@@ -9,15 +9,23 @@ import os
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
+# Pydanticのインポート処理
 try:
-    from pydantic_settings import BaseSettings
+    # Pydantic v2の場合
+    from pydantic_settings import BaseSettings  # type: ignore
     from pydantic import Field
 except ImportError:
-    # Fallback for older pydantic versions
-    from pydantic import BaseSettings, Field
+    try:
+        # Pydantic v1の場合
+        from pydantic import BaseSettings, Field  # type: ignore
+    except ImportError as e:
+        raise ImportError(
+            "pydanticまたはpydantic-settingsがインストールされていません。"
+            "pip install pydantic-settings または pip install pydantic を実行してください。"
+        ) from e
 
 
-class Settings(BaseSettings):
+class Settings(BaseSettings):  # type: ignore[misc]
     """アプリケーション設定クラス"""
     
     # 基本設定
