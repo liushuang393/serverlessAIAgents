@@ -1,0 +1,85 @@
+示例场景：旧前端 → 自适应现代前端
+1. 业务目标
+输入：大量 HTML / JSP / ES5 JS / 旧版 CSS 文件。
+
+输出：基于 TypeScript + React (or SolidJS) 的组件化前端，使用 CSS Grid / Flexbox，符合 WCAG 2.2 AA，可在 Safari / Edge / Chrome / Firefox 及 iOS / Android / Windows / macOS / iPadOS 下无障碍渲染。
+
+2. 积木与工作流
+mermaid
+コピーする
+編集する
+graph TD
+    A[InventoryAgent] --> B[AnalyzerAgent]
+    B --> C[MigrationPlannerAgent]
+    C --> D[RefactorAgent]
+    D --> E[CompatFixAgent]
+    D --> F[ResponsiveAgent]
+    E & F --> G[TestAgent]
+    G --> H[QAReportAgent]
+    H --> I[CDOrchestrator]
+积木	关键职责	输入→输出
+InventoryAgent	Git 仓库清单 & 依赖版本扫描	repo → manifest.json
+AnalyzerAgent	AST 解析、模板引擎检测、内联脚本定位	manifest → issue_list.json
+MigrationPlannerAgent	生成迁移蓝图：技术栈、逐页策略、优先级	issue_list → plan.yaml
+RefactorAgent	按 plan 将 JSP → TSX、拆分组件、引入 Tailwind	plan.yaml → patch_PR
+CompatFixAgent	利用 MDN 数据库和 Can I Use API 生产 Polyfill 配置	patch_PR → patch_PR
+ResponsiveAgent	生成 @media / container queries、Flex/Grid 布局	patch_PR → patch_PR
+TestAgent	Playwright＋axe-core 自动化：4浏览器×3分辨率×WCAG	patch_PR → test_report.json
+QAReportAgent	汇总覆盖率、Lighthouse 分数、视觉回归差异	test_report → report.pdf
+CDOrchestrator	自动创建 PR、触发 CI/CD，灰度发布	report.pdf → deployment
+
+3. 正确性与质量保障
+阶段	手段	工具
+静态分析	ESLint (TypeScript)、stylelint (CSS)	SonarQube 插件
+单元测试	React Testing Library / Vitest	覆盖 80%+
+端到端	Playwright Cloud / Matrix	Edge 124, Safari 18 TP…
+性能	Lighthouse CI	LCP < 2.5s, CLS < 0.1
+可访问性	axe-core + pa11y	WCAG 2.2 AA 全通过
+视觉回归	Percy / reg-suit	帧差 < 0.1
+报告	Allure + mkdocs‑material	PDF / HTML 双输出
+
+四、落地为正式产品：架构蓝图
+java
+コピーする
+編集する
+┌────────────────────────────────────────────┐
+│  Browser / CLI / API Client               │
+└──────┬──────────────────┬─────────────────┘
+       │ GraphQL Gateway  │
+       ▼                  ▼
+   ┌─────────┐       ┌──────────┐
+   │ Orchestr│──────▶│ Event Bus│ Kafka
+   │  ator    │       └──────────┘
+   └─▲──┬──▲──┘              ▲
+     │  │  │                 │
+╭────┴╮┴──┴╮╭───────╮  ╭──────┴─────╮
+│Agent Runner│  …  │Agent Runner│
+╰───────┬────╯      ╰───────┬─────╯
+        │  Container (Docker)│
+        ▼                   ▼
+  Runtime SDK (lib)   Model Gateway (vLLM/Bedrock)
+Agent Runner：每个积木打包为独立镜像；通过 ⟪agent‑sdk⟫ 注入日志 & 追踪。
+
+Orchestrator：Temporal （支持重试/补偿），流程描述用 YAML 或 Python DSL。
+
+Event Bus：Kafka；主题粒度 projectID.stage.agentName，方便订阅与审计。
+
+Model Gateway：统一封装 LLM 调用（OpenAI、Bedrock、Ollama、vLLM），自动重试与费用追踪。
+
+CI/CD：GitHub Actions + ArgoCD。测试通过→k8s 灰度；失败自动回滚上版本。
+
+Observability：OpenTelemetry + Prometheus + Grafana；业务指标（转化率、首屏 TTI）旁路收集。
+
+五、实施步骤速览
+初始化项目
+定义积木
+本工程积木充分利用，没有的场合追加
+
+编排工作流（Temporal DSL）
+
+
+本地调试 docker‑compose up → make e2e
+
+接入 CI：Push → Actions → Temporal → Kubernetes
+
+发布：Argo Rollout 蓝绿；Grafana 监控 LCP／错误率实时报警。
