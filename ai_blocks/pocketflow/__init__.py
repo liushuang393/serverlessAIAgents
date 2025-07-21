@@ -20,7 +20,7 @@ class BaseNode:
     def prep(self, shared):
         pass
 
-    def exec(self, prep_res):
+    def exec(self, prep_res) -> str | None:
         pass
 
     def post(self, shared, prep_res, exec_res):
@@ -100,7 +100,9 @@ class Flow(BaseNode):
     def get_next_node(self, curr, action):
         nxt = curr.successors.get(action or "default")
         if not nxt and curr.successors:
-            warnings.warn(f"Flow ends: '{action}' not found in {list(curr.successors)}")
+            warnings.warn(
+                f"Flow ends: '{action}' not found in {list(curr.successors)}"
+            )
         return nxt
 
     def _orch(self, shared, params=None):
@@ -187,7 +189,8 @@ class AsyncBatchNode(AsyncNode, BatchNode):
 
 class AsyncParallelBatchNode(AsyncNode, BatchNode):
     async def _exec_async(self, prep_res):
-        """非同期並列バッチ処理用の_exec_asyncメソッド - prep_resをitemsとして扱い、各要素に対して並列で親クラスの_exec_asyncを実行"""
+        """非同期並列バッチ処理用の_exec_asyncメソッド - prep_resをitemsとして扱い、
+        各要素に対して並列で親クラスの_exec_asyncを実行"""
         items = prep_res or []
         if not items:
             return None
