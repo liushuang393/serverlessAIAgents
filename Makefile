@@ -51,6 +51,7 @@ type-check:
 
 # クリーンアップ
 clean:
+	rm -rf build/ dist/ *.egg-info/
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -delete
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
@@ -60,9 +61,17 @@ clean:
 	rm -rf .mypy_cache/
 	rm -rf __temp_tests__/
 
-# ビルド
-build: clean
+# パッケージビルド
+build:
 	python -m build
+
+# PyPIへのアップロード（テスト環境）
+upload-test:
+	python -m twine upload --repository testpypi dist/*
+
+# PyPIへのアップロード（本番環境）
+upload:
+	python -m twine upload dist/*
 
 # ドキュメント
 docs:

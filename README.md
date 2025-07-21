@@ -328,6 +328,212 @@ settings = get_settings()
 settings.memory_max_items = 500  # デフォルトより少なく
 ```
 
+## 📚 インストール解説
+`pip install -e ".[all]"` コマンドについて詳しく説明します。
+
+## 📦 `pip install -e ".[all]"` の詳細解説
+
+### 🔍 各部分の意味
+
+````bash path=README.md mode=EXCERPT
+pip install -e ".[all]"
+````
+
+- **`-e`**: **editable install**（開発モード）
+- **`.`**: 現在のディレクトリ（プロジェクトルート）
+- **`[all]`**: オプショナル依存関係のグループ
+
+### 🛠️ 機能詳細
+
+#### 1. **Editable Install (-e)**
+```bash
+# 通常のインストール（コピー）
+pip install .
+
+# 開発モード（シンボリックリンク）
+pip install -e .
+```
+
+**違い:**
+- 通常: パッケージをsite-packagesにコピー
+- 開発モード: ソースコードへのリンクを作成
+
+**メリット:**
+- コード変更が即座に反映
+- 再インストール不要
+- デバッグが容易
+
+#### 2. **オプショナル依存関係 [all]**
+
+````toml path=pyproject.toml mode=EXCERPT
+[project.optional-dependencies]
+llm = [
+    "openai>=1.0.0,<2.0.0",
+    "anthropic>=0.5.0,<1.0.0",
+]
+vector = [
+    "chromadb>=0.4.0,<1.0.0",
+]
+all = [
+    "ai-blocks[llm,vector,document]",
+]
+````
+
+## 🏗️ モジュール開発時の注意点
+
+### 1. **パッケージ構造の設計**
+
+````python path=ai_blocks/__init__.py mode=EDIT
+"""AI Blocks - サーバーレスAIエージェント基盤"""
+
+__version__ = "0.1.0"
+
+# コアコンポーネントの公開
+from .core.memory import VectorMemory
+from .core.tool import ToolManager
+from .architectures.augmented_llm import AugmentedLLM
+
+__all__ = [
+    "VectorMemory",
+    "ToolManager", 
+    "AugmentedLLM",
+]
+````
+
+### 2. **依存関係の適切な管理**
+
+````toml path=pyproject.toml mode=EDIT
+# 必須依存関係（最小限に）
+dependencies = [
+    "pydantic>=2.0.0,<3.0.0",
+    "aiohttp>=3.8.0,<4.0.0",
+]
+
+# オプショナル依存関係（機能別）
+[project.optional-dependencies]
+llm = ["openai>=1.0.0"]
+vector = ["chromadb>=0.4.0"]
+dev = ["pytest>=7.0.0", "black>=23.0.0"]
+````
+
+### 3. **インポートエラーの適切な処理**
+
+````python path=ai_blocks/interfaces/openai_provider.py mode=EDIT
+try:
+    import openai
+except ImportError:
+    raise ImportError(
+        "OpenAI provider requires 'openai' package. "
+        "Install with: pip install ai-blocks[llm]"
+    )
+
+class OpenAIProvider:
+    def __init__(self, api_key: str):
+        self.client = openai.OpenAI(api_key=api_key)
+````
+
+### 4. **設定管理の実装**
+
+````python path=ai_blocks/config/settings.py mode=EDIT
+from pydantic_settings import BaseSettings
+from typing import Optional
+
+class Settings(BaseSettings):
+    openai_api_key: Optional[str] = None
+    default_model: str = "gpt-3.5-turbo"
+    
+    class Config:
+        env_prefix = "AI_BLOCKS_"
+        env_file = ".env"
+
+def get_settings() -> Settings:
+    return Settings()
+````
+
+### 5. **テスト構造の設計**
+
+````python path=tests/conftest.py mode=EDIT
+import pytest
+from ai_blocks.config import Settings
+
+@pytest.fixture
+def test_settings():
+    return Settings(
+        openai_api_key="test-key",
+        default_model="gpt-3.5-turbo"
+    )
+
+@pytest.fixture
+def mock_llm_provider(test_settings):
+    # モックプロバイダーを返す
+    pass
+````
+
+## 🚨 開発時の重要な注意点
+
+### 1. **循環インポートの回避**
+```python
+# ❌ 悪い例
+from ai_blocks.core.memory import VectorMemory
+from ai_blocks.core.tool import ToolManager  # VectorMemoryを使用
+
+# ✅ 良い例 - 遅延インポート
+def create_tool_manager():
+    from ai_blocks.core.tool import ToolManager
+    return ToolManager()
+```
+
+### 2. **型ヒントの活用**
+```python
+from typing import Protocol, Optional, List
+from abc import ABC, abstractmethod
+
+class MemoryProvider(Protocol):
+    async def store(self, data: str) -> None: ...
+    async def search(self, query: str) -> List[str]: ...
+```
+
+### 3. **エラーハンドリング**
+```python
+class AIBlocksError(Exception):
+    """基底例外クラス"""
+    pass
+
+class ProviderNotFoundError(AIBlocksError):
+    """プロバイダーが見つからない場合の例外"""
+    pass
+```
+
+### 4. **開発環境の確認**
+
+````makefile path=Makefile mode=EXCERPT
+setup-dev: install-dev
+	@echo "開発環境のセットアップが完了しました"
+	@echo "以下のコマンドでテストを実行できます:"
+	@echo "  make test"
+````
+
+## 🔧 実際の開発フロー
+
+```bash
+# 1. 開発環境セットアップ
+make setup-dev
+
+# 2. コード変更（即座に反映される）
+# ai_blocks/core/memory.py を編集
+
+# 3. テスト実行
+make test-unit
+
+# 4. 型チェック
+make type-check
+
+# 5. フォーマット
+make format
+```
+
+この構成により、効率的で保守性の高いモジュール開発が可能になります。
+
 ## 🤝 コントリビューション
 
 1. このリポジトリをフォーク

@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "ai-blocks"
 version = "0.1.0"
+dynamic = ["readme"]
 description = "軽量で柔軟なAIエージェント構築ライブラリ"
-readme = "README.md"
 license = {text = "MIT"}
 authors = [
     {name = "AI Blocks Team", email = "contact@aiblocks.dev"}
