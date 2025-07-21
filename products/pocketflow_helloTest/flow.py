@@ -9,8 +9,8 @@ class AnswerNode(Node):
         # Read question from shared
         return shared["question"]
 
-    def exec(self, question):
-        return call_llm(question)
+    def exec(self, prep_res):
+        return call_llm(prep_res)
 
     def post(self, shared, prep_res, exec_res):
         # Store the answer in shared
