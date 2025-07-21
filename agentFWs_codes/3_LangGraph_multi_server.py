@@ -1,8 +1,10 @@
 # LangGraph 多MCP Server 示例
 import asyncio
-from langgraph.prebuilt import create_react_agent
+
 from langchain_openai import ChatOpenAI
 from langgraph.mcp import MultiServerMCPClient
+from langgraph.prebuilt import create_react_agent
+
 
 async def create_multi():
     mcp = MultiServerMCPClient()
@@ -12,10 +14,15 @@ async def create_multi():
     llm = ChatOpenAI(model="gpt-4")
     return create_react_agent(llm=llm, tools=tools), mcp
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
+
     async def run():
         agent, mcp = await create_multi()
-        res = await agent.ainvoke({"messages":[("user","Python async 特性まとめ")]}, config={})
+        res = await agent.ainvoke(
+            {"messages": [("user", "Python async 特性まとめ")]}, config={}
+        )
         print(res["messages"][-1].content)
         await mcp.disconnect()
+
     asyncio.run(run())

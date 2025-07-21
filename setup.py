@@ -2,8 +2,10 @@
 AI Blocks - サーバーレスAIエージェント基盤のセットアップスクリプト
 """
 
-from setuptools import setup, find_packages
 import os
+
+from setuptools import find_packages, setup
+
 
 # README.mdの内容を読み込み
 def read_readme():
@@ -12,6 +14,7 @@ def read_readme():
         with open(readme_path, "r", encoding="utf-8") as f:
             return f.read()
     return ""
+
 
 # requirements.txtから依存関係を読み込み
 def read_requirements():
@@ -27,6 +30,7 @@ def read_requirements():
                 requirements.append(line)
         return requirements
     return []
+
 
 setup(
     name="ai-blocks",

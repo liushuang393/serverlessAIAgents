@@ -33,7 +33,7 @@ services:
       start_period: 40s
     networks:
       - ai-blocks-network
-    
+
   redis:
     image: redis:7-alpine
     container_name: ai-blocks-redis

@@ -26,13 +26,13 @@ class RAGServer:
         self.indices: Dict[str, VectorStoreIndex] = {}
         self.document_cache: Dict[str, List[Document]] = {}
         self.config = self._load_config()
-        
+
         # LlamaIndex設定を初期化
         Settings.llm = OpenAI(model="gpt-4o-mini")
         Settings.embed_model = OpenAIEmbedding(model="text-embedding-3-small")
-        
+
         self._register_tools()
-    
+
     def _load_config(self) -> Dict[str, Any]:
         """設定ファイルを読み込み"""
         config_path = Path("doc_config.json")
@@ -40,13 +40,13 @@ class RAGServer:
             with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         return {"default_chunk_size": 1024, "default_chunk_overlap": 200}
-    
+
     def _get_document_hash(self, file_path: str, chunk_size: int, chunk_overlap: int) -> str:
         """ドキュメント+パラメータのハッシュ値を計算、キャッシュ判定に使用"""
         file_stat = Path(file_path).stat()
         content = f"{file_path}_{file_stat.st_size}_{file_stat.st_mtime}_{chunk_size}_{chunk_overlap}"
         return hashlib.md5(content.encode()).hexdigest()
-    
+
     def _parse_documents(self, file_path: str, chunk_size: int, chunk_overlap: int) -> List[Document]:
         """ドキュメントを解析、スマートキャッシュをサポート"""
         doc_hash = self._get_document_hash(file_path, chunk_size, chunk_overlap)
@@ -73,10 +73,10 @@ class RAGServer:
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap
         )
-        
+
         nodes = splitter.get_nodes_from_documents(documents)
         processed_docs = [Document(text=node.text, metadata=node.metadata) for node in nodes]
-        
+
         # 結果をキャッシュ
         self.document_cache[doc_hash] = processed_docs
         logger.info(f"ドキュメント解析完了: {file_path}, チャンク数: {len(processed_docs)}")
@@ -85,7 +85,7 @@ class RAGServer:
 
     def _register_tools(self):
         """MCPツールを登録"""
-        
+
         @self.app.tool()
         def create_vector_index(
             file_path: str,
@@ -125,7 +125,7 @@ class RAGServer:
             except Exception as e:
                 logger.error(f"インデックス作成失敗: {str(e)}")
                 return f"インデックス作成失敗: {str(e)}"
-        
+
         @self.app.tool()
         def query_document(
             index_name: str,
@@ -155,7 +155,7 @@ class RAGServer:
             except Exception as e:
                 logger.error(f"検索失敗: {str(e)}")
                 return f"検索失敗: {str(e)}"
-        
+
         @self.app.tool()
         def get_document_summary(
             index_name: str,
@@ -186,7 +186,7 @@ class RAGServer:
             except Exception as e:
                 logger.error(f"要約生成失敗: {str(e)}")
                 return f"要約生成失敗: {str(e)}"
-        
+
         @self.app.tool()
         def list_indices() -> str:
             """利用可能なすべてのインデックスをリスト表示"""
@@ -225,7 +225,7 @@ class RAGAgent:
         self.tools = self._load_mcp_tools()
         self.tool_executor = ToolExecutor(self.tools)
         self.config = self._load_config()
-        
+
         # ワークフローグラフを構築
         self.graph = self._build_workflow()
 
@@ -236,7 +236,7 @@ class RAGAgent:
             with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         return {"available_indices": [], "document_descriptions": {}}
-    
+
     def _load_mcp_tools(self) -> List[Any]:
         """MCPサーバーからツールを読み込み"""
         # ここは簡略化処理、実際の実装ではMCPプロトコルを通じてツールリストを取得する必要がある
@@ -265,7 +265,7 @@ class RAGAgent:
                 "end": END
             }
         )
-        
+
         # エントリーポイントを設定
         workflow.set_entry_point("planner")
 
@@ -288,12 +288,12 @@ class RAGAgent:
 
         # 計画結果を解析
         plan = self._parse_plan(response.content)
-        
+
         state["current_plan"] = plan
         state["plan_step"] = 0
-        
+
         return state
-    
+
     def execution_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """タスク実行ノード"""
         plan = state.get("current_plan", [])
@@ -311,9 +311,9 @@ class RAGAgent:
         if "execution_results" not in state:
             state["execution_results"] = []
         state["execution_results"].append(result)
-        
+
         return state
-    
+
     def review_node(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """結果レビューノード"""
         results = state.get("execution_results", [])
@@ -332,9 +332,9 @@ class RAGAgent:
         # レビュー結果を解析
         state["review_result"] = response.content
         state["needs_continue"] = "継続が必要" in response.content
-        
+
         return state
-    
+
     def should_continue(self, state: Dict[str, Any]) -> str:
         """実行を継続するかどうかを判断"""
         if state.get("execution_complete", False):
@@ -350,7 +350,7 @@ class RAGAgent:
         """ドキュメント認識情報を含むシステムプロンプトを構築"""
         available_indices = self.config.get("available_indices", [])
         doc_descriptions = self.config.get("document_descriptions", {})
-        
+
         prompt = """
         あなたは専門的なドキュメント分析アシスタントで、以下の能力を持っています：
         1. ドキュメント検索と分析
@@ -359,7 +359,7 @@ class RAGAgent:
         4. インデックス管理
         利用可能なドキュメントインデックス：
         """
-        
+
         for index_name in available_indices:
             description = doc_descriptions.get(index_name, "説明なし")
             prompt += f"- {index_name}: {description}\n"
@@ -374,9 +374,9 @@ class RAGAgent:
 
         ユーザーのニーズに応じて、適切なツールとインデックスを賢く選択してタスクを実行してください。
         """
-        
+
         return prompt
-    
+
     def _parse_plan(self, plan_text: str) -> List[Dict[str, Any]]:
         """実行計画を解析"""
         # 簡略化実装、実際にはより複雑な解析ロジックが必要
@@ -398,7 +398,7 @@ class RAGAgent:
         # ここでMCPツールを呼び出すべき
         # 簡略化実装
         return f"ステップを実行：{step['action']}"
-    
+
     async def run(self, query: str) -> str:
         """エージェントを実行"""
         initial_state = {

@@ -110,21 +110,21 @@ from mcp_rag_client import RAGClient
 
 async def main():
     client = RAGClient()
-    
+
     # インデックス作成
     result = await client.create_index(
         file_path="document.pdf",
         index_name="test-doc"
     )
     print(result)
-    
+
     # 検索
     search_result = await client.query_document(
         index_name="test-doc",
         query="主要なポイントは何ですか？"
     )
     print(search_result)
-    
+
     await client.close()
 
 asyncio.run(main())

@@ -4,14 +4,14 @@
 このモジュールは、アプリケーション全体で一貫したロギングを提供します。
 """
 
+import logging
 import os
 import sys
-import logging
-from typing import Optional, Dict, Any
-
-# from loguru import logger  # loguruは使用しない
+from typing import Any, Dict, Optional
 
 from ..config import get_settings
+
+# from loguru import logger  # loguruは使用しない
 
 
 def setup_logging() -> None:
@@ -23,8 +23,8 @@ def setup_logging() -> None:
 
     # ログフォーマットを設定
     formatter = logging.Formatter(
-        fmt='%(asctime)s | %(levelname)s | %(name)s:%(funcName)s:%(lineno)d - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
+        fmt="%(asctime)s | %(levelname)s | %(name)s:%(funcName)s:%(lineno)d - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
     )
 
     # ルートロガーを設定

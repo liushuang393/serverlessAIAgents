@@ -1,13 +1,16 @@
 import asyncio
 import json
-import httpx
-from typing import Dict, List, Any, Optional
-from pathlib import Path
 import logging
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import httpx
 
 # ログ設定
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
 class RAGClient:
     def __init__(self, server_url: str = "http://localhost:8000"):
         self.server_url = server_url
@@ -18,14 +21,19 @@ class RAGClient:
         """設定を読み込み"""
         config_path = Path("mcp_config.json")
         if config_path.exists():
-            with open(config_path, 'r', encoding='utf-8') as f:
+            with open(config_path, "r", encoding="utf-8") as f:
                 config: Dict[str, Any] = json.load(f)
                 return config
         return {"available_indices": [], "document_descriptions": {}}
 
-    async def create_index(self, file_path: str, index_name: str,
-                          chunk_size: Optional[int] = None, chunk_overlap: Optional[int] = None,
-                          force_recreate: bool = False) -> Dict[str, Any]:
+    async def create_index(
+        self,
+        file_path: str,
+        index_name: str,
+        chunk_size: Optional[int] = None,
+        chunk_overlap: Optional[int] = None,
+        force_recreate: bool = False,
+    ) -> Dict[str, Any]:
         """ベクトルインデックスを作成"""
         try:
             data = {
@@ -33,9 +41,11 @@ class RAGClient:
                 "index_name": index_name,
                 "chunk_size": chunk_size,
                 "chunk_overlap": chunk_overlap,
-                "force_recreate": force_recreate
+                "force_recreate": force_recreate,
             }
-            response = await self.client.post(f"{self.server_url}/create_index", json=data)
+            response = await self.client.post(
+                f"{self.server_url}/create_index", json=data
+            )
             response.raise_for_status()
             result: Dict[str, Any] = response.json()
             return result
@@ -43,14 +53,12 @@ class RAGClient:
             logger.error(f"インデックス作成エラー: {str(e)}")
             return {"status": "error", "message": str(e)}
 
-    async def query_document(self, index_name: str, query: str, top_k: int = 5) -> Dict[str, Any]:
+    async def query_document(
+        self, index_name: str, query: str, top_k: int = 5
+    ) -> Dict[str, Any]:
         """ドキュメントを検索"""
         try:
-            data = {
-                "index_name": index_name,
-                "query": query,
-                "top_k": top_k
-            }
+            data = {"index_name": index_name, "query": query, "top_k": top_k}
             response = await self.client.post(f"{self.server_url}/query", json=data)
             response.raise_for_status()
             result: Dict[str, Any] = response.json()
@@ -59,13 +67,12 @@ class RAGClient:
             logger.error(f"検索エラー: {str(e)}")
             return {"status": "error", "message": str(e)}
 
-    async def get_summary(self, index_name: str, summary_type: str = "brief") -> Dict[str, Any]:
+    async def get_summary(
+        self, index_name: str, summary_type: str = "brief"
+    ) -> Dict[str, Any]:
         """ドキュメント要約を取得"""
         try:
-            data = {
-                "index_name": index_name,
-                "summary_type": summary_type
-            }
+            data = {"index_name": index_name, "summary_type": summary_type}
             response = await self.client.post(f"{self.server_url}/summary", json=data)
             response.raise_for_status()
             result: Dict[str, Any] = response.json()
@@ -125,8 +132,8 @@ async def main() -> None:
                     "file_path": "sample.pdf",
                     "index_name": "sample-doc",
                     "chunk_size": 1024,
-                    "chunk_overlap": 200
-                }
+                    "chunk_overlap": 200,
+                },
             },
             {
                 "operation": "query",
@@ -134,17 +141,14 @@ async def main() -> None:
                 "params": {
                     "index_name": "sample-doc",
                     "query": "このドキュメントの主要なポイントは何ですか？",
-                    "top_k": 3
-                }
+                    "top_k": 3,
+                },
             },
             {
                 "operation": "summary",
                 "description": "ドキュメント要約を取得",
-                "params": {
-                    "index_name": "sample-doc",
-                    "summary_type": "brief"
-                }
-            }
+                "params": {"index_name": "sample-doc", "summary_type": "brief"},
+            },
         ]
 
         print("\n=== サンプル操作（実際のファイルがある場合のみ実行） ===")
@@ -157,6 +161,7 @@ async def main() -> None:
         logger.error(f"エラーが発生しました: {str(e)}")
     finally:
         await client.close()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

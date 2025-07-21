@@ -12,7 +12,7 @@
 
 使用例:
     from products.frontend_migration import MigrationOrchestrator
-    
+
     orchestrator = MigrationOrchestrator()
     result = await orchestrator.migrate_project("/path/to/legacy/project")
 """

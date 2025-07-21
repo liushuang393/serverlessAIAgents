@@ -1,7 +1,9 @@
 # SmolAgents 基础示例
 import asyncio
-from smolagents import CodeAgent, ToolCollection
+
 from mcp_client import MCPClient
+from smolagents import CodeAgent, ToolCollection
+
 
 async def main():
     mcp = MCPClient()
@@ -13,5 +15,6 @@ async def main():
     print("输出:", result.output)
     await mcp.disconnect()
 
-if __name__=="__main__":
+
+if __name__ == "__main__":
     asyncio.run(main())

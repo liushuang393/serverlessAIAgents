@@ -28,32 +28,32 @@
 ```python
 class MemoryInterface(ABC):
     """長期記憶のための抽象インターフェース"""
-    
+
     @abstractmethod
     async def store(self, content: str, metadata: Dict[str, Any] = None) -> str:
         """コンテンツを記憶に保存する"""
         pass
-    
+
     @abstractmethod
     async def search(self, query: str, limit: int = 10, threshold: float = None) -> List[MemoryItem]:
         """類似性検索を実行する"""
         pass
-    
+
     @abstractmethod
     async def get(self, memory_id: str) -> Optional[MemoryItem]:
         """IDで記憶を取得する"""
         pass
-    
+
     @abstractmethod
     async def delete(self, memory_id: str) -> bool:
         """記憶を削除する"""
         pass
-    
+
     @abstractmethod
     async def clear(self) -> None:
         """全ての記憶を削除する"""
         pass
-    
+
     @abstractmethod
     async def count(self) -> int:
         """記憶の総数を取得する"""
@@ -65,7 +65,7 @@ class MemoryInterface(ABC):
 ```python
 class VectorMemory(MemoryInterface):
     """ベクトル検索ベースの記憶実装"""
-    
+
     def __init__(
         self,
         vector_store: Any = None,
@@ -112,32 +112,32 @@ await memory.delete(memory_id)
 ```python
 class ThreadInterface(ABC):
     """会話履歴と状態管理のための抽象インターフェース"""
-    
+
     @abstractmethod
     async def add_message(self, message: Message) -> None:
         """メッセージを履歴に追加する"""
         pass
-    
+
     @abstractmethod
     async def get_history(self, limit: int = None) -> List[Message]:
         """履歴を取得する"""
         pass
-    
+
     @abstractmethod
     async def get_state(self) -> Dict[str, Any]:
         """現在の状態を取得する"""
         pass
-    
+
     @abstractmethod
     async def update_state(self, state: Dict[str, Any]) -> None:
         """状態を更新する"""
         pass
-    
+
     @abstractmethod
     async def clear(self) -> None:
         """履歴と状態をクリアする"""
         pass
-    
+
     @abstractmethod
     async def get_thread_id(self) -> str:
         """スレッドIDを取得する"""
@@ -149,7 +149,7 @@ class ThreadInterface(ABC):
 ```python
 class SimpleThread(ThreadInterface):
     """シンプルなインメモリスレッド実装"""
-    
+
     def __init__(self, thread_id: str = None, max_history: int = 100):
         """
         Args:
@@ -190,22 +190,22 @@ state = await thread.get_state()
 ```python
 class ToolInterface(ABC):
     """外部API/関数実行のための抽象インターフェース"""
-    
+
     @abstractmethod
     async def execute(self, tool_name: str, parameters: Dict[str, Any]) -> ToolResult:
         """ツールを実行する"""
         pass
-    
+
     @abstractmethod
     def get_available_tools(self) -> List[ToolDefinition]:
         """利用可能なツール一覧を取得する"""
         pass
-    
+
     @abstractmethod
     def register_tool(self, tool: ToolDefinition) -> None:
         """新しいツールを登録する"""
         pass
-    
+
     @abstractmethod
     def unregister_tool(self, tool_name: str) -> bool:
         """ツールの登録を解除する"""
@@ -217,7 +217,7 @@ class ToolInterface(ABC):
 ```python
 class ToolManager(ToolInterface):
     """ツール管理の具体実装"""
-    
+
     def __init__(self, timeout: float = None):
         """
         Args:
@@ -262,12 +262,12 @@ print(result.result)  # "こんにちは、山田さん！"
 ```python
 class ParserInterface(ABC):
     """ドキュメント変換のための抽象インターフェース"""
-    
+
     @abstractmethod
     async def parse(self, content: bytes, content_type: str, metadata: Dict[str, Any] = None) -> ParsedDocument:
         """ドキュメントをテキストに変換する"""
         pass
-    
+
     @abstractmethod
     def supports(self, content_type: str) -> bool:
         """指定されたコンテンツタイプをサポートするか"""
@@ -279,7 +279,7 @@ class ParserInterface(ABC):
 ```python
 class MultiParser(ParserInterface):
     """複数のパーサーを統合したパーサー"""
-    
+
     def __init__(self, parsers: List[ParserInterface] = None):
         """
         Args:
@@ -312,7 +312,7 @@ print(parsed_doc.text)
 ```python
 class ChunkerInterface(ABC):
     """長文分割と前処理のための抽象インターフェース"""
-    
+
     @abstractmethod
     async def chunk(
         self,
@@ -323,7 +323,7 @@ class ChunkerInterface(ABC):
     ) -> List[TextChunk]:
         """テキストをチャンクに分割する"""
         pass
-    
+
     @abstractmethod
     async def merge_chunks(self, chunks: List[TextChunk]) -> str:
         """チャンクを結合する"""
@@ -335,7 +335,7 @@ class ChunkerInterface(ABC):
 ```python
 class SmartChunker(ChunkerInterface):
     """スマートなチャンカー（複数の戦略を組み合わせ）"""
-    
+
     def __init__(self):
         """スマートなチャンカーを初期化する"""
 ```
@@ -365,22 +365,22 @@ merged_text = await chunker.merge_chunks(chunks)
 ```python
 class RouterInterface(ABC):
     """インテント判定とAgent/Tool振り分けのための抽象インターフェース"""
-    
+
     @abstractmethod
     async def route(self, input_text: str, context: Dict[str, Any] = None) -> RouteResult:
         """入力に基づいて適切なAgent/Toolに振り分ける"""
         pass
-    
+
     @abstractmethod
     def register_route(self, route: RouteDefinition) -> None:
         """新しいルートを登録する"""
         pass
-    
+
     @abstractmethod
     def unregister_route(self, pattern: str) -> bool:
         """ルートの登録を解除する"""
         pass
-    
+
     @abstractmethod
     def get_routes(self) -> List[RouteDefinition]:
         """登録されているルートの一覧を取得する"""
@@ -392,7 +392,7 @@ class RouterInterface(ABC):
 ```python
 class RuleBasedRouter(RouterInterface):
     """ルールベースのルーター"""
-    
+
     def __init__(self, default_target: str = "default"):
         """
         Args:
@@ -431,7 +431,7 @@ print(result.target)  # "weather_agent"
 ```python
 class EvaluatorInterface(ABC):
     """出力品質チェックと改善指示のための抽象インターフェース"""
-    
+
     @abstractmethod
     async def evaluate(
         self,
@@ -441,7 +441,7 @@ class EvaluatorInterface(ABC):
     ) -> EvaluationResult:
         """出力を評価する"""
         pass
-    
+
     @abstractmethod
     async def suggest_improvements(
         self,
@@ -458,7 +458,7 @@ class EvaluatorInterface(ABC):
 ```python
 class RuleBasedEvaluator(EvaluatorInterface):
     """ルールベースの評価器"""
-    
+
     def __init__(self, passing_threshold: float = 0.7):
         """
         Args:
@@ -495,7 +495,7 @@ LLM + Memory + Tool を組み合わせた基本的なエージェントパター
 ```python
 class AugmentedLLM(Agent):
     """LLMにMemoryとToolを組み合わせた基本的なエージェント"""
-    
+
     def __init__(
         self,
         llm_provider: Any,
@@ -512,15 +512,15 @@ class AugmentedLLM(Agent):
             name: エージェント名
             config: 設定辞書
         """
-    
+
     async def process(self, input_text: str, context: Dict[str, Any] = None) -> str:
         """入力を処理して応答を生成する"""
         pass
-    
+
     async def add_knowledge(self, knowledge: str, metadata: Dict[str, Any] = None) -> str:
         """知識を記憶に追加する"""
         pass
-    
+
     async def get_status(self) -> Dict[str, Any]:
         """エージェントの状態を取得する"""
         pass

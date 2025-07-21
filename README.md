@@ -395,7 +395,7 @@ from .architectures.augmented_llm import AugmentedLLM
 
 __all__ = [
     "VectorMemory",
-    "ToolManager", 
+    "ToolManager",
     "AugmentedLLM",
 ]
 ````
@@ -441,7 +441,7 @@ from typing import Optional
 class Settings(BaseSettings):
     openai_api_key: Optional[str] = None
     default_model: str = "gpt-3.5-turbo"
-    
+
     class Config:
         env_prefix = "AI_BLOCKS_"
         env_file = ".env"
@@ -533,6 +533,149 @@ make format
 ```
 
 この構成により、効率的で保守性の高いモジュール開発が可能になります。
+
+## ✅ すでに自動チェックは有効になっています。pre-commitフック
+
+以下のようなフックが動作中です：
+
+| チェック項目                | 説明                 |
+| --------------------- | ------------------ |
+| `trailing-whitespace` | 行末の空白を削除           |
+| `end-of-file-fixer`   | ファイル末尾に改行を追加       |
+| `black`               | Pythonコードの自動整形ツール  |
+| `isort`               | import文の順序を自動で並び替え |
+| `flake8`              | Pythonコードの静的解析ツール  |
+| `mypy`                | Pythonの型チェックツール    |
+
+---
+
+---
+
+### ✅ `pre-commit` のインストール手順
+
+1. プロジェクトのルートディレクトリに `.pre-commit-config.yaml` を作成
+
+2. 必要なツールをインストール：
+
+   ```bash
+   pip install pre-commit black isort flake8 mypy
+   ```
+
+3. Git リポジトリにフックをインストール：
+
+   ```bash
+   pre-commit install
+   ```
+
+---
+
+### ✅ 自動チェックは以下のようにして発動します：
+
+```bash
+git commit -m "xxx"
+```
+
+このようにコミットするだけで `.pre-commit-config.yaml` に記載されたすべてのチェックが自動的に行われます。
+
+---
+
+### 🧹 提交前に自動修正を行うには：
+
+ログに次のような表示がある場合：
+
+```
+Fixing fwcode/test_rag_system.py
+reformatted fwcode/simple_test.py
+```
+
+これは**フックがファイルを自動で修正した**ことを意味します。
+
+そのため、**再度 `git add .` を実行し、再度コミット**する必要があります：
+
+```bash
+git add .
+git commit -m "fix: pre-commitによる自動整形"
+```
+
+もしくは、以下のコマンドを事前に実行しておくことで、全ファイルに対して一括整形も可能です：
+
+```bash
+pre-commit run --all-files
+```
+
+---
+
+### ⚠️ よくある失敗とその修正方法
+
+#### ❌ flake8 のエラー例：
+
+```plaintext
+fwcode/mcp_rag_client.py:5:1: F401 'typing.List' imported but unused
+```
+
+→ 未使用の import を削除する
+
+```plaintext
+fwcode/simple_test.py:34:89: E501 line too long (106 > 88 characters)
+```
+
+→ 1行が長すぎるので、分割する（line length を120に緩和する設定も可能）
+
+#### ❌ mypy のエラー例：
+
+```plaintext
+Function is missing a return type annotation
+```
+
+→ 以下のように戻り値の型を明示的に書く：
+
+```python
+def my_func() -> None:
+    ...
+```
+
+---
+
+### 📦 `.pre-commit-config.yaml` の例
+
+もし将来的に自分で設定ファイルを拡張したい場合は、以下のように記述できます：
+
+```yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-merge-conflict
+
+  - repo: https://github.com/psf/black
+    rev: 24.4.2
+    hooks:
+      - id: black
+
+  - repo: https://github.com/pre-commit/mirrors-isort
+    rev: v5.13.2
+    hooks:
+      - id: isort
+
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+```
+
+---
+
+必要であれば、`.pre-commit-config.yaml` の生成や、インストール用のシェルスクリプトも用意できますので、お気軽にお申し付けください。
+今の状態でも十分プロフェッショナルなチェック体制になっています！
+
 
 ## 🤝 コントリビューション
 

@@ -12,17 +12,17 @@
 - レスポンシブ画像の最適化
 """
 
-import re
-import json
 import asyncio
-from pathlib import Path
-from typing import Dict, List, Any, Optional, Tuple
+import json
+import re
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-from ai_blocks.core.tool import ToolManager, tool
-from ai_blocks.core.memory import VectorMemory
 from ai_blocks.architectures.prompt_chaining import PromptChain, SpecializedAgent
+from ai_blocks.core.memory import VectorMemory
+from ai_blocks.core.tool import ToolManager, tool
 from ai_blocks.utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -30,6 +30,7 @@ logger = get_logger(__name__)
 
 class ResponsiveUnit(Enum):
     """レスポンシブ単位の列挙"""
+
     REM = "rem"
     EM = "em"
     PERCENT = "%"
@@ -43,6 +44,7 @@ class ResponsiveUnit(Enum):
 @dataclass
 class ResponsiveRule:
     """レスポンシブ変換ルールを表すデータクラス"""
+
     property_name: str
     original_value: str
     responsive_value: str
@@ -54,6 +56,7 @@ class ResponsiveRule:
 @dataclass
 class ResponsiveConversion:
     """レスポンシブ変換結果を格納するデータクラス"""
+
     file_path: str
     original_css: str
     responsive_css: str
@@ -66,38 +69,38 @@ class ResponsiveConversion:
 class ResponsiveAgent:
     """
     レスポンシブデザイン変換を担当するエージェント
-    
+
     ai_blocks.architectures.prompt_chaining.PromptChainを使用して
     段階的な変換処理を実行し、ai_blocks.core.memory.VectorMemoryを
     使用して変換パターンを学習・記憶します。
     """
-    
+
     def __init__(self, llm_provider=None):
         """
         レスポンシブエージェントを初期化
-        
+
         Args:
             llm_provider: LLMプロバイダー（オプション）
         """
         self.tool_manager = ToolManager()
         self.memory = VectorMemory()
         self.llm_provider = llm_provider
-        
+
         # 変換ルールを定義
         self.conversion_rules = self._load_conversion_rules()
-        
+
         # レスポンシブ変換用ツールを登録
         self._register_responsive_tools()
-        
+
         # プロンプトチェーンを設定
         self.conversion_chain = self._setup_conversion_chain()
-        
+
         logger.info("ResponsiveAgentを初期化しました")
-    
+
     def _load_conversion_rules(self) -> Dict[str, Any]:
         """
         レスポンシブ変換ルールを読み込み
-        
+
         Returns:
             変換ルールの辞書
         """
@@ -107,97 +110,88 @@ class ResponsiveAgent:
                 "width": {
                     "small_values": {"max_px": 100, "unit": ResponsiveUnit.REM},
                     "medium_values": {"max_px": 500, "unit": ResponsiveUnit.PERCENT},
-                    "large_values": {"max_px": 1200, "unit": ResponsiveUnit.CLAMP}
+                    "large_values": {"max_px": 1200, "unit": ResponsiveUnit.CLAMP},
                 },
                 "height": {
                     "small_values": {"max_px": 100, "unit": ResponsiveUnit.REM},
                     "medium_values": {"max_px": 500, "unit": ResponsiveUnit.VH},
-                    "large_values": {"max_px": 800, "unit": ResponsiveUnit.CLAMP}
+                    "large_values": {"max_px": 800, "unit": ResponsiveUnit.CLAMP},
                 },
-                "max-width": {
-                    "all_values": {"unit": ResponsiveUnit.REM}
-                },
-                "max-height": {
-                    "all_values": {"unit": ResponsiveUnit.REM}
-                }
+                "max-width": {"all_values": {"unit": ResponsiveUnit.REM}},
+                "max-height": {"all_values": {"unit": ResponsiveUnit.REM}},
             },
-            
             # テキスト関連プロパティ
             "text_properties": {
-                "font-size": {
-                    "all_values": {"unit": ResponsiveUnit.REM}
-                },
-                "line-height": {
-                    "all_values": {"unit": ResponsiveUnit.EM}
-                },
-                "letter-spacing": {
-                    "all_values": {"unit": ResponsiveUnit.EM}
-                }
+                "font-size": {"all_values": {"unit": ResponsiveUnit.REM}},
+                "line-height": {"all_values": {"unit": ResponsiveUnit.EM}},
+                "letter-spacing": {"all_values": {"unit": ResponsiveUnit.EM}},
             },
-            
             # スペーシング関連プロパティ
             "spacing_properties": {
-                "margin": {
-                    "all_values": {"unit": ResponsiveUnit.REM}
-                },
-                "padding": {
-                    "all_values": {"unit": ResponsiveUnit.REM}
-                },
-                "gap": {
-                    "all_values": {"unit": ResponsiveUnit.REM}
-                }
+                "margin": {"all_values": {"unit": ResponsiveUnit.REM}},
+                "padding": {"all_values": {"unit": ResponsiveUnit.REM}},
+                "gap": {"all_values": {"unit": ResponsiveUnit.REM}},
             },
-            
             # ブレークポイント定義
             "breakpoints": {
                 "mobile": "320px",
-                "tablet": "768px", 
+                "tablet": "768px",
                 "desktop": "1024px",
-                "large": "1440px"
-            }
+                "large": "1440px",
+            },
         }
-    
+
     def _register_responsive_tools(self) -> None:
         """レスポンシブ変換用のツールを登録"""
-        
+
         @tool(name="convert_px_to_responsive", description="px値をレスポンシブ単位に変換")
-        def convert_px_to_responsive(property_name: str, px_value: str, context: str = "layout") -> Dict[str, Any]:
+        def convert_px_to_responsive(
+            property_name: str, px_value: str, context: str = "layout"
+        ) -> Dict[str, Any]:
             """
             px値をレスポンシブ単位に変換
-            
+
             Args:
                 property_name: CSSプロパティ名
                 px_value: px値（数値部分のみ）
                 context: コンテキスト（layout, text, spacing）
-                
+
             Returns:
                 変換結果の辞書
             """
             px_val = int(px_value)
             base_font_size = 16  # ブラウザのデフォルトフォントサイズ
-            
+
             # プロパティタイプに応じた変換ルールを取得
             rules = self.conversion_rules.get(f"{context}_properties", {})
             property_rules = rules.get(property_name, {})
-            
+
             if not property_rules:
                 # デフォルトルール: remに変換
                 return {
                     "responsive_value": f"{px_val / base_font_size:.2f}rem",
                     "unit_type": ResponsiveUnit.REM.value,
-                    "reasoning": f"デフォルトルール適用: {px_val}px → rem変換"
+                    "reasoning": f"デフォルトルール適用: {px_val}px → rem変換",
                 }
-            
+
             # 値の大きさに応じて適切な単位を選択
-            if "small_values" in property_rules and px_val <= property_rules["small_values"]["max_px"]:
+            if (
+                "small_values" in property_rules
+                and px_val <= property_rules["small_values"]["max_px"]
+            ):
                 unit = property_rules["small_values"]["unit"]
-            elif "medium_values" in property_rules and px_val <= property_rules["medium_values"]["max_px"]:
+            elif (
+                "medium_values" in property_rules
+                and px_val <= property_rules["medium_values"]["max_px"]
+            ):
                 unit = property_rules["medium_values"]["unit"]
             elif "large_values" in property_rules:
                 unit = property_rules["large_values"]["unit"]
             else:
-                unit = property_rules.get("all_values", {}).get("unit", ResponsiveUnit.REM)
-            
+                unit = property_rules.get("all_values", {}).get(
+                    "unit", ResponsiveUnit.REM
+                )
+
             # 単位に応じた変換を実行
             if unit == ResponsiveUnit.REM:
                 responsive_value = f"{px_val / base_font_size:.2f}rem"
@@ -217,60 +211,68 @@ class ResponsiveAgent:
                 min_val = px_val * 0.8 / base_font_size
                 max_val = px_val * 1.2 / base_font_size
                 preferred_val = px_val / 14.4  # vw単位
-                responsive_value = f"clamp({min_val:.1f}rem, {preferred_val:.1f}vw, {max_val:.1f}rem)"
+                responsive_value = (
+                    f"clamp({min_val:.1f}rem, {preferred_val:.1f}vw, {max_val:.1f}rem)"
+                )
             else:
                 responsive_value = f"{px_val / base_font_size:.2f}rem"
-            
+
             return {
                 "responsive_value": responsive_value,
                 "unit_type": unit.value,
-                "reasoning": f"{property_name}の{px_val}pxを{unit.value}単位に変換"
+                "reasoning": f"{property_name}の{px_val}pxを{unit.value}単位に変換",
             }
-        
+
         @tool(name="generate_media_queries", description="レスポンシブデザイン用のメディアクエリを生成")
-        def generate_media_queries(css_rules: List[str], target_properties: List[str]) -> List[str]:
+        def generate_media_queries(
+            css_rules: List[str], target_properties: List[str]
+        ) -> List[str]:
             """
             レスポンシブデザイン用のメディアクエリを生成
-            
+
             Args:
                 css_rules: CSSルールのリスト
                 target_properties: 対象プロパティのリスト
-                
+
             Returns:
                 生成されたメディアクエリのリスト
             """
             media_queries = []
             breakpoints = self.conversion_rules["breakpoints"]
-            
+
             # モバイルファーストのメディアクエリを生成
             for breakpoint_name, breakpoint_value in breakpoints.items():
                 if breakpoint_name == "mobile":
                     continue  # モバイルはベーススタイル
-                
+
                 media_query = f"@media (min-width: {breakpoint_value}) {{\n"
-                
+
                 # 各CSSルールに対してブレークポイント固有のスタイルを生成
                 for rule in css_rules:
                     if any(prop in rule for prop in target_properties):
                         # ブレークポイントに応じたスタイル調整
-                        adjusted_rule = self._adjust_rule_for_breakpoint(rule, breakpoint_name)
+                        adjusted_rule = self._adjust_rule_for_breakpoint(
+                            rule, breakpoint_name
+                        )
                         media_query += f"  {adjusted_rule}\n"
-                
+
                 media_query += "}\n"
                 media_queries.append(media_query)
-            
+
             logger.info(f"メディアクエリ生成完了: {len(media_queries)}個")
             return media_queries
-        
+
         @tool(name="convert_to_grid_layout", description="従来のレイアウトをCSS Gridに変換")
-        def convert_to_grid_layout(html_structure: str, css_rules: str) -> Dict[str, str]:
+        def convert_to_grid_layout(
+            html_structure: str, css_rules: str
+        ) -> Dict[str, str]:
             """
             従来のレイアウトをCSS Gridに変換
-            
+
             Args:
                 html_structure: HTML構造
                 css_rules: 既存のCSSルール
-                
+
             Returns:
                 Grid変換結果
             """
@@ -302,22 +304,24 @@ class ResponsiveAgent:
   }
 }
 """
-            
+
             return {
                 "grid_css": grid_css,
                 "html_classes": "container grid-item",
-                "reasoning": "従来のfloatレイアウトをCSS Gridに変換"
+                "reasoning": "従来のfloatレイアウトをCSS Gridに変換",
             }
-        
+
         @tool(name="convert_to_flexbox_layout", description="従来のレイアウトをFlexboxに変換")
-        def convert_to_flexbox_layout(html_structure: str, css_rules: str) -> Dict[str, str]:
+        def convert_to_flexbox_layout(
+            html_structure: str, css_rules: str
+        ) -> Dict[str, str]:
             """
             従来のレイアウトをFlexboxに変換
-            
+
             Args:
                 html_structure: HTML構造
                 css_rules: 既存のCSSルール
-                
+
             Returns:
                 Flexbox変換結果
             """
@@ -341,52 +345,48 @@ class ResponsiveAgent:
   .flex-container {
     flex-direction: column;
   }
-  
+
   .flex-item {
     flex: 1 1 auto;
   }
 }
 """
-            
+
             return {
                 "flexbox_css": flexbox_css,
                 "html_classes": "flex-container flex-item",
-                "reasoning": "従来のinline-blockレイアウトをFlexboxに変換"
+                "reasoning": "従来のinline-blockレイアウトをFlexboxに変換",
             }
-        
+
         # ツールマネージャーに登録
         self.tool_manager.register_function(convert_px_to_responsive)
         self.tool_manager.register_function(generate_media_queries)
         self.tool_manager.register_function(convert_to_grid_layout)
         self.tool_manager.register_function(convert_to_flexbox_layout)
-    
+
     def _adjust_rule_for_breakpoint(self, rule: str, breakpoint: str) -> str:
         """
         ブレークポイントに応じてCSSルールを調整
-        
+
         Args:
             rule: 元のCSSルール
             breakpoint: ブレークポイント名
-            
+
         Returns:
             調整されたCSSルール
         """
         # ブレークポイント別の調整係数
-        adjustments = {
-            "tablet": 1.1,
-            "desktop": 1.2,
-            "large": 1.3
-        }
-        
+        adjustments = {"tablet": 1.1, "desktop": 1.2, "large": 1.3}
+
         adjustment_factor = adjustments.get(breakpoint, 1.0)
-        
+
         # rem値を調整（簡単な例）
         def adjust_rem_value(match):
             value = float(match.group(1))
             adjusted_value = value * adjustment_factor
             return f"{adjusted_value:.2f}rem"
-        
-        adjusted_rule = re.sub(r'(\d+\.?\d*)rem', adjust_rem_value, rule)
+
+        adjusted_rule = re.sub(r"(\d+\.?\d*)rem", adjust_rem_value, rule)
         return adjusted_rule
 
     def _setup_conversion_chain(self) -> PromptChain:
@@ -408,7 +408,7 @@ class ResponsiveAgent:
             - メディアクエリの有無
             - アクセシビリティの問題
             """,
-            llm_provider=self.llm_provider
+            llm_provider=self.llm_provider,
         )
 
         converter_agent = SpecializedAgent(
@@ -422,7 +422,7 @@ class ResponsiveAgent:
             - CSS Grid / Flexbox の活用
             - アクセシビリティの向上
             """,
-            llm_provider=self.llm_provider
+            llm_provider=self.llm_provider,
         )
 
         validator_agent = SpecializedAgent(
@@ -436,15 +436,17 @@ class ResponsiveAgent:
             - アクセシビリティ準拠
             - 実装の実用性
             """,
-            llm_provider=self.llm_provider
+            llm_provider=self.llm_provider,
         )
 
         return PromptChain(
             agents=[analyzer_agent, converter_agent, validator_agent],
-            name="ResponsiveConversionChain"
+            name="ResponsiveConversionChain",
         )
 
-    async def convert_css_file(self, file_path: str, issue_list: List[Dict[str, Any]]) -> ResponsiveConversion:
+    async def convert_css_file(
+        self, file_path: str, issue_list: List[Dict[str, Any]]
+    ) -> ResponsiveConversion:
         """
         CSSファイルをレスポンシブデザインに変換
 
@@ -458,7 +460,7 @@ class ResponsiveAgent:
         logger.info(f"CSSファイルのレスポンシブ変換を開始: {file_path}")
 
         # ファイル内容を読み込み
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             original_css = f.read()
 
         applied_rules = []
@@ -468,14 +470,16 @@ class ResponsiveAgent:
         flexbox_layouts = []
 
         # 問題リストから固定pxサイズの問題を抽出
-        px_issues = [issue for issue in issue_list if issue.get("issue_type") == "fixed_px_size"]
+        px_issues = [
+            issue for issue in issue_list if issue.get("issue_type") == "fixed_px_size"
+        ]
 
         # 各px問題を順次変換
         for issue in px_issues:
             current_code = issue["current_code"]
 
             # CSSプロパティと値を抽出
-            match = re.search(r'(\w+):\s*(\d+)px', current_code)
+            match = re.search(r"(\w+):\s*(\d+)px", current_code)
             if match:
                 property_name = match.group(1)
                 px_value = match.group(2)
@@ -484,11 +488,14 @@ class ResponsiveAgent:
                 context = self._determine_context(property_name)
 
                 # レスポンシブ変換を実行
-                conversion_result = await self.tool_manager.execute("convert_px_to_responsive", {
-                    "property_name": property_name,
-                    "px_value": px_value,
-                    "context": context
-                })
+                conversion_result = await self.tool_manager.execute(
+                    "convert_px_to_responsive",
+                    {
+                        "property_name": property_name,
+                        "px_value": px_value,
+                        "context": context,
+                    },
+                )
 
                 if conversion_result.success:
                     result_data = conversion_result.result
@@ -497,7 +504,9 @@ class ResponsiveAgent:
                     # CSSを置換
                     old_declaration = f"{property_name}: {px_value}px"
                     new_declaration = f"{property_name}: {responsive_value}"
-                    responsive_css = responsive_css.replace(old_declaration, new_declaration)
+                    responsive_css = responsive_css.replace(
+                        old_declaration, new_declaration
+                    )
 
                     # 適用ルールを記録
                     rule = ResponsiveRule(
@@ -506,17 +515,17 @@ class ResponsiveAgent:
                         responsive_value=responsive_value,
                         unit_type=ResponsiveUnit(result_data["unit_type"]),
                         breakpoints=[],
-                        reasoning=result_data["reasoning"]
+                        reasoning=result_data["reasoning"],
                     )
                     applied_rules.append(rule)
 
         # メディアクエリを生成
         target_properties = [rule.property_name for rule in applied_rules]
         if target_properties:
-            media_query_result = await self.tool_manager.execute("generate_media_queries", {
-                "css_rules": [responsive_css],
-                "target_properties": target_properties
-            })
+            media_query_result = await self.tool_manager.execute(
+                "generate_media_queries",
+                {"css_rules": [responsive_css], "target_properties": target_properties},
+            )
 
             if media_query_result.success:
                 media_queries = media_query_result.result
@@ -524,19 +533,25 @@ class ResponsiveAgent:
 
         # Grid/Flexboxレイアウトの提案
         if self._should_suggest_grid_layout(original_css):
-            grid_result = await self.tool_manager.execute("convert_to_grid_layout", {
-                "html_structure": "",  # 実際の実装では対応するHTMLを渡す
-                "css_rules": responsive_css
-            })
+            grid_result = await self.tool_manager.execute(
+                "convert_to_grid_layout",
+                {
+                    "html_structure": "",  # 実際の実装では対応するHTMLを渡す
+                    "css_rules": responsive_css,
+                },
+            )
 
             if grid_result.success:
                 grid_layouts.append(grid_result.result["grid_css"])
 
         if self._should_suggest_flexbox_layout(original_css):
-            flexbox_result = await self.tool_manager.execute("convert_to_flexbox_layout", {
-                "html_structure": "",  # 実際の実装では対応するHTMLを渡す
-                "css_rules": responsive_css
-            })
+            flexbox_result = await self.tool_manager.execute(
+                "convert_to_flexbox_layout",
+                {
+                    "html_structure": "",  # 実際の実装では対応するHTMLを渡す
+                    "css_rules": responsive_css,
+                },
+            )
 
             if flexbox_result.success:
                 flexbox_layouts.append(flexbox_result.result["flexbox_css"])
@@ -549,7 +564,7 @@ class ResponsiveAgent:
             applied_rules=applied_rules,
             media_queries=media_queries,
             grid_layouts=grid_layouts,
-            flexbox_layouts=flexbox_layouts
+            flexbox_layouts=flexbox_layouts,
         )
 
         # メモリに保存
@@ -559,8 +574,8 @@ class ResponsiveAgent:
                 "type": "responsive_conversion",
                 "file_path": file_path,
                 "rules_applied": len(applied_rules),
-                "media_queries_added": len(media_queries)
-            }
+                "media_queries_added": len(media_queries),
+            },
         )
 
         logger.info(f"レスポンシブ変換完了: {file_path}, {len(applied_rules)}ルール適用")
@@ -576,7 +591,14 @@ class ResponsiveAgent:
         Returns:
             コンテキスト文字列
         """
-        layout_props = ["width", "height", "max-width", "max-height", "min-width", "min-height"]
+        layout_props = [
+            "width",
+            "height",
+            "max-width",
+            "max-height",
+            "min-width",
+            "min-height",
+        ]
         text_props = ["font-size", "line-height", "letter-spacing"]
         spacing_props = ["margin", "padding", "gap", "top", "left", "right", "bottom"]
 
@@ -593,7 +615,9 @@ class ResponsiveAgent:
         """Grid レイアウトを提案すべきかを判定"""
         # float や position を多用している場合はGrid を提案
         float_count = css_content.count("float:")
-        position_count = css_content.count("position: absolute") + css_content.count("position: relative")
+        position_count = css_content.count("position: absolute") + css_content.count(
+            "position: relative"
+        )
 
         return float_count > 2 or position_count > 3
 
@@ -605,7 +629,9 @@ class ResponsiveAgent:
 
         return inline_block_count > 2 or table_cell_count > 1
 
-    async def save_conversion_result(self, conversion: ResponsiveConversion, output_dir: str) -> None:
+    async def save_conversion_result(
+        self, conversion: ResponsiveConversion, output_dir: str
+    ) -> None:
         """
         変換結果を保存
 
@@ -618,7 +644,7 @@ class ResponsiveAgent:
 
         # 変換されたCSSファイルを保存
         css_file_path = output_path / f"responsive_{Path(conversion.file_path).name}"
-        with open(css_file_path, 'w', encoding='utf-8') as f:
+        with open(css_file_path, "w", encoding="utf-8") as f:
             f.write(conversion.responsive_css)
 
         # 変換レポートを保存
@@ -630,17 +656,19 @@ class ResponsiveAgent:
                     "original_value": rule.original_value,
                     "responsive_value": rule.responsive_value,
                     "unit_type": rule.unit_type.value,
-                    "reasoning": rule.reasoning
+                    "reasoning": rule.reasoning,
                 }
                 for rule in conversion.applied_rules
             ],
             "media_queries_count": len(conversion.media_queries),
             "grid_layouts_count": len(conversion.grid_layouts),
-            "flexbox_layouts_count": len(conversion.flexbox_layouts)
+            "flexbox_layouts_count": len(conversion.flexbox_layouts),
         }
 
-        report_path = output_path / f"conversion_report_{Path(conversion.file_path).stem}.json"
-        with open(report_path, 'w', encoding='utf-8') as f:
+        report_path = (
+            output_path / f"conversion_report_{Path(conversion.file_path).stem}.json"
+        )
+        with open(report_path, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
 
         logger.info(f"変換結果を保存しました: {css_file_path}, {report_path}")
@@ -660,13 +688,13 @@ async def main():
             {
                 "issue_type": "fixed_px_size",
                 "current_code": "width: 300px",
-                "line_number": 10
+                "line_number": 10,
             },
             {
                 "issue_type": "fixed_px_size",
                 "current_code": "font-size: 16px",
-                "line_number": 15
-            }
+                "line_number": 15,
+            },
         ]
 
         conversion = await agent.convert_css_file("sample.css", sample_issues)

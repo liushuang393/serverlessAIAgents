@@ -347,21 +347,21 @@ if errorlevel 1 exit /b 1
 if not "%TEST_ONLY%"=="true" (
     call :build_docker_image
     if errorlevel 1 exit /b 1
-    
+
     call :upload_to_pypi
     if errorlevel 1 exit /b 1
-    
+
     call :deploy_docker
     if errorlevel 1 exit /b 1
-    
+
     call :health_check
     if errorlevel 1 exit /b 1
-    
+
     REM Gitタグ作成
     set TAG_NAME=v%CURRENT_VERSION%
     git tag "!TAG_NAME!"
     git push origin "!TAG_NAME!"
-    
+
     call :log_success "完全リリース完了: !TAG_NAME!"
 ) else (
     call :log_success "テスト環境リリース完了"

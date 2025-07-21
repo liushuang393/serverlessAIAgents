@@ -151,3 +151,4 @@ generate_agents.sh
 products/frontend_migration/test_reports/*
 
 test_reports/*
+agentFWs_codes/gen_fwcode.sh
