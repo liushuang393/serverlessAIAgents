@@ -12,10 +12,9 @@ Jest + React Testing Library を使った自動テスト生成を担当するエ
 """
 
 import asyncio
-import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from ai_blocks.core.memory import VectorMemory
 from ai_blocks.core.tool import ToolManager, tool
@@ -77,7 +76,7 @@ class TestAgent:
         @tool(name="generate_unit_tests", description="React コンポーネントの単体テストを生成")
         def generate_unit_tests(
             component_code: str, component_name: str
-        ) -> List[Dict[str, str]]:
+        ) -> List[Dict[str, Any]]:
             """
             React コンポーネントの単体テストを生成
 
@@ -167,7 +166,7 @@ test('handles {component_name} events correctly', () => {{
             return test_cases
 
         @tool(name="generate_accessibility_tests", description="アクセシビリティテストを生成")
-        def generate_accessibility_tests(component_name: str) -> List[Dict[str, str]]:
+        def generate_accessibility_tests(component_name: str) -> List[Dict[str, Any]]:
             """
             アクセシビリティテストを生成
 
@@ -253,7 +252,7 @@ test('{component_name} has proper ARIA attributes', () => {{
         @tool(name="generate_integration_tests", description="インテグレーションテストを生成")
         def generate_integration_tests(
             component_name: str, dependencies: List[str]
-        ) -> List[Dict[str, str]]:
+        ) -> List[Dict[str, Any]]:
             """
             インテグレーションテストを生成
 
@@ -277,7 +276,10 @@ test('{component_name} integrates with child components', () => {{
   );
 
   // 子コンポーネントが正しくレンダリングされることを確認
-  {chr(10).join([f'  expect(screen.getByTestId("{dep.lower()}")).toBeInTheDocument();' for dep in dependencies])}
+  {chr(10).join([
+      f'  expect(screen.getByTestId("{dep.lower()}")).toBeInTheDocument();'
+      for dep in dependencies
+  ])}
 }});
 """
                 integration_tests.append(
@@ -322,7 +324,7 @@ test('{component_name} handles data flow correctly', async () => {{
             return integration_tests
 
         @tool(name="generate_performance_tests", description="パフォーマンステストを生成")
-        def generate_performance_tests(component_name: str) -> List[Dict[str, str]]:
+        def generate_performance_tests(component_name: str) -> List[Dict[str, Any]]:
             """
             パフォーマンステストを生成
 
@@ -640,7 +642,7 @@ async def main():
         # テストスイートを保存
         await agent.save_test_suite(test_suite)
 
-        print(f"テストスイート生成完了:")
+        print("テストスイート生成完了:")
         print(f"  コンポーネント: {test_suite.component_name}")
         print(f"  テストケース数: {len(test_suite.test_cases)}")
         print(f"  テストファイル: {test_suite.test_file_path}")

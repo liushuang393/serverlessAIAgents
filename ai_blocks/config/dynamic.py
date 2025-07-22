@@ -8,19 +8,17 @@
 import asyncio
 import json
 import os
-import time
 from contextlib import asynccontextmanager
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Union
+from typing import Any, Callable, Dict, List, Optional
 
 import yaml
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 from ..utils.logging import get_logger
-from .settings import Settings, get_settings
 
 logger = get_logger(__name__)
 
@@ -105,14 +103,16 @@ class DynamicSettings(BaseModel):
         default=0.1, description="トレースサンプリング率", ge=0.0, le=1.0
     )
 
-    @validator("log_level")
+    @field_validator("log_level")
+    @classmethod
     def validate_log_level(cls, v):
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if v.upper() not in valid_levels:
             raise ValueError(f"ログレベルは {valid_levels} のいずれかである必要があります")
         return v.upper()
 
-    @validator("default_model")
+    @field_validator("default_model")
+    @classmethod
     def validate_model(cls, v):
         # 基本的なモデル名の検証
         if not v or len(v.strip()) == 0:
@@ -188,10 +188,11 @@ class ConfigManager:
 
                 if hasattr(self._settings, setting_key):
                     # 型変換
-                    field_info = self._settings.__fields__[setting_key]
-                    field_type = field_info.type_
+                    field_info = self._settings.__class__.model_fields[setting_key]
+                    field_type = field_info.annotation
 
                     try:
+                        converted_value: Any
                         if field_type == bool:
                             converted_value = value.lower() in (
                                 "true",
@@ -328,7 +329,7 @@ class ConfigManager:
         # Pydanticのバリデーション
         try:
             # 一時的なインスタンスでバリデーション
-            temp_settings = self._settings.copy()
+            temp_settings = self._settings.model_copy()
             setattr(temp_settings, key, value)
             return True
         except Exception as e:
@@ -397,7 +398,7 @@ class ConfigManager:
         target_file = file_path or self.config_file
 
         # 設定を辞書に変換
-        config_dict = self._settings.dict()
+        config_dict = self._settings.model_dump()
 
         try:
             with open(target_file, "w", encoding="utf-8") as f:
@@ -422,7 +423,7 @@ class ConfigManager:
 
     def get_current_settings(self) -> Dict[str, Any]:
         """現在の設定を取得する"""
-        return self._settings.dict()
+        return self._settings.model_dump()
 
     async def cleanup(self) -> None:
         """クリーンアップ処理"""

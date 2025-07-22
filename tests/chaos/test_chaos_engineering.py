@@ -8,17 +8,14 @@
 import asyncio
 import random
 import time
-from typing import Any, Dict, List, Optional
-from unittest.mock import MagicMock, patch
+from typing import Any, Dict, List
 
 import pytest
 
-from ai_blocks.core.factory import get_factory
 from ai_blocks.core.memory import VectorMemory
-from ai_blocks.core.registry import DeploymentStrategy, get_registry
 from ai_blocks.core.thread import SimpleThread
 from ai_blocks.core.tool import ToolManager
-from ai_blocks.utils.observability import get_observability_manager
+from ai_blocks.utils.observability import MetricType, get_observability_manager
 
 
 class ChaosInjector:
@@ -158,11 +155,11 @@ class TestChaosEngineering:
         for i in range(50):
             try:
                 # ストア操作
-                memory_id = await chaos_memory.store(f"カオステストデータ {i}")
+                _ = await chaos_memory.store(f"カオステストデータ {i}")
                 successful_stores += 1
 
                 # 検索操作
-                results = await chaos_memory.search("カオス", limit=5)
+                _ = await chaos_memory.search("カオス", limit=5)
                 successful_searches += 1
 
             except Exception as e:
@@ -177,7 +174,7 @@ class TestChaosEngineering:
         )
         success_rate = (successful_stores + successful_searches) / total_operations
 
-        print(f"メモリカオステスト結果:")
+        print("メモリカオステスト結果:")
         print(f"  成功ストア: {successful_stores}")
         print(f"  失敗ストア: {failed_stores}")
         print(f"  成功検索: {successful_searches}")
@@ -197,7 +194,7 @@ class TestChaosEngineering:
         timeout_executions = 0
 
         # 様々なツールを実行
-        tools_to_test = [
+        tools_to_test: List[tuple[str, Dict[str, Any]]] = [
             ("echo", {"text": "カオステスト"}),
             ("add", {"a": 10, "b": 20}),
             ("multiply", {"a": 5, "b": 7}),
@@ -211,7 +208,7 @@ class TestChaosEngineering:
                     result = await asyncio.wait_for(
                         chaos_tool_manager.execute(tool_name, params), timeout=5.0
                     )
-                    execution_time = time.time() - start_time
+                    _ = time.time() - start_time
 
                     if result.success:
                         successful_executions += 1
@@ -228,7 +225,7 @@ class TestChaosEngineering:
         )
         success_rate = successful_executions / total_executions
 
-        print(f"ツールカオステスト結果:")
+        print("ツールカオステスト結果:")
         print(f"  成功実行: {successful_executions}")
         print(f"  失敗実行: {failed_executions}")
         print(f"  タイムアウト: {timeout_executions}")
@@ -249,8 +246,8 @@ class TestChaosEngineering:
 
             for i in range(10):
                 try:
-                    memory_id = await chaos_memory.store(f"ワーカー{worker_id}データ{i}")
-                    search_results = await chaos_memory.search(f"ワーカー{worker_id}")
+                    _ = await chaos_memory.store(f"ワーカー{worker_id}データ{i}")
+                    _ = await chaos_memory.search(f"ワーカー{worker_id}")
                     results["success"] += 1
                 except Exception:
                     results["failure"] += 1
@@ -311,7 +308,7 @@ class TestChaosEngineering:
         chaos_memory = ChaosMemory(self.chaos_injector, max_items=100)
 
         # 正常状態でのテスト
-        memory_id = await chaos_memory.store("分断テスト前")
+        _ = await chaos_memory.store("分断テスト前")
         results = await chaos_memory.search("分断")
         assert len(results) > 0
 
@@ -333,7 +330,7 @@ class TestChaosEngineering:
         results = await chaos_memory.search("分断")
         assert len(results) > 0
 
-        print(f"ネットワーク分断テスト結果:")
+        print("ネットワーク分断テスト結果:")
         print(f"  分断中の失敗: {partition_failures}/10")
 
         # 分断が実際に発生していることを確認
@@ -358,7 +355,7 @@ class TestChaosEngineering:
             except Exception:
                 pass  # その他のカオス障害は無視
 
-        print(f"リソース枯渇テスト結果:")
+        print("リソース枯渇テスト結果:")
         print(f"  成功ストア: {successful_stores}")
         print(f"  メモリエラー: {memory_errors}")
 
@@ -382,15 +379,15 @@ class TestChaosEngineering:
             """複雑なワークフローをシミュレート"""
             try:
                 # 1. メモリにデータを保存
-                memory_id = await chaos_memory.store(f"ワークフロー{workflow_id}データ")
+                _ = await chaos_memory.store(f"ワークフロー{workflow_id}データ")
 
                 # 2. ツールを実行
-                tool_result = await chaos_tool_manager.execute(
+                _ = await chaos_tool_manager.execute(
                     "echo", {"text": f"ワークフロー{workflow_id}"}
                 )
 
                 # 3. 高障害率メモリで検索
-                search_results = await high_chaos_memory.search(f"ワークフロー{workflow_id}")
+                _ = await high_chaos_memory.search(f"ワークフロー{workflow_id}")
 
                 # 4. スレッドにメッセージを追加
                 from ai_blocks.core.models import Message, MessageRole
@@ -402,7 +399,7 @@ class TestChaosEngineering:
 
                 return True
 
-            except Exception as e:
+            except Exception:
                 return False
 
         # 複数のワークフローを並行実行
@@ -412,7 +409,7 @@ class TestChaosEngineering:
         successful_workflows = sum(1 for r in results if r is True)
         failed_workflows = len(results) - successful_workflows
 
-        print(f"カスケード障害テスト結果:")
+        print("カスケード障害テスト結果:")
         print(f"  成功ワークフロー: {successful_workflows}")
         print(f"  失敗ワークフロー: {failed_workflows}")
         print(f"  成功率: {successful_workflows/len(results):.2%}")
@@ -462,7 +459,7 @@ class TestChaosEngineering:
         chaos_success_rate = chaos_successes / chaos_operations
         recovery_success_rate = recovery_successes / recovery_operations
 
-        print(f"回復テスト結果:")
+        print("回復テスト結果:")
         print(f"  カオス期間成功率: {chaos_success_rate:.2%}")
         print(f"  回復期間成功率: {recovery_success_rate:.2%}")
 
@@ -488,7 +485,7 @@ class TestChaosEngineering:
                     self.observability.record_metric(
                         "chaos_test_operations",
                         1.0,
-                        "counter",
+                        MetricType.COUNTER,
                         {"operation": "store", "attempt": str(i)},
                     )
 
@@ -498,13 +495,19 @@ class TestChaosEngineering:
 
                     # 成功メトリクスを記録
                     self.observability.record_metric(
-                        "chaos_test_success", 1.0, "counter", {"operation": "store"}
+                        "chaos_test_success",
+                        1.0,
+                        MetricType.COUNTER,
+                        {"operation": "store"},
                     )
 
                 except Exception:
                     # 失敗メトリクスを記録
                     self.observability.record_metric(
-                        "chaos_test_failures", 1.0, "counter", {"operation": "store"}
+                        "chaos_test_failures",
+                        1.0,
+                        MetricType.COUNTER,
+                        {"operation": "store"},
                     )
 
         # 観測可能性システムが機能していることを確認
@@ -518,7 +521,7 @@ class TestChaosEngineering:
         assert "chaos_test_operations" in metric_names
 
         success_rate = operations_successful / operations_attempted
-        print(f"カオス下観測可能性テスト結果:")
+        print("カオス下観測可能性テスト結果:")
         print(f"  成功率: {success_rate:.2%}")
         print(f"  記録されたメトリクス数: {len(metrics)}")
 

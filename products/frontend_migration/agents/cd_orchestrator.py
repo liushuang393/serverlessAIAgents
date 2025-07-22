@@ -15,9 +15,7 @@ import asyncio
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-import yaml
+from typing import Any, Dict, List
 
 from ai_blocks.core.memory import VectorMemory
 from ai_blocks.core.tool import ToolManager, tool
@@ -206,7 +204,7 @@ jobs:
             workflows["ci-cd.yml"] = main_workflow
 
             # 品質チェック専用ワークフロー
-            quality_workflow = f"""
+            quality_workflow = """
 name: Quality Checks
 
 on:
@@ -304,7 +302,7 @@ jobs:
             Returns:
                 Netlify 設定ファイル
             """
-            netlify_config = f"""
+            netlify_config = """
 [build]
   publish = "dist"
   command = "npm run build"
@@ -338,11 +336,11 @@ jobs:
 
 [context.staging]
   command = "npm run build:staging"
-  environment = {{ NODE_ENV = "staging" }}
+  environment = { NODE_ENV = "staging" }
 
 [context.production]
   command = "npm run build:production"
-  environment = {{ NODE_ENV = "production" }}
+  environment = { NODE_ENV = "production" }
 """
 
             return {"netlify.toml": netlify_config}
@@ -423,7 +421,7 @@ jobs:
             return {"lighthouserc.json": json.dumps(lighthouse_config, indent=2)}
 
         @tool(name="generate_package_scripts", description="package.json スクリプトを生成")
-        def generate_package_scripts(build_config: Dict[str, Any]) -> Dict[str, str]:
+        def generate_package_scripts(build_config: Dict[str, Any]) -> Dict[str, Any]:
             """
             package.json のスクリプトセクションを生成
 
@@ -644,7 +642,7 @@ async def main():
         # パイプラインファイルを保存
         await orchestrator.save_pipeline_files(cd_pipeline, ".")
 
-        print(f"CDパイプラインセットアップ完了:")
+        print("CDパイプラインセットアップ完了:")
         print(f"  パイプライン名: {cd_pipeline.name}")
         print(f"  環境数: {len(cd_pipeline.environments)}")
         print(f"  ワークフローファイル数: {len(cd_pipeline.workflow_files)}")

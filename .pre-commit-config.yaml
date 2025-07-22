@@ -25,12 +25,10 @@ repos:
     rev: 6.0.0
     hooks:
       - id: flake8
-        args: [--max-line-length=88, --extend-ignore=E203]
+        args: [--max-line-length=110, --extend-ignore=E203]
 
-  # mypyは一時的に無効化 - プロジェクト全体の型エラーが多すぎるため
-  # 将来的に段階的に有効化予定
-  # - repo: https://github.com/pre-commit/mirrors-mypy
-  #   rev: v1.5.1
-  #   hooks:
-  #     - id: mypy
-  #       additional_dependencies: [pydantic, types-requests]
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.5.1
+    hooks:
+      - id: mypy
+        additional_dependencies: [pydantic, types-requests, types-PyYAML]

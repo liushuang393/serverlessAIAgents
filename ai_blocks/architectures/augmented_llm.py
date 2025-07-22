@@ -22,10 +22,10 @@ class AugmentedLLM(Agent):
     def __init__(
         self,
         llm_provider: Any,
-        memory: MemoryInterface = None,
-        tool_manager: ToolInterface = None,
+        memory: Optional[MemoryInterface] = None,
+        tool_manager: Optional[ToolInterface] = None,
         name: str = "AugmentedLLM",
-        config: Dict[str, Any] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         """
         Augmented LLMを初期化する
@@ -38,11 +38,10 @@ class AugmentedLLM(Agent):
             config: 設定辞書
         """
         super().__init__(name, config)
-
         self.llm = llm_provider
         self.memory = memory
         self.tools = tool_manager
-
+        self.config = config if config is not None else {}
         # 設定値
         self.max_memory_items = self.config.get("max_memory_items", 5)
         self.memory_threshold = self.config.get("memory_threshold", 0.7)
@@ -51,7 +50,9 @@ class AugmentedLLM(Agent):
 
         logger.info(f"Augmented LLM '{self.name}' を初期化しました")
 
-    async def process(self, input_text: str, context: Dict[str, Any] = None) -> str:
+    async def process(
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
         入力を処理して応答を生成する
 
@@ -65,25 +66,19 @@ class AugmentedLLM(Agent):
         if not input_text.strip():
             return "申し訳ありませんが、入力が空です。何かご質問やご依頼はありますか？"
 
-        context = context or {}
-
+        context = context if context is not None else {}
         try:
             # 1. 関連する記憶を検索
             relevant_memories = await self._search_memory(input_text)
-
-            # 2. 必要に応じてツールを実行
+            # 2. ツール実行
             tool_results = await self._execute_tools_if_needed(input_text, context)
-
             # 3. LLMで応答生成
             response = await self._generate_response(
                 input_text, relevant_memories, tool_results, context
             )
-
             # 4. 応答を記憶に保存
             await self._store_interaction(input_text, response)
-
             return response
-
         except Exception as e:
             logger.error(f"処理中にエラーが発生しました: {e}")
             return f"申し訳ありませんが、処理中にエラーが発生しました: {str(e)}"
@@ -100,12 +95,10 @@ class AugmentedLLM(Agent):
         """
         if not self.memory:
             return []
-
         try:
             memory_items = await self.memory.search(
                 query, limit=self.max_memory_items, threshold=self.memory_threshold
             )
-
             memories = []
             for item in memory_items:
                 memories.append(
@@ -115,10 +108,8 @@ class AugmentedLLM(Agent):
                         "metadata": item.metadata,
                     }
                 )
-
             logger.debug(f"記憶検索結果: {len(memories)}件")
             return memories
-
         except Exception as e:
             logger.warning(f"記憶検索中にエラーが発生しました: {e}")
             return []
@@ -284,7 +275,8 @@ class AugmentedLLM(Agent):
         if tool_results:
             tool_text = "\n".join(
                 [
-                    f"- {result['tool']}: {result['result'] if result['success'] else result['error']}"
+                    f"- {result['tool']}: "
+                    f"{result['result'] if result['success'] else result['error']}"
                     for result in tool_results
                 ]
             )
@@ -307,7 +299,7 @@ class AugmentedLLM(Agent):
 
         try:
             response = await self.llm.generate(prompt)
-            return response.strip()
+            return str(response).strip()
 
         except Exception as e:
             logger.error(f"LLM応答生成中にエラーが発生しました: {e}")
@@ -342,7 +334,7 @@ class AugmentedLLM(Agent):
             logger.warning(f"記憶保存中にエラーが発生しました: {e}")
 
     async def add_knowledge(
-        self, knowledge: str, metadata: Dict[str, Any] = None
+        self, knowledge: str, metadata: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         知識を記憶に追加する
@@ -387,7 +379,7 @@ class AugmentedLLM(Agent):
         if self.memory:
             try:
                 memory_count = await self.memory.count()
-                status["memory_count"] = memory_count
+                status["memory_count"] = memory_count  # type: ignore
             except Exception:
                 status["memory_count"] = "unknown"
 

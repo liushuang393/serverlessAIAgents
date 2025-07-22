@@ -35,7 +35,7 @@ class EvaluatorInterface(ABC):
 
     @abstractmethod
     async def evaluate(
-        self, output: str, criteria: List[str], context: Dict[str, Any] = None
+        self, output: str, criteria: List[str], context: Optional[Dict[str, Any]] = None
     ) -> EvaluationResult:
         """
         出力を評価する
@@ -87,7 +87,7 @@ class RuleBasedEvaluator(EvaluatorInterface):
         logger.info(f"ルールベースの評価器を初期化しました（合格閾値: {passing_threshold}）")
 
     async def evaluate(
-        self, output: str, criteria: List[str], context: Dict[str, Any] = None
+        self, output: str, criteria: List[str], context: Optional[Dict[str, Any]] = None
     ) -> EvaluationResult:
         """
         出力を評価する
@@ -176,7 +176,7 @@ class RuleBasedEvaluator(EvaluatorInterface):
         for criterion, score in evaluation.criteria_scores.items():
             if score < self.passing_threshold:
                 suggestion = await self._get_improvement_suggestion(
-                    criterion, score, output, context
+                    criterion, score, output, context or {}
                 )
                 if suggestion:
                     suggestions.append(suggestion)
@@ -210,9 +210,9 @@ class RuleBasedEvaluator(EvaluatorInterface):
 
             length = len(output)
             if length < min_length:
-                return max(0.0, length / min_length)
+                return float(max(0.0, length / min_length))
             elif length > max_length:
-                return max(0.0, 1.0 - (length - max_length) / max_length)
+                return float(max(0.0, 1.0 - (length - max_length) / max_length))
             else:
                 return 1.0
 
@@ -322,7 +322,7 @@ class LLMEvaluator(EvaluatorInterface):
         logger.info(f"LLMベースの評価器を初期化しました（合格閾値: {passing_threshold}）")
 
     async def evaluate(
-        self, output: str, criteria: List[str], context: Dict[str, Any] = None
+        self, output: str, criteria: List[str], context: Optional[Dict[str, Any]] = None
     ) -> EvaluationResult:
         """
         出力を評価する
@@ -394,7 +394,7 @@ class LLMEvaluator(EvaluatorInterface):
 
         try:
             # LLMに改善提案を依頼
-            prompt = self._create_improvement_prompt(output, evaluation, context)
+            prompt = self._create_improvement_prompt(output, evaluation, context or {})
             response = await self.llm_provider.generate(prompt)
 
             # レスポンスを解析
@@ -408,7 +408,7 @@ class LLMEvaluator(EvaluatorInterface):
             return [f"改善提案生成エラー: {str(e)}"]
 
     def _create_evaluation_prompt(
-        self, output: str, criteria: List[str], context: Dict[str, Any]
+        self, output: str, criteria: List[str], context: Optional[Dict[str, Any]]
     ) -> str:
         """評価用のプロンプトを作成する"""
         context = context or {}

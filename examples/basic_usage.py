@@ -5,14 +5,13 @@ AI Blocks 基本使用例
 """
 
 import asyncio
-from datetime import datetime
 
 from ai_blocks.core.chunker import SmartChunker
 from ai_blocks.core.evaluator import RuleBasedEvaluator
 
 # AI Blocksのコンポーネントをインポート
 from ai_blocks.core.memory import VectorMemory
-from ai_blocks.core.models import Message, MessageRole, RouteDefinition
+from ai_blocks.core.models import Message, MessageRole
 from ai_blocks.core.parser import MultiParser
 from ai_blocks.core.router import RuleBasedRouter
 from ai_blocks.core.thread import SimpleThread
@@ -223,12 +222,14 @@ async def demo_router():
             target="weather_agent",
             priority=90,
             conditions={"type": RouteType.KEYWORD, "keywords": ["天気", "weather", "気温"]},
+            description="天気関連のクエリ",
         ),
         RouteDefinition(
             pattern="math",
             target="math_agent",
             priority=85,
             conditions={"type": RouteType.KEYWORD, "keywords": ["計算", "数学", "math"]},
+            description="数学関連のクエリ",
         ),
     ]
 

@@ -5,8 +5,6 @@
 統一されたインターフェースを提供します。
 """
 
-import asyncio
-import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
@@ -14,7 +12,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from ..config import get_settings
-from ..core.models import MemoryItem
 from ..utils.logging import get_logger
 
 logger = get_logger(__name__)
@@ -128,8 +125,8 @@ class ChromaDBStore(VectorStore):
         self.persist_directory = (
             persist_directory or self.settings.chroma_persist_directory
         )
-        self._client = None
-        self._collection = None
+        self._client: Any = None
+        self._collection: Any = None
 
         logger.info(f"ChromaDBStore を初期化しました (collection: {collection_name})")
 
@@ -157,6 +154,9 @@ class ChromaDBStore(VectorStore):
 
             except ImportError:
                 raise ImportError("chromadbパッケージがインストールされていません: pip install chromadb")
+
+        if self._client is None or self._collection is None:
+            raise RuntimeError("ChromaDBクライアントの初期化に失敗しました")
 
         return self._client, self._collection
 
@@ -272,7 +272,8 @@ class ChromaDBStore(VectorStore):
         _, collection = self._get_client()
 
         try:
-            return collection.count()
+            count = collection.count()
+            return int(count) if count is not None else 0
 
         except Exception as e:
             logger.error(f"ChromaDBカウントエラー: {e}")
@@ -433,7 +434,8 @@ class PineconeStore(VectorStore):
 
         try:
             stats = index.describe_index_stats()
-            return stats["total_vector_count"]
+            count = stats.get("total_vector_count", 0)
+            return int(count) if count is not None else 0
 
         except Exception as e:
             logger.error(f"Pineconeカウントエラー: {e}")

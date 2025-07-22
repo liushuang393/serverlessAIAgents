@@ -5,10 +5,9 @@ Prompt Chaining アーキテクチャパターン
 各Agentは特定のタスクに特化し、前のAgentの出力を次のAgentの入力として使用します。
 """
 
-import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
-from ..core.models import ChainResult
+from ..core.models import ChainResult, Message, MessageRole
 from ..utils.logging import get_logger
 from .base import Agent, ChainExecutor
 
@@ -20,9 +19,9 @@ class PromptChain:
 
     def __init__(
         self,
-        agents: List[Agent] = None,
+        agents: Optional[Sequence[Agent]] = None,
         name: str = "PromptChain",
-        config: Dict[str, Any] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         """
         Prompt Chainを初期化する
@@ -33,8 +32,8 @@ class PromptChain:
             config: 設定辞書
         """
         self.name = name
-        self.agents = agents or []
-        self.config = config or {}
+        self.agents: List[Agent] = list(agents) if agents is not None else []
+        self.config = config if config is not None else {}
         self.executor = ChainExecutor(self.agents)
 
         # 設定値
@@ -44,7 +43,7 @@ class PromptChain:
         logger.info(f"Prompt Chain '{self.name}' を初期化しました（{len(self.agents)}個のAgent）")
 
     async def execute(
-        self, initial_input: str, context: Dict[str, Any] = None
+        self, initial_input: str, context: Optional[Dict[str, Any]] = None
     ) -> ChainResult:
         """
         チェーンを実行する
@@ -68,9 +67,9 @@ class PromptChain:
 
         # エラー回復機能が有効な場合は再試行ロジックを使用
         if self.enable_error_recovery:
-            return await self._execute_with_retry(initial_input, context)
+            return await self._execute_with_retry(initial_input, context or {})
         else:
-            return await self.executor.execute_sequential(initial_input, context)
+            return await self.executor.execute_sequential(initial_input, context or {})
 
     async def _execute_with_retry(
         self, initial_input: str, context: Dict[str, Any]
@@ -100,7 +99,8 @@ class PromptChain:
                     last_result = result
                     if attempt < self.max_retries:
                         logger.warning(
-                            f"Prompt Chain '{self.name}' が失敗しました。再試行します（{attempt + 1}/{self.max_retries}）"
+                            f"Prompt Chain '{self.name}' が失敗しました。"
+                            f"再試行します（{attempt + 1}/{self.max_retries}）"
                         )
 
             except Exception as e:
@@ -118,7 +118,7 @@ class PromptChain:
             final_output="", intermediate_results=[], execution_time=0.0, success=False
         )
 
-    def add_agent(self, agent: Agent, position: int = None) -> None:
+    def add_agent(self, agent: Agent, position: Optional[int] = None) -> None:
         """
         Agentをチェーンに追加する
 
@@ -203,8 +203,8 @@ class SpecializedAgent(Agent):
         name: str,
         task_description: str,
         llm_provider: Any = None,
-        prompt_template: str = None,
-        config: Dict[str, Any] = None,
+        prompt_template: Optional[str] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         """
         特化Agentを初期化する
@@ -224,7 +224,9 @@ class SpecializedAgent(Agent):
 
         logger.info(f"特化Agent '{self.name}' を初期化しました（タスク: {task_description}）")
 
-    async def process(self, input_text: str, context: Dict[str, Any] = None) -> str:
+    async def process(
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
         入力を処理して応答を生成する
 
@@ -241,13 +243,14 @@ class SpecializedAgent(Agent):
 
         try:
             # プロンプトを構築
-            prompt = self._build_prompt(input_text, context)
+            prompt = self._build_prompt(input_text, context or {})
 
             # LLMで処理
-            response = await self.llm.generate(prompt)
+            messages = [Message(role=MessageRole.USER, content=prompt)]
+            response = await self.llm.generate(messages)
 
             logger.debug(f"Agent '{self.name}' が処理を完了しました")
-            return response.strip()
+            return str(response.content).strip()
 
         except Exception as e:
             logger.error(f"Agent '{self.name}' の処理中にエラーが発生しました: {e}")
@@ -298,7 +301,9 @@ class SpecializedAgent(Agent):
 class SummarizerAgent(SpecializedAgent):
     """要約専門Agent"""
 
-    def __init__(self, llm_provider: Any = None, config: Dict[str, Any] = None):
+    def __init__(
+        self, llm_provider: Any = None, config: Optional[Dict[str, Any]] = None
+    ):
         super().__init__(
             name="Summarizer",
             task_description="テキストを簡潔に要約する",
@@ -326,7 +331,7 @@ class TranslatorAgent(SpecializedAgent):
         self,
         target_language: str = "English",
         llm_provider: Any = None,
-        config: Dict[str, Any] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         self.target_language = target_language
 
@@ -353,7 +358,9 @@ class TranslatorAgent(SpecializedAgent):
 class AnalyzerAgent(SpecializedAgent):
     """分析専門Agent"""
 
-    def __init__(self, llm_provider: Any = None, config: Dict[str, Any] = None):
+    def __init__(
+        self, llm_provider: Any = None, config: Optional[Dict[str, Any]] = None
+    ):
         super().__init__(
             name="Analyzer",
             task_description="テキストを分析して洞察を提供する",
@@ -383,7 +390,9 @@ def create_summarization_chain(llm_provider: Any = None) -> PromptChain:
     agents = [AnalyzerAgent(llm_provider), SummarizerAgent(llm_provider)]
 
     return PromptChain(
-        agents=agents, name="SummarizationChain", config={"enable_error_recovery": True}
+        agents=agents,
+        name="SummarizationChain",
+        config={"enable_error_recovery": True},
     )
 
 
@@ -397,5 +406,7 @@ def create_translation_chain(
     ]
 
     return PromptChain(
-        agents=agents, name="TranslationChain", config={"enable_error_recovery": True}
+        agents=agents,
+        name="TranslationChain",
+        config={"enable_error_recovery": True},
     )

@@ -5,18 +5,12 @@
 実際の移行プロセスをエンドツーエンドでテストし、品質を保証します。
 """
 
-import asyncio
 import json
-import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
 
 import pytest
-
-# プロジェクトルートをPythonパスに追加
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 from products.frontend_migration.workflows.migration_workflow import (
     MigrationOrchestrator,
@@ -534,7 +528,7 @@ $(document).ready(function() {
         initial_count = await orchestrator.memory.count()
 
         # 移行を実行
-        result = await orchestrator.migrate_project(complex_sample_project)
+        _ = await orchestrator.migrate_project(complex_sample_project)
 
         # メモリに移行プロセスが記録されているかチェック
         final_count = await orchestrator.memory.count()

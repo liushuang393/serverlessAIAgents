@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
-from ..core.models import ChainResult, Message, MessageRole
+from ..core.models import Message, MessageRole
 from ..utils.logging import get_logger
 from .base import Agent
 
@@ -53,7 +53,9 @@ class SubTask:
 class WorkerAgent(Agent):
     """ワーカーエージェントの基底クラス"""
 
-    def __init__(self, name: str, worker_type: str, config: Dict[str, Any] = None):
+    def __init__(
+        self, name: str, worker_type: str, config: Optional[Dict[str, Any]] = None
+    ):
         """
         ワーカーエージェントを初期化する
 
@@ -62,7 +64,7 @@ class WorkerAgent(Agent):
             worker_type: ワーカータイプ
             config: 設定辞書
         """
-        super().__init__(name, config)
+        super().__init__(name, config if config is not None else {})
         self.worker_type = worker_type
         self.is_busy = False
 
@@ -129,7 +131,9 @@ class WorkerAgent(Agent):
 class LLMWorker(WorkerAgent):
     """LLMを使用するワーカーエージェント"""
 
-    def __init__(self, name: str, llm_provider: Any, config: Dict[str, Any] = None):
+    def __init__(
+        self, name: str, llm_provider: Any, config: Optional[Dict[str, Any]] = None
+    ):
         """
         LLMワーカーを初期化する
 
@@ -152,14 +156,17 @@ class LLMWorker(WorkerAgent):
         ]
 
         response = await self.llm.generate(messages)
-        return response.content
+        return str(response.content)
 
 
 class DataProcessingWorker(WorkerAgent):
     """データ処理専用のワーカーエージェント"""
 
     def __init__(
-        self, name: str, processor_func: Callable, config: Dict[str, Any] = None
+        self,
+        name: str,
+        processor_func: Callable,
+        config: Optional[Dict[str, Any]] = None,
     ):
         """
         データ処理ワーカーを初期化する
@@ -186,9 +193,9 @@ class OrchestratorWorker(Agent):
     def __init__(
         self,
         name: str = "OrchestratorWorker",
-        task_decomposer: Callable = None,
-        result_aggregator: Callable = None,
-        config: Dict[str, Any] = None,
+        task_decomposer: Optional[Callable] = None,
+        result_aggregator: Optional[Callable] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         """
         オーケストレーター・ワーカーを初期化する
@@ -243,7 +250,9 @@ class OrchestratorWorker(Agent):
 
         return None
 
-    async def process(self, input_text: str, context: Dict[str, Any] = None) -> str:
+    async def process(
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
         入力を処理して応答を生成する
 

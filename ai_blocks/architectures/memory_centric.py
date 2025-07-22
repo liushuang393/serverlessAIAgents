@@ -5,11 +5,10 @@ Memory-centric アーキテクチャパターン
 知識検索に特化したエージェントパターンを実装します。
 """
 
-import asyncio
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from ..core import ChunkerInterface, MemoryInterface, ParserInterface
 from ..core.models import MemoryItem, Message, MessageRole, ParsedDocument
@@ -37,7 +36,7 @@ class KnowledgeSource:
     description: str
     document_count: int = 0
     last_updated: Optional[float] = None
-    metadata: Dict[str, Any] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class MemoryCentricAgent(Agent):
@@ -47,11 +46,11 @@ class MemoryCentricAgent(Agent):
         self,
         name: str = "MemoryCentricAgent",
         llm_provider: Any = None,
-        memory: MemoryInterface = None,
-        chunker: ChunkerInterface = None,
-        parser: ParserInterface = None,
+        memory: Optional[MemoryInterface] = None,
+        chunker: Optional[ChunkerInterface] = None,
+        parser: Optional[ParserInterface] = None,
         search_strategy: SearchStrategy = SearchStrategy.HYBRID,
-        config: Dict[str, Any] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         """
         Memory-centricエージェントを初期化する
@@ -67,24 +66,23 @@ class MemoryCentricAgent(Agent):
         """
         super().__init__(name, config)
 
+        if not memory:
+            raise ValueError("メモリコンポーネントが必要です")
+
         self.llm = llm_provider
-        self.memory = memory
+        self.memory: MemoryInterface = memory  # 型ヒントを明確化
         self.chunker = chunker
         self.parser = parser
         self.search_strategy = search_strategy
-
+        self.config = config if config is not None else {}
         # 設定値
         self.max_search_results = self.config.get("max_search_results", 10)
         self.similarity_threshold = self.config.get("similarity_threshold", 0.7)
         self.context_window_size = self.config.get("context_window_size", 4000)
         self.enable_source_citation = self.config.get("enable_source_citation", True)
         self.rerank_results = self.config.get("rerank_results", True)
-
         # 知識ソース管理
         self.knowledge_sources: Dict[str, KnowledgeSource] = {}
-
-        if not self.memory:
-            raise ValueError("メモリコンポーネントが必要です")
 
         logger.info(
             f"MemoryCentricAgent '{self.name}' を初期化しました (strategy: {search_strategy})"
@@ -96,7 +94,7 @@ class MemoryCentricAgent(Agent):
         name: str,
         documents: List[Any],
         description: str = "",
-        metadata: Dict[str, Any] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         知識ソースを追加する
@@ -117,35 +115,58 @@ class MemoryCentricAgent(Agent):
             try:
                 # ドキュメントをパース
                 if self.parser:
-                    parsed_doc = await self.parser.parse(doc)
+                    # docの型に応じてcontent_typeを推定
+                    if isinstance(doc, bytes):
+                        content = doc
+                        content_type = "application/octet-stream"  # デフォルト
+                    elif isinstance(doc, str):
+                        # 文字列の場合はバイト列に変換
+                        content = doc.encode("utf-8")
+                        # 拡張子やコンテンツから推定
+                        if doc.strip().startswith("<"):
+                            content_type = "text/html"
+                        elif doc.strip().startswith("{") or doc.strip().startswith("["):
+                            content_type = "application/json"
+                        else:
+                            content_type = "text/plain"
+                    else:
+                        # その他の場合は文字列として扱う
+                        content = str(doc).encode("utf-8")
+                        content_type = "text/plain"
+
+                    parsed_doc = await self.parser.parse(content, content_type)
                 else:
                     # パーサーがない場合は文字列として扱う
                     parsed_doc = ParsedDocument(
                         text=str(doc),
                         metadata={"source_id": source_id},
                         source_type="text",
+                        chunks=None,
                     )
 
                 # テキストをチャンク化
                 if self.chunker:
-                    chunks = await self.chunker.chunk(parsed_doc.text)
+                    text_chunks = await self.chunker.chunk(parsed_doc.text)
+                    chunk_texts = [chunk.text for chunk in text_chunks]
                 else:
                     # チャンカーがない場合は全体を1つのチャンクとして扱う
-                    chunks = [parsed_doc.text]
+                    chunk_texts = [parsed_doc.text]
 
                 # 各チャンクをメモリに保存
-                for i, chunk_text in enumerate(chunks):
+                for i, chunk_content in enumerate(chunk_texts):
                     chunk_metadata = {
                         "source_id": source_id,
                         "source_name": name,
                         "document_index": document_count,
                         "chunk_index": i,
-                        "total_chunks": len(chunks),
+                        "total_chunks": len(chunk_texts),
                         **(metadata or {}),
                         **(parsed_doc.metadata or {}),
                     }
 
-                    await self.memory.store(chunk_text, chunk_metadata)
+                    if self.memory is None:
+                        raise ValueError("メモリコンポーネントが設定されていません")
+                    await self.memory.store(chunk_content, chunk_metadata)
 
                 document_count += 1
 
@@ -169,7 +190,9 @@ class MemoryCentricAgent(Agent):
             f"({document_count} ドキュメント, {processing_time:.2f}秒)"
         )
 
-    async def process(self, input_text: str, context: Dict[str, Any] = None) -> str:
+    async def process(
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
         入力を処理して知識ベースを活用した応答を生成する
 
@@ -270,8 +293,11 @@ class MemoryCentricAgent(Agent):
                 memory.similarity_score = score / len(keywords)
                 matched_memories.append(memory)
 
-        # スコア順でソート
-        matched_memories.sort(key=lambda m: m.similarity_score, reverse=True)
+        # スコア順でソート（Noneの場合は0.0として扱う）
+        matched_memories.sort(
+            key=lambda m: m.similarity_score if m.similarity_score is not None else 0.0,
+            reverse=True,
+        )
 
         return matched_memories[: self.max_search_results]
 
@@ -289,22 +315,44 @@ class MemoryCentricAgent(Agent):
         # セマンティック検索結果（重み: 0.7）
         for memory in semantic_results:
             combined_results[memory.id] = memory
-            memory.similarity_score = memory.similarity_score * 0.7
+            # similarity_scoreがNoneの場合は0.0として扱う
+            if memory.similarity_score is not None:
+                memory.similarity_score = memory.similarity_score * 0.7
+            else:
+                memory.similarity_score = 0.0
 
         # キーワード検索結果（重み: 0.3）
         for memory in keyword_results:
             if memory.id in combined_results:
                 # 既存の結果にスコアを加算
-                combined_results[memory.id].similarity_score += (
+                # similarity_scoreがNoneの場合は0.0として扱う
+                keyword_score = (
                     memory.similarity_score * 0.3
+                    if memory.similarity_score is not None
+                    else 0.0
                 )
+                existing_score = combined_results[memory.id].similarity_score
+                if existing_score is not None:
+                    combined_results[memory.id].similarity_score = (
+                        existing_score + keyword_score
+                    )
+                else:
+                    combined_results[memory.id].similarity_score = keyword_score
             else:
-                memory.similarity_score = memory.similarity_score * 0.3
+                # similarity_scoreがNoneの場合は0.0として扱う
+                memory.similarity_score = (
+                    memory.similarity_score * 0.3
+                    if memory.similarity_score is not None
+                    else 0.0
+                )
                 combined_results[memory.id] = memory
 
-        # スコア順でソート
+        # スコア順でソート（Noneの場合は0.0として扱う）
         final_results = list(combined_results.values())
-        final_results.sort(key=lambda m: m.similarity_score, reverse=True)
+        final_results.sort(
+            key=lambda m: m.similarity_score if m.similarity_score is not None else 0.0,
+            reverse=True,
+        )
 
         return final_results[: self.max_search_results]
 
@@ -349,7 +397,10 @@ class MemoryCentricAgent(Agent):
                 combined_results[memory.id] = memory
 
         final_results = list(combined_results.values())
-        final_results.sort(key=lambda m: m.similarity_score, reverse=True)
+        final_results.sort(
+            key=lambda m: m.similarity_score if m.similarity_score is not None else 0.0,
+            reverse=True,
+        )
 
         return final_results[: self.max_search_results]
 
@@ -384,8 +435,11 @@ class MemoryCentricAgent(Agent):
                 # スコア解析に失敗した場合は元のスコアを維持
                 reranked_memories.append(memory)
 
-        # 再ランクされたスコアでソート
-        reranked_memories.sort(key=lambda m: m.similarity_score, reverse=True)
+        # 再ランクされたスコアでソート（Noneの場合は0.0として扱う）
+        reranked_memories.sort(
+            key=lambda m: m.similarity_score if m.similarity_score is not None else 0.0,
+            reverse=True,
+        )
 
         return reranked_memories
 
@@ -444,7 +498,7 @@ class MemoryCentricAgent(Agent):
         ]
 
         response = await self.llm.generate(messages)
-        return response.content
+        return str(response.content)
 
     def get_knowledge_sources(self) -> Dict[str, KnowledgeSource]:
         """登録されている知識ソースを取得する"""

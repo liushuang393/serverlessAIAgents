@@ -10,10 +10,9 @@ AI Blocks 包括的デモンストレーション
 
 import asyncio
 import time
-from pathlib import Path
 
 from ai_blocks.config.dynamic import config_context, get_config_manager
-from ai_blocks.core.factory import builder, get_factory
+from ai_blocks.core.factory import get_factory
 from ai_blocks.core.memory import VectorMemory
 from ai_blocks.core.registry import DeploymentStrategy, get_registry
 from ai_blocks.core.tool import ToolManager, tool
@@ -196,12 +195,14 @@ async def demo_observability_features():
     print("\n2️⃣ メトリクス収集")
 
     # 様々なメトリクスを記録
+    from ai_blocks.utils.observability import MetricType
+
     observability.record_metric(
-        "demo_requests_total", 1.0, "counter", {"endpoint": "/api/demo"}
+        "demo_requests_total", 1.0, MetricType.COUNTER, {"endpoint": "/api/demo"}
     )
-    observability.record_metric("demo_active_users", 42.0, "gauge")
+    observability.record_metric("demo_active_users", 42.0, MetricType.GAUGE)
     observability.record_metric(
-        "demo_response_time", 0.123, "histogram", {"method": "GET"}
+        "demo_response_time", 0.123, MetricType.HISTOGRAM, {"method": "GET"}
     )
 
     metrics = observability.metrics_collector.get_metrics()
@@ -210,7 +211,7 @@ async def demo_observability_features():
     # Prometheus形式での出力例
     prometheus_output = observability.metrics_collector.get_prometheus_format()
     lines = prometheus_output.split("\n")[:10]  # 最初の10行
-    print(f"   Prometheus形式出力例:")
+    print("   Prometheus形式出力例:")
     for line in lines[:5]:  # 最初の5行のみ表示
         if line.strip():
             print(f"     {line}")
@@ -268,10 +269,16 @@ async def demo_integrated_workflow():
         # メトリクスを記録しながら知識を保存
         for i, knowledge in enumerate(knowledge_base):
             await memory.store(knowledge, {"category": "features", "index": i})
-            observability.record_metric("knowledge_items_stored", 1.0, "counter")
+            from ai_blocks.utils.observability import MetricType
+
+            observability.record_metric(
+                "knowledge_items_stored", 1.0, MetricType.COUNTER
+            )
 
         # 複数のクエリを処理
         queries = ["積木式", "ホットスワップ", "観測可能性"]
+
+        from ai_blocks.utils.observability import MetricType
 
         for query in queries:
             with observability.trace(f"query_processing_{query}"):
@@ -283,7 +290,10 @@ async def demo_integrated_workflow():
 
                 # クエリメトリクスを記録
                 observability.record_metric(
-                    "query_results_count", len(results), "gauge", {"query": query}
+                    "query_results_count",
+                    len(results),
+                    MetricType.GAUGE,
+                    {"query": query},
                 )
 
         print("\n3️⃣ パフォーマンス分析")
@@ -302,16 +312,18 @@ async def demo_integrated_workflow():
         total_results = sum(len(r) for r in results)
         avg_time = (end_time - start_time) / len(tasks)
 
-        print(f"   20件の並列クエリ実行完了")
+        print("   20件の並列クエリ実行完了")
         print(f"   総実行時間: {end_time - start_time:.3f}秒")
         print(f"   平均クエリ時間: {avg_time:.3f}秒")
         print(f"   総結果数: {total_results}")
 
         # パフォーマンスメトリクスを記録
+        from ai_blocks.utils.observability import MetricType
+
         observability.record_metric(
-            "batch_query_duration", end_time - start_time, "histogram"
+            "batch_query_duration", end_time - start_time, MetricType.HISTOGRAM
         )
-        observability.record_metric("avg_query_duration", avg_time, "gauge")
+        observability.record_metric("avg_query_duration", avg_time, MetricType.GAUGE)
 
 
 async def demo_error_handling_and_resilience():
@@ -366,7 +378,10 @@ async def demo_error_handling_and_resilience():
         except Exception as e:
             error_count += 1
             # エラーメトリクスを記録
-            observability.record_metric("simulated_errors", 1.0, "counter")
+            print(f"エラー：{e}")
+            from ai_blocks.utils.observability import MetricType
+
+            observability.record_metric("simulated_errors", 1.0, MetricType.COUNTER)
 
     print(f"   成功操作: {success_count}")
     print(f"   エラー操作: {error_count}")
@@ -393,14 +408,14 @@ async def main():
 
         # 最終サマリー
         await demo_section_header("デモ完了サマリー")
-        print(f"\n🎉 全ての機能デモが正常に完了しました！")
+        print("\n🎉 全ての機能デモが正常に完了しました！")
         print(f"⏱️  総実行時間: {end_time - start_time:.2f}秒")
 
         # 最終的な観測可能性レポート
         observability = await get_observability_manager()
         summary = observability.get_observability_summary()
 
-        print(f"\n📊 最終観測可能性レポート:")
+        print("\n📊 最終観測可能性レポート:")
         print(f"   総トレース数: {summary['traces']['total_count']}")
         print(f"   総メトリクス数: {summary['metrics']['total_count']}")
 
@@ -409,8 +424,8 @@ async def main():
             print(f"   最終CPU使用率: {perf['cpu_usage']:.1f}%")
             print(f"   最終メモリ使用率: {perf['memory_usage']:.1f}%")
 
-        print(f"\n✨ AI Blocks の積木式設計により、全ての機能が")
-        print(f"   シームレスに連携して動作することが確認できました！")
+        print("\n✨ AI Blocks の積木式設計により、全ての機能が")
+        print("   シームレスに連携して動作することが確認できました！")
 
     except Exception as e:
         print(f"\n❌ デモ実行中にエラーが発生しました: {e}")
@@ -426,8 +441,8 @@ async def main():
 
             config_manager = await get_config_manager()
             await config_manager.cleanup()
-        except:
-            pass  # クリーンアップエラーは無視
+        except Exception as e:
+            print(f"   ❌ クリーンアップ中にエラーが発生しました: {e}")
 
 
 if __name__ == "__main__":

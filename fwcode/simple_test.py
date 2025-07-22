@@ -13,8 +13,8 @@ class SimpleRAGTest:
     """依存関係なしでRAGシステムの基本機能をテスト"""
 
     def __init__(self):
-        self.indices = {}
-        self.document_cache = {}
+        self.indices: Dict[str, Any] = {}
+        self.document_cache: Dict[str, List[str]] = {}
         self.config = self._load_config()
 
     def _load_config(self) -> Dict[str, Any]:
@@ -22,7 +22,8 @@ class SimpleRAGTest:
         config_path = Path("doc_config.json")
         if config_path.exists():
             with open(config_path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                config = json.load(f)
+                return config if isinstance(config, dict) else {}
         return {"default_chunk_size": 1024, "default_chunk_overlap": 200}
 
     def _get_document_hash(
@@ -33,7 +34,7 @@ class SimpleRAGTest:
             file_stat = Path(file_path).stat()
             content = f"{file_path}_{file_stat.st_size}_{file_stat.st_mtime}_{chunk_size}_{chunk_overlap}"
             return hashlib.md5(content.encode()).hexdigest()
-        except Exception as e:
+        except Exception:
             return hashlib.md5(
                 f"{file_path}_{chunk_size}_{chunk_overlap}".encode()
             ).hexdigest()

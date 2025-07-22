@@ -10,7 +10,7 @@ import re
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from ..core import ToolInterface
 from ..core.models import Message, MessageRole, ToolDefinition, ToolResult
@@ -55,9 +55,9 @@ class ToolCallingAgent(Agent):
     def __init__(
         self,
         name: str = "ToolCallingAgent",
-        llm_provider: Any = None,
-        tool_manager: ToolInterface = None,
-        config: Dict[str, Any] = None,
+        llm_provider: Optional[Any] = None,
+        tool_manager: Optional[ToolInterface] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         """
         Tool Callingエージェントを初期化する
@@ -69,10 +69,9 @@ class ToolCallingAgent(Agent):
             config: 設定辞書
         """
         super().__init__(name, config)
-
         self.llm = llm_provider
         self.tools = tool_manager
-
+        self.config = config if config is not None else {}
         # 設定値
         self.max_tool_calls = self.config.get("max_tool_calls", 5)
         self.max_iterations = self.config.get("max_iterations", 3)
@@ -86,7 +85,9 @@ class ToolCallingAgent(Agent):
 
         logger.info(f"ToolCallingAgent '{self.name}' を初期化しました")
 
-    async def process(self, input_text: str, context: Dict[str, Any] = None) -> str:
+    async def process(
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
         入力を処理してツールを使用した応答を生成する
 
@@ -114,6 +115,8 @@ class ToolCallingAgent(Agent):
                 logger.info(f"反復 {iteration + 1}/{self.max_iterations} を開始")
 
                 # LLMに応答を生成させる
+                if self.llm is None:
+                    raise ValueError("LLMプロバイダーが設定されていません")
                 response = await self.llm.generate(conversation_history)
                 assistant_message = Message(
                     role=MessageRole.ASSISTANT, content=response.content
@@ -162,6 +165,8 @@ class ToolCallingAgent(Agent):
 
     def _create_system_message(self) -> Message:
         """システムメッセージを作成する"""
+        if self.tools is None:
+            raise ValueError("ツールマネージャーが設定されていません")
         available_tools = self.tools.get_available_tools()
         tools_description = self._format_tools_description(available_tools)
 
@@ -227,7 +232,7 @@ class ToolCallingAgent(Agent):
 
     async def _execute_tool_calls(self, tool_calls: List[ToolCall]) -> List[ToolResult]:
         """ツール呼び出しを実行する"""
-        results = []
+        results: List[ToolResult] = []
 
         if self.enable_parallel_calls and len(tool_calls) > 1:
             # 並列実行
@@ -237,16 +242,21 @@ class ToolCallingAgent(Agent):
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             # 例外を処理
+            processed_results: List[ToolResult] = []
             for i, result in enumerate(results):
                 if isinstance(result, Exception):
                     tool_calls[i].status = ToolCallStatus.FAILED
-                    results[i] = ToolResult(
+                    error_result = ToolResult(
                         success=False,
                         result=None,
                         error_message=str(result),
                         execution_time=0.0,
                     )
-                    tool_calls[i].result = results[i]
+                    tool_calls[i].result = error_result
+                    processed_results.append(error_result)
+                else:
+                    processed_results.append(result)
+            results = processed_results
         else:
             # 順次実行
             for tool_call in tool_calls:
@@ -263,6 +273,8 @@ class ToolCallingAgent(Agent):
         try:
             logger.info(f"ツール '{tool_call.tool_name}' を実行中...")
 
+            if self.tools is None:
+                raise ValueError("ツールマネージャーが設定されていません")
             result = await self.tools.execute(tool_call.tool_name, tool_call.parameters)
 
             tool_call.status = ToolCallStatus.COMPLETED
@@ -315,6 +327,8 @@ class FunctionCallingAgent(ToolCallingAgent):
 
     def _create_system_message(self) -> Message:
         """関数呼び出し形式のシステムメッセージを作成する"""
+        if self.tools is None:
+            raise ValueError("ツールマネージャーが設定されていません")
         available_tools = self.tools.get_available_tools()
         functions_schema = self._create_functions_schema(available_tools)
 

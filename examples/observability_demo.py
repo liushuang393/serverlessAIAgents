@@ -8,12 +8,11 @@ OpenTelemetry準拠のトレーシング、Prometheus形式のメトリクス、
 import asyncio
 import random
 import time
-from typing import List
+from typing import Any, Dict, List, Tuple
 
 from ai_blocks.core.memory import VectorMemory
 from ai_blocks.core.tool import ToolManager
 from ai_blocks.utils.observability import (
-    MetricType,
     SpanStatus,
     get_observability_manager,
     record_counter,
@@ -117,7 +116,7 @@ async def simulate_tool_execution() -> None:
     tool_manager = ToolManager()
 
     # 複数のツールを実行
-    tools_to_test = [
+    tools_to_test: List[Tuple[str, Dict[str, Any]]] = [
         ("echo", {"text": "Hello, World!"}),
         ("add", {"a": 10, "b": 20}),
         ("multiply", {"a": 5, "b": 7}),
@@ -156,7 +155,7 @@ async def simulate_tool_execution() -> None:
                         labels={"tool": tool_name, "error_type": "execution_failed"},
                     )
 
-            except Exception as e:
+            except Exception:
                 execution_duration = time.time() - execution_time
 
                 # エラーメトリクス
@@ -211,13 +210,13 @@ async def demo_distributed_tracing():
         manager.tracer.finish_trace(trace)
 
     # トレース結果を表示
-    print(f"\n📊 トレース結果:")
+    print("\n📊 トレース結果:")
     print(f"   トレースID: {trace.trace_id}")
     print(f"   総実行時間: {trace.duration:.3f}秒")
     print(f"   スパン数: {len(trace.spans)}")
 
     # スパンの詳細
-    print(f"\n📋 スパン詳細:")
+    print("\n📋 スパン詳細:")
     for span in trace.spans.values():
         status_icon = "✅" if span.status == SpanStatus.OK else "❌"
         print(f"   {status_icon} {span.operation_name}: {span.duration:.3f}秒")
@@ -271,7 +270,7 @@ async def demo_metrics_collection():
         )
 
     # Prometheus形式での出力
-    print(f"\n3️⃣ Prometheus形式出力（抜粋）:")
+    print("\n3️⃣ Prometheus形式出力（抜粋）:")
     prometheus_output = manager.metrics_collector.get_prometheus_format()
     lines = prometheus_output.split("\n")[:15]  # 最初の15行を表示
     for line in lines:
@@ -292,7 +291,7 @@ async def demo_performance_monitoring():
     current_metrics = manager.performance_monitor.get_current_metrics()
 
     if current_metrics:
-        print(f"\n📈 現在のパフォーマンス:")
+        print("\n📈 現在のパフォーマンス:")
         print(f"   CPU使用率: {current_metrics.cpu_usage:.1f}%")
         print(f"   メモリ使用率: {current_metrics.memory_usage:.1f}%")
         print(f"   リクエスト数: {current_metrics.request_count}")
@@ -314,7 +313,7 @@ async def demo_performance_monitoring():
             )
 
     # 負荷テストをシミュレート
-    print(f"\n⚡ 負荷テストシミュレーション:")
+    print("\n⚡ 負荷テストシミュレーション:")
 
     # 高負荷処理をシミュレート
     tasks = []
@@ -345,23 +344,23 @@ async def demo_observability_summary():
     # 概要を取得
     summary = manager.get_observability_summary()
 
-    print(f"\n🎯 サービス概要:")
+    print("\n🎯 サービス概要:")
     print(f"   サービス名: {summary['service_name']}")
     print(
         f"   タイムスタンプ: {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(summary['timestamp']))}"
     )
 
-    print(f"\n🔍 トレーシング:")
+    print("\n🔍 トレーシング:")
     print(f"   総トレース数: {summary['traces']['total_count']}")
     print(f"   アクティブトレース数: {summary['traces']['active_count']}")
 
-    print(f"\n📊 メトリクス:")
+    print("\n📊 メトリクス:")
     print(f"   総メトリクス数: {summary['metrics']['total_count']}")
     for metric_type, count in summary["metrics"]["types"].items():
         print(f"   {metric_type}: {count}件")
 
     if summary["performance"]:
-        print(f"\n🏥 パフォーマンス:")
+        print("\n🏥 パフォーマンス:")
         perf = summary["performance"]
         print(f"   CPU使用率: {perf['cpu_usage']:.1f}%")
         print(f"   メモリ使用率: {perf['memory_usage']:.1f}%")

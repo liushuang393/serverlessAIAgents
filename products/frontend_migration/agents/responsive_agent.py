@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 from ai_blocks.architectures.prompt_chaining import PromptChain, SpecializedAgent
 from ai_blocks.core.memory import VectorMemory
@@ -700,7 +700,7 @@ async def main():
         conversion = await agent.convert_css_file("sample.css", sample_issues)
         await agent.save_conversion_result(conversion, "output/")
 
-        print(f"レスポンシブ変換完了:")
+        print("レスポンシブ変換完了:")
         print(f"  適用ルール数: {len(conversion.applied_rules)}")
         print(f"  メディアクエリ数: {len(conversion.media_queries)}")
         print(f"  Grid レイアウト提案: {len(conversion.grid_layouts)}")

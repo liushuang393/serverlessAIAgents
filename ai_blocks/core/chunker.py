@@ -9,9 +9,8 @@ import re
 import uuid
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from ..config import get_settings
 from ..utils.logging import get_logger
 from .models import TextChunk
 
@@ -37,7 +36,7 @@ class ChunkerInterface(ABC):
         text: str,
         chunk_size: int = 1000,
         overlap: int = 200,
-        metadata: Dict[str, Any] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> List[TextChunk]:
         """
         テキストをチャンクに分割する
@@ -85,7 +84,7 @@ class SimpleChunker(ChunkerInterface):
         text: str,
         chunk_size: int = 1000,
         overlap: int = 200,
-        metadata: Dict[str, Any] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> List[TextChunk]:
         """
         テキストをチャンクに分割する
@@ -146,10 +145,14 @@ class SimpleChunker(ChunkerInterface):
         return merged_text
 
     async def _chunk_by_character(
-        self, text: str, chunk_size: int, overlap: int, metadata: Dict[str, Any]
+        self,
+        text: str,
+        chunk_size: int,
+        overlap: int,
+        metadata: Optional[Dict[str, Any]],
     ) -> List[TextChunk]:
         """文字数ベースでチャンクに分割する"""
-        chunks = []
+        chunks: List[TextChunk] = []
         start = 0
 
         while start < len(text):
@@ -188,12 +191,16 @@ class SimpleChunker(ChunkerInterface):
         return chunks
 
     async def _chunk_by_word(
-        self, text: str, chunk_size: int, overlap: int, metadata: Dict[str, Any]
+        self,
+        text: str,
+        chunk_size: int,
+        overlap: int,
+        metadata: Optional[Dict[str, Any]],
     ) -> List[TextChunk]:
         """単語ベースでチャンクに分割する"""
         # 単語に分割
         words = re.findall(r"\S+|\s+", text)
-        chunks = []
+        chunks: List[TextChunk] = []
         start_word_idx = 0
 
         while start_word_idx < len(words):
@@ -247,7 +254,11 @@ class SimpleChunker(ChunkerInterface):
         return chunks
 
     async def _chunk_by_sentence(
-        self, text: str, chunk_size: int, overlap: int, metadata: Dict[str, Any]
+        self,
+        text: str,
+        chunk_size: int,
+        overlap: int,
+        metadata: Optional[Dict[str, Any]],
     ) -> List[TextChunk]:
         """文ベースでチャンクに分割する"""
         # 文に分割（日本語と英語に対応）
@@ -267,7 +278,7 @@ class SimpleChunker(ChunkerInterface):
         if sentences[-1].strip():
             full_sentences.append(sentences[-1])
 
-        chunks = []
+        chunks: List[TextChunk] = []
         start_sentence_idx = 0
 
         while start_sentence_idx < len(full_sentences):
@@ -324,13 +335,17 @@ class SimpleChunker(ChunkerInterface):
         return chunks
 
     async def _chunk_by_paragraph(
-        self, text: str, chunk_size: int, overlap: int, metadata: Dict[str, Any]
+        self,
+        text: str,
+        chunk_size: int,
+        overlap: int,
+        metadata: Optional[Dict[str, Any]],
     ) -> List[TextChunk]:
         """段落ベースでチャンクに分割する"""
         # 段落に分割
         paragraphs = re.split(r"\n\s*\n", text)
 
-        chunks = []
+        chunks: List[TextChunk] = []
         start_para_idx = 0
 
         while start_para_idx < len(paragraphs):
@@ -404,7 +419,7 @@ class SmartChunker(ChunkerInterface):
         text: str,
         chunk_size: int = 1000,
         overlap: int = 200,
-        metadata: Dict[str, Any] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> List[TextChunk]:
         """
         テキストをスマートにチャンクに分割する

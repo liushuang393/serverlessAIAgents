@@ -2,7 +2,7 @@
 import asyncio
 
 from mcp_client import MCPClient
-from openai_agents import Agent, create_agent
+from openai_agents import create_agent
 
 
 async def setup_openai_agent_with_mcp():

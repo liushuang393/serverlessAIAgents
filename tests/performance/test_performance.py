@@ -8,7 +8,7 @@
 import asyncio
 import statistics
 import time
-from typing import Any, Dict, List
+from typing import Dict
 
 import pytest
 
@@ -17,8 +17,6 @@ from ai_blocks.architectures.parallel_agents import ParallelAgents
 from ai_blocks.architectures.prompt_chaining import PromptChain, SpecializedAgent
 from ai_blocks.core.chunker import SmartChunker
 from ai_blocks.core.memory import VectorMemory
-from ai_blocks.core.router import RuleBasedRouter
-from ai_blocks.core.thread import SimpleThread
 from ai_blocks.core.tool import ToolManager
 
 
@@ -101,7 +99,7 @@ class TestMemoryPerformance:
 
         # メトリクスを表示
         results = metrics.get_metrics()
-        print(f"\nメモリ保存パフォーマンス (100件):")
+        print("\nメモリ保存パフォーマンス (100件):")
         print(f"  平均時間: {results['avg']:.6f}秒")
         print(f"  最大時間: {results['max']:.6f}秒")
         print(f"  最小時間: {results['min']:.6f}秒")
@@ -131,19 +129,19 @@ class TestMemoryPerformance:
         for query in queries:
             for _ in range(5):  # 各クエリを5回実行
                 metrics.start()
-                results = await memory.search(query, limit=10)
+                await memory.search(query, limit=10)
                 metrics.stop()
 
         # メトリクスを表示
-        results = metrics.get_metrics()
-        print(f"\nメモリ検索パフォーマンス (25回):")
-        print(f"  平均時間: {results['avg']:.6f}秒")
-        print(f"  最大時間: {results['max']:.6f}秒")
-        print(f"  最小時間: {results['min']:.6f}秒")
-        print(f"  95パーセンタイル: {results['p95']:.6f}秒")
+        metrics_results = metrics.get_metrics()
+        print("\nメモリ検索パフォーマンス (25回):")
+        print(f"  平均時間: {metrics_results['avg']:.6f}秒")
+        print(f"  最大時間: {metrics_results['max']:.6f}秒")
+        print(f"  最小時間: {metrics_results['min']:.6f}秒")
+        print(f"  95パーセンタイル: {metrics_results['p95']:.6f}秒")
 
         # 基本的な検証
-        assert results["count"] == 25
+        assert metrics_results["count"] == 25
 
 
 @pytest.mark.slow
@@ -173,7 +171,7 @@ class TestChunkerPerformance:
 
         # メトリクスを表示
         results = metrics.get_metrics()
-        print(f"\nチャンカーパフォーマンス:")
+        print("\nチャンカーパフォーマンス:")
         print(f"  平均時間: {results['avg']:.6f}秒")
         print(f"  最大時間: {results['max']:.6f}秒")
         print(f"  最小時間: {results['min']:.6f}秒")
@@ -217,7 +215,7 @@ class TestAugmentedLLMPerformance:
 
         # メトリクスを表示
         results = metrics.get_metrics()
-        print(f"\nAugmented LLMパフォーマンス:")
+        print("\nAugmented LLMパフォーマンス:")
         print(f"  平均時間: {results['avg']:.6f}秒")
         print(f"  最大時間: {results['max']:.6f}秒")
         print(f"  最小時間: {results['min']:.6f}秒")
@@ -261,7 +259,7 @@ class TestParallelAgentsPerformance:
 
         # メトリクスを表示
         results = metrics.get_metrics()
-        print(f"\nParallel Agentsパフォーマンス:")
+        print("\nParallel Agentsパフォーマンス:")
         print(f"  平均時間: {results['avg']:.6f}秒")
         print(f"  最大時間: {results['max']:.6f}秒")
         print(f"  最小時間: {results['min']:.6f}秒")
@@ -304,7 +302,7 @@ class TestPromptChainPerformance:
 
         # メトリクスを表示
         results = metrics.get_metrics()
-        print(f"\nPrompt Chainパフォーマンス:")
+        print("\nPrompt Chainパフォーマンス:")
         print(f"  平均時間: {results['avg']:.6f}秒")
         print(f"  最大時間: {results['max']:.6f}秒")
         print(f"  最小時間: {results['min']:.6f}秒")

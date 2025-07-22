@@ -5,7 +5,6 @@ Memory（記憶）コンポーネント
 具体的な実装を提供します。
 """
 
-import asyncio
 import time
 import uuid
 from abc import ABC, abstractmethod
@@ -13,7 +12,6 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-from pydantic import BaseModel, Field
 
 from ..config import get_settings
 from ..utils.logging import get_logger
@@ -420,7 +418,11 @@ class VectorMemory(MemoryInterface):
 
         _, content, metadata, created_at = item_data
         return MemoryItem(
-            id=memory_id, content=content, metadata=metadata, created_at=created_at
+            id=memory_id,
+            content=content,
+            metadata=metadata,
+            similarity_score=None,
+            created_at=created_at,
         )
 
     async def delete(self, memory_id: str) -> bool:

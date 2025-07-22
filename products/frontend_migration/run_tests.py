@@ -21,10 +21,9 @@ import argparse
 import json
 import subprocess
 import sys
-import time
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 # プロジェクトルートをPythonパスに追加
 project_root = Path(__file__).parent.parent.parent
@@ -43,9 +42,9 @@ class TestRunner:
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
-        self.test_results = {}
-        self.start_time = None
-        self.end_time = None
+        self.test_results: Dict[str, Any] = {}
+        self.start_time: Optional[datetime] = None
+        self.end_time: Optional[datetime] = None
 
     def run_unit_tests(self) -> Dict[str, Any]:
         """
@@ -301,9 +300,7 @@ class TestRunner:
         ]
 
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, cwd=project_root
-            )
+            _ = subprocess.run(cmd, capture_output=True, text=True, cwd=project_root)
 
             # カバレッジJSONを読み込み
             coverage_file = (
@@ -379,7 +376,7 @@ class TestRunner:
         with open(markdown_report_path, "w", encoding="utf-8") as f:
             f.write(markdown_report)
 
-        print(f"✅ 総合レポートを生成しました:")
+        print("✅ 総合レポートを生成しました:")
         print(f"   JSON: {json_report_path}")
         print(f"   Markdown: {markdown_report_path}")
 
@@ -517,7 +514,9 @@ class TestRunner:
                 total_passed += summary.get("passed", 0)
                 total_failed += summary.get("failed", 0)
                 print(
-                    f"   テスト数: {summary.get('total', 0)}, 成功: {summary.get('passed', 0)}, 失敗: {summary.get('failed', 0)}"
+                    f"   テスト数: {summary.get('total', 0)}, "
+                    f"成功: {summary.get('passed', 0)}, "
+                    f"失敗: {summary.get('failed', 0)}"
                 )
 
         print("-" * 60)
@@ -529,8 +528,11 @@ class TestRunner:
             if coverage_result["status"] == "completed":
                 print(f"📊 コードカバレッジ: {coverage_result.get('total_coverage', 0):.1f}%")
 
-        duration = (self.end_time - self.start_time).total_seconds()
-        print(f"⏱️  実行時間: {duration:.2f}秒")
+        if self.end_time and self.start_time:
+            duration = (self.end_time - self.start_time).total_seconds()
+            print(f"⏱️  実行時間: {duration:.2f}秒")
+        else:
+            print("⏱️  実行時間: 不明")
         print("=" * 60)
 
 

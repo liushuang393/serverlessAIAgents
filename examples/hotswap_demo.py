@@ -7,14 +7,11 @@
 
 import asyncio
 import time
-from typing import Any, Dict
+import uuid
+from datetime import datetime
+from typing import Any, Dict, Optional
 
-from ai_blocks.core.factory import (
-    builder,
-    component_context,
-    get_architecture_factory,
-    get_factory,
-)
+from ai_blocks.core.factory import builder, component_context, get_factory
 from ai_blocks.core.memory import MemoryInterface, VectorMemory
 from ai_blocks.core.models import MemoryItem
 from ai_blocks.core.registry import (
@@ -46,18 +43,18 @@ class EnhancedVectorMemory(MemoryInterface):
             "avg_search_time": 0.0,
             "cache_hits": 0,
         }
-        print(f"🚀 Enhanced Vector Memory v2.0.0 初期化完了（改良版機能付き）")
+        print("🚀 Enhanced Vector Memory v2.0.0 初期化完了（改良版機能付き）")
 
-    async def store(self, content: str, metadata: Dict[str, Any] = None) -> str:
+    async def store(
+        self, content: str, metadata: Optional[Dict[str, Any]] = None
+    ) -> str:
         """コンテンツを記憶に保存する（改良版）"""
-        import uuid
-        from datetime import datetime
-
         memory_id = str(uuid.uuid4())
         item = MemoryItem(
             id=memory_id,
             content=content,
             metadata=metadata or {},
+            similarity_score=None,
             created_at=datetime.now(),
         )
 
@@ -66,7 +63,7 @@ class EnhancedVectorMemory(MemoryInterface):
         return memory_id
 
     async def search(
-        self, query: str, limit: int = 10, threshold: float = None
+        self, query: str, limit: int = 10, threshold: Optional[float] = None
     ) -> list[MemoryItem]:
         """類似性検索を実行する（改良版）"""
         start_time = time.time()
@@ -91,7 +88,7 @@ class EnhancedVectorMemory(MemoryInterface):
         print(f"🔍 [v2.0.0] 改良版検索: '{query}' -> {len(results)}件 ({search_time:.3f}秒)")
         return results
 
-    async def get(self, memory_id: str) -> MemoryItem:
+    async def get(self, memory_id: str) -> Optional[MemoryItem]:
         """IDで記憶を取得する"""
         return self._items.get(memory_id)
 
@@ -114,7 +111,7 @@ class EnhancedVectorMemory(MemoryInterface):
         """ヘルスチェック（改良版）"""
         try:
             test_id = await self.store("ヘルスチェック v2.0.0", {"test": True})
-            results = await self.search("ヘルスチェック", limit=1)
+            _ = await self.search("ヘルスチェック", limit=1)
             await self.delete(test_id)
 
             return HealthCheckResult(
@@ -267,6 +264,8 @@ async def demo_health_monitoring():
     print("=" * 60)
 
     registry = get_registry()
+    # レジストリ表示
+    print(registry)
     factory = get_factory()
 
     # 複数バージョンのヘルスチェック
@@ -295,12 +294,12 @@ async def demo_registry_metrics():
     # レジストリの状態を表示
     metrics = registry.get_metrics()
 
-    print(f"📈 レジストリ統計:")
+    print("📈 レジストリ統計:")
     print(f"   総コンポーネント数: {metrics['total_components']}")
     print(f"   総インスタンス数: {metrics['total_instances']}")
     print(f"   アクティブヘルスチェック数: {metrics['active_health_checks']}")
 
-    print(f"\n📋 登録済みコンポーネント:")
+    print("\n📋 登録済みコンポーネント:")
     for key, info in metrics["registrations"].items():
         print(f"   {key}:")
         print(f"     現在バージョン: {info['current_version']}")

@@ -22,7 +22,10 @@ class ParserInterface(ABC):
 
     @abstractmethod
     async def parse(
-        self, content: bytes, content_type: str, metadata: Dict[str, Any] = None
+        self,
+        content: bytes,
+        content_type: str,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> ParsedDocument:
         """
         ドキュメントをテキストに変換する
@@ -64,7 +67,10 @@ class TextParser(ParserInterface):
     ]
 
     async def parse(
-        self, content: bytes, content_type: str, metadata: Dict[str, Any] = None
+        self,
+        content: bytes,
+        content_type: str,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> ParsedDocument:
         """
         テキストドキュメントをパースする
@@ -212,7 +218,10 @@ class HTMLParser(ParserInterface):
             self._available = False
 
     async def parse(
-        self, content: bytes, content_type: str, metadata: Dict[str, Any] = None
+        self,
+        content: bytes,
+        content_type: str,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> ParsedDocument:
         """
         HTMLドキュメントをパースする
@@ -298,7 +307,10 @@ class PDFParser(ParserInterface):
             self._available = False
 
     async def parse(
-        self, content: bytes, content_type: str, metadata: Dict[str, Any] = None
+        self,
+        content: bytes,
+        content_type: str,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> ParsedDocument:
         """
         PDFドキュメントをパースする
@@ -400,7 +412,10 @@ class MultiParser(ParserInterface):
         logger.info(f"マルチパーサーを初期化しました（{len(self._parsers)}個のパーサー）")
 
     async def parse(
-        self, content: bytes, content_type: str, metadata: Dict[str, Any] = None
+        self,
+        content: bytes,
+        content_type: str,
+        metadata: Optional[Dict[str, Any]] = None,
     ) -> ParsedDocument:
         """
         ドキュメントをパースする

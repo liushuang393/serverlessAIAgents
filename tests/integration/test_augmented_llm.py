@@ -3,13 +3,13 @@ Augmented LLM アーキテクチャパターンの統合テスト
 """
 
 import asyncio
-from unittest.mock import AsyncMock
+from typing import Optional
 
 import pytest
 
 from ai_blocks.architectures.augmented_llm import AugmentedLLM
-from ai_blocks.core.memory import VectorMemory
-from ai_blocks.core.tool import ToolManager, tool
+from ai_blocks.core.memory import MemoryInterface, VectorMemory
+from ai_blocks.core.tool import ToolInterface, ToolManager, tool
 
 
 class MockLLMProvider:
@@ -257,9 +257,9 @@ class TestAugmentedLLMErrorHandling:
         """メモリエラーのハンドリングテスト"""
 
         # エラーを発生させるモックメモリ
-        class ErrorMemory:
+        class ErrorMemory(MemoryInterface):
             async def search(
-                self, query: str, limit: int = 10, threshold: float = None
+                self, query: str, limit: int = 10, threshold: Optional[float] = None
             ):
                 raise Exception("メモリエラー")
 
@@ -268,6 +268,19 @@ class TestAugmentedLLMErrorHandling:
 
             async def count(self):
                 return 0
+
+            async def get(self, memory_id: str):
+                # メモリIDを使用してエラーを発生させる
+                _ = memory_id
+                raise Exception("メモリエラー")
+
+            async def delete(self, memory_id: str):
+                # メモリIDを使用してエラーを発生させる
+                _ = memory_id
+                raise Exception("メモリエラー")
+
+            async def clear(self):
+                raise Exception("メモリエラー")
 
         memory = ErrorMemory()
         tools = ToolManager()
@@ -286,11 +299,33 @@ class TestAugmentedLLMErrorHandling:
         """ツールエラーのハンドリングテスト"""
 
         # エラーを発生させるモックツール
-        class ErrorTools:
+        class ErrorTools(ToolInterface):
             def get_available_tools(self):
                 return []
 
             async def execute(self, tool_name: str, parameters):
+                # パラメータを使用してエラーを発生させる
+                _ = tool_name, parameters
+                raise Exception("ツールエラー")
+
+            def register_tool(self, tool):
+                # ツールを使用してエラーを発生させる
+                _ = tool
+                raise Exception("ツールエラー")
+
+            def unregister_tool(self, tool_name: str):
+                # ツール名を使用してエラーを発生させる
+                _ = tool_name
+                raise Exception("ツールエラー")
+
+            def register_function(self, func, name=None, description=None):
+                # パラメータを使用してエラーを発生させる
+                _ = func, name, description
+                raise Exception("ツールエラー")
+
+            def register_class(self, cls, prefix=None):
+                # パラメータを使用してエラーを発生させる
+                _ = cls, prefix
                 raise Exception("ツールエラー")
 
         memory = VectorMemory()

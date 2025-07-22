@@ -12,7 +12,6 @@ MDN データベースと Can I Use API を活用した Polyfill 設定生成を
 """
 
 import asyncio
-import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -282,7 +281,7 @@ class CompatFixAgent:
             return config
 
         @tool(name="fix_ie_specific_code", description="IE専用コードを修正")
-        def fix_ie_specific_code(css_content: str) -> Dict[str, str]:
+        def fix_ie_specific_code(css_content: str) -> Dict[str, Any]:
             """
             IE専用コードを現代的な代替案に修正
 
@@ -521,7 +520,7 @@ async def main():
             "sample.css", target_browsers=["Chrome", "Firefox", "Safari", "IE"]
         )
 
-        print(f"互換性修正完了:")
+        print("互換性修正完了:")
         print(f"  ファイル: {fix_result.file_path}")
         print(f"  修正問題数: {len(fix_result.issues_fixed)}")
         print(f"  追加Polyfill数: {len(fix_result.polyfills_added)}")

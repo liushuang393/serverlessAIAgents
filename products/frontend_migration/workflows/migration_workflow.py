@@ -18,7 +18,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from ai_blocks.architectures.orchestrator_worker import OrchestratorWorker
 from ai_blocks.core.memory import VectorMemory
 from ai_blocks.core.router import LLMBasedRouter
 from ai_blocks.utils.logging import get_logger
@@ -60,7 +59,7 @@ class MigrationOrchestrator:
     プロセス全体の状態を管理します。
     """
 
-    def __init__(self, llm_provider=None, config: Dict[str, Any] = None):
+    def __init__(self, llm_provider=None, config: Optional[Dict[str, Any]] = None):
         """
         移行オーケストレーターを初期化
 
@@ -439,7 +438,7 @@ async def main():
     try:
         result = await orchestrator.migrate_project("/path/to/legacy/project")
 
-        print(f"移行完了:")
+        print("移行完了:")
         print(f"  プロジェクト: {result.project_name}")
         print(f"  成功率: {result.conversion_success_rate:.1%}")
         print(f"  出力: {result.output_directory}")

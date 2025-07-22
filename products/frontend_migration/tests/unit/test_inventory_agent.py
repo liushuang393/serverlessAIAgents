@@ -5,18 +5,11 @@ InventoryAgentの各機能を個別にテストし、
 リポジトリスキャンとマニフェスト生成の正確性を検証します。
 """
 
-import asyncio
 import json
-import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
 
 import pytest
-
-# プロジェクトルートをPythonパスに追加
-project_root = Path(__file__).parent.parent.parent.parent
-sys.path.insert(0, str(project_root))
 
 from products.frontend_migration.agents.inventory_agent import (
     FileInfo,
@@ -248,7 +241,7 @@ $(document).ready(function() {
     async def test_memory_integration(self, agent, sample_repo):
         """メモリ統合のテスト"""
         # リポジトリスキャンを実行
-        manifest = await agent.scan_repository(sample_repo)
+        _ = await agent.scan_repository(sample_repo)
 
         # メモリに何かが保存されているかチェック（countメソッドに問題があるため、searchで確認）
         search_results = await agent.memory.search(
@@ -336,7 +329,7 @@ class TestInventoryAgentPerformance:
             # 100個のファイルを作成
             for i in range(100):
                 (repo_path / f"file_{i}.html").write_text(f"<html>Content {i}</html>")
-                (repo_path / f"style_{i}.css").write_text(f"body {{ color: red; }}")
+                (repo_path / f"style_{i}.css").write_text("body { color: red; }")
 
             import time
 

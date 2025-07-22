@@ -18,9 +18,8 @@ import re
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
-from ai_blocks.architectures.augmented_llm import AugmentedLLM
 from ai_blocks.core.memory import VectorMemory
 from ai_blocks.core.parser import HTMLParser, TextParser
 from ai_blocks.core.tool import ToolManager, tool
@@ -425,7 +424,7 @@ class AnalyzerAgent:
 
     def _calculate_file_statistics(self, issues: List[CodeIssue]) -> Dict[str, Any]:
         """ファイル統計を計算"""
-        stats = {
+        stats: Dict[str, Any] = {
             "total_issues": len(issues),
             "severity_breakdown": self._get_severity_breakdown(issues),
             "issue_type_breakdown": {},
@@ -446,7 +445,7 @@ class AnalyzerAgent:
         self, manifest: Dict[str, Any], issues: List[CodeIssue]
     ) -> Dict[str, Any]:
         """フレームワーク関連の問題を分析"""
-        framework_info = manifest.get("framework_info", {})
+        _ = manifest.get("framework_info", {})
 
         analysis = {
             "jquery_migration_needed": any(
@@ -552,7 +551,7 @@ async def main():
         result = await agent.analyze_project("manifest.json")
         await agent.save_analysis_result(result, "issue_list.json")
 
-        print(f"プロジェクト解析結果:")
+        print("プロジェクト解析結果:")
         print(f"  解析ファイル数: {result.total_files_analyzed}")
         print(f"  総問題数: {len(result.issues)}")
         print(f"  移行複雑度: {result.migration_complexity}")

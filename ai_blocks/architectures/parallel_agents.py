@@ -4,9 +4,8 @@ Parallel Agents アーキテクチャパターン
 このモジュールは、複数のAgentを並列実行し、結果を統合するパターンを実装します。
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from ..core.models import ChainResult
 from ..utils.logging import get_logger
 from .base import Agent, ChainExecutor, ResultAggregator, SimpleAggregator
 
@@ -18,10 +17,10 @@ class ParallelAgents:
 
     def __init__(
         self,
-        agents: List[Agent] = None,
-        aggregator: ResultAggregator = None,
+        agents: Optional[List[Agent]] = None,
+        aggregator: Optional[ResultAggregator] = None,
         name: str = "ParallelAgents",
-        config: Dict[str, Any] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         """
         Parallel Agentsを初期化する
@@ -33,9 +32,9 @@ class ParallelAgents:
             config: 設定辞書
         """
         self.name = name
-        self.agents = agents or []
-        self.aggregator = aggregator or SimpleAggregator()
-        self.config = config or {}
+        self.agents = agents if agents is not None else []
+        self.aggregator = aggregator if aggregator is not None else SimpleAggregator()
+        self.config = config if config is not None else {}
         self.executor = ChainExecutor(self.agents, self.aggregator)
 
         # 設定値
@@ -46,7 +45,9 @@ class ParallelAgents:
             f"Parallel Agents '{self.name}' を初期化しました（{len(self.agents)}個のAgent）"
         )
 
-    async def process(self, input_text: str, context: Dict[str, Any] = None) -> str:
+    async def process(
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
         複数のAgentを並列実行し、結果を統合する
 
@@ -83,7 +84,8 @@ class ParallelAgents:
                 return "十分な数のAgentが成功しませんでした。"
 
             logger.info(
-                f"Parallel Agents '{self.name}' が完了しました（成功: {success_count}/{len(self.agents)}）"
+                f"Parallel Agents '{self.name}' が完了しました"
+                f"（成功: {success_count}/{len(self.agents)}）"
             )
 
             return result.final_output or "結果の統合に失敗しました。"

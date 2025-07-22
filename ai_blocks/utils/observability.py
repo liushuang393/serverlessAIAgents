@@ -6,16 +6,14 @@ OpenTelemetry準拠のトレーシング、Prometheus形式のメトリクス、
 """
 
 import asyncio
-import json
 import threading
 import time
 import uuid
 from collections import defaultdict, deque
 from contextlib import asynccontextmanager, contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, Callable, ContextManager, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -170,6 +168,7 @@ class MetricsCollector:
                 type=MetricType.COUNTER,
                 value=self._counters[key],
                 labels=labels or {},
+                help_text=f"Counter metric for {name}",
             )
             self._metrics[key] = metric
 
@@ -180,7 +179,11 @@ class MetricsCollector:
             self._gauges[key] = value
 
             metric = Metric(
-                name=name, type=MetricType.GAUGE, value=value, labels=labels or {}
+                name=name,
+                type=MetricType.GAUGE,
+                value=value,
+                labels=labels or {},
+                help_text=f"Gauge metric for {name}",
             )
             self._metrics[key] = metric
 
@@ -199,6 +202,7 @@ class MetricsCollector:
                 type=MetricType.HISTOGRAM,
                 value=avg_value,
                 labels=labels or {},
+                help_text=f"Histogram metric for {name}",
             )
             self._metrics[key] = metric
 
@@ -328,7 +332,9 @@ class PerformanceMonitor:
 
     def __init__(self, collection_interval: float = 60.0):
         self.collection_interval = collection_interval
-        self._metrics_history: deque = deque(maxlen=1000)  # 最大1000件の履歴
+        self._metrics_history: deque[PerformanceMetrics] = deque(
+            maxlen=1000
+        )  # 最大1000件の履歴
         self._monitoring_task: Optional[asyncio.Task] = None
         self._running = False
 

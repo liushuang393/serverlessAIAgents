@@ -9,10 +9,10 @@ import json
 import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List
 
 from ..utils.logging import get_logger
-from .models import Message, MessageRole
+from .models import Message
 
 logger = get_logger(__name__)
 
@@ -351,7 +351,7 @@ class PersistentThread(ThreadInterface):
 
     async def _save_to_storage(self) -> None:
         """ストレージにスレッドを保存する"""
-        if not self._dirty:
+        if not self._dirty or self._storage is None:
             return
 
         data = {

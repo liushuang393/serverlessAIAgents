@@ -11,11 +11,10 @@ from typing import Any, Dict
 
 import pytest
 
-from ai_blocks.core.factory import get_architecture_factory, get_factory
+from ai_blocks.core.factory import get_factory
 from ai_blocks.core.memory import MemoryInterface, VectorMemory
 from ai_blocks.core.models import MemoryItem
 from ai_blocks.core.registry import (
-    ComponentStatus,
     DeploymentStrategy,
     HealthCheckResult,
     get_registry,
@@ -52,6 +51,7 @@ class TestEnhancedVectorMemory(MemoryInterface):
             id=memory_id,
             content=content,
             metadata={**(metadata or {}), "version": self._version},
+            similarity_score=None,
             created_at=datetime.now(),
         )
 
@@ -74,7 +74,10 @@ class TestEnhancedVectorMemory(MemoryInterface):
 
     async def get(self, memory_id: str) -> MemoryItem:
         """IDで記憶を取得する"""
-        return self._items.get(memory_id)
+        item = self._items.get(memory_id)
+        if item is None:
+            raise KeyError(f"Memory item with ID '{memory_id}' not found")
+        return item
 
     async def delete(self, memory_id: str) -> bool:
         """記憶を削除する"""
@@ -95,7 +98,7 @@ class TestEnhancedVectorMemory(MemoryInterface):
         """ヘルスチェック（改良版）"""
         try:
             test_id = await self.store("ヘルスチェック v2.0.0", {"test": True})
-            results = await self.search("ヘルスチェック", limit=1)
+            await self.search("ヘルスチェック", limit=1)
             await self.delete(test_id)
 
             return HealthCheckResult(
@@ -160,6 +163,7 @@ class TestHotswapIntegration:
         """バージョンデプロイメントテスト"""
         # 初期状態の確認
         registration = self.registry.get_registration("memory", "test_vector")
+        assert registration is not None
         assert registration.current_version == "1.0.0"
 
         # v2.0.0にデプロイ
@@ -170,6 +174,7 @@ class TestHotswapIntegration:
 
         # バージョンが更新されたことを確認
         registration = self.registry.get_registration("memory", "test_vector")
+        assert registration is not None
         assert registration.current_version == "2.0.0"
 
         # 新しいバージョンでコンポーネントを作成
@@ -177,7 +182,7 @@ class TestHotswapIntegration:
         assert memory_v2 is not None
 
         # v2.0.0の機能をテスト
-        memory_id = await memory_v2.store("テストデータ v2.0.0")
+        await memory_v2.store("テストデータ v2.0.0")
         results = await memory_v2.search("テスト")
         assert len(results) > 0
         assert results[0].similarity_score == 0.95  # v2.0.0の改良された類似度
@@ -197,6 +202,7 @@ class TestHotswapIntegration:
 
         # デプロイメント後の状態確認
         registration = self.registry.get_registration("memory", "test_vector")
+        assert registration is not None
         assert registration.current_version == "2.0.0"
 
         # 両方のバージョンが利用可能であることを確認
@@ -232,6 +238,7 @@ class TestHotswapIntegration:
 
         # 現在のバージョンを確認
         registration = self.registry.get_registration("memory", "test_vector")
+        assert registration is not None
         assert registration.current_version == "2.0.0"
 
         # 問題のあるバージョンをシミュレート（手動でロールバック）
@@ -239,11 +246,12 @@ class TestHotswapIntegration:
 
         # ロールバック後の状態確認
         registration = self.registry.get_registration("memory", "test_vector")
+        assert registration is not None
         assert registration.current_version == "1.0.0"
 
         # v1.0.0が正常に動作することを確認
         memory_v1 = await self.factory.create("memory", "test_vector", "1.0.0")
-        memory_id = await memory_v1.store("ロールバックテスト")
+        await memory_v1.store("ロールバックテスト")
         results = await memory_v1.search("ロールバック")
         assert len(results) > 0
 
@@ -267,7 +275,7 @@ class TestHotswapIntegration:
 
         # 各インスタンスが独立して動作することを確認
         for i, instance in enumerate(instances):
-            memory_id = await instance.store(f"同時アクセステスト {i}")
+            await instance.store(f"同時アクセステスト {i}")
             results = await instance.search("同時アクセス")
             assert len(results) > 0
 
@@ -298,10 +306,11 @@ class TestHotswapIntegration:
 
             # v1.0.0にロールバック（次のテストのため）
             registration = self.registry.get_registration("memory", "test_vector")
+            assert registration is not None
             await self.registry._rollback(registration, "1.0.0")
 
         # デプロイメント時間の結果を確認
-        print(f"\nデプロイメント戦略別実行時間:")
+        print("\nデプロイメント戦略別実行時間:")
         for strategy, duration in deployment_times.items():
             print(f"  {strategy}: {duration:.3f}秒")
 
@@ -343,6 +352,6 @@ class TestHotswapIntegration:
         assert memory.similarity_threshold == 0.8
 
         # 設定が正しく適用されていることを確認
-        memory_id = await memory.store("依存関係テスト")
+        await memory.store("依存関係テスト")
         results = await memory.search("依存関係")
         assert len(results) > 0

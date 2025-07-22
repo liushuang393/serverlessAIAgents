@@ -6,14 +6,11 @@
 """
 
 import asyncio
-import time
 import uuid
-from abc import ABC, abstractmethod
-from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Type
 
 from pydantic import BaseModel, Field
 
@@ -95,7 +92,7 @@ class ComponentRegistry:
         return cls._instance
 
     def __init__(self):
-        if self._initialized:
+        if hasattr(self, "_initialized") and self._initialized:
             return
 
         self._registrations: Dict[str, ComponentRegistration] = {}
@@ -103,7 +100,7 @@ class ComponentRegistry:
         self._health_check_tasks: Dict[str, asyncio.Task] = {}
         self._deployment_locks: Dict[str, asyncio.Lock] = {}
         self._metrics: Dict[str, Dict[str, Any]] = {}
-        self._initialized = True
+        self._initialized: bool = True
 
         logger.info("コンポーネントレジストリを初期化しました")
 
@@ -114,7 +111,7 @@ class ComponentRegistry:
         component_class: Type,
         version: str = "1.0.0",
         factory_func: Optional[Callable] = None,
-        config: Dict[str, Any] = None,
+        config: Optional[Dict[str, Any]] = None,
         health_check_func: Optional[Callable] = None,
         deployment_strategy: DeploymentStrategy = DeploymentStrategy.IMMEDIATE,
     ) -> None:

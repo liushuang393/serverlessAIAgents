@@ -18,10 +18,10 @@ class AgentRouter:
 
     def __init__(
         self,
-        router: RouterInterface = None,
-        agents: Dict[str, Agent] = None,
+        router: Optional[RouterInterface] = None,
+        agents: Optional[Dict[str, Agent]] = None,
         name: str = "AgentRouter",
-        config: Dict[str, Any] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         """
         Agent Routerを初期化する
@@ -33,9 +33,9 @@ class AgentRouter:
             config: 設定辞書
         """
         self.name = name
-        self.router = router
-        self.agents = agents or {}
-        self.config = config or {}
+        self.router = router if router is not None else None
+        self.agents = agents if agents is not None else {}
+        self.config = config if config is not None else {}
 
         # 設定値
         self.fallback_agent = self.config.get("fallback_agent", "default")
@@ -43,7 +43,9 @@ class AgentRouter:
 
         logger.info(f"Agent Router '{self.name}' を初期化しました（{len(self.agents)}個のAgent）")
 
-    async def process(self, input_text: str, context: Dict[str, Any] = None) -> str:
+    async def process(
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
         入力内容に基づいて最適なAgentに振り分けて処理する
 
@@ -62,7 +64,9 @@ class AgentRouter:
             if not self.router:
                 raise ValueError("ルーターが設定されていません")
 
-            route_result = await self.router.route(input_text, context or {})
+            route_result = await self.router.route(
+                input_text, context if context is not None else {}
+            )
 
             # 信頼度チェック
             if route_result.confidence < self.min_confidence:
@@ -81,11 +85,12 @@ class AgentRouter:
                     return f"エラー: Agent '{target_agent_name}' が見つかりません"
 
             logger.info(
-                f"Agent '{selected_agent.name}' に振り分けました（信頼度: {route_result.confidence:.2f}）"
+                f"Agent '{selected_agent.name}' に振り分けました"
+                f"（信頼度: {route_result.confidence:.2f}）"
             )
 
             # Agentで処理実行
-            context = context or {}
+            context = context if context is not None else {}
             context.update({"route_result": route_result, "router_name": self.name})
 
             return await selected_agent.process(input_text, context)

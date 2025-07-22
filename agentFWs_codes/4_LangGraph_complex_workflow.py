@@ -48,7 +48,10 @@ async def create_research_workflow():
 
     async def report_node(state: AgentState):
         agent = create_react_agent(llm=llm, tools=[], state_modifier="你是报告专家")
-        prompt = f"请生成报告：原始研究：{state['research_data']['raw_data']}，分析结果：{state['research_data']['analysis']}"
+        prompt = (
+            f"请生成报告：原始研究：{state['research_data']['raw_data']}，"
+            f"分析结果：{state['research_data']['analysis']}"
+        )
         res = await agent.ainvoke(
             {"messages": [("user", prompt)]},
             config={"configurable": {"thread_id": "report"}},

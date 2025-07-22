@@ -12,7 +12,6 @@ from pathlib import Path
 from typing import Any
 
 from ai_blocks.config.dynamic import (
-    ConfigSource,
     ConfigValidationError,
     config_context,
     get_config_manager,
@@ -144,13 +143,13 @@ async def demo_rollback():
     original_log_level = await manager.get("log_level")
     original_temperature = await manager.get("temperature")
 
-    print(f"\n1️⃣ 元の設定:")
+    print("\n1️⃣ 元の設定:")
     print(f"   debug: {original_debug}")
     print(f"   log_level: {original_log_level}")
     print(f"   temperature: {original_temperature}")
 
     # 複数の設定を変更
-    print(f"\n2️⃣ 設定を変更:")
+    print("\n2️⃣ 設定を変更:")
     await manager.set("debug", True, reason="デバッグモード有効化")
     await manager.set("log_level", "DEBUG", reason="詳細ログ有効化")
     await manager.set("temperature", 1.5, reason="温度を上げる")
@@ -160,14 +159,14 @@ async def demo_rollback():
     print(f"   temperature: {await manager.get('temperature')}")
 
     # 1ステップロールバック
-    print(f"\n3️⃣ 1ステップロールバック:")
+    print("\n3️⃣ 1ステップロールバック:")
     await manager.rollback(1)
     print(f"   debug: {await manager.get('debug')}")
     print(f"   log_level: {await manager.get('log_level')}")
     print(f"   temperature: {await manager.get('temperature')}")
 
     # 2ステップロールバック
-    print(f"\n4️⃣ 2ステップロールバック:")
+    print("\n4️⃣ 2ステップロールバック:")
     await manager.rollback(2)
     print(f"   debug: {await manager.get('debug')}")
     print(f"   log_level: {await manager.get('log_level')}")
@@ -193,7 +192,7 @@ async def demo_file_operations():
         json.dump(temp_config, f, indent=2)
         temp_file_path = Path(f.name)
 
-    print(f"\n1️⃣ 設定をファイルに保存:")
+    print("\n1️⃣ 設定をファイルに保存:")
     try:
         await manager.save_to_file(temp_file_path)
         print(f"   ✅ 設定を保存しました: {temp_file_path}")
@@ -201,7 +200,7 @@ async def demo_file_operations():
         # ファイル内容を表示
         with open(temp_file_path, "r") as f:
             content = f.read()
-        print(f"   ファイル内容（最初の200文字）:")
+        print("   ファイル内容（最初の200文字）:")
         print(f"   {content[:200]}...")
 
     except Exception as e:
@@ -224,12 +223,12 @@ async def demo_context_manager():
     original_debug = await manager.get("debug")
     original_max_tokens = await manager.get("max_tokens")
 
-    print(f"\n1️⃣ コンテキスト外の設定:")
+    print("\n1️⃣ コンテキスト外の設定:")
     print(f"   debug: {original_debug}")
     print(f"   max_tokens: {original_max_tokens}")
 
     # 一時的な設定変更
-    print(f"\n2️⃣ コンテキスト内での一時的な設定変更:")
+    print("\n2️⃣ コンテキスト内での一時的な設定変更:")
     async with config_context(debug=True, max_tokens=3000):
         print(f"   debug: {await manager.get('debug')}")
         print(f"   max_tokens: {await manager.get('max_tokens')}")
@@ -238,7 +237,7 @@ async def demo_context_manager():
         await asyncio.sleep(0.1)
 
     # コンテキスト終了後
-    print(f"\n3️⃣ コンテキスト終了後（自動復元）:")
+    print("\n3️⃣ コンテキスト終了後（自動復元）:")
     print(f"   debug: {await manager.get('debug')}")
     print(f"   max_tokens: {await manager.get('max_tokens')}")
 

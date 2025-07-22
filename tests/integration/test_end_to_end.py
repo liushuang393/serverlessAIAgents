@@ -7,28 +7,19 @@
 
 import asyncio
 import time
-from typing import Any, Dict, List
 
 import pytest
 
-from ai_blocks.architectures.augmented_llm import AugmentedLLM
-from ai_blocks.architectures.parallel_agents import ParallelAgents
-from ai_blocks.architectures.prompt_chaining import PromptChain, SpecializedAgent
 from ai_blocks.config.dynamic import config_context, get_config_manager
 from ai_blocks.core.chunker import SimpleChunker
-from ai_blocks.core.evaluator import RuleBasedEvaluator
+from ai_blocks.core.evaluator import EvaluationCriteria, RuleBasedEvaluator
 from ai_blocks.core.memory import VectorMemory
-from ai_blocks.core.models import (
-    EvaluationCriteria,
-    Message,
-    MessageRole,
-    RouteDefinition,
-)
+from ai_blocks.core.models import Message, MessageRole, RouteDefinition
 from ai_blocks.core.parser import TextParser
 from ai_blocks.core.router import RuleBasedRouter
 from ai_blocks.core.thread import SimpleThread
 from ai_blocks.core.tool import ToolManager, tool
-from ai_blocks.utils.observability import get_observability_manager, trace
+from ai_blocks.utils.observability import MetricType, get_observability_manager
 
 
 # テスト用のカスタムツール
@@ -266,19 +257,22 @@ class TestEndToEndIntegration:
                     pattern=r"計算|数学|足し算|引き算|掛け算|割り算",
                     target="calculator_agent",
                     priority=1,
-                    metadata={"type": "math"},
+                    conditions={"type": "math"},
+                    description="数学計算関連のクエリ",
                 ),
                 RouteDefinition(
                     pattern=r"分析|解析|統計|データ",
                     target="analysis_agent",
                     priority=1,
-                    metadata={"type": "analysis"},
+                    conditions={"type": "analysis"},
+                    description="データ分析関連のクエリ",
                 ),
                 RouteDefinition(
                     pattern=r".*",
                     target="general_agent",
                     priority=0,
-                    metadata={"type": "general"},
+                    conditions={"type": "general"},
+                    description="一般的なクエリ",
                 ),
             ]
 
@@ -308,15 +302,13 @@ class TestEndToEndIntegration:
 
             # 評価基準を定義
             criteria = [
-                EvaluationCriteria(name="relevance", description="回答の関連性", weight=0.4),
-                EvaluationCriteria(name="accuracy", description="回答の正確性", weight=0.3),
-                EvaluationCriteria(
-                    name="completeness", description="回答の完全性", weight=0.3
-                ),
+                EvaluationCriteria.RELEVANCE.value,
+                EvaluationCriteria.ACCURACY.value,
+                EvaluationCriteria.COMPLETENESS.value,
             ]
 
             # テストケース
-            test_cases = [
+            test_cases: list[dict[str, str | tuple[float, float]]] = [
                 {
                     "input": "AI Blocksの主な特徴は？",
                     "output": "AI Blocksの主な特徴は、モジュラー設計、型安全性、観測可能性、ホットスワップ機能です。",
@@ -336,13 +328,15 @@ class TestEndToEndIntegration:
 
             for test_case in test_cases:
                 result = await evaluator.evaluate(
-                    input_text=test_case["input"],
-                    output_text=test_case["output"],
+                    output=str(test_case["output"]),
                     criteria=criteria,
+                    context={"query": str(test_case["input"])},
                 )
 
                 assert result.passed is True
-                min_score, max_score = test_case["expected_score_range"]
+                score_range = test_case["expected_score_range"]
+                assert isinstance(score_range, tuple)
+                min_score, max_score = score_range
                 assert min_score <= result.score <= max_score
 
     @pytest.mark.asyncio
@@ -379,7 +373,7 @@ class TestEndToEndIntegration:
 
             # 並列処理のテスト
             async def memory_task(i: int):
-                memory_id = await memory.store(f"並列テストデータ {i}")
+                await memory.store(f"並列テストデータ {i}")
                 results = await memory.search("並列", limit=5)
                 return len(results)
 
@@ -415,6 +409,7 @@ class TestEndToEndIntegration:
             # 存在しないツールの実行
             result = await tool_manager.execute("nonexistent_tool", {})
             assert result.success is False
+            assert result.error_message is not None
             assert "見つかりません" in result.error_message
 
             # 無効なパラメータでのツール実行
@@ -438,14 +433,18 @@ class TestEndToEndIntegration:
         # トレーシングとメトリクスの統合テスト
         with self.observability.trace("observability_integration_test"):
             # メトリクスを記録
-            self.observability.record_metric("test_counter", 1.0, "counter")
-            self.observability.record_metric("test_gauge", 42.0, "gauge")
-            self.observability.record_metric("test_histogram", 1.5, "histogram")
+            self.observability.record_metric("test_counter", 1.0, MetricType.COUNTER)
+            self.observability.record_metric("test_gauge", 42.0, MetricType.GAUGE)
+            self.observability.record_metric(
+                "test_histogram", 1.5, MetricType.HISTOGRAM
+            )
 
             # 複数の操作を実行してトレースを生成
+            from ai_blocks.core.memory import VectorMemory
+
             memory = VectorMemory()
             await memory.store("観測可能性テスト")
-            results = await memory.search("観測可能性")
+            await memory.search("観測可能性")
 
             # メトリクスが記録されていることを確認
             metrics = self.observability.metrics_collector.get_metrics()

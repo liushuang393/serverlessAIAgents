@@ -6,16 +6,13 @@
 """
 
 import asyncio
-import inspect
-from abc import ABC, abstractmethod
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Generic, List, Optional, Type, TypeVar, Union
+from typing import Any, Dict, Generic, List, Optional, TypeVar
 
 from ..config import get_settings
 from ..utils.logging import get_logger
-from .models import AgentConfig
-from .registry import ComponentRegistry, DeploymentStrategy, get_registry
+from .registry import ComponentRegistry, get_registry
 
 logger = get_logger(__name__)
 
@@ -40,6 +37,18 @@ class ComponentSpec:
     component_type: str
     component_name: str
     version: Optional[str] = None
+    config: Dict[str, Any] = field(default_factory=dict)
+    dependencies: List[DependencySpec] = field(default_factory=list)
+    singleton: bool = False
+    lazy_init: bool = False
+
+
+@dataclass
+class AgentConfig:
+    """エージェント設定"""
+
+    name: str
+    agent_type: str
     config: Dict[str, Any] = field(default_factory=dict)
     dependencies: List[DependencySpec] = field(default_factory=list)
     singleton: bool = False
@@ -81,7 +90,7 @@ class ComponentFactory(Generic[T]):
         registration = self.registry.get_registration(component_type, component_name)
         if registration and key in self._singletons:
             logger.debug(f"シングルトンインスタンスを返します: {key}")
-            return self._singletons[key]
+            return self._singletons[key]  # type: ignore
 
         # 設定をマージ
         merged_config = await self._merge_config(
@@ -109,7 +118,7 @@ class ComponentFactory(Generic[T]):
         await self._post_create(instance, component_type, component_name)
 
         logger.debug(f"コンポーネントを作成しました: {key}")
-        return instance
+        return instance  # type: ignore
 
     async def _merge_config(
         self, component_type: str, component_name: str, user_config: Dict[str, Any]

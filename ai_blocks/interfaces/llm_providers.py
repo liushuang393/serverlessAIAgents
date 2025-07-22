@@ -5,11 +5,11 @@ LLMプロバイダーインターフェース
 統一されたインターフェースを提供します。
 """
 
-import asyncio
 import time
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from ..config import get_settings
 from ..core.models import Message, MessageRole
@@ -32,7 +32,7 @@ class LLMResponse:
 class LLMProvider(ABC):
     """LLMプロバイダーの抽象基底クラス"""
 
-    def __init__(self, model: str = None, **kwargs):
+    def __init__(self, model: str, **kwargs):
         """
         LLMプロバイダーを初期化する
 
@@ -48,8 +48,8 @@ class LLMProvider(ABC):
     async def generate(
         self,
         messages: List[Message],
-        temperature: float = None,
-        max_tokens: int = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
         **kwargs,
     ) -> LLMResponse:
         """
@@ -66,14 +66,13 @@ class LLMProvider(ABC):
         """
         pass
 
-    @abstractmethod
     async def stream_generate(
         self,
-        messages: List[Message],
-        temperature: float = None,
-        max_tokens: int = None,
-        **kwargs,
-    ) -> AsyncGenerator[str, None]:
+        messages: List[Message],  # noqa: ARG002
+        temperature: Optional[float] = None,  # noqa: ARG002
+        max_tokens: Optional[int] = None,  # noqa: ARG002
+        **kwargs,  # noqa: ARG002
+    ) -> AsyncIterator[str]:
         """
         ストリーミング形式で応答を生成する
 
@@ -86,7 +85,7 @@ class LLMProvider(ABC):
         Yields:
             str: 生成されたテキストの断片
         """
-        pass
+        raise NotImplementedError("サブクラスでstream_generateメソッドを実装してください")
 
     @abstractmethod
     def count_tokens(self, text: str) -> int:
@@ -109,7 +108,7 @@ class LLMProvider(ABC):
 class OpenAIProvider(LLMProvider):
     """OpenAI APIプロバイダー"""
 
-    def __init__(self, api_key: str = None, model: str = None, **kwargs):
+    def __init__(self, api_key: str, model: str, **kwargs):
         """
         OpenAIプロバイダーを初期化する
 
@@ -125,7 +124,7 @@ class OpenAIProvider(LLMProvider):
             raise ValueError("OpenAI APIキーが設定されていません")
 
         # OpenAIクライアントの初期化は実際の使用時に行う
-        self._client = None
+        self._client: Optional[Any] = None
 
         logger.info(f"OpenAIProvider を初期化しました (model: {self.model})")
 
@@ -143,8 +142,8 @@ class OpenAIProvider(LLMProvider):
     async def generate(
         self,
         messages: List[Message],
-        temperature: float = None,
-        max_tokens: int = None,
+        temperature: Optional[float] = 0.0,
+        max_tokens: Optional[int] = 0,
         **kwargs,
     ) -> LLMResponse:
         """OpenAI APIを使用して応答を生成する"""
@@ -179,13 +178,13 @@ class OpenAIProvider(LLMProvider):
             logger.error(f"OpenAI API呼び出しエラー: {e}")
             raise
 
-    async def stream_generate(
+    async def stream_generate(  # type: ignore[override]
         self,
         messages: List[Message],
-        temperature: float = None,
-        max_tokens: int = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
         **kwargs,
-    ) -> AsyncGenerator[str, None]:
+    ) -> AsyncIterator[str]:
         """OpenAI APIを使用してストリーミング応答を生成する"""
         client = self._get_client()
 
@@ -212,7 +211,8 @@ class OpenAIProvider(LLMProvider):
         try:
             import tiktoken
 
-            encoding = tiktoken.encoding_for_model(self.model)
+            model_name = self.model or "gpt-3.5-turbo"
+            encoding = tiktoken.encoding_for_model(model_name)
             return len(encoding.encode(text))
         except ImportError:
             logger.warning("tiktokenがインストールされていません。概算値を返します")
@@ -223,7 +223,7 @@ class OpenAIProvider(LLMProvider):
 class AnthropicProvider(LLMProvider):
     """Anthropic Claude APIプロバイダー"""
 
-    def __init__(self, api_key: str = None, model: str = None, **kwargs):
+    def __init__(self, api_key: str, model: str, **kwargs):
         """
         Anthropicプロバイダーを初期化する
 
@@ -256,8 +256,8 @@ class AnthropicProvider(LLMProvider):
     async def generate(
         self,
         messages: List[Message],
-        temperature: float = None,
-        max_tokens: int = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
         **kwargs,
     ) -> LLMResponse:
         """Anthropic APIを使用して応答を生成する"""
@@ -283,14 +283,17 @@ class AnthropicProvider(LLMProvider):
                         }
                     )
 
-            response = await client.messages.create(
-                model=self.model,
-                messages=formatted_messages,
-                system=system_message,
-                temperature=temperature or self.settings.temperature,
-                max_tokens=max_tokens or self.settings.max_tokens,
+            create_kwargs = {
+                "model": self.model,
+                "messages": formatted_messages,
+                "temperature": temperature or self.settings.temperature,
+                "max_tokens": max_tokens or self.settings.max_tokens,
                 **kwargs,
-            )
+            }
+            if system_message is not None:
+                create_kwargs["system"] = system_message
+
+            response = await client.messages.create(**create_kwargs)
 
             response_time = time.time() - start_time
 
@@ -311,13 +314,13 @@ class AnthropicProvider(LLMProvider):
             logger.error(f"Anthropic API呼び出しエラー: {e}")
             raise
 
-    async def stream_generate(
+    async def stream_generate(  # type: ignore[override]
         self,
         messages: List[Message],
-        temperature: float = None,
-        max_tokens: int = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
         **kwargs,
-    ) -> AsyncGenerator[str, None]:
+    ) -> AsyncIterator[str]:
         """Anthropic APIを使用してストリーミング応答を生成する"""
         client = self._get_client()
 
@@ -339,14 +342,18 @@ class AnthropicProvider(LLMProvider):
                         }
                     )
 
-            async with client.messages.stream(
-                model=self.model,
-                messages=formatted_messages,
-                system=system_message,
-                temperature=temperature or self.settings.temperature,
-                max_tokens=max_tokens or self.settings.max_tokens,
+            # system_messageがNoneの場合は除外
+            stream_kwargs = {
+                "model": self.model,
+                "messages": formatted_messages,
+                "temperature": temperature or self.settings.temperature,
+                "max_tokens": max_tokens or self.settings.max_tokens,
                 **kwargs,
-            ) as stream:
+            }
+            if system_message is not None:
+                stream_kwargs["system"] = system_message
+
+            async with client.messages.stream(**stream_kwargs) as stream:
                 async for text in stream.text_stream:
                     yield text
 

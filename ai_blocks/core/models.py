@@ -107,6 +107,7 @@ class RouteDefinition(BaseModel):
     target: str = Field(..., description="振り分け先")
     priority: int = Field(default=0, description="優先度（高い値が優先）")
     conditions: Dict[str, Any] = Field(default_factory=dict, description="追加の条件")
+    description: str = Field(..., description="ルートの説明")
 
 
 class EvaluationResult(BaseModel):

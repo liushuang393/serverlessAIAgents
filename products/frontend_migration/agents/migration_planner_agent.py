@@ -166,7 +166,7 @@ class MigrationPlannerAgent:
         self,
         manifest_path: str,
         issue_list_path: str,
-        requirements: Dict[str, Any] = None,
+        requirements: Optional[Dict[str, Any]] = None,
     ) -> MigrationBlueprint:
         """
         移行計画を生成
@@ -331,7 +331,7 @@ class MigrationPlannerAgent:
         """移行戦略を決定"""
         complexity = issue_list.get("migration_complexity", "medium")
         total_files = manifest.get("total_files", 0)
-        total_issues = len(issue_list.get("issues", []))
+        _ = len(issue_list.get("issues", []))
 
         # 戦略決定ロジック
         if complexity == "simple" and total_files < 20:
@@ -444,9 +444,9 @@ class MigrationPlannerAgent:
 
         # 戦略による調整
         if migration_strategy["strategy"] == MigrationStrategy.FULL_REWRITE:
-            base_effort *= 1.5
+            base_effort = int(base_effort * 1.5)
         elif migration_strategy["strategy"] == MigrationStrategy.INCREMENTAL:
-            base_effort *= 1.2
+            base_effort = int(base_effort * 1.2)
 
         return int(base_effort + issue_effort)
 
@@ -613,7 +613,7 @@ async def main():
         # ブループリントを保存
         await agent.save_blueprint(blueprint, "migration_plan.yaml")
 
-        print(f"移行計画生成完了:")
+        print("移行計画生成完了:")
         print(f"  プロジェクト: {blueprint.project_name}")
         print(f"  戦略: {blueprint.overall_strategy.value}")
         print(f"  対象フレームワーク: {blueprint.target_framework}")

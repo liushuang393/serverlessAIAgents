@@ -4,7 +4,7 @@ RAGシステムのテストスクリプト
 """
 
 import asyncio
-import os
+import json
 import sys
 from pathlib import Path
 
@@ -81,7 +81,7 @@ async def test_server_import() -> bool:
         print("✅ mcp_rag_server モジュールのインポートに成功")
 
         # アプリケーションの作成テスト
-        app = mcp_rag_server.create_app()
+        _ = mcp_rag_server.create_app()
         print("✅ FastAPIアプリケーションの作成に成功")
 
         return True
@@ -132,10 +132,8 @@ def test_config_files() -> bool:
         config_path = Path(config_file)
         if config_path.exists():
             try:
-                import json
-
                 with open(config_path, "r", encoding="utf-8") as f:
-                    config = json.load(f)
+                    _ = json.load(f)
                 print(f"✅ {config_file} は有効なJSONファイルです")
             except json.JSONDecodeError as e:
                 print(f"❌ {config_file} のJSON形式が無効です: {e}")

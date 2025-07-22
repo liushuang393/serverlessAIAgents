@@ -9,7 +9,7 @@ import asyncio
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from ..core import EvaluatorInterface
 from ..core.models import EvaluationResult, Message, MessageRole
@@ -46,9 +46,9 @@ class EvaluatorOptimizer(Agent):
         self,
         name: str = "EvaluatorOptimizer",
         llm_provider: Any = None,
-        evaluator: EvaluatorInterface = None,
+        evaluator: Optional[EvaluatorInterface] = None,
         strategy: OptimizationStrategy = OptimizationStrategy.ITERATIVE,
-        config: Dict[str, Any] = None,
+        config: Optional[Dict[str, Any]] = None,
     ):
         """
         Evaluator-Optimizerを初期化する
@@ -81,7 +81,9 @@ class EvaluatorOptimizer(Agent):
 
         logger.info(f"EvaluatorOptimizer '{self.name}' を初期化しました (strategy: {strategy})")
 
-    async def process(self, input_text: str, context: Dict[str, Any] = None) -> str:
+    async def process(
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
         入力を処理して最適化された応答を生成する
 
@@ -144,7 +146,8 @@ class EvaluatorOptimizer(Agent):
 
             # 品質チェック
             if (
-                attempt.evaluation.passed
+                attempt.evaluation is not None
+                and attempt.evaluation.passed
                 and attempt.evaluation.score >= self.min_score_threshold
             ):
                 logger.info(f"品質基準を満たしました (スコア: {attempt.evaluation.score:.3f})")
@@ -157,8 +160,12 @@ class EvaluatorOptimizer(Agent):
                 )
 
         # 最高スコアの結果を返す
-        best_attempt = max(attempts, key=lambda a: a.evaluation.score)
-        logger.info(f"最高スコアの結果を返します (スコア: {best_attempt.evaluation.score:.3f})")
+        best_attempt = max(
+            attempts, key=lambda a: a.evaluation.score if a.evaluation else 0.0
+        )
+        logger.info(
+            f"最高スコアの結果を返します (スコア: {best_attempt.evaluation.score if best_attempt.evaluation else 0.0:.3f})"
+        )
 
         return best_attempt.content
 
@@ -194,11 +201,15 @@ class EvaluatorOptimizer(Agent):
         await asyncio.gather(*evaluation_tasks)
 
         # 最高スコアの候補を選択
-        best_candidate = max(candidates, key=lambda c: c.evaluation.score)
+        best_candidate = max(
+            candidates, key=lambda c: c.evaluation.score if c.evaluation else 0.0
+        )
 
-        logger.info(f"最高スコアの候補を選択しました (スコア: {best_candidate.evaluation.score:.3f})")
+        logger.info(
+            f"最高スコアの候補を選択 (スコア:{best_candidate.evaluation.score if best_candidate.evaluation else 0.0:.3f})"
+        )
 
-        return best_candidate.content
+        return str(best_candidate.content)
 
     async def _hybrid_optimization(
         self, input_text: str, context: Dict[str, Any]
@@ -233,17 +244,20 @@ class EvaluatorOptimizer(Agent):
         await asyncio.gather(*evaluation_tasks)
 
         # 最高スコアの候補を選択
-        best_candidate = max(candidates, key=lambda c: c.evaluation.score)
+        best_candidate = max(
+            candidates, key=lambda c: c.evaluation.score if c.evaluation else 0.0
+        )
 
         # 品質基準を満たしていれば終了
         if (
-            best_candidate.evaluation.passed
+            best_candidate.evaluation is not None
+            and best_candidate.evaluation.passed
             and best_candidate.evaluation.score >= self.min_score_threshold
         ):
             logger.info(
                 f"初期候補が品質基準を満たしました (スコア: {best_candidate.evaluation.score:.3f})"
             )
-            return best_candidate.content
+            return str(best_candidate.content)
 
         # 反復改善を実行
         logger.info("反復改善を開始します")
@@ -263,13 +277,20 @@ class EvaluatorOptimizer(Agent):
             await self._evaluate_content(improved_attempt, input_text, context)
 
             # より良い結果なら更新
-            if improved_attempt.evaluation.score > best_candidate.evaluation.score:
+            if (
+                improved_attempt.evaluation is not None
+                and best_candidate.evaluation is not None
+                and improved_attempt.evaluation.score > best_candidate.evaluation.score
+            ):
                 best_candidate = improved_attempt
-                logger.info(f"改善されました (スコア: {best_candidate.evaluation.score:.3f})")
+                logger.info(
+                    f"改善 (スコア: {best_candidate.evaluation.score if best_candidate.evaluation else 0.0:.3f})"
+                )
 
             # 品質基準を満たしたら終了
             if (
-                best_candidate.evaluation.passed
+                best_candidate.evaluation is not None
+                and best_candidate.evaluation.passed
                 and best_candidate.evaluation.score >= self.min_score_threshold
             ):
                 break
@@ -280,7 +301,7 @@ class EvaluatorOptimizer(Agent):
                     input_text, best_candidate, context
                 )
 
-        return best_candidate.content
+        return str(best_candidate.content)
 
     async def _generate_content(
         self, prompt: str, context: Dict[str, Any], attempt_number: int
@@ -298,17 +319,24 @@ class EvaluatorOptimizer(Agent):
         """
         start_time = time.time()
 
+        # システムメッセージにコンテキスト情報を含める
+        system_content = "あなたは高品質な回答を生成する専門アシスタントです。"
+        if context:
+            system_content += f"\n\n追加コンテキスト: {context}"
+
         messages = [
-            Message(role=MessageRole.SYSTEM, content="あなたは高品質な回答を生成する専門アシスタントです。"),
+            Message(role=MessageRole.SYSTEM, content=system_content),
             Message(role=MessageRole.USER, content=prompt),
         ]
 
+        if self.llm is None:
+            raise ValueError("LLMプロバイダーが設定されていません")
         response = await self.llm.generate(messages)
         generation_time = time.time() - start_time
 
         return GenerationAttempt(
             attempt_number=attempt_number,
-            content=response.content,
+            content=str(response.content),
             generation_time=generation_time,
         )
 
@@ -325,11 +353,17 @@ class EvaluatorOptimizer(Agent):
         """
         start_time = time.time()
 
+        # 元の入力をコンテキストに追加
+        evaluation_context = context.copy() if context else {}
+        evaluation_context["original_input"] = original_input
+
+        if self.evaluator is None:
+            raise ValueError("評価器が設定されていません")
+
         evaluation = await self.evaluator.evaluate(
-            content=attempt.content,
+            output=attempt.content,
             criteria=self.evaluation_criteria,
-            reference=original_input,
-            context=context,
+            context=evaluation_context,
         )
 
         attempt.evaluation = evaluation
@@ -354,10 +388,19 @@ class EvaluatorOptimizer(Agent):
         Returns:
             str: 改善プロンプト
         """
-        feedback = attempt.evaluation.feedback
-        suggestions = "\n".join(
-            f"- {suggestion}" for suggestion in attempt.evaluation.suggestions
-        )
+        if attempt.evaluation is None:
+            feedback = "評価が実行されていません"
+            suggestions = "- 評価を実行してください"
+        else:
+            feedback = attempt.evaluation.feedback
+            suggestions = "\n".join(
+                f"- {suggestion}" for suggestion in attempt.evaluation.suggestions
+            )
+
+        # コンテキスト情報を追加
+        context_info = ""
+        if context:
+            context_info = f"\n【追加コンテキスト】\n{context}\n"
 
         improvement_prompt = f"""以下の回答を改善してください：
 
@@ -371,7 +414,7 @@ class EvaluatorOptimizer(Agent):
 {feedback}
 
 【改善提案】
-{suggestions}
+{suggestions}{context_info}
 
 【改善指示】
 上記のフィードバックと提案を参考に、より高品質な回答を生成してください。

@@ -15,7 +15,6 @@ import asyncio
 import json
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from ai_blocks.core.memory import VectorMemory
@@ -346,8 +345,8 @@ class QAReportAgent:
                 "seo": 0.2,
             }
 
-            weighted_sum = 0
-            total_weight = 0
+            weighted_sum = 0.0
+            total_weight = 0.0
 
             for category, score in category_scores.items():
                 weight = weights.get(category, 0.25)
@@ -388,7 +387,7 @@ class QAReportAgent:
         )
 
         # アクセシビリティ監査を実行
-        a11y_result = await self.tool_manager.execute(
+        _ = await self.tool_manager.execute(
             "run_accessibility_audit",
             {"page_url": page_url, "tools": ["axe-core", "wave"]},
         )
@@ -613,7 +612,7 @@ async def main():
         # レポートを保存
         await agent.save_report(qa_report, "qa_report.json")
 
-        print(f"QAレポート生成完了:")
+        print("QAレポート生成完了:")
         print(f"  URL: {qa_report.page_url}")
         print(f"  総合スコア: {qa_report.overall_score:.2f}")
         print(f"  パフォーマンス: {len(qa_report.performance_metrics)}メトリクス")

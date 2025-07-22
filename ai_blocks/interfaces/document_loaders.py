@@ -5,12 +5,11 @@
 テキストに変換するための統一されたインターフェースを提供します。
 """
 
-import asyncio
 import mimetypes
 from abc import ABC, abstractmethod
 from io import BytesIO
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Optional, Union
 
 from ..config import get_settings
 from ..core.models import ParsedDocument
@@ -60,9 +59,7 @@ class DocumentLoader(ABC):
 
     def _get_mime_type(self, source: Union[str, Path]) -> Optional[str]:
         """ソースのMIMEタイプを取得する"""
-        if isinstance(source, (str, Path)):
-            return mimetypes.guess_type(str(source))[0]
-        return None
+        return mimetypes.guess_type(str(source))[0]
 
 
 class PDFLoader(DocumentLoader):
@@ -96,7 +93,7 @@ class PDFLoader(DocumentLoader):
         try:
             # ソースの種類に応じて処理
             if isinstance(source, bytes):
-                pdf_file = BytesIO(source)
+                pdf_file: Union[BytesIO, Any] = BytesIO(source)
                 source_info = "binary_data"
             else:
                 pdf_file = open(source, "rb")
@@ -318,7 +315,7 @@ class ImageLoader(DocumentLoader):
             logger.info(f"画像OCRを正常に完了しました: {len(clean_text)}文字")
 
             return ParsedDocument(
-                text=clean_text, metadata=metadata, source_type="image"
+                text=clean_text, metadata=metadata, chunks=None, source_type="image"
             )
 
         except Exception as e:
@@ -431,8 +428,10 @@ class DocumentLoaderFactory:
                     continue
             raise ValueError("適切なローダーが見つかりませんでした")
 
-        loader = self.get_loader(source)
-        if not loader:
+        # この時点でsourceはstr | Pathのみ
+        loader = self.get_loader(source)  # type: ignore[assignment]
+        if loader is None:
             raise ValueError(f"サポートされていないファイル形式: {source}")
 
+        # この時点でloaderはNoneではない
         return await loader.load(source)

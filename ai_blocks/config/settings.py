@@ -5,19 +5,26 @@ AI Blocksの設定管理
 Pydanticを使用して型安全な設定を提供します。
 """
 
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 # Pydanticのインポート処理
 try:
     # Pydantic v2の場合
-    from pydantic import Field
+    from pydantic import ConfigDict, Field
     from pydantic_settings import BaseSettings
+
+    HAS_CONFIG_DICT = True
 except ImportError:
     try:
         # Pydantic v1の場合
+        from typing import Any
+
         from pydantic import BaseSettings, Field  # type: ignore
+
+        # Pydantic v1用のダミー型
+        ConfigDict = Any  # type: ignore
+        HAS_CONFIG_DICT = False
     except ImportError as e:
         raise ImportError(
             "pydanticまたはpydantic-settingsがインストールされていません。"
@@ -36,7 +43,10 @@ class Settings(BaseSettings):
     # ログ設定
     log_level: str = Field(default="INFO", description="ログレベル")
     log_format: str = Field(
-        default="{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} - {message}",
+        default=(
+            "{time:YYYY-MM-DD HH:mm:ss} | {level} | "
+            "{name}:{function}:{line} - {message}"
+        ),
         description="ログフォーマット",
     )
     log_file: Optional[str] = Field(default=None, description="ログファイルパス")
@@ -45,6 +55,10 @@ class Settings(BaseSettings):
     openai_api_key: Optional[str] = Field(default=None, description="OpenAI APIキー")
     anthropic_api_key: Optional[str] = Field(
         default=None, description="Anthropic APIキー"
+    )
+    base_url: Optional[str] = Field(default=None, description="LLM APIのベースURL（Ollama等）")
+    ai_blocks_base_url: Optional[str] = Field(
+        default=None, description="AI Blocks用のベースURL"
     )
     default_llm_provider: str = Field(default="openai", description="デフォルトLLMプロバイダー")
     default_model: str = Field(default="gpt-3.5-turbo", description="デフォルトモデル")
@@ -91,13 +105,23 @@ class Settings(BaseSettings):
     enable_tracing: bool = Field(default=False, description="トレーシングを有効にする")
     trace_sample_rate: float = Field(default=0.1, description="トレースサンプリング率")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-
-        # 環境変数のプレフィックス
-        env_prefix = "AI_BLOCKS_"
+    # Pydantic v2の設定
+    if HAS_CONFIG_DICT:
+        model_config = {
+            "env_file": ".env",
+            "env_file_encoding": "utf-8",
+            "case_sensitive": False,
+            "env_prefix": "AI_BLOCKS_",
+            "extra": "ignore",  # 未定義フィールドを無視
+        }
+    else:
+        # Pydantic v1の場合の後方互換性
+        class Config:
+            env_file = ".env"
+            env_file_encoding = "utf-8"
+            case_sensitive = False
+            env_prefix = "AI_BLOCKS_"
+            extra = "ignore"
 
 
 # グローバル設定インスタンス

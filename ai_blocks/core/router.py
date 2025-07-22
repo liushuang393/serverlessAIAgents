@@ -8,7 +8,7 @@ Router（ルーター）コンポーネント
 import re
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Pattern
+from typing import Any, Dict, List, Optional, Pattern
 
 from ..utils.logging import get_logger
 from .models import RouteDefinition, RouteResult
@@ -31,7 +31,7 @@ class RouterInterface(ABC):
 
     @abstractmethod
     async def route(
-        self, input_text: str, context: Dict[str, Any] = None
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
     ) -> RouteResult:
         """
         入力に基づいて適切なAgent/Toolに振り分ける
@@ -99,7 +99,7 @@ class RuleBasedRouter(RouterInterface):
         logger.info(f"ルールベースのルーターを初期化しました（デフォルトターゲット: {default_target}）")
 
     async def route(
-        self, input_text: str, context: Dict[str, Any] = None
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
     ) -> RouteResult:
         """
         入力に基づいて適切なAgent/Toolに振り分ける
@@ -122,7 +122,9 @@ class RuleBasedRouter(RouterInterface):
         sorted_routes = sorted(self._routes, key=lambda r: r.priority, reverse=True)
 
         for route in sorted_routes:
-            match_result = await self._check_route_match(route, input_text, context)
+            match_result = await self._check_route_match(
+                route, input_text, context or {}
+            )
             if match_result:
                 confidence, parameters, reasoning = match_result
 
@@ -319,6 +321,7 @@ class RuleBasedRouter(RouterInterface):
                 "type": RouteType.KEYWORD,
                 "keywords": ["help", "ヘルプ", "助けて", "使い方", "how to"],
             },
+            description="ヘルプ関連のクエリ",
         )
         self._routes.append(help_route)
 
@@ -328,6 +331,7 @@ class RuleBasedRouter(RouterInterface):
             target="calculator",
             priority=80,
             conditions={"type": RouteType.REGEX},
+            description="数学計算関連のクエリ",
         )
         self._routes.append(calc_route)
         self._compiled_patterns[calc_route.pattern] = re.compile(calc_route.pattern)
@@ -354,6 +358,7 @@ class RuleBasedRouter(RouterInterface):
                     "どこ",
                 ],
             },
+            description="質問関連のクエリ",
         )
         self._routes.append(question_route)
 
@@ -376,7 +381,7 @@ class LLMBasedRouter(RouterInterface):
         logger.info(f"LLMベースのルーターを初期化しました（デフォルトターゲット: {default_target}）")
 
     async def route(
-        self, input_text: str, context: Dict[str, Any] = None
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
     ) -> RouteResult:
         """
         入力に基づいて適切なAgent/Toolに振り分ける
@@ -405,7 +410,7 @@ class LLMBasedRouter(RouterInterface):
 
         try:
             # LLMにルーティング判定を依頼
-            prompt = self._create_routing_prompt(input_text, context)
+            prompt = self._create_routing_prompt(input_text, context or {})
             response = await self.llm_provider.generate(prompt)
 
             # レスポンスを解析

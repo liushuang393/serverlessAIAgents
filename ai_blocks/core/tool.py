@@ -10,7 +10,7 @@ import inspect
 import time
 from abc import ABC, abstractmethod
 from functools import wraps
-from typing import Any, Callable, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional
 
 from ..config import get_settings
 from ..utils.logging import get_logger
@@ -70,7 +70,11 @@ class ToolInterface(ABC):
         pass
 
 
-def tool(name: str = None, description: str = "", parameters: Dict[str, Any] = None):
+def tool(
+    name: Optional[str] = None,
+    description: str = "",
+    parameters: Optional[Dict[str, Any]] = None,
+):
     """
     関数をツールとして登録するためのデコレータ
 
@@ -110,7 +114,7 @@ def tool(name: str = None, description: str = "", parameters: Dict[str, Any] = N
         )
 
         # 関数にツール定義を付加
-        func._tool_definition = tool_def
+        func._tool_definition = tool_def  # type: ignore
 
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -119,7 +123,7 @@ def tool(name: str = None, description: str = "", parameters: Dict[str, Any] = N
             else:
                 return func(*args, **kwargs)
 
-        wrapper._tool_definition = tool_def
+        wrapper._tool_definition = tool_def  # type: ignore
         return wrapper
 
     return decorator
@@ -171,6 +175,10 @@ class ToolManager(ToolInterface):
         try:
             # パラメータを検証
             validated_params = self._validate_parameters(tool_def, parameters)
+
+            # ツール関数が存在するかチェック
+            if tool_def.function is None:
+                raise ValueError(f"ツール '{tool_name}' の関数が定義されていません")
 
             # ツールを実行
             if asyncio.iscoroutinefunction(tool_def.function):
@@ -240,9 +248,9 @@ class ToolManager(ToolInterface):
     def register_function(
         self,
         func: Callable,
-        name: str = None,
+        name: Optional[str] = None,
         description: str = "",
-        parameters: Dict[str, Any] = None,
+        parameters: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
         関数をツールとして登録する

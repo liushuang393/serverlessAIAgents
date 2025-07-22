@@ -19,7 +19,9 @@ logger = get_logger(__name__)
 class Agent(ABC):
     """全てのAgentの基底クラス"""
 
-    def __init__(self, name: str = None, config: Dict[str, Any] = None):
+    def __init__(
+        self, name: Optional[str] = None, config: Optional[Dict[str, Any]] = None
+    ):
         """
         Agentを初期化する
 
@@ -27,8 +29,8 @@ class Agent(ABC):
             name: Agent名
             config: 設定辞書
         """
-        self.name = name or self.__class__.__name__
-        self.config = config or {}
+        self.name = name if name is not None else self.__class__.__name__
+        self.config = config if config is not None else {}
         self._metrics = {
             "total_requests": 0,
             "successful_requests": 0,
@@ -39,7 +41,9 @@ class Agent(ABC):
         logger.info(f"Agent '{self.name}' を初期化しました")
 
     @abstractmethod
-    async def process(self, input_text: str, context: Dict[str, Any] = None) -> str:
+    async def process(
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
+    ) -> str:
         """
         入力を処理して応答を生成する
 
@@ -53,7 +57,7 @@ class Agent(ABC):
         pass
 
     async def process_with_metrics(
-        self, input_text: str, context: Dict[str, Any] = None
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         メトリクス収集付きで処理を実行する
@@ -125,7 +129,7 @@ class ResultAggregator(ABC):
 
     @abstractmethod
     async def aggregate(
-        self, results: List[str], context: Dict[str, Any] = None
+        self, results: List[str], context: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         複数の結果を統合する
@@ -153,7 +157,7 @@ class SimpleAggregator(ResultAggregator):
         self.separator = separator
 
     async def aggregate(
-        self, results: List[str], context: Dict[str, Any] = None
+        self, results: List[str], context: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         複数の結果を単純に結合する
@@ -176,7 +180,7 @@ class SimpleAggregator(ResultAggregator):
 class WeightedAggregator(ResultAggregator):
     """重み付き結果統合器"""
 
-    def __init__(self, weights: List[float] = None):
+    def __init__(self, weights: Optional[List[float]] = None):
         """
         重み付き結果統合器を初期化する
 
@@ -186,7 +190,7 @@ class WeightedAggregator(ResultAggregator):
         self.weights = weights
 
     async def aggregate(
-        self, results: List[str], context: Dict[str, Any] = None
+        self, results: List[str], context: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         重み付きで複数の結果を統合する
@@ -238,7 +242,7 @@ class VotingAggregator(ResultAggregator):
         self.min_votes = min_votes
 
     async def aggregate(
-        self, results: List[str], context: Dict[str, Any] = None
+        self, results: List[str], context: Optional[Dict[str, Any]] = None
     ) -> str:
         """
         投票により複数の結果を統合する
@@ -254,7 +258,7 @@ class VotingAggregator(ResultAggregator):
             return ""
 
         # 結果の出現回数をカウント
-        result_counts = {}
+        result_counts: Dict[str, int] = {}
         for result in results:
             if result.strip():
                 normalized_result = result.strip().lower()
@@ -279,7 +283,9 @@ class VotingAggregator(ResultAggregator):
 class ChainExecutor:
     """チェーン実行器"""
 
-    def __init__(self, agents: List[Agent], aggregator: ResultAggregator = None):
+    def __init__(
+        self, agents: List[Agent], aggregator: Optional[ResultAggregator] = None
+    ):
         """
         チェーン実行器を初期化する
 
@@ -293,7 +299,7 @@ class ChainExecutor:
         logger.info(f"チェーン実行器を初期化しました（{len(agents)}個のAgent）")
 
     async def execute_sequential(
-        self, initial_input: str, context: Dict[str, Any] = None
+        self, initial_input: str, context: Optional[Dict[str, Any]] = None
     ) -> ChainResult:
         """
         Agentを順次実行する
@@ -347,7 +353,7 @@ class ChainExecutor:
             )
 
     async def execute_parallel(
-        self, input_text: str, context: Dict[str, Any] = None
+        self, input_text: str, context: Optional[Dict[str, Any]] = None
     ) -> ChainResult:
         """
         Agentを並列実行する
