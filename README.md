@@ -694,7 +694,10 @@ repos:
 
 - [OpenAI](https://openai.com/) - GPTモデルの提供
 - [Anthropic](https://www.anthropic.com/) - Claudeモデルの提供
+- [google](https://makersuite.google.com/) - Geminiモデルの提供
+- [HuggingFace](https://huggingface.co/) - オペンソースモデルの提供
 - [ChromaDB](https://www.trychroma.com/) - ベクトルデータベース
+- [PocketFlow](https://github.com/The-Pocket/PocketFlow/) - 100行のLLMフレームワーク。エージェントがエージェントを構築できる
 - オープンソースコミュニティの皆様
 
 ## 📞 サポート
