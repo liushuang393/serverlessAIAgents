@@ -53,9 +53,39 @@ pip install agentflow
 
 ### ソースからインストール
 
+#### オプション 1: Conda 環境（推奨）
+
 ```bash
+# リポジトリをクローン
 git clone https://github.com/liushuang393/serverlessAIAgents.git
 cd serverlessAIAgents
+
+# Anaconda Prompt で実行
+conda env create -f environment.yml
+conda activate agentflow
+pip install -e ".[dev]"
+```
+
+または、セットアップスクリプトを使用：
+
+```bash
+# Anaconda Prompt で実行
+setup_conda.bat
+```
+
+#### オプション 2: Python venv
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/liushuang393/serverlessAIAgents.git
+cd serverlessAIAgents
+
+# 仮想環境を作成
+python -m venv venv
+.\venv\Scripts\Activate.ps1  # Windows
+source venv/bin/activate      # Linux/Mac
+
+# 依存関係をインストール
 pip install -e ".[dev]"
 ```
 

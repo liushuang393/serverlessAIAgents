@@ -10,6 +10,11 @@ __pycache__/
 .env.*
 *.log
 
+# ---- Conda
+.conda/
+*.conda
+envs/
+
 # ---- Editor / OS
 .vscode/
 .idea/
