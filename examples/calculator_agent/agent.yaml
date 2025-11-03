@@ -1,0 +1,40 @@
+meta:
+  id: calculator-agent
+  name: Calculator Agent
+  version: 1.0.0
+  description: 数式を計算するエージェント
+  author: AgentFlow Team
+  license: MIT
+  icon: 🧮
+  category: utility
+
+protocols:
+  mcp: true
+  a2a:
+    enabled: true
+    endpoint: http://localhost:8003
+  agui: true
+
+inputs:
+  - name: expression
+    type: string
+    description: 計算する数式（例: "2 + 3 * 4"）
+    required: true
+
+outputs:
+  - name: result
+    type: number
+    description: 計算結果
+  - name: expression
+    type: string
+    description: 計算した数式
+
+skills:
+  - name: calculate
+    description: 数式を計算
+    inputs:
+      - expression
+    outputs:
+      - result
+      - expression
+

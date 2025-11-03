@@ -1,0 +1,54 @@
+meta:
+  id: weather-agent
+  name: Weather Agent
+  version: 1.0.0
+  description: 天気情報を取得するエージェント
+  author: AgentFlow Team
+  license: MIT
+  icon: 🌤️
+  category: utility
+
+protocols:
+  mcp: true
+  a2a:
+    enabled: true
+    endpoint: http://localhost:8001
+  agui: true
+
+inputs:
+  - name: location
+    type: string
+    description: 場所（都市名または座標）
+    required: true
+  - name: units
+    type: string
+    description: 温度単位（celsius または fahrenheit）
+    required: false
+    default: celsius
+
+outputs:
+  - name: temperature
+    type: number
+    description: 現在の気温
+  - name: condition
+    type: string
+    description: 天気の状態
+  - name: humidity
+    type: number
+    description: 湿度（%）
+  - name: wind_speed
+    type: number
+    description: 風速（m/s）
+
+skills:
+  - name: get_weather
+    description: 指定された場所の現在の天気を取得
+    inputs:
+      - location
+      - units
+    outputs:
+      - temperature
+      - condition
+      - humidity
+      - wind_speed
+

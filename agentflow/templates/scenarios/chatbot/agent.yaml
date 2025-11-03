@@ -1,0 +1,63 @@
+id: {{ agent_name }}
+name: {{ agent_name | title }}
+version: 1.0.0
+description: {{ agent_description }}
+author: {{ author }}
+email: {{ email }}
+category: conversation
+protocols:
+  - mcp
+  - a2a
+  - agui
+
+inputs:
+  - name: message
+    type: string
+    description: User message
+    required: true
+  
+  - name: session_id
+    type: string
+    description: Session ID for conversation history
+    required: false
+
+outputs:
+  - name: response
+    type: string
+    description: Bot response
+  
+  - name: metadata
+    type: object
+    description: Response metadata
+    schema:
+      type: object
+      properties:
+        model:
+          type: string
+        tokens_used:
+          type: integer
+        confidence:
+          type: number
+
+tools:
+  - name: llm_client
+    description: LLM client for text generation
+    type: external
+    config:
+      provider: {{ llm_provider }}
+      model: {{ model_name }}
+  
+  {% if enable_memory %}
+  - name: memory_store
+    description: Conversation history storage
+    type: builtin
+    config:
+      max_length: {{ max_history_length }}
+  {% endif %}
+
+config:
+  timeout: 60
+  max_retries: 3
+  enable_logging: true
+  streaming: true
+

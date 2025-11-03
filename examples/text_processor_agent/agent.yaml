@@ -1,0 +1,73 @@
+meta:
+  id: text-processor
+  name: Text Processor Agent
+  version: 1.0.0
+  author: AgentFlow Team
+  icon: 📝
+  category: text
+  description: A simple text processing agent that demonstrates AgentBlock usage
+
+interfaces:
+  inputs:
+    - name: text
+      type: string
+      required: true
+      description: The text to process
+    - name: operation
+      type: string
+      required: false
+      description: The operation to perform (upper, lower, length, word_count)
+      options:
+        - upper
+        - lower
+        - length
+        - word_count
+      default: upper
+  outputs:
+    - name: result
+      type: string
+      description: The processed result
+    - name: original_text
+      type: string
+      description: The original input text
+    - name: operation
+      type: string
+      description: The operation that was performed
+
+protocols:
+  mcp:
+    tools: []
+    resources: []
+  a2a:
+    enabled: true
+    skills:
+      - process_text
+      - convert_case
+      - count_words
+  agui:
+    enabled: true
+    events:
+      - flow.start
+      - flow.complete
+      - node.start
+      - node.complete
+
+dependencies:
+  agents: []
+  tools: []
+  packages: []
+
+pocketflow:
+  entry: flow.py:create_flow
+  shared_schema: schemas.py:SharedData
+
+visual:
+  color: "#4A90E2"
+  size: medium
+  ports:
+    input:
+      - text
+      - operation
+    output:
+      - result
+

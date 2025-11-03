@@ -1,0 +1,23 @@
+# AgentFlow Framework
+agentflow>=0.1.0
+
+# Core dependencies
+pocketflow>=0.0.3
+pydantic>=2.0.0
+pyyaml>=6.0
+
+{% if 'mcp' in protocols %}
+# MCP Protocol
+mcp>=1.0.0
+{% endif %}
+
+{% if 'a2a' in protocols %}
+# A2A Protocol
+python-a2a>=0.5.0
+{% endif %}
+
+{% if 'agui' in protocols %}
+# AG-UI Protocol
+adk-agui-middleware>=0.1.0
+{% endif %}
+

@@ -1,0 +1,56 @@
+# {{ agent_name }}
+
+{{ description }}
+
+## 概要
+
+このエージェントは AgentFlow フレームワークを使用して作成されました。
+
+## セットアップ
+
+```bash
+# 依存関係をインストール
+pip install -r requirements.txt
+```
+
+## 使用方法
+
+```bash
+# エージェントを実行
+agentflow run .
+
+# または直接実行
+python main.py
+```
+
+## プロトコル
+
+このエージェントは以下のプロトコルをサポートしています：
+
+{% if 'mcp' in protocols %}
+- **MCP (Model Context Protocol)**: ツール統合
+{% endif %}
+{% if 'a2a' in protocols %}
+- **A2A (Agent-to-Agent)**: エージェント間通信
+{% endif %}
+{% if 'agui' in protocols %}
+- **AG-UI**: フロントエンド統合
+{% endif %}
+
+## 開発
+
+```bash
+# テストを実行
+pytest tests/
+
+# 型チェック
+mypy .
+
+# リント
+ruff check .
+```
+
+## ライセンス
+
+MIT License
+

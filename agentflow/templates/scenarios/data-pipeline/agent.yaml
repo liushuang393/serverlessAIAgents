@@ -1,0 +1,72 @@
+id: {{ agent_name }}
+name: {{ agent_name | title }}
+version: 1.0.0
+description: {{ agent_description }}
+author: {{ author }}
+email: {{ email }}
+category: data
+protocols:
+  - mcp
+  - a2a
+
+inputs:
+  - name: input_path
+    type: string
+    description: Path to input data file
+    required: true
+  
+  - name: output_path
+    type: string
+    description: Path to output data file
+    required: true
+  
+  - name: transformations
+    type: array
+    description: List of transformations to apply
+    required: false
+
+outputs:
+  - name: processed_data
+    type: object
+    description: Processed data statistics
+    schema:
+      type: object
+      properties:
+        rows_processed:
+          type: integer
+        rows_valid:
+          type: integer
+        rows_invalid:
+          type: integer
+
+tools:
+  - name: data_reader
+    description: Read data from various formats
+    type: builtin
+    config:
+      format: {{ input_format }}
+  
+  {% if enable_validation %}
+  - name: data_validator
+    description: Validate data quality
+    type: builtin
+  {% endif %}
+  
+  {% if enable_transformation %}
+  - name: data_transformer
+    description: Transform data
+    type: builtin
+  {% endif %}
+  
+  - name: data_writer
+    description: Write data to various formats
+    type: builtin
+    config:
+      format: {{ output_format }}
+
+config:
+  timeout: 600
+  max_retries: 3
+  enable_logging: true
+  batch_size: 1000
+

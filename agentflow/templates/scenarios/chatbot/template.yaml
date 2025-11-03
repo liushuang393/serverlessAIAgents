@@ -1,0 +1,61 @@
+id: chatbot
+name: Chatbot Agent
+description: 対話型チャットボットエージェント
+category: conversation
+author: AgentFlow Team
+version: 1.0.0
+
+parameters:
+  - name: agent_name
+    type: string
+    description: エージェント名
+    default: chatbot
+    required: true
+  
+  - name: agent_description
+    type: string
+    description: エージェントの説明
+    default: Interactive chatbot agent
+    required: true
+  
+  - name: author
+    type: string
+    description: 作成者名
+    default: Your Name
+    required: true
+  
+  - name: email
+    type: string
+    description: 作成者のメールアドレス
+    default: your.email@example.com
+    required: true
+  
+  - name: llm_provider
+    type: string
+    description: LLM プロバイダー
+    default: openai
+    required: true
+    choices:
+      - openai
+      - anthropic
+      - google
+      - local
+  
+  - name: model_name
+    type: string
+    description: モデル名
+    default: gpt-4
+    required: true
+  
+  - name: enable_memory
+    type: bool
+    description: 会話履歴を保持する
+    default: true
+    required: false
+  
+  - name: max_history_length
+    type: int
+    description: 最大履歴長
+    default: 10
+    required: false
+

@@ -1,0 +1,55 @@
+meta:
+  id: translator-agent
+  name: Translator Agent
+  version: 1.0.0
+  description: テキストを翻訳するエージェント
+  author: AgentFlow Team
+  license: MIT
+  icon: 🌐
+  category: language
+
+protocols:
+  mcp: true
+  a2a:
+    enabled: true
+    endpoint: http://localhost:8002
+  agui: true
+
+inputs:
+  - name: text
+    type: string
+    description: 翻訳するテキスト
+    required: true
+  - name: source_lang
+    type: string
+    description: 元の言語コード（例: ja, en, zh）
+    required: false
+    default: auto
+  - name: target_lang
+    type: string
+    description: 翻訳先の言語コード（例: ja, en, zh）
+    required: true
+
+outputs:
+  - name: translated_text
+    type: string
+    description: 翻訳されたテキスト
+  - name: detected_lang
+    type: string
+    description: 検出された元の言語
+  - name: confidence
+    type: number
+    description: 翻訳の信頼度（0-1）
+
+skills:
+  - name: translate
+    description: テキストを指定された言語に翻訳
+    inputs:
+      - text
+      - source_lang
+      - target_lang
+    outputs:
+      - translated_text
+      - detected_lang
+      - confidence
+

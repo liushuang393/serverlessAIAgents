@@ -1,0 +1,45 @@
+"""{{ agent_name }} - メインエントリーポイント.
+
+{{ description }}
+"""
+
+from pocketflow import AsyncFlow, AsyncNode
+
+
+async def process_input(shared: dict) -> dict:
+    """入力データを処理.
+    
+    Args:
+        shared: 共有データ辞書
+        
+    Returns:
+        処理結果を含む辞書
+    """
+    input_data = shared.get("input", "")
+    
+    # TODO: ここに処理ロジックを実装
+    result = f"Processed: {input_data}"
+    
+    return {"output": result}
+
+
+# メインワークフローを定義
+{{ flow_name }} = AsyncFlow(
+    name="{{ flow_name }}",
+    nodes=[
+        AsyncNode(name="process", func=process_input),
+    ],
+)
+
+
+if __name__ == "__main__":
+    import asyncio
+    
+    async def main() -> None:
+        """テスト実行."""
+        shared = {"input": "Hello, {{ agent_name }}!"}
+        result = await {{ flow_name }}.run_async(shared)
+        print(f"Result: {result}")
+    
+    asyncio.run(main())
+

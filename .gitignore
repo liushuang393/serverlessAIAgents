@@ -24,10 +24,60 @@ build/
 .cache/
 coverage/
 
+# ---- Test / Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Build / Distribution
+*.egg-info/
+dist/
+build/
+*.egg
+*.whl
+
+# ---- Secrets / Credentials (機密情報)
+*.key
+*.pem
+*.p12
+*.pfx
+*.cer
+*.crt
+secrets/
+credentials/
+config/secrets.yaml
+config/credentials.yaml
+.secrets/
+.credentials/
+
+# ---- API Keys / Tokens
+**/api_keys.json
+**/tokens.json
+**/.env.local
+**/.env.production
+**/.env.development
+
+# ---- Database
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# ---- Spec Workflow (Optional)
+.spec-workflow/approvals/
+
+# ---- Temporary Test Directories
+invalid-name/
+test-*/
+tmp-*/
+
 # ---- Others
 *.bak
 *.tmp
 *.swp
 
-# ---- 如果不想跟踪这个外部内容（如有）
+# ---- External Content (Optional)
 # products/ai_learning_platform/Hands-On-Large-Language-Models/

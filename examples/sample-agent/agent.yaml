@@ -1,0 +1,102 @@
+# サンプルエージェントメタデータ
+# このファイルは agent.yaml のスキーマ例を示します
+
+meta:
+  id: sample-text-processor
+  name: Sample Text Processor
+  version: 1.0.0
+  author: AgentFlow Team
+  icon: 📝
+  category: text-processing
+  description: A sample agent that processes text input and returns formatted output
+
+interfaces:
+  inputs:
+    - name: text
+      type: string
+      required: true
+      description: Input text to process
+      default: ""
+    
+    - name: format
+      type: enum
+      required: false
+      description: Output format
+      options:
+        - uppercase
+        - lowercase
+        - titlecase
+      default: uppercase
+    
+    - name: max_length
+      type: number
+      required: false
+      description: Maximum output length
+      default: 1000
+
+  outputs:
+    - name: result
+      type: string
+      schema:
+        type: string
+        description: Processed text result
+    
+    - name: metadata
+      type: object
+      schema:
+        type: object
+        properties:
+          length:
+            type: integer
+          format:
+            type: string
+
+protocols:
+  mcp:
+    tools:
+      - mcp://text-tools/format
+      - mcp://text-tools/validate
+    resources:
+      - mcp://dictionaries/english
+
+  a2a:
+    enabled: true
+    skills:
+      - process_text
+      - format_text
+    card_path: agent_card.yaml
+
+  agui:
+    enabled: true
+    events:
+      - flow.start
+      - flow.complete
+      - node.start
+      - node.complete
+      - progress
+
+dependencies:
+  agents:
+    - text-validator
+  tools:
+    - mcp://text-tools/format
+  packages:
+    - pydantic>=2.0.0
+    - pyyaml>=6.0.0
+
+pocketflow:
+  entry: flow.py:create_flow
+  shared_schema: schemas.py:TextProcessorSchema
+
+visual:
+  color: "#4A90E2"
+  size: medium
+  ports:
+    input:
+      text: [0, 0.5]
+      format: [0, 0.3]
+      max_length: [0, 0.7]
+    output:
+      result: [1, 0.5]
+      metadata: [1, 0.3]
+
