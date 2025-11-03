@@ -45,51 +45,21 @@ AgentFlow は、**MCP（Model Context Protocol）**、**A2A（Agent-to-Agent）*
 
 ## 📦 インストール
 
-### PyPI からインストール
+### 簡単インストール
 
 ```bash
+# PyPI からインストール
+pip install agentflow
+
+# または Conda 環境で
 conda env create -f environment.yml
 conda activate agentflow
 pip install agentflow
 ```
 
-### ソースからインストール
+### 開発者向けインストール
 
-#### オプション 1: Conda 環境（推奨）
-
-```bash
-# リポジトリをクローン
-git clone https://github.com/liushuang393/serverlessAIAgents.git
-cd serverlessAIAgents
-
-# Anaconda Prompt で実行
-conda env create -f environment.yml
-conda activate agentflow
-pip install -e ".[dev]"
-```
-
-または、セットアップスクリプトを使用：
-
-```bash
-# Anaconda Prompt で実行
-setup_conda.bat
-```
-
-#### オプション 2: Python venv
-
-```bash
-# リポジトリをクローン
-git clone https://github.com/liushuang393/serverlessAIAgents.git
-cd serverlessAIAgents
-
-# 仮想環境を作成
-python -m venv venv
-.\venv\Scripts\Activate.ps1  # Windows
-source venv/bin/activate      # Linux/Mac
-
-# 依存関係をインストール
-pip install -e ".[dev]"
-```
+開発に参加する場合は、**[初心者ガイド](docs/getting-started-ja.md)** または **[開発ガイド](docs/development.md)** を参照してください。
 
 ### 動作確認
 
@@ -339,45 +309,19 @@ AgentFlow への貢献を歓迎します！
 
 ### 貢献方法
 
-1. **リポジトリをフォーク**
-   ```bash
-   # GitHub で Fork ボタンをクリック
-   ```
+AgentFlow への貢献は以下のドキュメントを参照してください：
 
-2. **開発環境をセットアップ**
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/serverlessAIAgents.git
-   cd serverlessAIAgents
-   python -m venv .venv
-   source .venv/bin/activate  # Windows: .venv\Scripts\activate
-   pip install -e ".[dev]"
-   ```
+- **[開発ガイド](docs/development.md)** - 開発環境のセットアップと開発フロー
+- **[貢献ガイドライン](CONTRIBUTING.md)** - コーディング規約とプルリクエストプロセス
+- **[コード品質チェックガイド](docs/quality-checks.md)** - 品質チェックツールの使い方
+- **[開発規範](DEVELOPMENT_STANDARDS.md)** - コーディング規範（[English](DEVELOPMENT_STANDARDS_EN.md) | [日本語](DEVELOPMENT_STANDARDS_JA.md)）
 
-3. **ブランチを作成**
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-4. **変更を加える**
-   - コーディング規約に従う
-   - テストを追加
-   - ドキュメントを更新
-
-5. **品質チェック**
-   ```bash
-   ruff format .           # フォーマット
-   ruff check .            # リント
-   mypy agentflow          # 型チェック
-   pytest tests/ --cov     # テスト
-   ```
-
-6. **プルリクエストを作成**
-   ```bash
-   git push origin feature/your-feature-name
-   # GitHub で Pull Request を作成
-   ```
-
-詳細は [開発ガイド](docs/development.md) と [貢献ガイドライン](CONTRIBUTING.md) を参照してください。
+**簡単な手順**:
+1. リポジトリをフォーク
+2. 開発環境をセットアップ（[開発ガイド](docs/development.md) 参照）
+3. ブランチを作成して変更を加える
+4. 品質チェックを実行（`.\check.ps1 all` または `check.bat all`）
+5. プルリクエストを作成
 
 ### 行動規範
 

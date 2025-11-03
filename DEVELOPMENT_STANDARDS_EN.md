@@ -1,62 +1,62 @@
-# AgentFlow 开发规范
+# AgentFlow Development Standards
 
-> **版本**: 1.0.0
-> **最后更新**: 2025-01-15
-> **适用范围**: AgentFlow Framework 所有代码
+> **Version**: 1.0.0  
+> **Last Updated**: 2025-01-15  
+> **Scope**: All AgentFlow Framework code
 
-**其他语言**: [English](DEVELOPMENT_STANDARDS_EN.md) | [日本語](DEVELOPMENT_STANDARDS_JA.md)
-
----
-
-## 📋 目录
-
-1. [核心原则](#核心原则)
-2. [代码质量标准](#代码质量标准)
-3. [架构设计原则](#架构设计原则)
-4. [类型系统规范](#类型系统规范)
-5. [测试标准](#测试标准)
-6. [文档规范](#文档规范)
-7. [错误处理](#错误处理)
-8. [AI 常犯错误清单](#ai-常犯错误清单)
-9. [工具配置](#工具配置)
-10. [检查清单](#检查清单)
+**Other Languages**: [日本語](DEVELOPMENT_STANDARDS_JA.md) | [中文](DEVELOPMENT_STANDARDS.md)
 
 ---
 
-## 核心原则
+## 📋 Table of Contents
 
-### 1. 零容忍政策
-
-- ❌ **禁止**: 静态分析错误（mypy, ruff）
-- ❌ **禁止**: 未处理的警告
-- ❌ **禁止**: `Any` 类型（除非有充分理由并注释）
-- ❌ **禁止**: `type: ignore`（除非有充分理由并注释）
-- ❌ **禁止**: 硬编码配置、密钥、路径
-- ❌ **禁止**: `print()` 调试语句（使用 logging）
-- ❌ **禁止**: 可变默认参数 `def foo(x=[])`
-
-### 2. 质量优先
-
-- ✅ **类型覆盖率**: 100%
-- ✅ **测试覆盖率**: ≥ 80%
-- ✅ **文档覆盖率**: 所有公共 API
-- ✅ **代码审查**: 所有 PR 必须经过审查
+1. [Core Principles](#core-principles)
+2. [Code Quality Standards](#code-quality-standards)
+3. [Architecture Design Principles](#architecture-design-principles)
+4. [Type System Specifications](#type-system-specifications)
+5. [Testing Standards](#testing-standards)
+6. [Documentation Standards](#documentation-standards)
+7. [Error Handling](#error-handling)
+8. [Common AI Mistakes Checklist](#common-ai-mistakes-checklist)
+9. [Tool Configuration](#tool-configuration)
+10. [Checklist](#checklist)
 
 ---
 
-## 代码质量标准
+## Core Principles
 
-### 1. Python 版本
+### 1. Zero Tolerance Policy
+
+- ❌ **FORBIDDEN**: Static analysis errors (mypy, ruff)
+- ❌ **FORBIDDEN**: Unhandled warnings
+- ❌ **FORBIDDEN**: `Any` type (unless justified with comments)
+- ❌ **FORBIDDEN**: `type: ignore` (unless justified with comments)
+- ❌ **FORBIDDEN**: Hardcoded configuration, secrets, paths
+- ❌ **FORBIDDEN**: `print()` debug statements (use logging)
+- ❌ **FORBIDDEN**: Mutable default arguments `def foo(x=[])`
+
+### 2. Quality First
+
+- ✅ **Type Coverage**: 100%
+- ✅ **Test Coverage**: ≥ 80%
+- ✅ **Documentation Coverage**: All public APIs
+- ✅ **Code Review**: All PRs must be reviewed
+
+---
+
+## Code Quality Standards
+
+### 1. Python Version
 
 ```python
-# 最低版本: Python 3.13+
-# 原因: AG-UI 协议要求 + 性能优势
+# Minimum version: Python 3.13+
+# Reason: AG-UI protocol requirement + performance advantages
 requires-python = ">=3.13"
 ```
 
-### 2. 代码风格
+### 2. Code Style
 
-使用 **Ruff** 作为统一的 linter 和 formatter：
+Use **Ruff** as unified linter and formatter:
 
 ```toml
 [tool.ruff]
@@ -64,31 +64,31 @@ line-length = 100
 target-version = "py313"
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "N", "UP", "ANN", "B", "A", "C4", "DTZ",
-          "T10", "EM", "ISC", "ICN", "PIE", "PT", "Q", "RSE", "RET",
+select = ["E", "W", "F", "I", "N", "UP", "ANN", "B", "A", "C4", "DTZ", 
+          "T10", "EM", "ISC", "ICN", "PIE", "PT", "Q", "RSE", "RET", 
           "SIM", "TID", "TCH", "ARG", "PTH", "ERA", "PL", "TRY", "RUF"]
 ignore = ["ANN101", "ANN102"]
 ```
 
-### 3. 命名规范
+### 3. Naming Conventions
 
 ```python
-# 模块名: 小写+下划线
+# Module names: lowercase + underscore
 # agent_flow.py ✅  |  AgentFlow.py ❌
 
-# 类名: PascalCase
+# Class names: PascalCase
 class AgentFlowEngine: ...  # ✅
 class agent_flow_engine: ...  # ❌
 
-# 函数/变量: snake_case
+# Functions/Variables: snake_case
 def create_agent() -> Agent: ...  # ✅
 def createAgent() -> Agent: ...  # ❌
 
-# 常量: UPPER_SNAKE_CASE
+# Constants: UPPER_SNAKE_CASE
 MAX_RETRIES = 3  # ✅
 maxRetries = 3  # ❌
 
-# 私有成员: 单下划线前缀
+# Private members: single underscore prefix
 class Agent:
     def __init__(self) -> None:
         self._internal_state: dict[str, Any] = {}  # ✅
@@ -96,19 +96,19 @@ class Agent:
 
 ---
 
-## 架构设计原则
+## Architecture Design Principles
 
-### 1. SOLID 原则
+### 1. SOLID Principles
 
-#### S - 单一职责原则（Single Responsibility）
+#### S - Single Responsibility Principle
 ```python
-# ❌ 错误: 一个类做太多事
+# ❌ Wrong: One class does too much
 class Agent:
     def execute(self) -> None: ...
     def save_to_db(self) -> None: ...
     def send_email(self) -> None: ...
 
-# ✅ 正确: 职责分离
+# ✅ Correct: Separation of concerns
 class Agent:
     def execute(self) -> None: ...
 
@@ -119,18 +119,18 @@ class NotificationService:
     def send_email(self, to: str, content: str) -> None: ...
 ```
 
-#### O - 开闭原则（Open/Closed）
+#### O - Open/Closed Principle
 ```python
-# ✅ 使用协议和抽象基类
+# ✅ Use protocols and abstract base classes
 from typing import Protocol
 
 class ProtocolAdapter(Protocol):
     async def execute(self, request: dict[str, Any]) -> dict[str, Any]: ...
 ```
 
-#### L - 里氏替换原则（Liskov Substitution）
+#### L - Liskov Substitution Principle
 ```python
-# ✅ 子类可以替换父类
+# ✅ Subclasses can replace parent classes
 class BaseAdapter:
     async def execute(self, request: dict[str, Any]) -> dict[str, Any]:
         raise NotImplementedError
@@ -140,9 +140,9 @@ class MCPAdapter(BaseAdapter):
         return {"status": "ok"}
 ```
 
-#### I - 接口隔离原则（Interface Segregation)
+#### I - Interface Segregation Principle
 ```python
-# ✅ 小而专注的接口
+# ✅ Small and focused interfaces
 class Executable(Protocol):
     def execute(self) -> None: ...
 
@@ -150,9 +150,9 @@ class Validatable(Protocol):
     def validate(self) -> bool: ...
 ```
 
-#### D - 依赖倒置原则（Dependency Inversion）
+#### D - Dependency Inversion Principle
 ```python
-# ✅ 依赖抽象而非具体实现
+# ✅ Depend on abstractions, not concrete implementations
 from typing import Protocol
 
 class Storage(Protocol):
@@ -164,11 +164,10 @@ class AgentManager:
         self._storage = storage
 ```
 
-
-### 2. 依赖注入
+### 2. Dependency Injection
 
 ```python
-# ✅ 构造函数注入
+# ✅ Constructor injection
 class AgentFlowEngine:
     def __init__(
         self,
@@ -181,30 +180,30 @@ class AgentFlowEngine:
         self._logger = logger or logging.getLogger(__name__)
 ```
 
-### 3. 异步优先
+### 3. Async First
 
 ```python
-# ✅ 所有 I/O 操作使用 async/await
+# ✅ All I/O operations use async/await
 async def load_agent(agent_id: str) -> Agent:
     async with aiofiles.open(f"agents/{agent_id}.yaml") as f:
         content = await f.read()
     return Agent.from_yaml(content)
 
-# ❌ 避免阻塞调用
+# ❌ Avoid blocking calls
 def load_agent_sync(agent_id: str) -> Agent:
-    with open(f"agents/{agent_id}.yaml") as f:  # 阻塞!
+    with open(f"agents/{agent_id}.yaml") as f:  # Blocking!
         content = f.read()
     return Agent.from_yaml(content)
 ```
 
 ---
 
-## 类型系统规范
+## Type System Specifications
 
-### 1. 类型注解 100% 覆盖
+### 1. 100% Type Annotation Coverage
 
 ```python
-# ✅ 完整的类型注解
+# ✅ Complete type annotations
 from typing import Any
 from collections.abc import Callable, Awaitable
 
@@ -215,23 +214,23 @@ async def execute_workflow(
 ) -> dict[str, Any]:
     ...
 
-# ❌ 缺少类型注解
+# ❌ Missing type annotations
 async def execute_workflow(workflow_id, inputs, hooks=None):
     ...
 ```
 
-### 2. 使用 Pydantic 进行数据验证
+### 2. Use Pydantic for Data Validation
 
 ```python
 from pydantic import BaseModel, Field, field_validator
 
 class AgentMetadata(BaseModel):
-    """Agent 元数据模型"""
-
+    """Agent metadata model"""
+    
     name: str = Field(..., min_length=1, max_length=100)
     version: str = Field(..., pattern=r"^\d+\.\d+\.\d+$")
     protocols: list[str] = Field(default_factory=list)
-
+    
     @field_validator("protocols")
     @classmethod
     def validate_protocols(cls, v: list[str]) -> list[str]:
@@ -241,7 +240,7 @@ class AgentMetadata(BaseModel):
         return v
 ```
 
-### 3. 泛型使用
+### 3. Generic Usage
 
 ```python
 from typing import TypeVar, Generic
@@ -256,37 +255,37 @@ class AsyncProcessor(Generic[T, R]):
 
 ---
 
-## 测试标准
+## Testing Standards
 
-### 1. 测试覆盖率要求
+### 1. Test Coverage Requirements
 
-- **单元测试**: ≥ 80% 代码覆盖率
-- **集成测试**: 覆盖所有核心流程
-- **端到端测试**: 覆盖关键用户场景
+- **Unit Tests**: ≥ 80% code coverage
+- **Integration Tests**: Cover all core workflows
+- **End-to-End Tests**: Cover key user scenarios
 
-### 2. 测试结构
+### 2. Test Structure
 
 ```python
 import pytest
 from agentflow.core.engine import AgentFlowEngine
 
 class TestAgentFlowEngine:
-    """AgentFlowEngine 单元测试"""
-
+    """AgentFlowEngine unit tests"""
+    
     @pytest.fixture
     def engine(self) -> AgentFlowEngine:
         return AgentFlowEngine()
-
+    
     async def test_execute_workflow_success(
         self,
         engine: AgentFlowEngine,
     ) -> None:
-        """测试工作流执行成功场景"""
+        """Test successful workflow execution"""
         result = await engine.execute(workflow_id="test", inputs={})
         assert result["status"] == "success"
 ```
 
-### 3. Mock 外部依赖
+### 3. Mock External Dependencies
 
 ```python
 from unittest.mock import AsyncMock
@@ -294,18 +293,18 @@ from unittest.mock import AsyncMock
 async def test_agent_with_mocked_storage() -> None:
     mock_storage = AsyncMock()
     mock_storage.load.return_value = '{"name": "test"}'
-
+    
     agent = Agent(storage=mock_storage)
     await agent.load("test_id")
-
+    
     mock_storage.load.assert_called_once_with("test_id")
 ```
 
 ---
 
-## 文档规范
+## Documentation Standards
 
-### Docstring 格式（Google Style）
+### Docstring Format (Google Style)
 
 ```python
 async def execute_workflow(
@@ -314,20 +313,20 @@ async def execute_workflow(
     *,
     timeout: float = 30.0,
 ) -> dict[str, Any]:
-    """执行指定的工作流。
-
+    """Execute the specified workflow.
+    
     Args:
-        workflow_id: 工作流唯一标识符
-        inputs: 工作流输入参数字典
-        timeout: 执行超时时间（秒），默认 30 秒
-
+        workflow_id: Unique workflow identifier
+        inputs: Workflow input parameters dictionary
+        timeout: Execution timeout in seconds, default 30 seconds
+    
     Returns:
-        包含执行结果的字典
-
+        Dictionary containing execution results
+    
     Raises:
-        ValueError: 当 workflow_id 为空时
-        TimeoutError: 当执行超时时
-
+        ValueError: When workflow_id is empty
+        TimeoutError: When execution times out
+    
     Example:
         >>> result = await execute_workflow("my-workflow", {"input": "test"})
         >>> print(result["status"])
@@ -336,28 +335,27 @@ async def execute_workflow(
     ...
 ```
 
-
 ---
 
-## 错误处理
+## Error Handling
 
-### 1. 自定义异常层次
+### 1. Custom Exception Hierarchy
 
 ```python
 class AgentFlowError(Exception):
-    """AgentFlow 基础异常"""
+    """AgentFlow base exception"""
 
 class WorkflowError(AgentFlowError):
-    """工作流相关异常"""
+    """Workflow related exception"""
 
 class WorkflowNotFoundError(WorkflowError):
-    """工作流未找到"""
+    """Workflow not found"""
 ```
 
-### 2. 最佳实践
+### 2. Best Practices
 
 ```python
-# ✅ 正确: 捕获具体异常
+# ✅ Correct: Catch specific exceptions
 try:
     result = await execute_workflow(workflow_id)
 except WorkflowNotFoundError:
@@ -367,37 +365,37 @@ except TimeoutError:
     logger.warning(f"Workflow timeout: {workflow_id}")
     return {"status": "timeout"}
 
-# ❌ 错误: 捕获所有异常
+# ❌ Wrong: Catch all exceptions
 try:
     result = await execute_workflow(workflow_id)
-except Exception:  # 太宽泛!
+except Exception:  # Too broad!
     pass
 ```
 
 ---
 
-## AI 常犯错误清单
+## Common AI Mistakes Checklist
 
-### ❌ 错误 1: 忘记 async/await
+### ❌ Mistake 1: Forgetting async/await
 ```python
-# ❌ 错误
+# ❌ Wrong
 def load_data():
-    return aiofiles.open("data.txt")  # 返回协程对象!
+    return aiofiles.open("data.txt")  # Returns coroutine!
 
-# ✅ 正确
+# ✅ Correct
 async def load_data() -> str:
     async with aiofiles.open("data.txt") as f:
         return await f.read()
 ```
 
-### ❌ 错误 2: 可变默认参数
+### ❌ Mistake 2: Mutable Default Arguments
 ```python
-# ❌ 错误
+# ❌ Wrong
 def add_item(item: str, items: list[str] = []) -> list[str]:
-    items.append(item)  # 所有调用共享同一个列表!
+    items.append(item)  # Shared list!
     return items
 
-# ✅ 正确
+# ✅ Correct
 def add_item(item: str, items: list[str] | None = None) -> list[str]:
     if items is None:
         items = []
@@ -405,23 +403,23 @@ def add_item(item: str, items: list[str] | None = None) -> list[str]:
     return items
 ```
 
-### ❌ 错误 3: 忘记关闭资源
+### ❌ Mistake 3: Forgetting to Close Resources
 ```python
-# ❌ 错误
+# ❌ Wrong
 async def process_file(path: str) -> str:
     f = await aiofiles.open(path)
     content = await f.read()
-    return content  # 文件未关闭!
+    return content  # File not closed!
 
-# ✅ 正确
+# ✅ Correct
 async def process_file(path: str) -> str:
     async with aiofiles.open(path) as f:
         return await f.read()
 ```
 
-### ❌ 错误 4: 循环导入
+### ❌ Mistake 4: Circular Imports
 ```python
-# ✅ 正确: 使用 TYPE_CHECKING
+# ✅ Correct: Use TYPE_CHECKING
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from b import B
@@ -430,40 +428,41 @@ class A:
     def use_b(self, b: "B") -> None: ...
 ```
 
-### ❌ 错误 5: 类型注解不完整
+### ❌ Mistake 5: Incomplete Type Annotations
 ```python
-# ❌ 错误
-def process(data):  # 缺少类型
+# ❌ Wrong
+def process(data):  # Missing types
     return data
 
-# ✅ 正确
+# ✅ Correct
 def process(data: dict[str, Any]) -> dict[str, Any]:
     return data
 ```
 
 ---
 
-## 工具配置
+## Tool Configuration
 
-所有工具配置集中在 `pyproject.toml` 中。
-
----
-
-## 检查清单
-
-在提交代码前，确保：
-
-- [ ] `ruff check .` 无错误
-- [ ] `ruff format .` 已格式化
-- [ ] `mypy .` 无类型错误
-- [ ] `pytest` 所有测试通过
-- [ ] 测试覆盖率 ≥ 80%
-- [ ] 所有公共 API 有 docstring
-- [ ] 无 `print()` 调试语句
-- [ ] 无硬编码配置
-- [ ] 异常处理完整
-- [ ] 资源正确关闭
+All tool configurations are centralized in `pyproject.toml`.
 
 ---
 
-**严格遵守本规范，确保代码质量！**
+## Checklist
+
+Before submitting code, ensure:
+
+- [ ] `ruff check .` passes with no errors
+- [ ] `ruff format .` has formatted code
+- [ ] `mypy .` passes with no type errors
+- [ ] `pytest` all tests pass
+- [ ] Test coverage ≥ 80%
+- [ ] All public APIs have docstrings
+- [ ] No `print()` debug statements
+- [ ] No hardcoded configuration
+- [ ] Complete exception handling
+- [ ] Resources properly closed
+
+---
+
+**Strictly follow these standards to ensure code quality!**
+
