@@ -1,0 +1,175 @@
+# AgentFlow Pre-commit Configuration
+# Git コミット前に自動的にコード品質チェックと修正を実行
+#
+# セットアップ:
+#   pip install pre-commit
+#   pre-commit install
+#
+# 手動実行:
+#   pre-commit run --all-files
+
+repos:
+  # ========================================
+  # Python: Ruff (Linter + Formatter)
+  # ========================================
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      # Ruff Linter - 自動修正可能な問題を修正
+      - id: ruff
+        name: "Python: Ruff Linter (auto-fix)"
+        args: [--fix, --exit-non-zero-on-fix]
+        types_or: [python, pyi]
+      
+      # Ruff Formatter - コードフォーマット
+      - id: ruff-format
+        name: "Python: Ruff Formatter"
+        types_or: [python, pyi]
+
+  # ========================================
+  # Python: Type Checking
+  # ========================================
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        name: "Python: MyPy Type Checker"
+        additional_dependencies:
+          - pydantic>=2.0.0
+          - types-pyyaml>=6.0.0
+          - types-requests>=2.32.0
+        args: [--strict, --ignore-missing-imports]
+        exclude: ^(tests/|examples/)
+
+  # ========================================
+  # JavaScript/TypeScript: ESLint + Prettier
+  # ========================================
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v9.15.0
+    hooks:
+      - id: eslint
+        name: "JS/TS: ESLint (auto-fix)"
+        files: \.(js|jsx|ts|tsx)$
+        args: [--fix, --max-warnings=0]
+        additional_dependencies:
+          - eslint@9.15.0
+          - "@typescript-eslint/eslint-plugin@8.15.0"
+          - "@typescript-eslint/parser@8.15.0"
+          - eslint-plugin-react@7.37.2
+          - eslint-plugin-react-hooks@5.0.0
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+        name: "JS/TS: Prettier Formatter"
+        files: \.(js|jsx|ts|tsx|json|css|scss|md|yaml|yml)$
+        args: [--write]
+
+  # ========================================
+  # YAML: Validation
+  # ========================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+        name: "YAML: Syntax Check"
+        args: [--safe]
+      
+      - id: check-json
+        name: "JSON: Syntax Check"
+      
+      - id: check-toml
+        name: "TOML: Syntax Check"
+
+  # ========================================
+  # General: File Checks
+  # ========================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # ファイル末尾の改行を確認
+      - id: end-of-file-fixer
+        name: "General: Fix End of Files"
+      
+      # 行末の空白を削除
+      - id: trailing-whitespace
+        name: "General: Remove Trailing Whitespace"
+        args: [--markdown-linebreak-ext=md]
+      
+      # 大きなファイルの追加を防止
+      - id: check-added-large-files
+        name: "General: Check Large Files"
+        args: [--maxkb=1000]
+      
+      # マージコンフリクトマーカーをチェック
+      - id: check-merge-conflict
+        name: "General: Check Merge Conflicts"
+      
+      # デバッグステートメントをチェック
+      - id: debug-statements
+        name: "Python: Check Debug Statements"
+      
+      # 実行権限のあるテキストファイルをチェック
+      - id: check-executables-have-shebangs
+        name: "General: Check Shebangs"
+
+  # ========================================
+  # Security: Secrets Detection
+  # ========================================
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        name: "Security: Detect Secrets"
+        args: [--baseline, .secrets.baseline]
+        exclude: package-lock.json
+
+  # ========================================
+  # Markdown: Linting
+  # ========================================
+  - repo: https://github.com/igorshubovych/markdownlint-cli
+    rev: v0.43.0
+    hooks:
+      - id: markdownlint
+        name: "Markdown: Linting"
+        args: [--fix]
+
+# ========================================
+# Configuration
+# ========================================
+default_language_version:
+  python: python3.13
+  node: 20.11.0
+
+# 除外するファイル/ディレクトリ
+exclude: |
+  (?x)^(
+    \.venv/|
+    venv/|
+    \.conda/|
+    node_modules/|
+    dist/|
+    build/|
+    \.eggs/|
+    \.mypy_cache/|
+    \.ruff_cache/|
+    \.pytest_cache/|
+    __pycache__/|
+    \.git/|
+    invalid-name/
+  )$
+
+# CI での実行設定
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false
+
