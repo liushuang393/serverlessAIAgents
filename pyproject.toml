@@ -1,0 +1,128 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai-blocks"
+version = "0.1.0"
+dynamic = ["readme"]
+description = "軽量で柔軟なAIエージェント構築ライブラリ"
+license = {text = "MIT"}
+authors = [
+    {name = "AI Blocks Team", email = "contact@aiblocks.dev"}
+]
+maintainers = [
+    {name = "AI Blocks Team", email = "contact@aiblocks.dev"}
+]
+keywords = ["ai", "agent", "llm", "machine-learning", "nlp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic",
+    "pydantic-settings",
+    "aiohttp",
+    "numpy",
+    "python-dotenv",
+    "tenacity",
+]
+
+[project.optional-dependencies]
+llm = [
+    "openai",
+    "anthropic",
+    "tiktoken",
+]
+vector = [
+    "chromadb",
+]
+document = [
+    "beautifulsoup4",
+    "pypdf",
+    "pillow",
+]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+    "black",
+    "isort",
+    "mypy",
+    "pre-commit",
+]
+all = [
+    "ai-blocks[llm,vector,document]",
+]
+
+[project.urls]
+Homepage = "https://github.com/ai-blocks/ai-blocks"
+Documentation = "https://ai-blocks.readthedocs.io"
+Repository = "https://github.com/ai-blocks/ai-blocks"
+"Bug Tracker" = "https://github.com/ai-blocks/ai-blocks/issues"
+
+[tool.setuptools.packages.find]
+include = ["ai_blocks*"]
+
+[tool.black]
+line-length = 88
+target-version = ['py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["ai_blocks"]
+
+[tool.mypy]
+explicit_package_bases = true
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+# 段階的に型チェックを厳格化するため、一時的に緩和
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = false
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+# 外部ライブラリのインポートエラーを無視
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q --strict-markers"
+testpaths = ["tests"]
+asyncio_mode = "auto"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "asyncio: marks tests as async tests",
+]

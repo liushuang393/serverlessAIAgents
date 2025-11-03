@@ -1,0 +1,1 @@
+Sync, Async, Batch, Parallel

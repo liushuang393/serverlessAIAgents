@@ -1,0 +1,21 @@
+{
+  "server_url": "http://localhost:8000",
+  "available_indices": [
+    "tax-beijing",
+    "tax-shanghai",
+    "ai-report-2025",
+    "market-analysis"
+  ],
+  "document_descriptions": {
+    "tax-beijing": "北京市税収政策ファイル集合",
+    "tax-shanghai": "上海市税収政策ファイル集合",
+    "ai-report-2025": "2025年人工知能発展レポート",
+    "market-analysis": "市場分析関連ドキュメント"
+  },
+  "tools_permissions": {
+    "create_vector_index": true,
+    "query_document": true,
+    "get_document_summary": true,
+    "list_indices": true
+  }
+}

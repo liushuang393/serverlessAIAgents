@@ -1,0 +1,12 @@
+{
+  "include": ["."],
+  "exclude": [
+    "**/.git",
+    "**/.venv",
+    "**/venv",
+    "**/__pycache__",
+    "**/node_modules",
+    "data/", "build/", "dist/"
+  ],
+  "reportMissingImports": true
+}

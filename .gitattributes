@@ -1,0 +1,12 @@
+﻿* text=auto
+
+# Unix系はLF
+*.py     text eol=lf
+*.md     text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+Dockerfile text eol=lf
+Makefile text eol=lf
+
+# WindowsバッチはCRLF
+*.bat    text eol=crlf

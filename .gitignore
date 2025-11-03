@@ -1,0 +1,33 @@
+﻿# ---- Python venv / cache
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.env
+.env.*
+*.log
+
+# ---- Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ---- Node / Frontend
+node_modules/
+**/node_modules/
+dist/
+build/
+.cache/
+coverage/
+
+# ---- Others
+*.bak
+*.tmp
+*.swp
+
+# ---- 如果不想跟踪这个外部内容（如有）
+# products/ai_learning_platform/Hands-On-Large-Language-Models/
