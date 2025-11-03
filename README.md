@@ -48,6 +48,8 @@ AgentFlow は、**MCP（Model Context Protocol）**、**A2A（Agent-to-Agent）*
 ### PyPI からインストール
 
 ```bash
+conda env create -f environment.yml
+conda activate agentflow
 pip install agentflow
 ```
 
@@ -165,6 +167,7 @@ agentflow template list         # テンプレート一覧
 
 ### 入門ガイド
 
+- **[初心者ガイド](docs/getting-started-ja.md)** - インストールから日常的な使い方まで（初心者向け）⭐
 - [クイックスタート](docs/quickstart.md) - 10 分で最初のエージェントを作成
 - [実装ガイド](docs/implementation-guide.md) - 各層の実装方法とベストプラクティス
 - [サンプル集](examples/) - 5 つの実用的なエージェント例
@@ -178,6 +181,7 @@ agentflow template list         # テンプレート一覧
 
 ### 開発者向け
 
+- [コード品質チェックガイド](docs/quality-checks.md) - 品質チェックツールの使い方
 - [開発ガイド](docs/development.md) - 開発環境のセットアップと貢献方法
 - [貢献ガイドライン](CONTRIBUTING.md) - コーディング規約とプルリクエストプロセス
 - [変更履歴](CHANGELOG.md) - バージョン履歴と変更内容
