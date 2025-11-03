@@ -14,7 +14,7 @@ interfaces:
       required: true
       description: Input text
       default: ""
-  
+
   outputs:
     - name: output
       type: string
@@ -26,7 +26,7 @@ protocols:
     enabled: true
     servers: []
   {% endif %}
-  
+
   {% if 'a2a' in protocols %}
   a2a:
     enabled: true
@@ -35,7 +35,7 @@ protocols:
       - name: process
         description: Process input data
   {% endif %}
-  
+
   {% if 'agui' in protocols %}
   agui:
     enabled: true
@@ -56,4 +56,3 @@ visual:
   ports:
     input: [100, 50]
     output: [300, 50]
-

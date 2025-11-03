@@ -64,8 +64,8 @@ line-length = 100
 target-version = "py313"
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "N", "UP", "ANN", "B", "A", "C4", "DTZ", 
-          "T10", "EM", "ISC", "ICN", "PIE", "PT", "Q", "RSE", "RET", 
+select = ["E", "W", "F", "I", "N", "UP", "ANN", "B", "A", "C4", "DTZ",
+          "T10", "EM", "ISC", "ICN", "PIE", "PT", "Q", "RSE", "RET",
           "SIM", "TID", "TCH", "ARG", "PTH", "ERA", "PL", "TRY", "RUF"]
 ignore = ["ANN101", "ANN102"]
 ```
@@ -101,6 +101,7 @@ class Agent:
 ### 1. SOLID 原則
 
 #### S - 単一責任原則（Single Responsibility）
+
 ```python
 # ❌ 間違い: 1つのクラスが多くのことをする
 class Agent:
@@ -120,6 +121,7 @@ class NotificationService:
 ```
 
 #### O - 開閉原則（Open/Closed）
+
 ```python
 # ✅ プロトコルと抽象基底クラスを使用
 from typing import Protocol
@@ -129,6 +131,7 @@ class ProtocolAdapter(Protocol):
 ```
 
 #### L - リスコフの置換原則（Liskov Substitution）
+
 ```python
 # ✅ サブクラスは親クラスを置き換えられる
 class BaseAdapter:
@@ -141,6 +144,7 @@ class MCPAdapter(BaseAdapter):
 ```
 
 #### I - インターフェース分離原則（Interface Segregation）
+
 ```python
 # ✅ 小さく焦点を絞ったインターフェース
 class Executable(Protocol):
@@ -151,6 +155,7 @@ class Validatable(Protocol):
 ```
 
 #### D - 依存性逆転原則（Dependency Inversion）
+
 ```python
 # ✅ 具体的な実装ではなく抽象に依存
 from typing import Protocol
@@ -226,11 +231,11 @@ from pydantic import BaseModel, Field, field_validator
 
 class AgentMetadata(BaseModel):
     """Agent メタデータモデル"""
-    
+
     name: str = Field(..., min_length=1, max_length=100)
     version: str = Field(..., pattern=r"^\d+\.\d+\.\d+$")
     protocols: list[str] = Field(default_factory=list)
-    
+
     @field_validator("protocols")
     @classmethod
     def validate_protocols(cls, v: list[str]) -> list[str]:
@@ -271,11 +276,11 @@ from agentflow.core.engine import AgentFlowEngine
 
 class TestAgentFlowEngine:
     """AgentFlowEngine 単体テスト"""
-    
+
     @pytest.fixture
     def engine(self) -> AgentFlowEngine:
         return AgentFlowEngine()
-    
+
     async def test_execute_workflow_success(
         self,
         engine: AgentFlowEngine,
@@ -293,10 +298,10 @@ from unittest.mock import AsyncMock
 async def test_agent_with_mocked_storage() -> None:
     mock_storage = AsyncMock()
     mock_storage.load.return_value = '{"name": "test"}'
-    
+
     agent = Agent(storage=mock_storage)
     await agent.load("test_id")
-    
+
     mock_storage.load.assert_called_once_with("test_id")
 ```
 
@@ -314,19 +319,19 @@ async def execute_workflow(
     timeout: float = 30.0,
 ) -> dict[str, Any]:
     """指定されたワークフローを実行する。
-    
+
     Args:
         workflow_id: ワークフローの一意識別子
         inputs: ワークフロー入力パラメータ辞書
         timeout: 実行タイムアウト（秒）、デフォルト 30 秒
-    
+
     Returns:
         実行結果を含む辞書
-    
+
     Raises:
         ValueError: workflow_id が空の場合
         TimeoutError: 実行がタイムアウトした場合
-    
+
     Example:
         >>> result = await execute_workflow("my-workflow", {"input": "test"})
         >>> print(result["status"])
@@ -377,6 +382,7 @@ except Exception:  # 広すぎる！
 ## AI がよく犯す間違いチェックリスト
 
 ### ❌ 間違い 1: async/await を忘れる
+
 ```python
 # ❌ 間違い
 def load_data():
@@ -389,6 +395,7 @@ async def load_data() -> str:
 ```
 
 ### ❌ 間違い 2: 可変デフォルト引数
+
 ```python
 # ❌ 間違い
 def add_item(item: str, items: list[str] = []) -> list[str]:
@@ -404,6 +411,7 @@ def add_item(item: str, items: list[str] | None = None) -> list[str]:
 ```
 
 ### ❌ 間違い 3: リソースを閉じ忘れる
+
 ```python
 # ❌ 間違い
 async def process_file(path: str) -> str:
@@ -418,6 +426,7 @@ async def process_file(path: str) -> str:
 ```
 
 ### ❌ 間違い 4: 循環インポート
+
 ```python
 # ✅ 正しい: TYPE_CHECKING を使用
 from typing import TYPE_CHECKING
@@ -429,6 +438,7 @@ class A:
 ```
 
 ### ❌ 間違い 5: 不完全な型アノテーション
+
 ```python
 # ❌ 間違い
 def process(data):  # 型が不足
@@ -465,4 +475,3 @@ def process(data: dict[str, Any]) -> dict[str, Any]:
 ---
 
 **この規範を厳格に遵守し、コード品質を確保してください！**
-

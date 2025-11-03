@@ -139,9 +139,7 @@ class ProgressEvent(AGUIEvent):
     フローの進行状況を報告するために発行されます。
     """
 
-    event_type: AGUIEventType = Field(
-        default=AGUIEventType.PROGRESS, description="イベントタイプ"
-    )
+    event_type: AGUIEventType = Field(default=AGUIEventType.PROGRESS, description="イベントタイプ")
     current: int = Field(..., description="現在の進行数")
     total: int = Field(..., description="合計数")
     percentage: float = Field(..., description="進行率 (0-100)")
@@ -153,10 +151,7 @@ class LogEvent(AGUIEvent):
     フロー実行中のログメッセージを配信するために発行されます。
     """
 
-    event_type: AGUIEventType = Field(
-        default=AGUIEventType.LOG, description="イベントタイプ"
-    )
+    event_type: AGUIEventType = Field(default=AGUIEventType.LOG, description="イベントタイプ")
     level: str = Field(..., description="ログレベル (DEBUG, INFO, WARNING, ERROR)")
     message: str = Field(..., description="ログメッセージ")
     source: str | None = Field(default=None, description="ログソース")
-

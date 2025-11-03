@@ -1,6 +1,6 @@
 @echo off
 REM AgentFlow コード品質チェックスクリプト (Windows)
-REM 
+REM
 REM 使用方法:
 REM   check.bat [command]
 REM
@@ -219,4 +219,3 @@ echo ✅ クリーンアップ完了
 goto :eof
 
 endlocal
-

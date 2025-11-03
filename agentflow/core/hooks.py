@@ -152,4 +152,3 @@ class LifecycleHooks:
             0
         """
         return self._hooks[hook_type].copy()
-

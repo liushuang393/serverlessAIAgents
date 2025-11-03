@@ -27,9 +27,7 @@ class SchemaValidationError(AgentFlowError):
             errors: Pydantic バリデーションエラーリスト
         """
         self.errors = errors
-        error_messages = "\n".join(
-            f"  - {err['loc']}: {err['msg']}" for err in errors
-        )
+        error_messages = "\n".join(f"  - {err['loc']}: {err['msg']}" for err in errors)
         super().__init__(f"Schema validation failed:\n{error_messages}")
 
 
@@ -70,11 +68,11 @@ class SchemaLoader:
         try:
             with path.open("r", encoding="utf-8") as f:
                 data = yaml.safe_load(f)
-        except yaml.YAMLError as e:
-            self._logger.error(f"Failed to parse YAML: {e}")
+        except yaml.YAMLError:
+            self._logger.exception("Failed to parse YAML")
             raise
-
-        return self.validate(data)
+        else:
+            return self.validate(data)
 
     def load_from_dict(self, data: dict[str, Any]) -> AgentMetadata:
         """辞書からメタデータを読み込み.
@@ -105,10 +103,11 @@ class SchemaLoader:
         try:
             metadata = AgentMetadata.model_validate(data)
             self._logger.debug(f"Validated agent metadata: {metadata.meta.id}")
-            return metadata
         except ValidationError as e:
-            self._logger.error(f"Schema validation failed: {e}")
+            self._logger.exception("Schema validation failed")
             raise SchemaValidationError(e.errors()) from e
+        else:
+            return metadata
 
     def save_to_file(self, metadata: AgentMetadata, path: Path) -> None:
         """メタデータを YAML ファイルに保存.
@@ -152,4 +151,3 @@ class SchemaLoader:
             AgentMetadata の JSON スキーマ
         """
         return AgentMetadata.model_json_schema()
-

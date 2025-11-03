@@ -196,9 +196,7 @@ class TestMCPClient:
         await client.connect()
 
         # ツールを呼び出す
-        result = await client.call_tool(
-            "mcp://test-server/test_tool", {"arg": "value"}
-        )
+        result = await client.call_tool("mcp://test-server/test_tool", {"arg": "value"})
 
         # 検証
         assert result["success"] is True
@@ -286,4 +284,3 @@ class TestMCPClient:
         # セッションとツールがクリアされることを確認
         assert len(client._sessions) == 0
         assert len(client._tools) == 0
-

@@ -19,10 +19,10 @@ from agentflow.protocols.agui_emitter import AGUIEventEmitter
 class AgentBlock(ABC):
     """全てのエージェントが継承する基底クラス.
 
-    このクラスは以下の機能を提供します：
+    このクラスは以下の機能を提供します:
     - メタデータの自動読み込み
-    - プロトコルアダプターの自動適用（@auto_adapt デコレーター）
-    - ライフサイクルメソッド（init, run, cleanup）
+    - プロトコルアダプターの自動適用 (@auto_adapt デコレーター)
+    - ライフサイクルメソッド (init, run, cleanup)
     - エンジンとの統合
 
     Example:
@@ -43,21 +43,18 @@ class AgentBlock(ABC):
         """AgentBlock を初期化.
 
         Args:
-            metadata_path: agent.yaml ファイルのパス（デフォルト: "agent.yaml"）
-            engine: AgentFlowEngine インスタンス（オプション）
+            metadata_path: agent.yaml ファイルのパス (デフォルト: "agent.yaml")
+            engine: AgentFlowEngine インスタンス (オプション)
         """
         self._metadata_path = Path(metadata_path)
         self._engine = engine or AgentFlowEngine()
         self._initialized = False
 
-        # メタデータを読み込み（@auto_adapt デコレーターが設定）
-        # デコレーターによって self._metadata が設定される
-
     def load_metadata(self, metadata_path: str | Path | None = None) -> AgentMetadata:
         """メタデータを読み込み.
 
         Args:
-            metadata_path: agent.yaml ファイルのパス（オプション）
+            metadata_path: agent.yaml ファイルのパス (オプション)
 
         Returns:
             AgentMetadata インスタンス
@@ -70,9 +67,8 @@ class AgentBlock(ABC):
             self._metadata_path = Path(metadata_path)
 
         if not self._metadata_path.exists():
-            raise FileNotFoundError(
-                f"Metadata file not found: {self._metadata_path}"
-            )
+            msg = f"Metadata file not found: {self._metadata_path}"
+            raise FileNotFoundError(msg)
 
         loader = SchemaLoader()
         self._metadata = loader.load_from_file(self._metadata_path)
@@ -90,7 +86,7 @@ class AgentBlock(ABC):
 
     @abstractmethod
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
-        """エージェントを実行（サブクラスで実装必須）.
+        """エージェントを実行 (サブクラスで実装必須).
 
         Args:
             input_data: 入力データ
@@ -98,21 +94,20 @@ class AgentBlock(ABC):
         Returns:
             出力データ
         """
-        pass
 
     async def initialize(self) -> None:
-        """エージェントを初期化（オプション）.
+        """エージェントを初期化 (オプション).
 
         サブクラスでオーバーライドして、初期化処理を実装できます。
-        例：モデルのロード、接続の確立など。
+        例: モデルのロード、接続の確立など。
         """
         self._initialized = True
 
     async def cleanup(self) -> None:
-        """エージェントをクリーンアップ（オプション）.
+        """エージェントをクリーンアップ (オプション).
 
         サブクラスでオーバーライドして、クリーンアップ処理を実装できます。
-        例：接続のクローズ、リソースの解放など。
+        例: 接続のクローズ、リソースの解放など。
         """
         self._initialized = False
 
@@ -144,27 +139,23 @@ class AgentBlock(ABC):
         return self._initialized
 
     def get_mcp_tools(self) -> list[dict[str, Any]]:
-        """MCP ツール定義を取得（@auto_adapt デコレーターが提供）.
+        """MCP ツール定義を取得 (@auto_adapt デコレーターが提供).
 
         Returns:
             MCP ツール定義のリスト
         """
-        # デコレーターによって注入されるメソッド
-        # ここでは型ヒントのために定義
         return []
 
     def get_a2a_card(self) -> AgentCard | None:
-        """A2A AgentCard を取得（@auto_adapt デコレーターが提供）.
+        """A2A AgentCard を取得 (@auto_adapt デコレーターが提供).
 
         Returns:
             AgentCard インスタンス、または None
         """
-        # デコレーターによって注入されるメソッド
-        # ここでは型ヒントのために定義
         return None
 
     def create_agui_emitter(self, engine: Any) -> AGUIEventEmitter:
-        """AG-UI イベントエミッターを作成（@auto_adapt デコレーターが提供）.
+        """AG-UI イベントエミッターを作成 (@auto_adapt デコレーターが提供).
 
         Args:
             engine: AgentFlowEngine インスタンス
@@ -172,8 +163,6 @@ class AgentBlock(ABC):
         Returns:
             AGUIEventEmitter インスタンス
         """
-        # デコレーターによって注入されるメソッド
-        # ここでは型ヒントのために定義
         return AGUIEventEmitter(engine)
 
     async def __aenter__(self) -> "AgentBlock":
@@ -199,4 +188,3 @@ class AgentBlock(ABC):
             exc_tb: トレースバック
         """
         await self.cleanup()
-

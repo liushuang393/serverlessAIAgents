@@ -11,10 +11,11 @@
 ## Phase 1: Core Framework & Protocol Integration (Week 1-3)
 
 ### Task 1.1: Project Structure Setup
+
 - [x] **Priority**: P0
 - [x] **Effort**: 1 day
 - [x] **Dependencies**: None
-- [ ] **Files**: 
+- [ ] **Files**:
   - `agentflow/__init__.py`
   - `agentflow/core/__init__.py`
   - `agentflow/protocols/__init__.py`
@@ -24,19 +25,22 @@
 
 **Description**: Create the basic project structure and package configuration.
 
-**Requirements**: 
+**Requirements**:
+
 - FR-004 (CLI Tool)
 
 **Acceptance Criteria**:
+
 - Project can be installed with `pip install -e .`
 - All core modules are importable
 - Package metadata is complete (name, version, dependencies)
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Python Package Engineer
 Task: Set up the AgentFlow framework project structure
-Context: 
+Context:
 - Reference design.md Section 1.2 for component structure
 - Use modern Python packaging (pyproject.toml)
 - Include all dependencies from design.md Section 10
@@ -68,6 +72,7 @@ Instructions:
 ---
 
 ### Task 1.2: PocketFlow Engine Wrapper
+
 - [x] **Priority**: P0
 - [x] **Effort**: 2 days
 - [x] **Dependencies**: Task 1.1
@@ -78,18 +83,21 @@ Instructions:
 
 **Description**: Implement AgentFlowEngine that wraps PocketFlow with event hooks.
 
-**Requirements**: 
+**Requirements**:
+
 - FR-003 (Workflow Engine)
 - NFR-001.1 (Performance)
 
 **Acceptance Criteria**:
+
 - Engine can execute PocketFlow graphs
 - All 6 hook events are triggered correctly
 - Hooks can be registered and unregistered
 - Shared state is properly managed
 - Unit tests achieve 90%+ coverage
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Workflow Engine Developer
 Task: Implement AgentFlowEngine wrapper for PocketFlow with event hooks
@@ -129,6 +137,7 @@ Instructions:
 ---
 
 ### Task 1.3: MCP Client Integration
+
 - [x] **Priority**: P0
 - [x] **Effort**: 3 days
 - [x] **Dependencies**: Task 1.1
@@ -140,11 +149,13 @@ Instructions:
 
 **Description**: Implement MCP client that connects to multiple MCP servers and exposes tools.
 
-**Requirements**: 
+**Requirements**:
+
 - FR-001.1, FR-001.2 (MCP Integration)
 - NFR-001.2 (MCP overhead <100ms)
 
 **Acceptance Criteria**:
+
 - Can connect to multiple MCP servers from YAML config
 - Tools are callable via URI format `mcp://server/tool`
 - Tool definitions are generated for LLM use
@@ -152,7 +163,8 @@ Instructions:
 - Graceful error handling for server failures
 - Integration tests with mock MCP servers
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Protocol Integration Engineer
 Task: Implement MCP client for connecting to multiple MCP servers
@@ -193,6 +205,7 @@ Instructions:
 ---
 
 ### Task 1.4: A2A Server Implementation
+
 - [x] **Priority**: P0
 - [x] **Effort**: 3 days
 - [x] **Dependencies**: Task 1.1, Task 1.2
@@ -203,11 +216,13 @@ Instructions:
 
 **Description**: Implement A2A server that exposes local agents as A2A endpoints.
 
-**Requirements**: 
+**Requirements**:
+
 - FR-001.3 (A2A Server)
 - US-001 (Protocol Support)
 
 **Acceptance Criteria**:
+
 - Agents can be registered to A2A server
 - AgentCard is auto-generated from agent.yaml
 - A2A endpoints respond to task requests
@@ -215,7 +230,8 @@ Instructions:
 - Server can handle concurrent requests
 - Integration tests with google-a2a SDK
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Distributed Systems Engineer
 Task: Implement A2A server to expose local agents as A2A endpoints
@@ -256,6 +272,7 @@ Instructions:
 ---
 
 ### Task 1.5: A2A Client Implementation
+
 - [x] **Priority**: P0
 - [x] **Effort**: 2 days
 - [x] **Dependencies**: Task 1.4
@@ -265,18 +282,21 @@ Instructions:
 
 **Description**: Implement A2A client for discovering and calling remote agents.
 
-**Requirements**: 
+**Requirements**:
+
 - FR-001.4 (A2A Client)
 - US-002 (Auto Protocol Adapters)
 
 **Acceptance Criteria**:
+
 - Can discover remote agents via endpoint
 - AgentCard is fetched and cached
 - Remote agent calls work with proper error handling
 - Timeout and retry logic implemented
 - Integration tests with mock A2A servers
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: API Client Developer
 Task: Implement A2A client for calling remote agents
@@ -316,6 +336,7 @@ Instructions:
 ---
 
 ### Task 1.6: AG-UI Event Emitter
+
 - [x] **Priority**: P1
 - [x] **Effort**: 3 days
 - [x] **Dependencies**: Task 1.2
@@ -326,18 +347,21 @@ Instructions:
 
 **Description**: Implement AG-UI event emitter that converts flow events to SSE streams.
 
-**Requirements**: 
+**Requirements**:
+
 - FR-001.5 (AG-UI Integration)
 - US-006 (Real-time Preview)
 
 **Acceptance Criteria**:
+
 - Emitter attaches to AgentFlowEngine hooks
 - All flow events are converted to AG-UI events
 - SSE streaming works correctly
 - Event types match AG-UI specification
 - Integration tests verify event sequences
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Real-time Systems Developer
 Task: Implement AG-UI event emitter for flow execution streaming
@@ -377,6 +401,7 @@ Instructions:
 ---
 
 ### Task 1.7: Agent Metadata Schema
+
 - [x] **Priority**: P0
 - [x] **Effort**: 2 days
 - [x] **Dependencies**: Task 1.1
@@ -387,18 +412,21 @@ Instructions:
 
 **Description**: Implement Pydantic models for agent.yaml metadata schema.
 
-**Requirements**: 
+**Requirements**:
+
 - FR-002 (Agent Block System)
 - NFR-003.2 (Type Hints)
 
 **Acceptance Criteria**:
+
 - All metadata fields have Pydantic models
 - Validation catches schema violations
 - YAML parsing and serialization works
 - Example agent.yaml provided
 - Comprehensive validation tests
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Data Modeling Engineer
 Task: Implement Pydantic models for agent.yaml metadata schema
@@ -438,6 +466,7 @@ Instructions:
 ---
 
 ### Task 1.8: Agent Block Manager
+
 - [ ] **Priority**: P0
 - [ ] **Effort**: 3 days
 - [ ] **Dependencies**: Task 1.7
@@ -449,18 +478,21 @@ Instructions:
 
 **Description**: Implement agent block manager for loading, validating, and managing agents.
 
-**Requirements**: 
+**Requirements**:
+
 - FR-002 (Agent Block System)
 - US-004 (Install Agent Blocks)
 
 **Acceptance Criteria**:
+
 - Agents can be loaded from directories
 - Metadata validation works
 - Dependency resolution implemented
 - Registry management (add/remove/list)
 - Integration tests with sample agents
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Component Manager Developer
 Task: Implement agent block manager for lifecycle management
@@ -503,6 +535,7 @@ Instructions:
 ## Phase 2: CLI & Marketplace (Week 4-5)
 
 ### Task 2.1: CLI Framework Setup
+
 - [x] **Priority**: P0
 - [x] **Effort**: 2 days
 - [x] **Dependencies**: Task 1.1
@@ -513,18 +546,21 @@ Instructions:
 
 **Description**: Set up Click-based CLI framework with Rich formatting.
 
-**Requirements**: 
+**Requirements**:
+
 - FR-004 (CLI Tool)
 - NFR-004.2 (Clear Error Messages)
 
 **Acceptance Criteria**:
+
 - CLI entry point works: `agentflow --help`
 - Command groups are organized
 - Rich formatting for output
 - Error handling with helpful messages
 - Tests for CLI invocation
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: CLI Developer
 Task: Set up AgentFlow CLI framework with Click and Rich
@@ -564,6 +600,7 @@ Instructions:
 ---
 
 ### Task 2.2: CLI Init Command
+
 - [x] **Priority**: P0
 - [x] **Effort**: 2 days
 - [x] **Dependencies**: Task 2.1
@@ -574,18 +611,21 @@ Instructions:
 
 **Description**: Implement `agentflow init` command for project creation.
 
-**Requirements**: 
+**Requirements**:
+
 - US-001 (One-Command Init)
 - FR-004.1 (Project Initialization)
 
 **Acceptance Criteria**:
+
 - Creates complete project structure
 - Generates protocol configuration files
 - Supports --protocols flag
 - Creates example agent
 - Tests verify all files are created
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Project Scaffolding Developer
 Task: Implement agentflow init command for project creation
@@ -625,6 +665,7 @@ Instructions:
 ---
 
 ### Task 2.3: CLI Create Commands
+
 - [x] **Priority**: P0
 - [x] **Effort**: 2 days
 - [x] **Dependencies**: Task 2.1, Task 1.8
@@ -635,18 +676,21 @@ Instructions:
 
 **Description**: Implement `agentflow create` commands (agent, tool, from-template).
 
-**Requirements**: 
+**Requirements**:
+
 - FR-004.2 (Agent Creation)
 - US-007 (Create from Template)
 
 **Acceptance Criteria**:
+
 - `create agent` generates agent structure
 - `create from-template` uses template system
 - Interactive prompts for configuration
 - Validates agent names (kebab-case)
 - Tests cover all create variants
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Code Generator Developer
 Task: Implement agentflow create commands for agent/tool/template creation
@@ -686,6 +730,7 @@ Instructions:
 ---
 
 ### Task 2.4: Marketplace Search & Install
+
 - [x] **Priority**: P1
 - [x] **Effort**: 3 days
 - [x] **Dependencies**: Task 1.8, Task 2.1
@@ -697,19 +742,22 @@ Instructions:
 
 **Description**: Implement marketplace search and install functionality.
 
-**Requirements**: 
+**Requirements**:
+
 - US-003 (Search Agent Blocks)
 - US-004 (Install Agent Blocks)
 - FR-005 (Marketplace)
 
 **Acceptance Criteria**:
+
 - Search returns relevant results
 - Filtering by protocols, category works
 - Install downloads and configures agents
 - Dependency resolution during install
 - Tests with mock marketplace API
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Package Manager Developer
 Task: Implement marketplace search and install commands
@@ -749,6 +797,7 @@ Instructions:
 ---
 
 ### Task 2.5: CLI Run & Test Commands
+
 - [x] **Priority**: P0
 - [x] **Effort**: 2 days
 - [x] **Dependencies**: Task 1.2, Task 1.8, Task 2.1
@@ -759,18 +808,21 @@ Instructions:
 
 **Description**: Implement commands to run and test agents.
 
-**Requirements**: 
+**Requirements**:
+
 - FR-004.4 (Testing Commands)
 - NFR-004.3 (Helpful CLI)
 
 **Acceptance Criteria**:
+
 - `run` command executes agents
 - Input can be provided via CLI or file
 - Output is formatted nicely
 - `test` command runs agent tests
 - Progress indicators for long operations
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: CLI Execution Developer
 Task: Implement agentflow run and test commands
@@ -812,6 +864,7 @@ Instructions:
 ## Phase 3: Auto-Adapter & Integration (Week 6-7) [COMPLETE]
 
 ### Task 3.1: Protocol Adapter Generator
+
 - [x] **Priority**: P0
 - [x] **Effort**: 3 days
 - [x] **Dependencies**: Task 1.3, Task 1.4, Task 1.6, Task 1.7
@@ -824,18 +877,21 @@ Instructions:
 
 **Description**: Implement protocol adapter generator that creates MCP/A2A/AG-UI adapters from metadata.
 
-**Requirements**: 
+**Requirements**:
+
 - US-002 (Auto Protocol Adapters)
 - FR-001 (Protocol Integration)
 
 **Acceptance Criteria**:
+
 - MCP tools generated from agent.yaml
 - A2A AgentCard generated from metadata
 - AG-UI events mapped to flow hooks
 - All adapters are testable independently
 - Integration tests verify protocol compliance
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Code Generation Engineer
 Task: Implement protocol adapter generator for automatic MCP/A2A/AG-UI support
@@ -875,6 +931,7 @@ Instructions:
 ---
 
 ### Task 3.2: Auto-Adapt Decorator
+
 - [x] **Priority**: P0
 - [x] **Effort**: 2 days
 - [x] **Dependencies**: Task 3.1
@@ -884,18 +941,21 @@ Instructions:
 
 **Description**: Implement @auto_adapt decorator that applies protocol adapters to agent classes.
 
-**Requirements**: 
+**Requirements**:
+
 - US-002 (Auto Protocol Adapters)
 - NFR-004.1 (Quick Start)
 
 **Acceptance Criteria**:
+
 - Decorator can be applied to agent classes
 - Protocol methods are injected automatically
 - Supports selective protocol enabling
 - Works with inheritance
 - Tests verify decorator behavior
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Python Metaprogramming Expert
 Task: Implement @auto_adapt decorator for automatic protocol support
@@ -935,6 +995,7 @@ Instructions:
 ---
 
 ### Task 3.3: Agent Block Base Class
+
 - [x] **Priority**: P0
 - [x] **Effort**: 2 days
 - [x] **Dependencies**: Task 1.8, Task 3.2
@@ -944,18 +1005,21 @@ Instructions:
 
 **Description**: Implement AgentBlock base class that all agents inherit from.
 
-**Requirements**: 
+**Requirements**:
+
 - FR-002 (Agent Block System)
 - US-002 (Auto Protocol Adapters)
 
 **Acceptance Criteria**:
+
 - Base class provides common functionality
 - Metadata loading is automatic
 - Protocol adapters are applied
 - Lifecycle methods (init, run, cleanup)
 - Example agent using base class
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Framework API Designer
 Task: Implement AgentBlock base class for all agents
@@ -995,6 +1059,7 @@ Instructions:
 ---
 
 ### Task 3.4: End-to-End Integration Tests
+
 - [x] **Priority**: P0
 - [x] **Effort**: 3 days
 - [x] **Dependencies**: All Phase 1-3 tasks
@@ -1005,18 +1070,21 @@ Instructions:
 
 **Description**: Create comprehensive integration tests for the entire framework.
 
-**Requirements**: 
+**Requirements**:
+
 - NFR-003.3 (80% Coverage)
 - All functional requirements
 
 **Acceptance Criteria**:
+
 - Full agent lifecycle tested (create, load, run)
 - All three protocols tested together
 - Multi-agent workflows tested
 - Error scenarios covered
 - Performance benchmarks included
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: QA Engineer
 Task: Create comprehensive integration tests for AgentFlow framework
@@ -1058,6 +1126,7 @@ Instructions:
 ## Phase 4: Visual Studio (Week 8-9) [P2 - Optional]
 
 ### Task 4.1: Studio Backend API
+
 - [x] **Priority**: P2
 - [x] **Effort**: 3 days
 - [x] **Dependencies**: Task 1.2, Task 1.8
@@ -1068,18 +1137,21 @@ Instructions:
 
 **Description**: Implement REST API for visual studio backend.
 
-**Requirements**: 
+**Requirements**:
+
 - FR-006 (Visual Studio)
 - Design Section 4.2 (REST API)
 
 **Acceptance Criteria**:
+
 - All REST endpoints implemented
 - CORS configured for frontend
 - WebSocket support for AG-UI events
 - API documentation generated
 - Integration tests for all endpoints
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Backend API Developer
 Task: Implement REST API for AgentFlow Studio
@@ -1119,6 +1191,7 @@ Instructions:
 ---
 
 ### Task 4.2: Studio Frontend - Canvas
+
 - [x] **Priority**: P2
 - [x] **Effort**: 5 days
 - [x] **Dependencies**: Task 4.1
@@ -1129,18 +1202,21 @@ Instructions:
 
 **Description**: Implement React Flow-based visual workflow canvas.
 
-**Requirements**: 
+**Requirements**:
+
 - US-005 (Drag-and-Drop Composition)
 - FR-006.1, FR-006.2 (Canvas & Properties)
 
 **Acceptance Criteria**:
+
 - Drag-and-drop agent blocks
 - Connect nodes with edges
 - Properties panel for selected nodes
 - Save/load workflows
 - Undo/redo support
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Frontend Developer
 Task: Implement visual workflow canvas using React Flow
@@ -1182,6 +1258,7 @@ Instructions:
 ## Phase 5: Templates & Documentation (Week 10)
 
 ### Task 5.1: Template System Implementation
+
 - [x] **Priority**: P1
 - [x] **Effort**: 3 days
 - [x] **Dependencies**: Task 2.3
@@ -1192,18 +1269,21 @@ Instructions:
 
 **Description**: Implement template system with scenario templates.
 
-**Requirements**: 
+**Requirements**:
+
 - US-007 (Create from Template)
 - FR-007 (Template System)
 
 **Acceptance Criteria**:
+
 - Template metadata schema defined
 - Wizard-based customization works
 - Parameter substitution implemented
 - 3+ scenario templates included
 - Tests verify template generation
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Template System Developer
 Task: Implement template system with scenario templates
@@ -1243,6 +1323,7 @@ Instructions:
 ---
 
 ### Task 5.2: Documentation & Examples
+
 - [x] **Priority**: P1
 - [x] **Effort**: 3 days
 - [x] **Dependencies**: All previous tasks
@@ -1254,18 +1335,21 @@ Instructions:
 
 **Description**: Create comprehensive documentation and examples.
 
-**Requirements**: 
+**Requirements**:
+
 - NFR-003.4 (Documentation)
 - NFR-004.1 (Quick Start)
 
 **Acceptance Criteria**:
+
 - Quick start guide (10 min to first agent)
 - API reference documentation
 - 5+ example agents
 - Architecture documentation
 - Contributing guide
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Technical Writer
 Task: Create comprehensive documentation for AgentFlow
@@ -1305,6 +1389,7 @@ Instructions:
 ---
 
 ### Task 5.3: Release Preparation
+
 - [x] **Priority**: P0
 - [x] **Effort**: 2 days
 - [x] **Dependencies**: All previous tasks
@@ -1316,18 +1401,21 @@ Instructions:
 
 **Description**: Prepare for v1.0 release.
 
-**Requirements**: 
+**Requirements**:
+
 - All functional requirements
 - All non-functional requirements
 
 **Acceptance Criteria**:
+
 - Version bumped to 1.0.0
 - CHANGELOG complete
 - CI/CD pipeline configured
 - PyPI package ready
 - GitHub release created
 
-**_Prompt**:
+**\_Prompt**:
+
 ```
 Role: Release Engineer
 Task: Prepare AgentFlow v1.0 release
@@ -1369,6 +1457,7 @@ Instructions:
 ## Summary
 
 **Total Tasks**: 24
+
 - **Phase 1** (Core): 8 tasks, 19 days
 - **Phase 2** (CLI): 5 tasks, 11 days
 - **Phase 3** (Integration): 4 tasks, 10 days
@@ -1378,6 +1467,7 @@ Instructions:
 **Critical Path**: Phase 1 → Phase 2 → Phase 3 → Phase 5 (48 days / ~10 weeks)
 
 **Priority Breakdown**:
+
 - P0 (Must Have): 18 tasks
 - P1 (Should Have): 4 tasks
 - P2 (Nice to Have): 2 tasks
@@ -1428,6 +1518,7 @@ Phase 5: Polish
 ## Implementation Guidelines
 
 ### Code Quality Standards
+
 - **Type Hints**: All functions must have type hints
 - **Docstrings**: Google-style docstrings for all public APIs
 - **Testing**: Minimum 80% code coverage
@@ -1435,6 +1526,7 @@ Phase 5: Polish
 - **Linting**: Pass mypy, flake8, pylint
 
 ### Git Workflow
+
 - **Branch Naming**: `task/{task-number}-{short-description}`
   - Example: `task/1.2-engine-wrapper`
 - **Commit Messages**: Follow Conventional Commits
@@ -1445,12 +1537,14 @@ Phase 5: Polish
   - Documentation updated
 
 ### Testing Strategy
+
 - **Unit Tests**: Test each component in isolation
 - **Integration Tests**: Test component interactions
 - **E2E Tests**: Test full user workflows
 - **Performance Tests**: Verify NFR requirements
 
 ### Documentation Requirements
+
 - **Code Comments**: Explain "why", not "what"
 - **API Docs**: Auto-generated from docstrings
 - **Examples**: Working code examples for each feature
@@ -1461,6 +1555,7 @@ Phase 5: Polish
 ## Risk Mitigation
 
 ### Technical Risks
+
 1. **PocketFlow Limitations**
    - **Risk**: PocketFlow may not support all needed features
    - **Mitigation**: Fork and extend if necessary (Task 1.2)
@@ -1477,6 +1572,7 @@ Phase 5: Polish
    - **Owner**: Task 3.4 implementer
 
 ### Schedule Risks
+
 1. **Dependency Delays**
    - **Risk**: Blocked tasks waiting for dependencies
    - **Mitigation**: Parallel work where possible, mock interfaces
@@ -1492,6 +1588,7 @@ Phase 5: Polish
 ## Success Metrics
 
 ### Development Metrics
+
 - [ ] All P0 tasks completed
 - [ ] 80%+ test coverage achieved
 - [ ] All integration tests passing
@@ -1499,12 +1596,14 @@ Phase 5: Polish
 - [ ] Documentation complete
 
 ### Quality Metrics
+
 - [ ] Zero critical bugs
 - [ ] <5 high-priority bugs
 - [ ] All NFRs validated
 - [ ] Code review approval rate >90%
 
 ### User Metrics (Post-Release)
+
 - [ ] 100+ GitHub stars in 3 months
 - [ ] 10+ community contributions
 - [ ] <10 minutes to first agent
@@ -1522,5 +1621,4 @@ Phase 5: Polish
 
 ---
 
-*This task breakdown provides implementation-ready work items with clear acceptance criteria and AI-friendly prompts for each task.*
-
+_This task breakdown provides implementation-ready work items with clear acceptance criteria and AI-friendly prompts for each task._

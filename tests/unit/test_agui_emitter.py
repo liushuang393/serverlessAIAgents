@@ -1,8 +1,5 @@
 """AG-UI イベントエミッターのユニットテスト."""
 
-import asyncio
-from unittest.mock import AsyncMock, MagicMock
-
 import pytest
 
 from agentflow.core.engine import AgentFlowEngine
@@ -275,4 +272,3 @@ class TestAGUIEventEmitter:
 
         # イベントは発行されない
         assert emitter.get_queue_size() == 0
-

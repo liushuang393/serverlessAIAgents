@@ -137,4 +137,3 @@ class ExecutionResult(BaseModel):
 # Type aliases for hooks
 HookCallback = Callable[[ExecutionContext], Awaitable[None]]
 NodeHookCallback = Callable[[ExecutionContext, str, dict[str, Any]], Awaitable[None]]
-

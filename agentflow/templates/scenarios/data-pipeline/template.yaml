@@ -11,25 +11,25 @@ parameters:
     description: エージェント名
     default: data-pipeline
     required: true
-  
+
   - name: agent_description
     type: string
     description: エージェントの説明
     default: Data processing pipeline agent
     required: true
-  
+
   - name: author
     type: string
     description: 作成者名
     default: Your Name
     required: true
-  
+
   - name: email
     type: string
     description: 作成者のメールアドレス
     default: your.email@example.com
     required: true
-  
+
   - name: input_format
     type: string
     description: 入力データ形式
@@ -40,7 +40,7 @@ parameters:
       - json
       - parquet
       - excel
-  
+
   - name: output_format
     type: string
     description: 出力データ形式
@@ -51,16 +51,15 @@ parameters:
       - json
       - parquet
       - excel
-  
+
   - name: enable_validation
     type: bool
     description: データ検証を有効にする
     default: true
     required: false
-  
+
   - name: enable_transformation
     type: bool
     description: データ変換を有効にする
     default: true
     required: false
-

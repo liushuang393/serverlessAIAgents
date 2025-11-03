@@ -53,14 +53,14 @@
 
 ### 1.2 Core Components
 
-| Component | Responsibility | Technology |
-|-----------|---------------|------------|
-| **AgentFlow Engine** | Execute PocketFlow graphs with protocol hooks | Python, PocketFlow |
-| **Protocol Adapters** | MCP/A2A/AG-UI integration | Official SDKs |
-| **Agent Block Manager** | Load, validate, and manage agent blocks | Python, Pydantic |
-| **CLI Tool** | Command-line interface | Click, Rich |
-| **Marketplace** | Agent discovery and distribution | YAML index, HTTP |
-| **Visual Studio** | Web-based workflow editor | React, React Flow |
+| Component               | Responsibility                                | Technology         |
+| ----------------------- | --------------------------------------------- | ------------------ |
+| **AgentFlow Engine**    | Execute PocketFlow graphs with protocol hooks | Python, PocketFlow |
+| **Protocol Adapters**   | MCP/A2A/AG-UI integration                     | Official SDKs      |
+| **Agent Block Manager** | Load, validate, and manage agent blocks       | Python, Pydantic   |
+| **CLI Tool**            | Command-line interface                        | Click, Rich        |
+| **Marketplace**         | Agent discovery and distribution              | YAML index, HTTP   |
+| **Visual Studio**       | Web-based workflow editor                     | React, React Flow  |
 
 ---
 
@@ -71,18 +71,19 @@
 **Purpose**: Wrap PocketFlow with protocol event hooks
 
 **Class Diagram**:
+
 ```python
 class AgentFlowEngine:
     """
     Core execution engine that wraps PocketFlow and provides
     lifecycle hooks for protocol integration.
     """
-    
+
     # Attributes
     flow: PocketFlow                    # The underlying PocketFlow graph
     hooks: Dict[str, List[Callable]]    # Event hooks registry
     shared_store: SharedStore           # Shared state across nodes
-    
+
     # Methods
     def __init__(flow: PocketFlow)
     def register_hook(event: str, callback: Callable) -> None
@@ -92,6 +93,7 @@ class AgentFlowEngine:
 ```
 
 **Hook Events**:
+
 - `on_start`: Triggered before flow execution
 - `on_node_exec`: Triggered before each node execution
 - `on_node_complete`: Triggered after each node execution
@@ -101,23 +103,24 @@ class AgentFlowEngine:
 - `on_error`: Triggered on execution errors
 
 **Implementation Strategy**:
+
 ```python
 # Monkey-patch PocketFlow Node to inject hooks
 def _wrap_node_execution(self, node: Node) -> Node:
     original_run = node.run
-    
+
     def wrapped_run(shared):
         # Pre-execution hook
         self._trigger_hooks("on_node_exec", node, shared)
-        
+
         # Execute original node
         result = original_run(shared)
-        
+
         # Post-execution hook
         self._trigger_hooks("on_node_complete", node, shared, result)
-        
+
         return result
-    
+
     node.run = wrapped_run
     return node
 ```
@@ -131,15 +134,16 @@ def _wrap_node_execution(self, node: Node) -> Node:
 **Purpose**: Connect to MCP servers and expose tools to agents
 
 **Class Diagram**:
+
 ```python
 class MCPToolManager:
     """Manages connections to multiple MCP servers"""
-    
+
     # Attributes
     config: Dict[str, Any]              # MCP server configurations
     sessions: Dict[str, ClientSession]  # Active MCP sessions
     tool_registry: Dict[str, Tool]      # Available tools
-    
+
     # Methods
     async def connect_all_servers() -> None
     async def connect_server(server_config: dict) -> ClientSession
@@ -149,12 +153,13 @@ class MCPToolManager:
 ```
 
 **Configuration Format** (`.agentflow/protocols/mcp.yaml`):
+
 ```yaml
 servers:
   - name: file-tools
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem", "/data"]
-    
+
   - name: database-tools
     command: npx
     args: ["-y", "@modelcontextprotocol/server-postgres"]
@@ -171,15 +176,16 @@ servers:
 **Purpose**: Expose local agents and call remote agents via A2A protocol
 
 **Class Diagram**:
+
 ```python
 class AgentFlowA2AServer:
     """Exposes local agents as A2A endpoints"""
-    
+
     # Attributes
     port: int
     agents: Dict[str, AgentBlock]
     server: A2AServer
-    
+
     # Methods
     def register_agent(agent_block: AgentBlock) -> None
     def generate_agent_card(agent_meta: dict) -> AgentCard
@@ -187,16 +193,17 @@ class AgentFlowA2AServer:
 
 class AgentFlowA2AClient:
     """Calls remote A2A agents"""
-    
+
     # Attributes
     remote_agents: Dict[str, AgentInfo]
-    
+
     # Methods
     async def discover_agent(endpoint: str) -> AgentCard
     async def call_remote_agent(agent_name: str, input_data: dict) -> Any
 ```
 
 **AgentCard Generation**:
+
 ```python
 def generate_agent_card(agent_meta: dict) -> AgentCard:
     return AgentCard(
@@ -222,19 +229,20 @@ def generate_agent_card(agent_meta: dict) -> AgentCard:
 **Purpose**: Convert flow execution events to AG-UI SSE streams
 
 **Class Diagram**:
+
 ```python
 class AGUIEventEmitter:
     """Emits AG-UI events during flow execution"""
-    
+
     # Attributes
     server: AGUIServer
     current_run_id: str
-    
+
     # Methods
     def attach_to_flow(flow_engine: AgentFlowEngine) -> None
     def emit(event: dict) -> None
     def stream_llm_tokens(token_generator: Iterator[str]) -> None
-    
+
     # Hook Handlers
     def _on_flow_start(shared: dict) -> None
     def _on_node_exec(node: Node, input_data: dict) -> None
@@ -243,15 +251,16 @@ class AGUIEventEmitter:
 ```
 
 **Event Mapping**:
-| Flow Event | AG-UI Event Type | Data |
-|------------|------------------|------|
-| Flow Start | `RUN_STARTED` | `{run_id, timestamp}` |
-| Node Exec | `TOOL_CALL_START` | `{tool_name, arguments}` |
-| Node Complete | `TOOL_CALL_END` | `{tool_name, result}` |
-| LLM Token | `TEXT_MESSAGE_CONTENT` | `{delta}` |
-| State Change | `STATE_DELTA` | `{patch}` |
-| Flow Finish | `RUN_FINISHED` | `{result}` |
-| Error | `ERROR` | `{message, stack_trace}` |
+
+| Flow Event    | AG-UI Event Type       | Data                     |
+| ------------- | ---------------------- | ------------------------ |
+| Flow Start    | `RUN_STARTED`          | `{run_id, timestamp}`    |
+| Node Exec     | `TOOL_CALL_START`      | `{tool_name, arguments}` |
+| Node Complete | `TOOL_CALL_END`        | `{tool_name, result}`    |
+| LLM Token     | `TEXT_MESSAGE_CONTENT` | `{delta}`                |
+| State Change  | `STATE_DELTA`          | `{patch}`                |
+| Flow Finish   | `RUN_FINISHED`         | `{result}`               |
+| Error         | `ERROR`                | `{message, stack_trace}` |
 
 ---
 
@@ -262,6 +271,7 @@ class AGUIEventEmitter:
 **File**: `agent.yaml`
 
 **Schema** (Pydantic):
+
 ```python
 class AgentMetadata(BaseModel):
     meta: MetaInfo
@@ -338,14 +348,15 @@ class VisualConfig(BaseModel):
 **Purpose**: Load, validate, and manage agent blocks
 
 **Class Diagram**:
+
 ```python
 class AgentBlockManager:
     """Manages agent block lifecycle"""
-    
+
     # Attributes
     registry: Dict[str, AgentBlock]
     registry_path: Path
-    
+
     # Methods
     def load_agent(agent_path: Path) -> AgentBlock
     def validate_agent(agent_meta: AgentMetadata) -> ValidationResult
@@ -356,6 +367,7 @@ class AgentBlockManager:
 ```
 
 **Agent Loading Process**:
+
 1. Read `agent.yaml` and parse with Pydantic
 2. Validate metadata schema
 3. Check dependencies availability
@@ -370,11 +382,12 @@ class AgentBlockManager:
 **Purpose**: Automatically generate protocol adapters from metadata
 
 **Implementation**:
+
 ```python
 def auto_adapt(protocols: List[str]):
     """
     Decorator that auto-generates protocol adapters
-    
+
     Usage:
         @auto_adapt(protocols=["mcp", "a2a", "agui"])
         class MyAgent(AgentBlock):
@@ -382,34 +395,34 @@ def auto_adapt(protocols: List[str]):
     """
     def decorator(cls):
         original_init = cls.__init__
-        
+
         def new_init(self, *args, **kwargs):
             original_init(self, *args, **kwargs)
-            
+
             # Load metadata
             self.metadata = self.load_metadata("agent.yaml")
-            
+
             # Generate protocol adapters
             if "mcp" in protocols:
                 self._mcp_tools = ProtocolAdapter.generate_mcp_tools(self.metadata)
-            
+
             if "a2a" in protocols:
                 self._a2a_card = ProtocolAdapter.generate_a2a_card(self.metadata)
-            
+
             if "agui" in protocols:
                 ProtocolAdapter.wrap_flow_with_agui(self.flow, self.metadata)
-        
+
         cls.__init__ = new_init
-        
+
         # Add protocol interface methods
         if "mcp" in protocols:
             cls.get_mcp_tools = lambda self: self._mcp_tools
-        
+
         if "a2a" in protocols:
             cls.get_a2a_card = lambda self: self._a2a_card
-        
+
         return cls
-    
+
     return decorator
 ```
 
@@ -420,6 +433,7 @@ def auto_adapt(protocols: List[str]):
 **Purpose**: Command-line interface for all framework operations
 
 **Command Structure**:
+
 ```
 agentflow
 ├── init <name>                    # Create new project
@@ -444,6 +458,7 @@ agentflow
 ```
 
 **Implementation** (Click framework):
+
 ```python
 import click
 from rich.console import Console
@@ -460,11 +475,11 @@ def cli():
 def init(name, protocols):
     """Create a new AgentFlow project"""
     console = Console()
-    
+
     with console.status(f"[bold green]Creating project {name}..."):
         # Create project structure
         create_project_structure(name, protocols.split(','))
-    
+
     console.print(f"✅ Project {name} created successfully!", style="bold green")
     console.print(f"\nNext steps:")
     console.print(f"  cd {name}")
@@ -478,6 +493,7 @@ def init(name, protocols):
 **Purpose**: Registry and distribution system for agent blocks
 
 **Architecture**:
+
 ```
 Marketplace
 ├── Local Registry (.agentflow/registry.yaml)
@@ -489,6 +505,7 @@ Marketplace
 ```
 
 **Registry Schema** (`.agentflow/registry.yaml`):
+
 ```yaml
 agents:
   - id: pdf-analyzer
@@ -497,14 +514,14 @@ agents:
     source: "local"
     path: "./agents/pdf-analyzer"
     protocols: [mcp, a2a, agui]
-    
+
   - id: translator-pro
     name: "Translator Pro"
     version: "2.1.0"
     source: "a2a"
     endpoint: "https://api.example.com/translator"
     protocols: [a2a]
-    
+
   - id: email-sender
     name: "Email Sender"
     version: "1.5.0"
@@ -514,6 +531,7 @@ agents:
 ```
 
 **Marketplace API**:
+
 ```python
 class AgentMarketplace:
     def search(query: str, filters: dict = None) -> List[AgentInfo]
@@ -590,13 +608,13 @@ class DocumentProcessor(Workflow):
         self.pdf_agent = get_agent("pdf-analyzer")
         self.translator = get_agent("translator")
         self.email_sender = get_agent("email-sender")
-    
+
     async def run(self, input_data):
         # Sequential execution
         pdf_result = await self.pdf_agent.run({"pdf_path": input_data["file"]})
         translated = await self.translator.run({"text": pdf_result["text"]})
         await self.email_sender.run({"to": input_data["email"], "content": translated})
-        
+
         return {"status": "success"}
 ```
 
@@ -622,16 +640,19 @@ POST   /api/workflows/:id/run         # Execute workflow
 ## 5. Security Considerations
 
 ### 5.1 Agent Isolation
+
 - Each agent runs in its own execution context
 - Shared state is immutable between agents
 - MCP tools have explicit permission declarations
 
 ### 5.2 Marketplace Security
+
 - Agent packages are validated before installation
 - Code signing for published agents (future)
 - Dependency vulnerability scanning
 
 ### 5.3 Protocol Security
+
 - A2A endpoints require authentication tokens
 - MCP servers run with limited file system access
 - AG-UI events don't expose sensitive data
@@ -641,16 +662,19 @@ POST   /api/workflows/:id/run         # Execute workflow
 ## 6. Performance Optimization
 
 ### 6.1 Lazy Loading
+
 - Agents are loaded on-demand
 - MCP connections are pooled and reused
 - Protocol adapters are cached
 
 ### 6.2 Async Execution
+
 - All I/O operations are async
 - Parallel agent execution where possible
 - Streaming responses for LLM outputs
 
 ### 6.3 Caching Strategy
+
 - Agent metadata cached in memory
 - MCP tool definitions cached
 - A2A AgentCards cached with TTL
@@ -660,12 +684,14 @@ POST   /api/workflows/:id/run         # Execute workflow
 ## 7. Error Handling
 
 ### 7.1 Error Categories
+
 - **Configuration Errors**: Invalid YAML, missing files
 - **Validation Errors**: Schema violations, type mismatches
 - **Runtime Errors**: Node execution failures, timeouts
 - **Protocol Errors**: MCP/A2A/AG-UI communication failures
 
 ### 7.2 Error Recovery
+
 - Automatic retry with exponential backoff
 - Fallback to alternative agents (if configured)
 - Graceful degradation (skip optional steps)
@@ -676,16 +702,19 @@ POST   /api/workflows/:id/run         # Execute workflow
 ## 8. Testing Strategy
 
 ### 8.1 Unit Tests
+
 - Each component tested in isolation
 - Mock protocol adapters for testing
 - 80%+ code coverage target
 
 ### 8.2 Integration Tests
+
 - End-to-end agent execution
 - Protocol compatibility tests
 - Marketplace operations
 
 ### 8.3 Performance Tests
+
 - Load testing with 50+ concurrent agents
 - Latency measurements for protocol overhead
 - Memory usage profiling
@@ -695,6 +724,7 @@ POST   /api/workflows/:id/run         # Execute workflow
 ## 9. Deployment Architecture
 
 ### 9.1 Development Mode
+
 ```
 Local Machine
 ├── AgentFlow CLI
@@ -704,6 +734,7 @@ Local Machine
 ```
 
 ### 9.2 Production Mode
+
 ```
 Cloud Environment
 ├── AgentFlow Runtime (Docker)
@@ -717,29 +748,31 @@ Cloud Environment
 
 ## 10. Technology Stack Summary
 
-| Layer | Technology | Version | Justification |
-|-------|-----------|---------|---------------|
-| **Core** | Python | 3.13+ | AG-UI requires 3.13+; JIT performance boost (10-20%); LTS until 2029 |
-| **Workflow** | PocketFlow | Latest | Lightweight, AI-friendly |
-| **MCP** | mcp Python SDK | Latest | Official Anthropic SDK (supports 3.10+) |
-| **A2A** | google-a2a | Latest | Official Google SDK (supports 3.9+) |
-| **AG-UI** | ag-ui Python | Latest | Official AG-UI SDK (requires 3.13+) |
-| **CLI** | Click + Rich | Latest | Best Python CLI experience |
-| **Validation** | Pydantic | 2.x | Type safety, validation |
-| **Config** | PyYAML | Latest | Human-readable configs |
-| **Frontend** | React + React Flow | Latest | Visual workflow editor |
-| **Testing** | pytest | Latest | Industry standard |
+| Layer          | Technology         | Version | Justification                                                        |
+| -------------- | ------------------ | ------- | -------------------------------------------------------------------- |
+| **Core**       | Python             | 3.13+   | AG-UI requires 3.13+; JIT performance boost (10-20%); LTS until 2029 |
+| **Workflow**   | PocketFlow         | Latest  | Lightweight, AI-friendly                                             |
+| **MCP**        | mcp Python SDK     | Latest  | Official Anthropic SDK (supports 3.10+)                              |
+| **A2A**        | google-a2a         | Latest  | Official Google SDK (supports 3.9+)                                  |
+| **AG-UI**      | ag-ui Python       | Latest  | Official AG-UI SDK (requires 3.13+)                                  |
+| **CLI**        | Click + Rich       | Latest  | Best Python CLI experience                                           |
+| **Validation** | Pydantic           | 2.x     | Type safety, validation                                              |
+| **Config**     | PyYAML             | Latest  | Human-readable configs                                               |
+| **Frontend**   | React + React Flow | Latest  | Visual workflow editor                                               |
+| **Testing**    | pytest             | Latest  | Industry standard                                                    |
 
 ---
 
 ## 11. Migration Path
 
 ### 11.1 From LangChain
+
 - Provide LangChain adapter for existing chains
 - Migration guide with examples
 - Tool to convert LangChain agents to AgentFlow
 
 ### 11.2 From CrewAI
+
 - Similar agent-based architecture
 - Map CrewAI roles to AgentFlow blocks
 - Preserve multi-agent orchestration patterns
@@ -761,5 +794,4 @@ Cloud Environment
 **Created**: 2025-11-03  
 **Status**: Draft
 
-*This design document provides implementation-ready specifications for all AgentFlow components.*
-
+_This design document provides implementation-ready specifications for all AgentFlow components._

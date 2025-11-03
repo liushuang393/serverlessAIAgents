@@ -168,4 +168,3 @@ class TestErrorHandling:
         assert result.exit_code != 0
         # エラーメッセージが含まれることを確認
         assert "Error" in result.output or "Missing" in result.output
-

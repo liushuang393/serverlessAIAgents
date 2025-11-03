@@ -4,16 +4,15 @@
 """
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from agentflow.core.agent_block import AgentBlock
-from agentflow.core.engine import AgentFlowEngine
 from agentflow.core.metadata import (
     A2AConfig,
-    AGUIConfig,
     AgentMetadata,
+    AGUIConfig,
     DependencySpec,
     InputField,
     InterfaceDefinition,
@@ -26,7 +25,10 @@ from agentflow.core.metadata import (
 )
 from agentflow.core.schemas import SchemaLoader
 from agentflow.protocols.a2a_server import A2AServer
-from agentflow.protocols.agui_events import AGUIEvent
+
+
+if TYPE_CHECKING:
+    from agentflow.protocols.agui_events import AGUIEvent
 
 
 class TestProtocolIntegration:
@@ -95,7 +97,7 @@ class TestProtocolIntegration:
         test_agent_class: type[AgentBlock],
     ) -> None:
         """MCP プロトコル統合をテスト."""
-        metadata, metadata_file = sample_metadata
+        _metadata, metadata_file = sample_metadata
 
         # エージェントを作成
         agent = test_agent_class(metadata_path=metadata_file)
@@ -125,7 +127,7 @@ class TestProtocolIntegration:
         test_agent_class: type[AgentBlock],
     ) -> None:
         """A2A プロトコル統合をテスト."""
-        metadata, metadata_file = sample_metadata
+        _metadata, metadata_file = sample_metadata
 
         # エージェントを作成
         agent = test_agent_class(metadata_path=metadata_file)
@@ -153,7 +155,7 @@ class TestProtocolIntegration:
         test_agent_class: type[AgentBlock],
     ) -> None:
         """A2A サーバー統合をテスト."""
-        metadata, metadata_file = sample_metadata
+        _metadata, metadata_file = sample_metadata
 
         # エージェントを作成
         agent = test_agent_class(metadata_path=metadata_file)
@@ -179,9 +181,7 @@ class TestProtocolIntegration:
         assert retrieved_card.name == "Protocol Test Agent"
 
         # タスクを実行 (agent.name をキーとして使用)
-        response = await server.handle_task(
-            "Protocol Test Agent", "process", {"input": "test"}
-        )
+        response = await server.handle_task("Protocol Test Agent", "process", {"input": "test"})
         assert response["status"] == "success"
         assert response["result"]["output"] == "processed: test"
 
@@ -192,7 +192,7 @@ class TestProtocolIntegration:
         test_agent_class: type[AgentBlock],
     ) -> None:
         """AG-UI プロトコル統合をテスト."""
-        metadata, metadata_file = sample_metadata
+        _metadata, metadata_file = sample_metadata
 
         # エージェントを作成
         agent = test_agent_class(metadata_path=metadata_file)
@@ -229,7 +229,7 @@ class TestProtocolIntegration:
         test_agent_class: type[AgentBlock],
     ) -> None:
         """全プロトコルを同時に使用できることをテスト."""
-        metadata, metadata_file = sample_metadata
+        _metadata, metadata_file = sample_metadata
 
         # エージェントを作成
         agent = test_agent_class(metadata_path=metadata_file)
@@ -260,9 +260,10 @@ class TestProtocolIntegration:
 
         class ErrorAgent(AgentBlock):
             async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
-                raise ValueError("Test error")
+                msg = "Test error"
+                raise ValueError(msg)
 
-        metadata, metadata_file = sample_metadata
+        _metadata, metadata_file = sample_metadata
 
         # エージェントを作成
         agent = ErrorAgent(metadata_path=metadata_file)
@@ -292,7 +293,7 @@ class TestProtocolIntegration:
         test_agent_class: type[AgentBlock],
     ) -> None:
         """プロトコルメタデータの検証をテスト."""
-        metadata, metadata_file = sample_metadata
+        _metadata, metadata_file = sample_metadata
 
         # エージェントを作成
         agent = test_agent_class(metadata_path=metadata_file)
@@ -313,4 +314,3 @@ class TestProtocolIntegration:
 
         assert len(agent.metadata.protocols.agui.events) == 3
         assert "flow.start" in agent.metadata.protocols.agui.events
-

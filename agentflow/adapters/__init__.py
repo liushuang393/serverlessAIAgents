@@ -6,5 +6,5 @@
 
 from agentflow.adapters.protocol_adapter import ProtocolAdapter
 
-__all__ = ["ProtocolAdapter"]
 
+__all__ = ["ProtocolAdapter"]

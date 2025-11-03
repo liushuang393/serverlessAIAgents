@@ -4,14 +4,12 @@
 """
 
 import shutil
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
 
-from agentflow.core.schemas import SchemaLoader
 from agentflow.marketplace.registry import AgentRegistryEntry, LocalRegistry
 
 
@@ -31,7 +29,7 @@ class MarketplaceAgent(BaseModel):
 
 class MarketplaceClient:
     """マーケットプレイスクライアント.
-    
+
     エージェントの検索、インストール、アンインストールを提供します。
     """
 
@@ -42,19 +40,19 @@ class MarketplaceClient:
         registry: LocalRegistry | None = None,
     ) -> None:
         """クライアントを初期化.
-        
+
         Args:
             marketplace_url: マーケットプレイス API の URL
             install_dir: エージェントインストールディレクトリ
             registry: ローカルレジストリ
         """
         self.marketplace_url = marketplace_url
-        
+
         if install_dir is None:
             install_dir = Path.home() / ".agentflow" / "agents"
         self.install_dir = install_dir
         self.install_dir.mkdir(parents=True, exist_ok=True)
-        
+
         self.registry = registry or LocalRegistry()
         self.client = httpx.Client(timeout=30.0)
 
@@ -66,13 +64,13 @@ class MarketplaceClient:
         limit: int = 10,
     ) -> list[MarketplaceAgent]:
         """エージェントを検索.
-        
+
         Args:
             query: 検索クエリ
             category: カテゴリフィルター
             protocols: プロトコルフィルター
             limit: 最大結果数
-            
+
         Returns:
             マーケットプレイスエージェントのリスト
         """
@@ -102,7 +100,7 @@ class MarketplaceClient:
                 dependencies=[],
             ),
         ]
-        
+
         # フィルタリング
         results = mock_agents
 
@@ -115,35 +113,31 @@ class MarketplaceClient:
                 or query_lower in agent.name.lower()
                 or query_lower in agent.description.lower()
             ]
-        
+
         if category:
             results = [agent for agent in results if agent.category == category]
-        
+
         if protocols:
-            results = [
-                agent
-                for agent in results
-                if any(p in agent.protocols for p in protocols)
-            ]
-        
+            results = [agent for agent in results if any(p in agent.protocols for p in protocols)]
+
         return results[:limit]
 
     def install(
         self,
         agent_id: str,
-        version: str | None = None,
+        _version: str | None = None,
         force: bool = False,
     ) -> Path:
         """エージェントをインストール.
-        
+
         Args:
             agent_id: エージェント ID
-            version: バージョン (None の場合は最新)
+            _version: バージョン (None の場合は最新、未使用)
             force: 既存エージェントを上書き
-            
+
         Returns:
             インストールパス
-            
+
         Raises:
             ValueError: エージェントが見つからない、または既にインストール済み
         """
@@ -151,19 +145,19 @@ class MarketplaceClient:
         if self.registry.is_installed(agent_id) and not force:
             msg = f"Agent already installed: {agent_id}"
             raise ValueError(msg)
-        
+
         # エージェント情報を取得
         agents = self.search(query=agent_id)
         agent = next((a for a in agents if a.id == agent_id), None)
-        
+
         if not agent:
             msg = f"Agent not found: {agent_id}"
             raise ValueError(msg)
-        
+
         # インストールディレクトリを作成
         install_path = self.install_dir / agent_id
         install_path.mkdir(parents=True, exist_ok=True)
-        
+
         # TODO: 実際のダウンロードとインストール
         # 現在はモックとして agent.yaml を作成
         agent_yaml = install_path / "agent.yaml"
@@ -204,7 +198,7 @@ visual:
 """,
             encoding="utf-8",
         )
-        
+
         # レジストリに追加
         entry = AgentRegistryEntry(
             id=agent.id,
@@ -214,18 +208,18 @@ visual:
             category=agent.category,
             description=agent.description,
             install_path=str(install_path),
-            installed_at=datetime.now().isoformat(),
+            installed_at=datetime.now(UTC).isoformat(),
         )
         self.registry.add_agent(entry)
-        
+
         return install_path
 
     def uninstall(self, agent_id: str) -> bool:
         """エージェントをアンインストール.
-        
+
         Args:
             agent_id: エージェント ID
-            
+
         Returns:
             アンインストールに成功した場合 True
         """
@@ -233,18 +227,18 @@ visual:
         entry = self.registry.get_agent(agent_id)
         if not entry:
             return False
-        
+
         # インストールディレクトリを削除
         install_path = Path(entry.install_path)
         if install_path.exists():
             shutil.rmtree(install_path)
-        
+
         # レジストリから削除
         return self.registry.remove_agent(agent_id)
 
     def list_installed(self) -> list[AgentRegistryEntry]:
         """インストール済みエージェントを一覧取得.
-        
+
         Returns:
             エージェントエントリのリスト
         """
@@ -253,4 +247,3 @@ visual:
     def close(self) -> None:
         """クライアントをクローズ."""
         self.client.close()
-

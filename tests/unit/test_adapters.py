@@ -6,8 +6,8 @@ from agentflow.adapters.protocol_adapter import ProtocolAdapter
 from agentflow.core.engine import AgentFlowEngine
 from agentflow.core.metadata import (
     A2AConfig,
-    AGUIConfig,
     AgentMetadata,
+    AGUIConfig,
     DependencySpec,
     InputField,
     InterfaceDefinition,
@@ -282,4 +282,3 @@ class TestProtocolAdapter:
         assert "properties" in schema
         assert "length" in schema["properties"]
         assert "words" in schema["properties"]
-

@@ -66,7 +66,7 @@ servers:
       - "@modelcontextprotocol/server-filesystem"
       - /path/to/allowed/directory
     enabled: true
-  
+
   github:
     command: npx
     args:
@@ -88,19 +88,19 @@ class FileProcessorAgent(AgentBlock):
         # MCP クライアントを初期化
         self.mcp = MCPClient()
         await self.mcp.connect("filesystem")
-    
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         # ファイルを読み込む
         content = await self.mcp.call_tool(
             "mcp://filesystem/read_file",
             {"path": input_data["file_path"]}
         )
-        
+
         # 処理
         result = content.upper()
-        
+
         return {"result": result}
-    
+
     async def cleanup(self) -> None:
         await self.mcp.disconnect("filesystem")
         await super().cleanup()
@@ -258,7 +258,7 @@ class OrchestratorAgent(AgentBlock):
     async def initialize(self) -> None:
         await super().initialize()
         self.a2a_client = A2AClient()
-    
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         # エージェント 1: テキスト処理
         result1 = await self.a2a_client.call_remote_agent(
@@ -266,14 +266,14 @@ class OrchestratorAgent(AgentBlock):
             "process_text",
             {"text": input_data["text"]}
         )
-        
+
         # エージェント 2: 分析
         result2 = await self.a2a_client.call_remote_agent(
             "http://localhost:8002",
             "analyze",
             {"text": result1["result"]}
         )
-        
+
         return {"final_result": result2}
 ```
 
@@ -326,7 +326,7 @@ await emitter.detach_from_flow("my-flow")
 # イベントをストリーミング
 async for event in emitter.stream_events():
     print(f"[{event.event_type.value}] {event.data}")
-    
+
     if event.event_type == AGUIEventType.FLOW_COMPLETE:
         break
 ```
@@ -339,22 +339,22 @@ class StreamingAgent(AgentBlock):
         # エミッターを作成
         emitter = self.create_agui_emitter(self.engine)
         await emitter.attach_to_flow("processing")
-        
+
         # 処理開始
         await emitter.emit_log("info", "処理を開始します", "agent")
-        
+
         # ステップ 1
         await emitter.emit_log("info", "ステップ 1: データ読み込み", "agent")
         data = await self.load_data(input_data["source"])
-        
+
         # ステップ 2
         await emitter.emit_log("info", "ステップ 2: データ処理", "agent")
         result = await self.process_data(data)
-        
+
         # 完了
         await emitter.emit_log("success", "処理完了！", "agent")
         await emitter.detach_from_flow("processing")
-        
+
         return {"result": result}
 ```
 
@@ -397,22 +397,22 @@ class AdvancedAgent(AgentBlock):
         # MCP クライアント
         self.mcp = MCPClient()
         await self.mcp.connect("filesystem")
-        
+
         # A2A クライアント
         self.a2a = A2AClient()
-    
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         # AG-UI エミッター
         emitter = self.create_agui_emitter(self.engine)
         await emitter.attach_to_flow("advanced-flow")
-        
+
         # ステップ 1: MCP でファイル読み込み
         await emitter.emit_log("info", "ファイルを読み込み中...", "agent")
         content = await self.mcp.call_tool(
             "mcp://filesystem/read_file",
             {"path": input_data["file"]}
         )
-        
+
         # ステップ 2: A2A でリモート処理
         await emitter.emit_log("info", "リモート処理中...", "agent")
         result = await self.a2a.call_remote_agent(
@@ -420,11 +420,11 @@ class AdvancedAgent(AgentBlock):
             "process",
             {"content": content}
         )
-        
+
         # 完了
         await emitter.emit_log("success", "処理完了！", "agent")
         await emitter.detach_from_flow("advanced-flow")
-        
+
         return result
 ```
 
@@ -435,4 +435,3 @@ class AdvancedAgent(AgentBlock):
 - [API リファレンス](api.md) - 詳細な API ドキュメント
 - [CLI リファレンス](cli.md) - CLI コマンドの詳細
 - [サンプル集](../examples/) - 実装例
-

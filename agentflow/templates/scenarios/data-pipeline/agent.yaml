@@ -14,12 +14,12 @@ inputs:
     type: string
     description: Path to input data file
     required: true
-  
+
   - name: output_path
     type: string
     description: Path to output data file
     required: true
-  
+
   - name: transformations
     type: array
     description: List of transformations to apply
@@ -45,19 +45,19 @@ tools:
     type: builtin
     config:
       format: {{ input_format }}
-  
+
   {% if enable_validation %}
   - name: data_validator
     description: Validate data quality
     type: builtin
   {% endif %}
-  
+
   {% if enable_transformation %}
   - name: data_transformer
     description: Transform data
     type: builtin
   {% endif %}
-  
+
   - name: data_writer
     description: Write data to various formats
     type: builtin
@@ -69,4 +69,3 @@ config:
   max_retries: 3
   enable_logging: true
   batch_size: 1000
-

@@ -3,21 +3,31 @@
 このモジュールは AgentFlow の CLI ツールのメインエントリーポイントを提供します。
 """
 
+import asyncio
+import json
 import sys
+import traceback
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 import click
 from rich.console import Console
 from rich.panel import Panel
+from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.text import Text
 
 from agentflow.cli.commands.create import create
 from agentflow.cli.commands.init import init
 from agentflow.cli.commands.marketplace import marketplace
 from agentflow.cli.commands.template import template
+from agentflow.core.schemas import SchemaLoader
+
 
 # Rich Console インスタンス
 console = Console()
+
+# 定数
+ENTRY_PARTS_COUNT = 2
 
 
 class AgentFlowCLI(click.Group):
@@ -35,9 +45,7 @@ class AgentFlowCLI(click.Group):
         """
         # タイトル
         title = Text("AgentFlow CLI", style="bold cyan")
-        subtitle = Text(
-            "Lightweight AI Agent Development Framework", style="dim"
-        )
+        subtitle = Text("Lightweight AI Agent Development Framework", style="dim")
 
         console.print()
         console.print(Panel(title, subtitle=subtitle, border_style="cyan"))
@@ -86,7 +94,6 @@ def cli(ctx: click.Context, verbose: bool) -> None:
 @click.pass_context
 def protocols(ctx: click.Context) -> None:
     """プロトコル関連のコマンド."""
-    pass
 
 
 @cli.command()
@@ -127,17 +134,6 @@ def run(
         agentflow run my-agent --input data.json
         agentflow run my-agent --input data.json --output result.json
     """
-    import asyncio
-    import json
-    import sys
-    from importlib.util import module_from_spec, spec_from_file_location
-
-    from rich.panel import Panel
-    from rich.progress import Progress, SpinnerColumn, TextColumn
-
-    from agentflow.core.engine import AgentFlowEngine
-    from agentflow.core.schemas import SchemaLoader
-
     verbose = ctx.obj["verbose"]
 
     try:
@@ -178,7 +174,7 @@ def run(
         # エージェントのメインモジュールを動的にロード
         # entry フィールドは "module.py:FlowName" 形式
         entry_parts = metadata.pocketflow.entry.split(":")
-        if len(entry_parts) != 2:
+        if len(entry_parts) != ENTRY_PARTS_COUNT:
             console.print(
                 f"[red]Error: Invalid entry format: {metadata.pocketflow.entry}. "
                 f"Expected 'module.py:FlowName'[/red]"
@@ -204,9 +200,7 @@ def run(
         # フローを取得
         flow = getattr(module, flow_name, None)
         if flow is None:
-            console.print(
-                f"[red]Error: Flow '{flow_name}' not found in {entry_point}[/red]"
-            )
+            console.print(f"[red]Error: Flow '{flow_name}' not found in {entry_point}[/red]")
             ctx.exit(1)
 
         # 実行
@@ -258,14 +252,13 @@ def run(
             )
         )
         if verbose:
-            import traceback
             console.print(f"[dim]{traceback.format_exc()}[/dim]")
         ctx.exit(1)
 
 
 @cli.command()
 @click.pass_context
-def list(ctx: click.Context) -> None:
+def list_agents(ctx: click.Context) -> None:
     """インストール済みエージェントを一覧表示."""
     verbose = ctx.obj["verbose"]
 
@@ -299,11 +292,13 @@ def handle_error(error: Exception, verbose: bool = False) -> None:
         verbose: 詳細表示フラグ
     """
     console.print()
-    console.print(Panel(
-        f"[bold red]Error:[/bold red] {error!s}",
-        border_style="red",
-        title="❌ エラー",
-    ))
+    console.print(
+        Panel(
+            f"[bold red]Error:[/bold red] {error!s}",
+            border_style="red",
+            title="❌ エラー",
+        )
+    )
 
     if verbose:
         console.print()
@@ -332,4 +327,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

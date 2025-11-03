@@ -1,0 +1,22 @@
+# Markdownlint configuration
+# See: https://github.com/DavidAnson/markdownlint/blob/main/doc/Rules.md
+
+# MD013/line-length - Line length
+MD013:
+  line_length: 200  # Allow longer lines for tables and links
+  code_blocks: false  # Don't check code blocks
+  tables: false  # Don't check tables
+
+# MD040/fenced-code-language - Fenced code blocks should have a language specified
+MD040: false  # Allow code blocks without language (for output examples)
+
+# MD051/link-fragments - Link fragments should be valid
+MD051: false  # Allow Japanese link fragments (GitHub supports them)
+
+# MD036/no-emphasis-as-heading - Emphasis used instead of a heading
+MD036: false  # Allow emphasis for styling
+
+# MD029/ol-prefix - Ordered list item prefix
+MD029:
+  style: "ordered"  # Allow any ordered list style
+

@@ -8,18 +8,18 @@ from pocketflow import AsyncFlow, AsyncNode
 
 async def process_input(shared: dict) -> dict:
     """入力データを処理.
-    
+
     Args:
         shared: 共有データ辞書
-        
+
     Returns:
         処理結果を含む辞書
     """
     input_text = shared.get("input", "")
-    
+
     # TODO: ここに処理ロジックを実装
     result = f"Processed: {input_text}"
-    
+
     return {"output": result}
 
 
@@ -34,12 +34,11 @@ MainFlow = AsyncFlow(
 
 if __name__ == "__main__":
     import asyncio
-    
+
     async def main() -> None:
         """テスト実行."""
         shared = {"input": "Hello, AgentFlow!"}
         result = await MainFlow.run_async(shared)
         print(f"Result: {result}")
-    
-    asyncio.run(main())
 
+    asyncio.run(main())

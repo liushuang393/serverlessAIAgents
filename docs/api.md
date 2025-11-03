@@ -23,6 +23,7 @@ def __init__(
 ```
 
 **パラメータ:**
+
 - `metadata_path` (str | Path | None): agent.yaml ファイルのパス。デフォルトは `./agent.yaml`
 - `engine` (AgentFlowEngine | None): カスタムエンジンインスタンス。デフォルトは新規作成
 
@@ -77,6 +78,7 @@ def load_metadata(
 メタデータファイルを読み込む。
 
 **パラメータ:**
+
 - `metadata_path` (str | Path | None): agent.yaml ファイルのパス
 
 **戻り値:** `AgentMetadata` - 読み込んだメタデータ
@@ -110,6 +112,7 @@ async def run(self, input_data: dict[str, Any]) -> dict[str, Any]
 エージェントのメイン処理。**必須オーバーライド**。
 
 **パラメータ:**
+
 - `input_data` (dict[str, Any]): 入力データ
 
 **戻り値:** `dict[str, Any]` - 処理結果
@@ -169,6 +172,7 @@ def create_agui_emitter(self, engine: Any) -> AGUIEventEmitter
 AG-UI イベントエミッターを作成（`@auto_adapt` により自動注入）。
 
 **パラメータ:**
+
 - `engine` (Any): ワークフローエンジン
 
 **戻り値:** `AGUIEventEmitter` - イベントエミッター
@@ -225,6 +229,7 @@ def register_workflow(
 ワークフローを登録。
 
 **パラメータ:**
+
 - `workflow_id` (str): ワークフロー ID
 - `flow` (AsyncFlow | Flow): ワークフローインスタンス
 
@@ -241,6 +246,7 @@ async def execute_workflow(
 ワークフローを実行。
 
 **パラメータ:**
+
 - `workflow_id` (str): ワークフロー ID
 - `input_data` (dict[str, Any]): 入力データ
 
@@ -358,6 +364,7 @@ def load_from_file(self, path: str | Path) -> AgentMetadata
 YAML ファイルからメタデータを読み込む。
 
 **パラメータ:**
+
 - `path` (str | Path): YAML ファイルパス
 
 **戻り値:** `AgentMetadata` - メタデータ
@@ -377,6 +384,7 @@ def save_to_file(
 メタデータを YAML ファイルに保存。
 
 **パラメータ:**
+
 - `metadata` (AgentMetadata): メタデータ
 - `path` (str | Path): 保存先パス
 
@@ -430,10 +438,12 @@ class MyAgent:
 ```
 
 **パラメータ:**
+
 - `protocols` (list[str] | None): 有効化するプロトコル。None の場合は自動判定
 - `metadata_path` (str | None): メタデータファイルパス
 
 **注入されるメソッド:**
+
 - `get_mcp_tools()` - MCP ツール定義を取得
 - `get_a2a_card()` - A2A カードを取得
 - `create_agui_emitter(engine)` - AG-UI エミッターを作成
@@ -446,4 +456,3 @@ class MyAgent:
 - [プロトコルガイド](protocols.md) - MCP/A2A/AG-UI の詳細
 - [CLI リファレンス](cli.md) - CLI コマンドの詳細
 - [サンプル集](../examples/) - 実装例
-

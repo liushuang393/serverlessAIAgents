@@ -31,15 +31,18 @@ AgentFlow のテンプレートシステムを使用して、プロジェクト�
 **説明**: PDF 請求書を処理するエージェント
 
 **ユースケース**:
+
 - PDF からデータ抽出
 - 請求書情報の構造化
 - データベースへの保存
 
 **パラメーター**:
+
 - `agent_name`: エージェント名
 - `database_type`: データベースタイプ（sqlite, postgresql, mysql）
 
 **使用例**:
+
 ```bash
 agentflow template generate invoice-processor my-invoice-agent \
   -p agent_name=invoice-processor \
@@ -53,16 +56,19 @@ agentflow template generate invoice-processor my-invoice-agent \
 **説明**: 対話型チャットボットエージェント
 
 **ユースケース**:
+
 - カスタマーサポート
 - FAQ 応答
 - 会話型インターフェース
 
 **パラメーター**:
+
 - `agent_name`: エージェント名
 - `llm_provider`: LLM プロバイダー（openai, anthropic, local）
 - `memory_type`: メモリタイプ（short-term, long-term, hybrid）
 
 **使用例**:
+
 ```bash
 agentflow template generate chatbot my-chatbot \
   -p agent_name=support-bot \
@@ -77,16 +83,19 @@ agentflow template generate chatbot my-chatbot \
 **説明**: データ処理パイプラインエージェント
 
 **ユースケース**:
+
 - ETL 処理
 - データ変換
 - バッチ処理
 
 **パラメーター**:
+
 - `agent_name`: エージェント名
 - `input_format`: 入力形式（csv, json, parquet）
 - `output_format`: 出力形式（csv, json, parquet）
 
 **使用例**:
+
 ```bash
 agentflow template generate data-pipeline my-pipeline \
   -p agent_name=etl-pipeline \
@@ -172,7 +181,7 @@ parameters:
     type: string
     description: エージェント名
     required: true
-  
+
   - name: feature_enabled
     type: boolean
     description: 機能を有効化
@@ -197,7 +206,7 @@ from typing import Any
 
 class {{ agent_name | capitalize }}Agent(AgentBlock):
     """{{ description }}."""
-    
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         {% if feature_enabled %}
         # 機能が有効
@@ -206,7 +215,7 @@ class {{ agent_name | capitalize }}Agent(AgentBlock):
         # 機能が無効
         result = await self._process_basic(input_data)
         {% endif %}
-        
+
         return {"result": result}
 ```
 
@@ -231,7 +240,7 @@ export AGENTFLOW_TEMPLATE_PATH=/path/to/templates
 files:
   - src: agent.py.j2
     dest: agent.py
-  
+
   - src: database.py.j2
     dest: database.py
     condition: "{{ database_enabled }}"
@@ -275,4 +284,3 @@ def snake_case(value: str) -> str:
 ---
 
 詳細な API リファレンスは [api.md](api.md#template-system) を参照してください。
-

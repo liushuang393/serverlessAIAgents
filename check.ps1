@@ -1,5 +1,5 @@
 # AgentFlow コード品質チェックスクリプト (PowerShell)
-# 
+#
 # 使用方法:
 #   .\check.ps1 [command]
 #
@@ -41,21 +41,21 @@ function Format-Code {
     Write-Host "コードを自動フォーマット中..." -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
-    
+
     Write-Host "[Python] Ruff フォーマット中..." -ForegroundColor Yellow
     ruff format .
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[エラー] Ruff フォーマットに失敗しました" -ForegroundColor Red
         exit 1
     }
-    
+
     ruff check --fix .
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[エラー] Ruff リントに失敗しました" -ForegroundColor Red
         exit 1
     }
     Write-Host ""
-    
+
     Write-Host "[JS/TS] Prettier フォーマット中..." -ForegroundColor Yellow
     Push-Location studio
     npx prettier --write "src/**/*.{ts,tsx,js,jsx,json,css}"
@@ -66,7 +66,7 @@ function Format-Code {
     }
     Pop-Location
     Write-Host ""
-    
+
     Write-Host "✅ すべてのコードがフォーマットされました" -ForegroundColor Green
 }
 
@@ -75,7 +75,7 @@ function Run-Lint {
     Write-Host "リントチェック中..." -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
-    
+
     Write-Host "[Python] Ruff リントチェック中..." -ForegroundColor Yellow
     ruff check .
     if ($LASTEXITCODE -ne 0) {
@@ -83,7 +83,7 @@ function Run-Lint {
         exit 1
     }
     Write-Host ""
-    
+
     Write-Host "[JS/TS] ESLint チェック中..." -ForegroundColor Yellow
     Push-Location studio
     npx eslint "src/**/*.{ts,tsx,js,jsx}" --max-warnings=0
@@ -94,7 +94,7 @@ function Run-Lint {
     }
     Pop-Location
     Write-Host ""
-    
+
     Write-Host "✅ すべてのリントチェックが完了しました" -ForegroundColor Green
 }
 
@@ -103,7 +103,7 @@ function Run-TypeCheck {
     Write-Host "型チェック中..." -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
-    
+
     Write-Host "[Python] MyPy 型チェック中..." -ForegroundColor Yellow
     mypy agentflow --strict --ignore-missing-imports
     if ($LASTEXITCODE -ne 0) {
@@ -111,7 +111,7 @@ function Run-TypeCheck {
         exit 1
     }
     Write-Host ""
-    
+
     Write-Host "[TypeScript] tsc 型チェック中..." -ForegroundColor Yellow
     Push-Location studio
     npx tsc --noEmit
@@ -122,7 +122,7 @@ function Run-TypeCheck {
     }
     Pop-Location
     Write-Host ""
-    
+
     Write-Host "✅ すべての型チェックが完了しました" -ForegroundColor Green
 }
 
@@ -131,14 +131,14 @@ function Run-Test {
     Write-Host "テストを実行中..." -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
-    
+
     pytest -v
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[エラー] テストに失敗しました" -ForegroundColor Red
         exit 1
     }
     Write-Host ""
-    
+
     Write-Host "✅ すべてのテストが完了しました" -ForegroundColor Green
 }
 
@@ -147,14 +147,14 @@ function Run-TestCov {
     Write-Host "カバレッジ付きでテストを実行中..." -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
-    
+
     pytest --cov=agentflow --cov-report=html --cov-report=term-missing -v
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[エラー] テストに失敗しました" -ForegroundColor Red
         exit 1
     }
     Write-Host ""
-    
+
     Write-Host "📊 カバレッジレポート: htmlcov\index.html" -ForegroundColor Cyan
     Write-Host "✅ すべてのテストが完了しました" -ForegroundColor Green
 }
@@ -164,23 +164,23 @@ function Run-All {
     Write-Host "すべてのチェックを実行中..." -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
-    
+
     Format-Code
     if ($LASTEXITCODE -ne 0) { exit 1 }
     Write-Host ""
-    
+
     Run-Lint
     if ($LASTEXITCODE -ne 0) { exit 1 }
     Write-Host ""
-    
+
     Run-TypeCheck
     if ($LASTEXITCODE -ne 0) { exit 1 }
     Write-Host ""
-    
+
     Run-Test
     if ($LASTEXITCODE -ne 0) { exit 1 }
     Write-Host ""
-    
+
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host "✅ すべてのチェックが完了しました！" -ForegroundColor Green
     Write-Host "========================================" -ForegroundColor Cyan
@@ -191,14 +191,14 @@ function Run-PreCommit {
     Write-Host "Pre-commit を全ファイルに実行中..." -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
-    
+
     pre-commit run --all-files
     if ($LASTEXITCODE -ne 0) {
         Write-Host "[警告] Pre-commit で問題が見つかりました" -ForegroundColor Yellow
         Write-Host "自動修正された場合は、変更を確認してください" -ForegroundColor Yellow
     }
     Write-Host ""
-    
+
     Write-Host "✅ Pre-commit チェックが完了しました" -ForegroundColor Green
 }
 
@@ -207,26 +207,26 @@ function Clean-Files {
     Write-Host "一時ファイルとキャッシュを削除中..." -ForegroundColor Cyan
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host ""
-    
+
     Write-Host "[Python] キャッシュを削除中..." -ForegroundColor Yellow
     Get-ChildItem -Path . -Recurse -Directory -Filter "__pycache__" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path . -Recurse -Directory -Filter ".pytest_cache" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path . -Recurse -Directory -Filter ".mypy_cache" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path . -Recurse -Directory -Filter ".ruff_cache" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
     Get-ChildItem -Path . -Recurse -Directory -Filter "*.egg-info" | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-    
+
     if (Test-Path "htmlcov") { Remove-Item -Path "htmlcov" -Recurse -Force }
     if (Test-Path ".coverage") { Remove-Item -Path ".coverage" -Force }
     if (Test-Path "coverage.xml") { Remove-Item -Path "coverage.xml" -Force }
     if (Test-Path "dist") { Remove-Item -Path "dist" -Recurse -Force }
     if (Test-Path "build") { Remove-Item -Path "build" -Recurse -Force }
     Write-Host ""
-    
+
     Write-Host "[JS/TS] キャッシュを削除中..." -ForegroundColor Yellow
     if (Test-Path "studio\dist") { Remove-Item -Path "studio\dist" -Recurse -Force }
     if (Test-Path "studio\node_modules\.cache") { Remove-Item -Path "studio\node_modules\.cache" -Recurse -Force }
     Write-Host ""
-    
+
     Write-Host "✅ クリーンアップ完了" -ForegroundColor Green
 }
 
@@ -248,4 +248,3 @@ switch ($Command.ToLower()) {
         exit 1
     }
 }
-

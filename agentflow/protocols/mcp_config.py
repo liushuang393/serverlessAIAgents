@@ -48,4 +48,3 @@ class MCPConfig(BaseModel):
             MCPConfig インスタンス
         """
         return cls(**data)
-

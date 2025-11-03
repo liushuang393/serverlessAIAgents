@@ -12,15 +12,16 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
+
 console = Console()
 
 
 def validate_agent_id(agent_id: str) -> bool:
     """エージェント ID が kebab-case 形式かを検証.
-    
+
     Args:
         agent_id: 検証するエージェント ID
-        
+
     Returns:
         有効な場合 True
     """
@@ -38,7 +39,7 @@ def create_project_structure(
     dry_run: bool = False,
 ) -> None:
     """プロジェクト構造を作成.
-    
+
     Args:
         project_path: プロジェクトディレクトリのパス
         agent_id: エージェント ID (kebab-case)
@@ -50,14 +51,14 @@ def create_project_structure(
     """
     # テンプレートディレクトリを取得
     template_dir = Path(__file__).parent.parent.parent / "templates" / "project_template"
-    
+
     if not template_dir.exists():
         msg = f"Template directory not found: {template_dir}"
         raise FileNotFoundError(msg)
-    
+
     # Jinja2 環境を設定
     env = Environment(loader=FileSystemLoader(str(template_dir)))
-    
+
     # テンプレート変数
     context = {
         "agent_id": agent_id,
@@ -66,7 +67,7 @@ def create_project_structure(
         "description": description,
         "protocols": protocols,
     }
-    
+
     # 作成するファイルのリスト
     files_to_create = [
         ("agent.yaml.template", "agent.yaml"),
@@ -75,24 +76,24 @@ def create_project_structure(
         ("requirements.txt.template", "requirements.txt"),
         (".gitignore.template", ".gitignore"),
     ]
-    
+
     if dry_run:
         console.print("[dim]Dry-run mode: No files will be created[/dim]")
         console.print()
-    
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         console=console,
     ) as progress:
         task = progress.add_task("Creating project...", total=len(files_to_create) + 2)
-        
+
         # プロジェクトディレクトリを作成
         if not dry_run:
             project_path.mkdir(parents=True, exist_ok=True)
         console.print(f"✓ Created directory: {project_path}")
         progress.advance(task)
-        
+
         # tests ディレクトリを作成
         tests_dir = project_path / "tests"
         if not dry_run:
@@ -100,16 +101,16 @@ def create_project_structure(
             (tests_dir / "__init__.py").touch()
         console.print(f"✓ Created directory: {tests_dir}")
         progress.advance(task)
-        
+
         # テンプレートファイルを生成
         for template_name, output_name in files_to_create:
             template = env.get_template(template_name)
             content = template.render(**context)
-            
+
             output_path = project_path / output_name
             if not dry_run:
                 output_path.write_text(content, encoding="utf-8")
-            
+
             console.print(f"✓ Created file: {output_name}")
             progress.advance(task)
 
@@ -151,44 +152,45 @@ def init(
     dry_run: bool,
 ) -> None:
     """新しい AgentFlow プロジェクトを初期化.
-    
+
     PROJECT_NAME: プロジェクト名 (kebab-case 推奨)
-    
+
     例:
-    
+
         \b
         # すべてのプロトコルを有効化
         $ agentflow init my-agent
-        
+
         \b
         # MCP のみを有効化
         $ agentflow init my-agent --protocols mcp
-        
+
         \b
         # ドライランモード
         $ agentflow init my-agent --dry-run
     """
     verbose = ctx.obj.get("verbose", False)
-    
+
     # プロジェクト名を kebab-case に変換
     agent_id = project_name.lower().replace("_", "-").replace(" ", "-")
-    
+
     # ID の検証
     if not validate_agent_id(agent_id):
         console.print(
             Panel(
                 f"[red]Invalid project name: {project_name}[/red]\n\n"
-                "Project name must be in kebab-case format (lowercase letters, numbers, and hyphens only).\n"
+                "Project name must be in kebab-case format "
+                "(lowercase letters, numbers, and hyphens only).\n"
                 f"Suggested: {agent_id}",
                 title="❌ エラー",
                 border_style="red",
             )
         )
         raise click.Abort
-    
+
     # プロジェクトパス
     project_path = Path.cwd() / agent_id
-    
+
     # 既存プロジェクトのチェック
     if project_path.exists() and not dry_run:
         console.print(
@@ -200,25 +202,27 @@ def init(
             )
         )
         raise click.Abort
-    
+
     # プロトコルリストを作成
     protocol_list = list(protocols) if protocols else ["mcp", "a2a", "agui"]
-    
+
     if verbose:
         console.print(f"[dim]Project name: {agent_id}[/dim]")
         console.print(f"[dim]Author: {author}[/dim]")
         console.print(f"[dim]Protocols: {', '.join(protocol_list)}[/dim]")
         console.print()
-    
+
     # プロジェクトを作成
     try:
         console.print()
-        console.print(Panel(
-            f"[bold cyan]Creating project: {agent_id}[/bold cyan]",
-            border_style="cyan",
-        ))
+        console.print(
+            Panel(
+                f"[bold cyan]Creating project: {agent_id}[/bold cyan]",
+                border_style="cyan",
+            )
+        )
         console.print()
-        
+
         create_project_structure(
             project_path=project_path,
             agent_id=agent_id,
@@ -228,26 +232,29 @@ def init(
             protocols=protocol_list,
             dry_run=dry_run,
         )
-        
+
         console.print()
-        console.print(Panel(
-            f"[bold green]✓ Project created successfully![/bold green]\n\n"
-            f"Next steps:\n"
-            f"  1. cd {agent_id}\n"
-            f"  2. pip install -r requirements.txt\n"
-            f"  3. python main.py",
-            title="🎉 成功",
-            border_style="green",
-        ))
-        
+        console.print(
+            Panel(
+                f"[bold green]✓ Project created successfully![/bold green]\n\n"
+                f"Next steps:\n"
+                f"  1. cd {agent_id}\n"
+                f"  2. pip install -r requirements.txt\n"
+                f"  3. python main.py",
+                title="🎉 成功",
+                border_style="green",
+            )
+        )
+
     except Exception as e:
         console.print()
-        console.print(Panel(
-            f"[bold red]Error:[/bold red] {e!s}",
-            title="❌ エラー",
-            border_style="red",
-        ))
+        console.print(
+            Panel(
+                f"[bold red]Error:[/bold red] {e!s}",
+                title="❌ エラー",
+                border_style="red",
+            )
+        )
         if verbose:
             console.print_exception()
         raise click.Abort from e
-

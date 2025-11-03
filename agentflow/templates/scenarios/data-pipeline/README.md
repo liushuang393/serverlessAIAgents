@@ -9,8 +9,8 @@
 ## 機能
 
 - {{ input_format | upper }} 形式のデータ読み込み
-{% if enable_validation %}- データ品質検証{% endif %}
-{% if enable_transformation %}- データ変換{% endif %}
+  {% if enable_validation %}- データ品質検証{% endif %}
+  {% if enable_transformation %}- データ変換{% endif %}
 - {{ output_format | upper }} 形式でのデータ出力
 - バッチ処理（1000行ずつ）
 
@@ -92,4 +92,3 @@ MIT License
 ## 作成者
 
 {{ author }} <{{ email }}>
-

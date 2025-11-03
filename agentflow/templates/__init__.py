@@ -5,5 +5,5 @@
 
 from agentflow.templates.template_manager import TemplateManager
 
-__all__ = ["TemplateManager"]
 
+__all__ = ["TemplateManager"]

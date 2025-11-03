@@ -22,24 +22,24 @@ from typing import Any
 
 class MyAgent(AgentBlock):
     """カスタムエージェント."""
-    
+
     async def initialize(self) -> None:
         """初期化処理."""
         await super().initialize()
         # データベース接続、モデルロードなど
         self.model = await self._load_model()
-    
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """メイン処理."""
         # 入力検証
         if "text" not in input_data:
             raise ValueError("text は必須です")
-        
+
         # 処理実行
         result = await self._process(input_data["text"])
-        
+
         return {"result": result}
-    
+
     async def cleanup(self) -> None:
         """クリーンアップ処理."""
         # リソース解放
@@ -58,7 +58,7 @@ from agentflow.core.auto_adapt import auto_adapt
 @auto_adapt(protocols=["mcp", "a2a", "agui"])
 class MultiProtocolAgent(AgentBlock):
     """複数プロトコル対応エージェント."""
-    
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         # 実装
         return {"result": "..."}
@@ -195,7 +195,7 @@ from agentflow.tools.base import Tool
 
 class MyTool(Tool):
     """カスタムツール."""
-    
+
     def get_definition(self) -> dict:
         """ツール定義を返す."""
         return {
@@ -209,7 +209,7 @@ class MyTool(Tool):
                 "required": ["param1"]
             }
         }
-    
+
     async def execute(self, params: dict) -> dict:
         """ツールを実行."""
         result = await self._process(params["param1"])
@@ -240,6 +240,7 @@ logger.setLevel(logging.DEBUG)
 **問題**: mypy で型エラーが発生
 
 **解決策**:
+
 ```python
 # 型アノテーションを追加
 async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
@@ -251,6 +252,7 @@ async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
 **問題**: `RuntimeError: Event loop is closed`
 
 **解決策**:
+
 ```python
 # コンテキストマネージャーを使用
 async with MyAgent() as agent:
@@ -262,6 +264,7 @@ async with MyAgent() as agent:
 **問題**: MCP サーバーに接続できない
 
 **解決策**:
+
 ```python
 # タイムアウトを設定
 client = MCPClient(timeout=30.0)
@@ -313,7 +316,7 @@ class MyAgent(AgentBlock):
 ```python
 async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
     items = input_data["items"]
-    
+
     # バッチで処理
     batch_size = 10
     results = []
@@ -321,11 +324,10 @@ async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         batch = items[i:i+batch_size]
         batch_results = await self._process_batch(batch)
         results.extend(batch_results)
-    
+
     return {"results": results}
 ```
 
 ---
 
 詳細な API リファレンスは [api.md](api.md) を参照してください。
-

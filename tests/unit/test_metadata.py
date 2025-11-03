@@ -1,6 +1,5 @@
 """エージェントメタデータスキーマのテスト."""
 
-import tempfile
 from pathlib import Path
 
 import pytest
@@ -8,8 +7,8 @@ from pydantic import ValidationError
 
 from agentflow.core.metadata import (
     A2AConfig,
-    AGUIConfig,
     AgentMetadata,
+    AGUIConfig,
     DependencySpec,
     InputField,
     InterfaceDefinition,
@@ -167,9 +166,7 @@ class TestAgentMetadata:
                         description="Input text",
                     )
                 ],
-                outputs=[
-                    OutputField(name="result", type="string")
-                ],
+                outputs=[OutputField(name="result", type="string")],
             ),
             protocols=ProtocolConfig(
                 mcp=MCPConfig(tools=[], resources=[]),
@@ -286,4 +283,3 @@ visual:
         loaded_metadata = loader.load_from_file(yaml_file)
         assert loaded_metadata.meta.id == metadata.meta.id
         assert loaded_metadata.meta.version == metadata.meta.version
-

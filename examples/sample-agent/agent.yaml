@@ -17,7 +17,7 @@ interfaces:
       required: true
       description: Input text to process
       default: ""
-    
+
     - name: format
       type: enum
       required: false
@@ -27,7 +27,7 @@ interfaces:
         - lowercase
         - titlecase
       default: uppercase
-    
+
     - name: max_length
       type: number
       required: false
@@ -40,7 +40,7 @@ interfaces:
       schema:
         type: string
         description: Processed text result
-    
+
     - name: metadata
       type: object
       schema:
@@ -99,4 +99,3 @@ visual:
     output:
       result: [1, 0.5]
       metadata: [1, 0.3]
-

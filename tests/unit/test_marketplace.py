@@ -1,6 +1,6 @@
 """AgentFlow マーケットプレイスのテスト."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -31,7 +31,7 @@ class TestLocalRegistry:
             category="test",
             description="Test description",
             install_path="/path/to/agent",
-            installed_at=datetime.now().isoformat(),
+            installed_at=datetime.now(UTC).isoformat(),
         )
 
         registry.add_agent(entry)
@@ -54,7 +54,7 @@ class TestLocalRegistry:
             category="test",
             description="Test description",
             install_path="/path/to/agent",
-            installed_at=datetime.now().isoformat(),
+            installed_at=datetime.now(UTC).isoformat(),
         )
 
         registry.add_agent(entry)
@@ -84,7 +84,7 @@ class TestLocalRegistry:
             category="test",
             description="Test description",
             install_path="/path/to/agent",
-            installed_at=datetime.now().isoformat(),
+            installed_at=datetime.now(UTC).isoformat(),
         )
 
         registry.add_agent(entry)
@@ -114,7 +114,7 @@ class TestLocalRegistry:
                 category="test",
                 description=f"Test agent {i}",
                 install_path=f"/path/to/agent-{i}",
-                installed_at=datetime.now().isoformat(),
+                installed_at=datetime.now(UTC).isoformat(),
             )
             registry.add_agent(entry)
 
@@ -134,7 +134,7 @@ class TestLocalRegistry:
             category="test",
             description="Test description",
             install_path="/path/to/agent",
-            installed_at=datetime.now().isoformat(),
+            installed_at=datetime.now(UTC).isoformat(),
         )
 
         assert not registry.is_installed("test-agent")
@@ -293,4 +293,3 @@ class TestMarketplaceClient:
         assert any(agent.id == "text-analyzer" for agent in agents)
 
         client.close()
-

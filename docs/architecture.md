@@ -52,12 +52,14 @@ AgentFlow は4層のアーキテクチャで構成されています：
 Visual Studio は React + TypeScript で実装されたビジュアルワークフローエディタです。
 
 **主要コンポーネント:**
+
 - **Canvas**: React Flow ベースのビジュアルエディタ
 - **AgentNode**: ドラッグ&ドロップ可能なエージェントノード
 - **PropertiesPanel**: ノードプロパティエディタ
 - **Sidebar**: エージェント一覧とマーケットプレイス
 
 **技術スタック:**
+
 - React 18.3.1
 - TypeScript 5.7.2
 - React Flow 11.11.4
@@ -73,10 +75,12 @@ Visual Studio は React + TypeScript で実装されたビジュアルワーク�
 LLM ツールとの接続を提供します。
 
 **主要クラス:**
+
 - `MCPClient`: MCP サーバーへの接続
 - `MCPConfig`: MCP 設定管理
 
 **使用例:**
+
 ```python
 from agentflow.protocols.mcp_client import MCPClient
 
@@ -90,11 +94,13 @@ async with MCPClient("mcp://localhost:3000") as client:
 エージェント間の協調を提供します。
 
 **主要クラス:**
+
 - `A2AServer`: A2A サーバー実装
 - `A2AClient`: A2A クライアント実装
 - `A2ACard`: エージェント情報カード
 
 **使用例:**
+
 ```python
 from agentflow.protocols.a2a_server import A2AServer
 
@@ -107,10 +113,12 @@ await server.start()
 フロントエンドへのイベントストリーミングを提供します。
 
 **主要クラス:**
+
 - `AGUIEmitter`: イベント送信
 - `AGUIEvent`: イベントデータ
 
 **使用例:**
+
 ```python
 from agentflow.protocols.agui_emitter import AGUIEmitter
 
@@ -124,17 +132,20 @@ await emitter.emit_result({"status": "success"})
 PocketFlow ベースの軽量ワークフローエンジンです。
 
 **主要クラス:**
+
 - `AgentFlowEngine`: エンジン本体
 - `AsyncFlow` / `Flow`: ワークフロー定義
 - `AsyncNode` / `Node`: ノード定義
 
 **特徴:**
+
 - 非同期実行サポート
 - ノード間のデータフロー管理
 - エラーハンドリング
 - ライフサイクル管理
 
 **使用例:**
+
 ```python
 from agentflow.core.engine import AgentFlowEngine, AsyncFlow, AsyncNode
 
@@ -154,6 +165,7 @@ result = await engine.run_async(flow, {"value": 10})
 外部ツールとの統合を提供します。
 
 **ツールカテゴリ:**
+
 - **LLM Tools**: OpenAI、Anthropic、Google などの LLM API
 - **Database Tools**: PostgreSQL、MySQL、MongoDB などのデータベース
 - **External API Tools**: REST API、GraphQL などの外部 API
@@ -165,12 +177,14 @@ result = await engine.run_async(flow, {"value": 10})
 すべてのエージェントの基底クラスです。
 
 **主要機能:**
+
 - メタデータ自動読み込み
 - プロトコルアダプター自動適用
 - ライフサイクル管理 (initialize / run / cleanup)
 - コンテキストマネージャーサポート
 
 **実装例:**
+
 ```python
 from agentflow.core.agent_block import AgentBlock
 
@@ -196,10 +210,12 @@ class MyAgent(AgentBlock):
 プロトコルメソッドを自動生成します。
 
 **主要クラス:**
+
 - `ProtocolAdapter`: アダプター生成
 - `@auto_adapt`: デコレーター
 
 **使用例:**
+
 ```python
 from agentflow.decorators import auto_adapt
 
@@ -220,10 +236,12 @@ emitter = agent.create_agui_emitter()
 エージェントの検索とインストールを提供します。
 
 **主要クラス:**
+
 - `MarketplaceClient`: マーケットプレイス API クライアント
 - `LocalRegistry`: ローカルエージェント管理
 
 **使用例:**
+
 ```bash
 # エージェント検索
 agentflow marketplace search chatbot
@@ -240,10 +258,12 @@ agentflow marketplace list
 プロジェクトテンプレートを提供します。
 
 **主要クラス:**
+
 - `TemplateManager`: テンプレート管理
 - `TemplateMetadata`: テンプレートメタデータ
 
 **使用例:**
+
 ```bash
 # テンプレート一覧
 agentflow template list
@@ -305,4 +325,3 @@ AgentFlow は以下の拡張ポイントを提供しています：
 - [API リファレンス](api.md) - 詳細な API ドキュメント
 - [プロトコルガイド](protocols.md) - プロトコルの詳細
 - [CLI リファレンス](cli.md) - CLI コマンドの詳細
-

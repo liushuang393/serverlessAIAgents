@@ -18,7 +18,7 @@ protocols:
 inputs:
   - name: expression
     type: string
-    description: 計算する数式（例: "2 + 3 * 4"）
+    description: '計算する数式 (例: "2 + 3 * 4")'
     required: true
 
 outputs:
@@ -37,4 +37,3 @@ skills:
     outputs:
       - result
       - expression
-

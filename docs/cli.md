@@ -11,6 +11,7 @@ agentflow [OPTIONS] COMMAND [ARGS]...
 ```
 
 **オプション:**
+
 - `--version`: バージョン情報を表示
 - `--verbose, -v`: 詳細ログを表示
 - `--help`: ヘルプメッセージを表示
@@ -26,9 +27,11 @@ agentflow init <project-name> [OPTIONS]
 ```
 
 **引数:**
+
 - `project-name`: プロジェクト名（kebab-case）
 
 **オプション:**
+
 - `--protocols <protocols>`: 有効化するプロトコル（カンマ区切り）
   - 例: `--protocols mcp,a2a,agui`
   - デフォルト: すべて有効
@@ -77,9 +80,11 @@ agentflow create agent <agent-name> [OPTIONS]
 ```
 
 **引数:**
+
 - `agent-name`: エージェント名（kebab-case）
 
 **オプション:**
+
 - `--interactive, -i`: 対話モードで作成
 - `--mcp / --no-mcp`: MCP プロトコルを有効化/無効化
 - `--a2a / --no-a2a`: A2A プロトコルを有効化/無効化
@@ -130,9 +135,11 @@ agentflow run <agent-path> [OPTIONS]
 ```
 
 **引数:**
+
 - `agent-path`: エージェントディレクトリのパス
 
 **オプション:**
+
 - `--input <json>`: 入力データ（JSON 文字列または JSON ファイルパス）
 - `--output <file>`: 出力ファイルパス
 - `--json`: JSON 形式で出力
@@ -186,6 +193,7 @@ agentflow search [OPTIONS]
 ```
 
 **オプション:**
+
 - `--query <text>`: 検索クエリ
 - `--category <category>`: カテゴリでフィルター
 - `--protocols <protocols>`: プロトコルでフィルター（カンマ区切り）
@@ -245,9 +253,11 @@ agentflow install <agent-id> [OPTIONS]
 ```
 
 **引数:**
+
 - `agent-id`: エージェント ID
 
 **オプション:**
+
 - `--force, -f`: 既存のエージェントを上書き
 - `--help`: ヘルプメッセージを表示
 
@@ -280,9 +290,11 @@ agentflow uninstall <agent-id> [OPTIONS]
 ```
 
 **引数:**
+
 - `agent-id`: エージェント ID
 
 **オプション:**
+
 - `--help`: ヘルプメッセージを表示
 
 **例:**
@@ -302,6 +314,7 @@ agentflow list [OPTIONS]
 ```
 
 **オプション:**
+
 - `--help`: ヘルプメッセージを表示
 
 **例:**
@@ -335,9 +348,11 @@ agentflow info <agent-id> [OPTIONS]
 ```
 
 **引数:**
+
 - `agent-id`: エージェント ID
 
 **オプション:**
+
 - `--help`: ヘルプメッセージを表示
 
 **例:**
@@ -477,4 +492,3 @@ agentflow --verbose <command>
 - [クイックスタートガイド](quickstart.md) - 基本的な使い方
 - [API リファレンス](api.md) - Python API の詳細
 - [プロトコルガイド](protocols.md) - MCP/A2A/AG-UI の詳細
-

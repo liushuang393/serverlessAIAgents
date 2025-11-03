@@ -76,15 +76,19 @@ studio/
 ### コンポーネント
 
 #### Canvas
+
 メインのワークフローキャンバス。React Flow を使用してノードとエッジを管理。
 
 #### AgentNode
+
 カスタムノードコンポーネント。エージェントを表示し、設定ボタンを提供。
 
 #### Sidebar
+
 インストール済みエージェントの一覧を表示。ドラッグ&ドロップでキャンバスに配置可能。
 
 #### PropertiesPanel
+
 選択されたノードの設定を表示・編集。
 
 ### 状態管理
@@ -92,7 +96,8 @@ studio/
 Zustand を使用してグローバル状態を管理：
 
 ```typescript
-const { workflow, updateWorkflow, selectedNode, setSelectedNode } = useWorkflowStore()
+const { workflow, updateWorkflow, selectedNode, setSelectedNode } =
+  useWorkflowStore();
 ```
 
 ### API 連携
@@ -158,4 +163,3 @@ MIT License
 - [Zustand Documentation](https://zustand-demo.pmnd.rs/)
 - [Tailwind CSS Documentation](https://tailwindcss.com/)
 - [shadcn/ui Documentation](https://ui.shadcn.com/)
-

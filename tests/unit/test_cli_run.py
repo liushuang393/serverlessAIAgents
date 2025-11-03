@@ -105,7 +105,10 @@ TestFlow.start(ProcessNode())
             if result.exception:
                 print(f"Exception: {result.exception}")
                 import traceback
-                traceback.print_exception(type(result.exception), result.exception, result.exception.__traceback__)
+
+                traceback.print_exception(
+                    type(result.exception), result.exception, result.exception.__traceback__
+                )
 
         assert result.exit_code == 0
         assert "success" in result.output.lower() or "processed" in result.output.lower()
@@ -352,4 +355,3 @@ visual:
         assert result.exit_code != 0
         # JSON エラーまたはスキーマエラーのいずれかが発生
         assert "json" in result.output.lower() or "error" in result.output.lower()
-

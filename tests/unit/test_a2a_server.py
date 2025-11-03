@@ -30,7 +30,10 @@ def sample_agent_card() -> AgentCard:
             AgentSkill(
                 name="calculate",
                 description="Calculate a sum",
-                input_schema={"type": "object", "properties": {"a": {"type": "number"}, "b": {"type": "number"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"a": {"type": "number"}, "b": {"type": "number"}},
+                },
                 output_schema={"type": "object", "properties": {"result": {"type": "number"}}},
             ),
         ],
@@ -44,6 +47,7 @@ def sample_handlers() -> dict[str, callable]:
     Returns:
         ハンドラー関数の辞書
     """
+
     async def greet_handler(inputs: dict) -> dict:
         name = inputs.get("name", "World")
         return {"message": f"Hello, {name}!"}
@@ -67,9 +71,7 @@ class TestA2AServer:
         server = A2AServer()
         assert len(server.list_agents()) == 0
 
-    def test_register_agent(
-        self, sample_agent_card: AgentCard, sample_handlers: dict
-    ) -> None:
+    def test_register_agent(self, sample_agent_card: AgentCard, sample_handlers: dict) -> None:
         """エージェント登録をテスト."""
         server = A2AServer()
         server.register_agent(sample_agent_card, sample_handlers)
@@ -87,9 +89,7 @@ class TestA2AServer:
         with pytest.raises(ValueError, match="Agent already registered"):
             server.register_agent(sample_agent_card, sample_handlers)
 
-    def test_unregister_agent(
-        self, sample_agent_card: AgentCard, sample_handlers: dict
-    ) -> None:
+    def test_unregister_agent(self, sample_agent_card: AgentCard, sample_handlers: dict) -> None:
         """エージェント削除をテスト."""
         server = A2AServer()
         server.register_agent(sample_agent_card, sample_handlers)
@@ -104,9 +104,7 @@ class TestA2AServer:
         with pytest.raises(ValueError, match="Agent not found"):
             server.unregister_agent("nonexistent")
 
-    def test_get_agent_card(
-        self, sample_agent_card: AgentCard, sample_handlers: dict
-    ) -> None:
+    def test_get_agent_card(self, sample_agent_card: AgentCard, sample_handlers: dict) -> None:
         """エージェントカード取得をテスト."""
         server = A2AServer()
         server.register_agent(sample_agent_card, sample_handlers)
@@ -128,9 +126,7 @@ class TestA2AServer:
         server = A2AServer()
         server.register_agent(sample_agent_card, sample_handlers)
 
-        result = await server.handle_task(
-            "test-agent", "greet", {"name": "Alice"}
-        )
+        result = await server.handle_task("test-agent", "greet", {"name": "Alice"})
 
         assert result["status"] == "success"
         assert result["result"]["message"] == "Hello, Alice!"
@@ -154,10 +150,9 @@ class TestA2AServer:
         with pytest.raises(ValueError, match="Skill not found"):
             await server.handle_task("test-agent", "nonexistent", {})
 
-    async def test_handle_task_timeout(
-        self, sample_agent_card: AgentCard
-    ) -> None:
+    async def test_handle_task_timeout(self, sample_agent_card: AgentCard) -> None:
         """タスクタイムアウトをテスト."""
+
         async def slow_handler(_inputs: dict) -> dict:
             await asyncio.sleep(2)
             return {"result": "done"}
@@ -172,10 +167,9 @@ class TestA2AServer:
         assert result["status"] == "error"
         assert result["error"] == "Task timeout"
 
-    async def test_handle_task_with_sync_handler(
-        self, sample_agent_card: AgentCard
-    ) -> None:
+    async def test_handle_task_with_sync_handler(self, sample_agent_card: AgentCard) -> None:
         """同期ハンドラーでのタスク処理をテスト."""
+
         def sync_handler(inputs: dict) -> dict:
             name = inputs.get("name", "World")
             return {"message": f"Hello, {name}!"}
@@ -185,16 +179,12 @@ class TestA2AServer:
         server = A2AServer()
         server.register_agent(sample_agent_card, handlers)
 
-        result = await server.handle_task(
-            "test-agent", "greet", {"name": "Bob"}
-        )
+        result = await server.handle_task("test-agent", "greet", {"name": "Bob"})
 
         assert result["status"] == "success"
         assert result["result"]["message"] == "Hello, Bob!"
 
-    def test_get_all_agent_cards(
-        self, sample_agent_card: AgentCard, sample_handlers: dict
-    ) -> None:
+    def test_get_all_agent_cards(self, sample_agent_card: AgentCard, sample_handlers: dict) -> None:
         """全エージェントカード取得をテスト."""
         server = A2AServer()
         server.register_agent(sample_agent_card, sample_handlers)
@@ -205,9 +195,7 @@ class TestA2AServer:
         assert cards[0]["name"] == "test-agent"
         assert len(cards[0]["skills"]) == 2
 
-    def test_get_agent_skills(
-        self, sample_agent_card: AgentCard, sample_handlers: dict
-    ) -> None:
+    def test_get_agent_skills(self, sample_agent_card: AgentCard, sample_handlers: dict) -> None:
         """エージェントスキルリスト取得をテスト."""
         server = A2AServer()
         server.register_agent(sample_agent_card, sample_handlers)
@@ -285,4 +273,3 @@ class TestAgentCard:
         assert a2a_format["name"] == "test"
         assert len(a2a_format["skills"]) == 1
         assert a2a_format["skills"][0]["name"] == "skill1"
-

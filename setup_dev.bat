@@ -1,6 +1,6 @@
 @echo off
 REM AgentFlow 開発環境セットアップスクリプト (Windows)
-REM 
+REM
 REM 使用方法:
 REM   setup_dev.bat
 
@@ -80,4 +80,3 @@ echo   4. テスト実行: check.bat test
 echo   5. すべてのチェック: check.bat all
 echo.
 pause
-

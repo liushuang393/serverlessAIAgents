@@ -7,8 +7,8 @@ import pytest
 from agentflow.core.engine import AgentFlowEngine
 from agentflow.core.metadata import (
     A2AConfig,
-    AGUIConfig,
     AgentMetadata,
+    AGUIConfig,
     DependencySpec,
     InputField,
     InterfaceDefinition,
@@ -71,9 +71,7 @@ class TestAutoAdaptDecorator:
 
         return metadata_file
 
-    def test_decorator_with_mcp_protocol(
-        self, sample_metadata_file: Path, tmp_path: Path
-    ) -> None:
+    def test_decorator_with_mcp_protocol(self, sample_metadata_file: Path, tmp_path: Path) -> None:
         """MCP プロトコルを有効にしたデコレーターをテスト."""
 
         @auto_adapt(protocols=["mcp"], metadata_path=sample_metadata_file)
@@ -89,9 +87,7 @@ class TestAutoAdaptDecorator:
         assert isinstance(tools, list)
         assert len(tools) > 0
 
-    def test_decorator_with_a2a_protocol(
-        self, sample_metadata_file: Path, tmp_path: Path
-    ) -> None:
+    def test_decorator_with_a2a_protocol(self, sample_metadata_file: Path, tmp_path: Path) -> None:
         """A2A プロトコルを有効にしたデコレーターをテスト."""
 
         @auto_adapt(protocols=["a2a"], metadata_path=sample_metadata_file)
@@ -107,9 +103,7 @@ class TestAutoAdaptDecorator:
         assert isinstance(card, AgentCard)
         assert card.name == "Test Agent"
 
-    def test_decorator_with_agui_protocol(
-        self, sample_metadata_file: Path, tmp_path: Path
-    ) -> None:
+    def test_decorator_with_agui_protocol(self, sample_metadata_file: Path, tmp_path: Path) -> None:
         """AG-UI プロトコルを有効にしたデコレーターをテスト."""
 
         @auto_adapt(protocols=["agui"], metadata_path=sample_metadata_file)
@@ -126,14 +120,10 @@ class TestAutoAdaptDecorator:
         emitter = agent.create_agui_emitter(engine)
         assert isinstance(emitter, AGUIEventEmitter)
 
-    def test_decorator_with_all_protocols(
-        self, sample_metadata_file: Path, tmp_path: Path
-    ) -> None:
+    def test_decorator_with_all_protocols(self, sample_metadata_file: Path, tmp_path: Path) -> None:
         """全プロトコルを有効にしたデコレーターをテスト."""
 
-        @auto_adapt(
-            protocols=["mcp", "a2a", "agui"], metadata_path=sample_metadata_file
-        )
+        @auto_adapt(protocols=["mcp", "a2a", "agui"], metadata_path=sample_metadata_file)
         class TestAgent:
             def __init__(self) -> None:
                 pass
@@ -151,10 +141,8 @@ class TestAutoAdaptDecorator:
         card = agent.get_a2a_card()
         assert card is not None
 
-    def test_decorator_without_protocols(
-        self, sample_metadata_file: Path, tmp_path: Path
-    ) -> None:
-        """プロトコル指定なしのデコレーターをテスト（自動判定）."""
+    def test_decorator_without_protocols(self, sample_metadata_file: Path, tmp_path: Path) -> None:
+        """プロトコル指定なしのデコレーターをテスト (自動判定)."""
 
         @auto_adapt(metadata_path=sample_metadata_file)
         class TestAgent:
@@ -186,9 +174,7 @@ class TestAutoAdaptDecorator:
         # プロトコルメソッドも追加されていることを確認
         assert hasattr(agent, "get_mcp_tools")
 
-    def test_decorator_with_inheritance(
-        self, sample_metadata_file: Path, tmp_path: Path
-    ) -> None:
+    def test_decorator_with_inheritance(self, sample_metadata_file: Path, tmp_path: Path) -> None:
         """デコレーターが継承と互換性があることをテスト."""
 
         class BaseAgent:
@@ -229,9 +215,7 @@ class TestAutoAdaptDecorator:
         tools = agent.get_mcp_tools()
         assert tools == []
 
-    def test_get_metadata_method(
-        self, sample_metadata_file: Path, tmp_path: Path
-    ) -> None:
+    def test_get_metadata_method(self, sample_metadata_file: Path, tmp_path: Path) -> None:
         """get_metadata メソッドをテスト."""
 
         @auto_adapt(protocols=["mcp"], metadata_path=sample_metadata_file)
@@ -247,9 +231,7 @@ class TestAutoAdaptDecorator:
         assert isinstance(metadata, AgentMetadata)
         assert metadata.meta.name == "Test Agent"
 
-    def test_decorator_can_be_stacked(
-        self, sample_metadata_file: Path, tmp_path: Path
-    ) -> None:
+    def test_decorator_can_be_stacked(self, sample_metadata_file: Path, tmp_path: Path) -> None:
         """デコレーターが他のデコレーターとスタックできることをテスト."""
 
         def another_decorator(cls: type) -> type:
@@ -258,7 +240,7 @@ class TestAutoAdaptDecorator:
 
             def new_init(self: object, *args: object, **kwargs: object) -> None:
                 original_init(self, *args, **kwargs)
-                setattr(self, "decorated", True)
+                self.decorated = True
 
             cls.__init__ = new_init  # type: ignore
             return cls
@@ -275,4 +257,3 @@ class TestAutoAdaptDecorator:
         assert hasattr(agent, "get_mcp_tools")
         assert hasattr(agent, "decorated")
         assert agent.decorated is True
-

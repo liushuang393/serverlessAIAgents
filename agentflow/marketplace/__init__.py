@@ -6,9 +6,9 @@
 from agentflow.marketplace.client import MarketplaceClient
 from agentflow.marketplace.registry import AgentRegistryEntry, LocalRegistry
 
-__all__ = [
-    "MarketplaceClient",
-    "LocalRegistry",
-    "AgentRegistryEntry",
-]
 
+__all__ = [
+    "AgentRegistryEntry",
+    "LocalRegistry",
+    "MarketplaceClient",
+]

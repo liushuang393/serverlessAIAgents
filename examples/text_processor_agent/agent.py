@@ -11,7 +11,7 @@ from agentflow.core.agent_block import AgentBlock
 class TextProcessorAgent(AgentBlock):
     """テキスト処理エージェント.
 
-    このエージェントは以下の機能を提供します：
+    このエージェントは以下の機能を提供します:
     - テキストの大文字変換
     - テキストの小文字変換
     - テキストの長さカウント
@@ -75,10 +75,12 @@ async def main() -> None:
     await agent.initialize()
 
     # 実行
-    result = await agent.run({
-        "text": "Hello World",
-        "operation": "upper",
-    })
+    result = await agent.run(
+        {
+            "text": "Hello World",
+            "operation": "upper",
+        }
+    )
     print(f"Result: {result}")
 
     # クリーンアップ
@@ -89,10 +91,12 @@ async def main() -> None:
 async def main_with_context() -> None:
     """コンテキストマネージャーを使用したメイン関数."""
     async with TextProcessorAgent(metadata_path="agent.yaml") as agent:
-        result = await agent.run({
-            "text": "Hello World",
-            "operation": "word_count",
-        })
+        result = await agent.run(
+            {
+                "text": "Hello World",
+                "operation": "word_count",
+            }
+        )
         print(f"Word count: {result['result']}")
 
 
@@ -101,4 +105,3 @@ if __name__ == "__main__":
 
     asyncio.run(main())
     asyncio.run(main_with_context())
-

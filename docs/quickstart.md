@@ -105,10 +105,10 @@ class MyFirstAgent(AgentBlock):
             処理結果（result キーを含む）
         """
         message = input_data.get("message", "")
-        
+
         # メッセージを処理（例：大文字に変換）
         result = f"処理完了: {message.upper()}"
-        
+
         return {
             "result": result,
             "original": message,
@@ -124,12 +124,12 @@ class MyFirstAgent(AgentBlock):
 # エージェントのエントリーポイント
 if __name__ == "__main__":
     import asyncio
-    
+
     async def main():
         async with MyFirstAgent(metadata_path="agent.yaml") as agent:
             result = await agent.run({"message": "hello world"})
             print(f"結果: {result}")
-    
+
     asyncio.run(main())
 ```
 
@@ -161,14 +161,14 @@ from agentflow.core.agent_block import AgentBlock
 async def main():
     # エージェントをロード
     agent = MyFirstAgent(metadata_path="agent.yaml")
-    
+
     # 初期化
     await agent.initialize()
-    
+
     # 実行
     result = await agent.run({"message": "hello world"})
     print(f"結果: {result}")
-    
+
     # クリーンアップ
     await agent.cleanup()
 
@@ -312,4 +312,3 @@ pip install -r requirements.txt
 - 📖 [ドキュメント](https://agentflow.dev/docs)
 - 💬 [Discord コミュニティ](https://discord.gg/agentflow)
 - 🐛 [GitHub Issues](https://github.com/agentflow/agentflow/issues)
-

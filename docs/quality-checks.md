@@ -58,28 +58,28 @@ npm install
 
 ### Python ツール
 
-| ツール | 用途 | 自動修正 |
-|--------|------|---------|
-| **Ruff** | リント + フォーマット | ✅ |
-| **MyPy** | 型チェック | ❌ |
-| **pytest** | テスト実行 | ❌ |
-| **pytest-cov** | カバレッジ測定 | ❌ |
-| **detect-secrets** | 機密情報検出 | ❌ |
+| ツール             | 用途                  | 自動修正 |
+| ------------------ | --------------------- | -------- |
+| **Ruff**           | リント + フォーマット | ✅       |
+| **MyPy**           | 型チェック            | ❌       |
+| **pytest**         | テスト実行            | ❌       |
+| **pytest-cov**     | カバレッジ測定        | ❌       |
+| **detect-secrets** | 機密情報検出          | ❌       |
 
 ### JavaScript/TypeScript ツール
 
-| ツール | 用途 | 自動修正 |
-|--------|------|---------|
-| **ESLint** | リント | ✅ |
-| **Prettier** | フォーマット | ✅ |
-| **TypeScript** | 型チェック | ❌ |
+| ツール         | 用途         | 自動修正 |
+| -------------- | ------------ | -------- |
+| **ESLint**     | リント       | ✅       |
+| **Prettier**   | フォーマット | ✅       |
+| **TypeScript** | 型チェック   | ❌       |
 
 ### その他のツール
 
-| ツール | 用途 | 自動修正 |
-|--------|------|---------|
-| **markdownlint** | Markdown リント | ✅ |
-| **yamllint** | YAML 検証 | ❌ |
+| ツール           | 用途            | 自動修正 |
+| ---------------- | --------------- | -------- |
+| **markdownlint** | Markdown リント | ✅       |
+| **yamllint**     | YAML 検証       | ❌       |
 
 ---
 
@@ -262,6 +262,7 @@ make check-all
 **原因**: 初回実行時に依存関係をダウンロードするため
 
 **解決策**:
+
 ```bash
 # キャッシュをクリア
 pre-commit clean
@@ -275,6 +276,7 @@ pre-commit install --install-hooks
 **原因**: 厳格な型チェック設定
 
 **解決策**:
+
 ```bash
 # 特定のファイルのみチェック
 mypy agentflow/core/
@@ -288,6 +290,7 @@ mypy agentflow --ignore-missing-imports
 **原因**: 自動修正できないエラー
 
 **解決策**:
+
 ```bash
 # エラー詳細を確認
 cd studio
@@ -302,6 +305,7 @@ npm run lint
 **原因**: Ruff が型アノテーションを削除する場合がある
 
 **解決策**:
+
 ```bash
 # Ruff の設定を調整（pyproject.toml）
 # または MyPy の設定を調整
@@ -312,6 +316,7 @@ npm run lint
 **原因**: 機密情報ではない文字列を検出
 
 **解決策**:
+
 ```bash
 # ベースラインを更新
 detect-secrets scan > .secrets.baseline
@@ -335,26 +340,31 @@ detect-secrets scan > .secrets.baseline
 ## ✅ ベストプラクティス
 
 1. **コミット前に必ずチェック**
+
    ```bash
    make check-all
    ```
 
 2. **定期的に Pre-commit を更新**
+
    ```bash
    pre-commit autoupdate
    ```
 
 3. **カバレッジを 80% 以上に保つ**
+
    ```bash
    make test-cov
    ```
 
 4. **型アノテーションを 100% にする**
+
    ```bash
    mypy agentflow --strict
    ```
 
 5. **機密情報をコミットしない**
+
    ```bash
    # .gitignore に追加
    # detect-secrets でチェック
@@ -363,4 +373,3 @@ detect-secrets scan > .secrets.baseline
 ---
 
 **🎊 コード品質を保ちながら開発を楽しみましょう！**
-

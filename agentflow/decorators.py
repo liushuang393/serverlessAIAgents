@@ -4,14 +4,16 @@
 """
 
 import functools
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
 
 from agentflow.adapters.protocol_adapter import ProtocolAdapter
 from agentflow.core.metadata import AgentMetadata
 from agentflow.core.schemas import SchemaLoader
 from agentflow.protocols.a2a_card import AgentCard
 from agentflow.protocols.agui_emitter import AGUIEventEmitter
+
 
 T = TypeVar("T")
 
@@ -71,16 +73,13 @@ def auto_adapt(
             if metadata_file.exists():
                 self._metadata: AgentMetadata = loader.load_from_file(metadata_file)
             else:
-                # メタデータファイルが見つからない場合、空のメタデータを作成
-                # （テスト用）
+                # メタデータファイルが見つからない場合、空のメタデータを作成 (テスト用)
                 self._metadata = None  # type: ignore
 
             # プロトコルアダプターを生成
             if self._metadata:
                 # MCP プロトコル
-                if "mcp" in protocols or (
-                    not protocols and self._metadata.protocols.mcp
-                ):
+                if "mcp" in protocols or (not protocols and self._metadata.protocols.mcp):
                     self._mcp_tools = ProtocolAdapter.generate_mcp_tools(self._metadata)
 
                 # A2A プロトコル
@@ -141,10 +140,9 @@ def auto_adapt(
                 """
                 metadata = getattr(self, "_metadata", None)
                 if metadata:
-                    return ProtocolAdapter.wrap_flow_with_agui(
-                        engine, "default-flow", metadata
-                    )
-                raise ValueError("Metadata not loaded")
+                    return ProtocolAdapter.wrap_flow_with_agui(engine, "default-flow", metadata)
+                msg = "Metadata not loaded"
+                raise ValueError(msg)
 
             cls.create_agui_emitter = create_agui_emitter  # type: ignore
 
@@ -162,4 +160,3 @@ def auto_adapt(
         return cls
 
     return decorator
-

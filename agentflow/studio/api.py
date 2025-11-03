@@ -15,13 +15,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from agentflow.core.agent_block import AgentBlock
 from agentflow.core.engine import AgentFlowEngine
-from agentflow.core.metadata import AgentMetadata
 from agentflow.core.schemas import SchemaLoader
 from agentflow.marketplace.client import MarketplaceClient
 from agentflow.marketplace.registry import LocalRegistry
-from agentflow.protocols.agui_emitter import AGUIEventEmitter
 
 
 # リクエスト/レスポンスモデル
@@ -114,7 +111,7 @@ def create_app(
     workflows_dir.mkdir(parents=True, exist_ok=True)
 
     # グローバル状態
-    engine = AgentFlowEngine()
+    AgentFlowEngine()
     registry = LocalRegistry()
     marketplace = MarketplaceClient()
     active_connections: dict[str, WebSocket] = {}
@@ -148,9 +145,7 @@ def create_app(
         metadata_path = agent_path / "agent.yaml"
 
         if not metadata_path.exists():
-            raise HTTPException(
-                status_code=500, detail="Agent metadata not found"
-            )
+            raise HTTPException(status_code=500, detail="Agent metadata not found")
 
         loader = SchemaLoader()
         metadata = loader.load_from_file(metadata_path)
@@ -163,9 +158,7 @@ def create_app(
         }
 
     @app.post("/api/agents/{agent_id}/run")
-    async def run_agent(
-        agent_id: str, request: AgentRunRequest
-    ) -> AgentRunResponse:
+    async def run_agent(agent_id: str, request: AgentRunRequest) -> AgentRunResponse:
         """エージェントを実行."""
         agent_info = registry.get_agent(agent_id)
         if not agent_info:
@@ -175,12 +168,12 @@ def create_app(
         metadata_path = agent_path / "agent.yaml"
 
         try:
-            # エージェントを動的にロード（簡易実装）
+            # エージェントを動的にロード (簡易実装)
             # 実際には main.py を import して実行
             loader = SchemaLoader()
-            metadata = loader.load_from_file(metadata_path)
+            loader.load_from_file(metadata_path)
 
-            # ダミー実行（実際には AgentBlock をロードして実行）
+            # ダミー実行 (実際には AgentBlock をロードして実行)
             result = {
                 "message": f"Agent {agent_id} executed successfully",
                 "input": request.input_data,
@@ -189,9 +182,7 @@ def create_app(
             return AgentRunResponse(status="success", result=result)
 
         except Exception as e:
-            return AgentRunResponse(
-                status="error", result=None, error=str(e)
-            )
+            return AgentRunResponse(status="error", result=None, error=str(e))
 
     @app.get("/api/agents/{agent_id}/events")
     async def stream_agent_events(agent_id: str) -> StreamingResponse:
@@ -205,9 +196,7 @@ def create_app(
                 await asyncio.sleep(1)
             yield "data: {'type': 'complete', 'message': 'Done'}\n\n"
 
-        return StreamingResponse(
-            event_generator(), media_type="text/event-stream"
-        )
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     # マーケットプレイス API
     @app.post("/api/marketplace/search")
@@ -271,11 +260,9 @@ def create_app(
         workflow_path = workflows_dir / f"{workflow_id}.yaml"
 
         if workflow_path.exists():
-            raise HTTPException(
-                status_code=409, detail="Workflow already exists"
-            )
+            raise HTTPException(status_code=409, detail="Workflow already exists")
 
-        # ワークフローを保存（簡易実装）
+        # ワークフローを保存 (簡易実装)
         import yaml
 
         workflow_data = {
@@ -295,9 +282,7 @@ def create_app(
         }
 
     @app.put("/api/workflows/{workflow_id}")
-    async def update_workflow(
-        workflow_id: str, request: WorkflowUpdateRequest
-    ) -> dict[str, Any]:
+    async def update_workflow(workflow_id: str, request: WorkflowUpdateRequest) -> dict[str, Any]:
         """ワークフローを更新."""
         workflow_path = workflows_dir / f"{workflow_id}.yaml"
 
@@ -331,9 +316,7 @@ def create_app(
         }
 
     @app.post("/api/workflows/{workflow_id}/run")
-    async def run_workflow(
-        workflow_id: str, request: AgentRunRequest
-    ) -> AgentRunResponse:
+    async def run_workflow(workflow_id: str, request: AgentRunRequest) -> AgentRunResponse:
         """ワークフローを実行."""
         workflow_path = workflows_dir / f"{workflow_id}.yaml"
 
@@ -341,7 +324,7 @@ def create_app(
             raise HTTPException(status_code=404, detail="Workflow not found")
 
         try:
-            # ワークフローを実行（簡易実装）
+            # ワークフローを実行 (簡易実装)
             result = {
                 "message": f"Workflow {workflow_id} executed successfully",
                 "input": request.input_data,
@@ -349,13 +332,11 @@ def create_app(
             return AgentRunResponse(status="success", result=result)
 
         except Exception as e:
-            return AgentRunResponse(
-                status="error", result=None, error=str(e)
-            )
+            return AgentRunResponse(status="error", result=None, error=str(e))
 
     # WebSocket エンドポイント
     @app.websocket("/ws/{client_id}")
-    async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    async def websocket_endpoint(websocket: WebSocket, client_id: str) -> None:
         """WebSocket 接続を処理."""
         await websocket.accept()
         active_connections[client_id] = websocket
@@ -363,11 +344,10 @@ def create_app(
         try:
             while True:
                 data = await websocket.receive_text()
-                # エコーバック（簡易実装）
+                # エコーバック (簡易実装)
                 await websocket.send_text(f"Echo: {data}")
 
         except WebSocketDisconnect:
             del active_connections[client_id]
 
     return app
-

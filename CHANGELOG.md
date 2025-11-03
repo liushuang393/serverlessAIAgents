@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 #### Phase 1: Core Framework & Protocol Integration
+
 - **AgentFlow Engine**: PocketFlow ベースの軽量ワークフローエンジン
 - **MCP Client**: Model Context Protocol クライアント実装
 - **A2A Server/Client**: Agent-to-Agent プロトコル実装
@@ -19,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Test Coverage**: 90.28% カバレッジ、208 テスト
 
 #### Phase 2: CLI & Marketplace
+
 - **CLI Framework**: Click ベースのコマンドラインインターフェース
 - **Init Command**: プロジェクト初期化コマンド (`agentflow init`)
 - **Create Commands**: エージェント作成コマンド (`agentflow create`)
@@ -27,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Run & Test Commands**: エージェント実行とテストコマンド
 
 #### Phase 3: Auto-Adapter & Integration
+
 - **Protocol Adapter Generator**: MCP/A2A/AG-UI アダプター自動生成
 - **@auto_adapt Decorator**: プロトコルメソッド自動注入デコレーター
 - **AgentBlock Base Class**: エージェント基底クラス
@@ -35,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **End-to-End Tests**: 統合テスト 13 件
 
 #### Phase 4: Visual Studio (Optional)
+
 - **Studio Backend API**: FastAPI ベースの REST API
 - **Agent Management API**: エージェント管理エンドポイント
 - **Marketplace API**: マーケットプレイス統合 API
@@ -47,6 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Undo/Redo**: 操作の取り消し/やり直し機能
 
 #### Phase 5: Templates & Documentation
+
 - **Template System**: Jinja2 ベースのテンプレートシステム
 - **Template Manager**: テンプレート管理クラス
 - **Scenario Templates**: 3 つのシナリオテンプレート
@@ -71,6 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical Details
 
 #### Dependencies
+
 - **Python**: 3.13+ (LTS until Oct 2029)
 - **Core**: pydantic>=2.0, pyyaml>=6.0, httpx>=0.27.0
 - **CLI**: click>=8.1.0, rich>=13.0.0
@@ -79,6 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Dev**: pytest>=8.0.0, pytest-cov>=5.0.0, pytest-asyncio>=0.24.0, ruff>=0.7.0, mypy>=1.13.0
 
 #### Code Quality
+
 - **Linter**: Ruff (unified linter and formatter)
 - **Type Checker**: mypy (strict mode)
 - **Test Framework**: pytest + pytest-asyncio
@@ -86,6 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Code Style**: Google-style docstrings, 100% type annotations
 
 #### Architecture
+
 - **4-Layer Architecture**:
   1. UI Layer (Optional) - Visual Studio (React)
   2. Protocol Layer - MCP, A2A, AG-UI
@@ -99,18 +107,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Developer-friendly (CLI, templates, docs)
 
 ### Breaking Changes
+
 - None (initial release)
 
 ### Deprecated
+
 - None (initial release)
 
 ### Removed
+
 - None (initial release)
 
 ### Fixed
+
 - None (initial release)
 
 ### Security
+
 - Safe expression evaluation using AST (Calculator Agent)
 - No use of `eval()` or `exec()`
 - Input validation using Pydantic
@@ -119,6 +132,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
+
 - Additional protocol integrations
 - More scenario templates
 - Performance optimizations
@@ -128,4 +142,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ---
 
 [1.0.0]: https://github.com/liushuang393/serverlessAIAgents/releases/tag/v1.0.0
-

@@ -5,7 +5,6 @@ FastAPI サーバーを起動・管理するためのクラスです。
 
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 from typing import Any
 
@@ -52,18 +51,12 @@ class StudioServer:
         )
 
     def run(self) -> None:
-        """サーバーを起動（ブロッキング）."""
-        self.console.print(
-            f"[bold green]🚀 AgentFlow Studio starting...[/bold green]"
-        )
+        """サーバーを起動 (ブロッキング)."""
+        self.console.print("[bold green]🚀 AgentFlow Studio starting...[/bold green]")
         self.console.print(f"[cyan]Host:[/cyan] {self.host}")
         self.console.print(f"[cyan]Port:[/cyan] {self.port}")
-        self.console.print(
-            f"[cyan]API Docs:[/cyan] http://{self.host}:{self.port}/api/docs"
-        )
-        self.console.print(
-            f"[cyan]Agents:[/cyan] {self.agents_dir or '~/.agentflow/agents'}"
-        )
+        self.console.print(f"[cyan]API Docs:[/cyan] http://{self.host}:{self.port}/api/docs")
+        self.console.print(f"[cyan]Agents:[/cyan] {self.agents_dir or '~/.agentflow/agents'}")
         self.console.print(
             f"[cyan]Workflows:[/cyan] {self.workflows_dir or '~/.agentflow/workflows'}"
         )
@@ -78,7 +71,7 @@ class StudioServer:
         )
 
     async def start(self) -> None:
-        """サーバーを起動（非同期）."""
+        """サーバーを起動 (非同期)."""
         config = uvicorn.Config(
             self.app,
             host=self.host,
@@ -102,9 +95,7 @@ def main() -> None:
     """CLI エントリーポイント."""
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="AgentFlow Studio Server"
-    )
+    parser = argparse.ArgumentParser(description="AgentFlow Studio Server")
     parser.add_argument(
         "--host",
         default="0.0.0.0",
@@ -146,4 +137,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -9,8 +9,8 @@ from agentflow.core.agent_block import AgentBlock
 from agentflow.core.engine import AgentFlowEngine
 from agentflow.core.metadata import (
     A2AConfig,
-    AGUIConfig,
     AgentMetadata,
+    AGUIConfig,
     DependencySpec,
     InputField,
     InterfaceDefinition,
@@ -146,9 +146,7 @@ class TestAgentBlock:
     ) -> None:
         """カスタムエンジンを渡せることをテスト."""
         custom_engine = AgentFlowEngine()
-        agent = concrete_agent_class(
-            metadata_path=sample_metadata_file, engine=custom_engine
-        )
+        agent = concrete_agent_class(metadata_path=sample_metadata_file, engine=custom_engine)
 
         assert agent.engine is custom_engine
 
@@ -225,9 +223,7 @@ class TestAgentBlock:
         assert isinstance(emitter, AGUIEventEmitter)
 
     @pytest.mark.asyncio
-    async def test_custom_initialize_and_cleanup(
-        self, sample_metadata_file: Path
-    ) -> None:
+    async def test_custom_initialize_and_cleanup(self, sample_metadata_file: Path) -> None:
         """カスタム initialize と cleanup をテスト."""
         initialized = False
         cleaned_up = False
@@ -253,4 +249,3 @@ class TestAgentBlock:
 
         await agent.cleanup()
         assert cleaned_up
-

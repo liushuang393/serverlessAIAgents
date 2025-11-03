@@ -13,6 +13,7 @@ AgentFlow の実装例とベストプラクティスを紹介します。
 **説明:** テキスト処理エージェントの基本実装例
 
 **機能:**
+
 - テキストの大文字/小文字変換
 - 文字数カウント
 - 単語数カウント
@@ -31,6 +32,7 @@ python agent.py
 ```
 
 **学べること:**
+
 - `AgentBlock` の基本的な使い方
 - `initialize()` と `cleanup()` のオーバーライド
 - 入力検証とエラーハンドリング
@@ -47,6 +49,7 @@ python agent.py
 **説明:** 天気情報を取得するエージェント
 
 **機能:**
+
 - 指定された場所の天気情報を取得
 - 気温、湿度、風速などの情報を提供
 - 摂氏/華氏の単位変換
@@ -64,6 +67,7 @@ python agent.py
 ```
 
 **学べること:**
+
 - 外部 API 統合のパターン
 - ダミーデータの生成
 - 単位変換の実装
@@ -79,6 +83,7 @@ python agent.py
 **説明:** テキストを翻訳するエージェント
 
 **機能:**
+
 - 複数言語間の翻訳
 - 自動言語検出
 - 翻訳信頼度の提供
@@ -96,6 +101,7 @@ python agent.py
 ```
 
 **学べること:**
+
 - 言語検出の実装
 - 辞書ベースの翻訳
 - 信頼度スコアの計算
@@ -111,6 +117,7 @@ python agent.py
 **説明:** 数式を安全に計算するエージェント
 
 **機能:**
+
 - 数式の安全な評価（AST 使用）
 - 基本的な算術演算のサポート
 - エラーハンドリング
@@ -128,6 +135,7 @@ python agent.py
 ```
 
 **学べること:**
+
 - AST を使用した安全な数式評価
 - 演算子のマッピング
 - セキュリティを考慮した実装
@@ -176,14 +184,14 @@ class FileReaderAgent(AgentBlock):
         await super().initialize()
         self.mcp = MCPClient()
         await self.mcp.connect("filesystem")
-    
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         content = await self.mcp.call_tool(
             "mcp://filesystem/read_file",
             {"path": input_data["file_path"]}
         )
         return {"content": content}
-    
+
     async def cleanup(self) -> None:
         await self.mcp.disconnect("filesystem")
         await super().cleanup()
@@ -200,7 +208,7 @@ class OrchestratorAgent(AgentBlock):
     async def initialize(self) -> None:
         await super().initialize()
         self.a2a = A2AClient()
-    
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         # エージェント 1: データ取得
         data = await self.a2a.call_remote_agent(
@@ -208,14 +216,14 @@ class OrchestratorAgent(AgentBlock):
             "fetch_data",
             {"source": input_data["source"]}
         )
-        
+
         # エージェント 2: データ処理
         result = await self.a2a.call_remote_agent(
             "http://localhost:8002",
             "process_data",
             {"data": data}
         )
-        
+
         return result
 ```
 
@@ -228,17 +236,17 @@ class StreamingAgent(AgentBlock):
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         emitter = self.create_agui_emitter(self.engine)
         await emitter.attach_to_flow("processing")
-        
+
         await emitter.emit_log("info", "処理開始", "agent")
-        
+
         # 長時間処理をシミュレート
         for i in range(5):
             await emitter.emit_log("info", f"ステップ {i+1}/5", "agent")
             await asyncio.sleep(1)
-        
+
         await emitter.emit_log("success", "処理完了", "agent")
         await emitter.detach_from_flow("processing")
-        
+
         return {"status": "completed"}
 ```
 
@@ -253,33 +261,33 @@ class DataPipelineAgent(AgentBlock):
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         # ステップ 1: データ読み込み
         data = await self.load_data(input_data["source"])
-        
+
         # ステップ 2: データクリーニング
         cleaned = await self.clean_data(data)
-        
+
         # ステップ 3: データ変換
         transformed = await self.transform_data(cleaned)
-        
+
         # ステップ 4: データ保存
         await self.save_data(transformed, input_data["destination"])
-        
+
         return {
             "status": "success",
             "records_processed": len(transformed)
         }
-    
+
     async def load_data(self, source: str) -> list[dict]:
         # データ読み込みロジック
         pass
-    
+
     async def clean_data(self, data: list[dict]) -> list[dict]:
         # データクリーニングロジック
         pass
-    
+
     async def transform_data(self, data: list[dict]) -> list[dict]:
         # データ変換ロジック
         pass
-    
+
     async def save_data(self, data: list[dict], destination: str) -> None:
         # データ保存ロジック
         pass
@@ -296,7 +304,7 @@ class APIAgent(AgentBlock):
     async def initialize(self) -> None:
         await super().initialize()
         self.client = httpx.AsyncClient()
-    
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         response = await self.client.get(
             input_data["url"],
@@ -304,7 +312,7 @@ class APIAgent(AgentBlock):
         )
         response.raise_for_status()
         return {"data": response.json()}
-    
+
     async def cleanup(self) -> None:
         await self.client.aclose()
         await super().cleanup()
@@ -326,15 +334,15 @@ class DatabaseAgent(AgentBlock):
             user="user",
             password="password"
         )
-    
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         query = input_data["query"]
         params = input_data.get("params", [])
-        
+
         async with self.pool.acquire() as conn:
             rows = await conn.fetch(query, *params)
             return {"results": [dict(row) for row in rows]}
-    
+
     async def cleanup(self) -> None:
         await self.pool.close()
         await super().cleanup()
@@ -359,10 +367,10 @@ class StateMachineAgent(AgentBlock):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.state = State.IDLE
-    
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         self.state = State.PROCESSING
-        
+
         try:
             result = await self.process(input_data)
             self.state = State.COMPLETED
@@ -370,7 +378,7 @@ class StateMachineAgent(AgentBlock):
         except Exception as e:
             self.state = State.ERROR
             raise
-    
+
     async def process(self, input_data: dict[str, Any]) -> dict[str, Any]:
         # 処理ロジック
         pass
@@ -387,7 +395,7 @@ from typing import Any
 class RetryAgent(AgentBlock):
     MAX_RETRIES = 3
     RETRY_DELAY = 1.0
-    
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         for attempt in range(self.MAX_RETRIES):
             try:
@@ -396,7 +404,7 @@ class RetryAgent(AgentBlock):
                 if attempt == self.MAX_RETRIES - 1:
                     raise
                 await asyncio.sleep(self.RETRY_DELAY * (attempt + 1))
-    
+
     async def process(self, input_data: dict[str, Any]) -> dict[str, Any]:
         # 処理ロジック（失敗する可能性あり）
         pass
@@ -415,21 +423,21 @@ class CachingAgent(AgentBlock):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cache: dict[str, Any] = {}
-    
+
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         cache_key = self.get_cache_key(input_data)
-        
+
         if cache_key in self.cache:
             return self.cache[cache_key]
-        
+
         result = await self.process(input_data)
         self.cache[cache_key] = result
         return result
-    
+
     def get_cache_key(self, input_data: dict[str, Any]) -> str:
         data_str = json.dumps(input_data, sort_keys=True)
         return hashlib.md5(data_str.encode()).hexdigest()
-    
+
     async def process(self, input_data: dict[str, Any]) -> dict[str, Any]:
         # 処理ロジック
         pass
@@ -449,10 +457,10 @@ from my_agent import MyAgent
 async def test_agent_basic():
     agent = MyAgent(metadata_path="agent.yaml")
     await agent.initialize()
-    
+
     result = await agent.run({"input": "test"})
     assert result["output"] == "expected"
-    
+
     await agent.cleanup()
 
 @pytest.mark.asyncio
@@ -496,4 +504,3 @@ async def test_agent_with_context_manager():
 - [API リファレンス](../docs/api.md)
 - [プロトコルガイド](../docs/protocols.md)
 - [CLI リファレンス](../docs/cli.md)
-

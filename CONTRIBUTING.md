@@ -14,7 +14,7 @@ AgentFlow プロジェクトへの貢献を歓迎します！このガイドで�
 
 ## 行動規範
 
-AgentFlow プロジェクトは、すべての貢献者に対して敬意と包括性を持って接することを期待しています。不適切な行動を発見した場合は、team@agentflow.dev までご報告ください。
+AgentFlow プロジェクトは、すべての貢献者に対して敬意と包括性を持って接することを期待しています。不適切な行動を発見した場合は、<team@agentflow.dev> までご報告ください。
 
 ## 開発環境のセットアップ
 
@@ -98,6 +98,7 @@ git commit -m "fix: issue #123 を解決"
 ```
 
 **コミットメッセージ形式**:
+
 - `feat:` - 新機能
 - `fix:` - バグ修正
 - `docs:` - ドキュメント変更
@@ -263,6 +264,7 @@ class TestAgentFlowEngine:
 ### README の更新
 
 ユーザー向け機能に影響する変更の場合:
+
 - README.md を更新
 - 該当する場合は例を追加
 - 機能リストを更新
@@ -283,20 +285,24 @@ class TestAgentFlowEngine:
 
 ```markdown
 ## 説明
+
 変更の簡単な説明
 
 ## 変更の種類
+
 - [ ] バグ修正
 - [ ] 新機能
 - [ ] 破壊的変更
 - [ ] ドキュメント更新
 
 ## テスト
+
 - [ ] ユニットテスト追加/更新
 - [ ] 統合テスト追加/更新
 - [ ] すべてのテストが通過
 
 ## チェックリスト
+
 - [ ] コードがスタイルガイドラインに従っている
 - [ ] セルフレビュー完了
 - [ ] ドキュメント更新済み
@@ -314,7 +320,6 @@ class TestAgentFlowEngine:
 
 - バグ報告や機能リクエストは [GitHub Issues](https://github.com/liushuang393/serverlessAIAgents/issues) を開いてください
 - 質問は [GitHub Discussions](https://github.com/liushuang393/serverlessAIAgents/discussions) を開始してください
-- プライベートな問い合わせは 115070984+liushuang393@users.noreply.github.com にメールしてください
+- プライベートな問い合わせは <115070984+liushuang393@users.noreply.github.com> にメールしてください
 
 AgentFlow への貢献ありがとうございます！ 🎉
-

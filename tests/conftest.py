@@ -37,4 +37,3 @@ def sample_workflow() -> WorkflowConfig:
             {"from": "node2", "to": "node3"},
         ],
     )
-

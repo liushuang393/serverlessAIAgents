@@ -34,10 +34,10 @@ class TestTemplateManager:
     def test_list_templates(self, template_manager):
         """テンプレート一覧を取得."""
         templates = template_manager.list_templates()
-        
+
         assert len(templates) >= 3
         assert all(isinstance(t, TemplateMetadata) for t in templates)
-        
+
         # テンプレート ID を確認
         template_ids = [t.id for t in templates]
         assert "invoice-processor" in template_ids
@@ -47,7 +47,7 @@ class TestTemplateManager:
     def test_get_template(self, template_manager):
         """テンプレートメタデータを取得."""
         metadata = template_manager.get_template("invoice-processor")
-        
+
         assert metadata is not None
         assert metadata.id == "invoice-processor"
         assert metadata.name == "Invoice Processor"
@@ -59,12 +59,10 @@ class TestTemplateManager:
         metadata = template_manager.get_template("nonexistent")
         assert metadata is None
 
-    def test_generate_project_invoice_processor(
-        self, template_manager, temp_output_dir
-    ):
+    def test_generate_project_invoice_processor(self, template_manager, temp_output_dir):
         """invoice-processor テンプレートからプロジェクトを生成."""
         output_dir = temp_output_dir / "invoice-processor"
-        
+
         parameters = {
             "agent_name": "my-invoice-processor",
             "agent_description": "My custom invoice processor",
@@ -74,19 +72,19 @@ class TestTemplateManager:
             "enable_ocr": True,
             "supported_languages": ["ja", "en", "zh"],
         }
-        
+
         template_manager.generate_project(
             "invoice-processor",
             output_dir,
             parameters,
         )
-        
+
         # 生成されたファイルを確認
         assert output_dir.exists()
         assert (output_dir / "agent.yaml").exists()
         assert (output_dir / "agent.py").exists()
         assert (output_dir / "README.md").exists()
-        
+
         # agent.yaml の内容を確認
         agent_yaml = (output_dir / "agent.yaml").read_text(encoding="utf-8")
         assert "my-invoice-processor" in agent_yaml
@@ -96,7 +94,7 @@ class TestTemplateManager:
     def test_generate_project_chatbot(self, template_manager, temp_output_dir):
         """chatbot テンプレートからプロジェクトを生成."""
         output_dir = temp_output_dir / "chatbot"
-        
+
         parameters = {
             "agent_name": "my-chatbot",
             "agent_description": "My custom chatbot",
@@ -107,31 +105,29 @@ class TestTemplateManager:
             "enable_memory": True,
             "max_history_length": 20,
         }
-        
+
         template_manager.generate_project(
             "chatbot",
             output_dir,
             parameters,
         )
-        
+
         # 生成されたファイルを確認
         assert output_dir.exists()
         assert (output_dir / "agent.yaml").exists()
         assert (output_dir / "agent.py").exists()
         assert (output_dir / "README.md").exists()
-        
+
         # agent.yaml の内容を確認
         agent_yaml = (output_dir / "agent.yaml").read_text(encoding="utf-8")
         assert "my-chatbot" in agent_yaml
         assert "anthropic" in agent_yaml
         assert "claude-3-opus" in agent_yaml
 
-    def test_generate_project_data_pipeline(
-        self, template_manager, temp_output_dir
-    ):
+    def test_generate_project_data_pipeline(self, template_manager, temp_output_dir):
         """data-pipeline テンプレートからプロジェクトを生成."""
         output_dir = temp_output_dir / "data-pipeline"
-        
+
         parameters = {
             "agent_name": "my-data-pipeline",
             "agent_description": "My custom data pipeline",
@@ -142,31 +138,29 @@ class TestTemplateManager:
             "enable_validation": True,
             "enable_transformation": True,
         }
-        
+
         template_manager.generate_project(
             "data-pipeline",
             output_dir,
             parameters,
         )
-        
+
         # 生成されたファイルを確認
         assert output_dir.exists()
         assert (output_dir / "agent.yaml").exists()
         assert (output_dir / "agent.py").exists()
         assert (output_dir / "README.md").exists()
-        
+
         # agent.yaml の内容を確認
         agent_yaml = (output_dir / "agent.yaml").read_text(encoding="utf-8")
         assert "my-data-pipeline" in agent_yaml
         assert "parquet" in agent_yaml
         assert "json" in agent_yaml
 
-    def test_generate_project_template_not_found(
-        self, template_manager, temp_output_dir
-    ):
+    def test_generate_project_template_not_found(self, template_manager, temp_output_dir):
         """存在しないテンプレートからプロジェクトを生成."""
         output_dir = temp_output_dir / "test"
-        
+
         with pytest.raises(ValueError, match="Template not found"):
             template_manager.generate_project(
                 "nonexistent",
@@ -174,13 +168,11 @@ class TestTemplateManager:
                 {},
             )
 
-    def test_generate_project_output_exists(
-        self, template_manager, temp_output_dir
-    ):
+    def test_generate_project_output_exists(self, template_manager, temp_output_dir):
         """既存のディレクトリにプロジェクトを生成."""
         output_dir = temp_output_dir / "test"
         output_dir.mkdir()
-        
+
         with pytest.raises(FileExistsError, match="already exists"):
             template_manager.generate_project(
                 "chatbot",
@@ -237,7 +229,7 @@ class TestTemplateManager:
                 ),
             ],
         )
-        
+
         # 型が不正
         with pytest.raises(ValueError, match="must be int"):
             template_manager._validate_parameters(
@@ -264,7 +256,7 @@ class TestTemplateManager:
                 ),
             ],
         )
-        
+
         # 選択肢にない値
         with pytest.raises(ValueError, match="must be one of"):
             template_manager._validate_parameters(
@@ -291,8 +283,7 @@ class TestTemplateManager:
                 ),
             ],
         )
-        
+
         # デフォルト値が使用される
         validated = template_manager._validate_parameters(metadata, {})
         assert validated["timeout"] == 30
-

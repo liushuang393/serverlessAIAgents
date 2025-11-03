@@ -11,7 +11,6 @@ from agentflow.core.hooks import HookType, LifecycleHooks
 from agentflow.core.metadata import (
     A2AConfig,
     AGUIConfig,
-    AgentMetadata as AgentMetadataModel,
     DependencySpec,
     InputField,
     InterfaceDefinition,
@@ -21,6 +20,9 @@ from agentflow.core.metadata import (
     PocketFlowConfig,
     ProtocolConfig,
     VisualConfig,
+)
+from agentflow.core.metadata import (
+    AgentMetadata as AgentMetadataModel,
 )
 from agentflow.core.schemas import SchemaLoader, SchemaValidationError
 from agentflow.core.types import AgentMetadata, ExecutionContext, WorkflowConfig
@@ -52,4 +54,3 @@ __all__ = [
     "WorkflowError",
     "WorkflowNotFoundError",
 ]
-

@@ -1,29 +1,30 @@
-import { X } from 'lucide-react'
-import { useWorkflowStore } from '../stores/workflowStore'
+import { X } from "lucide-react";
+import { useWorkflowStore } from "../stores/workflowStore";
 
 /**
  * プロパティパネルコンポーネント
- * 
+ *
  * 選択されたノードの設定を表示・編集。
  * ノードが選択されていない場合は非表示。
  */
 
 export default function PropertiesPanel() {
-  const { selectedNode, workflow, setSelectedNode, updateNodeData } = useWorkflowStore()
+  const { selectedNode, workflow, setSelectedNode, updateNodeData } =
+    useWorkflowStore();
 
   // 選択されたノードを取得
-  const node = workflow.nodes.find((n) => n.id === selectedNode)
+  const node = workflow.nodes.find((n) => n.id === selectedNode);
 
   if (!node) {
-    return null
+    return null;
   }
 
   /**
    * パネルを閉じる
    */
   const handleClose = () => {
-    setSelectedNode(null)
-  }
+    setSelectedNode(null);
+  };
 
   /**
    * ノードデータを更新
@@ -35,16 +36,14 @@ export default function PropertiesPanel() {
         ...node.data.config,
         [key]: value,
       },
-    })
-  }
+    });
+  };
 
   return (
     <div className="w-80 border-l border-border bg-card flex flex-col">
       {/* ヘッダー */}
       <div className="p-4 border-b border-border flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-foreground">
-          プロパティ
-        </h2>
+        <h2 className="text-lg font-semibold text-foreground">プロパティ</h2>
         <button
           onClick={handleClose}
           className="p-1 rounded hover:bg-accent transition-colors"
@@ -96,8 +95,8 @@ export default function PropertiesPanel() {
                 入力データ
               </label>
               <textarea
-                value={node.data.config.input || ''}
-                onChange={(e) => handleConfigChange('input', e.target.value)}
+                value={node.data.config.input || ""}
+                onChange={(e) => handleConfigChange("input", e.target.value)}
                 placeholder='{"key": "value"}'
                 className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-ring"
                 rows={4}
@@ -111,7 +110,9 @@ export default function PropertiesPanel() {
               <input
                 type="number"
                 value={node.data.config.timeout || 30}
-                onChange={(e) => handleConfigChange('timeout', parseInt(e.target.value))}
+                onChange={(e) =>
+                  handleConfigChange("timeout", parseInt(e.target.value))
+                }
                 className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -121,7 +122,9 @@ export default function PropertiesPanel() {
                 <input
                   type="checkbox"
                   checked={node.data.config.enabled !== false}
-                  onChange={(e) => handleConfigChange('enabled', e.target.checked)}
+                  onChange={(e) =>
+                    handleConfigChange("enabled", e.target.checked)
+                  }
                   className="w-4 h-4 rounded border-input text-primary focus:ring-2 focus:ring-ring"
                 />
                 有効化
@@ -166,6 +169,5 @@ export default function PropertiesPanel() {
         </button>
       </div>
     </div>
-  )
+  );
 }
-

@@ -149,8 +149,8 @@ class ProtocolAdapter:
         }
 
         for input_field in metadata.interfaces.inputs:
-            input_schema["properties"][input_field.name] = (
-                ProtocolAdapter._field_to_json_schema(input_field)
+            input_schema["properties"][input_field.name] = ProtocolAdapter._field_to_json_schema(
+                input_field
             )
             if input_field.required:
                 input_schema["required"].append(input_field.name)
@@ -162,8 +162,8 @@ class ProtocolAdapter:
         }
 
         for output_field in metadata.interfaces.outputs:
-            output_schema["properties"][output_field.name] = (
-                ProtocolAdapter._field_to_json_schema(output_field)
+            output_schema["properties"][output_field.name] = ProtocolAdapter._field_to_json_schema(
+                output_field
             )
 
         # スキルリストを生成
@@ -189,7 +189,7 @@ class ProtocolAdapter:
             skills.append(skill)
 
         # AgentCard を作成
-        card = AgentCard(
+        return AgentCard(
             name=metadata.meta.name,
             description=metadata.meta.description,
             version=metadata.meta.version,
@@ -202,13 +202,11 @@ class ProtocolAdapter:
             },
         )
 
-        return card
-
     @staticmethod
     def wrap_flow_with_agui(
         engine: AgentFlowEngine,
-        flow_id: str,
-        metadata: AgentMetadata,
+        _flow_id: str,
+        _metadata: AgentMetadata,
     ) -> AGUIEventEmitter:
         """AsyncFlow に AG-UI イベントエミッターを追加.
 
@@ -216,8 +214,8 @@ class ProtocolAdapter:
 
         Args:
             engine: AgentFlowEngine インスタンス
-            flow_id: フロー ID
-            metadata: エージェントメタデータ
+            _flow_id: フロー ID (未使用)
+            _metadata: エージェントメタデータ (未使用)
 
         Returns:
             AGUIEventEmitter インスタンス
@@ -228,10 +226,4 @@ class ProtocolAdapter:
             >>> async for event in emitter.stream_events():
             ...     print(event.event_type)
         """
-        # AGUIEventEmitter を作成
-        emitter = AGUIEventEmitter(engine)
-
-        # エンジンにアタッチ（非同期なので、呼び出し側で await する必要がある）
-        # ここでは emitter インスタンスを返すだけ
-        return emitter
-
+        return AGUIEventEmitter(engine)

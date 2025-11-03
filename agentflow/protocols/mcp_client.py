@@ -58,9 +58,7 @@ class MCPClient:
             try:
                 await self._connect_server(server_config)
             except Exception:
-                self._logger.exception(
-                    f"Failed to connect to server {server_config.name}"
-                )
+                self._logger.exception(f"Failed to connect to server {server_config.name}")
                 # サーバー接続失敗は致命的ではない
                 continue
 
@@ -109,9 +107,7 @@ class MCPClient:
                 "server": config.name,
             }
 
-        self._logger.info(
-            f"Connected to {config.name}, loaded {len(tools_result.tools)} tools"
-        )
+        self._logger.info(f"Connected to {config.name}, loaded {len(tools_result.tools)} tools")
 
     async def disconnect(self) -> None:
         """すべての MCP サーバーから切断."""
@@ -125,9 +121,7 @@ class MCPClient:
                     await context.__aexit__(None, None, None)
                 self._logger.debug(f"Disconnected from server: {server_name}")
             except Exception:
-                self._logger.exception(
-                    f"Error disconnecting from {server_name}"
-                )
+                self._logger.exception(f"Error disconnecting from {server_name}")
 
         self._sessions.clear()
         self._tools.clear()
@@ -152,9 +146,7 @@ class MCPClient:
             for tool_uri, tool_info in self._tools.items()
         ]
 
-    async def call_tool(
-        self, tool_uri: str, arguments: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def call_tool(self, tool_uri: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """ツールを呼び出す.
 
         Args:
@@ -192,9 +184,7 @@ class MCPClient:
             result = await session.call_tool(tool_name, arguments)
 
         except Exception:
-            self._logger.exception(
-                f"Tool call failed: {tool_uri}"
-            )
+            self._logger.exception(f"Tool call failed: {tool_uri}")
             return {
                 "success": False,
                 "error": "Tool call failed",
@@ -236,4 +226,3 @@ class MCPClient:
     async def __aexit__(self, *args: Any) -> None:
         """非同期コンテキストマネージャーの終了."""
         await self.disconnect()
-

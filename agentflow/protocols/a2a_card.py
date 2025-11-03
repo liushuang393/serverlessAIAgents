@@ -20,12 +20,8 @@ class AgentSkill(BaseModel):
 
     name: str = Field(..., description="スキル名")
     description: str = Field(..., description="スキルの説明")
-    input_schema: dict[str, Any] = Field(
-        default_factory=dict, description="入力スキーマ"
-    )
-    output_schema: dict[str, Any] = Field(
-        default_factory=dict, description="出力スキーマ"
-    )
+    input_schema: dict[str, Any] = Field(default_factory=dict, description="入力スキーマ")
+    output_schema: dict[str, Any] = Field(default_factory=dict, description="出力スキーマ")
 
 
 class AgentCard(BaseModel):
@@ -44,12 +40,8 @@ class AgentCard(BaseModel):
     description: str = Field(..., description="エージェントの説明")
     version: str = Field(default="1.0.0", description="エージェントのバージョン")
     author: str | None = Field(default=None, description="エージェントの作成者")
-    skills: list[AgentSkill] = Field(
-        default_factory=list, description="エージェントのスキルリスト"
-    )
-    metadata: dict[str, Any] = Field(
-        default_factory=dict, description="追加のメタデータ"
-    )
+    skills: list[AgentSkill] = Field(default_factory=list, description="エージェントのスキルリスト")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="追加のメタデータ")
 
     @classmethod
     def from_yaml(cls, yaml_data: dict[str, Any]) -> "AgentCard":
@@ -102,4 +94,3 @@ class AgentCard(BaseModel):
             ],
             "metadata": self.metadata,
         }
-

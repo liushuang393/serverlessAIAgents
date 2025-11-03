@@ -25,7 +25,7 @@
 └─────────────────────────────────────────┘
                     ↕
 ┌─────────────────────────────────────────┐
-│      PocketFlow Core (执行引擎)           │  
+│      PocketFlow Core (执行引擎)           │
 │  • Node-Flow工作流引擎                     │
 │  • Shared Store数据管理                   │
 │  • 重试/回退/并发控制                       │
@@ -42,36 +42,40 @@
 ### 积木化设计四原则
 
 #### 1️⃣ **标准接口,松耦合**
+
 每个Agent都是独立的"积木块",通过标准协议互联:
+
 ```python
 class AgentBlock:
     # A2A接口 - Agent间通信
     def get_agent_card(self) -> AgentCard: ...
-    
+
     # AG-UI接口 - 用户交互
     def emit_ui_event(self, event: UIEvent): ...
-    
+
     # MCP接口 - 工具使用
     def list_tools(self) -> List[Tool]: ...
-    
+
     # PocketFlow接口 - 工作流执行
     def get_flow(self) -> Flow: ...
 ```
 
 #### 2️⃣ **热插拔,可组合**
+
 像乐高积木一样自由组合:
+
 ```yaml
 # 产品配置 = Agent积木组合
 product:
   name: "文档处理助手"
   agents:
     - id: pdf_analyzer
-      source: "local://agents/pdf_analyzer"  # 本地Agent
+      source: "local://agents/pdf_analyzer" # 本地Agent
     - id: translator
-      source: "a2a://translation-service.com"  # 远程A2A Agent
+      source: "a2a://translation-service.com" # 远程A2A Agent
     - id: email_sender
-      source: "marketplace://email-pro"  # 市场Agent
-  
+      source: "marketplace://email-pro" # 市场Agent
+
   workflow:
     - when: user_upload_pdf
       call: pdf_analyzer
@@ -81,11 +85,13 @@ product:
 ```
 
 #### 3️⃣ **模板化,可复制**
+
 参照PocketFlow的模板思想:
+
 ```
 templates/
 ├── basic/              # 基础单Agent模板
-├── rag/                # RAG模式模板  
+├── rag/                # RAG模式模板
 ├── mapreduce/          # MapReduce模式模板
 ├── agent-orchestrator/ # 多Agent编排模板
 └── custom/            # 自定义模板
@@ -97,7 +103,9 @@ templates/
 ```
 
 #### 4️⃣ **可视化,零代码**
+
 为未来的可视化平台预留接口:
+
 ```json
 // agent.visual.json - 可视化元数据
 {
@@ -122,25 +130,29 @@ templates/
 ## 1️⃣ 用户故事 (User Stories)
 
 ### US-001: 一键启动,三协议支持
+
 **作为** 开发者  
 **我想要** 创建的Agent自动支持MCP/A2A/AG-UI三个协议  
 **以便** 无缝接入整个AI生态系统
 
 **验收标准**:
+
 ```bash
 agentflow init my-agent --protocols mcp,a2a,ag-ui
 # 生成的Agent自动包含:
 # - MCP工具定义(tools.mcp.json)
-# - A2A AgentCard(agent.a2a.json)  
+# - A2A AgentCard(agent.a2a.json)
 # - AG-UI事件映射(agent.agui.json)
 ```
 
 ### US-002: 积木市场,即搜即用
+
 **作为** 开发者  
 **我想要** 搜索并导入现成的Agent积木  
 **以便** 快速组装产品原型
 
 **验收标准**:
+
 ```bash
 # 搜索Agent积木
 agentflow search "PDF解析"
@@ -163,11 +175,13 @@ result = pdf_agent.run({"pdf_path": "test.pdf"})
 ```
 
 ### US-003: 可视化编排,零代码搭建
+
 **作为** 产品经理  
 **我想要** 通过拖拽界面设计Agent工作流  
 **以便** 不需要写代码就能创建AI产品
 
 **验收标准**:
+
 - ✅ 打开Web编排器: `agentflow studio`
 - ✅ 拖拽Agent积木到画布
 - ✅ 连接Agent之间的数据流
@@ -175,17 +189,19 @@ result = pdf_agent.run({"pdf_path": "test.pdf"})
 - ✅ 一键生成可部署代码
 
 ### US-004: 模板复用,改提示词即可
+
 **作为** 开发者  
 **我想要** 使用成熟的场景模板  
 **以便** 只需修改提示词和配置就能上线
 
 **验收标准**:
+
 ```bash
 # 从模板创建
 agentflow create from-template invoice-processor
 > 📋 使用模板: 发票处理系统
 > 📝 请回答以下问题来定制你的Agent:
-> 
+>
 > 1. 发票格式? [PDF/图片/Excel] PDF
 > 2. 需要提取哪些字段? 发票号,金额,日期,供应商
 > 3. 处理后动作? [保存数据库/发送邮件/生成报表] 保存数据库
@@ -206,12 +222,12 @@ graph TB
         MobileUI[移动端<br/>AG-UI协议]
         VSCODE[VS Code插件<br/>AG-UI协议]
     end
-    
+
     subgraph "AgentFlow核心"
         Studio[可视化编排器]
         Registry[Agent积木市场]
         CLI[命令行工具]
-        
+
         subgraph "运行时引擎"
             A2AServer[A2A Server<br/>Agent协作]
             AGUIEmitter[AG-UI Emitter<br/>UI事件流]
@@ -219,33 +235,33 @@ graph TB
             MCPClient[MCP Client<br/>工具调用]
         end
     end
-    
+
     subgraph "Agent积木库"
         LocalAgent[本地Agent积木]
         RemoteAgent[远程A2A Agent]
         MarketAgent[市场Agent积木]
     end
-    
+
     subgraph "工具与数据层"
         MCPTools[MCP工具服务器]
         Database[(数据库)]
         APIs[外部API]
     end
-    
+
     WebUI --> AGUIEmitter
     MobileUI --> AGUIEmitter
     VSCODE --> AGUIEmitter
-    
+
     Studio --> Registry
     CLI --> Registry
     Registry --> LocalAgent
     Registry --> RemoteAgent
     Registry --> MarketAgent
-    
+
     AGUIEmitter --> FlowEngine
     A2AServer --> FlowEngine
     FlowEngine --> MCPClient
-    
+
     RemoteAgent -.A2A协议.-> A2AServer
     FlowEngine --> LocalAgent
     MCPClient --> MCPTools
@@ -255,15 +271,15 @@ graph TB
 
 ### 技术栈选型
 
-| 层级 | 技术选择 | 理由 |
-|------|---------|------|
-| **工作流引擎** | PocketFlow (100行) | 简单、易扩展、AI友好 |
-| **A2A通信** | google-a2a SDK | 官方SDK,生态支持好 |
-| **AG-UI实现** | AG-UI Python SDK | 支持SSE流式输出 |
-| **MCP客户端** | mcp Python SDK | Anthropic官方 |
-| **可视化** | React Flow + shadcn/ui | 拖拽式编排 |
-| **CLI** | Click + Rich | 美观的命令行 |
-| **配置管理** | YAML + Pydantic | 类型安全 |
+| 层级           | 技术选择               | 理由                 |
+| -------------- | ---------------------- | -------------------- |
+| **工作流引擎** | PocketFlow (100行)     | 简单、易扩展、AI友好 |
+| **A2A通信**    | google-a2a SDK         | 官方SDK,生态支持好   |
+| **AG-UI实现**  | AG-UI Python SDK       | 支持SSE流式输出      |
+| **MCP客户端**  | mcp Python SDK         | Anthropic官方        |
+| **可视化**     | React Flow + shadcn/ui | 拖拽式编排           |
+| **CLI**        | Click + Rich           | 美观的命令行         |
+| **配置管理**   | YAML + Pydantic        | 类型安全             |
 
 ### 项目结构 v2.0
 
@@ -325,7 +341,7 @@ meta:
   icon: "📄"
   category: "文档处理"
   description: "高级PDF分析,支持文本提取、表格识别、摘要生成"
-  
+
 # 积木接口定义
 interfaces:
   # 输入接口(插座)
@@ -339,7 +355,7 @@ interfaces:
       type: enum
       options: ["extract", "summarize", "qa"]
       default: "extract"
-      
+
   # 输出接口(插头)
   outputs:
     - name: result
@@ -348,44 +364,44 @@ interfaces:
         text: string
         tables: array
         metadata: object
-        
+
 # 协议支持
 protocols:
   mcp:
     tools: ["read_pdf", "extract_tables"]
     resources: ["pdf_content"]
-    
+
   a2a:
     enabled: true
     card_path: "./a2a_card.json"
     skills: ["document_analysis", "table_extraction"]
-    
+
   agui:
     enabled: true
     events:
-      - type: "TEXT_MESSAGE_CONTENT"  # 流式输出分析进度
-      - type: "TOOL_CALL_START"       # 显示工具调用
-      - type: "STATE_DELTA"           # 更新分析状态
-      
+      - type: "TEXT_MESSAGE_CONTENT" # 流式输出分析进度
+      - type: "TOOL_CALL_START" # 显示工具调用
+      - type: "STATE_DELTA" # 更新分析状态
+
 # 依赖关系
 dependencies:
-  agents: []  # 不依赖其他Agent
-  tools:      # MCP工具依赖
+  agents: [] # 不依赖其他Agent
+  tools: # MCP工具依赖
     - mcp://file-tools/read_pdf
     - mcp://llm-tools/summarize
-  packages:   # Python包依赖
+  packages: # Python包依赖
     - PyPDF2>=3.0.0
     - pdfplumber>=0.9.0
-    
+
 # PocketFlow配置
 pocketflow:
   entry: "flow.py:create_pdf_analysis_flow"
   shared_schema: "schemas.py:PDFAnalysisSchema"
-  
+
 # 可视化配置
 visual:
   color: "#3B82F6"
-  size: "medium"  # small/medium/large
+  size: "medium" # small/medium/large
   ports:
     input: ["left"]
     output: ["right"]
@@ -406,30 +422,30 @@ from agentflow import AgentBlock, auto_adapt
 @auto_adapt(protocols=["mcp", "a2a", "agui"])
 class PDFAnalyzerAgent(AgentBlock):
     """只需实现核心业务逻辑,协议适配自动完成"""
-    
+
     def __init__(self):
         self.metadata = self.load_metadata("agent.yaml")
         self.flow = self.create_flow()
-    
+
     # 核心业务逻辑 - PocketFlow
     def create_flow(self) -> Flow:
         read_node = ReadPDFNode()
         analyze_node = AnalyzeNode()
         output_node = OutputNode()
-        
+
         read_node >> analyze_node >> output_node
         return Flow(start=read_node)
-    
+
     # 以下方法由@auto_adapt装饰器自动生成:
-    
+
     # def get_mcp_tools(self) -> List[Tool]:
     #     """自动从agent.yaml的protocols.mcp生成"""
     #     ...
-    
+
     # def get_a2a_card(self) -> AgentCard:
     #     """自动从agent.yaml的protocols.a2a生成"""
     #     ...
-    
+
     # def emit_agui_events(self, flow_state):
     #     """自动将Flow执行状态转为AG-UI事件"""
     #     ...
@@ -450,7 +466,7 @@ class ProtocolAdapter:
             tool_def = load_tool_definition(category, name)
             tools.append(tool_def)
         return tools
-    
+
     @staticmethod
     def generate_a2a_card(agent_meta: dict) -> AgentCard:
         """生成A2A AgentCard"""
@@ -468,39 +484,39 @@ class ProtocolAdapter:
             ],
             endpoint=f"http://localhost:8000/agents/{agent_meta['meta']['id']}"
         )
-    
+
     @staticmethod
     def wrap_flow_with_agui(flow: Flow, agent_meta: dict):
         """将PocketFlow的执行包装为AG-UI事件流"""
-        
+
         # 在Flow执行前
         def on_flow_start(shared):
             emit_agui_event({
                 "type": "RUN_STARTED",
                 "data": {"agent": agent_meta["meta"]["name"]}
             })
-        
+
         # Node执行时
         def on_node_exec(node, input_data):
             emit_agui_event({
                 "type": "TOOL_CALL_START",
                 "data": {"tool": node.__class__.__name__, "input": input_data}
             })
-        
+
         # 流式输出时
         def on_llm_stream(token):
             emit_agui_event({
                 "type": "TEXT_MESSAGE_CONTENT",
                 "data": {"delta": token}
             })
-        
+
         # 状态变化时
         def on_state_change(old_state, new_state):
             emit_agui_event({
                 "type": "STATE_DELTA",
                 "data": {"patch": diff(old_state, new_state)}
             })
-        
+
         # 注入钩子到Flow
         flow.register_hooks({
             "on_start": on_flow_start,
@@ -513,6 +529,7 @@ class ProtocolAdapter:
 ### 机能2: Agent积木市场
 
 **本地市场** (`.agentflow/marketplace/`)
+
 ```
 marketplace/
 ├── index.yaml              # 市场索引
@@ -527,6 +544,7 @@ marketplace/
 ```
 
 **远程市场API**:
+
 ```python
 # agentflow/marketplace.py
 class AgentMarketplace:
@@ -546,7 +564,7 @@ class AgentMarketplace:
                 "source": "a2a://marketplace.agentflow.ai/pdf-analyzer-pro"
             }
         ]
-    
+
     def install(self, agent_id: str):
         """安装Agent积木"""
         # 1. 下载Agent包或获取A2A endpoint
@@ -555,7 +573,7 @@ class AgentMarketplace:
         # 4. 生成本地适配器代码
         # 5. 更新registry.yaml
         pass
-    
+
     def publish(self, agent_path: str):
         """发布自己的Agent到市场"""
         # 1. 验证agent.yaml完整性
@@ -568,6 +586,7 @@ class AgentMarketplace:
 ### 机能3: 可视化编排器 (AgentFlow Studio)
 
 **启动方式**:
+
 ```bash
 agentflow studio
 > 🎨 AgentFlow Studio 已启动
@@ -577,6 +596,7 @@ agentflow studio
 **核心功能**:
 
 1. **画布编排**
+
 ```
 ┌────────────────────────────────────────────────────┐
 │  [File] [Edit] [View] [Agents]  [🔍Search Agents]  │
@@ -617,6 +637,7 @@ agentflow studio
    - 支持断点调试
 
 3. **一键生成代码**
+
 ```python
 # studio自动生成的workflow代码
 # workflows/my_workflow/orchestrator.py
@@ -629,29 +650,30 @@ class MyWorkflow(Workflow):
         self.pdf_analyzer = get_agent("pdf-analyzer")
         self.translator = get_agent("translator")
         self.email_sender = get_agent("email-sender")
-    
+
     async def run(self, user_input):
         # 按画布连接顺序执行
         pdf_result = await self.pdf_analyzer.run({
             "pdf_path": user_input["file"]
         })
-        
+
         translated = await self.translator.run({
             "text": pdf_result["text"],
             "target_lang": "en"
         })
-        
+
         await self.email_sender.run({
             "to": user_input["email"],
             "content": translated["text"]
         })
-        
+
         return {"status": "success"}
 ```
 
 ### 机能4: 模板系统增强
 
 **场景模板库**:
+
 ```
 templates/
 ├── scenarios/                  # 具体业务场景模板
@@ -673,6 +695,7 @@ templates/
 ```
 
 **模板元数据** (template.yaml):
+
 ```yaml
 meta:
   id: invoice-processor-v1
@@ -680,8 +703,8 @@ meta:
   description: "自动处理PDF/图片发票,提取信息并保存到数据库"
   author: "agentflow-team"
   version: "1.0.0"
-  difficulty: "beginner"  # beginner/intermediate/advanced
-  
+  difficulty: "beginner" # beginner/intermediate/advanced
+
 # 模板包含的积木
 includes:
   agents:
@@ -692,7 +715,7 @@ includes:
     - pdf-reader
     - ocr-tool
     - db-connector
-    
+
 # 可定制参数(向导式配置)
 customization:
   questions:
@@ -701,19 +724,19 @@ customization:
       type: select
       options: ["PDF", "图片", "Excel"]
       default: "PDF"
-      
+
     - id: extract_fields
       prompt: "需要提取哪些字段?"
       type: multiselect
       options: ["发票号", "金额", "日期", "供应商", "税额"]
       default: ["发票号", "金额", "日期"]
-      
+
     - id: output_action
       prompt: "处理后动作?"
       type: select
       options: ["保存数据库", "发送邮件", "生成报表"]
       default: "保存数据库"
-      
+
   # 基于用户回答生成配置
   config_template: |
     invoice:
@@ -721,7 +744,7 @@ customization:
       fields: {{ extract_fields | join(', ') }}
     output:
       action: {{ output_action }}
-      
+
 # 需要修改的提示词文件
 prompts_to_edit:
   - path: "prompts/extract.txt"
@@ -731,10 +754,10 @@ prompts_to_edit:
       - 发票号码: 通常在右上角
       - 金额: 查找"合计"或"总计"
       ...
-      
+
 # 部署配置
 deployment:
-  type: "standalone"  # standalone/cloud/edge
+  type: "standalone" # standalone/cloud/edge
   dependencies:
     - PostgreSQL >= 12
   environment:
@@ -743,6 +766,7 @@ deployment:
 ```
 
 **使用模板的命令**:
+
 ```bash
 # 交互式创建
 agentflow create from-template invoice-processor
@@ -752,7 +776,7 @@ agentflow create from-template invoice-processor
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📝 请回答以下问题来定制你的Agent:
 
-❓ 发票格式? 
+❓ 发票格式?
    1) PDF  2) 图片  3) Excel
 👉 选择 [1]: 1
 
@@ -795,6 +819,7 @@ agentflow create from-template invoice-processor
 ### 阶段1: 核心框架 + 协议集成 (Week 1-3)
 
 #### Task 1.1: PocketFlow核心包装
+
 **优先级**: P0  
 **工时**: 2天
 
@@ -804,7 +829,7 @@ from pocketflow import Node, Flow as PocketFlow
 
 class AgentFlowEngine:
     """PocketFlow包装器,增加协议钩子"""
-    
+
     def __init__(self, flow: PocketFlow):
         self.flow = flow
         self.hooks = {
@@ -814,28 +839,29 @@ class AgentFlowEngine:
             "on_state_change": [],
             "on_finish": []
         }
-    
+
     def register_hook(self, event: str, callback):
         """注册事件钩子"""
         self.hooks[event].append(callback)
-    
+
     def run(self, shared: dict):
         """执行Flow并触发钩子"""
         # 触发开始钩子
         for hook in self.hooks["on_start"]:
             hook(shared)
-        
+
         # 执行PocketFlow (需要monkey patch Node)
         result = self.flow.run(shared)
-        
+
         # 触发完成钩子
         for hook in self.hooks["on_finish"]:
             hook(shared, result)
-        
+
         return result
 ```
 
 #### Task 1.2: MCP客户端集成
+
 **优先级**: P0  
 **工时**: 3天
 
@@ -846,17 +872,17 @@ from mcp.client.stdio import stdio_client
 
 class MCPToolManager:
     """MCP工具管理器"""
-    
+
     def __init__(self, mcp_config_path: str):
         self.config = load_yaml(mcp_config_path)
         self.sessions = {}  # 每个MCP服务器一个session
-    
+
     async def connect_all_servers(self):
         """连接所有MCP服务器"""
         for server in self.config["servers"]:
             session = await self._connect_server(server)
             self.sessions[server["name"]] = session
-    
+
     async def _connect_server(self, server_config):
         """连接单个MCP服务器"""
         server_params = StdioServerParameters(
@@ -864,31 +890,31 @@ class MCPToolManager:
             args=server_config.get("args", []),
             env=server_config.get("env", {})
         )
-        
+
         async with stdio_client(server_params) as (read, write):
             async with ClientSession(read, write) as session:
                 await session.initialize()
-                
+
                 # 列出可用工具
                 tools = await session.list_tools()
                 print(f"✅ 连接MCP服务器: {server_config['name']}")
                 print(f"   可用工具: {[t.name for t in tools]}")
-                
+
                 return session
-    
+
     async def call_tool(self, tool_uri: str, arguments: dict):
         """调用MCP工具
-        
+
         Args:
             tool_uri: 格式 mcp://server_name/tool_name
             arguments: 工具参数
         """
         server_name, tool_name = self._parse_uri(tool_uri)
         session = self.sessions[server_name]
-        
+
         result = await session.call_tool(tool_name, arguments)
         return result
-    
+
     def generate_tool_definitions(self):
         """生成工具定义供LLM使用"""
         tools = []
@@ -903,24 +929,26 @@ class MCPToolManager:
 ```
 
 **MCP配置示例** (.agentflow/protocols/mcp.yaml):
+
 ```yaml
 servers:
   - name: file-tools
     command: npx
     args: ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/data"]
-    
+
   - name: database-tools
     command: npx
     args: ["-y", "@modelcontextprotocol/server-postgres"]
     env:
       DATABASE_URL: "postgresql://user:pass@localhost/db"
-      
+
   - name: custom-tools
     command: python
     args: ["tools/mcp_server.py"]
 ```
 
 #### Task 1.3: A2A Server/Client实现
+
 **优先级**: P0  
 **工时**: 4天
 
@@ -930,31 +958,31 @@ from google_a2a import A2AServer, AgentCard, Skill
 
 class AgentFlowA2AServer:
     """A2A服务器,暴露本地Agent给远程调用"""
-    
+
     def __init__(self, port: int = 8000):
         self.port = port
         self.agents = {}  # 注册的Agent
         self.server = A2AServer()
-    
+
     def register_agent(self, agent_block):
         """注册Agent到A2A服务器"""
         # 从agent.yaml生成AgentCard
         card = self._generate_card(agent_block)
-        
+
         # 注册处理函数
         @self.server.task_handler(card.name)
         async def handle_task(task):
             # 调用Agent的PocketFlow执行
             result = await agent_block.run(task.input)
             return result
-        
+
         self.agents[card.name] = agent_block
         print(f"✅ Agent已注册到A2A: {card.name}")
-    
+
     def _generate_card(self, agent_block) -> AgentCard:
         """从agent.yaml生成AgentCard"""
         meta = agent_block.metadata
-        
+
         return AgentCard(
             name=meta["meta"]["name"],
             description=meta["meta"]["description"],
@@ -970,7 +998,7 @@ class AgentFlowA2AServer:
                 for skill in meta["protocols"]["a2a"]["skills"]
             ]
         )
-    
+
     def start(self):
         """启动A2A服务器"""
         print(f"🚀 A2A Server启动: http://localhost:{self.port}")
@@ -980,10 +1008,10 @@ class AgentFlowA2AServer:
 # agentflow/protocols/a2a_client.py
 class AgentFlowA2AClient:
     """A2A客户端,调用远程Agent"""
-    
+
     def __init__(self):
         self.remote_agents = {}  # 缓存远程Agent的AgentCard
-    
+
     async def discover_agent(self, endpoint: str):
         """发现远程Agent"""
         # 获取AgentCard
@@ -993,22 +1021,23 @@ class AgentFlowA2AClient:
             "endpoint": endpoint
         }
         return card
-    
+
     async def call_remote_agent(self, agent_name: str, input_data: dict):
         """调用远程Agent"""
         agent_info = self.remote_agents[agent_name]
-        
+
         # 发送A2A任务
         result = await send_a2a_task(
             endpoint=agent_info["endpoint"],
             skill=agent_info["card"].skills[0].name,  # 简化:使用第一个skill
             input=input_data
         )
-        
+
         return result
 ```
 
 #### Task 1.4: AG-UI事件流实现
+
 **优先级**: P1  
 **工时**: 3天
 
@@ -1018,20 +1047,20 @@ from ag_ui import AGUIServer, Event
 
 class AGUIEventEmitter:
     """AG-UI事件发射器"""
-    
+
     def __init__(self):
         self.server = AGUIServer()
         self.current_run_id = None
-    
+
     def attach_to_flow(self, flow_engine: AgentFlowEngine):
         """将AG-UI事件绑定到Flow执行"""
-        
+
         # 注册钩子
         flow_engine.register_hook("on_start", self._on_flow_start)
         flow_engine.register_hook("on_node_exec", self._on_node_exec)
         flow_engine.register_hook("on_state_change", self._on_state_change)
         flow_engine.register_hook("on_finish", self._on_flow_finish)
-    
+
     def _on_flow_start(self, shared):
         """Flow开始"""
         self.current_run_id = generate_id()
@@ -1040,7 +1069,7 @@ class AGUIEventEmitter:
             "run_id": self.current_run_id,
             "timestamp": now()
         })
-    
+
     def _on_node_exec(self, node, input_data):
         """Node执行"""
         self.emit({
@@ -1051,7 +1080,7 @@ class AGUIEventEmitter:
                 "arguments": input_data
             }
         })
-    
+
     def _on_state_change(self, old_state, new_state):
         """状态变化"""
         delta = diff_dict(old_state, new_state)
@@ -1060,7 +1089,7 @@ class AGUIEventEmitter:
             "run_id": self.current_run_id,
             "data": {"patch": delta}
         })
-    
+
     def _on_flow_finish(self, shared, result):
         """Flow完成"""
         self.emit({
@@ -1068,11 +1097,11 @@ class AGUIEventEmitter:
             "run_id": self.current_run_id,
             "data": {"result": result}
         })
-    
+
     def emit(self, event: dict):
         """发送AG-UI事件(SSE)"""
         self.server.send_event(Event(**event))
-    
+
     def stream_llm_tokens(self, token_generator):
         """流式输出LLM token"""
         for token in token_generator:
@@ -1086,6 +1115,7 @@ class AGUIEventEmitter:
 ### 阶段2: CLI工具 + 市场 (Week 4-5)
 
 #### Task 2.1: CLI命令实现
+
 ```bash
 agentflow --help
 
@@ -1103,6 +1133,7 @@ Commands:
 ```
 
 #### Task 2.2: Agent市场API
+
 ```python
 # 搜索
 agentflow search "PDF处理" --filter protocols=a2a,mcp
@@ -1113,7 +1144,7 @@ agentflow install pdf-analyzer-pro
 > ⬇️  下载AgentCard...
 > 🔍 解析依赖: PyPDF2, pdfplumber
 > ✅ 安装完成!
-> 
+>
 > 使用方法:
 >   from agentflow import get_agent
 >   agent = get_agent("pdf-analyzer-pro")
@@ -1125,19 +1156,21 @@ agentflow publish ./agents/my-agent --price free
 ### 阶段3: 可视化Studio (Week 6-8)
 
 #### Task 3.1: React Flow画布
+
 - 拖拽Agent积木
 - 连接数据流
 - 属性编辑器
 - 实时预览
 
 #### Task 3.2: AG-UI前端集成
+
 ```typescript
 // studio前端通过AG-UI协议连接后端
 import { useAGUI } from '@ag-ui/react'
 
 function AgentPreview({ agentId }) {
   const { events, sendMessage } = useAGUI(`http://localhost:8000/agents/${agentId}`)
-  
+
   return (
     <div>
       {events.map(event => {
@@ -1158,6 +1191,7 @@ function AgentPreview({ agentId }) {
 ### 阶段4: 模板和文档 (Week 9-10)
 
 #### Task 4.1: 创建10个场景模板
+
 1. 发票处理系统 ✓
 2. 客服聊天机器人
 3. 数据分析管道
@@ -1170,6 +1204,7 @@ function AgentPreview({ agentId }) {
 10. 智能问答系统
 
 #### Task 4.2: 完整文档
+
 - 快速开始指南
 - 协议集成教程
 - Agent开发指南
@@ -1185,6 +1220,7 @@ function AgentPreview({ agentId }) {
 ### 提示词模板库
 
 #### 1. 项目初始化提示词
+
 ```
 我要使用AgentFlow框架创建一个新的AI Agent项目。
 
@@ -1209,6 +1245,7 @@ AgentFlow框架规范:
 ```
 
 #### 2. Agent开发提示词
+
 ```
 基于AgentFlow框架,开发一个[Agent名称]。
 
@@ -1253,6 +1290,7 @@ AgentFlow框架规范:
 ```
 
 #### 3. 积木组合提示词
+
 ```
 我要组合多个Agent积木创建一个产品级工作流。
 
@@ -1261,7 +1299,7 @@ AgentFlow框架规范:
 
 需要的Agent积木:
 1. [Agent1] - 功能: [描述]
-2. [Agent2] - 功能: [描述]  
+2. [Agent2] - 功能: [描述]
 3. [Agent3] - 功能: [描述]
 
 数据流:
@@ -1270,19 +1308,19 @@ User Input → Agent1 → Agent2 → Agent3 → Output
 请帮我:
 1. 检查这些Agent是否在市场存在
    agentflow search [关键词]
-   
+
 2. 安装需要的Agent
    agentflow install [agent-id]
-   
+
 3. 创建工作流编排代码 workflows/[product-name]/orchestrator.py
    - 使用A2A协议连接远程Agent
    - 处理Agent间数据传递
    - 实现错误处理和重试
-   
+
 4. 配置AG-UI界面 workflows/[product-name]/ui_config.yaml
    - 设计用户输入表单
    - 配置实时状态显示
-   
+
 5. 编写测试用例
 
 AgentFlow规范:
@@ -1294,6 +1332,7 @@ AgentFlow规范:
 ```
 
 #### 4. 模板定制提示词
+
 ```
 使用AgentFlow模板快速创建项目。
 
@@ -1305,18 +1344,18 @@ AgentFlow规范:
 
 步骤:
 1. agentflow create from-template invoice-processor
-   
+
 2. 根据定制需求修改配置:
    - config.yaml: 更新数据库连接
    - prompts/extract.txt: 调整字段提取规则
-   
+
 3. 修改agent.yaml适应我的需求:
    - 更新inputs/outputs定义
    - 调整dependencies
-   
+
 4. 测试运行:
    agentflow run --test
-   
+
 5. 如有问题,使用AG-UI调试界面查看实时日志
 
 请帮我执行这些步骤,并解释每个配置的作用。
@@ -1345,20 +1384,21 @@ AgentFlow规范:
 
 ### 与其他框架对比
 
-| 特性 | AgentFlow | LangChain | CrewAI | AutoGen |
-|------|-----------|-----------|--------|---------|
-| **核心代码行数** | ~500行 | ~50K行 | ~10K行 | ~20K行 |
-| **MCP支持** | ✅ 原生 | ⚠️ 需插件 | ❌ | ❌ |
-| **A2A支持** | ✅ 原生 | ❌ | ⚠️ 实验性 | ❌ |
-| **AG-UI支持** | ✅ 原生 | ❌ | ✅ | ❌ |
-| **积木化设计** | ✅ | ⚠️ 复杂 | ⚠️ 部分 | ❌ |
-| **可视化编排** | ✅ | ❌ | ❌ | ❌ |
-| **模板系统** | ✅ | ⚠️ 简单 | ⚠️ 简单 | ❌ |
-| **AI助手友好** | ✅ 极佳 | ⚠️ 一般 | ✅ | ⚠️ |
+| 特性             | AgentFlow | LangChain | CrewAI    | AutoGen |
+| ---------------- | --------- | --------- | --------- | ------- |
+| **核心代码行数** | ~500行    | ~50K行    | ~10K行    | ~20K行  |
+| **MCP支持**      | ✅ 原生   | ⚠️ 需插件 | ❌        | ❌      |
+| **A2A支持**      | ✅ 原生   | ❌        | ⚠️ 实验性 | ❌      |
+| **AG-UI支持**    | ✅ 原生   | ❌        | ✅        | ❌      |
+| **积木化设计**   | ✅        | ⚠️ 复杂   | ⚠️ 部分   | ❌      |
+| **可视化编排**   | ✅        | ❌        | ❌        | ❌      |
+| **模板系统**     | ✅        | ⚠️ 简单   | ⚠️ 简单   | ❌      |
+| **AI助手友好**   | ✅ 极佳   | ⚠️ 一般   | ✅        | ⚠️      |
 
 ### 开发路线图
 
 **Q1 2026: MVP版本**
+
 - ✅ PocketFlow集成
 - ✅ MCP/A2A/AG-UI基础支持
 - ✅ CLI工具
@@ -1366,18 +1406,21 @@ AgentFlow规范:
 - ✅ 基础文档
 
 **Q2 2026: 市场版本**
+
 - 🔄 Agent积木市场
 - 🔄 可视化Studio (Beta)
 - 🔄 10个场景模板
 - 🔄 社区贡献机制
 
 **Q3 2026: 企业版本**
+
 - 📅 企业级安全认证
 - 📅 多租户支持
 - 📅 性能监控
 - 📅 SaaS云服务
 
 **Q4 2026: 生态版本**
+
 - 📅 第三方集成市场
 - 📅 AI助手深度集成
 - 📅 移动端支持
@@ -1413,24 +1456,24 @@ agentflow protocols validate          # 验证配置
 ### agent.yaml 快速模板
 
 ```yaml
-meta: {id, name, version, author, icon, category, description}
+meta: { id, name, version, author, icon, category, description }
 interfaces:
-  inputs: [{name, type, required, description}]
-  outputs: [{name, type, schema}]
+  inputs: [{ name, type, required, description }]
+  outputs: [{ name, type, schema }]
 protocols:
-  mcp: {tools, resources}
-  a2a: {enabled, skills}
-  agui: {enabled, events}
-dependencies: {agents, tools, packages}
-pocketflow: {entry, shared_schema}
-visual: {color, size, ports}
+  mcp: { tools, resources }
+  a2a: { enabled, skills }
+  agui: { enabled, events }
+dependencies: { agents, tools, packages }
+pocketflow: { entry, shared_schema }
+visual: { color, size, ports }
 ```
 
 ### 协议文档链接
 
-- **MCP**: https://modelcontextprotocol.io
-- **A2A**: https://github.com/google-a2a/A2A
-- **AG-UI**: https://docs.ag-ui.com
+- **MCP**: <https://modelcontextprotocol.io>
+- **A2A**: <https://github.com/google-a2a/A2A>
+- **AG-UI**: <https://docs.ag-ui.com>
 
 ---
 

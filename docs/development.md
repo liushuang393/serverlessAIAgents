@@ -96,6 +96,7 @@ git commit -m "feat: 新機能を追加"
 ```
 
 **コミットメッセージ規約**:
+
 - `feat:` - 新機能
 - `fix:` - バグ修正
 - `docs:` - ドキュメント変更
@@ -147,17 +148,17 @@ def execute_workflow(
     inputs: dict[str, Any],
 ) -> ExecutionResult:
     """ワークフローを実行.
-    
+
     Args:
         workflow_id: ワークフローの一意識別子.
         inputs: ワークフローの入力パラメーター.
-    
+
     Returns:
         ステータスと出力を含む ExecutionResult.
-    
+
     Raises:
         WorkflowNotFoundError: ワークフローが存在しない場合.
-    
+
     Example:
         >>> result = execute_workflow("my-workflow", {"key": "value"})
         >>> print(result.status)
@@ -227,12 +228,12 @@ from agentflow.core.engine import AgentFlowEngine
 
 class TestAgentFlowEngine:
     """AgentFlowEngine のテストスイート."""
-    
+
     @pytest.fixture
     def engine(self) -> AgentFlowEngine:
         """テストエンジンインスタンスを作成."""
         return AgentFlowEngine()
-    
+
     async def test_execute_workflow_success(
         self,
         engine: AgentFlowEngine,
@@ -241,10 +242,10 @@ class TestAgentFlowEngine:
         # Arrange
         workflow = create_test_workflow()
         engine.register_workflow(workflow)
-        
+
         # Act
         result = await engine.execute(workflow.workflow_id, {})
-        
+
         # Assert
         assert result.status == "success"
         assert result.error is None
@@ -281,20 +282,24 @@ open htmlcov/index.html
 
 ```markdown
 ## 説明
+
 変更の簡単な説明
 
 ## 変更の種類
+
 - [ ] バグ修正
 - [ ] 新機能
 - [ ] 破壊的変更
 - [ ] ドキュメント更新
 
 ## テスト
+
 - [ ] ユニットテスト追加/更新
 - [ ] 統合テスト追加/更新
 - [ ] すべてのテストが通過
 
 ## チェックリスト
+
 - [ ] コードがスタイルガイドラインに従っている
 - [ ] セルフレビュー完了
 - [ ] ドキュメント更新済み
@@ -314,9 +319,8 @@ open htmlcov/index.html
 
 - バグ報告や機能リクエストは [GitHub Issues](https://github.com/liushuang393/serverlessAIAgents/issues) を開いてください
 - 質問は [GitHub Discussions](https://github.com/liushuang393/serverlessAIAgents/discussions) を開始してください
-- プライベートな問い合わせは 115070984+liushuang393@users.noreply.github.com にメールしてください
+- プライベートな問い合わせは <115070984+liushuang393@users.noreply.github.com> にメールしてください
 
 ---
 
 詳細な貢献ガイドラインは [CONTRIBUTING.md](../CONTRIBUTING.md) を参照してください。
-

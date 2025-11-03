@@ -1,62 +1,63 @@
-import { useEffect, useState } from 'react'
-import { Search, Package } from 'lucide-react'
+import { useEffect, useState } from "react";
+import { Search, Package } from "lucide-react";
 
 /**
  * サイドバーコンポーネント
- * 
+ *
  * インストール済みエージェントの一覧を表示。
  * エージェントをキャンバスにドラッグ&ドロップ可能。
  */
 
 interface Agent {
-  id: string
-  name: string
-  version: string
-  description: string
-  category: string
+  id: string;
+  name: string;
+  version: string;
+  description: string;
+  category: string;
 }
 
 export default function Sidebar() {
-  const [agents, setAgents] = useState<Agent[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
-  const [loading, setLoading] = useState(true)
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [loading, setLoading] = useState(true);
 
   /**
    * エージェント一覧を取得
    */
   useEffect(() => {
-    fetchAgents()
-  }, [])
+    fetchAgents();
+  }, []);
 
   const fetchAgents = async () => {
     try {
-      const response = await fetch('/api/agents')
-      const data = await response.json()
-      setAgents(data)
+      const response = await fetch("/api/agents");
+      const data = await response.json();
+      setAgents(data);
     } catch (error) {
-      console.error('Failed to fetch agents:', error)
+      console.error("Failed to fetch agents:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   /**
    * ドラッグ開始時のハンドラー
-   * 
+   *
    * エージェント情報を dataTransfer に設定。
    */
   const onDragStart = (event: React.DragEvent, agent: Agent) => {
-    event.dataTransfer.setData('application/reactflow', JSON.stringify(agent))
-    event.dataTransfer.effectAllowed = 'move'
-  }
+    event.dataTransfer.setData("application/reactflow", JSON.stringify(agent));
+    event.dataTransfer.effectAllowed = "move";
+  };
 
   /**
    * 検索フィルター
    */
-  const filteredAgents = agents.filter((agent) =>
-    agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    agent.description.toLowerCase().includes(searchQuery.toLowerCase())
-  )
+  const filteredAgents = agents.filter(
+    (agent) =>
+      agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      agent.description.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   return (
     <div className="w-64 border-r border-border bg-card flex flex-col">
@@ -65,7 +66,7 @@ export default function Sidebar() {
         <h2 className="text-lg font-semibold text-foreground mb-3">
           エージェント
         </h2>
-        
+
         {/* 検索ボックス */}
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -126,6 +127,5 @@ export default function Sidebar() {
         {filteredAgents.length} 個のエージェント
       </div>
     </div>
-  )
+  );
 }
-

@@ -60,9 +60,7 @@ class A2AServer:
         self._agents[agent_card.name] = agent_card
         self._handlers[agent_card.name] = handlers
 
-        self._logger.info(
-            f"Registered agent: {agent_card.name} with {len(handlers)} skills"
-        )
+        self._logger.info(f"Registered agent: {agent_card.name} with {len(handlers)} skills")
 
     def unregister_agent(self, agent_name: str) -> None:
         """エージェントをサーバーから削除.
@@ -142,15 +140,11 @@ class A2AServer:
 
         try:
             # タスクを実行
-            self._logger.debug(
-                f"Executing task: agent={agent_name}, skill={skill_name}"
-            )
+            self._logger.debug(f"Executing task: agent={agent_name}, skill={skill_name}")
 
             # ハンドラーが async かどうかを確認
             if asyncio.iscoroutinefunction(handler):
-                result = await asyncio.wait_for(
-                    handler(inputs), timeout=task_timeout
-                )
+                result = await asyncio.wait_for(handler(inputs), timeout=task_timeout)
             else:
                 # 同期関数の場合は executor で実行
                 loop = asyncio.get_event_loop()
@@ -159,14 +153,11 @@ class A2AServer:
                     timeout=task_timeout,
                 )
 
-            self._logger.debug(
-                f"Task completed: agent={agent_name}, skill={skill_name}"
-            )
+            self._logger.debug(f"Task completed: agent={agent_name}, skill={skill_name}")
 
         except TimeoutError:
             self._logger.exception(
-                f"Task timeout: agent={agent_name}, skill={skill_name}, "
-                f"timeout={task_timeout}s"
+                f"Task timeout: agent={agent_name}, skill={skill_name}, timeout={task_timeout}s"
             )
             return {
                 "status": "error",
@@ -176,9 +167,7 @@ class A2AServer:
             }
 
         except Exception:
-            self._logger.exception(
-                f"Task failed: agent={agent_name}, skill={skill_name}"
-            )
+            self._logger.exception(f"Task failed: agent={agent_name}, skill={skill_name}")
             return {
                 "status": "error",
                 "error": "Task execution failed",
@@ -214,4 +203,3 @@ class A2AServer:
             return []
 
         return [skill.name for skill in self._agents[agent_name].skills]
-

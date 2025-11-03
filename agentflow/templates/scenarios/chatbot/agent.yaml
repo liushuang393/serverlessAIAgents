@@ -15,7 +15,7 @@ inputs:
     type: string
     description: User message
     required: true
-  
+
   - name: session_id
     type: string
     description: Session ID for conversation history
@@ -25,7 +25,7 @@ outputs:
   - name: response
     type: string
     description: Bot response
-  
+
   - name: metadata
     type: object
     description: Response metadata
@@ -46,7 +46,7 @@ tools:
     config:
       provider: {{ llm_provider }}
       model: {{ model_name }}
-  
+
   {% if enable_memory %}
   - name: memory_store
     description: Conversation history storage
@@ -60,4 +60,3 @@ config:
   max_retries: 3
   enable_logging: true
   streaming: true
-

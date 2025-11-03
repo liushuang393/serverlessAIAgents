@@ -22,12 +22,12 @@ inputs:
     required: true
   - name: source_lang
     type: string
-    description: 元の言語コード（例: ja, en, zh）
+    description: '元の言語コード (例: ja, en, zh)'
     required: false
     default: auto
   - name: target_lang
     type: string
-    description: 翻訳先の言語コード（例: ja, en, zh）
+    description: '翻訳先の言語コード (例: ja, en, zh)'
     required: true
 
 outputs:
@@ -52,4 +52,3 @@ skills:
       - translated_text
       - detected_lang
       - confidence
-

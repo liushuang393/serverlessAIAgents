@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import tempfile
 from pathlib import Path
-from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -15,9 +14,11 @@ from agentflow.studio.api import create_app
 @pytest.fixture
 def temp_dirs():
     """一時ディレクトリを作成."""
-    with tempfile.TemporaryDirectory() as agents_dir:
-        with tempfile.TemporaryDirectory() as workflows_dir:
-            yield Path(agents_dir), Path(workflows_dir)
+    with (
+        tempfile.TemporaryDirectory() as agents_dir,
+        tempfile.TemporaryDirectory() as workflows_dir,
+    ):
+        yield Path(agents_dir), Path(workflows_dir)
 
 
 @pytest.fixture
@@ -119,9 +120,7 @@ class TestWorkflowsAPI:
             json={
                 "name": "Test Workflow",
                 "description": "A test workflow",
-                "nodes": [
-                    {"id": "node1", "type": "agent", "data": {"agent_id": "test"}}
-                ],
+                "nodes": [{"id": "node1", "type": "agent", "data": {"agent_id": "test"}}],
                 "edges": [],
             },
         )
@@ -275,4 +274,3 @@ class TestOpenAPI:
         response = client.get("/api/redoc")
         assert response.status_code == 200
         assert "redoc" in response.text.lower()
-

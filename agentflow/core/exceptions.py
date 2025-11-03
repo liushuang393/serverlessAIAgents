@@ -70,4 +70,3 @@ class AgentBlockValidationError(AgentBlockError):
 
 class ConfigurationError(AgentFlowError):
     """Raised when configuration is invalid."""
-

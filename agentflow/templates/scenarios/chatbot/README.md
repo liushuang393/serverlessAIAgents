@@ -9,7 +9,7 @@
 ## 機能
 
 - {{ llm_provider | upper }} {{ model_name }} を使用したテキスト生成
-{% if enable_memory %}- 会話履歴の保持（最大 {{ max_history_length }} ターン）{% endif %}
+  {% if enable_memory %}- 会話履歴の保持（最大 {{ max_history_length }} ターン）{% endif %}
 - ストリーミング応答
 - セッション管理
 
@@ -25,17 +25,23 @@ pip install -r requirements.txt
 ### 環境変数の設定
 
 {% if llm_provider == 'openai' %}
+
 ```bash
 export OPENAI_API_KEY=your_api_key_here
 ```
+
 {% elif llm_provider == 'anthropic' %}
+
 ```bash
 export ANTHROPIC_API_KEY=your_api_key_here
 ```
+
 {% elif llm_provider == 'google' %}
+
 ```bash
 export GOOGLE_API_KEY=your_api_key_here
 ```
+
 {% endif %}
 
 ### 実行
@@ -78,7 +84,7 @@ agentflow run . --input '{"message": "Hello!", "session_id": "user123"}'
 
 - **Provider**: {{ llm_provider }}
 - **Model**: {{ model_name }}
-{% if enable_memory %}- **Memory**: 有効（最大 {{ max_history_length }} ターン）{% else %}- **Memory**: 無効{% endif %}
+  {% if enable_memory %}- **Memory**: 有効（最大 {{ max_history_length }} ターン）{% else %}- **Memory**: 無効{% endif %}
 
 ## プロトコル対応
 
@@ -95,4 +101,3 @@ MIT License
 ## 作成者
 
 {{ author }} <{{ email }}>
-

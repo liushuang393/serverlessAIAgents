@@ -21,15 +21,15 @@
 以下のソフトウェアをインストールしてください：
 
 1. **Anaconda** または **Miniconda**
-   - ダウンロード: https://www.anaconda.com/download
+   - ダウンロード: <https://www.anaconda.com/download>
    - Python 環境を管理するツール
 
 2. **Git**
-   - ダウンロード: https://git-scm.com/download/win
+   - ダウンロード: <https://git-scm.com/download/win>
    - コードをダウンロードするツール
 
 3. **Node.js** (v18 以上)
-   - ダウンロード: https://nodejs.org/
+   - ダウンロード: <https://nodejs.org/>
    - フロントエンド開発に必要
 
 ### インストール確認
@@ -88,6 +88,7 @@ setup_dev.bat
 ```
 
 このスクリプトは以下を自動で行います：
+
 - ✅ Python パッケージのインストール
 - ✅ Pre-commit フックのインストール
 - ✅ フロントエンド依存関係のインストール
@@ -183,17 +184,17 @@ git push origin main
 
 ### check.ps1 / check.bat コマンド
 
-| コマンド | 説明 | 実行時間 |
-|---------|------|---------|
-| `.\check.ps1 help` | ヘルプを表示 | 即座 |
-| `.\check.ps1 format` | コードを自動フォーマット | 10秒 |
-| `.\check.ps1 lint` | リントチェック | 10秒 |
-| `.\check.ps1 type-check` | 型チェック | 20秒 |
-| `.\check.ps1 test` | テストを実行 | 30秒 |
-| `.\check.ps1 test-cov` | カバレッジ付きテスト | 40秒 |
-| `.\check.ps1 all` | **すべてのチェック** | 1分 |
-| `.\check.ps1 pre-commit` | Pre-commit を実行 | 30秒 |
-| `.\check.ps1 clean` | 一時ファイルを削除 | 5秒 |
+| コマンド                 | 説明                     | 実行時間 |
+| ------------------------ | ------------------------ | -------- |
+| `.\check.ps1 help`       | ヘルプを表示             | 即座     |
+| `.\check.ps1 format`     | コードを自動フォーマット | 10秒     |
+| `.\check.ps1 lint`       | リントチェック           | 10秒     |
+| `.\check.ps1 type-check` | 型チェック               | 20秒     |
+| `.\check.ps1 test`       | テストを実行             | 30秒     |
+| `.\check.ps1 test-cov`   | カバレッジ付きテスト     | 40秒     |
+| `.\check.ps1 all`        | **すべてのチェック**     | 1分      |
+| `.\check.ps1 pre-commit` | Pre-commit を実行        | 30秒     |
+| `.\check.ps1 clean`      | 一時ファイルを削除       | 5秒      |
 
 ### 推奨される使い方
 
@@ -360,6 +361,7 @@ check.bat all
    - `docs/implementation-guide.md` - 実装ガイド
 
 2. **サンプルエージェントを試す**
+
    ```bash
    # サンプルエージェントを実行
    cd examples/text_processor_agent
@@ -367,6 +369,7 @@ check.bat all
    ```
 
 3. **自分のエージェントを作成**
+
    ```bash
    # 新しいエージェントを作成
    agentflow create my-agent --template basic
@@ -380,16 +383,19 @@ check.bat all
 ### 覚えておくべき 3 つのコマンド
 
 1. **環境をアクティベート**
+
    ```bash
    conda activate agentflow
    ```
 
 2. **すべてのチェックを実行**
+
    ```powershell
    .\check.ps1 all
    ```
 
 3. **コミット**
+
    ```bash
    git add .
    git commit -m "feat: 変更内容"
@@ -401,4 +407,3 @@ check.bat all
 ---
 
 **困ったときは**: `docs/quality-checks.md` を参照するか、GitHub Issues で質問してください。
-

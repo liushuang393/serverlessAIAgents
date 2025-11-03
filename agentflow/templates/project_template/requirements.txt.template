@@ -20,4 +20,3 @@ python-a2a>=0.5.0
 # AG-UI Protocol
 adk-agui-middleware>=0.1.0
 {% endif %}
-

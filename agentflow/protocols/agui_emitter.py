@@ -56,9 +56,7 @@ class AGUIEventEmitter:
         self._engine = engine
         self._logger = logger or logging.getLogger(__name__)
         self._max_queue_size = max_queue_size
-        self._event_queue: asyncio.Queue[AGUIEvent | None] = asyncio.Queue(
-            maxsize=max_queue_size
-        )
+        self._event_queue: asyncio.Queue[AGUIEvent | None] = asyncio.Queue(maxsize=max_queue_size)
         self._flow_id: str | None = None
         self._node_count: int = 0
         self._completed_nodes: int = 0
@@ -91,9 +89,7 @@ class AGUIEventEmitter:
         self._engine.unregister_hook(HookType.ON_ERROR, self._on_flow_error)
         self._engine.unregister_hook(HookType.ON_CANCEL, self._on_flow_cancel)
         self._engine.unregister_hook(HookType.ON_NODE_EXEC, self._on_node_start)
-        self._engine.unregister_hook(
-            HookType.ON_NODE_COMPLETE, self._on_node_complete
-        )
+        self._engine.unregister_hook(HookType.ON_NODE_COMPLETE, self._on_node_complete)
 
         # ストリーム終了シグナルを送信
         await self._event_queue.put(None)
@@ -111,9 +107,7 @@ class AGUIEventEmitter:
             await asyncio.wait_for(self._event_queue.put(event), timeout=1.0)
             self._logger.debug(f"Emitted event: {event.event_type}")
         except TimeoutError:
-            self._logger.warning(
-                f"Event queue full, dropping event: {event.event_type}"
-            )
+            self._logger.warning(f"Event queue full, dropping event: {event.event_type}")
 
     async def _on_flow_start(self, event: HookEvent) -> None:
         """フロー開始フックハンドラー.
@@ -271,9 +265,7 @@ class AGUIEventEmitter:
         )
         await self._emit_event(progress_event)
 
-    async def emit_log(
-        self, level: str, message: str, source: str | None = None
-    ) -> None:
+    async def emit_log(self, level: str, message: str, source: str | None = None) -> None:
         """ログイベントを発行.
 
         Args:
@@ -316,4 +308,3 @@ class AGUIEventEmitter:
             キュー内のイベント数
         """
         return self._event_queue.qsize()
-

@@ -77,9 +77,7 @@ class HookedNode(AsyncNode):  # type: ignore[misc]
             result = prep_res
 
         # ON_NODE_COMPLETE フックをトリガー
-        await self.hooks.trigger(
-            HookType.ON_NODE_COMPLETE, self.context, self.node_id, result
-        )
+        await self.hooks.trigger(HookType.ON_NODE_COMPLETE, self.context, self.node_id, result)
 
         return result  # type: ignore[no-any-return]
 
@@ -230,9 +228,7 @@ class AgentFlowEngine:
             raise WorkflowNotFoundError(workflow_id)
         return self._workflows[workflow_id]
 
-    def _build_pocketflow(
-        self, workflow: WorkflowConfig, context: ExecutionContext
-    ) -> AsyncFlow:
+    def _build_pocketflow(self, workflow: WorkflowConfig, context: ExecutionContext) -> AsyncFlow:
         """WorkflowConfigからPocketFlowのAsyncFlowを構築.
 
         Args:
@@ -318,9 +314,7 @@ class AgentFlowEngine:
         )
 
         start_time = time.time()
-        self._logger.info(
-            f"Starting execution: workflow={workflow_id}, execution={execution_id}"
-        )
+        self._logger.info(f"Starting execution: workflow={workflow_id}, execution={execution_id}")
 
         try:
             # ON_START フックをトリガー
@@ -408,4 +402,3 @@ class AgentFlowEngine:
             ['workflow-1', 'workflow-2']
         """
         return list(self._workflows.keys())
-

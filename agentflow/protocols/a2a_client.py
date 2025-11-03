@@ -79,9 +79,7 @@ class A2AClient:
         _card, timestamp = self._cache[endpoint]
         return time.time() - timestamp < self._cache_ttl
 
-    async def discover_agent(
-        self, endpoint: str, *, force_refresh: bool = False
-    ) -> AgentCard:
+    async def discover_agent(self, endpoint: str, *, force_refresh: bool = False) -> AgentCard:
         """リモートエージェントを発見して AgentCard を取得.
 
         Args:
@@ -115,9 +113,7 @@ class A2AClient:
                 # キャッシュに保存
                 self._cache[endpoint] = (card, time.time())
 
-                self._logger.info(
-                    f"Successfully discovered agent: {card.name} at {endpoint}"
-                )
+                self._logger.info(f"Successfully discovered agent: {card.name} at {endpoint}")
 
             except httpx.HTTPError:
                 if attempt == self._max_retries - 1:
@@ -129,9 +125,7 @@ class A2AClient:
 
                 # 指数バックオフで再試行
                 wait_time = 2**attempt
-                self._logger.warning(
-                    f"Attempt {attempt + 1} failed, retrying in {wait_time}s"
-                )
+                self._logger.warning(f"Attempt {attempt + 1} failed, retrying in {wait_time}s")
                 await asyncio.sleep(wait_time)
             else:
                 return card
@@ -174,9 +168,7 @@ class A2AClient:
         request_timeout = timeout if timeout is not None else self._default_timeout
 
         # タスクを実行
-        self._logger.debug(
-            f"Calling remote agent: endpoint={endpoint}, skill={skill_name}"
-        )
+        self._logger.debug(f"Calling remote agent: endpoint={endpoint}, skill={skill_name}")
 
         for attempt in range(self._max_retries):
             try:
@@ -203,9 +195,7 @@ class A2AClient:
 
                 # 指数バックオフで再試行
                 wait_time = 2**attempt
-                self._logger.warning(
-                    f"Attempt {attempt + 1} failed, retrying in {wait_time}s"
-                )
+                self._logger.warning(f"Attempt {attempt + 1} failed, retrying in {wait_time}s")
                 await asyncio.sleep(wait_time)
             else:
                 return result
@@ -234,4 +224,3 @@ class A2AClient:
             エンドポイント URL のリスト
         """
         return list(self._cache.keys())
-

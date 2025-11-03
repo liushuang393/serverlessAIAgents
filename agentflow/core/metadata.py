@@ -16,9 +16,7 @@ class MetaInfo(BaseModel):
 
     id: str = Field(..., description="一意識別子 (kebab-case)", pattern=r"^[a-z0-9-]+$")
     name: str = Field(..., description="表示名", min_length=1)
-    version: str = Field(
-        ..., description="セマンティックバージョン", pattern=r"^\d+\.\d+\.\d+$"
-    )
+    version: str = Field(..., description="セマンティックバージョン", pattern=r"^\d+\.\d+\.\d+$")
     author: str = Field(..., description="作成者名", min_length=1)
     icon: str = Field(..., description="絵文字またはアイコン名", min_length=1)
     category: str = Field(..., description="マーケットプレイスカテゴリ", min_length=1)
@@ -39,9 +37,7 @@ class InputField(BaseModel):
     )
     required: bool = Field(True, description="必須フィールドかどうか")
     description: str = Field(..., description="フィールドの説明", min_length=1)
-    accept: list[str] | None = Field(
-        None, description="ファイルタイプの場合の許可拡張子リスト"
-    )
+    accept: list[str] | None = Field(None, description="ファイルタイプの場合の許可拡張子リスト")
     options: list[str] | None = Field(None, description="enum タイプの場合の選択肢")
     default: Any | None = Field(None, description="デフォルト値")
 
@@ -54,9 +50,7 @@ class OutputField(BaseModel):
 
     name: str = Field(..., description="フィールド名", min_length=1)
     type: str = Field(..., description="データ型", min_length=1)
-    schema: dict[str, Any] | None = Field(
-        None, description="複雑な型の場合の JSON スキーマ"
-    )
+    schema: dict[str, Any] | None = Field(None, description="複雑な型の場合の JSON スキーマ")
 
 
 class InterfaceDefinition(BaseModel):
@@ -78,9 +72,7 @@ class MCPConfig(BaseModel):
     tools: list[str] = Field(
         default_factory=list, description="ツール URI リスト (mcp://server/tool)"
     )
-    resources: list[str] = Field(
-        default_factory=list, description="リソース URI リスト"
-    )
+    resources: list[str] = Field(default_factory=list, description="リソース URI リスト")
 
 
 class A2AConfig(BaseModel):
@@ -101,9 +93,7 @@ class AGUIConfig(BaseModel):
     """
 
     enabled: bool = Field(True, description="AG-UI プロトコルを有効にするか")
-    events: list[str] = Field(
-        default_factory=list, description="発行するイベントタイプリスト"
-    )
+    events: list[str] = Field(default_factory=list, description="発行するイベントタイプリスト")
 
 
 class ProtocolConfig(BaseModel):
@@ -126,9 +116,7 @@ class DependencySpec(BaseModel):
     agents: list[str] = Field(
         default_factory=list, description="依存する他のエージェント ID リスト"
     )
-    tools: list[str] = Field(
-        default_factory=list, description="依存する MCP ツール URI リスト"
-    )
+    tools: list[str] = Field(default_factory=list, description="依存する MCP ツール URI リスト")
     packages: list[str] = Field(
         default_factory=list, description="依存する Python パッケージリスト"
     )
@@ -140,9 +128,7 @@ class PocketFlowConfig(BaseModel):
     PocketFlow ワークフローのエントリーポイントとスキーマを定義します。
     """
 
-    entry: str = Field(
-        ..., description="モジュールパス (例: 'flow.py:create_flow')", min_length=1
-    )
+    entry: str = Field(..., description="モジュールパス (例: 'flow.py:create_flow')", min_length=1)
     shared_schema: str = Field(
         ..., description="スキーマパス (例: 'schemas.py:MySchema')", min_length=1
     )
@@ -154,15 +140,11 @@ class VisualConfig(BaseModel):
     エージェントの UI 表示設定を定義します。
     """
 
-    color: str = Field(
-        ..., description="16進数カラーコード", pattern=r"^#[0-9A-Fa-f]{6}$"
-    )
+    color: str = Field(..., description="16進数カラーコード", pattern=r"^#[0-9A-Fa-f]{6}$")
     size: str = Field(
         "medium", description="サイズ (small/medium/large)", pattern=r"^(small|medium|large)$"
     )
-    ports: dict[str, Any] = Field(
-        default_factory=dict, description="入出力ポート位置設定"
-    )
+    ports: dict[str, Any] = Field(default_factory=dict, description="入出力ポート位置設定")
 
 
 class AgentMetadata(BaseModel):
@@ -177,4 +159,3 @@ class AgentMetadata(BaseModel):
     dependencies: DependencySpec = Field(..., description="依存関係仕様")
     pocketflow: PocketFlowConfig = Field(..., description="PocketFlow 設定")
     visual: VisualConfig = Field(..., description="ビジュアル設定")
-

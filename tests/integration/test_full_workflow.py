@@ -1,6 +1,6 @@
 """フルワークフロー統合テスト.
 
-このテストは AgentFlow フレームワークの全体的なワークフローをテストします：
+このテストは AgentFlow フレームワークの全体的なワークフローをテストします:
 1. プロジェクト初期化 (agentflow init)
 2. エージェント作成 (agentflow create agent)
 3. エージェント実行 (agentflow run)
@@ -13,11 +13,10 @@ from typing import Any
 import pytest
 
 from agentflow.core.agent_block import AgentBlock
-from agentflow.core.engine import AgentFlowEngine
 from agentflow.core.metadata import (
     A2AConfig,
-    AGUIConfig,
     AgentMetadata,
+    AGUIConfig,
     DependencySpec,
     InputField,
     InterfaceDefinition,
@@ -257,9 +256,7 @@ class TestFullWorkflow:
         assert result2["result"] == "OLLEH"
         assert result2["stage"] == "agent2"
 
-    def test_save_and_load_results(
-        self, test_project_dir: Path
-    ) -> None:
+    def test_save_and_load_results(self, test_project_dir: Path) -> None:
         """結果をファイルに保存して読み込めることをテスト."""
         results_file = test_project_dir / "results.json"
 
@@ -280,4 +277,3 @@ class TestFullWorkflow:
 
         assert loaded_results["result"] == "test result"
         assert loaded_results["metadata"]["agent"] == "test-agent"
-

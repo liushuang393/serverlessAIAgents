@@ -2,4 +2,3 @@
 
 # CLI will be implemented in subsequent tasks
 __all__: list[str] = []
-

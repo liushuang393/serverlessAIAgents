@@ -4,7 +4,7 @@
 
 **軽量 AI エージェント開発フレームワーク**
 
-*PocketFlow ベースの統一プロトコルインターフェース*
+_PocketFlow ベースの統一プロトコルインターフェース_
 
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![Tests](https://img.shields.io/badge/tests-208%20passed-brightgreen.svg)](tests/)
@@ -24,16 +24,16 @@ AgentFlow は、**MCP（Model Context Protocol）**、**A2A（Agent-to-Agent）*
 
 ### ✨ 主な特徴
 
-| 特徴 | 説明 | 利点 |
-|------|------|------|
-| 🚀 **軽量設計** | コアコード ~500 行 | 高速起動、低メモリ使用量 |
-| 🔌 **3 プロトコル統合** | MCP / A2A / AG-UI | 1 つのコードで複数のプロトコルに対応 |
-| 🎨 **自動アダプター** | `@auto_adapt` デコレーター | プロトコル変換を自動化 |
-| 📦 **CLI ツール** | 包括的なコマンドラインツール | プロジェクト管理を簡素化 |
-| 🏪 **マーケットプレイス** | エージェント共有プラットフォーム | 再利用可能なエージェントを検索・インストール |
-| 🧪 **高品質** | 208 テスト、90.28% カバレッジ | 本番環境対応の信頼性 |
-| 🔒 **型安全** | 100% 型アノテーション、mypy strict | 開発時エラーを早期発見 |
-| ⚡ **非同期ファースト** | 完全非同期 I/O | 高スループット処理 |
+| 特徴                      | 説明                               | 利点                                         |
+| ------------------------- | ---------------------------------- | -------------------------------------------- |
+| 🚀 **軽量設計**           | コアコード ~500 行                 | 高速起動、低メモリ使用量                     |
+| 🔌 **3 プロトコル統合**   | MCP / A2A / AG-UI                  | 1 つのコードで複数のプロトコルに対応         |
+| 🎨 **自動アダプター**     | `@auto_adapt` デコレーター         | プロトコル変換を自動化                       |
+| 📦 **CLI ツール**         | 包括的なコマンドラインツール       | プロジェクト管理を簡素化                     |
+| 🏪 **マーケットプレイス** | エージェント共有プラットフォーム   | 再利用可能なエージェントを検索・インストール |
+| 🧪 **高品質**             | 208 テスト、90.28% カバレッジ      | 本番環境対応の信頼性                         |
+| 🔒 **型安全**             | 100% 型アノテーション、mypy strict | 開発時エラーを早期発見                       |
+| ⚡ **非同期ファースト**   | 完全非同期 I/O                     | 高スループット処理                           |
 
 ### 🎁 AgentFlow の利点
 
@@ -101,22 +101,22 @@ agentflow run . --input '{"text": "hello"}'
 
 ### コア機能
 
-| 機能 | 説明 | ドキュメント |
-|------|------|-------------|
-| **AgentBlock** | エージェント基底クラス | [API リファレンス](docs/api.md#agentblock) |
-| **@auto_adapt** | プロトコル自動変換デコレーター | [API リファレンス](docs/api.md#auto-adapt) |
-| **AgentFlowEngine** | PocketFlow ベースのワークフローエンジン | [API リファレンス](docs/api.md#engine) |
-| **CLI** | コマンドラインツール | [CLI リファレンス](docs/cli.md) |
-| **Marketplace** | エージェント共有プラットフォーム | [API リファレンス](docs/api.md#marketplace) |
-| **Template System** | プロジェクトテンプレート | [テンプレートガイド](docs/templates.md) |
+| 機能                | 説明                                    | ドキュメント                                |
+| ------------------- | --------------------------------------- | ------------------------------------------- |
+| **AgentBlock**      | エージェント基底クラス                  | [API リファレンス](docs/api.md#agentblock)  |
+| **@auto_adapt**     | プロトコル自動変換デコレーター          | [API リファレンス](docs/api.md#auto-adapt)  |
+| **AgentFlowEngine** | PocketFlow ベースのワークフローエンジン | [API リファレンス](docs/api.md#engine)      |
+| **CLI**             | コマンドラインツール                    | [CLI リファレンス](docs/cli.md)             |
+| **Marketplace**     | エージェント共有プラットフォーム        | [API リファレンス](docs/api.md#marketplace) |
+| **Template System** | プロジェクトテンプレート                | [テンプレートガイド](docs/templates.md)     |
 
 ### プロトコルサポート
 
-| プロトコル | 説明 | Python バージョン | ドキュメント |
-|-----------|------|------------------|-------------|
-| **MCP** | Model Context Protocol（ツール接続） | 3.10+ | [プロトコルガイド](docs/protocols.md#mcp) |
-| **A2A** | Agent-to-Agent（エージェント協調） | 3.9+ | [プロトコルガイド](docs/protocols.md#a2a) |
-| **AG-UI** | Agent-UI（フロントエンド連携） | 3.13+ | [プロトコルガイド](docs/protocols.md#ag-ui) |
+| プロトコル | 説明                                 | Python バージョン | ドキュメント                                |
+| ---------- | ------------------------------------ | ----------------- | ------------------------------------------- |
+| **MCP**    | Model Context Protocol（ツール接続） | 3.10+             | [プロトコルガイド](docs/protocols.md#mcp)   |
+| **A2A**    | Agent-to-Agent（エージェント協調）   | 3.9+              | [プロトコルガイド](docs/protocols.md#a2a)   |
+| **AG-UI**  | Agent-UI（フロントエンド連携）       | 3.13+             | [プロトコルガイド](docs/protocols.md#ag-ui) |
 
 ### CLI コマンド
 
@@ -288,18 +288,18 @@ serverlessAIAgents/
 
 ### 主要ディレクトリの説明
 
-| ディレクトリ | 説明 | 主要ファイル |
-|------------|------|------------|
-| **`agentflow/core/`** | コアフレームワーク | `agent_block.py`, `engine.py`, `metadata.py` |
-| **`agentflow/protocols/`** | プロトコル実装 | `mcp_client.py`, `a2a_server.py`, `agui_emitter.py` |
-| **`agentflow/cli/`** | CLI ツール | `main.py`, `commands/` |
-| **`agentflow/marketplace/`** | マーケットプレイス | `client.py`, `registry.py` |
-| **`agentflow/studio/`** | Visual Studio バックエンド | `api.py`, `server.py` |
-| **`agentflow/templates/`** | テンプレートシステム | `template_manager.py`, `scenarios/` |
-| **`studio/`** | Visual Studio フロントエンド | React + TypeScript + Vite |
-| **`tests/`** | テストスイート | `unit/`, `integration/` |
-| **`examples/`** | サンプルエージェント | 5 つの実用例 |
-| **`docs/`** | ドキュメント | 8 つのガイド |
+| ディレクトリ                 | 説明                         | 主要ファイル                                        |
+| ---------------------------- | ---------------------------- | --------------------------------------------------- |
+| **`agentflow/core/`**        | コアフレームワーク           | `agent_block.py`, `engine.py`, `metadata.py`        |
+| **`agentflow/protocols/`**   | プロトコル実装               | `mcp_client.py`, `a2a_server.py`, `agui_emitter.py` |
+| **`agentflow/cli/`**         | CLI ツール                   | `main.py`, `commands/`                              |
+| **`agentflow/marketplace/`** | マーケットプレイス           | `client.py`, `registry.py`                          |
+| **`agentflow/studio/`**      | Visual Studio バックエンド   | `api.py`, `server.py`                               |
+| **`agentflow/templates/`**   | テンプレートシステム         | `template_manager.py`, `scenarios/`                 |
+| **`studio/`**                | Visual Studio フロントエンド | React + TypeScript + Vite                           |
+| **`tests/`**                 | テストスイート               | `unit/`, `integration/`                             |
+| **`examples/`**              | サンプルエージェント         | 5 つの実用例                                        |
+| **`docs/`**                  | ドキュメント                 | 8 つのガイド                                        |
 
 ---
 
@@ -317,6 +317,7 @@ AgentFlow への貢献は以下のドキュメントを参照してください�
 - **[開発規範](DEVELOPMENT_STANDARDS.md)** - コーディング規範（[English](DEVELOPMENT_STANDARDS_EN.md) | [日本語](DEVELOPMENT_STANDARDS_JA.md)）
 
 **簡単な手順**:
+
 1. リポジトリをフォーク
 2. 開発環境をセットアップ（[開発ガイド](docs/development.md) 参照）
 3. ブランチを作成して変更を加える
@@ -387,7 +388,7 @@ AgentFlow は以下のオープンソースプロジェクトとコミュニテ�
 
 ### 連絡先
 
-- 📧 **Email**: 115070984+liushuang393@users.noreply.github.com
+- 📧 **Email**: <115070984+liushuang393@users.noreply.github.com>
 - � **GitHub**: [@liushuang393](https://github.com/liushuang393)
 - � **Repository**: [serverlessAIAgents](https://github.com/liushuang393/serverlessAIAgents)
 
