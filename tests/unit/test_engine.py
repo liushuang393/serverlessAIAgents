@@ -160,3 +160,58 @@ class TestAgentFlowEngine:
         assert len(workflows) == 2
         assert sample_workflow.workflow_id in workflows
         assert workflow2.workflow_id in workflows
+
+    def test_register_and_unregister_hook(self, engine: AgentFlowEngine) -> None:
+        """Test registering and unregistering hooks."""
+
+        async def test_callback(ctx: ExecutionContext) -> None:
+            pass
+
+        # Test register_hook method
+        engine.register_hook(HookType.ON_START, test_callback)
+        hooks = engine.hooks.get_hooks(HookType.ON_START)
+        assert test_callback in hooks
+
+        # Test unregister_hook method
+        engine.unregister_hook(HookType.ON_START, test_callback)
+        hooks = engine.hooks.get_hooks(HookType.ON_START)
+        assert test_callback not in hooks
+
+    async def test_cancel_execution(self, engine: AgentFlowEngine) -> None:
+        """Test cancelling an execution."""
+        # Track cancel hook calls
+        cancel_called = []
+
+        async def on_cancel(ctx: ExecutionContext) -> None:
+            cancel_called.append(ctx.execution_id)
+
+        engine.hooks.register(HookType.ON_CANCEL, on_cancel)
+
+        # Cancel an execution
+        await engine.cancel("test-execution-123")
+
+        assert cancel_called == ["test-execution-123"]
+
+    async def test_execute_with_non_callable_node(self, engine: AgentFlowEngine) -> None:
+        """Test executing workflow with non-callable node function."""
+        # Create a workflow with a non-callable node
+        workflow = WorkflowConfig(
+            workflow_id="test-non-callable",
+            name="Test Non-Callable",
+            nodes=[
+                {
+                    "id": "node1",
+                    "type": "process",
+                    "func": None,  # Non-callable
+                }
+            ],
+            edges=[],
+        )
+
+        engine.register_workflow(workflow)
+
+        # Execute should handle non-callable gracefully
+        result = await engine.execute("test-non-callable", {"input": "test"})
+
+        # Should complete successfully even with non-callable node
+        assert result.status == "success"

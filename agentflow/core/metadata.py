@@ -50,7 +50,9 @@ class OutputField(BaseModel):
 
     name: str = Field(..., description="フィールド名", min_length=1)
     type: str = Field(..., description="データ型", min_length=1)
-    schema: dict[str, Any] | None = Field(None, description="複雑な型の場合の JSON スキーマ")
+    output_schema: dict[str, Any] | None = Field(
+        None, alias="schema", description="複雑な型の場合の JSON スキーマ"
+    )
 
 
 class InterfaceDefinition(BaseModel):

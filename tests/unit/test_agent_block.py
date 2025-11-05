@@ -249,3 +249,150 @@ class TestAgentBlock:
 
         await agent.cleanup()
         assert cleaned_up
+
+    def test_load_metadata_with_different_path(
+        self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path, tmp_path: Path
+    ) -> None:
+        """異なるパスでメタデータを読み込めることをテスト."""
+        # 別のメタデータファイルを作成
+        metadata2 = AgentMetadata(
+            meta=MetaInfo(
+                id="test-agent-2",
+                name="Test Agent 2",
+                version="2.0.0",
+                author="Test Author",
+                icon="🤖",
+                category="test",
+                description="A second test agent",
+            ),
+            interfaces=InterfaceDefinition(
+                inputs=[InputField(name="data", type="string", required=True, description="Data")],
+                outputs=[OutputField(name="output", type="string")],
+            ),
+            protocols=ProtocolConfig(
+                mcp=None,
+                a2a=None,
+                agui=None,
+            ),
+            dependencies=DependencySpec(agents=[], tools=[], packages=[]),
+            pocketflow=PocketFlowConfig(
+                entry="flow.py:flow",
+                shared_schema="schemas.py:Schema",
+            ),
+            visual=VisualConfig(color="#000000", size="medium", ports={}),
+        )
+
+        metadata_file2 = tmp_path / "agent2.yaml"
+        loader = SchemaLoader()
+        loader.save_to_file(metadata2, metadata_file2)
+
+        # 最初のメタデータで初期化
+        agent = concrete_agent_class(metadata_path=sample_metadata_file)
+        agent.load_metadata()
+        assert agent.metadata.meta.name == "Test Agent"
+
+        # 異なるパスでメタデータを再読み込み
+        agent.load_metadata(metadata_path=metadata_file2)
+        assert agent.metadata.meta.name == "Test Agent 2"
+
+    def test_get_mcp_tools_with_mcp_protocol(
+        self, concrete_agent_class: type[AgentBlock], tmp_path: Path
+    ) -> None:
+        """MCP プロトコルが有効な場合の get_mcp_tools をテスト."""
+        metadata = AgentMetadata(
+            meta=MetaInfo(
+                id="test-agent",
+                name="Test Agent",
+                version="1.0.0",
+                author="Test Author",
+                icon="🤖",
+                category="test",
+                description="A test agent",
+            ),
+            interfaces=InterfaceDefinition(
+                inputs=[InputField(name="text", type="string", required=True, description="Input")],
+                outputs=[OutputField(name="result", type="string")],
+            ),
+            protocols=ProtocolConfig(
+                mcp=MCPConfig(tools=["tool1"], resources=[]),
+                a2a=None,
+                agui=None,
+            ),
+            dependencies=DependencySpec(agents=[], tools=[], packages=[]),
+            pocketflow=PocketFlowConfig(
+                entry="flow.py:flow",
+                shared_schema="schemas.py:Schema",
+            ),
+            visual=VisualConfig(color="#000000", size="medium", ports={}),
+        )
+
+        metadata_file = tmp_path / "agent.yaml"
+        loader = SchemaLoader()
+        loader.save_to_file(metadata, metadata_file)
+
+        agent = concrete_agent_class(metadata_path=metadata_file)
+        agent.load_metadata()
+
+        # MCP ツールが生成されることを確認
+        tools = agent.get_mcp_tools()
+        assert isinstance(tools, list)
+
+    def test_get_a2a_card_with_a2a_protocol(
+        self, concrete_agent_class: type[AgentBlock], tmp_path: Path
+    ) -> None:
+        """A2A プロトコルが有効な場合の get_a2a_card をテスト."""
+        metadata = AgentMetadata(
+            meta=MetaInfo(
+                id="test-agent",
+                name="Test Agent",
+                version="1.0.0",
+                author="Test Author",
+                icon="🤖",
+                category="test",
+                description="A test agent",
+            ),
+            interfaces=InterfaceDefinition(
+                inputs=[InputField(name="text", type="string", required=True, description="Input")],
+                outputs=[OutputField(name="result", type="string")],
+            ),
+            protocols=ProtocolConfig(
+                mcp=None,
+                a2a=A2AConfig(enabled=True, skills=["process"]),
+                agui=None,
+            ),
+            dependencies=DependencySpec(agents=[], tools=[], packages=[]),
+            pocketflow=PocketFlowConfig(
+                entry="flow.py:flow",
+                shared_schema="schemas.py:Schema",
+            ),
+            visual=VisualConfig(color="#000000", size="medium", ports={}),
+        )
+
+        metadata_file = tmp_path / "agent.yaml"
+        loader = SchemaLoader()
+        loader.save_to_file(metadata, metadata_file)
+
+        agent = concrete_agent_class(metadata_path=metadata_file)
+        agent.load_metadata()
+
+        # A2A カードが生成されることを確認
+        card = agent.get_a2a_card()
+        assert isinstance(card, AgentCard)
+        assert card.name == "Test Agent"
+
+    def test_protocol_methods_without_metadata(
+        self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path
+    ) -> None:
+        """メタデータ読み込み前のプロトコルメソッドをテスト."""
+        agent = concrete_agent_class(metadata_path=sample_metadata_file)
+
+        # メタデータ読み込み前はデフォルト値を返す
+        tools = agent.get_mcp_tools()
+        assert tools == []
+
+        card = agent.get_a2a_card()
+        assert card is None
+
+        # create_agui_emitter はメタデータが必要
+        with pytest.raises(ValueError, match="Metadata not loaded"):
+            agent.create_agui_emitter(agent.engine)

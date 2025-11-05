@@ -142,16 +142,15 @@ class A2AServer:
             # タスクを実行
             self._logger.debug(f"Executing task: agent={agent_name}, skill={skill_name}")
 
-            # ハンドラーが async かどうかを確認
-            if asyncio.iscoroutinefunction(handler):
-                result = await asyncio.wait_for(handler(inputs), timeout=task_timeout)
-            else:
-                # 同期関数の場合は executor で実行
-                loop = asyncio.get_event_loop()
-                result = await asyncio.wait_for(
-                    loop.run_in_executor(None, handler, inputs),
-                    timeout=task_timeout,
-                )
+            # asyncio.timeout() コンテキストマネージャーを使用
+            async with asyncio.timeout(task_timeout):
+                # ハンドラーが async かどうかを確認
+                if asyncio.iscoroutinefunction(handler):
+                    result = await handler(inputs)
+                else:
+                    # 同期関数の場合は executor で実行
+                    loop = asyncio.get_event_loop()
+                    result = await loop.run_in_executor(None, handler, inputs)
 
             self._logger.debug(f"Task completed: agent={agent_name}, skill={skill_name}")
 

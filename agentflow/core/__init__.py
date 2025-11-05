@@ -8,6 +8,8 @@ from agentflow.core.exceptions import (
     WorkflowNotFoundError,
 )
 from agentflow.core.hooks import HookType, LifecycleHooks
+from agentflow.core.loader import AgentLoader
+from agentflow.core.manager import AgentBlockManager, AgentInfo
 from agentflow.core.metadata import (
     A2AConfig,
     AGUIConfig,
@@ -26,15 +28,20 @@ from agentflow.core.metadata import (
 )
 from agentflow.core.schemas import SchemaLoader, SchemaValidationError
 from agentflow.core.types import AgentMetadata, ExecutionContext, WorkflowConfig
+from agentflow.core.validator import AgentValidator, ValidationResult
 
 
 __all__ = [
     "A2AConfig",
     "AGUIConfig",
+    "AgentBlockManager",
     "AgentFlowEngine",
     "AgentFlowError",
+    "AgentInfo",
+    "AgentLoader",
     "AgentMetadata",
     "AgentMetadataModel",
+    "AgentValidator",
     "DependencySpec",
     "ExecutionContext",
     "HookType",
@@ -49,6 +56,7 @@ __all__ = [
     "ProtocolError",
     "SchemaLoader",
     "SchemaValidationError",
+    "ValidationResult",
     "VisualConfig",
     "WorkflowConfig",
     "WorkflowError",

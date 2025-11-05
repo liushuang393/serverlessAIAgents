@@ -1,11 +1,21 @@
 """MCP サーバー設定モデル.
 
 このモジュールは MCP サーバーの設定を管理するための Pydantic モデルを提供します。
+
+Note:
+    MCP ライブラリは Pydantic 1.x を使用しているため、
+    Pydantic 2.x の v1 互換層を使用します。
 """
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+
+# MCP ライブラリとの互換性のため Pydantic v1 を使用
+try:
+    from pydantic.v1 import BaseModel, Field
+except ImportError:
+    # Pydantic 1.x の場合は通常の import
+    from pydantic import BaseModel, Field  # type: ignore[assignment]
 
 
 class MCPServerConfig(BaseModel):

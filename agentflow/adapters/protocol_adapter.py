@@ -49,8 +49,8 @@ class ProtocolAdapter:
                 schema["accept"] = field.accept
 
         # OutputField の場合の追加プロパティ
-        if isinstance(field, OutputField) and field.schema:
-            schema.update(field.schema)
+        if isinstance(field, OutputField) and field.output_schema:
+            schema.update(field.output_schema)
 
         return schema
 

@@ -284,3 +284,260 @@ class TestMCPClient:
         # セッションとツールがクリアされることを確認
         assert len(client._sessions) == 0
         assert len(client._tools) == 0
+
+    @patch("agentflow.protocols.mcp_client.stdio_client")
+    @patch("agentflow.protocols.mcp_client.ClientSession")
+    async def test_disconnect_with_active_sessions(
+        self,
+        mock_session_class: MagicMock,
+        mock_stdio_client: MagicMock,
+        sample_config: MCPConfig,
+        mock_session: MagicMock,
+    ) -> None:
+        """アクティブなセッションがある状態での切断をテスト."""
+        # モックの設定
+        mock_context = AsyncMock()
+        mock_context.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+        mock_context.__aexit__ = AsyncMock()
+        mock_stdio_client.return_value = mock_context
+        mock_session_class.return_value = mock_session
+
+        mock_tools_result = MagicMock()
+        mock_tools_result.tools = []
+        mock_session.list_tools.return_value = mock_tools_result
+
+        # クライアントを作成して接続
+        client = MCPClient(sample_config)
+        await client.connect()
+
+        # セッションが存在することを確認
+        assert len(client._sessions) == 1
+
+        # 切断
+        await client.disconnect()
+
+        # セッションとツールがクリアされることを確認
+        assert len(client._sessions) == 0
+        assert len(client._tools) == 0
+        assert len(client._contexts) == 0
+        mock_context.__aexit__.assert_called_once()
+
+    @patch("agentflow.protocols.mcp_client.stdio_client")
+    @patch("agentflow.protocols.mcp_client.ClientSession")
+    async def test_disconnect_with_error(
+        self,
+        mock_session_class: MagicMock,
+        mock_stdio_client: MagicMock,
+        sample_config: MCPConfig,
+        mock_session: MagicMock,
+    ) -> None:
+        """切断時のエラーを処理することをテスト."""
+        # モックの設定
+        mock_context = AsyncMock()
+        mock_context.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+        mock_context.__aexit__ = AsyncMock(side_effect=Exception("Disconnect error"))
+        mock_stdio_client.return_value = mock_context
+        mock_session_class.return_value = mock_session
+
+        mock_tools_result = MagicMock()
+        mock_tools_result.tools = []
+        mock_session.list_tools.return_value = mock_tools_result
+
+        # クライアントを作成して接続
+        client = MCPClient(sample_config)
+        await client.connect()
+
+        # 切断時のエラーは致命的ではない
+        await client.disconnect()
+
+        # セッションとツールがクリアされることを確認
+        assert len(client._sessions) == 0
+        assert len(client._tools) == 0
+
+    @patch("agentflow.protocols.mcp_client.stdio_client")
+    @patch("agentflow.protocols.mcp_client.ClientSession")
+    async def test_call_tool_with_exception(
+        self,
+        mock_session_class: MagicMock,
+        mock_stdio_client: MagicMock,
+        sample_config: MCPConfig,
+        mock_session: MagicMock,
+    ) -> None:
+        """ツール呼び出し時の例外処理をテスト."""
+        # モックの設定
+        mock_context = AsyncMock()
+        mock_context.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+        mock_context.__aexit__ = AsyncMock()
+        mock_stdio_client.return_value = mock_context
+        mock_session_class.return_value = mock_session
+
+        mock_tool = MagicMock()
+        mock_tool.name = "test_tool"
+        mock_tool.description = "A test tool"
+        mock_tool.inputSchema = {"type": "object"}
+
+        mock_tools_result = MagicMock()
+        mock_tools_result.tools = [mock_tool]
+        mock_session.list_tools.return_value = mock_tools_result
+
+        # ツール呼び出しで例外を発生させる
+        mock_session.call_tool.side_effect = Exception("Tool execution failed")
+
+        # クライアントを作成して接続
+        client = MCPClient(sample_config)
+        await client.connect()
+
+        # ツールを呼び出す
+        result = await client.call_tool("mcp://test-server/test_tool", {"arg": "value"})
+
+        # エラーレスポンスを確認
+        assert result["success"] is False
+        assert result["error"] == "Tool call failed"
+        assert result["tool"] == "test_tool"
+        assert result["server"] == "test-server"
+
+    @patch("agentflow.protocols.mcp_client.stdio_client")
+    @patch("agentflow.protocols.mcp_client.ClientSession")
+    async def test_call_tool_server_not_connected(
+        self,
+        mock_session_class: MagicMock,
+        mock_stdio_client: MagicMock,
+        sample_config: MCPConfig,
+        mock_session: MagicMock,
+    ) -> None:
+        """サーバーが接続されていない状態でのツール呼び出しをテスト."""
+        # モックの設定
+        mock_context = AsyncMock()
+        mock_context.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+        mock_context.__aexit__ = AsyncMock()
+        mock_stdio_client.return_value = mock_context
+        mock_session_class.return_value = mock_session
+
+        mock_tool = MagicMock()
+        mock_tool.name = "test_tool"
+        mock_tool.description = "A test tool"
+        mock_tool.inputSchema = {"type": "object"}
+
+        mock_tools_result = MagicMock()
+        mock_tools_result.tools = [mock_tool]
+        mock_session.list_tools.return_value = mock_tools_result
+
+        # クライアントを作成して接続
+        client = MCPClient(sample_config)
+        await client.connect()
+
+        # セッションを削除してサーバーが接続されていない状態をシミュレート
+        client._sessions.clear()
+
+        # ツールを呼び出す
+        with pytest.raises(RuntimeError, match="Server not connected"):
+            await client.call_tool("mcp://test-server/test_tool", {"arg": "value"})
+
+    def test_get_tool_info_found(self, sample_config: MCPConfig) -> None:
+        """ツール情報の取得をテスト."""
+        client = MCPClient(sample_config)
+        tool_info = {
+            "name": "test_tool",
+            "description": "A test tool",
+            "input_schema": {"type": "object"},
+            "server": "test-server",
+        }
+        client._tools["mcp://test-server/test_tool"] = tool_info
+
+        info = client.get_tool_info("mcp://test-server/test_tool")
+        assert info == tool_info
+
+    def test_get_tool_info_not_found(self, sample_config: MCPConfig) -> None:
+        """存在しないツールの情報取得をテスト."""
+        client = MCPClient(sample_config)
+        info = client.get_tool_info("mcp://test-server/nonexistent")
+        assert info is None
+
+    @patch("agentflow.protocols.mcp_client.stdio_client")
+    @patch("agentflow.protocols.mcp_client.ClientSession")
+    async def test_context_manager(
+        self,
+        mock_session_class: MagicMock,
+        mock_stdio_client: MagicMock,
+        sample_config: MCPConfig,
+        mock_session: MagicMock,
+    ) -> None:
+        """コンテキストマネージャーとしての使用をテスト."""
+        # モックの設定
+        mock_context = AsyncMock()
+        mock_context.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+        mock_context.__aexit__ = AsyncMock()
+        mock_stdio_client.return_value = mock_context
+        mock_session_class.return_value = mock_session
+
+        mock_tools_result = MagicMock()
+        mock_tools_result.tools = []
+        mock_session.list_tools.return_value = mock_tools_result
+
+        # コンテキストマネージャーとして使用
+        async with MCPClient(sample_config) as client:
+            assert len(client._sessions) == 1
+
+        # 終了後はセッションがクリアされる
+        assert len(client._sessions) == 0
+
+    @patch("agentflow.protocols.mcp_client.stdio_client")
+    async def test_connect_server_failure(
+        self,
+        mock_stdio_client: MagicMock,
+        sample_config: MCPConfig,
+    ) -> None:
+        """サーバー接続失敗時の処理をテスト."""
+        # 接続失敗をシミュレート
+        mock_stdio_client.side_effect = Exception("Connection failed")
+
+        client = MCPClient(sample_config)
+        # 接続失敗は致命的ではない
+        await client.connect()
+
+        # セッションは作成されない
+        assert len(client._sessions) == 0
+
+    def test_init_with_custom_logger(self, sample_config: MCPConfig) -> None:
+        """カスタムロガーでの初期化をテスト."""
+        import logging
+
+        custom_logger = logging.getLogger("custom")
+        client = MCPClient(sample_config, logger=custom_logger)
+        assert client._logger == custom_logger
+
+    @patch("agentflow.protocols.mcp_client.stdio_client")
+    @patch("agentflow.protocols.mcp_client.ClientSession")
+    async def test_get_tool_definitions_with_none_description(
+        self,
+        mock_session_class: MagicMock,
+        mock_stdio_client: MagicMock,
+        sample_config: MCPConfig,
+        mock_session: MagicMock,
+    ) -> None:
+        """description が None のツール定義をテスト."""
+        # モックの設定
+        mock_context = AsyncMock()
+        mock_context.__aenter__ = AsyncMock(return_value=(MagicMock(), MagicMock()))
+        mock_context.__aexit__ = AsyncMock()
+        mock_stdio_client.return_value = mock_context
+        mock_session_class.return_value = mock_session
+
+        mock_tool = MagicMock()
+        mock_tool.name = "test_tool"
+        mock_tool.description = None  # description が None
+        mock_tool.inputSchema = {"type": "object"}
+
+        mock_tools_result = MagicMock()
+        mock_tools_result.tools = [mock_tool]
+        mock_session.list_tools.return_value = mock_tools_result
+
+        # クライアントを作成して接続
+        client = MCPClient(sample_config)
+        await client.connect()
+
+        # ツール定義を取得
+        definitions = client.get_tool_definitions()
+
+        # description が空文字列になることを確認
+        assert definitions[0]["function"]["description"] == ""

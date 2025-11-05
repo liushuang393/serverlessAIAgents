@@ -211,13 +211,13 @@ def create_app(
         )
         return [
             {
-                "id": agent["id"],
-                "name": agent["name"],
-                "version": agent["version"],
-                "description": agent.get("description", ""),
-                "author": agent.get("author", ""),
-                "category": agent.get("category", "other"),
-                "protocols": agent.get("protocols", []),
+                "id": agent.id,
+                "name": agent.name,
+                "version": agent.version,
+                "description": agent.description,
+                "author": agent.author,
+                "category": agent.category,
+                "protocols": agent.protocols,
             }
             for agent in results
         ]
