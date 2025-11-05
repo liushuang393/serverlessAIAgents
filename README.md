@@ -14,6 +14,8 @@ _PocketFlow ベースの統一プロトコルインターフェース_
 
 [Documentation](https://github.com/liushuang393/serverlessAIAgents/tree/main/docs) | [Examples](https://github.com/liushuang393/serverlessAIAgents/tree/main/examples) | [Contributing](CONTRIBUTING.md)
 
+**Languages**: [English](README_EN.md) | [简体中文](README_ZH.md) | 日本語
+
 </div>
 
 ---
