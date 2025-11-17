@@ -7,8 +7,8 @@
 _PocketFlow ベースの統一プロトコルインターフェース_
 
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-208%20passed-brightgreen.svg)](tests/)
-[![Coverage](https://img.shields.io/badge/coverage-90.28%25-brightgreen.svg)](htmlcov/)
+[![Tests](https://img.shields.io/badge/tests-434%20passed-brightgreen.svg)](tests/)
+[![Coverage](https://img.shields.io/badge/coverage-92.46%25-brightgreen.svg)](htmlcov/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
@@ -24,7 +24,7 @@ _PocketFlow ベースの統一プロトコルインターフェース_
 
 > **注意**: このプロジェクトは現在開発中であり、**まだ人工テストを受けていません**。
 >
-> - ✅ **自動テスト**: 396 テスト、89.79% カバレッジ
+> - ✅ **自動テスト**: 434 テスト、92.46% カバレッジ
 > - ⚠️ **人工テスト**: 未実施
 > - 🚧 **本番環境**: 使用前に十分なテストを実施してください
 >
@@ -45,7 +45,7 @@ AgentFlow は、**MCP（Model Context Protocol）**、**A2A（Agent-to-Agent）*
 | 🎨 **自動アダプター**     | `@auto_adapt` デコレーター         | プロトコル変換を自動化                       |
 | 📦 **CLI ツール**         | 包括的なコマンドラインツール       | プロジェクト管理を簡素化                     |
 | 🏪 **マーケットプレイス** | エージェント共有プラットフォーム   | 再利用可能なエージェントを検索・インストール |
-| 🧪 **高品質**             | 208 テスト、90.28% カバレッジ      | 本番環境対応の信頼性                         |
+| 🧪 **高品質**             | 434 テスト、92.46% カバレッジ      | 本番環境対応の信頼性                         |
 | 🔒 **型安全**             | 100% 型アノテーション、mypy strict | 開発時エラーを早期発見                       |
 | ⚡ **非同期ファースト**   | 完全非同期 I/O                     | 高スループット処理                           |
 
@@ -56,6 +56,24 @@ AgentFlow は、**MCP（Model Context Protocol）**、**A2A（Agent-to-Agent）*
 - **拡張性**: モジュラー設計で簡単にカスタマイズ可能
 - **本番環境対応**: 高いテストカバレッジと型安全性
 - **アクティブな開発**: 継続的な改善とコミュニティサポート
+
+### 🧠 Agentic AI Design Patterns
+
+AgentFlow は業界最佳実践に基づいた Agentic AI デザインパターンを提供します：
+
+| パターン | 完成度 | 説明 | 使用例 |
+|---------|--------|------|--------|
+| 🔧 **Tool Use** | 95% | LLM が外部ツール/API を呼び出し | データ検索、計算、外部サービス連携 |
+| 🎯 **Reflection** | 100% | 自己評価と改善の反復ループ | コンテンツ品質向上、エラー修正 |
+| 🤝 **Multi-Agent** | 96% | 複数の専門エージェントの協調 | 複雑なタスクの分散処理 |
+
+**設計原則**：
+- ✅ **簡単**: AgentBlock ベース、理解しやすい
+- ✅ **柔軟**: WorkflowConfig で組み合わせ
+- ✅ **健壮**: エラーハンドリングと fallback
+- ✅ **独立**: 外部フレームワーク不要
+
+詳細は [Design Patterns ドキュメント](docs/design/) を参照してください。
 
 ## 📦 インストール
 
@@ -131,6 +149,49 @@ agentflow run . --input '{"text": "hello"}'
 | **MCP**    | Model Context Protocol（ツール接続） | 3.10+             | [プロトコルガイド](docs/protocols.md#mcp)   |
 | **A2A**    | Agent-to-Agent（エージェント協調）   | 3.9+              | [プロトコルガイド](docs/protocols.md#a2a)   |
 | **AG-UI**  | Agent-UI（フロントエンド連携）       | 3.13+             | [プロトコルガイド](docs/protocols.md#ag-ui) |
+
+### Agentic AI Design Patterns
+
+AgentFlow は業界最佳実践に基づいた 3 つのデザインパターンを提供します：
+
+#### 1. Reflection Pattern（自己評価と改善）
+
+```python
+from agentflow.patterns import ReflectionWorkflow
+
+# Reflection Workflow を作成
+workflow = ReflectionWorkflow.create(
+    workflow_id="content-reflection",
+    generator=my_content_generator,
+    llm_client=my_llm,
+    evaluation_criteria={
+        "clarity": "内容が明確か",
+        "accuracy": "情報が正確か",
+    },
+    max_iterations=3,
+)
+
+# 実行
+result = await engine.execute("content-reflection", {"task": "AI の説明を書く"})
+```
+
+#### 2. Multi-Agent Collaboration（複数エージェント協調）
+
+```python
+from agentflow.patterns import MultiAgentWorkflow
+
+# Sequential パターン（順次実行）
+workflow = MultiAgentWorkflow.create(
+    workflow_id="research-pipeline",
+    agents=[research_agent, analysis_agent, report_agent],
+    pattern="sequential",  # または "concurrent", "handoff"
+)
+
+# 実行
+result = await engine.execute("research-pipeline", {"task": "AI 市場調査"})
+```
+
+詳細は [Design Patterns ドキュメント](docs/design/) を参照してください。
 
 ### CLI コマンド
 
@@ -210,6 +271,9 @@ serverlessAIAgents/
 │   │   └── agui_emitter.py       # AG-UI イベントエミッター
 │   ├── adapters/                 # プロトコルアダプター
 │   │   └── protocol_adapter.py   # アダプター生成ロジック
+│   ├── patterns/                 # Agentic AI デザインパターン
+│   │   ├── reflection.py         # Reflection Pattern 実装
+│   │   └── multi_agent.py        # Multi-Agent Pattern 実装
 │   ├── cli/                      # CLI ツール
 │   │   ├── main.py               # CLI エントリーポイント
 │   │   └── commands/             # CLI コマンド
