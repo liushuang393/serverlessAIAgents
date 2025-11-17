@@ -79,46 +79,68 @@
 
 ---
 
-### Phase 3: Reflection Pattern (1-2 週間) ⭐⭐ (オプション)
+### Phase 3: Reflection Pattern (1-2 週間) ✅ 設計完了
 
-**目標**: 0% → 80%
+**目標**: 0% → 85%
+
+**設計原則**：
+- ✅ 吸収思想：Generate-Reflect-Iterate ループ
+- ❌ 不引入：LangChain ReflectionAgent, AutoGen ReflectionWorkflow
+- ✅ 基于：AgentBlock, WorkflowConfig, PocketFlow
 
 **主要タスク**:
-1. Self-Checker 実装
-   - 出力品質評価
-   - エラー検出
-2. Quality Evaluator 実装
-   - 評価基準定義
-   - スコアリング
-3. Iterative Improver 実装
+1. ReflectorAgent 実装（AgentBlock 継承）
+   - 評価基準に基づく判定
    - フィードバック生成
-   - 改善ループ
+2. ImproverAgent 実装（AgentBlock 継承）
+   - フィードバックに基づく改善
+   - 改善履歴記録
+3. ReflectionLoop 実装
+   - 反復制御ロジック
+   - 最大反復回数制限（デフォルト 3）
+4. ReflectionWorkflow 実装
+   - WorkflowConfig 工厂
+   - AgentFlowEngine 統合
 
 **成果物**:
 - `agentflow/patterns/reflection.py`
 - `tests/unit/test_reflection.py`
+- 10+ 単体テスト、カバレッジ 85%+
+
+**詳細設計**: `docs/design/PHASE3_REFLECTION_DESIGN.md` ✅
 
 ---
 
-### Phase 4: Multi-Agent Collaboration Enhancement (2-3 週間) ⭐⭐ (オプション)
+### Phase 4: Multi-Agent Collaboration (2-3 週間) ✅ 設計完了
 
 **目標**: 50% → 85%
 
+**設計原則**：
+- ✅ 吸収思想：Sequential, Concurrent, Handoff パターン
+- ❌ 不引入：AutoGen GroupChat, LangChain MultiAgentExecutor
+- ✅ 基于：AgentBlock, WorkflowConfig, PocketFlow
+
 **主要タスク**:
-1. Supervisor Pattern 実装
-   - タスク分配
-   - 進捗追跡
-2. Shared State Board 実装
-   - 状態共有
-   - 同期メカニズム
-3. Task Assignment System 実装
-   - タスク認領
-   - ロックメカニズム
+1. SharedContext 実装
+   - Agent 間の状態共有
+   - 履歴管理
+2. AgentRouter 実装（AgentBlock 継承）
+   - タスクベースのルーティング
+   - LLM 駆動の Agent 選択
+3. AgentCoordinator 実装
+   - Sequential パターン（順次実行）
+   - Concurrent パターン（並行実行）
+   - Handoff パターン（動的委譲）
+4. MultiAgentWorkflow 実装
+   - WorkflowConfig 工厂
+   - AgentFlowEngine 統合
 
 **成果物**:
-- `agentflow/patterns/supervisor.py`
-- `agentflow/patterns/shared_state.py`
-- `tests/integration/test_multi_agent.py`
+- `agentflow/patterns/multi_agent.py`
+- `tests/unit/test_multi_agent.py`
+- 15+ 単体テスト、カバレッジ 85%+
+
+**詳細設計**: `docs/design/PHASE4_MULTI_AGENT_DESIGN.md` ✅
 
 ---
 
