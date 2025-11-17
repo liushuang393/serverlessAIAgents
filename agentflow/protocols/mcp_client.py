@@ -3,19 +3,34 @@
 このモジュールは複数の MCP サーバーに接続し、ツールを呼び出すためのクライアントを提供します。
 """
 
+import asyncio
 import logging
 from typing import Any
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
+from agentflow.core.security import AuditLogger, ParameterValidator, ToolWhitelist
 from agentflow.protocols.mcp_config import MCPConfig, MCPServerConfig
 
 
+class ToolNotAllowedError(Exception):
+    """工具がホワイトリストにない場合のエラー."""
+
+
+class ToolValidationError(Exception):
+    """工具パラメータ検証エラー."""
+
+
 class MCPClient:
-    """複数の MCP サーバーを管理するクライアント.
+    """複数の MCP サーバーを管理するクライアント（セキュリティ強化版）.
 
     このクラスは複数の MCP サーバーに接続し、ツールの呼び出しを管理します。
+    業界最佳実践に基づいた以下のセキュリティ機能を提供:
+    - ツールホワイトリスト検証
+    - 審計ログ記録
+    - パラメータ検証
+    - リトライとタイムアウト制御
 
     Example:
         >>> config = MCPConfig(servers=[...])
@@ -29,18 +44,38 @@ class MCPClient:
         config: MCPConfig,
         *,
         logger: logging.Logger | None = None,
+        whitelist: ToolWhitelist | None = None,
+        audit_logger: AuditLogger | None = None,
+        validator: ParameterValidator | None = None,
+        max_retries: int = 3,
+        timeout: float = 30.0,
+        enable_security: bool = True,
     ) -> None:
         """MCP クライアントを初期化.
 
         Args:
             config: MCP 設定
             logger: ロガーインスタンス (オプション)
+            whitelist: ツールホワイトリスト (オプション、None の場合はデフォルト)
+            audit_logger: 審計ログ記録器 (オプション、None の場合はデフォルト)
+            validator: パラメータ検証器 (オプション、None の場合はデフォルト)
+            max_retries: 最大リトライ回数 (デフォルト: 3)
+            timeout: タイムアウト時間（秒）(デフォルト: 30.0)
+            enable_security: セキュリティ機能を有効にするか (デフォルト: True)
         """
         self._config = config
         self._logger = logger or logging.getLogger(__name__)
         self._sessions: dict[str, ClientSession] = {}
         self._tools: dict[str, dict[str, Any]] = {}
         self._contexts: dict[str, Any] = {}  # stdio_client コンテキストを保持
+
+        # セキュリティコンポーネント
+        self._enable_security = enable_security
+        self._whitelist = whitelist or ToolWhitelist()
+        self._audit_logger = audit_logger or AuditLogger(logger=self._logger)
+        self._validator = validator or ParameterValidator()
+        self._max_retries = max_retries
+        self._timeout = timeout
 
     async def connect(self) -> None:
         """すべての有効な MCP サーバーに接続.
@@ -146,21 +181,48 @@ class MCPClient:
             for tool_uri, tool_info in self._tools.items()
         ]
 
-    async def call_tool(self, tool_uri: str, arguments: dict[str, Any]) -> dict[str, Any]:
-        """ツールを呼び出す.
+    async def call_tool(
+        self,
+        tool_uri: str,
+        arguments: dict[str, Any],
+        user_id: str = "system",
+    ) -> dict[str, Any]:
+        """ツールを呼び出す（セキュリティチェック付き）.
+
+        実行フロー:
+        1. ホワイトリストチェック
+        2. パラメータ検証
+        3. リトライ付き実行
+        4. 審計ログ記録
 
         Args:
             tool_uri: ツール URI (例: "mcp://server/tool")
             arguments: ツール引数
+            user_id: ユーザー ID（審計ログ用）
 
         Returns:
             ツール実行結果
 
         Raises:
+            ToolNotAllowedError: ツールがホワイトリストにない場合
+            ToolValidationError: パラメータ検証失敗
             ValueError: ツール URI が無効な場合
             RuntimeError: ツール呼び出しに失敗した場合
         """
-        # URI をパース
+        # 1. ホワイトリストチェック
+        if self._enable_security and not self._whitelist.is_allowed(tool_uri):
+            error_msg = f"Tool not in whitelist: {tool_uri}"
+            self._audit_logger.log_tool_call(
+                user_id=user_id,
+                tool_uri=tool_uri,
+                parameters=arguments,
+                result=None,
+                success=False,
+                error=error_msg,
+            )
+            raise ToolNotAllowedError(error_msg)
+
+        # 2. URI をパース
         if not tool_uri.startswith("mcp://"):
             msg = f"Invalid tool URI: {tool_uri}"
             raise ValueError(msg)
@@ -173,31 +235,118 @@ class MCPClient:
         server_name = tool_info["server"]
         tool_name = tool_info["name"]
 
+        # 3. パラメータ検証
+        if self._enable_security:
+            schema = tool_info.get("input_schema", {})
+            is_valid, error_msg = self._validator.validate(schema, arguments)
+            if not is_valid:
+                self._audit_logger.log_tool_call(
+                    user_id=user_id,
+                    tool_uri=tool_uri,
+                    parameters=arguments,
+                    result=None,
+                    success=False,
+                    error=error_msg,
+                )
+                raise ToolValidationError(error_msg or "Parameter validation failed")
+
+        # 4. リトライ付き実行
+        result = await self._call_tool_with_retry(
+            tool_uri=tool_uri,
+            tool_name=tool_name,
+            server_name=server_name,
+            arguments=arguments,
+            user_id=user_id,
+        )
+
+        return result
+
+    async def _call_tool_with_retry(
+        self,
+        tool_uri: str,
+        tool_name: str,
+        server_name: str,
+        arguments: dict[str, Any],
+        user_id: str,
+    ) -> dict[str, Any]:
+        """リトライ付きでツールを呼び出す.
+
+        Args:
+            tool_uri: ツール URI
+            tool_name: ツール名
+            server_name: サーバー名
+            arguments: ツール引数
+            user_id: ユーザー ID
+
+        Returns:
+            ツール実行結果
+        """
         if server_name not in self._sessions:
             msg = f"Server not connected: {server_name}"
             raise RuntimeError(msg)
 
         session = self._sessions[server_name]
+        last_error: Exception | None = None
 
-        try:
-            # ツールを呼び出す
-            result = await session.call_tool(tool_name, arguments)
+        # 指数バックオフでリトライ
+        for attempt in range(self._max_retries):
+            try:
+                # タイムアウト付きで実行
+                async with asyncio.timeout(self._timeout):
+                    result = await session.call_tool(tool_name, arguments)
 
-        except Exception:
-            self._logger.exception(f"Tool call failed: {tool_uri}")
-            return {
-                "success": False,
-                "error": "Tool call failed",
-                "tool": tool_name,
-                "server": server_name,
-            }
-        else:
-            return {
-                "success": True,
-                "result": result.content,
-                "tool": tool_name,
-                "server": server_name,
-            }
+                # 成功時の審計ログ
+                self._audit_logger.log_tool_call(
+                    user_id=user_id,
+                    tool_uri=tool_uri,
+                    parameters=arguments,
+                    result=result.content,
+                    success=True,
+                )
+
+                return {
+                    "success": True,
+                    "result": result.content,
+                    "tool": tool_name,
+                    "server": server_name,
+                }
+
+            except asyncio.TimeoutError as e:
+                last_error = e
+                self._logger.warning(
+                    f"Tool call timeout (attempt {attempt + 1}/{self._max_retries}): {tool_uri}"
+                )
+                if attempt < self._max_retries - 1:
+                    wait_time = 2**attempt  # 指数バックオフ
+                    await asyncio.sleep(wait_time)
+
+            except Exception as e:
+                last_error = e
+                self._logger.warning(
+                    f"Tool call failed (attempt {attempt + 1}/{self._max_retries}): {tool_uri}",
+                    exc_info=True,
+                )
+                if attempt < self._max_retries - 1:
+                    wait_time = 2**attempt  # 指数バックオフ
+                    await asyncio.sleep(wait_time)
+
+        # すべてのリトライが失敗
+        error_msg = f"Tool call failed after {self._max_retries} attempts: {last_error}"
+        self._audit_logger.log_tool_call(
+            user_id=user_id,
+            tool_uri=tool_uri,
+            parameters=arguments,
+            result=None,
+            success=False,
+            error=error_msg,
+        )
+
+        return {
+            "success": False,
+            "error": error_msg,
+            "tool": tool_name,
+            "server": server_name,
+        }
 
     def list_tools(self) -> list[str]:
         """利用可能なツール URI のリストを取得.
