@@ -191,8 +191,8 @@ class TestMCPClient:
         mock_result.content = [{"type": "text", "text": "Success"}]
         mock_session.call_tool.return_value = mock_result
 
-        # クライアントを作成して接続
-        client = MCPClient(sample_config)
+        # クライアントを作成して接続（セキュリティ機能を無効化）
+        client = MCPClient(sample_config, enable_security=False)
         await client.connect()
 
         # ツールを呼び出す
@@ -205,7 +205,7 @@ class TestMCPClient:
 
     async def test_call_tool_invalid_uri(self, sample_config: MCPConfig) -> None:
         """無効な URI でのツール呼び出しをテスト."""
-        client = MCPClient(sample_config)
+        client = MCPClient(sample_config, enable_security=False)
 
         with pytest.raises(ValueError, match="Invalid tool URI"):
             await client.call_tool("invalid://uri", {})
@@ -231,8 +231,8 @@ class TestMCPClient:
         mock_tools_result.tools = []
         mock_session.list_tools.return_value = mock_tools_result
 
-        # クライアントを作成して接続
-        client = MCPClient(sample_config)
+        # クライアントを作成して接続（セキュリティ機能を無効化）
+        client = MCPClient(sample_config, enable_security=False)
         await client.connect()
 
         # 存在しないツールを呼び出す
@@ -383,16 +383,17 @@ class TestMCPClient:
         # ツール呼び出しで例外を発生させる
         mock_session.call_tool.side_effect = Exception("Tool execution failed")
 
-        # クライアントを作成して接続
-        client = MCPClient(sample_config)
+        # クライアントを作成して接続（セキュリティ機能を無効化）
+        client = MCPClient(sample_config, enable_security=False)
         await client.connect()
 
         # ツールを呼び出す
         result = await client.call_tool("mcp://test-server/test_tool", {"arg": "value"})
 
-        # エラーレスポンスを確認
+        # エラーレスポンスを確認（リトライ機能により詳細なエラーメッセージが含まれる）
         assert result["success"] is False
-        assert result["error"] == "Tool call failed"
+        assert "Tool call failed" in result["error"]
+        assert "Tool execution failed" in result["error"]
         assert result["tool"] == "test_tool"
         assert result["server"] == "test-server"
 
@@ -422,8 +423,8 @@ class TestMCPClient:
         mock_tools_result.tools = [mock_tool]
         mock_session.list_tools.return_value = mock_tools_result
 
-        # クライアントを作成して接続
-        client = MCPClient(sample_config)
+        # クライアントを作成して接続（セキュリティ機能を無効化）
+        client = MCPClient(sample_config, enable_security=False)
         await client.connect()
 
         # セッションを削除してサーバーが接続されていない状態をシミュレート

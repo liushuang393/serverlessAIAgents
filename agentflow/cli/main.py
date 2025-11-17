@@ -256,11 +256,11 @@ def run(
         ctx.exit(1)
 
 
-@cli.command()
+@cli.command(name="list")
 @click.pass_context
 def list_agents(ctx: click.Context) -> None:
     """インストール済みエージェントを一覧表示."""
-    verbose = ctx.obj["verbose"]
+    verbose = ctx.obj.get("verbose", False) if ctx.obj else False
 
     if verbose:
         console.print("[dim]Listing installed agents...[/dim]")
@@ -276,7 +276,7 @@ def info(ctx: click.Context, agent_id: str) -> None:
 
     AGENT_ID: エージェント ID
     """
-    verbose = ctx.obj["verbose"]
+    verbose = ctx.obj.get("verbose", False) if ctx.obj else False
 
     if verbose:
         console.print(f"[dim]Getting info for: {agent_id}[/dim]")
