@@ -394,6 +394,184 @@ Installation:
 
 ---
 
+### `skills` - Skills 管理
+
+Skills を管理します。Claude Code Skills 形式と完全互換です。
+
+```bash
+agentflow skills <subcommand> [OPTIONS]
+```
+
+#### `skills list` - Skills 一覧
+
+```bash
+agentflow skills list [OPTIONS]
+```
+
+**オプション:**
+
+- `--learned, -l`: 学習済み Skills のみ表示
+- `--project, -p`: プロジェクト Skills のみ表示
+- `--help`: ヘルプメッセージを表示
+
+**例:**
+
+```bash
+# 全 Skills を表示
+agentflow skills list
+
+# 学習済み Skills のみ
+agentflow skills list --learned
+```
+
+**出力例:**
+
+```
+Skills
+┏━━━━━━━━━━━━━━━┳━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━┓
+┃ Name          ┃ Version ┃ Description              ┃ Triggers             ┃ Learned ┃
+┡━━━━━━━━━━━━━━━╇━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━┩
+│ pdf-extractor │ 1.0.0   │ Extract text from PDF... │ pdf, extract text... │         │
+└───────────────┴─────────┴──────────────────────────┴──────────────────────┴─────────┘
+Total: 1 skills
+```
+
+#### `skills show` - Skill 詳細
+
+```bash
+agentflow skills show <name>
+```
+
+**引数:**
+
+- `name`: Skill 名
+
+**例:**
+
+```bash
+agentflow skills show pdf-extractor
+```
+
+#### `skills create` - Skill 作成
+
+```bash
+agentflow skills create <name> [OPTIONS]
+```
+
+**引数:**
+
+- `name`: Skill 名 (kebab-case)
+
+**オプション:**
+
+- `--description, -d`: Skill の説明
+- `--triggers, -t`: トリガーワード（カンマ区切り）
+- `--scope, -s`: 保存先 (`project` | `global`)
+- `--interactive, -i`: 対話モードで作成
+- `--help`: ヘルプメッセージを表示
+
+**例:**
+
+```bash
+# 基本的な使い方
+agentflow skills create my-skill
+
+# 対話モード
+agentflow skills create my-skill --interactive
+
+# オプション指定
+agentflow skills create my-skill -d "My skill" -t "my,skill" -s global
+```
+
+#### `skills validate` - Skill 検証
+
+```bash
+agentflow skills validate <path> [OPTIONS]
+```
+
+**引数:**
+
+- `path`: Skill ディレクトリまたは SKILL.md ファイルのパス
+
+**オプション:**
+
+- `--strict`: 厳格モード（警告もエラーとして扱う）
+- `--help`: ヘルプメッセージを表示
+
+**例:**
+
+```bash
+# ディレクトリを検証
+agentflow skills validate .agentflow/skills/my-skill
+
+# ファイルを検証
+agentflow skills validate ./SKILL.md --strict
+```
+
+#### `skills search` - Skills 検索
+
+```bash
+agentflow skills search <query> [OPTIONS]
+```
+
+**引数:**
+
+- `query`: 検索クエリ（自然言語）
+
+**オプション:**
+
+- `--top, -n`: 表示する結果数（デフォルト: 5）
+- `--help`: ヘルプメッセージを表示
+
+**例:**
+
+```bash
+# 自然言語で検索
+agentflow skills search "PDF からテキスト抽出"
+
+# 結果数を指定
+agentflow skills search "excel spreadsheet" --top 10
+```
+
+**出力例:**
+
+```
+Search Results for: 'pdf text extraction'
+┏━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ #  ┃ Name          ┃ Score ┃ Reason                         ┃ Description            ┃
+┡━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ 1  │ pdf-extractor │ 0.90  │ Matched by: trigger 'pdf'...   │ Extract text, tables...│
+└────┴───────────────┴───────┴────────────────────────────────┴────────────────────────┘
+```
+
+#### `skills delete` - Skill 削除
+
+```bash
+agentflow skills delete <name> [OPTIONS]
+```
+
+**引数:**
+
+- `name`: Skill 名
+
+**オプション:**
+
+- `--scope, -s`: 削除対象 (`learned` | `project` | `global`)
+- `--force, -f`: 確認なしで削除
+- `--help`: ヘルプメッセージを表示
+
+**例:**
+
+```bash
+# 学習済み Skill を削除
+agentflow skills delete my-skill
+
+# プロジェクト Skill を強制削除
+agentflow skills delete my-skill --scope project --force
+```
+
+---
+
 ## 環境変数
 
 AgentFlow CLI は以下の環境変数をサポートします：

@@ -22,25 +22,68 @@ AgentFlow プロジェクトは、すべての貢献者に対して敬意と包�
 
 - Python 3.13 以上
 - Git
+- Conda（推奨）または Python venv
 - Python の async/await の基本的な理解
 - 型ヒントの知識
 
-### 開発環境のセットアップ
+### ステップ 1: リポジトリのクローン
 
 ```bash
 # リポジトリをフォークしてクローン
 git clone https://github.com/YOUR_USERNAME/serverlessAIAgents.git
 cd serverlessAIAgents
 
-# 仮想環境を作成
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+# アップストリームリポジトリを追加（オプション）
+git remote add upstream https://github.com/liushuang393/serverlessAIAgents.git
+```
+
+### ステップ 2: Conda 環境のセットアップ（推奨）
+
+```bash
+# Conda 環境を作成
+conda env create -f environment.yml
+
+# 環境をアクティベート
+conda activate agentflow
 
 # 開発用依存関係をインストール
 pip install -e ".[dev]"
+```
 
+### ステップ 3: 仮想環境のセットアップ（Conda を使用しない場合）
+
+```bash
+# 仮想環境を作成
+python -m venv .venv
+
+# 環境をアクティベート
+# Linux/Mac:
+source .venv/bin/activate
+# Windows:
+.venv\Scripts\activate
+
+# 開発用依存関係をインストール
+pip install -e ".[dev]"
+```
+
+### ステップ 4: Pre-commit フックのインストール
+
+```bash
 # pre-commit フックをインストール
 pre-commit install
+
+# 動作確認（全ファイルをチェック）
+pre-commit run --all-files
+```
+
+### ステップ 5: インストール確認
+
+```bash
+# AgentFlow がインストールされているか確認
+agentflow --version
+
+# Python でインポート確認
+python -c "import agentflow; print(agentflow.__version__)"
 ```
 
 ## 開発ワークフロー
@@ -67,6 +110,21 @@ git checkout -b fix/issue-number-description
 
 ### 3. 品質チェックを実行
 
+**推奨方法**: `check.sh`（Linux/Mac）または `check.ps1`/`check.bat`（Windows）を使用
+
+```bash
+# Linux/Mac: すべてのチェックを実行
+./check.sh all
+
+# Windows PowerShell: すべてのチェックを実行
+.\check.ps1 all
+
+# Windows CMD: すべてのチェックを実行
+check.bat all
+```
+
+**個別のチェック**:
+
 ```bash
 # コードをフォーマット
 ruff format .
@@ -82,7 +140,24 @@ pytest
 
 # カバレッジを確認
 pytest --cov=agentflow --cov-report=term-missing
+
+# HTML カバレッジレポートを生成
+pytest --cov=agentflow --cov-report=html
+# htmlcov/index.html を開いて確認
 ```
+
+**check スクリプトのコマンド一覧**:
+
+| コマンド | 説明 |
+|---------|------|
+| `all` | すべてのチェックを実行 |
+| `format` | コードを自動フォーマット |
+| `lint` | リントチェック |
+| `type-check` | 型チェック |
+| `test` | テストを実行 |
+| `test-cov` | カバレッジ付きテスト |
+| `pre-commit` | Pre-commit を実行 |
+| `clean` | 一時ファイルを削除 |
 
 ### 4. 変更をコミット
 
@@ -207,6 +282,48 @@ def load_config(path: str) -> dict[str, Any]:
 
 ## テスト
 
+### テストの実行
+
+**基本的な実行**:
+
+```bash
+# すべてのテストを実行
+pytest
+
+# 特定のテストファイルを実行
+pytest tests/unit/test_agent_block.py
+
+# 特定のテスト関数を実行
+pytest tests/unit/test_agent_block.py::test_agent_initialization
+
+# 詳細な出力で実行
+pytest -v
+
+# 失敗時にデバッガーを起動
+pytest --pdb
+```
+
+**カバレッジ付きテスト**:
+
+```bash
+# カバレッジレポートを表示
+pytest --cov=agentflow --cov-report=term-missing
+
+# HTML カバレッジレポートを生成
+pytest --cov=agentflow --cov-report=html
+# htmlcov/index.html をブラウザで開く
+
+# カバレッジの最小値を設定
+pytest --cov=agentflow --cov-fail-under=80
+```
+
+**並列実行**（高速化）:
+
+```bash
+# pytest-xdist を使用（インストールが必要）
+pytest -n auto  # CPU コア数に応じて並列実行
+```
+
 ### テスト構造
 
 ```
@@ -215,6 +332,13 @@ tests/
 ├── integration/    # 統合テスト (低速、依存関係あり)
 └── conftest.py     # 共有フィクスチャ
 ```
+
+### テストの記述ガイドライン
+
+- **テスト名は明確に**: `test_関数名_シナリオ` の形式
+- **1つのテストで1つのことをテスト**: 単一責任の原則
+- **Arrange-Act-Assert パターン**: 準備、実行、検証を明確に分離
+- **フィクスチャを使用**: 共通のセットアップは `conftest.py` に
 
 ### テストの記述
 
@@ -271,15 +395,79 @@ class TestAgentFlowEngine:
 
 ## プルリクエストプロセス
 
-### 提出前のチェック
+### ステップ 1: ローカルでの準備
 
-- [ ] すべてのテストが通過 (`pytest`)
-- [ ] コードがフォーマット済み (`ruff format .`)
-- [ ] リントエラーなし (`ruff check .`)
-- [ ] 型エラーなし (`mypy agentflow`)
-- [ ] カバレッジ ≥ 80% (`pytest --cov`)
+1. **最新のコードを取得**:
+
+```bash
+# メインブランチに切り替え
+git checkout main
+
+# アップストリームから最新を取得
+git fetch upstream
+git merge upstream/main
+
+# または
+git pull upstream main
+```
+
+2. **ブランチを作成**:
+
+```bash
+# 機能ブランチを作成
+git checkout -b feature/your-feature-name
+
+# またはバグ修正ブランチ
+git checkout -b fix/issue-number-description
+```
+
+3. **変更を加える**:
+
+- コードを編集
+- テストを追加/更新
+- ドキュメントを更新
+
+### ステップ 2: 提出前のチェック
+
+**必須チェックリスト**:
+
+- [ ] すべてのテストが通過 (`pytest` または `./check.sh test`)
+- [ ] コードがフォーマット済み (`ruff format .` または `./check.sh format`)
+- [ ] リントエラーなし (`ruff check .` または `./check.sh lint`)
+- [ ] 型エラーなし (`mypy agentflow` または `./check.sh type-check`)
+- [ ] カバレッジ ≥ 80% (`pytest --cov` または `./check.sh test-cov`)
+- [ ] Pre-commit チェック通過 (`pre-commit run --all-files` または `./check.sh pre-commit`)
 - [ ] ドキュメント更新済み
 - [ ] CHANGELOG.md 更新済み (該当する場合)
+
+**推奨**: `check.sh all`（または `check.ps1 all`/`check.bat all`）を実行して、すべてのチェックを一度に確認
+
+### ステップ 3: コミットとプッシュ
+
+```bash
+# 変更をステージング
+git add .
+
+# コミット（pre-commit フックが自動実行される）
+git commit -m "feat: 新機能 X を追加"
+
+# フォークにプッシュ
+git push origin feature/your-feature-name
+```
+
+**注意**: Pre-commit フックが失敗した場合は、エラーを修正してから再度コミットしてください。
+
+### ステップ 4: Pull Request の作成
+
+1. GitHub で Pull Request を作成
+2. PR 説明テンプレートに従って記入
+3. 関連する Issue をリンク（該当する場合）
+
+### ステップ 5: CI/CD チェック
+
+- GitHub Actions が自動的にチェックを実行します
+- すべてのチェックが通過する必要があります
+- 失敗した場合は、ローカルで再確認して修正してください
 
 ### PR 説明テンプレート
 
@@ -316,10 +504,85 @@ class TestAgentFlowEngine:
 3. すべてのレビューコメントに対応
 4. マージコンフリクトなし
 
-## 質問がありますか？
+## よくある質問
 
-- バグ報告や機能リクエストは [GitHub Issues](https://github.com/liushuang393/serverlessAIAgents/issues) を開いてください
-- 質問は [GitHub Discussions](https://github.com/liushuang393/serverlessAIAgents/discussions) を開始してください
-- プライベートな問い合わせは <115070984+liushuang393@users.noreply.github.com> にメールしてください
+### Q: ローカルでテストが失敗する
+
+**A**: 以下を確認してください：
+
+```bash
+# 環境がアクティベートされているか確認
+conda activate agentflow  # または source .venv/bin/activate
+
+# 依存関係がインストールされているか確認
+pip install -e ".[dev]"
+
+# テストを再実行
+pytest
+```
+
+### Q: Pre-commit フックが遅い
+
+**A**: 初回実行時は依存関係をダウンロードするため遅いです。2回目以降は速くなります。
+
+```bash
+# キャッシュをクリア
+pre-commit clean
+
+# 再インストール
+pre-commit install --install-hooks
+```
+
+### Q: コミット時に自動チェックをスキップしたい
+
+**A**: 緊急時のみ `--no-verify` を使用してください（**非推奨**）。
+
+```bash
+# 自動チェックをスキップ（非推奨）
+git commit --no-verify -m "message"
+```
+
+**推奨**: エラーを修正してからコミットしてください。
+
+### Q: 型エラーが解決できない
+
+**A**: 以下を試してください：
+
+```bash
+# 型チェックの詳細を確認
+mypy agentflow --show-error-codes
+
+# 特定のエラーを無視（一時的）
+# type: ignore[error-code] を追加
+```
+
+### Q: カバレッジが 80% を下回る
+
+**A**: 新しいコードにはテストを追加してください。
+
+```bash
+# カバレッジレポートを確認
+pytest --cov=agentflow --cov-report=html
+# htmlcov/index.html で未カバー箇所を確認
+
+# テストを追加
+# tests/unit/ または tests/integration/ に追加
+```
+
+## サポート
+
+- **バグ報告や機能リクエスト**: [GitHub Issues](https://github.com/liushuang393/serverlessAIAgents/issues) を開いてください
+- **質問**: [GitHub Discussions](https://github.com/liushuang393/serverlessAIAgents/discussions) を開始してください
+- **プライベートな問い合わせ**: <115070984+liushuang393@users.noreply.github.com> にメールしてください
+
+## 関連ドキュメント
+
+- [開発規範](docs/DEVELOPMENT_STANDARDS_JA.md) - 詳細なコーディング規約
+- [アーキテクチャ](docs/architecture.md) - システム設計の理解
+- [API リファレンス](docs/api.md) - API の詳細
+
+---
 
 AgentFlow への貢献ありがとうございます！ 🎉
+
+あなたの貢献が、AgentFlow をより良いフレームワークにします。

@@ -149,6 +149,127 @@ class TestInfoCommand:
         assert "Not implemented" in result.output or "⚠" in result.output
 
 
+class TestSkillsCommand:
+    """skills コマンドグループのテスト."""
+
+    def test_skills_help(self) -> None:
+        """skills --help が動作することをテスト."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["skills", "--help"])
+
+        assert result.exit_code == 0
+        assert "skills" in result.output.lower()
+        assert "list" in result.output.lower()
+        assert "show" in result.output.lower()
+        assert "create" in result.output.lower()
+        assert "validate" in result.output.lower()
+        assert "search" in result.output.lower()
+        assert "delete" in result.output.lower()
+
+    def test_skills_list(self) -> None:
+        """skills list コマンドが動作することをテスト."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["skills", "list"])
+
+        # exit_code 0 または出力があればOK
+        assert result.exit_code == 0
+        # "skills" または "Total" が出力に含まれる
+        assert "skill" in result.output.lower() or "total" in result.output.lower() or "No skills" in result.output
+
+    def test_skills_list_learned_option(self) -> None:
+        """skills list --learned オプションが動作することをテスト."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["skills", "list", "--learned"])
+
+        assert result.exit_code == 0
+
+    def test_skills_list_project_option(self) -> None:
+        """skills list --project オプションが動作することをテスト."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["skills", "list", "--project"])
+
+        assert result.exit_code == 0
+
+    def test_skills_show_missing_name(self) -> None:
+        """skills show に引数がない場合エラーになることをテスト."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["skills", "show"])
+
+        assert result.exit_code != 0
+        assert "Missing argument" in result.output or "Error" in result.output
+
+    def test_skills_show_not_found(self) -> None:
+        """skills show で存在しない Skill を指定した場合."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["skills", "show", "nonexistent-skill"])
+
+        assert result.exit_code == 0
+        assert "not found" in result.output.lower()
+
+    def test_skills_create_help(self) -> None:
+        """skills create --help が動作することをテスト."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["skills", "create", "--help"])
+
+        assert result.exit_code == 0
+        assert "name" in result.output.lower()
+        assert "--description" in result.output
+        assert "--triggers" in result.output
+        assert "--scope" in result.output
+
+    def test_skills_create_invalid_name(self) -> None:
+        """skills create で無効な名前を指定した場合."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["skills", "create", "Invalid_Name"])
+
+        assert result.exit_code == 0
+        assert "invalid" in result.output.lower() or "kebab-case" in result.output.lower()
+
+    def test_skills_validate_help(self) -> None:
+        """skills validate --help が動作することをテスト."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["skills", "validate", "--help"])
+
+        assert result.exit_code == 0
+        assert "path" in result.output.lower()
+        assert "--strict" in result.output
+
+    def test_skills_validate_nonexistent_path(self) -> None:
+        """skills validate で存在しないパスを指定した場合."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["skills", "validate", "/nonexistent/path"])
+
+        assert result.exit_code != 0
+
+    def test_skills_search_help(self) -> None:
+        """skills search --help が動作することをテスト."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["skills", "search", "--help"])
+
+        assert result.exit_code == 0
+        assert "query" in result.output.lower()
+        assert "--top" in result.output
+
+    def test_skills_search_no_results(self) -> None:
+        """skills search で結果がない場合."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["skills", "search", "xyznonexistent123"])
+
+        assert result.exit_code == 0
+        # "No skills" または検索結果の出力
+        assert "skill" in result.output.lower()
+
+    def test_skills_delete_help(self) -> None:
+        """skills delete --help が動作することをテスト."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["skills", "delete", "--help"])
+
+        assert result.exit_code == 0
+        assert "name" in result.output.lower()
+        assert "--scope" in result.output
+        assert "--force" in result.output
+
+
 class TestErrorHandling:
     """エラーハンドリングのテスト."""
 

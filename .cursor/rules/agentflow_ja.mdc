@@ -1,0 +1,751 @@
+# AgentFlow 工程規範 (Engineering Rules)
+
+> **バージョン**: 1.0.0
+> **更新日**: 2025-01-15
+> **適用範囲**: AgentFlow Framework の全コード
+
+---
+
+## 🎯 プロジェクト概要
+
+AgentFlow は軽量 AI エージェント開発フレームワークで、MCP / A2A / AG-UI / A2UI の4プロトコルを統一インターフェースで提供します。
+
+### 技術スタック
+
+| 項目 | 技術 |
+|------|------|
+| 言語 | Python 3.13+ |
+| パッケージ管理 | pip / conda |
+| Linter | Ruff |
+| 型チェック | Mypy (strict) |
+| テスト | Pytest (asyncio) |
+| ビルド | Hatch |
+
+### 8層アーキテクチャ
+
+```
+📱 アプリケーション層 (apps/) → ビジネスアプリ
+🎨 UI層 (studio/) → ビジュアルエディタ
+🔄 フロー層 (quick.py, patterns/) → 3つの開発方式
+🤖 Agent層 (core/agent_block.py) → Agent基底クラス
+🛠️ ツール層 (skills/, providers/tool_provider.py) → Skillsシステム
+🔌 Provider層 (providers/) → 統一アクセスインターフェース
+🌐 プロトコル層 (protocols/) → 4プロトコルサポート
+💾 インフラ層 (memory/, llm/) → 外部サービス統合
+```
+
+---
+
+## 📁 ディレクトリ構造規範
+
+```
+agentflow/
+├── __init__.py          # 公開API エクスポート
+├── core/                # コアモジュール
+│   ├── agent_block.py   # Agent基底クラス
+│   ├── engine.py        # 実行エンジン
+│   ├── exceptions.py    # 例外階層
+│   ├── types.py         # コア型定義
+│   ├── metadata.py      # メタデータ定義
+│   └── schemas.py       # Schemaローダー
+├── providers/           # 統一Provider
+│   ├── llm_provider.py  # LLMアクセス
+│   ├── tool_provider.py # ツール登録
+│   ├── data_provider.py # データアクセス
+│   └── event_provider.py # イベント処理
+├── protocols/           # プロトコル実装
+│   ├── mcp_client.py    # MCPプロトコル
+│   ├── a2a_*.py         # A2Aプロトコル
+│   ├── agui_*.py        # AG-UIプロトコル
+│   └── a2ui/            # A2UIプロトコル
+├── patterns/            # 協調パターン
+│   ├── multi_agent.py   # マルチAgent協調
+│   └── supervisor.py    # Supervisorパターン
+├── skills/              # Skillsシステム
+│   ├── base.py          # Skill基底クラス
+│   ├── engine.py        # Skillエンジン
+│   ├── loader.py        # Skillローダー
+│   └── builtin/         # 内蔵Skills
+├── memory/              # 記憶システム
+│   ├── memory_manager.py # 記憶管理
+│   ├── vector_search.py  # ベクトル検索
+│   └── vector_db/       # ベクトルDB
+├── llm/                 # LLM統合
+└── cli/                 # CLIツール
+
+apps/                    # アプリケーション例
+├── decision_governance_engine/  # 意思決定エンジン
+├── market_trend_monitor/        # 市場監視
+└── code_migration_assistant/    # コード移行
+
+tests/                   # テスト
+├── unit/                # 単体テスト
+├── integration/         # 統合テスト
+└── conftest.py          # 共有Fixtures
+```
+
+---
+
+## 🔧 コア機能モジュール
+
+### 1. Agent定義（3つの方式）
+
+```python
+# 方式1: @agent デコレータ（最も簡単・推奨）
+from agentflow import agent, tool, AgentClient
+
+@agent
+class QAAgent:
+    """質問応答Agent"""
+    system_prompt = "あなたは親切なアシスタントです"
+    skills = ["chatbot", "rag"]  # Claude Code Skills互換
+    
+    @tool
+    def search(self, query: str) -> list[dict]:
+        """検索機能"""
+        return []
+
+# 呼び出し
+result = await AgentClient.get("QAAgent").invoke({"question": "..."})
+
+# 方式2: create_flow（複数Agent協調）
+from agentflow import create_flow
+
+flow = create_flow(
+    agents=[GatekeeperAgent(), AnalysisAgent()],
+    pattern="sequential",  # sequential | concurrent | handoff
+    enable_memory=True
+)
+result = await flow.run({"task": "..."})
+
+# 方式3: AgentBlock（完全制御）
+from agentflow.core.agent_block import AgentBlock
+
+class CustomAgent(AgentBlock):
+    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
+        # カスタムロジック
+        return {"result": "ok"}
+```
+
+### 2. LLM Provider（松結合）
+
+```python
+# 推奨: get_llm() 関数を使用
+from agentflow.providers import get_llm
+
+llm = get_llm()  # 環境変数から自動検出
+response = await llm.chat([{"role": "user", "content": "hello"}])
+
+# Agent内での使用
+class MyAgent(AgentBlock):
+    async def run(self, input_data):
+        llm = get_llm(temperature=0.3)  # 分析向け低温度
+        return await llm.chat([...])
+```
+
+### 3. Skills システム（Claude Code Skills互換）
+
+```python
+from agentflow.skills import SkillEngine
+
+engine = SkillEngine(auto_learn=True)
+result = await engine.resolve("PDFからテキストを抽出")
+
+if result.generated:
+    print(f"🆕 新Skill自動生成: {result.skill.name}")
+```
+
+### 4. マルチAgent協調パターン
+
+```python
+from agentflow.patterns.multi_agent import AgentCoordinator, SharedContext
+
+# Sequential協調
+coordinator = AgentCoordinator(
+    agents=[Agent1(), Agent2()],
+    pattern="sequential",
+    shared_context=SharedContext(enable_memory=True)
+)
+
+# Supervisorパターン
+from agentflow.patterns.supervisor import SupervisorCoordinator
+
+supervisor = SupervisorCoordinator(
+    supervisor=SupervisorAgent(),
+    workers={
+        "research": ResearchAgent(),
+        "write": WriteAgent(),
+    },
+    max_iterations=10
+)
+```
+
+---
+
+## 📝 コードスタイル規範
+
+### 1. 命名規則
+
+```python
+# モジュール名: snake_case
+# agent_flow.py ✅  |  AgentFlow.py ❌
+
+# クラス名: PascalCase
+class AgentFlowEngine: ...  # ✅
+class agent_flow_engine: ...  # ❌
+
+# 関数/変数: snake_case
+def create_agent() -> Agent: ...  # ✅
+def createAgent() -> Agent: ...  # ❌
+
+# 定数: UPPER_SNAKE_CASE
+MAX_RETRIES = 3  # ✅
+
+# プライベートメンバー: 単一アンダースコアプレフィックス
+class Agent:
+    def __init__(self) -> None:
+        self._internal_state: dict[str, Any] = {}  # ✅
+```
+
+### 2. 型アノテーション（100%カバレッジ）
+
+```python
+# ✅ 完全な型アノテーション
+from typing import Any
+from collections.abc import Callable, Awaitable
+
+async def execute_workflow(
+    workflow_id: str,
+    inputs: dict[str, Any],
+    hooks: list[Callable[[str], Awaitable[None]]] | None = None,
+) -> dict[str, Any]:
+    ...
+
+# ❌ 型アノテーション不足
+async def execute_workflow(workflow_id, inputs, hooks=None):
+    ...
+```
+
+### 3. Docstring（Googleスタイル）
+
+```python
+async def execute_workflow(
+    workflow_id: str,
+    inputs: dict[str, Any],
+    *,
+    timeout: float = 30.0,
+) -> dict[str, Any]:
+    """指定されたワークフローを実行する。
+
+    Args:
+        workflow_id: ワークフローの一意識別子
+        inputs: ワークフロー入力パラメータ辞書
+        timeout: 実行タイムアウト（秒）、デフォルト30秒
+
+    Returns:
+        実行結果を含む辞書
+
+    Raises:
+        ValueError: workflow_idが空の場合
+        TimeoutError: 実行がタイムアウトした場合
+
+    Example:
+        >>> result = await execute_workflow("my-workflow", {"input": "test"})
+        >>> print(result["status"])
+        success
+    """
+    ...
+```
+
+### 4. インポート順序（isort）
+
+```python
+# 1. 標準ライブラリ
+import asyncio
+import logging
+from pathlib import Path
+from typing import Any
+
+# 2. サードパーティ
+import httpx
+from pydantic import BaseModel
+
+# 3. プロジェクト内
+from agentflow.core.engine import AgentFlowEngine
+from agentflow.core.types import WorkflowConfig
+```
+
+---
+
+## 🏗️ アーキテクチャ設計原則
+
+### 1. SOLID原則
+
+```python
+# S - 単一責任
+class Agent:
+    async def execute(self) -> None: ...  # 実行のみ担当
+
+class AgentRepository:
+    async def save(self, agent: Agent) -> None: ...  # 永続化のみ担当
+
+# O - 開閉原則（Protocol）
+from typing import Protocol
+
+class ProtocolAdapter(Protocol):
+    async def execute(self, request: dict[str, Any]) -> dict[str, Any]: ...
+
+# D - 依存性逆転
+class AgentManager:
+    def __init__(self, storage: Storage) -> None:  # 抽象に依存
+        self._storage = storage
+```
+
+### 2. 非同期優先
+
+```python
+# ✅ すべてのI/O操作でasync/awaitを使用
+async def load_agent(agent_id: str) -> Agent:
+    async with aiofiles.open(f"agents/{agent_id}.yaml") as f:
+        content = await f.read()
+    return Agent.from_yaml(content)
+
+# ❌ ブロッキング呼び出しを避ける
+def load_agent_sync(agent_id: str) -> Agent:
+    with open(f"agents/{agent_id}.yaml") as f:  # ブロッキング！
+        content = f.read()
+    return Agent.from_yaml(content)
+```
+
+### 3. 依存性注入
+
+```python
+class AgentFlowEngine:
+    def __init__(
+        self,
+        workflow_engine: WorkflowEngine,
+        protocol_adapters: dict[str, ProtocolAdapter],
+        logger: logging.Logger | None = None,
+    ) -> None:
+        self._workflow = workflow_engine
+        self._adapters = protocol_adapters
+        self._logger = logger or logging.getLogger(__name__)
+```
+
+### 4. Pydanticデータ検証
+
+```python
+from pydantic import BaseModel, Field, field_validator
+
+class AgentMetadata(BaseModel):
+    """Agentメタデータモデル"""
+    
+    name: str = Field(..., min_length=1, max_length=100)
+    version: str = Field(..., pattern=r"^\d+\.\d+\.\d+$")
+    protocols: list[str] = Field(default_factory=list)
+    
+    @field_validator("protocols")
+    @classmethod
+    def validate_protocols(cls, v: list[str]) -> list[str]:
+        valid = {"mcp", "a2a", "ag-ui", "a2ui"}
+        if invalid := set(v) - valid:
+            raise ValueError(f"Invalid protocols: {invalid}")
+        return v
+```
+
+---
+
+## 🚨 エラーハンドリング規範
+
+### 1. カスタム例外階層
+
+```python
+# agentflow/core/exceptions.py
+class AgentFlowError(Exception):
+    """AgentFlow基底例外"""
+
+class WorkflowError(AgentFlowError):
+    """ワークフロー関連例外"""
+
+class WorkflowNotFoundError(WorkflowError):
+    """ワークフローが見つからない"""
+    def __init__(self, workflow_id: str) -> None:
+        super().__init__(f"Workflow not found: {workflow_id}")
+        self.workflow_id = workflow_id
+
+class ProtocolError(AgentFlowError):
+    """プロトコル関連例外"""
+
+class ConfigurationError(AgentFlowError):
+    """設定無効"""
+```
+
+### 2. ベストプラクティス
+
+```python
+# ✅ 特定の例外をキャッチ
+try:
+    result = await execute_workflow(workflow_id)
+except WorkflowNotFoundError:
+    logger.error(f"Workflow not found: {workflow_id}")
+    raise
+except TimeoutError:
+    logger.warning(f"Workflow timeout: {workflow_id}")
+    return {"status": "timeout"}
+
+# ❌ すべての例外をキャッチ
+try:
+    result = await execute_workflow(workflow_id)
+except Exception:  # 広すぎる！
+    pass
+
+# ✅ raise from で例外チェーンを保持
+try:
+    data = await fetch_data()
+except httpx.HTTPError as e:
+    raise WorkflowError(f"Failed to fetch data") from e
+```
+
+---
+
+## 🧪 テスト規範
+
+### 1. テストカバレッジ要件
+
+| タイプ | 要件 |
+|--------|------|
+| 単体テスト | ≥ 80% コードカバレッジ |
+| 統合テスト | すべてのコアワークフロー |
+| E2Eテスト | 主要ユーザーシナリオ |
+
+### 2. テスト構造
+
+```python
+# tests/unit/test_agent_block.py
+import pytest
+from agentflow.core.agent_block import AgentBlock
+
+class TestAgentBlock:
+    """AgentBlock単体テスト"""
+    
+    @pytest.fixture
+    def sample_metadata_file(self, tmp_path: Path) -> Path:
+        """テスト用メタデータファイルを作成"""
+        ...
+    
+    @pytest.fixture
+    def concrete_agent_class(self) -> type[AgentBlock]:
+        """テスト用具象Agentクラス"""
+        class ConcreteAgent(AgentBlock):
+            async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
+                return {"result": "ok"}
+        return ConcreteAgent
+    
+    @pytest.mark.asyncio
+    async def test_run_method(
+        self,
+        concrete_agent_class: type[AgentBlock],
+        sample_metadata_file: Path,
+    ) -> None:
+        """runメソッドのテスト"""
+        agent = concrete_agent_class(metadata_path=sample_metadata_file)
+        result = await agent.run({"text": "hello"})
+        assert result["result"] == "ok"
+```
+
+### 3. 外部依存のモック
+
+```python
+from unittest.mock import AsyncMock
+
+async def test_agent_with_mocked_storage() -> None:
+    mock_storage = AsyncMock()
+    mock_storage.load.return_value = '{"name": "test"}'
+    
+    agent = Agent(storage=mock_storage)
+    await agent.load("test_id")
+    
+    mock_storage.load.assert_called_once_with("test_id")
+```
+
+### 4. テストマーカー
+
+```python
+# pyproject.toml で定義されたマーカー
+@pytest.mark.unit         # 単体テスト
+@pytest.mark.integration  # 統合テスト
+@pytest.mark.e2e          # エンドツーエンドテスト
+@pytest.mark.slow         # 遅いテスト
+
+# 特定のマーカーでテストを実行
+# pytest -m unit
+# pytest -m "not slow"
+```
+
+---
+
+## 🔒 セキュリティ規範
+
+### 1. ハードコード禁止
+
+```python
+# ❌ 禁止
+API_KEY = "sk-xxx"
+DB_PASSWORD = "secret123"
+
+# ✅ 環境変数を使用
+import os
+API_KEY = os.environ.get("OPENAI_API_KEY")
+
+# ✅ pydantic-settings を使用
+from pydantic_settings import BaseSettings
+
+class Settings(BaseSettings):
+    openai_api_key: str
+    database_url: str
+    
+    class Config:
+        env_file = ".env"
+```
+
+### 2. 入力検証
+
+```python
+# ✅ Pydantic で検証
+from pydantic import BaseModel, Field
+
+class DecisionRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=10000)
+    constraints: ConstraintSet | None = None
+```
+
+### 3. ログセキュリティ
+
+```python
+# ❌ 機密情報のログ禁止
+logger.info(f"API Key: {api_key}")
+
+# ✅ マスク処理
+logger.info(f"API Key: {api_key[:8]}...")
+```
+
+---
+
+## ⚡ パフォーマンス最適化
+
+### 1. 並行実行
+
+```python
+# ✅ 独立タスクを並行実行
+async def process_all(items: list[str]) -> list[dict]:
+    tasks = [process_item(item) for item in items]
+    return await asyncio.gather(*tasks)
+
+# ✅ セマフォで並行数を制限
+semaphore = asyncio.Semaphore(10)
+
+async def limited_request(url: str) -> dict:
+    async with semaphore:
+        return await fetch(url)
+```
+
+### 2. キャッシュ戦略
+
+```python
+from functools import lru_cache
+
+@lru_cache(maxsize=100)
+def get_config(config_id: str) -> Config:
+    return load_config(config_id)
+```
+
+### 3. コネクションプール
+
+```python
+# ✅ httpx コネクションプールを使用
+async with httpx.AsyncClient() as client:
+    responses = await asyncio.gather(*[
+        client.get(url) for url in urls
+    ])
+```
+
+---
+
+## 🛠️ ツール設定
+
+### Ruff (pyproject.toml)
+
+```toml
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "N", "UP", "ANN", "B", "A", "C4", 
+          "DTZ", "T10", "EM", "ISC", "ICN", "PIE", "PT", "Q", 
+          "RSE", "RET", "SIM", "TID", "TCH", "ARG", "PTH", 
+          "ERA", "PL", "TRY", "RUF"]
+ignore = ["ANN101", "ANN102", "ANN401", "TRY003", "PLR0913"]
+```
+
+### Mypy (pyproject.toml)
+
+```toml
+[tool.mypy]
+python_version = "3.13"
+strict = true
+disallow_untyped_defs = true
+warn_return_any = true
+```
+
+### Pytest (pyproject.toml)
+
+```toml
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+addopts = [
+    "--strict-markers",
+    "--cov=agentflow",
+    "--cov-fail-under=80",
+]
+```
+
+---
+
+## ❌ 禁止事項
+
+| ルール | 説明 |
+|--------|------|
+| ❌ `print()` | `logging` を使用 |
+| ❌ `Any` 型 | 十分な理由がある場合のみ |
+| ❌ `type: ignore` | 十分な理由がある場合のみ |
+| ❌ 可変デフォルト引数 | `def foo(x=[])` |
+| ❌ ハードコード設定 | 環境変数を使用 |
+| ❌ `--no-verify` | Git hooks を迂回禁止 |
+| ❌ テスト無効化でコミット | テストを通過させる |
+| ❌ 広範な例外キャッチ | `except Exception` |
+
+---
+
+## ✅ コミット前チェックリスト
+
+```bash
+# 1. コードフォーマット
+ruff format .
+
+# 2. Lintチェック
+ruff check .
+
+# 3. 型チェック
+mypy .
+
+# 4. テスト実行
+pytest
+
+# 5. デバッグコードがないか確認
+grep -r "print(" agentflow/ --include="*.py"
+grep -r "breakpoint()" agentflow/ --include="*.py"
+```
+
+---
+
+## 📚 AIがよく犯す間違いチェック
+
+### ❌ async/await を忘れる
+
+```python
+# ❌ 間違い
+def load_data():
+    return aiofiles.open("data.txt")  # コルーチンを返す！
+
+# ✅ 正しい
+async def load_data() -> str:
+    async with aiofiles.open("data.txt") as f:
+        return await f.read()
+```
+
+### ❌ 可変デフォルト引数
+
+```python
+# ❌ 間違い
+def add_item(item: str, items: list[str] = []) -> list[str]:
+    items.append(item)  # すべての呼び出しで同じリストを共有！
+    return items
+
+# ✅ 正しい
+def add_item(item: str, items: list[str] | None = None) -> list[str]:
+    if items is None:
+        items = []
+    items.append(item)
+    return items
+```
+
+### ❌ リソースを閉じ忘れる
+
+```python
+# ❌ 間違い
+async def process_file(path: str) -> str:
+    f = await aiofiles.open(path)
+    content = await f.read()
+    return content  # ファイルが閉じられていない！
+
+# ✅ 正しい
+async def process_file(path: str) -> str:
+    async with aiofiles.open(path) as f:
+        return await f.read()
+```
+
+### ❌ 循環インポート
+
+```python
+# ✅ TYPE_CHECKING を使用
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from b import B
+
+class A:
+    def use_b(self, b: "B") -> None: ...
+```
+
+---
+
+## 🔄 開発フロー
+
+### 1. 機能開発
+
+```
+1. 機能ブランチ作成: git checkout -b feature/xxx
+2. テスト作成（Red）
+3. 機能実装（Green）
+4. リファクタリング（Refactor）
+5. コミット: git commit -m "feat: xxx"
+6. PR + コードレビュー
+7. main にマージ
+```
+
+### 2. コミットメッセージ規範
+
+```
+feat: 新機能
+fix: バグ修正
+docs: ドキュメント更新
+style: コードフォーマット
+refactor: リファクタリング
+test: テスト
+chore: ビルド/ツール
+```
+
+### 3. バージョン管理
+
+```
+メジャー.マイナー.パッチ
+  1.0.0
+  │ │ └── バグ修正
+  │ └──── 新機能（後方互換）
+  └────── 破壊的変更（非互換）
+```
+
+---
+
+**この規範を厳格に遵守し、コード品質を確保してください！**

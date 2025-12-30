@@ -1,327 +1,238 @@
-# AgentFlow アーキテクチャ
+# AgentFlow アーキテクチャ設計書
 
-AgentFlow の設計思想とアーキテクチャの詳細を説明します。
+> **バージョン**: 2.0.0
+> **更新日**: 2025-01-20
 
-## 設計思想
+---
 
-AgentFlow は以下の原則に基づいて設計されています：
+## 📋 概要
 
-1. **軽量性**: コアコードは約500行、PocketFlow エンジンは100行
-2. **モジュラー性**: プロトコル、ツール、エージェントを独立して開発可能
-3. **プロトコル中立**: MCP、A2A、AG-UI の3つのプロトコルを統一的にサポート
-4. **開発者体験**: 10分で最初のエージェントを作成可能
-5. **型安全性**: Python 3.13+ の型ヒントを完全活用
+AgentFlow は**シンプルさ**と**柔軟性**を両立した多 Agent フレームワークです。
 
-## システムアーキテクチャ
+### 設計哲学
 
-AgentFlow は4層のアーキテクチャで構成されています：
+| 原則 | 説明 |
+|------|------|
+| **簡潔** | コアコードは約500行、学習コスト最小 |
+| **柔軟** | プラグイン/工場パターンで自由に拡張 |
+| **統一** | MCP/A2A/AG-UI/A2UI を統一 API で提供 |
+| **型安全** | Python 3.12+ 型ヒント完全活用 |
+
+---
+
+## 🏗️ システム構成
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    UI Layer (Optional)                   │
-│                  Visual Studio (React)                   │
-└─────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────┐
-│                    Protocol Layer                        │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐  │
-│  │   MCP    │  │   A2A    │  │       AG-UI          │  │
-│  │  Client  │  │  Server  │  │  Event Emitter       │  │
-│  └──────────┘  └──────────┘  └──────────────────────┘  │
-└─────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────┐
-│                    Engine Layer                          │
-│              AgentFlowEngine (PocketFlow)                │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │  AsyncFlow / Flow / AsyncNode / Node             │   │
-│  └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────┐
-│                    Tool Layer                            │
-│  ┌──────────┐  ┌──────────┐  ┌──────────────────────┐  │
-│  │   LLM    │  │ Database │  │    External API      │  │
-│  │  Tools   │  │  Tools   │  │       Tools          │  │
-│  └──────────┘  └──────────┘  └──────────────────────┘  │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        AgentFlow Framework                       │
+├─────────────────────────────────────────────────────────────────┤
+│  📱 UI 層                                                        │
+│     ├── AG-UI: イベントストリーム（通信プロトコル）              │
+│     └── A2UI: 宣言式コンポーネント（UI 規範）                   │
+├─────────────────────────────────────────────────────────────────┤
+│  🤖 Agent 層                                                     │
+│     ├── AgentBlock: Agent 基底クラス                            │
+│     ├── Skills: Claude Skills 形式の指示ファイル                │
+│     └── Coordinator: 協調パターン (Supervisor/Hierarchical)     │
+├─────────────────────────────────────────────────────────────────┤
+│  🔗 協調層                                                       │
+│     └── A2A: Agent 間通信 (発見・委譲・協調)                    │
+├─────────────────────────────────────────────────────────────────┤
+│  🔧 ツール層                                                     │
+│     └── MCP: 外部ツール接続 (DB/API/ファイル)                   │
+├─────────────────────────────────────────────────────────────────┤
+│  ⚙️ コア層                                                       │
+│     ├── Registry: 統一登録/取得パターン                         │
+│     ├── Engine: PocketFlow ワークフローエンジン                 │
+│     └── Metadata: agent.yaml メタデータ管理                     │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-### 1. UI Layer (オプション)
+---
 
-Visual Studio は React + TypeScript で実装されたビジュアルワークフローエディタです。
+## 🔑 コアコンセプト
 
-**主要コンポーネント:**
+### 1. 統一レジストリパターン
 
-- **Canvas**: React Flow ベースのビジュアルエディタ
-- **AgentNode**: ドラッグ&ドロップ可能なエージェントノード
-- **PropertiesPanel**: ノードプロパティエディタ
-- **Sidebar**: エージェント一覧とマーケットプレイス
-
-**技術スタック:**
-
-- React 18.3.1
-- TypeScript 5.7.2
-- React Flow 11.11.4
-- Zustand 4.5.5 (状態管理)
-- Tailwind CSS 3.4.15
-
-### 2. Protocol Layer
-
-3つのオープンプロトコルを統一的にサポートします。
-
-#### MCP (Model Context Protocol)
-
-LLM ツールとの接続を提供します。
-
-**主要クラス:**
-
-- `MCPClient`: MCP サーバーへの接続
-- `MCPConfig`: MCP 設定管理
-
-**使用例:**
+すべてのコンポーネント（Protocol/Skill/Coordinator）を統一 API で管理：
 
 ```python
-from agentflow.protocols.mcp_client import MCPClient
+from agentflow.core.registry import Registry
 
-async with MCPClient("mcp://localhost:3000") as client:
-    tools = await client.list_tools()
-    result = await client.call_tool("search", {"query": "AgentFlow"})
+# 基本操作
+registry.register("name", item)      # 登録
+registry.get("name")                  # 取得（None 許容）
+registry.get_or_raise("name")         # 取得（例外付き）
+registry.unregister("name")           # 削除
+registry.list_names()                 # 名前一覧
+registry.list_all()                   # 全アイテム
 ```
 
-#### A2A (Agent-to-Agent)
+**設計原則**：
+- スレッドセーフ（`threading.Lock`）
+- 型安全（`Generic[T]`）
+- 重複登録警告（上書き可能）
 
-エージェント間の協調を提供します。
+### 2. AgentBlock 基底クラス
 
-**主要クラス:**
-
-- `A2AServer`: A2A サーバー実装
-- `A2AClient`: A2A クライアント実装
-- `A2ACard`: エージェント情報カード
-
-**使用例:**
-
-```python
-from agentflow.protocols.a2a_server import A2AServer
-
-server = A2AServer(agent, host="0.0.0.0", port=8000)
-await server.start()
-```
-
-#### AG-UI (Agent-UI)
-
-フロントエンドへのイベントストリーミングを提供します。
-
-**主要クラス:**
-
-- `AGUIEmitter`: イベント送信
-- `AGUIEvent`: イベントデータ
-
-**使用例:**
-
-```python
-from agentflow.protocols.agui_emitter import AGUIEmitter
-
-emitter = AGUIEmitter()
-await emitter.emit_progress(50, "処理中...")
-await emitter.emit_result({"status": "success"})
-```
-
-### 3. Engine Layer
-
-PocketFlow ベースの軽量ワークフローエンジンです。
-
-**主要クラス:**
-
-- `AgentFlowEngine`: エンジン本体
-- `AsyncFlow` / `Flow`: ワークフロー定義
-- `AsyncNode` / `Node`: ノード定義
-
-**特徴:**
-
-- 非同期実行サポート
-- ノード間のデータフロー管理
-- エラーハンドリング
-- ライフサイクル管理
-
-**使用例:**
-
-```python
-from agentflow.core.engine import AgentFlowEngine, AsyncFlow, AsyncNode
-
-async def process_node(input_data):
-    return {"result": input_data["value"] * 2}
-
-flow = AsyncFlow([
-    AsyncNode("process", process_node),
-])
-
-engine = AgentFlowEngine()
-result = await engine.run_async(flow, {"value": 10})
-```
-
-### 4. Tool Layer
-
-外部ツールとの統合を提供します。
-
-**ツールカテゴリ:**
-
-- **LLM Tools**: OpenAI、Anthropic、Google などの LLM API
-- **Database Tools**: PostgreSQL、MySQL、MongoDB などのデータベース
-- **External API Tools**: REST API、GraphQL などの外部 API
-
-## コアコンポーネント
-
-### AgentBlock
-
-すべてのエージェントの基底クラスです。
-
-**主要機能:**
-
-- メタデータ自動読み込み
-- プロトコルアダプター自動適用
-- ライフサイクル管理 (initialize / run / cleanup)
-- コンテキストマネージャーサポート
-
-**実装例:**
+すべての Agent の基底：
 
 ```python
 from agentflow.core.agent_block import AgentBlock
 
 class MyAgent(AgentBlock):
     async def initialize(self) -> None:
-        """初期化処理."""
+        """初期化処理"""
         await super().initialize()
-        # カスタム初期化
 
     async def run(self, input_data: dict) -> dict:
-        """エージェント実行."""
-        # ビジネスロジック
-        return {"result": "success"}
+        """メイン処理（必須実装）"""
+        return {"result": "..."}
 
     async def cleanup(self) -> None:
-        """クリーンアップ処理."""
-        # カスタムクリーンアップ
+        """終了処理"""
         await super().cleanup()
+
+# コンテキストマネージャー使用
+async with MyAgent() as agent:
+    result = await agent.run({"input": "data"})
 ```
 
-### Protocol Adapter
+### 3. 協調パターン
 
-プロトコルメソッドを自動生成します。
+| パターン | クラス | 説明 |
+|---------|--------|------|
+| Sequential | `CoordinatorBase` | 順次実行 |
+| Concurrent | `CoordinatorBase` | 並行実行 |
+| **Supervisor** | `SupervisorCoordinator` | 監督者が動的にワーカー選択 |
+| **Hierarchical** | `HierarchicalCoordinator` | 階層的タスク分解 |
+| Handoff | `CoordinatorBase` | 動的委譲 |
 
-**主要クラス:**
-
-- `ProtocolAdapter`: アダプター生成
-- `@auto_adapt`: デコレーター
-
-**使用例:**
-
+**Supervisor パターン例**：
 ```python
-from agentflow.decorators import auto_adapt
+from agentflow.patterns.supervisor import SupervisorCoordinator
 
-@auto_adapt()
-class MyAgent:
-    def process(self, data: str) -> str:
-        return data.upper()
-
-# プロトコルメソッドが自動注入される
-agent = MyAgent()
-mcp_tools = agent.get_mcp_tools()
-a2a_card = agent.get_a2a_card()
-emitter = agent.create_agui_emitter()
+coordinator = SupervisorCoordinator(
+    supervisor=supervisor_agent,
+    workers={"research": research_agent, "write": write_agent},
+    max_iterations=10
+)
+result = await coordinator.execute("市場調査レポート作成")
 ```
 
-### Marketplace
+### 4. Skills 自動進化システム
 
-エージェントの検索とインストールを提供します。
-
-**主要クラス:**
-
-- `MarketplaceClient`: マーケットプレイス API クライアント
-- `LocalRegistry`: ローカルエージェント管理
-
-**使用例:**
-
-```bash
-# エージェント検索
-agentflow marketplace search chatbot
-
-# エージェントインストール
-agentflow marketplace install chatbot-agent
-
-# インストール済みエージェント一覧
-agentflow marketplace list
-```
-
-### Template System
-
-プロジェクトテンプレートを提供します。
-
-**主要クラス:**
-
-- `TemplateManager`: テンプレート管理
-- `TemplateMetadata`: テンプレートメタデータ
-
-**使用例:**
-
-```bash
-# テンプレート一覧
-agentflow template list
-
-# テンプレートから生成
-agentflow template generate chatbot my-chatbot -i
-```
-
-## データフロー
-
-エージェント実行時のデータフローを示します：
+Claude Code Skills 完全互換の**自動進化能力システム**：
 
 ```
-1. ユーザー入力
-   ↓
-2. AgentBlock.run() 呼び出し
-   ↓
-3. Engine でワークフロー実行
-   ↓
-4. ノードごとに処理
-   ├─ Tool 呼び出し (MCP)
-   ├─ 他エージェント呼び出し (A2A)
-   └─ イベント送信 (AG-UI)
-   ↓
-5. 結果を返却
-   ↓
-6. ユーザーに出力
+用户需求 → 技能匹配 → 存在なら実行
+                   → 不在なら自動生成 → 検証 → 固化 → 実行
+= 越用越厉害（使うほど強くなる）
 ```
 
-## セキュリティ
+**SKILL.md フォーマット**:
+```markdown
+---
+name: pdf-extractor
+description: PDFからテキストを抽出。PDF操作時に使用。
+triggers: [pdf, extract text]
+requirements: [pypdf]
+tags: [document]
+---
+# Instructions
+具体的な実行手順...
+```
 
-AgentFlow は以下のセキュリティ対策を実装しています：
+**自動進化エンジン**:
+```python
+from agentflow.skills import SkillEngine
 
-1. **入力検証**: Pydantic による型検証
-2. **認証**: A2A プロトコルでの認証サポート
-3. **サンドボックス**: ツール実行の分離
-4. **ログ**: 監査ログの記録
+engine = SkillEngine(auto_learn=True)
 
-## パフォーマンス
+# マッチ or 自動生成
+result = await engine.resolve("PDFを解析したい")
+if result.generated:
+    print(f"新スキル生成: {result.skill.name}")
+```
 
-AgentFlow は以下のパフォーマンス最適化を実装しています：
+| コンポーネント | 役割 |
+|--------------|------|
+| `SkillMatcher` | triggers/description でマッチング |
+| `SkillGenerator` | LLM で新スキル自動生成 |
+| `SkillValidator` | フォーマット・安全性検証 |
+| `SkillPersister` | learned_skills へ固化 |
+| `SkillEngine` | 統合インターフェース |
 
-1. **非同期実行**: asyncio による並行処理
-2. **キャッシング**: メタデータとツール情報のキャッシュ
-3. **遅延読み込み**: 必要なモジュールのみ読み込み
-4. **軽量設計**: コアコードは約500行
+詳細は [Skills ガイド](guide-skills.md) を参照。
 
-## 拡張性
+---
 
-AgentFlow は以下の拡張ポイントを提供しています：
+## 📦 プロトコルスタック
 
-1. **カスタムプロトコル**: 新しいプロトコルの追加
-2. **カスタムツール**: 新しいツールの追加
-3. **カスタムエンジン**: 独自のワークフローエンジン
-4. **カスタムテンプレート**: 独自のプロジェクトテンプレート
+### AG-UI vs A2UI
 
-## 次のステップ
+| 比較 | AG-UI | A2UI |
+|------|-------|------|
+| **種別** | 通信プロトコル | UI 規範 |
+| **役割** | イベント配信 | コンポーネント記述 |
+| **類比** | HTTP | HTML |
 
-- [API リファレンス](api.md) - 詳細な API ドキュメント
-- [プロトコルガイド](protocols.md) - プロトコルの詳細
-- [CLI リファレンス](cli.md) - CLI コマンドの詳細
+### プロトコル選択ガイド
+
+| シナリオ | 推奨プロトコル |
+|---------|---------------|
+| 外部ツール接続 | MCP |
+| Agent 間協調 | A2A |
+| UI 更新通知 | AG-UI |
+| 動的 UI 生成 | A2UI (AG-UI 経由) |
+
+---
+
+## 📁 ディレクトリ構成
+
+```
+agentflow/
+├── core/                 # コアモジュール
+│   ├── agent_block.py    # Agent 基底クラス
+│   ├── registry.py       # 統一レジストリ
+│   ├── engine.py         # ワークフローエンジン
+│   └── metadata.py       # メタデータ管理
+├── patterns/             # 協調パターン
+│   ├── coordinator.py    # 協調器基底
+│   ├── supervisor.py     # Supervisor パターン
+│   └── hierarchical.py   # Hierarchical パターン
+├── protocols/            # プロトコル実装
+│   ├── mcp_client.py     # MCP クライアント
+│   ├── a2a_server.py     # A2A サーバー
+│   ├── agui_emitter.py   # AG-UI エミッター
+│   └── a2ui/             # A2UI コンポーネント
+└── skills/               # スキル自動進化システム
+    ├── base.py           # Skill 基底クラス
+    ├── loader.py         # スキルローダー
+    ├── matcher.py        # スキルマッチャー
+    ├── generator.py      # スキル自動生成
+    ├── validator.py      # スキル検証
+    ├── persister.py      # スキル固化
+    └── engine.py         # 統合エンジン
+```
+
+---
+
+## 🧩 拡張ポイント
+
+| 拡張対象 | 方法 |
+|---------|------|
+| カスタム Coordinator | `CoordinatorBase` 継承 |
+| カスタム Skill | `Skill.load()` で SKILL.md 読み込み |
+| カスタム A2UI | `A2UIComponent` 継承 |
+| カスタム Protocol | `ProtocolRegistry` に登録 |
+
+---
+
+## 📚 関連ドキュメント
+
+- [Skills ガイド](guide-skills.md) - 自動進化システム詳細
+- [プロトコル詳細](protocols.md) - MCP/A2A/AG-UI/A2UI の使用方法
+- [API リファレンス](api.md) - 全 API 詳細
+- [クイックスタート](quickstart.md) - 10分で始める
+- [CLI リファレンス](cli.md) - CLI コマンド一覧

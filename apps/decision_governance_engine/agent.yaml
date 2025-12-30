@@ -1,0 +1,244 @@
+# -*- coding: utf-8 -*-
+# Decision Governance Engine - Agent Configuration
+# 道・法・術・器・検証の5層構造による意思決定支援システム
+
+name: decision_governance_engine
+version: "1.0.0"
+description: |
+  企業の意思決定を支援するマルチエージェントシステム。
+  道（本質）→法（戦略）→術（計画）→器（実装）→検証の5層で構造化された分析を提供。
+
+# Agent定義
+agents:
+  gatekeeper:
+    name: GatekeeperAgent
+    description: 入口検証Agent - 不適格な問題を門前払い
+    class: apps.decision_governance_engine.agents.GatekeeperAgent
+    config:
+      max_tokens: 300
+      temperature: 0.1
+      use_rag: false
+
+  dao:
+    name: DaoAgent
+    description: 本質判定Agent（道）- 問題の本質を抽出
+    class: apps.decision_governance_engine.agents.DaoAgent
+    config:
+      max_tokens: 500
+      temperature: 0.3
+      use_rag: false
+
+  fa:
+    name: FaAgent
+    description: 戦略選定Agent（法）- 戦略パスを評価
+    class: apps.decision_governance_engine.agents.FaAgent
+    config:
+      max_tokens: 800
+      temperature: 0.4
+      use_rag: false
+      max_recommended_paths: 2
+
+  shu:
+    name: ShuAgent
+    description: 実行計画Agent（術）- 具体的な実行計画を策定
+    class: apps.decision_governance_engine.agents.ShuAgent
+    config:
+      max_tokens: 1000
+      temperature: 0.5
+      use_rag: true
+      rag_sources:
+        - industry_practices
+        - case_studies
+
+  qi:
+    name: QiAgent
+    description: 技術実装Agent（器）- 技術的な実装方針を策定
+    class: apps.decision_governance_engine.agents.QiAgent
+    config:
+      max_tokens: 1200
+      temperature: 0.6
+      use_rag: true
+      rag_sources:
+        - technical_docs
+        - compliance
+
+  review:
+    name: ReviewAgent
+    description: 検証Agent - 全層の結果を検証し最終判定
+    class: apps.decision_governance_engine.agents.ReviewAgent
+    config:
+      max_tokens: 1500
+      temperature: 0.7
+      mandatory_checks:
+        - 責任者が明確か
+        - 最悪ケースの想定があるか
+        - 撤退条件が定義されているか
+        - 最初の一歩が明日実行可能か
+
+# Workflow定義
+workflow:
+  type: sequential
+  pattern: multi_agent
+  stages:
+    - name: gate
+      agent: gatekeeper
+      on_reject: terminate
+    - name: essence
+      agent: dao
+    - name: strategy
+      agent: fa
+    - name: planning
+      agent: shu
+    - name: implementation
+      agent: qi
+    - name: verification
+      agent: review
+      on_revise: rollback  # REVISEの場合は該当Agentに回退
+
+# Studio UI（React Flow）用ノード定義
+studio:
+  enabled: true
+  title: Decision Governance Engine
+  description: 道・法・術・器による意思決定フロー
+  nodes:
+    - id: gatekeeper
+      type: agent
+      label: 門番
+      icon: "🚪"
+      position: { x: 100, y: 200 }
+      style:
+        background: "#f3f4f6"
+        border: "#374151"
+    - id: dao
+      type: agent
+      label: 道（本質）
+      icon: "🎯"
+      position: { x: 300, y: 200 }
+      style:
+        background: "#dbeafe"
+        border: "#2563eb"
+    - id: fa
+      type: agent
+      label: 法（戦略）
+      icon: "⚖️"
+      position: { x: 500, y: 200 }
+      style:
+        background: "#dcfce7"
+        border: "#16a34a"
+    - id: shu
+      type: agent
+      label: 術（計画）
+      icon: "📋"
+      position: { x: 700, y: 200 }
+      style:
+        background: "#fef3c7"
+        border: "#d97706"
+    - id: qi
+      type: agent
+      label: 器（実装）
+      icon: "🔧"
+      position: { x: 900, y: 200 }
+      style:
+        background: "#fce7f3"
+        border: "#db2777"
+    - id: review
+      type: agent
+      label: 検証
+      icon: "✅"
+      position: { x: 1100, y: 200 }
+      style:
+        background: "#f0fdf4"
+        border: "#15803d"
+    - id: reject_exit
+      type: output
+      label: 拒否
+      icon: "❌"
+      position: { x: 100, y: 350 }
+      style:
+        background: "#fee2e2"
+        border: "#dc2626"
+    - id: report_output
+      type: output
+      label: レポート出力
+      icon: "📄"
+      position: { x: 1100, y: 350 }
+      style:
+        background: "#e0f2fe"
+        border: "#0284c7"
+  edges:
+    - source: gatekeeper
+      target: dao
+      label: 受理
+      condition: is_acceptable
+    - source: gatekeeper
+      target: reject_exit
+      label: 拒否
+      condition: "!is_acceptable"
+      style:
+        stroke: "#dc2626"
+        strokeDasharray: "5,5"
+    - source: dao
+      target: fa
+    - source: fa
+      target: shu
+    - source: shu
+      target: qi
+    - source: qi
+      target: review
+    - source: review
+      target: report_output
+      label: PASS
+      condition: "verdict == PASS"
+    - source: review
+      target: dao
+      label: REVISE
+      condition: "verdict == REVISE"
+      style:
+        stroke: "#d97706"
+        strokeDasharray: "3,3"
+    - source: review
+      target: reject_exit
+      label: REJECT
+      condition: "verdict == REJECT"
+      style:
+        stroke: "#dc2626"
+        strokeDasharray: "5,5"
+
+# 出力設定
+output:
+  format: decision_report
+  include_sections:
+    - executive_summary
+    - dao_analysis
+    - fa_strategy
+    - shu_plan
+    - qi_implementation
+    - review_findings
+  signature_required: true
+
+# RAG設定
+rag:
+  enabled: true
+  sources:
+    industry_practices:
+      type: vector_store
+      description: 業界ベストプラクティス
+    case_studies:
+      type: vector_store
+      description: 過去の事例
+    technical_docs:
+      type: vector_store
+      description: 技術ドキュメント
+    compliance:
+      type: vector_store
+      description: コンプライアンス規定
+
+# ログ設定
+logging:
+  level: INFO
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  handlers:
+    - console
+    - file
+  file_path: logs/decision_engine.log
+

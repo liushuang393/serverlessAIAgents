@@ -12,7 +12,7 @@ _PocketFlow ベースの統一プロトコルインターフェース_
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 
-[Documentation](https://github.com/liushuang393/serverlessAIAgents/tree/main/docs) | [Examples](https://github.com/liushuang393/serverlessAIAgents/tree/main/examples) | [Contributing](CONTRIBUTING.md)
+[ドキュメント](docs/) | [サンプル](examples/) | [貢献ガイド](CONTRIBUTING.md)
 
 **Languages**: [English](README_EN.md) | [简体中文](README_ZH.md) | 日本語
 
@@ -22,362 +22,497 @@ _PocketFlow ベースの統一プロトコルインターフェース_
 
 ## ⚠️ プロジェクトステータス
 
-> **注意**: このプロジェクトは現在開発中であり、**まだ人工テストを受けていません**。
+> **注意**: このプロジェクトは現在開発中です。
 >
 > - ✅ **自動テスト**: 434 テスト、92.46% カバレッジ
-> - ⚠️ **人工テスト**: 未実施
 > - 🚧 **本番環境**: 使用前に十分なテストを実施してください
->
-> 本番環境での使用を検討する場合は、事前に十分なテストを実施し、問題があれば [GitHub Issues](https://github.com/liushuang393/serverlessAIAgents/issues) で報告してください。
 
 ---
 
-## � AgentFlow とは
+## 🎯 AgentFlow とは
 
-AgentFlow は、**MCP（Model Context Protocol）**、**A2A（Agent-to-Agent）**、**AG-UI（Agent-UI）** の 3 つのオープンプロトコルを統一インターフェースで提供する軽量 AI エージェント開発フレームワークです。
+**MCP / A2A / AG-UI / A2UI** の 4 プロトコルを統一インターフェースで提供する軽量 AI エージェントフレームワーク。
+
+### 🏗️ フレームワークアーキテクチャ
+
+AgentFlow は **8層アーキテクチャ** で構成され、各層が明確に分離されています。
+
+```mermaid
+graph TB
+    subgraph L1["📱 アプリケーション層"]
+        direction LR
+        A1[decision_governance_engine]
+        A2[market_trend_monitor]
+        A3[code_migration_assistant]
+        A4[Your Custom App]
+    end
+
+    subgraph L2["🎨 UI層"]
+        direction LR
+        U1[Studio UI<br/>ビジュアルエディタ]
+        U2[A2UI<br/>宣言式UI]
+        U3[AG-UI<br/>リアルタイムイベント]
+    end
+
+    subgraph L3["🔄 フロー層 - 3つの開発方式"]
+        direction TB
+        F1["方式1: @agent<br/>最も簡単・推奨"]
+        F2["方式2: create_flow<br/>宣言的協調"]
+        F3["方式3: AgentCoordinator<br/>完全制御"]
+    end
+
+    subgraph L4["🤖 Agent層"]
+        direction LR
+        AG1[AgentBlock<br/>基底クラス]
+        AG2[@agent<br/>デコレータ]
+        AG3[Custom Agent<br/>カスタム実装]
+    end
+
+    subgraph L5["🛠️ ツール層"]
+        direction TB
+        T1[@tool<br/>メソッドツール]
+        T2[MCP Tools<br/>外部ツール統合]
+        T3[Skills Engine<br/>自動進化システム]
+        T4[Built-in Skills<br/>DB/決済/認証/デプロイ]
+    end
+
+    subgraph L6["🔌 Provider層 - 統一アクセス"]
+        direction LR
+        P1[LLMProvider<br/>OpenAI/Anthropic]
+        P2[DataProvider<br/>SQL/Vector/Cache]
+        P3[EventProvider<br/>SSE/WebSocket]
+        P4[ToolProvider<br/>統一ツール呼び出し]
+    end
+
+    subgraph L7["🌐 プロトコル層 - 4プロトコル"]
+        direction LR
+        PR1[MCP]
+        PR2[A2A]
+        PR3[AG-UI]
+        PR4[A2UI]
+    end
+
+    subgraph L8["💾 インフラ層"]
+        direction LR
+        I1[LLM Services<br/>OpenAI/Anthropic/Google/Ollama]
+        I2[データベース<br/>Supabase/PostgreSQL/Turso]
+        I3[Vector DB<br/>Pinecone/Qdrant]
+        I4[キャッシュ<br/>Redis/Memory]
+    end
+
+    A1 --> F1
+    A2 --> F2
+    A3 --> F3
+    A4 --> F1
+
+    U1 --> F2
+    U2 --> AG2
+    U3 --> F3
+
+    F1 --> AG2
+    F2 --> AG1
+    F3 --> AG3
+
+    AG1 --> T1
+    AG2 --> T2
+    AG3 --> T3
+    AG3 --> T4
+
+    T1 --> P4
+    T2 --> PR1
+    T3 --> P4
+    T4 --> P4
+
+    AG1 --> P1
+    AG2 --> P2
+    AG3 --> P3
+
+    P1 --> I1
+    P2 --> I2
+    P2 --> I3
+    P2 --> I4
+
+    P4 --> PR1
+    P3 --> PR3
+    U2 --> PR4
+    F3 --> PR2
+
+    style L1 fill:#e3f2fd
+    style L2 fill:#fff3e0
+    style L3 fill:#e8f5e9
+    style L4 fill:#f3e5f5
+    style L5 fill:#fff9c4
+    style L6 fill:#e0f2f1
+    style L7 fill:#fce4ec
+    style L8 fill:#f5f5f5
+```
+
+**レイヤー詳細説明**:
+
+| レイヤー | 主要コンポーネント | 役割 | 選択基準 |
+|---------|-----------------|------|---------|
+| 📱 **アプリケーション層** | decision_governance_engine, market_trend_monitor, code_migration_assistant | 実際のビジネスアプリケーション | ビジネス要件に応じて選択 |
+| 🎨 **UI層** | Studio UI, A2UI, AG-UI | ビジュアルエディタ、宣言式UI生成、リアルタイム進捗表示 | ユーザー体験要件に応じて選択 |
+| 🔄 **フロー層** | @agent, create_flow, AgentCoordinator | **3つの開発方式**（簡単→複雑） | 複雑度に応じて選択 |
+| 🤖 **Agent層** | AgentBlock, @agent, Custom Agent | Agent実装（基底クラス/デコレータ/カスタム） | 実装方式に応じて選択 |
+| 🛠️ **ツール層** | @tool, MCP Tools, Skills, Built-in | ツール統合（メソッド/MCP/自動進化/内蔵） | 機能要件に応じて選択 |
+| 🔌 **Provider層** | LLMProvider, DataProvider, EventProvider, ToolProvider | **統一アクセスインターフェース**（約定優先） | 自動選択（デフォルト値あり） |
+| 🌐 **プロトコル層** | MCP, A2A, AG-UI, A2UI | 4つの標準プロトコル | 統合要件に応じて自動適用 |
+| 💾 **インフラ層** | LLM Services, DB, Vector DB, Cache | 外部サービス・データストア | 環境変数で自動検出 |
+
+**データフロー例**:
+
+```
+ユーザーリクエスト
+  ↓
+アプリケーション層（decision_governance_engine）
+  ↓
+フロー層（create_flow）
+  ↓
+Agent層（GatekeeperAgent → DaoAgent → ...）
+  ↓
+ツール層（@tool / MCP / Skills）
+  ↓
+Provider層（LLMProvider / DataProvider）
+  ↓
+インフラ層（OpenAI / PostgreSQL）
+  ↓
+結果を返す
+```
 
 ### ✨ 主な特徴
 
-| 特徴                      | 説明                               | 利点                                         |
-| ------------------------- | ---------------------------------- | -------------------------------------------- |
-| 🚀 **軽量設計**           | コアコード ~500 行                 | 高速起動、低メモリ使用量                     |
-| 🔌 **3 プロトコル統合**   | MCP / A2A / AG-UI                  | 1 つのコードで複数のプロトコルに対応         |
-| 🎨 **自動アダプター**     | `@auto_adapt` デコレーター         | プロトコル変換を自動化                       |
-| 📦 **CLI ツール**         | 包括的なコマンドラインツール       | プロジェクト管理を簡素化                     |
-| 🏪 **マーケットプレイス** | エージェント共有プラットフォーム   | 再利用可能なエージェントを検索・インストール |
-| 🧪 **高品質**             | 434 テスト、92.46% カバレッジ      | 本番環境対応の信頼性                         |
-| 🔒 **型安全**             | 100% 型アノテーション、mypy strict | 開発時エラーを早期発見                       |
-| ⚡ **非同期ファースト**   | 完全非同期 I/O                     | 高スループット処理                           |
+| 特徴 | 説明 |
+|------|------|
+| 🚀 **軽量** | コアコード ~500 行 |
+| 🎯 **@agent デコレータ** | 1行でAgent定義、設定ゼロ (v0.2.0 NEW) |
+| 🔧 **統一Provider** | LLM/Tool/Data/Eventの統一アクセス (v0.2.0 NEW) |
+| 🔌 **4 プロトコル** | MCP / A2A / AG-UI / A2UI 統合 |
+| 🎨 **自動アダプター** | `@auto_adapt` でプロトコル自動変換 |
+| 🧠 **Skills 自動進化** | 越用越厉害 - 使うほど強くなる |
+| 📦 **CLI** | `agentflow init/run/create` |
+| 🔒 **型安全** | 100% 型アノテーション |
+| ⚡ **非同期** | 完全非同期 I/O |
 
-### 🎁 AgentFlow の利点
+### 🎯 Skills 自動進化システム（NEW）
 
-- **学習コストが低い**: シンプルな API、豊富なサンプル、包括的なドキュメント
-- **プロトコル非依存**: 1 つのエージェントで複数のプロトコルに対応
-- **拡張性**: モジュラー設計で簡単にカスタマイズ可能
-- **本番環境対応**: 高いテストカバレッジと型安全性
-- **アクティブな開発**: 継続的な改善とコミュニティサポート
+Claude Code Skills 完全互換の自動進化能力システム：
 
-### 🧠 Agentic AI Design Patterns
+```
+用户需求 → 技能匹配 → 存在なら実行
+                   → 不在なら自動生成 → 検証 → 固化
+= 越用越厉害（使うほど強くなる）
+```
 
-AgentFlow は業界最佳実践に基づいた Agentic AI デザインパターンを提供します：
+```python
+from agentflow.skills import SkillEngine
 
-| パターン | 完成度 | 説明 | 使用例 |
-|---------|--------|------|--------|
-| 🔧 **Tool Use** | 95% | LLM が外部ツール/API を呼び出し | データ検索、計算、外部サービス連携 |
-| 🎯 **Reflection** | 100% | 自己評価と改善の反復ループ | コンテンツ品質向上、エラー修正 |
-| 🤝 **Multi-Agent** | 96% | 複数の専門エージェントの協調 | 複雑なタスクの分散処理 |
+engine = SkillEngine(auto_learn=True)
+result = await engine.resolve("PDFからテキストを抽出")
 
-**設計原則**：
-- ✅ **簡単**: AgentBlock ベース、理解しやすい
-- ✅ **柔軟**: WorkflowConfig で組み合わせ
-- ✅ **健壮**: エラーハンドリングと fallback
-- ✅ **独立**: 外部フレームワーク不要
+if result.generated:
+    print(f"🆕 新スキル自動生成: {result.skill.name}")
+```
 
-詳細は [Design Patterns ドキュメント](docs/design/) を参照してください。
+詳細は [Skills ガイド](docs/guide-skills.md) を参照。
+
+### 🤖 LLM プロバイダー（松耦合設計）
+
+**設計原則**: Agent/サービスは具体的なプロバイダー・モデルを知る必要がありません。
+環境変数からAPIキーを設定するだけで自動検出されます。
+
+| プロバイダー | 環境変数 | 対応モデル |
+|-------------|---------|-----------|
+| **OpenAI** | `OPENAI_API_KEY` | GPT-4o, o1, o3-mini, GPT-4o-realtime（音声） |
+| **Anthropic** | `ANTHROPIC_API_KEY` | Claude 3.5 Sonnet/Haiku, Claude 4（予定） |
+| **Google** | `GOOGLE_API_KEY` | Gemini 2.0 Flash, Gemini 1.5 Pro（200万トークン） |
+| **DeepSeek** | `DEEPSEEK_API_KEY` | DeepSeek V3, DeepSeek R1（推論） |
+| **Ollama** | `OLLAMA_BASE_URL` | Llama 3.3, Qwen 2.5, Mistral Large（ローカル） |
+| **LocalAI** | `LOCALAI_BASE_URL` | 任意のGGUF/GGML（ローカル・デフォルト） |
+
+```python
+# ✅ 推奨: get_llm() 松耦合 API
+from agentflow import get_llm
+
+# プロバイダー/モデル不明でOK - 環境変数から自動検出
+llm = get_llm()
+response = await llm.chat([{"role": "user", "content": "Hello!"}])
+print(response["content"])
+
+# Agent 内での使用例
+class MyAgent(AgentBlock):
+    async def run(self, input_data):
+        llm = get_llm(temperature=0.3)  # 分析タスク向け低温度
+        result = await llm.chat([{"role": "user", "content": "..."}])
+        return result["content"]
+
+# ストリーミング
+llm = get_llm()
+async for chunk in llm.stream([{"role": "user", "content": "..."}]):
+    print(chunk, end="", flush=True)
+
+# 高度なルーティング（コスト最適化・フォールバック）
+from agentflow.llm import create_router_from_env
+router = create_router_from_env()  # 複数プロバイダー自動管理
+```
+
+### 🗄️ データベース（松耦合設計）
+
+**設計原則**: Agent/サービスは具体的なDB実装を知る必要がありません。
+
+| データベース | 環境変数 | 特徴 |
+|-------------|---------|------|
+| **Supabase** | `SUPABASE_URL` + `SUPABASE_KEY` | RLS、リアルタイム、500MB無料 |
+| **PostgreSQL** | `DATABASE_URL` | 汎用、SSL対応 |
+| **Turso** | `TURSO_URL` + `TURSO_AUTH_TOKEN` | エッジ対応、9GB無料 |
+
+```python
+# ✅ 推奨: get_db() 松耦合 API
+from agentflow import get_db
+
+# プロバイダー/接続情報不明でOK - 環境変数から自動検出
+db = get_db()
+await db.connect()
+
+# CRUD 操作
+users = await db.select("users", filters={"status": "active"})
+new_user = await db.insert("users", {"email": "test@example.com"})
+await db.update("users", {"name": "Updated"}, filters={"id": 1})
+await db.delete("users", filters={"id": 1})
+```
+
+### 🔍 ベクトルDB & Embedding（松耦合設計）
+
+| サービス | 環境変数 | 用途 |
+|----------|---------|------|
+| **Pinecone** | `PINECONE_API_KEY` | クラウドベクトルDB |
+| **Qdrant** | `QDRANT_URL` | セルフホストベクトルDB |
+| **ChromaDB** | `CHROMA_PERSIST_DIR` | ローカルベクトルDB |
+| **OpenAI Embedding** | `OPENAI_API_KEY` | text-embedding-3-small |
+| **SentenceTransformer** | `USE_LOCAL_EMBEDDING` | ローカル埋め込み |
+
+```python
+# ✅ 推奨: get_vectordb() / get_embedding() 松耦合 API
+from agentflow import get_vectordb, get_embedding
+
+# VectorDB（Pinecone/Qdrant/ChromaDB 自動検出）
+vdb = get_vectordb()
+await vdb.connect()
+await vdb.add(["doc1", "doc2"], ids=["1", "2"])
+results = await vdb.search("query text", top_k=5)
+
+# Embedding（OpenAI/SentenceTransformer 自動検出）
+emb = get_embedding()
+vector = await emb.embed_text("Hello world")
+vectors = await emb.embed_batch(["text1", "text2"])
+```
+
+### 🏗️ 内蔵 Production-Ready Skills
+
+| スキル | 説明 | 対応サービス |
+|--------|------|------------|
+| 🗄️ **database-manager** | DB統合管理、CRUD、RLS | Supabase / Turso / PostgreSQL |
+| 💳 **stripe-payment** | 決済・サブスク管理 | Stripe Checkout / Billing |
+| 🚀 **deployment-manager** | デプロイ・環境管理 | Vercel / Cloudflare Pages |
+| 🔐 **auth-provider** | 認証・セッション管理 | Supabase Auth / Clerk |
+| 🔄 **model-router** | 複数LLM切替・コスト最適化 | 全プロバイダー対応 |
+
+詳細は [内蔵 Skills ガイド](docs/guide-builtin-skills.md) を参照。
+
+### 🧠 協調パターン
+
+| パターン | 説明 |
+|---------|------|
+| **Supervisor** | 監督者が動的にワーカー選択 |
+| **Hierarchical** | 階層的タスク分解 |
+| **Sequential/Concurrent** | 順次/並行実行 |
 
 ## 📦 インストール
 
-### 簡単インストール
-
 ```bash
-# PyPI からインストール
-pip install agentflow
-
-# または Conda 環境で
+# Conda 環境
 conda env create -f environment.yml
 conda activate agentflow
-pip install agentflow
-```
 
-### 開発者向けインストール
-
-開発に参加する場合は、**[初心者ガイド](docs/getting-started-ja.md)** または **[開発ガイド](docs/development.md)** を参照してください。
-
-### 動作確認
-
-```bash
-agentflow --version
-# agentflow, version 1.0.0
+# または pip
+pip install -e .
 ```
 
 ---
 
 ## 🚀 クイックスタート
 
-### 5 分でエージェントを作成
+AgentFlow は **3つの開発方式** を提供します。用途に応じて最適な方法を選択してください。
 
-```bash
-# 1. プロジェクト作成
-agentflow init my-agent && cd my-agent
+### 方式1: @agent デコレータ（最も簡単・推奨）
 
-# 2. エージェント実装（agent.py を編集）
-cat > agent.py << 'EOF'
-from agentflow.core.agent_block import AgentBlock
-from typing import Any
+**特徴**: 設定ゼロ、1行でAgent定義、すぐに使える
 
-class MyAgent(AgentBlock):
-    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
-        return {"result": input_data.get("text", "").upper()}
-EOF
+```python
+from agentflow import agent, tool, AgentClient
 
-# 3. 実行
-agentflow run . --input '{"text": "hello"}'
-# Output: {"result": "HELLO"}
+@agent  # デコレータ一つでAgent定義
+class QAAgent:
+    """質問応答Agent - 設定ゼロで動作"""
+    
+    system_prompt = "あなたは親切なアシスタントです"
+    
+    @tool  # ツールを自動登録
+    def search_database(self, query: str) -> list:
+        """DBを検索"""
+        return []  # 実際のDB検索
+
+# 呼び出し（同期）
+result = await AgentClient.get("QAAgent").invoke({"question": "..."})
+
+# ストリーム（SSE）
+async for chunk in AgentClient.get("QAAgent").stream({"question": "..."}):
+    print(chunk)
 ```
 
-詳細は [クイックスタートガイド](docs/quickstart.md) を参照してください。
+**適用シーン**: 
+- ✅ 単一Agentの簡単なタスク
+- ✅ プロトタイプ開発
+- ✅ クイックスタート
 
 ---
 
-## 🎯 機能一覧
+### 方式2: create_flow（複数Agent協調）
 
-### コア機能
-
-| 機能                | 説明                                    | ドキュメント                                |
-| ------------------- | --------------------------------------- | ------------------------------------------- |
-| **AgentBlock**      | エージェント基底クラス                  | [API リファレンス](docs/api.md#agentblock)  |
-| **@auto_adapt**     | プロトコル自動変換デコレーター          | [API リファレンス](docs/api.md#auto-adapt)  |
-| **AgentFlowEngine** | PocketFlow ベースのワークフローエンジン | [API リファレンス](docs/api.md#engine)      |
-| **CLI**             | コマンドラインツール                    | [CLI リファレンス](docs/cli.md)             |
-| **Marketplace**     | エージェント共有プラットフォーム        | [API リファレンス](docs/api.md#marketplace) |
-| **Template System** | プロジェクトテンプレート                | [テンプレートガイド](docs/templates.md)     |
-
-### プロトコルサポート
-
-| プロトコル | 説明                                 | Python バージョン | ドキュメント                                |
-| ---------- | ------------------------------------ | ----------------- | ------------------------------------------- |
-| **MCP**    | Model Context Protocol（ツール接続） | 3.10+             | [プロトコルガイド](docs/protocols.md#mcp)   |
-| **A2A**    | Agent-to-Agent（エージェント協調）   | 3.9+              | [プロトコルガイド](docs/protocols.md#a2a)   |
-| **AG-UI**  | Agent-UI（フロントエンド連携）       | 3.13+             | [プロトコルガイド](docs/protocols.md#ag-ui) |
-
-### Agentic AI Design Patterns
-
-AgentFlow は業界最佳実践に基づいた 3 つのデザインパターンを提供します：
-
-#### 1. Reflection Pattern（自己評価と改善）
+**特徴**: 宣言的、複数Agentの順次/並行実行、進捗追跡
 
 ```python
-from agentflow.patterns import ReflectionWorkflow
+from agentflow import create_flow
 
-# Reflection Workflow を作成
-workflow = ReflectionWorkflow.create(
-    workflow_id="content-reflection",
-    generator=my_content_generator,
-    llm_client=my_llm,
-    evaluation_criteria={
-        "clarity": "内容が明確か",
-        "accuracy": "情報が正確か",
+# 複数Agentを協調実行
+flow = create_flow(
+    agents=[GatekeeperAgent(), AnalysisAgent(), OutputAgent()],
+    pattern="sequential",  # sequential | concurrent | handoff
+    enable_memory=True
+)
+
+# 同期実行
+result = await flow.run({"task": "..."})
+
+# SSEストリーム（進捗付き）
+async for event in flow.run_stream({"task": "..."}):
+    print(f"{event['type']}: {event.get('node', '')}")
+    # node_start, node_complete, progress, result
+
+# 記憶システム
+flow.memory.remember("key", "value")
+value = flow.memory.recall("key")
+```
+
+**適用シーン**:
+- ✅ 複数Agentの協調処理
+- ✅ ワークフロー管理
+- ✅ 進捗表示が必要な場合
+
+---
+
+### 方式3: AgentCoordinator（完全制御）
+
+**特徴**: 最大の柔軟性、カスタムロジック、高度な制御
+
+```python
+from agentflow.patterns.multi_agent import AgentCoordinator, SharedContext
+from agentflow.patterns.supervisor import SupervisorCoordinator
+
+# Sequential協調
+coordinator = AgentCoordinator(
+    agents=[Agent1(), Agent2(), Agent3()],
+    pattern="sequential",
+    shared_context=SharedContext(enable_memory=True)
+)
+result = await coordinator.execute({"task": "..."})
+
+# Supervisorパターン（動的選択）
+supervisor = SupervisorCoordinator(
+    supervisor=SupervisorAgent(),
+    workers={
+        "research": ResearchAgent(),
+        "write": WriteAgent(),
+        "review": ReviewAgent(),
     },
-    max_iterations=3,
+    max_iterations=10
 )
-
-# 実行
-result = await engine.execute("content-reflection", {"task": "AI の説明を書く"})
+result = await supervisor.execute("タスク")
 ```
 
-#### 2. Multi-Agent Collaboration（複数エージェント協調）
+**適用シーン**:
+- ✅ 複雑なビジネスロジック
+- ✅ カスタム協調パターン
+- ✅ エンタープライズ級アプリケーション
 
-```python
-from agentflow.patterns import MultiAgentWorkflow
+---
 
-# Sequential パターン（順次実行）
-workflow = MultiAgentWorkflow.create(
-    workflow_id="research-pipeline",
-    agents=[research_agent, analysis_agent, report_agent],
-    pattern="sequential",  # または "concurrent", "handoff"
-)
+詳細は [クイックスタート](docs/quickstart.md) を参照。
 
-# 実行
-result = await engine.execute("research-pipeline", {"task": "AI 市場調査"})
-```
+---
 
-詳細は [Design Patterns ドキュメント](docs/design/) を参照してください。
+## 🎨 使用シナリオ
 
-### CLI コマンド
+AgentFlow は3つの操作方法を提供します。用途に応じて最適な方法を選択してください。
 
-```bash
-agentflow init <project>        # プロジェクト初期化
-agentflow create agent <name>   # エージェント作成
-agentflow run <path>            # エージェント実行
-agentflow search [query]        # マーケットプレイス検索
-agentflow install <agent-id>    # エージェントインストール
-agentflow template list         # テンプレート一覧
-```
+### 1. 🖱️ Studio UI（ビジュアルエディタ）
 
-詳細は [CLI リファレンス](docs/cli.md) を参照してください。
+**コードを書かずに、ブラウザ上でドラッグ&ドロップでワークフローを作成**
+
+- ✅ **初心者向け**: プログラミング知識不要
+- ✅ **視覚的**: ワークフローを視覚的に理解・編集
+- ✅ **迅速**: 数分でワークフローを作成
+
+**使用例**: 複数のエージェントを接続して複雑な処理フローを構築
+
+📖 [Studio UI 操作ガイド](docs/guide-studio-ui.md) - インストール、使用、注意事項、ベストプラクティス
+
+---
+
+### 2. ⚡ CLI（コマンドライン）
+
+**ターミナルから素早くエージェントを実行・管理**
+
+- ✅ **高速**: GUI なしで高速に操作
+- ✅ **自動化**: スクリプト化・バッチ処理に最適
+- ✅ **シンプル**: コマンド1つで実行
+
+**使用例**: バッチ処理、CI/CD パイプライン、サーバー環境での実行
+
+📖 [CLI 操作ガイド](docs/guide-cli.md) - インストール、使用、注意事項、ベストプラクティス
+
+---
+
+### 3. 🐍 コーディング（Python）
+
+**Python コードでエージェントを開発・カスタマイズ**
+
+- ✅ **柔軟性**: 完全なカスタマイズが可能
+- ✅ **型安全**: 100% 型アノテーション対応
+- ✅ **拡張性**: プロトコル統合・協調パターンが利用可能
+
+**使用例**: カスタムエージェントの開発、複雑なロジックの実装、プロトコル統合
+
+📖 [コーディングガイド](docs/guide-coding.md) - インストール、使用、注意事項、ベストプラクティス
 
 ---
 
 ## 📚 ドキュメント
 
-### 入門ガイド
-
-- **[初心者ガイド](docs/getting-started-ja.md)** - インストールから日常的な使い方まで（初心者向け）⭐
-- [クイックスタート](docs/quickstart.md) - 10 分で最初のエージェントを作成
-- [実装ガイド](docs/implementation-guide.md) - 各層の実装方法とベストプラクティス
-- [サンプル集](examples/) - 5 つの実用的なエージェント例
-
-### リファレンス
-
-- [API リファレンス](docs/api.md) - 完全な API ドキュメント
-- [プロトコルガイド](docs/protocols.md) - MCP/A2A/AG-UI の詳細
-- [CLI リファレンス](docs/cli.md) - すべてのコマンドの説明
-- [アーキテクチャ](docs/architecture.md) - システム設計と設計哲学
-
-### 開発者向け
-
-- [コード品質チェックガイド](docs/quality-checks.md) - 品質チェックツールの使い方
-- [開発ガイド](docs/development.md) - 開発環境のセットアップと貢献方法
-- [貢献ガイドライン](CONTRIBUTING.md) - コーディング規約とプルリクエストプロセス
-- [変更履歴](CHANGELOG.md) - バージョン履歴と変更内容
-
----
-
-## 🏗️ アーキテクチャ
-
-AgentFlow は 4 層のモジュラーアーキテクチャを採用：
-
-```
-┌──────────────────────────────────────────┐
-│  UI Layer (Optional)                     │  ← Visual Studio (React)
-├──────────────────────────────────────────┤
-│  Protocol Layer                          │  ← MCP / A2A / AG-UI
-├──────────────────────────────────────────┤
-│  Engine Layer                            │  ← AgentFlowEngine (PocketFlow)
-├──────────────────────────────────────────┤
-│  Tool Layer                              │  ← LLM / Database / External APIs
-└──────────────────────────────────────────┘
-```
-
-詳細は [アーキテクチャドキュメント](docs/architecture.md) を参照してください。
-
----
-
-## 📁 プロジェクト構造
-
-```
-serverlessAIAgents/
-├── agentflow/                    # コアフレームワーク
-│   ├── core/                     # コアモジュール
-│   │   ├── agent_block.py        # AgentBlock 基底クラス
-│   │   ├── engine.py             # AgentFlowEngine (PocketFlow ラッパー)
-│   │   ├── metadata.py           # エージェントメタデータ管理
-│   │   ├── schemas.py            # Pydantic スキーマ定義
-│   │   └── types.py              # 型定義
-│   ├── protocols/                # プロトコル実装
-│   │   ├── mcp_client.py         # MCP クライアント
-│   │   ├── a2a_server.py         # A2A サーバー
-│   │   ├── a2a_client.py         # A2A クライアント
-│   │   └── agui_emitter.py       # AG-UI イベントエミッター
-│   ├── adapters/                 # プロトコルアダプター
-│   │   └── protocol_adapter.py   # アダプター生成ロジック
-│   ├── patterns/                 # Agentic AI デザインパターン
-│   │   ├── reflection.py         # Reflection Pattern 実装
-│   │   └── multi_agent.py        # Multi-Agent Pattern 実装
-│   ├── cli/                      # CLI ツール
-│   │   ├── main.py               # CLI エントリーポイント
-│   │   └── commands/             # CLI コマンド
-│   │       ├── init.py           # プロジェクト初期化
-│   │       ├── create.py         # エージェント作成
-│   │       ├── marketplace.py    # マーケットプレイス操作
-│   │       └── template.py       # テンプレート操作
-│   ├── marketplace/              # マーケットプレイス
-│   │   ├── client.py             # マーケットプレイスクライアント
-│   │   └── registry.py           # エージェントレジストリ
-│   ├── studio/                   # Visual Studio (オプション)
-│   │   ├── api.py                # FastAPI REST API
-│   │   └── server.py             # Studio サーバー
-│   ├── templates/                # プロジェクトテンプレート
-│   │   ├── template_manager.py   # テンプレート管理
-│   │   ├── project_template/     # プロジェクトテンプレート
-│   │   ├── agent_template/       # エージェントテンプレート
-│   │   └── scenarios/            # シナリオテンプレート
-│   │       ├── chatbot/          # チャットボットテンプレート
-│   │       ├── data-pipeline/    # データパイプラインテンプレート
-│   │       └── invoice-processor/# 請求書処理テンプレート
-│   └── decorators.py             # @auto_adapt デコレーター
-│
-├── studio/                       # Visual Studio フロントエンド
-│   ├── src/
-│   │   ├── components/           # React コンポーネント
-│   │   │   ├── Canvas.tsx        # ワークフローキャンバス
-│   │   │   ├── AgentNode.tsx     # エージェントノード
-│   │   │   ├── PropertiesPanel.tsx # プロパティパネル
-│   │   │   └── Sidebar.tsx       # サイドバー
-│   │   ├── stores/               # Zustand ストア
-│   │   │   └── workflowStore.ts  # ワークフロー状態管理
-│   │   └── App.tsx               # メインアプリ
-│   ├── package.json              # Node.js 依存関係
-│   └── vite.config.ts            # Vite 設定
-│
-├── tests/                        # テストスイート
-│   ├── unit/                     # ユニットテスト
-│   │   ├── test_agent_block.py   # AgentBlock テスト
-│   │   ├── test_engine.py        # Engine テスト
-│   │   ├── test_mcp_client.py    # MCP クライアントテスト
-│   │   ├── test_a2a_server.py    # A2A サーバーテスト
-│   │   ├── test_adapters.py      # アダプターテスト
-│   │   ├── test_decorators.py    # デコレーターテスト
-│   │   ├── test_cli.py           # CLI テスト
-│   │   ├── test_marketplace.py   # マーケットプレイステスト
-│   │   └── test_templates.py     # テンプレートテスト
-│   ├── integration/              # 統合テスト
-│   │   ├── test_protocols.py     # プロトコル統合テスト
-│   │   └── test_full_workflow.py # フルワークフローテスト
-│   └── conftest.py               # pytest 設定
-│
-├── examples/                     # サンプルエージェント
-│   ├── text_processor_agent/     # テキスト処理エージェント
-│   ├── weather_agent/            # 天気情報エージェント
-│   ├── translator_agent/         # 翻訳エージェント
-│   ├── calculator_agent/         # 計算機エージェント
-│   └── sample-agent/             # サンプルエージェント
-│
-├── docs/                         # ドキュメント
-│   ├── quickstart.md             # クイックスタートガイド
-│   ├── api.md                    # API リファレンス
-│   ├── protocols.md              # プロトコルガイド
-│   ├── cli.md                    # CLI リファレンス
-│   ├── architecture.md           # アーキテクチャドキュメント
-│   ├── implementation-guide.md   # 実装ガイド
-│   ├── development.md            # 開発ガイド
-│   └── templates.md              # テンプレートガイド
-│
-├── .github/                      # GitHub 設定
-│   └── workflows/                # CI/CD ワークフロー
-│       ├── test.yml              # テストワークフロー
-│       ├── lint.yml              # リントワークフロー
-│       └── publish.yml           # 公開ワークフロー
-│
-├── .spec-workflow/               # 仕様ワークフロー
-│   └── specs/
-│       └── agentflow-framework/
-│           ├── requirements.md   # 要件定義
-│           ├── design.md         # 設計書
-│           └── tasks.md          # タスク一覧
-│
-├── pyproject.toml                # プロジェクト設定
-├── README.md                     # このファイル
-├── CHANGELOG.md                  # 変更履歴
-├── CONTRIBUTING.md               # 貢献ガイドライン
-├── LICENSE                       # ライセンス
-└── .gitignore                    # Git 除外設定
-```
-
-### 主要ディレクトリの説明
-
-| ディレクトリ                 | 説明                         | 主要ファイル                                        |
-| ---------------------------- | ---------------------------- | --------------------------------------------------- |
-| **`agentflow/core/`**        | コアフレームワーク           | `agent_block.py`, `engine.py`, `metadata.py`        |
-| **`agentflow/protocols/`**   | プロトコル実装               | `mcp_client.py`, `a2a_server.py`, `agui_emitter.py` |
-| **`agentflow/cli/`**         | CLI ツール                   | `main.py`, `commands/`                              |
-| **`agentflow/marketplace/`** | マーケットプレイス           | `client.py`, `registry.py`                          |
-| **`agentflow/studio/`**      | Visual Studio バックエンド   | `api.py`, `server.py`                               |
-| **`agentflow/templates/`**   | テンプレートシステム         | `template_manager.py`, `scenarios/`                 |
-| **`studio/`**                | Visual Studio フロントエンド | React + TypeScript + Vite                           |
-| **`tests/`**                 | テストスイート               | `unit/`, `integration/`                             |
-| **`examples/`**              | サンプルエージェント         | 5 つの実用例                                        |
-| **`docs/`**                  | ドキュメント                 | 8 つのガイド                                        |
+| ドキュメント | 説明 |
+|------------|------|
+| [Studio UI 操作ガイド](docs/guide-studio-ui.md) | ビジュアルエディタでの操作 |
+| [CLI 操作ガイド](docs/guide-cli.md) | コマンドラインでの操作 |
+| [コーディングガイド](docs/guide-coding.md) | Python コードでの開発 |
+| [Skills ガイド](docs/guide-skills.md) | 自動進化システム |
+| [内蔵 Skills ガイド](docs/guide-builtin-skills.md) | DB/決済/認証/デプロイ（NEW） |
+| [LLM ルーター](docs/guide-llm-router.md) | マルチモデル切替（NEW） |
+| [アーキテクチャ](docs/architecture.md) | 設計思想・構成 |
+| [プロトコル](docs/protocols.md) | MCP/A2A/AG-UI/A2UI |
+| [API](docs/api.md) | API リファレンス |
+| [CLI](docs/cli.md) | コマンド一覧 |
+| [クイックスタート](docs/quickstart.md) | 入門ガイド |
+| [開発規範](docs/DEVELOPMENT_STANDARDS_JA.md) | コーディング規約 |
 
 ---
 
@@ -385,104 +520,20 @@ serverlessAIAgents/
 
 AgentFlow への貢献を歓迎します！
 
-### 貢献方法
-
-AgentFlow への貢献は以下のドキュメントを参照してください：
-
-- **[開発ガイド](docs/development.md)** - 開発環境のセットアップと開発フロー
-- **[貢献ガイドライン](CONTRIBUTING.md)** - コーディング規約とプルリクエストプロセス
-- **[コード品質チェックガイド](docs/quality-checks.md)** - 品質チェックツールの使い方
-- **[開発規範](DEVELOPMENT_STANDARDS.md)** - コーディング規範（[English](DEVELOPMENT_STANDARDS_EN.md) | [日本語](DEVELOPMENT_STANDARDS_JA.md)）
-
-**簡単な手順**:
-
-1. リポジトリをフォーク
-2. 開発環境をセットアップ（[開発ガイド](docs/development.md) 参照）
-3. ブランチを作成して変更を加える
-4. 品質チェックを実行（`.\check.ps1 all` または `check.bat all`）
-5. プルリクエストを作成
-
-### 行動規範
-
-すべての貢献者は [行動規範](CONTRIBUTING.md#行動規範) に従うことが求められます。
+- [貢献ガイドライン](CONTRIBUTING.md) - ローカル開発環境のセットアップ、テスト提出、プルリクエストの手順
+- [変更履歴](CHANGELOG.md)
 
 ---
 
 ## 📄 ライセンス
 
-AgentFlow は [MIT License](LICENSE) の下で公開されています。
-
-```
-MIT License
-
-Copyright (c) 2025 AgentFlow Team
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction...
-```
-
----
-
-## 🙏 謝辞
-
-AgentFlow は以下のオープンソースプロジェクトとコミュニティに支えられています：
-
-### コアライブラリ
-
-- **[PocketFlow](https://github.com/pocketflow/pocketflow)** - 軽量ワークフローエンジンの基盤
-- **[Pydantic](https://github.com/pydantic/pydantic)** - データ検証と設定管理
-- **[Click](https://github.com/pallets/click)** - CLI フレームワーク
-- **[Rich](https://github.com/Textualize/rich)** - 美しいターミナル出力
-- **[FastAPI](https://github.com/tiangolo/fastapi)** - 高性能 Web フレームワーク
-- **[Ruff](https://github.com/astral-sh/ruff)** - 高速 Python リンター・フォーマッター
-
-### プロトコル
-
-- **[MCP (Model Context Protocol)](https://modelcontextprotocol.io/)** - Anthropic による LLM ツール接続プロトコル
-- **[A2A (Agent-to-Agent Protocol)](https://a2a.dev/)** - エージェント間通信の標準プロトコル
-- **[AG-UI](https://github.com/ag-ui/ag-ui)** - エージェント UI 統合プロトコル
-
-### 開発ツール
-
-- **[pytest](https://github.com/pytest-dev/pytest)** - テストフレームワーク
-- **[mypy](https://github.com/python/mypy)** - 静的型チェッカー
-- **[pre-commit](https://github.com/pre-commit/pre-commit)** - Git フックフレームワーク
-
-### コミュニティ
-
-- **Python コミュニティ** - 素晴らしい言語とエコシステム
-- **オープンソースコントリビューター** - すべての貢献者に感謝
-
----
-
-## 📞 サポート
-
-### コミュニティ
-
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/liushuang393/serverlessAIAgents/discussions) - 質問、アイデア、フィードバック
-- 🐛 **Issues**: [GitHub Issues](https://github.com/liushuang393/serverlessAIAgents/issues) - バグ報告、機能リクエスト
-- 📖 **Documentation**: [docs/](https://github.com/liushuang393/serverlessAIAgents/tree/main/docs) - 包括的なドキュメント
-
-### 連絡先
-
-- 📧 **Email**: <115070984+liushuang393@users.noreply.github.com>
-- � **GitHub**: [@liushuang393](https://github.com/liushuang393)
-- � **Repository**: [serverlessAIAgents](https://github.com/liushuang393/serverlessAIAgents)
-
----
-
-## 🌟 スター履歴
-
-[![Star History Chart](https://api.star-history.com/svg?repos=liushuang393/serverlessAIAgents&type=Date)](https://star-history.com/#liushuang393/serverlessAIAgents&Date)
+[MIT License](LICENSE)
 
 ---
 
 <div align="center">
 
-**AgentFlow で AI エージェント開発を加速しましょう！**
-
-[始める](docs/quickstart.md) | [ドキュメント](docs/) | [サンプル](examples/) | [貢献](CONTRIBUTING.md)
+**AgentFlow で AI エージェント開発を加速！**
 
 Made with ❤️ by the AgentFlow Team
 

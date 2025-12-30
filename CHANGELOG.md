@@ -129,6 +129,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Input validation using Pydantic
 - Type safety with mypy strict mode
 
+## [1.1.0] - 2025-12-30
+
+### Changed
+
+#### ドキュメント整理
+
+- **docs/** ディレクトリを大幅に整理
+  - `architecture.md` を更新（新アーキテクチャ図、コアコンセプト追加）
+  - 重複ファイルを削除（DEVELOPMENT_STANDARDS の中英版など）
+  - `design/` ディレクトリを削除（Phase1-4 設計書）
+  - `deployment/` ディレクトリを削除（CI/CD、本番チェックリストなど）
+  - `memory/` ディレクトリを整理（MEMORY_SYSTEM_DESIGN.md のみ保持）
+
+#### 保持されたドキュメント
+
+- `architecture.md` - アーキテクチャ設計書（更新済み）
+- `protocols.md` - プロトコル詳細
+- `api.md` - API リファレンス
+- `cli.md` - CLI リファレンス
+- `quickstart.md` - クイックスタート
+- `getting-started-ja.md` - 入門ガイド
+- `DEVELOPMENT_STANDARDS_JA.md` - 開発規範（日本語版のみ）
+- `memory/MEMORY_SYSTEM_DESIGN.md` - 記憶システム設計
+- `examples/` - サンプルコード
+
+### Removed
+
+- `docs/DEVELOPMENT_STANDARDS.md` - 中文版（日本語版に統一）
+- `docs/DEVELOPMENT_STANDARDS_EN.md` - 英語版（日本語版に統一）
+- `docs/ERROR_HANDLING_BEST_PRACTICES.md`
+- `docs/development.md`
+- `docs/implementation-guide.md`
+- `docs/quality-checks.md`
+- `docs/security-hardening.md`
+- `docs/templates.md`
+- `docs/design/` ディレクトリ全体
+- `docs/deployment/` ディレクトリ全体
+- `docs/memory/PRODUCTION_DEPLOYMENT.md`
+- `docs/memory/USAGE_EXAMPLES.md`
+
+---
+
 ## [Unreleased]
 
 ### Planned
@@ -141,4 +183,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[1.1.0]: https://github.com/liushuang393/serverlessAIAgents/releases/tag/v1.1.0
 [1.0.0]: https://github.com/liushuang393/serverlessAIAgents/releases/tag/v1.0.0

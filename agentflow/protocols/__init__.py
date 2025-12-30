@@ -1,4 +1,4 @@
-"""Protocol adapters for MCP, A2A, and AG-UI.
+"""Protocol adapters for MCP, A2A, AG-UI, and A2UI.
 
 このモジュールは遅延インポートを使用して、MCP ライブラリの互換性問題を回避します。
 """
@@ -21,6 +21,21 @@ from agentflow.protocols.agui_events import (
     NodeErrorEvent,
     NodeStartEvent,
     ProgressEvent,
+)
+
+# A2UI Protocol
+from agentflow.protocols.a2ui import (
+    A2UIComponent,
+    A2UIEmitter,
+    A2UIRenderer,
+    ButtonComponent,
+    CardComponent,
+    ComponentRegistry,
+    FormComponent,
+    ImageComponent,
+    InputComponent,
+    ListComponent,
+    TextComponent,
 )
 
 # MCP Client は遅延インポート (Pydantic 互換性問題を回避)
@@ -47,23 +62,38 @@ def __getattr__(name: str) -> object:
 
 
 __all__ = [
+    # A2A
     "A2AClient",
     "A2AServer",
+    "AgentCard",
+    "AgentSkill",
+    # AG-UI
     "AGUIEvent",
     "AGUIEventEmitter",
     "AGUIEventType",
-    "AgentCard",
-    "AgentSkill",
     "FlowCancelEvent",
     "FlowCompleteEvent",
     "FlowErrorEvent",
     "FlowStartEvent",
     "LogEvent",
-    "MCPClient",
-    "MCPConfig",
-    "MCPServerConfig",
     "NodeCompleteEvent",
     "NodeErrorEvent",
     "NodeStartEvent",
     "ProgressEvent",
+    # A2UI
+    "A2UIComponent",
+    "A2UIEmitter",
+    "A2UIRenderer",
+    "ButtonComponent",
+    "CardComponent",
+    "ComponentRegistry",
+    "FormComponent",
+    "ImageComponent",
+    "InputComponent",
+    "ListComponent",
+    "TextComponent",
+    # MCP
+    "MCPClient",
+    "MCPConfig",
+    "MCPServerConfig",
 ]

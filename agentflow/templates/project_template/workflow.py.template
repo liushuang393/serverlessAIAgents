@@ -1,0 +1,134 @@
+"""{{ agent_name }} - ワークフロー定義.
+
+このモジュールは複数Agentの協調ワークフローを定義します。
+
+使用パターン:
+    - Sequential: 順次実行（デフォルト）
+    - Concurrent: 並行実行
+
+使用例:
+    >>> from {{ module_name }}.workflow import flow, run, run_stream
+    >>> result = await run({"task": "タスク内容"})
+    >>> async for event in run_stream(inputs):
+    ...     print(event)
+"""
+
+from collections.abc import AsyncIterator
+from typing import Any
+
+from agentflow import Flow, create_flow
+from agentflow.core.agent_block import AgentBlock
+
+
+# ============================================================
+# Agent 定義
+# ============================================================
+
+
+class InputAgent(AgentBlock):
+    """入力検証Agent.
+
+    職責: 入力データの検証と前処理
+    """
+
+    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
+        """入力を検証."""
+        task = input_data.get("task", "")
+        if len(task) < 5:
+            return {"valid": False, "error": "タスクが短すぎます"}
+        return {"valid": True, "task": task}
+
+
+class ProcessAgent(AgentBlock):
+    """処理Agent.
+
+    職責: メイン処理ロジック
+    """
+
+    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
+        """メイン処理."""
+        if not input_data.get("valid", False):
+            return input_data
+
+        task = input_data.get("task", "")
+        # TODO: 実際の処理ロジック
+        return {"processed": True, "result": f"処理完了: {task}"}
+
+
+class OutputAgent(AgentBlock):
+    """出力整形Agent.
+
+    職責: 結果の整形と出力
+    """
+
+    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
+        """出力を整形."""
+        return {
+            "status": "success" if input_data.get("processed") else "failed",
+            "data": input_data,
+        }
+
+
+# ============================================================
+# Flow 構築（統一入口）
+# ============================================================
+
+flow: Flow = create_flow(
+    agents=[InputAgent(), ProcessAgent(), OutputAgent()],
+    pattern="sequential",
+    enable_memory=True,
+    name="{{ agent_name }}-workflow",
+)
+
+
+# ============================================================
+# 便利関数
+# ============================================================
+
+
+async def run(inputs: dict[str, Any]) -> dict[str, Any]:
+    """ワークフローを実行.
+
+    Args:
+        inputs: 入力データ（task キー必須）
+
+    Returns:
+        処理結果
+    """
+    return await flow.run(inputs)
+
+
+async def run_stream(inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
+    """ストリームモードで実行（SSE用）.
+
+    Yields:
+        イベント: node_start, node_complete, result
+    """
+    async for event in flow.run_stream(inputs):
+        yield event
+
+
+async def cleanup() -> None:
+    """クリーンアップ."""
+    await flow.cleanup()
+
+
+# ============================================================
+# 直接実行用
+# ============================================================
+
+if __name__ == "__main__":
+    import asyncio
+
+    async def main() -> None:
+        """テスト実行."""
+        result = await run({"task": "テストタスク"})
+        print(f"Result: {result}")
+
+        # ストリーム実行テスト
+        print("\nStream execution:")
+        async for event in run_stream({"task": "ストリームテスト"}):
+            print(f"  {event['type']}: {event.get('node', 'N/A')}")
+
+    asyncio.run(main())
+

@@ -3,6 +3,9 @@
 このモジュールは業界最佳実践に基づいた Agentic AI デザインパターンを提供します:
 - Reflection: 自己評価と改善の反復
 - Multi-Agent: 複数エージェント協調
+- Coordinator: 協調パターン基類
+- Supervisor: 監督者パターン
+- Hierarchical: 階層パターン
 
 設計原則:
 - 簡単: AgentBlock ベース、理解しやすい
@@ -14,7 +17,15 @@
 - Analytics Vidhya: Reflection Pattern
 - Azure Architecture: AI Agent Orchestration Patterns
 - Anthropic: Building Effective Agents
+- LangGraph: Multi-agent Supervisor / Hierarchical Teams
 """
+
+# Coordinator Base
+from agentflow.patterns.coordinator import (
+    CoordinationPattern,
+    CoordinatorBase,
+    CoordinatorRegistry,
+)
 
 # Reflection Pattern
 from agentflow.patterns.reflection import (
@@ -33,7 +44,23 @@ from agentflow.patterns.multi_agent import (
     SharedContext,
 )
 
+# Supervisor Pattern
+from agentflow.patterns.supervisor import (
+    SupervisorCoordinator,
+    SupervisorDecision,
+)
+
+# Hierarchical Pattern
+from agentflow.patterns.hierarchical import (
+    HierarchicalCoordinator,
+    SubTask,
+)
+
 __all__ = [
+    # Coordinator Base
+    "CoordinationPattern",
+    "CoordinatorBase",
+    "CoordinatorRegistry",
     # Reflection Pattern
     "ImproverAgent",
     "ReflectionLoop",
@@ -45,5 +72,11 @@ __all__ = [
     "AgentRouter",
     "MultiAgentWorkflow",
     "SharedContext",
+    # Supervisor Pattern
+    "SupervisorCoordinator",
+    "SupervisorDecision",
+    # Hierarchical Pattern
+    "HierarchicalCoordinator",
+    "SubTask",
 ]
 

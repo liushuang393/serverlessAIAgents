@@ -26,6 +26,7 @@ from agentflow.core.metadata import (
 from agentflow.core.metadata import (
     AgentMetadata as AgentMetadataModel,
 )
+from agentflow.core.registry import ProtocolRegistry, Registry
 from agentflow.core.schemas import SchemaLoader, SchemaValidationError
 from agentflow.core.types import AgentMetadata, ExecutionContext, WorkflowConfig
 from agentflow.core.validator import AgentValidator, ValidationResult
@@ -54,6 +55,8 @@ __all__ = [
     "PocketFlowConfig",
     "ProtocolConfig",
     "ProtocolError",
+    "ProtocolRegistry",
+    "Registry",
     "SchemaLoader",
     "SchemaValidationError",
     "ValidationResult",

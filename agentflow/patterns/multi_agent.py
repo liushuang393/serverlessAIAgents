@@ -37,18 +37,46 @@ class SharedContext:
     - Agent 間で状態を共有
     - 履歴管理
     - スレッドセーフ
+    - 記憶システム統合（オプション）
 
     Example:
         >>> context = SharedContext()
         >>> context.set("result_a", {"data": "A"})
         >>> result = context.get("result_a")
+
+        # 記憶システムを有効化
+        >>> context = SharedContext(enable_memory=True)
+        >>> await context.start()
+        >>> await context.remember("重要な情報", topic="AI")
+        >>> memories = await context.recall(topic="AI")
     """
 
-    def __init__(self) -> None:
-        """初期化."""
+    def __init__(
+        self,
+        enable_memory: bool = False,
+        enable_vector_search: bool = False,
+        embedding_dim: int = 384,
+    ) -> None:
+        """初期化.
+
+        Args:
+            enable_memory: 記憶システムを有効化
+            enable_vector_search: ベクトル検索を有効化（enable_memory=Trueの場合のみ）
+            embedding_dim: 埋め込みベクトルの次元数
+        """
         self._data: dict[str, Any] = {}
         self._history: list[dict[str, Any]] = []
         self._logger = logging.getLogger(__name__)
+        self._enable_memory = enable_memory
+        self._memory_manager = None
+
+        # 記憶システムを初期化
+        if self._enable_memory:
+            from agentflow.memory import MemoryManager
+
+            self._memory_manager = MemoryManager(
+                enable_vector_search=enable_vector_search, embedding_dim=embedding_dim
+            )
 
     def set(self, key: str, value: Any) -> None:
         """値を設定.
@@ -94,10 +122,103 @@ class SharedContext:
         """
         return self._history.copy()
 
+    def remove(self, key: str) -> None:
+        """値を削除.
+
+        Args:
+            key: キー
+        """
+        if key in self._data:
+            del self._data[key]
+            self._history.append({
+                "action": "remove",
+                "key": key,
+                "timestamp": datetime.now().isoformat(),
+            })
+            self._logger.debug(f"SharedContext.remove: {key}")
+
     def clear(self) -> None:
         """クリア."""
         self._data.clear()
         self._history.clear()
+
+    async def start(self) -> None:
+        """記憶システムを開始（記憶システムが有効な場合）."""
+        if self._memory_manager:
+            await self._memory_manager.start()
+            self._logger.info("Memory system started in SharedContext")
+
+    async def stop(self) -> None:
+        """記憶システムを停止（記憶システムが有効な場合）."""
+        if self._memory_manager:
+            await self._memory_manager.stop()
+            self._logger.info("Memory system stopped in SharedContext")
+
+    async def remember(
+        self,
+        text: str,
+        topic: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> Any:
+        """情報を記憶（記憶システムが有効な場合）.
+
+        Args:
+            text: 記憶する情報
+            topic: トピック名
+            metadata: 追加メタデータ
+
+        Returns:
+            記憶エントリ、または None
+
+        Raises:
+            RuntimeError: 記憶システムが無効な場合
+        """
+        if not self._memory_manager:
+            msg = "Memory system is not enabled. Set enable_memory=True in constructor."
+            raise RuntimeError(msg)
+
+        return await self._memory_manager.remember(text, topic, metadata)
+
+    async def recall(
+        self,
+        topic: str | None = None,
+        limit: int = 10,
+        min_importance: float = 0.0,
+        query: str | None = None,
+        min_similarity: float = 0.0,
+    ) -> list[Any]:
+        """記憶を検索（記憶システムが有効な場合）.
+
+        Args:
+            topic: トピック名
+            limit: 最大取得数
+            min_importance: 最小重要度
+            query: ベクトル検索クエリ（enable_vector_search=Trueの場合のみ）
+            min_similarity: 最小類似度（ベクトル検索用）
+
+        Returns:
+            記憶エントリのリスト
+
+        Raises:
+            RuntimeError: 記憶システムが無効な場合
+        """
+        if not self._memory_manager:
+            msg = "Memory system is not enabled. Set enable_memory=True in constructor."
+            raise RuntimeError(msg)
+
+        return await self._memory_manager.recall(
+            topic, limit, min_importance, query, min_similarity
+        )
+
+    def get_memory_status(self) -> dict[str, Any] | None:
+        """記憶システムの状態を取得.
+
+        Returns:
+            システム状態、または None（記憶システムが無効な場合）
+        """
+        if self._memory_manager:
+            return self._memory_manager.get_status()
+        return None
 
 
 class AgentRouter(AgentBlock):
@@ -276,33 +397,64 @@ class AgentCoordinator:
             msg = f"Unknown pattern: {self._pattern}"
             raise ValueError(msg)
 
-    async def _execute_sequential(self, task: str) -> dict[str, Any]:
+    async def _execute_sequential(self, task: str | dict[str, Any]) -> dict[str, Any]:
         """順次実行.
 
         Args:
-            task: タスク内容
+            task: タスク内容（文字列または辞書）
 
         Returns:
-            最終結果
+            最終結果（フラット化された構造）
         """
         self._logger.info("Sequential 実行開始")
 
-        result = {"task": task}
+        # taskが辞書の場合はそのまま使用、文字列の場合は{"task": task}に変換
+        if isinstance(task, dict):
+            result = task
+        else:
+            result = {"task": task}
+        agent_results: dict[str, Any] = {}
 
         for i, agent in enumerate(self._agents):
-            self._logger.info(f"Agent {i + 1}/{len(self._agents)} 実行中")
-
-            # Agent を実行
-            result = await agent.run(result)
-
-            # 共有コンテキストに保存
             agent_name = agent.__class__.__name__
-            self._context.set(f"agent_{i}_{agent_name}", result)
+            self._logger.info(f"Agent {i + 1}/{len(self._agents)} 実行中: {agent_name}")
+
+            # ノード開始コールバック
+            if hasattr(self, "_on_node_start") and self._on_node_start:
+                try:
+                    await self._on_node_start(agent_name, {"index": i, "input": result})
+                except Exception as e:
+                    self._logger.warning(f"on_node_start callback failed: {e}")
+
+            try:
+                # Agent を実行
+                result = await agent.run(result)
+
+                # 共有コンテキストに保存
+                self._context.set(f"agent_{i}_{agent_name}", result)
+                agent_results[agent_name] = result
+
+                # ノード完了コールバック
+                if hasattr(self, "_on_node_complete") and self._on_node_complete:
+                    try:
+                        await self._on_node_complete(agent_name, result)
+                    except Exception as e:
+                        self._logger.warning(f"on_node_complete callback failed: {e}")
+
+            except Exception as e:
+                self._logger.error(f"Agent {i} ({agent_name}) failed: {e}")
+                agent_results[agent_name] = {
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+                raise
 
         self._logger.info("Sequential 実行完了")
 
+        # 一貫した結果構造を返す
         return {
             "final_result": result,
+            "agent_results": agent_results,
             "pattern": "sequential",
             "agents_executed": len(self._agents),
         }
@@ -423,6 +575,7 @@ class MultiAgentWorkflow:
         agents: list[AgentBlock],
         pattern: str = "sequential",
         llm_client: Any = None,
+        shared_context: SharedContext | None = None,
     ) -> WorkflowConfig:
         """Multi-Agent Workflow を作成.
 
@@ -431,12 +584,14 @@ class MultiAgentWorkflow:
             agents: Agent リスト
             pattern: 協調パターン (sequential, concurrent, handoff)
             llm_client: LLM クライアント（Router 用）
+            shared_context: 共有コンテキスト（オプション、記憶システム付き可能）
 
         Returns:
             WorkflowConfig
         """
-        # SharedContext を作成
-        shared_context = SharedContext()
+        # SharedContext を作成（提供されていない場合）
+        if shared_context is None:
+            shared_context = SharedContext()
 
         # AgentCoordinator を作成
         coordinator = AgentCoordinator(
@@ -446,32 +601,15 @@ class MultiAgentWorkflow:
         )
 
         # WorkflowConfig を構築
-        # 注意：実際の実装では PocketFlow のノード定義が必要
-        # ここでは簡略化のため、メタデータのみ設定
-        nodes = []
-        edges = []
-
-        # Agent ノードを追加
-        for i, agent in enumerate(agents):
-            nodes.append({
-                "id": f"agent_{i}",
-                "type": "agent",
-                "agent": agent,
-            })
-
-            # エッジを追加（Sequential の場合）
-            if pattern == "sequential" and i > 0:
-                edges.append({
-                    "from": f"agent_{i - 1}",
-                    "to": f"agent_{i}",
-                })
-
-        # Coordinator ノードを追加
-        nodes.append({
-            "id": "coordinator",
-            "type": "coordinator",
-            "coordinator": coordinator,
-        })
+        # Coordinatorが全てのAgentを管理するため、Coordinatorノードのみを作成
+        nodes = [
+            {
+                "id": "coordinator",
+                "type": "coordinator",
+                "coordinator": coordinator,
+            }
+        ]
+        edges = []  # Coordinatorノードのみなのでedgeは不要
 
         return WorkflowConfig(
             workflow_id=workflow_id,
@@ -483,6 +621,7 @@ class MultiAgentWorkflow:
                 "pattern": pattern,
                 "num_agents": len(agents),
                 "shared_context": shared_context,
+                "coordinator": coordinator,  # デバッグ用
             },
         )
 

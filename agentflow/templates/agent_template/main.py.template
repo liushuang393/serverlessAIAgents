@@ -1,44 +1,88 @@
 """{{ agent_name }} - メインエントリーポイント.
 
 {{ description }}
+
+開発方式:
+    方式1: @agent デコレータ（最も簡単）
+    方式2: create_flow（複数Agent協調）
 """
 
-from pocketflow import AsyncFlow, AsyncNode
+from typing import Any
+
+# ============================================================
+# 方式1: @agent デコレータ（v0.2.0 推奨・最も簡単）
+# ============================================================
+
+from agentflow import agent, tool, AgentClient
 
 
-async def process_input(shared: dict) -> dict:
-    """入力データを処理.
+@agent
+class {{ flow_name }}Agent:
+    """{{ agent_name }} Agent.
 
-    Args:
-        shared: 共有データ辞書
-
-    Returns:
-        処理結果を含む辞書
+    {{ description }}
     """
-    input_data = shared.get("input", "")
 
-    # TODO: ここに処理ロジックを実装
-    result = f"Processed: {input_data}"
+    # システムプロンプト（LLM使用時）
+    system_prompt = "あなたは{{ agent_name }}の処理を担当するAgentです。"
 
-    return {"output": result}
+    @tool
+    def process(self, input_text: str) -> str:
+        """入力テキストを処理.
+
+        Args:
+            input_text: 入力テキスト
+
+        Returns:
+            処理結果
+        """
+        # TODO: ここに処理ロジックを実装
+        return f"Processed: {input_text}"
+
+    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
+        """メイン処理.
+
+        Args:
+            input_data: 入力データ
+
+        Returns:
+            処理結果
+        """
+        input_text = input_data.get("input", "")
+        result = self.process(input_text)
+        return {"output": result}
 
 
-# メインワークフローを定義
-{{ flow_name }} = AsyncFlow(
-    name="{{ flow_name }}",
-    nodes=[
-        AsyncNode(name="process", func=process_input),
-    ],
-)
+# ============================================================
+# 方式2: create_flow（複数Agent協調時に使用）
+# ============================================================
 
+# from agentflow import create_flow
+#
+# flow = create_flow(
+#     agents=[{{ flow_name }}Agent()],
+#     pattern="sequential",  # "parallel", "handoff" なども可
+#     enable_memory=True,
+#     name="{{ agent_name }}-flow",
+# )
+
+
+# ============================================================
+# 実行
+# ============================================================
 
 if __name__ == "__main__":
     import asyncio
 
     async def main() -> None:
         """テスト実行."""
-        shared = {"input": "Hello, {{ agent_name }}!"}
-        result = await {{ flow_name }}.run_async(shared)
+        # 方式1: AgentClient で呼び出し
+        client = AgentClient.get("{{ flow_name }}Agent")
+        result = await client.invoke({"input": "Hello, {{ agent_name }}!"})
         print(f"Result: {result}")
+
+        # 方式2: create_flow で呼び出し（コメント解除して使用）
+        # result = await flow.run({"input": "Hello!"})
+        # print(f"Flow Result: {result}")
 
     asyncio.run(main())

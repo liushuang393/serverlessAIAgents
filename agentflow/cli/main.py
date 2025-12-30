@@ -19,6 +19,7 @@ from rich.text import Text
 from agentflow.cli.commands.create import create
 from agentflow.cli.commands.init import init
 from agentflow.cli.commands.marketplace import marketplace
+from agentflow.cli.commands.skills import skills
 from agentflow.cli.commands.template import template
 from agentflow.core.schemas import SchemaLoader
 
@@ -56,7 +57,7 @@ class AgentFlowCLI(click.Group):
 
 
 @click.group(cls=AgentFlowCLI)
-@click.version_option(version="0.1.0", prog_name="agentflow")
+@click.version_option(version="0.2.0", prog_name="agentflow")
 @click.option(
     "--verbose",
     "-v",
@@ -117,6 +118,18 @@ def protocols(ctx: click.Context) -> None:
     is_flag=True,
     help="JSON 形式で出力",
 )
+@click.option(
+    "--agent-name",
+    "-n",
+    "agent_name",
+    help="@agent デコレータで定義されたAgent名（agent.yaml不要）",
+)
+@click.option(
+    "--stream",
+    "-s",
+    is_flag=True,
+    help="ストリームモード（SSE形式で進捗表示）",
+)
 @click.pass_context
 def run(
     ctx: click.Context,
@@ -124,40 +137,29 @@ def run(
     input_data: str | None,
     output_file: Path | None,
     json_output: bool,
+    agent_name: str | None,
+    stream: bool,
 ) -> None:
     """エージェントを実行.
 
-    AGENT_PATH: エージェントディレクトリのパス
+    AGENT_PATH: エージェントディレクトリのパス または @agent で定義されたAgent名
 
     例:
+        # 方式1: agent.yaml ベース（従来）
         agentflow run my-agent --input '{"text": "Hello"}'
-        agentflow run my-agent --input data.json
-        agentflow run my-agent --input data.json --output result.json
+
+        # 方式2: @agent デコレータ（v0.2.0 NEW）
+        agentflow run . --agent-name QAAgent --input '{"question": "Hello"}'
+
+        # 方式3: ストリームモード
+        agentflow run my-agent --input data.json --stream
     """
     verbose = ctx.obj["verbose"]
 
     try:
-        # エージェントディレクトリの確認
-        if not agent_path.is_dir():
-            console.print(f"[red]Error: {agent_path} is not a directory[/red]")
-            ctx.exit(1)
-
-        # agent.yaml を読み込み
-        agent_yaml = agent_path / "agent.yaml"
-        if not agent_yaml.exists():
-            console.print(f"[red]Error: agent.yaml not found in {agent_path}[/red]")
-            ctx.exit(1)
-
-        loader = SchemaLoader()
-        metadata = loader.load_from_file(agent_yaml)
-
-        if verbose:
-            console.print(f"[dim]Loading agent: {metadata.meta.name}[/dim]")
-
         # 入力データを解析
         shared_data: dict = {}
         if input_data:
-            # ファイルパスか JSON 文字列かを判定
             input_path = Path(input_data)
             if input_path.exists() and input_path.is_file():
                 with input_path.open("r", encoding="utf-8") as f:
@@ -171,52 +173,130 @@ def run(
                     console.print(f"[red]Error: Invalid JSON input: {e}[/red]")
                     ctx.exit(1)
 
-        # エージェントのメインモジュールを動的にロード
-        # entry フィールドは "module.py:FlowName" 形式
-        entry_parts = metadata.pocketflow.entry.split(":")
-        if len(entry_parts) != ENTRY_PARTS_COUNT:
-            console.print(
-                f"[red]Error: Invalid entry format: {metadata.pocketflow.entry}. "
-                f"Expected 'module.py:FlowName'[/red]"
-            )
-            ctx.exit(1)
+        # 方式1: @agent デコレータで定義されたAgent（v0.2.0 NEW）
+        if agent_name:
+            from agentflow.agent_decorator import AgentClient
 
-        module_path, flow_name = entry_parts
-        entry_point = agent_path / module_path
+            if verbose:
+                console.print(f"[dim]Using @agent decorator: {agent_name}[/dim]")
 
-        if not entry_point.exists():
-            console.print(f"[red]Error: Entry point not found: {entry_point}[/red]")
-            ctx.exit(1)
+            # エージェントモジュールをロード
+            if agent_path.is_dir():
+                # ディレクトリの場合、main.py を探す
+                main_py = agent_path / "main.py"
+                if main_py.exists():
+                    spec = spec_from_file_location("agent_module", main_py)
+                    if spec and spec.loader:
+                        module = module_from_spec(spec)
+                        sys.modules["agent_module"] = module
+                        spec.loader.exec_module(module)
+            else:
+                # ファイルの場合
+                spec = spec_from_file_location("agent_module", agent_path)
+                if spec and spec.loader:
+                    module = module_from_spec(spec)
+                    sys.modules["agent_module"] = module
+                    spec.loader.exec_module(module)
 
-        spec = spec_from_file_location("agent_module", entry_point)
-        if spec is None or spec.loader is None:
-            console.print(f"[red]Error: Failed to load module: {entry_point}[/red]")
-            ctx.exit(1)
+            # AgentClientで実行
+            async def execute_agent() -> dict:
+                client = AgentClient.get(agent_name)
+                if stream:
+                    # ストリームモード
+                    async for chunk in client.stream(shared_data):
+                        if json_output:
+                            console.print(json.dumps(chunk, ensure_ascii=False))
+                        else:
+                            console.print(f"[dim]Chunk:[/dim] {chunk}")
+                    return {}
+                else:
+                    return await client.invoke(shared_data)
 
-        module = module_from_spec(spec)
-        sys.modules["agent_module"] = module
-        spec.loader.exec_module(module)
+            result = asyncio.run(execute_agent())
 
-        # フローを取得
-        flow = getattr(module, flow_name, None)
-        if flow is None:
-            console.print(f"[red]Error: Flow '{flow_name}' not found in {entry_point}[/red]")
-            ctx.exit(1)
+        # 方式2: agent.yaml ベース（従来）
+        else:
+            # エージェントディレクトリの確認
+            if not agent_path.is_dir():
+                console.print(f"[red]Error: {agent_path} is not a directory[/red]")
+                ctx.exit(1)
 
-        # 実行
-        async def execute() -> dict:
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                console=console,
-            ) as progress:
-                progress.add_task(description="Executing agent...", total=None)
-                # AsyncFlow を直接実行
-                await flow.run_async(shared_data)
-                # shared_data が更新されているので、それを返す
-                return shared_data
+            # agent.yaml を読み込み
+            agent_yaml = agent_path / "agent.yaml"
+            if not agent_yaml.exists():
+                console.print(f"[red]Error: agent.yaml not found in {agent_path}[/red]")
+                ctx.exit(1)
 
-        result = asyncio.run(execute())
+            loader = SchemaLoader()
+            metadata = loader.load_from_file(agent_yaml)
+
+            # メタデータからAgent名を設定（結果表示用）
+            agent_name = metadata.meta.name
+
+            if verbose:
+                console.print(f"[dim]Loading agent: {metadata.meta.name}[/dim]")
+
+            # エージェントのメインモジュールを動的にロード
+            entry_parts = metadata.pocketflow.entry.split(":")
+            if len(entry_parts) != ENTRY_PARTS_COUNT:
+                console.print(
+                    f"[red]Error: Invalid entry format: {metadata.pocketflow.entry}. "
+                    f"Expected 'module.py:FlowName'[/red]"
+                )
+                ctx.exit(1)
+
+            module_path, flow_name = entry_parts
+            entry_point = agent_path / module_path
+
+            if not entry_point.exists():
+                console.print(f"[red]Error: Entry point not found: {entry_point}[/red]")
+                ctx.exit(1)
+
+            spec = spec_from_file_location("agent_module", entry_point)
+            if spec is None or spec.loader is None:
+                console.print(f"[red]Error: Failed to load module: {entry_point}[/red]")
+                ctx.exit(1)
+
+            module = module_from_spec(spec)
+            sys.modules["agent_module"] = module
+            spec.loader.exec_module(module)
+
+            # Flowを取得（create_flow または従来のFlow）
+            flow = getattr(module, flow_name, None)
+            if flow is None:
+                console.print(f"[red]Error: Flow '{flow_name}' not found in {entry_point}[/red]")
+                ctx.exit(1)
+
+            # 実行
+            async def execute() -> dict:
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    console=console,
+                ) as progress:
+                    progress.add_task(description="Executing agent...", total=None)
+                    if stream:
+                        # create_flow の run_stream を使用
+                        if hasattr(flow, "run_stream"):
+                            async for event in flow.run_stream(shared_data):
+                                if json_output:
+                                    console.print(json.dumps(event, ensure_ascii=False))
+                                else:
+                                    console.print(f"[dim]{event.get('type', 'event')}:[/dim] {event.get('node', '')}")
+                            return {}
+                        else:
+                            console.print("[yellow]Warning: Stream mode not supported, using normal mode[/yellow]")
+                    # 通常実行
+                    if hasattr(flow, "run"):
+                        return await flow.run(shared_data)
+                    elif hasattr(flow, "run_async"):
+                        await flow.run_async(shared_data)
+                        return shared_data
+                    else:
+                        msg = f"Flow '{flow_name}' has no run/run_async method"
+                        raise ValueError(msg)
+
+            result = asyncio.run(execute())
 
         # 結果を出力
         if json_output or output_file:
@@ -233,12 +313,12 @@ def run(
                 )
             else:
                 console.print(output_data)
-        else:
+        elif not stream:
             console.print(
                 Panel(
                     f"[green]✓[/green] Agent executed successfully!\n\n"
                     f"[dim]Result:[/dim]\n{json.dumps(result, indent=2, ensure_ascii=False)}",
-                    title=metadata.meta.name,
+                    title=agent_name or "Agent",
                     border_style="green",
                 )
             )
@@ -259,13 +339,41 @@ def run(
 @cli.command(name="list")
 @click.pass_context
 def list_agents(ctx: click.Context) -> None:
-    """インストール済みエージェントを一覧表示."""
+    """インストール済みエージェントを一覧表示.
+
+    v0.2.0: @agent デコレータで定義されたAgentも表示
+    """
     verbose = ctx.obj.get("verbose", False) if ctx.obj else False
 
     if verbose:
         console.print("[dim]Listing installed agents...[/dim]")
 
-    console.print("[yellow]⚠ Not implemented yet[/yellow]")
+    from rich.table import Table
+
+    table = Table(title="Installed Agents", show_header=True, header_style="bold cyan")
+    table.add_column("ID", style="cyan")
+    table.add_column("Type", style="yellow")
+    table.add_column("Description")
+
+    # 方式1: @agent デコレータで定義されたAgent（v0.2.0 NEW）
+    try:
+        from agentflow.agent_decorator import AgentClient
+
+        decorated_agents = AgentClient.list_agents()
+        for agent_name in decorated_agents:
+            table.add_row(agent_name, "@agent", f"Decorator-based agent: {agent_name}")
+    except Exception:
+        pass
+
+    # 方式2: agent.yaml ベース（将来実装）
+    # TODO: registry から取得
+
+    if table.rows:
+        console.print()
+        console.print(table)
+    else:
+        console.print("[yellow]⚠ No agents found[/yellow]")
+        console.print("[dim]Tip: Use 'agentflow create agent <name>' to create a new agent[/dim]")
 
 
 @cli.command()
@@ -282,6 +390,128 @@ def info(ctx: click.Context, agent_id: str) -> None:
         console.print(f"[dim]Getting info for: {agent_id}[/dim]")
 
     console.print("[yellow]⚠ Not implemented yet[/yellow]")
+
+
+@cli.command()
+@click.option(
+    "--system",
+    "-s",
+    "system_prompt",
+    default="あなたは親切で知識豊富なアシスタントです。",
+    help="システムプロンプト",
+)
+@click.option(
+    "--model",
+    "-m",
+    default="gpt-4o-mini",
+    help="使用する LLM モデル",
+)
+@click.pass_context
+def chat(ctx: click.Context, system_prompt: str, model: str) -> None:
+    """対話型チャットセッションを開始.
+
+    例:
+        agentflow chat
+        agentflow chat --system "あなたはコード専門家です"
+        agentflow chat --model gpt-4o
+    """
+    from agentflow.llm.llm_client import LLMConfig
+    from agentflow.skills.chatbot import ChatBotConfig, ChatBotSkill
+
+    console.print(
+        Panel(
+            "[cyan]AgentFlow Chat[/cyan]\n"
+            "[dim]終了するには 'exit' または 'quit' と入力してください[/dim]",
+            border_style="cyan",
+        )
+    )
+
+    # ChatBot 初期化
+    llm_config = LLMConfig(model=model)
+    bot_config = ChatBotConfig(system_prompt=system_prompt)
+    chatbot = ChatBotSkill(llm_config=llm_config, config=bot_config)
+    session = chatbot.create_session()
+
+    async def chat_loop() -> None:
+        """チャットループ."""
+        while True:
+            try:
+                user_input = console.input("[bold green]You:[/bold green] ")
+                if user_input.lower() in ("exit", "quit", "q"):
+                    console.print("[dim]チャットを終了します[/dim]")
+                    break
+
+                if not user_input.strip():
+                    continue
+
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    console=console,
+                    transient=True,
+                ) as progress:
+                    progress.add_task(description="考え中...", total=None)
+                    response = await chatbot.chat(session.id, user_input)
+
+                console.print(f"[bold blue]Assistant:[/bold blue] {response}")
+                console.print()
+
+            except KeyboardInterrupt:
+                console.print("\n[dim]チャットを終了します[/dim]")
+                break
+
+    asyncio.run(chat_loop())
+
+
+@cli.command()
+@click.option(
+    "--host",
+    "-h",
+    default="127.0.0.1",
+    help="サーバーホスト",
+)
+@click.option(
+    "--port",
+    "-p",
+    default=8000,
+    type=int,
+    help="サーバーポート",
+)
+@click.option(
+    "--reload",
+    is_flag=True,
+    help="開発モード（自動リロード）",
+)
+@click.pass_context
+def studio(ctx: click.Context, host: str, port: int, reload: bool) -> None:
+    """AgentFlow Studio サーバーを起動.
+
+    例:
+        agentflow studio
+        agentflow studio --port 3000
+        agentflow studio --reload
+    """
+    import uvicorn
+
+    from agentflow.studio.api import create_app
+
+    console.print(
+        Panel(
+            f"[cyan]AgentFlow Studio[/cyan]\n"
+            f"[dim]http://{host}:{port}[/dim]\n"
+            f"[dim]API Docs: http://{host}:{port}/api/docs[/dim]",
+            border_style="cyan",
+        )
+    )
+
+    app = create_app()
+    uvicorn.run(
+        app if not reload else "agentflow.studio.api:create_app",
+        host=host,
+        port=port,
+        reload=reload,
+        factory=reload,
+    )
 
 
 def handle_error(error: Exception, verbose: bool = False) -> None:
@@ -313,6 +543,7 @@ def handle_error(error: Exception, verbose: bool = False) -> None:
 cli.add_command(init)
 cli.add_command(create)
 cli.add_command(marketplace)
+cli.add_command(skills)
 cli.add_command(template)
 
 

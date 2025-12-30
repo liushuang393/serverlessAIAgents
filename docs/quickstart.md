@@ -2,6 +2,16 @@
 
 このガイドでは、AgentFlow を使って最初の AI エージェントを作成し、実行する方法を説明します。
 
+## 🎯 核心原則
+
+```
+【統一入口 = create_flow】
+すべてはFlowから始まる。単一Agentでも必ずFlowで包む。
+
+【層構造】
+Flow（編排） → Agent（実行） → Skill（プロンプト）
+```
+
 ## 前提条件
 
 - Python 3.13 以上
@@ -11,6 +21,21 @@
 
 ```bash
 pip install agentflow
+```
+
+## 0. 最速スタート（5行で動く）
+
+```python
+from agentflow import create_flow
+from agentflow.core.agent_block import AgentBlock
+
+class MyAgent(AgentBlock):
+    async def run(self, input_data: dict) -> dict:
+        return {"result": f"処理: {input_data.get('task', '')}"}
+
+# 単一Agentでも必ずFlowで包む
+flow = create_flow([MyAgent()])
+result = await flow.run({"task": "hello"})
 ```
 
 ## 1. プロジェクトの初期化
@@ -26,11 +51,13 @@ cd my-first-agent
 
 ```
 my-first-agent/
-├── agent.yaml          # エージェントメタデータ
-├── main.py             # エージェント実装
-├── requirements.txt    # 依存関係
-├── .gitignore          # Git 除外設定
-└── README.md           # プロジェクト説明
+├── main.py             # FastAPI + AgentFlow統合
+├── workflow.py         # Flow定義（複数Agent用）
+├── agents/             # Agent実装
+├── skills/             # SKILL.md形式プロンプト
+├── schemas/            # Pydantic入出力定義
+├── agent.yaml          # メタデータ
+└── requirements.txt    # 依存関係
 ```
 
 ## 2. エージェントメタデータの設定
@@ -75,62 +102,62 @@ skills:
       - result
 ```
 
-## 3. エージェントの実装
+## 3. エージェントの実装（推奨パターン）
 
 `main.py` を編集してエージェントのロジックを実装します：
 
 ```python
-"""My First Agent - シンプルなメッセージ処理エージェント."""
+"""My First Agent - FastAPI + AgentFlow統合."""
 
 from typing import Any
+from fastapi import FastAPI
+from pydantic import BaseModel
+
+from agentflow import create_flow
 from agentflow.core.agent_block import AgentBlock
 
 
+# Agent定義
 class MyFirstAgent(AgentBlock):
     """メッセージを処理するシンプルなエージェント."""
 
-    async def initialize(self) -> None:
-        """初期化処理."""
-        await super().initialize()
-        print("🚀 エージェントを初期化しました")
+    name: str = "MyFirstAgent"
 
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
-        """
-        メッセージを処理.
-
-        Args:
-            input_data: 入力データ（message キーを含む）
-
-        Returns:
-            処理結果（result キーを含む）
-        """
+        """メッセージを処理."""
         message = input_data.get("message", "")
-
-        # メッセージを処理（例：大文字に変換）
-        result = f"処理完了: {message.upper()}"
-
         return {
-            "result": result,
+            "result": f"処理完了: {message.upper()}",
             "original": message,
-            "length": len(message),
         }
 
-    async def cleanup(self) -> None:
-        """クリーンアップ処理."""
-        print("🧹 エージェントをクリーンアップしました")
-        await super().cleanup()
+
+# Flow定義（単一Agentでも必ずFlowで包む）
+flow = create_flow(
+    agents=[MyFirstAgent()],
+    pattern="sequential",
+    name="my-first-flow",
+)
 
 
-# エージェントのエントリーポイント
+# FastAPI アプリ
+app = FastAPI(title="My First Agent")
+
+
+class TaskRequest(BaseModel):
+    message: str
+
+
+@app.post("/api/process")
+async def process(request: TaskRequest) -> dict:
+    """同期処理エンドポイント."""
+    result = await flow.run({"message": request.message})
+    return {"status": "success", "data": result}
+
+
 if __name__ == "__main__":
-    import asyncio
-
-    async def main():
-        async with MyFirstAgent(metadata_path="agent.yaml") as agent:
-            result = await agent.run({"message": "hello world"})
-            print(f"結果: {result}")
-
-    asyncio.run(main())
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
 ```
 
 ## 4. エージェントの実行

@@ -302,7 +302,9 @@ def test_multi_agent_workflow_create_sequential():
     assert "sequential" in workflow.name
     assert workflow.config["pattern"] == "sequential"
     assert workflow.config["num_agents"] == 2
-    assert len(workflow.nodes) == 3  # 2 agents + 1 coordinator
+    # Coordinator が全 Agent を管理するため、ノードは 1 つ
+    assert len(workflow.nodes) == 1
+    assert workflow.nodes[0]["type"] == "coordinator"
 
 
 def test_multi_agent_workflow_create_concurrent():

@@ -7,7 +7,7 @@ name = "agentflow"
 version = "1.0.0"
 description = "Lightweight AI Agent development framework with MCP/A2A/AG-UI protocol support"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
     { name = "AgentFlow Team", email = "team@agentflow.dev" }
@@ -22,14 +22,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
-
-[project.urls]
-Homepage = "https://github.com/liushuang393/serverlessAIAgents"
-Documentation = "https://github.com/liushuang393/serverlessAIAgents/blob/main/README.md"
-Repository = "https://github.com/liushuang393/serverlessAIAgents"
-Issues = "https://github.com/liushuang393/serverlessAIAgents/issues"
-Changelog = "https://github.com/liushuang393/serverlessAIAgents/blob/main/CHANGELOG.md"
-
 dependencies = [
     # Core workflow engine
     "pocketflow>=0.0.3",
@@ -56,6 +48,13 @@ dependencies = [
     # Logging
     "structlog>=24.0.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/liushuang393/serverlessAIAgents"
+Documentation = "https://github.com/liushuang393/serverlessAIAgents/blob/main/README.md"
+Repository = "https://github.com/liushuang393/serverlessAIAgents"
+Issues = "https://github.com/liushuang393/serverlessAIAgents/issues"
+Changelog = "https://github.com/liushuang393/serverlessAIAgents/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 studio = [

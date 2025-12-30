@@ -242,7 +242,31 @@ class AgentFlowEngine:
         nodes: dict[str, HookedNode] = {}
 
         # ノード関数を定義
-        def create_node_func() -> Any:
+        def create_node_func(node_config: dict[str, Any]) -> Any:
+            # coordinatorノードの場合は、coordinatorを直接実行
+            if node_config.get("type") == "coordinator" and "coordinator" in node_config:
+                coordinator = node_config["coordinator"]
+
+                async def coordinator_func(data: dict[str, Any]) -> dict[str, Any]:
+                    # inputsからtaskを取得、なければ全体を渡す
+                    task_input = data.get("inputs", data)
+                    # coordinatorがdict入力を期待する場合は直接渡す
+                    if isinstance(task_input, dict):
+                        # AgentCoordinatorのexecuteメソッドがstr型を期待しているため、
+                        # _execute_sequentialを直接呼び出す
+                        result = await coordinator._execute_sequential(task_input)
+                    else:
+                        result = await coordinator.execute(str(task_input))
+
+                    # 結果をshared_stateに保存
+                    if "outputs" in data:
+                        data["outputs"]["coordinator_result"] = result
+
+                    return result
+
+                return coordinator_func
+
+            # 通常のノードはパススルー
             async def node_func(data: dict[str, Any]) -> dict[str, Any]:
                 return data
 
@@ -253,7 +277,7 @@ class AgentFlowEngine:
 
             nodes[node_id] = HookedNode(
                 node_id=node_id,
-                func=create_node_func(),
+                func=create_node_func(node_config),
                 hooks=self._hooks,
                 context=context,
                 logger=self._logger,
@@ -269,10 +293,14 @@ class AgentFlowEngine:
         # 開始ノードを見つける
         start_node = None
         for node_config in workflow.nodes:
-            if node_config.get("type") == "start" or not any(
-                e["target"] == node_config["id"] for e in workflow.edges
-            ):
-                start_node = nodes[node_config["id"]]
+            node_id = node_config["id"]
+            # startタイプのノード、またはどのedgeのターゲットにもなっていないノード
+            is_start = node_config.get("type") == "start"
+            is_not_target = not any(
+                (e.get("target") or e.get("to")) == node_id for e in workflow.edges
+            )
+            if is_start or is_not_target:
+                start_node = nodes[node_id]
                 break
 
         # AsyncFlow を作成
@@ -328,10 +356,14 @@ class AgentFlowEngine:
             shared_state: dict[str, Any] = {"inputs": inputs, "outputs": {}}
             result = await flow.run_async(shared_state)
 
+            # coordinatorの結果を取得
+            coordinator_result = shared_state.get("outputs", {}).get("coordinator_result")
+            final_result = coordinator_result if coordinator_result is not None else result
+
             output: dict[str, Any] = {
                 "workflow_id": workflow_id,
                 "execution_id": execution_id,
-                "result": result,
+                "result": final_result,
                 "outputs": shared_state.get("outputs", {}),
             }
 
