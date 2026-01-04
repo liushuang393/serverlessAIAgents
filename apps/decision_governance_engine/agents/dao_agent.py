@@ -48,7 +48,7 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
     """
 
     name = "DaoAgent"
-    max_tokens = 1200  # 出力増加に伴い拡張
+    # timeout_seconds, max_retries, max_tokens は ResilientAgent のデフォルト値を使用
     temperature = 0.3  # 低め＝安定判断
 
     # RAG使用禁止

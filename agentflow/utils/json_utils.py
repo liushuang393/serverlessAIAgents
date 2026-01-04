@@ -71,14 +71,76 @@ def extract_json(text: str) -> dict[str, Any] | None:
 
 
 def _try_parse_json(text: str) -> dict[str, Any] | None:
-    """JSON パースを試みる."""
+    """JSON パースを試みる.
+
+    不完全な JSON の場合は修復を試みる（max_tokens 不足対策）。
+    """
     try:
         data = json.loads(text)
         if isinstance(data, dict):
             return data
         return None
     except json.JSONDecodeError:
+        # 修復を試みる（トークン不足で途中で切れた場合）
+        repaired = _try_repair_json(text)
+        if repaired:
+            try:
+                data = json.loads(repaired)
+                if isinstance(data, dict):
+                    return data
+            except json.JSONDecodeError:
+                pass
         return None
+
+
+def _try_repair_json(text: str) -> str | None:
+    """不完全な JSON を修復.
+
+    max_tokens 不足で JSON が途中で切れた場合の対策。
+    - 閉じられていない文字列を閉じる
+    - 閉じられていない括弧/配列を閉じる
+    - 末尾のカンマを削除
+
+    Args:
+        text: 不完全な JSON テキスト
+
+    Returns:
+        修復済み JSON、修復不可能な場合は None
+    """
+    if not text or not text.strip():
+        return None
+
+    text = text.strip()
+
+    # 末尾の不完全なキーやコンマを削除
+    # 例: {"key": "value", "incomplete   →  {"key": "value"
+    text = re.sub(r',\s*"[^"]*$', '', text)
+    text = re.sub(r',\s*$', '', text)
+
+    # 閉じられていない文字列を閉じる
+    # 奇数個の " がある場合は最後に " を追加
+    quote_count = 0
+    i = 0
+    while i < len(text):
+        if text[i] == '\\' and i + 1 < len(text):
+            i += 2
+            continue
+        if text[i] == '"':
+            quote_count += 1
+        i += 1
+
+    if quote_count % 2 == 1:
+        text += '"'
+
+    # 括弧のバランスを確認
+    open_braces = text.count('{') - text.count('}')
+    open_brackets = text.count('[') - text.count(']')
+
+    # 閉じ括弧を追加
+    text += ']' * open_brackets
+    text += '}' * open_braces
+
+    return text if text else None
 
 
 def _extract_outermost_json(text: str) -> str | None:

@@ -40,7 +40,7 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
     """
 
     name = "ReviewAgent"
-    max_tokens = 1500
+    # timeout_seconds, max_retries, max_tokens は ResilientAgent のデフォルト値を使用
     temperature = 0.7  # やや高め＝多角的視点
 
     MANDATORY_CHECKS = [

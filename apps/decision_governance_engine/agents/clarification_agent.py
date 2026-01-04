@@ -36,7 +36,7 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
     """
 
     name = "ClarificationAgent"
-    max_tokens = 600
+    # timeout_seconds, max_retries, max_tokens は ResilientAgent のデフォルト値を使用
     temperature = 0.3  # 低め = 安定した診断
 
     # RAG使用禁止

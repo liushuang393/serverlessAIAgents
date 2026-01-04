@@ -275,11 +275,17 @@ class PipelineEngine(BaseEngine):
                 completed_stages.append(stage.name)
             else:
                 # 通常のAgentステージ - 前ステージの結果を渡す input_mapper を設定
-                for inst in instances:
-                    node_id = stage.name if len(instances) == 1 else None
-                    input_mapper = self._create_stage_input_mapper(completed_stages.copy())
-                    input_mappers = {node_id: input_mapper} if node_id else None
-                    builder.then(inst, ids=[node_id] if node_id else None, input_mappers=input_mappers)
+                input_mapper = self._create_stage_input_mapper(completed_stages.copy())
+                if len(instances) == 1:
+                    # 単一Agent: ステージ名をnode_idとして使用
+                    input_mappers = {stage.name: input_mapper}
+                    builder.then(instances[0], ids=[stage.name], input_mappers=input_mappers)
+                else:
+                    # 複数Agent: 各Agentに固有のIDを付与して input_mapper を渡す
+                    node_ids = [f"{stage.name}_{i}" for i in range(len(instances))]
+                    input_mappers = {node_id: input_mapper for node_id in node_ids}
+                    for i, inst in enumerate(instances):
+                        builder.then(inst, ids=[node_ids[i]], input_mappers=input_mappers)
                 completed_stages.append(stage.name)
 
         return builder.with_config(max_revisions=self._max_revisions).build()
@@ -464,13 +470,19 @@ class PipelineEngine(BaseEngine):
         """Pipelineをストリーム実行（Flowを活用）."""
         if self._flow:
             # Flowのrun_streamを使用
+            # レポートジェネレーターがある場合、flow_complete イベントを変換
             async for event in self._flow.run_stream(inputs):
-                yield event
-
-            # レポートジェネレーターがあれば最終結果に適用
-            if self._report_generator and event.get("type") == "flow_complete":
-                result = event.get("result", {})
-                yield {"type": "result", "data": self._report_generator(result)}
+                if event.get("type") == "flow_complete" and self._report_generator:
+                    # flow_complete の result を変換して置き換え
+                    result = event.get("result", {})
+                    transformed = self._report_generator(result)
+                    yield {
+                        **event,
+                        "result": transformed,
+                        "data": {**event.get("data", {}), "transformed": True},
+                    }
+                else:
+                    yield event
             return
 
         # Fallback: 従来のストリーム実行ロジック
@@ -583,4 +595,3 @@ class PipelineEngine(BaseEngine):
                 "status": "success",
                 "results": self._results,
             }
-

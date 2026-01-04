@@ -61,7 +61,7 @@ class ShuAgent(ResilientAgent[ShuInput, ShuOutput]):
     """
 
     name = "ShuAgent"
-    max_tokens = 1500  # 増加（新フィールド追加のため）
+    # timeout_seconds, max_retries, max_tokens は ResilientAgent のデフォルト値を使用
     temperature = 0.5
 
     # RAG使用許可

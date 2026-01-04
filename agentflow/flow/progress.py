@@ -89,12 +89,19 @@ class ProgressTracker:
         Args:
             node: 完了したノード
             result: ノード実行結果
-            success: 実行が成功したか
+            success: 実行が成功したか（失敗時はカウントしない）
 
         Returns:
             AG-UI NodeCompleteEvent形式の辞書
+
+        Note:
+            success=True の場合のみ進捗カウンターを増加。
+            失敗したノードは on_node_error で処理され、
+            このメソッドは success=True でのみ呼ばれるべき。
         """
-        self._completed += 1
+        # 成功時のみカウント（失敗ノードは進捗に含めない）
+        if success:
+            self._completed += 1
         self._current_node = None
         return {
             "event_type": "node.complete",

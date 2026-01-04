@@ -40,7 +40,7 @@ class CognitiveGateAgent(ResilientAgent[CognitiveGateInput, CognitiveGateOutput]
     """
 
     name = "CognitiveGateAgent"
-    max_tokens = 800
+    # timeout_seconds, max_retries, max_tokens は ResilientAgent のデフォルト値を使用
     temperature = 0.3  # 低め（厳密な判断）
 
     def __init__(self, llm_client: Any = None) -> None:

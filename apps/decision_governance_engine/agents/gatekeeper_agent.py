@@ -29,7 +29,7 @@ class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
     """
 
     name = "GatekeeperAgent"
-    max_tokens = 500
+    # timeout_seconds, max_retries, max_tokens は ResilientAgent のデフォルト値を使用
     temperature = 0.1  # 極めて低い＝一貫した判定
 
     # 企業新事業関連性チェック用システムプロンプト

@@ -54,7 +54,7 @@ class FaAgent(ResilientAgent[FaInput, FaOutput]):
     """
 
     name = "FaAgent"
-    max_tokens = 1500  # 出力増加に伴い拡張
+    # timeout_seconds, max_retries, max_tokens は ResilientAgent のデフォルト値を使用
     temperature = 0.4
 
     def __init__(self, llm_client: Any = None) -> None:

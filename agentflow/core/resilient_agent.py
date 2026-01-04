@@ -86,12 +86,13 @@ class ResilientAgent(AgentBlock, Generic[InputT, OutputT]):
     """
 
     # サブクラスで設定するクラス属性
+    # 注: 統一デフォルト値 - 個別Agentでの設定は不要
     name: str = "ResilientAgent"
-    timeout_seconds: int = 30
-    max_retries: int = 2
-    retry_delay: float = 1.0
+    timeout_seconds: int = 300  # 5分（複雑なLLM処理に余裕を持たせる）
+    max_retries: int = 3  # リトライ3回
+    retry_delay: float = 2.0  # 初期遅延2秒
     retry_backoff: str = "exponential"  # "fixed" | "exponential"
-    max_tokens: int = 1000
+    max_tokens: int = 4000  # 十分なトークン数（GPT-4で約3000文字）
     temperature: float = 0.5
 
     def __init__(
