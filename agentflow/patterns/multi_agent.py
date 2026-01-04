@@ -15,8 +15,8 @@
 - Azure Architecture: AI Agent Orchestration Patterns
 - OpenAI: Multi-Agent Collaboration
 
-技術栈：
-- AgentBlock: Agent 基類
+技術スタック：
+- AgentBlock: Agent基底クラス
 - asyncio: 並行処理
 - PocketFlow: ワークフロー実行
 """
@@ -31,10 +31,10 @@ from agentflow.core.types import WorkflowConfig
 
 
 class SharedContext:
-    """Agent 間の共有コンテキスト.
+    """Agent間の共有コンテキスト.
 
-    職責：
-    - Agent 間で状態を共有
+    責務：
+    - Agent間で状態を共有
     - 履歴管理
     - スレッドセーフ
     - 記憶システム統合（オプション）
@@ -222,11 +222,11 @@ class SharedContext:
 
 
 class AgentRouter(AgentBlock):
-    """Agent ルーティング - タスクに応じて Agent を選択.
+    """Agentルーティング - タスクに応じてAgentを選択.
 
-    職責：
+    責務：
     - タスクを分析
-    - 最適な Agent を選択
+    - 最適なAgentを選択
     - ルーティング理由を記録
 
     Example:
@@ -343,12 +343,12 @@ class AgentRouter(AgentBlock):
 
 
 class AgentCoordinator:
-    """Agent 協調制御.
+    """Agent協調制御.
 
-    職責：
-    - Sequential パターン（順次実行）
-    - Concurrent パターン（並行実行）
-    - Handoff パターン（動的委譲）
+    責務：
+    - Sequentialパターン（順次実行）
+    - Concurrentパターン（並行実行）
+    - Handoffパターン（動的委譲）
 
     Example:
         >>> coordinator = AgentCoordinator(
@@ -551,12 +551,12 @@ class AgentCoordinator:
 
 
 class MultiAgentWorkflow:
-    """Multi-Agent Workflow 工厂.
+    """Multi-Agent Workflowファクトリー.
 
-    職責：
-    - WorkflowConfig を生成
+    責務：
+    - WorkflowConfigを生成
     - 複数の協調パターンをサポート
-    - AgentFlowEngine と統合
+    - AgentFlowEngineと統合
 
     Example:
         >>> workflow = MultiAgentWorkflow.create(

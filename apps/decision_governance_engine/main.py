@@ -1,12 +1,17 @@
 # -*- coding: utf-8 -*-
 """Decision Governance Engine - メインエントリーポイント.
 
+PipelineEngine パターンを使用した CLI エントリーポイント。
+
 使用例:
     # CLIモード
     python -m apps.decision_governance_engine.main "新規事業への投資判断をしたい"
 
     # インタラクティブモード
     python -m apps.decision_governance_engine.main --interactive
+
+    # 制約条件付き
+    python -m apps.decision_governance_engine.main "投資判断" --budget 1000 --timeline 6
 """
 
 import argparse
@@ -16,14 +21,12 @@ import logging
 import sys
 from pathlib import Path
 
-# agentflow インポート時に .env が自動読み込みされる
+from apps.decision_governance_engine.engine import DecisionEngine
 from apps.decision_governance_engine.schemas.input_schemas import (
     BudgetConstraint,
     ConstraintSet,
-    DecisionRequest,
     TimelineConstraint,
 )
-from apps.decision_governance_engine.workflow import DecisionEngine
 
 
 def setup_logging(verbose: bool = False) -> None:
@@ -48,12 +51,13 @@ async def run_decision_engine(question: str, constraints: ConstraintSet | None =
     """
     engine = DecisionEngine()
 
-    request = DecisionRequest(
-        question=question,
-        constraints=constraints or ConstraintSet(),
-    )
+    # PipelineEngine API を使用
+    inputs = {
+        "question": question,
+        "constraints": (constraints.model_dump() if constraints else {}),
+    }
 
-    result = await engine.process(request)
+    result = await engine.run(inputs)
 
     # Pydanticモデルの場合はdictに変換
     if hasattr(result, "model_dump"):

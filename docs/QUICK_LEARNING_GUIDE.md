@@ -73,7 +73,7 @@
 │                    agentflow/protocols/a2ui (服务端组件)         │
 │                         ↑ 统一前端 SDK                          │
 │  ─────────────────────────────────────────────────────────────  │
-│  L3 🔄 流程层      @agent / create_flow / AgentCoordinator      │
+│  L3 🔄 流程层      @agent / Engines / AgentCoordinator      │
 │                         ↑ 三种开发方式                          │
 │  ─────────────────────────────────────────────────────────────  │
 │  L4 🤖 Agent层     AgentBlock / @agent 装饰器                   │
@@ -176,27 +176,29 @@ class AnalyzerAgent:
 result = await AnalyzerAgent().invoke({"question": "..."})
 ```
 
-### 方式 2: create_flow（多 Agent 协调）
+### 方式 2: Engine Pattern（多 Agent 协调・推奨）
 
-适合多个 Agent 协作的场景：
+适合多个 Agent 协作的场景，4種類の予定義パターンから選択：
 
 ```python
-from agentflow import create_flow
+from agentflow.engines import PipelineEngine
 
-# 定义工作流
-flow = create_flow([
-    AnalyzerAgent(),      # 分析
-    PlannerAgent(),       # 规划
-    ExecutorAgent(),      # 执行
-    ReviewerAgent(),      # 审核
-])
+# PipelineEngine を使用（複数Agent + Review）
+engine = PipelineEngine(
+    stages=[
+        {"name": "gate", "agent": GateAgent, "gate": True},
+        {"name": "analysis", "agents": [AnalyzerAgent, PlannerAgent], "parallel": True},
+        {"name": "review", "agent": ReviewerAgent, "review": True},
+    ],
+    max_revisions=2,
+)
 
 # 同步执行
-result = await flow.run({"task": "..."})
+result = await engine.run({"task": "..."})
 
 # 流式执行（获取 AG-UI 事件）
-async for event in flow.run_stream({"task": "..."}):
-    print(event)  # flow.start, node.start, progress, ...
+async for event in engine.run_stream({"task": "..."}):
+    print(event)  # engine.start, stage.start, progress, ...
 ```
 
 ### 方式 3: YAML 配置（声明式）
@@ -236,12 +238,11 @@ workflow:
 ```
 
 ```python
-from agentflow import AgentFlowEngine
+from apps.decision_governance_engine import DecisionEngine
 
-engine = AgentFlowEngine()
-engine.register_workflow("decision-flow", "agent.yaml")
-
-result = await engine.execute("decision-flow", {"input": "..."})
+# PipelineEngine を使用
+engine = DecisionEngine()
+result = await engine.run({"question": "..."})
 ```
 
 ### 前端开发

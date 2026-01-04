@@ -3,6 +3,8 @@
 > **バージョン**: 0.2.0  
 > **参照**: [Claude Code Skills 公式ドキュメント](https://code.claude.com/docs/en/skills)
 
+> **注意**: Skills 自動進化システムの詳細は [Skills 自動進化システム ガイド](guide-skills.md) を参照してください。
+
 ## 概要
 
 AgentFlow の Skills システムは Claude Code Skills 規範に完全互換です。

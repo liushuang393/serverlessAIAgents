@@ -1,9 +1,12 @@
-"""AgentFlow Patterns - Agentic AI Design Patterns.
+"""AgentFlow Patterns - Agentic AI デザインパターン（内部モジュール）.
 
-このモジュールは業界最佳実践に基づいた Agentic AI デザインパターンを提供します:
+⚠️ 注意: これは内部モジュールです。
+外部からは agentflow.engines を使用してください。
+
+このモジュールは業界ベストプラクティスに基づいたAgentic AIデザインパターンを提供します:
 - Reflection: 自己評価と改善の反復
 - Multi-Agent: 複数エージェント協調
-- Coordinator: 協調パターン基類
+- Coordinator: 協調パターン基底クラス
 - Supervisor: 監督者パターン
 - Hierarchical: 階層パターン
 
@@ -56,16 +59,16 @@ from agentflow.patterns.hierarchical import (
     SubTask,
 )
 
-# Progress Emitter
+# Progress Emitter（内部使用）
 from agentflow.patterns.progress_emitter import (
     AgentMeta,
     ProgressEmitter,
 )
 
-# Agent Pipeline
+# Agent Pipeline（非推奨 - PipelineEngine を使用してください）
 from agentflow.patterns.agent_pipeline import (
     AgentConfig,
-    AgentPipeline,
+    AgentPipeline,  # 非推奨
     AgentProtocol,
     PipelineConfig,
     RevisionRequest,
@@ -96,7 +99,7 @@ __all__ = [
     # Progress Emitter
     "AgentMeta",
     "ProgressEmitter",
-    # Agent Pipeline
+    # Agent Pipeline（非推奨 - PipelineEngine を使用）
     "AgentConfig",
     "AgentPipeline",
     "AgentProtocol",

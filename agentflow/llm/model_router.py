@@ -1,6 +1,6 @@
-"""LLM Model Router - 智能模型路由与切换.
+"""LLM Model Router - インテリジェントモデルルーティングと切り替え.
 
-提供多模型管理、自动切换、成本优化、负载均衡等功能。
+マルチモデル管理、自動切り替え、コスト最適化、負荷分散などの機能を提供。
 """
 
 import asyncio
@@ -19,53 +19,53 @@ logger = logging.getLogger(__name__)
 
 
 # ============================================================================
-# 模型定义
+# モデル定義
 # ============================================================================
 
 
 class ModelTier(Enum):
-    """模型等级."""
+    """モデル階層."""
 
-    ECONOMY = "economy"  # 经济型（快速、便宜）
-    STANDARD = "standard"  # 标准型（平衡）
-    PREMIUM = "premium"  # 高级型（最强、最贵）
+    ECONOMY = "economy"  # エコノミー型（高速、低コスト）
+    STANDARD = "standard"  # スタンダード型（バランス）
+    PREMIUM = "premium"  # プレミアム型（最強、最高価格）
 
 
 class ModelCapability(Enum):
-    """模型能力."""
+    """モデル能力."""
 
-    CHAT = "chat"  # 对话
-    COMPLETION = "completion"  # 补全
-    CODE = "code"  # 代码生成
-    REASONING = "reasoning"  # 推理
-    VISION = "vision"  # 图像理解
-    EMBEDDING = "embedding"  # 向量嵌入
-    FUNCTION_CALLING = "function_calling"  # 函数调用
-    AUDIO = "audio"  # 音频理解/生成
-    REALTIME = "realtime"  # 实时语音对话
+    CHAT = "chat"  # 対話
+    COMPLETION = "completion"  # 補完
+    CODE = "code"  # コード生成
+    REASONING = "reasoning"  # 推論
+    VISION = "vision"  # 画像理解
+    EMBEDDING = "embedding"  # ベクトル埋め込み
+    FUNCTION_CALLING = "function_calling"  # 関数呼び出し
+    AUDIO = "audio"  # 音声理解/生成
+    REALTIME = "realtime"  # リアルタイム音声対話
 
 
 @dataclass
 class ModelInfo:
-    """模型信息."""
+    """モデル情報."""
 
     name: str
     provider: str
     tier: ModelTier
     capabilities: list[ModelCapability]
     context_window: int
-    input_cost_per_1k: float  # 每 1000 token 输入成本（USD）
-    output_cost_per_1k: float  # 每 1000 token 输出成本（USD）
+    input_cost_per_1k: float  # 1000トークンあたりの入力コスト（USD）
+    output_cost_per_1k: float  # 1000トークンあたりの出力コスト（USD）
     max_output_tokens: int = 4096
     supports_streaming: bool = True
     supports_json_mode: bool = False
     description: str = ""
 
 
-# 预定义模型库（2025年12月30日更新）
+# 事前定義モデルライブラリ（2025年12月30日更新）
 MODELS: dict[str, ModelInfo] = {
     # ========================================
-    # OpenAI（文本/多模态）
+    # OpenAI（テキスト/マルチモーダル）
     # ========================================
     "gpt-4o": ModelInfo(
         name="gpt-4o",
@@ -84,7 +84,7 @@ MODELS: dict[str, ModelInfo] = {
         output_cost_per_1k=0.01,
         max_output_tokens=16384,
         supports_json_mode=True,
-        description="GPT-4o 旗舰多模态模型（文本/图像/音频）",
+        description="GPT-4o フラグシップマルチモーダルモデル（テキスト/画像/音声）",
     ),
     "gpt-4o-mini": ModelInfo(
         name="gpt-4o-mini",
@@ -101,7 +101,7 @@ MODELS: dict[str, ModelInfo] = {
         output_cost_per_1k=0.0006,
         max_output_tokens=16384,
         supports_json_mode=True,
-        description="GPT-4o-mini 高性价比模型",
+        description="GPT-4o-mini 高コストパフォーマンスモデル",
     ),
     "o1": ModelInfo(
         name="o1",
@@ -119,7 +119,7 @@ MODELS: dict[str, ModelInfo] = {
         output_cost_per_1k=0.06,
         max_output_tokens=100000,
         supports_json_mode=True,
-        description="o1 深度推理模型，适合复杂任务",
+        description="o1 深度推論モデル、複雑なタスクに適している",
     ),
     "o1-mini": ModelInfo(
         name="o1-mini",
@@ -135,7 +135,7 @@ MODELS: dict[str, ModelInfo] = {
         output_cost_per_1k=0.012,
         max_output_tokens=65536,
         supports_json_mode=True,
-        description="o1-mini 轻量推理模型",
+        description="o1-mini 軽量推論モデル",
     ),
     "o3-mini": ModelInfo(
         name="o3-mini",
@@ -152,9 +152,9 @@ MODELS: dict[str, ModelInfo] = {
         output_cost_per_1k=0.0044,
         max_output_tokens=100000,
         supports_json_mode=True,
-        description="o3-mini 最新推理模型（2025年1月发布）",
+        description="o3-mini 最新推論モデル（2025年1月リリース）",
     ),
-    # OpenAI 语音模型
+    # OpenAI音声モデル
     "gpt-4o-realtime": ModelInfo(
         name="gpt-4o-realtime-preview",
         provider="openai",
@@ -168,7 +168,7 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.005,
         output_cost_per_1k=0.02,
         max_output_tokens=4096,
-        description="GPT-4o Realtime 实时语音对话",
+        description="GPT-4o Realtime リアルタイム音声対話",
     ),
     "gpt-4o-audio": ModelInfo(
         name="gpt-4o-audio-preview",
@@ -182,10 +182,10 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.0025,
         output_cost_per_1k=0.01,
         max_output_tokens=16384,
-        description="GPT-4o Audio 音频理解与生成",
+        description="GPT-4o Audio 音声理解と生成",
     ),
     # ========================================
-    # Anthropic Claude（文本/多模态）
+    # Anthropic Claude（テキスト/マルチモーダル）
     # ========================================
     "claude-sonnet-4-20250514": ModelInfo(
         name="claude-sonnet-4-20250514",
@@ -202,7 +202,7 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.003,
         output_cost_per_1k=0.015,
         max_output_tokens=64000,
-        description="Claude Sonnet 4 最新旗舰（预计2025年发布）",
+        description="Claude Sonnet 4 最新フラグシップ（2025年リリース予定）",
     ),
     "claude-3-5-sonnet-20241022": ModelInfo(
         name="claude-3-5-sonnet-20241022",
@@ -219,7 +219,7 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.003,
         output_cost_per_1k=0.015,
         max_output_tokens=8192,
-        description="Claude 3.5 Sonnet 代码能力最强",
+        description="Claude 3.5 Sonnet コード能力が最強",
     ),
     "claude-3-5-haiku-20241022": ModelInfo(
         name="claude-3-5-haiku-20241022",
@@ -234,7 +234,7 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.0008,
         output_cost_per_1k=0.004,
         max_output_tokens=8192,
-        description="Claude 3.5 Haiku 快速经济",
+        description="Claude 3.5 Haiku 高速エコノミー",
     ),
     "claude-3-opus-20240229": ModelInfo(
         name="claude-3-opus-20240229",
@@ -250,10 +250,10 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.015,
         output_cost_per_1k=0.075,
         max_output_tokens=4096,
-        description="Claude 3 Opus 最强推理能力",
+        description="Claude 3 Opus 最強推論能力",
     ),
     # ========================================
-    # Google Gemini（文本/多模态）
+    # Google Gemini（テキスト/マルチモーダル）
     # ========================================
     "gemini-2.0-flash": ModelInfo(
         name="gemini-2.0-flash-exp",
@@ -271,7 +271,7 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.0,
         output_cost_per_1k=0.0,
         max_output_tokens=8192,
-        description="Gemini 2.0 Flash 最新多模态（免费预览）",
+        description="Gemini 2.0 Flash 最新マルチモーダル（無料プレビュー）",
     ),
     "gemini-2.0-flash-thinking": ModelInfo(
         name="gemini-2.0-flash-thinking-exp",
@@ -286,7 +286,7 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.0,
         output_cost_per_1k=0.0,
         max_output_tokens=8192,
-        description="Gemini 2.0 Flash Thinking 推理增强",
+        description="Gemini 2.0 Flash Thinking 推論強化",
     ),
     "gemini-1.5-pro": ModelInfo(
         name="gemini-1.5-pro",
@@ -304,7 +304,7 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.00125,
         output_cost_per_1k=0.005,
         max_output_tokens=8192,
-        description="Gemini 1.5 Pro 200万上下文",
+        description="Gemini 1.5 Pro 200万コンテキスト",
     ),
     "gemini-1.5-flash": ModelInfo(
         name="gemini-1.5-flash",
@@ -320,10 +320,10 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.000075,
         output_cost_per_1k=0.0003,
         max_output_tokens=8192,
-        description="Gemini 1.5 Flash 极速响应",
+        description="Gemini 1.5 Flash 超高速レスポンス",
     ),
     # ========================================
-    # DeepSeek（文本/代码）
+    # DeepSeek（テキスト/コード）
     # ========================================
     "deepseek-chat": ModelInfo(
         name="deepseek-chat",
@@ -339,7 +339,7 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.00014,
         output_cost_per_1k=0.00028,
         max_output_tokens=8192,
-        description="DeepSeek V3 性价比之王",
+        description="DeepSeek V3 コストパフォーマンスの王者",
     ),
     "deepseek-reasoner": ModelInfo(
         name="deepseek-reasoner",
@@ -354,10 +354,10 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.00055,
         output_cost_per_1k=0.00219,
         max_output_tokens=8192,
-        description="DeepSeek R1 推理专用",
+        description="DeepSeek R1 推論専用",
     ),
     # ========================================
-    # 本地模型（Ollama/LocalAI）
+    # ローカルモデル（Ollama/LocalAI）
     # ========================================
     "llama3.3-70b": ModelInfo(
         name="llama3.3:70b",
@@ -372,7 +372,7 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.0,
         output_cost_per_1k=0.0,
         max_output_tokens=4096,
-        description="Llama 3.3 70B 本地运行",
+        description="Llama 3.3 70B ローカル実行",
     ),
     "qwen2.5-72b": ModelInfo(
         name="qwen2.5:72b",
@@ -387,7 +387,7 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.0,
         output_cost_per_1k=0.0,
         max_output_tokens=8192,
-        description="Qwen 2.5 72B 中文最强本地模型",
+        description="Qwen 2.5 72B 中国語最強ローカルモデル",
     ),
     "qwen2.5-coder-32b": ModelInfo(
         name="qwen2.5-coder:32b",
@@ -401,7 +401,7 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.0,
         output_cost_per_1k=0.0,
         max_output_tokens=8192,
-        description="Qwen 2.5 Coder 32B 代码专用",
+        description="Qwen 2.5 Coder 32B コード専用",
     ),
     "mistral-large": ModelInfo(
         name="mistral-large:latest",
@@ -417,7 +417,7 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.0,
         output_cost_per_1k=0.0,
         max_output_tokens=4096,
-        description="Mistral Large 123B 本地运行",
+        description="Mistral Large 123B ローカル実行",
     ),
     "phi-4": ModelInfo(
         name="phi4:latest",
@@ -432,30 +432,30 @@ MODELS: dict[str, ModelInfo] = {
         input_cost_per_1k=0.0,
         output_cost_per_1k=0.0,
         max_output_tokens=4096,
-        description="Microsoft Phi-4 14B 轻量高效",
+        description="Microsoft Phi-4 14B 軽量高効率",
     ),
 }
 
 
 # ============================================================================
-# 路由策略
+# ルーティング戦略
 # ============================================================================
 
 
 class RoutingStrategy(Enum):
-    """路由策略."""
+    """ルーティング戦略."""
 
-    COST_OPTIMIZED = "cost_optimized"  # 成本优先
-    QUALITY_OPTIMIZED = "quality_optimized"  # 质量优先
-    BALANCED = "balanced"  # 平衡
-    ROUND_ROBIN = "round_robin"  # 轮询
-    LATENCY_OPTIMIZED = "latency_optimized"  # 延迟优先
-    CAPABILITY_MATCH = "capability_match"  # 能力匹配
+    COST_OPTIMIZED = "cost_optimized"  # コスト優先
+    QUALITY_OPTIMIZED = "quality_optimized"  # 品質優先
+    BALANCED = "balanced"  # バランス
+    ROUND_ROBIN = "round_robin"  # ラウンドロビン
+    LATENCY_OPTIMIZED = "latency_optimized"  # レイテンシ優先
+    CAPABILITY_MATCH = "capability_match"  # 能力マッチ
 
 
 @dataclass
 class RoutingConfig:
-    """路由配置."""
+    """ルーティング設定."""
 
     strategy: RoutingStrategy = RoutingStrategy.BALANCED
     fallback_models: list[str] = field(default_factory=list)
@@ -467,13 +467,13 @@ class RoutingConfig:
 
 
 # ============================================================================
-# 模型统计
+# モデル統計
 # ============================================================================
 
 
 @dataclass
 class ModelStats:
-    """模型使用统计."""
+    """モデル使用統計."""
 
     total_requests: int = 0
     successful_requests: int = 0
@@ -488,16 +488,16 @@ class ModelStats:
 
 
 # ============================================================================
-# 模型路由器
+# モデルルーター
 # ============================================================================
 
 
 class ModelRouter:
-    """智能模型路由器.
+    """インテリジェントモデルルーター.
 
-    提供多模型管理、自动切换、成本优化、负载均衡等功能。
+    マルチモデル管理、自動切り替え、コスト最適化、負荷分散などの機能を提供。
 
-    使用示例:
+    使用例:
         ```python
         router = ModelRouter(
             models={
@@ -508,13 +508,13 @@ class ModelRouter:
             routing_config=RoutingConfig(strategy=RoutingStrategy.BALANCED),
         )
 
-        # 自动选择最佳模型
+        # 最適なモデルを自動選択
         response = await router.chat(messages)
 
-        # 指定模型
+        # モデルを指定
         response = await router.chat(messages, model="economy")
 
-        # 根据能力选择
+        # 能力に基づいて選択
         response = await router.chat_with_capability(
             messages,
             required_capabilities=[ModelCapability.CODE, ModelCapability.REASONING],
@@ -527,11 +527,11 @@ class ModelRouter:
         models: dict[str, LLMConfig] | None = None,
         routing_config: RoutingConfig | None = None,
     ) -> None:
-        """初始化模型路由器.
+        """モデルルーターを初期化.
 
         Args:
-            models: 模型配置字典 {"name": LLMConfig}
-            routing_config: 路由配置
+            models: モデル設定辞書 {"name": LLMConfig}
+            routing_config: ルーティング設定
         """
         self._models = models or {}
         self._routing_config = routing_config or RoutingConfig()
@@ -542,45 +542,45 @@ class ModelRouter:
         self._initialize_clients()
 
     def _initialize_clients(self) -> None:
-        """初始化所有模型客户端."""
+        """すべてのモデルクライアントを初期化."""
         for name, config in self._models.items():
             try:
                 self._clients[name] = LLMClient(config)
-                logger.info(f"已初始化模型客户端: {name} ({config.provider}/{config.model})")
+                logger.info(f"モデルクライアントを初期化しました: {name} ({config.provider}/{config.model})")
             except Exception as e:
-                logger.warning(f"模型 {name} 初始化失败: {e}")
+                logger.warning(f"モデル {name} の初期化に失敗しました: {e}")
 
     def add_model(self, name: str, config: LLMConfig) -> None:
-        """添加模型.
+        """モデルを追加.
 
         Args:
-            name: 模型名称
-            config: 模型配置
+            name: モデル名
+            config: モデル設定
         """
         self._models[name] = config
         self._clients[name] = LLMClient(config)
-        logger.info(f"已添加模型: {name}")
+        logger.info(f"モデルを追加しました: {name}")
 
     def remove_model(self, name: str) -> None:
-        """移除模型.
+        """モデルを削除.
 
         Args:
-            name: 模型名称
+            name: モデル名
         """
         if name in self._models:
             del self._models[name]
         if name in self._clients:
             del self._clients[name]
-        logger.info(f"已移除模型: {name}")
+        logger.info(f"モデルを削除しました: {name}")
 
     def get_model_info(self, model_name: str) -> ModelInfo | None:
-        """获取模型信息.
+        """モデル情報を取得.
 
         Args:
-            model_name: 模型名称
+            model_name: モデル名
 
         Returns:
-            模型信息
+            モデル情報
         """
         config = self._models.get(model_name)
         if config:
@@ -588,15 +588,15 @@ class ModelRouter:
         return None
 
     def list_models(self) -> list[str]:
-        """列出所有模型.
+        """すべてのモデルをリストアップ.
 
         Returns:
-            模型名称列表
+            モデル名リスト
         """
         return list(self._models.keys())
 
     # ========================================================================
-    # 路由逻辑
+    # ルーティングロジック
     # ========================================================================
 
     def _select_model(
@@ -604,22 +604,22 @@ class ModelRouter:
         required_capabilities: list[ModelCapability] | None = None,
         max_cost: float | None = None,
     ) -> str:
-        """根据策略选择模型.
+        """戦略に基づいてモデルを選択.
 
         Args:
-            required_capabilities: 必需的能力
-            max_cost: 最大成本限制
+            required_capabilities: 必要な能力
+            max_cost: 最大コスト制限
 
         Returns:
-            选中的模型名称
+            選択されたモデル名
         """
         strategy = self._routing_config.strategy
         available = list(self._clients.keys())
 
         if not available:
-            raise ValueError("没有可用的模型")
+            raise ValueError("利用可能なモデルがありません")
 
-        # 过滤：能力匹配
+        # フィルタリング：能力マッチ
         if required_capabilities:
             filtered = []
             for name in available:
@@ -630,7 +630,7 @@ class ModelRouter:
             if filtered:
                 available = filtered
 
-        # 过滤：成本限制
+        # フィルタリング：コスト制限
         if max_cost:
             filtered = []
             for name in available:
@@ -640,7 +640,7 @@ class ModelRouter:
             if filtered:
                 available = filtered
 
-        # 策略选择
+        # 戦略選択
         if strategy == RoutingStrategy.COST_OPTIMIZED:
             return self._select_cheapest(available)
         elif strategy == RoutingStrategy.QUALITY_OPTIMIZED:
@@ -653,7 +653,7 @@ class ModelRouter:
             return self._select_balanced(available)
 
     def _select_cheapest(self, available: list[str]) -> str:
-        """选择最便宜的模型."""
+        """最も安価なモデルを選択."""
         cheapest = available[0]
         cheapest_cost = float("inf")
 
@@ -668,8 +668,8 @@ class ModelRouter:
         return cheapest
 
     def _select_highest_quality(self, available: list[str]) -> str:
-        """选择最高质量的模型."""
-        # 按等级排序：PREMIUM > STANDARD > ECONOMY
+        """最高品質のモデルを選択."""
+        # 階層でソート：PREMIUM > STANDARD > ECONOMY
         tier_order = {ModelTier.PREMIUM: 0, ModelTier.STANDARD: 1, ModelTier.ECONOMY: 2}
 
         best = available[0]
@@ -686,7 +686,7 @@ class ModelRouter:
         return best
 
     def _select_lowest_latency(self, available: list[str]) -> str:
-        """选择延迟最低的模型（基于历史统计）."""
+        """レイテンシが最も低いモデルを選択（履歴統計に基づく）."""
         best = available[0]
         best_latency = float("inf")
 
@@ -699,13 +699,13 @@ class ModelRouter:
         return best
 
     def _select_round_robin(self, available: list[str]) -> str:
-        """轮询选择模型."""
+        """ラウンドロビンでモデルを選択."""
         selected = available[self._round_robin_index % len(available)]
         self._round_robin_index += 1
         return selected
 
     def _select_balanced(self, available: list[str]) -> str:
-        """平衡选择（综合考虑成本、质量、延迟）."""
+        """バランス選択（コスト、品質、レイテンシを総合的に考慮）."""
         scores: dict[str, float] = {}
 
         for name in available:
@@ -714,17 +714,17 @@ class ModelRouter:
 
             score = 0.0
 
-            # 成本得分（越低越好）
+            # コストスコア（低いほど良い）
             if info:
                 cost = info.input_cost_per_1k + info.output_cost_per_1k
                 score += (1 / (cost + 0.001)) * 0.3
 
-            # 质量得分
+            # 品質スコア
             if info:
                 tier_score = {ModelTier.PREMIUM: 1.0, ModelTier.STANDARD: 0.7, ModelTier.ECONOMY: 0.4}
                 score += tier_score.get(info.tier, 0.5) * 0.4
 
-            # 成功率得分
+            # 成功率スコア
             if stats.total_requests > 0:
                 success_rate = stats.successful_requests / stats.total_requests
                 score += success_rate * 0.3
@@ -734,7 +734,7 @@ class ModelRouter:
         return max(scores.keys(), key=lambda k: scores[k])
 
     # ========================================================================
-    # 请求处理
+    # リクエスト処理
     # ========================================================================
 
     async def chat(
@@ -743,15 +743,15 @@ class ModelRouter:
         model: str | None = None,
         **kwargs: Any,
     ) -> LLMResponse:
-        """发送聊天请求.
+        """チャットリクエストを送信.
 
         Args:
-            messages: 消息列表
-            model: 指定模型（可选）
-            **kwargs: 其他参数
+            messages: メッセージリスト
+            model: 指定モデル（オプション）
+            **kwargs: その他のパラメータ
 
         Returns:
-            LLM 响应
+            LLMレスポンス
         """
         selected_model = model or self._select_model()
         return await self._execute_with_retry(selected_model, messages, **kwargs)
@@ -762,15 +762,15 @@ class ModelRouter:
         required_capabilities: list[ModelCapability],
         **kwargs: Any,
     ) -> LLMResponse:
-        """根据能力选择模型并发送请求.
+        """能力に基づいてモデルを選択し、リクエストを送信.
 
         Args:
-            messages: 消息列表
-            required_capabilities: 必需的能力
-            **kwargs: 其他参数
+            messages: メッセージリスト
+            required_capabilities: 必要な能力
+            **kwargs: その他のパラメータ
 
         Returns:
-            LLM 响应
+            LLMレスポンス
         """
         selected_model = self._select_model(required_capabilities=required_capabilities)
         return await self._execute_with_retry(selected_model, messages, **kwargs)
@@ -781,15 +781,15 @@ class ModelRouter:
         max_cost_per_request: float,
         **kwargs: Any,
     ) -> LLMResponse:
-        """在成本限制下发送请求.
+        """コスト制限下でリクエストを送信.
 
         Args:
-            messages: 消息列表
-            max_cost_per_request: 最大成本
-            **kwargs: 其他参数
+            messages: メッセージリスト
+            max_cost_per_request: 最大コスト
+            **kwargs: その他のパラメータ
 
         Returns:
-            LLM 响应
+            LLMレスポンス
         """
         selected_model = self._select_model(max_cost=max_cost_per_request)
         return await self._execute_with_retry(selected_model, messages, **kwargs)
@@ -800,15 +800,15 @@ class ModelRouter:
         messages: list[LLMMessage],
         **kwargs: Any,
     ) -> LLMResponse:
-        """带重试的请求执行.
+        """リトライ付きリクエスト実行.
 
         Args:
-            model_name: 模型名称
-            messages: 消息列表
-            **kwargs: 其他参数
+            model_name: モデル名
+            messages: メッセージリスト
+            **kwargs: その他のパラメータ
 
         Returns:
-            LLM 响应
+            LLMレスポンス
         """
         models_to_try = [model_name] + self._routing_config.fallback_models
         last_error: Exception | None = None
@@ -823,7 +823,7 @@ class ModelRouter:
             try:
                 response = await client.chat(messages, **kwargs)
 
-                # 更新统计
+                # 統計を更新
                 self._update_stats(
                     current_model,
                     success=True,
@@ -837,21 +837,21 @@ class ModelRouter:
             except Exception as e:
                 last_error = e
                 logger.warning(
-                    f"模型 {current_model} 请求失败 (尝试 {attempt + 1}): {e}"
+                    f"モデル {current_model} のリクエストが失敗しました (試行 {attempt + 1}): {e}"
                 )
 
-                # 更新统计
+                # 統計を更新
                 self._update_stats(
                     current_model,
                     success=False,
                     latency_ms=int((time.time() - start_time) * 1000),
                 )
 
-                # 等待后重试
+                # 待機してリトライ
                 if attempt < len(models_to_try) - 1:
                     await asyncio.sleep(self._routing_config.retry_delay)
 
-        raise last_error or ValueError("所有模型都失败了")
+        raise last_error or ValueError("すべてのモデルが失敗しました")
 
     def _update_stats(
         self,
@@ -861,7 +861,7 @@ class ModelRouter:
         input_tokens: int = 0,
         output_tokens: int = 0,
     ) -> None:
-        """更新模型统计."""
+        """モデル統計を更新."""
         stats = self._stats[model_name]
         stats.total_requests += 1
         stats.total_latency_ms += latency_ms
@@ -872,7 +872,7 @@ class ModelRouter:
             stats.total_input_tokens += input_tokens
             stats.total_output_tokens += output_tokens
 
-            # 计算成本
+            # コストを計算
             info = self.get_model_info(model_name)
             if info:
                 cost = (
@@ -883,49 +883,49 @@ class ModelRouter:
         else:
             stats.failed_requests += 1
 
-        # 更新平均值
+        # 平均値を更新
         if stats.total_requests > 0:
             stats.avg_latency_ms = stats.total_latency_ms / stats.total_requests
             stats.error_rate = stats.failed_requests / stats.total_requests
 
     # ========================================================================
-    # 统计查询
+    # 統計クエリ
     # ========================================================================
 
     def get_stats(self, model_name: str | None = None) -> dict[str, ModelStats]:
-        """获取模型统计.
+        """モデル統計を取得.
 
         Args:
-            model_name: 模型名称（可选，不指定返回全部）
+            model_name: モデル名（オプション、指定しない場合はすべて返す）
 
         Returns:
-            模型统计字典
+            モデル統計辞書
         """
         if model_name:
             return {model_name: self._stats[model_name]}
         return dict(self._stats)
 
     def get_total_cost(self) -> float:
-        """获取总成本.
+        """総コストを取得.
 
         Returns:
-            总成本（USD）
+            総コスト（USD）
         """
         return sum(s.total_cost for s in self._stats.values())
 
     def get_cost_breakdown(self) -> dict[str, float]:
-        """获取成本明细.
+        """コスト内訳を取得.
 
         Returns:
-            各模型成本字典
+            各モデルのコスト辞書
         """
         return {name: stats.total_cost for name, stats in self._stats.items()}
 
     def reset_stats(self, model_name: str | None = None) -> None:
-        """重置统计.
+        """統計をリセット.
 
         Args:
-            model_name: 模型名称（可选，不指定重置全部）
+            model_name: モデル名（オプション、指定しない場合はすべてリセット）
         """
         if model_name:
             self._stats[model_name] = ModelStats()
@@ -934,29 +934,29 @@ class ModelRouter:
 
 
 # ============================================================================
-# 便捷函数
+# 便利関数
 # ============================================================================
 
 
 def create_router_from_env() -> ModelRouter:
-    """从环境变量创建路由器.
+    """環境変数からルーターを作成.
 
-    环境变量（优先级从高到低）:
-        - OPENAI_API_KEY: OpenAI API 密钥
-        - ANTHROPIC_API_KEY: Anthropic API 密钥
-        - GOOGLE_API_KEY: Google AI Studio API 密钥
-        - DEEPSEEK_API_KEY: DeepSeek API 密钥
-        - OLLAMA_BASE_URL: Ollama 服务地址（默认 http://localhost:11434）
-        - LOCALAI_BASE_URL: LocalAI 服务地址（默认 http://localhost:8080）
+    環境変数（優先度の高い順）:
+        - OPENAI_API_KEY: OpenAI APIキー
+        - ANTHROPIC_API_KEY: Anthropic APIキー
+        - GOOGLE_API_KEY: Google AI Studio APIキー
+        - DEEPSEEK_API_KEY: DeepSeek APIキー
+        - OLLAMA_BASE_URL: Ollamaサービスアドレス（デフォルト: http://localhost:11434）
+        - LOCALAI_BASE_URL: LocalAIサービスアドレス（デフォルト: http://localhost:8080）
 
     Returns:
-        配置好的模型路由器（自动检测可用提供商）
+        設定済みモデルルーター（利用可能なプロバイダーを自動検出）
     """
     import os
 
     models: dict[str, LLMConfig] = {}
 
-    # OpenAI（云端首选）
+    # OpenAI（クラウド優先）
     if os.environ.get("OPENAI_API_KEY"):
         models["gpt-4o"] = LLMConfig(
             provider="openai",
@@ -1013,7 +1013,7 @@ def create_router_from_env() -> ModelRouter:
             api_key=os.environ["DEEPSEEK_API_KEY"],
         )
 
-    # Ollama（本地模型）
+    # Ollama（ローカルモデル）
     ollama_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
     if _check_service_available(ollama_url):
         models["ollama-llama3.3"] = LLMConfig(
@@ -1027,7 +1027,7 @@ def create_router_from_env() -> ModelRouter:
             base_url=ollama_url,
         )
 
-    # LocalAI（本地模型 - 默认）
+    # LocalAI（ローカルモデル - デフォルト）
     localai_url = os.environ.get("LOCALAI_BASE_URL", "http://localhost:8080")
     if _check_service_available(localai_url):
         models["localai-default"] = LLMConfig(
@@ -1036,14 +1036,14 @@ def create_router_from_env() -> ModelRouter:
             base_url=localai_url,
         )
 
-    # 如果没有任何可用模型，添加警告
+    # 利用可能なモデルがない場合、警告を追加
     if not models:
         import logging
 
         logging.warning(
-            "No LLM providers configured. Set one of: "
+            "LLMプロバイダーが設定されていません。次のいずれかを設定してください: "
             "OPENAI_API_KEY, ANTHROPIC_API_KEY, GOOGLE_API_KEY, DEEPSEEK_API_KEY, "
-            "or start Ollama/LocalAI service."
+            "またはOllama/LocalAIサービスを起動してください。"
         )
 
     return ModelRouter(
@@ -1056,14 +1056,14 @@ def create_router_from_env() -> ModelRouter:
 
 
 def _check_service_available(url: str, timeout: float = 1.0) -> bool:
-    """检查本地服务是否可用.
+    """ローカルサービスが利用可能かチェック.
 
     Args:
-        url: 服务 URL
-        timeout: 超时时间（秒）
+        url: サービスURL
+        timeout: タイムアウト時間（秒）
 
     Returns:
-        服务是否可用
+        サービスが利用可能かどうか
     """
     try:
         import httpx

@@ -1,19 +1,63 @@
 # Decision Governance Engine
 
-企業級意思決定支援システム - 「道・法・術・器」フレームワークによるMulti-Agentシステム
+企業級意思決定支援システム - PipelineEngine パターンによる Multi-Agent システム
 
 ---
 
 ## 1. システム概要
 
-Decision Governance Engineは、企業の重要な意思決定を支援するマルチエージェントシステムです。
-利用者は企業のCEO、CFO、CTOなどの責任者を対象としており。
+Decision Governance Engine は、企業の重要な意思決定を支援するマルチエージェントシステムです。
+**AgentFlow の PipelineEngine パターン** を使用して実装されています。
+
+### Engine Pattern
+
+```python
+from apps.decision_governance_engine import DecisionEngine
+
+# 同期実行
+engine = DecisionEngine()
+result = await engine.run({"question": "新規事業への投資判断をしたい"})
+
+# SSEストリーム
+async for event in engine.run_stream(inputs):
+    print(event)
+```
 
 ### アーキテクチャ概要
 
 ```
-入力 → GatekeeperAgent → ClarificationAgent → DaoAgent → FaAgent → ShuAgent → QiAgent → ReviewAgent → レポート出力
-         (門番)           (診断)             (道)       (法)       (術)       (器)       (検証)
+┌─────────────────────────────────────────────────────────────┐
+│  PipelineEngine (agentflow/engines/pipeline_engine.py)      │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ Gate層: CognitiveGate → Gatekeeper                      ││
+│  │ 分析層: Clarification → [Dao, Fa, Shu, Qi] (並行)       ││
+│  │ 検証層: ReviewAgent (REVISE回退対応)                    ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 前後端アーキテクチャ
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Frontend (React + TypeScript)                              │
+│  - UI表示、進捗表示、ユーザー入力                            │
+└─────────────────────────────────┬───────────────────────────┘
+                                  │ HTTP / SSE
+┌─────────────────────────────────▼───────────────────────────┐
+│  Backend API (FastAPI)                                      │
+│  - api.py → routers/ → DecisionEngine                       │
+└─────────────────────────────────┬───────────────────────────┘
+                                  │
+┌─────────────────────────────────▼───────────────────────────┐
+│  DecisionEngine (engine.py)                                 │
+│  - PipelineEngine を継承                                    │
+│  - run() / run_stream() API                                 │
+└─────────────────────────────────┬───────────────────────────┘
+                                  │
+┌─────────────────────────────────▼───────────────────────────┐
+│  各Agent (agents/*.py) + AgentRegistry                      │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ### コア概念
@@ -99,54 +143,30 @@ Decision Governance Engineは、企業の重要な意思決定を支援するマ
 
 ## 4. 環境構築（新規セットアップ）
 
+**詳細な手順は [インストールガイド](../../INSTALLATION_GUIDE_JA.md) を参照してください。**
+
 ### 4.1 前提条件
 
 | 項目 | 要件 |
 |-----|------|
 | Python | 3.13以上 |
-| Node.js | 20以上 |
+| Node.js | 18以上 |
 | パッケージマネージャ | pip, npm |
 | API Key | OpenAI / Anthropic / Gemini（いずれか1つ以上） |
 
-### 4.2 リポジトリ取得
+### 4.2 クイックセットアップ
 
 ```bash
-git clone https://github.com/liushuang393/serverlessAIAgents.git
-cd serverlessAIAgents
-```
+# 1. プロジェクトルートで AgentFlow をインストール
+pip install -e .
 
-### 4.3 バックエンド環境構築
-
-```bash
-# conda環境を使用する場合
-conda activate agentflow
-
-# または venv を使用する場合
-python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# .venv\Scripts\activate   # Windows
-
-# 依存関係インストール
-pip install -e ".[dev,studio]"
-```
-
-### 4.4 フロントエンド環境構築
-
-```bash
+# 2. フロントエンド依存関係をインストール
 cd apps/decision_governance_engine/frontend
 npm install
-```
 
-### 4.5 環境変数設定
-
-```bash
-# ~/.bashrc に追加（WSL/Linux）
-export OPENAI_API_KEY="your_openai_key"
-export ANTHROPIC_API_KEY="your_anthropic_key"
-export GEMINI_API_KEY="your_gemini_key"
-
-# 反映
-source ~/.bashrc
+# 3. 環境変数を設定（.env ファイルを作成）
+cd ../../..
+echo "OPENAI_API_KEY=your-key-here" > .env
 ```
 
 ---
@@ -157,16 +177,19 @@ source ~/.bashrc
 
 **ターミナル1: バックエンドAPI起動**
 ```bash
-cd /mnt/d/pythonPJ/serverlessAIAgents
-conda activate agentflow
+# プロジェクトルートで実行
+cd apps/decision_governance_engine
 
 # APIサーバー起動（ポート8000）
-uvicorn apps.decision_governance_engine.api:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn api:app --reload --host 0.0.0.0 --port 8000
+
+# または直接実行
+python api.py
 ```
 
 **ターミナル2: フロントエンド起動**
 ```bash
-cd /mnt/d/pythonPJ/serverlessAIAgents/apps/decision_governance_engine/frontend
+cd apps/decision_governance_engine/frontend
 
 # 開発サーバー起動（ポート5173）
 npm run dev
@@ -304,31 +327,38 @@ docker run -d \
 
 ```
 apps/decision_governance_engine/
-├── __init__.py          # パッケージ初期化
-├── main.py              # CLIエントリーポイント
-├── api.py               # FastAPI REST API
-├── workflow.py          # DecisionEngine本体
-├── agent.yaml           # Agent/Workflow設定
-├── agents/              # 各Agentの実装
-│   ├── base_agent.py
-│   ├── gatekeeper_agent.py
-│   ├── clarification_agent.py
-│   ├── dao_agent.py
-│   ├── fa_agent.py
-│   ├── shu_agent.py
-│   ├── qi_agent.py
-│   └── review_agent.py
-├── schemas/             # Pydanticスキーマ
-│   ├── input_schemas.py
-│   ├── output_schemas.py
-│   └── agent_schemas.py
-├── services/            # ビジネスロジック
-│   ├── pdf_generator.py
-│   └── ui_components.py
-├── skills/              # SKILL.md定義
-├── frontend/            # React フロントエンド
-└── design/              # 設計ドキュメント
+├── __init__.py              # パッケージ初期化（DecisionEngine エクスポート）
+├── engine.py                # DecisionEngine（PipelineEngine 継承）★メインエントリーポイント
+├── main.py                  # CLIエントリーポイント
+├── api.py                   # FastAPI REST API（engine.py を使用）
+├── flow_config.py           # 起動時設定（後方互換用）
+├── startup.py               # 起動情報ログ
+├── agents/                  # 各Agentの実装
+│   ├── agent_definitions.yaml   # Agent定義（YAML）
+│   ├── cognitive_gate_agent.py  # 認知前処理
+│   ├── gatekeeper_agent.py      # 門番
+│   ├── clarification_agent.py   # 診断
+│   ├── dao_agent.py             # 道（本質分析）
+│   ├── fa_agent.py              # 法（戦略評価）
+│   ├── shu_agent.py             # 術（計画策定）
+│   ├── qi_agent.py              # 器（技術実装）
+│   └── review_agent.py          # 検証（PASS/REVISE/REJECT）
+├── schemas/                 # Pydanticスキーマ
+├── services/                # ビジネスロジック
+│   ├── agent_registry.py        # Agent一元管理
+│   ├── report_generator.py      # レポート生成
+│   └── ui_components.py         # A2UIコンポーネント生成
+├── routers/                 # FastAPIルーター
+├── prompts/                 # プロンプトテンプレート
+├── skills/                  # SKILL.md定義
+├── knowledge/               # 知識ベース（RAG用）
+└── frontend/                # React フロントエンド
 ```
+
+**重要**: 
+- **メインエントリーポイント**: `engine.py` の `DecisionEngine` クラス
+- **API エントリーポイント**: `api.py`（内部で `engine.py` を使用）
+- **CLI エントリーポイント**: `main.py`（内部で `engine.py` を使用）
 
 ---
 
@@ -360,6 +390,7 @@ uvicorn apps.decision_governance_engine.api:app --port 8001
 
 ## 10. 関連ドキュメント
 
+- [インストールガイド](../../INSTALLATION_GUIDE_JA.md) - 詳細なセットアップ手順
 - [設計仕様書](design/decision-agent-spec.md)
-- [実装計画](IMPLEMENTATION_PLAN.md)
-- [変更履歴](CHANGELOG_v2.0.md)
+- [変更履歴](CHANGELOG_v2.0.md) / [CHANGELOG_v3.0.md](CHANGELOG_v3.0.md)
+- [AgentFlow メイン README](../../README.md) - フレームワーク全体の説明

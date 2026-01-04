@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """決策処理APIルーター.
 
+PipelineEngine パターンを使用した決策処理 API。
+
 エンドポイント:
     - POST /api/decision: 同期処理
     - GET /api/decision/stream: SSEストリーム付き処理
@@ -14,14 +16,13 @@ from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from apps.decision_governance_engine.engine import DecisionEngine
 from apps.decision_governance_engine.schemas.input_schemas import (
     BudgetConstraint,
     ConstraintSet,
-    DecisionRequest,
     TimelineConstraint,
 )
 from apps.decision_governance_engine.schemas.output_schemas import DecisionReport
-from apps.decision_governance_engine.workflow import DecisionEngine
 
 logger = logging.getLogger("decision_api.decision")
 
@@ -92,12 +93,19 @@ def build_constraints(req: DecisionAPIRequest) -> ConstraintSet:
 
 @router.post("/api/decision", response_model=DecisionAPIResponse | RejectionResponse)
 async def process_decision(req: DecisionAPIRequest) -> DecisionAPIResponse | RejectionResponse:
-    """同期的に意思決定を処理."""
+    """同期的に意思決定を処理.
+
+    PipelineEngine.run() を使用。
+    """
     engine = get_engine()
     constraints = build_constraints(req)
-    request = DecisionRequest(question=req.question, constraints=constraints)
 
-    result = await engine.process(request)
+    # PipelineEngine API を使用
+    inputs = {
+        "question": req.question,
+        "constraints": constraints.model_dump(),
+    }
+    result = await engine.run(inputs)
 
     # 拒否の場合
     if isinstance(result, dict) and result.get("status") == "rejected":
@@ -111,7 +119,8 @@ async def process_decision(req: DecisionAPIRequest) -> DecisionAPIResponse | Rej
             data=result.model_dump(),
         )
 
-    return DecisionAPIResponse(status="success", report_id="", data=result)
+    report_id = result.get("report_id", "") if isinstance(result, dict) else ""
+    return DecisionAPIResponse(status="success", report_id=report_id, data=result)
 
 
 @router.get("/api/decision/stream")
@@ -120,7 +129,10 @@ async def process_decision_stream(
     budget: float | None = Query(None, ge=0, description="予算制約（万円）"),
     timeline_months: int | None = Query(None, ge=1, le=120, description="期間制約（月）"),
 ) -> StreamingResponse:
-    """SSEストリーム付きで意思決定を処理."""
+    """SSEストリーム付きで意思決定を処理.
+
+    PipelineEngine.run_stream() を使用。
+    """
     from agentflow import create_sse_response
 
     engine = get_engine()
@@ -130,8 +142,11 @@ async def process_decision_stream(
     if timeline_months is not None:
         constraints.timeline = TimelineConstraint(months=timeline_months)
 
-    request = DecisionRequest(question=question, constraints=constraints)
-    return create_sse_response(engine.process_with_events(request))
+    inputs = {
+        "question": question,
+        "constraints": constraints.model_dump(),
+    }
+    return create_sse_response(engine.run_stream(inputs))
 
 
 # ========================================
@@ -187,16 +202,20 @@ async def websocket_decision(websocket: WebSocket) -> None:
             if timeline_months is not None:
                 constraints.timeline = TimelineConstraint(months=timeline_months)
 
-            request = DecisionRequest(question=question, constraints=constraints)
+            # PipelineEngine API を使用
+            inputs = {
+                "question": question,
+                "constraints": constraints.model_dump(),
+            }
             engine = get_engine()
 
-            async for event in engine.process_with_events(request):
+            async for event in engine.run_stream(inputs):
                 event_data = {
                     "type": "agent_event",
-                    "event_type": event.event_type.value,
-                    "timestamp": event.timestamp,
-                    "flow_id": event.flow_id,
-                    "data": event.data,
+                    "event_type": getattr(event, "event_type", {}).value if hasattr(getattr(event, "event_type", None), "value") else str(event.get("event_type", "")),
+                    "timestamp": getattr(event, "timestamp", 0),
+                    "flow_id": getattr(event, "flow_id", ""),
+                    "data": getattr(event, "data", {}),
                 }
                 if hasattr(event, "node_id"):
                     event_data["agent_id"] = event.node_id

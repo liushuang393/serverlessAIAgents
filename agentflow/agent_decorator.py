@@ -5,7 +5,12 @@
 AgentBlockを継承せずに、シンプルなクラスをAgentとして使用できます。
 Claude Code Skills 互換の Skills 自動読み込みをサポート。
 
+v0.3.1: Pydantic 入出力スキーマ対応
+- input_schema / output_schema クラス属性で型安全を実現
+- 自動バリデーション & シリアライゼーション
+
 使用例:
+    >>> # 基本的な使用法
     >>> @agent
     ... class MyAgent:
     ...     '''簡単な質問応答Agent'''
@@ -20,13 +25,30 @@ Claude Code Skills 互換の Skills 自動読み込みをサポート。
     ...
     >>> # Agentを呼び出し
     >>> result = await AgentClient.get("MyAgent").invoke({"question": "..."})
+    >>>
+    >>> # Pydantic スキーマ付き（型安全）
+    >>> from pydantic import BaseModel
+    >>> class QAInput(BaseModel):
+    ...     question: str
+    ...     context: str | None = None
+    >>>
+    >>> class QAOutput(BaseModel):
+    ...     answer: str
+    ...     confidence: float
+    >>>
+    >>> @agent
+    ... class TypedAgent:
+    ...     input_schema = QAInput      # 入力を自動バリデーション
+    ...     output_schema = QAOutput    # 出力を自動シリアライズ
+    ...
+    ...     async def process(self, input_data: QAInput) -> QAOutput:
+    ...         return QAOutput(answer="...", confidence=0.9)
 """
 
 import logging
 from pathlib import Path
 from typing import Any, Callable, TypeVar
 
-from agentflow.providers.llm_provider import LLMProvider
 from agentflow.providers.tool_provider import ToolProvider
 
 # Agentレジストリ（グローバル）
@@ -103,8 +125,9 @@ def list_skills() -> list[str]:
 
 class RegisteredAgent:
     """登録されたAgent情報.
-    
+
     Claude Code Skills 互換の Skills 自動読み込みをサポート。
+    v0.3.1: Pydantic 入出力スキーマ対応。
     """
 
     def __init__(
@@ -117,6 +140,8 @@ class RegisteredAgent:
         system_prompt: str | None = None,
         tools: list[str] | None = None,
         skills: list[str] | None = None,
+        input_schema: type | None = None,
+        output_schema: type | None = None,
     ) -> None:
         """初期化.
 
@@ -129,6 +154,8 @@ class RegisteredAgent:
             system_prompt: システムプロンプト
             tools: ツールリスト
             skills: 使用する Skills リスト（Claude Code Skills 互換）
+            input_schema: 入力 Pydantic スキーマ（自動バリデーション）
+            output_schema: 出力 Pydantic スキーマ（自動シリアライゼーション）
         """
         self.cls = cls
         self.name = name
@@ -138,6 +165,9 @@ class RegisteredAgent:
         self.system_prompt = system_prompt or getattr(cls, "system_prompt", None)
         self.tools = tools or []
         self.skills = skills or getattr(cls, "skills", [])
+        # Pydantic スキーマ（クラス属性から取得）
+        self.input_schema = input_schema or getattr(cls, "input_schema", None)
+        self.output_schema = output_schema or getattr(cls, "output_schema", None)
         self._instance: Any = None
         self._llm_provider: LLMProvider | None = None
         self._loaded_skills: dict[str, Any] = {}
@@ -147,11 +177,16 @@ class RegisteredAgent:
         """インスタンスを取得（遅延初期化）."""
         if self._instance is None:
             self._instance = self.cls()
-            # LLMProviderを注入
-            if self.llm:
-                self._llm_provider = LLMProvider.create(model=self.llm)
-            else:
-                self._llm_provider = LLMProvider.default()
+            # LLMProviderを注入（get_llm() 松耦合API を使用）
+            try:
+                from agentflow.providers import get_llm
+                self._llm_provider = get_llm(
+                    temperature=self.temperature,
+                    max_tokens=self.max_tokens,
+                )
+            except Exception as e:
+                self._logger.warning(f"LLMProvider initialization failed: {e}")
+                self._llm_provider = None
             self._instance._llm = self._llm_provider
             # ToolProviderを注入
             self._instance._tools = ToolProvider.discover()
@@ -194,14 +229,68 @@ class RegisteredAgent:
     
     def get_skill(self, name: str) -> Any:
         """読み込まれた Skill を取得.
-        
+
         Args:
             name: Skill 名
-            
+
         Returns:
             Skill インスタンス
         """
         return self._loaded_skills.get(name)
+
+    def validate_input(self, input_data: dict[str, Any]) -> Any:
+        """入力データをバリデーション.
+
+        input_schema が設定されている場合、Pydantic でバリデーションを実行。
+
+        Args:
+            input_data: 入力データ（辞書）
+
+        Returns:
+            バリデーション済みデータ（Pydantic モデルまたは元の辞書）
+
+        Raises:
+            ValidationError: バリデーション失敗時
+        """
+        if self.input_schema is None:
+            return input_data
+
+        # Pydantic v2 でバリデーション
+        try:
+            return self.input_schema.model_validate(input_data)
+        except Exception as e:
+            self._logger.error(f"Input validation failed: {e}")
+            raise
+
+    def serialize_output(self, output: Any) -> dict[str, Any]:
+        """出力をシリアライズ.
+
+        output_schema が設定されている場合、Pydantic モデルを辞書に変換。
+
+        Args:
+            output: 出力データ（Pydantic モデルまたは辞書）
+
+        Returns:
+            シリアライズされた辞書
+        """
+        if output is None:
+            return {}
+
+        # Pydantic モデルの場合は model_dump()
+        if hasattr(output, "model_dump"):
+            return output.model_dump()
+
+        # 辞書の場合はそのまま
+        if isinstance(output, dict):
+            return output
+
+        # その他はそのまま辞書でラップ
+        return {"result": output}
+
+    @property
+    def has_typed_schema(self) -> bool:
+        """型付きスキーマがあるか."""
+        return self.input_schema is not None or self.output_schema is not None
 
 
 T = TypeVar("T", bound=type)
@@ -381,14 +470,23 @@ class AgentClient:
     ) -> dict[str, Any]:
         """Agentを呼び出し（同期的に結果を取得）.
 
+        入力スキーマが設定されている場合は自動バリデーション。
+        出力スキーマが設定されている場合は自動シリアライゼーション。
+
         Args:
             input_data: 入力データ
             context: コンテキスト情報
 
         Returns:
-            Agent の出力
+            Agent の出力（辞書形式）
+
+        Raises:
+            ValidationError: 入力バリデーション失敗時
         """
         instance = self._registered.get_instance()
+
+        # 入力バリデーション（Pydantic スキーマがある場合）
+        validated_input = self._registered.validate_input(input_data)
 
         # コンテキストを設定
         if context:
@@ -396,13 +494,19 @@ class AgentClient:
                 setattr(instance, f"_ctx_{key}", value)
 
         # run メソッドを呼び出し
+        # Pydantic モデルを渡す場合と辞書を渡す場合を区別
+        call_input = validated_input if self._registered.has_typed_schema else input_data
+
         if hasattr(instance, "run"):
-            return await instance.run(input_data)
+            result = await instance.run(call_input)
         elif hasattr(instance, "process"):
-            return await instance.process(input_data)
+            result = await instance.process(call_input)
         else:
             msg = f"Agent {self._registered.name} has no run/process method"
             raise ValueError(msg)
+
+        # 出力シリアライゼーション
+        return self._registered.serialize_output(result)
 
     async def stream(
         self,

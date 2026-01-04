@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
-"""AgentPipeline - 自動進捗追跡付きの Agent 管道.
+"""AgentPipeline - 自動進捗追跡付きのAgentパイプライン.
 
-このモジュールは、複数の Agent を順次実行し、進捗イベントを自動発射する
+このモジュールは、複数のAgentを順次実行し、進捗イベントを自動発射する
 パイプラインを提供します。
 
 設計原則:
-- 自動進捗追跡: Agent の開始/完了を自動的にイベント化
-- 結果チェーン: 前の Agent の出力を次の Agent の入力に渡す
+- 自動進捗追跡: Agentの開始/完了を自動的にイベント化
+- 結果チェーン: 前のAgentの出力を次のAgentの入力に渡す
 - 条件分岐: 特定条件でパイプラインを早期終了可能
-- 回退機構: REVISE 判定時に指定 Agent まで戻って再実行
+- ロールバック機構: REVISE判定時に指定Agentまで戻って再実行
 
 使用例:
     >>> from agentflow.patterns.agent_pipeline import AgentPipeline, PipelineConfig
@@ -60,12 +60,12 @@ class AgentConfig:
     """Agent 設定（パイプライン用）.
 
     Attributes:
-        agent: Agent インスタンス
+        agent: Agentインスタンス
         id: Agent ID（イベント用）
-        name: Agent 名称（表示用）
-        label: Agent ラベル（表示用）
+        name: Agent名（表示用）
+        label: Agentラベル（表示用）
         icon: アイコン（オプション）
-        is_gate: ゲートAgent か（拒否時に早期終了）
+        is_gate: ゲートAgentか（拒否時に早期終了）
         skip_condition: スキップ条件（関数）
         progress_messages: 進捗メッセージリスト
     """
@@ -82,7 +82,7 @@ class AgentConfig:
     def __post_init__(self) -> None:
         """初期化後処理."""
         if not self.id:
-            # Agent クラス名から推定: DaoAgent → dao
+            # Agentクラス名から推定: DaoAgent → dao
             self.id = self.agent.name.replace("Agent", "").lower()
         if not self.name:
             self.name = self.agent.name
@@ -93,8 +93,8 @@ class PipelineConfig:
     """パイプライン設定.
 
     Attributes:
-        flow_id: フロー ID（None の場合は自動生成）
-        max_revisions: 最大回退回数
+        flow_id: フローID（Noneの場合は自動生成）
+        max_revisions: 最大リビジョン回数
         emit_progress_per_node: ノード単位の進捗イベントを発射するか
         result_key: 最終結果を格納するキー
     """
@@ -106,12 +106,12 @@ class PipelineConfig:
 
 
 class RevisionRequest:
-    """回退リクエスト.
+    """ロールバックリクエスト.
 
-    Review Agent などが REVISE 判定を返した場合に使用。
+    Review AgentなどがREVISE判定を返した場合に使用。
 
     Attributes:
-        target_agent_id: 回退先の Agent ID
+        target_agent_id: ロールバック先のAgent ID
         feedback: フィードバック情報
     """
 
@@ -119,7 +119,7 @@ class RevisionRequest:
         """初期化.
 
         Args:
-            target_agent_id: 回退先の Agent ID
+            target_agent_id: ロールバック先のAgent ID
             feedback: フィードバック情報
         """
         self.target_agent_id = target_agent_id
@@ -127,13 +127,13 @@ class RevisionRequest:
 
 
 class AgentPipeline:
-    """自動進捗追跡付き Agent パイプライン.
+    """自動進捗追跡付きAgentパイプライン.
 
-    複数の Agent を順次実行し、AG-UI 準拠の進捗イベントを自動発射。
-    ゲートAgent による早期終了、条件分岐、回退機構をサポート。
+    複数のAgentを順次実行し、AG-UI準拠の進捗イベントを自動発射。
+    ゲートAgentによる早期終了、条件分岐、ロールバック機構をサポート。
 
     Attributes:
-        agents: AgentConfig リスト
+        agents: AgentConfigリスト
         config: PipelineConfig
         emitter: ProgressEmitter
 
@@ -142,7 +142,7 @@ class AgentPipeline:
         ...     agents=[gatekeeper, dao, fa, shu, qi, review],
         ...     flow_id="decision-flow",
         ... )
-        >>> # SSE ストリーム付き実行
+        >>> # SSEストリーム付き実行
         >>> async for result, event in pipeline.run_with_events(input_data):
         ...     if event:
         ...         yield event
@@ -163,22 +163,22 @@ class AgentPipeline:
         """初期化.
 
         Args:
-            agents: Agent リスト（AgentProtocol または AgentConfig）
-            flow_id: フロー ID（オプション）
+            agents: Agentリスト（AgentProtocolまたはAgentConfig）
+            flow_id: フローID（オプション）
             config: パイプライン設定（オプション）
-            agent_metas: Agent メタデータリスト（オプション、後方互換）
+            agent_metas: Agentメタデータリスト（オプション、後方互換）
         """
         self._logger = logging.getLogger("agentflow.pipeline")
         self.config = config or PipelineConfig(flow_id=flow_id)
         self.flow_id = self.config.flow_id or f"pipeline-{uuid.uuid4().hex[:8]}"
 
-        # AgentConfig に正規化
+        # AgentConfigに正規化
         self.agents: list[AgentConfig] = []
         for i, agent in enumerate(agents):
             if isinstance(agent, AgentConfig):
                 self.agents.append(agent)
             else:
-                # AgentMeta があれば使用
+                # AgentMetaがあれば使用
                 meta = agent_metas[i] if agent_metas and i < len(agent_metas) else None
                 config_item = AgentConfig(
                     agent=agent,
@@ -189,18 +189,18 @@ class AgentPipeline:
                 )
                 self.agents.append(config_item)
 
-        # ProgressEmitter を初期化
+        # ProgressEmitterを初期化
         self.emitter = ProgressEmitter(
             flow_id=self.flow_id,
             total_agents=len(self.agents),
         )
-        # Agent メタデータを登録
+        # Agentメタデータを登録
         self.emitter.register_agents([
             AgentMeta(id=a.id, name=a.name, label=a.label, icon=a.icon)
             for a in self.agents
         ])
 
-        # 結果キャッシュ（回退時に使用）
+        # 結果キャッシュ（ロールバック時に使用）
         self._results: dict[str, dict[str, Any]] = {}
 
     def get_agent_index(self, agent_id: str) -> int:
@@ -341,11 +341,11 @@ class AgentPipeline:
         input_data: dict[str, Any],
         revision_checker: Callable[[dict[str, Any]], RevisionRequest | None],
     ) -> AsyncIterator[tuple[dict[str, Any] | None, AGUIEvent | None]]:
-        """回退機構付きでパイプラインを実行.
+        """ロールバック機構付きでパイプラインを実行.
 
         Args:
             input_data: 入力データ
-            revision_checker: 回退チェック関数（結果から RevisionRequest を返す）
+            revision_checker: ロールバックチェック関数（結果からRevisionRequestを返す）
 
         Yields:
             (結果 | None, イベント | None) のタプル
@@ -368,30 +368,30 @@ class AgentPipeline:
             if final_result is None:
                 return
 
-            # 回退チェック
+            # ロールバックチェック
             revision_request = revision_checker(final_result)
             if revision_request is None:
-                # 回退なし - 完了
+                # ロールバックなし - 完了
                 yield (final_result, None)
                 return
 
-            # 回退処理
+            # ロールバック処理
             if revision_count >= self.config.max_revisions:
                 self._logger.warning("Max revisions reached")
                 yield (None, FlowErrorEvent(
                     timestamp=time.time(),
                     flow_id=self.flow_id,
                     data={"revision_count": revision_count},
-                    error_message=f"最大回退回数（{self.config.max_revisions}回）に到達",
+                    error_message=f"最大リビジョン回数（{self.config.max_revisions}回）に到達",
                     error_type="MaxRevisionsReached",
                 ))
                 yield (final_result, None)
                 return
 
-            # 回退先から再開するために入力を調整
+            # ロールバック先から再開するために入力を調整
             target_index = self.get_agent_index(revision_request.target_agent_id)
             if target_index >= 0:
-                # 回退先の前の Agent の結果を入力として使用
+                # ロールバック先の前のAgentの結果を入力として使用
                 if target_index > 0:
                     prev_agent_id = self.agents[target_index - 1].id
                     if prev_agent_id in self._results:

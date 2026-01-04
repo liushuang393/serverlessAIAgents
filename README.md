@@ -377,27 +377,35 @@ async for chunk in AgentClient.get("QAAgent").stream({"question": "..."}):
 
 ---
 
-### 方式2: create_flow（複数Agent協調）
+### 方式2: create_flow（複数Agent協調 - チェーンビルダー）
 
-**特徴**: 宣言的、複数Agentの順次/並行実行、進捗追跡
+**特徴**: 宣言的チェーンAPI、Gate/Review/並行実行、REVISE回退、進捗追跡
 
 ```python
 from agentflow import create_flow
 
-# 複数Agentを協調実行
-flow = create_flow(
-    agents=[GatekeeperAgent(), AnalysisAgent(), OutputAgent()],
-    pattern="sequential",  # sequential | concurrent | handoff
-    enable_memory=True
+# 複雑なワークフロー（Gate + Review + REVISE）
+flow = (
+    create_flow("decision-engine")
+    .gate(GatekeeperAgent, check=lambda r: r["is_acceptable"])  # 条件分岐
+    .then(ClarificationAgent)                                     # 順次実行
+    .then(DaoAgent, FaAgent, ShuAgent, QiAgent, ids=["dao", "fa", "shu", "qi"])
+    .review(
+        ReviewAgent,
+        retry_from="dao",      # REVISE時はdaoに回退
+        max_revisions=2,       # 最大2回修正
+        on_pass=lambda ctx: generate_report(ctx)
+    )
+    .build()
 )
 
 # 同期実行
-result = await flow.run({"task": "..."})
+result = await flow.run({"question": "新規事業AとBのどちらに投資すべきか"})
 
 # SSEストリーム（進捗付き）
-async for event in flow.run_stream({"task": "..."}):
-    print(f"{event['type']}: {event.get('node', '')}")
-    # node_start, node_complete, progress, result
+async for event in flow.run_stream({"question": "..."}):
+    print(f"{event['type']}: {event.get('node_name', '')}")
+    # flow_start → node_start → node_complete → ... → flow_complete
 
 # 記憶システム
 flow.memory.remember("key", "value")
@@ -405,9 +413,10 @@ value = flow.memory.recall("key")
 ```
 
 **適用シーン**:
-- ✅ 複数Agentの協調処理
-- ✅ ワークフロー管理
-- ✅ 進捗表示が必要な場合
+- ✅ 複数Agentの協調処理（Gate→Agent→Review）
+- ✅ 条件分岐が必要なワークフロー
+- ✅ 審査・回退ロジックが必要な場合
+- ✅ SSE進捗表示が必要な場合
 
 ---
 
@@ -444,6 +453,91 @@ result = await supervisor.execute("タスク")
 - ✅ 複雑なビジネスロジック
 - ✅ カスタム協調パターン
 - ✅ エンタープライズ級アプリケーション
+
+---
+
+### 方式4: Engine Pattern（配置即用・NEW）
+
+**特徴**: 4種類の予定義パターン、配置だけで使用可能、90%のAIアプリシーンをカバー
+
+```mermaid
+graph LR
+    subgraph Engines["⚙️ Engine Pattern（4種類）"]
+        E1["SimpleEngine<br/>単一Agent問答"]
+        E2["GateEngine<br/>Gate + Agent"]
+        E3["PipelineEngine<br/>多Agent + Review"]
+        E4["RAGEngine<br/>RAG増強"]
+    end
+
+    subgraph Apps["🏢 アプリケーション"]
+        A1["カスタマーBot"]
+        A2["承認フロー"]
+        A3["決策エンジン"]
+        A4["ナレッジベース"]
+    end
+
+    A1 --> E1
+    A2 --> E2
+    A3 --> E3
+    A4 --> E4
+
+    style Engines fill:#fff3e0
+    style Apps fill:#e3f2fd
+```
+
+#### 4種類のEngine Pattern
+
+| Pattern | 適用シーン | フロー構造 |
+|---------|-----------|-----------|
+| **SimpleEngine** | 単一Agent問答、ChatBot | Agent → Response |
+| **GateEngine** | 権限チェック、コンプライアンス | Gate → Agent → Response |
+| **PipelineEngine** | 多ステップ審査、決策フロー | Gate → [Agents] → Review → Report |
+| **RAGEngine** | ナレッジベース、文書QA | RAG検索 → Agent → Response |
+
+#### 使用例
+
+```python
+from agentflow.engines import SimpleEngine, GateEngine, PipelineEngine, RAGEngine
+
+# 1. SimpleEngine - 最もシンプル
+engine = SimpleEngine(agent=QAAgent)
+result = await engine.run({"question": "こんにちは"})
+
+# 2. GateEngine - 前置チェック付き
+engine = GateEngine(
+    gate_agent=ComplianceChecker,
+    main_agent=ApprovalAgent,
+    gate_check=lambda r: r.get("compliant", False),
+)
+
+# 3. PipelineEngine - 複雑なフロー
+engine = PipelineEngine(
+    stages=[
+        {"name": "gate", "agent": GatekeeperAgent, "gate": True},
+        {"name": "analysis", "agents": [DaoAgent, FaAgent, ShuAgent], "parallel": True},
+        {"name": "review", "agent": ReviewAgent, "review": True, "retry_from": "analysis"},
+    ],
+    max_revisions=2,
+    report_generator=my_report_generator,
+)
+
+# 4. RAGEngine - ナレッジベース増強
+engine = RAGEngine(
+    agent=KnowledgeAgent,
+    vector_store="company_docs",
+    top_k=5,
+)
+
+# 共通API: run() / run_stream()
+result = await engine.run(inputs)
+async for event in engine.run_stream(inputs):
+    print(event)  # AG-UI イベント
+```
+
+**適用シーン**:
+- ✅ 高速プロトタイプ開発
+- ✅ 標準パターンの再利用
+- ✅ 配置ベースのAIアプリ構築
 
 ---
 

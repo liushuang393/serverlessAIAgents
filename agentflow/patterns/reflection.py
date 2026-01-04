@@ -15,8 +15,8 @@
 - Analytics Vidhya: Reflection Pattern
 - Anthropic: Self-Correction with Chain-of-Thought
 
-技術栈：
-- AgentBlock: Agent 基類
+技術スタック：
+- AgentBlock: Agent基底クラス
 - Pydantic: データ検証
 - PocketFlow: ワークフロー実行
 """
@@ -41,9 +41,9 @@ class ReflectionResult(BaseModel):
 
 
 class ReflectorAgent(AgentBlock):
-    """自己評価 Agent - 生成結果を評価.
+    """自己評価Agent - 生成結果を評価.
 
-    職責：
+    責務：
     - 生成結果を評価基準に基づいて判定
     - スコアリング
     - 具体的なフィードバック生成
@@ -181,9 +181,9 @@ class ReflectorAgent(AgentBlock):
 
 
 class ImproverAgent(AgentBlock):
-    """改善 Agent - フィードバックに基づいて改善.
+    """改善Agent - フィードバックに基づいて改善.
 
-    職責：
+    責務：
     - フィードバックを分析
     - 改善提案を適用
     - 改善後の出力を生成
@@ -282,10 +282,10 @@ class ImproverAgent(AgentBlock):
 
 
 class ReflectionLoop:
-    """Reflection ループ制御.
+    """Reflectionループ制御.
 
-    職責：
-    - Generate → Reflect → Improve の反復
+    責務：
+    - Generate → Reflect → Improveの反復
     - 最大反復回数の制限
     - 改善履歴の記録
 
@@ -387,12 +387,12 @@ class ReflectionLoop:
 
 
 class ReflectionWorkflow:
-    """Reflection Workflow 工厂.
+    """Reflection Workflowファクトリー.
 
-    職責：
-    - WorkflowConfig を生成
-    - Generator + Reflector + Improver を組み合わせ
-    - AgentFlowEngine と統合
+    責務：
+    - WorkflowConfigを生成
+    - Generator + Reflector + Improverを組み合わせ
+    - AgentFlowEngineと統合
 
     Example:
         >>> workflow = ReflectionWorkflow.create(

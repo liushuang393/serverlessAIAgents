@@ -1,24 +1,25 @@
 # -*- coding: utf-8 -*-
 """SSEFlowRunner - SSE イベント発射と業務ロジックの分離.
 
-このモジュールは、AgentPipeline とSSE配信を分離し、
+このモジュールは、Engine/Flow とSSE配信を分離し、
 テスト容易性とコードの再利用性を向上させます。
 
 設計原則:
 - 分離: SSEイベント発射とビジネスロジックを分離
 - 互換: AG-UIプロトコル準拠
-- 柔軟: AgentPipelineまたは任意のFlow実行を委譲可能
+- 柔軟: PipelineEngineまたは任意のFlow実行を委譲可能
 
 使用例:
     >>> from agentflow.integrations.sse_flow_runner import SSEFlowRunner
-    >>> from agentflow.patterns.agent_pipeline import AgentPipeline
-    >>> 
-    >>> pipeline = AgentPipeline(agents=[...], flow_id="my-flow")
-    >>> runner = SSEFlowRunner(pipeline)
-    >>> 
+    >>> from agentflow import PipelineEngine
+    >>>
+    >>> # PipelineEngine をラップ
+    >>> engine = PipelineEngine(stages=[...])
+    >>> # engine.run_stream() を使用するか、SSEFlowRunnerでラップ
+    >>>
     >>> # SSEストリーム配信
-    >>> async for event in runner.run_with_events(input_data):
-    ...     yield event.to_sse()  # SSE形式に変換
+    >>> async for event in engine.run_stream(input_data):
+    ...     yield event
     >>>
     >>> # FastAPI統合
     >>> @router.get("/stream")
@@ -48,7 +49,7 @@ from agentflow.protocols.agui_events import (
 class FlowProtocol(Protocol):
     """Flow プロトコル（ダックタイピング用）.
 
-    AgentPipeline または任意のFlowクラスと互換。
+    PipelineEngine または任意のFlowクラスと互換。
     """
 
     flow_id: str
@@ -97,7 +98,7 @@ class SSEConfig:
 class SSEFlowRunner:
     """SSE フロー実行器.
 
-    AgentPipeline などのFlowをラップし、SSE配信に特化した機能を提供。
+    PipelineEngine などのFlowをラップし、SSE配信に特化した機能を提供。
     業務ロジックとSSE発射を分離することで、テスト容易性を向上。
 
     Attributes:
@@ -105,8 +106,8 @@ class SSEFlowRunner:
         config: SSE設定
 
     使用例:
-        >>> # AgentPipeline をラップ
-        >>> runner = SSEFlowRunner(pipeline)
+        >>> # PipelineEngine をラップ
+        >>> runner = SSEFlowRunner(engine)
         >>> async for event in runner.run_with_events(input_data):
         ...     yield event
         >>>

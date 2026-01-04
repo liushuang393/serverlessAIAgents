@@ -5,11 +5,11 @@
 ## 🎯 核心原則
 
 ```
-【統一入口 = create_flow】
-すべてはFlowから始まる。単一Agentでも必ずFlowで包む。
+【統一入口 = Engines】
+すべてはEngineから始まる。4種類の予定義パターンから選択。
 
 【層構造】
-Flow（編排） → Agent（実行） → Skill（プロンプト）
+Engine（パターン） → Agent（実行） → Skill（プロンプト）
 ```
 
 ## 前提条件
@@ -26,16 +26,16 @@ pip install agentflow
 ## 0. 最速スタート（5行で動く）
 
 ```python
-from agentflow import create_flow
+from agentflow.engines import SimpleEngine
 from agentflow.core.agent_block import AgentBlock
 
 class MyAgent(AgentBlock):
     async def run(self, input_data: dict) -> dict:
         return {"result": f"処理: {input_data.get('task', '')}"}
 
-# 単一Agentでも必ずFlowで包む
-flow = create_flow([MyAgent()])
-result = await flow.run({"task": "hello"})
+# SimpleEngine で単一Agentを実行
+engine = SimpleEngine(agent=MyAgent)
+result = await engine.run({"task": "hello"})
 ```
 
 ## 1. プロジェクトの初期化
@@ -52,7 +52,7 @@ cd my-first-agent
 ```
 my-first-agent/
 ├── main.py             # FastAPI + AgentFlow統合
-├── workflow.py         # Flow定義（複数Agent用）
+├── engine.py           # Engine定義（推奨）
 ├── agents/             # Agent実装
 ├── skills/             # SKILL.md形式プロンプト
 ├── schemas/            # Pydantic入出力定義
@@ -113,7 +113,7 @@ from typing import Any
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-from agentflow import create_flow
+from agentflow.engines import SimpleEngine
 from agentflow.core.agent_block import AgentBlock
 
 
@@ -132,12 +132,8 @@ class MyFirstAgent(AgentBlock):
         }
 
 
-# Flow定義（単一Agentでも必ずFlowで包む）
-flow = create_flow(
-    agents=[MyFirstAgent()],
-    pattern="sequential",
-    name="my-first-flow",
-)
+# Engine定義（SimpleEngine を使用）
+engine = SimpleEngine(agent=MyFirstAgent)
 
 
 # FastAPI アプリ
@@ -151,7 +147,7 @@ class TaskRequest(BaseModel):
 @app.post("/api/process")
 async def process(request: TaskRequest) -> dict:
     """同期処理エンドポイント."""
-    result = await flow.run({"message": request.message})
+    result = await engine.run({"message": request.message})
     return {"status": "success", "data": result}
 
 
@@ -182,108 +178,86 @@ agentflow run . --input '{"message": "hello world"}'
 
 ```python
 import asyncio
-from pathlib import Path
+from agentflow.engines import SimpleEngine
 from agentflow.core.agent_block import AgentBlock
 
+class MyAgent(AgentBlock):
+    async def run(self, input_data: dict) -> dict:
+        return {"result": f"処理: {input_data.get('message', '')}"}
+
 async def main():
-    # エージェントをロード
-    agent = MyFirstAgent(metadata_path="agent.yaml")
-
-    # 初期化
-    await agent.initialize()
-
+    # Engine を作成
+    engine = SimpleEngine(agent=MyAgent)
+    
     # 実行
-    result = await agent.run({"message": "hello world"})
+    result = await engine.run({"message": "hello world"})
     print(f"結果: {result}")
 
-    # クリーンアップ
-    await agent.cleanup()
-
 asyncio.run(main())
 ```
 
-### コンテキストマネージャーを使用
+## 5. Engine パターンの選択
+
+AgentFlow は4種類の予定義 Engine パターンを提供します：
+
+### SimpleEngine - 単一Agent問答
 
 ```python
-import asyncio
+from agentflow.engines import SimpleEngine
 
-async def main():
-    async with MyFirstAgent(metadata_path="agent.yaml") as agent:
-        result = await agent.run({"message": "hello world"})
-        print(f"結果: {result}")
-
-asyncio.run(main())
+engine = SimpleEngine(agent=MyAgent)
+result = await engine.run({"question": "こんにちは"})
 ```
 
-## 5. プロトコル統合
-
-### MCP ツールとして使用
+### GateEngine - 前置チェック付き
 
 ```python
-# MCP ツール定義を取得
-tools = agent.get_mcp_tools()
-print(tools)
-```
+from agentflow.engines import GateEngine
 
-出力：
-
-```json
-[
-  {
-    "name": "my-first-agent.process",
-    "description": "メッセージを処理する",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "message": {
-          "type": "string",
-          "description": "処理するメッセージ"
-        }
-      },
-      "required": ["message"]
-    }
-  }
-]
-```
-
-### A2A エージェントとして公開
-
-```python
-from agentflow.protocols.a2a_server import A2AServer
-
-# A2A サーバーを作成
-server = A2AServer()
-
-# エージェントを登録
-card = agent.get_a2a_card()
-handlers = {
-    "process": lambda inputs: agent.run(inputs)
-}
-server.register_agent(card, handlers)
-
-# タスクを処理
-result = await server.handle_task(
-    "My First Agent",
-    "process",
-    {"message": "hello"}
+engine = GateEngine(
+    gate_agent=ComplianceChecker,
+    main_agent=ApprovalAgent,
+    gate_check=lambda r: r.get("compliant", False),
 )
+result = await engine.run({"request": "..."})
 ```
 
-### AG-UI イベントストリーミング
+### PipelineEngine - 複雑なフロー
 
 ```python
-# イベントエミッターを作成
-emitter = agent.create_agui_emitter(agent.engine)
+from agentflow.engines import PipelineEngine
 
-# フローにアタッチ
-await emitter.attach_to_flow("my-flow")
+engine = PipelineEngine(
+    stages=[
+        {"name": "gate", "agent": GateAgent, "gate": True},
+        {"name": "analysis", "agents": [DaoAgent, FaAgent], "parallel": True},
+        {"name": "review", "agent": ReviewAgent, "review": True},
+    ],
+    max_revisions=2,
+)
+result = await engine.run({"question": "..."})
+```
 
-# ログを送信
-await emitter.emit_log("info", "処理を開始します", "agent")
+### RAGEngine - ナレッジベース増強
 
-# イベントをストリーミング
-async for event in emitter.stream_events():
-    print(f"イベント: {event.event_type.value} - {event.data}")
+```python
+from agentflow.engines import RAGEngine
+
+engine = RAGEngine(
+    agent=KnowledgeAgent,
+    vector_store="company_docs",
+    top_k=5,
+)
+result = await engine.run({"query": "..."})
+```
+
+### SSEストリーミング
+
+すべての Engine は `run_stream()` でリアルタイムイベントを配信：
+
+```python
+async for event in engine.run_stream({"question": "..."}):
+    print(event)  # AG-UI イベント
 ```
 
 ## 6. 入力ファイルから実行
@@ -305,9 +279,10 @@ agentflow run . --input input.json --output output.json
 
 ## 7. 次のステップ
 
-- [API リファレンス](api.md) - 詳細な API ドキュメント
-- [プロトコルガイド](protocols.md) - MCP/A2A/AG-UI の詳細
-- [CLI リファレンス](cli.md) - CLI コマンドの詳細
+- [インストールガイド](../INSTALLATION_GUIDE_JA.md) - 詳細なセットアップ手順
+- [Engine パターンガイド](../README.md#方式4-engine-pattern配置即用new) - 4種類のEngine詳細
+- [CLI ガイド](guide-cli.md) - CLI コマンドの詳細
+- [Skills ガイド](guide-skills.md) - Skills 自動進化システム
 - [サンプル集](../examples/) - より高度な例
 
 ## トラブルシューティング

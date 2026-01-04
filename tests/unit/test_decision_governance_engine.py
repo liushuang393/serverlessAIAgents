@@ -32,7 +32,7 @@ from apps.decision_governance_engine.services.pdf_generator import PDFGeneratorS
 from apps.decision_governance_engine.services.ui_components import (
     DecisionUIComponentBuilder,
 )
-from apps.decision_governance_engine.workflow import DecisionEngine
+from apps.decision_governance_engine.engine import DecisionEngine
 
 
 class TestGatekeeperAgent:
@@ -317,7 +317,7 @@ class TestDecisionEngine:
     async def test_reject_invalid_question(self, engine: DecisionEngine) -> None:
         """不適格な質問は拒否される（CognitiveGateまたはGatekeeperで）."""
         # DecisionRequestは最低10文字必要なので、長めの不適格質問を使用
-        result = await engine.process("今日の天気はどうですか？教えてください")
+        result = await engine.run({"question": "今日の天気はどうですか？教えてください"})
         # 結果がdictの場合（拒否時）
         if isinstance(result, dict):
             # CognitiveGateまたはGatekeeperで拒否される
@@ -329,7 +329,7 @@ class TestDecisionEngine:
     @pytest.mark.asyncio
     async def test_process_valid_question(self, engine: DecisionEngine) -> None:
         """適格な質問は処理される."""
-        result = await engine.process("新規事業AとBのどちらに投資すべきか判断したい")
+        result = await engine.run({"question": "新規事業AとBのどちらに投資すべきか判断したい"})
         # 結果がdictの場合（拒否時）
         if isinstance(result, dict):
             assert result.get("status") == "rejected"
@@ -344,7 +344,7 @@ class TestDecisionEngine:
             question="リソース配分の最適化について判断したい",
             constraints=ConstraintSet(),
         )
-        result = await engine.process(request)
+        result = await engine.run({"question": request.question})
         # 結果がdictの場合（拒否時）
         if isinstance(result, dict):
             assert "status" in result

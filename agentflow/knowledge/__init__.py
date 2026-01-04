@@ -4,8 +4,8 @@
 RAG（検索増強生成）パターンの完全な実装を提供します：
 - ドキュメントローダー（PDF、Markdown、CSV、JSON、HTML）
 - ベクトルストア統合（Pinecone、Qdrant、ChromaDB）
-- 向量検索 Hook（useVectorSearch）
-- RAG パイプライン
+- ベクトル検索Hook（useVectorSearch）
+- RAGパイプライン
 
 使用例:
     >>> from agentflow.knowledge import RAGPipeline, DocumentLoader

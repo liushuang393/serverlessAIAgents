@@ -2,7 +2,7 @@
 """ProgressEmitter - 標準化された進捗イベント発射器.
 
 このモジュールは AG-UI プロトコルに準拠した進捗イベントの発射を簡素化します。
-AgentPipeline と連携して、自動的に進捗を計算・発射します。
+PipelineEngine と連携して、自動的に進捗を計算・発射します。
 
 設計原則:
 - 自動進捗計算: Agent数から自動的に進捗率を計算
@@ -53,7 +53,7 @@ class ProgressEmitter:
     """進捗イベント発射器.
 
     AG-UI プロトコル準拠の進捗イベントを自動生成・発射。
-    AgentPipeline と連携して、複数 Agent の進捗を自動追跡。
+    PipelineEngine と連携して、複数 Agent の進捗を自動追跡。
 
     Attributes:
         flow_id: フロー実行 ID
@@ -134,8 +134,8 @@ class ProgressEmitter:
 
         Args:
             agent_id: Agent ID
-            agent_name: Agent 名称
-            label: Agent ラベル
+            agent_name: Agent名
+            label: Agentラベル
             extra_data: 追加データ（オプション）
 
         Yields:
@@ -174,11 +174,11 @@ class ProgressEmitter:
     ) -> AsyncIterator[AGUIEvent]:
         """ノード完了イベントを発射.
 
-        完了時に completed_agents を自動インクリメント。
+        完了時にcompleted_agentsを自動インクリメント。
 
         Args:
             agent_id: Agent ID
-            agent_name: Agent 名称
+            agent_name: Agent名
             result_summary: 結果サマリー
             extra_data: 追加データ（オプション）
 

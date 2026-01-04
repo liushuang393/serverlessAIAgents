@@ -1,15 +1,32 @@
 """AgentFlow - Lightweight AI Agent Development Framework.
 
-AgentFlow is a lightweight framework for building AI agents with native support
-for MCP, A2A, and AG-UI protocols. Built on top of PocketFlow, it provides a
-simple yet powerful way to create, compose, and deploy AI agents.
+AgentFlow はAIエージェント開発のための軽量フレームワークです。
+MCP、A2A、AG-UI プロトコルをネイティブサポートしています。
 
-環境変数:
-    フレームワーク初期化時に .env ファイルを自動読み込み。
-    プロジェクトルートに .env を配置してください。
+=============================================================================
+公開API（推奨）
+=============================================================================
 
-Quick Start (推奨):
-    # 方式1: デコレータ（最も簡単）
+Engine Pattern（メインAPI - 4種類の予定義パターン）:
+    >>> from agentflow import SimpleEngine, PipelineEngine, GateEngine, RAGEngine
+    >>>
+    >>> # 1. SimpleEngine - 単一Agent質問応答
+    >>> engine = SimpleEngine(agent=MyAgent)
+    >>> result = await engine.run({"question": "こんにちは"})
+    >>>
+    >>> # 2. PipelineEngine - マルチステップフロー
+    >>> engine = PipelineEngine(
+    ...     stages=[
+    ...         {"name": "gate", "agent": GateAgent, "gate": True},
+    ...         {"name": "analysis", "agents": [Agent1, Agent2]},
+    ...         {"name": "review", "agent": ReviewAgent, "review": True},
+    ...     ],
+    ...     max_revisions=2,
+    ... )
+    >>> async for event in engine.run_stream(inputs):
+    ...     print(event)
+
+Decorator API（最も簡単）:
     >>> from agentflow import agent, tool, AgentClient
     >>> @agent
     ... class MyAgent:
@@ -19,69 +36,31 @@ Quick Start (推奨):
     ...         return []
     >>> result = await AgentClient.get("MyAgent").invoke({"question": "..."})
 
-    # 方式2: Flow（複数Agent協調）
-    >>> from agentflow import create_flow, Flow
-    >>> flow = create_flow([Agent1(), Agent2()])
-    >>> result = await flow.run({"task": "..."})
-
-    # ストリーム実行（SSE用）
-    >>> async for event in flow.run_stream(inputs):
-    ...     print(event)
-
-    # 記憶システム
-    >>> flow.memory.remember("key", "value")
-    >>> value = flow.memory.recall("key")
-
-松耦合アクセス（推奨）:
+松耦合Provider（推奨）:
     >>> from agentflow import get_llm, get_db, get_vectordb, get_embedding
-    >>>
-    >>> # LLM（プロバイダー/モデル不明でOK - 環境変数から自動検出）
-    >>> llm = get_llm()
+    >>> llm = get_llm()  # 環境変数から自動検出
     >>> response = await llm.chat([{"role": "user", "content": "hello"}])
-    >>>
-    >>> # DB（Supabase/PostgreSQL/SQLite 自動検出）
-    >>> db = get_db()
-    >>> users = await db.select("users", filters={"active": True})
-    >>>
-    >>> # VectorDB（Pinecone/Qdrant/ChromaDB 自動検出）
-    >>> vdb = get_vectordb()
-    >>> results = await vdb.search("query text", top_k=5)
-    >>>
-    >>> # Embedding（OpenAI/SentenceTransformer 自動検出）
-    >>> emb = get_embedding()
-    >>> vector = await emb.embed_text("Hello world")
 
-Advanced:
-    >>> from agentflow import AgentFlowEngine
-    >>> engine = AgentFlowEngine()
-    >>> result = await engine.execute("my-workflow", {"input": "test"})
+=============================================================================
+内部API（上級者向け - 直接使用は非推奨）
+=============================================================================
 
-New Modules (v0.3.0):
-    >>> # Knowledge Base / RAG
-    >>> from agentflow.knowledge import RAGPipeline, use_vector_search, use_rag
-    >>>
-    >>> # Observability
-    >>> from agentflow.observability import setup_observability, get_logger, get_tracer
-    >>>
-    >>> # Security
-    >>> from agentflow.security import APIKeyManager, RateLimiter, create_auth_middleware
-    >>>
-    >>> # Testing
-    >>> from agentflow.testing import MockLLMProvider, AgentTestCase
-    >>>
-    >>> # Deploy
-    >>> from agentflow.deploy import generate_all, generate_dockerfile
+- agentflow.flow: 低レベルフロー構築API（create_flow等）
+- agentflow.patterns: デザインパターン実装
+- agentflow.core: 基底クラスとユーティリティ
+- agentflow.integrations: フレームワーク統合
+
+環境変数:
+    フレームワーク初期化時に .env ファイルを自動読み込み。
 """
 
 # =============================================================================
-# 環境変数の自動読み込み（フレームワーク初期化時に1回だけ実行）
+# 環境変数の自動読み込み
 # =============================================================================
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-# .env ファイルを検索して読み込み
-# 優先順位: カレントディレクトリ → 上位ディレクトリを順に検索
 _cwd = Path.cwd()
 _env_candidates = [_cwd / ".env"] + [p / ".env" for p in _cwd.parents]
 for _env_path in _env_candidates:
@@ -89,14 +68,50 @@ for _env_path in _env_candidates:
         load_dotenv(_env_path)
         break
 else:
-    # 見つからない場合はデフォルト動作（python-dotenv が自動検索）
     load_dotenv()
 
-del _cwd, _env_candidates, _env_path  # クリーンアップ
-# =============================================================================
+del _cwd, _env_candidates, _env_path
 
+# =============================================================================
+# 公開API: Engine Pattern（メインAPI）
+# =============================================================================
+from agentflow.engines import (
+    BaseEngine,
+    EngineConfig,
+    SimpleEngine,
+    GateEngine,
+    PipelineEngine,
+    RAGEngine,
+)
+
+# =============================================================================
+# 公開API: Decorator API
+# =============================================================================
+from agentflow.agent_decorator import agent, AgentClient, get_skill, list_skills
+from agentflow.providers.tool_provider import tool
+
+# =============================================================================
+# 公開API: 松耦合Provider
+# =============================================================================
+from agentflow.providers import (
+    get_llm, reset_llm, LLMProvider,
+    get_db, reset_db, DBProvider,
+    get_vectordb, reset_vectordb, VectorDBProvider,
+    get_embedding, reset_embedding, EmbeddingProvider,
+)
+
+# =============================================================================
+# 公開API: Agent基底クラス
+# =============================================================================
 from agentflow.core.agent_block import AgentBlock
-from agentflow.core.engine import AgentFlowEngine
+from agentflow.core.resilient_agent import (
+    BaseDecisionAgent,
+    ResilientAgent,
+)
+
+# =============================================================================
+# 公開API: 例外クラス
+# =============================================================================
 from agentflow.core.exceptions import (
     AgentExecutionError,
     AgentFlowError,
@@ -106,43 +121,10 @@ from agentflow.core.exceptions import (
     WorkflowError,
     WorkflowNotFoundError,
 )
-from agentflow.core.resilient_agent import (
-    BaseDecisionAgent,
-    ResilientAgent,
-)
-from agentflow.core.types import AgentMetadata, WorkflowConfig
 
-# MCP Tool (v0.3.0)
-from agentflow.protocols.mcp_tool import (
-    MCPTool,
-    MCPToolClient,
-    MCPToolRequest,
-    MCPToolResponse,
-)
-
-# Quick API - 統一入口（推奨）
-from agentflow.quick import Flow, FlowWrapper, create_api_endpoint, create_flow
-
-# Decorator API（最も簡単）
-from agentflow.agent_decorator import agent, AgentClient, get_skill, list_skills
-from agentflow.providers.tool_provider import tool
-
-# 松耦合 Provider（推奨）
-from agentflow.providers import (
-    # LLM
-    get_llm, reset_llm, LLMProvider,
-    # DB
-    get_db, reset_db, DBProvider,
-    # VectorDB
-    get_vectordb, reset_vectordb, VectorDBProvider,
-    # Embedding
-    get_embedding, reset_embedding, EmbeddingProvider,
-)
-
-# SSE/AG-UI サポート
-from agentflow.integrations.fastapi_integration import create_sse_response
-
-# Observability（日志・监控）
+# =============================================================================
+# 公開API: Observability
+# =============================================================================
 from agentflow.observability import (
     setup_logging,
     get_logger,
@@ -150,10 +132,74 @@ from agentflow.observability import (
     setup_observability,
 )
 
+# =============================================================================
+# 公開API: SSE/AG-UI（FastAPI統合用）
+# =============================================================================
+from agentflow.integrations.fastapi_integration import create_sse_response
+
+# =============================================================================
+# 後方互換性のため維持（非推奨 - 将来削除予定）
+# =============================================================================
+from agentflow.core.engine import AgentFlowEngine  # 非推奨: enginesを使用してください
+from agentflow.core.types import AgentMetadata, WorkflowConfig
+
+# Flow API - 後方互換（内部APIとして維持）
+from agentflow.flow import (
+    create_flow,
+    Flow,
+    FlowBuilder,
+    FlowContext,
+    MemoryAccessor,
+    FlowNode,
+    AgentNode,
+    GateNode,
+    ParallelNode,
+    ReviewNode,
+    NodeType,
+    NextAction,
+    ReviewVerdict,
+    NodeResult,
+    FlowConfig,
+    AgentProtocol,
+)
+
+# MCP Tool（後方互換）
+from agentflow.protocols.mcp_tool import (
+    MCPTool,
+    MCPToolClient,
+    MCPToolRequest,
+    MCPToolResponse,
+)
+
 
 __version__ = "0.2.0"
+
+# =============================================================================
+# 公開シンボル定義
+# =============================================================================
 __all__ = [
-    # 松耦合アクセス（推奨）
+    # =========================================================================
+    # Engine Pattern（メインAPI - 推奨）
+    # =========================================================================
+    "BaseEngine",
+    "EngineConfig",
+    "SimpleEngine",
+    "GateEngine",
+    "PipelineEngine",
+    "RAGEngine",
+
+    # =========================================================================
+    # Decorator API（推奨）
+    # =========================================================================
+    "agent",
+    "tool",
+    "AgentClient",
+    "get_skill",
+    "list_skills",
+
+    # =========================================================================
+    # 松耦合Provider（推奨）
+    # =========================================================================
     "get_llm",
     "reset_llm",
     "LLMProvider",
@@ -166,43 +212,64 @@ __all__ = [
     "get_embedding",
     "reset_embedding",
     "EmbeddingProvider",
-    # Decorator API（最も簡単）
-    "agent",
-    "tool",
-    "AgentClient",
-    # Skills API（Claude Code Skills 互換）
-    "get_skill",
-    "list_skills",
-    # Quick API
-    "create_flow",
-    "Flow",
-    "FlowWrapper",  # 後方互換
-    "create_api_endpoint",
-    # Agent 基底クラス（v0.3.0）
+
+    # =========================================================================
+    # Agent基底クラス
+    # =========================================================================
     "AgentBlock",
     "ResilientAgent",
-    "BaseDecisionAgent",  # 後方互換
-    # MCP Tool（v0.3.0）
-    "MCPTool",
-    "MCPToolClient",
-    "MCPToolRequest",
-    "MCPToolResponse",
-    # Core API
-    "AgentFlowEngine",
+    "BaseDecisionAgent",
+
+    # =========================================================================
+    # 例外クラス
+    # =========================================================================
     "AgentFlowError",
     "AgentExecutionError",
     "AgentTimeoutError",
     "AgentRetryExhaustedError",
-    "AgentMetadata",
     "ProtocolError",
-    "WorkflowConfig",
     "WorkflowError",
     "WorkflowNotFoundError",
-    # SSE/AG-UI
-    "create_sse_response",
-    # Observability（日志・监控）
+
+    # =========================================================================
+    # Observability
+    # =========================================================================
     "setup_logging",
     "get_logger",
     "LogLevel",
     "setup_observability",
+
+    # =========================================================================
+    # SSE/AG-UI
+    # =========================================================================
+    "create_sse_response",
+
+    # =========================================================================
+    # 後方互換（非推奨）
+    # =========================================================================
+    "AgentFlowEngine",  # 非推奨
+    "AgentMetadata",
+    "WorkflowConfig",
+    # Flow API（内部API - 上級者向け）
+    "create_flow",
+    "Flow",
+    "FlowBuilder",
+    "FlowContext",
+    "MemoryAccessor",
+    "FlowNode",
+    "AgentNode",
+    "GateNode",
+    "ParallelNode",
+    "ReviewNode",
+    "NodeType",
+    "NextAction",
+    "ReviewVerdict",
+    "NodeResult",
+    "FlowConfig",
+    "AgentProtocol",
+    # MCP Tool
+    "MCPTool",
+    "MCPToolClient",
+    "MCPToolRequest",
+    "MCPToolResponse",
 ]

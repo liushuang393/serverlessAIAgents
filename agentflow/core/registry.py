@@ -21,9 +21,9 @@ T = TypeVar("T")
 
 
 class Registry(ABC, Generic[T]):
-    """汎用レジストリ基類.
+    """汎用レジストリ基底クラス.
 
-    Protocol、Skill、Coordinator など様々なコンポーネントの
+    Protocol、Skill、Coordinatorなど様々なコンポーネントの
     登録・取得を統一的に管理します。
 
     Example:

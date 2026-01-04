@@ -1,4 +1,4 @@
-"""協調器基類 - Multi-Agent 協調パターン共通インターフェース.
+"""協調器基底クラス - Multi-Agent協調パターン共通インターフェース.
 
 このモジュールは協調器の基本インターフェースを定義します：
 - Sequential: 順次実行
@@ -9,7 +9,7 @@
 設計原則：
 - 簡単：最小限のインターフェース
 - 柔軟：具体実装は自由
-- 統一：全パターン同じ API
+- 統一：全パターン同じAPI
 """
 
 import logging
@@ -32,7 +32,7 @@ class CoordinationPattern(str, Enum):
 
 
 class CoordinatorBase(ABC):
-    """協調器基類 - 全パターン共通インターフェース.
+    """協調器基底クラス - 全パターン共通インターフェース.
 
     Example:
         >>> class MyCoordinator(CoordinatorBase):
