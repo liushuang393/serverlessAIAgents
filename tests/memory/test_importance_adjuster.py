@@ -4,7 +4,12 @@ import pytest
 from datetime import datetime, timedelta
 
 from agentflow.memory.importance_adjuster import ImportanceAdjuster
-from agentflow.memory.types import MemoryEntry, MemoryType
+from agentflow.memory.types import (
+    MemoryEntry,
+    MemorySemanticLevel,
+    MemoryStability,
+    MemoryType,
+)
 
 
 class TestImportanceAdjuster:
@@ -155,7 +160,187 @@ class TestImportanceAdjuster:
 
         assert stats["total_accesses"] == 3
         assert stats["unique_entries"] == 2
-        assert stats["average_accesses"] == 1.5
-        assert stats["decay_constant"] == 30.0
-        assert stats["access_boost_factor"] == 0.1
+        assert abs(stats["average_accesses"] - 1.5) < 0.001
+        assert abs(stats["decay_constant"] - 30.0) < 0.001
+        assert abs(stats["access_boost_factor"] - 0.1) < 0.001
+
+
+class TestForgetPolicy:
+    """忘却ポリシーのテスト."""
+
+    @pytest.fixture
+    def adjuster(self) -> ImportanceAdjuster:
+        """ImportanceAdjusterインスタンスを作成."""
+        return ImportanceAdjuster(
+            decay_constant=30.0,
+            access_boost_factor=0.1,
+        )
+
+    def test_identify_forgettable_low_importance(
+        self, adjuster: ImportanceAdjuster
+    ) -> None:
+        """低重要度記憶の忘却判定テスト."""
+        # 低重要度、古い、負の強化
+        entry = MemoryEntry(
+            id="forget_1",
+            content="低価値な記憶",
+            topic="test",
+            timestamp=datetime.now() - timedelta(days=90),
+            memory_type=MemoryType.LONG_TERM,
+            importance_score=0.05,
+            reinforcement_score=-0.5,
+            stability=MemoryStability.VOLATILE,
+        )
+
+        forgettable = adjuster.identify_forgettable([entry])
+        assert "forget_1" in forgettable
+
+    def test_identify_forgettable_not_high_importance(
+        self, adjuster: ImportanceAdjuster
+    ) -> None:
+        """高重要度記憶は忘却されないテスト."""
+        entry = MemoryEntry(
+            id="keep_1",
+            content="重要な記憶",
+            topic="test",
+            timestamp=datetime.now() - timedelta(days=90),
+            memory_type=MemoryType.LONG_TERM,
+            importance_score=0.8,  # 高重要度
+            reinforcement_score=0.5,
+        )
+
+        forgettable = adjuster.identify_forgettable([entry])
+        assert "keep_1" not in forgettable
+
+    def test_identify_forgettable_not_crystallized(
+        self, adjuster: ImportanceAdjuster
+    ) -> None:
+        """結晶化された記憶は忘却されないテスト."""
+        entry = MemoryEntry(
+            id="crystal_1",
+            content="結晶化された記憶",
+            topic="test",
+            timestamp=datetime.now() - timedelta(days=180),
+            memory_type=MemoryType.LONG_TERM,
+            importance_score=0.05,  # 低重要度でも
+            reinforcement_score=-0.5,  # 負の強化でも
+            stability=MemoryStability.CRYSTALLIZED,  # 結晶化されていれば保持
+        )
+
+        forgettable = adjuster.identify_forgettable([entry])
+        assert "crystal_1" not in forgettable
+
+    def test_identify_forgettable_not_recent(
+        self, adjuster: ImportanceAdjuster
+    ) -> None:
+        """最近の記憶は忘却されないテスト."""
+        entry = MemoryEntry(
+            id="recent_1",
+            content="最近の記憶",
+            topic="test",
+            timestamp=datetime.now() - timedelta(days=10),  # 最近
+            memory_type=MemoryType.LONG_TERM,
+            importance_score=0.05,
+            reinforcement_score=-0.5,
+            stability=MemoryStability.VOLATILE,
+        )
+
+        forgettable = adjuster.identify_forgettable([entry])
+        assert "recent_1" not in forgettable
+
+
+class TestReinforcementLearning:
+    """強化学習フィードバックのテスト."""
+
+    @pytest.fixture
+    def adjuster(self) -> ImportanceAdjuster:
+        """ImportanceAdjusterインスタンスを作成."""
+        return ImportanceAdjuster(decay_constant=30.0, access_boost_factor=0.1)
+
+    @pytest.mark.asyncio
+    async def test_apply_reinforcement_positive(
+        self, adjuster: ImportanceAdjuster
+    ) -> None:
+        """正の強化フィードバックのテスト."""
+        entry = MemoryEntry(
+            id="reinforce_1",
+            content="強化対象の記憶",
+            topic="test",
+            timestamp=datetime.now(),
+            memory_type=MemoryType.LONG_TERM,
+            importance_score=0.5,
+            reinforcement_score=0.0,
+        )
+
+        original_score = entry.reinforcement_score
+        await adjuster.apply_reinforcement(entry, reward=1.0)
+
+        assert entry.reinforcement_score > original_score
+
+    @pytest.mark.asyncio
+    async def test_apply_reinforcement_negative(
+        self, adjuster: ImportanceAdjuster
+    ) -> None:
+        """負の強化フィードバックのテスト."""
+        entry = MemoryEntry(
+            id="reinforce_2",
+            content="強化対象の記憶",
+            topic="test",
+            timestamp=datetime.now(),
+            memory_type=MemoryType.LONG_TERM,
+            importance_score=0.5,
+            reinforcement_score=0.0,
+        )
+
+        original_score = entry.reinforcement_score
+        await adjuster.apply_reinforcement(entry, reward=-0.5)
+
+        assert entry.reinforcement_score < original_score
+
+    @pytest.mark.asyncio
+    async def test_apply_reinforcement_stability_upgrade(
+        self, adjuster: ImportanceAdjuster
+    ) -> None:
+        """強化による安定性アップグレードのテスト."""
+        entry = MemoryEntry(
+            id="upgrade_1",
+            content="強化対象の記憶",
+            topic="test",
+            timestamp=datetime.now(),
+            memory_type=MemoryType.LONG_TERM,
+            importance_score=0.5,
+            reinforcement_score=0.4,  # 閾値付近
+            stability=MemoryStability.VOLATILE,
+        )
+
+        # 高い報酬を複数回適用
+        await adjuster.apply_reinforcement(entry, reward=1.0)
+        await adjuster.apply_reinforcement(entry, reward=1.0)
+
+        # 安定性がアップグレードされる
+        assert entry.stability in [
+            MemoryStability.CONSOLIDATED,
+            MemoryStability.CRYSTALLIZED,
+        ]
+
+    @pytest.mark.asyncio
+    async def test_apply_reinforcement_clamps_score(
+        self, adjuster: ImportanceAdjuster
+    ) -> None:
+        """強化スコアが範囲内に収まるテスト."""
+        entry = MemoryEntry(
+            id="clamp_1",
+            content="強化対象の記憶",
+            topic="test",
+            timestamp=datetime.now(),
+            memory_type=MemoryType.LONG_TERM,
+            importance_score=0.5,
+            reinforcement_score=0.9,  # 高い初期値
+        )
+
+        # 大きな報酬を適用
+        await adjuster.apply_reinforcement(entry, reward=1.0)
+
+        # スコアは1.0を超えない
+        assert entry.reinforcement_score <= 1.0
 

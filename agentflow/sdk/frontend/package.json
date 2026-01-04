@@ -1,0 +1,57 @@
+{
+  "name": "@agentflow/ui",
+  "version": "0.1.0",
+  "description": "AgentFlow Frontend SDK - React Hooks & Components for AI Agent Apps",
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "test": "vitest",
+    "lint": "eslint src --max-warnings 0",
+    "type-check": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0",
+    "zustand": ">=4.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0",
+    "zustand": "^4.4.0"
+  },
+  "keywords": [
+    "agentflow",
+    "ai",
+    "agent",
+    "react",
+    "hooks",
+    "sse",
+    "streaming"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/liushuang393/serverlessAIAgents.git",
+    "directory": "agentflow/sdk/frontend"
+  },
+  "license": "MIT"
+}
+

@@ -12,6 +12,9 @@ from agentflow.protocols.agui_emitter import AGUIEventEmitter
 from agentflow.protocols.agui_events import (
     AGUIEvent,
     AGUIEventType,
+    ClarificationQuestion,
+    ClarificationReceivedEvent,
+    ClarificationRequiredEvent,
     FlowCancelEvent,
     FlowCompleteEvent,
     FlowErrorEvent,
@@ -42,6 +45,14 @@ from agentflow.protocols.a2ui import (
 from agentflow.protocols.mcp_client import MCPClient
 from agentflow.protocols.mcp_config import MCPConfig, MCPServerConfig
 
+# MCP Tool - 工具基底クラスとクライアント (v0.3.0 追加)
+from agentflow.protocols.mcp_tool import (
+    MCPTool,
+    MCPToolClient,
+    MCPToolRequest,
+    MCPToolResponse,
+)
+
 
 def __getattr__(name: str) -> object:
     """遅延インポートを実装.
@@ -71,6 +82,9 @@ __all__ = [
     "AGUIEvent",
     "AGUIEventEmitter",
     "AGUIEventType",
+    "ClarificationQuestion",
+    "ClarificationReceivedEvent",
+    "ClarificationRequiredEvent",
     "FlowCancelEvent",
     "FlowCompleteEvent",
     "FlowErrorEvent",
@@ -96,4 +110,9 @@ __all__ = [
     "MCPClient",
     "MCPConfig",
     "MCPServerConfig",
+    # MCP Tool (v0.3.0)
+    "MCPTool",
+    "MCPToolClient",
+    "MCPToolRequest",
+    "MCPToolResponse",
 ]

@@ -16,7 +16,7 @@ Flow互換インターフェース:
 from collections.abc import AsyncIterator
 from typing import Any
 
-from apps.code_migration_assistant.mcp_client import MCPClient
+from agentflow import MCPToolClient as MCPClient
 
 
 class CodeMigrationOrchestrator:

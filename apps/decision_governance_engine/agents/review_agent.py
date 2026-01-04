@@ -8,7 +8,7 @@
 import json
 from typing import Any
 
-from apps.decision_governance_engine.agents.base_agent import BaseDecisionAgent
+from agentflow import ResilientAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
     DaoOutput,
     FaOutput,
@@ -23,7 +23,7 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
 )
 
 
-class ReviewAgent(BaseDecisionAgent[ReviewInput, ReviewOutput]):
+class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
     """検証Agent.
 
     職責:

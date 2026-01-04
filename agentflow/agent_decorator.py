@@ -454,4 +454,3 @@ class AgentClient:
     def name(self) -> str:
         """Agent名."""
         return self._registered.name
-

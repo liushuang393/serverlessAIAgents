@@ -524,7 +524,11 @@ AgentFlow への貢献を歓迎します！
 - [変更履歴](CHANGELOG.md)
 
 ---
+## その他
+　他の優秀なAIエージェント開発フレームワーク
+    [agno](https://github.com/agno-agi/agno)
 
+| フレームワーク | 説明 |
 ## 📄 ライセンス
 
 [MIT License](LICENSE)

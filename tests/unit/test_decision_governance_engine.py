@@ -315,12 +315,13 @@ class TestDecisionEngine:
 
     @pytest.mark.asyncio
     async def test_reject_invalid_question(self, engine: DecisionEngine) -> None:
-        """不適格な質問は拒否される（10文字以上必要）."""
+        """不適格な質問は拒否される（CognitiveGateまたはGatekeeperで）."""
         # DecisionRequestは最低10文字必要なので、長めの不適格質問を使用
         result = await engine.process("今日の天気はどうですか？教えてください")
         # 結果がdictの場合（拒否時）
         if isinstance(result, dict):
-            assert result.get("status") == "rejected"
+            # CognitiveGateまたはGatekeeperで拒否される
+            assert result.get("status") in ["rejected", "cognitive_gate_blocked"]
         else:
             # DecisionReportオブジェクトの場合（処理された場合）
             assert hasattr(result, "report_id")

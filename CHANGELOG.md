@@ -5,6 +5,159 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-01-03
+
+### Added
+
+#### 🧠 Knowledge Base Integration
+
+- **RAG Pipeline**: 完整的检索增强生成（RAG）管道实现
+  - `RAGPipeline`: 统一的 RAG 接口，支持文档索引和语义查询
+  - `RAGConfig`: 可配置的 RAG 参数（top_k、相似度阈值、提示模板）
+  - 支持流式响应
+
+- **Document Loaders**: 多格式文档加载器
+  - `TextLoader`: 纯文本文件
+  - `MarkdownLoader`: Markdown 文件（按章节分割）
+  - `PDFLoader`: PDF 文件（支持 pdfplumber/pypdf）
+  - `CSVLoader`: CSV 文件（可指定内容列和元数据列）
+  - `JSONLoader`: JSON/JSONL 文件
+  - `HTMLLoader`: HTML 文件（自动清理标签）
+  - `UniversalLoader`: 自动检测格式的统一加载器
+
+- **Vector Search Hooks**: React Hooks 风格的向量搜索 API
+  - `use_vector_search()`: 向量相似度搜索
+  - `use_rag()`: RAG 查询接口
+
+#### 📊 Observability
+
+- **Structured Logging**: JSON 格式的结构化日志
+  - `AgentFlowLogger`: 带上下文的日志记录器
+  - `JSONFormatter`: JSON 格式输出
+  - 敏感信息自动掩码
+
+- **Metrics Collection**: Prometheus 兼容的指标收集
+  - `Counter`: 单调递增计数器
+  - `Gauge`: 可增减的量表
+  - `Histogram`: 分布统计
+  - `MetricsCollector`: 指标管理器
+
+- **Distributed Tracing**: 分布式追踪
+  - `Tracer`: 追踪器（支持 span 嵌套）
+  - `Span`: 追踪单元（支持属性和事件）
+  - 装饰器支持：`@tracer.trace()`
+
+- **Sentry Integration**: 错误追踪集成
+  - `setup_sentry()`: Sentry 初始化
+  - `capture_exception()`: 异常捕获
+  - 性能监控支持
+
+#### 🔐 Security Layer
+
+- **API Key Management**: API 密钥管理
+  - `APIKeyManager`: 密钥的创建、验证、吊销
+  - `generate_api_key()`: 安全的密钥生成
+  - 基于范围（scope）的访问控制
+  - 密钥哈希存储
+
+- **Rate Limiting**: 请求速率限制
+  - `RateLimiter`: 滑动窗口限流器
+  - 支持分钟/小时/天级别限制
+  - `RateLimitExceeded` 异常
+
+- **Authentication Middleware**: 认证中间件
+  - `AuthMiddleware`: JWT 和 API Key 认证
+  - `JWTConfig`: JWT 配置
+  - `@require_auth`: 认证装饰器
+  - `@require_permission`: 权限装饰器
+
+- **RBAC**: 基于角色的访问控制
+  - `RBACManager`: 角色管理器
+  - `Role`: 角色定义（支持权限继承）
+  - `Permission`: 权限定义（支持通配符）
+
+#### 🧪 Testing Tools
+
+- **Mock LLM Provider**: 测试用 LLM 模拟
+  - `MockLLMProvider`: 可配置响应的模拟 LLM
+  - 模式匹配响应
+  - 序列响应
+  - 调用记录追踪
+
+- **Agent Test Framework**: Agent 测试框架
+  - `AgentTestCase`: 测试用例基类
+  - `AgentTestRunner`: 测试运行器
+  - 自动 Mock 注入
+  - 断言辅助方法
+
+- **Test Fixtures**: Pytest 夹具
+  - `mock_llm_fixture`: Mock LLM 夹具
+  - `agent_fixture`: Agent 夹具
+  - `clean_env_fixture`: 清洁环境夹具
+
+#### 📦 Deployment Tools
+
+- **Docker Templates**: Docker 部署模板
+  - `Dockerfile`: 多阶段构建，安全最佳实践
+  - `docker-compose.yml`: 包含 Redis、PostgreSQL
+  - `.dockerignore`: 优化构建
+
+- **Serverless Deployment**: 无服务器部署
+  - `vercel.json`: Vercel 配置
+  - `serverless.yml`: AWS Lambda 配置
+  - `handler.py`: Lambda 入口模板
+
+- **CI/CD Templates**: CI/CD 模板
+  - `.github/workflows/ci-cd.yml`: GitHub Actions
+  - `.gitlab-ci.yml`: GitLab CI
+  - `.pre-commit-config.yaml`: 预提交钩子
+
+- **Environment Templates**: 环境配置模板
+  - `.env.example`: 环境变量模板
+
+### Usage Examples
+
+```python
+# Knowledge Base / RAG
+from agentflow.knowledge import RAGPipeline, use_vector_search
+
+async with RAGPipeline() as rag:
+    await rag.add_documents("./docs/")
+    result = await rag.query("What is AgentFlow?")
+    print(result.answer)
+
+# Observability
+from agentflow.observability import setup_observability, get_tracer
+
+setup_observability(service_name="my-agent", sentry_dsn="...")
+tracer = get_tracer()
+
+with tracer.span("process-request"):
+    # your code
+
+# Security
+from agentflow.security import APIKeyManager, RateLimiter
+
+api_keys = APIKeyManager()
+key, api_key = api_keys.create_key("my-key", scopes=["read"])
+
+limiter = RateLimiter(requests_per_minute=60)
+if await limiter.check(user_id):
+    # process request
+
+# Testing
+from agentflow.testing import MockLLMProvider
+
+mock = MockLLMProvider()
+mock.set_response("Test response")
+mock.add_pattern_response(r"hello", "Hello!")
+
+# Deploy
+from agentflow.deploy import generate_all
+
+generate_all("./deploy", app_name="my-agent", docker=True, github_actions=True)
+```
+
 ## [1.0.0] - 2025-11-03
 
 ### Added

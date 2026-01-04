@@ -95,7 +95,7 @@ const DecisionInputPage = () => {
         {/* Hero */}
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-            意思決定を構造化する
+            ⚖️意思決定を構造化する
           </h2>
           <p className="text-slate-400">
             複雑な問題を「道・法・術・器」のフレームワークで分析し、

@@ -1,68 +1,55 @@
 # -*- coding: utf-8 -*-
 """Decision Governance Engine - Workflow定義.
 
-道・法・術・器・検証の6 AgentをAgentCoordinatorで協調させる。
+認知前処理・門番・診断・道・法・術・器・検証の8 Agentを協調させる。
 状態遷移は順方向のみ、スキップ禁止。REVISE時は該当Agentに回退。
 
 AG-UI連携: AGUIEventEmitter経由でSSE進捗配信対応。
+ResultStore連携: フロー完了時に結果を自動保存。
 
-変更履歴:
-    - 2024: AgentFlow統一入口原則に準拠
-    - FlowWrapper互換のrunメソッドを追加
+アーキテクチャ:
+- AgentRegistry による Agent 管理の一元化
+- ReportGenerator による提案書生成の分離
+- AgentPipeline による進捗追跡の自動化
+- SSE イベント発射と業務ロジックの分離
 """
 
-import asyncio
 import logging
 import time
 import uuid
 from collections.abc import AsyncIterator
-from datetime import datetime
 from typing import Any
 
-from agentflow import create_flow
-from agentflow.patterns.multi_agent import AgentCoordinator, SharedContext
+from agentflow.core.result_store import ResultStoreManager
+from agentflow.patterns.multi_agent import SharedContext
 
-from apps.decision_governance_engine.agents.base_agent import (
-    AgentExecutionError,
-    AgentRetryExhaustedError,
-    AgentTimeoutError,
-)
-from apps.decision_governance_engine.agents.dao_agent import DaoAgent
-from apps.decision_governance_engine.agents.fa_agent import FaAgent
-from apps.decision_governance_engine.agents.gatekeeper_agent import GatekeeperAgent
-from apps.decision_governance_engine.agents.qi_agent import QiAgent
-from apps.decision_governance_engine.agents.review_agent import ReviewAgent
-from apps.decision_governance_engine.agents.shu_agent import ShuAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
+    ClarificationInput,
     DaoInput,
     DaoOutput,
     FaInput,
     FaOutput,
     GatekeeperInput,
     QiInput,
-    QiOutput,
     ReviewInput,
     ReviewVerdict,
     ShuInput,
     ShuOutput,
 )
 from apps.decision_governance_engine.schemas.input_schemas import DecisionRequest
-from apps.decision_governance_engine.schemas.output_schemas import (
-    DecisionReport,
-    ExecutiveSummary,
-)
+from apps.decision_governance_engine.schemas.output_schemas import DecisionReport
+from apps.decision_governance_engine.services.agent_registry import AgentRegistry
+from apps.decision_governance_engine.services.report_generator import ReportGenerator
 
 # AG-UI Events
 try:
     from agentflow.protocols.agui_events import (
         AGUIEvent,
+        ClarificationQuestion,
+        ClarificationRequiredEvent,
         FlowCompleteEvent,
         FlowErrorEvent,
         FlowStartEvent,
-        LogEvent,
-        NodeCompleteEvent,
-        NodeStartEvent,
-        ProgressEvent,
     )
     AGUI_AVAILABLE = True
 except ImportError:
@@ -72,8 +59,8 @@ except ImportError:
 class DecisionEngine:
     """Decision Governance Engine メインクラス.
 
-    AgentCoordinatorを使用して6つのAgentを順次実行し、署名可能な決策レポートを生成。
-    ReviewAgentがREVISEを返した場合、該当Agentに回退して再実行。
+    AgentRegistry を使用して8つのAgentを順次実行し、
+    署名可能な決策レポートを生成。
 
     使用例:
         >>> engine = DecisionEngine()
@@ -83,95 +70,20 @@ class DecisionEngine:
         ...     print(event.event_type, event.data)
     """
 
-    # Agent定義（門番・道・法・術・器・検証）
-    AGENT_DEFINITIONS = [
-        {"id": "gatekeeper", "name": "門番", "label": "入口検証"},
-        {"id": "dao", "name": "道", "label": "本質分析"},
-        {"id": "fa", "name": "法", "label": "戦略選定"},
-        {"id": "shu", "name": "術", "label": "実行計画"},
-        {"id": "qi", "name": "器", "label": "技術実装"},
-        {"id": "review", "name": "検証", "label": "最終検証"},
-    ]
-    TOTAL_AGENTS = len(AGENT_DEFINITIONS)
-
-    # REVISE回退設定
-    MAX_REVISIONS = 2  # 最大リビジョン回数
-
-    # Agent名マッピング（affected_agent → Agent ID）
-    AGENT_NAME_MAP = {
-        "GatekeeperAgent": "gatekeeper",
-        "DaoAgent": "dao",
-        "FaAgent": "fa",
-        "ShuAgent": "shu",
-        "QiAgent": "qi",
-        "ReviewAgent": "review",
-    }
+    MAX_REVISIONS = 2
 
     def __init__(self, llm_client: Any = None, enable_rag: bool = True) -> None:
         """初期化.
 
         Args:
-            llm_client: LLMクライアント（オプション）
+            llm_client: LLMクライアント（オプション、Noneの場合は自動取得）
             enable_rag: RAG機能を有効化するか
         """
         self._logger = logging.getLogger("decision_engine")
-        self._llm = llm_client
-        self._enable_rag = enable_rag
-        self._rag_initialized = False
-
-        # Agentを初期化
-        self._gatekeeper = GatekeeperAgent(llm_client=llm_client)
-        self._dao = DaoAgent(llm_client=llm_client)
-        self._fa = FaAgent(llm_client=llm_client)
-        self._shu = ShuAgent(llm_client=llm_client)
-        self._qi = QiAgent(llm_client=llm_client)
-        self._review = ReviewAgent(llm_client=llm_client)
-
-        # Agent辞書（回退時のアクセス用）
-        self._agents = {
-            "gatekeeper": self._gatekeeper,
-            "dao": self._dao,
-            "fa": self._fa,
-            "shu": self._shu,
-            "qi": self._qi,
-            "review": self._review,
-        }
-
-        # SharedContext初期化（記憶システム有効）
+        self._registry = AgentRegistry(llm_client=llm_client, enable_rag=enable_rag)
+        self._report_generator = ReportGenerator()
         self._context = SharedContext(enable_memory=True)
-
-        # Core Agents（Gatekeeper除く）のCoordinator
-        self._core_coordinator = AgentCoordinator(
-            agents=[self._dao, self._fa, self._shu, self._qi],
-            pattern="sequential",
-            shared_context=self._context,
-        )
-
-        # AG-UI イベントキュー（SSE配信用）
-        self._event_queue: asyncio.Queue[Any] = asyncio.Queue(maxsize=1000)
         self._flow_id: str | None = None
-        self._completed_agents: int = 0
-
-    async def _initialize_rag_skills(self) -> None:
-        """RAGスキルを初期化（Shu/Qi Agent用）.
-
-        業界プラクティスと技術ドキュメントをRAGに登録。
-        """
-        if self._rag_initialized or not self._enable_rag:
-            return
-
-        try:
-            # Shu AgentのRAG初期化（業界プラクティス）
-            await self._shu.initialize_rag()
-            self._logger.info("ShuAgent RAG initialized")
-
-            # Qi AgentのRAG初期化（技術ドキュメント）
-            await self._qi.initialize_rag()
-            self._logger.info("QiAgent RAG initialized")
-
-            self._rag_initialized = True
-        except Exception as e:
-            self._logger.warning(f"RAG initialization failed (non-fatal): {e}")
 
     async def process(self, request: DecisionRequest | str) -> DecisionReport | dict:
         """意思決定プロセスを実行.
@@ -182,252 +94,57 @@ class DecisionEngine:
         Returns:
             DecisionReport または拒否時のエラー情報
         """
-        # 文字列の場合はDecisionRequestに変換
         if isinstance(request, str):
             request = DecisionRequest(question=request)
 
         self._logger.info(f"Decision process started: {request.question[:50]}...")
-        self._context.clear()  # コンテキストをクリア
+        self._context.clear()
 
-        # RAGスキル初期化（Shu/Qi用）
-        await self._initialize_rag_skills()
+        # レジストリ初期化
+        await self._registry.initialize()
+        await self._registry.initialize_rag_agents()
 
-        # Step 1: Gatekeeper検証（単独実行）
+        # Step 0: CognitiveGate（認知前処理）
+        cognitive_result = await self._run_cognitive_gate(request)
+        if not cognitive_result.get("proceed", True):
+            return self._create_cognitive_gate_blocked_response(cognitive_result)
+
+        # Step 1: Gatekeeper検証
         gatekeeper_result = await self._run_gatekeeper(request)
         if not gatekeeper_result.get("is_acceptable", False):
-            self._logger.warning("Question rejected by Gatekeeper")
-            return {
-                "status": "rejected",
-                "reason": gatekeeper_result.get("rejection_reason"),
-                "message": gatekeeper_result.get("rejection_message"),
-                "suggested_rephrase": gatekeeper_result.get("suggested_rephrase"),
-            }
+            return self._create_rejected_response(gatekeeper_result)
 
-        # Step 2-6: Core Agents + Review（REVISEループ付き）
+        # Step 2: Clarification（問題診断）
+        clarification_result = await self._run_clarification(request)
+
+        # Step 3-7: Core Agents + Review（REVISEループ付き）
         for revision in range(self.MAX_REVISIONS + 1):
-            self._logger.info(f"Execution round {revision + 1}/{self.MAX_REVISIONS + 1}")
-
-            # Core Agentsを実行
-            results = await self._run_core_agents(request)
-
-            # Reviewを実行
+            results = await self._run_core_agents(request, clarification_result)
             review_result = await self._run_review(results)
             results["review"] = review_result
 
             verdict = review_result.get("overall_verdict", "PASS")
 
             if verdict == ReviewVerdict.PASS.value or verdict == ReviewVerdict.PASS:
-                # 合格 - レポート生成
-                self._logger.info("Review PASSED - generating report")
-                return self._generate_report(results)
+                return self._report_generator.generate(
+                    results,
+                    original_question=request.question,
+                    clarification_result=clarification_result,
+                )
 
             if verdict == ReviewVerdict.REJECT.value or verdict == ReviewVerdict.REJECT:
-                # 却下
-                self._logger.warning("Review REJECTED - stopping")
-                return {
-                    "status": "rejected_by_review",
-                    "verdict": "REJECT",
-                    "findings": review_result.get("findings", []),
-                    "message": "検証の結果、計画に重大な問題があります。",
-                }
+                return self._create_review_rejected_response(review_result)
 
-            # REVISE - 回退処理
+            # REVISE処理
             if revision < self.MAX_REVISIONS:
-                affected = self._get_affected_agent(review_result)
-                self._logger.info(f"Review REVISE - retrying from {affected}")
-                self._context.set("revision_round", revision + 1)
-                self._context.set("revision_feedback", review_result.get("findings", []))
-                self._context.set("affected_agent", affected)
-                # ループを継続して再実行
+                self._setup_revision_context(revision, review_result)
 
-        # 最大リビジョン到達
-        self._logger.warning("Max revisions reached")
-        return {
-            "status": "max_revisions_reached",
-            "message": f"最大リビジョン回数（{self.MAX_REVISIONS}回）に到達しました。",
-            "last_review": review_result,
-        }
-
-    async def _run_gatekeeper(self, request: DecisionRequest) -> dict:
-        """Gatekeeper検証を実行."""
-        gatekeeper_input = GatekeeperInput(raw_question=request.question)
-        result = await self._gatekeeper.run(gatekeeper_input.model_dump())
-        self._context.set("gatekeeper_result", result)
-        return result
-
-    async def _run_core_agents(self, request: DecisionRequest) -> dict[str, dict]:
-        """Core Agents（Dao→Fa→Shu→Qi）を実行."""
-        results: dict[str, dict] = {}
-
-        # Dao（本質分析）
-        dao_input = DaoInput(
-            question=request.question,
-            constraints=[
-                *request.constraints.technical,
-                *request.constraints.regulatory,
-            ],
-            stakeholders=request.constraints.human_resources,
-        )
-        dao_result = await self._dao.run(dao_input.model_dump())
-        self._context.set("dao_result", dao_result)
-        results["dao"] = dao_result
-        self._logger.info("Dao analysis completed")
-
-        # Fa（戦略選定）
-        fa_input = FaInput(
-            dao_result=DaoOutput(**dao_result),
-            available_resources={
-                "budget": request.constraints.budget.amount if request.constraints.budget else None,
-                "team": request.constraints.human_resources,
-            },
-            time_horizon=f"{request.constraints.timeline.months}ヶ月" if request.constraints.timeline else "",
-        )
-        fa_result = await self._fa.run(fa_input.model_dump())
-        self._context.set("fa_result", fa_result)
-        results["fa"] = fa_result
-        self._logger.info("Fa strategy completed")
-
-        # Shu（実行計画）
-        selected_path_id = fa_result.get("recommended_paths", [{}])[0].get("path_id", "A")
-        shu_input = ShuInput(
-            fa_result=FaOutput(**fa_result),
-            selected_path_id=selected_path_id,
-        )
-        shu_result = await self._shu.run(shu_input.model_dump())
-        self._context.set("shu_result", shu_result)
-        results["shu"] = shu_result
-        self._logger.info("Shu planning completed")
-
-        # Qi（技術実装）
-        qi_input = QiInput(
-            shu_result=ShuOutput(**shu_result),
-            tech_constraints=request.constraints.technical,
-        )
-        qi_result = await self._qi.run(qi_input.model_dump())
-        self._context.set("qi_result", qi_result)
-        results["qi"] = qi_result
-        self._logger.info("Qi implementation completed")
-
-        return results
-
-    async def _run_review(self, results: dict[str, dict]) -> dict:
-        """Review検証を実行."""
-        review_input = ReviewInput(
-            dao_result=DaoOutput(**results["dao"]),
-            fa_result=FaOutput(**results["fa"]),
-            shu_result=ShuOutput(**results["shu"]),
-            qi_result=QiOutput(**results["qi"]),
-        )
-        review_result = await self._review.run(review_input.model_dump())
-        self._context.set("review_result", review_result)
-        self._logger.info(f"Review completed: {review_result.get('overall_verdict')}")
-        return review_result
-
-    def _get_affected_agent(self, review_result: dict) -> str:
-        """Review結果から影響を受けるAgentを特定."""
-        findings = review_result.get("findings", [])
-        if findings:
-            # 最初のfindingから取得
-            affected_name = findings[0].get("affected_agent", "")
-            return self.AGENT_NAME_MAP.get(affected_name, "dao")
-        return "dao"  # デフォルト
-
-    def _generate_report(self, results: dict[str, dict]) -> DecisionReport:
-        """最終レポートを生成."""
-        dao_result = results.get("dao", {})
-        fa_result = results.get("fa", {})
-        shu_result = results.get("shu", {})
-        qi_result = results.get("qi", {})
-        review_result = results.get("review", {})
-
-        # ExecutiveSummary生成
-        recommended = fa_result.get("recommended_paths", [{}])[0]
-        summary = ExecutiveSummary(
-            one_line_decision=f"{recommended.get('name', '推奨案')}を選択すべき"[:30],
-            recommended_action=recommended.get("description", "詳細は法セクション参照"),
-            key_risks=list(recommended.get("cons", [])[:3]),
-            first_step=shu_result.get("first_action", "キックオフMTG設定"),
-            estimated_impact="計画実行により目標達成を見込む",
-        )
-
-        return DecisionReport(
-            report_id=f"DGE-{datetime.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:6].upper()}",
-            dao=dao_result,
-            fa=fa_result,
-            shu=shu_result,
-            qi=qi_result,
-            review=review_result,
-            executive_summary=summary,
-        )
-
-    # ========================================
-    # AG-UI SSE ストリーム配信
-    # ========================================
-
-    async def _emit_event(self, event: Any) -> None:
-        """イベントをキューに追加（内部用）."""
-        if not AGUI_AVAILABLE:
-            return
-        try:
-            await asyncio.wait_for(self._event_queue.put(event), timeout=1.0)
-        except TimeoutError:
-            self._logger.warning(f"Event queue full, dropping event")
-
-    async def _emit_node_start(self, agent_id: str, agent_name: str, label: str) -> None:
-        """ノード開始イベントを発火."""
-        if not AGUI_AVAILABLE or not self._flow_id:
-            return
-        event = NodeStartEvent(
-            timestamp=time.time(),
-            flow_id=self._flow_id,
-            data={"label": label},
-            node_id=agent_id,
-            node_name=agent_name,
-        )
-        await self._emit_event(event)
-        # ログ発行
-        log_event = LogEvent(
-            timestamp=time.time(),
-            flow_id=self._flow_id,
-            data={},
-            level="INFO",
-            message=f"{agent_name}({label})の分析を開始...",
-            source=agent_id,
-        )
-        await self._emit_event(log_event)
-
-    async def _emit_node_complete(
-        self, agent_id: str, agent_name: str, result_summary: str
-    ) -> None:
-        """ノード完了イベントを発火."""
-        if not AGUI_AVAILABLE or not self._flow_id:
-            return
-        self._completed_agents += 1
-        event = NodeCompleteEvent(
-            timestamp=time.time(),
-            flow_id=self._flow_id,
-            data={"result_summary": result_summary},
-            node_id=agent_id,
-            node_name=agent_name,
-        )
-        await self._emit_event(event)
-        # プログレスイベント
-        progress = ProgressEvent(
-            timestamp=time.time(),
-            flow_id=self._flow_id,
-            data={},
-            current=self._completed_agents,
-            total=self.TOTAL_AGENTS,
-            percentage=(self._completed_agents / self.TOTAL_AGENTS) * 100,
-        )
-        await self._emit_event(progress)
+        return self._create_max_revisions_response(review_result)
 
     async def process_with_events(
         self, request: DecisionRequest | str
     ) -> AsyncIterator[Any]:
         """SSEストリーム付きで意思決定プロセスを実行.
-
-        各Agentの開始・完了イベントをリアルタイム配信。
 
         Args:
             request: 意思決定依頼
@@ -436,148 +153,186 @@ class DecisionEngine:
             AGUIEvent: AG-UIプロトコル準拠イベント
         """
         if not AGUI_AVAILABLE:
-            # AG-UI利用不可の場合は通常処理
             result = await self.process(request)
             yield {"type": "result", "data": result}
             return
 
-        # 初期化
         self._flow_id = f"decision-{uuid.uuid4().hex[:8]}"
-        self._completed_agents = 0
-        self._event_queue = asyncio.Queue(maxsize=1000)
-
-        # 文字列の場合はDecisionRequestに変換
         if isinstance(request, str):
             request = DecisionRequest(question=request)
 
-        # Flow開始イベント
-        start_event = FlowStartEvent(
+        # Flow開始
+        yield FlowStartEvent(
             timestamp=time.time(),
             flow_id=self._flow_id,
             data={"question": request.question[:100]},
         )
-        yield start_event
 
-        # RAGスキル初期化
-        await self._initialize_rag_skills()
+        # レジストリ初期化
+        await self._registry.initialize()
+        await self._registry.initialize_rag_agents()
 
         try:
-            # Gatekeeper
-            agent_def = self.AGENT_DEFINITIONS[0]
-            await self._emit_node_start(
-                agent_def["id"], agent_def["name"], agent_def["label"]
-            )
-            while not self._event_queue.empty():
-                yield await self._event_queue.get()
+            # CognitiveGate
+            async for event in self._run_agent_with_events(
+                "cognitive_gate", self._run_cognitive_gate, request
+            ):
+                yield event
+            cognitive_result = self._context.get("cognitive_gate_result", {})
 
-            gatekeeper_result = await self._run_gatekeeper(request)
-
-            await self._emit_node_complete(
-                agent_def["id"],
-                agent_def["name"],
-                "受理" if gatekeeper_result.get("is_acceptable") else "拒否",
-            )
-            while not self._event_queue.empty():
-                yield await self._event_queue.get()
-
-            if not gatekeeper_result.get("is_acceptable", False):
-                error_event = FlowErrorEvent(
-                    timestamp=time.time(),
-                    flow_id=self._flow_id,
-                    data={"reason": gatekeeper_result.get("rejection_reason")},
-                    error_message=gatekeeper_result.get(
-                        "rejection_message", "質問が受理されませんでした"
-                    ),
-                    error_type="RejectedQuestion",
-                )
-                yield error_event
+            if not cognitive_result.get("proceed", True):
+                async for event in self._handle_cognitive_gate_blocked(
+                    request, cognitive_result
+                ):
+                    yield event
                 return
 
-            # Core Agents + Review
-            results = await self._run_core_agents_with_events(request)
-            while not self._event_queue.empty():
-                yield await self._event_queue.get()
+            # Gatekeeper
+            async for event in self._run_agent_with_events(
+                "gatekeeper", self._run_gatekeeper, request
+            ):
+                yield event
+            gatekeeper_result = self._context.get("gatekeeper_result", {})
+
+            if not gatekeeper_result.get("is_acceptable", False):
+                yield self._create_flow_error_event(gatekeeper_result)
+                return
+
+            # Clarification
+            async for event in self._run_agent_with_events(
+                "clarification", self._run_clarification, request
+            ):
+                yield event
+            clarification_result = self._context.get("clarification_result", {})
+
+            # Core Agents
+            results: dict[str, dict] = {}
+            for agent_id in ["dao", "fa", "shu", "qi"]:
+                async for event in self._run_core_agent_with_events(
+                    agent_id, request, clarification_result, results
+                ):
+                    yield event
 
             # Review
-            agent_def = self.AGENT_DEFINITIONS[5]
-            await self._emit_node_start(
-                agent_def["id"], agent_def["name"], agent_def["label"]
-            )
-            while not self._event_queue.empty():
-                yield await self._event_queue.get()
-
-            review_result = await self._run_review(results)
+            async for event in self._run_agent_with_events(
+                "review", self._run_review, results
+            ):
+                yield event
+            review_result = self._context.get("review_result", {})
             results["review"] = review_result
 
+            # 完了処理
             verdict = review_result.get("overall_verdict", "PASS")
-            await self._emit_node_complete(
-                agent_def["id"], agent_def["name"], f"判定: {verdict}"
-            )
-            while not self._event_queue.empty():
-                yield await self._event_queue.get()
-
-            # レポート生成
             if verdict == ReviewVerdict.PASS.value or verdict == ReviewVerdict.PASS:
-                report = self._generate_report(results)
-                complete_event = FlowCompleteEvent(
+                report = self._report_generator.generate(
+                    results,
+                    original_question=request.question,
+                    clarification_result=clarification_result,
+                )
+
+                report_data = report.model_dump(mode="json")
+                await ResultStoreManager.save(
+                    result_id=report.report_id,
+                    data=report_data,
+                    flow_id="decision-governance-engine",
+                    status="success",
+                    metadata={"question": request.question},
+                )
+
+                yield FlowCompleteEvent(
                     timestamp=time.time(),
                     flow_id=self._flow_id,
                     data={"report_id": report.report_id},
+                    result_id=report.report_id,
+                    result=report_data,
+                    include_result=True,
                 )
-                yield complete_event
             else:
-                error_event = FlowErrorEvent(
+                yield FlowErrorEvent(
                     timestamp=time.time(),
                     flow_id=self._flow_id,
                     data={"verdict": str(verdict)},
                     error_message=f"検証結果: {verdict}",
                     error_type="ReviewNotPassed",
                 )
-                yield error_event
 
         except Exception as e:
-            error_event = FlowErrorEvent(
+            yield FlowErrorEvent(
                 timestamp=time.time(),
                 flow_id=self._flow_id or "unknown",
                 data={},
                 error_message=str(e),
                 error_type=type(e).__name__,
             )
-            yield error_event
             raise
         finally:
             self._flow_id = None
 
-    async def _run_core_agents_with_events(
-        self, request: DecisionRequest
+    # ========================================
+    # Agent実行メソッド
+    # ========================================
+
+    async def _run_cognitive_gate(self, request: DecisionRequest) -> dict:
+        """CognitiveGateを実行."""
+        agent = self._registry.get_agent("cognitive_gate")
+        cognitive_input = {
+            "raw_question": request.question,
+            "constraints": [
+                *request.constraints.technical,
+                *request.constraints.regulatory,
+            ],
+        }
+        result = await agent.run(cognitive_input)
+        self._context.set("cognitive_gate_result", result)
+        return result
+
+    async def _run_gatekeeper(self, request: DecisionRequest) -> dict:
+        """Gatekeeperを実行."""
+        agent = self._registry.get_agent("gatekeeper")
+        gatekeeper_input = GatekeeperInput(raw_question=request.question)
+        result = await agent.run(gatekeeper_input.model_dump())
+        self._context.set("gatekeeper_result", result)
+        return result
+
+    async def _run_clarification(self, request: DecisionRequest) -> dict:
+        """Clarificationを実行."""
+        agent = self._registry.get_agent("clarification")
+        constraints = self._build_constraints_list(request)
+        clarification_input = ClarificationInput(
+            raw_question=request.question,
+            constraints=constraints,
+        )
+        result = await agent.run(clarification_input.model_dump())
+        self._context.set("clarification_result", result)
+        return result
+
+    async def _run_core_agents(
+        self,
+        request: DecisionRequest,
+        clarification_result: dict,
     ) -> dict[str, dict]:
-        """Core Agentsをイベント発火付きで実行."""
+        """Core Agents（Dao→Fa→Shu→Qi）を実行."""
         results: dict[str, dict] = {}
 
-        # Dao（本質分析）
-        agent_def = self.AGENT_DEFINITIONS[1]
-        await self._emit_node_start(
-            agent_def["id"], agent_def["name"], agent_def["label"]
+        # Dao
+        effective_question = clarification_result.get(
+            "refined_question", request.question
         )
+        dao_agent = self._registry.get_agent("dao")
         dao_input = DaoInput(
-            question=request.question,
-            constraints=[*request.constraints.technical, *request.constraints.regulatory],
+            question=effective_question,
+            constraints=[
+                *request.constraints.technical,
+                *request.constraints.regulatory,
+            ],
             stakeholders=request.constraints.human_resources,
         )
-        dao_result = await self._dao.run(dao_input.model_dump())
+        dao_result = await dao_agent.run(dao_input.model_dump())
         self._context.set("dao_result", dao_result)
         results["dao"] = dao_result
-        await self._emit_node_complete(
-            agent_def["id"],
-            agent_def["name"],
-            f"問題タイプ: {dao_result.get('problem_type', 'N/A')}",
-        )
 
-        # Fa（戦略選定）
-        agent_def = self.AGENT_DEFINITIONS[2]
-        await self._emit_node_start(
-            agent_def["id"], agent_def["name"], agent_def["label"]
-        )
+        # Fa
+        fa_agent = self._registry.get_agent("fa")
         fa_input = FaInput(
             dao_result=DaoOutput(**dao_result),
             available_resources={
@@ -590,89 +345,358 @@ class DecisionEngine:
             if request.constraints.timeline
             else "",
         )
-        fa_result = await self._fa.run(fa_input.model_dump())
+        fa_result = await fa_agent.run(fa_input.model_dump())
         self._context.set("fa_result", fa_result)
         results["fa"] = fa_result
-        paths_count = len(fa_result.get("recommended_paths", []))
-        await self._emit_node_complete(
-            agent_def["id"], agent_def["name"], f"推奨パス: {paths_count}件"
-        )
 
-        # Shu（実行計画）
-        agent_def = self.AGENT_DEFINITIONS[3]
-        await self._emit_node_start(
-            agent_def["id"], agent_def["name"], agent_def["label"]
+        # Shu
+        shu_agent = self._registry.get_agent("shu")
+        selected_path_id = fa_result.get("recommended_paths", [{}])[0].get(
+            "path_id", "A"
         )
-        selected_path_id = fa_result.get("recommended_paths", [{}])[0].get("path_id", "A")
         shu_input = ShuInput(
             fa_result=FaOutput(**fa_result),
             selected_path_id=selected_path_id,
         )
-        shu_result = await self._shu.run(shu_input.model_dump())
+        shu_result = await shu_agent.run(shu_input.model_dump())
         self._context.set("shu_result", shu_result)
         results["shu"] = shu_result
-        phases_count = len(shu_result.get("phases", []))
-        await self._emit_node_complete(
-            agent_def["id"], agent_def["name"], f"フェーズ: {phases_count}件"
-        )
 
-        # Qi（技術実装）
-        agent_def = self.AGENT_DEFINITIONS[4]
-        await self._emit_node_start(
-            agent_def["id"], agent_def["name"], agent_def["label"]
-        )
+        # Qi
+        qi_agent = self._registry.get_agent("qi")
         qi_input = QiInput(
             shu_result=ShuOutput(**shu_result),
             tech_constraints=request.constraints.technical,
         )
-        qi_result = await self._qi.run(qi_input.model_dump())
+        qi_result = await qi_agent.run(qi_input.model_dump())
         self._context.set("qi_result", qi_result)
         results["qi"] = qi_result
-        impl_count = len(qi_result.get("implementations", []))
-        await self._emit_node_complete(
-            agent_def["id"], agent_def["name"], f"実装要素: {impl_count}件"
-        )
 
         return results
 
-    def get_agent_definitions(self) -> list[dict[str, str]]:
+    async def _run_review(self, results: dict[str, dict]) -> dict:
+        """Reviewを実行."""
+        agent = self._registry.get_agent("review")
+        review_input = ReviewInput(
+            dao_result=DaoOutput(**results["dao"]),
+            fa_result=FaOutput(**results["fa"]),
+            shu_result=ShuOutput(**results["shu"]),
+            qi_result=results["qi"],
+        )
+        review_result = await agent.run(review_input.model_dump())
+        self._context.set("review_result", review_result)
+        return review_result
+
+    # ========================================
+    # イベント発射ヘルパー
+    # ========================================
+
+    async def _run_agent_with_events(
+        self,
+        agent_id: str,
+        run_func: Any,
+        *args: Any,
+    ) -> AsyncIterator[AGUIEvent]:
+        """Agent実行をイベント付きで実行."""
+        from agentflow.protocols.agui_events import (
+            LogEvent,
+            NodeCompleteEvent,
+            NodeStartEvent,
+        )
+
+        agent_def = self._registry.get_agent_definition(agent_id)
+        if not agent_def:
+            return
+
+        # 開始イベント
+        yield NodeStartEvent(
+            timestamp=time.time(),
+            flow_id=self._flow_id,
+            data={"label": agent_def.label},
+            node_id=agent_id,
+            node_name=agent_def.name,
+        )
+        yield LogEvent(
+            timestamp=time.time(),
+            flow_id=self._flow_id,
+            data={},
+            level="INFO",
+            message=f"{agent_def.name}({agent_def.label})の分析を開始...",
+            source=agent_id,
+        )
+
+        # Agent実行
+        result = await run_func(*args)
+
+        # 完了イベント
+        yield NodeCompleteEvent(
+            timestamp=time.time(),
+            flow_id=self._flow_id,
+            data={"result_summary": self._extract_result_summary(agent_id, result)},
+            node_id=agent_id,
+            node_name=agent_def.name,
+        )
+
+    async def _run_core_agent_with_events(
+        self,
+        agent_id: str,
+        request: DecisionRequest,
+        clarification_result: dict,
+        results: dict[str, dict],
+    ) -> AsyncIterator[AGUIEvent]:
+        """Core Agentをイベント付きで実行."""
+        from agentflow.protocols.agui_events import (
+            NodeCompleteEvent,
+            NodeStartEvent,
+        )
+
+        agent_def = self._registry.get_agent_definition(agent_id)
+        if not agent_def:
+            return
+
+        yield NodeStartEvent(
+            timestamp=time.time(),
+            flow_id=self._flow_id,
+            data={"label": agent_def.label},
+            node_id=agent_id,
+            node_name=agent_def.name,
+        )
+
+        # Agent実行
+        result = await self._run_single_core_agent(
+            agent_id, request, clarification_result, results
+        )
+        results[agent_id] = result
+
+        yield NodeCompleteEvent(
+            timestamp=time.time(),
+            flow_id=self._flow_id,
+            data={"result_summary": self._extract_result_summary(agent_id, result)},
+            node_id=agent_id,
+            node_name=agent_def.name,
+        )
+
+    async def _run_single_core_agent(
+        self,
+        agent_id: str,
+        request: DecisionRequest,
+        clarification_result: dict,
+        results: dict[str, dict],
+    ) -> dict:
+        """単一のCore Agentを実行."""
+        agent = self._registry.get_agent(agent_id)
+
+        if agent_id == "dao":
+            effective_question = clarification_result.get(
+                "refined_question", request.question
+            )
+            dao_input = DaoInput(
+                question=effective_question,
+                constraints=[
+                    *request.constraints.technical,
+                    *request.constraints.regulatory,
+                ],
+                stakeholders=request.constraints.human_resources,
+            )
+            result = await agent.run(dao_input.model_dump())
+            self._context.set("dao_result", result)
+            return result
+
+        elif agent_id == "fa":
+            fa_input = FaInput(
+                dao_result=DaoOutput(**results["dao"]),
+                available_resources={
+                    "budget": request.constraints.budget.amount
+                    if request.constraints.budget
+                    else None,
+                    "team": request.constraints.human_resources,
+                },
+                time_horizon=f"{request.constraints.timeline.months}ヶ月"
+                if request.constraints.timeline
+                else "",
+            )
+            result = await agent.run(fa_input.model_dump())
+            self._context.set("fa_result", result)
+            return result
+
+        elif agent_id == "shu":
+            selected_path_id = results["fa"].get("recommended_paths", [{}])[0].get(
+                "path_id", "A"
+            )
+            shu_input = ShuInput(
+                fa_result=FaOutput(**results["fa"]),
+                selected_path_id=selected_path_id,
+            )
+            result = await agent.run(shu_input.model_dump())
+            self._context.set("shu_result", result)
+            return result
+
+        elif agent_id == "qi":
+            qi_input = QiInput(
+                shu_result=ShuOutput(**results["shu"]),
+                tech_constraints=request.constraints.technical,
+            )
+            result = await agent.run(qi_input.model_dump())
+            self._context.set("qi_result", result)
+            return result
+
+        return {}
+
+    # ========================================
+    # ヘルパーメソッド
+    # ========================================
+
+    def _build_constraints_list(self, request: DecisionRequest) -> list[str]:
+        """制約条件を文字列リストに変換."""
+        constraints: list[str] = []
+        if request.constraints.budget:
+            constraints.append(f"予算: {request.constraints.budget.amount}万円")
+        if request.constraints.timeline:
+            constraints.append(f"期限: {request.constraints.timeline.months}ヶ月")
+        constraints.extend(request.constraints.technical)
+        constraints.extend(request.constraints.regulatory)
+        return constraints
+
+    def _setup_revision_context(self, revision: int, review_result: dict) -> None:
+        """リビジョンコンテキストを設定."""
+        findings = review_result.get("findings", [])
+        affected = "dao"
+        if findings:
+            affected_name = findings[0].get("affected_agent", "")
+            agent_name_map = self._registry.get_agent_name_map()
+            affected = agent_name_map.get(affected_name, "dao")
+
+        self._context.set("revision_round", revision + 1)
+        self._context.set("revision_feedback", findings)
+        self._context.set("affected_agent", affected)
+
+    def _extract_result_summary(self, agent_id: str, result: dict) -> str:
+        """結果からサマリーを抽出."""
+        if "problem_type" in result:
+            return f"問題タイプ: {result['problem_type']}"
+        if "recommended_paths" in result:
+            return f"推奨パス: {len(result.get('recommended_paths', []))}件"
+        if "phases" in result:
+            return f"フェーズ: {len(result.get('phases', []))}件"
+        if "implementations" in result:
+            return f"実装要素: {len(result.get('implementations', []))}件"
+        if "overall_verdict" in result:
+            return f"判定: {result['overall_verdict']}"
+        if "is_acceptable" in result:
+            return "受理" if result["is_acceptable"] else "拒否"
+        if "proceed" in result:
+            return "通過" if result["proceed"] else "補足情報要求中"
+        return "完了"
+
+    def get_agent_definitions(self) -> list[dict[str, Any]]:
         """Agent定義を取得（UI表示用）."""
-        return self.AGENT_DEFINITIONS.copy()
+        return [a.to_frontend_dict() for a in self._registry.get_agent_definitions()]
 
     def get_context(self) -> SharedContext:
         """SharedContextを取得."""
         return self._context
 
     # ========================================
-    # Flow 互換インターフェース
+    # レスポンス生成
+    # ========================================
+
+    def _create_cognitive_gate_blocked_response(self, result: dict) -> dict:
+        """CognitiveGateブロック時のレスポンス."""
+        return {
+            "status": "cognitive_gate_blocked",
+            "reason": "認知前処理で不足情報を検出",
+            "missing_info": result.get("missing_info", []),
+            "message": "分析を進める前に、以下の情報を明確にしてください。",
+        }
+
+    def _create_rejected_response(self, result: dict) -> dict:
+        """Gatekeeper拒否時のレスポンス."""
+        return {
+            "status": "rejected",
+            "reason": result.get("rejection_reason"),
+            "message": result.get("rejection_message"),
+            "suggested_rephrase": result.get("suggested_rephrase"),
+        }
+
+    def _create_review_rejected_response(self, result: dict) -> dict:
+        """Review拒否時のレスポンス."""
+        return {
+            "status": "rejected_by_review",
+            "verdict": "REJECT",
+            "findings": result.get("findings", []),
+            "message": "検証の結果、計画に重大な問題があります。",
+        }
+
+    def _create_max_revisions_response(self, result: dict) -> dict:
+        """最大リビジョン到達時のレスポンス."""
+        return {
+            "status": "max_revisions_reached",
+            "message": f"最大リビジョン回数（{self.MAX_REVISIONS}回）に到達しました。",
+            "last_review": result,
+        }
+
+    def _create_flow_error_event(self, result: dict) -> FlowErrorEvent:
+        """FlowErrorEventを生成."""
+        return FlowErrorEvent(
+            timestamp=time.time(),
+            flow_id=self._flow_id or "unknown",
+            data={
+                "reason": result.get("rejection_reason"),
+                "category": str(result.get("category", "")),
+            },
+            error_message=result.get(
+                "rejection_message", "質問が受理されませんでした"
+            ),
+            error_type="RejectedQuestion",
+        )
+
+    async def _handle_cognitive_gate_blocked(
+        self,
+        request: DecisionRequest,
+        cognitive_result: dict,
+    ) -> AsyncIterator[AGUIEvent]:
+        """CognitiveGateブロック時のイベント処理."""
+        clarification_questions = cognitive_result.get("clarification_questions", [])
+        if clarification_questions:
+            questions = [
+                ClarificationQuestion(
+                    id=f"q_{i}",
+                    text=q,
+                    type="text",
+                    required=True,
+                )
+                for i, q in enumerate(clarification_questions)
+            ]
+            yield ClarificationRequiredEvent(
+                timestamp=time.time(),
+                flow_id=self._flow_id,
+                original_question=request.question,
+                questions=questions,
+                message="分析を進めるために、以下の情報を補足してください。",
+                timeout_seconds=300,
+            )
+        else:
+            yield FlowErrorEvent(
+                timestamp=time.time(),
+                flow_id=self._flow_id,
+                data={"missing_info": cognitive_result.get("missing_info", [])},
+                error_message="認知前処理で不足情報を検出しました。",
+                error_type="CognitiveGateBlocked",
+            )
+
+    # ========================================
+    # Flow互換インターフェース
     # ========================================
 
     async def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
-        """Flow互換のrunメソッド.
-
-        Args:
-            inputs: 入力データ（question キー必須）
-
-        Returns:
-            DecisionReport または拒否情報
-        """
+        """Flow互換のrunメソッド."""
         question = inputs.get("question", inputs.get("task", ""))
         if not question:
             return {"status": "error", "message": "question is required"}
 
         request = DecisionRequest(question=question)
-
-        # 制約条件があれば設定
-        if "budget" in inputs:
-            request.constraints.budget = {"amount": inputs["budget"]}
-        if "timeline_months" in inputs:
-            request.constraints.timeline = {"months": inputs["timeline_months"]}
-        if "technical_constraints" in inputs:
-            request.constraints.technical = inputs["technical_constraints"]
-
         result = await self.process(request)
 
-        # Pydanticモデルの場合はdict化
         if hasattr(result, "model_dump"):
             return result.model_dump()
         return result
@@ -680,13 +704,7 @@ class DecisionEngine:
     async def run_stream(
         self, inputs: dict[str, Any]
     ) -> AsyncIterator[dict[str, Any]]:
-        """Flow互換のストリーム実行.
-
-        process_with_events を簡素化したラッパー。
-
-        Yields:
-            イベント dict（type, node, data）
-        """
+        """Flow互換のストリーム実行."""
         question = inputs.get("question", inputs.get("task", ""))
         if not question:
             yield {"type": "error", "error": "question is required"}
@@ -695,7 +713,6 @@ class DecisionEngine:
         request = DecisionRequest(question=question)
 
         async for event in self.process_with_events(request):
-            # AG-UI形式 → 簡素形式に変換
             if hasattr(event, "event_type"):
                 yield {
                     "type": event.event_type,
@@ -711,8 +728,6 @@ class DecisionEngine:
         return "decision-governance-engine"
 
 
-# ========================================
 # グローバルインスタンス（統一入口）
-# ========================================
-
 engine = DecisionEngine()
+

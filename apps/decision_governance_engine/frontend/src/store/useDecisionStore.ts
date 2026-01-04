@@ -3,14 +3,31 @@
  *
  * 目的: 画面間の状態共有・永続化
  * 技術: Zustand
+ * 
+ * 機能:
+ *   - 入力データの永続化
+ *   - 履歴管理（最大10件）
+ *   - レポートの永続化
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import type { DecisionRequest, DecisionReport } from '../types';
 
 /** 画面状態 */
-export type PageState = 'input' | 'processing' | 'report';
+export type PageState = 'input' | 'processing' | 'report' | 'knowledge-shu' | 'knowledge-qi';
+
+/** 履歴アイテム */
+export interface HistoryItem {
+  id: string;
+  question: string;
+  createdAt: string;
+  reportId: string | null;
+  status: 'completed' | 'failed' | 'signed';
+}
+
+/** 最大履歴数 */
+const MAX_HISTORY_ITEMS = 10;
 
 /** ストア状態 */
 interface DecisionState {
@@ -31,6 +48,9 @@ interface DecisionState {
   reportId: string | null;
   report: DecisionReport | null;
 
+  // 履歴
+  history: HistoryItem[];
+
   // エラー状態
   error: string | null;
 
@@ -42,6 +62,12 @@ interface DecisionState {
   setReport: (r: DecisionReport) => void;
   setError: (e: string | null) => void;
   reset: () => void;
+
+  // 履歴アクション
+  addToHistory: (item: Omit<HistoryItem, 'id' | 'createdAt'>) => void;
+  updateHistoryStatus: (id: string, status: HistoryItem['status']) => void;
+  clearHistory: () => void;
+  loadFromHistory: (id: string) => void;
 
   // 便利メソッド
   buildRequest: () => DecisionRequest;
@@ -68,6 +94,7 @@ export const useDecisionStore = create<DecisionState>()(
       constraints: { ...initialConstraints },
       reportId: null,
       report: null,
+      history: [],
       error: null,
 
       // アクション
@@ -82,7 +109,7 @@ export const useDecisionStore = create<DecisionState>()(
 
       setReportId: (id) => set({ reportId: id }),
 
-      setReport: (r) => set({ report: r }),
+      setReport: (r) => set({ report: r, reportId: r.report_id }),
 
       setError: (e) => set({ error: e }),
 
@@ -95,6 +122,38 @@ export const useDecisionStore = create<DecisionState>()(
           report: null,
           error: null,
         }),
+
+      // 履歴アクション
+      addToHistory: (item) =>
+        set((state) => {
+          const newItem: HistoryItem = {
+            ...item,
+            id: `history-${Date.now()}`,
+            createdAt: new Date().toISOString(),
+          };
+          const newHistory = [newItem, ...state.history].slice(0, MAX_HISTORY_ITEMS);
+          return { history: newHistory };
+        }),
+
+      updateHistoryStatus: (id, status) =>
+        set((state) => ({
+          history: state.history.map((item) =>
+            item.id === id ? { ...item, status } : item
+          ),
+        })),
+
+      clearHistory: () => set({ history: [] }),
+
+      loadFromHistory: (id) => {
+        const state = get();
+        const item = state.history.find((h) => h.id === id);
+        if (item) {
+          set({
+            question: item.question,
+            currentPage: 'input',
+          });
+        }
+      },
 
       // リクエスト構築
       buildRequest: () => {
@@ -123,9 +182,14 @@ export const useDecisionStore = create<DecisionState>()(
     }),
     {
       name: 'decision-storage',
+      storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         question: state.question,
         constraints: state.constraints,
+        history: state.history,
+        // レポートも永続化（大きい場合は除外を検討）
+        reportId: state.reportId,
+        report: state.report,
       }),
     }
   )

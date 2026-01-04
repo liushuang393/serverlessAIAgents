@@ -12,7 +12,7 @@ MCP Tools:
     - LLMClient: LLM调用工具
 """
 
-from apps.code_migration_assistant.mcp_tools.base import MCPTool, MCPToolRequest, MCPToolResponse
+from agentflow import MCPTool, MCPToolRequest, MCPToolResponse
 from apps.code_migration_assistant.mcp_tools.cobol_parser import COBOLParser
 from apps.code_migration_assistant.mcp_tools.code_validator import CodeValidator
 from apps.code_migration_assistant.mcp_tools.java_generator import JavaGenerator

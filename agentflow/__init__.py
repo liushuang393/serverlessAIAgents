@@ -4,6 +4,10 @@ AgentFlow is a lightweight framework for building AI agents with native support
 for MCP, A2A, and AG-UI protocols. Built on top of PocketFlow, it provides a
 simple yet powerful way to create, compose, and deploy AI agents.
 
+環境変数:
+    フレームワーク初期化時に .env ファイルを自動読み込み。
+    プロジェクトルートに .env を配置してください。
+
 Quick Start (推奨):
     # 方式1: デコレータ（最も簡単）
     >>> from agentflow import agent, tool, AgentClient
@@ -51,16 +55,70 @@ Advanced:
     >>> from agentflow import AgentFlowEngine
     >>> engine = AgentFlowEngine()
     >>> result = await engine.execute("my-workflow", {"input": "test"})
+
+New Modules (v0.3.0):
+    >>> # Knowledge Base / RAG
+    >>> from agentflow.knowledge import RAGPipeline, use_vector_search, use_rag
+    >>>
+    >>> # Observability
+    >>> from agentflow.observability import setup_observability, get_logger, get_tracer
+    >>>
+    >>> # Security
+    >>> from agentflow.security import APIKeyManager, RateLimiter, create_auth_middleware
+    >>>
+    >>> # Testing
+    >>> from agentflow.testing import MockLLMProvider, AgentTestCase
+    >>>
+    >>> # Deploy
+    >>> from agentflow.deploy import generate_all, generate_dockerfile
 """
 
+# =============================================================================
+# 環境変数の自動読み込み（フレームワーク初期化時に1回だけ実行）
+# =============================================================================
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+# .env ファイルを検索して読み込み
+# 優先順位: カレントディレクトリ → 上位ディレクトリを順に検索
+_cwd = Path.cwd()
+_env_candidates = [_cwd / ".env"] + [p / ".env" for p in _cwd.parents]
+for _env_path in _env_candidates:
+    if _env_path.exists():
+        load_dotenv(_env_path)
+        break
+else:
+    # 見つからない場合はデフォルト動作（python-dotenv が自動検索）
+    load_dotenv()
+
+del _cwd, _env_candidates, _env_path  # クリーンアップ
+# =============================================================================
+
+from agentflow.core.agent_block import AgentBlock
 from agentflow.core.engine import AgentFlowEngine
 from agentflow.core.exceptions import (
+    AgentExecutionError,
     AgentFlowError,
+    AgentRetryExhaustedError,
+    AgentTimeoutError,
     ProtocolError,
     WorkflowError,
     WorkflowNotFoundError,
 )
+from agentflow.core.resilient_agent import (
+    BaseDecisionAgent,
+    ResilientAgent,
+)
 from agentflow.core.types import AgentMetadata, WorkflowConfig
+
+# MCP Tool (v0.3.0)
+from agentflow.protocols.mcp_tool import (
+    MCPTool,
+    MCPToolClient,
+    MCPToolRequest,
+    MCPToolResponse,
+)
 
 # Quick API - 統一入口（推奨）
 from agentflow.quick import Flow, FlowWrapper, create_api_endpoint, create_flow
@@ -79,6 +137,17 @@ from agentflow.providers import (
     get_vectordb, reset_vectordb, VectorDBProvider,
     # Embedding
     get_embedding, reset_embedding, EmbeddingProvider,
+)
+
+# SSE/AG-UI サポート
+from agentflow.integrations.fastapi_integration import create_sse_response
+
+# Observability（日志・监控）
+from agentflow.observability import (
+    setup_logging,
+    get_logger,
+    LogLevel,
+    setup_observability,
 )
 
 
@@ -109,12 +178,31 @@ __all__ = [
     "Flow",
     "FlowWrapper",  # 後方互換
     "create_api_endpoint",
+    # Agent 基底クラス（v0.3.0）
+    "AgentBlock",
+    "ResilientAgent",
+    "BaseDecisionAgent",  # 後方互換
+    # MCP Tool（v0.3.0）
+    "MCPTool",
+    "MCPToolClient",
+    "MCPToolRequest",
+    "MCPToolResponse",
     # Core API
     "AgentFlowEngine",
     "AgentFlowError",
+    "AgentExecutionError",
+    "AgentTimeoutError",
+    "AgentRetryExhaustedError",
     "AgentMetadata",
     "ProtocolError",
     "WorkflowConfig",
     "WorkflowError",
     "WorkflowNotFoundError",
+    # SSE/AG-UI
+    "create_sse_response",
+    # Observability（日志・监控）
+    "setup_logging",
+    "get_logger",
+    "LogLevel",
+    "setup_observability",
 ]

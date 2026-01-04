@@ -3,7 +3,7 @@
 
 import pytest
 
-from apps.code_migration_assistant.mcp_client import MCPClient
+from agentflow import MCPToolClient as MCPClient
 from apps.code_migration_assistant.mcp_tools.cobol_parser import COBOLParser
 from apps.code_migration_assistant.mcp_tools.code_validator import CodeValidator
 from apps.code_migration_assistant.mcp_tools.java_generator import JavaGenerator

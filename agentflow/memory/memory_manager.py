@@ -6,15 +6,22 @@ LightMemの3段階記憶システムを統合管理:
 - Light1: 感覚記憶（予圧縮）
 - Light2: 短期記憶（トピックバッファ）
 - Light3: 長期記憶（オフライン統合）
+
+拡張機能（自動最適化、ユーザー透過的）:
+- 記憶蒸留: 類似記憶を抽象知識に自動変換
+- 主動忘却: 低価値記憶を自動削除
+- 強化学習: タスク結果に基づく記憶価値調整
 """
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import Any
 
 from agentflow.memory.importance_adjuster import ImportanceAdjuster
 from agentflow.memory.long_term_memory import LongTermMemory
+from agentflow.memory.memory_distiller import MemoryDistiller
 from agentflow.memory.sensory_memory import SensoryMemory
 from agentflow.memory.short_term_memory import ShortTermMemory
 from agentflow.memory.types import CompressionConfig, MemoryEntry
@@ -49,6 +56,11 @@ class MemoryManager:
         enable_importance_adjustment: bool = False,
         decay_constant: float = 30.0,
         access_boost_factor: float = 0.1,
+        # 自動最適化オプション（デフォルト有効）
+        enable_auto_distill: bool = True,
+        enable_auto_forget: bool = True,
+        distill_interval: int = 3600,  # 1時間ごと
+        forget_interval: int = 86400,  # 1日ごと
     ) -> None:
         """初期化.
 
@@ -62,11 +74,16 @@ class MemoryManager:
             enable_importance_adjustment: 重要度自動調整を有効化
             decay_constant: 時間減衰定数（日数）
             access_boost_factor: アクセスブースト係数
+            enable_auto_distill: 自動蒸留を有効化
+            enable_auto_forget: 自動忘却を有効化
+            distill_interval: 蒸留間隔（秒）
+            forget_interval: 忘却チェック間隔（秒）
         """
         self._sensory = SensoryMemory(compression_config)
         self._short_term = ShortTermMemory(token_threshold, llm_client)
         self._long_term = LongTermMemory(consolidation_interval)
         self._logger = logging.getLogger(__name__)
+        self._llm_client = llm_client
 
         # ベクトル検索エンジン（オプション）
         self._enable_vector_search = enable_vector_search
@@ -78,15 +95,52 @@ class MemoryManager:
             ImportanceAdjuster(decay_constant, access_boost_factor) if enable_importance_adjustment else None
         )
 
+        # 自動蒸留エンジン（Evo-Memory）
+        self._enable_auto_distill = enable_auto_distill
+        self._distill_interval = distill_interval
+        self._distiller = MemoryDistiller(llm_client=llm_client) if enable_auto_distill else None
+        self._distill_task: asyncio.Task[None] | None = None
+
+        # 自動忘却フラグ
+        self._enable_auto_forget = enable_auto_forget
+        self._forget_interval = forget_interval
+        self._forget_task: asyncio.Task[None] | None = None
+
     async def start(self) -> None:
         """記憶システムを開始."""
         await self._long_term.start()
         if self._importance_adjuster:
             await self._importance_adjuster.start()
+
+        # 自動蒸留タスクを開始
+        if self._enable_auto_distill and self._distiller:
+            self._distill_task = asyncio.create_task(self._auto_distill_loop())
+            self._logger.debug("自動蒸留タスクを開始")
+
+        # 自動忘却タスクを開始
+        if self._enable_auto_forget and self._importance_adjuster:
+            self._forget_task = asyncio.create_task(self._auto_forget_loop())
+            self._logger.debug("自動忘却タスクを開始")
+
         self._logger.info("Memory system started")
 
     async def stop(self) -> None:
         """記憶システムを停止."""
+        # 自動タスクを停止
+        if self._distill_task:
+            self._distill_task.cancel()
+            try:
+                await self._distill_task
+            except asyncio.CancelledError:
+                pass
+
+        if self._forget_task:
+            self._forget_task.cancel()
+            try:
+                await self._forget_task
+            except asyncio.CancelledError:
+                pass
+
         await self._long_term.stop()
         if self._importance_adjuster:
             await self._importance_adjuster.stop()
@@ -204,6 +258,8 @@ class MemoryManager:
             "pending_updates": len(self._long_term._update_queues),
             "vector_search_enabled": self._enable_vector_search,
             "importance_adjustment_enabled": self._enable_importance_adjustment,
+            "auto_distill_enabled": self._enable_auto_distill,
+            "auto_forget_enabled": self._enable_auto_forget,
         }
 
         if self._vector_search:
@@ -214,4 +270,136 @@ class MemoryManager:
             status["importance_statistics"] = self._importance_adjuster.get_statistics()
 
         return status
+
+    # =========================================================================
+    # 強化学習インターフェース（P1: タスクフィードバック）
+    # =========================================================================
+
+    async def reinforce(
+        self,
+        memory_ids: list[str] | None = None,
+        topic: str | None = None,
+        reward: float = 0.0,
+        context: str = "",
+    ) -> int:
+        """タスク結果に基づいて記憶を強化/弱化.
+
+        タスクが成功した場合は正の報酬、失敗した場合は負の報酬を与える。
+        これにより、有用な記憶の重要度が上がり、有害な記憶は忘却対象になりやすくなる。
+
+        ユーザーは「タスクが成功した」とだけ伝えれば良い。内部で自動処理。
+
+        Args:
+            memory_ids: 対象記憶IDリスト（Noneの場合は最近アクセスした記憶）
+            topic: 対象トピック（memory_idsがNoneの場合に使用）
+            reward: 報酬値（-1.0～1.0、正=有用、負=有害）
+            context: フィードバックコンテキスト
+
+        Returns:
+            強化した記憶の数
+        """
+        if not self._importance_adjuster:
+            self._logger.warning("重要度調整が無効のため、強化をスキップ")
+            return 0
+
+        # 対象記憶を取得
+        if memory_ids:
+            memories = [
+                m for m in self._long_term._memories.values()
+                if m.id in memory_ids
+            ]
+        elif topic:
+            memories = self._long_term.retrieve(topic, limit=20)
+        else:
+            # 最近アクセスした記憶を対象
+            recent_ids = sorted(
+                self._importance_adjuster._last_access.items(),
+                key=lambda x: x[1],
+                reverse=True
+            )[:10]
+            memories = [
+                m for m in self._long_term._memories.values()
+                if m.id in [id for id, _ in recent_ids]
+            ]
+
+        # 強化を適用
+        for memory in memories:
+            await self._importance_adjuster.apply_reinforcement(memory, reward, context)
+
+        self._logger.info(f"強化完了: {len(memories)}件, reward={reward}")
+        return len(memories)
+
+    # =========================================================================
+    # 自動最適化ループ（バックグラウンド、ユーザー透過的）
+    # =========================================================================
+
+    async def _auto_distill_loop(self) -> None:
+        """自動蒸留ループ（バックグラウンド）."""
+        while True:
+            try:
+                await asyncio.sleep(self._distill_interval)
+                await self._perform_distillation()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                self._logger.error(f"自動蒸留エラー: {e}")
+
+    async def _perform_distillation(self) -> int:
+        """蒸留を実行.
+
+        Returns:
+            生成した抽象知識の数
+        """
+        if not self._distiller:
+            return 0
+
+        # 長期記憶から蒸留対象を取得
+        memories = list(self._long_term._memories.values())
+
+        if not self._distiller.should_distill(memories):
+            return 0
+
+        # 蒸留実行
+        distilled = await self._distiller.distill(memories)
+
+        # 蒸留結果を長期記憶に保存
+        for abstract in distilled:
+            await self._long_term.store(abstract)
+
+        self._logger.info(f"蒸留完了: {len(distilled)}件の抽象知識を生成")
+        return len(distilled)
+
+    async def _auto_forget_loop(self) -> None:
+        """自動忘却ループ（バックグラウンド）."""
+        while True:
+            try:
+                await asyncio.sleep(self._forget_interval)
+                await self._perform_forgetting()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                self._logger.error(f"自動忘却エラー: {e}")
+
+    async def _perform_forgetting(self) -> int:
+        """忘却を実行.
+
+        Returns:
+            削除した記憶の数
+        """
+        if not self._importance_adjuster:
+            return 0
+
+        # 長期記憶から忘却対象を特定
+        memories = list(self._long_term._memories.values())
+        forgettable_ids = self._importance_adjuster.identify_forgettable(memories)
+
+        # 忘却実行
+        for entry_id in forgettable_ids:
+            if entry_id in self._long_term._memories:
+                del self._long_term._memories[entry_id]
+
+        if forgettable_ids:
+            self._logger.info(f"忘却完了: {len(forgettable_ids)}件の記憶を削除")
+
+        return len(forgettable_ids)
 

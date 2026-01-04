@@ -1,0 +1,153 @@
+# -*- coding: utf-8 -*-
+# Decision Governance Engine - 統一Agent定義
+# 
+# 目的: 前後端で共有可能な単一Agent定義ソース
+# 使用: workflow.py, flow_config.py, フロントエンドから参照
+# 
+# 変更履歴:
+#   - v2.2: CognitiveGateAgent追加
+#   - v2.0: ClarificationAgent追加
+
+flow_id: decision-governance-engine
+name: Decision Governance Engine
+version: "2.2.0"
+description: "意思決定支援エンジン - 認知・門番・診断・道法術器・検証の8ステップで決策レポートを生成"
+
+agents:
+  - id: cognitive_gate
+    name: 認知
+    label: 認知前処理
+    icon: 🧠
+    description: "道法術器の分析に入る前に、認知的前提条件を検査"
+    class_name: CognitiveGateAgent
+    is_gate: true
+    uses_rag: false
+    timeout_seconds: 30
+    progress_messages:
+      - [20, "評価対象を確認中..."]
+      - [50, "認知的前提を検査中..."]
+      - [80, "不足情報を特定中..."]
+
+  - id: gatekeeper
+    name: 門番
+    label: 入口検証
+    icon: 🚪
+    description: "質問の妥当性を検証"
+    class_name: GatekeeperAgent
+    is_gate: true
+    uses_rag: false
+    timeout_seconds: 30
+    progress_messages:
+      - [30, "質問タイプを判定中..."]
+      - [60, "受理可否を判断中..."]
+      - [90, "検証結果を生成中..."]
+
+  - id: clarification
+    name: 診断
+    label: 問題診断
+    icon: 🔬
+    description: "問題タイプと背景を診断、論理的な穴や認知バイアスを明確化"
+    class_name: ClarificationAgent
+    is_gate: false
+    uses_rag: false
+    timeout_seconds: 45
+    progress_messages:
+      - [20, "問題構造を分析中..."]
+      - [50, "暗黙の仮定を検出中..."]
+      - [80, "診断結果を生成中..."]
+
+  - id: dao
+    name: 道
+    label: 本質分析
+    icon: 🎯
+    description: "問題の本質と根本原因を分析、因果齒輪・死穴を特定"
+    class_name: DaoAgent
+    is_gate: false
+    uses_rag: false
+    timeout_seconds: 60
+    progress_messages:
+      - [15, "問題タイプを分類中..."]
+      - [35, "制約主導型分析を実行中..."]
+      - [55, "因果齒輪を構築中..."]
+      - [70, "本質を抽出中..."]
+      - [90, "死穴を特定中..."]
+
+  - id: fa
+    name: 法
+    label: 戦略選定
+    icon: 🛤️
+    description: "戦略パスを評価・選定、戦略的禁止事項を明確化"
+    class_name: FaAgent
+    is_gate: false
+    uses_rag: false
+    timeout_seconds: 60
+    progress_messages:
+      - [15, "戦略オプションを生成中..."]
+      - [30, "戦略的禁止事項を特定中..."]
+      - [50, "差別化軸を分析中..."]
+      - [70, "推奨戦略を評価中..."]
+      - [90, "戦略レポートを生成中..."]
+
+  - id: shu
+    name: 術
+    label: 実行計画
+    icon: 📋
+    description: "具体的な実行計画を策定、30日行動リズム・撤退基準を定義"
+    class_name: ShuAgent
+    is_gate: false
+    uses_rag: true
+    timeout_seconds: 60
+    progress_messages:
+      - [15, "実行フェーズを策定中..."]
+      - [35, "30日行動リズムを設計中..."]
+      - [50, "廃棄リストを作成中..."]
+      - [70, "撤退基準を定義中..."]
+      - [90, "実行計画を最終化中..."]
+
+  - id: qi
+    name: 器
+    label: 技術実装
+    icon: 🔧
+    description: "技術実装要素を特定、規制コンプライアンスを確認"
+    class_name: QiAgent
+    is_gate: false
+    uses_rag: true
+    timeout_seconds: 60
+    progress_messages:
+      - [15, "技術要素を特定中..."]
+      - [30, "規制コンプライアンスを確認中..."]
+      - [50, "地域別考慮事項を分析中..."]
+      - [70, "実装要素を構築中..."]
+      - [90, "技術提案を最終化中..."]
+
+  - id: review
+    name: 検証
+    label: 最終検証
+    icon: 🔍
+    description: "全体の整合性を検証、PASS/REVISE/REJECTを判定"
+    class_name: ReviewAgent
+    is_gate: false
+    uses_rag: false
+    timeout_seconds: 45
+    progress_messages:
+      - [20, "一貫性をチェック中..."]
+      - [40, "実現可能性を検証中..."]
+      - [60, "リスク整合性を確認中..."]
+      - [85, "最終判定を生成中..."]
+
+# Agent名マッピング（affected_agent → Agent ID）
+agent_name_mapping:
+  CognitiveGateAgent: cognitive_gate
+  GatekeeperAgent: gatekeeper
+  ClarificationAgent: clarification
+  DaoAgent: dao
+  FaAgent: fa
+  ShuAgent: shu
+  QiAgent: qi
+  ReviewAgent: review
+
+# 設定
+config:
+  max_revisions: 2
+  enable_rag: true
+  enable_web_search: true

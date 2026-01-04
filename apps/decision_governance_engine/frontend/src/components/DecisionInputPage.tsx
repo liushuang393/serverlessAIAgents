@@ -8,7 +8,8 @@
 
 import React, { useState, useCallback } from 'react';
 import { useDecisionStore } from '../store/useDecisionStore';
-import { decisionApi, DecisionApiError } from '../api/client';
+import { useAuthStore } from '../store/useAuthStore';
+import { SettingsModal } from './SettingsModal';
 
 /** 即時拒否パターン */
 const REJECT_PATTERNS = [
@@ -36,16 +37,22 @@ export const DecisionInputPage: React.FC = () => {
     setQuestion,
     setConstraints,
     setPage,
-    setReportId,
-    setError,
-    buildRequest,
+    reset,
   } = useDecisionStore();
+  const { user, performLogout } = useAuthStore();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [rejection, setRejection] = useState<{ category: string; message: string } | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [techInput, setTechInput] = useState('');
   const [regInput, setRegInput] = useState('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  /** ログアウト */
+  const handleLogout = useCallback(async () => {
+    await performLogout();
+    reset();
+  }, [performLogout, reset]);
 
   /** タグ追加 */
   const addTag = useCallback((type: 'technical' | 'regulatory', value: string) => {
@@ -65,11 +72,11 @@ export const DecisionInputPage: React.FC = () => {
     });
   }, [constraints, setConstraints]);
 
-  /** 送信処理 - REST API */
-  const handleSubmit = useCallback(async () => {
-    if (question.length < 10) return;
+  /** SSE モードで送信 */
+  const handleSubmitWithStream = useCallback(() => {
+    if (question.length < 10 || isSubmitting) return;
 
-    // クライアント側即時拒否チェック
+    // 拒否チェック
     const rejectResult = checkInstantReject(question);
     if (rejectResult) {
       setRejection(rejectResult);
@@ -80,46 +87,9 @@ export const DecisionInputPage: React.FC = () => {
     setApiError(null);
     setIsSubmitting(true);
 
-    try {
-      const request = buildRequest();
-      const response = await decisionApi.processDecision(request);
-
-      if (response.status === 'rejected') {
-        // サーバー側拒否
-        setRejection({
-          category: 'サーバー検証',
-          message: response.message || response.reason || '質問が受理されませんでした',
-        });
-      } else if (response.status === 'success') {
-        // 成功 - 進捗画面へ遷移
-        setReportId(response.report_id);
-        setPage('processing');
-      }
-    } catch (err) {
-      if (err instanceof DecisionApiError) {
-        setApiError(err.message);
-      } else {
-        setApiError('API呼び出しに失敗しました');
-      }
-      setError(err instanceof Error ? err.message : 'Unknown error');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }, [question, buildRequest, setReportId, setPage, setError]);
-
-  /** SSE モードで送信 */
-  const handleSubmitWithStream = useCallback(() => {
-    if (question.length < 10) return;
-
-    const rejectResult = checkInstantReject(question);
-    if (rejectResult) {
-      setRejection(rejectResult);
-      return;
-    }
-
     // 進捗画面へ遷移（SSE接続は進捗画面で開始）
     setPage('processing');
-  }, [question, setPage]);
+  }, [question, isSubmitting, setPage]);
 
   const isValid = question.length >= 10;
 
@@ -137,6 +107,31 @@ export const DecisionInputPage: React.FC = () => {
               <p className="text-xs text-slate-500">Enterprise Decision Platform</p>
             </div>
           </div>
+
+          {/* ユーザーメニュー */}
+          {user && (
+            <div className="flex items-center gap-3">
+              {/* 設定ボタン */}
+              <button
+                onClick={() => setIsSettingsOpen(true)}
+                className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
+                title="設定"
+              >
+                ⚙️
+              </button>
+              <div className="text-right">
+                <div className="text-sm font-medium text-white">{user.display_name}</div>
+                <div className="text-xs text-slate-500">{user.department}</div>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
+                title="ログアウト"
+              >
+                🚪
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
@@ -144,7 +139,7 @@ export const DecisionInputPage: React.FC = () => {
       <main className="max-w-3xl mx-auto px-6 py-12">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold mb-3 bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
-            意思決定を構造化する
+            ⚖️意思決定を構造化する
           </h2>
           <p className="text-slate-400">
             複雑な問題を「道・法・術・器」のフレームワークで分析
@@ -161,8 +156,34 @@ export const DecisionInputPage: React.FC = () => {
           )}
 
           {rejection && (
-            <div className="mb-6 bg-red-500/5 border border-red-500/20 rounded-xl p-4">
-              <span className="text-red-400">⚠️ {rejection.category}: {rejection.message}</span>
+            <div className="mb-6 bg-red-500/5 border border-red-500/20 rounded-xl p-5">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-red-400">⚠️</span>
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-red-400 font-medium">この質問には対応できません</span>
+                    <span className="text-xs px-2 py-0.5 bg-red-500/10 text-red-400 rounded">{rejection.category}</span>
+                  </div>
+                  <p className="text-sm text-slate-400 mb-3">{rejection.message}</p>
+                  <div className="bg-[#0a0a0f] rounded-lg p-3">
+                    <div className="text-xs text-slate-500 mb-2">✅ 受理可能な質問例：</div>
+                    <ul className="text-xs text-slate-400 space-y-1">
+                      <li>• 新規事業AとBのどちらに投資すべきか</li>
+                      <li>• このプロジェクトを続行すべきか中止すべきか</li>
+                      <li>• 自社開発と外注のどちらを選ぶべきか</li>
+                    </ul>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setRejection(null)}
+                  className="text-slate-500 hover:text-white transition-colors"
+                  aria-label="閉じる"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
           )}
 
@@ -266,7 +287,12 @@ export const DecisionInputPage: React.FC = () => {
                   type="text"
                   value={techInput}
                   onChange={(e) => setTechInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addTag('technical', techInput)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addTag('technical', techInput);
+                    }
+                  }}
                   placeholder="例: AWS, Python... (Enter追加)"
                   className="w-full bg-transparent text-sm text-white focus:outline-none placeholder-slate-600"
                 />
@@ -289,7 +315,12 @@ export const DecisionInputPage: React.FC = () => {
                   type="text"
                   value={regInput}
                   onChange={(e) => setRegInput(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && addTag('regulatory', regInput)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addTag('regulatory', regInput);
+                    }
+                  }}
                   placeholder="例: GDPR, 金融規制... (Enter追加)"
                   className="w-full bg-transparent text-sm text-white focus:outline-none placeholder-slate-600"
                 />
@@ -326,23 +357,55 @@ export const DecisionInputPage: React.FC = () => {
           </p>
         </div>
 
-        {/* 機能説明カード */}
+        {/* 機能説明カード + 知識ベース設定 */}
         <div className="grid grid-cols-4 gap-4 mt-8">
-          {[
-            { icon: '🎯', label: '道', desc: '本質抽出' },
-            { icon: '🛤️', label: '法', desc: '戦略選定' },
-            { icon: '📋', label: '術', desc: '実行計画' },
-            { icon: '🔧', label: '器', desc: '技術実装' },
-          ].map((item, i) => (
-            <div key={i} className="bg-[#12121a]/50 rounded-xl p-4 text-center border border-white/5">
-              <span className="text-2xl">{item.icon}</span>
-              <div className="text-sm font-medium mt-2">{item.label}</div>
-              <div className="text-xs text-slate-500">{item.desc}</div>
-            </div>
-          ))}
+          {/* 道（知識設定なし） */}
+          <div className="bg-[#12121a]/50 rounded-xl p-4 text-center border border-white/5">
+            <span className="text-2xl">🎯</span>
+            <div className="text-sm font-medium mt-2">道</div>
+            <div className="text-xs text-slate-500">本質抽出</div>
+          </div>
+
+          {/* 法（知識設定なし） */}
+          <div className="bg-[#12121a]/50 rounded-xl p-4 text-center border border-white/5">
+            <span className="text-2xl">🛤️</span>
+            <div className="text-sm font-medium mt-2">法</div>
+            <div className="text-xs text-slate-500">戦略選定</div>
+          </div>
+
+          {/* 術（知識設定あり） */}
+          <div className="bg-[#12121a]/50 rounded-xl p-4 text-center border border-white/5 group relative">
+            <span className="text-2xl">📋</span>
+            <div className="text-sm font-medium mt-2">術</div>
+            <div className="text-xs text-slate-500">実行計画</div>
+            <button
+              onClick={() => setPage('knowledge-shu')}
+              className="mt-2 px-3 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-300 text-xs rounded-lg transition-all flex items-center gap-1 mx-auto"
+            >
+              <span>📚</span> 知識追加
+            </button>
+          </div>
+
+          {/* 器（知識設定あり） */}
+          <div className="bg-[#12121a]/50 rounded-xl p-4 text-center border border-white/5 group relative">
+            <span className="text-2xl">🔧</span>
+            <div className="text-sm font-medium mt-2">器</div>
+            <div className="text-xs text-slate-500">技術実装</div>
+            <button
+              onClick={() => setPage('knowledge-qi')}
+              className="mt-2 px-3 py-1 bg-violet-600/20 hover:bg-violet-600/40 text-violet-300 text-xs rounded-lg transition-all flex items-center gap-1 mx-auto"
+            >
+              <span>📚</span> 知識追加
+            </button>
+          </div>
         </div>
       </main>
+
+      {/* 設定モーダル */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
     </div>
   );
 };
-

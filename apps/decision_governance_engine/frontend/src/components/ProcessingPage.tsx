@@ -6,13 +6,15 @@
  * 設計参考: design/decision-processing-ui.tsx
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { useDecisionStore } from '../store/useDecisionStore';
-import { useDecisionStream, AgentProgress } from '../hooks/useDecisionStream';
+import { useDecisionStream, AgentProgress, ThinkingLog } from '../hooks/useDecisionStream';
 
-/** Agent アイコン設定 */
+/** Agent アイコン設定（8 Agent対応） */
 const AGENT_ICONS: Record<string, string> = {
+  cognitive_gate: '🧠',
   gatekeeper: '🚪',
+  clarification: '🔬',
   dao: '🎯',
   fa: '🛤️',
   shu: '📋',
@@ -71,36 +73,91 @@ const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({ age
       {/* 結果プレビュー（完了時） */}
       {agent.status === 'completed' && agent.result && (
         <div className="mt-3 pt-3 border-t border-white/5">
-          {agent.id === 'dao' && agent.result.type && (
+          {agent.id === 'cognitive_gate' && agent.result.evaluation_object ? (
+            <div className="text-sm text-slate-400">
+              評価対象: <span className="text-cyan-400">{String(agent.result.evaluation_object)}</span>
+            </div>
+          ) : null}
+          {agent.id === 'gatekeeper' && (
+            <div className="text-sm text-emerald-400">
+              ✓ 質問を受理しました
+            </div>
+          )}
+          {agent.id === 'clarification' && agent.result.confidence ? (
+            <div className="text-sm text-slate-400">
+              診断信頼度: <span className="text-cyan-400">{String(agent.result.confidence)}</span>
+            </div>
+          ) : null}
+          {agent.id === 'dao' && agent.result.type ? (
             <div className="flex items-center gap-4 text-sm">
               <span className="px-2 py-1 bg-indigo-500/10 text-indigo-400 rounded text-xs">
-                {agent.result.type}
+                {String(agent.result.type)}
               </span>
-              <span className="text-slate-400">{agent.result.essence}</span>
+              <span className="text-slate-400">{String(agent.result.essence)}</span>
             </div>
-          )}
-          {agent.id === 'fa' && agent.result.paths && (
+          ) : null}
+          {agent.id === 'fa' && agent.result.paths ? (
             <div className="text-sm text-slate-400">
-              {agent.result.paths}つの戦略を評価 → <span className="text-emerald-400">{agent.result.recommended}を推奨</span>
+              {String(agent.result.paths)}つの戦略を評価 → <span className="text-emerald-400">{String(agent.result.recommended)}を推奨</span>
             </div>
-          )}
-          {agent.id === 'shu' && agent.result.phases && (
+          ) : null}
+          {agent.id === 'shu' && agent.result.phases ? (
             <div className="text-sm text-slate-400">
-              {agent.result.phases}フェーズの実行計画を策定
+              {String(agent.result.phases)}フェーズの実行計画を策定
             </div>
-          )}
-          {agent.id === 'qi' && agent.result.implementations && (
+          ) : null}
+          {agent.id === 'qi' && agent.result.implementations ? (
             <div className="text-sm text-slate-400">
-              {agent.result.implementations}件の実装要素を特定
+              {String(agent.result.implementations)}件の実装要素を特定
             </div>
-          )}
-          {agent.id === 'review' && agent.result.verdict && (
+          ) : null}
+          {agent.id === 'review' && agent.result.verdict ? (
             <div className={`text-sm ${
               agent.result.verdict === 'PASS' ? 'text-emerald-400' : 'text-amber-400'
             }`}>
-              判定: {agent.result.verdict}
+              判定: {String(agent.result.verdict)}
             </div>
-          )}
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/** 思考ログパネル */
+const ThinkingLogPanel: React.FC<{ logs: ThinkingLog[]; isExpanded: boolean; onToggle: () => void }> = ({ logs, isExpanded, onToggle }) => {
+  const logEndRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (isExpanded && logEndRef.current) {
+      logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [logs, isExpanded]);
+
+  return (
+    <div className="mt-6 bg-[#12121a] rounded-xl border border-white/5 overflow-hidden">
+      <button
+        onClick={onToggle}
+        className="w-full px-4 py-3 flex items-center justify-between text-sm hover:bg-white/5 transition-colors"
+      >
+        <span className="text-slate-400 flex items-center gap-2">
+          <span>💭</span> 思考ログ
+          <span className="text-xs text-slate-600">({logs.length}件)</span>
+        </span>
+        <span className={`text-slate-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
+      </button>
+      {isExpanded && (
+        <div className="max-h-48 overflow-y-auto border-t border-white/5 p-3 space-y-2 text-xs font-mono">
+          {logs.map((log, i) => (
+            <div key={i} className="flex gap-2 text-slate-400">
+              <span className="text-slate-600 shrink-0">
+                {new Date(log.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              </span>
+              <span className="text-indigo-400 shrink-0">[{log.agentName}]</span>
+              <span className="text-slate-300 break-all">{log.content}</span>
+            </div>
+          ))}
+          <div ref={logEndRef} />
         </div>
       )}
     </div>
@@ -108,37 +165,100 @@ const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({ age
 };
 
 export const ProcessingPage: React.FC = () => {
-  const { question, constraints, setPage, setReport } = useDecisionStore();
+  const { question, constraints, setPage, setReport, addToHistory } = useDecisionStore();
   const {
     isConnected,
     isComplete,
     error,
     agents,
     report,
+    thinkingLogs,
     startStream,
     stopStream,
   } = useDecisionStream();
 
-  // 画面表示時に SSE ストリーム開始
-  useEffect(() => {
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [isLogExpanded, setIsLogExpanded] = useState(false);
+
+  /** キャンセル処理（入力内容は保持） */
+  const handleCancel = useCallback(() => {
+    setIsCancelling(true);
+    stopStream();
+    setTimeout(() => {
+      // reset() は呼ばない - 入力内容を保持
+      setPage('input');
+      setIsCancelling(false);
+    }, 300);
+  }, [stopStream, setPage]);
+
+  /** リトライ処理 */
+  const handleRetry = useCallback(() => {
     if (question) {
       const budget = constraints.budget ? parseFloat(constraints.budget) : undefined;
       const timeline = constraints.timeline ? parseInt(constraints.timeline, 10) : undefined;
       startStream(question, budget, timeline);
     }
+  }, [question, constraints.budget, constraints.timeline, startStream]);
 
+  /** レポート画面へ遷移 */
+  const handleViewReport = useCallback(() => {
+    if (report) {
+      setReport(report);
+      setPage('report');
+    }
+  }, [report, setReport, setPage]);
+
+  // 画面表示時に SSE ストリーム開始（一度だけ実行、React Strict Mode 対策済み）
+  const hasStartedRef = useRef(false);
+  useEffect(() => {
+    // React Strict Mode で2回実行されても1回だけ startStream を呼ぶ
+    if (question && !hasStartedRef.current) {
+      hasStartedRef.current = true;
+      const budget = constraints.budget ? parseFloat(constraints.budget) : undefined;
+      const timeline = constraints.timeline ? parseInt(constraints.timeline, 10) : undefined;
+      console.log('[ProcessingPage] SSE ストリーム開始');
+      startStream(question, budget, timeline);
+    }
+
+    // クリーンアップ: コンポーネントが完全にアンマウントされた時のみ停止
+    // React Strict Mode の一時的なアンマウントでは hasStartedRef が true のままなので
+    // 次の mount 時に startStream がスキップされる
     return () => {
-      stopStream();
+      // 完了またはエラー時のみ停止（進行中の接続は維持）
+      if (isComplete || error) {
+        console.log('[ProcessingPage] クリーンアップ: ストリーム停止');
+        stopStream();
+        hasStartedRef.current = false;
+      }
     };
-  }, [question, constraints.budget, constraints.timeline, startStream, stopStream]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [question, isComplete, error]);
 
-  // 完了時にレポートを保存して遷移
+  // 完了時にレポートを保存（自動遷移しない - ボタンで遷移）
   useEffect(() => {
     if (isComplete && report) {
       setReport(report);
-      setTimeout(() => setPage('report'), 1500);
+      // 履歴に追加
+      addToHistory({
+        question,
+        reportId: report.report_id,
+        status: 'completed',
+      });
+      // 自動遷移を削除 - ユーザーがボタンをクリックして遷移
     }
-  }, [isComplete, report, setReport, setPage]);
+  }, [isComplete, report, question, setReport, addToHistory]);
+
+  // エラー時に履歴に記録（自動遷移しない）
+  useEffect(() => {
+    if (error && !isComplete) {
+      addToHistory({
+        question,
+        reportId: null,
+        status: 'failed',
+      });
+      // エラー時も自動遷移しない - 画面に留まってエラーを表示
+    }
+  }, [error, isComplete, question, addToHistory]);
 
   const completedCount = agents.filter((a) => a.status === 'completed').length;
   const overallProgress = Math.round((completedCount / agents.length) * 100);
@@ -180,23 +300,82 @@ export const ProcessingPage: React.FC = () => {
           </div>
         )}
 
-        {/* Core Agent カード（道・法・術・器） */}
+        {/* Agent カード（認知・門番・診断・道・法・術・器） */}
         <div className="space-y-4 mb-8">
-          {agents.slice(0, 4).map((agent) => (
+          {agents.slice(0, 7).map((agent) => (
             <AgentCard key={agent.id} agent={agent} />
           ))}
         </div>
 
         {/* Review Agent（検証 - 特別表示） */}
-        {agents[4] && (
-          <AgentCard agent={agents[4]} isReview />
+        {agents[7] && (
+          <AgentCard agent={agents[7]} isReview />
+        )}
+
+        {/* アクションボタン */}
+        <div className="flex justify-center gap-4 mt-8">
+          {isComplete && report ? (
+            <button 
+              onClick={handleViewReport}
+              className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl font-medium transition-all shadow-lg shadow-indigo-500/25 flex items-center gap-2"
+            >
+              📄 決策レポートを表示
+            </button>
+          ) : error ? (
+            <>
+              <button 
+                onClick={handleRetry}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-medium transition-all flex items-center gap-2"
+              >
+                🔄 リトライ
+              </button>
+              <button 
+                onClick={handleCancel}
+                disabled={isCancelling}
+                className="px-6 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-400 transition-all"
+              >
+                戻る
+              </button>
+            </>
+          ) : (
+            <button 
+              onClick={handleCancel}
+              disabled={isCancelling}
+              className="px-6 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-400 transition-all flex items-center gap-2"
+            >
+              {isCancelling ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-slate-400/30 border-t-slate-400 rounded-full animate-spin" />
+                  キャンセル中...
+                </>
+              ) : (
+                'キャンセル'
+              )}
+            </button>
+          )}
+        </div>
+
+        {/* ヒント */}
+        {!isComplete && !error && (
+          <div className="mt-8 text-center">
+            <p className="text-sm text-slate-600">
+              💡 各段階で深層分析を行っています。通常2〜3分で完了します。
+            </p>
+          </div>
         )}
 
         {/* 質問表示 */}
-        <div className="mt-12 bg-[#12121a] rounded-xl p-4 border border-white/5">
+        <div className="mt-8 bg-[#12121a] rounded-xl p-4 border border-white/5">
           <div className="text-xs text-slate-500 mb-2">処理中の質問</div>
           <div className="text-slate-300">{question}</div>
         </div>
+
+        {/* 思考ログパネル */}
+        <ThinkingLogPanel
+          logs={thinkingLogs}
+          isExpanded={isLogExpanded}
+          onToggle={() => setIsLogExpanded(!isLogExpanded)}
+        />
       </main>
     </div>
   );

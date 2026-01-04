@@ -68,7 +68,7 @@ async def verify_orchestrator() -> bool:
     print("\n🔍 Orchestratorを検証中...")
 
     try:
-        from apps.code_migration_assistant.mcp_client import MCPClient
+        from agentflow import MCPToolClient as MCPClient
         from apps.code_migration_assistant.orchestrator import CodeMigrationOrchestrator
 
         # MCPClientテスト
@@ -93,7 +93,7 @@ async def verify_basic_workflow() -> bool:
     print("\n🔍 基本ワークフローを検証中...")
 
     try:
-        from apps.code_migration_assistant.mcp_client import MCPClient
+        from agentflow import MCPToolClient as MCPClient
         from apps.code_migration_assistant.mcp_tools import COBOLParser, MCPToolRequest
 
         # MCPClientを作成

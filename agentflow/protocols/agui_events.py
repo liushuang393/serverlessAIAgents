@@ -2,8 +2,13 @@
 
 このモジュールは AgentFlow のフローイベントを AG-UI プロトコルイベントに変換するための
 データモデルを提供します。
+
+SSE シリアライズ:
+    全ての AGUIEvent は to_sse() メソッドで SSE 形式に変換できます。
+    これにより、アプリケーション層でフィールドを手動で抽出する必要がなくなります。
 """
 
+import json
 from enum import Enum
 from typing import Any
 
@@ -33,17 +38,54 @@ class AGUIEventType(str, Enum):
     # ログイベント
     LOG = "log"
 
+    # クラリフィケーションイベント（ユーザー補足要求）
+    CLARIFICATION_REQUIRED = "clarification.required"
+    CLARIFICATION_RECEIVED = "clarification.received"
+
 
 class AGUIEvent(BaseModel):
     """AG-UI イベントベースクラス.
 
     全ての AG-UI イベントの基底クラス。
+
+    使用例:
+        event = FlowCompleteEvent(...)
+        sse_string = event.to_sse()  # "data: {...}\\n\\n"
     """
 
     event_type: AGUIEventType = Field(..., description="イベントタイプ")
     timestamp: float = Field(..., description="イベント発生時刻 (Unix タイムスタンプ)")
     flow_id: str = Field(..., description="フロー実行 ID")
     data: dict[str, Any] = Field(default_factory=dict, description="イベントデータ")
+
+    def to_dict(self) -> dict[str, Any]:
+        """イベントを辞書形式に変換.
+
+        Pydantic の model_dump() を使用し、event_type を文字列値に変換。
+        None 値のフィールドは除外される。
+
+        Returns:
+            SSE 送信用の辞書
+        """
+        result = self.model_dump(exclude_none=True)
+        # event_type を文字列値に変換
+        if "event_type" in result:
+            result["event_type"] = self.event_type.value
+        return result
+
+    def to_sse(self, ensure_ascii: bool = False) -> str:
+        """SSE 形式の文字列に変換.
+
+        フレームワークが提供する標準シリアライズ。
+        アプリケーション層で個別フィールドを処理する必要がない。
+
+        Args:
+            ensure_ascii: ASCII エスケープするか（日本語等を \\uXXXX に変換）
+
+        Returns:
+            "data: {JSON}\\n\\n" 形式の文字列
+        """
+        return f"data: {json.dumps(self.to_dict(), ensure_ascii=ensure_ascii)}\n\n"
 
 
 class FlowStartEvent(AGUIEvent):
@@ -61,11 +103,18 @@ class FlowCompleteEvent(AGUIEvent):
     """フロー完了イベント.
 
     フローの実行が正常に完了したときに発行されます。
+
+    結果の取得方法:
+    - result_id が設定されている場合: /api/results/{result_id} で取得
+    - result が設定されている場合: イベント内に完整結果を含む
     """
 
     event_type: AGUIEventType = Field(
         default=AGUIEventType.FLOW_COMPLETE, description="イベントタイプ"
     )
+    result_id: str | None = Field(default=None, description="結果ID（ストア参照用）")
+    result: dict[str, Any] | None = Field(default=None, description="完整結果（小サイズ時直接含む）")
+    include_result: bool = Field(default=False, description="結果をイベントに含むか")
 
 
 class FlowErrorEvent(AGUIEvent):
@@ -155,3 +204,42 @@ class LogEvent(AGUIEvent):
     level: str = Field(..., description="ログレベル (DEBUG, INFO, WARNING, ERROR)")
     message: str = Field(..., description="ログメッセージ")
     source: str | None = Field(default=None, description="ログソース")
+
+
+class ClarificationQuestion(BaseModel):
+    """補足質問."""
+
+    id: str = Field(..., description="質問ID")
+    text: str = Field(..., description="質問テキスト")
+    type: str = Field(default="text", description="入力タイプ (text, number, select)")
+    required: bool = Field(default=True, description="必須フラグ")
+    options: list[str] = Field(default_factory=list, description="選択肢（selectタイプ用）")
+    placeholder: str = Field(default="", description="プレースホルダー")
+
+
+class ClarificationRequiredEvent(AGUIEvent):
+    """補足要求イベント.
+
+    Agent が情報不足を検出し、ユーザーに補足を求める際に発行されます。
+    フロントエンドはこのイベントを受信したら補足入力フォームを表示します。
+    """
+
+    event_type: AGUIEventType = Field(
+        default=AGUIEventType.CLARIFICATION_REQUIRED, description="イベントタイプ"
+    )
+    original_question: str = Field(..., description="元の質問")
+    questions: list[ClarificationQuestion] = Field(..., description="補足質問リスト")
+    message: str = Field(default="", description="ユーザーへのメッセージ")
+    timeout_seconds: int = Field(default=300, description="入力タイムアウト秒")
+
+
+class ClarificationReceivedEvent(AGUIEvent):
+    """補足受信イベント.
+
+    ユーザーが補足情報を提供した際に発行されます。
+    """
+
+    event_type: AGUIEventType = Field(
+        default=AGUIEventType.CLARIFICATION_RECEIVED, description="イベントタイプ"
+    )
+    answers: dict[str, Any] = Field(..., description="ユーザー回答")

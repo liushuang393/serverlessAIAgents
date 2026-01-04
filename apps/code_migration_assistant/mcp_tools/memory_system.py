@@ -11,7 +11,7 @@
 
 from typing import Any
 
-from apps.code_migration_assistant.mcp_tools.base import MCPTool, MCPToolRequest, MCPToolResponse
+from agentflow import MCPTool, MCPToolRequest, MCPToolResponse
 
 
 class MemorySystem(MCPTool):

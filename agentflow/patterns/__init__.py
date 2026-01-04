@@ -56,6 +56,21 @@ from agentflow.patterns.hierarchical import (
     SubTask,
 )
 
+# Progress Emitter
+from agentflow.patterns.progress_emitter import (
+    AgentMeta,
+    ProgressEmitter,
+)
+
+# Agent Pipeline
+from agentflow.patterns.agent_pipeline import (
+    AgentConfig,
+    AgentPipeline,
+    AgentProtocol,
+    PipelineConfig,
+    RevisionRequest,
+)
+
 __all__ = [
     # Coordinator Base
     "CoordinationPattern",
@@ -78,5 +93,14 @@ __all__ = [
     # Hierarchical Pattern
     "HierarchicalCoordinator",
     "SubTask",
+    # Progress Emitter
+    "AgentMeta",
+    "ProgressEmitter",
+    # Agent Pipeline
+    "AgentConfig",
+    "AgentPipeline",
+    "AgentProtocol",
+    "PipelineConfig",
+    "RevisionRequest",
 ]
 

@@ -47,7 +47,7 @@ async def test_mcp_tools() -> bool:
     print("\n🔍 MCP工具をテスト中...")
 
     try:
-        from apps.code_migration_assistant.mcp_client import MCPClient
+        from agentflow import MCPToolClient as MCPClient
         from apps.code_migration_assistant.mcp_tools import (
             COBOLParser,
             CodeValidator,

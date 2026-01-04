@@ -23,7 +23,7 @@ async def migrate_cobol_file(file_path: str) -> dict[str, Any]:
     Returns:
         移行結果
     """
-    from apps.code_migration_assistant.mcp_client import MCPClient
+    from agentflow import MCPToolClient as MCPClient
     from apps.code_migration_assistant.mcp_tools import (
         COBOLParser,
         CodeValidator,

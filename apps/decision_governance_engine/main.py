@@ -16,6 +16,7 @@ import logging
 import sys
 from pathlib import Path
 
+# agentflow インポート時に .env が自動読み込みされる
 from apps.decision_governance_engine.schemas.input_schemas import (
     BudgetConstraint,
     ConstraintSet,
