@@ -71,6 +71,7 @@ from agentflow.engines.base import BaseEngine, EngineConfig
 from agentflow.engines.gate_engine import GateEngine
 from agentflow.engines.pipeline_engine import PipelineEngine, StageConfig
 from agentflow.engines.rag_engine import RAGEngine
+from agentflow.engines.report_builder import ReportBuilder, SimpleReportBuilder
 from agentflow.engines.simple_engine import SimpleEngine
 from agentflow.patterns.progress_emitter import AgentMeta
 
@@ -86,5 +87,8 @@ __all__ = [
     # 設定クラス
     "StageConfig",
     "AgentMeta",
+    # レポート生成
+    "ReportBuilder",
+    "SimpleReportBuilder",
 ]
 

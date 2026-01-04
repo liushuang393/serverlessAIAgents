@@ -197,6 +197,16 @@ class ShuAgent(ResilientAgent[ShuInput, ShuOutput]):
         """入力をパース."""
         if "fa_result" in input_data and isinstance(input_data["fa_result"], dict):
             input_data["fa_result"] = FaOutput(**input_data["fa_result"])
+
+        # selected_path_id が未指定の場合、推奨パスの最初を自動選択
+        if "selected_path_id" not in input_data:
+            fa_result = input_data.get("fa_result")
+            if fa_result and hasattr(fa_result, "recommended_paths") and fa_result.recommended_paths:
+                input_data["selected_path_id"] = fa_result.recommended_paths[0].path_id
+            else:
+                # フォールバック
+                input_data["selected_path_id"] = "path_auto"
+
         return ShuInput(**input_data)
 
     async def process(self, input_data: ShuInput) -> ShuOutput:
@@ -278,8 +288,11 @@ JSON形式で出力してください。"""
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
         try:
-            json_match = response[response.find("{"):response.rfind("}") + 1]
-            data = json.loads(json_match)
+            # JSON部分を抽出してパース（堅牢な抽出）
+            from agentflow.utils import extract_json
+            data = extract_json(response)
+            if data is None:
+                raise json.JSONDecodeError("No valid JSON found", response, 0)
 
             phases = [ActionPhase(**p) for p in data.get("phases", [])]
             if len(phases) < 3:

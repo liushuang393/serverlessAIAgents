@@ -16,6 +16,10 @@
 - GET /api/health, /api/agents, /api/flows/{id}/definition
 """
 
+# 環境変数をロード（最初に実行）
+from dotenv import load_dotenv
+load_dotenv()
+
 import logging
 import os
 from collections.abc import AsyncGenerator

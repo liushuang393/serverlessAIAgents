@@ -1,0 +1,31 @@
+# ==============================================================================
+# Decision Governance Engine Frontend - 開発用 Dockerfile
+# ==============================================================================
+# Vite dev server を起動（ホットリロード対応）
+#
+# 使用方法:
+#   docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+# ==============================================================================
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# パッケージファイルをコピー
+COPY package.json package-lock.json ./
+
+# 依存関係インストール
+RUN npm ci
+
+# ソースコードはボリュームマウントで共有
+# COPY . . は不要
+
+# 開発用環境変数
+ENV VITE_DEBUG_MODE=true
+
+# ポート公開
+EXPOSE 5174
+
+# Vite dev server 起動
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+

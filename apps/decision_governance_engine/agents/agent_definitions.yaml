@@ -21,6 +21,7 @@ agents:
     description: "道法術器の分析に入る前に、認知的前提条件を検査"
     class_name: CognitiveGateAgent
     is_gate: true
+    gate_check_field: proceed
     uses_rag: false
     timeout_seconds: 30
     progress_messages:
@@ -35,6 +36,7 @@ agents:
     description: "質問の妥当性を検証"
     class_name: GatekeeperAgent
     is_gate: true
+    gate_check_field: is_acceptable
     uses_rag: false
     timeout_seconds: 30
     progress_messages:
@@ -127,6 +129,9 @@ agents:
     description: "全体の整合性を検証、PASS/REVISE/REJECTを判定"
     class_name: ReviewAgent
     is_gate: false
+    is_review: true
+    retry_from: dao
+    gate_check_field: overall_verdict
     uses_rag: false
     timeout_seconds: 45
     progress_messages:

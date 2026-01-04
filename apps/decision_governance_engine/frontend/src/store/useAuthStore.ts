@@ -29,7 +29,8 @@ interface AuthState {
   performLogout: () => Promise<void>;
 }
 
-const API_BASE = 'http://localhost:8000';
+// 开发环境使用相对路径（通过 Vite 代理），生产环境使用环境变量
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 /**
  * 認証ストア.
@@ -64,7 +65,11 @@ export const useAuthStore = create<AuthState>()(
 
       // 認証状態チェック
       checkAuth: async () => {
-        set({ isLoading: true });
+        // 既にログイン済みの場合は isLoading を設定しない（画面フリッカー防止）
+        const currentState = _get();
+        if (!currentState.isAuthenticated) {
+          set({ isLoading: true });
+        }
         try {
           const response = await fetch(`${API_BASE}/api/auth/me`, {
             credentials: 'include',

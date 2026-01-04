@@ -109,8 +109,11 @@ JSON形式で出力してください。"""
         response = await self._call_llm(f"{system_prompt}\n\n{user_prompt}")
 
         try:
-            json_match = response[response.find("{"):response.rfind("}") + 1]
-            data = json.loads(json_match)
+            # JSON部分を抽出してパース（堅牢な抽出）
+            from agentflow.utils import extract_json
+            data = extract_json(response)
+            if data is None:
+                raise json.JSONDecodeError("No valid JSON found", response, 0)
             return self._parse_llm_output(data)
         except json.JSONDecodeError as e:
             self._logger.warning(f"LLM response parse failed: {e}")

@@ -973,6 +973,11 @@ def create_router_from_env() -> ModelRouter:
             model="o1-mini",
             api_key=os.environ["OPENAI_API_KEY"],
         )
+        models["gpt-5.2"] = LLMConfig(
+            provider="openai",
+            model="gpt-5.2",
+            api_key=os.environ["OPENAI_API_KEY"],
+        )
 
     # Anthropic
     if os.environ.get("ANTHROPIC_API_KEY"):

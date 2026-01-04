@@ -1,0 +1,40 @@
+# ==============================================================================
+# Docker ビルド時に除外するファイル
+# ==============================================================================
+
+# 依存関係（ビルド時に新規インストール）
+node_modules/
+
+# ビルド成果物（ビルド時に再生成）
+dist/
+
+# 開発用設定
+.env.local
+.env.development
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# テスト
+coverage/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__/
+
+# ドキュメント
+*.md
+LICENSE
+
+# OS
+.DS_Store
+Thumbs.db
+

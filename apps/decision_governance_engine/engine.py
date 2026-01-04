@@ -5,8 +5,12 @@ PipelineEngine パターンを使用した意思決定支援エンジン。
 
 アーキテクチャ:
     Gate層: CognitiveGate → Gatekeeper（2段階チェック）
-    分析層: Clarification → [Dao, Fa, Shu, Qi]（4並行分析）
+    分析層: Clarification → Dao → Fa → Shu → Qi（順次実行）
     検証層: ReviewAgent（REVISE回退対応）
+
+設計改善（v2.3）:
+    - ReportBuilder インターフェースを使用
+    - YAML 定義から StageConfig 自動生成可能（将来対応）
 
 使用例:
     >>> from apps.decision_governance_engine.engine import DecisionEngine
@@ -24,11 +28,12 @@ import logging
 from typing import Any
 
 from agentflow.engines import PipelineEngine, EngineConfig
+from agentflow.providers import get_llm
 
-from apps.decision_governance_engine.schemas.input_schemas import DecisionRequest
-from apps.decision_governance_engine.schemas.output_schemas import DecisionReport
 from apps.decision_governance_engine.services.agent_registry import AgentRegistry
-from apps.decision_governance_engine.services.report_generator import ReportGenerator
+from apps.decision_governance_engine.services.decision_report_builder import (
+    DecisionReportBuilder,
+)
 
 
 class DecisionEngine(PipelineEngine):
@@ -58,16 +63,19 @@ class DecisionEngine(PipelineEngine):
             llm_client: LLMクライアント（省略時は自動取得）
             enable_rag: RAG機能を有効化するか
         """
+        # LLM自動取得（省略時）
+        if llm_client is None:
+            llm_client = get_llm()
+
         # 業務コンポーネント
         self._registry = AgentRegistry(llm_client=llm_client, enable_rag=enable_rag)
-        self._report_generator = ReportGenerator()
         self._enable_rag = enable_rag
 
-        # PipelineEngine 初期化
+        # PipelineEngine 初期化（ReportBuilder を使用）
         super().__init__(
             stages=[],  # _initialize で動的設定
             max_revisions=self.MAX_REVISIONS,
-            report_generator=self._generate_report,
+            report_builder=DecisionReportBuilder(),  # 新 API を使用
             config=EngineConfig(
                 name="decision-governance-engine",
                 enable_events=True,
@@ -77,16 +85,18 @@ class DecisionEngine(PipelineEngine):
         )
         self._logger = logging.getLogger("decision_engine")
 
-    async def _initialize(self) -> None:
-        """エンジンを初期化.
+    async def _setup_stages(self) -> None:
+        """ステージを動的に設定.
 
         AgentRegistry から Agent を取得し、stages を動的構築。
+        PipelineEngine の _setup_stages() フックをオーバーライド。
         """
         await self._registry.initialize()
         if self._enable_rag:
             await self._registry.initialize_rag_agents()
 
         # stages を動的構築
+        # 注: 道→法→術→器 は依存関係があるため順次実行
         self._stage_configs = self._parse_stages([
             {
                 "name": "cognitive_gate",
@@ -104,25 +114,32 @@ class DecisionEngine(PipelineEngine):
                 "name": "clarification",
                 "agent": self._registry.get_agent("clarification"),
             },
+            # 道・法・術・器 は依存チェーンのため順次実行
             {
-                "name": "analysis",
-                "agents": [
-                    self._registry.get_agent("dao"),
-                    self._registry.get_agent("fa"),
-                    self._registry.get_agent("shu"),
-                    self._registry.get_agent("qi"),
-                ],
-                "parallel": True,
+                "name": "dao",
+                "agent": self._registry.get_agent("dao"),
+            },
+            {
+                "name": "fa",
+                "agent": self._registry.get_agent("fa"),
+            },
+            {
+                "name": "shu",
+                "agent": self._registry.get_agent("shu"),
+            },
+            {
+                "name": "qi",
+                "agent": self._registry.get_agent("qi"),
             },
             {
                 "name": "review",
                 "agent": self._registry.get_agent("review"),
                 "review": True,
-                "retry_from": "analysis",
+                "retry_from": "dao",
             },
         ])
 
-        # stage_instances 設定
+        # stage_instances 設定（Agent は既に _registry で初期化済み）
         for stage in self._stage_configs:
             instances = []
             if stage.agent:
@@ -131,27 +148,7 @@ class DecisionEngine(PipelineEngine):
                 instances.extend(stage.agents)
             self._stage_instances[stage.name] = instances
 
-        self._logger.info("DecisionEngine initialized")
-
-    def _generate_report(self, results: dict[str, Any]) -> dict[str, Any]:
-        """決策レポートを生成.
-
-        Args:
-            results: 全Agent実行結果
-
-        Returns:
-            レポートデータ
-        """
-        inputs = results.get("inputs", {})
-        question = inputs.get("question", "")
-        clarification = results.get("clarification", {})
-
-        report = self._report_generator.generate(
-            results,
-            original_question=question,
-            clarification_result=clarification,
-        )
-        return report.model_dump() if hasattr(report, "model_dump") else report
+        self._logger.info("DecisionEngine stages configured")
 
 
 __all__ = ["DecisionEngine"]

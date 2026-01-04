@@ -181,13 +181,13 @@ class BaseEngine(ABC):
             total_agents=0,
         )
 
-        # Flow開始イベント
+        # Flow開始イベント（to_dict() で event_type を文字列に変換）
         if self._config.enable_events:
             yield FlowStartEvent(
                 timestamp=time.time(),
                 flow_id=self._flow_id,
                 data={"engine": self.__class__.__name__},
-            ).model_dump()
+            ).to_dict()
 
         try:
             # 実行してイベントを収集
@@ -200,7 +200,7 @@ class BaseEngine(ABC):
                     timestamp=time.time(),
                     flow_id=self._flow_id,
                     data={},
-                ).model_dump()
+                ).to_dict()
 
         except Exception as e:
             self._logger.exception(f"Engine stream failed: {self._flow_id}")
@@ -211,7 +211,7 @@ class BaseEngine(ABC):
                     error_message=str(e),
                     error_type=type(e).__name__,
                     data={},
-                ).model_dump()
+                ).to_dict()
             raise
 
     async def _execute_stream(
@@ -244,7 +244,7 @@ class BaseEngine(ABC):
                 node_name=node_name,
                 flow_id=self._flow_id or "",
                 data={},
-            ).model_dump()
+            ).to_dict()  # to_dict() で event_type を文字列に変換
         return None
 
     def _emit_node_complete(
@@ -259,7 +259,7 @@ class BaseEngine(ABC):
                 node_name=node_name,
                 flow_id=self._flow_id or "",
                 data={"result_keys": list(result.keys())},
-            ).model_dump()
+            ).to_dict()  # to_dict() で event_type を文字列に変換
         return None
 
     @property

@@ -291,8 +291,11 @@ JSON形式で出力してください。"""
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
         try:
-            json_match = response[response.find("{"):response.rfind("}") + 1]
-            data = json.loads(json_match)
+            # JSON部分を抽出してパース（堅牢な抽出）
+            from agentflow.utils import extract_json
+            data = extract_json(response)
+            if data is None:
+                raise json.JSONDecodeError("No valid JSON found", response, 0)
 
             implementations = [Implementation(**i) for i in data.get("implementations", [])]
             if not implementations:

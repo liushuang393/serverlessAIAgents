@@ -24,6 +24,13 @@ const RECONNECT_CONFIG = {
 /** 接続タイムアウト（30秒） */
 const CONNECTION_TIMEOUT = 30000;
 
+/** Ref で最新状態を追跡するためのヘルパー */
+const useLatestRef = <T,>(value: T) => {
+  const ref = useRef(value);
+  ref.current = value;
+  return ref;
+};
+
 /** Agent 進捗状態 */
 export interface AgentProgress {
   id: string;
@@ -82,6 +89,9 @@ export function useDecisionStream() {
     thinkingLogs: [],
   });
 
+  // 最新の state を ref で追跡（stale closure 回避）
+  const stateRef = useLatestRef(state);
+
   const eventSourceRef = useRef<EventSource | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastParamsRef = useRef<{question: string; budget?: number; timeline?: number} | null>(null);
@@ -116,8 +126,66 @@ export function useDecisionStream() {
   /** AG-UI イベントハンドラー */
   const handleEvent = useCallback(
     (event: AGUIEvent) => {
-      console.log('[useDecisionStream] handleEvent 受信:', event.event_type, event.node_id || '');
+      // 統一フォーマット: type → event_type に正規化
+      const eventType = event.event_type || (event as unknown as { type?: string }).type;
+      console.log('[useDecisionStream] handleEvent 受信:', eventType, event.node_id || '', JSON.stringify(event).slice(0, 200));
+      
+      // type フィールドのイベントを処理（PipelineEngine形式）
+      if (!event.event_type && (event as unknown as { type?: string }).type) {
+        const legacyEvent = event as unknown as { type: string; data?: Record<string, unknown> };
+        switch (legacyEvent.type) {
+          case 'progress':
+            // {type: "progress", data: {stage: "xxx", progress: 12.5}}
+            if (legacyEvent.data) {
+              const stage = legacyEvent.data.stage as string;
+              const progress = legacyEvent.data.progress as number;
+              if (stage) {
+                updateAgent(stage, { progress, message: `${progress}% 完了` });
+                addThinkingLog(stage, stage, `進捗: ${progress}%`);
+              }
+            }
+            return;
+          case 'result':
+            // {type: "result", data: {status: "xxx", results: {...}}}
+            if (legacyEvent.data) {
+              const status = legacyEvent.data.status as string;
+              const results = legacyEvent.data.results as Record<string, unknown>;
+              if (status === 'rejected') {
+                setState((prev) => ({
+                  ...prev,
+                  isComplete: true,
+                  error: '入力が拒否されました。質問を修正してください。',
+                }));
+                addThinkingLog('system', 'System', '❌ 入力が拒否されました');
+              } else if (results) {
+                // 成功結果を構築
+                setState((prev) => ({
+                  ...prev,
+                  isComplete: true,
+                  report: results as unknown as DecisionReport,
+                }));
+                addThinkingLog('system', 'System', '✅ 分析完了');
+              }
+            }
+            return;
+          case 'gate_rejected':
+            // ゲートで拒否された
+            addThinkingLog('system', 'System', '⚠️ ゲートチェックで処理が停止しました');
+            return;
+        }
+      }
+      
       switch (event.event_type) {
+        case 'connection.established':
+          // 接続確認イベント（サーバーから即座に送信される）
+          console.log('[useDecisionStream] 接続確認イベント受信');
+          setState((prev) => ({
+            ...prev,
+            isConnected: true,
+          }));
+          addThinkingLog('system', 'System', '🔗 サーバーに接続しました');
+          break;
+
         case 'flow.start':
           // 接続開始時、最初のagentをrunning状態に
           setState((prev) => ({
@@ -236,7 +304,14 @@ export function useDecisionStream() {
   const setConnectionTimeout = useCallback(() => {
     clearConnectionTimeout();
     timeoutRef.current = setTimeout(() => {
-      if (!state.isConnected && !state.isComplete) {
+      // stateRef を使用して最新の状態を参照（stale closure 回避）
+      const currentState = stateRef.current;
+      console.log('[useDecisionStream] タイムアウトチェック:', {
+        isConnected: currentState.isConnected,
+        isComplete: currentState.isComplete
+      });
+      if (!currentState.isConnected && !currentState.isComplete) {
+        console.log('[useDecisionStream] タイムアウト発火 - 接続をクローズ');
         eventSourceRef.current?.close();
         setState((prev) => ({
           ...prev,
@@ -245,7 +320,7 @@ export function useDecisionStream() {
         }));
       }
     }, CONNECTION_TIMEOUT);
-  }, [clearConnectionTimeout, state.isConnected, state.isComplete]);
+  }, [clearConnectionTimeout]);
 
   /** SSE 接続成功ハンドラー */
   const handleOpen = useCallback(() => {
@@ -280,18 +355,19 @@ export function useDecisionStream() {
   /** 自動再接続 */
   const attemptReconnect = useCallback(() => {
     const params = lastParamsRef.current;
-    if (!params || state.retryCount >= RECONNECT_CONFIG.maxRetries) {
+    const currentRetryCount = stateRef.current.retryCount;
+    if (!params || currentRetryCount >= RECONNECT_CONFIG.maxRetries) {
       return;
     }
 
     const delay = Math.min(
-      RECONNECT_CONFIG.baseDelay * Math.pow(2, state.retryCount),
+      RECONNECT_CONFIG.baseDelay * Math.pow(2, currentRetryCount),
       RECONNECT_CONFIG.maxDelay
     );
 
     setTimeout(() => {
       setState((prev) => ({ ...prev, retryCount: prev.retryCount + 1, error: null }));
-      
+
       eventSourceRef.current?.close();
       eventSourceRef.current = decisionApi.streamDecision(
         params.question,
@@ -303,14 +379,21 @@ export function useDecisionStream() {
       );
       setConnectionTimeout();
     }, delay);
-  }, [state.retryCount, handleEvent, handleError, handleOpen, setConnectionTimeout]);
+  }, [handleEvent, handleError, handleOpen, setConnectionTimeout]);
 
   /** ストリーム開始 */
   const startStream = useCallback(
     (question: string, budget?: number, timelineMonths?: number) => {
+      console.log('🔘 [STEP4] startStream() 開始', { 
+        question: question?.slice(0, 50), 
+        budget, 
+        timelineMonths,
+        existingConnection: eventSourceRef.current?.readyState 
+      });
+      
       // 既に接続中の場合はスキップ（React Strict Mode 対策）
       if (eventSourceRef.current && eventSourceRef.current.readyState !== EventSource.CLOSED) {
-        console.log('[SSE] 既存接続あり、スキップ');
+        console.log('🔘 [STEP4] ⚠️ 既存接続あり、スキップ readyState=', eventSourceRef.current.readyState);
         return;
       }
 
@@ -336,7 +419,7 @@ export function useDecisionStream() {
         thinkingLogs: [{ timestamp: Date.now(), agentId: 'system', agentName: 'System', content: '🚀 分析を開始します...' }],
       });
 
-      console.log('[SSE] 新規接続を開始:', question.slice(0, 30));
+      console.log('🔘 [STEP4] → decisionApi.streamDecision() を呼び出し');
 
       // SSE 接続開始
       eventSourceRef.current = decisionApi.streamDecision(
@@ -347,6 +430,8 @@ export function useDecisionStream() {
         handleError,
         handleOpen
       );
+      
+      console.log('🔘 [STEP4] EventSource 作成完了, readyState=', eventSourceRef.current?.readyState);
 
       // タイムアウト設定
       setConnectionTimeout();

@@ -46,25 +46,41 @@ class AgentStatus(str, Enum):
 
 class AgentDefinition(BaseModel):
     """Agent定義（前後端共通）.
-    
+
     単一AgentのID・名前・ラベル・アイコンを定義。
     フロントエンドで表示に使用される。
+    Pipeline設定（gate/review）も含む。
     """
-    
+
     id: str = Field(..., description="Agent ID（英数字）")
     name: str = Field(..., description="Agent名（表示用）")
     label: str = Field(..., description="Agent機能ラベル")
     icon: str = Field(default="○", description="表示アイコン（絵文字）")
     description: str = Field(default="", description="Agent説明")
     class_name: str = Field(default="", description="Agent実装クラス名")
+    module_path: str = Field(default="", description="Agentモジュールパス（省略時はclass_nameから推測）")
+
+    # Pipeline 設定
     is_gate: bool = Field(default=False, description="ゲートAgent（拒否時に早期終了）")
+    is_review: bool = Field(default=False, description="レビューAgent（PASS/REVISE/REJECT判定）")
+    gate_check_field: str = Field(default="", description="Gate通過判定フィールド名")
+    retry_from: str = Field(default="", description="REVISE時のロールバック先Agent ID")
+
+    # 機能設定
     uses_rag: bool = Field(default=False, description="RAGを使用するか")
+    uses_llm: bool = Field(default=True, description="LLMを使用するか")
     timeout_seconds: int = Field(default=60, description="タイムアウト秒数")
-    
+
+    # 進捗メッセージ
+    progress_messages: list[tuple[int, str]] = Field(
+        default_factory=list,
+        description="進捗メッセージ [(progress%, message), ...]"
+    )
+
     def to_dict(self) -> dict[str, Any]:
         """辞書に変換."""
         return self.model_dump()
-    
+
     def to_frontend_dict(self) -> dict[str, Any]:
         """フロントエンド用の辞書に変換（実装詳細を除外）."""
         return {
@@ -148,11 +164,131 @@ class FlowDefinition(BaseModel):
             if agent.id == agent_id:
                 return agent
         return None
-    
+
     def get_agent_ids(self) -> list[str]:
         """全Agent IDリストを取得."""
         return [a.id for a in self.agents]
-    
+
+    def instantiate_agent(
+        self,
+        agent_def: AgentDefinition,
+        llm_client: Any | None = None,
+        **kwargs: Any,
+    ) -> Any:
+        """AgentDefinitionからAgentインスタンスを生成.
+
+        Args:
+            agent_def: Agent定義
+            llm_client: 共有LLMクライアント（オプション）
+            **kwargs: 追加の初期化引数
+
+        Returns:
+            Agentインスタンス
+
+        Raises:
+            ImportError: モジュールが見つからない場合
+            AttributeError: クラスが見つからない場合
+        """
+        import importlib
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        if not agent_def.class_name:
+            raise ValueError(f"Agent {agent_def.id} has no class_name defined")
+
+        # モジュールパスを決定
+        module_path = agent_def.module_path
+        if not module_path:
+            # class_name から推測（CamelCase → snake_case）
+            import re
+            snake_name = re.sub(r'(?<!^)(?=[A-Z])', '_', agent_def.class_name).lower()
+            # デフォルトは agentflow.agents.{snake_name}
+            module_path = f"agentflow.agents.{snake_name}"
+
+        try:
+            module = importlib.import_module(module_path)
+            agent_class = getattr(module, agent_def.class_name)
+        except (ImportError, AttributeError) as e:
+            logger.error(f"Failed to import {agent_def.class_name} from {module_path}: {e}")
+            raise
+
+        # インスタンス化
+        init_kwargs = {**kwargs}
+        if llm_client is not None:
+            init_kwargs["llm_client"] = llm_client
+
+        logger.debug(f"Created agent: {agent_def.id} ({agent_def.class_name})")
+        return agent_class(**init_kwargs)
+
+    def instantiate_all_agents(
+        self,
+        llm_client: Any | None = None,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """全AgentをインスタンスId辞書として生成.
+
+        Args:
+            llm_client: 共有LLMクライアント
+            **kwargs: 追加の初期化引数
+
+        Returns:
+            {agent_id: agent_instance} の辞書
+        """
+        agents = {}
+        for agent_def in self.agents:
+            if agent_def.class_name:
+                agents[agent_def.id] = self.instantiate_agent(
+                    agent_def, llm_client=llm_client, **kwargs
+                )
+        return agents
+
+    def to_stage_configs(
+        self,
+        agents: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """FlowDefinitionからPipelineEngine用StageConfig辞書リストを生成.
+
+        Args:
+            agents: {agent_id: agent_instance} の辞書（省略時は定義のみ）
+
+        Returns:
+            StageConfig用の辞書リスト
+
+        使用例:
+            >>> flow = FlowDefinition.from_yaml("agents.yaml")
+            >>> agents = flow.instantiate_all_agents(llm_client=llm)
+            >>> stages = flow.to_stage_configs(agents)
+            >>> engine = PipelineEngine(stages=stages)
+        """
+        stage_configs = []
+
+        for agent_def in self.agents:
+            config: dict[str, Any] = {
+                "name": agent_def.id,
+            }
+
+            # Agent インスタンスを設定
+            if agents and agent_def.id in agents:
+                config["agent"] = agents[agent_def.id]
+
+            # Gate 設定
+            if agent_def.is_gate:
+                config["gate"] = True
+                if agent_def.gate_check_field:
+                    field = agent_def.gate_check_field
+                    config["gate_check"] = lambda r, f=field: r.get(f, True)
+
+            # Review 設定
+            if agent_def.is_review:
+                config["review"] = True
+                if agent_def.retry_from:
+                    config["retry_from"] = agent_def.retry_from
+
+            stage_configs.append(config)
+
+        return stage_configs
+
     def to_dict(self) -> dict[str, Any]:
         """辞書に変換."""
         return self.model_dump()

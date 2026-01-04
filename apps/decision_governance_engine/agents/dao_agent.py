@@ -289,9 +289,11 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
         try:
-            # JSON部分を抽出してパース
-            json_match = response[response.find("{"):response.rfind("}") + 1]
-            data = json.loads(json_match)
+            # JSON部分を抽出してパース（堅牢な抽出）
+            from agentflow.utils import extract_json
+            data = extract_json(response)
+            if data is None:
+                raise json.JSONDecodeError("No valid JSON found", response, 0)
 
             # v3.0: 本質導出プロセスをパース
             essence_derivation = None

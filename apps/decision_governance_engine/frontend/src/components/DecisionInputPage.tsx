@@ -74,11 +74,17 @@ export const DecisionInputPage: React.FC = () => {
 
   /** SSE モードで送信 */
   const handleSubmitWithStream = useCallback(() => {
-    if (question.length < 10 || isSubmitting) return;
+    console.log('🔘 [STEP1] handleSubmitWithStream 呼び出し', { questionLength: question.length, isSubmitting });
+    
+    if (question.length < 10 || isSubmitting) {
+      console.log('🔘 [STEP1] バリデーション失敗 - 処理中止');
+      return;
+    }
 
     // 拒否チェック
     const rejectResult = checkInstantReject(question);
     if (rejectResult) {
+      console.log('🔘 [STEP1] 即座に拒否:', rejectResult);
       setRejection(rejectResult);
       return;
     }
@@ -87,8 +93,10 @@ export const DecisionInputPage: React.FC = () => {
     setApiError(null);
     setIsSubmitting(true);
 
+    console.log('🔘 [STEP1] → setPage("processing") を呼び出し');
     // 進捗画面へ遷移（SSE接続は進捗画面で開始）
     setPage('processing');
+    console.log('🔘 [STEP1] setPage 完了');
   }, [question, isSubmitting, setPage]);
 
   const isValid = question.length >= 10;

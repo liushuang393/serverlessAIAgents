@@ -1,0 +1,42 @@
+# ==============================================================================
+# Decision Governance Engine - 開発用 Docker Compose オーバーライド
+# ==============================================================================
+# 使用方法:
+#   docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# 機能:
+#   - バックエンド: uvicorn --reload（ホットリロード）
+#   - フロントエンド: Vite dev server（プロキシ経由）
+# ==============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # バックエンド: 開発モード
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ../..
+      dockerfile: apps/decision_governance_engine/Dockerfile
+    command: ["uvicorn", "apps.decision_governance_engine.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    volumes:
+      # ソースコードをマウント（リアルタイム反映）
+      - ../../agentflow:/app/agentflow
+      - .:/app/apps/decision_governance_engine
+    environment:
+      - LOG_LEVEL=DEBUG
+
+  # ---------------------------------------------------------------------------
+  # フロントエンド: 開発モード（Vite dev server）
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5174:5174"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+    environment:
+      - VITE_DEBUG_MODE=true
+

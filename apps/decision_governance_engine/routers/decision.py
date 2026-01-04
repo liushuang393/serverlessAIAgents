@@ -91,6 +91,32 @@ def build_constraints(req: DecisionAPIRequest) -> ConstraintSet:
 # エンドポイント
 # ========================================
 
+def build_input_dict(question: str, constraints: ConstraintSet) -> dict:
+    """Agent用入力辞書を構築.
+
+    Args:
+        question: ユーザーの質問
+        constraints: 制約セット
+
+    Returns:
+        CognitiveGateAgent が期待する形式の入力辞書
+    """
+    constraint_list: list[str] = []
+    if constraints.budget:
+        constraint_list.append(f"予算: {constraints.budget.amount}万円")
+    if constraints.timeline:
+        constraint_list.append(f"期間: {constraints.timeline.months}ヶ月")
+    constraint_list.extend(constraints.technical)
+    constraint_list.extend(constraints.regulatory)
+    constraint_list.extend(constraints.human_resources)
+
+    return {
+        "raw_question": question,
+        "question": question,  # 後方互換のために残す
+        "constraints": constraint_list,
+    }
+
+
 @router.post("/api/decision", response_model=DecisionAPIResponse | RejectionResponse)
 async def process_decision(req: DecisionAPIRequest) -> DecisionAPIResponse | RejectionResponse:
     """同期的に意思決定を処理.
@@ -99,12 +125,7 @@ async def process_decision(req: DecisionAPIRequest) -> DecisionAPIResponse | Rej
     """
     engine = get_engine()
     constraints = build_constraints(req)
-
-    # PipelineEngine API を使用
-    inputs = {
-        "question": req.question,
-        "constraints": constraints.model_dump(),
-    }
+    inputs = build_input_dict(req.question, constraints)
     result = await engine.run(inputs)
 
     # 拒否の場合
@@ -133,7 +154,10 @@ async def process_decision_stream(
 
     PipelineEngine.run_stream() を使用。
     """
-    from agentflow import create_sse_response
+    import json
+
+    logger.info(f"[SSE] /api/decision/stream リクエスト受信")
+    logger.info(f"[SSE] question={question[:50]}...")
 
     engine = get_engine()
     constraints = ConstraintSet()
@@ -142,11 +166,57 @@ async def process_decision_stream(
     if timeline_months is not None:
         constraints.timeline = TimelineConstraint(months=timeline_months)
 
-    inputs = {
-        "question": question,
-        "constraints": constraints.model_dump(),
-    }
-    return create_sse_response(engine.run_stream(inputs))
+    inputs = build_input_dict(question, constraints)
+
+    def serialize_event(event: dict) -> str:
+        """イベントをJSON文字列に変換（enum対応）."""
+        # event_type が Enum の場合は .value を使用
+        if "event_type" in event:
+            et = event["event_type"]
+            if hasattr(et, "value"):
+                event = {**event, "event_type": et.value}
+        return json.dumps(event, ensure_ascii=False, default=str)
+
+    async def generate_events():
+        """SSEイベントを生成."""
+        import asyncio
+        import time as time_module
+        logger.info("[SSE] ストリーム開始")
+        # 即座に接続確認イベントを送信
+        yield f"data: {json.dumps({'event_type': 'connection.established', 'timestamp': time_module.time()}, ensure_ascii=False)}\n\n"
+        try:
+            async for event in engine.run_stream(inputs):
+                # イベントタイプをログ出力（type または event_type）
+                event_type = event.get('event_type') or event.get('type', 'unknown')
+                logger.info(f"[SSE] イベント発行: {event_type}")
+                if isinstance(event, dict):
+                    yield f"data: {serialize_event(event)}\n\n"
+                else:
+                    yield f"data: {event}\n\n"
+        except asyncio.CancelledError:
+            # クライアント切断時
+            logger.info("[SSE] クライアント切断を検出 - 処理を中止")
+            raise
+        except GeneratorExit:
+            # ジェネレーター終了時
+            logger.info("[SSE] ジェネレーター終了 - クライアント切断")
+            raise
+        except Exception as e:
+            logger.exception(f"[SSE] エラー発生: {e}")
+            error_event = {"event_type": "flow.error", "error_message": str(e)}
+            yield f"data: {json.dumps(error_event, ensure_ascii=False)}\n\n"
+        finally:
+            logger.info("[SSE] ストリーム終了")
+
+    return StreamingResponse(
+        generate_events(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ========================================
@@ -202,11 +272,7 @@ async def websocket_decision(websocket: WebSocket) -> None:
             if timeline_months is not None:
                 constraints.timeline = TimelineConstraint(months=timeline_months)
 
-            # PipelineEngine API を使用
-            inputs = {
-                "question": question,
-                "constraints": constraints.model_dump(),
-            }
+            inputs = build_input_dict(question, constraints)
             engine = get_engine()
 
             async for event in engine.run_stream(inputs):

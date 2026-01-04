@@ -1,5 +1,11 @@
 /**
  * Vite 設定.
+ *
+ * 注意事項:
+ * - server.proxy は開発環境（vite dev）でのみ有効
+ * - 本番環境（vite build）では静的ファイルが生成され、
+ *   Nginx リバースプロキシ経由で API に接続する
+ * - 本番デプロイ: docker-compose up --build
  */
 
 /// <reference types="vitest" />
@@ -14,19 +20,40 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // -------------------------------------------------------------------------
+  // 開発サーバー設定（vite dev 時のみ有効）
+  // 本番環境では Nginx が /api/ を backend:8000 にプロキシ
+  // -------------------------------------------------------------------------
   server: {
     port: 5174,
+    host: '0.0.0.0',  // WSL2 から Windows ブラウザにアクセス可能にするため
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-        // SSE ストリーミング対応
+        // SSE ストリーミング対応 - 重要な設定
+        ws: false,  // WebSocket を無効化（SSE と競合防止）
+        timeout: 0,  // タイムアウト無効化（長時間接続対応）
+        proxyTimeout: 0,  // プロキシタイムアウト無効化
         configure: (proxy) => {
+          // SSE 接続用の設定
           proxy.on('proxyReq', (proxyReq, req) => {
-            // SSE 接続の場合はバッファリングを無効化
             if (req.url?.includes('/stream')) {
               proxyReq.setHeader('Accept', 'text/event-stream');
+              proxyReq.setHeader('Cache-Control', 'no-cache');
+              proxyReq.setHeader('Connection', 'keep-alive');
             }
+          });
+          // レスポンスヘッダーの追加
+          proxy.on('proxyRes', (proxyRes, req) => {
+            if (req.url?.includes('/stream')) {
+              proxyRes.headers['Cache-Control'] = 'no-cache';
+              proxyRes.headers['X-Accel-Buffering'] = 'no';
+            }
+          });
+          // エラーハンドリング
+          proxy.on('error', (err, req, res) => {
+            console.error('[Vite Proxy Error]', err.message);
           });
         },
       },

@@ -28,7 +28,6 @@ Agent/サービスは具体的なプロバイダーやモデルを意識する�
 from __future__ import annotations
 
 import logging
-import os
 from typing import TYPE_CHECKING, Any, AsyncIterator
 
 from pydantic import BaseModel, Field
@@ -58,26 +57,26 @@ class LLMProviderConfig(BaseModel):
 def _detect_provider_from_env() -> tuple[str, str, str | None, str | None]:
     """環境変数から最適なプロバイダーを自動検出.
 
+    優先順位: 環境変数 > .env > config.py デフォルト値
+    （get_settings() が自動的にこの優先順位を適用）
+
     Returns:
         (provider, model, api_key, base_url) のタプル
     """
-    # 優先順位: OpenAI > Anthropic > Google > DeepSeek > Ollama > LocalAI
-    if os.getenv("OPENAI_API_KEY"):
-        return "openai", "gpt-4o-mini", os.getenv("OPENAI_API_KEY"), None
-    if os.getenv("ANTHROPIC_API_KEY"):
-        return "anthropic", "claude-3-5-sonnet-20241022", os.getenv("ANTHROPIC_API_KEY"), None
-    if os.getenv("GOOGLE_API_KEY"):
-        return "google", "gemini-2.0-flash-exp", os.getenv("GOOGLE_API_KEY"), None
-    if os.getenv("DEEPSEEK_API_KEY"):
-        return "deepseek", "deepseek-chat", os.getenv("DEEPSEEK_API_KEY"), "https://api.deepseek.com"
-    if os.getenv("OLLAMA_BASE_URL"):
-        return "ollama", "llama3.3:70b", None, os.getenv("OLLAMA_BASE_URL")
-    if os.getenv("LOCALAI_BASE_URL"):
-        return "localai", "default", None, os.getenv("LOCALAI_BASE_URL")
+    from agentflow.config import get_settings
 
-    # フォールバック: ローカルモック
-    logger.warning("No LLM API key found in environment. Using mock client.")
-    return "local", "mock", None, None
+    settings = get_settings()
+    llm_config = settings.get_active_llm_config()
+
+    provider = llm_config["provider"]
+    model = llm_config["model"]
+    api_key = llm_config.get("api_key")
+    base_url = llm_config.get("base_url")
+
+    if provider == "mock":
+        logger.warning("No LLM API key found in environment. Using mock client.")
+
+    return provider, model, api_key, base_url
 
 
 class LLMProvider:

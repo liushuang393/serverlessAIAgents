@@ -250,14 +250,50 @@ class LLMClient:
             Exception: API呼び出しエラー時
         """
         try:
+            # モデル名を小文字で取得
+            model_name = self._config.model.lower()
+
+            # モデル分類:
+            # 1. Reasoning モデル (o1, o3, o4 系): max_completion_tokens、temperature 非対応
+            # 2. GPT-5 系列: max_completion_tokens を使用（新 API）
+            # 3. GPT-4/3.5 系: max_tokens と temperature を使用（従来 API）
+            # 参考: https://platform.openai.com/docs/guides/reasoning
+            #       https://community.openai.com/t/why-was-max-tokens-changed-to-max-completion-tokens/938077
+
+            # Reasoning モデル判定: o1, o1-mini, o1-pro, o3, o3-mini, o4-mini など
+            is_reasoning_model = bool(
+                model_name.startswith(('o1', 'o3', 'o4'))
+            )
+
+            # GPT-5 系列判定: gpt-5, gpt-5.2, gpt-5-mini など（max_completion_tokens を使用）
+            is_gpt5_model = bool(
+                model_name.startswith('gpt-5') or 'gpt5' in model_name
+            )
+
+            # 新 API を使用するモデル（max_completion_tokens）
+            use_new_api = is_reasoning_model or is_gpt5_model
+
+            # 基本パラメータ
+            params: dict[str, Any] = {
+                "model": self._config.model,
+                "messages": [{"role": msg.role, "content": msg.content} for msg in messages],
+            }
+
+            # モデルに応じたパラメータ設定
+            if is_reasoning_model:
+                # Reasoning モデル: temperature 非対応、max_completion_tokens を使用
+                params["max_completion_tokens"] = kwargs.get("max_tokens", self._config.max_tokens)
+            elif is_gpt5_model:
+                # GPT-5 系: max_completion_tokens を使用、temperature は対応
+                params["max_completion_tokens"] = kwargs.get("max_tokens", self._config.max_tokens)
+                params["temperature"] = kwargs.get("temperature", self._config.temperature)
+            else:
+                # 従来モデル (GPT-4o, GPT-4, GPT-3.5 等): max_tokens と temperature を使用
+                params["temperature"] = kwargs.get("temperature", self._config.temperature)
+                params["max_tokens"] = kwargs.get("max_tokens", self._config.max_tokens)
+
             response = await asyncio.wait_for(
-                self._client.chat.completions.create(
-                    model=self._config.model,
-                    messages=[{"role": msg.role, "content": msg.content} for msg in messages],
-                    temperature=kwargs.get("temperature", self._config.temperature),
-                    max_tokens=kwargs.get("max_tokens", self._config.max_tokens),
-                    timeout=self._config.timeout,
-                ),
+                self._client.chat.completions.create(**params),
                 timeout=self._config.timeout,
             )
 
@@ -474,13 +510,32 @@ class LLMClient:
         Yields:
             生成されたテキストチャンク
         """
-        stream = await self._client.chat.completions.create(
-            model=self._config.model,
-            messages=[{"role": msg.role, "content": msg.content} for msg in messages],
-            temperature=kwargs.get("temperature", self._config.temperature),
-            max_tokens=kwargs.get("max_tokens", self._config.max_tokens),
-            stream=True,
-        )
+        # モデル名を小文字で取得
+        model_name = self._config.model.lower()
+
+        # モデル分類
+        is_reasoning_model = bool(model_name.startswith(('o1', 'o3', 'o4')))
+        is_gpt5_model = bool(model_name.startswith('gpt-5') or 'gpt5' in model_name)
+
+        params: dict[str, Any] = {
+            "model": self._config.model,
+            "messages": [{"role": msg.role, "content": msg.content} for msg in messages],
+            "stream": True,
+        }
+
+        if is_reasoning_model:
+            # Reasoning モデル: temperature 非対応、max_completion_tokens を使用
+            params["max_completion_tokens"] = kwargs.get("max_tokens", self._config.max_tokens)
+        elif is_gpt5_model:
+            # GPT-5 系: max_completion_tokens を使用、temperature は対応
+            params["max_completion_tokens"] = kwargs.get("max_tokens", self._config.max_tokens)
+            params["temperature"] = kwargs.get("temperature", self._config.temperature)
+        else:
+            # 従来モデル: max_tokens と temperature を使用
+            params["temperature"] = kwargs.get("temperature", self._config.temperature)
+            params["max_tokens"] = kwargs.get("max_tokens", self._config.max_tokens)
+
+        stream = await self._client.chat.completions.create(**params)
 
         async for chunk in stream:
             if chunk.choices[0].delta.content:

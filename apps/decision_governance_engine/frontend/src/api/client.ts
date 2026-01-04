@@ -219,26 +219,39 @@ export class DecisionApiClient {
       ...(timelineMonths && { timeline_months: timelineMonths.toString() }),
     });
 
-    const eventSource = new EventSource(
-      `${this.baseUrl}/api/decision/stream?${params}`
-    );
+    const url = `${this.baseUrl}/api/decision/stream?${params}`;
+    console.log('[SSE-DEBUG] Creating EventSource with URL:', url);
+
+    const eventSource = new EventSource(url);
+    console.log('[SSE-DEBUG] EventSource created, readyState:', eventSource.readyState);
+
+    // onopen が発火したかを追跡（一部環境で発火しないケースがある）
+    let hasCalledOnOpen = false;
 
     // 接続成功
     eventSource.onopen = () => {
-      console.log('[SSE] EventSource.onopen 発火 - 接続成功');
-      onOpen?.();
+      console.log('[SSE-DEBUG] onopen fired! readyState:', eventSource.readyState);
+      if (!hasCalledOnOpen) {
+        hasCalledOnOpen = true;
+        onOpen?.();
+      }
     };
 
     if (onEvent) {
       eventSource.onmessage = (e) => {
-        console.log('[SSE] EventSource.onmessage 受信:', e.data.slice(0, 100));
+        console.log('[SSE-DEBUG] onmessage received:', e.data?.slice(0, 80));
+        // 最初のメッセージ受信時に onopen が発火していなければ手動で呼ぶ
+        // これにより isConnected が確実に true になる
+        if (!hasCalledOnOpen) {
+          hasCalledOnOpen = true;
+          onOpen?.();
+        }
+
         try {
           const event: AGUIEvent = JSON.parse(e.data);
-          console.log('[SSE] パース成功:', event.event_type, event.node_id || '');
           onEvent(event);
-        } catch (err) {
-          // SSE イベントのパースに失敗 - ログ出力
-          console.warn('[SSE] イベントパース失敗:', e.data, err);
+        } catch {
+          // SSE イベントのパースに失敗 - 無視
         }
       };
     }
@@ -247,17 +260,20 @@ export class DecisionApiClient {
       // 接続状態を確認
       const isConnecting = eventSource.readyState === EventSource.CONNECTING;
       const isClosed = eventSource.readyState === EventSource.CLOSED;
-      
+      console.log('[SSE-DEBUG] onerror fired! readyState:', eventSource.readyState, 'connecting:', isConnecting, 'closed:', isClosed);
+
       if (isClosed) {
         // 完全に閉じた - リトライ不可
+        console.log('[SSE-DEBUG] Connection CLOSED, calling onError');
         if (onError) {
           onError('サーバーとの接続が切断されました。', false);
         }
       } else if (isConnecting) {
         // 再接続中 - ユーザーに通知しない（EventSourceが自動リトライ）
-        console.warn('[SSE] 再接続中...', err);
+        console.log('[SSE-DEBUG] Reconnecting...');
       } else {
         // その他のエラー
+        console.log('[SSE-DEBUG] Other error, closing connection');
         eventSource.close();
         if (onError) {
           onError('サーバーに接続できません。バックエンドが起動しているか確認してください。', true);

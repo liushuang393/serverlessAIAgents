@@ -123,9 +123,34 @@ class FlowExecutor:
                 # ノードを実行
                 result = await node.execute(ctx)
 
+                # ノード失敗時はエラーイベントを発行
+                if not result.success:
+                    error_msg = result.data.get("error", "Unknown error")
+                    error_type = result.data.get("error_type", "AgentError")
+                    if tracker:
+                        yield tracker.on_node_error(node, error_msg, error_type)
+                    else:
+                        yield {
+                            "event_type": "node.error",
+                            "type": "node_error",  # 後方互換
+                            "node_id": node.id,
+                            "node_name": node.name,
+                            "error_message": error_msg,
+                            "error_type": error_type,
+                            "message": error_msg,  # フロントエンド fallback
+                        }
+
                 # ノード完了イベント
                 if tracker:
-                    yield tracker.on_node_complete(node, result.data)
+                    yield tracker.on_node_complete(node, result.data, success=result.success)
+                else:
+                    yield {
+                        "event_type": "node.complete",
+                        "type": "node_complete",  # 後方互換
+                        "node_id": node.id,
+                        "node_name": node.name,
+                        "success": result.success,
+                    }
 
                 # 実行結果を処理
                 if result.action == NextAction.CONTINUE:
@@ -133,11 +158,28 @@ class FlowExecutor:
                     continue
 
                 if result.action == NextAction.STOP:
-                    # 正常終了
-                    if tracker:
-                        yield tracker.on_flow_complete(result.data)
+                    if result.success:
+                        # 正常終了
+                        if tracker:
+                            yield tracker.on_flow_complete(result.data)
+                        else:
+                            yield {
+                                "event_type": "flow.complete",
+                                "type": "flow_complete",  # 後方互換
+                                "result": result.data,
+                            }
                     else:
-                        yield {"type": "flow_complete", "result": result.data}
+                        # エラー終了
+                        error_msg = result.data.get("error", "Agent execution failed")
+                        if tracker:
+                            yield tracker.on_flow_error(Exception(error_msg))
+                        else:
+                            yield {
+                                "event_type": "flow.error",
+                                "type": "flow_error",  # 後方互換
+                                "error_message": error_msg,
+                                "message": error_msg,  # フロントエンド fallback
+                            }
                     return
 
                 if result.action == NextAction.EARLY_RETURN:
@@ -175,14 +217,23 @@ class FlowExecutor:
             if tracker:
                 yield tracker.on_flow_complete(final_result)
             else:
-                yield {"type": "flow_complete", "result": final_result}
+                yield {
+                    "event_type": "flow.complete",
+                    "type": "flow_complete",  # 後方互換
+                    "result": final_result,
+                }
 
         except Exception as e:
             self._logger.error(f"フロー実行失敗: {e}")
             if tracker:
                 yield tracker.on_flow_error(e)
             else:
-                yield {"type": "flow_error", "error": str(e)}
+                yield {
+                    "event_type": "flow.error",
+                    "type": "flow_error",  # 後方互換
+                    "error_message": str(e),
+                    "message": str(e),  # フロントエンド fallback
+                }
             raise
 
 

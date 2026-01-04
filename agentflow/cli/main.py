@@ -403,7 +403,7 @@ def info(ctx: click.Context, agent_id: str) -> None:
 @click.option(
     "--model",
     "-m",
-    default="gpt-4o-mini",
+    default="gpt-5.2",
     help="使用する LLM モデル",
 )
 @click.pass_context

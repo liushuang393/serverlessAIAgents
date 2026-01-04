@@ -25,6 +25,51 @@
     ...     max_revisions=2,
     ... )
     >>> result = await engine.run(inputs)
+
+=============================================================================
+継承ガイド
+=============================================================================
+
+PipelineEngine を継承してカスタムエンジンを作成する場合、2つの推奨パターンがあります：
+
+パターン1: _setup_stages() をオーバーライド（推奨）
+--------------------------------------------------
+ステージを動的に設定する場合に最適。親クラスの _initialize() が自動的に
+_initialize_agents() と _finalize_initialization() を呼び出すため、
+Flow 構築が確実に行われます。
+
+    >>> class MyEngine(PipelineEngine):
+    ...     def __init__(self, registry):
+    ...         self._registry = registry
+    ...         super().__init__(stages=[])  # 空で初期化
+    ...
+    ...     async def _setup_stages(self) -> None:
+    ...         await self._registry.initialize()
+    ...         self._stage_configs = self._parse_stages([
+    ...             {"name": "gate", "agent": self._registry.get("gate"), "gate": True},
+    ...             {"name": "process", "agent": self._registry.get("process")},
+    ...         ])
+    ...         # stage_instances も設定
+    ...         for stage in self._stage_configs:
+    ...             self._stage_instances[stage.name] = [stage.agent] if stage.agent else []
+
+パターン2: _initialize() をオーバーライド（上級者向け）
+------------------------------------------------------
+完全なカスタマイズが必要な場合。必ず最後に _finalize_initialization() を呼び出すこと！
+
+    >>> class MyEngine(PipelineEngine):
+    ...     async def _initialize(self) -> None:
+    ...         # カスタム初期化ロジック
+    ...         self._stage_configs = self._parse_stages([...])
+    ...         for stage in self._stage_configs:
+    ...             self._stage_instances[stage.name] = [...]
+    ...
+    ...         # 重要: Flow 構築を忘れずに！
+    ...         await self._finalize_initialization()
+
+WARNING:
+    _finalize_initialization() を呼び忘れると、self._flow が None のままになり、
+    run_stream() が期待通りに動作しません（fallback ロジックが使用されます）。
 """
 
 from __future__ import annotations
@@ -35,9 +80,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from agentflow.engines.base import BaseEngine, EngineConfig
+from agentflow.engines.report_builder import ReportBuilder
 
 if TYPE_CHECKING:
     from agentflow.flow import Flow
+    from agentflow.flow.context import FlowContext
 
 
 @dataclass
@@ -82,6 +129,7 @@ class PipelineEngine(BaseEngine):
         *,
         max_revisions: int = 2,
         report_generator: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+        report_builder: ReportBuilder | None = None,
         config: EngineConfig | None = None,
     ) -> None:
         """PipelineEngineを初期化.
@@ -89,16 +137,23 @@ class PipelineEngine(BaseEngine):
         Args:
             stages: ステージ設定リスト
             max_revisions: 最大リビジョン回数
-            report_generator: レポートジェネレーター（オプション）
+            report_generator: レポートジェネレーター（コールバック、後方互換用）
+            report_builder: ReportBuilder インスタンス（推奨）
             config: Engine設定
+
+        Note:
+            report_builder と report_generator の両方が指定された場合、
+            report_builder が優先される。
         """
         super().__init__(config)
         self._stage_configs = self._parse_stages(stages)
         self._max_revisions = max_revisions
         self._report_generator = report_generator
+        self._report_builder = report_builder
         self._flow: Flow | None = None
         self._stage_instances: dict[str, list[Any]] = {}
         self._results: dict[str, Any] = {}
+        self._inputs: dict[str, Any] = {}
         self._logger = logging.getLogger("agentflow.engines.pipeline")
 
     def _parse_stages(self, stages: list[dict[str, Any] | StageConfig]) -> list[StageConfig]:
@@ -118,11 +173,40 @@ class PipelineEngine(BaseEngine):
         return agent
 
     async def _initialize(self) -> None:
-        """すべてのAgentを初期化し、Flowを構築."""
-        # flow モジュールをインポート
-        from agentflow.flow import create_flow
+        """すべてのAgentを初期化し、Flowを構築.
+
+        Note:
+            サブクラスでこのメソッドをオーバーライドする場合は、
+            必ず最後に super()._finalize_initialization() を呼び出すか、
+            _setup_stages() をオーバーライドして stages を動的に設定してください。
+        """
+        # サブクラスでステージを動的に設定する機会を与える
+        await self._setup_stages()
 
         # Agentインスタンスを初期化
+        await self._initialize_agents()
+
+        # Flow を構築（重要：これを忘れるとストリーム実行が動作しない）
+        await self._finalize_initialization()
+
+    async def _setup_stages(self) -> None:
+        """ステージを動的に設定するためのフック.
+
+        サブクラスでオーバーライドして、stages を動的に設定できます。
+        このメソッドは Agent 初期化前に呼ばれます。
+
+        Example:
+            >>> async def _setup_stages(self) -> None:
+            ...     await self._registry.initialize()
+            ...     self._stage_configs = self._parse_stages([
+            ...         {"name": "gate", "agent": self._registry.get_agent("gate")},
+            ...         ...
+            ...     ])
+        """
+        pass  # デフォルトは何もしない
+
+    async def _initialize_agents(self) -> None:
+        """すべてのAgentインスタンスを初期化."""
         for stage in self._stage_configs:
             instances = []
 
@@ -141,7 +225,13 @@ class PipelineEngine(BaseEngine):
 
             self._stage_instances[stage.name] = instances
 
-        # Flow を構築
+    async def _finalize_initialization(self) -> None:
+        """初期化を完了（Flow 構築）.
+
+        Warning:
+            サブクラスで _initialize() をオーバーライドする場合は、
+            必ずこのメソッドを最後に呼び出してください。
+        """
         self._flow = self._build_flow()
         self._logger.info(f"PipelineEngine initialized with {len(self._stage_configs)} stages")
 
@@ -150,6 +240,9 @@ class PipelineEngine(BaseEngine):
         from agentflow.flow import create_flow
 
         builder = create_flow(self._config.name)
+
+        # ステージ名のリストを保持（依存関係追跡用）
+        completed_stages: list[str] = []
 
         for stage in self._stage_configs:
             instances = self._stage_instances[stage.name]
@@ -161,14 +254,17 @@ class PipelineEngine(BaseEngine):
                     id=stage.name,
                     check=stage.gate_check,
                 )
+                completed_stages.append(stage.name)
             elif stage.review and instances:
-                # Reviewステージ
+                # Reviewステージ - 全ての結果を入力として渡す
                 builder.review(
                     instances[0],
                     id=stage.name,
                     retry_from=stage.retry_from,
                     max_revisions=self._max_revisions,
+                    input_mapper=self._create_review_input_mapper(),
                 )
+                completed_stages.append(stage.name)
             elif stage.parallel and len(instances) > 1:
                 # 並列ステージ
                 agent_tuples = [
@@ -176,13 +272,65 @@ class PipelineEngine(BaseEngine):
                     for i, inst in enumerate(instances)
                 ]
                 builder.parallel(*agent_tuples, id=stage.name)
+                completed_stages.append(stage.name)
             else:
-                # 通常のAgentステージ
+                # 通常のAgentステージ - 前ステージの結果を渡す input_mapper を設定
                 for inst in instances:
                     node_id = stage.name if len(instances) == 1 else None
-                    builder.then(inst, ids=[node_id] if node_id else None)
+                    input_mapper = self._create_stage_input_mapper(completed_stages.copy())
+                    input_mappers = {node_id: input_mapper} if node_id else None
+                    builder.then(inst, ids=[node_id] if node_id else None, input_mappers=input_mappers)
+                completed_stages.append(stage.name)
 
         return builder.with_config(max_revisions=self._max_revisions).build()
+
+    def _create_stage_input_mapper(
+        self, completed_stages: list[str]
+    ) -> Callable[["FlowContext"], dict[str, Any]]:
+        """ステージ用の入力マッパーを生成.
+
+        前ステージの結果を {stage_name}_result として渡し、
+        結果を直接マージして後方互換性を維持。
+
+        Args:
+            completed_stages: 完了したステージ名のリスト
+
+        Returns:
+            入力マッピング関数
+        """
+        from agentflow.flow.context import FlowContext
+
+        def mapper(ctx: FlowContext) -> dict[str, Any]:
+            # 1. 元の入力を取得
+            inputs = ctx.get_inputs()
+
+            # 2. 前ステージの結果を追加
+            for stage_name in completed_stages:
+                result = ctx.get_result(stage_name)
+                if result:
+                    # {stage_name}_result として設定（Agent間依存用）
+                    inputs[f"{stage_name}_result"] = result
+                    # 結果を直接マージ（後方互換）
+                    inputs.update(result)
+
+            return inputs
+
+        return mapper
+
+    def _create_review_input_mapper(self) -> Callable[["FlowContext"], dict[str, Any]]:
+        """Review用の入力マッパーを生成.
+
+        すべての結果を渡す。
+
+        Returns:
+            入力マッピング関数
+        """
+        from agentflow.flow.context import FlowContext
+
+        def mapper(ctx: FlowContext) -> dict[str, Any]:
+            return ctx.get_all_results()
+
+        return mapper
 
     async def _execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Pipelineフローを実行（Flowを活用）."""
@@ -333,6 +481,7 @@ class PipelineEngine(BaseEngine):
         self, inputs: dict[str, Any]
     ) -> AsyncIterator[dict[str, Any]]:
         """従来のストリーム実行ロジック（フォールバック）."""
+        self._inputs = inputs.copy()
         self._results = {"inputs": inputs}
         current_inputs = inputs.copy()
 
@@ -344,6 +493,7 @@ class PipelineEngine(BaseEngine):
                         retry_from_idx = j
                         break
 
+        review_passed = False
         for revision in range(self._max_revisions + 1):
             start_idx = retry_from_idx if revision > 0 else 0
 
@@ -380,10 +530,11 @@ class PipelineEngine(BaseEngine):
                         return
 
                 if stage.review:
-                    verdict = stage_result.get("verdict", "PASS")
+                    verdict = stage_result.get("verdict", stage_result.get("overall_verdict", "PASS"))
                     yield {"type": "review_verdict", "data": {"verdict": verdict}}
 
                     if verdict == "PASS":
+                        review_passed = True
                         break
                     elif verdict == "REJECT":
                         yield {
@@ -395,13 +546,41 @@ class PipelineEngine(BaseEngine):
                         yield {"type": "revise", "data": {"retry_from": retry_from_idx}}
                         break
 
+                # 前ステージの結果を次のステージに渡す
+                # 1. {stage_name}_result として設定（Agent間依存用）
+                current_inputs[f"{stage.name}_result"] = stage_result
+                # 2. 結果を直接マージ（後方互換）
                 current_inputs.update(stage_result)
             else:
+                # 内部ループが break なしで完了した場合（全ステージ正常完了）
                 break
 
-        final = self._report_generator(self._results) if self._report_generator else {
-            "status": "success",
-            "results": self._results,
-        }
+            # Review で PASS した場合は外部ループも終了
+            if review_passed:
+                break
+
+        # 最終レポート生成
+        final = self._build_final_report()
         yield {"type": "result", "data": final}
+
+    def _build_final_report(self) -> dict[str, Any]:
+        """最終レポートを生成.
+
+        ReportBuilder > report_generator > デフォルト の優先順で使用。
+
+        Returns:
+            JSON シリアライズ可能なレポート辞書
+        """
+        if self._report_builder:
+            return self._report_builder.build(
+                results=self._results,
+                inputs=self._inputs,
+            )
+        elif self._report_generator:
+            return self._report_generator(self._results)
+        else:
+            return {
+                "status": "success",
+                "results": self._results,
+            }
 

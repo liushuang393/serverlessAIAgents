@@ -208,31 +208,42 @@ export const ProcessingPage: React.FC = () => {
     }
   }, [report, setReport, setPage]);
 
-  // 画面表示時に SSE ストリーム開始（一度だけ実行、React Strict Mode 対策済み）
+  // 画面表示時に SSE ストリーム開始（question が設定されたら1回のみ）
   const hasStartedRef = useRef(false);
+  // React Strict Mode 対応: 真のアンマウントかどうかを判定
+  const isMountedRef = useRef(false);
+
+  // ストリーム開始用 Effect（question 変化時に発火）
   useEffect(() => {
-    // React Strict Mode で2回実行されても1回だけ startStream を呼ぶ
+    isMountedRef.current = true;
+
+    // question がある場合のみ startStream を呼ぶ（1回のみ）
+    // Zustand persist の hydration 完了後に question が設定される
     if (question && !hasStartedRef.current) {
       hasStartedRef.current = true;
       const budget = constraints.budget ? parseFloat(constraints.budget) : undefined;
       const timeline = constraints.timeline ? parseInt(constraints.timeline, 10) : undefined;
-      console.log('[ProcessingPage] SSE ストリーム開始');
+      console.log('[ProcessingPage] startStream 開始', { question: question.slice(0, 50), budget, timeline });
       startStream(question, budget, timeline);
+    } else if (!question) {
+      console.log('[ProcessingPage] question が空 - hydration 待ち中');
     }
 
-    // クリーンアップ: コンポーネントが完全にアンマウントされた時のみ停止
-    // React Strict Mode の一時的なアンマウントでは hasStartedRef が true のままなので
-    // 次の mount 時に startStream がスキップされる
+    // Cleanup: React Strict Mode 対応
+    // Strict Mode では mount → unmount → mount の順で実行される
+    // 真のアンマウント時のみ stopStream を呼ぶ
     return () => {
-      // 完了またはエラー時のみ停止（進行中の接続は維持）
-      if (isComplete || error) {
-        console.log('[ProcessingPage] クリーンアップ: ストリーム停止');
-        stopStream();
-        hasStartedRef.current = false;
-      }
+      // 少し遅延して、Strict Mode の再マウントかどうかを確認
+      setTimeout(() => {
+        if (!isMountedRef.current) {
+          console.log('[ProcessingPage] 真のアンマウント - ストリーム停止');
+          stopStream();
+        }
+      }, 100);
+      isMountedRef.current = false;
+      hasStartedRef.current = false;  // 再マウント時に再開できるようにリセット
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [question, isComplete, error]);
+  }, [question, constraints.budget, constraints.timeline, startStream, stopStream]);
 
   // 完了時にレポートを保存（自動遷移しない - ボタンで遷移）
   useEffect(() => {

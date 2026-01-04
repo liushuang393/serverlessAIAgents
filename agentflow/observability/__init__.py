@@ -53,10 +53,12 @@ from agentflow.observability.sentry_integration import (
     capture_message,
 )
 from agentflow.observability.setup import setup_observability
+from agentflow.observability.startup import log_startup_info
 
 __all__ = [
     # Setup
     "setup_observability",
+    "log_startup_info",
     # Logging
     "AgentFlowLogger",
     "setup_logging",

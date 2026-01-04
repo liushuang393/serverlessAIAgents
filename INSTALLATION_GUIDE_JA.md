@@ -23,7 +23,7 @@
 | ソフトウェア | バージョン | 説明 |
 |------------|----------|------|
 | **Python** | 3.13+ | Python プログラミング言語 |
-| **Node.js** | 18+ | フロントエンド開発用（React が必要） |
+| **Node.js** | 22+ | フロントエンド開発用（React が必要） |
 | **npm** または **pnpm** | 最新版 | Node.js パッケージマネージャー |
 | **Git** | 最新版 | コードの取得用（オプション） |
 
@@ -119,13 +119,13 @@ AgentFlow をインストール済みであれば、追加のインストール�
 ```bash
 # FastAPI がインストールされているか確認
 python -c "import fastapi; print(fastapi.__version__)"
-# 出力例: 0.115.0
+# 出力例: 0.123.0
 ```
 
 ### ステップ 2: フロントエンド依存関係のインストール
 
 ```bash
-# フロントエンドディレクトリに移動
+# フロントエンドディレクトリに移動　例：
 cd apps/decision_governance_engine/frontend
 
 # 依存関係をインストール
@@ -211,16 +211,15 @@ GOOGLE_API_KEY=your-google-api-key-here
 
 ## アプリケーションの起動
 
-### 方法 1: バックエンド API サーバーの起動
+### 方法 1: フロントエンド開発サーバーの起動
 
 **ターミナル 1（バックエンド）:**
 
 ```bash
 # プロジェクトルートで実行
-cd apps/decision_governance_engine
 
 # FastAPI サーバーを起動
-python -m uvicorn api:app --reload --host 0.0.0.0 --port 8000
+uvicorn apps.decision_governance_engine.api:app --reload --host 0.0.0.0 --port 8000
 
 # または、api.py を直接実行
 python api.py
@@ -235,7 +234,6 @@ python api.py
 - `http://localhost:8000/api/agents` - Agent 一覧
 - `http://localhost:8000/docs` - API ドキュメント
 
-### 方法 2: フロントエンド開発サーバーの起動
 
 **ターミナル 2（フロントエンド）:**
 
@@ -255,7 +253,7 @@ pnpm dev
 
 **注意**: フロントエンドはバックエンド API（`http://localhost:8000`）に接続します。
 
-### 方法 3: CLI モードで実行（フロントエンド不要）
+### 方法 2: CLI モードで実行（フロントエンド不要）
 
 **ターミナル:**
 

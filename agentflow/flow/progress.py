@@ -68,7 +68,8 @@ class ProgressTracker:
         """
         self._current_node = node.id
         return {
-            "type": "node_start",
+            "event_type": "node.start",
+            "type": "node_start",  # 後方互換
             "timestamp": time.time(),
             "flow_id": self._flow_id,
             "node_id": node.id,
@@ -80,12 +81,15 @@ class ProgressTracker:
             },
         }
 
-    def on_node_complete(self, node: FlowNode, result: dict[str, Any]) -> dict[str, Any]:
+    def on_node_complete(
+        self, node: FlowNode, result: dict[str, Any], *, success: bool = True
+    ) -> dict[str, Any]:
         """ノード完了イベント.
 
         Args:
             node: 完了したノード
             result: ノード実行結果
+            success: 実行が成功したか
 
         Returns:
             AG-UI NodeCompleteEvent形式の辞書
@@ -93,21 +97,51 @@ class ProgressTracker:
         self._completed += 1
         self._current_node = None
         return {
-            "type": "node_complete",
+            "event_type": "node.complete",
+            "type": "node_complete",  # 後方互換
             "timestamp": time.time(),
             "flow_id": self._flow_id,
             "node_id": node.id,
             "node_name": node.name,
             "data": {
                 "progress": self.progress_percent,
-                "success": True,
+                "success": success,
+            },
+        }
+
+    def on_node_error(
+        self, node: FlowNode, error: str, error_type: str = "AgentError"
+    ) -> dict[str, Any]:
+        """ノードエラーイベント.
+
+        Args:
+            node: エラーが発生したノード
+            error: エラーメッセージ
+            error_type: エラータイプ名
+
+        Returns:
+            AG-UI NodeErrorEvent形式の辞書
+        """
+        return {
+            "event_type": "node.error",
+            "type": "node_error",  # 後方互換
+            "timestamp": time.time(),
+            "flow_id": self._flow_id,
+            "node_id": node.id,
+            "node_name": node.name,
+            "error_message": error,
+            "error_type": error_type,
+            "message": error,  # フロントエンドの fallback 用
+            "data": {
+                "progress": self.progress_percent,
             },
         }
 
     def on_flow_start(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """フロー開始イベント."""
         return {
-            "type": "flow_start",
+            "event_type": "flow.start",
+            "type": "flow_start",  # 後方互換
             "timestamp": time.time(),
             "flow_id": self._flow_id,
             "data": {
@@ -119,7 +153,8 @@ class ProgressTracker:
     def on_flow_complete(self, result: dict[str, Any]) -> dict[str, Any]:
         """フロー完了イベント."""
         return {
-            "type": "flow_complete",
+            "event_type": "flow.complete",
+            "type": "flow_complete",  # 後方互換
             "timestamp": time.time(),
             "flow_id": self._flow_id,
             "data": {
@@ -131,11 +166,13 @@ class ProgressTracker:
     def on_flow_error(self, error: Exception) -> dict[str, Any]:
         """フローエラーイベント."""
         return {
-            "type": "flow_error",
+            "event_type": "flow.error",
+            "type": "flow_error",  # 後方互換
             "timestamp": time.time(),
             "flow_id": self._flow_id,
             "error_message": str(error),
             "error_type": type(error).__name__,
+            "message": str(error),  # フロントエンドの fallback 用
             "data": {
                 "node_id": self._current_node,
                 "progress": self.progress_percent,

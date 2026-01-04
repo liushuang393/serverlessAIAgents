@@ -232,14 +232,14 @@ class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
                 temperature=0.1,
             )
 
-            # JSON パース
+            # JSON パース（堅牢な抽出）
             content = response.content if hasattr(response, "content") else str(response)
-            # JSON部分を抽出
-            json_match = re.search(r"\{[^}]+\}", content, re.DOTALL)
-            if json_match:
-                return json.loads(json_match.group())
+            from agentflow.utils import extract_json
+            data = extract_json(content)
+            if data:
+                return data
 
-            self._logger.warning(f"Failed to parse LLM response: {content}")
+            self._logger.warning(f"Failed to parse LLM response: {content[:100]}")
             return {"is_relevant": True, "reason": "Parse failed", "category": "NEW_BUSINESS"}
 
         except Exception as e:

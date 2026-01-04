@@ -364,6 +364,7 @@ export interface DecisionReport {
 
 /** AG-UI イベントタイプ */
 export type AGUIEventType =
+  | 'connection.established'
   | 'flow.start'
   | 'flow.complete'
   | 'flow.error'
