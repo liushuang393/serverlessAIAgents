@@ -138,6 +138,41 @@ from agentflow.observability import (
 from agentflow.integrations.fastapi_integration import create_sse_response
 
 # =============================================================================
+# 公開API: Human-in-the-Loop (HITL)
+# =============================================================================
+from agentflow.hitl import (
+    ApprovalManager,
+    ApprovalRequest,
+    ApprovalResponse,
+    ApprovalStatus,
+    Checkpointer,
+    CheckpointData,
+    Command,
+    CommandType,
+    HITLConfig,
+    InterruptError,
+    InterruptSignal,
+    MemoryCheckpointer,
+    create_hitl_router,
+    get_checkpointer,
+    interrupt,
+)
+from agentflow.engines.base import HITLEngineConfig
+
+# =============================================================================
+# 公開API: Planner Pattern (Plan-and-Execute)
+# =============================================================================
+from agentflow.patterns.planner import (
+    Plan,
+    PlanExecutor,
+    PlannerAgent,
+    PlanResult,
+    PlanStatus,
+    Step,
+    StepStatus,
+)
+
+# =============================================================================
 # 後方互換性のため維持（非推奨 - 将来削除予定）
 # =============================================================================
 from agentflow.core.engine import AgentFlowEngine  # 非推奨: enginesを使用してください
@@ -243,6 +278,37 @@ __all__ = [
     # SSE/AG-UI
     # =========================================================================
     "create_sse_response",
+
+    # =========================================================================
+    # Human-in-the-Loop (HITL)
+    # =========================================================================
+    "interrupt",
+    "InterruptError",
+    "InterruptSignal",
+    "ApprovalRequest",
+    "ApprovalResponse",
+    "ApprovalStatus",
+    "ApprovalManager",
+    "Command",
+    "CommandType",
+    "Checkpointer",
+    "CheckpointData",
+    "MemoryCheckpointer",
+    "get_checkpointer",
+    "HITLConfig",
+    "HITLEngineConfig",
+    "create_hitl_router",
+
+    # =========================================================================
+    # Planner Pattern (Plan-and-Execute)
+    # =========================================================================
+    "Plan",
+    "PlanExecutor",
+    "PlannerAgent",
+    "PlanResult",
+    "PlanStatus",
+    "Step",
+    "StepStatus",
 
     # =========================================================================
     # 後方互換（非推奨）

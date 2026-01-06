@@ -74,6 +74,17 @@ from agentflow.patterns.agent_pipeline import (
     RevisionRequest,
 )
 
+# Planner Pattern (Plan-and-Execute)
+from agentflow.patterns.planner import (
+    Plan,
+    PlanExecutor,
+    PlannerAgent,
+    PlanResult,
+    PlanStatus,
+    Step,
+    StepStatus,
+)
+
 __all__ = [
     # Coordinator Base
     "CoordinationPattern",
@@ -105,5 +116,13 @@ __all__ = [
     "AgentProtocol",
     "PipelineConfig",
     "RevisionRequest",
+    # Planner Pattern (Plan-and-Execute)
+    "Plan",
+    "PlanExecutor",
+    "PlannerAgent",
+    "PlanResult",
+    "PlanStatus",
+    "Step",
+    "StepStatus",
 ]
 

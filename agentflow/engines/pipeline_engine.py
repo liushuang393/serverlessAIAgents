@@ -100,7 +100,10 @@ class StageConfig:
         gate_check: Gate通過条件（lambda result: bool）
         retry_from: Review REVISE時のロールバック先ステージ名
         parallel: agentsを並列実行するか（デフォルト: False）
+        interrupt_before: このステージ実行前に人間の承認を要求
+        interrupt_after: このステージ実行後に人間の承認を要求
     """
+
     name: str
     agent: type | Any | None = None
     agents: list[type | Any] | None = None
@@ -109,6 +112,8 @@ class StageConfig:
     gate_check: Callable[[dict[str, Any]], bool] | None = None
     retry_from: str | None = None
     parallel: bool = False
+    interrupt_before: bool = False
+    interrupt_after: bool = False
 
 
 class PipelineEngine(BaseEngine):
@@ -442,27 +447,83 @@ class PipelineEngine(BaseEngine):
     async def _run_stage(
         self, stage: StageConfig, inputs: dict[str, Any]
     ) -> dict[str, Any]:
-        """単一ステージを実行."""
+        """単一ステージを実行.
+
+        HITL が有効でステージに interrupt_before/after が設定されている場合、
+        人間の承認を要求します。
+        """
         import asyncio
+
+        # HITL: 実行前の承認チェック
+        if stage.interrupt_before and self._should_interrupt(stage.name, "before"):
+            await self._request_stage_approval(stage, inputs, "before")
 
         instances = self._stage_instances[stage.name]
 
         if len(instances) == 1:
-            return await self._run_agent(instances[0], inputs)
-
-        if stage.parallel:
+            result = await self._run_agent(instances[0], inputs)
+        elif stage.parallel:
             tasks = [self._run_agent(inst, inputs) for inst in instances]
             results = await asyncio.gather(*tasks)
-            return {f"agent_{i}": r for i, r in enumerate(results)}
+            result = {f"agent_{i}": r for i, r in enumerate(results)}
         else:
             combined = {}
             current_inputs = inputs.copy()
             for inst in instances:
-                result = await self._run_agent(inst, current_inputs)
+                agent_result = await self._run_agent(inst, current_inputs)
                 agent_name = getattr(inst, "name", inst.__class__.__name__)
-                combined[agent_name] = result
-                current_inputs.update(result)
-            return combined
+                combined[agent_name] = agent_result
+                current_inputs.update(agent_result)
+            result = combined
+
+        # HITL: 実行後の承認チェック
+        if stage.interrupt_after and self._should_interrupt(stage.name, "after"):
+            await self._request_stage_approval(stage, inputs, "after", result)
+
+        return result
+
+    def _should_interrupt(self, stage_name: str, timing: str) -> bool:
+        """ステージで割り込みが必要かどうかを判定."""
+        if not self._config.hitl.enabled:
+            return False
+
+        # 設定の interrupt_before/after もチェック
+        if timing == "before" and stage_name in self._config.hitl.interrupt_before:
+            return True
+        if timing == "after" and stage_name in self._config.hitl.interrupt_after:
+            return True
+
+        return True  # ステージ設定で既にチェック済み
+
+    async def _request_stage_approval(
+        self,
+        stage: StageConfig,
+        inputs: dict[str, Any],
+        timing: str,
+        result: dict[str, Any] | None = None,
+    ) -> None:
+        """ステージの承認を要求."""
+        from agentflow.hitl import ApprovalRequest, interrupt
+
+        request = ApprovalRequest(
+            action=f"stage_{timing}_{stage.name}",
+            reason=f"ステージ '{stage.name}' の{timing}で承認が必要です",
+            context={
+                "stage_name": stage.name,
+                "timing": timing,
+                "inputs": inputs,
+                "result": result,
+            },
+            requester=self._config.name,
+        )
+
+        # interrupt() は InterruptSignal を発生させる
+        await interrupt(
+            request,
+            node_id=stage.name,
+            flow_id=self._flow_id,
+            state={"stage": stage.name, "timing": timing, "result": result},
+        )
 
     async def _execute_stream(
         self, inputs: dict[str, Any]

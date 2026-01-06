@@ -105,6 +105,18 @@ ruff format . && ruff check . && mypy . && pytest
 - **コミットメッセージ**: L727-737 (feat/fix/docs/style/refactor/test/chore)
 - **バージョン管理**: L739-747 (SemVer)
 
+### 🧠 認知アーキテクチャパターン (L751-808)
+- **ReAct**: L761-772 (思考→行動→観察)
+- **計画型**: L774-778 (PlannerAgent)
+- **自己反省**: L780-786 (ReviewAgent)
+- **HITL**: L788-796 (interrupt/approval)
+
+### 🔄 業界比較と拡張 (L810-896)
+- **主要フレームワーク比較**: L814-822
+- **AgentFlow アーキテクチャ図**: L826-858
+- **機能比較表**: L860-871
+- **将来ロードマップ**: L875-894
+
 ---
 
 ## 🚀 よく使うパターン（コピペ用）
@@ -138,6 +150,25 @@ flow = create_flow(agents=[A(), B()], pattern="sequential")
 result = await flow.run({...})
 ```
 
+### 計画型Agent（Plan-and-Execute）
+```python
+from agentflow import PlannerAgent, PlanExecutor
+
+planner = PlannerAgent()
+plan = await planner.create_plan(goal="Webアプリ構築")
+executor = PlanExecutor(agents={"dev": DevAgent(), "test": TestAgent()})
+result = await executor.execute(plan)
+```
+
+### HITL（Human-in-the-Loop）
+```python
+from agentflow import interrupt, ApprovalRequest
+
+response = await interrupt(ApprovalRequest(action="delete", reason="確認"))
+if response.approved:
+    await do_action()
+```
+
 ---
 
 ## 📦 重要インポート
@@ -154,6 +185,12 @@ from agentflow.core.exceptions import AgentFlowError
 # パターン
 from agentflow.patterns.multi_agent import AgentCoordinator, SharedContext
 from agentflow.patterns.supervisor import SupervisorCoordinator
+
+# 計画型・HITL
+from agentflow import (
+    PlannerAgent, PlanExecutor, Plan, Step,
+    interrupt, ApprovalRequest, ApprovalResponse
+)
 ```
 
 ---

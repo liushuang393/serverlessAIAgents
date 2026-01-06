@@ -54,6 +54,7 @@ from agentflow.observability.sentry_integration import (
 )
 from agentflow.observability.setup import setup_observability
 from agentflow.observability.startup import log_startup_info
+from agentflow.observability.otel_exporter import OTLPExporter
 
 __all__ = [
     # Setup
@@ -80,5 +81,7 @@ __all__ = [
     "setup_sentry",
     "capture_exception",
     "capture_message",
+    # OTLP Exporter
+    "OTLPExporter",
 ]
 

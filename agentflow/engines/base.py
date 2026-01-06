@@ -26,14 +26,36 @@ from pydantic import BaseModel
 
 # AG-UI イベント（遅延インポートで循環依存回避）
 if TYPE_CHECKING:
+    from agentflow.hitl.checkpointer import Checkpointer
     from agentflow.patterns.progress_emitter import AgentMeta, ProgressEmitter
     from agentflow.protocols.agui_events import AGUIEvent
 
 
 @dataclass
+class HITLEngineConfig:
+    """HITL 関連の Engine 設定.
+
+    Attributes:
+        enabled: HITL を有効にするか
+        checkpointer: チェックポインター（状態永続化）
+        interrupt_before: 指定ノードの実行前に割り込み
+        interrupt_after: 指定ノードの実行後に割り込み
+        approval_required_for: 承認が必要なアクションパターン
+        default_timeout_seconds: デフォルト承認タイムアウト
+    """
+
+    enabled: bool = False
+    checkpointer: "Checkpointer | None" = None
+    interrupt_before: list[str] = field(default_factory=list)
+    interrupt_after: list[str] = field(default_factory=list)
+    approval_required_for: list[str] = field(default_factory=list)
+    default_timeout_seconds: int = 3600
+
+
+@dataclass
 class EngineConfig:
     """Engine設定.
-    
+
     Attributes:
         name: Engineインスタンス名
         enable_events: AG-UIイベントを発行するか
@@ -41,14 +63,17 @@ class EngineConfig:
         max_retries: グローバル最大リトライ回数
         timeout_seconds: グローバルタイムアウト時間
         llm_config: LLM設定（model、temperature等）
+        hitl: HITL（Human-in-the-Loop）設定
         extra: 追加設定
     """
+
     name: str = "engine"
     enable_events: bool = True
     enable_memory: bool = True
     max_retries: int = 2
     timeout_seconds: int = 300
     llm_config: dict[str, Any] = field(default_factory=dict)
+    hitl: HITLEngineConfig = field(default_factory=HITLEngineConfig)
     extra: dict[str, Any] = field(default_factory=dict)
 
 
@@ -84,6 +109,9 @@ class BaseEngine(ABC):
         self._flow_id: str | None = None
         self._initialized = False
         self._progress_emitter: ProgressEmitter | None = None
+        self._thread_id: str | None = None
+        self._is_resuming: bool = False
+        self._resume_checkpoint_id: str | None = None
 
     @property
     def config(self) -> EngineConfig:
@@ -126,29 +154,47 @@ class BaseEngine(ABC):
         """
         ...
 
-    async def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
+    async def run(
+        self,
+        inputs: dict[str, Any],
+        *,
+        thread_id: str | None = None,
+    ) -> dict[str, Any]:
         """Engineを同期実行.
-        
+
         Args:
             inputs: 入力データ
-            
+            thread_id: スレッドID（HITL用、省略時は自動生成）
+
         Returns:
             最終結果（dict）
+
+        Raises:
+            InterruptSignal: HITL 割り込みが発生した場合
         """
         if not self._initialized:
             await self._initialize()
             self._initialized = True
 
         self._flow_id = f"{self._config.name}-{uuid.uuid4().hex[:8]}"
-        self._logger.info(f"Engine run started: {self._flow_id}")
+        self._thread_id = thread_id or f"thread-{uuid.uuid4().hex[:8]}"
+        self._logger.info(f"Engine run started: {self._flow_id} (thread: {self._thread_id})")
+
+        # HITL コンテキストを設定
+        self._setup_hitl_context()
 
         try:
             result = await self._execute(inputs)
             self._logger.info(f"Engine run completed: {self._flow_id}")
             return result
-        except Exception:
+        except Exception as e:
+            # InterruptSignal の場合は状態を保存
+            if self._is_interrupt_signal(e):
+                await self._handle_interrupt(e, inputs)
             self._logger.exception(f"Engine run failed: {self._flow_id}")
             raise
+        finally:
+            self._cleanup_hitl_context()
 
     async def run_stream(
         self, inputs: dict[str, Any]
@@ -267,3 +313,155 @@ class BaseEngine(ABC):
         """現在の ProgressEmitter を取得."""
         return self._progress_emitter
 
+    # =========================================================================
+    # HITL (Human-in-the-Loop) サポート
+    # =========================================================================
+
+    def _setup_hitl_context(self) -> None:
+        """HITL コンテキストを設定."""
+        if not self._config.hitl.enabled:
+            return
+
+        from agentflow.hitl import set_checkpointer, set_thread_id
+
+        if self._config.hitl.checkpointer:
+            set_checkpointer(self._config.hitl.checkpointer)
+
+        if self._thread_id:
+            set_thread_id(self._thread_id)
+
+    def _cleanup_hitl_context(self) -> None:
+        """HITL コンテキストをクリーンアップ."""
+        if not self._config.hitl.enabled:
+            return
+
+        from agentflow.hitl import clear_interrupt
+
+        clear_interrupt()
+
+    def _is_interrupt_signal(self, exc: Exception) -> bool:
+        """例外が InterruptSignal かどうかを判定."""
+        from agentflow.hitl import InterruptSignal
+
+        return isinstance(exc, InterruptSignal)
+
+    async def _handle_interrupt(
+        self,
+        exc: Exception,
+        inputs: dict[str, Any],
+    ) -> None:
+        """割り込みを処理し、状態を保存."""
+        from agentflow.hitl import InterruptSignal
+        from agentflow.hitl.checkpointer import CheckpointData
+
+        if not isinstance(exc, InterruptSignal):
+            return
+
+        checkpointer = self._config.hitl.checkpointer
+        if checkpointer is None:
+            self._logger.warning("Checkpointer が未設定のため、状態を保存できません")
+            return
+
+        payload = exc.payload
+        checkpoint = CheckpointData(
+            checkpoint_id=f"cp-{uuid.uuid4().hex[:12]}",
+            thread_id=self._thread_id or "",
+            flow_id=self._flow_id,
+            node_id=payload.node_id,
+            state=payload.state,
+            inputs=inputs,
+            interrupt_payload=payload.model_dump(),
+        )
+
+        await checkpointer.save(checkpoint)
+        self._logger.info(f"Checkpoint saved: {checkpoint.checkpoint_id}")
+
+    async def resume(
+        self,
+        thread_id: str,
+        command: "Command",
+    ) -> dict[str, Any]:
+        """中断されたワークフローを再開.
+
+        Args:
+            thread_id: スレッドID
+            command: 再開コマンド（approve/reject/update）
+
+        Returns:
+            実行結果
+
+        Raises:
+            InterruptError: チェックポイントが見つからない場合
+        """
+        from agentflow.hitl import InterruptError, resume_with_command
+
+        checkpointer = self._config.hitl.checkpointer
+        if checkpointer is None:
+            raise InterruptError("Checkpointer が設定されていません")
+
+        # 最新のチェックポイントを取得
+        checkpoint = await checkpointer.load_latest(thread_id)
+        if checkpoint is None:
+            raise InterruptError(f"チェックポイントが見つかりません: {thread_id}")
+
+        self._logger.info(
+            f"Resuming from checkpoint: {checkpoint.checkpoint_id} "
+            f"(command: {command.type.value})"
+        )
+
+        # コマンドに基づいて承認レスポンスを生成
+        response = await resume_with_command(
+            command=command,
+            checkpointer=checkpointer,
+            checkpoint_id=checkpoint.checkpoint_id,
+        )
+
+        self._is_resuming = True
+        self._resume_checkpoint_id = checkpoint.checkpoint_id
+
+        # 入力データを復元して再実行
+        # 注意: 実際の実装では、コマンドの結果を注入する仕組みが必要
+        inputs = checkpoint.inputs.copy()
+        inputs["_hitl_response"] = response.model_dump()
+        inputs["_hitl_command"] = command.model_dump()
+
+        return await self.run(inputs, thread_id=thread_id)
+
+    def _emit_approval_required(
+        self,
+        request_id: str,
+        action: str,
+        reason: str,
+        context: dict[str, Any],
+    ) -> dict[str, Any] | None:
+        """承認要求イベントを発行."""
+        if self._config.enable_events:
+            return {
+                "event_type": "approval_required",
+                "timestamp": time.time(),
+                "flow_id": self._flow_id or "",
+                "data": {
+                    "request_id": request_id,
+                    "action": action,
+                    "reason": reason,
+                    "context": context,
+                },
+            }
+        return None
+
+    @property
+    def thread_id(self) -> str | None:
+        """現在のスレッドIDを取得."""
+        return self._thread_id
+
+    @property
+    def is_hitl_enabled(self) -> bool:
+        """HITL が有効かどうか."""
+        return self._config.hitl.enabled
+
+
+# Command のインポート用型ヒント
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from agentflow.hitl import Command

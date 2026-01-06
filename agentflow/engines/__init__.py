@@ -67,7 +67,7 @@ Engine Types
     ...         return {"result": "..."}
 """
 
-from agentflow.engines.base import BaseEngine, EngineConfig
+from agentflow.engines.base import BaseEngine, EngineConfig, HITLEngineConfig
 from agentflow.engines.gate_engine import GateEngine
 from agentflow.engines.pipeline_engine import PipelineEngine, StageConfig
 from agentflow.engines.rag_engine import RAGEngine
@@ -79,6 +79,7 @@ __all__ = [
     # 基底クラス（カスタムEngine作成用）
     "BaseEngine",
     "EngineConfig",
+    "HITLEngineConfig",
     # 4種類の予定義Pattern
     "SimpleEngine",
     "GateEngine",
