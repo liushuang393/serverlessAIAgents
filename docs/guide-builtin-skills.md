@@ -14,9 +14,94 @@ AgentFlow は、すぐに本番環境で使える **企業級スキル** を内�
 | スキル | 説明 | 対応サービス |
 |--------|------|------------|
 | 🗄️ **database-manager** | データベース統合管理 | Supabase / Turso / PostgreSQL |
+| 🔍 **vectordb** | ベクトルデータベース統合 | FAISS / Qdrant / Weaviate / Supabase / ChromaDB |
 | 💳 **stripe-payment** | 決済・サブスクリプション | Stripe Checkout / Billing |
 | 🚀 **deployment-manager** | デプロイ・環境管理 | Vercel / Cloudflare Pages |
 | 🔐 **auth-provider** | 認証・セッション管理 | Supabase Auth / Clerk |
+
+---
+
+## 🔍 VectorDB Provider（黒盒設計）
+
+### 概要
+
+FAISS、Qdrant、Weaviate、Supabase Vector、ChromaDB などのベクトルデータベースを**統一インターフェース**で操作。
+Agent/サービスは具体的な実装を意識する必要がありません（黒盒設計）。
+
+### クイックスタート
+
+```python
+from agentflow import get_vectordb
+
+# 環境変数から自動検出
+vdb = get_vectordb(collection="my_docs")
+await vdb.connect()
+
+# ドキュメント追加
+await vdb.add(
+    documents=["Hello world", "Goodbye world"],
+    embeddings=[[0.1, 0.2, ...], [0.3, 0.4, ...]],
+    metadatas=[{"type": "greeting"}, {"type": "farewell"}],
+)
+
+# 類似検索
+results = await vdb.search(
+    query="Hello",
+    query_embedding=[0.1, 0.2, ...],
+    top_k=5,
+)
+```
+
+### 対応プロバイダー
+
+| プロバイダー | 特徴 | 必要パッケージ |
+|-------------|------|---------------|
+| **FAISS** | ローカル高速検索、GPU対応、大規模データ | `faiss-cpu` |
+| **Qdrant** | クラウド/ローカル、スケーラブル、本番推奨 | `qdrant-client` |
+| **Weaviate** | セマンティック検索、GraphQL API | `weaviate-client` |
+| **Supabase Vector** | PostgreSQL pgvector、SQL クエリ可能 | `supabase` |
+| **ChromaDB** | ローカル開発、シンプル（デフォルト） | `chromadb` |
+
+### 環境変数設定
+
+```bash
+# 方法1: 明示的にタイプを指定（推奨）
+VECTOR_DATABASE_TYPE=qdrant    # "faiss", "qdrant", "weaviate", "supabase", "chromadb"
+
+# 方法2: サービス URL で自動検出
+QDRANT_URL=http://localhost:6333
+WEAVIATE_URL=http://localhost:8080
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_KEY=your-api-key
+FAISS_INDEX_PATH=/path/to/index.faiss
+CHROMA_PERSIST_DIR=/path/to/chroma
+```
+
+### 主な機能
+
+- **CRUD 操作**: add / search / delete / clear
+- **類似検索**: ベクトル類似度による高速検索
+- **メタデータフィルタ**: 属性によるフィルタリング
+- **永続化**: ファイル/サーバー保存
+- **自動フォールバック**: 依存パッケージ不在時の自動降格
+
+### RAG 統合例
+
+```python
+from agentflow.skills.rag import RAGSkill
+import os
+
+# Qdrant を使用
+os.environ["VECTOR_DATABASE_TYPE"] = "qdrant"
+os.environ["QDRANT_URL"] = "http://localhost:6333"
+
+rag = RAGSkill()
+await rag.start()
+await rag.add_document("AgentFlow documentation...", topic="docs")
+result = await rag.query("What is AgentFlow?")
+```
+
+詳細は [rag SKILL.md](../agentflow/skills/builtin/rag/SKILL.md) を参照。
 
 ---
 

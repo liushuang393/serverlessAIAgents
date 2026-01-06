@@ -206,6 +206,11 @@ agentflow/
 │   ├── a2a_server.py     # A2A サーバー
 │   ├── agui_emitter.py   # AG-UI エミッター
 │   └── a2ui/             # A2UI コンポーネント
+├── providers/            # 統一 Provider Layer（黒盒設計）
+│   ├── llm_provider.py   # LLM Provider（OpenAI/Anthropic/Ollama）
+│   ├── db_provider.py    # DB Provider（Supabase/PostgreSQL/SQLite）
+│   ├── vectordb_provider.py  # VectorDB Provider（下記参照）
+│   └── embedding_provider.py # Embedding Provider
 └── skills/               # スキル自動進化システム
     ├── base.py           # Skill 基底クラス
     ├── loader.py         # スキルローダー
@@ -218,6 +223,43 @@ agentflow/
 
 ---
 
+## 🔍 VectorDB Provider（黒盒設計）
+
+Agent/サービスは `get_vectordb()` のみを呼び出し、具体的な実装を意識しません。
+
+### 対応プロバイダー
+
+| タイプ | クラス | 特徴 |
+|--------|--------|------|
+| `faiss` | `FAISSProvider` | ローカル高速、GPU対応 |
+| `qdrant` | `QdrantProvider` | 本番推奨、スケーラブル |
+| `weaviate` | `WeaviateProvider` | セマンティック検索 |
+| `supabase` | `SupabaseVectorProvider` | PostgreSQL pgvector |
+| `chromadb` | `ChromaDBProvider` | ローカル開発（デフォルト） |
+
+### 環境変数
+
+```bash
+VECTOR_DATABASE_TYPE=qdrant   # "faiss", "qdrant", "weaviate", "supabase", "chromadb"
+QDRANT_URL=http://localhost:6333
+WEAVIATE_URL=http://localhost:8080
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_KEY=your-key
+```
+
+### 使用例
+
+```python
+from agentflow import get_vectordb
+
+vdb = get_vectordb()  # 環境変数から自動選択
+await vdb.connect()
+await vdb.add(documents=["doc1"], embeddings=[[...]])
+results = await vdb.search(query="query", query_embedding=[...], top_k=5)
+```
+
+---
+
 ## 🧩 拡張ポイント
 
 | 拡張対象 | 方法 |
@@ -226,6 +268,7 @@ agentflow/
 | カスタム Skill | `Skill.load()` で SKILL.md 読み込み |
 | カスタム A2UI | `A2UIComponent` 継承 |
 | カスタム Protocol | `ProtocolRegistry` に登録 |
+| カスタム VectorDB | `VectorDBProvider` プロトコル実装 |
 
 ---
 

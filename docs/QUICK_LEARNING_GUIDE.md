@@ -352,9 +352,11 @@ response = await llm.chat([{"role": "user", "content": "hello"}])
 db = get_db()
 users = await db.select("users", filters={"active": True})
 
-# 向量数据库（自动检测 Pinecone/Qdrant/ChromaDB）
+# 向量数据库（自动检测 FAISS/Qdrant/Weaviate/Supabase/ChromaDB）
+# 环境变量: VECTOR_DATABASE_TYPE=qdrant
 vdb = get_vectordb()
-results = await vdb.search("query text", top_k=5)
+await vdb.connect()
+results = await vdb.search(query="query text", query_embedding=[...], top_k=5)
 
 # Embedding
 emb = get_embedding()
@@ -417,12 +419,22 @@ emitter.emit(TextComponent(text="Hello"))
 
 ### Provider 速查
 
-| 函数 | 说明 |
-|------|------|
-| `get_llm()` | 获取 LLM Provider |
-| `get_db()` | 获取数据库 Provider |
-| `get_vectordb()` | 获取向量数据库 |
-| `get_embedding()` | 获取 Embedding |
+| 函数 | 说明 | 环境变量 |
+|------|------|---------|
+| `get_llm()` | 获取 LLM Provider | `LLM_PROVIDER`, `OPENAI_API_KEY` |
+| `get_db()` | 获取数据库 Provider | `DATABASE_URL`, `SUPABASE_URL` |
+| `get_vectordb()` | 获取向量数据库 | `VECTOR_DATABASE_TYPE`, `QDRANT_URL` |
+| `get_embedding()` | 获取 Embedding | `EMBEDDING_PROVIDER` |
+
+### VectorDB 速查
+
+| 类型 | 环境变量 | 特点 |
+|------|---------|------|
+| FAISS | `VECTOR_DATABASE_TYPE=faiss` | 本地高速、GPU |
+| Qdrant | `VECTOR_DATABASE_TYPE=qdrant` | 生产推荐 |
+| Weaviate | `VECTOR_DATABASE_TYPE=weaviate` | 语义搜索 |
+| Supabase | `VECTOR_DATABASE_TYPE=supabase` | pgvector |
+| ChromaDB | `VECTOR_DATABASE_TYPE=chromadb` | 开发默认 |
 
 ### AG-UI 事件速查
 

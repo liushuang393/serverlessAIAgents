@@ -283,6 +283,34 @@ class ShuAgent(AgentBlock):
 
 ## ベクトルストア
 
+RAG Skill は内部で **VectorDB Provider**（黒盒設計）を使用します。
+環境変数で使用するベクトルデータベースを自動選択できます。
+
+### 対応ベクトルデータベース
+
+| タイプ | Provider | 特徴 | 必要パッケージ |
+|--------|----------|------|---------------|
+| `faiss` | FAISSProvider | ローカル高速検索、GPU対応 | `faiss-cpu` |
+| `qdrant` | QdrantProvider | クラウド/ローカル、スケーラブル | `qdrant-client` |
+| `weaviate` | WeaviateProvider | セマンティック検索、GraphQL | `weaviate-client` |
+| `supabase` | SupabaseVectorProvider | PostgreSQL pgvector | `supabase` |
+| `chromadb` | ChromaDBProvider | ローカル開発（デフォルト） | `chromadb` |
+
+### 環境変数設定
+
+```bash
+# 方法1: 明示的にタイプを指定（推奨）
+VECTOR_DATABASE_TYPE=qdrant
+
+# 方法2: サービス URL で自動検出
+QDRANT_URL=http://localhost:6333
+WEAVIATE_URL=http://localhost:8080
+SUPABASE_URL=https://xxx.supabase.co
+SUPABASE_KEY=your-api-key
+FAISS_INDEX_PATH=/path/to/index.faiss
+CHROMA_PERSIST_DIR=/path/to/chroma
+```
+
 ### ChromaDB（デフォルト）
 
 ```python
@@ -290,20 +318,65 @@ class ShuAgent(AgentBlock):
 rag = RAGSkill()
 ```
 
-### カスタムベクトルストア
+### Qdrant（本番推奨）
 
 ```python
-from agentflow.memory.memory_manager import MemoryManager
+import os
 
-# カスタム Memory Manager
-memory = MemoryManager(
-    provider="pgvector",  # PostgreSQL + pgvector
-    config={
-        "connection_string": "postgresql://...",
-    },
-)
+# 環境変数で設定
+os.environ["VECTOR_DATABASE_TYPE"] = "qdrant"
+os.environ["QDRANT_URL"] = "http://localhost:6333"
 
-rag = RAGSkill(memory_manager=memory)
+rag = RAGSkill()  # 自動的に Qdrant を使用
+```
+
+### FAISS（ローカル高速検索）
+
+```python
+import os
+
+os.environ["VECTOR_DATABASE_TYPE"] = "faiss"
+os.environ["FAISS_INDEX_PATH"] = "./data/faiss_index"
+
+rag = RAGSkill()  # 自動的に FAISS を使用
+```
+
+### Weaviate（セマンティック検索）
+
+```python
+import os
+
+os.environ["VECTOR_DATABASE_TYPE"] = "weaviate"
+os.environ["WEAVIATE_URL"] = "http://localhost:8080"
+
+rag = RAGSkill()  # 自動的に Weaviate を使用
+```
+
+### Supabase Vector（PostgreSQL pgvector）
+
+```python
+import os
+
+os.environ["VECTOR_DATABASE_TYPE"] = "supabase"
+os.environ["SUPABASE_URL"] = "https://xxx.supabase.co"
+os.environ["SUPABASE_KEY"] = "your-supabase-key"
+
+rag = RAGSkill()  # 自動的に Supabase Vector を使用
+```
+
+### カスタム VectorDB Provider
+
+```python
+from agentflow import get_vectordb
+from agentflow.providers.vectordb_provider import reset_vectordb
+
+# VectorDB を明示的に取得して使用
+reset_vectordb()  # 既存インスタンスをリセット
+vdb = get_vectordb(collection="my_knowledge_base")
+await vdb.connect()
+
+# RAG Skill に渡す
+rag = RAGSkill(vector_store=vdb)
 ```
 
 ## ベストプラクティス
