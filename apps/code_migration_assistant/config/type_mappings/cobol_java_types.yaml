@@ -1,0 +1,110 @@
+# -*- coding: utf-8 -*-
+# COBOL → Java 型マッピング定義
+# COBOL to Java Type Mapping Configuration
+#
+# このファイルで COBOL の PIC 句と Java の型の対応を定義します。
+
+# PIC 句パターンベースのマッピング
+pic_patterns:
+  # 数値型（整数）
+  - pattern: "^9\\(\\d+\\)$"
+    description: "PIC 9(n) - 符号なし整数"
+    java_type: int
+    java_default: "0"
+    condition:
+      max_digits: 9
+
+  - pattern: "^9\\(\\d+\\)$"
+    description: "PIC 9(n) - 大きな整数"
+    java_type: long
+    java_default: "0L"
+    condition:
+      min_digits: 10
+
+  # 符号付き整数
+  - pattern: "^S9\\(\\d+\\)$"
+    description: "PIC S9(n) - 符号付き整数"
+    java_type: int
+    java_default: "0"
+    condition:
+      max_digits: 9
+
+  - pattern: "^S9\\(\\d+\\)$"
+    description: "PIC S9(n) - 大きな符号付き整数"
+    java_type: long
+    java_default: "0L"
+    condition:
+      min_digits: 10
+
+  # 小数点付き数値
+  - pattern: "^9\\(\\d+\\)V9\\(\\d+\\)$"
+    description: "PIC 9(n)V9(m) - 小数"
+    java_type: BigDecimal
+    java_import: java.math.BigDecimal
+    java_default: "BigDecimal.ZERO"
+
+  - pattern: "^S9\\(\\d+\\)V9\\(\\d+\\)$"
+    description: "PIC S9(n)V9(m) - 符号付き小数"
+    java_type: BigDecimal
+    java_import: java.math.BigDecimal
+    java_default: "BigDecimal.ZERO"
+
+  # 文字列型
+  - pattern: "^X\\(\\d+\\)$"
+    description: "PIC X(n) - 文字列"
+    java_type: String
+    java_default: "\"\""
+
+  - pattern: "^A\\(\\d+\\)$"
+    description: "PIC A(n) - アルファベット文字列"
+    java_type: String
+    java_default: "\"\""
+
+  # COMP-3（パック10進数）
+  - pattern: "^S9\\(\\d+\\)V9\\(\\d+\\)\\s+COMP-3$"
+    description: "PIC S9(n)V9(m) COMP-3 - パック10進数"
+    java_type: BigDecimal
+    java_import: java.math.BigDecimal
+    java_default: "BigDecimal.ZERO"
+
+# 推論タイプベースのマッピング（フォールバック）
+inferred_types:
+  numeric:
+    java_type: int
+    java_default: "0"
+
+  numeric_large:
+    java_type: long
+    java_default: "0L"
+
+  decimal:
+    java_type: BigDecimal
+    java_import: java.math.BigDecimal
+    java_default: "BigDecimal.ZERO"
+
+  string:
+    java_type: String
+    java_default: "\"\""
+
+  comp3:
+    java_type: BigDecimal
+    java_import: java.math.BigDecimal
+    java_default: "BigDecimal.ZERO"
+
+  unknown:
+    java_type: Object
+    java_default: "null"
+
+# 必須インポート
+required_imports:
+  BigDecimal:
+    - java.math.BigDecimal
+    - java.math.RoundingMode
+
+# COBOL 特殊値のマッピング
+special_values:
+  SPACES: "\"\""
+  ZEROS: "0"
+  HIGH-VALUES: "\"\\uFFFF\""
+  LOW-VALUES: "\"\\u0000\""
+

@@ -2,7 +2,8 @@
 
 ## 📋 概要
 
-Code Migration Assistantは、COBOL→Java移行を支援するAIエージェントシステムです。AgentFlowのReflection Pattern + Memory Systemを活用し、高品質な移行コードを自動生成します。
+Code Migration Assistantは、COBOL→Java移行を支援するAIエージェントシステムです。
+AgentFlowのReflection Pattern + Memory Systemを活用し、高品質な移行コードを自動生成します。
 
 ---
 
@@ -33,34 +34,67 @@ Code Migration Assistantは、COBOL→Java移行を支援するAIエージェン
 
 本系统采用**MCP工具化架构**，将所有功能模块设计为独立的MCP工具，通过标准化的MCP协议进行通信。
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│         Code Migration Assistant (Orchestrator)              │
-│                                                               │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │           Workflow Orchestration Logic               │   │
-│  │  - MCP工具调用顺序管理                                │   │
-│  │  - 数据流转控制                                       │   │
-│  │  - 错误处理和重试                                     │   │
-│  │  - 结果聚合                                           │   │
-│  └─────────────────────────────────────────────────────┘   │
-│                            │                                 │
-│                            ▼                                 │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │              MCP Protocol Layer                      │   │
-│  └─────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-                             │
-        ┌────────────────────┼────────────────────┐
-        ▼                    ▼                    ▼
-┌──────────────┐    ┌──────────────┐    ┌──────────────┐
-│  核心工具层   │    │  辅助工具层   │    │  基盤工具层   │
-├──────────────┤    ├──────────────┤    ├──────────────┤
-│ COBOLParser  │    │SyntaxChecker │    │ Reflection   │
-│ JavaGenerator│    │StyleChecker  │    │ Memory       │
-│CodeValidator │    │TestGenerator │    │ LLM Client   │
-│              │    │Complexity    │    │              │
-└──────────────┘    └──────────────┘    └──────────────┘
+```mermaid
+flowchart TB
+    subgraph Input["📥 入力"]
+        COBOL["COBOL ソースコード"]
+    end
+
+    subgraph Coordinator["🎯 CoordinatorAgent (編排)"]
+        direction TB
+        C1["流程決策"]
+        C2["Agent 調度"]
+        C3["リトライ管理"]
+    end
+
+    subgraph Transform["🔄 TransformAgent"]
+        direction TB
+        T1["@tool: parse_cobol"]
+        T2["@tool: compile_java"]
+        T3["LLM: コード翻訳"]
+    end
+
+    subgraph Checker["✅ CheckerAgent"]
+        direction TB
+        CH1["@tool: execute_java"]
+        CH2["@tool: compare_outputs"]
+        CH3["@tool: generate_diff_report"]
+        CH4["LLM: 差異分析・判定"]
+    end
+
+    subgraph Fixer["🔧 FixerAgent"]
+        direction TB
+        F1["@tool: compile_java"]
+        F2["@tool: execute_java"]
+        F3["LLM: コード修復"]
+    end
+
+    subgraph TestGen["🧪 TestGenAgent"]
+        direction TB
+        TG1["@tool: run_junit"]
+        TG2["@tool: get_test_template"]
+        TG3["LLM: テストケース生成"]
+    end
+
+    subgraph Output["📤 出力"]
+        JAVA["Java ソースコード"]
+        RESULT["検証結果"]
+    end
+
+    COBOL --> Coordinator
+    Coordinator --> Transform
+    Transform --> Checker
+    Checker -->|PASS| Output
+    Checker -->|FAIL/RETRY| Fixer
+    Fixer --> Checker
+    Coordinator -.-> TestGen
+    TestGen -.-> Checker
+
+    style Coordinator fill:#4a90d9,color:#fff
+    style Transform fill:#50b5a9,color:#fff
+    style Checker fill:#e8a838,color:#fff
+    style Fixer fill:#d94a4a,color:#fff
+    style TestGen fill:#9b59b6,color:#fff
 ```
 
 ### MCP工具化的优势
@@ -566,4 +600,390 @@ MIT License - 詳細は [LICENSE](../../LICENSE) を参照してください。
 ## 📧 お問い合わせ
 
 質問や提案がある場合は、[GitHub Issues](https://github.com/liushuang393/serverlessAIAgents/issues) で報告してください。
+
+---
+
+## 🔧 新規移行タイプ追加手順（拡張ガイド）
+
+本システムは拡張可能なアダプター設計を採用しており、COBOL→Java 以外の移行タイプを追加できます。
+
+### 対応可能な移行例
+
+| ソース言語 | ターゲット言語 | ユースケース |
+|----------|-------------|------------|
+| RPG (AS/400) | C# | IBMメインフレームからの移行 |
+| Java Struts | Java Spring Boot | レガシーWebフレームワーク刷新 |
+| VB6 | C# WPF | デスクトップアプリ現代化 |
+| PL/I | Java | メインフレームからの移行 |
+
+---
+
+### 手順1: 設定ファイルの確認
+
+現在の設定ファイル構成:
+```
+apps/code_migration_assistant/
+├── adapters/
+│   ├── base.py              # 基底クラス（変更不要）
+│   ├── source/              # ソース言語アダプター
+│   │   └── cobol_adapter.py
+│   └── target/              # ターゲット言語アダプター
+│       └── java_adapter.py
+├── parsers/                 # 言語パーサー
+│   └── ply_cobol_parser.py
+├── tools/                   # 実行環境ツール
+│   └── junit_runner.py
+└── agents/                  # Agent（変更不要）
+```
+
+---
+
+### 手順2: ソース言語アダプターの追加
+
+#### 例: RPG → C# 移行の場合
+
+**2-1. ソースアダプター作成**
+
+`adapters/source/rpg_adapter.py` を新規作成:
+
+```python
+# -*- coding: utf-8 -*-
+"""RPG Language Adapter."""
+
+from apps.code_migration_assistant.adapters.base import (
+    AST,
+    SourceLanguageAdapter,
+)
+
+class RpgAdapter(SourceLanguageAdapter):
+    """RPG (AS/400) 言語アダプター."""
+
+    @property
+    def language_name(self) -> str:
+        return "RPG"
+
+    def parse(self, source_code: str) -> AST:
+        """RPG コードを解析."""
+        # RPG 固有の解析ロジック
+        # H-Spec, F-Spec, D-Spec, C-Spec を解析
+        pass
+
+    def extract_variables(self, ast: AST) -> list[dict]:
+        """D-Spec から変数を抽出."""
+        pass
+
+    def identify_external_calls(self, ast: AST) -> list[dict]:
+        """CALL, SQL 等を特定."""
+        pass
+```
+
+**2-2. ターゲットアダプター作成**
+
+`adapters/target/csharp_adapter.py` を新規作成:
+
+```python
+# -*- coding: utf-8 -*-
+"""C# Language Adapter."""
+
+from apps.code_migration_assistant.adapters.base import (
+    AST,
+    ExecutionResult,
+    TargetLanguageAdapter,
+)
+
+class CSharpAdapter(TargetLanguageAdapter):
+    """C# 言語アダプター."""
+
+    @property
+    def language_name(self) -> str:
+        return "C#"
+
+    def generate_skeleton(self, ast: AST, class_name: str) -> str:
+        """C# クラススケルトン生成."""
+        # namespace, using, class 構造を生成
+        pass
+
+    def compile(self, code: str) -> tuple[bool, list[str]]:
+        """dotnet build でコンパイル."""
+        pass
+
+    def execute(self, code: str, inputs: dict) -> ExecutionResult:
+        """dotnet run で実行."""
+        pass
+```
+
+---
+
+### 手順3: パーサーの追加
+
+`parsers/rpg_parser.py` を新規作成:
+
+```python
+# -*- coding: utf-8 -*-
+"""RPG Parser using PLY."""
+
+class RpgParser:
+    """RPG ソースコードパーサー."""
+
+    def __init__(self, source_code: str):
+        self.source = source_code
+
+    def parse(self) -> dict:
+        """RPG コードを解析して AST を生成."""
+        # H-Spec: ヘッダー仕様
+        # F-Spec: ファイル仕様
+        # D-Spec: データ仕様
+        # C-Spec: 計算仕様
+        pass
+```
+
+---
+
+### 手順4: ツールの追加
+
+`tools/dotnet_runner.py` を新規作成:
+
+```python
+# -*- coding: utf-8 -*-
+"""C# (.NET) 実行環境."""
+
+class DotNetRunner:
+    """NUnit テスト実行."""
+
+    def run_tests(self, test_code: str, target_code: str) -> dict:
+        """dotnet test でテスト実行."""
+        pass
+```
+
+---
+
+### 手順5: アダプター登録
+
+`adapters/__init__.py` を更新:
+
+```python
+from .source.rpg_adapter import RpgAdapter
+from .target.csharp_adapter import CSharpAdapter
+
+__all__ = [
+    # 既存
+    "CobolAdapter", "JavaAdapter",
+    # 新規追加
+    "RpgAdapter", "CSharpAdapter",
+]
+```
+
+---
+
+### 手順6: Agent の system_prompt を更新（オプション）
+
+`agents/transform_agent.py` の `system_prompt` を言語に応じて動的に設定:
+
+```python
+PROMPTS = {
+    ("COBOL", "Java"): "あなたは COBOL→Java 変換の専門家です...",
+    ("RPG", "C#"): "あなたは RPG→C# 変換の専門家です...",
+    ("Struts", "SpringBoot"): "あなたは Struts→Spring Boot 変換の専門家です...",
+}
+```
+
+---
+
+### 例: Java Struts → Spring Boot 移行
+
+**追加フォルダ/ファイル:**
+
+```
+adapters/source/struts_adapter.py    # Struts XML/Action 解析
+adapters/target/springboot_adapter.py # Spring Boot 生成
+parsers/struts_parser.py             # struts-config.xml パーサー
+tools/maven_runner.py                # Maven ビルド/テスト実行
+```
+
+**Struts アダプターの実装ポイント:**
+
+1. `struts-config.xml` の解析（Action マッピング）
+2. `ActionForm` → `@ModelAttribute` 変換
+3. `Action` クラス → `@Controller` 変換
+4. JSP → Thymeleaf or HTML テンプレート変換
+
+---
+
+## 🔍 アーキテクチャ分析と改善提案
+
+### 現状の評価
+
+| 観点 | 評価 | 説明 |
+|-----|-----|------|
+| 拡張性 | ⭐⭐⭐☆☆ (3/5) | アダプターパターンで言語追加可能だが、Agent との結合が強い |
+| 高内聚 | ⭐⭐⭐⭐☆ (4/5) | 各 Agent の責務は明確 |
+| 低耦合 | ⭐⭐⭐☆☆ (3/5) | Agent が具体的な Adapter を直接参照 |
+| 合理性 | ⭐⭐⭐⭐☆ (4/5) | MCP 工具化は良い設計、ただし改善余地あり |
+
+---
+
+### 改善提案
+
+#### 1. **Factory Pattern の導入（高優先度）**
+
+**問題**: `TransformAgent` が `CobolAdapter`, `JavaAdapter` を直接インスタンス化
+
+**改善**: `AdapterFactory` を導入し、設定で言語ペアを切り替え
+
+```python
+# adapters/factory.py
+class AdapterFactory:
+    """言語アダプターファクトリー."""
+
+    REGISTRY = {
+        "COBOL": CobolAdapter,
+        "RPG": RpgAdapter,
+        "Struts": StrutsAdapter,
+    }
+
+    @classmethod
+    def get_source_adapter(cls, language: str) -> SourceLanguageAdapter:
+        return cls.REGISTRY[language]()
+```
+
+#### 2. **設定ファイルによる言語ペア管理（高優先度）**
+
+**問題**: 言語ペアがコードにハードコード
+
+**改善**: YAML/JSON 設定ファイルで管理
+
+```yaml
+# config/migration_types.yaml
+migration_types:
+  - name: cobol-to-java
+    source: COBOL
+    target: Java
+    parser: ply_cobol_parser
+    runner: junit_runner
+    prompts:
+      transform: prompts/cobol_java_transform.txt
+
+  - name: rpg-to-csharp
+    source: RPG
+    target: C#
+    parser: rpg_parser
+    runner: dotnet_runner
+    prompts:
+      transform: prompts/rpg_csharp_transform.txt
+```
+
+#### 3. **Plugin アーキテクチャ（中優先度）**
+
+**問題**: 新言語追加時にコア修正が必要
+
+**改善**: Plugin として動的ロード
+
+```python
+# plugins/rpg_csharp/__init__.py
+def register(registry):
+    registry.register_source("RPG", RpgAdapter)
+    registry.register_target("C#", CSharpAdapter)
+    registry.register_parser("rpg", RpgParser)
+```
+
+#### 4. **Prompt テンプレート外部化（中優先度）**
+
+**問題**: `system_prompt` がコード内に埋め込み
+
+**改善**: 外部ファイル化して言語ごとに管理
+
+```
+prompts/
+├── cobol_java/
+│   ├── transform.txt
+│   ├── checker.txt
+│   └── fixer.txt
+└── rpg_csharp/
+    ├── transform.txt
+    └── ...
+```
+
+#### 5. **型マッピングの外部化（低優先度）**
+
+**問題**: 型マッピングがアダプター内にハードコード
+
+**改善**: マッピングテーブルを JSON/YAML で管理
+
+```yaml
+# mappings/cobol_java_types.yaml
+type_mappings:
+  - cobol_type: "PIC 9(5)"
+    java_type: "int"
+    java_default: "0"
+
+  - cobol_type: "PIC 9(5)V99"
+    java_type: "BigDecimal"
+    java_import: "java.math.BigDecimal"
+```
+
+---
+
+### 推奨実装順序
+
+1. **Phase 1（必須）**: Factory Pattern + 設定ファイル
+2. **Phase 2（推奨）**: Prompt 外部化 + 型マッピング外部化
+3. **Phase 3（将来）**: Plugin アーキテクチャ
+
+---
+
+### 改善後のフォルダ構成（推奨）
+
+```
+apps/code_migration_assistant/
+├── config/
+│   ├── migration_types.yaml    # 移行タイプ定義
+│   └── settings.yaml           # グローバル設定
+├── adapters/
+│   ├── base.py
+│   ├── factory.py              # ← 新規追加
+│   ├── source/
+│   │   ├── cobol_adapter.py
+│   │   ├── rpg_adapter.py      # ← 新規追加（例）
+│   │   └── struts_adapter.py   # ← 新規追加（例）
+│   └── target/
+│       ├── java_adapter.py
+│       ├── csharp_adapter.py   # ← 新規追加（例）
+│       └── springboot_adapter.py  # ← 新規追加（例）
+├── parsers/
+│   ├── ply_cobol_parser.py
+│   ├── rpg_parser.py           # ← 新規追加（例）
+│   └── struts_parser.py        # ← 新規追加（例）
+├── tools/
+│   ├── junit_runner.py
+│   ├── dotnet_runner.py        # ← 新規追加（例）
+│   └── maven_runner.py         # ← 新規追加（例）
+├── prompts/                    # ← 新規追加
+│   ├── cobol_java/
+│   └── rpg_csharp/
+├── mappings/                   # ← 新規追加
+│   ├── cobol_java_types.yaml
+│   └── rpg_csharp_types.yaml
+└── agents/                     # 変更最小限
+    ├── transform_agent.py
+    └── ...
+```
+
+---
+
+## 📝 チェックリスト（新規移行タイプ追加時）
+
+```markdown
+- [ ] ソースアダプター作成 (`adapters/source/xxx_adapter.py`)
+- [ ] ターゲットアダプター作成 (`adapters/target/xxx_adapter.py`)
+- [ ] パーサー作成 (`parsers/xxx_parser.py`)
+- [ ] テストランナー作成 (`tools/xxx_runner.py`)
+- [ ] 型マッピング定義 (`mappings/xxx_types.yaml`)
+- [ ] Prompt テンプレート作成 (`prompts/xxx/`)
+- [ ] `adapters/__init__.py` に登録
+- [ ] 設定ファイル更新 (`config/migration_types.yaml`)
+- [ ] 単体テスト作成
+- [ ] 統合テスト作成
+- [ ] README 更新
+```
+
 

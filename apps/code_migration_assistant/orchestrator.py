@@ -1,170 +1,104 @@
 # -*- coding: utf-8 -*-
 """Code Migration Orchestrator.
 
-このモジュールはCOBOL→Java移行を編排するオーケストレーターを提供します。
+ソース言語→ターゲット言語移行のオーケストレーター。
+agentflow の Engine パターンを使用。
 
-主な機能:
-    - MCP工具の編排
-    - 移行ワークフローの実行
-    - エラーハンドリング
+v3.0: agentflow Engine パターン統合
+    - CodeMigrationEngine: PipelineEngine ベース
+    - Transform → Check → Fix ループ
+    - AG-UI イベント対応
 
 Flow互換インターフェース:
-    >>> orchestrator = CodeMigrationOrchestrator(mcp_client)
+    >>> orchestrator = CodeMigrationOrchestrator()
     >>> result = await orchestrator.run({"cobol_code": "..."})
+    >>>
+    >>> # ストリーム実行
+    >>> async for event in orchestrator.run_stream({"cobol_code": "..."}):
+    ...     print(event)
 """
 
 from collections.abc import AsyncIterator
 from typing import Any
 
-from agentflow import MCPToolClient as MCPClient
-
 
 class CodeMigrationOrchestrator:
     """Code Migration Orchestrator.
 
-    COBOL→Java移行を編排します。
+    agentflow の Engine パターンを使用したオーケストレーター。
 
     ワークフロー:
-        1. COBOLParser: COBOLコードを解析
-        2. MemorySystem (recall): 過去の移行パターンを想起
-        3. ReflectionPattern: JavaGenerator + CodeValidator でコード生成・検証
-        4. MemorySystem (remember): 移行結果を記憶
-        5. 結果を返す
+        1. TransformAgent: ソース → ターゲット 変換
+        2. CheckerAgent: 等価性検証
+        3. (FAIL時) FixerAgent: コード修復 → 再検証
+        4. (オプション) TestGenAgent: テスト生成・実行
 
     使用例:
-        ```python
-        orchestrator = CodeMigrationOrchestrator(mcp_client)
-        result = await orchestrator.migrate(cobol_code="...")
-        ```
+        >>> orchestrator = CodeMigrationOrchestrator()
+        >>> result = await orchestrator.run({"cobol_code": "..."})
     """
 
-    def __init__(self, mcp_client: MCPClient) -> None:
+    def __init__(self, migration_type: str = "cobol-to-java") -> None:
         """CodeMigrationOrchestratorを初期化.
 
         Args:
-            mcp_client: MCP Client
+            migration_type: 移行タイプ名
         """
-        self.mcp = mcp_client
+        self._migration_type = migration_type
+        # Engine を遅延初期化
+        self._engine = None
+        self._testgen_agent = None
+
+    def _get_engine(self):
+        """CodeMigrationEngine を取得（遅延初期化）."""
+        if self._engine is None:
+            from apps.code_migration_assistant.engine import CodeMigrationEngine
+            self._engine = CodeMigrationEngine(migration_type=self._migration_type)
+        return self._engine
+
+    def _get_testgen_agent(self):
+        """TestGenAgent を取得（遅延初期化）."""
+        if self._testgen_agent is None:
+            from apps.code_migration_assistant.agents import TestGenAgent
+            self._testgen_agent = TestGenAgent()
+        return self._testgen_agent
 
     async def migrate(
         self,
-        cobol_code: str,
-        file_name: str = "unknown.cob",
-        encoding: str = "utf-8",
-        max_iterations: int = 3,
-        acceptance_threshold: float = 85.0,
+        source_code: str,
+        expected_outputs: dict[str, Any] | None = None,
+        run_tests: bool = False,
     ) -> dict[str, Any]:
-        """COBOL→Java移行を実行.
+        """コード移行を実行.
 
         Args:
-            cobol_code: COBOLソースコード
-            file_name: ファイル名
-            encoding: エンコーディング
-            max_iterations: 最大反復回数
-            acceptance_threshold: 受け入れ閾値
+            source_code: ソースコード
+            expected_outputs: 期待される出力（検証用）
+            run_tests: テストを実行するか
 
         Returns:
             移行結果
         """
-        # Step 1: COBOLParser - COBOLコードを解析
-        parse_response = await self.mcp.call_tool_by_name(
-            tool_name="cobol_parser",
-            input_data={
-                "cobol_code": cobol_code,
-                "file_name": file_name,
-                "encoding": encoding,
-            },
-        )
+        engine = self._get_engine()
 
-        if not parse_response.success:
-            return {
-                "success": False,
-                "errors": parse_response.errors,
-                "stage": "parsing",
-            }
+        # Engine で移行を実行
+        result = await engine.run({
+            "source_code": source_code,
+            "expected_outputs": expected_outputs or {},
+        })
 
-        ast = parse_response.output.get("ast")
-        metadata = parse_response.output.get("metadata")
+        # テスト実行（オプション）
+        if run_tests and result.get("success"):
+            testgen = self._get_testgen_agent()
+            test_result = testgen.process({
+                "target_code": result.get("target_code", ""),
+                "source_code": source_code,
+                "class_name": result.get("class_name", "Unknown"),
+                "run_tests": True,
+            })
+            result["test_result"] = test_result
 
-        # Step 2: MemorySystem (recall) - 過去の移行パターンを想起
-        recall_response = await self.mcp.call_tool_by_name(
-            tool_name="memory_system",
-            input_data={
-                "operation": "recall",
-                "data": {
-                    "query": f"COBOL migration pattern for {ast.get('program_id', 'unknown')}",
-                    "memory_type": "pattern",
-                    "top_k": 5,
-                },
-            },
-        )
-
-        patterns = []
-        if recall_response.success:
-            patterns = recall_response.output.get("memories", [])
-
-        # Step 3: ReflectionPattern - JavaGenerator + CodeValidator でコード生成・検証
-        reflection_response = await self.mcp.call_tool_by_name(
-            tool_name="reflection_pattern",
-            input_data={
-                "generator_tool": "java_generator",
-                "evaluator_tool": "code_validator",
-                "improver_tool": "java_generator",
-                "initial_input": {
-                    "ast": ast,
-                    "metadata": metadata,
-                    "patterns": patterns,
-                },
-                "max_iterations": max_iterations,
-                "acceptance_threshold": acceptance_threshold,
-            },
-        )
-
-        if not reflection_response.success:
-            return {
-                "success": False,
-                "errors": reflection_response.errors,
-                "stage": "generation",
-            }
-
-        final_output = reflection_response.output.get("final_output")
-        final_score = reflection_response.output.get("final_score")
-        iterations = reflection_response.output.get("iterations")
-        is_acceptable = reflection_response.output.get("is_acceptable")
-
-        # Step 4: MemorySystem (remember) - 移行結果を記憶
-        if is_acceptable:
-            await self.mcp.call_tool_by_name(
-                tool_name="memory_system",
-                input_data={
-                    "operation": "remember",
-                    "data": {
-                        "content": final_output.get("java_code"),
-                        "topic": f"migration_{ast.get('program_id', 'unknown')}",
-                        "memory_type": "history",
-                        "importance_score": final_score / 100.0,
-                        "metadata": {
-                            "cobol_program_id": ast.get("program_id"),
-                            "java_class_name": final_output.get("class_name"),
-                            "score": final_score,
-                            "iterations": iterations,
-                        },
-                    },
-                },
-            )
-
-        # Step 5: 結果を返す
-        return {
-            "success": True,
-            "java_code": final_output.get("java_code"),
-            "class_name": final_output.get("class_name"),
-            "package_name": final_output.get("package_name"),
-            "score": final_score,
-            "iterations": iterations,
-            "is_acceptable": is_acceptable,
-            "ast": ast,
-            "metadata": metadata,
-        }
+        return result
 
     # ========================================
     # Flow 互換インターフェース
@@ -175,23 +109,22 @@ class CodeMigrationOrchestrator:
 
         Args:
             inputs: 入力データ
-                - cobol_code: COBOLソースコード（必須）
-                - file_name: ファイル名（オプション）
-                - encoding: エンコーディング（オプション）
+                - source_code または cobol_code: ソースコード（必須）
+                - expected_outputs: 期待出力（オプション）
+                - run_tests: テスト実行（オプション）
 
         Returns:
             移行結果
         """
-        cobol_code = inputs.get("cobol_code", "")
-        if not cobol_code:
-            return {"success": False, "errors": ["cobol_code is required"]}
+        source_code = inputs.get("source_code") or inputs.get("cobol_code", "")
+        if not source_code:
+            return {"success": False, "errors": ["source_code is required"]}
 
+        # migrate メソッドを呼び出し
         return await self.migrate(
-            cobol_code=cobol_code,
-            file_name=inputs.get("file_name", "unknown.cob"),
-            encoding=inputs.get("encoding", "utf-8"),
-            max_iterations=inputs.get("max_iterations", 3),
-            acceptance_threshold=inputs.get("acceptance_threshold", 85.0),
+            source_code=source_code,
+            expected_outputs=inputs.get("expected_outputs"),
+            run_tests=inputs.get("run_tests", False),
         )
 
     async def run_stream(
@@ -199,83 +132,26 @@ class CodeMigrationOrchestrator:
     ) -> AsyncIterator[dict[str, Any]]:
         """Flow互換のストリーム実行.
 
-        各ステップでイベントを発火。
+        Engine の run_stream を使用。
 
         Yields:
-            イベント dict
+            AG-UI イベント
         """
-        cobol_code = inputs.get("cobol_code", "")
-        if not cobol_code:
-            yield {"type": "error", "error": "cobol_code is required"}
+        source_code = inputs.get("source_code") or inputs.get("cobol_code", "")
+        if not source_code:
+            yield {"type": "error", "error": "source_code is required"}
             return
 
-        file_name = inputs.get("file_name", "unknown.cob")
+        engine = self._get_engine()
 
-        # Step 1: Parsing
-        yield {"type": "node_start", "node": "COBOLParser", "data": {}}
-        parse_response = await self.mcp.call_tool_by_name(
-            tool_name="cobol_parser",
-            input_data={"cobol_code": cobol_code, "file_name": file_name},
-        )
-        yield {
-            "type": "node_complete",
-            "node": "COBOLParser",
-            "data": {"success": parse_response.success},
-        }
-
-        if not parse_response.success:
-            yield {"type": "error", "error": parse_response.errors}
-            return
-
-        ast = parse_response.output.get("ast")
-
-        # Step 2: Memory recall
-        yield {"type": "node_start", "node": "MemoryRecall", "data": {}}
-        recall_response = await self.mcp.call_tool_by_name(
-            tool_name="memory_system",
-            input_data={
-                "operation": "recall",
-                "data": {"query": f"COBOL migration for {ast.get('program_id')}"},
-            },
-        )
-        yield {
-            "type": "node_complete",
-            "node": "MemoryRecall",
-            "data": {"patterns_found": len(recall_response.output.get("memories", []))},
-        }
-
-        # Step 3: Reflection
-        yield {"type": "node_start", "node": "ReflectionPattern", "data": {}}
-        reflection_response = await self.mcp.call_tool_by_name(
-            tool_name="reflection_pattern",
-            input_data={
-                "generator_tool": "java_generator",
-                "evaluator_tool": "code_validator",
-                "improver_tool": "java_generator",
-                "initial_input": {"ast": ast},
-            },
-        )
-        yield {
-            "type": "node_complete",
-            "node": "ReflectionPattern",
-            "data": {"success": reflection_response.success},
-        }
-
-        # Final result
-        if reflection_response.success:
-            yield {
-                "type": "result",
-                "data": {
-                    "success": True,
-                    "java_code": reflection_response.output.get("final_output", {}).get(
-                        "java_code"
-                    ),
-                },
-            }
-        else:
-            yield {"type": "error", "error": reflection_response.errors}
+        # Engine のストリーム実行を委譲
+        async for event in engine.run_stream({
+            "source_code": source_code,
+            "expected_outputs": inputs.get("expected_outputs", {}),
+        }):
+            yield event
 
     @property
     def name(self) -> str:
         """Flow名."""
-        return "code-migration-assistant"
+        return f"code-migration-{self._migration_type}"

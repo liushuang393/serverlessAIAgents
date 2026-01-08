@@ -14,7 +14,7 @@
 - マルチモデル管理、自動切り替え、コスト最適化、負荷分散
 """
 
-from agentflow.llm.llm_client import LLMClient, LLMConfig, LLMMessage, LLMResponse
+from agentflow.llm.llm_client import LLMClient, LLMConfig, LLMMessage, LLMResponse, ToolCall
 from agentflow.llm.model_router import (
     ModelRouter,
     ModelInfo,
@@ -33,6 +33,7 @@ __all__ = [
     "LLMConfig",
     "LLMMessage",
     "LLMResponse",
+    "ToolCall",
     # モデルルーティング（高度な機能）
     "ModelRouter",
     "ModelInfo",

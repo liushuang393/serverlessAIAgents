@@ -1,0 +1,83 @@
+# -*- coding: utf-8 -*-
+# 移行タイプ設定ファイル
+# Migration Types Configuration
+#
+# このファイルで新しい移行タイプを追加できます。
+# 新しい言語ペアを追加する際は、対応するアダプター、パーサー、
+# ランナー、プロンプトファイルも作成してください。
+
+migration_types:
+  # ========================================
+  # COBOL → Java（デフォルト）
+  # ========================================
+  - name: cobol-to-java
+    description: "COBOL から Java への移行"
+    source:
+      language: COBOL
+      adapter: cobol_adapter.CobolAdapter
+      parser: ply_cobol_parser.PLYCobolParser
+    target:
+      language: Java
+      adapter: java_adapter.JavaAdapter
+      runner: junit_runner.JUnitRunner
+    prompts:
+      transform: cobol_java/transform.txt
+      checker: cobol_java/checker.txt
+      fixer: cobol_java/fixer.txt
+      testgen: cobol_java/testgen.txt
+    type_mapping: cobol_java_types.yaml
+    options:
+      max_iterations: 3
+      acceptance_threshold: 85.0
+
+  # ========================================
+  # RPG → C#（テンプレート）
+  # ========================================
+  # - name: rpg-to-csharp
+  #   description: "RPG (AS/400) から C# への移行"
+  #   source:
+  #     language: RPG
+  #     adapter: rpg_adapter.RpgAdapter
+  #     parser: rpg_parser.RpgParser
+  #   target:
+  #     language: C#
+  #     adapter: csharp_adapter.CSharpAdapter
+  #     runner: dotnet_runner.DotNetRunner
+  #   prompts:
+  #     transform: rpg_csharp/transform.txt
+  #     checker: rpg_csharp/checker.txt
+  #     fixer: rpg_csharp/fixer.txt
+  #   type_mapping: rpg_csharp_types.yaml
+  #   options:
+  #     max_iterations: 3
+  #     acceptance_threshold: 80.0
+
+  # ========================================
+  # Struts → Spring Boot（テンプレート）
+  # ========================================
+  # - name: struts-to-springboot
+  #   description: "Java Struts から Spring Boot への移行"
+  #   source:
+  #     language: Struts
+  #     adapter: struts_adapter.StrutsAdapter
+  #     parser: struts_parser.StrutsParser
+  #   target:
+  #     language: SpringBoot
+  #     adapter: springboot_adapter.SpringBootAdapter
+  #     runner: maven_runner.MavenRunner
+  #   prompts:
+  #     transform: struts_springboot/transform.txt
+  #     checker: struts_springboot/checker.txt
+  #     fixer: struts_springboot/fixer.txt
+  #   type_mapping: struts_springboot_types.yaml
+  #   options:
+  #     max_iterations: 5
+  #     acceptance_threshold: 90.0
+
+# デフォルト設定
+defaults:
+  migration_type: cobol-to-java
+  log_level: INFO
+  output_dir: ./output
+  encoding: utf-8
+

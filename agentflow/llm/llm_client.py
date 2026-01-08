@@ -31,12 +31,37 @@ class LLMMessage(BaseModel):
     """LLMメッセージ.
 
     Args:
-        role: メッセージの役割（system/user/assistant）
+        role: メッセージの役割（system/user/assistant/tool）
         content: メッセージ内容
+        tool_call_id: ツール呼び出しID（tool roleの場合必須）
+        name: ツール名（tool roleの場合）
     """
 
     role: str = Field(..., description="メッセージの役割")
-    content: str = Field(..., description="メッセージ内容")
+    content: str | None = Field(default=None, description="メッセージ内容")
+    tool_call_id: str | None = Field(default=None, description="ツール呼び出しID")
+    name: str | None = Field(default=None, description="ツール名")
+
+
+class ToolCall(BaseModel):
+    """ツール呼び出し情報.
+
+    Args:
+        id: ツール呼び出しID
+        name: ツール名
+        arguments: ツール引数（JSON文字列またはdict）
+    """
+
+    id: str = Field(..., description="ツール呼び出しID")
+    name: str = Field(..., description="ツール名")
+    arguments: str | dict = Field(..., description="ツール引数")
+
+    def get_arguments_dict(self) -> dict:
+        """引数を辞書として取得."""
+        import json
+        if isinstance(self.arguments, dict):
+            return self.arguments
+        return json.loads(self.arguments)
 
 
 class LLMResponse(BaseModel):
@@ -47,12 +72,18 @@ class LLMResponse(BaseModel):
         model: 使用されたモデル名
         usage: トークン使用量
         finish_reason: 終了理由
+        tool_calls: ツール呼び出しリスト
     """
 
-    content: str = Field(..., description="生成されたテキスト")
+    content: str | None = Field(default=None, description="生成されたテキスト")
     model: str = Field(..., description="使用されたモデル名")
     usage: dict[str, int] = Field(default_factory=dict, description="トークン使用量")
     finish_reason: str | None = Field(default=None, description="終了理由")
+    tool_calls: list[ToolCall] = Field(default_factory=list, description="ツール呼び出しリスト")
+
+    def has_tool_calls(self) -> bool:
+        """ツール呼び出しがあるかどうか."""
+        return len(self.tool_calls) > 0
 
 
 class LLMConfig(BaseModel):
@@ -158,20 +189,19 @@ class LLMClient:
             self._client = None
 
     def _initialize_google(self) -> None:
-        """Google Geminiクライアント初期化."""
+        """Google Geminiクライアント初期化（新 google.genai ライブラリ使用）."""
         try:
-            import google.generativeai as genai
+            from google import genai
 
-            api_key = self._config.api_key or os.environ.get("GOOGLE_API_KEY")
+            api_key = self._config.api_key or os.environ.get("GEMINI_API_KEY")
             if api_key:
-                genai.configure(api_key=api_key)
-                self._client = genai.GenerativeModel(self._config.model)
+                self._client = genai.Client(api_key=api_key)
                 self._logger.info(f"Google Gemini client initialized: {self._config.model}")
             else:
-                self._logger.warning("GOOGLE_API_KEY not set. Using mock client.")
+                self._logger.warning("GEMINI_API_KEY not set. Using mock client.")
                 self._client = None
         except ImportError:
-            self._logger.warning("google-generativeai library not installed. Using mock client.")
+            self._logger.warning("google-genai library not installed. Using mock client.")
             self._client = None
 
     def _initialize_ollama(self) -> None:
@@ -236,11 +266,13 @@ class LLMClient:
     async def _chat_openai(
         self, messages: list[LLMMessage], **kwargs: Any
     ) -> LLMResponse:
-        """OpenAIチャット.
+        """OpenAIチャット（tool calling対応）.
 
         Args:
             messages: メッセージリスト
             **kwargs: 追加パラメータ
+                - tools: ツール定義リスト（OpenAI形式）
+                - tool_choice: ツール選択モード（auto/none/required/{type:function,function:{name:...}}）
 
         Returns:
             LLMレスポンス
@@ -253,42 +285,41 @@ class LLMClient:
             # モデル名を小文字で取得
             model_name = self._config.model.lower()
 
-            # モデル分類:
-            # 1. Reasoning モデル (o1, o3, o4 系): max_completion_tokens、temperature 非対応
-            # 2. GPT-5 系列: max_completion_tokens を使用（新 API）
-            # 3. GPT-4/3.5 系: max_tokens と temperature を使用（従来 API）
-            # 参考: https://platform.openai.com/docs/guides/reasoning
-            #       https://community.openai.com/t/why-was-max-tokens-changed-to-max-completion-tokens/938077
+            # モデル分類
+            is_reasoning_model = bool(model_name.startswith(('o1', 'o3', 'o4')))
+            is_gpt5_model = bool(model_name.startswith('gpt-5') or 'gpt5' in model_name)
 
-            # Reasoning モデル判定: o1, o1-mini, o1-pro, o3, o3-mini, o4-mini など
-            is_reasoning_model = bool(
-                model_name.startswith(('o1', 'o3', 'o4'))
-            )
-
-            # GPT-5 系列判定: gpt-5, gpt-5.2, gpt-5-mini など（max_completion_tokens を使用）
-            is_gpt5_model = bool(
-                model_name.startswith('gpt-5') or 'gpt5' in model_name
-            )
-
-            # 新 API を使用するモデル（max_completion_tokens）
-            use_new_api = is_reasoning_model or is_gpt5_model
+            # メッセージをOpenAI形式に変換
+            openai_messages = []
+            for msg in messages:
+                msg_dict: dict[str, Any] = {"role": msg.role}
+                if msg.content is not None:
+                    msg_dict["content"] = msg.content
+                if msg.tool_call_id:
+                    msg_dict["tool_call_id"] = msg.tool_call_id
+                if msg.name:
+                    msg_dict["name"] = msg.name
+                openai_messages.append(msg_dict)
 
             # 基本パラメータ
             params: dict[str, Any] = {
                 "model": self._config.model,
-                "messages": [{"role": msg.role, "content": msg.content} for msg in messages],
+                "messages": openai_messages,
             }
+
+            # ツール設定
+            if "tools" in kwargs and kwargs["tools"]:
+                params["tools"] = kwargs["tools"]
+                if "tool_choice" in kwargs:
+                    params["tool_choice"] = kwargs["tool_choice"]
 
             # モデルに応じたパラメータ設定
             if is_reasoning_model:
-                # Reasoning モデル: temperature 非対応、max_completion_tokens を使用
                 params["max_completion_tokens"] = kwargs.get("max_tokens", self._config.max_tokens)
             elif is_gpt5_model:
-                # GPT-5 系: max_completion_tokens を使用、temperature は対応
                 params["max_completion_tokens"] = kwargs.get("max_tokens", self._config.max_tokens)
                 params["temperature"] = kwargs.get("temperature", self._config.temperature)
             else:
-                # 従来モデル (GPT-4o, GPT-4, GPT-3.5 等): max_tokens と temperature を使用
                 params["temperature"] = kwargs.get("temperature", self._config.temperature)
                 params["max_tokens"] = kwargs.get("max_tokens", self._config.max_tokens)
 
@@ -297,8 +328,19 @@ class LLMClient:
                 timeout=self._config.timeout,
             )
 
+            # ツール呼び出しの解析
+            tool_calls_list: list[ToolCall] = []
+            message = response.choices[0].message
+            if hasattr(message, 'tool_calls') and message.tool_calls:
+                for tc in message.tool_calls:
+                    tool_calls_list.append(ToolCall(
+                        id=tc.id,
+                        name=tc.function.name,
+                        arguments=tc.function.arguments,
+                    ))
+
             return LLMResponse(
-                content=response.choices[0].message.content,
+                content=message.content,
                 model=response.model,
                 usage={
                     "prompt_tokens": response.usage.prompt_tokens,
@@ -306,6 +348,7 @@ class LLMClient:
                     "total_tokens": response.usage.total_tokens,
                 },
                 finish_reason=response.choices[0].finish_reason,
+                tool_calls=tool_calls_list,
             )
         except asyncio.TimeoutError:
             self._logger.error(f"OpenAI API timeout after {self._config.timeout}s")
@@ -317,11 +360,12 @@ class LLMClient:
     async def _chat_anthropic(
         self, messages: list[LLMMessage], **kwargs: Any
     ) -> LLMResponse:
-        """Anthropicチャット.
+        """Anthropicチャット（tool calling対応）.
 
         Args:
             messages: メッセージリスト
             **kwargs: 追加パラメータ
+                - tools: ツール定義リスト（Anthropic形式に自動変換）
 
         Returns:
             LLMレスポンス
@@ -337,29 +381,71 @@ class LLMClient:
             for msg in messages:
                 if msg.role == "system":
                     system_message = msg.content
+                elif msg.role == "tool":
+                    # ツール結果をAnthropic形式に変換
+                    user_messages.append({
+                        "role": "user",
+                        "content": [{
+                            "type": "tool_result",
+                            "tool_use_id": msg.tool_call_id,
+                            "content": msg.content,
+                        }],
+                    })
                 else:
                     user_messages.append({"role": msg.role, "content": msg.content})
 
+            # パラメータ構築
+            params: dict[str, Any] = {
+                "model": self._config.model,
+                "messages": user_messages,
+                "temperature": kwargs.get("temperature", self._config.temperature),
+                "max_tokens": kwargs.get("max_tokens", self._config.max_tokens),
+                "timeout": self._config.timeout,
+            }
+            if system_message:
+                params["system"] = system_message
+
+            # ツール設定（OpenAI形式からAnthropic形式に変換）
+            if "tools" in kwargs and kwargs["tools"]:
+                anthropic_tools = []
+                for tool in kwargs["tools"]:
+                    if tool.get("type") == "function":
+                        func = tool["function"]
+                        anthropic_tools.append({
+                            "name": func["name"],
+                            "description": func.get("description", ""),
+                            "input_schema": func.get("parameters", {"type": "object", "properties": {}}),
+                        })
+                params["tools"] = anthropic_tools
+
             response = await asyncio.wait_for(
-                self._client.messages.create(
-                    model=self._config.model,
-                    system=system_message,
-                    messages=user_messages,
-                    temperature=kwargs.get("temperature", self._config.temperature),
-                    max_tokens=kwargs.get("max_tokens", self._config.max_tokens),
-                    timeout=self._config.timeout,
-                ),
+                self._client.messages.create(**params),
                 timeout=self._config.timeout,
             )
 
+            # レスポンス解析
+            content_text = None
+            tool_calls_list: list[ToolCall] = []
+
+            for block in response.content:
+                if hasattr(block, 'text'):
+                    content_text = block.text
+                elif hasattr(block, 'type') and block.type == "tool_use":
+                    tool_calls_list.append(ToolCall(
+                        id=block.id,
+                        name=block.name,
+                        arguments=block.input if isinstance(block.input, str) else block.input,
+                    ))
+
             return LLMResponse(
-                content=response.content[0].text,
+                content=content_text,
                 model=response.model,
                 usage={
                     "input_tokens": response.usage.input_tokens,
                     "output_tokens": response.usage.output_tokens,
                 },
                 finish_reason=response.stop_reason,
+                tool_calls=tool_calls_list,
             )
         except asyncio.TimeoutError:
             self._logger.error(f"Anthropic API timeout after {self._config.timeout}s")
@@ -371,52 +457,106 @@ class LLMClient:
     async def _chat_google(
         self, messages: list[LLMMessage], **kwargs: Any
     ) -> LLMResponse:
-        """Google Geminiチャット.
+        """Google Geminiチャット（tool calling対応、新 google.genai ライブラリ使用）.
 
         Args:
             messages: メッセージリスト
             **kwargs: 追加パラメータ
+                - tools: ツール定義リスト（Gemini形式に自動変換）
 
         Returns:
             LLMレスポンス
         """
+        from google import genai
+        from google.genai import types
+
         try:
             # メッセージをGemini形式に変換
-            contents = []
+            contents: list[types.Content] = []
             system_instruction = None
+
             for msg in messages:
                 if msg.role == "system":
                     system_instruction = msg.content
                 elif msg.role == "user":
-                    contents.append({"role": "user", "parts": [msg.content]})
+                    contents.append(types.Content(role="user", parts=[types.Part.from_text(text=msg.content)]))
                 elif msg.role == "assistant":
-                    contents.append({"role": "model", "parts": [msg.content]})
+                    contents.append(types.Content(role="model", parts=[types.Part.from_text(text=msg.content)]))
+                elif msg.role == "tool":
+                    # ツール結果
+                    contents.append(types.Content(
+                        role="user",
+                        parts=[types.Part.from_function_response(
+                            name=msg.name or "unknown",
+                            response={"result": msg.content},
+                        )],
+                    ))
 
-            # 同期APIを非同期でラップ
-            loop = asyncio.get_event_loop()
+            # ツール定義の変換（OpenAI形式 → Gemini形式）
+            gemini_tools = None
+            if "tools" in kwargs and kwargs["tools"]:
+                function_declarations = []
+                for tool in kwargs["tools"]:
+                    if tool.get("type") == "function":
+                        func = tool["function"]
+                        function_declarations.append(types.FunctionDeclaration(
+                            name=func["name"],
+                            description=func.get("description", ""),
+                            parameters=func.get("parameters", {}),
+                        ))
+                if function_declarations:
+                    gemini_tools = [types.Tool(function_declarations=function_declarations)]
+
+            # 生成設定
+            gen_config = types.GenerateContentConfig(
+                temperature=kwargs.get("temperature", self._config.temperature),
+                max_output_tokens=kwargs.get("max_tokens", self._config.max_tokens),
+                system_instruction=system_instruction,
+                tools=gemini_tools,
+            )
+
+            # 非同期API呼び出し
             response = await asyncio.wait_for(
-                loop.run_in_executor(
-                    None,
-                    lambda: self._client.generate_content(
-                        contents,
-                        generation_config={
-                            "temperature": kwargs.get("temperature", self._config.temperature),
-                            "max_output_tokens": kwargs.get("max_tokens", self._config.max_tokens),
-                        },
-                    ),
+                asyncio.to_thread(
+                    self._client.models.generate_content,
+                    model=self._config.model,
+                    contents=contents,
+                    config=gen_config,
                 ),
                 timeout=self._config.timeout,
             )
 
+            # レスポンス解析
+            content_text = None
+            tool_calls_list: list[ToolCall] = []
+
+            if response.candidates and response.candidates[0].content:
+                for part in response.candidates[0].content.parts:
+                    if part.text:
+                        content_text = part.text
+                    elif part.function_call:
+                        fc = part.function_call
+                        tool_calls_list.append(ToolCall(
+                            id=f"gemini_{fc.name}_{id(fc)}",
+                            name=fc.name,
+                            arguments=dict(fc.args) if fc.args else {},
+                        ))
+
+            # 使用量取得
+            usage = {}
+            if response.usage_metadata:
+                usage = {
+                    "prompt_tokens": response.usage_metadata.prompt_token_count or 0,
+                    "completion_tokens": response.usage_metadata.candidates_token_count or 0,
+                    "total_tokens": response.usage_metadata.total_token_count or 0,
+                }
+
             return LLMResponse(
-                content=response.text,
+                content=content_text,
                 model=self._config.model,
-                usage={
-                    "prompt_tokens": response.usage_metadata.prompt_token_count,
-                    "completion_tokens": response.usage_metadata.candidates_token_count,
-                    "total_tokens": response.usage_metadata.total_token_count,
-                },
-                finish_reason=str(response.candidates[0].finish_reason),
+                usage=usage,
+                finish_reason=str(response.candidates[0].finish_reason) if response.candidates else "unknown",
+                tool_calls=tool_calls_list,
             )
         except asyncio.TimeoutError:
             self._logger.error(f"Google API timeout after {self._config.timeout}s")

@@ -1,155 +1,160 @@
 # -*- coding: utf-8 -*-
-"""Integration Tests for Code Migration Assistant."""
+"""Integration Tests for Code Migration Assistant.
+
+v2.0: Multi-Agent アーキテクチャ対応
+"""
 
 import pytest
 
 from agentflow import MCPToolClient as MCPClient
 from apps.code_migration_assistant.mcp_tools.cobol_parser import COBOLParser
-from apps.code_migration_assistant.mcp_tools.code_validator import CodeValidator
-from apps.code_migration_assistant.mcp_tools.java_generator import JavaGenerator
 from apps.code_migration_assistant.orchestrator import CodeMigrationOrchestrator
 
 
-@pytest.mark.asyncio
-async def test_parser_generator_integration() -> None:
-    """COBOLParser + JavaGenerator統合テスト."""
-    # MCPClientを作成
-    client = MCPClient()
-    client.register_tool("cobol_parser", COBOLParser())
-    client.register_tool("java_generator", JavaGenerator())
+# ========================================
+# Agent 統合テスト
+# ========================================
 
-    # COBOLコードを解析
+
+@pytest.mark.asyncio
+async def test_transform_agent_basic() -> None:
+    """TransformAgent 基本テスト."""
+    from apps.code_migration_assistant.agents import TransformAgent
+
+    agent = TransformAgent()
+
+    # 簡単な COBOL コード
     cobol_code = """
        IDENTIFICATION DIVISION.
        PROGRAM-ID. SIMPLE-CALC.
-       
+
        DATA DIVISION.
        WORKING-STORAGE SECTION.
        01 WS-NUM1 PIC 9(5).
        01 WS-NUM2 PIC 9(5).
     """
 
-    parse_response = await client.call_tool_by_name(
-        tool_name="cobol_parser",
-        input_data={
-            "cobol_code": cobol_code,
-        },
-    )
+    # 確定性メソッドを直接テスト
+    parse_result = agent.parse_cobol(cobol_code)
+    assert parse_result["success"] is True
+    assert "program_id" in parse_result
 
-    assert parse_response.success is True
-
-    # Javaコードを生成
-    ast = parse_response.output["ast"]
-    metadata = parse_response.output["metadata"]
-
-    generate_response = await client.call_tool_by_name(
-        tool_name="java_generator",
-        input_data={
-            "ast": ast,
-            "metadata": metadata,
-        },
-    )
-
-    assert generate_response.success is True
-    assert "java_code" in generate_response.output
-    assert "class_name" in generate_response.output
+    # コンパイルテスト
+    java_code = """
+    public class SimpleCalc {
+        private int wsNum1;
+        private int wsNum2;
+    }
+    """
+    compile_result = agent.compile_java(java_code)
+    assert "success" in compile_result
 
 
 @pytest.mark.asyncio
-async def test_generator_validator_integration() -> None:
-    """JavaGenerator + CodeValidator統合テスト."""
-    # MCPClientを作成
-    client = MCPClient()
-    client.register_tool("java_generator", JavaGenerator())
-    client.register_tool("code_validator", CodeValidator())
+async def test_checker_agent_basic() -> None:
+    """CheckerAgent 基本テスト."""
+    from apps.code_migration_assistant.agents import CheckerAgent
 
-    # テストデータ
-    ast = {
-        "program_id": "TEST-PROGRAM",
-        "divisions": {
-            "PROCEDURE DIVISION": [],
-        },
+    agent = CheckerAgent()
+
+    # 比較テスト
+    expected = {"value": "100", "name": "test"}
+    actual = {"value": "100", "name": "test"}
+
+    comparison = agent.compare_outputs(expected, actual)
+    assert comparison["is_equal"] is True
+    assert comparison["match_rate"] >= 0.99  # 浮点数比較は近似値で
+
+
+@pytest.mark.asyncio
+async def test_checker_agent_diff() -> None:
+    """CheckerAgent 差分検出テスト."""
+    from apps.code_migration_assistant.agents import CheckerAgent
+
+    agent = CheckerAgent()
+
+    expected = {"value": "100", "name": "test"}
+    actual = {"value": "200", "name": "test"}
+
+    comparison = agent.compare_outputs(expected, actual)
+    assert comparison["is_equal"] is False
+    assert len(comparison["differences"]) == 1
+    assert comparison["differences"][0]["field"] == "value"
+
+
+@pytest.mark.asyncio
+async def test_fixer_agent_basic() -> None:
+    """FixerAgent 基本テスト."""
+    from apps.code_migration_assistant.agents import FixerAgent
+
+    agent = FixerAgent()
+
+    # コンパイルテスト
+    java_code = """
+    public class Test {
+        public static void main(String[] args) {
+            System.out.println("Hello");
+        }
     }
+    """
 
-    metadata = {
-        "variables": [
-            {
-                "name": "WS-NUM1",
-                "type": "numeric",
-                "pic_clause": "9(5)",
-                "level": "01",
-            },
-        ],
-    }
+    compile_result = agent.compile_java(java_code)
+    assert "success" in compile_result
 
-    # Javaコードを生成
-    generate_response = await client.call_tool_by_name(
-        tool_name="java_generator",
-        input_data={
-            "ast": ast,
-            "metadata": metadata,
-        },
-    )
+    # エラー位置抽出テスト
+    errors = ["Test.java:5: error: ';' expected"]
+    locations = agent.extract_error_location(errors)
+    assert len(locations) > 0
 
-    assert generate_response.success is True
 
-    # Javaコードを検証
-    java_code = generate_response.output["java_code"]
-    mappings = generate_response.output["mappings"]
+@pytest.mark.asyncio
+async def test_testgen_agent_basic() -> None:
+    """TestGenAgent 基本テスト."""
+    from apps.code_migration_assistant.agents import TestGenAgent
 
-    validate_response = await client.call_tool_by_name(
-        tool_name="code_validator",
-        input_data={
-            "java_code": java_code,
-            "ast": ast,
-            "metadata": metadata,
-            "mappings": mappings,
-        },
-    )
+    agent = TestGenAgent()
 
-    assert validate_response.success is True
-    assert "score" in validate_response.output
-    assert validate_response.output["score"] > 0
+    # テンプレート取得
+    template = agent.get_test_template("Calculator")
+    assert "class CalculatorTest" in template
+    assert "@Test" in template
 
 
 @pytest.mark.asyncio
 async def test_orchestrator_basic() -> None:
-    """Orchestrator基本テスト."""
-    # MCPClientを作成
-    client = MCPClient()
-    client.register_tool("cobol_parser", COBOLParser())
-    client.register_tool("java_generator", JavaGenerator())
-    client.register_tool("code_validator", CodeValidator())
+    """Orchestrator 基本テスト."""
+    orchestrator = CodeMigrationOrchestrator()
 
-    # Orchestratorを作成
-    orchestrator = CodeMigrationOrchestrator(client)
-
-    # 簡単なCOBOLコード
+    # 簡単な COBOL コード
     cobol_code = """
        IDENTIFICATION DIVISION.
        PROGRAM-ID. HELLO-WORLD.
-       
+
        DATA DIVISION.
        WORKING-STORAGE SECTION.
        01 WS-MESSAGE PIC X(20).
-       
+
        PROCEDURE DIVISION.
            MOVE "HELLO WORLD" TO WS-MESSAGE.
            DISPLAY WS-MESSAGE.
            STOP RUN.
     """
 
-    # 移行実行（ReflectionPatternとMemorySystemは未登録なのでエラーになる）
-    # 注意: 完全なテストには全てのMCP工具が必要
-    result = await orchestrator.migrate(cobol_code=cobol_code)
+    # run メソッドをテスト（LLM なしでは完全な変換はできない）
+    result = await orchestrator.run({"cobol_code": cobol_code})
 
-    # 解析段階は成功するはず
-    assert "ast" in result or "errors" in result
+    # 結果構造を確認
+    assert "success" in result
+
+
+# ========================================
+# MCP Client テスト（後方互換性）
+# ========================================
 
 
 @pytest.mark.asyncio
 async def test_mcp_client_tool_management() -> None:
-    """MCPClient工具管理テスト."""
+    """MCPClient 工具管理テスト."""
     client = MCPClient()
 
     # 工具登録
@@ -171,4 +176,3 @@ async def test_mcp_client_tool_management() -> None:
     # 工具登録解除
     client.unregister_tool("cobol_parser")
     assert client.has_tool("cobol_parser") is False
-
