@@ -107,6 +107,8 @@ class AgentFlowSettings(BaseSettings):
     # ========================================
     llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="LLM温度")
     llm_max_tokens: int = Field(default=4096, gt=0, description="最大トークン数")
+    # LLM APIタイムアウト（複雑な分析タスクには180秒以上推奨）
+    llm_timeout: int = Field(default=180, gt=0, description="LLM APIタイムアウト（秒）")
 
     # ========================================
     # メモリ設定
@@ -167,7 +169,7 @@ class AgentFlowSettings(BaseSettings):
         """有効なLLM設定を取得.
 
         Returns:
-            LLM設定辞書（provider, model, api_key, base_url等）
+            LLM設定辞書（provider, model, api_key, base_url, timeout等）
         """
         provider = self.get_active_provider()
         config: dict[str, Any] = {
@@ -175,6 +177,7 @@ class AgentFlowSettings(BaseSettings):
             "model": self.get_active_model(),
             "temperature": self.llm_temperature,
             "max_tokens": self.llm_max_tokens,
+            "timeout": self.llm_timeout,
         }
 
         if provider == "openai":

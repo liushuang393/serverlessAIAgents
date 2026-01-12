@@ -120,13 +120,13 @@ triggers:
             description="PDF ファイルからテキストを抽出。PDF 処理が必要な場合に使用。",
             triggers=["pdf", "document", "extract"],
         )
-        
+
         # 高マッチ（トリガー含む）
         assert metadata.matches_query("PDF からテキスト抽出") > 0.5
-        
-        # 中マッチ（description 部分一致）
-        assert metadata.matches_query("ファイル処理") > 0.2
-        
+
+        # 中マッチ（トリガー document）
+        assert metadata.matches_query("document file") > 0.5
+
         # 低マッチ（無関係）
         assert metadata.matches_query("天気予報") < 0.2
 

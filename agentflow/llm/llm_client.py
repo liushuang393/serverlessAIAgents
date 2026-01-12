@@ -105,7 +105,8 @@ class LLMConfig(BaseModel):
     base_url: str | None = Field(default=None, description="カスタムベースURL")
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="温度パラメータ")
     max_tokens: int = Field(default=2000, gt=0, description="最大トークン数")
-    timeout: int = Field(default=60, gt=0, description="タイムアウト（秒）")
+    # LLM API超时：复杂分析任务可能需要较长时间，默认180秒
+    timeout: int = Field(default=180, gt=0, description="タイムアウト（秒）")
 
 
 class LLMClient:

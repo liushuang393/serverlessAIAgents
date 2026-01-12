@@ -71,7 +71,12 @@ def auto_adapt(
                 metadata_file = Path.cwd() / metadata_path
 
             if metadata_file.exists():
-                self._metadata: AgentMetadata = loader.load_from_file(metadata_file)
+                try:
+                    self._metadata: AgentMetadata = loader.load_from_file(metadata_file)
+                except Exception:
+                    # 旧形式の agent.yaml など、スキーマ検証に失敗した場合はスキップ
+                    # ログ出力は SchemaLoader 内で行われる
+                    self._metadata = None  # type: ignore
             else:
                 # メタデータファイルが見つからない場合、空のメタデータを作成 (テスト用)
                 self._metadata = None  # type: ignore

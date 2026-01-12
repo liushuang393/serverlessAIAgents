@@ -3,10 +3,17 @@
 
 PipelineEngine パターンを使用した意思決定支援エンジン。
 
-アーキテクチャ:
-    Gate層: CognitiveGate → Gatekeeper（2段階チェック）
-    分析層: Clarification → Dao → Fa → Shu → Qi（順次実行）
-    検証層: ReviewAgent（REVISE回退対応）
+アーキテクチャ（8ステージ順次実行）:
+    前処理層: CognitiveGate（認知分析）→ Gatekeeper（門番、Gate判断）
+    診断層: Clarification（問題精緻化）
+    分析層: Dao → Fa → Shu → Qi（順次実行、依存チェーン）
+    検証層: ReviewAgent（PASS/REVISE/REJECT、REVISEはDaoへ戻る）
+
+実行フロー:
+    CognitiveGate → Gatekeeper → Clarification → Dao → Fa → Shu → Qi → Review
+         ↓              ↓                                              ↓
+       分析のみ      拦截判断                                    PASS/REVISE/REJECT
+       (通過)      (不適格拒否)                                   (REVISEはDaoへ戻る)
 
 設計改善（v2.3）:
     - ReportBuilder インターフェースを使用
@@ -101,8 +108,8 @@ class DecisionEngine(PipelineEngine):
             {
                 "name": "cognitive_gate",
                 "agent": self._registry.get_agent("cognitive_gate"),
-                "gate": True,
-                "gate_check": lambda r: r.get("proceed", True),
+                # CognitiveGateは分析専用、常に通過（拦截はGatekeeperで行う）
+                "gate": False,
             },
             {
                 "name": "gatekeeper",

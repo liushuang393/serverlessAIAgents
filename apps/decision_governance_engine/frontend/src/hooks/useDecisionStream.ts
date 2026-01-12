@@ -62,6 +62,24 @@ export interface StreamState {
   thinkingLogs: ThinkingLog[];
 }
 
+/** Agent ID → 英語クラス名 マッピング */
+const agentClassNameMap: Record<string, string> = {
+  cognitive_gate: 'CognitiveGateAgent',
+  gatekeeper: 'GatekeeperAgent',
+  clarification: 'ClarificationAgent',
+  dao: 'DaoAgent',
+  fa: 'FaAgent',
+  shu: 'ShuAgent',
+  qi: 'QiAgent',
+  review: 'ReviewAgent',
+};
+
+/** 統一ログ名を生成（例: 門番：GatekeeperAgent） */
+const getUnifiedLogName = (agentId: string, japaneseName: string): string => {
+  const className = agentClassNameMap[agentId] || agentId;
+  return `${japaneseName}：${className}`;
+};
+
 /** 初期 Agent 状態（認知前処理・門番・診断・道・法・術・器・検証の8 Agent） */
 const initialAgents: AgentProgress[] = [
   { id: 'cognitive_gate', name: '認知', label: '認知前処理', status: 'waiting', progress: 0, message: '' },
@@ -199,13 +217,17 @@ export function useDecisionStream() {
 
         case 'node.start':
           if (event.node_id) {
+            const agentStart = initialAgents.find(a => a.id === event.node_id);
+            const logNameStart = agentStart
+              ? getUnifiedLogName(event.node_id, agentStart.name)
+              : event.node_id;
             updateAgent(event.node_id, {
               status: 'running',
               progress: 10,
-              message: `${event.node_name || event.node_id} 処理開始...`,
+              message: `${logNameStart} 処理開始...`,
             });
-            // ログ追加
-            addThinkingLog(event.node_id, event.node_name || event.node_id, '処理を開始しました');
+            // ログ追加（統一フォーマット: 日本語名：英語クラス名）
+            addThinkingLog(event.node_id, logNameStart, '処理を開始しました');
           }
           break;
 
@@ -218,38 +240,53 @@ export function useDecisionStream() {
                 progress: event.percentage,
                 message: message as string,
               });
-              // ログ追加
+              // ログ追加（統一フォーマット）
               if (message) {
-                const agent = initialAgents.find(a => a.id === nodeId);
-                addThinkingLog(nodeId as string, agent?.name || nodeId as string, message as string);
+                const agentProg = initialAgents.find(a => a.id === nodeId);
+                const logNameProg = agentProg
+                  ? getUnifiedLogName(nodeId as string, agentProg.name)
+                  : nodeId as string;
+                addThinkingLog(nodeId as string, logNameProg, message as string);
               }
             }
           }
           break;
 
         case 'log':
-          // LLM思考ログイベント
+          // LLM思考ログイベント（統一フォーマット）
           {
             const nodeId = event.node_id || 'system';
-            const nodeName = event.node_name || 'System';
+            const agentLog = initialAgents.find(a => a.id === nodeId);
+            const logNameLog = agentLog
+              ? getUnifiedLogName(nodeId, agentLog.name)
+              : (event.node_name || 'System');
             const content = event.message || (event.data as Record<string, unknown>)?.content || '';
             if (content) {
-              addThinkingLog(nodeId, nodeName, content as string);
+              addThinkingLog(nodeId, logNameLog, content as string);
             }
           }
           break;
 
         case 'node.complete':
           if (event.node_id) {
+            // 既にfailed状態の場合は上書きしない（error後のcomplete防止）
+            const currentAgent = stateRef.current.agents.find(a => a.id === event.node_id);
+            if (currentAgent?.status === 'failed') {
+              console.log('[useDecisionStream] node.complete無視（既にfailed）:', event.node_id);
+              break;
+            }
+            const agentComplete = initialAgents.find(a => a.id === event.node_id);
+            const logNameComplete = agentComplete
+              ? getUnifiedLogName(event.node_id, agentComplete.name)
+              : event.node_id;
             updateAgent(event.node_id, {
               status: 'completed',
               progress: 100,
               message: '完了',
               result: event.data as Record<string, unknown>,
             });
-            // ログ追加
-            const agent = initialAgents.find(a => a.id === event.node_id);
-            addThinkingLog(event.node_id, agent?.name || event.node_id, '✓ 分析完了');
+            // ログ追加（統一フォーマット）
+            addThinkingLog(event.node_id, logNameComplete, '✓ 分析完了');
           }
           break;
 
@@ -257,13 +294,16 @@ export function useDecisionStream() {
           if (event.node_id) {
             // NodeErrorEvent は error_message フィールドを使用
             const errorMsg = event.error_message || event.message || 'エラー発生';
+            const agentError = initialAgents.find(a => a.id === event.node_id);
+            const logNameError = agentError
+              ? getUnifiedLogName(event.node_id, agentError.name)
+              : event.node_id;
             updateAgent(event.node_id, {
               status: 'failed',
               message: errorMsg,
             });
-            // ログ追加
-            const agent = initialAgents.find(a => a.id === event.node_id);
-            addThinkingLog(event.node_id, agent?.name || event.node_id, `❌ ${errorMsg}`);
+            // ログ追加（統一フォーマット）
+            addThinkingLog(event.node_id, logNameError, `❌ ${errorMsg}`);
           }
           break;
 

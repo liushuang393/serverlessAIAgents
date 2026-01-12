@@ -253,10 +253,12 @@ class PipelineEngine(BaseEngine):
             instances = self._stage_instances[stage.name]
 
             if stage.gate and instances:
-                # Gateステージ
+                # Gateステージ - 前ステージの結果を渡す input_mapper を設定
+                input_mapper = self._create_stage_input_mapper(completed_stages.copy())
                 builder.gate(
                     instances[0],
                     id=stage.name,
+                    input_mapper=input_mapper,
                     check=stage.gate_check,
                 )
                 completed_stages.append(stage.name)

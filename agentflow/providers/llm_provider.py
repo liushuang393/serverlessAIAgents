@@ -51,17 +51,18 @@ class LLMProviderConfig(BaseModel):
 
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="温度パラメータ")
     max_tokens: int = Field(default=2000, gt=0, description="最大トークン数")
-    timeout: int = Field(default=60, gt=0, description="タイムアウト秒数")
+    # LLM API超时设置为180秒（复杂分析任务需要较长时间）
+    timeout: int = Field(default=180, gt=0, description="タイムアウト秒数")
 
 
-def _detect_provider_from_env() -> tuple[str, str, str | None, str | None]:
+def _detect_provider_from_env() -> tuple[str, str, str | None, str | None, int]:
     """環境変数から最適なプロバイダーを自動検出.
 
     優先順位: 環境変数 > .env > config.py デフォルト値
     （get_settings() が自動的にこの優先順位を適用）
 
     Returns:
-        (provider, model, api_key, base_url) のタプル
+        (provider, model, api_key, base_url, timeout) のタプル
     """
     from agentflow.config import get_settings
 
@@ -72,11 +73,12 @@ def _detect_provider_from_env() -> tuple[str, str, str | None, str | None]:
     model = llm_config["model"]
     api_key = llm_config.get("api_key")
     base_url = llm_config.get("base_url")
+    timeout = llm_config.get("timeout", 180)
 
     if provider == "mock":
         logger.warning("No LLM API key found in environment. Using mock client.")
 
-    return provider, model, api_key, base_url
+    return provider, model, api_key, base_url, timeout
 
 
 class LLMProvider:
@@ -115,7 +117,7 @@ class LLMProvider:
         from agentflow.llm.llm_client import LLMClient, LLMConfig
 
         # 環境変数から最適なプロバイダーを検出
-        provider, model, api_key, base_url = _detect_provider_from_env()
+        provider, model, api_key, base_url, timeout = _detect_provider_from_env()
         self._provider_info = (provider, model, api_key, base_url)
 
         llm_config = LLMConfig(
@@ -125,10 +127,10 @@ class LLMProvider:
             base_url=base_url,
             temperature=self._temperature_override or self._config.temperature,
             max_tokens=self._max_tokens_override or self._config.max_tokens,
-            timeout=self._config.timeout,
+            timeout=timeout,  # 環境変数から取得したtimeoutを使用
         )
         self._client = LLMClient(llm_config)
-        logger.info(f"LLMProvider initialized: provider={provider}, model={model}")
+        logger.info(f"LLMProvider initialized: provider={provider}, model={model}, timeout={timeout}s")
 
     async def chat(
         self,

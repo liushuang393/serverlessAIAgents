@@ -89,6 +89,7 @@ class GateNode(FlowNode):
     """ゲートノード：条件を満たさない場合は早期リターン."""
 
     agent: AgentProtocol | None = None
+    input_mapper: Callable[["FlowContext"], dict[str, Any]] | None = None
     check: Callable[[dict[str, Any]], bool] | None = None
     on_fail: Callable[["FlowContext"], dict[str, Any] | Any] | None = None
 
@@ -99,7 +100,8 @@ class GateNode(FlowNode):
     async def execute(self, ctx: "FlowContext") -> NodeResult:
         """ゲートチェックを実行."""
         try:
-            inputs = ctx.get_inputs()
+            # input_mapperがあれば使用、なければ元の入力を使用
+            inputs = self.input_mapper(ctx) if self.input_mapper else ctx.get_inputs()
             result = await self.agent.run(inputs)
             ctx.set_result(self.id, result)
 

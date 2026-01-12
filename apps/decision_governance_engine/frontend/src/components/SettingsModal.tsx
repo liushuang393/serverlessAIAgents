@@ -44,7 +44,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setError(null);
     try {
       const response = await apiClient.get('/config/rag');
-      setConfigs(response.data);
+      setConfigs(response.data as AgentRAGConfig[]);
     } catch (err) {
       setError('設定の取得に失敗しました');
       console.error('Failed to fetch RAG configs:', err);

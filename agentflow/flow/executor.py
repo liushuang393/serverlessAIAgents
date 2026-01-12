@@ -123,7 +123,7 @@ class FlowExecutor:
                 # ノードを実行
                 result = await node.execute(ctx)
 
-                # ノード失敗時はエラーイベントを発行
+                # ノード失敗時はエラーイベントを発行（completeは発行しない）
                 if not result.success:
                     error_msg = result.data.get("error", "Unknown error")
                     error_type = result.data.get("error_type", "AgentError")
@@ -139,18 +139,18 @@ class FlowExecutor:
                             "error_type": error_type,
                             "message": error_msg,  # フロントエンド fallback
                         }
-
-                # ノード完了イベント
-                if tracker:
-                    yield tracker.on_node_complete(node, result.data, success=result.success)
                 else:
-                    yield {
-                        "event_type": "node.complete",
-                        "type": "node_complete",  # 後方互換
-                        "node_id": node.id,
-                        "node_name": node.name,
-                        "success": result.success,
-                    }
+                    # ノード成功時のみ完了イベントを発行
+                    if tracker:
+                        yield tracker.on_node_complete(node, result.data, success=True)
+                    else:
+                        yield {
+                            "event_type": "node.complete",
+                            "type": "node_complete",  # 後方互換
+                            "node_id": node.id,
+                            "node_name": node.name,
+                            "success": True,
+                        }
 
                 # 実行結果を処理
                 if result.action == NextAction.CONTINUE:

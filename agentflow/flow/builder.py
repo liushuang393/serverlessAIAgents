@@ -77,6 +77,7 @@ class FlowBuilder:
         *,
         id: str | None = None,
         name: str | None = None,
+        input_mapper: Callable[[FlowContext], dict[str, Any]] | None = None,
         check: Callable[[dict[str, Any]], bool] | None = None,
         on_fail: Callable[[FlowContext], dict[str, Any] | Any] | None = None,
     ) -> FlowBuilder:
@@ -88,6 +89,7 @@ class FlowBuilder:
             agent: ゲートAgent
             id: ノードID（オプション）
             name: ノード名（オプション）
+            input_mapper: 入力マッピング関数（前ステージの結果を渡す）
             check: 条件チェック関数、Trueを返すと通過
             on_fail: 失敗時の処理関数
 
@@ -109,6 +111,7 @@ class FlowBuilder:
             id=node_id,
             name=node_name,
             agent=resolved,
+            input_mapper=input_mapper,
             check=check,
             on_fail=on_fail,
         )
