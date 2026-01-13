@@ -80,10 +80,19 @@ class QiAgent(ResilientAgent[QiInput, QiOutput]):
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
+        # デバッグログ
+        self._logger.debug(f"QiAgent LLM response length: {len(response) if response else 0}")
+        if not response or not response.strip():
+            self._logger.warning("QiAgent: LLM returned empty response")
+            # 空レスポンスの場合はデフォルト出力を返す
+            return self._create_default_output(shu_result)
+
         from agentflow.utils import extract_json
         data = extract_json(response)
         if data is None:
-            raise ValueError(f"QiAgent: LLM returned invalid JSON: {response[:200]}")
+            self._logger.warning(f"QiAgent: Failed to extract JSON. Response preview: {response[:500]}")
+            # JSONパース失敗時もデフォルト出力を返す
+            return self._create_default_output(shu_result)
 
         return QiOutput(
             implementations=[Implementation(**i) for i in data.get("implementations", [])],
@@ -101,3 +110,33 @@ class QiAgent(ResilientAgent[QiInput, QiOutput]):
             ],
         )
 
+    def _create_default_output(self, shu_result: ShuOutput) -> QiOutput:
+        """デフォルト出力を生成（LLMレスポンス失敗時のフォールバック）.
+
+        Args:
+            shu_result: ShuAgent出力
+
+        Returns:
+            基本的なQiOutput
+        """
+        # フェーズから実装要素を推定
+        implementations = []
+        for phase in shu_result.phases[:3]:
+            implementations.append(
+                Implementation(
+                    component=phase.name,
+                    technology="要検討",
+                    estimated_effort=phase.duration,
+                    risks=["詳細検討が必要"],
+                )
+            )
+
+        return QiOutput(
+            implementations=implementations,
+            tool_recommendations=["プロジェクト管理ツール", "コラボレーションツール"],
+            integration_points=["既存システムとの連携"],
+            technical_debt_warnings=["詳細な技術検討が必要です（LLM分析未完了）"],
+            domain_technologies=[],
+            regulatory_considerations=[],
+            geographic_considerations=[],
+        )

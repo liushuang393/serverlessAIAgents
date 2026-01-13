@@ -46,8 +46,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       const response = await apiClient.get('/config/rag');
       setConfigs(response.data as AgentRAGConfig[]);
     } catch (err) {
-      setError('設定の取得に失敗しました');
-      console.error('Failed to fetch RAG configs:', err);
+      // エラー詳細をUIに表示
+      const errorDetail = err instanceof Error ? err.message : '不明なエラー';
+      setError(`設定の取得に失敗しました: ${errorDetail}`);
     } finally {
       setIsLoading(false);
     }
@@ -60,8 +61,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       await apiClient.put(`/config/rag/${agentId}`, updates);
       await fetchConfigs();
     } catch (err) {
-      setError('設定の保存に失敗しました');
-      console.error('Failed to save RAG config:', err);
+      // エラー詳細をUIに表示
+      const errorDetail = err instanceof Error ? err.message : '不明なエラー';
+      setError(`設定の保存に失敗しました: ${errorDetail}`);
     } finally {
       setIsSaving(false);
     }

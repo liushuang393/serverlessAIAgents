@@ -194,7 +194,12 @@ class ReviewNode(FlowNode):
             if isinstance(verdict_raw, ReviewVerdict):
                 verdict = verdict_raw
             else:
-                verdict = ReviewVerdict(str(verdict_raw).upper())
+                # LLMが "REVIEWVERDICT.REVISE" のような形式で返す場合に対応
+                verdict_str = str(verdict_raw).upper()
+                # "REVIEWVERDICT." プレフィックスを除去
+                if verdict_str.startswith("REVIEWVERDICT."):
+                    verdict_str = verdict_str.replace("REVIEWVERDICT.", "")
+                verdict = ReviewVerdict(verdict_str)
 
             self._logger.info(f"レビュー判定: {verdict.value}")
 

@@ -1,9 +1,9 @@
 /**
  * ErrorBoundary - エラー境界コンポーネント.
- * 
+ *
  * React コンポーネントツリー内のエラーをキャッチし、
  * フォールバック UI を表示。
- * 
+ *
  * @example
  * ```tsx
  * <ErrorBoundary
@@ -16,6 +16,30 @@
  */
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
+
+// ========================================
+// 環境検出
+// ========================================
+
+/** 開発環境かどうかを判定 */
+function isDevelopment(): boolean {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const proc = (globalThis as any).process;
+    if (proc?.env?.NODE_ENV) {
+      return proc.env.NODE_ENV === 'development';
+    }
+  } catch {
+    // Node.js 環境ではない
+  }
+  // デフォルト: 開発環境として扱う（エラー詳細を表示）
+  return true;
+}
+
+/** 本番環境かどうかを判定 */
+function isProduction(): boolean {
+  return !isDevelopment();
+}
 
 // ========================================
 // 型定義
@@ -58,7 +82,7 @@ function DefaultErrorFallback({ error, onReset }: DefaultFallbackProps) {
       <p className="text-red-600 mb-4 text-center max-w-md">
         予期しないエラーが発生しました。問題が解決しない場合は、ページを再読み込みしてください。
       </p>
-      {process.env.NODE_ENV === 'development' && (
+      {isDevelopment() && (
         <details className="mb-4 p-4 bg-red-100 rounded-lg max-w-full overflow-auto">
           <summary className="cursor-pointer text-red-700 font-medium">
             エラー詳細（開発環境のみ）
@@ -78,7 +102,7 @@ function DefaultErrorFallback({ error, onReset }: DefaultFallbackProps) {
           再試行
         </button>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => globalThis.location.reload()}
           className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
         >
           ページ再読み込み
@@ -109,8 +133,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     this.props.onError?.(error, errorInfo);
 
     // 本番環境ではエラー報告サービスに送信
-    if (process.env.NODE_ENV === 'production') {
-      console.error('[ErrorBoundary] エラーをキャッチ:', error, errorInfo);
+    if (isProduction()) {
+      // 注: 本番環境では適切なエラー報告サービス（Sentry等）を使用
       // 例: Sentry.captureException(error);
     }
   }

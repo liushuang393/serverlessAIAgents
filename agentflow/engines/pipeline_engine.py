@@ -311,8 +311,6 @@ class PipelineEngine(BaseEngine):
         Returns:
             入力マッピング関数
         """
-        from agentflow.flow.context import FlowContext
-
         def mapper(ctx: FlowContext) -> dict[str, Any]:
             # 1. 元の入力を取得
             inputs = ctx.get_inputs()
@@ -333,15 +331,31 @@ class PipelineEngine(BaseEngine):
     def _create_review_input_mapper(self) -> Callable[["FlowContext"], dict[str, Any]]:
         """Review用の入力マッパーを生成.
 
-        すべての結果を渡す。
+        すべての結果を {stage_name}_result 形式で渡す。
 
         Returns:
             入力マッピング関数
         """
-        from agentflow.flow.context import FlowContext
-
         def mapper(ctx: FlowContext) -> dict[str, Any]:
-            return ctx.get_all_results()
+            # 元の結果を取得
+            all_results = ctx.get_all_results()
+            self._logger.debug(f"[review_input_mapper] all_results keys: {list(all_results.keys())}")
+
+            # {stage_name}_result 形式に変換
+            formatted_results: dict[str, Any] = {}
+            for stage_name, result in all_results.items():
+                # {stage_name}_result として設定
+                formatted_results[f"{stage_name}_result"] = result
+                # 直接マージも行う（後方互換）
+                if isinstance(result, dict):
+                    formatted_results.update(result)
+
+            # 元の入力も含める
+            inputs = ctx.get_inputs()
+            formatted_results.update(inputs)
+
+            self._logger.debug(f"[review_input_mapper] formatted keys: {list(formatted_results.keys())}")
+            return formatted_results
 
         return mapper
 
@@ -590,6 +604,10 @@ class PipelineEngine(BaseEngine):
                 if event := self._emit_node_complete(stage.name, stage_result):
                     yield event
 
+                # 思考過程LOGイベントを発行（道・法・術・器の詳細分析を含む）
+                for log_event in self._emit_thinking_logs(stage.name, stage_result):
+                    yield log_event
+
                 if stage.gate:
                     check = stage.gate_check or (lambda r: r.get("passed", True))
                     if not check(stage_result):
@@ -658,3 +676,182 @@ class PipelineEngine(BaseEngine):
                 "status": "success",
                 "results": self._results,
             }
+
+    def _emit_thinking_logs(
+        self, stage_name: str, stage_result: dict[str, Any]
+    ) -> list[dict[str, Any]]:
+        """Agent思考過程のLOGイベントを生成.
+
+        道・法・術・器 各Agentの詳細な思考内容を抽出し、
+        フロントエンドに表示するためのLOGイベントを生成。
+
+        Args:
+            stage_name: ステージ名（agent ID）
+            stage_result: Agent結果辞書
+
+        Returns:
+            LOGイベントのリスト
+        """
+        import time
+
+        if not self._config.enable_events:
+            return []
+
+        events: list[dict[str, Any]] = []
+
+        # Agent別の思考過程抽出
+        thinking_content = self._extract_thinking_content(stage_name, stage_result)
+        self._logger.debug(f"[_emit_thinking_logs] stage={stage_name}, contents={len(thinking_content)}")
+        if not thinking_content:
+            # 結果キーをログ出力（デバッグ用）
+            self._logger.debug(f"[_emit_thinking_logs] result_keys={list(stage_result.keys()) if stage_result else 'empty'}")
+
+        for content in thinking_content:
+            events.append({
+                "event_type": "log",
+                "timestamp": time.time(),
+                "flow_id": self._flow_id or "",
+                "node_id": stage_name,
+                "node_name": stage_name,
+                "level": "INFO",
+                "message": content,
+                "source": stage_name,
+            })
+
+        return events
+
+    def _extract_thinking_content(
+        self, stage_name: str, result: dict[str, Any]
+    ) -> list[str]:
+        """Agentの思考過程コンテンツを抽出.
+
+        各Agent固有のフィールドから思考過程を人間可読な形式で抽出。
+
+        Args:
+            stage_name: ステージ名
+            result: Agent結果辞書
+
+        Returns:
+            思考過程の文字列リスト
+        """
+        contents: list[str] = []
+
+        # 認知判定（Cognitive Gate）
+        if stage_name == "cognitive_gate":
+            if eo := result.get("evaluation_object"):
+                contents.append(f"【評価対象】{eo}")
+            if cb := result.get("cognitive_biases"):
+                if isinstance(cb, list) and cb:
+                    contents.append(f"【認知バイアス検出】{', '.join(str(b) for b in cb)}")
+            if cf := result.get("clarifying_questions"):
+                if isinstance(cf, list) and cf:
+                    contents.append(f"【追加確認事項】{', '.join(str(q) for q in cf[:3])}")
+
+        # 門番（Gatekeeper）
+        elif stage_name == "gatekeeper":
+            if cat := result.get("category"):
+                contents.append(f"【分類】{cat}")
+            if conf := result.get("confidence"):
+                contents.append(f"【信頼度】{conf}")
+
+        # 診断（Clarification）
+        elif stage_name == "clarification":
+            if rq := result.get("restated_question"):
+                contents.append(f"【再定義した質問】{rq}")
+            if ambig := result.get("ambiguities"):
+                if isinstance(ambig, list) and ambig:
+                    contents.append(f"【曖昧性】{', '.join(str(a) for a in ambig[:3])}")
+            if bias := result.get("cognitive_biases"):
+                if isinstance(bias, list) and bias:
+                    contents.append(f"【認知バイアス】{', '.join(str(b) for b in bias[:3])}")
+
+        # 道（Dao）- 本質分析
+        elif stage_name == "dao":
+            if pt := result.get("problem_type"):
+                contents.append(f"【問題タイプ】{pt}")
+            if essence := result.get("essence"):
+                contents.append(f"【本質】{essence}")
+            # 本質導出プロセス（思考の可視化）
+            if ed := result.get("essence_derivation"):
+                if isinstance(ed, dict):
+                    if sp := ed.get("surface_problem"):
+                        contents.append(f"【表層問題】{sp}")
+                    if uw := ed.get("underlying_why"):
+                        contents.append(f"【深層理由】{uw}")
+                    if rc := ed.get("root_constraint"):
+                        contents.append(f"【根本制約】{rc}")
+            if ic := result.get("immutable_constraints"):
+                if isinstance(ic, list) and ic:
+                    contents.append(f"【不可変制約】{', '.join(str(c) for c in ic[:3])}")
+            if dt := result.get("death_traps"):
+                if isinstance(dt, list) and dt:
+                    trap_names = [t.get("name", str(t)) if isinstance(t, dict) else str(t) for t in dt[:2]]
+                    contents.append(f"【死穴（禁忌）】{', '.join(trap_names)}")
+
+        # 法（Fa）- 戦略選定
+        elif stage_name == "fa":
+            if rp := result.get("recommended_paths"):
+                if isinstance(rp, list) and rp:
+                    path_names = [p.get("name", str(p)) if isinstance(p, dict) else str(p) for p in rp[:2]]
+                    contents.append(f"【推奨戦略】{', '.join(path_names)}")
+            if sp := result.get("strategic_prohibitions"):
+                if isinstance(sp, list) and sp:
+                    contents.append(f"【戦略的禁止事項】{', '.join(str(p) for p in sp[:3])}")
+            if da := result.get("differentiation_axis"):
+                if isinstance(da, dict):
+                    axis_name = da.get("axis_name", "")
+                    if axis_name:
+                        contents.append(f"【差別化軸】{axis_name}")
+            if wef := result.get("why_existing_fails"):
+                contents.append(f"【既存解が使えない理由】{wef}")
+
+        # 術（Shu）- 実行計画
+        elif stage_name == "shu":
+            if fa := result.get("first_action"):
+                contents.append(f"【最初の一歩】{fa}")
+            if phases := result.get("phases"):
+                if isinstance(phases, list) and phases:
+                    phase_names = [p.get("name", str(p)) if isinstance(p, dict) else str(p) for p in phases[:3]]
+                    contents.append(f"【実行フェーズ】{', '.join(phase_names)}")
+            if cl := result.get("cut_list"):
+                if isinstance(cl, list) and cl:
+                    contents.append(f"【切り捨てリスト】{', '.join(str(c) for c in cl[:3])}")
+            if svp := result.get("single_validation_point"):
+                if isinstance(svp, dict):
+                    point = svp.get("validation_point", "")
+                    if point:
+                        contents.append(f"【単一検証ポイント】{point}")
+            if ec := result.get("exit_criteria"):
+                if isinstance(ec, dict):
+                    trigger = ec.get("exit_trigger", "")
+                    if trigger:
+                        contents.append(f"【撤退基準】{trigger}")
+
+        # 器（Qi）- 技術実装
+        elif stage_name == "qi":
+            if impls := result.get("implementations"):
+                if isinstance(impls, list) and impls:
+                    # Implementation モデル: component フィールドを使用
+                    impl_names = [i.get("component", i.get("name", str(i))) if isinstance(i, dict) else str(i) for i in impls[:3]]
+                    contents.append(f"【実装要素】{', '.join(impl_names)}")
+            if tools := result.get("tool_recommendations"):
+                if isinstance(tools, list) and tools:
+                    contents.append(f"【推奨ツール】{', '.join(str(t) for t in tools[:3])}")
+            if dtech := result.get("domain_technologies"):
+                if isinstance(dtech, list) and dtech:
+                    # DomainSpecificTechnology モデル: technology_name フィールドを使用
+                    tech_names = [d.get("technology_name", d.get("name", str(d))) if isinstance(d, dict) else str(d) for d in dtech[:2]]
+                    contents.append(f"【ドメイン固有技術】{', '.join(tech_names)}")
+
+        # 検証（Review）
+        elif stage_name == "review":
+            if verdict := result.get("overall_verdict"):
+                contents.append(f"【総合判定】{verdict}")
+            if score := result.get("confidence_score"):
+                contents.append(f"【信頼度スコア】{score}")
+            if findings := result.get("findings"):
+                if isinstance(findings, list) and findings:
+                    finding_types = [f.get("finding_type", str(f)) if isinstance(f, dict) else str(f) for f in findings[:3]]
+                    contents.append(f"【検証所見】{', '.join(finding_types)}")
+
+        return contents

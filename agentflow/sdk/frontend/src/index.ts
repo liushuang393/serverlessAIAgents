@@ -1,35 +1,47 @@
 /**
  * @agentflow/ui - AgentFlow Frontend SDK.
- * 
+ *
  * React Hooks & Components for AI Agent Applications.
- * 
+ *
  * @packageDocumentation
- * 
+ *
  * @example
  * ```tsx
  * import {
+ *   // Hooks
  *   useAgentStream,
+ *   useErrorHandler,
+ *
+ *   // Store
  *   createAgentStore,
+ *
+ *   // API
  *   AgentApiClient,
+ *
+ *   // Components
  *   AgentProgress,
  *   Notification,
  *   ErrorBoundary,
+ *
+ *   // Utils
+ *   logger,
+ *   createLogger,
  * } from '@agentflow/ui';
- * 
+ *
  * // SSE ストリーム
  * const { agents, start, isComplete } = useAgentStream({
  *   endpoint: '/api/decision/stream',
  *   agents: [{ id: 'dao', name: '道', label: '本質分析' }],
  * });
- * 
- * // Store 作成
- * const useMyStore = createAgentStore({
- *   name: 'my-app',
- *   initialState: { question: '' },
+ *
+ * // エラーハンドリング
+ * const { error, handleAsync, isLoading } = useErrorHandler();
+ * const handleSubmit = handleAsync(async () => {
+ *   await api.post('/data', payload);
  * });
- * 
- * // API クライアント
- * const api = new AgentApiClient({ baseUrl: '/api' });
+ *
+ * // ログ
+ * logger.info('User action', { userId: '123' });
  * ```
  */
 
@@ -45,6 +57,13 @@ export {
   type AgentProgress as AgentProgressState,
   type StreamState,
 } from './hooks/useAgentStream';
+
+export {
+  useErrorHandler,
+  type UseErrorHandlerConfig,
+  type UseErrorHandlerReturn,
+  type ErrorInfo,
+} from './hooks/useErrorHandler';
 
 // ========================================
 // Store
@@ -126,3 +145,16 @@ export {
   isProgressEvent,
 } from './types/events';
 
+// ========================================
+// Utils
+// ========================================
+
+export {
+  Logger,
+  logger,
+  createLogger,
+  configureLogger,
+  type LogLevel,
+  type LogEntry,
+  type LoggerConfig,
+} from './utils/logger';

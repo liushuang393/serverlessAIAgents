@@ -350,17 +350,39 @@ class ResilientAgent(AgentBlock, Generic[InputT, OutputT]):
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
             )
-            return response.get("content", "")
+            # LLMResponse（Pydantic モデル）または dict に対応
+            content = self._extract_content(response)
+            return content
         elif hasattr(self._llm, "chat"):
             response = await self._llm.chat(
                 [{"role": "user", "content": prompt}],
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
             )
-            return response.get("content", "")
+            # LLMResponse（Pydantic モデル）または dict に対応
+            content = self._extract_content(response)
+            return content
         else:
             self._logger.warning("LLM クライアントに有効なメソッドがありません")
             return ""
+
+    def _extract_content(self, response: Any) -> str:
+        """LLM レスポンスからコンテンツを抽出.
+
+        Args:
+            response: LLMResponse（Pydantic モデル）または dict
+
+        Returns:
+            コンテンツ文字列（None の場合は空文字列）
+        """
+        # Pydantic モデルの場合（LLMResponse）
+        if hasattr(response, "content"):
+            return response.content or ""
+        # dict の場合
+        if isinstance(response, dict):
+            return response.get("content", "") or ""
+        # その他
+        return str(response) if response else ""
 
     @property
     def llm(self) -> Any:

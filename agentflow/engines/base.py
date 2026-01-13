@@ -296,17 +296,59 @@ class BaseEngine(ABC):
     def _emit_node_complete(
         self, node_name: str, result: dict[str, Any]
     ) -> dict[str, Any] | None:
-        """ノード完了イベントを発行."""
+        """ノード完了イベントを発行.
+
+        Args:
+            node_name: ノード名
+            result: Agent結果（思考過程含む）
+
+        Returns:
+            AG-UIイベント辞書（完全な結果データ付き）
+        """
         if self._config.enable_events:
             from agentflow.protocols.agui_events import NodeCompleteEvent
+
+            # 結果をシリアライズ可能な形式に変換
+            serialized_result = self._serialize_result(result)
+
             return NodeCompleteEvent(
                 timestamp=time.time(),
                 node_id=node_name,
                 node_name=node_name,
                 flow_id=self._flow_id or "",
-                data={"result_keys": list(result.keys())},
-            ).to_dict()  # to_dict() で event_type を文字列に変換
+                data=serialized_result,  # 完全な結果データを含む
+            ).to_dict()
         return None
+
+    def _serialize_result(self, result: dict[str, Any]) -> dict[str, Any]:
+        """結果をJSONシリアライズ可能な形式に変換.
+
+        Pydantic モデル、Enum、その他の複雑なオブジェクトを処理。
+
+        Args:
+            result: Agent結果辞書
+
+        Returns:
+            シリアライズ可能な辞書
+        """
+        from enum import Enum
+        from pydantic import BaseModel
+
+        def serialize_value(value: Any) -> Any:
+            if value is None:
+                return None
+            if isinstance(value, BaseModel):
+                return value.model_dump()
+            if isinstance(value, Enum):
+                return value.value
+            if isinstance(value, dict):
+                return {k: serialize_value(v) for k, v in value.items()}
+            if isinstance(value, list):
+                return [serialize_value(v) for v in value]
+            # 基本型（str, int, float, bool）はそのまま
+            return value
+
+        return {k: serialize_value(v) for k, v in result.items()}
 
     @property
     def progress_emitter(self) -> "ProgressEmitter | None":

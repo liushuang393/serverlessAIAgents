@@ -92,12 +92,16 @@ export const useAuthStore = create<AuthState>()(
             });
             return false;
           }
-        } catch {
+        } catch (err) {
+          // 認証チェック失敗時はエラー詳細を含める
+          const errorMessage = err instanceof Error
+            ? `認証状態の確認に失敗しました: ${err.message}`
+            : '認証状態の確認に失敗しました';
           set({
             user: null,
             isAuthenticated: false,
             isLoading: false,
-            error: '認証状態の確認に失敗しました',
+            error: errorMessage,
           });
           return false;
         }
@@ -138,18 +142,23 @@ export const useAuthStore = create<AuthState>()(
 
       // ログアウト
       performLogout: async () => {
+        let logoutError: string | null = null;
         try {
           await fetch(`${API_BASE}/api/auth/logout`, {
             method: 'POST',
             credentials: 'include',
           });
-        } catch {
-          // ログアウトエラーは無視
+        } catch (err) {
+          // ログアウトAPIが失敗しても、ローカル状態はクリアする
+          // ただし、ユーザーにはサーバー側の問題を通知
+          logoutError = err instanceof Error
+            ? `ログアウト通信エラー（ローカルセッションはクリア済み）: ${err.message}`
+            : 'ログアウト通信エラー（ローカルセッションはクリア済み）';
         }
         set({
           user: null,
           isAuthenticated: false,
-          error: null,
+          error: logoutError,
         });
       },
     }),

@@ -43,8 +43,10 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
       if (!res.ok) throw new Error('取得失敗');
       const data = await res.json();
       setDocuments(data.documents || []);
-    } catch (e) {
-      setError((e as Error).message);
+    } catch (err) {
+      // エラー詳細をUIに表示（型安全）
+      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -71,8 +73,10 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
       if (!res.ok) throw new Error('追加失敗');
       setNewContent('');
       await fetchDocuments();
-    } catch (e) {
-      setError((e as Error).message);
+    } catch (err) {
+      // エラー詳細をUIに表示（型安全）
+      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -85,8 +89,10 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
       const res = await fetch(`/api/knowledge/${agentType}/${docId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('削除失敗');
       await fetchDocuments();
-    } catch (e) {
-      setError((e as Error).message);
+    } catch (err) {
+      // エラー詳細をUIに表示（型安全）
+      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
+      setError(errorMessage);
     }
   };
 

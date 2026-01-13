@@ -644,9 +644,9 @@ class DomainSpecificTechnology(BaseModel):
     この問題領域に特化した技術を列挙。
     """
 
-    technology_name: str = Field(..., max_length=30, description="技術名（例: WebRTC, SFU）")
-    category: str = Field(..., max_length=20, description="カテゴリ（例: プロトコル, インフラ）")
-    why_required: str = Field(..., max_length=50, description="なぜこの技術が必要か")
+    technology_name: str = Field(..., max_length=80, description="技術名（例: WebRTC, SFU）")
+    category: str = Field(..., max_length=30, description="カテゴリ（例: プロトコル, インフラ）")
+    why_required: str = Field(..., max_length=100, description="なぜこの技術が必要か")
     alternatives: list[str] = Field(default_factory=list, max_length=3, description="代替技術（max 3）")
 
 
