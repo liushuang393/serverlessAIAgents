@@ -5,7 +5,7 @@ SharedContextの記憶システム統合テスト。
 
 import pytest
 
-from agentflow.patterns.multi_agent import SharedContext
+from agentflow.patterns.shared_context import SharedContext
 
 
 @pytest.mark.asyncio

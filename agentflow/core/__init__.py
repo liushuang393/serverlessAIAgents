@@ -10,6 +10,21 @@ from agentflow.core.exceptions import (
     WorkflowError,
     WorkflowNotFoundError,
 )
+
+# NEW: 統一エラーレスポンス（RFC 7807 互換）
+from agentflow.core.error_response import (
+    ErrorCode,
+    ErrorResponse,
+    AgentFlowAPIError,
+    ValidationError as APIValidationError,
+    NotFoundError,
+    TimeoutError as APITimeoutError,
+    RateLimitError,
+    ExecutionError,
+    create_error_response,
+    exception_to_response,
+    create_exception_handlers,
+)
 from agentflow.core.resilient_agent import (
     BaseDecisionAgent,
     InputT,
@@ -52,6 +67,48 @@ from agentflow.core.result_store import (
 from agentflow.core.schemas import SchemaLoader, SchemaValidationError
 from agentflow.core.types import AgentMetadata, ExecutionContext, WorkflowConfig
 from agentflow.core.validator import AgentValidator, ValidationResult
+
+# 信頼性強化
+from agentflow.core.circuit_breaker import (
+    CircuitBreaker,
+    CircuitBreakerConfig,
+    CircuitBreakerOpenError,
+    CircuitState,
+)
+from agentflow.core.reliability import (
+    get_circuit_breaker,
+    reliable,
+)
+from agentflow.core.retry import RetryableAgent, RetryConfig
+
+# ==========================================================================
+# Core Interfaces（安定インターフェース - 変更厳禁）
+# ==========================================================================
+from agentflow.core.interfaces import (
+    # Enums
+    CodeOutputType,
+    DeployTarget,
+    # Data types
+    WorkflowDefinition,
+    NodeDefinition,
+    EdgeDefinition,
+    GeneratedCode,
+    FilePreview,
+    CodeGenOptions,
+    DeployConfig,
+    DeployEvent,
+    DeployResult,
+    ConfigField,
+    ConfigTemplate,
+    ValidationResult as InterfaceValidationResult,
+    ExecutionEvent,
+    DebugEvent,
+    # Interfaces
+    ICodeGenerator,
+    IDeployExecutor,
+    IConfigManager,
+    IWorkflowRunner,
+)
 
 
 __all__ = [
@@ -102,4 +159,52 @@ __all__ = [
     "WorkflowConfig",
     "WorkflowError",
     "WorkflowNotFoundError",
+    # ==========================================================================
+    # NEW: 統一エラーレスポンス（RFC 7807 互換）
+    # ==========================================================================
+    "ErrorCode",
+    "ErrorResponse",
+    "AgentFlowAPIError",
+    "APIValidationError",
+    "NotFoundError",
+    "APITimeoutError",
+    "RateLimitError",
+    "ExecutionError",
+    "create_error_response",
+    "exception_to_response",
+    "create_exception_handlers",
+    # ==========================================================================
+    # 信頼性強化
+    # ==========================================================================
+    "CircuitBreaker",
+    "CircuitBreakerConfig",
+    "CircuitBreakerOpenError",
+    "CircuitState",
+    "RetryableAgent",
+    "RetryConfig",
+    "get_circuit_breaker",
+    "reliable",
+    # ==========================================================================
+    # Core Interfaces（安定インターフェース）
+    # ==========================================================================
+    "CodeOutputType",
+    "DeployTarget",
+    "WorkflowDefinition",
+    "NodeDefinition",
+    "EdgeDefinition",
+    "GeneratedCode",
+    "FilePreview",
+    "CodeGenOptions",
+    "DeployConfig",
+    "DeployEvent",
+    "DeployResult",
+    "ConfigField",
+    "ConfigTemplate",
+    "InterfaceValidationResult",
+    "ExecutionEvent",
+    "DebugEvent",
+    "ICodeGenerator",
+    "IDeployExecutor",
+    "IConfigManager",
+    "IWorkflowRunner",
 ]

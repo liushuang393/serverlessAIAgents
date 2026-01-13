@@ -341,72 +341,61 @@ async def main():
 
 ## 🤝 協調パターン
 
-### Supervisor パターン
+### DeepAgent パターン（推奨）
 
 ```python
-from agentflow.patterns.supervisor import SupervisorCoordinator
+from agentflow.patterns import DeepAgentCoordinator
 
 async def main():
-    # スーパーバイザーエージェント
-    supervisor = SupervisorAgent()
-    
-    # ワーカーエージェント
-    workers = {
-        "research": ResearchAgent(),
-        "write": WriteAgent(),
-    }
-    
-    # コーディネーターを作成
-    coordinator = SupervisorCoordinator(
-        supervisor=supervisor,
-        workers=workers,
-        max_iterations=10
+    # DeepAgentCoordinator を作成
+    coordinator = DeepAgentCoordinator(
+        llm_client=llm,
+        max_iterations=10,
+        quality_threshold=75.0,
+        enable_evolution=True,  # 自己進化を有効化
     )
-    
-    # タスクを実行
+
+    # タスクを実行（認知分析→タスク分解→Agent選択→並行実行→品質評審）
     result = await coordinator.execute("市場調査レポート作成")
     print(result)
 ```
 
-### Hierarchical パターン
+### Reflection パターン
 
 ```python
-from agentflow.patterns.hierarchical import HierarchicalCoordinator
+from agentflow.patterns import ReflectionWorkflow
 
 async def main():
-    # 階層構造を定義
-    hierarchy = {
-        "manager": ManagerAgent(),
-        "workers": {
-            "task1": Task1Agent(),
-            "task2": Task2Agent(),
-        }
-    }
-    
-    # コーディネーターを作成
-    coordinator = HierarchicalCoordinator(hierarchy=hierarchy)
-    
-    # タスクを実行
-    result = await coordinator.execute("複雑なタスク")
+    # 自己改善ループを作成
+    workflow = ReflectionWorkflow(
+        llm_client=llm,
+        max_iterations=3,
+        acceptance_threshold=80.0,
+    )
+
+    # 反復改善
+    result = await workflow.execute("レポートを作成")
     print(result)
 ```
 
-### Sequential パターン
+### AgentPipeline パターン
 
 ```python
-from agentflow.patterns.coordinator import CoordinatorBase
+from agentflow.patterns import AgentPipeline
 
 async def main():
-    agents = [
-        Agent1(),
-        Agent2(),
-        Agent3(),
-    ]
-    
-    # 順次実行
-    coordinator = CoordinatorBase(agents=agents, mode="sequential")
-    result = await coordinator.execute(input_data)
-    print(result)
+    # 順次実行パイプライン
+    pipeline = AgentPipeline(
+        agents=[Agent1(), Agent2(), Agent3()],
+        flow_id="my-pipeline",
+    )
+
+    # SSEイベント付き実行
+    async for result, event in pipeline.run_with_events(input_data):
+        if event:
+            yield event  # SSE配信
+        if result:
+            print(result)
 ```
 
 ---

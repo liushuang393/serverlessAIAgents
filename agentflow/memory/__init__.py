@@ -39,6 +39,24 @@ from agentflow.memory.types import (
     UpdateQueue,
 )
 
+# NEW: Vector Store（LlamaIndex/LangChain 互換接口）
+from agentflow.memory.vector_store import (
+    # データモデル
+    Document,
+    Node,
+    SearchResult,
+    SearchType,
+    # 埋め込み
+    EmbeddingModel,
+    SimpleEmbedding,
+    # ベクトルストア
+    VectorStore,
+    InMemoryVectorStore,
+    # ファクトリー
+    create_vector_store,
+    create_embedding_model,
+)
+
 __all__ = [
     # Main Manager（ユーザー向け主要API）
     "MemoryManager",
@@ -57,5 +75,22 @@ __all__ = [
     "TopicBuffer",
     "UpdateQueue",
     "CompressionConfig",
+    # ==========================================================================
+    # NEW: Vector Store（LlamaIndex/LangChain 互換）
+    # ==========================================================================
+    # データモデル
+    "Document",
+    "Node",
+    "SearchResult",
+    "SearchType",
+    # 埋め込み
+    "EmbeddingModel",
+    "SimpleEmbedding",
+    # ベクトルストア
+    "VectorStore",
+    "InMemoryVectorStore",
+    # ファクトリー
+    "create_vector_store",
+    "create_embedding_model",
 ]
 

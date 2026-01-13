@@ -1,128 +1,224 @@
-"""AgentFlow Patterns - Agentic AI デザインパターン（内部モジュール）.
+"""AgentFlow Patterns - Agentic AI デザインパターン.
 
-⚠️ 注意: これは内部モジュールです。
-外部からは agentflow.engines を使用してください。
+このモジュールは4つの主要パターンを提供します：
 
-このモジュールは業界ベストプラクティスに基づいたAgentic AIデザインパターンを提供します:
-- Reflection: 自己評価と改善の反復
-- Multi-Agent: 複数エージェント協調
-- Coordinator: 協調パターン基底クラス
-- Supervisor: 監督者パターン
-- Hierarchical: 階層パターン
+1. **DeepAgent（推奨）** - 智能型Agent協調
+   - 認知分析 → タスク分解 → 動的Agent割当 → 自己進化
+   - AgentPoolで6個の汎用Agent + カスタムAgent追加対応
+   - 複雑なタスク、柔軟な対応に最適
+
+2. **Reflexion（NEW）** - 失敗学習パターン
+   - 失敗から自動的に学習
+   - verbal reflection による改善
+   - 参考論文: Reflexion (NeurIPS 2023)
+
+3. **Reflection** - 自己改善ループ
+   - 単一Agentの反復改善
+   - Generate → Reflect → Improve サイクル
+
+4. **AgentPipeline** - 順次実行パイプライン
+   - 複数Agentの順序実行
+   - SSE進捗配信対応
 
 設計原則:
 - 簡単: AgentBlock ベース、理解しやすい
-- 柔軟: WorkflowConfig で組み合わせ
+- 柔軟: カスタムAgent追加が容易
 - 健壮: エラーハンドリングと fallback
 - 独立: 外部フレームワーク不要
 
 参考（思想のみ吸収）:
-- Analytics Vidhya: Reflection Pattern
-- Azure Architecture: AI Agent Orchestration Patterns
+- LangChain: DeepAgents Framework
 - Anthropic: Building Effective Agents
-- LangGraph: Multi-agent Supervisor / Hierarchical Teams
+- Reflexion: Language Agents with Verbal Reinforcement Learning
 """
 
-# Coordinator Base
-from agentflow.patterns.coordinator import (
-    CoordinationPattern,
-    CoordinatorBase,
-    CoordinatorRegistry,
+# =============================================================================
+# 1. DeepAgent Pattern（推奨）- 智能型Agent協調
+# =============================================================================
+from agentflow.patterns.deep_agent import (
+    # メインCoordinator
+    DeepAgentCoordinator,
+    # Agent管理
+    AgentPool,
+    DynamicAgent,
+    # データモデル
+    AgentMessage,
+    AgentType,
+    CognitiveAnalysis,
+    CompactionStrategy,
+    EvolutionRecord,
+    MessageType,
+    ParallelGroup,
+    QualityReview,
+    TaskStatus,
+    TodoItem,
+    # ストレージ
+    EvolutionStore,
+    MemoryEvolutionStore,
+    MemoryRuntimeStore,
+    RuntimeStore,
+    # コンテキスト管理
+    ContextCompressor,
+    ConversationManager,
+    # 進捗管理
+    ProgressManager,
+    # 進化
+    Evolver,
 )
 
-# Reflection Pattern
+# =============================================================================
+# 2. Reflexion Pattern（NEW）- 失敗学習パターン
+# =============================================================================
+from agentflow.patterns.reflexion import (
+    # データモデル
+    Reflection,
+    ReflectionType,
+    Severity,
+    FailurePattern,
+    LearningOutcome,
+    # 生成器
+    ReflectionGenerator,
+    LLMReflectionGenerator,
+    # メイン
+    ReflectiveEvolver,
+)
+
+# =============================================================================
+# 3. Reflection Pattern - 自己改善ループ
+# =============================================================================
 from agentflow.patterns.reflection import (
-    ImproverAgent,
+    ReflectionWorkflow,
     ReflectionLoop,
     ReflectionResult,
-    ReflectionWorkflow,
     ReflectorAgent,
+    ImproverAgent,
 )
 
-# Multi-Agent Pattern
-from agentflow.patterns.multi_agent import (
-    AgentCoordinator,
-    AgentRouter,
-    MultiAgentWorkflow,
-    SharedContext,
-)
-
-# Supervisor Pattern
-from agentflow.patterns.supervisor import (
-    SupervisorCoordinator,
-    SupervisorDecision,
-)
-
-# Hierarchical Pattern
-from agentflow.patterns.hierarchical import (
-    HierarchicalCoordinator,
-    SubTask,
-)
-
-# Progress Emitter（内部使用）
-from agentflow.patterns.progress_emitter import (
-    AgentMeta,
-    ProgressEmitter,
-)
-
-# Agent Pipeline（非推奨 - PipelineEngine を使用してください）
+# =============================================================================
+# 4. AgentPipeline - 順次実行パイプライン
+# =============================================================================
 from agentflow.patterns.agent_pipeline import (
+    AgentPipeline,
     AgentConfig,
-    AgentPipeline,  # 非推奨
     AgentProtocol,
     PipelineConfig,
     RevisionRequest,
 )
 
-# Planner Pattern (Plan-and-Execute)
-from agentflow.patterns.planner import (
-    Plan,
-    PlanExecutor,
-    PlannerAgent,
-    PlanResult,
-    PlanStatus,
-    Step,
-    StepStatus,
+# =============================================================================
+# 内部使用（SSE進捗配信）
+# =============================================================================
+from agentflow.patterns.progress_emitter import (
+    ProgressEmitter,
+    AgentMeta,
 )
 
+# =============================================================================
+# 共有コンテキスト
+# =============================================================================
+from agentflow.patterns.shared_context import SharedContext
+
+# =============================================================================
+# 基底クラス（協調器基底）
+# =============================================================================
+from agentflow.patterns.coordinator import (
+    CoordinatorBase,
+    CoordinationPattern,
+)
+
+# =============================================================================
+# 専門化Agent（FAQなど）
+# =============================================================================
+from agentflow.agents import (
+    FAQAgent,
+    FAQAgentConfig,
+    SalesAgent,
+    SalesAgentConfig,
+)
+
+
 __all__ = [
-    # Coordinator Base
-    "CoordinationPattern",
-    "CoordinatorBase",
-    "CoordinatorRegistry",
-    # Reflection Pattern
-    "ImproverAgent",
+    # ==========================================================================
+    # 1. DeepAgent Pattern（推奨）
+    # ==========================================================================
+    # メインCoordinator
+    "DeepAgentCoordinator",
+    # Agent管理
+    "AgentPool",
+    "DynamicAgent",
+    # データモデル
+    "AgentMessage",
+    "AgentType",
+    "CognitiveAnalysis",
+    "CompactionStrategy",
+    "EvolutionRecord",
+    "MessageType",
+    "ParallelGroup",
+    "QualityReview",
+    "TaskStatus",
+    "TodoItem",
+    # ストレージ
+    "EvolutionStore",
+    "MemoryEvolutionStore",
+    "MemoryRuntimeStore",
+    "RuntimeStore",
+    # コンテキスト管理
+    "ContextCompressor",
+    "ConversationManager",
+    # 進捗管理
+    "ProgressManager",
+    # 進化
+    "Evolver",
+    # ==========================================================================
+    # 2. Reflexion Pattern（NEW - 失敗学習）
+    # ==========================================================================
+    # データモデル
+    "Reflection",
+    "ReflectionType",
+    "Severity",
+    "FailurePattern",
+    "LearningOutcome",
+    # 生成器
+    "ReflectionGenerator",
+    "LLMReflectionGenerator",
+    # メイン
+    "ReflectiveEvolver",
+    # ==========================================================================
+    # 3. Reflection Pattern（自己改善ループ）
+    # ==========================================================================
+    "ReflectionWorkflow",
     "ReflectionLoop",
     "ReflectionResult",
-    "ReflectionWorkflow",
     "ReflectorAgent",
-    # Multi-Agent Pattern
-    "AgentCoordinator",
-    "AgentRouter",
-    "MultiAgentWorkflow",
-    "SharedContext",
-    # Supervisor Pattern
-    "SupervisorCoordinator",
-    "SupervisorDecision",
-    # Hierarchical Pattern
-    "HierarchicalCoordinator",
-    "SubTask",
-    # Progress Emitter
-    "AgentMeta",
-    "ProgressEmitter",
-    # Agent Pipeline（非推奨 - PipelineEngine を使用）
-    "AgentConfig",
+    "ImproverAgent",
+    # ==========================================================================
+    # 4. AgentPipeline
+    # ==========================================================================
     "AgentPipeline",
+    "AgentConfig",
     "AgentProtocol",
     "PipelineConfig",
     "RevisionRequest",
-    # Planner Pattern (Plan-and-Execute)
-    "Plan",
-    "PlanExecutor",
-    "PlannerAgent",
-    "PlanResult",
-    "PlanStatus",
-    "Step",
-    "StepStatus",
+    # ==========================================================================
+    # 内部使用（SSE進捗配信）
+    # ==========================================================================
+    "ProgressEmitter",
+    "AgentMeta",
+    # ==========================================================================
+    # 共有コンテキスト
+    # ==========================================================================
+    "SharedContext",
+    # ==========================================================================
+    # 基底クラス
+    # ==========================================================================
+    "CoordinatorBase",
+    "CoordinationPattern",
+    # ==========================================================================
+    # 専門化Agent
+    # ==========================================================================
+    "FAQAgent",
+    "FAQAgentConfig",
+    "SalesAgent",
+    "SalesAgentConfig",
 ]
 

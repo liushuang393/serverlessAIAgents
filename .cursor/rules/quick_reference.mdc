@@ -2,227 +2,196 @@
 alwaysApply: true
 ---
 
-# AgentFlow 規範索引
+# AgentFlow 規範クイックリファレンス
 
-> ⚠️ **AI指示**: このファイルで必要な章を特定し、`agentflow_ja.mdc` の該当行のみ読み取る。
-
----
-
-## 📑 詳細索引 → agentflow_ja.mdc
-
-### 🎯 プロジェクト概要 (L9-36)
-- 技術スタック表: L15-22
-- 8層アーキテクチャ図: L26-35
-
-### 📁 ディレクトリ構造 (L39-86)
-- agentflow/ 構造: L42-74
-- apps/ 構造: L76-79
-- tests/ 構造: L81-84
-
-### 🔧 コア機能モジュール (L89-182)
-- **Agent定義3方式**: L91-128
-  - @agent デコレータ: L94-109
-  - create_flow: L111-119
-  - AgentBlock: L121-128
-- **LLM Provider**: L130-144
-- **Skills システム**: L146-156
-- **マルチAgent協調**: L158-181
-  - AgentCoordinator: L164-168
-  - SupervisorCoordinator: L171-180
-
-### 📝 コードスタイル規範 (L185-277)
-- **命名規則**: L187-208
-  - モジュール: snake_case
-  - クラス: PascalCase
-  - 関数/変数: snake_case
-  - 定数: UPPER_SNAKE_CASE
-  - プライベート: _prefix
-- **型アノテーション**: L210-227 (100%カバレッジ必須)
-- **Docstring**: L229-258 (Googleスタイル)
-- **インポート順序**: L260-276 (標準→サードパーティ→プロジェクト)
-
-### 🏗️ アーキテクチャ設計原則 (L280-355)
-- **SOLID原則**: L282-302
-  - S: 単一責任
-  - O: 開閉原則 (Protocol)
-  - D: 依存性逆転
-- **非同期優先**: L304-318 (async/await必須)
-- **依存性注入**: L320-333
-- **Pydanticデータ検証**: L335-354
-
-### 🚨 エラーハンドリング規範 (L358-407)
-- **例外階層定義**: L360-381
-- **ベストプラクティス**: L383-407
-  - 特定例外キャッチ: L386-394
-  - raise from: L402-406
-
-### 🧪 テスト規範 (L411-483)
-- **カバレッジ要件**: L413-419 (単体≥80%, 統合, E2E)
-- **テスト構造**: L421-454 (pytest, fixture)
-- **外部依存モック**: L456-469 (AsyncMock)
-- **テストマーカー**: L471-483 (unit, integration, e2e, slow)
-
-### 🔒 セキュリティ規範 (L487-530)
-- **ハードコード禁止**: L489-509 (環境変数, pydantic-settings)
-- **入力検証**: L511-520 (Pydantic)
-- **ログセキュリティ**: L522-530 (マスク処理)
-
-### ⚡ パフォーマンス最適化 (L534-570)
-- **並行実行**: L536-550 (asyncio.gather, Semaphore)
-- **キャッシュ戦略**: L552-560 (lru_cache)
-- **コネクションプール**: L562-570 (httpx)
-
-### 🛠️ ツール設定 (L574-611)
-- **Ruff**: L576-589 (line-length=100, select rules)
-- **Mypy**: L591-599 (strict=true)
-- **Pytest**: L601-611 (asyncio_mode=auto, cov≥80%)
-
-### ❌ 禁止事項 (L615-627)
-```
-print() → logging
-Any → 具体型
-type: ignore → 型修正
-def foo(x=[]) → x: list | None = None
-ハードコード → 環境変数
---no-verify → 禁止
-テスト無効化 → 禁止
-except Exception → 特定例外
-```
-
-### ✅ コミット前チェック (L630-648)
-```bash
-ruff format . && ruff check . && mypy . && pytest
-```
-
-### 📚 AIがよく犯す間違い (L652-709)
-- **async/await忘れ**: L654-665
-- **可変デフォルト引数**: L667-681
-- **リソース閉じ忘れ**: L683-696
-- **循環インポート**: L698-709 (TYPE_CHECKING使用)
-
-### 🔄 開発フロー (L713-747)
-- **機能開発フロー**: L715-725 (TDD: Red→Green→Refactor)
-- **コミットメッセージ**: L727-737 (feat/fix/docs/style/refactor/test/chore)
-- **バージョン管理**: L739-747 (SemVer)
-
-### 🧠 認知アーキテクチャパターン (L751-808)
-- **ReAct**: L761-772 (思考→行動→観察)
-- **計画型**: L774-778 (PlannerAgent)
-- **自己反省**: L780-786 (ReviewAgent)
-- **HITL**: L788-796 (interrupt/approval)
-
-### 🔄 業界比較と拡張 (L810-896)
-- **主要フレームワーク比較**: L814-822
-- **AgentFlow アーキテクチャ図**: L826-858
-- **機能比較表**: L860-871
-- **将来ロードマップ**: L875-894
+> バージョン: 2.1.0 | 更新: 2026-01-13
 
 ---
 
-## 🚀 よく使うパターン（コピペ用）
+## 🎯 プロジェクト概要
 
-### Agent定義（@agent デコレータ）
+| 項目 | 値 |
+|------|-----|
+| 言語 | Python 3.13+ |
+| Linter | Ruff (line-length=100) |
+| 型 | Mypy (strict) |
+| テスト | Pytest (cov≥80%) |
+| プロトコル | MCP/A2A/AG-UI/A2UI/WebSocket |
+
+---
+
+## 📁 主要ディレクトリ
+
+```
+agentflow/
+├── core/           # AgentBlock, Registry, ErrorResponse
+├── patterns/       # DeepAgent, Reflection, Pipeline, Reflexion
+├── services/       # AgentService, WorkflowService (統一サービス層)
+├── providers/      # LLM, ToolExecutor
+├── protocols/      # MCP, A2A, AG-UI, A2UI
+├── integrations/   # WebSocket, SSE, FastAPI
+├── memory/         # LightMem, VectorStore
+├── engines/        # SimpleEngine, PipelineEngine, RAGEngine
+└── skills/         # Skills自動進化
+```
+
+---
+
+## 🚀 主要パターン（3+1）
+
+### 1. DeepAgent（推奨）- 複雑なマルチAgent協調
 ```python
-from agentflow import agent, tool, AgentClient
+from agentflow.patterns import DeepAgentCoordinator
 
-@agent
-class MyAgent:
-    system_prompt = "..."
-    skills = ["chatbot"]
-    
-    @tool
-    def my_tool(self, arg: str) -> str: ...
+coordinator = DeepAgentCoordinator(
+    llm_client=llm,
+    max_iterations=10,
+    quality_threshold=75.0,
+)
+result = await coordinator.execute("タスク")
+```
 
-result = await AgentClient.get("MyAgent").invoke({...})
+### 2. Reflection - 自己改善ループ
+```python
+from agentflow.patterns import ReflectionWorkflow
+
+workflow = ReflectionWorkflow(llm_client=llm, max_iterations=3)
+result = await workflow.run({"task": "..."})
+```
+
+### 3. Pipeline - 順次実行
+```python
+from agentflow.patterns import AgentPipeline
+
+pipeline = AgentPipeline(agents=[Agent1(), Agent2()])
+result = await pipeline.run(input_data)
+```
+
+### 4. Reflexion - 失敗学習
+```python
+from agentflow.patterns import ReflectiveEvolver
+
+evolver = ReflectiveEvolver(llm_client=llm)
+await evolver.learn_from_failure(task, error, context)
+```
+
+---
+
+## 🔧 基本操作
+
+### Agent定義
+```python
+from agentflow.core.agent_block import AgentBlock
+
+class MyAgent(AgentBlock):
+    async def run(self, input_data: dict) -> dict:
+        return {"result": "ok"}
 ```
 
 ### LLM呼び出し
 ```python
 from agentflow.providers import get_llm
+
 llm = get_llm()
 response = await llm.chat([{"role": "user", "content": "..."}])
 ```
 
-### マルチAgent
+### サービス層（API/CLI/Studio統一）
 ```python
-from agentflow import create_flow
-flow = create_flow(agents=[A(), B()], pattern="sequential")
-result = await flow.run({...})
+from agentflow.services import AgentService
+
+service = AgentService()
+
+# API向け
+result = await service.execute(agent_id="MyAgent")
+
+# CLI向け
+result = await service.execute_with_callback(on_progress=lambda p,m: print(f"[{p}%] {m}"))
+
+# Studio向け
+async for event in service.execute_stream():
+    await ws.send(event.to_json())
 ```
 
-### 計画型Agent（Plan-and-Execute）
-```python
-from agentflow import PlannerAgent, PlanExecutor
+---
 
-planner = PlannerAgent()
-plan = await planner.create_plan(goal="Webアプリ構築")
-executor = PlanExecutor(agents={"dev": DevAgent(), "test": TestAgent()})
-result = await executor.execute(plan)
-```
+## 🌐 プロトコル（5つ）
 
-### HITL（Human-in-the-Loop）
-```python
-from agentflow import interrupt, ApprovalRequest
-
-response = await interrupt(ApprovalRequest(action="delete", reason="確認"))
-if response.approved:
-    await do_action()
-```
+| プロトコル | 用途 | クラス |
+|-----------|------|--------|
+| MCP | ツール接続 | `MCPClient` |
+| A2A | Agent間通信 | `A2AClient` |
+| AG-UI | SSEイベント | `AGUIEventEmitter` |
+| A2UI | 生成式UI | `A2UIEmitter` |
+| WebSocket | 双方向/HITL | `WebSocketManager` |
 
 ---
 
 ## 📦 重要インポート
 
 ```python
-# 基本API
-from agentflow import agent, tool, AgentClient, create_flow
-from agentflow.providers import get_llm
+# パターン
+from agentflow.patterns import (
+    DeepAgentCoordinator,
+    ReflectionWorkflow,
+    AgentPipeline,
+    ReflectiveEvolver,
+)
+
+# サービス層
+from agentflow.services import AgentService, WorkflowService
 
 # コア
 from agentflow.core.agent_block import AgentBlock
-from agentflow.core.exceptions import AgentFlowError
+from agentflow.core import ErrorResponse, ErrorCode
 
-# パターン
-from agentflow.patterns.multi_agent import AgentCoordinator, SharedContext
-from agentflow.patterns.supervisor import SupervisorCoordinator
+# プロバイダー
+from agentflow.providers import get_llm, ToolExecutor
 
-# 計画型・HITL
-from agentflow import (
-    PlannerAgent, PlanExecutor, Plan, Step,
-    interrupt, ApprovalRequest, ApprovalResponse
-)
+# メモリ
+from agentflow.memory import MemoryManager, VectorStore
+
+# プロトコル
+from agentflow.protocols import MCPClient, A2AClient
+from agentflow.integrations import WebSocketManager
 ```
 
 ---
 
-## 🗂️ 例外階層
+## ❌ 禁止事項
 
-```
-AgentFlowError
-├── WorkflowError
-│   ├── WorkflowNotFoundError
-│   └── WorkflowExecutionError
-├── ProtocolError
-│   ├── ProtocolNotSupportedError
-│   └── ProtocolAdapterError
-├── AgentBlockError
-│   ├── AgentBlockNotFoundError
-│   └── AgentBlockValidationError
-└── ConfigurationError
+| ❌ | ✅ |
+|----|-----|
+| `print()` | `logging` |
+| `Any` 型 | 具体型 |
+| `except Exception` | 特定例外 |
+| `def foo(x=[])` | `x: list | None = None` |
+| ハードコード | 環境変数 |
+| `--no-verify` | 禁止 |
+
+---
+
+## ✅ コミット前
+
+```bash
+ruff format . && ruff check . && mypy . && pytest
 ```
 
 ---
 
 ## 🔧 技術スタック
 
-| 項目 | 技術 |
-|------|------|
-| 言語 | Python 3.13+ |
-| Linter | Ruff (line-length=100) |
-| 型チェック | Mypy (strict) |
-| テスト | Pytest (asyncio, cov≥80%) |
-| ビルド | Hatch |
+| ツール | 設定 |
+|--------|------|
+| Ruff | line-length=100, py313 |
+| Mypy | strict=true |
+| Pytest | asyncio_mode=auto, cov≥80% |
 
 ---
 
-**📖 詳細コード例が必要 → `agentflow_ja.mdc` の該当行を `read_file` で取得**
+## 📚 関連ドキュメント
+
+- `docs/PATTERNS_GUIDE.md` - パターン詳細
+- `docs/protocols.md` - プロトコル詳細
+- `docs/api.md` - API リファレンス
+- `docs/architecture.md` - アーキテクチャ

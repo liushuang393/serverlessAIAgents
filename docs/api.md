@@ -451,8 +451,266 @@ class MyAgent:
 
 ---
 
+---
+
+## Service API（NEW）
+
+### AgentService
+
+Agent 実行の統一サービス。
+
+```python
+from agentflow.services import AgentService
+```
+
+#### 実行メソッド
+
+##### `execute`
+
+```python
+async def execute(
+    self,
+    *,
+    agent_id: str = "",
+    agent_path: str | Path | None = None,
+    input_data: dict[str, Any] | None = None,
+    **kwargs: Any,
+) -> ServiceResult
+```
+
+Agent を実行して結果を返す（API向け）。
+
+**パラメータ:**
+
+- `agent_id` (str): Agent ID（@agent デコレータ名）
+- `agent_path` (str | Path | None): Agent パス
+- `input_data` (dict[str, Any] | None): 入力データ
+
+**戻り値:** `ServiceResult` - 実行結果
+
+##### `execute_stream`
+
+```python
+async def execute_stream(
+    self,
+    **kwargs: Any,
+) -> AsyncIterator[ServiceEvent]
+```
+
+イベントストリームを返す（WebSocket/SSE向け）。
+
+**Yields:** `ServiceEvent` - 実行イベント
+
+##### `execute_with_callback`
+
+```python
+async def execute_with_callback(
+    self,
+    on_event: EventCallback | None = None,
+    on_progress: ProgressCallback | None = None,
+    **kwargs: Any,
+) -> ServiceResult
+```
+
+コールバック付き実行（CLI向け）。
+
+**パラメータ:**
+
+- `on_event`: 全イベント受信コールバック
+- `on_progress`: 進捗のみ受信コールバック `(progress%, message) -> None`
+
+**例:**
+
+```python
+service = AgentService()
+
+# API向け
+result = await service.execute(agent_id="MyAgent", input_data={"text": "hello"})
+
+# CLI向け
+def on_progress(pct, msg):
+    print(f"[{pct:.1f}%] {msg}")
+
+result = await service.execute_with_callback(
+    agent_id="MyAgent",
+    input_data={"text": "hello"},
+    on_progress=on_progress,
+)
+
+# WebSocket向け
+async for event in service.execute_stream(agent_id="MyAgent"):
+    await ws.send(event.to_json())
+```
+
+### WorkflowService
+
+Workflow 実行の統一サービス。
+
+```python
+from agentflow.services import WorkflowService
+```
+
+**使用例:**
+
+```python
+service = WorkflowService()
+
+result = await service.execute(
+    workflow_type="deep_agent",  # "deep_agent" | "pipeline" | "reflection"
+    task="市場分析レポート作成",
+    input_data={"context": "..."},
+)
+```
+
+### ServiceEvent
+
+統一イベントモデル。
+
+```python
+from agentflow.services import ServiceEvent, ProgressEvent, ResultEvent
+```
+
+**イベントタイプ:**
+
+| タイプ | 説明 |
+|--------|------|
+| `START` | 実行開始 |
+| `PROGRESS` | 進捗更新 |
+| `COMPLETE` | 実行完了 |
+| `ERROR` | エラー発生 |
+| `AGENT_START` | Agent開始 |
+| `AGENT_COMPLETE` | Agent完了 |
+| `APPROVAL_REQUIRED` | HITL承認待ち |
+
+---
+
+## Tool API（NEW）
+
+### ToolExecutor
+
+並行ツール実行（OpenAI Function Calling 互換）。
+
+```python
+from agentflow.providers import ToolExecutor, ToolCall
+```
+
+#### 基本使用
+
+```python
+executor = ToolExecutor(tool_provider=my_tools)
+
+# 単一実行
+result = await executor.execute(ToolCall.create("search", {"q": "AI"}))
+
+# 並行実行（OpenAI互換）
+results = await executor.execute_parallel([
+    ToolCall.create("search", {"q": "AI"}),
+    ToolCall.create("fetch", {"url": "..."}),
+])
+
+# フォールバック付き
+result = await executor.execute_with_fallback(tool_call)
+```
+
+#### ToolCall
+
+```python
+class ToolCall(BaseModel):
+    id: str           # 呼び出しID
+    type: str         # "function"
+    function: FunctionCall
+```
+
+#### ToolResult
+
+```python
+class ToolResult(BaseModel):
+    tool_call_id: str    # 対応するToolCall ID
+    role: str            # "tool"
+    content: str         # 実行結果
+    name: str            # ツール名
+    status: ToolCallStatus
+```
+
+---
+
+## VectorStore API（NEW）
+
+### VectorStore
+
+ベクトル検索抽象インターフェース（LlamaIndex/LangChain 互換）。
+
+```python
+from agentflow.memory import VectorStore, Document, InMemoryVectorStore
+```
+
+#### 基本使用
+
+```python
+store = InMemoryVectorStore()
+
+# ドキュメント追加
+await store.add_documents([
+    Document(page_content="AgentFlowはAgent框架です"),
+])
+
+# 類似度検索
+results = await store.similarity_search("Agentフレームワーク", k=5)
+for r in results:
+    print(f"Score: {r.score}, Content: {r.document.page_content}")
+
+# MMR検索（多様性考慮）
+results = await store.max_marginal_relevance_search("Agent", k=5)
+```
+
+---
+
+## ErrorResponse API（NEW）
+
+### ErrorResponse
+
+RFC 7807 Problem Details 互換のエラーレスポンス。
+
+```python
+from agentflow.core import ErrorCode, ErrorResponse, create_error_response
+```
+
+#### 基本使用
+
+```python
+# エラーレスポンス作成
+error = create_error_response(
+    code=ErrorCode.AGENT_NOT_FOUND,
+    detail="Agent 'MyAgent' was not found",
+)
+
+# JSON形式
+print(error.to_dict())
+# {
+#   "type": "https://agentflow.dev/errors/agent_not_found",
+#   "title": "Agent Not Found",
+#   "status": 404,
+#   "detail": "Agent 'MyAgent' was not found",
+#   "code": "agent_not_found",
+#   "trace_id": "trace_abc123..."
+# }
+```
+
+#### エラーコード
+
+| コード | HTTP Status | 説明 |
+|--------|-------------|------|
+| `AGENT_NOT_FOUND` | 404 | Agent未発見 |
+| `WORKFLOW_NOT_FOUND` | 404 | Workflow未発見 |
+| `VALIDATION_ERROR` | 400 | バリデーションエラー |
+| `LLM_TIMEOUT` | 408 | LLMタイムアウト |
+| `AGENT_EXECUTION_ERROR` | 500 | Agent実行エラー |
+
+---
+
 ## 次のステップ
 
+- [パターンガイド](PATTERNS_GUIDE.md) - DeepAgent/Reflection/Pipeline の詳細
 - [プロトコルガイド](protocols.md) - MCP/A2A/AG-UI の詳細
 - [CLI リファレンス](cli.md) - CLI コマンドの詳細
 - [サンプル集](../examples/) - 実装例

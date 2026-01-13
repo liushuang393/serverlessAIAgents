@@ -160,19 +160,6 @@ from agentflow.hitl import (
 from agentflow.engines.base import HITLEngineConfig
 
 # =============================================================================
-# 公開API: Planner Pattern (Plan-and-Execute)
-# =============================================================================
-from agentflow.patterns.planner import (
-    Plan,
-    PlanExecutor,
-    PlannerAgent,
-    PlanResult,
-    PlanStatus,
-    Step,
-    StepStatus,
-)
-
-# =============================================================================
 # 後方互換性のため維持（非推奨 - 将来削除予定）
 # =============================================================================
 from agentflow.core.engine import AgentFlowEngine  # 非推奨: enginesを使用してください
@@ -298,17 +285,6 @@ __all__ = [
     "HITLConfig",
     "HITLEngineConfig",
     "create_hitl_router",
-
-    # =========================================================================
-    # Planner Pattern (Plan-and-Execute)
-    # =========================================================================
-    "Plan",
-    "PlanExecutor",
-    "PlannerAgent",
-    "PlanResult",
-    "PlanStatus",
-    "Step",
-    "StepStatus",
 
     # =========================================================================
     # 後方互換（非推奨）

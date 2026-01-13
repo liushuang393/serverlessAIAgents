@@ -34,9 +34,24 @@ from agentflow.providers.llm_provider import LLMProvider, get_llm, reset_llm
 from agentflow.providers.db_provider import DBProvider, get_db, reset_db
 from agentflow.providers.vectordb_provider import VectorDBProvider, get_vectordb, reset_vectordb
 from agentflow.providers.embedding_provider import EmbeddingProvider, get_embedding, reset_embedding
-from agentflow.providers.tool_provider import ToolProvider
+from agentflow.providers.tool_provider import ToolProvider, RegisteredTool, tool
 from agentflow.providers.data_provider import DataProvider
 from agentflow.providers.event_provider import EventProvider
+
+# NEW: Tool Executor（OpenAI Function Calling 互換）
+from agentflow.providers.tool_executor import (
+    ToolCall,
+    FunctionCall,
+    ToolResult,
+    ToolCallStatus,
+    BatchResult,
+    FallbackStrategy,
+    SimpleFallbackStrategy,
+    SemanticFallbackStrategy,
+    RetryConfig,
+    RetryStrategy,
+    ToolExecutor,
+)
 
 __all__ = [
     # LLM（推奨: get_llm() を使用）
@@ -55,8 +70,23 @@ __all__ = [
     "get_embedding",
     "reset_embedding",
     "EmbeddingProvider",
-    # その他のプロバイダー
+    # Tool Provider
     "ToolProvider",
+    "RegisteredTool",
+    "tool",
+    # NEW: Tool Executor（OpenAI互換並行実行）
+    "ToolCall",
+    "FunctionCall",
+    "ToolResult",
+    "ToolCallStatus",
+    "BatchResult",
+    "FallbackStrategy",
+    "SimpleFallbackStrategy",
+    "SemanticFallbackStrategy",
+    "RetryConfig",
+    "RetryStrategy",
+    "ToolExecutor",
+    # その他のプロバイダー
     "DataProvider",
     "EventProvider",
 ]

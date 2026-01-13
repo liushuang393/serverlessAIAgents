@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """データモデルパッケージ."""
 
 from apps.market_trend_monitor.backend.models.schemas import (
@@ -10,8 +11,25 @@ from apps.market_trend_monitor.backend.models.schemas import (
     SourceType,
     Trend,
 )
+from apps.market_trend_monitor.backend.models.agent_schemas import (
+    AnalyzerInput,
+    AnalyzerOutput,
+    ArticleSchema,
+    CollectorInput,
+    CollectorOutput,
+    DateRange,
+    NotificationSchema,
+    NotifierInput,
+    NotifierOutput,
+    ReporterInput,
+    ReporterOutput,
+    ReportSchema,
+    ReportSectionSchema,
+    TrendSchema,
+)
 
 __all__ = [
+    # dataclass モデル
     "Article",
     "Notification",
     "NotificationPriority",
@@ -20,5 +38,20 @@ __all__ = [
     "SentimentType",
     "SourceType",
     "Trend",
+    # Pydantic スキーマ（Agent I/O）
+    "AnalyzerInput",
+    "AnalyzerOutput",
+    "ArticleSchema",
+    "CollectorInput",
+    "CollectorOutput",
+    "DateRange",
+    "NotificationSchema",
+    "NotifierInput",
+    "NotifierOutput",
+    "ReporterInput",
+    "ReporterOutput",
+    "ReportSchema",
+    "ReportSectionSchema",
+    "TrendSchema",
 ]
 

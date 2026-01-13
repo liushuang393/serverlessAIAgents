@@ -1,11 +1,17 @@
 # AgentFlow プロトコルガイド
 
-AgentFlow は 4 つのオープンプロトコルをサポートしています：
+> バージョン: 2.1.0
+> 更新日: 2026-01-13
 
-- **MCP (Model Context Protocol)**: ツール接続レイヤー
-- **A2A (Agent-to-Agent)**: エージェント協調レイヤー
-- **AG-UI (Agent-UI)**: フロントエンド連携レイヤー（通信プロトコル）
-- **A2UI (Agent-to-UI)**: 生成式 UI レイヤー（UI 規範）
+AgentFlow は **5つのプロトコル** をサポートしています：
+
+| プロトコル | 役割 | 通信方式 |
+|-----------|------|----------|
+| **MCP** | ツール接続 | stdio |
+| **A2A** | Agent間通信 | HTTP/REST |
+| **AG-UI** | UIイベント配信 | SSE |
+| **A2UI** | 生成式UI規範 | AG-UI経由 |
+| **WebSocket** | 双方向通信 | WS（NEW） |
 
 ## プロトコルスタック概要
 
@@ -17,7 +23,8 @@ AgentFlow は 4 つのオープンプロトコルをサポートしています�
 │     └── フロントエンドアプリ (Web/Mobile/Desktop)              │
 │                                                                 │
 │  🎨 UI 交互層                                                   │
-│     ├── AG-UI: 通信プロトコル (イベントストリーム)             │
+│     ├── WebSocket: 双方向リアルタイム（HITL対応）              │
+│     ├── AG-UI: 通信プロトコル (イベントストリーム/SSE)         │
 │     └── A2UI: UI 規範 (宣言式コンポーネント)                   │
 │                                                                 │
 │  🤖 Agent 層                                                    │
@@ -30,6 +37,15 @@ AgentFlow は 4 つのオープンプロトコルをサポートしています�
 │     └── MCP: ツール接続 (データソース・API・外部サービス)      │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**通信プロトコル比較：**
+
+| 比較 | AG-UI (SSE) | WebSocket |
+|------|-------------|-----------|
+| **方向** | 単方向（Server→Client） | 双方向 |
+| **用途** | イベント配信、ログ | HITL、リアルタイム操作 |
+| **類比** | Server Push | Chat |
+| **推奨シーン** | 長時間タスク進捗 | 承認待ち、対話 |
 
 **AG-UI と A2UI の関係：**
 - AG-UI = 通信パイプ（HTTP のような役割）
@@ -547,8 +563,203 @@ class AdvancedAgent(AgentBlock):
 
 ---
 
+## WebSocket（双方向通信）
+
+### 概要
+
+WebSocket は Agent とフロントエンドの双方向リアルタイム通信を実現します。
+
+- **通信方式**: WebSocket (ws://, wss://)
+- **用途**: HITL（Human-in-the-Loop）、リアルタイム対話、承認待ち
+- **互換性**: FastAPI WebSocket、Socket.IO風イベント駆動
+
+### AG-UI との違い
+
+| 項目 | AG-UI (SSE) | WebSocket |
+|------|-------------|-----------|
+| 通信方向 | Server → Client | 双方向 |
+| クライアント操作 | 不可 | 可能 |
+| 接続維持 | 自動再接続 | 手動管理 |
+| 推奨用途 | ログ配信、進捗 | HITL、承認、対話 |
+
+### 基本使用（FastAPI統合）
+
+```python
+from fastapi import FastAPI, WebSocket
+from agentflow.integrations import WebSocketManager, WSEvent, WSEventType
+
+app = FastAPI()
+ws_manager = WebSocketManager()
+
+# WebSocket エンドポイント
+@app.websocket("/ws/{session_id}")
+async def websocket_endpoint(websocket: WebSocket, session_id: str):
+    await ws_manager.handle_connection(websocket, session_id)
+
+# Agent からイベント送信
+async def notify_progress(session_id: str, progress: float):
+    await ws_manager.send(session_id, WSEvent(
+        type=WSEventType.PROGRESS,
+        data={"progress": progress, "message": "処理中..."},
+    ))
+
+# 全員にブロードキャスト
+async def broadcast_update():
+    await ws_manager.broadcast(WSEvent(
+        type=WSEventType.STATE_UPDATE,
+        data={"status": "updated"},
+    ))
+```
+
+### HITL（承認待ち）
+
+```python
+from agentflow.integrations import WebSocketManager, WSEvent, WSEventType, WSCommand
+
+ws_manager = WebSocketManager()
+
+# コマンドハンドラー登録
+def handle_approval(command: WSCommand):
+    if command.payload.get("approved"):
+        print(f"承認されました: {command.flow_id}")
+    else:
+        print(f"拒否されました: {command.flow_id}")
+
+ws_manager.register_command_handler("approval.response", handle_approval)
+
+# 承認リクエスト送信
+async def request_approval(session_id: str, flow_id: str, action: str):
+    await ws_manager.send(session_id, WSEvent(
+        type=WSEventType.APPROVAL_REQUIRED,
+        flow_id=flow_id,
+        data={
+            "action": action,
+            "description": "この操作を承認しますか？",
+            "options": ["approve", "reject"],
+        },
+    ))
+
+    # 応答待ち
+    command = await ws_manager.get_next_command(timeout=300)
+    return command.payload.get("approved", False) if command else False
+```
+
+### イベントタイプ
+
+```python
+from agentflow.integrations import WSEventType
+
+# 接続管理
+WSEventType.CONNECT        # 接続成功
+WSEventType.DISCONNECT     # 切断
+WSEventType.PING           # ハートビート
+WSEventType.PONG           # ハートビート応答
+
+# Agent イベント（AG-UI互換）
+WSEventType.FLOW_START     # フロー開始
+WSEventType.FLOW_COMPLETE  # フロー完了
+WSEventType.FLOW_ERROR     # エラー発生
+WSEventType.NODE_START     # ノード開始
+WSEventType.NODE_COMPLETE  # ノード完了
+WSEventType.PROGRESS       # 進捗更新
+
+# HITL イベント
+WSEventType.APPROVAL_REQUIRED   # 承認待ち
+WSEventType.APPROVAL_RESPONSE   # 承認応答
+
+# カスタム
+WSEventType.MESSAGE        # メッセージ
+WSEventType.COMMAND        # コマンド
+WSEventType.STATE_UPDATE   # 状態更新
+```
+
+### ルーター作成（簡易方法）
+
+```python
+from agentflow.integrations import create_websocket_router, WebSocketManager
+
+# WebSocketManager 共有
+manager = WebSocketManager()
+
+# ルーター作成
+ws_router = create_websocket_router(manager=manager, path="/ws/{session_id}")
+
+# FastAPI に登録
+app.include_router(ws_router)
+```
+
+### クライアント側（JavaScript）
+
+```javascript
+// 接続
+const ws = new WebSocket(`ws://localhost:8000/ws/${sessionId}`);
+
+// イベント受信
+ws.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    
+    switch (data.type) {
+        case 'progress':
+            updateProgressBar(data.data.progress);
+            break;
+        case 'approval.required':
+            showApprovalDialog(data);
+            break;
+        case 'flow.complete':
+            handleCompletion(data);
+            break;
+    }
+};
+
+// 承認応答送信
+function approve(flowId) {
+    ws.send(JSON.stringify({
+        type: 'approval.response',
+        flow_id: flowId,
+        payload: { approved: true }
+    }));
+}
+
+// 切断
+ws.onclose = () => {
+    console.log('Disconnected');
+    // 再接続ロジック
+};
+```
+
+### 統計・監視
+
+```python
+# 接続統計
+stats = ws_manager.get_stats()
+print(f"接続数: {stats['total_connections']}")
+print(f"セッション: {stats['active_sessions']}")
+
+# ハートビート開始（自動切断検知）
+await ws_manager.start_heartbeat()
+
+# 停止
+await ws_manager.stop_heartbeat()
+```
+
+---
+
+## プロトコル選択ガイド
+
+| シナリオ | 推奨プロトコル |
+|---------|---------------|
+| 外部ツール呼び出し | MCP |
+| 別 Agent への委譲 | A2A |
+| 進捗・ログ配信 | AG-UI (SSE) |
+| 動的 UI 生成 | A2UI (AG-UI経由) |
+| 承認待ち・HITL | WebSocket |
+| リアルタイム対話 | WebSocket |
+
+---
+
 ## 次のステップ
 
+- [パターンガイド](PATTERNS_GUIDE.md) - DeepAgent/Reflection/Pipeline の詳細
 - [API リファレンス](api.md) - 詳細な API ドキュメント
 - [CLI リファレンス](cli.md) - CLI コマンドの詳細
 - [サンプル集](../examples/) - 実装例

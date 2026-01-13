@@ -27,14 +27,13 @@ from apps.market_trend_monitor.backend.config import config
 logger = logging.getLogger(__name__)
 
 # ============================================================
-# Flow 作成（統一入口）
+# Flow 作成（FlowBuilder パターン）
 # ============================================================
 
-flow: Flow = create_flow(
-    agents=[CollectorAgent(), AnalyzerAgent(), ReporterAgent(), NotifierAgent()],
-    pattern="sequential",
-    enable_memory=True,
-    name="market-trend-monitor",
+flow: Flow = (
+    create_flow("market-trend-monitor", name="Market Trend Monitor")
+    .then(CollectorAgent(), AnalyzerAgent(), ReporterAgent(), NotifierAgent())
+    .build()
 )
 
 

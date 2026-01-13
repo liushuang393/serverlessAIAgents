@@ -1,145 +1,64 @@
-"""協調器基底クラス - Multi-Agent協調パターン共通インターフェース.
+# -*- coding: utf-8 -*-
+"""Coordinator - Agent協調パターン基底クラス.
 
-このモジュールは協調器の基本インターフェースを定義します：
-- Sequential: 順次実行
-- Concurrent: 並行実行
-- Supervisor: 監督者パターン
-- Hierarchical: 階層パターン
+Agent協調の基底抽象を提供。
+全てのCoordinatorはexecuteメソッドを実装する必要がある。
 
-設計原則：
-- 簡単：最小限のインターフェース
-- 柔軟：具体実装は自由
-- 統一：全パターン同じAPI
+Example:
+    >>> class MyCoordinator(CoordinatorBase):
+    ...     @property
+    ...     def pattern(self) -> CoordinationPattern:
+    ...         return CoordinationPattern.PIPELINE
+    ...
+    ...     async def execute(self, task: str, **kwargs) -> dict:
+    ...         return {"result": f"Processed: {task}"}
 """
 
-import logging
 from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Any
 
-from agentflow.core.agent_block import AgentBlock
-from agentflow.core.registry import Registry
 
-
-class CoordinationPattern(str, Enum):
+class CoordinationPattern(Enum):
     """協調パターン種別."""
 
-    SEQUENTIAL = "sequential"
-    CONCURRENT = "concurrent"
-    SUPERVISOR = "supervisor"
-    HIERARCHICAL = "hierarchical"
-    HANDOFF = "handoff"
+    HIERARCHICAL = "hierarchical"  # 階層型（DeepAgent等）
+    PEER_TO_PEER = "peer_to_peer"  # P2P型
+    BROADCAST = "broadcast"  # ブロードキャスト型
+    PIPELINE = "pipeline"  # パイプライン型
 
 
 class CoordinatorBase(ABC):
-    """協調器基底クラス - 全パターン共通インターフェース.
+    """Agent協調の基底クラス.
+
+    全てのCoordinatorが実装すべきインターフェースを定義。
+    executeメソッドが標準の実行エントリーポイント。
+
+    Attributes:
+        pattern: 協調パターン種別
 
     Example:
-        >>> class MyCoordinator(CoordinatorBase):
-        ...     @property
-        ...     def pattern(self) -> CoordinationPattern:
-        ...         return CoordinationPattern.SEQUENTIAL
-        ...
-        ...     async def execute(self, task, **kwargs):
-        ...         # 実装
-        ...         pass
+        >>> coordinator = MyCoordinator()
+        >>> result = await coordinator.execute("タスクを実行")
     """
-
-    def __init__(self, agents: list[AgentBlock] | None = None) -> None:
-        """初期化.
-
-        Args:
-            agents: 協調対象の Agent リスト
-        """
-        self._agents = agents or []
-        self._logger = logging.getLogger(self.__class__.__name__)
 
     @property
     @abstractmethod
     def pattern(self) -> CoordinationPattern:
-        """協調パターン種別を取得.
-
-        Returns:
-            協調パターン
-        """
-        pass
+        """協調パターンを返す."""
+        ...
 
     @abstractmethod
-    async def execute(self, task: str, **kwargs: Any) -> dict[str, Any]:
-        """協調タスクを実行.
+    async def execute(self, task: Any, **kwargs: Any) -> Any:
+        """タスクを実行.
+
+        全Coordinatorが実装すべきコアメソッド。
 
         Args:
-            task: 実行するタスク
+            task: 実行するタスク（通常は文字列）
             **kwargs: 追加パラメータ
 
         Returns:
-            実行結果
+            実行結果（通常はdict）
         """
-        pass
-
-    def add_agent(self, agent: AgentBlock) -> None:
-        """Agent を追加.
-
-        Args:
-            agent: 追加する Agent
-        """
-        self._agents.append(agent)
-        self._logger.debug(f"Added agent: {type(agent).__name__}")
-
-    def remove_agent(self, agent: AgentBlock) -> bool:
-        """Agent を削除.
-
-        Args:
-            agent: 削除する Agent
-
-        Returns:
-            削除成功した場合 True
-        """
-        try:
-            self._agents.remove(agent)
-            return True
-        except ValueError:
-            return False
-
-    @property
-    def agents(self) -> list[AgentBlock]:
-        """Agent リストを取得."""
-        return list(self._agents)
-
-    @property
-    def agent_count(self) -> int:
-        """Agent 数を取得."""
-        return len(self._agents)
-
-
-class CoordinatorRegistry(Registry["CoordinatorBase"]):
-    """協調器レジストリ - パターン別の協調器を管理.
-
-    Example:
-        >>> registry = CoordinatorRegistry()
-        >>> registry.register("supervisor", SupervisorCoordinator())
-        >>> coordinator = registry.get("supervisor")
-    """
-
-    _instance: "CoordinatorRegistry | None" = None
-
-    def __new__(cls) -> "CoordinatorRegistry":
-        """シングルトンパターン."""
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-        return cls._instance
-
-    def get_by_pattern(self, pattern: CoordinationPattern) -> "CoordinatorBase | None":
-        """パターン種別で協調器を取得.
-
-        Args:
-            pattern: 協調パターン
-
-        Returns:
-            協調器、存在しない場合 None
-        """
-        for coordinator in self._items.values():
-            if coordinator.pattern == pattern:
-                return coordinator
-        return None
-
+        ...

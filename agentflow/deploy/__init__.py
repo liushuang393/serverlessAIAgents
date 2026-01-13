@@ -39,6 +39,23 @@ from agentflow.deploy.generator import (
     generate_all,
     DeploymentConfig,
 )
+from agentflow.deploy.workflow_generator import (
+    generate_workflow_code,
+    generate_workflow_zip,
+    Workflow,
+    WorkflowNode,
+    WorkflowEdge,
+    WorkflowCodeGenerator,
+    CodeGenConfig,
+)
+from agentflow.deploy.executor import DeployExecutor
+from agentflow.deploy.targets import (
+    BaseDeployTarget,
+    VercelTarget,
+    DockerTarget,
+    AWSLambdaTarget,
+    GitHubActionsTarget,
+)
 
 __all__ = [
     # Docker
@@ -57,5 +74,20 @@ __all__ = [
     # All-in-one
     "generate_all",
     "DeploymentConfig",
+    # Workflow Generator (v0.3.0)
+    "generate_workflow_code",
+    "generate_workflow_zip",
+    "Workflow",
+    "WorkflowNode",
+    "WorkflowEdge",
+    "WorkflowCodeGenerator",
+    "CodeGenConfig",
+    # Deploy Executor (v0.4.0)
+    "DeployExecutor",
+    "BaseDeployTarget",
+    "VercelTarget",
+    "DockerTarget",
+    "AWSLambdaTarget",
+    "GitHubActionsTarget",
 ]
 

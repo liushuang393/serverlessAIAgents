@@ -337,7 +337,7 @@ export const ReportPage: React.FC = () => {
               </div>
               <div className="text-right">
                 <div className="text-xs text-slate-500 mb-1">信頼度スコア</div>
-                <div className="text-3xl font-bold text-emerald-400">{Math.round(review.confidence_score * 100)}%</div>
+                <div className="text-3xl font-bold text-emerald-400">{Math.round((review?.confidence_score ?? 0) * 100)}%</div>
               </div>
             </div>
 
@@ -974,58 +974,66 @@ export const ReportPage: React.FC = () => {
                 検証 / ReviewAgent
               </h3>
 
-              <div className="flex items-center gap-3 mb-6">
-                <span className="text-sm text-slate-400">判定結果:</span>
-                <span className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                  review.overall_verdict === 'PASS' 
-                    ? 'bg-emerald-500/10 text-emerald-400' 
-                    : review.overall_verdict === 'REVISE'
-                    ? 'bg-amber-500/10 text-amber-400'
-                    : 'bg-red-500/10 text-red-400'
-                }`}>
-                  {review.overall_verdict}
-                </span>
-              </div>
-
-              {review.findings && review.findings.length > 0 && (
-                <div className="space-y-3">
-                  {review.findings.map((finding, i) => (
-                    <div key={i} className={`rounded-lg p-4 border ${
-                      finding.severity === 'CRITICAL' 
-                        ? 'bg-red-500/5 border-red-500/20'
-                        : finding.severity === 'WARNING' 
-                        ? 'bg-amber-500/5 border-amber-500/20' 
-                        : 'bg-blue-500/5 border-blue-500/20'
+              {review ? (
+                <>
+                  <div className="flex items-center gap-3 mb-6">
+                    <span className="text-sm text-slate-400">判定結果:</span>
+                    <span className={`px-3 py-1 rounded-lg text-sm font-medium ${
+                      review.overall_verdict === 'PASS' 
+                        ? 'bg-emerald-500/10 text-emerald-400' 
+                        : review.overall_verdict === 'REVISE'
+                        ? 'bg-amber-500/10 text-amber-400'
+                        : 'bg-red-500/10 text-red-400'
                     }`}>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-xs px-2 py-0.5 rounded ${
-                          finding.severity === 'CRITICAL'
-                            ? 'bg-red-500/10 text-red-400'
-                            : finding.severity === 'WARNING' 
-                            ? 'bg-amber-500/10 text-amber-400' 
-                            : 'bg-blue-500/10 text-blue-400'
-                        }`}>
-                          {finding.severity}
-                        </span>
-                        <span className="text-xs text-slate-500">{finding.category}</span>
-                      </div>
-                      <p className="text-sm text-slate-400">{finding.description}</p>
-                      {finding.suggested_revision && (
-                        <p className="text-xs text-slate-500 mt-2">💡 {finding.suggested_revision}</p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
+                      {review.overall_verdict || '処理中...'}
+                    </span>
+                  </div>
 
-              {review.final_warnings && review.final_warnings.length > 0 && (
-                <div className="bg-[#0a0a0f] rounded-lg p-4">
-                  <div className="text-xs text-slate-500 mb-2">最終警告</div>
-                  <ul className="text-sm text-slate-400 space-y-1">
-                    {review.final_warnings.map((w: string, i: number) => (
-                      <li key={i}>⚠️ {w}</li>
-                    ))}
-                  </ul>
+                  {review.findings && review.findings.length > 0 && (
+                    <div className="space-y-3">
+                      {review.findings.map((finding, i) => (
+                        <div key={i} className={`rounded-lg p-4 border ${
+                          finding.severity === 'CRITICAL' 
+                            ? 'bg-red-500/5 border-red-500/20'
+                            : finding.severity === 'WARNING' 
+                            ? 'bg-amber-500/5 border-amber-500/20' 
+                            : 'bg-blue-500/5 border-blue-500/20'
+                        }`}>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              finding.severity === 'CRITICAL'
+                                ? 'bg-red-500/10 text-red-400'
+                                : finding.severity === 'WARNING' 
+                                ? 'bg-amber-500/10 text-amber-400' 
+                                : 'bg-blue-500/10 text-blue-400'
+                            }`}>
+                              {finding.severity}
+                            </span>
+                            <span className="text-xs text-slate-500">{finding.category}</span>
+                          </div>
+                          <p className="text-sm text-slate-400">{finding.description}</p>
+                          {finding.suggested_revision && (
+                            <p className="text-xs text-slate-500 mt-2">💡 {finding.suggested_revision}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {review.final_warnings && review.final_warnings.length > 0 && (
+                    <div className="bg-[#0a0a0f] rounded-lg p-4">
+                      <div className="text-xs text-slate-500 mb-2">最終警告</div>
+                      <ul className="text-sm text-slate-400 space-y-1">
+                        {review.final_warnings.map((w: string, i: number) => (
+                          <li key={i}>⚠️ {w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="text-center py-8 text-slate-500">
+                  検証結果を取得中...
                 </div>
               )}
             </div>

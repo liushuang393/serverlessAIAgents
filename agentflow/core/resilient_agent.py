@@ -95,11 +95,15 @@ class ResilientAgent(AgentBlock, Generic[InputT, OutputT]):
     max_tokens: int = 4000  # 十分なトークン数（GPT-4で約3000文字）
     temperature: float = 0.5
 
+    # 内蔵ツール設定
+    enable_code_execution: bool = True  # コード実行機能を有効化
+
     def __init__(
         self,
         llm_client: Any = None,
         prompts_dir: Path | None = None,
         skills_dir: Path | None = None,
+        enable_code_execution: bool | None = None,
         **kwargs: Any,
     ) -> None:
         """初期化.
@@ -108,6 +112,7 @@ class ResilientAgent(AgentBlock, Generic[InputT, OutputT]):
             llm_client: LLM クライアントインスタンス（None の場合は自動取得）
             prompts_dir: プロンプトテンプレートディレクトリ（旧方式）
             skills_dir: Skills ディレクトリ（SKILL.md 形式）
+            enable_code_execution: コード実行機能（None でクラス設定使用）
             **kwargs: AgentBlock への引数
         """
         super().__init__(**kwargs)
@@ -116,11 +121,18 @@ class ResilientAgent(AgentBlock, Generic[InputT, OutputT]):
         self._skills_dir = skills_dir
         self._logger = logging.getLogger(f"agentflow.{self.name}")
         self._cached_skill_prompt: str | None = None
+        self._tool_provider: Any = None
+
+        # コード実行機能の設定
+        if enable_code_execution is not None:
+            self._enable_code_execution = enable_code_execution
+        else:
+            self._enable_code_execution = self.enable_code_execution
 
     async def initialize(self) -> None:
         """エージェント初期化.
 
-        LLM クライアントの自動取得などを行います。
+        LLM クライアントの自動取得、内蔵ツールの登録を行います。
         """
         await super().initialize()
 
@@ -133,6 +145,15 @@ class ResilientAgent(AgentBlock, Generic[InputT, OutputT]):
                 self._logger.debug(f"{self.name}: LLM auto-injected")
             except Exception as e:
                 self._logger.warning(f"{self.name}: Failed to auto-inject LLM: {e}")
+
+        # 内蔵ツールを自動登録
+        if self._enable_code_execution:
+            try:
+                from agentflow.providers.tool_provider import ToolProvider
+                self._tool_provider = ToolProvider(include_builtin=True)
+                self._logger.debug(f"{self.name}: 内蔵ツール登録完了")
+            except Exception as e:
+                self._logger.debug(f"{self.name}: 内蔵ツール登録スキップ: {e}")
 
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """エージェント実行（リトライ + タイムアウト）.

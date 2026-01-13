@@ -1,18 +1,24 @@
 """AgentFlow Studio REST API.
 
 FastAPI アプリケーションで、エージェント管理、ワークフロー実行、
-マーケットプレイス統合のための REST エンドポイントを提供します。
+マーケットプレイス統合、Preview/Publish機能のための REST エンドポイントを提供します。
+
+v0.3.0 新機能:
+- Preview API: ワークフローのリアルタイム実行とデバッグ
+- Publish API: コード生成と各プラットフォームへのデプロイ
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
+from io import BytesIO
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from pydantic import BaseModel, Field
 
 from agentflow.core.engine import AgentFlowEngine
@@ -89,6 +95,59 @@ class ChatRequest(BaseModel):
 
     session_id: str | None = Field(None, description="セッション ID")
     message: str = Field(..., description="ユーザーメッセージ")
+
+
+# ========================================
+# Preview/Publish リクエストモデル (v0.3.0)
+# ========================================
+class PreviewRunRequest(BaseModel):
+    """プレビュー実行リクエスト."""
+
+    workflow: dict[str, Any] = Field(..., description="ワークフロー定義")
+    input_data: dict[str, Any] = Field(default_factory=dict, description="入力データ")
+    debug: bool = Field(False, description="デバッグモード")
+
+
+class PreviewRunResponse(BaseModel):
+    """プレビュー実行レスポンス."""
+
+    status: str = Field(..., description="実行ステータス")
+    result: dict[str, Any] | None = Field(None, description="実行結果")
+    logs: list[dict[str, Any]] = Field(default_factory=list, description="実行ログ")
+    duration_ms: float | None = Field(None, description="実行時間（ミリ秒）")
+    error: str | None = Field(None, description="エラーメッセージ")
+
+
+class PublishExportRequest(BaseModel):
+    """エクスポートリクエスト."""
+
+    workflow: dict[str, Any] = Field(..., description="ワークフロー定義")
+    target: Literal["fastapi", "cli", "vercel", "lambda", "docker"] = Field(
+        ..., description="出力タイプ"
+    )
+    app_name: str | None = Field(None, description="アプリケーション名")
+    version: str = Field("1.0.0", description="バージョン")
+    include_tests: bool = Field(True, description="テストコードを含める")
+    include_readme: bool = Field(True, description="README を含める")
+
+
+class PublishDeployRequest(BaseModel):
+    """デプロイリクエスト."""
+
+    workflow: dict[str, Any] = Field(..., description="ワークフロー定義")
+    target: Literal["vercel", "docker_hub"] = Field(..., description="デプロイ先")
+    app_name: str | None = Field(None, description="アプリケーション名")
+    credentials: dict[str, str] = Field(default_factory=dict, description="認証情報")
+
+
+class PublishDeployResponse(BaseModel):
+    """デプロイレスポンス."""
+
+    status: str = Field(..., description="デプロイステータス")
+    deployment_id: str | None = Field(None, description="デプロイメント ID")
+    url: str | None = Field(None, description="デプロイ URL")
+    logs: list[str] = Field(default_factory=list, description="デプロイログ")
+    error: str | None = Field(None, description="エラーメッセージ")
 
 
 def create_app(
@@ -606,5 +665,480 @@ def create_app(
         if chatbot_skill.clear_session(session_id):
             return {"status": "success"}
         raise HTTPException(status_code=404, detail="Session not found")
+
+    # ========================================
+    # Preview API (v0.4.0 - Services Layer)
+    # ========================================
+    @app.post("/api/preview/run", response_model=PreviewRunResponse)
+    async def preview_run(request: PreviewRunRequest) -> PreviewRunResponse:
+        """ワークフローをプレビュー実行.
+        
+        ワークフロー定義を受け取り、即座に実行して結果を返します。
+        デバッグモードでは各ノードの中間結果も返します。
+        
+        v0.4.0: PreviewService を使用した統一実装。
+        """
+        import time
+        from agentflow.services import PreviewService
+        
+        start_time = time.time()
+        logs: list[dict[str, Any]] = []
+        result: dict[str, Any] = {}
+        
+        try:
+            service = PreviewService()
+            
+            async for event in service.run_stream(request.workflow, request.input_data):
+                logs.append({
+                    "type": event.type,
+                    "node_id": event.node_id,
+                    "message": event.message,
+                    "progress": event.progress,
+                    "timestamp": event.timestamp.isoformat(),
+                })
+                
+                if event.type == "complete" and event.data:
+                    result = event.data
+                elif event.type == "error":
+                    duration_ms = (time.time() - start_time) * 1000
+                    return PreviewRunResponse(
+                        status="error",
+                        logs=logs,
+                        duration_ms=duration_ms,
+                        error=event.message,
+                    )
+            
+            duration_ms = (time.time() - start_time) * 1000
+            
+            return PreviewRunResponse(
+                status="success",
+                result=result,
+                logs=logs,
+                duration_ms=duration_ms,
+            )
+            
+        except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
+            logs.append({
+                "type": "error",
+                "message": str(e),
+                "timestamp": time.time(),
+            })
+            return PreviewRunResponse(
+                status="error",
+                logs=logs,
+                duration_ms=duration_ms,
+                error=str(e),
+            )
+
+    @app.post("/api/preview/stream")
+    async def preview_stream(request: PreviewRunRequest) -> StreamingResponse:
+        """ワークフローをストリーム実行.
+        
+        SSE (Server-Sent Events) でリアルタイムに実行状況を返します。
+        
+        v0.4.0: PreviewService を使用した統一実装。
+        """
+        from agentflow.services import PreviewService
+        
+        async def event_generator():
+            try:
+                service = PreviewService()
+                
+                async for event in service.run_stream(request.workflow, request.input_data):
+                    yield f"data: {json.dumps(event.to_dict())}\n\n"
+                
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+    # ========================================
+    # Publish API (v0.4.0 - Services Layer)
+    # ========================================
+    @app.post("/api/publish/export")
+    async def publish_export(request: PublishExportRequest) -> Response:
+        """ワークフローをコードにエクスポート.
+        
+        ワークフロー定義から実行可能なコードを生成し、
+        ZIP ファイルとしてダウンロードできます。
+        
+        v0.4.0: PublishService を使用した統一実装。
+        """
+        from agentflow.services import PublishService
+        from agentflow.core.interfaces import CodeGenOptions, CodeOutputType
+        
+        try:
+            service = PublishService()
+            
+            # target を CodeOutputType にマッピング
+            type_map = {
+                "fastapi": CodeOutputType.BACKEND,
+                "cli": CodeOutputType.BACKEND,
+                "vercel": CodeOutputType.BACKEND,
+                "lambda": CodeOutputType.BACKEND,
+                "docker": CodeOutputType.BACKEND,
+                "frontend": CodeOutputType.FRONTEND,
+                "fullstack": CodeOutputType.FULLSTACK,
+            }
+            output_type = type_map.get(request.target, CodeOutputType.BACKEND)
+            
+            options = CodeGenOptions(
+                app_name=request.app_name or "",
+                version=request.version,
+                include_tests=request.include_tests,
+                include_readme=request.include_readme,
+            )
+            
+            zip_buffer = await service.export_zip(request.workflow, output_type, options)
+            
+            # ファイル名を生成
+            workflow_name = request.workflow.get("name", "workflow")
+            safe_name = workflow_name.lower().replace(" ", "-")
+            filename = f"{safe_name}-{request.target}.zip"
+            
+            return Response(
+                content=zip_buffer.getvalue(),
+                media_type="application/zip",
+                headers={
+                    "Content-Disposition": f"attachment; filename={filename}"
+                },
+            )
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/api/publish/preview")
+    async def publish_preview(request: PublishExportRequest) -> dict[str, Any]:
+        """生成されるコードをプレビュー.
+        
+        実際にダウンロードせずに、生成されるファイルの内容を確認できます。
+        
+        v0.4.0: PublishService を使用した統一実装。
+        """
+        from agentflow.services import PublishService
+        from agentflow.core.interfaces import CodeOutputType
+        
+        try:
+            service = PublishService()
+            
+            # target を CodeOutputType にマッピング
+            type_map = {
+                "fastapi": CodeOutputType.BACKEND,
+                "cli": CodeOutputType.BACKEND,
+                "vercel": CodeOutputType.BACKEND,
+                "lambda": CodeOutputType.BACKEND,
+                "docker": CodeOutputType.BACKEND,
+                "frontend": CodeOutputType.FRONTEND,
+                "fullstack": CodeOutputType.FULLSTACK,
+            }
+            output_type = type_map.get(request.target, CodeOutputType.BACKEND)
+            
+            previews = await service.preview_code(request.workflow, output_type)
+            
+            return {
+                "status": "success",
+                "files": {
+                    path: {
+                        "content": preview.content_preview,
+                        "lines": preview.lines,
+                        "size": preview.size,
+                    }
+                    for path, preview in previews.items()
+                },
+            }
+            
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/api/publish/deploy", response_model=PublishDeployResponse)
+    async def publish_deploy(request: PublishDeployRequest) -> PublishDeployResponse:
+        """ワークフローをデプロイ.
+        
+        指定されたプラットフォームに直接デプロイします。
+        認証情報が必要です。
+        
+        v0.4.0: PublishService を使用した統一実装。
+        
+        対応プラットフォーム:
+        - Vercel (Serverless Functions)
+        - Docker (Build & Push)
+        - AWS Lambda
+        - GitHub Actions (CI/CD 生成)
+        """
+        from agentflow.services import PublishService
+        from agentflow.core.interfaces import CodeOutputType, DeployTarget
+        
+        logs: list[str] = []
+        
+        try:
+            service = PublishService()
+            
+            # target を DeployTarget にマッピング
+            target_map = {
+                "vercel": DeployTarget.VERCEL,
+                "docker": DeployTarget.DOCKER,
+                "docker_hub": DeployTarget.DOCKER,
+                "aws_lambda": DeployTarget.AWS_LAMBDA,
+                "lambda": DeployTarget.AWS_LAMBDA,
+                "github_actions": DeployTarget.GITHUB_ACTIONS,
+            }
+            deploy_target = target_map.get(request.target)
+            
+            if deploy_target is None:
+                raise ValueError(f"Unknown target: {request.target}")
+            
+            logs.append(f"🚀 {deploy_target.value} デプロイを開始...")
+            
+            # 設定を準備
+            config = dict(request.credentials)
+            config["project_name"] = request.app_name or request.workflow.get("name", "workflow")
+            
+            # フル発布フロー（コード生成 + デプロイ）
+            async for event in service.publish(
+                workflow=request.workflow,
+                output_type=CodeOutputType.BACKEND,
+                target=deploy_target,
+                config=config,
+            ):
+                logs.append(event.message)
+                
+                if event.type == "success" and event.data:
+                    return PublishDeployResponse(
+                        status="success",
+                        deployment_id=event.data.get("deployment_id"),
+                        url=event.data.get("url"),
+                        logs=logs,
+                    )
+                elif event.type == "error":
+                    return PublishDeployResponse(
+                        status="error",
+                        logs=logs,
+                        error=event.message,
+                    )
+            
+            return PublishDeployResponse(
+                status="success",
+                logs=logs,
+            )
+                
+        except Exception as e:
+            logs.append(f"❌ エラー: {str(e)}")
+            return PublishDeployResponse(
+                status="error",
+                logs=logs,
+                error=str(e),
+            )
+
+    @app.post("/api/publish/deploy/stream")
+    async def publish_deploy_stream(request: PublishDeployRequest) -> StreamingResponse:
+        """ワークフローをストリームデプロイ.
+        
+        SSE でリアルタイムにデプロイ状況を返します。
+        """
+        from agentflow.services import PublishService
+        from agentflow.core.interfaces import CodeOutputType, DeployTarget
+        
+        async def event_generator():
+            try:
+                service = PublishService()
+                
+                target_map = {
+                    "vercel": DeployTarget.VERCEL,
+                    "docker": DeployTarget.DOCKER,
+                    "docker_hub": DeployTarget.DOCKER,
+                    "aws_lambda": DeployTarget.AWS_LAMBDA,
+                    "lambda": DeployTarget.AWS_LAMBDA,
+                    "github_actions": DeployTarget.GITHUB_ACTIONS,
+                }
+                deploy_target = target_map.get(request.target, DeployTarget.VERCEL)
+                
+                config = dict(request.credentials)
+                config["project_name"] = request.app_name or request.workflow.get("name", "workflow")
+                
+                async for event in service.publish(
+                    workflow=request.workflow,
+                    output_type=CodeOutputType.BACKEND,
+                    target=deploy_target,
+                    config=config,
+                ):
+                    yield f"data: {json.dumps(event.to_dict())}\n\n"
+                
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+    @app.get("/api/publish/targets")
+    async def list_publish_targets() -> list[dict[str, Any]]:
+        """利用可能なデプロイターゲット一覧.
+        
+        v0.4.0: PublishService から動的に取得。
+        """
+        from agentflow.services import PublishService
+        
+        service = PublishService()
+        
+        # 出力タイプ
+        output_types = service.get_supported_output_types()
+        
+        # デプロイターゲット
+        deploy_targets = service.get_supported_targets()
+        
+        return {
+            "output_types": output_types,
+            "deploy_targets": deploy_targets,
+        }
+
+    @app.get("/api/publish/config-fields/{target}")
+    async def get_config_fields(target: str) -> list[dict[str, Any]]:
+        """ターゲットに必要な設定フィールドを取得.
+        
+        UI でフォームを動的に生成するために使用します。
+        
+        v0.4.0: ConfigManager から動的に取得。
+        """
+        from agentflow.services import PublishService
+        from agentflow.core.interfaces import DeployTarget
+        
+        service = PublishService()
+        
+        # target を DeployTarget にマッピング
+        target_map = {
+            "vercel": DeployTarget.VERCEL,
+            "docker": DeployTarget.DOCKER,
+            "aws_lambda": DeployTarget.AWS_LAMBDA,
+            "github_actions": DeployTarget.GITHUB_ACTIONS,
+        }
+        deploy_target = target_map.get(target)
+        
+        if deploy_target is None:
+            raise HTTPException(status_code=400, detail=f"Unknown target: {target}")
+        
+        fields = await service.get_config_fields(deploy_target)
+        return [f.to_dict() for f in fields]
+
+    # ========================================
+    # サービスノード API（v0.5.0）
+    # ========================================
+
+    @app.get("/api/nodes/service")
+    async def list_service_nodes() -> list[dict[str, Any]]:
+        """利用可能なサービスノード一覧.
+        
+        Studio UIのノードパレット用。
+        RAG/Text2SQL/Chart/Suggestion/FAQノードを含む。
+        """
+        from agentflow.flow.service_nodes import get_all_service_node_definitions
+        return get_all_service_node_definitions()
+
+    @app.get("/api/nodes/service/{node_type}")
+    async def get_service_node_definition(node_type: str) -> dict[str, Any]:
+        """特定のサービスノード定義を取得."""
+        from agentflow.flow.service_nodes import (
+            RAGNode, Text2SQLNode, ChartNode, SuggestionNode, FAQNode
+        )
+        
+        node_map = {
+            "rag": RAGNode,
+            "text2sql": Text2SQLNode,
+            "chart": ChartNode,
+            "suggestion": SuggestionNode,
+            "faq": FAQNode,
+        }
+        
+        node_cls = node_map.get(node_type)
+        if node_cls is None:
+            raise HTTPException(status_code=404, detail=f"ノードタイプが見つかりません: {node_type}")
+        
+        return node_cls.get_studio_definition()
+
+    @app.post("/api/nodes/service/{node_type}/execute")
+    async def execute_service_node(
+        node_type: str,
+        request: dict[str, Any],
+    ) -> dict[str, Any]:
+        """サービスノードを直接実行.
+        
+        Studio プレビュー用。
+        """
+        from agentflow.services import (
+            RAGService, RAGConfig,
+            Text2SQLService, Text2SQLConfig,
+            ChartService, ChartConfig,
+            SuggestionService, SuggestionConfig,
+        )
+        
+        inputs = request.get("inputs", {})
+        config = request.get("config", {})
+        
+        try:
+            if node_type == "rag":
+                service = RAGService(RAGConfig(**config) if config else None)
+                result = await service.execute(action="query", **inputs)
+            elif node_type == "text2sql":
+                service = Text2SQLService(Text2SQLConfig(**config) if config else None)
+                result = await service.execute(action="query", **inputs)
+            elif node_type == "chart":
+                service = ChartService(ChartConfig(**config) if config else None)
+                result = await service.execute(action="generate", **inputs)
+            elif node_type == "suggestion":
+                service = SuggestionService(SuggestionConfig(**config) if config else None)
+                result = await service.execute(**inputs)
+            else:
+                raise HTTPException(status_code=404, detail=f"ノードタイプが見つかりません: {node_type}")
+            
+            return {
+                "success": result.success,
+                "data": result.data,
+                "duration_ms": result.duration_ms,
+            }
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.post("/api/nodes/service/{node_type}/execute/stream")
+    async def execute_service_node_stream(
+        node_type: str,
+        request: dict[str, Any],
+    ) -> StreamingResponse:
+        """サービスノードをストリーム実行.
+        
+        リアルタイムプログレス表示用。
+        """
+        from agentflow.services import (
+            RAGService, RAGConfig,
+            Text2SQLService, Text2SQLConfig,
+            ChartService, ChartConfig,
+            SuggestionService, SuggestionConfig,
+        )
+        
+        inputs = request.get("inputs", {})
+        config = request.get("config", {})
+        
+        async def event_generator():
+            try:
+                if node_type == "rag":
+                    service = RAGService(RAGConfig(**config) if config else None)
+                    action = "query"
+                elif node_type == "text2sql":
+                    service = Text2SQLService(Text2SQLConfig(**config) if config else None)
+                    action = "query"
+                elif node_type == "chart":
+                    service = ChartService(ChartConfig(**config) if config else None)
+                    action = "generate"
+                elif node_type == "suggestion":
+                    service = SuggestionService(SuggestionConfig(**config) if config else None)
+                    action = "generate"
+                else:
+                    yield f"data: {json.dumps({'type': 'error', 'message': 'Unknown node type'})}\n\n"
+                    return
+                
+                async for event in service.execute_stream(action=action, **inputs):
+                    yield f"data: {json.dumps(event.to_dict())}\n\n"
+                    
+            except Exception as e:
+                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     return app

@@ -354,7 +354,7 @@ export interface DecisionReport {
   fa: FaOutput;
   shu: ShuOutput;
   qi: QiOutput;
-  review: ReviewOutput;
+  review?: ReviewOutput;  // Optional: 最終ステージが未完了の場合 undefined
   executive_summary: ExecutiveSummary;
 }
 

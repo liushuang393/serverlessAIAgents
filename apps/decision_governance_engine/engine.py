@@ -19,6 +19,10 @@ PipelineEngine パターンを使用した意思決定支援エンジン。
     - ReportBuilder インターフェースを使用
     - YAML 定義から StageConfig 自動生成可能（将来対応）
 
+設計改善（v3.0）:
+    - DeepAgentAdapter 統合（認知分析、コンテキスト圧縮、自己進化）
+    - 品質評審の多次元評価
+
 使用例:
     >>> from apps.decision_governance_engine.engine import DecisionEngine
     >>>
@@ -41,6 +45,9 @@ from apps.decision_governance_engine.services.agent_registry import AgentRegistr
 from apps.decision_governance_engine.services.decision_report_builder import (
     DecisionReportBuilder,
 )
+from apps.decision_governance_engine.services.deep_agent_adapter import (
+    DeepAgentAdapter,
+)
 
 
 class DecisionEngine(PipelineEngine):
@@ -51,6 +58,11 @@ class DecisionEngine(PipelineEngine):
 
     Attributes:
         MAX_REVISIONS: 最大リビジョン回数（デフォルト: 2）
+
+    v3.0 新機能:
+        - DeepAgentAdapter 統合（認知分析、コンテキスト圧縮、自己進化）
+        - 品質評審の多次元評価
+        - 成功パターン学習
 
     使用例:
         >>> engine = DecisionEngine()
@@ -63,20 +75,34 @@ class DecisionEngine(PipelineEngine):
         self,
         llm_client: Any = None,
         enable_rag: bool = True,
+        enable_deep_agent: bool = True,
     ) -> None:
         """初期化.
 
         Args:
             llm_client: LLMクライアント（省略時は自動取得）
             enable_rag: RAG機能を有効化するか
+            enable_deep_agent: DeepAgent機能を有効化するか
         """
         # LLM自動取得（省略時）
         if llm_client is None:
             llm_client = get_llm()
 
+        self._llm_client = llm_client
+
         # 業務コンポーネント
         self._registry = AgentRegistry(llm_client=llm_client, enable_rag=enable_rag)
         self._enable_rag = enable_rag
+
+        # DeepAgentAdapter（v3.0）
+        self._enable_deep_agent = enable_deep_agent
+        if enable_deep_agent:
+            self._deep_adapter = DeepAgentAdapter(
+                llm_client=llm_client,
+                enable_evolution=True,
+            )
+        else:
+            self._deep_adapter = None
 
         # PipelineEngine 初期化（ReportBuilder を使用）
         super().__init__(
@@ -156,6 +182,60 @@ class DecisionEngine(PipelineEngine):
             self._stage_instances[stage.name] = instances
 
         self._logger.info("DecisionEngine stages configured")
+
+    # =========================================================================
+    # DeepAgent 統合メソッド（v3.0）
+    # =========================================================================
+
+    async def analyze_cognitive(self, question: str) -> dict[str, Any]:
+        """認知分析を実行.
+
+        Args:
+            question: 分析対象の質問
+
+        Returns:
+            認知分析結果（dict形式）
+        """
+        if not self._deep_adapter:
+            return {"intent": question, "is_clear": True, "complexity": "medium"}
+
+        cognitive = await self._deep_adapter.analyze_cognitive(question)
+        return cognitive.model_dump()
+
+    async def record_success(
+        self,
+        task: str,
+        result: dict[str, Any],
+        context: dict[str, Any] | None = None,
+    ) -> None:
+        """成功パターンを学習.
+
+        Args:
+            task: タスク内容
+            result: 実行結果
+            context: コンテキスト情報
+        """
+        if self._deep_adapter:
+            await self._deep_adapter.record_success(task, result, context)
+
+    def get_learned_hint(self, task: str) -> str | None:
+        """学習済みヒントを取得.
+
+        Args:
+            task: タスク内容
+
+        Returns:
+            学習済みヒント（なければNone）
+        """
+        if self._deep_adapter:
+            return self._deep_adapter.get_learned_hint(task)
+        return None
+
+    def get_deep_stats(self) -> dict[str, Any]:
+        """DeepAgent統計情報を取得."""
+        if self._deep_adapter:
+            return self._deep_adapter.get_stats()
+        return {}
 
 
 __all__ = ["DecisionEngine"]

@@ -201,7 +201,7 @@ python api.py
 cd apps/decision_governance_engine/frontend
 
 # 開発サーバー起動（ポート5173）
-npm run dev
+eng
 ```
 
 **ブラウザでアクセス**

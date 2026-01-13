@@ -81,6 +81,18 @@ from agentflow.flow.progress import ProgressTracker
 from agentflow.flow.builder import FlowBuilder, create_flow
 from agentflow.flow.flow import Flow, MemoryAccessor
 
+# サービスノード（Studio統合用）
+from agentflow.flow.service_nodes import (
+    ServiceNodeType,
+    ServiceNode,
+    RAGNode,
+    Text2SQLNode,
+    ChartNode,
+    SuggestionNode,
+    FAQNode,
+    get_all_service_node_definitions,
+)
+
 
 __all__ = [
     # エントリ関数
@@ -109,5 +121,14 @@ __all__ = [
     "FlowGraph",
     "FlowExecutor",
     "ProgressTracker",
+    # サービスノード
+    "ServiceNodeType",
+    "ServiceNode",
+    "RAGNode",
+    "Text2SQLNode",
+    "ChartNode",
+    "SuggestionNode",
+    "FAQNode",
+    "get_all_service_node_definitions",
 ]
 

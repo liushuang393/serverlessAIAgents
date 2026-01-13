@@ -1,31 +1,34 @@
+# -*- coding: utf-8 -*-
 """データ収集エージェント.
 
 複数のソースから市場動向データを収集します。
 
 設計原則：
 - 松耦合：LLM プロバイダーを意識しない（環境変数から自動検出）
+- 型安全：Pydantic による I/O 検証
+- 健壮性：ResilientAgent によるリトライ・タイムアウト制御
 """
 
-import asyncio
 import logging
 import uuid
-from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from datetime import datetime
+from typing import Any
 
-from agentflow.core.agent_block import AgentBlock
-from agentflow.core.retry import RetryableAgent
-from agentflow.providers import get_llm
+from agentflow import ResilientAgent
 from agentflow.config import get_settings
 
-from apps.market_trend_monitor.backend.models import Article, SourceType
+from apps.market_trend_monitor.backend.models import (
+    Article,
+    ArticleSchema,
+    CollectorInput,
+    CollectorOutput,
+    SourceType,
+)
 from apps.market_trend_monitor.backend.integrations import NewsAPIClient
 
-if TYPE_CHECKING:
-    from agentflow.providers.llm_provider import LLMProvider
 
-
-class CollectorAgent(AgentBlock):
-    """データ収集エージェント（松耦合設計）.
+class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
+    """データ収集エージェント（ResilientAgent 継承・型安全）.
 
     役割:
     - 複数のソース（ニュース、GitHub、arXiv、RSS）からデータ収集
@@ -33,141 +36,95 @@ class CollectorAgent(AgentBlock):
     - 重複排除とキャッシュ管理
 
     Note:
-        LLM プロバイダー/モデルは環境変数から自動検出されます。
-        具体的なプロバイダーを意識する必要はありません。
-
-    入力:
-        {
-            "keywords": ["COBOL", "Java migration", "AI"],
-            "sources": ["news", "github", "arxiv", "rss"],
-            "date_range": {"start": "2025-01-01", "end": "2025-01-18"}
-        }
-
-    出力:
-        {
-            "articles": [Article, ...],
-            "total_count": 150,
-            "sources_stats": {"news": 50, "github": 40, ...}
-        }
+        LLM プロバイダー/モデルは環境変数から自動検出されます（松耦合）。
+        ResilientAgent によりリトライ・タイムアウトが自動制御されます。
     """
 
-    def __init__(self) -> None:
-        """初期化."""
-        super().__init__()
-        self._logger = logging.getLogger(__name__)
+    # ResilientAgent 設定
+    name = "CollectorAgent"
+    temperature = 0.3  # 要約タスクは低め
+
+    def __init__(self, llm_client: Any = None) -> None:
+        """初期化.
+
+        Args:
+            llm_client: LLM クライアント（None の場合は自動取得）
+        """
+        super().__init__(llm_client)
+        self._logger = logging.getLogger(self.name)
         self._cache: set[str] = set()  # URL キャッシュ（重複排除用）
 
-        # LLM プロバイダー（環境変数から自動検出・松耦合）
-        # 要約タスクには低めの温度を使用
-        self._llm: "LLMProvider" = get_llm(temperature=0.3)
-
-        # NewsAPIクライアント初期化
+        # NewsAPI クライアント初期化
         settings = get_settings()
         news_api_key = getattr(settings, "news_api_key", None)
         self._news_api_client = NewsAPIClient(api_key=news_api_key)
 
-    async def initialize(self) -> None:
-        """エージェント初期化.
+    def _parse_input(self, input_data: dict[str, Any]) -> CollectorInput:
+        """入力データを Pydantic モデルに変換."""
+        return CollectorInput(**input_data)
 
-        外部APIクライアントのセットアップを行います。
-        """
-        await super().initialize()
-        self._logger.info("CollectorAgent initialized with LLM support")
-
-    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
+    async def process(self, input_data: CollectorInput) -> CollectorOutput:
         """データ収集を実行.
 
         Args:
-            input_data: 入力データ
-                - keywords: 検索キーワードリスト
-                - sources: データソースリスト
-                - date_range: 日付範囲（オプション）
-                - shared_context: 共有コンテキスト（記憶システム付き）
+            input_data: 型付き入力データ
 
         Returns:
-            収集結果
-                - articles: 記事リスト
-                - total_count: 総記事数
-                - sources_stats: ソース別統計
+            型付き収集結果
         """
-        keywords = input_data.get("keywords", [])
-        sources = input_data.get("sources", ["news"])
-        date_range = input_data.get("date_range", {})
-        shared_context = input_data.get("shared_context")
+        keywords = input_data.keywords
+        sources = input_data.sources
+        # NOTE: date_range は将来の拡張用（現在未使用）
 
         self._logger.info(f"Starting collection: keywords={keywords}, sources={sources}")
 
         articles: list[Article] = []
         sources_stats: dict[str, int] = {}
 
-        # 各ソースからデータ収集（リトライ機構付き）
+        # 各ソースからデータ収集
+        # NOTE: ResilientAgent がリトライ・タイムアウトを管理
         for source in sources:
-            source_articles = await self._collect_from_source_with_retry(
-                source=source, keywords=keywords, date_range=date_range, max_retries=3
+            source_articles = await self._collect_from_source(
+                source=source, keywords=keywords
             )
             articles.extend(source_articles)
             sources_stats[source] = len(source_articles)
 
         self._logger.info(f"Collection completed: total={len(articles)} articles")
 
-        # 記憶システムに保存
-        if shared_context:
-            await self._save_to_memory(articles, shared_context)
+        # 記事を ArticleSchema に変換
+        article_schemas = [
+            ArticleSchema(
+                id=a.id,
+                title=a.title,
+                url=a.url,
+                source=a.source.value,
+                published_at=a.published_at.isoformat(),
+                content=a.content,
+                keywords=a.keywords,
+                collected_at=a.collected_at.isoformat(),
+                metadata=a.metadata,
+            )
+            for a in articles
+        ]
 
-        return {
-            "articles": [article.to_dict() for article in articles],
-            "total_count": len(articles),
-            "sources_stats": sources_stats,
-        }
-
-    async def _collect_from_source_with_retry(
-        self, source: str, keywords: list[str], date_range: dict[str, str], max_retries: int = 3
-    ) -> list[Article]:
-        """リトライ機構付きデータ収集.
-
-        Args:
-            source: データソース名
-            keywords: 検索キーワード
-            date_range: 日付範囲
-            max_retries: 最大リトライ回数
-
-        Returns:
-            収集した記事リスト
-        """
-        for attempt in range(max_retries):
-            try:
-                return await self._collect_from_source(source, keywords, date_range)
-            except asyncio.TimeoutError:
-                self._logger.warning(f"Timeout collecting from {source} (attempt {attempt + 1}/{max_retries})")
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(1.0 * (2 ** attempt))  # 指数バックオフ
-                else:
-                    self._logger.error(f"Failed to collect from {source} after {max_retries} attempts")
-                    return []  # 空リストを返す
-            except Exception as e:
-                self._logger.error(f"Error collecting from {source}: {e}")
-                if attempt < max_retries - 1:
-                    await asyncio.sleep(1.0)
-                else:
-                    return []  # 空リストを返す
-        return []
+        return CollectorOutput(
+            articles=article_schemas,
+            total_count=len(articles),
+            sources_stats=sources_stats,
+        )
 
     async def _collect_from_source(
-        self, source: str, keywords: list[str], date_range: dict[str, str]
+        self, source: str, keywords: list[str]
     ) -> list[Article]:
-        """特定ソースからデータ収集（NewsAPI統合）.
+        """特定ソースからデータ収集（NewsAPI 統合）.
 
         Args:
             source: データソース名
             keywords: 検索キーワード
-            date_range: 日付範囲
 
         Returns:
             収集した記事リスト
-
-        Raises:
-            asyncio.TimeoutError: タイムアウト時
-            Exception: その他のエラー時
         """
         self._logger.debug(f"Collecting from {source}")
 
@@ -235,7 +192,7 @@ class CollectorAgent(AgentBlock):
         return articles
 
     async def _generate_article_content(self, keyword: str, source: str) -> str:
-        """LLMを使用して記事コンテンツを生成.
+        """LLM を使用して記事コンテンツを生成.
 
         Args:
             keyword: キーワード
@@ -244,50 +201,34 @@ class CollectorAgent(AgentBlock):
         Returns:
             生成された記事コンテンツ
         """
-        try:
-            prompt = f"""Generate a brief news article summary about "{keyword}" from {source}.
+        prompt = f"""Generate a brief news article summary about "{keyword}" from {source}.
 The article should be informative and professional, around 200-300 words.
 Focus on recent trends, developments, or insights related to {keyword}.
 Write in Japanese."""
 
-            # LLM で生成（松耦合：プロバイダー不明）
-            response = await self._llm.complete(prompt)
-            return response["content"]
-
+        try:
+            # ResilientAgent の _call_llm を使用
+            response = await self._call_llm(prompt)
+            return response if response else self._fallback_content(keyword)
         except Exception as e:
             self._logger.warning(f"Failed to generate content with LLM: {e}")
-            # フォールバック: 簡単なテンプレート
-            return f"{keyword} に関する詳細な記事内容。最新の動向、技術的な進展、市場の反応などを含む包括的な分析。"
+            return self._fallback_content(keyword)
 
-    async def _save_to_memory(self, articles: list[Article], shared_context: Any) -> None:
-        """記事を記憶システムに保存.
+    def _fallback_content(self, keyword: str) -> str:
+        """フォールバックコンテンツ生成."""
+        return f"{keyword} に関する詳細な記事内容。最新の動向、技術的な進展、市場の反応などを含む包括的な分析。"
+
+    def validate_output(self, output: CollectorOutput) -> bool:
+        """出力検証.
 
         Args:
-            articles: 収集した記事リスト
-            shared_context: 共有コンテキスト
+            output: 出力データ
+
+        Returns:
+            検証結果（True = 有効）
         """
-        try:
-            for article in articles:
-                # 記事のタイトルと要約を記憶
-                memory_text = f"Title: {article.title}\nURL: {article.url}\nKeywords: {', '.join(article.keywords)}\nContent: {article.content[:200]}..."
-
-                await shared_context.remember(
-                    memory_text,
-                    topic="collected_articles",
-                    metadata={
-                        "article_id": article.id,
-                        "source": article.source.value,
-                        "published_at": article.published_at.isoformat(),
-                        "keywords": article.keywords,
-                    },
-                )
-
-            self._logger.info(f"Saved {len(articles)} articles to memory system")
-        except Exception as e:
-            self._logger.warning(f"Failed to save articles to memory: {e}")
-
-    async def cleanup(self) -> None:
-        """クリーンアップ処理."""
-        self._logger.info("CollectorAgent cleanup")
-        await super().cleanup()
+        if output.total_count < 0:
+            self._logger.warning("Validation failed: negative total_count")
+            return False
+        return True
 
