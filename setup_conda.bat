@@ -1,15 +1,17 @@
 @echo off
 REM AgentFlow Conda 環境セットアップスクリプト
 REM 使用方法: Anaconda Prompt で setup_conda.bat を実行
+REM
+REM 依存関係は pyproject.toml で一元管理しています
 
 echo ========================================
 echo AgentFlow Conda 環境セットアップ
 echo ========================================
 echo.
 
-REM Conda 環境を作成
+REM Conda 環境を作成（Python 3.13）
 echo [1/4] Conda 環境を作成中...
-call conda env create -f environment.yml -y
+call conda create -n agentflow python=3.13 -y
 if %errorlevel% neq 0 (
     echo エラー: Conda 環境の作成に失敗しました
     exit /b 1
@@ -27,7 +29,7 @@ if %errorlevel% neq 0 (
 echo ✓ 環境アクティベート完了
 echo.
 
-REM AgentFlow を開発モードでインストール
+REM AgentFlow を開発モードでインストール（pyproject.toml から依存関係を取得）
 echo [3/4] AgentFlow を開発モードでインストール中...
 pip install -e ".[dev]"
 if %errorlevel% neq 0 (

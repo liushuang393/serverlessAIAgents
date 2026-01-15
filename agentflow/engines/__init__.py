@@ -71,7 +71,18 @@ from agentflow.engines.base import BaseEngine, EngineConfig, HITLEngineConfig
 from agentflow.engines.gate_engine import GateEngine
 from agentflow.engines.pipeline_engine import PipelineEngine, StageConfig
 from agentflow.engines.rag_engine import RAGEngine
-from agentflow.engines.report_builder import ReportBuilder, SimpleReportBuilder
+from agentflow.engines.report_builder import (
+    ChartData,
+    ExecutiveSummary,
+    OutputFormat,
+    ReportBuilder,
+    ReportSection,
+    SectionedReportBuilder,
+    SimpleReportBuilder,
+    create_bar_chart,
+    create_line_chart,
+    create_pie_chart,
+)
 from agentflow.engines.simple_engine import SimpleEngine
 from agentflow.patterns.progress_emitter import AgentMeta
 
@@ -91,5 +102,13 @@ __all__ = [
     # レポート生成
     "ReportBuilder",
     "SimpleReportBuilder",
+    "SectionedReportBuilder",
+    "ReportSection",
+    "ExecutiveSummary",
+    "ChartData",
+    "OutputFormat",
+    "create_bar_chart",
+    "create_line_chart",
+    "create_pie_chart",
 ]
 

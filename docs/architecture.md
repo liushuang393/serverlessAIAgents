@@ -1,7 +1,7 @@
 # AgentFlow アーキテクチャ設計書
 
-> **バージョン**: 2.1.0
-> **更新日**: 2026-01-13
+> **バージョン**: 2.4.0
+> **更新日**: 2026-01-15
 
 ---
 
@@ -41,29 +41,56 @@ AgentFlow は**シンプルさ**と**柔軟性**を両立した多 Agent フレ�
 │  📱 UI 通信層                                                    │
 │     ├── AG-UI: イベントストリーム（SSE）                        │
 │     ├── A2UI: 宣言式コンポーネント（UI 規範）                   │
-│     └── WebSocket: 双方向通信（HITL対応）                       │
+│     ├── RichContent: 富文本コンポーネント（共通モジュール）NEW  │
+│     ├── WebSocket: 双方向通信（HITL対応）                       │
+│     └── RealtimeStateSync: フロントエンド状態同期（NEW）        │
+├─────────────────────────────────────────────────────────────────┤
+│  🎭 オーケストレーション層（NEW）                                │
+│     ├── Orchestrator: 統合オーケストレーター                    │
+│     ├── PlannerAgent: タスク分解・計画生成                      │
+│     ├── ExecutorAgent: ステップ実行・リトライ                   │
+│     └── MonitorAgent: リアルタイム監視・異常検出                │
 ├─────────────────────────────────────────────────────────────────┤
 │  🤖 Agent 層                                                     │
 │     ├── AgentBlock: Agent 基底クラス                            │
+│     ├── AgentBlueprint: 宣言式Agent定義（YAML/JSON）（NEW）     │
 │     ├── Skills: Claude Skills 形式の指示ファイル                │
 │     └── Patterns: DeepAgent/Reflection/Pipeline/Reflexion       │
 ├─────────────────────────────────────────────────────────────────┤
 │  🔗 協調層                                                       │
-│     └── A2A: Agent 間通信 (発見・委譲・協調)                    │
+│     ├── A2A: Agent 間通信 (発見・委譲・協調)                    │
+│     └── AgentDiscovery: 動的Agent発見・負荷分散（NEW）          │
 ├─────────────────────────────────────────────────────────────────┤
 │  🔧 ツール層                                                     │
 │     ├── MCP: 外部ツール接続 (DB/API/ファイル)                   │
-│     └── ToolExecutor: 並行ツール実行（OpenAI互換）              │
+│     ├── ToolExecutor: 並行ツール実行（OpenAI互換）              │
+│     └── UnifiedToolProvider: 統一ツール抽象層（NEW）            │
+├─────────────────────────────────────────────────────────────────┤
+│  📊 状態管理層（NEW）                                            │
+│     ├── GlobalStateStore: Redux式グローバル状態管理             │
+│     ├── Actions: 状態変更アクション定義                         │
+│     └── Selectors: 状態クエリセレクター                         │
 ├─────────────────────────────────────────────────────────────────┤
 │  🧠 記憶層                                                       │
 │     ├── MemoryManager: 3段階記憶（LightMem）                    │
+│     ├── EnhancedMemory: 記憶蒸留・主動遺忘・強化学習            │
 │     ├── VectorStore: ベクトル検索（LlamaIndex互換）             │
 │     └── Reflexion: 失敗学習システム                             │
+├─────────────────────────────────────────────────────────────────┤
+│  🛡️ AI安全防護層                                                 │
+│     ├── HallucinationDetector: 幻覚検出・可信度評価             │
+│     ├── ReasoningMonitor: 多步推理監視・目標逸脱検出            │
+│     ├── DataSanitizer: 注入攻撃防護・PII脱敏                    │
+│     ├── ConstraintValidator: 入出力・状態遷移検証（NEW）        │
+│     ├── DualVerifier: 二重検証・クロスバリデーション（NEW）     │
+│     └── AISafetyGuard: 統一安全防護ファサード                   │
 ├─────────────────────────────────────────────────────────────────┤
 │  ⚙️ コア層                                                       │
 │     ├── Registry: 統一登録/取得パターン                         │
 │     ├── Engine: PocketFlow ワークフローエンジン                 │
 │     ├── ErrorResponse: RFC 7807 統一エラー                      │
+│     ├── ResilientAgent: 回路遮断・リトライ・検証                │
+│     ├── RollbackManager: マルチレベルロールバック（NEW）        │
 │     └── Metadata: agent.yaml メタデータ管理                     │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -125,7 +152,8 @@ async with MyAgent() as agent:
 | **DeepAgent**（推奨） | `DeepAgentCoordinator` | 智能型マルチAgent協調 |
 | Reflection | `ReflectionWorkflow` | 自己改善ループ |
 | Pipeline | `AgentPipeline` | 順次実行パイプライン |
-| **Reflexion**（NEW） | `ReflectiveEvolver` | 失敗学習パターン |
+| **Reflexion** | `ReflectiveEvolver` | 失敗学習パターン |
+| **ResilientAgent**（NEW） | `ResilientAgent` | 信頼性強化Agent（回路遮断・リトライ） |
 
 **DeepAgent パターン例**：
 ```python
@@ -160,7 +188,225 @@ async for event in service.execute_stream(agent_id="MyAgent"):
     await websocket.send(event.to_json())
 ```
 
-### 4. Skills 自動進化システム
+### 5. オーケストレーション層（NEW）
+
+タスクの計画・実行・監視を分離したマルチエージェント協調システム：
+
+```python
+from agentflow.orchestration import Orchestrator
+
+# オーケストレーターの初期化
+orchestrator = Orchestrator(llm_client=llm, tool_provider=tools)
+await orchestrator.initialize()
+
+# タスクの実行
+result = await orchestrator.execute(
+    task="競合他社の価格を分析してレポートを生成",
+    context={"market": "EC"},
+    available_tools=["web_scraper", "data_analyzer"],
+)
+
+# ストリーミング実行（リアルタイム進捗）
+async for event in orchestrator.execute_stream(task="..."):
+    print(f"[{event['type']}] {event.get('message', '')}")
+```
+
+| コンポーネント | クラス | 役割 |
+|--------------|--------|------|
+| **Planner** | `PlannerAgent` | タスク分解、依存関係グラフ、実行計画生成 |
+| **Executor** | `ExecutorAgent` | ステップ実行、リトライ、並行処理 |
+| **Monitor** | `MonitorAgent` | リアルタイム監視、異常検出、アラート |
+| **統合** | `Orchestrator` | 全体制御、動的再計画、エラー回復 |
+
+### 6. 統一ツールプロバイダー（NEW）
+
+Skills、MCP、組み込みツールを統一インターフェースで提供：
+
+```python
+from agentflow.providers import UnifiedToolProvider
+
+provider = UnifiedToolProvider()
+await provider.initialize(mcp_config={...})
+
+# URI形式で呼び出し
+result = await provider.call("skill://pdf-extractor", {"file": "doc.pdf"})
+result = await provider.call("mcp://database/query", {"sql": "SELECT ..."})
+result = await provider.call("builtin://calculator", {"expression": "1+1"})
+
+# LLM向けツール定義を取得
+tools_for_llm = provider.get_tools_for_llm()
+```
+
+| URIスキーム | 説明 | 例 |
+|------------|------|-----|
+| `skill://` | Skills（SKILL.md） | `skill://pdf-extractor` |
+| `mcp://` | MCPツール | `mcp://filesystem/read` |
+| `builtin://` | 組み込みツール | `builtin://calculator` |
+| (なし) | 自動推論 | `calculator` → builtin |
+
+### 7. グローバル状態管理（NEW）
+
+Redux式の中央集権型状態管理システム：
+
+```python
+from agentflow.state import GlobalStateStore, create_action, ActionType, select
+
+# ストアの作成
+store = GlobalStateStore(initial_state={"context": {}})
+
+# アクションのディスパッチ
+store.dispatch(create_action(ActionType.UPDATE_PROGRESS, {"progress": 0.5}))
+store.dispatch(create_action(ActionType.SET_CONTEXT, {"key": "value"}))
+
+# 状態の取得
+status = select(store.get_state(), "execution.status")
+progress = store.get_state("execution.progress", default=0.0)
+
+# 購読（状態変更時にコールバック）
+unsubscribe = store.subscribe(
+    callback=lambda state: print(f"Progress: {state['execution']['progress']}"),
+    selector="execution.progress",
+)
+
+# スナップショット（ロールバック用）
+snapshot_id = store.create_snapshot("before_critical_operation")
+# ...操作...
+store.restore_snapshot(snapshot_id)  # 問題発生時にロールバック
+```
+
+### 8. 宣言式Agent定義（NEW）
+
+YAML/JSONでAgentを宣言的に定義：
+
+```yaml
+# agent-blueprint.yaml
+name: market-analyzer
+version: "1.0.0"
+description: 市場分析エージェント
+
+system_prompt: |
+  あなたは市場分析の専門家です。
+  データを収集・分析し、洞察を提供します。
+
+skills:
+  - name: web-scraper
+    required: true
+  - name: data-analyzer
+
+tools:
+  - uri: mcp://database/query
+  - uri: builtin://calculator
+
+memory:
+  type: enhanced
+  max_history: 100
+
+safety:
+  enable_hallucination_check: true
+  enable_pii_detection: true
+
+constraints:
+  max_iterations: 10
+  timeout_seconds: 300
+  allowed_tools:
+    - web-scraper
+    - data-analyzer
+```
+
+```python
+from agentflow.core import AgentBlueprint
+
+# YAMLから読み込み
+blueprint = AgentBlueprint.from_yaml("agent-blueprint.yaml")
+
+# 検証
+result = blueprint.validate()
+if not result.is_valid:
+    for error in result.errors:
+        print(f"Error: {error}")
+
+# Agentインスタンス化
+agent = await blueprint.to_agent(llm_client=llm, tool_provider=tools)
+result = await agent.run({"task": "EC市場を分析"})
+```
+
+### 9. Agent 発見機構（NEW）
+
+大規模マルチエージェント環境での動的 Agent 発見・負荷分散システム：
+
+```python
+from agentflow.discovery import InMemoryAgentRegistry, AgentEntry, AgentStatus
+
+# レジストリ初期化
+registry = InMemoryAgentRegistry()
+
+# Agent 登録
+entry = AgentEntry(
+    agent_id="analysis-agent-1",
+    name="分析Agent",
+    endpoint="http://localhost:8001",
+    capabilities=["data_analysis", "report_generation"],
+    metadata={"version": "1.0.0"},
+)
+await registry.register(entry)
+
+# 能力による検索
+agents = await registry.discover(capabilities=["data_analysis"])
+
+# 負荷分散選択
+selected = await registry.select_agent(
+    capability="data_analysis",
+    strategy="round_robin",  # または "random", "weighted"
+)
+
+# ヘルスチェック
+await registry.heartbeat("analysis-agent-1")
+```
+
+| コンポーネント | クラス | 役割 |
+|--------------|--------|------|
+| **AgentEntry** | `AgentEntry` | Agent 登録情報（ID、能力、エンドポイント） |
+| **AgentDiscovery** | `AgentDiscovery` | 発見機構基底クラス |
+| **Registry** | `InMemoryAgentRegistry` | インメモリ実装 |
+| **HealthChecker** | `HealthChecker` | 定期ヘルスチェック |
+
+### 10. 富文本コンポーネント（共通モジュール）（NEW）
+
+Agent レスポンスで使用する富文本構築システム（Studio/CLI/App 共通）：
+
+```python
+from agentflow import RichResponse, AlertType, ChartType
+
+# Agent での富文本レスポンス構築
+response = RichResponse()
+response.add_markdown("# 分析結果")
+response.add_table([
+    {"name": "A", "value": 100},
+    {"name": "B", "value": 200},
+])
+response.add_chart_from_data(
+    data=[{"x": "A", "y": 10}, {"x": "B", "y": 20}],
+    x_key="x",
+    y_key="y",
+    chart_type=ChartType.BAR,
+)
+response.add_alert("処理完了", AlertType.SUCCESS)
+
+return response.to_dict()  # フロントエンドに送信
+```
+
+| コンポーネント | 説明 |
+|--------------|------|
+| `MarkdownContent` | Markdown テキスト |
+| `CodeBlock` | コードブロック（シンタックスハイライト） |
+| `DataTable` | テーブル（ソート・フィルタ・ページネーション） |
+| `ChartView` | チャート（ECharts 互換） |
+| `Alert` | アラート（info/success/warning/error） |
+| `Citation` | 引用・ソース表示 |
+| `CollapsibleSection` | 折りたたみセクション |
+| `Tabs` | タブコンテナ |
+
+### 11. Skills 自動進化システム
 
 Claude Code Skills 完全互換の**自動進化能力システム**：
 
@@ -207,6 +453,79 @@ if result.generated:
 
 ---
 
+## 🛡️ AI安全防護システム（NEW）
+
+LLM の弱点を補完し、信頼性の高い AI アプリケーションを構築するための防護機構。
+
+### 幻覚検出（Hallucination Detection）
+
+```python
+from agentflow.security import HallucinationDetector
+
+detector = HallucinationDetector()
+result = await detector.check(
+    output="専門家によると、GPT-4は2022年にリリースされた",
+    context="GPT-4のリリース日に関する情報",
+)
+
+if not result.is_reliable:
+    print(f"可信度: {result.confidence_score:.2f}")
+    for issue in result.issues:
+        print(f"- {issue.description}")
+```
+
+### 推理監視（Reasoning Monitor）
+
+多步推理の安定性を保証：
+
+```python
+from agentflow.security import ReasoningMonitor, ReasoningStep
+
+monitor = ReasoningMonitor(original_goal="売上データ分析")
+monitor.add_constraint("外部APIへのアクセス禁止")
+
+for step in reasoning_steps:
+    result = monitor.check_step(step)
+    if result.needs_correction:
+        corrected = await monitor.suggest_correction()
+        # 目標逸脱検出、無限ループ検出、制約違反検出
+```
+
+### データ脱敏（Data Sanitization）
+
+```python
+from agentflow.security import DataSanitizer
+
+sanitizer = DataSanitizer()
+
+# プロンプト注入検出
+threats = sanitizer.check_prompt_injection(user_input)
+
+# PII自動脱敏
+result = sanitizer.sanitize("メール: test@example.com, 電話: 13812345678")
+# → "メール: te***@example.com, 電話: 138****5678"
+```
+
+### 統一防護ファサード
+
+```python
+from agentflow.security import AISafetyGuard
+
+guard = AISafetyGuard()
+
+# 入力チェック（注入攻撃、脱獄攻撃、PII検出）
+input_result = await guard.check_input(user_input)
+if not input_result.is_safe:
+    return "入力にセキュリティ脅威が検出されました"
+
+# 出力チェック（幻覚検出、PII漏洩検出）
+output_result = await guard.check_output(llm_output)
+if output_result.needs_review:
+    await notify_human_reviewer(output_result)
+```
+
+---
+
 ## 📦 プロトコルスタック
 
 ### AG-UI vs A2UI
@@ -234,11 +553,24 @@ if result.generated:
 agentflow/
 ├── core/                 # コアモジュール
 │   ├── agent_block.py    # Agent 基底クラス
+│   ├── blueprint.py      # 宣言式Agent定義（NEW）
 │   ├── registry.py       # 統一レジストリ
 │   ├── engine.py         # ワークフローエンジン
-│   ├── error_response.py # RFC 7807 統一エラー（NEW）
+│   ├── error_response.py # RFC 7807 統一エラー
+│   ├── constraint_validator.py # 制約検証（NEW）
+│   ├── dual_verifier.py  # 二重検証（NEW）
+│   ├── rollback_manager.py # ロールバック管理（NEW）
 │   └── metadata.py       # メタデータ管理
-├── services/             # 統一サービス層（NEW）
+├── orchestration/        # オーケストレーション層（NEW）
+│   ├── orchestrator.py   # 統合オーケストレーター
+│   ├── planner.py        # 計画エージェント
+│   ├── executor.py       # 実行エージェント
+│   └── monitor.py        # 監視エージェント
+├── state/                # 状態管理層（NEW）
+│   ├── store.py          # GlobalStateStore
+│   ├── actions.py        # アクション定義
+│   └── selectors.py      # セレクター
+├── services/             # 統一サービス層
 │   ├── base.py           # ServiceBase, ServiceEvent
 │   ├── agent_service.py  # Agent実行サービス
 │   └── workflow_service.py # Workflow実行サービス
@@ -247,28 +579,44 @@ agentflow/
 │   ├── deep_agent.py     # DeepAgentCoordinator（推奨）
 │   ├── reflection.py     # ReflectionWorkflow
 │   ├── agent_pipeline.py # AgentPipeline
-│   └── reflexion.py      # Reflexion失敗学習（NEW）
+│   ├── task_decomposer.py # タスク分解（NEW）
+│   └── reflexion.py      # Reflexion失敗学習
 ├── protocols/            # プロトコル実装
 │   ├── mcp_client.py     # MCP クライアント
 │   ├── a2a_server.py     # A2A サーバー
 │   ├── agui_emitter.py   # AG-UI エミッター
 │   └── a2ui/             # A2UI コンポーネント
+│       └── rich_content.py # 富文本コンポーネント（共通）
+├── discovery/            # Agent 発見機構（NEW）
+│   ├── base.py           # AgentEntry, AgentDiscovery 基底
+│   ├── registry.py       # InMemoryAgentRegistry
+│   └── health.py         # HealthChecker
 ├── integrations/         # フレームワーク統合
 │   ├── fastapi_integration.py  # FastAPI 統合
 │   ├── sse_flow_runner.py      # SSE フロー実行
-│   └── websocket_integration.py # WebSocket（NEW）
+│   ├── websocket_integration.py # WebSocket
+│   └── realtime_sync.py  # リアルタイム状態同期（NEW）
 ├── providers/            # 統一 Provider Layer
 │   ├── llm_provider.py   # LLM Provider
 │   ├── tool_provider.py  # Tool Provider
-│   ├── tool_executor.py  # 並行ツール実行（NEW）
+│   ├── unified_tool.py   # 統一ツールプロバイダー（NEW）
+│   ├── tool_executor.py  # 並行ツール実行
 │   ├── db_provider.py    # DB Provider
 │   └── embedding_provider.py # Embedding Provider
 ├── memory/               # 記憶システム
 │   ├── memory_manager.py # 統合マネージャー
+│   ├── enhanced_memory.py # 記憶蒸留・主動遺忘
 │   ├── sensory_memory.py # Light1: 感覚記憶
 │   ├── short_term_memory.py # Light2: 短期記憶
 │   ├── long_term_memory.py  # Light3: 長期記憶
-│   └── vector_store.py   # ベクトル検索（NEW）
+│   └── vector_store.py   # ベクトル検索
+├── sandbox/              # サンドボックス実行（NEW）
+│   └── codeact_executor.py # CodeAct実行器
+├── security/             # AI安全防護システム
+│   ├── hallucination_detector.py # 幻覚検出
+│   ├── reasoning_monitor.py # 推理監視
+│   ├── data_sanitizer.py # データ脱敏
+│   └── ai_safety_guard.py # 統一防護ファサード
 ├── engines/              # 簡易 Engine パターン
 │   ├── simple_engine.py  # 単一Agent
 │   ├── gate_engine.py    # 前置チェック
@@ -278,6 +626,23 @@ agentflow/
     ├── base.py           # Skill 基底クラス
     ├── loader.py         # スキルローダー
     └── engine.py         # 統合エンジン
+
+studio/                   # フロントエンド（React）
+├── src/
+│   ├── components/
+│   │   └── rich-content/  # 富文本レンダラー（NEW）
+│   │       ├── RichContentRenderer.tsx  # メインレンダラー
+│   │       ├── types.ts   # TypeScript 型定義
+│   │       └── renderers/ # 個別レンダラー
+│   │           ├── MarkdownRenderer.tsx
+│   │           ├── CodeBlockRenderer.tsx
+│   │           ├── DataTableRenderer.tsx
+│   │           ├── AlertRenderer.tsx
+│   │           ├── CitationRenderer.tsx
+│   │           ├── CollapsibleRenderer.tsx
+│   │           └── TabsRenderer.tsx
+│   └── ...
+└── ...
 ```
 
 ---
@@ -328,6 +693,14 @@ results = await vdb.search(query="query", query_embedding=[...], top_k=5)
 | カスタム A2UI | `A2UIComponent` 継承 |
 | カスタム Protocol | `ProtocolRegistry` に登録 |
 | カスタム VectorDB | `VectorDBProvider` プロトコル実装 |
+| カスタム幻覚パターン | `HallucinationDetector.add_pattern()` |
+| カスタム脱敏パターン | `DataSanitizer.add_injection_pattern()` |
+| カスタム ResilientAgent | `ResilientAgent` 継承、検証ロジック追加 |
+| カスタム BuiltinTool | `UnifiedToolProvider.builtin.register()` |
+| カスタム StateAction | `ActionType` に追加、`_reduce` に処理追加 |
+| カスタム Blueprint | YAML拡張、`AgentBlueprint` カスタマイズ |
+| カスタム AgentRegistry | `AgentDiscovery` 継承（Redis/Consul等） |
+| カスタム RichComponent | `RichComponent` 継承、フロントエンドレンダラー追加 |
 
 ---
 
@@ -338,3 +711,8 @@ results = await vdb.search(query="query", query_embedding=[...], top_k=5)
 - [API リファレンス](api.md) - 全 API 詳細
 - [クイックスタート](quickstart.md) - 10分で始める
 - [CLI リファレンス](cli.md) - CLI コマンド一覧
+- [AI安全防護ガイド](guide-ai-safety.md) - 幻覚検出・推理監視・データ脱敏
+- [フレームワークビジョン](design/FRAMEWORK_VISION.md) - 設計思想・ロードマップ
+- [パターンガイド](PATTERNS_GUIDE.md) - 協調パターン詳細
+- [富文本レンダラー設計](design/RICH_CONTENT_RENDERER_DESIGN.md) - フロントエンド富文本コンポーネント
+- [Agent発見機構設計](design/AGENT_DISCOVERY_DESIGN.md) - 動的Agent発見・負荷分散

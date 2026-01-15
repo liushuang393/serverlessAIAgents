@@ -22,7 +22,7 @@ from agentflow.patterns.deep_agent import (
     CognitiveAnalysis,
     ContextCompressor,
     CompactionStrategy,
-    Evolver,
+    SelfEvolver,
     ProgressManager,
     QualityReview,
     QualityDimension,
@@ -57,32 +57,24 @@ class DeepAgentAdapter:
         self,
         llm_client: Any = None,
         enable_evolution: bool = True,
-        max_context_items: int = 200,
     ) -> None:
         """初期化.
 
         Args:
             llm_client: LLMクライアント
             enable_evolution: 自己進化機能を有効化
-            max_context_items: コンテキスト最大アイテム数
         """
         self._llm = llm_client
         self._logger = logging.getLogger(__name__)
 
         # コンポーネント初期化
-        self._progress = ProgressManager(
-            max_context_items=max_context_items,
-            llm_client=llm_client,
-        )
+        self._progress = ProgressManager()
         self._compressor = ContextCompressor(llm_client=llm_client)
 
         # 進化システム（オプション）
         if enable_evolution:
             self._evolution_store = MemoryEvolutionStore()
-            self._evolver = Evolver(
-                llm_client=llm_client,
-                evolution_store=self._evolution_store,
-            )
+            self._evolver = SelfEvolver(store=self._evolution_store)
         else:
             self._evolver = None
             self._evolution_store = None

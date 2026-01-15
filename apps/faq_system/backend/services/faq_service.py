@@ -3,6 +3,9 @@
 
 ServiceBase を継承し、RAG + Text2SQL のハイブリッド検索を提供。
 
+v1.1 新機能:
+    - AI安全防護統合（幻覚検出、PII脱敏、SQL注入防護）
+
 使用例:
     >>> from apps.faq_system.backend.services import FAQService, FAQConfig
     >>>
@@ -27,6 +30,7 @@ from agentflow.services.base import (
     ServiceEvent,
     ResultEvent,
 )
+from agentflow.security import SafetyMixin
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +103,7 @@ class ChartData(BaseModel):
 # =============================================================================
 
 
-class FAQService(ServiceBase[dict[str, Any]]):
+class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
     """FAQ Service - RAG + Text2SQL ハイブリッドサービス.
 
     ServiceBase を継承し、フレームワーク規範に準拠。
@@ -108,16 +112,31 @@ class FAQService(ServiceBase[dict[str, Any]]):
     - query: FAQ質問応答（自動クエリ分類）
     - faq: FAQのみ検索
     - sql: Text2SQLのみ実行
+
+    v1.1 新機能:
+        - AI安全防護（幻覚検出、PII脱敏、SQL注入防護）
     """
 
-    def __init__(self, config: FAQConfig | None = None) -> None:
-        """初期化."""
+    def __init__(
+        self,
+        config: FAQConfig | None = None,
+        enable_safety: bool = True,
+    ) -> None:
+        """初期化.
+
+        Args:
+            config: FAQサービス設定
+            enable_safety: AI安全防護を有効化するか
+        """
         super().__init__()
         self._config = config or FAQConfig()
         self._llm = None
         self._db = None
         self._rag_service = None
         self._started = False
+
+        # AI安全防護初期化（v1.1）
+        self.init_safety(enabled=enable_safety)
 
     async def start(self) -> None:
         """サービス開始."""

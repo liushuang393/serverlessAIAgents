@@ -2,6 +2,9 @@
 
 AgentFlow 統一入口で構築。
 
+v1.1 新機能:
+    - AI安全防護統合（幻覚検出、データ脱敏）
+
 使用例:
     >>> from apps.market_trend_monitor.backend.workflow import flow
     >>> result = await flow.run({"keywords": ["AI", "LLM"]})
@@ -15,6 +18,7 @@ from collections.abc import AsyncIterator
 from typing import Any
 
 from agentflow import Flow, create_flow
+from agentflow.security import SafetyMixin, AISafetyGuard
 
 from apps.market_trend_monitor.backend.agents import (
     AnalyzerAgent,
@@ -87,14 +91,58 @@ async def cleanup() -> None:
 
 
 # 後方互換: workflow オブジェクト
-class _WorkflowCompat:
-    """後方互換用ラッパー."""
+class _WorkflowCompat(SafetyMixin):
+    """後方互換用ラッパー（AI安全防護付き）.
 
-    def __init__(self, f: Flow) -> None:
+    v1.1 新機能:
+        - AI安全防護（幻覚検出、データ脱敏）
+    """
+
+    def __init__(self, f: Flow, enable_safety: bool = True) -> None:
         self._flow = f
+        # AI安全防護初期化
+        self.init_safety(enabled=enable_safety)
 
     async def run(self, input_data: dict[str, Any] | None = None) -> dict[str, Any]:
         return await run(input_data)
+
+    async def run_with_safety(
+        self,
+        input_data: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """安全検査付きで実行.
+
+        入力の安全検査を行い、結果に幻覚警告を付加。
+
+        Args:
+            input_data: 入力データ
+
+        Returns:
+            実行結果（安全警告付き）
+        """
+        if input_data is None:
+            input_data = {}
+
+        # キーワード入力の安全検査
+        keywords = input_data.get("keywords", [])
+        if keywords and self.safety_enabled:
+            for keyword in keywords:
+                check = await self.check_input_safety(keyword)
+                if not check.is_safe:
+                    logger.warning("入力キーワードに安全上の問題: %s", keyword)
+
+        # 実行
+        result = await run(input_data)
+
+        # 出力の幻覚検査（レポート部分）
+        if self.safety_enabled and "report" in result:
+            report_text = str(result.get("report", ""))
+            output_check = await self.check_output_safety(report_text)
+            if output_check.needs_review:
+                result["_safety_warnings"] = output_check.warnings
+                logger.warning("出力に幻覚の可能性: %s", output_check.warnings)
+
+        return result
 
     async def initialize(self) -> None:
         pass  # auto_initialize=True なので不要

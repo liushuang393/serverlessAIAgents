@@ -43,6 +43,14 @@ from agentflow.integrations.websocket_integration import (
     create_websocket_router,
 )
 
+# NEW: リアルタイム状態同期
+from agentflow.integrations.realtime_sync import (
+    RealtimeStateSync,
+    SyncEvent,
+    SyncEventType,
+    ClientConnection,
+)
+
 __all__ = [
     # FastAPI 統合
     "AgentRouter",
@@ -64,5 +72,12 @@ __all__ = [
     "ConnectionManager",
     "WebSocketManager",
     "create_websocket_router",
+    # ==========================================================================
+    # NEW: リアルタイム状態同期
+    # ==========================================================================
+    "RealtimeStateSync",
+    "SyncEvent",
+    "SyncEventType",
+    "ClientConnection",
 ]
 

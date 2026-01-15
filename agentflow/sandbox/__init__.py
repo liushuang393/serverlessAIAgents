@@ -27,6 +27,13 @@ from agentflow.sandbox.base import (
     SandboxConfig,
     SandboxProvider,
 )
+from agentflow.sandbox.codeact_executor import (
+    ActionResult,
+    ActionTemplate,
+    ActionType,
+    CodeActExecutor,
+    ExecutionStatus,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -74,5 +81,11 @@ __all__ = [
     "SandboxProvider",
     "SandboxConfig",
     "ExecutionResult",
+    # CodeAct執行器
+    "CodeActExecutor",
+    "ActionResult",
+    "ActionTemplate",
+    "ActionType",
+    "ExecutionStatus",
 ]
 

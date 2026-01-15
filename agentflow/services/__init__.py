@@ -103,6 +103,12 @@ from agentflow.services.auth_service import (
     AuthUser,
     AuthToken,
 )
+from agentflow.services.document_exporter import (
+    DocumentExporter,
+    ExportConfig,
+    ExportFormat,
+    TemplateType,
+)
 
 __all__ = [
     # 基底
@@ -149,4 +155,9 @@ __all__ = [
     "AuthConfig",
     "AuthUser",
     "AuthToken",
+    # ドキュメントエクスポーター
+    "DocumentExporter",
+    "ExportConfig",
+    "ExportFormat",
+    "TemplateType",
 ]

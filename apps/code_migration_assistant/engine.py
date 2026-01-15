@@ -4,6 +4,9 @@
 agentflow の Engine パターンを使用してコード移行を実行。
 Transform → Check → (Fix) → Check のループを PipelineEngine で実装。
 
+v1.1 新機能:
+    - AI安全防護統合（コード注入防護、機密情報検出）
+
 使用例:
     >>> from apps.code_migration_assistant.engine import CodeMigrationEngine
     >>>
@@ -18,6 +21,7 @@ Transform → Check → (Fix) → Check のループを PipelineEngine で実装
 from typing import Any
 
 from agentflow.engines.base import BaseEngine, EngineConfig
+from agentflow.security import SafetyMixin
 
 from apps.code_migration_assistant.adapters import get_adapter_factory
 from apps.code_migration_assistant.agents.transform_agent import TransformAgent
@@ -25,7 +29,7 @@ from apps.code_migration_assistant.agents.checker_agent import CheckerAgent
 from apps.code_migration_assistant.agents.fixer_agent import FixerAgent
 
 
-class CodeMigrationEngine(BaseEngine):
+class CodeMigrationEngine(BaseEngine, SafetyMixin):
     """コード移行 Engine.
 
     agentflow の Engine パターンを使用した移行エンジン。
@@ -34,6 +38,9 @@ class CodeMigrationEngine(BaseEngine):
     Attributes:
         migration_type: 移行タイプ（例: "cobol-to-java"）
         max_fix_iterations: 最大修復反復回数
+
+    v1.1 新機能:
+        - AI安全防護（コード注入防護）
     """
 
     def __init__(
@@ -41,6 +48,7 @@ class CodeMigrationEngine(BaseEngine):
         migration_type: str = "cobol-to-java",
         max_fix_iterations: int = 3,
         config: EngineConfig | None = None,
+        enable_safety: bool = True,
     ) -> None:
         """CodeMigrationEngine を初期化.
 
@@ -48,6 +56,7 @@ class CodeMigrationEngine(BaseEngine):
             migration_type: 移行タイプ名
             max_fix_iterations: 最大修復反復回数
             config: Engine 設定
+            enable_safety: AI安全防護を有効化するか
         """
         super().__init__(config=config)
         self._migration_type = migration_type
@@ -58,6 +67,9 @@ class CodeMigrationEngine(BaseEngine):
         self._transform_agent: TransformAgent | None = None
         self._checker_agent: CheckerAgent | None = None
         self._fixer_agent: FixerAgent | None = None
+
+        # AI安全防護初期化（v1.1）
+        self.init_safety(enabled=enable_safety)
 
     async def _initialize(self) -> None:
         """内部 Agent を初期化."""

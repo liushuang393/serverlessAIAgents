@@ -244,6 +244,20 @@ class AgentPipeline:
 
         return result
 
+    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
+        """パイプラインを実行（run_sync のエイリアス）.
+
+        Args:
+            input_data: 入力データ
+
+        Returns:
+            最終結果
+
+        Note:
+            イベント付き実行は run_with_events() を使用してください。
+        """
+        return await self.run_sync(input_data)
+
     async def run_with_events(
         self, input_data: dict[str, Any]
     ) -> AsyncIterator[tuple[dict[str, Any] | None, AGUIEvent | None]]:

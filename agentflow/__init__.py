@@ -138,6 +138,57 @@ from agentflow.observability import (
 from agentflow.integrations.fastapi_integration import create_sse_response
 
 # =============================================================================
+# 公開API: 統一 API 層（NEW - 前後台交互）
+# =============================================================================
+from agentflow.api import (
+    # レスポンス
+    APIResponse,
+    APIError,
+    ErrorCode,
+    PagedResponse,
+    StreamEvent,
+    StreamEventType,
+    # WebSocket
+    WebSocketHub,
+    WSMessage,
+    WSMessageType,
+    # SSE
+    SSEEmitter,
+    SSEEvent,
+    # Rich Builder
+    RichResponseBuilder,
+    # Router Factory
+    create_agent_router,
+    create_websocket_router,
+    RouterConfig,
+)
+
+# =============================================================================
+# 公開API: 富文本コンポーネント（共通モジュール）
+# =============================================================================
+from agentflow.protocols.a2ui.rich_content import (
+    # 列挙型
+    RichComponentType,
+    ChartType,
+    AlertType,
+    # コンポーネント
+    RichComponent,
+    MarkdownContent,
+    CodeBlock,
+    DataTable,
+    ChartView,
+    Citation,
+    CollapsibleSection,
+    Link,
+    Progress,
+    Alert,
+    Tabs,
+    Timeline,
+    # ビルダー
+    RichResponse,
+)
+
+# =============================================================================
 # 公開API: Human-in-the-Loop (HITL)
 # =============================================================================
 from agentflow.hitl import (
@@ -265,6 +316,53 @@ __all__ = [
     # SSE/AG-UI
     # =========================================================================
     "create_sse_response",
+
+    # =========================================================================
+    # 統一 API 層（NEW - 前後台交互）
+    # =========================================================================
+    # レスポンス
+    "APIResponse",
+    "APIError",
+    "ErrorCode",
+    "PagedResponse",
+    "StreamEvent",
+    "StreamEventType",
+    # WebSocket
+    "WebSocketHub",
+    "WSMessage",
+    "WSMessageType",
+    # SSE
+    "SSEEmitter",
+    "SSEEvent",
+    # Rich Builder
+    "RichResponseBuilder",
+    # Router Factory
+    "create_agent_router",
+    "create_websocket_router",
+    "RouterConfig",
+
+    # =========================================================================
+    # 富文本コンポーネント（共通モジュール）
+    # =========================================================================
+    # 列挙型
+    "RichComponentType",
+    "ChartType",
+    "AlertType",
+    # コンポーネント
+    "RichComponent",
+    "MarkdownContent",
+    "CodeBlock",
+    "DataTable",
+    "ChartView",
+    "Citation",
+    "CollapsibleSection",
+    "Link",
+    "Progress",
+    "Alert",
+    "Tabs",
+    "Timeline",
+    # ビルダー
+    "RichResponse",
 
     # =========================================================================
     # Human-in-the-Loop (HITL)

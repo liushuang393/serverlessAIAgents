@@ -81,6 +81,46 @@ from agentflow.core.reliability import (
 )
 from agentflow.core.retry import RetryableAgent, RetryConfig
 
+# NEW: 強約束・多重校験・回滚重试（Manus分析に基づく高信頼性設計）
+from agentflow.core.constraint_validator import (
+    ConstraintValidator,
+    ConstraintType,
+    DangerousOperationConfig,
+    ToolCallConstraint,
+    ValidationResult as ConstraintValidationResult,
+    ValidationSeverity,
+)
+from agentflow.core.dual_verifier import (
+    ConsistencyVerifyStrategy,
+    DualVerifier,
+    SafetyVerifyStrategy,
+    SchemaVerifyStrategy,
+    VerifyResult,
+    VerifyStatus,
+    VerifyStrategy,
+    VerifyType,
+)
+from agentflow.core.rollback_manager import (
+    Checkpoint,
+    CheckpointStatus,
+    RetryConfig as RollbackRetryConfig,
+    RetryStrategy,
+    RollbackManager,
+    RollbackResult,
+)
+
+# NEW: 宣言式Agent定義（AgentBlueprint）
+from agentflow.core.blueprint import (
+    AgentBlueprint,
+    AgentBlueprintModel,
+    SkillConfig,
+    ToolConfig,
+    MemoryConfig,
+    SafetyConfig,
+    ConstraintsConfig,
+    ValidationResult as BlueprintValidationResult,
+)
+
 # ==========================================================================
 # Core Interfaces（安定インターフェース - 変更厳禁）
 # ==========================================================================
@@ -184,6 +224,40 @@ __all__ = [
     "RetryConfig",
     "get_circuit_breaker",
     "reliable",
+    # ==========================================================================
+    # 強約束・多重校験・回滚重试
+    # ==========================================================================
+    "ConstraintValidator",
+    "ConstraintType",
+    "DangerousOperationConfig",
+    "ToolCallConstraint",
+    "ConstraintValidationResult",
+    "ValidationSeverity",
+    "DualVerifier",
+    "VerifyResult",
+    "VerifyStatus",
+    "VerifyType",
+    "VerifyStrategy",
+    "SchemaVerifyStrategy",
+    "ConsistencyVerifyStrategy",
+    "SafetyVerifyStrategy",
+    "RollbackManager",
+    "RollbackResult",
+    "Checkpoint",
+    "CheckpointStatus",
+    "RollbackRetryConfig",
+    "RetryStrategy",
+    # ==========================================================================
+    # 宣言式Agent定義（AgentBlueprint）
+    # ==========================================================================
+    "AgentBlueprint",
+    "AgentBlueprintModel",
+    "SkillConfig",
+    "ToolConfig",
+    "MemoryConfig",
+    "SafetyConfig",
+    "ConstraintsConfig",
+    "BlueprintValidationResult",
     # ==========================================================================
     # Core Interfaces（安定インターフェース）
     # ==========================================================================

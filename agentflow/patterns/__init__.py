@@ -40,7 +40,13 @@ from agentflow.patterns.deep_agent import (
     DeepAgentCoordinator,
     # Agent管理
     AgentPool,
-    DynamicAgent,
+    BaseAgent,
+    ResearchAgent,
+    AnalysisAgent,
+    PlanningAgent,
+    ExecutionAgent,
+    ReviewAgent,
+    ReportAgent,
     # データモデル
     AgentMessage,
     AgentType,
@@ -49,9 +55,12 @@ from agentflow.patterns.deep_agent import (
     EvolutionRecord,
     MessageType,
     ParallelGroup,
+    QualityDimension,
     QualityReview,
     TaskStatus,
     TodoItem,
+    CompactionResult,
+    MemoryTier,
     # ストレージ
     EvolutionStore,
     MemoryEvolutionStore,
@@ -59,11 +68,11 @@ from agentflow.patterns.deep_agent import (
     RuntimeStore,
     # コンテキスト管理
     ContextCompressor,
-    ConversationManager,
     # 進捗管理
     ProgressManager,
+    ProgressEvent,
     # 進化
-    Evolver,
+    SelfEvolver,
 )
 
 # =============================================================================
@@ -127,6 +136,38 @@ from agentflow.patterns.coordinator import (
 )
 
 # =============================================================================
+# 5. AgentComposer（NEW）- 標準Agent組合パターン
+# =============================================================================
+from agentflow.patterns.composer import (
+    AgentComposer,
+    CompositionPattern,
+    CompositionConfig,
+    CompositionResult,
+    AgentNode,
+    AgentRole,
+    TaskAssignment,
+    AgentRouter,
+    CapabilityBasedRouter,
+    RoundRobinRouter,
+)
+
+# =============================================================================
+# 6. TaskDecomposer - 高度なタスク分解システム
+# =============================================================================
+from agentflow.patterns.task_decomposer import (
+    # データモデル
+    DecomposedTask,
+    DecompositionConfig,
+    DecompositionPlan,
+    TaskGranularity,
+    TaskPriority,
+    # 依存関係グラフ
+    DependencyGraph,
+    # メイン
+    TaskDecomposer,
+)
+
+# =============================================================================
 # 専門化Agent（FAQなど）
 # =============================================================================
 from agentflow.agents import (
@@ -145,15 +186,24 @@ __all__ = [
     "DeepAgentCoordinator",
     # Agent管理
     "AgentPool",
-    "DynamicAgent",
+    "BaseAgent",
+    "ResearchAgent",
+    "AnalysisAgent",
+    "PlanningAgent",
+    "ExecutionAgent",
+    "ReviewAgent",
+    "ReportAgent",
     # データモデル
     "AgentMessage",
     "AgentType",
     "CognitiveAnalysis",
     "CompactionStrategy",
+    "CompactionResult",
     "EvolutionRecord",
+    "MemoryTier",
     "MessageType",
     "ParallelGroup",
+    "QualityDimension",
     "QualityReview",
     "TaskStatus",
     "TodoItem",
@@ -164,11 +214,11 @@ __all__ = [
     "RuntimeStore",
     # コンテキスト管理
     "ContextCompressor",
-    "ConversationManager",
     # 進捗管理
     "ProgressManager",
+    "ProgressEvent",
     # 進化
-    "Evolver",
+    "SelfEvolver",
     # ==========================================================================
     # 2. Reflexion Pattern（NEW - 失敗学習）
     # ==========================================================================
@@ -213,6 +263,29 @@ __all__ = [
     # ==========================================================================
     "CoordinatorBase",
     "CoordinationPattern",
+    # ==========================================================================
+    # 5. AgentComposer（NEW - 標準Agent組合）
+    # ==========================================================================
+    "AgentComposer",
+    "CompositionPattern",
+    "CompositionConfig",
+    "CompositionResult",
+    "AgentNode",
+    "AgentRole",
+    "TaskAssignment",
+    "AgentRouter",
+    "CapabilityBasedRouter",
+    "RoundRobinRouter",
+    # ==========================================================================
+    # 6. TaskDecomposer（高度なタスク分解）
+    # ==========================================================================
+    "DecomposedTask",
+    "DecompositionConfig",
+    "DecompositionPlan",
+    "TaskGranularity",
+    "TaskPriority",
+    "DependencyGraph",
+    "TaskDecomposer",
     # ==========================================================================
     # 専門化Agent
     # ==========================================================================

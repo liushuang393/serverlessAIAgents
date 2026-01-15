@@ -57,6 +57,17 @@ from agentflow.memory.vector_store import (
     create_embedding_model,
 )
 
+# NEW: Enhanced Memory（記憶蒸留 + 主動忘却 + 強化学習）
+from agentflow.memory.enhanced_memory import (
+    DistillationStrategy,
+    DistilledKnowledge,
+    EnhancedMemoryManager,
+    ForgettingStrategy,
+    MemoryConfig,
+    MemoryImportanceTracker,
+    MemoryStats,
+)
+
 __all__ = [
     # Main Manager（ユーザー向け主要API）
     "MemoryManager",
@@ -92,5 +103,15 @@ __all__ = [
     # ファクトリー
     "create_vector_store",
     "create_embedding_model",
+    # ==========================================================================
+    # NEW: Enhanced Memory（記憶蒸留 + 主動忘却 + 強化学習）
+    # ==========================================================================
+    "EnhancedMemoryManager",
+    "MemoryConfig",
+    "DistillationStrategy",
+    "ForgettingStrategy",
+    "DistilledKnowledge",
+    "MemoryStats",
+    "MemoryImportanceTracker",
 ]
 

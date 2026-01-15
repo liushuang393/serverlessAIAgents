@@ -17,7 +17,7 @@ if [ -z "$CONDA_DEFAULT_ENV" ]; then
     echo "  conda activate agentflow"
     echo ""
     echo "または、Conda 環境を作成してください:"
-    echo "  conda env create -f environment.yml"
+    echo "  conda create -n agentflow python=3.13 -y"
     echo "  conda activate agentflow"
     echo ""
     read -p "Press Enter to exit..."

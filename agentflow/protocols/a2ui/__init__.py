@@ -4,6 +4,7 @@
 - 宣言式コンポーネント定義
 - ストリーミング UI 生成
 - AG-UI との統合
+- 富文本コンポーネント（Markdown、コード、表格、チャート）
 
 設計原則：
 - 安全：Agent は定義済みコンポーネントのみ使用可能
@@ -29,8 +30,28 @@ from agentflow.protocols.a2ui.components import (
 from agentflow.protocols.a2ui.emitter import A2UIEmitter
 from agentflow.protocols.a2ui.renderer import A2UIRenderer, ComponentRegistry
 
+# 富文本コンポーネント（NEW）
+from agentflow.protocols.a2ui.rich_content import (
+    RichComponentType,
+    ChartType,
+    AlertType,
+    RichComponent,
+    MarkdownContent,
+    CodeBlock,
+    DataTable,
+    ChartView,
+    Citation,
+    CollapsibleSection,
+    Link,
+    Progress,
+    Alert,
+    Tabs,
+    Timeline,
+    RichResponse,
+)
+
 __all__ = [
-    # コンポーネント
+    # 基本コンポーネント
     "A2UIComponent",
     "ButtonComponent",
     "CardComponent",
@@ -45,5 +66,22 @@ __all__ = [
     # レンダラー
     "A2UIRenderer",
     "ComponentRegistry",
+    # 富文本コンポーネント（NEW）
+    "RichComponentType",
+    "ChartType",
+    "AlertType",
+    "RichComponent",
+    "MarkdownContent",
+    "CodeBlock",
+    "DataTable",
+    "ChartView",
+    "Citation",
+    "CollapsibleSection",
+    "Link",
+    "Progress",
+    "Alert",
+    "Tabs",
+    "Timeline",
+    "RichResponse",
 ]
 

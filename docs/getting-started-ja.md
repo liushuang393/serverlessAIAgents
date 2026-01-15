@@ -71,8 +71,8 @@ cd serverlessAIAgents
 ### ステップ 2: Conda 環境を作成
 
 ```bash
-# Conda 環境を作成（初回のみ）
-conda env create -f environment.yml
+# Conda 環境を作成（初回のみ、Python 3.13）
+conda create -n agentflow python=3.13 -y
 
 # 環境をアクティベート
 conda activate agentflow

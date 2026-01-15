@@ -468,12 +468,12 @@ vectors = await emb.embed_batch(["text1", "text2"])
 ## 📦 インストール
 
 ```bash
-# Conda 環境
-conda env create -f environment.yml
+# Conda 環境を作成
+conda create -n agentflow python=3.13 -y
 conda activate agentflow
 
-# または pip
-pip install -e .
+# 依存関係をインストール（pyproject.toml から自動取得）
+pip install -e ".[dev]"
 ```
 
 ---

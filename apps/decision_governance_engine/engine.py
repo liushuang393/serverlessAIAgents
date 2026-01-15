@@ -23,6 +23,9 @@ PipelineEngine パターンを使用した意思決定支援エンジン。
     - DeepAgentAdapter 統合（認知分析、コンテキスト圧縮、自己進化）
     - 品質評審の多次元評価
 
+設計改善（v3.1）:
+    - AI安全防護統合（幻覚検出、データ脱敏、注入防護）
+
 使用例:
     >>> from apps.decision_governance_engine.engine import DecisionEngine
     >>>
@@ -40,6 +43,7 @@ from typing import Any
 
 from agentflow.engines import PipelineEngine, EngineConfig
 from agentflow.providers import get_llm
+from agentflow.security import SafetyMixin
 
 from apps.decision_governance_engine.services.agent_registry import AgentRegistry
 from apps.decision_governance_engine.services.decision_report_builder import (
@@ -50,7 +54,7 @@ from apps.decision_governance_engine.services.deep_agent_adapter import (
 )
 
 
-class DecisionEngine(PipelineEngine):
+class DecisionEngine(PipelineEngine, SafetyMixin):
     """Decision Governance Engine.
 
     PipelineEngine を継承し、8つの専門Agentを順次実行。
@@ -64,6 +68,9 @@ class DecisionEngine(PipelineEngine):
         - 品質評審の多次元評価
         - 成功パターン学習
 
+    v3.1 新機能:
+        - AI安全防護（幻覚検出、データ脱敏、注入防護）
+
     使用例:
         >>> engine = DecisionEngine()
         >>> result = await engine.run({"question": "投資判断をしたい"})
@@ -76,6 +83,7 @@ class DecisionEngine(PipelineEngine):
         llm_client: Any = None,
         enable_rag: bool = True,
         enable_deep_agent: bool = True,
+        enable_safety: bool = True,
     ) -> None:
         """初期化.
 
@@ -83,6 +91,7 @@ class DecisionEngine(PipelineEngine):
             llm_client: LLMクライアント（省略時は自動取得）
             enable_rag: RAG機能を有効化するか
             enable_deep_agent: DeepAgent機能を有効化するか
+            enable_safety: AI安全防護を有効化するか
         """
         # LLM自動取得（省略時）
         if llm_client is None:
@@ -117,6 +126,9 @@ class DecisionEngine(PipelineEngine):
             ),
         )
         self._logger = logging.getLogger("decision_engine")
+
+        # AI安全防護初期化（v3.1）
+        self.init_safety(enabled=enable_safety)
 
     async def _setup_stages(self) -> None:
         """ステージを動的に設定.

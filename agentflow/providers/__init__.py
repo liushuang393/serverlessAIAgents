@@ -53,6 +53,15 @@ from agentflow.providers.tool_executor import (
     ToolExecutor,
 )
 
+# NEW: 統一ツールプロバイダー（Skills/MCP/Builtin統合）
+from agentflow.providers.unified_tool import (
+    UnifiedToolProvider,
+    ToolType,
+    ToolStatus,
+    ToolResult as UnifiedToolResult,
+    ToolDefinition,
+)
+
 __all__ = [
     # LLM（推奨: get_llm() を使用）
     "get_llm",
@@ -89,5 +98,13 @@ __all__ = [
     # その他のプロバイダー
     "DataProvider",
     "EventProvider",
+    # ==========================================================================
+    # NEW: 統一ツールプロバイダー
+    # ==========================================================================
+    "UnifiedToolProvider",
+    "ToolType",
+    "ToolStatus",
+    "UnifiedToolResult",
+    "ToolDefinition",
 ]
 
