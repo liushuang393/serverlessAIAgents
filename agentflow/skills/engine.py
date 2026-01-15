@@ -201,3 +201,11 @@ class SkillEngine:
         self._registry.register(skill.name, skill)
         self._matcher.add_skill(skill)
 
+    def get_registry(self) -> SkillRegistry:
+        """SkillRegistry を取得.
+
+        Returns:
+            内部の SkillRegistry インスタンス
+        """
+        return self._registry
+

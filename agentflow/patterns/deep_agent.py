@@ -46,6 +46,7 @@ from agentflow.protocols.mcp_client import MCPClient
 from agentflow.protocols.mcp_config import MCPConfig
 from agentflow.providers.tool_provider import RegisteredTool, ToolProvider
 from agentflow.skills import Skill, SkillRegistry
+from agentflow.skills.engine import SkillEngine
 
 
 # =============================================================================
@@ -1221,6 +1222,7 @@ class AgentPool:
         predefined_agents: dict[str, AgentBlock] | None = None,
         tool_provider: ToolProvider | None = None,
         skill_registry: SkillRegistry | None = None,
+        skill_engine: SkillEngine | None = None,
         mcp_config: MCPConfig | None = None,
     ) -> None:
         """初期化.
@@ -1230,6 +1232,7 @@ class AgentPool:
             predefined_agents: 事前定義Agent {"名前": Agent}
             tool_provider: ToolProvider インスタンス（Noneの場合は自動発見）
             skill_registry: SkillRegistry インスタンス（Noneの場合は自動初期化）
+            skill_engine: SkillEngine（動的 Skill 解析用）
             mcp_config: MCPサーバー設定（Noneの場合はMCP無効）
         """
         self._llm = llm_client
@@ -1240,8 +1243,11 @@ class AgentPool:
         # ツールプロバイダー（@tool登録されたツールを自動発見）
         self._tools = tool_provider or ToolProvider.discover()
 
-        # Skillsレジストリ（SKILL.mdベースの能力定義）
-        self._skills = skill_registry or SkillRegistry()
+        # SkillEngine（動的 Skill 解析用）
+        self._skill_engine = skill_engine
+
+        # Skillsレジストリ（SkillEngine があればその内部レジストリを使用）
+        self._skills = skill_registry or (skill_engine.get_registry() if skill_engine else SkillRegistry())
 
         # MCPクライアント（外部ツール統合用）
         self._mcp_config = mcp_config
@@ -1396,6 +1402,35 @@ class AgentPool:
                 skills.append(skill)
         return skills
 
+    async def resolve_skill_for_task(self, task_description: str) -> list[str]:
+        """タスクに対して動的に Skill を解析.
+
+        SkillEngine を使って、タスクにマッチする Skill を検索/生成。
+
+        Args:
+            task_description: タスクの説明
+
+        Returns:
+            マッチした Skill 名のリスト
+        """
+        if not self._skill_engine:
+            return []
+
+        try:
+            # まず検索のみ試行
+            matches = self._skill_engine.find(task_description, top_k=2)
+            if matches:
+                return [m.skill.name for m in matches]
+
+            # マッチなしなら生成を試行
+            result = await self._skill_engine.resolve(task_description)
+            if result.skill:
+                return [result.skill.name]
+        except Exception as e:
+            self._logger.warning(f"Skill 解析失敗: {e}")
+
+        return []
+
     async def get_or_create(
         self,
         agent_type: AgentType | str,
@@ -1467,7 +1502,7 @@ class AgentPool:
 
         system_prompt = prompts.get(agent_type, "あなたは汎用的なAIアシスタントです。")
 
-        # DynamicAgent クラスを生成
+        # DynamicAgent クラスを生成（SkillRegistry を注入）
         return DynamicAgent(
             name=str(agent_type),
             system_prompt=system_prompt,
@@ -1475,6 +1510,7 @@ class AgentPool:
             tools=tools,
             skills=skills,
             context=context,
+            skill_registry=self._skills,
         )
 
     def register_agent(self, name: str, agent: AgentBlock) -> None:
@@ -1491,6 +1527,7 @@ class DynamicAgent(AgentBlock):
     """動的生成Agent.
 
     AgentPoolから動的に生成されるAgent。
+    Skills の instructions を自動的にシステムプロンプトに注入。
     """
 
     def __init__(
@@ -1501,9 +1538,20 @@ class DynamicAgent(AgentBlock):
         tools: list[Any] | None = None,
         skills: list[str] | None = None,
         context: dict[str, Any] | None = None,
+        skill_registry: SkillRegistry | None = None,
         **kwargs: Any,
     ) -> None:
-        """初期化."""
+        """初期化.
+
+        Args:
+            name: Agent 名
+            system_prompt: システムプロンプト
+            llm_client: LLM クライアント
+            tools: ツールリスト
+            skills: スキル名リスト
+            context: コンテキスト
+            skill_registry: スキルレジストリ（None の場合はグローバルを使用）
+        """
         super().__init__(**kwargs)
         self._name = name
         self._system_prompt = system_prompt
@@ -1511,10 +1559,36 @@ class DynamicAgent(AgentBlock):
         self._tools = tools or []
         self._skills = skills or []
         self._context = context or {}
+        self._skill_registry = skill_registry or SkillRegistry()
         self._logger = logging.getLogger(__name__)
+
+    def _build_skill_instructions(self) -> str:
+        """Skills の instructions を構築.
+
+        Returns:
+            結合された Skill 指示文字列
+        """
+        if not self._skills:
+            return ""
+
+        skill_prompts = []
+        for skill_name in self._skills:
+            skill = self._skill_registry.get(skill_name)
+            if skill:
+                # Skill の to_prompt() を使用して指示を取得
+                skill_prompts.append(skill.to_prompt())
+                self._logger.debug(f"Skill 指示を追加: {skill_name}")
+            else:
+                self._logger.warning(f"Skill が見つかりません: {skill_name}")
+
+        if skill_prompts:
+            return "\n\n---\n\n".join(skill_prompts)
+        return ""
 
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """Agent実行.
+
+        Skills の instructions をシステムプロンプトに注入して LLM を呼び出す。
 
         Args:
             input_data: 入力データ
@@ -1525,19 +1599,31 @@ class DynamicAgent(AgentBlock):
         if not self._llm:
             return {"error": "LLM not configured", "agent": self._name}
 
+        # Skills 指示を構築
+        skill_instructions = self._build_skill_instructions()
+
+        # システムプロンプトを構築（Skills 指示を追加）
+        full_system_prompt = self._system_prompt
+        if skill_instructions:
+            full_system_prompt = f"{self._system_prompt}\n\n# Skills\n\n{skill_instructions}"
+
         # メッセージ構築
         messages = [
-            {"role": "system", "content": self._system_prompt},
+            {"role": "system", "content": full_system_prompt},
             {"role": "user", "content": str(input_data.get("task", input_data))},
         ]
 
         # LLM呼び出し
         try:
             response = await self._llm.chat(messages)
+            content = response.get("content", "") if isinstance(response, dict) else (
+                response.content if hasattr(response, "content") else str(response)
+            )
             return {
                 "agent": self._name,
-                "output": response.content if hasattr(response, "content") else str(response),
+                "output": content,
                 "status": "success",
+                "skills_used": self._skills,
             }
         except Exception as e:
             self._logger.error(f"Agent {self._name} 実行失敗: {e}")
@@ -2027,28 +2113,38 @@ class Evolver:
     - 客户反馈の処理
     - Skills/Promptの改善
     - 永続化ストアとの統合（オプション）
+    - **高信頼パターンの Skill 固化**
 
     参考文献:
     - DeepAgents Self-Evolution (2025)
     - Mem0 Learning Architecture
     """
 
+    # Skill 固化の閾値
+    SKILL_CONSOLIDATION_THRESHOLD = 0.85
+    MIN_SUCCESS_COUNT_FOR_SKILL = 3
+
     def __init__(
         self,
         llm_client: Any = None,
         evolution_store: EvolutionStore | None = None,
+        skill_engine: SkillEngine | None = None,
     ) -> None:
         """初期化.
 
         Args:
             llm_client: LLMクライアント
             evolution_store: 永続化ストア（L3層、オプション）
+            skill_engine: SkillEngine（Skill 固化用、オプション）
         """
         self._llm = llm_client
         self._store = evolution_store
+        self._skill_engine = skill_engine
         self._records: list[EvolutionRecord] = []
         self._learned_patterns: dict[str, str] = {}
         self._pattern_scores: dict[str, float] = {}  # パターン信頼度
+        self._pattern_success_count: dict[str, int] = {}  # パターン成功回数
+        self._consolidated_skills: set[str] = set()  # 既に Skill 化したパターン
         self._logger = logging.getLogger(__name__)
 
     async def learn_from_success(
@@ -2059,6 +2155,8 @@ class Evolver:
     ) -> EvolutionRecord | None:
         """成功パターンから学習.
 
+        高信頼パターンは自動的に Skill として固化される。
+
         Args:
             task: 元のタスク
             result: 成功結果
@@ -2068,6 +2166,11 @@ class Evolver:
             進化記録
         """
         pattern_key = self._extract_pattern_key(task)
+
+        # 成功回数をインクリメント
+        self._pattern_success_count[pattern_key] = (
+            self._pattern_success_count.get(pattern_key, 0) + 1
+        )
 
         # 既存パターンの信頼度を上げる
         current_score = self._pattern_scores.get(pattern_key, 0.5)
@@ -2096,7 +2199,74 @@ class Evolver:
             await self._store.save_feedback(record)
 
         self._logger.info(f"成功パターン学習: {pattern_key} (信頼度: {new_score:.2f})")
+
+        # Skill 固化を評価
+        await self._try_consolidate_skill(task, pattern_key, result, context)
+
         return record
+
+    async def _try_consolidate_skill(
+        self,
+        task: str,
+        pattern_key: str,
+        result: dict[str, Any],
+        context: dict[str, Any],
+    ) -> bool:
+        """高信頼パターンを Skill として固化を試行.
+
+        Args:
+            task: タスク
+            pattern_key: パターンキー
+            result: 実行結果
+            context: コンテキスト
+
+        Returns:
+            固化成功したか
+        """
+        # SkillEngine がない場合はスキップ
+        if not self._skill_engine:
+            return False
+
+        # 既に固化済みの場合はスキップ
+        if pattern_key in self._consolidated_skills:
+            return False
+
+        # 条件を満たすか確認
+        confidence = self._pattern_scores.get(pattern_key, 0.0)
+        success_count = self._pattern_success_count.get(pattern_key, 0)
+
+        if (
+            confidence < self.SKILL_CONSOLIDATION_THRESHOLD
+            or success_count < self.MIN_SUCCESS_COUNT_FOR_SKILL
+        ):
+            return False
+
+        # Skill 固化を試行
+        try:
+            approach = self._learned_patterns.get(pattern_key, "")
+            agent_type = context.get("agent_type", "unknown")
+            skills_used = context.get("skills_used", [])
+
+            self._logger.info(
+                f"Skill 固化を開始: {pattern_key} "
+                f"(信頼度: {confidence:.2f}, 成功: {success_count}回)"
+            )
+
+            # SkillEngine.resolve で新規 Skill を生成
+            skill_result = await self._skill_engine.resolve(task)
+            if skill_result.generated and skill_result.saved:
+                self._consolidated_skills.add(pattern_key)
+                self._logger.info(
+                    f"Skill 固化成功: {skill_result.skill.name} "
+                    f"(パターン: {pattern_key})"
+                )
+                return True
+
+            return False
+
+        except Exception as e:
+            self._logger.warning(f"Skill 固化失敗: {e}")
+            return False
 
     async def process_feedback(
         self,
@@ -2229,6 +2399,7 @@ class DeepAgentCoordinator(CoordinatorBase):
         quality_threshold: float = 70.0,
         enable_evolution: bool = True,
         enable_memory: bool = True,
+        enable_skill_auto_learn: bool = True,
         on_progress: Callable[[dict[str, Any]], None] | None = None,
         runtime_store: RuntimeStore | None = None,
         evolution_store: EvolutionStore | None = None,
@@ -2243,6 +2414,7 @@ class DeepAgentCoordinator(CoordinatorBase):
             quality_threshold: 品質閾値
             enable_evolution: 自己進化を有効化
             enable_memory: 記憶システムを有効化
+            enable_skill_auto_learn: Skill 自動学習を有効化
             on_progress: 進捗コールバック
             runtime_store: 実行時ストア（L1層）- デフォルトはメモリストア
             evolution_store: 進化ストア（L3層）- デフォルトはメモリストア
@@ -2253,20 +2425,32 @@ class DeepAgentCoordinator(CoordinatorBase):
         self._max_retries = max_retries
         self._quality_threshold = quality_threshold
         self._enable_evolution = enable_evolution
+        self._enable_skill_auto_learn = enable_skill_auto_learn
         self._on_progress = on_progress
 
         # ストレージ層初期化（三層設計: L1 Runtime, L2 App Session, L3 Evolution）
         self._runtime_store = runtime_store or MemoryRuntimeStore()
         self._evolution_store = evolution_store or MemoryEvolutionStore()
 
-        # コンポーネント初期化（ストレージ注入）
-        self._agent_pool = AgentPool(llm_client=llm_client, predefined_agents=predefined_agents)
+        # SkillEngine 初期化（越用越厉害）
+        self._skill_engine = SkillEngine(auto_learn=enable_skill_auto_learn)
+
+        # コンポーネント初期化（ストレージ注入、SkillEngine 共有）
+        self._agent_pool = AgentPool(
+            llm_client=llm_client,
+            predefined_agents=predefined_agents,
+            skill_engine=self._skill_engine,
+        )
         self._progress = ProgressManager(
             enable_memory=enable_memory,
             runtime_store=self._runtime_store,
         )
         self._evolver = (
-            Evolver(llm_client=llm_client, evolution_store=self._evolution_store)
+            Evolver(
+                llm_client=llm_client,
+                evolution_store=self._evolution_store,
+                skill_engine=self._skill_engine if enable_skill_auto_learn else None,
+            )
             if enable_evolution
             else None
         )
@@ -2602,17 +2786,22 @@ JSON形式で回答:"""
         task: str,
         cognitive: CognitiveAnalysis,
     ) -> list[TodoItem]:
-        """任務分解 - 計画生成."""
+        """任務分解 - 計画生成.
+
+        各サブタスクに対して SkillEngine を使って適切な Skill を自動マッチング/生成する。
+        """
         # 学習済みヒントを確認
         hint = self._evolver.get_learned_hint(task) if self._evolver else None
 
         if not self._llm:
-            # デフォルト分解
-            return [
+            # デフォルト分解（Skill マッチングあり）
+            todos = [
                 TodoItem(task="調査・情報収集", agent_type=AgentType.RESEARCH, priority=3),
                 TodoItem(task="分析・評価", agent_type=AgentType.ANALYSIS, priority=2, dependencies=[]),
                 TodoItem(task="結論・報告作成", agent_type=AgentType.REPORT, priority=1, dependencies=[]),
             ]
+            # 各 Todo に Skill をマッチング
+            return await self._resolve_skills_for_todos(todos)
 
         prompt = f"""タスクを実行可能なステップに分解してください:
 タスク: {task}
@@ -2640,11 +2829,51 @@ JSON形式で回答:
                     priority=step.get("priority", 1),
                     dependencies=step.get("dependencies", []),
                 ))
-            return todos if todos else self._default_todos(task)
+            todos = todos if todos else self._default_todos(task)
+
+            # 各 Todo に Skill をマッチング/生成
+            return await self._resolve_skills_for_todos(todos)
 
         except Exception as e:
             self._logger.warning(f"任務分解失敗: {e}")
             return self._default_todos(task)
+
+    async def _resolve_skills_for_todos(self, todos: list[TodoItem]) -> list[TodoItem]:
+        """各 Todo に対して SkillEngine で Skill をマッチング/生成.
+
+        Args:
+            todos: TodoItem リスト
+
+        Returns:
+            Skill がマッチングされた TodoItem リスト
+        """
+        if not self._enable_skill_auto_learn:
+            return todos
+
+        for todo in todos:
+            try:
+                # タスク説明から Skill を検索（生成なし）
+                matches = self._skill_engine.find(todo.task, top_k=2)
+                if matches:
+                    # マッチした Skill を設定
+                    todo.skills = [m.skill.name for m in matches]
+                    self._logger.debug(f"Todo '{todo.task}' に Skill をマッチ: {todo.skills}")
+                else:
+                    # マッチなしの場合、auto_learn が有効なら生成を試行
+                    if self._enable_skill_auto_learn:
+                        try:
+                            result = await self._skill_engine.resolve(todo.task)
+                            if result.skill:
+                                todo.skills = [result.skill.name]
+                                self._logger.info(
+                                    f"Todo '{todo.task}' に新規 Skill を生成: {result.skill.name}"
+                                )
+                        except Exception as gen_err:
+                            self._logger.warning(f"Skill 生成失敗（続行）: {gen_err}")
+            except Exception as e:
+                self._logger.warning(f"Skill マッチング失敗（続行）: {e}")
+
+        return todos
 
     def _default_todos(self, task: str) -> list[TodoItem]:
         """デフォルトTodo生成."""
