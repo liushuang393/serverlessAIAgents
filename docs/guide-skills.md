@@ -1,7 +1,7 @@
 # Skills 自動進化システム ガイド
 
-> **バージョン**: 1.0.0
-> **更新日**: 2025-01-20
+> **バージョン**: 2.0.0
+> **更新日**: 2025-01-15
 
 > **注意**: Claude Code Skills 互換性の詳細は [Skills ガイド](skills-guide.md) を参照してください。
 
@@ -28,6 +28,8 @@ AgentFlow の **Skills 自動進化システム** は、Claude Code Skills 完�
 | ✅ **自動検証** | フォーマット・セキュリティを自動チェック |
 | 💾 **自動固化** | 検証済みスキルを learned_skills に保存 |
 | 📈 **使用統計** | 使用回数を追跡、信頼度を更新 |
+| 🔗 **Agent統合** | DeepAgentCoordinator と自動連携 |
+| 🧠 **進化学習** | 成功パターンから自動で Skill を固化 |
 
 ---
 
@@ -245,9 +247,125 @@ path = persister.save(skill, scope="learned", force=True)
 
 ---
 
+## 🔗 DeepAgentCoordinator との統合
+
+Skills は DeepAgentCoordinator の実行フローに自動統合されています。
+
+### 統合ポイント
+
+| 統合箇所 | 機能 |
+|----------|------|
+| **タスク分解** | 各サブタスクに最適な Skill を自動マッチ/生成 |
+| **DynamicAgent** | Skill の instructions を system prompt に注入 |
+| **Evolver** | 成功パターンから自動で Skill を固化 |
+| **AgentPool** | SkillEngine を共有、動的解析をサポート |
+
+### タスク分解時の自動マッチング
+
+```python
+# DeepAgentCoordinator が内部で自動実行
+coordinator = DeepAgentCoordinator(
+    llm_client=llm,
+    enable_skill_auto_learn=True,  # Skill 自動学習を有効化
+)
+
+# タスク分解時、各 todo に適切な Skill が自動でバインド
+result = await coordinator.run("PDFを解析してレポートを作成")
+# → 内部で pdf-extractor skill が自動マッチ
+```
+
+### DynamicAgent での Skill 活用
+
+```python
+# DynamicAgent は自動で Skill の指示を LLM に注入
+agent = DynamicAgent(
+    llm_client=llm,
+    skills=[pdf_skill, report_skill],  # Skill リスト
+)
+
+# run() 時、skills の instructions が system prompt に追加される
+result = await agent.run("PDFからデータを抽出")
+```
+
+### 成功パターンからの自動固化
+
+```python
+# Evolver が高信頼度の成功パターンを自動で Skill に固化
+evolver = Evolver(
+    llm_client=llm,
+    skill_engine=skill_engine,  # SkillEngine を渡す
+)
+
+# 成功時、confidence >= 0.8 なら自動で Skill 生成
+await evolver.learn_from_success(
+    task="PDF解析タスク",
+    result={"success": True, ...},
+    confidence=0.85,
+)
+# → learned_skills に自動保存
+```
+
+---
+
+## 🛠️ Skill の作成方法
+
+### 方法1: 手動作成（推奨）
+
+1. ディレクトリを作成:
+```bash
+mkdir -p ~/.agentflow/skills/my-skill
+```
+
+2. SKILL.md を作成:
+```bash
+cat > ~/.agentflow/skills/my-skill/SKILL.md << 'EOF'
+---
+name: my-skill
+description: 説明文
+triggers:
+  - キーワード1
+  - キーワード2
+---
+
+# Instructions
+
+具体的な手順をここに記述。
+EOF
+```
+
+### 方法2: 自動生成
+
+```python
+from agentflow.skills import SkillEngine
+
+engine = SkillEngine(auto_learn=True)
+
+# クエリから自動生成
+result = await engine.resolve("新しいタスクの説明")
+if result.generated:
+    print(f"新 Skill 生成: {result.skill.name}")
+    # ~/.agentflow/learned_skills/ に自動保存
+```
+
+### 方法3: 成功パターンから固化
+
+タスク実行が成功し、信頼度が高い場合、Evolver が自動で Skill を生成します。
+
+```python
+# 手動で固化をトリガー
+await evolver.learn_from_success(
+    task="タスク説明",
+    result=execution_result,
+    confidence=0.9,
+)
+```
+
+---
+
 ## 📚 関連ドキュメント
 
 - [アーキテクチャ](architecture.md) - システム全体設計
 - [コーディングガイド](guide-coding.md) - Python 開発ガイド
 - [API リファレンス](api.md) - 全 API 詳細
+- [DeepAgent 設計](design/DEEP_AGENT_COORDINATOR_DESIGN.md) - Coordinator 詳細
 
