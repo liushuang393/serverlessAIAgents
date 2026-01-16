@@ -43,6 +43,27 @@ from agentflow.knowledge.hooks import (
     RAGHook,
 )
 
+# 新規追加: 隔離KB、ドキュメント健康度
+from agentflow.knowledge.isolated_kb import (
+    IsolatedKBManager,
+    KBConfig,
+    KBDocument,
+    KBType,
+    KBVisibility,
+    SearchResult,
+    KBAccessLog,
+)
+from agentflow.knowledge.doc_health_checker import (
+    DocHealthChecker,
+    DocHealthConfig,
+    Document,
+    HealthReport,
+    HealthIssue,
+    HealthStatus,
+    IssueType,
+    IssueSeverity,
+)
+
 __all__ = [
     # Document Loaders
     "DocumentLoader",
@@ -62,5 +83,22 @@ __all__ = [
     "use_rag",
     "VectorSearchHook",
     "RAGHook",
+    # 隔離KB
+    "IsolatedKBManager",
+    "KBConfig",
+    "KBDocument",
+    "KBType",
+    "KBVisibility",
+    "SearchResult",
+    "KBAccessLog",
+    # ドキュメント健康度
+    "DocHealthChecker",
+    "DocHealthConfig",
+    "Document",
+    "HealthReport",
+    "HealthIssue",
+    "HealthStatus",
+    "IssueType",
+    "IssueSeverity",
 ]
 

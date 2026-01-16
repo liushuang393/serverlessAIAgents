@@ -97,6 +97,9 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
                 keywords=t.keywords,
                 sentiment=t.sentiment.value,
                 growth_rate=t.growth_rate,
+                first_seen=t.first_seen.isoformat(),
+                last_seen=t.last_seen.isoformat(),
+                article_count=t.article_count,
                 created_at=t.created_at.isoformat(),
                 metadata=t.metadata,
             )
@@ -180,6 +183,7 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
             # 成長率（簡易計算）
             growth_rate = random.uniform(-0.2, 0.5)
 
+            now = datetime.now()
             trend = Trend(
                 id=str(uuid.uuid4()),
                 topic=keyword,
@@ -188,7 +192,10 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
                 keywords=[keyword],
                 sentiment=sentiment,
                 growth_rate=growth_rate,
-                created_at=datetime.now(),
+                first_seen=now,
+                last_seen=now,
+                article_count=count,
+                created_at=now,
                 metadata={"analysis_version": "3.0", "llm_analyzed": enable_sentiment},
             )
 

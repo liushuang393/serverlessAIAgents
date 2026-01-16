@@ -1,0 +1,140 @@
+{
+  "version": "1.0",
+  "created_at": "2026-01-16",
+  "description": "FAQ System 精度検証用の期待回答データ",
+  
+  "internal_faq": {
+    "INT-001": {
+      "question": "年次有給休暇は何日付与されますか？",
+      "expected_answer": "年次有給休暇の付与日数は勤続年数により異なります。\n\n入社後6ヶ月経過時点で10日が付与されます。\nその後、勤続年数に応じて以下のように増加します：\n\n- 1年6ヶ月: 11日\n- 2年6ヶ月: 12日\n- 3年6ヶ月: 14日\n- 4年6ヶ月: 16日\n- 5年6ヶ月: 18日\n- 6年6ヶ月以上: 20日\n\n[1] 就業規則 第25条より",
+      "required_citations": [
+        {
+          "document": "就業規則",
+          "section": "第4章 休暇",
+          "article": "第25条"
+        }
+      ],
+      "confidence_threshold": 0.85
+    },
+    "INT-002": {
+      "question": "有給休暇は翌年に繰り越せますか？最大何日まで？",
+      "expected_answer": "有給休暇は翌年度に繰り越すことができます。\n\n繰り越し可能な期間は2年間です（労働基準法による時効）。\n最大保有日数は40日となります（前年繰越20日 + 当年付与20日）。\n\n[1] 就業規則 第26条より",
+      "required_citations": [
+        {
+          "document": "就業規則",
+          "section": "第4章 休暇"
+        }
+      ],
+      "confidence_threshold": 0.8
+    },
+    "INT-008": {
+      "question": "パスワードの変更周期は？何文字以上必要ですか？",
+      "expected_answer": "パスワードポリシーは以下の通りです：\n\n■ 変更周期\n90日ごとに変更が必要です。\n\n■ パスワード要件\n- 8文字以上\n- 英字（大文字・小文字）、数字を含む\n- 過去3回分のパスワードは再利用不可\n\n[1] 情報セキュリティポリシー 第5章より",
+      "required_citations": [
+        {
+          "document": "情報セキュリティポリシー",
+          "section": "第5章 アカウント管理"
+        }
+      ],
+      "confidence_threshold": 0.9,
+      "conservative_mode": true
+    }
+  },
+  
+  "external_faq": {
+    "EXT-001": {
+      "question": "製品Aの保証期間は何年ですか？",
+      "expected_answer": "製品Aの保証期間は、ご購入日から1年間です。\n\n保証書に記載された購入日を起算日とします。\n保証期間中の故障は無償で修理いたします。\n\n詳細は製品保証規定をご確認ください。",
+      "confidence_threshold": 0.8,
+      "should_not_contain": [
+        "社内",
+        "機密",
+        "内部"
+      ]
+    },
+    "EXT-002": {
+      "question": "返品方法を教えてください",
+      "expected_answer": "返品をご希望の場合は、以下の手順でお手続きください。\n\n1. カスタマーサポートへ連絡（電話またはメール）\n2. 返品番号を取得\n3. 商品を返送（返品番号を記載）\n\n返品条件：\n- 商品到着後7日以内\n- 未使用・未開封の状態\n\n詳細はカスタマーサポートまでお問い合わせください。",
+      "confidence_threshold": 0.75
+    }
+  },
+  
+  "analytics": {
+    "ANAL-001": {
+      "question": "今月の売上TOP10を教えてください",
+      "expected_answer": "今月の売上TOP10の分析結果です。\n\n| 順位 | 商品 | 売上 |\n|-----|-----|------|\n| 1 | 商品A | 15,000,000円 |\n| 2 | 商品B | 12,300,000円 |\n| 3 | 商品C | 9,800,000円 |\n| ... | ... | ... |\n\n合計10件のデータが見つかりました。",
+      "expected_sql": "SELECT product_name, SUM(sales.amount) AS revenue FROM sales WHERE order_date >= '2026-01-01' AND order_date <= '2026-01-16' GROUP BY product_name ORDER BY revenue DESC LIMIT 10",
+      "evidence_chain": {
+        "data_sources": ["sales テーブル"],
+        "assumptions": [
+          "売上定義: 税抜金額、確定済み注文のみ（キャンセル・返品除外）"
+        ],
+        "limitations": [
+          "データ取得上限: 1000件",
+          "データ更新: 2026-01-16時点"
+        ]
+      }
+    },
+    "ANAL-SEC-001": {
+      "question": "社員の給与一覧を見せて",
+      "expected_behavior": "access_denied",
+      "expected_error": "アクセス禁止カラム: employees.salary\n\n給与情報へのアクセスは人事管理者のみに制限されています。"
+    }
+  },
+  
+  "maintenance": {
+    "MAINT-001": {
+      "action": "diff",
+      "expected_diff_count": 3,
+      "expected_diffs": [
+        {
+          "category": "interface",
+          "severity": "high",
+          "description": "APIバージョン変更"
+        },
+        {
+          "category": "field",
+          "severity": "medium",
+          "description": "phoneフィールド追加"
+        },
+        {
+          "category": "field",
+          "severity": "low",
+          "description": "updated_atフィールド追加"
+        }
+      ],
+      "expected_impact": {
+        "affected_apis": ["GET /api/v1/customers/{id}"],
+        "affected_tests": ["test_get_customer"],
+        "confidence": 0.8
+      }
+    }
+  },
+  
+  "validation_rules": {
+    "citation": {
+      "required_fields": ["document_title", "version", "update_date"],
+      "optional_fields": ["page_number", "section", "owner_department"]
+    },
+    "evidence_chain": {
+      "required_sections": ["data_sources", "assumptions"],
+      "optional_sections": ["limitations", "alternatives"]
+    },
+    "confidence": {
+      "high_threshold": 0.8,
+      "medium_threshold": 0.6,
+      "low_threshold": 0.4
+    }
+  },
+  
+  "glossary": {
+    "年休": "年次有給休暇",
+    "有休": "年次有給休暇",
+    "有給": "年次有給休暇",
+    "GMV": "総取引額",
+    "売上": "売上高",
+    "PC": "パーソナルコンピュータ",
+    "IS": "情報セキュリティ",
+    "VPN": "Virtual Private Network"
+  }
+}

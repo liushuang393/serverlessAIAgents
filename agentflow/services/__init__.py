@@ -110,6 +110,19 @@ from agentflow.services.document_exporter import (
     TemplateType,
 )
 
+# 新規追加: 語義層サービス
+from agentflow.services.semantic_layer import (
+    SemanticLayerService,
+    SemanticLayerConfig,
+    Metric,
+    Dimension,
+    ResolvedQuery,
+    SQLHints,
+    MetricType,
+    AggregationType,
+    TimeGranularity,
+)
+
 __all__ = [
     # 基底
     "ServiceBase",
@@ -160,4 +173,14 @@ __all__ = [
     "ExportConfig",
     "ExportFormat",
     "TemplateType",
+    # 語義層サービス
+    "SemanticLayerService",
+    "SemanticLayerConfig",
+    "Metric",
+    "Dimension",
+    "ResolvedQuery",
+    "SQLHints",
+    "MetricType",
+    "AggregationType",
+    "TimeGranularity",
 ]

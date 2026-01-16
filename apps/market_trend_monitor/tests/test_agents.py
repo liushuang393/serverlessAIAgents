@@ -5,8 +5,12 @@ import pytest
 from apps.market_trend_monitor.backend.agents import (
     AnalyzerAgent,
     CollectorAgent,
+    EvidenceLedgerAgent,
     NotifierAgent,
+    PredictionReviewAgent,
+    RedTeamAgent,
     ReporterAgent,
+    SignalScorerAgent,
 )
 
 
@@ -164,3 +168,180 @@ class TestNotifierAgent:
 
         await agent.cleanup()
 
+
+
+class TestEvidenceLedgerAgent:
+    """EvidenceLedgerAgent のテスト."""
+
+    @pytest.mark.asyncio
+    async def test_evidence_ledger_initialization(self) -> None:
+        """初期化テスト."""
+        agent = EvidenceLedgerAgent()
+        await agent.initialize()
+        assert agent is not None
+        await agent.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_evidence_ledger_run(self) -> None:
+        """実行テスト."""
+        agent = EvidenceLedgerAgent()
+        await agent.initialize()
+
+        input_data = {
+            "articles": [
+                {
+                    "id": "test-1",
+                    "title": "AI市場が急成長",
+                    "url": "https://example.com/ai-growth",
+                    "source": "news",
+                    "published_at": "2025-01-15T10:00:00",
+                    "content": "AI市場は2025年に大幅な成長が予測されています。",
+                    "keywords": ["AI", "市場"],
+                    "collected_at": "2025-01-15T12:00:00",
+                    "metadata": {},
+                }
+            ],
+            "claim_text": "AI市場は2025年に成長する",
+        }
+
+        result = await agent.run(input_data)
+
+        assert "evidences" in result
+        assert "evidence_ids" in result
+        assert result["total_registered"] >= 1
+
+        await agent.cleanup()
+
+
+class TestSignalScorerAgent:
+    """SignalScorerAgent のテスト."""
+
+    @pytest.mark.asyncio
+    async def test_signal_scorer_initialization(self) -> None:
+        """初期化テスト."""
+        agent = SignalScorerAgent()
+        await agent.initialize()
+        assert agent is not None
+        await agent.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_signal_scorer_run(self) -> None:
+        """実行テスト."""
+        agent = SignalScorerAgent()
+        await agent.initialize()
+
+        input_data = {
+            "signals": [
+                {
+                    "id": "sig-1",
+                    "name": "AI市場成長シグナル",
+                    "description": "AI関連企業の株価上昇",
+                    "source": "market_data",
+                    "detected_at": "2025-01-15T10:00:00",
+                    "raw_value": 0.75,
+                    "metadata": {},
+                }
+            ],
+        }
+
+        result = await agent.run(input_data)
+
+        assert "signals" in result
+        assert "total_evaluated" in result
+        assert "dashboard_stats" in result
+
+        await agent.cleanup()
+
+
+class TestRedTeamAgent:
+    """RedTeamAgent のテスト."""
+
+    @pytest.mark.asyncio
+    async def test_redteam_initialization(self) -> None:
+        """初期化テスト."""
+        agent = RedTeamAgent()
+        await agent.initialize()
+        assert agent is not None
+        await agent.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_redteam_run(self) -> None:
+        """実行テスト."""
+        agent = RedTeamAgent()
+        await agent.initialize()
+
+        input_data = {
+            "claim": {
+                "id": "claim-1",
+                "text": "AI市場は2025年に50%成長する",
+                "level": "hypothesis",
+                "confidence": 0.7,
+                "created_at": "2025-01-15T10:00:00",
+                "evidence_ids": [],
+                "metadata": {},
+            },
+            "evidences": [
+                {
+                    "id": "ev-1",
+                    "source_id": "article-1",
+                    "source_type": "news",
+                    "content": "AI市場の成長予測",
+                    "reliability": 0.8,
+                    "collected_at": "2025-01-15T10:00:00",
+                    "metadata": {},
+                }
+            ],
+        }
+
+        result = await agent.run(input_data)
+
+        assert "challenges" in result
+        assert "results" in result
+        assert "stats" in result
+
+        await agent.cleanup()
+
+
+class TestPredictionReviewAgent:
+    """PredictionReviewAgent のテスト."""
+
+    @pytest.mark.asyncio
+    async def test_prediction_review_initialization(self) -> None:
+        """初期化テスト."""
+        agent = PredictionReviewAgent()
+        await agent.initialize()
+        assert agent is not None
+        await agent.cleanup()
+
+    @pytest.mark.asyncio
+    async def test_prediction_review_run(self) -> None:
+        """実行テスト."""
+        agent = PredictionReviewAgent()
+        await agent.initialize()
+
+        input_data = {
+            "predictions": [
+                {
+                    "id": "pred-1",
+                    "statement": "AI市場は2025年Q1に成長する",
+                    "target_date": "2025-01-15",
+                    "confidence": 0.8,
+                    "claim_id": "claim-1",
+                    "created_at": "2025-01-01T10:00:00",
+                    "status": "pending",
+                    "metadata": {},
+                }
+            ],
+            "actual_outcomes": {
+                "pred-1": "AI市場は2025年Q1に15%成長した",
+            },
+        }
+
+        result = await agent.run(input_data)
+
+        assert "reviews" in result
+        assert "total_reviewed" in result
+        assert "accuracy_stats" in result
+        assert result["total_reviewed"] == 1
+
+        await agent.cleanup()

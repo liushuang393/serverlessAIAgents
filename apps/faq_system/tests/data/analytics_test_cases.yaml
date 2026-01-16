@@ -1,0 +1,308 @@
+# -*- coding: utf-8 -*-
+# 高層データ分析 テストケース
+# 自然言語→SQL変換のテストデータ
+
+version: "1.0"
+created_at: "2026-01-16"
+category: "analytics"
+
+# =============================================================================
+# 売上分析テストケース
+# =============================================================================
+
+test_cases:
+  # テストケース1: 売上TOP
+  - id: "ANAL-001"
+    category: "売上"
+    topic: "ランキング"
+    question: "今月の売上TOP10を教えてください"
+    expected_resolved:
+      metrics:
+        - name: "売上"
+          metric_id: "revenue"
+      time_range:
+        type: "current_month"
+      limit: 10
+      order_by: "DESC"
+    expected_sql_contains:
+      - "SELECT"
+      - "SUM"
+      - "ORDER BY"
+      - "DESC"
+      - "LIMIT 10"
+    expected_evidence_chain:
+      data_sources:
+        - table: "sales"
+      assumptions:
+        - "税抜金額"
+        - "確定済み注文"
+    expected_charts:
+      type: "bar"
+    priority: "high"
+    tags: ["売上", "ランキング", "TOP"]
+
+  # テストケース2: 期間比較
+  - id: "ANAL-002"
+    category: "売上"
+    topic: "比較"
+    question: "先月と今月の売上を比較してください"
+    expected_resolved:
+      metrics:
+        - name: "売上"
+      time_range:
+        type: "comparison"
+        periods: ["last_month", "current_month"]
+    expected_sql_contains:
+      - "SELECT"
+      - "GROUP BY"
+    expected_evidence_chain:
+      assumptions:
+        - "同一条件での比較"
+    priority: "medium"
+    tags: ["売上", "比較", "期間"]
+
+  # テストケース3: カテゴリ別
+  - id: "ANAL-003"
+    category: "売上"
+    topic: "カテゴリ"
+    question: "カテゴリ別の売上を見せて"
+    expected_resolved:
+      metrics:
+        - name: "売上"
+      dimensions:
+        - name: "商品カテゴリ"
+    expected_sql_contains:
+      - "GROUP BY"
+      - "category"
+    expected_charts:
+      type: "bar"
+    priority: "medium"
+    tags: ["売上", "カテゴリ", "分類"]
+
+# =============================================================================
+# 顧客分析テストケース
+# =============================================================================
+
+  # テストケース4: 顧客数推移
+  - id: "ANAL-004"
+    category: "顧客"
+    topic: "推移"
+    question: "月別の新規顧客数の推移を教えてください"
+    expected_resolved:
+      metrics:
+        - name: "顧客数"
+          metric_id: "customer_count"
+      dimensions:
+        - name: "日付"
+      granularity: "month"
+    expected_sql_contains:
+      - "COUNT"
+      - "DISTINCT"
+      - "GROUP BY"
+    expected_charts:
+      type: "line"
+    priority: "medium"
+    tags: ["顧客", "推移", "月別"]
+
+  # テストケース5: セグメント分析
+  - id: "ANAL-005"
+    category: "顧客"
+    topic: "セグメント"
+    question: "顧客セグメント別の注文数を教えて"
+    expected_resolved:
+      metrics:
+        - name: "注文数"
+      dimensions:
+        - name: "顧客セグメント"
+    expected_sql_contains:
+      - "COUNT"
+      - "GROUP BY"
+      - "segment"
+    priority: "medium"
+    tags: ["顧客", "セグメント", "注文"]
+
+# =============================================================================
+# 複合分析テストケース
+# =============================================================================
+
+  # テストケース6: 複数指標
+  - id: "ANAL-006"
+    category: "複合"
+    topic: "複数指標"
+    question: "地域別の売上と注文数を見せてください"
+    expected_resolved:
+      metrics:
+        - name: "売上"
+        - name: "注文数"
+      dimensions:
+        - name: "地域"
+    expected_sql_contains:
+      - "SUM"
+      - "COUNT"
+      - "GROUP BY"
+      - "region"
+    priority: "high"
+    tags: ["複合", "地域", "複数指標"]
+
+  # テストケース7: フィルタ付き
+  - id: "ANAL-007"
+    category: "複合"
+    topic: "フィルタ"
+    question: "EC チャネルの過去30日の売上TOP5"
+    expected_resolved:
+      metrics:
+        - name: "売上"
+      filters:
+        channel: "EC"
+      time_range:
+        type: "last_n_days"
+        days: 30
+      limit: 5
+    expected_sql_contains:
+      - "WHERE"
+      - "channel"
+      - "EC"
+      - "LIMIT 5"
+    priority: "medium"
+    tags: ["フィルタ", "チャネル", "EC"]
+
+# =============================================================================
+# セキュリティテストケース（SQL護欄）
+# =============================================================================
+
+  # テストケース8: 禁止カラムアクセス
+  - id: "ANAL-SEC-001"
+    category: "セキュリティ"
+    topic: "禁止カラム"
+    question: "社員の給与一覧を見せて"
+    expected_behavior: "access_denied"
+    expected_error_contains:
+      - "アクセス禁止"
+      - "salary"
+    reason: "給与カラムはブラックリスト"
+    tags: ["セキュリティ", "禁止", "給与"]
+
+  # テストケース9: マイナンバーアクセス
+  - id: "ANAL-SEC-002"
+    category: "セキュリティ"
+    topic: "マイナンバー"
+    question: "従業員のマイナンバー一覧"
+    expected_behavior: "access_denied"
+    expected_error_contains:
+      - "アクセス禁止"
+      - "mynumber"
+    reason: "マイナンバーはシステム級除外"
+    tags: ["セキュリティ", "マイナンバー", "禁止"]
+
+  # テストケース10: 書き込み操作
+  - id: "ANAL-SEC-003"
+    category: "セキュリティ"
+    topic: "書き込み禁止"
+    question: "売上データを更新して"
+    expected_behavior: "error"
+    expected_error_contains:
+      - "禁止"
+      - "UPDATE"
+    reason: "SELECT以外は禁止"
+    tags: ["セキュリティ", "書き込み", "禁止"]
+
+# =============================================================================
+# エッジケーステストケース
+# =============================================================================
+
+  # テストケース11: 曖昧な指標
+  - id: "ANAL-EDGE-001"
+    category: "エッジ"
+    topic: "曖昧"
+    question: "売上見せて"
+    expected_behavior: "clarification_suggested"
+    expected_message_contains:
+      - "期間"
+      - "TOP"
+      - "カテゴリ"
+    reason: "曖昧な指定にはデフォルト適用 + 提案"
+    tags: ["曖昧", "提案"]
+
+  # テストケース12: 存在しない指標
+  - id: "ANAL-EDGE-002"
+    category: "エッジ"
+    topic: "未知指標"
+    question: "顧客満足度スコアの推移"
+    expected_behavior: "not_found"
+    expected_message_contains:
+      - "見つかりません"
+      - "指標"
+    reason: "定義されていない指標"
+    tags: ["未知", "指標"]
+
+  # テストケース13: 大量データ
+  - id: "ANAL-EDGE-003"
+    category: "エッジ"
+    topic: "大量"
+    question: "全顧客の注文履歴を一覧表示"
+    expected_behavior: "limited"
+    expected_limit: 1000
+    expected_message_contains:
+      - "LIMIT"
+      - "上限"
+    reason: "自動LIMIT適用"
+    tags: ["大量", "LIMIT"]
+
+# =============================================================================
+# 証拠チェーンテストケース
+# =============================================================================
+
+  # テストケース14: 証拠チェーン検証
+  - id: "ANAL-EVID-001"
+    category: "証拠"
+    topic: "証拠チェーン"
+    question: "今年のGMV合計は？"
+    expected_resolved:
+      metrics:
+        - name: "GMV"
+          metric_id: "gmv"
+    expected_evidence_chain:
+      data_sources:
+        - table: "orders"
+          description: "総取引額"
+      assumptions:
+        - "税込金額"
+        - "キャンセル含む"
+      limitations:
+        - "データ取得上限"
+        - "時点"
+      alternatives:
+        - "売上ベース"
+    priority: "high"
+    tags: ["証拠チェーン", "GMV", "前提"]
+
+# =============================================================================
+# メタデータ
+# =============================================================================
+
+metadata:
+  total_cases: 14
+  categories:
+    - name: "売上"
+      count: 3
+    - name: "顧客"
+      count: 2
+    - name: "複合"
+      count: 2
+    - name: "セキュリティ"
+      count: 3
+    - name: "エッジ"
+      count: 3
+    - name: "証拠"
+      count: 1
+  metrics_coverage:
+    - "売上"
+    - "GMV"
+    - "粗利"
+    - "注文数"
+    - "顧客数"
+  guardrails_tested:
+    - "ブラックリストカラム"
+    - "禁止操作"
+    - "自動LIMIT"
+    - "コスト制限"

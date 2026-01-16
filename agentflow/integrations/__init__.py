@@ -51,6 +51,20 @@ from agentflow.integrations.realtime_sync import (
     ClientConnection,
 )
 
+# 新規追加: 工単生成器
+from agentflow.integrations.ticket_generator import (
+    TicketGenerator,
+    TicketGeneratorConfig,
+    Ticket,
+    TicketPriority,
+    TicketStatus,
+    TicketType,
+    TicketProviderBase,
+    InMemoryTicketProvider,
+    JiraTicketProvider,
+    ServiceNowTicketProvider,
+)
+
 __all__ = [
     # FastAPI 統合
     "AgentRouter",
@@ -79,5 +93,18 @@ __all__ = [
     "SyncEvent",
     "SyncEventType",
     "ClientConnection",
+    # ==========================================================================
+    # 工単生成器
+    # ==========================================================================
+    "TicketGenerator",
+    "TicketGeneratorConfig",
+    "Ticket",
+    "TicketPriority",
+    "TicketStatus",
+    "TicketType",
+    "TicketProviderBase",
+    "InMemoryTicketProvider",
+    "JiraTicketProvider",
+    "ServiceNowTicketProvider",
 ]
 

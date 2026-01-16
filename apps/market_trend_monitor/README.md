@@ -4,7 +4,8 @@
 
 ## 概要
 
-Market Trend Monitor は、AgentFlow フレームワークを使用した実用的なアプリケーション例です。Multi-Agent パターンで複数のエージェントが協調動作し、市場動向を自動的に監視・分析します。
+Market Trend Monitor は、AgentFlow フレームワークを使用した実用的なアプリケーション例です。Multi-Agent パターンで複数のエージェントが協調動作し、
+市場動向を自動的に監視・分析します。
 
 ### 主要機能
 

@@ -1,0 +1,294 @@
+# -*- coding: utf-8 -*-
+# メンテナンス支援 テストケース
+# 仕様差分・影響分析のテストデータ
+
+version: "1.0"
+created_at: "2026-01-16"
+category: "maintenance"
+
+# =============================================================================
+# 仕様差分テストケース
+# =============================================================================
+
+test_cases:
+  # テストケース1: API変更
+  - id: "MAINT-001"
+    category: "API"
+    topic: "仕様変更"
+    action: "diff"
+    old_document: |
+      # 顧客情報取得API
+      ## エンドポイント
+      GET /api/v1/customers/{id}
+      
+      ## レスポンス
+      - customer_id: string
+      - name: string
+      - email: string
+      - created_at: datetime
+    new_document: |
+      # 顧客情報取得API
+      ## エンドポイント
+      GET /api/v2/customers/{id}
+      
+      ## レスポンス
+      - customer_id: string
+      - name: string
+      - email: string
+      - phone: string (新規追加)
+      - created_at: datetime
+      - updated_at: datetime (新規追加)
+    expected_diffs:
+      - category: "interface"
+        description: "APIバージョン変更 v1 → v2"
+        severity: "high"
+      - category: "field"
+        description: "phone フィールド追加"
+        severity: "medium"
+      - category: "field"
+        description: "updated_at フィールド追加"
+        severity: "low"
+    expected_impact:
+      affected_apis: ["GET /api/v1/customers/{id}"]
+      affected_tests: ["test_get_customer"]
+    priority: "high"
+    tags: ["API", "バージョン", "フィールド追加"]
+
+  # テストケース2: ビジネスルール変更
+  - id: "MAINT-002"
+    category: "ビジネスルール"
+    topic: "規則変更"
+    action: "diff"
+    old_document: |
+      # 注文キャンセルポリシー
+      
+      ## キャンセル条件
+      - 発送前であればキャンセル可能
+      - キャンセル料: なし
+      
+      ## 例外
+      - 特注品はキャンセル不可
+    new_document: |
+      # 注文キャンセルポリシー
+      
+      ## キャンセル条件
+      - 発送前であればキャンセル可能
+      - キャンセル料: 注文確定後24時間以降は10%
+      
+      ## 例外
+      - 特注品はキャンセル不可
+      - セール品は発送準備開始後キャンセル不可
+    expected_diffs:
+      - category: "rule"
+        description: "キャンセル料の追加"
+        severity: "high"
+      - category: "exception"
+        description: "セール品のキャンセル制限追加"
+        severity: "high"
+    expected_impact:
+      affected_modules: ["order_service", "cancellation_service"]
+      affected_faqs: ["キャンセル方法FAQ"]
+    priority: "high"
+    tags: ["ルール", "キャンセル", "ポリシー"]
+
+  # テストケース3: データベーススキーマ変更
+  - id: "MAINT-003"
+    category: "データベース"
+    topic: "スキーマ変更"
+    action: "diff"
+    old_document: |
+      CREATE TABLE orders (
+        order_id VARCHAR(20) PRIMARY KEY,
+        customer_id VARCHAR(20) NOT NULL,
+        total_amount DECIMAL(10,2),
+        status VARCHAR(20),
+        created_at TIMESTAMP
+      );
+    new_document: |
+      CREATE TABLE orders (
+        order_id VARCHAR(20) PRIMARY KEY,
+        customer_id VARCHAR(20) NOT NULL,
+        total_amount DECIMAL(12,2),
+        discount_amount DECIMAL(10,2) DEFAULT 0,
+        status VARCHAR(20),
+        payment_status VARCHAR(20),
+        created_at TIMESTAMP,
+        updated_at TIMESTAMP
+      );
+    expected_diffs:
+      - category: "field"
+        description: "total_amount 精度変更"
+        severity: "medium"
+      - category: "field"
+        description: "discount_amount カラム追加"
+        severity: "medium"
+      - category: "field"
+        description: "payment_status カラム追加"
+        severity: "medium"
+      - category: "field"
+        description: "updated_at カラム追加"
+        severity: "low"
+    expected_impact:
+      affected_tables: ["orders"]
+      affected_apis: ["POST /orders", "GET /orders/{id}"]
+    priority: "high"
+    tags: ["DB", "スキーマ", "マイグレーション"]
+
+# =============================================================================
+# 影響分析テストケース
+# =============================================================================
+
+  # テストケース4: 影響範囲分析
+  - id: "MAINT-004"
+    category: "影響分析"
+    topic: "影響範囲"
+    action: "impact"
+    diffs:
+      - category: "interface"
+        description: "認証API変更"
+        old_value: "Basic認証"
+        new_value: "OAuth2.0"
+    expected_impact:
+      affected_modules:
+        - "auth_service"
+        - "api_gateway"
+        - "client_sdk"
+      affected_apis:
+        - "POST /auth/login"
+        - "POST /auth/token"
+        - "GET /auth/userinfo"
+      affected_tests:
+        - "test_authentication"
+        - "test_authorization"
+        - "test_token_refresh"
+      affected_runbooks:
+        - "認証トラブルシューティング"
+    priority: "critical"
+    tags: ["認証", "影響分析", "セキュリティ"]
+
+# =============================================================================
+# 成果物生成テストケース
+# =============================================================================
+
+  # テストケース5: Release Note 生成
+  - id: "MAINT-005"
+    category: "成果物"
+    topic: "Release Note"
+    action: "generate"
+    diffs:
+      - category: "interface"
+        description: "APIエンドポイント変更"
+        severity: "high"
+      - category: "field"
+        description: "新規フィールド追加"
+        severity: "medium"
+    expected_deliverables:
+      - type: "release_note"
+        contains:
+          - "変更概要"
+          - "影響範囲"
+          - "⚠️ 重要な変更"
+      - type: "faq_draft"
+        contains:
+          - "Q"
+          - "A"
+      - type: "test_checklist"
+        contains:
+          - "[ ]"
+          - "テスト観点"
+    priority: "medium"
+    tags: ["Release Note", "自動生成"]
+
+# =============================================================================
+# 完全分析テストケース
+# =============================================================================
+
+  # テストケース6: 完全分析（差分→影響→成果物）
+  - id: "MAINT-006"
+    category: "完全分析"
+    topic: "フル分析"
+    action: "full"
+    old_document: |
+      # ユーザー登録フロー
+      
+      1. メールアドレス入力
+      2. パスワード設定（8文字以上）
+      3. 確認メール送信
+      4. 登録完了
+    new_document: |
+      # ユーザー登録フロー
+      
+      1. メールアドレス入力
+      2. SMS認証（電話番号入力）
+      3. パスワード設定（10文字以上、記号必須）
+      4. 二要素認証設定（オプション）
+      5. 確認メール送信
+      6. 登録完了
+    expected_diffs:
+      - category: "rule"
+        description: "SMS認証ステップ追加"
+        severity: "high"
+      - category: "rule"
+        description: "パスワード要件強化"
+        severity: "high"
+      - category: "rule"
+        description: "二要素認証オプション追加"
+        severity: "medium"
+    expected_impact:
+      affected_modules:
+        - "registration_service"
+        - "sms_service"
+        - "authentication_service"
+    expected_deliverables:
+      - type: "release_note"
+      - type: "faq_draft"
+      - type: "training_notice"
+      - type: "test_checklist"
+    priority: "high"
+    tags: ["完全分析", "登録フロー", "セキュリティ"]
+
+# =============================================================================
+# 否定的テストケース
+# =============================================================================
+
+  # テストケース7: ドキュメントなし
+  - id: "MAINT-NEG-001"
+    category: "エラー"
+    topic: "入力不足"
+    action: "diff"
+    old_document: ""
+    new_document: ""
+    expected_behavior: "error"
+    expected_error_contains:
+      - "old_document"
+      - "new_document"
+      - "必要"
+    tags: ["エラー", "入力不足"]
+
+# =============================================================================
+# メタデータ
+# =============================================================================
+
+metadata:
+  total_cases: 7
+  categories:
+    - name: "API"
+      count: 1
+    - name: "ビジネスルール"
+      count: 1
+    - name: "データベース"
+      count: 1
+    - name: "影響分析"
+      count: 1
+    - name: "成果物"
+      count: 1
+    - name: "完全分析"
+      count: 1
+    - name: "エラー"
+      count: 1
+  expected_outputs:
+    - "差分リスト"
+    - "影響範囲分析"
+    - "Release Note"
+    - "FAQ更新草案"
+    - "テストチェックリスト"

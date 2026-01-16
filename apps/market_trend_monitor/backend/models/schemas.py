@@ -81,6 +81,9 @@ class Trend:
     keywords: list[str]
     sentiment: SentimentType
     growth_rate: float
+    first_seen: datetime = field(default_factory=datetime.now)
+    last_seen: datetime = field(default_factory=datetime.now)
+    article_count: int = 0
     created_at: datetime = field(default_factory=datetime.now)
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -94,6 +97,9 @@ class Trend:
             "keywords": self.keywords,
             "sentiment": self.sentiment.value,
             "growth_rate": self.growth_rate,
+            "first_seen": self.first_seen.isoformat(),
+            "last_seen": self.last_seen.isoformat(),
+            "article_count": self.article_count,
             "created_at": self.created_at.isoformat(),
             "metadata": self.metadata,
         }

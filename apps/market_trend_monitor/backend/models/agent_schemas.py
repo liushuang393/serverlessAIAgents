@@ -78,6 +78,9 @@ class TrendSchema(BaseModel):
     keywords: list[str]
     sentiment: str
     growth_rate: float
+    first_seen: str = ""
+    last_seen: str = ""
+    article_count: int = 0
     created_at: str
     metadata: dict = Field(default_factory=dict)
 

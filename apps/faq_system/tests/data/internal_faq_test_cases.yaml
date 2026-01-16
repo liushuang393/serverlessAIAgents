@@ -1,0 +1,295 @@
+# -*- coding: utf-8 -*-
+# 社内FAQ テストケース
+# 精度検証用のテストデータと期待回答
+
+version: "1.0"
+created_at: "2026-01-16"
+category: "internal_faq"
+
+# =============================================================================
+# 人事・労務関連
+# =============================================================================
+
+test_cases:
+  # テストケース1: 年次有給休暇
+  - id: "INT-001"
+    category: "人事"
+    topic: "休暇"
+    question: "年次有給休暇は何日付与されますか？"
+    expected_answer_contains:
+      - "勤続年数"
+      - "6ヶ月"
+      - "10日"
+    expected_citation:
+      document_title: "就業規則"
+      section: "第4章 休暇"
+    conservative_mode: true
+    priority: "high"
+    tags: ["休暇", "年休", "有給"]
+
+  # テストケース2: 有給の繰り越し
+  - id: "INT-002"
+    category: "人事"
+    topic: "休暇"
+    question: "有給休暇は翌年に繰り越せますか？最大何日まで？"
+    expected_answer_contains:
+      - "繰り越し"
+      - "2年"
+      - "40日"
+    expected_citation:
+      document_title: "就業規則"
+    conservative_mode: true
+    priority: "medium"
+    tags: ["休暇", "繰り越し"]
+
+  # テストケース3: 慶弔休暇
+  - id: "INT-003"
+    category: "人事"
+    topic: "休暇"
+    question: "結婚する時の慶弔休暇は何日もらえますか？"
+    expected_answer_contains:
+      - "結婚"
+      - "5日"
+    expected_citation:
+      document_title: "慶弔休暇規程"
+    conservative_mode: true
+    priority: "medium"
+    tags: ["休暇", "慶弔"]
+
+  # テストケース4: 在宅勤務
+  - id: "INT-004"
+    category: "人事"
+    topic: "勤務"
+    question: "在宅勤務の申請手続きを教えてください"
+    expected_answer_contains:
+      - "申請"
+      - "上長"
+      - "承認"
+    expected_citation:
+      document_title: "テレワーク規程"
+    conservative_mode: false
+    priority: "medium"
+    tags: ["勤務", "在宅", "テレワーク"]
+
+  # テストケース5: 給与計算
+  - id: "INT-005"
+    category: "人事"
+    topic: "給与"
+    question: "給与の締め日と支払日はいつですか？"
+    expected_answer_contains:
+      - "締め日"
+      - "末日"
+      - "25日"
+    expected_citation:
+      document_title: "給与規程"
+    conservative_mode: true
+    priority: "high"
+    tags: ["給与", "支払"]
+
+# =============================================================================
+# 経費・福利厚生関連
+# =============================================================================
+
+  # テストケース6: 交通費精算
+  - id: "INT-006"
+    category: "経理"
+    topic: "経費"
+    question: "出張時の交通費精算の上限はありますか？"
+    expected_answer_contains:
+      - "交通費"
+      - "精算"
+      - "領収書"
+    expected_citation:
+      document_title: "出張旅費規程"
+    conservative_mode: false
+    priority: "medium"
+    tags: ["経費", "交通費", "出張"]
+
+  # テストケース7: 接待費
+  - id: "INT-007"
+    category: "経理"
+    topic: "経費"
+    question: "取引先との会食の経費精算のルールを教えてください"
+    expected_answer_contains:
+      - "接待"
+      - "承認"
+      - "上限"
+    expected_citation:
+      document_title: "交際費規程"
+    conservative_mode: true
+    priority: "high"
+    tags: ["経費", "接待", "交際費"]
+
+# =============================================================================
+# IT・セキュリティ関連
+# =============================================================================
+
+  # テストケース8: パスワード変更
+  - id: "INT-008"
+    category: "IT"
+    topic: "セキュリティ"
+    question: "パスワードの変更周期は？何文字以上必要ですか？"
+    expected_answer_contains:
+      - "90日"
+      - "8文字"
+      - "英数字"
+    expected_citation:
+      document_title: "情報セキュリティポリシー"
+    conservative_mode: true
+    priority: "high"
+    tags: ["セキュリティ", "パスワード"]
+
+  # テストケース9: VPN接続
+  - id: "INT-009"
+    category: "IT"
+    topic: "ネットワーク"
+    question: "社外からVPN接続する方法を教えてください"
+    expected_answer_contains:
+      - "VPN"
+      - "接続"
+      - "クライアント"
+    expected_citation:
+      document_title: "リモートアクセス手順書"
+    conservative_mode: false
+    priority: "medium"
+    tags: ["IT", "VPN", "リモート"]
+
+  # テストケース10: USB使用
+  - id: "INT-010"
+    category: "IT"
+    topic: "セキュリティ"
+    question: "USBメモリの使用は許可されていますか？"
+    expected_answer_contains:
+      - "USB"
+      - "禁止"
+      - "申請"
+    expected_citation:
+      document_title: "情報セキュリティポリシー"
+    conservative_mode: true
+    priority: "high"
+    tags: ["セキュリティ", "USB", "情報漏洩"]
+
+# =============================================================================
+# 新入社員向け
+# =============================================================================
+
+  # テストケース11: 入社手続き
+  - id: "INT-011"
+    category: "人事"
+    topic: "入社"
+    question: "入社初日に必要な書類は何ですか？"
+    expected_answer_contains:
+      - "身分証明書"
+      - "年金手帳"
+      - "銀行口座"
+    expected_citation:
+      document_title: "入社オリエンテーション資料"
+    conservative_mode: false
+    priority: "medium"
+    tags: ["入社", "新入社員", "手続き"]
+
+  # テストケース12: 社内システム
+  - id: "INT-012"
+    category: "IT"
+    topic: "システム"
+    question: "勤怠システムのログイン方法を教えてください"
+    expected_answer_contains:
+      - "URL"
+      - "社員番号"
+      - "初期パスワード"
+    expected_citation:
+      document_title: "勤怠システム利用ガイド"
+    conservative_mode: false
+    priority: "medium"
+    tags: ["システム", "勤怠", "ログイン"]
+
+# =============================================================================
+# 否定的テストケース（回答できないケース）
+# =============================================================================
+
+  # テストケース13: 給与情報（権限なし）
+  - id: "INT-NEG-001"
+    category: "人事"
+    topic: "給与"
+    question: "田中さんの給与はいくらですか？"
+    expected_behavior: "access_denied"
+    expected_message_contains:
+      - "権限"
+      - "アクセス"
+    reason: "他人の給与情報は参照不可"
+    tags: ["権限", "給与", "拒否"]
+
+  # テストケース14: 社外秘情報
+  - id: "INT-NEG-002"
+    category: "経営"
+    topic: "戦略"
+    question: "来期の事業計画を教えてください"
+    expected_behavior: "access_denied"
+    expected_message_contains:
+      - "機密"
+      - "権限"
+    reason: "機密情報は一般社員には非公開"
+    tags: ["機密", "経営", "拒否"]
+
+  # テストケース15: 未知の情報
+  - id: "INT-NEG-003"
+    category: "その他"
+    topic: "不明"
+    question: "火星移住プロジェクトの進捗を教えてください"
+    expected_behavior: "not_found"
+    expected_message_contains:
+      - "見つかりません"
+      - "確認"
+    reason: "存在しない情報"
+    tags: ["未知", "不明"]
+
+# =============================================================================
+# エッジケース
+# =============================================================================
+
+  # テストケース16: 曖昧な質問
+  - id: "INT-EDGE-001"
+    category: "一般"
+    topic: "曖昧"
+    question: "休みについて"
+    expected_behavior: "clarification_needed"
+    expected_message_contains:
+      - "詳しく"
+      - "どの"
+    reason: "曖昧な質問には明確化を求める"
+    tags: ["曖昧", "明確化"]
+
+  # テストケース17: 複合質問
+  - id: "INT-EDGE-002"
+    category: "人事"
+    topic: "複合"
+    question: "有給の日数と申請方法、承認フローを教えてください"
+    expected_answer_contains:
+      - "日数"
+      - "申請"
+      - "承認"
+    expected_citation_count: 2
+    reason: "複数のトピックを含む質問"
+    tags: ["複合", "複数"]
+
+# =============================================================================
+# メタデータ
+# =============================================================================
+
+metadata:
+  total_cases: 17
+  categories:
+    - name: "人事"
+      count: 8
+    - name: "経理"
+      count: 2
+    - name: "IT"
+      count: 4
+    - name: "その他"
+      count: 3
+  coverage_targets:
+    - "就業規則"
+    - "給与規程"
+    - "情報セキュリティポリシー"
+    - "出張旅費規程"
+    - "テレワーク規程"

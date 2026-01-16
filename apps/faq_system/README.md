@@ -2,9 +2,50 @@
 
 AgentFlow フレームワーク級 Agent/サービスを使用した FAQ システムのデモアプリケーションです。
 
-## 🆕 v2.0 強化版
+## 🆕 v3.0 企業級強化版
 
-新しい強化版（`main_enhanced.py`）では以下の機能が追加されました：
+最新の v3.0 では、企業向けの本格的な機能が実装されました。
+
+### v3.0 新機能一覧
+
+| 機能カテゴリ | 機能 | 説明 |
+|-------------|------|------|
+| **社内FAQ** | 双KB隔離 | 社内/対客KB を物理的に隔離 |
+| | 保守モード | 規則類は直接摘録優先、自由発揮を抑制 |
+| | 必須引用 | 来源/バージョン/更新日を必ず提示 |
+| | 工単自動生成 | 不確定回答時に自動でチケット生成 |
+| **メンテナンス支援** | 仕様差分総結 | 新旧ドキュメントの差分を自動抽出 |
+| | 影響範囲分析 | モジュール/API/DB/テストへの影響を特定 |
+| | 成果物自動生成 | Release Note、FAQ更新草案等を自動生成 |
+| **高層データ分析** | 語義層 | 指標・ディメンション辞書による口径統一 |
+| | SQL護欄 | SELECT限定、ブラックリスト、LIMIT自動付与 |
+| | 証拠チェーン | データソース、前提条件、制限事項を明示 |
+| **セキュリティ** | RBAC/ABAC | ロール・属性ベースのアクセス制御 |
+| | APPI準拠 | PII検出/マスク、MyNumber完全除外 |
+| | 監査ログ | 全操作記録、異常検知 |
+
+### 起動方法
+
+```bash
+# v3.0 企業級強化版
+uvicorn apps.faq_system.main_v3:app --reload --port 8003
+
+# v2.0 強化版
+uvicorn apps.faq_system.main_enhanced:app --reload --port 8002
+
+# v1.0 オリジナル版
+uvicorn apps.faq_system.main:app --reload --port 8001
+```
+
+### 詳細設計書
+
+詳細な設計と使用方法は [DESIGN.md](./DESIGN.md) を参照してください。
+
+---
+
+## v2.0 強化版
+
+強化版（`main_enhanced.py`）の機能：
 
 ### 新機能
 
@@ -15,16 +56,6 @@ AgentFlow フレームワーク級 Agent/サービスを使用した FAQ シス�
 | **引用表示** | 回答のソース/引用を明示表示 |
 | **チャート自動生成** | データから自動的にEChartsグラフを生成 |
 | **ギャップ分析** | 知識ベースの不足を自動検出 |
-
-### 起動方法
-
-```bash
-# v2.0 強化版
-uvicorn apps.faq_system.main_enhanced:app --reload --port 8002
-
-# v1.0 オリジナル版
-uvicorn apps.faq_system.main:app --reload --port 8001
-```
 
 ### 対応コンポーネント
 
@@ -241,6 +272,100 @@ GET /api/nodes/service
 1. **Pydantic で入出力スキーマを定義**
 2. **`_parse_input()` と `process()` を実装**
 3. **内部メソッドは `_` または `__` でプレフィックス**
+
+---
+
+## v3.0 クイックスタート
+
+### 社内FAQ検索
+
+```python
+from apps.faq_system.backend.agents import InternalKBAgent, InternalKBConfig
+
+# Agent 初期化
+config = InternalKBConfig(
+    conservative_mode=True,  # 規則類は保守モード
+    require_citation=True,   # 引用必須
+)
+agent = InternalKBAgent(config=config)
+
+# 質問実行
+result = await agent.run({
+    "question": "年次有給休暇は何日もらえますか？",
+    "user_context": {
+        "user_id": "user123",
+        "role": "employee",
+        "department": "営業部",
+    },
+})
+
+print(f"回答: {result['answer']}")
+print(f"信頼度: {result['confidence']}")
+print(f"引用: {result['citations']}")
+```
+
+### メンテナンス支援
+
+```python
+from apps.faq_system.backend.agents import MaintenanceAgent
+
+agent = MaintenanceAgent()
+
+# 仕様差分分析
+result = await agent.run({
+    "action": "full",
+    "old_document": old_spec,
+    "new_document": new_spec,
+})
+
+print(f"差分: {result['diffs']}")
+print(f"影響: {result['impact']}")
+print(f"Release Note: {result['deliverables']['release_note']}")
+```
+
+### データ分析
+
+```python
+from apps.faq_system.backend.agents import AnalyticsAgent
+
+agent = AnalyticsAgent()
+
+result = await agent.run({
+    "question": "今月の売上TOP10を教えてください",
+    "user_context": {"role": "analyst"},
+})
+
+print(f"回答: {result['answer']}")
+print(f"SQL: {result['sql']}")
+print(f"証拠チェーン: {result['evidence_chain']}")
+```
+
+### 術語辞書
+
+```python
+from apps.faq_system.backend.services import GlossaryService
+
+glossary = GlossaryService()
+
+# クエリ拡張（同義語展開）
+expanded = glossary.expand_query("有休申請")
+# ["有休申請", "年次有給休暇申請", "休暇申請", ...]
+```
+
+### APPI準拠（PII検出）
+
+```python
+from apps.faq_system.backend.security import APPIComplianceChecker
+
+checker = APPIComplianceChecker()
+
+# PII検出＆マスク
+text = "山田太郎のマイナンバーは123456789012です"
+masked = checker.mask_pii(text)
+# "山田太郎のマイナンバーは************です"
+```
+
+---
 
 ## ライセンス
 
