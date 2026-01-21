@@ -117,6 +117,22 @@ class AgentFlowSettings(BaseSettings):
     redis_url: str | None = Field(default=None, description="Redis URL")
 
     # ========================================
+    # 知識ストア設定（長期記憶）
+    # ========================================
+    knowledge_storage_path: str = Field(
+        default="memory/knowledge",
+        description="知識ストレージのパス"
+    )
+    knowledge_backend: str = Field(
+        default="auto",
+        description="知識ストアバックエンド (auto/memvid/memory)"
+    )
+    knowledge_auto_persist: bool = Field(
+        default=True,
+        description="知識の自動永続化を有効化"
+    )
+
+    # ========================================
     # ログ設定
     # ========================================
     log_level: str = Field(default="INFO", description="ログレベル")
@@ -222,6 +238,18 @@ class AgentFlowSettings(BaseSettings):
         if self.chroma_persist_dir:
             return {"backend": "chroma", "persist_dir": self.chroma_persist_dir, "collection": self.chroma_collection}
         return {"backend": "memory"}
+
+    def get_knowledge_config(self) -> dict[str, Any]:
+        """知識ストア設定を取得.
+
+        Returns:
+            知識ストア設定辞書（backend, storage_path, auto_persist）
+        """
+        return {
+            "backend": self.knowledge_backend,
+            "storage_path": self.knowledge_storage_path,
+            "auto_persist": self.knowledge_auto_persist,
+        }
 
     def configure_logging(self) -> None:
         """ログ設定を適用."""

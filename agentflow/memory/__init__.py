@@ -68,6 +68,26 @@ from agentflow.memory.enhanced_memory import (
     MemoryStats,
 )
 
+# NEW: Knowledge Store（Memvid長期知識記憶）
+from agentflow.memory.knowledge import (
+    # 主要API
+    get_knowledge_manager,
+    get_knowledge_store,
+    reset_knowledge_manager,
+    # マネージャー
+    KnowledgeManager,
+    # ストアインターフェース
+    KnowledgeStore,
+    # ストア実装
+    MemvidKnowledgeStore,
+    InMemoryKnowledgeStore,
+    is_memvid_available,
+    # 型定義
+    KnowledgeEntry,
+    KnowledgeSource,
+    # 注: SearchResult, SearchTypeはvector_storeで既に定義
+)
+
 __all__ = [
     # Main Manager（ユーザー向け主要API）
     "MemoryManager",
@@ -113,5 +133,23 @@ __all__ = [
     "DistilledKnowledge",
     "MemoryStats",
     "MemoryImportanceTracker",
+    # ==========================================================================
+    # NEW: Knowledge Store（Memvid長期知識記憶）
+    # ==========================================================================
+    # 主要API
+    "get_knowledge_manager",
+    "get_knowledge_store",
+    "reset_knowledge_manager",
+    # マネージャー
+    "KnowledgeManager",
+    # ストアインターフェース
+    "KnowledgeStore",
+    # ストア実装
+    "MemvidKnowledgeStore",
+    "InMemoryKnowledgeStore",
+    "is_memvid_available",
+    # 型定義
+    "KnowledgeEntry",
+    "KnowledgeSource",
 ]
 

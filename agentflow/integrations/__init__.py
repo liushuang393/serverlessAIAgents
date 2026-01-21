@@ -65,6 +65,19 @@ from agentflow.integrations.ticket_generator import (
     ServiceNowTicketProvider,
 )
 
+# ==========================================================================
+# NEW: Context Bridge（L0統合I/F）
+# ==========================================================================
+from agentflow.integrations.context_bridge import (
+    FlowContext,
+    ContextBridge,
+    InvocationResult,
+    SourceSystemType,
+    get_current_context,
+    set_current_context,
+    reset_context,
+)
+
 __all__ = [
     # FastAPI 統合
     "AgentRouter",
@@ -106,5 +119,15 @@ __all__ = [
     "InMemoryTicketProvider",
     "JiraTicketProvider",
     "ServiceNowTicketProvider",
+    # ==========================================================================
+    # Context Bridge（L0統合I/F）
+    # ==========================================================================
+    "FlowContext",
+    "ContextBridge",
+    "InvocationResult",
+    "SourceSystemType",
+    "get_current_context",
+    "set_current_context",
+    "reset_context",
 ]
 

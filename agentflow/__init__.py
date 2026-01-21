@@ -244,6 +244,27 @@ from agentflow.protocols.mcp_tool import (
     MCPToolResponse,
 )
 
+# =============================================================================
+# Knowledge Store（Memvid長期知識記憶）
+# =============================================================================
+from agentflow.memory.knowledge import (
+    # 主要API（推奨）
+    get_knowledge_manager,
+    get_knowledge_store,
+    reset_knowledge_manager,
+    # マネージャー
+    KnowledgeManager,
+    # ストアインターフェース
+    KnowledgeStore,
+    # ストア実装
+    MemvidKnowledgeStore,
+    InMemoryKnowledgeStore,
+    is_memvid_available,
+    # 型定義
+    KnowledgeEntry,
+    KnowledgeSource,
+)
+
 
 __version__ = "0.2.0"
 
@@ -285,6 +306,25 @@ __all__ = [
     "get_embedding",
     "reset_embedding",
     "EmbeddingProvider",
+
+    # =========================================================================
+    # Knowledge Store（Memvid長期知識記憶）
+    # =========================================================================
+    # 主要API
+    "get_knowledge_manager",
+    "get_knowledge_store",
+    "reset_knowledge_manager",
+    # マネージャー
+    "KnowledgeManager",
+    # ストアインターフェース
+    "KnowledgeStore",
+    # ストア実装
+    "MemvidKnowledgeStore",
+    "InMemoryKnowledgeStore",
+    "is_memvid_available",
+    # 型定義
+    "KnowledgeEntry",
+    "KnowledgeSource",
 
     # =========================================================================
     # Agent基底クラス

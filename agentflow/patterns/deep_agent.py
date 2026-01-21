@@ -44,6 +44,7 @@ from agentflow.patterns.coordinator import CoordinationPattern, CoordinatorBase
 from agentflow.patterns.shared_context import SharedContext
 from agentflow.protocols.mcp_client import MCPClient
 from agentflow.protocols.mcp_config import MCPConfig
+from agentflow.protocols.mcp_lazy_client import LazyMCPClient, ToolSearchResult
 from agentflow.providers.tool_provider import RegisteredTool, ToolProvider
 from agentflow.skills import Skill, SkillRegistry
 from agentflow.skills.engine import SkillEngine
@@ -1224,6 +1225,7 @@ class AgentPool:
         skill_registry: SkillRegistry | None = None,
         skill_engine: SkillEngine | None = None,
         mcp_config: MCPConfig | None = None,
+        enable_lazy_mcp: bool = True,
     ) -> None:
         """初期化.
 
@@ -1234,6 +1236,7 @@ class AgentPool:
             skill_registry: SkillRegistry インスタンス（Noneの場合は自動初期化）
             skill_engine: SkillEngine（動的 Skill 解析用）
             mcp_config: MCPサーバー設定（Noneの場合はMCP無効）
+            enable_lazy_mcp: MCP懒加載を有効にするか（デフォルト: True）
         """
         self._llm = llm_client
         self._agents: dict[str, AgentBlock] = predefined_agents or {}
@@ -1249,9 +1252,10 @@ class AgentPool:
         # Skillsレジストリ（SkillEngine があればその内部レジストリを使用）
         self._skills = skill_registry or (skill_engine.get_registry() if skill_engine else SkillRegistry())
 
-        # MCPクライアント（外部ツール統合用）
+        # MCPクライアント（外部ツール統合用、懒加載対応）
         self._mcp_config = mcp_config
-        self._mcp_client: MCPClient | None = None
+        self._enable_lazy_mcp = enable_lazy_mcp
+        self._mcp_client: MCPClient | LazyMCPClient | None = None
         self._mcp_connected = False
 
         # Agent種別ごとのデフォルトツール/スキル/MCPツール
@@ -1265,7 +1269,10 @@ class AgentPool:
         }
 
     async def connect_mcp(self) -> bool:
-        """MCPサーバーに接続.
+        """MCPサーバーに接続（懒加載対応）.
+
+        enable_lazy_mcp が True の場合、LazyMCPClient を使用して
+        ツールインデックスのみを初期ロードし、上下文 token を削減。
 
         Returns:
             接続成功したか
@@ -1275,10 +1282,30 @@ class AgentPool:
             return False
 
         try:
-            self._mcp_client = MCPClient(self._mcp_config)
+            # 懒加載を使用するか判定
+            use_lazy = self._enable_lazy_mcp and self._mcp_config.should_enable_lazy_loading()
+
+            if use_lazy:
+                self._mcp_client = LazyMCPClient(
+                    self._mcp_config,
+                    enable_lazy_loading=True,
+                )
+                self._logger.info("懒加載MCPクライアントを使用")
+            else:
+                self._mcp_client = MCPClient(self._mcp_config)
+                self._logger.info("通常MCPクライアントを使用")
+
             await self._mcp_client.connect()
             self._mcp_connected = True
             self._logger.info("MCPサーバーに接続しました")
+
+            # 懒加載モードの統計をログ
+            if use_lazy and isinstance(self._mcp_client, LazyMCPClient):
+                stats = self._mcp_client.get_stats()
+                self._logger.info(
+                    f"MCPツールインデックス: {stats['total_tools']} ツール登録済み"
+                )
+
             return True
         except Exception as e:
             self._logger.error(f"MCP接続エラー: {e}")
@@ -1294,6 +1321,8 @@ class AgentPool:
     def get_mcp_tools(self) -> list[dict[str, Any]]:
         """利用可能なMCPツール定義を取得.
 
+        懒加載モードの場合、ロード済みツールのみ返す。
+
         Returns:
             MCPツール定義リスト
         """
@@ -1301,12 +1330,85 @@ class AgentPool:
             return []
         return self._mcp_client.get_tool_definitions()
 
+    def get_mcp_tool_index(self) -> list[dict[str, str]]:
+        """MCPツールインデックス（軽量版）を取得.
+
+        懒加載モード専用。全ツールの名前と説明のみ含む軽量リスト。
+        LLM への system prompt に含めて検索の参考情報とする。
+
+        Returns:
+            ツールインデックスのリスト（軽量）
+        """
+        if not self._mcp_client or not self._mcp_connected:
+            return []
+
+        if isinstance(self._mcp_client, LazyMCPClient):
+            return self._mcp_client.get_tool_index()
+
+        # 通常クライアントの場合はインデックスに変換
+        return [
+            {
+                "uri": tool["function"]["name"],
+                "name": tool["function"]["name"].split("/")[-1],
+                "description": tool["function"].get("description", "")[:100],
+            }
+            for tool in self._mcp_client.get_tool_definitions()
+        ]
+
+    def get_mcp_tool_index_prompt(self) -> str:
+        """MCPツールインデックスのプロンプトを取得.
+
+        懒加載モード専用。LLM 向けのインデックスプロンプトを生成。
+
+        Returns:
+            ツールインデックスを含むプロンプト文字列
+        """
+        if isinstance(self._mcp_client, LazyMCPClient):
+            return self._mcp_client.get_tool_index_prompt()
+        return ""
+
+    def search_mcp_tools(self, query: str) -> ToolSearchResult:
+        """MCPツールを検索.
+
+        懒加載モード専用。Claude Code の MCPSearch 風のインターフェース。
+
+        Args:
+            query: 検索クエリ（キーワードまたは select:tool_name）
+
+        Returns:
+            ToolSearchResult: 検索結果
+        """
+        if not isinstance(self._mcp_client, LazyMCPClient):
+            self._logger.warning("懒加載モードでない場合、検索は使用できません")
+            return ToolSearchResult(entries=[], query=query)
+
+        return self._mcp_client.search_tools(query)
+
+    def load_mcp_tools(self, tool_uris: list[str]) -> list[dict[str, Any]]:
+        """指定したMCPツールの完全定義をロード.
+
+        懒加載モード専用。検索後に必要なツールのみをロード。
+
+        Args:
+            tool_uris: ロードするツール URI のリスト
+
+        Returns:
+            ロードされたツール定義のリスト
+        """
+        if not isinstance(self._mcp_client, LazyMCPClient):
+            self._logger.warning("懒加載モードでない場合、個別ロードは不要です")
+            return []
+
+        return self._mcp_client.load_tools(tool_uris)
+
     async def call_mcp_tool(
         self,
         tool_uri: str,
         arguments: dict[str, Any],
     ) -> dict[str, Any]:
         """MCPツールを呼び出す.
+
+        懒加載モードの場合、未ロードツールは自動的にロードされる。
 
         Args:
             tool_uri: ツールURI (例: "mcp://filesystem/read_file")
@@ -1318,6 +1420,23 @@ class AgentPool:
         if not self._mcp_client or not self._mcp_connected:
             return {"error": "MCP not connected"}
         return await self._mcp_client.call_tool(tool_uri, arguments)
+
+    def get_mcp_stats(self) -> dict[str, Any]:
+        """MCP懒加載の統計情報を取得.
+
+        Returns:
+            統計情報（ツール数、ロード済み数、token削減量など）
+        """
+        if isinstance(self._mcp_client, LazyMCPClient):
+            return self._mcp_client.get_stats()
+
+        # 通常クライアントの場合
+        return {
+            "total_tools": len(self._mcp_client.list_tools()) if self._mcp_client else 0,
+            "loaded_tools": len(self._mcp_client.list_tools()) if self._mcp_client else 0,
+            "load_ratio": 1.0,
+            "lazy_loading_enabled": False,
+        }
 
     def register_tool(self, tool: RegisteredTool) -> None:
         """ツールを登録.

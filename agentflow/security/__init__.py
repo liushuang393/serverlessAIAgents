@@ -97,6 +97,17 @@ from agentflow.security.ai_safety_guard import (
     SafetyLevel,
 )
 from agentflow.security.safety_mixin import SafetyMixin
+from agentflow.security.output_contracts import (
+    EvidenceType,
+    FallbackAction,
+    Evidence,
+    EvidenceRule,
+    FieldSchema,
+    OutputContract,
+    ValidationResult,
+    ContractValidator,
+    ContractRegistry,
+)
 
 __all__ = [
     # API Key
@@ -148,5 +159,15 @@ __all__ = [
     "SafetyLevel",
     # Safety Mixin (Apps統合用)
     "SafetyMixin",
+    # L5: Output Contracts（構造化出力規約）
+    "EvidenceType",
+    "FallbackAction",
+    "Evidence",
+    "EvidenceRule",
+    "FieldSchema",
+    "OutputContract",
+    "ValidationResult",
+    "ContractValidator",
+    "ContractRegistry",
 ]
 
