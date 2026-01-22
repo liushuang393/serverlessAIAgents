@@ -43,7 +43,14 @@ from agentflow.protocols.a2ui import (
 
 # MCP Client は遅延インポート (Pydantic 互換性問題を回避)
 from agentflow.protocols.mcp_client import MCPClient
-from agentflow.protocols.mcp_config import MCPConfig, MCPServerConfig
+from agentflow.protocols.mcp_config import LazyLoadingConfig, MCPConfig, MCPServerConfig
+
+# MCP Lazy Client - 懒加載対応クライアント (v0.4.0 追加)
+from agentflow.protocols.mcp_lazy_client import (
+    LazyMCPClient,
+    ToolIndexEntry,
+    ToolSearchResult,
+)
 
 # MCP Tool - 工具基底クラスとクライアント (v0.3.0 追加)
 from agentflow.protocols.mcp_tool import (
@@ -110,6 +117,11 @@ __all__ = [
     "MCPClient",
     "MCPConfig",
     "MCPServerConfig",
+    "LazyLoadingConfig",
+    # MCP Lazy Client (v0.4.0)
+    "LazyMCPClient",
+    "ToolIndexEntry",
+    "ToolSearchResult",
     # MCP Tool (v0.3.0)
     "MCPTool",
     "MCPToolClient",

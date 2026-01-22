@@ -1,0 +1,65 @@
+{
+  "entries": [
+    {
+      "id": "7e7bde43-63ef-4e6e-a1b8-728f7cc00d03",
+      "title": "タイトル1",
+      "body": "内容1",
+      "tags": [
+        "tag1"
+      ],
+      "source": "document",
+      "source_id": null,
+      "timestamp": "2026-01-21T08:43:42.396225+00:00",
+      "updated_at": null,
+      "importance": 0.5,
+      "access_count": 1,
+      "metadata": {}
+    },
+    {
+      "id": "b78a0a59-fe92-4e4b-8bf7-b05ef533000f",
+      "title": "タイトル2",
+      "body": "内容2",
+      "tags": [
+        "tag2"
+      ],
+      "source": "document",
+      "source_id": null,
+      "timestamp": "2026-01-21T08:43:42.396251+00:00",
+      "updated_at": null,
+      "importance": 0.5,
+      "access_count": 1,
+      "metadata": {}
+    },
+    {
+      "id": "eb73bf71-ba1e-4d31-96bf-b1f4541fe988",
+      "title": "FAQ質問1",
+      "body": "FAQ回答1",
+      "tags": [
+        "faq"
+      ],
+      "source": "document",
+      "source_id": null,
+      "timestamp": "2026-01-21T08:43:42.459107+00:00",
+      "updated_at": null,
+      "importance": 0.5,
+      "access_count": 1,
+      "metadata": {}
+    },
+    {
+      "id": "cffcd1d1-e1df-4351-8f7c-e518d7888ebc",
+      "title": "FAQ質問2",
+      "body": "FAQ回答2",
+      "tags": [
+        "faq"
+      ],
+      "source": "document",
+      "source_id": null,
+      "timestamp": "2026-01-21T08:43:42.459137+00:00",
+      "updated_at": null,
+      "importance": 0.5,
+      "access_count": 1,
+      "metadata": {}
+    }
+  ],
+  "saved_at": "2026-01-21T08:43:42.461349+00:00"
+}

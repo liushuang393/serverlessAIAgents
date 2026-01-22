@@ -187,9 +187,24 @@ GOOGLE_API_KEY=your-google-api-key-here
 # デバッグモード（オプション）
 # ============================================
 # DEBUG=true
+
+# ============================================
+# 知識ストア設定（オプション - 長期記憶機能）
+# ============================================
+# バックエンド選択:
+#   auto   - 自動検出（memvid-sdkがあれば使用、なければmemoryにフォールバック）
+#   memvid - Rust製高性能RAG（.mv2ファイル、セマンティック+BM25検索）
+#   memory - インメモリ実装（BM25検索、JSON永続化可能、依存なし）
+# KNOWLEDGE_BACKEND=auto
+
+# 知識データの保存先パス
+# KNOWLEDGE_STORAGE_PATH=memory/knowledge
+
+# 自動永続化（終了時に保存）
+# KNOWLEDGE_AUTO_PERSIST=true
 ```
 
-**重要**: 
+**重要**:
 - API キーは必ず `.env` ファイルに設定してください
 - `.env` ファイルは Git にコミットしないでください（既に `.gitignore` に含まれています）
 
@@ -444,6 +459,42 @@ python -m apps.decision_governance_engine.main --interactive
 ### Q4: 他のアプリ（market_trend_monitor など）も同じ手順ですか？
 
 **A:** 基本的に同じです。各アプリの `README.md` を確認してください。
+
+### Q5: 高性能な長期記憶（Memvid）を使うには？
+
+**A:** Memvid は Rust 製の高性能 RAG ライブラリです。以下の手順でインストール：
+
+```bash
+# Memvid オプション依存をインストール
+pip install agentflow[memvid]
+```
+
+インストール後、自動的に Memvid が使用されます。インストールされていない場合は、メモリ内実装（BM25 検索）にフォールバックします。
+
+**使用例：**
+
+```python
+from agentflow import get_knowledge_manager
+
+# 知識マネージャーを取得（環境に応じて自動選択）
+manager = get_knowledge_manager()
+await manager.start()
+
+# 知識を追加
+await manager.add(
+    content="FAQ: よくある質問の回答",
+    title="FAQ項目",
+    tags=["faq", "support"]
+)
+
+# 知識を検索
+results = await manager.query("質問内容")
+
+# プロンプト用コンテキスト生成
+context = manager.format_context(results)
+
+await manager.stop()
+```
 
 ---
 

@@ -62,6 +62,16 @@ class ActionType(str, Enum):
     CREATE_CHECKPOINT = "CREATE_CHECKPOINT"
     RESTORE_CHECKPOINT = "RESTORE_CHECKPOINT"
 
+    # ==========================================================================
+    # L2標準状態フィールド（Goal/Facts/Decisions）
+    # ==========================================================================
+    SET_GOAL = "SET_GOAL"
+    UPDATE_GOAL = "UPDATE_GOAL"
+    ADD_CONSTRAINT = "ADD_CONSTRAINT"
+    ADD_FACT = "ADD_FACT"
+    ADD_DECISION = "ADD_DECISION"
+    CLEAR_FACTS = "CLEAR_FACTS"
+
     # カスタム
     CUSTOM = "CUSTOM"
 
@@ -229,6 +239,103 @@ def restore_checkpoint(checkpoint_id: str) -> Action:
     )
 
 
+# ==========================================================================
+# L2標準状態フィールド用アクション
+# ==========================================================================
+def set_goal(
+    objective: str,
+    constraints: list[dict[str, Any]] | None = None,
+    success_criteria: list[str] | None = None,
+    priority: int = 1,
+    deadline: str | None = None,
+    context: dict[str, Any] | None = None,
+) -> Action:
+    """目標を設定するアクション."""
+    return create_action(
+        ActionType.SET_GOAL,
+        {
+            "objective": objective,
+            "constraints": constraints or [],
+            "success_criteria": success_criteria or [],
+            "priority": priority,
+            "deadline": deadline,
+            "context": context or {},
+        },
+    )
+
+
+def update_goal(updates: dict[str, Any]) -> Action:
+    """目標を更新するアクション."""
+    return create_action(ActionType.UPDATE_GOAL, {"updates": updates})
+
+
+def add_constraint(
+    constraint_type: str,
+    description: str,
+    value: Any = None,
+    is_hard: bool = True,
+) -> Action:
+    """制約を追加するアクション."""
+    return create_action(
+        ActionType.ADD_CONSTRAINT,
+        {
+            "type": constraint_type,
+            "description": description,
+            "value": value,
+            "is_hard": is_hard,
+        },
+    )
+
+
+def add_fact(
+    source: str,
+    source_name: str,
+    data: dict[str, Any],
+    confidence: float = 1.0,
+    metadata: dict[str, Any] | None = None,
+) -> Action:
+    """事実を追加するアクション."""
+    return create_action(
+        ActionType.ADD_FACT,
+        {
+            "source": source,
+            "source_name": source_name,
+            "data": data,
+            "confidence": confidence,
+            "metadata": metadata or {},
+        },
+    )
+
+
+def add_decision(
+    step: str,
+    decision_type: str,
+    choice: str,
+    reason: str,
+    alternatives: list[str] | None = None,
+    evidence_facts: list[str] | None = None,
+    confidence: float = 1.0,
+) -> Action:
+    """判断を追加するアクション."""
+    return create_action(
+        ActionType.ADD_DECISION,
+        {
+            "step": step,
+            "decision_type": decision_type,
+            "choice": choice,
+            "reason": reason,
+            "alternatives": alternatives or [],
+            "evidence_facts": evidence_facts or [],
+            "confidence": confidence,
+        },
+    )
+
+
+def clear_facts() -> Action:
+    """事実をクリアするアクション."""
+    return create_action(ActionType.CLEAR_FACTS, {})
+
+
 # エクスポート
 __all__ = [
     "ActionType",
@@ -250,4 +357,11 @@ __all__ = [
     "receive_approval",
     "create_checkpoint",
     "restore_checkpoint",
+    # L2標準状態フィールド
+    "set_goal",
+    "update_goal",
+    "add_constraint",
+    "add_fact",
+    "add_decision",
+    "clear_facts",
 ]

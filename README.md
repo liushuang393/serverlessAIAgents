@@ -474,6 +474,9 @@ conda activate agentflow
 
 # 依存関係をインストール（pyproject.toml から自動取得）
 pip install -e ".[dev]"
+
+# オプション: Memvid高性能長期記憶を使用する場合
+pip install -e ".[dev,memvid]"
 ```
 
 ---

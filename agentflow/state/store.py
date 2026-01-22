@@ -124,7 +124,10 @@ class GlobalStateStore:
         self._logger = logging.getLogger(__name__)
 
     def _create_initial_state(self) -> dict[str, Any]:
-        """初期状態を作成."""
+        """初期状態を作成.
+
+        L2標準状態フィールド（goal/facts/decisions）を含む。
+        """
         return {
             "execution": {
                 "id": None,
@@ -144,6 +147,19 @@ class GlobalStateStore:
                 "pending_approvals": [],
             },
             "checkpoints": [],
+            # =================================================================
+            # L2標準状態フィールド（Goal/Facts/Decisions）
+            # =================================================================
+            "goal": {
+                "objective": None,
+                "constraints": [],
+                "success_criteria": [],
+                "priority": 1,
+                "deadline": None,
+                "context": {},
+            },
+            "facts": [],  # 収集した事実リスト
+            "decisions": [],  # 判断履歴リスト
             "metadata": {
                 "created_at": datetime.now().isoformat(),
                 "version": 1,
@@ -297,6 +313,64 @@ class GlobalStateStore:
             checkpoint_id = payload.get("checkpoint_id")
             if checkpoint_id:
                 self._restore_snapshot(checkpoint_id)
+
+        # ======================================================================
+        # L2標準状態フィールド（Goal/Facts/Decisions）
+        # ======================================================================
+        elif action.type == ActionType.SET_GOAL:
+            self._state["goal"] = {
+                "objective": payload.get("objective"),
+                "constraints": payload.get("constraints", []),
+                "success_criteria": payload.get("success_criteria", []),
+                "priority": payload.get("priority", 1),
+                "deadline": payload.get("deadline"),
+                "context": payload.get("context", {}),
+            }
+
+        elif action.type == ActionType.UPDATE_GOAL:
+            updates = payload.get("updates", {})
+            if self._state.get("goal"):
+                self._state["goal"].update(updates)
+
+        elif action.type == ActionType.ADD_CONSTRAINT:
+            constraint = {
+                "type": payload.get("type"),
+                "description": payload.get("description"),
+                "value": payload.get("value"),
+                "is_hard": payload.get("is_hard", True),
+                "added_at": datetime.now().isoformat(),
+            }
+            if self._state.get("goal"):
+                self._state["goal"]["constraints"].append(constraint)
+
+        elif action.type == ActionType.ADD_FACT:
+            fact = {
+                "id": f"fact-{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+                "source": payload.get("source"),
+                "source_name": payload.get("source_name"),
+                "data": payload.get("data"),
+                "confidence": payload.get("confidence", 1.0),
+                "metadata": payload.get("metadata", {}),
+                "timestamp": datetime.now().isoformat(),
+            }
+            self._state["facts"].append(fact)
+
+        elif action.type == ActionType.ADD_DECISION:
+            decision = {
+                "id": f"dec-{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+                "step": payload.get("step"),
+                "decision_type": payload.get("decision_type"),
+                "choice": payload.get("choice"),
+                "reason": payload.get("reason"),
+                "alternatives": payload.get("alternatives", []),
+                "evidence_facts": payload.get("evidence_facts", []),
+                "confidence": payload.get("confidence", 1.0),
+                "timestamp": datetime.now().isoformat(),
+            }
+            self._state["decisions"].append(decision)
+
+        elif action.type == ActionType.CLEAR_FACTS:
+            self._state["facts"] = []
 
         # メタデータを更新
         self._state["metadata"]["version"] += 1

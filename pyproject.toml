@@ -64,6 +64,11 @@ studio = [
     "websockets>=13.0",
 ]
 
+# Memvid長期知識記憶（高性能RAG）
+memvid = [
+    "memvid-sdk>=2.0.0",  # Rust製高性能RAGライブラリ（Python SDK）
+]
+
 dev = [
     # Testing
     "pytest>=8.0.0",
@@ -94,7 +99,7 @@ docs = [
 ]
 
 all = [
-    "agentflow[dev,docs]",
+    "agentflow[dev,docs,memvid]",
 ]
 
 [project.scripts]
