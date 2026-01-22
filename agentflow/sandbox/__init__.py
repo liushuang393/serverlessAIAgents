@@ -2,18 +2,35 @@
 """AgentFlow Sandbox モジュール.
 
 セキュアなコード実行サンドボックスを提供。
-Agent で sandbox_provider を設定すると、execute_python Tool が利用可能。
+Daytonaの設計思想を参考に、ライフサイクル管理とワークスペース機能を追加。
 
 サポート環境:
 - microsandbox: microVM ベース（デフォルト・推奨）
 - docker: コンテナベース
 - e2b: クラウド SaaS
 
-使用例（Agent 設定）:
-    >>> @agent
-    ... class AnalysisAgent:
-    ...     sandbox_provider = "microsandbox"  # サンドボックス有効化
-    ...     # execute_python Tool が自動的に利用可能に
+基本使用例:
+    >>> from agentflow.sandbox import get_sandbox
+    >>> sandbox = get_sandbox(provider="docker")
+    >>> result = await sandbox.execute("print('Hello')")
+
+ライフサイクル管理（Daytonaスタイル）:
+    >>> from agentflow.sandbox import ManagedSandbox
+    >>> async with ManagedSandbox.create(provider="docker") as sandbox:
+    ...     result = await sandbox.execute("print('Hello')")
+    ...     print(sandbox.state)  # SandboxState.STARTED
+
+ワークスペース使用:
+    >>> from agentflow.sandbox import Workspace
+    >>> async with Workspace.create(name="my-project") as ws:
+    ...     await ws.write_file("main.py", b"print('Hello')")
+    ...     result = await ws.run_file("main.py")
+
+マネージャー使用:
+    >>> from agentflow.sandbox import get_sandbox_manager
+    >>> manager = get_sandbox_manager()
+    >>> sandbox = await manager.create(provider="docker")
+    >>> await sandbox.start()
 
 環境変数:
     MICROSANDBOX_SERVER: microsandbox サーバー URL
@@ -24,8 +41,11 @@ import logging
 
 from agentflow.sandbox.base import (
     ExecutionResult,
+    ResourceLimits,
+    ResourceUsage,
     SandboxConfig,
     SandboxProvider,
+    SandboxState,
 )
 from agentflow.sandbox.codeact_executor import (
     ActionResult,
@@ -33,6 +53,22 @@ from agentflow.sandbox.codeact_executor import (
     ActionType,
     CodeActExecutor,
     ExecutionStatus,
+)
+from agentflow.sandbox.lifecycle import (
+    EventType,
+    ManagedSandbox,
+    SandboxEvent,
+)
+from agentflow.sandbox.manager import (
+    SandboxManager,
+    get_sandbox_manager,
+)
+from agentflow.sandbox.workspace import (
+    FileInfo,
+    Workspace,
+    WorkspaceManager,
+    WorkspaceState,
+    get_workspace_manager,
 )
 
 logger = logging.getLogger(__name__)
@@ -77,10 +113,26 @@ def get_sandbox(
 __all__ = [
     # プロバイダ取得
     "get_sandbox",
-    # 基底クラス
+    # 基底クラス・型
     "SandboxProvider",
     "SandboxConfig",
     "ExecutionResult",
+    "SandboxState",
+    "ResourceUsage",
+    "ResourceLimits",
+    # ライフサイクル管理（Daytonaスタイル）
+    "ManagedSandbox",
+    "SandboxEvent",
+    "EventType",
+    # マネージャー
+    "SandboxManager",
+    "get_sandbox_manager",
+    # ワークスペース
+    "Workspace",
+    "WorkspaceState",
+    "WorkspaceManager",
+    "get_workspace_manager",
+    "FileInfo",
     # CodeAct執行器
     "CodeActExecutor",
     "ActionResult",

@@ -19,8 +19,10 @@ from rich.text import Text
 from agentflow.cli.commands.create import create
 from agentflow.cli.commands.init import init
 from agentflow.cli.commands.marketplace import marketplace
+from agentflow.cli.commands.sandbox import sandbox
 from agentflow.cli.commands.skills import skills
 from agentflow.cli.commands.template import template
+from agentflow.cli.commands.workspace import workspace
 from agentflow.core.schemas import SchemaLoader
 
 
@@ -543,8 +545,10 @@ def handle_error(error: Exception, verbose: bool = False) -> None:
 cli.add_command(init)
 cli.add_command(create)
 cli.add_command(marketplace)
+cli.add_command(sandbox)
 cli.add_command(skills)
 cli.add_command(template)
+cli.add_command(workspace)
 
 
 def main() -> None:

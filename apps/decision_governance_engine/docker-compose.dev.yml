@@ -17,7 +17,7 @@ services:
     build:
       context: ../..
       dockerfile: apps/decision_governance_engine/Dockerfile
-    command: ["uvicorn", "apps.decision_governance_engine.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uvicorn", "apps.decision_governance_engine.api:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
     volumes:
       # ソースコードをマウント（リアルタイム反映）
       - ../../agentflow:/app/agentflow

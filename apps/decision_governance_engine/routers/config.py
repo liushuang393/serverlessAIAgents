@@ -6,6 +6,10 @@
     - PUT /api/config/rag/{agent_id}: Agent RAG設定更新
     - POST /api/config/rag/{agent_id}/test: RAG接続テスト
     - GET /api/config/agents: 全Agent設定取得
+    - GET /api/config/weights: 評価権重設定取得
+    - GET /api/config/weights/overview: 設定概要取得
+    - GET /api/config/weights/thresholds: 閾値設定取得
+    - POST /api/config/weights/preset: プリセット切り替え
 """
 
 import logging
@@ -13,6 +17,11 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+
+from apps.decision_governance_engine.config import (
+    get_config,
+    reload_config,
+)
 
 logger = logging.getLogger("decision_api.config")
 
@@ -232,3 +241,185 @@ def get_rag_config(agent_id: str) -> AgentRAGConfig | None:
     """特定AgentのRAG設定を取得（他モジュール向け）."""
     _init_default_configs()
     return _rag_configs.get(agent_id)
+
+
+# ========================================
+# 評価パラメータ設定 API
+# ========================================
+
+class PresetSummary(BaseModel):
+    """プリセット概要."""
+
+    id: str
+    name_zh: str
+    name_ja: str
+    name_en: str
+    description: str
+
+
+class DimensionSummary(BaseModel):
+    """評価次元概要."""
+
+    id: str
+    name_zh: str
+    name_ja: str
+    name_en: str
+    description: str
+    inverse: bool = False
+
+
+class WeightsResponse(BaseModel):
+    """権重レスポンス."""
+
+    active_preset: str
+    weights: dict[str, int]
+    total: int
+
+
+class ThresholdsResponse(BaseModel):
+    """閾値レスポンス."""
+
+    active_preset: str
+    go: dict[str, Any]
+    pilot: dict[str, Any]
+    delay: dict[str, Any]
+
+
+class ConfigOverviewResponse(BaseModel):
+    """設定概要レスポンス."""
+
+    version: str
+    active_preset: str
+    available_presets: list[PresetSummary]
+    dimensions: list[DimensionSummary]
+
+
+class SwitchPresetRequest(BaseModel):
+    """プリセット切り替えリクエスト."""
+
+    preset_id: str = Field(..., description="切り替え先プリセット ID")
+
+
+class SwitchPresetResponse(BaseModel):
+    """プリセット切り替えレスポンス."""
+
+    success: bool
+    previous_preset: str
+    current_preset: str
+    weights: dict[str, int]
+
+
+@router.get("/weights/overview", response_model=ConfigOverviewResponse)
+async def get_weights_overview() -> ConfigOverviewResponse:
+    """
+    設定概要を取得.
+
+    Returns:
+        ConfigOverviewResponse: バージョン、アクティブプリセット、利用可能プリセット一覧
+    """
+    config = get_config()
+
+    presets = [
+        PresetSummary(
+            id=p.id,
+            name_zh=p.name_zh,
+            name_ja=p.name_ja,
+            name_en=p.name_en,
+            description=p.description,
+        )
+        for p in config.presets.values()
+    ]
+
+    dimensions = [
+        DimensionSummary(
+            id=d.id,
+            name_zh=d.name_zh,
+            name_ja=d.name_ja,
+            name_en=d.name_en,
+            description=d.description,
+            inverse=d.inverse,
+        )
+        for d in config.dimensions.values()
+    ]
+
+    return ConfigOverviewResponse(
+        version=config.version,
+        active_preset=config.active_preset,
+        available_presets=presets,
+        dimensions=dimensions,
+    )
+
+
+@router.get("/weights", response_model=WeightsResponse)
+async def get_weights() -> WeightsResponse:
+    """
+    現在の権重設定を取得.
+
+    Returns:
+        WeightsResponse: アクティブプリセットの権重
+    """
+    config = get_config()
+    weights = config.get_weights()
+
+    return WeightsResponse(
+        active_preset=config.active_preset,
+        weights=weights,
+        total=sum(weights.values()),
+    )
+
+
+@router.get("/weights/thresholds", response_model=ThresholdsResponse)
+async def get_thresholds() -> ThresholdsResponse:
+    """
+    現在の閾値設定を取得.
+
+    Returns:
+        ThresholdsResponse: GO/PILOT/DELAY 閾値
+    """
+    config = get_config()
+    thresholds = config.get_thresholds()
+
+    return ThresholdsResponse(
+        active_preset=config.active_preset,
+        go=thresholds.go.model_dump(),
+        pilot=thresholds.pilot.model_dump(),
+        delay=thresholds.delay.model_dump(),
+    )
+
+
+@router.post("/weights/preset", response_model=SwitchPresetResponse)
+async def switch_preset(request: SwitchPresetRequest) -> SwitchPresetResponse:
+    """
+    プリセットを切り替え.
+
+    Note:
+        現在はメモリ内のみ変更。永続化は別途実装が必要。
+
+    Args:
+        request: 切り替え先プリセット ID
+
+    Returns:
+        SwitchPresetResponse: 切り替え結果
+    """
+    config = get_config()
+    previous = config.active_preset
+
+    if request.preset_id not in config.presets:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown preset: {request.preset_id}. "
+            f"Available: {list(config.presets.keys())}",
+        )
+
+    # メモリ内で切り替え（永続化は別途）
+    config.active_preset = request.preset_id
+    new_weights = config.get_weights()
+
+    logger.info(f"Preset switched: {previous} -> {request.preset_id}")
+
+    return SwitchPresetResponse(
+        success=True,
+        previous_preset=previous,
+        current_preset=request.preset_id,
+        weights=new_weights,
+    )

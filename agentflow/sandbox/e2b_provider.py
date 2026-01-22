@@ -2,6 +2,7 @@
 """E2B サンドボックスプロバイダ.
 
 e2b.dev クラウドサービスを使用したサンドボックス実行。
+Daytonaスタイルの生命周期管理を統合。
 
 前提条件:
     - E2B_API_KEY 環境変数が設定されていること
@@ -19,12 +20,14 @@ from __future__ import annotations
 import logging
 import os
 import time
+from datetime import UTC, datetime
 from typing import Any
 
 from agentflow.sandbox.base import (
     ExecutionResult,
     SandboxConfig,
     SandboxProvider,
+    SandboxState,
 )
 
 logger = logging.getLogger(__name__)
@@ -34,6 +37,11 @@ class E2BProvider(SandboxProvider):
     """E2B クラウドサンドボックスプロバイダ.
 
     https://e2b.dev のクラウドサービスを使用。
+    Daytonaスタイルの生命周期追跡を含む。
+
+    Attributes:
+        state: 現在の状態
+        execution_count: 実行回数
     """
 
     def __init__(self, config: SandboxConfig | None = None) -> None:
@@ -60,6 +68,13 @@ class E2BProvider(SandboxProvider):
                 "https://e2b.dev で API キーを取得してください。"
             )
 
+        # 生命周期追跡（Daytonaスタイル）
+        self._state = SandboxState.CREATED
+        self._created_at = datetime.now(UTC)
+        self._last_activity_at = self._created_at
+        self._execution_count = 0
+        self._total_execution_ms = 0.0
+
         # SDK インポートチェック
         try:
             from e2b_code_interpreter import Sandbox  # noqa: F401
@@ -72,6 +87,29 @@ class E2BProvider(SandboxProvider):
             )
 
         logger.info("E2B provider initialized")
+
+    @property
+    def state(self) -> SandboxState:
+        """現在の状態."""
+        return self._state
+
+    @property
+    def execution_count(self) -> int:
+        """実行回数."""
+        return self._execution_count
+
+    def get_stats(self) -> dict[str, Any]:
+        """統計情報を取得."""
+        return {
+            "provider": "e2b",
+            "state": self._state.value,
+            "sdk_available": self._sdk_available,
+            "api_key_set": bool(self._api_key),
+            "created_at": self._created_at.isoformat(),
+            "last_activity_at": self._last_activity_at.isoformat(),
+            "execution_count": self._execution_count,
+            "total_execution_ms": self._total_execution_ms,
+        }
 
     async def execute(
         self,
@@ -106,7 +144,12 @@ class E2BProvider(SandboxProvider):
                 error="E2B_API_KEY が設定されていません",
             )
 
+        # 状態を STARTED に遷移（初回実行時）
+        if self._state == SandboxState.CREATED:
+            self._state = SandboxState.STARTED
+
         start_time = time.time()
+        self._last_activity_at = datetime.now(UTC)
 
         try:
             from e2b_code_interpreter import Sandbox
@@ -132,6 +175,11 @@ class E2BProvider(SandboxProvider):
 
                 duration_ms = (time.time() - start_time) * 1000
 
+                # 実行統計を更新
+                self._execution_count += 1
+                self._total_execution_ms += duration_ms
+                self._last_activity_at = datetime.now(UTC)
+
                 return ExecutionResult(
                     stdout=output.strip(),
                     stderr=error,
@@ -145,10 +193,17 @@ class E2BProvider(SandboxProvider):
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
+            self._execution_count += 1
+            self._total_execution_ms += duration_ms
             logger.error(f"E2B execution error: {e}")
             return ExecutionResult(
                 exit_code=1,
                 duration_ms=duration_ms,
                 error=f"{type(e).__name__}: {e}",
             )
+
+    async def close(self) -> None:
+        """リソース解放."""
+        self._state = SandboxState.STOPPED
+        logger.info("E2B provider closed")
 

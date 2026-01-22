@@ -130,6 +130,29 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         # AI安全防護初期化（v3.1）
         self.init_safety(enabled=enable_safety)
 
+    async def run(self, input_data: dict[str, Any]) -> Any:
+
+        """DecisionEngine を実行（入力キー互換）.
+
+        目的:
+            既存呼び出しの `question` を `raw_question` に正規化し、
+            CognitiveGateAgent 等の入力スキーマ（raw_question 必須）を満たす。
+
+        Args:
+            input_data: 入力 dict。`raw_question` 推奨。互換のため `question` のみでも可。
+
+        Returns:
+            PipelineEngine.run() の戻り値（DecisionReport または拒否時 dict）。
+        """
+
+        # 入力キー互換（question -> raw_question）
+        if "raw_question" not in input_data and "question" in input_data:
+            normalized = dict(input_data)
+            normalized["raw_question"] = normalized.get("question")
+            input_data = normalized
+
+        return await super().run(input_data)
+
     async def _setup_stages(self) -> None:
         """ステージを動的に設定.
 

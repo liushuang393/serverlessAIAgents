@@ -4,15 +4,20 @@
 PipelineEngine パターンを使用した決策処理 API。
 
 エンドポイント:
-    - POST /api/decision: 同期処理
+    - POST /api/decision: 同期処理（履歴自動保存）
     - GET /api/decision/stream: SSEストリーム付き処理
+    - GET /api/decision/history: 履歴照会
+    - GET /api/decision/history/{request_id}: 個別履歴取得
     - WebSocket /ws/decision: リアルタイム通知
 """
 
 import logging
+import time
+from datetime import datetime
 from typing import Any
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -23,8 +28,15 @@ from apps.decision_governance_engine.schemas.input_schemas import (
     TimelineConstraint,
 )
 from apps.decision_governance_engine.schemas.output_schemas import DecisionReport
+from apps.decision_governance_engine.services.decision_contract_builder import (
+    DecisionGovContractBuilder,
+)
 
 logger = logging.getLogger("decision_api.decision")
+
+# 履歴保存フラグ（環境変数で制御可能）
+import os
+ENABLE_HISTORY = os.getenv("ENABLE_DECISION_HISTORY", "true").lower() == "true"
 
 router = APIRouter(tags=["決策処理"])
 
@@ -118,22 +130,85 @@ def build_input_dict(question: str, constraints: ConstraintSet) -> dict:
 
 
 @router.post("/api/decision", response_model=DecisionAPIResponse | RejectionResponse)
-async def process_decision(req: DecisionAPIRequest) -> DecisionAPIResponse | RejectionResponse:
+async def process_decision(
+    req: DecisionAPIRequest,
+    format: str = Query(
+        default="legacy",
+        description="レスポンス形式（legacy: DecisionReport 互換 / v1: 字段级契约）",
+    ),
+) -> DecisionAPIResponse | RejectionResponse:
     """同期的に意思決定を処理.
 
-    PipelineEngine.run() を使用。
+    PipelineEngine.run() を使用。履歴は自動保存。
     """
+    start_time = time.time()
+    request_id = uuid4()
+
     engine = get_engine()
     constraints = build_constraints(req)
     inputs = build_input_dict(req.question, constraints)
     result = await engine.run(inputs)
 
+    processing_time_ms = int((time.time() - start_time) * 1000)
+
     # 拒否の場合
     if isinstance(result, dict) and result.get("status") == "rejected":
         return RejectionResponse(**result)
 
-    # 成功の場合
+    # 成功の場合 - 履歴保存
+    decision_role = "PILOT"  # デフォルト
+    confidence = None
+    results_dict: dict[str, Any] = {}
+
     if isinstance(result, DecisionReport):
+        report_data = result.model_dump()
+        decision_role = _infer_decision_role(report_data)
+        confidence = report_data.get("confidence")
+        results_dict = {
+            "fa": report_data.get("fa_analysis"),
+            "shu": report_data.get("shu_analysis"),
+            "qi": report_data.get("qi_analysis"),
+            "dao": report_data.get("dao_analysis"),
+            "review": report_data.get("review"),
+        }
+    elif isinstance(result, dict):
+        decision_role = _infer_decision_role(result)
+        confidence = result.get("confidence")
+        results_dict = {
+            "fa": result.get("fa_analysis"),
+            "shu": result.get("shu_analysis"),
+            "qi": result.get("qi_analysis"),
+            "dao": result.get("dao_analysis"),
+            "review": result.get("review"),
+        }
+
+    # 非同期で履歴保存（失敗しても処理は継続）
+    if ENABLE_HISTORY:
+        try:
+            from apps.decision_governance_engine.repositories import DecisionRepository
+            repo = DecisionRepository()
+            await repo.save(
+                request_id=request_id,
+                question=req.question,
+                decision_role=decision_role,
+                mode="STANDARD",
+                confidence=confidence,
+                results=results_dict,
+                processing_time_ms=processing_time_ms,
+            )
+            logger.info(f"決策履歴保存完了: {request_id}")
+        except Exception as e:
+            logger.warning(f"決策履歴保存失敗（処理は継続）: {e}")
+
+    # レスポンス生成
+    if isinstance(result, DecisionReport):
+        if format == "v1":
+            contract = DecisionGovContractBuilder.build_from_report(result)
+            return DecisionAPIResponse(
+                status="success",
+                report_id=result.report_id,
+                data=contract.model_dump(),
+            )
         return DecisionAPIResponse(
             status="success",
             report_id=result.report_id,
@@ -141,7 +216,139 @@ async def process_decision(req: DecisionAPIRequest) -> DecisionAPIResponse | Rej
         )
 
     report_id = result.get("report_id", "") if isinstance(result, dict) else ""
+    if format == "v1":
+        contract = DecisionGovContractBuilder.build_from_report(result)
+        return DecisionAPIResponse(status="success", report_id=report_id, data=contract.model_dump())
     return DecisionAPIResponse(status="success", report_id=report_id, data=result)
+
+
+def _infer_decision_role(data: dict[str, Any]) -> str:
+    """レポートデータから決策結論を推論.
+
+    Args:
+        data: レポートデータ
+
+    Returns:
+        GO/NO_GO/DELAY/PILOT
+    """
+    # 明示的な decision_role があればそれを使用
+    if "decision_role" in data:
+        return data["decision_role"]
+
+    # recommendation から推論
+    recommendation = data.get("recommendation", "").lower()
+    if "立項" in recommendation or "go" in recommendation or "実施" in recommendation:
+        return "GO"
+    if "不立項" in recommendation or "no_go" in recommendation or "中止" in recommendation:
+        return "NO_GO"
+    if "延後" in recommendation or "delay" in recommendation or "延期" in recommendation:
+        return "DELAY"
+
+    # デフォルトは PILOT（最も安全）
+    return "PILOT"
+
+
+# ========================================
+# 履歴照会エンドポイント
+# ========================================
+
+class HistoryListResponse(BaseModel):
+    """履歴一覧レスポンス."""
+    status: str = "success"
+    total: int = 0
+    items: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class HistoryDetailResponse(BaseModel):
+    """履歴詳細レスポンス."""
+    status: str = "success"
+    data: dict[str, Any] = Field(default_factory=dict)
+
+
+@router.get("/api/decision/history", response_model=HistoryListResponse)
+async def get_decision_history(
+    limit: int = Query(default=20, ge=1, le=100, description="取得件数"),
+    decision_role: str | None = Query(default=None, description="決策結果フィルタ（GO/NO_GO/DELAY/PILOT）"),
+    mode: str | None = Query(default=None, description="モードフィルタ（FAST/STANDARD/AUDIT）"),
+) -> HistoryListResponse:
+    """決策履歴一覧を取得.
+
+    Args:
+        limit: 取得件数上限
+        decision_role: 決策結果でフィルタ
+        mode: モードでフィルタ
+
+    Returns:
+        履歴一覧
+    """
+    if not ENABLE_HISTORY:
+        return HistoryListResponse(status="disabled", total=0, items=[])
+
+    try:
+        from apps.decision_governance_engine.repositories import DecisionRepository
+        repo = DecisionRepository()
+        records = await repo.find_recent(limit=limit, decision_role=decision_role, mode=mode)
+
+        items = [
+            {
+                "id": str(r.id),
+                "request_id": str(r.request_id),
+                "question": r.question[:100] + "..." if len(r.question) > 100 else r.question,
+                "decision_role": r.decision_role,
+                "confidence": float(r.confidence) if r.confidence else None,
+                "mode": r.mode,
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+            }
+            for r in records
+        ]
+        return HistoryListResponse(status="success", total=len(items), items=items)
+    except Exception as e:
+        logger.warning(f"履歴取得失敗（DB未接続の可能性）: {e}")
+        return HistoryListResponse(status="error", total=0, items=[])
+
+
+@router.get("/api/decision/history/{request_id}", response_model=HistoryDetailResponse)
+async def get_decision_detail(request_id: str) -> HistoryDetailResponse:
+    """決策履歴詳細を取得.
+
+    Args:
+        request_id: リクエストID（UUID）
+
+    Returns:
+        履歴詳細
+    """
+    if not ENABLE_HISTORY:
+        raise HTTPException(status_code=503, detail="履歴機能は無効です")
+
+    try:
+        from apps.decision_governance_engine.repositories import DecisionRepository
+        repo = DecisionRepository()
+        record = await repo.find_by_request_id(UUID(request_id))
+
+        if not record:
+            raise HTTPException(status_code=404, detail="履歴が見つかりません")
+
+        data = {
+            "id": str(record.id),
+            "request_id": str(record.request_id),
+            "question": record.question,
+            "decision_role": record.decision_role,
+            "confidence": float(record.confidence) if record.confidence else None,
+            "mode": record.mode,
+            "fa_result": record.fa_result,
+            "shu_result": record.shu_result,
+            "qi_result": record.qi_result,
+            "summary_bullets": record.summary_bullets,
+            "warnings": record.warnings,
+            "processing_time_ms": record.processing_time_ms,
+            "created_at": record.created_at.isoformat() if record.created_at else None,
+        }
+        return HistoryDetailResponse(status="success", data=data)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.warning(f"履歴詳細取得失敗: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/api/decision/stream")

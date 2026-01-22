@@ -1,0 +1,253 @@
+# ==============================================================================
+# 決策評価パラメータ設定ファイル
+# ==============================================================================
+# 目的: 决策权重、阈值、评价维度等の設定を一元管理
+# 画面から切り替え可能なプリセット（增长优先/风险优先/效率优先）を提供
+#
+# 変更履歴:
+#   2026-01-18: 初版作成（增长优先モードをデフォルトに）
+# ==============================================================================
+
+# バージョン（設定変更時にインクリメント）
+version: "1.0.0"
+
+# 現在のアクティブプリセット（画面から切り替え可能）
+active_preset: "growth_first"
+
+# ==============================================================================
+# 評価次元（8次元固定、v1）
+# ==============================================================================
+dimensions:
+  user_impact:
+    id: "user_impact"
+    name_zh: "用户价值"
+    name_ja: "ユーザー価値"
+    name_en: "User Impact"
+    description: "用户能获得的实际价值，解决痛点的程度"
+    min_score: 1
+    max_score: 5
+
+  growth_potential:
+    id: "growth_potential"
+    name_zh: "增长/收益潜力"
+    name_ja: "成長/収益ポテンシャル"
+    name_en: "Growth/Revenue Potential"
+    description: "市场规模、收入增长、用户增长潜力"
+    min_score: 1
+    max_score: 5
+
+  timing_window:
+    id: "timing_window"
+    name_zh: "时间窗口"
+    name_ja: "タイミング/窓口"
+    name_en: "Timing/Window"
+    description: "市场时机、竞争窗口、先发优势"
+    min_score: 1
+    max_score: 5
+
+  channel_reach:
+    id: "channel_reach"
+    name_zh: "渠道可达性"
+    name_ja: "チャネル到達性"
+    name_en: "Channel Reachability"
+    description: "目标用户的触达难度、获客成本"
+    min_score: 1
+    max_score: 5
+
+  cost:
+    id: "cost"
+    name_zh: "成本"
+    name_ja: "コスト"
+    name_en: "Build + Run Cost"
+    description: "开发成本 + 运维成本"
+    min_score: 1
+    max_score: 5
+    inverse: true  # 分数越低越好
+
+  risk:
+    id: "risk"
+    name_zh: "风险"
+    name_ja: "リスク"
+    name_en: "Market/Execution/Legal Risk"
+    description: "市场风险、执行风险、法规风险"
+    min_score: 1
+    max_score: 5
+    inverse: true
+
+  reversibility:
+    id: "reversibility"
+    name_zh: "可逆性"
+    name_ja: "可逆性"
+    name_en: "Reversibility"
+    description: "决策失败后的恢复难度"
+    min_score: 1
+    max_score: 5
+
+  dependencies:
+    id: "dependencies"
+    name_zh: "依赖复杂度"
+    name_ja: "依存複雑度"
+    name_en: "Dependencies Complexity"
+    description: "外部依赖、技术债务、团队依赖"
+    min_score: 1
+    max_score: 5
+    inverse: true
+
+# ==============================================================================
+# プリセット定義（3種類）
+# ==============================================================================
+presets:
+  # --------------------------------------------------------------------------
+  # 增长优先（Growth First）- デフォルト
+  # --------------------------------------------------------------------------
+  growth_first:
+    id: "growth_first"
+    name_zh: "增长优先"
+    name_ja: "成長優先"
+    name_en: "Growth First"
+    description: "收益/窗口权重大，适合快速扩张期"
+    
+    # 权重配置（总和 = 100）
+    weights:
+      user_impact: 18
+      growth_potential: 24
+      timing_window: 14
+      channel_reach: 14
+      cost: 8
+      risk: 10
+      reversibility: 7
+      dependencies: 5
+    
+    # GO/NO_GO/DELAY/PILOT 阈值
+    thresholds:
+      go:
+        min_score: 3.8           # 加权平均 >= 3.8
+        min_confidence: 0.70     # 置信度 >= 70%
+        min_evidence_coverage: 0.6
+        hard_veto_dimensions: ["risk"]  # 风险 >= 4 则硬否决
+        hard_veto_score: 4
+      
+      pilot:
+        min_score: 3.0
+        min_confidence: 0.45
+        min_evidence_coverage: 0.4
+      
+      delay:
+        min_score: 2.5
+        min_confidence: 0.30
+        min_evidence_coverage: 0.2
+      
+      # 低于 delay 阈值则为 NO_GO
+
+  # --------------------------------------------------------------------------
+  # 风险优先（Risk First）
+  # --------------------------------------------------------------------------
+  risk_first:
+    id: "risk_first"
+    name_zh: "风险优先"
+    name_ja: "リスク優先"
+    name_en: "Risk First"
+    description: "合规/可逆性权重大，适合合规敏感行业"
+    
+    weights:
+      user_impact: 12
+      growth_potential: 14
+      timing_window: 8
+      channel_reach: 8
+      cost: 12
+      risk: 22
+      reversibility: 14
+      dependencies: 10
+    
+    thresholds:
+      go:
+        min_score: 4.0
+        min_confidence: 0.80
+        min_evidence_coverage: 0.7
+        hard_veto_dimensions: ["risk", "reversibility"]
+        hard_veto_score: 3
+      pilot:
+        min_score: 3.2
+        min_confidence: 0.55
+        min_evidence_coverage: 0.5
+      delay:
+        min_score: 2.8
+        min_confidence: 0.40
+        min_evidence_coverage: 0.3
+
+  # --------------------------------------------------------------------------
+  # 效率优先（Efficiency First）
+  # --------------------------------------------------------------------------
+  efficiency_first:
+    id: "efficiency_first"
+    name_zh: "效率优先"
+    name_ja: "効率優先"
+    name_en: "Efficiency First"
+    description: "成本/依赖权重大，适合资源受限期"
+
+    weights:
+      user_impact: 14
+      growth_potential: 16
+      timing_window: 10
+      channel_reach: 10
+      cost: 20
+      risk: 12
+      reversibility: 8
+      dependencies: 10
+
+    thresholds:
+      go:
+        min_score: 3.6
+        min_confidence: 0.65
+        min_evidence_coverage: 0.55
+        hard_veto_dimensions: ["cost", "dependencies"]
+        hard_veto_score: 4
+      pilot:
+        min_score: 2.8
+        min_confidence: 0.40
+        min_evidence_coverage: 0.35
+      delay:
+        min_score: 2.2
+        min_confidence: 0.25
+        min_evidence_coverage: 0.2
+
+# ==============================================================================
+# モード別タイムアウト設定
+# ==============================================================================
+mode_settings:
+  fast:
+    timeout_seconds: 5
+    max_sources: 5
+    max_tokens: 2000
+    parallel_agents: 2
+
+  standard:
+    timeout_seconds: 15
+    max_sources: 15
+    max_tokens: 8000
+    parallel_agents: 4
+
+  audit:
+    timeout_seconds: 60
+    max_sources: 30
+    max_tokens: 20000
+    parallel_agents: 6
+
+# ==============================================================================
+# 証拠信頼度スコアリング設定
+# ==============================================================================
+evidence_reliability:
+  domain_scores:
+    gov: 0.95      # .gov ドメイン
+    edu: 0.90      # .edu ドメイン
+    org: 0.75      # .org ドメイン
+    com: 0.60      # .com ドメイン
+    default: 0.50
+
+  freshness_decay:
+    days_30: 1.0
+    days_90: 0.9
+    days_180: 0.7
+    days_365: 0.5
+    older: 0.3
+

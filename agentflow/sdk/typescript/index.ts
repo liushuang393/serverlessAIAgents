@@ -29,3 +29,18 @@ export type {
   StreamConfig,
 } from './agentflow-client';
 
+// サンドボックス型定義（Daytonaスタイル）
+export type {
+  SandboxState,
+  ResourceUsage,
+  ResourceLimits,
+  SandboxConfig,
+  ExecutionResult,
+  SandboxEventType,
+  SandboxEvent,
+  ManagedSandbox,
+  FileInfo,
+  Workspace,
+  WorkspaceState,
+} from './types/sandbox';
+

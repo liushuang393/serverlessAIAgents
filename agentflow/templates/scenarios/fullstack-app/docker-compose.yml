@@ -1,0 +1,135 @@
+# -*- coding: utf-8 -*-
+# {{ app_name }} Docker Compose 設定
+#
+# 使用方法:
+#   1. .env ファイルを設定（ポート自動設定: python -m agentflow.tools.port_manager {{ app_name }}）
+#   2. docker-compose up -d
+#
+# ポートは .env から自動読み込み（衝突回避）
+
+services:
+  # ===========================================
+  # メイン PostgreSQL データベース
+  # ===========================================
+  postgres-main:
+    image: postgres:16-alpine
+    container_name: {{ app_name }}_postgres_main
+    restart: unless-stopped
+    ports:
+      - "${DB_MAIN_PORT:-{{ db_port }}}:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME:-{{ db_name }}}
+      POSTGRES_USER: ${DB_USER:-{{ db_user }}}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-{{ db_password }}}
+      TZ: Asia/Tokyo
+    volumes:
+      - postgres_main_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-{{ db_user }}} -d ${DB_NAME:-{{ db_name }}}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - {{ app_name }}_network
+
+{% if use_history_db %}
+  # ===========================================
+  # 履歴用 PostgreSQL（長期保存・分析用）
+  # ===========================================
+  postgres-history:
+    image: postgres:16-alpine
+    container_name: {{ app_name }}_postgres_history
+    restart: unless-stopped
+    ports:
+      - "${DB_HISTORY_PORT:-{{ db_port + 2 }}}:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME:-{{ db_name }}}_history
+      POSTGRES_USER: ${DB_USER:-{{ db_user }}}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-{{ db_password }}}
+      TZ: Asia/Tokyo
+    volumes:
+      - postgres_history_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-{{ db_user }}} -d ${DB_NAME:-{{ db_name }}}_history"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - {{ app_name }}_network
+{% endif %}
+
+{% if redis_enabled %}
+  # ===========================================
+  # Redis キャッシュ
+  # ===========================================
+  redis:
+    image: redis:7-alpine
+    container_name: {{ app_name }}_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - {{ app_name }}_network
+{% endif %}
+
+  # ===========================================
+  # API サーバー
+  # ===========================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: {{ app_name }}_api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-{{ api_port }}}:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${DB_USER:-{{ db_user }}}:${DB_PASSWORD:-{{ db_password }}}@postgres-main:5432/${DB_NAME:-{{ db_name }}}
+{% if redis_enabled %}
+      REDIS_URL: redis://redis:6379/0
+{% endif %}
+      APP_ENV: ${APP_ENV:-development}
+      HOST: ${HOST:-localhost}
+    depends_on:
+      postgres-main:
+        condition: service_healthy
+{% if redis_enabled %}
+      redis:
+        condition: service_healthy
+{% endif %}
+    volumes:
+      - .:/app:ro
+    networks:
+      - {{ app_name }}_network
+
+# ===========================================
+# ボリューム定義
+# ===========================================
+volumes:
+  postgres_main_data:
+    name: {{ app_name }}_postgres_main_data
+{% if use_history_db %}
+  postgres_history_data:
+    name: {{ app_name }}_postgres_history_data
+{% endif %}
+{% if redis_enabled %}
+  redis_data:
+    name: {{ app_name }}_redis_data
+{% endif %}
+
+# ===========================================
+# ネットワーク定義
+# ===========================================
+networks:
+  {{ app_name }}_network:
+    driver: bridge
+

@@ -157,7 +157,7 @@ graph TB
 | 🤖 **Agent層** | AgentBlock, @agent, Custom Agent | Agent実装（基底クラス/デコレータ/カスタム） | 実装方式に応じて選択 |
 | 🛠️ **ツール層** | @tool, MCP Tools, Skills, Built-in | ツール統合（メソッド/MCP/自動進化/内蔵） | 機能要件に応じて選択 |
 | 🔌 **Provider層** | LLMProvider, DataProvider, EventProvider, ToolProvider | **統一アクセスインターフェース**（約定優先） | 自動選択（デフォルト値あり） |
-| 🌐 **プロトコル層** | MCP, A2A, AG-UI, A2UI | 4つの標準プロトコル | 統合要件に応じて自動適用 |
+| 🌐 **プロトコル層** | MCP, A2A, AG-UI, A2UI | 4つの標準プロトコル | 統合要件に応じて自動適用 | skills
 | 💾 **インフラ層** | LLM Services, DB, Vector DB, Cache | 外部サービス・データストア | 環境変数で自動検出 |
 
 **データフロー例**:
@@ -729,6 +729,51 @@ AgentFlow は3つの操作方法を提供します。用途に応じて最適な
 
 ---
 
+## 🛠️ App 開発手順
+
+新規 App を作成する際の標準手順:
+
+### Step 1: テンプレートから基盤生成
+
+```bash
+# 対話モードで新規 App 作成
+python -m agentflow.cli template generate fullstack-app apps/my_new_app -i
+
+# またはパラメータ指定
+python -m agentflow.cli template generate fullstack-app apps/my_new_app \
+  -p app_name=my_new_app \
+  -p app_title="My New App" \
+  -p db_name=my_new_app_db
+```
+
+### Step 2: ポート自動設定（衝突回避）
+
+```bash
+# ポート管理ツールで .env を自動生成
+python -m agentflow.tools.port_manager my_new_app apps/my_new_app
+
+# 結果: 他の App と衝突しないポートが自動割り当て
+# DB_MAIN_PORT=5435, API_PORT=8001, etc.
+```
+
+### Step 3: コンテナ起動 & マイグレーション
+
+```bash
+cd apps/my_new_app
+docker-compose up -d
+alembic upgrade head
+```
+
+### Step 4: 開発開始
+
+```bash
+uvicorn api:app --reload --port ${API_PORT}
+```
+
+詳細は [ポート管理ガイド](docs/PORT_MANAGEMENT.md) を参照。
+
+---
+
 ## 📚 ドキュメント
 
 | ドキュメント | 説明 |
@@ -739,6 +784,7 @@ AgentFlow は3つの操作方法を提供します。用途に応じて最適な
 | [Skills ガイド](docs/guide-skills.md) | 自動進化システム |
 | [内蔵 Skills ガイド](docs/guide-builtin-skills.md) | DB/決済/認証/デプロイ（NEW） |
 | [LLM ルーター](docs/guide-llm-router.md) | マルチモデル切替（NEW） |
+| [ポート管理](docs/PORT_MANAGEMENT.md) | App ポート自動管理（NEW） |
 | [アーキテクチャ](docs/architecture.md) | 設計思想・構成 |
 | [プロトコル](docs/protocols.md) | MCP/A2A/AG-UI/A2UI |
 | [API](docs/api.md) | API リファレンス |

@@ -40,6 +40,7 @@ from apps.decision_governance_engine.routers.auth import router as auth_router
 from apps.decision_governance_engine.routers.config import router as config_router
 from apps.decision_governance_engine.routers.decision import router as decision_router
 from apps.decision_governance_engine.routers.knowledge import router as knowledge_router
+from apps.decision_governance_engine.routers.product_launch import router as product_launch_router
 from apps.decision_governance_engine.routers.report import router as report_router
 from apps.decision_governance_engine.routers.workflow import router as workflow_router
 
@@ -92,6 +93,7 @@ app.include_router(auth_router)
 app.include_router(config_router)
 app.include_router(decision_router)
 app.include_router(knowledge_router)
+app.include_router(product_launch_router)
 app.include_router(report_router)
 app.include_router(workflow_router)
 

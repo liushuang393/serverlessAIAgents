@@ -174,6 +174,23 @@ class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
                 suggested_rephrase="例：「SaaS市場に新規参入すべきか？予算5000万円、12ヶ月以内の判断が必要」",
             )
 
+        # Step 2.5: 受理可能パターンの高速判定（LLM未設定でも安定して分類する）
+        #
+        # 注意:
+        # - LLMが無い環境（ユニットテスト/ローカル実行）でも、意思決定系の代表パターンは
+        #   ルールベースでカテゴリ付与できるようにする。
+        # - ここでマッチした場合は「意思決定課題」と見做して受理する。
+        for pattern, category in self.ACCEPTANCE_PATTERNS:
+            if re.search(pattern, question, re.IGNORECASE):
+                return GatekeeperOutput(
+                    is_acceptable=True,
+                    category=category,
+                    confidence=0.85,
+                    rejection_reason=None,
+                    rejection_message=None,
+                    suggested_rephrase=None,
+                )
+
         # Step 3: LLMによる企業新事業関連性チェック
         relevance_result = await self._check_business_relevance(question)
 

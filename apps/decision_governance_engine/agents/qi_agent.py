@@ -2,7 +2,11 @@
 """QiAgent - 技術実装Agent（器）.
 
 実行計画を技術的な実装方針に変換する。
-LLM必須。LLMなしの場合はエラーを返す。
+
+注意:
+    - 通常は LLM を利用して詳細化する。
+    - ただし、テスト/ローカル環境などで LLM が未設定の場合でもパイプライン全体を
+      破綻させないため、最低限のルールベース・フォールバックを返す。
 """
 
 import logging
@@ -59,12 +63,23 @@ class QiAgent(ResilientAgent[QiInput, QiOutput]):
         return QiInput(**input_data)
 
     async def process(self, input_data: QiInput) -> QiOutput:
-        """技術実装方針を策定（LLM必須）."""
-        if not self._llm:
-            raise RuntimeError("QiAgent requires LLM client")
+        """技術実装方針を策定.
+
+        I/O:
+            - Input: ShuAgent の出力（フェーズ） + 技術制約
+            - Output: 実装要素/推奨ツール/統合ポイント等
+
+        注意:
+            - LLM が利用できない場合は、最低限のデフォルト出力を返す（例外は投げない）。
+        """
 
         shu_result = input_data.shu_result
         tech_constraints = input_data.tech_constraints
+
+        if not self._llm:
+            self._logger.warning("QiAgent: LLM not available, returning default output")
+            return self._create_default_output(shu_result)
+
 
         phases_info = "\n".join(
             f"Phase {p.phase_number}: {p.name} ({p.duration}) - {', '.join(p.actions)}"

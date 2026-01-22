@@ -1,0 +1,39 @@
+# -*- coding: utf-8 -*-
+# {{ app_name }} Python 依存パッケージ
+
+# Web フレームワーク
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+python-multipart>=0.0.6
+
+# データベース
+sqlalchemy[asyncio]>=2.0.0
+asyncpg>=0.29.0
+psycopg2-binary>=2.9.9
+alembic>=1.13.0
+
+# バリデーション・設定
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+pyyaml>=6.0
+
+{% if redis_enabled %}
+# キャッシュ
+redis>=5.0.0
+{% endif %}
+
+# ユーティリティ
+httpx>=0.25.0
+orjson>=3.9.0
+
+# テスト
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# 開発ツール
+black>=23.0.0
+ruff>=0.1.0
+mypy>=1.5.0
+

@@ -34,6 +34,13 @@ from apps.decision_governance_engine.schemas.output_schemas import (
     DecisionReport,
     ExecutiveSummary,
 )
+from apps.decision_governance_engine.schemas.contract_schemas import (
+    DecisionGovResponseV1,
+    DecisionRole,
+    DecisionMode,
+    EvidenceItem,
+    Claim,
+)
 
 __all__ = [
     # Input schemas
@@ -63,5 +70,11 @@ __all__ = [
     # Output schemas
     "DecisionReport",
     "ExecutiveSummary",
+    # Contract schemas
+    "DecisionGovResponseV1",
+    "DecisionRole",
+    "DecisionMode",
+    "EvidenceItem",
+    "Claim",
 ]
 

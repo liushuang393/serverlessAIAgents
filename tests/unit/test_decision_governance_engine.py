@@ -475,3 +475,66 @@ class TestPDFGenerator:
         assert len(result) > 0
         if not generator._has_reportlab:
             assert b"<html" in result or b"<!DOCTYPE" in result
+
+
+class TestDecisionGovContractV1:
+    """字段级契约 v1 の生成テスト."""
+
+    def test_build_contract_v1_decision_role_go(self) -> None:
+        """PASS + success_probability 高 -> GO."""
+        from apps.decision_governance_engine.services.decision_contract_builder import (
+            DecisionGovContractBuilder,
+        )
+
+        report = DecisionReport(
+            report_id="CONTRACT-001",
+            original_question="テスト質問",
+            dao={"problem_type": "TRADE_OFF", "essence": "本質", "immutable_constraints": [], "hidden_assumptions": []},
+            fa={
+                "recommended_paths": [
+                    {"path_id": "A", "name": "案A", "description": "", "pros": [], "cons": [], "success_probability": 0.8}
+                ],
+                "rejected_paths": [],
+                "decision_criteria": [],
+            },
+            shu={"phases": [], "first_action": "", "dependencies": []},
+            qi={"implementations": [], "tool_recommendations": [], "integration_points": [], "technical_debt_warnings": []},
+            review={"overall_verdict": "PASS", "findings": []},
+            executive_summary=ExecutiveSummary(
+                one_line_decision="案Aを選択",
+                recommended_action="実行",
+                key_risks=[],
+                first_step="",
+                estimated_impact="",
+            ),
+        )
+
+        contract = DecisionGovContractBuilder.build_from_report(report)
+        assert contract.schema_version == "dgov.response.v1"
+        assert contract.decision_role.value == "GO"
+        assert contract.report_id == "CONTRACT-001"
+
+    def test_build_contract_v1_decision_role_no_go_on_reject(self) -> None:
+        """REJECT -> NO_GO."""
+        from apps.decision_governance_engine.services.decision_contract_builder import (
+            DecisionGovContractBuilder,
+        )
+
+        report = DecisionReport(
+            report_id="CONTRACT-REJECT-001",
+            dao={"problem_type": "TRADE_OFF", "essence": "本質", "immutable_constraints": [], "hidden_assumptions": []},
+            fa={"recommended_paths": [], "rejected_paths": [], "decision_criteria": []},
+            shu={"phases": [], "first_action": "", "dependencies": []},
+            qi={"implementations": [], "tool_recommendations": [], "integration_points": [], "technical_debt_warnings": []},
+            review={"overall_verdict": "REJECT", "findings": []},
+            executive_summary=ExecutiveSummary(
+                one_line_decision="",
+                recommended_action="",
+                key_risks=[],
+                first_step="",
+                estimated_impact="",
+            ),
+        )
+        contract = DecisionGovContractBuilder.build_from_report(report)
+        assert contract.decision_role.value == "NO_GO"
+

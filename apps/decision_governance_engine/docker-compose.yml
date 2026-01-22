@@ -1,20 +1,107 @@
 # ==============================================================================
 # Decision Governance Engine - Docker Compose
 # ==============================================================================
-# フロントエンド（Nginx）+ バックエンド（FastAPI）統合起動
+# PostgreSQL x2（メイン/履歴） + Redis + バックエンド + フロントエンド
+#
+# ポート設定:
+#   1. .env を作成（自動生成: python -m agentflow.tools.port_manager decision_governance_engine）
+#   2. または下記デフォルト値を使用
 #
 # 使用方法:
 #   開発（ホットリロード）:
-#     docker-compose up
+#     docker-compose up -d
+#
+#   DB のみ起動:
+#     docker-compose up -d postgres-main postgres-history redis
 #
 #   本番（イメージビルド）:
 #     docker-compose -f docker-compose.yml -f docker-compose.prod.yml up --build
 #
 #   停止:
 #     docker-compose down
+#
+#   データ永続化解除（ボリューム削除）:
+#     docker-compose down -v
 # ==============================================================================
 
 services:
+  # ---------------------------------------------------------------------------
+  # PostgreSQL メインDB（決策履歴・ユーザー管理）
+  # ---------------------------------------------------------------------------
+  postgres-main:
+    image: postgres:16-alpine
+    container_name: dge-postgres-main
+    ports:
+      - "${DB_MAIN_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dge}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dge_password}
+      POSTGRES_DB: ${POSTGRES_DB:-decision_governance}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_main_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dge} -d ${POSTGRES_DB:-decision_governance}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - dge-network
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL 履歴DB（長期保存・分析用）
+  # ---------------------------------------------------------------------------
+  postgres-history:
+    image: postgres:16-alpine
+    container_name: dge-postgres-history
+    ports:
+      - "${DB_HISTORY_PORT:-5434}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_HISTORY_USER:-dge_history}
+      POSTGRES_PASSWORD: ${POSTGRES_HISTORY_PASSWORD:-dge_history_password}
+      POSTGRES_DB: ${POSTGRES_HISTORY_DB:-decision_history}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_history_data:/var/lib/postgresql/data
+      - ./db/init-history:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_HISTORY_USER:-dge_history} -d ${POSTGRES_HISTORY_DB:-decision_history}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - dge-network
+
+  # ---------------------------------------------------------------------------
+  # Redis（キャッシュ・セッション・リアルタイム通知）
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: dge-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - dge-network
+
   # ---------------------------------------------------------------------------
   # バックエンド: FastAPI + Uvicorn
   # ---------------------------------------------------------------------------
@@ -24,7 +111,7 @@ services:
       dockerfile: apps/decision_governance_engine/Dockerfile
     container_name: dge-backend
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     environment:
       # LLM 設定（.env から読み込み）
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -33,12 +120,23 @@ services:
       # アプリ設定
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - ENABLE_RAG=${ENABLE_RAG:-true}
+      # データベース設定
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-dge}:${POSTGRES_PASSWORD:-dge_password}@postgres-main:5432/${POSTGRES_DB:-decision_governance}
+      - DATABASE_HISTORY_URL=postgresql+asyncpg://${POSTGRES_HISTORY_USER:-dge_history}:${POSTGRES_HISTORY_PASSWORD:-dge_history_password}@postgres-history:5432/${POSTGRES_HISTORY_DB:-decision_history}
+      - REDIS_URL=redis://redis:6379/0
     volumes:
       # 開発時: ソースコードをマウント（ホットリロード用）
       - ../../agentflow:/app/agentflow:ro
       - .:/app/apps/decision_governance_engine:ro
       # 知識ベース
       - ./knowledge:/app/apps/decision_governance_engine/knowledge:ro
+    depends_on:
+      postgres-main:
+        condition: service_healthy
+      postgres-history:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
       interval: 30s
@@ -57,11 +155,11 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=
-        - VITE_DEBUG_MODE=false
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:${API_PORT:-8000}}
+        - VITE_DEBUG_MODE=${VITE_DEBUG_MODE:-false}
     container_name: dge-frontend
     ports:
-      - "80:80"
+      - "${FRONTEND_PORT:-80}:80"
     depends_on:
       backend:
         condition: service_healthy
@@ -74,6 +172,17 @@ services:
     restart: unless-stopped
     networks:
       - dge-network
+
+# ---------------------------------------------------------------------------
+# ボリューム（データ永続化）
+# ---------------------------------------------------------------------------
+volumes:
+  postgres_main_data:
+    driver: local
+  postgres_history_data:
+    driver: local
+  redis_data:
+    driver: local
 
 # ---------------------------------------------------------------------------
 # ネットワーク

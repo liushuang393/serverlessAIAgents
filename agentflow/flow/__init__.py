@@ -93,6 +93,12 @@ from agentflow.flow.service_nodes import (
     get_all_service_node_definitions,
 )
 
+# サンドボックスノード（Daytonaスタイル）
+from agentflow.flow.sandbox_node import (
+    SandboxNode,
+    WorkspaceNode,
+)
+
 
 __all__ = [
     # エントリ関数
@@ -130,5 +136,8 @@ __all__ = [
     "SuggestionNode",
     "FAQNode",
     "get_all_service_node_definitions",
+    # サンドボックスノード
+    "SandboxNode",
+    "WorkspaceNode",
 ]
 

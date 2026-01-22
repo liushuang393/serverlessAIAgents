@@ -2,7 +2,7 @@
 """Docker サンドボックスプロバイダ.
 
 Docker コンテナを使用したサンドボックス実行。
-開発・テスト環境向け。
+開発・テスト環境向け。Daytonaスタイルの生命周期管理を統合。
 
 前提条件:
     - Docker がインストールされていること
@@ -21,13 +21,16 @@ import asyncio
 import logging
 import tempfile
 import time
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from agentflow.sandbox.base import (
     ExecutionResult,
+    ResourceUsage,
     SandboxConfig,
     SandboxProvider,
+    SandboxState,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,13 +40,60 @@ class DockerProvider(SandboxProvider):
     """Docker サンドボックスプロバイダ.
 
     Docker コンテナで Python コードを実行。
+    Daytonaスタイルの生命周期追跡を含む。
+
+    Attributes:
+        state: 現在の状態
+        resource_usage: リソース使用状況
+        execution_count: 実行回数
     """
 
     def __init__(self, config: SandboxConfig | None = None) -> None:
         """初期化."""
         super().__init__(config)
         self._image = config.image if config else "python:3.13-slim"
+
+        # 生命周期追跡（Daytonaスタイル）
+        self._state = SandboxState.CREATED
+        self._created_at = datetime.now(UTC)
+        self._last_activity_at = self._created_at
+        self._execution_count = 0
+        self._total_execution_ms = 0.0
+        self._last_resource_usage: ResourceUsage | None = None
+
         logger.info(f"Docker provider initialized: image={self._image}")
+
+    @property
+    def state(self) -> SandboxState:
+        """現在の状態."""
+        return self._state
+
+    @property
+    def execution_count(self) -> int:
+        """実行回数."""
+        return self._execution_count
+
+    @property
+    def resource_usage(self) -> ResourceUsage | None:
+        """最新のリソース使用状況."""
+        return self._last_resource_usage
+
+    def get_stats(self) -> dict[str, Any]:
+        """統計情報を取得."""
+        return {
+            "provider": "docker",
+            "state": self._state.value,
+            "image": self._image,
+            "created_at": self._created_at.isoformat(),
+            "last_activity_at": self._last_activity_at.isoformat(),
+            "execution_count": self._execution_count,
+            "total_execution_ms": self._total_execution_ms,
+            "avg_execution_ms": (
+                self._total_execution_ms / self._execution_count
+                if self._execution_count > 0
+                else 0.0
+            ),
+        }
 
     async def execute(
         self,
@@ -66,8 +116,13 @@ class DockerProvider(SandboxProvider):
         Returns:
             ExecutionResult
         """
+        # 状態を STARTED に遷移（初回実行時）
+        if self._state == SandboxState.CREATED:
+            self._state = SandboxState.STARTED
+
         start_time = time.time()
         effective_timeout = timeout or self._config.timeout
+        self._last_activity_at = datetime.now(UTC)
 
         try:
             # 一時ディレクトリにコードを保存
@@ -137,6 +192,11 @@ class DockerProvider(SandboxProvider):
 
             duration_ms = (time.time() - start_time) * 1000
 
+            # 実行統計を更新
+            self._execution_count += 1
+            self._total_execution_ms += duration_ms
+            self._last_activity_at = datetime.now(UTC)
+
             return ExecutionResult(
                 stdout=stdout.decode("utf-8", errors="replace").strip(),
                 stderr=stderr.decode("utf-8", errors="replace").strip(),
@@ -146,10 +206,17 @@ class DockerProvider(SandboxProvider):
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
+            self._execution_count += 1
+            self._total_execution_ms += duration_ms
             logger.error(f"Docker execution error: {e}")
             return ExecutionResult(
                 exit_code=1,
                 duration_ms=duration_ms,
                 error=f"{type(e).__name__}: {e}",
             )
+
+    async def close(self) -> None:
+        """リソース解放."""
+        self._state = SandboxState.STOPPED
+        logger.info("Docker provider closed")
 

@@ -2,7 +2,7 @@
 """Microsandbox プロバイダ.
 
 セルフホスト可能な microsandbox を使用したサンドボックス実行。
-microVM ベースの強力な隔離を提供。
+microVM ベースの強力な隔離を提供。Daytonaスタイルの生命周期管理を統合。
 
 前提条件:
     - microsandbox サーバーが起動していること
@@ -24,12 +24,15 @@ from __future__ import annotations
 import logging
 import os
 import time
+from datetime import UTC, datetime
 from typing import Any
 
 from agentflow.sandbox.base import (
     ExecutionResult,
+    ResourceUsage,
     SandboxConfig,
     SandboxProvider,
+    SandboxState,
 )
 
 logger = logging.getLogger(__name__)
@@ -40,9 +43,12 @@ class MicrosandboxProvider(SandboxProvider):
 
     microVM ベースのセキュアなサンドボックス。
     https://github.com/zerocore-ai/microsandbox
+    Daytonaスタイルの生命周期追跡を含む。
 
     Attributes:
         server_url: microsandbox サーバー URL
+        state: 現在の状態
+        execution_count: 実行回数
     """
 
     def __init__(self, config: SandboxConfig | None = None) -> None:
@@ -63,6 +69,13 @@ class MicrosandboxProvider(SandboxProvider):
             else os.getenv("MICROSANDBOX_SERVER", "http://localhost:5555")
         )
 
+        # 生命周期追跡（Daytonaスタイル）
+        self._state = SandboxState.CREATED
+        self._created_at = datetime.now(UTC)
+        self._last_activity_at = self._created_at
+        self._execution_count = 0
+        self._total_execution_ms = 0.0
+
         # SDK インポートチェック
         try:
             import microsandbox  # noqa: F401
@@ -75,6 +88,29 @@ class MicrosandboxProvider(SandboxProvider):
             )
 
         logger.info(f"Microsandbox provider initialized: {self._server_url}")
+
+    @property
+    def state(self) -> SandboxState:
+        """現在の状態."""
+        return self._state
+
+    @property
+    def execution_count(self) -> int:
+        """実行回数."""
+        return self._execution_count
+
+    def get_stats(self) -> dict[str, Any]:
+        """統計情報を取得."""
+        return {
+            "provider": "microsandbox",
+            "state": self._state.value,
+            "server_url": self._server_url,
+            "sdk_available": self._sdk_available,
+            "created_at": self._created_at.isoformat(),
+            "last_activity_at": self._last_activity_at.isoformat(),
+            "execution_count": self._execution_count,
+            "total_execution_ms": self._total_execution_ms,
+        }
 
     async def execute(
         self,
@@ -103,8 +139,12 @@ class MicrosandboxProvider(SandboxProvider):
                 error="microsandbox SDK がインストールされていません",
             )
 
+        # 状態を STARTED に遷移（初回実行時）
+        if self._state == SandboxState.CREATED:
+            self._state = SandboxState.STARTED
+
         start_time = time.time()
-        effective_timeout = timeout or self._config.timeout
+        self._last_activity_at = datetime.now(UTC)
 
         try:
             from microsandbox import PythonSandbox
@@ -134,6 +174,11 @@ class MicrosandboxProvider(SandboxProvider):
 
             duration_ms = (time.time() - start_time) * 1000
 
+            # 実行統計を更新
+            self._execution_count += 1
+            self._total_execution_ms += duration_ms
+            self._last_activity_at = datetime.now(UTC)
+
             return ExecutionResult(
                 stdout=output.strip() if output else "",
                 stderr="",
@@ -143,6 +188,8 @@ class MicrosandboxProvider(SandboxProvider):
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
+            self._execution_count += 1
+            self._total_execution_ms += duration_ms
             logger.error(f"Microsandbox execution error: {e}")
             return ExecutionResult(
                 stderr=str(e),
@@ -153,6 +200,6 @@ class MicrosandboxProvider(SandboxProvider):
 
     async def close(self) -> None:
         """リソース解放."""
-        # microsandbox は async with で自動解放されるため、特に何もしない
-        pass
+        self._state = SandboxState.STOPPED
+        logger.info("Microsandbox provider closed")
 
