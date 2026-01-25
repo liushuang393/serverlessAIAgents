@@ -113,7 +113,7 @@ jobs:
             --cov-fail-under=${{ inputs.coverage-threshold }}
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           file: ${{ inputs.working-directory }}/coverage.xml
           flags: unittests
