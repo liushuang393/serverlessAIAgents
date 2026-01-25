@@ -1,0 +1,125 @@
+# ==============================================================================
+# Decision Governance Engine - CI/CD ワークフロー
+# ==============================================================================
+# 使用方法:
+#   1. GitHub リポジトリの Settings > Secrets に必要な認証情報を設定
+#   2. デプロイしたいプラットフォームのジョブのコメントを解除
+# ==============================================================================
+name: Decision Governance Engine CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "apps/decision_governance_engine/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/decision_governance_engine/**"
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: "デプロイ先を選択"
+        required: false
+        default: "none"
+        type: choice
+        options:
+          - none
+          - gcp-cloudrun
+          - railway
+          - flyio
+
+env:
+  APP_NAME: decision-governance-engine
+  WORKING_DIR: apps/decision_governance_engine
+
+jobs:
+  # ==========================================================================
+  # CI: テスト・Lint
+  # ==========================================================================
+  ci:
+    name: CI (Lint & Test)
+    uses: ./.github/workflows/reusable-python-ci.yml
+    with:
+      working-directory: apps/decision_governance_engine
+      python-version: "3.13"
+      coverage-threshold: 80
+
+  # ==========================================================================
+  # セキュリティスキャン
+  # ==========================================================================
+  security:
+    name: Security Scan
+    needs: ci
+    uses: ./.github/workflows/reusable-security-scan.yml
+    with:
+      working-directory: apps/decision_governance_engine
+      scan-type: "python"
+
+  # ==========================================================================
+  # Docker ビルド (コンテナベースのプラットフォーム用)
+  # ==========================================================================
+  docker:
+    name: Docker Build
+    needs: ci
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    uses: ./.github/workflows/reusable-docker-build.yml
+    with:
+      working-directory: apps/decision_governance_engine
+      image-name: decision-governance-engine
+      dockerfile: Dockerfile
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.GHCR_TOKEN }}
+
+  # ==========================================================================
+  # デプロイ: Google Cloud Run
+  # ==========================================================================
+  deploy-gcp:
+    name: Deploy to GCP Cloud Run
+    needs: [ci, security]
+    if: |
+      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'gcp-cloudrun')
+    uses: ./.github/workflows/reusable-deploy-gcp-cloudrun.yml
+    with:
+      service-name: decision-governance-engine
+      region: asia-northeast1
+      working-directory: apps/decision_governance_engine
+    secrets:
+      GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      GCP_SA_KEY: ${{ secrets.GCP_SA_KEY }}
+
+  # ==========================================================================
+  # デプロイ: Railway (コメント解除で有効化)
+  # ==========================================================================
+  # deploy-railway:
+  #   name: Deploy to Railway
+  #   needs: [ci, security]
+  #   if: |
+  #     (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+  #     (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'railway')
+  #   uses: ./.github/workflows/reusable-deploy-railway.yml
+  #   with:
+  #     service-name: decision-governance-engine
+  #     working-directory: apps/decision_governance_engine
+  #   secrets:
+  #     RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+  # ==========================================================================
+  # デプロイ: Fly.io (コメント解除で有効化)
+  # ==========================================================================
+  # deploy-flyio:
+  #   name: Deploy to Fly.io
+  #   needs: [ci, security]
+  #   if: |
+  #     (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+  #     (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'flyio')
+  #   uses: ./.github/workflows/reusable-deploy-flyio.yml
+  #   with:
+  #     app-name: decision-governance-engine
+  #     region: nrt
+  #     working-directory: apps/decision_governance_engine
+  #   secrets:
+  #     FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+

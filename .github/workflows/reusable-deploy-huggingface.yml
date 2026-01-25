@@ -1,0 +1,88 @@
+# ==============================================================================
+# 再利用可能ワークフロー: Hugging Face Spaces デプロイ
+# ==============================================================================
+name: Reusable Deploy to Hugging Face Spaces
+
+on:
+  workflow_call:
+    inputs:
+      space-name:
+        description: "Space 名 (username/space-name)"
+        required: true
+        type: string
+      space-sdk:
+        description: "Space SDK (gradio, streamlit, docker)"
+        required: false
+        default: "gradio"
+        type: string
+      working-directory:
+        description: "作業ディレクトリ"
+        required: false
+        default: "."
+        type: string
+    secrets:
+      HF_TOKEN:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy to Hugging Face Spaces
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install huggingface_hub
+        run: pip install huggingface_hub
+
+      - name: Create Space README
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          cat > README.md << 'EOF'
+          ---
+          title: ${{ inputs.space-name }}
+          emoji: 🤖
+          colorFrom: blue
+          colorTo: purple
+          sdk: ${{ inputs.space-sdk }}
+          sdk_version: "4.0"
+          app_file: app.py
+          pinned: false
+          ---
+
+          # ${{ inputs.space-name }}
+
+          Deployed with AgentFlow Framework via GitHub Actions.
+          EOF
+
+      - name: Push to Hugging Face Spaces
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+          # HF Space リポジトリをクローン
+          git clone https://huggingface.co/spaces/${{ inputs.space-name }} hf-space || \
+            (huggingface-cli repo create ${{ inputs.space-name }} --type space --space_sdk ${{ inputs.space-sdk }} && \
+             git clone https://huggingface.co/spaces/${{ inputs.space-name }} hf-space)
+
+          # ファイルをコピー
+          rsync -av --exclude='.git' --exclude='hf-space' --exclude='__pycache__' . hf-space/
+
+          # プッシュ
+          cd hf-space
+          git add .
+          git diff --staged --quiet || git commit -m "Deploy from GitHub Actions: ${{ github.sha }}"
+          git push https://oauth2:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/${{ inputs.space-name }} main
+

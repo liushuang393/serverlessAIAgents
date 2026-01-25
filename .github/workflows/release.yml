@@ -1,0 +1,142 @@
+# ==============================================================================
+# Release 自動化ワークフロー - セマンティックバージョニング
+# ==============================================================================
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "リリースタイプ"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install python-semantic-release
+
+      - name: Get next version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            BUMP="${{ github.event.inputs.release_type }}"
+          else
+            # Conventional commits からバージョンを判定
+            LAST_COMMIT=$(git log -1 --pretty=%B)
+            if echo "$LAST_COMMIT" | grep -qE "^feat!:|^BREAKING CHANGE:"; then
+              BUMP="major"
+            elif echo "$LAST_COMMIT" | grep -qE "^feat"; then
+              BUMP="minor"
+            else
+              BUMP="patch"
+            fi
+          fi
+          echo "bump=$BUMP" >> $GITHUB_OUTPUT
+
+          # 現在のバージョンを取得
+          CURRENT=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "current=$CURRENT" >> $GITHUB_OUTPUT
+
+      - name: Calculate new version
+        id: new_version
+        run: |
+          CURRENT="${{ steps.version.outputs.current }}"
+          BUMP="${{ steps.version.outputs.bump }}"
+
+          # v プレフィックスを除去
+          VERSION=${CURRENT#v}
+          IFS='.' read -ra PARTS <<< "$VERSION"
+          MAJOR=${PARTS[0]:-0}
+          MINOR=${PARTS[1]:-0}
+          PATCH=${PARTS[2]:-0}
+
+          case $BUMP in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+          esac
+
+          NEW_VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG="${{ steps.version.outputs.current }}"
+          if [ "$PREV_TAG" = "v0.0.0" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h)" --no-merges)
+          else
+            COMMITS=$(git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges)
+          fi
+
+          # Changelog を生成
+          {
+            echo "## What's Changed"
+            echo ""
+            echo "### 🚀 Features"
+            echo "$COMMITS" | grep -E "^- feat" || echo "- No new features"
+            echo ""
+            echo "### 🐛 Bug Fixes"
+            echo "$COMMITS" | grep -E "^- fix" || echo "- No bug fixes"
+            echo ""
+            echo "### 📚 Documentation"
+            echo "$COMMITS" | grep -E "^- docs" || echo "- No documentation changes"
+            echo ""
+            echo "### 🔧 Other Changes"
+            echo "$COMMITS" | grep -vE "^- (feat|fix|docs)" || echo "- No other changes"
+          } > CHANGELOG_TEMP.md
+
+          echo "Generated changelog"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.new_version.outputs.version }}
+          name: Release ${{ steps.new_version.outputs.version }}
+          body_path: CHANGELOG_TEMP.md
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update version in pyproject.toml
+        run: |
+          VERSION="${{ steps.new_version.outputs.version }}"
+          VERSION=${VERSION#v}
+          sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml
+          git diff --staged --quiet || git commit -m "chore: bump version to ${{ steps.new_version.outputs.version }}"
+          git push
+

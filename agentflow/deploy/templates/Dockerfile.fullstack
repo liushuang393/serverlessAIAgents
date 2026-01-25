@@ -1,0 +1,88 @@
+# ==============================================================================
+# AgentFlow 統一 Dockerfile テンプレート (Fullstack)
+# ==============================================================================
+# 用途: Python Backend + Node.js Frontend のフルスタックアプリケーション
+#
+# ビルド引数:
+#   - PYTHON_VERSION: Python バージョン (default: 3.13)
+#   - NODE_VERSION: Node.js バージョン (default: 20)
+#   - BACKEND_PATH: バックエンドパス (default: backend)
+#   - FRONTEND_PATH: フロントエンドパス (default: frontend)
+#   - API_PORT: API ポート (default: 8000)
+# ==============================================================================
+
+ARG PYTHON_VERSION=3.13
+ARG NODE_VERSION=20
+
+# ---------------------------------------------------------------------------
+# Stage 1: Frontend Build
+# ---------------------------------------------------------------------------
+FROM node:${NODE_VERSION}-alpine AS frontend-builder
+
+ARG FRONTEND_PATH=frontend
+ARG VITE_API_URL=/api
+
+WORKDIR /frontend
+
+COPY ${FRONTEND_PATH}/package*.json ./
+RUN npm ci --only=production
+
+COPY ${FRONTEND_PATH}/ ./
+ENV VITE_API_URL=${VITE_API_URL}
+RUN npm run build
+
+# ---------------------------------------------------------------------------
+# Stage 2: Backend Dependencies
+# ---------------------------------------------------------------------------
+FROM python:${PYTHON_VERSION}-slim AS backend-deps
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ---------------------------------------------------------------------------
+# Stage 3: Production
+# ---------------------------------------------------------------------------
+FROM python:${PYTHON_VERSION}-slim AS production
+
+ARG BACKEND_PATH=backend
+ARG API_PORT=8000
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONPATH=/app \
+    PORT=${API_PORT}
+
+WORKDIR /app
+
+# 非 root ユーザー
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
+# Python 依存関係
+COPY --from=backend-deps /usr/local/lib/python*/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=backend-deps /usr/local/bin /usr/local/bin
+
+# アプリケーションコード
+COPY agentflow/ /app/agentflow/
+COPY ${BACKEND_PATH}/ /app/backend/
+
+# フロントエンドビルド成果物
+COPY --from=frontend-builder /frontend/dist /app/static
+
+# パーミッション
+RUN chown -R appuser:appgroup /app
+USER appuser
+
+# ヘルスチェック
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen(f'http://localhost:${PORT}/health')" || exit 1
+
+EXPOSE ${API_PORT}
+
+CMD ["sh", "-c", "uvicorn backend.api:app --host 0.0.0.0 --port ${PORT}"]
+

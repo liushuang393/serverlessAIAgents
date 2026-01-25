@@ -82,6 +82,41 @@ from agentflow.engines import (
     GateEngine,
     PipelineEngine,
     RAGEngine,
+    # PEV Engine（Plan-Execute-Verify）
+    PEVEngine,
+    PEVEngineConfig,
+    HierarchicalPlanner,
+    MonitoredExecutor,
+    ResultVerifier,
+)
+
+# =============================================================================
+# 公開API: World Model（状態・因果・制約の明示的表現）
+# =============================================================================
+from agentflow.world_model import (
+    # 因果モデル
+    CausalModel,
+    CausalNode,
+    CausalRelation,
+    # 制約ソルバー
+    ConstraintSolver,
+    ConstraintViolation,
+    SolverResult,
+    # 世界状態
+    WorldState,
+    WorldStateSnapshot,
+    ActionPrediction,
+)
+
+# =============================================================================
+# 公開API: 適応型コーディネーター（能力差を吸収する分業型Agent設計）
+# =============================================================================
+from agentflow.patterns.adaptive_coordinator import (
+    AdaptiveCoordinator,
+    AgentProfile,
+    AgentCapability,
+    TaskRequirement,
+    DelegationResult,
 )
 
 # =============================================================================
@@ -281,6 +316,37 @@ __all__ = [
     "GateEngine",
     "PipelineEngine",
     "RAGEngine",
+    # PEV Engine（Plan-Execute-Verify）
+    "PEVEngine",
+    "PEVEngineConfig",
+    "HierarchicalPlanner",
+    "MonitoredExecutor",
+    "ResultVerifier",
+
+    # =========================================================================
+    # World Model（状態・因果・制約の明示的表現）
+    # =========================================================================
+    # 因果モデル
+    "CausalModel",
+    "CausalNode",
+    "CausalRelation",
+    # 制約ソルバー
+    "ConstraintSolver",
+    "ConstraintViolation",
+    "SolverResult",
+    # 世界状態
+    "WorldState",
+    "WorldStateSnapshot",
+    "ActionPrediction",
+
+    # =========================================================================
+    # 適応型コーディネーター（能力差を吸収する分業型Agent設計）
+    # =========================================================================
+    "AdaptiveCoordinator",
+    "AgentProfile",
+    "AgentCapability",
+    "TaskRequirement",
+    "DelegationResult",
 
     # =========================================================================
     # Decorator API（推奨）

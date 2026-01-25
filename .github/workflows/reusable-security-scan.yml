@@ -1,0 +1,130 @@
+# ==============================================================================
+# 再利用可能ワークフロー: セキュリティスキャン
+# ==============================================================================
+# 用途: 依存関係とコンテナイメージのセキュリティスキャン
+# ツール: Trivy, pip-audit, npm audit
+# ==============================================================================
+
+name: Reusable Security Scan
+
+on:
+  workflow_call:
+    inputs:
+      scan-type:
+        description: "スキャンタイプ (dependencies, container, all)"
+        required: false
+        default: "all"
+        type: string
+      working-directory:
+        description: "作業ディレクトリ"
+        required: false
+        default: "."
+        type: string
+      image-ref:
+        description: "スキャン対象イメージ (container スキャン時)"
+        required: false
+        default: ""
+        type: string
+      severity:
+        description: "報告する脆弱性の重大度 (CRITICAL,HIGH,MEDIUM,LOW)"
+        required: false
+        default: "CRITICAL,HIGH"
+        type: string
+      fail-on-vulnerability:
+        description: "脆弱性発見時に失敗するか"
+        required: false
+        default: true
+        type: boolean
+
+jobs:
+  dependency-scan:
+    name: Dependency Scan
+    runs-on: ubuntu-latest
+    if: ${{ inputs.scan-type == 'dependencies' || inputs.scan-type == 'all' }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install pip-audit
+        run: pip install pip-audit
+
+      - name: Run pip-audit
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          pip-audit --desc on --format json --output pip-audit-results.json || true
+          pip-audit --desc on
+
+      - name: Check for Node.js project
+        id: check-node
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          if [ -f "package.json" ]; then
+            echo "has-node=true" >> $GITHUB_OUTPUT
+          else
+            echo "has-node=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run npm audit
+        if: steps.check-node.outputs.has-node == 'true'
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          npm audit --json > npm-audit-results.json || true
+          npm audit || true
+
+      - name: Upload audit results
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-audit-results
+          path: |
+            ${{ inputs.working-directory }}/pip-audit-results.json
+            ${{ inputs.working-directory }}/npm-audit-results.json
+          if-no-files-found: ignore
+
+  container-scan:
+    name: Container Scan
+    runs-on: ubuntu-latest
+    if: ${{ (inputs.scan-type == 'container' || inputs.scan-type == 'all') && inputs.image-ref != '' }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ inputs.image-ref }}
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: ${{ inputs.severity }}
+          exit-code: ${{ inputs.fail-on-vulnerability && '1' || '0' }}
+
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
+
+  filesystem-scan:
+    name: Filesystem Scan
+    runs-on: ubuntu-latest
+    if: ${{ inputs.scan-type == 'all' }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: ${{ inputs.working-directory }}
+          format: "table"
+          severity: ${{ inputs.severity }}
+          exit-code: ${{ inputs.fail-on-vulnerability && '1' || '0' }}
+

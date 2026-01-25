@@ -1,0 +1,108 @@
+# ==============================================================================
+# FAQ System - CI/CD ワークフロー
+# ==============================================================================
+# 使用方法:
+#   1. GitHub リポジトリの Settings > Secrets に必要な認証情報を設定
+#   2. デプロイしたいプラットフォームのジョブのコメントを解除
+# ==============================================================================
+name: FAQ System CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - "apps/faq_system/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "apps/faq_system/**"
+  workflow_dispatch:
+    inputs:
+      deploy_target:
+        description: "デプロイ先を選択"
+        required: false
+        default: "none"
+        type: choice
+        options:
+          - none
+          - vercel
+          - huggingface
+          - render
+
+env:
+  APP_NAME: faq-system
+  WORKING_DIR: apps/faq_system
+
+jobs:
+  # ==========================================================================
+  # CI: テスト・Lint
+  # ==========================================================================
+  ci:
+    name: CI (Lint & Test)
+    uses: ./.github/workflows/reusable-python-ci.yml
+    with:
+      working-directory: apps/faq_system
+      python-version: "3.13"
+      coverage-threshold: 70
+
+  # ==========================================================================
+  # セキュリティスキャン
+  # ==========================================================================
+  security:
+    name: Security Scan
+    needs: ci
+    uses: ./.github/workflows/reusable-security-scan.yml
+    with:
+      working-directory: apps/faq_system
+      scan-type: "fullstack"
+
+  # ==========================================================================
+  # デプロイ: Vercel (フロントエンド向け)
+  # ==========================================================================
+  deploy-vercel:
+    name: Deploy to Vercel
+    needs: [ci, security]
+    if: |
+      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'vercel')
+    uses: ./.github/workflows/reusable-deploy-vercel.yml
+    with:
+      working-directory: apps/faq_system/frontend
+      production: true
+    secrets:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_FAQ }}
+
+  # ==========================================================================
+  # デプロイ: Hugging Face Spaces (AI デモ向け)
+  # ==========================================================================
+  # deploy-huggingface:
+  #   name: Deploy to Hugging Face Spaces
+  #   needs: [ci, security]
+  #   if: |
+  #     (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+  #     (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'huggingface')
+  #   uses: ./.github/workflows/reusable-deploy-huggingface.yml
+  #   with:
+  #     space-name: your-username/faq-system
+  #     space-sdk: gradio
+  #     working-directory: apps/faq_system
+  #   secrets:
+  #     HF_TOKEN: ${{ secrets.HF_TOKEN }}
+
+  # ==========================================================================
+  # デプロイ: Render (バックエンド向け)
+  # ==========================================================================
+  # deploy-render:
+  #   name: Deploy to Render
+  #   needs: [ci, security]
+  #   if: |
+  #     (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+  #     (github.event_name == 'workflow_dispatch' && github.event.inputs.deploy_target == 'render')
+  #   uses: ./.github/workflows/reusable-deploy-render.yml
+  #   with:
+  #     service-id: srv-xxxxxxxxxxxx
+  #   secrets:
+  #     RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+

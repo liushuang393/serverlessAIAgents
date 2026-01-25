@@ -86,16 +86,31 @@ from agentflow.engines.report_builder import (
 from agentflow.engines.simple_engine import SimpleEngine
 from agentflow.patterns.progress_emitter import AgentMeta
 
+# PEV Engine（Plan-Execute-Verify）
+from agentflow.pev import (
+    PEVEngine,
+    PEVEngineConfig,
+    HierarchicalPlanner,
+    MonitoredExecutor,
+    ResultVerifier,
+)
+
 __all__ = [
     # 基底クラス（カスタムEngine作成用）
     "BaseEngine",
     "EngineConfig",
     "HITLEngineConfig",
-    # 4種類の予定義Pattern
+    # 5種類の予定義Pattern
     "SimpleEngine",
     "GateEngine",
     "PipelineEngine",
     "RAGEngine",
+    "PEVEngine",  # NEW: Plan-Execute-Verify Engine
+    # PEV関連クラス
+    "PEVEngineConfig",
+    "HierarchicalPlanner",
+    "MonitoredExecutor",
+    "ResultVerifier",
     # 設定クラス
     "StageConfig",
     "AgentMeta",

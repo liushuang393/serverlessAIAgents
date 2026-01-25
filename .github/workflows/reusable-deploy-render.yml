@@ -1,0 +1,41 @@
+# ==============================================================================
+# 再利用可能ワークフロー: Render デプロイ
+# ==============================================================================
+name: Reusable Deploy to Render
+
+on:
+  workflow_call:
+    inputs:
+      service-id:
+        description: "Render サービス ID"
+        required: false
+        default: ""
+        type: string
+    secrets:
+      RENDER_API_KEY:
+        required: false
+      RENDER_DEPLOY_HOOK:
+        required: false
+
+jobs:
+  deploy:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy via API
+        if: ${{ inputs.service-id != '' && secrets.RENDER_API_KEY != '' }}
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json" \
+            -d '{"clearCache": "do_not_clear"}' \
+            "https://api.render.com/v1/services/${{ inputs.service-id }}/deploys"
+
+      - name: Deploy via Hook
+        if: ${{ secrets.RENDER_DEPLOY_HOOK != '' }}
+        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
+

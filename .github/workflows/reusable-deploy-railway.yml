@@ -1,0 +1,39 @@
+# ==============================================================================
+# 再利用可能ワークフロー: Railway デプロイ
+# ==============================================================================
+name: Reusable Deploy to Railway
+
+on:
+  workflow_call:
+    inputs:
+      service-name:
+        description: "Railway サービス名"
+        required: true
+        type: string
+      working-directory:
+        description: "作業ディレクトリ"
+        required: false
+        default: "."
+        type: string
+    secrets:
+      RAILWAY_TOKEN:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy to Railway
+        working-directory: ${{ inputs.working-directory }}
+        run: railway up --service ${{ inputs.service-name }}
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+

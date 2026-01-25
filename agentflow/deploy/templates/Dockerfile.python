@@ -1,0 +1,84 @@
+# ==============================================================================
+# AgentFlow 統一 Dockerfile テンプレート (Python)
+# ==============================================================================
+# 用途: Python/FastAPI アプリケーション用の本番 Dockerfile
+#
+# ビルド引数:
+#   - PYTHON_VERSION: Python バージョン (default: 3.13)
+#   - APP_PATH: アプリケーションパス (default: .)
+#   - PORT: 公開ポート (default: 8000)
+#
+# 使用例:
+#   docker build -t my-app \
+#     --build-arg APP_PATH=apps/my-app \
+#     --build-arg PORT=8080 \
+#     -f Dockerfile.python .
+# ==============================================================================
+
+ARG PYTHON_VERSION=3.13
+
+# ---------------------------------------------------------------------------
+# Stage 1: Base
+# ---------------------------------------------------------------------------
+FROM python:${PYTHON_VERSION}-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PYTHONFAULTHANDLER=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+# ---------------------------------------------------------------------------
+# Stage 2: Dependencies
+# ---------------------------------------------------------------------------
+FROM base AS dependencies
+
+# システム依存関係
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Python 依存関係
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ---------------------------------------------------------------------------
+# Stage 3: Production
+# ---------------------------------------------------------------------------
+FROM base AS production
+
+ARG APP_PATH=.
+ARG PORT=8000
+
+# 非 root ユーザー作成
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
+# 依存関係をコピー
+COPY --from=dependencies /usr/local/lib/python*/site-packages /usr/local/lib/python3.13/site-packages
+COPY --from=dependencies /usr/local/bin /usr/local/bin
+
+# アプリケーションコードをコピー
+COPY agentflow/ /app/agentflow/
+COPY ${APP_PATH}/ /app/app/
+
+# PYTHONPATH 設定
+ENV PYTHONPATH=/app \
+    PORT=${PORT}
+
+# パーミッション設定
+RUN chown -R appuser:appgroup /app
+USER appuser
+
+# ヘルスチェック
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen(f'http://localhost:${PORT}/health')" || exit 1
+
+# ポート公開
+EXPOSE ${PORT}
+
+# 起動コマンド
+CMD ["sh", "-c", "uvicorn app.api:app --host 0.0.0.0 --port ${PORT}"]
+

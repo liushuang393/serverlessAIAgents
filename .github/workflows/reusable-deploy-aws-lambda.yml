@@ -1,0 +1,112 @@
+# ==============================================================================
+# 再利用可能ワークフロー: AWS Lambda デプロイ
+# ==============================================================================
+name: Reusable Deploy to AWS Lambda
+
+on:
+  workflow_call:
+    inputs:
+      function-name:
+        description: "Lambda 関数名"
+        required: true
+        type: string
+      runtime:
+        description: "Lambda ランタイム"
+        required: false
+        default: "python3.13"
+        type: string
+      handler:
+        description: "ハンドラー"
+        required: false
+        default: "handler.handler"
+        type: string
+      region:
+        description: "AWS リージョン"
+        required: false
+        default: "ap-northeast-1"
+        type: string
+      working-directory:
+        description: "作業ディレクトリ"
+        required: false
+        default: "."
+        type: string
+      memory-size:
+        description: "メモリサイズ (MB)"
+        required: false
+        default: 256
+        type: number
+      timeout:
+        description: "タイムアウト (秒)"
+        required: false
+        default: 30
+        type: number
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      AWS_ROLE_ARN:
+        required: false
+
+jobs:
+  deploy:
+    name: Deploy to AWS Lambda
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.region }}
+
+      - name: Install dependencies
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          pip install -r requirements.txt -t package/
+          cp -r *.py package/ 2>/dev/null || true
+          cp -r src/* package/ 2>/dev/null || true
+
+      - name: Create deployment package
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          cd package
+          zip -r ../deployment.zip .
+
+      - name: Deploy to Lambda
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          # 関数が存在するか確認
+          if aws lambda get-function --function-name ${{ inputs.function-name }} 2>/dev/null; then
+            # 既存関数を更新
+            aws lambda update-function-code \
+              --function-name ${{ inputs.function-name }} \
+              --zip-file fileb://deployment.zip
+          else
+            # 新規関数を作成
+            aws lambda create-function \
+              --function-name ${{ inputs.function-name }} \
+              --runtime ${{ inputs.runtime }} \
+              --handler ${{ inputs.handler }} \
+              --memory-size ${{ inputs.memory-size }} \
+              --timeout ${{ inputs.timeout }} \
+              --zip-file fileb://deployment.zip \
+              --role ${{ secrets.AWS_ROLE_ARN }}
+          fi
+
+      - name: Update function configuration
+        run: |
+          aws lambda update-function-configuration \
+            --function-name ${{ inputs.function-name }} \
+            --memory-size ${{ inputs.memory-size }} \
+            --timeout ${{ inputs.timeout }}
+

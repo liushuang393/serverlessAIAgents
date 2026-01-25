@@ -88,3 +88,4 @@ tmp-*/
 
 # ---- External Content (Optional)
 # products/ai_learning_platform/Hands-On-Large-Language-Models/
+tests/*

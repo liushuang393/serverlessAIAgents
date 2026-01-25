@@ -1,0 +1,85 @@
+# ==============================================================================
+# 再利用可能ワークフロー: Azure Container Apps デプロイ
+# ==============================================================================
+name: Reusable Deploy to Azure Container Apps
+
+on:
+  workflow_call:
+    inputs:
+      app-name:
+        description: "Container App 名"
+        required: true
+        type: string
+      resource-group:
+        description: "リソースグループ"
+        required: true
+        type: string
+      environment-name:
+        description: "Container Apps 環境名"
+        required: true
+        type: string
+      location:
+        description: "Azure リージョン"
+        required: false
+        default: "japaneast"
+        type: string
+      dockerfile:
+        description: "Dockerfile パス"
+        required: false
+        default: "Dockerfile"
+        type: string
+      working-directory:
+        description: "作業ディレクトリ"
+        required: false
+        default: "."
+        type: string
+    secrets:
+      AZURE_CREDENTIALS:
+        required: true
+      AZURE_REGISTRY_URL:
+        required: true
+      AZURE_REGISTRY_USERNAME:
+        required: true
+      AZURE_REGISTRY_PASSWORD:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy to Azure Container Apps
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.AZURE_REGISTRY_URL }}
+          username: ${{ secrets.AZURE_REGISTRY_USERNAME }}
+          password: ${{ secrets.AZURE_REGISTRY_PASSWORD }}
+
+      - name: Build and Push Docker image
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          IMAGE="${{ secrets.AZURE_REGISTRY_URL }}/${{ inputs.app-name }}:${{ github.sha }}"
+          docker build -t $IMAGE -f ${{ inputs.dockerfile }} .
+          docker push $IMAGE
+          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
+
+      - name: Deploy to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          appSourcePath: ${{ inputs.working-directory }}
+          acrName: ${{ secrets.AZURE_REGISTRY_URL }}
+          containerAppName: ${{ inputs.app-name }}
+          resourceGroup: ${{ inputs.resource-group }}
+          containerAppEnvironment: ${{ inputs.environment-name }}
+          imageToDeploy: ${{ env.IMAGE }}
+          targetPort: 8080
+

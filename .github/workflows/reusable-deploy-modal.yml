@@ -1,0 +1,57 @@
+# ==============================================================================
+# 再利用可能ワークフロー: Modal デプロイ
+# ==============================================================================
+name: Reusable Deploy to Modal
+
+on:
+  workflow_call:
+    inputs:
+      app-name:
+        description: "Modal アプリ名"
+        required: true
+        type: string
+      working-directory:
+        description: "作業ディレクトリ"
+        required: false
+        default: "."
+        type: string
+      modal-file:
+        description: "Modal アプリファイル"
+        required: false
+        default: "modal_app.py"
+        type: string
+    secrets:
+      MODAL_TOKEN_ID:
+        required: true
+      MODAL_TOKEN_SECRET:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy to Modal
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install Modal
+        run: pip install modal
+
+      - name: Setup Modal credentials
+        run: |
+          mkdir -p ~/.modal
+          echo '{"token_id": "${{ secrets.MODAL_TOKEN_ID }}", "token_secret": "${{ secrets.MODAL_TOKEN_SECRET }}"}' > ~/.modal/credentials.json
+
+      - name: Deploy to Modal
+        working-directory: ${{ inputs.working-directory }}
+        run: modal deploy ${{ inputs.modal-file }}
+        env:
+          MODAL_TOKEN_ID: ${{ secrets.MODAL_TOKEN_ID }}
+          MODAL_TOKEN_SECRET: ${{ secrets.MODAL_TOKEN_SECRET }}
+

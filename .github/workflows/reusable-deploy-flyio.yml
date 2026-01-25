@@ -1,0 +1,68 @@
+# ==============================================================================
+# 再利用可能ワークフロー: Fly.io デプロイ
+# ==============================================================================
+name: Reusable Deploy to Fly.io
+
+on:
+  workflow_call:
+    inputs:
+      app-name:
+        description: "Fly.io アプリ名"
+        required: true
+        type: string
+      region:
+        description: "プライマリリージョン"
+        required: false
+        default: "nrt"
+        type: string
+      working-directory:
+        description: "作業ディレクトリ"
+        required: false
+        default: "."
+        type: string
+    secrets:
+      FLY_API_TOKEN:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy to Fly.io
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Create fly.toml if not exists
+        working-directory: ${{ inputs.working-directory }}
+        run: |
+          if [ ! -f fly.toml ]; then
+            cat > fly.toml << EOF
+          app = "${{ inputs.app-name }}"
+          primary_region = "${{ inputs.region }}"
+
+          [build]
+
+          [http_service]
+            internal_port = 8080
+            force_https = true
+            auto_stop_machines = true
+            auto_start_machines = true
+            min_machines_running = 0
+
+          [[vm]]
+            cpu_kind = "shared"
+            cpus = 1
+            memory_mb = 256
+          EOF
+          fi
+
+      - name: Deploy to Fly.io
+        working-directory: ${{ inputs.working-directory }}
+        run: flyctl deploy --remote-only --yes
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
