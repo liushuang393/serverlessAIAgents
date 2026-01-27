@@ -7,15 +7,18 @@
 - 松耦合：LLM プロバイダーを意識しない（環境変数から自動検出）
 - 型安全：Pydantic による I/O 検証
 - 健壮性：ResilientAgent によるリトライ・タイムアウト制御
+- Skills体系：確定性処理をSkillスクリプトに分離（Anthropic Skills準拠）
 """
 
 import logging
 import uuid
 from collections import Counter
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from agentflow import ResilientAgent
+from agentflow.skills import Skill, SkillRouter, SkillRuntime
 
 from apps.market_trend_monitor.backend.models import (
     AnalyzerInput,
@@ -46,14 +49,27 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
     name = "AnalyzerAgent"
     temperature = 0.5  # 分析タスクは中程度
 
-    def __init__(self, llm_client: Any = None) -> None:
+    def __init__(
+        self,
+        llm_client: Any = None,
+        *,
+        skill_router: SkillRouter | None = None,
+        skill_runtime: SkillRuntime | None = None,
+    ) -> None:
         """初期化.
 
         Args:
             llm_client: LLM クライアント（None の場合は自動取得）
+            skill_router: Skillルーター（None の場合は新規作成）
+            skill_runtime: Skill実行環境（None の場合は新規作成）
         """
         super().__init__(llm_client)
         self._logger = logging.getLogger(self.name)
+
+        # Skill体系初期化（Anthropic Skills準拠）
+        self._skill_router = skill_router or SkillRouter()
+        self._skill_runtime = skill_runtime or SkillRuntime()
+        self._market_trend_skill: Skill | None = None
 
     def _parse_input(self, input_data: dict[str, Any]) -> AnalyzerInput:
         """入力データを Pydantic モデルに変換."""

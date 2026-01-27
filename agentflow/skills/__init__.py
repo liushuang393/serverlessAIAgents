@@ -34,6 +34,12 @@ from agentflow.skills.persister import SkillPersister
 # 統合エンジン
 from agentflow.skills.engine import SkillEngine, SkillExecutionResult
 
+# ルーター（Anthropic Skills体系準拠）
+from agentflow.skills.router import RoutingResult, SkillMeta, SkillRouter
+
+# ランタイム（Anthropic Skills体系準拠）
+from agentflow.skills.runtime import ScriptResult, SkillRuntime
+
 # 組み込みスキル
 from agentflow.skills.chatbot import ChatBotConfig, ChatBotSkill, ChatMessage, ChatSession
 from agentflow.skills.rag import RAGConfig, RAGResult, RAGSkill
@@ -56,6 +62,13 @@ __all__ = [
     # 統合エンジン
     "SkillEngine",
     "SkillExecutionResult",
+    # ルーター（Anthropic Skills体系準拠）
+    "SkillRouter",
+    "SkillMeta",
+    "RoutingResult",
+    # ランタイム（Anthropic Skills体系準拠）
+    "SkillRuntime",
+    "ScriptResult",
     # 組み込みスキル - RAG
     "RAGConfig",
     "RAGResult",
