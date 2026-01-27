@@ -264,9 +264,23 @@ class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
             return {"is_relevant": True, "reason": str(e), "category": "NEW_BUSINESS"}
 
     def validate_output(self, output: GatekeeperOutput) -> bool:
-        """出力検証."""
+        """出力検証.
+
+        Args:
+            output: GatekeeperAgent出力
+
+        Returns:
+            検証結果
+        """
         # 拒否の場合は理由が必須
         if not output.is_acceptable and not output.rejection_reason:
+            self._logger.warning("Validation failed: rejection without reason")
             return False
+
+        # confidence が範囲内か（ge=0.0, le=1.0）
+        if not (0.0 <= output.confidence <= 1.0):
+            self._logger.warning(f"Validation failed: confidence {output.confidence} out of range")
+            return False
+
         return True
 

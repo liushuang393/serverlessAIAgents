@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Custom exceptions for AgentFlow framework."""
 
 
@@ -154,3 +155,38 @@ class AgentRetryExhaustedError(AgentExecutionError):
         self.max_retries = max_retries
         message = f"リトライ上限到達 ({max_retries}回) - 最終エラー: {last_error}"
         super().__init__(agent_name, message, last_error)
+
+
+class AgentOutputValidationError(AgentExecutionError):
+    """Agent 出力検証エラー.
+
+    LLM が返したデータが業務要件を満たさない場合に発生します。
+    Pydantic 検証前に業務ロジックで検証を行い、このエラーを発生させることで
+    リトライをトリガーします。
+
+    Attributes:
+        field_name: 検証に失敗したフィールド名
+        expected: 期待値の説明
+        actual: 実際の値
+    """
+
+    def __init__(
+        self,
+        agent_name: str,
+        field_name: str,
+        expected: str,
+        actual: str,
+    ) -> None:
+        """初期化.
+
+        Args:
+            agent_name: Agent 名
+            field_name: フィールド名
+            expected: 期待値の説明
+            actual: 実際の値
+        """
+        self.field_name = field_name
+        self.expected = expected
+        self.actual = actual
+        message = f"出力検証エラー: {field_name} - 期待: {expected}, 実際: {actual}"
+        super().__init__(agent_name, message)

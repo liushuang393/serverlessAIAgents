@@ -150,6 +150,7 @@ from agentflow.core.resilient_agent import (
 from agentflow.core.exceptions import (
     AgentExecutionError,
     AgentFlowError,
+    AgentOutputValidationError,
     AgentRetryExhaustedError,
     AgentTimeoutError,
     ProtocolError,
@@ -404,6 +405,7 @@ __all__ = [
     # =========================================================================
     "AgentFlowError",
     "AgentExecutionError",
+    "AgentOutputValidationError",
     "AgentTimeoutError",
     "AgentRetryExhaustedError",
     "ProtocolError",

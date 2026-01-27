@@ -113,6 +113,7 @@ class ProgressTracker:
             "data": {
                 "progress": self.progress_percent,
                 "success": success,
+                **result,  # Agent結果を含める（思考ログ抽出用）
             },
         }
 

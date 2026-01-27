@@ -15,7 +15,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import type { DecisionRequest, DecisionReport } from '../types';
 
 /** 画面状態 */
-export type PageState = 'input' | 'processing' | 'report' | 'knowledge-shu' | 'knowledge-qi';
+export type PageState = 'input' | 'processing' | 'report' | 'history' | 'knowledge-shu' | 'knowledge-qi';
 
 /** 履歴アイテム */
 export interface HistoryItem {

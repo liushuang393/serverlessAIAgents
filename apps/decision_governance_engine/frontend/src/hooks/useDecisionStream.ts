@@ -153,13 +153,18 @@ export function useDecisionStream() {
         const legacyEvent = event as unknown as { type: string; data?: Record<string, unknown> };
         switch (legacyEvent.type) {
           case 'progress':
-            // {type: "progress", data: {stage: "xxx", progress: 12.5}}
+            // {type: "progress", data: {stage: "xxx", progress: 10, overall_progress: 87.5}}
+            // progress: ステージ内の進捗（10% = 開始、100% = 完了）
+            // overall_progress: フロー全体の進捗
             if (legacyEvent.data) {
               const stage = legacyEvent.data.stage as string;
-              const progress = legacyEvent.data.progress as number;
-              if (stage) {
-                updateAgent(stage, { progress, message: `${progress}% 完了` });
-                addThinkingLog(stage, stage, `進捗: ${progress}%`);
+              const stageProgress = legacyEvent.data.progress as number;
+              // overall_progress は全体進捗（UI上部の表示用、今後対応可能）
+              // const overallProgress = legacyEvent.data.overall_progress as number;
+              if (stage && stageProgress !== undefined) {
+                // ステージ内進捗のみ更新（status は node.complete で更新）
+                updateAgent(stage, { progress: stageProgress, message: `${stageProgress}% 処理中...` });
+                addThinkingLog(stage, stage, `ステージ進捗: ${stageProgress}%`);
               }
             }
             return;
@@ -187,8 +192,39 @@ export function useDecisionStream() {
             }
             return;
           case 'gate_rejected':
-            // ゲートで拒否された
+            // ゲートで拒否された（後方互換）
             addThinkingLog('system', 'System', '⚠️ ゲートチェックで処理が停止しました');
+            return;
+          case 'early_return':
+            // 早期リターン（Gate拒否またはReview REJECT）
+            {
+              const data = legacyEvent.data || {};
+              const rejectionMessage = data.rejection_message as string || '';
+              const rejectionReason = data.rejection_reason as string || '';
+              const suggestedRephrase = data.suggested_rephrase as string || '';
+
+              // 拒否理由をログに表示
+              if (rejectionMessage) {
+                addThinkingLog('system', 'System', `⚠️ ${rejectionMessage}`);
+              } else {
+                addThinkingLog('system', 'System', '⚠️ 入力が条件を満たしていません');
+              }
+              if (rejectionReason) {
+                addThinkingLog('system', 'System', `理由: ${rejectionReason}`);
+              }
+              if (suggestedRephrase) {
+                addThinkingLog('system', 'System', `💡 提案: ${suggestedRephrase}`);
+              }
+
+              // 状態を設定（エラーとして表示し、再試行可能にする）
+              setState((prev) => ({
+                ...prev,
+                isComplete: true,
+                error: rejectionMessage || '入力が条件を満たしていません。質問を修正してください。',
+                isRetryable: true,
+              }));
+              eventSourceRef.current?.close();
+            }
             return;
         }
       }

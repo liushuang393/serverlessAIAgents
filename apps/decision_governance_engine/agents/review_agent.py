@@ -6,6 +6,7 @@
 """
 
 import json
+import logging
 from typing import Any
 
 from agentflow import ResilientAgent
@@ -49,6 +50,11 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
         "撤退条件が定義されているか",
         "最初の一歩が明日実行可能か",
     ]
+
+    def __init__(self, llm_client: Any = None) -> None:
+        """初期化."""
+        super().__init__(llm_client)
+        self._logger = logging.getLogger(self.name)
 
     SYSTEM_PROMPT = """あなたはReviewAgent（検証）です。
 全ての分析結果を俯瞰し、最終的な判定を下します。
@@ -114,20 +120,34 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
+        # 詳細ログ: LLM生出力を記録（デバッグ用）
+        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
+
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
             from agentflow.utils import extract_json
             data = extract_json(response)
+
             if data is None:
+                self._logger.error(f"JSON extraction failed. Raw response: {response[:1000]}")
                 raise json.JSONDecodeError("No valid JSON found", response, 0)
+
+            # 詳細ログ: 抽出されたJSON
+            self._logger.debug(f"Extracted JSON: {data}")
 
             findings = [ReviewFinding(**f) for f in data.get("findings", [])]
             verdict = ReviewVerdict(data.get("overall_verdict", "REVISE"))
 
+            # confidence_score の範囲を正規化（ge=0.0, le=1.0）
+            confidence = data.get("confidence_score", 0.7)
+            if not isinstance(confidence, (int, float)):
+                confidence = 0.7
+            confidence = max(0.0, min(1.0, float(confidence)))
+
             return ReviewOutput(
                 overall_verdict=verdict,
                 findings=findings,
-                confidence_score=data.get("confidence_score", 0.7),
+                confidence_score=confidence,
                 final_warnings=data.get("final_warnings", []),
             )
         except json.JSONDecodeError:
@@ -207,4 +227,25 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
     def _generate_warnings(self, findings: list[ReviewFinding]) -> list[str]:
         """最終警告を生成."""
         return [f.description for f in findings if f.severity in [FindingSeverity.CRITICAL, FindingSeverity.WARNING]]
+
+    def validate_output(self, output: ReviewOutput) -> bool:
+        """出力検証.
+
+        Args:
+            output: ReviewAgent出力
+
+        Returns:
+            検証結果
+        """
+        # overall_verdict が有効な値か
+        if output.overall_verdict not in ReviewVerdict:
+            self._logger.warning(f"Validation failed: invalid verdict {output.overall_verdict}")
+            return False
+
+        # confidence_score が範囲内か
+        if not (0.0 <= output.confidence_score <= 1.0):
+            self._logger.warning(f"Validation failed: confidence_score {output.confidence_score} out of range")
+            return False
+
+        return True
 

@@ -4,6 +4,7 @@ from agentflow.core.engine import AgentFlowEngine
 from agentflow.core.exceptions import (
     AgentExecutionError,
     AgentFlowError,
+    AgentOutputValidationError,
     AgentRetryExhaustedError,
     AgentTimeoutError,
     ProtocolError,
@@ -163,6 +164,7 @@ __all__ = [
     "AgentLoader",
     "AgentMetadata",
     "AgentMetadataModel",
+    "AgentOutputValidationError",
     "AgentRetryExhaustedError",
     "AgentStatus",
     "AgentTimeoutError",

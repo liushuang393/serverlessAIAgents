@@ -12,6 +12,7 @@ import logging
 from typing import Any
 
 from agentflow import ResilientAgent
+from agentflow.core.exceptions import AgentOutputValidationError
 from apps.decision_governance_engine.schemas.agent_schemas import (
     CausalGear,
     DaoInput,
@@ -196,16 +197,16 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         "essence_statement": "本質の一文（非これ不可）"
     },
     "essence": "問題の本質を一文で（50字以内、カテゴリ禁止）",
-    "existing_alternatives": [
+    "existing_alternatives": [  // ★最大3個まで
         {
             "name": "既存解の名称（例: Zoom）",
             "why_not_viable": "なぜこの企業では使えないか",
             "specific_constraint": "具体的な制約"
         }
     ],
-    "immutable_constraints": ["変えられない制約1", "制約2", ...],
-    "hidden_assumptions": ["暗黙の前提1", "前提2", ...],
-    "causal_gears": [
+    "immutable_constraints": ["制約1", "制約2", ...],  // ★最大5個まで
+    "hidden_assumptions": ["前提1", "前提2", "前提3"],  // ★最大3個まで（厳守）
+    "causal_gears": [  // ★3〜5個
         {
             "gear_id": 1,
             "name": "齿轮名（20字以内）",
@@ -216,14 +217,21 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         }
     ],
     "bottleneck_gear": 1,
-    "death_traps": [
+    "death_traps": [  // ★最大3個まで（厳守）
         {
             "action": "禁止行動",
             "reason": "なぜ致命的か",
             "severity": "FATAL"
         }
     ]
-}"""
+}
+
+【重要な制約】
+- hidden_assumptions: 最大3個まで（超えないこと）
+- death_traps: 最大3個まで（超えないこと）
+- existing_alternatives: 最大3個まで
+- causal_gears: 3〜5個
+- immutable_constraints: 最大5個まで"""
 
     def _parse_input(self, input_data: dict[str, Any]) -> DaoInput:
         """入力をパース."""
@@ -288,12 +296,23 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
+        # 詳細ログ: LLM生出力を記録（デバッグ用）
+        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
+
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
             from agentflow.utils import extract_json
             data = extract_json(response)
+
             if data is None:
+                self._logger.error(f"JSON extraction failed. Raw response: {response[:1000]}")
                 raise json.JSONDecodeError("No valid JSON found", response, 0)
+
+            # 詳細ログ: 抽出されたJSON
+            self._logger.debug(f"Extracted JSON: {data}")
+
+            # 業務ロジック検証（Pydantic検証前）- 失敗時はリトライをトリガー
+            self._validate_llm_output_fields(data)
 
             # v3.0: 本質導出プロセスをパース
             essence_derivation = None
@@ -368,6 +387,59 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
             self._logger.warning(f"LLM response parse failed: {e}")
             # パース失敗時はルールベースにフォールバック
             return self._analyze_rule_based(question, constraints, inferred_type)
+
+    def _validate_llm_output_fields(self, data: dict[str, Any]) -> None:
+        """LLM出力の業務ロジック検証（Pydantic検証前）.
+
+        重要なフィールドが空の場合はAgentOutputValidationErrorを発生させ、
+        リトライをトリガーする。
+
+        Args:
+            data: 抽出されたJSONデータ
+
+        Raises:
+            AgentOutputValidationError: 必須フィールドが空の場合
+        """
+        # essence の検証（必須かつ非空）
+        essence = data.get("essence")
+        if not essence or not isinstance(essence, str) or not essence.strip():
+            self._logger.warning(f"LLM returned empty essence. Full data: {data}")
+            raise AgentOutputValidationError(
+                agent_name=self.name,
+                field_name="essence",
+                expected="non-empty string (max 50 chars)",
+                actual=f"empty or invalid: {essence}",
+            )
+
+        # immutable_constraints の検証（リストであること）
+        immutable = data.get("immutable_constraints")
+        if immutable is not None and not isinstance(immutable, list):
+            self._logger.warning(f"LLM returned invalid immutable_constraints: {immutable}")
+            data["immutable_constraints"] = []
+
+        # causal_gears のリスト長を検証・正規化（max 5）
+        causal_gears = data.get("causal_gears", [])
+        if isinstance(causal_gears, list) and len(causal_gears) > 5:
+            self._logger.warning(f"causal_gears has {len(causal_gears)} items (max 5), truncating")
+            data["causal_gears"] = causal_gears[:5]
+
+        # death_traps のリスト長を検証・正規化（max 3）
+        death_traps = data.get("death_traps", [])
+        if isinstance(death_traps, list) and len(death_traps) > 3:
+            self._logger.warning(f"death_traps has {len(death_traps)} items (max 3), truncating")
+            data["death_traps"] = death_traps[:3]
+
+        # existing_alternatives のリスト長を検証・正規化（max 3）
+        existing_alts = data.get("existing_alternatives", [])
+        if isinstance(existing_alts, list) and len(existing_alts) > 3:
+            self._logger.warning(f"existing_alternatives has {len(existing_alts)} items (max 3), truncating")
+            data["existing_alternatives"] = existing_alts[:3]
+
+        # hidden_assumptions のリスト長を検証・正規化（max 3）
+        hidden = data.get("hidden_assumptions", [])
+        if isinstance(hidden, list) and len(hidden) > 3:
+            self._logger.warning(f"hidden_assumptions has {len(hidden)} items (max 3), truncating")
+            data["hidden_assumptions"] = hidden[:3]
 
     def _detect_constraint_driven(self, question: str) -> str:
         """制約主導型問題かどうかを検出."""

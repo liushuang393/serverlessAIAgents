@@ -20,6 +20,7 @@ from typing import Any
 from agentflow.skills.rag import RAGConfig, RAGSkill
 
 from agentflow import ResilientAgent
+from agentflow.core.exceptions import AgentOutputValidationError
 from apps.decision_governance_engine.schemas.agent_schemas import (
     ActionPhase,
     ContextSpecificAction,
@@ -144,13 +145,20 @@ class ShuAgent(ResilientAgent[ShuInput, ShuOutput]):
 
 【出力形式】
 必ず以下のJSON形式で出力してください：
+
+**重要な制約**:
+- phases: 3〜5個のフェーズ
+- 各フェーズの actions: 最大5個まで（6個以上は禁止）
+- 各フェーズの deliverables: 最大5個まで
+- 各フェーズの success_criteria: 最大5個まで
+
 {
     "phases": [
         {
             "phase_number": 1,
             "name": "調査・検証",
             "duration": "2週間",
-            "actions": ["文脈特化した具体的行動1", "行動2"],
+            "actions": ["行動1", "行動2", "行動3"],
             "deliverables": ["成果物1"],
             "success_criteria": ["完了条件1"]
         }
@@ -222,6 +230,36 @@ class ShuAgent(ResilientAgent[ShuInput, ShuOutput]):
 
         return self._plan_rule_based(selected_path)
 
+    def validate_output(self, output: ShuOutput) -> bool:
+        """出力の品質検証.
+
+        Args:
+            output: ShuAgent出力
+
+        Returns:
+            検証結果（True = 有効）
+        """
+        # フェーズ数の検証
+        if len(output.phases) < 3:
+            self._logger.warning(f"Output has only {len(output.phases)} phases (min 3)")
+            return False
+
+        # 各フェーズのactions数を検証
+        for phase in output.phases:
+            if len(phase.actions) == 0:
+                self._logger.warning(f"Phase {phase.phase_number} has no actions")
+                return False
+            if len(phase.actions) > 5:
+                self._logger.warning(f"Phase {phase.phase_number} has {len(phase.actions)} actions (max 5)")
+                return False
+
+        # first_action の検証
+        if not output.first_action or not output.first_action.strip():
+            self._logger.warning("first_action is empty")
+            return False
+
+        return True
+
     def _find_selected_path(self, fa_result: FaOutput, path_id: str) -> PathOption | None:
         """選択されたパスを検索."""
         for path in fa_result.recommended_paths:
@@ -287,12 +325,23 @@ JSON形式で出力してください。"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
+        # 詳細ログ: LLM生出力を記録
+        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
+
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
             from agentflow.utils import extract_json
             data = extract_json(response)
+
             if data is None:
+                self._logger.error(f"JSON extraction failed. Raw response: {response[:1000]}")
                 raise json.JSONDecodeError("No valid JSON found", response, 0)
+
+            # 詳細ログ: 抽出されたJSON
+            self._logger.debug(f"Extracted JSON: {data}")
+
+            # 業務ロジック検証・正規化（Pydantic検証前）
+            self._validate_and_normalize_phases(data)
 
             phases = [ActionPhase(**p) for p in data.get("phases", [])]
             if len(phases) < 3:
@@ -349,6 +398,73 @@ JSON形式で出力してください。"""
         except json.JSONDecodeError as e:
             self._logger.warning(f"LLM response parse failed: {e}")
             return self._plan_rule_based(selected_path)
+
+    def _validate_and_normalize_phases(self, data: dict[str, Any]) -> None:
+        """LLM出力のphasesを検証・正規化（Pydantic検証前）.
+
+        - 長すぎるリストを截断
+        - 必須フィールドの欠落をチェック
+        - 空のフェーズを除去
+
+        Args:
+            data: 抽出されたJSONデータ（in-place で修正）
+
+        Raises:
+            AgentOutputValidationError: 修復不可能な問題がある場合
+        """
+        phases = data.get("phases", [])
+
+        if not phases or not isinstance(phases, list):
+            self._logger.warning(f"LLM returned empty or invalid phases: {phases}")
+            raise AgentOutputValidationError(
+                agent_name=self.name,
+                field_name="phases",
+                expected="list with at least 3 phases",
+                actual=f"empty or invalid: {phases}",
+            )
+
+        # 各フェーズを正規化
+        normalized_phases = []
+        for i, phase in enumerate(phases[:5]):  # 最大5フェーズ
+            if not isinstance(phase, dict):
+                self._logger.warning(f"Phase {i} is not a dict: {phase}")
+                continue
+
+            # actions の截断（max_length=5）
+            actions = phase.get("actions", [])
+            if isinstance(actions, list) and len(actions) > 5:
+                self._logger.warning(
+                    f"Phase {i} has {len(actions)} actions (max 5), truncating: {actions}"
+                )
+                phase["actions"] = actions[:5]
+
+            # deliverables の截断
+            deliverables = phase.get("deliverables", [])
+            if isinstance(deliverables, list) and len(deliverables) > 5:
+                phase["deliverables"] = deliverables[:5]
+
+            # success_criteria の截断
+            success_criteria = phase.get("success_criteria", [])
+            if isinstance(success_criteria, list) and len(success_criteria) > 5:
+                phase["success_criteria"] = success_criteria[:5]
+
+            # 必須フィールドの存在チェック
+            if not phase.get("phase_number"):
+                phase["phase_number"] = i + 1
+            if not phase.get("name"):
+                phase["name"] = f"フェーズ{i + 1}"
+            if not phase.get("duration"):
+                phase["duration"] = "要定義"
+            if not phase.get("actions"):
+                phase["actions"] = ["要定義"]
+
+            normalized_phases.append(phase)
+
+        if len(normalized_phases) < 3:
+            self._logger.warning(f"Only {len(normalized_phases)} valid phases after normalization")
+            # 3フェーズ未満でも続行（_plan_with_llm でデフォルトフェーズが使用される）
+
+        data["phases"] = normalized_phases
 
     def _plan_rule_based(self, selected_path: PathOption | None) -> ShuOutput:
         """ルールベース計画策定（v3.0: 文脈特化対応）."""

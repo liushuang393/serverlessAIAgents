@@ -549,6 +549,20 @@ class PipelineEngine(BaseEngine):
             # Flowのrun_streamを使用
             # レポートジェネレーターがある場合、flow_complete イベントを変換
             async for event in self._flow.run_stream(inputs):
+                event_type = event.get("event_type") or event.get("type", "")
+
+                # node.complete イベント時に思考ログを発行
+                if event_type in ("node.complete", "node_complete"):
+                    node_id = event.get("node_id", "")
+                    # FlowContext から結果を取得（data フィールドに含まれる場合がある）
+                    node_result = event.get("data", {})
+                    if not node_result and self._flow._context:
+                        node_result = self._flow._context.get_result(node_id) or {}
+
+                    # 思考ログイベントを発行
+                    for log_event in self._emit_thinking_logs(node_id, node_result):
+                        yield log_event
+
                 if event.get("type") == "flow_complete" and self._report_generator:
                     # flow_complete の result を変換して置き換え
                     result = event.get("result", {})
@@ -592,10 +606,16 @@ class PipelineEngine(BaseEngine):
                 if event := self._emit_node_start(stage.name):
                     yield event
 
-                progress = (i + 1) / len(self._stage_configs) * 100
+                # ステージ開始時の進捗イベント（overall_progressはフロー全体、stage_progressはステージ内）
+                overall_progress = (i + 1) / len(self._stage_configs) * 100
                 yield {
                     "type": "progress",
-                    "data": {"stage": stage.name, "progress": progress, "revision": revision},
+                    "data": {
+                        "stage": stage.name,
+                        "progress": 10,  # ステージ開始時は10%
+                        "overall_progress": overall_progress,  # フロー全体の進捗
+                        "revision": revision,
+                    },
                 }
 
                 stage_result = await self._run_stage(stage, current_inputs)

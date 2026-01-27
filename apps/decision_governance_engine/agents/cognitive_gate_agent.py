@@ -14,6 +14,7 @@ import logging
 from typing import Any
 
 from agentflow import ResilientAgent
+from agentflow.core.exceptions import AgentOutputValidationError
 from apps.decision_governance_engine.prompts import build_full_prompt
 from apps.decision_governance_engine.schemas.agent_schemas import (
     ClarificationOutput,
@@ -108,33 +109,132 @@ JSON形式で出力してください。"""
         system_prompt = self._get_system_prompt()
         response = await self._call_llm(f"{system_prompt}\n\n{user_prompt}")
 
+        # 詳細ログ: LLM生出力を記録（デバッグ用）
+        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
+
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
             from agentflow.utils import extract_json
             data = extract_json(response)
+
             if data is None:
+                self._logger.error(f"JSON extraction failed. Raw response: {response[:1000]}")
                 raise json.JSONDecodeError("No valid JSON found", response, 0)
+
+            # 詳細ログ: 抽出されたJSON
+            self._logger.debug(f"Extracted JSON: {data}")
+
+            # 業務ロジック検証（Pydantic検証前）- 失敗時はリトライをトリガー
+            self._validate_llm_output_fields(data)
+
             return self._parse_llm_output(data)
+
         except json.JSONDecodeError as e:
             self._logger.warning(f"LLM response parse failed: {e}")
+            # JSONパース失敗 → ルールベースにフォールバック
             return self._analyze_rule_based(input_data)
 
+    def _validate_llm_output_fields(self, data: dict[str, Any]) -> None:
+        """LLM出力の業務ロジック検証（Pydantic検証前）.
+
+        重要なフィールドが空の場合はAgentOutputValidationErrorを発生させ、
+        リトライをトリガーする。
+
+        Args:
+            data: 抽出されたJSONデータ
+
+        Raises:
+            AgentOutputValidationError: 必須フィールドが空の場合
+        """
+        # criteria の検証（min_length=1）
+        criteria = data.get("criteria")
+        if not criteria or not isinstance(criteria, list) or len(criteria) == 0:
+            self._logger.warning(f"LLM returned empty criteria. Full data: {data}")
+            raise AgentOutputValidationError(
+                agent_name=self.name,
+                field_name="criteria",
+                expected="list with at least 1 item",
+                actual=f"empty or invalid: {criteria}",
+            )
+
+        # 空文字列のみの criteria もNG
+        valid_criteria = [c for c in criteria if c and str(c).strip()]
+        if len(valid_criteria) == 0:
+            self._logger.warning(f"LLM returned criteria with only empty strings: {criteria}")
+            raise AgentOutputValidationError(
+                agent_name=self.name,
+                field_name="criteria",
+                expected="list with at least 1 non-empty item",
+                actual=f"all items empty: {criteria}",
+            )
+
+        # evaluation_object の検証
+        eval_obj = data.get("evaluation_object")
+        if not eval_obj or not isinstance(eval_obj, str) or not eval_obj.strip():
+            self._logger.warning(f"LLM returned empty evaluation_object. Full data: {data}")
+            raise AgentOutputValidationError(
+                agent_name=self.name,
+                field_name="evaluation_object",
+                expected="non-empty string",
+                actual=f"empty or invalid: {eval_obj}",
+            )
+
+        # intent の検証
+        intent = data.get("intent")
+        if not intent or not isinstance(intent, str) or not intent.strip():
+            self._logger.warning(f"LLM returned empty intent. Full data: {data}")
+            raise AgentOutputValidationError(
+                agent_name=self.name,
+                field_name="intent",
+                expected="non-empty string",
+                actual=f"empty or invalid: {intent}",
+            )
+
     def _parse_llm_output(self, data: dict[str, Any]) -> CognitiveGateOutput:
-        """LLM出力をパース."""
+        """LLM出力をパース.
+
+        注意: _validate_llm_output_fields() で事前検証済みのデータが渡される前提。
+        ただし、保守的にデフォルト値を設定（防御的プログラミング）。
+        """
         # 不可逆性をパース
         irr_data = data.get("irreversibility", {})
+        if not isinstance(irr_data, dict):
+            irr_data = {}
         level_str = irr_data.get("level", "MEDIUM")
         level = IrreversibilityLevel(level_str) if level_str in IrreversibilityLevel.__members__ else IrreversibilityLevel.MEDIUM
 
         irreversibility = Irreversibility(
             level=level,
-            description=irr_data.get("description", "要評価")[:50],
+            description=str(irr_data.get("description", "要評価"))[:50],
         )
 
+        # criteria: 事前検証済みだが、保守的にデフォルト値を設定
+        raw_criteria = data.get("criteria")
+        if not raw_criteria or not isinstance(raw_criteria, list) or len(raw_criteria) == 0:
+            self._logger.warning("criteria was empty after validation - using default (should not happen)")
+            criteria = ["要定義"]
+        else:
+            criteria = [str(c)[:50] for c in raw_criteria[:5] if c and str(c).strip()]
+            if not criteria:
+                self._logger.warning("criteria had only empty strings - using default")
+                criteria = ["要定義"]
+
+        # evaluation_object: 事前検証済みだが、保守的にデフォルト値を設定
+        evaluation_object = data.get("evaluation_object", "")
+        if not evaluation_object or not isinstance(evaluation_object, str) or not str(evaluation_object).strip():
+            self._logger.warning("evaluation_object was empty after validation - using default")
+            evaluation_object = "評価対象未特定"
+
+        # intent: 事前検証済みだが、保守的にデフォルト値を設定
+        intent = data.get("intent", "")
+        if not intent or not isinstance(intent, str) or not str(intent).strip():
+            self._logger.warning("intent was empty after validation - using default")
+            intent = "動機未特定"
+
         return CognitiveGateOutput(
-            evaluation_object=data.get("evaluation_object", "")[:50],
-            intent=data.get("intent", "")[:100],
-            criteria=data.get("criteria", ["要定義"])[:5],
+            evaluation_object=str(evaluation_object).strip()[:50],
+            intent=str(intent).strip()[:100],
+            criteria=criteria,
             irreversibility=irreversibility,
             proceed=data.get("proceed", False),
             missing_info=data.get("missing_info", [])[:3],

@@ -43,7 +43,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.get('/config/rag');
+      const response = await apiClient.get('/api/config/rag');
       setConfigs(response.data as AgentRAGConfig[]);
     } catch (err) {
       // エラー詳細をUIに表示
@@ -58,7 +58,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   const saveConfig = useCallback(async (agentId: string, updates: Partial<AgentRAGConfig>) => {
     setIsSaving(true);
     try {
-      await apiClient.put(`/config/rag/${agentId}`, updates);
+      await apiClient.put(`/api/config/rag/${agentId}`, updates);
       await fetchConfigs();
     } catch (err) {
       // エラー詳細をUIに表示

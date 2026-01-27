@@ -205,7 +205,7 @@ alembic downgrade -1
 # プロジェクトルートで実行
 
 # APIサーバー起動（ポート8000）
-python -m uvicorn apps.decision_governance_engine.api:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn apps.decision_governance_engine.api:app --host 0.0.0.0 --port 8001 --reload
 
 # または直接実行
 python api.py
