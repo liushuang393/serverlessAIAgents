@@ -21,7 +21,7 @@ from typing import TYPE_CHECKING, Any
 
 from agentflow.flow.context import FlowContext
 from agentflow.flow.progress import ProgressTracker
-from agentflow.flow.types import NextAction
+from agentflow.flow.types import NextAction, NodeType
 
 if TYPE_CHECKING:
     from agentflow.flow.graph import FlowGraph
@@ -139,8 +139,9 @@ class FlowExecutor:
                             "error_type": error_type,
                             "message": error_msg,  # フロントエンド fallback
                         }
-                else:
-                    # ノード成功時のみ完了イベントを発行
+                elif result.action in (NextAction.CONTINUE, NextAction.STOP):
+                    # ノード正常完了時のみ完了イベントを発行
+                    # EARLY_RETURN（Gate失敗）や RETRY_FROM（REVISE）では発行しない
                     if tracker:
                         yield tracker.on_node_complete(node, result.data, success=True)
                     else:
@@ -158,15 +159,23 @@ class FlowExecutor:
                     continue
 
                 if result.action == NextAction.STOP:
+                    # Review PASS の場合は review_verdict イベントを発行
+                    if node.node_type == NodeType.REVIEW and result.success:
+                        yield {
+                            "type": "review_verdict",
+                            "data": {"verdict": "PASS"},
+                        }
+
                     if result.success:
-                        # 正常終了
+                        # 正常終了 - 全ノードの結果を返す
+                        final_result = ctx.get_all_results()
                         if tracker:
-                            yield tracker.on_flow_complete(result.data)
+                            yield tracker.on_flow_complete(final_result)
                         else:
                             yield {
                                 "event_type": "flow.complete",
                                 "type": "flow_complete",  # 後方互換
-                                "result": result.data,
+                                "result": final_result,
                             }
                     else:
                         # エラー終了
@@ -183,6 +192,13 @@ class FlowExecutor:
                     return
 
                 if result.action == NextAction.EARLY_RETURN:
+                    # Review REJECT の場合は review_verdict イベントを発行
+                    if node.node_type == NodeType.REVIEW:
+                        yield {
+                            "type": "review_verdict",
+                            "data": {"verdict": "REJECT"},
+                        }
+
                     # 早期リターン（GateインターセプトまたはREJECT）
                     yield {
                         "type": "early_return",
@@ -197,16 +213,27 @@ class FlowExecutor:
                         self._logger.error("RETRY_FROMでロールバックノードが指定されていません")
                         break
 
-                    # ロールバックノードから開始する結果をクリア
-                    ctx.clear_results_from(retry_id)
-                    if tracker:
-                        tracker.reset()
-
                     # ロールバックノードのインデックスを検索
                     retry_idx = self._graph.get_node_index(retry_id)
                     if retry_idx < 0:
                         self._logger.error(f"ロールバックノードが見つかりません: {retry_id}")
                         break
+
+                    # REVISE イベントを発行（フロントエンドにロールバックを通知）
+                    # retry_from はノードのインデックス（フロントエンドで使用）
+                    yield {
+                        "type": "review_verdict",
+                        "data": {"verdict": "REVISE"},
+                    }
+                    yield {
+                        "type": "revise",
+                        "data": {"retry_from": retry_idx, "retry_node_id": retry_id},
+                    }
+
+                    # ロールバックノードから開始する結果をクリア
+                    ctx.clear_results_from(retry_id)
+                    if tracker:
+                        tracker.reset()
 
                     self._logger.info(f"REVISEロールバック: {retry_id} (第{ctx.revision_count}回)")
                     idx = retry_idx

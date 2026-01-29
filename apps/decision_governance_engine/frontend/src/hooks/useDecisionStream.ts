@@ -217,11 +217,17 @@ export function useDecisionStream() {
               }
 
               // 状態を設定（エラーとして表示し、再試行可能にする）
+              // 現在runningのAgentをcompletedに更新（結果データも設定）
               setState((prev) => ({
                 ...prev,
                 isComplete: true,
                 error: rejectionMessage || '入力が条件を満たしていません。質問を修正してください。',
                 isRetryable: true,
+                agents: prev.agents.map((a) =>
+                  a.status === 'running'
+                    ? { ...a, status: 'completed' as const, progress: 100, message: '拒否', result: data }
+                    : a
+                ),
               }));
               eventSourceRef.current?.close();
             }

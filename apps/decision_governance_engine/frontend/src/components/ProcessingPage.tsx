@@ -79,9 +79,15 @@ const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({ age
             </div>
           ) : null}
           {agent.id === 'gatekeeper' && (
-            <div className="text-sm text-emerald-400">
-              ✓ 質問を受理しました
-            </div>
+            agent.result?.is_acceptable ? (
+              <div className="text-sm text-emerald-400">
+                ✓ 質問を受理しました
+              </div>
+            ) : agent.result?.rejection_message ? (
+              <div className="text-sm text-amber-400">
+                ⚠️ {String(agent.result.rejection_message)}
+              </div>
+            ) : null
           )}
           {agent.id === 'clarification' && agent.result.confidence ? (
             <div className="text-sm text-slate-400">

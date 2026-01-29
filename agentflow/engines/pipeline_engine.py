@@ -563,10 +563,16 @@ class PipelineEngine(BaseEngine):
                     for log_event in self._emit_thinking_logs(node_id, node_result):
                         yield log_event
 
-                if event.get("type") == "flow_complete" and self._report_generator:
+                if event.get("type") == "flow_complete":
                     # flow_complete の result を変換して置き換え
                     result = event.get("result", {})
-                    transformed = self._report_generator(result)
+                    # ReportBuilder または report_generator で変換
+                    if self._report_builder:
+                        transformed = self._report_builder.build(result, self._inputs)
+                    elif self._report_generator:
+                        transformed = self._report_generator(result)
+                    else:
+                        transformed = result
                     yield {
                         **event,
                         "result": transformed,
