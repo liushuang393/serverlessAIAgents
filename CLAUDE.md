@@ -159,6 +159,85 @@ yield event.to_dict()
 yield {"type": "progress", "data": {"progress": some_value}}
 ```
 
+## Context Engineering（上下文エンジニアリング）
+
+### 設計原則
+
+上下文を「注意力予算」として管理し、LLMの効率を最大化する:
+
+| 原則 | 予算 | コンポーネント |
+|------|------|---------------|
+| システムプロンプト | ≤500 token | `TokenBudgetManager` |
+| ツール公開 | Top 5-7 | `ToolRelevanceSelector` |
+| RAG検索 | 必要時のみ | `RetrievalGate` |
+| コンテキスト注入 | Top 1-2片段 | `BudgetManager.allocate_rag_context()` |
+| 会話圧縮 | 10ターンごと | `TurnBasedCompressor` |
+| 重要情報保持 | 永続Notes | `KeyNotesStore` |
+| 子Agent結果 | 最終出力のみ | `ResultSummarizer` |
+
+### クイックスタート
+
+```python
+from agentflow import ContextEngineer, ContextConfig
+
+# 統合インターフェース（推奨）
+engineer = ContextEngineer()
+await engineer.start()
+
+# メッセージ追加（自動圧縮）
+engineer.add_message("user", "APIの仕様を教えて")
+
+# 最適化されたコンテキスト構築
+context = await engineer.build_context(
+    query="決済APIの仕様",
+    base_prompt="技術アシスタント",
+    available_tools=all_tools,
+    rag_search_func=rag.search,
+)
+
+# 結果
+# context.system_prompt  -> 500token内に収まる
+# context.tools          -> 関連Top-7ツール
+# context.rag_results    -> 必要時のみ検索結果
+# context.messages       -> 圧縮済み履歴
+# context.key_notes      -> 重要情報
+```
+
+### 個別コンポーネント使用
+
+```python
+from agentflow import (
+    TokenBudgetManager,    # Token予算管理
+    ToolRelevanceSelector, # ツール関連性選択
+    RetrievalGate,         # RAG検索判定
+    KeyNotesStore,         # 重要Notes永続化
+    TurnBasedCompressor,   # ターン圧縮
+)
+from agentflow.patterns.deep_agent import ResultSummarizer  # 結果フィルター
+
+# 例: RAG検索が必要かどうか判定
+gate = RetrievalGate()
+decision = await gate.should_retrieve("文書の内容を教えて")
+if decision.should_retrieve:
+    results = await rag.search(decision.suggested_query)
+```
+
+### キーファイル
+
+```
+agentflow/context/
+├── __init__.py           # モジュール導出
+├── budget_manager.py     # Token予算管理
+├── tool_selector.py      # ツール関連性選択
+├── retrieval_gate.py     # RAG検索判定
+├── key_notes.py          # 重要Notes永続化
+├── turn_compressor.py    # ターン圧縮
+└── context_engineer.py   # 統合インターフェース
+
+agentflow/patterns/deep_agent/
+└── result_summarizer.py  # 子Agent結果フィルター
+```
+
 ## Reference Application
 
 `apps/decision_governance_engine/` is a complete multi-agent decision support system demonstrating PipelineEngine, agent coordination, and the 8-layer architecture.

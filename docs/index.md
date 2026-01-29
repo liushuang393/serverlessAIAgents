@@ -37,6 +37,7 @@
 
 | ドキュメント | 説明 |
 |-------------|------|
+| **[context-engineering.md](./context-engineering.md)** | ⭐ **Context Engineering** - 上下文予算管理 |
 | [guide-llm-router.md](./guide-llm-router.md) | LLM ルーター設定 |
 | [protocols.md](./protocols.md) | MCP / A2A / AG-UI プロトコル |
 

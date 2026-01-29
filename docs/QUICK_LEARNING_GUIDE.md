@@ -426,6 +426,29 @@ emitter.emit(TextComponent(text="Hello"))
 | `get_vectordb()` | 获取向量数据库 | `VECTOR_DATABASE_TYPE`, `QDRANT_URL` |
 | `get_embedding()` | 获取 Embedding | `EMBEDDING_PROVIDER` |
 
+### Context Engineering 速查
+
+| 组件 | 说明 | 导入 |
+|------|------|------|
+| `ContextEngineer` | 统合接口（推荐） | `from agentflow import ContextEngineer` |
+| `TokenBudgetManager` | Token 预算管理 | `from agentflow import TokenBudgetManager` |
+| `ToolRelevanceSelector` | 工具相关性选择 | `from agentflow import ToolRelevanceSelector` |
+| `RetrievalGate` | RAG 检索判定 | `from agentflow import RetrievalGate` |
+| `KeyNotesStore` | 重要 Notes 永续化 | `from agentflow import KeyNotesStore` |
+| `TurnBasedCompressor` | 轮数压缩 | `from agentflow import TurnBasedCompressor` |
+| `ResultSummarizer` | 结果过滤 | `from agentflow.patterns.deep_agent import ResultSummarizer` |
+
+### Context Engineering 预算速查
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `system_prompt_budget` | 500 | 系统提示 Token 预算 |
+| `tools_budget` | 300 | 工具描述预算 |
+| `rag_context_budget` | 2000 | RAG 上下文预算 |
+| `history_budget` | 4000 | 会话历史预算 |
+| `turn_threshold` | 10 | 压缩触发轮数 |
+| `max_tools` | 7 | 最大暴露工具数 |
+
 ### VectorDB 速查
 
 | 类型 | 环境变量 | 特点 |
@@ -462,10 +485,11 @@ emitter.emit(TextComponent(text="Hello"))
 
 ## 📚 更多资源
 
+- **[Context Engineering 指南](./context-engineering.md)** - ⭐ 上下文预算管理详细教程
 - [框架抽象改进计划](./FRAMEWORK_ABSTRACTION_PLAN.md)
 - [@agentflow/ui 文档](../agentflow/sdk/frontend/README.md)
 - [示例应用](../apps/)
-- [API 文档](./api/)
+- [API 文档](./api.md)
 
 ---
 

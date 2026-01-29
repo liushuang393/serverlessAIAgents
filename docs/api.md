@@ -708,8 +708,140 @@ print(error.to_dict())
 
 ---
 
+## Context Engineering API（NEW）
+
+### ContextEngineer
+
+上下文エンジニアリングの統合インターフェース。
+
+```python
+from agentflow import ContextEngineer, ContextConfig
+```
+
+#### 基本使用
+
+```python
+engineer = ContextEngineer()
+await engineer.start()
+
+# メッセージ追加
+engineer.add_message("user", "APIの仕様を教えて")
+
+# コンテキスト構築
+context = await engineer.build_context(
+    query="決済APIの仕様",
+    base_prompt="技術アシスタント",
+    available_tools=tools,
+    rag_search_func=rag.search,
+)
+
+# 結果
+# context.system_prompt  -> 予算内プロンプト
+# context.tools          -> Top-K関連ツール
+# context.rag_results    -> 検索結果（必要時のみ）
+# context.messages       -> 圧縮済み履歴
+```
+
+### TokenBudgetManager
+
+Token予算管理。
+
+```python
+from agentflow import TokenBudgetManager, BudgetConfig
+
+config = BudgetConfig(
+    system_prompt_budget=500,
+    tools_budget=300,
+    rag_context_budget=2000,
+)
+manager = TokenBudgetManager(config=config)
+
+# プロンプト配分
+allocation = manager.allocate_system_prompt(long_prompt, skills)
+print(f"Tokens: {allocation.token_count}, Truncated: {allocation.truncated}")
+```
+
+### ToolRelevanceSelector
+
+クエリベースのツール選択。
+
+```python
+from agentflow import ToolRelevanceSelector
+
+selector = ToolRelevanceSelector()
+selected = await selector.select_relevant_tools(
+    query="データベース検索",
+    all_tools=all_tools,
+    max_tools=7,
+)
+```
+
+### RetrievalGate
+
+RAG検索必要性判定。
+
+```python
+from agentflow import RetrievalGate
+
+gate = RetrievalGate()
+decision = await gate.should_retrieve("文書の内容を教えて")
+
+if decision.should_retrieve:
+    results = await rag.search(decision.suggested_query)
+```
+
+### KeyNotesStore
+
+重要情報の永続化。
+
+```python
+from agentflow import KeyNotesStore, NoteImportance
+
+store = KeyNotesStore()
+store.add_note("予算は100万円", importance=NoteImportance.HIGH)
+await store.extract_and_store("私は田中です", source="user")
+
+context_str = store.to_context_string(max_tokens=500)
+```
+
+### TurnBasedCompressor
+
+ターン数ベースの会話圧縮。
+
+```python
+from agentflow import TurnBasedCompressor, TurnConfig
+
+compressor = TurnBasedCompressor(
+    config=TurnConfig(turn_threshold=10),
+)
+
+for msg in messages:
+    compressor.add_message(msg["role"], msg["content"])
+
+if compressor.should_compress():
+    result = await compressor.compress()
+    print(f"圧縮: {result.original_count} -> {result.compressed_count}")
+```
+
+### ResultSummarizer
+
+子Agent結果フィルター。
+
+```python
+from agentflow.patterns.deep_agent import ResultSummarizer
+
+summarizer = ResultSummarizer()
+summarized = await summarizer.summarize_results(results)
+# debug_info, intermediate_steps 等は自動除去
+```
+
+詳細は [Context Engineering ガイド](context-engineering.md) を参照。
+
+---
+
 ## 次のステップ
 
+- [Context Engineering ガイド](context-engineering.md) - 上下文予算管理の詳細
 - [パターンガイド](PATTERNS_GUIDE.md) - DeepAgent/Reflection/Pipeline の詳細
 - [プロトコルガイド](protocols.md) - MCP/A2A/AG-UI の詳細
 - [CLI リファレンス](cli.md) - CLI コマンドの詳細

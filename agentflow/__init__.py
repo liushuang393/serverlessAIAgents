@@ -315,6 +315,34 @@ from agentflow.memory.knowledge import (
     KnowledgeSource,
 )
 
+# =============================================================================
+# 公開API: Context Engineering（上下文エンジニアリング）
+# =============================================================================
+from agentflow.context import (
+    # 統合インターフェース（推奨）
+    ContextEngineer,
+    ContextConfig,
+    # Token予算管理
+    TokenBudgetManager,
+    BudgetConfig,
+    BudgetAllocation,
+    # ツール関連性選択
+    ToolRelevanceSelector,
+    ToolScore,
+    # RAG検索判定
+    RetrievalGate,
+    RetrievalDecision,
+    RetrievalReason,
+    # 重要Notes永続化
+    KeyNotesStore,
+    KeyNote,
+    NoteImportance,
+    # ターン圧縮
+    TurnBasedCompressor,
+    CompressionResult,
+    TurnConfig,
+)
+
 
 __version__ = "0.2.0"
 
@@ -406,6 +434,32 @@ __all__ = [
     # 型定義
     "KnowledgeEntry",
     "KnowledgeSource",
+
+    # =========================================================================
+    # Context Engineering（上下文エンジニアリング）
+    # =========================================================================
+    # 統合インターフェース
+    "ContextEngineer",
+    "ContextConfig",
+    # Token予算管理
+    "TokenBudgetManager",
+    "BudgetConfig",
+    "BudgetAllocation",
+    # ツール関連性選択
+    "ToolRelevanceSelector",
+    "ToolScore",
+    # RAG検索判定
+    "RetrievalGate",
+    "RetrievalDecision",
+    "RetrievalReason",
+    # 重要Notes永続化
+    "KeyNotesStore",
+    "KeyNote",
+    "NoteImportance",
+    # ターン圧縮
+    "TurnBasedCompressor",
+    "CompressionResult",
+    "TurnConfig",
 
     # =========================================================================
     # Agent基底クラス
