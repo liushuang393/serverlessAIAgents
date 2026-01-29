@@ -176,7 +176,7 @@ export const LoginPage: React.FC = () => {
                     className="w-full flex items-center justify-between px-4 py-3 bg-[#0a0a0f] hover:bg-[#0a0a0f]/50 rounded-lg border border-white/5 hover:border-indigo-500/30 transition-all group"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500/20 to-violet-500/20 flex items-center justify-center text-lg">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500/20 to-violet-500/20 flex items-center justify-center text-lg font-bold text-white">
                         {user.name.charAt(0)}
                       </div>
                       <div className="text-left">

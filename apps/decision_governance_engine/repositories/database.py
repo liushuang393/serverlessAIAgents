@@ -36,8 +36,17 @@ _redis_client: Any = None
 
 
 def get_database_url() -> str:
-    """データベース URL を取得."""
-    return os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
+    """データベース URL を取得.
+
+    PostgreSQL + asyncpg ドライバーを使用。
+    """
+    url = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
+
+    # postgresql:// → postgresql+asyncpg:// 自動変換
+    if url.startswith("postgresql://") and "+asyncpg" not in url:
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    return url
 
 
 def get_redis_url() -> str:
@@ -46,16 +55,16 @@ def get_redis_url() -> str:
 
 
 async def init_db(create_tables: bool = False) -> None:
-    """データベース初期化.
-    
+    """データベース初期化（PostgreSQL）.
+
     Args:
         create_tables: True の場合、テーブルを自動作成（開発用）
     """
     global _engine, _session_factory
-    
+
     database_url = get_database_url()
-    logger.info(f"Initializing database: {database_url[:30]}...")
-    
+    logger.info(f"Initializing database: {database_url[:50]}...")
+
     _engine = create_async_engine(
         database_url,
         echo=os.getenv("DB_ECHO", "false").lower() == "true",
@@ -63,13 +72,13 @@ async def init_db(create_tables: bool = False) -> None:
         max_overflow=10,
         pool_pre_ping=True,
     )
-    
+
     _session_factory = async_sessionmaker(
         bind=_engine,
         class_=AsyncSession,
         expire_on_commit=False,
     )
-    
+
     if create_tables:
         async with _engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)

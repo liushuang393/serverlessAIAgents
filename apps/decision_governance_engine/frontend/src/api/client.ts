@@ -17,6 +17,8 @@ import type {
   DecisionAPIResponse,
   AGUIEvent,
   SignatureResponse,
+  HistoryListResponse,
+  HistoryDetailResponse,
 } from '../types';
 
 /** API ベースURL
@@ -374,6 +376,46 @@ export class DecisionApiClient {
     if (!response.ok) {
       throw DecisionApiError.fromResponse(response);
     }
+
+    return response.json();
+  }
+
+  /**
+   * 履歴一覧取得.
+   *
+   * @param options フィルタオプション
+   * @returns 履歴一覧
+   */
+  async getHistory(options?: {
+    limit?: number;
+    decision_role?: string;
+    mode?: string;
+  }): Promise<HistoryListResponse> {
+    const params = new URLSearchParams();
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.decision_role) params.append('decision_role', options.decision_role);
+    if (options?.mode) params.append('mode', options.mode);
+
+    const query = params.toString() ? `?${params.toString()}` : '';
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/api/decision/history${query}`,
+      { method: 'GET' }
+    );
+
+    return response.json();
+  }
+
+  /**
+   * 履歴詳細取得.
+   *
+   * @param requestId リクエストID
+   * @returns 履歴詳細
+   */
+  async getHistoryDetail(requestId: string): Promise<HistoryDetailResponse> {
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/api/decision/history/${requestId}`,
+      { method: 'GET' }
+    );
 
     return response.json();
   }

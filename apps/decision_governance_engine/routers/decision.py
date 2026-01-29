@@ -303,8 +303,12 @@ async def get_decision_history(
         ]
         return HistoryListResponse(status="success", total=len(items), items=items)
     except Exception as e:
-        logger.warning(f"履歴取得失敗（DB未接続の可能性）: {e}")
-        return HistoryListResponse(status="error", total=0, items=[])
+        logger.error(f"履歴取得失敗: {e}")
+        # エラー時は適切なHTTPステータスコードを返す
+        raise HTTPException(
+            status_code=500,
+            detail=f"履歴取得に失敗しました: {str(e)}"
+        )
 
 
 @router.get("/api/decision/history/{request_id}", response_model=HistoryDetailResponse)

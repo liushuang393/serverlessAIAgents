@@ -6,6 +6,7 @@
 """
 
 import json
+import logging
 from typing import Any
 
 from agentflow import ResilientAgent
@@ -41,6 +42,11 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
 
     # RAG使用禁止
     USE_RAG = False
+
+    def __init__(self, llm_client: Any = None) -> None:
+        """初期化."""
+        super().__init__(llm_client)
+        self._logger = logging.getLogger(self.name)
 
     # 認知バイアスパターン
     COGNITIVE_BIAS_PATTERNS: dict[str, dict[str, str]] = {
@@ -150,12 +156,20 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
+        # 詳細ログ: LLM生出力を記録（デバッグ用）
+        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
+
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
             from agentflow.utils import extract_json
             data = extract_json(response)
+
             if data is None:
+                self._logger.error(f"JSON extraction failed. Raw response: {response[:1000]}")
                 raise json.JSONDecodeError("No valid JSON found", response, 0)
+
+            # 詳細ログ: 抽出されたJSON
+            self._logger.debug(f"Extracted JSON: {data}")
 
             ambiguities = [
                 Ambiguity(**a) for a in data.get("ambiguities", [])
@@ -167,13 +181,19 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
                 CognitiveBias(**c) for c in data.get("cognitive_biases", [])
             ][:2]
 
+            # diagnosis_confidence の範囲を正規化（ge=0.0, le=1.0）
+            confidence = data.get("diagnosis_confidence", 0.7)
+            if not isinstance(confidence, (int, float)):
+                confidence = 0.7
+            confidence = max(0.0, min(1.0, float(confidence)))
+
             return ClarificationOutput(
                 restated_question=data.get("restated_question", question)[:100],
                 ambiguities=ambiguities,
                 hidden_assumptions=hidden_assumptions,
                 cognitive_biases=cognitive_biases,
                 refined_question=data.get("refined_question", question),
-                diagnosis_confidence=data.get("diagnosis_confidence", 0.7),
+                diagnosis_confidence=confidence,
             )
         except json.JSONDecodeError:
             return self._diagnose_rule_based(question, constraints)

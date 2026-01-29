@@ -127,6 +127,38 @@ Cache: `REDIS_URL`
 
 See `.env.example` for full list.
 
+## AG-UI Event Format Standards
+
+When emitting events in engines or flows, ALWAYS use the standard event classes from `agentflow/protocols/agui_events.py`:
+
+- `FlowStartEvent`, `FlowCompleteEvent`, `FlowErrorEvent` - フロー制御
+- `NodeStartEvent`, `NodeCompleteEvent`, `NodeErrorEvent` - ノード制御
+- `ProgressEvent` - 進捗（`current`, `total`, `percentage` フィールド必須）
+- `LogEvent` - 思考ログ（`level`, `message`, `source` フィールド必須）
+
+**禁止事項**:
+- カスタムイベント dict を `{type: "xxx", data: {...}}` 形式で作成しない
+- `progress` フィールドの意味が曖昧なイベントを発行しない
+
+**正しい例**:
+```python
+from agentflow.protocols.agui_events import ProgressEvent, AGUIEventType
+event = ProgressEvent(
+    event_type=AGUIEventType.PROGRESS,
+    timestamp=time.time(),
+    flow_id=self._flow_id,
+    current=i+1, total=len(stages),
+    percentage=(i+1)/len(stages)*100
+)
+yield event.to_dict()
+```
+
+**誤った例**:
+```python
+# ❌ 意味が曖昧（stage進捗？全体進捗？）
+yield {"type": "progress", "data": {"progress": some_value}}
+```
+
 ## Reference Application
 
 `apps/decision_governance_engine/` is a complete multi-agent decision support system demonstrating PipelineEngine, agent coordination, and the 8-layer architecture.

@@ -15,6 +15,7 @@ import logging
 from typing import Any
 
 from agentflow import ResilientAgent
+from agentflow.core.exceptions import AgentOutputValidationError
 from apps.decision_governance_engine.schemas.agent_schemas import (
     DaoOutput,
     DifferentiationAxis,
@@ -139,17 +140,17 @@ class FaAgent(ResilientAgent[FaInput, FaOutput]):
 【出力形式】
 必ず以下のJSON形式で出力してください：
 {
-    "recommended_paths": [
+    "recommended_paths": [  // ★最大2個まで（厳守）
         {
             "path_id": "A",
             "name": "パス名（10字以内）",
             "description": "説明（100字以内）",
             "strategy_type": "CONSERVATIVE",
-            "pros": ["メリット1", "メリット2"],
-            "cons": ["デメリット1"],
-            "suitable_conditions": ["適用条件1"],
-            "risks": ["リスク1"],
-            "costs": ["コスト1"],
+            "pros": ["メリット1", "メリット2", "メリット3"],  // 最大3個
+            "cons": ["デメリット1", "デメリット2"],  // 最大3個
+            "suitable_conditions": ["適用条件1"],  // 最大3個
+            "risks": ["リスク1"],  // 最大3個
+            "costs": ["コスト1"],  // 最大3個
             "time_to_value": "6ヶ月",
             "reversibility": "HIGH",
             "success_probability": 0.7
@@ -163,22 +164,27 @@ class FaAgent(ResilientAgent[FaInput, FaOutput]):
             "A": [3, 5, 2, 5, 4],
             "B": [5, 2, 5, 2, 3]
         },
-        "recommendation_summary": "状況に応じた推奨サマリー"
+        "recommendation_summary": "状況に応じた推奨サマリー（200字以内）"
     },
-    "strategic_prohibitions": [
+    "strategic_prohibitions": [  // ★最大3個まで（厳守）
         {
             "prohibition": "禁止事項（50字以内）",
-            "rationale": "なぜ禁止するか（戦略的理由）",
-            "violation_consequence": "違反した場合の結果"
+            "rationale": "なぜ禁止するか（100字以内）",
+            "violation_consequence": "違反した場合の結果（50字以内）"
         }
     ],
     "differentiation_axis": {
-        "axis_name": "差別化軸名",
-        "why_this_axis": "なぜこの軸で差別化するか",
-        "not_this_axis": "差別化しない軸"
+        "axis_name": "差別化軸名（30字以内）",
+        "why_this_axis": "なぜこの軸で差別化するか（100字以内）",
+        "not_this_axis": "差別化しない軸（50字以内）"
     },
-    "why_existing_fails": "既存の標準解が使えない理由（一文）"
-}"""
+    "why_existing_fails": "既存の標準解が使えない理由（100字以内）"
+}
+
+【重要な制約】
+- recommended_paths: 最大2個まで（厳守）
+- strategic_prohibitions: 最大3個まで（厳守）
+- pros/cons/risks/costs: 各最大3個まで"""
 
     def _parse_input(self, input_data: dict[str, Any]) -> FaInput:
         """入力をパース."""
@@ -244,12 +250,23 @@ JSON形式で出力してください。"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
+        # 詳細ログ: LLM生出力を記録（デバッグ用）
+        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
+
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
             from agentflow.utils import extract_json
             data = extract_json(response)
+
             if data is None:
+                self._logger.error(f"JSON extraction failed. Raw response: {response[:1000]}")
                 raise json.JSONDecodeError("No valid JSON found", response, 0)
+
+            # 詳細ログ: 抽出されたJSON
+            self._logger.debug(f"Extracted JSON: {data}")
+
+            # 業務ロジック検証（Pydantic検証前）- 失敗時はリトライをトリガー
+            self._validate_and_normalize_llm_output(data)
 
             recommended = []
             for p in data.get("recommended_paths", [])[:2]:
@@ -295,6 +312,46 @@ JSON形式で出力してください。"""
         except json.JSONDecodeError as e:
             self._logger.warning(f"LLM response parse failed: {e}")
             return self._analyze_rule_based(dao_result, input_data)
+
+    def _validate_and_normalize_llm_output(self, data: dict[str, Any]) -> None:
+        """LLM出力の業務ロジック検証と正規化（Pydantic検証前）.
+
+        Args:
+            data: 抽出されたJSONデータ
+
+        Raises:
+            AgentOutputValidationError: 必須フィールドが空の場合
+        """
+        # recommended_paths の検証（必須、min_length=1相当）
+        recommended = data.get("recommended_paths")
+        if not recommended or not isinstance(recommended, list) or len(recommended) == 0:
+            self._logger.warning(f"LLM returned empty recommended_paths. Full data: {data}")
+            raise AgentOutputValidationError(
+                agent_name=self.name,
+                field_name="recommended_paths",
+                expected="list with at least 1 item",
+                actual=f"empty or invalid: {recommended}",
+            )
+
+        # recommended_paths のリスト長を正規化（max 2）
+        if len(recommended) > 2:
+            self._logger.warning(f"recommended_paths has {len(recommended)} items (max 2), truncating")
+            data["recommended_paths"] = recommended[:2]
+
+        # 各パスのpros/cons/risks/costs のリスト長を正規化（max 3）
+        for i, path in enumerate(data.get("recommended_paths", [])[:2]):
+            if isinstance(path, dict):
+                for field in ["pros", "cons", "suitable_conditions", "risks", "costs"]:
+                    items = path.get(field, [])
+                    if isinstance(items, list) and len(items) > 3:
+                        self._logger.warning(f"Path {i} {field} has {len(items)} items (max 3), truncating")
+                        path[field] = items[:3]
+
+        # strategic_prohibitions のリスト長を正規化（max 3）
+        prohibitions = data.get("strategic_prohibitions", [])
+        if isinstance(prohibitions, list) and len(prohibitions) > 3:
+            self._logger.warning(f"strategic_prohibitions has {len(prohibitions)} items (max 3), truncating")
+            data["strategic_prohibitions"] = prohibitions[:3]
 
     def _parse_path_option(self, data: dict) -> PathOption:
         """パスオプションをパース."""

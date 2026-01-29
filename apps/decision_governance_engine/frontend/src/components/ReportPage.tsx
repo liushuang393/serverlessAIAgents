@@ -230,7 +230,69 @@ export const ReportPage: React.FC = () => {
 
   if (!report) return null;
 
-  const { executive_summary, dao, fa, shu, qi, review, proposal_title, signature_block } = report;
+  // 各セクションを安全に取得（古いデータ形式への対応）
+  const { dao, fa, shu, qi, review, proposal_title, signature_block } = report;
+
+  // 各セクションのデフォルト値（未定義の場合の安全対策）
+  // executive_summary が undefined の場合のフォールバック
+  const safeExecutiveSummary = report.executive_summary || {
+    one_line_decision: '分析結果を確認してください',
+    recommended_action: '詳細は下記セクションを参照',
+    first_step: '詳細は下記セクションを参照',
+    key_risks: [],
+    estimated_impact: '',
+  };
+
+  const safeDao = dao || {
+    problem_type: 'N/A',
+    problem_nature: null,
+    essence: '分析データがありません',
+    essence_derivation: null,
+    existing_alternatives: [],
+    immutable_constraints: [],
+    hidden_assumptions: [],
+    causal_gears: [],
+    bottleneck_gear: null,
+    death_traps: [],
+  };
+
+  const safeFa = fa || {
+    recommended_paths: [],
+    rejected_paths: [],
+    decision_criteria: [],
+    path_comparison: null,
+    strategic_prohibitions: [],
+    differentiation_axis: null,
+    why_existing_fails: '',
+  };
+
+  const safeShu = shu || {
+    phases: [],
+    first_action: '分析データがありません',
+    dependencies: [],
+    rhythm_control: null,
+    cut_list: [],
+    context_specific_actions: [],
+    single_validation_point: null,
+    exit_criteria: null,
+  };
+
+  const safeQi = qi || {
+    implementations: [],
+    tool_recommendations: [],
+    integration_points: [],
+    technical_debt_warnings: [],
+    domain_technologies: [],
+    regulatory_considerations: [],
+    geographic_considerations: [],
+  };
+
+  const safeReview = review || {
+    overall_verdict: 'REVISE',
+    findings: [],
+    confidence_score: 0,
+    final_warnings: [],
+  };
 
   // 提案書タイトル（デフォルト値）
   const titleJa = proposal_title?.title_ja || '課題解決提案書';
@@ -275,6 +337,12 @@ export const ReportPage: React.FC = () => {
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm flex items-center gap-2 transition-all"
               >
                 📄 {isExporting ? '生成中...' : 'PDF出力'}
+              </button>
+              <button
+                onClick={() => setPage('history')}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm flex items-center gap-2 transition-all"
+              >
+                📜 履歴
               </button>
               <button
                 onClick={handleNewQuestion}
@@ -337,7 +405,7 @@ export const ReportPage: React.FC = () => {
               </div>
               <div className="text-right">
                 <div className="text-xs text-slate-500 mb-1">信頼度スコア</div>
-                <div className="text-3xl font-bold text-emerald-400">{Math.round((review?.confidence_score ?? 0) * 100)}%</div>
+                <div className="text-3xl font-bold text-emerald-400">{Math.round((safeReview?.confidence_score ?? 0) * 100)}%</div>
               </div>
             </div>
 
@@ -346,16 +414,16 @@ export const ReportPage: React.FC = () => {
               <div className="flex items-center gap-2 text-indigo-400 text-sm mb-2">
                 <span>💡</span> 結論
               </div>
-              <p className="text-lg font-medium">{executive_summary.one_line_decision}</p>
+              <p className="text-lg font-medium">{safeExecutiveSummary.one_line_decision}</p>
             </div>
 
             {/* v3.0: 本質の一文 */}
-            {(executive_summary as any).essence_statement && (
+            {(safeExecutiveSummary as any).essence_statement && (
               <div className="bg-purple-500/5 rounded-xl p-5 mb-6 border border-purple-500/20">
                 <div className="flex items-center gap-2 text-purple-400 text-sm mb-2">
                   <span>📍</span> 本質
                 </div>
-                <p className="font-medium">{(executive_summary as any).essence_statement}</p>
+                <p className="font-medium">{(safeExecutiveSummary as any).essence_statement}</p>
               </div>
             )}
 
@@ -364,26 +432,26 @@ export const ReportPage: React.FC = () => {
               <div className="flex items-center gap-2 text-emerald-400 text-sm mb-2">
                 <span>🎯</span> 最初の一歩（明日実行可能）
               </div>
-              <p className="font-medium">{executive_summary.first_step}</p>
+              <p className="font-medium">{safeExecutiveSummary.first_step}</p>
             </div>
 
             {/* v3.0: 戦略的禁止事項サマリー */}
-            {(executive_summary as any).strategic_prohibition_summary && (
+            {(safeExecutiveSummary as any).strategic_prohibition_summary && (
               <div className="bg-red-500/5 rounded-xl p-5 mb-6 border border-red-500/20">
                 <div className="flex items-center gap-2 text-red-400 text-sm mb-2">
                   <span>⛔</span> 戦略的禁止
                 </div>
-                <p className="text-sm text-slate-400">{(executive_summary as any).strategic_prohibition_summary}</p>
+                <p className="text-sm text-slate-400">{(safeExecutiveSummary as any).strategic_prohibition_summary}</p>
               </div>
             )}
 
             {/* v3.0: 撤退基準サマリー */}
-            {(executive_summary as any).exit_criteria_summary && (
+            {(safeExecutiveSummary as any).exit_criteria_summary && (
               <div className="bg-amber-500/5 rounded-xl p-5 mb-6 border border-amber-500/20">
                 <div className="flex items-center gap-2 text-amber-400 text-sm mb-2">
                   <span>🚪</span> 撤退基準
                 </div>
-                <p className="text-sm text-slate-400">{(executive_summary as any).exit_criteria_summary}</p>
+                <p className="text-sm text-slate-400">{(safeExecutiveSummary as any).exit_criteria_summary}</p>
               </div>
             )}
 
@@ -393,7 +461,7 @@ export const ReportPage: React.FC = () => {
                 <span>⚠️</span> 主要リスク
               </div>
               <div className="grid grid-cols-1 gap-2">
-                {executive_summary.key_risks.map((risk, i) => (
+                {safeExecutiveSummary.key_risks.map((risk, i) => (
                   <div key={i} className="flex items-center gap-3 text-sm text-slate-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
                     {risk}
@@ -442,13 +510,13 @@ export const ReportPage: React.FC = () => {
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-xs text-slate-500 mb-1">問題タイプ</div>
                   <div className="px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded inline-block text-sm">
-                    {dao.problem_type}
+                    {safeDao.problem_type}
                   </div>
                 </div>
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-xs text-slate-500 mb-1">問題の本質的性質</div>
                   <div className="px-3 py-1 bg-purple-500/10 text-purple-400 rounded inline-block text-sm">
-                    {dao.problem_nature || 'N/A'}
+                    {safeDao.problem_nature || 'N/A'}
                   </div>
                 </div>
               </div>
@@ -456,11 +524,11 @@ export const ReportPage: React.FC = () => {
               {/* 本質（一文） */}
               <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-lg p-5 border border-indigo-500/20">
                 <div className="text-xs text-indigo-400 mb-2">📍 本質（一文）</div>
-                <div className="text-lg font-medium">{dao.essence}</div>
+                <div className="text-lg font-medium">{safeDao.essence}</div>
               </div>
 
               {/* v3.0: 本質導出プロセス */}
-              {dao.essence_derivation && (
+              {safeDao.essence_derivation && (
                 <div className="bg-[#0a0a0f] rounded-lg p-5 border border-blue-500/20">
                   <div className="text-sm font-medium text-blue-400 mb-4 flex items-center gap-2">
                     <span>🔍</span> 本質導出プロセス
@@ -468,35 +536,35 @@ export const ReportPage: React.FC = () => {
                   <div className="space-y-3">
                     <div>
                       <div className="text-xs text-slate-500">表面的問題</div>
-                      <div className="text-sm mt-1">{dao.essence_derivation.surface_problem}</div>
+                      <div className="text-sm mt-1">{safeDao.essence_derivation.surface_problem}</div>
                     </div>
                     <div className="w-full h-px bg-slate-800" />
                     <div>
                       <div className="text-xs text-slate-500">一段深い理由</div>
-                      <div className="text-sm mt-1">{dao.essence_derivation.underlying_why}</div>
+                      <div className="text-sm mt-1">{safeDao.essence_derivation.underlying_why}</div>
                     </div>
                     <div className="w-full h-px bg-slate-800" />
                     <div>
                       <div className="text-xs text-slate-500">根本制約</div>
-                      <div className="text-sm mt-1">{dao.essence_derivation.root_constraint}</div>
+                      <div className="text-sm mt-1">{safeDao.essence_derivation.root_constraint}</div>
                     </div>
                     <div className="w-full h-px bg-slate-800" />
                     <div className="bg-blue-500/5 rounded p-3">
                       <div className="text-xs text-blue-400">本質の一文</div>
-                      <div className="text-sm mt-1 font-medium">{dao.essence_derivation.essence_statement}</div>
+                      <div className="text-sm mt-1 font-medium">{safeDao.essence_derivation.essence_statement}</div>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* v3.0: 既存代替手段 */}
-              {dao.existing_alternatives && dao.existing_alternatives.length > 0 && (
+              {safeDao.existing_alternatives && safeDao.existing_alternatives.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-sm font-medium text-amber-400 mb-3 flex items-center gap-2">
                     <span>🔄</span> 既存代替手段（なぜ使えないか）
                   </div>
                   <div className="space-y-3">
-                    {dao.existing_alternatives.map((alt: any, i: number) => (
+                    {safeDao.existing_alternatives.map((alt: any, i: number) => (
                       <div key={i} className="bg-amber-500/5 rounded p-3 border border-amber-500/10">
                         <div className="font-medium text-amber-400 text-sm">{alt.name}</div>
                         <div className="text-sm text-slate-400 mt-1">{alt.why_not_viable}</div>
@@ -507,11 +575,11 @@ export const ReportPage: React.FC = () => {
                 </div>
               )}
 
-              {dao.immutable_constraints && (
+              {safeDao.immutable_constraints && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-xs text-slate-500 mb-3">🔒 不可変制約</div>
                   <div className="space-y-2">
-                    {dao.immutable_constraints.map((c: string, i: number) => (
+                    {safeDao.immutable_constraints.map((c: string, i: number) => (
                       <div key={i} className="flex items-center gap-2 text-sm">
                         <span className="text-red-400">🔒</span> {c}
                       </div>
@@ -520,11 +588,11 @@ export const ReportPage: React.FC = () => {
                 </div>
               )}
 
-              {dao.hidden_assumptions && (
+              {safeDao.hidden_assumptions && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-xs text-slate-500 mb-3">💭 隠れた前提</div>
                   <div className="space-y-2">
-                    {dao.hidden_assumptions.map((a: string, i: number) => (
+                    {safeDao.hidden_assumptions.map((a: string, i: number) => (
                       <div key={i} className="flex items-center gap-2 text-sm text-slate-400">
                         <span>💭</span> {a}
                       </div>
@@ -534,22 +602,22 @@ export const ReportPage: React.FC = () => {
               )}
 
               {/* v3.0: 因果齿轮 */}
-              {dao.causal_gears && dao.causal_gears.length > 0 && (
+              {safeDao.causal_gears && safeDao.causal_gears.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-sm font-medium text-cyan-400 mb-3 flex items-center gap-2">
                     <span>⚙️</span> 因果齿轮
                   </div>
                   <div className="space-y-2">
-                    {dao.causal_gears.map((gear: any, i: number) => (
+                    {safeDao.causal_gears.map((gear: any, i: number) => (
                       <div key={i} className={`flex items-start gap-3 p-2 rounded ${
-                        gear.name === dao.bottleneck_gear ? 'bg-cyan-500/10 border border-cyan-500/30' : ''
+                        gear.name === safeDao.bottleneck_gear ? 'bg-cyan-500/10 border border-cyan-500/30' : ''
                       }`}>
                         <span className="text-cyan-400">⚙️</span>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-sm">{gear.name}</span>
                             <span className="text-xs px-2 py-0.5 bg-slate-700 rounded">Leverage: {gear.leverage}</span>
-                            {gear.name === dao.bottleneck_gear && (
+                            {gear.name === safeDao.bottleneck_gear && (
                               <span className="text-xs px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded">ボトルネック</span>
                             )}
                           </div>
@@ -562,13 +630,13 @@ export const ReportPage: React.FC = () => {
               )}
 
               {/* v3.0: 死穴 */}
-              {dao.death_traps && dao.death_traps.length > 0 && (
+              {safeDao.death_traps && safeDao.death_traps.length > 0 && (
                 <div className="bg-red-500/5 rounded-lg p-4 border border-red-500/20">
                   <div className="text-sm font-medium text-red-400 mb-3 flex items-center gap-2">
                     <span>💀</span> 死穴（禁忌）
                   </div>
                   <div className="space-y-3">
-                    {dao.death_traps.map((trap: any, i: number) => (
+                    {safeDao.death_traps.map((trap: any, i: number) => (
                       <div key={i} className="bg-red-500/10 rounded p-3">
                         <div className="flex items-center gap-2">
                           <span className="text-red-400">⚠️</span>
@@ -594,13 +662,13 @@ export const ReportPage: React.FC = () => {
               </h3>
 
               {/* v3.0: 戦略的禁止事項 */}
-              {fa.strategic_prohibitions && fa.strategic_prohibitions.length > 0 && (
+              {safeFa.strategic_prohibitions && safeFa.strategic_prohibitions.length > 0 && (
                 <div className="bg-red-500/5 rounded-lg p-5 border border-red-500/20">
                   <div className="text-sm font-medium text-red-400 mb-4 flex items-center gap-2">
                     <span>🚫</span> 戦略的禁止事項（絶対にやってはいけない）
                   </div>
                   <div className="space-y-3">
-                    {fa.strategic_prohibitions.map((p: any, i: number) => (
+                    {safeFa.strategic_prohibitions.map((p: any, i: number) => (
                       <div key={i} className="bg-red-500/10 rounded p-4">
                         <div className="flex items-start gap-2">
                           <span className="text-red-400 mt-0.5">⛔</span>
@@ -617,7 +685,7 @@ export const ReportPage: React.FC = () => {
               )}
 
               {/* v3.0: 差別化軸 */}
-              {fa.differentiation_axis && (
+              {safeFa.differentiation_axis && (
                 <div className="bg-gradient-to-r from-violet-500/10 to-purple-500/10 rounded-lg p-5 border border-violet-500/20">
                   <div className="text-sm font-medium text-violet-400 mb-4 flex items-center gap-2">
                     <span>🎯</span> 差別化軸
@@ -625,43 +693,43 @@ export const ReportPage: React.FC = () => {
                   <div className="space-y-4">
                     <div className="bg-violet-500/10 rounded p-4">
                       <div className="text-xs text-slate-500 mb-1">勝負する軸</div>
-                      <div className="text-lg font-medium text-violet-400">{fa.differentiation_axis.axis_name}</div>
-                      <div className="text-sm text-slate-400 mt-2">{fa.differentiation_axis.why_this_axis}</div>
+                      <div className="text-lg font-medium text-violet-400">{safeFa.differentiation_axis.axis_name}</div>
+                      <div className="text-sm text-slate-400 mt-2">{safeFa.differentiation_axis.why_this_axis}</div>
                     </div>
                     <div className="bg-slate-800/50 rounded p-4">
                       <div className="text-xs text-slate-500 mb-1">勝負しない軸</div>
-                      <div className="text-sm text-slate-400">{fa.differentiation_axis.not_this_axis}</div>
+                      <div className="text-sm text-slate-400">{safeFa.differentiation_axis.not_this_axis}</div>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* v3.0: 既存解が使えない理由 */}
-              {fa.why_existing_fails && (
+              {safeFa.why_existing_fails && (
                 <div className="bg-amber-500/5 rounded-lg p-4 border border-amber-500/20">
                   <div className="text-xs text-amber-400 mb-2 flex items-center gap-2">
                     <span>⚠️</span> 既存解が使えない理由
                   </div>
-                  <div className="text-sm text-slate-400">{fa.why_existing_fails}</div>
+                  <div className="text-sm text-slate-400">{safeFa.why_existing_fails}</div>
                 </div>
               )}
 
               {/* 推奨パス */}
-              {fa.recommended_paths?.map((path: RecommendedPath, i: number) => (
+              {safeFa.recommended_paths?.map((path: RecommendedPath, i: number) => (
                 <PathCard key={i} path={path} isRecommended />
               ))}
 
               {/* 不推奨パス */}
-              {fa.rejected_paths?.map((path: RecommendedPath, i: number) => (
+              {safeFa.rejected_paths?.map((path: RecommendedPath, i: number) => (
                 <PathCard key={i} path={path} isRecommended={false} />
               ))}
 
               {/* 判断基準 */}
-              {fa.decision_criteria && (
+              {safeFa.decision_criteria && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-xs text-slate-500 mb-2">判断基準</div>
                   <div className="flex flex-wrap gap-2">
-                    {fa.decision_criteria.map((c: string, i: number) => (
+                    {safeFa.decision_criteria.map((c: string, i: number) => (
                       <span key={i} className="px-2 py-1 bg-slate-800 text-slate-400 rounded text-xs">{c}</span>
                     ))}
                   </div>
@@ -677,21 +745,21 @@ export const ReportPage: React.FC = () => {
                 術 / 実行計画 v3.0
               </h3>
 
-              {shu.first_action && (
+              {safeShu.first_action && (
                 <div className="bg-emerald-500/5 rounded-lg p-4 border border-emerald-500/20">
                   <div className="text-xs text-emerald-400 mb-2">🎯 最初の一歩</div>
-                  <div className="text-sm font-medium">{shu.first_action}</div>
+                  <div className="text-sm font-medium">{safeShu.first_action}</div>
                 </div>
               )}
 
               {/* v3.0: 切り捨てリスト */}
-              {shu.cut_list && shu.cut_list.length > 0 && (
+              {safeShu.cut_list && safeShu.cut_list.length > 0 && (
                 <div className="bg-red-500/5 rounded-lg p-4 border border-red-500/20">
                   <div className="text-sm font-medium text-red-400 mb-3 flex items-center gap-2">
                     <span>✂️</span> 切り捨てリスト（最初の30日間でやらないこと）
                   </div>
                   <div className="space-y-2">
-                    {shu.cut_list.map((item: string, i: number) => (
+                    {safeShu.cut_list.map((item: string, i: number) => (
                       <div key={i} className="flex items-center gap-2 text-sm text-red-400">
                         <span>❌</span> {item}
                       </div>
@@ -701,13 +769,13 @@ export const ReportPage: React.FC = () => {
               )}
 
               {/* v3.0: 文脈特化行動 */}
-              {shu.context_specific_actions && shu.context_specific_actions.length > 0 && (
+              {safeShu.context_specific_actions && safeShu.context_specific_actions.length > 0 && (
                 <div className="bg-blue-500/5 rounded-lg p-4 border border-blue-500/20">
                   <div className="text-sm font-medium text-blue-400 mb-3 flex items-center gap-2">
                     <span>🎯</span> 文脈特化行動（この問題固有）
                   </div>
                   <div className="space-y-3">
-                    {shu.context_specific_actions.map((action: any, i: number) => (
+                    {safeShu.context_specific_actions.map((action: any, i: number) => (
                       <div key={i} className="bg-blue-500/10 rounded p-3">
                         <div className="font-medium text-sm">{action.action}</div>
                         <div className="text-xs text-slate-500 mt-1">理由: {action.why_this_context}</div>
@@ -719,7 +787,7 @@ export const ReportPage: React.FC = () => {
               )}
 
               {/* v3.0: 単一検証ポイント */}
-              {shu.single_validation_point && (
+              {safeShu.single_validation_point && (
                 <div className="bg-amber-500/5 rounded-lg p-4 border border-amber-500/20">
                   <div className="text-sm font-medium text-amber-400 mb-3 flex items-center gap-2">
                     <span>🔬</span> 単一検証ポイント（PoCで絶対に検証すべき1点）
@@ -727,22 +795,22 @@ export const ReportPage: React.FC = () => {
                   <div className="space-y-3">
                     <div>
                       <div className="text-xs text-slate-500">検証対象</div>
-                      <div className="text-sm mt-1 font-medium">{shu.single_validation_point.validation_target}</div>
+                      <div className="text-sm mt-1 font-medium">{safeShu.single_validation_point.validation_target}</div>
                     </div>
                     <div>
                       <div className="text-xs text-slate-500">成功基準</div>
-                      <div className="text-sm mt-1">{shu.single_validation_point.success_criteria}</div>
+                      <div className="text-sm mt-1">{safeShu.single_validation_point.success_criteria}</div>
                     </div>
                     <div className="bg-amber-500/10 rounded p-2">
                       <div className="text-xs text-amber-400">失敗時行動</div>
-                      <div className="text-sm mt-1">{shu.single_validation_point.failure_action}</div>
+                      <div className="text-sm mt-1">{safeShu.single_validation_point.failure_action}</div>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* v3.0: 撤退基準 */}
-              {shu.exit_criteria && (
+              {safeShu.exit_criteria && (
                 <div className="bg-red-500/5 rounded-lg p-4 border border-red-500/20">
                   <div className="text-sm font-medium text-red-400 mb-3 flex items-center gap-2">
                     <span>🚪</span> 撤退基準（どこで止めるか）
@@ -750,35 +818,35 @@ export const ReportPage: React.FC = () => {
                   <div className="space-y-3">
                     <div>
                       <div className="text-xs text-slate-500">チェックポイント</div>
-                      <div className="text-sm mt-1">{shu.exit_criteria.checkpoint}</div>
+                      <div className="text-sm mt-1">{safeShu.exit_criteria.checkpoint}</div>
                     </div>
                     <div>
                       <div className="text-xs text-slate-500">撤退トリガー</div>
-                      <div className="text-sm mt-1 text-red-400">{shu.exit_criteria.exit_trigger}</div>
+                      <div className="text-sm mt-1 text-red-400">{safeShu.exit_criteria.exit_trigger}</div>
                     </div>
                     <div>
                       <div className="text-xs text-slate-500">撤退時行動</div>
-                      <div className="text-sm mt-1">{shu.exit_criteria.exit_action}</div>
+                      <div className="text-sm mt-1">{safeShu.exit_criteria.exit_action}</div>
                     </div>
                   </div>
                 </div>
               )}
 
               {/* タイムライン */}
-              {shu.phases && shu.phases.length > 0 && (
+              {safeShu.phases && safeShu.phases.length > 0 && (
                 <div>
                   <div className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
                     <span>📅</span> フェーズ
                   </div>
-                  <PhaseTimeline phases={shu.phases} />
+                  <PhaseTimeline phases={safeShu.phases} />
                 </div>
               )}
 
-              {shu.dependencies && shu.dependencies.length > 0 && (
+              {safeShu.dependencies && safeShu.dependencies.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-xs text-slate-500 mb-2">前提条件</div>
                   <ul className="text-sm text-slate-400 space-y-1">
-                    {shu.dependencies.map((d: string, i: number) => (
+                    {safeShu.dependencies.map((d: string, i: number) => (
                       <li key={i}>• {d}</li>
                     ))}
                   </ul>
@@ -786,23 +854,23 @@ export const ReportPage: React.FC = () => {
               )}
 
               {/* v3.0: 30天行動節奏 */}
-              {shu.rhythm_control && (
+              {safeShu.rhythm_control && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4 border border-blue-500/20">
                   <div className="text-sm font-medium text-blue-400 mb-3 flex items-center gap-2">
                     <span>⏱️</span> 30天行動節奏
                   </div>
-                  {shu.rhythm_control.focus && (
+                  {safeShu.rhythm_control.focus && (
                     <div className="space-y-3">
                       <div className="bg-blue-500/10 rounded p-3">
                         <div className="text-xs text-blue-400">聚焦</div>
-                        <div className="text-lg font-medium mt-1">{shu.rhythm_control.focus.name}</div>
-                        <div className="text-sm text-slate-400 mt-1">{shu.rhythm_control.focus.description}</div>
-                        <div className="text-xs text-emerald-400 mt-2">成功指標: {shu.rhythm_control.focus.success_metric}</div>
+                        <div className="text-lg font-medium mt-1">{safeShu.rhythm_control.focus.name}</div>
+                        <div className="text-sm text-slate-400 mt-1">{safeShu.rhythm_control.focus.description}</div>
+                        <div className="text-xs text-emerald-400 mt-2">成功指標: {safeShu.rhythm_control.focus.success_metric}</div>
                       </div>
-                      {shu.rhythm_control.focus.avoid_list && shu.rhythm_control.focus.avoid_list.length > 0 && (
+                      {safeShu.rhythm_control.focus.avoid_list && safeShu.rhythm_control.focus.avoid_list.length > 0 && (
                         <div>
                           <div className="text-xs text-slate-500 mb-2">この期間やらないこと</div>
-                          {shu.rhythm_control.focus.avoid_list.map((avoid: string, i: number) => (
+                          {safeShu.rhythm_control.focus.avoid_list.map((avoid: string, i: number) => (
                             <div key={i} className="text-sm text-red-400 flex items-center gap-2">
                               <span>❌</span> {avoid}
                             </div>
@@ -812,11 +880,11 @@ export const ReportPage: React.FC = () => {
                       <div className="grid grid-cols-2 gap-4 mt-3">
                         <div>
                           <div className="text-xs text-slate-500">チェックポイント</div>
-                          <div className="text-sm mt-1">{shu.rhythm_control.checkpoint_date}</div>
+                          <div className="text-sm mt-1">{safeShu.rhythm_control.checkpoint_date}</div>
                         </div>
                         <div>
                           <div className="text-xs text-slate-500">次の判断</div>
-                          <div className="text-sm mt-1">{shu.rhythm_control.next_decision_point}</div>
+                          <div className="text-sm mt-1">{safeShu.rhythm_control.next_decision_point}</div>
                         </div>
                       </div>
                     </div>
@@ -834,13 +902,13 @@ export const ReportPage: React.FC = () => {
               </h3>
 
               {/* v3.0: ドメイン固有技術 */}
-              {qi.domain_technologies && qi.domain_technologies.length > 0 && (
+              {safeQi.domain_technologies && safeQi.domain_technologies.length > 0 && (
                 <div className="bg-emerald-500/5 rounded-lg p-5 border border-emerald-500/20">
                   <div className="text-sm font-medium text-emerald-400 mb-4 flex items-center gap-2">
                     <span>🛠️</span> ドメイン固有技術（具体名詞）
                   </div>
                   <div className="space-y-3">
-                    {qi.domain_technologies.map((tech: any, i: number) => (
+                    {safeQi.domain_technologies.map((tech: any, i: number) => (
                       <div key={i} className="bg-emerald-500/10 rounded p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="font-medium text-emerald-400">{tech.technology_name}</span>
@@ -859,7 +927,7 @@ export const ReportPage: React.FC = () => {
               )}
 
               {/* v3.0: 規制対応 */}
-              {qi.regulatory_considerations && qi.regulatory_considerations.length > 0 && (
+              {safeQi.regulatory_considerations && safeQi.regulatory_considerations.length > 0 && (
                 <div className="bg-amber-500/5 rounded-lg p-5 border border-amber-500/20">
                   <div className="text-sm font-medium text-amber-400 mb-4 flex items-center gap-2">
                     <span>📜</span> 規制対応事項
@@ -875,7 +943,7 @@ export const ReportPage: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {qi.regulatory_considerations.map((reg: any, i: number) => (
+                        {safeQi.regulatory_considerations.map((reg: any, i: number) => (
                           <tr key={i} className="border-b border-slate-800">
                             <td className="py-2 text-amber-400">{reg.region}</td>
                             <td className="py-2">{reg.regulation}</td>
@@ -890,13 +958,13 @@ export const ReportPage: React.FC = () => {
               )}
 
               {/* v3.0: 地理的考慮 */}
-              {qi.geographic_considerations && qi.geographic_considerations.length > 0 && (
+              {safeQi.geographic_considerations && safeQi.geographic_considerations.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4 border border-blue-500/20">
                   <div className="text-sm font-medium text-blue-400 mb-4 flex items-center gap-2">
                     <span>🌍</span> 地理的考慮事項
                   </div>
                   <div className="space-y-3">
-                    {qi.geographic_considerations.map((geo: any, i: number) => (
+                    {safeQi.geographic_considerations.map((geo: any, i: number) => (
                       <div key={i} className="flex items-start gap-4 p-3 bg-blue-500/5 rounded">
                         <div className="text-blue-400 font-medium">{geo.region}</div>
                         <div className="flex-1">
@@ -910,12 +978,12 @@ export const ReportPage: React.FC = () => {
               )}
 
               {/* 実装要素 */}
-              {qi.implementations && qi.implementations.length > 0 && (
+              {safeQi.implementations && safeQi.implementations.length > 0 && (
                 <div>
                   <div className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
                     <span>🔧</span> 実装要素
                   </div>
-                  {qi.implementations.map((impl: Implementation, i: number) => (
+                  {safeQi.implementations.map((impl: Implementation, i: number) => (
                     <div key={i} className="bg-[#0a0a0f] rounded-lg p-4 mb-3">
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-medium">{impl.component}</span>
@@ -932,33 +1000,33 @@ export const ReportPage: React.FC = () => {
                 </div>
               )}
 
-              {qi.tool_recommendations && qi.tool_recommendations.length > 0 && (
+              {safeQi.tool_recommendations && safeQi.tool_recommendations.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-xs text-slate-500 mb-2">🧰 ツール推奨</div>
                   <div className="flex flex-wrap gap-2">
-                    {qi.tool_recommendations.map((t: string, i: number) => (
+                    {safeQi.tool_recommendations.map((t: string, i: number) => (
                       <span key={i} className="px-2 py-1 bg-indigo-500/10 text-indigo-400 rounded text-xs">{t}</span>
                     ))}
                   </div>
                 </div>
               )}
 
-              {qi.integration_points && qi.integration_points.length > 0 && (
+              {safeQi.integration_points && safeQi.integration_points.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-xs text-slate-500 mb-2">🔗 統合ポイント</div>
                   <ul className="text-sm text-slate-400 space-y-1">
-                    {qi.integration_points.map((p: string, i: number) => (
+                    {safeQi.integration_points.map((p: string, i: number) => (
                       <li key={i}>• {p}</li>
                     ))}
                   </ul>
                 </div>
               )}
 
-              {qi.technical_debt_warnings && qi.technical_debt_warnings.length > 0 && (
+              {safeQi.technical_debt_warnings && safeQi.technical_debt_warnings.length > 0 && (
                 <div className="bg-amber-500/5 rounded-lg p-4 border border-amber-500/20">
                   <div className="text-xs text-amber-400 mb-2">⚠️ 技術負債警告</div>
                   <ul className="text-sm text-slate-400 space-y-1">
-                    {qi.technical_debt_warnings.map((w: string, i: number) => (
+                    {safeQi.technical_debt_warnings.map((w: string, i: number) => (
                       <li key={i}>• {w}</li>
                     ))}
                   </ul>
@@ -974,24 +1042,24 @@ export const ReportPage: React.FC = () => {
                 検証 / ReviewAgent
               </h3>
 
-              {review ? (
+              {safeReview ? (
                 <>
                   <div className="flex items-center gap-3 mb-6">
                     <span className="text-sm text-slate-400">判定結果:</span>
                     <span className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                      review.overall_verdict === 'PASS' 
-                        ? 'bg-emerald-500/10 text-emerald-400' 
-                        : review.overall_verdict === 'REVISE'
+                      safeReview.overall_verdict === 'PASS'
+                        ? 'bg-emerald-500/10 text-emerald-400'
+                        : safeReview.overall_verdict === 'REVISE'
                         ? 'bg-amber-500/10 text-amber-400'
                         : 'bg-red-500/10 text-red-400'
                     }`}>
-                      {review.overall_verdict || '処理中...'}
+                      {safeReview.overall_verdict || '処理中...'}
                     </span>
                   </div>
 
-                  {review.findings && review.findings.length > 0 && (
+                  {safeReview.findings && safeReview.findings.length > 0 && (
                     <div className="space-y-3">
-                      {review.findings.map((finding, i) => (
+                      {safeReview.findings.map((finding, i) => (
                         <div key={i} className={`rounded-lg p-4 border ${
                           finding.severity === 'CRITICAL' 
                             ? 'bg-red-500/5 border-red-500/20'
@@ -1020,11 +1088,11 @@ export const ReportPage: React.FC = () => {
                     </div>
                   )}
 
-                  {review.final_warnings && review.final_warnings.length > 0 && (
+                  {safeReview.final_warnings && safeReview.final_warnings.length > 0 && (
                     <div className="bg-[#0a0a0f] rounded-lg p-4">
                       <div className="text-xs text-slate-500 mb-2">最終警告</div>
                       <ul className="text-sm text-slate-400 space-y-1">
-                        {review.final_warnings.map((w: string, i: number) => (
+                        {safeReview.final_warnings.map((w: string, i: number) => (
                           <li key={i}>⚠️ {w}</li>
                         ))}
                       </ul>

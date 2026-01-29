@@ -13,6 +13,7 @@ import { useAuthStore } from './store/useAuthStore';
 import { DecisionInputPage } from './components/DecisionInputPage';
 import { ProcessingPage } from './components/ProcessingPage';
 import { ReportPage } from './components/ReportPage';
+import { HistoryPage } from './components/HistoryPage';
 import { LoginPage } from './components/LoginPage';
 import { KnowledgePage } from './components/KnowledgePage';
 
@@ -127,6 +128,8 @@ const AppContent: React.FC = () => {
       return <ProcessingPage />;
     case 'report':
       return <ReportPage />;
+    case 'history':
+      return <HistoryPage />;
     case 'knowledge-shu':
       return <KnowledgePage agentType="shu" />;
     case 'knowledge-qi':

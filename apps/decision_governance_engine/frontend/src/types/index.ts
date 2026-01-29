@@ -44,6 +44,48 @@ export interface SignatureResponse {
 }
 
 // ========================================
+// 履歴関連型
+// ========================================
+
+/** サーバー側履歴アイテム */
+export interface ServerHistoryItem {
+  id: string;
+  request_id: string;
+  question: string;
+  decision_role: 'GO' | 'NO_GO' | 'DELAY' | 'PILOT';
+  confidence: number | null;
+  mode: 'FAST' | 'STANDARD' | 'AUDIT';
+  created_at: string;
+}
+
+/** 履歴一覧レスポンス */
+export interface HistoryListResponse {
+  status: string;
+  total: number;
+  items: ServerHistoryItem[];
+}
+
+/** 履歴詳細レスポンス */
+export interface HistoryDetailResponse {
+  status: string;
+  data: {
+    id: string;
+    request_id: string;
+    question: string;
+    decision_role: string;
+    confidence: number | null;
+    mode: string;
+    fa_result: Record<string, unknown> | null;
+    shu_result: Record<string, unknown> | null;
+    qi_result: Record<string, unknown> | null;
+    summary_bullets: string[] | null;
+    warnings: string[] | null;
+    processing_time_ms: number | null;
+    created_at: string;
+  };
+}
+
+// ========================================
 // API リクエスト/レスポンス型
 // ========================================
 
