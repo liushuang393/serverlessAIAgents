@@ -224,6 +224,20 @@ from agentflow.protocols.a2ui.rich_content import (
 )
 
 # =============================================================================
+# 公開API: Channels - 多平台メッセージ統合（v1.1.0 NEW）
+# =============================================================================
+from agentflow.channels import (
+    # Gateway
+    MessageGateway,
+    # Base
+    MessageChannelAdapter,
+    ChannelMessage,
+    UserInfo,
+    MessageMetadata,
+)
+from agentflow.channels.base import MessageType
+
+# =============================================================================
 # 公開API: Human-in-the-Loop (HITL)
 # =============================================================================
 from agentflow.hitl import (
@@ -446,6 +460,18 @@ __all__ = [
     "create_agent_router",
     "create_websocket_router",
     "RouterConfig",
+
+    # =========================================================================
+    # Channels - 多平台メッセージ統合（v1.1.0 NEW）
+    # =========================================================================
+    # Gateway
+    "MessageGateway",
+    # Base
+    "MessageChannelAdapter",
+    "ChannelMessage",
+    "UserInfo",
+    "MessageMetadata",
+    "MessageType",
 
     # =========================================================================
     # 富文本コンポーネント（共通モジュール）

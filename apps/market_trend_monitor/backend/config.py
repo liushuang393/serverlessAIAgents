@@ -36,12 +36,13 @@ class CollectorConfig:
 
 @dataclass
 class AnalyzerConfig:
-    """分析設定."""
+    """分析設定.
 
-    # LLM API設定
-    llm_provider: str = "openai"
-    llm_model: str = "gpt-4"
-    llm_api_key: str = field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
+    Note:
+        LLM設定は環境変数から自動検出されます（松耦合原則）。
+        get_llm() を使用することで、OpenAI/Anthropic/Google等を
+        自動的に切り替えることができます。
+    """
 
     # トレンドスコア閾値
     trend_score_threshold: float = 0.5

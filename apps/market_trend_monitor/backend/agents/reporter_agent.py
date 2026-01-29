@@ -46,13 +46,13 @@ class ReporterAgent(ResilientAgent[ReporterInput, ReporterOutput]):
     name = "ReporterAgent"
     temperature = 0.7  # レポート生成は高め
 
-    def __init__(self, llm_client: Any = None) -> None:
+    def __init__(self) -> None:
         """初期化.
 
-        Args:
-            llm_client: LLM クライアント（None の場合は自動取得）
+        Note:
+            LLM クライアントは get_llm() により自動取得されます（松耦合原則）。
         """
-        super().__init__(llm_client)
+        super().__init__()  # ResilientAgent が内部で get_llm() を呼び出す
         self._logger = logging.getLogger(self.name)
 
     def _parse_input(self, input_data: dict[str, Any]) -> ReporterInput:

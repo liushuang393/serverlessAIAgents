@@ -51,19 +51,20 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
 
     def __init__(
         self,
-        llm_client: Any = None,
         *,
         skill_router: SkillRouter | None = None,
         skill_runtime: SkillRuntime | None = None,
     ) -> None:
         """初期化.
 
+        Note:
+            LLM クライアントは get_llm() により自動取得されます（松耦合原則）。
+
         Args:
-            llm_client: LLM クライアント（None の場合は自動取得）
             skill_router: Skillルーター（None の場合は新規作成）
             skill_runtime: Skill実行環境（None の場合は新規作成）
         """
-        super().__init__(llm_client)
+        super().__init__()  # ResilientAgent が内部で get_llm() を呼び出す
         self._logger = logging.getLogger(self.name)
 
         # Skill体系初期化（Anthropic Skills準拠）

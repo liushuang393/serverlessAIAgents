@@ -326,6 +326,7 @@ async for event in preview.run_debug(workflow, inputs, breakpoints=["node-1"]):
 | 🎯 **@agent デコレータ** | 1行でAgent定義、設定ゼロ (v0.2.0 NEW) |
 | 🔧 **統一Provider** | LLM/Tool/Data/Eventの統一アクセス (v0.2.0 NEW) |
 | 🔌 **4 プロトコル** | MCP / A2A / AG-UI / A2UI 統合 |
+| 💬 **Channels** | Telegram/Slack/Discord 多平台統合 (v1.1.0 NEW) |
 | 🎨 **自動アダプター** | `@auto_adapt` でプロトコル自動変換 |
 | 🧠 **Skills 自動進化** | 越用越厉害 - 使うほど強くなる |
 | 📦 **CLI** | `agentflow init/run/create` |
@@ -353,6 +354,36 @@ if result.generated:
 ```
 
 詳細は [Skills ガイド](docs/guide-skills.md) を参照。
+
+### 💬 Channels - 多平台メッセージ統合（v1.1.0 NEW）
+
+類似 [moltbot](https://github.com/moltbot/moltbot) の多平台 AI チャットボット機能：
+
+```python
+from agentflow.channels import MessageGateway, TelegramAdapter
+from agentflow import ChatBotSkill, WebSocketHub
+
+# 統一ゲートウェイ
+hub = WebSocketHub()
+chatbot = ChatBotSkill()
+gateway = MessageGateway(hub, chatbot)
+
+# プラットフォーム登録
+gateway.register_channel("telegram", TelegramAdapter(token=TOKEN))
+gateway.register_channel("slack", SlackAdapter(token=TOKEN))
+gateway.register_channel("discord", DiscordAdapter(token=TOKEN))
+
+# メッセージルーティング: Platform → Agent → Platform
+response = await gateway.route_message("telegram", "user_123", "Hello")
+```
+
+**対応プラットフォーム**:
+- ✅ Telegram (webhook + polling)
+- ✅ Slack (Event API + Block Kit)
+- ✅ Discord (Gateway + Embeds)
+- 🔜 WhatsApp, Teams, Signal（拡張可能）
+
+詳細は [Channels ガイド](docs/channels.md) | [Messaging Hub サンプル](apps/messaging_hub/) を参照。
 
 ### 🤖 LLM プロバイダー（松耦合設計）
 
