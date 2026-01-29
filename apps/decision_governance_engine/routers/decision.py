@@ -363,12 +363,15 @@ async def process_decision_stream(
 ) -> StreamingResponse:
     """SSEストリーム付きで意思決定を処理.
 
-    PipelineEngine.run_stream() を使用。
+    PipelineEngine.run_stream() を使用。履歴は完了時に自動保存。
     """
     import json
 
     logger.info(f"[SSE] /api/decision/stream リクエスト受信")
     logger.info(f"[SSE] question={question[:50]}...")
+
+    start_time = time.time()
+    request_id = uuid4()
 
     engine = get_engine()
     constraints = ConstraintSet()
@@ -388,6 +391,38 @@ async def process_decision_stream(
                 event = {**event, "event_type": et.value}
         return json.dumps(event, ensure_ascii=False, default=str)
 
+    async def save_history(result_data: dict[str, Any]) -> None:
+        """完了時に履歴を保存."""
+        if not ENABLE_HISTORY:
+            return
+
+        processing_time_ms = int((time.time() - start_time) * 1000)
+        decision_role = _infer_decision_role(result_data)
+        confidence = result_data.get("confidence")
+        results_dict = {
+            "fa": result_data.get("fa_analysis") or result_data.get("fa"),
+            "shu": result_data.get("shu_analysis") or result_data.get("shu"),
+            "qi": result_data.get("qi_analysis") or result_data.get("qi"),
+            "dao": result_data.get("dao_analysis") or result_data.get("dao"),
+            "review": result_data.get("review"),
+        }
+
+        try:
+            from apps.decision_governance_engine.repositories import DecisionRepository
+            repo = DecisionRepository()
+            await repo.save(
+                request_id=request_id,
+                question=question,
+                decision_role=decision_role,
+                mode="STANDARD",
+                confidence=confidence,
+                results=results_dict,
+                processing_time_ms=processing_time_ms,
+            )
+            logger.info(f"[SSE] 決策履歴保存完了: {request_id}")
+        except Exception as e:
+            logger.warning(f"[SSE] 決策履歴保存失敗（処理は継続）: {e}")
+
     async def generate_events():
         """SSEイベントを生成."""
         import asyncio
@@ -395,15 +430,37 @@ async def process_decision_stream(
         logger.info("[SSE] ストリーム開始")
         # 即座に接続確認イベントを送信
         yield f"data: {json.dumps({'event_type': 'connection.established', 'timestamp': time_module.time()}, ensure_ascii=False)}\n\n"
+
+        final_result: dict[str, Any] = {}
+        is_rejected = False
+
         try:
             async for event in engine.run_stream(inputs):
                 # イベントタイプをログ出力（type または event_type）
                 event_type = event.get('event_type') or event.get('type', 'unknown')
                 logger.info(f"[SSE] イベント発行: {event_type}")
+
+                # flow.complete または result イベントから結果を取得
+                if event_type == 'flow.complete' and event.get('result'):
+                    final_result = event.get('result', {})
+                elif event_type == 'result' and event.get('data'):
+                    data = event.get('data', {})
+                    if data.get('status') == 'rejected':
+                        is_rejected = True
+                    elif data.get('results'):
+                        final_result = data.get('results', {})
+                elif event_type == 'early_return':
+                    is_rejected = True
+
                 if isinstance(event, dict):
                     yield f"data: {serialize_event(event)}\n\n"
                 else:
                     yield f"data: {event}\n\n"
+
+            # 成功完了時のみ履歴を保存（拒否時は保存しない）
+            if final_result and not is_rejected:
+                await save_history(final_result)
+
         except asyncio.CancelledError:
             # クライアント切断時
             logger.info("[SSE] クライアント切断を検出 - 処理を中止")

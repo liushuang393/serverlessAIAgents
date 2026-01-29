@@ -393,19 +393,49 @@ export const ReportPage: React.FC = () => {
           </div>
         </div>
 
-        {/* エグゼクティブサマリー v3.1 */}
+        {/* エグゼクティブサマリー v3.2 */}
         <div className="bg-gradient-to-br from-[#12121a] to-[#1a1a24] rounded-2xl border border-white/5 p-8 mb-8 relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-          
+
           <div className="relative">
             <div className="flex items-start justify-between mb-6">
               <div>
                 <h2 className="text-xs text-slate-500 uppercase tracking-wider mb-1">1. EXECUTIVE SUMMARY</h2>
                 <div className="text-2xl font-bold">エグゼクティブサマリー</div>
               </div>
+              {/* 信頼度スコア（判定結果と連動） */}
               <div className="text-right">
-                <div className="text-xs text-slate-500 mb-1">信頼度スコア</div>
-                <div className="text-3xl font-bold text-emerald-400">{Math.round((safeReview?.confidence_score ?? 0) * 100)}%</div>
+                <div className="flex items-center gap-2 justify-end mb-1">
+                  <span className={`text-xs px-2 py-0.5 rounded ${
+                    safeReview.overall_verdict === 'PASS'
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : safeReview.overall_verdict === 'REVISE'
+                      ? 'bg-amber-500/20 text-amber-400'
+                      : 'bg-red-500/20 text-red-400'
+                  }`}>
+                    {safeReview.overall_verdict === 'PASS' ? '検証通過' :
+                     safeReview.overall_verdict === 'REVISE' ? '要修正' : '却下'}
+                  </span>
+                </div>
+                <div className="text-xs text-slate-500 mb-1">
+                  分析信頼度
+                  <span
+                    className="ml-1 text-slate-600 cursor-help"
+                    title="分析の論理的整合性・根拠の充実度を示すスコア。70%以上で高信頼、40-70%で要確認、40%未満で再分析推奨。"
+                  >ⓘ</span>
+                </div>
+                <div className={`text-3xl font-bold ${
+                  (safeReview?.confidence_score ?? 0) >= 0.7 ? 'text-emerald-400' :
+                  (safeReview?.confidence_score ?? 0) >= 0.4 ? 'text-amber-400' : 'text-red-400'
+                }`}>
+                  {Math.round((safeReview?.confidence_score ?? 0) * 100)}%
+                </div>
+                {/* スコアが低い場合の警告 */}
+                {(safeReview?.confidence_score ?? 0) < 0.4 && (
+                  <div className="text-xs text-red-400 mt-1">
+                    ⚠ 再分析を推奨
+                  </div>
+                )}
               </div>
             </div>
 
@@ -472,30 +502,190 @@ export const ReportPage: React.FC = () => {
           </div>
         </div>
 
-        {/* タブナビゲーション */}
-        <div className="flex gap-2 mb-6 border-b border-white/5 pb-4">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
-                activeTab === tab.id
-                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <span>{tab.icon}</span>
-              {tab.name}
-            </button>
-          ))}
+        {/* タブナビゲーション（検証タブに状態バッジ追加） */}
+        <div className="flex gap-2 mb-6 border-b border-white/5 pb-4 flex-wrap">
+          {TABS.map((tab) => {
+            // 検証タブに特別なバッジを追加
+            const isReviewTab = tab.id === 'review';
+            const reviewBadgeColor = safeReview.overall_verdict === 'PASS'
+              ? 'bg-emerald-500'
+              : safeReview.overall_verdict === 'REVISE'
+              ? 'bg-amber-500'
+              : 'bg-red-500';
+
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+                  activeTab === tab.id
+                    ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <span>{tab.icon}</span>
+                {tab.name}
+                {/* 検証タブには判定ステータスバッジを表示 */}
+                {isReviewTab && (
+                  <span className={`w-2 h-2 rounded-full ${reviewBadgeColor}`} />
+                )}
+                {/* 検証タブに指摘件数があれば表示 */}
+                {isReviewTab && safeReview.findings && safeReview.findings.length > 0 && (
+                  <span className="text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded">
+                    {safeReview.findings.length}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
         {/* タブコンテンツ */}
         <div className="bg-[#12121a] rounded-xl border border-white/5 p-6">
           {activeTab === 'summary' && (
-            <div className="text-center py-8 text-slate-500">
-              上記のエグゼクティブサマリーが全体概要です。<br />
-              各タブで詳細を確認できます。
+            <div className="space-y-6">
+              {/* 分析概要ヘッダー */}
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <span className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">📊</span>
+                  分析結果概要
+                </h3>
+                {/* 検証ステータスバッジ */}
+                <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
+                  safeReview.overall_verdict === 'PASS'
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                    : safeReview.overall_verdict === 'REVISE'
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
+                    : 'bg-red-500/10 text-red-400 border border-red-500/30'
+                }`}>
+                  <span>
+                    {safeReview.overall_verdict === 'PASS' ? '✅' :
+                     safeReview.overall_verdict === 'REVISE' ? '⚠️' : '❌'}
+                  </span>
+                  検証: {safeReview.overall_verdict || '処理中'}
+                </div>
+              </div>
+
+              {/* 質問の再掲示 */}
+              <div className="bg-[#0a0a0f] rounded-lg p-4 border border-white/10">
+                <div className="text-xs text-slate-500 mb-2">📝 分析対象の質問</div>
+                <p className="text-slate-300">{report.question || '（質問が設定されていません）'}</p>
+              </div>
+
+              {/* 分析セクションナビゲーション */}
+              <div className="space-y-4">
+                <div className="text-sm text-slate-400 mb-3">各セクションの詳細を確認できます：</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* 道 */}
+                  <button
+                    onClick={() => setActiveTab('dao')}
+                    className="p-4 bg-[#0a0a0f] rounded-lg border border-white/5 hover:border-indigo-500/30 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-xl">🎯</span>
+                      <span className="font-medium group-hover:text-indigo-400 transition-colors">道（本質分析）</span>
+                    </div>
+                    <p className="text-xs text-slate-500 line-clamp-2">
+                      {safeDao.essence || '問題の本質を分析します'}
+                    </p>
+                  </button>
+
+                  {/* 法 */}
+                  <button
+                    onClick={() => setActiveTab('fa')}
+                    className="p-4 bg-[#0a0a0f] rounded-lg border border-white/5 hover:border-violet-500/30 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-xl">🛤️</span>
+                      <span className="font-medium group-hover:text-violet-400 transition-colors">法（戦略選定）</span>
+                    </div>
+                    <p className="text-xs text-slate-500 line-clamp-2">
+                      {safeFa.recommended_paths?.length
+                        ? `${safeFa.recommended_paths.length}つの推奨戦略を提案`
+                        : '戦略オプションを評価します'}
+                    </p>
+                  </button>
+
+                  {/* 術 */}
+                  <button
+                    onClick={() => setActiveTab('shu')}
+                    className="p-4 bg-[#0a0a0f] rounded-lg border border-white/5 hover:border-blue-500/30 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-xl">📋</span>
+                      <span className="font-medium group-hover:text-blue-400 transition-colors">術（実行計画）</span>
+                    </div>
+                    <p className="text-xs text-slate-500 line-clamp-2">
+                      {safeShu.phases?.length
+                        ? `${safeShu.phases.length}フェーズの実行計画`
+                        : '実行計画を策定します'}
+                    </p>
+                  </button>
+
+                  {/* 器 */}
+                  <button
+                    onClick={() => setActiveTab('qi')}
+                    className="p-4 bg-[#0a0a0f] rounded-lg border border-white/5 hover:border-emerald-500/30 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-xl">🔧</span>
+                      <span className="font-medium group-hover:text-emerald-400 transition-colors">器（技術実装）</span>
+                    </div>
+                    <p className="text-xs text-slate-500 line-clamp-2">
+                      {safeQi.implementations?.length
+                        ? `${safeQi.implementations.length}件の実装要素を特定`
+                        : '技術要件を定義します'}
+                    </p>
+                  </button>
+                </div>
+
+                {/* 検証セクション（特別強調） */}
+                <button
+                  onClick={() => setActiveTab('review')}
+                  className={`w-full p-4 rounded-lg border-2 border-dashed transition-all text-left ${
+                    safeReview.overall_verdict === 'PASS'
+                      ? 'bg-emerald-500/5 border-emerald-500/30 hover:border-emerald-500/50'
+                      : safeReview.overall_verdict === 'REVISE'
+                      ? 'bg-amber-500/5 border-amber-500/30 hover:border-amber-500/50'
+                      : 'bg-red-500/5 border-red-500/30 hover:border-red-500/50'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="text-xl">🔍</span>
+                      <div>
+                        <span className="font-medium">検証（ReviewAgent）</span>
+                        <p className="text-xs text-slate-500 mt-1">
+                          {safeReview.findings?.length
+                            ? `${safeReview.findings.length}件の指摘事項あり`
+                            : '分析結果の検証結果を確認'}
+                        </p>
+                      </div>
+                    </div>
+                    <span className={`text-sm font-medium ${
+                      safeReview.overall_verdict === 'PASS' ? 'text-emerald-400' :
+                      safeReview.overall_verdict === 'REVISE' ? 'text-amber-400' : 'text-red-400'
+                    }`}>
+                      {safeReview.overall_verdict || '処理中'} →
+                    </span>
+                  </div>
+                </button>
+              </div>
+
+              {/* 修正が必要な場合のガイダンス */}
+              {safeReview.overall_verdict !== 'PASS' && (
+                <div className="mt-4 p-4 bg-amber-500/5 rounded-lg border border-amber-500/20">
+                  <div className="flex items-start gap-3">
+                    <span className="text-amber-400 mt-0.5">💡</span>
+                    <div>
+                      <div className="text-sm font-medium text-amber-400 mb-1">修正が必要です</div>
+                      <div className="text-sm text-slate-400">
+                        検証タブで詳細な指摘事項を確認し、画面右上の「再分析」ボタンから入力内容を修正してください。
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1044,63 +1234,176 @@ export const ReportPage: React.FC = () => {
 
               {safeReview ? (
                 <>
-                  <div className="flex items-center gap-3 mb-6">
-                    <span className="text-sm text-slate-400">判定結果:</span>
-                    <span className={`px-3 py-1 rounded-lg text-sm font-medium ${
-                      safeReview.overall_verdict === 'PASS'
-                        ? 'bg-emerald-500/10 text-emerald-400'
-                        : safeReview.overall_verdict === 'REVISE'
-                        ? 'bg-amber-500/10 text-amber-400'
-                        : 'bg-red-500/10 text-red-400'
-                    }`}>
-                      {safeReview.overall_verdict || '処理中...'}
-                    </span>
+                  {/* 判定結果バナー（詳細注釈付き） */}
+                  <div className={`rounded-xl p-5 border-2 ${
+                    safeReview.overall_verdict === 'PASS'
+                      ? 'bg-emerald-500/5 border-emerald-500/30'
+                      : safeReview.overall_verdict === 'REVISE'
+                      ? 'bg-amber-500/5 border-amber-500/30'
+                      : 'bg-red-500/5 border-red-500/30'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <span className="text-2xl">
+                          {safeReview.overall_verdict === 'PASS' ? '✅' :
+                           safeReview.overall_verdict === 'REVISE' ? '⚠️' : '❌'}
+                        </span>
+                        <div>
+                          <div className="text-sm text-slate-400 mb-1">総合判定</div>
+                          <span className={`text-xl font-bold ${
+                            safeReview.overall_verdict === 'PASS'
+                              ? 'text-emerald-400'
+                              : safeReview.overall_verdict === 'REVISE'
+                              ? 'text-amber-400'
+                              : 'text-red-400'
+                          }`}>
+                            {safeReview.overall_verdict || '処理中...'}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-sm text-slate-400 mb-1">信頼度</div>
+                        <div className={`text-xl font-bold ${
+                          (safeReview?.confidence_score ?? 0) >= 0.7 ? 'text-emerald-400' :
+                          (safeReview?.confidence_score ?? 0) >= 0.4 ? 'text-amber-400' : 'text-red-400'
+                        }`}>
+                          {Math.round((safeReview?.confidence_score ?? 0) * 100)}%
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 判定結果の意味を説明 */}
+                    <div className="mt-4 pt-4 border-t border-white/10">
+                      <div className="text-sm text-slate-400">
+                        {safeReview.overall_verdict === 'PASS' && (
+                          <>
+                            <span className="text-emerald-400">✓ 承認可能：</span>
+                            この提案書は検証を通過しました。署名して意思決定を進めることができます。
+                          </>
+                        )}
+                        {safeReview.overall_verdict === 'REVISE' && (
+                          <>
+                            <span className="text-amber-400">⚠ 修正必要：</span>
+                            以下の指摘事項を確認し、入力条件を修正して再分析を行ってください。
+                          </>
+                        )}
+                        {safeReview.overall_verdict === 'REJECT' && (
+                          <>
+                            <span className="text-red-400">✕ 却下：</span>
+                            重大な問題があります。根本的な見直しが必要です。
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
+                  {/* 指摘事項セクション */}
                   {safeReview.findings && safeReview.findings.length > 0 && (
-                    <div className="space-y-3">
-                      {safeReview.findings.map((finding, i) => (
-                        <div key={i} className={`rounded-lg p-4 border ${
-                          finding.severity === 'CRITICAL' 
-                            ? 'bg-red-500/5 border-red-500/20'
-                            : finding.severity === 'WARNING' 
-                            ? 'bg-amber-500/5 border-amber-500/20' 
-                            : 'bg-blue-500/5 border-blue-500/20'
-                        }`}>
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className={`text-xs px-2 py-0.5 rounded ${
-                              finding.severity === 'CRITICAL'
-                                ? 'bg-red-500/10 text-red-400'
-                                : finding.severity === 'WARNING' 
-                                ? 'bg-amber-500/10 text-amber-400' 
-                                : 'bg-blue-500/10 text-blue-400'
-                            }`}>
-                              {finding.severity}
-                            </span>
-                            <span className="text-xs text-slate-500">{finding.category}</span>
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
+                        <span>📋</span> 指摘事項 ({safeReview.findings.length}件)
+                      </div>
+                      <div className="space-y-3">
+                        {safeReview.findings.map((finding, i) => (
+                          <div key={i} className={`rounded-lg p-4 border ${
+                            finding.severity === 'CRITICAL'
+                              ? 'bg-red-500/5 border-red-500/20'
+                              : finding.severity === 'WARNING'
+                              ? 'bg-amber-500/5 border-amber-500/20'
+                              : 'bg-blue-500/5 border-blue-500/20'
+                          }`}>
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                                finding.severity === 'CRITICAL'
+                                  ? 'bg-red-500/20 text-red-400'
+                                  : finding.severity === 'WARNING'
+                                  ? 'bg-amber-500/20 text-amber-400'
+                                  : 'bg-blue-500/20 text-blue-400'
+                              }`}>
+                                {finding.severity === 'CRITICAL' ? '重大' :
+                                 finding.severity === 'WARNING' ? '警告' : '情報'}
+                              </span>
+                              <span className="text-xs text-slate-500 px-2 py-0.5 bg-slate-800 rounded">
+                                {finding.category}
+                              </span>
+                              {finding.affected_agent && (
+                                <span className="text-xs text-slate-500">
+                                  対象: {finding.affected_agent}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-slate-300 mb-2">{finding.description}</p>
+                            {finding.suggested_revision && (
+                              <div className="mt-3 p-3 bg-slate-800/50 rounded-lg">
+                                <div className="text-xs text-emerald-400 mb-1 flex items-center gap-1">
+                                  <span>💡</span> 修正提案
+                                </div>
+                                <p className="text-sm text-slate-400">{finding.suggested_revision}</p>
+                              </div>
+                            )}
                           </div>
-                          <p className="text-sm text-slate-400">{finding.description}</p>
-                          {finding.suggested_revision && (
-                            <p className="text-xs text-slate-500 mt-2">💡 {finding.suggested_revision}</p>
-                          )}
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
                   )}
 
+                  {/* 最終警告 */}
                   {safeReview.final_warnings && safeReview.final_warnings.length > 0 && (
-                    <div className="bg-[#0a0a0f] rounded-lg p-4">
-                      <div className="text-xs text-slate-500 mb-2">最終警告</div>
-                      <ul className="text-sm text-slate-400 space-y-1">
+                    <div className="bg-amber-500/5 rounded-lg p-4 border border-amber-500/20">
+                      <div className="text-sm font-medium text-amber-400 mb-3 flex items-center gap-2">
+                        <span>⚠️</span> 最終警告（意思決定者への注意事項）
+                      </div>
+                      <ul className="space-y-2">
                         {safeReview.final_warnings.map((w: string, i: number) => (
-                          <li key={i}>⚠️ {w}</li>
+                          <li key={i} className="text-sm text-slate-400 flex items-start gap-2">
+                            <span className="text-amber-400 mt-0.5">•</span>
+                            <span>{w}</span>
+                          </li>
                         ))}
                       </ul>
+                    </div>
+                  )}
+
+                  {/* 修正アクションガイド（PASS以外の場合） */}
+                  {safeReview.overall_verdict !== 'PASS' && (
+                    <div className="bg-indigo-500/5 rounded-lg p-5 border border-indigo-500/20">
+                      <div className="text-sm font-medium text-indigo-400 mb-4 flex items-center gap-2">
+                        <span>🔧</span> 次のステップ
+                      </div>
+                      <ol className="space-y-3 text-sm text-slate-400">
+                        <li className="flex items-start gap-3">
+                          <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold shrink-0">1</span>
+                          <span>上記の指摘事項を確認し、問題点を把握してください</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold shrink-0">2</span>
+                          <span>画面右上の「🔄 再分析」ボタンをクリックして入力画面に戻ります</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold shrink-0">3</span>
+                          <span>質問や制約条件を修正して、再度分析を実行してください</span>
+                        </li>
+                      </ol>
+                      <button
+                        onClick={handleNewQuestion}
+                        className="mt-4 w-full px-4 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
+                      >
+                        🔄 入力内容を修正して再分析
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 指摘事項がない場合 */}
+                  {(!safeReview.findings || safeReview.findings.length === 0) && (
+                    <div className="text-center py-6 text-slate-500 bg-[#0a0a0f] rounded-lg">
+                      <span className="text-3xl mb-2 block">✨</span>
+                      <p>重大な指摘事項はありません</p>
                     </div>
                   )}
                 </>
               ) : (
                 <div className="text-center py-8 text-slate-500">
+                  <div className="w-8 h-8 border-2 border-slate-600 border-t-slate-400 rounded-full animate-spin mx-auto mb-3" />
                   検証結果を取得中...
                 </div>
               )}
@@ -1108,7 +1411,7 @@ export const ReportPage: React.FC = () => {
           )}
         </div>
 
-        {/* 署名セクション v3.1 */}
+        {/* 署名セクション v3.2 - 判定結果に応じた表示制御 */}
         <div className="mt-8 bg-[#12121a] rounded-xl border border-white/5 p-6">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <span className="text-slate-500">7.</span>
@@ -1159,7 +1462,7 @@ export const ReportPage: React.FC = () => {
             </table>
           </div>
 
-          {/* 承認印エリア */}
+          {/* 承認印エリア - 判定結果に応じた表示 */}
           <div className="flex items-center justify-center gap-8">
             {signatureStatus === 'signed' && signatureData ? (
               /* 署名済み - 判子表示 */
@@ -1168,7 +1471,7 @@ export const ReportPage: React.FC = () => {
                   <span>✅</span>
                   <span className="font-medium">提案書が承認されました</span>
                 </div>
-                
+
                 <SignatureArea
                   signerName={signatureData.signed_by}
                   department={signatureData.department}
@@ -1177,8 +1480,8 @@ export const ReportPage: React.FC = () => {
                   animated={showSignedAnimation}
                 />
               </div>
-            ) : (
-              /* 未署名 - 署名ボタン */
+            ) : safeReview.overall_verdict === 'PASS' ? (
+              /* 検証通過 - 署名ボタン表示 */
               <div className="flex flex-col items-center gap-4">
                 <div className="w-24 h-24 rounded-full border-2 border-dashed border-slate-600 flex items-center justify-center text-slate-500 text-xs">
                   承認印
@@ -1190,7 +1493,7 @@ export const ReportPage: React.FC = () => {
                       署名者: {user.display_name} ({user.department})
                     </div>
                   )}
-                  <button 
+                  <button
                     onClick={handleSign}
                     disabled={isSigning || !user}
                     className={`px-6 py-3 rounded-xl font-medium transition-all flex items-center gap-2 ${
@@ -1213,6 +1516,51 @@ export const ReportPage: React.FC = () => {
                       </>
                     )}
                   </button>
+                </div>
+              </div>
+            ) : (
+              /* 検証未通過 - 修正ガイダンス表示 */
+              <div className="flex flex-col items-center gap-4 w-full max-w-md">
+                <div className={`w-24 h-24 rounded-full border-2 border-dashed flex items-center justify-center ${
+                  safeReview.overall_verdict === 'REVISE'
+                    ? 'border-amber-500/50 text-amber-500'
+                    : 'border-red-500/50 text-red-500'
+                }`}>
+                  <div className="text-center">
+                    <div className="text-2xl mb-1">
+                      {safeReview.overall_verdict === 'REVISE' ? '⚠️' : '❌'}
+                    </div>
+                    <div className="text-xs">
+                      {safeReview.overall_verdict === 'REVISE' ? '要修正' : '却下'}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className={`text-sm mb-3 ${
+                    safeReview.overall_verdict === 'REVISE' ? 'text-amber-400' : 'text-red-400'
+                  }`}>
+                    {safeReview.overall_verdict === 'REVISE'
+                      ? '⚠️ 検証で修正が必要と判定されました'
+                      : '❌ 検証で却下されました'}
+                  </div>
+                  <div className="text-sm text-slate-400 mb-4">
+                    「検証」タブで指摘事項を確認し、<br />
+                    入力内容を修正して再分析してください。
+                  </div>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={() => setActiveTab('review')}
+                      className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-all flex items-center gap-2"
+                    >
+                      🔍 検証結果を確認
+                    </button>
+                    <button
+                      onClick={handleNewQuestion}
+                      className="px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg text-sm transition-all flex items-center gap-2"
+                    >
+                      🔄 再分析
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

@@ -226,6 +226,45 @@ export function useDecisionStream() {
               eventSourceRef.current?.close();
             }
             return;
+          case 'review_verdict':
+            // Review判定結果
+            {
+              const data = legacyEvent.data || {};
+              const verdict = data.verdict as string;
+              if (verdict === 'REVISE') {
+                addThinkingLog('review', '検証：ReviewAgent', `⚠️ 指摘あり - 再分析を開始します`);
+              } else if (verdict === 'PASS') {
+                addThinkingLog('review', '検証：ReviewAgent', `✅ 分析品質OK`);
+              } else if (verdict === 'REJECT') {
+                addThinkingLog('review', '検証：ReviewAgent', `❌ 分析不合格`);
+              }
+            }
+            return;
+          case 'revise':
+            // REVISE時のロールバック処理
+            // retry_from はステージインデックス（0=cognitive_gate, 1=gatekeeper, ...）
+            // retry_fromより後のAgentの進捗をリセットする
+            {
+              const data = legacyEvent.data || {};
+              const retryFromIdx = data.retry_from as number;
+              // インデックスに対応するAgent ID
+              const agentIds = initialAgents.map(a => a.id);
+
+              addThinkingLog('system', 'System', `🔄 指摘に基づき再分析を実行（ステージ${retryFromIdx}から）`);
+
+              // retry_from以降のAgentをリセット（waitingに戻す）
+              setState((prev) => ({
+                ...prev,
+                agents: prev.agents.map((a, idx) => {
+                  if (idx >= retryFromIdx) {
+                    // retry_from以降はリセット
+                    return { ...a, status: 'waiting' as const, progress: 0, message: '' };
+                  }
+                  return a;
+                }),
+              }));
+            }
+            return;
         }
       }
       

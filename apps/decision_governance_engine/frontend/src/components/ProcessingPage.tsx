@@ -10,7 +10,7 @@ import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { useDecisionStore } from '../store/useDecisionStore';
 import { useDecisionStream, AgentProgress, ThinkingLog } from '../hooks/useDecisionStream';
 
-/** Agent アイコン設定（8 Agent対応） */
+/** Agent アイコン設定（8 Agent対応） - Decision Governance Engine v1.1 */
 const AGENT_ICONS: Record<string, string> = {
   cognitive_gate: '🧠',
   gatekeeper: '🚪',
@@ -108,7 +108,9 @@ const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({ age
           ) : null}
           {agent.id === 'qi' && agent.result.implementations ? (
             <div className="text-sm text-slate-400">
-              {String(agent.result.implementations)}件の実装要素を特定
+              {Array.isArray(agent.result.implementations)
+                ? agent.result.implementations.length
+                : String(agent.result.implementations)}件の実装要素を特定
             </div>
           ) : null}
           {agent.id === 'review' && agent.result.verdict ? (

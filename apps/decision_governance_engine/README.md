@@ -181,16 +181,13 @@ echo "OPENAI_API_KEY=your-key-here" > .env
 # 4. データベースのセットアップ
 # DB コンテナ起動
 cd apps/decision_governance_engine
-docker-compose up -d postgres-main postgres-history redis
-
+docker-compose up -d postgres-main redis
 # マイグレーション適用
 alembic upgrade head
 
 # マイグレーション履歴確認
 alembic history
 
-# 新規マイグレーション作成（モデル変更後）
-alembic revision --autogenerate -m "add_new_column"
 
 # ロールバック
 alembic downgrade -1
