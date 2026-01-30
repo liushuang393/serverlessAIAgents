@@ -46,6 +46,12 @@ build/
 *.egg
 *.whl
 
+# ---- Root requirements.txt (generated for Docker builds)
+# Primary dependency management: pyproject.toml
+# Generated: pip-compile pyproject.toml -o requirements.txt
+# Delete after Docker build - do not commit
+/requirements.txt
+
 # ---- Secrets / Credentials (機密情報)
 *.key
 *.pem

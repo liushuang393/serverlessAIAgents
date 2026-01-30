@@ -569,6 +569,43 @@ pytest --cov=agentflow --cov-report=html
 # tests/unit/ または tests/integration/ に追加
 ```
 
+## Docker ビルドと依存関係管理
+
+### 依存関係の管理方針
+
+**単一ソース**: `pyproject.toml` が唯一の依存関係定義ファイルです。
+
+**`requirements.txt` の扱い**:
+
+- ルートの `requirements.txt` は **一時ファイル** です
+- Docker ビルド時のみに生成し、使用後は削除してください
+- **Git にコミットしないでください**（`.gitignore` で除外済み）
+
+### Docker ビルド手順
+
+```bash
+# 1. requirements.txt を生成
+pip-compile pyproject.toml -o requirements.txt
+
+# 2. Docker ビルド
+docker build -t agentflow .
+
+# 3. 使用後に削除（重要！）
+rm requirements.txt
+```
+
+### アプリ固有の requirements.txt
+
+`apps/*/requirements.txt` は各アプリの Docker ビルド用です。これらは pyproject.toml から自動生成ではなく、アプリ固有の依存関係を定義しています。
+
+**例**: `apps/decision_governance_engine/requirements.txt`
+
+### 注意事項
+
+- 依存関係の追加・変更は必ず `pyproject.toml` を編集してください
+- ルートの `requirements.txt` を直接編集しないでください
+- 二重管理（pyproject.toml と requirements.txt 両方）を避けてください
+
 ## サポート
 
 - **バグ報告や機能リクエスト**: [GitHub Issues](https://github.com/liushuang393/serverlessAIAgents/issues) を開いてください

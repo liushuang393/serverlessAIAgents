@@ -63,7 +63,6 @@
 | [FRAMEWORK_ABSTRACTION_PLAN.md](./FRAMEWORK_ABSTRACTION_PLAN.md) | フレームワーク抽象化計画 |
 | [design/APP_REFACTORING_PROPOSAL_JA.md](./design/APP_REFACTORING_PROPOSAL_JA.md) | アプリ リファクタリング提案 |
 | [design/DATALAKE_INTEGRATION_DESIGN.md](./design/DATALAKE_INTEGRATION_DESIGN.md) | DataLake 統合設計 |
-| **[design/TECHNICAL_IMPROVEMENT_ANALYSIS_JA.md](./design/TECHNICAL_IMPROVEMENT_ANALYSIS_JA.md)** | ⭐ **技術改善分析** - サンドボックス/信頼性/監視 |
 
 ---
 
