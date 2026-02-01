@@ -44,6 +44,7 @@ from fastapi.responses import JSONResponse
 
 from agentflow import ChatBotSkill, WebSocketHub, get_llm
 from agentflow.channels import DiscordAdapter, MessageGateway, SlackAdapter, TelegramAdapter
+from apps.messaging_hub.coordinator import AssistantConfig, PersonalAssistantCoordinator
 
 # 配置日志
 logging.basicConfig(
@@ -60,7 +61,16 @@ logger = logging.getLogger("messaging_hub")
 # WebSocket Hub
 hub = WebSocketHub()
 
-# ChatBot Skill（复用现有）
+# Personal Assistant Coordinator（新機能）
+assistant_config = AssistantConfig(
+    enable_os_skills=True,
+    enable_browser_skills=True,
+    summary_language="ja",
+    use_emoji=True,
+)
+assistant = PersonalAssistantCoordinator(config=assistant_config)
+
+# ChatBot Skill（复用现有、assistantと連携）
 chatbot = ChatBotSkill(
     # 可以在这里添加 coordinator 或 rag_skill
     temperature=0.7,
@@ -352,6 +362,71 @@ async def list_sessions() -> dict[str, Any]:
 
 
 # =========================================================================
+# Personal Assistant エンドポイント（新機能）
+# =========================================================================
+
+
+@app.post("/assistant/process")
+async def process_assistant_request(
+    message: str,
+    user_id: str = "default",
+) -> dict[str, Any]:
+    """Personal Assistant にリクエストを処理させる.
+
+    自然言語でタスクを指示し、主管向けのサマリーを受け取る。
+
+    Examples:
+        - "今日のメールを整理して"
+        - "ダウンロードフォルダを片付けて"
+        - "AI市場の最新動向を調査して"
+        - "競合A社の分析レポートを作成して"
+
+    Args:
+        message: 自然言語のリクエスト
+        user_id: ユーザーID
+
+    Returns:
+        処理結果（summary, key_points, actions, risks を含む）
+    """
+    try:
+        result = await assistant.process(message, user_id=user_id)
+        return {
+            "ok": True,
+            "summary": result.get("summary", ""),
+            "headline": result.get("headline", ""),
+            "key_points": result.get("key_points", []),
+            "actions": result.get("actions", []),
+            "risks": result.get("risks", []),
+            "intent": result.get("intent", {}),
+        }
+    except Exception as e:
+        logger.error("Assistant processing error: %s", e, exc_info=True)
+        return {
+            "ok": False,
+            "error": str(e),
+            "summary": f"❌ 処理エラー: {e}",
+        }
+
+
+@app.get("/assistant/templates")
+async def list_assistant_templates() -> dict[str, Any]:
+    """利用可能なタスクテンプレート一覧を取得."""
+    templates = assistant._intent_router.list_templates()
+    return {
+        "templates": templates,
+        "total": len(templates),
+        "examples": [
+            {"template": "email_organize", "example": "今日のメールを整理して"},
+            {"template": "file_organize", "example": "ダウンロードを整理して"},
+            {"template": "system_optimize", "example": "PCを最適化して"},
+            {"template": "research", "example": "「AI市場」について調べて"},
+            {"template": "competitor_analysis", "example": "「競合A社」を分析して"},
+            {"template": "report", "example": "「週次レポート」を作成して"},
+        ],
+    }
+
+
+# =========================================================================
 # 启动入口
 # =========================================================================
 
@@ -372,9 +447,9 @@ if __name__ == "__main__":
     # 检查 LLM provider
     try:
         llm = get_llm()
-        logger.info(f"✓ LLM Provider initialized")
+        logger.info("✓ LLM Provider initialized")
     except Exception as e:
-        logger.error(f"✗ Failed to initialize LLM: {e}")
+        logger.error("✗ Failed to initialize LLM: %s", e)
         logger.error("Please set OPENAI_API_KEY or other LLM provider keys")
 
     # 启动服务

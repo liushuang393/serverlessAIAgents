@@ -13,6 +13,7 @@
 - 自動生成（LLM による新 Skill 作成）
 - 自動固化（learned_skills ディレクトリへ保存）
 - RAG/ChatBot などの組み込みスキル
+- OS/Browser 制御スキル（セキュリティ隔離設計）
 
 参考：
 - Anthropic Claude Code Skills 仕様
@@ -43,6 +44,51 @@ from agentflow.skills.runtime import ScriptResult, SkillRuntime
 # 組み込みスキル
 from agentflow.skills.chatbot import ChatBotConfig, ChatBotSkill, ChatMessage, ChatSession
 from agentflow.skills.rag import RAGConfig, RAGResult, RAGSkill
+
+# ========== OS/Browser 制御スキル（セキュリティ隔離設計） ==========
+# ゲートウェイ
+from agentflow.skills.gateway import (
+    GatewayConfig,
+    HumanConfirmationRequired,
+    RiskLevel,
+    SkillCategory,
+    SkillDefinition,
+    SkillGateway,
+    SkillGatewayError,
+    SkillNotFoundError,
+    SkillPermissionError,
+    SkillResult,
+)
+
+# モード切替機構
+from agentflow.skills.mode_switcher import (
+    ModeSwitcher,
+    ModeSwitchError,
+    ModeSwitchDenied,
+    ModeTransition,
+    SwitchDirection,
+)
+
+# ファクトリ
+from agentflow.skills.factory import create_skill_gateway
+
+# OS スキル
+from agentflow.skills.os import (
+    CommandSkill,
+    ExecutionMode,
+    FileSystemSkill,
+    NetworkSkill,
+    OSSkillConfig,
+    ProcessSkill,
+    SystemInfoSkill,
+)
+
+# Browser スキル
+from agentflow.skills.browser import (
+    BrowserSkill,
+    BrowserSkillConfig,
+    BrowserSkillError,
+)
 
 __all__ = [
     # 基本
@@ -78,5 +124,37 @@ __all__ = [
     "ChatBotSkill",
     "ChatMessage",
     "ChatSession",
+    # ========== OS/Browser 制御スキル ==========
+    # ゲートウェイ
+    "SkillGateway",
+    "GatewayConfig",
+    "SkillDefinition",
+    "SkillResult",
+    "SkillCategory",
+    "RiskLevel",
+    "SkillGatewayError",
+    "SkillNotFoundError",
+    "SkillPermissionError",
+    "HumanConfirmationRequired",
+    # モード切替機構
+    "ModeSwitcher",
+    "ModeSwitchError",
+    "ModeSwitchDenied",
+    "ModeTransition",
+    "SwitchDirection",
+    # ファクトリ
+    "create_skill_gateway",
+    # OS スキル
+    "OSSkillConfig",
+    "ExecutionMode",
+    "FileSystemSkill",
+    "CommandSkill",
+    "ProcessSkill",
+    "NetworkSkill",
+    "SystemInfoSkill",
+    # Browser スキル
+    "BrowserSkillConfig",
+    "BrowserSkill",
+    "BrowserSkillError",
 ]
 
