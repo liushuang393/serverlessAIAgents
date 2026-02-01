@@ -60,17 +60,24 @@ class KnowledgeDeleteResponse(BaseModel):
 # Agent取得用依存関係（遅延インポート）
 # ========================================
 
-def _get_agent(agent_type: str) -> Any:
-    """AgentTypeに応じたAgentインスタンスを取得."""
+async def _get_agent(agent_type: str) -> Any:
+    """AgentTypeに応じたAgentインスタンスを取得.
+
+    DecisionEngine の AgentRegistry を通じてアクセスする。
+    初期化されていない場合は自動的に初期化を行う。
+    """
     from apps.decision_governance_engine.routers.decision import get_engine
     engine = get_engine()
 
-    if agent_type == "shu":
-        return engine._shu
-    elif agent_type == "qi":
-        return engine._qi
-    else:
-        raise HTTPException(status_code=400, detail=f"Unknown agent type: {agent_type}")
+    # AgentRegistry が初期化されていない場合は初期化
+    if not engine._registry._initialized:
+        await engine._registry.initialize()
+
+    # AgentRegistry を通じてアクセス
+    try:
+        return engine._registry.get_agent(agent_type)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Unknown agent type: {agent_type}") from e
 
 
 # ========================================
@@ -100,7 +107,7 @@ def create_knowledge_router(
     @router.get("", response_model=KnowledgeListResponse)
     async def list_documents() -> KnowledgeListResponse:
         """知識ドキュメント一覧を取得."""
-        agent = _get_agent(agent_type)
+        agent = await _get_agent(agent_type)
 
         if not hasattr(agent, "_rag") or agent._rag is None:
             return KnowledgeListResponse(
@@ -123,7 +130,7 @@ def create_knowledge_router(
     @router.post("", response_model=KnowledgeAddResponse)
     async def add_document(doc: KnowledgeDocument) -> KnowledgeAddResponse:
         """知識ドキュメントを追加."""
-        agent = _get_agent(agent_type)
+        agent = await _get_agent(agent_type)
 
         if not hasattr(agent, "_rag") or agent._rag is None:
             await agent.initialize_rag()
@@ -145,7 +152,7 @@ def create_knowledge_router(
     @router.delete("/{doc_id}", response_model=KnowledgeDeleteResponse)
     async def delete_document(doc_id: str) -> KnowledgeDeleteResponse:
         """知識ドキュメントを削除."""
-        agent = _get_agent(agent_type)
+        agent = await _get_agent(agent_type)
 
         if not hasattr(agent, "_rag") or agent._rag is None:
             raise HTTPException(status_code=404, detail="Knowledge base not initialized")

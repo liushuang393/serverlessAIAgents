@@ -43,7 +43,16 @@ from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
 from agentflow import ChatBotSkill, WebSocketHub, get_llm
-from agentflow.channels import DiscordAdapter, MessageGateway, SlackAdapter, TelegramAdapter
+from agentflow.channels import (
+    DiscordAdapter,
+    MessageGateway,
+    SignalAdapter,
+    SlackAdapter,
+    TeamsAdapter,
+    TelegramAdapter,
+    WhatsAppAdapter,
+)
+from agentflow.skills import ConversationExportSkill, ExportFormat
 from apps.messaging_hub.coordinator import AssistantConfig, PersonalAssistantCoordinator
 
 # 配置日志
@@ -162,6 +171,38 @@ async def setup_platforms() -> None:
     else:
         logger.warning("✗ DISCORD_BOT_TOKEN not set, skipping Discord")
 
+    # Microsoft Teams
+    teams_app_id = os.getenv("TEAMS_APP_ID")
+    teams_app_password = os.getenv("TEAMS_APP_PASSWORD")
+    if teams_app_id and teams_app_password and TeamsAdapter:
+        teams = TeamsAdapter(app_id=teams_app_id, app_password=teams_app_password)
+        gateway.register_channel("teams", teams)
+        logger.info("✓ Teams adapter registered")
+    else:
+        logger.warning("✗ TEAMS_APP_ID/PASSWORD not set, skipping Teams")
+
+    # WhatsApp
+    whatsapp_phone_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
+    whatsapp_token = os.getenv("WHATSAPP_ACCESS_TOKEN")
+    if whatsapp_phone_id and whatsapp_token and WhatsAppAdapter:
+        whatsapp = WhatsAppAdapter(
+            phone_number_id=whatsapp_phone_id, access_token=whatsapp_token
+        )
+        gateway.register_channel("whatsapp", whatsapp)
+        logger.info("✓ WhatsApp adapter registered")
+    else:
+        logger.warning("✗ WHATSAPP credentials not set, skipping WhatsApp")
+
+    # Signal
+    signal_api_url = os.getenv("SIGNAL_API_URL")
+    signal_phone = os.getenv("SIGNAL_PHONE_NUMBER")
+    if signal_api_url and signal_phone and SignalAdapter:
+        signal = SignalAdapter(api_url=signal_api_url, phone_number=signal_phone)
+        gateway.register_channel("signal", signal)
+        logger.info("✓ Signal adapter registered")
+    else:
+        logger.warning("✗ SIGNAL_API_URL/PHONE not set, skipping Signal")
+
 
 async def start_background_tasks() -> None:
     """启动后台任务."""
@@ -273,6 +314,70 @@ async def slack_webhook(request: Request) -> JSONResponse:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
+@app.post("/webhook/teams")
+async def teams_webhook(request: Request) -> JSONResponse:
+    """Microsoft Teams Webhook 端点."""
+    try:
+        activity_data = await request.json()
+        auth_header = request.headers.get("Authorization", "")
+
+        teams_adapter = gateway.get_channel("teams")
+        if teams_adapter:
+            response = await teams_adapter.handle_webhook(
+                activity_data, auth_header, gateway
+            )
+            return JSONResponse(response)
+
+        return JSONResponse({"ok": False, "error": "Teams not configured"})
+
+    except Exception as e:
+        logger.error(f"Teams webhook error: {e}", exc_info=True)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.api_route("/webhook/whatsapp", methods=["GET", "POST"])
+async def whatsapp_webhook(request: Request) -> JSONResponse:
+    """WhatsApp Webhook 端点（検証とメッセージ両方対応）."""
+    try:
+        whatsapp_adapter = gateway.get_channel("whatsapp")
+        if not whatsapp_adapter:
+            return JSONResponse({"ok": False, "error": "WhatsApp not configured"})
+
+        if request.method == "GET":
+            # Webhook 検証
+            verify_token = os.getenv("WHATSAPP_VERIFY_TOKEN", "")
+            params = dict(request.query_params)
+            response = await whatsapp_adapter.verify_webhook(params, verify_token)
+            return JSONResponse(response)
+        else:
+            # メッセージ処理
+            payload = await request.json()
+            response = await whatsapp_adapter.handle_webhook(payload, gateway)
+            return JSONResponse(response)
+
+    except Exception as e:
+        logger.error(f"WhatsApp webhook error: {e}", exc_info=True)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@app.post("/webhook/signal")
+async def signal_webhook(request: Request) -> JSONResponse:
+    """Signal Webhook 端点（signal-cli-rest-api callback モード）."""
+    try:
+        payload = await request.json()
+
+        signal_adapter = gateway.get_channel("signal")
+        if signal_adapter:
+            response = await signal_adapter.handle_webhook(payload, gateway)
+            return JSONResponse(response)
+
+        return JSONResponse({"ok": False, "error": "Signal not configured"})
+
+    except Exception as e:
+        logger.error(f"Signal webhook error: {e}", exc_info=True)
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
 # =========================================================================
 # API 端点
 # =========================================================================
@@ -359,6 +464,112 @@ async def list_sessions() -> dict[str, Any]:
     """列出所有活跃会话."""
     sessions = chatbot.list_sessions()
     return {"sessions": sessions, "total": len(sessions)}
+
+
+# =========================================================================
+# 管理画面用 API エンドポイント（Admin Dashboard）
+# =========================================================================
+
+
+@app.get("/api/health")
+async def api_health() -> dict[str, Any]:
+    """管理画面用ヘルスチェック."""
+    import time
+
+    stats = gateway.get_statistics()
+    return {
+        "status": "healthy",
+        "uptime": time.time(),  # TODO: 実際の uptime を計算
+        "statistics": stats,
+    }
+
+
+@app.get("/api/stats")
+async def api_statistics() -> dict[str, Any]:
+    """管理画面用統計情報."""
+    stats = gateway.get_statistics()
+    sessions = chatbot.list_sessions()
+
+    platform_stats = {}
+    for platform_name in gateway.list_channels():
+        platform_stats[platform_name] = stats.get(f"{platform_name}_messages", 0)
+
+    return {
+        "totalMessages": stats.get("total_messages", 0),
+        "totalSessions": len(sessions),
+        "activeSessions": sum(1 for s in sessions if s.get("active", True)),
+        "platformStats": platform_stats,
+    }
+
+
+@app.get("/api/platforms")
+async def api_platforms() -> list[dict[str, Any]]:
+    """管理画面用プラットフォーム一覧."""
+    platforms = []
+
+    for platform_name in gateway.list_channels():
+        adapter = gateway.get_channel(platform_name)
+        stats = gateway.get_statistics()
+
+        platform_info = {
+            "name": platform_name,
+            "connected": adapter is not None,
+            "lastActivity": stats.get(f"{platform_name}_last_activity"),
+            "messageCount": stats.get(f"{platform_name}_messages", 0),
+        }
+        platforms.append(platform_info)
+
+    return platforms
+
+
+@app.get("/api/sessions")
+async def api_sessions() -> list[dict[str, Any]]:
+    """管理画面用セッション一覧."""
+    sessions = chatbot.list_sessions()
+    return [
+        {
+            "id": s.get("session_id", ""),
+            "platform": s.get("platform", "unknown"),
+            "userId": s.get("user_id", ""),
+            "userName": s.get("user_name", "Unknown"),
+            "startedAt": s.get("started_at", ""),
+            "lastMessageAt": s.get("last_message_at", ""),
+            "messageCount": s.get("message_count", 0),
+        }
+        for s in sessions
+    ]
+
+
+@app.get("/api/export")
+async def api_export(format: str = "json") -> JSONResponse:
+    """会話履歴エクスポート."""
+    try:
+        # セッションから会話履歴を取得
+        sessions = chatbot.list_sessions()
+        messages = []
+
+        for session in sessions:
+            session_messages = session.get("messages", [])
+            for msg in session_messages:
+                messages.append({
+                    "timestamp": msg.get("timestamp", ""),
+                    "platform": session.get("platform", "unknown"),
+                    "user_id": session.get("user_id", ""),
+                    "user_name": session.get("user_name", "Unknown"),
+                    "role": msg.get("role", "user"),
+                    "content": msg.get("content", ""),
+                })
+
+        # エクスポート
+        exporter = ConversationExportSkill()
+        export_format = ExportFormat(format) if format in ["json", "csv", "markdown"] else ExportFormat.JSON
+        result = await exporter.export(messages, format=export_format)
+
+        return JSONResponse({"data": result})
+
+    except Exception as e:
+        logger.error(f"Export failed: {e}", exc_info=True)
+        return JSONResponse({"error": str(e)}, status_code=500)
 
 
 # =========================================================================

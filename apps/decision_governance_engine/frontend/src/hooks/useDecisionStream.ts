@@ -192,8 +192,26 @@ export function useDecisionStream() {
             }
             return;
           case 'gate_rejected':
-            // ゲートで拒否された（後方互換）
-            addThinkingLog('system', 'System', '⚠️ ゲートチェックで処理が停止しました');
+            // ゲートで拒否された（詳細情報を含む）
+            {
+              const gateData = legacyEvent.data || {};
+              const gateMessage = gateData.rejection_message as string || '';
+              const gateReason = gateData.rejection_reason as string || '';
+              const gateSuggest = gateData.suggested_rephrase as string || '';
+              const gateStage = gateData.stage as string || '';
+
+              if (gateMessage) {
+                addThinkingLog('system', 'System', `⚠️ ${gateMessage}`);
+              } else {
+                addThinkingLog('system', 'System', `⚠️ ゲートチェック(${gateStage || 'gatekeeper'})で処理が停止しました`);
+              }
+              if (gateReason) {
+                addThinkingLog('system', 'System', `📋 理由: ${gateReason}`);
+              }
+              if (gateSuggest) {
+                addThinkingLog('system', 'System', `💡 提案: ${gateSuggest}`);
+              }
+            }
             return;
           case 'early_return':
             // 早期リターン（Gate拒否またはReview REJECT）
@@ -202,18 +220,37 @@ export function useDecisionStream() {
               const rejectionMessage = data.rejection_message as string || '';
               const rejectionReason = data.rejection_reason as string || '';
               const suggestedRephrase = data.suggested_rephrase as string || '';
+              const category = data.category as string || '';
 
-              // 拒否理由をログに表示
+              // 拒否理由をログに表示（より詳細なメッセージを構築）
               if (rejectionMessage) {
                 addThinkingLog('system', 'System', `⚠️ ${rejectionMessage}`);
               } else {
-                addThinkingLog('system', 'System', '⚠️ 入力が条件を満たしていません');
+                // フォールバック: 具体的なガイダンスを表示
+                addThinkingLog('system', 'System', '⚠️ この質問は意思決定支援の対象外です。');
+                addThinkingLog('system', 'System', '企業の新事業・新製品/サービス投入に関する意思決定課題を入力してください。');
               }
               if (rejectionReason) {
-                addThinkingLog('system', 'System', `理由: ${rejectionReason}`);
+                addThinkingLog('system', 'System', `📋 理由: ${rejectionReason}`);
+              }
+              if (category) {
+                addThinkingLog('system', 'System', `📂 カテゴリ: ${category}`);
               }
               if (suggestedRephrase) {
                 addThinkingLog('system', 'System', `💡 提案: ${suggestedRephrase}`);
+              }
+
+              // 具体的なエラーメッセージを構築
+              let errorMessage = rejectionMessage;
+              if (!errorMessage) {
+                errorMessage = 'この質問は意思決定支援の対象外です。\n\n';
+                if (rejectionReason) {
+                  errorMessage += `理由: ${rejectionReason}\n\n`;
+                }
+                errorMessage += '【対応可能な質問例】\n';
+                errorMessage += '• 「SaaS市場に新規参入すべきか？」\n';
+                errorMessage += '• 「新製品を来年Q1に投入すべきか？」\n';
+                errorMessage += '• 「海外市場への進出タイミングは？」';
               }
 
               // 状態を設定（エラーとして表示し、再試行可能にする）
@@ -221,7 +258,7 @@ export function useDecisionStream() {
               setState((prev) => ({
                 ...prev,
                 isComplete: true,
-                error: rejectionMessage || '入力が条件を満たしていません。質問を修正してください。',
+                error: errorMessage,
                 isRetryable: true,
                 agents: prev.agents.map((a) =>
                   a.status === 'running'

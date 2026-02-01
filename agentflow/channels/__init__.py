@@ -60,6 +60,21 @@ try:
 except ImportError:
     DiscordAdapter = None  # type: ignore[misc, assignment]
 
+try:
+    from agentflow.channels.teams import TeamsAdapter
+except ImportError:
+    TeamsAdapter = None  # type: ignore[misc, assignment]
+
+try:
+    from agentflow.channels.whatsapp import WhatsAppAdapter
+except ImportError:
+    WhatsAppAdapter = None  # type: ignore[misc, assignment]
+
+try:
+    from agentflow.channels.signal import SignalAdapter
+except ImportError:
+    SignalAdapter = None  # type: ignore[misc, assignment]
+
 
 __all__ = [
     # Base
@@ -73,4 +88,7 @@ __all__ = [
     "TelegramAdapter",
     "SlackAdapter",
     "DiscordAdapter",
+    "TeamsAdapter",
+    "WhatsAppAdapter",
+    "SignalAdapter",
 ]

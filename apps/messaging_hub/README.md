@@ -1,154 +1,154 @@
-# Messaging Hub - Multi-Platform AI Chatbot
+# Messaging Hub - マルチプラットフォーム AI チャットボット
 
-统一消息平台网关，类似 [moltbot](https://github.com/moltbot/moltbot) 的实现，支持 Telegram、Slack、Discord 等多平台集成。
+統一メッセージプラットフォームゲートウェイ。[moltbot](https://github.com/moltbot/moltbot) に類似した実装で、Telegram、Slack、Discord などのマルチプラットフォーム統合をサポート。
 
-## 🚀 Features
+## 🚀 機能
 
-- ✅ **多平台支持**: Telegram, Slack, Discord
-- ✅ **统一会话管理**: 跨平台用户会话追踪
-- ✅ **实时同步**: WebSocket 双向通信
-- ✅ **AI Agent 集成**: 复用 AgentFlow 多代理能力
-- ✅ **富文本支持**: Markdown, Embeds, Block Kit
-- ✅ **松耦合设计**: 自动检测 LLM provider
+- ✅ **マルチプラットフォーム対応**: Telegram, Slack, Discord
+- ✅ **統一セッション管理**: クロスプラットフォームユーザーセッション追跡
+- ✅ **リアルタイム同期**: WebSocket 双方向通信
+- ✅ **AI Agent 統合**: AgentFlow マルチエージェント機能を活用
+- ✅ **リッチテキスト対応**: Markdown, Embeds, Block Kit
+- ✅ **松結合設計**: LLM プロバイダー自動検出
 
-## 📋 Architecture
+## 📋 アーキテクチャ
 
 ```
 Message Platforms (Telegram/Slack/Discord)
            ↓
-    Message Gateway (核心路由)
+    Message Gateway (コアルーティング)
            ↓
-    ChatBot Skill (会话管理)
+    ChatBot Skill (セッション管理)
            ↓
-    Agent/Coordinator (AI 处理)
+    Agent/Coordinator (AI 処理)
            ↓
     WebSocket Hub → Frontend (Live Canvas)
 ```
 
-## 🛠️ Quick Start
+## 🛠️ クイックスタート
 
-### 1. 安装依赖
+### 1. 依存関係のインストール
 
 ```bash
-# 基础依赖
+# 基本依存関係
 pip install -e ".[dev]"
 
-# 平台依赖（按需安装）
+# プラットフォーム依存関係（必要に応じてインストール）
 pip install python-telegram-bot>=20.0  # Telegram
 pip install slack-sdk>=3.0             # Slack
 pip install discord.py>=2.0            # Discord
 ```
 
-### 2. 配置环境变量
+### 2. 環境変数の設定
 
 ```bash
-# 复制配置文件
+# 設定ファイルをコピー
 cp apps/messaging_hub/.env.example apps/messaging_hub/.env
 
-# 编辑配置（至少配置一个 LLM + 一个平台）
+# 設定を編集（最低1つの LLM + 1つのプラットフォームを設定）
 vim apps/messaging_hub/.env
 ```
 
-必需配置：
-- **LLM Provider**: `OPENAI_API_KEY` 或 `ANTHROPIC_API_KEY`
-- **至少一个平台**: `TELEGRAM_BOT_TOKEN` 或 `SLACK_BOT_TOKEN` 或 `DISCORD_BOT_TOKEN`
+必須設定：
+- **LLM Provider**: `OPENAI_API_KEY` または `ANTHROPIC_API_KEY`
+- **最低1つのプラットフォーム**: `TELEGRAM_BOT_TOKEN` または `SLACK_BOT_TOKEN` または `DISCORD_BOT_TOKEN`
 
-### 3. 运行服务
+### 3. サービスの起動
 
 ```bash
-# 开发模式
+# 開発モード
 python apps/messaging_hub/main.py
 
-# 或使用 uvicorn
+# または uvicorn を使用
 uvicorn apps.messaging_hub.main:app --reload --port 8000
 ```
 
-启动后访问：
-- **API 文档**: http://localhost:8000/docs
-- **健康检查**: http://localhost:8000/health
+起動後のアクセス先：
+- **API ドキュメント**: http://localhost:8000/docs
+- **ヘルスチェック**: http://localhost:8000/health
 - **WebSocket**: ws://localhost:8000/ws
 
-## 🤖 Platform Setup
+## 🤖 プラットフォーム設定
 
 ### Telegram
 
-1. **创建 Bot**:
-   - 访问 [@BotFather](https://t.me/BotFather)
-   - 发送 `/newbot` 创建新 bot
-   - 获取 Token: `1234567890:ABCdef...`
+1. **Bot の作成**:
+   - [@BotFather](https://t.me/BotFather) にアクセス
+   - `/newbot` を送信して新しい bot を作成
+   - Token を取得: `1234567890:ABCdef...`
 
-2. **配置 Webhook**（可选，推荐用于生产环境）:
+2. **Webhook の設定**（オプション、本番環境推奨）:
    ```bash
    curl -X POST https://api.telegram.org/bot<TOKEN>/setWebhook \
      -d url=https://your-domain.com/webhook/telegram
    ```
 
-3. **或使用轮询模式**（开发环境）:
-   - 代码已支持自动轮询，无需额外配置
+3. **またはポーリングモードを使用**（開発環境）:
+   - コードは自動ポーリングをサポート、追加設定不要
 
 ### Slack
 
-1. **创建 Slack App**:
-   - 访问 https://api.slack.com/apps
-   - 点击 "Create New App" → "From scratch"
+1. **Slack App の作成**:
+   - https://api.slack.com/apps にアクセス
+   - "Create New App" → "From scratch" をクリック
 
-2. **配置 OAuth & Permissions**:
-   - 添加 Bot Token Scopes:
+2. **OAuth & Permissions の設定**:
+   - Bot Token Scopes を追加:
      - `chat:write`
      - `channels:read`
      - `im:read`
      - `users:read`
-   - 安装 App 到 workspace
-   - 复制 Bot User OAuth Token: `xoxb-...`
+   - App を workspace にインストール
+   - Bot User OAuth Token をコピー: `xoxb-...`
 
-3. **配置 Event Subscriptions**:
-   - 启用 Events
+3. **Event Subscriptions の設定**:
+   - Events を有効化
    - Request URL: `https://your-domain.com/webhook/slack`
-   - Subscribe to bot events:
+   - bot events を購読:
      - `message.channels`
      - `message.im`
 
 ### Discord
 
-1. **创建 Discord Bot**:
-   - 访问 https://discord.com/developers/applications
-   - 点击 "New Application"
-   - 进入 "Bot" 标签，点击 "Add Bot"
+1. **Discord Bot の作成**:
+   - https://discord.com/developers/applications にアクセス
+   - "New Application" をクリック
+   - "Bot" タブに移動し、"Add Bot" をクリック
 
-2. **配置 Intents**:
-   - 启用 "Message Content Intent"
-   - 启用 "Server Members Intent"
+2. **Intents の設定**:
+   - "Message Content Intent" を有効化
+   - "Server Members Intent" を有効化
 
-3. **获取 Token**:
-   - 复制 Bot Token
+3. **Token の取得**:
+   - Bot Token をコピー
 
-4. **邀请 Bot 到服务器**:
+4. **Bot をサーバーに招待**:
    - OAuth2 → URL Generator
    - Scopes: `bot`
    - Permissions: `Send Messages`, `Read Messages/View Channels`
-   - 复制生成的 URL 并访问
+   - 生成された URL をコピーしてアクセス
 
-## 📡 API Endpoints
+## 📡 API エンドポイント
 
 ### HTTP APIs
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | 服务信息 |
-| `/health` | GET | 健康检查 + 统计 |
-| `/platforms` | GET | 已注册平台列表 |
-| `/sessions` | GET | 活跃会话列表 |
-| `/send` | POST | 直接发送消息（管理） |
+| エンドポイント | メソッド | 説明 |
+|---------------|---------|------|
+| `/` | GET | サービス情報 |
+| `/health` | GET | ヘルスチェック + 統計 |
+| `/platforms` | GET | 登録済みプラットフォーム一覧 |
+| `/sessions` | GET | アクティブセッション一覧 |
+| `/send` | POST | 直接メッセージ送信（管理用） |
 | `/webhook/telegram` | POST | Telegram webhook |
 | `/webhook/slack` | POST | Slack webhook |
 
 ### WebSocket
 
 ```javascript
-// 连接 WebSocket
+// WebSocket に接続
 const ws = new WebSocket('ws://localhost:8000/ws?client_id=user123');
 
-// 接收实时消息
+// リアルタイムメッセージを受信
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
   console.log('Received:', data);
@@ -156,31 +156,31 @@ ws.onmessage = (event) => {
 };
 ```
 
-## 🧪 Testing
+## 🧪 テスト
 
-### 手动测试
+### 手動テスト
 
-1. **Telegram**: 向你的 bot 发送消息
+1. **Telegram**: bot にメッセージを送信
    ```
    /start
    Hello, bot!
    ```
 
-2. **Slack**: 在频道或 DM 中 @提及 bot
+2. **Slack**: チャンネルまたは DM で bot を @メンション
    ```
    @YourBot hello
    ```
 
-3. **Discord**: 在服务器频道发送消息
+3. **Discord**: サーバーチャンネルでメッセージを送信
    ```
    !hello
-   你好，bot
+   こんにちは、bot
    ```
 
-### 使用 API 测试
+### API を使用したテスト
 
 ```bash
-# 发送消息到 Telegram
+# Telegram にメッセージを送信
 curl -X POST http://localhost:8000/send \
   -H "Content-Type: application/json" \
   -d '{
@@ -189,47 +189,47 @@ curl -X POST http://localhost:8000/send \
     "text": "Hello from API!"
   }'
 
-# 查看活跃会话
+# アクティブセッションを確認
 curl http://localhost:8000/sessions
 
-# 查看平台状态
+# プラットフォーム状態を確認
 curl http://localhost:8000/platforms
 ```
 
-## 🎯 Advanced Usage
+## 🎯 高度な使用方法
 
-### 添加自定义 Agent
+### カスタム Agent の追加
 
 ```python
 from agentflow import ChatBotSkill
 from agentflow.patterns.coordinator import AdaptiveCoordinator
 
-# 创建多代理协调器
+# マルチエージェントコーディネーターを作成
 coordinator = AdaptiveCoordinator(agents=[agent1, agent2])
 
-# 集成到 ChatBot
+# ChatBot に統合
 chatbot = ChatBotSkill(coordinator=coordinator)
 
-# 使用到网关
+# ゲートウェイで使用
 gateway = MessageGateway(hub, chatbot)
 ```
 
-### 添加 RAG 能力
+### RAG 機能の追加
 
 ```python
 from agentflow.skills.rag import RAGSkill
 
-# 创建 RAG skill
+# RAG skill を作成
 rag = RAGSkill(knowledge_base_path="./data")
 
-# 集成到 ChatBot
+# ChatBot に統合
 chatbot = ChatBotSkill(rag_skill=rag)
 ```
 
-### 持久化会话
+### セッションの永続化
 
 ```python
-# 扩展 ChatBotSkill 实现数据库存储
+# ChatBotSkill を拡張してデータベースストレージを実装
 from agentflow import get_db
 
 class PersistentChatBot(ChatBotSkill):
@@ -238,19 +238,19 @@ class PersistentChatBot(ChatBotSkill):
         self.db = get_db()
 
     async def create_session(self, metadata=None):
-        # 从数据库加载
+        # データベースから読み込み
         # ...
 ```
 
-## 📊 Monitoring
+## 📊 モニタリング
 
-查看统计信息：
+統計情報の確認：
 
 ```bash
 curl http://localhost:8000/health
 ```
 
-响应：
+レスポンス：
 ```json
 {
   "status": "healthy",
@@ -263,20 +263,20 @@ curl http://localhost:8000/health
 }
 ```
 
-## 🔒 Security
+## 🔒 セキュリティ
 
-1. **Webhook 验证**:
-   - Slack: 自动验证签名（需要 `SLACK_SIGNING_SECRET`）
-   - Telegram: 建议使用 HTTPS + secret token
+1. **Webhook 検証**:
+   - Slack: 署名を自動検証（`SLACK_SIGNING_SECRET` が必要）
+   - Telegram: HTTPS + secret token の使用を推奨
 
-2. **环境变量**:
-   - 切勿提交 `.env` 文件到版本控制
-   - 生产环境使用密钥管理服务
+2. **環境変数**:
+   - `.env` ファイルをバージョン管理にコミットしないこと
+   - 本番環境ではシークレット管理サービスを使用
 
-3. **Rate Limiting**:
-   - 考虑添加速率限制（可用 FastAPI middleware）
+3. **レート制限**:
+   - レート制限の追加を検討（FastAPI middleware で実装可能）
 
-## 🚢 Deployment
+## 🚢 デプロイ
 
 ### Docker
 
@@ -292,41 +292,35 @@ RUN pip install -e ".[dev]" && \
 CMD ["uvicorn", "apps.messaging_hub.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-### 环境变量（生产）
+### 環境変数（本番環境）
 
 ```bash
-# 使用 secrets management
+# シークレット管理サービスを使用
 export OPENAI_API_KEY=$(aws secretsmanager get-secret-value ...)
 export TELEGRAM_BOT_TOKEN=$(...)
 ```
 
-## 🆚 Comparison with Moltbot
+## 🆚 Moltbot との比較
 
-| Feature | Moltbot | Messaging Hub |
-|---------|---------|---------------|
-| Platforms | 12+ (WhatsApp, iMessage, etc.) | 3 (可扩展) |
-| Architecture | Gateway-centric | 8-layer clean arch |
-| Multi-Agent | Basic routing | 4 patterns + 5 engines |
-| Memory | Unknown | 3-tier system |
+| 機能 | Moltbot | Messaging Hub |
+|------|---------|---------------|
+| プラットフォーム | 12+ (WhatsApp, iMessage 等) | 3 (拡張可能) |
+| アーキテクチャ | Gateway 中心 | 8層クリーンアーキテクチャ |
+| マルチエージェント | 基本ルーティング | 4パターン + 5エンジン |
+| メモリ | 不明 | 3層システム |
 | UI | Live Canvas | A2UI + React Studio |
-| Protocols | A2UI | MCP/A2A/AG-UI/A2UI/UCP |
-| Voice | ✅ (ElevenLabs) | 🔜 (planned) |
-| Device Tools | ✅ (Camera, Location) | 🔜 (planned) |
-| Browser Control | ✅ (Playwright) | 🔜 (planned) |
+| プロトコル | A2UI | MCP/A2A/AG-UI/A2UI/UCP |
+| 音声 | ✅ (ElevenLabs) | 🔜 (計画中) |
+| デバイスツール | ✅ (カメラ, 位置情報) | 🔜 (計画中) |
+| ブラウザ制御 | ✅ (Playwright) | 🔜 (計画中) |
 
-## 📝 License
+## 📝 ライセンス
 
-MIT License - see AgentFlow main README
+MIT License - AgentFlow メイン README を参照
 
-## 🤝 Contributing
+## 🤝 コントリビューション
 
-欢迎贡献！请遵循 AgentFlow 的贡献指南。
+貢献を歓迎します！AgentFlow のコントリビューションガイドに従ってください。
 
-可以添加的功能：
-- [ ] WhatsApp 适配器
-- [ ] Microsoft Teams 适配器
-- [ ] Signal 适配器
-- [ ] 语音消息支持
-- [ ] 图片识别（Vision）
-- [ ] 会话导出
-- [ ] 管理后台 UI
+実装済み機能：
+

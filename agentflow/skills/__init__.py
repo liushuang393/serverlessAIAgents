@@ -90,6 +90,42 @@ from agentflow.skills.browser import (
     BrowserSkillError,
 )
 
+# Vision スキル（画像認識）
+try:
+    from agentflow.skills.vision import (
+        VisionConfig,
+        VisionProvider,
+        VisionResult,
+        VisionSkill,
+    )
+except ImportError:
+    VisionSkill = None  # type: ignore[misc, assignment]
+    VisionConfig = None  # type: ignore[misc, assignment]
+    VisionResult = None  # type: ignore[misc, assignment]
+    VisionProvider = None  # type: ignore[misc, assignment]
+
+# Voice スキル（音声認識・合成）
+try:
+    from agentflow.skills.voice import (
+        TTSVoice,
+        VoiceConfig,
+        VoiceProvider,
+        VoiceSkill,
+    )
+except ImportError:
+    VoiceSkill = None  # type: ignore[misc, assignment]
+    VoiceConfig = None  # type: ignore[misc, assignment]
+    VoiceProvider = None  # type: ignore[misc, assignment]
+    TTSVoice = None  # type: ignore[misc, assignment]
+
+# 会話エクスポートスキル
+from agentflow.skills.conversation_export import (
+    ConversationExportSkill,
+    ExportConfig,
+    ExportFormat,
+    ExportMessage,
+)
+
 __all__ = [
     # 基本
     "Skill",
@@ -156,5 +192,20 @@ __all__ = [
     "BrowserSkillConfig",
     "BrowserSkill",
     "BrowserSkillError",
+    # Vision スキル
+    "VisionSkill",
+    "VisionConfig",
+    "VisionResult",
+    "VisionProvider",
+    # Voice スキル
+    "VoiceSkill",
+    "VoiceConfig",
+    "VoiceProvider",
+    "TTSVoice",
+    # 会話エクスポートスキル
+    "ConversationExportSkill",
+    "ExportConfig",
+    "ExportFormat",
+    "ExportMessage",
 ]
 

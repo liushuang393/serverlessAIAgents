@@ -408,10 +408,16 @@ class PipelineEngine(BaseEngine):
                     check = stage.gate_check or (lambda r: r.get("passed", True))
                     if not check(stage_result):
                         self._logger.info(f"Gate {stage.name} rejected")
+                        # 拒否理由を詳細に抽出（GatekeeperAgentの出力形式に対応）
                         return {
                             "status": "rejected",
                             "stage": stage.name,
-                            "reason": stage_result.get("reason", "Gate rejected"),
+                            "rejection_message": stage_result.get("rejection_message", ""),
+                            "rejection_reason": stage_result.get("rejection_reason", ""),
+                            "suggested_rephrase": stage_result.get("suggested_rephrase", ""),
+                            "category": stage_result.get("category", ""),
+                            "reason": stage_result.get("rejection_reason")
+                            or stage_result.get("reason", "Gate rejected"),
                             "results": self._results,
                         }
 
@@ -637,12 +643,23 @@ class PipelineEngine(BaseEngine):
                 if stage.gate:
                     check = stage.gate_check or (lambda r: r.get("passed", True))
                     if not check(stage_result):
-                        yield {"type": "gate_rejected", "data": {"stage": stage.name}}
+                        # 拒否理由を詳細に抽出（GatekeeperAgentの出力形式に対応）
+                        rejection_data = {
+                            "stage": stage.name,
+                            "rejection_message": stage_result.get("rejection_message", ""),
+                            "rejection_reason": stage_result.get("rejection_reason", ""),
+                            "suggested_rephrase": stage_result.get("suggested_rephrase", ""),
+                            "category": stage_result.get("category", ""),
+                        }
+                        # early_return イベントを発行（フロントエンドとの互換性）
+                        yield {"type": "early_return", "data": rejection_data}
+                        yield {"type": "gate_rejected", "data": rejection_data}
                         yield {
                             "type": "result",
                             "data": {
                                 "status": "rejected",
                                 "stage": stage.name,
+                                **rejection_data,
                                 "results": self._results,
                             },
                         }
