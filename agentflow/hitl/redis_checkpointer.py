@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RedisCheckpointer - Redis ベースの状態永続化.
 
 本番環境での分散ワークフロー状態管理に使用。
@@ -23,7 +22,8 @@ import os
 from datetime import datetime
 from typing import Any
 
-from agentflow.hitl.checkpointer import Checkpointer, CheckpointData
+from agentflow.hitl.checkpointer import CheckpointData, Checkpointer
+
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,9 @@ class RedisCheckpointer(Checkpointer):
     async def connect(self) -> None:
         """Redis に接続."""
         try:
-            import redis.asyncio as redis
+            import importlib
+
+            redis = importlib.import_module("redis.asyncio")
 
             if self._url:
                 self._client = redis.from_url(self._url, decode_responses=True)
@@ -147,6 +149,10 @@ class RedisCheckpointer(Checkpointer):
             return None
 
         data = json.loads(json_data)
+        # 新旧スキーマ互換のためデフォルトを補完
+        data.setdefault("schema_version", 1)
+        data.setdefault("cursor", None)
+        data.setdefault("run_id", None)
         # datetime 復元
         data["created_at"] = datetime.fromisoformat(data["created_at"])
         data["updated_at"] = datetime.fromisoformat(data["updated_at"])
@@ -218,4 +224,3 @@ class RedisCheckpointer(Checkpointer):
             "ttl": self._ttl,
             "connected": self._connected,
         }
-

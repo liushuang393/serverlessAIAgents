@@ -1,150 +1,145 @@
-# AgentFlow (serverlessAIAgents) - Agent Instructions
+# AGENTS.md (Repository Instructions)
 
-This repo is a Python-first AI agent framework with an optional React/Vite Studio UI.
-Agentic coding changes should preserve the existing architecture and quality gates.
+This file is for agentic coding tools operating in this repo.
 
-## Quick Start (Local)
+Updated: 2026-02-03
 
-- Recommended runtime: Python 3.13+ (mypy/ruff configs target 3.13; AG-UI requires 3.13)
-- Install (dev): `pip install -e ".[dev]"`
-- Studio deps: `cd studio && npm install`
+## Repo Map
+```
+./
+├── agentflow/                 # framework library (public API: agentflow/__init__.py)
+├── apps/                      # sample applications
+├── studio/                    # React/Vite Studio frontend
+├── tests/                     # pytest suite
+├── docs/                      # developer docs + design notes
+├── code-rules/                # detailed coding rules (source of truth)
+└── .github/workflows/         # CI/CD workflows
+```
 
-Note: `pyproject.toml` currently declares `requires-python >=3.10`, but tooling and
-documentation assume 3.13+. For development work, treat 3.13+ as required.
+## Commands (Canonical)
 
-## Build / Lint / Test Commands
+```bash
+# Install (dev)
+make install-dev
 
-### One-command workflows
+# Format / lint / types
+make format
+make lint
+make type-check
 
-- Run everything: `make check-all`
-- Format all: `make format`
-- Lint all: `make lint`
-- Type check all: `make type-check`
-- Test all: `make test`
-- Test with coverage: `make test-cov`
+# Run the full test suite (configured with coverage + fail-under)
+make test
+make test-cov
 
-### Cross-platform helper scripts
+# Run pre-commit on all files (includes detect-secrets)
+make pre-commit
 
-- Linux/Mac/WSL: `./check.sh all` (also: `format`, `lint`, `type-check`, `test`, `test-cov`)
-- Windows PowerShell: `./check.ps1 all`
-- Windows CMD: `check.bat all`
+# Studio dev servers
+make dev-backend      # FastAPI backend on :8000
+make dev-frontend     # Vite frontend on :3000
 
-### Python (direct)
+# Build
+make build
+make build-frontend
+```
 
-- Format: `ruff format .`
-- Lint: `ruff check .`
-- Auto-fix lint: `ruff check --fix .`
-- Type check (strict): `mypy agentflow --strict --ignore-missing-imports`
+### Running A Single Test (Fast Local Loop)
 
-### Tests
+Pytest config in `pyproject.toml` enables coverage and `--cov-fail-under=80` by default.
+Know the difference:
 
-- Run all tests: `pytest -v`
-- Run a directory: `pytest tests/unit/`
-- Run a single file: `pytest tests/unit/test_agent_block.py`
-- Run a single test: `pytest tests/unit/test_agent_block.py::test_agent_initialization`
-- Run by keyword: `pytest -k "agent_initialization"`
-- Run by marker (if tests are marked): `pytest -m unit` / `pytest -m "not slow"`
+```bash
+# Single test (uses repo defaults; may fail coverage threshold on small runs)
+pytest tests/unit/test_file.py::test_name
 
-Pytest config lives in `pyproject.toml` and enforces:
-- strict markers/config, asyncio_mode=auto
-- coverage on `agentflow` and `--cov-fail-under=80`
+# Single test, disable coverage plugin (recommended for quick iteration)
+pytest --no-cov tests/unit/test_file.py::test_name
 
-### Frontend (studio/)
+# Run a single test file
+pytest --no-cov tests/unit/test_file.py
 
-- Dev server: `cd studio && npm run dev`
-- Build: `cd studio && npm run build`
-- Lint: `cd studio && npm run lint` (or `npm run lint:fix`)
-- Format: `cd studio && npm run format`
-- Type check: `cd studio && npm run type-check`
+# Run tests matching a name/pattern
+pytest --no-cov -k "workflow" tests/unit
 
-### Build / Dev servers
+# Run by marker (markers are strict)
+pytest --no-cov -m unit
+pytest --no-cov -m "not slow"
 
-- Build Python package: `make build`
-- Build Studio bundle: `make build-frontend`
-- Run backend API (Studio server): `make dev-backend`
-- Run Studio dev server: `make dev-frontend`
+# Stop on first failure
+pytest --no-cov --maxfail=1 -x tests/unit/test_file.py
+```
 
-## Pre-commit / Secrets
+## Code Style (Source Of Truth)
 
-- Install hooks: `make install-hooks` or `pre-commit install`
-- Run on all files: `make pre-commit` or `pre-commit run --all-files`
-- Secrets scanning uses `detect-secrets` with `.secrets.baseline`
-- Never commit credentials or real API keys (check `.env.example` for expected vars)
+Primary references:
+- `CLAUDE.md` (project-wide conventions, especially language + prohibited patterns)
+- `pyproject.toml` (Ruff/Mypy/Pytest config)
+- `code-rules/CLAUDE.md` + `code-rules/global/*` (deeper standards)
 
-## Cursor / Copilot Rules
+Cursor rules / Copilot rules:
+- Not found: `.cursor/rules/`, `.cursorrules`, `.github/copilot-instructions.md`
 
-- No `.cursor/rules/`, `.cursorrules`, or `.github/copilot-instructions.md` found in this repo.
+## Language Rules
+- Code comments, docstrings, log messages: Japanese (even if conversation is English).
+- Identifiers (vars/functions/classes): English, PEP 8 style.
 
-## Code Style and Engineering Guidelines
+## Formatting
+- Python formatter: Ruff (`ruff format .`), line length 100.
+- Quotes: double quotes (Ruff format: `quote-style = "double"`).
+- Do not hand-format; run `make format` after edits.
 
-### Formatting
+## Imports
+- Use Ruff/isort via `ruff check`.
+- Group order: standard library, third-party, first-party (`agentflow`), then local.
+- Prefer absolute imports (`from agentflow...`) over relative (relative only within same package).
+- No wildcard imports.
 
-- Use Ruff as the single source of truth (formatter + linter)
-- Line length: 100; quotes: double (Ruff format)
-- Prefer small, focused functions; avoid large files (hard limit: do not create >1000-line files)
+## Typing
+- Mypy strict is expected (see `pyproject.toml` and `make type-check`).
+- Add type annotations for all public functions/methods (tests are exempt via Ruff config).
+- Prefer `X | None` unions and `collections.abc` types (`Callable`, `Awaitable`, etc.).
+- Avoid `Any`; if unavoidable, keep it scoped and explain why.
+- Avoid `# type: ignore`; if unavoidable, include a reason and target the narrowest code.
 
-### Imports
+## Async / I/O
+- Async-first codebase: prefer `async def` and non-blocking I/O.
+- Avoid blocking calls in async paths (`open()`, `time.sleep()`, sync HTTP, etc.).
+- Prefer `aiofiles` for files and `httpx` for HTTP.
 
-- Order: standard library, third-party, then first-party (`agentflow`), separated by blank lines
-- No wildcard imports
-- Prefer absolute imports; relative imports only within a package when they improve clarity
-- Use `if TYPE_CHECKING:` to avoid runtime cycles when needed
+## Errors & Logging
+- Fail fast; do not swallow exceptions.
+- No bare `except:`.
+- Convert unexpected exceptions at service boundaries and preserve the cause (`raise ... from e`).
+- Use structured logging (structlog); do not leave `print()` debugging.
+- When logging errors, include contextual fields (ids, target, model, path) and `exc_info=True`.
 
-### Types (mypy strict)
+## Event Protocols (AG-UI)
+- Never emit ad-hoc events as `{type: "...", data: {...}}`.
+- Use `agentflow/protocols/agui_events.py` event models and `.to_dict()` / `.to_sse()`.
+- Progress events must include `current`, `total`, `percentage` (avoid ambiguous progress).
 
-- 100% type annotations for production code (tests are exempt via Ruff per-file ignores)
-- Avoid `Any`; if unavoidable, isolate it and explain why
-- Prefer built-in generics: `dict[str, X]`, `list[X]`, and `collections.abc` for callables
-- Prefer `X | None` unions over `Optional[X]` (unless consistent with surrounding code)
-- Do not use `type: ignore` without a specific error code and a short justification
+## File Size / Modularity
+- Hard limit: keep source files < 1000 lines.
+- If a file exceeds ~500 lines or mixes 3+ responsibilities, split it.
 
-### Async-first I/O
+## Tests
+- Tests live in `tests/` (configured in `pyproject.toml`).
+- Markers: `unit`, `integration`, `e2e`, `slow` (strict markers enabled).
+- Prefer small, deterministic unit tests; isolate external calls behind providers.
 
-- All I/O must be async (use `aiofiles`, `httpx`, async DB clients)
-- Avoid blocking calls in core library code (no synchronous `open()`, no `requests`, no `time.sleep()`)
-- If you must call a blocking API in non-critical/demo areas, confine it and document why
+## Secrets
+- Do not commit `.env`, API keys, tokens, credentials.
+- Pre-commit runs detect-secrets using `.secrets.baseline`.
 
-### Error handling
-
-- Fail fast: validate inputs early and raise meaningful exceptions
-- No bare `except:`; catch specific exceptions
-- Prefer project exceptions (see `code-rules/global/error-handling.md`) and keep a clear hierarchy
-- When wrapping unexpected errors, log context and re-raise with `raise ... from e`
-- Never silently swallow exceptions
-
-### Logging
-
-- Use `structlog` (structured logs); avoid `print()`
-- Log errors with context fields (workflow_id, target, provider, etc.) and `exc_info=True` when useful
-
-### Naming
-
-- Modules: `snake_case.py`
-- Classes: `PascalCase`
-- Functions/vars: `snake_case`
-- Constants: `UPPER_SNAKE_CASE`
-- Private members: leading underscore (`_internal_state`)
-
-### Architecture constraints (AgentFlow)
-
-- Preserve the 8-layer dependency direction (upper layers depend only on lower layers)
-- Prefer interfaces/protocols across layer boundaries over concrete class dependencies
-- Use unified provider APIs instead of hardcoding vendor logic:
-  - `from agentflow import get_llm, get_db, get_vectordb, get_cache`
-
-### AG-UI events
-
-- When emitting AG-UI events, use standard event classes from `agentflow/protocols/agui_events.py`
-- Do not emit ad-hoc dict events like `{type: ..., data: ...}` for AG-UI streams
-
-### Docs
-
-- Public functions/classes need Google-style docstrings
-- Keep docstrings practical: Args/Returns/Raises; include examples for non-trivial APIs
-
-## Where To Look (Existing Guidance)
-
-- `CLAUDE.md`: project overview, architecture, and common commands
-- `pyproject.toml`: Ruff, mypy, pytest, coverage configuration
-- `Makefile` and `check.sh`: canonical developer workflows
-- `code-rules/`: detailed rules (style, error handling, testing, AgentFlow-specific patterns)
+## Where To Look (Common Tasks)
+| Task | Location |
+|------|----------|
+| Public API surface | `agentflow/__init__.py` |
+| CLI behavior | `agentflow/cli/main.py` |
+| Engines | `agentflow/engines/` |
+| Flow DSL | `agentflow/flow/` |
+| Protocols + event models | `agentflow/protocols/` |
+| Studio backend | `agentflow/studio/` |
+| Studio frontend | `studio/` |
+| Deploy + codegen | `agentflow/deploy/`, `agentflow/codegen/` |
+| Detailed coding rules | `code-rules/` |

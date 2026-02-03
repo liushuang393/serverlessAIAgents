@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tool Executor - 并行工具执行器（OpenAI Function Calling 兼容接口）.
 
 このモジュールは、OpenAI parallel function calling 互換の
@@ -29,13 +28,16 @@ import logging
 import time
 import uuid
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from datetime import datetime
+from collections.abc import Callable
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
 from pydantic import BaseModel, Field
 
+from agentflow.governance import GovernanceDecision, GovernanceEngine, ToolExecutionContext
+from agentflow.hitl import interrupt
+from agentflow.hitl.types import ApprovalRequest
 from agentflow.providers.tool_provider import RegisteredTool, ToolProvider
 
 
@@ -68,10 +70,10 @@ class ToolCall(BaseModel):
 
     id: str = Field(default_factory=lambda: f"call_{uuid.uuid4().hex[:12]}")
     type: str = Field(default="function")
-    function: "FunctionCall" = Field(...)
+    function: FunctionCall = Field(...)
 
     @classmethod
-    def create(cls, name: str, arguments: dict[str, Any]) -> "ToolCall":
+    def create(cls, name: str, arguments: dict[str, Any]) -> ToolCall:
         """簡易作成メソッド."""
         return cls(function=FunctionCall(name=name, arguments=arguments))
 
@@ -145,7 +147,6 @@ class FallbackStrategy(ABC):
         Returns:
             フォールバックツール名、または None
         """
-        pass
 
 
 class SimpleFallbackStrategy(FallbackStrategy):
@@ -262,6 +263,12 @@ class RetryStrategy:
         """初期化."""
         self._config = config or RetryConfig()
 
+    @property
+    def max_retries(self) -> int:
+        """最大リトライ回数を取得."""
+
+        return self._config.max_retries
+
     def should_retry(self, attempt: int, error: Exception) -> bool:
         """リトライすべきか判定."""
         if attempt >= self._config.max_retries:
@@ -280,7 +287,7 @@ class RetryStrategy:
         import random
 
         delay = min(
-            self._config.base_delay * (self._config.exponential_base ** attempt),
+            self._config.base_delay * (self._config.exponential_base**attempt),
             self._config.max_delay,
         )
         if self._config.jitter:
@@ -326,6 +333,7 @@ class ToolExecutor:
         default_timeout: float = 30.0,
         on_tool_start: Callable[[ToolCall], None] | None = None,
         on_tool_complete: Callable[[ToolResult], None] | None = None,
+        governance_engine: GovernanceEngine | None = None,
     ) -> None:
         """初期化.
 
@@ -345,6 +353,7 @@ class ToolExecutor:
         self._default_timeout = default_timeout
         self._on_start = on_tool_start
         self._on_complete = on_tool_complete
+        self._governance = governance_engine or GovernanceEngine()
         self._logger = logging.getLogger(__name__)
 
         # 実行統計
@@ -360,6 +369,7 @@ class ToolExecutor:
         self,
         tool_call: ToolCall,
         timeout: float | None = None,
+        execution_context: ToolExecutionContext | None = None,
     ) -> ToolResult:
         """単一ツールを実行.
 
@@ -374,12 +384,14 @@ class ToolExecutor:
             tool_call,
             timeout or self._default_timeout,
             enable_fallback=False,
+            execution_context=execution_context,
         )
 
     async def execute_with_fallback(
         self,
         tool_call: ToolCall,
         timeout: float | None = None,
+        execution_context: ToolExecutionContext | None = None,
     ) -> ToolResult:
         """フォールバック付きで単一ツールを実行.
 
@@ -394,6 +406,7 @@ class ToolExecutor:
             tool_call,
             timeout or self._default_timeout,
             enable_fallback=True,
+            execution_context=execution_context,
         )
 
     async def execute_parallel(
@@ -401,6 +414,7 @@ class ToolExecutor:
         tool_calls: list[ToolCall],
         timeout: float | None = None,
         enable_fallback: bool = True,
+        execution_context: ToolExecutionContext | None = None,
     ) -> BatchResult:
         """複数ツールを並行実行（OpenAI parallel function calling 互換）.
 
@@ -424,7 +438,12 @@ class ToolExecutor:
 
         async def _execute_one(tc: ToolCall) -> ToolResult:
             async with semaphore:
-                return await self._execute_single(tc, effective_timeout, enable_fallback)
+                return await self._execute_single(
+                    tc,
+                    effective_timeout,
+                    enable_fallback,
+                    execution_context=execution_context,
+                )
 
         # 並行実行
         tasks = [_execute_one(tc) for tc in tool_calls]
@@ -437,24 +456,29 @@ class ToolExecutor:
         fallback_count = 0
 
         for i, result in enumerate(results):
-            if isinstance(result, Exception):
-                # gather で例外が発生した場合
-                processed_results.append(ToolResult(
-                    tool_call_id=tool_calls[i].id,
-                    name=tool_calls[i].function.name,
-                    content=f"Error: {result}",
-                    status=ToolCallStatus.FAILED,
-                    error=str(result),
-                ))
-                failed_count += 1
-            else:
-                processed_results.append(result)
-                if result.status == ToolCallStatus.SUCCESS:
+            if isinstance(result, ToolResult):
+                tool_result = result
+                processed_results.append(tool_result)
+                if tool_result.status == ToolCallStatus.SUCCESS:
                     success_count += 1
-                elif result.status == ToolCallStatus.FALLBACK:
+                elif tool_result.status == ToolCallStatus.FALLBACK:
                     fallback_count += 1
                 else:
                     failed_count += 1
+                continue
+
+            # gather で例外が発生した場合
+            error = result
+            processed_results.append(
+                ToolResult(
+                    tool_call_id=tool_calls[i].id,
+                    name=tool_calls[i].function.name,
+                    content=f"Error: {error}",
+                    status=ToolCallStatus.FAILED,
+                    error=str(error),
+                )
+            )
+            failed_count += 1
 
         total_time = (time.time() - start_time) * 1000
 
@@ -471,11 +495,13 @@ class ToolExecutor:
         tool_call: ToolCall,
         timeout: float,
         enable_fallback: bool,
+        execution_context: ToolExecutionContext | None = None,
     ) -> ToolResult:
         """単一ツールを実行（内部）."""
         start_time = time.time()
         tool_name = tool_call.function.name
         arguments = tool_call.function.arguments
+        tool_info = self._provider.get_tool(tool_name)
 
         # コールバック
         if self._on_start:
@@ -483,9 +509,51 @@ class ToolExecutor:
 
         self._stats["total_calls"] += 1
 
+        if tool_info is None:
+            execution_time = (time.time() - start_time) * 1000
+            self._stats["failed_calls"] += 1
+            self._stats["total_time_ms"] += execution_time
+            result = ToolResult(
+                tool_call_id=tool_call.id,
+                name=tool_name,
+                content=f"Error: Tool not found: {tool_name}",
+                status=ToolCallStatus.FAILED,
+                execution_time_ms=execution_time,
+                error=f"Tool not found: {tool_name}",
+            )
+            if self._on_complete:
+                self._on_complete(result)
+            return result
+
+        governance_result = await self._governance.evaluate_tool(
+            tool_info,
+            tool_call.id,
+            dict(arguments),
+            execution_context,
+        )
+
+        if governance_result.decision == GovernanceDecision.DENY:
+            execution_time = (time.time() - start_time) * 1000
+            self._stats["failed_calls"] += 1
+            self._stats["total_time_ms"] += execution_time
+            result = ToolResult(
+                tool_call_id=tool_call.id,
+                name=tool_name,
+                content=f"Error: {governance_result.reason}",
+                status=ToolCallStatus.FAILED,
+                execution_time_ms=execution_time,
+                error=governance_result.reason,
+            )
+            if self._on_complete:
+                self._on_complete(result)
+            return result
+
+        if governance_result.decision == GovernanceDecision.APPROVAL_REQUIRED:
+            await self._interrupt_for_approval(tool_info, tool_call, execution_context)
+
         # リトライループ
         last_error: Exception | None = None
-        for attempt in range(self._retry._config.max_retries + 1):
+        for attempt in range(self._retry.max_retries + 1):
             try:
                 # タイムアウト付きで実行
                 result_value = await asyncio.wait_for(
@@ -511,7 +579,7 @@ class ToolExecutor:
 
                 return result
 
-            except asyncio.TimeoutError as e:
+            except TimeoutError as e:
                 last_error = e
                 self._logger.warning(f"Tool timeout: {tool_name} (attempt {attempt + 1})")
 
@@ -528,9 +596,7 @@ class ToolExecutor:
 
         # 失敗: フォールバック試行
         if enable_fallback and last_error:
-            fallback_result = await self._try_fallback(
-                tool_call, last_error, timeout, start_time
-            )
+            fallback_result = await self._try_fallback(tool_call, last_error, timeout, start_time)
             if fallback_result:
                 return fallback_result
 
@@ -553,6 +619,57 @@ class ToolExecutor:
 
         return result
 
+    async def _interrupt_for_approval(
+        self,
+        tool_info: RegisteredTool,
+        tool_call: ToolCall,
+        execution_context: ToolExecutionContext | None,
+    ) -> None:
+        """承認が必要な場合に割り込みを発火."""
+
+        priority = self._approval_priority(tool_info.risk_level.value)
+        request = ApprovalRequest(
+            action=tool_info.name,
+            resource_id=None,
+            resource_type=None,
+            reason="承認が必要なツール実行です",
+            context={
+                "tool_name": tool_info.name,
+                "operation_type": tool_info.operation_type.value,
+                "risk_level": tool_info.risk_level.value,
+                "arguments": tool_call.function.arguments,
+            },
+            requester="ToolExecutor",
+            priority=priority,
+            timeout_seconds=None,
+            expires_at=None,
+            metadata={
+                "tool_call_id": tool_call.id,
+                "audit_required": tool_info.needs_audit(),
+            },
+        )
+
+        flow_id = execution_context.flow_id if execution_context else None
+        _ = await interrupt(
+            request,
+            flow_id=flow_id,
+            state={
+                "tool_call_id": tool_call.id,
+                "tool_name": tool_info.name,
+            },
+        )
+
+    def _approval_priority(self, risk_level: str) -> str:
+        """リスクに応じた承認優先度を決定."""
+
+        if risk_level in ("critical",):
+            return "critical"
+        if risk_level in ("high",):
+            return "high"
+        if risk_level in ("medium",):
+            return "normal"
+        return "low"
+
     async def _try_fallback(
         self,
         original_call: ToolCall,
@@ -571,9 +688,7 @@ class ToolExecutor:
         if not fallback_tool:
             return None
 
-        self._logger.info(
-            f"Trying fallback: {original_call.function.name} -> {fallback_tool}"
-        )
+        self._logger.info(f"Trying fallback: {original_call.function.name} -> {fallback_tool}")
 
         try:
             result_value = await asyncio.wait_for(

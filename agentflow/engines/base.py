@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """BaseEngine - Engine抽象基底クラス.
 
 すべてのEngine Patternの基底クラス、統一インターフェースを定義：
@@ -20,15 +19,17 @@ import uuid
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from pydantic import BaseModel
+
+from agentflow.run import MemoryRunStore, RunRecord
+
 
 # AG-UI イベント（遅延インポートで循環依存回避）
 if TYPE_CHECKING:
     from agentflow.hitl.checkpointer import Checkpointer
     from agentflow.patterns.progress_emitter import AgentMeta, ProgressEmitter
-    from agentflow.protocols.agui_events import AGUIEvent
 
 
 @dataclass
@@ -45,7 +46,7 @@ class HITLEngineConfig:
     """
 
     enabled: bool = False
-    checkpointer: "Checkpointer | None" = None
+    checkpointer: Checkpointer | None = None
     interrupt_before: list[str] = field(default_factory=list)
     interrupt_after: list[str] = field(default_factory=list)
     approval_required_for: list[str] = field(default_factory=list)
@@ -74,6 +75,7 @@ class EngineConfig:
     timeout_seconds: int = 300
     llm_config: dict[str, Any] = field(default_factory=dict)
     hitl: HITLEngineConfig = field(default_factory=HITLEngineConfig)
+    run_store: object = field(default_factory=MemoryRunStore)
     extra: dict[str, Any] = field(default_factory=dict)
 
 
@@ -84,16 +86,16 @@ OutputT = TypeVar("OutputT", bound=BaseModel)
 
 class BaseEngine(ABC):
     """Engine抽象基底クラス.
-    
+
     すべてのEngine Patternはこのクラスを継承し、以下を実装する必要がある：
     - _build_flow(): 内部フローを構築
     - _execute(): コアロジックを実行
-    
+
     Example:
         >>> class MyEngine(BaseEngine):
         ...     def _build_flow(self):
         ...         return create_flow([self._agent])
-        ...     
+        ...
         ...     async def _execute(self, inputs):
         ...         return await self._flow.run(inputs)
     """
@@ -110,6 +112,8 @@ class BaseEngine(ABC):
         self._initialized = False
         self._progress_emitter: ProgressEmitter | None = None
         self._thread_id: str | None = None
+        self._run_id: str | None = None
+        self._run_store = cast("MemoryRunStore", self._config.run_store)
         self._is_resuming: bool = False
         self._resume_checkpoint_id: str | None = None
 
@@ -118,12 +122,12 @@ class BaseEngine(ABC):
         """現在の設定を取得."""
         return self._config
 
-    def configure(self, **kwargs: Any) -> "BaseEngine":
+    def configure(self, **kwargs: Any) -> BaseEngine:
         """実行時に設定を調整.
-        
+
         Args:
             **kwargs: 設定項目のキー値ペア
-            
+
         Returns:
             self（チェーンメソッド呼び出しをサポート）
         """
@@ -137,7 +141,7 @@ class BaseEngine(ABC):
     @abstractmethod
     async def _initialize(self) -> None:
         """内部コンポーネント（Agent、Flow等）を初期化.
-        
+
         サブクラスで実装必須、初回run()時に自動呼び出し。
         """
         ...
@@ -145,10 +149,10 @@ class BaseEngine(ABC):
     @abstractmethod
     async def _execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """コアロジックを実行.
-        
+
         Args:
             inputs: 入力データ
-            
+
         Returns:
             出力結果
         """
@@ -178,7 +182,25 @@ class BaseEngine(ABC):
 
         self._flow_id = f"{self._config.name}-{uuid.uuid4().hex[:8]}"
         self._thread_id = thread_id or f"thread-{uuid.uuid4().hex[:8]}"
+        self._run_id = f"run-{uuid.uuid4().hex[:12]}"
+        started_at = time.time()
         self._logger.info(f"Engine run started: {self._flow_id} (thread: {self._thread_id})")
+
+        from agentflow.integrations.context_bridge import get_current_context
+
+        context = get_current_context()
+        run_record = RunRecord(
+            run_id=self._run_id,
+            flow_id=self._flow_id,
+            thread_id=self._thread_id,
+            trace_id=context.trace_id if context else None,
+            tenant_id=context.tenant_id if context else None,
+            status="running",
+            started_at=started_at,
+            completed_at=None,
+            metrics={},
+        )
+        await self._run_store.save(run_record)
 
         # HITL コンテキストを設定
         self._setup_hitl_context()
@@ -186,19 +208,26 @@ class BaseEngine(ABC):
         try:
             result = await self._execute(inputs)
             self._logger.info(f"Engine run completed: {self._flow_id}")
+            run_record.status = "completed"
             return result
         except Exception as e:
             # InterruptSignal の場合は状態を保存
             if self._is_interrupt_signal(e):
+                run_record.status = "interrupted"
                 await self._handle_interrupt(e, inputs)
+            else:
+                run_record.status = "failed"
             self._logger.exception(f"Engine run failed: {self._flow_id}")
             raise
         finally:
+            run_record.completed_at = time.time()
+            run_record.metrics["duration_ms"] = (
+                run_record.completed_at - run_record.started_at
+            ) * 1000
+            await self._run_store.save(run_record)
             self._cleanup_hitl_context()
 
-    async def run_stream(
-        self, inputs: dict[str, Any]
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def run_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """Engineをストリーム実行、AG-UIイベントをyield.
 
         Args:
@@ -260,9 +289,7 @@ class BaseEngine(ABC):
                 ).to_dict()
             raise
 
-    async def _execute_stream(
-        self, inputs: dict[str, Any]
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def _execute_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """ストリーム実行のコアロジック（サブクラスでオーバーライド可能）.
 
         デフォルト実装：_execute()を呼び出し、単一の結果イベントをyield。
@@ -271,7 +298,7 @@ class BaseEngine(ABC):
         result = await self._execute(inputs)
         yield {"type": "result", "data": result}
 
-    def _setup_progress_emitter(self, agent_metas: list["AgentMeta"]) -> None:
+    def _setup_progress_emitter(self, agent_metas: list[AgentMeta]) -> None:
         """進捗エミッターを設定.
 
         Args:
@@ -284,6 +311,7 @@ class BaseEngine(ABC):
         """ノード開始イベントを発行."""
         if self._config.enable_events:
             from agentflow.protocols.agui_events import NodeStartEvent
+
             return NodeStartEvent(
                 timestamp=time.time(),
                 node_id=node_name,
@@ -293,9 +321,7 @@ class BaseEngine(ABC):
             ).to_dict()  # to_dict() で event_type を文字列に変換
         return None
 
-    def _emit_node_complete(
-        self, node_name: str, result: dict[str, Any]
-    ) -> dict[str, Any] | None:
+    def _emit_node_complete(self, node_name: str, result: dict[str, Any]) -> dict[str, Any] | None:
         """ノード完了イベントを発行.
 
         Args:
@@ -332,6 +358,7 @@ class BaseEngine(ABC):
             シリアライズ可能な辞書
         """
         from enum import Enum
+
         from pydantic import BaseModel
 
         def serialize_value(value: Any) -> Any:
@@ -351,7 +378,7 @@ class BaseEngine(ABC):
         return {k: serialize_value(v) for k, v in result.items()}
 
     @property
-    def progress_emitter(self) -> "ProgressEmitter | None":
+    def progress_emitter(self) -> ProgressEmitter | None:
         """現在の ProgressEmitter を取得."""
         return self._progress_emitter
 
@@ -394,7 +421,7 @@ class BaseEngine(ABC):
     ) -> None:
         """割り込みを処理し、状態を保存."""
         from agentflow.hitl import InterruptSignal
-        from agentflow.hitl.checkpointer import CheckpointData
+        from agentflow.hitl.checkpointer import CheckpointCursor, CheckpointData
 
         if not isinstance(exc, InterruptSignal):
             return
@@ -405,14 +432,24 @@ class BaseEngine(ABC):
             return
 
         payload = exc.payload
+        cursor = CheckpointCursor(
+            node_id=payload.node_id,
+            flow_id=payload.flow_id or self._flow_id,
+            thread_id=self._thread_id,
+            run_id=self._run_id,
+        )
         checkpoint = CheckpointData(
             checkpoint_id=f"cp-{uuid.uuid4().hex[:12]}",
             thread_id=self._thread_id or "",
             flow_id=self._flow_id,
             node_id=payload.node_id,
+            schema_version=2,
+            cursor=cursor,
+            run_id=self._run_id,
             state=payload.state,
             inputs=inputs,
             interrupt_payload=payload.model_dump(),
+            parent_checkpoint_id=self._resume_checkpoint_id,
         )
 
         await checkpointer.save(checkpoint)
@@ -421,7 +458,7 @@ class BaseEngine(ABC):
     async def resume(
         self,
         thread_id: str,
-        command: "Command",
+        command: Command,
     ) -> dict[str, Any]:
         """中断されたワークフローを再開.
 
@@ -447,9 +484,18 @@ class BaseEngine(ABC):
             raise InterruptError(f"チェックポイントが見つかりません: {thread_id}")
 
         self._logger.info(
-            f"Resuming from checkpoint: {checkpoint.checkpoint_id} "
-            f"(command: {command.type.value})"
+            f"Resuming from checkpoint: {checkpoint.checkpoint_id} (command: {command.type.value})"
         )
+
+        # スキーマバージョンの検証
+        schema_version = checkpoint.schema_version or 1
+        if schema_version not in {1, 2}:
+            raise InterruptError(f"未対応のチェックポイントスキーマ: {schema_version}")
+
+        if schema_version >= 2 and checkpoint.cursor is None:
+            self._logger.warning(
+                "カーソル情報が欠落しているため、旧式の再開処理にフォールバックします"
+            )
 
         # コマンドに基づいて承認レスポンスを生成
         response = await resume_with_command(
@@ -462,12 +508,31 @@ class BaseEngine(ABC):
         self._resume_checkpoint_id = checkpoint.checkpoint_id
 
         # 入力データを復元して再実行
-        # 注意: 実際の実装では、コマンドの結果を注入する仕組みが必要
+        # 注意: 現段階ではカーソルを付与するだけの最小実装
+        inputs = self._rehydrate_inputs(checkpoint, response, command)
+
+        return await self.run(inputs, thread_id=thread_id)
+
+    def _rehydrate_inputs(
+        self,
+        checkpoint: CheckpointData,
+        response: ApprovalResponse,
+        command: Command,
+    ) -> dict[str, Any]:
+        """再開用の入力データを再構成.
+
+        カーソル情報を付与し、最小限の決定論的な再開を支援する。
+        """
         inputs = checkpoint.inputs.copy()
         inputs["_hitl_response"] = response.model_dump()
         inputs["_hitl_command"] = command.model_dump()
-
-        return await self.run(inputs, thread_id=thread_id)
+        if checkpoint.schema_version >= 2:
+            if checkpoint.cursor:
+                inputs["_hitl_cursor"] = checkpoint.cursor.model_dump()
+            if checkpoint.run_id:
+                inputs["_hitl_run_id"] = checkpoint.run_id
+            inputs["_hitl_schema_version"] = checkpoint.schema_version
+        return inputs
 
     def _emit_approval_required(
         self,
@@ -505,5 +570,7 @@ class BaseEngine(ABC):
 # Command のインポート用型ヒント
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
-    from agentflow.hitl import Command
+    from agentflow.hitl import ApprovalResponse, Command
+    from agentflow.hitl.checkpointer import CheckpointData

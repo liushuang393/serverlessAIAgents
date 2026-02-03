@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Checkpointer - 状態永続化モジュール.
 
 中断されたワークフローの状態を保存・復元するためのインターフェース。
@@ -19,7 +18,20 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+
 logger = logging.getLogger(__name__)
+
+
+class CheckpointCursor(BaseModel):
+    """再開位置のカーソル情報.
+
+    再開時にどのノード・フローから復元すべきかを表す。
+    """
+
+    node_id: str | None = Field(None, description="中断ノードID")
+    flow_id: str | None = Field(None, description="フローID")
+    thread_id: str | None = Field(None, description="スレッドID")
+    run_id: str | None = Field(None, description="実行ID")
 
 
 class CheckpointData(BaseModel):
@@ -32,6 +44,9 @@ class CheckpointData(BaseModel):
     thread_id: str = Field(..., description="スレッドID（会話/セッション識別子）")
     flow_id: str | None = Field(None, description="フローID")
     node_id: str | None = Field(None, description="中断ノードID")
+    schema_version: int = Field(1, description="スキーマバージョン")
+    cursor: CheckpointCursor | None = Field(None, description="再開カーソル")
+    run_id: str | None = Field(None, description="実行ID")
     state: dict[str, Any] = Field(default_factory=dict, description="状態データ")
     inputs: dict[str, Any] = Field(default_factory=dict, description="入力データ")
     results: dict[str, Any] = Field(default_factory=dict, description="途中結果")
@@ -164,4 +179,3 @@ class MemoryCheckpointer(Checkpointer):
         checkpoint_ids = self._thread_index.get(thread_id, [])
         checkpoints = [self._storage[cid] for cid in checkpoint_ids if cid in self._storage]
         return sorted(checkpoints, key=lambda x: x.created_at, reverse=True)
-

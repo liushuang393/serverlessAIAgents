@@ -61,74 +61,88 @@ Decorator API（最も簡単）:
 # =============================================================================
 # 公開API: Engine Pattern（メインAPI）
 # =============================================================================
-from agentflow.engines import (
-    BaseEngine,
-    EngineConfig,
-    SimpleEngine,
-    GateEngine,
-    PipelineEngine,
-    RAGEngine,
-    # PEV Engine（Plan-Execute-Verify）
-    PEVEngine,
-    PEVEngineConfig,
-    HierarchicalPlanner,
-    MonitoredExecutor,
-    ResultVerifier,
-)
-
-# =============================================================================
-# 公開API: World Model（状態・因果・制約の明示的表現）
-# =============================================================================
-from agentflow.world_model import (
-    # 因果モデル
-    CausalModel,
-    CausalNode,
-    CausalRelation,
-    # 制約ソルバー
-    ConstraintSolver,
-    ConstraintViolation,
-    SolverResult,
-    # 世界状態
-    WorldState,
-    WorldStateSnapshot,
-    ActionPrediction,
-)
-
-# =============================================================================
-# 公開API: 適応型コーディネーター（能力差を吸収する分業型Agent設計）
-# =============================================================================
-from agentflow.patterns.adaptive_coordinator import (
-    AdaptiveCoordinator,
-    AgentProfile,
-    AgentCapability,
-    TaskRequirement,
-    DelegationResult,
-)
-
 # =============================================================================
 # 公開API: Decorator API
 # =============================================================================
-from agentflow.agent_decorator import agent, AgentClient, get_skill, list_skills
-from agentflow.providers.tool_provider import tool
+from agentflow.agent_decorator import AgentClient, agent, get_skill, list_skills
 
 # =============================================================================
-# 公開API: 松耦合Provider
+# 公開API: 統一 API 層（NEW - 前後台交互）
 # =============================================================================
-from agentflow.providers import (
-    get_llm, reset_llm, LLMProvider,
-    get_db, reset_db, DBProvider,
-    get_vectordb, reset_vectordb, VectorDBProvider,
-    get_embedding, reset_embedding, EmbeddingProvider,
+from agentflow.api import (
+    APIError,
+    # レスポンス
+    APIResponse,
+    ErrorCode,
+    PagedResponse,
+    # Rich Builder
+    RichResponseBuilder,
+    RouterConfig,
+    # SSE
+    SSEEmitter,
+    SSEEvent,
+    StreamEvent,
+    StreamEventType,
+    # WebSocket
+    WebSocketHub,
+    WSMessage,
+    WSMessageType,
+    # Router Factory
+    create_agent_router,
+    create_websocket_router,
+)
+
+# =============================================================================
+# 公開API: Channels - 多平台メッセージ統合（v1.1.0 NEW）
+# =============================================================================
+from agentflow.channels import (
+    ChannelMessage,
+    # Base
+    MessageChannelAdapter,
+    # Gateway
+    MessageGateway,
+    MessageMetadata,
+    UserInfo,
+)
+from agentflow.channels.base import MessageType
+
+# =============================================================================
+# 公開API: Context Engineering（上下文エンジニアリング）
+# =============================================================================
+from agentflow.context import (
+    BudgetAllocation,
+    BudgetConfig,
+    CompressionResult,
+    ContextConfig,
+    # 統合インターフェース（推奨）
+    ContextEngineer,
+    KeyNote,
+    # 重要Notes永続化
+    KeyNotesStore,
+    NoteImportance,
+    RetrievalDecision,
+    # RAG検索判定
+    RetrievalGate,
+    RetrievalReason,
+    # Token予算管理
+    TokenBudgetManager,
+    # ツール関連性選択
+    ToolRelevanceSelector,
+    ToolScore,
+    # ターン圧縮
+    TurnBasedCompressor,
+    TurnConfig,
 )
 
 # =============================================================================
 # 公開API: Agent基底クラス
 # =============================================================================
 from agentflow.core.agent_block import AgentBlock
-from agentflow.core.resilient_agent import (
-    BaseDecisionAgent,
-    ResilientAgent,
-)
+
+# =============================================================================
+# 後方互換性のため維持（非推奨 - 将来削除予定）
+# =============================================================================
+from agentflow.core.engine import AgentFlowEngine  # 非推奨: enginesを使用してください
 
 # =============================================================================
 # 公開API: 例外クラス
@@ -143,86 +157,46 @@ from agentflow.core.exceptions import (
     WorkflowError,
     WorkflowNotFoundError,
 )
-
-# =============================================================================
-# 公開API: Observability
-# =============================================================================
-from agentflow.observability import (
-    setup_logging,
-    get_logger,
-    LogLevel,
-    setup_observability,
+from agentflow.core.resilient_agent import (
+    BaseDecisionAgent,
+    ResilientAgent,
 )
-
-# =============================================================================
-# 公開API: SSE/AG-UI（FastAPI統合用）
-# =============================================================================
-from agentflow.integrations.fastapi_integration import create_sse_response
-
-# =============================================================================
-# 公開API: 統一 API 層（NEW - 前後台交互）
-# =============================================================================
-from agentflow.api import (
-    # レスポンス
-    APIResponse,
-    APIError,
-    ErrorCode,
-    PagedResponse,
-    StreamEvent,
-    StreamEventType,
-    # WebSocket
-    WebSocketHub,
-    WSMessage,
-    WSMessageType,
-    # SSE
-    SSEEmitter,
-    SSEEvent,
-    # Rich Builder
-    RichResponseBuilder,
-    # Router Factory
-    create_agent_router,
-    create_websocket_router,
-    RouterConfig,
+from agentflow.core.types import AgentMetadata, WorkflowConfig
+from agentflow.engines import (
+    BaseEngine,
+    EngineConfig,
+    GateEngine,
+    HierarchicalPlanner,
+    MonitoredExecutor,
+    # PEV Engine（Plan-Execute-Verify）
+    PEVEngine,
+    PEVEngineConfig,
+    PipelineEngine,
+    RAGEngine,
+    ResultVerifier,
+    SimpleEngine,
 )
+from agentflow.engines.base import HITLEngineConfig
 
-# =============================================================================
-# 公開API: 富文本コンポーネント（共通モジュール）
-# =============================================================================
-from agentflow.protocols.a2ui.rich_content import (
-    # 列挙型
-    RichComponentType,
-    ChartType,
-    AlertType,
-    # コンポーネント
-    RichComponent,
-    MarkdownContent,
-    CodeBlock,
-    DataTable,
-    ChartView,
-    Citation,
-    CollapsibleSection,
-    Link,
-    Progress,
-    Alert,
-    Tabs,
-    Timeline,
-    # ビルダー
-    RichResponse,
+# Flow API - 後方互換（内部APIとして維持）
+from agentflow.flow import (
+    AgentNode,
+    AgentProtocol,
+    Flow,
+    FlowBuilder,
+    FlowConfig,
+    FlowContext,
+    FlowNode,
+    GateNode,
+    MemoryAccessor,
+    NextAction,
+    NodeResult,
+    NodeType,
+    ParallelNode,
+    ReviewNode,
+    ReviewVerdict,
+    create_flow,
 )
-
-# =============================================================================
-# 公開API: Channels - 多平台メッセージ統合（v1.1.0 NEW）
-# =============================================================================
-from agentflow.channels import (
-    # Gateway
-    MessageGateway,
-    # Base
-    MessageChannelAdapter,
-    ChannelMessage,
-    UserInfo,
-    MessageMetadata,
-)
-from agentflow.channels.base import MessageType
 
 # =============================================================================
 # 公開API: Human-in-the-Loop (HITL)
@@ -232,8 +206,8 @@ from agentflow.hitl import (
     ApprovalRequest,
     ApprovalResponse,
     ApprovalStatus,
-    Checkpointer,
     CheckpointData,
+    Checkpointer,
     Command,
     CommandType,
     HITLConfig,
@@ -244,32 +218,77 @@ from agentflow.hitl import (
     get_checkpointer,
     interrupt,
 )
-from agentflow.engines.base import HITLEngineConfig
 
 # =============================================================================
-# 後方互換性のため維持（非推奨 - 将来削除予定）
+# 公開API: SSE/AG-UI（FastAPI統合用）
 # =============================================================================
-from agentflow.core.engine import AgentFlowEngine  # 非推奨: enginesを使用してください
-from agentflow.core.types import AgentMetadata, WorkflowConfig
+from agentflow.integrations.fastapi_integration import create_sse_response
 
-# Flow API - 後方互換（内部APIとして維持）
-from agentflow.flow import (
-    create_flow,
-    Flow,
-    FlowBuilder,
-    FlowContext,
-    MemoryAccessor,
-    FlowNode,
-    AgentNode,
-    GateNode,
-    ParallelNode,
-    ReviewNode,
-    NodeType,
-    NextAction,
-    ReviewVerdict,
-    NodeResult,
-    FlowConfig,
-    AgentProtocol,
+# =============================================================================
+# Knowledge Store（Memvid長期知識記憶）
+# =============================================================================
+from agentflow.memory.knowledge import (
+    InMemoryKnowledgeStore,
+    # 型定義
+    KnowledgeEntry,
+    # マネージャー
+    KnowledgeManager,
+    KnowledgeSource,
+    # ストアインターフェース
+    KnowledgeStore,
+    # ストア実装
+    MemvidKnowledgeStore,
+    # 主要API（推奨）
+    get_knowledge_manager,
+    get_knowledge_store,
+    is_memvid_available,
+    reset_knowledge_manager,
+)
+
+# =============================================================================
+# 公開API: Observability
+# =============================================================================
+from agentflow.observability import (
+    LogLevel,
+    get_logger,
+    setup_logging,
+    setup_observability,
+)
+
+# =============================================================================
+# 公開API: 適応型コーディネーター（能力差を吸収する分業型Agent設計）
+# =============================================================================
+from agentflow.patterns.adaptive_coordinator import (
+    AdaptiveCoordinator,
+    AgentCapability,
+    AgentProfile,
+    DelegationResult,
+    TaskRequirement,
+)
+
+# =============================================================================
+# 公開API: 富文本コンポーネント（共通モジュール）
+# =============================================================================
+from agentflow.protocols.a2ui.rich_content import (
+    Alert,
+    AlertType,
+    ChartType,
+    ChartView,
+    Citation,
+    CodeBlock,
+    CollapsibleSection,
+    DataTable,
+    Link,
+    MarkdownContent,
+    Progress,
+    # コンポーネント
+    RichComponent,
+    # 列挙型
+    RichComponentType,
+    # ビルダー
+    RichResponse,
+    Tabs,
+    Timeline,
 )
 
 # MCP Tool（後方互換）
@@ -281,52 +300,45 @@ from agentflow.protocols.mcp_tool import (
 )
 
 # =============================================================================
-# Knowledge Store（Memvid長期知識記憶）
+# 公開API: 松耦合Provider
 # =============================================================================
-from agentflow.memory.knowledge import (
-    # 主要API（推奨）
-    get_knowledge_manager,
-    get_knowledge_store,
-    reset_knowledge_manager,
-    # マネージャー
-    KnowledgeManager,
-    # ストアインターフェース
-    KnowledgeStore,
-    # ストア実装
-    MemvidKnowledgeStore,
-    InMemoryKnowledgeStore,
-    is_memvid_available,
-    # 型定義
-    KnowledgeEntry,
-    KnowledgeSource,
+from agentflow.providers import (
+    DBProvider,
+    EmbeddingProvider,
+    LLMProvider,
+    VectorDBProvider,
+    get_db,
+    get_embedding,
+    get_llm,
+    get_vectordb,
+    reset_db,
+    reset_embedding,
+    reset_llm,
+    reset_vectordb,
 )
+from agentflow.providers.tool_provider import tool
 
 # =============================================================================
-# 公開API: Context Engineering（上下文エンジニアリング）
+# 公開API: Run/Replay/Compare
 # =============================================================================
-from agentflow.context import (
-    # 統合インターフェース（推奨）
-    ContextEngineer,
-    ContextConfig,
-    # Token予算管理
-    TokenBudgetManager,
-    BudgetConfig,
-    BudgetAllocation,
-    # ツール関連性選択
-    ToolRelevanceSelector,
-    ToolScore,
-    # RAG検索判定
-    RetrievalGate,
-    RetrievalDecision,
-    RetrievalReason,
-    # 重要Notes永続化
-    KeyNotesStore,
-    KeyNote,
-    NoteImportance,
-    # ターン圧縮
-    TurnBasedCompressor,
-    CompressionResult,
-    TurnConfig,
+from agentflow.run import MemoryRunStore, RunDiff, RunRecord, RunStore
+
+# =============================================================================
+# 公開API: World Model（状態・因果・制約の明示的表現）
+# =============================================================================
+from agentflow.world_model import (
+    ActionPrediction,
+    # 因果モデル
+    CausalModel,
+    CausalNode,
+    CausalRelation,
+    # 制約ソルバー
+    ConstraintSolver,
+    ConstraintViolation,
+    SolverResult,
+    # 世界状態
+    WorldState,
+    WorldStateSnapshot,
 )
 
 try:
@@ -366,7 +378,6 @@ __all__ = [
     "HierarchicalPlanner",
     "MonitoredExecutor",
     "ResultVerifier",
-
     # =========================================================================
     # World Model（状態・因果・制約の明示的表現）
     # =========================================================================
@@ -382,7 +393,6 @@ __all__ = [
     "WorldState",
     "WorldStateSnapshot",
     "ActionPrediction",
-
     # =========================================================================
     # 適応型コーディネーター（能力差を吸収する分業型Agent設計）
     # =========================================================================
@@ -391,7 +401,6 @@ __all__ = [
     "AgentCapability",
     "TaskRequirement",
     "DelegationResult",
-
     # =========================================================================
     # Decorator API（推奨）
     # =========================================================================
@@ -400,7 +409,6 @@ __all__ = [
     "AgentClient",
     "get_skill",
     "list_skills",
-
     # =========================================================================
     # 松耦合Provider（推奨）
     # =========================================================================
@@ -416,7 +424,6 @@ __all__ = [
     "get_embedding",
     "reset_embedding",
     "EmbeddingProvider",
-
     # =========================================================================
     # Knowledge Store（Memvid長期知識記憶）
     # =========================================================================
@@ -435,7 +442,6 @@ __all__ = [
     # 型定義
     "KnowledgeEntry",
     "KnowledgeSource",
-
     # =========================================================================
     # Context Engineering（上下文エンジニアリング）
     # =========================================================================
@@ -461,14 +467,12 @@ __all__ = [
     "TurnBasedCompressor",
     "CompressionResult",
     "TurnConfig",
-
     # =========================================================================
     # Agent基底クラス
     # =========================================================================
     "AgentBlock",
     "ResilientAgent",
     "BaseDecisionAgent",
-
     # =========================================================================
     # 例外クラス
     # =========================================================================
@@ -480,7 +484,6 @@ __all__ = [
     "ProtocolError",
     "WorkflowError",
     "WorkflowNotFoundError",
-
     # =========================================================================
     # Observability
     # =========================================================================
@@ -488,7 +491,13 @@ __all__ = [
     "get_logger",
     "LogLevel",
     "setup_observability",
-
+    # =========================================================================
+    # Run/Replay/Compare
+    # =========================================================================
+    "RunRecord",
+    "RunStore",
+    "MemoryRunStore",
+    "RunDiff",
     # =========================================================================
     # Runtime Context（プラットフォーム向け）
     # =========================================================================
@@ -502,7 +511,6 @@ __all__ = [
     # SSE/AG-UI
     # =========================================================================
     "create_sse_response",
-
     # =========================================================================
     # 統一 API 層（NEW - 前後台交互）
     # =========================================================================
@@ -526,7 +534,6 @@ __all__ = [
     "create_agent_router",
     "create_websocket_router",
     "RouterConfig",
-
     # =========================================================================
     # Channels - 多平台メッセージ統合（v1.1.0 NEW）
     # =========================================================================
@@ -538,7 +545,6 @@ __all__ = [
     "UserInfo",
     "MessageMetadata",
     "MessageType",
-
     # =========================================================================
     # 富文本コンポーネント（共通モジュール）
     # =========================================================================
@@ -561,7 +567,6 @@ __all__ = [
     "Timeline",
     # ビルダー
     "RichResponse",
-
     # =========================================================================
     # Human-in-the-Loop (HITL)
     # =========================================================================
@@ -581,7 +586,6 @@ __all__ = [
     "HITLConfig",
     "HITLEngineConfig",
     "create_hitl_router",
-
     # =========================================================================
     # 後方互換（非推奨）
     # =========================================================================

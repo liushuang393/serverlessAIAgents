@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """PostgresCheckpointer - PostgreSQL ベースの状態永続化.
 
 本番環境での永続的なワークフロー状態管理に使用。
@@ -23,7 +22,8 @@ import os
 from datetime import datetime
 from typing import Any
 
-from agentflow.hitl.checkpointer import Checkpointer, CheckpointData
+from agentflow.hitl.checkpointer import CheckpointData, Checkpointer
+
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,9 @@ class PostgresCheckpointer(Checkpointer):
             - thread_id (TEXT NOT NULL)
             - flow_id (TEXT)
             - node_id (TEXT)
+            - schema_version (INTEGER)
+            - cursor (JSONB)
+            - run_id (TEXT)
             - state (JSONB)
             - inputs (JSONB)
             - results (JSONB)
@@ -87,7 +90,9 @@ class PostgresCheckpointer(Checkpointer):
     async def connect(self) -> None:
         """PostgreSQL に接続."""
         try:
-            import asyncpg
+            import importlib
+
+            asyncpg = importlib.import_module("asyncpg")
 
             if self._url:
                 self._pool = await asyncpg.create_pool(self._url)
@@ -124,6 +129,9 @@ class PostgresCheckpointer(Checkpointer):
                     thread_id TEXT NOT NULL,
                     flow_id TEXT,
                     node_id TEXT,
+                    schema_version INTEGER DEFAULT 1,
+                    cursor JSONB,
+                    run_id TEXT,
                     state JSONB DEFAULT '{{}}',
                     inputs JSONB DEFAULT '{{}}',
                     results JSONB DEFAULT '{{}}',
@@ -134,6 +142,17 @@ class PostgresCheckpointer(Checkpointer):
                     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
                 )
             """)
+            # 既存テーブル互換のためカラム追加
+            await conn.execute(
+                f"ALTER TABLE {self._table_name} "
+                "ADD COLUMN IF NOT EXISTS schema_version INTEGER DEFAULT 1"
+            )
+            await conn.execute(
+                f"ALTER TABLE {self._table_name} ADD COLUMN IF NOT EXISTS cursor JSONB"
+            )
+            await conn.execute(
+                f"ALTER TABLE {self._table_name} ADD COLUMN IF NOT EXISTS run_id TEXT"
+            )
             # インデックス作成
             await conn.execute(
                 f"CREATE INDEX IF NOT EXISTS idx_{self._table_name}_thread "
@@ -155,11 +174,14 @@ class PostgresCheckpointer(Checkpointer):
             await conn.execute(
                 f"""
                 INSERT INTO {self._table_name}
-                    (checkpoint_id, thread_id, flow_id, node_id, state, inputs,
-                     results, interrupt_payload, parent_checkpoint_id, metadata,
+                    (checkpoint_id, thread_id, flow_id, node_id, schema_version, cursor, run_id,
+                     state, inputs, results, interrupt_payload, parent_checkpoint_id, metadata,
                      created_at, updated_at)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
                 ON CONFLICT (checkpoint_id) DO UPDATE SET
+                    schema_version = EXCLUDED.schema_version,
+                    cursor = EXCLUDED.cursor,
+                    run_id = EXCLUDED.run_id,
                     state = EXCLUDED.state,
                     inputs = EXCLUDED.inputs,
                     results = EXCLUDED.results,
@@ -171,10 +193,15 @@ class PostgresCheckpointer(Checkpointer):
                 data.thread_id,
                 data.flow_id,
                 data.node_id,
+                data.schema_version,
+                json.dumps(data.cursor.model_dump(), ensure_ascii=False) if data.cursor else None,
+                data.run_id,
                 json.dumps(data.state, ensure_ascii=False),
                 json.dumps(data.inputs, ensure_ascii=False),
                 json.dumps(data.results, ensure_ascii=False),
-                json.dumps(data.interrupt_payload, ensure_ascii=False) if data.interrupt_payload else None,
+                json.dumps(data.interrupt_payload, ensure_ascii=False)
+                if data.interrupt_payload
+                else None,
                 data.parent_checkpoint_id,
                 json.dumps(data.metadata, ensure_ascii=False),
                 data.created_at,
@@ -191,10 +218,15 @@ class PostgresCheckpointer(Checkpointer):
             thread_id=row["thread_id"],
             flow_id=row["flow_id"],
             node_id=row["node_id"],
+            schema_version=row["schema_version"] if row["schema_version"] is not None else 1,
+            cursor=json.loads(row["cursor"]) if row["cursor"] else None,
+            run_id=row["run_id"],
             state=json.loads(row["state"]) if row["state"] else {},
             inputs=json.loads(row["inputs"]) if row["inputs"] else {},
             results=json.loads(row["results"]) if row["results"] else {},
-            interrupt_payload=json.loads(row["interrupt_payload"]) if row["interrupt_payload"] else None,
+            interrupt_payload=json.loads(row["interrupt_payload"])
+            if row["interrupt_payload"]
+            else None,
             parent_checkpoint_id=row["parent_checkpoint_id"],
             metadata=json.loads(row["metadata"]) if row["metadata"] else {},
             created_at=row["created_at"],
@@ -277,4 +309,3 @@ class PostgresCheckpointer(Checkpointer):
             "table_name": self._table_name,
             "connected": self._connected,
         }
-
