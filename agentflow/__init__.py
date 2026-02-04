@@ -360,6 +360,64 @@ from agentflow.runtime import (
 )
 
 # =============================================================================
+# 公開API: Agent Wizard（Meta-Agent自動生成）
+# =============================================================================
+from agentflow.wizard import (
+    # AgentWizard
+    AgentWizard,
+    # Gap Detector
+    CapabilityGapDetector,
+    # System Synthesizer
+    SystemSynthesizer,
+    # Skill Forge
+    SkillForge,
+    # Self Improvement Loop
+    SelfImprovementLoop,
+    # Test Synthesizer
+    TestSynthesizer,
+    # Models
+    AgentSpec,
+    CapabilityGap,
+    GapAnalysis,
+    TestCase,
+    SynthesisResult,
+)
+
+# =============================================================================
+# 公開API: Code Intelligence（コード智能層）
+# =============================================================================
+from agentflow.code_intelligence import (
+    # AST
+    UnifiedAST,
+    ASTNode,
+    ASTNodeType,
+    # Parser
+    CodeParser,
+    ParseContext,
+    ParseResult,
+    get_parser,
+    register_parser,
+    # Transformer
+    CodeTransformer,
+    TransformContext,
+    TransformResult,
+    get_transformer,
+    register_transformer,
+    # Migration
+    MigrationProject,
+    MigrationPhase,
+    MigrationTracker,
+    CodeInventory,
+    # Quality
+    QualityGate,
+    QualityGateRunner,
+    QualityReport,
+    # CI/CD
+    MigrationPipelineGenerator,
+    PipelineConfig,
+)
+
+# =============================================================================
 # 公開シンボル定義
 # =============================================================================
 __all__ = [
@@ -586,6 +644,54 @@ __all__ = [
     "HITLConfig",
     "HITLEngineConfig",
     "create_hitl_router",
+    # =========================================================================
+    # Agent Wizard（Meta-Agent自動生成）
+    # =========================================================================
+    "AgentWizard",
+    "CapabilityGapDetector",
+    "SystemSynthesizer",
+    "SkillForge",
+    "SelfImprovementLoop",
+    "TestSynthesizer",
+    # Models
+    "AgentSpec",
+    "CapabilityGap",
+    "GapAnalysis",
+    "TestCase",
+    "SynthesisResult",
+
+    # =========================================================================
+    # Code Intelligence（コード智能層）
+    # =========================================================================
+    # AST
+    "UnifiedAST",
+    "ASTNode",
+    "ASTNodeType",
+    # Parser
+    "CodeParser",
+    "ParseContext",
+    "ParseResult",
+    "get_parser",
+    "register_parser",
+    # Transformer
+    "CodeTransformer",
+    "TransformContext",
+    "TransformResult",
+    "get_transformer",
+    "register_transformer",
+    # Migration
+    "MigrationProject",
+    "MigrationPhase",
+    "MigrationTracker",
+    "CodeInventory",
+    # Quality
+    "QualityGate",
+    "QualityGateRunner",
+    "QualityReport",
+    # CI/CD
+    "MigrationPipelineGenerator",
+    "PipelineConfig",
+
     # =========================================================================
     # 後方互換（非推奨）
     # =========================================================================
