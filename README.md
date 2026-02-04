@@ -157,7 +157,7 @@ graph TB
 | 🤖 **Agent層** | AgentBlock, @agent, Custom Agent | Agent実装（基底クラス/デコレータ/カスタム） | 実装方式に応じて選択 |
 | 🛠️ **ツール層** | @tool, MCP Tools, Skills, Built-in | ツール統合（メソッド/MCP/自動進化/内蔵） | 機能要件に応じて選択 |
 | 🔌 **Provider層** | LLMProvider, DataProvider, EventProvider, ToolProvider | **統一アクセスインターフェース**（約定優先） | 自動選択（デフォルト値あり） |
-| 🌐 **プロトコル層** | MCP, A2A, AG-UI, A2UI | 4つの標準プロトコル | 統合要件に応じて自動適用 | skills
+| 🌐 **プロトコル層** | MCP, A2A, AG-UI, A2UI | 4つの標準プロトコル | 統合要件に応じて自動適用 |
 | 💾 **インフラ層** | LLM Services, DB, Vector DB, Cache | 外部サービス・データストア | 環境変数で自動検出 |
 
 **データフロー例**:
@@ -328,7 +328,7 @@ async for event in preview.run_debug(workflow, inputs, breakpoints=["node-1"]):
 | 🔌 **4 プロトコル** | MCP / A2A / AG-UI / A2UI 統合 |
 | 💬 **Channels** | Telegram/Slack/Discord 多平台統合 (v1.1.0 NEW) |
 | 🎨 **自動アダプター** | `@auto_adapt` でプロトコル自動変換 |
-| 🧠 **Skills 自動進化** | 越用越厉害 - 使うほど強くなる |
+| 🧠 **Skills 自動進化** | 使うほど強くなる |
 | 📦 **CLI** | `agentflow init/run/create` |
 | 🔒 **型安全** | 100% 型アノテーション |
 | ⚡ **非同期** | 完全非同期 I/O |
@@ -338,9 +338,9 @@ async for event in preview.run_debug(workflow, inputs, breakpoints=["node-1"]):
 Claude Code Skills 完全互換の自動進化能力システム：
 
 ```
-用户需求 → 技能匹配 → 存在なら実行
-                   → 不在なら自動生成 → 検証 → 固化
-= 越用越厉害（使うほど強くなる）
+ユーザー要求 → スキルマッチング → 存在すれば実行
+                               → 存在しなければ自動生成 → 検証 → 固化
+= 使うほど強くなる
 ```
 
 ```python
@@ -836,11 +836,15 @@ AgentFlow への貢献を歓迎します！
 - [変更履歴](CHANGELOG.md)
 
 ---
-## その他
-　他の優秀なAIエージェント開発フレームワーク
-    [agno](https://github.com/agno-agi/agno)
 
-| フレームワーク | 説明 |
+## その他
+
+他の優秀な AI エージェント開発フレームワーク:
+
+- [agno](https://github.com/agno-agi/agno) - 高性能 AI エージェントフレームワーク
+
+---
+
 ## 📄 ライセンス
 
 [MIT License](LICENSE)
