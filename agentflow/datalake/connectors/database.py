@@ -15,6 +15,8 @@ SQLAlchemy を使用した非同期データベースアクセス。
     DATABASE_URL: データベース接続文字列
 """
 
+from __future__ import annotations
+
 import json
 import logging
 from datetime import datetime, timezone

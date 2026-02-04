@@ -3,16 +3,21 @@
 このモジュールは全てのエージェントが継承する基底クラスを提供します。
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.core.engine import AgentFlowEngine
 from agentflow.core.metadata import AgentMetadata
 from agentflow.core.schemas import SchemaLoader
 from agentflow.decorators import auto_adapt
 from agentflow.protocols.a2a_card import AgentCard
-from agentflow.protocols.agui_emitter import AGUIEventEmitter
+
+
+if TYPE_CHECKING:
+    from agentflow.protocols.agui_emitter import AGUIEventEmitter
 
 
 @auto_adapt()
@@ -163,9 +168,12 @@ class AgentBlock(ABC):
         Returns:
             AGUIEventEmitter インスタンス
         """
+        # Lazy import to avoid circular dependency
+        from agentflow.protocols.agui_emitter import AGUIEventEmitter
+
         return AGUIEventEmitter(engine)
 
-    async def __aenter__(self) -> "AgentBlock":
+    async def __aenter__(self) -> AgentBlock:
         """非同期コンテキストマネージャーのエントリー.
 
         Returns:

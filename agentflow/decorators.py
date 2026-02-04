@@ -3,16 +3,20 @@
 このモジュールは AgentFlow のエージェントクラスに適用できるデコレーターを提供します。
 """
 
+from __future__ import annotations
+
 import functools
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
-from agentflow.adapters.protocol_adapter import ProtocolAdapter
 from agentflow.core.metadata import AgentMetadata
 from agentflow.core.schemas import SchemaLoader
 from agentflow.protocols.a2a_card import AgentCard
-from agentflow.protocols.agui_emitter import AGUIEventEmitter
+
+
+if TYPE_CHECKING:
+    from agentflow.protocols.agui_emitter import AGUIEventEmitter
 
 
 T = TypeVar("T")
@@ -83,6 +87,9 @@ def auto_adapt(
 
             # プロトコルアダプターを生成
             if self._metadata:
+                # Lazy import to avoid circular dependency
+                from agentflow.adapters.protocol_adapter import ProtocolAdapter
+
                 # MCP プロトコル
                 if "mcp" in protocols or (not protocols and self._metadata.protocols.mcp):
                     self._mcp_tools = ProtocolAdapter.generate_mcp_tools(self._metadata)
@@ -143,6 +150,9 @@ def auto_adapt(
                 Returns:
                     AGUIEventEmitter インスタンス
                 """
+                # Lazy import to avoid circular dependency
+                from agentflow.adapters.protocol_adapter import ProtocolAdapter
+
                 metadata = getattr(self, "_metadata", None)
                 if metadata:
                     return ProtocolAdapter.wrap_flow_with_agui(engine, "default-flow", metadata)

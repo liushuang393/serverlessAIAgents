@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentWizard - Agent 自動生成・進化システム.
 
 自然言語から Agent を自動生成し、テスト、検証、発布を行います。
@@ -20,21 +19,24 @@
     >>> print(result.agent_spec)
 """
 
+from agentflow.wizard.agent_wizard import AgentWizard
+from agentflow.wizard.gap_detector import CapabilityGapDetector
+from agentflow.wizard.improvement_loop import SelfImprovementLoop
 from agentflow.wizard.models import (
     AgentSpec,
     CapabilityGap,
+    GapAnalysis,
     GapType,
     SynthesisResult,
+    TestCase,
     TestResult,
     ValidationResult,
     WizardConfig,
 )
-from agentflow.wizard.agent_wizard import AgentWizard
-from agentflow.wizard.gap_detector import CapabilityGapDetector
-from agentflow.wizard.system_synthesizer import SystemSynthesizer
 from agentflow.wizard.skill_forge import SkillForge
-from agentflow.wizard.improvement_loop import SelfImprovementLoop
+from agentflow.wizard.system_synthesizer import SystemSynthesizer
 from agentflow.wizard.test_synthesizer import TestSynthesizer
+
 
 __version__ = "1.0.0"
 __author__ = "AgentFlow Team"
@@ -43,8 +45,10 @@ __all__ = [
     # Models
     "AgentSpec",
     "CapabilityGap",
+    "GapAnalysis",
     "GapType",
     "SynthesisResult",
+    "TestCase",
     "TestResult",
     "ValidationResult",
     "WizardConfig",

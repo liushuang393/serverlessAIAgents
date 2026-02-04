@@ -23,7 +23,7 @@ from typing import Any
 from agentflow.observability.logging import LogLevel, setup_logging
 from agentflow.observability.metrics import MetricsCollector, setup_metrics
 from agentflow.observability.sentry_integration import setup_sentry
-from agentflow.observability.tracing import ConsoleExporter, Tracer, setup_tracing
+from agentflow.observability.tracing import setup_tracing
 
 logger = logging.getLogger(__name__)
 

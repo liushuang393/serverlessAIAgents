@@ -12,7 +12,7 @@ REST APIおよびGraphQL APIへのアクセスを提供。
 import json
 import logging
 from typing import Any, AsyncIterator, Dict, List, Union
-from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.parse import parse_qs, urlparse
 
 from pydantic import Field
 

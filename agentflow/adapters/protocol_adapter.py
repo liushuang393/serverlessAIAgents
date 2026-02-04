@@ -4,12 +4,17 @@
 自動生成するファクトリークラスを提供します。
 """
 
-from typing import Any
+from __future__ import annotations
 
-from agentflow.core.engine import AgentFlowEngine
+from typing import TYPE_CHECKING, Any
+
 from agentflow.core.metadata import AgentMetadata, InputField, OutputField
 from agentflow.protocols.a2a_card import AgentCard, AgentSkill
-from agentflow.protocols.agui_emitter import AGUIEventEmitter
+
+
+if TYPE_CHECKING:
+    from agentflow.core.engine import AgentFlowEngine
+    from agentflow.protocols.agui_emitter import AGUIEventEmitter
 
 
 class ProtocolAdapter:
@@ -226,4 +231,7 @@ class ProtocolAdapter:
             >>> async for event in emitter.stream_events():
             ...     print(event.event_type)
         """
+        # Lazy import to avoid circular dependency
+        from agentflow.protocols.agui_emitter import AGUIEventEmitter
+
         return AGUIEventEmitter(engine)

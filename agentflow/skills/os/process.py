@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import asyncio
 import os
-import signal
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
