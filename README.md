@@ -399,6 +399,29 @@ response = await gateway.route_message("telegram", "user_123", "Hello")
 | **Ollama** | `OLLAMA_BASE_URL` | Llama 3.3, Qwen 2.5, Mistral Large（ローカル） |
 | **LocalAI** | `LOCALAI_BASE_URL` | 任意のGGUF/GGML（ローカル・デフォルト） |
 
+### 🧭 Platform Runtime（マルチテナント向け）
+
+AgentFlow はプラットフォーム運用を前提に、**明示的な初期化**と**実行コンテキスト**を提供します。
+
+```python
+from agentflow import init_agentflow, RuntimeContext, use_runtime_context, get_llm
+from agentflow.config import AgentFlowSettings
+
+# 1) 明示的に初期化（.env 読み込みは任意）
+init_agentflow(load_env=True)
+
+# 2) テナントごとの設定を作成
+tenant_settings = AgentFlowSettings(openai_api_key="sk-...", openai_model="gpt-4o")
+ctx = RuntimeContext(tenant_id="tenant-001", settings=tenant_settings)
+
+# 3) コンテキスト内で実行
+with use_runtime_context(ctx):
+    llm = get_llm(context=ctx)
+    response = await llm.chat([{"role": "user", "content": "hello"}])
+```
+
+詳細は `docs/ja/PLATFORM_RUNTIME_GUIDE.md` を参照してください。
+
 ```python
 # ✅ 推奨: get_llm() 松耦合 API
 from agentflow import get_llm

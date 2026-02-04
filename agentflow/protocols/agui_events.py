@@ -243,3 +243,50 @@ class ClarificationReceivedEvent(AGUIEvent):
         default=AGUIEventType.CLARIFICATION_RECEIVED, description="イベントタイプ"
     )
     answers: dict[str, Any] = Field(..., description="ユーザー回答")
+
+
+LEGACY_EVENT_TYPE_MAP: dict[AGUIEventType, str] = {
+    AGUIEventType.FLOW_START: "flow_start",
+    AGUIEventType.FLOW_COMPLETE: "flow_complete",
+    AGUIEventType.FLOW_ERROR: "flow_error",
+    AGUIEventType.FLOW_CANCEL: "flow_cancel",
+    AGUIEventType.NODE_START: "node_start",
+    AGUIEventType.NODE_COMPLETE: "node_complete",
+    AGUIEventType.NODE_ERROR: "node_error",
+    AGUIEventType.PROGRESS: "progress",
+    AGUIEventType.LOG: "log",
+    AGUIEventType.CLARIFICATION_REQUIRED: "clarification_required",
+    AGUIEventType.CLARIFICATION_RECEIVED: "clarification_received",
+}
+
+
+def to_legacy_dict(event: AGUIEvent) -> dict[str, Any]:
+    """Convert AG-UI event to legacy-compatible dict."""
+    payload = event.to_dict()
+    payload["type"] = LEGACY_EVENT_TYPE_MAP.get(event.event_type, event.event_type.value)
+    if isinstance(event, (FlowErrorEvent, NodeErrorEvent)) and "message" not in payload:
+        payload["message"] = event.error_message
+    data = payload.get("data")
+    if isinstance(data, dict) and "success" in data:
+        payload["success"] = data["success"]
+    return payload
+
+
+__all__ = [
+    "AGUIEventType",
+    "AGUIEvent",
+    "FlowStartEvent",
+    "FlowCompleteEvent",
+    "FlowErrorEvent",
+    "FlowCancelEvent",
+    "NodeStartEvent",
+    "NodeCompleteEvent",
+    "NodeErrorEvent",
+    "ProgressEvent",
+    "LogEvent",
+    "ClarificationQuestion",
+    "ClarificationRequiredEvent",
+    "ClarificationReceivedEvent",
+    "LEGACY_EVENT_TYPE_MAP",
+    "to_legacy_dict",
+]

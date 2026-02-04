@@ -345,9 +345,21 @@ def set_context(**kwargs: Any) -> None:
         _context_var.update(kwargs)
 
 
+def get_context() -> dict[str, Any]:
+    """グローバルコンテキストを取得."""
+    with _context_lock:
+        return _context_var.copy()
+
+
+def replace_context(context: dict[str, Any]) -> None:
+    """グローバルコンテキストを置換."""
+    global _context_var
+    with _context_lock:
+        _context_var = context.copy()
+
+
 def clear_context() -> None:
     """グローバルコンテキストをクリア."""
     global _context_var
     with _context_lock:
         _context_var.clear()
-

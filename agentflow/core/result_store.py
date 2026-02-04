@@ -41,6 +41,7 @@ class FlowResult(BaseModel):
     
     result_id: str = Field(..., description="結果ID")
     flow_id: str = Field(..., description="フローID")
+    tenant_id: str | None = Field(default=None, description="テナントID")
     status: str = Field(default="success", description="実行ステータス")
     data: dict[str, Any] = Field(default_factory=dict, description="結果データ")
     created_at: datetime = Field(default_factory=datetime.now, description="作成日時")
@@ -123,7 +124,10 @@ class FileResultStore(ResultStore):
     async def save(self, result: FlowResult) -> None:
         """結果を保存."""
         path = self._get_path(result.result_id)
-        path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+        import aiofiles
+
+        async with aiofiles.open(path, "w", encoding="utf-8") as f:
+            await f.write(result.model_dump_json(indent=2))
         logger.debug(f"FileResultStore: Saved result to {path}")
     
     async def get(self, result_id: str) -> FlowResult | None:
@@ -132,7 +136,11 @@ class FileResultStore(ResultStore):
         if not path.exists():
             return None
         try:
-            data = json.loads(path.read_text(encoding="utf-8"))
+            import aiofiles
+
+            async with aiofiles.open(path, "r", encoding="utf-8") as f:
+                content = await f.read()
+            data = json.loads(content)
             return FlowResult(**data)
         except Exception as e:
             logger.error(f"FileResultStore: Failed to load {path}: {e}")
@@ -192,11 +200,22 @@ class ResultStoreManager:
         flow_id: str,
         status: str = "success",
         metadata: dict[str, Any] | None = None,
+        tenant_id: str | None = None,
     ) -> FlowResult:
         """結果を保存."""
+        if tenant_id is None:
+            try:
+                from agentflow.runtime import get_runtime_context
+
+                runtime = get_runtime_context()
+                if runtime is not None:
+                    tenant_id = runtime.tenant_id
+            except Exception:
+                tenant_id = None
         result = FlowResult(
             result_id=result_id,
             flow_id=flow_id,
+            tenant_id=tenant_id,
             status=status,
             data=data,
             metadata=metadata or {},
@@ -218,4 +237,3 @@ class ResultStoreManager:
     async def list_results(cls, flow_id: str | None = None, limit: int = 100) -> list[FlowResult]:
         """結果一覧を取得."""
         return await cls.get_store().list_results(flow_id, limit)
-

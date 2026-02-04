@@ -32,6 +32,8 @@ from agentflow.observability.logging import (
     setup_logging,
     get_logger,
     LogLevel,
+    get_context,
+    replace_context,
 )
 from agentflow.observability.metrics import (
     MetricsCollector,
@@ -65,6 +67,8 @@ __all__ = [
     "setup_logging",
     "get_logger",
     "LogLevel",
+    "get_context",
+    "replace_context",
     # Metrics
     "MetricsCollector",
     "Counter",
@@ -84,4 +88,3 @@ __all__ = [
     # OTLP Exporter
     "OTLPExporter",
 ]
-

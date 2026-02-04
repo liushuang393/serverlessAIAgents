@@ -18,8 +18,10 @@ Agent/サービスは具体的なDB実装を知る必要がありません。
 """
 
 import logging
-import os
-from typing import Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from agentflow.runtime import RuntimeContext
 
 logger = logging.getLogger(__name__)
 
@@ -239,11 +241,19 @@ class SupabaseDBProvider:
         return "supabase"
 
 
-def get_db() -> DBProvider:
+def get_db(
+    *,
+    context: "RuntimeContext | None" = None,
+    _new_instance: bool = False,
+) -> DBProvider:
     """データベースプロバイダーを取得（松耦合）.
 
     環境変数から自動検出して最適なDBプロバイダーを返します。
     Agent/サービスは具体的な実装を知る必要がありません。
+
+    Args:
+        context: RuntimeContext（テナント/設定の分離用）
+        _new_instance: 新しいインスタンスを強制作成（テスト用）
 
     Returns:
         DBProvider インスタンス
@@ -256,32 +266,50 @@ def get_db() -> DBProvider:
     """
     global _db_instance
 
-    if _db_instance is not None:
+    if _db_instance is not None and not _new_instance and context is None:
         return _db_instance
+
+    from agentflow.runtime import get_env, resolve_settings
+
+    settings = resolve_settings(context) if context is not None else None
 
     # Supabase
-    supabase_url = os.getenv("SUPABASE_URL")
-    supabase_key = os.getenv("SUPABASE_KEY") or os.getenv("SUPABASE_ANON_KEY")
+    supabase_url = (
+        settings.supabase_url if settings else get_env("SUPABASE_URL", context=context)
+    )
+    supabase_key = (
+        (settings.supabase_key if settings else None)
+        or get_env("SUPABASE_KEY", context=context)
+        or get_env("SUPABASE_ANON_KEY", context=context)
+    )
     if supabase_url and supabase_key:
         logger.info("Using Supabase provider (from env)")
-        _db_instance = SupabaseDBProvider(supabase_url, supabase_key)
-        return _db_instance
+        provider = SupabaseDBProvider(supabase_url, supabase_key)
+        if context is None and not _new_instance:
+            _db_instance = provider
+        return provider
 
     # Turso (TODO: 実装)
-    turso_url = os.getenv("TURSO_URL")
-    turso_token = os.getenv("TURSO_AUTH_TOKEN")
+    turso_url = (
+        settings.turso_url if settings else get_env("TURSO_URL", context=context)
+    )
+    turso_token = get_env("TURSO_AUTH_TOKEN", context=context)
     if turso_url and turso_token:
         logger.warning("Turso provider not yet implemented, using mock")
 
     # DATABASE_URL (PostgreSQL/SQLite) - TODO: 実装
-    db_url = os.getenv("DATABASE_URL")
+    db_url = (
+        settings.database_url if settings else get_env("DATABASE_URL", context=context)
+    )
     if db_url:
         logger.warning(f"DATABASE_URL detected but not implemented: {db_url[:20]}...")
 
     # フォールバック: Mock
     logger.info("No DB config found in environment. Using mock provider.")
-    _db_instance = MockDBProvider()
-    return _db_instance
+    provider = MockDBProvider()
+    if context is None and not _new_instance:
+        _db_instance = provider
+    return provider
 
 
 def reset_db() -> None:

@@ -169,11 +169,19 @@ class TemplateManager:
             rel_path = template_file.relative_to(template_dir)
             output_path = output_dir / rel_path
 
+            # .j2 拡張子を除去（例: config/__init__.py.j2 -> config/__init__.py）
+            is_jinja_template = template_file.name.endswith(".j2")
+            if is_jinja_template:
+                output_path = output_path.parent / output_path.name[:-3]
+
             # 出力ディレクトリを作成
             output_path.parent.mkdir(parents=True, exist_ok=True)
 
+            # Jinja2テンプレートとして処理する拡張子
+            template_extensions = [".py", ".yaml", ".md", ".txt", ".json", ".j2"]
+
             # ファイルを処理
-            if template_file.suffix in [".py", ".yaml", ".md", ".txt", ".json"]:
+            if template_file.suffix in template_extensions:
                 # テキストファイルはテンプレートとして処理
                 try:
                     template = env.get_template(str(rel_path))
@@ -239,9 +247,7 @@ class TemplateManager:
                 # 選択肢のチェック
                 if param.choices and value not in param.choices:
                     msg = f"Parameter {param.name} must be one of {param.choices}, got {value}"
-                    raise ValueError(
-                        msg
-                    )
+                    raise ValueError(msg)
 
             validated[param.name] = value
 

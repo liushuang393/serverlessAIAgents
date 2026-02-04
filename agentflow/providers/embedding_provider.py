@@ -18,8 +18,10 @@ Agent/サービスは具体的な埋め込みモデルを知る必要があり�
 """
 
 import logging
-import os
-from typing import Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from agentflow.runtime import RuntimeContext
 
 logger = logging.getLogger(__name__)
 
@@ -171,7 +173,12 @@ class SentenceTransformerProvider:
         return self._model_name
 
 
-def get_embedding(model: str | None = None) -> EmbeddingProvider:
+def get_embedding(
+    model: str | None = None,
+    *,
+    context: "RuntimeContext | None" = None,
+    _new_instance: bool = False,
+) -> EmbeddingProvider:
     """埋め込みプロバイダーを取得（松耦合）.
 
     環境変数から自動検出して最適な埋め込みモデルを返します。
@@ -179,6 +186,8 @@ def get_embedding(model: str | None = None) -> EmbeddingProvider:
 
     Args:
         model: モデル名（省略時は自動選択）
+        context: RuntimeContext（テナント/設定の分離用）
+        _new_instance: 新しいインスタンスを強制作成（テスト用）
 
     Returns:
         EmbeddingProvider インスタンス
@@ -191,32 +200,54 @@ def get_embedding(model: str | None = None) -> EmbeddingProvider:
     """
     global _embedding_instance
 
-    if _embedding_instance is not None and model is None:
+    if _embedding_instance is not None and model is None and context is None and not _new_instance:
         return _embedding_instance
+
+    from agentflow.runtime import get_env, resolve_settings
+
+    settings = resolve_settings(context) if context is not None else None
 
     # OpenAI
-    openai_key = os.getenv("OPENAI_API_KEY")
+    openai_key = (
+        settings.openai_api_key if settings else get_env("OPENAI_API_KEY", context=context)
+    )
     if openai_key:
-        emb_model = model or os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+        emb_model = model
+        if emb_model is None:
+            emb_model = get_env("EMBEDDING_MODEL", context=context)
+        if emb_model is None and settings is not None:
+            emb_model = settings.openai_embedding_model
+        if emb_model is None:
+            emb_model = "text-embedding-3-small"
         logger.info(f"Using OpenAI embedding: {emb_model}")
-        _embedding_instance = OpenAIEmbeddingProvider(openai_key, emb_model)
-        return _embedding_instance
+        provider = OpenAIEmbeddingProvider(openai_key, emb_model)
+        if context is None and not _new_instance:
+            _embedding_instance = provider
+        return provider
 
     # Voyage AI (TODO)
-    if os.getenv("VOYAGE_API_KEY"):
+    if get_env("VOYAGE_API_KEY", context=context):
         logger.warning("Voyage AI detected but not implemented")
 
     # SentenceTransformer（ローカル）
-    if os.getenv("USE_LOCAL_EMBEDDING"):
-        local_model = model or os.getenv("LOCAL_EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+    if get_env("USE_LOCAL_EMBEDDING", context=context):
+        local_model = (
+            model
+            or get_env("LOCAL_EMBEDDING_MODEL", context=context)
+            or "all-MiniLM-L6-v2"
+        )
         logger.info(f"Using local embedding: {local_model}")
-        _embedding_instance = SentenceTransformerProvider(local_model)
-        return _embedding_instance
+        provider = SentenceTransformerProvider(local_model)
+        if context is None and not _new_instance:
+            _embedding_instance = provider
+        return provider
 
     # フォールバック: Mock
     logger.info("No embedding config found. Using mock provider.")
-    _embedding_instance = MockEmbeddingProvider()
-    return _embedding_instance
+    provider = MockEmbeddingProvider()
+    if context is None and not _new_instance:
+        _embedding_instance = provider
+    return provider
 
 
 def reset_embedding() -> None:

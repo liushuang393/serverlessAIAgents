@@ -49,6 +49,7 @@
 |-------------|------|
 | [architecture.md](./architecture.md) | 全体アーキテクチャ |
 | [api.md](./api.md) | API リファレンス |
+| [ja/PLATFORM_RUNTIME_GUIDE.md](./ja/PLATFORM_RUNTIME_GUIDE.md) | Platform Runtime（マルチテナントSaaS運用） |
 | [design/DEEP_AGENT_COORDINATOR_DESIGN.md](./design/DEEP_AGENT_COORDINATOR_DESIGN.md) | DeepAgent 設計 |
 | [design/DEEP_AGENT_IMPLEMENTATION_GUIDE_JA.md](./design/DEEP_AGENT_IMPLEMENTATION_GUIDE_JA.md) | DeepAgent 実装ガイド |
 | [memory/MEMORY_SYSTEM_DESIGN.md](./memory/MEMORY_SYSTEM_DESIGN.md) | メモリシステム設計 |
@@ -150,4 +151,3 @@ agentflow studio --port 8000
 ---
 
 > 💡 **ヒント**: まずは [QUICKSTART.md](./QUICKSTART.md) を読んで、5分で最初の Agent を作成してみてください！
-

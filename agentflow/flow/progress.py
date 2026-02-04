@@ -14,6 +14,16 @@ import logging
 import time
 from typing import TYPE_CHECKING, Any
 
+from agentflow.protocols.agui_events import (
+    FlowCompleteEvent,
+    FlowErrorEvent,
+    FlowStartEvent,
+    NodeCompleteEvent,
+    NodeErrorEvent,
+    NodeStartEvent,
+    to_legacy_dict,
+)
+
 if TYPE_CHECKING:
     from agentflow.flow.graph import FlowGraph
     from agentflow.flow.nodes import FlowNode
@@ -67,19 +77,18 @@ class ProgressTracker:
             AG-UI NodeStartEvent形式の辞書
         """
         self._current_node = node.id
-        return {
-            "event_type": "node.start",
-            "type": "node_start",  # 後方互換
-            "timestamp": time.time(),
-            "flow_id": self._flow_id,
-            "node_id": node.id,
-            "node_name": node.name,
-            "data": {
+        event = NodeStartEvent(
+            timestamp=time.time(),
+            flow_id=self._flow_id,
+            node_id=node.id,
+            node_name=node.name,
+            data={
                 "label": node.label,
                 "icon": node.icon,
                 "progress": self.progress_percent,
             },
-        }
+        )
+        return to_legacy_dict(event)
 
     def on_node_complete(
         self, node: FlowNode, result: dict[str, Any], *, success: bool = True
@@ -103,19 +112,18 @@ class ProgressTracker:
         if success:
             self._completed += 1
         self._current_node = None
-        return {
-            "event_type": "node.complete",
-            "type": "node_complete",  # 後方互換
-            "timestamp": time.time(),
-            "flow_id": self._flow_id,
-            "node_id": node.id,
-            "node_name": node.name,
-            "data": {
+        event = NodeCompleteEvent(
+            timestamp=time.time(),
+            flow_id=self._flow_id,
+            node_id=node.id,
+            node_name=node.name,
+            data={
                 "progress": self.progress_percent,
                 "success": success,
-                **result,  # Agent結果を含める（思考ログ抽出用）
+                **result,
             },
-        }
+        )
+        return to_legacy_dict(event)
 
     def on_node_error(
         self, node: FlowNode, error: str, error_type: str = "AgentError"
@@ -130,62 +138,53 @@ class ProgressTracker:
         Returns:
             AG-UI NodeErrorEvent形式の辞書
         """
-        return {
-            "event_type": "node.error",
-            "type": "node_error",  # 後方互換
-            "timestamp": time.time(),
-            "flow_id": self._flow_id,
-            "node_id": node.id,
-            "node_name": node.name,
-            "error_message": error,
-            "error_type": error_type,
-            "message": error,  # フロントエンドの fallback 用
-            "data": {
-                "progress": self.progress_percent,
-            },
-        }
+        event = NodeErrorEvent(
+            timestamp=time.time(),
+            flow_id=self._flow_id,
+            node_id=node.id,
+            node_name=node.name,
+            error_message=error,
+            error_type=error_type,
+            data={"progress": self.progress_percent},
+        )
+        return to_legacy_dict(event)
 
     def on_flow_start(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """フロー開始イベント."""
-        return {
-            "event_type": "flow.start",
-            "type": "flow_start",  # 後方互換
-            "timestamp": time.time(),
-            "flow_id": self._flow_id,
-            "data": {
+        event = FlowStartEvent(
+            timestamp=time.time(),
+            flow_id=self._flow_id,
+            data={
                 "total_nodes": self._graph.node_count,
                 "inputs_preview": str(inputs)[:100],
             },
-        }
+        )
+        return to_legacy_dict(event)
 
     def on_flow_complete(self, result: dict[str, Any]) -> dict[str, Any]:
         """フロー完了イベント."""
-        return {
-            "event_type": "flow.complete",
-            "type": "flow_complete",  # 後方互換
-            "timestamp": time.time(),
-            "flow_id": self._flow_id,
-            "data": {
-                "progress": 100,
-            },
-            "result": result,
-        }
+        event = FlowCompleteEvent(
+            timestamp=time.time(),
+            flow_id=self._flow_id,
+            data={"progress": 100},
+            result=result,
+            include_result=True,
+        )
+        return to_legacy_dict(event)
 
     def on_flow_error(self, error: Exception) -> dict[str, Any]:
         """フローエラーイベント."""
-        return {
-            "event_type": "flow.error",
-            "type": "flow_error",  # 後方互換
-            "timestamp": time.time(),
-            "flow_id": self._flow_id,
-            "error_message": str(error),
-            "error_type": type(error).__name__,
-            "message": str(error),  # フロントエンドの fallback 用
-            "data": {
+        event = FlowErrorEvent(
+            timestamp=time.time(),
+            flow_id=self._flow_id,
+            error_message=str(error),
+            error_type=type(error).__name__,
+            data={
                 "node_id": self._current_node,
                 "progress": self.progress_percent,
             },
-        }
+        )
+        return to_legacy_dict(event)
 
     def reset(self) -> None:
         """進捗をリセット（REVISEロールバック時用）."""
@@ -194,4 +193,3 @@ class ProgressTracker:
 
 
 __all__ = ["ProgressTracker"]
-

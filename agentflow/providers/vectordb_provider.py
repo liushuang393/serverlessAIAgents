@@ -27,8 +27,10 @@ Agent/サービスは具体的なVector DB実装を知る必要がありませ�
 """
 
 import logging
-import os
-from typing import Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from agentflow.runtime import RuntimeContext
 
 logger = logging.getLogger(__name__)
 
@@ -822,7 +824,12 @@ class SupabaseVectorProvider:
         return "supabase"
 
 
-def get_vectordb(collection: str = "default") -> VectorDBProvider:
+def get_vectordb(
+    collection: str = "default",
+    *,
+    context: "RuntimeContext | None" = None,
+    _new_instance: bool = False,
+) -> VectorDBProvider:
     """ベクトルDBプロバイダーを取得（松耦合・黒盒設計）.
 
     環境変数から自動検出して最適なVector DBを返します。
@@ -830,6 +837,8 @@ def get_vectordb(collection: str = "default") -> VectorDBProvider:
 
     Args:
         collection: コレクション名
+        context: RuntimeContext（テナント/設定の分離用）
+        _new_instance: 新しいインスタンスを強制作成（テスト用）
 
     Returns:
         VectorDBProvider インスタンス
@@ -840,103 +849,145 @@ def get_vectordb(collection: str = "default") -> VectorDBProvider:
     """
     global _vectordb_instance
 
-    if _vectordb_instance is not None:
+    if _vectordb_instance is not None and context is None and not _new_instance:
         return _vectordb_instance
 
+    from agentflow.runtime import get_env, resolve_settings
+
+    settings = resolve_settings(context) if context is not None else None
+
     # 1. 明示的な VECTOR_DATABASE_TYPE 指定を優先
-    db_type = os.getenv("VECTOR_DATABASE_TYPE", "").lower()
+    db_type = (get_env("VECTOR_DATABASE_TYPE", context=context) or "").lower()
 
     if db_type == "faiss":
         try:
             logger.info("Using FAISS provider")
-            _vectordb_instance = FAISSProvider(collection=collection)
-            return _vectordb_instance
+            provider = FAISSProvider(collection=collection)
+            if context is None and not _new_instance:
+                _vectordb_instance = provider
+            return provider
         except ImportError:
             logger.warning("faiss-cpu not installed. Falling back.")
 
     if db_type == "qdrant":
         try:
-            url = os.getenv("QDRANT_URL", "http://localhost:6333")
+            url = (
+                (settings.qdrant_url if settings else None)
+                or get_env("QDRANT_URL", "http://localhost:6333", context=context)
+            )
             logger.info(f"Using Qdrant provider: {url}")
-            _vectordb_instance = QdrantProvider(url=url, collection=collection)
-            return _vectordb_instance
+            provider = QdrantProvider(url=url, collection=collection)
+            if context is None and not _new_instance:
+                _vectordb_instance = provider
+            return provider
         except ImportError:
             logger.warning("qdrant-client not installed. Falling back.")
 
     if db_type == "weaviate":
         try:
-            url = os.getenv("WEAVIATE_URL", "http://localhost:8080")
+            url = get_env("WEAVIATE_URL", "http://localhost:8080", context=context)
             logger.info(f"Using Weaviate provider: {url}")
-            _vectordb_instance = WeaviateProvider(url=url, collection=collection)
-            return _vectordb_instance
+            provider = WeaviateProvider(url=url, collection=collection)
+            if context is None and not _new_instance:
+                _vectordb_instance = provider
+            return provider
         except ImportError:
             logger.warning("weaviate-client not installed. Falling back.")
 
     if db_type == "supabase":
         try:
             logger.info("Using Supabase Vector provider")
-            _vectordb_instance = SupabaseVectorProvider(table=collection)
-            return _vectordb_instance
+            provider = SupabaseVectorProvider(table=collection)
+            if context is None and not _new_instance:
+                _vectordb_instance = provider
+            return provider
         except ImportError:
             logger.warning("supabase package not installed. Falling back.")
 
     if db_type == "chromadb":
         try:
-            chroma_dir = os.getenv("CHROMA_PERSIST_DIR")
+            chroma_dir = (
+                (settings.chroma_persist_dir if settings else None)
+                or get_env("CHROMA_PERSIST_DIR", context=context)
+            )
             logger.info(f"Using ChromaDB provider: {chroma_dir or 'in-memory'}")
-            _vectordb_instance = ChromaDBProvider(persist_dir=chroma_dir, collection=collection)
-            return _vectordb_instance
+            provider = ChromaDBProvider(persist_dir=chroma_dir, collection=collection)
+            if context is None and not _new_instance:
+                _vectordb_instance = provider
+            return provider
         except ImportError:
             logger.warning("chromadb not installed. Falling back.")
 
     # 2. 環境変数から自動検出（後方互換性）
-    if os.getenv("QDRANT_URL"):
+    if (settings.qdrant_url if settings else None) or get_env("QDRANT_URL", context=context):
         try:
-            url = os.getenv("QDRANT_URL")
+            url = (settings.qdrant_url if settings else None) or get_env(
+                "QDRANT_URL", context=context
+            )
             logger.info(f"Auto-detected Qdrant: {url}")
-            _vectordb_instance = QdrantProvider(url=url, collection=collection)
-            return _vectordb_instance
+            provider = QdrantProvider(url=url, collection=collection)
+            if context is None and not _new_instance:
+                _vectordb_instance = provider
+            return provider
         except ImportError:
             pass
 
-    if os.getenv("WEAVIATE_URL"):
+    if get_env("WEAVIATE_URL", context=context):
         try:
-            url = os.getenv("WEAVIATE_URL")
+            url = get_env("WEAVIATE_URL", context=context)
             logger.info(f"Auto-detected Weaviate: {url}")
-            _vectordb_instance = WeaviateProvider(url=url, collection=collection)
-            return _vectordb_instance
+            provider = WeaviateProvider(url=url, collection=collection)
+            if context is None and not _new_instance:
+                _vectordb_instance = provider
+            return provider
         except ImportError:
             pass
 
-    if os.getenv("SUPABASE_URL") and os.getenv("SUPABASE_KEY"):
+    if (
+        (settings.supabase_url if settings else None)
+        or get_env("SUPABASE_URL", context=context)
+    ) and (
+        (settings.supabase_key if settings else None)
+        or get_env("SUPABASE_KEY", context=context)
+    ):
         try:
             logger.info("Auto-detected Supabase Vector")
-            _vectordb_instance = SupabaseVectorProvider(table=collection)
-            return _vectordb_instance
+            provider = SupabaseVectorProvider(table=collection)
+            if context is None and not _new_instance:
+                _vectordb_instance = provider
+            return provider
         except ImportError:
             pass
 
-    if os.getenv("FAISS_INDEX_PATH"):
+    if get_env("FAISS_INDEX_PATH", context=context):
         try:
             logger.info("Auto-detected FAISS")
-            _vectordb_instance = FAISSProvider(collection=collection)
-            return _vectordb_instance
+            provider = FAISSProvider(collection=collection)
+            if context is None and not _new_instance:
+                _vectordb_instance = provider
+            return provider
         except ImportError:
             pass
 
-    if os.getenv("CHROMA_PERSIST_DIR") or os.getenv("USE_CHROMADB"):
+    if get_env("CHROMA_PERSIST_DIR", context=context) or get_env(
+        "USE_CHROMADB", context=context
+    ):
         try:
-            chroma_dir = os.getenv("CHROMA_PERSIST_DIR")
+            chroma_dir = get_env("CHROMA_PERSIST_DIR", context=context)
             logger.info(f"Auto-detected ChromaDB: {chroma_dir or 'in-memory'}")
-            _vectordb_instance = ChromaDBProvider(persist_dir=chroma_dir, collection=collection)
-            return _vectordb_instance
+            provider = ChromaDBProvider(persist_dir=chroma_dir, collection=collection)
+            if context is None and not _new_instance:
+                _vectordb_instance = provider
+            return provider
         except ImportError:
             pass
 
     # 3. フォールバック: Mock（開発/テスト用）
     logger.info("No VectorDB config found. Using mock provider.")
-    _vectordb_instance = MockVectorDBProvider(collection=collection)
-    return _vectordb_instance
+    provider = MockVectorDBProvider(collection=collection)
+    if context is None and not _new_instance:
+        _vectordb_instance = provider
+    return provider
 
 
 def reset_vectordb() -> None:

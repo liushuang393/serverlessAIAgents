@@ -16,12 +16,20 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 from agentflow.flow.context import FlowContext
 from agentflow.flow.progress import ProgressTracker
 from agentflow.flow.types import NextAction, NodeType
+from agentflow.protocols.agui_events import (
+    FlowCompleteEvent,
+    FlowErrorEvent,
+    NodeCompleteEvent,
+    NodeErrorEvent,
+    to_legacy_dict,
+)
 
 if TYPE_CHECKING:
     from agentflow.flow.graph import FlowGraph
@@ -130,28 +138,29 @@ class FlowExecutor:
                     if tracker:
                         yield tracker.on_node_error(node, error_msg, error_type)
                     else:
-                        yield {
-                            "event_type": "node.error",
-                            "type": "node_error",  # 後方互換
-                            "node_id": node.id,
-                            "node_name": node.name,
-                            "error_message": error_msg,
-                            "error_type": error_type,
-                            "message": error_msg,  # フロントエンド fallback
-                        }
+                        event = NodeErrorEvent(
+                            timestamp=time.time(),
+                            flow_id=ctx.flow_id,
+                            node_id=node.id,
+                            node_name=node.name,
+                            error_message=error_msg,
+                            error_type=error_type,
+                        )
+                        yield to_legacy_dict(event)
                 elif result.action in (NextAction.CONTINUE, NextAction.STOP):
                     # ノード正常完了時のみ完了イベントを発行
                     # EARLY_RETURN（Gate失敗）や RETRY_FROM（REVISE）では発行しない
                     if tracker:
                         yield tracker.on_node_complete(node, result.data, success=True)
                     else:
-                        yield {
-                            "event_type": "node.complete",
-                            "type": "node_complete",  # 後方互換
-                            "node_id": node.id,
-                            "node_name": node.name,
-                            "success": True,
-                        }
+                        event = NodeCompleteEvent(
+                            timestamp=time.time(),
+                            flow_id=ctx.flow_id,
+                            node_id=node.id,
+                            node_name=node.name,
+                            data={"success": True},
+                        )
+                        yield to_legacy_dict(event)
 
                 # 実行結果を処理
                 if result.action == NextAction.CONTINUE:
@@ -172,23 +181,26 @@ class FlowExecutor:
                         if tracker:
                             yield tracker.on_flow_complete(final_result)
                         else:
-                            yield {
-                                "event_type": "flow.complete",
-                                "type": "flow_complete",  # 後方互換
-                                "result": final_result,
-                            }
+                            event = FlowCompleteEvent(
+                                timestamp=time.time(),
+                                flow_id=ctx.flow_id,
+                                result=final_result,
+                                include_result=True,
+                            )
+                            yield to_legacy_dict(event)
                     else:
                         # エラー終了
                         error_msg = result.data.get("error", "Agent execution failed")
                         if tracker:
                             yield tracker.on_flow_error(Exception(error_msg))
                         else:
-                            yield {
-                                "event_type": "flow.error",
-                                "type": "flow_error",  # 後方互換
-                                "error_message": error_msg,
-                                "message": error_msg,  # フロントエンド fallback
-                            }
+                            event = FlowErrorEvent(
+                                timestamp=time.time(),
+                                flow_id=ctx.flow_id,
+                                error_message=error_msg,
+                                error_type="AgentError",
+                            )
+                            yield to_legacy_dict(event)
                     return
 
                 if result.action == NextAction.EARLY_RETURN:
@@ -265,4 +277,3 @@ class FlowExecutor:
 
 
 __all__ = ["FlowExecutor"]
-

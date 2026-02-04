@@ -55,22 +55,8 @@ Decorator API（最も簡単）:
 """
 
 # =============================================================================
-# 環境変数の自動読み込み
+# 環境変数の読み込みは明示的に行う（init_agentflow を使用）
 # =============================================================================
-from pathlib import Path
-
-from dotenv import load_dotenv
-
-_cwd = Path.cwd()
-_env_candidates = [_cwd / ".env"] + [p / ".env" for p in _cwd.parents]
-for _env_path in _env_candidates:
-    if _env_path.exists():
-        load_dotenv(_env_path)
-        break
-else:
-    load_dotenv()
-
-del _cwd, _env_candidates, _env_path
 
 # =============================================================================
 # 公開API: Engine Pattern（メインAPI）
@@ -343,8 +329,23 @@ from agentflow.context import (
     TurnConfig,
 )
 
+try:
+    from importlib.metadata import PackageNotFoundError, version
 
-__version__ = "0.2.0"
+    __version__ = version("agentflow")
+except PackageNotFoundError:
+    __version__ = "1.6.1"
+
+# =============================================================================
+# 公開API: Runtime Context（プラットフォーム向け）
+# =============================================================================
+from agentflow.runtime import (
+    RuntimeContext,
+    get_runtime_context,
+    set_runtime_context,
+    use_runtime_context,
+    init_agentflow,
+)
 
 # =============================================================================
 # 公開シンボル定義
@@ -487,6 +488,15 @@ __all__ = [
     "get_logger",
     "LogLevel",
     "setup_observability",
+
+    # =========================================================================
+    # Runtime Context（プラットフォーム向け）
+    # =========================================================================
+    "RuntimeContext",
+    "get_runtime_context",
+    "set_runtime_context",
+    "use_runtime_context",
+    "init_agentflow",
 
     # =========================================================================
     # SSE/AG-UI

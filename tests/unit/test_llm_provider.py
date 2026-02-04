@@ -33,7 +33,7 @@ class TestLLMProviderConfig:
         config = LLMProviderConfig()
         assert config.temperature == 0.7
         assert config.max_tokens == 2000
-        assert config.timeout == 60
+        assert config.timeout == 180
 
     def test_custom_values(self):
         """カスタム値が正しく設定される."""
@@ -82,7 +82,7 @@ class TestDetectProviderFromEnv:
         }
         mock_get_settings.return_value = mock_settings
 
-        provider, model, api_key, base_url = _detect_provider_from_env()
+        provider, model, api_key, base_url, _timeout = _detect_provider_from_env()
         assert provider == "openai"
         assert model == "gpt-4o"
         assert api_key == "sk-test-key"
@@ -100,7 +100,7 @@ class TestDetectProviderFromEnv:
         }
         mock_get_settings.return_value = mock_settings
 
-        provider, model, api_key, base_url = _detect_provider_from_env()
+        provider, model, api_key, base_url, _timeout = _detect_provider_from_env()
         assert provider == "anthropic"
         assert model == "claude-3-opus"
         assert api_key == "sk-ant-test"
@@ -117,7 +117,7 @@ class TestDetectProviderFromEnv:
         }
         mock_get_settings.return_value = mock_settings
 
-        provider, model, api_key, base_url = _detect_provider_from_env()
+        provider, model, api_key, base_url, _timeout = _detect_provider_from_env()
         assert provider == "mock"
         assert model == "mock"
 
@@ -353,4 +353,3 @@ class TestResetLLM:
         llm2 = get_llm()
 
         assert llm1 is not llm2
-

@@ -33,7 +33,9 @@ from typing import TYPE_CHECKING, Any, AsyncIterator
 from pydantic import BaseModel, Field
 
 if TYPE_CHECKING:
+    from agentflow.config import AgentFlowSettings
     from agentflow.llm.llm_client import LLMClient
+    from agentflow.runtime import RuntimeContext
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +57,9 @@ class LLMProviderConfig(BaseModel):
     timeout: int = Field(default=180, gt=0, description="タイムアウト秒数")
 
 
-def _detect_provider_from_env() -> tuple[str, str, str | None, str | None, int]:
+def _detect_provider_from_env(
+    settings: "AgentFlowSettings | None" = None,
+) -> tuple[str, str, str | None, str | None, int]:
     """環境変数から最適なプロバイダーを自動検出.
 
     優先順位: 環境変数 > .env > config.py デフォルト値
@@ -64,9 +68,9 @@ def _detect_provider_from_env() -> tuple[str, str, str | None, str | None, int]:
     Returns:
         (provider, model, api_key, base_url, timeout) のタプル
     """
-    from agentflow.config import get_settings
+    from agentflow.config import AgentFlowSettings, get_settings
 
-    settings = get_settings()
+    settings = settings or get_settings()
     llm_config = settings.get_active_llm_config()
 
     provider = llm_config["provider"]
@@ -97,6 +101,7 @@ class LLMProvider:
         *,
         temperature: float | None = None,
         max_tokens: int | None = None,
+        settings: "AgentFlowSettings | None" = None,
     ) -> None:
         """初期化（通常は get_llm() を使用）.
 
@@ -110,6 +115,7 @@ class LLMProvider:
         self._max_tokens_override = max_tokens
         self._client: "LLMClient | None" = None
         self._provider_info: tuple[str, str, str | None, str | None] | None = None
+        self._settings = settings
         self._initialize_client()
 
     def _initialize_client(self) -> None:
@@ -117,7 +123,7 @@ class LLMProvider:
         from agentflow.llm.llm_client import LLMClient, LLMConfig
 
         # 環境変数から最適なプロバイダーを検出
-        provider, model, api_key, base_url, timeout = _detect_provider_from_env()
+        provider, model, api_key, base_url, timeout = _detect_provider_from_env(self._settings)
         self._provider_info = (provider, model, api_key, base_url)
 
         llm_config = LLMConfig(
@@ -195,6 +201,7 @@ def get_llm(
     *,
     temperature: float | None = None,
     max_tokens: int | None = None,
+    context: "RuntimeContext | None" = None,
     _new_instance: bool = False,
 ) -> LLMProvider:
     """LLMプロバイダーを取得（推奨API）.
@@ -205,6 +212,7 @@ def get_llm(
     Args:
         temperature: 温度パラメータ（省略時はデフォルト 0.7）
         max_tokens: 最大トークン数（省略時はデフォルト 2000）
+        context: RuntimeContext（テナント/設定の分離用）
         _new_instance: 新しいインスタンスを強制作成（テスト用）
 
     Returns:
@@ -223,9 +231,15 @@ def get_llm(
     """
     global _default_llm
 
-    # カスタムパラメータがある場合は新しいインスタンス
-    if temperature is not None or max_tokens is not None or _new_instance:
-        return LLMProvider(temperature=temperature, max_tokens=max_tokens)
+    # コンテキスト指定やカスタムパラメータがある場合は新しいインスタンス
+    if context is not None or temperature is not None or max_tokens is not None or _new_instance:
+        from agentflow.runtime import resolve_settings
+
+        return LLMProvider(
+            temperature=temperature,
+            max_tokens=max_tokens,
+            settings=resolve_settings(context),
+        )
 
     # シングルトン
     if _default_llm is None:
@@ -238,4 +252,3 @@ def reset_llm() -> None:
     """LLMシングルトンをリセット（テスト用）."""
     global _default_llm
     _default_llm = None
-
