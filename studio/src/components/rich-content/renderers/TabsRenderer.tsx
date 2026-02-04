@@ -36,7 +36,7 @@ export function TabsRenderer({
   const defaultValue = component.props.defaultValue;
 
   const [activeTab, setActiveTab] = useState(
-    (typeof defaultValue === 'string' ? defaultValue : tabs[0]?.value) || ''
+    (typeof defaultValue === 'string' ? defaultValue : tabs[0]?.value) || '',
   );
 
   if (tabs.length === 0) {

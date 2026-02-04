@@ -103,7 +103,7 @@ export function RichContentRenderer({
           return <UnknownRenderer key={key} component={component} />;
       }
     },
-    [customRenderers]
+    [customRenderers],
   );
 
   // レスポンスが空の場合
@@ -124,7 +124,7 @@ export function RichContentRenderer({
       data-theme={theme}
     >
       {response.components.map((component, idx) =>
-        renderComponent(component, idx)
+        renderComponent(component, idx),
       )}
     </div>
   );

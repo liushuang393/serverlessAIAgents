@@ -49,39 +49,39 @@ graph TB
 
     subgraph L2["🎨 UI層"]
         direction LR
-        U1[Studio UI<br/>ビジュアルエディタ]
-        U2[A2UI<br/>宣言式UI]
-        U3[AG-UI<br/>リアルタイムイベント]
+        U1["Studio UI"]
+        U2["A2UI"]
+        U3["AG-UI"]
     end
 
     subgraph L3["🔄 フロー層 - 3つの開発方式"]
         direction TB
-        F1["方式1: @agent<br/>最も簡単・推奨"]
-        F2["方式2: create_flow<br/>宣言的協調"]
-        F3["方式3: AgentCoordinator<br/>完全制御"]
+        F1["@agent - 最も簡単"]
+        F2["create_flow - 宣言的"]
+        F3["AgentCoordinator - 完全制御"]
     end
 
     subgraph L4["🤖 Agent層"]
         direction LR
-        AG1[AgentBlock<br/>基底クラス]
-        AG2[@agent<br/>デコレータ]
-        AG3[Custom Agent<br/>カスタム実装]
+        AG1["AgentBlock"]
+        AG2["@agent"]
+        AG3["Custom Agent"]
     end
 
     subgraph L5["🛠️ ツール層"]
         direction TB
-        T1[@tool<br/>メソッドツール]
-        T2[MCP Tools<br/>外部ツール統合]
-        T3[Skills Engine<br/>自動進化システム]
-        T4[Built-in Skills<br/>DB/決済/認証/デプロイ]
+        T1["@tool"]
+        T2["MCP Tools"]
+        T3["Skills Engine"]
+        T4["Built-in Skills"]
     end
 
     subgraph L6["🔌 Provider層 - 統一アクセス"]
         direction LR
-        P1[LLMProvider<br/>OpenAI/Anthropic]
-        P2[DataProvider<br/>SQL/Vector/Cache]
-        P3[EventProvider<br/>SSE/WebSocket]
-        P4[ToolProvider<br/>統一ツール呼び出し]
+        P1["LLMProvider"]
+        P2["DataProvider"]
+        P3["EventProvider"]
+        P4["ToolProvider"]
     end
 
     subgraph L7["🌐 プロトコル層 - 4プロトコル"]
@@ -94,10 +94,10 @@ graph TB
 
     subgraph L8["💾 インフラ層"]
         direction LR
-        I1[LLM Services<br/>OpenAI/Anthropic/Google/Ollama]
-        I2[データベース<br/>Supabase/PostgreSQL/Turso]
-        I3[Vector DB<br/>Pinecone/Qdrant]
-        I4[キャッシュ<br/>Redis/Memory]
+        I1["LLM Services"]
+        I2["Database"]
+        I3["Vector DB"]
+        I4["Cache"]
     end
 
     A1 --> F1

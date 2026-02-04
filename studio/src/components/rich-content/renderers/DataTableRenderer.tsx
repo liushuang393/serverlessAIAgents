@@ -39,11 +39,15 @@ export function DataTableRenderer({ component }: DataTableRendererProps): React.
 
   // ソート処理
   const sortedData = useMemo(() => {
-    if (!sortKey) return data;
+    if (!sortKey) {
+return data;
+}
     return [...data].sort((a, b) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
-      if (aVal === bVal) return 0;
+      if (aVal === bVal) {
+return 0;
+}
       // 型安全な比較
       const aStr = String(aVal ?? '');
       const bStr = String(bVal ?? '');

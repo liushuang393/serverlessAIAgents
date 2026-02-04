@@ -1,3 +1,5 @@
+import type React from 'react';
+
 /**
  * RichContent 型定義
  *

@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import React, { useCallback } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -7,11 +7,10 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   type Connection,
-  type Edge,
   type Node,
-} from "reactflow";
-import AgentNode from "./AgentNode";
-import { useWorkflowStore } from "../stores/workflowStore";
+} from 'reactflow';
+import AgentNode from './AgentNode';
+import { useWorkflowStore } from '../stores/workflowStore';
 
 /**
  * ワークフローキャンバスコンポーネント
@@ -54,7 +53,7 @@ export default function Canvas() {
    */
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
+    event.dataTransfer.dropEffect = 'move';
   }, []);
 
   /**
@@ -67,8 +66,10 @@ export default function Canvas() {
     (event: React.DragEvent) => {
       event.preventDefault();
 
-      const agentData = event.dataTransfer.getData("application/reactflow");
-      if (!agentData) return;
+      const agentData = event.dataTransfer.getData('application/reactflow');
+      if (!agentData) {
+return;
+}
 
       const agent = JSON.parse(agentData);
       const position = {
@@ -78,7 +79,7 @@ export default function Canvas() {
 
       const newNode: Node = {
         id: `${agent.id}-${Date.now()}`,
-        type: "agent",
+        type: 'agent',
         position,
         data: {
           label: agent.name,
@@ -101,7 +102,7 @@ export default function Canvas() {
    * ワークフローストアを更新。
    */
   const handleNodesChange = useCallback(
-    (changes: any) => {
+    (changes: Parameters<typeof onNodesChange>[0]) => {
       onNodesChange(changes);
       // ノード変更後にストアを更新
       setTimeout(() => {
@@ -118,7 +119,7 @@ export default function Canvas() {
    * ワークフローストアを更新。
    */
   const handleEdgesChange = useCallback(
-    (changes: any) => {
+    (changes: Parameters<typeof onEdgesChange>[0]) => {
       onEdgesChange(changes);
       // エッジ変更後にストアを更新
       setTimeout(() => {
@@ -152,10 +153,10 @@ export default function Canvas() {
         <MiniMap
           nodeColor={(node) => {
             switch (node.type) {
-              case "agent":
-                return "#3b82f6";
+              case 'agent':
+                return '#3b82f6';
               default:
-                return "#6b7280";
+                return '#6b7280';
             }
           }}
           className="bg-card border border-border"

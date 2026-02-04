@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Search, Package } from "lucide-react";
+import React, { useEffect, useState } from 'react';
+import { Search, Package } from 'lucide-react';
 
 /**
  * サイドバーコンポーネント
@@ -18,7 +18,7 @@ interface Agent {
 
 export default function Sidebar() {
   const [agents, setAgents] = useState<Agent[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
   /**
@@ -30,11 +30,11 @@ export default function Sidebar() {
 
   const fetchAgents = async () => {
     try {
-      const response = await fetch("/api/agents");
+      const response = await fetch('/api/agents');
       const data = await response.json();
       setAgents(data);
     } catch (error) {
-      console.error("Failed to fetch agents:", error);
+      console.error('Failed to fetch agents:', error);
     } finally {
       setLoading(false);
     }
@@ -46,8 +46,8 @@ export default function Sidebar() {
    * エージェント情報を dataTransfer に設定。
    */
   const onDragStart = (event: React.DragEvent, agent: Agent) => {
-    event.dataTransfer.setData("application/reactflow", JSON.stringify(agent));
-    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData('application/reactflow', JSON.stringify(agent));
+    event.dataTransfer.effectAllowed = 'move';
   };
 
   /**

@@ -1,12 +1,12 @@
-import { useState } from "react";
-import { ReactFlowProvider } from "reactflow";
-import "reactflow/dist/style.css";
-import Canvas from "./components/Canvas";
-import Sidebar from "./components/Sidebar";
-import PropertiesPanel from "./components/PropertiesPanel";
-import PreviewPanel from "./components/PreviewPanel";
-import PublishDialog from "./components/PublishDialog";
-import { useWorkflowStore } from "./stores/workflowStore";
+import { useState } from 'react';
+import { ReactFlowProvider } from 'reactflow';
+import 'reactflow/dist/style.css';
+import Canvas from './components/Canvas';
+import Sidebar from './components/Sidebar';
+import PropertiesPanel from './components/PropertiesPanel';
+import PreviewPanel from './components/PreviewPanel';
+import PublishDialog from './components/PublishDialog';
+import { useWorkflowStore } from './stores/workflowStore';
 
 /**
  * AgentFlow Studio メインアプリケーション
@@ -29,7 +29,7 @@ function App() {
     try {
       await saveWorkflow();
     } catch (error) {
-      console.error("Save failed:", error);
+      console.error('Save failed:', error);
     } finally {
       setSaving(false);
     }
@@ -44,7 +44,7 @@ function App() {
           <div className="flex items-center gap-4">
             <span className="font-bold text-primary">🤖 AgentFlow Studio</span>
             <span className="text-sm text-muted-foreground">
-              {workflow.name || "新しいワークフロー"}
+              {workflow.name || '新しいワークフロー'}
             </span>
           </div>
 
@@ -55,12 +55,12 @@ function App() {
               disabled={saving}
               className="px-3 py-1.5 text-sm border rounded-md hover:bg-muted disabled:opacity-50 flex items-center gap-1"
             >
-              {saving ? "💾 保存中..." : "💾 保存"}
+              {saving ? '💾 保存中...' : '💾 保存'}
             </button>
             <button
               onClick={() => setShowPreview(!showPreview)}
               className={`px-3 py-1.5 text-sm border rounded-md hover:bg-muted flex items-center gap-1 ${
-                showPreview ? "bg-primary/10 border-primary" : ""
+                showPreview ? 'bg-primary/10 border-primary' : ''
               }`}
             >
               ▶ Preview

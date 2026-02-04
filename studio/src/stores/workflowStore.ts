@@ -1,5 +1,5 @@
-import { create } from "zustand";
-import type { Node, Edge } from "reactflow";
+import { create } from 'zustand';
+import type { Node, Edge } from 'reactflow';
 
 /**
  * ワークフローストア
@@ -25,7 +25,7 @@ interface WorkflowStore {
   // アクション
   updateWorkflow: (updates: Partial<Workflow>) => void;
   setSelectedNode: (nodeId: string | null) => void;
-  updateNodeData: (nodeId: string, data: any) => void;
+  updateNodeData: (nodeId: string, data: Record<string, unknown>) => void;
   saveWorkflow: () => Promise<void>;
   loadWorkflow: (workflowId: string) => Promise<void>;
   undo: () => void;
@@ -36,9 +36,9 @@ interface WorkflowStore {
 
 export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   workflow: {
-    id: "new-workflow",
-    name: "新しいワークフロー",
-    description: "",
+    id: 'new-workflow',
+    name: '新しいワークフロー',
+    description: '',
     nodes: [],
     edges: [],
   },
@@ -94,9 +94,9 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
     try {
       const response = await fetch(`/api/workflows/${workflow.id}`, {
-        method: "PUT",
+        method: 'PUT',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           name: workflow.name,
@@ -107,12 +107,12 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to save workflow");
+        throw new Error('Failed to save workflow');
       }
 
-      console.log("Workflow saved successfully");
+      console.log('Workflow saved successfully');
     } catch (error) {
-      console.error("Failed to save workflow:", error);
+      console.error('Failed to save workflow:', error);
       throw error;
     }
   },
@@ -125,7 +125,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       const response = await fetch(`/api/workflows/${workflowId}`);
 
       if (!response.ok) {
-        throw new Error("Failed to load workflow");
+        throw new Error('Failed to load workflow');
       }
 
       const data = await response.json();
@@ -142,9 +142,9 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         historyIndex: -1,
       });
 
-      console.log("Workflow loaded successfully");
+      console.log('Workflow loaded successfully');
     } catch (error) {
-      console.error("Failed to load workflow:", error);
+      console.error('Failed to load workflow:', error);
       throw error;
     }
   },

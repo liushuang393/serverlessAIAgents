@@ -1,5 +1,5 @@
-import { X } from "lucide-react";
-import { useWorkflowStore } from "../stores/workflowStore";
+import { X } from 'lucide-react';
+import { useWorkflowStore } from '../stores/workflowStore';
 
 /**
  * プロパティパネルコンポーネント
@@ -29,7 +29,7 @@ export default function PropertiesPanel() {
   /**
    * ノードデータを更新
    */
-  const handleConfigChange = (key: string, value: any) => {
+  const handleConfigChange = (key: string, value: unknown) => {
     updateNodeData(node.id, {
       ...node.data,
       config: {
@@ -95,8 +95,8 @@ export default function PropertiesPanel() {
                 入力データ
               </label>
               <textarea
-                value={node.data.config.input || ""}
-                onChange={(e) => handleConfigChange("input", e.target.value)}
+                value={node.data.config.input || ''}
+                onChange={(e) => handleConfigChange('input', e.target.value)}
                 placeholder='{"key": "value"}'
                 className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-ring"
                 rows={4}
@@ -111,7 +111,7 @@ export default function PropertiesPanel() {
                 type="number"
                 value={node.data.config.timeout || 30}
                 onChange={(e) =>
-                  handleConfigChange("timeout", parseInt(e.target.value))
+                  handleConfigChange('timeout', parseInt(e.target.value))
                 }
                 className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
@@ -123,7 +123,7 @@ export default function PropertiesPanel() {
                   type="checkbox"
                   checked={node.data.config.enabled !== false}
                   onChange={(e) =>
-                    handleConfigChange("enabled", e.target.checked)
+                    handleConfigChange('enabled', e.target.checked)
                   }
                   className="w-4 h-4 rounded border-input text-primary focus:ring-2 focus:ring-ring"
                 />
