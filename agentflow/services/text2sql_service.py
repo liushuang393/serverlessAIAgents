@@ -68,12 +68,18 @@ class ChartType(str, Enum):
 @dataclass
 class Text2SQLConfig:
     """Text2SQL 設定."""
-    
+
     dialect: SQLDialect = SQLDialect.POSTGRESQL
     max_rows: int = 1000
     timeout_seconds: int = 30
     auto_chart: bool = True
     schema: dict[str, list[str]] = field(default_factory=dict)
+    # NL2SQL 増強オプション（学術研究に基づく）
+    enable_schema_linking: bool = True  # Schema Linking 有効化
+    enable_fewshot: bool = True  # Few-shot 動的選択有効化
+    enable_postprocess: bool = True  # 後処理校正有効化
+    fewshot_k: int = 3  # Few-shot 例の数
+    schema_linking_use_llm: bool = True  # Schema Linking で LLM 使用
     
     @classmethod
     def get_config_fields(cls) -> list[dict[str, Any]]:
@@ -153,14 +159,18 @@ class Text2SQLService(ServiceBase):
         self._llm = None
         self._db = None
         self._started = False
+        # NL2SQL 増強コンポーネント
+        self._schema_linker: Any = None
+        self._fewshot_manager: Any = None
+        self._postprocessor: Any = None
 
     async def start(self) -> None:
         """サービス開始."""
         if self._started:
             return
-        
+
         from agentflow.providers import get_llm, get_db
-        
+
         self._llm = get_llm(temperature=0)
         try:
             self._db = get_db()
@@ -168,13 +178,73 @@ class Text2SQLService(ServiceBase):
         except Exception as e:
             self._logger.warning(f"DB接続失敗: {e}")
             self._db = None
-        
+
+        # NL2SQL 増強コンポーネントの初期化
+        await self._init_enhanced_components()
+
         self._started = True
+
+    async def _init_enhanced_components(self) -> None:
+        """NL2SQL 増強コンポーネントを初期化."""
+        # Schema Linker 初期化
+        if self._config.enable_schema_linking and self._config.schema:
+            from agentflow.services.schema_linker import (
+                SchemaLinker,
+                SchemaLinkerConfig,
+            )
+            linker_config = SchemaLinkerConfig(
+                use_llm=self._config.schema_linking_use_llm,
+            )
+            self._schema_linker = SchemaLinker(
+                schema=self._config.schema,
+                config=linker_config,
+            )
+            await self._schema_linker.start()
+            self._logger.info("Schema Linker 初期化完了")
+
+        # Few-shot Manager 初期化
+        if self._config.enable_fewshot:
+            from agentflow.services.fewshot_manager import (
+                FewshotManager,
+                FewshotManagerConfig,
+            )
+            fewshot_config = FewshotManagerConfig(
+                default_k=self._config.fewshot_k,
+            )
+            self._fewshot_manager = FewshotManager(config=fewshot_config)
+            self._logger.info("Few-shot Manager 初期化完了")
+
+        # Post-Processor 初期化
+        if self._config.enable_postprocess:
+            from agentflow.services.sql_postprocessor import (
+                SQLPostProcessor,
+                PostProcessorConfig,
+            )
+            pp_config = PostProcessorConfig(
+                enable_execution_test=self._db is not None,
+            )
+            execute_func = self._execute_sql_raw if self._db else None
+            self._postprocessor = SQLPostProcessor(
+                config=pp_config,
+                execute_func=execute_func,
+            )
+            await self._postprocessor.start()
+            self._logger.info("SQL Post-Processor 初期化完了")
+
+    async def _execute_sql_raw(self, sql: str) -> list[dict]:
+        """後処理テスト用の SQL 実行関数."""
+        if not self._db:
+            raise RuntimeError("データベース未接続")
+        return await self._db.execute_raw(sql)
 
     async def stop(self) -> None:
         """サービス停止."""
         if self._db:
             await self._db.disconnect()
+        if self._schema_linker:
+            await self._schema_linker.stop()
+        if self._postprocessor:
+            await self._postprocessor.stop()
         self._started = False
 
     async def _execute_internal(
@@ -318,13 +388,86 @@ class Text2SQLService(ServiceBase):
         yield self._emit_result(execution_id, result_data, (time.time() - start_time) * 1000)
 
     async def _generate_sql_internal(self, question: str) -> str:
-        """SQL生成ロジック."""
-        schema_info = self._format_schema()
-        
-        prompt = f"""あなたはSQLエキスパートです。以下のデータベーススキーマに基づいて、
-ユーザーの質問に答えるSQLクエリを生成してください。
+        """SQL生成ロジック（NL2SQL 増強版）.
 
-## データベーススキーマ
+        学術研究に基づく3段階処理:
+        1. Schema Linking: 関連テーブル・カラムの特定
+        2. Few-shot Selection: 類似クエリ例の選択
+        3. Post-Processing: 構文検証と自動修正
+        """
+        # 1. Schema Linking（有効な場合）
+        schema_info = ""
+        schema_link_result = None
+        if self._schema_linker:
+            schema_link_result = await self._schema_linker.link(question)
+            schema_info = schema_link_result.linked_schema
+            self._logger.debug(
+                f"Schema Linking: テーブル={schema_link_result.relevant_tables}, "
+                f"信頼度={schema_link_result.confidence:.2f}"
+            )
+        else:
+            schema_info = self._format_schema()
+
+        # 2. Few-shot Selection（有効な場合）
+        fewshot_prompt = ""
+        if self._fewshot_manager:
+            examples = self._fewshot_manager.get_similar_examples(
+                question, k=self._config.fewshot_k
+            )
+            if examples:
+                fewshot_prompt = self._fewshot_manager.format_examples_prompt(examples)
+                self._logger.debug(f"Few-shot: {len(examples)} 例を選択")
+
+        # 3. プロンプト構築
+        prompt = self._build_enhanced_prompt(
+            question, schema_info, fewshot_prompt
+        )
+
+        response = await self._llm.chat([{"role": "user", "content": prompt}])
+        sql = self._extract_sql(response["content"])
+        sql = self._sanitize_sql(sql)
+
+        # 4. Post-Processing（有効な場合）
+        if self._postprocessor:
+            pp_result = await self._postprocessor.process(
+                sql=sql,
+                query=question,
+                schema_context=schema_info,
+            )
+            if pp_result.total_corrections > 0:
+                self._logger.info(
+                    f"SQL 修正: {pp_result.total_corrections} 回の修正を適用"
+                )
+            sql = pp_result.final_sql
+
+        return sql
+
+    def _build_enhanced_prompt(
+        self,
+        question: str,
+        schema_info: str,
+        fewshot_prompt: str,
+    ) -> str:
+        """増強プロンプトを構築.
+
+        Args:
+            question: ユーザークエリ
+            schema_info: スキーマ情報（Schema Linking 結果）
+            fewshot_prompt: Few-shot 例
+
+        Returns:
+            プロンプト文字列
+        """
+        parts = ["あなたはSQLエキスパートです。"]
+
+        # Few-shot 例（ある場合）
+        if fewshot_prompt:
+            parts.append("\n" + fewshot_prompt + "\n")
+
+        parts.append(f"""
+以下のデータベーススキーマに基づいて、ユーザーの質問に答えるSQLクエリを生成してください。
+
+## データベーススキーマ（関連部分のみ）
 {schema_info}
 
 ## SQLダイアレクト
@@ -343,13 +486,9 @@ class Text2SQLService(ServiceBase):
 ## 出力
 SQLクエリのみを出力してください（説明不要）:
 ```sql
-"""
-        
-        response = await self._llm.chat([{"role": "user", "content": prompt}])
-        sql = self._extract_sql(response["content"])
-        sql = self._sanitize_sql(sql)
-        
-        return sql
+""")
+
+        return "".join(parts)
 
     async def _execute_sql_internal(self, sql: str) -> SQLResult:
         """SQL実行ロジック."""

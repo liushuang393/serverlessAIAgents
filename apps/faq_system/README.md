@@ -41,6 +41,24 @@ uvicorn apps.faq_system.main:app --reload --port 8001
 
 詳細な設計と使用方法は [DESIGN.md](./DESIGN.md) を参照してください。
 
+### テスト手順
+
+```bash
+# 1. NL2SQL 増強サービスの単体テスト（28テスト）
+pytest tests/unit/test_nl2sql_services.py -v --no-cov
+
+# 2. FAQ システム全体のテスト
+pytest apps/faq_system/tests/ -v --no-cov
+
+# 3. サーバー起動してAPIテスト
+uvicorn apps.faq_system.main_v3:app --reload --port 8003
+
+# 4. API テスト（別ターミナル）
+curl -X POST http://localhost:8003/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"message": "今月の売上TOP10を教えて"}'
+```
+
 ---
 
 ## v2.0 強化版
@@ -323,12 +341,25 @@ print(f"影響: {result['impact']}")
 print(f"Release Note: {result['deliverables']['release_note']}")
 ```
 
-### データ分析
+### データ分析（NL2SQL 増強版）
 
 ```python
-from apps.faq_system.backend.agents import AnalyticsAgent
+from apps.faq_system.backend.agents import AnalyticsAgent, AnalyticsConfig, NL2SQLEnhancementConfig
 
-agent = AnalyticsAgent()
+# NL2SQL 増強設定
+nl2sql_config = NL2SQLEnhancementConfig(
+    enable_schema_linking=True,   # Schema Linking 有効
+    schema_linking_use_llm=False, # LLM スコアリング（オプション）
+    enable_fewshot=True,          # Few-shot 動的選択
+    fewshot_k=3,                  # 類似例の数
+    enable_postprocess=True,      # SQL 後処理（検証・修正）
+)
+
+config = AnalyticsConfig(
+    nl2sql_enhancement=nl2sql_config,
+)
+
+agent = AnalyticsAgent(config=config)
 
 result = await agent.run({
     "question": "今月の売上TOP10を教えてください",
@@ -338,6 +369,35 @@ result = await agent.run({
 print(f"回答: {result['answer']}")
 print(f"SQL: {result['sql']}")
 print(f"証拠チェーン: {result['evidence_chain']}")
+```
+
+#### NL2SQL 増強機能
+
+| 機能 | 説明 | 設定 |
+|------|------|------|
+| **Schema Linking** | 関連テーブル・カラムを自動選択（全スキーマをLLMに渡さない） | `enable_schema_linking` |
+| **Few-shot 動的選択** | BM25 類似度で最適な例を選択（ベクトルDB不要） | `enable_fewshot`, `fewshot_k` |
+| **SQL 後処理** | 構文検証、セキュリティ検証、自動修正 | `enable_postprocess` |
+
+#### DataAnalyticsAgent（統一入口）
+
+フレームワーク層の統一 Agent も利用可能：
+
+```python
+from agentflow.agents import DataAnalyticsAgent, DataAnalyticsConfig
+
+agent = DataAnalyticsAgent(config=DataAnalyticsConfig(
+    db_schema={"sales": ["id", "amount", "date", "region"]},
+    auto_chart=True,
+    auto_insights=True,
+    enable_dsl_pipeline=True,  # NL → DSL → SQL パイプライン
+))
+
+result = await agent.run({"question": "今月の売上TOP10を教えて"})
+print(f"SQL: {result['sql']}")
+print(f"DSL: {result['dsl']}")      # 中間表現
+print(f"Chart: {result['chart']}")  # 自動生成チャート
+print(f"Insights: {result['insights']}")  # データインサイト
 ```
 
 ### 術語辞書

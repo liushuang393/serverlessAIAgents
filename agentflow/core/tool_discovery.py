@@ -221,6 +221,67 @@ class ToolDiscoveryService:
         self._logger.info(f"リフレッシュ完了: {len(self._registry)} ツール")
         return len(self._registry)
 
+    async def discover_skills_from_engine(self) -> int:
+        """SkillEngine からスキルを発見してツールとして登録.
+
+        ビルトインスキルおよびユーザー学習スキルを自動発見。
+
+        Returns:
+            登録されたスキル数
+        """
+        try:
+            from agentflow.skills.loader import SkillLoader
+            from pathlib import Path
+
+            count = 0
+            loader = SkillLoader()
+
+            # ビルトインスキルディレクトリ
+            builtin_dir = Path(__file__).parent.parent / "skills" / "builtin"
+            if builtin_dir.exists():
+                skills = loader.load_directory(builtin_dir, recursive=True)
+                for skill in skills:
+                    try:
+                        tool_def = ToolDefinition.from_skill(skill)
+                        self._registry.register(tool_def)
+                        count += 1
+                    except Exception as e:
+                        self._logger.warning(f"スキル登録エラー {getattr(skill, 'name', '?')}: {e}")
+
+            # ユーザー学習スキルディレクトリ
+            user_skills_dir = Path.home() / ".agentflow" / "skills"
+            if user_skills_dir.exists():
+                skills = loader.load_directory(user_skills_dir, recursive=True)
+                for skill in skills:
+                    try:
+                        tool_def = ToolDefinition.from_skill(skill)
+                        self._registry.register(tool_def)
+                        count += 1
+                    except Exception as e:
+                        self._logger.warning(f"ユーザースキル登録エラー {getattr(skill, 'name', '?')}: {e}")
+
+            # ルートスキルディレクトリ（新規）
+            root_skills_dir = Path(__file__).parent.parent.parent / "skills"
+            if root_skills_dir.exists():
+                skills = loader.load_directory(root_skills_dir, recursive=True)
+                for skill in skills:
+                    try:
+                        tool_def = ToolDefinition.from_skill(skill)
+                        self._registry.register(tool_def)
+                        count += 1
+                    except Exception as e:
+                        self._logger.warning(f"ルートスキル登録エラー {getattr(skill, 'name', '?')}: {e}")
+
+            self._logger.debug(f"SkillEngine からスキル発見: {count}")
+            return count
+
+        except ImportError:
+            self._logger.debug("SkillLoader が利用不可")
+            return 0
+        except Exception as e:
+            self._logger.warning(f"スキル発見エラー: {e}")
+            return 0
+
 
 __all__ = [
     "ToolDiscoveryService",

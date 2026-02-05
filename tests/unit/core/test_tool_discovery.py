@@ -115,3 +115,26 @@ class TestToolDiscoveryService:
         service = ToolDiscoveryService(tool_registry)
 
         assert service.registry is tool_registry
+
+    @pytest.mark.asyncio
+    async def test_discover_skills_from_skill_engine(self, tool_registry):
+        """SkillEngine からスキルを発見してツールとして登録."""
+        from agentflow.core.tool_discovery import ToolDiscoveryService
+        from agentflow.core.tool_definition import ToolSource
+
+        service = ToolDiscoveryService(tool_registry)
+
+        # SkillEngine から発見
+        count = await service.discover_skills_from_engine()
+
+        # ビルトインスキルが登録されていることを確認
+        assert count > 0
+
+        # スキルがツールとして登録されていることを確認
+        skill_tools = tool_registry.filter_by_source(ToolSource.SKILL)
+        assert len(skill_tools) > 0
+
+        # RAG スキルが存在することを確認
+        rag_tool = tool_registry.get("tool://skill/rag")
+        assert rag_tool is not None
+        assert "検索" in rag_tool.description or "retrieval" in rag_tool.description.lower()

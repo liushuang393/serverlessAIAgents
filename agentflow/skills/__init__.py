@@ -1,4 +1,4 @@
-"""AgentFlow Skills - 自動進化能力システム.
+"""AgentFlow Skills - 自動進化能力システム（Claude Code Skills 互換）.
 
 このモジュールは Claude Code Skills 完全互換の自動進化能力システムを提供します：
 
@@ -7,43 +7,50 @@
                      → 不在なら自動生成 → 検証 → 固化 → 実行
   = 越用越厉害（使うほど強くなる）
 
-機能：
-- SKILL.md ベースの能力定義（Claude Code Skills 互換）
-- 自動マッチング（triggers, description）
-- 自動生成（LLM による新 Skill 作成）
-- 自動固化（learned_skills ディレクトリへ保存）
-- RAG/ChatBot などの組み込みスキル
-- OS/Browser 制御スキル（セキュリティ隔離設計）
+ディレクトリ構造：
+- core/: フレームワーク基盤（SkillEngine, SkillLoader, etc.）
+- builtin/: 組み込み Skill（SKILL.md + Python 実装が同じディレクトリ）
+- os/: OS 制御スキル
+- browser/: ブラウザ制御スキル
 
 参考：
 - Anthropic Claude Code Skills 仕様
 - https://code.claude.com/docs/en/skills
 """
 
+# ========== フレームワーク基盤（core/）==========
 # 基本クラス
-from agentflow.skills.base import Skill, SkillMetadata
+from agentflow.skills.core.base import Skill, SkillMetadata
 
 # ローダーとレジストリ
-from agentflow.skills.loader import SkillLoader, SkillRegistry
+from agentflow.skills.core.loader import SkillLoader, SkillRegistry
 
 # 自動進化コンポーネント
-from agentflow.skills.matcher import MatchResult, SkillMatcher
-from agentflow.skills.generator import GenerationResult, SkillGenerator
-from agentflow.skills.validator import SkillValidator, ValidationResult
-from agentflow.skills.persister import SkillPersister
+from agentflow.skills.core.matcher import MatchResult, SkillMatcher
+from agentflow.skills.core.generator import GenerationResult, SkillGenerator
+from agentflow.skills.core.validator import SkillValidator, ValidationResult
+from agentflow.skills.core.persister import SkillPersister
 
 # 統合エンジン
-from agentflow.skills.engine import SkillEngine, SkillExecutionResult
+from agentflow.skills.core.engine import SkillEngine, SkillExecutionResult
 
 # ルーター（Anthropic Skills体系準拠）
-from agentflow.skills.router import RoutingResult, SkillMeta, SkillRouter
+from agentflow.skills.core.router import RoutingResult, SkillMeta, SkillRouter
 
 # ランタイム（Anthropic Skills体系準拠）
-from agentflow.skills.runtime import ScriptResult, SkillRuntime
+from agentflow.skills.core.runtime import ScriptResult, SkillRuntime
 
-# 組み込みスキル
-from agentflow.skills.chatbot import ChatBotConfig, ChatBotSkill, ChatMessage, ChatSession
-from agentflow.skills.rag import RAGConfig, RAGResult, RAGSkill
+# ========== 組み込みスキル（builtin/）==========
+# RAG Skill
+from agentflow.skills.builtin.rag import RAGConfig, RAGResult, RAGSkill
+
+# ChatBot Skill
+from agentflow.skills.builtin.chatbot import (
+    ChatBotConfig,
+    ChatBotSkill,
+    ChatMessage,
+    ChatSession,
+)
 
 # ========== OS/Browser 制御スキル（セキュリティ隔離設計） ==========
 # ゲートウェイ
@@ -92,7 +99,7 @@ from agentflow.skills.browser import (
 
 # Vision スキル（画像認識）
 try:
-    from agentflow.skills.vision import (
+    from agentflow.skills.builtin.vision import (
         VisionConfig,
         VisionProvider,
         VisionResult,
@@ -106,7 +113,7 @@ except ImportError:
 
 # Voice スキル（音声認識・合成）
 try:
-    from agentflow.skills.voice import (
+    from agentflow.skills.builtin.voice import (
         TTSVoice,
         VoiceConfig,
         VoiceProvider,
@@ -119,11 +126,20 @@ except ImportError:
     TTSVoice = None  # type: ignore[misc, assignment]
 
 # 会話エクスポートスキル
-from agentflow.skills.conversation_export import (
+from agentflow.skills.builtin.conversation_export import (
     ConversationExportSkill,
     ExportConfig,
     ExportFormat,
     ExportMessage,
+)
+
+# カレンダースキル
+from agentflow.skills.builtin.calendar import (
+    CalendarEvent,
+    CalendarSkill,
+    EventStatus,
+    RecurrenceType,
+    TimeSlot,
 )
 
 __all__ = [
@@ -207,5 +223,11 @@ __all__ = [
     "ExportConfig",
     "ExportFormat",
     "ExportMessage",
+    # カレンダースキル
+    "CalendarEvent",
+    "CalendarSkill",
+    "EventStatus",
+    "RecurrenceType",
+    "TimeSlot",
 ]
 

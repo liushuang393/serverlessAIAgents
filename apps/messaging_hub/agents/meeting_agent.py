@@ -19,7 +19,7 @@ from agentflow.providers import get_llm
 
 
 if TYPE_CHECKING:
-    from agentflow.skills.calendar import CalendarEvent, CalendarSkill
+    from agentflow.skills import CalendarEvent, CalendarSkill
 
 
 @dataclass

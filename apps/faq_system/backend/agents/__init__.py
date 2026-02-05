@@ -38,6 +38,7 @@ from apps.faq_system.backend.agents.analytics_agent import (
     AnalyticsResponse,
     SQLGuardrails,
     EvidenceChain,
+    NL2SQLEnhancementConfig,
 )
 
 __all__ = [
@@ -60,10 +61,11 @@ __all__ = [
     "MaintenanceResponse",
     "DiffResult",
     "ImpactAnalysis",
-    # 分析
+    # 分析（NL2SQL 増強対応）
     "AnalyticsAgent",
     "AnalyticsConfig",
     "AnalyticsResponse",
     "SQLGuardrails",
     "EvidenceChain",
+    "NL2SQLEnhancementConfig",
 ]

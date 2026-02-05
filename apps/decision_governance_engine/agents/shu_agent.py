@@ -17,7 +17,7 @@ import json
 import logging
 from typing import Any
 
-from agentflow.skills.rag import RAGConfig, RAGSkill
+from agentflow.skills import RAGConfig, RAGSkill
 
 from agentflow import ResilientAgent
 from agentflow.core.exceptions import AgentOutputValidationError

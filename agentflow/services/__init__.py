@@ -91,11 +91,18 @@ from agentflow.services.chart_service import (
     ChartConfig,
     ChartType,
     ChartFormat,
+    # 増強: ダッシュボード・ドリルダウン
+    DrillDownConfig,
+    DashboardPanel,
+    DashboardConfig,
+    ChartRecommendation,
 )
 from agentflow.services.suggestion_service import (
     SuggestionService,
     SuggestionConfig,
     SuggestionType,
+    # 増強: 優先度
+    SuggestionPriority,
 )
 from agentflow.services.auth_service import (
     AuthService,
@@ -121,6 +128,37 @@ from agentflow.services.semantic_layer import (
     MetricType,
     AggregationType,
     TimeGranularity,
+    # DSL 中間表現層
+    QueryDSL,
+    FilterDSL,
+    OrderByDSL,
+    TimeRangeDSL,
+    FilterOperator,
+    SortDirection,
+)
+
+# 新規追加: NL2SQL 増強コンポーネント（学術研究に基づく）
+from agentflow.services.schema_linker import (
+    SchemaLinker,
+    SchemaLinkerConfig,
+    SchemaLinkResult,
+    TableInfo,
+    ColumnInfo,
+)
+from agentflow.services.fewshot_manager import (
+    FewshotManager,
+    FewshotManagerConfig,
+    FewshotExample,
+    BM25,
+)
+from agentflow.services.sql_postprocessor import (
+    SQLPostProcessor,
+    PostProcessorConfig,
+    PostProcessResult,
+    ValidationResult,
+    CorrectionResult,
+    ValidationLevel,
+    SQLErrorType,
 )
 
 __all__ = [
@@ -183,4 +221,28 @@ __all__ = [
     "MetricType",
     "AggregationType",
     "TimeGranularity",
+    # DSL 中間表現層
+    "QueryDSL",
+    "FilterDSL",
+    "OrderByDSL",
+    "TimeRangeDSL",
+    "FilterOperator",
+    "SortDirection",
+    # NL2SQL 増強コンポーネント
+    "SchemaLinker",
+    "SchemaLinkerConfig",
+    "SchemaLinkResult",
+    "TableInfo",
+    "ColumnInfo",
+    "FewshotManager",
+    "FewshotManagerConfig",
+    "FewshotExample",
+    "BM25",
+    "SQLPostProcessor",
+    "PostProcessorConfig",
+    "PostProcessResult",
+    "ValidationResult",
+    "CorrectionResult",
+    "ValidationLevel",
+    "SQLErrorType",
 ]

@@ -332,6 +332,46 @@ async for event in preview.run_debug(workflow, inputs, breakpoints=["node-1"]):
 | 📦 **CLI** | `agentflow init/run/create` |
 | 🔒 **型安全** | 100% 型アノテーション |
 | ⚡ **非同期** | 完全非同期 I/O |
+| 🤖 **Auto-Agent** | 統一ツール・Agentレジストリ、能力ベースマッチング、Skills統合 (v1.8.1 NEW) |
+
+### 🤖 Auto-Agent + Skills 統合（v1.8.1 NEW）
+
+統一ツール・Agentレジストリを通じた、能力ベースの自動Agent選択システム：
+
+```
+タスク要件 → AgentRegistry検索 → 最適Agent選択 → ツール自動バインド → 実行
+```
+
+```python
+from agentflow import agent
+from agentflow.engines import SimpleEngine
+from agentflow.core.tool_discovery import ToolDiscoveryService
+from agentflow.core.tool_registry import get_global_tool_registry
+
+# Step 1: Skills を自動発見してツールとして登録
+service = ToolDiscoveryService(get_global_tool_registry())
+await service.discover_skills_from_engine()  # ビルトインスキルを自動発見
+
+# Step 2: @agent でAgent定義（AgentRegistry に自動登録）
+@agent(skills=["rag", "chatbot"])
+class MyAgent:
+    """RAG と Chatbot スキルを使用する Agent."""
+    system_prompt = "あなたは親切なアシスタントです"
+
+# Step 3: SimpleEngine で実行（スキルを自動バインド）
+engine = SimpleEngine(agent=MyAgent, skills=["rag"])
+result = await engine.run({"query": "質問"})
+```
+
+**Skills ディレクトリ構成:**
+```
+skills/
+├── builtin/     # フレームワーク提供スキル（rag, chatbot, etc.）
+├── user/        # ユーザー定義スキル
+└── apps/        # アプリケーション固有スキル
+```
+
+詳細は [Auto-Agent アーキテクチャ](docs/auto-agent-architecture.md) を参照。
 
 ### 🎯 Skills 自動進化システム（NEW）
 
@@ -521,16 +561,61 @@ vectors = await emb.embed_batch(["text1", "text2"])
 
 ## 📦 インストール
 
+### 前提条件
+
+| 要件 | バージョン | 確認コマンド |
+|------|-----------|-------------|
+| **Python** | 3.13+ | `python --version` |
+| **pip** | 最新 | `pip --version` |
+| **Node.js** | 18+ (Studio UI 使用時) | `node --version` |
+| **Git** | 最新 | `git --version` |
+
+### フレームワークのインストール
+
 ```bash
-# Conda 環境を作成
+# 1. リポジトリをクローン
+git clone https://github.com/your-org/agentflow.git
+cd agentflow
+
+# 2. Python 環境を作成（Conda 推奨）
 conda create -n agentflow python=3.13 -y
 conda activate agentflow
 
-# 依存関係をインストール（pyproject.toml から自動取得）
+# 3. フレームワークをインストール
 pip install -e ".[dev]"
 
-# オプション: Memvid高性能長期記憶を使用する場合
+# 4. インストール確認
+python -c "import agentflow; print(agentflow.__version__)"
+```
+
+### オプション: Studio UI（フロントエンド）
+
+```bash
+# フロントエンド依存関係をインストール
+cd studio && npm install
+
+# 開発サーバー起動
+npm run dev  # http://localhost:5173
+```
+
+### オプション: 追加機能
+
+```bash
+# Memvid 高性能長期記憶
 pip install -e ".[dev,memvid]"
+
+# 全機能
+pip install -e ".[dev,memvid,channels]"
+```
+
+### 環境変数設定
+
+```bash
+# .env ファイルを作成（.env.example からコピー）
+cp .env.example .env
+
+# 最低限必要な設定
+OPENAI_API_KEY=sk-...           # または ANTHROPIC_API_KEY
 ```
 
 ---
@@ -831,6 +916,77 @@ uvicorn api:app --reload --port ${API_PORT}
 
 ---
 
+## 🏢 Apps とフレームワークの関係
+
+### 概要
+
+`apps/` ディレクトリには、AgentFlow フレームワークを使用した**サンプルアプリケーション**が含まれています。
+これらは独立したアプリケーションであり、フレームワークの使用方法を示すリファレンス実装です。
+
+```
+agentflow/                    # フレームワーク本体
+├── agents/                   # Agent基盤
+├── engines/                  # Engine Pattern（SimpleEngine, PipelineEngine, etc.）
+├── providers/                # 松耦合Provider（LLM, DB, VectorDB）
+├── skills/                   # Skills Engine
+└── ...
+
+apps/                         # サンプルアプリケーション（独立）
+├── decision_governance_engine/   # PipelineEngine 活用例
+├── market_trend_monitor/         # マルチAgent データ収集例
+├── code_migration_assistant/     # MCP ツール連携例
+├── faq_system/                   # FAQ システム例
+├── messaging_hub/                # Channels 統合例
+└── platform/                     # マルチテナントプラットフォーム例
+```
+
+### 重要なポイント
+
+| ポイント | 説明 |
+|---------|------|
+| **独立性** | 各 App は他の App に依存しません。個別に動作可能です |
+| **参照実装** | フレームワークの使用方法を示すサンプルコードです |
+| **カスタマイズ可能** | 自由にコピー・改変して独自のアプリを構築できます |
+| **フレームワーク依存** | Apps は `agentflow` フレームワークをインポートして使用します |
+
+### App の使い方
+
+```python
+# Apps はフレームワークをインポートして使用
+from agentflow import SimpleEngine, agent, get_llm
+from agentflow.engines import PipelineEngine
+
+# 例: decision_governance_engine の実行
+from apps.decision_governance_engine.engine import DecisionEngine
+
+engine = DecisionEngine()
+result = await engine.run({"question": "投資判断をしたい"})
+```
+
+### App 一覧
+
+| App | 説明 | 使用パターン |
+|-----|------|-------------|
+| **decision_governance_engine** | 多Agent 意思決定支援システム | PipelineEngine + Gate + Review |
+| **market_trend_monitor** | 市場トレンド分析 | マルチAgent データ収集 |
+| **code_migration_assistant** | コード移行支援 | MCP ツール連携 |
+| **faq_system** | FAQ 検索システム | RAG + NL2SQL |
+| **messaging_hub** | マルチプラットフォームチャット | Channels 統合 |
+| **platform** | マルチテナントプラットフォーム | RuntimeContext |
+
+### 新規 App の作成
+
+新しい App を作成する場合は、テンプレートを使用できます：
+
+```bash
+# テンプレートから新規 App を生成
+python -m agentflow.cli template generate fullstack-app apps/my_app -i
+```
+
+詳細は「🛠️ App 開発手順」セクションを参照してください。
+
+---
+
 ## 📚 ドキュメント
 
 | ドキュメント | 説明 |
@@ -843,6 +999,7 @@ uvicorn api:app --reload --port ${API_PORT}
 | [LLM ルーター](docs/guide-llm-router.md) | マルチモデル切替（NEW） |
 | [ポート管理](docs/PORT_MANAGEMENT.md) | App ポート自動管理（NEW） |
 | [アーキテクチャ](docs/architecture.md) | 設計思想・構成 |
+| [Auto-Agent](docs/auto-agent-architecture.md) | 統一ツール・Agentレジストリ (v1.8.0 NEW) |
 | [プロトコル](docs/protocols.md) | MCP/A2A/AG-UI/A2UI |
 | [API](docs/api.md) | API リファレンス |
 | [CLI](docs/cli.md) | コマンド一覧 |

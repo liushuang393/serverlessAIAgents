@@ -53,6 +53,14 @@ class ChartType(str, Enum):
     RADAR = "radar"
     HEATMAP = "heatmap"
     TABLE = "table"
+    # 増強: Redash/Superset 参照追加タイプ
+    STACKED_BAR = "stacked_bar"
+    GROUPED_BAR = "grouped_bar"
+    DONUT = "donut"
+    FUNNEL = "funnel"
+    TREEMAP = "treemap"
+    PIVOT = "pivot"
+    COMBO = "combo"  # 棒グラフ + 折れ線グラフ
 
 
 class ChartFormat(str, Enum):
@@ -62,16 +70,74 @@ class ChartFormat(str, Enum):
     BOTH = "both"
 
 
+# =============================================================================
+# ダッシュボード・ドリルダウン設定（Redash/Superset 参照）
+# =============================================================================
+
+
+@dataclass
+class DrillDownConfig:
+    """ドリルダウン設定 - クリック時の詳細表示設定."""
+    enabled: bool = True
+    drill_fields: list[str] = field(default_factory=list)  # ドリルダウン可能なフィールド
+    drill_query_template: str = ""  # ドリルダウン時のクエリテンプレート
+    max_drill_depth: int = 3  # 最大ドリルダウン階層
+
+
+@dataclass
+class DashboardPanel:
+    """ダッシュボードパネル - 1つのチャート設定."""
+    panel_id: str
+    title: str
+    chart_type: ChartType
+    data_query: str = ""
+    width: int = 6  # 12カラムグリッドで幅（1-12）
+    height: int = 4  # 高さ単位
+    x: int = 0  # グリッド位置 X
+    y: int = 0  # グリッド位置 Y
+    drill_down: DrillDownConfig = field(default_factory=DrillDownConfig)
+    filters: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class DashboardConfig:
+    """ダッシュボード設定."""
+    dashboard_id: str
+    title: str
+    panels: list[DashboardPanel] = field(default_factory=list)
+    global_filters: list[str] = field(default_factory=list)  # ダッシュボード全体フィルタ
+    refresh_interval: int = 0  # 自動更新間隔（秒、0=無効）
+    theme: str = "light"
+
+
+@dataclass
+class ChartRecommendation:
+    """チャート推薦結果 - より詳細な分析結果."""
+    primary_type: ChartType
+    primary_reason: str
+    confidence: float
+    alternatives: list[tuple[ChartType, str, float]]  # (type, reason, confidence)
+    data_characteristics: dict[str, Any]  # データ特性分析結果
+
+
 @dataclass
 class ChartConfig:
     """チャート設定."""
-    
+
     default_type: ChartType = ChartType.BAR
     format: ChartFormat = ChartFormat.ECHARTS
     theme: str = "default"
     max_data_points: int = 100
     auto_recommend: bool = True
-    
+    # 増強: ドリルダウン・ダッシュボード対応
+    enable_drill_down: bool = True
+    enable_interactivity: bool = True
+    color_palette: list[str] = field(default_factory=lambda: [
+        "#5470c6", "#91cc75", "#fac858", "#ee6666", "#73c0de",
+        "#3ba272", "#fc8452", "#9a60b4", "#ea7ccc"
+    ])
+    pivot_aggregation: str = "sum"  # sum, count, avg, min, max
+
     @classmethod
     def get_config_fields(cls) -> list[dict[str, Any]]:
         """Studio 設定フィールド定義."""
@@ -104,6 +170,19 @@ class ChartConfig:
                 "label": "自動タイプ推薦",
                 "default": True,
             },
+            {
+                "name": "enable_drill_down",
+                "type": "boolean",
+                "label": "ドリルダウン有効",
+                "default": True,
+            },
+            {
+                "name": "pivot_aggregation",
+                "type": "select",
+                "label": "ピボット集計方法",
+                "options": ["sum", "count", "avg", "min", "max"],
+                "default": "sum",
+            },
         ]
 
 
@@ -115,6 +194,9 @@ class ChartOutput:
     echarts: dict[str, Any] | None = None
     chartjs: dict[str, Any] | None = None
     recommendation: str = ""
+    # 増強: ドリルダウン・分析情報
+    drill_down_config: DrillDownConfig | None = None
+    data_characteristics: dict[str, Any] = field(default_factory=dict)
 
 
 # =============================================================================
@@ -124,10 +206,15 @@ class ChartOutput:
 
 class ChartService(ServiceBase):
     """Chart Service - フレームワーク級サービス.
-    
+
+    Redash/Superset を参照した増強版可視化サービス。
+
     Actions:
     - generate: データからチャート生成
-    - recommend: 最適なチャートタイプを推薦
+    - recommend: 最適なチャートタイプを推薦（詳細分析付き）
+    - analyze: データ特性を分析（チャート推薦の根拠を提供）
+    - pivot: ピボットテーブル生成
+    - drill_down: ドリルダウンデータ取得
     """
 
     def __init__(self, config: ChartConfig | None = None) -> None:
@@ -142,12 +229,21 @@ class ChartService(ServiceBase):
     ) -> AsyncIterator[ServiceEvent]:
         """内部実行ロジック."""
         action = kwargs.get("action", "generate")
-        
+
         if action == "generate":
             async for event in self._do_generate(execution_id, **kwargs):
                 yield event
         elif action == "recommend":
             async for event in self._do_recommend(execution_id, **kwargs):
+                yield event
+        elif action == "analyze":
+            async for event in self._do_analyze(execution_id, **kwargs):
+                yield event
+        elif action == "pivot":
+            async for event in self._do_pivot(execution_id, **kwargs):
+                yield event
+        elif action == "drill_down":
+            async for event in self._do_drill_down(execution_id, **kwargs):
                 yield event
         else:
             yield self._emit_error(execution_id, "invalid_action", f"不明なアクション: {action}")
@@ -374,6 +470,300 @@ class ChartService(ServiceBase):
         return any(re.match(p, s) for p in date_patterns)
 
     # =========================================================================
+    # 増強: データ分析・ピボット・ドリルダウン機能
+    # =========================================================================
+
+    async def _do_analyze(
+        self,
+        execution_id: str,
+        data: list[dict[str, Any]] | None = None,
+        columns: list[str] | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[ServiceEvent]:
+        """データ特性を詳細分析してチャート推薦根拠を提供."""
+        start_time = time.time()
+
+        if not data:
+            yield self._emit_error(execution_id, "no_data", "データがありません")
+            return
+
+        columns = columns or (list(data[0].keys()) if data else [])
+        characteristics = self._analyze_data_characteristics(data, columns)
+        recommendation = self._recommend_chart_with_details(data, columns, characteristics)
+
+        yield self._emit_result(execution_id, {
+            "characteristics": characteristics,
+            "recommendation": {
+                "primary_type": recommendation.primary_type.value,
+                "primary_reason": recommendation.primary_reason,
+                "confidence": recommendation.confidence,
+                "alternatives": [
+                    {"type": t.value, "reason": r, "confidence": c}
+                    for t, r, c in recommendation.alternatives
+                ],
+            },
+        }, (time.time() - start_time) * 1000)
+
+    async def _do_pivot(
+        self,
+        execution_id: str,
+        data: list[dict[str, Any]] | None = None,
+        rows: list[str] | None = None,
+        cols: list[str] | None = None,
+        values: str | None = None,
+        aggregation: str | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[ServiceEvent]:
+        """ピボットテーブル生成."""
+        start_time = time.time()
+
+        if not data:
+            yield self._emit_error(execution_id, "no_data", "データがありません")
+            return
+
+        rows = rows or []
+        cols = cols or []
+        aggregation = aggregation or self._config.pivot_aggregation
+
+        yield self._emit_progress(execution_id, 50, "ピボットテーブルを生成中...", phase="pivot")
+
+        pivot_result = self._build_pivot_table(data, rows, cols, values, aggregation)
+
+        yield self._emit_result(execution_id, {
+            "pivot_data": pivot_result["data"],
+            "row_headers": pivot_result["row_headers"],
+            "col_headers": pivot_result["col_headers"],
+            "aggregation": aggregation,
+        }, (time.time() - start_time) * 1000)
+
+    async def _do_drill_down(
+        self,
+        execution_id: str,
+        data: list[dict[str, Any]] | None = None,
+        drill_field: str | None = None,
+        drill_value: Any = None,
+        parent_filters: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> AsyncIterator[ServiceEvent]:
+        """ドリルダウンデータ取得."""
+        start_time = time.time()
+
+        if not data:
+            yield self._emit_error(execution_id, "no_data", "データがありません")
+            return
+
+        if not drill_field:
+            yield self._emit_error(execution_id, "no_drill_field", "ドリルダウンフィールドを指定してください")
+            return
+
+        parent_filters = parent_filters or {}
+
+        # フィルタリング
+        filtered_data = data
+        for key, val in parent_filters.items():
+            filtered_data = [r for r in filtered_data if r.get(key) == val]
+
+        if drill_value is not None:
+            filtered_data = [r for r in filtered_data if r.get(drill_field) == drill_value]
+
+        # ドリルダウン可能なフィールドを検出
+        next_drill_fields = self._detect_drill_fields(filtered_data, drill_field)
+
+        yield self._emit_result(execution_id, {
+            "filtered_data": filtered_data[:self._config.max_data_points],
+            "total_count": len(filtered_data),
+            "drill_field": drill_field,
+            "drill_value": drill_value,
+            "next_drill_fields": next_drill_fields,
+        }, (time.time() - start_time) * 1000)
+
+    def _analyze_data_characteristics(
+        self,
+        data: list[dict[str, Any]],
+        columns: list[str],
+    ) -> dict[str, Any]:
+        """データ特性を詳細分析."""
+        characteristics: dict[str, Any] = {
+            "row_count": len(data),
+            "column_count": len(columns),
+            "columns": {},
+        }
+
+        for col in columns:
+            col_data = [r.get(col) for r in data if r.get(col) is not None]
+            if not col_data:
+                continue
+
+            col_info: dict[str, Any] = {
+                "non_null_count": len(col_data),
+                "null_count": len(data) - len(col_data),
+            }
+
+            sample = col_data[0]
+            if isinstance(sample, (int, float)):
+                col_info["type"] = "numeric"
+                col_info["min"] = min(col_data)
+                col_info["max"] = max(col_data)
+                col_info["avg"] = sum(col_data) / len(col_data)
+            elif self._is_date_like(sample):
+                col_info["type"] = "date"
+                col_info["is_time_series"] = True
+            else:
+                col_info["type"] = "text"
+                unique_vals = set(str(v) for v in col_data)
+                col_info["unique_count"] = len(unique_vals)
+                col_info["is_categorical"] = len(unique_vals) <= 20
+
+            characteristics["columns"][col] = col_info
+
+        # 時系列判定
+        characteristics["has_time_series"] = any(
+            c.get("type") == "date" for c in characteristics["columns"].values()
+        )
+        # カテゴリカル判定
+        characteristics["has_categorical"] = any(
+            c.get("is_categorical", False) for c in characteristics["columns"].values()
+        )
+
+        return characteristics
+
+    def _recommend_chart_with_details(
+        self,
+        data: list[dict[str, Any]],
+        columns: list[str],
+        characteristics: dict[str, Any],
+    ) -> ChartRecommendation:
+        """詳細なチャート推薦."""
+        row_count = characteristics["row_count"]
+        has_time_series = characteristics.get("has_time_series", False)
+        has_categorical = characteristics.get("has_categorical", False)
+
+        numeric_cols = [c for c, info in characteristics["columns"].items() if info.get("type") == "numeric"]
+        text_cols = [c for c, info in characteristics["columns"].items() if info.get("type") == "text"]
+        date_cols = [c for c, info in characteristics["columns"].items() if info.get("type") == "date"]
+
+        alternatives: list[tuple[ChartType, str, float]] = []
+
+        # 推薦ロジック（Redash/Superset 参照）
+        if has_time_series and numeric_cols:
+            primary = ChartType.LINE
+            reason = "時系列データのためトレンド表示に最適"
+            confidence = 0.95
+            alternatives.append((ChartType.AREA, "塗りつぶしで累積効果を表示", 0.85))
+            alternatives.append((ChartType.BAR, "期間別比較にも適している", 0.70))
+        elif len(text_cols) == 1 and len(numeric_cols) == 1 and row_count <= 8:
+            primary = ChartType.PIE
+            reason = "カテゴリ別の割合表示に最適"
+            confidence = 0.90
+            alternatives.append((ChartType.DONUT, "中央にKPI表示可能", 0.85))
+            alternatives.append((ChartType.BAR, "比較分析にも適している", 0.75))
+        elif has_categorical and numeric_cols:
+            primary = ChartType.BAR
+            reason = "カテゴリ別比較に最適"
+            confidence = 0.88
+            alternatives.append((ChartType.STACKED_BAR, "構成比表示にも適している", 0.80))
+            alternatives.append((ChartType.PIE, "割合表示にも適している", 0.65))
+        elif len(numeric_cols) >= 2:
+            primary = ChartType.SCATTER
+            reason = "数値間の相関分析に最適"
+            confidence = 0.85
+            alternatives.append((ChartType.HEATMAP, "密度分布の表示に適している", 0.70))
+        else:
+            primary = ChartType.TABLE
+            reason = "データ構造が複雑なため詳細表示を推奨"
+            confidence = 0.60
+            alternatives.append((ChartType.BAR, "数値があれば棒グラフも可能", 0.50))
+
+        return ChartRecommendation(
+            primary_type=primary,
+            primary_reason=reason,
+            confidence=confidence,
+            alternatives=alternatives,
+            data_characteristics=characteristics,
+        )
+
+    def _build_pivot_table(
+        self,
+        data: list[dict[str, Any]],
+        rows: list[str],
+        cols: list[str],
+        values: str | None,
+        aggregation: str,
+    ) -> dict[str, Any]:
+        """ピボットテーブルを構築."""
+        from collections import defaultdict
+
+        # 行・列ヘッダーを収集
+        row_headers: list[tuple[Any, ...]] = []
+        col_headers: list[tuple[Any, ...]] = []
+        pivot_data: dict[tuple[Any, ...], dict[tuple[Any, ...], list[Any]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
+
+        for record in data:
+            row_key = tuple(record.get(r, "") for r in rows) if rows else ("",)
+            col_key = tuple(record.get(c, "") for c in cols) if cols else ("",)
+            val = record.get(values, 0) if values else 1
+
+            if row_key not in row_headers:
+                row_headers.append(row_key)
+            if col_key not in col_headers:
+                col_headers.append(col_key)
+
+            pivot_data[row_key][col_key].append(val)
+
+        # 集計実行
+        result_data: list[list[Any]] = []
+        for row_key in row_headers:
+            row: list[Any] = list(row_key)
+            for col_key in col_headers:
+                cell_values = pivot_data[row_key][col_key]
+                if not cell_values:
+                    aggregated = 0
+                elif aggregation == "sum":
+                    aggregated = sum(cell_values)
+                elif aggregation == "count":
+                    aggregated = len(cell_values)
+                elif aggregation == "avg":
+                    aggregated = sum(cell_values) / len(cell_values)
+                elif aggregation == "min":
+                    aggregated = min(cell_values)
+                elif aggregation == "max":
+                    aggregated = max(cell_values)
+                else:
+                    aggregated = sum(cell_values)
+                row.append(aggregated)
+            result_data.append(row)
+
+        return {
+            "data": result_data,
+            "row_headers": [list(r) for r in row_headers],
+            "col_headers": [list(c) for c in col_headers],
+        }
+
+    def _detect_drill_fields(
+        self,
+        data: list[dict[str, Any]],
+        current_field: str,
+    ) -> list[str]:
+        """ドリルダウン可能なフィールドを検出."""
+        if not data:
+            return []
+
+        all_fields = list(data[0].keys())
+        drill_fields = []
+
+        for field in all_fields:
+            if field == current_field:
+                continue
+            # カテゴリカルなフィールドのみドリルダウン対象
+            unique_vals = set(str(r.get(field, "")) for r in data[:100])
+            if 2 <= len(unique_vals) <= 50:
+                drill_fields.append(field)
+
+        return drill_fields[:5]  # 最大5フィールド
+
+    # =========================================================================
     # Studio 統合用メソッド
     # =========================================================================
 
@@ -406,4 +796,9 @@ __all__ = [
     "ChartOutput",
     "ChartType",
     "ChartFormat",
+    # 増強: ダッシュボード・ドリルダウン
+    "DrillDownConfig",
+    "DashboardPanel",
+    "DashboardConfig",
+    "ChartRecommendation",
 ]

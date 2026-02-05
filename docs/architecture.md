@@ -1,7 +1,7 @@
 # AgentFlow アーキテクチャ設計書
 
-> **バージョン**: 2.4.0
-> **更新日**: 2026-01-15
+> **バージョン**: 2.5.0
+> **更新日**: 2026-02-05
 
 ---
 
@@ -92,6 +92,12 @@ AgentFlow は**シンプルさ**と**柔軟性**を両立した多 Agent フレ�
 │     ├── ResilientAgent: 回路遮断・リトライ・検証                │
 │     ├── RollbackManager: マルチレベルロールバック（NEW）        │
 │     └── Metadata: agent.yaml メタデータ管理                     │
+├─────────────────────────────────────────────────────────────────┤
+│  🤖 Auto-Agent 層（v1.8.0 NEW）                                  │
+│     ├── ToolRegistry: 全ソースのツール統一管理                  │
+│     ├── AgentRegistry: Agent能力とファクトリ統一管理            │
+│     ├── ToolBinder: ランタイムツールアタッチ                    │
+│     └── ToolDiscoveryService: 全ソースツール発見                │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -553,14 +559,20 @@ if output_result.needs_review:
 agentflow/
 ├── core/                 # コアモジュール
 │   ├── agent_block.py    # Agent 基底クラス
-│   ├── blueprint.py      # 宣言式Agent定義（NEW）
+│   ├── blueprint.py      # 宣言式Agent定義
 │   ├── registry.py       # 統一レジストリ
 │   ├── engine.py         # ワークフローエンジン
 │   ├── error_response.py # RFC 7807 統一エラー
-│   ├── constraint_validator.py # 制約検証（NEW）
-│   ├── dual_verifier.py  # 二重検証（NEW）
-│   ├── rollback_manager.py # ロールバック管理（NEW）
-│   └── metadata.py       # メタデータ管理
+│   ├── constraint_validator.py # 制約検証
+│   ├── dual_verifier.py  # 二重検証
+│   ├── rollback_manager.py # ロールバック管理
+│   ├── metadata.py       # メタデータ管理
+│   ├── tool_definition.py # 統一ツール定義（v1.8.0 NEW）
+│   ├── tool_registry.py  # ツールレジストリ（v1.8.0 NEW）
+│   ├── capability_spec.py # Agent能力仕様（v1.8.0 NEW）
+│   ├── agent_registry.py # Agentレジストリ（v1.8.0 NEW）
+│   ├── tool_binding.py   # ツールバインディング（v1.8.0 NEW）
+│   └── tool_discovery.py # ツール発見サービス（v1.8.0 NEW）
 ├── orchestration/        # オーケストレーション層（NEW）
 │   ├── orchestrator.py   # 統合オーケストレーター
 │   ├── planner.py        # 計画エージェント
@@ -704,8 +716,96 @@ results = await vdb.search(query="query", query_embedding=[...], top_k=5)
 
 ---
 
+## 🤖 Auto-Agent アーキテクチャ（v1.8.0 NEW）
+
+統一ツール・Agentレジストリを通じた、自律的Agent分析と自動Agent生成の基盤システム。
+
+### 設計原則
+
+| 原則 | 説明 |
+|------|------|
+| **高度抽象化** | ツールソース（MCP/Skills/Builtin）を統一インターフェースで表現 |
+| **低結合** | レジストリはインターフェースであり、具体実装に依存しない |
+| **高凝集** | 各モジュールは単一責任を持つ |
+| **拡張容易** | 新しいツールソースは `ToolDefinition.from_*()` を実装するだけ |
+
+### コアコンポーネント
+
+| コンポーネント | クラス | 役割 |
+|--------------|--------|------|
+| **ToolDefinition** | `ToolDefinition` | 統一ツール表現（URI、スキーマ、メタデータ） |
+| **ToolRegistry** | `ToolRegistry` | ツール登録・検索・フィルタリング |
+| **AgentCapabilitySpec** | `AgentCapabilitySpec` | Agent能力宣言（ツール/LLM要件） |
+| **AgentRegistry** | `AgentRegistry` | Agent能力登録・マッチング・ファクトリ |
+| **ToolBinder** | `ToolBinder` | ランタイムツールバインディング |
+| **ToolDiscoveryService** | `ToolDiscoveryService` | 全ソースからツール発見 |
+
+### URI スキーム
+
+| スキーム | 説明 | 例 |
+|----------|------|-----|
+| `tool://builtin/` | ビルトインツール | `tool://builtin/calculator` |
+| `tool://mcp/` | MCPサーバーツール | `tool://mcp/filesystem/read_file` |
+| `tool://skill/` | Skillsツール | `tool://skill/summarize` |
+| `tool://dynamic/` | 動的生成ツール | `tool://dynamic/custom_tool` |
+
+### 使用例
+
+```python
+from agentflow import (
+    get_global_tool_registry,
+    get_global_agent_registry,
+    ToolDiscoveryService,
+    AgentCapabilitySpec,
+    CapabilityRequirement,
+    ToolBinder,
+)
+
+# Step 1: ツール発見・登録
+tool_registry = get_global_tool_registry()
+service = ToolDiscoveryService(tool_registry)
+service.register_builtin(
+    name="search",
+    description="ドキュメント検索",
+    input_schema={"type": "object", "properties": {"query": {"type": "string"}}},
+)
+
+# Step 2: Agent能力定義・登録
+agent_registry = get_global_agent_registry()
+capability = AgentCapabilitySpec(
+    id="search_agent",
+    name="Search Agent",
+    description="ドキュメントを検索して情報を取得",
+    tags=["search", "document"],
+    required_tools=["tool://builtin/search"],
+)
+agent_registry.register("SearchAgent", capability, lambda: SearchAgent())
+
+# Step 3: タスク要件でAgent検索
+requirement = CapabilityRequirement(
+    description="ドキュメントを検索",
+    required_tags=["search"],
+)
+matches = agent_registry.find_matching(requirement)
+best_agent_id = matches[0][0]  # "SearchAgent"
+
+# Step 4: ツールをバインド
+factory = agent_registry.get_factory(best_agent_id)
+agent = factory()
+binder = ToolBinder(tool_registry)
+bound_agent = await binder.bind_for_capability(agent, capability)
+
+# Step 5: バインドされたツールをLLMに渡す
+mcp_tools = bound_agent._tools.to_mcp_format()
+```
+
+詳細は [Auto-Agent アーキテクチャ詳細](auto-agent-architecture.md) を参照。
+
+---
+
 ## 📚 関連ドキュメント
 
+- [Auto-Agent アーキテクチャ](auto-agent-architecture.md) - 統一ツール・Agentレジストリ詳細（NEW）
 - [Skills ガイド](guide-skills.md) - 自動進化システム詳細
 - [プロトコル詳細](protocols.md) - MCP/A2A/AG-UI/A2UI の使用方法
 - [API リファレンス](api.md) - 全 API 詳細

@@ -418,7 +418,7 @@ def chat(ctx: click.Context, system_prompt: str, model: str) -> None:
         agentflow chat --model gpt-4o
     """
     from agentflow.llm.llm_client import LLMConfig
-    from agentflow.skills.chatbot import ChatBotConfig, ChatBotSkill
+    from agentflow.skills import ChatBotConfig, ChatBotSkill
 
     console.print(
         Panel(

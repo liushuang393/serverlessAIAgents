@@ -55,6 +55,17 @@ from agentflow.agents.sales_agent import (
     SalesAgent,
     SalesAgentConfig,
 )
+from agentflow.agents.data_analytics_agent import (
+    DataAnalyticsAgent,
+    DataAnalyticsConfig,
+    DataAnalyticsInput,
+    DataAnalyticsOutput,
+    NL2SQLEnhancementConfig,
+    DSLOutputSchema,
+    ChartDataSchema,
+    InsightSchema,
+    SuggestionOutputSchema,
+)
 
 __all__ = [
     # FAQ Agent
@@ -68,4 +79,14 @@ __all__ = [
     # Sales Agent
     "SalesAgent",
     "SalesAgentConfig",
+    # DataAnalytics Agent（NL2SQL + DSL + Chart + Suggestion 統合）
+    "DataAnalyticsAgent",
+    "DataAnalyticsConfig",
+    "DataAnalyticsInput",
+    "DataAnalyticsOutput",
+    "NL2SQLEnhancementConfig",
+    "DSLOutputSchema",
+    "ChartDataSchema",
+    "InsightSchema",
+    "SuggestionOutputSchema",
 ]

@@ -179,13 +179,13 @@ class AgentRegistry:
         scored.sort(key=lambda x: x[1], reverse=True)
         return scored[:limit]
 
-    def list_all(self) -> list[str]:
-        """登録された全Agent IDをリスト.
+    def list_all(self) -> list[AgentEntry]:
+        """登録された全Agentエントリをリスト.
 
         Returns:
-            Agent IDのリスト
+            AgentEntryのリスト
         """
-        return list(self._agents.keys())
+        return list(self._agents.values())
 
     def get_all_capabilities(self) -> dict[str, AgentCapabilitySpec]:
         """全Agentの能力を取得.

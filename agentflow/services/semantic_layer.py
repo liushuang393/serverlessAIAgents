@@ -167,6 +167,202 @@ class SQLHints:
     joins: list[str] = field(default_factory=list)
 
 
+# =============================================================================
+# DSL 中間表現層（NL → DSL → SQL パイプライン用）
+# =============================================================================
+
+
+class FilterOperator(str, Enum):
+    """フィルタ演算子."""
+
+    EQ = "="
+    NE = "!="
+    GT = ">"
+    GE = ">="
+    LT = "<"
+    LE = "<="
+    IN = "IN"
+    NOT_IN = "NOT IN"
+    LIKE = "LIKE"
+    IS_NULL = "IS NULL"
+    IS_NOT_NULL = "IS NOT NULL"
+    BETWEEN = "BETWEEN"
+
+
+class SortDirection(str, Enum):
+    """ソート方向."""
+
+    ASC = "ASC"
+    DESC = "DESC"
+
+
+@dataclass
+class FilterDSL:
+    """フィルタ条件 DSL.
+
+    Attributes:
+        field: フィールド名（metric_id または dimension_id）
+        operator: 演算子
+        value: 値
+        values: 複数値（IN用）
+    """
+
+    field: str
+    operator: FilterOperator
+    value: Any = None
+    values: list[Any] = field(default_factory=list)
+
+
+@dataclass
+class OrderByDSL:
+    """ソート条件 DSL.
+
+    Attributes:
+        field: フィールド名
+        direction: ソート方向
+    """
+
+    field: str
+    direction: SortDirection = SortDirection.DESC
+
+
+@dataclass
+class TimeRangeDSL:
+    """時間範囲 DSL.
+
+    Attributes:
+        start: 開始日時（ISO形式 or 相対表現）
+        end: 終了日時
+        granularity: 時間粒度
+    """
+
+    start: str | None = None
+    end: str | None = None
+    granularity: TimeGranularity | None = None
+    relative: str | None = None  # "last_30_days", "this_month" 等
+
+
+@dataclass
+class QueryDSL:
+    """クエリ DSL - NL と SQL の中間表現.
+
+    Quick BI の QQL や Cube.js の Query 形式を参考に設計。
+    自然言語から直接SQLを生成せず、構造化されたDSLを経由することで:
+    - 解釈の透明性向上
+    - デバッグ容易性
+    - 口径統一の強制
+
+    Attributes:
+        metrics: 指標IDリスト
+        dimensions: ディメンションIDリスト
+        filters: フィルタ条件リスト
+        order_by: ソート条件リスト
+        limit: 取得件数
+        time_range: 時間範囲
+        confidence: 変換信頼度
+        raw_query: 元の自然言語クエリ
+
+    Example:
+        >>> dsl = QueryDSL(
+        ...     metrics=["revenue", "order_count"],
+        ...     dimensions=["category", "region"],
+        ...     filters=[FilterDSL(field="amount", operator=FilterOperator.GE, value=1000)],
+        ...     order_by=[OrderByDSL(field="revenue", direction=SortDirection.DESC)],
+        ...     limit=10,
+        ...     time_range=TimeRangeDSL(relative="this_month"),
+        ... )
+    """
+
+    metrics: list[str] = field(default_factory=list)
+    dimensions: list[str] = field(default_factory=list)
+    filters: list[FilterDSL] = field(default_factory=list)
+    order_by: list[OrderByDSL] = field(default_factory=list)
+    limit: int | None = None
+    time_range: TimeRangeDSL | None = None
+    confidence: float = 1.0
+    raw_query: str = ""
+    warnings: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        """辞書形式に変換."""
+        return {
+            "metrics": self.metrics,
+            "dimensions": self.dimensions,
+            "filters": [
+                {
+                    "field": f.field,
+                    "operator": f.operator.value,
+                    "value": f.value,
+                    "values": f.values,
+                }
+                for f in self.filters
+            ],
+            "order_by": [
+                {"field": o.field, "direction": o.direction.value}
+                for o in self.order_by
+            ],
+            "limit": self.limit,
+            "time_range": {
+                "start": self.time_range.start if self.time_range else None,
+                "end": self.time_range.end if self.time_range else None,
+                "granularity": (
+                    self.time_range.granularity.value
+                    if self.time_range and self.time_range.granularity
+                    else None
+                ),
+                "relative": self.time_range.relative if self.time_range else None,
+            } if self.time_range else None,
+            "confidence": self.confidence,
+            "raw_query": self.raw_query,
+            "warnings": self.warnings,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "QueryDSL":
+        """辞書から生成."""
+        filters = []
+        for f in data.get("filters", []):
+            filters.append(FilterDSL(
+                field=f["field"],
+                operator=FilterOperator(f["operator"]),
+                value=f.get("value"),
+                values=f.get("values", []),
+            ))
+
+        order_by = []
+        for o in data.get("order_by", []):
+            order_by.append(OrderByDSL(
+                field=o["field"],
+                direction=SortDirection(o.get("direction", "DESC")),
+            ))
+
+        time_range = None
+        if data.get("time_range"):
+            tr = data["time_range"]
+            time_range = TimeRangeDSL(
+                start=tr.get("start"),
+                end=tr.get("end"),
+                granularity=(
+                    TimeGranularity(tr["granularity"])
+                    if tr.get("granularity")
+                    else None
+                ),
+                relative=tr.get("relative"),
+            )
+
+        return cls(
+            metrics=data.get("metrics", []),
+            dimensions=data.get("dimensions", []),
+            filters=filters,
+            order_by=order_by,
+            limit=data.get("limit"),
+            time_range=time_range,
+            confidence=data.get("confidence", 1.0),
+            raw_query=data.get("raw_query", ""),
+            warnings=data.get("warnings", []),
+        )
+
+
 @dataclass
 class SemanticLayerConfig:
     """語義層設定."""
@@ -183,6 +379,9 @@ class SemanticLayerConfig:
     # 検証設定
     require_metric: bool = True
     allow_raw_columns: bool = False
+
+    # DSL 設定
+    enable_dsl_pipeline: bool = True
 
 
 class SemanticLayerService:
@@ -804,6 +1003,309 @@ class SemanticLayerService:
 
         return "\n".join(lines)
 
+    # =========================================================================
+    # DSL パイプライン（NL → DSL → SQL）
+    # =========================================================================
+
+    async def nl_to_dsl(self, query: str) -> QueryDSL:
+        """自然言語からDSLに変換.
+
+        Args:
+            query: 自然言語クエリ
+
+        Returns:
+            QueryDSL 中間表現
+        """
+        dsl = QueryDSL(raw_query=query)
+
+        # 1. 指標を解決
+        for metric_id, metric in self._metrics.items():
+            names_to_check = [metric.name.lower()] + [a.lower() for a in metric.aliases]
+            query_lower = query.lower()
+            if any(name in query_lower for name in names_to_check):
+                dsl.metrics.append(metric_id)
+
+        # 2. ディメンションを解決
+        for dim_id, dim in self._dimensions.items():
+            names_to_check = [dim.name.lower()] + [a.lower() for a in dim.aliases]
+            query_lower = query.lower()
+            if any(name in query_lower for name in names_to_check):
+                dsl.dimensions.append(dim_id)
+
+        # 3. 時間範囲を解決
+        dsl.time_range = self._parse_time_range_dsl(query)
+
+        # 4. ソートとリミットを解決
+        sort_info = self._extract_order_limit(query)
+        if sort_info.get("limit"):
+            dsl.limit = sort_info["limit"]
+        if sort_info.get("order_by"):
+            for field, direction in sort_info["order_by"]:
+                dsl.order_by.append(OrderByDSL(
+                    field=field if field != "metric" else (dsl.metrics[0] if dsl.metrics else ""),
+                    direction=SortDirection.DESC if direction == "DESC" else SortDirection.ASC,
+                ))
+
+        # 5. 信頼度計算
+        dsl.confidence = self._calculate_dsl_confidence(dsl)
+
+        # 6. 警告追加
+        if not dsl.metrics:
+            dsl.warnings.append("指標が特定できませんでした")
+        if not dsl.time_range:
+            dsl.warnings.append("時間範囲が指定されていません（デフォルト適用）")
+
+        return dsl
+
+    def _parse_time_range_dsl(self, query: str) -> TimeRangeDSL | None:
+        """時間範囲をパース（DSL形式）.
+
+        Args:
+            query: クエリ
+
+        Returns:
+            TimeRangeDSL または None
+        """
+        query_lower = query.lower()
+
+        # 相対表現パターン
+        relative_patterns = {
+            "今月": "this_month",
+            "先月": "last_month",
+            "今週": "this_week",
+            "先週": "last_week",
+            "今日": "today",
+            "昨日": "yesterday",
+            "今年": "this_year",
+            "去年": "last_year",
+            "昨年": "last_year",
+            "過去7日": "last_7_days",
+            "過去30日": "last_30_days",
+            "過去1ヶ月": "last_30_days",
+            "直近30日": "last_30_days",
+        }
+
+        for pattern, relative_key in relative_patterns.items():
+            if pattern in query_lower:
+                granularity = self._detect_time_granularity(query)
+                return TimeRangeDSL(relative=relative_key, granularity=granularity)
+
+        return None
+
+    def _detect_time_granularity(self, query: str) -> TimeGranularity | None:
+        """時間粒度を検出.
+
+        Args:
+            query: クエリ
+
+        Returns:
+            TimeGranularity または None
+        """
+        query_lower = query.lower()
+        if any(k in query_lower for k in ["日別", "日毎", "毎日"]):
+            return TimeGranularity.DAY
+        elif any(k in query_lower for k in ["週別", "週毎"]):
+            return TimeGranularity.WEEK
+        elif any(k in query_lower for k in ["月別", "月毎"]):
+            return TimeGranularity.MONTH
+        elif any(k in query_lower for k in ["四半期別"]):
+            return TimeGranularity.QUARTER
+        elif any(k in query_lower for k in ["年別", "年毎"]):
+            return TimeGranularity.YEAR
+        return None
+
+    def _calculate_dsl_confidence(self, dsl: QueryDSL) -> float:
+        """DSL信頼度を計算.
+
+        Args:
+            dsl: QueryDSL
+
+        Returns:
+            信頼度（0.0-1.0）
+        """
+        score = 1.0
+        if not dsl.metrics:
+            score -= 0.4
+        if not dsl.time_range:
+            score -= 0.2
+        if len(dsl.warnings) > 0:
+            score -= 0.1 * len(dsl.warnings)
+        return max(0.0, min(1.0, score))
+
+    def dsl_to_sql(self, dsl: QueryDSL) -> str:
+        """DSLからSQLに変換.
+
+        Args:
+            dsl: QueryDSL
+
+        Returns:
+            SQL文字列
+        """
+        # SELECT句
+        select_parts = []
+        tables_needed = set()
+
+        # ディメンション
+        for dim_id in dsl.dimensions:
+            dim = self._dimensions.get(dim_id)
+            if dim:
+                select_parts.append(f"{dim.table}.{dim.column}")
+                tables_needed.add(dim.table)
+
+        # 指標
+        for metric_id in dsl.metrics:
+            metric = self._metrics.get(metric_id)
+            if metric:
+                select_parts.append(f"{metric.definition} AS {metric_id}")
+                tables_needed.add(metric.table)
+
+        if not select_parts:
+            return "-- エラー: 指標またはディメンションが指定されていません"
+
+        select_clause = "SELECT " + ", ".join(select_parts)
+
+        # FROM句
+        from_clause = "FROM " + ", ".join(sorted(tables_needed))
+
+        # WHERE句
+        where_parts = []
+        if dsl.time_range:
+            time_sql = self._time_range_to_sql(dsl.time_range)
+            if time_sql:
+                where_parts.append(time_sql)
+
+        for f in dsl.filters:
+            filter_sql = self._filter_to_sql(f)
+            if filter_sql:
+                where_parts.append(filter_sql)
+
+        where_clause = ""
+        if where_parts:
+            where_clause = "WHERE " + " AND ".join(where_parts)
+
+        # GROUP BY句
+        group_by_clause = ""
+        if dsl.dimensions:
+            group_by_parts = []
+            for dim_id in dsl.dimensions:
+                dim = self._dimensions.get(dim_id)
+                if dim:
+                    group_by_parts.append(f"{dim.table}.{dim.column}")
+            if group_by_parts:
+                group_by_clause = "GROUP BY " + ", ".join(group_by_parts)
+
+        # ORDER BY句
+        order_by_clause = ""
+        if dsl.order_by:
+            order_parts = []
+            for o in dsl.order_by:
+                order_parts.append(f"{o.field} {o.direction.value}")
+            order_by_clause = "ORDER BY " + ", ".join(order_parts)
+
+        # LIMIT句
+        limit_clause = ""
+        if dsl.limit:
+            limit_clause = f"LIMIT {min(dsl.limit, self._config.max_limit)}"
+
+        # SQL組み立て
+        sql_parts = [select_clause, from_clause]
+        if where_clause:
+            sql_parts.append(where_clause)
+        if group_by_clause:
+            sql_parts.append(group_by_clause)
+        if order_by_clause:
+            sql_parts.append(order_by_clause)
+        if limit_clause:
+            sql_parts.append(limit_clause)
+
+        return "\n".join(sql_parts)
+
+    def _time_range_to_sql(self, tr: TimeRangeDSL) -> str:
+        """時間範囲をSQLに変換.
+
+        Args:
+            tr: TimeRangeDSL
+
+        Returns:
+            WHERE句の条件
+        """
+        if tr.relative:
+            # 相対時間をSQLに変換
+            relative_sql = {
+                "today": "DATE(order_date) = CURRENT_DATE",
+                "yesterday": "DATE(order_date) = CURRENT_DATE - INTERVAL '1 day'",
+                "this_week": "order_date >= DATE_TRUNC('week', CURRENT_DATE)",
+                "last_week": (
+                    "order_date >= DATE_TRUNC('week', CURRENT_DATE - INTERVAL '1 week') "
+                    "AND order_date < DATE_TRUNC('week', CURRENT_DATE)"
+                ),
+                "this_month": "order_date >= DATE_TRUNC('month', CURRENT_DATE)",
+                "last_month": (
+                    "order_date >= DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month') "
+                    "AND order_date < DATE_TRUNC('month', CURRENT_DATE)"
+                ),
+                "this_year": "order_date >= DATE_TRUNC('year', CURRENT_DATE)",
+                "last_year": (
+                    "order_date >= DATE_TRUNC('year', CURRENT_DATE - INTERVAL '1 year') "
+                    "AND order_date < DATE_TRUNC('year', CURRENT_DATE)"
+                ),
+                "last_7_days": "order_date >= CURRENT_DATE - INTERVAL '7 days'",
+                "last_30_days": "order_date >= CURRENT_DATE - INTERVAL '30 days'",
+            }
+            return relative_sql.get(tr.relative, "")
+
+        parts = []
+        if tr.start:
+            parts.append(f"order_date >= '{tr.start}'")
+        if tr.end:
+            parts.append(f"order_date <= '{tr.end}'")
+        return " AND ".join(parts)
+
+    def _filter_to_sql(self, f: FilterDSL) -> str:
+        """フィルタをSQLに変換.
+
+        Args:
+            f: FilterDSL
+
+        Returns:
+            WHERE句の条件
+        """
+        field = f.field
+
+        if f.operator == FilterOperator.IS_NULL:
+            return f"{field} IS NULL"
+        elif f.operator == FilterOperator.IS_NOT_NULL:
+            return f"{field} IS NOT NULL"
+        elif f.operator in (FilterOperator.IN, FilterOperator.NOT_IN):
+            values_str = ", ".join(f"'{v}'" if isinstance(v, str) else str(v) for v in f.values)
+            return f"{field} {f.operator.value} ({values_str})"
+        elif f.operator == FilterOperator.BETWEEN:
+            if len(f.values) >= 2:
+                return f"{field} BETWEEN {f.values[0]} AND {f.values[1]}"
+            return ""
+        elif f.operator == FilterOperator.LIKE:
+            return f"{field} LIKE '{f.value}'"
+        else:
+            # 基本演算子
+            if isinstance(f.value, str):
+                return f"{field} {f.operator.value} '{f.value}'"
+            return f"{field} {f.operator.value} {f.value}"
+
+    async def nl_to_sql_via_dsl(self, query: str) -> tuple[str, QueryDSL]:
+        """自然言語からDSL経由でSQLに変換.
+
+        NL → DSL → SQL の完全パイプライン。
+
+        Args:
+            query: 自然言語クエリ
+
+        Returns:
+            (SQL文字列, QueryDSL中間表現)
+        """
+        dsl = await self.nl_to_dsl(query)
+        sql = self.dsl_to_sql(dsl)
+        return sql, dsl
+
 
 # timedelta import for time calculations
 from datetime import timedelta
@@ -819,4 +1321,11 @@ __all__ = [
     "MetricType",
     "AggregationType",
     "TimeGranularity",
+    # DSL 関連
+    "QueryDSL",
+    "FilterDSL",
+    "OrderByDSL",
+    "TimeRangeDSL",
+    "FilterOperator",
+    "SortDirection",
 ]

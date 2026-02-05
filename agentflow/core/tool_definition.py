@@ -119,26 +119,58 @@ class ToolDefinition(BaseModel):
         )
 
     @classmethod
-    def from_skill(cls, skill_data: dict[str, Any]) -> ToolDefinition:
+    def from_skill(cls, skill_data: dict[str, Any] | Any) -> ToolDefinition:
         """Skill 形式から ToolDefinition を作成.
 
         Args:
-            skill_data: スキル定義（name、description、parameters を含む）
+            skill_data: スキル定義（dict または Skill オブジェクト）
 
         Returns:
             ToolDefinition インスタンス
         """
-        name = skill_data["name"]
+        # Skill オブジェクトの場合は属性から取得
+        if hasattr(skill_data, "metadata"):
+            # agentflow.skills.base.Skill オブジェクト
+            metadata = skill_data.metadata
+            name = metadata.name
+            description = metadata.description
+
+            # input_schema があれば使用、なければデフォルト
+            input_schema = getattr(metadata, "input_schema", None) or {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "スキルへの入力"}
+                },
+            }
+
+            # メタデータを収集
+            extra_metadata = {
+                "version": getattr(metadata, "version", None),
+                "author": getattr(metadata, "author", None),
+                "triggers": getattr(metadata, "triggers", []),
+                "tags": getattr(metadata, "tags", []),
+                "requirements": getattr(metadata, "requirements", []),
+            }
+        else:
+            # dict の場合
+            name = skill_data.get("name", "unknown")
+            description = skill_data.get("description", "")
+            input_schema = skill_data.get("input_schema") or {
+                "type": "object",
+                "properties": skill_data.get("parameters", {}),
+            }
+            extra_metadata = {
+                k: v for k, v in skill_data.items()
+                if k not in ("name", "description", "input_schema", "parameters")
+            }
+
         return cls(
             uri=f"tool://skill/{name}",
             name=name,
-            description=skill_data.get("description", ""),
+            description=description,
             source=ToolSource.SKILL,
-            input_schema={
-                "type": "object",
-                "properties": skill_data.get("parameters", {}),
-            },
-            metadata={"skill_data": skill_data},
+            input_schema=input_schema if input_schema else {},
+            metadata=extra_metadata,
         )
 
     @classmethod

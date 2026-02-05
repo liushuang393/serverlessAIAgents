@@ -51,6 +51,9 @@ from typing import Any, Callable, TypeVar
 
 from agentflow.providers.tool_provider import ToolProvider
 
+# グローバルロガー
+_logger = logging.getLogger(__name__)
+
 # Agentレジストリ（グローバル）
 _agent_registry: dict[str, "RegisteredAgent"] = {}
 
@@ -362,6 +365,33 @@ def agent(
             skills=agent_skills,
         )
         _agent_registry[agent_name] = registered
+
+        # NEW: グローバル AgentRegistry にも登録
+        try:
+            from agentflow.core.agent_registry import get_global_agent_registry
+            from agentflow.core.capability_spec import AgentCapabilitySpec
+
+            global_registry = get_global_agent_registry()
+
+            # AgentCapabilitySpec を作成
+            capability = AgentCapabilitySpec(
+                id=f"{agent_name}_capability",
+                name=agent_name,
+                description=system_prompt or cls.__doc__ or f"{agent_name} Agent",
+                tags=list(agent_skills) if agent_skills else [],
+                required_tools=[f"tool://skill/{s}" for s in (agent_skills or [])],
+            )
+
+            # AgentRegistry に登録
+            global_registry.register(
+                agent_id=agent_name,
+                capability=capability,
+                factory=lambda r=registered: r.get_instance(),
+            )
+
+            _logger.debug(f"Agent '{agent_name}' を AgentRegistry に登録")
+        except Exception as e:
+            _logger.warning(f"AgentRegistry 登録エラー: {e}")
 
         # 元のクラスにメタデータを追加
         cls._agent_name = agent_name  # type: ignore

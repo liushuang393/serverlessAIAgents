@@ -68,7 +68,7 @@ class SimpleEngine(BaseEngine):
         self._logger = logging.getLogger("agentflow.engines.simple")
 
     async def _initialize(self) -> None:
-        """Agentインスタンスを初期化."""
+        """Agentインスタンスを初期化し、ツールをバインド."""
         if isinstance(self._agent_cls, type):
             # クラスの場合、インスタンス化が必要
             self._agent_instance = self._agent_cls()
@@ -80,7 +80,52 @@ class SimpleEngine(BaseEngine):
         if hasattr(self._agent_instance, "initialize"):
             await self._agent_instance.initialize()
 
+        # ツールバインディング（skills/tools が指定されている場合）
+        await self._bind_tools()
+
         self._logger.info(f"SimpleEngine initialized with {self._agent_instance}")
+
+    async def _bind_tools(self) -> None:
+        """ツールをAgentにバインド.
+
+        skills と tools をツールURIに変換し、ToolBinder でバインド。
+        """
+        # ツールURIを収集
+        tool_uris: list[str] = list(self._tools)
+
+        # スキルをツールURIに変換
+        for skill_name in self._skills:
+            tool_uris.append(f"tool://skill/{skill_name}")
+
+        if not tool_uris:
+            return
+
+        try:
+            from agentflow.core.tool_registry import get_global_tool_registry
+            from agentflow.core.tool_binding import ToolBinder
+            from agentflow.core.capability_spec import AgentCapabilitySpec
+
+            tool_registry = get_global_tool_registry()
+            binder = ToolBinder(tool_registry)
+
+            # AgentCapabilitySpec を作成
+            agent_name = getattr(
+                self._agent_cls, "__name__",
+                self._agent_instance.__class__.__name__
+            )
+            capability = AgentCapabilitySpec(
+                id=f"{agent_name}_runtime",
+                name=agent_name,
+                description="Runtime agent",
+                required_tools=tool_uris,
+            )
+
+            # ツールをバインド
+            await binder.bind_for_capability(self._agent_instance, capability)
+            self._logger.debug(f"ツールバインド完了: {len(tool_uris)} ツール")
+
+        except Exception as e:
+            self._logger.warning(f"ツールバインドエラー: {e}")
 
     async def _execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Agentを実行.
