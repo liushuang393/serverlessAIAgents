@@ -10,10 +10,12 @@ This module provides first-class task concepts including:
 
 from agentflow.task.task_id import TaskID
 from agentflow.task.task_state import TaskState, can_transition, is_terminal
+from agentflow.task.task import Task
 
 __all__ = [
     "TaskID",
     "TaskState",
     "can_transition",
     "is_terminal",
+    "Task",
 ]
