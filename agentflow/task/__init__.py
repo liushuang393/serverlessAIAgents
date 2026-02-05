@@ -9,7 +9,11 @@ This module provides first-class task concepts including:
 """
 
 from agentflow.task.task_id import TaskID
+from agentflow.task.task_state import TaskState, can_transition, is_terminal
 
 __all__ = [
     "TaskID",
+    "TaskState",
+    "can_transition",
+    "is_terminal",
 ]
