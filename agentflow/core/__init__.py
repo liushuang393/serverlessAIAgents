@@ -123,6 +123,29 @@ from agentflow.core.blueprint import (
 )
 
 # ==========================================================================
+# NEW: 統一ツール・Agent レジストリ（Auto-Agent Architecture）
+# ==========================================================================
+from agentflow.core.tool_definition import ToolDefinition, ToolSource
+from agentflow.core.tool_registry import (
+    ToolRegistry,
+    get_global_tool_registry,
+    reset_global_tool_registry,
+)
+from agentflow.core.capability_spec import (
+    AgentCapabilitySpec,
+    CapabilityRequirement,
+    LLMRequirements,
+)
+from agentflow.core.agent_registry import (
+    AgentEntry,
+    AgentRegistry,
+    get_global_agent_registry,
+    reset_global_agent_registry,
+)
+from agentflow.core.tool_binding import BoundTools, ToolBinder, ToolExecutor
+from agentflow.core.tool_discovery import ToolDiscoveryService
+
+# ==========================================================================
 # Core Interfaces（安定インターフェース - 変更厳禁）
 # ==========================================================================
 from agentflow.core.interfaces import (
@@ -260,6 +283,25 @@ __all__ = [
     "SafetyConfig",
     "ConstraintsConfig",
     "BlueprintValidationResult",
+    # ==========================================================================
+    # 統一ツール・Agent レジストリ（Auto-Agent Architecture）
+    # ==========================================================================
+    "ToolDefinition",
+    "ToolSource",
+    "ToolRegistry",
+    "get_global_tool_registry",
+    "reset_global_tool_registry",
+    "AgentCapabilitySpec",
+    "CapabilityRequirement",
+    "LLMRequirements",
+    "AgentEntry",
+    "AgentRegistry",
+    "get_global_agent_registry",
+    "reset_global_agent_registry",
+    "BoundTools",
+    "ToolBinder",
+    "ToolExecutor",
+    "ToolDiscoveryService",
     # ==========================================================================
     # Core Interfaces（安定インターフェース）
     # ==========================================================================

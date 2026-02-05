@@ -324,6 +324,28 @@ from agentflow.providers.tool_provider import tool
 from agentflow.run import MemoryRunStore, RunDiff, RunRecord, RunStore
 
 # =============================================================================
+# 公開API: 統一ツール・Agentレジストリ（Auto-Agent Architecture）
+# =============================================================================
+from agentflow.core.tool_definition import ToolDefinition, ToolSource
+from agentflow.core.tool_registry import (
+    ToolRegistry,
+    get_global_tool_registry,
+    reset_global_tool_registry,
+)
+from agentflow.core.capability_spec import (
+    AgentCapabilitySpec,
+    CapabilityRequirement,
+    LLMRequirements,
+)
+from agentflow.core.agent_registry import (
+    AgentRegistry,
+    get_global_agent_registry,
+    reset_global_agent_registry,
+)
+from agentflow.core.tool_binding import BoundTools, ToolBinder, ToolExecutor
+from agentflow.core.tool_discovery import ToolDiscoveryService
+
+# =============================================================================
 # 公開API: World Model（状態・因果・制約の明示的表現）
 # =============================================================================
 from agentflow.world_model import (
@@ -459,6 +481,30 @@ __all__ = [
     "AgentCapability",
     "TaskRequirement",
     "DelegationResult",
+    # =========================================================================
+    # 統一ツール・Agentレジストリ（Auto-Agent Architecture）
+    # =========================================================================
+    # ツール定義
+    "ToolDefinition",
+    "ToolSource",
+    # ツールレジストリ
+    "ToolRegistry",
+    "get_global_tool_registry",
+    "reset_global_tool_registry",
+    # Agent能力仕様
+    "AgentCapabilitySpec",
+    "CapabilityRequirement",
+    "LLMRequirements",
+    # Agentレジストリ
+    "AgentRegistry",
+    "get_global_agent_registry",
+    "reset_global_agent_registry",
+    # ツールバインディング
+    "BoundTools",
+    "ToolBinder",
+    "ToolExecutor",
+    # ツール発見
+    "ToolDiscoveryService",
     # =========================================================================
     # Decorator API（推奨）
     # =========================================================================
