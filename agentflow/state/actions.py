@@ -72,6 +72,18 @@ class ActionType(str, Enum):
     ADD_DECISION = "ADD_DECISION"
     CLEAR_FACTS = "CLEAR_FACTS"
 
+    # ==========================================================================
+    # Agent OS Task Lifecycle
+    # ==========================================================================
+    TASK_CREATED = "TASK_CREATED"
+    TASK_PLANNED = "TASK_PLANNED"
+    TASK_STARTED = "TASK_STARTED"
+    TASK_VERIFIED = "TASK_VERIFIED"
+    TASK_COMPLETED = "TASK_COMPLETED"
+    TASK_FAILED = "TASK_FAILED"
+    TASK_PAUSED = "TASK_PAUSED"
+    TASK_CANCELLED = "TASK_CANCELLED"
+
     # カスタム
     CUSTOM = "CUSTOM"
 

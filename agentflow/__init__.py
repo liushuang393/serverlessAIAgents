@@ -363,6 +363,46 @@ from agentflow.world_model import (
     WorldStateSnapshot,
 )
 
+# =============================================================================
+# 公開API: Agent OS（Task Lifecycle, Perception, Reasoner, Security）
+# =============================================================================
+from agentflow.task import (
+    TaskID,
+    TaskState,
+    Task,
+    TaskGraph,
+    ControlPlane,
+    ExecutionPlane,
+    can_transition,
+    is_terminal,
+)
+from agentflow.perception import (
+    PerceptionEvent,
+    PerceptionEventType,
+)
+from agentflow.reasoner import (
+    ActionDecision,
+    ActionType,
+    StructuredConstraints,
+    StructuredConstraint,
+    ConstraintType,
+)
+from agentflow.security.evidence_collector import (
+    SystemEvidence,
+    FileEvidence,
+    NetworkCallEvidence,
+)
+from agentflow.security.local_first import (
+    LocalFirstPolicy,
+    LocalFirstEnforcer,
+    ExecutionLocation,
+    NetworkAccessDecision,
+)
+from agentflow.tools.cli import (
+    CLIToolConfig,
+    CLIValidator,
+)
+
 try:
     from importlib.metadata import PackageNotFoundError, version
 
@@ -766,4 +806,37 @@ __all__ = [
     "MCPToolClient",
     "MCPToolRequest",
     "MCPToolResponse",
+    # =========================================================================
+    # Agent OS（Task Lifecycle, Perception, Reasoner, Security）
+    # =========================================================================
+    # Task Lifecycle
+    "TaskID",
+    "TaskState",
+    "Task",
+    "TaskGraph",
+    "ControlPlane",
+    "ExecutionPlane",
+    "can_transition",
+    "is_terminal",
+    # Perception
+    "PerceptionEvent",
+    "PerceptionEventType",
+    # Reasoner
+    "ActionDecision",
+    "ActionType",
+    "StructuredConstraints",
+    "StructuredConstraint",
+    "ConstraintType",
+    # Security / Evidence
+    "SystemEvidence",
+    "FileEvidence",
+    "NetworkCallEvidence",
+    # Local-First Policy
+    "LocalFirstPolicy",
+    "LocalFirstEnforcer",
+    "ExecutionLocation",
+    "NetworkAccessDecision",
+    # CLI Tool Framework
+    "CLIToolConfig",
+    "CLIValidator",
 ]

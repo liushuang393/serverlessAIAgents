@@ -372,6 +372,63 @@ class GlobalStateStore:
         elif action.type == ActionType.CLEAR_FACTS:
             self._state["facts"] = []
 
+        # ======================================================================
+        # Agent OS Task Lifecycle
+        # ======================================================================
+        elif action.type == ActionType.TASK_CREATED:
+            task_id = payload.get("task_id")
+            if "tasks" not in self._state:
+                self._state["tasks"] = {}
+            self._state["tasks"][task_id] = {
+                "name": payload.get("name"),
+                "state": "created",
+                "created_at": datetime.now().isoformat(),
+                "started_at": None,
+                "completed_at": None,
+                "outputs": {},
+                "error": None,
+            }
+
+        elif action.type == ActionType.TASK_PLANNED:
+            task_id = payload.get("task_id")
+            if "tasks" in self._state and task_id in self._state["tasks"]:
+                self._state["tasks"][task_id]["state"] = "planned"
+
+        elif action.type == ActionType.TASK_STARTED:
+            task_id = payload.get("task_id")
+            if "tasks" in self._state and task_id in self._state["tasks"]:
+                self._state["tasks"][task_id]["state"] = "running"
+                self._state["tasks"][task_id]["started_at"] = datetime.now().isoformat()
+
+        elif action.type == ActionType.TASK_VERIFIED:
+            task_id = payload.get("task_id")
+            if "tasks" in self._state and task_id in self._state["tasks"]:
+                self._state["tasks"][task_id]["state"] = "verified"
+
+        elif action.type == ActionType.TASK_COMPLETED:
+            task_id = payload.get("task_id")
+            if "tasks" in self._state and task_id in self._state["tasks"]:
+                self._state["tasks"][task_id]["state"] = "done"
+                self._state["tasks"][task_id]["completed_at"] = datetime.now().isoformat()
+                if outputs := payload.get("outputs"):
+                    self._state["tasks"][task_id]["outputs"] = outputs
+
+        elif action.type == ActionType.TASK_FAILED:
+            task_id = payload.get("task_id")
+            if "tasks" in self._state and task_id in self._state["tasks"]:
+                self._state["tasks"][task_id]["state"] = "failed"
+                self._state["tasks"][task_id]["error"] = payload.get("error")
+
+        elif action.type == ActionType.TASK_PAUSED:
+            task_id = payload.get("task_id")
+            if "tasks" in self._state and task_id in self._state["tasks"]:
+                self._state["tasks"][task_id]["state"] = "paused"
+
+        elif action.type == ActionType.TASK_CANCELLED:
+            task_id = payload.get("task_id")
+            if "tasks" in self._state and task_id in self._state["tasks"]:
+                self._state["tasks"][task_id]["state"] = "cancelled"
+
         # メタデータを更新
         self._state["metadata"]["version"] += 1
         self._state["metadata"]["last_action"] = action.type.value
