@@ -34,8 +34,10 @@ export const DecisionInputPage: React.FC = () => {
   const {
     question,
     constraints,
+    stakeholders,
     setQuestion,
     setConstraints,
+    setStakeholders,
     setPage,
     reset,
   } = useDecisionStore();
@@ -339,6 +341,61 @@ export const DecisionInputPage: React.FC = () => {
                     }
                   }}
                   placeholder="例: GDPR, 金融規制... (Enter追加)"
+                  className="w-full bg-transparent text-sm text-white focus:outline-none placeholder-slate-600"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* ステークホルダー（責任者）情報 - オプション */}
+          <div className="bg-[#12121a] rounded-2xl p-6 border border-white/5">
+            <div className="flex items-center gap-2 mb-4">
+              <span>👥</span>
+              <h2 className="text-sm font-medium text-slate-300">責任者情報（任意）</h2>
+              <span className="text-xs text-slate-600">— 提案書の署名欄に反映されます</span>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-[#0a0a0f] rounded-xl p-4 border border-white/5">
+                <label className="text-xs text-slate-500 mb-2 block">プロダクトオーナー</label>
+                <input
+                  type="text"
+                  value={stakeholders.product_owner}
+                  onChange={(e) => setStakeholders({ product_owner: e.target.value })}
+                  placeholder="事業価値・撤退判断の最終責任者"
+                  maxLength={100}
+                  className="w-full bg-transparent text-sm text-white focus:outline-none placeholder-slate-600"
+                />
+              </div>
+              <div className="bg-[#0a0a0f] rounded-xl p-4 border border-white/5">
+                <label className="text-xs text-slate-500 mb-2 block">技術責任者</label>
+                <input
+                  type="text"
+                  value={stakeholders.tech_lead}
+                  onChange={(e) => setStakeholders({ tech_lead: e.target.value })}
+                  placeholder="計測・実装の責任者"
+                  maxLength={100}
+                  className="w-full bg-transparent text-sm text-white focus:outline-none placeholder-slate-600"
+                />
+              </div>
+              <div className="bg-[#0a0a0f] rounded-xl p-4 border border-white/5">
+                <label className="text-xs text-slate-500 mb-2 block">事業責任者</label>
+                <input
+                  type="text"
+                  value={stakeholders.business_owner}
+                  onChange={(e) => setStakeholders({ business_owner: e.target.value })}
+                  placeholder="予算・ROIの責任者"
+                  maxLength={100}
+                  className="w-full bg-transparent text-sm text-white focus:outline-none placeholder-slate-600"
+                />
+              </div>
+              <div className="bg-[#0a0a0f] rounded-xl p-4 border border-white/5">
+                <label className="text-xs text-slate-500 mb-2 block">法務・コンプライアンス担当</label>
+                <input
+                  type="text"
+                  value={stakeholders.legal_reviewer}
+                  onChange={(e) => setStakeholders({ legal_reviewer: e.target.value })}
+                  placeholder="規制・契約審査の責任者"
+                  maxLength={100}
                   className="w-full bg-transparent text-sm text-white focus:outline-none placeholder-slate-600"
                 />
               </div>

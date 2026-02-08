@@ -16,7 +16,15 @@ from typing import Any
 
 from agentflow import ResilientAgent
 from agentflow.config import get_settings
+from dateutil import parser as date_parser
 
+from apps.market_trend_monitor.backend.config import config
+from apps.market_trend_monitor.backend.integrations import (
+    ArxivAPIClient,
+    GitHubAPIClient,
+    NewsAPIClient,
+    RSSFetcher,
+)
 from apps.market_trend_monitor.backend.models import (
     Article,
     ArticleSchema,
@@ -24,7 +32,6 @@ from apps.market_trend_monitor.backend.models import (
     CollectorOutput,
     SourceType,
 )
-from apps.market_trend_monitor.backend.integrations import NewsAPIClient
 
 
 class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
@@ -54,10 +61,14 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
         self._logger = logging.getLogger(self.name)
         self._cache: set[str] = set()  # URL キャッシュ（重複排除用）
 
-        # NewsAPI クライアント初期化
         settings = get_settings()
         news_api_key = getattr(settings, "news_api_key", None)
+        github_token = getattr(settings, "github_token", None)
+
         self._news_api_client = NewsAPIClient(api_key=news_api_key)
+        self._github_api_client = GitHubAPIClient(token=github_token)
+        self._arxiv_client = ArxivAPIClient()
+        self._rss_fetcher = RSSFetcher()
 
     def _parse_input(self, input_data: dict[str, Any]) -> CollectorInput:
         """入力データを Pydantic モデルに変換."""
@@ -66,33 +77,28 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
     async def process(self, input_data: CollectorInput) -> CollectorOutput:
         """データ収集を実行.
 
-        Args:
+        引数:
             input_data: 型付き入力データ
 
-        Returns:
+        戻り値:
             型付き収集結果
         """
         keywords = input_data.keywords
         sources = input_data.sources
         # NOTE: date_range は将来の拡張用（現在未使用）
 
-        self._logger.info(f"Starting collection: keywords={keywords}, sources={sources}")
+        self._logger.info("収集開始: keywords=%s, sources=%s", keywords, sources)
 
         articles: list[Article] = []
         sources_stats: dict[str, int] = {}
 
-        # 各ソースからデータ収集
-        # NOTE: ResilientAgent がリトライ・タイムアウトを管理
         for source in sources:
-            source_articles = await self._collect_from_source(
-                source=source, keywords=keywords
-            )
+            source_articles = await self._collect_from_source(source=source, keywords=keywords)
             articles.extend(source_articles)
             sources_stats[source] = len(source_articles)
 
-        self._logger.info(f"Collection completed: total={len(articles)} articles")
+        self._logger.info("収集完了: total=%s件", len(articles))
 
-        # 記事を ArticleSchema に変換
         article_schemas = [
             ArticleSchema(
                 id=a.id,
@@ -114,121 +120,209 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
             sources_stats=sources_stats,
         )
 
-    async def _collect_from_source(
-        self, source: str, keywords: list[str]
-    ) -> list[Article]:
-        """特定ソースからデータ収集（NewsAPI 統合）.
+    async def _collect_from_source(self, source: str, keywords: list[str]) -> list[Article]:
+        """特定ソースからデータ収集."""
+        self._logger.debug("ソース収集中: %s", source)
 
-        Args:
-            source: データソース名
-            keywords: 検索キーワード
+        source_key = source.lower().strip()
 
-        Returns:
-            収集した記事リスト
-        """
-        self._logger.debug(f"Collecting from {source}")
+        if source_key == SourceType.NEWS.value:
+            return await self._collect_from_news(keywords)
+        if source_key == SourceType.GITHUB.value:
+            return await self._collect_from_github(keywords)
+        if source_key == SourceType.ARXIV.value:
+            return await self._collect_from_arxiv(keywords)
+        if source_key == SourceType.RSS.value:
+            return await self._collect_from_rss(keywords)
 
+        self._logger.warning("未対応ソース: %s", source)
+        return []
+
+    async def _collect_from_news(self, keywords: list[str]) -> list[Article]:
+        """NewsAPIから収集."""
         articles: list[Article] = []
-
-        # NewsAPIから実際のニュースを取得
         for keyword in keywords:
             try:
-                # NewsAPIで検索
                 news_articles = await self._news_api_client.search_everything(
                     query=keyword,
                     language="en",
                     page_size=5,
                 )
 
-                # NewsAPIの記事をArticleモデルに変換
                 for news_article in news_articles:
                     url = news_article.get("url", "")
-
-                    # 重複チェック
-                    if url in self._cache:
+                    if not url or url in self._cache:
                         continue
 
                     article = Article(
                         id=str(uuid.uuid4()),
                         title=news_article.get("title", f"{keyword} に関する最新動向"),
                         url=url,
-                        source=SourceType(source) if source in [s.value for s in SourceType] else SourceType.NEWS,
-                        published_at=datetime.fromisoformat(news_article.get("publishedAt", datetime.now().isoformat()).replace("Z", "+00:00")),
+                        source=SourceType.NEWS,
+                        published_at=self._parse_datetime(news_article.get("publishedAt")),
                         content=news_article.get("content", news_article.get("description", "")),
                         keywords=[keyword],
                         collected_at=datetime.now(),
                         metadata={
-                            "source_type": source,
+                            "source_type": "news",
                             "query": keyword,
                             "news_source": news_article.get("source", {}).get("name", "Unknown"),
                             "author": news_article.get("author", "Unknown"),
                         },
                     )
-
                     articles.append(article)
                     self._cache.add(url)
-
-            except Exception as e:
-                self._logger.warning(f"Failed to collect from NewsAPI for keyword '{keyword}': {e}")
-                # フォールバック: LLM生成コンテンツ
-                content = await self._generate_article_content(keyword, source)
-                url = f"https://{source}.example.com/article/{keyword}"
-
+            except Exception as exc:
+            self._logger.warning("NewsAPI収集失敗 '%s': %s", keyword, exc)
+                content = await self._generate_article_content(keyword, "news")
+                url = f"https://news.example.com/article/{keyword}"
                 if url not in self._cache:
-                    article = Article(
-                        id=str(uuid.uuid4()),
-                        title=f"{keyword} に関する最新動向 ({source})",
-                        url=url,
-                        source=SourceType(source) if source in [s.value for s in SourceType] else SourceType.NEWS,
-                        published_at=datetime.now(),
-                        content=content,
-                        keywords=[keyword],
-                        collected_at=datetime.now(),
-                        metadata={"source_type": source, "query": keyword, "fallback": True},
+                    articles.append(
+                        Article(
+                            id=str(uuid.uuid4()),
+                            title=f"{keyword} に関する最新動向 (news)",
+                            url=url,
+                            source=SourceType.NEWS,
+                            published_at=datetime.now(),
+                            content=content,
+                            keywords=[keyword],
+                            collected_at=datetime.now(),
+                            metadata={"source_type": "news", "query": keyword, "fallback": True},
+                        )
                     )
-                    articles.append(article)
                     self._cache.add(url)
+        return articles
 
+    async def _collect_from_github(self, keywords: list[str]) -> list[Article]:
+        """GitHubから収集."""
+        articles: list[Article] = []
+        for keyword in keywords:
+            repos = await self._github_api_client.search_repositories(query=keyword, per_page=5)
+            for repo in repos:
+                url = repo.get("html_url", "")
+                if not url or url in self._cache:
+                    continue
+
+                updated_at = repo.get("updated_at")
+                article = Article(
+                    id=str(uuid.uuid4()),
+                    title=repo.get("full_name", keyword),
+                    url=url,
+                    source=SourceType.GITHUB,
+                    published_at=self._parse_datetime(updated_at),
+                    content=repo.get("description", ""),
+                    keywords=[keyword],
+                    collected_at=datetime.now(),
+                    metadata={
+                        "source_type": "github",
+                        "query": keyword,
+                        "stars": repo.get("stargazers_count"),
+                        "language": repo.get("language"),
+                    },
+                )
+                articles.append(article)
+                self._cache.add(url)
+        return articles
+
+    async def _collect_from_arxiv(self, keywords: list[str]) -> list[Article]:
+        """arXivから収集."""
+        articles: list[Article] = []
+        for keyword in keywords:
+            entries = await self._arxiv_client.search(query=keyword, max_results=5)
+            for entry in entries:
+                url = entry.get("link", "")
+                if not url or url in self._cache:
+                    continue
+
+                published = entry.get("published")
+                article = Article(
+                    id=str(uuid.uuid4()),
+                    title=str(entry.get("title", keyword)).strip(),
+                    url=url,
+                    source=SourceType.ARXIV,
+                    published_at=self._parse_datetime(published),
+                    content=entry.get("summary", ""),
+                    keywords=[keyword],
+                    collected_at=datetime.now(),
+                    metadata={
+                        "source_type": "arxiv",
+                        "query": keyword,
+                        "authors": [a.get("name") for a in entry.get("authors", [])],
+                    },
+                )
+                articles.append(article)
+                self._cache.add(url)
+        return articles
+
+    async def _collect_from_rss(self, keywords: list[str]) -> list[Article]:
+        """RSSから収集."""
+        articles: list[Article] = []
+        feed_urls = config.collector.rss_feeds
+        for feed_url in feed_urls:
+            entries = await self._rss_fetcher.fetch(feed_url)
+            for entry in entries:
+                title = entry.get("title", "")
+                summary = entry.get("summary", "")
+                url = entry.get("link", "")
+                if not url or url in self._cache:
+                    continue
+
+                if keywords:
+                    if not any(k.lower() in (title + summary).lower() for k in keywords):
+                        continue
+
+                published = entry.get("published")
+                article = Article(
+                    id=str(uuid.uuid4()),
+                    title=title or "RSS Update",
+                    url=url,
+                    source=SourceType.RSS,
+                    published_at=self._parse_datetime(published),
+                    content=summary,
+                    keywords=keywords or [],
+                    collected_at=datetime.now(),
+                    metadata={
+                        "source_type": "rss",
+                        "feed": feed_url,
+                    },
+                )
+                articles.append(article)
+                self._cache.add(url)
         return articles
 
     async def _generate_article_content(self, keyword: str, source: str) -> str:
-        """LLM を使用して記事コンテンツを生成.
-
-        Args:
-            keyword: キーワード
-            source: ソース名
-
-        Returns:
-            生成された記事コンテンツ
-        """
+        """LLM を使用して記事コンテンツを生成."""
         prompt = f"""Generate a brief news article summary about "{keyword}" from {source}.
 The article should be informative and professional, around 200-300 words.
 Focus on recent trends, developments, or insights related to {keyword}.
 Write in Japanese."""
 
         try:
-            # ResilientAgent の _call_llm を使用
             response = await self._call_llm(prompt)
             return response if response else self._fallback_content(keyword)
         except Exception as e:
-            self._logger.warning(f"Failed to generate content with LLM: {e}")
+            self._logger.warning("LLM生成に失敗: %s", e)
             return self._fallback_content(keyword)
 
     def _fallback_content(self, keyword: str) -> str:
         """フォールバックコンテンツ生成."""
-        return f"{keyword} に関する詳細な記事内容。最新の動向、技術的な進展、市場の反応などを含む包括的な分析。"
+        return (
+            f"{keyword} に関する詳細な記事内容。最新の動向、技術的な進展、"
+            "市場の反応などを含む包括的な分析。"
+        )
+
+    def _parse_datetime(self, raw: str | None) -> datetime:
+        """日時文字列をパース（失敗時は現在時刻）."""
+        if not raw:
+            return datetime.now()
+        try:
+            return date_parser.parse(raw)
+        except Exception:
+            return datetime.now()
 
     def validate_output(self, output: CollectorOutput) -> bool:
-        """出力検証.
-
-        Args:
-            output: 出力データ
-
-        Returns:
-            検証結果（True = 有効）
-        """
+        """出力検証."""
         if output.total_count < 0:
             self._logger.warning("Validation failed: negative total_count")
             return False
         return True
-

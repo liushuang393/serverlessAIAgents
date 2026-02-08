@@ -115,9 +115,7 @@ class EvidenceLedgerAgent(
             article = self._schema_to_article(article_schema)
 
             # 証拠として登録
-            evidence = self._evidence_service.register_evidence_from_article(
-                article
-            )
+            evidence = await self._evidence_service.register_evidence_from_article(article)
 
             evidence_ids.append(evidence.id)
             sources.add(article_schema.source)
@@ -160,9 +158,8 @@ class EvidenceLedgerAgent(
             url=schema.url,
             source=SourceType(schema.source),
             published_at=datetime.fromisoformat(schema.published_at),
-            content=schema.metadata.get("content", ""),
+            content=schema.content,
             keywords=schema.keywords,
             collected_at=datetime.fromisoformat(schema.collected_at),
             metadata=schema.metadata,
         )
-

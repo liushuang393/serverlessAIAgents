@@ -5,15 +5,9 @@ Market Trend Monitor の Agent 入出力スキーマを Pydantic で定義。
 ResilientAgent の型安全性を確保します。
 """
 
-from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, Field
-
-from apps.market_trend_monitor.backend.models.schemas import (
-    NotificationPriority,
-    SentimentType,
-    SourceType,
-)
 
 
 # ============================================================
@@ -31,7 +25,7 @@ class CollectorInput(BaseModel):
     """CollectorAgent 入力スキーマ."""
 
     keywords: list[str] = Field(default_factory=list, description="検索キーワード")
-    sources: list[str] = Field(default=["news"], description="データソース")
+    sources: list[str] = Field(default_factory=lambda: ["news"], description="データソース")
     date_range: DateRange | None = Field(default=None, description="日付範囲")
 
 
@@ -46,7 +40,7 @@ class ArticleSchema(BaseModel):
     content: str
     keywords: list[str] = Field(default_factory=list)
     collected_at: str
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class CollectorOutput(BaseModel):
@@ -82,7 +76,7 @@ class TrendSchema(BaseModel):
     last_seen: str = ""
     article_count: int = 0
     created_at: str
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class AnalyzerOutput(BaseModel):
@@ -110,8 +104,8 @@ class ReportSectionSchema(BaseModel):
 
     title: str
     content: str
-    charts: list[dict] = Field(default_factory=list)
-    metadata: dict = Field(default_factory=dict)
+    charts: list[dict[str, Any]] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ReportSchema(BaseModel):
@@ -122,14 +116,14 @@ class ReportSchema(BaseModel):
     sections: list[ReportSectionSchema]
     generated_at: str
     period: str = ""
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ReporterOutput(BaseModel):
     """ReporterAgent 出力スキーマ."""
 
     report: ReportSchema
-    formats: list[str] = Field(default=["markdown", "html"])
+    formats: list[str] = Field(default_factory=lambda: ["markdown", "html"])
 
 
 # ============================================================
@@ -151,7 +145,7 @@ class NotificationSchema(BaseModel):
     priority: str
     message: str
     timestamp: str
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class NotifierOutput(BaseModel):
@@ -159,4 +153,3 @@ class NotifierOutput(BaseModel):
 
     notifications: list[NotificationSchema] = Field(default_factory=list)
     alerts_count: int = 0
-

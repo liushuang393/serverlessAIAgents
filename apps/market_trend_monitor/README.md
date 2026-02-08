@@ -46,7 +46,7 @@ Frontend (React) ←→ REST API / WebSocket ←→ Backend (AgentFlow)
 
 ```bash
 # 依存関係インストール
-cd apps/market-trend-monitor/backend
+cd ./apps/market-trend-monitor/backend
 pip install -r requirements.txt
 
 # 環境変数設定（オプション）
@@ -55,10 +55,23 @@ export DATABASE_URL="sqlite:///./market_trend.db"
 export LOG_LEVEL="INFO"
 
 # サーバー起動
-python -m apps.market_trend_monitor.backend.api.main
+uvicorn apps.market_trend_monitor.backend.api.main:app --host 0.0.0.0 --port 8002 --reload
 ```
 
-サーバーは `http://localhost:8000` で起動します。
+サーバーは `http://localhost:8002` で起動します。
+
+### フロントエンドセットアップ
+
+```bash
+# 依存関係インストール
+cd ./apps/market_trend_monitor/frontend
+npm install
+
+# 開発サーバー起動
+npm run dev
+```
+
+フロントエンドは `http://localhost:3002` で起動します。
 
 ### API ドキュメント
 
@@ -152,17 +165,6 @@ apps/market-trend-monitor/
 └── README.md                # このファイル
 ```
 
-## 開発状況
-
-- [x] バックエンド基盤
-- [x] エージェント実装
-- [x] Multi-Agent Coordinator
-- [x] FastAPI サーバー
-- [x] ユニットテスト
-- [ ] フロントエンド実装
-- [ ] データベース統合
-- [ ] WebSocket 実装
-- [ ] スケジューラー統合
 
 ## ライセンス
 

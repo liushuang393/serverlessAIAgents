@@ -25,6 +25,7 @@ from apps.decision_governance_engine.engine import DecisionEngine
 from apps.decision_governance_engine.schemas.input_schemas import (
     BudgetConstraint,
     ConstraintSet,
+    StakeholderInfo,
     TimelineConstraint,
 )
 from apps.decision_governance_engine.schemas.output_schemas import DecisionReport
@@ -53,6 +54,9 @@ class DecisionAPIRequest(BaseModel):
     technical_constraints: list[str] = Field(default_factory=list, description="技術制約")
     regulatory_constraints: list[str] = Field(default_factory=list, description="法規制約")
     human_resources: list[str] = Field(default_factory=list, description="人的リソース")
+    stakeholders: StakeholderInfo | None = Field(
+        None, description="ステークホルダー（責任者）情報（任意）",
+    )
 
 
 class DecisionAPIResponse(BaseModel):
@@ -103,12 +107,17 @@ def build_constraints(req: DecisionAPIRequest) -> ConstraintSet:
 # エンドポイント
 # ========================================
 
-def build_input_dict(question: str, constraints: ConstraintSet) -> dict:
+def build_input_dict(
+    question: str,
+    constraints: ConstraintSet,
+    stakeholders: StakeholderInfo | None = None,
+) -> dict:
     """Agent用入力辞書を構築.
 
     Args:
         question: ユーザーの質問
         constraints: 制約セット
+        stakeholders: ステークホルダー（責任者）情報（任意）
 
     Returns:
         CognitiveGateAgent が期待する形式の入力辞書
@@ -122,11 +131,29 @@ def build_input_dict(question: str, constraints: ConstraintSet) -> dict:
     constraint_list.extend(constraints.regulatory)
     constraint_list.extend(constraints.human_resources)
 
-    return {
+    result: dict = {
         "raw_question": question,
         "question": question,  # 後方互換のために残す
         "constraints": constraint_list,
     }
+
+    # ステークホルダー情報を list[str] 形式に変換（DaoInput.stakeholders の型に合わせる）
+    if stakeholders:
+        label_map = {
+            "product_owner": "プロダクトオーナー",
+            "tech_lead": "技術責任者",
+            "business_owner": "事業責任者",
+            "legal_reviewer": "法務・コンプライアンス担当",
+        }
+        stakeholder_list = [
+            f"{label_map.get(k, k)}: {v}"
+            for k, v in stakeholders.model_dump().items()
+            if v
+        ]
+        if stakeholder_list:
+            result["stakeholders"] = stakeholder_list
+
+    return result
 
 
 @router.post("/api/decision", response_model=DecisionAPIResponse | RejectionResponse)
@@ -146,7 +173,7 @@ async def process_decision(
 
     engine = get_engine()
     constraints = build_constraints(req)
-    inputs = build_input_dict(req.question, constraints)
+    inputs = build_input_dict(req.question, constraints, req.stakeholders)
     result = await engine.run(inputs)
 
     processing_time_ms = int((time.time() - start_time) * 1000)
@@ -360,6 +387,10 @@ async def process_decision_stream(
     question: str = Query(..., min_length=10, max_length=2000, description="意思決定の質問"),
     budget: float | None = Query(None, ge=0, description="予算制約（万円）"),
     timeline_months: int | None = Query(None, ge=1, le=120, description="期間制約（月）"),
+    stakeholder_product_owner: str = Query("", max_length=100, description="プロダクトオーナー"),
+    stakeholder_tech_lead: str = Query("", max_length=100, description="技術責任者"),
+    stakeholder_business_owner: str = Query("", max_length=100, description="事業責任者"),
+    stakeholder_legal_reviewer: str = Query("", max_length=100, description="法務担当"),
 ) -> StreamingResponse:
     """SSEストリーム付きで意思決定を処理.
 
@@ -380,7 +411,22 @@ async def process_decision_stream(
     if timeline_months is not None:
         constraints.timeline = TimelineConstraint(months=timeline_months)
 
-    inputs = build_input_dict(question, constraints)
+    # ステークホルダー情報を構築（いずれかの値が設定されている場合のみ）
+    stakeholders: StakeholderInfo | None = None
+    if any([
+        stakeholder_product_owner,
+        stakeholder_tech_lead,
+        stakeholder_business_owner,
+        stakeholder_legal_reviewer,
+    ]):
+        stakeholders = StakeholderInfo(
+            product_owner=stakeholder_product_owner,
+            tech_lead=stakeholder_tech_lead,
+            business_owner=stakeholder_business_owner,
+            legal_reviewer=stakeholder_legal_reviewer,
+        )
+
+    inputs = build_input_dict(question, constraints, stakeholders)
 
     def serialize_event(event: dict) -> str:
         """イベントをJSON文字列に変換（enum対応）."""
@@ -540,7 +586,13 @@ async def websocket_decision(websocket: WebSocket) -> None:
             if timeline_months is not None:
                 constraints.timeline = TimelineConstraint(months=timeline_months)
 
-            inputs = build_input_dict(question, constraints)
+            # WebSocket経由のステークホルダー情報
+            ws_stakeholders: StakeholderInfo | None = None
+            stakeholder_data = data.get("stakeholders")
+            if isinstance(stakeholder_data, dict):
+                ws_stakeholders = StakeholderInfo(**stakeholder_data)
+
+            inputs = build_input_dict(question, constraints, ws_stakeholders)
             engine = get_engine()
 
             async for event in engine.run_stream(inputs):

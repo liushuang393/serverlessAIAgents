@@ -202,6 +202,7 @@ export class DecisionApiClient {
    * @param onEvent イベントコールバック
    * @param onError エラーコールバック
    * @param onOpen 接続成功コールバック
+   * @param stakeholders ステークホルダー情報（オプション）
    * @returns EventSource インスタンス
    */
   streamDecision(
@@ -210,13 +211,27 @@ export class DecisionApiClient {
     timelineMonths?: number,
     onEvent?: (event: AGUIEvent) => void,
     onError?: (error: string, isRetryable?: boolean) => void,
-    onOpen?: () => void
+    onOpen?: () => void,
+    stakeholders?: {
+      product_owner?: string;
+      tech_lead?: string;
+      business_owner?: string;
+      legal_reviewer?: string;
+    }
   ): EventSource {
     const params = new URLSearchParams({
       question,
       ...(budget && { budget: budget.toString() }),
       ...(timelineMonths && { timeline_months: timelineMonths.toString() }),
     });
+
+    // ステークホルダー情報をクエリパラメータに追加
+    if (stakeholders) {
+      if (stakeholders.product_owner) params.set('stakeholder_product_owner', stakeholders.product_owner);
+      if (stakeholders.tech_lead) params.set('stakeholder_tech_lead', stakeholders.tech_lead);
+      if (stakeholders.business_owner) params.set('stakeholder_business_owner', stakeholders.business_owner);
+      if (stakeholders.legal_reviewer) params.set('stakeholder_legal_reviewer', stakeholders.legal_reviewer);
+    }
 
     const url = `${this.baseUrl}/api/decision/stream?${params}`;
 

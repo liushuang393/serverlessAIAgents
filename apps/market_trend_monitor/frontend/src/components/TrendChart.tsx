@@ -30,7 +30,10 @@ const TrendChart: React.FC<TrendChartProps> = ({ trends }) => {
   const chartData = trends
     .slice(0, 20)
     .map((trend) => ({
-      name: trend.topic.substring(0, 15) + '...',
+      name:
+        trend.topic.length > 16
+          ? `${trend.topic.substring(0, 16)}...`
+          : trend.topic,
       score: trend.score,
       growth: trend.growth_rate * 100,
       date: format(new Date(trend.created_at), 'MM/dd'),
@@ -45,6 +48,8 @@ const TrendChart: React.FC<TrendChartProps> = ({ trends }) => {
           justifyContent: 'center',
           alignItems: 'center',
           height: '100%',
+          color: '#94a3b8',
+          fontSize: '0.9rem',
         }}
       >
         データがありません
@@ -55,24 +60,34 @@ const TrendChart: React.FC<TrendChartProps> = ({ trends }) => {
   return (
     <ResponsiveContainer width="100%" height="90%">
       <LineChart data={chartData}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="date" />
-        <YAxis />
-        <Tooltip />
+        <CartesianGrid strokeDasharray="4 4" stroke="rgba(148, 163, 184, 0.2)" />
+        <XAxis dataKey="date" stroke="#94a3b8" />
+        <YAxis stroke="#94a3b8" />
+        <Tooltip
+          contentStyle={{
+            borderRadius: 12,
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            background: '#0f1117',
+            boxShadow: '0 12px 24px rgba(0, 0, 0, 0.45)',
+            color: '#f8fafc',
+          }}
+        />
         <Legend />
         <Line
           type="monotone"
           dataKey="score"
-          stroke="#8884d8"
+          stroke="#818cf8"
           name="スコア"
           strokeWidth={2}
+          dot={{ r: 2 }}
         />
         <Line
           type="monotone"
           dataKey="growth"
-          stroke="#82ca9d"
+          stroke="#a855f7"
           name="成長率(%)"
           strokeWidth={2}
+          dot={{ r: 2 }}
         />
       </LineChart>
     </ResponsiveContainer>
@@ -80,4 +95,3 @@ const TrendChart: React.FC<TrendChartProps> = ({ trends }) => {
 };
 
 export default TrendChart;
-

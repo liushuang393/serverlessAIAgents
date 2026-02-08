@@ -72,13 +72,32 @@ const Settings: React.FC = () => {
 
   return (
     <Box p={3}>
-      <Typography variant="h4" gutterBottom>
-        設定
-      </Typography>
+      <Paper
+        sx={{
+          p: { xs: 3, md: 4 },
+          mb: 3,
+          background:
+            'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(168,85,247,0.12))',
+        }}
+      >
+        <Typography variant="h4" gutterBottom>
+          設定
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          監視対象と収集頻度を調整して、重要シグナルの感度を最適化します。
+        </Typography>
+      </Paper>
 
       <Stack spacing={3}>
         {/* キーワード設定 */}
-        <Paper sx={{ p: 3 }}>
+        <Paper
+          sx={{
+            p: 3,
+            backgroundImage:
+              'linear-gradient(135deg, rgba(99,102,241,0.08), rgba(18,18,26,0.95))',
+            border: '1px solid rgba(99,102,241,0.2)',
+          }}
+        >
           <Typography variant="h6" gutterBottom>
             監視キーワード
           </Typography>
@@ -93,6 +112,11 @@ const Settings: React.FC = () => {
                   handleAddKeyword();
                 }
               }}
+              sx={{
+                '& .MuiInputBase-root': {
+                  backgroundColor: '#0f1117',
+                },
+              }}
             />
             <Button variant="contained" onClick={handleAddKeyword}>
               追加
@@ -104,13 +128,21 @@ const Settings: React.FC = () => {
                 key={keyword}
                 label={keyword}
                 onDelete={() => handleDeleteKeyword(keyword)}
+                sx={{ backgroundColor: 'rgba(99, 102, 241, 0.18)', color: '#e2e8f0' }}
               />
             ))}
           </Stack>
         </Paper>
 
         {/* データソース設定 */}
-        <Paper sx={{ p: 3 }}>
+        <Paper
+          sx={{
+            p: 3,
+            backgroundImage:
+              'linear-gradient(135deg, rgba(168,85,247,0.08), rgba(18,18,26,0.95))',
+            border: '1px solid rgba(168,85,247,0.2)',
+          }}
+        >
           <Typography variant="h6" gutterBottom>
             データソース
           </Typography>
@@ -131,7 +163,7 @@ const Settings: React.FC = () => {
         </Paper>
 
         {/* アクションボタン */}
-        <Box display="flex" gap={2}>
+        <Box display="flex" gap={2} flexWrap="wrap">
           <Button variant="contained" onClick={handleSave}>
             設定を保存
           </Button>
@@ -157,4 +189,3 @@ const Settings: React.FC = () => {
 };
 
 export default Settings;
-

@@ -10,6 +10,7 @@ from apps.decision_governance_engine.schemas.input_schemas import (
     BudgetConstraint,
     TimelineConstraint,
     RequesterInfo,
+    StakeholderInfo,
 )
 from apps.decision_governance_engine.schemas.agent_schemas import (
     QuestionCategory,
@@ -49,6 +50,7 @@ __all__ = [
     "BudgetConstraint",
     "TimelineConstraint",
     "RequesterInfo",
+    "StakeholderInfo",
     # Agent schemas
     "QuestionCategory",
     "GatekeeperInput",

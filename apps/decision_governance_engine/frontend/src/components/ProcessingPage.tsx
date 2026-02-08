@@ -173,7 +173,7 @@ const ThinkingLogPanel: React.FC<{ logs: ThinkingLog[]; isExpanded: boolean; onT
 };
 
 export const ProcessingPage: React.FC = () => {
-  const { question, constraints, setPage, setReport, addToHistory } = useDecisionStore();
+  const { question, constraints, stakeholders, setPage, setReport, addToHistory } = useDecisionStore();
   const {
     isConnected,
     isComplete,
@@ -202,11 +202,11 @@ export const ProcessingPage: React.FC = () => {
   /** リトライ処理 */
   const handleRetry = useCallback(() => {
     if (question) {
-      const budget = constraints.budget ? parseFloat(constraints.budget) : undefined;
-      const timeline = constraints.timeline ? parseInt(constraints.timeline, 10) : undefined;
-      startStream(question, budget, timeline);
+      const budget = constraints.budget ? Number.parseFloat(constraints.budget) : undefined;
+      const timeline = constraints.timeline ? Number.parseInt(constraints.timeline, 10) : undefined;
+      startStream(question, budget, timeline, stakeholders);
     }
-  }, [question, constraints.budget, constraints.timeline, startStream]);
+  }, [question, constraints.budget, constraints.timeline, stakeholders, startStream]);
 
   /** レポート画面へ遷移 */
   const handleViewReport = useCallback(() => {
@@ -229,10 +229,9 @@ export const ProcessingPage: React.FC = () => {
     // Zustand persist の hydration 完了後に question が設定される
     if (question && !hasStartedRef.current) {
       hasStartedRef.current = true;
-      const budget = constraints.budget ? parseFloat(constraints.budget) : undefined;
-      const timeline = constraints.timeline ? parseInt(constraints.timeline, 10) : undefined;
-      console.log('[ProcessingPage] startStream 開始', { question: question.slice(0, 50), budget, timeline });
-      startStream(question, budget, timeline);
+      const budget = constraints.budget ? Number.parseFloat(constraints.budget) : undefined;
+      const timeline = constraints.timeline ? Number.parseInt(constraints.timeline, 10) : undefined;
+      startStream(question, budget, timeline, stakeholders);
     } else if (!question) {
       console.log('[ProcessingPage] question が空 - hydration 待ち中');
     }
@@ -251,7 +250,7 @@ export const ProcessingPage: React.FC = () => {
       isMountedRef.current = false;
       hasStartedRef.current = false;  // 再マウント時に再開できるようにリセット
     };
-  }, [question, constraints.budget, constraints.timeline, startStream, stopStream]);
+  }, [question, constraints.budget, constraints.timeline, stakeholders, startStream, stopStream]);
 
   // 完了時にレポートを保存（自動遷移しない - ボタンで遷移）
   useEffect(() => {

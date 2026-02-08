@@ -171,14 +171,18 @@ class SignalScorerAgent(ResilientAgent[SignalScorerInput, SignalScorerOutput]):
 
     def _schema_to_trend(self, schema: TrendSchema) -> Trend:
         """TrendSchema を Trend に変換."""
+        first_seen = schema.first_seen or datetime.now().isoformat()
+        last_seen = schema.last_seen or datetime.now().isoformat()
         return Trend(
             id=schema.id,
             topic=schema.topic,
+            score=schema.score,
+            articles_count=schema.articles_count,
             keywords=schema.keywords,
             sentiment=SentimentType(schema.sentiment),
             growth_rate=schema.growth_rate,
-            first_seen=datetime.fromisoformat(schema.first_seen),
-            last_seen=datetime.fromisoformat(schema.last_seen),
+            first_seen=datetime.fromisoformat(first_seen),
+            last_seen=datetime.fromisoformat(last_seen),
             article_count=schema.article_count,
             metadata=schema.metadata,
         )

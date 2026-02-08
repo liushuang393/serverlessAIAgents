@@ -20,11 +20,18 @@ from apps.market_trend_monitor.backend.services.redteam_service import (
 from apps.market_trend_monitor.backend.services.signal_service import (
     SignalService,
 )
+from apps.market_trend_monitor.backend.services.market_store import (
+    MarketStore,
+)
+from apps.market_trend_monitor.backend.services.source_registry import (
+    SourceRegistryService,
+)
 
 __all__ = [
     "EvidenceService",
+    "MarketStore",
     "PredictionService",
     "RedTeamService",
     "SignalService",
+    "SourceRegistryService",
 ]
-

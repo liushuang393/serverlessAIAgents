@@ -73,6 +73,10 @@ from apps.market_trend_monitor.backend.models.prediction import (
     PredictionSchema,
     PredictionStatus,
 )
+from apps.market_trend_monitor.backend.models.source_registry import (
+    SourceRegistryEntry,
+    SourceRegistrySchema,
+)
 
 __all__ = [
     # ============================================================
@@ -145,5 +149,9 @@ __all__ = [
     "PredictionReviewSchema",
     "PredictionSchema",
     "PredictionStatus",
+    # ============================================================
+    # 情報源台帳
+    # ============================================================
+    "SourceRegistryEntry",
+    "SourceRegistrySchema",
 ]
-

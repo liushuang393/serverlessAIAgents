@@ -33,6 +33,14 @@ class CollectorConfig:
     # 最大記事数
     max_articles_per_source: int = 100
 
+    # RSS フィード
+    rss_feeds: list[str] = field(
+        default_factory=lambda: [
+            "https://hnrss.org/newest",
+            "https://www.reddit.com/r/MachineLearning/.rss",
+        ]
+    )
+
 
 @dataclass
 class AnalyzerConfig:
@@ -49,6 +57,9 @@ class AnalyzerConfig:
 
     # センチメント分析有効化
     enable_sentiment_analysis: bool = True
+
+    # トレンド算定ウィンドウ（日数）
+    trend_window_days: int = 7
 
 
 @dataclass
@@ -122,12 +133,15 @@ class AppConfig:
     # データディレクトリ
     data_dir: Path = field(default_factory=lambda: Path("./data"))
 
-    def __post_init__(self) -> None:
-        """初期化後処理."""
-        # データディレクトリを作成
+    def ensure_data_dir(self) -> Path:
+        """データディレクトリを確保して返す.
+
+        Returns:
+            データディレクトリのPath
+        """
         self.data_dir.mkdir(parents=True, exist_ok=True)
+        return self.data_dir
 
 
 # グローバル設定インスタンス
 config = AppConfig()
-

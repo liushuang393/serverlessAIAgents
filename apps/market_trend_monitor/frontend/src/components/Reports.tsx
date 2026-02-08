@@ -53,18 +53,45 @@ const Reports: React.FC = () => {
 
   return (
     <Box p={3}>
-      <Typography variant="h4" gutterBottom>
-        レポート
-      </Typography>
+      <Paper
+        sx={{
+          p: { xs: 3, md: 4 },
+          mb: 3,
+          background:
+            'linear-gradient(135deg, rgba(99,102,241,0.22), rgba(168,85,247,0.12))',
+        }}
+      >
+        <Typography variant="h4" gutterBottom>
+          レポート
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          意思決定に直結する分析結果と要約を時系列で確認できます。
+        </Typography>
+      </Paper>
 
       {reports.length === 0 ? (
-        <Paper sx={{ p: 3 }}>
-          <Typography>レポートがありません</Typography>
+        <Paper
+          sx={{
+            p: 3,
+            border: '1px dashed rgba(255,255,255,0.2)',
+            backgroundColor: '#0f1117',
+          }}
+        >
+          <Typography color="text.secondary">レポートがありません</Typography>
         </Paper>
       ) : (
         <Box>
           {reports.map((report) => (
-            <Accordion key={report.id} sx={{ mb: 2 }}>
+            <Accordion
+              key={report.id}
+              sx={{
+                mb: 2,
+                borderRadius: 3,
+                backgroundColor: '#12121a',
+                border: '1px solid rgba(255,255,255,0.06)',
+                '&:before': { display: 'none' },
+              }}
+            >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                 <Box sx={{ width: '100%' }}>
                   <Typography variant="h6">{report.title}</Typography>
@@ -75,7 +102,7 @@ const Reports: React.FC = () => {
                   </Typography>
                 </Box>
               </AccordionSummary>
-              <AccordionDetails>
+              <AccordionDetails sx={{ backgroundColor: '#0f1117' }}>
                 <Box>
                   <Typography variant="body1" paragraph>
                     {report.summary}
@@ -102,6 +129,10 @@ const Reports: React.FC = () => {
                           key={trend.id}
                           label={`${trend.topic} (${trend.score.toFixed(1)})`}
                           size="small"
+                          sx={{
+                            backgroundColor: 'rgba(99, 102, 241, 0.18)',
+                            color: '#e2e8f0',
+                          }}
                         />
                       ))}
                     </Box>
@@ -117,4 +148,3 @@ const Reports: React.FC = () => {
 };
 
 export default Reports;
-

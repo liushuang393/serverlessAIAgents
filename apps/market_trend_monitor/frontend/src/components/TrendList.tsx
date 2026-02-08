@@ -45,21 +45,55 @@ const TrendList: React.FC<TrendListProps> = ({ trends }) => {
   }
 
   return (
-    <TableContainer>
-      <Table>
+    <TableContainer
+      sx={{
+        borderRadius: 2,
+        border: '1px solid rgba(255,255,255,0.06)',
+        backgroundColor: '#0f1117',
+      }}
+    >
+      <Table
+        sx={{
+          '& .MuiTableCell-head': {
+            color: '#cbd5f5',
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+          },
+          '& .MuiTableCell-body': {
+            color: '#e2e8f0',
+            borderBottom: '1px solid rgba(255,255,255,0.04)',
+          },
+        }}
+      >
         <TableHead>
           <TableRow>
-            <TableCell>トピック</TableCell>
-            <TableCell align="right">スコア</TableCell>
-            <TableCell align="right">記事数</TableCell>
-            <TableCell>センチメント</TableCell>
-            <TableCell align="right">成長率</TableCell>
-            <TableCell>作成日時</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>トピック</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600 }}>
+              スコア
+            </TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600 }}>
+              記事数
+            </TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>センチメント</TableCell>
+            <TableCell align="right" sx={{ fontWeight: 600 }}>
+              成長率
+            </TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>作成日時</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {trends.map((trend) => (
-            <TableRow key={trend.id} hover>
+            <TableRow
+              key={trend.id}
+              hover
+              sx={{
+                '&:nth-of-type(odd)': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                },
+                '&:hover': {
+                  backgroundColor: 'rgba(99, 102, 241, 0.08)',
+                },
+              }}
+            >
               <TableCell>{trend.topic}</TableCell>
               <TableCell align="right">{trend.score.toFixed(2)}</TableCell>
               <TableCell align="right">{trend.articles_count}</TableCell>
@@ -68,6 +102,8 @@ const TrendList: React.FC<TrendListProps> = ({ trends }) => {
                   label={trend.sentiment}
                   color={getSentimentColor(trend.sentiment)}
                   size="small"
+                  variant="outlined"
+                  sx={{ borderColor: 'rgba(255,255,255,0.2)' }}
                 />
               </TableCell>
               <TableCell align="right">
@@ -85,4 +121,3 @@ const TrendList: React.FC<TrendListProps> = ({ trends }) => {
 };
 
 export default TrendList;
-

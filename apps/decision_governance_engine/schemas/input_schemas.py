@@ -41,6 +41,35 @@ class ConstraintSet(BaseModel):
     regulatory: list[str] = Field(default_factory=list, description="規制・コンプライアンス")
 
 
+class StakeholderInfo(BaseModel):
+    """ステークホルダー（責任者）情報.
+
+    提案書の責任分界を明確にするためのオプション情報。
+    入力画面から任意で設定し、提案書の署名欄・責任者欄に反映される。
+    """
+
+    product_owner: str = Field(
+        default="",
+        max_length=100,
+        description="プロダクトオーナー（事業価値・撤退判断の最終責任者）",
+    )
+    tech_lead: str = Field(
+        default="",
+        max_length=100,
+        description="技術責任者（計測・実装の責任者）",
+    )
+    business_owner: str = Field(
+        default="",
+        max_length=100,
+        description="事業責任者（予算・ROIの責任者）",
+    )
+    legal_reviewer: str = Field(
+        default="",
+        max_length=100,
+        description="法務・コンプライアンス担当（規制・契約審査の責任者）",
+    )
+
+
 class RequesterInfo(BaseModel):
     """依頼者情報."""
 
@@ -78,6 +107,10 @@ class DecisionRequest(BaseModel):
         default=None,
         description="依頼者情報",
     )
+    stakeholders: StakeholderInfo | None = Field(
+        default=None,
+        description="ステークホルダー（責任者）情報（任意）",
+    )
     additional_context: str | None = Field(
         default=None,
         max_length=5000,
@@ -103,6 +136,12 @@ class DecisionRequest(BaseModel):
                         "role": "CEO",
                         "decision_authority": True,
                         "organization_size": "STARTUP",
+                    },
+                    "stakeholders": {
+                        "product_owner": "田中太郎",
+                        "tech_lead": "鈴木一郎",
+                        "business_owner": "佐藤花子",
+                        "legal_reviewer": "",
                     },
                 }
             ]

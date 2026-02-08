@@ -12,7 +12,7 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { DecisionRequest, DecisionReport } from '../types';
+import type { DecisionRequest, DecisionReport, StakeholderInfo } from '../types';
 
 /** 画面状態 */
 export type PageState = 'input' | 'processing' | 'report' | 'history' | 'knowledge-shu' | 'knowledge-qi';
@@ -44,6 +44,9 @@ interface DecisionState {
     regulatory: string[];
   };
 
+  // ステークホルダー（責任者）情報
+  stakeholders: StakeholderInfo;
+
   // 処理結果
   reportId: string | null;
   report: DecisionReport | null;
@@ -57,6 +60,7 @@ interface DecisionState {
   // アクション
   setQuestion: (q: string) => void;
   setConstraints: (c: Partial<DecisionState['constraints']>) => void;
+  setStakeholders: (s: Partial<StakeholderInfo>) => void;
   setPage: (p: PageState) => void;
   setReportId: (id: string) => void;
   setReport: (r: DecisionReport) => void;
@@ -82,6 +86,14 @@ const initialConstraints = {
   regulatory: [] as string[],
 };
 
+/** 初期ステークホルダー */
+const initialStakeholders: StakeholderInfo = {
+  product_owner: '',
+  tech_lead: '',
+  business_owner: '',
+  legal_reviewer: '',
+};
+
 /**
  * Decision ストア.
  */
@@ -92,6 +104,7 @@ export const useDecisionStore = create<DecisionState>()(
       currentPage: 'input',
       question: '',
       constraints: { ...initialConstraints },
+      stakeholders: { ...initialStakeholders },
       reportId: null,
       report: null,
       history: [],
@@ -103,6 +116,11 @@ export const useDecisionStore = create<DecisionState>()(
       setConstraints: (c) =>
         set((state) => ({
           constraints: { ...state.constraints, ...c },
+        })),
+
+      setStakeholders: (s) =>
+        set((state) => ({
+          stakeholders: { ...state.stakeholders, ...s },
         })),
 
       setPage: (p) => set({ currentPage: p }),
@@ -118,6 +136,7 @@ export const useDecisionStore = create<DecisionState>()(
           currentPage: 'input',
           question: '',
           constraints: { ...initialConstraints },
+          stakeholders: { ...initialStakeholders },
           reportId: null,
           report: null,
           error: null,
@@ -169,13 +188,20 @@ export const useDecisionStore = create<DecisionState>()(
 
         // 数値変換
         if (state.constraints.budget) {
-          const b = parseFloat(state.constraints.budget);
-          if (!isNaN(b)) req.budget = b;
+          const b = Number.parseFloat(state.constraints.budget);
+          if (!Number.isNaN(b)) req.budget = b;
         }
         if (state.constraints.timeline) {
-          const t = parseInt(state.constraints.timeline, 10);
-          if (!isNaN(t)) req.timeline_months = t;
+          const t = Number.parseInt(state.constraints.timeline, 10);
+          if (!Number.isNaN(t)) req.timeline_months = t;
         }
+
+        // ステークホルダー情報（値がある場合のみ設定）
+        const sh = state.stakeholders;
+        if (sh.product_owner) req.stakeholder_product_owner = sh.product_owner;
+        if (sh.tech_lead) req.stakeholder_tech_lead = sh.tech_lead;
+        if (sh.business_owner) req.stakeholder_business_owner = sh.business_owner;
+        if (sh.legal_reviewer) req.stakeholder_legal_reviewer = sh.legal_reviewer;
 
         return req;
       },
@@ -186,6 +212,7 @@ export const useDecisionStore = create<DecisionState>()(
       partialize: (state) => ({
         question: state.question,
         constraints: state.constraints,
+        stakeholders: state.stakeholders,
         history: state.history,
         // レポートも永続化（大きい場合は除外を検討）
         reportId: state.reportId,

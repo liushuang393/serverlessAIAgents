@@ -112,7 +112,17 @@ export function useDecisionStream() {
 
   const eventSourceRef = useRef<EventSource | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastParamsRef = useRef<{question: string; budget?: number; timeline?: number} | null>(null);
+  const lastParamsRef = useRef<{
+    question: string;
+    budget?: number;
+    timeline?: number;
+    stakeholders?: {
+      product_owner?: string;
+      tech_lead?: string;
+      business_owner?: string;
+      legal_reviewer?: string;
+    };
+  } | null>(null);
 
   /** Agent 状態を更新 */
   const updateAgent = useCallback(
@@ -533,7 +543,8 @@ export function useDecisionStream() {
         params.timeline,
         handleEvent,
         handleError,
-        handleOpen
+        handleOpen,
+        params.stakeholders
       );
       setConnectionTimeout();
     }, delay);
@@ -541,7 +552,12 @@ export function useDecisionStream() {
 
   /** ストリーム開始 */
   const startStream = useCallback(
-    (question: string, budget?: number, timelineMonths?: number) => {
+    (question: string, budget?: number, timelineMonths?: number, stakeholders?: {
+      product_owner?: string;
+      tech_lead?: string;
+      business_owner?: string;
+      legal_reviewer?: string;
+    }) => {
       console.log('🔘 [STEP4] startStream() 開始', { 
         question: question?.slice(0, 50), 
         budget, 
@@ -560,7 +576,7 @@ export function useDecisionStream() {
       clearConnectionTimeout();
 
       // パラメータ保存（再接続用）
-      lastParamsRef.current = { question, budget, timeline: timelineMonths };
+      lastParamsRef.current = { question, budget, timeline: timelineMonths, stakeholders };
 
       // 状態リセット（最初のagentをrunning状態に）
       const startingAgents = initialAgents.map((a, i) =>
@@ -586,7 +602,8 @@ export function useDecisionStream() {
         timelineMonths,
         handleEvent,
         handleError,
-        handleOpen
+        handleOpen,
+        stakeholders
       );
       
       console.log('🔘 [STEP4] EventSource 作成完了, readyState=', eventSourceRef.current?.readyState);

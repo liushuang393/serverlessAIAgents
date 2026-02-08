@@ -98,6 +98,14 @@ export interface ConstraintSet {
   human_resources: string[];
 }
 
+/** ステークホルダー（責任者）情報 */
+export interface StakeholderInfo {
+  product_owner: string;
+  tech_lead: string;
+  business_owner: string;
+  legal_reviewer: string;
+}
+
 /** 決策リクエスト */
 export interface DecisionRequest {
   question: string;
@@ -106,6 +114,10 @@ export interface DecisionRequest {
   technical_constraints: string[];
   regulatory_constraints: string[];
   human_resources: string[];
+  stakeholder_product_owner?: string;
+  stakeholder_tech_lead?: string;
+  stakeholder_business_owner?: string;
+  stakeholder_legal_reviewer?: string;
 }
 
 /** 拒否レスポンス */
