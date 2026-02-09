@@ -1,0 +1,23 @@
+# ==============================================================================
+# Design Skills Engine - ComfyUI CPU モードオーバーライド
+# ==============================================================================
+# 使用方法:
+#   COMFYUI_MODELS_DIR=../../models docker compose \
+#     -f docker-compose.yml -f docker-compose.cpu.yml up -d
+#
+# GPU がない環境で ComfyUI を CPU モードで実行する。
+# 生成速度は大幅に低下するが、動作確認やテストには十分。
+# ==============================================================================
+
+services:
+  comfyui:
+    # GPU 予約を削除 (deploy セクション全体をオーバーライド)
+    deploy: {}
+    environment:
+      - COMFYUI_EXTRA_ARGS=--cpu
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8188/prompt')"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 120s

@@ -1,0 +1,55 @@
+# ==============================================================================
+# Design Skills Engine - ComfyUI Docker Compose (GPU モード)
+# ==============================================================================
+# 使用方法:
+#   COMFYUI_MODELS_DIR=../../models docker compose up -d
+#
+# 前提条件:
+#   - NVIDIA GPU + nvidia-container-toolkit がインストール済み
+#   - モデルファイルを事前にダウンロード:
+#     scripts/setup_comfyui.sh
+# ==============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # ComfyUI: 画像生成サーバー (GPU)
+  # ---------------------------------------------------------------------------
+  comfyui:
+    image: yanwk/comfyui-boot:latest
+    ports:
+      - "${COMFYUI_PORT:-8188}:8188"
+    volumes:
+      # モデルファイル (ユーザーが事前にダウンロード)
+      - ${COMFYUI_MODELS_DIR:-./models}:/root/ComfyUI/models
+      # 生成画像の出力先
+      - comfyui_output:/root/ComfyUI/output
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8188/prompt')"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+    networks:
+      - dse-network
+
+# ---------------------------------------------------------------------------
+# ボリューム定義
+# ---------------------------------------------------------------------------
+volumes:
+  comfyui_output:
+    driver: local
+
+# ---------------------------------------------------------------------------
+# ネットワーク定義
+# ---------------------------------------------------------------------------
+networks:
+  dse-network:
+    driver: bridge
