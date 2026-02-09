@@ -121,6 +121,28 @@ class SkillLoader:
         self._logger.info(f"Loaded {len(skills)} skills from {directory}")
         return skills
 
+    def load_default_paths(self) -> list[Skill]:
+        """Claude Code CLI 互換パスからスキルを自動読み込み.
+
+        Scan order:
+        1. ~/.claude/skills/ (user-level)
+        2. .claude/skills/  (project-level, relative to cwd)
+        3. agentflow/skills/builtin/ (framework builtin)
+
+        Returns:
+            読み込まれた Skill リスト
+        """
+        skills: list[Skill] = []
+        scan_dirs = [
+            Path.home() / ".claude" / "skills",
+            Path.cwd() / ".claude" / "skills",
+            Path(__file__).parent.parent / "builtin",
+        ]
+        for d in scan_dirs:
+            if d.exists():
+                skills.extend(self.load_directory(d, recursive=False))
+        return skills
+
     def resolve_dependencies(self, skill: Skill) -> list[Skill]:
         """Skill の依存関係を解決.
 

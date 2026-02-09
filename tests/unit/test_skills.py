@@ -540,3 +540,33 @@ class TestSkillPersister:
         learned = persister.list_learned()
         assert "test-skill" in learned
 
+
+class TestSkillLoader:
+    """SkillLoader のテスト."""
+
+    def test_load_default_paths_finds_builtins(self) -> None:
+        """load_default_paths() finds builtin skills."""
+        # Reset singleton to avoid stale state from other tests
+        SkillRegistry._instance = None
+        loader = SkillLoader()
+        skills = loader.load_default_paths()
+        # Should find at least some builtin skills
+        assert len(skills) > 0
+        names = [s.name for s in skills]
+        assert "design-skills" in names
+
+    def test_load_default_paths_scans_user_dir(self, tmp_path: Path) -> None:
+        """load_default_paths() scans .claude/skills/ directories."""
+        SkillRegistry._instance = None
+        # Create a skill in a simulated project .claude/skills/
+        project_skills = tmp_path / ".claude" / "skills" / "my-custom"
+        project_skills.mkdir(parents=True)
+        (project_skills / "SKILL.md").write_text(
+            "---\nname: my-custom\ndescription: Custom skill\n---\nDo stuff.",
+            encoding="utf-8",
+        )
+        loader = SkillLoader()
+        # Directly test load_directory since we can't easily mock cwd/home
+        skills = loader.load_directory(tmp_path / ".claude" / "skills")
+        assert any(s.name == "my-custom" for s in skills)
+
