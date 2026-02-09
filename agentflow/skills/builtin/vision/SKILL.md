@@ -20,6 +20,11 @@ examples:
   - "この画像に何が写っていますか？"
   - "画像からテキストを抽出して"
   - "写真を分析して"
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # Vision Skill

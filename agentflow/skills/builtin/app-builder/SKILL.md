@@ -23,6 +23,11 @@ tags:
   - docker
   - database
   - alembic
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # App 基盤構築スキル

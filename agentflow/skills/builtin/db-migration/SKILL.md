@@ -21,6 +21,11 @@ tags:
   - migration
   - alembic
   - postgresql
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # DB マイグレーション管理スキル (Alembic)

@@ -17,6 +17,11 @@ tags:
   - ecommerce
   - cross-border
   - automation
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # 跨境電商運営スキルパッケージ

@@ -29,6 +29,11 @@ examples:
   - "対話セッションを管理"
   - "RAG 連携チャット"
   - "Agent 呼び出し対話"
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # ChatBot Skill

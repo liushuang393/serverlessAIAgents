@@ -22,6 +22,11 @@ examples:
   - "この音声をテキストに変換して"
   - "テキストを音声で読み上げて"
   - "音声ファイルを文字起こしして"
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # Voice Skill

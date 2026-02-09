@@ -31,6 +31,12 @@ examples:
   - "知識ベースを構築"
   - "RAG で質問応答"
   - "意味検索を実行"
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - Grep
+user-invocable: true
 ---
 
 # RAG Skill

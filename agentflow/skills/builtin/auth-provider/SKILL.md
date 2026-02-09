@@ -31,6 +31,11 @@ examples:
   - "OAuth 社交登录"
   - "JWT 验证"
   - "会话管理"
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # Auth Provider Skill

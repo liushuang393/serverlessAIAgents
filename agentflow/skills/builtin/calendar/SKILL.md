@@ -18,6 +18,11 @@ examples:
   - "今週の予定を教えて"
   - "会議を予約して"
   - "空いている時間を探して"
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # Calendar Skill

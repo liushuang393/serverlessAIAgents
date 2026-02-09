@@ -30,6 +30,11 @@ examples:
   - "处理 Stripe Webhook"
   - "管理订阅"
   - "生成 Customer Portal 链接"
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # Stripe Payment Skill

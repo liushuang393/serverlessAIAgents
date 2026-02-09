@@ -31,6 +31,11 @@ examples:
   - "创建预览环境"
   - "回滚到上一个版本"
   - "配置自定义域名"
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # Deployment Manager Skill

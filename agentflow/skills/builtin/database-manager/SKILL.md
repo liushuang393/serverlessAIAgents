@@ -33,6 +33,11 @@ examples:
   - "创建用户表并设置 RLS"
   - "执行数据库迁移"
   - "CRUD 操作示例"
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # Database Manager Skill

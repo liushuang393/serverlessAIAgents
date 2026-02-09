@@ -17,6 +17,11 @@ examples:
   - "会話履歴をエクスポートして"
   - "チャット履歴をCSVで保存して"
   - "会話をMarkdownで出力して"
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # Conversation Export Skill

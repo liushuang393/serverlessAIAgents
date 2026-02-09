@@ -17,6 +17,11 @@ tags:
   - development
   - agile
   - iteration
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # App 開発標準フロー

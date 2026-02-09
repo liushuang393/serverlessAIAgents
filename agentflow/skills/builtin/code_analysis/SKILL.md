@@ -16,6 +16,13 @@ tags:
   - code-analysis
   - migration
   - security
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - Grep
+  - Glob
+user-invocable: true
 ---
 
 # コード分析・移行スキルパッケージ

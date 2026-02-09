@@ -35,6 +35,11 @@ acceptance_criteria:
   - 各trendにtopic, score, sentiment, growth_rateが含まれること
   - 入力articles数 > 0 の場合、trends数 >= 1
   - スコアは0.0-1.0の範囲内
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
 ---
 
 # Market Trend Analysis Skill

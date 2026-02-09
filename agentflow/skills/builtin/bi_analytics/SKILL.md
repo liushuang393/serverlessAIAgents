@@ -1,3 +1,27 @@
+---
+name: bi-analytics
+description: >
+  AI Agent向けビジネスインテリジェンス分析スキル。
+  データ分析、可視化、レポート生成を提供。
+version: 1.0.0
+triggers:
+  - BI
+  - analytics
+  - データ分析
+  - レポート
+  - ビジネスインテリジェンス
+  - 可視化
+tags:
+  - analytics
+  - business-intelligence
+  - data
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+user-invocable: true
+---
+
 # BI Analytics Skill
 
 > AI Agent向けビジネスインテリジェンス分析スキル
