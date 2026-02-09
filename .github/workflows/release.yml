@@ -4,8 +4,9 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
+  # push 自動トリガーを無効化（push の度に bot コミットが発生し、ローカルと分叉する問題を防止）
+  # push:
+  #   branches: [main]
   workflow_dispatch:
     inputs:
       release_type:
