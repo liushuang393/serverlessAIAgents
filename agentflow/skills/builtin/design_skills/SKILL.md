@@ -31,7 +31,7 @@ Lovartの「Design Skills」思想をAgentFlowフレームワークで実装:
 ## 使用方法
 
 ```python
-from apps.design_skills_engine.engine import DesignSkillsEngine
+from agentflow.skills.builtin.design_skills import DesignSkillsEngine
 
 engine = DesignSkillsEngine()
 result = await engine.run({

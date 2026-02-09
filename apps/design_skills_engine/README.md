@@ -26,7 +26,7 @@ export OPENAI_API_KEY=sk-...  # LLM強化モード使用時
 ### 2. 基本使用（Pythonコード）
 
 ```python
-from apps.design_skills_engine.engine import DesignSkillsEngine
+from agentflow.skills.builtin.design_skills.engine import DesignSkillsEngine
 
 # エンジンを初期化
 engine = DesignSkillsEngine()
@@ -57,9 +57,9 @@ async for event in engine.run_stream({
 ### 4. 個別Agent使用
 
 ```python
-from apps.design_skills_engine.agents.intent_analyzer_agent import IntentAnalyzerAgent
-from apps.design_skills_engine.agents.prompt_planner_agent import PromptPlannerAgent
-from apps.design_skills_engine.schemas.design_schemas import (
+from agentflow.skills.builtin.design_skills.agents.intent_analyzer_agent import IntentAnalyzerAgent
+from agentflow.skills.builtin.design_skills.agents.prompt_planner_agent import PromptPlannerAgent
+from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
     DesignBriefInput,
     PromptPlanInput,
 )
@@ -87,7 +87,7 @@ for img in plan.images:
 ### 5. AgentFlowスキルとして使用
 
 ```python
-from apps.design_skills_engine.skills.design_skills import run
+from agentflow.skills.builtin.design_skills.skills.design_skills import run
 
 result = await run({
     "brief": "商品画像を生成",

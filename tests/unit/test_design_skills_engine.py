@@ -29,14 +29,14 @@ class TestDesignSkillsEngine:
 
     async def test_engine_initializes(self) -> None:
         """エンジンが正常に初期化されること."""
-        from apps.design_skills_engine.engine import DesignSkillsEngine
+        from agentflow.skills.builtin.design_skills.engine import DesignSkillsEngine
 
         engine = DesignSkillsEngine(llm_client=None)
         assert engine is not None
 
     async def test_engine_has_correct_config(self) -> None:
         """エンジンの設定が正しいこと."""
-        from apps.design_skills_engine.engine import DesignSkillsEngine
+        from agentflow.skills.builtin.design_skills.engine import DesignSkillsEngine
 
         engine = DesignSkillsEngine(llm_client=None)
         assert engine._config.name == "design-skills-engine"
@@ -49,13 +49,13 @@ class TestDesignSkillsSkill:
     def test_skill_md_exists(self) -> None:
         """SKILL.mdが存在すること."""
         from pathlib import Path
-        skill_path = Path("apps/design_skills_engine/skills/design-skills/SKILL.md")
+        skill_path = Path("agentflow/skills/builtin/design_skills/SKILL.md")
         assert skill_path.exists()
 
     def test_skill_md_has_required_fields(self) -> None:
         """SKILL.mdに必須フィールドが含まれること."""
         from pathlib import Path
-        skill_path = Path("apps/design_skills_engine/skills/design-skills/SKILL.md")
+        skill_path = Path("agentflow/skills/builtin/design_skills/SKILL.md")
         content = skill_path.read_text()
         assert "name:" in content
         assert "description:" in content
@@ -64,7 +64,7 @@ class TestDesignSkillsSkill:
     def test_skill_module_exists(self) -> None:
         """スキルモジュールディレクトリが存在すること."""
         from pathlib import Path
-        design_skill_dir = Path("apps/design_skills_engine/skills/design-skills")
+        design_skill_dir = Path("agentflow/skills/builtin/design_skills")
         assert design_skill_dir.exists()
         assert (design_skill_dir / "__init__.py").exists()
         assert (design_skill_dir / "design_skills.py").exists()

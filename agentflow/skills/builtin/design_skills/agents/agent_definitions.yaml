@@ -1,0 +1,65 @@
+# -*- coding: utf-8 -*-
+# Design Skills Engine - 統一Agent定義
+#
+# 目的: 前後端で共有可能な単一Agent定義ソース（UI表示用）
+# 使用: フロントエンドの進捗表示・Agent名・アイコン表示
+#
+# アーキテクチャ:
+#   IntentAnalyzer（意図解析）→ PromptPlanner（プロンプト計画）→ WorkflowExecutor（生成実行）
+
+flow_id: design-skills-engine
+name: Design Skills Engine
+version: "1.0.0"
+description: "Lovart風デザインスキル - 自然言語からComfyUI経由でマルチ画像生成"
+
+agents:
+  - id: intent_analyzer
+    name: 意図解析
+    label: デザイン意図分析
+    icon: 🎯
+    description: "デザインブリーフを解析し、構造化された意図を抽出"
+    class_name: IntentAnalyzerAgent
+    is_gate: false
+    uses_rag: false
+    progress_messages:
+      - [30, "デザインブリーフを解析中..."]
+      - [60, "デザイン意図を抽出中..."]
+      - [90, "画像役割を決定中..."]
+
+  - id: prompt_planner
+    name: プロンプト計画
+    label: プロンプト計画生成
+    icon: 🎨
+    description: "グローバルスタイルと個別画像プロンプトを含む構造化計画を生成"
+    class_name: PromptPlannerAgent
+    is_gate: false
+    uses_rag: false
+    progress_messages:
+      - [20, "グローバルスタイルを構築中..."]
+      - [50, "個別画像プロンプトを生成中..."]
+      - [80, "一貫性パラメータを最適化中..."]
+
+  - id: workflow_executor
+    name: 生成実行
+    label: ワークフロー実行
+    icon: 🖼️
+    description: "プロンプト計画をComfyUI経由で実行し、生成画像を収集"
+    class_name: WorkflowExecutorAgent
+    is_gate: false
+    uses_rag: false
+    progress_messages:
+      - [10, "ComfyUIに接続中..."]
+      - [30, "ヒーロー画像を生成中..."]
+      - [60, "フィーチャー画像を生成中..."]
+      - [90, "結果を収集中..."]
+
+# Agent名マッピング
+agent_name_mapping:
+  IntentAnalyzerAgent: intent_analyzer
+  PromptPlannerAgent: prompt_planner
+  WorkflowExecutorAgent: workflow_executor
+
+# 設定
+config:
+  max_revisions: 0
+  enable_rag: false

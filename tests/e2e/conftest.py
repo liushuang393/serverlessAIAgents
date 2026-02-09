@@ -9,7 +9,7 @@ from pathlib import Path
 
 import httpx
 import pytest
-from apps.design_skills_engine.tools.comfyui_client import ComfyUIClient
+from agentflow.skills.builtin.design_skills.tools.comfyui_client import ComfyUIClient
 
 
 @pytest.fixture(scope="session")

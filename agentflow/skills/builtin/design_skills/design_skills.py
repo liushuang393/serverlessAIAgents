@@ -3,11 +3,13 @@
 DesignSkillsEngine を AgentFlow スキルとして公開。
 
 使用例:
-    >>> from apps.design_skills_engine.skills.design_skills import run
+    >>> from agentflow.skills.builtin.design_skills.design_skills import run
     >>> result = await run({"brief": "商品画像を生成", "num_images": 4})
 """
 
 from typing import Any
+
+from agentflow.skills.builtin.design_skills.engine import DesignSkillsEngine
 
 
 async def run(input_data: dict[str, Any]) -> dict[str, Any]:
@@ -19,8 +21,5 @@ async def run(input_data: dict[str, Any]) -> dict[str, Any]:
     Returns:
         生成画像とメタデータ
     """
-    from apps.design_skills_engine.engine import DesignSkillsEngine
-
     engine = DesignSkillsEngine()
-    result = await engine.run(input_data)
-    return result
+    return await engine.run(input_data)
