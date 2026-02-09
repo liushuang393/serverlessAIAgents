@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DaoAgent - 本質判定Agent（道）v3.0.
 
 問題の本質を抽出し、因果齿轮で構造化し、死穴（禁忌）を明らかにする。
@@ -11,8 +10,6 @@ import json
 import logging
 from typing import Any
 
-from agentflow import ResilientAgent
-from agentflow.core.exceptions import AgentOutputValidationError
 from apps.decision_governance_engine.schemas.agent_schemas import (
     CausalGear,
     DaoInput,
@@ -25,6 +22,9 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     ProblemNatureType,
     ProblemType,
 )
+
+from agentflow import ResilientAgent
+from agentflow.core.exceptions import AgentOutputValidationError
 
 
 class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
@@ -306,7 +306,8 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
 
             if data is None:
                 self._logger.error(f"JSON extraction failed. Raw response: {response[:1000]}")
-                raise json.JSONDecodeError("No valid JSON found", response, 0)
+                msg = "No valid JSON found"
+                raise json.JSONDecodeError(msg, response, 0)
 
             # 詳細ログ: 抽出されたJSON
             self._logger.debug(f"Extracted JSON: {data}")

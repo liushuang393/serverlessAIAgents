@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Flow進捗追跡.
 
 フロー実行の進捗を自動追跡し、AG-UIプロトコルイベントを発行。
@@ -23,6 +22,7 @@ from agentflow.protocols.agui_events import (
     NodeStartEvent,
     to_legacy_dict,
 )
+
 
 if TYPE_CHECKING:
     from agentflow.flow.graph import FlowGraph

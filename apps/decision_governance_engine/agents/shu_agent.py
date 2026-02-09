@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ShuAgent - 実行計画Agent（術）v3.0.
 
 選択されたパスを具体的な実行フェーズに分解する。
@@ -17,10 +16,6 @@ import json
 import logging
 from typing import Any
 
-from agentflow.skills import RAGConfig, RAGSkill
-
-from agentflow import ResilientAgent
-from agentflow.core.exceptions import AgentOutputValidationError
 from apps.decision_governance_engine.schemas.agent_schemas import (
     ActionPhase,
     ContextSpecificAction,
@@ -34,6 +29,10 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     ShuOutput,
     SingleValidationPoint,
 )
+
+from agentflow import ResilientAgent
+from agentflow.core.exceptions import AgentOutputValidationError
+from agentflow.skills import RAGConfig, RAGSkill
 
 
 class ShuAgent(ResilientAgent[ShuInput, ShuOutput]):
@@ -335,7 +334,8 @@ JSON形式で出力してください。"""
 
             if data is None:
                 self._logger.error(f"JSON extraction failed. Raw response: {response[:1000]}")
-                raise json.JSONDecodeError("No valid JSON found", response, 0)
+                msg = "No valid JSON found"
+                raise json.JSONDecodeError(msg, response, 0)
 
             # 詳細ログ: 抽出されたJSON
             self._logger.debug(f"Extracted JSON: {data}")

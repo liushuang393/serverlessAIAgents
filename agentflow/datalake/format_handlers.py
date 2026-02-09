@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FormatHandler - データフォーマットハンドラ.
 
 各種ファイルフォーマットのパース/シリアライズを担当。
@@ -16,6 +15,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +184,7 @@ class JSONHandler(FormatHandler):
         """
         text = content.decode(encoding)
 
-        if jsonl or text.strip().startswith("{") and "\n{" in text:
+        if jsonl or (text.strip().startswith("{") and "\n{" in text):
             # JSONL形式
             return [json.loads(line, **kwargs) for line in text.strip().split("\n") if line.strip()]
 
@@ -259,9 +259,12 @@ class ExcelHandler(FormatHandler):
         try:
             import openpyxl
         except ImportError as e:
-            raise ImportError(
+            msg = (
                 "openpyxl is required for Excel support. "
                 "Install with: pip install openpyxl"
+            )
+            raise ImportError(
+                msg
             ) from e
 
         workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True)
@@ -278,7 +281,7 @@ class ExcelHandler(FormatHandler):
             return []
 
         headers = [str(h) if h else f"col_{i}" for i, h in enumerate(rows[0])]
-        return [dict(zip(headers, row)) for row in rows[1:]]
+        return [dict(zip(headers, row, strict=False)) for row in rows[1:]]
 
     async def serialize(
         self,
@@ -299,9 +302,12 @@ class ExcelHandler(FormatHandler):
         try:
             import openpyxl
         except ImportError as e:
-            raise ImportError(
+            msg = (
                 "openpyxl is required for Excel support. "
                 "Install with: pip install openpyxl"
+            )
+            raise ImportError(
+                msg
             ) from e
 
         workbook = openpyxl.Workbook()
@@ -360,9 +366,12 @@ class ParquetHandler(FormatHandler):
         try:
             import pyarrow.parquet as pq
         except ImportError as e:
-            raise ImportError(
+            msg = (
                 "pyarrow is required for Parquet support. "
                 "Install with: pip install pyarrow"
+            )
+            raise ImportError(
+                msg
             ) from e
 
         table = pq.read_table(io.BytesIO(content), columns=columns)
@@ -386,9 +395,12 @@ class ParquetHandler(FormatHandler):
             import pyarrow as pa
             import pyarrow.parquet as pq
         except ImportError as e:
-            raise ImportError(
+            msg = (
                 "pyarrow is required for Parquet support. "
                 "Install with: pip install pyarrow"
+            )
+            raise ImportError(
+                msg
             ) from e
 
         table = pa.Table.from_pylist(data)

@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 """予測復盤API."""
 
 from datetime import date
 from typing import Any
 
+from apps.market_trend_monitor.backend.api.state import prediction_service
+from apps.market_trend_monitor.backend.models import PredictionOutcome
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from apps.market_trend_monitor.backend.api.state import prediction_service
-from apps.market_trend_monitor.backend.models import PredictionOutcome
 
 router = APIRouter(tags=["予測復盤"])
 

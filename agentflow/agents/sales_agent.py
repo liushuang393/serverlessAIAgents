@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Sales Agent - 売上分析専門Agent.
 
 売上データ分析、トレンド可視化、予測に特化したAgent。
@@ -11,11 +10,11 @@
 
 使用例:
     >>> from agentflow.agents import SalesAgent
-    >>> 
+    >>>
     >>> agent = SalesAgent(config=SalesAgentConfig(
     ...     sql_schema={"sales": ["id", "product", "amount", "date", "region"]},
     ... ))
-    >>> 
+    >>>
     >>> result = await agent.run({"question": "今月の売上トレンドを教えて"})
 """
 
@@ -23,12 +22,17 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
 # 循環インポート回避: agentflow.core から直接インポート
 from agentflow.core import ResilientAgent
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +45,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SalesAgentConfig:
     """SalesAgent 設定.
-    
+
     Attributes:
         sql_schema: DBスキーマ
         sql_dialect: SQLダイアレクト
@@ -49,7 +53,7 @@ class SalesAgentConfig:
         compare_yoy: 前年同期比較を含める
         auto_forecast: 予測を自動生成
     """
-    
+
     sql_schema: dict[str, list[str]] = field(default_factory=dict)
     sql_dialect: str = "postgresql"
     default_period: int = 30
@@ -132,8 +136,10 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
             return
 
         from agentflow.services import (
-            Text2SQLService, Text2SQLConfig,
-            SuggestionService, SuggestionConfig,
+            SuggestionConfig,
+            SuggestionService,
+            Text2SQLConfig,
+            Text2SQLService,
         )
 
         self.__sql_service = Text2SQLService(Text2SQLConfig(
@@ -210,7 +216,7 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
             )
 
         except Exception as e:
-            logger.error(f"SalesAgent実行エラー: {e}")
+            logger.exception(f"SalesAgent実行エラー: {e}")
             return SalesOutput(
                 question=question,
                 error=str(e),

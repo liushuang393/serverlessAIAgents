@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """TestSynthesizer - テストケース自動合成.
 
 Agent 仕様からテストケースを自動生成します。
@@ -154,7 +153,7 @@ class TestSynthesizer:
         tests.append(TestCase(
             name=f"test_{agent_spec.name.lower()}_special_chars",
             description=f"Test {agent_spec.name} with special characters",
-            input_data={"query": "!@#$%^&*(){}[]|\\:\";<>?,./~`"},
+            input_data={"query": '!@#$%^&*(){}[]|\\:";<>?,./~`'},
             expected_output={},
             assertions=[
                 "result is not None",

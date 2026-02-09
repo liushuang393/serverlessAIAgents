@@ -69,9 +69,11 @@ class RedisBackend(MemoryBackend):
             self._connected = True
             self._logger.info(f"Connected to Redis at {self._host}:{self._port}")
         except ImportError:
-            raise ImportError("redis package is required. Install with: pip install redis")
+            msg = "redis package is required. Install with: pip install redis"
+            raise ImportError(msg)
         except Exception as e:
-            raise ConnectionError(f"Failed to connect to Redis: {e}")
+            msg = f"Failed to connect to Redis: {e}"
+            raise ConnectionError(msg)
 
     async def disconnect(self) -> None:
         """Redisから切断."""
@@ -83,7 +85,8 @@ class RedisBackend(MemoryBackend):
     async def save(self, entry: MemoryEntry) -> None:
         """記憶を保存."""
         if not self._connected:
-            raise ConnectionError("Not connected to Redis")
+            msg = "Not connected to Redis"
+            raise ConnectionError(msg)
 
         # 記憶エントリをJSON化
         entry_data = {
@@ -111,7 +114,8 @@ class RedisBackend(MemoryBackend):
     async def load(self, entry_id: str) -> MemoryEntry | None:
         """記憶を読み込み."""
         if not self._connected:
-            raise ConnectionError("Not connected to Redis")
+            msg = "Not connected to Redis"
+            raise ConnectionError(msg)
 
         key = f"memory:{entry_id}"
         data = await self._client.get(key)
@@ -135,7 +139,8 @@ class RedisBackend(MemoryBackend):
     async def delete(self, entry_id: str) -> bool:
         """記憶を削除."""
         if not self._connected:
-            raise ConnectionError("Not connected to Redis")
+            msg = "Not connected to Redis"
+            raise ConnectionError(msg)
 
         key = f"memory:{entry_id}"
         result = await self._client.delete(key)
@@ -149,7 +154,8 @@ class RedisBackend(MemoryBackend):
     ) -> list[MemoryEntry]:
         """記憶を検索."""
         if not self._connected:
-            raise ConnectionError("Not connected to Redis")
+            msg = "Not connected to Redis"
+            raise ConnectionError(msg)
 
         memories: list[MemoryEntry] = []
 
@@ -176,7 +182,8 @@ class RedisBackend(MemoryBackend):
     async def exists(self, entry_id: str) -> bool:
         """記憶の存在を確認."""
         if not self._connected:
-            raise ConnectionError("Not connected to Redis")
+            msg = "Not connected to Redis"
+            raise ConnectionError(msg)
 
         key = f"memory:{entry_id}"
         return await self._client.exists(key) > 0
@@ -184,19 +191,20 @@ class RedisBackend(MemoryBackend):
     async def count(self, topic: str | None = None) -> int:
         """記憶の数を取得."""
         if not self._connected:
-            raise ConnectionError("Not connected to Redis")
+            msg = "Not connected to Redis"
+            raise ConnectionError(msg)
 
         if topic:
             topic_key = f"topic:{topic}"
             return await self._client.scard(topic_key)
-        else:
-            keys = await self._client.keys("memory:*")
-            return len(keys)
+        keys = await self._client.keys("memory:*")
+        return len(keys)
 
     async def clear(self, topic: str | None = None) -> int:
         """記憶をクリア."""
         if not self._connected:
-            raise ConnectionError("Not connected to Redis")
+            msg = "Not connected to Redis"
+            raise ConnectionError(msg)
 
         if topic:
             # トピック内の記憶を削除
@@ -208,15 +216,14 @@ class RedisBackend(MemoryBackend):
                     count += 1
             await self._client.delete(topic_key)
             return count
-        else:
-            # 全記憶を削除
-            keys = await self._client.keys("memory:*")
-            if keys:
-                await self._client.delete(*keys)
-            topic_keys = await self._client.keys("topic:*")
-            if topic_keys:
-                await self._client.delete(*topic_keys)
-            return len(keys)
+        # 全記憶を削除
+        keys = await self._client.keys("memory:*")
+        if keys:
+            await self._client.delete(*keys)
+        topic_keys = await self._client.keys("topic:*")
+        if topic_keys:
+            await self._client.delete(*topic_keys)
+        return len(keys)
 
     def get_status(self) -> dict[str, Any]:
         """バックエンドの状態を取得."""

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """SystemSynthesizer - システム自動合成.
 
 能力缺口リストから完整なシステム（Agents + Flows + Skills + Tests）を生成します。
@@ -335,7 +334,7 @@ class SystemSynthesizer:
         # Agent 検証
         for agent in agents:
             if not agent.name:
-                errors.append(f"Agent has no name")
+                errors.append("Agent has no name")
             if not agent.description:
                 warnings.append(f"Agent '{agent.name}' has no description")
             if not agent.system_prompt:

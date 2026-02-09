@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Flow型定義.
 
 フロー編成フレームワークのすべての型、列挙型、データクラスを定義。
@@ -13,12 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
-
-if TYPE_CHECKING:
-    from collections.abc import Callable
-
-    from agentflow.flow.context import FlowContext
+from typing import Any, Protocol, runtime_checkable
 
 
 # ============================================================
@@ -146,18 +140,18 @@ InputMapper = "Callable[[FlowContext], dict[str, Any]]"
 
 
 __all__ = [
-    "NodeType",
-    "NextAction",
-    "ReviewVerdict",
-    "NodeResult",
-    "FlowConfig",
     "AgentProtocol",
-    "InitializableAgent",
-    "CleanableAgent",
     "CheckFunc",
+    "CleanableAgent",
+    "FlowConfig",
+    "InitializableAgent",
+    "InputMapper",
+    "NextAction",
+    "NodeResult",
+    "NodeType",
     "OnFailFunc",
     "OnPassFunc",
     "OnRejectFunc",
-    "InputMapper",
+    "ReviewVerdict",
 ]
 

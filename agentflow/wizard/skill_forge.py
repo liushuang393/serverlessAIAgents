@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """SkillForge - 技能锻造.
 
 Skill のテスト合成、依存解析、組み立てを行います。
@@ -305,7 +304,6 @@ Skill 名: {spec.name}
                 passed = True
                 for assertion in test.assertions:
                     try:
-                        result = {"matched": matched}
                         # 簡易的なアサーション評価
                         if "matched" in assertion and "True" in assertion:
                             passed = passed and matched
@@ -417,7 +415,7 @@ Skill 名: {spec.name}
                 elif neighbor in rec_stack:
                     # 循環を検出
                     cycle_start = path.index(neighbor)
-                    cycle = path[cycle_start:] + [neighbor]
+                    cycle = [*path[cycle_start:], neighbor]
                     cycles.append(cycle)
 
             rec_stack.remove(node)
@@ -429,4 +427,4 @@ Skill 名: {spec.name}
         return cycles
 
 
-__all__ = ["SkillForge", "SkillSpec", "ForgeResult"]
+__all__ = ["ForgeResult", "SkillForge", "SkillSpec"]

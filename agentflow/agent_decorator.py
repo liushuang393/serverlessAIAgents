@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Agent デコレータ - 簡易Agent定義.
 
 このモジュールは、@agent デコレータによる簡易Agent定義を提供します。
@@ -46,10 +45,12 @@ v0.3.1: Pydantic 入出力スキーマ対応
 """
 
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
 
 from agentflow.providers.tool_provider import ToolProvider
+
 
 # グローバルロガー
 _logger = logging.getLogger(__name__)
@@ -63,7 +64,7 @@ _skills_registry: dict[str, Any] | None = None
 
 def _get_skills_registry() -> dict[str, Any]:
     """Skills レジストリを取得（遅延初期化）.
-    
+
     Returns:
         Skill名 → Skillインスタンスのマップ
     """
@@ -76,36 +77,36 @@ def _get_skills_registry() -> dict[str, Any]:
 
 def _load_builtin_skills() -> None:
     """ビルトイン Skills を読み込み.
-    
+
     agentflow/skills/builtin/ から SKILL.md を持つ Skills を自動検出。
     """
     from agentflow.skills.loader import SkillLoader
-    
+
     logger = logging.getLogger(__name__)
-    
+
     # ビルトイン Skills ディレクトリ
     builtin_dir = Path(__file__).parent / "skills" / "builtin"
-    
+
     if builtin_dir.exists():
         loader = SkillLoader()
         skills = loader.load_directory(builtin_dir, recursive=True)
-        
+
         for skill in skills:
             _skills_registry[skill.name] = skill
             logger.debug(f"Loaded builtin skill: {skill.name}")
-        
+
         logger.info(f"Loaded {len(skills)} builtin skills")
 
 
 def get_skill(name: str) -> Any:
     """Skill を名前で取得.
-    
+
     Args:
         name: Skill 名
-        
+
     Returns:
         Skill インスタンス
-        
+
     Raises:
         KeyError: Skill が見つからない場合
     """
@@ -119,7 +120,7 @@ def get_skill(name: str) -> Any:
 
 def list_skills() -> list[str]:
     """利用可能な Skills 一覧を取得.
-    
+
     Returns:
         Skill 名のリスト
     """
@@ -200,36 +201,36 @@ class RegisteredAgent:
 
     def _load_skills(self) -> None:
         """Skills を読み込み、システムプロンプトに追加.
-        
+
         Claude Code Skills 規範に従い、Skill の instructions をプロンプトに追加。
         """
         if not self.skills:
             return
-        
+
         skill_prompts = []
-        
+
         for skill_name in self.skills:
             try:
                 skill = get_skill(skill_name)
                 self._loaded_skills[skill_name] = skill
-                
+
                 # Skill の instructions をプロンプトに追加
                 if hasattr(skill, "to_prompt"):
                     skill_prompts.append(skill.to_prompt())
                 elif hasattr(skill, "instructions"):
                     skill_prompts.append(f"## Skill: {skill_name}\n{skill.instructions}")
-                
+
                 self._logger.debug(f"Loaded skill: {skill_name}")
             except KeyError as e:
                 self._logger.warning(f"Skill not found: {skill_name} - {e}")
-        
+
         # システムプロンプトに Skills を追加
         if skill_prompts and self.system_prompt:
             skills_section = "\n\n---\n# Available Skills\n\n" + "\n\n".join(skill_prompts)
             self.system_prompt = self.system_prompt + skills_section
         elif skill_prompts:
             self.system_prompt = "# Available Skills\n\n" + "\n\n".join(skill_prompts)
-    
+
     def get_skill(self, name: str) -> Any:
         """読み込まれた Skill を取得.
 
@@ -262,7 +263,7 @@ class RegisteredAgent:
         try:
             return self.input_schema.model_validate(input_data)
         except Exception as e:
-            self._logger.error(f"Input validation failed: {e}")
+            self._logger.exception(f"Input validation failed: {e}")
             raise
 
     def serialize_output(self, output: Any) -> dict[str, Any]:
@@ -299,7 +300,7 @@ class RegisteredAgent:
 T = TypeVar("T", bound=type)
 
 
-def agent(
+def agent[T: type](
     cls: T | None = None,
     *,
     name: str | None = None,
@@ -335,7 +336,7 @@ def agent(
         >>> @agent(name="カスタム", llm="gpt-4", skills=["chatbot", "rag"])
         ... class AdvancedAgent:
         ...     pass
-        
+
         >>> # クラス属性で Skills を指定
         >>> @agent
         ... class DocumentAgent:
@@ -349,7 +350,7 @@ def agent(
         system_prompt = getattr(cls, "system_prompt", None)
         if system_prompt is None and cls.__doc__:
             system_prompt = cls.__doc__.strip()
-        
+
         # クラス属性から Skills を取得（デコレータ引数が優先）
         agent_skills = skills or getattr(cls, "skills", None)
 

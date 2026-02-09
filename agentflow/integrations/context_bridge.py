@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Context Bridge - 統合コンテキスト管理モジュール.
 
 既存システムからAgentFlowを呼び出す際の統一コンテキスト受け渡し規約を提供。
@@ -37,12 +36,13 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+
 if TYPE_CHECKING:
     from agentflow.flow.flow import Flow
 
 
 # コンテキスト変数（スレッドローカル相当）
-_current_context: ContextVar["FlowContext | None"] = ContextVar(
+_current_context: ContextVar[FlowContext | None] = ContextVar(
     "current_flow_context", default=None
 )
 
@@ -128,13 +128,13 @@ class FlowContext(BaseModel):
         description="カスタム拡張フィールド",
     )
 
-    def with_business_data(self, **kwargs: Any) -> "FlowContext":
+    def with_business_data(self, **kwargs: Any) -> FlowContext:
         """業務データを追加した新しいコンテキストを返す."""
         new_ctx = self.model_copy(deep=True)
         new_ctx.business_context.update(kwargs)
         return new_ctx
 
-    def with_user_data(self, **kwargs: Any) -> "FlowContext":
+    def with_user_data(self, **kwargs: Any) -> FlowContext:
         """ユーザーデータを追加した新しいコンテキストを返す."""
         new_ctx = self.model_copy(deep=True)
         new_ctx.user_context.update(kwargs)
@@ -151,7 +151,7 @@ class FlowContext(BaseModel):
         }
 
     @classmethod
-    def from_headers(cls, headers: dict[str, str], **kwargs: Any) -> "FlowContext":
+    def from_headers(cls, headers: dict[str, str], **kwargs: Any) -> FlowContext:
         """HTTPヘッダーからコンテキストを復元."""
         return cls(
             session_id=headers.get("X-Session-Id", str(uuid.uuid4())),
@@ -208,7 +208,7 @@ class ContextBridge:
 
     async def invoke_flow(
         self,
-        flow: "Flow",
+        flow: Flow,
         context: FlowContext,
         inputs: dict[str, Any],
         **options: Any,
@@ -371,12 +371,12 @@ def reset_context(token: Any) -> None:
 
 
 __all__ = [
-    "FlowContext",
     "ContextBridge",
+    "FlowContext",
     "InvocationResult",
     "SourceSystemType",
     "get_current_context",
-    "set_current_context",
     "reset_context",
+    "set_current_context",
 ]
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """HITL 型定義モジュール.
 
 Human-in-the-Loop パターンで使用するデータモデルを定義。
@@ -94,17 +93,17 @@ class Command(BaseModel):
     issued_at: datetime = Field(default_factory=datetime.utcnow)
 
     @classmethod
-    def approve(cls, value: Any = None, approver: str | None = None) -> "Command":
+    def approve(cls, value: Any = None, approver: str | None = None) -> Command:
         """承認コマンドを作成."""
         return cls(type=CommandType.APPROVE, value=value, issuer=approver)
 
     @classmethod
-    def reject(cls, reason: str | None = None, rejector: str | None = None) -> "Command":
+    def reject(cls, reason: str | None = None, rejector: str | None = None) -> Command:
         """拒否コマンドを作成."""
         return cls(type=CommandType.REJECT, value=reason, issuer=rejector)
 
     @classmethod
-    def update(cls, updates: dict[str, Any], updater: str | None = None) -> "Command":
+    def update(cls, updates: dict[str, Any], updater: str | None = None) -> Command:
         """更新コマンドを作成."""
         return cls(type=CommandType.UPDATE, value=updates, issuer=updater)
 

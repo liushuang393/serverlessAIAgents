@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """情報源台帳サービス.
 
 情報源の信頼度・有効性・利用条件を管理します。
@@ -9,14 +8,16 @@ from __future__ import annotations
 import logging
 import uuid
 from datetime import datetime
-from typing import Any
-
-from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from typing import TYPE_CHECKING, Any
 
 from apps.market_trend_monitor.backend.db.models import SourceRegistryModel
 from apps.market_trend_monitor.backend.db.session import async_session, init_db
 from apps.market_trend_monitor.backend.models import SourceRegistryEntry, SourceType
+from sqlalchemy import func, select
+
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 
 class SourceRegistryService:

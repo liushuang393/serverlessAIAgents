@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """状態アクション定義.
 
 状態変更を表現するアクションを定義。
@@ -19,11 +18,11 @@
 
 from __future__ import annotations
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any
-import uuid
 
 
 class ActionType(str, Enum):
@@ -350,30 +349,30 @@ def clear_facts() -> Action:
 
 # エクスポート
 __all__ = [
-    "ActionType",
     "Action",
-    "create_action",
-    "set_execution_status",
-    "update_progress",
-    "set_current_step",
-    "complete_step",
-    "fail_step",
-    "set_context",
-    "update_context",
-    "merge_context",
+    "ActionType",
+    "add_constraint",
+    "add_decision",
+    "add_fact",
     "add_result",
-    "set_final_output",
-    "set_error",
-    "set_plan",
-    "request_approval",
-    "receive_approval",
+    "clear_facts",
+    "complete_step",
+    "create_action",
     "create_checkpoint",
+    "fail_step",
+    "merge_context",
+    "receive_approval",
+    "request_approval",
     "restore_checkpoint",
+    "set_context",
+    "set_current_step",
+    "set_error",
+    "set_execution_status",
+    "set_final_output",
     # L2標準状態フィールド
     "set_goal",
+    "set_plan",
+    "update_context",
     "update_goal",
-    "add_constraint",
-    "add_fact",
-    "add_decision",
-    "clear_facts",
+    "update_progress",
 ]

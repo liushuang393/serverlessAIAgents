@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CapabilityGapDetector - 能力缺口検出.
 
 システムに不足している能力を検出し、改善提案を生成します。
@@ -20,7 +19,7 @@ from __future__ import annotations
 import logging
 import uuid
 from collections import Counter
-from datetime import datetime, UTC, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from agentflow.wizard.models import (

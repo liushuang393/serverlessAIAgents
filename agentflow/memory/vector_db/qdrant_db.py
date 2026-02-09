@@ -68,9 +68,11 @@ class QdrantDB(VectorDatabase):
             self._connected = True
             self._logger.info(f"Connected to Qdrant at {self._host}:{self._port}")
         except ImportError:
-            raise ImportError("qdrant-client package is required. Install with: pip install qdrant-client")
+            msg = "qdrant-client package is required. Install with: pip install qdrant-client"
+            raise ImportError(msg)
         except Exception as e:
-            raise ConnectionError(f"Failed to connect to Qdrant: {e}")
+            msg = f"Failed to connect to Qdrant: {e}"
+            raise ConnectionError(msg)
 
     async def disconnect(self) -> None:
         """Qdrantから切断."""
@@ -80,7 +82,8 @@ class QdrantDB(VectorDatabase):
     async def upsert(self, entry: MemoryEntry, embedding: list[float]) -> None:
         """ベクトルを挿入/更新."""
         if not self._connected:
-            raise ConnectionError("Not connected to Qdrant")
+            msg = "Not connected to Qdrant"
+            raise ConnectionError(msg)
 
         from qdrant_client.models import PointStruct
 
@@ -107,9 +110,10 @@ class QdrantDB(VectorDatabase):
     ) -> list[tuple[MemoryEntry, float]]:
         """ベクトル類似度検索."""
         if not self._connected:
-            raise ConnectionError("Not connected to Qdrant")
+            msg = "Not connected to Qdrant"
+            raise ConnectionError(msg)
 
-        from qdrant_client.models import Filter, FieldCondition, MatchValue
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
 
         # フィルタを構築
         query_filter = None
@@ -145,7 +149,8 @@ class QdrantDB(VectorDatabase):
     async def delete(self, entry_id: str) -> bool:
         """ベクトルを削除."""
         if not self._connected:
-            raise ConnectionError("Not connected to Qdrant")
+            msg = "Not connected to Qdrant"
+            raise ConnectionError(msg)
 
         self._client.delete(collection_name=self._collection_name, points_selector=[entry_id])
         return True
@@ -153,10 +158,11 @@ class QdrantDB(VectorDatabase):
     async def clear(self, topic: str | None = None) -> int:
         """ベクトルをクリア."""
         if not self._connected:
-            raise ConnectionError("Not connected to Qdrant")
+            msg = "Not connected to Qdrant"
+            raise ConnectionError(msg)
 
         if topic:
-            from qdrant_client.models import Filter, FieldCondition, MatchValue
+            from qdrant_client.models import FieldCondition, Filter, MatchValue
 
             # トピックでフィルタして削除
             self._client.delete(

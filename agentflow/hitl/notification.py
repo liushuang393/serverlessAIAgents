@@ -9,14 +9,17 @@ from __future__ import annotations
 import asyncio
 import logging
 from abc import ABC, abstractmethod
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
-from agentflow.hitl.types import ApprovalRequest
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
+    from agentflow.hitl.types import ApprovalRequest
 
 
 logger = logging.getLogger(__name__)
@@ -296,7 +299,7 @@ class NotificationManager:
 
         if tasks:
             completed = await asyncio.gather(*tasks, return_exceptions=True)
-            for channel, result in zip(target_channels, completed):
+            for channel, result in zip(target_channels, completed, strict=False):
                 if isinstance(result, Exception):
                     logger.error(f"通知エラー ({channel.value}): {result}")
                     results[channel] = False

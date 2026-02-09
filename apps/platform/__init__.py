@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Platform App - AgentFlow Platform Application.
 
 Platform は AgentFlow の統合プラットフォームアプリケーションです。
@@ -24,23 +23,24 @@ Gallery、一键发布、多租户Dashboard をサポートします。
 
 from apps.platform.engine import PlatformEngine
 from apps.platform.services.component_library import (
+    ComponentEntry,
     ComponentLibrary,
     ComponentType,
     ComponentVisibility,
-    ComponentEntry,
 )
 from apps.platform.services.gallery_service import GalleryService
 from apps.platform.services.publish_orchestrator import PublishOrchestrator
+
 
 __version__ = "1.0.0"
 __author__ = "AgentFlow Team"
 
 __all__ = [
-    "PlatformEngine",
+    "ComponentEntry",
     "ComponentLibrary",
     "ComponentType",
     "ComponentVisibility",
-    "ComponentEntry",
     "GalleryService",
+    "PlatformEngine",
     "PublishOrchestrator",
 ]

@@ -361,7 +361,7 @@ JSON のみを出力してください。"""
             return skill_def
 
         except json.JSONDecodeError as e:
-            self._logger.error("スキル定義のパースに失敗: %s", e)
+            self._logger.exception("スキル定義のパースに失敗: %s", e)
             return {
                 "error": "スキル定義の生成に失敗しました",
                 "raw_response": content,
@@ -567,13 +567,10 @@ JSON のみを出力してください。"""
                 context["results"][step.id] = result.result
 
                 # 次ステップ決定
-                if result.success:
-                    current_step_id = step.on_success
-                else:
-                    current_step_id = step.on_failure
+                current_step_id = step.on_success if result.success else step.on_failure
 
             except Exception as e:
-                self._logger.error("ステップ実行エラー: %s - %s", step.id, e)
+                self._logger.exception("ステップ実行エラー: %s - %s", step.id, e)
                 step_results.append(
                     {
                         "step_id": step.id,

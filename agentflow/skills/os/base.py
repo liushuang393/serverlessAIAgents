@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OS スキル基底クラス.
 
 全ての OS スキルが継承する共通基盤。
@@ -34,19 +33,16 @@ class OSSkillError(Exception):
 class PathSecurityError(OSSkillError):
     """パスセキュリティ違反."""
 
-    pass
 
 
 class CommandSecurityError(OSSkillError):
     """コマンドセキュリティ違反."""
 
-    pass
 
 
 class ExecutionModeError(OSSkillError):
     """実行モード違反."""
 
-    pass
 
 
 class OSSkillBase(ABC):

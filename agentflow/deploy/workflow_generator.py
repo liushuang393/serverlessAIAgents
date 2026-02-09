@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Workflow コード生成モジュール.
 
 Studio で作成したワークフローを実行可能なコードに変換します。
@@ -17,8 +16,8 @@ import logging
 import zipfile
 from dataclasses import dataclass, field
 from io import BytesIO
-from pathlib import Path
 from typing import Any, Literal
+
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +73,7 @@ class Workflow:
     edges: list[WorkflowEdge] = field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "Workflow":
+    def from_dict(cls, data: dict[str, Any]) -> Workflow:
         """辞書からワークフローを作成.
 
         Args:
@@ -185,7 +184,7 @@ class WorkflowCodeGenerator:
         Returns:
             インポート文字列
         """
-        agent_types = set(node.agent_type for node in self.workflow.nodes)
+        agent_types = {node.agent_type for node in self.workflow.nodes}
         imports = [
             "from agentflow import create_flow",
             "from agentflow.core.agent_block import AgentBlock",
@@ -260,13 +259,13 @@ from pydantic import BaseModel, Field
 # ============================================================================
 class WorkflowInput(BaseModel):
     """ワークフロー入力."""
-    
+
     data: dict[str, Any] = Field(default_factory=dict, description="入力データ")
 
 
 class WorkflowOutput(BaseModel):
     """ワークフロー出力."""
-    
+
     status: str = Field(..., description="実行ステータス")
     result: dict[str, Any] | None = Field(None, description="実行結果")
     error: str | None = Field(None, description="エラーメッセージ")
@@ -315,10 +314,10 @@ async def health() -> dict[str, str]:
 @app.post("/run", response_model=WorkflowOutput)
 async def run_workflow(input_data: WorkflowInput) -> WorkflowOutput:
     """ワークフローを実行.
-    
+
     Args:
         input_data: 入力データ
-        
+
     Returns:
         実行結果
     """
@@ -332,23 +331,23 @@ async def run_workflow(input_data: WorkflowInput) -> WorkflowOutput:
 @app.post("/stream")
 async def stream_workflow(input_data: WorkflowInput) -> StreamingResponse:
     """ワークフローをストリーム実行.
-    
+
     Args:
         input_data: 入力データ
-        
+
     Returns:
         SSE ストリーム
     """
     import json
-    
+
     async def event_generator():
         try:
             async for event in flow.run_stream(input_data.data):
                 yield f"data: {{json.dumps(event, ensure_ascii=False)}}\\n\\n"
             yield "data: {{\\"type\\": \\"complete\\"}}\\n\\n"
         except Exception as e:
-            yield f"data: {{\\"type\\": \\"error\\", \\"message\\": \\"{str(e)}\\"}}\\n\\n"
-    
+            yield f"data: {{\\"type\\": \\"error\\", \\"message\\": \\"{e!s}\\"}}\\n\\n"
+
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
@@ -425,27 +424,27 @@ def run(input_file: str | None, output_file: str | None, data: str | None):
     """ワークフローを実行."""
     # 入力データを準備
     input_data: dict[str, Any] = {{}}
-    
+
     if input_file:
         with open(input_file, encoding="utf-8") as f:
             input_data = json.load(f)
     elif data:
         input_data = json.loads(data)
-    
+
     # 実行
     async def _run():
         return await flow.run(input_data)
-    
+
     try:
         result = asyncio.run(_run())
-        
+
         if output_file:
             with open(output_file, "w", encoding="utf-8") as f:
                 json.dump(result, f, ensure_ascii=False, indent=2)
             click.echo(f"結果を {{output_file}} に保存しました")
         else:
             click.echo(json.dumps(result, ensure_ascii=False, indent=2))
-            
+
     except Exception as e:
         click.echo(f"エラー: {{e}}", err=True)
         sys.exit(1)
@@ -466,7 +465,7 @@ if __name__ == "__main__":
         files["cli.py"] = cli_content
 
         # pyproject.toml
-        files["pyproject.toml"] = f'''[build-system]
+        files["pyproject.toml"] = f"""[build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
@@ -483,7 +482,7 @@ dependencies = [
 
 [project.scripts]
 {self.config.app_name} = "cli:cli"
-'''
+"""
 
         if self.config.include_readme:
             files["README.md"] = self._generate_readme("cli")
@@ -532,7 +531,7 @@ dependencies = [
         files = self.generate_fastapi()
 
         # Dockerfile
-        files["Dockerfile"] = f'''# -*- coding: utf-8 -*-
+        files["Dockerfile"] = f"""# -*- coding: utf-8 -*-
 # {self.workflow.name} Docker Image
 #
 # Build: docker build -t {self.config.app_name} .
@@ -560,10 +559,10 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \\
 EXPOSE 8000
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
-'''
+"""
 
         # docker-compose.yml
-        files["docker-compose.yml"] = f'''version: "3.9"
+        files["docker-compose.yml"] = f"""version: "3.9"
 
 services:
   app:
@@ -574,7 +573,7 @@ services:
     environment:
       - LOG_LEVEL=INFO
     restart: unless-stopped
-'''
+"""
 
         # .dockerignore
         files[".dockerignore"] = """__pycache__
@@ -736,7 +735,8 @@ def test_run_workflow(client):
 
         generator = generators.get(self.config.output_type)
         if not generator:
-            raise ValueError(f"Unknown output type: {self.config.output_type}")
+            msg = f"Unknown output type: {self.config.output_type}"
+            raise ValueError(msg)
 
         return generator()
 

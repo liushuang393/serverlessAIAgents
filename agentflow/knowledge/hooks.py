@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Knowledge Hooks モジュール.
 
 React Hooks スタイルの API を提供します：
@@ -15,9 +14,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, Callable, Coroutine
+from typing import TYPE_CHECKING, Any
 
 from agentflow.providers import get_embedding, get_vectordb
+
 
 if TYPE_CHECKING:
     from agentflow.providers.embedding_provider import EmbeddingProvider
@@ -68,8 +68,8 @@ class VectorSearchHook:
         """
         self._collection = collection
         self._min_similarity = min_similarity
-        self._vectordb: "VectorDBProvider | None" = None
-        self._embedding: "EmbeddingProvider | None" = None
+        self._vectordb: VectorDBProvider | None = None
+        self._embedding: EmbeddingProvider | None = None
         self._connected = False
         self._logger = logging.getLogger(__name__)
 
@@ -189,7 +189,7 @@ class VectorSearchHook:
 
         return await self._vectordb.delete(ids)
 
-    async def __aenter__(self) -> "VectorSearchHook":
+    async def __aenter__(self) -> VectorSearchHook:
         """非同期コンテキストマネージャーのエントリー."""
         await self.connect()
         return self
@@ -369,7 +369,7 @@ class RAGHook:
 
         await self._search_hook.add(documents, ids, metadatas)
 
-    async def __aenter__(self) -> "RAGHook":
+    async def __aenter__(self) -> RAGHook:
         """非同期コンテキストマネージャーのエントリー."""
         await self.start()
         return self

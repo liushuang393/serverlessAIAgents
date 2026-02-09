@@ -1,15 +1,14 @@
-# -*- coding: utf-8 -*-
 """証拠台帳API."""
 
 import uuid
 from datetime import datetime
 from typing import Any
 
+from apps.market_trend_monitor.backend.api.state import evidence_service
+from apps.market_trend_monitor.backend.models import Article, ClaimLevel, SourceType
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from apps.market_trend_monitor.backend.api.state import evidence_service
-from apps.market_trend_monitor.backend.models import Article, ClaimLevel, SourceType
 
 router = APIRouter(tags=["証拠台帳"])
 

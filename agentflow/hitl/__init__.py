@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Human-in-the-Loop (HITL) モジュール.
 
 AI Agent ワークフローに人間の判断を組み込むためのコアモジュール。
@@ -34,6 +33,32 @@ LangGraph の interrupt パターンを参考に、業界ベストプラクテ�
     4. すべての承認/拒否をログに記録する
 """
 
+# 工厂函数: 根据环境变量自动选择 Checkpointer
+import logging
+import os
+
+from agentflow.hitl.api import create_hitl_router
+from agentflow.hitl.approval_manager import (
+    ApprovalCallback,
+    ApprovalManager,
+)
+from agentflow.hitl.checkpointer import (
+    CheckpointData,
+    Checkpointer,
+    MemoryCheckpointer,
+)
+from agentflow.hitl.interrupt import (
+    InterruptError,
+    InterruptSignal,
+    InterruptTimeoutError,
+    clear_interrupt,
+    get_current_interrupt,
+    interrupt,
+    is_interrupted,
+    resume_with_command,
+    set_checkpointer,
+    set_thread_id,
+)
 from agentflow.hitl.types import (
     ApprovalRequest,
     ApprovalResponse,
@@ -44,32 +69,7 @@ from agentflow.hitl.types import (
     InterruptPayload,
     InterruptType,
 )
-from agentflow.hitl.interrupt import (
-    interrupt,
-    InterruptError,
-    InterruptTimeoutError,
-    InterruptSignal,
-    get_current_interrupt,
-    is_interrupted,
-    set_checkpointer,
-    set_thread_id,
-    clear_interrupt,
-    resume_with_command,
-)
-from agentflow.hitl.checkpointer import (
-    Checkpointer,
-    CheckpointData,
-    MemoryCheckpointer,
-)
-from agentflow.hitl.approval_manager import (
-    ApprovalManager,
-    ApprovalCallback,
-)
-from agentflow.hitl.api import create_hitl_router
 
-# 工厂函数: 根据环境变量自动选择 Checkpointer
-import logging
-import os
 
 _checkpointer_logger = logging.getLogger(__name__)
 
@@ -145,35 +145,35 @@ def get_checkpointer(
 
 
 __all__ = [
+    "ApprovalCallback",
+    # ApprovalManager
+    "ApprovalManager",
     # 型定義
     "ApprovalRequest",
     "ApprovalResponse",
     "ApprovalStatus",
+    "CheckpointData",
+    # Checkpointer
+    "Checkpointer",
     "Command",
     "CommandType",
     "HITLConfig",
-    "InterruptPayload",
-    "InterruptType",
-    # interrupt 関数
-    "interrupt",
     "InterruptError",
-    "InterruptTimeoutError",
+    "InterruptPayload",
     "InterruptSignal",
-    "get_current_interrupt",
-    "is_interrupted",
-    "set_checkpointer",
-    "set_thread_id",
-    "clear_interrupt",
-    "resume_with_command",
-    # Checkpointer
-    "Checkpointer",
-    "CheckpointData",
+    "InterruptTimeoutError",
+    "InterruptType",
     "MemoryCheckpointer",
-    "get_checkpointer",
-    # ApprovalManager
-    "ApprovalManager",
-    "ApprovalCallback",
+    "clear_interrupt",
     # API
     "create_hitl_router",
+    "get_checkpointer",
+    "get_current_interrupt",
+    # interrupt 関数
+    "interrupt",
+    "is_interrupted",
+    "resume_with_command",
+    "set_checkpointer",
+    "set_thread_id",
 ]
 

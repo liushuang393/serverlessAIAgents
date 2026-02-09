@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentFlow Studio API モデル定義.
 
 全APIエンドポイントで使用するPydanticリクエスト/レスポンスモデル。

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """カバレッジダッシュボードサービス.
 
 知識ベースのカバレッジと品質を可視化。
@@ -18,11 +17,12 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any
-from collections import defaultdict
+
 
 logger = logging.getLogger(__name__)
 
@@ -450,7 +450,7 @@ class CoverageDashboard:
         diff = recent_rate - previous_rate
         if diff > 0.05:
             return "improving"
-        elif diff < -0.05:
+        if diff < -0.05:
             return "declining"
         return "stable"
 
@@ -521,10 +521,10 @@ class CoverageDashboard:
 __all__ = [
     "CoverageDashboard",
     "CoverageDashboardConfig",
+    "CoverageLevel",
     "CoverageReport",
     "CoverageStats",
-    "TopicCoverage",
     "GapAnalysis",
-    "CoverageLevel",
     "QueryLog",
+    "TopicCoverage",
 ]

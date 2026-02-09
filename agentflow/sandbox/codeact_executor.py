@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CodeAct执行器 - 增强的代码执行能力.
 
 Manus分析中提到的CodeAct能力：
@@ -31,18 +30,19 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
 from pydantic import BaseModel, Field
 
-from agentflow.sandbox.base import ExecutionResult, SandboxConfig, SandboxProvider
+from agentflow.sandbox.base import SandboxConfig, SandboxProvider
+
 
 logger = logging.getLogger(__name__)
 
 
 class ActionType(str, Enum):
     """操作类型."""
-    
+
     CODE_EXECUTE = "code_execute"      # 直接代码执行
     DATA_ANALYSIS = "data_analysis"    # 数据分析
     FILE_OPERATION = "file_operation"  # 文件操作
@@ -53,7 +53,7 @@ class ActionType(str, Enum):
 
 class ExecutionStatus(str, Enum):
     """执行状态."""
-    
+
     PENDING = "pending"
     RUNNING = "running"
     SUCCESS = "success"
@@ -65,7 +65,7 @@ class ExecutionStatus(str, Enum):
 @dataclass
 class ActionResult:
     """操作结果.
-    
+
     Attributes:
         action_id: 操作ID
         action_type: 操作类型
@@ -75,7 +75,7 @@ class ActionResult:
         duration_ms: 执行时间
         metadata: 元数据
     """
-    
+
     action_id: str
     action_type: ActionType
     status: ExecutionStatus = ExecutionStatus.PENDING
@@ -85,12 +85,12 @@ class ActionResult:
     metadata: dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=datetime.now)
     completed_at: datetime | None = None
-    
+
     @property
     def success(self) -> bool:
         """是否成功."""
         return self.status == ExecutionStatus.SUCCESS
-    
+
     def to_dict(self) -> dict[str, Any]:
         """转换为字典."""
         return {
@@ -108,9 +108,9 @@ class ActionResult:
 
 class ActionTemplate(BaseModel):
     """操作模板.
-    
+
     预定义的操作模板，简化常见操作。
-    
+
     Attributes:
         name: 模板名称
         action_type: 操作类型
@@ -118,7 +118,7 @@ class ActionTemplate(BaseModel):
         required_params: 必需参数
         optional_params: 可选参数
     """
-    
+
     name: str = Field(default="", description="模板名称")
     action_type: ActionType = Field(default=ActionType.CODE_EXECUTE)
     code_template: str = Field(default="", description="代码模板")
@@ -230,7 +230,8 @@ class CodeActExecutor:
                 from agentflow.sandbox.e2b_provider import E2BProvider
                 self._sandbox = E2BProvider(self._config)
             else:
-                raise ValueError(f"Unknown provider: {self._provider_name}")
+                msg = f"Unknown provider: {self._provider_name}"
+                raise ValueError(msg)
         return self._sandbox
 
     def register_template(self, template: ActionTemplate) -> None:
@@ -293,7 +294,7 @@ class CodeActExecutor:
                 result.error = exec_result.stderr or exec_result.error
                 result.output = exec_result.stdout
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             result.status = ExecutionStatus.TIMEOUT
             result.error = "执行超时"
             result.completed_at = datetime.now()
@@ -487,7 +488,7 @@ class CodeActExecutor:
             await self._sandbox.close()
             self._sandbox = None
 
-    async def __aenter__(self) -> "CodeActExecutor":
+    async def __aenter__(self) -> CodeActExecutor:
         """async with支持."""
         return self
 

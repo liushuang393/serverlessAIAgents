@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """可視化コンポーネント.
 
 チャート生成、ダッシュボード、レポート出力を提供。
@@ -11,10 +10,14 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from agentflow.skills.builtin.bi_analytics.connector import DataFrame
 from agentflow.skills.builtin.bi_analytics.analyzer import AnalysisResult
+
+
+if TYPE_CHECKING:
+    from agentflow.skills.builtin.bi_analytics.connector import DataFrame
+
 
 logger = logging.getLogger(__name__)
 
@@ -119,18 +122,18 @@ class ChartGenerator:
         # データフレームの場合
         if chart_type == ChartType.BAR:
             return await self._bar_chart(data, x, y, title, **kwargs)
-        elif chart_type == ChartType.LINE:
+        if chart_type == ChartType.LINE:
             return await self._line_chart(data, x, y, title, **kwargs)
-        elif chart_type == ChartType.SCATTER:
+        if chart_type == ChartType.SCATTER:
             return await self._scatter_chart(data, x, y, title, **kwargs)
-        elif chart_type == ChartType.PIE:
+        if chart_type == ChartType.PIE:
             return await self._pie_chart(data, x, y, title, **kwargs)
-        elif chart_type == ChartType.HISTOGRAM:
+        if chart_type == ChartType.HISTOGRAM:
             return await self._histogram_chart(data, x, title, **kwargs)
-        elif chart_type == ChartType.TABLE:
+        if chart_type == ChartType.TABLE:
             return await self._table_chart(data, title, **kwargs)
-        else:
-            raise ValueError(f"不明なチャート種別: {chart_type}")
+        msg = f"不明なチャート種別: {chart_type}"
+        raise ValueError(msg)
 
     async def _bar_chart(
         self,
@@ -277,7 +280,7 @@ class ChartGenerator:
                 "series": [
                     {
                         "type": "pie",
-                        "data": [{"name": l, "value": v} for l, v in zip(labels, values)],
+                        "data": [{"name": l, "value": v} for l, v in zip(labels, values, strict=False)],
                     }
                 ],
             },

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """フィードバックサービス.
 
 ユーザーからのフィードバック収集と分析。
@@ -22,11 +21,12 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any
-from collections import defaultdict
+
 
 logger = logging.getLogger(__name__)
 
@@ -512,11 +512,11 @@ class FeedbackService:
 
 
 __all__ = [
+    "Feedback",
     "FeedbackService",
     "FeedbackServiceConfig",
-    "Feedback",
-    "FeedbackType",
-    "FeedbackStatus",
     "FeedbackStats",
+    "FeedbackStatus",
+    "FeedbackType",
     "ImprovementSuggestion",
 ]

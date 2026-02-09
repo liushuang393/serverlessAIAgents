@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Text2SQL Service - フレームワーク級 Text2SQL サービス.
 
 自然言語からSQLを生成し、実行結果を可視化する再利用可能なサービス。
@@ -11,7 +10,7 @@
 
 使用例:
     >>> from agentflow.services import Text2SQLService
-    >>> 
+    >>>
     >>> service = Text2SQLService(
     ...     dialect="postgresql",
     ...     schema={"sales": ["id", "amount", "date"]},
@@ -27,18 +26,20 @@ from __future__ import annotations
 import logging
 import re
 import time
-from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.services.base import (
     ServiceBase,
     ServiceEvent,
     ServiceEventType,
-    ProgressEvent,
-    ResultEvent,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ class Text2SQLConfig:
     enable_postprocess: bool = True  # 後処理校正有効化
     fewshot_k: int = 3  # Few-shot 例の数
     schema_linking_use_llm: bool = True  # Schema Linking で LLM 使用
-    
+
     @classmethod
     def get_config_fields(cls) -> list[dict[str, Any]]:
         """Studio 設定フィールド定義."""
@@ -143,9 +144,9 @@ class ChartData:
 
 class Text2SQLService(ServiceBase):
     """Text2SQL Service - フレームワーク級サービス.
-    
+
     Studio/CLI/SDK/API 全てで同一インターフェース。
-    
+
     Actions:
     - query: 自然言語 → SQL → 実行 → 回答
     - generate_sql: SQLのみ生成
@@ -169,7 +170,7 @@ class Text2SQLService(ServiceBase):
         if self._started:
             return
 
-        from agentflow.providers import get_llm, get_db
+        from agentflow.providers import get_db, get_llm
 
         self._llm = get_llm(temperature=0)
         try:
@@ -217,8 +218,8 @@ class Text2SQLService(ServiceBase):
         # Post-Processor 初期化
         if self._config.enable_postprocess:
             from agentflow.services.sql_postprocessor import (
-                SQLPostProcessor,
                 PostProcessorConfig,
+                SQLPostProcessor,
             )
             pp_config = PostProcessorConfig(
                 enable_execution_test=self._db is not None,
@@ -234,7 +235,8 @@ class Text2SQLService(ServiceBase):
     async def _execute_sql_raw(self, sql: str) -> list[dict]:
         """後処理テスト用の SQL 実行関数."""
         if not self._db:
-            raise RuntimeError("データベース未接続")
+            msg = "データベース未接続"
+            raise RuntimeError(msg)
         return await self._db.execute_raw(sql)
 
     async def stop(self) -> None:
@@ -254,10 +256,10 @@ class Text2SQLService(ServiceBase):
     ) -> AsyncIterator[ServiceEvent]:
         """内部実行ロジック."""
         action = kwargs.get("action", "query")
-        
+
         if not self._started:
             await self.start()
-        
+
         if action == "query":
             async for event in self._do_query(execution_id, **kwargs):
                 yield event
@@ -278,11 +280,11 @@ class Text2SQLService(ServiceBase):
     ) -> AsyncIterator[ServiceEvent]:
         """自然言語 → SQL → 実行 → 回答."""
         start_time = time.time()
-        
+
         yield self._emit_progress(execution_id, 10, "SQLを生成中...", phase="generate")
-        
+
         sql = await self._generate_sql_internal(question)
-        
+
         yield self._emit_progress(execution_id, 30, "SQLを実行中...", phase="execute")
         yield ServiceEvent(
             type=ServiceEventType.LOG,
@@ -290,28 +292,28 @@ class Text2SQLService(ServiceBase):
             message=f"生成SQL: {sql}",
             data={"sql": sql},
         )
-        
+
         sql_result = await self._execute_sql_internal(sql)
-        
+
         if not sql_result.success:
             yield self._emit_error(
-                execution_id, 
-                "sql_error", 
+                execution_id,
+                "sql_error",
                 f"SQL実行エラー: {sql_result.error}"
             )
             return
-        
+
         yield self._emit_progress(execution_id, 60, "結果を分析中...", phase="analyze")
-        
+
         answer = await self._summarize_result(question, sql_result)
-        
+
         chart = None
         if self._config.auto_chart and sql_result.data:
             yield self._emit_progress(execution_id, 80, "チャートを生成中...", phase="chart")
             chart = self._generate_chart(question, sql_result)
-        
+
         yield self._emit_progress(execution_id, 100, "完了", phase="complete")
-        
+
         result_data = {
             "answer": answer,
             "sql": sql,
@@ -325,7 +327,7 @@ class Text2SQLService(ServiceBase):
                 "title": chart.title,
                 "data": chart.data,
             }
-        
+
         yield self._emit_result(execution_id, result_data, (time.time() - start_time) * 1000)
 
     async def _do_generate_sql(
@@ -336,11 +338,11 @@ class Text2SQLService(ServiceBase):
     ) -> AsyncIterator[ServiceEvent]:
         """SQLのみ生成."""
         start_time = time.time()
-        
+
         yield self._emit_progress(execution_id, 50, "SQLを生成中...", phase="generate")
-        
+
         sql = await self._generate_sql_internal(question)
-        
+
         yield self._emit_result(execution_id, {
             "sql": sql,
             "question": question,
@@ -354,11 +356,11 @@ class Text2SQLService(ServiceBase):
     ) -> AsyncIterator[ServiceEvent]:
         """SQL直接実行."""
         start_time = time.time()
-        
+
         yield self._emit_progress(execution_id, 30, "SQLを実行中...", phase="execute")
-        
+
         sql_result = await self._execute_sql_internal(sql)
-        
+
         if not sql_result.success:
             yield self._emit_error(
                 execution_id,
@@ -366,11 +368,11 @@ class Text2SQLService(ServiceBase):
                 f"SQL実行エラー: {sql_result.error}"
             )
             return
-        
+
         chart = None
         if self._config.auto_chart and sql_result.data:
             chart = self._generate_chart("", sql_result)
-        
+
         result_data = {
             "sql": sql,
             "columns": sql_result.columns,
@@ -384,7 +386,7 @@ class Text2SQLService(ServiceBase):
                 "title": chart.title,
                 "data": chart.data,
             }
-        
+
         yield self._emit_result(execution_id, result_data, (time.time() - start_time) * 1000)
 
     async def _generate_sql_internal(self, question: str) -> str:
@@ -501,19 +503,19 @@ SQLクエリのみを出力してください（説明不要）:
                 success=False,
                 error="データベース未接続",
             )
-        
+
         start_time = time.time()
-        
+
         try:
             rows = await self._db.execute_raw(sql)
             exec_time = (time.time() - start_time) * 1000
-            
+
             if rows:
-                columns = list(rows[0].keys()) if hasattr(rows[0], 'keys') else []
-                data = [dict(r) if hasattr(r, 'keys') else r for r in rows]
+                columns = list(rows[0].keys()) if hasattr(rows[0], "keys") else []
+                data = [dict(r) if hasattr(r, "keys") else r for r in rows]
             else:
                 columns, data = [], []
-            
+
             return SQLResult(
                 sql=sql,
                 data=data,
@@ -537,9 +539,9 @@ SQLクエリのみを出力してください（説明不要）:
         """結果を要約."""
         if not result.data:
             return "該当するデータが見つかりませんでした。"
-        
+
         sample = result.data[:10]
-        
+
         prompt = f"""以下のSQLクエリ結果に基づいて、ユーザーの質問に自然な日本語で回答してください。
 
 ## ユーザーの質問
@@ -558,7 +560,7 @@ SQLクエリのみを出力してください（説明不要）:
 - 必要に応じてデータの傾向を説明
 
 回答:"""
-        
+
         response = await self._llm.chat([{"role": "user", "content": prompt}])
         return response["content"].strip()
 
@@ -566,13 +568,13 @@ SQLクエリのみを出力してください（説明不要）:
         """チャート生成."""
         if not result.data or not result.columns:
             return None
-        
+
         chart_type = self._determine_chart_type(result)
-        
+
         data = result.data[:50]
         labels = [str(r.get(result.columns[0], "")) for r in data]
         values = [r.get(result.columns[1], 0) if len(result.columns) > 1 else 0 for r in data]
-        
+
         return ChartData(
             chart_type=chart_type,
             title=question[:50] if question else "クエリ結果",
@@ -583,7 +585,7 @@ SQLクエリのみを出力してください（説明不要）:
                 "yAxis": {"type": "value"},
                 "series": [{
                     "type": chart_type.value if chart_type != ChartType.PIE else "pie",
-                    "data": [{"name": l, "value": v} for l, v in zip(labels, values)] if chart_type == ChartType.PIE else values,
+                    "data": [{"name": l, "value": v} for l, v in zip(labels, values, strict=False)] if chart_type == ChartType.PIE else values,
                 }],
             },
         )
@@ -592,19 +594,19 @@ SQLクエリのみを出力してください（説明不要）:
         """データに適したチャートタイプを決定."""
         if len(result.data) <= 5:
             return ChartType.PIE
-        
+
         if len(result.columns) >= 2:
             first_col_values = [r.get(result.columns[0]) for r in result.data[:5]]
             if all(self._is_date_like(v) for v in first_col_values if v):
                 return ChartType.LINE
-        
+
         return ChartType.BAR
 
     def _format_schema(self) -> str:
         """スキーマ情報をフォーマット."""
         if not self._config.schema:
             return "（スキーマ情報なし）"
-        
+
         lines = []
         for table, columns in self._config.schema.items():
             lines.append(f"テーブル: {table}")
@@ -614,30 +616,31 @@ SQLクエリのみを出力してください（説明不要）:
 
     def _extract_sql(self, text: str) -> str:
         """レスポンスからSQLを抽出."""
-        match = re.search(r'```sql\s*(.*?)\s*```', text, re.DOTALL | re.IGNORECASE)
+        match = re.search(r"```sql\s*(.*?)\s*```", text, re.DOTALL | re.IGNORECASE)
         if match:
             return match.group(1).strip()
-        
-        match = re.search(r'SELECT.*', text, re.DOTALL | re.IGNORECASE)
+
+        match = re.search(r"SELECT.*", text, re.DOTALL | re.IGNORECASE)
         if match:
             return match.group(0).strip()
-        
+
         return text.strip()
 
     def _sanitize_sql(self, sql: str) -> str:
         """SQLを安全化."""
         sql = sql.strip()
-        
-        dangerous = ['INSERT', 'UPDATE', 'DELETE', 'DROP', 'TRUNCATE', 'ALTER', 'CREATE']
+
+        dangerous = ["INSERT", "UPDATE", "DELETE", "DROP", "TRUNCATE", "ALTER", "CREATE"]
         upper_sql = sql.upper()
-        
+
         for keyword in dangerous:
             if keyword in upper_sql:
-                raise ValueError(f"危険なSQLキーワードを検出: {keyword}")
-        
-        if 'LIMIT' not in upper_sql:
+                msg = f"危険なSQLキーワードを検出: {keyword}"
+                raise ValueError(msg)
+
+        if "LIMIT" not in upper_sql:
             sql = f"{sql.rstrip(';')} LIMIT {self._config.max_rows}"
-        
+
         return sql
 
     def _is_date_like(self, value: Any) -> bool:
@@ -645,7 +648,7 @@ SQLクエリのみを出力してください（説明不要）:
         if value is None:
             return False
         s = str(value)
-        date_patterns = [r'\d{4}-\d{2}-\d{2}', r'\d{2}/\d{2}/\d{4}', r'\d{4}/\d{2}/\d{2}']
+        date_patterns = [r"\d{4}-\d{2}-\d{2}", r"\d{2}/\d{2}/\d{4}", r"\d{4}/\d{2}/\d{2}"]
         return any(re.match(p, s) for p in date_patterns)
 
     # =========================================================================
@@ -675,10 +678,10 @@ SQLクエリのみを出力してください（説明不要）:
 
 
 __all__ = [
-    "Text2SQLService",
-    "Text2SQLConfig",
-    "SQLResult",
     "ChartData",
-    "SQLDialect",
     "ChartType",
+    "SQLDialect",
+    "SQLResult",
+    "Text2SQLConfig",
+    "Text2SQLService",
 ]

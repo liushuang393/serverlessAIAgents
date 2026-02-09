@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """SharedContext - Agent間の共有コンテキスト.
 
 Agent間で状態を共有するためのコンテキストクラス。

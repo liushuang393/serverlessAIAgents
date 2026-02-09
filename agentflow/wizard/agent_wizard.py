@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentWizard - Agent 自動生成ウィザード.
 
 自然言語記述から Agent を自動生成します。
@@ -19,7 +18,6 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from pathlib import Path
 from typing import Any
 
 from agentflow.providers import get_llm
@@ -417,7 +415,7 @@ class AgentWizard:
         # テンプレートベースのコード生成
         template = self._get_agent_template(agent_spec.engine_type)
 
-        code = template.format(
+        return template.format(
             name=agent_spec.name,
             description=agent_spec.description,
             system_prompt=agent_spec.system_prompt.replace('"', '\\"'),
@@ -426,7 +424,6 @@ class AgentWizard:
             required_skills=agent_spec.required_skills,
         )
 
-        return code
 
     def _get_agent_template(self, engine_type: EngineType) -> str:
         """Agent テンプレートを取得.

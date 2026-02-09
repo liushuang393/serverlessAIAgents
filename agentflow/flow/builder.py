@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Flowチェーンビルダー.
 
 流暢なチェーンAPIを提供し、複雑なフローを構築。
@@ -24,14 +23,17 @@ Example:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
-from agentflow.flow.context import FlowContext
 from agentflow.flow.graph import FlowGraph
 from agentflow.flow.nodes import AgentNode, GateNode, ParallelNode, ReviewNode
 from agentflow.flow.types import AgentProtocol, FlowConfig
 
+
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from agentflow.flow.context import FlowContext
     from agentflow.flow.flow import Flow
 
 
@@ -283,7 +285,7 @@ class FlowBuilder:
         )
         return self
 
-    def build(self) -> "Flow":
+    def build(self) -> Flow:
         """Flowインスタンスを構築.
 
         Returns:
@@ -295,7 +297,8 @@ class FlowBuilder:
         from agentflow.flow.flow import Flow
 
         if self._graph.node_count == 0:
-            raise ValueError("フローにノードがありません。少なくとも1つのAgentを追加してください")
+            msg = "フローにノードがありません。少なくとも1つのAgentを追加してください"
+            raise ValueError(msg)
 
         self._logger.info(f"Flowを構築: {self.flow_id}, ノード数: {self._graph.node_count}")
 

@@ -1,6 +1,6 @@
-# -*- coding: utf-8 -*-
 """FAQ System Backend."""
 
-from apps.faq_system.backend.services import FAQService, FAQConfig
+from apps.faq_system.backend.services import FAQConfig, FAQService
 
-__all__ = ["FAQService", "FAQConfig"]
+
+__all__ = ["FAQConfig", "FAQService"]

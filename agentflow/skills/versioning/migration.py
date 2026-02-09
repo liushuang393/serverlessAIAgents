@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Version Migration - 版本迁移.
 
 技能版本间的迁移和回滚。
@@ -14,17 +13,22 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Callable, Coroutine
+from typing import TYPE_CHECKING, Any
 
+from agentflow.skills.versioning.diff_engine import DiffEngine, DiffResult
 from agentflow.skills.versioning.skill_version import (
     SkillSnapshot,
     SkillVersion,
-    VersionStatus,
 )
-from agentflow.skills.versioning.version_store import VersionStore
-from agentflow.skills.versioning.diff_engine import DiffEngine, DiffResult
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+
+    from agentflow.skills.versioning.version_store import VersionStore
+
 
 _logger = logging.getLogger(__name__)
 
@@ -296,7 +300,7 @@ class VersionMigration:
             result.error = str(e)
             result.completed_at = datetime.now(UTC)
             self._history.append(result)
-            _logger.error(f"Migration failed: {e}")
+            _logger.exception(f"Migration failed: {e}")
 
         return result
 
@@ -431,7 +435,7 @@ class VersionMigration:
         to_v = SkillVersion.parse(to_version)
 
         if not from_v.is_compatible_with(to_v):
-            return False, f"Versions are not compatible (major version mismatch)"
+            return False, "Versions are not compatible (major version mismatch)"
 
         return True, "Migration is possible"
 
@@ -457,9 +461,9 @@ class VersionMigration:
 
 
 __all__ = [
+    "MigrationResult",
     "MigrationStatus",
     "MigrationStep",
     "StepResult",
-    "MigrationResult",
     "VersionMigration",
 ]

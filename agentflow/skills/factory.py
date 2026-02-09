@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """スキルファクトリ.
 
 OS/Browser スキルをゲートウェイに登録するヘルパー。
@@ -15,8 +14,9 @@ Example:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
 
+from agentflow.skills.browser.browser_skill import BrowserSkill
+from agentflow.skills.browser.config import BrowserSkillConfig
 from agentflow.skills.gateway import (
     GatewayConfig,
     RiskLevel,
@@ -24,14 +24,12 @@ from agentflow.skills.gateway import (
     SkillDefinition,
     SkillGateway,
 )
+from agentflow.skills.os.command import CommandSkill
 from agentflow.skills.os.config import ExecutionMode, OSSkillConfig
 from agentflow.skills.os.filesystem import FileSystemSkill
-from agentflow.skills.os.command import CommandSkill
-from agentflow.skills.os.process import ProcessSkill
 from agentflow.skills.os.network import NetworkSkill
+from agentflow.skills.os.process import ProcessSkill
 from agentflow.skills.os.system_info import SystemInfoSkill
-from agentflow.skills.browser.config import BrowserSkillConfig
-from agentflow.skills.browser.browser_skill import BrowserSkill
 
 
 def create_skill_gateway(

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ModalTarget - Modal Labs デプロイターゲット.
 
 Modal Labs への GPU/CPU ワークロードデプロイを実装します。
@@ -7,9 +6,7 @@ Modal Labs への GPU/CPU ワークロードデプロイを実装します。
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.core.interfaces import (
     ConfigField,
@@ -18,6 +15,12 @@ from agentflow.core.interfaces import (
     ValidationResult,
 )
 from agentflow.deploy.targets.base import BaseDeployTarget
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
+
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +64,7 @@ class ModalTarget(BaseDeployTarget):
             )
 
             # Modal アプリを動的に作成
-            app = modal.App(name=app_name)
+            modal.App(name=app_name)
 
             # イメージ設定
             image = modal.Image.debian_slim(python_version="3.11").pip_install(

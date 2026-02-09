@@ -19,23 +19,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from agentflow.marketplace.client import MarketplaceClient
 from agentflow.marketplace.registry import LocalRegistry
 
+
 # モデルを再エクスポート（後方互換性）
-from agentflow.studio.models import (
-    AgentRunRequest,
-    AgentRunResponse,
-    ChatRequest,
-    KnowledgeAddRequest,
-    MarketplaceInstallRequest,
-    MarketplaceSearchRequest,
-    PreviewRunRequest,
-    PreviewRunResponse,
-    PublishDeployRequest,
-    PublishDeployResponse,
-    PublishExportRequest,
-    RAGQueryRequest,
-    WorkflowCreateRequest,
-    WorkflowUpdateRequest,
-)
 
 
 def create_app(

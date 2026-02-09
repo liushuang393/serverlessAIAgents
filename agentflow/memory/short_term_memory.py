@@ -163,11 +163,10 @@ class ShortTermMemory:
         """
         # LLMクライアントが設定されている場合は使用
         if self._llm_client:
-            prompt = custom_prompt or f"以下の'{topic}'に関する内容を簡潔に要約してください:\n\n{content}"
+            pass
             # 実際のLLM呼び出し（実装は省略）
             # summary = await self._llm_client.generate(prompt)
             # return summary
-            pass
 
         # フォールバック: 簡易要約（最初の200文字）
         return content[:200] + "..." if len(content) > 200 else content

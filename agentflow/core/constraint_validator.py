@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """強約束バリデータ - Agent自由度制限システム.
 
 Manus分析に基づく高信頼性設計：
@@ -24,16 +23,21 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field, ValidationError
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 logger = logging.getLogger(__name__)
 
 
 class ValidationSeverity(str, Enum):
     """検証結果の深刻度."""
-    
+
     INFO = "info"          # 情報のみ
     WARNING = "warning"    # 警告（続行可能）
     ERROR = "error"        # エラー（続行不可）
@@ -42,7 +46,7 @@ class ValidationSeverity(str, Enum):
 
 class ConstraintType(str, Enum):
     """制約の種類."""
-    
+
     SCHEMA = "schema"          # スキーマ検証
     TOOL_WHITELIST = "tool_whitelist"  # ツールホワイトリスト
     VALUE_RANGE = "value_range"    # 値の範囲
@@ -53,7 +57,7 @@ class ConstraintType(str, Enum):
 @dataclass
 class ValidationResult:
     """検証結果.
-    
+
     Attributes:
         is_valid: 検証成功かどうか
         severity: 深刻度
@@ -62,14 +66,14 @@ class ValidationResult:
         details: 詳細情報
         timestamp: 検証時刻
     """
-    
+
     is_valid: bool
     severity: ValidationSeverity = ValidationSeverity.INFO
     constraint_type: ConstraintType = ConstraintType.SCHEMA
     message: str = ""
     details: dict[str, Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """辞書に変換."""
         return {
@@ -84,14 +88,14 @@ class ValidationResult:
 
 class ToolCallConstraint(BaseModel):
     """ツール呼び出し制約.
-    
+
     Attributes:
         tool_name: ツール名
         allowed_args: 許可された引数名
         forbidden_args: 禁止された引数名
         arg_validators: 引数バリデータ
     """
-    
+
     tool_name: str
     allowed_args: list[str] = Field(default_factory=list)
     forbidden_args: list[str] = Field(default_factory=list)
@@ -101,13 +105,13 @@ class ToolCallConstraint(BaseModel):
 
 class DangerousOperationConfig(BaseModel):
     """危険操作の設定.
-    
+
     Attributes:
         blocked_keywords: ブロックするキーワード
         require_approval: 承認が必要な操作
         max_impact_level: 最大許可影響レベル
     """
-    
+
     blocked_keywords: list[str] = Field(
         default_factory=lambda: [
             "DROP", "DELETE", "TRUNCATE",  # SQL危険操作
@@ -126,28 +130,28 @@ class DangerousOperationConfig(BaseModel):
 
 class ConstraintValidator:
     """強約束バリデータ.
-    
+
     Agentの行動を制限し、安全な操作のみを許可する。
     Manus分析に基づく「強約束」設計を実装。
-    
+
     主な機能:
     - 入出力スキーマの強制検証
     - ツール呼び出しのホワイトリスト制御
     - 危険操作の事前ブロック
     - カスタムバリデータの登録
-    
+
     Example:
         >>> validator = ConstraintValidator(
         ...     allowed_tools=["search", "analyze", "report"],
         ...     input_schema=MyInputSchema,
         ... )
-        >>> 
+        >>>
         >>> # ツール呼び出しの検証
         >>> result = validator.validate_tool_call(tool_call)
         >>> if not result.is_valid:
         ...     raise ValueError(result.message)
     """
-    
+
     def __init__(
         self,
         *,

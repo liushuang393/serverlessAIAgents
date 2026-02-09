@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """TenantDashboard - 多租户ダッシュボードサービス.
 
 テナント別の使用状況、分析、管理機能を提供。
@@ -11,16 +10,17 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
-from datetime import datetime, UTC, timedelta
+from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from agentflow.multi_tenant.manager import TenantManager, get_tenant_manager
 from apps.platform.services.component_library import (
     ComponentLibrary,
     ComponentType,
     get_component_library,
 )
+
+from agentflow.multi_tenant.manager import TenantManager, get_tenant_manager
 
 
 @dataclass
@@ -316,4 +316,4 @@ class TenantDashboard:
         }
 
 
-__all__ = ["TenantDashboard", "TenantStats", "UsageTrend", "TopComponent", "RecentActivity"]
+__all__ = ["RecentActivity", "TenantDashboard", "TenantStats", "TopComponent", "UsageTrend"]

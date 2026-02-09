@@ -4,9 +4,10 @@
 """
 
 import logging
+from collections.abc import Callable
 from datetime import datetime
 from functools import wraps
-from typing import Any, Callable
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -18,6 +19,7 @@ from agentflow.skills.builtin.stripe_payment.exceptions import (
     SubscriptionError,
     WebhookError,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +93,8 @@ class StripePayment:
         try:
             import stripe
         except ImportError:
-            raise ImportError("stripe 库未安装，请运行: pip install stripe")
+            msg = "stripe 库未安装，请运行: pip install stripe"
+            raise ImportError(msg)
 
         stripe.api_key = self._config.secret_key
         self._stripe = stripe
@@ -211,19 +214,20 @@ class StripePayment:
             验证后的事件对象
         """
         if not self._config.webhook_secret:
-            raise WebhookError("未配置 webhook_secret")
+            msg = "未配置 webhook_secret"
+            raise WebhookError(msg)
 
         try:
-            event = self._stripe.Webhook.construct_event(
+            return self._stripe.Webhook.construct_event(
                 payload,
                 signature,
                 self._config.webhook_secret,
             )
-            return event
         except self._stripe.error.SignatureVerificationError as e:
             raise SignatureVerificationError(str(e))
         except ValueError as e:
-            raise WebhookError(f"无效的 payload: {e}")
+            msg = f"无效的 payload: {e}"
+            raise WebhookError(msg)
 
     async def handle_webhook_event(
         self,
@@ -254,11 +258,10 @@ class StripePayment:
             if existing:
                 logger.info(f"事件已处理过: {event_id}")
                 return True
-        else:
-            # 使用内存存储
-            if event_id in self._processed_events:
-                logger.info(f"事件已处理过: {event_id}")
-                return True
+        # 使用内存存储
+        elif event_id in self._processed_events:
+            logger.info(f"事件已处理过: {event_id}")
+            return True
 
         # 查找处理器
         handler = handlers.get(event_type)
@@ -287,8 +290,9 @@ class StripePayment:
             return True
 
         except Exception as e:
-            logger.error(f"事件处理失败: {event_type} ({event_id}): {e}")
-            raise WebhookError(f"事件处理失败: {e}")
+            logger.exception(f"事件处理失败: {event_type} ({event_id}): {e}")
+            msg = f"事件处理失败: {e}"
+            raise WebhookError(msg)
 
     def idempotent(self, key_prefix: str) -> Callable:
         """幂等性装饰器.
@@ -760,7 +764,8 @@ class StripePayment:
             测试时钟对象
         """
         if not self._config.test_mode:
-            raise PaymentError("测试时钟仅在测试模式下可用")
+            msg = "测试时钟仅在测试模式下可用"
+            raise PaymentError(msg)
 
         try:
             clock = self._stripe.test_helpers.TestClock.create(
@@ -786,7 +791,8 @@ class StripePayment:
             更新后的测试时钟
         """
         if not self._config.test_mode:
-            raise PaymentError("测试时钟仅在测试模式下可用")
+            msg = "测试时钟仅在测试模式下可用"
+            raise PaymentError(msg)
 
         try:
             clock = self._stripe.test_helpers.TestClock.advance(

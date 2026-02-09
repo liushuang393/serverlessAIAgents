@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Router Factory - 統一ルーター生成.
 
 設計原則:
@@ -20,21 +19,22 @@
 
 from __future__ import annotations
 
-import json
 import logging
-from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
 from agentflow.api.response import APIResponse, ErrorCode
 from agentflow.api.sse_emitter import SSEEmitter
 
+
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Callable
+
     from fastapi import APIRouter, WebSocket
+
     from agentflow.api.websocket_hub import WebSocketHub
-    from agentflow.core.agent_block import AgentBlock
 
 
 logger = logging.getLogger(__name__)
@@ -69,7 +69,7 @@ class AgentRequest(BaseModel):
 def create_agent_router(
     agent_class: type,
     config: RouterConfig | None = None,
-) -> "APIRouter":
+) -> APIRouter:
     """Agent 用ルーターを作成.
 
     自動生成されるエンドポイント:
@@ -172,9 +172,9 @@ def create_agent_router(
 
 
 def create_websocket_router(
-    hub: "WebSocketHub",
+    hub: WebSocketHub,
     config: RouterConfig | None = None,
-) -> "APIRouter":
+) -> APIRouter:
     """WebSocket 用ルーターを作成.
 
     Args:
@@ -184,13 +184,13 @@ def create_websocket_router(
     Returns:
         FastAPI Router
     """
-    from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+    from fastapi import APIRouter
 
     config = config or RouterConfig()
     router = APIRouter(prefix=config.prefix, tags=config.tags or ["WebSocket"])
 
     @router.websocket("/{client_id}")
-    async def websocket_endpoint(websocket: WebSocket, client_id: str):
+    async def websocket_endpoint(websocket: WebSocket, client_id: str) -> None:
         """WebSocket エンドポイント."""
         await hub.handle_connection(websocket, client_id)
 
@@ -254,8 +254,8 @@ def create_sse_endpoint(
 
 
 __all__ = [
-    "create_agent_router",
-    "create_websocket_router",
-    "create_sse_endpoint",
     "RouterConfig",
+    "create_agent_router",
+    "create_sse_endpoint",
+    "create_websocket_router",
 ]

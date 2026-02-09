@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Message Gateway - 消息路由网关.
 
 核心组件：统一管理多平台消息路由，连接消息平台与 AI Agent。
@@ -33,8 +32,8 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import uuid
 from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
     from agentflow.api.websocket_hub import WebSocketHub
@@ -322,7 +321,7 @@ class MessageGateway:
                     f"Sent response to {platform}:{channel_id}, message_id={message_id}"
                 )
             except Exception as e:
-                self._logger.error(f"Failed to send message to platform: {e}")
+                self._logger.exception(f"Failed to send message to platform: {e}")
                 raise
 
             # 6. 同步到 WebSocket 客户端
@@ -348,7 +347,7 @@ class MessageGateway:
                 error_msg = "抱歉，处理您的消息时出现了错误。请稍后再试。"
                 await adapter.send_message(channel_id, error_msg)
             except Exception as send_error:
-                self._logger.error(f"Failed to send error message: {send_error}")
+                self._logger.exception(f"Failed to send error message: {send_error}")
 
             raise
 

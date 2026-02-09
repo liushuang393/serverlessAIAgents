@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Core Interface Types - 核心接口の型定義.
 
 全てのインターフェースで使用するデータ型を定義します。
@@ -101,7 +100,7 @@ class WorkflowDefinition:
     metadata: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "WorkflowDefinition":
+    def from_dict(cls, data: dict[str, Any]) -> WorkflowDefinition:
         """辞書から作成."""
         nodes = [
             NodeDefinition(
@@ -434,26 +433,26 @@ class DebugEvent(ExecutionEvent):
 # =============================================================================
 
 __all__ = [
+    "CodeGenOptions",
     # Enums
     "CodeOutputType",
-    "DeployTarget",
-    # Workflow
-    "WorkflowDefinition",
-    "NodeDefinition",
-    "EdgeDefinition",
-    # Code Generation
-    "GeneratedCode",
-    "FilePreview",
-    "CodeGenOptions",
+    # Config
+    "ConfigField",
+    "ConfigTemplate",
+    "DebugEvent",
     # Deploy
     "DeployConfig",
     "DeployEvent",
     "DeployResult",
-    # Config
-    "ConfigField",
-    "ConfigTemplate",
-    "ValidationResult",
+    "DeployTarget",
+    "EdgeDefinition",
     # Execution
     "ExecutionEvent",
-    "DebugEvent",
+    "FilePreview",
+    # Code Generation
+    "GeneratedCode",
+    "NodeDefinition",
+    "ValidationResult",
+    # Workflow
+    "WorkflowDefinition",
 ]

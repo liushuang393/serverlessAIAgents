@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Decision Governance Engine - プロンプト管理モジュール.
 
 全Agentのシステムプロンプトを一元管理し、外部ファイルからの読み込みをサポート。
@@ -17,6 +16,7 @@
 
 from pathlib import Path
 from typing import Any
+
 
 # プロンプトディレクトリのパス
 PROMPTS_DIR = Path(__file__).parent
@@ -83,9 +83,9 @@ def build_full_prompt(agent_name: str, user_context: dict[str, Any] | None = Non
 
 __all__ = [
     "PROMPTS_DIR",
-    "load_prompt",
-    "get_common_system_prompt",
-    "get_agent_prompt",
     "build_full_prompt",
+    "get_agent_prompt",
+    "get_common_system_prompt",
+    "load_prompt",
 ]
 

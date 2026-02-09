@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """GatekeeperAgent - 入口検証Agent.
 
 不適格な問題を門前払いし、企業新事業・新製品/サービス投入に関する
@@ -6,17 +5,17 @@
 このAgentはDaoAgentの前に必ず実行される。
 """
 
-import json
 import logging
 import re
 from typing import Any
 
-from agentflow import ResilientAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
     GatekeeperInput,
     GatekeeperOutput,
     QuestionCategory,
 )
+
+from agentflow import ResilientAgent
 
 
 class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
@@ -260,7 +259,7 @@ class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
             return {"is_relevant": True, "reason": "Parse failed", "category": "NEW_BUSINESS"}
 
         except Exception as e:
-            self._logger.error(f"LLM relevance check failed: {e}")
+            self._logger.exception(f"LLM relevance check failed: {e}")
             return {"is_relevant": True, "reason": str(e), "category": "NEW_BUSINESS"}
 
     def validate_output(self, output: GatekeeperOutput) -> bool:

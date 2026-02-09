@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentFlow Services - 統一サービス層.
 
 このモジュールは、API / CLI / Studio 全ての交互モードが使用する
@@ -50,65 +49,39 @@
     ...     await ws.send(event.to_json())
 """
 
+from agentflow.services.agent_service import AgentService
+from agentflow.services.auth_service import (
+    AuthConfig,
+    AuthService,
+    AuthToken,
+    AuthUser,
+)
 from agentflow.services.base import (
+    ErrorEvent,
+    # コールバック
+    EventCallback,
+    LogEvent,
+    ProgressCallback,
+    ProgressEvent,
+    ResultEvent,
     # 基底クラス
     ServiceBase,
-    ServiceResult,
     ServiceError,
     # イベント
     ServiceEvent,
     ServiceEventType,
-    ProgressEvent,
-    LogEvent,
-    ResultEvent,
-    ErrorEvent,
-    # コールバック
-    EventCallback,
-    ProgressCallback,
-)
-
-from agentflow.services.agent_service import AgentService
-from agentflow.services.workflow_service import WorkflowService
-from agentflow.services.publish_service import PublishService
-from agentflow.services.preview_service import PreviewService
-
-# 新規追加: ナレッジ・データ・可視化サービス
-from agentflow.services.rag_service import (
-    RAGService,
-    RAGConfig,
-    RAGDocument,
-    ChunkStrategy,
-    RerankerType,
-)
-from agentflow.services.text2sql_service import (
-    Text2SQLService,
-    Text2SQLConfig,
-    SQLResult,
-    SQLDialect,
+    ServiceResult,
 )
 from agentflow.services.chart_service import (
-    ChartService,
     ChartConfig,
-    ChartType,
     ChartFormat,
+    ChartRecommendation,
+    ChartService,
+    ChartType,
+    DashboardConfig,
+    DashboardPanel,
     # 増強: ダッシュボード・ドリルダウン
     DrillDownConfig,
-    DashboardPanel,
-    DashboardConfig,
-    ChartRecommendation,
-)
-from agentflow.services.suggestion_service import (
-    SuggestionService,
-    SuggestionConfig,
-    SuggestionType,
-    # 増強: 優先度
-    SuggestionPriority,
-)
-from agentflow.services.auth_service import (
-    AuthService,
-    AuthConfig,
-    AuthUser,
-    AuthToken,
 )
 from agentflow.services.document_exporter import (
     DocumentExporter,
@@ -116,133 +89,159 @@ from agentflow.services.document_exporter import (
     ExportFormat,
     TemplateType,
 )
+from agentflow.services.fewshot_manager import (
+    BM25,
+    FewshotExample,
+    FewshotManager,
+    FewshotManagerConfig,
+)
+from agentflow.services.preview_service import PreviewService
+from agentflow.services.publish_service import PublishService
 
-# 新規追加: 語義層サービス
-from agentflow.services.semantic_layer import (
-    SemanticLayerService,
-    SemanticLayerConfig,
-    Metric,
-    Dimension,
-    ResolvedQuery,
-    SQLHints,
-    MetricType,
-    AggregationType,
-    TimeGranularity,
-    # DSL 中間表現層
-    QueryDSL,
-    FilterDSL,
-    OrderByDSL,
-    TimeRangeDSL,
-    FilterOperator,
-    SortDirection,
+# 新規追加: ナレッジ・データ・可視化サービス
+from agentflow.services.rag_service import (
+    ChunkStrategy,
+    RAGConfig,
+    RAGDocument,
+    RAGService,
+    RerankerType,
 )
 
 # 新規追加: NL2SQL 増強コンポーネント（学術研究に基づく）
 from agentflow.services.schema_linker import (
+    ColumnInfo,
     SchemaLinker,
     SchemaLinkerConfig,
     SchemaLinkResult,
     TableInfo,
-    ColumnInfo,
-)
-from agentflow.services.fewshot_manager import (
-    FewshotManager,
-    FewshotManagerConfig,
-    FewshotExample,
-    BM25,
-)
-from agentflow.services.sql_postprocessor import (
-    SQLPostProcessor,
-    PostProcessorConfig,
-    PostProcessResult,
-    ValidationResult,
-    CorrectionResult,
-    ValidationLevel,
-    SQLErrorType,
 )
 
+# 新規追加: 語義層サービス
+from agentflow.services.semantic_layer import (
+    AggregationType,
+    Dimension,
+    FilterDSL,
+    FilterOperator,
+    Metric,
+    MetricType,
+    OrderByDSL,
+    # DSL 中間表現層
+    QueryDSL,
+    ResolvedQuery,
+    SemanticLayerConfig,
+    SemanticLayerService,
+    SortDirection,
+    SQLHints,
+    TimeGranularity,
+    TimeRangeDSL,
+)
+from agentflow.services.sql_postprocessor import (
+    CorrectionResult,
+    PostProcessorConfig,
+    PostProcessResult,
+    SQLErrorType,
+    SQLPostProcessor,
+    ValidationLevel,
+    ValidationResult,
+)
+from agentflow.services.suggestion_service import (
+    SuggestionConfig,
+    # 増強: 優先度
+    SuggestionPriority,
+    SuggestionService,
+    SuggestionType,
+)
+from agentflow.services.text2sql_service import (
+    SQLDialect,
+    SQLResult,
+    Text2SQLConfig,
+    Text2SQLService,
+)
+from agentflow.services.workflow_service import WorkflowService
+
+
 __all__ = [
+    "BM25",
+    # サービス
+    "AgentService",
+    "AggregationType",
+    "AuthConfig",
+    # 認証サービス
+    "AuthService",
+    "AuthToken",
+    "AuthUser",
+    "ChartConfig",
+    "ChartFormat",
+    # チャートサービス
+    "ChartService",
+    "ChartType",
+    "ChunkStrategy",
+    "ColumnInfo",
+    "CorrectionResult",
+    "Dimension",
+    # ドキュメントエクスポーター
+    "DocumentExporter",
+    "ErrorEvent",
+    # コールバック
+    "EventCallback",
+    "ExportConfig",
+    "ExportFormat",
+    "FewshotExample",
+    "FewshotManager",
+    "FewshotManagerConfig",
+    "FilterDSL",
+    "FilterOperator",
+    "LogEvent",
+    "Metric",
+    "MetricType",
+    "OrderByDSL",
+    "PostProcessResult",
+    "PostProcessorConfig",
+    "PreviewService",
+    "ProgressCallback",
+    "ProgressEvent",
+    "PublishService",
+    # DSL 中間表現層
+    "QueryDSL",
+    "RAGConfig",
+    "RAGDocument",
+    # RAGサービス
+    "RAGService",
+    "RerankerType",
+    "ResolvedQuery",
+    "ResultEvent",
+    "SQLDialect",
+    "SQLErrorType",
+    "SQLHints",
+    "SQLPostProcessor",
+    "SQLResult",
+    "SchemaLinkResult",
+    # NL2SQL 増強コンポーネント
+    "SchemaLinker",
+    "SchemaLinkerConfig",
+    "SemanticLayerConfig",
+    # 語義層サービス
+    "SemanticLayerService",
     # 基底
     "ServiceBase",
-    "ServiceResult",
     "ServiceError",
     # イベント
     "ServiceEvent",
     "ServiceEventType",
-    "ProgressEvent",
-    "LogEvent",
-    "ResultEvent",
-    "ErrorEvent",
-    # コールバック
-    "EventCallback",
-    "ProgressCallback",
-    # サービス
-    "AgentService",
-    "WorkflowService",
-    "PublishService",
-    "PreviewService",
-    # RAGサービス
-    "RAGService",
-    "RAGConfig",
-    "RAGDocument",
-    "ChunkStrategy",
-    "RerankerType",
-    # Text2SQLサービス
-    "Text2SQLService",
-    "Text2SQLConfig",
-    "SQLResult",
-    "SQLDialect",
-    # チャートサービス
-    "ChartService",
-    "ChartConfig",
-    "ChartType",
-    "ChartFormat",
+    "ServiceResult",
+    "SortDirection",
+    "SuggestionConfig",
     # 提案サービス
     "SuggestionService",
-    "SuggestionConfig",
     "SuggestionType",
-    # 認証サービス
-    "AuthService",
-    "AuthConfig",
-    "AuthUser",
-    "AuthToken",
-    # ドキュメントエクスポーター
-    "DocumentExporter",
-    "ExportConfig",
-    "ExportFormat",
-    "TemplateType",
-    # 語義層サービス
-    "SemanticLayerService",
-    "SemanticLayerConfig",
-    "Metric",
-    "Dimension",
-    "ResolvedQuery",
-    "SQLHints",
-    "MetricType",
-    "AggregationType",
-    "TimeGranularity",
-    # DSL 中間表現層
-    "QueryDSL",
-    "FilterDSL",
-    "OrderByDSL",
-    "TimeRangeDSL",
-    "FilterOperator",
-    "SortDirection",
-    # NL2SQL 増強コンポーネント
-    "SchemaLinker",
-    "SchemaLinkerConfig",
-    "SchemaLinkResult",
     "TableInfo",
-    "ColumnInfo",
-    "FewshotManager",
-    "FewshotManagerConfig",
-    "FewshotExample",
-    "BM25",
-    "SQLPostProcessor",
-    "PostProcessorConfig",
-    "PostProcessResult",
-    "ValidationResult",
-    "CorrectionResult",
+    "TemplateType",
+    "Text2SQLConfig",
+    # Text2SQLサービス
+    "Text2SQLService",
+    "TimeGranularity",
+    "TimeRangeDSL",
     "ValidationLevel",
-    "SQLErrorType",
+    "ValidationResult",
+    "WorkflowService",
 ]

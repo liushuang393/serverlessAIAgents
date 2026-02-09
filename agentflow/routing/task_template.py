@@ -1,5 +1,4 @@
-# -*- coding: utf-8 -*-
-"""Task Template - 再利用可能なタスク定義.
+r"""Task Template - 再利用可能なタスク定義.
 
 「メール整理」「レポート作成」等の再利用可能なタスクテンプレート。
 Skill.md の上位層として、パラメータ化されたタスク定義を提供。
@@ -30,6 +29,7 @@ import logging
 import re
 from dataclasses import dataclass, field
 from typing import Any
+
 
 _logger = logging.getLogger(__name__)
 
@@ -141,11 +141,11 @@ class TaskTemplate:
         try:
             if target_type == "int":
                 return int(value)
-            elif target_type == "float":
+            if target_type == "float":
                 return float(value)
-            elif target_type == "bool":
+            if target_type == "bool":
                 return value.lower() in ("true", "1", "yes", "はい", "是")
-            elif target_type == "list":
+            if target_type == "list":
                 return [v.strip() for v in value.split(",")]
         except (ValueError, AttributeError):
             pass
@@ -191,9 +191,9 @@ class TemplateRegistry:
         >>> template = registry.get("email_organize")
     """
 
-    _instance: "TemplateRegistry | None" = None
+    _instance: TemplateRegistry | None = None
 
-    def __new__(cls) -> "TemplateRegistry":
+    def __new__(cls) -> TemplateRegistry:
         """シングルトン."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)

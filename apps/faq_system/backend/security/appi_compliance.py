@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """APPI（個人情報保護法）準拠サービス.
 
 日本の個人情報保護法（APPI）に準拠したデータ処理。
@@ -24,6 +23,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -335,11 +335,11 @@ class APPIComplianceChecker:
         if pii_type == PIIType.MYNUMBER:
             # マイナンバーは全マスク
             return self._config.mask_character * len(value)
-        elif pii_type == PIIType.CREDIT_CARD:
+        if pii_type == PIIType.CREDIT_CARD:
             # カード番号は末尾4桁のみ表示
             cleaned = re.sub(r"[-\s]", "", value)
             return self._config.mask_character * (len(cleaned) - 4) + cleaned[-4:]
-        elif pii_type == PIIType.PHONE:
+        if pii_type == PIIType.PHONE:
             # 電話番号は中間をマスク
             cleaned = re.sub(r"[-\s]", "", value)
             if len(cleaned) > 6:
@@ -393,7 +393,7 @@ class APPIComplianceChecker:
         digits = [int(d) for d in value]
         weights_1 = [6, 5, 4, 3, 2, 7, 6, 5, 4, 3, 2]
 
-        remainder = sum(d * w for d, w in zip(digits[:11], weights_1)) % 11
+        remainder = sum(d * w for d, w in zip(digits[:11], weights_1, strict=False)) % 11
         check_digit = 0 if remainder <= 1 else 11 - remainder
 
         if digits[11] == check_digit:
@@ -575,9 +575,9 @@ class APPIComplianceChecker:
 __all__ = [
     "APPIComplianceChecker",
     "APPIConfig",
-    "PIIType",
-    "PIISeverity",
-    "PIIDetection",
-    "DataRetentionPolicy",
     "BreachReport",
+    "DataRetentionPolicy",
+    "PIIDetection",
+    "PIISeverity",
+    "PIIType",
 ]

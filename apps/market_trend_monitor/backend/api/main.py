@@ -4,11 +4,8 @@ REST API と WebSocket エンドポイントを提供します。
 """
 
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
-
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 from apps.market_trend_monitor.backend.api.routes import (
     collect_router,
@@ -23,6 +20,9 @@ from apps.market_trend_monitor.backend.api.state import source_registry_service
 from apps.market_trend_monitor.backend.config import config
 from apps.market_trend_monitor.backend.db import init_db
 from apps.market_trend_monitor.backend.workflow import workflow
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
 
 # ロギング設定
 logging.basicConfig(
@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """アプリケーションライフサイクル管理.
 
     Args:

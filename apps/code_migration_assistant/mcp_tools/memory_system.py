@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """MemorySystem MCP Tool.
 
 このモジュールは記憶システムを提供するMCPツールを実装します。
@@ -102,7 +101,7 @@ class MemorySystem(MCPTool):
         except Exception as e:
             return MCPToolResponse(
                 success=False,
-                errors=[f"Memory operation failed: {str(e)}"],
+                errors=[f"Memory operation failed: {e!s}"],
             )
 
     async def _remember(self, data: dict[str, Any]) -> dict[str, Any]:
@@ -119,10 +118,12 @@ class MemorySystem(MCPTool):
         topic = data.get("topic")
 
         if not content:
-            raise ValueError("content is required for remember operation")
+            msg = "content is required for remember operation"
+            raise ValueError(msg)
 
         if not topic:
-            raise ValueError("topic is required for remember operation")
+            msg = "topic is required for remember operation"
+            raise ValueError(msg)
 
         # オプションパラメータ
         memory_type = data.get("memory_type", "pattern")
@@ -156,7 +157,8 @@ class MemorySystem(MCPTool):
         query = data.get("query")
 
         if not query:
-            raise ValueError("query is required for recall operation")
+            msg = "query is required for recall operation"
+            raise ValueError(msg)
 
         # オプションパラメータ
         memory_type = data.get("memory_type")

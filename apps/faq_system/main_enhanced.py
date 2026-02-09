@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FAQ System Enhanced - 強化版FAQシステム.
 
 改善点：
@@ -14,27 +13,26 @@
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
-import uuid
 from datetime import datetime
 from typing import Any
-
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse
-from pydantic import BaseModel, Field
 
 # 強化版Agent
 from apps.faq_system.backend.agents import (
     EnhancedFAQAgent,
     EnhancedFAQConfig,
 )
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, StreamingResponse
+from pydantic import BaseModel, Field
+
+from agentflow.integrations import RealtimeStateSync
 
 # フレームワーク層
-from agentflow.state import GlobalStateStore, ActionType, create_action
-from agentflow.integrations import RealtimeStateSync
+from agentflow.state import GlobalStateStore
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -148,7 +146,7 @@ manager = ConnectionManager()
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index():
+async def index() -> str:
     """トップページ - 強化版UI."""
     return """
 <!DOCTYPE html>
@@ -490,11 +488,10 @@ async def index():
 async def chat_v2(request: ChatRequest) -> dict[str, Any]:
     """チャット API v2（同期）."""
     agent = _get_faq_agent()
-    result = await agent.run({
+    return await agent.run({
         "question": request.message,
         "session_id": request.session_id,
     })
-    return result
 
 
 @app.post("/api/v2/chat/stream")
@@ -516,7 +513,7 @@ async def chat_stream_v2(request: ChatRequest) -> StreamingResponse:
 
 
 @app.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: str):
+async def websocket_endpoint(websocket: WebSocket, client_id: str) -> None:
     """WebSocket エンドポイント."""
     await manager.connect(websocket, client_id)
 

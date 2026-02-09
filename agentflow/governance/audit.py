@@ -9,11 +9,13 @@ import logging
 import uuid
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
-from typing import override
+from typing import TYPE_CHECKING, override
 
 from pydantic import BaseModel, Field
 
-from agentflow.security.policy_engine import AuthDecision, AuthMode
+
+if TYPE_CHECKING:
+    from agentflow.security.policy_engine import AuthDecision, AuthMode
 
 
 class AuditEvent(BaseModel):

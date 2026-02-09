@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RestAPIConnector - REST/GraphQL APIコネクタ.
 
 REST APIおよびGraphQL APIへのアクセスを提供。
@@ -9,16 +8,19 @@ REST APIおよびGraphQL APIへのアクセスを提供。
     >>> data = await connector.query("https://api.example.com/users", "name=John")
 """
 
+import builtins
+import contextlib
 import json
 import logging
-from typing import Any, AsyncIterator, Dict, List, Union
-from urllib.parse import parse_qs, urlparse
+from typing import Any
+from urllib.parse import parse_qs
 
 from pydantic import Field
 
-from agentflow.datalake.auth import AuthCredentials, AuthProvider
+from agentflow.datalake.auth import AuthProvider
 from agentflow.datalake.connector import ConnectorConfig, DataConnector
 from agentflow.datalake.core import DataItem, ReadResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -84,9 +86,12 @@ class RestAPIConnector(DataConnector):
             try:
                 import aiohttp
             except ImportError as e:
-                raise ImportError(
+                msg = (
                     "aiohttp is required for REST API support. "
                     "Install with: pip install aiohttp"
+                )
+                raise ImportError(
+                    msg
                 ) from e
 
             timeout = aiohttp.ClientTimeout(total=self._config.timeout)
@@ -154,7 +159,7 @@ class RestAPIConnector(DataConnector):
         recursive: bool = False,
         pattern: str | None = None,
         limit: int | None = None,
-    ) -> List[DataItem]:
+    ) -> list[DataItem]:
         """APIエンドポイント一覧（REST APIでは通常サポートされない）.
 
         Args:
@@ -190,10 +195,8 @@ class RestAPIConnector(DataConnector):
             # JSONの場合はパース
             parsed_content: Any = content
             if "application/json" in content_type:
-                try:
+                with contextlib.suppress(json.JSONDecodeError):
                     parsed_content = json.loads(content)
-                except json.JSONDecodeError:
-                    pass
 
             return ReadResult(
                 uri=url,
@@ -209,7 +212,7 @@ class RestAPIConnector(DataConnector):
     async def write(
         self,
         path: str,
-        content: Union[bytes, str, dict, list],
+        content: bytes | str | dict | list,
         content_type: str | None = None,
         metadata: dict[str, str] | None = None,
     ) -> DataItem:
@@ -299,7 +302,7 @@ class RestAPIConnector(DataConnector):
         query: str | dict[str, Any],
         method: str = "GET",
         **kwargs: Any,
-    ) -> List[Dict[str, Any]]:
+    ) -> builtins.list[dict[str, Any]]:
         """APIクエリ実行.
 
         Args:
@@ -332,7 +335,8 @@ class RestAPIConnector(DataConnector):
                 response.raise_for_status()
                 data = await response.json()
         else:
-            raise ValueError(f"Unsupported method: {method}")
+            msg = f"Unsupported method: {method}"
+            raise ValueError(msg)
 
         # リストでない場合はラップ
         if isinstance(data, list):

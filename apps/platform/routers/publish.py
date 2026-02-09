@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Publish Router - 発布 API エンドポイント.
 
 POST /api/publish/deploy - 一键发布
@@ -9,11 +8,7 @@ GET /api/publish/stream/{publish_id} - SSE ストリーム
 
 from __future__ import annotations
 
-import json
 from typing import Any
-
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
 
 from apps.platform.engine import PlatformEngine
 from apps.platform.schemas.publish_schemas import (
@@ -21,6 +16,9 @@ from apps.platform.schemas.publish_schemas import (
     PublishResponse,
     PublishStatus,
 )
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+
 
 router = APIRouter(prefix="/api/publish", tags=["publish"])
 
@@ -170,7 +168,7 @@ async def stream_publish(
             PublishStatus.FAILED,
             PublishStatus.CANCELLED,
         ]:
-            yield f"event: done\ndata: {{}}\n\n"
+            yield "event: done\ndata: {}\n\n"
 
     return StreamingResponse(
         event_generator(),

@@ -22,9 +22,9 @@ from pydantic import BaseModel
 
 
 async def sse_event_generator(
-    event_source: AsyncGenerator[dict[str, Any] | BaseModel, None],
+    event_source: AsyncGenerator[dict[str, Any] | BaseModel],
     ping_interval: float = 30.0,
-) -> AsyncGenerator[str, None]:
+) -> AsyncGenerator[str]:
     """SSE イベントジェネレーター.
 
     AG-UI イベントを SSE 形式に変換して yield。
@@ -42,10 +42,7 @@ async def sse_event_generator(
 
     async for event in event_source:
         # Pydantic モデルの場合は dict に変換
-        if isinstance(event, BaseModel):
-            event_data = event.model_dump()
-        else:
-            event_data = event
+        event_data = event.model_dump() if isinstance(event, BaseModel) else event
 
         # イベントタイプを取得
         event_type = event_data.get("event_type", "message")
@@ -57,12 +54,12 @@ async def sse_event_generator(
         # ping チェック
         current_time = asyncio.get_event_loop().time()
         if current_time - last_ping >= ping_interval:
-            yield f"event: ping\ndata: {{}}\n\n"
+            yield "event: ping\ndata: {}\n\n"
             last_ping = current_time
 
 
 def create_sse_response(
-    event_source: AsyncGenerator[dict[str, Any] | BaseModel, None],
+    event_source: AsyncGenerator[dict[str, Any] | BaseModel],
     ping_interval: float = 30.0,
 ) -> StreamingResponse:
     """SSE レスポンスを作成.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """安全機能ミックスイン - Apps統合用.
 
 Engine/Service/Agentに安全機能を付加するミックスインクラス。
@@ -15,15 +14,15 @@ Engine/Service/Agentに安全機能を付加するミックスインクラス。
     ...         input_check = await self.check_input_safety(inputs.get("query", ""))
     ...         if not input_check.is_safe:
     ...             return {"error": "入力が安全でありません"}
-    ...         
+    ...
     ...         # 処理実行
     ...         result = await self._process(inputs)
-    ...         
+    ...
     ...         # 出力検査
     ...         output_check = await self.check_output_safety(result.get("response", ""))
     ...         if output_check.needs_review:
     ...             result["_safety_warning"] = output_check.warnings
-    ...         
+    ...
     ...         return result
 """
 
@@ -39,9 +38,8 @@ from agentflow.security.ai_safety_guard import (
     OutputCheckResult,
     SafetyLevel,
 )
-from agentflow.security.data_sanitizer import DataSanitizer, SanitizerConfig
-from agentflow.security.hallucination_detector import HallucinationDetector, DetectionConfig
-from agentflow.security.reasoning_monitor import ReasoningMonitor, MonitorConfig
+from agentflow.security.data_sanitizer import DataSanitizer
+
 
 _logger = logging.getLogger(__name__)
 
@@ -114,7 +112,7 @@ class SafetyMixin:
                 )
             return result
         except Exception as e:
-            _logger.error("入力安全検査エラー: %s", e)
+            _logger.exception("入力安全検査エラー: %s", e)
             # エラー時は安全側に倒す
             return InputCheckResult(
                 is_safe=False,
@@ -157,7 +155,7 @@ class SafetyMixin:
                 )
             return result
         except Exception as e:
-            _logger.error("出力安全検査エラー: %s", e)
+            _logger.exception("出力安全検査エラー: %s", e)
             from agentflow.security.ai_safety_guard import OutputCheckResult
             return OutputCheckResult(
                 is_safe=True,
@@ -185,7 +183,7 @@ class SafetyMixin:
             result = sanitizer.sanitize(text)
             return result.sanitized_text
         except Exception as e:
-            _logger.error("テキスト脱敏エラー: %s", e)
+            _logger.exception("テキスト脱敏エラー: %s", e)
             return text
 
 

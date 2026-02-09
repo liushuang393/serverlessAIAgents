@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Agent テストフレームワークモジュール.
 
 Agent のテストを簡単に行うためのフレームワークを提供します。
@@ -18,9 +17,14 @@ import os
 import unittest
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Type
+from typing import TYPE_CHECKING, Any
 
 from agentflow.testing.mock_llm import MockLLMProvider, create_mock_llm
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +115,7 @@ class AgentTestCase(unittest.TestCase):
 
     async def create_agent(
         self,
-        agent_class: Type[Any],
+        agent_class: type[Any],
         **kwargs: Any,
     ) -> Any:
         """Agent を作成.
@@ -180,13 +184,9 @@ class AgentTestCase(unittest.TestCase):
             key: キー
             substring: 期待するサブ文字列（オプション）
         """
-        self.assertIn(key, response, f"Response should contain '{key}'")
+        assert key in response, f"Response should contain '{key}'"
         if substring:
-            self.assertIn(
-                substring,
-                str(response[key]),
-                f"Response['{key}'] should contain '{substring}'",
-            )
+            assert substring in str(response[key]), f"Response['{key}'] should contain '{substring}'"
 
     def assertResponseSuccess(self, response: dict[str, Any]) -> None:
         """レスポンスが成功を示すことを検証.
@@ -197,7 +197,7 @@ class AgentTestCase(unittest.TestCase):
         if "error" in response:
             self.fail(f"Response contains error: {response['error']}")
         if "success" in response:
-            self.assertTrue(response["success"], "Response should indicate success")
+            assert response["success"], "Response should indicate success"
 
 
 class AgentTestRunner:
@@ -221,7 +221,7 @@ class AgentTestRunner:
 
     def run_tests(
         self,
-        test_class: Type[AgentTestCase],
+        test_class: type[AgentTestCase],
         test_names: list[str] | None = None,
     ) -> unittest.TestResult:
         """テストを実行.

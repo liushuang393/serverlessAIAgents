@@ -1,14 +1,15 @@
-# -*- coding: utf-8 -*-
 """BaseDeployTarget - デプロイターゲット基底クラス."""
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
+
     from agentflow.core.interfaces import (
         ConfigField,
         DeployConfig,
@@ -39,8 +40,8 @@ class BaseDeployTarget(ABC):
     async def deploy(
         self,
         source_path: Path,
-        config: "DeployConfig",
-    ) -> AsyncIterator["DeployEvent"]:
+        config: DeployConfig,
+    ) -> AsyncIterator[DeployEvent]:
         """デプロイを実行.
 
         Args:
@@ -53,7 +54,7 @@ class BaseDeployTarget(ABC):
         ...
 
     @abstractmethod
-    def get_config_fields(self) -> list["ConfigField"]:
+    def get_config_fields(self) -> list[ConfigField]:
         """必要な設定フィールドを取得.
 
         Returns:
@@ -62,7 +63,7 @@ class BaseDeployTarget(ABC):
         ...
 
     @abstractmethod
-    def validate_config(self, config: dict[str, Any]) -> "ValidationResult":
+    def validate_config(self, config: dict[str, Any]) -> ValidationResult:
         """設定を検証.
 
         Args:

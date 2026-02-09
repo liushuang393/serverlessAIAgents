@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Gallery Router - Gallery API エンドポイント.
 
 GET /api/gallery/search - 検索
@@ -11,17 +10,17 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-
 from apps.platform.engine import PlatformEngine
 from apps.platform.schemas.gallery_schemas import (
-    GallerySearchRequest,
-    GallerySearchResponse,
+    FeaturedResponse,
+    GalleryFilter,
     GalleryItem,
     GalleryItemType,
-    GalleryFilter,
-    FeaturedResponse,
+    GallerySearchRequest,
+    GallerySearchResponse,
 )
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 
 router = APIRouter(prefix="/api/gallery", tags=["gallery"])
 

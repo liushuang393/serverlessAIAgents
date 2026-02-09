@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Flowノード定義.
 
 フローグラフ内の各種ノード型を定義:
@@ -19,7 +18,7 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from agentflow.flow.types import (
     AgentProtocol,
@@ -29,7 +28,10 @@ from agentflow.flow.types import (
     ReviewVerdict,
 )
 
+
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from agentflow.flow.context import FlowContext
 
 
@@ -49,7 +51,7 @@ class FlowNode(ABC):
             self.label = self.name
 
     @abstractmethod
-    async def execute(self, ctx: "FlowContext") -> NodeResult:
+    async def execute(self, ctx: FlowContext) -> NodeResult:
         """ノードを実行."""
         ...
 
@@ -59,13 +61,13 @@ class AgentNode(FlowNode):
     """Agent実行ノード."""
 
     agent: AgentProtocol | None = None
-    input_mapper: Callable[["FlowContext"], dict[str, Any]] | None = None
+    input_mapper: Callable[[FlowContext], dict[str, Any]] | None = None
 
     def __post_init__(self) -> None:
         super().__post_init__()
         object.__setattr__(self, "node_type", NodeType.AGENT)
 
-    async def execute(self, ctx: "FlowContext") -> NodeResult:
+    async def execute(self, ctx: FlowContext) -> NodeResult:
         """Agentを実行."""
         try:
             inputs = self.input_mapper(ctx) if self.input_mapper else ctx.get_inputs()
@@ -76,7 +78,7 @@ class AgentNode(FlowNode):
 
             return NodeResult(success=True, data=result, action=NextAction.CONTINUE)
         except Exception as e:
-            self._logger.error(f"Agent実行失敗: {e}")
+            self._logger.exception(f"Agent実行失敗: {e}")
             return NodeResult(
                 success=False,
                 data={"error": str(e), "error_type": type(e).__name__},
@@ -89,15 +91,15 @@ class GateNode(FlowNode):
     """ゲートノード：条件を満たさない場合は早期リターン."""
 
     agent: AgentProtocol | None = None
-    input_mapper: Callable[["FlowContext"], dict[str, Any]] | None = None
+    input_mapper: Callable[[FlowContext], dict[str, Any]] | None = None
     check: Callable[[dict[str, Any]], bool] | None = None
-    on_fail: Callable[["FlowContext"], dict[str, Any] | Any] | None = None
+    on_fail: Callable[[FlowContext], dict[str, Any] | Any] | None = None
 
     def __post_init__(self) -> None:
         super().__post_init__()
         object.__setattr__(self, "node_type", NodeType.GATE)
 
-    async def execute(self, ctx: "FlowContext") -> NodeResult:
+    async def execute(self, ctx: FlowContext) -> NodeResult:
         """ゲートチェックを実行."""
         try:
             # input_mapperがあれば使用、なければ元の入力を使用
@@ -124,7 +126,7 @@ class GateNode(FlowNode):
                 early_return_data=early_data,
             )
         except Exception as e:
-            self._logger.error(f"ゲート実行失敗: {e}")
+            self._logger.exception(f"ゲート実行失敗: {e}")
             return NodeResult(success=False, data={"error": str(e)}, action=NextAction.STOP)
 
 
@@ -133,13 +135,13 @@ class ParallelNode(FlowNode):
     """並列実行ノード：複数Agentを同時実行."""
 
     agents: list[tuple[str, AgentProtocol]] = field(default_factory=list)
-    input_mappers: dict[str, Callable[["FlowContext"], dict[str, Any]]] = field(default_factory=dict)
+    input_mappers: dict[str, Callable[[FlowContext], dict[str, Any]]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         super().__post_init__()
         object.__setattr__(self, "node_type", NodeType.PARALLEL)
 
-    async def execute(self, ctx: "FlowContext") -> NodeResult:
+    async def execute(self, ctx: FlowContext) -> NodeResult:
         """すべてのAgentを並列実行."""
         try:
             async def run_one(agent_id: str, agent: AgentProtocol) -> tuple[str, dict]:
@@ -162,7 +164,7 @@ class ParallelNode(FlowNode):
 
             return NodeResult(success=True, data=combined, action=NextAction.CONTINUE)
         except Exception as e:
-            self._logger.error(f"並列ノード失敗: {e}")
+            self._logger.exception(f"並列ノード失敗: {e}")
             return NodeResult(success=False, data={"error": str(e)}, action=NextAction.STOP)
 
 
@@ -171,9 +173,9 @@ class ReviewNode(FlowNode):
     """レビューノード：判定結果に基づいてPASS/REVISE/REJECTを決定."""
 
     agent: AgentProtocol | None = None
-    input_mapper: Callable[["FlowContext"], dict[str, Any]] | None = None
-    on_pass: Callable[["FlowContext"], dict[str, Any]] | None = None
-    on_reject: Callable[["FlowContext"], dict[str, Any]] | None = None
+    input_mapper: Callable[[FlowContext], dict[str, Any]] | None = None
+    on_pass: Callable[[FlowContext], dict[str, Any]] | None = None
+    on_reject: Callable[[FlowContext], dict[str, Any]] | None = None
     retry_from: str | None = None  # REVISE時にロールバックするノード
     max_revisions: int = 2
     verdict_key: str = "overall_verdict"  # 判定結果フィールド名
@@ -182,7 +184,7 @@ class ReviewNode(FlowNode):
         super().__post_init__()
         object.__setattr__(self, "node_type", NodeType.REVIEW)
 
-    async def execute(self, ctx: "FlowContext") -> NodeResult:
+    async def execute(self, ctx: FlowContext) -> NodeResult:
         """レビューを実行."""
         try:
             inputs = self.input_mapper(ctx) if self.input_mapper else ctx.get_all_results()
@@ -234,8 +236,8 @@ class ReviewNode(FlowNode):
                 retry_from=self.retry_from,
             )
         except Exception as e:
-            self._logger.error(f"レビュー実行失敗: {e}")
+            self._logger.exception(f"レビュー実行失敗: {e}")
             return NodeResult(success=False, data={"error": str(e)}, action=NextAction.STOP)
 
 
-__all__ = ["FlowNode", "AgentNode", "GateNode", "ParallelNode", "ReviewNode"]
+__all__ = ["AgentNode", "FlowNode", "GateNode", "ParallelNode", "ReviewNode"]

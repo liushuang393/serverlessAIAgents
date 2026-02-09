@@ -28,10 +28,9 @@ import logging
 import time
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -39,6 +38,10 @@ from agentflow.governance import GovernanceDecision, GovernanceEngine, ToolExecu
 from agentflow.hitl import interrupt
 from agentflow.hitl.types import ApprovalRequest
 from agentflow.providers.tool_provider import RegisteredTool, ToolProvider
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 # =============================================================================
@@ -753,18 +756,18 @@ class ToolExecutor:
 # =============================================================================
 
 __all__ = [
-    # データモデル（OpenAI互換）
-    "ToolCall",
-    "FunctionCall",
-    "ToolResult",
-    "ToolCallStatus",
     "BatchResult",
     # 戦略
     "FallbackStrategy",
-    "SimpleFallbackStrategy",
-    "SemanticFallbackStrategy",
+    "FunctionCall",
     "RetryConfig",
     "RetryStrategy",
+    "SemanticFallbackStrategy",
+    "SimpleFallbackStrategy",
+    # データモデル（OpenAI互換）
+    "ToolCall",
+    "ToolCallStatus",
     # メイン
     "ToolExecutor",
+    "ToolResult",
 ]

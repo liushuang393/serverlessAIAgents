@@ -24,7 +24,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -39,6 +38,8 @@ from agentflow.flow.types import (
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from agentflow.flow.context import FlowContext
 
 logger = logging.getLogger(__name__)
@@ -102,14 +103,14 @@ class EnhancedParallelNode(FlowNode):
             return self._aggregate_results(ctx, results)
 
         except TimeoutError:
-            self._logger.error(f"グローバルタイムアウト: {self.global_timeout}秒")
+            self._logger.exception(f"グローバルタイムアウト: {self.global_timeout}秒")
             return NodeResult(
                 success=False,
                 data={"error": "global_timeout", "timeout": self.global_timeout},
                 action=NextAction.STOP,
             )
         except Exception as e:
-            self._logger.error(f"並列実行失敗: {e}")
+            self._logger.exception(f"並列実行失敗: {e}")
             return NodeResult(success=False, data={"error": str(e)}, action=NextAction.STOP)
 
     async def _run_task_with_timeout(
@@ -131,7 +132,7 @@ class EnhancedParallelNode(FlowNode):
             self._logger.warning(f"タスク {task.id} タイムアウト")
             return (task.id, TimeoutError(f"タスク {task.id} がタイムアウト"))
         except Exception as e:
-            self._logger.error(f"タスク {task.id} 失敗: {e}")
+            self._logger.exception(f"タスク {task.id} 失敗: {e}")
             return (task.id, e)
 
     def _aggregate_results(

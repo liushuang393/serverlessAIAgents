@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Turn-Based Compressor - ターン数ベースの会話圧縮.
 
 会話の長さ（ターン数）に基づいて自動的に圧縮を実行する。
@@ -23,11 +22,12 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Protocol
 
 from agentflow.context.key_notes import KeyNotesStore, NoteImportance
+
 
 _logger = logging.getLogger(__name__)
 
@@ -55,7 +55,7 @@ class Message:
 
     role: MessageRole
     content: str
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     turn_number: int = 0
     metadata: dict[str, Any] = field(default_factory=dict)
 
@@ -207,10 +207,7 @@ class TurnBasedCompressor:
 
         # Token数チェック（概算）
         total_tokens = sum(len(m.content) // 4 for m in self._messages)
-        if total_tokens >= self._config.token_threshold:
-            return True
-
-        return False
+        return total_tokens >= self._config.token_threshold
 
     async def compress(self) -> CompressionResult:
         """会話を圧縮.

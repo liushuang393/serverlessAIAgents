@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Decision Governance Engine - Router模块.
 
 API路由的模块化拆分，提高可维护性和复用性。
@@ -14,25 +13,30 @@ API路由的模块化拆分，提高可维护性和复用性。
 
 from apps.decision_governance_engine.routers.auth import router as auth_router
 from apps.decision_governance_engine.routers.config import (
-    router as config_router,
     get_rag_config,
+)
+from apps.decision_governance_engine.routers.config import (
+    router as config_router,
 )
 from apps.decision_governance_engine.routers.decision import router as decision_router
 from apps.decision_governance_engine.routers.knowledge import (
     create_knowledge_router,
+)
+from apps.decision_governance_engine.routers.knowledge import (
     router as knowledge_router,
 )
 from apps.decision_governance_engine.routers.report import router as report_router
 from apps.decision_governance_engine.routers.workflow import router as workflow_router
 
+
 __all__ = [
     "auth_router",
     "config_router",
-    "decision_router",
-    "knowledge_router",
     "create_knowledge_router",
+    "decision_router",
+    "get_rag_config",
+    "knowledge_router",
     "report_router",
     "workflow_router",
-    "get_rag_config",
 ]
 

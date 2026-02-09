@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Request Scope - 请求级作用域管理.
 
 为每个请求提供隔离的资源作用域。
@@ -17,8 +16,13 @@ import time
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 from uuid import uuid4
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 _logger = logging.getLogger(__name__)
 
@@ -112,7 +116,7 @@ class RequestScope:
         cls,
         request_id: str | None = None,
         tenant_id: str | None = None,
-    ) -> AsyncIterator["RequestScope"]:
+    ) -> AsyncIterator[RequestScope]:
         """创建请求作用域.
 
         Args:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Decision Governance Engine - 設定.
 
 API起動時の初期化処理を提供。
@@ -18,6 +17,7 @@ from pathlib import Path
 
 from agentflow.core.flow_definition import FlowDefinition, FlowDefinitionRegistry
 from agentflow.core.result_store import MemoryResultStore, ResultStoreManager
+
 
 # 定数
 FLOW_ID = "decision-governance-engine"

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Coordinator - Agent協調パターン基底クラス.
 
 Agent協調の基底抽象を提供。

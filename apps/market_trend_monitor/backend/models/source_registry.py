@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """情報源台帳モデル.
 
 情報源の信頼度・利用条件・有効性を管理します。
@@ -8,9 +7,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
-
 from apps.market_trend_monitor.backend.models.schemas import SourceType
+from pydantic import BaseModel, Field
 
 
 @dataclass

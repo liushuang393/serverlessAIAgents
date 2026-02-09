@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Market Trend Monitor のインメモリストア.
 
 API から参照される最新スナップショットを保持します。

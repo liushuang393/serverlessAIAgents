@@ -23,7 +23,37 @@ LightMemの思想に基づいた3段階記憶システム。
     >>> await manager.stop()
 """
 
+# NEW: Enhanced Memory（記憶蒸留 + 主動忘却 + 強化学習）
+from agentflow.memory.enhanced_memory import (
+    DistillationStrategy,
+    DistilledKnowledge,
+    EnhancedMemoryManager,
+    ForgettingStrategy,
+    MemoryConfig,
+    MemoryImportanceTracker,
+    MemoryStats,
+)
 from agentflow.memory.importance_adjuster import ImportanceAdjuster
+
+# NEW: Knowledge Store（Memvid長期知識記憶）
+from agentflow.memory.knowledge import (
+    InMemoryKnowledgeStore,
+    # 型定義
+    KnowledgeEntry,
+    # マネージャー
+    KnowledgeManager,
+    KnowledgeSource,
+    # 注: SearchResult, SearchTypeはvector_storeで既に定義
+    # ストアインターフェース
+    KnowledgeStore,
+    # ストア実装
+    MemvidKnowledgeStore,
+    # 主要API
+    get_knowledge_manager,
+    get_knowledge_store,
+    is_memvid_available,
+    reset_knowledge_manager,
+)
 from agentflow.memory.long_term_memory import LongTermMemory
 from agentflow.memory.memory_distiller import MemoryDistiller
 from agentflow.memory.memory_manager import MemoryManager
@@ -43,113 +73,83 @@ from agentflow.memory.types import (
 from agentflow.memory.vector_store import (
     # データモデル
     Document,
+    # 埋め込み
+    EmbeddingModel,
+    InMemoryVectorStore,
     Node,
     SearchResult,
     SearchType,
-    # 埋め込み
-    EmbeddingModel,
     SimpleEmbedding,
     # ベクトルストア
     VectorStore,
-    InMemoryVectorStore,
+    create_embedding_model,
     # ファクトリー
     create_vector_store,
-    create_embedding_model,
 )
 
-# NEW: Enhanced Memory（記憶蒸留 + 主動忘却 + 強化学習）
-from agentflow.memory.enhanced_memory import (
-    DistillationStrategy,
-    DistilledKnowledge,
-    EnhancedMemoryManager,
-    ForgettingStrategy,
-    MemoryConfig,
-    MemoryImportanceTracker,
-    MemoryStats,
-)
-
-# NEW: Knowledge Store（Memvid長期知識記憶）
-from agentflow.memory.knowledge import (
-    # 主要API
-    get_knowledge_manager,
-    get_knowledge_store,
-    reset_knowledge_manager,
-    # マネージャー
-    KnowledgeManager,
-    # ストアインターフェース
-    KnowledgeStore,
-    # ストア実装
-    MemvidKnowledgeStore,
-    InMemoryKnowledgeStore,
-    is_memvid_available,
-    # 型定義
-    KnowledgeEntry,
-    KnowledgeSource,
-    # 注: SearchResult, SearchTypeはvector_storeで既に定義
-)
 
 __all__ = [
-    # Main Manager（ユーザー向け主要API）
-    "MemoryManager",
-    # Memory Layers（内部使用、通常は直接使わない）
-    "SensoryMemory",
-    "ShortTermMemory",
-    "LongTermMemory",
-    # 自動最適化エンジン（内部使用）
-    "MemoryDistiller",
-    "ImportanceAdjuster",
-    # Types
-    "MemoryEntry",
-    "MemoryType",
-    "MemorySemanticLevel",
-    "MemoryStability",
-    "TopicBuffer",
-    "UpdateQueue",
     "CompressionConfig",
+    "DistillationStrategy",
+    "DistilledKnowledge",
     # ==========================================================================
     # NEW: Vector Store（LlamaIndex/LangChain 互換）
     # ==========================================================================
     # データモデル
     "Document",
-    "Node",
-    "SearchResult",
-    "SearchType",
     # 埋め込み
     "EmbeddingModel",
-    "SimpleEmbedding",
-    # ベクトルストア
-    "VectorStore",
-    "InMemoryVectorStore",
-    # ファクトリー
-    "create_vector_store",
-    "create_embedding_model",
     # ==========================================================================
     # NEW: Enhanced Memory（記憶蒸留 + 主動忘却 + 強化学習）
     # ==========================================================================
     "EnhancedMemoryManager",
-    "MemoryConfig",
-    "DistillationStrategy",
     "ForgettingStrategy",
-    "DistilledKnowledge",
-    "MemoryStats",
+    "ImportanceAdjuster",
+    "InMemoryKnowledgeStore",
+    "InMemoryVectorStore",
+    # 型定義
+    "KnowledgeEntry",
+    # マネージャー
+    "KnowledgeManager",
+    "KnowledgeSource",
+    # ストアインターフェース
+    "KnowledgeStore",
+    "LongTermMemory",
+    "MemoryConfig",
+    # 自動最適化エンジン（内部使用）
+    "MemoryDistiller",
+    # Types
+    "MemoryEntry",
     "MemoryImportanceTracker",
+    # Main Manager（ユーザー向け主要API）
+    "MemoryManager",
+    "MemorySemanticLevel",
+    "MemoryStability",
+    "MemoryStats",
+    "MemoryType",
+    # ストア実装
+    "MemvidKnowledgeStore",
+    "Node",
+    "SearchResult",
+    "SearchType",
+    # Memory Layers（内部使用、通常は直接使わない）
+    "SensoryMemory",
+    "ShortTermMemory",
+    "SimpleEmbedding",
+    "TopicBuffer",
+    "UpdateQueue",
+    # ベクトルストア
+    "VectorStore",
+    "create_embedding_model",
+    # ファクトリー
+    "create_vector_store",
     # ==========================================================================
     # NEW: Knowledge Store（Memvid長期知識記憶）
     # ==========================================================================
     # 主要API
     "get_knowledge_manager",
     "get_knowledge_store",
-    "reset_knowledge_manager",
-    # マネージャー
-    "KnowledgeManager",
-    # ストアインターフェース
-    "KnowledgeStore",
-    # ストア実装
-    "MemvidKnowledgeStore",
-    "InMemoryKnowledgeStore",
     "is_memvid_available",
-    # 型定義
-    "KnowledgeEntry",
-    "KnowledgeSource",
+    "reset_knowledge_manager",
 ]
 

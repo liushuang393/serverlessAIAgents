@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """分散トレーシングモジュール.
 
 リクエストの追跡とスパン管理を提供します。
@@ -16,13 +15,15 @@ import functools
 import threading
 import time
 import uuid
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Callable, Iterator, TypeVar
+from datetime import UTC, datetime
+from typing import Any, TypeVar
+
 
 # グローバルトレーサー
-_tracer_instance: "Tracer | None" = None
+_tracer_instance: Tracer | None = None
 _current_span: threading.local = threading.local()
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -43,7 +44,7 @@ class SpanContext:
     parent_span_id: str | None = None
 
     @classmethod
-    def generate(cls, parent: "SpanContext | None" = None) -> "SpanContext":
+    def generate(cls, parent: SpanContext | None = None) -> SpanContext:
         """新しいスパンコンテキストを生成.
 
         Args:
@@ -123,7 +124,7 @@ class Span:
         self.events.append(
             {
                 "name": name,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
                 "attributes": attributes or {},
             }
         )
@@ -155,10 +156,10 @@ class Span:
             "span_id": self.span_id,
             "parent_span_id": self.context.parent_span_id,
             "start_time": datetime.fromtimestamp(
-                self.start_time, tz=timezone.utc
+                self.start_time, tz=UTC
             ).isoformat(),
             "end_time": (
-                datetime.fromtimestamp(self.end_time, tz=timezone.utc).isoformat()
+                datetime.fromtimestamp(self.end_time, tz=UTC).isoformat()
                 if self.end_time
                 else None
             ),
@@ -340,14 +341,13 @@ class Tracer:
                         return await func(*args, **kwargs)
 
                 return async_wrapper  # type: ignore
-            else:
 
-                @functools.wraps(func)
-                def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
-                    with self.span(span_name):
-                        return func(*args, **kwargs)
+            @functools.wraps(func)
+            def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
+                with self.span(span_name):
+                    return func(*args, **kwargs)
 
-                return sync_wrapper  # type: ignore
+            return sync_wrapper  # type: ignore
 
         return decorator
 

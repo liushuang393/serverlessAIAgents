@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Parser モジュール.
 
 多言語パーサーと統一インターフェース。
@@ -11,13 +10,8 @@
 from agentflow.code_intelligence.parsers.base import (
     CodeParser,
     ParseContext,
-    ParseResult,
     ParseError,
-)
-from agentflow.code_intelligence.parsers.registry import (
-    ParserRegistry,
-    get_parser,
-    register_parser,
+    ParseResult,
 )
 
 # Legacy parsers
@@ -26,20 +20,26 @@ from agentflow.code_intelligence.parsers.legacy.cobol_parser import CobolParser
 # Modern parsers
 from agentflow.code_intelligence.parsers.modern.java_parser import JavaParser
 from agentflow.code_intelligence.parsers.modern.python_parser import PythonParser
+from agentflow.code_intelligence.parsers.registry import (
+    ParserRegistry,
+    get_parser,
+    register_parser,
+)
+
 
 __all__ = [
-    # Base
-    "CodeParser",
-    "ParseContext",
-    "ParseResult",
-    "ParseError",
-    # Registry
-    "ParserRegistry",
-    "get_parser",
-    "register_parser",
     # Legacy parsers
     "CobolParser",
+    # Base
+    "CodeParser",
     # Modern parsers
     "JavaParser",
+    "ParseContext",
+    "ParseError",
+    "ParseResult",
+    # Registry
+    "ParserRegistry",
     "PythonParser",
+    "get_parser",
+    "register_parser",
 ]

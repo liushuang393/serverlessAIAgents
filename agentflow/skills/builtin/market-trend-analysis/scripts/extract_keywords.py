@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """キーワード抽出スクリプト - 確定性処理.
 
 このスクリプトはLLM推論を使用せず、確定的にキーワードを抽出します。
@@ -151,6 +150,5 @@ def _tokenize(text: str) -> list[str]:
     # 連続空白を正規化
     text = re.sub(r"\s+", " ", text)
     # 分割
-    tokens = text.strip().lower().split()
-    return tokens
+    return text.strip().lower().split()
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """PDF出力サービス v3.0.
 
 DecisionReportをPDF形式でエクスポートする。
@@ -8,7 +7,6 @@ v3.0: 本質導出・戦略的禁止事項・撤退基準など全フィール�
 
 import io
 import logging
-from datetime import datetime
 from typing import Any
 
 from apps.decision_governance_engine.schemas.output_schemas import DecisionReport
@@ -65,12 +63,12 @@ class PDFGeneratorService:
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.cidfonts import UnicodeCIDFont
         from reportlab.platypus import (
+            PageBreak,
             Paragraph,
             SimpleDocTemplate,
             Spacer,
             Table,
             TableStyle,
-            PageBreak,
         )
 
         # CJKフォント登録（中日韓文字対応）

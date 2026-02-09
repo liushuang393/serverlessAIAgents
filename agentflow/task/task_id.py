@@ -1,8 +1,8 @@
 """First-class Task identifier for Agent OS."""
 
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
-import uuid
 
 
 @dataclass(frozen=True)
@@ -61,5 +61,6 @@ class TaskID:
         """
         parts = task_id_str.split("_")
         if len(parts) != 4 or parts[0] != "task":
-            raise ValueError(f"Invalid TaskID format: {task_id_str}")
+            msg = f"Invalid TaskID format: {task_id_str}"
+            raise ValueError(msg)
         return cls(type=parts[1], timestamp=parts[2], random=parts[3])

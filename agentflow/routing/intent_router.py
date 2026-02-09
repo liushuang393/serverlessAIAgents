@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Intent Router - 意図解析とルーティング.
 
 自然言語から意図を解析し、適切なSkill/Agent/テンプレートにルーティングする。
@@ -24,6 +23,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
     from agentflow.routing.task_template import TaskTemplate
@@ -108,11 +108,11 @@ class IntentRouter:
     def __init__(
         self,
         config: RouterConfig | None = None,
-        templates: list["TaskTemplate"] | None = None,
+        templates: list[TaskTemplate] | None = None,
     ) -> None:
         """初期化."""
         self._config = config or RouterConfig()
-        self._templates: dict[str, "TaskTemplate"] = {}
+        self._templates: dict[str, TaskTemplate] = {}
         self._logger = logging.getLogger(__name__)
 
         # テンプレート登録
@@ -120,7 +120,7 @@ class IntentRouter:
             for t in templates:
                 self.register_template(t)
 
-    def register_template(self, template: "TaskTemplate") -> None:
+    def register_template(self, template: TaskTemplate) -> None:
         """テンプレートを登録."""
         self._templates[template.name] = template
         self._logger.debug("テンプレート登録: %s", template.name)
@@ -239,7 +239,7 @@ class IntentRouter:
         """登録済みテンプレート一覧."""
         return list(self._templates.keys())
 
-    def get_template(self, name: str) -> "TaskTemplate | None":
+    def get_template(self, name: str) -> TaskTemplate | None:
         """テンプレート取得."""
         return self._templates.get(name)
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Prediction Review モデル定義.
 
 予測復盤システムのデータモデル。
@@ -49,7 +48,7 @@ class PredictionOutcome(str, Enum):
 @dataclass
 class Prediction:
     """予測データモデル.
-    
+
     市場動向に対する予測とその結果を表現します。
     """
 

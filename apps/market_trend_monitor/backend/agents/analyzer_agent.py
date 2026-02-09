@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """分析エージェント.
 
 収集データを分析し、トレンドを抽出します。
@@ -16,9 +15,6 @@ from collections import Counter
 from datetime import datetime, timedelta
 from typing import Any
 
-from agentflow import ResilientAgent
-from agentflow.skills import Skill, SkillRouter, SkillRuntime
-
 from apps.market_trend_monitor.backend.config import config
 from apps.market_trend_monitor.backend.models import (
     AnalyzerInput,
@@ -30,6 +26,9 @@ from apps.market_trend_monitor.backend.models import (
     TrendSchema,
 )
 from apps.market_trend_monitor.backend.services.evidence_service import EvidenceService
+
+from agentflow import ResilientAgent
+from agentflow.skills import Skill, SkillRouter, SkillRuntime
 
 
 class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):

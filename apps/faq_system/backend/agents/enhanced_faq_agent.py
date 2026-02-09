@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """強化版 FAQ Agent - Orchestrator + Skills + 富文本対応.
 
 このAgentは以下の改善を含みます：
@@ -22,17 +21,21 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
 from agentflow.core.agent_block import AgentBlock
 from agentflow.protocols.a2ui.rich_content import (
-    AlertType,
     ChartType,
     ChartView,
     RichResponse,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +152,7 @@ class EnhancedFAQAgent(AgentBlock):
         """
         start_time = datetime.now()
         question = input_data.get("question", "")
-        session_id = input_data.get("session_id", str(uuid.uuid4()))
+        input_data.get("session_id", str(uuid.uuid4()))
 
         if not question:
             return FAQResponse(error="質問が指定されていません").model_dump()
@@ -443,12 +446,11 @@ class EnhancedFAQAgent(AgentBlock):
                 {"text": "カテゴリ別の内訳は？", "type": "followup"},
                 {"text": "トップ10を表示", "type": "followup"},
             ]
-        else:
-            return [
-                {"text": "もう少し詳しく教えて", "type": "followup"},
-                {"text": "関連する情報は？", "type": "followup"},
-                {"text": "例を見せて", "type": "followup"},
-            ]
+        return [
+            {"text": "もう少し詳しく教えて", "type": "followup"},
+            {"text": "関連する情報は？", "type": "followup"},
+            {"text": "例を見せて", "type": "followup"},
+        ]
 
     async def _analyze_gap(
         self, question: str, response: FAQResponse
@@ -458,14 +460,13 @@ class EnhancedFAQAgent(AgentBlock):
             return {}
 
         try:
-            result = await self._gap_analyzer.run({
+            return await self._gap_analyzer.run({
                 "query_logs": [{
                     "question": question,
                     "confidence": response.confidence,
                     "answered": bool(response.answer),
                 }]
             })
-            return result
         except Exception as e:
             self._logger.warning("ギャップ分析エラー: %s", e)
             return {}
@@ -490,9 +491,9 @@ class EnhancedFAQAgent(AgentBlock):
             return
 
         from agentflow.skills.builtin.knowledge_qa import (
-            Retriever,
             AnswerGenerator,
             GapAnalyzer,
+            Retriever,
         )
 
         self._retriever = Retriever()

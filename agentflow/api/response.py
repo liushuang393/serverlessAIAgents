@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """統一 API レスポンス - 全アプリ共通のレスポンス形式.
 
 設計原則:
@@ -31,7 +30,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -85,7 +84,7 @@ class APIError(BaseModel):
     field: str | None = Field(None, description="エラーが発生したフィールド")
 
 
-class APIResponse(BaseModel, Generic[T]):
+class APIResponse[T](BaseModel):
     """統一 API レスポンス.
 
     Attributes:
@@ -110,7 +109,7 @@ class APIResponse(BaseModel, Generic[T]):
         cls,
         data: T | None = None,
         meta: dict[str, Any] | None = None,
-    ) -> "APIResponse[T]":
+    ) -> APIResponse[T]:
         """成功レスポンスを作成.
 
         Args:
@@ -133,7 +132,7 @@ class APIResponse(BaseModel, Generic[T]):
         message: str,
         details: dict[str, Any] | None = None,
         field: str | None = None,
-    ) -> "APIResponse[None]":
+    ) -> APIResponse[None]:
         """エラーレスポンスを作成.
 
         Args:
@@ -157,7 +156,7 @@ class APIResponse(BaseModel, Generic[T]):
 
     # エイリアス
     @classmethod
-    def ok(cls, data: T | None = None, **kwargs: Any) -> "APIResponse[T]":
+    def ok(cls, data: T | None = None, **kwargs: Any) -> APIResponse[T]:
         """成功レスポンス（エイリアス）."""
         return cls.success_response(data=data, meta=kwargs.get("meta"))
 
@@ -167,7 +166,7 @@ class APIResponse(BaseModel, Generic[T]):
         code: ErrorCode = ErrorCode.UNKNOWN,
         message: str = "An error occurred",
         **kwargs: Any,
-    ) -> "APIResponse[None]":
+    ) -> APIResponse[None]:
         """エラーレスポンス（エイリアス）."""
         return cls.error_response(
             code=code,
@@ -177,7 +176,7 @@ class APIResponse(BaseModel, Generic[T]):
         )
 
 
-class PagedResponse(BaseModel, Generic[T]):
+class PagedResponse[T](BaseModel):
     """ページネーション対応レスポンス."""
 
     items: list[T] = Field(..., description="アイテムリスト")
@@ -194,7 +193,7 @@ class PagedResponse(BaseModel, Generic[T]):
         total: int,
         page: int = 1,
         page_size: int = 10,
-    ) -> "PagedResponse[T]":
+    ) -> PagedResponse[T]:
         """ページネーションレスポンスを作成.
 
         Args:
@@ -239,7 +238,7 @@ class StreamEvent(BaseModel):
     )
 
     @classmethod
-    def progress(cls, value: int, message: str = "", **kwargs: Any) -> "StreamEvent":
+    def progress(cls, value: int, message: str = "", **kwargs: Any) -> StreamEvent:
         """進捗イベントを作成."""
         return cls(
             type=StreamEventType.PROGRESS,
@@ -247,12 +246,12 @@ class StreamEvent(BaseModel):
         )
 
     @classmethod
-    def result(cls, data: dict[str, Any]) -> "StreamEvent":
+    def result(cls, data: dict[str, Any]) -> StreamEvent:
         """結果イベントを作成."""
         return cls(type=StreamEventType.RESULT, data=data)
 
     @classmethod
-    def error(cls, message: str, code: str = "ERROR") -> "StreamEvent":
+    def error(cls, message: str, code: str = "ERROR") -> StreamEvent:
         """エラーイベントを作成."""
         return cls(
             type=StreamEventType.ERROR,
@@ -266,8 +265,8 @@ class StreamEvent(BaseModel):
 
 
 __all__ = [
-    "APIResponse",
     "APIError",
+    "APIResponse",
     "ErrorCode",
     "PagedResponse",
     "StreamEvent",

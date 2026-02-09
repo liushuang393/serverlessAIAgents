@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """信号評価エージェント.
 
 5軸評価体系に基づく統一的な信号強度評価を提供します。
@@ -13,10 +12,6 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
-
-from agentflow import ResilientAgent
-
 from apps.market_trend_monitor.backend.models import (
     SentimentType,
     SignalSchema,
@@ -27,6 +22,9 @@ from apps.market_trend_monitor.backend.models import (
 from apps.market_trend_monitor.backend.services.signal_service import (
     SignalService,
 )
+from pydantic import BaseModel, Field
+
+from agentflow import ResilientAgent
 
 
 # ============================================================

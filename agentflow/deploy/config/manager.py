@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ConfigManager - 設定管理器実装.
 
 IConfigManager インターフェースを実装し、
@@ -19,6 +18,7 @@ from agentflow.core.interfaces import (
     IConfigManager,
     ValidationResult,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -284,7 +284,8 @@ class ConfigManager(IConfigManager):
         """
         template = self._templates.get(target)
         if template is None:
-            raise ValueError(f"No template for target: {target}")
+            msg = f"No template for target: {target}"
+            raise ValueError(msg)
         return template
 
     async def get_required_fields(
@@ -436,7 +437,7 @@ class ConfigManager(IConfigManager):
             data = json.loads(config_file.read_text(encoding="utf-8"))
             return data.get("config", {})
         except Exception as e:
-            logger.error(f"Failed to load config {name}: {e}")
+            logger.exception(f"Failed to load config {name}: {e}")
             return None
 
     async def list_configs(

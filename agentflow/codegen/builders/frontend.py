@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FrontendBuilder - フロントエンドコードビルダー.
 
 React ベースのフロントエンドコードを生成します。
@@ -10,6 +9,7 @@ import json
 from typing import TYPE_CHECKING
 
 from agentflow.codegen.builders.base import BaseBuilder
+
 
 if TYPE_CHECKING:
     from agentflow.core.interfaces import CodeGenOptions, WorkflowDefinition
@@ -23,8 +23,8 @@ class FrontendBuilder(BaseBuilder):
 
     async def build(
         self,
-        workflow: "WorkflowDefinition",
-        options: "CodeGenOptions",
+        workflow: WorkflowDefinition,
+        options: CodeGenOptions,
     ) -> dict[str, str]:
         """フロントエンドコードをビルド."""
         files: dict[str, str] = {}
@@ -61,8 +61,8 @@ class FrontendBuilder(BaseBuilder):
 
     def _generate_package_json(
         self,
-        workflow: "WorkflowDefinition",
-        options: "CodeGenOptions",
+        workflow: WorkflowDefinition,
+        options: CodeGenOptions,
     ) -> str:
         """package.json を生成."""
         package = {
@@ -117,7 +117,7 @@ class FrontendBuilder(BaseBuilder):
 
     def _generate_vite_config(self) -> str:
         """vite.config.ts を生成."""
-        return '''import { defineConfig } from 'vite';
+        return """import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
@@ -132,11 +132,11 @@ export default defineConfig({
     },
   },
 });
-'''
+"""
 
     def _generate_main(self) -> str:
         """main.tsx を生成."""
-        return '''import React from 'react';
+        return """import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
@@ -146,22 +146,22 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>
 );
-'''
+"""
 
     def _generate_app(
         self,
-        workflow: "WorkflowDefinition",
-        options: "CodeGenOptions",
+        workflow: WorkflowDefinition,
+        options: CodeGenOptions,
     ) -> str:
         """App.tsx を生成."""
-        return f'''import {{ useState }} from 'react';
+        return f"""import {{ useState }} from 'react';
 import WorkflowRunner from './components/WorkflowRunner';
 import ResultDisplay from './components/ResultDisplay';
 import InputForm from './components/InputForm';
 import type {{ WorkflowResult }} from './types';
 
 function App() {{
-  const [input, setInput] = useState<Record<string, unknown>>({{}}); 
+  const [input, setInput] = useState<Record<string, unknown>>({{}});
   const [result, setResult] = useState<WorkflowResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -215,11 +215,11 @@ function App() {{
 }}
 
 export default App;
-'''
+"""
 
     def _generate_css(self) -> str:
         """index.css を生成."""
-        return '''* {
+        return """* {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -328,11 +328,11 @@ pre {
     grid-template-columns: 1fr;
   }
 }
-'''
+"""
 
-    def _generate_workflow_runner(self, workflow: "WorkflowDefinition") -> str:
+    def _generate_workflow_runner(self, workflow: WorkflowDefinition) -> str:
         """WorkflowRunner コンポーネントを生成."""
-        return '''import { useState, useCallback } from 'react';
+        return """import { useState, useCallback } from 'react';
 import type { WorkflowResult, ExecutionEvent } from '../types';
 
 interface Props {
@@ -419,11 +419,11 @@ export default function WorkflowRunner({ onResult, onEvent }: Props) {
     </div>
   );
 }
-'''
+"""
 
     def _generate_result_display(self) -> str:
         """ResultDisplay コンポーネントを生成."""
-        return '''import type { WorkflowResult } from '../types';
+        return """import type { WorkflowResult } from '../types';
 
 interface Props {
   result: WorkflowResult;
@@ -444,11 +444,11 @@ export default function ResultDisplay({ result }: Props) {
     </div>
   );
 }
-'''
+"""
 
     def _generate_input_form(self) -> str:
         """InputForm コンポーネントを生成."""
-        return '''import { useState, useCallback } from 'react';
+        return """import { useState, useCallback } from 'react';
 
 interface Props {
   value: Record<string, unknown>;
@@ -481,11 +481,11 @@ export default function InputForm({ value, onChange }: Props) {
     </div>
   );
 }
-'''
+"""
 
-    def _generate_api_client(self, options: "CodeGenOptions") -> str:
+    def _generate_api_client(self, options: CodeGenOptions) -> str:
         """API クライアントを生成."""
-        return '''const API_BASE = '/api';
+        return """const API_BASE = '/api';
 
 export async function runWorkflow(input: Record<string, unknown>) {
   const response = await fetch(`${API_BASE}/run`, {
@@ -529,11 +529,11 @@ export async function getWorkflowInfo() {
   const response = await fetch(`${API_BASE}/workflow/info`);
   return response.json();
 }
-'''
+"""
 
     def _generate_types(self) -> str:
         """型定義を生成."""
-        return '''export interface WorkflowResult {
+        return """export interface WorkflowResult {
   status: 'success' | 'error';
   result?: Record<string, unknown>;
   error?: string;
@@ -554,15 +554,15 @@ export interface WorkflowInfo {
   nodes: number;
   edges: number;
 }
-'''
+"""
 
     def _generate_html(
         self,
-        workflow: "WorkflowDefinition",
-        options: "CodeGenOptions",
+        workflow: WorkflowDefinition,
+        options: CodeGenOptions,
     ) -> str:
         """index.html を生成."""
-        return f'''<!DOCTYPE html>
+        return f"""<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -575,15 +575,15 @@ export interface WorkflowInfo {
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-'''
+"""
 
     def _generate_readme(
         self,
-        workflow: "WorkflowDefinition",
-        options: "CodeGenOptions",
+        workflow: WorkflowDefinition,
+        options: CodeGenOptions,
     ) -> str:
         """README を生成."""
-        return f'''# {workflow.name} - Frontend
+        return f"""# {workflow.name} - Frontend
 
 {workflow.description}
 
@@ -612,7 +612,7 @@ Edit `vite.config.ts` to change the API proxy target.
 ---
 
 *Generated by AgentFlow Studio*
-'''
+"""
 
 
 __all__ = ["FrontendBuilder"]

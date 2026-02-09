@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeepAgent Agent池管理.
 
 通用Agent池の設計思想:
@@ -27,6 +26,7 @@ from agentflow.patterns.deep_agent.da_models import (
     MessageType,
     TodoItem,
 )
+
 
 _logger = logging.getLogger(__name__)
 
@@ -75,7 +75,6 @@ class BaseAgent(ABC):
         Returns:
             実行結果
         """
-        pass
 
     async def receive_message(self, message: AgentMessage) -> None:
         """メッセージを受信."""
@@ -331,13 +330,13 @@ class AgentPool:
 # =============================================================================
 
 __all__ = [
-    "BaseAgent",
-    "ResearchAgent",
-    "AnalysisAgent",
-    "PlanningAgent",
-    "ExecutionAgent",
-    "ReviewAgent",
-    "ReportAgent",
     "AgentPool",
+    "AnalysisAgent",
+    "BaseAgent",
+    "ExecutionAgent",
+    "PlanningAgent",
+    "ReportAgent",
+    "ResearchAgent",
+    "ReviewAgent",
 ]
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Code Migration Assistant - agentflow ベースのコード移行ツール.
 
 agentflow の Engine パターンを使用したコード移行アシスタント。
@@ -19,6 +18,7 @@ Factory パターンにより、設定ベースで言語ペアを切り替え可
 
 from apps.code_migration_assistant.engine import CodeMigrationEngine
 from apps.code_migration_assistant.orchestrator import CodeMigrationOrchestrator
+
 
 __all__ = [
     "CodeMigrationEngine",

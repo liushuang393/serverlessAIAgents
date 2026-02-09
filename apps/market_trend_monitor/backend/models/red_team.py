@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Red Team Analysis モデル定義.
 
 反証分析システムのデータモデル。
@@ -88,7 +87,7 @@ class ChallengeResult:
 @dataclass
 class CounterArgument:
     """反論データモデル.
-    
+
     主張に対する反対意見を表現します。
     """
 
@@ -108,7 +107,7 @@ class CounterArgument:
 @dataclass
 class InvalidationCondition:
     """失効条件データモデル.
-    
+
     主張が無効になる条件を表現します。
     """
 
@@ -128,7 +127,7 @@ class InvalidationCondition:
 @dataclass
 class RedTeamAnalysis:
     """Red Team 分析結果データモデル.
-    
+
     主張に対する反証分析結果を表現します。
     """
 
@@ -162,21 +161,21 @@ class RedTeamAnalysis:
         """反論と失効条件から不確実性を計算."""
         if not self.counter_arguments and not self.invalidation_conditions:
             return 0.0
-        
+
         # 反論の強さの加重平均
         counter_weight = 0.0
         if self.counter_arguments:
             counter_weight = sum(
                 ca.strength for ca in self.counter_arguments
             ) / len(self.counter_arguments)
-        
+
         # 失効条件の確率加重
         invalidation_weight = 0.0
         if self.invalidation_conditions:
             invalidation_weight = sum(
                 ic.probability for ic in self.invalidation_conditions
             ) / len(self.invalidation_conditions)
-        
+
         # 総合不確実性の計算（50:50の重み付け）
         self.overall_uncertainty = (counter_weight + invalidation_weight) / 2
         return self.overall_uncertainty

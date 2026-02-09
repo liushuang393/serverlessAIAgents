@@ -8,9 +8,9 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from agentflow.core.agent_block import AgentBlock
-
 from apps.market_trend_monitor.backend.models import Notification, NotificationPriority, Trend
+
+from agentflow.core.agent_block import AgentBlock
 
 
 class NotifierAgent(AgentBlock):
@@ -95,9 +95,9 @@ class NotifierAgent(AgentBlock):
 
     def _dict_to_trend(self, data: dict[str, Any]) -> Trend:
         """辞書からTrendオブジェクトを生成."""
-        from agentflow.utils.type_helpers import convert_enum
-
         from apps.market_trend_monitor.backend.models import SentimentType
+
+        from agentflow.utils.type_helpers import convert_enum
 
         return Trend(
             id=data["id"],
@@ -182,12 +182,11 @@ class NotifierAgent(AgentBlock):
         """
         if growth_rate >= 0.5:
             return NotificationPriority.CRITICAL
-        elif growth_rate >= 0.4:
+        if growth_rate >= 0.4:
             return NotificationPriority.HIGH
-        elif growth_rate >= 0.3:
+        if growth_rate >= 0.3:
             return NotificationPriority.MEDIUM
-        else:
-            return NotificationPriority.LOW
+        return NotificationPriority.LOW
 
     async def _send_notifications(self, notifications: list[Notification]) -> None:
         """通知送信.

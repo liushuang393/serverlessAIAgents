@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """権限設定（Permission Config）.
 
 FAQ システムの権限管理設定。
@@ -25,6 +24,7 @@ import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -359,12 +359,11 @@ class PermissionConfig:
                         "reason": "Allowed by role",
                         "requires_audit": restriction.requires_audit,
                     }
-                else:
-                    return {
-                        "restricted": True,
-                        "reason": restriction.reason,
-                        "requires_audit": restriction.requires_audit,
-                    }
+                return {
+                    "restricted": True,
+                    "reason": restriction.reason,
+                    "requires_audit": restriction.requires_audit,
+                }
 
         return {
             "restricted": False,
@@ -432,10 +431,10 @@ class PermissionConfig:
 
 
 __all__ = [
+    "FieldRestriction",
+    "KBPermission",
     "PermissionConfig",
     "PermissionConfigData",
-    "RolePermissions",
-    "KBPermission",
-    "FieldRestriction",
     "PermissionLevel",
+    "RolePermissions",
 ]

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """オファーデータモデル - 意図広告（Direct Offers）対応.
 
 Google Gemini の意図広告に対応したオファーデータ構造。
@@ -94,9 +93,7 @@ class Offer(BaseModel):
         now = datetime.now()
         if self.valid_from and now < self.valid_from:
             return False
-        if self.valid_until and now > self.valid_until:
-            return False
-        return True
+        return not (self.valid_until and now > self.valid_until)
 
     def calculate_discount(self, price: float) -> float:
         """割引額を計算.

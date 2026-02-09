@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Data Provider - 統一データアクセスインターフェース.
 
 このモジュールは、SQL/Vector/Cacheの統一アクセスを提供します。
@@ -218,7 +217,7 @@ class CacheProvider:
         """
         if self._config.provider == "memory":
             return self._memory_cache.get(key, default)
-        elif self._config.provider == "redis":
+        if self._config.provider == "redis":
             if self._redis_client is None:
                 return default
             value = await self._redis_client.get(key)

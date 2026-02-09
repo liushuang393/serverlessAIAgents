@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """語義層（Semantic Layer）サービス.
 
 自然言語→SQL変換における指標定義・ディメンション管理を提供。
@@ -30,6 +29,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -318,7 +318,7 @@ class QueryDSL:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "QueryDSL":
+    def from_dict(cls, data: dict[str, Any]) -> QueryDSL:
         """辞書から生成."""
         filters = []
         for f in data.get("filters", []):
@@ -824,7 +824,7 @@ class SemanticLayerService:
                     end = now.strftime("%Y-%m-%d")
                     return {"start": start, "end": end}
 
-                elif time_type == "last_month":
+                if time_type == "last_month":
                     first_of_month = now.replace(day=1)
                     last_month_end = first_of_month - timedelta(days=1)
                     last_month_start = last_month_end.replace(day=1)
@@ -833,16 +833,16 @@ class SemanticLayerService:
                         "end": last_month_end.strftime("%Y-%m-%d"),
                     }
 
-                elif time_type == "current_year":
+                if time_type == "current_year":
                     start = now.replace(month=1, day=1).strftime("%Y-%m-%d")
                     end = now.strftime("%Y-%m-%d")
                     return {"start": start, "end": end}
 
-                elif time_type == "today":
+                if time_type == "today":
                     today = now.strftime("%Y-%m-%d")
                     return {"start": today, "end": today}
 
-                elif time_type == "last_n_days":
+                if time_type == "last_n_days":
                     days = int(match.group(1))
                     start = (now - timedelta(days=days)).strftime("%Y-%m-%d")
                     end = now.strftime("%Y-%m-%d")
@@ -1104,13 +1104,13 @@ class SemanticLayerService:
         query_lower = query.lower()
         if any(k in query_lower for k in ["日別", "日毎", "毎日"]):
             return TimeGranularity.DAY
-        elif any(k in query_lower for k in ["週別", "週毎"]):
+        if any(k in query_lower for k in ["週別", "週毎"]):
             return TimeGranularity.WEEK
-        elif any(k in query_lower for k in ["月別", "月毎"]):
+        if any(k in query_lower for k in ["月別", "月毎"]):
             return TimeGranularity.MONTH
-        elif any(k in query_lower for k in ["四半期別"]):
+        if any(k in query_lower for k in ["四半期別"]):
             return TimeGranularity.QUARTER
-        elif any(k in query_lower for k in ["年別", "年毎"]):
+        if any(k in query_lower for k in ["年別", "年毎"]):
             return TimeGranularity.YEAR
         return None
 
@@ -1274,22 +1274,21 @@ class SemanticLayerService:
 
         if f.operator == FilterOperator.IS_NULL:
             return f"{field} IS NULL"
-        elif f.operator == FilterOperator.IS_NOT_NULL:
+        if f.operator == FilterOperator.IS_NOT_NULL:
             return f"{field} IS NOT NULL"
-        elif f.operator in (FilterOperator.IN, FilterOperator.NOT_IN):
+        if f.operator in (FilterOperator.IN, FilterOperator.NOT_IN):
             values_str = ", ".join(f"'{v}'" if isinstance(v, str) else str(v) for v in f.values)
             return f"{field} {f.operator.value} ({values_str})"
-        elif f.operator == FilterOperator.BETWEEN:
+        if f.operator == FilterOperator.BETWEEN:
             if len(f.values) >= 2:
                 return f"{field} BETWEEN {f.values[0]} AND {f.values[1]}"
             return ""
-        elif f.operator == FilterOperator.LIKE:
+        if f.operator == FilterOperator.LIKE:
             return f"{field} LIKE '{f.value}'"
-        else:
-            # 基本演算子
-            if isinstance(f.value, str):
-                return f"{field} {f.operator.value} '{f.value}'"
-            return f"{field} {f.operator.value} {f.value}"
+        # 基本演算子
+        if isinstance(f.value, str):
+            return f"{field} {f.operator.value} '{f.value}'"
+        return f"{field} {f.operator.value} {f.value}"
 
     async def nl_to_sql_via_dsl(self, query: str) -> tuple[str, QueryDSL]:
         """自然言語からDSL経由でSQLに変換.
@@ -1312,20 +1311,20 @@ from datetime import timedelta
 
 
 __all__ = [
-    "SemanticLayerService",
-    "SemanticLayerConfig",
-    "Metric",
-    "Dimension",
-    "ResolvedQuery",
-    "SQLHints",
-    "MetricType",
     "AggregationType",
-    "TimeGranularity",
+    "Dimension",
+    "FilterDSL",
+    "FilterOperator",
+    "Metric",
+    "MetricType",
+    "OrderByDSL",
     # DSL 関連
     "QueryDSL",
-    "FilterDSL",
-    "OrderByDSL",
-    "TimeRangeDSL",
-    "FilterOperator",
+    "ResolvedQuery",
+    "SQLHints",
+    "SemanticLayerConfig",
+    "SemanticLayerService",
     "SortDirection",
+    "TimeGranularity",
+    "TimeRangeDSL",
 ]

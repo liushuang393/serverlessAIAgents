@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Java Parser - Javaパーサー.
 
 Javaソースコードを解析してUnifiedASTを生成します。
@@ -16,19 +15,20 @@ import re
 import time
 from typing import Any
 
+from agentflow.code_intelligence.ast.unified_ast import (
+    ASTNode,
+    ASTNodeType,
+    ImportInfo,
+    SymbolInfo,
+    TypeInfo,
+    UnifiedAST,
+)
 from agentflow.code_intelligence.parsers.base import (
     CodeParser,
     ParseContext,
     ParseResult,
 )
-from agentflow.code_intelligence.ast.unified_ast import (
-    UnifiedAST,
-    ASTNode,
-    ASTNodeType,
-    SymbolInfo,
-    ImportInfo,
-    TypeInfo,
-)
+
 
 _logger = logging.getLogger(__name__)
 
@@ -228,7 +228,7 @@ class JavaParser(CodeParser):
             )
 
         except Exception as e:
-            _logger.error(f"Java parsing failed: {e}")
+            _logger.exception(f"Java parsing failed: {e}")
             return ParseResult(
                 success=False,
                 errors=[str(e)],
@@ -239,8 +239,7 @@ class JavaParser(CodeParser):
         # 単一行コメント
         source = re.sub(r"//.*$", "", source, flags=re.MULTILINE)
         # 複数行コメント
-        source = re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL)
-        return source
+        return re.sub(r"/\*.*?\*/", "", source, flags=re.DOTALL)
 
     def _extract_package(self, source: str) -> str | None:
         """パッケージを抽出."""
@@ -285,7 +284,7 @@ class JavaParser(CodeParser):
             class_body = ""
             in_body = False
 
-            for i, char in enumerate(source[class_start:]):
+            for _i, char in enumerate(source[class_start:]):
                 if char == "{":
                     brace_count += 1
                     in_body = True

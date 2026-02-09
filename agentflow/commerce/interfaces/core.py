@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """コア抽象インターフェース.
 
 商品、オファー、カート、取引、決済の抽象インターフェース。
@@ -14,6 +13,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
     from agentflow.commerce.models import (

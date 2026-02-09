@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FAQ System Skill.
 
 知識ベース管理、検索、回答生成を提供。
@@ -11,13 +10,14 @@ Example:
 """
 
 from agentflow.skills.builtin.faq_system.manager import (
-    FAQManager,
     FAQEntry,
+    FAQManager,
     SearchResult,
 )
 
+
 __all__ = [
-    "FAQManager",
     "FAQEntry",
+    "FAQManager",
     "SearchResult",
 ]

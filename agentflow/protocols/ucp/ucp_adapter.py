@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """UCPプロトコルアダプター.
 
 AgentFlowのコマースモジュールとUCPプロトコルを接続するアダプター。
@@ -14,10 +13,9 @@ from __future__ import annotations
 
 import logging
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.commerce.interfaces import (
-    ICommerceAI,
     IDealRecommender,
     IIntentAnalyzer,
     IOfferProvider,
@@ -31,7 +29,10 @@ from agentflow.commerce.models import (
     PurchaseIntent,
 )
 from agentflow.protocols.ucp.ucp_client import UCPClient
-from agentflow.protocols.ucp.ucp_config import UCPConfig
+
+
+if TYPE_CHECKING:
+    from agentflow.protocols.ucp.ucp_config import UCPConfig
 
 
 class UCPAdapter:
@@ -67,7 +68,7 @@ class UCPAdapter:
         """アダプターをクローズ."""
         await self._client.close()
 
-    async def __aenter__(self) -> "UCPAdapter":
+    async def __aenter__(self) -> UCPAdapter:
         """非同期コンテキストマネージャーのエントリー."""
         return self
 
@@ -209,7 +210,7 @@ class UCPAdapter:
             recommendations.append(direct_offer)
         return recommendations
 
-    def create_intent_analyzer(self) -> "UCPIntentAnalyzerAdapter":
+    def create_intent_analyzer(self) -> UCPIntentAnalyzerAdapter:
         """IIntentAnalyzer互換アダプターを作成.
 
         Returns:
@@ -217,7 +218,7 @@ class UCPAdapter:
         """
         return UCPIntentAnalyzerAdapter(self)
 
-    def create_offer_provider(self) -> "UCPOfferProviderAdapter":
+    def create_offer_provider(self) -> UCPOfferProviderAdapter:
         """IOfferProvider互換アダプターを作成.
 
         Returns:
@@ -225,7 +226,7 @@ class UCPAdapter:
         """
         return UCPOfferProviderAdapter(self)
 
-    def create_deal_recommender(self) -> "UCPDealRecommenderAdapter":
+    def create_deal_recommender(self) -> UCPDealRecommenderAdapter:
         """IDealRecommender互換アダプターを作成.
 
         Returns:

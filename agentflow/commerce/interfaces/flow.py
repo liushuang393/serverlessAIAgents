@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """フロー抽象インターフェース.
 
 AI商取引フロー（Agentic Commerce Flow）の抽象インターフェース。
@@ -15,16 +14,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from agentflow.commerce.models import (
-        Cart,
-        DirectOffer,
-        Product,
-        PurchaseIntent,
-        Transaction,
-    )
+from typing import Any
 
 
 class FlowStepType(str, Enum):

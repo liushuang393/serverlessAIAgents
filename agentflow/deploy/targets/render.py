@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RenderTarget - Render デプロイターゲット.
 
 Render への Web サービスデプロイを実装します。
@@ -7,9 +6,7 @@ Render への Web サービスデプロイを実装します。
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.core.interfaces import (
     ConfigField,
@@ -18,6 +15,12 @@ from agentflow.core.interfaces import (
     ValidationResult,
 )
 from agentflow.deploy.targets.base import BaseDeployTarget
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
+
 
 logger = logging.getLogger(__name__)
 

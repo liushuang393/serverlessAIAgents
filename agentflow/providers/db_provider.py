@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DBProvider - 松耦合データベースアクセス.
 
 Agent/サービスは具体的なDB実装を知る必要がありません。
@@ -19,6 +18,7 @@ Agent/サービスは具体的なDB実装を知る必要がありません。
 
 import logging
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
 
 if TYPE_CHECKING:
     from agentflow.runtime import RuntimeContext
@@ -186,7 +186,8 @@ class SupabaseDBProvider:
             self._client = create_client(self._url, self._key)
             logger.info(f"Connected to Supabase: {self._url[:30]}...")
         except ImportError:
-            raise ImportError("supabase package required: pip install supabase")
+            msg = "supabase package required: pip install supabase"
+            raise ImportError(msg)
 
     async def disconnect(self) -> None:
         """切断."""

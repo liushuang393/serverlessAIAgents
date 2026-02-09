@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """SelfImprovementLoop - 自己改進循環.
 
 Monitor → Analyze → Improve → Deploy → Verify のループを実行します。
@@ -13,21 +12,26 @@ Monitor → Analyze → Improve → Deploy → Verify のループを実行し�
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from agentflow.providers import get_llm
 from agentflow.wizard.gap_detector import CapabilityGapDetector
 from agentflow.wizard.system_synthesizer import SystemSynthesizer
-from agentflow.wizard.models import (
-    CapabilityGap,
-    GapAnalysis,
-    SynthesisResult,
-    ValidationResult,
-)
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from agentflow.wizard.models import (
+        CapabilityGap,
+        GapAnalysis,
+        SynthesisResult,
+    )
 
 
 class LoopPhase(str, Enum):
@@ -152,10 +156,8 @@ class SelfImprovementLoop:
         self._running = False
         if self._task:
             self._task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._task
-            except asyncio.CancelledError:
-                pass
             self._task = None
         self._current_phase = LoopPhase.IDLE
         self._logger.info("Self-improvement loop stopped")
@@ -282,13 +284,12 @@ class SelfImprovementLoop:
 
                 return record
 
-            else:
-                # 手動対応が必要
-                return ImprovementRecord(
-                    record_id=record_id,
-                    gap=gap,
-                    error="Manual intervention required",
-                )
+            # 手動対応が必要
+            return ImprovementRecord(
+                record_id=record_id,
+                gap=gap,
+                error="Manual intervention required",
+            )
 
         except Exception as e:
             self._logger.exception(f"Improvement failed: {e}")
@@ -421,4 +422,4 @@ class SelfImprovementLoop:
         ]
 
 
-__all__ = ["SelfImprovementLoop", "LoopPhase", "ImprovementRecord", "LoopStats"]
+__all__ = ["ImprovementRecord", "LoopPhase", "LoopStats", "SelfImprovementLoop"]

@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """決策履歴リポジトリ.
 
 目的:
     決策記録の CRUD 操作 + Redis キャッシュ
-    
+
 使用例:
     repo = DecisionRepository()
     record = await repo.save(decision_response)
@@ -16,18 +15,17 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import select, desc
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from apps.decision_governance_engine.repositories.models import (
-    DecisionRecord,
-    EvidenceItem,
-    Claim,
-)
 from apps.decision_governance_engine.repositories.database import (
     get_db_session,
     get_redis,
 )
+from apps.decision_governance_engine.repositories.models import (
+    Claim,
+    DecisionRecord,
+    EvidenceItem,
+)
+from sqlalchemy import desc, select
+
 
 logger = logging.getLogger(__name__)
 
@@ -37,14 +35,14 @@ CACHE_TTL_SECONDS = 3600  # 1時間
 
 class DecisionRepository:
     """決策履歴リポジトリ.
-    
+
     決策記録の永続化・照会・キャッシュを担当。
     """
-    
+
     def __init__(self) -> None:
         """初期化."""
         self._cache_prefix = "dge:decision:"
-    
+
     async def save(
         self,
         request_id: UUID,
@@ -60,7 +58,7 @@ class DecisionRepository:
         organization_size: str | None = None,
     ) -> DecisionRecord:
         """決策記録を保存.
-        
+
         Args:
             request_id: リクエスト一意ID
             question: 入力された質問
@@ -73,12 +71,12 @@ class DecisionRepository:
             processing_time_ms: 処理時間
             requester_role: リクエスタ役割
             organization_size: 組織規模
-            
+
         Returns:
             保存された DecisionRecord
         """
         results = results or {}
-        
+
         async with get_db_session() as session:
             record = DecisionRecord(
                 request_id=request_id,
@@ -99,7 +97,7 @@ class DecisionRepository:
             )
             session.add(record)
             await session.flush()
-            
+
             # 証拠を保存
             if evidence:
                 for ev in evidence:
@@ -114,7 +112,7 @@ class DecisionRepository:
                         tags=ev.get("tags"),
                     )
                     session.add(ev_item)
-            
+
             # クレームを保存
             if claims:
                 for cl in claims:
@@ -126,14 +124,14 @@ class DecisionRepository:
                         confidence=cl.get("confidence"),
                     )
                     session.add(claim)
-            
+
             logger.info(f"Decision record saved: {record.id}")
-            
+
             # キャッシュ無効化
             await self._invalidate_cache(str(request_id))
-            
+
             return record
-    
+
     async def find_by_request_id(self, request_id: UUID) -> DecisionRecord | None:
         """リクエストIDで決策記録を検索."""
         async with get_db_session() as session:

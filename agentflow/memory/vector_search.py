@@ -3,10 +3,8 @@
 意味的検索のためのベクトル埋め込みと類似度検索を提供します。
 """
 
-import asyncio
 import logging
 import math
-from typing import Any
 
 from agentflow.memory.types import MemoryEntry
 
@@ -108,9 +106,10 @@ class VectorSearch:
             コサイン類似度（0.0～1.0）
         """
         if len(vec1) != len(vec2):
-            raise ValueError("Vectors must have the same dimension")
+            msg = "Vectors must have the same dimension"
+            raise ValueError(msg)
 
-        dot_product = sum(a * b for a, b in zip(vec1, vec2))
+        dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
         return max(0.0, min(1.0, dot_product))  # クリップ
 
     async def search_similar(

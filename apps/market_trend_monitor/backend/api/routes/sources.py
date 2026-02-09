@@ -1,13 +1,12 @@
-# -*- coding: utf-8 -*-
 """情報源台帳API."""
 
 from typing import Any
 
+from apps.market_trend_monitor.backend.api.state import source_registry_service
+from apps.market_trend_monitor.backend.models import SourceRegistrySchema, SourceType
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from apps.market_trend_monitor.backend.api.state import source_registry_service
-from apps.market_trend_monitor.backend.models import SourceRegistrySchema, SourceType
 
 router = APIRouter(tags=["情報源"])
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Token Budget Manager - 上下文予算管理.
 
 上下文を「注意力予算」として管理し、各コンポーネントに
@@ -20,9 +19,10 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
+
 
 if TYPE_CHECKING:
     from agentflow.providers.tool_provider import RegisteredTool
@@ -188,7 +188,7 @@ class TokenBudgetManager:
         """
         self._config = config or BudgetConfig()
         self._counter = counter or TiktokenCounter()
-        self._usage: dict[BudgetCategory, int] = {cat: 0 for cat in BudgetCategory}
+        self._usage: dict[BudgetCategory, int] = dict.fromkeys(BudgetCategory, 0)
         self._logger = logging.getLogger(__name__)
 
     def count_tokens(self, text: str) -> int:
@@ -293,7 +293,7 @@ class TokenBudgetManager:
 
     def allocate_tools(
         self,
-        tools: list["RegisteredTool"],
+        tools: list[RegisteredTool],
         max_tools: int = 7,
     ) -> BudgetAllocation:
         """ツール説明を予算内に配分.
@@ -426,7 +426,7 @@ class TokenBudgetManager:
 
     def reset_usage(self) -> None:
         """使用量をリセット."""
-        self._usage = {cat: 0 for cat in BudgetCategory}
+        self._usage = dict.fromkeys(BudgetCategory, 0)
 
     def get_usage_summary(self) -> dict[str, Any]:
         """使用量サマリを取得.

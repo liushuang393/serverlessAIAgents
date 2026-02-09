@@ -167,7 +167,7 @@ class MultiLLMRouter:
                 self._performance_cache[model_name] = ProviderPerformance()
                 logger.info(f"プロバイダー初期化完了: {model_name}")
             except Exception as e:
-                logger.error(f"プロバイダー初期化失敗: {model_name} - {e}")
+                logger.exception(f"プロバイダー初期化失敗: {model_name} - {e}")
 
         self._initialized = True
 
@@ -259,7 +259,8 @@ class MultiLLMRouter:
                     logger.warning(f"モデル {model_name} が利用不可、フォールバック: {fallback}")
                     return self._providers[fallback]
 
-        raise ValueError(f"利用可能なプロバイダーがありません: {model_name}")
+        msg = f"利用可能なプロバイダーがありません: {model_name}"
+        raise ValueError(msg)
 
     async def _select_by_capabilities(self, required_capabilities: list[str]) -> str:
         """能力要件に基づいてモデルを選択.

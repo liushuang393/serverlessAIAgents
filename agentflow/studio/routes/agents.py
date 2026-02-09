@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """エージェントAPI ルート.
 
 エージェントの一覧取得、詳細取得、実行に関するエンドポイント。
@@ -8,15 +7,19 @@ from __future__ import annotations
 
 import asyncio
 import json
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 
 from agentflow.core.engine import AgentFlowEngine
-from agentflow.marketplace.registry import LocalRegistry
 from agentflow.studio.models import AgentRunRequest, AgentRunResponse
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from agentflow.marketplace.registry import LocalRegistry
 
 
 def create_agents_router(

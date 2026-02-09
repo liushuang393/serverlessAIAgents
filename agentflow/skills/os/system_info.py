@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """システム情報スキル.
 
 OSおよびリソース使用状況の読み取り専用APIを提供。
@@ -15,10 +14,13 @@ import os
 import platform
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.skills.os.base import OSSkillBase
-from agentflow.skills.os.config import OSSkillConfig
+
+
+if TYPE_CHECKING:
+    from agentflow.skills.os.config import OSSkillConfig
 
 
 @dataclass

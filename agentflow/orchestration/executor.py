@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """実行Agent - 計画ステップの実行.
 
 計画に基づいてステップを実行し、結果を管理する。
@@ -176,7 +175,7 @@ class ExecutorAgent:
                 )
                 return result
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 last_error = f"タイムアウト ({timeout}秒)"
                 self._logger.warning(
                     f"ステップタイムアウト: {step.name} (リトライ {retries + 1}/{self._config.max_retries})"
@@ -224,16 +223,16 @@ class ExecutorAgent:
         """
         if step.step_type == StepType.TOOL_CALL:
             return await self._execute_tool_call(step, context)
-        elif step.step_type == StepType.LLM_GENERATION:
+        if step.step_type == StepType.LLM_GENERATION:
             return await self._execute_llm_generation(step, context)
-        elif step.step_type == StepType.HUMAN_INPUT:
+        if step.step_type == StepType.HUMAN_INPUT:
             return await self._execute_human_input(step, context)
-        elif step.step_type == StepType.PARALLEL:
+        if step.step_type == StepType.PARALLEL:
             return await self._execute_parallel(step, context)
-        elif step.step_type == StepType.SEQUENTIAL:
+        if step.step_type == StepType.SEQUENTIAL:
             return await self._execute_sequential(step, context)
-        else:
-            raise ValueError(f"不明なステップ種別: {step.step_type}")
+        msg = f"不明なステップ種別: {step.step_type}"
+        raise ValueError(msg)
 
     async def _execute_tool_call(
         self,
@@ -242,10 +241,12 @@ class ExecutorAgent:
     ) -> Any:
         """ツール呼び出しを実行."""
         if not self._tool_provider:
-            raise RuntimeError("ツールプロバイダーが設定されていません")
+            msg = "ツールプロバイダーが設定されていません"
+            raise RuntimeError(msg)
 
         if not step.tool_uri:
-            raise ValueError("ツールURIが指定されていません")
+            msg = "ツールURIが指定されていません"
+            raise ValueError(msg)
 
         # パラメータをコンテキストで展開
         params = self._expand_params(step.params, context)
@@ -253,7 +254,8 @@ class ExecutorAgent:
         result = await self._tool_provider.call(step.tool_uri, params)
 
         if not result.success:
-            raise RuntimeError(f"ツール呼び出し失敗: {result.error}")
+            msg = f"ツール呼び出し失敗: {result.error}"
+            raise RuntimeError(msg)
 
         return result.output
 
@@ -264,14 +266,14 @@ class ExecutorAgent:
     ) -> Any:
         """LLM生成を実行."""
         if not self._llm:
-            raise RuntimeError("LLMクライアントが設定されていません")
+            msg = "LLMクライアントが設定されていません"
+            raise RuntimeError(msg)
 
         # プロンプトを構築
         prompt = step.params.get("prompt", step.description)
         prompt = self._expand_template(prompt, context)
 
-        response = await self._llm.generate(prompt)
-        return response
+        return await self._llm.generate(prompt)
 
     async def _execute_human_input(
         self,
@@ -403,7 +405,7 @@ class ExecutorAgent:
                 tasks = [self.execute_step(s, context) for s in ready_steps]
                 results = await asyncio.gather(*tasks)
 
-                for step, result in zip(ready_steps, results):
+                for step, result in zip(ready_steps, results, strict=False):
                     if result.success and result.output:
                         context[f"step_{step.id}_output"] = result.output
                     yield result
@@ -437,7 +439,7 @@ class ExecutorAgent:
 
 # エクスポート
 __all__ = [
-    "StepResult",
-    "ExecutorConfig",
     "ExecutorAgent",
+    "ExecutorConfig",
+    "StepResult",
 ]

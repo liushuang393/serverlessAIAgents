@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """移行計画策定スキル - Migration Planner.
 
 レガシーコードの移行計画を策定するスキル。
@@ -231,10 +230,9 @@ class MigrationPlanner(AgentBlock):
 
         if total_loc < 10000 and complexity_score < 0.3:
             return MigrationStrategy.BIG_BANG
-        elif total_loc > 500000:
+        if total_loc > 500000:
             return MigrationStrategy.STRANGLER
-        else:
-            return self._preferred_strategy
+        return self._preferred_strategy
 
     def _generate_phases(
         self,
@@ -376,10 +374,9 @@ class MigrationPlanner(AgentBlock):
         self, risks: list[str]
     ) -> list[str]:
         """緩和策を生成."""
-        strategies = [
+        return [
             "段階的な移行で各フェーズのリスクを最小化",
             "ロールバック計画を各フェーズで準備",
             "並行運用期間を設けて本番切替リスクを軽減",
             "自動テストカバレッジ80%以上を維持",
         ]
-        return strategies

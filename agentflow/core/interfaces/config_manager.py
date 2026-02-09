@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """IConfigManager - 設定管理器インターフェース.
 
 デプロイ設定テンプレートとユーザー設定を管理するインターフェース。
@@ -9,6 +8,7 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
 
 if TYPE_CHECKING:
     from agentflow.core.interfaces.types import (
@@ -46,8 +46,8 @@ class IConfigManager(Protocol):
 
     async def get_template(
         self,
-        target: "DeployTarget",
-    ) -> "ConfigTemplate":
+        target: DeployTarget,
+    ) -> ConfigTemplate:
         """プラットフォーム設定テンプレートを取得.
 
         Args:
@@ -63,9 +63,9 @@ class IConfigManager(Protocol):
 
     async def get_required_fields(
         self,
-        target: "DeployTarget",
+        target: DeployTarget,
         current_config: dict[str, Any] | None = None,
-    ) -> list["ConfigField"]:
+    ) -> list[ConfigField]:
         """未入力の必須フィールドを取得.
 
         現在の設定を考慮して、まだ入力されていない必須フィールドを返します。
@@ -82,7 +82,7 @@ class IConfigManager(Protocol):
 
     async def merge_config(
         self,
-        template: "ConfigTemplate",
+        template: ConfigTemplate,
         user_config: dict[str, Any],
     ) -> dict[str, Any]:
         """テンプレートとユーザー設定をマージ.
@@ -98,9 +98,9 @@ class IConfigManager(Protocol):
 
     async def validate(
         self,
-        target: "DeployTarget",
+        target: DeployTarget,
         config: dict[str, Any],
-    ) -> "ValidationResult":
+    ) -> ValidationResult:
         """設定を検証.
 
         Args:
@@ -115,7 +115,7 @@ class IConfigManager(Protocol):
     async def save_config(
         self,
         name: str,
-        target: "DeployTarget",
+        target: DeployTarget,
         config: dict[str, Any],
     ) -> None:
         """設定を保存.
@@ -143,7 +143,7 @@ class IConfigManager(Protocol):
 
     async def list_configs(
         self,
-        target: "DeployTarget | None" = None,
+        target: DeployTarget | None = None,
     ) -> list[str]:
         """保存された設定一覧を取得.
 

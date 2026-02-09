@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AI商取引抽象インターフェース.
 
 高凝集・低結合の原則に基づいた抽象インターフェース定義。
@@ -16,44 +15,42 @@
 4. AIインターフェース: ICommerceAI
 """
 
-from agentflow.commerce.interfaces.core import (
-    IProduct,
-    IOffer,
-    ICart,
-    ITransaction,
-    IPayment,
-)
-
 from agentflow.commerce.interfaces.agents import (
+    IDealRecommender,
     IIntentAnalyzer,
     IOfferProvider,
-    IDealRecommender,
 )
-
+from agentflow.commerce.interfaces.ai import (
+    ICommerceAI,
+)
+from agentflow.commerce.interfaces.core import (
+    ICart,
+    IOffer,
+    IPayment,
+    IProduct,
+    ITransaction,
+)
 from agentflow.commerce.interfaces.flow import (
     ICommerceFlow,
     ICommerceStep,
 )
 
-from agentflow.commerce.interfaces.ai import (
-    ICommerceAI,
-)
 
 __all__ = [
-    # コアインターフェース
-    "IProduct",
-    "IOffer",
     "ICart",
-    "ITransaction",
-    "IPayment",
-    # エージェントインターフェース
-    "IIntentAnalyzer",
-    "IOfferProvider",
-    "IDealRecommender",
+    # AIインターフェース
+    "ICommerceAI",
     # フローインターフェース
     "ICommerceFlow",
     "ICommerceStep",
-    # AIインターフェース
-    "ICommerceAI",
+    "IDealRecommender",
+    # エージェントインターフェース
+    "IIntentAnalyzer",
+    "IOffer",
+    "IOfferProvider",
+    "IPayment",
+    # コアインターフェース
+    "IProduct",
+    "ITransaction",
 ]
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FAQマネージャー.
 
 知識ベースの管理と検索を提供。
@@ -8,10 +7,11 @@ from __future__ import annotations
 
 import logging
 import re
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
-import uuid
+
 
 logger = logging.getLogger(__name__)
 
@@ -218,7 +218,7 @@ class FAQManager:
     def _tokenize(self, text: str) -> list[str]:
         """テキストをトークン化."""
         # 簡易的な単語分割
-        return re.findall(r'\w+', text.lower())
+        return re.findall(r"\w+", text.lower())
 
     def _calculate_score(
         self,
@@ -297,7 +297,7 @@ class FAQManager:
             ])
             return response.content if hasattr(response, "content") else str(response)
         except Exception as e:
-            self._logger.error(f"回答生成エラー: {e}")
+            self._logger.exception(f"回答生成エラー: {e}")
             if results:
                 return results[0].entry.answer
             return "申し訳ございません。回答を生成できませんでした。"
@@ -322,7 +322,7 @@ class FAQManager:
 
     def list_categories(self) -> list[str]:
         """カテゴリ一覧を取得."""
-        return list(set(e.category for e in self._entries.values() if e.category))
+        return list({e.category for e in self._entries.values() if e.category})
 
     def list_tags(self) -> list[str]:
         """タグ一覧を取得."""

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Resource Pool - 资源池管理.
 
 Provider连接池和资源复用管理。
@@ -15,9 +14,14 @@ import asyncio
 import logging
 import time
 from abc import ABC, abstractmethod
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Generic, TypeVar
-from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING, Any, TypeVar
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 _logger = logging.getLogger(__name__)
 
@@ -91,7 +95,7 @@ class PoolConfig:
     health_check_interval: float = 60.0
 
 
-class ResourceFactory(ABC, Generic[T]):
+class ResourceFactory[T](ABC):
     """资源工厂接口."""
 
     @abstractmethod
@@ -112,7 +116,7 @@ class ResourceFactory(ABC, Generic[T]):
 
 
 @dataclass
-class PooledResource(Generic[T]):
+class PooledResource[T]:
     """池化资源包装器.
 
     Attributes:
@@ -138,7 +142,7 @@ class PooledResource(Generic[T]):
         return time.time() - self.last_used_at
 
 
-class ResourcePool(Generic[T]):
+class ResourcePool[T]:
     """通用资源池.
 
     管理资源的创建、复用和销毁。
@@ -192,10 +196,8 @@ class ResourcePool(Generic[T]):
 
         if self._maintenance_task:
             self._maintenance_task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await self._maintenance_task
-            except asyncio.CancelledError:
-                pass
 
         # 销毁所有资源
         while not self._available.empty():
@@ -248,7 +250,7 @@ class ResourcePool(Generic[T]):
                 await self._release_pooled(pooled)
                 self._stats.total_releases += 1
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             self._stats.wait_count -= 1
             msg = f"Acquire timeout after {self._config.acquire_timeout}s"
             raise TimeoutError(msg) from None
@@ -265,8 +267,7 @@ class ResourcePool(Generic[T]):
                         pooled.mark_used()
                         self._in_use.add(pooled)
                         return pooled
-                    else:
-                        await self._destroy_resource(pooled)
+                    await self._destroy_resource(pooled)
                 except asyncio.QueueEmpty:
                     break
 
@@ -341,9 +342,9 @@ class ResourcePool(Generic[T]):
 
 
 __all__ = [
-    "PoolStats",
     "PoolConfig",
-    "ResourceFactory",
+    "PoolStats",
     "PooledResource",
+    "ResourceFactory",
     "ResourcePool",
 ]

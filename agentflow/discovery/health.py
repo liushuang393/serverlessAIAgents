@@ -4,7 +4,9 @@ Agent の生存確認とステータス更新を行うヘルスチェッカー�
 """
 
 import asyncio
+import contextlib
 from typing import TYPE_CHECKING
+
 
 if TYPE_CHECKING:
     from agentflow.discovery.registry import InMemoryAgentRegistry
@@ -51,10 +53,8 @@ class HealthChecker:
         self._running = False
         if self._task:
             self._task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._task
-            except asyncio.CancelledError:
-                pass
             self._task = None
 
     async def _run_loop(self) -> None:

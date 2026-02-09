@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """interrupt 関数モジュール.
 
 ワークフローを一時停止し、人間の入力を待つためのコア機能。
@@ -12,7 +11,6 @@ LangGraph の interrupt() パターンを参考に実装。
 
 from __future__ import annotations
 
-import asyncio
 import contextvars
 import logging
 import uuid
@@ -29,6 +27,7 @@ from agentflow.hitl.types import (
     InterruptType,
 )
 
+
 if TYPE_CHECKING:
     from agentflow.hitl.checkpointer import Checkpointer
 
@@ -38,7 +37,7 @@ logger = logging.getLogger(__name__)
 _current_interrupt: contextvars.ContextVar[InterruptPayload | None] = contextvars.ContextVar(
     "current_interrupt", default=None
 )
-_current_checkpointer: contextvars.ContextVar["Checkpointer | None"] = contextvars.ContextVar(
+_current_checkpointer: contextvars.ContextVar[Checkpointer | None] = contextvars.ContextVar(
     "current_checkpointer", default=None
 )
 _current_thread_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
@@ -49,13 +48,11 @@ _current_thread_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 class InterruptError(Exception):
     """割り込み関連のエラー."""
 
-    pass
 
 
 class InterruptTimeoutError(InterruptError):
     """割り込みタイムアウトエラー."""
 
-    pass
 
 
 def get_current_interrupt() -> InterruptPayload | None:
@@ -68,7 +65,7 @@ def is_interrupted() -> bool:
     return _current_interrupt.get() is not None
 
 
-def set_checkpointer(checkpointer: "Checkpointer") -> None:
+def set_checkpointer(checkpointer: Checkpointer) -> None:
     """現在のコンテキストに Checkpointer を設定."""
     _current_checkpointer.set(checkpointer)
 
@@ -121,9 +118,12 @@ async def interrupt(
     thread_id = _current_thread_id.get()
 
     if checkpointer is None:
-        raise InterruptError(
+        msg = (
             "Checkpointer が設定されていません。"
             "Engine に checkpointer を設定するか、set_checkpointer() を呼び出してください。"
+        )
+        raise InterruptError(
+            msg
         )
 
     if thread_id is None:
@@ -194,7 +194,7 @@ def clear_interrupt() -> None:
 
 async def resume_with_command(
     command: Command,
-    checkpointer: "Checkpointer",
+    checkpointer: Checkpointer,
     checkpoint_id: str,
 ) -> ApprovalResponse:
     """コマンドでワークフローを再開.
@@ -209,11 +209,13 @@ async def resume_with_command(
     """
     checkpoint = await checkpointer.load(checkpoint_id)
     if checkpoint is None:
-        raise InterruptError(f"チェックポイントが見つかりません: {checkpoint_id}")
+        msg = f"チェックポイントが見つかりません: {checkpoint_id}"
+        raise InterruptError(msg)
 
     payload_data = checkpoint.interrupt_payload
     if payload_data is None:
-        raise InterruptError("このチェックポイントには割り込みペイロードがありません")
+        msg = "このチェックポイントには割り込みペイロードがありません"
+        raise InterruptError(msg)
 
     payload = InterruptPayload(**payload_data)
     request_id = payload.request.id if payload.request else "unknown"
@@ -227,7 +229,7 @@ async def resume_with_command(
             approver=command.issuer,
             modifications=command.value if isinstance(command.value, dict) else {},
         )
-    elif command.type == CommandType.REJECT:
+    if command.type == CommandType.REJECT:
         return ApprovalResponse(
             request_id=request_id,
             status=ApprovalStatus.REJECTED,
@@ -235,7 +237,7 @@ async def resume_with_command(
             approver=command.issuer,
             rejection_reason=str(command.value) if command.value else None,
         )
-    elif command.type == CommandType.CANCEL:
+    if command.type == CommandType.CANCEL:
         return ApprovalResponse(
             request_id=request_id,
             status=ApprovalStatus.CANCELLED,
@@ -243,13 +245,12 @@ async def resume_with_command(
             approver=command.issuer,
             rejection_reason="Cancelled by user",
         )
-    else:
-        # UPDATE や RETRY の場合は承認として扱う
-        return ApprovalResponse(
-            request_id=request_id,
-            status=ApprovalStatus.APPROVED,
-            approved=True,
-            approver=command.issuer,
-            modifications=command.value if isinstance(command.value, dict) else {},
-        )
+    # UPDATE や RETRY の場合は承認として扱う
+    return ApprovalResponse(
+        request_id=request_id,
+        status=ApprovalStatus.APPROVED,
+        approved=True,
+        approver=command.issuer,
+        modifications=command.value if isinstance(command.value, dict) else {},
+    )
 

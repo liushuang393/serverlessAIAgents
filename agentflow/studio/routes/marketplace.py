@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """マーケットプレイスAPI ルート.
 
 エージェントマーケットプレイスの検索とインストール機能。
@@ -6,12 +5,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException
 
-from agentflow.marketplace.client import MarketplaceClient
-from agentflow.studio.models import MarketplaceInstallRequest, MarketplaceSearchRequest
+
+if TYPE_CHECKING:
+    from agentflow.marketplace.client import MarketplaceClient
+    from agentflow.studio.models import MarketplaceInstallRequest, MarketplaceSearchRequest
 
 
 def create_marketplace_router(marketplace: MarketplaceClient) -> APIRouter:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ResilientAgent - 健壮な Agent 基底クラス.
 
 このモジュールは、リトライ、タイムアウト、LLM統合を備えた健壮な Agent 基底クラスを提供します。
@@ -31,7 +30,7 @@ import asyncio
 import logging
 from abc import abstractmethod
 from pathlib import Path
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
@@ -41,19 +40,20 @@ from agentflow.core.exceptions import (
     AgentTimeoutError,
 )
 
+
 # 型変数（Pydantic モデルを制約）
 InputT = TypeVar("InputT", bound=BaseModel)
 OutputT = TypeVar("OutputT", bound=BaseModel)
 
 __all__ = [
+    "BaseDecisionAgent",
     "InputT",
     "OutputT",
     "ResilientAgent",
-    "BaseDecisionAgent",
 ]
 
 
-class ResilientAgent(AgentBlock, Generic[InputT, OutputT]):
+class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
     """健壮な Agent 基底クラス.
 
     特徴:
@@ -173,11 +173,11 @@ class ResilientAgent(AgentBlock, Generic[InputT, OutputT]):
         for attempt in range(self.max_retries + 1):
             try:
                 return await self._run_with_timeout(input_data, attempt)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self._logger.warning(
                     f"{self.name} タイムアウト (attempt {attempt + 1}/{self.max_retries + 1})"
                 )
-                last_error = asyncio.TimeoutError(
+                last_error = TimeoutError(
                     f"Timeout after {self.timeout_seconds}s"
                 )
             except Exception as e:
@@ -372,20 +372,17 @@ class ResilientAgent(AgentBlock, Generic[InputT, OutputT]):
                 temperature=self.temperature,
             )
             # LLMResponse（Pydantic モデル）または dict に対応
-            content = self._extract_content(response)
-            return content
-        elif hasattr(self._llm, "chat"):
+            return self._extract_content(response)
+        if hasattr(self._llm, "chat"):
             response = await self._llm.chat(
                 [{"role": "user", "content": prompt}],
                 max_tokens=self.max_tokens,
                 temperature=self.temperature,
             )
             # LLMResponse（Pydantic モデル）または dict に対応
-            content = self._extract_content(response)
-            return content
-        else:
-            self._logger.warning("LLM クライアントに有効なメソッドがありません")
-            return ""
+            return self._extract_content(response)
+        self._logger.warning("LLM クライアントに有効なメソッドがありません")
+        return ""
 
     def _extract_content(self, response: Any) -> str:
         """LLM レスポンスからコンテンツを抽出.

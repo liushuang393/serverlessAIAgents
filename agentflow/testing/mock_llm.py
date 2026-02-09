@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Mock LLM Provider モジュール.
 
 テスト用の LLM プロバイダーモックを提供します。
@@ -16,7 +15,12 @@ import asyncio
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator, Callable
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Callable
+
 
 logger = logging.getLogger(__name__)
 

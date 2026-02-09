@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Vision Skill - 画像認識・分析機能.
 
 GPT-4V / Claude Vision / Gemini Vision を使用した画像認識スキル。

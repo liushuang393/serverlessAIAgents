@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Code Migration Agent.
 
 @agent 装饰器を使用した COBOL→Java 移行 Agent。
@@ -14,14 +13,17 @@ LLM が必要な処理（コード翻訳、差分分析、修復提案）を担�
     ... })
 """
 
-from typing import Any
-
-from agentflow import agent, tool
-from agentflow.llm import LLMClient, LLMConfig
-from agentflow.config import get_settings
+from typing import TYPE_CHECKING, Any
 
 from apps.code_migration_assistant.adapters import CobolAdapter, JavaAdapter
-from apps.code_migration_assistant.adapters.base import AST
+
+from agentflow import agent, tool
+from agentflow.config import get_settings
+from agentflow.llm import LLMClient, LLMConfig
+
+
+if TYPE_CHECKING:
+    from apps.code_migration_assistant.adapters.base import AST
 
 
 @agent

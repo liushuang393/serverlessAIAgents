@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Executive Summary Builder - 主管向け簡潔サマリー生成.
 
 複雑なAgent出力を主管が理解しやすい形式に変換する。
@@ -27,6 +26,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from agentflow.providers import get_llm
+
 
 _logger = logging.getLogger(__name__)
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AI商取引（Agentic Commerce）モジュール.
 
 Google AI商取引戦略（UCP、意図広告、AI主導商取引）に対応するための
@@ -31,57 +30,57 @@ Google AI商取引戦略（UCP、意図広告、AI主導商取引）に対応す
 """
 
 from agentflow.commerce.interfaces import (
-    # コアインターフェース
-    IProduct,
-    IOffer,
     ICart,
-    ITransaction,
-    IPayment,
-    # エージェントインターフェース
-    IIntentAnalyzer,
-    IOfferProvider,
-    IDealRecommender,
+    # AIインターフェース
+    ICommerceAI,
     # フローインターフェース
     ICommerceFlow,
     ICommerceStep,
-    # AIインターフェース
-    ICommerceAI,
+    IDealRecommender,
+    # エージェントインターフェース
+    IIntentAnalyzer,
+    IOffer,
+    IOfferProvider,
+    IPayment,
+    # コアインターフェース
+    IProduct,
+    ITransaction,
 )
-
 from agentflow.commerce.models import (
-    # データモデル
-    Product,
-    Offer,
     Cart,
     CartItem,
-    Transaction,
-    PurchaseIntent,
     DirectOffer,
+    Offer,
+    # データモデル
+    Product,
+    PurchaseIntent,
+    Transaction,
 )
 
+
 __all__ = [
-    # コアインターフェース
-    "IProduct",
-    "IOffer",
+    "Cart",
+    "CartItem",
+    "DirectOffer",
     "ICart",
-    "ITransaction",
-    "IPayment",
-    # エージェントインターフェース
-    "IIntentAnalyzer",
-    "IOfferProvider",
-    "IDealRecommender",
+    # AIインターフェース
+    "ICommerceAI",
     # フローインターフェース
     "ICommerceFlow",
     "ICommerceStep",
-    # AIインターフェース
-    "ICommerceAI",
+    "IDealRecommender",
+    # エージェントインターフェース
+    "IIntentAnalyzer",
+    "IOffer",
+    "IOfferProvider",
+    "IPayment",
+    # コアインターフェース
+    "IProduct",
+    "ITransaction",
+    "Offer",
     # データモデル
     "Product",
-    "Offer",
-    "Cart",
-    "CartItem",
-    "Transaction",
     "PurchaseIntent",
-    "DirectOffer",
+    "Transaction",
 ]
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """UCP設定モデル.
 
 UCPクライアント・サーバーの設定を管理。
@@ -84,7 +83,7 @@ class UCPConfig(BaseModel):
         return None
 
     @classmethod
-    def from_env(cls) -> "UCPConfig":
+    def from_env(cls) -> UCPConfig:
         """環境変数から設定を読み込み.
 
         Returns:

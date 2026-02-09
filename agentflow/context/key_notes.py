@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Key Notes Store - 重要情報の永続化.
 
 会話中の重要情報を抽出し、圧縮されても失われないように
@@ -25,9 +24,10 @@ import hashlib
 import logging
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Protocol
+
 
 _logger = logging.getLogger(__name__)
 
@@ -74,14 +74,14 @@ class KeyNote:
     importance: NoteImportance
     category: NoteCategory
     source: str = ""
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    last_accessed: datetime = field(default_factory=lambda: datetime.now(UTC))
     access_count: int = 0
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def touch(self) -> None:
         """アクセスを記録."""
-        self.last_accessed = datetime.now(timezone.utc)
+        self.last_accessed = datetime.now(UTC)
         self.access_count += 1
 
 
@@ -511,7 +511,7 @@ class KeyNotesStore:
         Returns:
             一意ID
         """
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(UTC).isoformat()
         hash_input = f"{content}:{timestamp}"
         return hashlib.sha256(hash_input.encode()).hexdigest()[:12]
 

@@ -6,21 +6,22 @@
 import asyncio
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncIterator
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from agentflow.skills.builtin.deployment_manager.exceptions import (
     BuildError,
     ConfigError,
-    DeploymentError,
     DomainError,
     ProviderError,
     RollbackError,
     TimeoutError,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +178,8 @@ class VercelProvider(DeploymentProvider):
             try:
                 import httpx
             except ImportError:
-                raise ConfigError("httpx 库未安装，请运行: pip install httpx")
+                msg = "httpx 库未安装，请运行: pip install httpx"
+                raise ConfigError(msg)
 
             self._client = httpx.AsyncClient(
                 base_url=self.BASE_URL,
@@ -208,7 +210,8 @@ class VercelProvider(DeploymentProvider):
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            raise ProviderError(f"Vercel API 错误: {e}")
+            msg = f"Vercel API 错误: {e}"
+            raise ProviderError(msg)
 
     async def deploy(
         self,
@@ -325,7 +328,7 @@ class VercelProvider(DeploymentProvider):
     ) -> Deployment:
         """回滚到指定版本."""
         # 获取目标部署
-        target = await self.get_deployment(project_name, deployment_id)
+        await self.get_deployment(project_name, deployment_id)
 
         # 提升为生产部署
         data = await self._request(
@@ -472,7 +475,8 @@ class CloudflareProvider(DeploymentProvider):
             try:
                 import httpx
             except ImportError:
-                raise ConfigError("httpx 库未安装，请运行: pip install httpx")
+                msg = "httpx 库未安装，请运行: pip install httpx"
+                raise ConfigError(msg)
 
             self._client = httpx.AsyncClient(
                 base_url=self.BASE_URL,
@@ -500,13 +504,15 @@ class CloudflareProvider(DeploymentProvider):
             if not data.get("success", True):
                 errors = data.get("errors", [])
                 error_msg = errors[0].get("message") if errors else "Unknown error"
-                raise ProviderError(f"Cloudflare API 错误: {error_msg}")
+                msg = f"Cloudflare API 错误: {error_msg}"
+                raise ProviderError(msg)
 
             return data.get("result", data)
         except Exception as e:
             if isinstance(e, ProviderError):
                 raise
-            raise ProviderError(f"Cloudflare API 错误: {e}")
+            msg = f"Cloudflare API 错误: {e}"
+            raise ProviderError(msg)
 
     async def deploy(
         self,
@@ -521,7 +527,7 @@ class CloudflareProvider(DeploymentProvider):
         account_id = self._config.account_id
 
         # 获取或创建项目
-        project = await self._get_or_create_project(project_name)
+        await self._get_or_create_project(project_name)
 
         # 创建部署（直接上传）
         # 注意：实际需要上传文件到 Pages
@@ -706,14 +712,17 @@ class DeploymentManager:
         """初始化提供商."""
         if self._provider_name == "vercel":
             if not isinstance(self._config, VercelConfig):
-                raise ConfigError("Vercel 需要 VercelConfig 配置")
+                msg = "Vercel 需要 VercelConfig 配置"
+                raise ConfigError(msg)
             self._provider = VercelProvider(self._config)
         elif self._provider_name in ("cloudflare_pages", "cloudflare"):
             if not isinstance(self._config, CloudflareConfig):
-                raise ConfigError("Cloudflare 需要 CloudflareConfig 配置")
+                msg = "Cloudflare 需要 CloudflareConfig 配置"
+                raise ConfigError(msg)
             self._provider = CloudflareProvider(self._config)
         else:
-            raise ConfigError(f"不支持的提供商: {self._provider_name}")
+            msg = f"不支持的提供商: {self._provider_name}"
+            raise ConfigError(msg)
 
         logger.info(f"部署管理器已初始化: {self._provider_name}")
 
@@ -808,7 +817,8 @@ class DeploymentManager:
         """
         deployments = await self.list_deployments(project_name, limit=2)
         if len(deployments) < 2:
-            raise RollbackError("没有可回滚的版本")
+            msg = "没有可回滚的版本"
+            raise RollbackError(msg)
 
         previous = deployments[1]
         return await self.rollback(project_name, previous.id)
@@ -908,7 +918,7 @@ class DeploymentManager:
 
             if deployment.status == DeploymentStatus.READY:
                 return deployment
-            elif deployment.status == DeploymentStatus.ERROR:
+            if deployment.status == DeploymentStatus.ERROR:
                 raise BuildError(
                     deployment.error_message or "部署失败",
                     code="BUILD_ERROR",
@@ -917,7 +927,8 @@ class DeploymentManager:
             await asyncio.sleep(interval)
             elapsed += interval
 
-        raise TimeoutError(f"部署超时: {deployment_id}")
+        msg = f"部署超时: {deployment_id}"
+        raise TimeoutError(msg)
 
     # ========================================================================
     # 环境变量管理
@@ -999,7 +1010,8 @@ class DeploymentManager:
         path = Path(file_path)
 
         if not path.exists():
-            raise ConfigError(f".env 文件不存在: {file_path}")
+            msg = f".env 文件不存在: {file_path}"
+            raise ConfigError(msg)
 
         with open(path) as f:
             for line in f:
@@ -1031,7 +1043,8 @@ class DeploymentManager:
         """
         if isinstance(self._provider, VercelProvider):
             return await self._provider.add_domain(project_name, domain)
-        raise DomainError(f"{self._provider_name} 不支持域名管理")
+        msg = f"{self._provider_name} 不支持域名管理"
+        raise DomainError(msg)
 
     async def verify_domain(
         self,
@@ -1049,7 +1062,8 @@ class DeploymentManager:
         """
         if isinstance(self._provider, VercelProvider):
             return await self._provider.verify_domain(project_name, domain)
-        raise DomainError(f"{self._provider_name} 不支持域名验证")
+        msg = f"{self._provider_name} 不支持域名验证"
+        raise DomainError(msg)
 
     # ========================================================================
     # 日志流

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """メトリクス収集モジュール.
 
 アプリケーションメトリクスの収集と公開を提供します。
@@ -17,10 +16,15 @@ import time
 from collections import defaultdict
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from typing import Any, Callable, Iterator
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
 
 # グローバルメトリクスコレクター
-_metrics_instance: "MetricsCollector | None" = None
+_metrics_instance: MetricsCollector | None = None
 
 
 @dataclass

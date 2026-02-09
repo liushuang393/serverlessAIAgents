@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Retrieval Gate - RAG検索必要性判定.
 
 全てのクエリでRAG検索を実行するのではなく、
@@ -27,6 +26,7 @@ import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
 
 _logger = logging.getLogger(__name__)
 
@@ -107,8 +107,7 @@ class RetrievalGate:
         "教えて", "説明", "詳細", "内容", "情報", "確認",
         # 中国語
         "文档", "资料", "参考", "查找", "搜索", "规范", "手册",
-        "指南", "依据", "来源", "根据", "告诉", "说明", "详细", "内容",
-        # 英語
+        "指南", "依据", "来源", "根据", "告诉", "说明", "详细", # 英語
         "document", "documentation", "reference", "search", "find",
         "specification", "manual", "guide", "procedure", "source",
         "based on", "according to", "explain", "tell me", "information",
@@ -121,7 +120,7 @@ class RetrievalGate:
         "どう思う", "感想", "意見", "気持ち", "元気",
         # 中国語
         "你好", "谢谢", "再见", "早上好", "辛苦",
-        "怎么看", "感想", "意见", "心情",
+        "怎么看", "意见", "心情",
         # 英語
         "hello", "hi", "thanks", "thank you", "bye", "goodbye",
         "how are you", "what do you think", "opinion", "feel",

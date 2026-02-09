@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Parser Registry - パーサーレジストリ.
 
 パーサーの登録と取得を管理します。
@@ -8,9 +7,12 @@ from __future__ import annotations
 
 import logging
 import threading
-from typing import Type
+from typing import TYPE_CHECKING
 
-from agentflow.code_intelligence.parsers.base import CodeParser
+
+if TYPE_CHECKING:
+    from agentflow.code_intelligence.parsers.base import CodeParser
+
 
 _logger = logging.getLogger(__name__)
 
@@ -26,10 +28,10 @@ class ParserRegistry:
         >>> parser = registry.get("python")
     """
 
-    _instance: "ParserRegistry | None" = None
+    _instance: ParserRegistry | None = None
     _instance_lock = threading.Lock()
 
-    def __new__(cls) -> "ParserRegistry":
+    def __new__(cls) -> ParserRegistry:
         """シングルトンパターン."""
         with cls._instance_lock:
             if cls._instance is None:
@@ -42,12 +44,12 @@ class ParserRegistry:
         if getattr(self, "_initialized", False):
             return
 
-        self._parsers: dict[str, Type[CodeParser]] = {}
+        self._parsers: dict[str, type[CodeParser]] = {}
         self._instances: dict[str, CodeParser] = {}
         self._lock = threading.RLock()
         self._initialized = True
 
-    def register(self, language: str, parser_class: Type[CodeParser]) -> None:
+    def register(self, language: str, parser_class: type[CodeParser]) -> None:
         """パーサーを登録.
 
         Args:
@@ -174,7 +176,7 @@ def get_parser(language: str) -> CodeParser:
     return _get_registry().get_or_raise(language)
 
 
-def register_parser(language: str, parser_class: Type[CodeParser]) -> None:
+def register_parser(language: str, parser_class: type[CodeParser]) -> None:
     """パーサーを登録.
 
     Args:

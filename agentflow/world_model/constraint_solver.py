@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """制約ソルバー - 制約条件の検証と充足.
 
 行動の妥当性を制約条件に基づいて検証し、
@@ -26,11 +25,14 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class ConstraintViolation(BaseModel):
@@ -231,10 +233,9 @@ class ConstraintSolver:
             SolverResult
         """
         # 予測状態に対して制約チェック
-        result = self.check(predicted_state)
+        return self.check(predicted_state)
 
         # アクション固有の制約もチェック（将来拡張用）
-        return result
 
     def get_valid_actions(
         self,
@@ -288,9 +289,9 @@ class ConstraintSolver:
 
 
 __all__ = [
-    "ConstraintViolation",
-    "SolverResult",
     "Constraint",
     "ConstraintSolver",
+    "ConstraintViolation",
+    "SolverResult",
 ]
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Pytest フィクスチャモジュール.
 
 Pytest で使用するフィクスチャを提供します。
@@ -16,14 +15,18 @@ from __future__ import annotations
 
 import os
 from contextlib import contextmanager
-from typing import Any, Generator
+from typing import TYPE_CHECKING, Any
 
 from agentflow.testing.mock_llm import MockLLMProvider, create_mock_llm
 
 
+if TYPE_CHECKING:
+    from collections.abc import Generator
+
+
 def mock_llm_fixture(
     default_response: str = "Mock response",
-) -> Generator[MockLLMProvider, None, None]:
+) -> Generator[MockLLMProvider]:
     """Mock LLM フィクスチャ.
 
     Args:
@@ -50,7 +53,7 @@ def mock_llm_fixture(
 def agent_fixture(
     agent_class: type,
     **kwargs: Any,
-) -> Generator[Any, None, None]:
+) -> Generator[Any]:
     """Agent フィクスチャ.
 
     Args:
@@ -80,7 +83,7 @@ def agent_fixture(
 @contextmanager
 def clean_env_fixture(
     env_vars: dict[str, str] | None = None,
-) -> Generator[dict[str, str], None, None]:
+) -> Generator[dict[str, str]]:
     """クリーンな環境変数フィクスチャ.
 
     Args:
@@ -125,12 +128,12 @@ def pytest_fixtures() -> dict[str, Any]:
     fixtures: dict[str, Any] = {}
 
     @pytest.fixture
-    def mock_llm() -> Generator[MockLLMProvider, None, None]:
+    def mock_llm() -> Generator[MockLLMProvider]:
         """Mock LLM フィクスチャ."""
         yield from mock_llm_fixture()
 
     @pytest.fixture
-    def clean_env() -> Generator[dict[str, str], None, None]:
+    def clean_env() -> Generator[dict[str, str]]:
         """クリーン環境フィクスチャ."""
         with clean_env_fixture() as env:
             yield env
@@ -153,14 +156,14 @@ from agentflow.testing import MockLLMProvider, create_mock_llm
 def mock_llm():
     """Mock LLM Provider fixture."""
     mock = create_mock_llm("Default mock response")
-    
+
     # グローバル LLM を置き換え
     from agentflow.providers import llm_provider
     original_instance = llm_provider._llm_instance
     llm_provider._llm_instance = mock
-    
+
     yield mock
-    
+
     llm_provider._llm_instance = original_instance
 
 
@@ -169,9 +172,9 @@ def clean_env():
     """Clean environment fixture."""
     import os
     original_env = os.environ.copy()
-    
+
     yield {}
-    
+
     os.environ.clear()
     os.environ.update(original_env)
 
@@ -180,7 +183,7 @@ def clean_env():
 async def agent_context():
     """Agent test context fixture."""
     from agentflow.testing.agent_test_framework import agent_test_context
-    
+
     async with agent_test_context() as ctx:
         yield ctx
 '''

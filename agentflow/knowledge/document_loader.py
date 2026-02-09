@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ドキュメントローダーモジュール.
 
 様々なファイル形式からドキュメントを読み込み、チャンキングを行います。
@@ -26,9 +25,10 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, AsyncIterator, Iterator
+from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +63,7 @@ class DocumentChunk:
         metadata: dict[str, Any] | None = None,
         chunk_index: int = 0,
         total_chunks: int = 1,
-    ) -> "DocumentChunk":
+    ) -> DocumentChunk:
         """チャンクを作成.
 
         Args:
@@ -214,7 +214,7 @@ class TextLoader(DocumentLoader):
                 {
                     "loader": "text",
                     "file_size": path.stat().st_size,
-                    "loaded_at": datetime.now(timezone.utc).isoformat(),
+                    "loaded_at": datetime.now(UTC).isoformat(),
                 }
             )
 
@@ -242,7 +242,7 @@ class MarkdownLoader(DocumentLoader):
                 {
                     "loader": "markdown",
                     "file_size": path.stat().st_size,
-                    "loaded_at": datetime.now(timezone.utc).isoformat(),
+                    "loaded_at": datetime.now(UTC).isoformat(),
                 }
             )
 
@@ -329,7 +329,7 @@ class CSVLoader(DocumentLoader):
                     {
                         "loader": "csv",
                         "row_index": i,
-                        "loaded_at": datetime.now(timezone.utc).isoformat(),
+                        "loaded_at": datetime.now(UTC).isoformat(),
                     }
                 )
 
@@ -422,7 +422,7 @@ class JSONLoader(DocumentLoader):
             {
                 "loader": "json",
                 "object_index": index,
-                "loaded_at": datetime.now(timezone.utc).isoformat(),
+                "loaded_at": datetime.now(UTC).isoformat(),
             }
         )
 
@@ -453,7 +453,7 @@ class PDFLoader(DocumentLoader):
                 {
                     "loader": "pdf",
                     "file_size": path.stat().st_size,
-                    "loaded_at": datetime.now(timezone.utc).isoformat(),
+                    "loaded_at": datetime.now(UTC).isoformat(),
                 }
             )
 
@@ -508,7 +508,7 @@ class HTMLLoader(DocumentLoader):
                 {
                     "loader": "html",
                     "file_size": path.stat().st_size,
-                    "loaded_at": datetime.now(timezone.utc).isoformat(),
+                    "loaded_at": datetime.now(UTC).isoformat(),
                 }
             )
 
@@ -531,8 +531,7 @@ class HTMLLoader(DocumentLoader):
             # BeautifulSoup がない場合は正規表現で除去
             text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL)
             text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL)
-            text = re.sub(r"<[^>]+>", "", text)
-            return text
+            return re.sub(r"<[^>]+>", "", text)
 
     def supports(self, source: str | Path) -> bool:
         """HTML ファイルをサポート."""
@@ -612,10 +611,7 @@ class UniversalLoader:
         dir_path = Path(directory)
         all_chunks: list[DocumentChunk] = []
 
-        if recursive:
-            files = list(dir_path.rglob(pattern))
-        else:
-            files = list(dir_path.glob(pattern))
+        files = list(dir_path.rglob(pattern)) if recursive else list(dir_path.glob(pattern))
 
         for file_path in files:
             if file_path.is_file():

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ツールバインディングインターフェース.
 
 ランタイムでAgentにツールをアタッチする機能を提供するモジュール。
@@ -21,7 +20,8 @@
 """
 from __future__ import annotations
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
     from agentflow.core.capability_spec import AgentCapabilitySpec
@@ -127,11 +127,13 @@ class ToolExecutor:
             ValueError: ツールが見つからない or ハンドラがない場合
         """
         if uri not in self._tools:
-            raise ValueError(f"ツールがバインドされていません: {uri}")
+            msg = f"ツールがバインドされていません: {uri}"
+            raise ValueError(msg)
 
         handler = self._handlers.get(uri)
         if not handler:
-            raise ValueError(f"ツールのハンドラがありません: {uri}")
+            msg = f"ツールのハンドラがありません: {uri}"
+            raise ValueError(msg)
 
         return await handler(**kwargs)
 

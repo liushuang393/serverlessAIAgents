@@ -23,7 +23,6 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -38,6 +37,8 @@ from agentflow.flow.types import (
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from agentflow.flow.context import FlowContext
 
 logger = logging.getLogger(__name__)
@@ -116,7 +117,7 @@ class RollbackNode(FlowNode):
             )
 
         except Exception as e:
-            self._logger.error(f"ロールバックフロー実行失敗: {e}")
+            self._logger.exception(f"ロールバックフロー実行失敗: {e}")
 
             if self.policy == RollbackPolicy.AUTO_ON_FAILURE:
                 await self._execute_rollback(ctx, executed_nodes)
@@ -146,7 +147,7 @@ class RollbackNode(FlowNode):
                     compensation = self.compensation_actions[node_id]
                     await self._run_compensation(compensation, ctx)
                 except Exception as e:
-                    self._logger.error(f"補償アクション失敗: {node_id}: {e}")
+                    self._logger.exception(f"補償アクション失敗: {node_id}: {e}")
 
     async def _run_compensation(
         self,

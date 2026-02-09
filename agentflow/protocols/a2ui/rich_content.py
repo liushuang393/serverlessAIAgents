@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """A2UI 富文本コンポーネント - Markdown/表格/コード/チャート対応.
 
 このモジュールは AG-UI/A2UI 規範に準拠した富文本コンポーネントを提供します。
@@ -236,11 +235,11 @@ class DataTable(RichComponent):
         """値から型を推論."""
         if isinstance(value, bool):
             return "boolean"
-        elif isinstance(value, int):
+        if isinstance(value, int):
             return "integer"
-        elif isinstance(value, float):
+        if isinstance(value, float):
             return "number"
-        elif isinstance(value, (list, dict)):
+        if isinstance(value, (list, dict)):
             return "object"
         return "string"
 
@@ -299,7 +298,7 @@ class ChartView(RichComponent):
         y_key: str,
         chart_type: ChartType = ChartType.BAR,
         title: str | None = None,
-    ) -> "ChartView":
+    ) -> ChartView:
         """テーブルデータからチャートを作成.
 
         Args:
@@ -381,10 +380,7 @@ class CollapsibleSection(RichComponent):
             content: コンテンツ（コンポーネントリストまたはテキスト）
             expanded: 初期状態で展開するか
         """
-        if isinstance(content, str):
-            content_data = content
-        else:
-            content_data = [c.to_dict() for c in content]
+        content_data = content if isinstance(content, str) else [c.to_dict() for c in content]
 
         super().__init__(
             component_type=RichComponentType.COLLAPSIBLE,
@@ -550,7 +546,7 @@ class RichResponse:
         self,
         content: str,
         **kwargs: Any,
-    ) -> "RichResponse":
+    ) -> RichResponse:
         """Markdown を追加."""
         self.components.append(MarkdownContent(content, **kwargs))
         return self
@@ -561,7 +557,7 @@ class RichResponse:
         language: str = "text",
         title: str | None = None,
         **kwargs: Any,
-    ) -> "RichResponse":
+    ) -> RichResponse:
         """コードブロックを追加."""
         self.components.append(CodeBlock(code, language, title, **kwargs))
         return self
@@ -572,7 +568,7 @@ class RichResponse:
         columns: list[dict[str, Any]] | None = None,
         title: str | None = None,
         **kwargs: Any,
-    ) -> "RichResponse":
+    ) -> RichResponse:
         """テーブルを追加."""
         self.components.append(DataTable(data, columns, title, **kwargs))
         return self
@@ -583,7 +579,7 @@ class RichResponse:
         data: dict[str, Any],
         title: str | None = None,
         **kwargs: Any,
-    ) -> "RichResponse":
+    ) -> RichResponse:
         """チャートを追加."""
         self.components.append(ChartView(chart_type, data, title, **kwargs))
         return self
@@ -595,7 +591,7 @@ class RichResponse:
         y_key: str,
         chart_type: ChartType = ChartType.BAR,
         title: str | None = None,
-    ) -> "RichResponse":
+    ) -> RichResponse:
         """テーブルデータからチャートを追加."""
         chart = ChartView.from_table_data(data, x_key, y_key, chart_type, title)
         self.components.append(chart)
@@ -608,7 +604,7 @@ class RichResponse:
         snippet: str,
         url: str | None = None,
         relevance_score: float | None = None,
-    ) -> "RichResponse":
+    ) -> RichResponse:
         """引用を追加."""
         self.components.append(Citation(
             source_id, title, snippet, url, relevance_score
@@ -618,7 +614,7 @@ class RichResponse:
     def add_citations(
         self,
         citations: list[dict[str, Any]],
-    ) -> "RichResponse":
+    ) -> RichResponse:
         """複数の引用を追加."""
         for c in citations:
             self.add_citation(
@@ -635,7 +631,7 @@ class RichResponse:
         title: str,
         content: list[RichComponent] | str,
         expanded: bool = False,
-    ) -> "RichResponse":
+    ) -> RichResponse:
         """折りたたみセクションを追加."""
         self.components.append(CollapsibleSection(title, content, expanded))
         return self
@@ -645,7 +641,7 @@ class RichResponse:
         value: float,
         max_value: float = 100,
         label: str | None = None,
-    ) -> "RichResponse":
+    ) -> RichResponse:
         """進捗を追加."""
         self.components.append(Progress(value, max_value, label))
         return self
@@ -655,7 +651,7 @@ class RichResponse:
         message: str,
         alert_type: AlertType = AlertType.INFO,
         title: str | None = None,
-    ) -> "RichResponse":
+    ) -> RichResponse:
         """アラートを追加."""
         self.components.append(Alert(message, alert_type, title))
         return self
@@ -665,7 +661,7 @@ class RichResponse:
         text: str,
         url: str,
         external: bool = True,
-    ) -> "RichResponse":
+    ) -> RichResponse:
         """リンクを追加."""
         self.components.append(Link(text, url, external))
         return self
@@ -684,23 +680,23 @@ class RichResponse:
 
 
 __all__ = [
-    # 列挙型
-    "RichComponentType",
-    "ChartType",
+    "Alert",
     "AlertType",
-    # コンポーネント
-    "RichComponent",
-    "MarkdownContent",
-    "CodeBlock",
-    "DataTable",
+    "ChartType",
     "ChartView",
     "Citation",
+    "CodeBlock",
     "CollapsibleSection",
+    "DataTable",
     "Link",
+    "MarkdownContent",
     "Progress",
-    "Alert",
-    "Tabs",
-    "Timeline",
+    # コンポーネント
+    "RichComponent",
+    # 列挙型
+    "RichComponentType",
     # ビルダー
     "RichResponse",
+    "Tabs",
+    "Timeline",
 ]

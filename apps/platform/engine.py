@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """PlatformEngine - Platform アプリケーションエンジン.
 
 Gallery、一键发布、多租户Dashboard を統合したエンジン。
@@ -17,31 +16,36 @@ Gallery、一键发布、多租户Dashboard を統合したエンジン。
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from agentflow.engines import SimpleEngine, EngineConfig
-from agentflow.providers import get_llm
+from apps.platform.schemas.publish_schemas import (
+    PublishEvent,
+    PublishRequest,
+    PublishResponse,
+)
 from apps.platform.services.component_library import (
-    ComponentLibrary,
     ComponentEntry,
+    ComponentLibrary,
     ComponentType,
     get_component_library,
 )
 from apps.platform.services.gallery_service import GalleryService
 from apps.platform.services.publish_orchestrator import PublishOrchestrator
 from apps.platform.services.tenant_dashboard import TenantDashboard
-from apps.platform.schemas.gallery_schemas import (
-    GallerySearchRequest,
-    GallerySearchResponse,
-    GalleryItem,
-    FeaturedResponse,
-)
-from apps.platform.schemas.publish_schemas import (
-    PublishRequest,
-    PublishEvent,
-    PublishResponse,
-)
+
+from agentflow.engines import EngineConfig, SimpleEngine
+from agentflow.providers import get_llm
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from apps.platform.schemas.gallery_schemas import (
+        FeaturedResponse,
+        GalleryItem,
+        GallerySearchRequest,
+        GallerySearchResponse,
+    )
 
 
 class PlatformEngine(SimpleEngine):
@@ -337,16 +341,15 @@ class PlatformEngine(SimpleEngine):
             query = input_data.get("query", "")
             return await self.search_gallery(query)
 
-        elif action == "publish":
+        if action == "publish":
             request = PublishRequest(**input_data.get("request", {}))
             return await self.publish_sync(request)
 
-        elif action == "dashboard":
+        if action == "dashboard":
             tenant_id = input_data.get("tenant_id", "default")
             return await self.get_dashboard_summary(tenant_id)
 
-        else:
-            return {"error": f"Unknown action: {action}"}
+        return {"error": f"Unknown action: {action}"}
 
 
 __all__ = ["PlatformEngine"]

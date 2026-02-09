@@ -12,6 +12,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from datetime import datetime
 from typing import Any
@@ -68,10 +69,8 @@ class LongTermMemory:
         """
         if self._consolidation_task:
             self._consolidation_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._consolidation_task
-            except asyncio.CancelledError:
-                pass
             self._consolidation_task = None
 
         # 最終統合
@@ -175,7 +174,7 @@ class LongTermMemory:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self._logger.error(f"Consolidation error: {e}")
+                self._logger.exception(f"Consolidation error: {e}")
 
     def retrieve(
         self,

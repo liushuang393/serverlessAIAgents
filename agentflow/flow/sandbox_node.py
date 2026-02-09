@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """サンドボックスノード.
 
 Flow内でサンドボックスコード実行を行うノード。
@@ -25,7 +24,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from agentflow.flow.types import NextAction, NodeResult, NodeType
 from agentflow.sandbox import (
@@ -35,9 +34,11 @@ from agentflow.sandbox import (
     Workspace,
 )
 
+
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from agentflow.flow.context import FlowContext
-    from agentflow.flow.nodes import FlowNode
 
 
 logger = logging.getLogger(__name__)
@@ -62,13 +63,13 @@ class SandboxNode:
 
     id: str
     name: str
-    code_source: Callable[["FlowContext"], str]
+    code_source: Callable[[FlowContext], str]
     provider: str = "docker"
     config: SandboxConfig | None = None
     packages: list[str] = field(default_factory=list)
     timeout: float | None = None
-    on_success: Callable[["FlowContext", ExecutionResult], Any] | None = None
-    on_error: Callable[["FlowContext", ExecutionResult], Any] | None = None
+    on_success: Callable[[FlowContext, ExecutionResult], Any] | None = None
+    on_error: Callable[[FlowContext, ExecutionResult], Any] | None = None
     node_type: NodeType = field(default=NodeType.AGENT)
     label: str = ""
     icon: str = "🔒"
@@ -79,7 +80,7 @@ class SandboxNode:
         if not self.label:
             self.label = self.name
 
-    async def execute(self, ctx: "FlowContext") -> NodeResult:
+    async def execute(self, ctx: FlowContext) -> NodeResult:
         """サンドボックスでコードを実行.
 
         Args:
@@ -129,14 +130,13 @@ class SandboxNode:
                     self.on_success(ctx, result)
                 self._logger.info(f"サンドボックス実行成功: {self.id}")
                 return NodeResult(success=True, data=result_data, action=NextAction.CONTINUE)
-            else:
-                if self.on_error:
-                    self.on_error(ctx, result)
-                self._logger.warning(f"サンドボックス実行失敗: {self.id}, exit_code={result.exit_code}")
-                return NodeResult(success=False, data=result_data, action=NextAction.STOP)
+            if self.on_error:
+                self.on_error(ctx, result)
+            self._logger.warning(f"サンドボックス実行失敗: {self.id}, exit_code={result.exit_code}")
+            return NodeResult(success=False, data=result_data, action=NextAction.STOP)
 
         except Exception as e:
-            self._logger.error(f"サンドボックスノードエラー: {e}")
+            self._logger.exception(f"サンドボックスノードエラー: {e}")
             return NodeResult(
                 success=False,
                 data={"error": str(e), "error_type": type(e).__name__},
@@ -162,8 +162,8 @@ class WorkspaceNode:
     id: str
     name: str
     workspace_name: str = ""
-    files_source: Callable[["FlowContext"], dict[str, bytes | str]] | None = None
-    code_source: Callable[["FlowContext"], str] | None = None
+    files_source: Callable[[FlowContext], dict[str, bytes | str]] | None = None
+    code_source: Callable[[FlowContext], str] | None = None
     provider: str = "docker"
     config: SandboxConfig | None = None
     node_type: NodeType = field(default=NodeType.AGENT)
@@ -176,7 +176,7 @@ class WorkspaceNode:
         if not self.label:
             self.label = self.name
 
-    async def execute(self, ctx: "FlowContext") -> NodeResult:
+    async def execute(self, ctx: FlowContext) -> NodeResult:
         """ワークスペースでコードを実行.
 
         Args:
@@ -224,11 +224,10 @@ class WorkspaceNode:
 
                 if result.exit_code == 0:
                     return NodeResult(success=True, data=result_data, action=NextAction.CONTINUE)
-                else:
-                    return NodeResult(success=False, data=result_data, action=NextAction.STOP)
+                return NodeResult(success=False, data=result_data, action=NextAction.STOP)
 
         except Exception as e:
-            self._logger.error(f"ワークスペースノードエラー: {e}")
+            self._logger.exception(f"ワークスペースノードエラー: {e}")
             return NodeResult(
                 success=False,
                 data={"error": str(e), "error_type": type(e).__name__},

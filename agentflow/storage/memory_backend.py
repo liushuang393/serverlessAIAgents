@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """メモリストレージバックエンド.
 
 開発・テスト用のインメモリ実装。
@@ -7,7 +6,6 @@
 from __future__ import annotations
 
 import fnmatch
-import json
 from datetime import datetime
 from typing import Any
 
@@ -105,7 +103,7 @@ class MemoryStorageBackend(BaseStorageBackend):
         full_pattern = f"{prefix}{pattern}"
 
         matched: list[str] = []
-        for key in self._data.keys():
+        for key in self._data:
             if fnmatch.fnmatch(key, full_pattern):
                 matched.append(self._strip_prefix(key))
 
@@ -122,11 +120,10 @@ class MemoryStorageBackend(BaseStorageBackend):
 
     def _cleanup_expired(self, prefixed_key: str) -> None:
         """期限切れデータを削除."""
-        if prefixed_key in self._ttl:
-            if datetime.now() > self._ttl[prefixed_key]:
-                if prefixed_key in self._data:
-                    del self._data[prefixed_key]
-                del self._ttl[prefixed_key]
+        if prefixed_key in self._ttl and datetime.now() > self._ttl[prefixed_key]:
+            if prefixed_key in self._data:
+                del self._data[prefixed_key]
+            del self._ttl[prefixed_key]
 
     # =========================================================================
     # バッチ操作（最適化版）
@@ -243,8 +240,8 @@ class MemoryStorageBackend(BaseStorageBackend):
             self._cleanup_expired(key)
 
         prefix = f"{self._namespace}:"
-        ns_keys = [k for k in self._data.keys() if k.startswith(prefix)]
-        ns_files = [k for k in self._files.keys() if k.startswith(prefix)]
+        ns_keys = [k for k in self._data if k.startswith(prefix)]
+        ns_files = [k for k in self._files if k.startswith(prefix)]
 
         return {
             "backend": "memory",
@@ -253,5 +250,5 @@ class MemoryStorageBackend(BaseStorageBackend):
             "key_count": len(ns_keys),
             "file_count": len(ns_files),
             "total_file_size": sum(len(v) for k, v in self._files.items() if k.startswith(prefix)),
-            "ttl_keys": len([k for k in self._ttl.keys() if k.startswith(prefix)]),
+            "ttl_keys": len([k for k in self._ttl if k.startswith(prefix)]),
         }

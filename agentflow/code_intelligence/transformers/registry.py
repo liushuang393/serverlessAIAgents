@@ -1,13 +1,15 @@
-# -*- coding: utf-8 -*-
 """Transformer Registry - 変換レジストリ."""
 
 from __future__ import annotations
 
 import logging
 import threading
-from typing import Type
+from typing import TYPE_CHECKING
 
-from agentflow.code_intelligence.transformers.base import CodeTransformer
+
+if TYPE_CHECKING:
+    from agentflow.code_intelligence.transformers.base import CodeTransformer
+
 
 _logger = logging.getLogger(__name__)
 
@@ -18,10 +20,10 @@ class TransformerRegistry:
     ソース言語-ターゲット言語のペアで変換器を管理します。
     """
 
-    _instance: "TransformerRegistry | None" = None
+    _instance: TransformerRegistry | None = None
     _instance_lock = threading.Lock()
 
-    def __new__(cls) -> "TransformerRegistry":
+    def __new__(cls) -> TransformerRegistry:
         with cls._instance_lock:
             if cls._instance is None:
                 cls._instance = super().__new__(cls)
@@ -31,7 +33,7 @@ class TransformerRegistry:
     def __init__(self) -> None:
         if getattr(self, "_initialized", False):
             return
-        self._transformers: dict[str, Type[CodeTransformer]] = {}
+        self._transformers: dict[str, type[CodeTransformer]] = {}
         self._instances: dict[str, CodeTransformer] = {}
         self._lock = threading.RLock()
         self._initialized = True
@@ -43,7 +45,7 @@ class TransformerRegistry:
         self,
         source_language: str,
         target_language: str,
-        transformer_class: Type[CodeTransformer],
+        transformer_class: type[CodeTransformer],
     ) -> None:
         """変換器を登録."""
         with self._lock:
@@ -101,7 +103,7 @@ def get_transformer(source_language: str, target_language: str) -> CodeTransform
 def register_transformer(
     source_language: str,
     target_language: str,
-    transformer_class: Type[CodeTransformer],
+    transformer_class: type[CodeTransformer],
 ) -> None:
     """変換器を登録."""
     _get_registry().register(source_language, target_language, transformer_class)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """UCPプロトコルメッセージ定義.
 
 Universal Commerce Protocolのメッセージ構造を定義。

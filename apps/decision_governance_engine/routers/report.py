@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """レポート関連APIルーター.
 
 エンドポイント:
@@ -14,11 +13,11 @@ import logging
 from datetime import datetime
 from typing import Any
 
+from apps.decision_governance_engine.routers.auth import UserInfo, require_auth
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from apps.decision_governance_engine.routers.auth import UserInfo, require_auth
 
 logger = logging.getLogger("decision_api.report")
 
@@ -76,6 +75,7 @@ def _get_sample_report(report_id: str) -> Any:
 async def _get_report_from_db(report_id: str) -> Any:
     """DBから決策記録を取得してレポートオブジェクトに変換."""
     from uuid import UUID
+
     from apps.decision_governance_engine.repositories import DecisionRepository
     from apps.decision_governance_engine.schemas.output_schemas import (
         DecisionReport,

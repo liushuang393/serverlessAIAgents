@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """E2B サンドボックスプロバイダ.
 
 e2b.dev クラウドサービスを使用したサンドボックス実行。
@@ -29,6 +28,7 @@ from agentflow.sandbox.base import (
     SandboxProvider,
     SandboxState,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -195,7 +195,7 @@ class E2BProvider(SandboxProvider):
             duration_ms = (time.time() - start_time) * 1000
             self._execution_count += 1
             self._total_execution_ms += duration_ms
-            logger.error(f"E2B execution error: {e}")
+            logger.exception(f"E2B execution error: {e}")
             return ExecutionResult(
                 exit_code=1,
                 duration_ms=duration_ms,

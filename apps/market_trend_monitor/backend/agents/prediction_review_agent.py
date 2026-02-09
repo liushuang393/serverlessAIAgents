@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """予測復盤エージェント.
 
 過去の予測と実際の結果を比較し、精度を評価します。
@@ -10,12 +9,7 @@
 """
 
 import logging
-from datetime import datetime
 from typing import Any
-
-from pydantic import BaseModel, Field
-
-from agentflow import ResilientAgent
 
 from apps.market_trend_monitor.backend.models import (
     PredictionOutcome,
@@ -25,6 +19,9 @@ from apps.market_trend_monitor.backend.models import (
 from apps.market_trend_monitor.backend.services.prediction_service import (
     PredictionService,
 )
+from pydantic import BaseModel, Field
+
+from agentflow import ResilientAgent
 
 
 # ============================================================

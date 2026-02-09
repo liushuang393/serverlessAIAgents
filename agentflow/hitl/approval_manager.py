@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ApprovalManager - 承認管理モジュール.
 
 人間の承認ワークフローを管理するためのコンポーネント。
@@ -9,17 +8,17 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import datetime, timedelta
-from typing import Any, Awaitable
+from typing import Any
 
 from agentflow.hitl.types import (
     ApprovalRequest,
     ApprovalResponse,
     ApprovalStatus,
-    Command,
     HITLConfig,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +88,7 @@ class ApprovalManager:
             try:
                 await self._notification_callback(request)
             except Exception as e:
-                logger.error(f"通知送信に失敗: {e}")
+                logger.exception(f"通知送信に失敗: {e}")
 
         # 承認待ち
         try:
@@ -102,7 +101,7 @@ class ApprovalManager:
                 return response
             # 応答がない場合は期限切れとして扱う
             return self._create_expired_response(request)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(f"Approval request timed out: {request.id}")
             return self._create_expired_response(request)
         finally:
@@ -216,5 +215,5 @@ class ApprovalManager:
             try:
                 await callback(request)
             except Exception as e:
-                logger.error(f"Escalation callback failed: {e}")
+                logger.exception(f"Escalation callback failed: {e}")
 

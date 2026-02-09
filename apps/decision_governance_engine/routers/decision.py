@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """決策処理APIルーター.
 
 PipelineEngine パターンを使用した決策処理 API。
@@ -13,13 +12,8 @@ PipelineEngine パターンを使用した決策処理 API。
 
 import logging
 import time
-from datetime import datetime
 from typing import Any
 from uuid import UUID, uuid4
-
-from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
 
 from apps.decision_governance_engine.engine import DecisionEngine
 from apps.decision_governance_engine.schemas.input_schemas import (
@@ -32,11 +26,18 @@ from apps.decision_governance_engine.schemas.output_schemas import DecisionRepor
 from apps.decision_governance_engine.services.decision_contract_builder import (
     DecisionGovContractBuilder,
 )
+from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+
 
 logger = logging.getLogger("decision_api.decision")
 
 # 履歴保存フラグ（環境変数で制御可能）
+import contextlib
 import os
+
+
 ENABLE_HISTORY = os.getenv("ENABLE_DECISION_HISTORY", "true").lower() == "true"
 
 router = APIRouter(tags=["決策処理"])
@@ -330,11 +331,11 @@ async def get_decision_history(
         ]
         return HistoryListResponse(status="success", total=len(items), items=items)
     except Exception as e:
-        logger.error(f"履歴取得失敗: {e}")
+        logger.exception(f"履歴取得失敗: {e}")
         # エラー時は適切なHTTPステータスコードを返す
         raise HTTPException(
             status_code=500,
-            detail=f"履歴取得に失敗しました: {str(e)}"
+            detail=f"履歴取得に失敗しました: {e!s}"
         )
 
 
@@ -398,7 +399,7 @@ async def process_decision_stream(
     """
     import json
 
-    logger.info(f"[SSE] /api/decision/stream リクエスト受信")
+    logger.info("[SSE] /api/decision/stream リクエスト受信")
     logger.info(f"[SSE] question={question[:50]}...")
 
     start_time = time.time()
@@ -483,19 +484,19 @@ async def process_decision_stream(
         try:
             async for event in engine.run_stream(inputs):
                 # イベントタイプをログ出力（type または event_type）
-                event_type = event.get('event_type') or event.get('type', 'unknown')
+                event_type = event.get("event_type") or event.get("type", "unknown")
                 logger.info(f"[SSE] イベント発行: {event_type}")
 
                 # flow.complete または result イベントから結果を取得
-                if event_type == 'flow.complete' and event.get('result'):
-                    final_result = event.get('result', {})
-                elif event_type == 'result' and event.get('data'):
-                    data = event.get('data', {})
-                    if data.get('status') == 'rejected':
+                if event_type == "flow.complete" and event.get("result"):
+                    final_result = event.get("result", {})
+                elif event_type == "result" and event.get("data"):
+                    data = event.get("data", {})
+                    if data.get("status") == "rejected":
                         is_rejected = True
-                    elif data.get('results'):
-                        final_result = data.get('results', {})
-                elif event_type == 'early_return':
+                    elif data.get("results"):
+                        final_result = data.get("results", {})
+                elif event_type == "early_return":
                     is_rejected = True
 
                 if isinstance(event, dict):
@@ -553,10 +554,8 @@ class ConnectionManager:
 
     async def broadcast(self, message: dict) -> None:
         for connection in self.active_connections:
-            try:
+            with contextlib.suppress(Exception):
                 await connection.send_json(message)
-            except Exception:
-                pass
 
 
 ws_manager = ConnectionManager()

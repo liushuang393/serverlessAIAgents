@@ -56,8 +56,9 @@ class Task(BaseModel):
             ValueError: If the transition is invalid
         """
         if not can_transition(self.state, new_state):
+            msg = f"Invalid transition from {self.state} to {new_state}"
             raise ValueError(
-                f"Invalid transition from {self.state} to {new_state}"
+                msg
             )
 
         # Record the transition

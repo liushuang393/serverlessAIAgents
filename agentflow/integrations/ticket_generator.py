@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """工単生成器（Ticket Generator）.
 
 FAQ システムで回答できない質問を自動的に工単化するモジュール。
@@ -34,6 +33,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -178,7 +178,6 @@ class TicketProviderBase(ABC):
         Returns:
             作成された工単（外部IDを含む）
         """
-        pass
 
     @abstractmethod
     async def update_ticket(
@@ -193,7 +192,6 @@ class TicketProviderBase(ABC):
         Returns:
             更新された工単
         """
-        pass
 
     @abstractmethod
     async def get_ticket(self, ticket_id: str) -> Ticket | None:
@@ -205,7 +203,6 @@ class TicketProviderBase(ABC):
         Returns:
             工単、または None
         """
-        pass
 
     @abstractmethod
     async def search_tickets(
@@ -220,7 +217,6 @@ class TicketProviderBase(ABC):
         Returns:
             工単リスト
         """
-        pass
 
 
 class InMemoryTicketProvider(TicketProviderBase):
@@ -245,7 +241,8 @@ class InMemoryTicketProvider(TicketProviderBase):
         """工単を更新."""
         ticket = self._tickets.get(ticket_id)
         if not ticket:
-            raise ValueError(f"Ticket not found: {ticket_id}")
+            msg = f"Ticket not found: {ticket_id}"
+            raise ValueError(msg)
 
         for key, value in updates.items():
             if hasattr(ticket, key):
@@ -320,7 +317,8 @@ class JiraTicketProvider(TicketProviderBase):
         """工単を更新."""
         self._logger.info("Updating Jira ticket: %s", ticket_id)
         # 実装は省略
-        raise NotImplementedError("Jira update not implemented")
+        msg = "Jira update not implemented"
+        raise NotImplementedError(msg)
 
     async def get_ticket(self, ticket_id: str) -> Ticket | None:
         """工単を取得."""
@@ -368,7 +366,8 @@ class ServiceNowTicketProvider(TicketProviderBase):
         self, ticket_id: str, updates: dict[str, Any]
     ) -> Ticket:
         """工単を更新."""
-        raise NotImplementedError("ServiceNow update not implemented")
+        msg = "ServiceNow update not implemented"
+        raise NotImplementedError(msg)
 
     async def get_ticket(self, ticket_id: str) -> Ticket | None:
         """工単を取得."""
@@ -688,14 +687,14 @@ from datetime import timedelta
 
 
 __all__ = [
-    "TicketGenerator",
-    "TicketGeneratorConfig",
-    "Ticket",
-    "TicketPriority",
-    "TicketStatus",
-    "TicketType",
-    "TicketProviderBase",
     "InMemoryTicketProvider",
     "JiraTicketProvider",
     "ServiceNowTicketProvider",
+    "Ticket",
+    "TicketGenerator",
+    "TicketGeneratorConfig",
+    "TicketPriority",
+    "TicketProviderBase",
+    "TicketStatus",
+    "TicketType",
 ]

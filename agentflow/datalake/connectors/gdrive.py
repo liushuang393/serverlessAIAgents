@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """GoogleDriveConnector - Google Drive API コネクタ.
 
 Google Drive へのアクセスを提供。
@@ -18,14 +17,15 @@ Google Drive API v3 を使用。
 import logging
 import mimetypes
 import os
-from datetime import datetime, timezone
-from typing import Any, AsyncIterator
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import Field
 
-from agentflow.datalake.auth import AuthCredentials, AuthProvider
+from agentflow.datalake.auth import AuthProvider
 from agentflow.datalake.connector import ConnectorConfig, DataConnector
 from agentflow.datalake.core import DataItem, ReadResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -102,9 +102,12 @@ class GoogleDriveConnector(DataConnector):
             try:
                 import aiohttp
             except ImportError as e:
-                raise ImportError(
+                msg = (
                     "aiohttp is required for Google Drive support. "
                     "Install with: pip install aiohttp"
+                )
+                raise ImportError(
+                    msg
                 ) from e
 
             timeout = aiohttp.ClientTimeout(total=self._config.timeout)
@@ -120,7 +123,7 @@ class GoogleDriveConnector(DataConnector):
         """
         # トークンが有効な場合は再利用
         if self._access_token and self._token_expires:
-            if datetime.now(timezone.utc) < self._token_expires:
+            if datetime.now(UTC) < self._token_expires:
                 return self._access_token
 
         # 認証プロバイダから取得
@@ -149,9 +152,12 @@ class GoogleDriveConnector(DataConnector):
         try:
             import jwt
         except ImportError as e:
-            raise ImportError(
+            msg = (
                 "PyJWT is required for service account auth. "
                 "Install with: pip install PyJWT"
+            )
+            raise ImportError(
+                msg
             ) from e
 
         with open(sa_file) as f:
@@ -179,8 +185,8 @@ class GoogleDriveConnector(DataConnector):
             response.raise_for_status()
             result = await response.json()
             self._access_token = result["access_token"]
-            self._token_expires = datetime.now(timezone.utc).replace(
-                second=datetime.now(timezone.utc).second + 3540
+            self._token_expires = datetime.now(UTC).replace(
+                second=datetime.now(UTC).second + 3540
             )
             return self._access_token
 
@@ -191,9 +197,12 @@ class GoogleDriveConnector(DataConnector):
         refresh_token = self._config.refresh_token or os.getenv("GOOGLE_REFRESH_TOKEN")
 
         if not all([client_id, client_secret, refresh_token]):
-            raise ValueError(
+            msg = (
                 "Google credentials required. Set GOOGLE_CLIENT_ID, "
                 "GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN."
+            )
+            raise ValueError(
+                msg
             )
 
         session = await self._get_session()
@@ -210,8 +219,8 @@ class GoogleDriveConnector(DataConnector):
             result = await response.json()
             self._access_token = result["access_token"]
             expires_in = result.get("expires_in", 3600)
-            self._token_expires = datetime.now(timezone.utc).replace(
-                second=datetime.now(timezone.utc).second + expires_in - 60
+            self._token_expires = datetime.now(UTC).replace(
+                second=datetime.now(UTC).second + expires_in - 60
             )
             return self._access_token
 
@@ -331,7 +340,8 @@ class GoogleDriveConnector(DataConnector):
         """ファイル読み取り."""
         file_id = await self._resolve_path(path)
         if not file_id:
-            raise FileNotFoundError(f"File not found: {path}")
+            msg = f"File not found: {path}"
+            raise FileNotFoundError(msg)
 
         # ファイル情報取得
         info = await self._request(
@@ -390,7 +400,8 @@ class GoogleDriveConnector(DataConnector):
             parent_id = "root"
 
         if not parent_id:
-            raise FileNotFoundError(f"Parent folder not found: {parent_path}")
+            msg = f"Parent folder not found: {parent_path}"
+            raise FileNotFoundError(msg)
 
         # 既存ファイルを確認
         existing_id = await self._resolve_path(path)
@@ -433,7 +444,7 @@ class GoogleDriveConnector(DataConnector):
             uri=f"gdrive://{path}",
             name=result["name"],
             size=len(content),
-            modified_at=datetime.now(timezone.utc),
+            modified_at=datetime.now(UTC),
             content_type=content_type,
             metadata={"id": result["id"]},
         )

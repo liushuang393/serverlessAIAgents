@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """IWorkflowRunner - ワークフロー実行器インターフェース.
 
 Workflow を実際に実行するインターフェース（Preview 機能用）。
@@ -8,10 +7,12 @@ Workflow を実際に実行するインターフェース（Preview 機能用）
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
+
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from agentflow.core.interfaces.types import (
         DebugEvent,
         ExecutionEvent,
@@ -46,7 +47,7 @@ class IWorkflowRunner(Protocol):
 
     async def run(
         self,
-        workflow: "WorkflowDefinition",
+        workflow: WorkflowDefinition,
         inputs: dict[str, Any],
     ) -> dict[str, Any]:
         """ワークフローを同期実行.
@@ -65,9 +66,9 @@ class IWorkflowRunner(Protocol):
 
     async def run_stream(
         self,
-        workflow: "WorkflowDefinition",
+        workflow: WorkflowDefinition,
         inputs: dict[str, Any],
-    ) -> AsyncIterator["ExecutionEvent"]:
+    ) -> AsyncIterator[ExecutionEvent]:
         """ワークフローをストリーム実行.
 
         リアルタイムで進捗イベントを発行しながら実行します。
@@ -87,10 +88,10 @@ class IWorkflowRunner(Protocol):
 
     async def run_debug(
         self,
-        workflow: "WorkflowDefinition",
+        workflow: WorkflowDefinition,
         inputs: dict[str, Any],
         breakpoints: list[str] | None = None,
-    ) -> AsyncIterator["DebugEvent"]:
+    ) -> AsyncIterator[DebugEvent]:
         """ワークフローをデバッグモードで実行.
 
         ブレークポイントでの一時停止、変数の検査などをサポートします。
@@ -110,7 +111,7 @@ class IWorkflowRunner(Protocol):
 
     async def validate(
         self,
-        workflow: "WorkflowDefinition",
+        workflow: WorkflowDefinition,
     ) -> list[str]:
         """ワークフローを検証.
 

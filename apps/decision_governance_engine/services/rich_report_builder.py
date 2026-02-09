@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """富文本レポートビルダー - RichResponse 統合.
 
 Decision Governance Engine のレポートを富文本形式で構築します。
@@ -145,7 +144,7 @@ class RichReportBuilder:
         if not fa:
             return
 
-        content = f"""## 法 / 戦略選定
+        content = """## 法 / 戦略選定
 
 """
         response.add_markdown(content)

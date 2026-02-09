@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """信頼性強化ユーティリティ.
 
 リトライ、サーキットブレーカー、メトリクスを統合したデコレータ。
@@ -27,8 +26,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from functools import wraps
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
 
 from agentflow.core.circuit_breaker import (
     CircuitBreaker,
@@ -36,6 +36,7 @@ from agentflow.core.circuit_breaker import (
     CircuitBreakerOpenError,
 )
 from agentflow.observability.metrics import get_metrics
+
 
 logger = logging.getLogger(__name__)
 
@@ -176,7 +177,8 @@ def reliable(
             # ここには到達しないはず
             if last_error:
                 raise last_error
-            raise RuntimeError("Unexpected error in reliable decorator")
+            msg = "Unexpected error in reliable decorator"
+            raise RuntimeError(msg)
 
         return wrapper  # type: ignore[return-value]
 

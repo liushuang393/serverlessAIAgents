@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Runtime context management for AgentFlow.
 
 This module provides a per-request/per-tenant context to avoid global singletons
@@ -10,9 +9,13 @@ from __future__ import annotations
 from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any, Iterator
+from typing import TYPE_CHECKING, Any
 
 from agentflow.config import AgentFlowSettings, get_settings
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 @dataclass(frozen=True)
@@ -106,9 +109,9 @@ def get_env(
 
 __all__ = [
     "RuntimeContext",
+    "get_env",
     "get_runtime_context",
+    "resolve_settings",
     "set_runtime_context",
     "use_runtime_context",
-    "resolve_settings",
-    "get_env",
 ]

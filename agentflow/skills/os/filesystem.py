@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ファイルシステムスキル.
 
 安全なファイル操作APIを提供。全ての操作はワークスペース内に制限。
@@ -15,11 +14,13 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.skills.os.base import OSSkillBase, OSSkillError, PathSecurityError
-from agentflow.skills.os.config import OSSkillConfig
+
+
+if TYPE_CHECKING:
+    from agentflow.skills.os.config import OSSkillConfig
 
 
 @dataclass
@@ -102,11 +103,10 @@ class FileSystemSkill(OSSkillBase):
 
         # 非同期でファイル読み込み
         loop = asyncio.get_event_loop()
-        content = await loop.run_in_executor(
+        return await loop.run_in_executor(
             None,
             lambda: validated_path.read_text(encoding=encoding),
         )
-        return content
 
     async def write_file(self, path: str, content: str, encoding: str = "utf-8") -> FileOperationResult:
         """ファイルに書き込む.

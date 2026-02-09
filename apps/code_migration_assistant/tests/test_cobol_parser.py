@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """Tests for COBOLParser MCP Tool."""
 
 import pytest
+from apps.code_migration_assistant.mcp_tools.cobol_parser import COBOLParser
 
 from agentflow import MCPToolRequest
-from apps.code_migration_assistant.mcp_tools.cobol_parser import COBOLParser
 
 
 @pytest.mark.asyncio
@@ -15,13 +14,13 @@ async def test_cobol_parser_basic() -> None:
     cobol_code = """
        IDENTIFICATION DIVISION.
        PROGRAM-ID. CALCULATOR.
-       
+
        DATA DIVISION.
        WORKING-STORAGE SECTION.
        01 WS-NUM1 PIC 9(5).
        01 WS-NUM2 PIC 9(5).
        01 WS-RESULT PIC 9(10).
-       
+
        PROCEDURE DIVISION.
            MOVE 100 TO WS-NUM1.
            MOVE 200 TO WS-NUM2.
@@ -128,7 +127,7 @@ async def test_cobol_parser_metadata() -> None:
     cobol_code = """
        IDENTIFICATION DIVISION.
        PROGRAM-ID. METADATA-TEST.
-       
+
        DATA DIVISION.
        WORKING-STORAGE SECTION.
        01 WS-NAME PIC X(20).

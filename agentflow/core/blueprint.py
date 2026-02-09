@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Agentブループリント - 宣言式Agent定義.
 
 YAML/JSON形式でAgentを宣言的に定義し、動的にインスタンス化。
@@ -23,7 +22,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -221,7 +219,7 @@ class AgentBlueprint:
         self._logger = logging.getLogger(__name__)
 
     @classmethod
-    def from_yaml(cls, path: str | Path) -> "AgentBlueprint":
+    def from_yaml(cls, path: str | Path) -> AgentBlueprint:
         """YAMLファイルからロード.
 
         Args:
@@ -232,7 +230,8 @@ class AgentBlueprint:
         """
         path = Path(path)
         if not path.exists():
-            raise FileNotFoundError(f"ブループリントファイルが見つかりません: {path}")
+            msg = f"ブループリントファイルが見つかりません: {path}"
+            raise FileNotFoundError(msg)
 
         with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
@@ -241,7 +240,7 @@ class AgentBlueprint:
         return cls(model)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AgentBlueprint":
+    def from_dict(cls, data: dict[str, Any]) -> AgentBlueprint:
         """辞書からロード.
 
         Args:
@@ -254,7 +253,7 @@ class AgentBlueprint:
         return cls(model)
 
     @classmethod
-    def from_json(cls, json_string: str) -> "AgentBlueprint":
+    def from_json(cls, json_string: str) -> AgentBlueprint:
         """JSON文字列からロード.
 
         Args:
@@ -330,7 +329,6 @@ class AgentBlueprint:
             async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
                 """実行."""
                 # 制約を適用
-                constraints = self._blueprint._model.constraints
 
                 # ツールを呼び出し
                 results: list[dict[str, Any]] = []
@@ -441,12 +439,12 @@ class AgentBlueprint:
 
 # エクスポート
 __all__ = [
-    "SkillConfig",
-    "ToolConfig",
+    "AgentBlueprint",
+    "AgentBlueprintModel",
+    "ConstraintsConfig",
     "MemoryConfig",
     "SafetyConfig",
-    "ConstraintsConfig",
-    "AgentBlueprintModel",
+    "SkillConfig",
+    "ToolConfig",
     "ValidationResult",
-    "AgentBlueprint",
 ]

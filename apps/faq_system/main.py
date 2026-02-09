@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FAQ System Demo - フレームワーク級Agent/サービスのデモアプリ.
 
 このアプリはフレームワーク層のAgentとサービスを呼び出すのみで、
@@ -29,7 +28,7 @@ from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 # フレームワーク層 Agent/サービスをインポート
@@ -41,12 +40,12 @@ from agentflow.agents import (
     SalesAgentConfig,
 )
 from agentflow.services import (
-    RAGService,
     RAGConfig,
-    Text2SQLService,
-    Text2SQLConfig,
-    SuggestionService,
+    RAGService,
     SuggestionConfig,
+    SuggestionService,
+    Text2SQLConfig,
+    Text2SQLService,
 )
 
 
@@ -167,7 +166,7 @@ def _get_sales_agent() -> SalesAgent:
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index():
+async def index() -> str:
     """トップページ."""
     return """
     <!DOCTYPE html>
@@ -199,11 +198,11 @@ async def index():
                 const chatBox = document.getElementById('chat-box');
                 const message = input.value.trim();
                 if (!message) return;
-                
+
                 // ユーザーメッセージ表示
                 chatBox.innerHTML += '<div class="message user">👤 ' + message + '</div>';
                 input.value = '';
-                
+
                 // API呼び出し
                 try {
                     const response = await fetch('/api/chat', {
@@ -212,10 +211,10 @@ async def index():
                         body: JSON.stringify({ message }),
                     });
                     const data = await response.json();
-                    
+
                     // アシスタント回答表示
                     chatBox.innerHTML += '<div class="message assistant">🤖 ' + data.answer + '</div>';
-                    
+
                     // 提案表示
                     if (data.suggestions && data.suggestions.length > 0) {
                         let suggestHtml = '<div class="message assistant">💡 提案: ';
@@ -225,17 +224,17 @@ async def index():
                         suggestHtml += '</div>';
                         chatBox.innerHTML += suggestHtml;
                     }
-                    
+
                     chatBox.scrollTop = chatBox.scrollHeight;
                 } catch (e) {
                     chatBox.innerHTML += '<div class="message assistant">❌ エラー: ' + e.message + '</div>';
                 }
             }
-            
+
             function fillMessage(text) {
                 document.getElementById('message').value = text;
             }
-            
+
             document.getElementById('message').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') sendMessage();
             });
@@ -253,8 +252,7 @@ async def chat(request: ChatRequest) -> dict[str, Any]:
     FAQAgent が内部でクエリタイプを判定し、適切なサービスを使用します。
     """
     agent = _get_faq_agent()
-    result = await agent.run({"question": request.message})
-    return result
+    return await agent.run({"question": request.message})
 
 
 @app.post("/api/chat/stream")
@@ -310,8 +308,7 @@ async def sales_analyze(request: SQLQueryRequest) -> dict[str, Any]:
     SalesAgent を使用して売上データを分析します。
     """
     agent = _get_sales_agent()
-    result = await agent.run({"question": request.question})
-    return result
+    return await agent.run({"question": request.question})
 
 
 @app.get("/api/health")

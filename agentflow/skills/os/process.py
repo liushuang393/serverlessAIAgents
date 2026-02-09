@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """プロセス制御スキル.
 
 安全なプロセス管理APIを提供。real_machine モード専用。
@@ -12,13 +11,15 @@ Example:
 from __future__ import annotations
 
 import asyncio
-import os
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.skills.os.base import OSSkillBase, OSSkillError
-from agentflow.skills.os.config import OSSkillConfig
+
+
+if TYPE_CHECKING:
+    from agentflow.skills.os.config import OSSkillConfig
 
 
 @dataclass
@@ -150,7 +151,7 @@ class ProcessSkill(OSSkillBase):
             self._logger.info(f"プロセス停止: PID={pid}")
             return True
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             info.status = "killed"
             del self._managed_processes[pid]
@@ -159,7 +160,7 @@ class ProcessSkill(OSSkillBase):
     async def list_managed_processes(self) -> list[ProcessInfo]:
         """管理中のプロセス一覧を取得."""
         result = []
-        for pid, (proc, info) in list(self._managed_processes.items()):
+        for _pid, (proc, info) in list(self._managed_processes.items()):
             # 状態更新
             if proc.returncode is not None:
                 info.status = "exited"
@@ -179,10 +180,10 @@ class ProcessSkill(OSSkillBase):
                 await self.stop_process(pid, force=True)
                 count += 1
             except Exception as e:
-                self._logger.error(f"プロセス停止失敗: PID={pid}, error={e}")
+                self._logger.exception(f"プロセス停止失敗: PID={pid}, error={e}")
         return count
 
-    async def __aenter__(self) -> "ProcessSkill":
+    async def __aenter__(self) -> ProcessSkill:
         """async with サポート."""
         return self
 

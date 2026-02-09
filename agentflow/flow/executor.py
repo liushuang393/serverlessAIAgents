@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Flow実行エンジン.
 
 フローの実際の実行を担当、以下を含む:
@@ -17,7 +16,6 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 from agentflow.flow.context import FlowContext
@@ -31,7 +29,10 @@ from agentflow.protocols.agui_events import (
     to_legacy_dict,
 )
 
+
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from agentflow.flow.graph import FlowGraph
 
 
@@ -48,7 +49,7 @@ class FlowExecutor:
 
     def __init__(
         self,
-        graph: "FlowGraph",
+        graph: FlowGraph,
         *,
         enable_progress: bool = True,
         max_revisions: int = 2,
@@ -263,7 +264,7 @@ class FlowExecutor:
                 }
 
         except Exception as e:
-            self._logger.error(f"フロー実行失敗: {e}")
+            self._logger.exception(f"フロー実行失敗: {e}")
             if tracker:
                 yield tracker.on_flow_error(e)
             else:

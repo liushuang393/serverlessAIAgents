@@ -65,37 +65,30 @@ class A2UIRenderer(ABC):
     @abstractmethod
     def render_text(self, component: A2UIComponent) -> Any:
         """テキストを描画."""
-        pass
 
     @abstractmethod
     def render_button(self, component: A2UIComponent) -> Any:
         """ボタンを描画."""
-        pass
 
     @abstractmethod
     def render_input(self, component: A2UIComponent) -> Any:
         """入力フィールドを描画."""
-        pass
 
     @abstractmethod
     def render_card(self, component: A2UIComponent) -> Any:
         """カードを描画."""
-        pass
 
     @abstractmethod
     def render_list(self, component: A2UIComponent) -> Any:
         """リストを描画."""
-        pass
 
     @abstractmethod
     def render_image(self, component: A2UIComponent) -> Any:
         """画像を描画."""
-        pass
 
     @abstractmethod
     def render_form(self, component: A2UIComponent) -> Any:
         """フォームを描画."""
-        pass
 
     def render_custom(self, component: A2UIComponent) -> Any:
         """カスタムコンポーネントを描画.

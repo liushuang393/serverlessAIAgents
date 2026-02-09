@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Code Migration Orchestrator.
 
 ソース言語→ターゲット言語移行のオーケストレーター。

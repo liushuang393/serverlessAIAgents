@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """知識ベース管理APIルーター.
 
 通用工厂パターンで複数Agent（術/器）の知識管理を統一。
@@ -7,16 +6,17 @@
     # 個別Router作成
     shu_router = create_knowledge_router("shu", "術", "実行計画")
     qi_router = create_knowledge_router("qi", "器", "技術実装")
-    
+
     # または統合Router
     from routers.knowledge import router as knowledge_router
 """
 
 import logging
-from typing import Any, Callable
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+
 
 logger = logging.getLogger("decision_api.knowledge")
 

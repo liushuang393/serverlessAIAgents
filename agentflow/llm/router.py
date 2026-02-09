@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """LLM モデルルーター.
 
 インテリジェントモデルルーティングと切り替え機能を提供。
@@ -17,6 +16,7 @@ from typing import Any
 from agentflow.llm.llm_client import LLMClient, LLMConfig, LLMMessage, LLMResponse
 from agentflow.llm.models import MODELS, ModelCapability, ModelInfo, ModelTier
 from agentflow.llm.stats import ModelStats
+
 
 logger = logging.getLogger(__name__)
 
@@ -172,7 +172,8 @@ class ModelRouter:
         available = list(self._clients.keys())
 
         if not available:
-            raise ValueError("利用可能なモデルがありません")
+            msg = "利用可能なモデルがありません"
+            raise ValueError(msg)
 
         # フィルタリング：能力マッチ
         if required_capabilities:
@@ -198,14 +199,14 @@ class ModelRouter:
         # 戦略選択
         if strategy == RoutingStrategy.COST_OPTIMIZED:
             return self._select_cheapest(available)
-        elif strategy == RoutingStrategy.QUALITY_OPTIMIZED:
+        if strategy == RoutingStrategy.QUALITY_OPTIMIZED:
             return self._select_highest_quality(available)
-        elif strategy == RoutingStrategy.LATENCY_OPTIMIZED:
+        if strategy == RoutingStrategy.LATENCY_OPTIMIZED:
             return self._select_lowest_latency(available)
-        elif strategy == RoutingStrategy.ROUND_ROBIN:
+        if strategy == RoutingStrategy.ROUND_ROBIN:
             return self._select_round_robin(available)
-        else:  # BALANCED
-            return self._select_balanced(available)
+        # BALANCED
+        return self._select_balanced(available)
 
     def _select_cheapest(self, available: list[str]) -> str:
         """最も安価なモデルを選択."""
@@ -369,7 +370,7 @@ class ModelRouter:
         Returns:
             LLMレスポンス
         """
-        models_to_try = [model_name] + self._routing_config.fallback_models
+        models_to_try = [model_name, *self._routing_config.fallback_models]
         last_error: Exception | None = None
 
         for attempt, current_model in enumerate(models_to_try):

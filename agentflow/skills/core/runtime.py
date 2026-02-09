@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Skill実行ランタイム - Anthropic Skills体系準拠.
 
 Skill内のスクリプトを安全に実行するためのランタイム環境を提供。
@@ -11,16 +10,16 @@ agentflow/sandbox/を統合し、隔離されたPython実行環境を実現。
 
 Example:
     >>> from agentflow.skills import SkillRuntime, SkillRouter
-    >>> 
+    >>>
     >>> router = SkillRouter()
     >>> await router.initialize()
     >>> runtime = SkillRuntime()
-    >>> 
+    >>>
     >>> # Skillスクリプト実行
     >>> result = router.route("extract keywords")
     >>> if result.matched:
     ...     script_result = await runtime.execute_script(
-    ...         result.skill, 
+    ...         result.skill,
     ...         "extract_keywords",
     ...         {"articles": [...]}
     ...     )
@@ -33,13 +32,16 @@ import importlib.util
 import json
 import logging
 import sys
-import tempfile
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from agentflow.sandbox.base import ExecutionResult
-from agentflow.skills.base import Skill
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from agentflow.sandbox.base import ExecutionResult
+    from agentflow.skills.base import Skill
+
 
 logger = logging.getLogger(__name__)
 
@@ -67,7 +69,7 @@ class ScriptResult:
     @classmethod
     def from_execution_result(
         cls, result: ExecutionResult, parse_json: bool = True
-    ) -> "ScriptResult":
+    ) -> ScriptResult:
         """ExecutionResultから変換.
 
         Args:
@@ -155,10 +157,9 @@ class SkillRuntime:
             return await self._execute_in_sandbox(
                 skill, script_path, input_data, effective_timeout
             )
-        else:
-            return await self._execute_directly(
-                skill, script_path, input_data
-            )
+        return await self._execute_directly(
+            skill, script_path, input_data
+        )
 
     def _resolve_script_path(self, skill: Skill, script_name: str) -> Path | None:
         """スクリプトパスを解決.
@@ -253,7 +254,6 @@ class SkillRuntime:
 
             # スクリプト内で定義された関数のみを対象
             # dataclass、クラス、importされたものは除外
-            import dataclasses
             import inspect
 
             def is_valid_function(name: str) -> bool:
@@ -274,11 +274,6 @@ class SkillRuntime:
 
             # スクリプトファイル名に基づく関数名マッピング
             # 例: validate_input.py -> validate_articles_input, validate_input
-            expected_patterns = [
-                expected_func_name,  # validate_input
-                f"{expected_func_name}_data",  # validate_input_data
-                f"{expected_func_name}s",  # validate_inputs
-            ]
 
             # スクリプト名の一部を含む関数を検索
             matching_funcs = [
@@ -317,7 +312,7 @@ class SkillRuntime:
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
-            self._logger.error(f"Script execution failed: {e}")
+            self._logger.exception(f"Script execution failed: {e}")
             return ScriptResult(
                 success=False,
                 error=str(e),
@@ -427,7 +422,7 @@ class SkillRuntime:
             return ScriptResult.from_execution_result(result)
 
         except Exception as e:
-            self._logger.error(f"Sandbox execution failed: {e}")
+            self._logger.exception(f"Sandbox execution failed: {e}")
             return ScriptResult(
                 success=False,
                 error=str(e),
@@ -450,7 +445,7 @@ class SkillRuntime:
             ラッパーコード
         """
         input_json = json.dumps(input_data, ensure_ascii=False)
-        return f'''
+        return f"""
 import json
 import sys
 
@@ -460,7 +455,7 @@ import sys
 
 # --- Wrapper ---
 if __name__ == "__main__":
-    input_data = json.loads({repr(input_json)})
+    input_data = json.loads({input_json!r})
 
     # Find and call the main function
     func = None
@@ -497,5 +492,5 @@ if __name__ == "__main__":
     except Exception as e:
         print(json.dumps({{"error": str(e)}}))
         sys.exit(1)
-'''
+"""
 

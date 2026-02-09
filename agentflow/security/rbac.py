@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RBAC（ロールベースアクセス制御）モジュール.
 
 ロールとパーミッションベースのアクセス制御を提供します。
@@ -15,6 +14,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -300,17 +300,9 @@ class RBACManager:
                     return True
 
             # 継承ロールをチェック
-            for inherited in role.inherits:
-                if check_role(inherited):
-                    return True
+            return any(check_role(inherited) for inherited in role.inherits)
 
-            return False
-
-        for role_name in self._user_roles.get(user_id, []):
-            if check_role(role_name):
-                return True
-
-        return False
+        return any(check_role(role_name) for role_name in self._user_roles.get(user_id, []))
 
     def has_role(self, user_id: str, role_name: str) -> bool:
         """ユーザーがロールを持っているか確認.

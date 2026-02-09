@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """テナントマネージャー.
 
 テナントの管理と切り替えを行う。
@@ -10,7 +9,8 @@ import logging
 from contextvars import ContextVar
 from typing import Any
 
-from agentflow.multi_tenant.context import TenantContext, ResourceLimits, IsolationLevel
+from agentflow.multi_tenant.context import IsolationLevel, ResourceLimits, TenantContext
+
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,8 @@ class TenantManager:
             ValueError: テナントIDが既に存在する場合
         """
         if tenant_id in self._tenants:
-            raise ValueError(f"テナント '{tenant_id}' は既に存在します")
+            msg = f"テナント '{tenant_id}' は既に存在します"
+            raise ValueError(msg)
 
         tenant = TenantContext(
             tenant_id=tenant_id,
@@ -125,7 +126,8 @@ class TenantManager:
         """
         tenant = self.get_tenant(tenant_id)
         if tenant is None:
-            raise ValueError(f"テナント '{tenant_id}' が見つかりません")
+            msg = f"テナント '{tenant_id}' が見つかりません"
+            raise ValueError(msg)
 
         _current_tenant.set(tenant)
         self._logger.debug(f"現在のテナントを設定: {tenant_id}")
@@ -222,5 +224,6 @@ def require_tenant() -> TenantContext:
     """
     tenant = _current_tenant.get()
     if tenant is None:
-        raise RuntimeError("テナントが設定されていません")
+        msg = "テナントが設定されていません"
+        raise RuntimeError(msg)
     return tenant

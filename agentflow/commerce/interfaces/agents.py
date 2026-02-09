@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """エージェント抽象インターフェース.
 
 意図分析、オファー提供、取引推薦のエージェントインターフェース。
@@ -14,6 +13,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
     from agentflow.commerce.models import (

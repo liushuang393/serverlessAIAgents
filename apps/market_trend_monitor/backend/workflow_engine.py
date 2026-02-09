@@ -18,8 +18,6 @@ v1.1 新機能:
 import logging
 from typing import Any
 
-from agentflow import PipelineEngine
-
 from apps.market_trend_monitor.backend.agents import (
     AnalyzerAgent,
     CollectorAgent,
@@ -27,6 +25,9 @@ from apps.market_trend_monitor.backend.agents import (
     ReporterAgent,
 )
 from apps.market_trend_monitor.backend.config import config
+
+from agentflow import PipelineEngine
+
 
 logger = logging.getLogger(__name__)
 

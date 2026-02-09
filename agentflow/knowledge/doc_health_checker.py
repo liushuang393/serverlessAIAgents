@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ドキュメント健康度チェッカー.
 
 知識ベースのドキュメント品質と健康度を監視するモジュール。
@@ -22,13 +21,12 @@
 
 from __future__ import annotations
 
-import hashlib
 import logging
-import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -168,7 +166,7 @@ class HealthReport:
         """全体ステータス."""
         if self.critical_count > 0 or self.expired_count > 0:
             return HealthStatus.CRITICAL
-        elif self.warning_count > 0:
+        if self.warning_count > 0:
             return HealthStatus.WARNING
         return HealthStatus.HEALTHY
 
@@ -663,9 +661,9 @@ __all__ = [
     "DocHealthChecker",
     "DocHealthConfig",
     "Document",
-    "HealthReport",
     "HealthIssue",
+    "HealthReport",
     "HealthStatus",
-    "IssueType",
     "IssueSeverity",
+    "IssueType",
 ]

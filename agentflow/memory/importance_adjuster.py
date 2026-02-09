@@ -9,9 +9,10 @@
 """
 
 import asyncio
+import contextlib
 import logging
 import math
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 from agentflow.memory.types import MemoryEntry, MemoryStability
@@ -86,10 +87,8 @@ class ImportanceAdjuster:
         self._running = False
         if self._recalculation_task:
             self._recalculation_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._recalculation_task
-            except asyncio.CancelledError:
-                pass
         self._logger.info("Importance adjuster stopped")
 
     def record_access(self, entry_id: str) -> None:
@@ -165,7 +164,7 @@ class ImportanceAdjuster:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self._logger.error(f"Error in recalculation loop: {e}")
+                self._logger.exception(f"Error in recalculation loop: {e}")
 
     def get_statistics(self) -> dict[str, Any]:
         """アクセス統計を取得.

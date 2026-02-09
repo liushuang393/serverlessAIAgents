@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """統一ツールレジストリ.
 
 すべてのソースからのツールを一元管理するレジストリモジュール。
@@ -26,6 +25,7 @@ from __future__ import annotations
 
 import threading
 from typing import TYPE_CHECKING
+
 
 if TYPE_CHECKING:
     from agentflow.core.tool_definition import ToolDefinition, ToolSource

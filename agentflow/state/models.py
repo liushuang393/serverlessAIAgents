@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """状態モデル定義.
 
 L2層：標準状態フィールド（Goal/Constraints/Facts/Decisions）を定義。
@@ -97,7 +96,7 @@ class Goal(BaseModel):
         description: str,
         value: Any = None,
         **kwargs: Any,
-    ) -> "Goal":
+    ) -> Goal:
         """制約を追加."""
         constraint = Constraint(
             type=constraint_type,
@@ -218,12 +217,12 @@ class StandardState(BaseModel):
     facts: list[Fact] = Field(default_factory=list, description="収集した事実")
     decisions: list[Decision] = Field(default_factory=list, description="判断履歴")
 
-    def add_fact(self, fact: Fact) -> "StandardState":
+    def add_fact(self, fact: Fact) -> StandardState:
         """事実を追加."""
         self.facts.append(fact)
         return self
 
-    def add_decision(self, decision: Decision) -> "StandardState":
+    def add_decision(self, decision: Decision) -> StandardState:
         """判断を追加."""
         self.decisions.append(decision)
         return self
@@ -249,7 +248,7 @@ class StandardState(BaseModel):
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "StandardState":
+    def from_dict(cls, data: dict[str, Any]) -> StandardState:
         """辞書から復元."""
         return cls(
             goal=Goal(**data["goal"]) if data.get("goal") else None,
@@ -259,13 +258,13 @@ class StandardState(BaseModel):
 
 
 __all__ = [
-    "ConstraintType",
     "Constraint",
-    "Goal",
-    "FactSource",
-    "Fact",
-    "DecisionType",
+    "ConstraintType",
     "Decision",
+    "DecisionType",
+    "Fact",
+    "FactSource",
+    "Goal",
     "StandardState",
 ]
 

@@ -10,13 +10,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from agentflow.core.engine import AgentFlowEngine
-from agentflow.core.metadata import AgentMetadata
 from agentflow.core.schemas import SchemaLoader
 from agentflow.decorators import auto_adapt
-from agentflow.protocols.a2a_card import AgentCard
 
 
 if TYPE_CHECKING:
+    from agentflow.core.metadata import AgentMetadata
+    from agentflow.protocols.a2a_card import AgentCard
     from agentflow.protocols.agui_emitter import AGUIEventEmitter
 
 

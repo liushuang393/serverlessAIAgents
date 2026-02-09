@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """サーキットブレーカー.
 
 連続失敗時にサービスを一時的に遮断し、システム全体の安定性を保護。
@@ -23,10 +22,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, TypeVar
+from typing import Any, TypeVar
+
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +130,7 @@ class CircuitBreaker:
         """開いているか（遮断中）."""
         return self._state == CircuitState.OPEN
 
-    async def __aenter__(self) -> "CircuitBreaker":
+    async def __aenter__(self) -> CircuitBreaker:
         """async with サポート."""
         await self._check_state()
         return self

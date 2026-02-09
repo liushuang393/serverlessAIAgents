@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DataLake Connectors - 各種データソースコネクタ.
 
 サポートコネクタ:
@@ -11,6 +10,7 @@
 """
 
 from agentflow.datalake.connectors.local import LocalFileConnector
+
 
 __all__ = [
     "LocalFileConnector",

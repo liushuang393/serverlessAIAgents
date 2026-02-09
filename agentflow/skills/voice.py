@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Voice Skill - 音声認識・合成機能.
 
 OpenAI Whisper / TTS を使用した音声処理スキル。
@@ -24,7 +23,6 @@ from __future__ import annotations
 import base64
 import logging
 import os
-import tempfile
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -157,11 +155,10 @@ class VoiceSkill:
 
             if response_format == "text":
                 return response.text
-            else:
-                return response.json().get("text", "")
+            return response.json().get("text", "")
 
         except httpx.HTTPStatusError as e:
-            self._logger.error(f"Whisper API error: {e.response.text}")
+            self._logger.exception(f"Whisper API error: {e.response.text}")
             raise
         except Exception as e:
             self._logger.error(f"Transcription failed: {e}", exc_info=True)
@@ -208,7 +205,7 @@ class VoiceSkill:
             return response.content
 
         except httpx.HTTPStatusError as e:
-            self._logger.error(f"TTS API error: {e.response.text}")
+            self._logger.exception(f"TTS API error: {e.response.text}")
             raise
         except Exception as e:
             self._logger.error(f"Speech synthesis failed: {e}", exc_info=True)

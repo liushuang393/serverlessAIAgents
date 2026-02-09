@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """設定API."""
 
+from apps.market_trend_monitor.backend.config import config
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from apps.market_trend_monitor.backend.config import config
 
 router = APIRouter(tags=["設定"])
 

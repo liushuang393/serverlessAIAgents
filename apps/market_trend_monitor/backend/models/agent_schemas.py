@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Agent I/O スキーマ定義.
 
 Market Trend Monitor の Agent 入出力スキーマを Pydantic で定義。

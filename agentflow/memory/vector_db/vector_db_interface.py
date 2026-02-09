@@ -29,12 +29,10 @@ class VectorDatabase(ABC):
         Raises:
             ConnectionError: 接続に失敗した場合
         """
-        pass
 
     @abstractmethod
     async def disconnect(self) -> None:
         """データベースから切断."""
-        pass
 
     @abstractmethod
     async def upsert(
@@ -52,7 +50,6 @@ class VectorDatabase(ABC):
             ValueError: 無効なエントリまたはベクトルの場合
             IOError: 挿入に失敗した場合
         """
-        pass
 
     @abstractmethod
     async def search(
@@ -76,7 +73,6 @@ class VectorDatabase(ABC):
         Raises:
             IOError: 検索に失敗した場合
         """
-        pass
 
     @abstractmethod
     async def delete(self, entry_id: str) -> bool:
@@ -91,7 +87,6 @@ class VectorDatabase(ABC):
         Raises:
             IOError: 削除に失敗した場合
         """
-        pass
 
     @abstractmethod
     async def clear(self, topic: str | None = None) -> int:
@@ -106,7 +101,6 @@ class VectorDatabase(ABC):
         Raises:
             IOError: クリアに失敗した場合
         """
-        pass
 
     @abstractmethod
     def get_status(self) -> dict[str, Any]:
@@ -115,5 +109,4 @@ class VectorDatabase(ABC):
         Returns:
             状態情報
         """
-        pass
 

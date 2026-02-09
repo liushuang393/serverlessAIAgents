@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CodeGenerator - コード生成器実装.
 
 ICodeGenerator インターフェースを実装し、Workflow から
@@ -7,12 +6,13 @@ ICodeGenerator インターフェースを実装し、Workflow から
 
 from __future__ import annotations
 
-import json
 import logging
 import zipfile
 from io import BytesIO
-from typing import Any
 
+from agentflow.codegen.builders.backend import BackendBuilder
+from agentflow.codegen.builders.frontend import FrontendBuilder
+from agentflow.codegen.builders.fullstack import FullstackBuilder
 from agentflow.core.interfaces import (
     CodeGenOptions,
     CodeOutputType,
@@ -21,9 +21,7 @@ from agentflow.core.interfaces import (
     ICodeGenerator,
     WorkflowDefinition,
 )
-from agentflow.codegen.builders.backend import BackendBuilder
-from agentflow.codegen.builders.frontend import FrontendBuilder
-from agentflow.codegen.builders.fullstack import FullstackBuilder
+
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +70,8 @@ class CodeGenerator(ICodeGenerator):
 
         builder = self._builders.get(output_type)
         if builder is None:
-            raise ValueError(f"Unsupported output type: {output_type}")
+            msg = f"Unsupported output type: {output_type}"
+            raise ValueError(msg)
 
         logger.info(f"Generating {output_type.value} code for workflow: {workflow.name}")
 
@@ -184,18 +183,18 @@ class CodeGenerator(ICodeGenerator):
                 "npm run build",
                 "npm run dev",
             )
-        elif output_type == CodeOutputType.BACKEND:
+        if output_type == CodeOutputType.BACKEND:
             return (
                 "app.py",
                 None,
-                f"uvicorn app:app --host 0.0.0.0 --port 8000",
+                "uvicorn app:app --host 0.0.0.0 --port 8000",
             )
-        else:  # FULLSTACK
-            return (
-                "backend/app.py",
-                "cd frontend && npm run build",
-                "uvicorn backend.app:app --host 0.0.0.0 --port 8000",
-            )
+        # FULLSTACK
+        return (
+            "backend/app.py",
+            "cd frontend && npm run build",
+            "uvicorn backend.app:app --host 0.0.0.0 --port 8000",
+        )
 
 
 __all__ = ["CodeGenerator"]

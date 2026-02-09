@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """構造化出力規約（Output Contracts）.
 
 L5層：AI出力の品質と安全性を担保するための構造化出力規約を定義。
@@ -360,30 +359,28 @@ class ContractValidator:
         rules = field.validation_rules
 
         # 最小値
-        if "min" in rules and isinstance(value, (int, float)):
-            if value < rules["min"]:
-                result.invalid_fields.append({
-                    "field": field.name,
-                    "rule": "min",
-                    "expected": rules["min"],
-                    "actual": value,
-                })
-                result.errors.append(
-                    f"フィールド '{field.name}' が最小値({rules['min']})を下回っています"
-                )
+        if "min" in rules and isinstance(value, (int, float)) and value < rules["min"]:
+            result.invalid_fields.append({
+                "field": field.name,
+                "rule": "min",
+                "expected": rules["min"],
+                "actual": value,
+            })
+            result.errors.append(
+                f"フィールド '{field.name}' が最小値({rules['min']})を下回っています"
+            )
 
         # 最大値
-        if "max" in rules and isinstance(value, (int, float)):
-            if value > rules["max"]:
-                result.invalid_fields.append({
-                    "field": field.name,
-                    "rule": "max",
-                    "expected": rules["max"],
-                    "actual": value,
-                })
-                result.errors.append(
-                    f"フィールド '{field.name}' が最大値({rules['max']})を超えています"
-                )
+        if "max" in rules and isinstance(value, (int, float)) and value > rules["max"]:
+            result.invalid_fields.append({
+                "field": field.name,
+                "rule": "max",
+                "expected": rules["max"],
+                "actual": value,
+            })
+            result.errors.append(
+                f"フィールド '{field.name}' が最大値({rules['max']})を超えています"
+            )
 
         # 正規表現パターン
         if "pattern" in rules and isinstance(value, str):
@@ -399,17 +396,16 @@ class ContractValidator:
                 )
 
         # 列挙値
-        if "enum" in rules:
-            if value not in rules["enum"]:
-                result.invalid_fields.append({
-                    "field": field.name,
-                    "rule": "enum",
-                    "allowed": rules["enum"],
-                    "actual": value,
-                })
-                result.errors.append(
-                    f"フィールド '{field.name}' が許可された値ではありません"
-                )
+        if "enum" in rules and value not in rules["enum"]:
+            result.invalid_fields.append({
+                "field": field.name,
+                "rule": "enum",
+                "allowed": rules["enum"],
+                "actual": value,
+            })
+            result.errors.append(
+                f"フィールド '{field.name}' が許可された値ではありません"
+            )
 
         # 最小長
         if "min_length" in rules and isinstance(value, (str, list)):
@@ -594,13 +590,13 @@ class ContractRegistry:
 # エクスポート
 # ==========================================================================
 __all__ = [
-    "EvidenceType",
-    "FallbackAction",
+    "ContractRegistry",
+    "ContractValidator",
     "Evidence",
     "EvidenceRule",
+    "EvidenceType",
+    "FallbackAction",
     "FieldSchema",
     "OutputContract",
     "ValidationResult",
-    "ContractValidator",
-    "ContractRegistry",
 ]

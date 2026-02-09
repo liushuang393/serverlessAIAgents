@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Intent Routing モジュール - 意図解析とルーティング.
 
 自然言語から意図を解析し、適切なSkill/Agent/テンプレートにルーティングする。
@@ -10,7 +9,7 @@
 
 使用例:
     >>> from agentflow.routing import IntentRouter, TaskTemplate
-    >>> 
+    >>>
     >>> router = IntentRouter()
     >>> router.register_template(TaskTemplate(
     ...     name="email_organize",
@@ -18,41 +17,42 @@
     ...     description="メールを重要度別に整理",
     ...     required_skills=["email", "summarizer"],
     ... ))
-    >>> 
+    >>>
     >>> intent = await router.route("今日のメールを整理して")
     >>> print(intent.template_name)  # "email_organize"
 """
 
+from agentflow.routing.executive_summary import (
+    ExecutiveSummary,
+    ExecutiveSummaryBuilder,
+    SummaryConfig,
+)
 from agentflow.routing.intent_router import (
-    IntentRouter,
     Intent,
     IntentCategory,
+    IntentRouter,
     RouterConfig,
 )
 from agentflow.routing.task_template import (
-    TaskTemplate,
     TaskParameter,
+    TaskTemplate,
     TemplateRegistry,
 )
-from agentflow.routing.executive_summary import (
-    ExecutiveSummaryBuilder,
-    SummaryConfig,
-    ExecutiveSummary,
-)
+
 
 __all__ = [
-    # Intent Router
-    "IntentRouter",
-    "Intent",
-    "IntentCategory",
-    "RouterConfig",
-    # Task Template
-    "TaskTemplate",
-    "TaskParameter",
-    "TemplateRegistry",
+    "ExecutiveSummary",
     # Executive Summary
     "ExecutiveSummaryBuilder",
+    "Intent",
+    "IntentCategory",
+    # Intent Router
+    "IntentRouter",
+    "RouterConfig",
     "SummaryConfig",
-    "ExecutiveSummary",
+    "TaskParameter",
+    # Task Template
+    "TaskTemplate",
+    "TemplateRegistry",
 ]
 

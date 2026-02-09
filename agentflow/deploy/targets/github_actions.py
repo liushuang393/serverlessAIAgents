@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """GitHubActionsTarget - GitHub Actions デプロイターゲット."""
 
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.core.interfaces import (
     ConfigField,
@@ -15,6 +12,12 @@ from agentflow.core.interfaces import (
     ValidationResult,
 )
 from agentflow.deploy.targets.base import BaseDeployTarget
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
+
 
 logger = logging.getLogger(__name__)
 
@@ -109,16 +112,15 @@ class GitHubActionsTarget(BaseDeployTarget):
         """ワークフローファイルを生成."""
         if deploy_target == "vercel":
             return self._generate_vercel_workflow(workflow_name, branch)
-        elif deploy_target == "docker":
+        if deploy_target == "docker":
             return self._generate_docker_workflow(workflow_name, branch, config)
-        elif deploy_target == "aws":
+        if deploy_target == "aws":
             return self._generate_aws_workflow(workflow_name, branch)
-        else:
-            return self._generate_generic_workflow(workflow_name, branch)
+        return self._generate_generic_workflow(workflow_name, branch)
 
     def _generate_vercel_workflow(self, name: str, branch: str) -> str:
         """Vercel デプロイワークフローを生成."""
-        return f'''name: {name}
+        return f"""name: {name}
 
 on:
   push:
@@ -129,7 +131,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -153,14 +155,14 @@ jobs:
           vercel-org-id: ${{{{ secrets.VERCEL_ORG_ID }}}}
           vercel-project-id: ${{{{ secrets.VERCEL_PROJECT_ID }}}}
           vercel-args: '--prod'
-'''
+"""
 
     def _generate_docker_workflow(self, name: str, branch: str, config: DeployConfig) -> str:
         """Docker デプロイワークフローを生成."""
         registry = config.settings.get("registry", "ghcr.io")
-        image_name = config.settings.get("image_name", "agentflow-app")
+        config.settings.get("image_name", "agentflow-app")
 
-        return f'''name: {name}
+        return f"""name: {name}
 
 on:
   push:
@@ -207,11 +209,11 @@ jobs:
           labels: ${{{{ steps.meta.outputs.labels }}}}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-'''
+"""
 
     def _generate_aws_workflow(self, name: str, branch: str) -> str:
         """AWS Lambda デプロイワークフローを生成."""
-        return f'''name: {name}
+        return f"""name: {name}
 
 on:
   push:
@@ -220,7 +222,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -254,11 +256,11 @@ jobs:
           aws lambda update-function-code \\
             --function-name ${{{{ secrets.LAMBDA_FUNCTION_NAME }}}} \\
             --zip-file fileb://lambda.zip
-'''
+"""
 
     def _generate_generic_workflow(self, name: str, branch: str) -> str:
         """汎用ワークフローを生成."""
-        return f'''name: {name}
+        return f"""name: {name}
 
 on:
   push:
@@ -290,7 +292,7 @@ jobs:
       - name: Build
         run: |
           echo "Add your build commands here"
-'''
+"""
 
     def _generate_secrets_hint(
         self,

@@ -10,8 +10,7 @@ from .storage import TaskStore
 def _parse_tags(raw: str | None) -> list[str] | None:
     if raw is None:
         return None
-    tags = [t.strip() for t in raw.split(",") if t.strip()]
-    return tags
+    return [t.strip() for t in raw.split(",") if t.strip()]
 
 
 def _print_json(payload: object) -> None:

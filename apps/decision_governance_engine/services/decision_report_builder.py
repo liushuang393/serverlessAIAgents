@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DecisionReportBuilder - 決策レポート生成.
 
 AgentFlow の SectionedReportBuilder を継承し、DGE 専用のレポート生成を実装。
@@ -15,13 +14,13 @@ AgentFlow の SectionedReportBuilder を継承し、DGE 専用のレポート生
 
 from typing import Any
 
+from apps.decision_governance_engine.services.report_generator import ReportGenerator
+
 from agentflow.engines.report_builder import (
     ExecutiveSummary,
     ReportSection,
     SectionedReportBuilder,
 )
-
-from apps.decision_governance_engine.services.report_generator import ReportGenerator
 
 
 class DecisionReportBuilder(SectionedReportBuilder):

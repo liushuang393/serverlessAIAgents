@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """スキルゲートウェイ.
 
 全てのスキル呼び出しを統一管理するセキュリティゲートウェイ。
@@ -24,9 +23,13 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Awaitable
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 
 class SkillCategory(str, Enum):
@@ -223,8 +226,9 @@ class SkillGateway:
         # 2. 実行モードチェック
         is_isolated = self._config.execution_mode == "isolated"
         if is_isolated and not skill.allowed_in_isolated:
+            msg = f"スキル '{skill_name}' は isolated モードでは使用できません"
             raise SkillPermissionError(
-                f"スキル '{skill_name}' は isolated モードでは使用できません",
+                msg,
                 skill_name,
             )
 
@@ -281,7 +285,7 @@ class SkillGateway:
 
         except Exception as e:
             duration_ms = (asyncio.get_event_loop().time() - start_time) * 1000
-            self._logger.error(f"スキル実行エラー: {skill_name} - {e}")
+            self._logger.exception(f"スキル実行エラー: {skill_name} - {e}")
 
             return SkillResult(
                 success=False,

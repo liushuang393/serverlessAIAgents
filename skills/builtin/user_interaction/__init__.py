@@ -14,6 +14,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
+
 # ロガー設定
 logger = logging.getLogger("user_interaction")
 
@@ -207,9 +208,9 @@ class UserInteractionSkill:
 
 # エクスポート
 __all__ = [
-    "UserInteractionSkill",
     "ClarificationQuestion",
     "ClarificationRequest",
     "EnrichedQuestion",
+    "UserInteractionSkill",
 ]
 

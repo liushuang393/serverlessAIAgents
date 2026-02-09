@@ -409,10 +409,10 @@ class RLMController:
         # 決定的操作を優先
         if self._config.prefer_deterministic:
             # まだキーワード検索していないハンドルがあれば
-            searched_handles = set(
+            searched_handles = {
                 v.metadata.get("handle_id")
                 for v in self._workspace.list_variables(VariableType.SEARCH_RESULT)
-            )
+            }
             unsearched = [h for h in handles if h.handle_id not in searched_handles]
 
             if unsearched:

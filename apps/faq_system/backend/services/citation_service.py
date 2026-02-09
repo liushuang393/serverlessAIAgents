@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """引用サービス（Citation Service）.
 
 回答の引用ソース管理と表示。
@@ -19,11 +18,11 @@
 from __future__ import annotations
 
 import logging
-import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -236,12 +235,11 @@ class CitationService:
 
         if style == CitationStyle.INLINE:
             return self._format_inline(citations)
-        elif style == CitationStyle.FOOTNOTE:
+        if style == CitationStyle.FOOTNOTE:
             return self._format_footnote(citations)
-        elif style == CitationStyle.FULL:
+        if style == CitationStyle.FULL:
             return self._format_full(citations)
-        else:
-            return self._format_compact(citations)
+        return self._format_compact(citations)
 
     def _format_inline(self, citations: list[Citation]) -> str:
         """インラインスタイル."""
@@ -428,7 +426,7 @@ class CitationService:
         """
         return {
             "total_citations": len(citations),
-            "unique_sources": len(set(c.source.source_id for c in citations)),
+            "unique_sources": len({c.source.source_id for c in citations}),
             "average_relevance": (
                 sum(c.relevance_score for c in citations) / len(citations)
                 if citations else 0
@@ -448,10 +446,10 @@ class CitationService:
 
 
 __all__ = [
+    "Citation",
     "CitationService",
     "CitationServiceConfig",
-    "Citation",
+    "CitationStyle",
     "SourceInfo",
     "SourceType",
-    "CitationStyle",
 ]

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CodeTransformer - 統一変換インターフェース.
 
 AST 間の変換を行う統一インターフェースを定義します。
@@ -13,9 +12,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from agentflow.code_intelligence.ast.unified_ast import UnifiedAST
+
+if TYPE_CHECKING:
+    from agentflow.code_intelligence.ast.unified_ast import UnifiedAST
 
 
 class TransformError(Exception):
@@ -217,9 +218,9 @@ Output only the converted code without explanations."""
 
 
 __all__ = [
-    "TransformError",
-    "TransformContext",
-    "TransformResult",
     "CodeTransformer",
     "LLMAssistedTransformer",
+    "TransformContext",
+    "TransformError",
+    "TransformResult",
 ]

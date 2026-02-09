@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """UCP (Universal Commerce Protocol) 実装.
 
 GoogleのAgentic Commerce戦略に対応するための
@@ -17,43 +16,44 @@ Example:
     ...     offers = await client.get_offers(intent)
 """
 
-from agentflow.protocols.ucp.ucp_messages import (
-    UCPMessageType,
-    UCPMessage,
-    UCPIntentRequest,
-    UCPIntentResponse,
-    UCPOfferRequest,
-    UCPOfferResponse,
-    UCPTransactionRequest,
-    UCPTransactionResponse,
-    UCPError,
-)
+from agentflow.protocols.ucp.ucp_adapter import UCPAdapter
+from agentflow.protocols.ucp.ucp_client import UCPClient
 from agentflow.protocols.ucp.ucp_config import (
     UCPConfig,
     UCPEndpoint,
     UCPSecurityConfig,
 )
-from agentflow.protocols.ucp.ucp_client import UCPClient
-from agentflow.protocols.ucp.ucp_adapter import UCPAdapter
+from agentflow.protocols.ucp.ucp_messages import (
+    UCPError,
+    UCPIntentRequest,
+    UCPIntentResponse,
+    UCPMessage,
+    UCPMessageType,
+    UCPOfferRequest,
+    UCPOfferResponse,
+    UCPTransactionRequest,
+    UCPTransactionResponse,
+)
+
 
 __all__ = [
-    # メッセージ
-    "UCPMessageType",
-    "UCPMessage",
-    "UCPIntentRequest",
-    "UCPIntentResponse",
-    "UCPOfferRequest",
-    "UCPOfferResponse",
-    "UCPTransactionRequest",
-    "UCPTransactionResponse",
-    "UCPError",
+    # アダプター
+    "UCPAdapter",
+    # クライアント
+    "UCPClient",
     # 設定
     "UCPConfig",
     "UCPEndpoint",
+    "UCPError",
+    "UCPIntentRequest",
+    "UCPIntentResponse",
+    "UCPMessage",
+    # メッセージ
+    "UCPMessageType",
+    "UCPOfferRequest",
+    "UCPOfferResponse",
     "UCPSecurityConfig",
-    # クライアント
-    "UCPClient",
-    # アダプター
-    "UCPAdapter",
+    "UCPTransactionRequest",
+    "UCPTransactionResponse",
 ]
 

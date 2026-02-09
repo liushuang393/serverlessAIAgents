@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FAQ System Services.
 
 強化版 FAQ システムのサービス群。
@@ -10,77 +9,79 @@
 """
 
 # フレームワーク層のサービスを再エクスポート
-from agentflow.agents import FAQAgent as FAQService
-from agentflow.agents import FAQAgentConfig as FAQConfig
-
-# FAQ System 固有サービス
-from apps.faq_system.backend.services.glossary_service import (
-    GlossaryService,
-    GlossaryConfig,
-    Term,
-    TermEntry,
-    TermType,
-)
 from apps.faq_system.backend.services.citation_service import (
+    Citation,
     CitationService,
     CitationServiceConfig,
-    Citation,
+    CitationStyle,
     SourceInfo,
     SourceType,
-    CitationStyle,
-)
-from apps.faq_system.backend.services.feedback_service import (
-    FeedbackService,
-    FeedbackServiceConfig,
-    Feedback,
-    FeedbackType,
-    FeedbackStatus,
-    FeedbackStats,
-    ImprovementSuggestion,
 )
 from apps.faq_system.backend.services.coverage_dashboard import (
     CoverageDashboard,
     CoverageDashboardConfig,
+    CoverageLevel,
     CoverageReport,
     CoverageStats,
-    TopicCoverage,
     GapAnalysis,
-    CoverageLevel,
     QueryLog,
+    TopicCoverage,
+)
+from apps.faq_system.backend.services.feedback_service import (
+    Feedback,
+    FeedbackService,
+    FeedbackServiceConfig,
+    FeedbackStats,
+    FeedbackStatus,
+    FeedbackType,
+    ImprovementSuggestion,
 )
 
+# FAQ System 固有サービス
+from apps.faq_system.backend.services.glossary_service import (
+    GlossaryConfig,
+    GlossaryService,
+    Term,
+    TermEntry,
+    TermType,
+)
+
+from agentflow.agents import FAQAgent as FAQService
+from agentflow.agents import FAQAgentConfig as FAQConfig
+
+
 __all__ = [
-    # フレームワーク層
-    "FAQService",
-    "FAQConfig",
-    # 術語辞書
-    "GlossaryService",
-    "GlossaryConfig",
-    "Term",
-    "TermEntry",
-    "TermType",
+    "Citation",
     # 引用
     "CitationService",
     "CitationServiceConfig",
-    "Citation",
-    "SourceInfo",
-    "SourceType",
     "CitationStyle",
-    # フィードバック
-    "FeedbackService",
-    "FeedbackServiceConfig",
-    "Feedback",
-    "FeedbackType",
-    "FeedbackStatus",
-    "FeedbackStats",
-    "ImprovementSuggestion",
     # カバレッジ
     "CoverageDashboard",
     "CoverageDashboardConfig",
+    "CoverageLevel",
     "CoverageReport",
     "CoverageStats",
-    "TopicCoverage",
+    "FAQConfig",
+    # フレームワーク層
+    "FAQService",
+    "Feedback",
+    # フィードバック
+    "FeedbackService",
+    "FeedbackServiceConfig",
+    "FeedbackStats",
+    "FeedbackStatus",
+    "FeedbackType",
     "GapAnalysis",
-    "CoverageLevel",
+    "GlossaryConfig",
+    # 術語辞書
+    "GlossaryService",
+    "ImprovementSuggestion",
     "QueryLog",
+    "SourceInfo",
+    "SourceType",
+    "Term",
+    "TermEntry",
+    "TermType",
+    "TopicCoverage",
 ]

@@ -24,7 +24,6 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -38,6 +37,8 @@ from agentflow.flow.types import (
 
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from agentflow.flow.context import FlowContext
 
 logger = logging.getLogger(__name__)
@@ -84,7 +85,7 @@ class ConditionalNode(FlowNode):
             return NodeResult(success=True, data={}, action=NextAction.CONTINUE)
 
         except Exception as e:
-            self._logger.error(f"条件分岐実行失敗: {e}")
+            self._logger.exception(f"条件分岐実行失敗: {e}")
             return NodeResult(success=False, data={"error": str(e)}, action=NextAction.STOP)
 
     async def _execute_branch(self, ctx: FlowContext, branch: ConditionalBranch) -> NodeResult:
@@ -163,7 +164,7 @@ class SwitchNode(FlowNode):
             return NodeResult(success=True, data={}, action=NextAction.CONTINUE)
 
         except Exception as e:
-            self._logger.error(f"switch実行失敗: {e}")
+            self._logger.exception(f"switch実行失敗: {e}")
             return NodeResult(success=False, data={"error": str(e)}, action=NextAction.STOP)
 
     async def _execute_nodes(self, ctx: FlowContext, nodes: list[FlowNode]) -> NodeResult:

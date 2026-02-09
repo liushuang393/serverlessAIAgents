@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Wizard データモデル.
 
 AgentWizard システムで使用するデータ構造を定義します。
@@ -7,7 +6,7 @@ AgentWizard システムで使用するデータ構造を定義します。
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -107,7 +106,7 @@ class AgentSpec:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "AgentSpec":
+    def from_dict(cls, data: dict[str, Any]) -> AgentSpec:
         """辞書から作成."""
         return cls(
             name=data["name"],
@@ -433,17 +432,17 @@ class WizardResult:
 
 
 __all__ = [
-    "GapType",
-    "EngineType",
-    "ValidationStatus",
-    "WizardConfig",
     "AgentSpec",
     "CapabilityGap",
+    "EngineType",
     "GapAnalysis",
+    "GapType",
+    "SynthesisResult",
     "TestCase",
     "TestResult",
     "TestSuiteResult",
     "ValidationResult",
-    "SynthesisResult",
+    "ValidationStatus",
+    "WizardConfig",
     "WizardResult",
 ]

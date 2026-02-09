@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CodeInventory - 代码盘点.
 
 遗留系统代码的发现、盘点、依赖分析。
@@ -15,9 +14,10 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
 
 _logger = logging.getLogger(__name__)
 
@@ -226,7 +226,6 @@ class CodeInventory:
 
     def __init__(self) -> None:
         """初期化."""
-        pass
 
     def _detect_language(self, file_path: Path) -> str:
         """言語を検出."""
@@ -351,10 +350,7 @@ class CodeInventory:
         ]
 
         # 拡張子フィルタ
-        if extensions:
-            target_extensions = set(extensions)
-        else:
-            target_extensions = set(self.EXTENSION_MAP.keys())
+        target_extensions = set(extensions) if extensions else set(self.EXTENSION_MAP.keys())
 
         # ファイル収集
         for file_path in root_path.rglob("*"):
@@ -532,8 +528,8 @@ class CodeInventory:
 
 
 __all__ = [
-    "FileInfo",
-    "DependencyInfo",
-    "InventoryResult",
     "CodeInventory",
+    "DependencyInfo",
+    "FileInfo",
+    "InventoryResult",
 ]

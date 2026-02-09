@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FAQ Service - フレームワーク規範準拠の FAQ サービス.
 
 ServiceBase を継承し、RAG + Text2SQL のハイブリッド検索を提供。
@@ -19,18 +18,21 @@ from __future__ import annotations
 import logging
 import re
 import time
-from collections.abc import AsyncIterator
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+from agentflow.security import SafetyMixin
 from agentflow.services.base import (
     ServiceBase,
     ServiceEvent,
-    ResultEvent,
 )
-from agentflow.security import SafetyMixin
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +146,7 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
             return
 
         from agentflow.providers import get_llm
-        from agentflow.services.rag_service import RAGService, RAGConfig
+        from agentflow.services.rag_service import RAGConfig, RAGService
 
         # RAG サービス初期化
         rag_config = RAGConfig(
@@ -237,7 +239,7 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
 
         if sql_score >= 2:
             return QueryType.SQL
-        elif sql_score >= 1:
+        if sql_score >= 1:
             return QueryType.HYBRID
         return QueryType.FAQ
 
@@ -476,7 +478,7 @@ SQL:"""
     # コンテキストマネージャー
     # =========================================================================
 
-    async def __aenter__(self) -> "FAQService":
+    async def __aenter__(self) -> FAQService:
         """非同期コンテキストマネージャー開始."""
         await self.start()
         return self
@@ -487,10 +489,10 @@ SQL:"""
 
 
 __all__ = [
-    "FAQService",
-    "FAQConfig",
-    "QueryType",
-    "ChartType",
-    "SQLResult",
     "ChartData",
+    "ChartType",
+    "FAQConfig",
+    "FAQService",
+    "QueryType",
+    "SQLResult",
 ]

@@ -11,7 +11,6 @@ Evo-Memory思想に基づき、類似記憶を抽象的な知識に自動蒸留�
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import uuid
 from datetime import datetime

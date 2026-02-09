@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """增强记忆系统 - Manus分析启发的高级记忆功能.
 
 基于Manus分析中提到的记忆系统特性:
@@ -17,10 +16,10 @@
     >>>
     >>> manager = EnhancedMemoryManager()
     >>> await manager.start()
-    >>> 
+    >>>
     >>> # 记忆并自动蒸馏
     >>> await manager.remember_with_distillation("重要信息", topic="AI")
-    >>> 
+    >>>
     >>> # 基于任务结果强化记忆
     >>> await manager.reinforce_memories(topic="AI", reward=1.0)
 """
@@ -28,19 +27,23 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from agentflow.memory.memory_manager import MemoryManager
-from agentflow.memory.types import MemoryEntry, MemoryType
+
+
+if TYPE_CHECKING:
+    from agentflow.memory.types import MemoryEntry
 
 
 class DistillationStrategy(str, Enum):
     """蒸馏策略."""
-    
+
     SIMILARITY = "similarity"      # 基于相似度合并
     TEMPORAL = "temporal"          # 基于时间窗口合并
     SEMANTIC = "semantic"          # 基于语义关系合并
@@ -49,7 +52,7 @@ class DistillationStrategy(str, Enum):
 
 class ForgettingStrategy(str, Enum):
     """遗忘策略."""
-    
+
     LRU = "lru"                    # 最近最少使用
     IMPORTANCE = "importance"      # 基于重要性
     DECAY = "decay"                # 时间衰减
@@ -59,7 +62,7 @@ class ForgettingStrategy(str, Enum):
 @dataclass
 class MemoryConfig:
     """增强记忆配置.
-    
+
     Attributes:
         distillation_threshold: 触发蒸馏的相似记忆数量
         forgetting_threshold: 触发遗忘的记忆数量
@@ -68,7 +71,7 @@ class MemoryConfig:
         distillation_strategy: 蒸馏策略
         forgetting_strategy: 遗忘策略
     """
-    
+
     distillation_threshold: int = 5
     forgetting_threshold: int = 1000
     importance_decay_rate: float = 0.01
@@ -84,7 +87,7 @@ class MemoryConfig:
 @dataclass
 class DistilledKnowledge:
     """蒸馏后的知识.
-    
+
     Attributes:
         id: 知识ID
         content: 抽象内容
@@ -93,7 +96,7 @@ class DistilledKnowledge:
         confidence: 置信度
         created_at: 创建时间
     """
-    
+
     id: str
     content: str
     source_memories: list[str] = field(default_factory=list)
@@ -102,7 +105,7 @@ class DistilledKnowledge:
     created_at: datetime = field(default_factory=datetime.now)
     access_count: int = 0
     last_accessed: datetime | None = None
-    
+
     def to_dict(self) -> dict[str, Any]:
         """转换为字典."""
         return {
@@ -119,7 +122,7 @@ class DistilledKnowledge:
 @dataclass
 class MemoryStats:
     """记忆统计信息.
-    
+
     Attributes:
         total_memories: 总记忆数
         distilled_count: 蒸馏知识数
@@ -127,7 +130,7 @@ class MemoryStats:
         avg_importance: 平均重要性
         topic_distribution: 主题分布
     """
-    
+
     total_memories: int = 0
     distilled_count: int = 0
     forgotten_count: int = 0
@@ -272,17 +275,13 @@ class EnhancedMemoryManager:
         """停止记忆系统."""
         if self._distillation_task:
             self._distillation_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._distillation_task
-            except asyncio.CancelledError:
-                pass
 
         if self._forgetting_task:
             self._forgetting_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._forgetting_task
-            except asyncio.CancelledError:
-                pass
 
         await self._base.stop()
         self._logger.info("增强记忆系统已停止")
@@ -533,7 +532,7 @@ class EnhancedMemoryManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self._logger.error(f"自动蒸馏错误: {e}")
+                self._logger.exception(f"自动蒸馏错误: {e}")
 
     async def _auto_forgetting_loop(self) -> None:
         """自动遗忘循环."""
@@ -548,7 +547,7 @@ class EnhancedMemoryManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self._logger.error(f"自动遗忘错误: {e}")
+                self._logger.exception(f"自动遗忘错误: {e}")
 
     def get_stats(self) -> MemoryStats:
         """获取统计信息."""
@@ -573,7 +572,7 @@ class EnhancedMemoryManager:
             return [dk for dk in self._distilled.values() if dk.topic == topic]
         return list(self._distilled.values())
 
-    async def __aenter__(self) -> "EnhancedMemoryManager":
+    async def __aenter__(self) -> EnhancedMemoryManager:
         """async with支持."""
         await self.start()
         return self

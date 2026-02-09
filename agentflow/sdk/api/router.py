@@ -180,8 +180,7 @@ def create_agent_router(
             try:
                 body = await request.json()
                 eng = get_engine()
-                result = await eng.process(body)
-                return result
+                return await eng.process(body)
             except AgentApiException:
                 raise
             except Exception as e:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AST Visitor パターン.
 
 AST の走査と変換のための Visitor パターンを提供します。
@@ -6,15 +5,16 @@ AST の走査と変換のための Visitor パターンを提供します。
 
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from abc import ABC
+from typing import Any, TypeVar
 
 from agentflow.code_intelligence.ast.unified_ast import ASTNode, ASTNodeType
+
 
 T = TypeVar("T")
 
 
-class ASTVisitor(ABC, Generic[T]):
+class ASTVisitor[T](ABC):
     """AST Visitor 基底クラス.
 
     AST を走査し、各ノードを訪問します。
@@ -238,10 +238,10 @@ class ASTSerializer(ASTVisitor[dict[str, Any]]):
 
 
 __all__ = [
-    "ASTVisitor",
+    "ASTSerializer",
     "ASTTransformVisitor",
+    "ASTVisitor",
+    "DepthCalculator",
     "NodeCollector",
     "NodeCounter",
-    "DepthCalculator",
-    "ASTSerializer",
 ]

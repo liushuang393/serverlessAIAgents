@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """UCPクライアント実装.
 
 Universal Commerce Protocol のクライアント。
@@ -17,13 +16,11 @@ import asyncio
 import logging
 import time
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
-from agentflow.protocols.ucp.ucp_config import UCPConfig, UCPEndpoint
 from agentflow.protocols.ucp.ucp_messages import (
-    UCPError,
     UCPIntentRequest,
     UCPIntentResponse,
     UCPMessage,
@@ -32,6 +29,10 @@ from agentflow.protocols.ucp.ucp_messages import (
     UCPTransactionRequest,
     UCPTransactionResponse,
 )
+
+
+if TYPE_CHECKING:
+    from agentflow.protocols.ucp.ucp_config import UCPConfig, UCPEndpoint
 
 
 class UCPClient:
@@ -80,7 +81,7 @@ class UCPClient:
             await self._http_client.aclose()
             self._http_client = None
 
-    async def __aenter__(self) -> "UCPClient":
+    async def __aenter__(self) -> UCPClient:
         """非同期コンテキストマネージャーのエントリー."""
         return self
 
@@ -163,7 +164,8 @@ class UCPClient:
             ValueError: レート制限超過
         """
         if not self._check_rate_limit():
-            raise ValueError("Rate limit exceeded")
+            msg = "Rate limit exceeded"
+            raise ValueError(msg)
 
         self._request_count += 1
         client = await self._get_http_client()
@@ -219,7 +221,8 @@ class UCPClient:
         """
         endpoint = self._config.get_endpoint()
         if not endpoint:
-            raise ValueError("No available UCP endpoint")
+            msg = "No available UCP endpoint"
+            raise ValueError(msg)
 
         request = UCPIntentRequest(
             message_id=self._generate_message_id(),
@@ -269,7 +272,8 @@ class UCPClient:
         """
         endpoint = self._config.get_endpoint()
         if not endpoint:
-            raise ValueError("No available UCP endpoint")
+            msg = "No available UCP endpoint"
+            raise ValueError(msg)
 
         request = UCPOfferRequest(
             message_id=self._generate_message_id(),
@@ -304,7 +308,8 @@ class UCPClient:
         """
         endpoint = self._config.get_endpoint()
         if not endpoint:
-            raise ValueError("No available UCP endpoint")
+            msg = "No available UCP endpoint"
+            raise ValueError(msg)
 
         request = UCPTransactionRequest(
             message_id=self._generate_message_id(),
@@ -336,7 +341,8 @@ class UCPClient:
         """
         endpoint = self._config.get_endpoint()
         if not endpoint:
-            raise ValueError("No available UCP endpoint")
+            msg = "No available UCP endpoint"
+            raise ValueError(msg)
 
         request = UCPTransactionRequest(
             message_id=self._generate_message_id(),

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """術語辞書サービス（Glossary Service）.
 
 術語の管理と検索精度向上を支援。
@@ -25,6 +24,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -229,11 +229,7 @@ class GlossaryService:
 
         # 逆引きインデックスを構築
         all_terms = (
-            [entry.canonical]
-            + entry.synonyms
-            + entry.abbreviations
-            + entry.katakana
-            + entry.english
+            [entry.canonical, *entry.synonyms, *entry.abbreviations, *entry.katakana, *entry.english]
         )
 
         for term in all_terms:
@@ -241,7 +237,7 @@ class GlossaryService:
                 self._reverse_index[term.lower()] = entry.canonical
 
         # 部門ローカル用語
-        for dept, terms in entry.local_terms.items():
+        for _dept, terms in entry.local_terms.items():
             for term in terms:
                 if term:
                     self._reverse_index[term.lower()] = entry.canonical
@@ -383,9 +379,8 @@ class GlossaryService:
             if (
                 term_lower in registered_term
                 or registered_term in term_lower
-            ):
-                if canonical not in suggestions:
-                    suggestions.append(canonical)
+            ) and canonical not in suggestions:
+                suggestions.append(canonical)
 
         return suggestions[:5]
 
@@ -413,7 +408,7 @@ class GlossaryService:
         Returns:
             カテゴリリスト
         """
-        return list(set(e.category for e in self._entries.values() if e.category))
+        return list({e.category for e in self._entries.values() if e.category})
 
     def export_dictionary(self) -> list[dict[str, Any]]:
         """辞書をエクスポート.
@@ -477,8 +472,8 @@ class GlossaryService:
 
 
 __all__ = [
-    "GlossaryService",
     "GlossaryConfig",
+    "GlossaryService",
     "Term",
     "TermEntry",
     "TermType",

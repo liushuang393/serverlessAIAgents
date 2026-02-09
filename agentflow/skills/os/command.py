@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """コマンド実行スキル.
 
 安全なコマンド実行APIを提供。ホワイトリスト制限付き。
@@ -13,10 +12,13 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from agentflow.skills.os.base import CommandSecurityError, OSSkillBase, OSSkillError
-from agentflow.skills.os.config import OSSkillConfig
+
+
+if TYPE_CHECKING:
+    from agentflow.skills.os.config import OSSkillConfig
 
 
 @dataclass
@@ -151,7 +153,7 @@ class CommandSkill(OSSkillBase):
                 duration_ms=duration_ms,
             )
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             msg = f"コマンドタイムアウト: {command} ({timeout}秒)"
             raise OSSkillError(msg, skill_name="CommandSkill")
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentFlow設定.
 
 このモジュールは、AgentFlowフレームワークの設定を管理します。
@@ -35,7 +34,6 @@
 """
 
 import logging
-import os
 from functools import lru_cache
 from typing import Any
 

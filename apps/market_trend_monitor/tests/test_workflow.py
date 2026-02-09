@@ -1,7 +1,6 @@
 """ワークフローの統合テスト."""
 
 import pytest
-
 from apps.market_trend_monitor.backend.workflow import MarketTrendWorkflow
 
 

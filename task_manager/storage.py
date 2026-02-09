@@ -2,10 +2,14 @@ from __future__ import annotations
 
 import json
 import uuid
-from collections.abc import Iterable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .models import VALID_PRIORITIES, VALID_STATUSES, Task, utc_now_iso
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 class TaskStore:
@@ -18,8 +22,9 @@ class TaskStore:
 
     def _ensure_ready(self) -> None:
         if not self.tasks_dir.exists():
+            msg = f"Task store not initialized. Run init() or create {self.tasks_dir}."
             raise FileNotFoundError(
-                f"Task store not initialized. Run init() or create {self.tasks_dir}."
+                msg
             )
 
     def _task_path(self, task_id: str) -> Path:
@@ -39,11 +44,13 @@ class TaskStore:
 
     def _validate_status(self, status: str) -> None:
         if status not in VALID_STATUSES:
-            raise ValueError(f"Invalid status: {status}. Allowed: {sorted(VALID_STATUSES)}")
+            msg = f"Invalid status: {status}. Allowed: {sorted(VALID_STATUSES)}"
+            raise ValueError(msg)
 
     def _validate_priority(self, priority: str) -> None:
         if priority not in VALID_PRIORITIES:
-            raise ValueError(f"Invalid priority: {priority}. Allowed: {sorted(VALID_PRIORITIES)}")
+            msg = f"Invalid priority: {priority}. Allowed: {sorted(VALID_PRIORITIES)}"
+            raise ValueError(msg)
 
     def create_task(
         self,
@@ -56,7 +63,8 @@ class TaskStore:
     ) -> Task:
         self._ensure_ready()
         if not title.strip():
-            raise ValueError("title is required")
+            msg = "title is required"
+            raise ValueError(msg)
         self._validate_status(status)
         self._validate_priority(priority)
 
@@ -88,7 +96,8 @@ class TaskStore:
         self._ensure_ready()
         path = self._task_path(task_id)
         if not path.exists():
-            raise FileNotFoundError(f"Task not found: {task_id}")
+            msg = f"Task not found: {task_id}"
+            raise FileNotFoundError(msg)
         return self._load_task(path)
 
     def update_task(self, task_id: str, **fields: object) -> Task:
@@ -101,7 +110,8 @@ class TaskStore:
                 if key == "priority":
                     self._validate_priority(str(value))
                 if key == "tags" and not isinstance(value, list):
-                    raise ValueError("tags must be a list")
+                    msg = "tags must be a list"
+                    raise ValueError(msg)
                 setattr(task, key, value)
         task.updated_at = utc_now_iso()
         self._write_task(task)
@@ -114,5 +124,6 @@ class TaskStore:
         self._ensure_ready()
         path = self._task_path(task_id)
         if not path.exists():
-            raise FileNotFoundError(f"Task not found: {task_id}")
+            msg = f"Task not found: {task_id}"
+            raise FileNotFoundError(msg)
         path.unlink()

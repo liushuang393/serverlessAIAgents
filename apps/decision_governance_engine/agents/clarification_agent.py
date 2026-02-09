@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ClarificationAgent - 問題診断/澄清Agent.
 
 ユーザーの質問に即座に答えるのではなく、まず深く診断する。
@@ -9,7 +8,6 @@ import json
 import logging
 from typing import Any
 
-from agentflow import ResilientAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
     Ambiguity,
     ClarificationInput,
@@ -17,6 +15,8 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     CognitiveBias,
     HiddenAssumption,
 )
+
+from agentflow import ResilientAgent
 
 
 class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]):
@@ -166,7 +166,8 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
 
             if data is None:
                 self._logger.error(f"JSON extraction failed. Raw response: {response[:1000]}")
-                raise json.JSONDecodeError("No valid JSON found", response, 0)
+                msg = "No valid JSON found"
+                raise json.JSONDecodeError(msg, response, 0)
 
             # 詳細ログ: 抽出されたJSON
             self._logger.debug(f"Extracted JSON: {data}")
@@ -300,7 +301,7 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
         """認知バイアスを検出."""
         biases = []
 
-        for bias_id, bias_info in self.COGNITIVE_BIAS_PATTERNS.items():
+        for _bias_id, bias_info in self.COGNITIVE_BIAS_PATTERNS.items():
             if any(kw in question for kw in bias_info["keywords"]):
                 biases.append(CognitiveBias(
                     bias=bias_info["name"],
@@ -357,7 +358,5 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
     def validate_output(self, output: ClarificationOutput) -> bool:
         """出力検証."""
         # 復唱と精緻化は必須
-        if not output.restated_question or not output.refined_question:
-            return False
-        return True
+        return not (not output.restated_question or not output.refined_question)
 

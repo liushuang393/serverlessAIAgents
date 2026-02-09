@@ -255,7 +255,7 @@ class FileOrganizerAgent:
 
                 files = result.result or []
             except Exception as e:
-                self._logger.error("Gateway呼び出しエラー: %s", e)
+                self._logger.exception("Gateway呼び出しエラー: %s", e)
                 return analysis
         else:
             # ローカルファイルシステムを直接使用（フォールバック）
@@ -273,7 +273,7 @@ class FileOrganizerAgent:
                     for f in p.iterdir()
                 ]
             except Exception as e:
-                self._logger.error("ローカルファイル取得エラー: %s", e)
+                self._logger.exception("ローカルファイル取得エラー: %s", e)
                 return analysis
 
         # 分析
@@ -421,7 +421,7 @@ class FileOrganizerAgent:
         # アクションを実行/記録
         for action in plan:
             action_type = action.get("type")
-            source = action.get("source")
+            action.get("source")
             target = action.get("target")
 
             if action_type == "create_dir":
@@ -479,7 +479,7 @@ class FileOrganizerAgent:
 
         # カテゴリフォルダの作成
         if rules.get("create_category_folders"):
-            for category in analysis.by_category.keys():
+            for category in analysis.by_category:
                 folder_name = category_names.get(category, category.capitalize())
                 target_path = str(Path(analysis.path) / folder_name)
                 actions.append(
@@ -507,11 +507,10 @@ class FileOrganizerAgent:
         Returns:
             リネーム結果
         """
-        result = OrganizationResult(dry_run=True)
+        return OrganizationResult(dry_run=True)
 
         # TODO: LLMを使用してファイル名を分析し、統一的なリネームを提案
 
-        return result
 
     async def find_duplicates(
         self,

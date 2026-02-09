@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Decision Governance Engine - メインエントリーポイント.
 
 PipelineEngine パターンを使用した CLI エントリーポイント。

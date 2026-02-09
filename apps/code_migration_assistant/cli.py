@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Code Migration Assistant CLI.
 
 このスクリプトはCode Migration AssistantのCLIインターフェースを提供します。
@@ -8,6 +7,7 @@ import asyncio
 import sys
 from pathlib import Path
 from typing import Any
+
 
 # プロジェクトルートをPythonパスに追加
 project_root = Path(__file__).parent.parent.parent
@@ -23,7 +23,6 @@ async def migrate_cobol_file(file_path: str) -> dict[str, Any]:
     Returns:
         移行結果
     """
-    from agentflow import MCPToolClient as MCPClient
     from apps.code_migration_assistant.mcp_tools import (
         COBOLParser,
         CodeValidator,
@@ -31,6 +30,8 @@ async def migrate_cobol_file(file_path: str) -> dict[str, Any]:
         ReflectionPattern,
     )
     from apps.code_migration_assistant.orchestrator import CodeMigrationOrchestrator
+
+    from agentflow import MCPToolClient as MCPClient
 
     # MCPClientを作成
     client = MCPClient()
@@ -49,11 +50,10 @@ async def migrate_cobol_file(file_path: str) -> dict[str, Any]:
         cobol_code = f.read()
 
     # 移行実行
-    result = await orchestrator.migrate(
+    return await orchestrator.migrate(
         cobol_code=cobol_code, file_name=Path(file_path).name
     )
 
-    return result
 
 
 async def main() -> None:

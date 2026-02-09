@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DatabaseConnector - データベースコネクタ.
 
 PostgreSQL / MySQL / SQLite への統一アクセスを提供。
@@ -19,13 +18,13 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, timezone
-from typing import Any, AsyncIterator, Dict, List, Union
+from typing import Any
 
 from pydantic import Field
 
 from agentflow.datalake.connector import ConnectorConfig, DataConnector
 from agentflow.datalake.core import DataItem, ReadResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -90,17 +89,23 @@ class DatabaseConnector(DataConnector):
             try:
                 from sqlalchemy.ext.asyncio import create_async_engine
             except ImportError as e:
-                raise ImportError(
+                msg = (
                     "SQLAlchemy is required for database support. "
                     "Install with: pip install sqlalchemy[asyncio]"
+                )
+                raise ImportError(
+                    msg
                 ) from e
 
             import os
             conn_str = self._config.connection_string or os.getenv("DATABASE_URL")
             if not conn_str:
-                raise ValueError(
+                msg = (
                     "Database connection string required. "
                     "Set DATABASE_URL environment variable."
+                )
+                raise ValueError(
+                    msg
                 )
 
             self._engine = create_async_engine(
@@ -146,6 +151,7 @@ class DatabaseConnector(DataConnector):
             DataItemのリスト（各テーブル）
         """
         import fnmatch
+
         from sqlalchemy import inspect
 
         engine = await self._get_engine()
@@ -193,7 +199,8 @@ class DatabaseConnector(DataConnector):
 
         # テーブル名のサニタイズ（SQLインジェクション対策）
         if not table.isidentifier():
-            raise ValueError(f"Invalid table name: {table}")
+            msg = f"Invalid table name: {table}"
+            raise ValueError(msg)
 
         query = f"SELECT * FROM {table}"
         if schema:
@@ -240,17 +247,16 @@ class DatabaseConnector(DataConnector):
         # データ準備
         if isinstance(content, bytes):
             content = content.decode("utf-8")
-        if isinstance(content, str):
-            rows = json.loads(content)
-        else:
-            rows = content
+        rows = json.loads(content) if isinstance(content, str) else content
 
         if not rows:
-            raise ValueError("No data to insert")
+            msg = "No data to insert"
+            raise ValueError(msg)
 
         # テーブル名のサニタイズ
         if not table.isidentifier():
-            raise ValueError(f"Invalid table name: {table}")
+            msg = f"Invalid table name: {table}"
+            raise ValueError(msg)
 
         # INSERT文生成
         columns = list(rows[0].keys())
@@ -303,7 +309,8 @@ class DatabaseConnector(DataConnector):
         schema, table = self._parse_path(path)
 
         if not table.isidentifier():
-            raise ValueError(f"Invalid table name: {table}")
+            msg = f"Invalid table name: {table}"
+            raise ValueError(msg)
 
         full_table = f"{schema}.{table}" if schema else table
 
@@ -313,7 +320,7 @@ class DatabaseConnector(DataConnector):
             logger.warning(f"Dropped table {full_table}")
             return True
         except Exception as e:
-            logger.error(f"Failed to drop table {full_table}: {e}")
+            logger.exception(f"Failed to drop table {full_table}: {e}")
             return False
 
     async def query(

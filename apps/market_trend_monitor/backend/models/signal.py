@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Signal Scoring モデル定義.
 
 信号評価システムのデータモデル。
@@ -15,7 +14,7 @@ from pydantic import BaseModel, Field
 
 class SignalGrade(str, Enum):
     """信号グレード.
-    
+
     スコアに基づく信号強度の分類:
     - A (強信号): ≥4.0 - 高確度で行動可能
     - B (中信号): 3.0-3.9 - 注視すべき兆候
@@ -37,7 +36,7 @@ class SignalGrade(str, Enum):
 @dataclass
 class SignalScore:
     """5軸信号スコア.
-    
+
     各軸は0-1の範囲で評価されます。
     """
 
@@ -64,9 +63,9 @@ class SignalScore:
         total = self.total
         if total >= 4.0:
             return SignalGrade.A
-        elif total >= 3.0:
+        if total >= 3.0:
             return SignalGrade.B
-        elif total >= 2.0:
+        if total >= 2.0:
             return SignalGrade.C
         return SignalGrade.D
 
@@ -86,7 +85,7 @@ class SignalScore:
 @dataclass
 class Signal:
     """信号データモデル.
-    
+
     トレンドに対する信号評価結果を表現します。
     """
 

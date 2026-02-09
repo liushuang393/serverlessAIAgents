@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Lifecycle - 生命周期钩子.
 
 应用和请求生命周期管理。
@@ -18,7 +17,12 @@ import logging
 import time
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable, Coroutine
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Coroutine
+
 
 _logger = logging.getLogger(__name__)
 
@@ -72,13 +76,13 @@ class HookInfo:
             else:
                 result = self.handler(*args, **kwargs)
             return result
-        except asyncio.TimeoutError:
-            _logger.error(f"Hook '{self.name}' timed out after {self.timeout}s")
+        except TimeoutError:
+            _logger.exception(f"Hook '{self.name}' timed out after {self.timeout}s")
             if self.required:
                 raise
             return None
         except Exception as e:
-            _logger.error(f"Hook '{self.name}' failed: {e}")
+            _logger.exception(f"Hook '{self.name}' failed: {e}")
             if self.required:
                 raise
             return None
@@ -241,7 +245,7 @@ class LifecycleManager:
                 result = await hook.execute(*args, **kwargs)
                 results.append(result)
             except Exception as e:
-                _logger.error(f"Hook '{hook.name}' failed: {e}")
+                _logger.exception(f"Hook '{hook.name}' failed: {e}")
                 if hook.required:
                     raise
         return results
@@ -270,7 +274,7 @@ class LifecycleManager:
 
             except Exception as e:
                 self._phase = LifecyclePhase.STOPPED
-                _logger.error(f"Startup failed: {e}")
+                _logger.exception(f"Startup failed: {e}")
                 raise
 
     async def shutdown(self) -> None:
@@ -285,7 +289,7 @@ class LifecycleManager:
             try:
                 await self._run_hooks(self._shutdown_hooks)
             except Exception as e:
-                _logger.error(f"Shutdown error: {e}")
+                _logger.exception(f"Shutdown error: {e}")
             finally:
                 self._phase = LifecyclePhase.STOPPED
                 duration = (time.time() - start_time) * 1000
@@ -350,10 +354,10 @@ def get_lifecycle_manager() -> LifecycleManager:
 
 
 __all__ = [
-    "LifecyclePhase",
-    "HookPriority",
     "HookInfo",
+    "HookPriority",
     "LifecycleEvent",
     "LifecycleManager",
+    "LifecyclePhase",
     "get_lifecycle_manager",
 ]

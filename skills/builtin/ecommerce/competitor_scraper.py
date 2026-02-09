@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """競品採集スキル - Competitor Scraper.
 
 ECプラットフォームから競合商品情報を収集するスキル。

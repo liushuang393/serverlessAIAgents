@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Evidence Ledger サービス.
 
 証拠台帳の管理を行うビジネスロジック層。
@@ -13,9 +12,7 @@ import hashlib
 import logging
 import uuid
 from datetime import datetime
-
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from typing import TYPE_CHECKING
 
 from apps.market_trend_monitor.backend.db.models import ClaimModel, EvidenceModel
 from apps.market_trend_monitor.backend.db.session import async_session, init_db
@@ -26,6 +23,11 @@ from apps.market_trend_monitor.backend.models import (
     Evidence,
     SourceType,
 )
+from sqlalchemy import select
+
+
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 
 class EvidenceService:
@@ -244,7 +246,7 @@ class EvidenceService:
 
     def _compute_content_hash(self, url: str, content: str) -> str:
         """コンテンツハッシュを計算."""
-        data = f"{url}:{content}".encode("utf-8")
+        data = f"{url}:{content}".encode()
         return hashlib.sha256(data).hexdigest()[:16]
 
     async def _find_by_hash(

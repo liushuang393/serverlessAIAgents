@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Market Trend Analysis Skill - 市場動向分析.
 
 このSkillは市場動向を自動分析するための機能を提供します：
@@ -16,7 +15,7 @@ Anthropic Skills体系に準拠し、以下の3層構造を採用：
     >>> from agentflow.skills import SkillRouter
     >>> router = SkillRouter()
     >>> await router.initialize()
-    >>> 
+    >>>
     >>> result = router.route("市場トレンドを分析")
     >>> if result.matched:
     ...     skill = result.skill
@@ -28,6 +27,7 @@ Anthropic Skills体系に準拠し、以下の3層構造を採用：
 """
 
 from pathlib import Path
+
 
 # Skillディレクトリパス
 SKILL_DIR = Path(__file__).parent

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """WebSocket Hub - 統一 WebSocket 接続管理.
 
 設計原則:
@@ -81,7 +80,7 @@ class WSMessage(BaseModel):
         return json.dumps(self.model_dump(), ensure_ascii=False, default=str)
 
     @classmethod
-    def from_json(cls, data: str | bytes) -> "WSMessage":
+    def from_json(cls, data: str | bytes) -> WSMessage:
         """JSONから作成."""
         if isinstance(data, bytes):
             data = data.decode("utf-8")
@@ -383,7 +382,7 @@ class WebSocketHub:
             try:
                 await handler(client_id, data)
             except Exception as e:
-                self._logger.error("Handler error for %s: %s", event_type, e)
+                self._logger.exception("Handler error for %s: %s", event_type, e)
 
     # =========================================================================
     # ミドルウェア
@@ -441,10 +440,10 @@ class WebSocketHub:
 
 
 __all__ = [
-    "WebSocketHub",
     "WSClient",
+    "WSHandler",
     "WSMessage",
     "WSMessageType",
-    "WSHandler",
     "WSMiddleware",
+    "WebSocketHub",
 ]

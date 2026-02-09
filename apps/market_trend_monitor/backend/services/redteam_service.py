@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Red Team Challenge サービス.
 
 反証分析の管理を行うビジネスロジック層。
@@ -15,7 +14,6 @@ from apps.market_trend_monitor.backend.models import (
     ChallengeResult,
     ChallengeType,
     Claim,
-    ClaimLevel,
 )
 
 

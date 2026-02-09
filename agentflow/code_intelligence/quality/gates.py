@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """QualityGate - 品質ゲート.
 
 コード変換の品質を検証するゲートを定義します。
@@ -14,7 +13,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -365,12 +364,12 @@ class QualityGateRunner:
 
 
 __all__ = [
-    "QualityLevel",
-    "QualityIssue",
     "GateResult",
-    "QualityReport",
     "QualityGate",
-    "SyntaxValidator",
-    "SemanticValidator",
     "QualityGateRunner",
+    "QualityIssue",
+    "QualityLevel",
+    "QualityReport",
+    "SemanticValidator",
+    "SyntaxValidator",
 ]

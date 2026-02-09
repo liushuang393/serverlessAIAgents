@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ICodeGenerator - コード生成器インターフェース.
 
 Workflow から実行可能なコードを生成するインターフェース。
@@ -8,10 +7,12 @@ Workflow から実行可能なコードを生成するインターフェース�
 
 from __future__ import annotations
 
-from io import BytesIO
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
 
 if TYPE_CHECKING:
+    from io import BytesIO
+
     from agentflow.core.interfaces.types import (
         CodeGenOptions,
         CodeOutputType,
@@ -45,10 +46,10 @@ class ICodeGenerator(Protocol):
 
     async def generate(
         self,
-        workflow: "WorkflowDefinition",
-        output_type: "CodeOutputType",
-        options: "CodeGenOptions | None" = None,
-    ) -> "GeneratedCode":
+        workflow: WorkflowDefinition,
+        output_type: CodeOutputType,
+        options: CodeGenOptions | None = None,
+    ) -> GeneratedCode:
         """コードを生成.
 
         Args:
@@ -66,9 +67,9 @@ class ICodeGenerator(Protocol):
 
     async def preview(
         self,
-        workflow: "WorkflowDefinition",
-        output_type: "CodeOutputType",
-    ) -> dict[str, "FilePreview"]:
+        workflow: WorkflowDefinition,
+        output_type: CodeOutputType,
+    ) -> dict[str, FilePreview]:
         """生成されるファイルをプレビュー.
 
         実際のコード生成を行わずに、生成されるファイルの
@@ -85,9 +86,9 @@ class ICodeGenerator(Protocol):
 
     async def export_zip(
         self,
-        workflow: "WorkflowDefinition",
-        output_type: "CodeOutputType",
-        options: "CodeGenOptions | None" = None,
+        workflow: WorkflowDefinition,
+        output_type: CodeOutputType,
+        options: CodeGenOptions | None = None,
     ) -> BytesIO:
         """ZIP ファイルとしてエクスポート.
 
@@ -103,7 +104,7 @@ class ICodeGenerator(Protocol):
 
     def get_supported_frameworks(
         self,
-        output_type: "CodeOutputType",
+        output_type: CodeOutputType,
     ) -> list[str]:
         """サポートされているフレームワークを取得.
 

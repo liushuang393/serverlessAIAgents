@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """認証関連APIルーター.
 
 エンドポイント:
@@ -15,6 +14,7 @@ from typing import Any
 
 from fastapi import APIRouter, Cookie, Depends, Response
 from pydantic import BaseModel, Field
+
 
 logger = logging.getLogger("decision_api.auth")
 
@@ -57,25 +57,25 @@ class AuthResponse(BaseModel):
 
 DEMO_USERS = {
     "admin": {
-        "password_hash": hashlib.sha256("admin123".encode()).hexdigest(),
+        "password_hash": hashlib.sha256(b"admin123").hexdigest(),
         "display_name": "管理者 太郎",
         "department": "経営企画部",
         "position": "部長",
     },
     "tanaka": {
-        "password_hash": hashlib.sha256("tanaka123".encode()).hexdigest(),
+        "password_hash": hashlib.sha256(b"tanaka123").hexdigest(),
         "display_name": "田中 一郎",
         "department": "技術開発本部",
         "position": "シニアマネージャー",
     },
     "suzuki": {
-        "password_hash": hashlib.sha256("suzuki123".encode()).hexdigest(),
+        "password_hash": hashlib.sha256(b"suzuki123").hexdigest(),
         "display_name": "鈴木 花子",
         "department": "事業戦略室",
         "position": "リーダー",
     },
     "yamamoto": {
-        "password_hash": hashlib.sha256("yamamoto123".encode()).hexdigest(),
+        "password_hash": hashlib.sha256(b"yamamoto123").hexdigest(),
         "display_name": "山本 健太",
         "department": "DX推進部",
         "position": "マネージャー",

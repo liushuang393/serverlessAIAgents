@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Listing生成スキル - Listing Generator.
 
 競合分析に基づいて最適化された商品リスティングを生成するスキル。
@@ -320,8 +319,7 @@ class ListingGenerator(AgentBlock):
     def _generate_backend_keywords(self, keywords: list[str]) -> list[str]:
         """バックエンドキーワードを生成."""
         # プラットフォーム制限に合わせて調整
-        backend = keywords[:50]  # Amazon制限に合わせる
-        return backend
+        return keywords[:50]  # Amazon制限に合わせる
 
     def _calculate_seo_score(
         self,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ChatBot Skill - 対話管理と Agent 連携能力.
 
 このモジュールは、マルチターン対話と Agent 呼び出しを統合した
@@ -21,12 +20,15 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from agentflow.providers import get_llm
-from agentflow.patterns.coordinator import CoordinatorBase
+
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from agentflow.patterns.coordinator import CoordinatorBase
     from agentflow.providers.llm_provider import LLMProvider
     from agentflow.skills.rag import RAGSkill
 
@@ -150,7 +152,7 @@ class ChatBotSkill:
         self,
         config: ChatBotConfig | None = None,
         coordinator: CoordinatorBase | None = None,
-        rag_skill: "RAGSkill | None" = None,
+        rag_skill: RAGSkill | None = None,
         pre_hook: Callable[[str, ChatSession], str] | None = None,
         post_hook: Callable[[str, ChatSession], str] | None = None,
         *,
@@ -174,7 +176,7 @@ class ChatBotSkill:
         self._logger = logging.getLogger(__name__)
 
         # LLM プロバイダー（環境変数から自動検出・松耦合）
-        self._llm: "LLMProvider" = get_llm(temperature=temperature)
+        self._llm: LLMProvider = get_llm(temperature=temperature)
 
         # オプション機能
         self._coordinator = coordinator

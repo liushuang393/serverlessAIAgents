@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Python Parser - Pythonパーサー.
 
 Pythonソースコードを解析してUnifiedASTを生成します。
@@ -14,21 +13,21 @@ from __future__ import annotations
 import ast as python_ast
 import logging
 import time
-from typing import Any
 
+from agentflow.code_intelligence.ast.unified_ast import (
+    ASTNode,
+    ASTNodeType,
+    ImportInfo,
+    SymbolInfo,
+    TypeInfo,
+    UnifiedAST,
+)
 from agentflow.code_intelligence.parsers.base import (
     CodeParser,
     ParseContext,
     ParseResult,
 )
-from agentflow.code_intelligence.ast.unified_ast import (
-    UnifiedAST,
-    ASTNode,
-    ASTNodeType,
-    SymbolInfo,
-    ImportInfo,
-    TypeInfo,
-)
+
 
 _logger = logging.getLogger(__name__)
 
@@ -132,7 +131,7 @@ class PythonParser(CodeParser):
             )
 
         except Exception as e:
-            _logger.error(f"Python parsing failed: {e}")
+            _logger.exception(f"Python parsing failed: {e}")
             return ParseResult(
                 success=False,
                 errors=[str(e)],
@@ -154,7 +153,7 @@ class PythonParser(CodeParser):
                 ))
             return None
 
-        elif isinstance(node, python_ast.ImportFrom):
+        if isinstance(node, python_ast.ImportFrom):
             module = node.module or ""
             for alias in node.names:
                 imports.append(ImportInfo(
@@ -163,7 +162,7 @@ class PythonParser(CodeParser):
                 ))
             return None
 
-        elif isinstance(node, python_ast.ClassDef):
+        if isinstance(node, python_ast.ClassDef):
             class_node = ASTNode(
                 node_type=ASTNodeType.CLASS,
                 name=node.name,
@@ -190,7 +189,7 @@ class PythonParser(CodeParser):
 
             return class_node
 
-        elif isinstance(node, (python_ast.FunctionDef, python_ast.AsyncFunctionDef)):
+        if isinstance(node, (python_ast.FunctionDef, python_ast.AsyncFunctionDef)):
             is_async = isinstance(node, python_ast.AsyncFunctionDef)
 
             # 引数を抽出
@@ -228,7 +227,7 @@ class PythonParser(CodeParser):
 
             return func_node
 
-        elif isinstance(node, python_ast.AnnAssign):
+        if isinstance(node, python_ast.AnnAssign):
             # 型注釈付き変数
             if isinstance(node.target, python_ast.Name):
                 var_name = node.target.id
@@ -280,9 +279,9 @@ class PythonParser(CodeParser):
         """ASTノードから名前を取得."""
         if isinstance(node, python_ast.Name):
             return node.id
-        elif isinstance(node, python_ast.Attribute):
+        if isinstance(node, python_ast.Attribute):
             return f"{self._get_name(node.value)}.{node.attr}"
-        elif isinstance(node, python_ast.Subscript):
+        if isinstance(node, python_ast.Subscript):
             return f"{self._get_name(node.value)}[...]"
         return "unknown"
 

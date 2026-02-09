@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Market Trend Monitor 統合テスト.
 
 このスクリプトはバックエンドAPIの統合テストを実行します。
@@ -7,6 +6,7 @@
 import asyncio
 import sys
 from pathlib import Path
+
 
 # プロジェクトルートをPythonパスに追加
 project_root = Path(__file__).parent.parent.parent
@@ -108,10 +108,9 @@ async def test_workflow_directly() -> bool:
                     if isinstance(output[key], dict):
                         print(f"      - {key}: {len(output[key])}個のキー")
             return True
-        else:
-            error_msg = getattr(result, "error", "Unknown error")
-            print(f"  ❌ ワークフロー実行失敗: {error_msg}")
-            return False
+        error_msg = getattr(result, "error", "Unknown error")
+        print(f"  ❌ ワークフロー実行失敗: {error_msg}")
+        return False
 
     except Exception as e:
         print(f"  ❌ ワークフロー直接テスト失敗: {e}")

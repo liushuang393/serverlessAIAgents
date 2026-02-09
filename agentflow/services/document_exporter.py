@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Document Exporter Service - 汎用ドキュメントエクスポート.
 
 レポートやドキュメントを複数フォーマットでエクスポートする汎用サービス。
@@ -24,17 +23,20 @@ from __future__ import annotations
 import io
 import json
 import logging
-from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.services.base import (
     ServiceBase,
     ServiceEvent,
-    ResultEvent,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 _logger = logging.getLogger(__name__)
 
@@ -74,7 +76,7 @@ class Section:
     title: str
     content: str
     level: int = 1
-    subsections: list["Section"] = field(default_factory=list)
+    subsections: list[Section] = field(default_factory=list)
 
 
 class DocumentExporter(ServiceBase[bytes]):
@@ -223,12 +225,11 @@ h2{{color:#2c3e50;border-left:4px solid #3498db;padding-left:10px}}
         """PDFエクスポート."""
         if not self._has_reportlab:
             # HTML代替
-            html_bytes = await self._export_html(content, options)
-            return html_bytes
+            return await self._export_html(content, options)
 
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import getSampleStyleSheet
-        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+        from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
         title = options.get("title", self._config.title)
         sections = content.get("sections", [])
@@ -256,7 +257,7 @@ __all__ = [
     "DocumentExporter",
     "ExportConfig",
     "ExportFormat",
-    "TemplateType",
     "Section",
+    "TemplateType",
 ]
 

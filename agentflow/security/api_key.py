@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """API Key 管理モジュール.
 
 API Key の生成、検証、管理を提供します。
@@ -13,13 +12,13 @@ API Key の生成、検証、管理を提供します。
 from __future__ import annotations
 
 import hashlib
-import hmac
 import logging
 import secrets
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +71,7 @@ class APIKey:
     name: str
     key_hash: str
     scopes: list[str] = field(default_factory=list)
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     expires_at: datetime | None = None
     last_used_at: datetime | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -87,10 +86,7 @@ class APIKey:
         if not self.enabled:
             return False
 
-        if self.expires_at and datetime.now(timezone.utc) > self.expires_at:
-            return False
-
-        return True
+        return not (self.expires_at and datetime.now(UTC) > self.expires_at)
 
     def has_scope(self, scope: str) -> bool:
         """スコープを持っているかを確認.
@@ -253,7 +249,7 @@ class APIKeyManager:
                 return None
 
             # 最終使用日時を更新
-            api_key.last_used_at = datetime.now(timezone.utc)
+            api_key.last_used_at = datetime.now(UTC)
 
         return api_key
 
@@ -350,7 +346,7 @@ class APIKeyManager:
         Returns:
             削除したキーの数
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         expired_ids = []
 
         with self._lock:

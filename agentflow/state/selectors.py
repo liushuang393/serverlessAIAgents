@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """状態セレクター.
 
 状態から必要な部分を効率的に取得するセレクターを提供。
@@ -22,7 +21,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 T = TypeVar("T")
 
@@ -99,7 +103,7 @@ def select(
     return current
 
 
-def create_selector(
+def create_selector[T](
     path: str,
     transform: Callable[[Any], T] | None = None,
     default: Any = None,
@@ -199,17 +203,17 @@ def select_pending_approvals(state: dict[str, Any]) -> list[dict[str, Any]]:
 # エクスポート
 __all__ = [
     "StateSelector",
-    "select",
-    "create_selector",
     "compose_selectors",
-    "select_execution_status",
-    "select_progress",
-    "select_current_step",
-    "select_context",
-    "select_results",
-    "select_error",
-    "select_plan",
-    "select_history",
+    "create_selector",
+    "select",
     "select_checkpoints",
+    "select_context",
+    "select_current_step",
+    "select_error",
+    "select_execution_status",
+    "select_history",
     "select_pending_approvals",
+    "select_plan",
+    "select_progress",
+    "select_results",
 ]

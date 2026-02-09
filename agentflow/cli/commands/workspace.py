@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CLI workspace コマンド.
 
 ワークスペース管理のためのCLIコマンド。Daytonaスタイルの操作を提供。
@@ -15,8 +14,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from pathlib import Path
-from typing import Any
 
 import click
 
@@ -26,13 +23,13 @@ from agentflow.sandbox import (
     get_workspace_manager,
 )
 
+
 logger = logging.getLogger(__name__)
 
 
 @click.group()
 def workspace() -> None:
     """ワークスペース管理コマンド."""
-    pass
 
 
 @workspace.command()

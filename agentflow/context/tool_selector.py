@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tool Relevance Selector - 関連性ベースのツール選択.
 
 クエリに基づいて最も関連性の高いツールを動的に選択する。
@@ -23,12 +22,13 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
+
 if TYPE_CHECKING:
-    from agentflow.providers.tool_provider import RegisteredTool, RiskLevel
+    from agentflow.providers.tool_provider import RegisteredTool
 
 _logger = logging.getLogger(__name__)
 
@@ -138,9 +138,9 @@ class ToolRelevanceSelector:
     async def select_relevant_tools(
         self,
         query: str,
-        all_tools: list["RegisteredTool"],
+        all_tools: list[RegisteredTool],
         max_tools: int | None = None,
-    ) -> list["RegisteredTool"]:
+    ) -> list[RegisteredTool]:
         """関連ツールを選択.
 
         Args:
@@ -158,7 +158,7 @@ class ToolRelevanceSelector:
     async def score_tools(
         self,
         query: str,
-        tools: list["RegisteredTool"],
+        tools: list[RegisteredTool],
     ) -> list[ToolScore]:
         """全ツールをスコアリング.
 
@@ -210,7 +210,7 @@ class ToolRelevanceSelector:
         self,
         scores: list[ToolScore],
         k: int | None = None,
-    ) -> list["RegisteredTool"]:
+    ) -> list[RegisteredTool]:
         """Top-Kツールを選択.
 
         Args:
@@ -251,9 +251,8 @@ class ToolRelevanceSelector:
         words.extend(re.findall(r"[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff]", text))
 
         # ストップワード除去
-        keywords = {w for w in words if w not in self._STOP_WORDS and len(w) > 1}
+        return {w for w in words if w not in self._STOP_WORDS and len(w) > 1}
 
-        return keywords
 
     def _calculate_keyword_score(
         self,
@@ -318,7 +317,7 @@ class ToolRelevanceSelector:
     async def _calculate_semantic_score(
         self,
         query_embedding: list[float],
-        tool: "RegisteredTool",
+        tool: RegisteredTool,
     ) -> float:
         """セマンティックスコアを計算.
 
@@ -347,7 +346,7 @@ class ToolRelevanceSelector:
         # コサイン類似度
         return self._cosine_similarity(query_embedding, tool_embedding)
 
-    def _calculate_safety_score(self, tool: "RegisteredTool") -> float:
+    def _calculate_safety_score(self, tool: RegisteredTool) -> float:
         """安全性スコアを計算.
 
         Args:
@@ -417,7 +416,7 @@ class ToolRelevanceSelector:
         if len(vec1) != len(vec2):
             return 0.0
 
-        dot_product = sum(a * b for a, b in zip(vec1, vec2))
+        dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
         norm1 = sum(a * a for a in vec1) ** 0.5
         norm2 = sum(b * b for b in vec2) ** 0.5
 

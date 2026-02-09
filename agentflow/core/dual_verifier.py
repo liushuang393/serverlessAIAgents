@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """双重校验器 - 多重验证系统.
 
 Manus分析中提到的「多重校验」机制：
@@ -29,16 +28,19 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
-from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
+
 
 logger = logging.getLogger(__name__)
 
 
 class VerifyStatus(str, Enum):
     """校验状态."""
-    
+
     PASS = "pass"          # 通过
     FAIL = "fail"          # 失败
     WARNING = "warning"    # 警告（需关注但可继续）
@@ -47,7 +49,7 @@ class VerifyStatus(str, Enum):
 
 class VerifyType(str, Enum):
     """校验类型."""
-    
+
     SCHEMA = "schema"          # 模式匹配
     SEMANTIC = "semantic"      # 语义检查
     NUMERICAL = "numerical"    # 数值验证
@@ -59,7 +61,7 @@ class VerifyType(str, Enum):
 @dataclass
 class VerifyResult:
     """校验结果.
-    
+
     Attributes:
         status: 校验状态
         verify_type: 校验类型
@@ -69,7 +71,7 @@ class VerifyResult:
         suggestions: 改进建议
         timestamp: 校验时间
     """
-    
+
     status: VerifyStatus
     verify_type: VerifyType = VerifyType.SCHEMA
     confidence: float = 1.0
@@ -77,12 +79,12 @@ class VerifyResult:
     details: dict[str, Any] = field(default_factory=dict)
     suggestions: list[str] = field(default_factory=list)
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
     @property
     def is_valid(self) -> bool:
         """是否有效（通过或警告）."""
         return self.status in (VerifyStatus.PASS, VerifyStatus.WARNING)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """转换为字典."""
         return {
@@ -98,7 +100,7 @@ class VerifyResult:
 
 class VerifyStrategy(ABC):
     """校验策略基类."""
-    
+
     @abstractmethod
     async def verify(
         self,
@@ -106,11 +108,11 @@ class VerifyStrategy(ABC):
         context: dict[str, Any],
     ) -> VerifyResult:
         """执行校验.
-        
+
         Args:
             data: 待校验数据
             context: 上下文信息
-        
+
         Returns:
             VerifyResult
         """
@@ -119,11 +121,11 @@ class VerifyStrategy(ABC):
 
 class SchemaVerifyStrategy(VerifyStrategy):
     """模式校验策略."""
-    
+
     def __init__(self, schema: type[BaseModel]) -> None:
         """初始化."""
         self._schema = schema
-    
+
     async def verify(
         self,
         data: dict[str, Any],
@@ -303,7 +305,7 @@ class DualVerifier:
                 result = await strategy.verify(data, context)
                 results.append(result)
             except Exception as e:
-                self._logger.error(f"策略执行失败: {e}")
+                self._logger.exception(f"策略执行失败: {e}")
                 results.append(VerifyResult(
                     status=VerifyStatus.FAIL,
                     message=f"策略执行异常: {e}",
@@ -397,7 +399,7 @@ class DualVerifier:
             )
 
         # 统计各状态数量
-        status_counts = {status: 0 for status in VerifyStatus}
+        status_counts = dict.fromkeys(VerifyStatus, 0)
         for r in results:
             status_counts[r.status] += 1
 

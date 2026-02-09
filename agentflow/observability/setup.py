@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """可観測性セットアップモジュール.
 
 ログ、メトリクス、トレーシング、エラー追跡を一括設定します。
@@ -18,12 +17,18 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.observability.logging import LogLevel, setup_logging
-from agentflow.observability.metrics import MetricsCollector, setup_metrics
+from agentflow.observability.metrics import setup_metrics
 from agentflow.observability.sentry_integration import setup_sentry
 from agentflow.observability.tracing import setup_tracing
+
+
+if TYPE_CHECKING:
+    from starlette.requests import Request
+    from starlette.responses import Response
+
 
 logger = logging.getLogger(__name__)
 
@@ -147,8 +152,6 @@ def create_fastapi_middleware() -> Any:
     """
     try:
         from starlette.middleware.base import BaseHTTPMiddleware
-        from starlette.requests import Request
-        from starlette.responses import Response
     except ImportError:
         logger.warning("Starlette not installed. FastAPI middleware not available.")
         return None

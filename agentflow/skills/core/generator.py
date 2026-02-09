@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Skill 生成器 - 自動進化の核心コンポーネント.
 
 このモジュールは新しい Skill を自動生成する機能を提供します：
@@ -19,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 
 from agentflow.providers import get_llm
 from agentflow.skills.core.base import Skill, SkillMetadata
+
 
 if TYPE_CHECKING:
     from agentflow.providers.llm_provider import LLMProvider
@@ -42,7 +42,7 @@ class GenerationResult:
 
 
 # Skill 生成用プロンプトテンプレート
-SKILL_GENERATION_PROMPT = '''あなたは Skill 生成の専門家です。
+SKILL_GENERATION_PROMPT = """あなたは Skill 生成の専門家です。
 ユーザーの要求に基づいて、Claude Code Skills 形式の SKILL.md を生成してください。
 
 ## ユーザー要求
@@ -78,7 +78,7 @@ tags:
 - 指示内容は具体的で実行可能なものに
 
 SKILL.md のみを出力してください。説明文は不要です。
-'''
+"""
 
 
 class SkillGenerator:
@@ -111,7 +111,7 @@ class SkillGenerator:
             llm_provider: LLM プロバイダー（省略時は自動検出）
             max_retries: 最大リトライ回数
         """
-        self._llm: "LLMProvider" = llm_provider or get_llm()
+        self._llm: LLMProvider = llm_provider or get_llm()
         self._max_retries = max_retries
         self._logger = logging.getLogger(__name__)
 
@@ -141,7 +141,7 @@ class SkillGenerator:
                 self._logger.warning(f"Parse failed, attempt {attempt}/{self._max_retries}")
 
             except Exception as e:
-                self._logger.error(f"Generation error: {e}")
+                self._logger.exception(f"Generation error: {e}")
                 if attempt == self._max_retries:
                     return GenerationResult(
                         skill=None, success=False, error=str(e), attempts=attempt

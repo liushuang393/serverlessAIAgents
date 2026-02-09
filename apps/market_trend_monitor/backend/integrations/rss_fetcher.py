@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RSS フィード取得."""
 
 from __future__ import annotations

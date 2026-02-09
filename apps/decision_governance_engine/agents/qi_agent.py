@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """QiAgent - 技術実装Agent（器）.
 
 実行計画を技術的な実装方針に変換する。
@@ -12,8 +11,6 @@
 import logging
 from typing import Any
 
-from agentflow import ResilientAgent
-from agentflow.core.exceptions import AgentOutputValidationError
 from apps.decision_governance_engine.schemas.agent_schemas import (
     DomainSpecificTechnology,
     GeographicConsideration,
@@ -23,6 +20,9 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     RegulatoryConsideration,
     ShuOutput,
 )
+
+from agentflow import ResilientAgent
+from agentflow.core.exceptions import AgentOutputValidationError
 
 
 class QiAgent(ResilientAgent[QiInput, QiOutput]):

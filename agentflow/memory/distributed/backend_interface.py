@@ -30,12 +30,10 @@ class MemoryBackend(ABC):
         Raises:
             ConnectionError: 接続に失敗した場合
         """
-        pass
 
     @abstractmethod
     async def disconnect(self) -> None:
         """バックエンドから切断."""
-        pass
 
     @abstractmethod
     async def save(self, entry: MemoryEntry) -> None:
@@ -48,7 +46,6 @@ class MemoryBackend(ABC):
             ValueError: 無効なエントリの場合
             IOError: 保存に失敗した場合
         """
-        pass
 
     @abstractmethod
     async def load(self, entry_id: str) -> MemoryEntry | None:
@@ -63,7 +60,6 @@ class MemoryBackend(ABC):
         Raises:
             IOError: 読み込みに失敗した場合
         """
-        pass
 
     @abstractmethod
     async def delete(self, entry_id: str) -> bool:
@@ -78,7 +74,6 @@ class MemoryBackend(ABC):
         Raises:
             IOError: 削除に失敗した場合
         """
-        pass
 
     @abstractmethod
     async def search(
@@ -100,7 +95,6 @@ class MemoryBackend(ABC):
         Raises:
             IOError: 検索に失敗した場合
         """
-        pass
 
     @abstractmethod
     async def exists(self, entry_id: str) -> bool:
@@ -115,7 +109,6 @@ class MemoryBackend(ABC):
         Raises:
             IOError: 確認に失敗した場合
         """
-        pass
 
     @abstractmethod
     async def count(self, topic: str | None = None) -> int:
@@ -130,7 +123,6 @@ class MemoryBackend(ABC):
         Raises:
             IOError: 取得に失敗した場合
         """
-        pass
 
     @abstractmethod
     async def clear(self, topic: str | None = None) -> int:
@@ -145,7 +137,6 @@ class MemoryBackend(ABC):
         Raises:
             IOError: クリアに失敗した場合
         """
-        pass
 
     @abstractmethod
     def get_status(self) -> dict[str, Any]:
@@ -154,5 +145,4 @@ class MemoryBackend(ABC):
         Returns:
             状態情報
         """
-        pass
 

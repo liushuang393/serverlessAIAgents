@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FlyioTarget - Fly.io デプロイターゲット.
 
 Fly.io へのグローバル分散デプロイを実装します。
@@ -8,9 +7,7 @@ from __future__ import annotations
 
 import logging
 import subprocess
-from collections.abc import AsyncIterator
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.core.interfaces import (
     ConfigField,
@@ -19,6 +16,12 @@ from agentflow.core.interfaces import (
     ValidationResult,
 )
 from agentflow.deploy.targets.base import BaseDeployTarget
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
+
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +150,7 @@ class FlyioTarget(BaseDeployTarget):
         self, app_name: str, region: str, config: DeployConfig
     ) -> str:
         """fly.toml 設定を生成."""
-        return f'''# Fly.io Configuration
+        return f"""# Fly.io Configuration
 app = "{app_name}"
 primary_region = "{region}"
 
@@ -164,7 +167,7 @@ primary_region = "{region}"
   cpu_kind = "shared"
   cpus = 1
   memory_mb = {config.settings.get("memory", 256)}
-'''
+"""
 
     def get_config_fields(self) -> list[ConfigField]:
         """設定フィールドを取得."""

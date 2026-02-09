@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Decision Governance Engine - 契約レスポンス組み立て.
 
 目的:
@@ -18,10 +17,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import datetime
-from typing import Any, Mapping
-
-from pydantic import BaseModel
+from typing import Any
 
 from apps.decision_governance_engine.schemas.contract_schemas import (
     Claim,
@@ -30,6 +28,7 @@ from apps.decision_governance_engine.schemas.contract_schemas import (
     DecisionMode,
     DecisionRole,
 )
+from pydantic import BaseModel
 
 
 def _to_mapping(obj: Any) -> Mapping[str, Any]:

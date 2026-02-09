@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentFlow 知識ベース統合モジュール.
 
 RAG（検索増強生成）パターンの完全な実装を提供します：
@@ -21,84 +20,85 @@ RAG（検索増強生成）パターンの完全な実装を提供します：
     >>> results = await search("類似検索クエリ", top_k=5)
 """
 
+from agentflow.knowledge.doc_health_checker import (
+    DocHealthChecker,
+    DocHealthConfig,
+    Document,
+    HealthIssue,
+    HealthReport,
+    HealthStatus,
+    IssueSeverity,
+    IssueType,
+)
 from agentflow.knowledge.document_loader import (
-    DocumentLoader,
     CSVLoader,
+    DocumentChunk,
+    DocumentLoader,
+    HTMLLoader,
     JSONLoader,
     MarkdownLoader,
     PDFLoader,
     TextLoader,
-    HTMLLoader,
-    DocumentChunk,
-)
-from agentflow.knowledge.rag_pipeline import (
-    RAGPipeline,
-    RAGConfig,
-    RAGResult,
 )
 from agentflow.knowledge.hooks import (
-    use_vector_search,
-    use_rag,
-    VectorSearchHook,
     RAGHook,
+    VectorSearchHook,
+    use_rag,
+    use_vector_search,
 )
 
 # 新規追加: 隔離KB、ドキュメント健康度
 from agentflow.knowledge.isolated_kb import (
     IsolatedKBManager,
+    KBAccessLog,
     KBConfig,
     KBDocument,
     KBType,
     KBVisibility,
     SearchResult,
-    KBAccessLog,
 )
-from agentflow.knowledge.doc_health_checker import (
-    DocHealthChecker,
-    DocHealthConfig,
-    Document,
-    HealthReport,
-    HealthIssue,
-    HealthStatus,
-    IssueType,
-    IssueSeverity,
+from agentflow.knowledge.rag_pipeline import (
+    RAGConfig,
+    RAGPipeline,
+    RAGResult,
 )
 
+
 __all__ = [
-    # Document Loaders
-    "DocumentLoader",
     "CSVLoader",
-    "JSONLoader",
-    "MarkdownLoader",
-    "PDFLoader",
-    "TextLoader",
-    "HTMLLoader",
-    "DocumentChunk",
-    # RAG Pipeline
-    "RAGPipeline",
-    "RAGConfig",
-    "RAGResult",
-    # Hooks
-    "use_vector_search",
-    "use_rag",
-    "VectorSearchHook",
-    "RAGHook",
-    # 隔離KB
-    "IsolatedKBManager",
-    "KBConfig",
-    "KBDocument",
-    "KBType",
-    "KBVisibility",
-    "SearchResult",
-    "KBAccessLog",
     # ドキュメント健康度
     "DocHealthChecker",
     "DocHealthConfig",
     "Document",
-    "HealthReport",
+    "DocumentChunk",
+    # Document Loaders
+    "DocumentLoader",
+    "HTMLLoader",
     "HealthIssue",
+    "HealthReport",
     "HealthStatus",
-    "IssueType",
+    # 隔離KB
+    "IsolatedKBManager",
     "IssueSeverity",
+    "IssueType",
+    "JSONLoader",
+    "KBAccessLog",
+    "KBConfig",
+    "KBDocument",
+    "KBType",
+    "KBVisibility",
+    "MarkdownLoader",
+    "PDFLoader",
+    "RAGConfig",
+    "RAGHook",
+    # RAG Pipeline
+    "RAGPipeline",
+    "RAGResult",
+    "SearchResult",
+    "TextLoader",
+    "VectorSearchHook",
+    "use_rag",
+    # Hooks
+    "use_vector_search",
 ]
 

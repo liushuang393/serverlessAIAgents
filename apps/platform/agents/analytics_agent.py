@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AnalyticsAgent - 分析・レポートAgent.
 
 使用状況の分析とレポート生成を行う。
@@ -12,8 +11,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentflow.core.agent_block import AgentBlock
 from apps.platform.services.tenant_dashboard import TenantDashboard
+
+from agentflow.core.agent_block import AgentBlock
 
 
 class AnalyticsAgent(AgentBlock):
@@ -62,14 +62,13 @@ class AnalyticsAgent(AgentBlock):
 
         if analysis_type == "usage":
             return await self._analyze_usage(tenant_id)
-        elif analysis_type == "trends":
+        if analysis_type == "trends":
             return await self._analyze_trends(tenant_id)
-        elif analysis_type == "components":
+        if analysis_type == "components":
             return await self._analyze_components(tenant_id)
-        elif analysis_type == "recommendations":
+        if analysis_type == "recommendations":
             return await self._generate_recommendations(tenant_id)
-        else:
-            return {"success": False, "error": f"Unknown analysis type: {analysis_type}"}
+        return {"success": False, "error": f"Unknown analysis type: {analysis_type}"}
 
     async def _analyze_usage(self, tenant_id: str) -> dict[str, Any]:
         """使用状況を分析.
@@ -200,7 +199,7 @@ class AnalyticsAgent(AgentBlock):
             提案結果
         """
         stats = await self._dashboard.get_stats(tenant_id)
-        top_components = await self._dashboard.get_top_components(tenant_id, limit=5)
+        await self._dashboard.get_top_components(tenant_id, limit=5)
 
         recommendations = []
 

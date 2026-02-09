@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """内置沙盒工具.
 
 将沙盒功能封装为 MCP Tool，Agent 配置后可用。
@@ -25,6 +24,7 @@ import logging
 from typing import Any
 
 from agentflow.sandbox.base import SandboxConfig, SandboxProvider
+
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,8 @@ def _get_sandbox(provider: str = "microsandbox") -> SandboxProvider:
         from agentflow.sandbox.e2b_provider import E2BProvider
         instance = E2BProvider(config)
     else:
-        raise ValueError(f"Unknown sandbox provider: {provider}. Use: microsandbox/docker/e2b")
+        msg = f"Unknown sandbox provider: {provider}. Use: microsandbox/docker/e2b"
+        raise ValueError(msg)
 
     _sandbox_instances[provider] = instance
     logger.info(f"Sandbox initialized: {provider}")

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Prediction Review サービス.
 
 予測復盤の管理を行うビジネスロジック層。

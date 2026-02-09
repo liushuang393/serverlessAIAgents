@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ComponentLibrary - 共通コンポーネントライブラリ.
 
 Agent, Flow, Tool, Skill, Engine, Template の統一管理。
@@ -31,7 +30,7 @@ import logging
 import threading
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Protocol
 
@@ -108,7 +107,7 @@ class ComponentEntry:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ComponentEntry":
+    def from_dict(cls, data: dict[str, Any]) -> ComponentEntry:
         """辞書から作成."""
         return cls(
             id=data["id"],
@@ -201,10 +200,10 @@ class ComponentLibrary(Registry[ComponentEntry]):
     マルチテナント対応、可視性制御付き。
     """
 
-    _instance: "ComponentLibrary | None" = None
+    _instance: ComponentLibrary | None = None
     _instance_lock = threading.Lock()
 
-    def __new__(cls, store: ComponentStore | None = None) -> "ComponentLibrary":
+    def __new__(cls, store: ComponentStore | None = None) -> ComponentLibrary:
         """シングルトンパターン."""
         with cls._instance_lock:
             if cls._instance is None:
@@ -299,16 +298,12 @@ class ComponentLibrary(Registry[ComponentEntry]):
 
         if entry.visibility == ComponentVisibility.TENANT:
             # テナント内共有: 同じテナントIDならアクセス可
-            if tenant and entry.tenant_id == tenant.tenant_id:
-                return True
-            return False
+            return bool(tenant and entry.tenant_id == tenant.tenant_id)
 
         if entry.visibility == ComponentVisibility.PRIVATE:
             # プライベート: 所有者のみ（簡易実装）
             # 本来は owner_id チェックが必要
-            if tenant and entry.tenant_id == tenant.tenant_id:
-                return True
-            return False
+            return bool(tenant and entry.tenant_id == tenant.tenant_id)
 
         return False
 
@@ -346,13 +341,12 @@ class ComponentLibrary(Registry[ComponentEntry]):
                 continue
 
             # クエリマッチ
-            if query:
-                if (
-                    query_lower not in entry.name.lower()
-                    and query_lower not in entry.description.lower()
-                    and query_lower not in entry.id.lower()
-                ):
-                    continue
+            if query and (
+                query_lower not in entry.name.lower()
+                and query_lower not in entry.description.lower()
+                and query_lower not in entry.id.lower()
+            ):
+                continue
 
             # タイプフィルター
             if types and entry.type not in types:
@@ -432,9 +426,8 @@ class ComponentLibrary(Registry[ComponentEntry]):
         """
         dependents = []
         for entry in self.list_all().values():
-            if component_id in entry.dependencies:
-                if self._check_visibility(entry):
-                    dependents.append(entry)
+            if component_id in entry.dependencies and self._check_visibility(entry):
+                dependents.append(entry)
 
         return dependents
 
@@ -492,11 +485,11 @@ def get_component_library() -> ComponentLibrary:
 
 
 __all__ = [
-    "ComponentType",
-    "ComponentVisibility",
     "ComponentEntry",
     "ComponentLibrary",
     "ComponentStore",
+    "ComponentType",
+    "ComponentVisibility",
     "InMemoryComponentStore",
     "get_component_library",
 ]

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """NewsAPI Integration.
 
 このモジュールはNewsAPIとの統合を提供します。
@@ -114,7 +113,7 @@ class NewsAPIClient:
                         if response.status == 200:
                             data = await response.json()
                             return data.get("articles", [])
-                        elif response.status == 429:
+                        if response.status == 429:
                             # レート制限エラー
                             self._logger.warning(f"Rate limit exceeded (attempt {attempt + 1}/{self._max_retries})")
                             if attempt < self._max_retries - 1:
@@ -127,13 +126,13 @@ class NewsAPIClient:
                                 await asyncio.sleep(1.0)
                                 continue
                             return self._generate_mock_articles(query, page_size)
-            except asyncio.TimeoutError:
-                self._logger.error(f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})")
+            except TimeoutError:
+                self._logger.exception(f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})")
                 if attempt < self._max_retries - 1:
                     await asyncio.sleep(1.0)
                     continue
             except Exception as e:
-                self._logger.error(f"Failed to fetch news from NewsAPI: {e}")
+                self._logger.exception(f"Failed to fetch news from NewsAPI: {e}")
                 if attempt < self._max_retries - 1:
                     await asyncio.sleep(1.0)
                     continue
@@ -182,7 +181,7 @@ class NewsAPIClient:
                         if response.status == 200:
                             data = await response.json()
                             return data.get("articles", [])
-                        elif response.status == 429:
+                        if response.status == 429:
                             # レート制限エラー
                             self._logger.warning(f"Rate limit exceeded (attempt {attempt + 1}/{self._max_retries})")
                             if attempt < self._max_retries - 1:
@@ -195,13 +194,13 @@ class NewsAPIClient:
                                 await asyncio.sleep(1.0)
                                 continue
                             return self._generate_mock_articles(f"top headlines {country}", page_size)
-            except asyncio.TimeoutError:
-                self._logger.error(f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})")
+            except TimeoutError:
+                self._logger.exception(f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})")
                 if attempt < self._max_retries - 1:
                     await asyncio.sleep(1.0)
                     continue
             except Exception as e:
-                self._logger.error(f"Failed to fetch top headlines from NewsAPI: {e}")
+                self._logger.exception(f"Failed to fetch top headlines from NewsAPI: {e}")
                 if attempt < self._max_retries - 1:
                     await asyncio.sleep(1.0)
                     continue

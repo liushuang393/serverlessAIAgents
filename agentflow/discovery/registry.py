@@ -112,7 +112,7 @@ class InMemoryAgentRegistry(AgentDiscoveryBase):
         if strategy == LoadBalanceStrategy.RANDOM:
             return random.choice(candidates)
 
-        elif strategy == LoadBalanceStrategy.WEIGHTED:
+        if strategy == LoadBalanceStrategy.WEIGHTED:
             # 重み付きランダム選択
             total_weight = sum(e.weight for e in candidates)
             r = random.randint(1, total_weight)
@@ -123,13 +123,12 @@ class InMemoryAgentRegistry(AgentDiscoveryBase):
                     return entry
             return candidates[-1]
 
-        else:
-            # ROUND_ROBIN（デフォルト）
-            async with self._lock:
-                counter = self._rr_counters.get(capability, 0)
-                selected = candidates[counter % len(candidates)]
-                self._rr_counters[capability] = counter + 1
-                return selected
+        # ROUND_ROBIN（デフォルト）
+        async with self._lock:
+            counter = self._rr_counters.get(capability, 0)
+            selected = candidates[counter % len(candidates)]
+            self._rr_counters[capability] = counter + 1
+            return selected
 
     async def cleanup_stale(self) -> int:
         """タイムアウトした Agent を UNHEALTHY に変更.

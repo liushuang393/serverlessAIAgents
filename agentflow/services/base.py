@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Service Base - 統一サービス基盤.
 
 このモジュールは、全サービスの基底クラスとイベント定義を提供します。
@@ -18,11 +17,10 @@ import logging
 import time
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator, Callable, Iterator
-from dataclasses import dataclass, field
+from collections.abc import AsyncIterator, Callable
 from datetime import datetime
 from enum import Enum
-from typing import Any, Generic, TypeVar
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -241,7 +239,7 @@ ProgressCallback = Callable[[float, str], None]  # (progress%, message)
 T = TypeVar("T")
 
 
-class ServiceBase(ABC, Generic[T]):
+class ServiceBase[T](ABC):
     """サービス基底クラス.
 
     全サービスはこのクラスを継承。
@@ -450,7 +448,6 @@ class ServiceBase(ABC, Generic[T]):
         Yields:
             イベント
         """
-        pass
 
     # =========================================================================
     # ヘルパーメソッド（サブクラス用）
@@ -526,22 +523,22 @@ class ServiceBase(ABC, Generic[T]):
 # =============================================================================
 
 __all__ = [
-    # イベントタイプ
-    "ServiceEventType",
-    "LogLevel",
-    # イベントモデル
-    "ServiceEvent",
-    "ProgressEvent",
-    "LogEvent",
-    "ResultEvent",
-    "ErrorEvent",
     "ApprovalRequiredEvent",
-    # 結果・エラー
-    "ServiceResult",
-    "ServiceError",
+    "ErrorEvent",
     # コールバック
     "EventCallback",
+    "LogEvent",
+    "LogLevel",
     "ProgressCallback",
+    "ProgressEvent",
+    "ResultEvent",
     # 基底クラス
     "ServiceBase",
+    "ServiceError",
+    # イベントモデル
+    "ServiceEvent",
+    # イベントタイプ
+    "ServiceEventType",
+    # 結果・エラー
+    "ServiceResult",
 ]

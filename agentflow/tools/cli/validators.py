@@ -46,17 +46,22 @@ class CLIValidator:
             if arg.startswith("-"):
                 clean_arg = arg.lstrip("-")
                 if self._config.is_flag_forbidden(clean_arg):
-                    raise ValueError(
+                    msg = (
                         f"Forbidden flag '{arg}' in command. "
                         f"Forbidden flags: {self._config.forbidden_flags}"
                     )
-            else:
-                # Also check positional arguments (subcommands like 'push', 'reset')
-                if arg in self._config.forbidden_flags:
                     raise ValueError(
-                        f"Forbidden subcommand '{arg}' in command. "
-                        f"Forbidden: {self._config.forbidden_flags}"
+                        msg
                     )
+            # Also check positional arguments (subcommands like 'push', 'reset')
+            elif arg in self._config.forbidden_flags:
+                msg = (
+                    f"Forbidden subcommand '{arg}' in command. "
+                    f"Forbidden: {self._config.forbidden_flags}"
+                )
+                raise ValueError(
+                    msg
+                )
 
     def get_config(self) -> CLIToolConfig:
         """Get the configuration for this validator.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Market Trend Analysis - 確定性処理スクリプト群.
 
 このパッケージはLLM推論を使用しない確定性処理を提供します。

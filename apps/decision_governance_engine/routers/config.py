@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """設定管理APIルーター.
 
 エンドポイント:
@@ -15,13 +14,12 @@
 import logging
 from typing import Any
 
+from apps.decision_governance_engine.config import (
+    get_config,
+)
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from apps.decision_governance_engine.config import (
-    get_config,
-    reload_config,
-)
 
 logger = logging.getLogger("decision_api.config")
 
@@ -203,25 +201,25 @@ async def test_agent_rag(agent_id: str) -> RAGTestResult:
                 document_count=doc_count,
                 sample_query_result=test_result.answer[:200] if test_result.answer else None,
             )
-        else:
-            return RAGTestResult(
-                success=False,
-                message="RAGが初期化されていません",
-            )
-
-    except Exception as e:
-        logger.error(f"RAG test failed for {agent_id}: {e}")
         return RAGTestResult(
             success=False,
-            message=f"RAGテスト失敗: {str(e)}",
+            message="RAGが初期化されていません",
+        )
+
+    except Exception as e:
+        logger.exception(f"RAG test failed for {agent_id}: {e}")
+        return RAGTestResult(
+            success=False,
+            message=f"RAGテスト失敗: {e!s}",
         )
 
 
 @router.get("/agents")
 async def get_all_agent_configs() -> dict[str, Any]:
     """全Agent設定を取得（agent.yamlから）."""
-    import yaml
     from pathlib import Path
+
+    import yaml
 
     config_path = Path(__file__).parent.parent / "agent.yaml"
     with open(config_path) as f:

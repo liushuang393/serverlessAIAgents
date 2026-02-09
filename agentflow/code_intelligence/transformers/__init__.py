@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Transformer モジュール.
 
 AST 変換とコード生成。
@@ -7,8 +6,8 @@ AST 変換とコード生成。
 from agentflow.code_intelligence.transformers.base import (
     CodeTransformer,
     TransformContext,
-    TransformResult,
     TransformError,
+    TransformResult,
 )
 from agentflow.code_intelligence.transformers.registry import (
     TransformerRegistry,
@@ -16,11 +15,12 @@ from agentflow.code_intelligence.transformers.registry import (
     register_transformer,
 )
 
+
 __all__ = [
     "CodeTransformer",
     "TransformContext",
-    "TransformResult",
     "TransformError",
+    "TransformResult",
     "TransformerRegistry",
     "get_transformer",
     "register_transformer",

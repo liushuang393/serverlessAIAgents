@@ -14,10 +14,10 @@ from agentflow.skills.builtin.auth_provider.exceptions import (
     AuthError,
     EmailNotConfirmedError,
     InvalidCredentialsError,
-    MFARequiredError,
     TokenExpiredError,
     UserNotFoundError,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +184,8 @@ class SupabaseAuthProvider(AuthProviderBase):
         try:
             from supabase import create_client
         except ImportError:
-            raise AuthError("supabase 库未安装，请运行: pip install supabase")
+            msg = "supabase 库未安装，请运行: pip install supabase"
+            raise AuthError(msg)
 
         self._client = create_client(self._config.url, self._config.anon_key)
         logger.info("Supabase Auth 已初始化")
@@ -212,13 +213,16 @@ class SupabaseAuthProvider(AuthProviderBase):
 
             if response.user:
                 return self._parse_user(response.user)
-            raise AuthError("注册失败")
+            msg = "注册失败"
+            raise AuthError(msg)
 
         except Exception as e:
             error_msg = str(e)
             if "User already registered" in error_msg:
-                raise AuthError("用户已存在", code="user_exists")
-            raise AuthError(f"注册失败: {e}")
+                msg = "用户已存在"
+                raise AuthError(msg, code="user_exists")
+            msg = f"注册失败: {e}"
+            raise AuthError(msg)
 
     async def sign_in(
         self,
@@ -236,15 +240,19 @@ class SupabaseAuthProvider(AuthProviderBase):
                 self._current_session = session
                 return session
 
-            raise InvalidCredentialsError("邮箱或密码错误")
+            msg = "邮箱或密码错误"
+            raise InvalidCredentialsError(msg)
 
         except Exception as e:
             error_msg = str(e).lower()
             if "invalid" in error_msg or "credentials" in error_msg:
-                raise InvalidCredentialsError("邮箱或密码错误")
+                msg = "邮箱或密码错误"
+                raise InvalidCredentialsError(msg)
             if "email not confirmed" in error_msg:
-                raise EmailNotConfirmedError("请先确认邮箱")
-            raise AuthError(f"登录失败: {e}")
+                msg = "请先确认邮箱"
+                raise EmailNotConfirmedError(msg)
+            msg = f"登录失败: {e}"
+            raise AuthError(msg)
 
     async def sign_in_with_magic_link(
         self,
@@ -261,7 +269,8 @@ class SupabaseAuthProvider(AuthProviderBase):
             )
             logger.info(f"Magic Link 已发送到: {email}")
         except Exception as e:
-            raise AuthError(f"发送 Magic Link 失败: {e}")
+            msg = f"发送 Magic Link 失败: {e}"
+            raise AuthError(msg)
 
     async def sign_in_with_otp(
         self,
@@ -275,9 +284,11 @@ class SupabaseAuthProvider(AuthProviderBase):
             elif phone:
                 self._client.auth.sign_in_with_otp({"phone": phone})
             else:
-                raise AuthError("需要提供邮箱或手机号")
+                msg = "需要提供邮箱或手机号"
+                raise AuthError(msg)
         except Exception as e:
-            raise AuthError(f"发送 OTP 失败: {e}")
+            msg = f"发送 OTP 失败: {e}"
+            raise AuthError(msg)
 
     async def verify_otp(
         self,
@@ -302,9 +313,11 @@ class SupabaseAuthProvider(AuthProviderBase):
                 self._current_session = session
                 return session
 
-            raise AuthError("OTP 验证失败")
+            msg = "OTP 验证失败"
+            raise AuthError(msg)
         except Exception as e:
-            raise AuthError(f"OTP 验证失败: {e}")
+            msg = f"OTP 验证失败: {e}"
+            raise AuthError(msg)
 
     async def sign_in_with_oauth(
         self,
@@ -326,7 +339,8 @@ class SupabaseAuthProvider(AuthProviderBase):
 
             return OAuthResponse(url=response.url, provider=provider)
         except Exception as e:
-            raise AuthError(f"OAuth 登录失败: {e}")
+            msg = f"OAuth 登录失败: {e}"
+            raise AuthError(msg)
 
     async def handle_oauth_callback(
         self,
@@ -342,9 +356,11 @@ class SupabaseAuthProvider(AuthProviderBase):
                 self._current_session = session
                 return session
 
-            raise AuthError("OAuth 回调处理失败")
+            msg = "OAuth 回调处理失败"
+            raise AuthError(msg)
         except Exception as e:
-            raise AuthError(f"OAuth 回调处理失败: {e}")
+            msg = f"OAuth 回调处理失败: {e}"
+            raise AuthError(msg)
 
     async def sign_out(self, scope: str = "local") -> None:
         """登出."""
@@ -357,7 +373,8 @@ class SupabaseAuthProvider(AuthProviderBase):
             self._current_session = None
             logger.info("已登出")
         except Exception as e:
-            raise AuthError(f"登出失败: {e}")
+            msg = f"登出失败: {e}"
+            raise AuthError(msg)
 
     async def get_session(self) -> Session | None:
         """获取当前会话."""
@@ -379,16 +396,19 @@ class SupabaseAuthProvider(AuthProviderBase):
                 self._current_session = session
                 return session
 
-            raise TokenExpiredError("刷新令牌已过期")
+            msg = "刷新令牌已过期"
+            raise TokenExpiredError(msg)
         except Exception as e:
-            raise TokenExpiredError(f"刷新会话失败: {e}")
+            msg = f"刷新会话失败: {e}"
+            raise TokenExpiredError(msg)
 
     async def verify_jwt(self, token: str) -> dict[str, Any]:
         """验证 JWT."""
         try:
             import jwt
         except ImportError:
-            raise AuthError("pyjwt 库未安装，请运行: pip install pyjwt")
+            msg = "pyjwt 库未安装，请运行: pip install pyjwt"
+            raise AuthError(msg)
 
         try:
             # 如果没有 JWT 密钥，使用 Supabase 的验证
@@ -401,21 +421,23 @@ class SupabaseAuthProvider(AuthProviderBase):
                         "email": response.user.email,
                         "role": response.user.role,
                     }
-                raise TokenExpiredError("无效的令牌")
+                msg = "无效的令牌"
+                raise TokenExpiredError(msg)
 
             # 本地验证
-            payload = jwt.decode(
+            return jwt.decode(
                 token,
                 self._config.jwt_secret,
                 algorithms=["HS256"],
                 audience="authenticated",
             )
-            return payload
 
         except jwt.ExpiredSignatureError:
-            raise TokenExpiredError("令牌已过期")
+            msg = "令牌已过期"
+            raise TokenExpiredError(msg)
         except jwt.InvalidTokenError as e:
-            raise AuthError(f"无效的令牌: {e}")
+            msg = f"无效的令牌: {e}"
+            raise AuthError(msg)
 
     async def get_user(self, user_id: str) -> User:
         """获取用户信息."""
@@ -424,11 +446,14 @@ class SupabaseAuthProvider(AuthProviderBase):
             response = self._client.auth.admin.get_user_by_id(user_id)
             if response.user:
                 return self._parse_user(response.user)
-            raise UserNotFoundError(f"用户不存在: {user_id}")
+            msg = f"用户不存在: {user_id}"
+            raise UserNotFoundError(msg)
         except Exception as e:
             if "not found" in str(e).lower():
-                raise UserNotFoundError(f"用户不存在: {user_id}")
-            raise AuthError(f"获取用户失败: {e}")
+                msg = f"用户不存在: {user_id}"
+                raise UserNotFoundError(msg)
+            msg = f"获取用户失败: {e}"
+            raise AuthError(msg)
 
     async def get_current_user(self) -> User | None:
         """获取当前用户."""
@@ -450,9 +475,11 @@ class SupabaseAuthProvider(AuthProviderBase):
             response = self._client.auth.update_user({"data": data or {}})
             if response.user:
                 return self._parse_user(response.user)
-            raise AuthError("更新用户失败")
+            msg = "更新用户失败"
+            raise AuthError(msg)
         except Exception as e:
-            raise AuthError(f"更新用户失败: {e}")
+            msg = f"更新用户失败: {e}"
+            raise AuthError(msg)
 
     async def update_password(
         self,
@@ -464,7 +491,8 @@ class SupabaseAuthProvider(AuthProviderBase):
             self._client.auth.update_user({"password": new_password})
             logger.info("密码已更新")
         except Exception as e:
-            raise AuthError(f"更新密码失败: {e}")
+            msg = f"更新密码失败: {e}"
+            raise AuthError(msg)
 
     async def reset_password_for_email(
         self,
@@ -479,7 +507,8 @@ class SupabaseAuthProvider(AuthProviderBase):
             )
             logger.info(f"密码重置邮件已发送到: {email}")
         except Exception as e:
-            raise AuthError(f"发送重置邮件失败: {e}")
+            msg = f"发送重置邮件失败: {e}"
+            raise AuthError(msg)
 
     # MFA 方法
     async def enroll_mfa(
@@ -503,7 +532,8 @@ class SupabaseAuthProvider(AuthProviderBase):
                 secret=response.totp.secret if hasattr(response, "totp") else None,
             )
         except Exception as e:
-            raise AuthError(f"注册 MFA 失败: {e}")
+            msg = f"注册 MFA 失败: {e}"
+            raise AuthError(msg)
 
     async def verify_mfa(
         self,
@@ -520,7 +550,8 @@ class SupabaseAuthProvider(AuthProviderBase):
             )
             logger.info("MFA 已激活")
         except Exception as e:
-            raise AuthError(f"MFA 验证失败: {e}")
+            msg = f"MFA 验证失败: {e}"
+            raise AuthError(msg)
 
     def _parse_user(self, user: Any) -> User:
         """解析用户数据."""
@@ -594,10 +625,12 @@ class AuthProvider:
         """初始化提供商."""
         if self._provider_name == "supabase":
             if not isinstance(self._config, SupabaseAuthConfig):
-                raise AuthError("Supabase 需要 SupabaseAuthConfig 配置")
+                msg = "Supabase 需要 SupabaseAuthConfig 配置"
+                raise AuthError(msg)
             self._provider = SupabaseAuthProvider(self._config)
         else:
-            raise AuthError(f"不支持的认证提供商: {self._provider_name}")
+            msg = f"不支持的认证提供商: {self._provider_name}"
+            raise AuthError(msg)
 
         logger.info(f"认证提供商已初始化: {self._provider_name}")
 
@@ -659,7 +692,8 @@ class AuthProvider:
         if isinstance(self._provider, SupabaseAuthProvider):
             await self._provider.sign_in_with_magic_link(email, redirect_to)
         else:
-            raise AuthError(f"{self._provider_name} 不支持 Magic Link 登录")
+            msg = f"{self._provider_name} 不支持 Magic Link 登录"
+            raise AuthError(msg)
 
     async def sign_in_with_otp(
         self,
@@ -670,7 +704,8 @@ class AuthProvider:
         if isinstance(self._provider, SupabaseAuthProvider):
             await self._provider.sign_in_with_otp(email, phone)
         else:
-            raise AuthError(f"{self._provider_name} 不支持 OTP 登录")
+            msg = f"{self._provider_name} 不支持 OTP 登录"
+            raise AuthError(msg)
 
     async def verify_otp(
         self,
@@ -682,7 +717,8 @@ class AuthProvider:
         """验证 OTP（仅 Supabase）."""
         if isinstance(self._provider, SupabaseAuthProvider):
             return await self._provider.verify_otp(token, type, email, phone)
-        raise AuthError(f"{self._provider_name} 不支持 OTP 验证")
+        msg = f"{self._provider_name} 不支持 OTP 验证"
+        raise AuthError(msg)
 
     async def handle_oauth_callback(
         self,
@@ -692,7 +728,8 @@ class AuthProvider:
         """处理 OAuth 回调（仅 Supabase）."""
         if isinstance(self._provider, SupabaseAuthProvider):
             return await self._provider.handle_oauth_callback(code, state)
-        raise AuthError(f"{self._provider_name} 不支持 OAuth 回调处理")
+        msg = f"{self._provider_name} 不支持 OAuth 回调处理"
+        raise AuthError(msg)
 
     async def get_current_user(self) -> User | None:
         """获取当前用户."""
@@ -708,7 +745,8 @@ class AuthProvider:
         """更新用户信息."""
         if isinstance(self._provider, SupabaseAuthProvider):
             return await self._provider.update_user(user_id, data)
-        raise AuthError(f"{self._provider_name} 不支持更新用户")
+        msg = f"{self._provider_name} 不支持更新用户"
+        raise AuthError(msg)
 
     async def update_password(
         self,
@@ -719,7 +757,8 @@ class AuthProvider:
         if isinstance(self._provider, SupabaseAuthProvider):
             await self._provider.update_password(new_password, current_password)
         else:
-            raise AuthError(f"{self._provider_name} 不支持更新密码")
+            msg = f"{self._provider_name} 不支持更新密码"
+            raise AuthError(msg)
 
     async def reset_password_for_email(
         self,
@@ -730,7 +769,8 @@ class AuthProvider:
         if isinstance(self._provider, SupabaseAuthProvider):
             await self._provider.reset_password_for_email(email, redirect_to)
         else:
-            raise AuthError(f"{self._provider_name} 不支持密码重置")
+            msg = f"{self._provider_name} 不支持密码重置"
+            raise AuthError(msg)
 
     async def enroll_mfa(
         self,
@@ -740,7 +780,8 @@ class AuthProvider:
         """注册 MFA."""
         if isinstance(self._provider, SupabaseAuthProvider):
             return await self._provider.enroll_mfa(factor_type, friendly_name)
-        raise AuthError(f"{self._provider_name} 不支持 MFA")
+        msg = f"{self._provider_name} 不支持 MFA"
+        raise AuthError(msg)
 
     async def verify_mfa(
         self,
@@ -751,5 +792,6 @@ class AuthProvider:
         if isinstance(self._provider, SupabaseAuthProvider):
             await self._provider.verify_mfa(factor_id, code)
         else:
-            raise AuthError(f"{self._provider_name} 不支持 MFA")
+            msg = f"{self._provider_name} 不支持 MFA"
+            raise AuthError(msg)
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """GateEngine - Gateインターセプト + Agent処理パターン.
 
 前置チェック付きのEngine Pattern、以下に適用：
@@ -24,20 +23,23 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.engines.base import BaseEngine, EngineConfig
 
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Callable
+
+
 class GateEngine(BaseEngine):
     """Gateインターセプト + Agent処理エンジン.
-    
+
     特徴：
     - 前置Gateチェック
     - Gate通過時のみメインAgentを実行
     - Gate拒否時はカスタムレスポンスを返却
-    
+
     Attributes:
         gate_agent: Gate Agent（チェッカー）
         main_agent: メインAgent（プロセッサー）
@@ -55,7 +57,7 @@ class GateEngine(BaseEngine):
         config: EngineConfig | None = None,
     ) -> None:
         """GateEngineを初期化.
-        
+
         Args:
             gate_agent: Gate Agentクラスまたはインスタンス
             main_agent: メインAgentクラスまたはインスタンス
@@ -110,11 +112,12 @@ class GateEngine(BaseEngine):
         elif hasattr(agent, "process"):
             result = await agent.process(inputs)
         else:
-            raise AttributeError(f"Agent {agent} has no run/invoke/process method")
+            msg = f"Agent {agent} has no run/invoke/process method"
+            raise AttributeError(msg)
 
         if isinstance(result, dict):
             return result
-        elif hasattr(result, "model_dump"):
+        if hasattr(result, "model_dump"):
             return result.model_dump()
         return {"result": result}
 

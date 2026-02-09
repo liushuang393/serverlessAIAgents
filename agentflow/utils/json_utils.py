@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """JSON ユーティリティ.
 
 LLM レスポンスから JSON を安全に抽出するためのユーティリティ。
@@ -114,15 +113,15 @@ def _try_repair_json(text: str) -> str | None:
 
     # 末尾の不完全なキーやコンマを削除
     # 例: {"key": "value", "incomplete   →  {"key": "value"
-    text = re.sub(r',\s*"[^"]*$', '', text)
-    text = re.sub(r',\s*$', '', text)
+    text = re.sub(r',\s*"[^"]*$', "", text)
+    text = re.sub(r",\s*$", "", text)
 
     # 閉じられていない文字列を閉じる
     # 奇数個の " がある場合は最後に " を追加
     quote_count = 0
     i = 0
     while i < len(text):
-        if text[i] == '\\' and i + 1 < len(text):
+        if text[i] == "\\" and i + 1 < len(text):
             i += 2
             continue
         if text[i] == '"':
@@ -133,12 +132,12 @@ def _try_repair_json(text: str) -> str | None:
         text += '"'
 
     # 括弧のバランスを確認
-    open_braces = text.count('{') - text.count('}')
-    open_brackets = text.count('[') - text.count(']')
+    open_braces = text.count("{") - text.count("}")
+    open_brackets = text.count("[") - text.count("]")
 
     # 閉じ括弧を追加
-    text += ']' * open_brackets
-    text += '}' * open_braces
+    text += "]" * open_brackets
+    text += "}" * open_braces
 
     return text if text else None
 

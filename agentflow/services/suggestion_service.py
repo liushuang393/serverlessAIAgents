@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Suggestion Service - フレームワーク級提案生成サービス.
 
 ユーザーの質問やコンテキストに基づいて、次のアクション提案を生成する再利用可能なサービス。
@@ -10,7 +9,7 @@
 
 使用例:
     >>> from agentflow.services import SuggestionService
-    >>> 
+    >>>
     >>> service = SuggestionService()
     >>> result = await service.execute(
     ...     question="売上データを見せて",
@@ -22,16 +21,19 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.services.base import (
     ServiceBase,
     ServiceEvent,
-    ResultEvent,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 logger = logging.getLogger(__name__)
 
@@ -261,10 +263,10 @@ class SuggestionService(ServiceBase):
         """フォローアップ質問を生成."""
         if not self._llm:
             return self._get_default_follow_up(context)
-        
+
         query_type = context.get("query_type", "faq")
         data_found = context.get("data_found", False)
-        
+
         prompt = f"""ユーザーの質問と結果に基づいて、次に聞くべきフォローアップ質問を3つ提案してください。
 
 質問: {question}
@@ -281,7 +283,7 @@ class SuggestionService(ServiceBase):
         try:
             response = await self._llm.chat([{"role": "user", "content": prompt}])
             lines = response["content"].strip().split("\n")
-            
+
             suggestions = []
             for line in lines:
                 text = line.strip().lstrip("・-123456789.） ")
@@ -304,7 +306,7 @@ class SuggestionService(ServiceBase):
         """関連トピックを生成."""
         if not self._llm:
             return []
-        
+
         prompt = f"""以下の質問に関連するトピックを2つ提案してください。
 
 質問: {question}
@@ -319,7 +321,7 @@ class SuggestionService(ServiceBase):
         try:
             response = await self._llm.chat([{"role": "user", "content": prompt}])
             lines = response["content"].strip().split("\n")
-            
+
             suggestions = []
             for line in lines:
                 text = line.strip().lstrip("・-123456789.） ")
@@ -340,11 +342,11 @@ class SuggestionService(ServiceBase):
     ) -> list[Suggestion]:
         """アクション提案を生成."""
         actions = []
-        
+
         query_type = context.get("query_type", "faq")
         data_found = context.get("data_found", False)
         has_chart = context.get("has_chart", False)
-        
+
         if query_type == "sql" and data_found:
             actions.append(Suggestion(
                 text="データをCSVでエクスポート",
@@ -357,14 +359,14 @@ class SuggestionService(ServiceBase):
                     type=SuggestionType.ACTION,
                     confidence=0.85,
                 ))
-        
+
         if query_type == "faq":
             actions.append(Suggestion(
                 text="関連ドキュメントを表示",
                 type=SuggestionType.ACTION,
                 confidence=0.8,
             ))
-        
+
         return actions
 
     async def _generate_drill_down(
@@ -374,7 +376,7 @@ class SuggestionService(ServiceBase):
     ) -> list[Suggestion]:
         """詳細分析提案を生成."""
         drill_downs = []
-        
+
         columns = context.get("columns", [])
         if columns:
             for col in columns[:2]:
@@ -383,7 +385,7 @@ class SuggestionService(ServiceBase):
                     type=SuggestionType.DRILL_DOWN,
                     confidence=0.75,
                 ))
-        
+
         return drill_downs
 
     def _get_default_follow_up(self, context: dict[str, Any]) -> list[Suggestion]:
@@ -395,11 +397,10 @@ class SuggestionService(ServiceBase):
                 Suggestion(text="先月との比較を見せて", type=SuggestionType.FOLLOW_UP),
                 Suggestion(text="上位10件の詳細を教えて", type=SuggestionType.FOLLOW_UP),
             ]
-        else:
-            return [
-                Suggestion(text="もっと詳しく教えて", type=SuggestionType.FOLLOW_UP),
-                Suggestion(text="関連する情報はある？", type=SuggestionType.FOLLOW_UP),
-            ]
+        return [
+            Suggestion(text="もっと詳しく教えて", type=SuggestionType.FOLLOW_UP),
+            Suggestion(text="関連する情報はある？", type=SuggestionType.FOLLOW_UP),
+        ]
 
     # =========================================================================
     # 増強: パターン・データ分析ベースの提案生成
@@ -564,10 +565,10 @@ class SuggestionService(ServiceBase):
 
 
 __all__ = [
-    "SuggestionService",
-    "SuggestionConfig",
     "Suggestion",
-    "SuggestionType",
+    "SuggestionConfig",
     # 増強
     "SuggestionPriority",
+    "SuggestionService",
+    "SuggestionType",
 ]

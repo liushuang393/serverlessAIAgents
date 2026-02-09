@@ -49,14 +49,16 @@ class SentenceTransformerEmbeddings(EmbeddingEngine):
             self._logger.info(f"Loaded Sentence Transformer model: {model_name} (dim={self._dimension})")
 
         except ImportError:
+            msg = "sentence-transformers package is required. Install with: pip install sentence-transformers"
             raise ImportError(
-                "sentence-transformers package is required. Install with: pip install sentence-transformers"
+                msg
             )
 
     async def embed_text(self, text: str) -> list[float]:
         """テキストをベクトル埋め込みに変換."""
         if not text or not text.strip():
-            raise ValueError("Text cannot be empty")
+            msg = "Text cannot be empty"
+            raise ValueError(msg)
 
         try:
             # Sentence Transformersは同期APIなので、asyncio.to_threadで非同期化
@@ -70,8 +72,9 @@ class SentenceTransformerEmbeddings(EmbeddingEngine):
             return embedding_list
 
         except Exception as e:
-            self._logger.error(f"Failed to generate embedding: {e}")
-            raise RuntimeError(f"Failed to generate embedding: {e}")
+            self._logger.exception(f"Failed to generate embedding: {e}")
+            msg = f"Failed to generate embedding: {e}"
+            raise RuntimeError(msg)
 
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """複数のテキストを一括変換."""
@@ -81,7 +84,8 @@ class SentenceTransformerEmbeddings(EmbeddingEngine):
         # 空のテキストをフィルタリング
         valid_texts = [t for t in texts if t and t.strip()]
         if not valid_texts:
-            raise ValueError("All texts are empty")
+            msg = "All texts are empty"
+            raise ValueError(msg)
 
         try:
             # Sentence Transformersは同期APIなので、asyncio.to_threadで非同期化
@@ -97,8 +101,9 @@ class SentenceTransformerEmbeddings(EmbeddingEngine):
             return embeddings_list
 
         except Exception as e:
-            self._logger.error(f"Failed to generate embeddings: {e}")
-            raise RuntimeError(f"Failed to generate embeddings: {e}")
+            self._logger.exception(f"Failed to generate embeddings: {e}")
+            msg = f"Failed to generate embeddings: {e}"
+            raise RuntimeError(msg)
 
     def get_dimension(self) -> int:
         """埋め込みベクトルの次元数を取得."""

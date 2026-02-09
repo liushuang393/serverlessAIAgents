@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 """外部情報採集サービス（Intelligence Service）.
 
 目的:
     外部情報ソースから情報を収集し、証拠チェーン（Evidence Chain）を構築する。
-    
+
 機能:
     - 複数ソースからの情報取得（Web検索、API等）
     - 去重・キャッシュ
@@ -18,17 +17,15 @@
 import asyncio
 import hashlib
 import logging
-import os
 from datetime import datetime, timedelta
-from typing import Any
 from uuid import uuid4
-
-from pydantic import BaseModel, Field
 
 from apps.decision_governance_engine.schemas.contract_schemas import (
     EvidenceItem,
     EvidenceReliability,
 )
+from pydantic import BaseModel, Field
+
 
 logger = logging.getLogger(__name__)
 
@@ -61,19 +58,19 @@ class IntelligenceResult(BaseModel):
 
 class IntelligenceService:
     """外部情報採集サービス.
-    
+
     外部ソースから情報を収集し、証拠チェーンを構築する。
     """
-    
+
     def __init__(self, config: IntelligenceConfig | None = None) -> None:
         """初期化.
-        
+
         Args:
             config: 設定（Noneの場合はデフォルト）
         """
         self.config = config or IntelligenceConfig()
         self._cache: dict[str, tuple[datetime, IntelligenceResult]] = {}
-        
+
         # モードに応じた最大ソース数を設定
         mode_limits = {
             "FAST": MAX_SOURCES_FAST,
@@ -82,11 +79,11 @@ class IntelligenceService:
         }
         if self.config.max_sources == 15:  # デフォルト値の場合のみ上書き
             self.config.max_sources = mode_limits.get(self.config.mode, MAX_SOURCES_STANDARD)
-    
+
     def _cache_key(self, query: str) -> str:
         """キャッシュキーを生成."""
         return hashlib.sha256(query.encode()).hexdigest()[:16]
-    
+
     def _get_cached(self, query: str) -> IntelligenceResult | None:
         """キャッシュから取得."""
         if not self.config.enable_cache:
@@ -99,20 +96,20 @@ class IntelligenceService:
                 return result
             del self._cache[key]
         return None
-    
+
     def _set_cache(self, query: str, result: IntelligenceResult) -> None:
         """キャッシュに保存."""
         if self.config.enable_cache:
             key = self._cache_key(query)
             self._cache[key] = (datetime.utcnow(), result)
-    
+
     async def gather(self, query: str, topics: list[str] | None = None) -> IntelligenceResult:
         """外部情報を収集.
-        
+
         Args:
             query: メイン検索クエリ
             topics: 追加トピック（オプション）
-            
+
         Returns:
             IntelligenceResult
         """
@@ -120,12 +117,12 @@ class IntelligenceService:
         cached = self._get_cached(query)
         if cached:
             return cached
-        
+
         logger.info(f"情報収集開始: {query[:50]}... (mode={self.config.mode})")
-        
+
         evidence: list[EvidenceItem] = []
         warnings: list[str] = []
-        
+
         # 各ソースから並列取得
         tasks = [
             self._fetch_web_search(query),
@@ -134,28 +131,28 @@ class IntelligenceService:
         if topics:
             for topic in topics[:3]:  # 最大3トピック
                 tasks.append(self._fetch_web_search(topic))
-        
+
         results = await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         for r in results:
             if isinstance(r, Exception):
                 warnings.append(f"ソース取得エラー: {str(r)[:50]}")
             elif isinstance(r, list):
                 evidence.extend(r)
-        
+
         # 去重（URL ベース）
         evidence = self._deduplicate(evidence)
-        
+
         # 信頼度スコアリング
         evidence = self._score_reliability(evidence)
-        
+
         # 最大件数制限
         evidence = evidence[:self.config.max_sources]
-        
+
         # カバレッジスコア計算
         high_count = sum(1 for e in evidence if e.reliability == EvidenceReliability.HIGH)
         coverage = min(1.0, len(evidence) / 10) * (0.5 + 0.5 * (high_count / max(len(evidence), 1)))
-        
+
         result = IntelligenceResult(
             query=query,
             evidence=evidence,

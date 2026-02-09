@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """統一ツールプロバイダー - Skills/MCP/内蔵ツールの統合管理.
 
 三種類のツールを統一インターフェースで管理:
@@ -34,9 +33,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class ToolType(str, Enum):
@@ -311,15 +314,14 @@ class MCPToolProvider(ToolProvider):
                     output=result.get("result"),
                     duration_ms=duration_ms,
                 )
-            else:
-                return ToolResult(
-                    success=False,
-                    status=ToolStatus.FAILED,
-                    tool_uri=tool_uri,
-                    tool_type=ToolType.MCP,
-                    error=result.get("error", "不明なエラー"),
-                    duration_ms=duration_ms,
-                )
+            return ToolResult(
+                success=False,
+                status=ToolStatus.FAILED,
+                tool_uri=tool_uri,
+                tool_type=ToolType.MCP,
+                error=result.get("error", "不明なエラー"),
+                duration_ms=duration_ms,
+            )
         except Exception as e:
             duration_ms = (datetime.now() - start_time).total_seconds() * 1000
             return ToolResult(
@@ -504,8 +506,9 @@ class BuiltinToolProvider(ToolProvider):
         # 安全な計算のみ許可
         allowed_chars = set("0123456789+-*/().% ")
         if not all(c in allowed_chars for c in expression):
-            raise ValueError("不正な文字が含まれています")
-        result = eval(expression)  # noqa: S307
+            msg = "不正な文字が含まれています"
+            raise ValueError(msg)
+        result = eval(expression)
         return {"expression": expression, "result": result}
 
     async def _get_datetime(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -595,23 +598,22 @@ class UnifiedToolProvider:
         # 適切なプロバイダーにルーティング
         if tool_type == ToolType.SKILL:
             return await self._skill_provider.call(tool_name, params)
-        elif tool_type == ToolType.MCP:
+        if tool_type == ToolType.MCP:
             return await self._mcp_provider.call(tool_name, params)
-        elif tool_type == ToolType.BUILTIN:
+        if tool_type == ToolType.BUILTIN:
             return await self._builtin_provider.call(tool_name, params)
-        elif tool_type == ToolType.CUSTOM and tool_name in self._custom_providers:
+        if tool_type == ToolType.CUSTOM and tool_name in self._custom_providers:
             provider = self._custom_providers[tool_name.split("/")[0]]
             return await provider.call(tool_name, params)
-        else:
-            duration_ms = (datetime.now() - start_time).total_seconds() * 1000
-            return ToolResult(
-                success=False,
-                status=ToolStatus.NOT_FOUND,
-                tool_uri=tool_uri,
-                tool_type=tool_type,
-                error=f"不明なツール種別またはツール: {tool_uri}",
-                duration_ms=duration_ms,
-            )
+        duration_ms = (datetime.now() - start_time).total_seconds() * 1000
+        return ToolResult(
+            success=False,
+            status=ToolStatus.NOT_FOUND,
+            tool_uri=tool_uri,
+            tool_type=tool_type,
+            error=f"不明なツール種別またはツール: {tool_uri}",
+            duration_ms=duration_ms,
+        )
 
     def _parse_uri(self, uri: str) -> tuple[ToolType, str]:
         """URIをパースしてツール種別と名前を取得.
@@ -624,15 +626,14 @@ class UnifiedToolProvider:
         """
         if uri.startswith("skill://"):
             return ToolType.SKILL, uri[8:]
-        elif uri.startswith("mcp://"):
+        if uri.startswith("mcp://"):
             return ToolType.MCP, uri  # MCPは完全URIを使用
-        elif uri.startswith("builtin://"):
+        if uri.startswith("builtin://"):
             return ToolType.BUILTIN, uri[10:]
-        elif uri.startswith("custom://"):
+        if uri.startswith("custom://"):
             return ToolType.CUSTOM, uri[9:]
-        else:
-            # スキームがない場合はbuiltin扱い
-            return ToolType.BUILTIN, uri
+        # スキームがない場合はbuiltin扱い
+        return ToolType.BUILTIN, uri
 
     def register_custom_provider(
         self,
@@ -677,11 +678,11 @@ class UnifiedToolProvider:
 
         if tool_type == ToolType.SKILL:
             return self._skill_provider.get_tool(tool_name)
-        elif tool_type == ToolType.MCP:
+        if tool_type == ToolType.MCP:
             return self._mcp_provider.get_tool(tool_name)
-        elif tool_type == ToolType.BUILTIN:
+        if tool_type == ToolType.BUILTIN:
             return self._builtin_provider.get_tool(tool_name)
-        elif tool_type == ToolType.CUSTOM:
+        if tool_type == ToolType.CUSTOM:
             provider_name = tool_name.split("/")[0]
             if provider_name in self._custom_providers:
                 return self._custom_providers[provider_name].get_tool(tool_name)
@@ -736,7 +737,7 @@ class UnifiedToolProvider:
         self._initialized = False
         self._logger.info("統一ツールプロバイダーを終了しました")
 
-    async def __aenter__(self) -> "UnifiedToolProvider":
+    async def __aenter__(self) -> UnifiedToolProvider:
         """非同期コンテキストマネージャー."""
         await self.initialize()
         return self
@@ -748,13 +749,13 @@ class UnifiedToolProvider:
 
 # エクスポート
 __all__ = [
-    "ToolType",
-    "ToolStatus",
-    "ToolResult",
+    "BuiltinToolProvider",
+    "MCPToolProvider",
+    "SkillToolProvider",
     "ToolDefinition",
     "ToolProvider",
-    "SkillToolProvider",
-    "MCPToolProvider",
-    "BuiltinToolProvider",
+    "ToolResult",
+    "ToolStatus",
+    "ToolType",
     "UnifiedToolProvider",
 ]

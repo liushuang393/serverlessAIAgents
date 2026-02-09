@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """監査ログサービス（Audit Logger）.
 
 FAQ システムの全操作を監査ログに記録。
@@ -23,13 +22,14 @@ FAQ システムの全操作を監査ログに記録。
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any
-import hashlib
+
 
 logger = logging.getLogger(__name__)
 
@@ -483,7 +483,7 @@ class AuditLogger:
     ) -> AuditEventType:
         """イベントタイプを決定."""
         action_lower = action.lower()
-        resource_lower = resource.lower()
+        resource.lower()
 
         if action_lower == "search":
             return AuditEventType.KB_SEARCH
@@ -587,14 +587,14 @@ class AuditLogger:
                 t.value: len([e for e in events if e.event_type == t])
                 for t in AuditEventType
             },
-            "unique_users": len(set(e.user_id for e in events)),
+            "unique_users": len({e.user_id for e in events}),
         }
 
 
 __all__ = [
-    "AuditLogger",
-    "AuditLoggerConfig",
     "AuditEvent",
     "AuditEventType",
+    "AuditLogger",
+    "AuditLoggerConfig",
     "AuditSeverity",
 ]

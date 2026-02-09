@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Flow実行クラス.
 
 エンドユーザーが使用するFlowクラス、シンプルな実行インターフェースを提供。
@@ -18,14 +17,16 @@ Example:
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
 from typing import TYPE_CHECKING, Any
 
 from agentflow.flow.context import FlowContext
 from agentflow.flow.executor import FlowExecutor
-from agentflow.flow.types import FlowConfig, InitializableAgent, CleanableAgent
+from agentflow.flow.types import CleanableAgent, FlowConfig, InitializableAgent
+
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from agentflow.flow.graph import FlowGraph
 
 
@@ -70,7 +71,7 @@ class Flow:
         self,
         flow_id: str,
         name: str,
-        graph: "FlowGraph",
+        graph: FlowGraph,
         config: FlowConfig,
     ) -> None:
         """初期化.

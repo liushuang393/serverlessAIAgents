@@ -5,17 +5,18 @@ The reasoner produces ActionDecisions, not text - ensuring
 that agent outputs are machine-processable.
 """
 
-from agentflow.reasoner.decisions import ActionDecision, ActionType
 from agentflow.reasoner.constraints import (
-    StructuredConstraints,
-    StructuredConstraint,
     ConstraintType,
+    StructuredConstraint,
+    StructuredConstraints,
 )
+from agentflow.reasoner.decisions import ActionDecision, ActionType
+
 
 __all__ = [
     "ActionDecision",
     "ActionType",
-    "StructuredConstraints",
-    "StructuredConstraint",
     "ConstraintType",
+    "StructuredConstraint",
+    "StructuredConstraints",
 ]

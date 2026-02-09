@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Docker サンドボックスプロバイダ.
 
 Docker コンテナを使用したサンドボックス実行。
@@ -32,6 +31,7 @@ from agentflow.sandbox.base import (
     SandboxProvider,
     SandboxState,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +182,7 @@ class DockerProvider(SandboxProvider):
                         process.communicate(),
                         timeout=effective_timeout,
                     )
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     process.kill()
                     return ExecutionResult(
                         exit_code=124,
@@ -208,7 +208,7 @@ class DockerProvider(SandboxProvider):
             duration_ms = (time.time() - start_time) * 1000
             self._execution_count += 1
             self._total_execution_ms += duration_ms
-            logger.error(f"Docker execution error: {e}")
+            logger.exception(f"Docker execution error: {e}")
             return ExecutionResult(
                 exit_code=1,
                 duration_ms=duration_ms,

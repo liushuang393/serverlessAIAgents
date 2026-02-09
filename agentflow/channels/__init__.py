@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Messaging Channels Module - 统一消息平台集成.
 
 该模块提供统一的消息平台适配器接口，支持多种消息平台：
@@ -44,6 +43,7 @@ from agentflow.channels.base import (
 )
 from agentflow.channels.gateway import MessageGateway
 
+
 # 可选导入（需要相应的依赖）
 try:
     from agentflow.channels.telegram import TelegramAdapter
@@ -77,18 +77,18 @@ except ImportError:
 
 
 __all__ = [
+    "ChannelMessage",
+    "DiscordAdapter",
     # Base
     "MessageChannelAdapter",
-    "ChannelMessage",
-    "UserInfo",
-    "MessageMetadata",
     # Gateway
     "MessageGateway",
+    "MessageMetadata",
+    "SignalAdapter",
+    "SlackAdapter",
+    "TeamsAdapter",
     # Adapters
     "TelegramAdapter",
-    "SlackAdapter",
-    "DiscordAdapter",
-    "TeamsAdapter",
+    "UserInfo",
     "WhatsAppAdapter",
-    "SignalAdapter",
 ]

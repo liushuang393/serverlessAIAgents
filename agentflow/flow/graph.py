@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Flowグラフ構造.
 
 ノードの順序付きリストとノード間の関係を管理。
@@ -12,6 +11,7 @@ from __future__ import annotations
 
 import logging
 from typing import TYPE_CHECKING
+
 
 if TYPE_CHECKING:
     from agentflow.flow.nodes import FlowNode
@@ -46,7 +46,8 @@ class FlowGraph:
             ValueError: ノードIDが重複している場合
         """
         if node.id in self._node_map:
-            raise ValueError(f"ノードIDが重複しています: {node.id}")
+            msg = f"ノードIDが重複しています: {node.id}"
+            raise ValueError(msg)
         self._nodes.append(node)
         self._node_map[node.id] = node
         self._logger.debug(f"ノードを追加: {node.id} ({node.node_type.name})")

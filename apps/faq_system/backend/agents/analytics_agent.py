@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """分析Agent - 高層データ分析.
 
 経営層・分析者向けのデータ分析Agent。
@@ -26,17 +25,17 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
 from agentflow.core import ResilientAgent
-from agentflow.services.semantic_layer import (
-    SemanticLayerService,
-    SemanticLayerConfig,
-    ResolvedQuery,
+from agentflow.security.policy_engine import PolicyEngine
+from agentflow.services.fewshot_manager import (
+    FewshotExample,
+    FewshotManager,
+    FewshotManagerConfig,
 )
-from agentflow.security.policy_engine import PolicyEngine, AuthContext, AuthMode
 
 # NL2SQL 増強コンポーネント
 from agentflow.services.schema_linker import (
@@ -44,15 +43,20 @@ from agentflow.services.schema_linker import (
     SchemaLinkerConfig,
     SchemaLinkResult,
 )
-from agentflow.services.fewshot_manager import (
-    FewshotManager,
-    FewshotManagerConfig,
-    FewshotExample,
+from agentflow.services.semantic_layer import (
+    ResolvedQuery,
+    SemanticLayerConfig,
+    SemanticLayerService,
 )
 from agentflow.services.sql_postprocessor import (
-    SQLPostProcessor,
     PostProcessorConfig,
+    SQLPostProcessor,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 logger = logging.getLogger(__name__)
 
@@ -384,7 +388,7 @@ ORDER BY total_sales DESC""",
                 ).model_dump()
 
             # 4. SQL生成（NL2SQL 増強版）
-            sql, schema_link_result = await self._generate_sql_enhanced(
+            sql, _schema_link_result = await self._generate_sql_enhanced(
                 question, resolved, user_context
             )
 
@@ -446,7 +450,7 @@ ORDER BY total_sales DESC""",
         self, input_data: dict[str, Any]
     ) -> AsyncIterator[dict[str, Any]]:
         """ストリーム実行."""
-        question = input_data.get("question", "")
+        input_data.get("question", "")
 
         yield {
             "type": "progress",
@@ -674,9 +678,8 @@ SQLクエリのみを出力してください（説明不要）:
 """
 
         response = await llm.chat([{"role": "user", "content": prompt}])
-        sql = self._extract_sql(response["content"])
+        return self._extract_sql(response["content"])
 
-        return sql
 
     def _extract_sql(self, content: str) -> str:
         """レスポンスからSQLを抽出."""
@@ -757,13 +760,13 @@ SQLクエリのみを出力してください（説明不要）:
             return "該当するデータが見つかりませんでした。条件を変更してお試しください。"
 
         # 簡易回答生成
-        metric_names = [m.name for m in resolved.metrics] or ["データ"]
+        [m.name for m in resolved.metrics] or ["データ"]
 
         answer = f"ご質問「{question}」に対する分析結果です。\n\n"
 
         if len(data) >= 1:
             top = data[0]
-            answer += f"1位は「{top.get('product_name', top.get(list(top.keys())[0], 'N/A'))}」"
+            answer += f"1位は「{top.get('product_name', top.get(next(iter(top.keys())), 'N/A'))}」"
 
             if "revenue" in top:
                 answer += f"で、売上は{top['revenue']:,}円です。"
@@ -871,7 +874,7 @@ SQLクエリのみを出力してください（説明不要）:
         """不確実性レベルを取得."""
         if confidence >= 0.8:
             return "low"
-        elif confidence >= 0.5:
+        if confidence >= 0.5:
             return "medium"
         return "high"
 
@@ -880,7 +883,7 @@ __all__ = [
     "AnalyticsAgent",
     "AnalyticsConfig",
     "AnalyticsResponse",
-    "SQLGuardrails",
     "EvidenceChain",
     "NL2SQLEnhancementConfig",
+    "SQLGuardrails",
 ]

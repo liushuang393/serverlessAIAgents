@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """起動時情報ログモジュール.
 
 アプリケーション起動時に設定情報をログ出力する。
@@ -26,6 +25,7 @@ import logging
 from typing import Any
 
 from agentflow.config import get_settings
+
 
 logger = logging.getLogger("agentflow.startup")
 

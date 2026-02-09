@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeepAgent ストレージ抽象.
 
 三層ストレージ設計:
@@ -16,9 +15,11 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from agentflow.patterns.deep_agent.da_models import EvolutionRecord
+
+if TYPE_CHECKING:
+    from agentflow.patterns.deep_agent.da_models import EvolutionRecord
 
 
 class RuntimeStore(ABC):
@@ -35,12 +36,10 @@ class RuntimeStore(ABC):
     @abstractmethod
     async def save_context(self, key: str, data: dict[str, Any]) -> None:
         """コンテキストを保存."""
-        pass
 
     @abstractmethod
     async def load_context(self, key: str) -> dict[str, Any] | None:
         """コンテキストを読み込み."""
-        pass
 
     # =========================================================================
     # チェックポイント管理
@@ -49,17 +48,14 @@ class RuntimeStore(ABC):
     @abstractmethod
     async def save_checkpoint(self, checkpoint_id: str, state: dict[str, Any]) -> None:
         """チェックポイントを保存（長時間タスク用）."""
-        pass
 
     @abstractmethod
     async def load_checkpoint(self, checkpoint_id: str) -> dict[str, Any] | None:
         """チェックポイントを復元."""
-        pass
 
     @abstractmethod
     async def list_checkpoints(self) -> list[str]:
         """チェックポイント一覧を取得."""
-        pass
 
     # =========================================================================
     # Virtual Filesystem（Artifact管理）
@@ -79,27 +75,22 @@ class RuntimeStore(ABC):
             content: ファイル内容（bytes or str）
             metadata: メタデータ（content_type, created_by等）
         """
-        pass
 
     @abstractmethod
     async def read_artifact(self, path: str) -> bytes | None:
         """仮想ファイルを読み込み."""
-        pass
 
     @abstractmethod
     async def list_artifacts(self, prefix: str = "") -> list[dict[str, Any]]:
         """仮想ファイル一覧を取得."""
-        pass
 
     @abstractmethod
     async def delete_artifact(self, path: str) -> bool:
         """仮想ファイルを削除."""
-        pass
 
     @abstractmethod
     async def artifact_exists(self, path: str) -> bool:
         """仮想ファイルの存在確認."""
-        pass
 
     # =========================================================================
     # クリア
@@ -108,7 +99,6 @@ class RuntimeStore(ABC):
     @abstractmethod
     async def clear(self) -> None:
         """全データをクリア."""
-        pass
 
 
 class EvolutionStore(ABC):
@@ -121,27 +111,22 @@ class EvolutionStore(ABC):
     @abstractmethod
     async def save_pattern(self, pattern_key: str, pattern_data: dict[str, Any]) -> None:
         """成功パターンを保存."""
-        pass
 
     @abstractmethod
     async def load_pattern(self, pattern_key: str) -> dict[str, Any] | None:
         """成功パターンを読み込み."""
-        pass
 
     @abstractmethod
     async def save_feedback(self, record: EvolutionRecord) -> None:
         """反馈記録を保存."""
-        pass
 
     @abstractmethod
     async def list_patterns(self, limit: int = 100) -> list[dict[str, Any]]:
         """パターン一覧を取得."""
-        pass
 
     @abstractmethod
     async def get_stats(self) -> dict[str, Any]:
         """統計情報を取得."""
-        pass
 
 
 class MemoryRuntimeStore(RuntimeStore):
@@ -285,9 +270,9 @@ class MemoryEvolutionStore(EvolutionStore):
 # =============================================================================
 
 __all__ = [
-    "RuntimeStore",
     "EvolutionStore",
-    "MemoryRuntimeStore",
     "MemoryEvolutionStore",
+    "MemoryRuntimeStore",
+    "RuntimeStore",
 ]
 

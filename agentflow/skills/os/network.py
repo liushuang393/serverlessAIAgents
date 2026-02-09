@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ネットワークスキル.
 
 安全なHTTPリクエストAPIを提供。ドメインホワイトリスト制限付き。
@@ -12,11 +11,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 
 from agentflow.skills.os.base import OSSkillBase, OSSkillError
-from agentflow.skills.os.config import OSSkillConfig
+
+
+if TYPE_CHECKING:
+    from agentflow.skills.os.config import OSSkillConfig
+
 
 # httpx は遅延インポート（オプション依存）
 HttpMethod = Literal["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
@@ -56,7 +59,6 @@ class HttpResponse:
 class NetworkSecurityError(OSSkillError):
     """ネットワークセキュリティ違反."""
 
-    pass
 
 
 class NetworkSkill(OSSkillBase):
@@ -187,7 +189,7 @@ class NetworkSkill(OSSkillBase):
             await self._client.aclose()
             self._client = None
 
-    async def __aenter__(self) -> "NetworkSkill":
+    async def __aenter__(self) -> NetworkSkill:
         """async with サポート."""
         return self
 

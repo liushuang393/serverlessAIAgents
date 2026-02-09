@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DataLake Core - 統一データアクセスAPI.
 
 全てのデータソースへの統一アクセスを提供するコアモジュール。
@@ -21,9 +20,10 @@
 """
 
 import logging
+from collections.abc import AsyncIterator
 from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncIterator
+from typing import Any
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
@@ -31,6 +31,7 @@ from pydantic import BaseModel, Field
 from agentflow.datalake.auth import AuthProvider
 from agentflow.datalake.connector import DataConnector
 from agentflow.datalake.format_handlers import get_format_handler
+
 
 logger = logging.getLogger(__name__)
 
@@ -319,8 +320,9 @@ class DataLake:
 
         if scheme not in self._connectors:
             available = ", ".join(self._connectors.keys()) or "none"
+            msg = f"Unknown scheme: {scheme}. Available: {available}"
             raise ValueError(
-                f"Unknown scheme: {scheme}. Available: {available}"
+                msg
             )
 
         # パス構築

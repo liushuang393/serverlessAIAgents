@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """PublishService - 統一発布サービス.
 
 コード生成とデプロイを統合したサービス層。
@@ -8,11 +7,9 @@ Studio / CLI / API 全てが使用します。
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
-from io import BytesIO
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from agentflow.codegen import CodeGenerator
 from agentflow.core.interfaces import (
     CodeGenOptions,
     CodeOutputType,
@@ -26,9 +23,15 @@ from agentflow.core.interfaces import (
     ValidationResult,
     WorkflowDefinition,
 )
-from agentflow.codegen import CodeGenerator
-from agentflow.deploy.executor import DeployExecutor
 from agentflow.deploy.config.manager import ConfigManager
+from agentflow.deploy.executor import DeployExecutor
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from io import BytesIO
+    from pathlib import Path
+
 
 logger = logging.getLogger(__name__)
 

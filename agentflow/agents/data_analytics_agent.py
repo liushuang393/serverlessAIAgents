@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DataAnalyticsAgent - データ分析統一Agent.
 
 NL2SQL + SemanticLayer(DSL) + Chart + Suggestion を統合した
@@ -33,6 +32,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from agentflow.core import ResilientAgent
+
 
 logger = logging.getLogger(__name__)
 
@@ -187,16 +187,16 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
             return
 
         from agentflow.services import (
-            SemanticLayerService,
-            SemanticLayerConfig,
-            ChartService,
             ChartConfig,
-            SuggestionService,
+            ChartService,
+            SemanticLayerConfig,
+            SemanticLayerService,
             SuggestionConfig,
+            SuggestionService,
             SuggestionType,
         )
-        from agentflow.services.schema_linker import SchemaLinker, SchemaLinkerConfig
         from agentflow.services.fewshot_manager import FewshotManager
+        from agentflow.services.schema_linker import SchemaLinker, SchemaLinkerConfig
         from agentflow.services.sql_postprocessor import SQLPostProcessor
 
         # SemanticLayerService
@@ -267,13 +267,12 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
                 schema_context = link_result.linked_schema
 
             # 2. Few-shot 例を取得
-            fewshot_prompt = ""
             query_pattern = ""
             if self.__fewshot_manager:
                 similar_examples = self.__fewshot_manager.get_similar_examples(
                     question, k=self._config.nl2sql.fewshot_k
                 )
-                fewshot_prompt = self.__fewshot_manager.format_examples_prompt(
+                self.__fewshot_manager.format_examples_prompt(
                     similar_examples
                 )
                 query_pattern = self.__fewshot_manager._detect_pattern(question)

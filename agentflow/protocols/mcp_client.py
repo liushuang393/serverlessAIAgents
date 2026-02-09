@@ -251,7 +251,7 @@ class MCPClient:
                 raise ToolValidationError(error_msg or "Parameter validation failed")
 
         # 4. リトライ付き実行
-        result = await self._call_tool_with_retry(
+        return await self._call_tool_with_retry(
             tool_uri=tool_uri,
             tool_name=tool_name,
             server_name=server_name,
@@ -259,7 +259,6 @@ class MCPClient:
             user_id=user_id,
         )
 
-        return result
 
     async def _call_tool_with_retry(
         self,
@@ -311,7 +310,7 @@ class MCPClient:
                     "server": server_name,
                 }
 
-            except asyncio.TimeoutError as e:
+            except TimeoutError as e:
                 last_error = e
                 self._logger.warning(
                     f"Tool call timeout (attempt {attempt + 1}/{self._max_retries}): {tool_uri}"

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """価格分析スキル - Price Analyzer.
 
 競合商品の価格を分析し、最適な価格戦略を提案するスキル。
@@ -282,12 +281,11 @@ class PriceAnalyzer(AgentBlock):
 
         if z_score > 1.0:
             return MarketPosition.LEADER
-        elif z_score > 0.0:
+        if z_score > 0.0:
             return MarketPosition.CHALLENGER
-        elif z_score > -1.0:
+        if z_score > -1.0:
             return MarketPosition.FOLLOWER
-        else:
-            return MarketPosition.NICHER
+        return MarketPosition.NICHER
 
     def _generate_insights(
         self,

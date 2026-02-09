@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """サンドボックスライフサイクル管理.
 
 Daytonaのライフサイクル設計を参考に、サンドボックスの状態管理と
@@ -31,16 +30,20 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from agentflow.sandbox.base import (
     ExecutionResult,
-    ResourceLimits,
     ResourceUsage,
     SandboxConfig,
     SandboxProvider,
     SandboxState,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +182,7 @@ class ManagedSandbox:
         provider: str = "docker",
         config: SandboxConfig | None = None,
         sandbox_id: str | None = None,
-    ) -> "ManagedSandbox":
+    ) -> ManagedSandbox:
         """ファクトリメソッド: サンドボックスを作成.
 
         Args:
@@ -223,7 +226,7 @@ class ManagedSandbox:
             try:
                 callback(event)
             except Exception as e:
-                self._logger.error(f"イベントコールバックでエラー: {e}")
+                self._logger.exception(f"イベントコールバックでエラー: {e}")
 
     async def _transition_state(self, new_state: SandboxState) -> None:
         """状態を遷移.
@@ -235,8 +238,9 @@ class ManagedSandbox:
             ValueError: 無効な状態遷移
         """
         if not SandboxState.can_transition(self._state, new_state):
+            msg = f"無効な状態遷移: {self._state.value} → {new_state.value}"
             raise ValueError(
-                f"無効な状態遷移: {self._state.value} → {new_state.value}"
+                msg
             )
 
         old_state = self._state
@@ -320,7 +324,8 @@ class ManagedSandbox:
             RuntimeError: 実行できない状態
         """
         if not self.is_running:
-            raise RuntimeError(f"サンドボックスは実行中ではありません: {self._state.value}")
+            msg = f"サンドボックスは実行中ではありません: {self._state.value}"
+            raise RuntimeError(msg)
 
         self._emit_event(EventType.EXECUTION_STARTED, {"code_length": len(code)})
 
@@ -375,7 +380,7 @@ class ManagedSandbox:
             self._auto_stop_task.cancel()
             self._auto_stop_task = None
 
-    async def __aenter__(self) -> "ManagedSandbox":
+    async def __aenter__(self) -> ManagedSandbox:
         """async with サポート."""
         await self.start()
         return self

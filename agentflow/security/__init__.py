@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentFlow セキュリティモジュール.
 
 認証、認可、API Key 管理、レート制限、AI安全防護を提供します。
@@ -41,54 +40,6 @@
     >>> safe_text = sanitizer.sanitize(user_input)
 """
 
-from agentflow.security.api_key import (
-    APIKeyManager,
-    APIKey,
-    APIKeyConfig,
-    generate_api_key,
-)
-from agentflow.security.rate_limiter import (
-    RateLimiter,
-    RateLimitConfig,
-    RateLimitExceeded,
-)
-from agentflow.security.auth_middleware import (
-    AuthMiddleware,
-    create_auth_middleware,
-    JWTConfig,
-    require_auth,
-    require_permission,
-)
-from agentflow.security.rbac import (
-    Permission,
-    Role,
-    RBACManager,
-)
-from agentflow.security.hallucination_detector import (
-    HallucinationDetector,
-    DetectionConfig,
-    DetectionResult,
-    Issue,
-    IssueType,
-    Severity,
-)
-from agentflow.security.reasoning_monitor import (
-    ReasoningMonitor,
-    MonitorConfig,
-    MonitorResult,
-    ReasoningStep,
-    ReasoningState,
-    DeviationType,
-    DeviationReport,
-)
-from agentflow.security.data_sanitizer import (
-    DataSanitizer,
-    SanitizerConfig,
-    SanitizationResult,
-    ThreatDetection,
-    ThreatType,
-    PIIType,
-)
 from agentflow.security.ai_safety_guard import (
     AISafetyGuard,
     GuardConfig,
@@ -96,78 +47,127 @@ from agentflow.security.ai_safety_guard import (
     OutputCheckResult,
     SafetyLevel,
 )
-from agentflow.security.safety_mixin import SafetyMixin
+from agentflow.security.api_key import (
+    APIKey,
+    APIKeyConfig,
+    APIKeyManager,
+    generate_api_key,
+)
+from agentflow.security.auth_middleware import (
+    AuthMiddleware,
+    JWTConfig,
+    create_auth_middleware,
+    require_auth,
+    require_permission,
+)
+from agentflow.security.data_sanitizer import (
+    DataSanitizer,
+    PIIType,
+    SanitizationResult,
+    SanitizerConfig,
+    ThreatDetection,
+    ThreatType,
+)
+from agentflow.security.hallucination_detector import (
+    DetectionConfig,
+    DetectionResult,
+    HallucinationDetector,
+    Issue,
+    IssueType,
+    Severity,
+)
 from agentflow.security.output_contracts import (
-    EvidenceType,
-    FallbackAction,
+    ContractRegistry,
+    ContractValidator,
     Evidence,
     EvidenceRule,
+    EvidenceType,
+    FallbackAction,
     FieldSchema,
     OutputContract,
     ValidationResult,
-    ContractValidator,
-    ContractRegistry,
 )
+from agentflow.security.rate_limiter import (
+    RateLimitConfig,
+    RateLimiter,
+    RateLimitExceeded,
+)
+from agentflow.security.rbac import (
+    Permission,
+    RBACManager,
+    Role,
+)
+from agentflow.security.reasoning_monitor import (
+    DeviationReport,
+    DeviationType,
+    MonitorConfig,
+    MonitorResult,
+    ReasoningMonitor,
+    ReasoningState,
+    ReasoningStep,
+)
+from agentflow.security.safety_mixin import SafetyMixin
+
 
 __all__ = [
-    # API Key
-    "APIKeyManager",
-    "APIKey",
-    "APIKeyConfig",
-    "generate_api_key",
-    # Rate Limiter
-    "RateLimiter",
-    "RateLimitConfig",
-    "RateLimitExceeded",
-    # Auth Middleware
-    "AuthMiddleware",
-    "create_auth_middleware",
-    "JWTConfig",
-    "require_auth",
-    "require_permission",
-    # RBAC
-    "Permission",
-    "Role",
-    "RBACManager",
-    # AI Safety - Hallucination Detection
-    "HallucinationDetector",
-    "DetectionConfig",
-    "DetectionResult",
-    "Issue",
-    "IssueType",
-    "Severity",
-    # AI Safety - Reasoning Monitor
-    "ReasoningMonitor",
-    "MonitorConfig",
-    "MonitorResult",
-    "ReasoningStep",
-    "ReasoningState",
-    "DeviationType",
-    "DeviationReport",
-    # AI Safety - Data Sanitizer
-    "DataSanitizer",
-    "SanitizerConfig",
-    "SanitizationResult",
-    "ThreatDetection",
-    "ThreatType",
-    "PIIType",
     # AI Safety - Guard (Facade)
     "AISafetyGuard",
-    "GuardConfig",
-    "InputCheckResult",
-    "OutputCheckResult",
-    "SafetyLevel",
-    # Safety Mixin (Apps統合用)
-    "SafetyMixin",
+    "APIKey",
+    "APIKeyConfig",
+    # API Key
+    "APIKeyManager",
+    # Auth Middleware
+    "AuthMiddleware",
+    "ContractRegistry",
+    "ContractValidator",
+    # AI Safety - Data Sanitizer
+    "DataSanitizer",
+    "DetectionConfig",
+    "DetectionResult",
+    "DeviationReport",
+    "DeviationType",
+    "Evidence",
+    "EvidenceRule",
     # L5: Output Contracts（構造化出力規約）
     "EvidenceType",
     "FallbackAction",
-    "Evidence",
-    "EvidenceRule",
     "FieldSchema",
+    "GuardConfig",
+    # AI Safety - Hallucination Detection
+    "HallucinationDetector",
+    "InputCheckResult",
+    "Issue",
+    "IssueType",
+    "JWTConfig",
+    "MonitorConfig",
+    "MonitorResult",
+    "OutputCheckResult",
     "OutputContract",
+    "PIIType",
+    # RBAC
+    "Permission",
+    "RBACManager",
+    "RateLimitConfig",
+    "RateLimitExceeded",
+    # Rate Limiter
+    "RateLimiter",
+    # AI Safety - Reasoning Monitor
+    "ReasoningMonitor",
+    "ReasoningState",
+    "ReasoningStep",
+    "Role",
+    "SafetyLevel",
+    # Safety Mixin (Apps統合用)
+    "SafetyMixin",
+    "SanitizationResult",
+    "SanitizerConfig",
+    "Severity",
+    "ThreatDetection",
+    "ThreatType",
     "ValidationResult",
-    "ContractValidator",
-    "ContractRegistry",
+    "create_auth_middleware",
+    "generate_api_key",
+    "require_auth",
+    "require_permission",
 ]
 

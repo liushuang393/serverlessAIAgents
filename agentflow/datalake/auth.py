@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AuthProvider - 認証プロバイダ抽象.
 
 認証ロジックを外部から注入可能にするためのプロトコル。
@@ -12,10 +11,11 @@
 
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
+
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +62,7 @@ class AuthCredentials(BaseModel):
         """
         if self.expires_at is None:
             return False
-        return datetime.now(timezone.utc) >= self.expires_at
+        return datetime.now(UTC) >= self.expires_at
 
 
 class AuthProvider(ABC):
@@ -114,8 +114,9 @@ class AuthProvider(ABC):
         Raises:
             NotImplementedError: 未実装の場合
         """
+        msg = f"Token refresh not implemented for {connector_type}"
         raise NotImplementedError(
-            f"Token refresh not implemented for {connector_type}"
+            msg
         )
 
 
@@ -183,5 +184,6 @@ class SimpleAuthProvider(AuthProvider):
         if connector_type in self._credentials:
             return self._credentials[connector_type]
 
-        raise KeyError(f"No credentials found for {connector_type}/{resource_id}")
+        msg = f"No credentials found for {connector_type}/{resource_id}"
+        raise KeyError(msg)
 

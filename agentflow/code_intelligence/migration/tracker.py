@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """MigrationTracker - 迁移追踪器.
 
 迁移项目的持久化、进度追踪、报告生成。
@@ -14,19 +13,19 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import UUID
 
 from agentflow.code_intelligence.migration.project import (
-    MigrationProject,
-    MigrationPhase,
-    PhaseStatus,
-    SourceFile,
     FileStatus,
+    MigrationPhase,
+    MigrationProject,
     QualityMetrics,
+    SourceFile,
 )
+
 
 _logger = logging.getLogger(__name__)
 

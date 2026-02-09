@@ -1,12 +1,15 @@
-# -*- coding: utf-8 -*-
 """DB セッション管理."""
 
 from __future__ import annotations
 
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-
 from apps.market_trend_monitor.backend.config import config
 from apps.market_trend_monitor.backend.db.base import Base
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 
 def _build_async_url(url: str) -> str:

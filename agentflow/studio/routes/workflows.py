@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ワークフローAPI ルート.
 
 ワークフローのCRUD操作と実行に関するエンドポイント。
@@ -6,8 +5,7 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 from fastapi import APIRouter, HTTPException
@@ -18,6 +16,10 @@ from agentflow.studio.models import (
     WorkflowCreateRequest,
     WorkflowUpdateRequest,
 )
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def create_workflows_router(workflows_dir: Path) -> APIRouter:

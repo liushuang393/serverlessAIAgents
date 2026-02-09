@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Market Trend Monitor Enhanced API.
 
 改善点：
@@ -20,17 +19,17 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from agentflow.protocols.a2ui.rich_content import (
-    ChartType,
-    ChartView,
-    RichResponse,
     AlertType,
+    ChartType,
+    RichResponse,
 )
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -135,7 +134,7 @@ async def _collect_data(
         await progress_callback(30, "データ収集中...")
 
     # デモデータ
-    articles = [
+    return [
         {
             "id": f"art-{i}",
             "title": f"{keywords[0] if keywords else 'AI'} に関するニュース {i}",
@@ -148,7 +147,6 @@ async def _collect_data(
         for i in range(10)
     ]
 
-    return articles
 
 
 async def _analyze_trends(
@@ -162,7 +160,7 @@ async def _analyze_trends(
         await progress_callback(60, "トレンド分析中...")
 
     # デモトレンド
-    trends = [
+    return [
         {
             "id": f"trend-{i}",
             "topic": f"トレンド{i+1}",
@@ -175,7 +173,6 @@ async def _analyze_trends(
         for i in range(5)
     ]
 
-    return trends
 
 
 async def _generate_report(
@@ -298,7 +295,7 @@ async def _generate_report(
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index():
+async def index() -> str:
     """トップページ - 強化版UI."""
     return """
 <!DOCTYPE html>
@@ -337,7 +334,7 @@ async def index():
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                     <label class="block text-sm text-gray-600 mb-1">キーワード</label>
-                    <input type="text" id="keywords" value="AI, LLM, Agent" 
+                    <input type="text" id="keywords" value="AI, LLM, Agent"
                         class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
                 </div>
                 <div>
@@ -569,8 +566,7 @@ async def collect_v2(request: CollectRequest) -> dict[str, Any]:
     """データ収集（同期）."""
     articles = await _collect_data(request.keywords, request.sources)
     trends = await _analyze_trends(articles)
-    report = await _generate_report(trends)
-    return report
+    return await _generate_report(trends)
 
 
 @app.post("/api/v2/collect/stream")
@@ -607,7 +603,7 @@ async def collect_stream_v2(request: CollectRequest) -> StreamingResponse:
 
 
 @app.websocket("/ws/{client_id}")
-async def websocket_endpoint(websocket: WebSocket, client_id: str):
+async def websocket_endpoint(websocket: WebSocket, client_id: str) -> None:
     """WebSocket エンドポイント."""
     await manager.connect(websocket, client_id)
 
@@ -619,7 +615,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 keywords = data.get("keywords", [])
                 sources = data.get("sources", ["news"])
 
-                async def progress_cb(progress: int, message: str, step: str = ""):
+                async def progress_cb(progress: int, message: str, step: str = "") -> None:
                     await manager.send_message(client_id, {
                         "type": "progress",
                         "progress": progress,

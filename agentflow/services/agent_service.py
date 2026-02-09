@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Agent Service - 統一Agent実行サービス.
 
 API / CLI / Studio 全てが使用する Agent 実行サービス。
@@ -24,23 +23,21 @@ API / CLI / Studio 全てが使用する Agent 実行サービス。
 
 from __future__ import annotations
 
-import asyncio
 import time
-from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.services.base import (
-    ErrorEvent,
-    LogEvent,
     LogLevel,
     ProgressEvent,
-    ResultEvent,
     ServiceBase,
     ServiceError,
     ServiceEvent,
-    ServiceEventType,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 class AgentService(ServiceBase[dict[str, Any]]):
@@ -138,8 +135,9 @@ class AgentService(ServiceBase[dict[str, Any]]):
             elif hasattr(agent, "invoke"):
                 result = await agent.invoke(input_data)
             else:
+                msg = "invalid_agent"
                 raise ServiceError(
-                    "invalid_agent",
+                    msg,
                     "Agent has no run/invoke method",
                 )
 
@@ -189,12 +187,14 @@ class AgentService(ServiceBase[dict[str, Any]]):
                 if agent_yaml.exists():
                     from agentflow.core.schemas import SchemaLoader
                     loader = SchemaLoader()
-                    metadata = loader.load_from_file(agent_yaml)
+                    loader.load_from_file(agent_yaml)
                     # TODO: メタデータからAgentをロード
-                    raise NotImplementedError("agent.yaml based loading")
+                    msg = "agent.yaml based loading"
+                    raise NotImplementedError(msg)
 
+        msg = "agent_not_found"
         raise ServiceError(
-            "agent_not_found",
+            msg,
             f"Agent not found: {agent_id or agent_path}",
         )
 

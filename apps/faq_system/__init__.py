@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FAQ System - Enterprise FAQ with RAG, Text2SQL, and Charts.
 
 ⚠️ 注意: このアプリは薄い App 層として設計されています。
@@ -19,5 +18,6 @@ Usage:
 
 # フレームワーク層の Agent を再エクスポート
 from agentflow.agents import FAQAgent, FAQAgentConfig
+
 
 __all__ = ["FAQAgent", "FAQAgentConfig"]

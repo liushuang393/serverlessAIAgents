@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """レート制限モジュール.
 
 API リクエストのレート制限を提供します。
@@ -18,6 +17,7 @@ import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Few-shot Example Manager - NL2SQL 動的示例選択.
 
 学術研究に基づく Few-shot 示例管理:
@@ -26,6 +25,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass, field
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -336,8 +336,7 @@ ORDER BY avg_unit_price DESC""",
         # 簡易トークン化（日本語対応）
         text = text.lower()
         # 英数字とカタカナを抽出
-        tokens = re.findall(r'[a-z0-9]+|[ぁ-んァ-ヶ一-龥]+', text)
-        return tokens
+        return re.findall(r"[a-z0-9]+|[ぁ-んァ-ヶ一-龥]+", text)
 
     def _detect_pattern(self, query: str) -> str | None:
         """クエリパターンを検出.
@@ -381,9 +380,9 @@ ORDER BY avg_unit_price DESC""",
 
 
 __all__ = [
+    "BM25",
+    "FewshotExample",
     "FewshotManager",
     "FewshotManagerConfig",
-    "FewshotExample",
-    "BM25",
 ]
 

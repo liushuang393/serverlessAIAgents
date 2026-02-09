@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """サービスノード定義.
 
 フレームワーク級サービスをフローノードとしてラップ。
@@ -12,7 +11,7 @@ Studio UIでノーコードで使用可能。
 
 使用例:
     >>> from agentflow.flow.service_nodes import RAGNode
-    >>> 
+    >>>
     >>> # フロー定義内で使用
     >>> node = RAGNode(
     ...     id="rag_search",
@@ -26,9 +25,10 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from agentflow.flow.types import NextAction, NodeResult
+
 
 if TYPE_CHECKING:
     from agentflow.flow.context import FlowContext
@@ -69,7 +69,7 @@ class ServiceNode:
         if not self.label:
             self.label = self.name
 
-    async def execute(self, ctx: "FlowContext") -> NodeResult:
+    async def execute(self, ctx: FlowContext) -> NodeResult:
         """ノードを実行."""
         raise NotImplementedError
 
@@ -82,9 +82,9 @@ class ServiceNode:
 @dataclass
 class RAGNode(ServiceNode):
     """RAG検索ノード.
-    
+
     ナレッジベースを検索し、回答を生成。
-    
+
     Attributes:
         config: RAGConfig
         input_key: 入力キー（デフォルト: "question"）
@@ -100,40 +100,40 @@ class RAGNode(ServiceNode):
         if not self.icon:
             self.icon = "search"
 
-    async def execute(self, ctx: "FlowContext") -> NodeResult:
+    async def execute(self, ctx: FlowContext) -> NodeResult:
         """RAG検索を実行."""
-        from agentflow.services import RAGService, RAGConfig
+        from agentflow.services import RAGConfig, RAGService
 
         try:
             config = self.config if isinstance(self.config, RAGConfig) else RAGConfig()
             service = RAGService(config)
-            
+
             inputs = ctx.get_inputs()
             question = inputs.get(self.input_key, "")
-            
+
             if not question:
                 return NodeResult(
                     success=False,
                     data={"error": "質問が指定されていません"},
                     action=NextAction.STOP,
                 )
-            
+
             result = await service.execute(
                 action="query",
                 question=question,
                 filters=inputs.get("filters"),
             )
-            
+
             ctx.set_result(self.id, result.data)
             ctx.set_result(self.output_key, result.data)
-            
+
             return NodeResult(
                 success=result.success,
                 data=result.data,
                 action=NextAction.CONTINUE if result.success else NextAction.STOP,
             )
         except Exception as e:
-            self._logger.error(f"RAG検索失敗: {e}")
+            self._logger.exception(f"RAG検索失敗: {e}")
             return NodeResult(
                 success=False,
                 data={"error": str(e)},
@@ -170,9 +170,9 @@ class RAGNode(ServiceNode):
 @dataclass
 class Text2SQLNode(ServiceNode):
     """Text2SQLノード.
-    
+
     自然言語からSQLを生成して実行。
-    
+
     Attributes:
         config: Text2SQLConfig
         input_key: 入力キー
@@ -188,39 +188,39 @@ class Text2SQLNode(ServiceNode):
         if not self.icon:
             self.icon = "database"
 
-    async def execute(self, ctx: "FlowContext") -> NodeResult:
+    async def execute(self, ctx: FlowContext) -> NodeResult:
         """Text2SQLを実行."""
-        from agentflow.services import Text2SQLService, Text2SQLConfig
+        from agentflow.services import Text2SQLConfig, Text2SQLService
 
         try:
             config = self.config if isinstance(self.config, Text2SQLConfig) else Text2SQLConfig()
             service = Text2SQLService(config)
-            
+
             inputs = ctx.get_inputs()
             question = inputs.get(self.input_key, "")
-            
+
             if not question:
                 return NodeResult(
                     success=False,
                     data={"error": "質問が指定されていません"},
                     action=NextAction.STOP,
                 )
-            
+
             result = await service.execute(
                 action="query",
                 question=question,
             )
-            
+
             ctx.set_result(self.id, result.data)
             ctx.set_result(self.output_key, result.data)
-            
+
             return NodeResult(
                 success=result.success,
                 data=result.data,
                 action=NextAction.CONTINUE if result.success else NextAction.STOP,
             )
         except Exception as e:
-            self._logger.error(f"Text2SQL失敗: {e}")
+            self._logger.exception(f"Text2SQL失敗: {e}")
             return NodeResult(
                 success=False,
                 data={"error": str(e)},
@@ -258,9 +258,9 @@ class Text2SQLNode(ServiceNode):
 @dataclass
 class ChartNode(ServiceNode):
     """チャート生成ノード.
-    
+
     データからチャートを自動生成。
-    
+
     Attributes:
         config: ChartConfig
         input_key: データ入力キー
@@ -276,43 +276,43 @@ class ChartNode(ServiceNode):
         if not self.icon:
             self.icon = "chart-bar"
 
-    async def execute(self, ctx: "FlowContext") -> NodeResult:
+    async def execute(self, ctx: FlowContext) -> NodeResult:
         """チャートを生成."""
-        from agentflow.services import ChartService, ChartConfig
+        from agentflow.services import ChartConfig, ChartService
 
         try:
             config = self.config if isinstance(self.config, ChartConfig) else ChartConfig()
             service = ChartService(config)
-            
+
             inputs = ctx.get_inputs()
             data = inputs.get(self.input_key, [])
             columns = inputs.get("columns", [])
             title = inputs.get("title", "")
-            
+
             if not data:
                 return NodeResult(
                     success=False,
                     data={"error": "データが指定されていません"},
                     action=NextAction.STOP,
                 )
-            
+
             result = await service.execute(
                 action="generate",
                 data=data,
                 columns=columns,
                 title=title,
             )
-            
+
             ctx.set_result(self.id, result.data)
             ctx.set_result(self.output_key, result.data)
-            
+
             return NodeResult(
                 success=result.success,
                 data=result.data,
                 action=NextAction.CONTINUE,
             )
         except Exception as e:
-            self._logger.error(f"チャート生成失敗: {e}")
+            self._logger.exception(f"チャート生成失敗: {e}")
             return NodeResult(
                 success=False,
                 data={"error": str(e)},
@@ -351,9 +351,9 @@ class ChartNode(ServiceNode):
 @dataclass
 class SuggestionNode(ServiceNode):
     """提案生成ノード.
-    
+
     フォローアップ質問やアクションを提案。
-    
+
     Attributes:
         config: SuggestionConfig
         input_key: 質問入力キー
@@ -369,33 +369,33 @@ class SuggestionNode(ServiceNode):
         if not self.icon:
             self.icon = "lightbulb"
 
-    async def execute(self, ctx: "FlowContext") -> NodeResult:
+    async def execute(self, ctx: FlowContext) -> NodeResult:
         """提案を生成."""
-        from agentflow.services import SuggestionService, SuggestionConfig
+        from agentflow.services import SuggestionConfig, SuggestionService
 
         try:
             config = self.config if isinstance(self.config, SuggestionConfig) else SuggestionConfig()
             service = SuggestionService(config)
-            
+
             inputs = ctx.get_inputs()
             question = inputs.get(self.input_key, "")
             context = inputs.get("context", {})
-            
+
             result = await service.execute(
                 question=question,
                 context=context,
             )
-            
+
             ctx.set_result(self.id, result.data)
             ctx.set_result(self.output_key, result.data.get("suggestions", []))
-            
+
             return NodeResult(
                 success=result.success,
                 data=result.data,
                 action=NextAction.CONTINUE,
             )
         except Exception as e:
-            self._logger.error(f"提案生成失敗: {e}")
+            self._logger.exception(f"提案生成失敗: {e}")
             return NodeResult(
                 success=False,
                 data={"error": str(e)},
@@ -431,10 +431,10 @@ class SuggestionNode(ServiceNode):
 @dataclass
 class FAQNode(ServiceNode):
     """FAQ複合ノード.
-    
+
     RAG + Text2SQL + Chart + Suggestion を統合。
     質問タイプを自動判定して適切なサービスを実行。
-    
+
     Attributes:
         rag_config: RAG設定
         sql_config: SQL設定
@@ -453,54 +453,56 @@ class FAQNode(ServiceNode):
         if not self.icon:
             self.icon = "question-circle"
 
-    async def execute(self, ctx: "FlowContext") -> NodeResult:
+    async def execute(self, ctx: FlowContext) -> NodeResult:
         """FAQ処理を実行."""
         from agentflow.services import (
-            RAGService, RAGConfig,
-            Text2SQLService, Text2SQLConfig,
-            ChartService, ChartConfig,
-            SuggestionService, SuggestionConfig,
+            RAGConfig,
+            RAGService,
+            SuggestionConfig,
+            SuggestionService,
+            Text2SQLConfig,
+            Text2SQLService,
         )
 
         try:
             inputs = ctx.get_inputs()
             question = inputs.get("question", "")
-            
+
             if not question:
                 return NodeResult(
                     success=False,
                     data={"error": "質問が指定されていません"},
                     action=NextAction.STOP,
                 )
-            
+
             # クエリタイプを判定
             query_type = self._classify_query(question)
-            
+
             result_data: dict[str, Any] = {
                 "question": question,
                 "query_type": query_type,
             }
-            
+
             if query_type == "sql":
                 # SQL処理
                 sql_config = self.sql_config or Text2SQLConfig()
                 sql_service = Text2SQLService(sql_config)
                 sql_result = await sql_service.execute(action="query", question=question)
-                
+
                 result_data["answer"] = sql_result.data.get("answer", "")
                 result_data["sql"] = sql_result.data.get("sql", "")
                 result_data["data"] = sql_result.data.get("data", [])
                 result_data["chart"] = sql_result.data.get("chart")
-                
+
             else:
                 # RAG処理
                 rag_config = self.rag_config or RAGConfig()
                 rag_service = RAGService(rag_config)
                 rag_result = await rag_service.execute(action="query", question=question)
-                
+
                 result_data["answer"] = rag_result.data.get("answer", "")
                 result_data["documents"] = rag_result.data.get("documents", [])
-            
+
             # 提案生成
             suggestion_config = self.suggestion_config or SuggestionConfig()
             suggestion_service = SuggestionService(suggestion_config)
@@ -509,16 +511,16 @@ class FAQNode(ServiceNode):
                 context={"query_type": query_type, "data_found": bool(result_data.get("data") or result_data.get("documents"))},
             )
             result_data["suggestions"] = suggestion_result.data.get("suggestions", [])
-            
+
             ctx.set_result(self.id, result_data)
-            
+
             return NodeResult(
                 success=True,
                 data=result_data,
                 action=NextAction.CONTINUE,
             )
         except Exception as e:
-            self._logger.error(f"FAQ処理失敗: {e}")
+            self._logger.exception(f"FAQ処理失敗: {e}")
             return NodeResult(
                 success=False,
                 data={"error": str(e)},
@@ -535,7 +537,7 @@ class FAQNode(ServiceNode):
     @classmethod
     def get_studio_definition(cls) -> dict[str, Any]:
         """Studio UI用ノード定義."""
-        from agentflow.services import RAGConfig, Text2SQLConfig, SuggestionConfig
+        from agentflow.services import RAGConfig, Text2SQLConfig
         return {
             "type": "faq",
             "label": "FAQ",
@@ -568,7 +570,7 @@ class FAQNode(ServiceNode):
 
 def get_all_service_node_definitions() -> list[dict[str, Any]]:
     """全サービスノード定義を取得.
-    
+
     Studio UIのノードパレット用。
     """
     return [
@@ -581,12 +583,12 @@ def get_all_service_node_definitions() -> list[dict[str, Any]]:
 
 
 __all__ = [
-    "ServiceNodeType",
-    "ServiceNode",
-    "RAGNode",
-    "Text2SQLNode",
     "ChartNode",
-    "SuggestionNode",
     "FAQNode",
+    "RAGNode",
+    "ServiceNode",
+    "ServiceNodeType",
+    "SuggestionNode",
+    "Text2SQLNode",
     "get_all_service_node_definitions",
 ]

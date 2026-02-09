@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """MCP 懒加載クライアント実装.
 
 このモジュールは MCP ツールの懒加載（Lazy Loading）機能を提供します。
@@ -219,8 +218,8 @@ class LazyMCPClient(MCPClient):
 
         lines.extend([
             "",
-            "ツールを使用する場合は `MCPSearch(query: \"キーワード\")` または",
-            "`MCPSearch(query: \"select:tool_name\")` で検索してください。",
+            'ツールを使用する場合は `MCPSearch(query: "キーワード")` または',
+            '`MCPSearch(query: "select:tool_name")` で検索してください。',
         ])
 
         return "\n".join(lines)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """TaskDecomposer - 高度なタスク分解システム.
 
 Manus分析に基づく「递归分解+依赖图+动态调度」の実装：
@@ -23,7 +22,7 @@ Manus分析に基づく「递归分解+依赖图+动态调度」の実装：
     >>>
     >>> decomposer = TaskDecomposer(llm_client=my_llm)
     >>> plan = await decomposer.decompose("新規事業の投資判断を行いたい")
-    >>> 
+    >>>
     >>> # 実行
     >>> async for step in decomposer.execute_plan(plan):
     ...     print(f"完了: {step.task}")
@@ -34,19 +33,24 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Any, AsyncIterator, Callable
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Callable
+
 
 logger = logging.getLogger(__name__)
 
 
 class TaskGranularity(str, Enum):
     """タスク粒度."""
-    
+
     COARSE = "coarse"      # 粗い（さらに分解可能）
     MEDIUM = "medium"      # 中程度
     FINE = "fine"          # 細かい（これ以上分解不要）
@@ -55,7 +59,7 @@ class TaskGranularity(str, Enum):
 
 class TaskPriority(str, Enum):
     """タスク優先度."""
-    
+
     CRITICAL = "critical"  # 最優先
     HIGH = "high"          # 高
     MEDIUM = "medium"      # 中
@@ -65,7 +69,7 @@ class TaskPriority(str, Enum):
 
 class DecomposedTask(BaseModel):
     """分解されたタスク.
-    
+
     Attributes:
         id: タスクID
         name: タスク名
@@ -80,7 +84,7 @@ class DecomposedTask(BaseModel):
         required_skills: 必要なスキル
         metadata: メタデータ
     """
-    
+
     id: str = Field(default_factory=lambda: f"task-{uuid.uuid4().hex[:8]}")
     name: str = Field(default="", description="タスク名")
     description: str = Field(default="", description="詳細説明")
@@ -94,7 +98,7 @@ class DecomposedTask(BaseModel):
     required_skills: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=datetime.now)
-    
+
     # 実行状態
     status: str = Field(default="pending")
     result: dict[str, Any] | None = Field(default=None)
@@ -105,7 +109,7 @@ class DecomposedTask(BaseModel):
 
 class DecompositionPlan(BaseModel):
     """分解計画.
-    
+
     Attributes:
         id: 計画ID
         root_task_id: ルートタスクID
@@ -114,7 +118,7 @@ class DecompositionPlan(BaseModel):
         parallel_groups: 並行実行グループ
         total_estimated_duration: 総推定時間
     """
-    
+
     id: str = Field(default_factory=lambda: f"plan-{uuid.uuid4().hex[:8]}")
     root_task_id: str = Field(default="")
     tasks: dict[str, DecomposedTask] = Field(default_factory=dict)
@@ -122,11 +126,11 @@ class DecompositionPlan(BaseModel):
     parallel_groups: list[list[str]] = Field(default_factory=list)
     total_estimated_duration: float = Field(default=0.0)
     created_at: datetime = Field(default_factory=datetime.now)
-    
+
     def get_task(self, task_id: str) -> DecomposedTask | None:
         """タスクを取得."""
         return self.tasks.get(task_id)
-    
+
     def get_ready_tasks(self) -> list[DecomposedTask]:
         """実行準備完了のタスクを取得."""
         completed_ids = {
@@ -251,7 +255,7 @@ class DependencyGraph:
             sorter = TopologicalSorter(self._graph)
             return list(sorter.static_order())
         except CycleError:
-            self._logger.error("循環依存のため実行順序を決定できません")
+            self._logger.exception("循環依存のため実行順序を決定できません")
             return []
 
     def get_parallel_groups(self) -> list[list[str]]:
@@ -584,7 +588,7 @@ JSON形式で回答:
                     return_exceptions=True,
                 )
 
-                for task, result in zip(batch, results):
+                for task, result in zip(batch, results, strict=False):
                     if isinstance(result, Exception):
                         task.status = "failed"
                         task.error = str(result)

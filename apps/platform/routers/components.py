@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Components Router - コンポーネント API エンドポイント.
 
 GET /api/components - コンポーネント一覧
@@ -11,24 +10,23 @@ GET /api/components/{component_id}/dependencies - 依存関係取得
 
 from __future__ import annotations
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-
 from apps.platform.engine import PlatformEngine
+from apps.platform.schemas.component_schemas import (
+    ComponentCreateRequest,
+    ComponentDependencyGraph,
+    ComponentListResponse,
+    ComponentResponse,
+    ComponentUpdateRequest,
+)
 from apps.platform.services.component_library import (
     ComponentEntry,
     ComponentType,
-    ComponentVisibility,
 )
-from apps.platform.schemas.component_schemas import (
-    ComponentCreateRequest,
-    ComponentUpdateRequest,
-    ComponentResponse,
-    ComponentListResponse,
-    ComponentDependencyGraph,
-)
+from fastapi import APIRouter, Depends, HTTPException, Query
+
 
 router = APIRouter(prefix="/api/components", tags=["components"])
 

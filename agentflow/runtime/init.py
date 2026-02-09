@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Runtime initialization helpers for AgentFlow."""
 
 from __future__ import annotations

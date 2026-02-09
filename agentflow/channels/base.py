@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Message Channel Adapter Base Classes.
 
 定义消息平台适配器的统一接口，支持多种消息平台集成。

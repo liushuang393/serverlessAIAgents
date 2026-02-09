@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeployExecutor - デプロイ執行器実装.
 
 IDeployExecutor インターフェースを実装し、
@@ -9,9 +8,8 @@ from __future__ import annotations
 
 import logging
 import tempfile
-from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.core.interfaces import (
     ConfigField,
@@ -23,11 +21,17 @@ from agentflow.core.interfaces import (
     IDeployExecutor,
     ValidationResult,
 )
-from agentflow.deploy.targets.base import BaseDeployTarget
-from agentflow.deploy.targets.vercel import VercelTarget
-from agentflow.deploy.targets.docker import DockerTarget
 from agentflow.deploy.targets.aws_lambda import AWSLambdaTarget
+from agentflow.deploy.targets.docker import DockerTarget
 from agentflow.deploy.targets.github_actions import GitHubActionsTarget
+from agentflow.deploy.targets.vercel import VercelTarget
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+    from agentflow.deploy.targets.base import BaseDeployTarget
+
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """HITL REST API エンドポイント.
 
 FastAPI を使用した承認ワークフローの REST API。
@@ -25,6 +24,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
 
 if TYPE_CHECKING:
     from fastapi import APIRouter
@@ -95,11 +95,11 @@ class APIResponse(BaseModel):
 
 
 def create_hitl_router(
-    approval_manager: "ApprovalManager",
+    approval_manager: ApprovalManager,
     *,
     prefix: str = "/hitl",
     tags: list[str] | None = None,
-) -> "APIRouter":
+) -> APIRouter:
     """HITL 用の FastAPI Router を作成.
 
     Args:

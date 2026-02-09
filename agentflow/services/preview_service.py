@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """PreviewService - 統一プレビューサービス.
 
 ワークフローの実行とデバッグを統合したサービス層。
@@ -10,8 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import AsyncIterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.core.interfaces import (
     DebugEvent,
@@ -19,6 +17,11 @@ from agentflow.core.interfaces import (
     IWorkflowRunner,
     WorkflowDefinition,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +111,7 @@ class PreviewService(IWorkflowRunner):
                 from agentflow.flow import FlowBuilder, FlowExecutor
 
                 # ワークフローからフローを構築
-                builder = FlowBuilder(workflow.id)
+                FlowBuilder(workflow.id)
 
                 # ノードを追加（実際のエージェントクラスが必要）
                 # ここでは簡易実装として各ノードを順次実行
@@ -211,7 +214,7 @@ class PreviewService(IWorkflowRunner):
 
         breakpoints = breakpoints or []
         start_time = time.time()
-        execution_id = f"debug_{int(start_time * 1000)}"
+        f"debug_{int(start_time * 1000)}"
 
         yield DebugEvent(
             type="start",

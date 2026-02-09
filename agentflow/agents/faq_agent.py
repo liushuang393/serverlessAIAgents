@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FAQ Agent - FAQ 専門Agent（ResilientAgent 準拠）.
 
 RAG + Text2SQL + Chart + Suggestion を統合した
@@ -26,12 +25,13 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 # 循環インポート回避: agentflow.core から直接インポート
 from agentflow.core import ResilientAgent
+
 
 logger = logging.getLogger(__name__)
 
@@ -196,11 +196,10 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         try:
             if query_type == "sql":
                 return await self._handle_sql_query(question, query_type)
-            else:
-                return await self._handle_faq_query(question, query_type)
+            return await self._handle_faq_query(question, query_type)
 
         except Exception as e:
-            self._logger.error(f"FAQAgent実行エラー: {e}")
+            self._logger.exception(f"FAQAgent実行エラー: {e}")
             return FAQOutput(
                 question=question,
                 query_type=query_type,
@@ -412,11 +411,11 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
 
 
 __all__ = [
+    "ChartSchema",
+    "DocumentSchema",
     "FAQAgent",
     "FAQAgentConfig",
     "FAQInput",
     "FAQOutput",
-    "DocumentSchema",
-    "ChartSchema",
     "SuggestionSchema",
 ]

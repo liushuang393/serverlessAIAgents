@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """統一ポリシーエンジン.
 
 RBAC/ABAC/PBAC を統合した柔軟な認可システム。
@@ -30,9 +29,14 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 logger = logging.getLogger(__name__)
 
@@ -143,10 +147,7 @@ class Policy:
             return False
 
         # カスタム条件
-        if self.custom_condition and not self.custom_condition(context):
-            return False
-
-        return True
+        return not (self.custom_condition and not self.custom_condition(context))
 
     def _match_attributes(
         self,
@@ -168,9 +169,8 @@ class Policy:
                 if not self._match_attributes(actual_value, expected):
                     return False
             # 単純比較
-            else:
-                if actual_value != expected:
-                    return False
+            elif actual_value != expected:
+                return False
 
         return True
 
@@ -265,18 +265,17 @@ class PolicyEngine:
 
         if mode == AuthMode.RBAC:
             return await self._authorize_rbac(context)
-        elif mode == AuthMode.ABAC:
+        if mode == AuthMode.ABAC:
             return await self._authorize_abac(context)
-        elif mode == AuthMode.PBAC:
+        if mode == AuthMode.PBAC:
             return await self._authorize_pbac(context)
-        elif mode == AuthMode.HYBRID:
+        if mode == AuthMode.HYBRID:
             return await self._authorize_hybrid(context)
-        else:
-            return AuthResult(
-                decision=AuthDecision.DENY,
-                reason=f"不明な認可モード: {mode}",
-                mode=mode,
-            )
+        return AuthResult(
+            decision=AuthDecision.DENY,
+            reason=f"不明な認可モード: {mode}",
+            mode=mode,
+        )
 
     async def _authorize_rbac(self, context: AuthContext) -> AuthResult:
         """RBAC による認可."""

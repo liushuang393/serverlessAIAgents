@@ -14,35 +14,29 @@ class DeploymentError(Exception):
 class BuildError(DeploymentError):
     """构建错误."""
 
-    pass
 
 
 class ConfigError(DeploymentError):
     """配置错误."""
 
-    pass
 
 
 class DomainError(DeploymentError):
     """域名错误."""
 
-    pass
 
 
 class RollbackError(DeploymentError):
     """回滚错误."""
 
-    pass
 
 
 class ProviderError(DeploymentError):
     """提供商 API 错误."""
 
-    pass
 
 
 class TimeoutError(DeploymentError):
     """超时错误."""
 
-    pass
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ナレッジベースAPI ルート.
 
 知識ベース管理とRAGクエリ機能。
@@ -6,11 +5,13 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter
 
-from agentflow.studio.models import ChatRequest, KnowledgeAddRequest, RAGQueryRequest
+
+if TYPE_CHECKING:
+    from agentflow.studio.models import ChatRequest, KnowledgeAddRequest, RAGQueryRequest
 
 
 def create_knowledge_router() -> APIRouter:

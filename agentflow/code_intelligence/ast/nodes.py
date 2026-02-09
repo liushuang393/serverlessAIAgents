@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AST ノード型定義.
 
 特定の用途向けのノードファクトリ関数を提供します。
@@ -308,14 +307,14 @@ def BlockNode(statements: list[ASTNode] | None = None, **kwargs) -> ASTNode:
 
 
 __all__ = [
-    "ProgramNode",
-    "FunctionNode",
-    "MethodNode",
-    "ClassNode",
-    "VariableNode",
-    "StatementNode",
-    "ExpressionNode",
-    "IfNode",
-    "ForNode",
     "BlockNode",
+    "ClassNode",
+    "ExpressionNode",
+    "ForNode",
+    "FunctionNode",
+    "IfNode",
+    "MethodNode",
+    "ProgramNode",
+    "StatementNode",
+    "VariableNode",
 ]

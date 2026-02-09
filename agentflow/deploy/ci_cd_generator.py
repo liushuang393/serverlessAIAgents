@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CI/CD テンプレート生成モジュール.
 
 GitHub Actions、GitLab CI の設定を生成します。
@@ -16,6 +15,7 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class CICDConfig:
     branches: list[str] = field(default_factory=lambda: ["main", "develop"])
 
 
-GITHUB_ACTIONS_TEMPLATE = '''# -*- coding: utf-8 -*-
+GITHUB_ACTIONS_TEMPLATE = """# -*- coding: utf-8 -*-
 # AgentFlow CI/CD Pipeline
 #
 # This workflow runs tests, linting, and deployment on push/PR
@@ -66,28 +66,28 @@ jobs:
   lint:
     name: Lint & Type Check
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{{{ env.PYTHON_VERSION }}}}
           cache: "pip"
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install ruff mypy
           pip install -e ".[dev]"
-      
+
       - name: Run Ruff (lint)
         run: ruff check .
-      
+
       - name: Run Ruff (format check)
         run: ruff format --check .
-      
+
       - name: Run Mypy (type check)
         run: mypy .
 
@@ -98,26 +98,26 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     needs: lint
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{{{ env.PYTHON_VERSION }}}}
           cache: "pip"
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
-      
+
       - name: Run tests
         run: {test_command}
         env:
           OPENAI_API_KEY: ${{{{ secrets.OPENAI_API_KEY }}}}
-      
+
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
@@ -132,19 +132,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: test
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{{{ secrets.DOCKER_USERNAME }}}}
           password: ${{{{ secrets.DOCKER_PASSWORD }}}}
-      
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -164,10 +164,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Deploy to production
         run: |
           echo "Add your deployment commands here"
@@ -175,10 +175,10 @@ jobs:
           # - Vercel: vercel --prod
           # - AWS: serverless deploy --stage prod
           # - K8s: kubectl apply -f k8s/
-'''
+"""
 
 
-GITLAB_CI_TEMPLATE = '''# -*- coding: utf-8 -*-
+GITLAB_CI_TEMPLATE = """# -*- coding: utf-8 -*-
 # AgentFlow GitLab CI/CD Pipeline
 
 stages:
@@ -267,7 +267,7 @@ deploy:production:
   only:
     - main
   when: manual
-'''
+"""
 
 
 def generate_github_actions(

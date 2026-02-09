@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """社内KB Agent - RBAC制御 + 保守モード.
 
 社内向け知識ベース専用のAgent。
@@ -25,14 +24,19 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
 from agentflow.core import ResilientAgent
-from agentflow.knowledge.isolated_kb import IsolatedKBManager, KBType
 from agentflow.integrations.ticket_generator import TicketGenerator
-from agentflow.security.policy_engine import PolicyEngine, AuthContext, AuthMode
+from agentflow.knowledge.isolated_kb import IsolatedKBManager, KBType
+from agentflow.security.policy_engine import AuthContext, AuthMode, PolicyEngine
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 logger = logging.getLogger(__name__)
 
@@ -266,7 +270,7 @@ class InternalKBAgent(ResilientAgent):
         Yields:
             進捗イベント
         """
-        question = input_data.get("question", "")
+        input_data.get("question", "")
 
         yield {
             "type": "progress",
@@ -431,16 +435,9 @@ class InternalKBAgent(ResilientAgent):
                 relevance_score=result.get("score", 0.0),
             ))
 
-        context = "\n\n".join(context_parts)
+        "\n\n".join(context_parts)
 
         # LLM で回答生成
-        prompt = f"""参考情報:
-{context}
-
-質問: {question}
-
-上記の参考情報に基づいて、質問に回答してください。
-必ず引用を含めてください（[1]、[2]等）。"""
 
         # TODO: 実際のLLM呼び出し
         answer = f"参考情報 [1] に基づくと、{search_results[0]['content'][:100]}..."
@@ -589,8 +586,8 @@ class InternalKBAgent(ResilientAgent):
 
 
 __all__ = [
+    "Citation",
     "InternalKBAgent",
     "InternalKBConfig",
     "InternalKBResponse",
-    "Citation",
 ]

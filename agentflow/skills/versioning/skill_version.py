@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Skill Version - 技能版本模型.
 
 技能版本的数据模型和版本号管理。
@@ -14,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 from uuid import uuid4
@@ -64,7 +63,7 @@ class VersionInfo:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "VersionInfo":
+    def from_dict(cls, data: dict[str, Any]) -> VersionInfo:
         """从字典创建."""
         return cls(
             version=data["version"],
@@ -123,7 +122,7 @@ class SkillVersion:
             and self.prerelease == other.prerelease
         )
 
-    def __lt__(self, other: "SkillVersion") -> bool:
+    def __lt__(self, other: SkillVersion) -> bool:
         """比较大小."""
         if self.major != other.major:
             return self.major < other.major
@@ -138,20 +137,20 @@ class SkillVersion:
             return False
         return self.prerelease < other.prerelease
 
-    def __le__(self, other: "SkillVersion") -> bool:
+    def __le__(self, other: SkillVersion) -> bool:
         return self == other or self < other
 
-    def __gt__(self, other: "SkillVersion") -> bool:
+    def __gt__(self, other: SkillVersion) -> bool:
         return not self <= other
 
-    def __ge__(self, other: "SkillVersion") -> bool:
+    def __ge__(self, other: SkillVersion) -> bool:
         return not self < other
 
     def __hash__(self) -> int:
         return hash((self.major, self.minor, self.patch, self.prerelease))
 
     @classmethod
-    def parse(cls, version_string: str) -> "SkillVersion":
+    def parse(cls, version_string: str) -> SkillVersion:
         """解析版本字符串.
 
         Args:
@@ -177,23 +176,23 @@ class SkillVersion:
         )
 
     @classmethod
-    def initial(cls) -> "SkillVersion":
+    def initial(cls) -> SkillVersion:
         """创建初始版本 (0.1.0)."""
         return cls(major=0, minor=1, patch=0)
 
-    def bump_major(self) -> "SkillVersion":
+    def bump_major(self) -> SkillVersion:
         """增加主版本号."""
         return SkillVersion(major=self.major + 1, minor=0, patch=0)
 
-    def bump_minor(self) -> "SkillVersion":
+    def bump_minor(self) -> SkillVersion:
         """增加次版本号."""
         return SkillVersion(major=self.major, minor=self.minor + 1, patch=0)
 
-    def bump_patch(self) -> "SkillVersion":
+    def bump_patch(self) -> SkillVersion:
         """增加补丁版本号."""
         return SkillVersion(major=self.major, minor=self.minor, patch=self.patch + 1)
 
-    def with_prerelease(self, prerelease: str) -> "SkillVersion":
+    def with_prerelease(self, prerelease: str) -> SkillVersion:
         """设置预发布标识."""
         return SkillVersion(
             major=self.major,
@@ -203,7 +202,7 @@ class SkillVersion:
             build=self.build,
         )
 
-    def with_build(self, build: str) -> "SkillVersion":
+    def with_build(self, build: str) -> SkillVersion:
         """设置构建元数据."""
         return SkillVersion(
             major=self.major,
@@ -217,7 +216,7 @@ class SkillVersion:
         """转换为元组."""
         return (self.major, self.minor, self.patch)
 
-    def is_compatible_with(self, other: "SkillVersion") -> bool:
+    def is_compatible_with(self, other: SkillVersion) -> bool:
         """检查是否兼容.
 
         主版本号相同则兼容。
@@ -271,7 +270,7 @@ class SkillSnapshot:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SkillSnapshot":
+    def from_dict(cls, data: dict[str, Any]) -> SkillSnapshot:
         """从字典创建."""
         return cls(
             id=data.get("id", str(uuid4())),
@@ -285,8 +284,8 @@ class SkillSnapshot:
 
 
 __all__ = [
-    "VersionStatus",
-    "VersionInfo",
-    "SkillVersion",
     "SkillSnapshot",
+    "SkillVersion",
+    "VersionInfo",
+    "VersionStatus",
 ]

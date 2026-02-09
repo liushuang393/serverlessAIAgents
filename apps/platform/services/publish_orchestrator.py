@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """PublishOrchestrator - 一键发布オーケストレーター.
 
 Validate → CodeGen → Deploy → Register のフローを統合。
@@ -14,34 +13,36 @@ Validate → CodeGen → Deploy → Register のフローを統合。
 from __future__ import annotations
 
 import logging
-import time
 import uuid
-from collections.abc import AsyncIterator
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from agentflow.services.publish_service import PublishService
-from agentflow.core.interfaces import (
-    CodeOutputType,
-    DeployTarget,
-    WorkflowDefinition,
+from apps.platform.schemas.publish_schemas import (
+    PublishEvent,
+    PublishPhase,
+    PublishRequest,
+    PublishResponse,
+    PublishStatus,
+    PublishTarget,
 )
 from apps.platform.services.component_library import (
-    ComponentLibrary,
     ComponentEntry,
+    ComponentLibrary,
     ComponentType,
     ComponentVisibility,
     get_component_library,
 )
-from apps.platform.schemas.publish_schemas import (
-    PublishRequest,
-    PublishResponse,
-    PublishEvent,
-    PublishPhase,
-    PublishStatus,
-    PublishTarget,
+
+from agentflow.core.interfaces import (
+    CodeOutputType,
+    DeployTarget,
 )
+from agentflow.services.publish_service import PublishService
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 class PublishOrchestrator:

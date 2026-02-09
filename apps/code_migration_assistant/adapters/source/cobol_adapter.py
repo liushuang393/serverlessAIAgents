@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """COBOL Language Adapter.
 
 COBOLソースコードの解析と分析を行う。
@@ -177,9 +176,9 @@ class CobolAdapter(SourceLanguageAdapter):
         """PIC句から型を推定する."""
         if "V" in pic_clause.upper():
             return "decimal"
-        elif "9" in pic_clause:
+        if "9" in pic_clause:
             return "numeric"
-        elif "X" in pic_clause.upper():
+        if "X" in pic_clause.upper():
             return "string"
         return "unknown"
 

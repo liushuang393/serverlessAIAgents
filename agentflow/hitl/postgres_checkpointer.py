@@ -109,9 +109,11 @@ class PostgresCheckpointer(Checkpointer):
             self._connected = True
             logger.info(f"PostgresCheckpointer connected: {self._url or self._database}")
         except ImportError:
-            raise ImportError("asyncpg package required: pip install asyncpg")
+            msg = "asyncpg package required: pip install asyncpg"
+            raise ImportError(msg)
         except Exception as e:
-            raise ConnectionError(f"Failed to connect to PostgreSQL: {e}")
+            msg = f"Failed to connect to PostgreSQL: {e}"
+            raise ConnectionError(msg)
 
     async def disconnect(self) -> None:
         """PostgreSQL から切断."""
@@ -166,7 +168,8 @@ class PostgresCheckpointer(Checkpointer):
     async def save(self, data: CheckpointData) -> str:
         """チェックポイントを保存."""
         if not self._connected:
-            raise ConnectionError("Not connected to PostgreSQL")
+            msg = "Not connected to PostgreSQL"
+            raise ConnectionError(msg)
 
         data.updated_at = datetime.utcnow()
 
@@ -236,7 +239,8 @@ class PostgresCheckpointer(Checkpointer):
     async def load(self, checkpoint_id: str) -> CheckpointData | None:
         """チェックポイントを読み込み."""
         if not self._connected:
-            raise ConnectionError("Not connected to PostgreSQL")
+            msg = "Not connected to PostgreSQL"
+            raise ConnectionError(msg)
 
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(
@@ -250,7 +254,8 @@ class PostgresCheckpointer(Checkpointer):
     async def load_latest(self, thread_id: str) -> CheckpointData | None:
         """指定スレッドの最新チェックポイントを読み込み."""
         if not self._connected:
-            raise ConnectionError("Not connected to PostgreSQL")
+            msg = "Not connected to PostgreSQL"
+            raise ConnectionError(msg)
 
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(
@@ -269,7 +274,8 @@ class PostgresCheckpointer(Checkpointer):
     async def delete(self, checkpoint_id: str) -> bool:
         """チェックポイントを削除."""
         if not self._connected:
-            raise ConnectionError("Not connected to PostgreSQL")
+            msg = "Not connected to PostgreSQL"
+            raise ConnectionError(msg)
 
         async with self._pool.acquire() as conn:
             result = await conn.execute(
@@ -281,7 +287,8 @@ class PostgresCheckpointer(Checkpointer):
     async def list_by_thread(self, thread_id: str) -> list[CheckpointData]:
         """指定スレッドの全チェックポイントを取得."""
         if not self._connected:
-            raise ConnectionError("Not connected to PostgreSQL")
+            msg = "Not connected to PostgreSQL"
+            raise ConnectionError(msg)
 
         async with self._pool.acquire() as conn:
             rows = await conn.fetch(

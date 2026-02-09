@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RAG設定ヘルパー.
 
 Agent初期化時にRAG設定を動的に適用するためのヘルパー関数。
@@ -9,6 +8,7 @@ import logging
 from typing import Any
 
 from agentflow.skills import RAGConfig, RAGSkill
+
 
 logger = logging.getLogger("decision_api.rag_helper")
 
@@ -40,7 +40,7 @@ def get_rag_config_for_agent(agent_id: str) -> dict[str, Any] | None:
         logger.warning(f"Config module not available for agent: {agent_id}")
         return None
     except Exception as e:
-        logger.error(f"Failed to get RAG config for {agent_id}: {e}")
+        logger.exception(f"Failed to get RAG config for {agent_id}: {e}")
         return None
 
 

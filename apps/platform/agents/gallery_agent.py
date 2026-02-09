@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """GalleryAgent - Gallery検索・発見Agent.
 
 自然言語でGallery検索を行う。
@@ -12,9 +11,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentflow.core.agent_block import AgentBlock
 from apps.platform.services.gallery_service import GalleryService
-from apps.platform.schemas.gallery_schemas import GallerySearchRequest
+
+from agentflow.core.agent_block import AgentBlock
 
 
 class GalleryAgent(AgentBlock):

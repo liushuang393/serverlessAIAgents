@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Version Store - 版本存储.
 
 Git风格的版本存储实现。
@@ -15,8 +14,7 @@ from __future__ import annotations
 import json
 import logging
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -24,8 +22,8 @@ from agentflow.skills.versioning.skill_version import (
     SkillSnapshot,
     SkillVersion,
     VersionInfo,
-    VersionStatus,
 )
+
 
 _logger = logging.getLogger(__name__)
 
@@ -143,11 +141,10 @@ class InMemoryVersionStore(VersionStore):
         if not self._store[skill_name]:
             return None
         # 找最新版本
-        latest = max(
+        return max(
             self._store[skill_name].values(),
             key=lambda s: s.version,
         )
-        return latest
 
     def delete(self, skill_name: str, version: str) -> bool:
         """删除版本."""
@@ -319,7 +316,7 @@ class FileVersionStore(VersionStore):
 
 
 __all__ = [
-    "VersionStore",
-    "InMemoryVersionStore",
     "FileVersionStore",
+    "InMemoryVersionStore",
+    "VersionStore",
 ]

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """知識管理器 - 統一入口.
 
 長期知識記憶の統一管理インターフェース。
@@ -16,7 +15,6 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from agentflow.memory.knowledge.knowledge_store import KnowledgeStore
 from agentflow.memory.knowledge.memory_store import InMemoryKnowledgeStore
 from agentflow.memory.knowledge.memvid_store import (
     MemvidKnowledgeStore,
@@ -29,8 +27,10 @@ from agentflow.memory.knowledge.types import (
     SearchType,
 )
 
+
 if TYPE_CHECKING:
-    pass
+    from agentflow.memory.knowledge.knowledge_store import KnowledgeStore
+
 
 logger = logging.getLogger(__name__)
 

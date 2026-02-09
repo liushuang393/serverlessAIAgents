@@ -16,16 +16,20 @@ LightMemの3段階記憶システムを統合管理:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.memory.importance_adjuster import ImportanceAdjuster
 from agentflow.memory.long_term_memory import LongTermMemory
 from agentflow.memory.memory_distiller import MemoryDistiller
 from agentflow.memory.sensory_memory import SensoryMemory
 from agentflow.memory.short_term_memory import ShortTermMemory
-from agentflow.memory.types import CompressionConfig, MemoryEntry
 from agentflow.memory.vector_search import VectorSearch
+
+
+if TYPE_CHECKING:
+    from agentflow.memory.types import CompressionConfig, MemoryEntry
 
 
 class MemoryManager:
@@ -129,17 +133,13 @@ class MemoryManager:
         # 自動タスクを停止
         if self._distill_task:
             self._distill_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._distill_task
-            except asyncio.CancelledError:
-                pass
 
         if self._forget_task:
             self._forget_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._forget_task
-            except asyncio.CancelledError:
-                pass
 
         await self._long_term.stop()
         if self._importance_adjuster:
@@ -342,7 +342,7 @@ class MemoryManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self._logger.error(f"自動蒸留エラー: {e}")
+                self._logger.exception(f"自動蒸留エラー: {e}")
 
     async def _perform_distillation(self) -> int:
         """蒸留を実行.
@@ -378,7 +378,7 @@ class MemoryManager:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self._logger.error(f"自動忘却エラー: {e}")
+                self._logger.exception(f"自動忘却エラー: {e}")
 
     async def _perform_forgetting(self) -> int:
         """忘却を実行.

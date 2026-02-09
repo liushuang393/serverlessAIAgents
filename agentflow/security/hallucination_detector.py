@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """幻觉检测器 - AI输出事实校验.
 
 基于研究论文的幻觉检测机制:
@@ -31,14 +30,18 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+
 class IssueType(str, Enum):
     """问题类型."""
-    
+
     FACTUAL_ERROR = "factual_error"        # 事实错误
     TEMPORAL_ERROR = "temporal_error"      # 时间错误
     NUMERICAL_ERROR = "numerical_error"    # 数字错误
@@ -50,7 +53,7 @@ class IssueType(str, Enum):
 
 class Severity(str, Enum):
     """严重程度."""
-    
+
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
@@ -60,7 +63,7 @@ class Severity(str, Enum):
 @dataclass
 class Issue:
     """检测到的问题.
-    
+
     Attributes:
         type: 问题类型
         description: 问题描述
@@ -68,13 +71,13 @@ class Issue:
         location: 问题位置（文本片段）
         suggestion: 修正建议
     """
-    
+
     type: IssueType
     description: str
     severity: Severity = Severity.MEDIUM
     location: str = ""
     suggestion: str = ""
-    
+
     def to_dict(self) -> dict[str, Any]:
         """转换为字典."""
         return {
@@ -89,7 +92,7 @@ class Issue:
 @dataclass
 class DetectionResult:
     """检测结果.
-    
+
     Attributes:
         confidence_score: 可信度评分（0.0-1.0）
         issues: 检测到的问题列表
@@ -97,14 +100,14 @@ class DetectionResult:
         unverified_claims: 未验证的声明
         needs_human_review: 是否需要人工复核
     """
-    
+
     confidence_score: float = 1.0
     issues: list[Issue] = field(default_factory=list)
     verified_claims: list[str] = field(default_factory=list)
     unverified_claims: list[str] = field(default_factory=list)
     needs_human_review: bool = False
     checked_at: datetime = field(default_factory=datetime.now)
-    
+
     @property
     def is_reliable(self) -> bool:
         """是否可靠（无高严重度问题）."""
@@ -112,7 +115,7 @@ class DetectionResult:
             issue.severity not in (Severity.HIGH, Severity.CRITICAL)
             for issue in self.issues
         )
-    
+
     @property
     def has_critical_issues(self) -> bool:
         """是否有严重问题."""
@@ -120,7 +123,7 @@ class DetectionResult:
             issue.severity == Severity.CRITICAL
             for issue in self.issues
         )
-    
+
     def to_dict(self) -> dict[str, Any]:
         """转换为字典."""
         return {
@@ -389,14 +392,13 @@ class HallucinationDetector:
         issues = []
 
         # 使用自定义事实检查器
-        if self._fact_checker:
-            if not self._fact_checker(output):
-                issues.append(Issue(
-                    type=IssueType.FACTUAL_ERROR,
-                    description="事实检查未通过",
-                    severity=Severity.HIGH,
-                    suggestion="输出与已知事实不符",
-                ))
+        if self._fact_checker and not self._fact_checker(output):
+            issues.append(Issue(
+                type=IssueType.FACTUAL_ERROR,
+                description="事实检查未通过",
+                severity=Severity.HIGH,
+                suggestion="输出与已知事实不符",
+            ))
 
         return issues
 

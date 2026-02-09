@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """COBOL Parser - COBOLパーサー.
 
 COBOLソースコードを解析してUnifiedASTを生成します。
@@ -14,22 +13,21 @@ from __future__ import annotations
 import logging
 import re
 import time
-from pathlib import Path
 from typing import Any
 
+from agentflow.code_intelligence.ast.unified_ast import (
+    ASTNode,
+    ASTNodeType,
+    SymbolInfo,
+    TypeInfo,
+    UnifiedAST,
+)
 from agentflow.code_intelligence.parsers.base import (
     CodeParser,
     ParseContext,
     ParseResult,
 )
-from agentflow.code_intelligence.ast.unified_ast import (
-    UnifiedAST,
-    ASTNode,
-    ASTNodeType,
-    SymbolInfo,
-    ImportInfo,
-    TypeInfo,
-)
+
 
 _logger = logging.getLogger(__name__)
 
@@ -107,7 +105,7 @@ class CobolParser(CodeParser):
                         name=var["type"],
                         source_type=var.get("pic", ""),
                     ),
-                    location=f"DATA DIVISION",
+                    location="DATA DIVISION",
                 )
 
             for proc in procedures:
@@ -175,7 +173,7 @@ class CobolParser(CodeParser):
             )
 
         except Exception as e:
-            _logger.error(f"COBOL parsing failed: {e}")
+            _logger.exception(f"COBOL parsing failed: {e}")
             return ParseResult(
                 success=False,
                 errors=[str(e)],
@@ -250,9 +248,9 @@ class CobolParser(CodeParser):
         """PIC句から型を推定."""
         if "9" in pic and "V" in pic:
             return "decimal"
-        elif "9" in pic:
+        if "9" in pic:
             return "numeric"
-        elif "X" in pic or "A" in pic:
+        if "X" in pic or "A" in pic:
             return "string"
         return "unknown"
 

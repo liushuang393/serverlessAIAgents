@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """HuggingFaceSpacesTarget - Hugging Face Spaces デプロイターゲット.
 
 Hugging Face Spaces への AI アプリケーションデプロイを実装します。
@@ -9,9 +8,8 @@ from __future__ import annotations
 import logging
 import shutil
 import tempfile
-from collections.abc import AsyncIterator
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.core.interfaces import (
     ConfigField,
@@ -20,6 +18,11 @@ from agentflow.core.interfaces import (
     ValidationResult,
 )
 from agentflow.deploy.targets.base import BaseDeployTarget
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +76,7 @@ class HuggingFaceSpacesTarget(BaseDeployTarget):
             )
 
             # Space リポジトリを作成
-            repo_url = create_repo(
+            create_repo(
                 repo_id=space_name,
                 repo_type="space",
                 space_sdk=space_sdk,

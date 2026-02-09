@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """World Model層 - 状態・因果・制約の明示的表現.
 
 Hassabisの示唆に基づく世界モデル実装：
@@ -49,19 +48,20 @@ from agentflow.world_model.world_state import (
     WorldStateSnapshot,
 )
 
+
 __all__ = [
+    "ActionPrediction",
     # Causal Model
     "CausalModel",
     "CausalNode",
     "CausalRelation",
-    "RelationType",
-    # World State
-    "WorldState",
-    "WorldStateSnapshot",
-    "ActionPrediction",
     # Constraint Solver
     "ConstraintSolver",
     "ConstraintViolation",
+    "RelationType",
     "SolverResult",
+    # World State
+    "WorldState",
+    "WorldStateSnapshot",
 ]
 

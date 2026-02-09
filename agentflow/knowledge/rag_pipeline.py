@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RAG パイプラインモジュール.
 
 検索増強生成（Retrieval-Augmented Generation）の完全な実装を提供します。
@@ -20,9 +19,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 from agentflow.knowledge.document_loader import (
     ChunkingConfig,
@@ -31,7 +30,10 @@ from agentflow.knowledge.document_loader import (
 )
 from agentflow.providers import get_embedding, get_llm, get_vectordb
 
+
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from agentflow.providers.embedding_provider import EmbeddingProvider
     from agentflow.providers.llm_provider import LLMProvider
     from agentflow.providers.vectordb_provider import VectorDBProvider
@@ -134,9 +136,9 @@ class RAGPipeline:
         self._started = False
 
         # プロバイダー（遅延初期化）
-        self._llm: "LLMProvider | None" = None
-        self._embedding: "EmbeddingProvider | None" = None
-        self._vectordb: "VectorDBProvider | None" = None
+        self._llm: LLMProvider | None = None
+        self._embedding: EmbeddingProvider | None = None
+        self._vectordb: VectorDBProvider | None = None
         self._llm_temperature = llm_temperature
 
         # ドキュメントローダー
@@ -314,11 +316,10 @@ class RAGPipeline:
         )
 
         # 類似度フィルタリング
-        filtered_results = [
+        return [
             r for r in results if r.get("distance", 1.0) <= (1.0 - min_similarity)
         ]
 
-        return filtered_results
 
     async def query(
         self,
@@ -388,7 +389,7 @@ class RAGPipeline:
             search_results=search_results,
             metadata={
                 "model": response.get("model", "unknown"),
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(UTC).isoformat(),
             },
         )
 
@@ -466,7 +467,7 @@ class RAGPipeline:
             msg = "RAG Pipeline not started. Call start() first."
             raise RuntimeError(msg)
 
-    async def __aenter__(self) -> "RAGPipeline":
+    async def __aenter__(self) -> RAGPipeline:
         """非同期コンテキストマネージャーのエントリー."""
         await self.start()
         return self

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """S3Connector - AWS S3 / MinIO 互換コネクタ.
 
 S3互換ストレージへのアクセスを提供。
@@ -19,13 +18,15 @@ AWS S3、MinIO、その他S3互換ストレージをサポート。
 import logging
 import mimetypes
 import os
-from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
 from pydantic import Field
 
 from agentflow.datalake.connector import ConnectorConfig, DataConnector
 from agentflow.datalake.core import DataItem, ReadResult
+
 
 if TYPE_CHECKING:
     from types_aiobotocore_s3 import S3Client
@@ -77,7 +78,7 @@ class S3Connector(DataConnector):
             config: コネクタ設定
         """
         self._config = config or S3Config()
-        self._client: "S3Client | None" = None
+        self._client: S3Client | None = None
 
     @property
     def scheme(self) -> str:
@@ -111,9 +112,12 @@ class S3Connector(DataConnector):
             try:
                 from aiobotocore.session import get_session
             except ImportError as e:
-                raise ImportError(
+                msg = (
                     "aiobotocore is required for S3 support. "
                     "Install with: pip install aiobotocore"
+                )
+                raise ImportError(
+                    msg
                 ) from e
 
             session = get_session()
@@ -282,7 +286,7 @@ class S3Connector(DataConnector):
             uri=f"s3://{bucket}/{key}",
             name=key.split("/")[-1],
             size=len(content),
-            modified_at=datetime.now(timezone.utc),
+            modified_at=datetime.now(UTC),
             content_type=content_type,
             metadata={"etag": response.get("ETag", "").strip('"')},
         )

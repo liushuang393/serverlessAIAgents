@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Telegram Adapter - Telegram 消息平台适配器.
 
 支持通过 python-telegram-bot 库与 Telegram Bot API 集成。
@@ -38,7 +37,10 @@ from typing import TYPE_CHECKING, Any
 
 from agentflow.channels.base import MessageChannelAdapter, UserInfo
 
+
 if TYPE_CHECKING:
+    from telegram import Update
+
     from agentflow.channels.gateway import MessageGateway
 
 
@@ -139,7 +141,7 @@ class TelegramAdapter(MessageChannelAdapter):
             return str(message.message_id)
 
         except Exception as e:
-            self._logger.error(f"Failed to send Telegram message: {e}")
+            self._logger.exception(f"Failed to send Telegram message: {e}")
             raise
 
     async def send_typing_indicator(self, channel_id: str) -> None:
@@ -183,7 +185,7 @@ class TelegramAdapter(MessageChannelAdapter):
             )
             return str(message.message_id)
         except Exception as e:
-            self._logger.error(f"Failed to send image: {e}")
+            self._logger.exception(f"Failed to send image: {e}")
             raise
 
     async def send_file(
@@ -213,7 +215,7 @@ class TelegramAdapter(MessageChannelAdapter):
             )
             return str(message.message_id)
         except Exception as e:
-            self._logger.error(f"Failed to send file: {e}")
+            self._logger.exception(f"Failed to send file: {e}")
             raise
 
     async def delete_message(
@@ -374,7 +376,6 @@ class TelegramAdapter(MessageChannelAdapter):
             gateway: 消息网关实例
             interval: 轮询间隔（秒）
         """
-        from telegram import Update
         from telegram.ext import Application, MessageHandler, filters
 
         self._logger.info("Starting Telegram polling...")
@@ -441,7 +442,7 @@ class TelegramAdapter(MessageChannelAdapter):
                 "is_bot": me.is_bot,
             }
         except Exception as e:
-            self._logger.error(f"Failed to get bot info: {e}")
+            self._logger.exception(f"Failed to get bot info: {e}")
             return {}
 
     async def set_webhook(self, webhook_url: str) -> bool:
@@ -458,7 +459,7 @@ class TelegramAdapter(MessageChannelAdapter):
             self._logger.info(f"Webhook set to: {webhook_url}")
             return True
         except Exception as e:
-            self._logger.error(f"Failed to set webhook: {e}")
+            self._logger.exception(f"Failed to set webhook: {e}")
             return False
 
     async def delete_webhook(self) -> bool:
@@ -472,5 +473,5 @@ class TelegramAdapter(MessageChannelAdapter):
             self._logger.info("Webhook deleted")
             return True
         except Exception as e:
-            self._logger.error(f"Failed to delete webhook: {e}")
+            self._logger.exception(f"Failed to delete webhook: {e}")
             return False

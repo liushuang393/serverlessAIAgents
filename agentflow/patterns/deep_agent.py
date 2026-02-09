@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeepAgentCoordinator - 統一深度Agent協調パターン.
 
 このモジュールはDeepAgents思想を取り入れた統一協調パターンを実装します：
@@ -35,7 +34,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -43,11 +42,16 @@ from agentflow.core.agent_block import AgentBlock
 from agentflow.patterns.coordinator import CoordinationPattern, CoordinatorBase
 from agentflow.patterns.shared_context import SharedContext
 from agentflow.protocols.mcp_client import MCPClient
-from agentflow.protocols.mcp_config import MCPConfig
 from agentflow.protocols.mcp_lazy_client import LazyMCPClient, ToolSearchResult
 from agentflow.providers.tool_provider import RegisteredTool, ToolProvider
 from agentflow.skills import Skill, SkillRegistry
 from agentflow.skills.engine import SkillEngine
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from agentflow.protocols.mcp_config import MCPConfig
 
 
 # =============================================================================
@@ -255,12 +259,10 @@ class RuntimeStore(ABC):
     @abstractmethod
     async def save_context(self, key: str, data: dict[str, Any]) -> None:
         """コンテキストを保存."""
-        pass
 
     @abstractmethod
     async def load_context(self, key: str) -> dict[str, Any] | None:
         """コンテキストを読み込み."""
-        pass
 
     # =========================================================================
     # チェックポイント管理
@@ -269,17 +271,14 @@ class RuntimeStore(ABC):
     @abstractmethod
     async def save_checkpoint(self, checkpoint_id: str, state: dict[str, Any]) -> None:
         """チェックポイントを保存（長時間タスク用）."""
-        pass
 
     @abstractmethod
     async def load_checkpoint(self, checkpoint_id: str) -> dict[str, Any] | None:
         """チェックポイントを復元."""
-        pass
 
     @abstractmethod
     async def list_checkpoints(self) -> list[str]:
         """チェックポイント一覧を取得."""
-        pass
 
     # =========================================================================
     # Virtual Filesystem（Artifact管理）
@@ -299,7 +298,6 @@ class RuntimeStore(ABC):
             content: ファイル内容（bytes or str）
             metadata: メタデータ（content_type, created_by等）
         """
-        pass
 
     @abstractmethod
     async def read_artifact(self, path: str) -> bytes | None:
@@ -311,7 +309,6 @@ class RuntimeStore(ABC):
         Returns:
             ファイル内容（存在しない場合はNone）
         """
-        pass
 
     @abstractmethod
     async def list_artifacts(self, prefix: str = "") -> list[dict[str, Any]]:
@@ -323,7 +320,6 @@ class RuntimeStore(ABC):
         Returns:
             ファイル情報リスト（path, size, metadata等）
         """
-        pass
 
     @abstractmethod
     async def delete_artifact(self, path: str) -> bool:
@@ -335,12 +331,10 @@ class RuntimeStore(ABC):
         Returns:
             削除成功したかどうか
         """
-        pass
 
     @abstractmethod
     async def artifact_exists(self, path: str) -> bool:
         """仮想ファイルの存在確認."""
-        pass
 
     # =========================================================================
     # クリア
@@ -349,7 +343,6 @@ class RuntimeStore(ABC):
     @abstractmethod
     async def clear(self) -> None:
         """全データをクリア."""
-        pass
 
 
 class EvolutionStore(ABC):
@@ -362,27 +355,22 @@ class EvolutionStore(ABC):
     @abstractmethod
     async def save_pattern(self, pattern_key: str, pattern_data: dict[str, Any]) -> None:
         """成功パターンを保存."""
-        pass
 
     @abstractmethod
     async def load_pattern(self, pattern_key: str) -> dict[str, Any] | None:
         """成功パターンを読み込み."""
-        pass
 
     @abstractmethod
     async def save_feedback(self, record: EvolutionRecord) -> None:
         """反馈記録を保存."""
-        pass
 
     @abstractmethod
     async def list_patterns(self, limit: int = 100) -> list[dict[str, Any]]:
         """パターン一覧を取得."""
-        pass
 
     @abstractmethod
     async def get_stats(self) -> dict[str, Any]:
         """統計情報を取得."""
-        pass
 
 
 class MemoryRuntimeStore(RuntimeStore):
@@ -445,10 +433,7 @@ class MemoryRuntimeStore(RuntimeStore):
         normalized_path = self._normalize_path(path)
 
         # bytes変換
-        if isinstance(content, str):
-            content_bytes = content.encode("utf-8")
-        else:
-            content_bytes = content
+        content_bytes = content.encode("utf-8") if isinstance(content, str) else content
 
         self._artifacts[normalized_path] = content_bytes
         self._artifact_metadata[normalized_path] = {
@@ -761,7 +746,7 @@ class ContextCompressor:
 
         return result
 
-    async def _selective_compact(  # noqa: RUF029 - async for interface consistency
+    async def _selective_compact(
         self,
         messages: list[AgentMessage],
         max_tokens: int,
@@ -874,7 +859,7 @@ class ContextCompressor:
                 msg_type=MessageType.SYSTEM,
             )
 
-            result_messages = [summary_msg] + recent_messages
+            result_messages = [summary_msg, *recent_messages]
             compressed_tokens = sum(len(str(m.content)) // 4 for m in result_messages)
             original_tokens = sum(len(str(m.content)) // 4 for m in messages)
 
@@ -889,7 +874,7 @@ class ContextCompressor:
             self._logger.warning(f"要約生成失敗: {e}")
             return await self._selective_compact(messages, max_tokens)
 
-    async def _hierarchical_compact(  # noqa: RUF029 - async for interface consistency
+    async def _hierarchical_compact(
         self,
         messages: list[AgentMessage],
         max_tokens: int,
@@ -922,7 +907,7 @@ class ContextCompressor:
                 },
                 msg_type=MessageType.SYSTEM,
             )
-            result = [layer3_summary] + layer2 + layer1
+            result = [layer3_summary, *layer2, *layer1]
         else:
             result = layer2 + layer1
 
@@ -1142,8 +1127,8 @@ class ConversationManager:
         if not messages:
             return ""
 
-        agents = set(m.from_agent for m in messages)
-        types = set(m.msg_type.value for m in messages)
+        agents = {m.from_agent for m in messages}
+        types = {m.msg_type.value for m in messages}
 
         # エラーや結果を抽出
         key_points: list[str] = []
@@ -1308,7 +1293,7 @@ class AgentPool:
 
             return True
         except Exception as e:
-            self._logger.error(f"MCP接続エラー: {e}")
+            self._logger.exception(f"MCP接続エラー: {e}")
             return False
 
     async def disconnect_mcp(self) -> None:
@@ -1588,7 +1573,7 @@ class AgentPool:
 
         return agent
 
-    async def _create_dynamic_agent(  # noqa: RUF029 - async reserved for future LLM calls
+    async def _create_dynamic_agent(
         self,
         agent_type: AgentType | str,
         context: dict[str, Any] | None,
@@ -1745,7 +1730,7 @@ class DynamicAgent(AgentBlock):
                 "skills_used": self._skills,
             }
         except Exception as e:
-            self._logger.error(f"Agent {self._name} 実行失敗: {e}")
+            self._logger.exception(f"Agent {self._name} 実行失敗: {e}")
             return {"agent": self._name, "error": str(e), "status": "failed"}
 
 
@@ -1902,7 +1887,7 @@ class ProgressManager:
             sorter = TopologicalSorter(graph)
             return list(sorter.static_order())
         except CycleError:
-            self._logger.error("循環依存のため実行順序を決定できません")
+            self._logger.exception("循環依存のため実行順序を決定できません")
             return []
 
     def get_parallel_groups(self) -> list[ParallelGroup]:
@@ -2057,7 +2042,7 @@ class ProgressManager:
         """
         result = self._messages.copy()
         if agent is not None:
-            result = [m for m in result if m.to_agent == agent or m.from_agent == agent]
+            result = [m for m in result if agent in (m.to_agent, m.from_agent)]
         if msg_type is not None:
             result = [m for m in result if m.msg_type == msg_type]
         return result
@@ -2362,9 +2347,9 @@ class Evolver:
 
         # Skill 固化を試行
         try:
-            approach = self._learned_patterns.get(pattern_key, "")
-            agent_type = context.get("agent_type", "unknown")
-            skills_used = context.get("skills_used", [])
+            self._learned_patterns.get(pattern_key, "")
+            context.get("agent_type", "unknown")
+            context.get("skills_used", [])
 
             self._logger.info(
                 f"Skill 固化を開始: {pattern_key} "
@@ -2645,7 +2630,8 @@ class DeepAgentCoordinator(CoordinatorBase):
         """
         checkpoint = await self.load_checkpoint(checkpoint_id)
         if not checkpoint:
-            raise ValueError(f"チェックポイントが見つかりません: {checkpoint_id}")
+            msg = f"チェックポイントが見つかりません: {checkpoint_id}"
+            raise ValueError(msg)
 
         self._logger.info(f"チェックポイントから再開: {checkpoint_id}")
 
@@ -2675,9 +2661,8 @@ class DeepAgentCoordinator(CoordinatorBase):
         # 指定されたフェーズから再開
         if phase in ("execute", "review"):
             return await self._continue_execution(task, checkpoint)
-        else:
-            # 最初からやり直し
-            return await self.execute(task)
+        # 最初からやり直し
+        return await self.execute(task)
 
     async def _continue_execution(
         self,
@@ -2730,7 +2715,7 @@ class DeepAgentCoordinator(CoordinatorBase):
             }
 
         except Exception as e:
-            self._logger.error(f"復旧後の実行失敗: {e}")
+            self._logger.exception(f"復旧後の実行失敗: {e}")
             return {"status": "error", "error": str(e)}
 
     async def list_checkpoints(self) -> list[str]:
@@ -2839,7 +2824,7 @@ class DeepAgentCoordinator(CoordinatorBase):
             }
 
         except Exception as e:
-            self._logger.error(f"DeepAgent実行失敗: {e}")
+            self._logger.exception(f"DeepAgent実行失敗: {e}")
             return {"status": "error", "error": str(e)}
 
     # =========================================================================
@@ -2977,18 +2962,17 @@ JSON形式で回答:
                     # マッチした Skill を設定
                     todo.skills = [m.skill.name for m in matches]
                     self._logger.debug(f"Todo '{todo.task}' に Skill をマッチ: {todo.skills}")
-                else:
-                    # マッチなしの場合、auto_learn が有効なら生成を試行
-                    if self._enable_skill_auto_learn:
-                        try:
-                            result = await self._skill_engine.resolve(todo.task)
-                            if result.skill:
-                                todo.skills = [result.skill.name]
-                                self._logger.info(
-                                    f"Todo '{todo.task}' に新規 Skill を生成: {result.skill.name}"
-                                )
-                        except Exception as gen_err:
-                            self._logger.warning(f"Skill 生成失敗（続行）: {gen_err}")
+                # マッチなしの場合、auto_learn が有効なら生成を試行
+                elif self._enable_skill_auto_learn:
+                    try:
+                        result = await self._skill_engine.resolve(todo.task)
+                        if result.skill:
+                            todo.skills = [result.skill.name]
+                            self._logger.info(
+                                f"Todo '{todo.task}' に新規 Skill を生成: {result.skill.name}"
+                            )
+                    except Exception as gen_err:
+                        self._logger.warning(f"Skill 生成失敗（続行）: {gen_err}")
             except Exception as e:
                 self._logger.warning(f"Skill マッチング失敗（続行）: {e}")
 
@@ -3035,7 +3019,7 @@ JSON形式で回答:
                         results[todo.id] = result
                 except Exception as e:
                     all_errors.append((todo.id, e))
-                    self._logger.error(f"単一タスク実行エラー: {todo.id} - {e}")
+                    self._logger.exception(f"単一タスク実行エラー: {todo.id} - {e}")
                 iteration += 1
 
         return results, all_errors
@@ -3069,7 +3053,7 @@ JSON形式で回答:
                 await self._progress.send_message_async(str(todo.agent_type), "coordinator", result)
                 return result
         except Exception as e:
-            self._logger.error(f"Todo {todo.id} 実行失敗: {e}")
+            self._logger.exception(f"Todo {todo.id} 実行失敗: {e}")
             self._progress.update_todo(todo.id, status=TaskStatus.FAILED, error=str(e))
 
         return None
@@ -3266,34 +3250,34 @@ JSON形式で回答:
 # =============================================================================
 
 __all__ = [
-    # データモデル - 状態・種別
-    "TaskStatus",
-    "AgentType",
-    "MessageType",
-    "CompactionStrategy",
-    "QualityDimension",
-    # データモデル - 構造体
-    "TodoItem",
-    "CognitiveAnalysis",
-    "QualityReview",
-    "EvolutionRecord",
     "AgentMessage",
-    "ParallelGroup",
-    "MemoryTier",
-    "CompactionResult",
-    # ストレージ抽象（三層設計）
-    "RuntimeStore",
-    "EvolutionStore",
-    "MemoryRuntimeStore",
-    "MemoryEvolutionStore",
-    # コンテキスト圧縮システム
-    "ContextCompressor",
     # コンポーネント
     "AgentPool",
-    "DynamicAgent",
-    "ProgressManager",
-    "Evolver",
+    "AgentType",
+    "CognitiveAnalysis",
+    "CompactionResult",
+    "CompactionStrategy",
+    # コンテキスト圧縮システム
+    "ContextCompressor",
     # メイン協調器
     "DeepAgentCoordinator",
+    "DynamicAgent",
+    "EvolutionRecord",
+    "EvolutionStore",
+    "Evolver",
+    "MemoryEvolutionStore",
+    "MemoryRuntimeStore",
+    "MemoryTier",
+    "MessageType",
+    "ParallelGroup",
+    "ProgressManager",
+    "QualityDimension",
+    "QualityReview",
+    # ストレージ抽象（三層設計）
+    "RuntimeStore",
+    # データモデル - 状態・種別
+    "TaskStatus",
+    # データモデル - 構造体
+    "TodoItem",
 ]
 

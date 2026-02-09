@@ -10,8 +10,6 @@ from datetime import UTC, datetime
 from secrets import token_urlsafe
 from typing import Any
 
-from pydantic import BaseModel, ValidationError
-
 
 class ToolWhitelist:
     """工具ホワイトリスト管理.

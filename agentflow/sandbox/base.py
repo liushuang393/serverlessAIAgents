@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """サンドボックス基底クラス.
 
 全てのサンドボックスプロバイダが実装すべきインターフェースを定義。
@@ -57,7 +56,7 @@ class SandboxState(str, Enum):
     DELETED = "deleted"
 
     @classmethod
-    def can_transition(cls, from_state: "SandboxState", to_state: "SandboxState") -> bool:
+    def can_transition(cls, from_state: SandboxState, to_state: SandboxState) -> bool:
         """状態遷移が許可されているかチェック.
 
         Args:
@@ -260,9 +259,8 @@ class SandboxProvider(ABC):
 
         オーバーライド可能。デフォルトは何もしない。
         """
-        pass
 
-    async def __aenter__(self) -> "SandboxProvider":
+    async def __aenter__(self) -> SandboxProvider:
         """async with サポート."""
         return self
 

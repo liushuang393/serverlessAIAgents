@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """MigrationPipelineGenerator - 迁移パイプライン生成.
 
 迁移プロジェクト用のCI/CDパイプラインを生成します。
@@ -20,6 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any
+
 
 _logger = logging.getLogger(__name__)
 
@@ -143,7 +143,7 @@ class MigrationPipelineGenerator:
         """GitHub Actions パイプラインを生成."""
         stages_jobs = self._build_github_jobs(config)
 
-        yaml_content = f"""# Generated Migration Pipeline for {config.project_name}
+        return f"""# Generated Migration Pipeline for {config.project_name}
 # Source: {config.source_language} -> Target: {config.target_language}
 
 name: Migration Pipeline - {config.project_name}
@@ -172,7 +172,6 @@ env:
 jobs:
 {stages_jobs}
 """
-        return yaml_content
 
     def _build_github_jobs(self, config: PipelineConfig) -> str:
         """GitHub Actions ジョブを構築."""
@@ -180,11 +179,11 @@ jobs:
 
         # Analyze
         if PipelineStage.ANALYZE in config.stages:
-            jobs.append(f"""  analyze:
+            jobs.append("""  analyze:
     runs-on: ubuntu-latest
     outputs:
-      file_count: ${{{{ steps.inventory.outputs.file_count }}}}
-      total_loc: ${{{{ steps.inventory.outputs.total_loc }}}}
+      file_count: ${{ steps.inventory.outputs.file_count }}
+      total_loc: ${{ steps.inventory.outputs.total_loc }}
     steps:
       - uses: actions/checkout@v4
 
@@ -200,8 +199,8 @@ jobs:
       - name: Run code inventory
         id: inventory
         run: |
-          agentflow code-inventory scan ${{{{ env.SOURCE_DIR }}}} \\
-            --language ${{{{ env.SOURCE_LANGUAGE }}}} \\
+          agentflow code-inventory scan ${{ env.SOURCE_DIR }} \\
+            --language ${{ env.SOURCE_LANGUAGE }} \\
             --output inventory.json
           echo "file_count=$(jq .total_files inventory.json)" >> $GITHUB_OUTPUT
           echo "total_loc=$(jq .total_loc inventory.json)" >> $GITHUB_OUTPUT
@@ -435,7 +434,7 @@ jobs:
 
     def _generate_gitlab(self, config: PipelineConfig) -> str:
         """GitLab CI パイプラインを生成."""
-        yaml_content = f"""# Generated Migration Pipeline for {config.project_name}
+        return f"""# Generated Migration Pipeline for {config.project_name}
 # Source: {config.source_language} -> Target: {config.target_language}
 
 stages:
@@ -559,11 +558,10 @@ deploy:
   script:
     - echo "Deploying to production..."
 """
-        return yaml_content
 
     def _generate_azure_devops(self, config: PipelineConfig) -> str:
         """Azure DevOps パイプラインを生成."""
-        yaml_content = f"""# Generated Migration Pipeline for {config.project_name}
+        return f"""# Generated Migration Pipeline for {config.project_name}
 # Source: {config.source_language} -> Target: {config.target_language}
 
 trigger:
@@ -698,11 +696,10 @@ stages:
               steps:
                 - script: echo "Deploying to production..."
 """
-        return yaml_content
 
     def _generate_jenkins(self, config: PipelineConfig) -> str:
         """Jenkins パイプラインを生成."""
-        groovy_content = f"""// Generated Migration Pipeline for {config.project_name}
+        return f"""// Generated Migration Pipeline for {config.project_name}
 // Source: {config.source_language} -> Target: {config.target_language}
 
 pipeline {{
@@ -812,7 +809,6 @@ pipeline {{
     }}
 }}
 """
-        return groovy_content
 
     def _format_env_vars(self, env: dict[str, str], indent: int = 0) -> str:
         """環境変数をフォーマット."""
@@ -847,8 +843,8 @@ pipeline {{
 
 
 __all__ = [
-    "PipelineStage",
     "CIPlatform",
-    "PipelineConfig",
     "MigrationPipelineGenerator",
+    "PipelineConfig",
+    "PipelineStage",
 ]

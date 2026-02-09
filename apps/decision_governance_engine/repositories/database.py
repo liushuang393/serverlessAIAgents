@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """データベース接続管理.
 
 目的:
@@ -11,16 +10,17 @@
 
 import logging
 import os
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Any
+from typing import Any
 
+from apps.decision_governance_engine.repositories.models import Base
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 
-from apps.decision_governance_engine.repositories.models import Base
 
 logger = logging.getLogger(__name__)
 
@@ -87,13 +87,13 @@ async def init_db(create_tables: bool = False) -> None:
 async def close_db() -> None:
     """データベース接続をクローズ."""
     global _engine, _session_factory, _redis_client
-    
+
     if _engine:
         await _engine.dispose()
         _engine = None
         _session_factory = None
         logger.info("Database connection closed")
-    
+
     if _redis_client:
         await _redis_client.close()
         _redis_client = None
@@ -101,16 +101,16 @@ async def close_db() -> None:
 
 
 @asynccontextmanager
-async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
+async def get_db_session() -> AsyncGenerator[AsyncSession]:
     """データベースセッションを取得（コンテキストマネージャ）.
-    
+
     使用例:
         async with get_db_session() as session:
             result = await session.execute(query)
     """
     if _session_factory is None:
         await init_db()
-    
+
     async with _session_factory() as session:
         try:
             yield session
@@ -122,18 +122,18 @@ async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
 
 async def get_redis() -> Any:
     """Redis クライアントを取得.
-    
+
     Returns:
         redis.asyncio.Redis インスタンス
-        
+
     Note:
         redis パッケージがインストールされていない場合は None を返す
     """
     global _redis_client
-    
+
     if _redis_client is not None:
         return _redis_client
-    
+
     try:
         import redis.asyncio as aioredis
         redis_url = get_redis_url()

@@ -14,25 +14,21 @@ class AuthError(Exception):
 class InvalidCredentialsError(AuthError):
     """凭证无效错误."""
 
-    pass
 
 
 class UserNotFoundError(AuthError):
     """用户不存在错误."""
 
-    pass
 
 
 class TokenExpiredError(AuthError):
     """令牌过期错误."""
 
-    pass
 
 
 class EmailNotConfirmedError(AuthError):
     """邮箱未确认错误."""
 
-    pass
 
 
 class MFARequiredError(AuthError):
@@ -51,17 +47,14 @@ class MFARequiredError(AuthError):
 class UserExistsError(AuthError):
     """用户已存在错误."""
 
-    pass
 
 
 class WeakPasswordError(AuthError):
     """弱密码错误."""
 
-    pass
 
 
 class RateLimitError(AuthError):
     """请求频率限制错误."""
 
-    pass
 

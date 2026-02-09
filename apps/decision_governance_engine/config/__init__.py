@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 決策評価パラメータ設定モジュール.
 
@@ -133,7 +132,8 @@ def load_config(config_path: str | None = None) -> DecisionWeightsConfig:
     path = Path(config_path) if config_path else DEFAULT_CONFIG_PATH
 
     if not path.exists():
-        raise FileNotFoundError(f"設定ファイルが見つかりません: {path}")
+        msg = f"設定ファイルが見つかりません: {path}"
+        raise FileNotFoundError(msg)
 
     with open(path, encoding="utf-8") as f:
         raw_config = yaml.safe_load(f)

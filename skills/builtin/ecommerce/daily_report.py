@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """日報生成スキル - Daily Report Generator.
 
 毎日の運営データを集約し、日報レポートを生成するスキル。
@@ -16,7 +15,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, date
+from datetime import date, datetime
 from enum import Enum
 from typing import Any
 

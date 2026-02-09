@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """データコネクタ.
 
 各種データソースへの接続を管理。
@@ -14,7 +13,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -161,14 +159,14 @@ class DataConnector(ABC):
         Returns:
             DataConnector インスタンス
         """
-        if url.startswith("postgres://") or url.startswith("postgresql://"):
+        if url.startswith(("postgres://", "postgresql://")):
             return MemoryConnector(ConnectionConfig(connector_type=ConnectorType.POSTGRES))
-        elif url.startswith("mysql://"):
+        if url.startswith("mysql://"):
             return MemoryConnector(ConnectionConfig(connector_type=ConnectorType.MYSQL))
-        elif url.startswith("memory://"):
+        if url.startswith("memory://"):
             return MemoryConnector(ConnectionConfig(connector_type=ConnectorType.MEMORY))
-        else:
-            raise ValueError(f"不明な接続URL: {url}")
+        msg = f"不明な接続URL: {url}"
+        raise ValueError(msg)
 
 
 class MemoryConnector(DataConnector):

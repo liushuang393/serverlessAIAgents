@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Chart Service - フレームワーク級チャート生成サービス.
 
 データからチャートを自動生成する再利用可能なサービス。
@@ -11,7 +10,7 @@ ECharts/Chart.js互換フォーマットを出力。
 
 使用例:
     >>> from agentflow.services import ChartService
-    >>> 
+    >>>
     >>> service = ChartService()
     >>> result = await service.execute(
     ...     action="generate",
@@ -24,16 +23,19 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.services.base import (
     ServiceBase,
     ServiceEvent,
-    ResultEvent,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 logger = logging.getLogger(__name__)
 
@@ -259,16 +261,16 @@ class ChartService(ServiceBase):
     ) -> AsyncIterator[ServiceEvent]:
         """チャート生成."""
         start_time = time.time()
-        
+
         if not data:
             yield self._emit_error(execution_id, "no_data", "データがありません")
             return
-        
+
         data = data[:self._config.max_data_points]
         columns = columns or (list(data[0].keys()) if data else [])
-        
+
         yield self._emit_progress(execution_id, 20, "チャートタイプを分析中...", phase="analyze")
-        
+
         if chart_type:
             selected_type = ChartType(chart_type)
             recommendation = ""
@@ -277,18 +279,18 @@ class ChartService(ServiceBase):
         else:
             selected_type = self._config.default_type
             recommendation = ""
-        
+
         yield self._emit_progress(execution_id, 60, "チャートを生成中...", phase="generate")
-        
+
         echarts_config = None
         chartjs_config = None
-        
+
         if self._config.format in (ChartFormat.ECHARTS, ChartFormat.BOTH):
             echarts_config = self._build_echarts(data, columns, selected_type, title)
-        
+
         if self._config.format in (ChartFormat.CHARTJS, ChartFormat.BOTH):
             chartjs_config = self._build_chartjs(data, columns, selected_type, title)
-        
+
         yield self._emit_result(execution_id, {
             "chart_type": selected_type.value,
             "title": title,
@@ -307,14 +309,14 @@ class ChartService(ServiceBase):
     ) -> AsyncIterator[ServiceEvent]:
         """チャートタイプ推薦."""
         start_time = time.time()
-        
+
         if not data:
             yield self._emit_error(execution_id, "no_data", "データがありません")
             return
-        
+
         columns = columns or (list(data[0].keys()) if data else [])
         selected_type, recommendation = self._recommend_chart_type(data, columns)
-        
+
         yield self._emit_result(execution_id, {
             "recommended_type": selected_type.value,
             "recommendation": recommendation,
@@ -329,19 +331,19 @@ class ChartService(ServiceBase):
         """チャートタイプを推薦."""
         if not data or not columns:
             return ChartType.TABLE, "データが少ないためテーブル表示を推奨"
-        
+
         row_count = len(data)
-        col_count = len(columns)
-        
+        len(columns)
+
         numeric_cols = []
         text_cols = []
         date_cols = []
-        
+
         for col in columns:
             sample_values = [r.get(col) for r in data[:10] if r.get(col) is not None]
             if not sample_values:
                 continue
-            
+
             first_val = sample_values[0]
             if isinstance(first_val, (int, float)):
                 numeric_cols.append(col)
@@ -349,19 +351,19 @@ class ChartService(ServiceBase):
                 date_cols.append(col)
             else:
                 text_cols.append(col)
-        
+
         if date_cols and numeric_cols:
             return ChartType.LINE, "時系列データのため折れ線グラフを推奨"
-        
+
         if len(text_cols) == 1 and len(numeric_cols) == 1 and row_count <= 8:
             return ChartType.PIE, "カテゴリ別の割合表示のため円グラフを推奨"
-        
+
         if text_cols and numeric_cols:
             return ChartType.BAR, "カテゴリ別比較のため棒グラフを推奨"
-        
+
         if len(numeric_cols) >= 2:
             return ChartType.SCATTER, "数値間の相関分析のため散布図を推奨"
-        
+
         return ChartType.TABLE, "データ構造が複雑なためテーブル表示を推奨"
 
     def _get_alternatives(
@@ -371,16 +373,16 @@ class ChartService(ServiceBase):
     ) -> list[dict[str, str]]:
         """代替チャートタイプを取得."""
         alternatives = []
-        
+
         if len(data) <= 20:
             alternatives.append({"type": "pie", "reason": "少量データに適している"})
-        
+
         if len(data) > 5:
             alternatives.append({"type": "bar", "reason": "比較分析に適している"})
             alternatives.append({"type": "line", "reason": "トレンド表示に適している"})
-        
+
         alternatives.append({"type": "table", "reason": "詳細データの確認に適している"})
-        
+
         return alternatives[:3]
 
     def _build_echarts(
@@ -393,20 +395,20 @@ class ChartService(ServiceBase):
         """ECharts設定を構築."""
         x_col = columns[0]
         y_col = columns[1] if len(columns) > 1 else columns[0]
-        
+
         labels = [str(r.get(x_col, "")) for r in data]
         values = [r.get(y_col, 0) for r in data]
-        
+
         config: dict[str, Any] = {
             "title": {"text": title, "left": "center"},
             "tooltip": {"trigger": "item" if chart_type == ChartType.PIE else "axis"},
         }
-        
+
         if chart_type == ChartType.PIE:
             config["series"] = [{
                 "type": "pie",
                 "radius": "50%",
-                "data": [{"name": l, "value": v} for l, v in zip(labels, values)],
+                "data": [{"name": l, "value": v} for l, v in zip(labels, values, strict=False)],
             }]
         elif chart_type == ChartType.SCATTER:
             if len(columns) >= 2:
@@ -421,7 +423,7 @@ class ChartService(ServiceBase):
                 "type": chart_type.value,
                 "data": values,
             }]
-        
+
         return config
 
     def _build_chartjs(
@@ -434,14 +436,14 @@ class ChartService(ServiceBase):
         """Chart.js設定を構築."""
         x_col = columns[0]
         y_col = columns[1] if len(columns) > 1 else columns[0]
-        
+
         labels = [str(r.get(x_col, "")) for r in data]
         values = [r.get(y_col, 0) for r in data]
-        
+
         chartjs_type = chart_type.value
         if chartjs_type == "area":
             chartjs_type = "line"
-        
+
         return {
             "type": chartjs_type,
             "data": {
@@ -466,7 +468,7 @@ class ChartService(ServiceBase):
         if value is None:
             return False
         s = str(value)
-        date_patterns = [r'\d{4}-\d{2}-\d{2}', r'\d{2}/\d{2}/\d{4}', r'\d{4}/\d{2}/\d{2}']
+        date_patterns = [r"\d{4}-\d{2}-\d{2}", r"\d{2}/\d{2}/\d{4}", r"\d{4}/\d{2}/\d{2}"]
         return any(re.match(p, s) for p in date_patterns)
 
     # =========================================================================
@@ -610,7 +612,7 @@ class ChartService(ServiceBase):
                 col_info["is_time_series"] = True
             else:
                 col_info["type"] = "text"
-                unique_vals = set(str(v) for v in col_data)
+                unique_vals = {str(v) for v in col_data}
                 col_info["unique_count"] = len(unique_vals)
                 col_info["is_categorical"] = len(unique_vals) <= 20
 
@@ -640,7 +642,7 @@ class ChartService(ServiceBase):
 
         numeric_cols = [c for c, info in characteristics["columns"].items() if info.get("type") == "numeric"]
         text_cols = [c for c, info in characteristics["columns"].items() if info.get("type") == "text"]
-        date_cols = [c for c, info in characteristics["columns"].items() if info.get("type") == "date"]
+        [c for c, info in characteristics["columns"].items() if info.get("type") == "date"]
 
         alternatives: list[tuple[ChartType, str, float]] = []
 
@@ -757,7 +759,7 @@ class ChartService(ServiceBase):
             if field == current_field:
                 continue
             # カテゴリカルなフィールドのみドリルダウン対象
-            unique_vals = set(str(r.get(field, "")) for r in data[:100])
+            unique_vals = {str(r.get(field, "")) for r in data[:100]}
             if 2 <= len(unique_vals) <= 50:
                 drill_fields.append(field)
 
@@ -791,14 +793,14 @@ class ChartService(ServiceBase):
 
 
 __all__ = [
-    "ChartService",
     "ChartConfig",
-    "ChartOutput",
-    "ChartType",
     "ChartFormat",
+    "ChartOutput",
+    "ChartRecommendation",
+    "ChartService",
+    "ChartType",
+    "DashboardConfig",
+    "DashboardPanel",
     # 増強: ダッシュボード・ドリルダウン
     "DrillDownConfig",
-    "DashboardPanel",
-    "DashboardConfig",
-    "ChartRecommendation",
 ]

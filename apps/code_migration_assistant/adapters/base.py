@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Language Adapter Base Classes.
 
 言語アダプターの抽象基底クラス。ソース言語/ターゲット言語の共通インターフェースを定義する。

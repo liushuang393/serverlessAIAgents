@@ -17,7 +17,6 @@ import logging
 import time
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
@@ -28,6 +27,8 @@ from agentflow.run import MemoryRunStore, RunRecord
 
 # AG-UI イベント（遅延インポートで循環依存回避）
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from agentflow.hitl.checkpointer import Checkpointer
     from agentflow.patterns.progress_emitter import AgentMeta, ProgressEmitter
 
@@ -476,12 +477,14 @@ class BaseEngine(ABC):
 
         checkpointer = self._config.hitl.checkpointer
         if checkpointer is None:
-            raise InterruptError("Checkpointer が設定されていません")
+            msg = "Checkpointer が設定されていません"
+            raise InterruptError(msg)
 
         # 最新のチェックポイントを取得
         checkpoint = await checkpointer.load_latest(thread_id)
         if checkpoint is None:
-            raise InterruptError(f"チェックポイントが見つかりません: {thread_id}")
+            msg = f"チェックポイントが見つかりません: {thread_id}"
+            raise InterruptError(msg)
 
         self._logger.info(
             f"Resuming from checkpoint: {checkpoint.checkpoint_id} (command: {command.type.value})"
@@ -490,7 +493,8 @@ class BaseEngine(ABC):
         # スキーマバージョンの検証
         schema_version = checkpoint.schema_version or 1
         if schema_version not in {1, 2}:
-            raise InterruptError(f"未対応のチェックポイントスキーマ: {schema_version}")
+            msg = f"未対応のチェックポイントスキーマ: {schema_version}"
+            raise InterruptError(msg)
 
         if schema_version >= 2 and checkpoint.cursor is None:
             self._logger.warning(

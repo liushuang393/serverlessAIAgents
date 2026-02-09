@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Language Adapters.
 
 拡張可能な言語アダプター。複数のソース言語とターゲット言語をサポート。
@@ -30,17 +29,18 @@ from apps.code_migration_assistant.adapters.factory import (
 from apps.code_migration_assistant.adapters.source.cobol_adapter import CobolAdapter
 from apps.code_migration_assistant.adapters.target.java_adapter import JavaAdapter
 
+
 __all__ = [
-    # 基底クラス
-    "SourceLanguageAdapter",
-    "TargetLanguageAdapter",
-    "ExecutionResult",
     "AST",
     # ファクトリー
     "AdapterFactory",
-    "get_adapter_factory",
     # 実装アダプター
     "CobolAdapter",
+    "ExecutionResult",
     "JavaAdapter",
+    # 基底クラス
+    "SourceLanguageAdapter",
+    "TargetLanguageAdapter",
+    "get_adapter_factory",
 ]
 

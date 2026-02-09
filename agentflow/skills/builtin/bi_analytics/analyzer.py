@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """分析エンジン.
 
 統計分析、トレンド分析、異常検出を提供。
@@ -11,9 +10,12 @@ import math
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from agentflow.skills.builtin.bi_analytics.connector import DataFrame
+
+if TYPE_CHECKING:
+    from agentflow.skills.builtin.bi_analytics.connector import DataFrame
+
 
 logger = logging.getLogger(__name__)
 
@@ -97,20 +99,19 @@ class BIAnalyzer:
 
         if analysis_type == AnalysisType.STATISTICAL:
             return await self._statistical_analysis(data, column)
-        elif analysis_type == AnalysisType.TREND:
+        if analysis_type == AnalysisType.TREND:
             return await self._trend_analysis(data, column, kwargs.get("date_column"))
-        elif analysis_type == AnalysisType.ANOMALY:
+        if analysis_type == AnalysisType.ANOMALY:
             return await self._anomaly_analysis(data, column)
-        elif analysis_type == AnalysisType.CORRELATION:
+        if analysis_type == AnalysisType.CORRELATION:
             return await self._correlation_analysis(data)
-        elif analysis_type == AnalysisType.DISTRIBUTION:
+        if analysis_type == AnalysisType.DISTRIBUTION:
             return await self._distribution_analysis(data, column)
-        else:
-            return AnalysisResult(
-                analysis_type=analysis_type,
-                success=False,
-                summary=f"不明な分析タイプ: {analysis_type}",
-            )
+        return AnalysisResult(
+            analysis_type=analysis_type,
+            success=False,
+            summary=f"不明な分析タイプ: {analysis_type}",
+        )
 
     async def _statistical_analysis(
         self,
@@ -122,10 +123,7 @@ class BIAnalyzer:
         insights: list[str] = []
 
         # 対象カラムを決定
-        if column:
-            columns = [column]
-        else:
-            columns = data.columns
+        columns = [column] if column else data.columns
 
         for col in columns:
             values = [
@@ -217,10 +215,7 @@ class BIAnalyzer:
             trend = "横ばい"
 
         # 変化率
-        if values[0] != 0:
-            change_rate = (values[-1] - values[0]) / values[0] * 100
-        else:
-            change_rate = 0
+        change_rate = (values[-1] - values[0]) / values[0] * 100 if values[0] != 0 else 0
 
         insights: list[str] = []
         if abs(change_rate) > 20:

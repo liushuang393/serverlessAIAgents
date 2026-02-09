@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Platform App - メインエントリーポイント.
 
 CLI および FastAPI サーバーのエントリーポイント。
@@ -15,24 +14,21 @@ CLI および FastAPI サーバーのエントリーポイント。
 
 import argparse
 import asyncio
-import json
 import logging
 import sys
-from pathlib import Path
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from apps.platform.engine import PlatformEngine
 from apps.platform.routers import (
-    gallery_router,
     components_router,
-    publish_router,
     dashboard_router,
+    gallery_router,
+    publish_router,
 )
 from apps.platform.schemas.publish_schemas import PublishRequest, PublishTarget
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 
 def create_app() -> FastAPI:
@@ -186,7 +182,7 @@ async def cli_components_list(
 
     components = engine.search_components(types=types, limit=limit)
 
-    print(f"\n📦 Components:")
+    print("\n📦 Components:")
     print("-" * 50)
 
     if not components:

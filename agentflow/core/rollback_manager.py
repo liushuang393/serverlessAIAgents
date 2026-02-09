@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """回滚管理器 - 状态快照与恢复系统.
 
 Manus分析中提到的「回滚重试」机制：
@@ -16,10 +15,10 @@ Manus分析中提到的「回滚重试」机制：
     >>> from agentflow.core.rollback_manager import RollbackManager
     >>>
     >>> manager = RollbackManager()
-    >>> 
+    >>>
     >>> # 创建检查点
     >>> checkpoint_id = await manager.create_checkpoint(state)
-    >>> 
+    >>>
     >>> try:
     ...     result = await risky_operation()
     ... except Exception:
@@ -36,7 +35,12 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +49,7 @@ T = TypeVar("T")
 
 class CheckpointStatus(str, Enum):
     """检查点状态."""
-    
+
     ACTIVE = "active"      # 活跃（可回滚）
     COMMITTED = "committed"  # 已提交（成功完成）
     ROLLED_BACK = "rolled_back"  # 已回滚
@@ -55,7 +59,7 @@ class CheckpointStatus(str, Enum):
 @dataclass
 class Checkpoint:
     """状态检查点.
-    
+
     Attributes:
         id: 检查点ID
         state: 状态快照
@@ -65,7 +69,7 @@ class Checkpoint:
         created_at: 创建时间
         description: 描述
     """
-    
+
     id: str
     state: dict[str, Any]
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -73,7 +77,7 @@ class Checkpoint:
     status: CheckpointStatus = CheckpointStatus.ACTIVE
     created_at: datetime = field(default_factory=datetime.now)
     description: str = ""
-    
+
     def to_dict(self) -> dict[str, Any]:
         """转换为字典."""
         return {
@@ -90,7 +94,7 @@ class Checkpoint:
 @dataclass
 class RollbackResult:
     """回滚结果.
-    
+
     Attributes:
         success: 是否成功
         checkpoint_id: 回滚到的检查点ID
@@ -98,7 +102,7 @@ class RollbackResult:
         message: 消息
         rolled_back_steps: 回滚的步骤数
     """
-    
+
     success: bool
     checkpoint_id: str
     restored_state: dict[str, Any] | None = None
@@ -108,7 +112,7 @@ class RollbackResult:
 
 class RetryStrategy(Enum):
     """重试策略."""
-    
+
     SAME = "same"          # 相同方式重试
     ALTERNATIVE = "alternative"  # 替代方式
     SIMPLIFIED = "simplified"    # 简化方式
@@ -118,14 +122,14 @@ class RetryStrategy(Enum):
 @dataclass
 class RetryConfig:
     """重试配置.
-    
+
     Attributes:
         max_retries: 最大重试次数
         strategies: 重试策略序列
         delay_seconds: 重试延迟
         backoff_multiplier: 退避乘数
     """
-    
+
     max_retries: int = 3
     strategies: list[RetryStrategy] = field(
         default_factory=lambda: [
@@ -373,7 +377,8 @@ class RollbackManager:
         # 所有重试都失败
         if last_error:
             raise last_error
-        raise RuntimeError("重试失败，但没有捕获到异常")
+        msg = "重试失败，但没有捕获到异常"
+        raise RuntimeError(msg)
 
     def _adjust_for_strategy(
         self,
@@ -427,7 +432,7 @@ class RollbackManager:
 
     def get_stats(self) -> dict[str, Any]:
         """获取统计信息."""
-        status_counts = {status: 0 for status in CheckpointStatus}
+        status_counts = dict.fromkeys(CheckpointStatus, 0)
         for cp in self._checkpoints.values():
             status_counts[cp.status] += 1
 

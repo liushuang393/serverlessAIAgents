@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Conversation Export Skill - 会話エクスポート機能.
 
 会話履歴を JSON / CSV / Markdown 形式でエクスポートするスキル。

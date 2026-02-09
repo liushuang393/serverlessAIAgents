@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tool Provider - 統一ツールアクセスインターフェース.
 
 このモジュールは、MCP/Method/Skills の統一アクセスを提供します。
@@ -35,17 +34,19 @@ from __future__ import annotations
 import functools
 import inspect
 import logging
+from collections.abc import Callable
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Literal, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from pydantic import BaseModel, Field
+
 
 if TYPE_CHECKING:
     from agentflow.security.policy_engine import AuthContext
 
 
 # ツールレジストリ（グローバル）
-_tool_registry: dict[str, "RegisteredTool"] = {}
+_tool_registry: dict[str, RegisteredTool] = {}
 
 
 class OperationType(str, Enum):
@@ -320,7 +321,7 @@ class ToolProvider:
         >>> result = await tools.call_secure("update_order", auth, order_id="o-1")
     """
 
-    _default_instance: "ToolProvider | None" = None
+    _default_instance: ToolProvider | None = None
 
     def __init__(self) -> None:
         """初期化."""
@@ -328,7 +329,7 @@ class ToolProvider:
         self._tools = dict(_tool_registry)  # コピー
 
     @classmethod
-    def discover(cls) -> "ToolProvider":
+    def discover(cls) -> ToolProvider:
         """@tool を自動発見してインスタンスを作成.
 
         Returns:
@@ -454,13 +455,12 @@ class ToolProvider:
         # 非同期関数の場合
         if inspect.iscoroutinefunction(func):
             return await func(**kwargs)
-        else:
-            return func(**kwargs)
+        return func(**kwargs)
 
     async def call_secure(
         self,
         name: str,
-        auth_context: "AuthContext",
+        auth_context: AuthContext,
         **kwargs: Any,
     ) -> Any:
         """セキュリティチェック付きでツールを呼び出し.

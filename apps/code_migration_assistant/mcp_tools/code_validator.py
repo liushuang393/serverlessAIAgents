@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CodeValidator MCP Tool.
 
 このモジュールは生成されたJavaコードを検証し、品質スコアとフィードバックを提供するMCPツールを提供します。
@@ -114,7 +113,7 @@ class CodeValidator(MCPTool):
         except Exception as e:
             return MCPToolResponse(
                 success=False,
-                errors=[f"Validation failed: {str(e)}"],
+                errors=[f"Validation failed: {e!s}"],
             )
 
     def _validate_code(
@@ -226,12 +225,7 @@ class CodeValidator(MCPTool):
             line_stripped = line.strip()
             if line_stripped and not line_stripped.startswith("//") and not line_stripped.startswith("/*"):
                 if (
-                    line_stripped.endswith("{")
-                    or line_stripped.endswith("}")
-                    or line_stripped.startswith("package")
-                    or line_stripped.startswith("import")
-                    or line_stripped.startswith("public")
-                    or line_stripped.startswith("private")
+                    line_stripped.endswith(("{", "}")) or line_stripped.startswith(("package", "import", "public", "private"))
                 ):
                     continue
                 if not line_stripped.endswith(";") and not line_stripped.endswith("{"):

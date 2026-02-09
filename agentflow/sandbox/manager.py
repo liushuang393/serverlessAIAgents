@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """サンドボックスマネージャー.
 
 Daytonaのサンドボックス管理設計を参考に、複数サンドボックスの
@@ -36,6 +35,7 @@ from typing import Any
 from agentflow.sandbox.base import SandboxConfig, SandboxState
 from agentflow.sandbox.lifecycle import ManagedSandbox
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,9 +61,9 @@ class SandboxManager:
         >>> await manager.cleanup_inactive()
     """
 
-    _instance: "SandboxManager | None" = None
+    _instance: SandboxManager | None = None
 
-    def __new__(cls) -> "SandboxManager":
+    def __new__(cls) -> SandboxManager:
         """シングルトンパターン."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -179,16 +179,14 @@ class SandboxManager:
             should_delete = False
             if sandbox.state == SandboxState.DELETED:
                 should_delete = True
-            elif sandbox.state == SandboxState.ARCHIVED:
-                should_delete = idle_seconds > max_idle_seconds
-            elif sandbox.state == SandboxState.STOPPED and include_stopped:
+            elif sandbox.state == SandboxState.ARCHIVED or (sandbox.state == SandboxState.STOPPED and include_stopped):
                 should_delete = idle_seconds > max_idle_seconds
 
             if should_delete:
                 try:
                     await sandbox.delete()
                 except Exception as e:
-                    self._logger.error(f"クリーンアップ失敗 {sandbox_id}: {e}")
+                    self._logger.exception(f"クリーンアップ失敗 {sandbox_id}: {e}")
                     continue
 
                 del self._sandboxes[sandbox_id]
@@ -263,7 +261,7 @@ class SandboxManager:
             try:
                 await self.delete(sandbox_id)
             except Exception as e:
-                self._logger.error(f"シャットダウン中のエラー {sandbox_id}: {e}")
+                self._logger.exception(f"シャットダウン中のエラー {sandbox_id}: {e}")
 
         self._logger.info("マネージャーをシャットダウンしました")
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """EmbeddingProvider - 松耦合埋め込みベクトル生成.
 
 Agent/サービスは具体的な埋め込みモデルを知る必要がありません。
@@ -19,6 +18,7 @@ Agent/サービスは具体的な埋め込みモデルを知る必要があり�
 
 import logging
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
 
 if TYPE_CHECKING:
     from agentflow.runtime import RuntimeContext
@@ -103,7 +103,8 @@ class OpenAIEmbeddingProvider:
                 from openai import AsyncOpenAI
                 self._client = AsyncOpenAI(api_key=self._api_key)
             except ImportError:
-                raise ImportError("openai package required: pip install openai")
+                msg = "openai package required: pip install openai"
+                raise ImportError(msg)
 
     async def embed_text(self, text: str) -> list[float]:
         """OpenAI 埋め込み."""
@@ -150,7 +151,8 @@ class SentenceTransformerProvider:
                 self._dimension = self._model.get_sentence_embedding_dimension()
                 logger.info(f"Loaded SentenceTransformer: {self._model_name}")
             except ImportError:
-                raise ImportError("sentence-transformers required: pip install sentence-transformers")
+                msg = "sentence-transformers required: pip install sentence-transformers"
+                raise ImportError(msg)
 
     async def embed_text(self, text: str) -> list[float]:
         """ローカル埋め込み."""

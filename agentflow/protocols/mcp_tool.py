@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """MCP Tool 基底クラスとクライアント.
 
 このモジュールは MCP (Model Context Protocol) 工具の基底クラスと
@@ -222,8 +221,7 @@ class MCPToolClient:
 
         # 工具を実行
         try:
-            response = await tool.execute(request)
-            return response
+            return await tool.execute(request)
 
         except Exception as e:
             return MCPToolResponse(

@@ -1,20 +1,16 @@
-# -*- coding: utf-8 -*-
 """NewsAPIClient 単元テスト.
 
 このモジュールは、NewsAPIClientのエラーハンドリングとレート制限対応をテストします。
 """
 
-import asyncio
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 from apps.market_trend_monitor.backend.integrations.news_api import NewsAPIClient
 
 
 @pytest.mark.asyncio
-async def test_news_api_mock_mode():
+async def test_news_api_mock_mode() -> None:
     """NewsAPIClientのモックモードをテスト."""
     client = NewsAPIClient(api_key=None)
 
@@ -25,7 +21,7 @@ async def test_news_api_mock_mode():
 
 
 @pytest.mark.asyncio
-async def test_news_api_rate_limit():
+async def test_news_api_rate_limit() -> None:
     """NewsAPIClientのレート制限対応をテスト."""
     client = NewsAPIClient(api_key="test-key", rate_limit_delay=0.5, max_retries=3)
 
@@ -48,13 +44,13 @@ async def test_news_api_rate_limit():
 
 
 @pytest.mark.asyncio
-async def test_news_api_timeout():
+async def test_news_api_timeout() -> None:
     """NewsAPIClientのタイムアウト処理をテスト."""
     client = NewsAPIClient(api_key="test-key", max_retries=2)
 
     with patch("aiohttp.ClientSession") as mock_session:
         # タイムアウトをシミュレート
-        mock_get = AsyncMock(side_effect=asyncio.TimeoutError("Request timeout"))
+        mock_get = AsyncMock(side_effect=TimeoutError("Request timeout"))
         mock_session.return_value.__aenter__.return_value.get = mock_get
         mock_session.return_value.__aexit__.return_value = None
 
@@ -66,7 +62,7 @@ async def test_news_api_timeout():
 
 
 @pytest.mark.asyncio
-async def test_news_api_successful_call():
+async def test_news_api_successful_call() -> None:
     """NewsAPIClientの正常な呼び出しをテスト."""
     client = NewsAPIClient(api_key="test-key")
 
@@ -104,7 +100,7 @@ async def test_news_api_successful_call():
 
 
 @pytest.mark.asyncio
-async def test_news_api_top_headlines():
+async def test_news_api_top_headlines() -> None:
     """NewsAPIClientのトップヘッドライン取得をテスト."""
     client = NewsAPIClient(api_key="test-key")
 
@@ -142,7 +138,7 @@ async def test_news_api_top_headlines():
 
 
 @pytest.mark.asyncio
-async def test_news_api_error_fallback():
+async def test_news_api_error_fallback() -> None:
     """NewsAPIClientのエラー時のフォールバックをテスト."""
     client = NewsAPIClient(api_key="test-key", max_retries=1)
 

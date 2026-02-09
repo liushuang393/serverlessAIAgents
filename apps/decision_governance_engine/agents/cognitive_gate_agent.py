@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CognitiveGateAgent - 認知前処理Agent.
 
 道・法・術・器の分析に入る前に、「認知的前提条件」を検査する。
@@ -13,8 +12,6 @@ import json
 import logging
 from typing import Any
 
-from agentflow import ResilientAgent
-from agentflow.core.exceptions import AgentOutputValidationError
 from apps.decision_governance_engine.prompts import build_full_prompt
 from apps.decision_governance_engine.schemas.agent_schemas import (
     ClarificationOutput,
@@ -23,6 +20,9 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     Irreversibility,
     IrreversibilityLevel,
 )
+
+from agentflow import ResilientAgent
+from agentflow.core.exceptions import AgentOutputValidationError
 
 
 class CognitiveGateAgent(ResilientAgent[CognitiveGateInput, CognitiveGateOutput]):
@@ -119,7 +119,8 @@ JSON形式で出力してください。"""
 
             if data is None:
                 self._logger.error(f"JSON extraction failed. Raw response: {response[:1000]}")
-                raise json.JSONDecodeError("No valid JSON found", response, 0)
+                msg = "No valid JSON found"
+                raise json.JSONDecodeError(msg, response, 0)
 
             # 詳細ログ: 抽出されたJSON
             self._logger.debug(f"Extracted JSON: {data}")

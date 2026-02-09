@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Agentレジストリ.
 
 能力ベースのAgent発見とファクトリベースのインスタンス化を提供するモジュール。
@@ -28,9 +27,12 @@
 from __future__ import annotations
 
 import threading
-from typing import Any, Callable, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from agentflow.core.capability_spec import AgentCapabilitySpec, CapabilityRequirement
 
 

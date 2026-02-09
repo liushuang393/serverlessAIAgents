@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Diff Engine - 差异对比引擎.
 
 技能版本间的差异对比。
@@ -208,7 +207,7 @@ class DiffEngine:
 
         for line in differ:
             # 跳过文件头
-            if line.startswith("---") or line.startswith("+++"):
+            if line.startswith(("---", "+++")):
                 continue
 
             # 解析hunk头
@@ -354,9 +353,9 @@ class DiffEngine:
 
 
 __all__ = [
-    "DiffType",
-    "DiffLine",
-    "DiffHunk",
-    "DiffResult",
     "DiffEngine",
+    "DiffHunk",
+    "DiffLine",
+    "DiffResult",
+    "DiffType",
 ]

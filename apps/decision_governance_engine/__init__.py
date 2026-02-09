@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Decision Governance Engine - 企業級意思決定支援システム.
 
 PipelineEngine パターンを使用した Multi-Agent 意思決定支援システム。
@@ -22,6 +21,7 @@ PipelineEngine パターンを使用した Multi-Agent 意思決定支援シス�
 """
 
 from apps.decision_governance_engine.engine import DecisionEngine
+
 
 __version__ = "2.0.0"
 __author__ = "AgentFlow Team"

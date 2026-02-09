@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """arXiv API 連携."""
 
 from __future__ import annotations

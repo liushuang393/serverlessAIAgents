@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """知識ストア - 型定義.
 
 長期知識記憶システムのデータ型定義。
@@ -13,7 +12,7 @@ Memvid技術に基づく高性能RAG記憶層をサポート。
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -74,7 +73,7 @@ class KnowledgeEntry:
     tags: list[str] = field(default_factory=list)
     source: KnowledgeSource = KnowledgeSource.DOCUMENT
     source_id: str | None = None
-    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime | None = None
     importance: float = 0.5
     access_count: int = 0
@@ -119,7 +118,7 @@ class KnowledgeEntry:
             source_id=data.get("source_id"),
             timestamp=datetime.fromisoformat(data["timestamp"])
             if isinstance(data.get("timestamp"), str)
-            else data.get("timestamp", datetime.now(timezone.utc)),
+            else data.get("timestamp", datetime.now(UTC)),
             updated_at=datetime.fromisoformat(data["updated_at"])
             if data.get("updated_at")
             else None,

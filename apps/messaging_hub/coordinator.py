@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Personal Assistant Coordinator - 私人助理協調器.
 
 messaging_hub固有の主管向けパーソナルアシスタント。
@@ -33,6 +32,7 @@ from agentflow.routing import (
     TaskParameter,
     TaskTemplate,
 )
+
 
 if TYPE_CHECKING:
     from agentflow.skills.gateway import SkillGateway
@@ -73,7 +73,7 @@ class PersonalAssistantCoordinator:
     def __init__(
         self,
         config: AssistantConfig | None = None,
-        skill_gateway: "SkillGateway | None" = None,
+        skill_gateway: SkillGateway | None = None,
     ) -> None:
         """初期化.
 
@@ -302,18 +302,17 @@ class PersonalAssistantCoordinator:
         # テンプレート別の実行
         if template_name == "email_organize":
             return await self._execute_email_organize(params, context)
-        elif template_name == "file_organize":
+        if template_name == "file_organize":
             return await self._execute_file_organize(params, context)
-        elif template_name == "system_optimize":
+        if template_name == "system_optimize":
             return await self._execute_system_optimize(params, context)
-        elif template_name == "research":
+        if template_name == "research":
             return await self._execute_research(params, context)
-        elif template_name == "competitor_analysis":
+        if template_name == "competitor_analysis":
             return await self._execute_competitor_analysis(params, context)
-        elif template_name == "report":
+        if template_name == "report":
             return await self._execute_report(params, context)
-        else:
-            return await self._execute_general_task(intent.original_text, context)
+        return await self._execute_general_task(intent.original_text, context)
 
     async def _answer_query(
         self,

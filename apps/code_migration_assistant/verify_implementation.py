@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Implementation Verification Script.
 
 このスクリプトは実装の完全性を検証します。
@@ -7,6 +6,7 @@
 import asyncio
 import sys
 from pathlib import Path
+
 
 # プロジェクトルートをPythonパスに追加
 project_root = Path(__file__).parent.parent.parent
@@ -22,9 +22,6 @@ async def verify_mcp_tools() -> bool:
             COBOLParser,
             CodeValidator,
             JavaGenerator,
-            MCPTool,
-            MCPToolRequest,
-            MCPToolResponse,
             MemorySystem,
             ReflectionPattern,
         )
@@ -68,8 +65,9 @@ async def verify_orchestrator() -> bool:
     print("\n🔍 Orchestratorを検証中...")
 
     try:
-        from agentflow import MCPToolClient as MCPClient
         from apps.code_migration_assistant.orchestrator import CodeMigrationOrchestrator
+
+        from agentflow import MCPToolClient as MCPClient
 
         # MCPClientテスト
         client = MCPClient()
@@ -93,8 +91,9 @@ async def verify_basic_workflow() -> bool:
     print("\n🔍 基本ワークフローを検証中...")
 
     try:
-        from agentflow import MCPToolClient as MCPClient
         from apps.code_migration_assistant.mcp_tools import COBOLParser, MCPToolRequest
+
+        from agentflow import MCPToolClient as MCPClient
 
         # MCPClientを作成
         client = MCPClient()
@@ -107,7 +106,7 @@ async def verify_basic_workflow() -> bool:
         cobol_code = """
        IDENTIFICATION DIVISION.
        PROGRAM-ID. TEST.
-       
+
        DATA DIVISION.
        WORKING-STORAGE SECTION.
        01 WS-NUM PIC 9(5).

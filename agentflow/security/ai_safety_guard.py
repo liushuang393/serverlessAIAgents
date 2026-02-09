@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AI安全防护门面 - 统一的AI弱点防护接口.
 
 整合所有AI安全防护功能:
@@ -13,12 +12,12 @@
     >>> from agentflow.security.ai_safety_guard import AISafetyGuard
     >>>
     >>> guard = AISafetyGuard()
-    >>> 
+    >>>
     >>> # 检查用户输入
     >>> input_result = await guard.check_input(user_input)
     >>> if not input_result.is_safe:
     ...     print("输入不安全")
-    >>> 
+    >>>
     >>> # 检查LLM输出
     >>> output_result = await guard.check_output(llm_output, context)
     >>> if output_result.needs_review:
@@ -35,27 +34,25 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from agentflow.security.hallucination_detector import (
-    HallucinationDetector,
-    DetectionConfig,
-    DetectionResult,
-)
-from agentflow.security.reasoning_monitor import (
-    ReasoningMonitor,
-    MonitorConfig,
-    MonitorResult,
-    ReasoningStep,
-)
 from agentflow.security.data_sanitizer import (
     DataSanitizer,
     SanitizerConfig,
-    SanitizationResult,
+)
+from agentflow.security.hallucination_detector import (
+    DetectionConfig,
+    HallucinationDetector,
+)
+from agentflow.security.reasoning_monitor import (
+    MonitorConfig,
+    MonitorResult,
+    ReasoningMonitor,
+    ReasoningStep,
 )
 
 
 class SafetyLevel(str, Enum):
     """安全级别."""
-    
+
     SAFE = "safe"           # 安全
     WARNING = "warning"     # 警告
     DANGER = "danger"       # 危险
@@ -65,7 +62,7 @@ class SafetyLevel(str, Enum):
 @dataclass
 class InputCheckResult:
     """输入检查结果.
-    
+
     Attributes:
         is_safe: 是否安全
         safety_level: 安全级别
@@ -73,14 +70,14 @@ class InputCheckResult:
         threats: 检测到的威胁
         warnings: 警告信息
     """
-    
+
     is_safe: bool = True
     safety_level: SafetyLevel = SafetyLevel.SAFE
     sanitized_input: str = ""
     threats: list[dict[str, Any]] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     checked_at: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """转换为字典."""
         return {
@@ -96,7 +93,7 @@ class InputCheckResult:
 @dataclass
 class OutputCheckResult:
     """输出检查结果.
-    
+
     Attributes:
         is_reliable: 是否可靠
         confidence_score: 可信度评分
@@ -104,14 +101,14 @@ class OutputCheckResult:
         issues: 检测到的问题
         sanitized_output: 脱敏后的输出
     """
-    
+
     is_reliable: bool = True
     confidence_score: float = 1.0
     needs_review: bool = False
     issues: list[dict[str, Any]] = field(default_factory=list)
     sanitized_output: str = ""
     checked_at: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """转换为字典."""
         return {
@@ -365,7 +362,8 @@ class AISafetyGuard:
         """
         monitor = self._reasoning_monitors.get(session_id)
         if not monitor:
-            raise ValueError(f"未找到会话 {session_id} 的推理监控器")
+            msg = f"未找到会话 {session_id} 的推理监控器"
+            raise ValueError(msg)
 
         return monitor.check_step(step)
 

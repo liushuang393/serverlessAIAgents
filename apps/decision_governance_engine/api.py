@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Decision Governance Engine - FastAPI REST API.
 
 モジュール化されたルーター構成:
@@ -18,6 +17,8 @@
 
 # 環境変数をロード（最初に実行）
 from dotenv import load_dotenv
+
+
 load_dotenv()
 
 import logging
@@ -25,15 +26,10 @@ import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from agentflow import setup_logging, LogLevel
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from apps.decision_governance_engine.flow_config import (
     register_flow_definition,
     setup_result_store,
 )
-from apps.decision_governance_engine.startup import log_startup_info
 
 # ルーターインポート
 from apps.decision_governance_engine.routers.auth import router as auth_router
@@ -43,12 +39,18 @@ from apps.decision_governance_engine.routers.knowledge import router as knowledg
 from apps.decision_governance_engine.routers.product_launch import router as product_launch_router
 from apps.decision_governance_engine.routers.report import router as report_router
 from apps.decision_governance_engine.routers.workflow import router as workflow_router
+from apps.decision_governance_engine.startup import log_startup_info
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from agentflow import LogLevel, setup_logging
+
 
 logger = logging.getLogger("decision_api")
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """アプリケーションライフサイクル管理.
 
     起動時: 設定情報をログ出力

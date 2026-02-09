@@ -7,6 +7,7 @@ tool output, system signals, etc.) are converted to PerceptionEvents.
 
 from agentflow.perception.events import PerceptionEvent, PerceptionEventType
 
+
 __all__ = [
     "PerceptionEvent",
     "PerceptionEventType",

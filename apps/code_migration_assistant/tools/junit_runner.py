@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """JUnit Runner - JUnit テスト実行ツール.
 
 JUnit 5 テストをコンパイル・実行し、結果を解析する。
@@ -154,9 +153,8 @@ class JUnitRunner:
         # JUnit Platform Console を使用
         if Path(self._junit_jar).exists():
             return self._run_with_console(work_dir, test_class, timeout)
-        else:
-            # フォールバック: 直接 Java で実行（基本的なテスト用）
-            return self._run_simple(work_dir, test_class, timeout)
+        # フォールバック: 直接 Java で実行（基本的なテスト用）
+        return self._run_simple(work_dir, test_class, timeout)
 
     def _run_with_console(
         self, work_dir: Path, test_class: str, timeout: int

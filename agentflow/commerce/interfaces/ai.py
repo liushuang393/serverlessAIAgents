@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AI商取引インターフェース.
 
 LLM（Gemini等）を活用したAI商取引機能の抽象インターフェース。
@@ -14,6 +13,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any
+
 
 if TYPE_CHECKING:
     from agentflow.commerce.models import (

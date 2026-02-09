@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FAQ/知識庫Q&A Skills パッケージ.
 
 このパッケージはRAGベースの知識庫Q&A機能を提供します。
@@ -17,50 +16,51 @@
     ... )
 """
 
+from agentflow.skills.builtin.knowledge_qa.answer_generator import (
+    AnswerConfig,
+    AnswerGenerator,
+    Citation,
+    GeneratedAnswer,
+)
 from agentflow.skills.builtin.knowledge_qa.doc_ingester import (
     DocIngester,
     IngestConfig,
     IngestedDoc,
     IngestResult,
 )
-from agentflow.skills.builtin.knowledge_qa.retriever import (
-    Retriever,
-    RetrievalConfig,
-    RetrievedChunk,
-    RetrievalResult,
-)
-from agentflow.skills.builtin.knowledge_qa.answer_generator import (
-    AnswerGenerator,
-    GeneratedAnswer,
-    AnswerConfig,
-    Citation,
-)
 from agentflow.skills.builtin.knowledge_qa.gap_analyzer import (
     GapAnalyzer,
     GapReport,
-    UnansweredQuestion,
     SuggestedDoc,
+    UnansweredQuestion,
+)
+from agentflow.skills.builtin.knowledge_qa.retriever import (
+    RetrievalConfig,
+    RetrievalResult,
+    RetrievedChunk,
+    Retriever,
 )
 
+
 __all__ = [
-    # ドキュメント取込
-    "DocIngester",
-    "IngestConfig",
-    "IngestedDoc",
-    "IngestResult",
-    # 検索
-    "Retriever",
-    "RetrievalConfig",
-    "RetrievedChunk",
-    "RetrievalResult",
+    "AnswerConfig",
     # 回答生成
     "AnswerGenerator",
-    "GeneratedAnswer",
-    "AnswerConfig",
     "Citation",
+    # ドキュメント取込
+    "DocIngester",
     # ギャップ分析
     "GapAnalyzer",
     "GapReport",
-    "UnansweredQuestion",
+    "GeneratedAnswer",
+    "IngestConfig",
+    "IngestResult",
+    "IngestedDoc",
+    "RetrievalConfig",
+    "RetrievalResult",
+    "RetrievedChunk",
+    # 検索
+    "Retriever",
     "SuggestedDoc",
+    "UnansweredQuestion",
 ]

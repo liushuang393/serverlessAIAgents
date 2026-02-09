@@ -1,7 +1,6 @@
 """エージェントのユニットテスト."""
 
 import pytest
-
 from apps.market_trend_monitor.backend.agents import (
     AnalyzerAgent,
     CollectorAgent,

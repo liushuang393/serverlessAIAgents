@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Evidence Ledger モデル定義.
 
 証拠台帳システムのデータモデル。
@@ -10,14 +9,13 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
-
 from apps.market_trend_monitor.backend.models.schemas import SourceType
+from pydantic import BaseModel, Field
 
 
 class ClaimLevel(str, Enum):
     """主張レベル.
-    
+
     証拠数と信頼度に基づいて自動昇格します。
     - LEAD: 初期手がかり（証拠数1以上、信頼度<0.5）
     - HYPOTHESIS: 仮説（証拠数2以上、信頼度0.5-0.7）
@@ -39,7 +37,7 @@ class ClaimLevel(str, Enum):
 @dataclass
 class Evidence:
     """証拠データモデル.
-    
+
     情報源から収集した証拠情報を表現します。
     """
 
@@ -73,7 +71,7 @@ class Evidence:
 @dataclass
 class Claim:
     """主張データモデル.
-    
+
     証拠に基づく主張を表現します。
     """
 
@@ -104,7 +102,7 @@ class Claim:
     def update_level(self) -> None:
         """証拠数と信頼度に基づいて主張レベルを更新."""
         evidence_count = len(self.evidence_ids)
-        
+
         if evidence_count >= 5 and self.confidence > 0.85:
             self.level = ClaimLevel.CONCLUSION
         elif evidence_count >= 3 and self.confidence >= 0.7:
@@ -113,7 +111,7 @@ class Claim:
             self.level = ClaimLevel.HYPOTHESIS
         else:
             self.level = ClaimLevel.LEAD
-        
+
         self.updated_at = datetime.now()
 
 

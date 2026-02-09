@@ -18,9 +18,9 @@
 """
 
 __all__ = [
-    "database_manager",
-    "stripe_payment",
-    "deployment_manager",
     "auth_provider",
+    "database_manager",
+    "deployment_manager",
+    "stripe_payment",
 ]
 

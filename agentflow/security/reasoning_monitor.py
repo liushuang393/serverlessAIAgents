@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """推理监控器 - 多步推理稳定性保障.
 
 解决LLM在多步推理中的不稳定问题:
@@ -16,7 +15,7 @@
     >>> from agentflow.security.reasoning_monitor import ReasoningMonitor
     >>>
     >>> monitor = ReasoningMonitor(original_goal="分析销售数据")
-    >>> 
+    >>>
     >>> # 在每个推理步骤后检查
     >>> for step in reasoning_steps:
     ...     result = monitor.check_step(step)
@@ -30,14 +29,14 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class DeviationType(str, Enum):
     """偏离类型."""
-    
+
     GOAL_DRIFT = "goal_drift"           # 目标偏离
     CONTEXT_LOSS = "context_loss"       # 上下文丢失
     CONSTRAINT_VIOLATION = "constraint_violation"  # 约束违反
@@ -49,7 +48,7 @@ class DeviationType(str, Enum):
 
 class ReasoningState(str, Enum):
     """推理状态."""
-    
+
     ON_TRACK = "on_track"           # 正常进行
     MINOR_DEVIATION = "minor"       # 轻微偏离
     MAJOR_DEVIATION = "major"       # 严重偏离
@@ -60,7 +59,7 @@ class ReasoningState(str, Enum):
 @dataclass
 class ReasoningStep:
     """推理步骤.
-    
+
     Attributes:
         step_id: 步骤ID
         action: 执行的动作
@@ -68,14 +67,14 @@ class ReasoningStep:
         result: 执行结果
         tool_calls: 工具调用
     """
-    
+
     step_id: int
     action: str
     thought: str = ""
     result: Any = None
     tool_calls: list[dict[str, Any]] = field(default_factory=list)
     timestamp: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """转换为字典."""
         return {
@@ -91,7 +90,7 @@ class ReasoningStep:
 @dataclass
 class DeviationReport:
     """偏离报告.
-    
+
     Attributes:
         deviation_type: 偏离类型
         severity: 严重程度（0.0-1.0）
@@ -99,13 +98,13 @@ class DeviationReport:
         affected_step: 受影响的步骤
         suggestion: 修正建议
     """
-    
+
     deviation_type: DeviationType
     severity: float
     description: str
     affected_step: int | None = None
     suggestion: str = ""
-    
+
     def to_dict(self) -> dict[str, Any]:
         """转换为字典."""
         return {
@@ -120,7 +119,7 @@ class DeviationReport:
 @dataclass
 class MonitorResult:
     """监控结果.
-    
+
     Attributes:
         state: 当前推理状态
         deviations: 检测到的偏离
@@ -128,19 +127,19 @@ class MonitorResult:
         recommended_action: 推荐操作
         progress: 进度估计
     """
-    
+
     state: ReasoningState = ReasoningState.ON_TRACK
     deviations: list[DeviationReport] = field(default_factory=list)
     needs_correction: bool = False
     recommended_action: str = "continue"
     progress: float = 0.0
     checked_at: datetime = field(default_factory=datetime.now)
-    
+
     @property
     def is_healthy(self) -> bool:
         """是否健康."""
         return self.state in (ReasoningState.ON_TRACK, ReasoningState.RECOVERED)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """转换为字典."""
         return {

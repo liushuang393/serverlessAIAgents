@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """PEVエンジン - 計画・実行・検証の統合エンジン.
 
 Hassabisの「計画・実行・検証の分離」に基づく自己修正可能なエンジン。
@@ -22,15 +21,12 @@ Hassabisの「計画・実行・検証の分離」に基づく自己修正可能
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
 from agentflow.pev.hierarchical_planner import (
-    GoalStatus,
-    HierarchicalPlan,
     HierarchicalPlanner,
 )
 from agentflow.pev.monitored_executor import (
@@ -43,6 +39,10 @@ from agentflow.pev.result_verifier import (
     VerificationResult,
     VerificationStrategy,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 class PEVEngineConfig(BaseModel):
@@ -222,7 +222,7 @@ class PEVEngine:
                 result.replan_count += 1
 
         except Exception as e:
-            self._logger.error(f"PEVエンジンエラー: {e}")
+            self._logger.exception(f"PEVエンジンエラー: {e}")
             result.error = str(e)
 
         return result
@@ -274,8 +274,8 @@ class PEVEngine:
 
 
 __all__ = [
+    "PEVEngine",
     "PEVEngineConfig",
     "PEVResult",
-    "PEVEngine",
 ]
 

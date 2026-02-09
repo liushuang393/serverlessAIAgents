@@ -10,7 +10,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import logging
 import re
 import uuid
@@ -105,12 +104,8 @@ class SensoryMemory:
         words = re.findall(r"\b\w+\b", first_sentence.lower())
 
         # 最も長い単語をトピックとする（簡易版）
-        if words:
-            topic = max(words, key=len)
-        else:
-            topic = "general"
+        return max(words, key=len) if words else "general"
 
-        return topic
 
     def _score_importance(self, text: str) -> list[float]:
         """テキストの重要度をスコアリング.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """SSE Emitter - 統一 Server-Sent Events 発信器.
 
 設計原則:
@@ -23,8 +22,7 @@
 from __future__ import annotations
 
 import json
-from collections.abc import AsyncIterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Any
@@ -272,8 +270,8 @@ class SSEEmitter:
 
 
 __all__ = [
+    "SSEConfig",
     "SSEEmitter",
     "SSEEvent",
     "SSEEventType",
-    "SSEConfig",
 ]

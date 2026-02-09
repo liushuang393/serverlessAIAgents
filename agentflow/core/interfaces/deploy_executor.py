@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """IDeployExecutor - デプロイ執行器インターフェース.
 
 生成されたコードをターゲットプラットフォームにデプロイするインターフェース。
@@ -8,11 +7,13 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
+
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
+
     from agentflow.core.interfaces.types import (
         ConfigField,
         DeployConfig,
@@ -53,10 +54,10 @@ class IDeployExecutor(Protocol):
 
     async def deploy(
         self,
-        source: "GeneratedCode | Path",
-        target: "DeployTarget",
-        config: "DeployConfig",
-    ) -> AsyncIterator["DeployEvent"]:
+        source: GeneratedCode | Path,
+        target: DeployTarget,
+        config: DeployConfig,
+    ) -> AsyncIterator[DeployEvent]:
         """デプロイを実行.
 
         ストリーム方式で進捗を報告しながらデプロイを実行します。
@@ -77,10 +78,10 @@ class IDeployExecutor(Protocol):
 
     async def deploy_sync(
         self,
-        source: "GeneratedCode | Path",
-        target: "DeployTarget",
-        config: "DeployConfig",
-    ) -> "DeployResult":
+        source: GeneratedCode | Path,
+        target: DeployTarget,
+        config: DeployConfig,
+    ) -> DeployResult:
         """デプロイを同期実行.
 
         Args:
@@ -95,8 +96,8 @@ class IDeployExecutor(Protocol):
 
     async def get_required_config(
         self,
-        target: "DeployTarget",
-    ) -> list["ConfigField"]:
+        target: DeployTarget,
+    ) -> list[ConfigField]:
         """ターゲットプラットフォームに必要な設定フィールドを取得.
 
         UI でフォームを動的に生成するために使用します。
@@ -111,9 +112,9 @@ class IDeployExecutor(Protocol):
 
     async def validate_config(
         self,
-        target: "DeployTarget",
+        target: DeployTarget,
         config: dict[str, Any],
-    ) -> "ValidationResult":
+    ) -> ValidationResult:
         """設定を検証.
 
         Args:
@@ -125,7 +126,7 @@ class IDeployExecutor(Protocol):
         """
         ...
 
-    def get_supported_targets(self) -> list["DeployTarget"]:
+    def get_supported_targets(self) -> list[DeployTarget]:
         """サポートされているデプロイターゲットを取得.
 
         Returns:

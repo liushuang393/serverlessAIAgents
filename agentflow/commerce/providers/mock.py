@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """モックプロバイダー実装.
 
 テスト・開発用のモック実装。
@@ -30,7 +29,6 @@ from agentflow.commerce.models import (
     Offer,
     OfferType,
     Product,
-    ProductCategory,
     PurchaseIntent,
     Transaction,
     TransactionStatus,
@@ -155,9 +153,7 @@ class MockOfferProvider(IOffer):
         if not offer or not offer.is_valid():
             return False
         # 最低購入金額チェック
-        if offer.min_purchase_amount and cart.subtotal < offer.min_purchase_amount:
-            return False
-        return True
+        return not (offer.min_purchase_amount and cart.subtotal < offer.min_purchase_amount)
 
 
 class MockCartProvider(ICart):
@@ -186,7 +182,8 @@ class MockCartProvider(ICart):
         """アイテムを追加."""
         cart = self._carts.get(cart_id)
         if not cart:
-            raise ValueError(f"Cart not found: {cart_id}")
+            msg = f"Cart not found: {cart_id}"
+            raise ValueError(msg)
         cart.add_item(item)
         return cart
 
@@ -194,7 +191,8 @@ class MockCartProvider(ICart):
         """アイテムを削除."""
         cart = self._carts.get(cart_id)
         if not cart:
-            raise ValueError(f"Cart not found: {cart_id}")
+            msg = f"Cart not found: {cart_id}"
+            raise ValueError(msg)
         cart.remove_item(product_id)
         return cart
 
@@ -202,7 +200,8 @@ class MockCartProvider(ICart):
         """オファーを適用."""
         cart = self._carts.get(cart_id)
         if not cart:
-            raise ValueError(f"Cart not found: {cart_id}")
+            msg = f"Cart not found: {cart_id}"
+            raise ValueError(msg)
         cart.applied_offers.append(offer_id)
         return cart
 
@@ -242,7 +241,8 @@ class MockTransactionProvider(ITransaction):
         """取引ステータスを更新."""
         transaction = self._transactions.get(transaction_id)
         if not transaction:
-            raise ValueError(f"Transaction not found: {transaction_id}")
+            msg = f"Transaction not found: {transaction_id}"
+            raise ValueError(msg)
         transaction.status = TransactionStatus(status)
         transaction.updated_at = datetime.now()
         return transaction
@@ -251,7 +251,8 @@ class MockTransactionProvider(ITransaction):
         """取引を完了."""
         transaction = self._transactions.get(transaction_id)
         if not transaction:
-            raise ValueError(f"Transaction not found: {transaction_id}")
+            msg = f"Transaction not found: {transaction_id}"
+            raise ValueError(msg)
         transaction.complete()
         return transaction
 

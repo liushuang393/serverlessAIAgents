@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """PLY-based COBOL Parser.
 
 このモジュールはPLY (Python Lex-Yacc)を使用したCOBOLパーサーを提供します。
@@ -23,7 +22,6 @@ from typing import Any
 class ParseError(Exception):
     """COBOL解析エラー."""
 
-    pass
 
 
 class PLYCobolParser:
@@ -46,7 +44,8 @@ class PLYCobolParser:
             ParseError: ソースコードが空の場合
         """
         if not source_code or not source_code.strip():
-            raise ParseError("Source code cannot be empty")
+            msg = "Source code cannot be empty"
+            raise ParseError(msg)
 
         self._source_code = source_code
         self._lines = source_code.split("\n")
@@ -122,7 +121,8 @@ class PLYCobolParser:
 
             # PROGRAM-IDが見つからない場合はエラー
             if not ast["program_id"]:
-                raise ParseError("PROGRAM-ID not found in source code")
+                msg = "PROGRAM-ID not found in source code"
+                raise ParseError(msg)
 
             self._logger.info(f"Parsing completed: PROGRAM-ID={ast['program_id']}")
             return ast
@@ -130,8 +130,9 @@ class PLYCobolParser:
         except ParseError:
             raise
         except Exception as e:
-            self._logger.error(f"Unexpected error during parsing: {e}")
-            raise ParseError(f"Failed to parse COBOL source: {e}") from e
+            self._logger.exception(f"Unexpected error during parsing: {e}")
+            msg = f"Failed to parse COBOL source: {e}"
+            raise ParseError(msg) from e
 
     def extract_variables(self, ast: dict[str, Any]) -> list[dict[str, Any]]:
         """変数情報を抽出.
@@ -176,10 +177,9 @@ class PLYCobolParser:
         """
         if "9" in pic and "V" in pic:
             return "decimal"
-        elif "9" in pic:
+        if "9" in pic:
             return "numeric"
-        elif "X" in pic or "A" in pic:
+        if "X" in pic or "A" in pic:
             return "string"
-        else:
-            return "unknown"
+        return "unknown"
 

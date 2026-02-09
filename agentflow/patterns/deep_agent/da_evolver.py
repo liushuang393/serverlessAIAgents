@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeepAgent 自己進化システム.
 
 DeepAgentsの「自己進化」原則を実装:
@@ -30,6 +29,7 @@ from agentflow.patterns.deep_agent.da_models import (
     TodoItem,
 )
 from agentflow.patterns.deep_agent.da_stores import EvolutionStore, MemoryEvolutionStore
+
 
 _logger = logging.getLogger(__name__)
 
@@ -150,7 +150,7 @@ class SelfEvolver:
     def _extract_template(self, task: str) -> str:
         """タスクからテンプレートを抽出（具体値を抽象化）."""
         import re
-        template = re.sub(r'\d+', '{N}', task)
+        template = re.sub(r"\d+", "{N}", task)
         template = re.sub(r'"[^"]*"', '"{STR}"', template)
         template = re.sub(r"'[^']*'", "'{STR}'", template)
         return template[:100]

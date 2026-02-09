@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Quota Manager - 配额管理.
 
 API调用配额和速率限制管理。
@@ -16,8 +15,9 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
-from typing import Any
 from enum import Enum
+from typing import Any
+
 
 _logger = logging.getLogger(__name__)
 
@@ -165,11 +165,11 @@ class TenantQuota:
         now = time.time()
         if period == QuotaPeriod.MINUTE:
             return now + 60
-        elif period == QuotaPeriod.HOUR:
+        if period == QuotaPeriod.HOUR:
             return now + 3600
-        elif period == QuotaPeriod.DAY:
+        if period == QuotaPeriod.DAY:
             return now + 86400
-        elif period == QuotaPeriod.MONTH:
+        if period == QuotaPeriod.MONTH:
             return now + 2592000  # 30天
         return now + 60
 
@@ -178,14 +178,14 @@ class TenantQuota:
         if quota_type == QuotaType.REQUESTS:
             if period == QuotaPeriod.MINUTE:
                 return self.limits.requests_per_minute
-            elif period == QuotaPeriod.HOUR:
+            if period == QuotaPeriod.HOUR:
                 return self.limits.requests_per_hour
-            elif period == QuotaPeriod.DAY:
+            if period == QuotaPeriod.DAY:
                 return self.limits.requests_per_day
         elif quota_type == QuotaType.TOKENS:
             if period == QuotaPeriod.DAY:
                 return self.limits.tokens_per_day
-            elif period == QuotaPeriod.MONTH:
+            if period == QuotaPeriod.MONTH:
                 return self.limits.tokens_per_month
         elif quota_type == QuotaType.STORAGE:
             return self.limits.storage_mb
@@ -425,12 +425,12 @@ def get_quota_manager() -> QuotaManager:
 
 
 __all__ = [
-    "QuotaType",
-    "QuotaPeriod",
-    "QuotaLimit",
-    "QuotaUsage",
     "QuotaExceededError",
-    "TenantQuota",
+    "QuotaLimit",
     "QuotaManager",
+    "QuotaPeriod",
+    "QuotaType",
+    "QuotaUsage",
+    "TenantQuota",
     "get_quota_manager",
 ]

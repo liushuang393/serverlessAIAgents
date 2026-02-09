@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """LLM Provider - 統一LLMアクセスインターフェース（松耦合設計）.
 
 このモジュールは、各種LLMプロバイダーへの統一アクセスを提供します。
@@ -28,11 +27,14 @@ Agent/サービスは具体的なプロバイダーやモデルを意識する�
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from agentflow.config import AgentFlowSettings
     from agentflow.llm.llm_client import LLMClient
     from agentflow.runtime import RuntimeContext
@@ -40,7 +42,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 # グローバルシングルトン
-_default_llm: "LLMProvider | None" = None
+_default_llm: LLMProvider | None = None
 
 
 class LLMProviderConfig(BaseModel):
@@ -58,7 +60,7 @@ class LLMProviderConfig(BaseModel):
 
 
 def _detect_provider_from_env(
-    settings: "AgentFlowSettings | None" = None,
+    settings: AgentFlowSettings | None = None,
 ) -> tuple[str, str, str | None, str | None, int]:
     """環境変数から最適なプロバイダーを自動検出.
 
@@ -68,7 +70,7 @@ def _detect_provider_from_env(
     Returns:
         (provider, model, api_key, base_url, timeout) のタプル
     """
-    from agentflow.config import AgentFlowSettings, get_settings
+    from agentflow.config import get_settings
 
     settings = settings or get_settings()
     llm_config = settings.get_active_llm_config()
@@ -101,7 +103,7 @@ class LLMProvider:
         *,
         temperature: float | None = None,
         max_tokens: int | None = None,
-        settings: "AgentFlowSettings | None" = None,
+        settings: AgentFlowSettings | None = None,
     ) -> None:
         """初期化（通常は get_llm() を使用）.
 
@@ -113,7 +115,7 @@ class LLMProvider:
         self._config = config or LLMProviderConfig()
         self._temperature_override = temperature
         self._max_tokens_override = max_tokens
-        self._client: "LLMClient | None" = None
+        self._client: LLMClient | None = None
         self._provider_info: tuple[str, str, str | None, str | None] | None = None
         self._settings = settings
         self._initialize_client()
@@ -201,7 +203,7 @@ def get_llm(
     *,
     temperature: float | None = None,
     max_tokens: int | None = None,
-    context: "RuntimeContext | None" = None,
+    context: RuntimeContext | None = None,
     _new_instance: bool = False,
 ) -> LLMProvider:
     """LLMプロバイダーを取得（推奨API）.

@@ -59,12 +59,14 @@ class OpenAIEmbeddings(EmbeddingEngine):
 
             self._client = AsyncOpenAI(api_key=api_key)
         except ImportError:
-            raise ImportError("openai package is required. Install with: pip install openai")
+            msg = "openai package is required. Install with: pip install openai"
+            raise ImportError(msg)
 
     async def embed_text(self, text: str) -> list[float]:
         """テキストをベクトル埋め込みに変換."""
         if not text or not text.strip():
-            raise ValueError("Text cannot be empty")
+            msg = "Text cannot be empty"
+            raise ValueError(msg)
 
         try:
             response = await self._client.embeddings.create(
@@ -78,8 +80,9 @@ class OpenAIEmbeddings(EmbeddingEngine):
             return embedding
 
         except Exception as e:
-            self._logger.error(f"Failed to generate embedding: {e}")
-            raise RuntimeError(f"Failed to generate embedding: {e}")
+            self._logger.exception(f"Failed to generate embedding: {e}")
+            msg = f"Failed to generate embedding: {e}"
+            raise RuntimeError(msg)
 
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """複数のテキストを一括変換."""
@@ -89,7 +92,8 @@ class OpenAIEmbeddings(EmbeddingEngine):
         # 空のテキストをフィルタリング
         valid_texts = [t for t in texts if t and t.strip()]
         if not valid_texts:
-            raise ValueError("All texts are empty")
+            msg = "All texts are empty"
+            raise ValueError(msg)
 
         try:
             response = await self._client.embeddings.create(
@@ -103,8 +107,9 @@ class OpenAIEmbeddings(EmbeddingEngine):
             return embeddings
 
         except Exception as e:
-            self._logger.error(f"Failed to generate embeddings: {e}")
-            raise RuntimeError(f"Failed to generate embeddings: {e}")
+            self._logger.exception(f"Failed to generate embeddings: {e}")
+            msg = f"Failed to generate embeddings: {e}"
+            raise RuntimeError(msg)
 
     def get_dimension(self) -> int:
         """埋め込みベクトルの次元数を取得."""

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Skill Router - 軽量Skill選択層（Anthropic Skills体系準拠）.
 
 このモジュールは、Agent Loop から Skill を選択するための軽量ルーター層を提供します。
@@ -13,7 +12,7 @@ Anthropic の「漸進的披露」戦略に従い、3層読み込みを実装：
 使用例:
     >>> router = SkillRouter()
     >>> await router.initialize()
-    >>> 
+    >>>
     >>> # 軽量ルーティング（メタ情報のみ使用）
     >>> result = router.route("市場トレンドを分析")
     >>> if result.matched:
@@ -27,6 +26,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
+
 
 if TYPE_CHECKING:
     from agentflow.skills.base import Skill
@@ -91,7 +91,7 @@ class SkillRouter:
     Example:
         >>> router = SkillRouter()
         >>> await router.initialize()
-        >>> 
+        >>>
         >>> result = router.route("PDFからテキスト抽出")
         >>> if result.matched:
         ...     print(f"Matched: {result.skill.name}")

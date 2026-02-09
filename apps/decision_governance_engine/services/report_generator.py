@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ReportGenerator - 提案書生成サービス.
 
 目的:
@@ -8,7 +7,7 @@
 
 使用例:
     >>> from apps.decision_governance_engine.services.report_generator import ReportGenerator
-    >>> 
+    >>>
     >>> generator = ReportGenerator()
     >>> report = generator.generate(results, original_question="新規事業への投資判断")
 """
@@ -16,19 +15,9 @@
 import logging
 from typing import Any
 
-from apps.decision_governance_engine.schemas.agent_schemas import (
-    ClarificationOutput,
-    DaoOutput,
-    FaOutput,
-    QiOutput,
-    ReviewOutput,
-    ShuOutput,
-)
 from apps.decision_governance_engine.schemas.output_schemas import (
     DecisionReport,
     ExecutiveSummary,
-    ProposalTitle,
-    SignatureBlock,
     generate_proposal_title,
     generate_signature_block,
 )

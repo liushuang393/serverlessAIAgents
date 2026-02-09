@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Decision Governance Engine - メインエンジン.
 
 PipelineEngine パターンを使用した意思決定支援エンジン。
@@ -41,10 +40,6 @@ PipelineEngine パターンを使用した意思決定支援エンジン。
 import logging
 from typing import Any
 
-from agentflow.engines import PipelineEngine, EngineConfig
-from agentflow.providers import get_llm
-from agentflow.security import SafetyMixin
-
 from apps.decision_governance_engine.services.agent_registry import AgentRegistry
 from apps.decision_governance_engine.services.decision_report_builder import (
     DecisionReportBuilder,
@@ -52,6 +47,10 @@ from apps.decision_governance_engine.services.decision_report_builder import (
 from apps.decision_governance_engine.services.deep_agent_adapter import (
     DeepAgentAdapter,
 )
+
+from agentflow.engines import EngineConfig, PipelineEngine
+from agentflow.providers import get_llm
+from agentflow.security import SafetyMixin
 
 
 class DecisionEngine(PipelineEngine, SafetyMixin):

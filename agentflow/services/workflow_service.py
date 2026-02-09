@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Workflow Service - 統一Workflow実行サービス.
 
 API / CLI / Studio 全てが使用する Workflow 実行サービス。
@@ -17,23 +16,20 @@ from __future__ import annotations
 
 import asyncio
 import time
-from collections.abc import AsyncIterator
 from enum import Enum
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.services.base import (
-    ApprovalRequiredEvent,
-    ErrorEvent,
-    LogEvent,
     LogLevel,
-    ProgressEvent,
-    ResultEvent,
     ServiceBase,
-    ServiceError,
     ServiceEvent,
     ServiceEventType,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
 
 
 class WorkflowType(str, Enum):

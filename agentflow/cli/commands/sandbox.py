@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentFlow CLI サンドボックスコマンド.
 
 Daytonaスタイルのサンドボックス管理CLIを提供。
@@ -25,6 +24,7 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
 
 console = Console()
 
@@ -163,9 +163,8 @@ def delete_sandbox(sandbox_id: str, force: bool) -> None:
         manager = get_sandbox_manager()
         return await manager.delete(sandbox_id)
 
-    if not force:
-        if not click.confirm(f"サンドボックス {sandbox_id} を削除しますか？"):
-            return
+    if not force and not click.confirm(f"サンドボックス {sandbox_id} を削除しますか？"):
+        return
 
     success = asyncio.run(_delete())
     if success:

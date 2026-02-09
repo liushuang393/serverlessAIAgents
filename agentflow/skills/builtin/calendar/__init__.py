@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Calendar Skill - カレンダー管理機能.
 
 カレンダーイベントの管理、空き時間検索を提供するスキル。
@@ -16,6 +15,7 @@ from agentflow.skills.builtin.calendar.calendar import (
     RecurrenceType,
     TimeSlot,
 )
+
 
 __all__ = [
     "CalendarEvent",

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentFlow 長期知識記憶システム.
 
 Memvid技術に基づく高性能長期記憶実装。
@@ -55,6 +54,7 @@ from agentflow.memory.knowledge.types import (
     SearchResult,
     SearchType,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -168,22 +168,22 @@ def get_knowledge_store(
 
 
 __all__ = [
-    # 主要API（推奨）
-    "get_knowledge_manager",
-    "get_knowledge_store",
-    "reset_knowledge_manager",
+    "InMemoryKnowledgeStore",
+    # 型定義
+    "KnowledgeEntry",
     # マネージャー
     "KnowledgeManager",
+    "KnowledgeSource",
     # ストアインターフェース
     "KnowledgeStore",
     # ストア実装
     "MemvidKnowledgeStore",
-    "InMemoryKnowledgeStore",
-    "is_memvid_available",
-    # 型定義
-    "KnowledgeEntry",
-    "KnowledgeSource",
     "SearchResult",
     "SearchType",
+    # 主要API（推奨）
+    "get_knowledge_manager",
+    "get_knowledge_store",
+    "is_memvid_available",
+    "reset_knowledge_manager",
 ]
 

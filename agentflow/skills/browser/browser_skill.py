@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ブラウザ制御スキル（メイン実装）.
 
 Playwright ベースの安全なブラウザ操作を提供。
@@ -15,13 +14,15 @@ from __future__ import annotations
 import base64
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from agentflow.skills.browser.base import BrowserSkillBase, BrowserSkillError, BrowserStateError
-from agentflow.skills.browser.config import BrowserSkillConfig
+
 
 if TYPE_CHECKING:
     from playwright.async_api import Browser, BrowserContext, Page
+
+    from agentflow.skills.browser.config import BrowserSkillConfig
 
 
 @dataclass
@@ -86,10 +87,10 @@ class BrowserSkill(BrowserSkillBase):
         """初期化."""
         super().__init__(config)
         self._playwright: Any = None
-        self._browser: "Browser | None" = None
-        self._context: "BrowserContext | None" = None
-        self._page: "Page | None" = None
-        self._pages: list["Page"] = []
+        self._browser: Browser | None = None
+        self._context: BrowserContext | None = None
+        self._page: Page | None = None
+        self._pages: list[Page] = []
 
     async def start(self) -> None:
         """ブラウザを起動."""
@@ -236,7 +237,7 @@ class BrowserSkill(BrowserSkillBase):
             msg = "ページが開かれていません。先に navigate() を呼び出してください"
             raise BrowserStateError(msg, skill_name="BrowserSkill")
 
-    async def __aenter__(self) -> "BrowserSkill":
+    async def __aenter__(self) -> BrowserSkill:
         """async with サポート."""
         await self.start()
         return self

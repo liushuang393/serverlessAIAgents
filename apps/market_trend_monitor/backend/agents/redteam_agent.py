@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Red Team エージェント.
 
 全ての結論に対して反証を試み、確信度を調整します。
@@ -13,10 +12,6 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
-
-from agentflow import ResilientAgent
-
 from apps.market_trend_monitor.backend.models import (
     ChallengeResultSchema,
     ChallengeSchema,
@@ -28,6 +23,9 @@ from apps.market_trend_monitor.backend.models import (
 from apps.market_trend_monitor.backend.services.redteam_service import (
     RedTeamService,
 )
+from pydantic import BaseModel, Field
+
+from agentflow import ResilientAgent
 
 
 # ============================================================

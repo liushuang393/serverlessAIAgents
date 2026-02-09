@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """グローバル状態ストア.
 
 Redux風の状態管理パターンを実装。
@@ -28,18 +27,20 @@ Redux風の状態管理パターンを実装。
 
 from __future__ import annotations
 
-import asyncio
 import copy
 import logging
 import threading
 import uuid
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.state.actions import Action, ActionType
 from agentflow.state.selectors import select
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 @dataclass
@@ -450,7 +451,7 @@ class GlobalStateStore:
                     # 全状態
                     subscription.callback(copy.deepcopy(self._state))
             except Exception as e:
-                self._logger.error(f"購読者への通知でエラー: {e}")
+                self._logger.exception(f"購読者への通知でエラー: {e}")
 
     def subscribe(
         self,

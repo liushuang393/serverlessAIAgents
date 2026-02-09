@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeepAgent データモデル.
 
 このモジュールはDeepAgentCoordinatorで使用するデータモデルを定義します。
@@ -257,18 +256,18 @@ class CompactionResult:
 # エクスポート
 # =============================================================================
 __all__ = [
-    "TaskStatus",
+    "AgentMessage",
     "AgentType",
-    "TodoItem",
     "CognitiveAnalysis",
+    "CompactionResult",
+    "CompactionStrategy",
+    "EvolutionRecord",
+    "MemoryTier",
+    "MessageType",
+    "ParallelGroup",
     "QualityDimension",
     "QualityReview",
-    "EvolutionRecord",
-    "MessageType",
-    "AgentMessage",
-    "ParallelGroup",
-    "CompactionStrategy",
-    "MemoryTier",
-    "CompactionResult",
+    "TaskStatus",
+    "TodoItem",
 ]
 

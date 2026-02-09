@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """起動時情報ログモジュール（App層）.
 
 フレームワーク層の log_startup_info を呼び出し、

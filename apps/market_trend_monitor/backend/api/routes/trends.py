@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """トレンド/レポート/記事API."""
 
 from datetime import datetime
 
+from apps.market_trend_monitor.backend.api.state import store
 from fastapi import APIRouter, HTTPException, Query
 
-from apps.market_trend_monitor.backend.api.state import store
 
 router = APIRouter(tags=["トレンド"])
 

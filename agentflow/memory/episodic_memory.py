@@ -16,14 +16,18 @@
 
 from __future__ import annotations
 
-import asyncio
+import contextlib
 import json
 import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    import asyncio
 
 
 logger = logging.getLogger(__name__)
@@ -385,14 +389,10 @@ class EpisodicMemory:
             del self._episodes[episode.episode_id]
             # インデックスからも削除
             if episode.task_type in self._by_task_type:
-                try:
+                with contextlib.suppress(ValueError):
                     self._by_task_type[episode.task_type].remove(episode.episode_id)
-                except ValueError:
-                    pass
-            try:
+            with contextlib.suppress(ValueError):
                 self._by_outcome[episode.outcome].remove(episode.episode_id)
-            except ValueError:
-                pass
 
     async def _load_from_disk(self) -> None:
         """ディスクから読み込み."""

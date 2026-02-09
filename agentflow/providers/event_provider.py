@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Event Provider - 統一イベント通知インターフェース.
 
 このモジュールは、SSE/WebSocket/Callbackの統一イベント通知を提供します。
@@ -17,8 +16,8 @@ import asyncio
 import json
 import logging
 import time
-from collections.abc import AsyncIterator
-from typing import Any, Callable
+from collections.abc import AsyncIterator, Callable
+from typing import Any
 
 from pydantic import BaseModel, Field
 

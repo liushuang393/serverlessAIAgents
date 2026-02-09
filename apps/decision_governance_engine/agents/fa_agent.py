@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FaAgent - 戦略選定Agent（法）v3.0.
 
 稳健型 vs 激进型の対比を含む戦略パス評価。
@@ -14,8 +13,6 @@ import json
 import logging
 from typing import Any
 
-from agentflow import ResilientAgent
-from agentflow.core.exceptions import AgentOutputValidationError
 from apps.decision_governance_engine.schemas.agent_schemas import (
     DaoOutput,
     DifferentiationAxis,
@@ -29,6 +26,9 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     StrategicProhibition,
     StrategyType,
 )
+
+from agentflow import ResilientAgent
+from agentflow.core.exceptions import AgentOutputValidationError
 
 
 class FaAgent(ResilientAgent[FaInput, FaOutput]):
@@ -260,7 +260,8 @@ JSON形式で出力してください。"""
 
             if data is None:
                 self._logger.error(f"JSON extraction failed. Raw response: {response[:1000]}")
-                raise json.JSONDecodeError("No valid JSON found", response, 0)
+                msg = "No valid JSON found"
+                raise json.JSONDecodeError(msg, response, 0)
 
             # 詳細ログ: 抽出されたJSON
             self._logger.debug(f"Extracted JSON: {data}")

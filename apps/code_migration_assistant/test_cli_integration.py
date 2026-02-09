@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Code Migration Assistant CLI 統合テスト.
 
 このスクリプトはCLIの統合テストを実行します。
@@ -7,6 +6,7 @@
 import asyncio
 import sys
 from pathlib import Path
+
 
 # プロジェクトルートをPythonパスに追加
 project_root = Path(__file__).parent.parent.parent
@@ -30,9 +30,8 @@ async def test_cli_migration() -> bool:
             print(f"    - 反復回数: {result['iterations']}")
             print(f"    - 受け入れ可能: {result['is_acceptable']}")
             return True
-        else:
-            print(f"  ❌ CLI移行失敗: {result.get('errors')}")
-            return False
+        print(f"  ❌ CLI移行失敗: {result.get('errors')}")
+        return False
 
     except Exception as e:
         print(f"  ❌ CLI移行テスト失敗: {e}")
@@ -47,13 +46,14 @@ async def test_mcp_tools() -> bool:
     print("\n🔍 MCPツールをテスト中...")
 
     try:
-        from agentflow import MCPToolClient as MCPClient
         from apps.code_migration_assistant.mcp_tools import (
             COBOLParser,
             CodeValidator,
             JavaGenerator,
             MCPToolRequest,
         )
+
+        from agentflow import MCPToolClient as MCPClient
 
         # MCPClientを作成
         client = MCPClient()
@@ -67,7 +67,7 @@ async def test_mcp_tools() -> bool:
         cobol_code = """
        IDENTIFICATION DIVISION.
        PROGRAM-ID. TEST.
-       
+
        DATA DIVISION.
        WORKING-STORAGE SECTION.
        01 WS-NUM PIC 9(5).

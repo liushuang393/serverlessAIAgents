@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeepAgent メイン協調器.
 
 DeepAgentCoordinatorは以下の責務を持つ:
@@ -49,6 +48,7 @@ from agentflow.patterns.deep_agent.da_stores import (
     MemoryRuntimeStore,
     RuntimeStore,
 )
+
 
 _logger = logging.getLogger(__name__)
 
@@ -354,8 +354,7 @@ class DeepAgentCoordinator:
     ) -> dict[str, Any]:
         """単一タスクを実行."""
         try:
-            result = await agent.execute(todo, self._context)
-            return result
+            return await agent.execute(todo, self._context)
         except Exception as e:
             _logger.warning("タスク実行失敗 [%s]: %s", todo.id, e)
             raise

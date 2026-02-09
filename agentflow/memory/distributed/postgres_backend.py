@@ -5,7 +5,6 @@
 
 import json
 import logging
-from datetime import datetime
 from typing import Any
 
 from agentflow.memory.distributed.backend_interface import MemoryBackend
@@ -76,9 +75,11 @@ class PostgresBackend(MemoryBackend):
             self._connected = True
             self._logger.info(f"Connected to PostgreSQL at {self._host}:{self._port}/{self._database}")
         except ImportError:
-            raise ImportError("asyncpg package is required. Install with: pip install asyncpg")
+            msg = "asyncpg package is required. Install with: pip install asyncpg"
+            raise ImportError(msg)
         except Exception as e:
-            raise ConnectionError(f"Failed to connect to PostgreSQL: {e}")
+            msg = f"Failed to connect to PostgreSQL: {e}"
+            raise ConnectionError(msg)
 
     async def disconnect(self) -> None:
         """PostgreSQLから切断."""
@@ -112,7 +113,8 @@ class PostgresBackend(MemoryBackend):
     async def save(self, entry: MemoryEntry) -> None:
         """記憶を保存."""
         if not self._connected:
-            raise ConnectionError("Not connected to PostgreSQL")
+            msg = "Not connected to PostgreSQL"
+            raise ConnectionError(msg)
 
         async with self._pool.acquire() as conn:
             await conn.execute(
@@ -141,7 +143,8 @@ class PostgresBackend(MemoryBackend):
     async def load(self, entry_id: str) -> MemoryEntry | None:
         """記憶を読み込み."""
         if not self._connected:
-            raise ConnectionError("Not connected to PostgreSQL")
+            msg = "Not connected to PostgreSQL"
+            raise ConnectionError(msg)
 
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow("SELECT * FROM memories WHERE id = $1", entry_id)
@@ -162,7 +165,8 @@ class PostgresBackend(MemoryBackend):
     async def delete(self, entry_id: str) -> bool:
         """記憶を削除."""
         if not self._connected:
-            raise ConnectionError("Not connected to PostgreSQL")
+            msg = "Not connected to PostgreSQL"
+            raise ConnectionError(msg)
 
         async with self._pool.acquire() as conn:
             result = await conn.execute("DELETE FROM memories WHERE id = $1", entry_id)
@@ -176,7 +180,8 @@ class PostgresBackend(MemoryBackend):
     ) -> list[MemoryEntry]:
         """記憶を検索."""
         if not self._connected:
-            raise ConnectionError("Not connected to PostgreSQL")
+            msg = "Not connected to PostgreSQL"
+            raise ConnectionError(msg)
 
         async with self._pool.acquire() as conn:
             if topic:
@@ -222,7 +227,8 @@ class PostgresBackend(MemoryBackend):
     async def exists(self, entry_id: str) -> bool:
         """記憶の存在を確認."""
         if not self._connected:
-            raise ConnectionError("Not connected to PostgreSQL")
+            msg = "Not connected to PostgreSQL"
+            raise ConnectionError(msg)
 
         async with self._pool.acquire() as conn:
             result = await conn.fetchval("SELECT COUNT(*) FROM memories WHERE id = $1", entry_id)
@@ -231,7 +237,8 @@ class PostgresBackend(MemoryBackend):
     async def count(self, topic: str | None = None) -> int:
         """記憶の数を取得."""
         if not self._connected:
-            raise ConnectionError("Not connected to PostgreSQL")
+            msg = "Not connected to PostgreSQL"
+            raise ConnectionError(msg)
 
         async with self._pool.acquire() as conn:
             if topic:
@@ -243,7 +250,8 @@ class PostgresBackend(MemoryBackend):
     async def clear(self, topic: str | None = None) -> int:
         """記憶をクリア."""
         if not self._connected:
-            raise ConnectionError("Not connected to PostgreSQL")
+            msg = "Not connected to PostgreSQL"
+            raise ConnectionError(msg)
 
         async with self._pool.acquire() as conn:
             if topic:

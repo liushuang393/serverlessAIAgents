@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tenant Isolation - 租户隔离.
 
 多租户环境下的数据和资源隔离。
@@ -16,7 +15,12 @@ import logging
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass, field
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 _logger = logging.getLogger(__name__)
 
@@ -219,6 +223,6 @@ __all__ = [
     "get_current_tenant",
     "get_current_tenant_or_raise",
     "get_tenant_id",
-    "require_tenant",
     "get_tenant_isolation",
+    "require_tenant",
 ]

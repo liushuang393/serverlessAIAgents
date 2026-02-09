@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """マルチテナント対応モジュール.
 
 エンタープライズ環境でのテナント分離を提供。
@@ -22,11 +21,12 @@ Example:
     >>> print(tenant.storage_prefix)  # "tenant:acme-corp:"
 """
 
-from agentflow.multi_tenant.context import TenantContext, ResourceLimits
+from agentflow.multi_tenant.context import ResourceLimits, TenantContext
 from agentflow.multi_tenant.manager import TenantManager
 
+
 __all__ = [
+    "ResourceLimits",
     "TenantContext",
     "TenantManager",
-    "ResourceLimits",
 ]

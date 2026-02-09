@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Adapter Factory.
 
 言語アダプターのファクトリークラス。
@@ -9,7 +8,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
 from apps.code_migration_assistant.adapters.base import (
     SourceLanguageAdapter,
     TargetLanguageAdapter,
@@ -125,7 +123,8 @@ class AdapterFactory:
         if migration_type:
             mt_config = self._migration_types.get(migration_type)
             if not mt_config:
-                raise ValueError(f"Unknown migration type: {migration_type}")
+                msg = f"Unknown migration type: {migration_type}"
+                raise ValueError(msg)
             language = mt_config["source"]["language"]
 
         if not language:
@@ -138,7 +137,8 @@ class AdapterFactory:
 
         adapter_class = self._SOURCE_REGISTRY.get(language.upper())
         if not adapter_class:
-            raise ValueError(f"No source adapter registered for: {language}")
+            msg = f"No source adapter registered for: {language}"
+            raise ValueError(msg)
 
         return adapter_class()
 
@@ -162,7 +162,8 @@ class AdapterFactory:
         if migration_type:
             mt_config = self._migration_types.get(migration_type)
             if not mt_config:
-                raise ValueError(f"Unknown migration type: {migration_type}")
+                msg = f"Unknown migration type: {migration_type}"
+                raise ValueError(msg)
             language = mt_config["target"]["language"]
 
         if not language:
@@ -174,7 +175,8 @@ class AdapterFactory:
 
         adapter_class = self._TARGET_REGISTRY.get(language.upper())
         if not adapter_class:
-            raise ValueError(f"No target adapter registered for: {language}")
+            msg = f"No target adapter registered for: {language}"
+            raise ValueError(msg)
 
         return adapter_class()
 
@@ -192,7 +194,8 @@ class AdapterFactory:
         """
         config = self._migration_types.get(migration_type)
         if not config:
-            raise ValueError(f"Unknown migration type: {migration_type}")
+            msg = f"Unknown migration type: {migration_type}"
+            raise ValueError(msg)
         return config
 
     def get_prompt(self, migration_type: str, prompt_type: str) -> str:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """VectorDBProvider - 松耦合ベクトルデータベースアクセス.
 
 Agent/サービスは具体的なVector DB実装を知る必要がありません。
@@ -28,6 +27,7 @@ Agent/サービスは具体的なVector DB実装を知る必要がありませ�
 
 import logging
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
 
 if TYPE_CHECKING:
     from agentflow.runtime import RuntimeContext
@@ -96,11 +96,9 @@ class MockVectorDBProvider:
 
     async def connect(self) -> None:
         """接続（no-op）."""
-        pass
 
     async def disconnect(self) -> None:
         """切断（no-op）."""
-        pass
 
     async def add(
         self,
@@ -112,7 +110,7 @@ class MockVectorDBProvider:
         """ドキュメントを追加."""
         if ids is None:
             ids = [f"doc_{i}" for i in range(len(documents))]
-        for i, (doc_id, doc) in enumerate(zip(ids, documents)):
+        for i, (doc_id, doc) in enumerate(zip(ids, documents, strict=False)):
             self._data[doc_id] = {
                 "id": doc_id,
                 "document": doc,
@@ -181,7 +179,8 @@ class ChromaDBProvider:
             )
             logger.info(f"Connected to ChromaDB: {self._collection_name}")
         except ImportError:
-            raise ImportError("chromadb package required: pip install chromadb")
+            msg = "chromadb package required: pip install chromadb"
+            raise ImportError(msg)
 
     async def disconnect(self) -> None:
         """切断."""
@@ -307,7 +306,8 @@ class QdrantProvider:
                 )
             logger.info(f"Connected to Qdrant: {self._url}, collection: {self._collection_name}")
         except ImportError:
-            raise ImportError("qdrant-client package required: pip install qdrant-client")
+            msg = "qdrant-client package required: pip install qdrant-client"
+            raise ImportError(msg)
 
     async def disconnect(self) -> None:
         """切断."""
@@ -324,14 +324,15 @@ class QdrantProvider:
         from qdrant_client.models import PointStruct
 
         if embeddings is None:
-            raise ValueError("Qdrant requires embeddings. Use get_embedding() to generate.")
+            msg = "Qdrant requires embeddings. Use get_embedding() to generate."
+            raise ValueError(msg)
 
         if ids is None:
             import uuid
             ids = [str(uuid.uuid4()) for _ in documents]
 
         points = []
-        for i, (doc_id, doc, emb) in enumerate(zip(ids, documents, embeddings)):
+        for i, (doc_id, doc, emb) in enumerate(zip(ids, documents, embeddings, strict=False)):
             payload = {"document": doc}
             if metadatas and i < len(metadatas):
                 payload.update(metadatas[i])
@@ -348,7 +349,8 @@ class QdrantProvider:
     ) -> list[dict[str, Any]]:
         """類似検索."""
         if query_embedding is None:
-            raise ValueError("Qdrant requires query_embedding for search.")
+            msg = "Qdrant requires query_embedding for search."
+            raise ValueError(msg)
 
         search_params = {
             "collection_name": self._collection_name,
@@ -357,7 +359,7 @@ class QdrantProvider:
         }
 
         if filter_metadata:
-            from qdrant_client.models import Filter, FieldCondition, MatchValue
+            from qdrant_client.models import FieldCondition, Filter, MatchValue
             conditions = [
                 FieldCondition(key=k, match=MatchValue(value=v))
                 for k, v in filter_metadata.items()
@@ -441,7 +443,8 @@ class FAISSProvider:
                 self._index = faiss.IndexFlatL2(self._vector_size)
                 logger.info(f"Created new FAISS index: dimension={self._vector_size}")
         except ImportError:
-            raise ImportError("faiss-cpu package required: pip install faiss-cpu")
+            msg = "faiss-cpu package required: pip install faiss-cpu"
+            raise ImportError(msg)
 
     async def disconnect(self) -> None:
         """インデックスを保存して切断."""
@@ -462,7 +465,8 @@ class FAISSProvider:
         import numpy as np
 
         if embeddings is None:
-            raise ValueError("FAISS requires embeddings. Use get_embedding() to generate.")
+            msg = "FAISS requires embeddings. Use get_embedding() to generate."
+            raise ValueError(msg)
 
         vectors = np.array(embeddings, dtype=np.float32)
         self._index.add(vectors)
@@ -488,7 +492,8 @@ class FAISSProvider:
         import numpy as np
 
         if query_embedding is None:
-            raise ValueError("FAISS requires query_embedding for search.")
+            msg = "FAISS requires query_embedding for search."
+            raise ValueError(msg)
 
         query_vector = np.array([query_embedding], dtype=np.float32)
         distances, indices = self._index.search(query_vector, top_k)
@@ -588,7 +593,8 @@ class WeaviateProvider:
                 self._client.schema.create_class(class_obj)
             logger.info(f"Connected to Weaviate: {self._url}, class: {self._class_name}")
         except ImportError:
-            raise ImportError("weaviate-client package required: pip install weaviate-client")
+            msg = "weaviate-client package required: pip install weaviate-client"
+            raise ImportError(msg)
 
     async def disconnect(self) -> None:
         """切断."""
@@ -603,14 +609,15 @@ class WeaviateProvider:
     ) -> None:
         """ドキュメントを追加."""
         if embeddings is None:
-            raise ValueError("Weaviate requires embeddings when vectorizer is 'none'.")
+            msg = "Weaviate requires embeddings when vectorizer is 'none'."
+            raise ValueError(msg)
 
         if ids is None:
             import uuid
             ids = [str(uuid.uuid4()) for _ in documents]
 
         with self._client.batch as batch:
-            for i, (doc_id, doc, emb) in enumerate(zip(ids, documents, embeddings)):
+            for i, (doc_id, doc, emb) in enumerate(zip(ids, documents, embeddings, strict=False)):
                 properties = {
                     "content": doc,
                     "doc_id": doc_id,
@@ -632,7 +639,8 @@ class WeaviateProvider:
     ) -> list[dict[str, Any]]:
         """類似検索."""
         if query_embedding is None:
-            raise ValueError("Weaviate requires query_embedding for vector search.")
+            msg = "Weaviate requires query_embedding for vector search."
+            raise ValueError(msg)
 
         near_vector = {"vector": query_embedding}
         query_builder = (
@@ -737,12 +745,14 @@ class SupabaseVectorProvider:
             from supabase import create_client
 
             if not self._url or not self._key:
-                raise ValueError("SUPABASE_URL and SUPABASE_KEY required")
+                msg = "SUPABASE_URL and SUPABASE_KEY required"
+                raise ValueError(msg)
 
             self._client = create_client(self._url, self._key)
             logger.info(f"Connected to Supabase: {self._url}, table: {self._table}")
         except ImportError:
-            raise ImportError("supabase package required: pip install supabase")
+            msg = "supabase package required: pip install supabase"
+            raise ImportError(msg)
 
     async def disconnect(self) -> None:
         """切断."""
@@ -757,14 +767,15 @@ class SupabaseVectorProvider:
     ) -> None:
         """ドキュメントを追加."""
         if embeddings is None:
-            raise ValueError("Supabase Vector requires embeddings.")
+            msg = "Supabase Vector requires embeddings."
+            raise ValueError(msg)
 
         if ids is None:
             import uuid
             ids = [str(uuid.uuid4()) for _ in documents]
 
         rows = []
-        for i, (doc_id, doc, emb) in enumerate(zip(ids, documents, embeddings)):
+        for i, (doc_id, doc, emb) in enumerate(zip(ids, documents, embeddings, strict=False)):
             row = {
                 "id": doc_id,
                 "content": doc,
@@ -785,7 +796,8 @@ class SupabaseVectorProvider:
     ) -> list[dict[str, Any]]:
         """類似検索（RPC関数使用）."""
         if query_embedding is None:
-            raise ValueError("Supabase Vector requires query_embedding for search.")
+            msg = "Supabase Vector requires query_embedding for search."
+            raise ValueError(msg)
 
         # Supabase の match_documents RPC 関数を呼び出し
         # 事前にこの関数をSupabaseに作成しておく必要あり

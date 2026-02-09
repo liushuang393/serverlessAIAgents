@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """世界状態管理 - 現在状態・予測状態・制約の統合管理.
 
 CausalModelとConstraintSolverを統合し、
@@ -25,15 +24,18 @@ from __future__ import annotations
 import copy
 import logging
 import uuid
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
 from agentflow.world_model.causal_model import CausalModel
 from agentflow.world_model.constraint_solver import ConstraintSolver, SolverResult
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class WorldStateSnapshot(BaseModel):
@@ -373,8 +375,8 @@ class WorldState:
 
 
 __all__ = [
-    "WorldStateSnapshot",
     "ActionPrediction",
     "WorldState",
+    "WorldStateSnapshot",
 ]
 

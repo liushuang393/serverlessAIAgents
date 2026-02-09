@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Context Engineer - 統合コンテキストエンジニアリング.
 
 Context Engineering の全コンポーネントを統合し、
@@ -42,11 +41,12 @@ from agentflow.context.budget_manager import (
 from agentflow.context.key_notes import (
     KeyNotesStore,
     NoteImportance,
+)
+from agentflow.context.key_notes import (
     StoreConfig as NotesConfig,
 )
 from agentflow.context.retrieval_gate import (
     GateConfig,
-    RetrievalDecision,
     RetrievalGate,
 )
 from agentflow.context.tool_selector import (
@@ -57,6 +57,7 @@ from agentflow.context.turn_compressor import (
     TurnBasedCompressor,
     TurnConfig,
 )
+
 
 if TYPE_CHECKING:
     from agentflow.providers.tool_provider import RegisteredTool
@@ -216,7 +217,7 @@ class ContextEngineer:
         query: str,
         base_prompt: str = "",
         skills: list[Any] | None = None,
-        available_tools: list["RegisteredTool"] | None = None,
+        available_tools: list[RegisteredTool] | None = None,
         rag_search_func: Any | None = None,
         existing_context: dict[str, Any] | None = None,
     ) -> BuiltContext:
@@ -321,8 +322,8 @@ class ContextEngineer:
     async def _select_tools(
         self,
         query: str,
-        all_tools: list["RegisteredTool"],
-    ) -> list["RegisteredTool"]:
+        all_tools: list[RegisteredTool],
+    ) -> list[RegisteredTool]:
         """関連ツールを選択.
 
         Args:

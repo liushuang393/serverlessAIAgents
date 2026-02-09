@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """Messaging Hub - Multi-Platform AI Chatbot.
 
 统一消息平台网关，支持 Telegram、Slack、Discord 等多平台集成。
@@ -39,6 +38,7 @@ import os
 from contextlib import asynccontextmanager
 from typing import Any
 
+from apps.messaging_hub.coordinator import AssistantConfig, PersonalAssistantCoordinator
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
@@ -53,7 +53,7 @@ from agentflow.channels import (
     WhatsAppAdapter,
 )
 from agentflow.skills import ConversationExportSkill, ExportFormat
-from apps.messaging_hub.coordinator import AssistantConfig, PersonalAssistantCoordinator
+
 
 # 配置日志
 logging.basicConfig(
@@ -349,11 +349,10 @@ async def whatsapp_webhook(request: Request) -> JSONResponse:
             params = dict(request.query_params)
             response = await whatsapp_adapter.verify_webhook(params, verify_token)
             return JSONResponse(response)
-        else:
-            # メッセージ処理
-            payload = await request.json()
-            response = await whatsapp_adapter.handle_webhook(payload, gateway)
-            return JSONResponse(response)
+        # メッセージ処理
+        payload = await request.json()
+        response = await whatsapp_adapter.handle_webhook(payload, gateway)
+        return JSONResponse(response)
 
     except Exception as e:
         logger.error(f"WhatsApp webhook error: {e}", exc_info=True)
@@ -452,7 +451,7 @@ async def send_message(
         return JSONResponse({"ok": True, "message_id": message_id})
 
     except Exception as e:
-        logger.error(f"Failed to send message: {e}")
+        logger.exception(f"Failed to send message: {e}")
         return JSONResponse(
             {"ok": False, "error": str(e)},
             status_code=500,
@@ -660,8 +659,8 @@ if __name__ == "__main__":
         llm = get_llm()
         logger.info("✓ LLM Provider initialized")
     except Exception as e:
-        logger.error("✗ Failed to initialize LLM: %s", e)
-        logger.error("Please set OPENAI_API_KEY or other LLM provider keys")
+        logger.exception("✗ Failed to initialize LLM: %s", e)
+        logger.exception("Please set OPENAI_API_KEY or other LLM provider keys")
 
     # 启动服务
     uvicorn.run(

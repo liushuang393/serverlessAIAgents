@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Error Response - 統一エラーレスポンス形式.
 
 このモジュールは、RFC 7807 Problem Details 互換の
@@ -40,9 +39,13 @@ import traceback
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from fastapi import Request
 
 
 # =============================================================================
@@ -569,7 +572,6 @@ def create_exception_handlers() -> dict[type, Any]:
         ...     app.add_exception_handler(exc_type, handler)
     """
     try:
-        from fastapi import Request
         from fastapi.responses import JSONResponse
     except ImportError:
         return {}
@@ -610,21 +612,21 @@ def create_exception_handlers() -> dict[type, Any]:
 # =============================================================================
 
 __all__ = [
-    # エラーコード
-    "ErrorCode",
     "ERROR_CODE_STATUS_MAP",
     "ERROR_CODE_TITLES",
-    # レスポンスモデル
-    "ErrorResponse",
     # 例外クラス
     "AgentFlowAPIError",
-    "ValidationError",
-    "NotFoundError",
-    "TimeoutError",
-    "RateLimitError",
+    # エラーコード
+    "ErrorCode",
+    # レスポンスモデル
+    "ErrorResponse",
     "ExecutionError",
+    "NotFoundError",
+    "RateLimitError",
+    "TimeoutError",
+    "ValidationError",
     # ヘルパー
     "create_error_response",
-    "exception_to_response",
     "create_exception_handlers",
+    "exception_to_response",
 ]

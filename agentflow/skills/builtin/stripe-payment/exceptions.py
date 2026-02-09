@@ -14,35 +14,29 @@ class StripeError(Exception):
 class PaymentError(StripeError):
     """支付错误."""
 
-    pass
 
 
 class WebhookError(StripeError):
     """Webhook 错误."""
 
-    pass
 
 
 class SubscriptionError(StripeError):
     """订阅错误."""
 
-    pass
 
 
 class RefundError(StripeError):
     """退款错误."""
 
-    pass
 
 
 class CustomerError(StripeError):
     """客户错误."""
 
-    pass
 
 
 class SignatureVerificationError(StripeError):
     """签名验证错误."""
 
-    pass
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """在庫・価格調整スキル - Inventory Adjuster.
 
 市場分析に基づいて在庫と価格を調整するスキル。
@@ -315,7 +314,7 @@ class InventoryAdjuster(AgentBlock):
                     UrgencyLevel.MEDIUM,
                     "競合価格に基づく値上げ推奨",
                 )
-            elif recommended_price < current_price * 0.9:
+            if recommended_price < current_price * 0.9:
                 return (
                     AdjustmentType.PRICE_DECREASE,
                     UrgencyLevel.HIGH,

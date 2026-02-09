@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Signal Adapter - Signal Messenger 統合.
 
 signal-cli REST API を使用した Signal 統合アダプター。
@@ -26,12 +25,14 @@ Example:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from typing import TYPE_CHECKING, Any
 
 import httpx
 
 from agentflow.channels.base import MessageChannelAdapter, UserInfo
+
 
 if TYPE_CHECKING:
     from agentflow.channels.gateway import MessageGateway
@@ -130,7 +131,7 @@ class SignalAdapter(MessageChannelAdapter):
             return timestamp
 
         except httpx.HTTPStatusError as e:
-            self._logger.error(f"Signal API error: {e.response.text}")
+            self._logger.exception(f"Signal API error: {e.response.text}")
             raise
         except Exception as e:
             self._logger.error(f"Failed to send Signal message: {e}", exc_info=True)
@@ -207,7 +208,7 @@ class SignalAdapter(MessageChannelAdapter):
                 response.raise_for_status()
                 image_data = base64.b64encode(response.content).decode()
             except Exception as e:
-                self._logger.error(f"Failed to download image: {e}")
+                self._logger.exception(f"Failed to download image: {e}")
                 raise
         else:
             image_data = image_url
@@ -269,7 +270,7 @@ class SignalAdapter(MessageChannelAdapter):
             response.raise_for_status()
             return response.json()
         except Exception as e:
-            self._logger.error(f"Failed to get groups: {e}")
+            self._logger.exception(f"Failed to get groups: {e}")
             return []
 
     async def start_polling(
@@ -349,10 +350,8 @@ class SignalAdapter(MessageChannelAdapter):
         self._running = False
         if self._polling_task:
             self._polling_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._polling_task
-            except asyncio.CancelledError:
-                pass
             self._polling_task = None
         self._logger.info("Signal polling stopped")
 

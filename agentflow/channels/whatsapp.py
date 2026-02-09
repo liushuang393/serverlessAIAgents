@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """WhatsApp Business API Adapter - WhatsApp Cloud API 統合.
 
 Meta WhatsApp Business Cloud API を使用した WhatsApp 統合アダプター。
@@ -34,6 +33,7 @@ from typing import TYPE_CHECKING, Any
 import httpx
 
 from agentflow.channels.base import MessageChannelAdapter, UserInfo
+
 
 if TYPE_CHECKING:
     from agentflow.channels.gateway import MessageGateway
@@ -138,7 +138,7 @@ class WhatsAppAdapter(MessageChannelAdapter):
             return message_id
 
         except httpx.HTTPStatusError as e:
-            self._logger.error(f"WhatsApp API error: {e.response.text}")
+            self._logger.exception(f"WhatsApp API error: {e.response.text}")
             raise
         except Exception as e:
             self._logger.error(f"Failed to send WhatsApp message: {e}", exc_info=True)
@@ -151,7 +151,6 @@ class WhatsAppAdapter(MessageChannelAdapter):
             channel_id: 受信者の電話番号
         """
         # WhatsApp Cloud API は typing indicator をサポートしていない
-        pass
 
     async def get_user_info(self, user_id: str) -> UserInfo:
         """ユーザー情報を取得.

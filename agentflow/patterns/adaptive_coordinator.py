@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """適応型コーディネーター - 能力差を吸収する分業型Agent設計.
 
 Hassabisの「参差不齐の知能を前提とした分業型Agent設計」に基づく実装。
@@ -439,12 +438,12 @@ class AdaptiveCoordinator:
 
 
 __all__ = [
-    "PerformanceLevel",
+    "AdaptiveCoordinator",
     "AgentCapability",
     "AgentProfile",
-    "TaskRequirement",
     "DelegationResult",
     "MatchScore",
-    "AdaptiveCoordinator",
+    "PerformanceLevel",
+    "TaskRequirement",
 ]
 

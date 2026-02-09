@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """オーケストレーター - 統合編排システム.
 
 Planner/Executor/Monitorを統合し、タスクの計画から実行、監視までを管理。
@@ -25,14 +24,12 @@ Planner/Executor/Monitorを統合し、タスクの計画から実行、監視�
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import uuid
-from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
@@ -41,16 +38,17 @@ from agentflow.orchestration.monitor import (
     AlertSeverity,
     MonitorAgent,
     MonitorEvent,
-    MonitorEventType,
     MonitorThresholds,
 )
 from agentflow.orchestration.planner import (
     ExecutionPlan,
     PlannerAgent,
     PlannerConfig,
-    PlanStep,
-    StepStatus,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 class ExecutionPhase(str, Enum):
@@ -380,7 +378,7 @@ class Orchestrator:
 
             duration_ms = (datetime.now() - start_time).total_seconds() * 1000
 
-            self._logger.error(f"タスク失敗: {execution_id} - {e}")
+            self._logger.exception(f"タスク失敗: {execution_id} - {e}")
 
             return ExecutionResult(
                 execution_id=execution_id,
@@ -624,7 +622,7 @@ class Orchestrator:
         Returns:
             統計情報
         """
-        status_counts = {status: 0 for status in ExecutionStatus}
+        status_counts = dict.fromkeys(ExecutionStatus, 0)
         for ctx in self._executions.values():
             status_counts[ctx.status] += 1
 
@@ -653,7 +651,7 @@ class Orchestrator:
         self._initialized = False
         self._logger.info("オーケストレーターを終了しました")
 
-    async def __aenter__(self) -> "Orchestrator":
+    async def __aenter__(self) -> Orchestrator:
         """非同期コンテキストマネージャー."""
         await self.initialize()
         return self
@@ -665,10 +663,10 @@ class Orchestrator:
 
 # エクスポート
 __all__ = [
-    "ExecutionPhase",
-    "ExecutionStatus",
     "ExecutionContext",
+    "ExecutionPhase",
     "ExecutionResult",
-    "OrchestratorConfig",
+    "ExecutionStatus",
     "Orchestrator",
+    "OrchestratorConfig",
 ]

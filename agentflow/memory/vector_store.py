@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Vector Store - 標準化ベクトルストア接口.
 
 このモジュールは、LlamaIndex/LangChain 互換のベクトルストア接口を提供します。
@@ -33,12 +32,14 @@ import logging
 import math
 import uuid
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Sequence
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 
 # =============================================================================
@@ -99,7 +100,7 @@ class Node(BaseModel):
         return self.embedding
 
     @classmethod
-    def from_document(cls, doc: Document, embedding: list[float] | None = None) -> "Node":
+    def from_document(cls, doc: Document, embedding: list[float] | None = None) -> Node:
         """Documentからノードを作成."""
         return cls(
             id_=doc.id or f"node_{uuid.uuid4().hex[:12]}",
@@ -146,7 +147,6 @@ class EmbeddingModel(ABC):
         Returns:
             埋め込みベクトル
         """
-        pass
 
     @abstractmethod
     async def embed_documents(self, texts: list[str]) -> list[list[float]]:
@@ -158,13 +158,11 @@ class EmbeddingModel(ABC):
         Returns:
             埋め込みベクトルリスト
         """
-        pass
 
     @property
     @abstractmethod
     def dimension(self) -> int:
         """埋め込み次元数."""
-        pass
 
 
 class SimpleEmbedding(EmbeddingModel):
@@ -269,7 +267,6 @@ class VectorStore(ABC):
         Returns:
             追加されたドキュメントIDリスト
         """
-        pass
 
     @abstractmethod
     async def add_nodes(
@@ -286,7 +283,6 @@ class VectorStore(ABC):
         Returns:
             追加されたノードIDリスト
         """
-        pass
 
     @abstractmethod
     async def delete(
@@ -303,7 +299,6 @@ class VectorStore(ABC):
         Returns:
             削除成功かどうか
         """
-        pass
 
     @abstractmethod
     async def similarity_search(
@@ -324,7 +319,6 @@ class VectorStore(ABC):
         Returns:
             検索結果リスト
         """
-        pass
 
     @abstractmethod
     async def similarity_search_with_score(
@@ -345,7 +339,6 @@ class VectorStore(ABC):
         Returns:
             (ドキュメント, スコア) のタプルリスト
         """
-        pass
 
     async def max_marginal_relevance_search(
         self,
@@ -420,7 +413,7 @@ class InMemoryVectorStore(VectorStore):
 
         # ノードに変換して保存
         ids = []
-        for doc, embedding in zip(documents, embeddings):
+        for doc, embedding in zip(documents, embeddings, strict=False):
             node = Node.from_document(doc, embedding)
             self._nodes[node.id_] = node
             ids.append(node.id_)
@@ -600,7 +593,7 @@ class InMemoryVectorStore(VectorStore):
         """コサイン類似度を計算."""
         if len(vec1) != len(vec2):
             return 0.0
-        dot_product = sum(a * b for a, b in zip(vec1, vec2))
+        dot_product = sum(a * b for a, b in zip(vec1, vec2, strict=False))
         return max(0.0, min(1.0, dot_product))
 
     def _match_filter(self, metadata: dict[str, Any], filter: dict[str, Any]) -> bool:
@@ -659,14 +652,16 @@ def create_vector_store(
     """
     if store_type == "memory":
         return InMemoryVectorStore(embedding_model=embedding_model)
-    elif store_type == "qdrant":
+    if store_type == "qdrant":
         # 将来の実装
-        raise NotImplementedError("Qdrant support coming soon. Use 'memory' for now.")
-    elif store_type == "pinecone":
+        msg = "Qdrant support coming soon. Use 'memory' for now."
+        raise NotImplementedError(msg)
+    if store_type == "pinecone":
         # 将来の実装
-        raise NotImplementedError("Pinecone support coming soon. Use 'memory' for now.")
-    else:
-        raise ValueError(f"Unknown store type: {store_type}")
+        msg = "Pinecone support coming soon. Use 'memory' for now."
+        raise NotImplementedError(msg)
+    msg = f"Unknown store type: {store_type}"
+    raise ValueError(msg)
 
 
 def create_embedding_model(
@@ -687,14 +682,16 @@ def create_embedding_model(
     """
     if model_type == "simple":
         return SimpleEmbedding(dim=kwargs.get("dim", 384))
-    elif model_type == "openai":
+    if model_type == "openai":
         # 将来の実装
-        raise NotImplementedError("OpenAI embeddings coming soon. Use 'simple' for now.")
-    elif model_type == "sentence-transformers":
+        msg = "OpenAI embeddings coming soon. Use 'simple' for now."
+        raise NotImplementedError(msg)
+    if model_type == "sentence-transformers":
         # 将来の実装
-        raise NotImplementedError("Sentence Transformers coming soon. Use 'simple' for now.")
-    else:
-        raise ValueError(f"Unknown model type: {model_type}")
+        msg = "Sentence Transformers coming soon. Use 'simple' for now."
+        raise NotImplementedError(msg)
+    msg = f"Unknown model type: {model_type}"
+    raise ValueError(msg)
 
 
 # =============================================================================
@@ -704,16 +701,16 @@ def create_embedding_model(
 __all__ = [
     # データモデル
     "Document",
+    # 埋め込み
+    "EmbeddingModel",
+    "InMemoryVectorStore",
     "Node",
     "SearchResult",
     "SearchType",
-    # 埋め込み
-    "EmbeddingModel",
     "SimpleEmbedding",
     # ベクトルストア
     "VectorStore",
-    "InMemoryVectorStore",
+    "create_embedding_model",
     # ファクトリー
     "create_vector_store",
-    "create_embedding_model",
 ]

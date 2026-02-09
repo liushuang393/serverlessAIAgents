@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """統一ツール定義モデル.
 
 すべてのツールソース（builtin、MCP、skill、dynamic）に対して
@@ -90,7 +89,8 @@ class ToolDefinition(BaseModel):
             ValueError: URIが無効な場合
         """
         if not v.startswith("tool://"):
-            raise ValueError(f"URIは 'tool://' で始まる必要があります。受信: {v}")
+            msg = f"URIは 'tool://' で始まる必要があります。受信: {v}"
+            raise ValueError(msg)
         return v
 
     @classmethod

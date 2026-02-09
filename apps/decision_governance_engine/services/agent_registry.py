@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentRegistry - Agent管理サービス.
 
 YAML定義からAgentインスタンスを生成・管理する。
@@ -11,14 +10,14 @@ workflow.pyのAgent初期化ロジックを集約。
 
 使用例:
     >>> from apps.decision_governance_engine.services.agent_registry import AgentRegistry
-    >>> 
+    >>>
     >>> registry = AgentRegistry()
     >>> registry.initialize()  # YAML読み込み + Agent生成
-    >>> 
+    >>>
     >>> # Agentインスタンス取得
     >>> dao_agent = registry.get_agent("dao")
     >>> all_agents = registry.get_all_agents()
-    >>> 
+    >>>
     >>> # フロントエンド用定義取得
     >>> definitions = registry.get_frontend_definitions()
 """
@@ -50,13 +49,13 @@ class AgentRegistry:
     使用例:
         >>> registry = AgentRegistry()
         >>> await registry.initialize()
-        >>> 
+        >>>
         >>> # Agent取得
         >>> dao = registry.get_agent("dao")
-        >>> 
+        >>>
         >>> # 全Agentリスト（順序付き）
         >>> agents = registry.get_ordered_agents()
-        >>> 
+        >>>
         >>> # フロントエンド用定義
         >>> defs = registry.get_frontend_definitions()
     """
@@ -124,8 +123,9 @@ class AgentRegistry:
     def _ensure_initialized(self) -> None:
         """初期化されていることを確認."""
         if not self._initialized or not self._flow_definition:
+            msg = "AgentRegistry not initialized. Call initialize() first."
             raise RuntimeError(
-                "AgentRegistry not initialized. Call initialize() first."
+                msg
             )
 
     def _create_agent(self, agent_def: AgentDefinition) -> Any:
@@ -139,12 +139,14 @@ class AgentRegistry:
         """
         class_name = agent_def.class_name
         if not class_name:
-            raise ValueError(f"Agent {agent_def.id} has no class_name defined")
+            msg = f"Agent {agent_def.id} has no class_name defined"
+            raise ValueError(msg)
 
         # モジュールパスを取得
         module_path = self.AGENT_CLASS_MAP.get(class_name)
         if not module_path:
-            raise ValueError(f"Unknown agent class: {class_name}")
+            msg = f"Unknown agent class: {class_name}"
+            raise ValueError(msg)
 
         # 遅延インポート
         import importlib
@@ -178,7 +180,8 @@ class AgentRegistry:
         # 定義から検索
         agent_def = self._flow_definition.get_agent(agent_id)
         if not agent_def:
-            raise ValueError(f"Agent not found: {agent_id}")
+            msg = f"Agent not found: {agent_id}"
+            raise ValueError(msg)
 
         # インスタンス生成・キャッシュ
         agent = self._create_agent(agent_def)

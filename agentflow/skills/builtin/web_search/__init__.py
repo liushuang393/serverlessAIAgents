@@ -18,6 +18,7 @@ from urllib.parse import quote_plus
 
 import httpx
 
+
 # ロガー設定
 logger = logging.getLogger("web_search")
 
@@ -108,10 +109,9 @@ class WebSearchSkill:
         """
         if self._config.engine == "duckduckgo":
             return await self._search_duckduckgo(query)
-        else:
-            # 他のエンジンは未実装
-            self._logger.warning(f"Engine {self._config.engine} not implemented, using DuckDuckGo")
-            return await self._search_duckduckgo(query)
+        # 他のエンジンは未実装
+        self._logger.warning(f"Engine {self._config.engine} not implemented, using DuckDuckGo")
+        return await self._search_duckduckgo(query)
 
     async def _search_duckduckgo(self, query: str) -> list[SearchResult]:
         """DuckDuckGo で検索."""
@@ -131,10 +131,13 @@ class WebSearchSkill:
 
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 429:
-                raise RateLimitError("DuckDuckGo rate limit exceeded") from e
-            raise SearchError(f"Search failed: {e}") from e
+                msg = "DuckDuckGo rate limit exceeded"
+                raise RateLimitError(msg) from e
+            msg = f"Search failed: {e}"
+            raise SearchError(msg) from e
         except Exception as e:
-            raise SearchError(f"Search error: {e}") from e
+            msg = f"Search error: {e}"
+            raise SearchError(msg) from e
 
     def _parse_ddg_html(self, html: str) -> list[SearchResult]:
         """DuckDuckGo HTML をパース."""
@@ -240,7 +243,7 @@ class WebSearchSkill:
             response = await llm_client.chat(messages=[{"role": "user", "content": prompt}])
             answer = response.get("content", "") if isinstance(response, dict) else str(response)
         except Exception as e:
-            self._logger.error(f"LLM summarization failed: {e}")
+            self._logger.exception(f"LLM summarization failed: {e}")
             answer = "\n".join([f"- {r.snippet}" for r in results])
 
         return SearchSummary(answer=answer, sources=results, query=query)
@@ -248,11 +251,11 @@ class WebSearchSkill:
 
 # エクスポート
 __all__ = [
-    "WebSearchSkill",
+    "RateLimitError",
     "SearchConfig",
+    "SearchError",
     "SearchResult",
     "SearchSummary",
-    "SearchError",
-    "RateLimitError",
+    "WebSearchSkill",
 ]
 

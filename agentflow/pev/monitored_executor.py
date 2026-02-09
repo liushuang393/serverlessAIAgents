@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """監視付き実行 - 実行監視と異常検知.
 
 計画を監視しながら実行し、異常を検知して報告する。
@@ -26,15 +25,18 @@ import asyncio
 import logging
 import time
 import uuid
-from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
 from agentflow.pev.hierarchical_planner import GoalStatus, HierarchicalPlan, SubGoal
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Callable
 
 
 class ExecutionEventType(str, Enum):
@@ -236,7 +238,7 @@ class MonitoredExecutor:
                 )
 
         except Exception as e:
-            self._logger.error(f"実行エラー: {e}")
+            self._logger.exception(f"実行エラー: {e}")
             yield ExecutionEvent(
                 type=ExecutionEventType.ABORTED,
                 message=str(e),
@@ -266,7 +268,8 @@ class MonitoredExecutor:
             agent = self._get_agent(goal.assigned_agent)
 
             if agent is None:
-                raise ValueError(f"Agentが見つかりません: {goal.assigned_agent}")
+                msg = f"Agentが見つかりません: {goal.assigned_agent}"
+                raise ValueError(msg)
 
             # 入力を準備
             input_data = {
@@ -302,7 +305,7 @@ class MonitoredExecutor:
             )
 
         except Exception as e:
-            self._logger.error(f"目標失敗: {goal.name} - {e}")
+            self._logger.exception(f"目標失敗: {goal.name} - {e}")
             plan.update_goal_status(goal.id, GoalStatus.FAILED, error=str(e))
 
             return ExecutionEvent(
@@ -349,10 +352,10 @@ class MonitoredExecutor:
 
 
 __all__ = [
-    "ExecutionEventType",
     "ExecutionEvent",
-    "ExecutionResult",
+    "ExecutionEventType",
     "ExecutionMonitor",
+    "ExecutionResult",
     "MonitoredExecutor",
 ]
 

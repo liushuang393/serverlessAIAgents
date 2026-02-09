@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """因果モデル - 状態遷移と因果関係の明示的表現.
 
 Hassabisの「世界モデル」に相当する因果関係グラフを実装。
@@ -28,12 +27,15 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class RelationType(str, Enum):
@@ -193,7 +195,8 @@ class CausalModel:
         for node_id, node in self.nodes.items():
             if node.name == name_or_id:
                 return node_id
-        raise ValueError(f"ノードが見つかりません: {name_or_id}")
+        msg = f"ノードが見つかりません: {name_or_id}"
+        raise ValueError(msg)
 
     def get_node_by_name(self, name: str) -> CausalNode | None:
         """名前でノードを取得."""
@@ -269,15 +272,15 @@ class CausalModel:
             if isinstance(cause_value, bool) and cause_value:
                 return effect_value + 1 if isinstance(effect_value, (int, float)) else effect_value
             return effect_value
-        elif relation_type == RelationType.DECREASES:
+        if relation_type == RelationType.DECREASES:
             if isinstance(cause_value, bool) and cause_value:
                 return effect_value - 1 if isinstance(effect_value, (int, float)) else effect_value
             return effect_value
-        elif relation_type == RelationType.ENABLES:
+        if relation_type == RelationType.ENABLES:
             return cause_value
-        elif relation_type == RelationType.PREVENTS:
+        if relation_type == RelationType.PREVENTS:
             return not cause_value if isinstance(effect_value, bool) else effect_value
-        elif relation_type == RelationType.TRIGGERS:
+        if relation_type == RelationType.TRIGGERS:
             return cause_value
         return effect_value
 
@@ -371,9 +374,9 @@ class CausalModel:
 
 
 __all__ = [
-    "RelationType",
+    "CausalModel",
     "CausalNode",
     "CausalRelation",
-    "CausalModel",
+    "RelationType",
 ]
 

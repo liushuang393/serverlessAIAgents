@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """LocalFileConnector - ローカルファイルシステムコネクタ.
 
 ローカルファイルシステムへのアクセスを提供。
@@ -12,15 +11,15 @@
 import fnmatch
 import logging
 import mimetypes
-import os
-from datetime import datetime, timezone
+from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import AsyncIterator
 
-from pydantic import BaseModel, Field
+from pydantic import Field
 
 from agentflow.datalake.connector import ConnectorConfig, DataConnector
 from agentflow.datalake.core import DataItem, ReadResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -89,8 +88,9 @@ class LocalFileConnector(DataConnector):
             try:
                 resolved.relative_to(self._base_path)
             except ValueError as e:
+                msg = f"Access denied: {path} is outside base path {self._base_path}"
                 raise ValueError(
-                    f"Access denied: {path} is outside base path {self._base_path}"
+                    msg
                 ) from e
 
         return resolved
@@ -146,7 +146,7 @@ class LocalFileConnector(DataConnector):
                         name=entry.name,
                         size=stat.st_size if entry.is_file() else None,
                         modified_at=datetime.fromtimestamp(
-                            stat.st_mtime, tz=timezone.utc
+                            stat.st_mtime, tz=UTC
                         ),
                         content_type=mimetypes.guess_type(str(entry))[0],
                         is_directory=entry.is_dir(),
@@ -169,10 +169,12 @@ class LocalFileConnector(DataConnector):
         resolved = self._resolve_path(path)
 
         if not resolved.exists():
-            raise FileNotFoundError(f"File not found: {path}")
+            msg = f"File not found: {path}"
+            raise FileNotFoundError(msg)
 
         if resolved.is_dir():
-            raise IsADirectoryError(f"Cannot read directory: {path}")
+            msg = f"Cannot read directory: {path}"
+            raise IsADirectoryError(msg)
 
         content = resolved.read_bytes()
         content_type = mimetypes.guess_type(str(resolved))[0] or "application/octet-stream"
@@ -221,7 +223,7 @@ class LocalFileConnector(DataConnector):
             uri=f"file://{resolved}",
             name=resolved.name,
             size=size,
-            modified_at=datetime.now(timezone.utc),
+            modified_at=datetime.now(UTC),
             content_type=content_type or mimetypes.guess_type(str(resolved))[0],
         )
 
@@ -280,7 +282,8 @@ class LocalFileConnector(DataConnector):
         resolved = self._resolve_path(path)
 
         if not resolved.exists():
-            raise FileNotFoundError(f"File not found: {path}")
+            msg = f"File not found: {path}"
+            raise FileNotFoundError(msg)
 
         try:
             import aiofiles

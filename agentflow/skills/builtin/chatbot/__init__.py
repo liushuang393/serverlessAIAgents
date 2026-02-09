@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ChatBot Skill - 対話管理と Agent 連携能力.
 
 このモジュールは、マルチターン対話と Agent 呼び出しを統合した
@@ -17,6 +16,7 @@ from agentflow.skills.builtin.chatbot.chatbot import (
     ChatMessage,
     ChatSession,
 )
+
 
 __all__ = [
     "ChatBotConfig",

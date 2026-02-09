@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeepAgent 進捗管理システム.
 
 リアルタイム進捗追跡と可視化を提供:
@@ -17,15 +16,19 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import Callable
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.patterns.deep_agent.da_models import (
     ParallelGroup,
     TaskStatus,
     TodoItem,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 _logger = logging.getLogger(__name__)
 

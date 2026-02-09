@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """SQL Post-Processor - NL2SQL 後処理モジュール.
 
 学術研究に基づく後処理パイプライン:
@@ -24,7 +23,12 @@ import logging
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
 
 logger = logging.getLogger(__name__)
 
@@ -244,9 +248,8 @@ class SQLPostProcessor:
         sql = re.sub(r";+", ";", sql)
 
         # 末尾のセミコロンを除去（一般的に不要）
-        sql = sql.rstrip(";")
+        return sql.rstrip(";")
 
-        return sql
 
     def _validate_syntax(self, sql: str) -> ValidationResult:
         """構文を検証.
@@ -496,12 +499,12 @@ class SQLPostProcessor:
 
 
 __all__ = [
-    "SQLPostProcessor",
-    "PostProcessorConfig",
-    "PostProcessResult",
-    "ValidationResult",
     "CorrectionResult",
-    "ValidationLevel",
+    "PostProcessResult",
+    "PostProcessorConfig",
     "SQLErrorType",
+    "SQLPostProcessor",
+    "ValidationLevel",
+    "ValidationResult",
 ]
 

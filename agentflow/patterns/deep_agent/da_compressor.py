@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeepAgent コンテキスト圧縮システム.
 
 業界最佳実践に基づいた多層コンテキスト圧縮を実装:
@@ -40,6 +39,7 @@ from agentflow.patterns.deep_agent.da_models import (
     MemoryTier,
     MessageType,
 )
+
 
 _logger = logging.getLogger(__name__)
 
@@ -126,12 +126,11 @@ class ContextCompressor:
 
         if strategy == CompactionStrategy.SELECTIVE:
             return await self._selective_compact(messages, max_tokens)
-        elif strategy == CompactionStrategy.SUMMARIZE:
+        if strategy == CompactionStrategy.SUMMARIZE:
             return await self._summarize_compact(messages, max_tokens)
-        elif strategy == CompactionStrategy.HIERARCHICAL:
+        if strategy == CompactionStrategy.HIERARCHICAL:
             return await self._hierarchical_compact(messages, max_tokens)
-        else:
-            return await self._hybrid_compact(messages, max_tokens)
+        return await self._hybrid_compact(messages, max_tokens)
 
     async def _selective_compact(
         self, messages: list[AgentMessage], max_tokens: int
@@ -201,7 +200,7 @@ class ContextCompressor:
             content={"summary": summary_text, "summarized_count": len(to_summarize)},
         )
 
-        result_messages = [summary_msg] + recent
+        result_messages = [summary_msg, *recent]
         compressed_tokens = sum(len(str(m.content)) // 4 for m in result_messages)
         return result_messages, CompactionResult(
             original_tokens, compressed_tokens,
@@ -252,7 +251,7 @@ class ContextCompressor:
         # 中重要度 → Session Memory
         mid_importance = [m for s, m in scored if 0.4 <= s < 0.7]
         # 低重要度 → Archival（将来の拡張用、現在は破棄）
-        _ = [m for s, m in scored if s < 0.4]  # noqa: F841
+        _ = [m for s, m in scored if s < 0.4]
 
         # Working Memoryに収まる分を保持
         working_budget = int(max_tokens * 0.6)

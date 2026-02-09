@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """GalleryService - Gallery検索・発見サービス.
 
 ローカルコンポーネントとマーケットプレイスの統一検索を提供。
@@ -14,26 +13,24 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
-from datetime import datetime, UTC
-from typing import Any
+from datetime import UTC, datetime
 
-from agentflow.marketplace.client import MarketplaceClient, MarketplaceAgent
+from apps.platform.schemas.gallery_schemas import (
+    FeaturedItem,
+    FeaturedResponse,
+    GalleryItem,
+    GalleryItemType,
+    GallerySearchRequest,
+    GallerySearchResponse,
+)
 from apps.platform.services.component_library import (
-    ComponentLibrary,
     ComponentEntry,
+    ComponentLibrary,
     ComponentType,
     get_component_library,
 )
-from apps.platform.schemas.gallery_schemas import (
-    GalleryItem,
-    GalleryItemType,
-    GalleryFilter,
-    GallerySearchRequest,
-    GallerySearchResponse,
-    FeaturedItem,
-    FeaturedResponse,
-)
+
+from agentflow.marketplace.client import MarketplaceAgent, MarketplaceClient
 
 
 class GalleryService:
@@ -293,20 +290,19 @@ class GalleryService:
         if sort_by == "relevance":
             # relevance はデフォルト順序を維持
             return results
-        elif sort_by == "name":
+        if sort_by == "name":
             return sorted(results, key=lambda x: x.name.lower(), reverse=reverse)
-        elif sort_by == "downloads":
+        if sort_by == "downloads":
             return sorted(results, key=lambda x: x.downloads, reverse=reverse)
-        elif sort_by == "rating":
+        if sort_by == "rating":
             return sorted(results, key=lambda x: x.rating, reverse=reverse)
-        elif sort_by == "updated":
+        if sort_by == "updated":
             return sorted(
                 results,
                 key=lambda x: x.updated_at or datetime.min.replace(tzinfo=UTC),
                 reverse=reverse,
             )
-        else:
-            return results
+        return results
 
     async def get_featured(self) -> FeaturedResponse:
         """推荐リストを取得.
@@ -327,7 +323,7 @@ class GalleryService:
         ]
 
         # カテゴリ一覧
-        categories = list(set(entry.category for entry in self._library.list_all().values()))
+        categories = list({entry.category for entry in self._library.list_all().values()})
 
         # 人気タグ
         all_tags: list[str] = []

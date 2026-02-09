@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """出力スキーマ定義 - 提案書.
 
 日本式ビジネス提案書の最終出力フォーマットを定義。
@@ -8,11 +7,8 @@ v3.1: 提案書フォーマット対応（タイトル自動生成、署名欄�
 """
 
 import hashlib
-import re
 from datetime import datetime
 from typing import Any
-
-from pydantic import BaseModel, Field
 
 from apps.decision_governance_engine.schemas.agent_schemas import (
     ClarificationOutput,
@@ -22,6 +18,7 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     ReviewOutput,
     ShuOutput,
 )
+from pydantic import BaseModel, Field
 
 
 class ProposalTitle(BaseModel):
@@ -195,10 +192,9 @@ def generate_proposal_title(question: str, problem_type: str = "") -> ProposalTi
             title_ja = "グローバル展開戦略提案"
             title_en = "Global_Expansion_Strategy_Proposal"
 
-    if "リアルタイム" in question:
-        if "音声" in question:
-            title_ja = "リアルタイム音声通信基盤構築提案"
-            title_en = "Realtime_Voice_Communication_Platform_Proposal"
+    if "リアルタイム" in question and "音声" in question:
+        title_ja = "リアルタイム音声通信基盤構築提案"
+        title_en = "Realtime_Voice_Communication_Platform_Proposal"
 
     # 案件ID生成（質問のハッシュから）
     hash_input = question + datetime.now().strftime("%Y%m%d")

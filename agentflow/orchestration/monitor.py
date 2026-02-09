@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """監視Agent - 実行監視とアラート.
 
 実行状況を監視し、異常を検出してアラートを発行する。
@@ -24,11 +23,15 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class MonitorEventType(str, Enum):
@@ -236,11 +239,10 @@ class MonitorAgent:
                 if event.event_type in (
                     MonitorEventType.COMPLETED,
                     MonitorEventType.FAILED,
-                ):
-                    if execution_id and event.execution_id == execution_id:
-                        break
+                ) and execution_id and event.execution_id == execution_id:
+                    break
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # 監視対象がなくなったらループを抜ける
                 if execution_id and execution_id not in self._executions:
                     break
@@ -457,7 +459,7 @@ class MonitorAgent:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self._logger.error(f"監視ループエラー: {e}")
+                self._logger.exception(f"監視ループエラー: {e}")
 
     async def _check_stuck(self, state: ExecutionState) -> None:
         """スタック検出.
@@ -521,7 +523,7 @@ class MonitorAgent:
             try:
                 self._alert_callback(event)
             except Exception as e:
-                self._logger.error(f"アラートコールバックエラー: {e}")
+                self._logger.exception(f"アラートコールバックエラー: {e}")
 
     def _emit_alert(
         self,
@@ -558,10 +560,10 @@ class MonitorAgent:
 
 # エクスポート
 __all__ = [
-    "MonitorEventType",
     "AlertSeverity",
-    "MonitorEvent",
-    "MonitorThresholds",
     "ExecutionState",
     "MonitorAgent",
+    "MonitorEvent",
+    "MonitorEventType",
+    "MonitorThresholds",
 ]

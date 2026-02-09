@@ -107,54 +107,54 @@ from agentflow.context.rlm.workspace import (
 
 
 __all__ = [
-    # =========================================================================
-    # Configuration
-    # =========================================================================
-    "RLMConfig",
-    "SubCallBudget",
-    "StopReason",
     "ActionType",
-    # =========================================================================
-    # Main Components
-    # =========================================================================
-    "RLMController",
-    "RLMResult",
-    "TaskRouter",
     "ActivationDecision",
-    # =========================================================================
-    # Context Store
-    # =========================================================================
-    "ContextStore",
     "ContextHandle",
-    "StructureInfo",
     # =========================================================================
     # Context Operations
     # =========================================================================
     "ContextOps",
-    "create_context_ops_prompt",
+    # =========================================================================
+    # Context Store
+    # =========================================================================
+    "ContextStore",
+    "LLMClientProtocol",
+    "RLMActionEvent",
+    "RLMCompleteEvent",
+    # =========================================================================
+    # Configuration
+    # =========================================================================
+    "RLMConfig",
+    # =========================================================================
+    # Main Components
+    # =========================================================================
+    "RLMController",
+    "RLMErrorEvent",
+    # =========================================================================
+    # Events
+    # =========================================================================
+    "RLMEvent",
+    "RLMEventEmitter",
+    "RLMEventType",
+    "RLMIterationEvent",
+    "RLMResult",
+    "RLMStartEvent",
+    "RLMSubcallEvent",
+    "RLMWorkspaceUpdateEvent",
+    "StopReason",
+    "StructureInfo",
+    "SubCallBudget",
     # =========================================================================
     # SubCall Manager
     # =========================================================================
     "SubCallManager",
     "SubCallResult",
-    "LLMClientProtocol",
+    "TaskRouter",
+    "VariableType",
     # =========================================================================
     # Workspace
     # =========================================================================
     "Workspace",
     "WorkspaceVariable",
-    "VariableType",
-    # =========================================================================
-    # Events
-    # =========================================================================
-    "RLMEvent",
-    "RLMEventType",
-    "RLMEventEmitter",
-    "RLMStartEvent",
-    "RLMIterationEvent",
-    "RLMSubcallEvent",
-    "RLMActionEvent",
-    "RLMWorkspaceUpdateEvent",
-    "RLMCompleteEvent",
-    "RLMErrorEvent",
+    "create_context_ops_prompt",
 ]

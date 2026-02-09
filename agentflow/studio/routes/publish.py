@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """パブリッシュAPI ルート.
 
 ワークフローのコード生成とデプロイ機能。
@@ -155,7 +154,7 @@ def create_publish_router() -> APIRouter:
                         url=event.data.get("url"),
                         logs=logs,
                     )
-                elif event.type == "error":
+                if event.type == "error":
                     return PublishDeployResponse(
                         status="error",
                         logs=logs,
@@ -165,7 +164,7 @@ def create_publish_router() -> APIRouter:
             return PublishDeployResponse(status="success", logs=logs)
 
         except Exception as e:
-            logs.append(f"❌ エラー: {str(e)}")
+            logs.append(f"❌ エラー: {e!s}")
             return PublishDeployResponse(status="error", logs=logs, error=str(e))
 
     @router.post("/deploy/stream")

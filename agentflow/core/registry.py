@@ -13,14 +13,15 @@
 
 import logging
 import threading
-from abc import ABC, abstractmethod
-from typing import Any, Generic, TypeVar
+from abc import ABC
+from typing import Any, TypeVar
+
 
 # 型変数定義
 T = TypeVar("T")
 
 
-class Registry(ABC, Generic[T]):
+class Registry[T](ABC):
     """汎用レジストリ基底クラス.
 
     Protocol、Skill、Coordinatorなど様々なコンポーネントの

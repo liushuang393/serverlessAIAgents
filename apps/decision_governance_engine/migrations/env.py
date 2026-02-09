@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 Alembic マイグレーション環境設定.
 
@@ -12,9 +11,9 @@ Alembic マイグレーション環境設定.
 import os
 from logging.config import fileConfig
 
+from alembic import context
 from sqlalchemy import create_engine, pool
 
-from alembic import context
 
 # ==============================================================================
 # Alembic 設定
@@ -29,6 +28,7 @@ if config.config_file_name is not None:
 # SQLAlchemy モデルのメタデータをインポート
 # ==============================================================================
 from apps.decision_governance_engine.repositories.models import Base
+
 
 target_metadata = Base.metadata
 

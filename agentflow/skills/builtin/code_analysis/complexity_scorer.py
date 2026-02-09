@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """複雑度評価スキル - Complexity Scorer.
 
 コードの複雑度を評価し、リファクタリング優先度を提案するスキル。
@@ -217,7 +216,7 @@ class ComplexityScorer(AgentBlock):
     def _analyze_files(self, files: list[str]) -> list[FileComplexity]:
         """ファイルを分析（デモ用サンプルデータ）."""
         # デモ用サンプルデータ
-        sample_files = [
+        return [
             FileComplexity(
                 file_path="src/main.py",
                 total_functions=5,
@@ -255,7 +254,6 @@ class ComplexityScorer(AgentBlock):
                 hotspots=[],
             ),
         ]
-        return sample_files
 
     def _identify_hotspots(
         self, file_complexities: list[FileComplexity]
@@ -335,11 +333,10 @@ class ComplexityScorer(AgentBlock):
         """複雑度レベルを判定."""
         if ccn <= 5:
             return ComplexityLevel.LOW
-        elif ccn <= 10:
+        if ccn <= 10:
             return ComplexityLevel.MODERATE
-        elif ccn <= 20:
+        if ccn <= 20:
             return ComplexityLevel.HIGH
-        elif ccn <= 50:
+        if ccn <= 50:
             return ComplexityLevel.VERY_HIGH
-        else:
-            return ComplexityLevel.UNMAINTAINABLE
+        return ComplexityLevel.UNMAINTAINABLE

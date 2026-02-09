@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """MigrationProject - 迁移项目管理.
 
 迁移项目的追踪和管理，包含阶段、文件状态、质量指标等。
@@ -16,7 +15,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -107,7 +106,7 @@ class SourceFile:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SourceFile":
+    def from_dict(cls, data: dict[str, Any]) -> SourceFile:
         """辞書から作成."""
         return cls(
             id=UUID(data["id"]) if "id" in data else uuid4(),
@@ -349,7 +348,7 @@ class MigrationProject:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "MigrationProject":
+    def from_dict(cls, data: dict[str, Any]) -> MigrationProject:
         """辞書から作成."""
         project = cls(
             id=UUID(data["id"]) if "id" in data else uuid4(),
@@ -362,7 +361,7 @@ class MigrationProject:
         )
 
         # ファイルを復元
-        for file_id, file_data in data.get("source_files", {}).items():
+        for _file_id, file_data in data.get("source_files", {}).items():
             file = SourceFile.from_dict(file_data)
             project.source_files[file.id] = file
 
@@ -391,7 +390,7 @@ class MigrationProject:
                 overall_score=qm.get("overall_score", 0.0),
             )
 
-        if "current_phase" in data and data["current_phase"]:
+        if data.get("current_phase"):
             project.current_phase = MigrationPhase(data["current_phase"])
 
         return project
@@ -404,7 +403,7 @@ class MigrationProject:
         source_language: str,
         target_language: str,
         extensions: list[str] | None = None,
-    ) -> "MigrationProject":
+    ) -> MigrationProject:
         """ディレクトリから作成."""
         source_dir = Path(source_dir)
         project = cls(
@@ -441,11 +440,11 @@ class MigrationProject:
 
 
 __all__ = [
-    "PhaseStatus",
     "FileStatus",
     "MigrationPhase",
-    "SourceFile",
-    "PhaseRecord",
-    "QualityMetrics",
     "MigrationProject",
+    "PhaseRecord",
+    "PhaseStatus",
+    "QualityMetrics",
+    "SourceFile",
 ]

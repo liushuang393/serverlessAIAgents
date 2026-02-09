@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentPipeline - 自動進捗追跡付きのAgentパイプライン.
 
 このモジュールは、複数のAgentを順次実行し、進捗イベントを自動発射する
@@ -115,7 +114,7 @@ class RevisionRequest:
         feedback: フィードバック情報
     """
 
-    def __init__(self, target_agent_id: str, feedback: dict[str, Any] | None = None):
+    def __init__(self, target_agent_id: str, feedback: dict[str, Any] | None = None) -> None:
         """初期化.
 
         Args:
@@ -284,7 +283,7 @@ class AgentPipeline:
         self.emitter.reset()
 
         try:
-            for i, config in enumerate(self.agents):
+            for _i, config in enumerate(self.agents):
                 # スキップ条件チェック
                 if config.skip_condition and config.skip_condition(result):
                     self._logger.info(f"Skipping {config.id} due to skip_condition")
@@ -340,7 +339,7 @@ class AgentPipeline:
             yield (result, None)
 
         except Exception as e:
-            self._logger.error(f"Pipeline error: {e}")
+            self._logger.exception(f"Pipeline error: {e}")
             yield (None, FlowErrorEvent(
                 timestamp=time.time(),
                 flow_id=self.flow_id,
@@ -434,9 +433,7 @@ class AgentPipeline:
         if result.get("proceed") is False:
             return True
         # status が rejected の場合
-        if result.get("status") == "rejected":
-            return True
-        return False
+        return result.get("status") == "rejected"
 
     def _extract_result_summary(
         self, agent_id: str, result: dict[str, Any]

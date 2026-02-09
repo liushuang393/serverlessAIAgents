@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Java Language Adapter.
 
 Javaのターゲットコード生成と実行を担う。
@@ -65,10 +64,10 @@ class JavaAdapter(TargetLanguageAdapter):
             lines.append("")
 
         # Class header
-        lines.append(f"/**")
+        lines.append("/**")
         lines.append(f" * 移行元: {ast.program_id}")
-        lines.append(f" * 生成者: CodeMigrationAgent")
-        lines.append(f" */")
+        lines.append(" * 生成者: CodeMigrationAgent")
+        lines.append(" */")
         lines.append(f"public class {class_name} {{")
         lines.append("")
 
@@ -126,15 +125,15 @@ class JavaAdapter(TargetLanguageAdapter):
             test_name = tc.get("name", f"test_{i}")
             description = tc.get("description", "")
 
-            lines.append(f"    @Test")
+            lines.append("    @Test")
             if description:
                 lines.append(f"    // {description}")
             lines.append(f"    void {test_name}() {{")
             lines.append(f"        // Inputs: {tc.get('inputs', {})}")
             lines.append(f"        // Expected: {tc.get('expected_outputs', {})}")
-            lines.append(f"        // TODO: Implement test")
-            lines.append(f"        fail(\"Not implemented\");")
-            lines.append(f"    }}")
+            lines.append("        // TODO: Implement test")
+            lines.append('        fail("Not implemented");')
+            lines.append("    }")
             lines.append("")
 
         lines.append("}")

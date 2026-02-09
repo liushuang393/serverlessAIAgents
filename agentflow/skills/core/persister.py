@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Skill 固化器 - 学習した Skill の永続化.
 
 このモジュールは生成された Skill をファイルシステムに保存する機能を提供します：
@@ -13,7 +12,7 @@ from datetime import datetime
 from pathlib import Path
 
 from agentflow.skills.core.base import Skill
-from agentflow.skills.core.validator import SkillValidator, ValidationResult
+from agentflow.skills.core.validator import SkillValidator
 
 
 class SkillPersister:

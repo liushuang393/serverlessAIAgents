@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Schema Linker サービス - NL2SQL の核心コンポーネント.
 
 自然言語クエリから関連テーブル・カラムを特定する。
@@ -24,7 +23,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass, field
-from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -207,14 +206,14 @@ class SchemaLinker:
             {"tables": {name: score}, "columns": {name: score}}
         """
         query_lower = query.lower()
-        query_tokens = set(re.findall(r'\w+', query_lower))
+        query_tokens = set(re.findall(r"\w+", query_lower))
 
         table_scores: dict[str, float] = {}
         column_scores: dict[str, float] = {}
 
         for table_name, table_info in self._tables.items():
             table_lower = table_name.lower()
-            table_tokens = set(re.findall(r'\w+', table_lower))
+            table_tokens = set(re.findall(r"\w+", table_lower))
 
             # テーブル名マッチング
             overlap = len(query_tokens & table_tokens)
@@ -226,7 +225,7 @@ class SchemaLinker:
             # カラム名マッチング
             for col in table_info.columns:
                 col_lower = col.name.lower()
-                col_tokens = set(re.findall(r'\w+', col_lower))
+                col_tokens = set(re.findall(r"\w+", col_lower))
                 col_key = f"{table_name}.{col.name}"
 
                 col_overlap = len(query_tokens & col_tokens)
@@ -288,7 +287,7 @@ JSON出力:"""
 
             # JSON抽出
             import json
-            json_match = re.search(r'\{[^}]+\}', content, re.DOTALL)
+            json_match = re.search(r"\{[^}]+\}", content, re.DOTALL)
             if json_match:
                 return json.loads(json_match.group())
         except Exception as e:
@@ -385,10 +384,10 @@ JSON出力:"""
 
 
 __all__ = [
+    "ColumnInfo",
+    "SchemaLinkResult",
     "SchemaLinker",
     "SchemaLinkerConfig",
-    "SchemaLinkResult",
     "TableInfo",
-    "ColumnInfo",
 ]
 

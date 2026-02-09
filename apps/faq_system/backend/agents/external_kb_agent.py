@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """対客KB Agent - 公開情報専用.
 
 対客向け知識ベース専用のAgent。
@@ -21,14 +20,19 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, AsyncIterator
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
 from agentflow.core import ResilientAgent
 from agentflow.knowledge.isolated_kb import IsolatedKBManager, KBType
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
 
 logger = logging.getLogger(__name__)
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Serverless テンプレート生成モジュール.
 
 Vercel、AWS Lambda のデプロイ設定を生成します。
@@ -16,6 +15,7 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +96,7 @@ handler = Mangum(app)
 '''
 
 
-AWS_SERVERLESS_TEMPLATE = '''# -*- coding: utf-8 -*-
+AWS_SERVERLESS_TEMPLATE = """# -*- coding: utf-8 -*-
 # AWS Lambda Serverless Configuration
 #
 # Deploy: serverless deploy
@@ -157,7 +157,7 @@ package:
     - "!tests/**"
     - "!*.md"
     - "!.env*"
-'''
+"""
 
 
 AWS_HANDLER_TEMPLATE = '''# -*- coding: utf-8 -*-

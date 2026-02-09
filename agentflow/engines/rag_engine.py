@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RAGEngine - RAG拡張Agentパターン.
 
 ナレッジベース検索拡張付きのEngine Pattern、以下に適用：
@@ -22,20 +21,23 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator, Callable
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.engines.base import BaseEngine, EngineConfig
 
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator, Callable
+
+
 class RAGEngine(BaseEngine):
     """RAG拡張Agentエンジン.
-    
+
     特徴：
     - 自動RAG検索
     - 検索結果をAgentコンテキストに注入
     - 複数のベクトルデータベースをサポート
-    
+
     Attributes:
         agent: メインAgent（拡張後のクエリを処理）
         vector_store: ベクトルストア名またはインスタンス
@@ -55,7 +57,7 @@ class RAGEngine(BaseEngine):
         config: EngineConfig | None = None,
     ) -> None:
         """RAGEngineを初期化.
-        
+
         Args:
             agent: Agentクラスまたはインスタンス
             vector_store: ベクトルストア名またはインスタンス
@@ -124,10 +126,9 @@ class RAGEngine(BaseEngine):
             if hasattr(result, "__await__"):
                 return await result
             return result
-        elif self._rag_pipeline:
+        if self._rag_pipeline:
             return await self._rag_pipeline.retrieve(query)
-        else:
-            return self._mock_retriever(query)
+        return self._mock_retriever(query)
 
     def _format_context(self, documents: list[dict[str, Any]]) -> str:
         """検索結果をコンテキストとしてフォーマット."""
@@ -147,11 +148,12 @@ class RAGEngine(BaseEngine):
         elif hasattr(agent, "process"):
             result = await agent.process(inputs)
         else:
-            raise AttributeError(f"Agent {agent} has no run/invoke/process method")
+            msg = f"Agent {agent} has no run/invoke/process method"
+            raise AttributeError(msg)
 
         if isinstance(result, dict):
             return result
-        elif hasattr(result, "model_dump"):
+        if hasattr(result, "model_dump"):
             return result.model_dump()
         return {"result": result}
 

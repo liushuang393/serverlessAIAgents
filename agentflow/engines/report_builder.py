@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ReportBuilder - パイプライン結果レポート生成インターフェース.
 
 PipelineEngine の最終出力を標準化するための抽象基底クラス。
@@ -31,7 +30,8 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
+
 
 # ロガー設定
 _logger = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ class ReportSection:
     content: str = ""
     charts: list[ChartData] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
-    subsections: list["ReportSection"] = field(default_factory=list)
+    subsections: list[ReportSection] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """辞書形式に変換."""
@@ -189,7 +189,6 @@ class ReportBuilder(ABC):
         Returns:
             JSON シリアライズ可能なレポート辞書
         """
-        pass
 
     def generate_id(self, prefix: str | None = None) -> str:
         """レポートIDを生成.
@@ -236,15 +235,15 @@ class ReportBuilder(ABC):
         """
         if hasattr(data, "model_dump"):
             return data.model_dump(mode="json")
-        elif hasattr(data, "to_dict"):
+        if hasattr(data, "to_dict"):
             return data.to_dict()
-        elif isinstance(data, datetime):
+        if isinstance(data, datetime):
             return data.isoformat()
-        elif isinstance(data, Enum):
+        if isinstance(data, Enum):
             return data.value
-        elif isinstance(data, dict):
+        if isinstance(data, dict):
             return {k: self.to_json_serializable(v) for k, v in data.items()}
-        elif isinstance(data, (list, tuple)):
+        if isinstance(data, (list, tuple)):
             return [self.to_json_serializable(item) for item in data]
         return data
 
@@ -514,13 +513,13 @@ def create_pie_chart(
 
 
 __all__ = [
-    "ReportBuilder",
-    "SimpleReportBuilder",
-    "SectionedReportBuilder",
-    "ReportSection",
-    "ExecutiveSummary",
     "ChartData",
+    "ExecutiveSummary",
     "OutputFormat",
+    "ReportBuilder",
+    "ReportSection",
+    "SectionedReportBuilder",
+    "SimpleReportBuilder",
     "create_bar_chart",
     "create_line_chart",
     "create_pie_chart",

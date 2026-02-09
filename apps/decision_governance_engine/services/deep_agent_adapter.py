@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeepAgentCoordinator アダプター.
 
 Decision Governance Engine に DeepAgent の機能を統合するアダプター。
@@ -19,16 +18,16 @@ import logging
 from typing import Any
 
 from agentflow.patterns.deep_agent import (
-    CognitiveAnalysis,
-    ContextCompressor,
-    CompactionStrategy,
-    SelfEvolver,
-    ProgressManager,
-    QualityReview,
-    QualityDimension,
-    MemoryEvolutionStore,
     AgentMessage,
+    CognitiveAnalysis,
+    CompactionStrategy,
+    ContextCompressor,
+    MemoryEvolutionStore,
     MessageType,
+    ProgressManager,
+    QualityDimension,
+    QualityReview,
+    SelfEvolver,
 )
 
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Rich Response Builder - 統一富文本構築器.
 
 設計原則:
@@ -23,7 +22,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from typing import Any
 
 from agentflow.protocols.a2ui.rich_content import (
@@ -40,8 +38,6 @@ from agentflow.protocols.a2ui.rich_content import (
     Progress,
     RichComponent,
     RichResponse,
-    Tabs,
-    Timeline,
 )
 
 
@@ -132,7 +128,7 @@ class RichResponseBuilder:
     # セクション管理
     # =========================================================================
 
-    def section(self, name: str) -> "RichResponseBuilder":
+    def section(self, name: str) -> RichResponseBuilder:
         """セクション開始.
 
         Args:
@@ -146,12 +142,12 @@ class RichResponseBuilder:
             self._sections[name] = []
         return self
 
-    def end_section(self) -> "RichResponseBuilder":
+    def end_section(self) -> RichResponseBuilder:
         """セクション終了."""
         self._current_section = None
         return self
 
-    def _add_component(self, component: RichComponent) -> "RichResponseBuilder":
+    def _add_component(self, component: RichComponent) -> RichResponseBuilder:
         """コンポーネント追加."""
         if self._current_section:
             self._sections[self._current_section].append(component)
@@ -167,7 +163,7 @@ class RichResponseBuilder:
         self,
         content: str,
         allow_html: bool = False,
-    ) -> "RichResponseBuilder":
+    ) -> RichResponseBuilder:
         """Markdown 追加.
 
         Args:
@@ -179,7 +175,7 @@ class RichResponseBuilder:
         """
         return self._add_component(MarkdownContent(content, allow_html=allow_html))
 
-    def add_heading(self, text: str, level: int = 1) -> "RichResponseBuilder":
+    def add_heading(self, text: str, level: int = 1) -> RichResponseBuilder:
         """見出し追加.
 
         Args:
@@ -192,7 +188,7 @@ class RichResponseBuilder:
         prefix = "#" * min(max(level, 1), 6)
         return self.add_markdown(f"{prefix} {text}")
 
-    def add_paragraph(self, text: str) -> "RichResponseBuilder":
+    def add_paragraph(self, text: str) -> RichResponseBuilder:
         """段落追加.
 
         Args:
@@ -209,7 +205,7 @@ class RichResponseBuilder:
         language: str = "text",
         title: str | None = None,
         show_line_numbers: bool = True,
-    ) -> "RichResponseBuilder":
+    ) -> RichResponseBuilder:
         """コードブロック追加.
 
         Args:
@@ -237,7 +233,7 @@ class RichResponseBuilder:
         title: str | None = None,
         sortable: bool = True,
         paginated: bool = True,
-    ) -> "RichResponseBuilder":
+    ) -> RichResponseBuilder:
         """テーブル追加.
 
         Args:
@@ -266,7 +262,7 @@ class RichResponseBuilder:
         data: dict[str, Any],
         title: str | None = None,
         height: str = "300px",
-    ) -> "RichResponseBuilder":
+    ) -> RichResponseBuilder:
         """チャート追加.
 
         Args:
@@ -287,7 +283,7 @@ class RichResponseBuilder:
         labels: list[str],
         values: list[float],
         title: str | None = None,
-    ) -> "RichResponseBuilder":
+    ) -> RichResponseBuilder:
         """棒グラフ追加（簡易版）.
 
         Args:
@@ -313,7 +309,7 @@ class RichResponseBuilder:
         labels: list[str],
         values: list[float],
         title: str | None = None,
-    ) -> "RichResponseBuilder":
+    ) -> RichResponseBuilder:
         """折れ線グラフ追加（簡易版）."""
         data = {
             "xAxis": {"type": "category", "data": labels},
@@ -329,7 +325,7 @@ class RichResponseBuilder:
         self,
         data_items: list[dict[str, Any]],
         title: str | None = None,
-    ) -> "RichResponseBuilder":
+    ) -> RichResponseBuilder:
         """円グラフ追加（簡易版）.
 
         Args:
@@ -358,7 +354,7 @@ class RichResponseBuilder:
         snippet: str,
         url: str | None = None,
         score: float | None = None,
-    ) -> "RichResponseBuilder":
+    ) -> RichResponseBuilder:
         """引用追加.
 
         Args:
@@ -375,7 +371,7 @@ class RichResponseBuilder:
             Citation(source_id, title, snippet, url=url, relevance_score=score)
         )
 
-    def add_citations(self, citations: list[dict[str, Any]]) -> "RichResponseBuilder":
+    def add_citations(self, citations: list[dict[str, Any]]) -> RichResponseBuilder:
         """複数引用追加.
 
         Args:
@@ -399,7 +395,7 @@ class RichResponseBuilder:
         text: str,
         url: str,
         external: bool = True,
-    ) -> "RichResponseBuilder":
+    ) -> RichResponseBuilder:
         """リンク追加.
 
         Args:
@@ -421,7 +417,7 @@ class RichResponseBuilder:
         message: str,
         alert_type: AlertType | str = AlertType.INFO,
         title: str | None = None,
-    ) -> "RichResponseBuilder":
+    ) -> RichResponseBuilder:
         """アラート追加.
 
         Args:
@@ -436,19 +432,19 @@ class RichResponseBuilder:
             alert_type = AlertType(alert_type)
         return self._add_component(Alert(message, alert_type, title=title))
 
-    def add_info(self, message: str, title: str | None = None) -> "RichResponseBuilder":
+    def add_info(self, message: str, title: str | None = None) -> RichResponseBuilder:
         """情報アラート追加."""
         return self.add_alert(message, AlertType.INFO, title)
 
-    def add_success(self, message: str, title: str | None = None) -> "RichResponseBuilder":
+    def add_success(self, message: str, title: str | None = None) -> RichResponseBuilder:
         """成功アラート追加."""
         return self.add_alert(message, AlertType.SUCCESS, title)
 
-    def add_warning(self, message: str, title: str | None = None) -> "RichResponseBuilder":
+    def add_warning(self, message: str, title: str | None = None) -> RichResponseBuilder:
         """警告アラート追加."""
         return self.add_alert(message, AlertType.WARNING, title)
 
-    def add_error(self, message: str, title: str | None = None) -> "RichResponseBuilder":
+    def add_error(self, message: str, title: str | None = None) -> RichResponseBuilder:
         """エラーアラート追加."""
         return self.add_alert(message, AlertType.ERROR, title)
 
@@ -461,7 +457,7 @@ class RichResponseBuilder:
         value: float,
         max_value: float = 100,
         label: str | None = None,
-    ) -> "RichResponseBuilder":
+    ) -> RichResponseBuilder:
         """進捗バー追加.
 
         Args:
@@ -479,7 +475,7 @@ class RichResponseBuilder:
         title: str,
         content: str | list[RichComponent],
         expanded: bool = False,
-    ) -> "RichResponseBuilder":
+    ) -> RichResponseBuilder:
         """折りたたみセクション追加.
 
         Args:
@@ -496,7 +492,7 @@ class RichResponseBuilder:
     # メタデータ
     # =========================================================================
 
-    def set_metadata(self, key: str, value: Any) -> "RichResponseBuilder":
+    def set_metadata(self, key: str, value: Any) -> RichResponseBuilder:
         """メタデータ設定.
 
         Args:
@@ -544,6 +540,6 @@ class RichResponseBuilder:
 
 
 __all__ = [
-    "RichResponseBuilder",
     "ComponentFactory",
+    "RichResponseBuilder",
 ]

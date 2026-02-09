@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RAG Skill - 検索増強生成（Retrieval-Augmented Generation）能力.
 
 このモジュールは、知識ベースと LLM を統合した RAG 機能を提供します：
@@ -19,9 +18,10 @@ import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
-from agentflow.providers import get_llm
 from agentflow.memory.memory_manager import MemoryManager
 from agentflow.memory.types import CompressionConfig
+from agentflow.providers import get_llm
+
 
 if TYPE_CHECKING:
     from agentflow.providers.llm_provider import LLMProvider
@@ -99,7 +99,7 @@ class RAGSkill:
         self._logger = logging.getLogger(__name__)
 
         # LLM プロバイダー（環境変数から自動検出・松耦合）
-        self._llm: "LLMProvider" = get_llm(temperature=temperature)
+        self._llm: LLMProvider = get_llm(temperature=temperature)
 
         # Memory Manager（ベクトル検索有効）
         if memory_manager:

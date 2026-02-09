@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ワークスペース管理.
 
 Daytonaのワークスペース概念を参考に、サンドボックスとファイルシステムを
@@ -45,6 +44,7 @@ from typing import Any
 
 from agentflow.sandbox.base import ExecutionResult, SandboxConfig, SandboxState
 from agentflow.sandbox.lifecycle import ManagedSandbox
+
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ class WorkspaceState:
         return json.dumps(data, ensure_ascii=False, indent=2)
 
     @classmethod
-    def from_json(cls, json_str: str) -> "WorkspaceState":
+    def from_json(cls, json_str: str) -> WorkspaceState:
         """JSON文字列から復元."""
         import base64
 
@@ -188,7 +188,7 @@ class Workspace:
         name: str = "",
         provider: str = "docker",
         config: SandboxConfig | None = None,
-    ) -> "Workspace":
+    ) -> Workspace:
         """ファクトリメソッド: ワークスペースを作成.
 
         Args:
@@ -376,7 +376,7 @@ class Workspace:
             "sandbox_stats": self._sandbox.stats,
         }
 
-    async def __aenter__(self) -> "Workspace":
+    async def __aenter__(self) -> Workspace:
         """async with サポート."""
         await self.start()
         return self
@@ -405,9 +405,9 @@ class WorkspaceManager:
         >>> await manager.delete(ws.workspace_id)
     """
 
-    _instance: "WorkspaceManager | None" = None
+    _instance: WorkspaceManager | None = None
 
-    def __new__(cls) -> "WorkspaceManager":
+    def __new__(cls) -> WorkspaceManager:
         """シングルトンパターン."""
         if cls._instance is None:
             cls._instance = super().__new__(cls)
@@ -423,7 +423,7 @@ class WorkspaceManager:
         self._initialized = True
 
     @classmethod
-    def get_instance(cls) -> "WorkspaceManager":
+    def get_instance(cls) -> WorkspaceManager:
         """シングルトンインスタンスを取得."""
         return cls()
 

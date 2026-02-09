@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """商品データモデル - Schema.org Product 準拠.
 
 AI商取引向けに最適化された商品データ構造。

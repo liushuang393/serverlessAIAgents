@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Sentry 統合モジュール.
 
 エラー追跡とパフォーマンスモニタリングのための Sentry 統合を提供します。
@@ -15,7 +14,9 @@ from __future__ import annotations
 import functools
 import logging
 import os
-from typing import Any, Callable, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
+
 
 logger = logging.getLogger(__name__)
 
@@ -120,8 +121,7 @@ def capture_exception(
                 else:
                     scope.set_extra(key, value)
 
-            event_id = sentry_sdk.capture_exception(error)
-            return event_id
+            return sentry_sdk.capture_exception(error)
 
     except Exception as e:
         logger.warning(f"Failed to capture exception in Sentry: {e}")
@@ -163,8 +163,7 @@ def capture_message(
                 else:
                     scope.set_extra(key, value)
 
-            event_id = sentry_sdk.capture_message(message, level=level)
-            return event_id
+            return sentry_sdk.capture_message(message, level=level)
 
     except Exception as e:
         logger.warning(f"Failed to capture message in Sentry: {e}")

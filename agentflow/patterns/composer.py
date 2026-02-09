@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentComposer - 標準Agent組合パターン.
 
 Supervisor/Worker、Mesh、Hierarchy などの組合パターンを提供。
@@ -23,9 +22,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
-from agentflow.core.agent_block import AgentBlock
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from agentflow.core.agent_block import AgentBlock
 
 
 logger = logging.getLogger(__name__)

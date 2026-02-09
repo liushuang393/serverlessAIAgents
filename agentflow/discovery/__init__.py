@@ -20,6 +20,7 @@ from agentflow.discovery.base import (
 )
 from agentflow.discovery.registry import InMemoryAgentRegistry as AgentDiscovery
 
+
 __all__ = [
     "AgentDiscovery",
     "AgentEntry",

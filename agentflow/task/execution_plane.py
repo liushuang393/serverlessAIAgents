@@ -7,10 +7,12 @@ The Execution Plane is the 'doing' layer responsible for:
 """
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
 
 from agentflow.task.task import Task
 from agentflow.task.task_id import TaskID
+
 
 if TYPE_CHECKING:
     from agentflow.task.execution_event import ExecutionEvent

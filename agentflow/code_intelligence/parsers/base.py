@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """CodeParser - 統一パーサーインターフェース.
 
 多言語解析のための統一インターフェースを定義します。
@@ -14,10 +13,13 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from agentflow.code_intelligence.ast.unified_ast import UnifiedAST
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from agentflow.code_intelligence.ast.unified_ast import UnifiedAST
 
 
 class ParseError(Exception):
@@ -248,13 +250,12 @@ class TreeSitterParser(CodeParser):
         """
         # Tree-sitter の初期化コード
         # 実際の実装では tree_sitter ライブラリを使用
-        pass
 
 
 __all__ = [
-    "ParseError",
-    "ParseContext",
-    "ParseResult",
     "CodeParser",
+    "ParseContext",
+    "ParseError",
+    "ParseResult",
     "TreeSitterParser",
 ]

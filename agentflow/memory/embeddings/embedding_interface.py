@@ -30,7 +30,6 @@ class EmbeddingEngine(ABC):
             ValueError: 無効なテキストの場合
             RuntimeError: 埋め込み生成に失敗した場合
         """
-        pass
 
     @abstractmethod
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
@@ -46,7 +45,6 @@ class EmbeddingEngine(ABC):
             ValueError: 無効なテキストの場合
             RuntimeError: 埋め込み生成に失敗した場合
         """
-        pass
 
     @abstractmethod
     def get_dimension(self) -> int:
@@ -55,7 +53,6 @@ class EmbeddingEngine(ABC):
         Returns:
             次元数
         """
-        pass
 
     @abstractmethod
     def get_model_name(self) -> str:
@@ -64,5 +61,4 @@ class EmbeddingEngine(ABC):
         Returns:
             モデル名
         """
-        pass
 

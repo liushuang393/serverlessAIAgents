@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OneDriveConnector - Microsoft Graph API コネクタ.
 
 OneDrive / SharePoint へのアクセスを提供。
@@ -18,14 +17,15 @@ Microsoft Graph API を使用。
 import logging
 import mimetypes
 import os
-from datetime import datetime, timezone
-from typing import Any, AsyncIterator
+from datetime import UTC, datetime
+from typing import Any
 
 from pydantic import Field
 
-from agentflow.datalake.auth import AuthCredentials, AuthProvider
+from agentflow.datalake.auth import AuthProvider
 from agentflow.datalake.connector import ConnectorConfig, DataConnector
 from agentflow.datalake.core import DataItem, ReadResult
+
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +95,12 @@ class OneDriveConnector(DataConnector):
             try:
                 import aiohttp
             except ImportError as e:
-                raise ImportError(
+                msg = (
                     "aiohttp is required for OneDrive support. "
                     "Install with: pip install aiohttp"
+                )
+                raise ImportError(
+                    msg
                 ) from e
 
             timeout = aiohttp.ClientTimeout(total=self._config.timeout)
@@ -113,7 +116,7 @@ class OneDriveConnector(DataConnector):
         """
         # トークンが有効な場合は再利用
         if self._access_token and self._token_expires:
-            if datetime.now(timezone.utc) < self._token_expires:
+            if datetime.now(UTC) < self._token_expires:
                 return self._access_token
 
         # 認証プロバイダから取得
@@ -132,9 +135,12 @@ class OneDriveConnector(DataConnector):
         tenant_id = self._config.tenant_id or os.getenv("MICROSOFT_TENANT_ID", "common")
 
         if not client_id or not client_secret:
-            raise ValueError(
+            msg = (
                 "Microsoft credentials required. Set MICROSOFT_CLIENT_ID and "
                 "MICROSOFT_CLIENT_SECRET environment variables."
+            )
+            raise ValueError(
+                msg
             )
 
         session = await self._get_session()
@@ -153,8 +159,8 @@ class OneDriveConnector(DataConnector):
 
             self._access_token = result["access_token"]
             expires_in = result.get("expires_in", 3600)
-            self._token_expires = datetime.now(timezone.utc).replace(
-                second=datetime.now(timezone.utc).second + expires_in - 60
+            self._token_expires = datetime.now(UTC).replace(
+                second=datetime.now(UTC).second + expires_in - 60
             )
 
             return self._access_token
@@ -167,10 +173,9 @@ class OneDriveConnector(DataConnector):
             if self._config.drive_id:
                 return f"{base}/drives/{self._config.drive_id}"
             return f"{base}/drive"
-        elif self._config.drive_id:
+        if self._config.drive_id:
             return f"https://graph.microsoft.com/v1.0/drives/{self._config.drive_id}"
-        else:
-            return "https://graph.microsoft.com/v1.0/me/drive"
+        return "https://graph.microsoft.com/v1.0/me/drive"
 
     async def _request(
         self,
@@ -332,7 +337,7 @@ class OneDriveConnector(DataConnector):
                 uri=f"onedrive://{path}",
                 name=result["name"],
                 size=result.get("size"),
-                modified_at=datetime.now(timezone.utc),
+                modified_at=datetime.now(UTC),
                 content_type=content_type,
                 metadata={"id": result["id"]},
             )

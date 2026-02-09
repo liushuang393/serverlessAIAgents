@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """セキュリティスキャンスキル - Security Scanner.
 
 コードベースのセキュリティ脆弱性を検出するスキル。
@@ -246,7 +245,7 @@ class SecurityScanner(AgentBlock):
         self, vulnerabilities: list[Vulnerability]
     ) -> ScanSummary:
         """サマリーを作成."""
-        severity_counts = {s: 0 for s in VulnerabilitySeverity}
+        severity_counts = dict.fromkeys(VulnerabilitySeverity, 0)
         for v in vulnerabilities:
             severity_counts[v.severity] += 1
 

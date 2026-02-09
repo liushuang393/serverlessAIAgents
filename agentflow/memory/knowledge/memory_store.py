@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """インメモリ知識ストア実装.
 
 memvid-sdkが利用できない場合の軽量回退実装。
@@ -18,15 +17,15 @@ import math
 import re
 import uuid
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 from agentflow.memory.knowledge.types import (
     KnowledgeEntry,
     SearchResult,
     SearchType,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -111,7 +110,7 @@ class InMemoryKnowledgeStore:
         self._persist_path.parent.mkdir(parents=True, exist_ok=True)
         data = {
             "entries": [e.to_dict() for e in self._entries.values()],
-            "saved_at": datetime.now(timezone.utc).isoformat(),
+            "saved_at": datetime.now(UTC).isoformat(),
         }
 
         with self._persist_path.open("w", encoding="utf-8") as f:
@@ -124,8 +123,7 @@ class InMemoryKnowledgeStore:
         """テキストをトークン化."""
         # シンプルな正規表現トークナイザー
         text = text.lower()
-        tokens = re.findall(r"\w+", text)
-        return tokens
+        return re.findall(r"\w+", text)
 
     def _index_entry(self, entry: KnowledgeEntry) -> None:
         """エントリをインデックスに追加."""
@@ -273,7 +271,7 @@ class InMemoryKnowledgeStore:
         old_entry = self._entries[entry.id]
         self._remove_from_index(old_entry)
 
-        entry.updated_at = datetime.now(timezone.utc)
+        entry.updated_at = datetime.now(UTC)
         self._entries[entry.id] = entry
         self._index_entry(entry)
         self._dirty = True

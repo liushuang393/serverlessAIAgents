@@ -7,11 +7,11 @@ from __future__ import annotations
 
 import logging
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
 from agentflow.governance.audit import AuditEvent, AuditLogger, LoggingAuditLogger
-from agentflow.providers.tool_provider import RegisteredTool
 from agentflow.security.policy_engine import (
     AuthContext,
     AuthDecision,
@@ -19,6 +19,10 @@ from agentflow.security.policy_engine import (
     AuthResult,
     PolicyEngine,
 )
+
+
+if TYPE_CHECKING:
+    from agentflow.providers.tool_provider import RegisteredTool
 
 
 class GovernanceDecision(str, Enum):

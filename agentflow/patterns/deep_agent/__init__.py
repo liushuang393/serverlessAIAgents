@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeepAgent パターン - 高度なマルチエージェント協調システム.
 
 DeepAgentsフレームワーク（arXiv:2504.04755）に基づく実装。
@@ -69,49 +68,50 @@ from agentflow.patterns.deep_agent.result_summarizer import (
     SummarizerConfig,
 )
 
+
 __all__ = [
-    # メイン協調器
-    "DeepAgentCoordinator",
-    # データモデル
-    "TaskStatus",
-    "AgentType",
-    "TodoItem",
-    "CognitiveAnalysis",
-    "QualityDimension",
-    "QualityReview",
-    "EvolutionRecord",
-    "MessageType",
     "AgentMessage",
-    "ParallelGroup",
-    "CompactionStrategy",
-    "MemoryTier",
-    "CompactionResult",
-    # ストレージ
-    "RuntimeStore",
-    "EvolutionStore",
-    "MemoryRuntimeStore",
-    "MemoryEvolutionStore",
+    "AgentPool",
+    "AgentType",
+    "AnalysisAgent",
     # Agent池
     "BaseAgent",
-    "ResearchAgent",
-    "AnalysisAgent",
-    "PlanningAgent",
+    "CognitiveAnalysis",
+    "CompactionResult",
+    "CompactionStrategy",
+    # コンテキスト圧縮
+    "ContextCompressor",
+    # メイン協調器
+    "DeepAgentCoordinator",
+    "DeepAgentResultFilter",
+    "EvolutionRecord",
+    "EvolutionStore",
     "ExecutionAgent",
-    "ReviewAgent",
-    "ReportAgent",
-    "AgentPool",
+    "FilterLevel",
+    "MemoryEvolutionStore",
+    "MemoryRuntimeStore",
+    "MemoryTier",
+    "MessageType",
+    "ParallelGroup",
+    "PlanningAgent",
     # 進捗管理
     "ProgressEvent",
     "ProgressManager",
-    # コンテキスト圧縮
-    "ContextCompressor",
-    # 自己進化
-    "SelfEvolver",
+    "QualityDimension",
+    "QualityReview",
+    "ReportAgent",
+    "ResearchAgent",
     # 結果サマライザー（Context Engineering）
     "ResultSummarizer",
-    "SummarizerConfig",
+    "ReviewAgent",
+    # ストレージ
+    "RuntimeStore",
+    # 自己進化
+    "SelfEvolver",
     "SummarizedResult",
-    "FilterLevel",
-    "DeepAgentResultFilter",
+    "SummarizerConfig",
+    # データモデル
+    "TaskStatus",
+    "TodoItem",
 ]
 

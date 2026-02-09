@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """UnifiedAST - 統一抽象構文木.
 
 言語非依存の抽象構文木モデルを提供します。
@@ -16,11 +15,15 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime, UTC
-from enum import Enum
-from typing import Any, Iterator
 import uuid
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from enum import Enum
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 class ASTNodeType(str, Enum):
@@ -105,7 +108,7 @@ class TypeInfo:
     kind: str = "primitive"
     is_nullable: bool = False
     type_params: list[str] = field(default_factory=list)
-    element_type: "TypeInfo | None" = None
+    element_type: TypeInfo | None = None
     source_type: str = ""  # 元の言語の型
 
     def to_dict(self) -> dict[str, Any]:
@@ -207,15 +210,15 @@ class ASTNode:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     type: ASTNodeType = ASTNodeType.STATEMENT
     name: str = ""
-    children: list["ASTNode"] = field(default_factory=list)
+    children: list[ASTNode] = field(default_factory=list)
     attributes: dict[str, Any] = field(default_factory=dict)
     line: int = 0
     column: int = 0
     end_line: int = 0
     end_column: int = 0
-    parent: "ASTNode | None" = field(default=None, repr=False)
+    parent: ASTNode | None = field(default=None, repr=False)
 
-    def add_child(self, child: "ASTNode") -> None:
+    def add_child(self, child: ASTNode) -> None:
         """子ノードを追加.
 
         Args:
@@ -224,7 +227,7 @@ class ASTNode:
         child.parent = self
         self.children.append(child)
 
-    def find_by_type(self, node_type: ASTNodeType) -> Iterator["ASTNode"]:
+    def find_by_type(self, node_type: ASTNodeType) -> Iterator[ASTNode]:
         """指定タイプのノードを検索.
 
         Args:
@@ -238,7 +241,7 @@ class ASTNode:
         for child in self.children:
             yield from child.find_by_type(node_type)
 
-    def find_by_name(self, name: str) -> Iterator["ASTNode"]:
+    def find_by_name(self, name: str) -> Iterator[ASTNode]:
         """指定名前のノードを検索.
 
         Args:
@@ -267,7 +270,7 @@ class ASTNode:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "ASTNode":
+    def from_dict(cls, data: dict[str, Any]) -> ASTNode:
         """辞書から作成."""
         node = cls(
             id=data.get("id", str(uuid.uuid4())),
@@ -392,7 +395,7 @@ class UnifiedAST:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "UnifiedAST":
+    def from_dict(cls, data: dict[str, Any]) -> UnifiedAST:
         """辞書から作成."""
         ast = cls(
             id=data.get("id", str(uuid.uuid4())),
@@ -428,10 +431,10 @@ class UnifiedAST:
 
 
 __all__ = [
-    "ASTNodeType",
-    "TypeInfo",
-    "SymbolInfo",
-    "ImportInfo",
     "ASTNode",
+    "ASTNodeType",
+    "ImportInfo",
+    "SymbolInfo",
+    "TypeInfo",
     "UnifiedAST",
 ]

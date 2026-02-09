@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentFlow CLI skills コマンド.
 
 このモジュールは Skills を管理するコマンドを提供します：
@@ -22,7 +21,6 @@ from agentflow.skills import (
     Skill,
     SkillLoader,
     SkillMatcher,
-    SkillPersister,
     SkillRegistry,
     SkillValidator,
 )
@@ -96,10 +94,10 @@ def list_skills(ctx: click.Context, learned: bool, project: bool) -> None:
 
     # フィルタリング
     if learned:
-        learned_dir = Path.home() / ".agentflow" / "learned_skills"
+        Path.home() / ".agentflow" / "learned_skills"
         all_skills = [s for s in all_skills if s.metadata.learned]
     elif project:
-        project_dir = Path(".agentflow") / "skills"
+        Path(".agentflow") / "skills"
         # プロジェクト Skills は learned フラグなし
         all_skills = [s for s in all_skills if not s.metadata.learned]
 

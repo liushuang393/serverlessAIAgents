@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """実行モード切替機構.
 
 isolated/real_machine モードの動的切替を安全に管理。
@@ -22,9 +21,13 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Awaitable
+from typing import TYPE_CHECKING, Any
 
 from agentflow.skills.os.config import ExecutionMode
+
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 
 class SwitchDirection(str, Enum):
@@ -198,8 +201,9 @@ class ModeSwitcher:
         approved_by: str | None = None
         if not skip_confirmation:
             if self._confirmation_handler is None:
+                msg = "real_machine モードへの切替には人工確認ハンドラが必要です"
                 raise ModeSwitchDenied(
-                    "real_machine モードへの切替には人工確認ハンドラが必要です"
+                    msg
                 )
 
             confirmed = await self._confirmation_handler(
@@ -216,7 +220,8 @@ class ModeSwitcher:
                     success=False,
                 )
                 self._history.append(transition)
-                raise ModeSwitchDenied("ユーザーが切替を拒否しました")
+                msg = "ユーザーが切替を拒否しました"
+                raise ModeSwitchDenied(msg)
 
             approved_by = "user"
 

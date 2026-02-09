@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentFlow Agents - 専門化されたAgentコレクション.
 
 通用Agentでは対応しにくいドメイン固有のタスクに対応する
@@ -42,6 +41,17 @@
     >>> coordinator = DeepAgentCoordinator(agent_pool=pool)
 """
 
+from agentflow.agents.data_analytics_agent import (
+    ChartDataSchema,
+    DataAnalyticsAgent,
+    DataAnalyticsConfig,
+    DataAnalyticsInput,
+    DataAnalyticsOutput,
+    DSLOutputSchema,
+    InsightSchema,
+    NL2SQLEnhancementConfig,
+    SuggestionOutputSchema,
+)
 from agentflow.agents.faq_agent import (
     ChartSchema,
     DocumentSchema,
@@ -55,38 +65,28 @@ from agentflow.agents.sales_agent import (
     SalesAgent,
     SalesAgentConfig,
 )
-from agentflow.agents.data_analytics_agent import (
-    DataAnalyticsAgent,
-    DataAnalyticsConfig,
-    DataAnalyticsInput,
-    DataAnalyticsOutput,
-    NL2SQLEnhancementConfig,
-    DSLOutputSchema,
-    ChartDataSchema,
-    InsightSchema,
-    SuggestionOutputSchema,
-)
+
 
 __all__ = [
-    # FAQ Agent
-    "FAQAgent",
-    "FAQAgentConfig",
-    "FAQInput",
-    "FAQOutput",
-    "DocumentSchema",
+    "ChartDataSchema",
     "ChartSchema",
-    "SuggestionSchema",
-    # Sales Agent
-    "SalesAgent",
-    "SalesAgentConfig",
+    "DSLOutputSchema",
     # DataAnalytics Agent（NL2SQL + DSL + Chart + Suggestion 統合）
     "DataAnalyticsAgent",
     "DataAnalyticsConfig",
     "DataAnalyticsInput",
     "DataAnalyticsOutput",
-    "NL2SQLEnhancementConfig",
-    "DSLOutputSchema",
-    "ChartDataSchema",
+    "DocumentSchema",
+    # FAQ Agent
+    "FAQAgent",
+    "FAQAgentConfig",
+    "FAQInput",
+    "FAQOutput",
     "InsightSchema",
+    "NL2SQLEnhancementConfig",
+    # Sales Agent
+    "SalesAgent",
+    "SalesAgentConfig",
     "SuggestionOutputSchema",
+    "SuggestionSchema",
 ]

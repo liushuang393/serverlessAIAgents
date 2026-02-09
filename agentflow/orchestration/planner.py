@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """計画Agent - タスク分解と実行計画作成.
 
 Manus分析に基づく計画駆動型実行の実装。
@@ -23,7 +22,7 @@ from __future__ import annotations
 
 import logging
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import Any
@@ -88,7 +87,7 @@ class PlanStep(BaseModel):
     error: str | None = Field(default=None)
 
     # サブステップ（並列/順次実行用）
-    sub_steps: list["PlanStep"] = Field(default_factory=list)
+    sub_steps: list[PlanStep] = Field(default_factory=list)
 
 
 class ExecutionPlan(BaseModel):
@@ -460,10 +459,10 @@ JSON形式で代替ステップを提案:
 
 # エクスポート
 __all__ = [
-    "StepType",
-    "StepStatus",
-    "PlanStep",
     "ExecutionPlan",
-    "PlannerConfig",
+    "PlanStep",
     "PlannerAgent",
+    "PlannerConfig",
+    "StepStatus",
+    "StepType",
 ]

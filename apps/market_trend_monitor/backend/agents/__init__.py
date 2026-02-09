@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """エージェントパッケージ.
 
 Market Trend Monitor の全エージェントを提供します。
@@ -31,22 +30,23 @@ from apps.market_trend_monitor.backend.agents.signal_scorer_agent import (
     SignalScorerOutput,
 )
 
+
 __all__ = [
     # 基本エージェント
     "AnalyzerAgent",
     "CollectorAgent",
-    "NotifierAgent",
-    "ReporterAgent",
     # 核心機能エージェント
     "EvidenceLedgerAgent",
     "EvidenceLedgerInput",
     "EvidenceLedgerOutput",
+    "NotifierAgent",
     "PredictionReviewAgent",
     "PredictionReviewInput",
     "PredictionReviewOutput",
     "RedTeamAgent",
     "RedTeamInput",
     "RedTeamOutput",
+    "ReporterAgent",
     "SignalScorerAgent",
     "SignalScorerInput",
     "SignalScorerOutput",

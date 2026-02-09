@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FastAPI 統合モジュール.
 
 このモジュールは、AgentをFastAPI APIとして公開する機能を提供します。
@@ -234,7 +233,7 @@ def create_app(
         from fastapi import FastAPI
         from fastapi.middleware.cors import CORSMiddleware
     except ImportError:
-        logger.error("FastAPI not installed. Please install: pip install fastapi")
+        logger.exception("FastAPI not installed. Please install: pip install fastapi")
         raise
 
     app = FastAPI(title=title, version=version, **kwargs)
@@ -303,7 +302,8 @@ def create_sse_response(
     try:
         from fastapi.responses import StreamingResponse
     except ImportError:
-        raise ImportError("FastAPI is required for create_sse_response")
+        msg = "FastAPI is required for create_sse_response"
+        raise ImportError(msg)
 
     from agentflow.protocols.agui_events import AGUIEvent
 
@@ -319,7 +319,7 @@ def create_sse_response(
                     yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
                 else:
                     # その他は文字列化
-                    yield f"data: {str(event)}\n\n"
+                    yield f"data: {event!s}\n\n"
         except Exception as e:
             # エラー時も SSE 形式でエラーを送信
             error_data = {

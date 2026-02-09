@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """COBOLParser MCP Tool.
 
 このモジュールはCOBOLソースコードを解析してASTとメタデータを生成するMCPツールを提供します。
@@ -13,8 +12,9 @@
 import re
 from typing import Any
 
-from agentflow import MCPTool, MCPToolRequest, MCPToolResponse
 from apps.code_migration_assistant.parsers import PLYCobolParser
+
+from agentflow import MCPTool, MCPToolRequest, MCPToolResponse
 
 
 class COBOLParser(MCPTool):
@@ -58,7 +58,7 @@ class COBOLParser(MCPTool):
         # 入力パラメータを取得
         cobol_code = request.input.get("cobol_code")
         file_name = request.input.get("file_name", "unknown.cob")
-        encoding = request.input.get("encoding", "utf-8")
+        request.input.get("encoding", "utf-8")
         parse_options = request.input.get("parse_options", {})
 
         # 必須パラメータチェック
@@ -90,7 +90,7 @@ class COBOLParser(MCPTool):
         except Exception as e:
             return MCPToolResponse(
                 success=False,
-                errors=[f"Parse failed: {str(e)}"],
+                errors=[f"Parse failed: {e!s}"],
             )
 
     def _parse_cobol(
@@ -134,7 +134,7 @@ class COBOLParser(MCPTool):
             return ast, metadata, errors, warnings
 
         except Exception as e:
-            errors.append(f"PLY parser error: {str(e)}")
+            errors.append(f"PLY parser error: {e!s}")
             # フォールバック: 簡易パーサー
             return self._fallback_parse(cobol_code, file_name, strict_mode)
 
@@ -278,12 +278,11 @@ class COBOLParser(MCPTool):
         """
         if "V" in pic_clause.upper():
             return "decimal"
-        elif "9" in pic_clause:
+        if "9" in pic_clause:
             return "numeric"
-        elif "X" in pic_clause.upper():
+        if "X" in pic_clause.upper():
             return "string"
-        else:
-            return "unknown"
+        return "unknown"
 
     def _extract_procedures(self, procedure_division_lines: list[str]) -> list[dict[str, Any]]:
         """プロシージャを抽出.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """COBOL Migration Skill.
 
 COBOL から Java への移行を支援する Skill。
@@ -156,7 +155,7 @@ class CobolMigrationSkill:
         """COBOL 型を Java 型に変換."""
         if cobol_type == "decimal" or "V" in pic_clause.upper():
             return "BigDecimal"
-        elif cobol_type == "numeric":
+        if cobol_type == "numeric":
             # 桁数で int/long を判定
             import re
             match = re.search(r"9\((\d+)\)", pic_clause)
@@ -164,7 +163,7 @@ class CobolMigrationSkill:
                 digits = int(match.group(1))
                 return "long" if digits > 9 else "int"
             return "int"
-        elif cobol_type == "string":
+        if cobol_type == "string":
             return "String"
         return "Object"
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """高度なチャンキング戦略モジュール.
 
 業界評価の高いチャンキング戦略を提供:
@@ -24,6 +23,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -88,7 +88,7 @@ class Chunk:
         metadata: dict[str, Any] | None = None,
         start_char: int = 0,
         end_char: int = 0,
-    ) -> "Chunk":
+    ) -> Chunk:
         """チャンクを作成."""
         content_hash = hashlib.sha256(content.encode()).hexdigest()[:12]
         return cls(
@@ -138,7 +138,7 @@ class RecursiveChunker(BaseChunker):
     async def chunk(self, text: str, metadata: dict[str, Any] | None = None) -> list[Chunk]:
         """テキストを再帰的に分割."""
         chunks = self._split_text(text, self._config.separators)
-        
+
         result = []
         current_pos = 0
         for i, chunk_text in enumerate(chunks):
@@ -147,7 +147,7 @@ class RecursiveChunker(BaseChunker):
                 if start == -1:
                     start = current_pos
                 end = start + len(chunk_text)
-                
+
                 chunk = Chunk.create(
                     content=chunk_text.strip(),
                     index=i,
@@ -169,10 +169,7 @@ class RecursiveChunker(BaseChunker):
         separator = separators[0]
         next_separators = separators[1:]
 
-        if separator:
-            splits = text.split(separator)
-        else:
-            splits = list(text)
+        splits = text.split(separator) if separator else list(text)
 
         # 各分割を処理
         chunks = []
@@ -180,13 +177,13 @@ class RecursiveChunker(BaseChunker):
 
         for split in splits:
             potential = current_chunk + (separator if current_chunk and self._config.keep_separator else "") + split
-            
+
             if len(potential) <= self._config.chunk_size:
                 current_chunk = potential
             else:
                 if current_chunk:
                     chunks.append(current_chunk)
-                
+
                 # 長すぎる場合は次のセパレータで再帰分割
                 if len(split) > self._config.chunk_size and next_separators:
                     sub_chunks = self._split_text(split, next_separators)
@@ -246,7 +243,7 @@ class SemanticChunker(BaseChunker):
         """意味的に分割."""
         # まず文単位で分割
         sentences = self._split_into_sentences(text)
-        
+
         if len(sentences) <= 1:
             return [Chunk.create(
                 content=text.strip(),
@@ -259,7 +256,7 @@ class SemanticChunker(BaseChunker):
             from agentflow.providers import get_embedding
             embedding_provider = get_embedding()
             embeddings = await embedding_provider.embed_batch(sentences)
-            
+
             # 類似度に基づいてグループ化
             groups = self._group_by_similarity(sentences, embeddings)
         except Exception as e:
@@ -275,7 +272,7 @@ class SemanticChunker(BaseChunker):
             if len(content) > self._config.chunk_size:
                 # 長すぎる場合は再分割
                 sub_chunks = await RecursiveChunker(self._config).chunk(content, metadata)
-                for j, sub_chunk in enumerate(sub_chunks):
+                for _j, sub_chunk in enumerate(sub_chunks):
                     sub_chunk.index = len(result)
                     sub_chunk.metadata["strategy"] = "semantic"
                     result.append(sub_chunk)
@@ -293,7 +290,7 @@ class SemanticChunker(BaseChunker):
     def _split_into_sentences(self, text: str) -> list[str]:
         """文単位で分割."""
         # 日本語と英語の文末を考慮
-        pattern = r'(?<=[。！？.!?])\s*'
+        pattern = r"(?<=[。！？.!?])\s*"
         sentences = re.split(pattern, text)
         return [s.strip() for s in sentences if s.strip()]
 
@@ -306,16 +303,16 @@ class SemanticChunker(BaseChunker):
         import numpy as np
 
         groups: list[list[str]] = [[sentences[0]]]
-        
+
         for i in range(1, len(sentences)):
             # 前の文との類似度を計算
             prev_emb = np.array(embeddings[i - 1])
             curr_emb = np.array(embeddings[i])
-            
+
             similarity = np.dot(prev_emb, curr_emb) / (
                 np.linalg.norm(prev_emb) * np.linalg.norm(curr_emb)
             )
-            
+
             # 類似度が閾値以上なら同じグループ
             if similarity >= self._similarity_threshold:
                 groups[-1].append(sentences[i])
@@ -334,14 +331,14 @@ class SentenceChunker(BaseChunker):
     async def chunk(self, text: str, metadata: dict[str, Any] | None = None) -> list[Chunk]:
         """文単位で分割."""
         sentences = self._split_into_sentences(text)
-        
+
         chunks = []
         current_chunk = []
         current_size = 0
 
         for sentence in sentences:
             sentence_size = len(sentence)
-            
+
             if current_size + sentence_size > self._config.chunk_size and current_chunk:
                 # 現在のチャンクを保存
                 content = " ".join(current_chunk)
@@ -351,7 +348,7 @@ class SentenceChunker(BaseChunker):
                     metadata={**(metadata or {}), "strategy": "sentence"},
                 )
                 chunks.append(chunk)
-                
+
                 # オーバーラップ: 最後の数文を保持
                 overlap_sentences = []
                 overlap_size = 0
@@ -361,7 +358,7 @@ class SentenceChunker(BaseChunker):
                         overlap_size += len(s)
                     else:
                         break
-                
+
                 current_chunk = overlap_sentences
                 current_size = overlap_size
 
@@ -383,7 +380,7 @@ class SentenceChunker(BaseChunker):
 
     def _split_into_sentences(self, text: str) -> list[str]:
         """文単位で分割."""
-        pattern = r'(?<=[。！？.!?])\s*'
+        pattern = r"(?<=[。！？.!?])\s*"
         sentences = re.split(pattern, text)
         return [s.strip() for s in sentences if s.strip()]
 
@@ -418,17 +415,17 @@ class TokenChunker(BaseChunker):
             self._encoder = tiktoken.get_encoding("cl100k_base")
 
         tokens = self._encoder.encode(text)
-        
+
         chunks = []
         chunk_size = self._config.chunk_size
         overlap = self._config.chunk_overlap
-        
+
         i = 0
         while i < len(tokens):
             # チャンクのトークンを取得
             chunk_tokens = tokens[i:i + chunk_size]
             content = self._encoder.decode(chunk_tokens)
-            
+
             chunk = Chunk.create(
                 content=content.strip(),
                 index=len(chunks),
@@ -439,7 +436,7 @@ class TokenChunker(BaseChunker):
                 },
             )
             chunks.append(chunk)
-            
+
             i += chunk_size - overlap
 
         self._logger.debug(f"TokenChunker: {len(chunks)} chunks from {len(tokens)} tokens")
@@ -456,11 +453,11 @@ class MarkdownChunker(BaseChunker):
     async def chunk(self, text: str, metadata: dict[str, Any] | None = None) -> list[Chunk]:
         """Markdownヘッダーで分割."""
         # ヘッダーパターン
-        header_pattern = r'^(#{1,6})\s+(.+)$'
-        
-        lines = text.split('\n')
+        header_pattern = r"^(#{1,6})\s+(.+)$"
+
+        lines = text.split("\n")
         sections: list[tuple[str, str, list[str]]] = []  # (level, header, content_lines)
-        
+
         current_header = ""
         current_level = ""
         current_content: list[str] = []
@@ -471,7 +468,7 @@ class MarkdownChunker(BaseChunker):
                 # 前のセクションを保存
                 if current_content or current_header:
                     sections.append((current_level, current_header, current_content))
-                
+
                 current_level = match.group(1)
                 current_header = match.group(2)
                 current_content = []
@@ -485,12 +482,12 @@ class MarkdownChunker(BaseChunker):
         # セクションをチャンクに変換
         chunks = []
         for level, header, content_lines in sections:
-            content = '\n'.join(content_lines).strip()
+            content = "\n".join(content_lines).strip()
             if not content and not header:
                 continue
 
             full_content = f"{level} {header}\n\n{content}" if header else content
-            
+
             # サイズチェック
             if len(full_content) > self._config.chunk_size:
                 # 長すぎる場合は再分割
@@ -540,7 +537,7 @@ def get_chunker(strategy: ChunkStrategy | str, config: ChunkConfig | None = None
     }
 
     chunker_cls = chunkers.get(strategy, RecursiveChunker)
-    
+
     if config:
         config.strategy = strategy
     else:
@@ -550,14 +547,14 @@ def get_chunker(strategy: ChunkStrategy | str, config: ChunkConfig | None = None
 
 
 __all__ = [
-    "ChunkStrategy",
-    "ChunkConfig",
-    "Chunk",
     "BaseChunker",
+    "Chunk",
+    "ChunkConfig",
+    "ChunkStrategy",
+    "MarkdownChunker",
     "RecursiveChunker",
     "SemanticChunker",
     "SentenceChunker",
     "TokenChunker",
-    "MarkdownChunker",
     "get_chunker",
 ]

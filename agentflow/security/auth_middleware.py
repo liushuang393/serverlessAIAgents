@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """認証ミドルウェアモジュール.
 
 JWT および API Key ベースの認証を提供します。
@@ -15,9 +14,11 @@ from __future__ import annotations
 import functools
 import logging
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Callable, TypeVar
+from datetime import UTC, datetime
+from typing import Any, TypeVar
+
 
 logger = logging.getLogger(__name__)
 
@@ -252,10 +253,11 @@ class AuthMiddleware:
             raise ValueError(msg)
 
         try:
-            import jwt
             from datetime import timedelta
 
-            now = datetime.now(timezone.utc)
+            import jwt
+
+            now = datetime.now(UTC)
             expire = now + timedelta(
                 minutes=expire_minutes or self._jwt_config.expire_minutes
             )
@@ -327,7 +329,7 @@ def get_current_user() -> AuthUser | None:
     return _current_user
 
 
-def require_auth(func: F) -> F:
+def require_auth[F: Callable[..., Any]](func: F) -> F:
     """認証必須デコレータ.
 
     Example:
@@ -343,7 +345,8 @@ def require_auth(func: F) -> F:
         if not user:
             from agentflow.core.exceptions import AgentFlowError
 
-            raise AgentFlowError("Authentication required")
+            msg = "Authentication required"
+            raise AgentFlowError(msg)
         return await func(*args, **kwargs)
 
     @functools.wraps(func)
@@ -352,7 +355,8 @@ def require_auth(func: F) -> F:
         if not user:
             from agentflow.core.exceptions import AgentFlowError
 
-            raise AgentFlowError("Authentication required")
+            msg = "Authentication required"
+            raise AgentFlowError(msg)
         return func(*args, **kwargs)
 
     import asyncio
@@ -378,11 +382,13 @@ def require_permission(permission: str) -> Callable[[F], F]:
             if not user:
                 from agentflow.core.exceptions import AgentFlowError
 
-                raise AgentFlowError("Authentication required")
+                msg = "Authentication required"
+                raise AgentFlowError(msg)
             if not user.has_permission(permission):
                 from agentflow.core.exceptions import AgentFlowError
 
-                raise AgentFlowError(f"Permission denied: {permission}")
+                msg = f"Permission denied: {permission}"
+                raise AgentFlowError(msg)
             return await func(*args, **kwargs)
 
         @functools.wraps(func)
@@ -391,11 +397,13 @@ def require_permission(permission: str) -> Callable[[F], F]:
             if not user:
                 from agentflow.core.exceptions import AgentFlowError
 
-                raise AgentFlowError("Authentication required")
+                msg = "Authentication required"
+                raise AgentFlowError(msg)
             if not user.has_permission(permission):
                 from agentflow.core.exceptions import AgentFlowError
 
-                raise AgentFlowError(f"Permission denied: {permission}")
+                msg = f"Permission denied: {permission}"
+                raise AgentFlowError(msg)
             return func(*args, **kwargs)
 
         import asyncio

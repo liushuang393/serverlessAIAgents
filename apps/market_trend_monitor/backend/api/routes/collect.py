@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 """データ収集API."""
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-
 from apps.market_trend_monitor.backend.api.state import store
 from apps.market_trend_monitor.backend.config import config
 from apps.market_trend_monitor.backend.workflow import run as run_workflow
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
 
 router = APIRouter(tags=["データ収集"])
 

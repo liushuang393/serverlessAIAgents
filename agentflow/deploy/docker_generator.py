@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Docker テンプレート生成モジュール.
 
 Dockerfile と docker-compose.yml を生成します。
@@ -16,6 +15,7 @@ import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -43,9 +43,9 @@ class DockerConfig:
     extra_packages: list[str] = field(default_factory=list)
 
 
-DOCKERFILE_TEMPLATE = '''# -*- coding: utf-8 -*-
+DOCKERFILE_TEMPLATE = """# -*- coding: utf-8 -*-
 # AgentFlow Docker Image
-# 
+#
 # Build: docker build -t {app_name} .
 # Run: docker run -p {port}:{port} {app_name}
 
@@ -111,10 +111,10 @@ EXPOSE {port}
 
 # Entry point
 CMD ["uvicorn", "{entry_point}", "--host", "0.0.0.0", "--port", "{port}"]
-'''
+"""
 
 
-DOCKER_COMPOSE_TEMPLATE = '''# -*- coding: utf-8 -*-
+DOCKER_COMPOSE_TEMPLATE = """# -*- coding: utf-8 -*-
 # AgentFlow Docker Compose
 #
 # Development: docker compose up
@@ -199,7 +199,7 @@ networks:
 volumes:
   redis-data:
   postgres-data:
-'''
+"""
 
 
 def generate_dockerfile(

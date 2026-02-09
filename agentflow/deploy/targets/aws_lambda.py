@@ -1,15 +1,11 @@
-# -*- coding: utf-8 -*-
 """AWSLambdaTarget - AWS Lambda デプロイターゲット."""
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import zipfile
-from collections.abc import AsyncIterator
 from io import BytesIO
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.core.interfaces import (
     ConfigField,
@@ -18,6 +14,12 @@ from agentflow.core.interfaces import (
     ValidationResult,
 )
 from agentflow.deploy.targets.base import BaseDeployTarget
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
+
 
 logger = logging.getLogger(__name__)
 

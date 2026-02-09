@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Discord Adapter - Discord 消息平台适配器.
 
 支持通过 discord.py 库与 Discord Bot API 集成。
@@ -31,6 +30,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from agentflow.channels.base import MessageChannelAdapter, UserInfo
+
 
 if TYPE_CHECKING:
     from agentflow.channels.gateway import MessageGateway
@@ -155,7 +155,7 @@ class DiscordAdapter(MessageChannelAdapter):
             return str(message.id)
 
         except Exception as e:
-            self._logger.error(f"Failed to send Discord message: {e}")
+            self._logger.exception(f"Failed to send Discord message: {e}")
             raise
 
     async def send_typing_indicator(self, channel_id: str) -> None:
@@ -209,7 +209,7 @@ class DiscordAdapter(MessageChannelAdapter):
             return str(message.id)
 
         except Exception as e:
-            self._logger.error(f"Failed to send image: {e}")
+            self._logger.exception(f"Failed to send image: {e}")
             raise
 
     async def send_file(
@@ -246,7 +246,7 @@ class DiscordAdapter(MessageChannelAdapter):
             return str(message.id)
 
         except Exception as e:
-            self._logger.error(f"Failed to send file: {e}")
+            self._logger.exception(f"Failed to send file: {e}")
             raise
 
     async def delete_message(
@@ -429,7 +429,7 @@ class DiscordAdapter(MessageChannelAdapter):
                 }
             return {}
         except Exception as e:
-            self._logger.error(f"Failed to get bot info: {e}")
+            self._logger.exception(f"Failed to get bot info: {e}")
             return {}
 
     async def get_channel_info(self, channel_id: str) -> dict[str, Any]:
@@ -454,5 +454,5 @@ class DiscordAdapter(MessageChannelAdapter):
                 "guild_id": str(channel.guild.id) if hasattr(channel, "guild") else None,
             }
         except Exception as e:
-            self._logger.error(f"Failed to get channel info: {e}")
+            self._logger.exception(f"Failed to get channel info: {e}")
             return {}

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Reflexion Pattern - 失敗学習と自己反省.
 
 このモジュールは、Reflexion 論文に基づいた失敗学習パターンを提供します。
@@ -31,15 +30,12 @@
 
 from __future__ import annotations
 
-import asyncio
-import hashlib
 import logging
 import uuid
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -152,7 +148,6 @@ class ReflectionGenerator(ABC):
         Returns:
             生成された反省
         """
-        pass
 
     @abstractmethod
     async def refine_reflection(
@@ -169,7 +164,6 @@ class ReflectionGenerator(ABC):
         Returns:
             改善された反省
         """
-        pass
 
 
 class LLMReflectionGenerator(ReflectionGenerator):
@@ -720,15 +714,15 @@ class ReflectiveEvolver:
 # =============================================================================
 
 __all__ = [
-    # データモデル
-    "ReflectionType",
-    "Severity",
-    "Reflection",
     "FailurePattern",
+    "LLMReflectionGenerator",
     "LearningOutcome",
+    "Reflection",
     # 生成器
     "ReflectionGenerator",
-    "LLMReflectionGenerator",
+    # データモデル
+    "ReflectionType",
     # メイン
     "ReflectiveEvolver",
+    "Severity",
 ]

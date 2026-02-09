@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Microsandbox プロバイダ.
 
 セルフホスト可能な microsandbox を使用したサンドボックス実行。
@@ -29,11 +28,11 @@ from typing import Any
 
 from agentflow.sandbox.base import (
     ExecutionResult,
-    ResourceUsage,
     SandboxConfig,
     SandboxProvider,
     SandboxState,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +189,7 @@ class MicrosandboxProvider(SandboxProvider):
             duration_ms = (time.time() - start_time) * 1000
             self._execution_count += 1
             self._total_execution_ms += duration_ms
-            logger.error(f"Microsandbox execution error: {e}")
+            logger.exception(f"Microsandbox execution error: {e}")
             return ExecutionResult(
                 stderr=str(e),
                 exit_code=1,

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """レポート生成エージェント.
 
 分析結果から読みやすいレポートを生成します。
@@ -14,19 +13,19 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from agentflow import ResilientAgent
-
 from apps.market_trend_monitor.backend.models import (
     Report,
-    ReportSection,
     ReporterInput,
     ReporterOutput,
     ReportSchema,
+    ReportSection,
     ReportSectionSchema,
     SentimentType,
     Trend,
     TrendSchema,
 )
+
+from agentflow import ResilientAgent
 
 
 class ReporterAgent(ResilientAgent[ReporterInput, ReporterOutput]):

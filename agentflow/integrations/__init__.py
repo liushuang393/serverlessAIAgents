@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """フレームワーク統合モジュール.
 
 このモジュールは、FastAPI等のフレームワークとの統合を提供します。
@@ -19,115 +18,115 @@
     >>> await manager.handle_connection(websocket, session_id)
 """
 
+# ==========================================================================
+# NEW: Context Bridge（L0統合I/F）
+# ==========================================================================
+from agentflow.integrations.context_bridge import (
+    ContextBridge,
+    FlowContext,
+    InvocationResult,
+    SourceSystemType,
+    get_current_context,
+    reset_context,
+    set_current_context,
+)
 from agentflow.integrations.fastapi_integration import (
     AgentRouter,
     FlowRouter,
     create_app,
     create_sse_response,
 )
-from agentflow.integrations.sse_flow_runner import (
-    FlowProtocol,
-    SSEConfig,
-    SSEFlowRunner,
-    SimplePipelineProtocol,
-)
-
-# NEW: WebSocket 統合
-from agentflow.integrations.websocket_integration import (
-    WSEventType,
-    WSEvent,
-    WSCommand,
-    ConnectionState,
-    ConnectionManager,
-    WebSocketManager,
-    create_websocket_router,
-)
 
 # NEW: リアルタイム状態同期
 from agentflow.integrations.realtime_sync import (
+    ClientConnection,
     RealtimeStateSync,
     SyncEvent,
     SyncEventType,
-    ClientConnection,
+)
+from agentflow.integrations.sse_flow_runner import (
+    FlowProtocol,
+    SimplePipelineProtocol,
+    SSEConfig,
+    SSEFlowRunner,
 )
 
 # 新規追加: 工単生成器
 from agentflow.integrations.ticket_generator import (
-    TicketGenerator,
-    TicketGeneratorConfig,
-    Ticket,
-    TicketPriority,
-    TicketStatus,
-    TicketType,
-    TicketProviderBase,
     InMemoryTicketProvider,
     JiraTicketProvider,
     ServiceNowTicketProvider,
+    Ticket,
+    TicketGenerator,
+    TicketGeneratorConfig,
+    TicketPriority,
+    TicketProviderBase,
+    TicketStatus,
+    TicketType,
 )
 
-# ==========================================================================
-# NEW: Context Bridge（L0統合I/F）
-# ==========================================================================
-from agentflow.integrations.context_bridge import (
-    FlowContext,
-    ContextBridge,
-    InvocationResult,
-    SourceSystemType,
-    get_current_context,
-    set_current_context,
-    reset_context,
+# NEW: WebSocket 統合
+from agentflow.integrations.websocket_integration import (
+    ConnectionManager,
+    ConnectionState,
+    WebSocketManager,
+    WSCommand,
+    WSEvent,
+    WSEventType,
+    create_websocket_router,
 )
+
 
 __all__ = [
     # FastAPI 統合
     "AgentRouter",
-    "FlowRouter",
-    "create_app",
-    "create_sse_response",
+    "ClientConnection",
+    "ConnectionManager",
+    "ConnectionState",
+    "ContextBridge",
+    # ==========================================================================
+    # Context Bridge（L0統合I/F）
+    # ==========================================================================
+    "FlowContext",
     # SSE
     "FlowProtocol",
-    "SSEConfig",
-    "SSEFlowRunner",
-    "SimplePipelineProtocol",
-    # ==========================================================================
-    # NEW: WebSocket 統合
-    # ==========================================================================
-    "WSEventType",
-    "WSEvent",
-    "WSCommand",
-    "ConnectionState",
-    "ConnectionManager",
-    "WebSocketManager",
-    "create_websocket_router",
+    "FlowRouter",
+    "InMemoryTicketProvider",
+    "InvocationResult",
+    "JiraTicketProvider",
     # ==========================================================================
     # NEW: リアルタイム状態同期
     # ==========================================================================
     "RealtimeStateSync",
+    "SSEConfig",
+    "SSEFlowRunner",
+    "ServiceNowTicketProvider",
+    "SimplePipelineProtocol",
+    "SourceSystemType",
     "SyncEvent",
     "SyncEventType",
-    "ClientConnection",
+    "Ticket",
     # ==========================================================================
     # 工単生成器
     # ==========================================================================
     "TicketGenerator",
     "TicketGeneratorConfig",
-    "Ticket",
     "TicketPriority",
+    "TicketProviderBase",
     "TicketStatus",
     "TicketType",
-    "TicketProviderBase",
-    "InMemoryTicketProvider",
-    "JiraTicketProvider",
-    "ServiceNowTicketProvider",
+    "WSCommand",
+    "WSEvent",
     # ==========================================================================
-    # Context Bridge（L0統合I/F）
+    # NEW: WebSocket 統合
     # ==========================================================================
-    "FlowContext",
-    "ContextBridge",
-    "InvocationResult",
-    "SourceSystemType",
+    "WSEventType",
+    "WebSocketManager",
+    "create_app",
+    "create_sse_response",
+    "create_websocket_router",
     "get_current_context",
-    "set_current_context",
     "reset_context",
+    "set_current_context",
 ]
 

@@ -23,9 +23,11 @@ LLMが外部保存されたコンテキストにアクセスするためのツ�
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from agentflow.context.rlm.context_store import ContextStore
+
+if TYPE_CHECKING:
+    from agentflow.context.rlm.context_store import ContextStore
 
 
 class ContextOps:

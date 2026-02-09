@@ -6,10 +6,10 @@ AGUIEventEmitter と統合して使用します。
 
 import json
 import logging
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 from agentflow.protocols.a2ui.components import A2UIComponent
-from agentflow.protocols.agui_events import AGUIEvent, AGUIEventType
 
 
 class A2UIEmitter:

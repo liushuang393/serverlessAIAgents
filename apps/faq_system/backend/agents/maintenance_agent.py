@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """メンテナンス支援Agent.
 
 保守担当者向けの変更作業支援Agent。
@@ -22,12 +21,13 @@ import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from difflib import unified_diff, SequenceMatcher
-from typing import Any, AsyncIterator
+from difflib import unified_diff
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 from agentflow.core import ResilientAgent
+
 
 logger = logging.getLogger(__name__)
 
@@ -588,9 +588,9 @@ class MaintenanceAgent(ResilientAgent):
 
 
 __all__ = [
+    "DiffResult",
+    "ImpactAnalysis",
     "MaintenanceAgent",
     "MaintenanceConfig",
     "MaintenanceResponse",
-    "DiffResult",
-    "ImpactAnalysis",
 ]

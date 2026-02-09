@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """JavaGenerator MCP Tool.
 
 このモジュールはASTからJavaコードを生成するMCPツールを提供します。
@@ -13,10 +12,9 @@
 
 from typing import Any
 
-from agentflow.llm import LLMClient, LLMConfig, LLMMessage
-from agentflow.config import get_settings
-
 from agentflow import MCPTool, MCPToolRequest, MCPToolResponse
+from agentflow.config import get_settings
+from agentflow.llm import LLMClient, LLMConfig
 
 
 class JavaGenerator(MCPTool):
@@ -124,7 +122,7 @@ class JavaGenerator(MCPTool):
         except Exception as e:
             return MCPToolResponse(
                 success=False,
-                errors=[f"Generation failed: {str(e)}"],
+                errors=[f"Generation failed: {e!s}"],
             )
 
     async def _generate_java(
@@ -310,18 +308,16 @@ class JavaGenerator(MCPTool):
         """
         if cobol_type == "decimal":
             return "BigDecimal"
-        elif cobol_type == "numeric":
+        if cobol_type == "numeric":
             # PIC句から桁数を判定
             if "9(5)" in pic_clause or "9(4)" in pic_clause or "9(3)" in pic_clause:
                 return "int"
-            elif "9(10)" in pic_clause or "9(9)" in pic_clause:
+            if "9(10)" in pic_clause or "9(9)" in pic_clause:
                 return "long"
-            else:
-                return "int"
-        elif cobol_type == "string":
+            return "int"
+        if cobol_type == "string":
             return "String"
-        else:
-            return "Object"
+        return "Object"
 
     async def _generate_methods(self, procedure_lines: list[str]) -> tuple[str, list[dict[str, Any]]]:
         """メソッドを生成（LLM使用）.

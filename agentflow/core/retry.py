@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """リトライ機構.
 
 このモジュールは、エージェント実行時のリトライ機構を提供します。
@@ -108,12 +107,12 @@ class RetryableAgent(AgentBlock):
                     isinstance(e, exc_type)
                     for exc_type in self._retry_config.retry_on_exceptions
                 ):
-                    self._logger.error(f"Non-retryable exception: {type(e).__name__}")
+                    self._logger.exception(f"Non-retryable exception: {type(e).__name__}")
                     raise
 
                 # 最後の試行の場合は例外を再送出
                 if attempt >= self._retry_config.max_attempts:
-                    self._logger.error(
+                    self._logger.exception(
                         f"Max attempts ({self._retry_config.max_attempts}) reached"
                     )
                     raise
@@ -130,7 +129,8 @@ class RetryableAgent(AgentBlock):
         # ここには到達しないはずだが、念のため
         if last_exception:
             raise last_exception
-        raise RuntimeError("Unexpected error in retry logic")
+        msg = "Unexpected error in retry logic"
+        raise RuntimeError(msg)
 
     async def _run_impl(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """実際の処理実装.
@@ -146,5 +146,6 @@ class RetryableAgent(AgentBlock):
         Raises:
             NotImplementedError: サブクラスで実装されていない場合
         """
-        raise NotImplementedError("Subclass must implement _run_impl method")
+        msg = "Subclass must implement _run_impl method"
+        raise NotImplementedError(msg)
 

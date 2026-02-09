@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """構造化ログモジュール.
 
 JSON 形式の構造化ログを提供します。
@@ -18,9 +17,14 @@ import sys
 import threading
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
-from typing import Any, Iterator, TextIO
+from typing import TYPE_CHECKING, Any, TextIO
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+
 
 # グローバルコンテキスト
 _context_var: dict[str, Any] = {}
@@ -94,7 +98,7 @@ class JSONFormatter(logging.Formatter):
 
         # タイムスタンプ
         if self._include_timestamp:
-            log_data["timestamp"] = datetime.now(timezone.utc).isoformat()
+            log_data["timestamp"] = datetime.now(UTC).isoformat()
 
         # 呼び出し元情報
         if self._include_caller:
@@ -287,7 +291,7 @@ def setup_logging(
     """
     global _loggers
 
-    config = LogConfig(
+    LogConfig(
         level=level,
         format=format,
         output=output,

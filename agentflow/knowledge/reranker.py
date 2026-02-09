@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Reranker モジュール."""
 
 from __future__ import annotations
@@ -9,6 +8,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
+
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,8 @@ class CohereReranker(BaseReranker):
 
     async def rerank(self, query: str, documents: list, top_k: int = 5) -> list[RankedDocument]:
         if not self._api_key:
-            raise ValueError("COHERE_API_KEY is required")
+            msg = "COHERE_API_KEY is required"
+            raise ValueError(msg)
         doc_texts = self._normalize_docs(documents)
         try:
             import cohere
@@ -93,7 +94,8 @@ class CohereReranker(BaseReranker):
                 ))
             return results
         except ImportError:
-            raise ImportError("cohere package required: pip install cohere")
+            msg = "cohere package required: pip install cohere"
+            raise ImportError(msg)
 
 
 class CrossEncoderReranker(BaseReranker):
@@ -114,7 +116,7 @@ class CrossEncoderReranker(BaseReranker):
                 self._model = CrossEncoder(self._model_name)
             pairs = [(query, doc) for doc in doc_texts]
             scores = self._model.predict(pairs)
-            scored_docs = list(zip(range(len(documents)), doc_texts, scores, documents))
+            scored_docs = list(zip(range(len(documents)), doc_texts, scores, documents, strict=False))
             scored_docs.sort(key=lambda x: x[2], reverse=True)
             results = []
             for original_idx, text, score, original_doc in scored_docs[:top_k]:
@@ -122,7 +124,8 @@ class CrossEncoderReranker(BaseReranker):
                 results.append(RankedDocument(content=text, score=float(score), original_index=original_idx, metadata=metadata))
             return results
         except ImportError:
-            raise ImportError("sentence-transformers required: pip install sentence-transformers")
+            msg = "sentence-transformers required: pip install sentence-transformers"
+            raise ImportError(msg)
 
 
 class BM25Reranker(BaseReranker):
@@ -142,7 +145,7 @@ class BM25Reranker(BaseReranker):
             doc_length_factor = 1.0 / (1.0 + len(doc_terms) / 100)
             score = tf * doc_length_factor
             scores.append(score)
-        scored_docs = list(zip(range(len(documents)), doc_texts, scores, documents))
+        scored_docs = list(zip(range(len(documents)), doc_texts, scores, documents, strict=False))
         scored_docs.sort(key=lambda x: x[2], reverse=True)
         results = []
         for original_idx, text, score, original_doc in scored_docs[:top_k]:
@@ -179,4 +182,4 @@ def get_reranker(reranker_type: RerankerType | str | None = None) -> BaseReranke
         return BM25Reranker()
 
 
-__all__ = ["RerankerType", "RankedDocument", "BaseReranker", "CohereReranker", "CrossEncoderReranker", "BM25Reranker", "get_reranker"]
+__all__ = ["BM25Reranker", "BaseReranker", "CohereReranker", "CrossEncoderReranker", "RankedDocument", "RerankerType", "get_reranker"]

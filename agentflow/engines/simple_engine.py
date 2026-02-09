@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """SimpleEngine - 単一Agent質問応答パターン.
 
 最もシンプルなEngine Pattern、以下に適用：
@@ -24,20 +23,23 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.engines.base import BaseEngine, EngineConfig
 
 
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+
 class SimpleEngine(BaseEngine):
     """単一Agent質問応答エンジン.
-    
+
     特徴：
     - 最もシンプルなパターン
     - 単一Agentでリクエストを処理
     - Agent出力を直接返却
-    
+
     Attributes:
         agent: Agentクラスまたはインスタンス
         skills: バインドするSkillsリスト
@@ -53,7 +55,7 @@ class SimpleEngine(BaseEngine):
         config: EngineConfig | None = None,
     ) -> None:
         """SimpleEngineを初期化.
-        
+
         Args:
             agent: Agentクラスまたはインスタンス
             skills: Skills名リスト
@@ -101,9 +103,9 @@ class SimpleEngine(BaseEngine):
             return
 
         try:
-            from agentflow.core.tool_registry import get_global_tool_registry
-            from agentflow.core.tool_binding import ToolBinder
             from agentflow.core.capability_spec import AgentCapabilitySpec
+            from agentflow.core.tool_binding import ToolBinder
+            from agentflow.core.tool_registry import get_global_tool_registry
 
             tool_registry = get_global_tool_registry()
             binder = ToolBinder(tool_registry)
@@ -129,10 +131,10 @@ class SimpleEngine(BaseEngine):
 
     async def _execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Agentを実行.
-        
+
         Args:
             inputs: 入力データ
-            
+
         Returns:
             Agent出力結果
         """
@@ -144,17 +146,17 @@ class SimpleEngine(BaseEngine):
         elif hasattr(self._agent_instance, "process"):
             result = await self._agent_instance.process(inputs)
         else:
+            msg = f"Agent {self._agent_instance} has no run/invoke/process method"
             raise AttributeError(
-                f"Agent {self._agent_instance} has no run/invoke/process method"
+                msg
             )
 
         # dictを返却することを保証
         if isinstance(result, dict):
             return result
-        elif hasattr(result, "model_dump"):
+        if hasattr(result, "model_dump"):
             return result.model_dump()
-        else:
-            return {"result": result}
+        return {"result": result}
 
     async def _execute_stream(
         self, inputs: dict[str, Any]

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Code Migration Assistant Skills.
 
 提供代码移行相关的 Skill。
@@ -9,6 +8,7 @@
 # 或者直接导入 CobolMigrationSkill 类
 
 from pathlib import Path
+
 
 # Skill 目录路径
 SKILLS_DIR = Path(__file__).parent

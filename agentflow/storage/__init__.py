@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """統一ストレージバックエンド.
 
 DeepAgentCoordinator の RuntimeStore/EvolutionStore を
@@ -29,8 +28,9 @@ from agentflow.storage.backend import (
 )
 from agentflow.storage.memory_backend import MemoryStorageBackend
 
+
 __all__ = [
-    "StorageBackend",
     "MemoryStorageBackend",
+    "StorageBackend",
     "get_backend",
 ]

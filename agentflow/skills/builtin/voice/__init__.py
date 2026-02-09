@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Voice Skill - 音声認識・合成機能.
 
 OpenAI Whisper / TTS を使用した音声処理スキル。
@@ -15,6 +14,7 @@ from agentflow.skills.builtin.voice.voice import (
     VoiceProvider,
     VoiceSkill,
 )
+
 
 __all__ = [
     "TTSVoice",

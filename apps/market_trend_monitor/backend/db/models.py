@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DB モデル定義."""
 
 from __future__ import annotations
@@ -6,10 +5,9 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Float, JSON, String, Text
-from sqlalchemy.orm import Mapped, mapped_column
-
 from apps.market_trend_monitor.backend.db.base import Base
+from sqlalchemy import JSON, Boolean, DateTime, Float, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
 
 
 class EvidenceModel(Base):

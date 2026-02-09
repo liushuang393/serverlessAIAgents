@@ -95,9 +95,11 @@ class RedisCheckpointer(Checkpointer):
             self._connected = True
             logger.info(f"RedisCheckpointer connected: {self._url or f'{self._host}:{self._port}'}")
         except ImportError:
-            raise ImportError("redis package required: pip install redis")
+            msg = "redis package required: pip install redis"
+            raise ImportError(msg)
         except Exception as e:
-            raise ConnectionError(f"Failed to connect to Redis: {e}")
+            msg = f"Failed to connect to Redis: {e}"
+            raise ConnectionError(msg)
 
     async def disconnect(self) -> None:
         """Redis から切断."""
@@ -117,7 +119,8 @@ class RedisCheckpointer(Checkpointer):
     async def save(self, data: CheckpointData) -> str:
         """チェックポイントを保存."""
         if not self._connected:
-            raise ConnectionError("Not connected to Redis")
+            msg = "Not connected to Redis"
+            raise ConnectionError(msg)
 
         data.updated_at = datetime.utcnow()
 
@@ -140,7 +143,8 @@ class RedisCheckpointer(Checkpointer):
     async def load(self, checkpoint_id: str) -> CheckpointData | None:
         """チェックポイントを読み込み."""
         if not self._connected:
-            raise ConnectionError("Not connected to Redis")
+            msg = "Not connected to Redis"
+            raise ConnectionError(msg)
 
         key = self._checkpoint_key(checkpoint_id)
         json_data = await self._client.get(key)
@@ -161,7 +165,8 @@ class RedisCheckpointer(Checkpointer):
     async def load_latest(self, thread_id: str) -> CheckpointData | None:
         """指定スレッドの最新チェックポイントを読み込み."""
         if not self._connected:
-            raise ConnectionError("Not connected to Redis")
+            msg = "Not connected to Redis"
+            raise ConnectionError(msg)
 
         thread_key = self._thread_key(thread_id)
         # Sorted Set から最新（最大スコア）を取得
@@ -175,7 +180,8 @@ class RedisCheckpointer(Checkpointer):
     async def delete(self, checkpoint_id: str) -> bool:
         """チェックポイントを削除."""
         if not self._connected:
-            raise ConnectionError("Not connected to Redis")
+            msg = "Not connected to Redis"
+            raise ConnectionError(msg)
 
         # まずデータを取得してスレッドIDを得る
         data = await self.load(checkpoint_id)
@@ -195,7 +201,8 @@ class RedisCheckpointer(Checkpointer):
     async def list_by_thread(self, thread_id: str) -> list[CheckpointData]:
         """指定スレッドの全チェックポイントを取得."""
         if not self._connected:
-            raise ConnectionError("Not connected to Redis")
+            msg = "Not connected to Redis"
+            raise ConnectionError(msg)
 
         thread_key = self._thread_key(thread_id)
         # 降順（新しい順）で取得

@@ -10,7 +10,7 @@ from typing import Any, TypeVar
 T = TypeVar("T", bound=Enum)
 
 
-def convert_enum(value: str | Enum, enum_class: type[T]) -> T:
+def convert_enum[T: Enum](value: str | Enum, enum_class: type[T]) -> T:
     """Enum型への自動変換ヘルパー.
 
     Args:
@@ -54,7 +54,7 @@ def convert_enum(value: str | Enum, enum_class: type[T]) -> T:
     raise TypeError(msg)
 
 
-def safe_dict_get(data: dict[str, Any], key: str, default: Any = None, enum_class: type[T] | None = None) -> Any:
+def safe_dict_get[T: Enum](data: dict[str, Any], key: str, default: Any = None, enum_class: type[T] | None = None) -> Any:
     """辞書から値を安全に取得し、必要に応じてEnum変換を行う.
 
     Args:
@@ -112,7 +112,7 @@ def flatten_dict(data: dict[str, Any], parent_key: str = "", sep: str = "_") -> 
 
 __all__ = [
     "convert_enum",
-    "safe_dict_get",
     "flatten_dict",
+    "safe_dict_get",
 ]
 

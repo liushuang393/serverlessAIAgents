@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """リアルタイム状態同期.
 
 フロントエンドとバックエンド間の状態をリアルタイムで同期。
@@ -24,15 +23,19 @@ WebSocket/SSE両方に対応。
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
-from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from agentflow.state.store import GlobalStateStore
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class SyncEventType(str, Enum):
@@ -176,10 +179,8 @@ class RealtimeStateSync:
         # ハートビートを停止
         if self._heartbeat_task:
             self._heartbeat_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._heartbeat_task
-            except asyncio.CancelledError:
-                pass
 
         # 購読解除
         if self._unsubscribe:
@@ -401,7 +402,7 @@ class RealtimeStateSync:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self._logger.error(f"ハートビートエラー: {e}")
+                self._logger.exception(f"ハートビートエラー: {e}")
 
     def register_action_handler(
         self,
@@ -443,13 +444,12 @@ class RealtimeStateSync:
             if handler:
                 result = await handler(client_id, payload)
                 return {"success": True, "result": result}
-            else:
-                return {"error": f"不明なアクション: {action_type}"}
+            return {"error": f"不明なアクション: {action_type}"}
 
         except json.JSONDecodeError:
             return {"error": "無効なJSONフォーマット"}
         except Exception as e:
-            self._logger.error(f"クライアントメッセージ処理エラー: {e}")
+            self._logger.exception(f"クライアントメッセージ処理エラー: {e}")
             return {"error": str(e)}
 
     def subscribe_path(
@@ -540,7 +540,7 @@ class RealtimeStateSync:
             "action_handlers": list(self._action_handlers.keys()),
         }
 
-    async def __aenter__(self) -> "RealtimeStateSync":
+    async def __aenter__(self) -> RealtimeStateSync:
         """非同期コンテキストマネージャー."""
         await self.start()
         return self
@@ -552,8 +552,8 @@ class RealtimeStateSync:
 
 # エクスポート
 __all__ = [
-    "SyncEventType",
-    "SyncEvent",
     "ClientConnection",
     "RealtimeStateSync",
+    "SyncEvent",
+    "SyncEventType",
 ]

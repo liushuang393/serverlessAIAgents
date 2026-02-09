@@ -211,8 +211,7 @@ def run(
                         else:
                             console.print(f"[dim]Chunk:[/dim] {chunk}")
                     return {}
-                else:
-                    return await client.invoke(shared_data)
+                return await client.invoke(shared_data)
 
             result = asyncio.run(execute_agent())
 
@@ -286,17 +285,15 @@ def run(
                                 else:
                                     console.print(f"[dim]{event.get('type', 'event')}:[/dim] {event.get('node', '')}")
                             return {}
-                        else:
-                            console.print("[yellow]Warning: Stream mode not supported, using normal mode[/yellow]")
+                        console.print("[yellow]Warning: Stream mode not supported, using normal mode[/yellow]")
                     # 通常実行
                     if hasattr(flow, "run"):
                         return await flow.run(shared_data)
-                    elif hasattr(flow, "run_async"):
+                    if hasattr(flow, "run_async"):
                         await flow.run_async(shared_data)
                         return shared_data
-                    else:
-                        msg = f"Flow '{flow_name}' has no run/run_async method"
-                        raise ValueError(msg)
+                    msg = f"Flow '{flow_name}' has no run/run_async method"
+                    raise ValueError(msg)
 
             result = asyncio.run(execute())
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Agent入出力スキーマ定義.
 
 各Agentの入出力を厳密に型定義する。
@@ -6,7 +5,6 @@
 """
 
 from enum import Enum
-from typing import Literal
 
 from pydantic import BaseModel, Field
 

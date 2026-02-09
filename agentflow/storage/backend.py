@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """統一ストレージバックエンド協議.
 
 RuntimeStore/EvolutionStore の共通インターフェースを定義。
@@ -8,8 +7,9 @@ from __future__ import annotations
 
 import logging
 import os
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, Protocol, runtime_checkable
+
 
 logger = logging.getLogger(__name__)
 
@@ -269,15 +269,15 @@ def get_backend(
     if scheme == "memory":
         return MemoryStorageBackend(namespace=namespace)
 
-    elif scheme == "redis":
+    if scheme == "redis":
         # Redis バックエンドは将来実装
         logger.warning("Redis backend not yet implemented, using memory")
         return MemoryStorageBackend(namespace=namespace)
 
-    elif scheme in ("postgres", "postgresql"):
+    if scheme in ("postgres", "postgresql"):
         # PostgreSQL バックエンドは将来実装
         logger.warning("PostgreSQL backend not yet implemented, using memory")
         return MemoryStorageBackend(namespace=namespace)
 
-    else:
-        raise ValueError(f"Unknown storage scheme: {scheme}")
+    msg = f"Unknown storage scheme: {scheme}"
+    raise ValueError(msg)

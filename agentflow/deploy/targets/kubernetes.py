@@ -17,9 +17,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.core.interfaces import (
     ConfigField,
@@ -28,6 +26,11 @@ from agentflow.core.interfaces import (
     ValidationResult,
 )
 from agentflow.deploy.targets.base import BaseDeployTarget
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
 
 
 logger = logging.getLogger(__name__)
@@ -109,7 +112,7 @@ class KubernetesTarget(BaseDeployTarget):
                     stderr=asyncio.subprocess.PIPE,
                 )
 
-                stdout, stderr = await apply_process.communicate()
+                _stdout, stderr = await apply_process.communicate()
 
                 if apply_process.returncode != 0:
                     yield DeployEvent(

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OpenTelemetry OTLP エクスポーター.
 
 OpenTelemetry Collector/Jaeger/Zipkin などの OTLP 互換バックエンドに
@@ -19,12 +18,12 @@ OpenTelemetry Collector/Jaeger/Zipkin などの OTLP 互換バックエンドに
 
 from __future__ import annotations
 
-import json
 import logging
 import os
 from typing import Any
 
 from agentflow.observability.tracing import Span, SpanExporter
+
 
 logger = logging.getLogger(__name__)
 
@@ -87,9 +86,9 @@ class OTLPExporter(SpanExporter):
             from opentelemetry.exporter.otlp.proto.http.trace_exporter import (
                 OTLPSpanExporter,
             )
-            from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-            from opentelemetry.sdk.trace import TracerProvider
             from opentelemetry.sdk.resources import Resource
+            from opentelemetry.sdk.trace import TracerProvider
+            from opentelemetry.sdk.trace.export import SimpleSpanProcessor
 
             resource = Resource.create({"service.name": self._service_name})
             provider = TracerProvider(resource=resource)

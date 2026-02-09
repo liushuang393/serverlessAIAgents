@@ -35,138 +35,6 @@
 # =============================================================================
 # 1. DeepAgent Pattern（推奨）- 智能型Agent協調
 # =============================================================================
-from agentflow.patterns.deep_agent import (
-    # メインCoordinator
-    DeepAgentCoordinator,
-    # Agent管理
-    AgentPool,
-    BaseAgent,
-    ResearchAgent,
-    AnalysisAgent,
-    PlanningAgent,
-    ExecutionAgent,
-    ReviewAgent,
-    ReportAgent,
-    # データモデル
-    AgentMessage,
-    AgentType,
-    CognitiveAnalysis,
-    CompactionStrategy,
-    EvolutionRecord,
-    MessageType,
-    ParallelGroup,
-    QualityDimension,
-    QualityReview,
-    TaskStatus,
-    TodoItem,
-    CompactionResult,
-    MemoryTier,
-    # ストレージ
-    EvolutionStore,
-    MemoryEvolutionStore,
-    MemoryRuntimeStore,
-    RuntimeStore,
-    # コンテキスト管理
-    ContextCompressor,
-    # 進捗管理
-    ProgressManager,
-    ProgressEvent,
-    # 進化
-    SelfEvolver,
-)
-
-# =============================================================================
-# 2. Reflexion Pattern（NEW）- 失敗学習パターン
-# =============================================================================
-from agentflow.patterns.reflexion import (
-    # データモデル
-    Reflection,
-    ReflectionType,
-    Severity,
-    FailurePattern,
-    LearningOutcome,
-    # 生成器
-    ReflectionGenerator,
-    LLMReflectionGenerator,
-    # メイン
-    ReflectiveEvolver,
-)
-
-# =============================================================================
-# 3. Reflection Pattern - 自己改善ループ
-# =============================================================================
-from agentflow.patterns.reflection import (
-    ReflectionWorkflow,
-    ReflectionLoop,
-    ReflectionResult,
-    ReflectorAgent,
-    ImproverAgent,
-)
-
-# =============================================================================
-# 4. AgentPipeline - 順次実行パイプライン
-# =============================================================================
-from agentflow.patterns.agent_pipeline import (
-    AgentPipeline,
-    AgentConfig,
-    AgentProtocol,
-    PipelineConfig,
-    RevisionRequest,
-)
-
-# =============================================================================
-# 内部使用（SSE進捗配信）
-# =============================================================================
-from agentflow.patterns.progress_emitter import (
-    ProgressEmitter,
-    AgentMeta,
-)
-
-# =============================================================================
-# 共有コンテキスト
-# =============================================================================
-from agentflow.patterns.shared_context import SharedContext
-
-# =============================================================================
-# 基底クラス（協調器基底）
-# =============================================================================
-from agentflow.patterns.coordinator import (
-    CoordinatorBase,
-    CoordinationPattern,
-)
-
-# =============================================================================
-# 5. AgentComposer（NEW）- 標準Agent組合パターン
-# =============================================================================
-from agentflow.patterns.composer import (
-    AgentComposer,
-    CompositionPattern,
-    CompositionConfig,
-    CompositionResult,
-    AgentNode,
-    AgentRole,
-    TaskAssignment,
-    AgentRouter,
-    CapabilityBasedRouter,
-    RoundRobinRouter,
-)
-
-# =============================================================================
-# 6. TaskDecomposer - 高度なタスク分解システム
-# =============================================================================
-from agentflow.patterns.task_decomposer import (
-    # データモデル
-    DecomposedTask,
-    DecompositionConfig,
-    DecompositionPlan,
-    TaskGranularity,
-    TaskPriority,
-    # 依存関係グラフ
-    DependencyGraph,
-    # メイン
-    TaskDecomposer,
-)
-
 # =============================================================================
 # 専門化Agent（FAQなど）
 # =============================================================================
@@ -177,121 +45,252 @@ from agentflow.agents import (
     SalesAgentConfig,
 )
 
+# =============================================================================
+# 4. AgentPipeline - 順次実行パイプライン
+# =============================================================================
+from agentflow.patterns.agent_pipeline import (
+    AgentConfig,
+    AgentPipeline,
+    AgentProtocol,
+    PipelineConfig,
+    RevisionRequest,
+)
+
+# =============================================================================
+# 5. AgentComposer（NEW）- 標準Agent組合パターン
+# =============================================================================
+from agentflow.patterns.composer import (
+    AgentComposer,
+    AgentNode,
+    AgentRole,
+    AgentRouter,
+    CapabilityBasedRouter,
+    CompositionConfig,
+    CompositionPattern,
+    CompositionResult,
+    RoundRobinRouter,
+    TaskAssignment,
+)
+
+# =============================================================================
+# 基底クラス（協調器基底）
+# =============================================================================
+from agentflow.patterns.coordinator import (
+    CoordinationPattern,
+    CoordinatorBase,
+)
+from agentflow.patterns.deep_agent import (
+    # データモデル
+    AgentMessage,
+    # Agent管理
+    AgentPool,
+    AgentType,
+    AnalysisAgent,
+    BaseAgent,
+    CognitiveAnalysis,
+    CompactionResult,
+    CompactionStrategy,
+    # コンテキスト管理
+    ContextCompressor,
+    # メインCoordinator
+    DeepAgentCoordinator,
+    EvolutionRecord,
+    # ストレージ
+    EvolutionStore,
+    ExecutionAgent,
+    MemoryEvolutionStore,
+    MemoryRuntimeStore,
+    MemoryTier,
+    MessageType,
+    ParallelGroup,
+    PlanningAgent,
+    ProgressEvent,
+    # 進捗管理
+    ProgressManager,
+    QualityDimension,
+    QualityReview,
+    ReportAgent,
+    ResearchAgent,
+    ReviewAgent,
+    RuntimeStore,
+    # 進化
+    SelfEvolver,
+    TaskStatus,
+    TodoItem,
+)
+
+# =============================================================================
+# 内部使用（SSE進捗配信）
+# =============================================================================
+from agentflow.patterns.progress_emitter import (
+    AgentMeta,
+    ProgressEmitter,
+)
+
+# =============================================================================
+# 3. Reflection Pattern - 自己改善ループ
+# =============================================================================
+from agentflow.patterns.reflection import (
+    ImproverAgent,
+    ReflectionLoop,
+    ReflectionResult,
+    ReflectionWorkflow,
+    ReflectorAgent,
+)
+
+# =============================================================================
+# 2. Reflexion Pattern（NEW）- 失敗学習パターン
+# =============================================================================
+from agentflow.patterns.reflexion import (
+    FailurePattern,
+    LearningOutcome,
+    LLMReflectionGenerator,
+    # データモデル
+    Reflection,
+    # 生成器
+    ReflectionGenerator,
+    ReflectionType,
+    # メイン
+    ReflectiveEvolver,
+    Severity,
+)
+
+# =============================================================================
+# 共有コンテキスト
+# =============================================================================
+from agentflow.patterns.shared_context import SharedContext
+
+# =============================================================================
+# 6. TaskDecomposer - 高度なタスク分解システム
+# =============================================================================
+from agentflow.patterns.task_decomposer import (
+    # データモデル
+    DecomposedTask,
+    DecompositionConfig,
+    DecompositionPlan,
+    # 依存関係グラフ
+    DependencyGraph,
+    # メイン
+    TaskDecomposer,
+    TaskGranularity,
+    TaskPriority,
+)
+
 
 __all__ = [
-    # ==========================================================================
-    # 1. DeepAgent Pattern（推奨）
-    # ==========================================================================
-    # メインCoordinator
-    "DeepAgentCoordinator",
-    # Agent管理
-    "AgentPool",
-    "BaseAgent",
-    "ResearchAgent",
-    "AnalysisAgent",
-    "PlanningAgent",
-    "ExecutionAgent",
-    "ReviewAgent",
-    "ReportAgent",
-    # データモデル
-    "AgentMessage",
-    "AgentType",
-    "CognitiveAnalysis",
-    "CompactionStrategy",
-    "CompactionResult",
-    "EvolutionRecord",
-    "MemoryTier",
-    "MessageType",
-    "ParallelGroup",
-    "QualityDimension",
-    "QualityReview",
-    "TaskStatus",
-    "TodoItem",
-    # ストレージ
-    "EvolutionStore",
-    "MemoryEvolutionStore",
-    "MemoryRuntimeStore",
-    "RuntimeStore",
-    # コンテキスト管理
-    "ContextCompressor",
-    # 進捗管理
-    "ProgressManager",
-    "ProgressEvent",
-    # 進化
-    "SelfEvolver",
-    # ==========================================================================
-    # 2. Reflexion Pattern（NEW - 失敗学習）
-    # ==========================================================================
-    # データモデル
-    "Reflection",
-    "ReflectionType",
-    "Severity",
-    "FailurePattern",
-    "LearningOutcome",
-    # 生成器
-    "ReflectionGenerator",
-    "LLMReflectionGenerator",
-    # メイン
-    "ReflectiveEvolver",
-    # ==========================================================================
-    # 3. Reflection Pattern（自己改善ループ）
-    # ==========================================================================
-    "ReflectionWorkflow",
-    "ReflectionLoop",
-    "ReflectionResult",
-    "ReflectorAgent",
-    "ImproverAgent",
-    # ==========================================================================
-    # 4. AgentPipeline
-    # ==========================================================================
-    "AgentPipeline",
-    "AgentConfig",
-    "AgentProtocol",
-    "PipelineConfig",
-    "RevisionRequest",
-    # ==========================================================================
-    # 内部使用（SSE進捗配信）
-    # ==========================================================================
-    "ProgressEmitter",
-    "AgentMeta",
-    # ==========================================================================
-    # 共有コンテキスト
-    # ==========================================================================
-    "SharedContext",
-    # ==========================================================================
-    # 基底クラス
-    # ==========================================================================
-    "CoordinatorBase",
-    "CoordinationPattern",
     # ==========================================================================
     # 5. AgentComposer（NEW - 標準Agent組合）
     # ==========================================================================
     "AgentComposer",
-    "CompositionPattern",
-    "CompositionConfig",
-    "CompositionResult",
+    "AgentConfig",
+    # データモデル
+    "AgentMessage",
+    "AgentMeta",
     "AgentNode",
+    # ==========================================================================
+    # 4. AgentPipeline
+    # ==========================================================================
+    "AgentPipeline",
+    # Agent管理
+    "AgentPool",
+    "AgentProtocol",
     "AgentRole",
-    "TaskAssignment",
     "AgentRouter",
+    "AgentType",
+    "AnalysisAgent",
+    "BaseAgent",
     "CapabilityBasedRouter",
-    "RoundRobinRouter",
+    "CognitiveAnalysis",
+    "CompactionResult",
+    "CompactionStrategy",
+    "CompositionConfig",
+    "CompositionPattern",
+    "CompositionResult",
+    # コンテキスト管理
+    "ContextCompressor",
+    "CoordinationPattern",
+    # ==========================================================================
+    # 基底クラス
+    # ==========================================================================
+    "CoordinatorBase",
     # ==========================================================================
     # 6. TaskDecomposer（高度なタスク分解）
     # ==========================================================================
     "DecomposedTask",
     "DecompositionConfig",
     "DecompositionPlan",
-    "TaskGranularity",
-    "TaskPriority",
+    # ==========================================================================
+    # 1. DeepAgent Pattern（推奨）
+    # ==========================================================================
+    # メインCoordinator
+    "DeepAgentCoordinator",
     "DependencyGraph",
-    "TaskDecomposer",
+    "EvolutionRecord",
+    # ストレージ
+    "EvolutionStore",
+    "ExecutionAgent",
     # ==========================================================================
     # 専門化Agent
     # ==========================================================================
     "FAQAgent",
     "FAQAgentConfig",
+    "FailurePattern",
+    "ImproverAgent",
+    "LLMReflectionGenerator",
+    "LearningOutcome",
+    "MemoryEvolutionStore",
+    "MemoryRuntimeStore",
+    "MemoryTier",
+    "MessageType",
+    "ParallelGroup",
+    "PipelineConfig",
+    "PlanningAgent",
+    # ==========================================================================
+    # 内部使用（SSE進捗配信）
+    # ==========================================================================
+    "ProgressEmitter",
+    "ProgressEvent",
+    # 進捗管理
+    "ProgressManager",
+    "QualityDimension",
+    "QualityReview",
+    # ==========================================================================
+    # 2. Reflexion Pattern（NEW - 失敗学習）
+    # ==========================================================================
+    # データモデル
+    "Reflection",
+    # 生成器
+    "ReflectionGenerator",
+    "ReflectionLoop",
+    "ReflectionResult",
+    "ReflectionType",
+    # ==========================================================================
+    # 3. Reflection Pattern（自己改善ループ）
+    # ==========================================================================
+    "ReflectionWorkflow",
+    # メイン
+    "ReflectiveEvolver",
+    "ReflectorAgent",
+    "ReportAgent",
+    "ResearchAgent",
+    "ReviewAgent",
+    "RevisionRequest",
+    "RoundRobinRouter",
+    "RuntimeStore",
     "SalesAgent",
     "SalesAgentConfig",
+    # 進化
+    "SelfEvolver",
+    "Severity",
+    # ==========================================================================
+    # 共有コンテキスト
+    # ==========================================================================
+    "SharedContext",
+    "TaskAssignment",
+    "TaskDecomposer",
+    "TaskGranularity",
+    "TaskPriority",
+    "TaskStatus",
+    "TodoItem",
 ]
 

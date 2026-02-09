@@ -5,8 +5,9 @@
 
 import logging
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
-from typing import Any, AsyncIterator, Callable, TypeVar
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, Field
 
@@ -17,6 +18,7 @@ from agentflow.skills.builtin.database_manager.exceptions import (
     RLSError,
     TransactionError,
 )
+
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +184,8 @@ class SupabaseProvider(DatabaseProvider):
         try:
             from supabase import create_client
         except ImportError:
-            raise ConnectionError("supabase 库未安装，请运行: pip install supabase")
+            msg = "supabase 库未安装，请运行: pip install supabase"
+            raise ConnectionError(msg)
 
         try:
             # 使用 service_role_key 绕过 RLS（如果提供）
@@ -190,7 +193,8 @@ class SupabaseProvider(DatabaseProvider):
             self._client = create_client(self._config.url, key)
             logger.info("Supabase 连接成功")
         except Exception as e:
-            raise ConnectionError(f"Supabase 连接失败: {e}")
+            msg = f"Supabase 连接失败: {e}"
+            raise ConnectionError(msg)
 
     async def disconnect(self) -> None:
         """断开 Supabase 连接."""
@@ -230,7 +234,8 @@ class SupabaseProvider(DatabaseProvider):
             response = query.execute()
             return response.data
         except Exception as e:
-            raise QueryError(f"Supabase 查询失败: {e}")
+            msg = f"Supabase 查询失败: {e}"
+            raise QueryError(msg)
 
     async def insert(
         self,
@@ -245,8 +250,10 @@ class SupabaseProvider(DatabaseProvider):
             return response.data[0] if response.data else {}
         except Exception as e:
             if "RLS" in str(e) or "policy" in str(e).lower():
-                raise RLSError(f"RLS 策略阻止操作: {e}")
-            raise QueryError(f"Supabase 插入失败: {e}")
+                msg = f"RLS 策略阻止操作: {e}"
+                raise RLSError(msg)
+            msg = f"Supabase 插入失败: {e}"
+            raise QueryError(msg)
 
     async def update(
         self,
@@ -263,8 +270,10 @@ class SupabaseProvider(DatabaseProvider):
             return response.data
         except Exception as e:
             if "RLS" in str(e) or "policy" in str(e).lower():
-                raise RLSError(f"RLS 策略阻止操作: {e}")
-            raise QueryError(f"Supabase 更新失败: {e}")
+                msg = f"RLS 策略阻止操作: {e}"
+                raise RLSError(msg)
+            msg = f"Supabase 更新失败: {e}"
+            raise QueryError(msg)
 
     async def delete(
         self,
@@ -280,8 +289,10 @@ class SupabaseProvider(DatabaseProvider):
             return response.data
         except Exception as e:
             if "RLS" in str(e) or "policy" in str(e).lower():
-                raise RLSError(f"RLS 策略阻止操作: {e}")
-            raise QueryError(f"Supabase 删除失败: {e}")
+                msg = f"RLS 策略阻止操作: {e}"
+                raise RLSError(msg)
+            msg = f"Supabase 删除失败: {e}"
+            raise QueryError(msg)
 
     async def execute(
         self,
@@ -293,7 +304,8 @@ class SupabaseProvider(DatabaseProvider):
             response = self._client.rpc("exec_sql", {"query": query}).execute()
             return response.data or []
         except Exception as e:
-            raise QueryError(f"Supabase SQL 执行失败: {e}")
+            msg = f"Supabase SQL 执行失败: {e}"
+            raise QueryError(msg)
 
     async def health_check(self) -> bool:
         """Supabase 健康检查."""
@@ -356,8 +368,9 @@ class TursoProvider(DatabaseProvider):
         try:
             import libsql_experimental as libsql
         except ImportError:
+            msg = "libsql-experimental 库未安装，请运行: pip install libsql-experimental"
             raise ConnectionError(
-                "libsql-experimental 库未安装，请运行: pip install libsql-experimental"
+                msg
             )
 
         try:
@@ -367,7 +380,8 @@ class TursoProvider(DatabaseProvider):
             )
             logger.info("Turso 连接成功")
         except Exception as e:
-            raise ConnectionError(f"Turso 连接失败: {e}")
+            msg = f"Turso 连接失败: {e}"
+            raise ConnectionError(msg)
 
     async def disconnect(self) -> None:
         """断开 Turso 连接."""
@@ -436,8 +450,8 @@ class TursoProvider(DatabaseProvider):
         filters: dict[str, Any],
     ) -> list[dict[str, Any]]:
         """更新 Turso 数据."""
-        set_clause = ", ".join(f"{k} = ?" for k in data.keys())
-        where_clause = " AND ".join(f"{k} = ?" for k in filters.keys())
+        set_clause = ", ".join(f"{k} = ?" for k in data)
+        where_clause = " AND ".join(f"{k} = ?" for k in filters)
         query = f"UPDATE {table} SET {set_clause} WHERE {where_clause} RETURNING *"
         params = list(data.values()) + list(filters.values())
         return await self.execute(query, params)
@@ -448,7 +462,7 @@ class TursoProvider(DatabaseProvider):
         filters: dict[str, Any],
     ) -> list[dict[str, Any]]:
         """删除 Turso 数据."""
-        where_clause = " AND ".join(f"{k} = ?" for k in filters.keys())
+        where_clause = " AND ".join(f"{k} = ?" for k in filters)
         query = f"DELETE FROM {table} WHERE {where_clause} RETURNING *"
         return await self.execute(query, list(filters.values()))
 
@@ -462,10 +476,11 @@ class TursoProvider(DatabaseProvider):
             cursor = self._client.execute(query, params or [])
             if cursor.description:
                 columns = [desc[0] for desc in cursor.description]
-                return [dict(zip(columns, row)) for row in cursor.fetchall()]
+                return [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
             return []
         except Exception as e:
-            raise QueryError(f"Turso 查询失败: {e}")
+            msg = f"Turso 查询失败: {e}"
+            raise QueryError(msg)
 
     async def health_check(self) -> bool:
         """Turso 健康检查."""
@@ -495,7 +510,8 @@ class PostgresProvider(DatabaseProvider):
         try:
             import asyncpg
         except ImportError:
-            raise ConnectionError("asyncpg 库未安装，请运行: pip install asyncpg")
+            msg = "asyncpg 库未安装，请运行: pip install asyncpg"
+            raise ConnectionError(msg)
 
         try:
             self._pool = await asyncpg.create_pool(
@@ -510,7 +526,8 @@ class PostgresProvider(DatabaseProvider):
             )
             logger.info("PostgreSQL 连接池创建成功")
         except Exception as e:
-            raise ConnectionError(f"PostgreSQL 连接失败: {e}")
+            msg = f"PostgreSQL 连接失败: {e}"
+            raise ConnectionError(msg)
 
     async def disconnect(self) -> None:
         """关闭 PostgreSQL 连接池."""
@@ -630,7 +647,8 @@ class PostgresProvider(DatabaseProvider):
                 rows = await conn.fetch(query, *(params or []))
                 return [dict(row) for row in rows]
         except Exception as e:
-            raise QueryError(f"PostgreSQL 查询失败: {e}")
+            msg = f"PostgreSQL 查询失败: {e}"
+            raise QueryError(msg)
 
     async def health_check(self) -> bool:
         """PostgreSQL 健康检查."""
@@ -699,18 +717,22 @@ class DatabaseManager:
         """建立数据库连接."""
         if self._provider_name == "supabase":
             if not isinstance(self._config, SupabaseConfig):
-                raise ValueError("Supabase 需要 SupabaseConfig 配置")
+                msg = "Supabase 需要 SupabaseConfig 配置"
+                raise ValueError(msg)
             self._provider = SupabaseProvider(self._config)
         elif self._provider_name == "turso":
             if not isinstance(self._config, TursoConfig):
-                raise ValueError("Turso 需要 TursoConfig 配置")
+                msg = "Turso 需要 TursoConfig 配置"
+                raise ValueError(msg)
             self._provider = TursoProvider(self._config)
         elif self._provider_name == "postgres":
             if not isinstance(self._config, PostgresConfig):
-                raise ValueError("PostgreSQL 需要 PostgresConfig 配置")
+                msg = "PostgreSQL 需要 PostgresConfig 配置"
+                raise ValueError(msg)
             self._provider = PostgresProvider(self._config, self._pool_size)
         else:
-            raise ValueError(f"不支持的数据库提供商: {self._provider_name}")
+            msg = f"不支持的数据库提供商: {self._provider_name}"
+            raise ValueError(msg)
 
         await self._provider.connect()
 
@@ -732,7 +754,8 @@ class DatabaseManager:
     def _ensure_connected(self) -> None:
         """确保已连接."""
         if not self._provider:
-            raise ConnectionError("数据库未连接，请先调用 connect()")
+            msg = "数据库未连接，请先调用 connect()"
+            raise ConnectionError(msg)
 
     async def select(
         self,
@@ -858,15 +881,15 @@ class DatabaseManager:
         """
         self._ensure_connected()
         if self._provider_name not in ("postgres",):
+            msg = f"{self._provider_name} 不支持事务，请使用 PostgreSQL"
             raise TransactionError(
-                f"{self._provider_name} 不支持事务，请使用 PostgreSQL"
+                msg
             )
 
         # 对于 PostgreSQL，使用真正的事务
         if isinstance(self._provider, PostgresProvider):
-            async with self._provider._pool.acquire() as conn:
-                async with conn.transaction():
-                    yield TransactionContext(conn, self._provider_name)
+            async with self._provider._pool.acquire() as conn, conn.transaction():
+                yield TransactionContext(conn, self._provider_name)
         else:
             yield TransactionContext(None, self._provider_name)
 
@@ -891,7 +914,8 @@ class DatabaseManager:
         """
         self._ensure_connected()
         if not isinstance(self._provider, SupabaseProvider):
-            raise NotImplementedError("实时订阅仅支持 Supabase")
+            msg = "实时订阅仅支持 Supabase"
+            raise NotImplementedError(msg)
         return await self._provider.subscribe(table, event, callback, filters)
 
     # RLS 管理（仅 Supabase/PostgreSQL）
@@ -1024,7 +1048,8 @@ class DatabaseManager:
                 executed.append(migration["name"])
                 logger.info(f"已执行迁移: {migration['name']}")
             except Exception as e:
-                raise MigrationError(f"迁移 {migration['name']} 执行失败: {e}")
+                msg = f"迁移 {migration['name']} 执行失败: {e}"
+                raise MigrationError(msg)
 
         return executed
 
@@ -1066,7 +1091,8 @@ class TransactionContext:
         if self._provider == "postgres" and self._conn:
             rows = await self._conn.fetch(query, *(params or []))
             return [dict(row) for row in rows]
-        raise TransactionError("事务上下文不可用")
+        msg = "事务上下文不可用"
+        raise TransactionError(msg)
 
     async def insert(
         self,

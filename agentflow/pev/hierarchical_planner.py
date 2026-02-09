@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """階層的計画 - 目標をサブ目標→タスクに分解.
 
 長期計画と動的再計画をサポートする階層的プランナー。
@@ -425,9 +424,9 @@ JSON形式で代替目標を提案:
 
 __all__ = [
     "GoalStatus",
-    "SubGoal",
-    "PlanLevel",
     "HierarchicalPlan",
     "HierarchicalPlanner",
+    "PlanLevel",
+    "SubGoal",
 ]
 

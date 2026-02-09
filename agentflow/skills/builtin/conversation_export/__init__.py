@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Conversation Export Skill - 会話エクスポート機能.
 
 会話履歴を JSON / CSV / Markdown 形式でエクスポートするスキル。
@@ -15,6 +14,7 @@ from agentflow.skills.builtin.conversation_export.conversation_export import (
     ExportFormat,
     ExportMessage,
 )
+
 
 __all__ = [
     "ConversationExportSkill",

@@ -18,9 +18,6 @@ from collections.abc import AsyncIterator
 from datetime import datetime
 from typing import Any
 
-from agentflow import Flow, create_flow
-from agentflow.security import SafetyMixin
-
 from apps.market_trend_monitor.backend.agents import (
     AnalyzerAgent,
     CollectorAgent,
@@ -35,6 +32,10 @@ from apps.market_trend_monitor.backend.services.registry import (
     evidence_service,
     signal_service,
 )
+
+from agentflow import Flow, create_flow
+from agentflow.security import SafetyMixin
+
 
 logger = logging.getLogger(__name__)
 

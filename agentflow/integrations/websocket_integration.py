@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """WebSocket Integration - 双向実時間通信.
 
 このモジュールは、Agent との双方向リアルタイム通信を提供します。
@@ -32,18 +31,22 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
 import time
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 # =============================================================================
@@ -98,7 +101,7 @@ class WSEvent(BaseModel):
         return json.dumps(self.model_dump(), ensure_ascii=False, default=str)
 
     @classmethod
-    def from_json(cls, data: str | bytes) -> "WSEvent":
+    def from_json(cls, data: str | bytes) -> WSEvent:
         """JSONから作成."""
         if isinstance(data, bytes):
             data = data.decode("utf-8")
@@ -154,32 +157,26 @@ class ConnectionManager(ABC):
     @abstractmethod
     async def connect(self, session_id: str, connection: Any) -> None:
         """接続を登録."""
-        pass
 
     @abstractmethod
     async def disconnect(self, session_id: str) -> None:
         """接続を解除."""
-        pass
 
     @abstractmethod
     async def send(self, session_id: str, event: WSEvent) -> bool:
         """特定セッションにイベント送信."""
-        pass
 
     @abstractmethod
     async def broadcast(self, event: WSEvent, exclude: set[str] | None = None) -> int:
         """全セッションにブロードキャスト."""
-        pass
 
     @abstractmethod
     def get_connection_count(self) -> int:
         """接続数を取得."""
-        pass
 
     @abstractmethod
     def get_sessions(self) -> list[str]:
         """セッションID一覧を取得."""
-        pass
 
 
 # =============================================================================
@@ -237,7 +234,8 @@ class WebSocketManager(ConnectionManager):
         """接続を登録."""
         if len(self._connections) >= self._max_connections:
             self._logger.warning(f"Max connections reached: {self._max_connections}")
-            raise ConnectionError("Max connections reached")
+            msg = "Max connections reached"
+            raise ConnectionError(msg)
 
         self._connections[session_id] = connection
         self._states[session_id] = ConnectionState(session_id=session_id)
@@ -290,7 +288,7 @@ class WebSocketManager(ConnectionManager):
             return True
 
         except Exception as e:
-            self._logger.error(f"Send error to {session_id}: {e}")
+            self._logger.exception(f"Send error to {session_id}: {e}")
             await self.disconnect(session_id)
             return False
 
@@ -351,7 +349,7 @@ class WebSocketManager(ConnectionManager):
                 try:
                     await self._handle_message(session_id, data)
                 except Exception as e:
-                    self._logger.error(f"Message handling error: {e}")
+                    self._logger.exception(f"Message handling error: {e}")
 
         except Exception as e:
             self._logger.info(f"WebSocket closed: {session_id} - {e}")
@@ -381,7 +379,7 @@ class WebSocketManager(ConnectionManager):
         except json.JSONDecodeError:
             self._logger.warning(f"Invalid JSON from {session_id}: {data[:100]}")
         except Exception as e:
-            self._logger.error(f"Command handling error: {e}")
+            self._logger.exception(f"Command handling error: {e}")
 
     def register_command_handler(
         self,
@@ -411,9 +409,8 @@ class WebSocketManager(ConnectionManager):
                     self._command_queue.get(),
                     timeout=timeout,
                 )
-            else:
-                return await self._command_queue.get()
-        except asyncio.TimeoutError:
+            return await self._command_queue.get()
+        except TimeoutError:
             return None
 
     async def start_heartbeat(self) -> None:
@@ -428,10 +425,8 @@ class WebSocketManager(ConnectionManager):
         """ハートビートを停止."""
         if self._heartbeat_task:
             self._heartbeat_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._heartbeat_task
-            except asyncio.CancelledError:
-                pass
             self._heartbeat_task = None
             self._logger.info("Heartbeat stopped")
 
@@ -457,7 +452,7 @@ class WebSocketManager(ConnectionManager):
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                self._logger.error(f"Heartbeat error: {e}")
+                self._logger.exception(f"Heartbeat error: {e}")
 
     def get_stats(self) -> dict[str, Any]:
         """統計情報を取得."""
@@ -489,7 +484,8 @@ def create_websocket_router(
     try:
         from fastapi import APIRouter, WebSocket, WebSocketDisconnect
     except ImportError:
-        raise ImportError("FastAPI is required for create_websocket_router")
+        msg = "FastAPI is required for create_websocket_router"
+        raise ImportError(msg)
 
     router = APIRouter()
     ws_manager = manager or WebSocketManager()
@@ -512,13 +508,13 @@ def create_websocket_router(
 # =============================================================================
 
 __all__ = [
-    # イベント
-    "WSEventType",
-    "WSEvent",
-    "WSCommand",
+    "ConnectionManager",
     # 接続管理
     "ConnectionState",
-    "ConnectionManager",
+    "WSCommand",
+    "WSEvent",
+    # イベント
+    "WSEventType",
     "WebSocketManager",
     # ユーティリティ
     "create_websocket_router",

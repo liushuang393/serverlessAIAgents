@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Slack Adapter - Slack 消息平台适配器.
 
 支持通过 slack-sdk 库与 Slack API 集成。
@@ -37,6 +36,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from agentflow.channels.base import MessageChannelAdapter, UserInfo
+
 
 if TYPE_CHECKING:
     from agentflow.channels.gateway import MessageGateway
@@ -140,7 +140,7 @@ class SlackAdapter(MessageChannelAdapter):
             return response["ts"]
 
         except Exception as e:
-            self._logger.error(f"Failed to send Slack message: {e}")
+            self._logger.exception(f"Failed to send Slack message: {e}")
             raise
 
     async def send_typing_indicator(self, channel_id: str) -> None:
@@ -154,7 +154,6 @@ class SlackAdapter(MessageChannelAdapter):
         """
         # Slack 没有 typing indicator，可以发送临时消息
         # 或者不实现（静默失败）
-        pass
 
     async def send_image(
         self,
@@ -202,7 +201,7 @@ class SlackAdapter(MessageChannelAdapter):
             return response["ts"]
 
         except Exception as e:
-            self._logger.error(f"Failed to send image: {e}")
+            self._logger.exception(f"Failed to send image: {e}")
             raise
 
     async def send_file(
@@ -235,7 +234,7 @@ class SlackAdapter(MessageChannelAdapter):
             return response["file"]["id"]
 
         except Exception as e:
-            self._logger.error(f"Failed to send file: {e}")
+            self._logger.exception(f"Failed to send file: {e}")
             raise
 
     async def delete_message(
@@ -309,7 +308,8 @@ class SlackAdapter(MessageChannelAdapter):
             response = await self._client.users_info(user=user_id)
 
             if not response["ok"]:
-                raise Exception(f"Slack API error: {response.get('error')}")
+                msg = f"Slack API error: {response.get('error')}"
+                raise Exception(msg)
 
             user = response["user"]
             profile = user.get("profile", {})
@@ -354,10 +354,9 @@ class SlackAdapter(MessageChannelAdapter):
         """
         try:
             # 验证签名（如果提供了 signing_secret）
-            if self._signing_secret:
-                if not self._verify_signature(body, headers):
-                    self._logger.warning("Invalid Slack signature")
-                    return {"error": "Invalid signature"}
+            if self._signing_secret and not self._verify_signature(body, headers):
+                self._logger.warning("Invalid Slack signature")
+                return {"error": "Invalid signature"}
 
             # 解析 body
             data = json.loads(body.decode("utf-8"))
@@ -440,7 +439,7 @@ class SlackAdapter(MessageChannelAdapter):
             return hmac.compare_digest(my_signature, signature)
 
         except Exception as e:
-            self._logger.error(f"Error verifying signature: {e}")
+            self._logger.exception(f"Error verifying signature: {e}")
             return False
 
     # =========================================================================
@@ -462,7 +461,7 @@ class SlackAdapter(MessageChannelAdapter):
                 "user": response["user"],
             }
         except Exception as e:
-            self._logger.error(f"Failed to get bot info: {e}")
+            self._logger.exception(f"Failed to get bot info: {e}")
             return {}
 
     async def get_channel_info(self, channel_id: str) -> dict[str, Any]:
@@ -480,5 +479,5 @@ class SlackAdapter(MessageChannelAdapter):
                 return response["channel"]
             return {}
         except Exception as e:
-            self._logger.error(f"Failed to get channel info: {e}")
+            self._logger.exception(f"Failed to get channel info: {e}")
             return {}

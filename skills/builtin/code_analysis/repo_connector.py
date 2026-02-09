@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """リポジトリ接続スキル - Repository Connector.
 
 Git/SVNリポジトリに接続し、コードを取得するスキル。
@@ -156,7 +155,7 @@ class RepoConnector(AgentBlock):
         local_path = await self._clone_repo(url, branch, vcs_type)
 
         # リポジトリ分析
-        repo_info = await self._analyze_repo(
+        return await self._analyze_repo(
             url=url,
             vcs_type=vcs_type,
             branch=branch,
@@ -164,14 +163,13 @@ class RepoConnector(AgentBlock):
             local_path=local_path,
         )
 
-        return repo_info
 
     def _detect_vcs_type(self, url: str) -> VCSType:
         """VCSタイプを検出."""
         url_lower = url.lower()
         if "github.com" in url_lower or "gitlab.com" in url_lower or url_lower.endswith(".git"):
             return VCSType.GIT
-        elif "svn" in url_lower:
+        if "svn" in url_lower:
             return VCSType.SVN
         return VCSType.GIT
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """A2UI コンポーネント生成サービス v3.0.
 
 Decision Governance Engine のレポートを A2UI コンポーネントに変換。
@@ -8,6 +7,8 @@ v3.0: 本質導出・戦略的禁止事項・撤退基準など全フィール�
 
 from typing import Any
 
+from apps.decision_governance_engine.schemas.output_schemas import DecisionReport
+
 from agentflow.protocols.a2ui.components import (
     A2UIComponent,
     ButtonComponent,
@@ -15,8 +16,6 @@ from agentflow.protocols.a2ui.components import (
     ListComponent,
     TextComponent,
 )
-
-from apps.decision_governance_engine.schemas.output_schemas import DecisionReport
 
 
 class DecisionUIComponentBuilder:

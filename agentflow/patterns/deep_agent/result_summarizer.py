@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Result Summarizer - 子Agent結果の過濾・要約.
 
 子Agentの実行結果から中間状態を除去し、
@@ -24,6 +23,7 @@ import logging
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Protocol
+
 
 _logger = logging.getLogger(__name__)
 
@@ -243,10 +243,9 @@ class ResultSummarizer:
         """
         if isinstance(result, dict):
             return self._filter_dict(result)
-        elif isinstance(result, list):
+        if isinstance(result, list):
             return [self._filter_result(item) for item in result]
-        else:
-            return result
+        return result
 
     def _filter_dict(self, data: dict[str, Any]) -> dict[str, Any]:
         """辞書をフィルタリング.
@@ -269,7 +268,7 @@ class ResultSummarizer:
 
             # 空値のスキップ（AGGRESSIVEモード）
             if self._config.filter_level == FilterLevel.AGGRESSIVE:
-                if filtered_value is None or filtered_value == "" or filtered_value == []:
+                if filtered_value is None or filtered_value in ("", []):
                     continue
 
             filtered[key] = filtered_value
@@ -301,11 +300,7 @@ class ResultSummarizer:
                 return True
 
         # プライベートキー（AGGRESSIVEモード）
-        if self._config.filter_level == FilterLevel.AGGRESSIVE:
-            if key.startswith("_"):
-                return True
-
-        return False
+        return bool(self._config.filter_level == FilterLevel.AGGRESSIVE and key.startswith("_"))
 
     def _truncate_result(self, result: Any) -> Any:
         """結果を切り詰め.

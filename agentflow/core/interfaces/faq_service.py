@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """FAQ Service Interface - Core interface for FAQ system.
 
 Defines the contract for FAQ service implementations.
@@ -9,7 +8,11 @@ from __future__ import annotations
 from abc import abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, AsyncIterator, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 class QueryType(str, Enum):
@@ -98,11 +101,11 @@ class IFAQService(Protocol):
         context: dict[str, Any] | None = None,
     ) -> FAQResponse:
         """Process FAQ query.
-        
+
         Args:
             question: User question
             context: Additional context
-            
+
         Returns:
             FAQResponse with answer, sources, charts
         """
@@ -115,11 +118,11 @@ class IFAQService(Protocol):
         context: dict[str, Any] | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Process FAQ query with streaming.
-        
+
         Args:
             question: User question
             context: Additional context
-            
+
         Yields:
             StreamEvent for real-time updates
         """
@@ -128,10 +131,10 @@ class IFAQService(Protocol):
     @abstractmethod
     async def add_document(self, document: FAQDocument) -> str:
         """Add FAQ document.
-        
+
         Args:
             document: FAQ document to add
-            
+
         Returns:
             Document ID
         """
@@ -145,12 +148,12 @@ class IFAQService(Protocol):
         filters: dict[str, Any] | None = None,
     ) -> SearchResult:
         """Search FAQ documents.
-        
+
         Args:
             query: Search query
             top_k: Number of results
             filters: Optional filters
-            
+
         Returns:
             SearchResult
         """
@@ -163,11 +166,11 @@ class IFAQService(Protocol):
         schema: dict[str, Any] | None = None,
     ) -> SQLQueryResult:
         """Convert question to SQL and execute.
-        
+
         Args:
             question: Natural language question
             schema: Database schema
-            
+
         Returns:
             SQLQueryResult
         """
@@ -232,16 +235,16 @@ class IChartGenerator(Protocol):
 
 
 __all__ = [
-    "QueryType",
+    "ChartData",
     "ChartType",
     "FAQDocument",
-    "SearchResult",
-    "SQLQueryResult",
-    "ChartData",
     "FAQResponse",
-    "StreamEvent",
+    "IChartGenerator",
     "IFAQService",
     "IRAGProvider",
     "IText2SQLProvider",
-    "IChartGenerator",
+    "QueryType",
+    "SQLQueryResult",
+    "SearchResult",
+    "StreamEvent",
 ]

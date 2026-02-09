@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Microsoft Teams Adapter - Teams Bot Framework 統合.
 
 Microsoft Teams Bot Framework SDK を使用した Teams 統合アダプター。
@@ -29,6 +28,7 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from agentflow.channels.base import MessageChannelAdapter, UserInfo
+
 
 if TYPE_CHECKING:
     from agentflow.channels.gateway import MessageGateway
@@ -238,7 +238,7 @@ class TeamsAdapter(MessageChannelAdapter):
                 app_id=self._app_id,
                 app_password=self._app_password,
             )
-            adapter = BotFrameworkAdapter(settings)
+            BotFrameworkAdapter(settings)
 
             # Activity をパース
             activity = Activity().deserialize(activity_data)

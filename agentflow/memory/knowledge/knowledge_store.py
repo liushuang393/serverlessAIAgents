@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """知識ストア - 抽象インターフェース.
 
 長期知識記憶の統一インターフェース定義。
@@ -13,6 +12,7 @@ Spring Boot風の設計：インターフェース分離、実装切替可能。
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
 
 if TYPE_CHECKING:
     from agentflow.memory.knowledge.types import (
@@ -54,7 +54,7 @@ class KnowledgeStore(Protocol):
         """
         ...
 
-    async def store(self, entry: "KnowledgeEntry") -> str:
+    async def store(self, entry: KnowledgeEntry) -> str:
         """知識エントリを保存.
 
         Args:
@@ -69,7 +69,7 @@ class KnowledgeStore(Protocol):
         """
         ...
 
-    async def store_batch(self, entries: list["KnowledgeEntry"]) -> list[str]:
+    async def store_batch(self, entries: list[KnowledgeEntry]) -> list[str]:
         """知識エントリを一括保存.
 
         Args:
@@ -88,10 +88,10 @@ class KnowledgeStore(Protocol):
         self,
         query: str,
         top_k: int = 5,
-        search_type: "SearchType | None" = None,
+        search_type: SearchType | None = None,
         tags: list[str] | None = None,
         min_score: float = 0.0,
-    ) -> list["SearchResult"]:
+    ) -> list[SearchResult]:
         """知識を検索.
 
         Args:
@@ -109,7 +109,7 @@ class KnowledgeStore(Protocol):
         """
         ...
 
-    async def get(self, entry_id: str) -> "KnowledgeEntry | None":
+    async def get(self, entry_id: str) -> KnowledgeEntry | None:
         """IDで知識エントリを取得.
 
         Args:
@@ -120,7 +120,7 @@ class KnowledgeStore(Protocol):
         """
         ...
 
-    async def update(self, entry: "KnowledgeEntry") -> bool:
+    async def update(self, entry: KnowledgeEntry) -> bool:
         """知識エントリを更新.
 
         Args:

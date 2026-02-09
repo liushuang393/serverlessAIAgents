@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ツール発見サービス.
 
 すべてのソースからツールを発見し、レジストリに登録するサービスモジュール。
@@ -30,9 +29,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from agentflow.core.tool_definition import ToolDefinition, ToolSource
+
 
 if TYPE_CHECKING:
     from agentflow.core.tool_registry import ToolRegistry
@@ -230,8 +230,9 @@ class ToolDiscoveryService:
             登録されたスキル数
         """
         try:
-            from agentflow.skills.loader import SkillLoader
             from pathlib import Path
+
+            from agentflow.skills.loader import SkillLoader
 
             count = 0
             loader = SkillLoader()

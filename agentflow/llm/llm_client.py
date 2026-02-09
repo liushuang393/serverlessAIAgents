@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """LLM統合クライアント.
 
 このモジュールは、各種LLMプロバイダーとの統一インターフェースを提供します。
@@ -21,7 +20,8 @@
 import asyncio
 import logging
 import os
-from typing import Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import Any
 
 import httpx
 from pydantic import BaseModel, Field
@@ -163,7 +163,8 @@ class LLMClient:
         elif self._config.provider in ("localai", "local"):
             self._initialize_localai()
         else:
-            raise ValueError(f"Unsupported provider: {self._config.provider}")
+            msg = f"Unsupported provider: {self._config.provider}"
+            raise ValueError(msg)
 
     def _initialize_openai(self) -> None:
         """OpenAIクライアント初期化."""
@@ -255,14 +256,13 @@ class LLMClient:
         # プロバイダー別の実装
         if self._config.provider == "openai":
             return await self._chat_openai(messages, **kwargs)
-        elif self._config.provider == "anthropic":
+        if self._config.provider == "anthropic":
             return await self._chat_anthropic(messages, **kwargs)
-        elif self._config.provider == "google":
+        if self._config.provider == "google":
             return await self._chat_google(messages, **kwargs)
-        elif self._config.provider in ("ollama", "localai", "local"):
+        if self._config.provider in ("ollama", "localai", "local"):
             return await self._chat_openai_compatible(messages, **kwargs)
-        else:
-            return self._mock_response(messages)
+        return self._mock_response(messages)
 
     async def _chat_openai(
         self, messages: list[LLMMessage], **kwargs: Any
@@ -287,8 +287,8 @@ class LLMClient:
             model_name = self._config.model.lower()
 
             # モデル分類
-            is_reasoning_model = bool(model_name.startswith(('o1', 'o3', 'o4')))
-            is_gpt5_model = bool(model_name.startswith('gpt-5') or 'gpt5' in model_name)
+            is_reasoning_model = bool(model_name.startswith(("o1", "o3", "o4")))
+            is_gpt5_model = bool(model_name.startswith("gpt-5") or "gpt5" in model_name)
 
             # メッセージをOpenAI形式に変換
             openai_messages = []
@@ -309,7 +309,7 @@ class LLMClient:
             }
 
             # ツール設定
-            if "tools" in kwargs and kwargs["tools"]:
+            if kwargs.get("tools"):
                 params["tools"] = kwargs["tools"]
                 if "tool_choice" in kwargs:
                     params["tool_choice"] = kwargs["tool_choice"]
@@ -332,7 +332,7 @@ class LLMClient:
             # ツール呼び出しの解析
             tool_calls_list: list[ToolCall] = []
             message = response.choices[0].message
-            if hasattr(message, 'tool_calls') and message.tool_calls:
+            if hasattr(message, "tool_calls") and message.tool_calls:
                 for tc in message.tool_calls:
                     tool_calls_list.append(ToolCall(
                         id=tc.id,
@@ -351,11 +351,11 @@ class LLMClient:
                 finish_reason=response.choices[0].finish_reason,
                 tool_calls=tool_calls_list,
             )
-        except asyncio.TimeoutError:
-            self._logger.error(f"OpenAI API timeout after {self._config.timeout}s")
+        except TimeoutError:
+            self._logger.exception(f"OpenAI API timeout after {self._config.timeout}s")
             raise
         except Exception as e:
-            self._logger.error(f"OpenAI API error: {e}")
+            self._logger.exception(f"OpenAI API error: {e}")
             raise
 
     async def _chat_anthropic(
@@ -407,7 +407,7 @@ class LLMClient:
                 params["system"] = system_message
 
             # ツール設定（OpenAI形式からAnthropic形式に変換）
-            if "tools" in kwargs and kwargs["tools"]:
+            if kwargs.get("tools"):
                 anthropic_tools = []
                 for tool in kwargs["tools"]:
                     if tool.get("type") == "function":
@@ -429,9 +429,9 @@ class LLMClient:
             tool_calls_list: list[ToolCall] = []
 
             for block in response.content:
-                if hasattr(block, 'text'):
+                if hasattr(block, "text"):
                     content_text = block.text
-                elif hasattr(block, 'type') and block.type == "tool_use":
+                elif hasattr(block, "type") and block.type == "tool_use":
                     tool_calls_list.append(ToolCall(
                         id=block.id,
                         name=block.name,
@@ -448,11 +448,11 @@ class LLMClient:
                 finish_reason=response.stop_reason,
                 tool_calls=tool_calls_list,
             )
-        except asyncio.TimeoutError:
-            self._logger.error(f"Anthropic API timeout after {self._config.timeout}s")
+        except TimeoutError:
+            self._logger.exception(f"Anthropic API timeout after {self._config.timeout}s")
             raise
         except Exception as e:
-            self._logger.error(f"Anthropic API error: {e}")
+            self._logger.exception(f"Anthropic API error: {e}")
             raise
 
     async def _chat_google(
@@ -468,7 +468,6 @@ class LLMClient:
         Returns:
             LLMレスポンス
         """
-        from google import genai
         from google.genai import types
 
         try:
@@ -495,7 +494,7 @@ class LLMClient:
 
             # ツール定義の変換（OpenAI形式 → Gemini形式）
             gemini_tools = None
-            if "tools" in kwargs and kwargs["tools"]:
+            if kwargs.get("tools"):
                 function_declarations = []
                 for tool in kwargs["tools"]:
                     if tool.get("type") == "function":
@@ -559,11 +558,11 @@ class LLMClient:
                 finish_reason=str(response.candidates[0].finish_reason) if response.candidates else "unknown",
                 tool_calls=tool_calls_list,
             )
-        except asyncio.TimeoutError:
-            self._logger.error(f"Google API timeout after {self._config.timeout}s")
+        except TimeoutError:
+            self._logger.exception(f"Google API timeout after {self._config.timeout}s")
             raise
         except Exception as e:
-            self._logger.error(f"Google API error: {e}")
+            self._logger.exception(f"Google API error: {e}")
             raise
 
     async def _chat_openai_compatible(
@@ -601,10 +600,11 @@ class LLMClient:
                     finish_reason=data["choices"][0].get("finish_reason"),
                 )
         except httpx.TimeoutException:
-            self._logger.error(f"API timeout after {self._config.timeout}s")
-            raise asyncio.TimeoutError(f"Timeout after {self._config.timeout}s")
+            self._logger.exception(f"API timeout after {self._config.timeout}s")
+            msg = f"Timeout after {self._config.timeout}s"
+            raise TimeoutError(msg)
         except Exception as e:
-            self._logger.error(f"API error: {e}")
+            self._logger.exception(f"API error: {e}")
             raise
 
     async def stream(
@@ -655,8 +655,8 @@ class LLMClient:
         model_name = self._config.model.lower()
 
         # モデル分類
-        is_reasoning_model = bool(model_name.startswith(('o1', 'o3', 'o4')))
-        is_gpt5_model = bool(model_name.startswith('gpt-5') or 'gpt5' in model_name)
+        is_reasoning_model = bool(model_name.startswith(("o1", "o3", "o4")))
+        is_gpt5_model = bool(model_name.startswith("gpt-5") or "gpt5" in model_name)
 
         params: dict[str, Any] = {
             "model": self._config.model,
@@ -764,34 +764,33 @@ class LLMClient:
         Yields:
             生成されたテキストチャンク
         """
-        async with httpx.AsyncClient(timeout=self._config.timeout) as client:
-            async with client.stream(
-                "POST",
-                f"{self._base_url}/chat/completions",
-                json={
-                    "model": self._config.model,
-                    "messages": [
-                        {"role": msg.role, "content": msg.content} for msg in messages
-                    ],
-                    "temperature": kwargs.get("temperature", self._config.temperature),
-                    "max_tokens": kwargs.get("max_tokens", self._config.max_tokens),
-                    "stream": True,
-                },
-            ) as response:
-                async for line in response.aiter_lines():
-                    if line.startswith("data: "):
-                        data = line[6:]
-                        if data == "[DONE]":
-                            break
-                        try:
-                            import json
+        async with httpx.AsyncClient(timeout=self._config.timeout) as client, client.stream(
+            "POST",
+            f"{self._base_url}/chat/completions",
+            json={
+                "model": self._config.model,
+                "messages": [
+                    {"role": msg.role, "content": msg.content} for msg in messages
+                ],
+                "temperature": kwargs.get("temperature", self._config.temperature),
+                "max_tokens": kwargs.get("max_tokens", self._config.max_tokens),
+                "stream": True,
+            },
+        ) as response:
+            async for line in response.aiter_lines():
+                if line.startswith("data: "):
+                    data = line[6:]
+                    if data == "[DONE]":
+                        break
+                    try:
+                        import json
 
-                            chunk = json.loads(data)
-                            content = chunk["choices"][0]["delta"].get("content", "")
-                            if content:
-                                yield content
-                        except (json.JSONDecodeError, KeyError):
-                            continue
+                        chunk = json.loads(data)
+                        content = chunk["choices"][0]["delta"].get("content", "")
+                        if content:
+                            yield content
+                    except (json.JSONDecodeError, KeyError):
+                        continue
 
     def _mock_response(self, messages: list[LLMMessage]) -> LLMResponse:
         """モックレスポンス生成.

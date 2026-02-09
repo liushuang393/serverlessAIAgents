@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ブラウザスキル基底クラス.
 
 全てのブラウザスキルが継承する共通基盤。
@@ -38,13 +37,11 @@ class BrowserSkillError(Exception):
 class DomainSecurityError(BrowserSkillError):
     """ドメインセキュリティ違反."""
 
-    pass
 
 
 class BrowserStateError(BrowserSkillError):
     """ブラウザ状態エラー."""
 
-    pass
 
 
 class BrowserSkillBase(ABC):

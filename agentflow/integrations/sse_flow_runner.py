@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """SSEFlowRunner - SSE イベント発射と業務ロジックの分離.
 
 このモジュールは、Engine/Flow とSSE配信を分離し、
@@ -35,7 +34,7 @@ import logging
 import time
 import uuid
 from collections.abc import AsyncIterator
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Protocol
 
 from agentflow.protocols.agui_events import (
@@ -163,7 +162,8 @@ class SSEFlowRunner:
             AGUIEvent
         """
         if self._flow is None:
-            raise ValueError("Flow is not set. Use set_flow() or pass flow to constructor.")
+            msg = "Flow is not set. Use set_flow() or pass flow to constructor."
+            raise ValueError(msg)
 
         flow_id = self.flow_id
         now = time.time()
@@ -199,7 +199,7 @@ class SSEFlowRunner:
                 )
 
         except Exception as e:
-            self._logger.error(f"Flow execution error: {e}")
+            self._logger.exception(f"Flow execution error: {e}")
             yield FlowErrorEvent(
                 timestamp=time.time(),
                 flow_id=flow_id,
@@ -244,9 +244,8 @@ class SSEFlowRunner:
             # JSON形式
             data = event.model_dump_json()
             return f"event: {event_type}\ndata: {data}\n\n"
-        else:
-            # シンプル形式
-            return f"event: {event_type}\ndata: {event.flow_id}\n\n"
+        # シンプル形式
+        return f"event: {event_type}\ndata: {event.flow_id}\n\n"
 
     def set_flow(self, flow: FlowProtocol) -> None:
         """Flowを設定.

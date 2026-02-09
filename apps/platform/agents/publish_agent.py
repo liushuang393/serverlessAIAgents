@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """PublishAgent - 発布支援Agent.
 
 発布プロセスの支援と自動化を行う。
@@ -12,9 +11,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentflow.core.agent_block import AgentBlock
+from apps.platform.schemas.publish_schemas import PublishRequest, PublishStatus, PublishTarget
 from apps.platform.services.publish_orchestrator import PublishOrchestrator
-from apps.platform.schemas.publish_schemas import PublishRequest, PublishTarget, PublishStatus
+
+from agentflow.core.agent_block import AgentBlock
 
 
 class PublishAgent(AgentBlock):
@@ -77,10 +77,9 @@ class PublishAgent(AgentBlock):
 
         if action == "recommend":
             return await self._recommend_target(input_data)
-        elif action == "publish":
+        if action == "publish":
             return await self._execute_publish(input_data)
-        else:
-            return {"success": False, "error": f"Unknown action: {action}"}
+        return {"success": False, "error": f"Unknown action: {action}"}
 
     async def _recommend_target(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """発布ターゲットを推薦.
@@ -92,7 +91,7 @@ class PublishAgent(AgentBlock):
             推薦結果
         """
         # コンポーネント情報から最適なターゲットを推薦
-        component_type = input_data.get("component_type", "agent")
+        input_data.get("component_type", "agent")
         requirements = input_data.get("requirements", [])
 
         recommendations = []

@@ -20,13 +20,16 @@ import asyncio
 import logging
 import time
 import uuid
-from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.skills.gateway import RiskLevel
+
+
+if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
 
 
 class ApprovalStatus(str, Enum):
@@ -133,10 +136,7 @@ class AutoApprovalRule:
             return False
 
         # ユーザーチェック
-        if self.allowed_users and user_id not in self.allowed_users:
-            return False
-
-        return True
+        return not (self.allowed_users and user_id not in self.allowed_users)
 
 
 class ApprovalManager:
@@ -278,7 +278,7 @@ class ApprovalManager:
             try:
                 await callback(request)
             except Exception as e:
-                self._logger.error("コールバックエラー: %s", e)
+                self._logger.exception("コールバックエラー: %s", e)
 
         # WebSocket通知
         if self._hub:

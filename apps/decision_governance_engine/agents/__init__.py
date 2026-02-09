@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Decision Governance Engine - Agents パッケージ.
 
 全てのAgentを公開するエントリーポイント。
@@ -14,13 +13,14 @@ from apps.decision_governance_engine.agents.qi_agent import QiAgent
 from apps.decision_governance_engine.agents.review_agent import ReviewAgent
 from apps.decision_governance_engine.agents.shu_agent import ShuAgent
 
+
 __all__ = [
-    "CognitiveGateAgent",
-    "GatekeeperAgent",
     "ClarificationAgent",
+    "CognitiveGateAgent",
     "DaoAgent",
     "FaAgent",
-    "ShuAgent",
+    "GatekeeperAgent",
     "QiAgent",
     "ReviewAgent",
+    "ShuAgent",
 ]

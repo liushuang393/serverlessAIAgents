@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
 """信号評価API."""
-
-from fastapi import APIRouter, HTTPException, Query
 
 from apps.market_trend_monitor.backend.api.state import signal_service
 from apps.market_trend_monitor.backend.models import SignalGrade
+from fastapi import APIRouter, HTTPException
+
 
 router = APIRouter(tags=["信号評価"])
 

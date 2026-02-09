@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DataConnector - データコネクタ抽象基底クラス.
 
 全てのデータソースコネクタが実装すべき統一インターフェースを定義。
@@ -11,9 +10,11 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, AsyncIterator
+from collections.abc import AsyncIterator
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
+
 
 if TYPE_CHECKING:
     from agentflow.datalake.core import DataItem, ReadResult

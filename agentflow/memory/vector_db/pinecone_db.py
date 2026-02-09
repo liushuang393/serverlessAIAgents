@@ -54,9 +54,11 @@ class PineconeDB(VectorDatabase):
             self._connected = True
             self._logger.info(f"Connected to Pinecone index: {self._index_name}")
         except ImportError:
-            raise ImportError("pinecone-client package is required. Install with: pip install pinecone-client")
+            msg = "pinecone-client package is required. Install with: pip install pinecone-client"
+            raise ImportError(msg)
         except Exception as e:
-            raise ConnectionError(f"Failed to connect to Pinecone: {e}")
+            msg = f"Failed to connect to Pinecone: {e}"
+            raise ConnectionError(msg)
 
     async def disconnect(self) -> None:
         """Pineconeから切断."""
@@ -66,7 +68,8 @@ class PineconeDB(VectorDatabase):
     async def upsert(self, entry: MemoryEntry, embedding: list[float]) -> None:
         """ベクトルを挿入/更新."""
         if not self._connected:
-            raise ConnectionError("Not connected to Pinecone")
+            msg = "Not connected to Pinecone"
+            raise ConnectionError(msg)
 
         metadata = {
             "content": entry.content,
@@ -89,7 +92,8 @@ class PineconeDB(VectorDatabase):
     ) -> list[tuple[MemoryEntry, float]]:
         """ベクトル類似度検索."""
         if not self._connected:
-            raise ConnectionError("Not connected to Pinecone")
+            msg = "Not connected to Pinecone"
+            raise ConnectionError(msg)
 
         # フィルタを構築
         filter_dict = {}
@@ -124,7 +128,8 @@ class PineconeDB(VectorDatabase):
     async def delete(self, entry_id: str) -> bool:
         """ベクトルを削除."""
         if not self._connected:
-            raise ConnectionError("Not connected to Pinecone")
+            msg = "Not connected to Pinecone"
+            raise ConnectionError(msg)
 
         self._index.delete(ids=[entry_id])
         return True
@@ -132,7 +137,8 @@ class PineconeDB(VectorDatabase):
     async def clear(self, topic: str | None = None) -> int:
         """ベクトルをクリア."""
         if not self._connected:
-            raise ConnectionError("Not connected to Pinecone")
+            msg = "Not connected to Pinecone"
+            raise ConnectionError(msg)
 
         if topic:
             # トピックでフィルタして削除

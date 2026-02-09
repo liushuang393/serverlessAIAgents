@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Skill エンジン - 自動進化システムの統合インターフェース.
 
 このモジュールは Skill システムの統合エンジンを提供します：
@@ -22,11 +21,12 @@ from typing import TYPE_CHECKING
 
 from agentflow.providers import get_llm
 from agentflow.skills.base import Skill
-from agentflow.skills.generator import GenerationResult, SkillGenerator
+from agentflow.skills.generator import SkillGenerator
 from agentflow.skills.loader import SkillLoader, SkillRegistry
 from agentflow.skills.matcher import MatchResult, SkillMatcher
 from agentflow.skills.persister import SkillPersister
 from agentflow.skills.validator import SkillValidator
+
 
 if TYPE_CHECKING:
     from agentflow.providers.llm_provider import LLMProvider
@@ -87,7 +87,7 @@ class SkillEngine:
             temperature: LLM 温度パラメータ（省略時はデフォルト）
         """
         # LLM プロバイダー（環境変数から自動検出・松耦合）
-        self._llm: "LLMProvider" = get_llm(temperature=temperature)
+        self._llm: LLMProvider = get_llm(temperature=temperature)
         self._auto_learn = auto_learn
         self._logger = logging.getLogger(__name__)
 
@@ -174,7 +174,7 @@ class SkillEngine:
             saved = True
             self._logger.info(f"Saved new skill: {skill.name}")
         except Exception as e:
-            self._logger.error(f"Failed to save skill: {e}")
+            self._logger.exception(f"Failed to save skill: {e}")
 
         return SkillExecutionResult(
             skill=skill,

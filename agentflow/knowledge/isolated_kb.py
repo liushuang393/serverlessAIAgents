@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """隔離知識ベースマネージャー.
 
 複数の知識ベースを物理的に隔離して管理するモジュール。
@@ -36,13 +35,11 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from agentflow.knowledge.rag_pipeline import RAGConfig, RAGPipeline
 from agentflow.security.policy_engine import AuthContext, AuthMode, PolicyEngine
 
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
@@ -285,7 +282,8 @@ class IsolatedKBManager:
 
         config = self._configs.get(kb_type)
         if not config:
-            raise ValueError(f"Unknown KB type: {kb_type}")
+            msg = f"Unknown KB type: {kb_type}"
+            raise ValueError(msg)
 
         # 権限チェック
         user_context = user_context or {}
@@ -302,8 +300,9 @@ class IsolatedKBManager:
                     success=False,
                     error="Permission denied",
                 )
+                msg = f"Access denied to {kb_type.value} KB"
                 raise PermissionError(
-                    f"Access denied to {kb_type.value} KB"
+                    msg
                 )
 
         # 検索実行
@@ -367,7 +366,8 @@ class IsolatedKBManager:
 
         config = self._configs.get(kb_type)
         if not config:
-            raise ValueError(f"Unknown KB type: {kb_type}")
+            msg = f"Unknown KB type: {kb_type}"
+            raise ValueError(msg)
 
         # 権限チェック（追加は常に認証必須）
         user_context = user_context or {}
@@ -382,8 +382,9 @@ class IsolatedKBManager:
                 success=False,
                 error="Permission denied",
             )
+            msg = f"Write access denied to {kb_type.value} KB"
             raise PermissionError(
-                f"Write access denied to {kb_type.value} KB"
+                msg
             )
 
         # メタデータを構築
@@ -437,7 +438,8 @@ class IsolatedKBManager:
 
         config = self._configs.get(kb_type)
         if not config:
-            raise ValueError(f"Unknown KB type: {kb_type}")
+            msg = f"Unknown KB type: {kb_type}"
+            raise ValueError(msg)
 
         # 権限チェック
         user_context = user_context or {}
@@ -446,8 +448,9 @@ class IsolatedKBManager:
                 kb_type, "read", user_context
             )
             if not auth_result:
+                msg = f"Access denied to {kb_type.value} KB"
                 raise PermissionError(
-                    f"Access denied to {kb_type.value} KB"
+                    msg
                 )
 
         # RAGクエリ実行
@@ -625,11 +628,12 @@ class IsolatedKBManager:
     def _ensure_started(self) -> None:
         """開始済みであることを確認."""
         if not self._started:
+            msg = "IsolatedKBManager not started. Call start() first."
             raise RuntimeError(
-                "IsolatedKBManager not started. Call start() first."
+                msg
             )
 
-    async def __aenter__(self) -> "IsolatedKBManager":
+    async def __aenter__(self) -> IsolatedKBManager:
         """非同期コンテキストマネージャーのエントリー."""
         await self.start()
         return self
@@ -646,10 +650,10 @@ class IsolatedKBManager:
 
 __all__ = [
     "IsolatedKBManager",
+    "KBAccessLog",
     "KBConfig",
     "KBDocument",
     "KBType",
     "KBVisibility",
     "SearchResult",
-    "KBAccessLog",
 ]

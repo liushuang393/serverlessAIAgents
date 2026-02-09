@@ -1,13 +1,10 @@
-# -*- coding: utf-8 -*-
 """DockerTarget - Docker デプロイターゲット."""
 
 from __future__ import annotations
 
 import asyncio
 import logging
-from collections.abc import AsyncIterator
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.core.interfaces import (
     ConfigField,
@@ -16,6 +13,12 @@ from agentflow.core.interfaces import (
     ValidationResult,
 )
 from agentflow.deploy.targets.base import BaseDeployTarget
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
+
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +129,7 @@ class DockerTarget(BaseDeployTarget):
                     stderr=asyncio.subprocess.PIPE,
                 )
 
-                stdout, stderr = await push_process.communicate()
+                _stdout, stderr = await push_process.communicate()
 
                 if push_process.returncode != 0:
                     yield DeployEvent(

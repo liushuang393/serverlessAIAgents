@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Dashboard Router - ダッシュボード API エンドポイント.
 
 GET /api/dashboard/{tenant_id} - ダッシュボードサマリー
@@ -12,10 +11,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from apps.platform.engine import PlatformEngine
 from fastapi import APIRouter, Depends, Query
 
-from apps.platform.engine import PlatformEngine
-from apps.platform.services.tenant_dashboard import TenantDashboard
 
 router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """結果検証 - 実行結果の検証と自己修正判断.
 
 実行結果を検証し、期待と比較して自己修正の必要性を判断する。
@@ -441,8 +440,8 @@ JSON形式で回答:
 
 
 __all__ = [
-    "VerificationStrategy",
-    "VerificationResult",
     "ResultVerifier",
+    "VerificationResult",
+    "VerificationStrategy",
 ]
 

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """証拠台帳エージェント.
 
 全ての結論に対する証拠の追跡可能性を確保します。
@@ -12,10 +11,6 @@
 import logging
 from typing import Any
 
-from pydantic import BaseModel, Field
-
-from agentflow import ResilientAgent
-
 from apps.market_trend_monitor.backend.models import (
     Article,
     ArticleSchema,
@@ -23,6 +18,9 @@ from apps.market_trend_monitor.backend.models import (
     SourceType,
 )
 from apps.market_trend_monitor.backend.services import EvidenceService
+from pydantic import BaseModel, Field
+
+from agentflow import ResilientAgent
 
 
 # ============================================================

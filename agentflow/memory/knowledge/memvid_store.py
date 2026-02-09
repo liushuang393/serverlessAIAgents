@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Memvid知識ストア実装.
 
 Memvid（Rust製高性能RAG）を使用した長期知識記憶の実装。
@@ -17,9 +16,9 @@ from __future__ import annotations
 
 import logging
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from agentflow.memory.knowledge.types import (
     KnowledgeEntry,
@@ -27,8 +26,6 @@ from agentflow.memory.knowledge.types import (
     SearchType,
 )
 
-if TYPE_CHECKING:
-    pass
 
 logger = logging.getLogger(__name__)
 
@@ -306,7 +303,7 @@ class MemvidKnowledgeStore:
             msg = f"Entry not found: {entry.id}"
             raise ValueError(msg)
 
-        entry.updated_at = datetime.now(timezone.utc)
+        entry.updated_at = datetime.now(UTC)
         self._entries[entry.id] = entry
 
         # Memvidは追記型なので、更新は新規putとして扱う
