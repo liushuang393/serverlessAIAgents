@@ -224,7 +224,7 @@ class ToolDiscoveryService:
     async def discover_skills_from_engine(self) -> int:
         """SkillEngine からスキルを発見してツールとして登録.
 
-        ビルトインスキルおよびユーザー学習スキルを自動発見。
+        ビルトインスキル・ユーザースキル・アプリ固有スキルを自動発見。
 
         Returns:
             登録されたスキル数
@@ -237,41 +237,33 @@ class ToolDiscoveryService:
             count = 0
             loader = SkillLoader()
 
-            # ビルトインスキルディレクトリ
-            builtin_dir = Path(__file__).parent.parent / "skills" / "builtin"
-            if builtin_dir.exists():
-                skills = loader.load_directory(builtin_dir, recursive=True)
-                for skill in skills:
-                    try:
-                        tool_def = ToolDefinition.from_skill(skill)
-                        self._registry.register(tool_def)
-                        count += 1
-                    except Exception as e:
-                        self._logger.warning(f"スキル登録エラー {getattr(skill, 'name', '?')}: {e}")
+            scan_dirs: list[tuple[str, Path]] = [
+                ("ビルトイン", Path(__file__).parent.parent / "skills" / "builtin"),
+                ("ユーザー", Path.home() / ".agentflow" / "skills"),
+            ]
 
-            # ユーザー学習スキルディレクトリ
-            user_skills_dir = Path.home() / ".agentflow" / "skills"
-            if user_skills_dir.exists():
-                skills = loader.load_directory(user_skills_dir, recursive=True)
-                for skill in skills:
-                    try:
-                        tool_def = ToolDefinition.from_skill(skill)
-                        self._registry.register(tool_def)
-                        count += 1
-                    except Exception as e:
-                        self._logger.warning(f"ユーザースキル登録エラー {getattr(skill, 'name', '?')}: {e}")
+            # アプリ固有スキル（apps/*/skills）を追加
+            repo_root = Path(__file__).parent.parent.parent
+            apps_dir = repo_root / "apps"
+            if apps_dir.exists():
+                for app_dir in sorted(path for path in apps_dir.iterdir() if path.is_dir()):
+                    app_skills_dir = app_dir / "skills"
+                    if app_skills_dir.exists():
+                        scan_dirs.append((f"アプリ:{app_dir.name}", app_skills_dir))
 
-            # ルートスキルディレクトリ（新規）
-            root_skills_dir = Path(__file__).parent.parent.parent / "skills"
-            if root_skills_dir.exists():
-                skills = loader.load_directory(root_skills_dir, recursive=True)
+            for label, skill_dir in scan_dirs:
+                if not skill_dir.exists():
+                    continue
+                skills = loader.load_directory(skill_dir, recursive=True)
                 for skill in skills:
                     try:
                         tool_def = ToolDefinition.from_skill(skill)
                         self._registry.register(tool_def)
                         count += 1
                     except Exception as e:
-                        self._logger.warning(f"ルートスキル登録エラー {getattr(skill, 'name', '?')}: {e}")
+                        self._logger.warning(
+                            f"{label}スキル登録エラー {getattr(skill, 'name', '?')}: {e}"
+                        )
 
             self._logger.debug(f"SkillEngine からスキル発見: {count}")
             return count

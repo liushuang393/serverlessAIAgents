@@ -22,6 +22,21 @@ const AGENT_ICONS: Record<string, string> = {
   review: '🔍',
 };
 
+/** 進捗サマリー用に件数を安全に抽出 */
+const getCountValue = (value: unknown): number | null => {
+  if (Array.isArray(value)) {
+    return value.length;
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number.parseInt(value, 10);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+};
+
 /** Agent カード */
 const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({ agent, isReview }) => {
   const statusColor = {
@@ -32,6 +47,9 @@ const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({ age
   };
 
   const icon = AGENT_ICONS[agent.id] || '○';
+  const pathCount = getCountValue(agent.result?.paths);
+  const phaseCount = getCountValue(agent.result?.phases);
+  const implementationCount = getCountValue(agent.result?.implementations);
 
   return (
     <div className={`bg-[#12121a] rounded-xl ${isReview ? 'border-2 border-dashed' : 'border'} ${statusColor[agent.status]} p-5 transition-all duration-500`}>
@@ -104,19 +122,17 @@ const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({ age
           ) : null}
           {agent.id === 'fa' && agent.result.paths ? (
             <div className="text-sm text-slate-400">
-              {String(agent.result.paths)}つの戦略を評価 → <span className="text-emerald-400">{String(agent.result.recommended)}を推奨</span>
+              {pathCount ?? '複数'}つの戦略を評価 → <span className="text-emerald-400">{String(agent.result.recommended)}</span>を推奨
             </div>
           ) : null}
           {agent.id === 'shu' && agent.result.phases ? (
             <div className="text-sm text-slate-400">
-              {String(agent.result.phases)}フェーズの実行計画を策定
+              {phaseCount ?? '複数'}フェーズの実行計画を策定
             </div>
           ) : null}
           {agent.id === 'qi' && agent.result.implementations ? (
             <div className="text-sm text-slate-400">
-              {Array.isArray(agent.result.implementations)
-                ? agent.result.implementations.length
-                : String(agent.result.implementations)}件の実装要素を特定
+              {implementationCount ?? '複数'}件の実装要素を特定
             </div>
           ) : null}
           {agent.id === 'review' && agent.result.verdict ? (

@@ -2016,7 +2016,7 @@ cd /path/to/serverlessAIAgents
 pip install -e .
 
 # 2. 環境変数の設定
-export OPENAI_API_KEY="your-api-key"
+export OPENAI_API_KEY=
 export FAQ_DB_URL="postgresql://..."
 ```
 

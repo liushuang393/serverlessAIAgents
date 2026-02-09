@@ -135,7 +135,7 @@ const PhaseTimeline: React.FC<{ phases: Phase[] }> = ({ phases }) => (
 );
 
 export const ReportPage: React.FC = () => {
-  const { report, reportId, setPage, reset } = useDecisionStore();
+  const { report, reportId, question, setPage, reset } = useDecisionStore();
   const { user, performLogout } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabId>('summary');
   const [isExporting, setIsExporting] = useState(false);
@@ -230,6 +230,35 @@ export const ReportPage: React.FC = () => {
 
   if (!report) return null;
 
+  /** 表示用テキストを安全に整形（object直表示の防止） */
+  const toDisplayText = (value: unknown, fallback = ""): string => {
+    if (value === null || value === undefined) {
+      return fallback;
+    }
+    if (typeof value === "string") {
+      const text = value.trim();
+      return text || fallback;
+    }
+    if (typeof value === "number" || typeof value === "boolean") {
+      return String(value);
+    }
+    if (Array.isArray(value)) {
+      const items = value
+        .map((item) => toDisplayText(item))
+        .filter((item) => item.length > 0);
+      return items.length > 0 ? items.join("、") : fallback;
+    }
+    if (typeof value === "object") {
+      try {
+        const compact = JSON.stringify(value);
+        return compact === "{}" ? fallback : compact;
+      } catch {
+        return fallback;
+      }
+    }
+    return fallback;
+  };
+
   // 各セクションを安全に取得（古いデータ形式への対応）
   const { dao, fa, shu, qi, review, proposal_title, signature_block } = report;
 
@@ -293,6 +322,29 @@ export const ReportPage: React.FC = () => {
     confidence_score: 0,
     final_warnings: [],
   };
+
+  // レビューが未生成の古いデータでは「未検証」を表示
+  const reviewVerdict = review?.overall_verdict;
+  const reviewStatusLabel = reviewVerdict || "未検証";
+  const reviewStatusClass = !reviewVerdict
+    ? "bg-slate-500/10 text-slate-400 border border-slate-500/30"
+    : reviewVerdict === "PASS"
+    ? "bg-emerald-500/20 text-emerald-400"
+    : reviewVerdict === "REVISE"
+    ? "bg-amber-500/20 text-amber-400"
+    : "bg-red-500/20 text-red-400";
+  const reviewStatusClassWithBorder = !reviewVerdict
+    ? "bg-slate-500/10 text-slate-400 border border-slate-500/30"
+    : reviewVerdict === "PASS"
+    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
+    : reviewVerdict === "REVISE"
+    ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+    : "bg-red-500/10 text-red-400 border border-red-500/30";
+  const reviewStatusIcon = !reviewVerdict ? "🕒" : reviewVerdict === "PASS" ? "✅" : reviewVerdict === "REVISE" ? "⚠️" : "❌";
+  const analysisQuestion = toDisplayText(
+    report.original_question ?? (report as unknown as { question?: unknown }).question ?? question,
+    "（質問が設定されていません）"
+  );
 
   // 提案書タイトル（デフォルト値）
   const titleJa = proposal_title?.title_ja || '課題解決提案書';
@@ -406,15 +458,8 @@ export const ReportPage: React.FC = () => {
               {/* 信頼度スコア（判定結果と連動） */}
               <div className="text-right">
                 <div className="flex items-center gap-2 justify-end mb-1">
-                  <span className={`text-xs px-2 py-0.5 rounded ${
-                    safeReview.overall_verdict === 'PASS'
-                      ? 'bg-emerald-500/20 text-emerald-400'
-                      : safeReview.overall_verdict === 'REVISE'
-                      ? 'bg-amber-500/20 text-amber-400'
-                      : 'bg-red-500/20 text-red-400'
-                  }`}>
-                    {safeReview.overall_verdict === 'PASS' ? '検証通過' :
-                     safeReview.overall_verdict === 'REVISE' ? '要修正' : '却下'}
+                  <span className={`text-xs px-2 py-0.5 rounded ${reviewStatusClass}`}>
+                    {!reviewVerdict ? "未検証" : reviewVerdict === "PASS" ? "検証通過" : reviewVerdict === "REVISE" ? "要修正" : "却下"}
                   </span>
                 </div>
                 <div className="text-xs text-slate-500 mb-1">
@@ -507,7 +552,9 @@ export const ReportPage: React.FC = () => {
           {TABS.map((tab) => {
             // 検証タブに特別なバッジを追加
             const isReviewTab = tab.id === 'review';
-            const reviewBadgeColor = safeReview.overall_verdict === 'PASS'
+            const reviewBadgeColor = !reviewVerdict
+              ? 'bg-slate-500'
+              : safeReview.overall_verdict === 'PASS'
               ? 'bg-emerald-500'
               : safeReview.overall_verdict === 'REVISE'
               ? 'bg-amber-500'
@@ -551,25 +598,16 @@ export const ReportPage: React.FC = () => {
                   分析結果概要
                 </h3>
                 {/* 検証ステータスバッジ */}
-                <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                  safeReview.overall_verdict === 'PASS'
-                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-                    : safeReview.overall_verdict === 'REVISE'
-                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/30'
-                    : 'bg-red-500/10 text-red-400 border border-red-500/30'
-                }`}>
-                  <span>
-                    {safeReview.overall_verdict === 'PASS' ? '✅' :
-                     safeReview.overall_verdict === 'REVISE' ? '⚠️' : '❌'}
-                  </span>
-                  検証: {safeReview.overall_verdict || '処理中'}
+                <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${reviewStatusClassWithBorder}`}>
+                  <span>{reviewStatusIcon}</span>
+                  検証: {reviewStatusLabel}
                 </div>
               </div>
 
               {/* 質問の再掲示 */}
               <div className="bg-[#0a0a0f] rounded-lg p-4 border border-white/10">
                 <div className="text-xs text-slate-500 mb-2">📝 分析対象の質問</div>
-                <p className="text-slate-300">{report.question || '（質問が設定されていません）'}</p>
+                <p className="text-slate-300">{analysisQuestion}</p>
               </div>
 
               {/* 分析セクションナビゲーション */}
@@ -643,7 +681,9 @@ export const ReportPage: React.FC = () => {
                 <button
                   onClick={() => setActiveTab('review')}
                   className={`w-full p-4 rounded-lg border-2 border-dashed transition-all text-left ${
-                    safeReview.overall_verdict === 'PASS'
+                    !reviewVerdict
+                      ? 'bg-slate-500/5 border-slate-500/30 hover:border-slate-500/50'
+                      : safeReview.overall_verdict === 'PASS'
                       ? 'bg-emerald-500/5 border-emerald-500/30 hover:border-emerald-500/50'
                       : safeReview.overall_verdict === 'REVISE'
                       ? 'bg-amber-500/5 border-amber-500/30 hover:border-amber-500/50'
@@ -663,17 +703,18 @@ export const ReportPage: React.FC = () => {
                       </div>
                     </div>
                     <span className={`text-sm font-medium ${
+                      !reviewVerdict ? 'text-slate-400' :
                       safeReview.overall_verdict === 'PASS' ? 'text-emerald-400' :
                       safeReview.overall_verdict === 'REVISE' ? 'text-amber-400' : 'text-red-400'
                     }`}>
-                      {safeReview.overall_verdict || '処理中'} →
+                      {reviewStatusLabel} →
                     </span>
                   </div>
                 </button>
               </div>
 
               {/* 修正が必要な場合のガイダンス */}
-              {safeReview.overall_verdict !== 'PASS' && (
+              {Boolean(reviewVerdict) && safeReview.overall_verdict !== 'PASS' && (
                 <div className="mt-4 p-4 bg-amber-500/5 rounded-lg border border-amber-500/20">
                   <div className="flex items-start gap-3">
                     <span className="text-amber-400 mt-0.5">💡</span>

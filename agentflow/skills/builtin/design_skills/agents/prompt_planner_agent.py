@@ -22,6 +22,7 @@ from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
     GlobalStyle,
     ImageRole,
     ImageSpec,
+    IntentAnalysis,
     PromptPlanInput,
     PromptPlanOutput,
 )
@@ -69,7 +70,34 @@ class PromptPlannerAgent(ResilientAgent[PromptPlanInput, PromptPlanOutput]):
         self._logger = logging.getLogger(self.name)
 
     def _parse_input(self, input_data: dict[str, Any]) -> PromptPlanInput:
-        """入力辞書をPromptPlanInputにパース."""
+        """入力辞書をPromptPlanInputにパース.
+        
+        PipelineEngine から渡される場合、intent_analyzer_result フィールドに
+        IntentAnalysis が含まれているため、それを intent フィールドに変換する。
+        """
+        # PipelineEngine からの入力を処理
+        if "intent_analyzer_result" in input_data and "intent" not in input_data:
+            intent_result = input_data["intent_analyzer_result"]
+            # IntentAnalysis オブジェクトまたは辞書を intent フィールドに設定
+            if isinstance(intent_result, dict):
+                input_data["intent"] = IntentAnalysis(**intent_result)
+            else:
+                input_data["intent"] = intent_result
+        # PipelineEngine が結果を直接マージした場合の処理
+        # IntentAnalysis のフィールドが直接 input_data に含まれている場合
+        elif "intent" not in input_data and "category" in input_data and "subject" in input_data:
+            # IntentAnalysis のフィールドを抽出して intent オブジェクトを構築
+            intent_fields = {
+                "category": input_data.get("category"),
+                "subject": input_data.get("subject"),
+                "key_features": input_data.get("key_features", []),
+                "target_audience": input_data.get("target_audience", ""),
+                "style_direction": input_data.get("style_direction", ""),
+                "image_roles": input_data.get("image_roles", []),
+                "platform_constraints": input_data.get("platform_constraints", {}),
+            }
+            input_data["intent"] = IntentAnalysis(**intent_fields)
+        
         return PromptPlanInput(**input_data)
 
     async def process(self, input_data: PromptPlanInput) -> PromptPlanOutput:

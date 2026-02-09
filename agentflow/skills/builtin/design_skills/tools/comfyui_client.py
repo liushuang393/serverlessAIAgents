@@ -95,63 +95,61 @@ class ComfyUIClient:
             negative_prompt = f"{negative_prompt}, {spec.extra_negative}"
 
         workflow: dict[str, Any] = {
-            "prompt": {
-                "1": {
-                    "class_type": "CheckpointLoaderSimple",
-                    "inputs": {
-                        "ckpt_name": style.base_model,
-                    },
+            "1": {
+                "class_type": "CheckpointLoaderSimple",
+                "inputs": {
+                    "ckpt_name": style.base_model,
                 },
-                "2": {
-                    "class_type": "CLIPTextEncode",
-                    "inputs": {
-                        "text": positive_prompt,
-                        "clip": ["1", 1],
-                    },
+            },
+            "2": {
+                "class_type": "CLIPTextEncode",
+                "inputs": {
+                    "text": positive_prompt,
+                    "clip": ["1", 1],
                 },
-                "3": {
-                    "class_type": "CLIPTextEncode",
-                    "inputs": {
-                        "text": negative_prompt,
-                        "clip": ["1", 1],
-                    },
+            },
+            "3": {
+                "class_type": "CLIPTextEncode",
+                "inputs": {
+                    "text": negative_prompt,
+                    "clip": ["1", 1],
                 },
-                "4": {
-                    "class_type": "EmptyLatentImage",
-                    "inputs": {
-                        "width": spec.width,
-                        "height": spec.height,
-                        "batch_size": 1,
-                    },
+            },
+            "4": {
+                "class_type": "EmptyLatentImage",
+                "inputs": {
+                    "width": spec.width,
+                    "height": spec.height,
+                    "batch_size": 1,
                 },
-                "5": {
-                    "class_type": "KSampler",
-                    "inputs": {
-                        "model": ["1", 0],
-                        "positive": ["2", 0],
-                        "negative": ["3", 0],
-                        "latent_image": ["4", 0],
-                        "seed": spec.seed,
-                        "steps": spec.steps,
-                        "cfg": spec.cfg_scale,
-                        "sampler_name": spec.sampler,
-                        "scheduler": "normal",
-                        "denoise": 1.0,
-                    },
+            },
+            "5": {
+                "class_type": "KSampler",
+                "inputs": {
+                    "model": ["1", 0],
+                    "positive": ["2", 0],
+                    "negative": ["3", 0],
+                    "latent_image": ["4", 0],
+                    "seed": spec.seed,
+                    "steps": spec.steps,
+                    "cfg": spec.cfg_scale,
+                    "sampler_name": spec.sampler,
+                    "scheduler": "normal",
+                    "denoise": 1.0,
                 },
-                "6": {
-                    "class_type": "VAEDecode",
-                    "inputs": {
-                        "samples": ["5", 0],
-                        "vae": ["1", 2],
-                    },
+            },
+            "6": {
+                "class_type": "VAEDecode",
+                "inputs": {
+                    "samples": ["5", 0],
+                    "vae": ["1", 2],
                 },
-                "7": {
-                    "class_type": "SaveImage",
-                    "inputs": {
-                        "images": ["6", 0],
-                        "filename_prefix": spec.image_id,
-                    },
+            },
+            "7": {
+                "class_type": "SaveImage",
+                "inputs": {
+                    "images": ["6", 0],
+                    "filename_prefix": spec.image_id,
                 },
             },
         }
@@ -169,7 +167,18 @@ class ComfyUIClient:
         Raises:
             httpx.HTTPStatusError: サーバーがエラーを返した場合
         """
-        response = await self._http_client.post("/prompt", json=workflow)
+        # ComfyUI APIは {"prompt": workflow} 形式を期待
+        payload = {"prompt": workflow}
+        response = await self._http_client.post("/prompt", json=payload)
+        
+        # エラー時は詳細をログ出力
+        if response.status_code != _HTTP_OK:
+            try:
+                error_detail = response.json()
+                self._logger.error(f"ComfyUI エラー応答: {error_detail}")
+            except Exception:
+                self._logger.error(f"ComfyUI エラー応答 (raw): {response.text}")
+        
         response.raise_for_status()
         data = response.json()
         prompt_id: str = data["prompt_id"]

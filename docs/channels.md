@@ -418,17 +418,17 @@ except Exception as e:
 
 ```bash
 # LLM Provider
-OPENAI_API_KEY=sk-...
+OPENAI_API_KEY=
 
 # Telegram
-TELEGRAM_BOT_TOKEN=1234567890:ABC...
+TELEGRAM_BOT_TOKEN=
 
 # Slack
-SLACK_BOT_TOKEN=xoxb-...
-SLACK_SIGNING_SECRET=...
+SLACK_BOT_TOKEN=
+SLACK_SIGNING_SECRET=
 
 # Discord
-DISCORD_BOT_TOKEN=...
+DISCORD_BOT_TOKEN=
 ```
 
 ### 平台设置

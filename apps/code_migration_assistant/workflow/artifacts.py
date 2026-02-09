@@ -11,6 +11,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+_APP_ROOT = Path(__file__).resolve().parents[1]
+
 
 class ArtifactStore:
     """成果物の永続化を担うストア."""
@@ -39,10 +41,10 @@ class ArtifactStore:
             decisions_path: DECISIONS.md の保存先
             failures_path: FAILURES.md の保存先
         """
-        self._base_dir = base_dir or Path("artifacts")
-        self._decisions_path = decisions_path or Path("DECISIONS.md")
-        self._failures_path = failures_path or Path("FAILURES.md")
-        self._tasks_dir = Path("current_tasks")
+        self._base_dir = base_dir or (_APP_ROOT / "artifacts")
+        self._decisions_path = decisions_path or (_APP_ROOT / "DECISIONS.md")
+        self._failures_path = failures_path or (_APP_ROOT / "FAILURES.md")
+        self._tasks_dir = _APP_ROOT / "current_tasks"
 
     async def initialize(self) -> None:
         """ディレクトリを初期化."""

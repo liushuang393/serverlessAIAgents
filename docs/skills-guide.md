@@ -86,6 +86,16 @@ skills/
 
 **重要**: 参照は1レベルの深さまで。ネストされた参照は避ける。
 
+### 実行時の探索パス（プロジェクト本体）
+
+AgentFlow 本体でスキルを自動発見する際の既定探索先は次の通りです。
+
+```
+agentflow/skills/builtin/   # フレームワーク提供スキル
+~/.agentflow/skills/        # ユーザースキル
+apps/*/skills/              # アプリ固有スキル
+```
+
 ## 使用方法
 
 ### Agent に Skills を設定
@@ -282,4 +292,3 @@ except FileNotFoundError:
 - [Claude Code Skills 公式ドキュメント](https://code.claude.com/docs/en/skills)
 - [Skills ベストプラクティス](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)
 - [ビルトイン Skills](../agentflow/skills/builtin/)
-

@@ -284,17 +284,17 @@ exclude_lines = [
 ```bash
 # .env.example - 環境変数テンプレート
 # LLM Providers
-OPENAI_API_KEY=your_openai_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
-GOOGLE_API_KEY=your_google_api_key
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GOOGLE_API_KEY=
 
 # Databases
-DATABASE_URL=postgresql://user:pass@localhost:5432/agentflow
+DATABASE_URL=
 SUPABASE_URL=your_supabase_url
-SUPABASE_KEY=your_supabase_key
+SUPABASE_KEY=
 
 # Vector Databases
-PINECONE_API_KEY=your_pinecone_key
+PINECONE_API_KEY=
 PINECONE_INDEX=agentflow-index
 
 # Cache

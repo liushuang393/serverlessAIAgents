@@ -27,19 +27,19 @@ pip install -r requirements.txt
 {% if llm_provider == 'openai' %}
 
 ```bash
-export OPENAI_API_KEY=your_api_key_here
+export OPENAI_API_KEY=
 ```
 
 {% elif llm_provider == 'anthropic' %}
 
 ```bash
-export ANTHROPIC_API_KEY=your_api_key_here
+export ANTHROPIC_API_KEY=
 ```
 
 {% elif llm_provider == 'google' %}
 
 ```bash
-export GOOGLE_API_KEY=your_api_key_here
+export GOOGLE_API_KEY=
 ```
 
 {% endif %}

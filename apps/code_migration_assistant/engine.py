@@ -122,10 +122,13 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             options=inputs.get("options", {}),
         )
 
+        artifacts_dir = inputs.get("artifacts_dir")
+        decisions_path = inputs.get("decisions_path")
+        failures_path = inputs.get("failures_path")
         artifact_store = ArtifactStore(
-            base_dir=Path(str(inputs.get("artifacts_dir", "artifacts"))),
-            decisions_path=Path(str(inputs.get("decisions_path", "DECISIONS.md"))),
-            failures_path=Path(str(inputs.get("failures_path", "FAILURES.md"))),
+            base_dir=Path(str(artifacts_dir)) if artifacts_dir else None,
+            decisions_path=Path(str(decisions_path)) if decisions_path else None,
+            failures_path=Path(str(failures_path)) if failures_path else None,
         )
         await artifact_store.initialize()
         lock_path = await artifact_store.acquire_lock(task_id)

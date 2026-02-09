@@ -168,13 +168,13 @@ touch .env
 # ============================================
 
 # OpenAI を使用する場合
-OPENAI_API_KEY=sk-your-openai-api-key-here
+OPENAI_API_KEY=
 
 # または Anthropic Claude を使用する場合
-ANTHROPIC_API_KEY=sk-ant-your-anthropic-api-key-here
+ANTHROPIC_API_KEY=
 
 # または Google Gemini を使用する場合
-GOOGLE_API_KEY=your-google-api-key-here
+GOOGLE_API_KEY=
 
 # ============================================
 # モデル選択（オプション）
@@ -521,4 +521,3 @@ await manager.stop()
 
 **最終更新**: 2025-01-20  
 **バージョン**: 1.0.0
-

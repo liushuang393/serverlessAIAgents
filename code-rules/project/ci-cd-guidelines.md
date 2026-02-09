@@ -223,10 +223,10 @@ print(f"Running in {config.app_name} mode")
 APP_NAME=AgentFlow
 DEBUG=false
 LOG_LEVEL=INFO
-DATABASE_URL=postgresql://user:password@localhost/dbname
+DATABASE_URL=
 REDIS_URL=redis://localhost:6379
-OPENAI_API_KEY=your-api-key-here
-JWT_SECRET=your-jwt-secret-here
+OPENAI_API_KEY=
+JWT_SECRET=
 
 # .env.local（ローカル開発用、上書き）
 DEBUG=true
@@ -402,12 +402,12 @@ services:
       timeout: 10s
       retries: 3
 
-  db:
-    image: postgres:15-alpine
-    environment:
-      - POSTGRES_DB=agentflow
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=pass
+	  db:
+	    image: postgres:15-alpine
+	    environment:
+	      - POSTGRES_DB=agentflow
+	      - POSTGRES_USER=user
+	      - POSTGRES_PASSWORD=
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/init.sql

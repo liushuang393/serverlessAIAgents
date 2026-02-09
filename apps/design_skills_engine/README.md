@@ -10,17 +10,75 @@ Lovart風「Design Skills」思想をAgentFlowフレームワークで実装し�
 
 ### 1. 前提条件
 
-```bash
-# AgentFlow フレームワークをインストール
-pip install -e ".[dev]"
+#### 1.1 AgentFlow フレームワークのインストール
 
-# ComfyUI サーバーを起動（別ターミナル）
-cd /path/to/ComfyUI
+```bash
+# リポジトリルートで実行
+pip install -e ".[dev]"
+```
+
+#### 1.2 ComfyUI サーバーの起動
+
+**方法A: Docker で起動（推奨）**
+
+```bash
+# ステップ1: モデルをダウンロード (~6.9GB、初回のみ)
+./apps/design_skills_engine/scripts/setup_comfyui.sh
+
+# ステップ2: apps/design_skills_engine ディレクトリに移動
+cd apps/design_skills_engine
+
+# ステップ3: Docker Compose で起動
+# GPU モード（NVIDIA GPU がある場合）
+COMFYUI_IMAGE=yanwk/comfyui-boot:cu128-slim COMFYUI_MODELS_DIR=../../models docker compose up -d
+
+# CPU モード（GPU がない場合、生成速度は遅い）
+COMFYUI_MODELS_DIR=../../models docker compose \
+  -f docker-compose.yml -f docker-compose.cpu.yml up -d
+
+# ステップ4: ヘルスチェック待機（起動完了まで1-2分）
+until curl -sf http://localhost:8188/prompt > /dev/null; do
+  echo "ComfyUI 起動待機中..."
+  sleep 5
+done
+echo "✓ ComfyUI サーバー起動完了"
+
+# 停止する場合
+docker compose down
+```
+
+**方法B: ローカルインストールで起動**
+
+```bash
+# ステップ1: ComfyUI をクローン（初回のみ）
+git clone https://github.com/comfyanonymous/ComfyUI.git ~/ComfyUI
+cd ~/ComfyUI
+
+# ステップ2: 依存関係をインストール（初回のみ）
+pip install -r requirements.txt
+
+# ステップ3: モデルをダウンロード（初回のみ、~6.9GB）
+# models/checkpoints/ ディレクトリに配置
+mkdir -p models/checkpoints
+cd models/checkpoints
+wget https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors
+cd ~/ComfyUI
+
+# ステップ4: サーバーを起動（別ターミナルで実行）
 python main.py --listen 0.0.0.0 --port 8188
 
-# 環境変数を設定（任意）
+# 起動確認（別ターミナルで実行）
+curl -sf http://localhost:8188/prompt && echo "✓ ComfyUI 起動成功"
+```
+
+#### 1.3 環境変数の設定（任意）
+
+```bash
+# ComfyUI URL（デフォルト: http://localhost:8188）
 export COMFYUI_URL=http://localhost:8188
-export OPENAI_API_KEY=sk-...  # LLM強化モード使用時
+
+# LLM強化モード使用時（IntentAnalyzer, PromptPlanner で使用）
+export OPENAI_API_KEY=
 ```
 
 ### 2. 基本使用（Pythonコード）
@@ -328,6 +386,8 @@ cd apps/design_skills_engine && docker compose down
 | `COMFYUI_URL` | `http://localhost:8188` | ComfyUIサーバーURL |
 | `COMFYUI_PORT` | `8188` | Docker公開ポート |
 | `COMFYUI_MODELS_DIR` | `./models` | モデルディレクトリパス |
+| `COMFYUI_IMAGE` | `yanwk/comfyui-boot:cu128-slim` | GPU用ComfyUIイメージ（任意） |
+| `COMFYUI_IMAGE_CPU` | `yanwk/comfyui-boot:cpu` | CPU用ComfyUIイメージ（任意） |
 
 ---
 

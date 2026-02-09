@@ -24,11 +24,12 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 # フレームワーク層 Agent/サービスをインポート
@@ -105,6 +106,7 @@ class AddDocumentRequest(BaseModel):
 
 
 _services: dict[str, Any] = {}
+_artifact_registry: dict[str, Path] = {}
 
 
 def _get_rag_service() -> RAGService:
@@ -158,6 +160,46 @@ def _get_sales_agent() -> SalesAgent:
             sql_schema=schema,
         ))
     return _services["sales_agent"]
+
+
+def _register_artifacts(payload: dict[str, Any]) -> dict[str, Any]:
+    """生成アセットを登録し、ダウンロードURLを注入."""
+    artifacts = payload.get("artifacts")
+    if not isinstance(artifacts, list):
+        return payload
+
+    for artifact in artifacts:
+        if not isinstance(artifact, dict):
+            continue
+        artifact_id = str(artifact.get("artifact_id", "")).strip()
+        file_path = str(artifact.get("file_path", "")).strip()
+        if not artifact_id or not file_path:
+            continue
+
+        path_obj = Path(file_path)
+        if not path_obj.exists() or not path_obj.is_file():
+            continue
+
+        _artifact_registry[artifact_id] = path_obj.resolve()
+        artifact["download_url"] = f"/api/assets/{artifact_id}/download"
+
+    rich_response = payload.get("rich_response")
+    if isinstance(rich_response, dict):
+        components = rich_response.get("components")
+        if isinstance(components, list):
+            for component in components:
+                if not isinstance(component, dict):
+                    continue
+                props = component.get("props")
+                if not isinstance(props, dict):
+                    continue
+                url = props.get("url")
+                if not isinstance(url, str) or not url.startswith("artifact://"):
+                    continue
+                artifact_id = url.replace("artifact://", "", 1)
+                if artifact_id in _artifact_registry:
+                    props["url"] = f"/api/assets/{artifact_id}/download"
+    return payload
 
 
 # =============================================================================
@@ -252,7 +294,17 @@ async def chat(request: ChatRequest) -> dict[str, Any]:
     FAQAgent が内部でクエリタイプを判定し、適切なサービスを使用します。
     """
     agent = _get_faq_agent()
-    return await agent.run({"question": request.message})
+    result = await agent.run({"question": request.message})
+    return _register_artifacts(result)
+
+
+@app.post("/api/maq/chat")
+async def maq_chat(request: ChatRequest) -> dict[str, Any]:
+    """MAQ統合チャット API.
+
+    社内FAQ・SQL分析・営業資料画像生成を単一入口で処理する。
+    """
+    return await chat(request)
 
 
 @app.post("/api/chat/stream")
@@ -265,6 +317,8 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
 
     async def event_generator():
         async for event in agent.run_stream({"question": request.message}):
+            if event.get("type") == "result" and isinstance(event.get("data"), dict):
+                event["data"] = _register_artifacts(event["data"])
             yield f"data: {json.dumps(event)}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
@@ -309,6 +363,41 @@ async def sales_analyze(request: SQLQueryRequest) -> dict[str, Any]:
     """
     agent = _get_sales_agent()
     return await agent.run({"question": request.question})
+
+
+@app.get("/api/assets/{artifact_id}/download")
+async def download_artifact(artifact_id: str) -> FileResponse:
+    """生成アセットをダウンロード."""
+    path_obj = _artifact_registry.get(artifact_id)
+    if path_obj is None:
+        raise HTTPException(status_code=404, detail="artifact not found")
+    if not path_obj.exists() or not path_obj.is_file():
+        raise HTTPException(status_code=404, detail="artifact file missing")
+    return FileResponse(
+        path=str(path_obj),
+        filename=path_obj.name,
+        media_type="application/octet-stream",
+    )
+
+
+@app.get("/api/a2a/card")
+async def get_a2a_card() -> dict[str, Any]:
+    """A2A AgentCard 相当の情報を取得."""
+    agent = _get_faq_agent()
+    card = agent.get_a2a_card()
+    if card is not None and hasattr(card, "to_a2a_format"):
+        return card.to_a2a_format()
+
+    return {
+        "name": "faq-system-maq-router",
+        "description": "社内FAQ/SQL分析/営業資料画像生成を振り分けるマルチ機能Agent",
+        "version": "1.1.0",
+        "skills": [
+            {"name": "knowledge_search", "description": "社内知識検索と回答生成"},
+            {"name": "sql_analytics", "description": "自然言語からSQL生成し、表とチャートを返却"},
+            {"name": "design_skills", "description": "営業資料向け画像セットを生成"},
+        ],
+    }
 
 
 @app.get("/api/health")

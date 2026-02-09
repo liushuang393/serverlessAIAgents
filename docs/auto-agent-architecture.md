@@ -343,21 +343,12 @@ engine = SimpleEngine(
 result = await engine.run({"query": "質問"})
 ```
 
-### Skills ディレクトリ構成
+### Skills 探索パス構成
 
 ```
-skills/                               # ルートレベル Skills ディレクトリ
-├── README.md                         # 使用方法ドキュメント
-├── builtin/                          # フレームワーク提供スキル
-│   ├── rag/SKILL.md
-│   ├── chatbot/SKILL.md
-│   └── ...
-├── user/                             # ユーザー定義スキル
-│   └── my-skill/SKILL.md
-└── apps/                             # アプリケーション固有スキル
-    └── decision_governance_engine/
-        ├── dao/SKILL.md
-        └── ...
+agentflow/skills/builtin/             # フレームワーク提供スキル
+~/.agentflow/skills/                  # ユーザー定義スキル（ローカル）
+apps/*/skills/                        # アプリケーション固有スキル
 ```
 
 ---

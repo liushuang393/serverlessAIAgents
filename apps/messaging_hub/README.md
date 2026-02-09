@@ -75,7 +75,7 @@ uvicorn apps.messaging_hub.main:app --reload --port 8000
 1. **Bot の作成**:
    - [@BotFather](https://t.me/BotFather) にアクセス
    - `/newbot` を送信して新しい bot を作成
-   - Token を取得: `1234567890:ABCdef...`
+	   - Token を取得（BotFather が表示する文字列）
 
 2. **Webhook の設定**（オプション、本番環境推奨）:
    ```bash
@@ -99,7 +99,7 @@ uvicorn apps.messaging_hub.main:app --reload --port 8000
      - `im:read`
      - `users:read`
    - App を workspace にインストール
-   - Bot User OAuth Token をコピー: `xoxb-...`
+	   - Bot User OAuth Token をコピー（prefix: xoxb）
 
 3. **Event Subscriptions の設定**:
    - Events を有効化
@@ -296,8 +296,7 @@ CMD ["uvicorn", "apps.messaging_hub.main:app", "--host", "0.0.0.0", "--port", "8
 
 ```bash
 # シークレット管理サービスを使用
-export OPENAI_API_KEY=$(aws secretsmanager get-secret-value ...)
-export TELEGRAM_BOT_TOKEN=$(...)
+# 例: AWS Secrets Manager / ECS Task Definition / GitHub Actions Secrets などで実行環境へ注入
 ```
 
 ## 🆚 Moltbot との比較
@@ -323,4 +322,3 @@ MIT License - AgentFlow メイン README を参照
 貢献を歓迎します！AgentFlow のコントリビューションガイドに従ってください。
 
 実装済み機能：
-

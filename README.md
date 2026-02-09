@@ -363,12 +363,11 @@ engine = SimpleEngine(agent=MyAgent, skills=["rag"])
 result = await engine.run({"query": "質問"})
 ```
 
-**Skills ディレクトリ構成:**
+**Skills の探索パス（現在の正規構成）:**
 ```
-skills/
-├── builtin/     # フレームワーク提供スキル（rag, chatbot, etc.）
-├── user/        # ユーザー定義スキル
-└── apps/        # アプリケーション固有スキル
+agentflow/skills/builtin/      # フレームワーク提供スキル
+~/.agentflow/skills/           # ユーザー定義スキル（ローカル）
+apps/*/skills/                 # アプリ固有スキル
 ```
 
 詳細は [Auto-Agent アーキテクチャ](docs/auto-agent-architecture.md) を参照。
@@ -598,6 +597,15 @@ cd studio && npm install
 npm run dev  # http://localhost:5173
 ```
 
+### Studio のパス区分（重要）
+
+`studio/` と `agentflow/studio/` は役割が異なります。
+
+| パス | 役割 | 主な機能 |
+|------|------|---------|
+| `studio/` | Studio フロントエンド (React/Vite) | 画面描画、ノード編集、API/WebSocket クライアント |
+| `agentflow/studio/` | Studio バックエンド (FastAPI) | `/api` ルーター、ワークフロー保存、プレビュー/公開API |
+
 ### オプション: 追加機能
 
 ```bash
@@ -615,7 +623,14 @@ pip install -e ".[dev,memvid,channels]"
 cp .env.example .env
 
 # 最低限必要な設定
-OPENAI_API_KEY=sk-...           # または ANTHROPIC_API_KEY
+OPENAI_API_KEY=               # または ANTHROPIC_API_KEY
+
+# 長期知識記憶（任意）
+# - 保存先はカレントディレクトリ相対（デフォルト: memory/knowledge）
+# - 設定は環境変数/.env で変更（プロセス再起動推奨）
+# KNOWLEDGE_BACKEND=auto        # auto/memvid/memory
+# KNOWLEDGE_STORAGE_PATH=memory/knowledge
+# KNOWLEDGE_AUTO_PERSIST=true
 ```
 
 ---

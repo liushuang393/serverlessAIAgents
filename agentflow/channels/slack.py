@@ -6,7 +6,7 @@
     pip install slack-sdk>=3.0
 
 环境变量：
-    SLACK_BOT_TOKEN: Slack Bot User OAuth Token (xoxb-...)
+    SLACK_BOT_TOKEN: Slack Bot User OAuth Token（prefix: xoxb）
     SLACK_SIGNING_SECRET: Slack Signing Secret（验证 webhook）
 
 Example:
@@ -69,7 +69,7 @@ class SlackAdapter(MessageChannelAdapter):
         """初始化 Slack 适配器.
 
         Args:
-            token: Slack Bot Token (xoxb-...)
+            token: Slack Bot Token（prefix: xoxb）
             signing_secret: Slack Signing Secret（webhook 验证）
             timeout: 请求超时时间（秒）
 

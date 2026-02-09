@@ -113,6 +113,7 @@ agentflow/services/       ← サービス層
     ├── text2sql_service.py
     ├── chart_service.py
     └── suggestion_service.py
+agentflow/skills/builtin/design_skills/ ← 営業資料画像生成
 ```
 
 ### Agent 実装パターン（必読）
@@ -151,6 +152,7 @@ class MyAgent(ResilientAgent[MyInput, MyOutput]):
 | RAG 検索 | `RAGService` | ナレッジベースを検索して回答を生成 |
 | Text2SQL | `Text2SQLService` | 自然言語からSQLを生成して実行 |
 | チャート生成 | `ChartService` | クエリ結果からチャートを自動生成 |
+| 営業資料画像生成 | `design_skills` | 営業向け画像セットを生成し、ダウンロード可能なアセットを返却 |
 | 提案生成 | `SuggestionService` | フォローアップ質問を提案 |
 | 認証 | `AuthService` | JWT/API Key 認証 |
 
@@ -170,6 +172,7 @@ python -m apps.faq_system.main
 |--------|------|----------|
 | `RAG_COLLECTION` | RAGコレクション名 | `faq_knowledge` |
 | `DB_SCHEMA` | DBスキーマJSON | `{}` |
+| `FAQ_SALES_MATERIAL_DIR` | 営業資料画像の出力先ディレクトリ | `/tmp/faq_sales_material` |
 
 ## API エンドポイント
 
@@ -186,6 +189,12 @@ POST /api/chat
 POST /api/chat/stream
 {
   "message": "今月の売上TOP10は？"
+}
+
+# MAQ統合入口（FAQ/SQL/営業資料を自動振り分け）
+POST /api/maq/chat
+{
+  "message": "営業資料図を4枚作成して"
 }
 ```
 
@@ -215,6 +224,20 @@ POST /api/sql/query
 {
   "question": "今月の売上合計は？"
 }
+```
+
+### 営業資料画像のダウンロード
+
+`/api/chat` または `/api/maq/chat` のレスポンスで `artifacts[].download_url` が返る。
+
+```bash
+GET /api/assets/{artifact_id}/download
+```
+
+### A2A カード
+
+```bash
+GET /api/a2a/card
 ```
 
 ## Studio からの利用

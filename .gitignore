@@ -18,6 +18,8 @@ envs/
 
 # ---- Editor / OS
 .vscode/
+.cursor/
+.claude/
 .idea/
 .DS_Store
 Thumbs.db
@@ -81,6 +83,7 @@ config/credentials.yaml
 
 # ---- Spec Workflow (Optional)
 .spec-workflow/approvals/
+.spec-workflow/session.json
 
 # ---- Temporary Test Directories
 invalid-name/
@@ -94,5 +97,10 @@ tmp-*/
 
 # ---- External Content (Optional)
 # products/ai_learning_platform/Hands-On-Large-Language-Models/
-tests/*
+models/
 apps/decision_governance_engine/.env
+apps/design_skills_engine/testimgs/*
+apps/code_migration_assistant/artifacts/
+apps/code_migration_assistant/current_tasks/
+apps/code_migration_assistant/DECISIONS.md
+apps/code_migration_assistant/FAILURES.md

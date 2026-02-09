@@ -50,7 +50,7 @@ cd ./apps/market-trend-monitor/backend
 pip install -r requirements.txt
 
 # 環境変数設定（オプション）
-export OPENAI_API_KEY="your-api-key"
+export OPENAI_API_KEY=
 export DATABASE_URL="sqlite:///./market_trend.db"
 export LOG_LEVEL="INFO"
 
@@ -174,4 +174,3 @@ MIT License
 
 - [設計書](DESIGN.md)
 - [AgentFlow ドキュメント](../../../docs/)
-

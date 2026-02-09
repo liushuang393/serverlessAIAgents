@@ -147,17 +147,17 @@ value = await cache.get("key")
 ```bash
 # .env 設定例
 # LLM Providers
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-ant-...
-GOOGLE_API_KEY=...
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GOOGLE_API_KEY=
 
 # Databases
-DATABASE_URL=postgresql://user:pass@localhost:5432/agentflow
+DATABASE_URL=
 SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_KEY=...
+SUPABASE_KEY=
 
 # Vector DB
-PINECONE_API_KEY=...
+PINECONE_API_KEY=
 QDRANT_URL=http://localhost:6333
 
 # Cache

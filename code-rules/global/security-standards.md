@@ -474,8 +474,8 @@ class ConfigurationManager:
 # .env (バージョン管理対象外)
 DB_HOST=localhost
 DB_USER=myuser
-DB_PASSWORD=mysecretpassword
-JWT_SECRET=your-super-secret-jwt-key
+DB_PASSWORD=
+JWT_SECRET=
 """
 ```
 

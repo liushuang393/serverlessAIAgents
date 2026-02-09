@@ -2,7 +2,7 @@
 name: design-skills
 description: >
   Generate professional multi-image design sets from natural language briefs.
-  Uses ComfyUI for image generation with unified style control.
+  Auto-fallback: ComfyUI (local GPU) -> OpenAI gpt-image-1 (cloud).
   Use when asked to create product images, brand visuals, social media assets.
 version: 1.0.1
 triggers:
@@ -40,34 +40,42 @@ You are a design skills agent that generates professional image sets from natura
 
 ## Quick Start
 
-1. **Check ComfyUI availability** (REQUIRED before generation):
+1. **Check available backend** (auto-detects):
    ```bash
-   curl -sf ${COMFYUI_URL:-http://localhost:8188}/system_stats > /dev/null && echo "✓ ComfyUI ready" || echo "✗ ComfyUI unavailable - please start ComfyUI server"
+   # ComfyUI (local) → OpenAI (cloud) の順で自動フォールバック
+   curl -sf ${COMFYUI_URL:-http://localhost:8188}/system_stats > /dev/null \
+     && echo "✓ Backend: ComfyUI (local GPU)" \
+     || ([ -n "$OPENAI_API_KEY" ] \
+       && echo "✓ Backend: OpenAI gpt-image-1 (cloud)" \
+       || echo "✗ No backend available - start ComfyUI or set OPENAI_API_KEY")
    ```
 
-2. **Verify SDXL model** (REQUIRED):
-   ```bash
-   curl -sf ${COMFYUI_URL:-http://localhost:8188}/object_info | grep -q "sd_xl_base_1.0.safetensors" && echo "✓ SDXL model found" || echo "✗ SDXL model missing - please install sd_xl_base_1.0.safetensors"
-   ```
-
-3. **Generate images** using the Python API or standalone script (see below)
+2. **Generate images** using the Python API or standalone script (see below)
 
 ## Prerequisites
 
-- **ComfyUI server**: Must be running at `http://localhost:8188` (or set `COMFYUI_URL` env var)
-- **SDXL Base 1.0 model**: `sd_xl_base_1.0.safetensors` must be installed in ComfyUI's models directory
+At least one of the following backends must be available:
+
+- **ComfyUI (local, preferred)**: Server at `http://localhost:8188` + SDXL Base 1.0 model
+- **OpenAI (cloud fallback)**: `OPENAI_API_KEY` environment variable set
 - **Python packages**: `httpx>=0.24.0` (auto-installed with agentflow)
 
 ## Usage Methods
 
-### Method 1: Python API (Recommended for AgentFlow)
+### Method 1: Python API - Full 4-Step Pipeline ✅ (Recommended)
+
+**Executes the complete design workflow:**
+1. **Intent Analysis** - Analyzes natural language brief
+2. **Prompt Planning** - Generates structured prompts for each image
+3. **ComfyUI Execution** - Generates images via ComfyUI
+4. **Result Aggregation** - Returns all images with metadata
 
 ```python
 from agentflow.skills.builtin.design_skills import DesignSkillsEngine
 
 engine = DesignSkillsEngine()
 result = await engine.run({
-    "brief": "アウトドアBluetoothスピーカーの商品画像、黒系、テクノ風",
+    "brief": "アウトドアBluetoothスピーカーの商品画像、黒系、テクノ風",  # Natural language input
     "num_images": 8,
     "target_platform": "amazon",  # optional
     "output_directory": "/tmp/design_output",  # optional
@@ -77,14 +85,42 @@ result = await engine.run({
 # {
 #   "images": [
 #     {"path": "/tmp/design_output/img_001.png", "role": "HERO", "prompt": "..."},
+#     {"path": "/tmp/design_output/img_002.png", "role": "FEATURE", "prompt": "..."},
 #     ...
 #   ],
-#   "global_style": {...},
-#   "metadata": {...}
+#   "global_style": {
+#     "color_palette": ["black", "blue"],
+#     "lighting": "dramatic",
+#     "camera_angle": "front view",
+#     ...
+#   },
+#   "metadata": {
+#     "total_images": 8,
+#     "seed": 42,
+#     "model": "sd_xl_base_1.0.safetensors"
+#   }
 # }
 ```
 
-### Method 2: Standalone Script (For CLI/Shell usage)
+**Use this method when:**
+- You want AI to analyze and plan the design
+- You need multiple images with consistent style
+- You prefer natural language input over technical prompts
+
+### Method 2: Standalone Script - Direct Generation Only ⚠️ (Quick Testing)
+
+### Method 2: Standalone Script - Direct Generation Only ⚠️ (Quick Testing)
+
+**Executes only Step 3 (ComfyUI generation):**
+- ❌ No intent analysis
+- ❌ No prompt planning
+- ✅ Direct image generation
+- ❌ No result aggregation
+
+**You must provide:**
+- Complete prompt text
+- Image dimensions
+- All generation parameters
 
 ```bash
 # Generate a single image
@@ -109,6 +145,12 @@ echo '{
 # }
 ```
 
+**Use this method when:**
+- You already know the exact prompt to use
+- You need to generate a single image quickly
+- You want to test ComfyUI connectivity
+- You don't need AI analysis or planning
+
 **Script Parameters:**
 - `prompt` (required): Positive prompt text
 - `negative_prompt`: Negative prompt (default: standard negative)
@@ -127,7 +169,9 @@ echo '{
 
 ## Design Workflow (For Multi-Image Generation)
 
-When generating multiple images from a natural language brief, follow this workflow:
+**This workflow is automatically executed when using Method 1 (Python API).**
+
+When generating multiple images from a natural language brief, the system follows this 4-step workflow:
 
 ### Step 1: Analyze Design Brief
 
@@ -178,19 +222,21 @@ Use a shared seed across all images for consistency.
 | 3:4 | 896x1152 |
 | 4:5 | 896x1120 |
 
-### Step 3: Execute via ComfyUI
+### Step 3: Execute (Auto-Fallback)
+
+The script automatically tries ComfyUI first, then falls back to OpenAI:
 
 **For each image in the plan:**
 
 1. Build the prompt using the role template + global style
-2. Call the standalone script or Python API
+2. Call the standalone script (auto-selects ComfyUI or OpenAI)
 3. Verify the output image exists
-4. Collect metadata (path, prompt, seed, etc.)
+4. Collect metadata (path, prompt, seed, backend)
 
 **Example batch generation:**
 
 ```bash
-# Generate HERO image
+# Generate HERO image (auto-selects backend)
 echo '{"prompt": "bluetooth speaker, center frame, hero shot, studio backdrop", "seed": 42, "width": 1024, "height": 1024}' | python scripts/generate_images.py
 
 # Generate FEATURE image
@@ -199,6 +245,8 @@ echo '{"prompt": "bluetooth speaker, waterproof feature, water splash", "seed": 
 # Generate LIFESTYLE image
 echo '{"prompt": "bluetooth speaker, outdoor camping scene, natural environment", "seed": 42, "width": 1344, "height": 768}' | python scripts/generate_images.py
 ```
+
+**Response includes `backend` field:** `"comfyui"` or `"openai"`
 
 ### Step 4: Return Results
 
@@ -232,35 +280,37 @@ After generating all images, provide a summary:
 
 ## Troubleshooting
 
-### ComfyUI Connection Failed
+### No Backend Available
 ```bash
-# Check if ComfyUI is running
+# Check ComfyUI
 curl -sf http://localhost:8188/system_stats
 
-# If not running, start ComfyUI server
-# (Refer to ComfyUI documentation for installation)
+# Check OpenAI API key
+echo $OPENAI_API_KEY | head -c 8
 ```
 
-### Model Not Found
+### ComfyUI Model Not Found
 ```bash
 # List available models
 curl -sf http://localhost:8188/object_info | grep -o '"[^"]*\.safetensors"'
-
-# Download SDXL Base 1.0 if missing
-# Place in ComfyUI's models/checkpoints/ directory
 ```
 
-### Generation Timeout
+### Generation Timeout (ComfyUI)
 - Increase timeout in script (default: 300s)
 - Check ComfyUI queue status: `curl http://localhost:8188/queue`
 - Reduce image size or steps for faster generation
+
+### OpenAI API Error
+- Verify API key: `curl -H "Authorization: Bearer $OPENAI_API_KEY" https://api.openai.com/v1/models | head -c 100`
+- Check rate limits and billing at platform.openai.com
 
 ## Reference Files
 
 - `agents/agent_definitions.yaml` - Agent pipeline configuration
 - `schemas/design_schemas.py` - Input/output data schemas
-- `tools/comfyui_client.py` - ComfyUI async client
-- `scripts/generate_images.py` - Standalone CLI script
+- `tools/comfyui_client.py` - ComfyUI async client (local backend)
+- `tools/openai_image_client.py` - OpenAI async client (cloud fallback)
+- `scripts/generate_images.py` - Standalone CLI script (auto-fallback)
 
 ## Testing
 

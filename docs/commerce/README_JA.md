@@ -147,7 +147,7 @@ transaction = await txn_provider.create_transaction(cart)
 
 ```bash
 export UCP_ENDPOINT_URL="https://ucp.example.com/api/v1"
-export UCP_API_KEY="your-api-key"
+export UCP_API_KEY=
 ```
 
 ### UCPクライアントの使用
@@ -292,4 +292,3 @@ pytest tests/unit/commerce/ --cov=agentflow.commerce
 ## ライセンス
 
 MIT License
-

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 # ==============================================================================
 # ComfyUI モデルセットアップスクリプト
 # ==============================================================================
@@ -9,7 +9,7 @@
 #   MODELS_DIR=/custom/path ./scripts/setup_comfyui.sh
 # ==============================================================================
 
-set -euo pipefail
+set -eu
 
 # ---------------------------------------------------------------------------
 # 設定
@@ -42,9 +42,9 @@ echo "SDXL Base 1.0 をダウンロード中... (~6.9GB)"
 echo "URL: ${MODEL_URL}"
 
 # wget または curl でダウンロード (レジューム対応)
-if command -v wget &>/dev/null; then
+if command -v wget >/dev/null 2>&1; then
     wget -c -O "${MODEL_PATH}" "${MODEL_URL}"
-elif command -v curl &>/dev/null; then
+elif command -v curl >/dev/null 2>&1; then
     curl -C - -L -o "${MODEL_PATH}" "${MODEL_URL}"
 else
     echo "エラー: wget または curl が必要です。"

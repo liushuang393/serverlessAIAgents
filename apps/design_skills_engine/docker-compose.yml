@@ -3,6 +3,8 @@
 # ==============================================================================
 # 使用方法:
 #   COMFYUI_MODELS_DIR=../../models docker compose up -d
+#   # イメージタグを明示したい場合（推奨: cu128-slim）
+#   COMFYUI_IMAGE=yanwk/comfyui-boot:cu128-slim COMFYUI_MODELS_DIR=../../models docker compose up -d
 #
 # 前提条件:
 #   - NVIDIA GPU + nvidia-container-toolkit がインストール済み
@@ -15,7 +17,9 @@ services:
   # ComfyUI: 画像生成サーバー (GPU)
   # ---------------------------------------------------------------------------
   comfyui:
-    image: yanwk/comfyui-boot:latest
+    # NOTE: yanwk/comfyui-boot は :latest を提供しないため、実在タグをデフォルトにする。
+    # 例: cu128-slim（Docker Hub 推奨）。必要に応じて COMFYUI_IMAGE で上書きする。
+    image: ${COMFYUI_IMAGE:-yanwk/comfyui-boot:cu128-slim}
     ports:
       - "${COMFYUI_PORT:-8188}:8188"
     volumes:

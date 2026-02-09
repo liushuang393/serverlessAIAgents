@@ -1,5 +1,8 @@
 # AgentFlow Studio
 
+> 注意: この `studio/` はフロントエンド専用です。  
+> バックエンド API は `agentflow/studio/`（FastAPI）にあります。
+
 AgentFlow のビジュアルワークフローエディタ。React + TypeScript + React Flow で構築されたモダンな Web アプリケーション。
 
 ## 機能

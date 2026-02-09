@@ -20,6 +20,20 @@ AgentFlowのReflection Pattern + Memory Systemを活用し、高品質な移行�
 
 各成果物は `meta / unknowns / extensions` を必須とし、Schema は `specs/schemas/` で管理します。
 
+### 成果物パス（既定値）
+
+- `apps/code_migration_assistant/artifacts/`（工程成果物ルート）
+- `apps/code_migration_assistant/DECISIONS.md`（判断ログ）
+- `apps/code_migration_assistant/FAILURES.md`（失敗ログ）
+- `apps/code_migration_assistant/current_tasks/`（排他制御ロック）
+
+上記は `ArtifactStore` 実装ファイル位置を基準に解決される既定値です（実行時カレントディレクトリ非依存）。  
+`CodeMigrationEngine.run(inputs)` では次の入力キーで上書きできます。
+
+- `artifacts_dir`（既定: `apps/code_migration_assistant/artifacts`）
+- `decisions_path`（既定: `apps/code_migration_assistant/DECISIONS.md`）
+- `failures_path`（既定: `apps/code_migration_assistant/FAILURES.md`）
+
 この設計にすると：
 COBOL → Java
 RPG → Java

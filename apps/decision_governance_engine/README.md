@@ -176,7 +176,7 @@ npm install
 
 # 3. 環境変数を設定（.env ファイルを作成）
 cd ../../..
-echo "OPENAI_API_KEY=your-key-here" > .env
+echo "OPENAI_API_KEY=" > .env
 ```
 # 4. データベースのセットアップ
 # DB コンテナ起動
@@ -203,10 +203,9 @@ alembic downgrade -1
 # プロジェクトルートで実行
 cd apps/decision_governance_engine
 
-# 開発モードで起動（ホットリロード有効）
-# 注意: docker-compose.yml と docker-compose.dev.yml を両方使用
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
 
+# 開発モードで起動（ホットリロード有効）
 # バックグラウンドで起動
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
