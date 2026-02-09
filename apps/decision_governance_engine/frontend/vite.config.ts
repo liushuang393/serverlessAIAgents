@@ -29,7 +29,10 @@ export default defineConfig({
     host: '0.0.0.0',  // WSL2 から Windows ブラウザにアクセス可能にするため
     proxy: {
       '/api': {
-        target: 'http://localhost:8001',
+        // PROXY_TARGET: 容器内では Docker 内部ネットワーク名を使用
+        // ※ VITE_ プレフィックスを使うとブラウザ側に注入されてしまうため、
+        //    proxy target 専用に PROXY_TARGET を使用する
+        target: process.env.PROXY_TARGET || 'http://localhost:8001',
         changeOrigin: true,
         // SSE ストリーミング対応 - 重要な設定
         ws: false,  // WebSocket を無効化（SSE と競合防止）

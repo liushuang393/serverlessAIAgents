@@ -2,7 +2,17 @@
 # Decision Governance Engine - 開発用 Docker Compose オーバーライド
 # ==============================================================================
 # 使用方法:
-#   docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# 前提:
+#   - 必ず docker-compose.yml と一緒に使用すること（postgres-main, redis が必要）
+#   - .env に API_PORT=8001 を設定すること（開発用ポート自動切替）
+#
+# ポート自動切替の仕組み:
+#   - 容器内は常に 8000（統一）
+#   - ホスト側ポートは docker-compose.yml の API_PORT 変数で制御:
+#       開発: API_PORT=8001 → localhost:8001 でアクセス
+#       本番: API_PORT=8000 → localhost:8000 でアクセス（デフォルト）
 #
 # 機能:
 #   - バックエンド: uvicorn --reload（ホットリロード）
@@ -11,32 +21,53 @@
 
 services:
   # ---------------------------------------------------------------------------
-  # バックエンド: 開発モード
+  # バックエンド: 開発モード（docker-compose.yml の backend をオーバーライド）
   # ---------------------------------------------------------------------------
   backend:
-    build:
-      context: ../..
-      dockerfile: apps/decision_governance_engine/Dockerfile
-    command: ["uvicorn", "apps.decision_governance_engine.api:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+    # 容器内ポートは 8000 のまま（docker-compose.yml と統一）
+    # ホスト側は .env の API_PORT=8001 で自動切替（docker-compose.yml の ports 設定を継承）
+    command: ["uvicorn", "apps.decision_governance_engine.api:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     volumes:
-      # ソースコードをマウント（リアルタイム反映）
+      # ソースコードをマウント（リアルタイム反映、読み書き可能）
       - ../../agentflow:/app/agentflow
       - .:/app/apps/decision_governance_engine
     environment:
+      # LLM 設定（ホストの環境変数をそのまま継承、値を上書きしない）
+      - OPENAI_API_KEY
+      - ANTHROPIC_API_KEY
+      - GOOGLE_API_KEY
+      - AZURE_OPENAI_API_KEY
+      - AZURE_OPENAI_ENDPOINT
+      # アプリ設定
       - LOG_LEVEL=DEBUG
+      - ENABLE_RAG=${ENABLE_RAG:-true}
+      # データベース設定（docker-compose.yml の postgres-main サービスを使用）
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-dge}:${POSTGRES_PASSWORD:-dge_password}@postgres-main:5432/${POSTGRES_DB:-decision_governance}
+      - REDIS_URL=redis://redis:6379/0
 
   # ---------------------------------------------------------------------------
-  # フロントエンド: 開発モード（Vite dev server）
+  # フロントエンド: 開発モード（docker-compose.yml の frontend をオーバーライド）
   # ---------------------------------------------------------------------------
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
     ports:
-      - "5174:5174"
+      - "${FRONTEND_DEV_PORT:-5174}:5174"
     volumes:
+      # ソースコードをマウント（ホットリロード用）
       - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
       - ./frontend/index.html:/app/index.html
+      # 設定ファイルをマウント（変更を即座に反映）
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend/postcss.config.js:/app/postcss.config.js
+      - ./frontend/tsconfig.json:/app/tsconfig.json
     environment:
       - VITE_DEBUG_MODE=true
+      # Vite dev server の proxy target（容器内部ネットワーク経由）
+      # ※ VITE_ プレフィックスだとブラウザ側に注入されてしまうため、
+      #    PROXY_TARGET を使用（vite.config.ts の process.env.PROXY_TARGET で参照）
+      - PROXY_TARGET=http://backend:8000
 

@@ -73,7 +73,18 @@ def _get_sample_report(report_id: str) -> Any:
 # ========================================
 
 async def _get_report_from_db(report_id: str) -> Any:
-    """DBから決策記録を取得してレポートオブジェクトに変換."""
+    """DBから決策記録を取得してレポートオブジェクトに変換.
+
+    Args:
+        report_id: レポートID（UUID文字列）
+
+    Returns:
+        DecisionReport | None: レポートオブジェクト、または取得失敗時はNone
+
+    注意:
+        - report_id は有効な UUID 形式である必要がある
+        - 不正な UUID の場合は None を返す（例外を投げない）
+    """
     from uuid import UUID
 
     from apps.decision_governance_engine.repositories import DecisionRepository
@@ -82,10 +93,20 @@ async def _get_report_from_db(report_id: str) -> Any:
         ExecutiveSummary,
     )
 
+    # UUID検証（システム理念: 変数・返回値強化）
+    try:
+        request_uuid = UUID(report_id)
+    except (ValueError, AttributeError, TypeError) as e:
+        logger.warning(
+            f"Invalid UUID format for report_id: {report_id!r} - {type(e).__name__}: {e}"
+        )
+        return None
+
     try:
         repo = DecisionRepository()
-        record = await repo.find_by_request_id(UUID(report_id))
+        record = await repo.find_by_request_id(request_uuid)
         if not record:
+            logger.info(f"No record found for request_id: {request_uuid}")
             return None
 
         # DB記録からレポートを構築
@@ -115,13 +136,30 @@ async def _get_report_from_db(report_id: str) -> Any:
             original_question=record.question,
         )
     except Exception as e:
-        logger.warning(f"Failed to get report from DB: {e}")
+        logger.error(
+            f"Failed to get report from DB for request_id={request_uuid}: {type(e).__name__}: {e}",
+            exc_info=True,
+        )
         return None
 
 
 @router.get("/{report_id}/pdf")
 async def export_report_pdf(report_id: str) -> StreamingResponse:
-    """レポートをPDF形式でエクスポート."""
+    """レポートをPDF形式でエクスポート.
+
+    Args:
+        report_id: レポートID（UUID文字列）
+
+    Returns:
+        StreamingResponse: PDFまたはHTMLファイル
+
+    Raises:
+        HTTPException: レポート取得またはPDF生成に失敗した場合
+
+    注意:
+        - システム理念「変数・返回値強化」に基づき、全エラーを適切に処理
+    """
+    from fastapi import HTTPException
     from apps.decision_governance_engine.services.pdf_generator import PDFGeneratorService
 
     # まずDBから取得を試みる
@@ -130,17 +168,34 @@ async def export_report_pdf(report_id: str) -> StreamingResponse:
         # DBに見つからない場合はサンプルレポートを使用
         report = _get_sample_report(report_id)
 
-    generator = PDFGeneratorService()
-    pdf_bytes = generator.generate_pdf(report)
+    if not report:
+        logger.error(f"Report not found and sample generation failed: {report_id}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Report not found: {report_id}",
+        )
 
-    content_type = "application/pdf" if generator._has_reportlab else "text/html"
-    filename = f"decision_report_{report_id}.{'pdf' if generator._has_reportlab else 'html'}"
+    try:
+        generator = PDFGeneratorService()
+        pdf_bytes = generator.generate_pdf(report)
 
-    return StreamingResponse(
-        io.BytesIO(pdf_bytes),
-        media_type=content_type,
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
-    )
+        content_type = "application/pdf" if generator._has_reportlab else "text/html"
+        filename = f"decision_report_{report_id}.{'pdf' if generator._has_reportlab else 'html'}"
+
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type=content_type,
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        logger.error(
+            f"PDF export failed for report_id={report_id}: {type(e).__name__}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"PDF生成に失敗しました: {e}",
+        ) from e
 
 
 @router.get("/{report_id}/components")

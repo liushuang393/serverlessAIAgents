@@ -95,3 +95,4 @@ tmp-*/
 # ---- External Content (Optional)
 # products/ai_learning_platform/Hands-On-Large-Language-Models/
 tests/*
+apps/decision_governance_engine/.env

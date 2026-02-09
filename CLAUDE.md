@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AgentFlow is a lightweight AI Agent development framework with MCP/A2A/AG-UI/A2UI protocol support. It provides a unified interface for 4 protocols and follows an 8-layer clean architecture.
 
-**Key Statistics**: 434 tests passing, 92.46% coverage, Python 3.13+ required
+**Version**: 1.14.1 | **Python**: >=3.10 (3.13+ for AG-UI protocol) | **Coverage minimum**: 80%
 
 ## Common Commands
 
@@ -40,9 +40,9 @@ make pre-commit          # Run pre-commit on all files
 
 ### 8-Layer Architecture (Top to Bottom)
 
-1. **Application Layer** (`apps/`): Business applications (decision_governance_engine, etc.)
-2. **UI Layer** (`studio/`, `agentflow/studio/`): Studio UI, A2UI, AG-UI
-3. **Flow Layer** (`agentflow/flow/`): Three development methods - @agent, create_flow, AgentCoordinator
+1. **Application Layer** (`apps/`): Business applications (6 apps: decision_governance_engine, code_migration_assistant, faq_system, market_trend_monitor, messaging_hub, platform)
+2. **UI Layer** (`studio/`, `agentflow/studio/`): Studio UI (React/Vite/Tailwind), A2UI, AG-UI
+3. **Flow Layer** (`agentflow/flow/`): Three development methods - @agent, create_flow, AgentCoordinator. Includes parallel flows, rollback flows, conditional flows, sandbox nodes.
 4. **Agent Layer** (`agentflow/agents/`, `agentflow/core/agent_block.py`): AgentBlock base class, @agent decorator
 5. **Tools Layer** (`agentflow/tools/`, `agentflow/skills/`): @tool methods, MCP tools, Skills Engine
 6. **Provider Layer** (`agentflow/providers/`): Unified access - get_llm(), get_db(), get_vectordb()
@@ -53,7 +53,7 @@ make pre-commit          # Run pre-commit on all files
 
 ### Core Patterns
 
-**Loose Coupling (松耦合)**: Agents don't know concrete provider implementations. Use:
+**Loose Coupling**: Agents don't know concrete provider implementations. Use:
 ```python
 from agentflow import get_llm, get_db, get_vectordb, get_cache
 llm = get_llm()  # Auto-detects from env vars (OpenAI, Anthropic, Google, etc.)
@@ -69,6 +69,9 @@ llm = get_llm()  # Auto-detects from env vars (OpenAI, Anthropic, Google, etc.)
 - GateEngine: Gate + Agent flow
 - PipelineEngine: Multi-stage with review
 - RAGEngine: Knowledge base augmented
+- PEVEngine: Plan-Execute-Verify (from `agentflow/pev/`)
+
+Custom engines extend `BaseEngine` and implement `_initialize()` and `_execute()`.
 
 ### Key Entry Points
 
@@ -79,10 +82,21 @@ llm = get_llm()  # Auto-detects from env vars (OpenAI, Anthropic, Google, etc.)
 - `agentflow/agent_decorator.py` - @agent decorator
 - `agentflow/decorators.py` - @tool decorator
 
+### Additional Modules
+
+- **Context Engineering** (`agentflow/context/`): Token budget management, tool relevance selection, RAG retrieval gating, conversation compression, key notes persistence. Unified via `ContextEngineer`.
+- **PEV** (`agentflow/pev/`): HierarchicalPlanner, MonitoredExecutor, ResultVerifier
+- **Channels** (`agentflow/channels/`): Multi-platform message integration
+- **HITL** (`agentflow/hitl/`): Human-in-the-loop approval and checkpointing
+- **Code Intelligence** (`agentflow/code_intelligence/`): AST parsing, code transformation, migration
+- **World Model** (`agentflow/world_model/`): Causal modeling, constraint solving
+- **Task OS** (`agentflow/task/`): Task lifecycle management
+
 ## Code Standards
 
 ### Python Requirements
-- **Python 3.13+** (required for AG-UI protocol)
+- **Python >=3.10** (pyproject.toml), **3.13+ for AG-UI protocol**
+- Ruff and mypy target `py313`
 - **100% type annotations** required
 - **All I/O must be async** - No blocking I/O allowed
 - **Line length**: 100 characters (Ruff)
@@ -110,13 +124,15 @@ llm = get_llm()  # Auto-detects from env vars (OpenAI, Anthropic, Google, etc.)
 
 ## Testing
 
-Tests are in `tests/` with markers: `unit`, `integration`, `e2e`, `slow`
+Tests are in `tests/` with markers: `unit`, `integration`, `e2e`, `slow`. `asyncio_mode = "auto"` is enabled — no need for `@pytest.mark.asyncio` on async tests.
 
 ```bash
 pytest tests/unit/                    # Unit tests only
 pytest -m "not slow"                  # Skip slow tests
 pytest --cov=agentflow -v            # With coverage
 ```
+
+Coverage omits `tests/`, `__init__.py`, and `cli/` directories. Coverage is configured with branch coverage enabled.
 
 ## Environment Variables
 
@@ -131,16 +147,13 @@ See `.env.example` for full list.
 
 When emitting events in engines or flows, ALWAYS use the standard event classes from `agentflow/protocols/agui_events.py`:
 
-- `FlowStartEvent`, `FlowCompleteEvent`, `FlowErrorEvent` - フロー制御
-- `NodeStartEvent`, `NodeCompleteEvent`, `NodeErrorEvent` - ノード制御
-- `ProgressEvent` - 進捗（`current`, `total`, `percentage` フィールド必須）
-- `LogEvent` - 思考ログ（`level`, `message`, `source` フィールド必須）
+- `FlowStartEvent`, `FlowCompleteEvent`, `FlowErrorEvent` - Flow control
+- `NodeStartEvent`, `NodeCompleteEvent`, `NodeErrorEvent` - Node control
+- `ProgressEvent` - Progress (`current`, `total`, `percentage` fields required)
+- `LogEvent` - Thinking logs (`level`, `message`, `source` fields required)
 
-**禁止事項**:
-- カスタムイベント dict を `{type: "xxx", data: {...}}` 形式で作成しない
-- `progress` フィールドの意味が曖昧なイベントを発行しない
+Never create custom event dicts like `{"type": "xxx", "data": {...}}`. Always use the event classes and call `.to_dict()`.
 
-**正しい例**:
 ```python
 from agentflow.protocols.agui_events import ProgressEvent, AGUIEventType
 event = ProgressEvent(
@@ -153,91 +166,27 @@ event = ProgressEvent(
 yield event.to_dict()
 ```
 
-**誤った例**:
-```python
-# ❌ 意味が曖昧（stage進捗？全体進捗？）
-yield {"type": "progress", "data": {"progress": some_value}}
-```
+## Context Engineering
 
-## Context Engineering（上下文エンジニアリング）
+Manage context as an "attention budget" to maximize LLM efficiency:
 
-### 設計原則
+| Component | Budget | Class |
+|-----------|--------|-------|
+| System prompt | ≤500 tokens | `TokenBudgetManager` |
+| Tool exposure | Top 5-7 | `ToolRelevanceSelector` |
+| RAG retrieval | On-demand | `RetrievalGate` |
+| Conversation | Compress every 10 turns | `TurnBasedCompressor` |
+| Key info | Persistent notes | `KeyNotesStore` |
+| Sub-agent results | Final output only | `ResultSummarizer` |
 
-上下文を「注意力予算」として管理し、LLMの効率を最大化する:
+Unified interface: `ContextEngineer` from `agentflow/context/context_engineer.py`. All components importable from `agentflow`.
 
-| 原則 | 予算 | コンポーネント |
-|------|------|---------------|
-| システムプロンプト | ≤500 token | `TokenBudgetManager` |
-| ツール公開 | Top 5-7 | `ToolRelevanceSelector` |
-| RAG検索 | 必要時のみ | `RetrievalGate` |
-| コンテキスト注入 | Top 1-2片段 | `BudgetManager.allocate_rag_context()` |
-| 会話圧縮 | 10ターンごと | `TurnBasedCompressor` |
-| 重要情報保持 | 永続Notes | `KeyNotesStore` |
-| 子Agent結果 | 最終出力のみ | `ResultSummarizer` |
+## Reference Applications
 
-### クイックスタート
-
-```python
-from agentflow import ContextEngineer, ContextConfig
-
-# 統合インターフェース（推奨）
-engineer = ContextEngineer()
-await engineer.start()
-
-# メッセージ追加（自動圧縮）
-engineer.add_message("user", "APIの仕様を教えて")
-
-# 最適化されたコンテキスト構築
-context = await engineer.build_context(
-    query="決済APIの仕様",
-    base_prompt="技術アシスタント",
-    available_tools=all_tools,
-    rag_search_func=rag.search,
-)
-
-# 結果
-# context.system_prompt  -> 500token内に収まる
-# context.tools          -> 関連Top-7ツール
-# context.rag_results    -> 必要時のみ検索結果
-# context.messages       -> 圧縮済み履歴
-# context.key_notes      -> 重要情報
-```
-
-### 個別コンポーネント使用
-
-```python
-from agentflow import (
-    TokenBudgetManager,    # Token予算管理
-    ToolRelevanceSelector, # ツール関連性選択
-    RetrievalGate,         # RAG検索判定
-    KeyNotesStore,         # 重要Notes永続化
-    TurnBasedCompressor,   # ターン圧縮
-)
-from agentflow.patterns.deep_agent import ResultSummarizer  # 結果フィルター
-
-# 例: RAG検索が必要かどうか判定
-gate = RetrievalGate()
-decision = await gate.should_retrieve("文書の内容を教えて")
-if decision.should_retrieve:
-    results = await rag.search(decision.suggested_query)
-```
-
-### キーファイル
-
-```
-agentflow/context/
-├── __init__.py           # モジュール導出
-├── budget_manager.py     # Token予算管理
-├── tool_selector.py      # ツール関連性選択
-├── retrieval_gate.py     # RAG検索判定
-├── key_notes.py          # 重要Notes永続化
-├── turn_compressor.py    # ターン圧縮
-└── context_engineer.py   # 統合インターフェース
-
-agentflow/patterns/deep_agent/
-└── result_summarizer.py  # 子Agent結果フィルター
-```
-
-## Reference Application
-
-`apps/decision_governance_engine/` is a complete multi-agent decision support system demonstrating PipelineEngine, agent coordination, and the 8-layer architecture.
+`apps/` contains 6 complete applications demonstrating the framework:
+- `decision_governance_engine/` - Multi-agent decision support (PipelineEngine, agent coordination) — primary reference app
+- `code_migration_assistant/` - Code migration with AST analysis
+- `market_trend_monitor/` - Market analysis with frontend
+- `faq_system/` - FAQ Q&A system
+- `messaging_hub/` - Multi-channel messaging
+- `platform/` - Platform application

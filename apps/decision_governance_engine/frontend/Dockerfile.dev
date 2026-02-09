@@ -17,15 +17,21 @@ COPY package.json package-lock.json ./
 # 依存関係インストール
 RUN npm ci
 
-# ソースコードはボリュームマウントで共有
-# COPY . . は不要
+# 設定ファイルをコピー（ビルドに必要）
+COPY vite.config.ts tsconfig.json tsconfig.node.json ./
+COPY tailwind.config.js postcss.config.js ./
+COPY eslint.config.js ./
+
+# ソースコードと public はボリュームマウントで共有
 
 # 開発用環境変数
 ENV VITE_DEBUG_MODE=true
+# ※ VITE_API_URL は設定しない（空 → 相対パス → Vite proxy 経由でバックエンドに接続）
+# ※ proxy target は PROXY_TARGET 環境変数で docker-compose.dev.yml から注入
 
 # ポート公開
 EXPOSE 5174
 
-# Vite dev server 起動
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
+# Vite dev server 起動（ポート5174を明示的に指定）
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5174"]
 

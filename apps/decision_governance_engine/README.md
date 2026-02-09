@@ -197,39 +197,79 @@ alembic downgrade -1
 
 ### 5.1 Web UI モード（推奨）
 
+#### 方法1: Docker Compose（推奨）
+
+```bash
+# プロジェクトルートで実行
+cd apps/decision_governance_engine
+
+# 開発モードで起動（ホットリロード有効）
+# 注意: docker-compose.yml と docker-compose.dev.yml を両方使用
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+# バックグラウンドで起動
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
+
+# ログ確認
+docker compose -f docker-compose.yml -f docker-compose.dev.yml logs -f backend
+
+# 停止
+docker compose -f docker-compose.yml -f docker-compose.dev.yml down
+```
+
+**サービス構成:**
+- `postgres-main`: PostgreSQL データベース（ポート 5432）
+- `redis`: Redis キャッシュ（ポート 6379）
+- `backend`: FastAPI バックエンド（ポート 8000、ホットリロード有効）
+- `frontend`: Vite 開発サーバー（ポート 5174）
+
+**ブラウザでアクセス**
+```
+http://localhost:5174
+```
+
+#### 方法2: ローカル環境（手動起動）
+
+**前提条件:**
+- PostgreSQL と Redis が起動していること
+- 環境変数 `DATABASE_URL` と `REDIS_URL` が設定されていること
+
 **ターミナル1: バックエンドAPI起動**
 ```bash
 # プロジェクトルートで実行
 
-# APIサーバー起動（ポート8000）
-python -m uvicorn apps.decision_governance_engine.api:app --host 0.0.0.0 --port 8001 --reload
+# 依存関係インストール
+pip install -e ".[dev]"
 
-# または直接実行
-python api.py
+# APIサーバー起動（ポート8000）
+uvicorn apps.decision_governance_engine.api:app --host 0.0.0.0 --port 8000 --reload
 ```
 
 **ターミナル2: フロントエンド起動**
 ```bash
 cd apps/decision_governance_engine/frontend
 
-# 開発サーバー起動（ポート5173）
-eng
+# 依存関係インストール
+npm install
+
+# 開発サーバー起動（ポート5174）
+npm run dev
 ```
 
 **ブラウザでアクセス**
 ```
-http://localhost:5173
+http://localhost:5174
 ```
 
 ### 5.2 動作確認
 
 ```bash
 # APIヘルスチェック
-curl http://localhost:8000/api/health
+curl http://localhost:8001/api/health
 # 期待出力: {"status":"ok","version":"1.0.0"}
 
 # Swagger UI（API仕様書）
-open http://localhost:8000/docs
+open http://localhost:8001/docs
 ```
 
 ### 5.3 CLI モード（開発者向け）

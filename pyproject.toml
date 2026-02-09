@@ -26,6 +26,9 @@ dependencies = [
     # Core workflow engine
     "pocketflow>=0.0.3",
 
+    # Database drivers
+    "asyncpg>=0.29.0",      # PostgreSQL async driver (required for SQLAlchemy async)
+
     # Protocol SDKs
     "mcp>=1.0.0",           # MCP protocol (requires Python 3.10+)
     "python-a2a>=0.5.0",    # A2A protocol (requires Python 3.9+)

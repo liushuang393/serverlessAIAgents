@@ -31,10 +31,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Poetry / pip-tools 等を使う場合はここで設定
-# 今回は requirements.txt を使用
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+# pyproject.toml から依存関係をインストール
+# コンテキストはリポジトリルート想定
+COPY pyproject.toml README.md ./
+# agentflow パッケージをコピー（editable install に必要）
+COPY agentflow/ /app/agentflow/
+RUN pip install --no-cache-dir -e ".[dev]"
 
 # ---------------------------------------------------------------------------
 # Stage: 本番イメージ

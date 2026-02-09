@@ -41,17 +41,52 @@ class PDFGeneratorService:
 
         Returns:
             PDFバイナリデータ
+
+        Raises:
+            ValueError: レポートが None または不正な場合
+            RuntimeError: PDF生成に失敗した場合
+
+        注意:
+            - システム理念「変数・返回値強化」に基づき、入力検証を実施
         """
-        if self._has_reportlab:
-            return self._generate_with_reportlab(report)
-        return self._generate_html_fallback(report)
+        if report is None:
+            raise ValueError("report cannot be None")
+
+        try:
+            if self._has_reportlab:
+                return self._generate_with_reportlab(report)
+            return self._generate_html_fallback(report)
+        except Exception as e:
+            self._logger.error(
+                f"PDF generation failed: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
+            raise RuntimeError(f"PDF生成に失敗しました: {e}") from e
 
     def _to_dict(self, obj: Any) -> dict:
-        """Pydanticオブジェクトまたはdictをdictに変換."""
+        """Pydanticオブジェクトまたはdictをdictに変換.
+
+        Args:
+            obj: 変換対象オブジェクト（Pydanticモデル、dict、またはNone）
+
+        Returns:
+            dict: 変換後の辞書（変換不可の場合は空辞書）
+
+        注意:
+            - システム理念「変数・返回値強化」に基づき、None や予期しない型を安全に処理
+        """
+        if obj is None:
+            return {}
         if hasattr(obj, "model_dump"):
-            return obj.model_dump()
+            try:
+                return obj.model_dump()
+            except Exception as e:
+                self._logger.warning(f"Failed to dump Pydantic model: {type(obj).__name__} - {e}")
+                return {}
         if isinstance(obj, dict):
             return obj
+        # 予期しない型の場合
+        self._logger.warning(f"Unexpected type in _to_dict: {type(obj).__name__}")
         return {}
 
     def _generate_with_reportlab(self, report: DecisionReport) -> bytes:
