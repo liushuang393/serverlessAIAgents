@@ -28,10 +28,12 @@ Example:
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import json
 import logging
 import sys
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
@@ -151,6 +153,13 @@ class SkillRuntime:
             )
 
         effective_timeout = timeout or self._timeout
+
+        # Route by file extension
+        if script_path.suffix == ".sh":
+            return await self._execute_shell_script(
+                skill, script_path, input_data
+            )
+
         should_use_sandbox = use_sandbox if use_sandbox is not None else bool(self._sandbox_provider)
 
         if should_use_sandbox and self._sandbox_provider:
@@ -179,12 +188,19 @@ class SkillRuntime:
         if not scripts_dir.exists():
             return None
 
-        # 拡張子なしの場合は.pyを追加
-        if not script_name.endswith(".py"):
-            script_name = f"{script_name}.py"
-
+        # Check exact match first (includes extension)
         script_path = scripts_dir / script_name
-        return script_path if script_path.exists() else None
+        if script_path.exists():
+            return script_path
+
+        # Try with extensions: .py, .sh
+        for ext in (".py", ".sh"):
+            if not script_name.endswith(ext):
+                candidate = scripts_dir / f"{script_name}{ext}"
+                if candidate.exists():
+                    return candidate
+
+        return None
 
     def list_scripts(self, skill: Skill) -> list[str]:
         """Skill内のスクリプト一覧を取得.
@@ -203,8 +219,8 @@ class SkillRuntime:
             return []
 
         return [
-            p.stem for p in scripts_dir.glob("*.py")
-            if not p.name.startswith("_")
+            p.stem for p in scripts_dir.glob("*")
+            if p.suffix in (".py", ".sh") and not p.name.startswith("_")
         ]
 
     async def _execute_directly(
@@ -318,6 +334,61 @@ class SkillRuntime:
                 error=str(e),
                 duration_ms=duration_ms,
             )
+
+    async def _execute_shell_script(
+        self,
+        skill: Skill,
+        script_path: Path,
+        input_data: dict[str, Any],
+    ) -> ScriptResult:
+        """シェルスクリプトを実行.
+
+        JSON入力をstdinで渡し、stdoutからJSON出力を取得。
+
+        Args:
+            skill: 対象Skill
+            script_path: スクリプトパス
+            input_data: 入力データ
+
+        Returns:
+            ScriptResult
+        """
+        start_time = time.time()
+        try:
+            input_json = json.dumps(input_data, ensure_ascii=False)
+            proc = await asyncio.create_subprocess_exec(
+                "bash", str(script_path),
+                stdin=asyncio.subprocess.PIPE,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                cwd=str(skill.path),
+            )
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(
+                proc.communicate(input=input_json.encode()),
+                timeout=self._timeout,
+            )
+            duration_ms = (time.time() - start_time) * 1000
+            stdout = stdout_bytes.decode("utf-8", errors="replace")
+            stderr = stderr_bytes.decode("utf-8", errors="replace")
+
+            output: dict[str, Any] = {}
+            if stdout.strip():
+                try:
+                    output = json.loads(stdout.strip())
+                except json.JSONDecodeError:
+                    output = {"raw": stdout}
+
+            return ScriptResult(
+                success=proc.returncode == 0,
+                output=output,
+                stdout=stdout,
+                stderr=stderr,
+                duration_ms=duration_ms,
+                error=stderr if proc.returncode != 0 else None,
+            )
+        except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
+            return ScriptResult(success=False, error=str(e), duration_ms=duration_ms)
 
     def _convert_result_to_dict(self, result: Any) -> dict[str, Any]:
         """実行結果を辞書に変換.
