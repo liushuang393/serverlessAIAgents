@@ -23,18 +23,16 @@ class GalleryAgent(AgentBlock):
     自然言語のクエリを解析し、適切なコンポーネントを検索・推薦する。
     """
 
+    name = "gallery-agent"
+
     def __init__(self, llm_client: Any = None) -> None:
         """初期化.
 
         Args:
             llm_client: LLMクライアント
         """
-        super().__init__(
-            name="gallery-agent",
-            description="Search and discover agents, tools, and components",
-            system_prompt=self._get_system_prompt(),
-            llm_client=llm_client,
-        )
+        super().__init__()
+        self._llm_client = llm_client
         self._gallery = GalleryService()
 
     def _get_system_prompt(self) -> str:

@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 """Code Migration Assistant MCP Tools.
 
-このパッケージはCOBOL→Java移行のためのMCP工具を提供します。
+このパッケージはCOBOL→Java移行のためのMCPツールを提供する。
 
 MCP Tools:
-    - COBOLParser: COBOL解析工具
-    - JavaGenerator: Java生成工具
-    - CodeValidator: 代码验证工具
-    - ReflectionPattern: 反射模式编排工具
-    - MemorySystem: 记忆系统工具
-    - LLMClient: LLM调用工具
+    - COBOLParser: COBOL解析ツール
+    - JavaGenerator: Java生成ツール
+    - CodeValidator: コード検証ツール
+    - ReflectionPattern: リフレクションパターンオーケストレーションツール
+    - MemorySystem: 記憶システムツール
+    - LLMClient: LLM呼び出しツール
 """
 
 from agentflow import MCPTool, MCPToolRequest, MCPToolResponse
@@ -29,4 +29,3 @@ __all__ = [
     "ReflectionPattern",
     "MemorySystem",
 ]
-

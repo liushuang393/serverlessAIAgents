@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LimitedFixArtifact",
+  "type": "object",
+  "required": [
+    "meta",
+    "applied",
+    "target_code",
+    "patch_summary",
+    "retest_required",
+    "unknowns",
+    "extensions"
+  ],
+  "properties": {
+    "meta": {"type": "object"},
+    "applied": {"type": "boolean"},
+    "target_code": {"type": "string"},
+    "patch_summary": {"type": "array"},
+    "retest_required": {"type": "boolean"},
+    "unknowns": {"type": "array"},
+    "extensions": {"type": "object"}
+  },
+  "additionalProperties": true
+}

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Language Adapter Base Classes.
 
-语言适配器的抽象基类，定义源语言和目标语言的统一接口。
+言語アダプターの抽象基底クラス。ソース言語/ターゲット言語の共通インターフェースを定義する。
 """
 
 from abc import ABC, abstractmethod
@@ -11,7 +11,7 @@ from typing import Any
 
 @dataclass
 class ExecutionResult:
-    """代码执行结果."""
+    """コード実行結果."""
 
     success: bool
     outputs: dict[str, Any] = field(default_factory=dict)
@@ -24,7 +24,7 @@ class ExecutionResult:
 
 @dataclass
 class AST:
-    """抽象语法树."""
+    """抽象構文木."""
 
     program_id: str
     divisions: dict[str, Any] = field(default_factory=dict)
@@ -34,58 +34,58 @@ class AST:
 
 
 class SourceLanguageAdapter(ABC):
-    """源语言适配器接口.
+    """ソース言語アダプターのインターフェース.
 
-    定义如何解析和执行源语言代码。
+    ソース言語の解析と実行方法を定義する。
     """
 
     @property
     @abstractmethod
     def language_name(self) -> str:
-        """语言名称."""
+        """言語名称."""
 
     @abstractmethod
     def parse(self, source_code: str) -> AST:
-        """解析源代码为 AST.
+        """ソースコードをASTへ解析する.
 
         Args:
-            source_code: 源代码
+            source_code: ソースコード
 
         Returns:
-            抽象语法树
+            抽象構文木
         """
 
     @abstractmethod
     def extract_variables(self, ast: AST) -> list[dict[str, Any]]:
-        """提取变量定义.
+        """変数定義を抽出する.
 
         Args:
-            ast: 抽象语法树
+            ast: 抽象構文木
 
         Returns:
-            变量列表
+            変数リスト
         """
 
     @abstractmethod
     def identify_external_calls(self, ast: AST) -> list[dict[str, Any]]:
-        """识别外部调用（文件、DB、API 等）.
+        """外部呼び出しを識別する（ファイル、DB、APIなど）.
 
         Args:
-            ast: 抽象语法树
+            ast: 抽象構文木
 
         Returns:
-            外部调用列表
+            外部呼び出しリスト
         """
 
     def execute(self, source_code: str, inputs: dict[str, Any]) -> ExecutionResult:
-        """执行源代码（可选，用于差分测试）.
+        """ソースコードを実行する（任意、差分テスト用）.
 
         Args:
-            source_code: 源代码
-            inputs: 输入参数
+            source_code: ソースコード
+            inputs: 入力パラメータ
 
         Returns:
-            执行结果
+            実行結果
         """
         return ExecutionResult(
             success=False,
@@ -94,78 +94,77 @@ class SourceLanguageAdapter(ABC):
 
 
 class TargetLanguageAdapter(ABC):
-    """目标语言适配器接口.
+    """ターゲット言語アダプターのインターフェース.
 
-    定义如何生成和执行目标语言代码。
+    ターゲット言語の生成と実行方法を定義する。
     """
 
     @property
     @abstractmethod
     def language_name(self) -> str:
-        """语言名称."""
+        """言語名称."""
 
     @abstractmethod
     def generate_skeleton(self, ast: AST, class_name: str) -> str:
-        """生成代码骨架（类定义、字段声明）.
+        """コードスケルトンを生成する（クラス定義・フィールド宣言）.
 
         Args:
-            ast: 源代码 AST
-            class_name: 类名
+            ast: ソースコードのAST
+            class_name: クラス名
 
         Returns:
-            代码骨架
+            コードスケルトン
         """
 
     @abstractmethod
     def generate_test_skeleton(self, class_name: str, test_cases: list[dict]) -> str:
-        """生成测试代码骨架.
+        """テストコードのスケルトンを生成する.
 
         Args:
-            class_name: 被测类名
-            test_cases: 测试用例
+            class_name: 対象クラス名
+            test_cases: テストケース
 
         Returns:
-            测试代码骨架
+            テストコードのスケルトン
         """
 
     @abstractmethod
     def compile(self, code: str) -> tuple[bool, list[str]]:
-        """编译代码.
+        """コードをコンパイルする.
 
         Args:
-            code: 源代码
+            code: ソースコード
 
         Returns:
-            (成功, 错误列表)
+            （成功, エラーリスト）
         """
 
     @abstractmethod
     def execute(self, code: str, inputs: dict[str, Any]) -> ExecutionResult:
-        """执行代码.
+        """コードを実行する.
 
         Args:
-            code: 源代码
-            inputs: 输入参数
+            code: ソースコード
+            inputs: 入力パラメータ
 
         Returns:
-            执行结果
+            実行結果
         """
 
     def get_type_mapping(self, source_type: str, pic_clause: str = "") -> str:
-        """获取类型映射.
+        """型マッピングを取得する.
 
         Args:
-            source_type: 源类型
-            pic_clause: PIC 子句（COBOL 特有）
+            source_type: ソース型
+            pic_clause: PIC句（COBOL固有）
 
         Returns:
-            目标语言类型
+            ターゲット言語の型
         """
-        # 默认实现，子类可覆盖
+        # デフォルト実装（子クラスで上書き可能）
         mapping = {
             "numeric": "int",
             "decimal": "BigDecimal",
             "string": "String",
         }
         return mapping.get(source_type, "Object")
-

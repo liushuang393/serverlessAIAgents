@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LegacyAnalysisArtifact",
+  "type": "object",
+  "required": [
+    "meta",
+    "programs",
+    "entry_points",
+    "io_contracts",
+    "data_structures",
+    "control_flow",
+    "db_access",
+    "external_calls",
+    "unknowns",
+    "extensions"
+  ],
+  "properties": {
+    "meta": {"type": "object"},
+    "programs": {"type": "array"},
+    "entry_points": {"type": "array"},
+    "io_contracts": {"type": "array"},
+    "data_structures": {"type": "array"},
+    "control_flow": {"type": "array"},
+    "db_access": {"type": "array"},
+    "external_calls": {"type": "array"},
+    "unknowns": {"type": "array"},
+    "extensions": {"type": "object"}
+  },
+  "additionalProperties": true
+}

@@ -55,7 +55,7 @@ class CodeMigrationAgent:
 
 ## 利用可能なツール
 - parse_source: ソースコード解析（確定的処理）
-- generate_skeleton: Java コード骨架生成（確定的処理）
+- generate_skeleton: Java コード骨格生成（確定的処理）
 - compile_code: Java コードコンパイル
 - compare_outputs: 出力比較（確定的処理）
 
@@ -117,13 +117,13 @@ PROCEDURE DIVISION の **ロジック部分を Java コードに翻訳する** �
 
     @tool
     def generate_skeleton(self, class_name: str | None = None) -> dict[str, Any]:
-        """Java コード骨架を生成.
+        """Java コード骨格を生成.
 
         Args:
             class_name: クラス名（省略時は PROGRAM-ID から生成）
 
         Returns:
-            Java コード骨架
+            Java コード骨格
         """
         if not self._current_ast:
             return {"error": "No AST available. Call parse_source first."}
@@ -242,7 +242,7 @@ PROCEDURE DIVISION の **ロジック部分を Java コードに翻訳する** �
         if "error" in parse_result:
             return {"success": False, "error": parse_result["error"], "stage": "parsing"}
 
-        # Step 2: 骨架生成（@tool: 確定的処理）
+        # Step 2: 骨格生成（@tool: 確定的処理）
         skeleton_result = self.generate_skeleton()
         if "error" in skeleton_result:
             return {"success": False, "error": skeleton_result["error"], "stage": "skeleton"}
@@ -282,7 +282,7 @@ PROCEDURE DIVISION の **ロジック部分を Java コードに翻訳する** �
 
         Args:
             parse_result: 解析結果
-            skeleton: Java コード骨架
+            skeleton: Java コード骨格
             class_name: クラス名
 
         Returns:
@@ -306,7 +306,7 @@ PROCEDURE DIVISION の **ロジック部分を Java コードに翻訳する** �
 ### 変数マッピング:
 {parse_result.get('variables', [])}
 
-### Java コード骨架:
+### Java コード骨格:
 ```java
 {skeleton}
 ```
@@ -314,7 +314,7 @@ PROCEDURE DIVISION の **ロジック部分を Java コードに翻訳する** �
 ## 要求
 
 1. PROCEDURE DIVISION のロジックを Java メソッドとして実装
-2. 骨架の TODO 部分を実際のコードで埋める
+2. 骨格の TODO 部分を実際のコードで埋める
 3. メインメソッドから適切なエントリポイントを呼び出す
 4. 完全な Java クラスを出力（コードブロックなし、純粋な Java コードのみ）
 

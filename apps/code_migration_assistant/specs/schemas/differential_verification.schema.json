@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DifferentialVerificationArtifact",
+  "type": "object",
+  "required": [
+    "meta",
+    "equivalence",
+    "diffs",
+    "classification",
+    "confidence",
+    "evidence",
+    "unknowns",
+    "extensions"
+  ],
+  "properties": {
+    "meta": {"type": "object"},
+    "equivalence": {"type": "boolean"},
+    "diffs": {"type": "array"},
+    "classification": {"type": "string"},
+    "confidence": {"type": "number"},
+    "evidence": {"type": "object"},
+    "unknowns": {"type": "array"},
+    "extensions": {"type": "object"}
+  },
+  "additionalProperties": true
+}

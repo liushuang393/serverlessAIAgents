@@ -1,0 +1,12 @@
+# -*- coding: utf-8 -*-
+# 移行タスク仕様
+version: 1
+required:
+  - task_id
+  - trace_id
+  - migration_type
+  - source_language
+  - target_language
+  - module
+  - expected_outputs
+  - options

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """COBOL Language Adapter.
 
-COBOL 源代码解析和分析。
+COBOLソースコードの解析と分析を行う。
 """
 
 import re
@@ -16,24 +16,24 @@ from apps.code_migration_assistant.parsers import PLYCobolParser
 
 
 class CobolAdapter(SourceLanguageAdapter):
-    """COBOL 语言适配器.
+    """COBOL言語アダプター.
 
-    使用 PLY 解析器解析 COBOL 代码。
+    PLYパーサーでCOBOLコードを解析する。
     """
 
     @property
     def language_name(self) -> str:
-        """语言名称."""
+        """言語名称."""
         return "COBOL"
 
     def parse(self, source_code: str) -> AST:
-        """解析 COBOL 代码为 AST.
+        """COBOLコードをASTへ解析する.
 
         Args:
-            source_code: COBOL 源代码
+            source_code: COBOLソースコード
 
         Returns:
-            抽象语法树
+            抽象構文木
         """
         try:
             parser = PLYCobolParser(source_code)
@@ -53,34 +53,34 @@ class CobolAdapter(SourceLanguageAdapter):
             return self._fallback_parse(source_code, str(e))
 
     def extract_variables(self, ast: AST) -> list[dict[str, Any]]:
-        """提取变量定义.
+        """変数定義を抽出する.
 
         Args:
-            ast: 抽象语法树
+            ast: 抽象構文木
 
         Returns:
-            变量列表（包含类型信息）
+            変数リスト（型情報を含む）
         """
         return ast.variables
 
     def identify_external_calls(self, ast: AST) -> list[dict[str, Any]]:
-        """识别外部调用.
+        """外部呼び出しを識別する.
 
         Args:
-            ast: 抽象语法树
+            ast: 抽象構文木
 
         Returns:
-            外部调用列表
+            外部呼び出しリスト
         """
         calls: list[dict[str, Any]] = []
 
-        # 检查 PROCEDURE DIVISION 中的外部调用
+        # PROCEDURE DIVISION内の外部呼び出しを確認
         proc_div = ast.divisions.get("PROCEDURE DIVISION", [])
 
         for line in proc_div:
             line_upper = line.upper()
 
-            # 文件操作
+            # ファイル操作
             if any(kw in line_upper for kw in ["OPEN", "CLOSE", "READ", "WRITE"]):
                 calls.append({
                     "type": "file_io",
@@ -88,7 +88,7 @@ class CobolAdapter(SourceLanguageAdapter):
                     "line": line.strip(),
                 })
 
-            # CALL 语句
+            # CALL文
             if "CALL" in line_upper:
                 calls.append({
                     "type": "program_call",
@@ -96,7 +96,7 @@ class CobolAdapter(SourceLanguageAdapter):
                     "line": line.strip(),
                 })
 
-            # SQL 操作
+            # SQL操作
             if "EXEC SQL" in line_upper:
                 calls.append({
                     "type": "sql",
@@ -106,29 +106,29 @@ class CobolAdapter(SourceLanguageAdapter):
         return calls
 
     def execute(self, source_code: str, inputs: dict[str, Any]) -> ExecutionResult:
-        """执行 COBOL 代码（模拟执行）.
+        """COBOLコードを実行する（模擬実行）.
 
-        注意: 实际 COBOL 执行需要 GnuCOBOL 等编译器。
-        此处提供模拟实现，用于单元测试。
+        注意: 実際のCOBOL実行にはGnuCOBOL等のコンパイラが必要。
+        ここでは単体テスト向けの簡易実装を提供する。
 
         Args:
-            source_code: COBOL 源代码
-            inputs: 输入参数
+            source_code: COBOLソースコード
+            inputs: 入力パラメータ
 
         Returns:
-            执行结果
+            実行結果
         """
-        # TODO: 集成 GnuCOBOL 编译器进行实际执行
+        # TODO: GnuCOBOLコンパイラを統合して実行対応する
         return ExecutionResult(
             success=False,
             error="COBOL execution requires GnuCOBOL compiler (not implemented)",
         )
 
     def _fallback_parse(self, source_code: str, error: str) -> AST:
-        """简易解析（fallback）."""
+        """簡易解析（フォールバック）."""
         lines = source_code.split("\n")
 
-        # 提取 PROGRAM-ID
+        # PROGRAM-IDを抽出
         program_id = "UNKNOWN"
         for line in lines:
             match = re.search(r"PROGRAM-ID\.\s+(\S+)", line, re.IGNORECASE)
@@ -136,7 +136,7 @@ class CobolAdapter(SourceLanguageAdapter):
                 program_id = match.group(1).rstrip(".")
                 break
 
-        # 简易 DIVISION 分割
+        # 簡易DIVISION分割
         divisions: dict[str, list[str]] = {}
         current_div = None
 
@@ -157,7 +157,7 @@ class CobolAdapter(SourceLanguageAdapter):
         )
 
     def _extract_variables_simple(self, data_lines: list[str]) -> list[dict[str, Any]]:
-        """简易变量提取."""
+        """簡易な変数抽出."""
         variables: list[dict[str, Any]] = []
 
         for line in data_lines:
@@ -174,7 +174,7 @@ class CobolAdapter(SourceLanguageAdapter):
         return variables
 
     def _infer_type(self, pic_clause: str) -> str:
-        """从 PIC 子句推断类型."""
+        """PIC句から型を推定する."""
         if "V" in pic_clause.upper():
             return "decimal"
         elif "9" in pic_clause:
@@ -184,7 +184,7 @@ class CobolAdapter(SourceLanguageAdapter):
         return "unknown"
 
     def _extract_procedures(self, ast: dict) -> list[dict[str, Any]]:
-        """提取 PROCEDURE."""
+        """PROCEDUREを抽出する."""
         procedures: list[dict[str, Any]] = []
         proc_lines = ast.get("divisions", {}).get("PROCEDURE DIVISION", [])
 
@@ -201,14 +201,13 @@ class CobolAdapter(SourceLanguageAdapter):
         return procedures
 
     def _extract_operation(self, line: str) -> str:
-        """提取文件操作类型."""
+        """ファイル操作種別を抽出する."""
         for op in ["OPEN", "CLOSE", "READ", "WRITE", "REWRITE", "DELETE"]:
             if op in line:
                 return op
         return "UNKNOWN"
 
     def _extract_call_target(self, line: str) -> str:
-        """提取 CALL 目标."""
+        """CALL対象を抽出する."""
         match = re.search(r"CALL\s+['\"]?(\S+)['\"]?", line, re.IGNORECASE)
         return match.group(1) if match else "UNKNOWN"
-

@@ -1,0 +1,5 @@
+- task=task-6f72f3a4fb25 stage=quality responsible=TEST_ISSUE reason=テスト工程の簡易実行モードで完全検証が未実施
+- task=task-9a264759f479 stage=quality responsible=TEST_ISSUE reason=テスト工程の簡易実行モードで完全検証が未実施
+- task=task-ab3591f00b97 stage=quality responsible=TEST_ISSUE reason=テスト工程の簡易実行モードで完全検証が未実施
+- task=task-5d609339e218 stage=quality responsible=TEST_ISSUE reason=テスト工程の簡易実行モードで完全検証が未実施
+- task=task-737a0c62df06 stage=quality responsible=TEST_ISSUE reason=テスト工程の簡易実行モードで完全検証が未実施

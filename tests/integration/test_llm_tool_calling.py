@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
-"""LLM Tool Calling 集成测试.
+"""LLM Tool Calling の統合テスト.
 
-本模块使用真实LLM API测试各提供商对工具/函数调用的支持程度。
-测试内容:
-- OpenAI GPT-4o 的 function calling
-- Anthropic Claude 的 tool use
-- Google Gemini 的 function calling
+本モジュールは実 LLM API を使用し、各プロバイダーのツール/関数呼び出し対応を検証する。
+テスト内容:
+- OpenAI GPT-4o の function calling
+- Anthropic Claude の tool use
+- Google Gemini の function calling
 
-运行方式:
+実行方法:
     pytest tests/integration/test_llm_tool_calling.py -v -s
 
 前提条件:
-    需要设置以下环境变量:
+    以下の環境変数を設定:
     - OPENAI_API_KEY
     - ANTHROPIC_API_KEY
-    - GEMINI_API_KEY (或 GOOGLE_API_KEY)
+    - GEMINI_API_KEY (または GOOGLE_API_KEY)
 """
 
 import json
@@ -25,23 +25,23 @@ import pytest
 from agentflow.llm import LLMClient, LLMConfig, LLMMessage
 
 
-# 标准工具定义（OpenAI格式）
+# 標準ツール定義（OpenAI 形式）
 SAMPLE_TOOLS = [
     {
         "type": "function",
         "function": {
             "name": "get_weather",
-            "description": "获取指定城市的天气信息",
+            "description": "指定した都市の天気情報を取得する",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "city": {
                         "type": "string",
-                        "description": "城市名称，如'Tokyo'或'New York'",
+                        "description": "都市名（例: 'Tokyo' / 'New York'）",
                     },
                     "unit": {
                         "type": "string",
-                        "description": "温度单位: 'celsius' 或 'fahrenheit'",
+                        "description": "温度単位: 'celsius' または 'fahrenheit'",
                         "enum": ["celsius", "fahrenheit"],
                     },
                 },
@@ -53,17 +53,17 @@ SAMPLE_TOOLS = [
         "type": "function",
         "function": {
             "name": "search_products",
-            "description": "在产品数据库中搜索产品",
+            "description": "商品データベースで商品を検索する",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "搜索关键词",
+                        "description": "検索キーワード",
                     },
                     "max_results": {
                         "type": "integer",
-                        "description": "最大返回结果数",
+                        "description": "最大返却件数",
                     },
                 },
                 "required": ["query"],
@@ -74,22 +74,22 @@ SAMPLE_TOOLS = [
 
 
 def has_openai_key() -> bool:
-    """检查OpenAI API key是否可用."""
+    """OpenAI API key が利用可能か確認する."""
     return bool(os.environ.get("OPENAI_API_KEY"))
 
 
 def has_anthropic_key() -> bool:
-    """检查Anthropic API key是否可用."""
+    """Anthropic API key が利用可能か確認する."""
     return bool(os.environ.get("ANTHROPIC_API_KEY"))
 
 
 def has_gemini_key() -> bool:
-    """检查Gemini API key是否可用."""
+    """Gemini API key が利用可能か確認する."""
     return bool(os.environ.get("GEMINI_API_KEY"))
 
 
 def has_gemini_library() -> bool:
-    """检查google-genai库是否已安装."""
+    """google-genai ライブラリがインストール済みか確認する."""
     try:
         from google import genai  # noqa: F401
         return True
@@ -98,17 +98,17 @@ def has_gemini_library() -> bool:
 
 
 class TestOpenAIToolCalling:
-    """OpenAI GPT-4o Tool Calling 测试."""
+    """OpenAI GPT-4o Tool Calling のテスト."""
 
     @pytest.mark.skipif(not has_openai_key(), reason="OPENAI_API_KEY not set")
     @pytest.mark.asyncio
     async def test_single_tool_call(self):
-        """测试单个工具调用识别."""
+        """単一ツール呼び出しの認識テスト."""
         config = LLMConfig(provider="openai", model="gpt-4o-mini")
         client = LLMClient(config)
 
         messages = [
-            LLMMessage(role="user", content="东京今天天气怎么样？请使用celsius单位。"),
+            LLMMessage(role="user", content="東京の今日の天気は？単位は celsius でお願いします。"),
         ]
 
         response = await client.chat(messages, tools=SAMPLE_TOOLS)
@@ -116,28 +116,28 @@ class TestOpenAIToolCalling:
         print(f"\n[OpenAI] Response: {response}")
         print(f"[OpenAI] Tool calls: {response.tool_calls}")
 
-        # 验证LLM识别到需要调用工具
-        assert response.has_tool_calls(), "OpenAI应该识别出需要调用get_weather工具"
+        # LLM がツール呼び出しを必要と判断する
+        assert response.has_tool_calls(), "OpenAI は get_weather の呼び出しが必要だと判断するはず"
         assert len(response.tool_calls) >= 1
 
-        # 验证工具名称
+        # ツール名
         tool_call = response.tool_calls[0]
-        assert tool_call.name == "get_weather", f"期望get_weather，实际: {tool_call.name}"
+        assert tool_call.name == "get_weather", f"期待: get_weather, 実際: {tool_call.name}"
 
-        # 验证参数
+        # 引数
         args = tool_call.get_arguments_dict()
-        assert "city" in args, "参数中应包含city"
+        assert "city" in args, "引数に city を含む"
         print(f"[OpenAI] Parsed arguments: {args}")
 
     @pytest.mark.skipif(not has_openai_key(), reason="OPENAI_API_KEY not set")
     @pytest.mark.asyncio
     async def test_tool_choice_selection(self):
-        """测试LLM能正确选择工具."""
+        """LLM が適切にツールを選択できる."""
         config = LLMConfig(provider="openai", model="gpt-4o-mini")
         client = LLMClient(config)
 
         messages = [
-            LLMMessage(role="user", content="帮我搜索价格低于100美元的笔记本电脑"),
+            LLMMessage(role="user", content="価格が 100 ドル未満のノートPCを検索して"),
         ]
 
         response = await client.chat(messages, tools=SAMPLE_TOOLS)
@@ -147,16 +147,16 @@ class TestOpenAIToolCalling:
         if response.has_tool_calls():
             tool_call = response.tool_calls[0]
             print(f"[OpenAI] Selected tool: {tool_call.name}")
-            assert tool_call.name == "search_products", "应该选择search_products工具"
+            assert tool_call.name == "search_products", "search_products を選択するはず"
 
 
 class TestAnthropicToolCalling:
-    """Anthropic Claude Tool Calling 测试."""
+    """Anthropic Claude Tool Calling のテスト."""
 
     @pytest.mark.skipif(not has_anthropic_key(), reason="ANTHROPIC_API_KEY not set")
     @pytest.mark.asyncio
     async def test_single_tool_call(self):
-        """测试单个工具调用识别."""
+        """単一ツール呼び出しの認識テスト."""
         config = LLMConfig(provider="anthropic", model="claude-sonnet-4-20250514")
         client = LLMClient(config)
 
@@ -169,7 +169,7 @@ class TestAnthropicToolCalling:
         print(f"\n[Anthropic] Response: {response}")
         print(f"[Anthropic] Tool calls: {response.tool_calls}")
 
-        assert response.has_tool_calls(), "Anthropic应该识别出需要调用get_weather工具"
+        assert response.has_tool_calls(), "Anthropic は get_weather の呼び出しが必要だと判断するはず"
 
         tool_call = response.tool_calls[0]
         assert tool_call.name == "get_weather"
@@ -179,7 +179,7 @@ class TestAnthropicToolCalling:
 
 
 class TestGeminiToolCalling:
-    """Google Gemini Tool Calling 测试."""
+    """Google Gemini Tool Calling のテスト."""
 
     @pytest.mark.skipif(
         not has_gemini_key() or not has_gemini_library(),
@@ -187,7 +187,7 @@ class TestGeminiToolCalling:
     )
     @pytest.mark.asyncio
     async def test_single_tool_call(self):
-        """测试单个工具调用识别."""
+        """単一ツール呼び出しの認識テスト."""
         config = LLMConfig(provider="google", model="gemini-2.0-flash")
         client = LLMClient(config)
 
@@ -286,4 +286,3 @@ class TestCrossProviderComparison:
             if "error" not in result:
                 assert result["recognized"], f"{provider}未能识别工具调用"
                 assert result["tool_name"] == "get_weather", f"{provider}选择了错误的工具"
-

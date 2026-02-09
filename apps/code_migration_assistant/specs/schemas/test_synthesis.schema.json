@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TestSynthesisArtifact",
+  "type": "object",
+  "required": [
+    "meta",
+    "test_cases",
+    "golden_master",
+    "evidence",
+    "unknowns",
+    "extensions"
+  ],
+  "properties": {
+    "meta": {"type": "object"},
+    "test_cases": {"type": "array"},
+    "golden_master": {"type": "object"},
+    "evidence": {"type": "object"},
+    "unknowns": {"type": "array"},
+    "extensions": {"type": "object"}
+  },
+  "additionalProperties": true
+}

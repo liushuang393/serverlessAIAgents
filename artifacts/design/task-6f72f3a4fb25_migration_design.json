@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "task_id": "task-6f72f3a4fb25",
+    "trace_id": "task-6f72f3a4fb25",
+    "stage": "design",
+    "generated_at": "2026-02-06T09:29:10.260576+00:00",
+    "source_language": "COBOL",
+    "target_language": "Java",
+    "module": "UNKNOWN"
+  },
+  "unknowns": [
+    {
+      "field": "entry_points",
+      "reason": "入口定義が空のため手動確認が必要"
+    }
+  ],
+  "extensions": {},
+  "package_mapping": {
+    "default": "com.migration.generated"
+  },
+  "class_mapping": {
+    "primary_class": "HelloWorld"
+  },
+  "transaction_policy": {
+    "mode": "preserve",
+    "rationale": "旧システムの境界を維持"
+  },
+  "state_model": {
+    "variables": [
+      "WS-MESSAGE"
+    ],
+    "mutability": "preserve"
+  },
+  "framework_mapping": {
+    "migration_type": "cobol-to-java",
+    "target_runtime": "Java"
+  },
+  "rationale": {
+    "class_mapping": "PROGRAM-ID をクラス名へ 1:1 変換",
+    "package_mapping": "生成物の配置を固定し検証容易性を確保",
+    "state_model": "WORKING-STORAGE を同等の状態変数として保持"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "meta": {
+    "task_id": "task-ab3591f00b97",
+    "trace_id": "task-ab3591f00b97",
+    "stage": "diff",
+    "generated_at": "2026-02-06T09:30:31.636179+00:00",
+    "source_language": "COBOL",
+    "target_language": "Java",
+    "module": "UNKNOWN"
+  },
+  "unknowns": [
+    {
+      "field": "verification",
+      "reason": "fast_mode では実行検証を省略。完全検証は fast_mode=False で実施"
+    }
+  ],
+  "extensions": {},
+  "equivalence": false,
+  "diffs": [],
+  "classification": "test",
+  "confidence": 0.0,
+  "evidence": {
+    "mode": "fast",
+    "skipped_execution": true
+  }
+}

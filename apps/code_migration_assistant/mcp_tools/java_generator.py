@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """JavaGenerator MCP Tool.
 
-このモジュールはASTからJavaコードを生成するMCP工具を提供します。
+このモジュールはASTからJavaコードを生成するMCPツールを提供します。
 
 主な機能:
     - ASTからJavaコード生成
@@ -69,10 +69,10 @@ class JavaGenerator(MCPTool):
         """ASTからJavaコードを生成.
 
         Args:
-            request: MCP工具リクエスト
+            request: MCPツールリクエスト
 
         Returns:
-            MCP工具レスポンス
+            MCPツールレスポンス
         """
         # 入力パラメータを取得
         ast = request.input.get("ast")

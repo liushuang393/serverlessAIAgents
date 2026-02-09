@@ -1,7 +1,7 @@
 """PL/I Language Adapter.
 
-PL/I（Programming Language One）源代码解析和分析。
-IBMメインフレームのレガシーPL/Iからモダン言語への移行をサポート。
+PL/I（Programming Language One）のソースコード解析と分析を行う。
+IBMメインフレームのレガシーPL/Iからモダン言語への移行をサポートする。
 """
 
 import re
@@ -15,10 +15,10 @@ from apps.code_migration_assistant.adapters.base import (
 
 
 class PLIAdapter(SourceLanguageAdapter):
-    """PL/I 语言适配器.
+    """PL/I言語アダプター.
 
-    IBM PL/I 代码の解析をサポート。
-    メインフレームレガシーシステム移行向け。
+    IBM PL/Iコードの解析をサポートする。
+    メインフレームのレガシーシステム移行向け。
     """
 
     # PL/I キーワード
@@ -91,17 +91,17 @@ class PLIAdapter(SourceLanguageAdapter):
 
     @property
     def language_name(self) -> str:
-        """语言名称."""
+        """言語名称."""
         return "PL/I"
 
     def parse(self, source_code: str) -> AST:
-        """解析 PL/I 代码为 AST.
+        """PL/IコードをASTへ解析する.
 
         Args:
-            source_code: PL/I 源代码
+            source_code: PL/Iソースコード
 
         Returns:
-            抽象语法树
+            抽象構文木
         """
         lines = self._preprocess(source_code)
         program_name = self._extract_program_name(lines)
@@ -126,24 +126,24 @@ class PLIAdapter(SourceLanguageAdapter):
         )
 
     def extract_variables(self, ast: AST) -> list[dict[str, Any]]:
-        """提取变量定义.
+        """変数定義を抽出する.
 
         Args:
-            ast: 抽象语法树
+            ast: 抽象構文木
 
         Returns:
-            变量列表
+            変数リスト
         """
         return ast.variables
 
     def identify_external_calls(self, ast: AST) -> list[dict[str, Any]]:
-        """识别外部调用.
+        """外部呼び出しを識別する.
 
         Args:
-            ast: 抽象语法树
+            ast: 抽象構文木
 
         Returns:
-            外部调用列表
+            外部呼び出しリスト
         """
         calls: list[dict[str, Any]] = []
         executable = ast.divisions.get("EXECUTABLE", [])
@@ -151,7 +151,7 @@ class PLIAdapter(SourceLanguageAdapter):
         for line in executable:
             line_upper = line.upper()
 
-            # CALL 语句
+            # CALL文
             if "CALL" in line_upper:
                 match = re.search(r"CALL\s+(\w+)", line_upper)
                 if match:
@@ -185,14 +185,14 @@ class PLIAdapter(SourceLanguageAdapter):
         return calls
 
     def execute(self, source_code: str, inputs: dict[str, Any]) -> ExecutionResult:
-        """执行 PL/I 代码（模拟执行）.
+        """PL/Iコードを実行する（模擬実行）.
 
         Args:
-            source_code: PL/I 源代码
-            inputs: 输入参数
+            source_code: PL/I ソースコード
+            inputs: 入力パラメータ
 
         Returns:
-            执行结果
+            実行結果
         """
         return ExecutionResult(
             success=False,
@@ -203,7 +203,7 @@ class PLIAdapter(SourceLanguageAdapter):
         """前処理：コメント除去、継続行結合.
 
         Args:
-            source_code: 源代码
+            source_code: ソースコード
 
         Returns:
             処理済み行リスト

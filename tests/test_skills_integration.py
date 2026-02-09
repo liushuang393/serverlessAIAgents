@@ -4,7 +4,7 @@
 このテストモジュールは以下を検証します：
 1. SKILL.md の読み込みと解析
 2. メタデータ（name, description）の制限検証
-3. 渐进式披露（Progressive Disclosure）の動作
+3. 段階的開示（Progressive Disclosure）の動作
 4. Agent への Skills 自動注入
 5. LLM との統合（実際の API 呼び出し）
 
@@ -41,7 +41,7 @@ class TestSkillMetadataLimits:
         assert len(metadata.name) <= 64
 
     def test_name_format(self):
-        """name は小写字母、数字、ハイフンのみ."""
+        """name は小文字英数字とハイフンのみ."""
         # 有効な例
         valid_names = [
             "my-skill",
@@ -159,16 +159,16 @@ class TestSkillRegistry:
 
 
 class TestProgressiveDisclosure:
-    """渐进式披露（Progressive Disclosure）テスト.
-    
+    """段階的開示（Progressive Disclosure）のテスト.
+
     Claude Code Skills の重要な特徴:
-    - 启動時: name + description のみ加载
-    - 触发時: 完整 SKILL.md 加载
-    - 需要時: 额外ファイル加载
+    - 起動時: name + description のみ読み込む
+    - トリガー時: 完全な SKILL.md を読み込む
+    - 必要時: 追加ファイルを読み込む
     """
 
     def test_metadata_only_loading(self):
-        """メタデータのみ读み込み（启动時シミュレーション）."""
+        """メタデータのみ読み込み（起動時シミュレーション）."""
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "progressive-skill"
             skill_dir.mkdir()
@@ -371,4 +371,3 @@ if __name__ == "__main__":
         print("\n⚠️ OPENAI_API_KEY が未設定のため LLM テストをスキップ")
     
     print("\n✅ すべてのテストが完了しました")
-

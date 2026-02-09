@@ -2,9 +2,38 @@
 
 ## 📋 概要
 
-Code Migration Assistantは、COBOL→Java移行を支援するAIエージェントシステムです。
+Code Migration Assistantは、COBOL→Java移行を支援するAIエージェントシステム(等価性検証を中心にした移行工場」へ進化させる)です。
 AgentFlowのReflection Pattern + Memory Systemを活用し、高品質な移行コードを自動生成します。
+汎用化（COBOL → Java 以外も想定）
 
+## 🧱 工程固定ワークフロー（v4）
+
+以下の工程を固定し、工程間通信は `artifacts/` 配下の JSON に限定します。
+
+1. 分析（LegacyAnalysis）
+2. 設計（MigrationDesign）
+3. 変換（CodeTransformation）
+4. テスト生成（TestSynthesis）
+5. 差分検証（DifferentialVerification）
+6. 品質裁定（QualityGate）
+7. 限定修正（LimitedFix）
+
+各成果物は `meta / unknowns / extensions` を必須とし、Schema は `specs/schemas/` で管理します。
+
+この設計にすると：
+COBOL → Java
+RPG → Java
+Struts → Spring Boot
+Java8 → Java21
+
+はすべて：
+👉 Adapter + Design ルール差し替えだけ
+
+今の code_migration_assistant は「賢い Agent」寄り。
+次は「等価性検証を中心にした移行工場」へ進化させる段階。
+
+Agent を増やすより、
+Spec と工程を固定する方が精度も再現性も上がる。
 ---
 
 ## 🎯 主な特徴
@@ -26,13 +55,13 @@ AgentFlowのReflection Pattern + Memory Systemを活用し、高品質な移行�
 
 ---
 
-## 🏗️ システムアーキテクチャ（MCP工具化）
+## 🏗️ システムアーキテクチャ（MCPツール化）
 
-### 核心设计理念
+### 中核設計理念
 
-**Code Migration Assistant = Orchestrator（编排器）**
+**Code Migration Assistant = Orchestrator（オーケストレーター）**
 
-本系统采用**MCP工具化架构**，将所有功能模块设计为独立的MCP工具，通过标准化的MCP协议进行通信。
+本システムは**MCPツール化アーキテクチャ**を採用し、すべての機能モジュールを独立したMCPツールとして設計し、標準化されたMCPプロトコルで通信します。
 
 ```mermaid
 flowchart TB
@@ -40,21 +69,21 @@ flowchart TB
         COBOL["COBOL ソースコード"]
     end
 
-    subgraph Coordinator["🎯 CoordinatorAgent (編排)"]
+    subgraph Coordinator["🎯 QualityGateAgent (オーケストレーション)"]
         direction TB
-        C1["流程決策"]
-        C2["Agent 調度"]
+        C1["フロー判定"]
+        C2["Agent スケジューリング"]
         C3["リトライ管理"]
     end
 
-    subgraph Transform["🔄 TransformAgent"]
+    subgraph Transform["🔄 CodeTransformationAgent"]
         direction TB
         T1["@tool: parse_cobol"]
         T2["@tool: compile_java"]
         T3["LLM: コード翻訳"]
     end
 
-    subgraph Checker["✅ CheckerAgent"]
+    subgraph Checker["✅ DifferentialVerificationAgent"]
         direction TB
         CH1["@tool: execute_java"]
         CH2["@tool: compare_outputs"]
@@ -62,14 +91,14 @@ flowchart TB
         CH4["LLM: 差異分析・判定"]
     end
 
-    subgraph Fixer["🔧 FixerAgent"]
+    subgraph Fixer["🔧 LimitedFixerAgent"]
         direction TB
         F1["@tool: compile_java"]
         F2["@tool: execute_java"]
         F3["LLM: コード修復"]
     end
 
-    subgraph TestGen["🧪 TestGenAgent"]
+    subgraph TestGen["🧪 TestSynthesisAgent"]
         direction TB
         TG1["@tool: run_junit"]
         TG2["@tool: get_test_template"]
@@ -97,82 +126,82 @@ flowchart TB
     style TestGen fill:#9b59b6,color:#fff
 ```
 
-### MCP工具化的优势
+### MCPツール化の利点
 
-1. **松耦合**: 各工具独立开发、测试、部署
-2. **可复用**: 工具可以被多个应用使用（不仅限于Code Migration Assistant）
-3. **可扩展**: 容易添加新工具，支持热插拔
-4. **标准化**: 统一的MCP接口，易于集成
-5. **分布式**: 工具可以部署在不同的服务器上
+1. **疎結合**: 各ツールを独立して開発・テスト・デプロイ可能
+2. **再利用可能**: ツールを複数アプリで共有可能（Code Migration Assistantに限定しない）
+3. **拡張容易**: 新規ツールを追加しやすく、ホットプラグに対応
+4. **標準化**: 統一されたMCPインターフェースで統合容易
+5. **分散**: ツールを複数サーバーに分散配置可能
 
 ---
 
-## 🧩 MCP工具分类
+## 🧩 MCPツール分類
 
-### 1. 核心工具层（Core Tools）
+### 1. コアツール層（Core Tools）
 
 #### COBOLParser MCP Tool
 - **職責**: COBOLソースコードの解析
 - **出力**: AST（抽象構文木）+ メタデータ
 - **サポート**: IDENTIFICATION/DATA/PROCEDURE DIVISION
-- **MCP接口**: 标准JSON输入输出
+- **MCPインターフェース**: 標準JSON入出力
 
 #### JavaGenerator MCP Tool
 - **職責**: ASTからJavaコード生成
 - **機能**: データ型変換、制御構造変換、命名規則適用
 - **出力**: Javaソースコード + レポート
-- **MCP接口**: 支持patterns和best_practices输入
+- **MCPインターフェース**: patterns と best_practices の入力に対応
 
 #### CodeValidator MCP Tool
 - **職責**: 生成されたJavaコードの検証
 - **評価**: 構文（30点）、意味（40点）、品質（20点）、性能（10点）
 - **出力**: 品質スコア + フィードバック + 改善提案
-- **MCP接口**: 返回详细的评分和建议
+- **MCPインターフェース**: 詳細なスコアと提案を返す
 
-### 2. 辅助工具层（Auxiliary Tools）
+### 2. 補助ツール層（Auxiliary Tools）
 
 #### SyntaxChecker MCP Tool
-- **職責**: Java语法检查（编译检查）
-- **出力**: 编译错误和警告列表
+- **職責**: Java文法チェック（コンパイルチェック）
+- **出力**: コンパイルエラーと警告一覧
 
 #### StyleChecker MCP Tool
-- **職責**: 代码风格检查
-- **出力**: 风格违规和改进建议
+- **職責**: コードスタイルチェック
+- **出力**: スタイル違反と改善提案
 
 #### TestGenerator MCP Tool
-- **職責**: 测试代码生成
-- **出力**: JUnit测试代码
+- **職責**: テストコード生成
+- **出力**: JUnitテストコード
 
 #### ComplexityAnalyzer MCP Tool
-- **職責**: 代码复杂度分析
-- **出力**: 圈复杂度、认知复杂度等指标
+- **職責**: コード複雑度分析
+- **出力**: 循環的複雑度、認知的複雑度などの指標
 
-### 3. 基盤工具层（Foundation Tools）
+### 3. 基盤ツール層（Foundation Tools）
 
 #### ReflectionPattern MCP Tool
-- **職責**: 反射模式编排
+- **職責**: リフレクションパターンのオーケストレーション
 - **フロー**: Generate → Evaluate → Improve（最大3回）
 - **目標**: スコア85点以上
-- **MCP接口**: 接收generator/evaluator/improver工具名称
+- **MCPインターフェース**: generator/evaluator/improver のツール名を受け取る
 
 #### MemorySystem MCP Tool
-- **職責**: 记忆系统
+- **職責**: 記憶システム
 - **記憶**: 移行パターン、履歴、ベストプラクティス
 - **活用**: 類似パターン検索、品質向上
-- **MCP接口**: remember和recall操作
+- **MCPインターフェース**: remember/recall 操作
 
 #### LLMClient MCP Tool
-- **職責**: LLM调用
-- **用途**: 代码改进、反馈生成
-- **MCP接口**: 标准prompt输入
+- **職責**: LLM呼び出し
+- **用途**: コード改善、フィードバック生成
+- **MCPインターフェース**: 標準プロンプト入力
 
 ---
 
 ## 📚 ドキュメント
 
 ### 設計ドキュメント
-1. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - 全体アーキテクチャ設計（MCP工具化）
-2. **[MCP_TOOLS_DESIGN.md](./MCP_TOOLS_DESIGN.md)** - MCP工具详细设计
+1. **[ARCHITECTURE.md](./ARCHITECTURE.md)** - 全体アーキテクチャ設計（MCPツール化）
+2. **[MCP_TOOLS_DESIGN.md](./MCP_TOOLS_DESIGN.md)** - MCPツール詳細設計
 3. **[COMPONENT_DESIGN.md](./COMPONENT_DESIGN.md)** - コンポーネント詳細設計
 4. **[REFLECTION_INTEGRATION.md](./REFLECTION_INTEGRATION.md)** - Reflection Pattern統合設計
 5. **[MEMORY_INTEGRATION.md](./MEMORY_INTEGRATION.md)** - Memory System統合設計
@@ -181,14 +210,14 @@ flowchart TB
 
 ## 🚀 使用例
 
-### 基本的な使用方法（MCP工具化）
+### 基本的な使用方法（MCPツール化）
 
 
 ---
 
 ## 🚀 使用方法
 
-### 基本使用
+### 基本的な使用方法
 
 ```python
 import asyncio
@@ -206,7 +235,7 @@ async def main():
     # MCPClientを作成
     client = MCPClient()
 
-    # MCP工具を登録
+    # MCPツールを登録
     client.register_tool("cobol_parser", COBOLParser())
     client.register_tool("java_generator", JavaGenerator())
     client.register_tool("code_validator", CodeValidator())
@@ -253,7 +282,7 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-### 個別MCP工具の使用
+### 個別MCPツールの使用
 
 #### COBOLParser
 
@@ -355,8 +384,8 @@ if response.success:
 ## 📚 ドキュメント
 
 - [アーキテクチャ設計](ARCHITECTURE.md)
-- [MCP工具設計](MCP_TOOLS_DESIGN.md)
-- [MCP架構総結](MCP_ARCHITECTURE_SUMMARY.md)
+- [MCPツール設計](MCP_TOOLS_DESIGN.md)
+- [MCPアーキテクチャサマリー](MCP_ARCHITECTURE_SUMMARY.md)
 - [コンポーネント設計](COMPONENT_DESIGN.md)
 - [Reflection Pattern統合](REFLECTION_INTEGRATION.md)
 - [Memory System統合](MEMORY_INTEGRATION.md)
@@ -471,7 +500,7 @@ PROCEDURE DIVISION.
     STOP RUN.
 """
 
-# MCP工具を通じて移行実行
+# MCPツールを通じて移行実行
 result = await orchestrator.migrate(cobol_code)
 
 print(f"Java Code:\n{result['java_code']}")
@@ -479,25 +508,25 @@ print(f"Quality Score: {result['score']}")
 print(f"Iterations: {result['iterations']}")
 ```
 
-### MCP工具调用流程
+### MCPツール呼び出しフロー
 
 ```
 Orchestrator
   │
   ├─ MCP Call: COBOLParser Tool
-  │    └─ 返回: AST + Metadata
+  │    └─ 返却: AST + Metadata
   │
   ├─ MCP Call: MemorySystem Tool (recall)
-  │    └─ 返回: Patterns
+  │    └─ 返却: Patterns
   │
   ├─ MCP Call: ReflectionPattern Tool
-  │    ├─ 内部调用: JavaGenerator Tool
-  │    ├─ 内部调用: CodeValidator Tool
-  │    └─ 内部调用: JavaGenerator Tool (improve)
-  │    └─ 返回: Final Java Code + Score
+  │    ├─ 内部呼び出し: JavaGenerator Tool
+  │    ├─ 内部呼び出し: CodeValidator Tool
+  │    └─ 内部呼び出し: JavaGenerator Tool (improve)
+  │    └─ 返却: Final Java Code + Score
   │
   └─ MCP Call: MemorySystem Tool (remember)
-       └─ 返回: Success
+       └─ 返却: Success
 ```
 
 ### 出力例
@@ -818,7 +847,7 @@ tools/maven_runner.py                # Maven ビルド/テスト実行
 | 拡張性 | ⭐⭐⭐☆☆ (3/5) | アダプターパターンで言語追加可能だが、Agent との結合が強い |
 | 高内聚 | ⭐⭐⭐⭐☆ (4/5) | 各 Agent の責務は明確 |
 | 低耦合 | ⭐⭐⭐☆☆ (3/5) | Agent が具体的な Adapter を直接参照 |
-| 合理性 | ⭐⭐⭐⭐☆ (4/5) | MCP 工具化は良い設計、ただし改善余地あり |
+| 合理性 | ⭐⭐⭐⭐☆ (4/5) | MCPツール化は良い設計、ただし改善余地あり |
 
 ---
 
@@ -985,5 +1014,3 @@ apps/code_migration_assistant/
 - [ ] 統合テスト作成
 - [ ] README 更新
 ```
-
-

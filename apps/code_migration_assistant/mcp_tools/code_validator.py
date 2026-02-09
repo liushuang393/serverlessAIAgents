@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """CodeValidator MCP Tool.
 
-このモジュールは生成されたJavaコードを検証し、品質スコアとフィードバックを提供するMCP工具を提供します。
+このモジュールは生成されたJavaコードを検証し、品質スコアとフィードバックを提供するMCPツールを提供します。
 
 主な機能:
     - 構文正確性検証（30点）
@@ -55,10 +55,10 @@ class CodeValidator(MCPTool):
         """Javaコードを検証.
 
         Args:
-            request: MCP工具リクエスト
+            request: MCPツールリクエスト
 
         Returns:
-            MCP工具レスポンス
+            MCPツールレスポンス
         """
         # 入力パラメータを取得
         java_code = request.input.get("java_code")

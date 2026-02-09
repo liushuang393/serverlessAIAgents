@@ -4,9 +4,9 @@
 ソース言語→ターゲット言語移行のオーケストレーター。
 agentflow の Engine パターンを使用。
 
-v3.0: agentflow Engine パターン統合
-    - CodeMigrationEngine: PipelineEngine ベース
-    - Transform → Check → Fix ループ
+v4.0: 工程固定パイプライン統合
+    - 分析 → 設計 → 変換 → テスト生成 → 差分検証 → 品質裁定 → 限定修正
+    - 成果物は artifacts/ 配下の JSON として保持
     - AG-UI イベント対応
 
 Flow互換インターフェース:
@@ -28,10 +28,13 @@ class CodeMigrationOrchestrator:
     agentflow の Engine パターンを使用したオーケストレーター。
 
     ワークフロー:
-        1. TransformAgent: ソース → ターゲット 変換
-        2. CheckerAgent: 等価性検証
-        3. (FAIL時) FixerAgent: コード修復 → 再検証
-        4. (オプション) TestGenAgent: テスト生成・実行
+        1. LegacyAnalysisAgent: 事実抽出
+        2. MigrationDesignAgent: 等価移行設計
+        3. CodeTransformationAgent: 設計拘束下の変換
+        4. TestSynthesisAgent: Golden Master 生成
+        5. DifferentialVerificationAgent: 差分分類
+        6. QualityGateAgent: 責任工程裁定
+        7. LimitedFixerAgent: 限定修正
 
     使用例:
         >>> orchestrator = CodeMigrationOrchestrator()
@@ -47,21 +50,14 @@ class CodeMigrationOrchestrator:
         self._migration_type = migration_type
         # Engine を遅延初期化
         self._engine = None
-        self._testgen_agent = None
 
     def _get_engine(self):
         """CodeMigrationEngine を取得（遅延初期化）."""
         if self._engine is None:
             from apps.code_migration_assistant.engine import CodeMigrationEngine
+
             self._engine = CodeMigrationEngine(migration_type=self._migration_type)
         return self._engine
-
-    def _get_testgen_agent(self):
-        """TestGenAgent を取得（遅延初期化）."""
-        if self._testgen_agent is None:
-            from apps.code_migration_assistant.agents import TestGenAgent
-            self._testgen_agent = TestGenAgent()
-        return self._testgen_agent
 
     async def migrate(
         self,
@@ -82,21 +78,13 @@ class CodeMigrationOrchestrator:
         engine = self._get_engine()
 
         # Engine で移行を実行
-        result = await engine.run({
-            "source_code": source_code,
-            "expected_outputs": expected_outputs or {},
-        })
-
-        # テスト実行（オプション）
-        if run_tests and result.get("success"):
-            testgen = self._get_testgen_agent()
-            test_result = testgen.process({
-                "target_code": result.get("target_code", ""),
+        result = await engine.run(
+            {
                 "source_code": source_code,
-                "class_name": result.get("class_name", "Unknown"),
-                "run_tests": True,
-            })
-            result["test_result"] = test_result
+                "expected_outputs": expected_outputs or {},
+                "fast_mode": not run_tests,
+            }
+        )
 
         return result
 
@@ -127,9 +115,7 @@ class CodeMigrationOrchestrator:
             run_tests=inputs.get("run_tests", False),
         )
 
-    async def run_stream(
-        self, inputs: dict[str, Any]
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def run_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """Flow互換のストリーム実行.
 
         Engine の run_stream を使用。
@@ -145,10 +131,12 @@ class CodeMigrationOrchestrator:
         engine = self._get_engine()
 
         # Engine のストリーム実行を委譲
-        async for event in engine.run_stream({
-            "source_code": source_code,
-            "expected_outputs": inputs.get("expected_outputs", {}),
-        }):
+        async for event in engine.run_stream(
+            {
+                "source_code": source_code,
+                "expected_outputs": inputs.get("expected_outputs", {}),
+            }
+        ):
             yield event
 
     @property

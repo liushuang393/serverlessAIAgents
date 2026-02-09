@@ -1,0 +1,31 @@
+{
+  "meta": {
+    "task_id": "task-9a264759f479",
+    "trace_id": "task-9a264759f479",
+    "stage": "code",
+    "generated_at": "2026-02-06T09:29:41.773860+00:00",
+    "source_language": "COBOL",
+    "target_language": "Java",
+    "module": "UNKNOWN"
+  },
+  "unknowns": [],
+  "extensions": {
+    "compile": {
+      "success": true,
+      "errors": []
+    }
+  },
+  "target_code": "package com.migration.generated;\n\n/**\n * 移行元: HELLO-WORLD\n * 生成者: CodeMigrationAgent\n */\npublic class HelloWorld {\n\n    // === Fields (WORKING-STORAGE) ===\n    private String message;\n\n    // === Methods (PROCEDURE DIVISION) ===\n    // TODO: LLM will generate method implementations\n\n    public static void main(String[] args) {\n        HelloWorld instance = new HelloWorld();\n        // TODO: Call entry point method\n    }\n}",
+  "generated_files": [
+    {
+      "path": "generated/HelloWorld.java",
+      "content": "package com.migration.generated;\n\n/**\n * 移行元: HELLO-WORLD\n * 生成者: CodeMigrationAgent\n */\npublic class HelloWorld {\n\n    // === Fields (WORKING-STORAGE) ===\n    private String message;\n\n    // === Methods (PROCEDURE DIVISION) ===\n    // TODO: LLM will generate method implementations\n\n    public static void main(String[] args) {\n        HelloWorld instance = new HelloWorld();\n        // TODO: Call entry point method\n    }\n}"
+    }
+  ],
+  "rule_hits": [
+    "class_mapping.primary_class",
+    "package_mapping.default",
+    "state_model.variables"
+  ],
+  "warnings": []
+}

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Java Language Adapter.
 
-Java 目标代码生成和执行。
+Javaのターゲットコード生成と実行を担う。
 """
 
 import re
@@ -18,12 +18,12 @@ from apps.code_migration_assistant.adapters.base import (
 
 
 class JavaAdapter(TargetLanguageAdapter):
-    """Java 语言适配器.
+    """Java言語アダプター.
 
-    生成 Java 代码骨架和测试代码，支持编译和执行。
+    Javaのコードスケルトンとテストコードを生成し、コンパイルと実行を行う。
     """
 
-    # COBOL → Java 类型映射
+    # COBOL → Java 型マッピング
     TYPE_MAP = {
         "numeric": "int",
         "numeric_large": "long",
@@ -34,18 +34,18 @@ class JavaAdapter(TargetLanguageAdapter):
 
     @property
     def language_name(self) -> str:
-        """语言名称."""
+        """言語名称."""
         return "Java"
 
     def generate_skeleton(self, ast: AST, class_name: str) -> str:
-        """生成 Java 类骨架.
+        """Javaクラススケルトンを生成する.
 
         Args:
-            ast: 源代码 AST
-            class_name: 类名
+            ast: ソースコードのAST
+            class_name: クラス名
 
         Returns:
-            Java 代码骨架（不包含方法体，由 LLM 填充）
+            Javaコードのスケルトン（メソッド本体はLLMが補完）
         """
         lines: list[str] = []
 
@@ -53,7 +53,7 @@ class JavaAdapter(TargetLanguageAdapter):
         lines.append("package com.migration.generated;")
         lines.append("")
 
-        # 检查是否需要 BigDecimal
+        # BigDecimalが必要か判定
         needs_bigdecimal = any(
             self.get_type_mapping(v.get("type", ""), v.get("pic_clause", "")) == "BigDecimal"
             for v in ast.variables
@@ -95,14 +95,14 @@ class JavaAdapter(TargetLanguageAdapter):
         return "\n".join(lines)
 
     def generate_test_skeleton(self, class_name: str, test_cases: list[dict]) -> str:
-        """生成 JUnit 测试骨架.
+        """JUnitテストのスケルトンを生成する.
 
         Args:
-            class_name: 被测类名
-            test_cases: 测试用例
+            class_name: 対象クラス名
+            test_cases: テストケース
 
         Returns:
-            JUnit 测试代码
+            JUnitテストコード
         """
         lines: list[str] = []
 
@@ -142,17 +142,17 @@ class JavaAdapter(TargetLanguageAdapter):
         return "\n".join(lines)
 
     def compile(self, code: str) -> tuple[bool, list[str]]:
-        """编译 Java 代码.
+        """Javaコードをコンパイルする.
 
         Args:
-            code: Java 源代码
+            code: Javaソースコード
 
         Returns:
-            (成功, 错误列表)
+            （成功, エラーリスト）
         """
         errors: list[str] = []
 
-        # 提取类名
+        # クラス名を抽出
         match = re.search(r"public\s+class\s+(\w+)", code)
         if not match:
             return False, ["Cannot find public class name"]
@@ -161,11 +161,11 @@ class JavaAdapter(TargetLanguageAdapter):
 
         try:
             with tempfile.TemporaryDirectory() as tmpdir:
-                # 写入源文件
+                # ソースファイルを書き込む
                 src_path = Path(tmpdir) / f"{class_name}.java"
                 src_path.write_text(code, encoding="utf-8")
 
-                # 编译
+                # コンパイル
                 result = subprocess.run(
                     ["javac", str(src_path)],
                     capture_output=True,
@@ -187,16 +187,16 @@ class JavaAdapter(TargetLanguageAdapter):
             return False, [str(e)]
 
     def execute(self, code: str, inputs: dict[str, Any]) -> ExecutionResult:
-        """执行 Java 代码.
+        """Javaコードを実行する.
 
         Args:
-            code: Java 源代码
-            inputs: 输入参数
+            code: Javaソースコード
+            inputs: 入力パラメータ
 
         Returns:
-            执行结果
+            実行結果
         """
-        # 提取类名
+        # クラス名を抽出
         match = re.search(r"public\s+class\s+(\w+)", code)
         if not match:
             return ExecutionResult(success=False, error="Cannot find public class name")
@@ -205,7 +205,7 @@ class JavaAdapter(TargetLanguageAdapter):
 
         try:
             with tempfile.TemporaryDirectory() as tmpdir:
-                # 写入并编译
+                # 書き込みとコンパイル
                 src_path = Path(tmpdir) / f"{class_name}.java"
                 src_path.write_text(code, encoding="utf-8")
 
@@ -222,7 +222,7 @@ class JavaAdapter(TargetLanguageAdapter):
                         error=f"Compilation failed: {compile_result.stderr}",
                     )
 
-                # 执行
+                # 実行
                 run_result = subprocess.run(
                     ["java", "-cp", tmpdir, class_name],
                     capture_output=True,
@@ -245,7 +245,7 @@ class JavaAdapter(TargetLanguageAdapter):
             return ExecutionResult(success=False, error=str(e))
 
     def get_type_mapping(self, source_type: str, pic_clause: str = "") -> str:
-        """获取类型映射."""
+        """型マッピングを取得する."""
         if "V" in pic_clause.upper() or source_type == "decimal":
             return "BigDecimal"
         if source_type == "numeric":
@@ -264,4 +264,3 @@ class JavaAdapter(TargetLanguageAdapter):
         if not parts:
             return "field"
         return parts[0].lower() + "".join(p.capitalize() for p in parts[1:])
-

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TransformationArtifact",
+  "type": "object",
+  "required": [
+    "meta",
+    "target_code",
+    "generated_files",
+    "rule_hits",
+    "warnings",
+    "unknowns",
+    "extensions"
+  ],
+  "properties": {
+    "meta": {"type": "object"},
+    "target_code": {"type": "string"},
+    "generated_files": {"type": "array"},
+    "rule_hits": {"type": "array"},
+    "warnings": {"type": "array"},
+    "unknowns": {"type": "array"},
+    "extensions": {"type": "object"}
+  },
+  "additionalProperties": true
+}

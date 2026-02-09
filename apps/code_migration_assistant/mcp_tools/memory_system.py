@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """MemorySystem MCP Tool.
 
-このモジュールは記憶システムを提供するMCP工具を実装します。
+このモジュールは記憶システムを提供するMCPツールを実装します。
 
 主な機能:
     - 移行パターンの記憶と想起
@@ -42,7 +42,7 @@ class MemorySystem(MCPTool):
             - count: 件数
 
     Note:
-        このMCP工具は実際のMemoryManagerを使用します。
+        このMCPツールは実際のMemoryManagerを使用します。
         実際の実装では、MemoryManagerを注入する必要があります。
     """
 
@@ -59,10 +59,10 @@ class MemorySystem(MCPTool):
         """記憶システム操作を実行.
 
         Args:
-            request: MCP工具リクエスト
+            request: MCPツールリクエスト
 
         Returns:
-            MCP工具レスポンス
+            MCPツールレスポンス
         """
         # 入力パラメータを取得
         operation = request.input.get("operation")

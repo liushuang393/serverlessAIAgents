@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-"""测试新的 create_flow 链式API.
+"""新しい create_flow チェーン API のテスト.
 
-验证:
-- 基本的 then() 顺序执行
-- gate() 条件拦截
-- review() 审查 + REVISE回退
-- parallel() 并行执行
-- 进度事件发射
+検証:
+- then() の順次実行
+- gate() の条件ブロック
+- review() の審査 + REVISE ロールバック
+- parallel() の並列実行
+- 進捗イベントの送出
 """
 
 import pytest
@@ -27,7 +27,7 @@ from agentflow.flow import (
 
 
 class MockAgent:
-    """简单的Mock Agent."""
+    """シンプルなモック Agent."""
 
     def __init__(self, name: str, output: dict[str, Any] | None = None):
         self.name = name
@@ -40,7 +40,7 @@ class MockAgent:
 
 
 class MockGateAgent:
-    """Mock闸门Agent."""
+    """モックのゲート Agent."""
 
     def __init__(self, should_pass: bool = True):
         self.name = "gate"
@@ -51,7 +51,7 @@ class MockGateAgent:
 
 
 class MockReviewAgent:
-    """Mock审查Agent."""
+    """モックのレビュー Agent."""
 
     def __init__(self, verdicts: list[str] | None = None):
         self.name = "review"
@@ -70,22 +70,22 @@ class MockReviewAgent:
 
 
 class TestFlowBuilder:
-    """测试FlowBuilder链式构建."""
+    """FlowBuilder のチェーン構築テスト."""
 
     def test_create_flow_returns_builder(self):
-        """create_flow应该返回FlowBuilder."""
+        """create_flow は FlowBuilder を返す."""
         builder = create_flow("test-flow")
         assert isinstance(builder, FlowBuilder)
         assert builder.flow_id == "test-flow"
 
     def test_build_without_nodes_raises(self):
-        """没有节点时build应该抛出异常."""
+        """ノードがない場合、build は例外を送出する."""
         builder = create_flow("empty-flow")
-        with pytest.raises(ValueError, match="没有节点"):
+        with pytest.raises(ValueError, match="フローにノードがありません"):
             builder.build()
 
     def test_build_returns_flow(self):
-        """build应该返回Flow实例."""
+        """build は Flow インスタンスを返す."""
         flow = create_flow("test").then(MockAgent("a")).build()
         assert isinstance(flow, Flow)
         assert flow.flow_id == "test"
@@ -93,11 +93,11 @@ class TestFlowBuilder:
 
 
 class TestFlowExecution:
-    """测试Flow执行."""
+    """Flow 実行のテスト."""
 
     @pytest.mark.asyncio
     async def test_simple_then(self):
-        """测试简单的顺序执行."""
+        """シンプルな順次実行のテスト."""
         agent1 = MockAgent("agent1")
         agent2 = MockAgent("agent2")
 
@@ -106,12 +106,12 @@ class TestFlowExecution:
 
         assert agent1.call_count == 1
         assert agent2.call_count == 1
-        # 结果包含所有节点的输出（key是自动生成的节点ID）
+        # 結果は全ノードの出力を含む（key は自動生成のノード ID）
         assert len(result) >= 2
 
     @pytest.mark.asyncio
     async def test_gate_pass(self):
-        """测试闸门通过."""
+        """ゲート通過のテスト."""
         gate = MockGateAgent(should_pass=True)
         agent = MockAgent("agent")
 
@@ -122,7 +122,7 @@ class TestFlowExecution:
 
     @pytest.mark.asyncio
     async def test_gate_block(self):
-        """测试闸门拦截."""
+        """ゲート遮断のテスト."""
         gate = MockGateAgent(should_pass=False)
         agent = MockAgent("agent")
 
@@ -134,13 +134,13 @@ class TestFlowExecution:
         )
         result = await flow.run({"input": "test"})
 
-        # Agent不应该被调用
+        # Agent は呼び出されない
         assert agent.call_count == 0
         assert result.get("status") == "blocked"
 
     @pytest.mark.asyncio
     async def test_review_pass(self):
-        """测试审查通过."""
+        """レビュー PASS のテスト."""
         agent = MockAgent("agent")
         review = MockReviewAgent(verdicts=["PASS"])
 
@@ -156,9 +156,9 @@ class TestFlowExecution:
 
     @pytest.mark.asyncio
     async def test_review_revise(self):
-        """测试审查REVISE回退."""
+        """レビュー REVISE のロールバックテスト."""
         agent = MockAgent("agent")
-        # 第一次REVISE，第二次PASS
+        # 1 回目は REVISE、2 回目は PASS
         review = MockReviewAgent(verdicts=["REVISE", "PASS"])
 
         flow = (
@@ -169,16 +169,16 @@ class TestFlowExecution:
         )
         result = await flow.run({"input": "test"})
 
-        # Agent应该被调用2次（原始 + 1次REVISE）
+        # Agent は 2 回呼ばれる（初回 + REVISE 1 回）
         assert agent.call_count == 2
 
 
 class TestFlowStream:
-    """测试流式执行."""
+    """ストリーミング実行のテスト."""
 
     @pytest.mark.asyncio
     async def test_stream_emits_events(self):
-        """测试流式执行发射事件."""
+        """ストリーミング実行でイベントが送出される."""
         agent = MockAgent("agent")
         flow = create_flow("test").then(agent).build()
 
@@ -186,7 +186,7 @@ class TestFlowStream:
         async for event in flow.run_stream({"input": "test"}):
             events.append(event)
 
-        # 应该有 flow_start, node_start, node_complete, flow_complete
+        # flow_start, node_start, node_complete, flow_complete が含まれる
         event_types = [e["type"] for e in events]
         assert "flow_start" in event_types
         assert "node_start" in event_types
@@ -196,4 +196,3 @@ class TestFlowStream:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

@@ -5,7 +5,7 @@
 1. Web API + UI
 2. コード差分表示
 3. リアルタイム進捗
-4. 富文本レポート
+4. リッチテキストレポート
 5. code_analysis Skills 統合
 
 使用例:
@@ -158,7 +158,7 @@ async def _transform_code(
     if progress_callback:
         await progress_callback(60, "コード変換中...", "transform")
 
-    # デモ変換（実際は TransformAgent を使用）
+    # デモ変換（実際は CodeTransformationAgent を使用）
     if source_language == "cobol" and target_language == "java":
         target_code = f"""/**
  * Migrated from COBOL
@@ -211,17 +211,17 @@ def _build_migration_report(
     analysis: dict[str, Any],
     verification: dict[str, Any],
 ) -> dict[str, Any]:
-    """移行レポートを構築（富文本）."""
+    """移行レポートを構築（リッチテキスト）."""
     response = RichResponse()
 
     # サマリー
     response.add_markdown(f"""# コード移行レポート
 
 ## サマリー
-- **ソース行数**: {analysis.get('loc', 0)}行
-- **複雑度**: {analysis.get('complexity', 0)}/10
-- **検証結果**: {verification.get('verdict', 'N/A')}
-- **品質スコア**: {verification.get('score', 0):.1f}点
+- **ソース行数**: {analysis.get("loc", 0)}行
+- **複雑度**: {analysis.get("complexity", 0)}/10
+- **検証結果**: {verification.get("verdict", "N/A")}
+- **品質スコア**: {verification.get("score", 0):.1f}点
 
 """)
 
@@ -249,11 +249,13 @@ def _build_migration_report(
     # 品質チャート
     chart_data = {
         "title": {"text": "コード品質スコア"},
-        "series": [{
-            "type": "gauge",
-            "data": [{"value": verification.get("score", 0), "name": "品質"}],
-            "detail": {"formatter": "{value}点"},
-        }],
+        "series": [
+            {
+                "type": "gauge",
+                "data": [{"value": verification.get("score", 0), "name": "品質"}],
+                "detail": {"formatter": "{value}点"},
+            }
+        ],
     }
     response.add_chart("gauge", chart_data, title="品質評価")
 
@@ -418,7 +420,7 @@ async def index():
                 hljs.highlightAll();
             }
 
-            // 富文本レポート
+            // リッチテキストレポート
             if (data.report && data.report.rich_response) {
                 document.getElementById('results-section').classList.remove('hidden');
                 renderRichContent(data.report.rich_response.components);
@@ -677,11 +679,14 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 target_lang = data.get("target_language", "java")
 
                 async def progress_cb(progress: int, message: str, step: str = ""):
-                    await manager.send_message(client_id, {
-                        "type": "progress",
-                        "progress": progress,
-                        "message": message,
-                    })
+                    await manager.send_message(
+                        client_id,
+                        {
+                            "type": "progress",
+                            "progress": progress,
+                            "message": message,
+                        },
+                    )
 
                 # 分析
                 await progress_cb(10, "分析中...")
@@ -707,25 +712,31 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 )
 
                 # 完了
-                await manager.send_message(client_id, {
-                    "type": "result",
-                    "data": {
-                        "success": True,
-                        "target_code": transform_result["target_code"],
-                        "analysis": analysis,
-                        "verification": verification,
-                        "report": report,
+                await manager.send_message(
+                    client_id,
+                    {
+                        "type": "result",
+                        "data": {
+                            "success": True,
+                            "target_code": transform_result["target_code"],
+                            "analysis": analysis,
+                            "verification": verification,
+                            "report": report,
+                        },
                     },
-                })
+                )
 
     except WebSocketDisconnect:
         manager.disconnect(client_id)
     except Exception as e:
         logger.exception("WebSocket error: %s", e)
-        await manager.send_message(client_id, {
-            "type": "error",
-            "message": str(e),
-        })
+        await manager.send_message(
+            client_id,
+            {
+                "type": "error",
+                "message": str(e),
+            },
+        )
 
 
 @app.get("/api/health")
@@ -746,4 +757,5 @@ async def health_check() -> dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8004)

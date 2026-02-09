@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """ReflectionPattern MCP Tool.
 
-このモジュールは反射模式编排を提供するMCP工具を実装します。
+このモジュールはリフレクションパターンのオーケストレーションを提供するMCPツールを実装する。
 
 主な機能:
-    - Generate → Evaluate → Improve ループ編排
+    - Generate → Evaluate → Improve ループのオーケストレーション
     - 最大反復回数制御
     - 受け入れ閾値判定
     - 履歴記録
@@ -18,12 +18,12 @@ from agentflow import MCPTool, MCPToolRequest, MCPToolResponse
 class ReflectionPattern(MCPTool):
     """ReflectionPattern MCP Tool.
 
-    Generate → Evaluate → Improve ループを編排します。
+    Generate → Evaluate → Improve ループをオーケストレーションします。
 
     Input:
-        - generator_tool: 生成工具名（必須）
-        - evaluator_tool: 評価工具名（必須）
-        - improver_tool: 改善工具名（必須、通常はgenerator_toolと同じ）
+        - generator_tool: 生成ツール名（必須）
+        - evaluator_tool: 評価ツール名（必須）
+        - improver_tool: 改善ツール名（必須、通常はgenerator_toolと同じ）
         - initial_input: 初期入力データ（必須）
         - max_iterations: 最大反復回数（デフォルト: 3）
         - acceptance_threshold: 受け入れ閾値（デフォルト: 85.0）
@@ -36,27 +36,27 @@ class ReflectionPattern(MCPTool):
         - is_acceptable: 受け入れ可能フラグ
 
     Note:
-        このMCP工具は他のMCP工具を呼び出すため、MCPClientが必要です。
-        実際の実装では、MCPClientを注入する必要があります。
+        このMCPツールは他のMCPツールを呼び出すため、MCPClientが必要。
+        実運用ではMCPClientを注入する必要がある。
     """
 
     def __init__(self, mcp_client: Any | None = None) -> None:
         """ReflectionPatternを初期化.
 
         Args:
-            mcp_client: MCP Client（他の工具を呼び出すため）
+            mcp_client: MCP Client（他のツールを呼び出すため）
         """
         super().__init__(tool_name="reflection_pattern", version="1.0.0")
         self.mcp_client = mcp_client
 
     async def handle_request(self, request: MCPToolRequest) -> MCPToolResponse:
-        """反射模式を実行.
+        """リフレクションパターンを実行.
 
         Args:
-            request: MCP工具リクエスト
+            request: MCPツールリクエスト
 
         Returns:
-            MCP工具レスポンス
+            MCPツールレスポンス
         """
         # 入力パラメータを取得
         generator_tool = request.input.get("generator_tool")
@@ -97,7 +97,7 @@ class ReflectionPattern(MCPTool):
                 errors=["MCP Client is not configured"],
             )
 
-        # 反射模式実行
+        # リフレクションパターン実行
         try:
             final_output, final_score, iterations, history, is_acceptable = await self._run_reflection_loop(
                 generator_tool=generator_tool,
@@ -134,12 +134,12 @@ class ReflectionPattern(MCPTool):
         max_iterations: int,
         acceptance_threshold: float,
     ) -> tuple[dict[str, Any], float, int, list[dict[str, Any]], bool]:
-        """反射ループを実行（内部実装）.
+        """リフレクションループを実行（内部実装）.
 
         Args:
-            generator_tool: 生成工具名
-            evaluator_tool: 評価工具名
-            improver_tool: 改善工具名
+            generator_tool: 生成ツール名
+            evaluator_tool: 評価ツール名
+            improver_tool: 改善ツール名
             initial_input: 初期入力データ
             max_iterations: 最大反復回数
             acceptance_threshold: 受け入れ閾値
@@ -213,16 +213,16 @@ class ReflectionPattern(MCPTool):
         return current_output or {}, current_score, len(history), history, is_acceptable
 
     async def _call_tool(self, tool_name: str, input_data: dict[str, Any]) -> MCPToolResponse:
-        """MCP工具を呼び出す.
+        """MCPツールを呼び出す.
 
         Args:
-            tool_name: 工具名
+            tool_name: ツール名
             input_data: 入力データ
 
         Returns:
-            MCP工具レスポンス
+            MCPツールレスポンス
         """
-        # MCPClientを使用して工具を呼び出す
+        # MCPClientを使用してツールを呼び出す
         # 注意: 実際の実装では、MCPClientのインターフェースに合わせて調整が必要
         request = MCPToolRequest(
             tool=tool_name,
@@ -230,10 +230,9 @@ class ReflectionPattern(MCPTool):
             input=input_data,
         )
 
-        # 工具を直接呼び出す（簡易実装）
-        # 実際の実装では、MCPClientを使用してリモート工具を呼び出す
+        # ツールを直接呼び出す（簡易実装）
+        # 実際の実装では、MCPClientを使用してリモートツールを呼び出す
         if self.mcp_client:
             return await self.mcp_client.call_tool(request)
         else:
             raise RuntimeError("MCP Client is not configured")
-

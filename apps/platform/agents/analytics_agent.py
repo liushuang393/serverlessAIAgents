@@ -22,18 +22,16 @@ class AnalyticsAgent(AgentBlock):
     テナントの使用状況を分析し、インサイトを提供する。
     """
 
+    name = "analytics-agent"
+
     def __init__(self, llm_client: Any = None) -> None:
         """初期化.
 
         Args:
             llm_client: LLMクライアント
         """
-        super().__init__(
-            name="analytics-agent",
-            description="Analyze usage and generate insights",
-            system_prompt=self._get_system_prompt(),
-            llm_client=llm_client,
-        )
+        super().__init__()
+        self._llm_client = llm_client
         self._dashboard = TenantDashboard()
 
     def _get_system_prompt(self) -> str:

@@ -43,8 +43,8 @@ async def test_cli_migration() -> bool:
 
 
 async def test_mcp_tools() -> bool:
-    """MCP工具テスト."""
-    print("\n🔍 MCP工具をテスト中...")
+    """MCPツールテスト."""
+    print("\n🔍 MCPツールをテスト中...")
 
     try:
         from agentflow import MCPToolClient as MCPClient
@@ -58,7 +58,7 @@ async def test_mcp_tools() -> bool:
         # MCPClientを作成
         client = MCPClient()
 
-        # MCP工具を登録
+        # MCPツールを登録
         client.register_tool("cobol_parser", COBOLParser())
         client.register_tool("java_generator", JavaGenerator())
         client.register_tool("code_validator", CodeValidator())
@@ -125,7 +125,7 @@ async def test_mcp_tools() -> bool:
         return True
 
     except Exception as e:
-        print(f"  ❌ MCP工具テスト失敗: {e}")
+        print(f"  ❌ MCPツールテスト失敗: {e}")
         import traceback
 
         traceback.print_exc()
@@ -140,7 +140,7 @@ async def main() -> None:
 
     results = []
 
-    # MCP工具テスト
+    # MCPツールテスト
     results.append(await test_mcp_tools())
 
     # CLI移行テスト

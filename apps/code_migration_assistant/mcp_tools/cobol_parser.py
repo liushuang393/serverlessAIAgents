@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """COBOLParser MCP Tool.
 
-このモジュールはCOBOLソースコードを解析してASTとメタデータを生成するMCP工具を提供します。
+このモジュールはCOBOLソースコードを解析してASTとメタデータを生成するMCPツールを提供します。
 
 主な機能:
     - COBOL構文解析
@@ -50,10 +50,10 @@ class COBOLParser(MCPTool):
         """COBOLソースコードを解析.
 
         Args:
-            request: MCP工具リクエスト
+            request: MCPツールリクエスト
 
         Returns:
-            MCP工具レスポンス
+            MCPツールレスポンス
         """
         # 入力パラメータを取得
         cobol_code = request.input.get("cobol_code")

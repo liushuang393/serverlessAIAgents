@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MigrationDesignArtifact",
+  "type": "object",
+  "required": [
+    "meta",
+    "package_mapping",
+    "class_mapping",
+    "transaction_policy",
+    "state_model",
+    "framework_mapping",
+    "rationale",
+    "unknowns",
+    "extensions"
+  ],
+  "properties": {
+    "meta": {"type": "object"},
+    "package_mapping": {"type": "object"},
+    "class_mapping": {"type": "object"},
+    "transaction_policy": {"type": "object"},
+    "state_model": {"type": "object"},
+    "framework_mapping": {"type": "object"},
+    "rationale": {"type": "object"},
+    "unknowns": {"type": "array"},
+    "extensions": {"type": "object"}
+  },
+  "additionalProperties": true
+}

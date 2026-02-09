@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-"""测试 @agent 装饰器的 Pydantic 支持.
+"""@agent デコレーターの Pydantic 対応テスト.
 
-验证:
-- input_schema 自动验证输入
-- output_schema 自动序列化输出
-- 与非 Pydantic Agent 的兼容性
+検証:
+- input_schema による入力の自動検証
+- output_schema による出力の自動シリアライズ
+- 非 Pydantic Agent との互換性
 """
 
 from unittest.mock import patch
@@ -21,14 +21,14 @@ from agentflow.agent_decorator import agent, AgentClient, _agent_registry
 
 
 class QuestionInput(BaseModel):
-    """测试输入模式."""
+    """入力スキーマのテスト用."""
 
     question: str
     context: str | None = None
 
 
 class AnswerOutput(BaseModel):
-    """测试输出模式."""
+    """出力スキーマのテスト用."""
 
     answer: str
     confidence: float = 0.5
@@ -39,11 +39,11 @@ class AnswerOutput(BaseModel):
 # ============================================================
 
 def _create_simple_agent():
-    """创建简单Agent."""
+    """シンプルな Agent を作成."""
     @agent
     class SimpleAgent:
-        """无类型的简单Agent."""
-        system_prompt = "你是一个助手"
+        """型なしのシンプルな Agent."""
+        system_prompt = "あなたはアシスタントです。"
 
         async def process(self, input_data: dict) -> dict:
             return {"response": f"回答: {input_data.get('question', '')}"}
@@ -52,11 +52,11 @@ def _create_simple_agent():
 
 
 def _create_typed_agent():
-    """创建带类型的Agent."""
+    """型付きの Agent を作成."""
     @agent
     class TypedAgent:
-        """带Pydantic类型的Agent."""
-        system_prompt = "你是一个带类型的助手"
+        """Pydantic の型付き Agent."""
+        system_prompt = "あなたは型付きのアシスタントです。"
         input_schema = QuestionInput
         output_schema = AnswerOutput
 
@@ -75,32 +75,32 @@ def _create_typed_agent():
 
 
 class TestPydanticSupport:
-    """测试 Pydantic 支持."""
+    """Pydantic 対応のテスト."""
 
     def setup_method(self):
-        """每个测试前清理注册表."""
+        """各テスト前にレジストリをクリア."""
         _agent_registry.clear()
-        # 重新创建并注册测试Agent
+        # テスト Agent を作り直して登録
         _create_simple_agent()
         _create_typed_agent()
 
     def test_simple_agent_registered(self):
-        """SimpleAgent 应该被注册."""
+        """SimpleAgent が登録される."""
         assert "SimpleAgent" in _agent_registry
 
     def test_typed_agent_registered(self):
-        """TypedAgent 应该被注册."""
+        """TypedAgent が登録される."""
         assert "TypedAgent" in _agent_registry
 
     def test_typed_agent_has_schemas(self):
-        """TypedAgent 应该有输入/输出模式."""
+        """TypedAgent が入出力スキーマを持つ."""
         registered = _agent_registry["TypedAgent"]
         assert registered.input_schema is QuestionInput
         assert registered.output_schema is AnswerOutput
         assert registered.has_typed_schema is True
 
     def test_simple_agent_no_schemas(self):
-        """SimpleAgent 不应该有输入/输出模式."""
+        """SimpleAgent は入出力スキーマを持たない."""
         registered = _agent_registry["SimpleAgent"]
         assert registered.input_schema is None
         assert registered.output_schema is None
@@ -109,19 +109,19 @@ class TestPydanticSupport:
     @pytest.mark.asyncio
     @patch("agentflow.providers.get_llm", return_value=None)
     async def test_simple_agent_invoke(self, mock_llm):
-        """测试无类型Agent的调用."""
+        """型なし Agent の呼び出しテスト."""
         client = AgentClient.get("SimpleAgent")
-        result = await client.invoke({"question": "你好"})
+        result = await client.invoke({"question": "こんにちは"})
         assert "response" in result
-        assert "你好" in result["response"]
+        assert "こんにちは" in result["response"]
 
     @pytest.mark.asyncio
     @patch("agentflow.providers.get_llm", return_value=None)
     async def test_typed_agent_invoke(self, mock_llm):
-        """测试带类型Agent的调用."""
+        """型付き Agent の呼び出しテスト."""
         client = AgentClient.get("TypedAgent")
-        result = await client.invoke({"question": "你好"})
-        # 输出应该被序列化为字典
+        result = await client.invoke({"question": "こんにちは"})
+        # 出力は dict にシリアライズされる
         assert isinstance(result, dict)
         assert "answer" in result
         assert "confidence" in result
@@ -130,29 +130,28 @@ class TestPydanticSupport:
     @pytest.mark.asyncio
     @patch("agentflow.providers.get_llm", return_value=None)
     async def test_typed_agent_validation_success(self, mock_llm):
-        """测试输入验证成功."""
+        """入力検証が成功する."""
         client = AgentClient.get("TypedAgent")
-        result = await client.invoke({"question": "有效问题", "context": "上下文"})
+        result = await client.invoke({"question": "有効な質問", "context": "コンテキスト"})
         assert "answer" in result
 
     @pytest.mark.asyncio
     async def test_typed_agent_validation_failure(self):
-        """测试输入验证失败（缺少必填字段）."""
-        # 验证发生在 invoke 之前，不需要 mock LLM
+        """入力検証が失敗する（必須フィールド不足）."""
+        # 検証は invoke より前に行われるため、LLM を mock する必要はない
         registered = _agent_registry["TypedAgent"]
         with pytest.raises(ValidationError):
-            registered.validate_input({"context": "只有上下文没有问题"})
+            registered.validate_input({"context": "コンテキストのみで質問がない"})
 
     @pytest.mark.asyncio
     async def test_typed_agent_validation_wrong_type(self):
-        """测试输入验证失败（类型错误）."""
+        """入力検証が失敗する（型が不正）."""
         registered = _agent_registry["TypedAgent"]
-        # Pydantic 会尝试转换，123 会变成 "123"
-        # 但 None 或者完全缺失 question 会失败
+        # Pydantic は型変換を試み、123 は "123" になる
+        # ただし、question が None / 未指定の場合は失敗する
         with pytest.raises(ValidationError):
-            registered.validate_input({})  # 完全缺失 question
+            registered.validate_input({})  # question が未指定
 
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

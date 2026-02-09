@@ -1,8 +1,8 @@
 """RPG Language Adapter.
 
-RPG（Report Program Generator）源代码解析和分析。
-IBM AS/400（iSeries）のレガシーRPGからモダン言語への移行をサポート。
-RPG II, RPG III, RPG IV（ILE RPG）, RPG Free形式をサポート。
+RPG（Report Program Generator）のソースコード解析と分析を行う。
+IBM AS/400（iSeries）のレガシーRPGからモダン言語への移行をサポートする。
+RPG II, RPG III, RPG IV（ILE RPG）, RPG Free形式をサポートする。
 """
 
 import re
@@ -16,9 +16,9 @@ from apps.code_migration_assistant.adapters.base import (
 
 
 class RPGAdapter(SourceLanguageAdapter):
-    """RPG 语言适配器.
+    """RPG言語アダプター.
 
-    IBM RPG（II/III/IV/Free）代码の解析をサポート。
+    IBM RPG（II/III/IV/Free）コードの解析をサポートする。
     AS/400（iSeries）レガシーシステム移行向け。
     """
 
@@ -88,17 +88,17 @@ class RPGAdapter(SourceLanguageAdapter):
 
     @property
     def language_name(self) -> str:
-        """语言名称."""
+        """言語名称."""
         return "RPG"
 
     def parse(self, source_code: str) -> AST:
-        """解析 RPG 代码为 AST.
+        """RPGコードをASTへ解析する.
 
         Args:
-            source_code: RPG 源代码
+            source_code: RPGソースコード
 
         Returns:
-            抽象语法树
+            抽象構文木
         """
         format_type = self._detect_format(source_code)
 
@@ -107,24 +107,24 @@ class RPGAdapter(SourceLanguageAdapter):
         return self._parse_fixed_format(source_code)
 
     def extract_variables(self, ast: AST) -> list[dict[str, Any]]:
-        """提取变量定义.
+        """変数定義を抽出する.
 
         Args:
-            ast: 抽象语法树
+            ast: 抽象構文木
 
         Returns:
-            变量列表
+            変数リスト
         """
         return ast.variables
 
     def identify_external_calls(self, ast: AST) -> list[dict[str, Any]]:
-        """识别外部调用.
+        """外部呼び出しを識別する.
 
         Args:
-            ast: 抽象语法树
+            ast: 抽象構文木
 
         Returns:
-            外部调用列表
+            外部呼び出しリスト
         """
         calls: list[dict[str, Any]] = []
         executable = ast.divisions.get("CALCULATIONS", [])
@@ -181,14 +181,14 @@ class RPGAdapter(SourceLanguageAdapter):
         return calls
 
     def execute(self, source_code: str, inputs: dict[str, Any]) -> ExecutionResult:
-        """执行 RPG 代码（模拟执行）.
+        """RPGコードを実行する（模擬実行）.
 
         Args:
-            source_code: RPG 源代码
-            inputs: 输入参数
+            source_code: RPG ソースコード
+            inputs: 入力パラメータ
 
         Returns:
-            执行结果
+            実行結果
         """
         return ExecutionResult(
             success=False,

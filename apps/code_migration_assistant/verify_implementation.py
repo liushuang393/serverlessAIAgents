@@ -14,8 +14,8 @@ sys.path.insert(0, str(project_root))
 
 
 async def verify_mcp_tools() -> bool:
-    """MCP工具の検証."""
-    print("🔍 MCP工具を検証中...")
+    """MCPツールの検証."""
+    print("🔍 MCPツールを検証中...")
 
     try:
         from apps.code_migration_assistant.mcp_tools import (
@@ -29,7 +29,7 @@ async def verify_mcp_tools() -> bool:
             ReflectionPattern,
         )
 
-        print("  ✅ 全MCP工具のインポート成功")
+        print("  ✅ 全MCPツールのインポート成功")
 
         # COBOLParserテスト
         parser = COBOLParser()
@@ -59,7 +59,7 @@ async def verify_mcp_tools() -> bool:
         return True
 
     except Exception as e:
-        print(f"  ❌ MCP工具検証失敗: {e}")
+        print(f"  ❌ MCPツール検証失敗: {e}")
         return False
 
 
@@ -154,7 +154,7 @@ async def main() -> None:
 
     results = []
 
-    # MCP工具検証
+    # MCPツール検証
     results.append(await verify_mcp_tools())
 
     # Orchestrator検証

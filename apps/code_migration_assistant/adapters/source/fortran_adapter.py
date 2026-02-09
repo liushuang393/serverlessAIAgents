@@ -1,7 +1,7 @@
 """FORTRAN Language Adapter.
 
-FORTRAN（FORTRAN 77/90/95/2003/2008）源代码解析和分析。
-レガシーFORTRANからモダンJava/Pythonへの移行をサポート。
+FORTRAN（FORTRAN 77/90/95/2003/2008）のソースコード解析と分析を行う。
+レガシーFORTRANからモダンJava/Pythonへの移行をサポートする。
 """
 
 import re
@@ -15,10 +15,10 @@ from apps.code_migration_assistant.adapters.base import (
 
 
 class FortranAdapter(SourceLanguageAdapter):
-    """FORTRAN 语言适配器.
+    """FORTRAN言語アダプター.
 
-    FORTRAN 77/90/95/2003/2008 代码的解析。
-    レガシーシステム移行のため、固定形式と自由形式の両方をサポート。
+    FORTRAN 77/90/95/2003/2008 のコード解析を行う。
+    レガシーシステム移行のため、固定形式と自由形式の両方をサポートする。
     """
 
     # FORTRAN キーワード
@@ -82,17 +82,17 @@ class FortranAdapter(SourceLanguageAdapter):
 
     @property
     def language_name(self) -> str:
-        """语言名称."""
+        """言語名称."""
         return "FORTRAN"
 
     def parse(self, source_code: str) -> AST:
-        """解析 FORTRAN 代码为 AST.
+        """FORTRANコードをASTへ解析する.
 
         Args:
-            source_code: FORTRAN 源代码
+            source_code: FORTRANソースコード
 
         Returns:
-            抽象语法树
+            抽象構文木
         """
         lines = self._preprocess(source_code)
         program_name = self._extract_program_name(lines)
@@ -118,24 +118,24 @@ class FortranAdapter(SourceLanguageAdapter):
         )
 
     def extract_variables(self, ast: AST) -> list[dict[str, Any]]:
-        """提取变量定义.
+        """変数定義を抽出する.
 
         Args:
-            ast: 抽象语法树
+            ast: 抽象構文木
 
         Returns:
-            变量列表
+            変数リスト
         """
         return ast.variables
 
     def identify_external_calls(self, ast: AST) -> list[dict[str, Any]]:
-        """识别外部调用.
+        """外部呼び出しを識別する.
 
         Args:
-            ast: 抽象语法树
+            ast: 抽象構文木
 
         Returns:
-            外部调用列表
+            外部呼び出しリスト
         """
         calls: list[dict[str, Any]] = []
         executable = ast.divisions.get("EXECUTABLE", [])
@@ -143,7 +143,7 @@ class FortranAdapter(SourceLanguageAdapter):
         for line in executable:
             line_upper = line.upper()
 
-            # CALL 语句
+            # CALL文
             if "CALL" in line_upper:
                 match = re.search(r"CALL\s+(\w+)", line_upper)
                 if match:
@@ -155,7 +155,7 @@ class FortranAdapter(SourceLanguageAdapter):
                         }
                     )
 
-            # 文件操作
+            # ファイル操作
             if any(kw in line_upper for kw in ["OPEN", "CLOSE", "READ", "WRITE"]):
                 calls.append(
                     {
@@ -181,14 +181,14 @@ class FortranAdapter(SourceLanguageAdapter):
         return calls
 
     def execute(self, source_code: str, inputs: dict[str, Any]) -> ExecutionResult:
-        """执行 FORTRAN 代码（模拟执行）.
+        """FORTRANコードを実行する（模擬実行）.
 
         Args:
-            source_code: FORTRAN 源代码
-            inputs: 输入参数
+            source_code: FORTRAN ソースコード
+            inputs: 入力パラメータ
 
         Returns:
-            执行结果
+            実行結果
         """
         return ExecutionResult(
             success=False,
@@ -199,7 +199,7 @@ class FortranAdapter(SourceLanguageAdapter):
         """前処理：継続行の結合、コメント除去.
 
         Args:
-            source_code: 源代码
+            source_code: ソースコード
 
         Returns:
             処理済み行リスト

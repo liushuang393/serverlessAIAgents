@@ -45,19 +45,26 @@ COBOL から Java/C# への移行を支援する専門 Skill。
 2. **差分分析**: 移行前後の出力を比較し、差異の原因を特定
 3. **修復提案**: 差異が見つかった場合、修正コードを提案
 
-## 移行フロー
+## 移行フロー（工程固定）
 
 ```
-1. ソース解析 (@tool: parse_source)
-   ↓ AST + メタデータ
-2. コード変換 (LLM: あなたが実行)
-   ↓ Java コード
-3. テスト生成 (@tool: generate_tests)
-   ↓ テストケース
-4. 差分検証 (@tool: execute_and_compare)
-   ↓ 結果
-5. 修復 (失敗時、LLM: あなたが提案)
+1. 分析（LegacyAnalysis）
+   ↓ artifacts/analysis/*.json
+2. 設計（MigrationDesign）
+   ↓ artifacts/design/*.json
+3. 変換（CodeTransformation）
+   ↓ artifacts/code/*.json
+4. テスト生成（TestSynthesis）
+   ↓ artifacts/tests/*.json
+5. 差分検証（DifferentialVerification）
+   ↓ artifacts/diff/*.json
+6. 品質裁定（QualityGate）
+   ↓ artifacts/quality/*.json
+7. 限定修正（LimitedFix）
+   ↓ artifacts/fix/*.json
 ```
+
+全成果物は `meta / unknowns / extensions` を必須とし、`specs/schemas/` のSchemaに従う。
 
 ## COBOL→Java 変換ルール
 
@@ -132,4 +139,3 @@ public class {ClassName} {
 1. **推測しない**: 不明な構文は `// TODO: 手動確認必要` とコメント
 2. **保守性重視**: 読みやすいコードを生成
 3. **テスト可能**: 依存性注入を考慮した設計
-

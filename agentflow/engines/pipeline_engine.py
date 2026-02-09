@@ -75,12 +75,14 @@ WARNING:
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from agentflow.engines.base import BaseEngine, EngineConfig
 from agentflow.engines.report_builder import ReportBuilder
+from agentflow.protocols.agui_events import ProgressEvent
 
 if TYPE_CHECKING:
     from agentflow.flow import Flow
@@ -618,17 +620,20 @@ class PipelineEngine(BaseEngine):
                 if event := self._emit_node_start(stage.name):
                     yield event
 
-                # ステージ開始時の進捗イベント（overall_progressはフロー全体、stage_progressはステージ内）
+                # AG-UI標準ProgressEventを発行（フロー全体の進捗）
                 overall_progress = (i + 1) / len(self._stage_configs) * 100
-                yield {
-                    "type": "progress",
-                    "data": {
+                progress_event = ProgressEvent(
+                    timestamp=time.time(),
+                    flow_id=self._flow_id or "",
+                    current=i + 1,
+                    total=len(self._stage_configs),
+                    percentage=overall_progress,
+                    data={
                         "stage": stage.name,
-                        "progress": 10,  # ステージ開始時は10%
-                        "overall_progress": overall_progress,  # フロー全体の進捗
                         "revision": revision,
                     },
-                }
+                )
+                yield progress_event.to_dict()
 
                 stage_result = await self._run_stage(stage, current_inputs)
                 self._results[stage.name] = stage_result

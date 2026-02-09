@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "task_id": "task-ab3591f00b97",
+    "trace_id": "task-ab3591f00b97",
+    "stage": "analysis",
+    "generated_at": "2026-02-06T09:30:31.483630+00:00",
+    "source_language": "COBOL",
+    "target_language": null,
+    "module": "UNKNOWN"
+  },
+  "unknowns": [
+    {
+      "field": "entry_points",
+      "reason": "PROCEDURE から段落名を抽出できなかった"
+    }
+  ],
+  "extensions": {
+    "metadata": {
+      "total_lines": 13,
+      "parser": "PLY"
+    }
+  },
+  "programs": [
+    {
+      "program_id": "HELLO-WORLD"
+    }
+  ],
+  "entry_points": [],
+  "io_contracts": [],
+  "data_structures": [
+    {
+      "level": "01",
+      "name": "WS-MESSAGE",
+      "pic": "X(20)",
+      "type": "string"
+    }
+  ],
+  "control_flow": [],
+  "db_access": [],
+  "external_calls": []
+}

@@ -1,17 +1,16 @@
 # -*- coding: utf-8 -*-
 """Code Migration Assistant Skills.
 
-提供代码移行相关的 Skill。
+コード移行に関するSkillを提供する。
 """
 
-# 注意: cobol-migration Skill 使用 SKILL.md 格式
-# 可以通过 SkillLoader 加载
-# 或者直接导入 CobolMigrationSkill 类
+# 注意: cobol-migration Skill はSKILL.md形式を使用する
+# SkillLoaderで読み込める
+# もしくはCobolMigrationSkillを直接インポートする
 
 from pathlib import Path
 
-# Skill 目录路径
+# Skillディレクトリのパス
 SKILLS_DIR = Path(__file__).parent
 
 __all__ = ["SKILLS_DIR"]
-

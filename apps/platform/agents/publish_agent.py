@@ -23,18 +23,16 @@ class PublishAgent(AgentBlock):
     コンポーネントの発布プロセスを支援し、最適な設定を提案する。
     """
 
+    name = "publish-agent"
+
     def __init__(self, llm_client: Any = None) -> None:
         """初期化.
 
         Args:
             llm_client: LLMクライアント
         """
-        super().__init__(
-            name="publish-agent",
-            description="Assist with publishing agents and components",
-            system_prompt=self._get_system_prompt(),
-            llm_client=llm_client,
-        )
+        super().__init__()
+        self._llm_client = llm_client
         self._orchestrator = PublishOrchestrator()
 
     def _get_system_prompt(self) -> str:

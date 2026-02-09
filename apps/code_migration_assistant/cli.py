@@ -35,7 +35,7 @@ async def migrate_cobol_file(file_path: str) -> dict[str, Any]:
     # MCPClientを作成
     client = MCPClient()
 
-    # MCP工具を登録
+    # MCPツールを登録
     client.register_tool("cobol_parser", COBOLParser())
     client.register_tool("java_generator", JavaGenerator())
     client.register_tool("code_validator", CodeValidator())

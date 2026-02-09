@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Checkpointer 工厂函数和实现的单元测试."""
+"""Checkpointer のファクトリ関数と実装の単体テスト."""
 
 import os
 from unittest.mock import patch
@@ -15,12 +15,12 @@ from agentflow.hitl import (
 
 
 class TestGetCheckpointer:
-    """get_checkpointer() 工厂函数测试."""
+    """get_checkpointer() ファクトリ関数のテスト."""
 
     def test_default_returns_memory(self) -> None:
-        """默认返回 MemoryCheckpointer."""
+        """デフォルトで MemoryCheckpointer を返す."""
         with patch.dict(os.environ, {}, clear=True):
-            # 清除可能影响的环境变量
+            # 影響しうる環境変数をクリア
             for key in ["REDIS_URL", "DATABASE_URL", "CHECKPOINTER_BACKEND"]:
                 os.environ.pop(key, None)
 
@@ -28,44 +28,43 @@ class TestGetCheckpointer:
             assert isinstance(cp, MemoryCheckpointer)
 
     def test_explicit_memory_backend(self) -> None:
-        """明确指定 memory 后端."""
+        """明示指定した memory backend."""
         cp = get_checkpointer(backend="memory")
         assert isinstance(cp, MemoryCheckpointer)
 
     def test_redis_backend_returns_redis_checkpointer(self) -> None:
-        """指定 redis 后端返回 RedisCheckpointer."""
+        """redis backend 指定で RedisCheckpointer を返す."""
         from agentflow.hitl.redis_checkpointer import RedisCheckpointer
         cp = get_checkpointer(backend="redis")
-        # RedisCheckpointer 可以导入，但运行时需要 redis 包
+        # RedisCheckpointer は import 可能だが、実行時には redis パッケージが必要
         assert isinstance(cp, (MemoryCheckpointer, RedisCheckpointer))
 
     def test_postgres_backend_returns_postgres_checkpointer(self) -> None:
-        """指定 postgres 后端返回 PostgresCheckpointer."""
+        """postgres backend 指定で PostgresCheckpointer を返す."""
         from agentflow.hitl.postgres_checkpointer import PostgresCheckpointer
         cp = get_checkpointer(backend="postgres")
-        # PostgresCheckpointer 可以导入，但运行时需要 asyncpg 包
+        # PostgresCheckpointer は import 可能だが、実行時には asyncpg パッケージが必要
         assert isinstance(cp, (MemoryCheckpointer, PostgresCheckpointer))
 
     def test_env_var_redis_url_detection(self) -> None:
-        """环境变量 REDIS_URL 自动检测."""
+        """環境変数 REDIS_URL の自動検出."""
         with patch.dict(os.environ, {"REDIS_URL": "redis://localhost:6379"}):
             cp = get_checkpointer()
-            # 如果 redis 包存在，返回 RedisCheckpointer
-            # 否则返回 MemoryCheckpointer
+            # redis パッケージが存在すれば RedisCheckpointer、なければ MemoryCheckpointer
             assert isinstance(cp, Checkpointer)
 
 
 class TestMemoryCheckpointer:
-    """MemoryCheckpointer 单元测试."""
+    """MemoryCheckpointer の単体テスト."""
 
     @pytest.fixture
     def checkpointer(self) -> MemoryCheckpointer:
-        """创建测试用 MemoryCheckpointer."""
+        """テスト用 MemoryCheckpointer を作成."""
         return MemoryCheckpointer()
 
     @pytest.fixture
     def sample_data(self) -> CheckpointData:
-        """创建测试用 CheckpointData."""
+        """テスト用 CheckpointData を作成."""
         return CheckpointData(
             checkpoint_id="cp-001",
             thread_id="thread-001",
@@ -80,7 +79,7 @@ class TestMemoryCheckpointer:
     async def test_save_and_load(
         self, checkpointer: MemoryCheckpointer, sample_data: CheckpointData
     ) -> None:
-        """保存和加载测试."""
+        """保存と読み出しのテスト."""
         await checkpointer.save(sample_data)
         loaded = await checkpointer.load("cp-001")
 
@@ -91,7 +90,7 @@ class TestMemoryCheckpointer:
 
     @pytest.mark.asyncio
     async def test_load_nonexistent(self, checkpointer: MemoryCheckpointer) -> None:
-        """加载不存在的检查点."""
+        """存在しないチェックポイントを読み出す."""
         loaded = await checkpointer.load("nonexistent")
         assert loaded is None
 
@@ -99,8 +98,8 @@ class TestMemoryCheckpointer:
     async def test_load_latest(
         self, checkpointer: MemoryCheckpointer
     ) -> None:
-        """加载最新检查点."""
-        # 保存多个检查点
+        """最新のチェックポイントを読み出す."""
+        # 複数のチェックポイントを保存
         for i in range(3):
             data = CheckpointData(
                 checkpoint_id=f"cp-{i:03d}",
@@ -117,7 +116,7 @@ class TestMemoryCheckpointer:
     async def test_delete(
         self, checkpointer: MemoryCheckpointer, sample_data: CheckpointData
     ) -> None:
-        """删除检查点."""
+        """チェックポイントを削除する."""
         await checkpointer.save(sample_data)
         result = await checkpointer.delete("cp-001")
         assert result is True
@@ -129,8 +128,8 @@ class TestMemoryCheckpointer:
     async def test_list_by_thread(
         self, checkpointer: MemoryCheckpointer
     ) -> None:
-        """按线程列出检查点."""
-        # 保存多个线程的检查点
+        """thread ごとにチェックポイントを列挙する."""
+        # 複数スレッドのチェックポイントを保存
         for i in range(3):
             data = CheckpointData(
                 checkpoint_id=f"cp-{i:03d}",
@@ -143,4 +142,3 @@ class TestMemoryCheckpointer:
 
         thread2_cps = await checkpointer.list_by_thread("thread-002")
         assert len(thread2_cps) == 1
-

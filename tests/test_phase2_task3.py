@@ -1,10 +1,10 @@
-"""Phase 2 Task 3 覆盖率测试脚本."""
+"""Phase 2 Task 3 カバレッジ測定用テストスクリプト."""
 
 import subprocess
 import sys
 
 
-# 临时重命名 conftest.py 以避免 MCP 导入问题
+# MCP のインポート問題を避けるため、一時的に conftest.py をリネーム
 subprocess.run(
     [
         "powershell",
@@ -20,7 +20,7 @@ subprocess.run(
 )
 
 try:
-    # 运行测试
+    # テストを実行
     result = subprocess.run(
         [
             sys.executable,
@@ -39,7 +39,7 @@ try:
 
     sys.exit(result.returncode)
 finally:
-    # 恢复 conftest.py
+    # conftest.py を復元
     subprocess.run(
         [
             "powershell",
