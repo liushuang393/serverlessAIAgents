@@ -87,7 +87,7 @@ for img in plan.images:
 ### 5. AgentFlowスキルとして使用
 
 ```python
-from agentflow.skills.builtin.design_skills.design_skills import run
+from apps.design_skills_engine.skills.design_skills import run
 
 result = await run({
     "brief": "商品画像を生成",
