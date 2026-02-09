@@ -22,6 +22,7 @@ from apps.decision_governance_engine.schemas.input_schemas import (
     StakeholderInfo,
     TimelineConstraint,
 )
+from apps.decision_governance_engine.routers.report import cache_report
 from apps.decision_governance_engine.schemas.output_schemas import DecisionReport
 from apps.decision_governance_engine.services.decision_contract_builder import (
     DecisionGovContractBuilder,
@@ -228,8 +229,9 @@ async def process_decision(
         except Exception as e:
             logger.warning(f"決策履歴保存失敗（処理は継続）: {e}")
 
-    # レスポンス生成
+    # レスポンス生成 + キャッシュ保存
     if isinstance(result, DecisionReport):
+        cache_report(result.report_id, result)
         if format == "v1":
             contract = DecisionGovContractBuilder.build_from_report(result)
             return DecisionAPIResponse(
@@ -244,10 +246,35 @@ async def process_decision(
         )
 
     report_id = result.get("report_id", "") if isinstance(result, dict) else ""
+    if report_id:
+        _cache_report_from_result(result if isinstance(result, dict) else {})
     if format == "v1":
         contract = DecisionGovContractBuilder.build_from_report(result)
         return DecisionAPIResponse(status="success", report_id=report_id, data=contract.model_dump())
     return DecisionAPIResponse(status="success", report_id=report_id, data=result)
+
+
+def _cache_report_from_result(result_data: dict[str, Any]) -> None:
+    """SSE完了結果からレポートをキャッシュに保存.
+
+    report_id（PROP-* 形式）をキーとしてキャッシュする。
+    PDF出力時に _get_report_from_db() から参照される。
+
+    Args:
+        result_data: SSE完了時の結果データ
+    """
+    report_id = result_data.get("report_id", "")
+    if not report_id:
+        return
+
+    try:
+        # DecisionReport として構築を試みる
+        report = DecisionReport(**result_data)
+        cache_report(report_id, report)
+    except Exception:
+        # Pydantic 構築失敗時は dict のままキャッシュ
+        cache_report(report_id, result_data)
+        logger.info(f"[SSE] レポートを dict 形式でキャッシュ: {report_id}")
 
 
 def _infer_decision_role(data: dict[str, Any]) -> str:
@@ -507,6 +534,9 @@ async def process_decision_stream(
             # 成功完了時のみ履歴を保存（拒否時は保存しない）
             if final_result and not is_rejected:
                 await save_history(final_result)
+
+                # レポートキャッシュに保存（PDF出力用）
+                _cache_report_from_result(final_result)
 
         except asyncio.CancelledError:
             # クライアント切断時

@@ -38,6 +38,9 @@ COPY pyproject.toml README.md ./
 COPY agentflow/ /app/agentflow/
 RUN pip install --no-cache-dir -e ".[dev]"
 
+# DGE 固有の追加依存関係（PDF生成用）
+RUN pip install --no-cache-dir reportlab
+
 # ---------------------------------------------------------------------------
 # Stage: 本番イメージ
 # ---------------------------------------------------------------------------

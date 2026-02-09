@@ -44,6 +44,28 @@ class SignatureResponse(BaseModel):
 # 署名済みレポート保存（本番ではDB使用）
 _signed_reports: dict[str, dict[str, Any]] = {}
 
+# レポートキャッシュ（PROP-* 形式の report_id → DecisionReport）
+# SSE完了時にキャッシュし、PDF出力時に参照する
+_report_cache: dict[str, Any] = {}
+
+# キャッシュ上限（メモリ保護）
+_REPORT_CACHE_MAX_SIZE = 100
+
+
+def cache_report(report_id: str, report: Any) -> None:
+    """レポートをキャッシュに保存.
+
+    Args:
+        report_id: レポートID（PROP-* 形式）
+        report: DecisionReport オブジェクトまたは dict
+    """
+    # キャッシュ上限を超えた場合、最も古いエントリを削除
+    if len(_report_cache) >= _REPORT_CACHE_MAX_SIZE:
+        oldest_key = next(iter(_report_cache))
+        del _report_cache[oldest_key]
+    _report_cache[report_id] = report
+    logger.info(f"レポートをキャッシュに保存: {report_id} (cache_size={len(_report_cache)})")
+
 
 def _get_sample_report(report_id: str) -> Any:
     """デモ用サンプルレポートを取得."""
@@ -73,17 +95,17 @@ def _get_sample_report(report_id: str) -> Any:
 # ========================================
 
 async def _get_report_from_db(report_id: str) -> Any:
-    """DBから決策記録を取得してレポートオブジェクトに変換.
+    """キャッシュまたはDBから決策レポートを取得.
+
+    検索順序:
+        1. メモリキャッシュ（PROP-* 形式対応）
+        2. DB検索（UUID 形式の場合のみ）
 
     Args:
-        report_id: レポートID（UUID文字列）
+        report_id: レポートID（PROP-* 形式または UUID 文字列）
 
     Returns:
         DecisionReport | None: レポートオブジェクト、または取得失敗時はNone
-
-    注意:
-        - report_id は有効な UUID 形式である必要がある
-        - 不正な UUID の場合は None を返す（例外を投げない）
     """
     from uuid import UUID
 
@@ -93,12 +115,18 @@ async def _get_report_from_db(report_id: str) -> Any:
         ExecutiveSummary,
     )
 
-    # UUID検証（システム理念: 変数・返回値強化）
+    # キャッシュから取得を試みる（PROP-* 形式対応）
+    cached = _report_cache.get(report_id)
+    if cached is not None:
+        logger.info(f"レポートをキャッシュから取得: {report_id}")
+        return cached
+
+    # UUID 形式の場合のみ DB 検索を試みる
     try:
         request_uuid = UUID(report_id)
-    except (ValueError, AttributeError, TypeError) as e:
-        logger.warning(
-            f"Invalid UUID format for report_id: {report_id!r} - {type(e).__name__}: {e}"
+    except (ValueError, AttributeError, TypeError):
+        logger.info(
+            f"report_id={report_id!r} は UUID 形式ではないため DB 検索をスキップ"
         )
         return None
 
