@@ -69,6 +69,118 @@ class TestSkillMetadata:
         with pytest.raises(TypeError, match="must be a dict"):
             SkillMetadata.from_dict("not a dict")  # type: ignore[arg-type]
 
+    def test_from_dict_claude_code_cli_kebab_case(self) -> None:
+        """Claude Code CLI kebab-case fields are parsed correctly."""
+        data = {
+            "name": "cli-skill",
+            "allowed-tools": ["Bash", "Read", "Write"],
+            "context": "fork",
+            "agent": True,
+            "user-invocable": True,
+            "disable-model-invocation": True,
+            "argument-hint": "<file-path>",
+            "hooks": {"pre-tool-use": "echo checking"},
+        }
+        m = SkillMetadata.from_dict(data)
+        assert m.allowed_tools == ["Bash", "Read", "Write"]
+        assert m.context == "fork"
+        assert m.agent is True
+        assert m.user_invocable is True
+        assert m.disable_model_invocation is True
+        assert m.argument_hint == "<file-path>"
+        assert m.hooks == {"pre-tool-use": "echo checking"}
+
+    def test_from_dict_claude_code_cli_snake_case(self) -> None:
+        """Claude Code CLI snake_case fields are parsed (backward compat)."""
+        data = {
+            "name": "cli-skill",
+            "allowed_tools": ["Bash"],
+            "user_invocable": True,
+            "disable_model_invocation": True,
+            "argument_hint": "<url>",
+        }
+        m = SkillMetadata.from_dict(data)
+        assert m.allowed_tools == ["Bash"]
+        assert m.user_invocable is True
+        assert m.disable_model_invocation is True
+        assert m.argument_hint == "<url>"
+
+    def test_to_dict_claude_code_cli_kebab_output(self) -> None:
+        """to_dict() emits kebab-case keys for CLI fields."""
+        m = SkillMetadata(
+            name="cli-skill",
+            allowed_tools=["Bash", "Read"],
+            context="fork",
+            agent=True,
+            user_invocable=True,
+            disable_model_invocation=True,
+            argument_hint="<path>",
+            hooks={"pre-tool-use": "lint"},
+        )
+        d = m.to_dict()
+        assert d["allowed-tools"] == ["Bash", "Read"]
+        assert d["context"] == "fork"
+        assert d["agent"] is True
+        assert d["user-invocable"] is True
+        assert d["disable-model-invocation"] is True
+        assert d["argument-hint"] == "<path>"
+        assert d["hooks"] == {"pre-tool-use": "lint"}
+
+    def test_to_dict_omits_empty_cli_fields(self) -> None:
+        """to_dict() omits CLI fields when they are default/empty."""
+        m = SkillMetadata(name="minimal")
+        d = m.to_dict()
+        assert "allowed-tools" not in d
+        assert "context" not in d
+        assert "agent" not in d
+        assert "user-invocable" not in d
+        assert "hooks" not in d
+
+    def test_cli_fields_round_trip(self) -> None:
+        """from_dict(to_dict(m)) preserves Claude Code CLI field values."""
+        original = SkillMetadata(
+            name="round-trip",
+            allowed_tools=["Bash", "Read", "Write"],
+            context="fork",
+            agent=True,
+            user_invocable=True,
+            disable_model_invocation=True,
+            argument_hint="<file>",
+            hooks={"post-tool-use": "test"},
+        )
+        restored = SkillMetadata.from_dict(original.to_dict())
+        assert restored.allowed_tools == original.allowed_tools
+        assert restored.context == original.context
+        assert restored.agent == original.agent
+        assert restored.user_invocable == original.user_invocable
+        assert restored.disable_model_invocation == original.disable_model_invocation
+        assert restored.argument_hint == original.argument_hint
+        assert restored.hooks == original.hooks
+
+    def test_cli_fields_defaults_when_absent(self) -> None:
+        """CLI fields have correct defaults when not provided."""
+        m = SkillMetadata.from_dict({"name": "no-cli"})
+        assert m.allowed_tools == []
+        assert m.context == ""
+        assert m.agent is False
+        assert m.user_invocable is False
+        assert m.disable_model_invocation is False
+        assert m.argument_hint == ""
+        assert m.hooks == {}
+
+    def test_cli_fields_not_in_extra(self) -> None:
+        """CLI fields should NOT leak into the extra dict."""
+        data = {
+            "name": "test",
+            "allowed-tools": ["Bash"],
+            "user-invocable": True,
+            "unknown-field": "value",
+        }
+        m = SkillMetadata.from_dict(data)
+        assert "allowed-tools" not in m.extra
+        assert "user-invocable" not in m.extra
+        assert m.extra == {"unknown-field": "value"}
+
 
 class TestSkill:
     """Skill のテスト."""

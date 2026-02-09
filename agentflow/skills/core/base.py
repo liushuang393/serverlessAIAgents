@@ -74,6 +74,15 @@ class SkillMetadata:
     dependencies: list[str] = field(default_factory=list)
     examples: list[str] = field(default_factory=list)
 
+    # Claude Code CLI 互換フィールド
+    allowed_tools: list[str] = field(default_factory=list)
+    context: str = ""  # "fork" | "" (empty = default)
+    agent: bool = False  # agent-requested skill
+    user_invocable: bool = False
+    disable_model_invocation: bool = False
+    argument_hint: str = ""  # e.g., "<file-path>"
+    hooks: dict[str, Any] = field(default_factory=dict)
+
     # 自動進化システム用フィールド
     created_at: str = ""
     learned: bool = False
@@ -109,6 +118,13 @@ class SkillMetadata:
             "name", "description", "version", "author", "tags",
             "triggers", "requirements", "dependencies", "examples",
             "created_at", "learned", "confidence", "usage_count",
+            # Claude Code CLI fields (kebab-case and snake_case variants)
+            "allowed-tools", "allowed_tools",
+            "context", "agent",
+            "user-invocable", "user_invocable",
+            "disable-model-invocation", "disable_model_invocation",
+            "argument-hint", "argument_hint",
+            "hooks",
         }
         extra = {k: v for k, v in data.items() if k not in known_fields}
 
@@ -120,6 +136,8 @@ class SkillMetadata:
                 return [str(v) for v in value]
             return [str(value)]
 
+        hooks_raw = data.get("hooks")
+
         return cls(
             name=str(data.get("name", "unknown")),
             description=str(data.get("description", "")),
@@ -130,6 +148,26 @@ class SkillMetadata:
             requirements=_ensure_list(data.get("requirements")),
             dependencies=_ensure_list(data.get("dependencies")),
             examples=_ensure_list(data.get("examples")),
+            # Claude Code CLI fields (kebab-case → snake_case)
+            allowed_tools=_ensure_list(
+                data.get("allowed-tools", data.get("allowed_tools"))
+            ),
+            context=str(data.get("context", "")),
+            agent=bool(data.get("agent", False)),
+            user_invocable=bool(
+                data.get("user-invocable", data.get("user_invocable", False))
+            ),
+            disable_model_invocation=bool(
+                data.get(
+                    "disable-model-invocation",
+                    data.get("disable_model_invocation", False),
+                )
+            ),
+            argument_hint=str(
+                data.get("argument-hint", data.get("argument_hint", ""))
+            ),
+            hooks=hooks_raw if isinstance(hooks_raw, dict) else {},
+            # Auto-evolution fields
             created_at=str(data.get("created_at", "")),
             learned=bool(data.get("learned", False)),
             confidence=float(data.get("confidence", 1.0)),
@@ -161,6 +199,18 @@ class SkillMetadata:
             result["dependencies"] = self.dependencies
         if self.examples:
             result["examples"] = self.examples
+        # Claude Code CLI fields (kebab-case output)
+        _cli_fields: dict[str, Any] = {
+            "allowed-tools": self.allowed_tools,
+            "context": self.context,
+            "agent": self.agent,
+            "user-invocable": self.user_invocable,
+            "disable-model-invocation": self.disable_model_invocation,
+            "argument-hint": self.argument_hint,
+            "hooks": self.hooks,
+        }
+        result.update({k: v for k, v in _cli_fields.items() if v})
+        # Auto-evolution fields
         if self.learned:
             result["learned"] = self.learned
             result["confidence"] = self.confidence
