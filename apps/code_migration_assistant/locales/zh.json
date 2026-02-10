@@ -1,0 +1,13 @@
+{
+    "report": {
+        "title": "迁移设计文档",
+        "summary": "概览",
+        "source": "目标系统",
+        "migration_source": "迁移源",
+        "migration_target": "迁移目标",
+        "business_flow": "业务流程",
+        "comparison_table": "新旧功能对照表",
+        "test_plan": "测试计划",
+        "risk_analysis": "风险分析"
+    }
+}

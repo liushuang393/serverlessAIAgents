@@ -73,7 +73,6 @@ const theme = createTheme({
   components: {
     MuiCssBaseline: {
       styleOverrides: `
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Sora:wght@400;500;600;700&display=swap');
         :root {
           --shadow-elev: 0 30px 80px rgba(0, 0, 0, 0.55);
           --shadow-card: 0 16px 40px rgba(0, 0, 0, 0.4);

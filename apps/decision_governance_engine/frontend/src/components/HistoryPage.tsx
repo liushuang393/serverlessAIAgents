@@ -34,6 +34,7 @@ export const HistoryPage: React.FC = () => {
   const [items, setItems] = useState<ServerHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
 
   // フィルター状態
@@ -45,6 +46,7 @@ export const HistoryPage: React.FC = () => {
   const fetchHistory = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setInfo(null);
 
     try {
       const response = await decisionApi.getHistory({
@@ -53,8 +55,11 @@ export const HistoryPage: React.FC = () => {
         mode: filterMode || undefined,
       });
 
-      if (response.status === 'success') {
+      if (response.status === 'success' || response.status === 'fallback') {
         setItems(response.items);
+        if (response.status === 'fallback') {
+          setInfo('一部履歴をフォールバックデータで表示しています');
+        }
       } else if (response.status === 'disabled') {
         setError('履歴機能が無効になっています');
         setItems([]);
@@ -80,11 +85,11 @@ export const HistoryPage: React.FC = () => {
   const handleDownloadPdf = useCallback(async (requestId: string) => {
     setExportingId(requestId);
     try {
-      const blob = await decisionApi.exportPdf(requestId);
-      const url = URL.createObjectURL(blob);
+      const exported = await decisionApi.exportPdf(requestId);
+      const url = URL.createObjectURL(exported.blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `decision-report-${requestId}.pdf`;
+      a.download = exported.filename;
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
@@ -231,6 +236,11 @@ export const HistoryPage: React.FC = () => {
         {error && (
           <div className="mb-6 bg-red-500/5 border border-red-500/20 rounded-xl p-4">
             <span className="text-red-400">&#x26A0; {error}</span>
+          </div>
+        )}
+        {info && !error && (
+          <div className="mb-6 bg-blue-500/5 border border-blue-500/20 rounded-xl p-4">
+            <span className="text-blue-300">{info}</span>
           </div>
         )}
 

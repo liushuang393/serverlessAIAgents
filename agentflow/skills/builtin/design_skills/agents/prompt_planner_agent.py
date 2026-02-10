@@ -71,7 +71,7 @@ class PromptPlannerAgent(ResilientAgent[PromptPlanInput, PromptPlanOutput]):
 
     def _parse_input(self, input_data: dict[str, Any]) -> PromptPlanInput:
         """入力辞書をPromptPlanInputにパース.
-        
+
         PipelineEngine から渡される場合、intent_analyzer_result フィールドに
         IntentAnalysis が含まれているため、それを intent フィールドに変換する。
         """
@@ -97,7 +97,7 @@ class PromptPlannerAgent(ResilientAgent[PromptPlanInput, PromptPlanOutput]):
                 "platform_constraints": input_data.get("platform_constraints", {}),
             }
             input_data["intent"] = IntentAnalysis(**intent_fields)
-        
+
         return PromptPlanInput(**input_data)
 
     async def process(self, input_data: PromptPlanInput) -> PromptPlanOutput:

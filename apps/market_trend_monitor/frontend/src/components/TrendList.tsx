@@ -16,6 +16,10 @@ import {
   TableHead,
   TableRow,
   Chip,
+  Box,
+  Typography,
+  Stack,
+  Tooltip,
 } from '@mui/material';
 import type { Trend, SentimentType } from '@/types';
 import { format } from 'date-fns';
@@ -39,9 +43,37 @@ const getSentimentColor = (
   }
 };
 
+const formatGrowthLabel = (trend: Trend): string => {
+  const growthState =
+    typeof trend.metadata?.growth_state === 'string'
+      ? trend.metadata.growth_state
+      : '';
+
+  if (growthState === 'new') {
+    return 'NEW';
+  }
+  if (growthState === 'insufficient_history' || growthState === 'no_signal') {
+    return 'N/A';
+  }
+  return `${(trend.growth_rate * 100).toFixed(1)}%`;
+};
+
+const resolveGrowthHint = (trend: Trend): string => {
+  const explanation =
+    typeof trend.metadata?.growth_explanation === 'string'
+      ? trend.metadata.growth_explanation
+      : '';
+  return explanation || '成長率は現期間と前期間の比較で算出されます。';
+};
+
 const TrendList: React.FC<TrendListProps> = ({ trends }) => {
   if (trends.length === 0) {
-    return <div>データがありません</div>;
+    return (
+      <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
+        <Typography variant="body1">トレンドデータがまだありません。</Typography>
+        <Typography variant="body2">「設定」画面で「データ収集を実行」を押してください。</Typography>
+      </Box>
+    );
   }
 
   return (
@@ -94,7 +126,24 @@ const TrendList: React.FC<TrendListProps> = ({ trends }) => {
                 },
               }}
             >
-              <TableCell>{trend.topic}</TableCell>
+              <TableCell>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  {trend.topic}
+                  {!!trend.metadata?.is_breakthrough && (
+                    <Chip
+                      label="BREAKTHROUGH"
+                      size="small"
+                      color="secondary"
+                      sx={{
+                        fontSize: '0.65rem',
+                        height: '18px',
+                        background: 'linear-gradient(90deg, #f43f5e, #fb7185)',
+                        fontWeight: 700,
+                      }}
+                    />
+                  )}
+                </Stack>
+              </TableCell>
               <TableCell align="right">{trend.score.toFixed(2)}</TableCell>
               <TableCell align="right">{trend.articles_count}</TableCell>
               <TableCell>
@@ -107,7 +156,9 @@ const TrendList: React.FC<TrendListProps> = ({ trends }) => {
                 />
               </TableCell>
               <TableCell align="right">
-                {(trend.growth_rate * 100).toFixed(1)}%
+                <Tooltip title={resolveGrowthHint(trend)}>
+                  <span>{formatGrowthLabel(trend)}</span>
+                </Tooltip>
               </TableCell>
               <TableCell>
                 {format(new Date(trend.created_at), 'yyyy/MM/dd HH:mm')}

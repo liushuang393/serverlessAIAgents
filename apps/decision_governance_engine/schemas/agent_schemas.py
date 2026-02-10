@@ -729,6 +729,12 @@ class ReviewFinding(BaseModel):
     description: str = Field(..., description="説明")
     affected_agent: str = Field(..., description="影響を受けるAgent")
     suggested_revision: str = Field(..., description="修正提案")
+    requires_human_review: bool = Field(
+        default=False, description="人間確認が必須か"
+    )
+    human_review_hint: str | None = Field(
+        default=None, description="人間確認時の補足メッセージ"
+    )
 
 
 class ReviewInput(BaseModel):
@@ -747,4 +753,3 @@ class ReviewOutput(BaseModel):
     findings: list[ReviewFinding] = Field(default_factory=list, description="検証所見")
     confidence_score: float = Field(..., ge=0.0, le=1.0, description="信頼度スコア")
     final_warnings: list[str] = Field(default_factory=list, description="最終警告")
-

@@ -59,6 +59,8 @@ export interface StreamState {
   retryCount: number;
   agents: AgentProgress[];
   report: DecisionReport | null;
+  /** 履歴照会・PDF出力用のリクエストID（UUID） */
+  requestId: string | null;
   thinkingLogs: ThinkingLog[];
 }
 
@@ -104,6 +106,7 @@ export function useDecisionStream() {
     retryCount: 0,
     agents: [...initialAgents],
     report: null,
+    requestId: null,
     thinkingLogs: [],
   });
 
@@ -325,10 +328,14 @@ export function useDecisionStream() {
         case 'connection.established':
           // 接続確認イベント（サーバーから即座に送信される）
           console.log('[useDecisionStream] 接続確認イベント受信');
-          setState((prev) => ({
-            ...prev,
-            isConnected: true,
-          }));
+          {
+            const reqId = (event.data as Record<string, unknown> | undefined)?.request_id;
+            setState((prev) => ({
+              ...prev,
+              isConnected: true,
+              requestId: typeof reqId === 'string' ? reqId : prev.requestId,
+            }));
+          }
           addThinkingLog('system', 'System', '🔗 サーバーに接続しました');
           break;
 
@@ -440,6 +447,7 @@ export function useDecisionStream() {
             ...prev,
             isComplete: true,
             report: (event.result as unknown as DecisionReport) || null,
+            requestId: typeof event.result_id === 'string' ? event.result_id : prev.requestId,
           }));
           addThinkingLog('system', 'System', '✅ 全分析が完了しました');
           eventSourceRef.current?.close();
@@ -590,6 +598,7 @@ export function useDecisionStream() {
         retryCount: 0,
         agents: startingAgents,
         report: null,
+        requestId: null,
         thinkingLogs: [{ timestamp: Date.now(), agentId: 'system', agentName: 'System', content: '🚀 分析を開始します...' }],
       });
 

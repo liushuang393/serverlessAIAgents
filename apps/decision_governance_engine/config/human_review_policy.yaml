@@ -1,0 +1,13 @@
+version: "1.0.0"
+
+# 重要指摘の判定ルール
+important_severities:
+  - "CRITICAL"
+  - "WARNING"
+
+# severity に関係なく必ず人間確認を要求するカテゴリ
+mandatory_categories:
+  - "RESPONSIBILITY_GAP"
+
+# フロント表示・API応答時に返す補足メッセージ
+important_hint: "重要指摘です。人間確認コメントを入力して妥当性を再判定してください。"

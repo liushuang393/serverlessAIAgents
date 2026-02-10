@@ -43,7 +43,7 @@ graph TB
         direction LR
         A1[decision_governance_engine]
         A2[market_trend_monitor]
-        A3[code_migration_assistant]
+        A3[Legacy-to-Agent (code_migration_assistant)]
         A4[Your Custom App]
     end
 
@@ -151,7 +151,7 @@ graph TB
 
 | レイヤー | 主要コンポーネント | 役割 | 選択基準 |
 |---------|-----------------|------|---------|
-| 📱 **アプリケーション層** | decision_governance_engine, market_trend_monitor, code_migration_assistant | 実際のビジネスアプリケーション | ビジネス要件に応じて選択 |
+| 📱 **アプリケーション層** | decision_governance_engine, market_trend_monitor, code_migration_assistant (Legacy-to-Agent) | 実際のビジネスアプリケーション | ビジネス要件に応じて選択 |
 | 🎨 **UI層** | Studio UI, A2UI, AG-UI | ビジュアルエディタ、宣言式UI生成、リアルタイム進捗表示 | ユーザー体験要件に応じて選択 |
 | 🔄 **フロー層** | @agent, create_flow, AgentCoordinator | **3つの開発方式**（簡単→複雑） | 複雑度に応じて選択 |
 | 🤖 **Agent層** | AgentBlock, @agent, Custom Agent | Agent実装（基底クラス/デコレータ/カスタム） | 実装方式に応じて選択 |
@@ -949,7 +949,7 @@ agentflow/                    # フレームワーク本体
 apps/                         # サンプルアプリケーション（独立）
 ├── decision_governance_engine/   # PipelineEngine 活用例
 ├── market_trend_monitor/         # マルチAgent データ収集例
-├── code_migration_assistant/     # MCP ツール連携例
+├── code_migration_assistant/     # Legacy-to-Agent Platform (旧 code_migration_assistant)
 ├── faq_system/                   # FAQ システム例
 ├── messaging_hub/                # Channels 統合例
 └── platform/                     # マルチテナントプラットフォーム例
@@ -984,7 +984,7 @@ result = await engine.run({"question": "投資判断をしたい"})
 |-----|------|-------------|
 | **decision_governance_engine** | 多Agent 意思決定支援システム | PipelineEngine + Gate + Review |
 | **market_trend_monitor** | 市場トレンド分析 | マルチAgent データ収集 |
-| **code_migration_assistant** | コード移行支援 | MCP ツール連携 |
+| **Legacy-to-Agent** | 旧システム現代化プラットフォーム | MCP/AgentFlow 統合 |
 | **faq_system** | FAQ 検索システム | RAG + NL2SQL |
 | **messaging_hub** | マルチプラットフォームチャット | Channels 統合 |
 | **platform** | マルチテナントプラットフォーム | RuntimeContext |

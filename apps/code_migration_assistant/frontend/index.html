@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legacy-to-Agent™ | Enterprise Migration Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body class="dark-theme">
+    <div class="app-container">
+        <!-- Navigation -->
+        <nav class="glass-nav">
+            <div class="logo">
+                <span class="gradient-text">LEGACY-TO-AGENT</span>
+                <span class="version-tag">v2.0.0</span>
+            </div>
+            <ul class="nav-links">
+                <li class="active">Dashboard</li>
+                <li>Audit Logs</li>
+                <li>Governance</li>
+                <li>Settings</li>
+            </ul>
+            <div class="user-profile">
+                <div class="status-indicator online"></div>
+                <span>Admin User</span>
+            </div>
+        </nav>
+
+        <main class="dashboard-grid">
+            <!-- Sidebar / Controls -->
+            <aside class="controls-panel card glass">
+                <h3><span class="icon">🚀</span> Ingestion</h3>
+                <div class="drop-zone" id="dropZone">
+                    <p>Drag COBOL files here or <span>Browse</span></p>
+                    <input type="file" id="fileInput" hidden>
+                </div>
+
+                <div class="config-options">
+                    <div class="option">
+                        <label>Migration Type</label>
+                        <select id="migrationType">
+                            <option value="cobol-to-java">COBOL to Java (Microservices)</option>
+                            <option value="cobol-to-node">COBOL to Node.js / TS</option>
+                        </select>
+                    </div>
+                    <div class="option">
+                        <label>Target Architecture</label>
+                        <div class="toggle-group">
+                            <button class="active">Spring Boot</button>
+                            <button>Quarkus</button>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="cta-button primary" id="startBtn">
+                    Start Migration Pipeline
+                </button>
+
+                <div class="governance-status card glass-inner">
+                    <h4>Governance Guard</h4>
+                    <div class="status-item">
+                        <span>Risk Level:</span>
+                        <span class="badge medium">MEDIUM</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Audit:</span>
+                        <span class="text-success">ACTIVE</span>
+                    </div>
+                    <div class="status-item">
+                        <span>Approval:</span>
+                        <span class="text-warning">REQUIRED (Design)</span>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <section class="main-display">
+                <!-- Pipeline Progress Visualization -->
+                <div class="pipeline-container card glass">
+                    <div class="pipeline-header">
+                        <h3>Migration Pipeline Status</h3>
+                        <div class="task-info" id="taskInfo">Task: --</div>
+                    </div>
+                    <div class="pipeline-steps">
+                        <div class="step" data-step="analysis">
+                            <div class="step-icon">1</div>
+                            <span class="step-label">Analysis</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step" data-step="design">
+                            <div class="step-icon">2</div>
+                            <span class="step-label">Design</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step" data-step="transform">
+                            <div class="step-icon">3</div>
+                            <span class="step-label">Transform</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step" data-step="testing">
+                            <div class="step-icon">4</div>
+                            <span class="step-label">Tests</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step" data-step="diff">
+                            <div class="step-icon">5</div>
+                            <span class="step-label">Diff</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step" data-step="quality">
+                            <div class="step-icon">6</div>
+                            <span class="step-label">Quality</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step" data-step="fix">
+                            <div class="step-icon">7</div>
+                            <span class="step-label">Fix</span>
+                            <div class="step-line"></div>
+                        </div>
+                        <div class="step" data-step="report">
+                            <div class="step-icon">8</div>
+                            <span class="step-label">Report</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Side-by-Side Editor -->
+                <div class="editor-container">
+                    <div class="editor-pane card glass">
+                        <div class="pane-header">
+                            <span class="lang-tag">COBOL (Legacy)</span>
+                            <span class="file-name" id="sourceFileName">--</span>
+                        </div>
+                        <pre class="code-block" id="sourceCode">// Upload a file to see contents</pre>
+                    </div>
+                    <div class="editor-pane card glass">
+                        <div class="pane-header">
+                            <span class="lang-tag target">Java (Modern)</span>
+                            <span class="file-name" id="targetFileName">--</span>
+                            <div class="diff-stats">
+                                <span class="added">+0</span>
+                                <span class="removed">-0</span>
+                            </div>
+                        </div>
+                        <pre class="code-block" id="targetCode">// Modernized code will appear here</pre>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bottom: Real-time logs and AI reasoning -->
+            <section class="log-panel card glass">
+                <div class="panel-tabs">
+                    <button class="active">AI Reasoning</button>
+                    <button>Audit Logs</button>
+                    <button>Console</button>
+                </div>
+                <div class="log-content" id="logContent">
+                    <div class="log-entry system">System initialized. Waiting for input...</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals for HITL -->
+    <div id="approvalModal" class="modal-overlay hidden">
+        <div class="modal-content glass card">
+            <h2>Design Approval Required</h2>
+            <p>The MigrationDesignAgent has completed the architecture plan. Please review before proceeding to code
+                generation.</p>
+            <div class="design-preview card glass-inner">
+                <div class="preview-item"><strong>Mapping Rules:</strong> 42</div>
+                <div class="preview-item"><strong>Complexity:</strong> High</div>
+                <div class="preview-item"><strong>Target Pattern:</strong> Repository/Service</div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn secondary" id="rejectBtn">Reject</button>
+                <button class="btn primary" id="approveBtn">Approve & Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

@@ -198,7 +198,13 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
             for keyword, weight in sorted_items[:10]:
                 score = min(weight / max(total_weight, 1.0), 1.0)
                 prev_weight = weighted_previous.get(keyword, 0.0)
-                growth_rate = self._calculate_growth_rate(weight, prev_weight)
+                growth_rate, growth_state = self._calculate_growth_rate(weight, prev_weight)
+                growth_explanation = self._build_growth_explanation(
+                    growth_state=growth_state,
+                    current=weight,
+                    previous=prev_weight,
+                    growth_rate=growth_rate,
+                )
 
                 sentiment = SentimentType.NEUTRAL
                 if enable_sentiment:
@@ -219,9 +225,14 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
                     article_count=count,
                     created_at=now,
                     metadata={
-                        "analysis_version": "3.1",
+                        "analysis_version": "3.2",
                         "llm_analyzed": enable_sentiment,
                         "weighted": True,
+                        "growth_state": growth_state,
+                        "growth_current_weight": round(weight, 4),
+                        "growth_previous_weight": round(prev_weight, 4),
+                        "growth_explanation": growth_explanation,
+                        "growth_baseline_missing": growth_state == "new",
                     },
                 )
                 trends.append(trend)
@@ -247,7 +258,14 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
                 last_seen=now,
                 article_count=count,
                 created_at=now,
-                metadata={"analysis_version": "3.0", "llm_analyzed": enable_sentiment},
+                metadata={
+                    "analysis_version": "3.2",
+                    "llm_analyzed": enable_sentiment,
+                    "weighted": False,
+                    "growth_state": "insufficient_history",
+                    "growth_explanation": "履歴データが不足しているため、成長率は比較できません。",
+                    "growth_baseline_missing": True,
+                },
             )
             trends.append(trend)
 
@@ -304,11 +322,54 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
             "count_current": count_current,
         }
 
-    def _calculate_growth_rate(self, current: float, previous: float) -> float:
-        """成長率を計算."""
-        if previous <= 0:
-            return 1.0 if current > 0 else 0.0
-        return (current - previous) / previous
+    def _calculate_growth_rate(self, current: float, previous: float) -> tuple[float, str]:
+        """成長率と状態を計算.
+
+        Note:
+            previous が 0 以下のケースは数学的に比率が定義しづらいため、
+            成長率を 0.0 に固定し「new」として扱います。
+        """
+        if current <= 0 and previous <= 0:
+            return 0.0, "no_signal"
+        if previous <= 0 and current > 0:
+            return 0.0, "new"
+
+        # 微小母数で成長率が暴騰しないように平滑化し、可視化可能な範囲にクリップする
+        raw_rate = (current - previous) / (previous + 1.0)
+        growth_rate = max(min(raw_rate, 3.0), -1.0)
+
+        if growth_rate > 0.05:
+            return growth_rate, "up"
+        if growth_rate < -0.05:
+            return growth_rate, "down"
+        return growth_rate, "flat"
+
+    def _build_growth_explanation(
+        self,
+        *,
+        growth_state: str,
+        current: float,
+        previous: float,
+        growth_rate: float,
+    ) -> str:
+        """成長率の説明文を生成."""
+        if growth_state == "new":
+            return (
+                "前期間に同一トピックの証拠が存在しないため、"
+                "比率ではなく新規検知として扱いました。"
+            )
+        if growth_state == "no_signal":
+            return "現期間・前期間ともに有効な証拠がないため、変化は判定できません。"
+        if growth_state == "flat":
+            return (
+                f"現期間 {current:.2f} / 前期間 {previous:.2f} で差分が小さく、"
+                "概ね横ばいと判定しました。"
+            )
+        direction = "増加" if growth_state == "up" else "減少"
+        return (
+            f"現期間 {current:.2f} / 前期間 {previous:.2f} の比較で、"
+            f"{direction}率は {growth_rate:.1%} です。"
+        )
 
     async def _analyze_sentiment(self, keyword: str, articles: list[Article]) -> SentimentType:
         """LLM を使用してセンチメント分析."""
@@ -337,3 +398,46 @@ Sentiment:"""
         except Exception as e:
             self._logger.warning("センチメント分析失敗 '%s': %s", keyword, e)
             return SentimentType.NEUTRAL
+
+    async def _generate_summary(
+        self,
+        trends: list[Trend],
+        keywords_stats: dict[str, int],
+    ) -> str:
+        """分析サマリーを生成."""
+        if not trends:
+            return "現在、分析対象のトレンドは検出されませんでした。キーワードまたは情報源を見直してください。"
+
+        top_trends = sorted(trends, key=lambda t: t.score, reverse=True)[:5]
+        top_topics = ", ".join([trend.topic for trend in top_trends])
+        positive_count = sum(1 for trend in trends if trend.sentiment == SentimentType.POSITIVE)
+        negative_count = sum(1 for trend in trends if trend.sentiment == SentimentType.NEGATIVE)
+        growing_count = sum(1 for trend in trends if trend.growth_rate > 0)
+        new_topics_count = sum(1 for trend in trends if trend.metadata.get("growth_state") == "new")
+        top_keywords = ", ".join(list(keywords_stats.keys())[:5])
+
+        fallback_summary = (
+            f"主要トピック: {top_topics}。"
+            f" 成長傾向 {growing_count} 件 / 全 {len(trends)} 件。"
+            f" 新規検知 {new_topics_count} 件。"
+            f" センチメントは Positive {positive_count} 件、Negative {negative_count} 件。"
+            f" 主要キーワード: {top_keywords if top_keywords else 'なし'}。"
+        )
+
+        prompt = f"""以下の市場分析結果をもとに、日本語で100-150文字の要約を作成してください。
+
+主要トピック: {top_topics}
+トレンド件数: {len(trends)}
+成長傾向件数: {growing_count}
+新規検知件数: {new_topics_count}
+Positive件数: {positive_count}
+Negative件数: {negative_count}
+主要キーワード: {top_keywords}
+"""
+        try:
+            response = await self._call_llm(prompt)
+            summary = response.strip() if response else ""
+            return summary or fallback_summary
+        except Exception as e:
+            self._logger.warning("サマリー生成失敗: %s", e)
+            return fallback_summary

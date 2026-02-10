@@ -39,6 +39,8 @@ const Settings: React.FC = () => {
   const [localKeywords, setLocalKeywords] = useState<string[]>(keywords);
   const [localSources, setLocalSources] = useState<SourceType[]>(sources);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [noticeMessage, setNoticeMessage] = useState('設定を保存しました');
+  const [noticeSeverity, setNoticeSeverity] = useState<'success' | 'warning' | 'error'>('success');
 
   const handleAddKeyword = () => {
     if (keywordInput.trim() && !localKeywords.includes(keywordInput.trim())) {
@@ -62,11 +64,31 @@ const Settings: React.FC = () => {
   const handleSave = () => {
     updateKeywords(localKeywords);
     updateSources(localSources);
+    setNoticeSeverity('success');
+    setNoticeMessage('設定を保存しました');
     setShowSuccess(true);
   };
 
   const handleCollect = async () => {
-    await collectData(localKeywords, localSources);
+    const response = await collectData(localKeywords, localSources);
+    if (!response) {
+      setNoticeSeverity('error');
+      setNoticeMessage('データ収集に失敗しました。APIログを確認してください');
+      setShowSuccess(true);
+      return;
+    }
+
+    if (response.status === 'empty') {
+      setNoticeSeverity('warning');
+      setNoticeMessage('データ収集は完了しましたが、該当データがありませんでした');
+      setShowSuccess(true);
+      return;
+    }
+
+    setNoticeSeverity('success');
+    setNoticeMessage(
+      `データ収集完了: 記事 ${response.articles_count} 件 / トレンド ${response.trends_count} 件`
+    );
     setShowSuccess(true);
   };
 
@@ -118,7 +140,11 @@ const Settings: React.FC = () => {
                 },
               }}
             />
-            <Button variant="contained" onClick={handleAddKeyword}>
+            <Button
+              variant="contained"
+              onClick={handleAddKeyword}
+              sx={{ whiteSpace: 'nowrap', flexShrink: 0, minWidth: '80px' }}
+            >
               追加
             </Button>
           </Box>
@@ -164,13 +190,18 @@ const Settings: React.FC = () => {
 
         {/* アクションボタン */}
         <Box display="flex" gap={2} flexWrap="wrap">
-          <Button variant="contained" onClick={handleSave}>
+          <Button
+            variant="contained"
+            onClick={handleSave}
+            sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
+          >
             設定を保存
           </Button>
           <Button
             variant="outlined"
             onClick={handleCollect}
             disabled={loading || localKeywords.length === 0}
+            sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
           >
             {loading ? 'データ収集中...' : 'データ収集を実行'}
           </Button>
@@ -182,7 +213,7 @@ const Settings: React.FC = () => {
         autoHideDuration={3000}
         onClose={() => setShowSuccess(false)}
       >
-        <Alert severity="success">設定を保存しました</Alert>
+        <Alert severity={noticeSeverity}>{noticeMessage}</Alert>
       </Snackbar>
     </Box>
   );

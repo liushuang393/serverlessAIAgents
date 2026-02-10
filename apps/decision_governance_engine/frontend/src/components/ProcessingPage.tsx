@@ -189,13 +189,14 @@ const ThinkingLogPanel: React.FC<{ logs: ThinkingLog[]; isExpanded: boolean; onT
 };
 
 export const ProcessingPage: React.FC = () => {
-  const { question, constraints, stakeholders, setPage, setReport, addToHistory } = useDecisionStore();
+  const { question, constraints, stakeholders, setPage, setReport, setRequestId, addToHistory } = useDecisionStore();
   const {
     isConnected,
     isComplete,
     error,
     agents,
     report,
+    requestId: streamRequestId,
     thinkingLogs,
     startStream,
     stopStream,
@@ -272,6 +273,7 @@ export const ProcessingPage: React.FC = () => {
   useEffect(() => {
     if (isComplete && report) {
       setReport(report);
+      if (streamRequestId) setRequestId(streamRequestId);
       // 履歴に追加
       addToHistory({
         question,
@@ -280,7 +282,7 @@ export const ProcessingPage: React.FC = () => {
       });
       // 自動遷移を削除 - ユーザーがボタンをクリックして遷移
     }
-  }, [isComplete, report, question, setReport, addToHistory]);
+  }, [isComplete, report, question, setReport, streamRequestId, setRequestId, addToHistory]);
 
   // エラー時に履歴に記録（自動遷移しない）
   useEffect(() => {

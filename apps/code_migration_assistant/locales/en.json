@@ -1,0 +1,13 @@
+{
+    "report": {
+        "title": "Migration Design Document",
+        "summary": "Summary",
+        "source": "Target System",
+        "migration_source": "Migration Source",
+        "migration_target": "Migration Target",
+        "business_flow": "Business Flow",
+        "comparison_table": "Comparison Table",
+        "test_plan": "Test Plan",
+        "risk_analysis": "Risk Analysis"
+    }
+}

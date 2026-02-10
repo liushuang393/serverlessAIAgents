@@ -137,19 +137,20 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
             self._logger.debug(f"Extracted JSON: {data}")
 
             findings = [ReviewFinding(**f) for f in data.get("findings", [])]
-            verdict = ReviewVerdict(data.get("overall_verdict", "REVISE"))
-
-            # confidence_score の範囲を正規化（ge=0.0, le=1.0）
-            confidence = data.get("confidence_score", 0.7)
-            if not isinstance(confidence, (int, float)):
-                confidence = 0.7
-            confidence = max(0.0, min(1.0, float(confidence)))
+            llm_verdict = self._parse_verdict(data.get("overall_verdict"))
+            verdict, confidence = self.derive_verdict_and_confidence(
+                findings=findings,
+                llm_verdict=llm_verdict,
+            )
 
             return ReviewOutput(
                 overall_verdict=verdict,
                 findings=findings,
                 confidence_score=confidence,
-                final_warnings=data.get("final_warnings", []),
+                final_warnings=self._build_final_warnings(
+                    findings=findings,
+                    llm_warnings=data.get("final_warnings", []),
+                ),
             )
         except json.JSONDecodeError:
             return self._review_rule_based(input_data)
@@ -157,20 +158,7 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
     def _review_rule_based(self, input_data: ReviewInput) -> ReviewOutput:
         """ルールベース検証."""
         findings = self._check_all(input_data)
-
-        # 判定ロジック
-        has_critical = any(f.severity == FindingSeverity.CRITICAL for f in findings)
-        has_warning = any(f.severity == FindingSeverity.WARNING for f in findings)
-
-        if has_critical:
-            verdict = ReviewVerdict.REJECT
-            confidence = 0.6
-        elif has_warning:
-            verdict = ReviewVerdict.REVISE
-            confidence = 0.75
-        else:
-            verdict = ReviewVerdict.PASS
-            confidence = 0.85
+        verdict, confidence = self.derive_verdict_and_confidence(findings=findings)
 
         return ReviewOutput(
             overall_verdict=verdict,
@@ -178,6 +166,76 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
             confidence_score=confidence,
             final_warnings=self._generate_warnings(findings),
         )
+
+    @classmethod
+    def derive_verdict_and_confidence(
+        cls,
+        findings: list[ReviewFinding],
+        mandatory_check_failures: int = 0,
+        llm_verdict: ReviewVerdict | None = None,
+    ) -> tuple[ReviewVerdict, float]:
+        """所見から判定と信頼度を一貫して算出."""
+        has_critical = any(f.severity == FindingSeverity.CRITICAL for f in findings)
+        warning_count = sum(1 for f in findings if f.severity == FindingSeverity.WARNING)
+
+        # SKILL.md の算出規則を基準に信頼度を統一
+        confidence = 0.85
+        if has_critical:
+            confidence -= 0.25
+        confidence -= 0.10 * warning_count
+        confidence -= 0.15 * max(0, mandatory_check_failures)
+        confidence = max(0.0, min(1.0, confidence))
+
+        if has_critical:
+            verdict = ReviewVerdict.REJECT
+        elif warning_count > 0 or confidence < 0.70:
+            verdict = ReviewVerdict.REVISE
+        else:
+            verdict = ReviewVerdict.PASS
+
+        # LLM がより厳しい判定を返した場合のみ採用
+        if llm_verdict and cls._verdict_severity(llm_verdict) > cls._verdict_severity(verdict):
+            verdict = llm_verdict
+
+        # 判定と信頼度の不整合を防止
+        if verdict == ReviewVerdict.REVISE:
+            confidence = min(confidence, 0.79)
+        elif verdict == ReviewVerdict.REJECT:
+            confidence = min(confidence, 0.59)
+
+        return verdict, round(confidence, 2)
+
+    @staticmethod
+    def _verdict_severity(verdict: ReviewVerdict) -> int:
+        """判定の厳しさを数値化."""
+        order = {
+            ReviewVerdict.PASS: 0,
+            ReviewVerdict.REVISE: 1,
+            ReviewVerdict.REJECT: 2,
+        }
+        return order[verdict]
+
+    @staticmethod
+    def _parse_verdict(value: Any) -> ReviewVerdict | None:
+        """文字列を ReviewVerdict に変換."""
+        if not isinstance(value, str):
+            return None
+        try:
+            return ReviewVerdict(value)
+        except ValueError:
+            return None
+
+    def _build_final_warnings(
+        self,
+        findings: list[ReviewFinding],
+        llm_warnings: list[Any] | None = None,
+    ) -> list[str]:
+        """LLM警告と所見警告を統合."""
+        warnings: list[str] = []
+        if llm_warnings:
+            warnings.extend(str(item) for item in llm_warnings if isinstance(item, str))
+        warnings.extend(self._generate_warnings(findings))
+        return list(dict.fromkeys(warnings))
 
     def _create_summary(self, input_data: ReviewInput) -> str:
         """検証用サマリーを作成."""
@@ -249,4 +307,3 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
             return False
 
         return True
-

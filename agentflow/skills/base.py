@@ -53,6 +53,9 @@ class SkillMetadata:
         triggers: トリガーワード（この単語が入力にあれば発火）
         requirements: 必要パッケージ（pip install 形式）
         dependencies: 依存 Skill 名
+        depends_on: 依存する他の Skill 名（自動解決用）
+        provides: 本 Skill が提供する能力タグ
+        phase: 所属する工程段階（例: ingestion, analysis, generation）
         examples: 使用例リスト
         created_at: 作成日時
         learned: 自動学習で生成されたか
@@ -72,6 +75,9 @@ class SkillMetadata:
     triggers: list[str] = field(default_factory=list)
     requirements: list[str] = field(default_factory=list)
     dependencies: list[str] = field(default_factory=list)
+    depends_on: list[str] = field(default_factory=list)
+    provides: list[str] = field(default_factory=list)
+    phase: str = ""
     examples: list[str] = field(default_factory=list)
 
     # 自動進化システム用フィールド
@@ -107,7 +113,9 @@ class SkillMetadata:
 
         known_fields = {
             "name", "description", "version", "author", "tags",
-            "triggers", "requirements", "dependencies", "examples",
+            "triggers", "requirements", "dependencies",
+            "depends_on", "depends-on", "provides", "phase",
+            "examples",
             "created_at", "learned", "confidence", "usage_count",
         }
         extra = {k: v for k, v in data.items() if k not in known_fields}
@@ -129,6 +137,11 @@ class SkillMetadata:
             triggers=_ensure_list(data.get("triggers")),
             requirements=_ensure_list(data.get("requirements")),
             dependencies=_ensure_list(data.get("dependencies")),
+            depends_on=_ensure_list(
+                data.get("depends_on", data.get("depends-on"))
+            ),
+            provides=_ensure_list(data.get("provides")),
+            phase=str(data.get("phase", "")),
             examples=_ensure_list(data.get("examples")),
             created_at=str(data.get("created_at", "")),
             learned=bool(data.get("learned", False)),
@@ -159,6 +172,12 @@ class SkillMetadata:
             result["requirements"] = self.requirements
         if self.dependencies:
             result["dependencies"] = self.dependencies
+        if self.depends_on:
+            result["depends_on"] = self.depends_on
+        if self.provides:
+            result["provides"] = self.provides
+        if self.phase:
+            result["phase"] = self.phase
         if self.examples:
             result["examples"] = self.examples
         if self.learned:

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS decision_records (
     -- 決策結果
     decision_role VARCHAR(20) NOT NULL,  -- GO/NO_GO/DELAY/PILOT
     confidence DECIMAL(5,4),  -- 0.0000 ~ 1.0000
+    report_case_id VARCHAR(64),  -- PROP-YYYYMM-XXXXXX
     
     -- 各セクション結果（JSONB で柔軟に格納）
     cognitive_gate_result JSONB,
@@ -30,6 +31,7 @@ CREATE TABLE IF NOT EXISTS decision_records (
     -- サマリ
     summary_bullets JSONB,  -- string[]
     warnings JSONB,         -- string[]
+    human_review_records JSONB,  -- 人間確認ログ
     
     -- メタ情報
     requester_role VARCHAR(50),
@@ -96,6 +98,7 @@ CREATE INDEX IF NOT EXISTS idx_decision_records_created_at ON decision_records(c
 CREATE INDEX IF NOT EXISTS idx_decision_records_decision_role ON decision_records(decision_role);
 CREATE INDEX IF NOT EXISTS idx_decision_records_mode ON decision_records(mode);
 CREATE INDEX IF NOT EXISTS idx_decision_records_requester ON decision_records(requester_role);
+CREATE INDEX IF NOT EXISTS idx_decision_records_report_case_id ON decision_records(report_case_id);
 CREATE INDEX IF NOT EXISTS idx_evidence_items_decision ON evidence_items(decision_record_id);
 CREATE INDEX IF NOT EXISTS idx_evidence_items_reliability ON evidence_items(reliability);
 CREATE INDEX IF NOT EXISTS idx_claims_decision ON claims(decision_record_id);
@@ -117,4 +120,3 @@ CREATE TRIGGER tr_decision_records_updated_at
     BEFORE UPDATE ON decision_records
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at();
-

@@ -131,6 +131,8 @@ export interface RejectionResponse {
 /** 成功レスポンス */
 export interface DecisionResponse {
   status: 'success';
+  /** 履歴照会・PDF出力用のリクエストID（UUID） */
+  request_id?: string;
   report_id: string;
   data: DecisionReport;
 }
@@ -352,6 +354,8 @@ export interface ReviewFinding {
   description: string;
   affected_agent?: string;
   suggested_revision?: string;
+  requires_human_review?: boolean;
+  human_review_hint?: string;
 }
 
 /** 検証出力 */
@@ -360,6 +364,25 @@ export interface ReviewOutput {
   confidence_score: number;
   findings: ReviewFinding[];
   final_warnings: string[];
+}
+
+/** 人間確認による重要指摘の再チェック要求 */
+export interface FindingRecheckRequest {
+  report_id: string;
+  request_id?: string;
+  finding_index: number;
+  confirmation_note: string;
+  acknowledged: boolean;
+  reviewer_name?: string;
+}
+
+/** 人間確認による重要指摘の再チェック応答 */
+export interface FindingRecheckResponse {
+  success: boolean;
+  resolved: boolean;
+  message: string;
+  issues: string[];
+  updated_review?: ReviewOutput;
 }
 
 /** エグゼクティブサマリー v3.0 */

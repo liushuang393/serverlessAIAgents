@@ -7,7 +7,7 @@
  *   - Output: ダッシュボードUI
  */
 
-import { useEffect } from 'react';
+import React, { useEffect } from 'react';
 import {
   Box,
   Grid,

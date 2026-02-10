@@ -13,6 +13,13 @@ project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 
+def _api_base_url() -> str:
+    """テスト対象APIのベースURLを返す."""
+    from apps.market_trend_monitor.backend.config import config
+
+    return f"http://localhost:{config.api.port}"
+
+
 async def test_api_endpoints() -> bool:
     """APIエンドポイントのテスト."""
     print("🔍 APIエンドポイントをテスト中...")
@@ -20,9 +27,11 @@ async def test_api_endpoints() -> bool:
     try:
         import httpx
 
+        base_url = _api_base_url()
+
         async with httpx.AsyncClient() as client:
             # ヘルスチェック
-            response = await client.get("http://localhost:8000/health")
+            response = await client.get(f"{base_url}/health")
             if response.status_code == 200:
                 print("  ✅ ヘルスチェック成功")
             else:
@@ -30,7 +39,7 @@ async def test_api_endpoints() -> bool:
                 return False
 
             # ルートエンドポイント
-            response = await client.get("http://localhost:8000/")
+            response = await client.get(f"{base_url}/")
             if response.status_code == 200:
                 print("  ✅ ルートエンドポイント成功")
             else:
@@ -38,7 +47,7 @@ async def test_api_endpoints() -> bool:
                 return False
 
             # トレンド一覧取得
-            response = await client.get("http://localhost:8000/api/trends")
+            response = await client.get(f"{base_url}/api/trends")
             if response.status_code == 200:
                 print("  ✅ トレンド一覧取得成功")
             else:
@@ -46,7 +55,7 @@ async def test_api_endpoints() -> bool:
                 return False
 
             # レポート一覧取得
-            response = await client.get("http://localhost:8000/api/reports")
+            response = await client.get(f"{base_url}/api/reports")
             if response.status_code == 200:
                 print("  ✅ レポート一覧取得成功")
             else:
@@ -55,7 +64,7 @@ async def test_api_endpoints() -> bool:
 
             # データ収集トリガー
             response = await client.post(
-                "http://localhost:8000/api/collect",
+                f"{base_url}/api/collect",
                 json={
                     "keywords": ["COBOL", "Java migration"],
                     "sources": ["news"],
@@ -168,11 +177,12 @@ async def main() -> None:
     print("=" * 60)
 
     results = []
+    docs_url = f"{_api_base_url()}/docs"
 
     # APIエンドポイントテスト（スキップ - サーバーが別プロセスで起動中）
     print("\n🔍 APIエンドポイントテスト")
     print("  ⏭️  スキップ（サーバーが別プロセスで起動中）")
-    print("  ℹ️  手動テスト: http://localhost:8000/docs")
+    print(f"  ℹ️  手動テスト: {docs_url}")
 
     # ワークフロー直接テスト
     results.append(await test_workflow_directly())
@@ -196,7 +206,7 @@ async def main() -> None:
         print("\n🎉 全ての統合テストに成功しました！")
         print("\nMarket Trend Monitor は正常に動作しています。")
         print("\n次のステップ:")
-        print("1. APIテスト: http://localhost:8000/docs でSwagger UIを確認")
+        print(f"1. APIテスト: {docs_url} でSwagger UIを確認")
         print("2. フロントエンド開発（オプション）")
     else:
         print("\n⚠️  一部の統合テストに失敗しました。")
@@ -204,4 +214,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Unit tests for ReviewAgent."""
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from apps.decision_governance_engine.agents.review_agent import ReviewAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
@@ -281,6 +281,56 @@ class TestReviewAgentValidation:
         )
         result = review_agent.validate_output(output)
         assert result is True
+
+
+class TestReviewAgentScoringConsistency:
+    """判定と信頼度の整合性テスト."""
+
+    def test_warning_forces_revise_with_capped_confidence(
+        self, review_agent: ReviewAgent
+    ) -> None:
+        """WARNING がある場合は REVISE かつ 80% 未満."""
+        findings = [
+            ReviewFinding(
+                severity=FindingSeverity.WARNING,
+                category=FindingCategory.OVER_OPTIMISM,
+                description="過度に楽観的",
+                affected_agent="FaAgent",
+                suggested_revision="見積もりを保守化",
+            )
+        ]
+        verdict, confidence = review_agent.derive_verdict_and_confidence(findings=findings)
+        assert verdict == ReviewVerdict.REVISE
+        assert confidence <= 0.79
+
+    @pytest.mark.asyncio
+    async def test_llm_output_is_normalized_by_findings(
+        self, sample_input: ReviewInput
+    ) -> None:
+        """LLM の高信頼 REVISE/PASS 不整合を正規化できること."""
+        review_agent = ReviewAgent(llm_client=MagicMock())
+        review_agent._call_llm = AsyncMock(
+            return_value="""
+            {
+              "overall_verdict": "PASS",
+              "findings": [
+                {
+                  "severity": "WARNING",
+                  "category": "RESPONSIBILITY_GAP",
+                  "description": "責任分担が曖昧",
+                  "affected_agent": "DaoAgent",
+                  "suggested_revision": "RACI を明確化"
+                }
+              ],
+              "confidence_score": 0.96,
+              "final_warnings": []
+            }
+            """
+        )
+
+        result = await review_agent.process(sample_input)
+        assert result.overall_verdict == ReviewVerdict.REVISE
+        assert result.confidence_score <= 0.79
 
     def test_validate_output_with_revise_verdict(self, review_agent: ReviewAgent) -> None:
         """Test validation passes with REVISE verdict and findings."""

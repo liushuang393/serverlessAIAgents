@@ -170,7 +170,7 @@ class ComfyUIClient:
         # ComfyUI APIは {"prompt": workflow} 形式を期待
         payload = {"prompt": workflow}
         response = await self._http_client.post("/prompt", json=payload)
-        
+
         # エラー時は詳細をログ出力
         if response.status_code != _HTTP_OK:
             try:
@@ -178,7 +178,7 @@ class ComfyUIClient:
                 self._logger.error(f"ComfyUI エラー応答: {error_detail}")
             except Exception:
                 self._logger.error(f"ComfyUI エラー応答 (raw): {response.text}")
-        
+
         response.raise_for_status()
         data = response.json()
         prompt_id: str = data["prompt_id"]

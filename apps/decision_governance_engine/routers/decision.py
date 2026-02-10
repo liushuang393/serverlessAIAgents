@@ -27,6 +27,9 @@ from apps.decision_governance_engine.schemas.output_schemas import DecisionRepor
 from apps.decision_governance_engine.services.decision_contract_builder import (
     DecisionGovContractBuilder,
 )
+from apps.decision_governance_engine.services.human_review_policy import (
+    enrich_review_with_policy,
+)
 from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -64,6 +67,7 @@ class DecisionAPIRequest(BaseModel):
 class DecisionAPIResponse(BaseModel):
     """API レスポンススキーマ."""
     status: str = Field(..., description="処理状態")
+    request_id: str | None = Field(None, description="履歴照会・PDF出力用のリクエストID（UUID）")
     report_id: str | None = Field(None, description="レポートID")
     data: dict[str, Any] = Field(default_factory=dict, description="レポートデータ")
 
@@ -81,6 +85,8 @@ class RejectionResponse(BaseModel):
 # ========================================
 
 _engine: DecisionEngine | None = None
+_fallback_history_records: list[dict[str, Any]] = []
+_FALLBACK_HISTORY_MAX = 200
 
 
 def get_engine() -> DecisionEngine:
@@ -108,6 +114,76 @@ def build_constraints(req: DecisionAPIRequest) -> ConstraintSet:
 # ========================================
 # エンドポイント
 # ========================================
+
+def _extract_results_for_history(result_data: dict[str, Any]) -> dict[str, Any]:
+    """履歴保存用に各セクション結果を抽出.
+
+    注意:
+        - Engine の出力は v3 系で `dao/fa/shu/qi/review` を基本とするが、
+          旧互換で `*_analysis` を含む場合があるため両方を許容する。
+        - DecisionRepository.save() が参照するキーに合わせて返す。
+    """
+
+    def _pick(*keys: str) -> Any:
+        for key in keys:
+            if key in result_data and result_data.get(key) is not None:
+                return result_data.get(key)
+        return None
+
+    return {
+        "cognitive_gate": _pick("cognitive_gate"),
+        "gatekeeper": _pick("gatekeeper"),
+        "dao": _pick("dao", "dao_analysis"),
+        "fa": _pick("fa", "fa_analysis"),
+        "shu": _pick("shu", "shu_analysis"),
+        "qi": _pick("qi", "qi_analysis"),
+        "review": enrich_review_with_policy(_pick("review")),
+    }
+
+
+def _extract_confidence_for_history(result_data: dict[str, Any]) -> float | None:
+    """履歴表示用の信頼度を抽出."""
+    raw_confidence = result_data.get("confidence")
+    if isinstance(raw_confidence, (int, float)):
+        return float(raw_confidence)
+
+    review = result_data.get("review")
+    if hasattr(review, "model_dump"):
+        review = review.model_dump()
+    if isinstance(review, dict):
+        review_confidence = review.get("confidence_score")
+        if isinstance(review_confidence, (int, float)):
+            return float(review_confidence)
+    return None
+
+
+def _save_fallback_history(
+    request_id: UUID,
+    question: str,
+    decision_role: str,
+    confidence: float | None,
+    mode: str,
+    results: dict[str, Any],
+    processing_time_ms: int | None,
+) -> None:
+    """DB 保存失敗時のメモリ退避."""
+    record = {
+        "id": f"fallback-{request_id}",
+        "request_id": str(request_id),
+        "question": question,
+        "decision_role": decision_role,
+        "confidence": confidence,
+        "mode": mode,
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "fa_result": results.get("fa"),
+        "shu_result": results.get("shu"),
+        "qi_result": results.get("qi"),
+        "review_result": results.get("review"),
+        "processing_time_ms": processing_time_ms,
+    }
+    _fallback_history_records.insert(0, record)
+    if len(_fallback_history_records) > _FALLBACK_HISTORY_MAX:
+        del _fallback_history_records[_FALLBACK_HISTORY_MAX:]
 
 def build_input_dict(
     question: str,
@@ -187,29 +263,28 @@ async def process_decision(
     # 成功の場合 - 履歴保存
     decision_role = "PILOT"  # デフォルト
     confidence = None
+    report_case_id: str | None = None
     results_dict: dict[str, Any] = {}
 
     if isinstance(result, DecisionReport):
         report_data = result.model_dump()
         decision_role = _infer_decision_role(report_data)
-        confidence = report_data.get("confidence")
+        confidence = _extract_confidence_for_history(report_data)
+        report_case_id = result.report_id
         results_dict = {
-            "fa": report_data.get("fa_analysis"),
-            "shu": report_data.get("shu_analysis"),
-            "qi": report_data.get("qi_analysis"),
-            "dao": report_data.get("dao_analysis"),
+            "cognitive_gate": None,
+            "gatekeeper": None,
+            "dao": report_data.get("dao"),
+            "fa": report_data.get("fa"),
+            "shu": report_data.get("shu"),
+            "qi": report_data.get("qi"),
             "review": report_data.get("review"),
         }
     elif isinstance(result, dict):
         decision_role = _infer_decision_role(result)
-        confidence = result.get("confidence")
-        results_dict = {
-            "fa": result.get("fa_analysis"),
-            "shu": result.get("shu_analysis"),
-            "qi": result.get("qi_analysis"),
-            "dao": result.get("dao_analysis"),
-            "review": result.get("review"),
-        }
+        confidence = _extract_confidence_for_history(result)
+        report_case_id = str(result.get("report_id", "")) or None
+        results_dict = _extract_results_for_history(result)
 
     # 非同期で履歴保存（失敗しても処理は継続）
     if ENABLE_HISTORY:
@@ -222,39 +297,57 @@ async def process_decision(
                 decision_role=decision_role,
                 mode="STANDARD",
                 confidence=confidence,
+                report_case_id=report_case_id,
                 results=results_dict,
                 processing_time_ms=processing_time_ms,
             )
             logger.info(f"決策履歴保存完了: {request_id}")
         except Exception as e:
             logger.warning(f"決策履歴保存失敗（処理は継続）: {e}")
+            _save_fallback_history(
+                request_id=request_id,
+                question=req.question,
+                decision_role=decision_role,
+                confidence=confidence,
+                mode="STANDARD",
+                results=results_dict,
+                processing_time_ms=processing_time_ms,
+            )
 
     # レスポンス生成 + キャッシュ保存
     if isinstance(result, DecisionReport):
         cache_report(result.report_id, result)
+        cache_report(str(request_id), result)
         if format == "v1":
             contract = DecisionGovContractBuilder.build_from_report(result)
             return DecisionAPIResponse(
                 status="success",
+                request_id=str(request_id),
                 report_id=result.report_id,
                 data=contract.model_dump(),
             )
         return DecisionAPIResponse(
             status="success",
+            request_id=str(request_id),
             report_id=result.report_id,
             data=result.model_dump(),
         )
 
     report_id = result.get("report_id", "") if isinstance(result, dict) else ""
     if report_id:
-        _cache_report_from_result(result if isinstance(result, dict) else {})
+        _cache_report_from_result(result if isinstance(result, dict) else {}, request_id=str(request_id))
     if format == "v1":
         contract = DecisionGovContractBuilder.build_from_report(result)
-        return DecisionAPIResponse(status="success", report_id=report_id, data=contract.model_dump())
-    return DecisionAPIResponse(status="success", report_id=report_id, data=result)
+        return DecisionAPIResponse(
+            status="success",
+            request_id=str(request_id),
+            report_id=report_id,
+            data=contract.model_dump(),
+        )
+    return DecisionAPIResponse(status="success", request_id=str(request_id), report_id=report_id, data=result)
 
 
-def _cache_report_from_result(result_data: dict[str, Any]) -> None:
+def _cache_report_from_result(result_data: dict[str, Any], request_id: str | None = None) -> None:
     """SSE完了結果からレポートをキャッシュに保存.
 
     report_id（PROP-* 形式）をキーとしてキャッシュする。
@@ -267,13 +360,20 @@ def _cache_report_from_result(result_data: dict[str, Any]) -> None:
     if not report_id:
         return
 
+    payload = dict(result_data)
+    payload["review"] = enrich_review_with_policy(payload.get("review"))
+
     try:
         # DecisionReport として構築を試みる
-        report = DecisionReport(**result_data)
+        report = DecisionReport(**payload)
         cache_report(report_id, report)
+        if request_id:
+            cache_report(request_id, report)
     except Exception:
         # Pydantic 構築失敗時は dict のままキャッシュ
-        cache_report(report_id, result_data)
+        cache_report(report_id, payload)
+        if request_id:
+            cache_report(request_id, payload)
         logger.info(f"[SSE] レポートを dict 形式でキャッシュ: {report_id}")
 
 
@@ -337,7 +437,25 @@ async def get_decision_history(
         履歴一覧
     """
     if not ENABLE_HISTORY:
-        return HistoryListResponse(status="disabled", total=0, items=[])
+        filtered_fallback = [
+            item
+            for item in _fallback_history_records
+            if (not decision_role or item.get("decision_role") == decision_role)
+            and (not mode or item.get("mode") == mode)
+        ]
+        fallback_items = [
+            {
+                "id": item.get("id", ""),
+                "request_id": item.get("request_id", ""),
+                "question": item.get("question", ""),
+                "decision_role": item.get("decision_role", "PILOT"),
+                "confidence": item.get("confidence"),
+                "mode": item.get("mode", "STANDARD"),
+                "created_at": item.get("created_at"),
+            }
+            for item in filtered_fallback[:limit]
+        ]
+        return HistoryListResponse(status="fallback", total=len(fallback_items), items=fallback_items)
 
     try:
         from apps.decision_governance_engine.repositories import DecisionRepository
@@ -356,14 +474,41 @@ async def get_decision_history(
             }
             for r in records
         ]
-        return HistoryListResponse(status="success", total=len(items), items=items)
+        # DB 取得結果にフォールバック記録を補完
+        known_request_ids = {item["request_id"] for item in items}
+        fallback_items = [
+            {
+                "id": item.get("id", ""),
+                "request_id": item.get("request_id", ""),
+                "question": item.get("question", ""),
+                "decision_role": item.get("decision_role", "PILOT"),
+                "confidence": item.get("confidence"),
+                "mode": item.get("mode", "STANDARD"),
+                "created_at": item.get("created_at"),
+            }
+            for item in _fallback_history_records
+            if item.get("request_id") not in known_request_ids
+        ]
+        all_items = (items + fallback_items)[:limit]
+        return HistoryListResponse(status="success", total=len(all_items), items=all_items)
     except Exception as e:
-        logger.exception(f"履歴取得失敗: {e}")
-        # エラー時は適切なHTTPステータスコードを返す
-        raise HTTPException(
-            status_code=500,
-            detail=f"履歴取得に失敗しました: {e!s}"
-        )
+        logger.exception(f"履歴取得失敗。フォールバックを返却: {e}")
+        fallback_items = [
+            {
+                "id": item.get("id", ""),
+                "request_id": item.get("request_id", ""),
+                "question": item.get("question", ""),
+                "decision_role": item.get("decision_role", "PILOT"),
+                "confidence": item.get("confidence"),
+                "mode": item.get("mode", "STANDARD"),
+                "created_at": item.get("created_at"),
+            }
+            for item in _fallback_history_records
+            if (not decision_role or item.get("decision_role") == decision_role)
+            and (not mode or item.get("mode") == mode)
+        ][:limit]
+        
+        return HistoryListResponse(status="fallback", total=len(fallback_items), items=fallback_items)
 
 
 @router.get("/api/decision/history/{request_id}", response_model=HistoryDetailResponse)
@@ -377,6 +522,12 @@ async def get_decision_detail(request_id: str) -> HistoryDetailResponse:
         履歴詳細
     """
     if not ENABLE_HISTORY:
+        fallback_data = next(
+            (item for item in _fallback_history_records if item.get("request_id") == request_id),
+            None,
+        )
+        if fallback_data:
+            return HistoryDetailResponse(status="fallback", data=fallback_data)
         raise HTTPException(status_code=503, detail="履歴機能は無効です")
 
     try:
@@ -406,7 +557,13 @@ async def get_decision_detail(request_id: str) -> HistoryDetailResponse:
     except HTTPException:
         raise
     except Exception as e:
-        logger.warning(f"履歴詳細取得失敗: {e}")
+        logger.warning(f"履歴詳細取得失敗。フォールバック検索: {e}")
+        fallback_data = next(
+            (item for item in _fallback_history_records if item.get("request_id") == request_id),
+            None,
+        )
+        if fallback_data:
+            return HistoryDetailResponse(status="fallback", data=fallback_data)
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -472,14 +629,9 @@ async def process_decision_stream(
 
         processing_time_ms = int((time.time() - start_time) * 1000)
         decision_role = _infer_decision_role(result_data)
-        confidence = result_data.get("confidence")
-        results_dict = {
-            "fa": result_data.get("fa_analysis") or result_data.get("fa"),
-            "shu": result_data.get("shu_analysis") or result_data.get("shu"),
-            "qi": result_data.get("qi_analysis") or result_data.get("qi"),
-            "dao": result_data.get("dao_analysis") or result_data.get("dao"),
-            "review": result_data.get("review"),
-        }
+        confidence = _extract_confidence_for_history(result_data)
+        report_case_id = str(result_data.get("report_id", "")) or None
+        results_dict = _extract_results_for_history(result_data)
 
         try:
             from apps.decision_governance_engine.repositories import DecisionRepository
@@ -490,12 +642,22 @@ async def process_decision_stream(
                 decision_role=decision_role,
                 mode="STANDARD",
                 confidence=confidence,
+                report_case_id=report_case_id,
                 results=results_dict,
                 processing_time_ms=processing_time_ms,
             )
             logger.info(f"[SSE] 決策履歴保存完了: {request_id}")
         except Exception as e:
             logger.warning(f"[SSE] 決策履歴保存失敗（処理は継続）: {e}")
+            _save_fallback_history(
+                request_id=request_id,
+                question=question,
+                decision_role=decision_role,
+                confidence=confidence,
+                mode="STANDARD",
+                results=results_dict,
+                processing_time_ms=processing_time_ms,
+            )
 
     async def generate_events():
         """SSEイベントを生成."""
@@ -503,7 +665,18 @@ async def process_decision_stream(
         import time as time_module
         logger.info("[SSE] ストリーム開始")
         # 即座に接続確認イベントを送信
-        yield f"data: {json.dumps({'event_type': 'connection.established', 'timestamp': time_module.time()}, ensure_ascii=False)}\n\n"
+        yield (
+            "data: "
+            + json.dumps(
+                {
+                    "event_type": "connection.established",
+                    "timestamp": time_module.time(),
+                    "data": {"request_id": str(request_id)},
+                },
+                ensure_ascii=False,
+            )
+            + "\n\n"
+        )
 
         final_result: dict[str, Any] = {}
         is_rejected = False
@@ -517,6 +690,9 @@ async def process_decision_stream(
                 # flow.complete または result イベントから結果を取得
                 if event_type == "flow.complete" and event.get("result"):
                     final_result = event.get("result", {})
+                    if final_result and not is_rejected:
+                        # PDF出力の即時性を優先し、DB保存前にキャッシュへ格納
+                        _cache_report_from_result(final_result, request_id=str(request_id))
                 elif event_type == "result" and event.get("data"):
                     data = event.get("data", {})
                     if data.get("status") == "rejected":
@@ -536,7 +712,7 @@ async def process_decision_stream(
                 await save_history(final_result)
 
                 # レポートキャッシュに保存（PDF出力用）
-                _cache_report_from_result(final_result)
+                _cache_report_from_result(final_result, request_id=str(request_id))
 
         except asyncio.CancelledError:
             # クライアント切断時

@@ -124,16 +124,42 @@ class SkillEngine:
     async def resolve(self, query: str) -> SkillExecutionResult:
         """クエリを Skill に解決（なければ生成）.
 
+        依存 Skill の自動解決も行う（depends_on フィールド）。
+
         Args:
             query: ユーザー要求
 
         Returns:
             Skill 実行結果
         """
+        return await self._resolve_internal(query, depth=0)
+
+    async def _resolve_internal(
+        self, query: str, depth: int = 0, max_depth: int = 3
+    ) -> SkillExecutionResult:
+        """内部解決ロジック（依存解決の再帰対応）.
+
+        Args:
+            query: ユーザー要求または Skill 名
+            depth: 現在の再帰深度
+            max_depth: 最大再帰深度
+
+        Returns:
+            Skill 実行結果
+
+        Raises:
+            RuntimeError: 最大再帰深度を超過した場合
+        """
+        if depth > max_depth:
+            msg = f"Skill dependency resolution exceeded max depth {max_depth}: {query}"
+            raise RuntimeError(msg)
+
         # 1. 既存 Skill を検索
         results = self._matcher.match(query)
         if results:
             skill = results[0].skill
+            # 依存 Skill の自動解決
+            await self._resolve_dependencies(skill, depth)
             skill.increment_usage()
             self._logger.info(f"Matched skill: {skill.name}")
             return SkillExecutionResult(
@@ -176,6 +202,9 @@ class SkillEngine:
         except Exception as e:
             self._logger.exception(f"Failed to save skill: {e}")
 
+        # 6. 依存 Skill の自動解決（生成されたものも含む）
+        await self._resolve_dependencies(skill, depth)
+
         return SkillExecutionResult(
             skill=skill,
             matched=False,
@@ -183,6 +212,34 @@ class SkillEngine:
             saved=saved,
             instructions=skill.to_prompt(),
         )
+
+    async def _resolve_dependencies(self, skill: Skill, depth: int) -> None:
+        """Skill が depends_on で宣言した依存を自動解決.
+
+        依存 Skill が未登録の場合、再帰的に resolve を呼び出し、
+        自動生成・固化する（自律的 Skill 依存解決システム）。
+
+        Args:
+            skill: 依存を解決する対象 Skill
+            depth: 現在の再帰深度
+        """
+        deps = skill.metadata.depends_on
+        if not deps:
+            return
+
+        for dep_name in deps:
+            # 既に登録済みならスキップ
+            if self.get_skill(dep_name):
+                continue
+            self._logger.info(
+                f"Auto-resolving dependency '{dep_name}' for skill '{skill.name}'"
+            )
+            try:
+                await self._resolve_internal(dep_name, depth + 1)
+            except Exception as e:
+                self._logger.warning(
+                    f"Failed to resolve dependency '{dep_name}': {e}"
+                )
 
     def find(self, query: str, top_k: int = 5) -> list[MatchResult]:
         """クエリにマッチする Skill を検索（生成なし）."""

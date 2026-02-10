@@ -114,6 +114,11 @@ CognitiveGate → Gatekeeper → Clarification → Dao → Fa → Shu → Qi →
 | `/api/report/{id}/agent/{agent_id}` | GET | 個別Agent出力取得 |
 | `/api/workflow/config` | GET | Studio UI設定取得 |
 
+**PDFエクスポートの注意（重要）**
+- `/api/report/{id}/pdf` の `{id}` は **UUID（request_id）** を推奨（履歴DBから復元できるため）
+- 画面表示用の `report_id`（`PROP-...`）は提案書の案件IDであり、環境によっては永続化されない場合があります
+- フロントエンドは `request_id` が取得できる場合、PDF出力に `request_id` を使用します
+
 ### 2.2 入力スキーマ
 
 ```python

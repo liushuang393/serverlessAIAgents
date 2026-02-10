@@ -29,6 +29,28 @@ migration_types:
     options:
       max_iterations: 3
       acceptance_threshold: 85.0
+  # ========================================
+  # COBOL → Spring Boot
+  # ========================================
+  - name: cobol-to-springboot
+    description: "COBOL から Spring Boot へのモダン化移行"
+    source:
+      language: COBOL
+      adapter: cobol_adapter.CobolAdapter
+      parser: ply_cobol_parser.PLYCobolParser
+    target:
+      language: SpringBoot
+      adapter: springboot_adapter.SpringBootAdapter
+      runner: maven_runner.MavenRunner
+    prompts:
+      transform: cobol_springboot/transform.txt
+      checker: cobol_java/checker.txt
+      fixer: cobol_java/fixer.txt
+      testgen: cobol_java/testgen.txt
+    type_mapping: cobol_java_types.yaml
+    options:
+      max_iterations: 3
+      acceptance_threshold: 85.0
 
   # ========================================
   # RPG → C#（テンプレート）
@@ -76,7 +98,7 @@ migration_types:
 
 # デフォルト設定
 defaults:
-  migration_type: cobol-to-java
+  migration_type: cobol-to-springboot
   log_level: INFO
   output_dir: ./output
   encoding: utf-8

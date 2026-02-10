@@ -21,6 +21,9 @@ from apps.decision_governance_engine.schemas.output_schemas import (
     generate_proposal_title,
     generate_signature_block,
 )
+from apps.decision_governance_engine.services.human_review_policy import (
+    enrich_review_with_policy,
+)
 
 
 class ReportGenerator:
@@ -73,7 +76,7 @@ class ReportGenerator:
         fa_result = results.get("fa", {})
         shu_result = results.get("shu", {})
         qi_result = results.get("qi", {})
-        review_result = results.get("review", {})
+        review_result = enrich_review_with_policy(results.get("review", {}))
 
         # ExecutiveSummary生成
         summary = self._generate_executive_summary(

@@ -100,7 +100,7 @@ async def test_full_pipeline():
 
         print(f"总共生成: {len(images)} 张图片")
         print(f"输出目录: {result.get('output_directory', 'N/A')}")
-        
+
         # 检查是否有错误
         errors = result.get("errors", [])
         if errors:
@@ -109,7 +109,7 @@ async def test_full_pipeline():
             for error in errors:
                 print(f"  - {error}")
             print()
-        
+
         print()
 
         # 验证文件是否存在
@@ -250,4 +250,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

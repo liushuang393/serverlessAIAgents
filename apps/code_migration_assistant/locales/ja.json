@@ -1,0 +1,13 @@
+{
+    "report": {
+        "title": "移行設計書",
+        "summary": "概要",
+        "source": "対象システム",
+        "migration_source": "移行元",
+        "migration_target": "移行先",
+        "business_flow": "業務フロー",
+        "comparison_table": "新旧対照表",
+        "test_plan": "テスト計画",
+        "risk_analysis": "リスク分析"
+    }
+}

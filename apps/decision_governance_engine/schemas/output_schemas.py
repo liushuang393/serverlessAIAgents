@@ -21,6 +21,36 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
 from pydantic import BaseModel, Field
 
 
+class HumanReview(BaseModel):
+    """人間による最終確認情報."""
+
+    requires_review: bool = Field(
+        default=True,
+        description="人間による最終確認が必要か",
+    )
+    approved: bool | None = Field(
+        default=None,
+        description="承認状態（None=未確認, True=承認, False=却下）",
+    )
+    reviewer_name: str | None = Field(
+        default=None,
+        description="確認者名",
+    )
+    reviewer_email: str | None = Field(
+        default=None,
+        description="確認者メールアドレス",
+    )
+    review_notes: str | None = Field(
+        default=None,
+        max_length=500,
+        description="確認時のコメント",
+    )
+    reviewed_at: str | None = Field(
+        default=None,
+        description="確認日時（ISO 8601形式）",
+    )
+
+
 class ProposalTitle(BaseModel):
     """提案書タイトル.
 
@@ -117,16 +147,22 @@ class ExecutiveSummary(BaseModel):
     )
 
 
-def generate_proposal_title(question: str, problem_type: str = "") -> ProposalTitle:
+def generate_proposal_title(
+    question: str,
+    problem_type: str = "",
+    now: datetime | None = None,
+) -> ProposalTitle:
     """ユーザーの質問から提案書タイトルを生成.
 
     Args:
         question: ユーザーの質問文
         problem_type: 問題タイプ（オプション）
+        now: 日時（省略時は現在時刻）
 
     Returns:
         ProposalTitle: 日本語/英語タイトルと案件ID
     """
+    now = now or datetime.now()
     # キーワード抽出用パターン
     keywords = {
         # 技術系
@@ -197,9 +233,9 @@ def generate_proposal_title(question: str, problem_type: str = "") -> ProposalTi
         title_en = "Realtime_Voice_Communication_Platform_Proposal"
 
     # 案件ID生成（質問のハッシュから）
-    hash_input = question + datetime.now().strftime("%Y%m%d")
+    hash_input = question + now.strftime("%Y%m%d")
     hash_value = hashlib.md5(hash_input.encode()).hexdigest()[:6].upper()
-    case_id = f"PROP-{datetime.now().strftime('%Y%m')}-{hash_value}"
+    case_id = f"PROP-{now.strftime('%Y%m')}-{hash_value}"
 
     # サブタイトル（問題タイプから）
     subtitle_map = {
@@ -220,16 +256,21 @@ def generate_proposal_title(question: str, problem_type: str = "") -> ProposalTi
     )
 
 
-def generate_signature_block(user_info: dict[str, Any] | None = None) -> SignatureBlock:
+def generate_signature_block(
+    user_info: dict[str, Any] | None = None,
+    now: datetime | None = None,
+) -> SignatureBlock:
     """署名欄を自動生成.
 
     Args:
         user_info: ユーザー情報（オプション）
+        now: 日時（省略時は現在時刻）
 
     Returns:
         SignatureBlock: 署名欄情報
     """
-    today = datetime.now().strftime("%Y年%m月%d日")
+    now = now or datetime.now()
+    today = now.strftime("%Y年%m月%d日")
 
     if user_info:
         return SignatureBlock(
@@ -292,6 +333,12 @@ class DecisionReport(BaseModel):
         default=None, description="署名欄情報"
     )
 
+    # v3.2: 人間確認フロー
+    human_review: HumanReview = Field(
+        default_factory=lambda: HumanReview(requires_review=True),
+        description="人間による最終確認情報",
+    )
+
     # 旧署名欄（後方互換性）
     signature_required: bool = Field(default=True, description="署名必須フラグ")
     signed_by: str | None = Field(default=None, description="署名者")
@@ -321,4 +368,3 @@ class DecisionReport(BaseModel):
             ]
         }
     }
-

@@ -19,6 +19,9 @@ from apps.market_trend_monitor.backend.services.prediction_service import (
 from apps.market_trend_monitor.backend.services.redteam_service import (
     RedTeamService,
 )
+from apps.market_trend_monitor.backend.services.report_export_service import (
+    ReportExportService,
+)
 from apps.market_trend_monitor.backend.services.signal_service import (
     SignalService,
 )
@@ -32,6 +35,7 @@ __all__ = [
     "MarketStore",
     "PredictionService",
     "RedTeamService",
+    "ReportExportService",
     "SignalService",
     "SourceRegistryService",
 ]

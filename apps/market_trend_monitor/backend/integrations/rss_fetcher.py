@@ -20,9 +20,18 @@ class RSSFetcher:
 
     async def fetch(self, feed_url: str) -> list[dict[str, Any]]:
         """フィードを取得."""
+        headers = {
+            "User-Agent": "MarketTrendMonitor/1.0 (+https://github.com/)",
+            "Accept": "application/rss+xml, application/xml;q=0.9, */*;q=0.8",
+        }
+
         for attempt in range(self._max_retries + 1):
             try:
-                async with httpx.AsyncClient(timeout=20.0) as client:
+                async with httpx.AsyncClient(
+                    timeout=20.0,
+                    follow_redirects=True,
+                    headers=headers,
+                ) as client:
                     response = await client.get(feed_url)
 
                 if response.status_code == 200:

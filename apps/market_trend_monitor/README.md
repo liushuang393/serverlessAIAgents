@@ -42,11 +42,23 @@ Frontend (React) ←→ REST API / WebSocket ←→ Backend (AgentFlow)
 - Node.js 18+ (フロントエンド用)
 - AgentFlow フレームワーク
 
+### ポート設定（一元管理）
+
+ポートとホストは `apps/market_trend_monitor/app_config.json` で一元管理します。
+
+```json
+{
+  "api_host": "0.0.0.0",
+  "api_port": 8002,
+  "frontend_port": 3002
+}
+```
+
 ### バックエンドセットアップ
 
 ```bash
 # 依存関係インストール
-cd ./apps/market-trend-monitor/backend
+cd ./apps/market_trend_monitor/backend
 pip install -r requirements.txt
 
 # 環境変数設定（オプション）
@@ -55,10 +67,10 @@ export DATABASE_URL="sqlite:///./market_trend.db"
 export LOG_LEVEL="INFO"
 
 # サーバー起動
-uvicorn apps.market_trend_monitor.backend.api.main:app --host 0.0.0.0 --port 8002 --reload
+python -m apps.market_trend_monitor.backend.api.main
 ```
 
-サーバーは `http://localhost:8002` で起動します。
+サーバーはデフォルトで `http://localhost:8002` で起動します。
 
 ### フロントエンドセットアップ
 
@@ -71,26 +83,46 @@ npm install
 npm run dev
 ```
 
-フロントエンドは `http://localhost:3002` で起動します。
+フロントエンドはデフォルトで `http://localhost:3002` で起動します。
 
 ### API ドキュメント
 
 起動後、以下の URL でドキュメントを確認できます:
-- Swagger UI: http://localhost:8000/docs
-- ReDoc: http://localhost:8000/redoc
+- Swagger UI: http://localhost:<api_port>/docs
+- ReDoc: http://localhost:<api_port>/redoc
 
 ## 使用方法
 
 ### 手動データ収集
 
 ```bash
-curl -X POST http://localhost:8000/api/collect \
+curl -X POST http://localhost:<api_port>/api/collect \
   -H "Content-Type: application/json" \
   -d '{
     "keywords": ["COBOL", "Java migration", "AI"],
     "sources": ["news", "github"]
   }'
 ```
+
+### レポートのバイナリエクスポート（PDF / PPTX）
+
+```bash
+# PDF
+curl -L -o market_report.pdf \
+  http://localhost:<api_port>/api/reports/<report_id>/export/pdf
+
+# PPTX
+curl -L -o market_report.pptx \
+  http://localhost:<api_port>/api/reports/<report_id>/export/pptx
+```
+
+出力テンプレートは以下の構成です。
+- 表紙
+- 目次
+- KPIサマリー
+- トレンドチャート
+- 詳細分析
+- 結論と次アクション
 
 ### Python API
 

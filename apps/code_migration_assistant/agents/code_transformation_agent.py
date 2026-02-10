@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from agentflow import agent
@@ -76,6 +77,21 @@ class CodeTransformationAgent:
                 UnknownItem(field="compile", reason="自動生成スケルトンの文法/依存を要確認")
             )
 
+        # マルチファイル対応: // --- [FILE: path] --- 形式があれば分割
+        generated_files = []
+        if "// --- [FILE:" in target_code:
+            # 分割ロジック
+            blocks = re.split(r"// --- \[FILE: (.+?)\] ---", target_code)
+            # blocks[0] は最初のセパレータの前（通常は空）
+            for i in range(1, len(blocks), 2):
+                file_path = blocks[i]
+                file_content = blocks[i+1].strip()
+                generated_files.append(GeneratedFile(path=file_path, content=file_content))
+        else:
+            generated_files = [
+                GeneratedFile(path=f"generated/{class_name}.java", content=target_code)
+            ]
+
         artifact = TransformationArtifact(
             meta=build_meta(
                 task_id=task_id,
@@ -86,9 +102,7 @@ class CodeTransformationAgent:
                 module=module,
             ),
             target_code=target_code,
-            generated_files=[
-                GeneratedFile(path=f"generated/{class_name}.java", content=target_code)
-            ],
+            generated_files=generated_files,
             rule_hits=[
                 "class_mapping.primary_class",
                 "package_mapping.default",

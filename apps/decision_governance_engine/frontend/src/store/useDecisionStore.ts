@@ -48,6 +48,8 @@ interface DecisionState {
   stakeholders: StakeholderInfo;
 
   // 処理結果
+  /** 履歴照会・PDF出力用のリクエストID（UUID） */
+  requestId: string | null;
   reportId: string | null;
   report: DecisionReport | null;
 
@@ -62,6 +64,7 @@ interface DecisionState {
   setConstraints: (c: Partial<DecisionState['constraints']>) => void;
   setStakeholders: (s: Partial<StakeholderInfo>) => void;
   setPage: (p: PageState) => void;
+  setRequestId: (id: string | null) => void;
   setReportId: (id: string) => void;
   setReport: (r: DecisionReport) => void;
   setError: (e: string | null) => void;
@@ -106,6 +109,7 @@ export const useDecisionStore = create<DecisionState>()(
       constraints: { ...initialConstraints },
       stakeholders: { ...initialStakeholders },
       reportId: null,
+      requestId: null,
       report: null,
       history: [],
       error: null,
@@ -125,6 +129,8 @@ export const useDecisionStore = create<DecisionState>()(
 
       setPage: (p) => set({ currentPage: p }),
 
+      setRequestId: (id) => set({ requestId: id }),
+
       setReportId: (id) => set({ reportId: id }),
 
       setReport: (r) => set({ report: r, reportId: r.report_id }),
@@ -138,6 +144,7 @@ export const useDecisionStore = create<DecisionState>()(
           constraints: { ...initialConstraints },
           stakeholders: { ...initialStakeholders },
           reportId: null,
+          requestId: null,
           report: null,
           error: null,
         }),
@@ -215,6 +222,7 @@ export const useDecisionStore = create<DecisionState>()(
         stakeholders: state.stakeholders,
         history: state.history,
         // レポートも永続化（大きい場合は除外を検討）
+        requestId: state.requestId,
         reportId: state.reportId,
         report: state.report,
       }),

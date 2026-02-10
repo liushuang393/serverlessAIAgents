@@ -3,9 +3,58 @@
 アプリケーション全体の設定を管理します。
 """
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+
+
+def _parse_port(value: str | int | None, default: int) -> int:
+    """ポート値を安全に整数へ変換する."""
+    if isinstance(value, int):
+        return value if value > 0 else default
+
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped:
+            try:
+                parsed = int(stripped)
+            except ValueError:
+                return default
+            return parsed if parsed > 0 else default
+
+    return default
+
+
+def _load_app_config() -> dict[str, object]:
+    """アプリ共通設定ファイルを読み込む."""
+    config_path = Path(__file__).resolve().parents[1] / "app_config.json"
+
+    try:
+        raw = config_path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return {}
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return {}
+
+    return parsed if isinstance(parsed, dict) else {}
+
+
+APP_CONFIG = _load_app_config()
+DEFAULT_API_HOST = str(APP_CONFIG.get("api_host", "localhost"))
+DEFAULT_API_PORT = _parse_port(APP_CONFIG.get("api_port"), 8002)
+DEFAULT_FRONTEND_PORT = _parse_port(APP_CONFIG.get("frontend_port"), 3002)
+
+
+def _default_cors_origins() -> list[str]:
+    """CORSのデフォルト許可オリジンを構築する."""
+    frontend_port = _parse_port(
+        os.getenv("MARKET_TREND_MONITOR_FRONTEND_PORT"), DEFAULT_FRONTEND_PORT
+    )
+    return [f"http://localhost:{frontend_port}", "http://localhost:3000"]
 
 
 @dataclass
@@ -15,12 +64,14 @@ class CollectorConfig:
     # 監視キーワード
     keywords: list[str] = field(
         default_factory=lambda: [
-            "COBOL",
-            "Java migration",
-            "legacy modernization",
-            "AI",
-            "LLM",
-            "machine learning",
+            "COBOL Refactoring",
+            "Java migration automation",
+            "legacy modernization AI",
+            "Mainframe Modernization",
+            "DX 推進",
+            "システム刷新 AI",
+            "LLM code analysis legacy",
+            "COBOL to Java",
         ]
     )
 
@@ -38,6 +89,9 @@ class CollectorConfig:
         default_factory=lambda: [
             "https://hnrss.org/newest",
             "https://www.reddit.com/r/MachineLearning/.rss",
+            "https://itmedia.jp/rss/2.0/itall/index.xml",
+            "https://tech.nikkeibp.co.jp/rss/index.rdf",
+            "https://qiita.com/tags/cobol/feed",
         ]
     )
 
@@ -105,11 +159,18 @@ class APIConfig:
     """API設定."""
 
     # サーバー設定
-    host: str = "0.0.0.0"
-    port: int = 8000
+    host: str = field(
+        default_factory=lambda: os.getenv("MARKET_TREND_MONITOR_API_HOST", DEFAULT_API_HOST)
+    )
+    port: int = field(
+        default_factory=lambda: _parse_port(
+            os.getenv("MARKET_TREND_MONITOR_API_PORT"),
+            DEFAULT_API_PORT,
+        )
+    )
 
     # CORS設定
-    cors_origins: list[str] = field(default_factory=lambda: ["http://localhost:3000"])
+    cors_origins: list[str] = field(default_factory=_default_cors_origins)
 
     # WebSocket設定
     websocket_ping_interval: int = 30

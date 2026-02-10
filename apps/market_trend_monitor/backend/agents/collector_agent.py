@@ -10,6 +10,7 @@
 """
 
 import logging
+import re
 import uuid
 from datetime import datetime
 from typing import Any
@@ -154,13 +155,22 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                     if not url or url in self._cache:
                         continue
 
+                    # ブレイクスルー（新発見・重要動向）の検知強化
+                    title = news_article.get("title", f"{keyword} に関する最新動向")
+                    content = news_article.get("content", news_article.get("description", ""))
+                    
+                    is_breakthrough = any(
+                        word in (title + content).lower() 
+                        for word in ["breakthrough", "innovative", "新手法", "画期的", "突破口", "automated"]
+                    )
+                    
                     article = Article(
                         id=str(uuid.uuid4()),
-                        title=news_article.get("title", f"{keyword} に関する最新動向"),
+                        title=title,
                         url=url,
                         source=SourceType.NEWS,
                         published_at=self._parse_datetime(news_article.get("publishedAt")),
-                        content=news_article.get("content", news_article.get("description", "")),
+                        content=content,
                         keywords=[keyword],
                         collected_at=datetime.now(),
                         metadata={
@@ -168,12 +178,14 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                             "query": keyword,
                             "news_source": news_article.get("source", {}).get("name", "Unknown"),
                             "author": news_article.get("author", "Unknown"),
+                            "is_breakthrough": is_breakthrough,
+                            "language": news_article.get("language", "en"),
                         },
                     )
                     articles.append(article)
                     self._cache.add(url)
             except Exception as exc:
-            self._logger.warning("NewsAPI収集失敗 '%s': %s", keyword, exc)
+                self._logger.warning("NewsAPI収集失敗 '%s': %s", keyword, exc)
                 content = await self._generate_article_content(keyword, "news")
                 url = f"https://news.example.com/article/{keyword}"
                 if url not in self._cache:
@@ -257,6 +269,7 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
     async def _collect_from_rss(self, keywords: list[str]) -> list[Article]:
         """RSSから収集."""
         articles: list[Article] = []
+        fallback_entries: list[tuple[dict[str, Any], str]] = []
         feed_urls = config.collector.rss_feeds
         for feed_url in feed_urls:
             entries = await self._rss_fetcher.fetch(feed_url)
@@ -267,8 +280,16 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                 if not url or url in self._cache:
                     continue
 
+                matched_keywords = self._match_keywords_in_text(
+                    text=f"{title}\n{summary}",
+                    keywords=keywords,
+                )
+
                 if keywords:
-                    if not any(k.lower() in (title + summary).lower() for k in keywords):
+                    if not matched_keywords:
+                        # すべて不一致のケースに備え、候補を保持して後段でフォールバック採用する
+                        if len(fallback_entries) < 30:
+                            fallback_entries.append((entry, feed_url))
                         continue
 
                 published = entry.get("published")
@@ -279,7 +300,7 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                     source=SourceType.RSS,
                     published_at=self._parse_datetime(published),
                     content=summary,
-                    keywords=keywords or [],
+                    keywords=matched_keywords or keywords[:1],
                     collected_at=datetime.now(),
                     metadata={
                         "source_type": "rss",
@@ -288,7 +309,61 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                 )
                 articles.append(article)
                 self._cache.add(url)
+
+        # RSS が取得できているのにキーワード不一致で 0 件になる場合の救済
+        if not articles and keywords and fallback_entries:
+            for entry, feed_url in fallback_entries[:10]:
+                url = entry.get("link", "")
+                if not url or url in self._cache:
+                    continue
+                article = Article(
+                    id=str(uuid.uuid4()),
+                    title=entry.get("title", "") or "RSS Update",
+                    url=url,
+                    source=SourceType.RSS,
+                    published_at=self._parse_datetime(entry.get("published")),
+                    content=entry.get("summary", ""),
+                    keywords=keywords[:1],
+                    collected_at=datetime.now(),
+                    metadata={
+                        "source_type": "rss",
+                        "feed": feed_url,
+                        "keyword_fallback": True,
+                    },
+                )
+                articles.append(article)
+                self._cache.add(url)
         return articles
+
+    def _match_keywords_in_text(self, text: str, keywords: list[str]) -> list[str]:
+        """テキストに一致するキーワード一覧を返す."""
+        normalized = re.sub(r"\s+", " ", text).strip().lower()
+        matched: list[str] = []
+
+        for keyword in keywords:
+            candidate = keyword.strip().lower()
+            if not candidate:
+                continue
+
+            # 日本語など非ASCIIキーワードは部分一致
+            if any(ord(ch) > 127 for ch in candidate):
+                if candidate in normalized:
+                    matched.append(keyword)
+                continue
+
+            # 複合語は語単位でゆるく一致
+            tokens = [t for t in re.split(r"\s+", candidate) if t]
+            if len(tokens) > 1:
+                if all(token in normalized for token in tokens):
+                    matched.append(keyword)
+                continue
+
+            # 単語は境界一致優先、失敗時は部分一致
+            pattern = rf"\b{re.escape(candidate)}\b"
+            if re.search(pattern, normalized) or candidate in normalized:
+                matched.append(keyword)
+
+        return list(dict.fromkeys(matched))
 
     async def _generate_article_content(self, keyword: str, source: str) -> str:
         """LLM を使用して記事コンテンツを生成."""

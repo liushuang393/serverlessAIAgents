@@ -67,7 +67,7 @@ describe('TrendList', () => {
   it('空のリストの場合、メッセージを表示する', () => {
     render(<TrendList trends={[]} />);
 
-    expect(screen.getByText('データがありません')).toBeInTheDocument();
+    expect(screen.getByText('トレンドデータがまだありません。')).toBeInTheDocument();
   });
 
   it('センチメントチップを表示する', () => {
@@ -80,4 +80,3 @@ describe('TrendList', () => {
     expect(neutralChips.length).toBeGreaterThan(0);
   });
 });
-

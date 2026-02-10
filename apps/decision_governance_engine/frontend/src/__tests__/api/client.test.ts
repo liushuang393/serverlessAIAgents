@@ -26,6 +26,7 @@ describe('DecisionApiClient', () => {
     it('成功時にレスポンスを返す', async () => {
       const mockResponse = {
         status: 'success',
+        request_id: 'uuid-123',
         report_id: 'test-123',
         data: { dao: {}, fa: {}, shu: {}, qi: {}, review: {} },
       };
@@ -52,17 +53,19 @@ describe('DecisionApiClient', () => {
         statusText: 'Bad Request',
       });
 
-      const promise = client.processDecision({
-        question: 'テスト',
-        technical_constraints: [],
-        regulatory_constraints: [],
-        human_resources: [],
-      });
+      const rejection = expect(
+        client.processDecision({
+          question: 'テスト',
+          technical_constraints: [],
+          regulatory_constraints: [],
+          human_resources: [],
+        })
+      ).rejects.toThrow('リクエストが不正です');
 
       // タイマーを進めてリトライ遅延をスキップ
       await vi.runAllTimersAsync();
 
-      await expect(promise).rejects.toThrow('リクエストが不正です');
+      await rejection;
     });
 
     it('500エラー時にリトライする', async () => {
@@ -135,6 +138,7 @@ describe('DecisionApiClient', () => {
         },
         'test-request-id'
       );
+      const rejection = expect(promise).rejects.toThrow();
 
       // キャンセル実行
       client.cancelRequest('test-request-id');
@@ -142,7 +146,7 @@ describe('DecisionApiClient', () => {
       // タイマーを進める
       await vi.runAllTimersAsync();
 
-      await expect(promise).rejects.toThrow();
+      await rejection;
     });
   });
 
@@ -179,4 +183,3 @@ describe('DecisionApiClient', () => {
     });
   });
 });
-

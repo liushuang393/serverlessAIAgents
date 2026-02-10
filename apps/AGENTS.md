@@ -6,9 +6,11 @@
 ## Structure
 ```
 apps/
+├── code_migration_assistant
 ├── decision_governance_engine/
+├── design_skills_engine
+├── platform/
 ├── market_trend_monitor/
-├── code_migration_assistant/
 ├── faq_system/
 └── messaging_hub/
 ```

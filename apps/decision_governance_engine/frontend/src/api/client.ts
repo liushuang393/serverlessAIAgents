@@ -16,6 +16,8 @@ import type {
   DecisionRequest,
   DecisionAPIResponse,
   AGUIEvent,
+  FindingRecheckRequest,
+  FindingRecheckResponse,
   SignatureResponse,
   HistoryListResponse,
   HistoryDetailResponse,
@@ -75,6 +77,35 @@ const getRetryDelay = (attempt: number, config = DEFAULT_RETRY_CONFIG): number =
   const delay = config.baseDelay * Math.pow(2, attempt);
   const jitter = Math.random() * 1000;
   return Math.min(delay + jitter, config.maxDelay);
+};
+
+/** エクスポートファイル情報 */
+export interface ExportFileResponse {
+  blob: Blob;
+  contentType: string;
+  filename: string;
+}
+
+/**
+ * Content-Disposition からファイル名を抽出.
+ */
+const parseFilenameFromDisposition = (disposition: string | null): string | null => {
+  if (!disposition) {
+    return null;
+  }
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match && utf8Match[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+  const normalMatch = disposition.match(/filename="?([^";]+)"?/i);
+  if (normalMatch && normalMatch[1]) {
+    return normalMatch[1];
+  }
+  return null;
 };
 
 /**
@@ -326,9 +357,9 @@ export class DecisionApiClient {
    *
    * @param reportId レポートID
    * @param requestId リクエストID（キャンセル用）
-   * @returns PDF Blob
+   * @returns エクスポートファイル情報
    */
-  async exportPdf(reportId: string, requestId?: string): Promise<Blob> {
+  async exportPdf(reportId: string, requestId?: string): Promise<ExportFileResponse> {
     const controller = new AbortController();
     const id = requestId || `pdf-${Date.now()}`;
     this.abortControllers.set(id, controller);
@@ -338,8 +369,42 @@ export class DecisionApiClient {
         `${this.baseUrl}/api/report/${reportId}/pdf`,
         { signal: controller.signal }
       );
+      const blob = await response.blob();
+      const contentType = response.headers.get('content-type') || blob.type || 'application/octet-stream';
+      const filename =
+        parseFilenameFromDisposition(response.headers.get('content-disposition')) ||
+        `decision_report_${reportId}.pdf`;
 
-      return response.blob();
+      return { blob, contentType, filename };
+    } finally {
+      this.abortControllers.delete(id);
+    }
+  }
+
+  /**
+   * HTML エクスポート.
+   *
+   * @param reportId レポートID
+   * @param requestId リクエストID（キャンセル用）
+   * @returns エクスポートファイル情報
+   */
+  async exportHtml(reportId: string, requestId?: string): Promise<ExportFileResponse> {
+    const controller = new AbortController();
+    const id = requestId || `html-${Date.now()}`;
+    this.abortControllers.set(id, controller);
+
+    try {
+      const response = await this.fetchWithRetry(
+        `${this.baseUrl}/api/report/${reportId}/html`,
+        { signal: controller.signal }
+      );
+      const blob = await response.blob();
+      const contentType = response.headers.get('content-type') || blob.type || 'text/html';
+      const filename =
+        parseFilenameFromDisposition(response.headers.get('content-disposition')) ||
+        `decision_report_${reportId}.html`;
+
+      return { blob, contentType, filename };
     } finally {
       this.abortControllers.delete(id);
     }
@@ -391,6 +456,22 @@ export class DecisionApiClient {
     if (!response.ok) {
       throw DecisionApiError.fromResponse(response);
     }
+
+    return response.json();
+  }
+
+  /**
+   * 重要指摘の人間確認を AI で再評価.
+   */
+  async recheckFinding(request: FindingRecheckRequest): Promise<FindingRecheckResponse> {
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/human-review/recheck-finding`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      }
+    );
 
     return response.json();
   }

@@ -60,6 +60,7 @@ class DecisionRecord(Base):
     # 結果
     decision_role: Mapped[str] = mapped_column(String(20), nullable=False)
     confidence: Mapped[float | None] = mapped_column(Numeric(5, 4))
+    report_case_id: Mapped[str | None] = mapped_column(String(64))
 
     # 各セクション結果
     cognitive_gate_result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
@@ -73,6 +74,7 @@ class DecisionRecord(Base):
     # サマリ
     summary_bullets: Mapped[list[str] | None] = mapped_column(JSONB)
     warnings: Mapped[list[str] | None] = mapped_column(JSONB)
+    human_review_records: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
 
     # メタ情報
     requester_role: Mapped[str | None] = mapped_column(String(50))
@@ -135,4 +137,3 @@ class Claim(Base):
     # リレーション
     decision_record: Mapped["DecisionRecord"] = relationship(back_populates="claims")
     evidence_refs: Mapped[list["EvidenceItem"]] = relationship(secondary=claim_evidence_refs, back_populates="claims")
-

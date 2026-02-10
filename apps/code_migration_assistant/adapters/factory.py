@@ -71,9 +71,13 @@ class AdapterFactory:
         from apps.code_migration_assistant.adapters.target.java_adapter import (
             JavaAdapter,
         )
+        from apps.code_migration_assistant.adapters.target.springboot_adapter import (
+            SpringBootAdapter,
+        )
 
         self.register_source_adapter("COBOL", CobolAdapter)
         self.register_target_adapter("Java", JavaAdapter)
+        self.register_target_adapter("SpringBoot", SpringBootAdapter)
 
     @classmethod
     def register_source_adapter(

@@ -16,6 +16,47 @@ import type {
   ReportsResponse,
 } from '@/types';
 
+function normalizeBaseURL(baseURL: string): string {
+  return baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
+}
+
+function extractErrorMessage(data: unknown): string | null {
+  if (typeof data === 'string') {
+    return data;
+  }
+
+  if (data && typeof data === 'object') {
+    const detail = (data as { detail?: unknown }).detail;
+    if (typeof detail === 'string') {
+      return detail;
+    }
+
+    try {
+      return JSON.stringify(data);
+    } catch {
+      return null;
+    }
+  }
+
+  return null;
+}
+
+function resolveApiBaseURL(): string {
+  const envBaseURL = import.meta.env.VITE_API_BASE_URL as string | undefined;
+  if (typeof envBaseURL === 'string' && envBaseURL.trim().length > 0) {
+    return normalizeBaseURL(envBaseURL.trim());
+  }
+
+  if (
+    typeof __MARKET_TREND_MONITOR_API_BASE_URL__ === 'string' &&
+    __MARKET_TREND_MONITOR_API_BASE_URL__.trim().length > 0
+  ) {
+    return normalizeBaseURL(__MARKET_TREND_MONITOR_API_BASE_URL__);
+  }
+
+  return '/api';
+}
+
 /**
  * API エラークラス.
  */
@@ -36,9 +77,9 @@ export class ApiError extends Error {
 class ApiClient {
   private client: AxiosInstance;
 
-  constructor(baseURL: string = '/api') {
+  constructor(baseURL: string = resolveApiBaseURL()) {
     this.client = axios.create({
-      baseURL,
+      baseURL: normalizeBaseURL(baseURL),
       timeout: 30000,
       headers: {
         'Content-Type': 'application/json',
@@ -49,13 +90,12 @@ class ApiClient {
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        const message = error.response?.data
-          ? String(error.response.data)
-          : error.message;
+        const details = error.response?.data;
+        const message = extractErrorMessage(details) ?? error.message;
         throw new ApiError(
           message,
           error.response?.status,
-          error.response?.data
+          details
         );
       }
     );
@@ -67,7 +107,11 @@ class ApiClient {
   async collect(request: CollectRequest): Promise<CollectResponse> {
     const response = await this.client.post<CollectResponse>(
       '/collect',
-      request
+      request,
+      {
+        // 収集処理は外部API呼び出しを含むため、通常APIより長いタイムアウトを設定
+        timeout: 120000,
+      }
     );
     return response.data;
   }
@@ -93,6 +137,30 @@ class ApiClient {
   }
 
   /**
+   * レポートをバイナリ形式でエクスポート.
+   */
+  async exportReport(
+    reportId: string,
+    format: 'pdf' | 'pptx'
+  ): Promise<{ blob: Blob; filename: string }> {
+    const response = await this.client.get<Blob>(
+      `/reports/${reportId}/export/${format}`,
+      {
+        responseType: 'blob',
+      }
+    );
+
+    const disposition = response.headers['content-disposition'] as string | undefined;
+    const matched = disposition?.match(/filename=\"?([^\";]+)\"?/i);
+    const filename = matched?.[1] ?? `market_report_${reportId}.${format}`;
+
+    return {
+      blob: response.data,
+      filename,
+    };
+  }
+
+  /**
    * ヘルスチェック.
    */
   async healthCheck(): Promise<{ status: string }> {
@@ -103,4 +171,3 @@ class ApiClient {
 
 // シングルトンインスタンス
 export const apiClient = new ApiClient();
-

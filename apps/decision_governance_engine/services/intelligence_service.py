@@ -228,14 +228,102 @@ class IntelligenceService:
         return unique
 
     def _score_reliability(self, evidence: list[EvidenceItem]) -> list[EvidenceItem]:
-        """信頼度スコアリング.
+        """信頼度スコアリング v2（数値化 + 鮮度減衰対応）.
 
-        ルール（v1・簡易）:
-            - 政府/学術ドメイン(.gov/.edu/.ac) → HIGH
-            - 大手メディア/業界レポート → HIGH
-            - 一般ビジネスサイト → MEDIUM
-            - その他 → LOW
+        ルール:
+            1. ドメインスコア（config.evidence_reliability.domain_scores）
+            2. 鮮度減衰（config.evidence_reliability.freshness_decay）
+            3. 最終スコア = ドメインスコア × 鮮度係数
+            4. 3段階に変換（HIGH >= 0.75, MEDIUM >= 0.50, LOW < 0.50）
         """
+        from apps.decision_governance_engine.config import get_config
+
+        try:
+            config = get_config()
+            domain_scores = config.evidence_reliability.domain_scores
+            freshness_decay = config.evidence_reliability.freshness_decay
+        except Exception as e:
+            logger.warning(f"設定読み込み失敗、デフォルトスコアリングを使用: {e}")
+            return self._score_reliability_fallback(evidence)
+
+        scored: list[EvidenceItem] = []
+        for e in evidence:
+            # 1. ドメインスコア
+            domain_score = self._get_domain_score(e.url, domain_scores)
+
+            # 2. 鮮度減衰係数
+            age_days = (datetime.utcnow() - e.retrieved_at).days
+            freshness_factor = self._get_freshness_factor(age_days, freshness_decay)
+
+            # 3. 最終スコア（0.0-1.0）
+            final_score = domain_score * freshness_factor
+
+            # 4. タグボーナス（industry_report は +0.1）
+            if "industry_report" in e.tags:
+                final_score = min(1.0, final_score + 0.1)
+
+            # 5. 3段階に変換
+            if final_score >= 0.75:
+                reliability = EvidenceReliability.HIGH
+            elif final_score >= 0.50:
+                reliability = EvidenceReliability.MEDIUM
+            else:
+                reliability = EvidenceReliability.LOW
+
+            scored.append(e.model_copy(update={"reliability": reliability}))
+
+        return scored
+
+    def _get_domain_score(self, url: str, domain_scores: dict[str, float]) -> float:
+        """URL からドメインスコアを取得.
+
+        Args:
+            url: URL
+            domain_scores: ドメイン -> スコアのマッピング
+
+        Returns:
+            ドメインスコア（0.0-1.0）
+        """
+        url_lower = url.lower()
+
+        # 特定ドメインマッチ
+        if ".gov" in url_lower:
+            return domain_scores.get("gov", 0.95)
+        if ".edu" in url_lower or ".ac.jp" in url_lower:
+            return domain_scores.get("edu", 0.90)
+        if ".org" in url_lower:
+            return domain_scores.get("org", 0.75)
+        if ".com" in url_lower:
+            return domain_scores.get("com", 0.60)
+
+        return domain_scores.get("default", 0.50)
+
+    def _get_freshness_factor(
+        self, age_days: int, freshness_decay: dict[str, float]
+    ) -> float:
+        """鮮度減衰係数を取得.
+
+        Args:
+            age_days: 経過日数
+            freshness_decay: 減衰設定
+
+        Returns:
+            鮮度係数（0.0-1.0）
+        """
+        if age_days <= 30:
+            return freshness_decay.get("days_30", 1.0)
+        if age_days <= 90:
+            return freshness_decay.get("days_90", 0.9)
+        if age_days <= 180:
+            return freshness_decay.get("days_180", 0.7)
+        if age_days <= 365:
+            return freshness_decay.get("days_365", 0.5)
+        return freshness_decay.get("older", 0.3)
+
+    def _score_reliability_fallback(
+        self, evidence: list[EvidenceItem]
+    ) -> list[EvidenceItem]:
+        """フォールバック用の簡易スコアリング（v1 互換）."""
         high_domains = {".gov", ".edu", ".ac.jp", "reuters.com", "bloomberg.com", "nikkei.com"}
 
         scored: list[EvidenceItem] = []

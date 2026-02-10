@@ -135,12 +135,16 @@ const PhaseTimeline: React.FC<{ phases: Phase[] }> = ({ phases }) => (
 );
 
 export const ReportPage: React.FC = () => {
-  const { report, reportId, question, setPage, reset } = useDecisionStore();
+  const { report, reportId, requestId, question, setPage, setReport, reset } = useDecisionStore();
   const { user, performLogout } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabId>('summary');
-  const [isExporting, setIsExporting] = useState(false);
+  const [exportingType, setExportingType] = useState<"pdf" | "html" | null>(null);
   const [isSigning, setIsSigning] = useState(false);
   const [notification, setNotification] = useState<{type: NotificationType; message: string} | null>(null);
+  const [humanReviewNotes, setHumanReviewNotes] = useState<Record<number, string>>({});
+  const [humanReviewChecks, setHumanReviewChecks] = useState<Record<number, boolean>>({});
+  const [humanReviewIssues, setHumanReviewIssues] = useState<Record<number, string[]>>({});
+  const [recheckingFindingIndex, setRecheckingFindingIndex] = useState<number | null>(null);
   const [signatureStatus, setSignatureStatus] = useState<'unsigned' | 'signed'>('unsigned');
   const [signatureData, setSignatureData] = useState<SignatureData | null>(null);
   const [showSignedAnimation, setShowSignedAnimation] = useState(false);
@@ -154,15 +158,16 @@ export const ReportPage: React.FC = () => {
 
   /** PDF エクスポート */
   const handleExportPdf = useCallback(async () => {
-    if (!reportId) return;
-    setIsExporting(true);
+    const exportId = requestId || reportId;
+    if (!exportId) return;
+    setExportingType("pdf");
 
     try {
-      const blob = await decisionApi.exportPdf(reportId);
-      const url = URL.createObjectURL(blob);
+      const exported = await decisionApi.exportPdf(exportId);
+      const url = URL.createObjectURL(exported.blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `decision-report-${reportId}.pdf`;
+      a.download = exported.filename;
       a.click();
       URL.revokeObjectURL(url);
       setNotification({ type: 'success', message: 'PDFをダウンロードしました' });
@@ -170,9 +175,32 @@ export const ReportPage: React.FC = () => {
       const message = err instanceof Error ? err.message : 'PDF生成に失敗しました';
       setNotification({ type: 'error', message });
     } finally {
-      setIsExporting(false);
+      setExportingType(null);
     }
-  }, [reportId]);
+  }, [requestId, reportId]);
+
+  /** HTML エクスポート */
+  const handleExportHtml = useCallback(async () => {
+    const exportId = requestId || reportId;
+    if (!exportId) return;
+    setExportingType("html");
+
+    try {
+      const exported = await decisionApi.exportHtml(exportId);
+      const url = URL.createObjectURL(exported.blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = exported.filename;
+      a.click();
+      URL.revokeObjectURL(url);
+      setNotification({ type: 'success', message: 'HTMLをダウンロードしました' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'HTML生成に失敗しました';
+      setNotification({ type: 'error', message });
+    } finally {
+      setExportingType(null);
+    }
+  }, [requestId, reportId]);
 
   /** 電子署名処理 */
   const handleSign = useCallback(async () => {
@@ -227,6 +255,83 @@ export const ReportPage: React.FC = () => {
     reset();
     setPage('input');
   }, [reset, setPage]);
+
+  /** 重要指摘かどうかを判定（設定優先 + 後方互換） */
+  const isImportantFinding = useCallback((finding: { severity: string; requires_human_review?: boolean }) => {
+    if (typeof finding.requires_human_review === "boolean") {
+      return finding.requires_human_review;
+    }
+    return finding.severity === "CRITICAL" || finding.severity === "WARNING";
+  }, []);
+
+  /** 人間確認コメントを送信して再判定 */
+  const handleRecheckFinding = useCallback(
+    async (findingIndex: number) => {
+      if (!report) {
+        return;
+      }
+
+      const note = (humanReviewNotes[findingIndex] || "").trim();
+      const acknowledged = Boolean(humanReviewChecks[findingIndex]);
+
+      if (!acknowledged) {
+        setNotification({ type: "error", message: "確認チェックボックスをオンにしてください" });
+        return;
+      }
+      if (note.length < 10) {
+        setNotification({ type: "error", message: "確認内容を10文字以上入力してください" });
+        return;
+      }
+
+      setRecheckingFindingIndex(findingIndex);
+      try {
+        const response = await decisionApi.recheckFinding({
+          report_id: report.report_id,
+          request_id: requestId || undefined,
+          finding_index: findingIndex,
+          confirmation_note: note,
+          acknowledged,
+          reviewer_name: user?.display_name,
+        });
+
+        if (response.resolved && response.updated_review) {
+          setReport({
+            ...report,
+            review: response.updated_review,
+          });
+          setNotification({ type: "success", message: response.message });
+          setHumanReviewIssues((prev) => {
+            const next = { ...prev };
+            delete next[findingIndex];
+            return next;
+          });
+          setHumanReviewNotes((prev) => {
+            const next = { ...prev };
+            delete next[findingIndex];
+            return next;
+          });
+          setHumanReviewChecks((prev) => {
+            const next = { ...prev };
+            delete next[findingIndex];
+            return next;
+          });
+          return;
+        }
+
+        setHumanReviewIssues((prev) => ({
+          ...prev,
+          [findingIndex]: response.issues || ["確認内容が不足しています"],
+        }));
+        setNotification({ type: "info", message: response.message });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "再判定に失敗しました";
+        setNotification({ type: "error", message });
+      } finally {
+        setRecheckingFindingIndex(null);
+      }
+    },
+    [humanReviewChecks, humanReviewNotes, report, requestId, setReport, user]
+  );
 
   if (!report) return null;
 
@@ -385,10 +490,17 @@ export const ReportPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 onClick={handleExportPdf}
-                disabled={isExporting}
+                disabled={exportingType !== null}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm flex items-center gap-2 transition-all"
               >
-                📄 {isExporting ? '生成中...' : 'PDF出力'}
+                📄 {exportingType === 'pdf' ? '生成中...' : 'PDF出力'}
+              </button>
+              <button
+                onClick={handleExportHtml}
+                disabled={exportingType !== null}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm flex items-center gap-2 transition-all"
+              >
+                🧾 {exportingType === 'html' ? '生成中...' : 'HTML出力'}
               </button>
               <button
                 onClick={() => setPage('history')}
@@ -1380,6 +1492,65 @@ export const ReportPage: React.FC = () => {
                                   <span>💡</span> 修正提案
                                 </div>
                                 <p className="text-sm text-slate-400">{finding.suggested_revision}</p>
+                              </div>
+                            )}
+
+                            {isImportantFinding(finding) && safeReview.overall_verdict !== "PASS" && (
+                              <div className="mt-4 p-4 rounded-lg border border-indigo-500/20 bg-indigo-500/5 space-y-3">
+                                <div className="text-sm font-medium text-indigo-300">
+                                  人間確認でこの指摘を再判定
+                                </div>
+                                {finding.human_review_hint && (
+                                  <div className="text-xs text-indigo-200">{finding.human_review_hint}</div>
+                                )}
+                                <textarea
+                                  value={humanReviewNotes[i] ?? ""}
+                                  onChange={(event) =>
+                                    setHumanReviewNotes((prev) => ({
+                                      ...prev,
+                                      [i]: event.target.value,
+                                    }))
+                                  }
+                                  placeholder="対応内容・責任者・期限・承認方法を具体的に記載してください"
+                                  className="w-full min-h-[100px] px-3 py-2 rounded-lg bg-[#0a0a0f] border border-white/10 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50"
+                                />
+                                <label className="flex items-center gap-2 text-sm text-slate-300">
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(humanReviewChecks[i])}
+                                    onChange={(event) =>
+                                      setHumanReviewChecks((prev) => ({
+                                        ...prev,
+                                        [i]: event.target.checked,
+                                      }))
+                                    }
+                                    className="rounded border-slate-500 bg-transparent"
+                                  />
+                                  指摘内容を確認し、上記内容で妥当性再判定を依頼します
+                                </label>
+                                {humanReviewIssues[i] && humanReviewIssues[i].length > 0 && (
+                                  <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
+                                    <div className="text-xs text-amber-300 mb-1">不足点</div>
+                                    <ul className="space-y-1">
+                                      {humanReviewIssues[i].map((issue, issueIdx) => (
+                                        <li key={issueIdx} className="text-sm text-amber-200">
+                                          • {issue}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                <button
+                                  onClick={() => handleRecheckFinding(i)}
+                                  disabled={recheckingFindingIndex === i}
+                                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                                    recheckingFindingIndex === i
+                                      ? "bg-slate-700 text-slate-400 cursor-wait"
+                                      : "bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30"
+                                  }`}
+                                >
+                                  {recheckingFindingIndex === i ? "再判定中..." : "チェックして再判定"}
+                                </button>
                               </div>
                             )}
                           </div>

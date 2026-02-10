@@ -22,6 +22,10 @@ class JavaAdapter(TargetLanguageAdapter):
     Javaのコードスケルトンとテストコードを生成し、コンパイルと実行を行う。
     """
 
+    def __init__(self, use_spring_boot: bool = True) -> None:
+        """初期化."""
+        self.use_spring_boot = use_spring_boot
+
     # COBOL → Java 型マッピング
     TYPE_MAP = {
         "numeric": "int",
@@ -63,11 +67,20 @@ class JavaAdapter(TargetLanguageAdapter):
             lines.append("import java.math.RoundingMode;")
             lines.append("")
 
+        if self.use_spring_boot:
+            lines.append("import lombok.Data;")
+            lines.append("import org.springframework.stereotype.Service;")
+            lines.append("import org.springframework.web.bind.annotation.*;")
+            lines.append("")
+
         # Class header
         lines.append("/**")
         lines.append(f" * 移行元: {ast.program_id}")
-        lines.append(" * 生成者: CodeMigrationAgent")
+        lines.append(" * 生成者: CodeMigrationAgent (Legacy-to-Agent™)")
         lines.append(" */")
+        if self.use_spring_boot:
+            lines.append("@Service")
+            lines.append("@Data")
         lines.append(f"public class {class_name} {{")
         lines.append("")
 

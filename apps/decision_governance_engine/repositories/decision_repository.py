@@ -12,6 +12,7 @@
 import json
 import logging
 from datetime import datetime
+from enum import Enum
 from typing import Any
 from uuid import UUID
 
@@ -50,6 +51,7 @@ class DecisionRepository:
         decision_role: str,
         mode: str = "STANDARD",
         confidence: float | None = None,
+        report_case_id: str | None = None,
         results: dict[str, Any] | None = None,
         evidence: list[dict[str, Any]] | None = None,
         claims: list[dict[str, Any]] | None = None,
@@ -65,6 +67,7 @@ class DecisionRepository:
             decision_role: GO/NO_GO/DELAY/PILOT
             mode: FAST/STANDARD/AUDIT
             confidence: 確信度
+            report_case_id: 提案書ID（PROP-*）
             results: 各セクション結果 dict
             evidence: 証拠リスト
             claims: クレームリスト
@@ -75,7 +78,9 @@ class DecisionRepository:
         Returns:
             保存された DecisionRecord
         """
-        results = results or {}
+        results = self._to_jsonable(results or {})
+        evidence = self._to_jsonable(evidence or [])
+        claims = self._to_jsonable(claims or [])
 
         async with get_db_session() as session:
             record = DecisionRecord(
@@ -84,6 +89,7 @@ class DecisionRepository:
                 mode=mode,
                 decision_role=decision_role,
                 confidence=confidence,
+                report_case_id=report_case_id,
                 cognitive_gate_result=results.get("cognitive_gate"),
                 gatekeeper_result=results.get("gatekeeper"),
                 dao_result=results.get("dao"),
@@ -137,6 +143,19 @@ class DecisionRepository:
         async with get_db_session() as session:
             result = await session.execute(
                 select(DecisionRecord).where(DecisionRecord.request_id == request_id)
+            )
+            return result.scalar_one_or_none()
+
+    async def find_by_report_case_id(
+        self,
+        report_case_id: str,
+    ) -> DecisionRecord | None:
+        """提案書ID（PROP-*）で決策記録を検索."""
+        async with get_db_session() as session:
+            result = await session.execute(
+                select(DecisionRecord).where(
+                    DecisionRecord.report_case_id == report_case_id
+                )
             )
             return result.scalar_one_or_none()
 
@@ -199,6 +218,69 @@ class DecisionRepository:
                 return True
             return False
 
+    async def append_human_review_record(
+        self,
+        request_id: UUID,
+        review_record: dict[str, Any],
+        updated_review: dict[str, Any] | None = None,
+    ) -> bool:
+        """人間確認レコードを review_result に追記."""
+        async with get_db_session() as session:
+            result = await session.execute(
+                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
+            )
+            record = result.scalar_one_or_none()
+            if record is None:
+                return False
+
+            current_review = record.review_result or {}
+            if not isinstance(current_review, dict):
+                current_review = {}
+            history = current_review.get("human_review_records", [])
+            if not isinstance(history, list):
+                history = []
+
+            history.append(self._to_jsonable(review_record))
+            current_review["human_review_records"] = history[-50:]
+
+            if updated_review:
+                normalized_review = self._to_jsonable(updated_review)
+                for key in ["overall_verdict", "confidence_score", "findings", "final_warnings"]:
+                    if key in normalized_review:
+                        current_review[key] = normalized_review[key]
+
+            record.review_result = current_review
+            record.human_review_records = current_review["human_review_records"]
+            return True
+
+    def _to_jsonable(self, value: Any) -> Any:
+        """JSONB 保存可能な形式へ正規化."""
+        if value is None:
+            return None
+        if isinstance(value, (str, int, float, bool)):
+            return value
+        if isinstance(value, Enum):
+            return value.value
+        if isinstance(value, datetime):
+            return value.isoformat()
+        if isinstance(value, UUID):
+            return str(value)
+        if hasattr(value, "model_dump"):
+            try:
+                return self._to_jsonable(value.model_dump())
+            except Exception:
+                return self._to_jsonable(dict(value))  # type: ignore[arg-type]
+        if isinstance(value, dict):
+            return {
+                str(k): self._to_jsonable(v)
+                for k, v in value.items()
+            }
+        if isinstance(value, list):
+            return [self._to_jsonable(v) for v in value]
+        if isinstance(value, tuple):
+            return [self._to_jsonable(v) for v in value]
+        return str(value)
+
     async def _get_from_cache(self, key: str) -> dict[str, Any] | None:
         """Redis キャッシュから取得."""
         redis = await get_redis()
@@ -248,4 +330,3 @@ class DecisionRepository:
             await redis.delete(f"{self._cache_prefix}{key}")
         except Exception as e:
             logger.warning(f"Cache invalidate failed: {e}")
-

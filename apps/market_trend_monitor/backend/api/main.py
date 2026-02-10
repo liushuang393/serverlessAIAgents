@@ -46,6 +46,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     logger.info("Market Trend Monitor API を起動中")
     await init_db()
     await source_registry_service.ensure_defaults()
+    from apps.market_trend_monitor.backend.api.state import store
+    await store.initialize()
     await workflow.initialize()
 
     yield

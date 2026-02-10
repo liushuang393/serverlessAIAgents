@@ -30,7 +30,7 @@ class PDFGeneratorService:
             from reportlab.lib.pagesizes import A4  # noqa: F401
             return True
         except ImportError:
-            self._logger.warning("ReportLab not installed. PDF export will use HTML fallback.")
+            self._logger.warning("ReportLab not installed. PDF export is unavailable.")
             return False
 
     def generate_pdf(self, report: DecisionReport) -> bytes:
@@ -52,16 +52,23 @@ class PDFGeneratorService:
         if report is None:
             raise ValueError("report cannot be None")
 
+        if not self._has_reportlab:
+            raise RuntimeError("ReportLab が未インストールのため PDF 出力できません")
+
         try:
-            if self._has_reportlab:
-                return self._generate_with_reportlab(report)
-            return self._generate_html_fallback(report)
+            return self._generate_with_reportlab(report)
         except Exception as e:
             self._logger.error(
                 f"PDF generation failed: {type(e).__name__}: {e}",
                 exc_info=True,
             )
             raise RuntimeError(f"PDF生成に失敗しました: {e}") from e
+
+    def generate_html(self, report: DecisionReport) -> bytes:
+        """HTMLを生成."""
+        if report is None:
+            raise ValueError("report cannot be None")
+        return self._generate_html_fallback(report)
 
     def _to_dict(self, obj: Any) -> dict:
         """Pydanticオブジェクトまたはdictをdictに変換.
@@ -122,6 +129,19 @@ class PDFGeneratorService:
         qi = self._to_dict(report.qi)
         review = self._to_dict(report.review)
 
+        # 表紙情報（proposal_title / signature_block）
+        proposal_title = self._to_dict(report.proposal_title) if report.proposal_title else {}
+        title_ja = proposal_title.get("title_ja", "提案書")
+        title_en = proposal_title.get("title_en", "")
+        case_id = proposal_title.get("case_id", report.report_id)
+        subtitle = proposal_title.get("subtitle", "")
+
+        sig_block = self._to_dict(report.signature_block) if report.signature_block else {}
+        author_name = sig_block.get("author_name", "")
+        author_dept = sig_block.get("author_department", "")
+        author_pos = sig_block.get("author_position", "")
+        created_date = sig_block.get("created_date", report.created_at.strftime("%Y年%m月%d日"))
+
         # CJK対応スタイル
         title_style = ParagraphStyle(
             "CJKTitle", parent=styles["Title"], fontSize=18, fontName=cjk_font
@@ -143,36 +163,47 @@ class PDFGeneratorService:
         )
 
         # ========== タイトル ==========
-        elements.append(Paragraph("決策レポート v3.0", title_style))
-        elements.append(Paragraph(f"Report ID: {report.report_id}", normal_style))
-        elements.append(Paragraph(
-            f"生成日時: {report.created_at.strftime('%Y-%m-%d %H:%M')} | Version: {report.version}", normal_style
-        ))
+        elements.append(Paragraph(title_ja, title_style))
+        if title_en:
+            elements.append(Paragraph(title_en, normal_style))
+        if subtitle:
+            elements.append(Paragraph(subtitle, normal_style))
+        elements.append(Paragraph(f"案件ID: {case_id}", normal_style))
+        if report.original_question:
+            elements.append(Paragraph(f"対象質問: {report.original_question}", normal_style))
+        elements.append(
+            Paragraph(
+                f"作成日: {created_date} | 生成日時: {report.created_at.strftime('%Y-%m-%d %H:%M')} | Version: {report.version}",
+                normal_style,
+            )
+        )
+        if any([author_dept, author_pos, author_name]):
+            elements.append(Paragraph(f"作成: {author_dept} {author_pos} {author_name}".strip(), normal_style))
         elements.append(Spacer(1, 0.5*cm))
 
         # ========== エグゼクティブサマリー ==========
-        elements.append(Paragraph("📊 エグゼクティブサマリー", heading_style))
+        elements.append(Paragraph("エグゼクティブサマリー", heading_style))
         summary = report.executive_summary
         elements.append(Paragraph(f"<b>結論:</b> {summary.one_line_decision}", highlight_style))
 
         if hasattr(summary, "essence_statement") and summary.essence_statement:
             elements.append(Paragraph(f"<b>本質:</b> {summary.essence_statement}", normal_style))
         elements.append(Paragraph(f"<b>推奨アクション:</b> {summary.recommended_action}", normal_style))
-        elements.append(Paragraph(f"<b>最初の一歩:</b> 🎯 {summary.first_step}", normal_style))
+        elements.append(Paragraph(f"<b>最初の一歩:</b> {summary.first_step}", normal_style))
 
         if hasattr(summary, "strategic_prohibition_summary") and summary.strategic_prohibition_summary:
-            elements.append(Paragraph(f"<b>⛔ 戦略的禁止:</b> {summary.strategic_prohibition_summary}", warning_style))
+            elements.append(Paragraph(f"<b>戦略的禁止:</b> {summary.strategic_prohibition_summary}", warning_style))
         if hasattr(summary, "exit_criteria_summary") and summary.exit_criteria_summary:
-            elements.append(Paragraph(f"<b>🚪 撤退基準:</b> {summary.exit_criteria_summary}", warning_style))
+            elements.append(Paragraph(f"<b>撤退基準:</b> {summary.exit_criteria_summary}", warning_style))
 
         if summary.key_risks:
             elements.append(Paragraph("<b>主要リスク:</b>", normal_style))
             for risk in summary.key_risks:
-                elements.append(Paragraph(f"  ⚠️ {risk}", normal_style))
+                elements.append(Paragraph(f"  - {risk}", normal_style))
         elements.append(Spacer(1, 0.5*cm))
 
         # ========== 道セクション ==========
-        elements.append(Paragraph("🎯 道 - 本質分析", heading_style))
+        elements.append(Paragraph("道 - 本質分析", heading_style))
         problem_type = dao.get("problem_type", "N/A")
         if hasattr(problem_type, "value"):
             problem_type = problem_type.value
@@ -187,7 +218,7 @@ class PDFGeneratorService:
         # 本質導出プロセス
         ed = dao.get("essence_derivation", {})
         if ed:
-            elements.append(Paragraph("🔍 本質導出プロセス", subheading_style))
+            elements.append(Paragraph("本質導出プロセス", subheading_style))
             elements.append(Paragraph(f"表面的問題: {ed.get('surface_problem', '')}", normal_style))
             elements.append(Paragraph(f"一段深い理由: {ed.get('underlying_why', '')}", normal_style))
             elements.append(Paragraph(f"根本制約: {ed.get('root_constraint', '')}", normal_style))
@@ -196,42 +227,68 @@ class PDFGeneratorService:
         # 既存代替手段
         alternatives = dao.get("existing_alternatives", [])
         if alternatives:
-            elements.append(Paragraph("🔄 既存代替手段", subheading_style))
+            elements.append(Paragraph("既存代替手段", subheading_style))
             for alt in alternatives:
                 elements.append(Paragraph(
                     f"• <b>{alt.get('name', '')}</b>: {alt.get('why_not_viable', '')} (制約: {alt.get('specific_constraint', '')})",
                     normal_style
                 ))
 
+        immutable_constraints = dao.get("immutable_constraints", [])
+        if immutable_constraints:
+            elements.append(Paragraph("不可変制約", subheading_style))
+            for c in immutable_constraints:
+                elements.append(Paragraph(f"  - {c}", warning_style))
+
+        hidden_assumptions = dao.get("hidden_assumptions", [])
+        if hidden_assumptions:
+            elements.append(Paragraph("隠れた前提", subheading_style))
+            for a in hidden_assumptions:
+                elements.append(Paragraph(f"  - {a}", normal_style))
+
+        gears = dao.get("causal_gears", [])
+        if gears:
+            elements.append(Paragraph("因果齿轮", subheading_style))
+            for g in gears:
+                elements.append(
+                    Paragraph(
+                        f"  - {g.get('name', '')} (Leverage: {g.get('leverage', '')}): {g.get('description', '')}",
+                        normal_style,
+                    )
+                )
+            bottleneck = dao.get("bottleneck_gear", "")
+            if bottleneck:
+                elements.append(Paragraph(f"ボトルネック: {bottleneck}", highlight_style))
+
         # 死穴
         traps = dao.get("death_traps", [])
         if traps:
-            elements.append(Paragraph("💀 死穴（禁忌）", subheading_style))
+            elements.append(Paragraph("死穴（禁忌）", subheading_style))
             for trap in traps:
                 elements.append(Paragraph(
-                    f"⚠️ <b>{trap.get('action', '')}</b> ({trap.get('severity', '')}): {trap.get('reason', '')}",
+                    f"- <b>{trap.get('action', '')}</b> ({trap.get('severity', '')}): {trap.get('reason', '')}",
                     warning_style
                 ))
         elements.append(Spacer(1, 0.3*cm))
 
         # ========== 法セクション ==========
         elements.append(PageBreak())
-        elements.append(Paragraph("⚖️ 法 - 戦略選定", heading_style))
+        elements.append(Paragraph("法 - 戦略選定", heading_style))
 
         # 戦略的禁止事項
         prohibitions = fa.get("strategic_prohibitions", [])
         if prohibitions:
-            elements.append(Paragraph("🚫 戦略的禁止事項", subheading_style))
+            elements.append(Paragraph("戦略的禁止事項", subheading_style))
             for p in prohibitions:
                 elements.append(Paragraph(
-                    f"⛔ <b>{p.get('prohibition', '')}</b>: {p.get('rationale', '')} → {p.get('violation_consequence', '')}",
+                    f"- <b>{p.get('prohibition', '')}</b>: {p.get('rationale', '')} → {p.get('violation_consequence', '')}",
                     warning_style
                 ))
 
         # 差別化軸
         diff_axis = fa.get("differentiation_axis", {})
         if diff_axis:
-            elements.append(Paragraph("🎯 差別化軸", subheading_style))
+            elements.append(Paragraph("差別化軸", subheading_style))
             elements.append(Paragraph(f"<b>勝負する軸:</b> {diff_axis.get('axis_name', '')}", highlight_style))
             elements.append(Paragraph(f"理由: {diff_axis.get('why_this_axis', '')}", normal_style))
             elements.append(Paragraph(f"<b>勝負しない軸:</b> {diff_axis.get('not_this_axis', '')}", normal_style))
@@ -246,7 +303,7 @@ class PDFGeneratorService:
             strategy_type = path.get("strategy_type", "")
             if hasattr(strategy_type, "value"):
                 strategy_type = strategy_type.value
-            elements.append(Paragraph(f"📌 {path.get('name', '')} ({strategy_type})", subheading_style))
+            elements.append(Paragraph(f"{path.get('name', '')} ({strategy_type})", subheading_style))
             elements.append(Paragraph(path.get("description", ""), normal_style))
             elements.append(Paragraph(
                 f"成功確率: {path.get('success_probability', 0)*100:.0f}% | "
@@ -254,27 +311,37 @@ class PDFGeneratorService:
                 f"可逆性: {path.get('reversibility', '')}",
                 normal_style
             ))
+            pros = path.get("pros", [])
+            if pros:
+                elements.append(Paragraph("<b>メリット:</b>", normal_style))
+                for pro in pros:
+                    elements.append(Paragraph(f"  - {pro}", normal_style))
+            cons = path.get("cons", [])
+            if cons:
+                elements.append(Paragraph("<b>デメリット:</b>", normal_style))
+                for con in cons:
+                    elements.append(Paragraph(f"  - {con}", warning_style))
         elements.append(Spacer(1, 0.3*cm))
 
         # ========== 術セクション ==========
-        elements.append(Paragraph("📋 術 - 実行計画", heading_style))
+        elements.append(Paragraph("術 - 実行計画", heading_style))
 
         # 最初の一歩
         first_action = shu.get("first_action", "")
         if first_action:
-            elements.append(Paragraph(f"🎯 <b>最初の一歩:</b> {first_action}", highlight_style))
+            elements.append(Paragraph(f"<b>最初の一歩:</b> {first_action}", highlight_style))
 
         # 切り捨てリスト
         cut_list = shu.get("cut_list", [])
         if cut_list:
-            elements.append(Paragraph("✂️ 切り捨てリスト（最初の30日間でやらないこと）", subheading_style))
+            elements.append(Paragraph("切り捨てリスト（最初の30日間でやらないこと）", subheading_style))
             for c in cut_list:
-                elements.append(Paragraph(f"  ❌ {c}", warning_style))
+                elements.append(Paragraph(f"  - {c}", warning_style))
 
         # 文脈特化行動
         context_actions = shu.get("context_specific_actions", [])
         if context_actions:
-            elements.append(Paragraph("🎯 文脈特化行動", subheading_style))
+            elements.append(Paragraph("文脈特化行動", subheading_style))
             for a in context_actions:
                 elements.append(Paragraph(
                     f"• <b>{a.get('action', '')}</b> → {a.get('expected_output', '')}",
@@ -284,7 +351,7 @@ class PDFGeneratorService:
         # 単一検証ポイント
         validation = shu.get("single_validation_point", {})
         if validation:
-            elements.append(Paragraph("🔬 単一検証ポイント", subheading_style))
+            elements.append(Paragraph("単一検証ポイント", subheading_style))
             elements.append(Paragraph(
                 f"検証: {validation.get('validation_target', '')} | "
                 f"基準: {validation.get('success_criteria', '')} | "
@@ -295,7 +362,7 @@ class PDFGeneratorService:
         # 撤退基準
         exit_criteria = shu.get("exit_criteria", {})
         if exit_criteria:
-            elements.append(Paragraph("🚪 撤退基準", subheading_style))
+            elements.append(Paragraph("撤退基準", subheading_style))
             elements.append(Paragraph(
                 f"チェック: {exit_criteria.get('checkpoint', '')} | "
                 f"トリガー: {exit_criteria.get('exit_trigger', '')} | "
@@ -303,8 +370,14 @@ class PDFGeneratorService:
                 warning_style
             ))
 
+        dependencies = shu.get("dependencies", [])
+        if dependencies:
+            elements.append(Paragraph("依存関係", subheading_style))
+            for dep in dependencies:
+                elements.append(Paragraph(f"  - {dep}", normal_style))
+
         # フェーズ
-        elements.append(Paragraph("📅 フェーズ", subheading_style))
+        elements.append(Paragraph("フェーズ", subheading_style))
         for phase in shu.get("phases", []):
             elements.append(Paragraph(
                 f"Phase {phase.get('phase_number', '?')}: {phase.get('name', '')} ({phase.get('duration', '')})",
@@ -312,18 +385,18 @@ class PDFGeneratorService:
             ))
             actions = phase.get("actions", [])
             if actions:
-                for action in actions[:3]:
+                for action in actions:
                     elements.append(Paragraph(f"    • {action}", normal_style))
         elements.append(Spacer(1, 0.3*cm))
 
         # ========== 器セクション ==========
         elements.append(PageBreak())
-        elements.append(Paragraph("🔧 器 - 技術実装", heading_style))
+        elements.append(Paragraph("器 - 技術実装", heading_style))
 
         # ドメイン固有技術
         domain_techs = qi.get("domain_technologies", [])
         if domain_techs:
-            elements.append(Paragraph("🛠️ ドメイン固有技術", subheading_style))
+            elements.append(Paragraph("ドメイン固有技術", subheading_style))
             for t in domain_techs:
                 elements.append(Paragraph(
                     f"• <b>{t.get('technology_name', '')}</b> ({t.get('category', '')}): {t.get('why_required', '')}",
@@ -333,7 +406,7 @@ class PDFGeneratorService:
         # 規制対応
         regulations = qi.get("regulatory_considerations", [])
         if regulations:
-            elements.append(Paragraph("📜 規制対応事項", subheading_style))
+            elements.append(Paragraph("規制対応事項", subheading_style))
             reg_data = [["地域", "規制", "要件", "影響"]]
             for r in regulations:
                 reg_data.append([
@@ -354,7 +427,7 @@ class PDFGeneratorService:
         # 地理的考慮
         geographics = qi.get("geographic_considerations", [])
         if geographics:
-            elements.append(Paragraph("🌍 地理的考慮事項", subheading_style))
+            elements.append(Paragraph("地理的考慮事項", subheading_style))
             for g in geographics:
                 elements.append(Paragraph(
                     f"• {g.get('region', '')}: {g.get('latency_requirement', '')} | {g.get('infrastructure_need', '')}",
@@ -364,13 +437,35 @@ class PDFGeneratorService:
         # 実装要素
         for impl in qi.get("implementations", []):
             elements.append(Paragraph(
-                f"🔧 {impl.get('component', '')}: {impl.get('technology', '')} ({impl.get('estimated_effort', '')})",
+                f"{impl.get('component', '')}: {impl.get('technology', '')} ({impl.get('estimated_effort', '')})",
                 normal_style
             ))
+            risks = impl.get("risks", [])
+            if risks:
+                for r in risks:
+                    elements.append(Paragraph(f"  - リスク: {r}", warning_style))
+
+        tools = qi.get("tool_recommendations", [])
+        if tools:
+            elements.append(Paragraph("推奨ツール", subheading_style))
+            for t in tools:
+                elements.append(Paragraph(f"  - {t}", normal_style))
+
+        integration = qi.get("integration_points", [])
+        if integration:
+            elements.append(Paragraph("統合ポイント", subheading_style))
+            for i in integration:
+                elements.append(Paragraph(f"  - {i}", normal_style))
+
+        debt_warnings = qi.get("technical_debt_warnings", [])
+        if debt_warnings:
+            elements.append(Paragraph("技術負債警告", subheading_style))
+            for w in debt_warnings:
+                elements.append(Paragraph(f"  - {w}", warning_style))
         elements.append(Spacer(1, 0.3*cm))
 
         # ========== 検証セクション ==========
-        elements.append(Paragraph("✅ 検証 - 最終判定", heading_style))
+        elements.append(Paragraph("検証 - 最終判定", heading_style))
         verdict = review.get("overall_verdict", "N/A")
         if hasattr(verdict, "value"):
             verdict = verdict.value
@@ -385,15 +480,26 @@ class PDFGeneratorService:
                     f"• {f.get('severity', '')}: {f.get('description', '')}",
                     normal_style
                 ))
+        final_warnings = review.get("final_warnings", [])
+        if final_warnings:
+            elements.append(Paragraph("最終警告", subheading_style))
+            for w in final_warnings:
+                elements.append(Paragraph(f"  - {w}", warning_style))
         elements.append(Spacer(1, 0.5*cm))
 
         # ========== 署名欄 ==========
-        elements.append(Paragraph("✍️ 署名欄", heading_style))
-        sig_data = [["承認者", "", "日付", ""], ["署名", "", "", ""]]
-        sig_table = Table(sig_data, colWidths=[3*cm, 6*cm, 2*cm, 4*cm])
+        elements.append(Paragraph("署名欄", heading_style))
+        sig_data = [
+            ["作成", "部署", author_dept, "役職", author_pos],
+            ["", "氏名", author_name, "日付", created_date],
+            ["承認", "部署", "", "役職", ""],
+            ["", "氏名", "", "日付", ""],
+        ]
+        sig_table = Table(sig_data, colWidths=[1.6 * cm, 2.2 * cm, 6.0 * cm, 1.6 * cm, 4.6 * cm])
         sig_table.setStyle(TableStyle([
             ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
             ("FONTNAME", (0, 0), (-1, -1), cjk_font),
+            ("BACKGROUND", (0, 0), (-1, 0), colors.Color(0.95, 0.95, 0.95)),
         ]))
         elements.append(sig_table)
 
@@ -437,41 +543,41 @@ class PDFGeneratorService:
 <head><meta charset="UTF-8"><title>提案書 - {title_ja}</title>
 <style>
 @page {{ size: A4; margin: 2cm; }}
-body{{font-family:'Yu Gothic','Hiragino Sans','Meiryo',sans-serif;max-width:900px;margin:0 auto;padding:30px;color:#333;line-height:1.8}}
-.cover{{text-align:center;padding:60px 0;border:3px double #2c3e50;margin-bottom:40px;background:linear-gradient(135deg,#fafbfc,#f0f2f5)}}
-.cover-title{{font-size:32px;font-weight:bold;color:#2c3e50;margin:20px 0 10px;letter-spacing:2px}}
-.cover-title-en{{font-size:14px;color:#7f8c8d;font-family:'Helvetica Neue',Arial,sans-serif;letter-spacing:1px}}
-.cover-subtitle{{font-size:16px;color:#555;margin:20px 0}}
-.cover-case-id{{font-size:12px;color:#999;font-family:monospace}}
-.cover-date{{font-size:14px;color:#555;margin-top:40px}}
-.cover-author{{font-size:14px;color:#555;margin-top:10px}}
-h1{{border-bottom:3px solid #2c3e50;padding-bottom:10px;color:#2c3e50;font-size:24px}}
-h2{{color:#34495e;margin-top:30px;border-left:4px solid #3498db;padding-left:12px;font-size:18px}}
-h3{{color:#7f8c8d;margin-top:20px;font-size:14px}}
-.meta{{color:#7f8c8d;font-size:0.9em;margin-bottom:20px}}
-.toc{{background:#f8f9fa;padding:20px;border-radius:8px;margin:20px 0}}
+body{{font-family:'Yu Gothic','Hiragino Sans','Meiryo',sans-serif;max-width:920px;margin:0 auto;padding:30px;color:#e2e8f0;line-height:1.8;background:#0a0a0f}}
+.cover{{text-align:center;padding:60px 0;border:2px solid #4338ca;margin-bottom:40px;background:linear-gradient(135deg,#12121a,#1a1a24);border-radius:16px}}
+.cover-title{{font-size:32px;font-weight:bold;color:#f8fafc;margin:20px 0 10px;letter-spacing:2px}}
+.cover-title-en{{font-size:14px;color:#94a3b8;font-family:'Helvetica Neue',Arial,sans-serif;letter-spacing:1px}}
+.cover-subtitle{{font-size:16px;color:#cbd5e1;margin:20px 0}}
+.cover-case-id{{font-size:12px;color:#94a3b8;font-family:monospace}}
+.cover-date{{font-size:14px;color:#cbd5e1;margin-top:40px}}
+.cover-author{{font-size:14px;color:#cbd5e1;margin-top:10px}}
+h1{{border-bottom:2px solid #334155;padding-bottom:10px;color:#f8fafc;font-size:24px}}
+h2{{color:#cbd5e1;margin-top:30px;border-left:4px solid #6366f1;padding-left:12px;font-size:18px}}
+h3{{color:#94a3b8;margin-top:20px;font-size:14px}}
+.meta{{color:#94a3b8;font-size:0.9em;margin-bottom:20px}}
+.toc{{background:#12121a;padding:20px;border-radius:12px;margin:20px 0;border:1px solid #334155}}
 .toc h2{{border:none;margin-top:0}}
 .toc ol{{margin:0;padding-left:25px}}
 .toc li{{margin:8px 0}}
-.summary{{background:linear-gradient(135deg,#f5f7fa,#e4e9f2);padding:25px;border-radius:12px;margin:20px 0;border:1px solid #ddd}}
-.card{{background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:15px;margin:15px 0;box-shadow:0 2px 4px rgba(0,0,0,0.05)}}
-.prohibition{{background:#fff5f5;border-left:4px solid #e74c3c;padding:10px 15px;margin:10px 0}}
-.highlight{{background:#e8f6ff;border-left:4px solid #3498db;padding:10px 15px;margin:10px 0}}
-.success{{background:#f0fff4;border-left:4px solid #27ae60;padding:10px 15px;margin:10px 0}}
-.warning{{background:#fffbeb;border-left:4px solid #f39c12;padding:10px 15px;margin:10px 0}}
+.summary{{background:linear-gradient(135deg,#12121a,#1a1a24);padding:25px;border-radius:12px;margin:20px 0;border:1px solid #334155}}
+.card{{background:#12121a;border:1px solid #334155;border-radius:10px;padding:15px;margin:15px 0;box-shadow:0 2px 6px rgba(15,23,42,0.3)}}
+.prohibition{{background:#3f1114;border-left:4px solid #ef4444;padding:10px 15px;margin:10px 0;border-radius:8px}}
+.highlight{{background:#172554;border-left:4px solid #6366f1;padding:10px 15px;margin:10px 0;border-radius:8px}}
+.success{{background:#052e16;border-left:4px solid #22c55e;padding:10px 15px;margin:10px 0;border-radius:8px}}
+.warning{{background:#422006;border-left:4px solid #f59e0b;padding:10px 15px;margin:10px 0;border-radius:8px}}
 ul{{padding-left:20px}}
 li{{margin:5px 0}}
-table{{border-collapse:collapse;width:100%}}
-td,th{{border:1px solid #ddd;padding:12px;text-align:left}}
-th{{background:#f5f5f5;font-weight:bold}}
+table{{border-collapse:collapse;width:100%;background:#12121a}}
+td,th{{border:1px solid #334155;padding:12px;text-align:left}}
+th{{background:#1f2937;font-weight:bold}}
 .signature-section{{margin-top:60px;page-break-inside:avoid}}
-.signature-table{{border:2px solid #333}}
-.signature-table th{{background:#f0f0f0;width:100px}}
+.signature-table{{border:2px solid #334155}}
+.signature-table th{{background:#1f2937;width:100px}}
 .signature-table td{{height:60px;vertical-align:top}}
-.label{{font-weight:bold;color:#555}}
-.essence{{font-size:1.1em;color:#2c3e50;font-weight:bold}}
-.footer{{text-align:center;color:#999;font-size:11px;margin-top:40px;padding-top:20px;border-top:1px solid #ddd}}
-.section-number{{color:#3498db;font-weight:bold;margin-right:8px}}
+.label{{font-weight:bold;color:#cbd5e1}}
+.essence{{font-size:1.1em;color:#f8fafc;font-weight:bold}}
+.footer{{text-align:center;color:#94a3b8;font-size:11px;margin-top:40px;padding-top:20px;border-top:1px solid #334155}}
+.section-number{{color:#818cf8;font-weight:bold;margin-right:8px}}
 </style></head>
 <body>
 
@@ -948,11 +1054,24 @@ th{{background:#f5f5f5;font-weight:bold}}
         findings_html = ""
         findings = review.get("findings", [])
         if findings:
-            items = "".join(
-                f"<li><strong>{f.get('severity', '')}</strong> ({f.get('category', '')}): {f.get('description', '')}"
-                f"<br/>影響Agent: {f.get('affected_agent', '')} | 修正提案: {f.get('suggested_revision', '')}</li>"
-                for f in findings
-            )
+            item_rows: list[str] = []
+            for finding in findings:
+                if not isinstance(finding, dict):
+                    continue
+                importance_text = "<br/>人間確認: 必須" if finding.get("requires_human_review") else ""
+                hint_text = (
+                    f"<br/>確認ヒント: {finding.get('human_review_hint', '')}"
+                    if finding.get("human_review_hint")
+                    else ""
+                )
+                item_rows.append(
+                    f"<li><strong>{finding.get('severity', '')}</strong> "
+                    f"({finding.get('category', '')}): {finding.get('description', '')}"
+                    f"<br/>影響Agent: {finding.get('affected_agent', '')} | "
+                    f"修正提案: {finding.get('suggested_revision', '')}"
+                    f"{importance_text}{hint_text}</li>"
+                )
+            items = "".join(item_rows)
             findings_html = f"<h3>📝 検証所見</h3><ul>{items}</ul>"
 
         # 最終警告
@@ -962,6 +1081,19 @@ th{{background:#f5f5f5;font-weight:bold}}
             items = "".join(f"<li>⚠️ {w}</li>" for w in warnings)
             warnings_html = f"<h3>⚠️ 最終警告</h3><ul>{items}</ul>"
 
+        review_records_html = ""
+        review_records = review.get("human_review_records", [])
+        if isinstance(review_records, list) and review_records:
+            items = "".join(
+                f"<li>{r.get('reviewed_at', '')}: {r.get('reviewer_name', '確認者不明')} / "
+                f"{'解消' if r.get('resolved') else '未解消'} / "
+                f"{r.get('confirmation_note', '')}</li>"
+                for r in review_records[-10:]
+                if isinstance(r, dict)
+            )
+            if items:
+                review_records_html = f"<h3>🧾 人間確認履歴</h3><ul>{items}</ul>"
+
         verdict_class = "success" if verdict == "PASS" else "prohibition" if verdict == "REJECT" else "warning"
 
         return f"""<h2>✅ 検証 - 最終判定</h2>
@@ -970,5 +1102,5 @@ th{{background:#f5f5f5;font-weight:bold}}
 <p><span class="label">信頼度:</span> {confidence*100:.0f}%</p>
 </div>
 {findings_html}
-{warnings_html}"""
-
+{warnings_html}
+{review_records_html}"""

@@ -26,8 +26,13 @@ from apps.code_migration_assistant.adapters.factory import (
     AdapterFactory,
     get_adapter_factory,
 )
+from apps.code_migration_assistant.adapters.skills import (
+    cobol_analysis_skill,
+    java_generation_skill,
+)
 from apps.code_migration_assistant.adapters.source.cobol_adapter import CobolAdapter
 from apps.code_migration_assistant.adapters.target.java_adapter import JavaAdapter
+from apps.code_migration_assistant.adapters.target.springboot_adapter import SpringBootAdapter
 
 
 __all__ = [
@@ -38,9 +43,12 @@ __all__ = [
     "CobolAdapter",
     "ExecutionResult",
     "JavaAdapter",
+    "SpringBootAdapter",
     # 基底クラス
     "SourceLanguageAdapter",
     "TargetLanguageAdapter",
     "get_adapter_factory",
+    # Agent Skills
+    "cobol_analysis_skill",
+    "java_generation_skill",
 ]
-

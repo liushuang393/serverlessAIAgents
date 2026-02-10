@@ -2,6 +2,7 @@
 
 エンドポイント:
     - GET /api/report/{report_id}/pdf: PDF出力
+    - GET /api/report/{report_id}/html: HTML出力
     - GET /api/report/{report_id}/components: A2UIコンポーネント
     - GET /api/report/{report_id}/agent/{agent_id}: 個別Agent出力
     - POST /api/report/{report_id}/sign: 署名
@@ -14,6 +15,9 @@ from datetime import datetime
 from typing import Any
 
 from apps.decision_governance_engine.routers.auth import UserInfo, require_auth
+from apps.decision_governance_engine.services.human_review_policy import (
+    enrich_review_with_policy,
+)
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
@@ -67,29 +71,6 @@ def cache_report(report_id: str, report: Any) -> None:
     logger.info(f"レポートをキャッシュに保存: {report_id} (cache_size={len(_report_cache)})")
 
 
-def _get_sample_report(report_id: str) -> Any:
-    """デモ用サンプルレポートを取得."""
-    from apps.decision_governance_engine.schemas.output_schemas import (
-        DecisionReport,
-        ExecutiveSummary,
-    )
-    return DecisionReport(
-        report_id=report_id,
-        dao={"problem_type": "TRADE_OFF", "essence": "サンプル本質"},
-        fa={"recommended_paths": [{"name": "推奨案A", "description": "説明"}]},
-        shu={"phases": [{"phase_number": 1, "name": "準備", "duration": "2週間"}], "first_action": "MTG設定"},
-        qi={"implementations": [], "tool_recommendations": []},
-        review={"overall_verdict": "PASS", "confidence_score": 0.85},
-        executive_summary=ExecutiveSummary(
-            one_line_decision="推奨案Aを選択",
-            recommended_action="段階的に実行",
-            key_risks=["リスク1"],
-            first_step="キックオフMTG",
-            estimated_impact="目標達成見込み",
-        ),
-    )
-
-
 # ========================================
 # エンドポイント
 # ========================================
@@ -112,7 +93,6 @@ async def _get_report_from_db(report_id: str) -> Any:
     from apps.decision_governance_engine.repositories import DecisionRepository
     from apps.decision_governance_engine.schemas.output_schemas import (
         DecisionReport,
-        ExecutiveSummary,
     )
 
     # キャッシュから取得を試みる（PROP-* 形式対応）
@@ -121,20 +101,20 @@ async def _get_report_from_db(report_id: str) -> Any:
         logger.info(f"レポートをキャッシュから取得: {report_id}")
         return cached
 
-    # UUID 形式の場合のみ DB 検索を試みる
+    # UUID 形式の場合は request_id で検索
     try:
         request_uuid = UUID(report_id)
     except (ValueError, AttributeError, TypeError):
-        logger.info(
-            f"report_id={report_id!r} は UUID 形式ではないため DB 検索をスキップ"
-        )
-        return None
+        request_uuid = None
 
     try:
         repo = DecisionRepository()
-        record = await repo.find_by_request_id(request_uuid)
+        if request_uuid is not None:
+            record = await repo.find_by_request_id(request_uuid)
+        else:
+            record = await repo.find_by_report_case_id(report_id)
         if not record:
-            logger.info(f"No record found for request_id: {request_uuid}")
+            logger.info(f"No record found for report_id/request_id: {report_id}")
             return None
 
         # DB記録からレポートを構築
@@ -142,30 +122,52 @@ async def _get_report_from_db(report_id: str) -> Any:
         fa_data = record.fa_result or {"recommended_paths": [], "rejected_paths": [], "decision_criteria": []}
         shu_data = record.shu_result or {"phases": [], "first_action": "N/A", "dependencies": []}
         qi_data = record.qi_result or {"implementations": [], "tool_recommendations": [], "integration_points": [], "technical_debt_warnings": []}
-        review_data = record.review_result or {"overall_verdict": "PASS", "confidence_score": record.confidence or 0.0, "findings": [], "final_warnings": []}
+        review_data = record.review_result or {
+            "overall_verdict": "PASS",
+            "confidence_score": record.confidence or 0.0,
+            "findings": [],
+            "final_warnings": [],
+        }
+        review_data = enrich_review_with_policy(review_data)
 
-        # ExecutiveSummaryを構築
-        summary = ExecutiveSummary(
-            one_line_decision=f"決策結果: {record.decision_role}",
-            recommended_action=shu_data.get("first_action", "N/A"),
-            key_risks=review_data.get("final_warnings", []) if isinstance(review_data.get("final_warnings"), list) else [],
-            first_step=shu_data.get("first_action", "N/A"),
-            estimated_impact="データベース履歴から復元",
+        # 提案書タイトルと署名欄を復元（当日のハッシュでIDが安定する）
+        created_at = record.created_at or datetime.utcnow()
+        problem_type = dao_data.get("problem_type", "")
+        if hasattr(problem_type, "value"):
+            problem_type = problem_type.value
+
+        from apps.decision_governance_engine.schemas.output_schemas import (
+            generate_proposal_title,
+            generate_signature_block,
         )
+        from apps.decision_governance_engine.services.report_generator import ReportGenerator
+
+        proposal_title = generate_proposal_title(record.question, str(problem_type), now=created_at)
+        if record.report_case_id:
+            proposal_title = proposal_title.model_copy(update={"case_id": record.report_case_id})
+        signature_block = generate_signature_block(None, now=created_at)
+        report_case_id = record.report_case_id or proposal_title.case_id
+
+        # ExecutiveSummaryを構築（ReportGeneratorと同一ロジックを使用）
+        generator = ReportGenerator()
+        summary = generator._generate_executive_summary(dao_data, fa_data, shu_data)
 
         return DecisionReport(
-            report_id=str(record.request_id),
+            report_id=report_case_id,
+            created_at=created_at,
+            proposal_title=proposal_title,
             dao=dao_data,
             fa=fa_data,
             shu=shu_data,
             qi=qi_data,
             review=review_data,
             executive_summary=summary,
+            signature_block=signature_block,
             original_question=record.question,
         )
     except Exception as e:
         logger.error(
-            f"Failed to get report from DB for request_id={request_uuid}: {type(e).__name__}: {e}",
+            f"Failed to get report from DB for report_id={report_id}: {type(e).__name__}: {e}",
             exc_info=True,
         )
         return None
@@ -179,7 +181,7 @@ async def export_report_pdf(report_id: str) -> StreamingResponse:
         report_id: レポートID（UUID文字列）
 
     Returns:
-        StreamingResponse: PDFまたはHTMLファイル
+        StreamingResponse: PDFファイル
 
     Raises:
         HTTPException: レポート取得またはPDF生成に失敗した場合
@@ -190,14 +192,9 @@ async def export_report_pdf(report_id: str) -> StreamingResponse:
     from fastapi import HTTPException
     from apps.decision_governance_engine.services.pdf_generator import PDFGeneratorService
 
-    # まずDBから取得を試みる
     report = await _get_report_from_db(report_id)
     if not report:
-        # DBに見つからない場合はサンプルレポートを使用
-        report = _get_sample_report(report_id)
-
-    if not report:
-        logger.error(f"Report not found and sample generation failed: {report_id}")
+        logger.error(f"Report not found: {report_id}")
         raise HTTPException(
             status_code=404,
             detail=f"Report not found: {report_id}",
@@ -207,8 +204,8 @@ async def export_report_pdf(report_id: str) -> StreamingResponse:
         generator = PDFGeneratorService()
         pdf_bytes = generator.generate_pdf(report)
 
-        content_type = "application/pdf" if generator._has_reportlab else "text/html"
-        filename = f"decision_report_{report_id}.{'pdf' if generator._has_reportlab else 'html'}"
+        content_type = "application/pdf"
+        filename = f"decision_report_{report_id}.pdf"
 
         return StreamingResponse(
             io.BytesIO(pdf_bytes),
@@ -226,15 +223,47 @@ async def export_report_pdf(report_id: str) -> StreamingResponse:
         ) from e
 
 
+@router.get("/{report_id}/html")
+async def export_report_html(report_id: str) -> StreamingResponse:
+    """レポートをHTML形式でエクスポート."""
+    from apps.decision_governance_engine.services.pdf_generator import PDFGeneratorService
+
+    report = await _get_report_from_db(report_id)
+    if not report:
+        logger.error(f"Report not found: {report_id}")
+        raise HTTPException(
+            status_code=404,
+            detail=f"Report not found: {report_id}",
+        )
+
+    try:
+        generator = PDFGeneratorService()
+        html_bytes = generator.generate_html(report)
+        filename = f"decision_report_{report_id}.html"
+        return StreamingResponse(
+            io.BytesIO(html_bytes),
+            media_type="text/html; charset=utf-8",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        logger.error(
+            f"HTML export failed for report_id={report_id}: {type(e).__name__}: {e}",
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail=f"HTML生成に失敗しました: {e}",
+        ) from e
+
+
 @router.get("/{report_id}/components")
 async def get_report_components(report_id: str) -> dict[str, Any]:
     """レポートのA2UIコンポーネントを取得."""
     from apps.decision_governance_engine.services.ui_components import DecisionUIComponentBuilder
 
-    # まずDBから取得を試みる
     report = await _get_report_from_db(report_id)
     if not report:
-        report = _get_sample_report(report_id)
+        raise HTTPException(status_code=404, detail=f"Report not found: {report_id}")
 
     builder = DecisionUIComponentBuilder()
     components = builder.build_report_view(report)
@@ -250,10 +279,9 @@ async def get_agent_output_component(report_id: str, agent_id: str) -> dict[str,
     """特定AgentのA2UI出力コンポーネントを取得."""
     from apps.decision_governance_engine.services.ui_components import DecisionUIComponentBuilder
 
-    # まずDBから取得を試みる
     report = await _get_report_from_db(report_id)
     if not report:
-        report = _get_sample_report(report_id)
+        raise HTTPException(status_code=404, detail=f"Report not found: {report_id}")
 
     builder = DecisionUIComponentBuilder()
 
@@ -317,4 +345,3 @@ async def get_report_signature(report_id: str) -> dict[str, Any]:
     if report_id not in _signed_reports:
         return {"signed": False, "signature": None}
     return {"signed": True, "signature": _signed_reports[report_id]}
-

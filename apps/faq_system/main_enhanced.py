@@ -18,11 +18,8 @@ import logging
 from datetime import datetime
 from typing import Any
 
-# 強化版Agent
-from apps.faq_system.backend.agents import (
-    EnhancedFAQAgent,
-    EnhancedFAQConfig,
-)
+# Knowledge Discovery Skill
+from agentflow.skills.builtin.knowledge_discovery.manager import KnowledgeDiscoveryManager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -65,20 +62,14 @@ app.add_middleware(
 
 _state_store = GlobalStateStore()
 _realtime_sync = RealtimeStateSync(_state_store)
-_faq_agent: EnhancedFAQAgent | None = None
+_knowledge_manager: KnowledgeDiscoveryManager | None = None
 
-
-def _get_faq_agent() -> EnhancedFAQAgent:
-    """FAQAgent取得."""
-    global _faq_agent
-    if _faq_agent is None:
-        _faq_agent = EnhancedFAQAgent(EnhancedFAQConfig(
-            enable_rich_response=True,
-            enable_citations=True,
-            enable_charts=True,
-            enable_gap_analysis=True,
-        ))
-    return _faq_agent
+def _get_knowledge_manager() -> KnowledgeDiscoveryManager:
+    """KnowledgeDiscoveryManager取得."""
+    global _knowledge_manager
+    if _knowledge_manager is None:
+        _knowledge_manager = KnowledgeDiscoveryManager()
+    return _knowledge_manager
 
 
 # =============================================================================
@@ -487,11 +478,8 @@ async def index() -> str:
 @app.post("/api/v2/chat")
 async def chat_v2(request: ChatRequest) -> dict[str, Any]:
     """チャット API v2（同期）."""
-    agent = _get_faq_agent()
-    return await agent.run({
-        "question": request.message,
-        "session_id": request.session_id,
-    })
+    manager = _get_knowledge_manager()
+    return await manager.discover(request.message, {"session_id": request.session_id})
 
 
 @app.post("/api/v2/chat/stream")
