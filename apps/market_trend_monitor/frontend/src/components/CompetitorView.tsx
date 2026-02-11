@@ -20,6 +20,9 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Button,
+  TextField,
+  Stack,
 } from '@mui/material';
 import { apiClient } from '../api/client';
 
@@ -32,6 +35,37 @@ interface CompetitorProfile {
   opportunity_level: number;
   last_updated: string;
   metadata: Record<string, unknown>;
+}
+
+interface CompetitorListResponse {
+  competitors: CompetitorProfile[];
+  total: number;
+  detected_count?: number;
+  watchlist_count?: number;
+  detected_competitors?: string[];
+  undetected_watchlist?: string[];
+  auto_discovered?: boolean;
+  source_articles?: number;
+  scope?: string;
+}
+
+interface CompetitorConfigResponse {
+  competitors: string[];
+  watchlist_count: number;
+}
+
+interface CompetitorDiscoverResponse {
+  status: string;
+  message: string;
+  competitors: CompetitorProfile[];
+  total: number;
+  detected_count: number;
+  watchlist_count?: number;
+  detected_competitors?: string[];
+  undetected_watchlist?: string[];
+  source_articles?: number;
+  focused_collected_articles?: number;
+  scope?: string;
 }
 
 const positionColors: Record<string, string> = {
@@ -131,15 +165,63 @@ export default function CompetitorView() {
   const [competitors, setCompetitors] = useState<CompetitorProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [watchlist, setWatchlist] = useState<string[]>([]);
+  const [watchlistInput, setWatchlistInput] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
+  const [detectedCount, setDetectedCount] = useState(0);
+  const [watchlistCount, setWatchlistCount] = useState(0);
+  const [sourceArticles, setSourceArticles] = useState(0);
+  const [undetectedWatchlist, setUndetectedWatchlist] = useState<string[]>([]);
+
+  const persistWatchlist = async (nextWatchlist: string[]) => {
+    try {
+      const resp = await apiClient.put<CompetitorConfigResponse>('/competitors/config', {
+        competitors: nextWatchlist,
+      });
+      const persisted = resp.data.competitors || [];
+      setWatchlist(persisted);
+      setWatchlistCount(resp.data.watchlist_count || persisted.length);
+      setNotice('競合ウォッチリストを保存しました');
+      setError(null);
+    } catch {
+      setError('競合ウォッチリストの保存に失敗しました');
+    }
+  };
 
   const fetchCompetitors = useCallback(async () => {
     setLoading(true);
     try {
-      const resp = await apiClient.get('/competitors');
-      setCompetitors(resp.data.competitors || []);
+      const [competitorResp, configResp] = await Promise.allSettled([
+        apiClient.get<CompetitorListResponse>('/competitors'),
+        apiClient.get<CompetitorConfigResponse>('/competitors/config'),
+      ]);
+
+      if (competitorResp.status === 'fulfilled') {
+        const payload = competitorResp.value.data;
+        setCompetitors(payload.competitors || []);
+        setDetectedCount(payload.detected_count || 0);
+        setWatchlistCount(payload.watchlist_count || 0);
+        setSourceArticles(payload.source_articles || 0);
+        setUndetectedWatchlist(payload.undetected_watchlist || []);
+      } else {
+        setCompetitors([]);
+        setDetectedCount(0);
+        setWatchlistCount(0);
+        setSourceArticles(0);
+        setUndetectedWatchlist([]);
+      }
+
+      if (configResp.status === 'fulfilled') {
+        const items = configResp.value.data.competitors || [];
+        setWatchlist(items);
+        setWatchlistCount(items.length);
+      } else {
+        setWatchlist([]);
+      }
+
       setError(null);
-    } catch (e) {
-      setError('Failed to load competitor data');
+    } catch {
+      setError('競合データの取得に失敗しました');
     } finally {
       setLoading(false);
     }
@@ -149,13 +231,72 @@ export default function CompetitorView() {
     fetchCompetitors();
   }, [fetchCompetitors]);
 
-  const positionDist = competitors.reduce<Record<string, number>>((acc, c) => {
+  const detectedCompetitors = competitors.filter(
+    (c) => Number(c.metadata?.article_count || 0) > 0,
+  );
+
+  const positionDist = detectedCompetitors.reduce<Record<string, number>>((acc, c) => {
     acc[c.market_position] = (acc[c.market_position] || 0) + 1;
     return acc;
   }, {});
 
-  const highThreats = competitors.filter((c) => c.threat_level >= 0.7);
-  const highOpportunities = competitors.filter((c) => c.opportunity_level >= 0.6);
+  const highThreats = detectedCompetitors.filter((c) => c.threat_level >= 0.7);
+  const highOpportunities = detectedCompetitors.filter((c) => c.opportunity_level >= 0.6);
+
+  const addWatchlistCompetitor = async () => {
+    const normalized = watchlistInput.trim();
+    if (!normalized) {
+      return;
+    }
+    if (watchlist.some((item) => item.toLowerCase() === normalized.toLowerCase())) {
+      setWatchlistInput('');
+      return;
+    }
+    const nextWatchlist = [...watchlist, normalized];
+    setWatchlist(nextWatchlist);
+    setWatchlistCount(nextWatchlist.length);
+    setWatchlistInput('');
+    await persistWatchlist(nextWatchlist);
+  };
+
+  const removeWatchlistCompetitor = async (name: string) => {
+    const nextWatchlist = watchlist.filter((item) => item !== name);
+    setWatchlist(nextWatchlist);
+    setWatchlistCount(nextWatchlist.length);
+    await persistWatchlist(nextWatchlist);
+  };
+
+  const saveWatchlist = async () => {
+    await persistWatchlist(watchlist);
+  };
+
+  const autoDiscover = async () => {
+    try {
+      setLoading(true);
+      const resp = await apiClient.post<CompetitorDiscoverResponse>(
+        '/competitors/discover',
+        {
+          include_unmatched: false,
+          limit: 400,
+          refresh_with_watchlist: true,
+          max_focus_keywords: 24,
+        },
+      );
+      const payload = resp.data;
+      setCompetitors(payload.competitors || []);
+      setDetectedCount(payload.detected_count || 0);
+      setWatchlistCount(payload.watchlist_count || watchlist.length);
+      setSourceArticles(payload.source_articles || 0);
+      setUndetectedWatchlist(payload.undetected_watchlist || []);
+      setNotice(payload.message || 'Auto discovery completed');
+      setError(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'unknown error';
+      setError(`最新記事からの競合自動発見に失敗しました: ${message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Box>
@@ -168,6 +309,106 @@ export default function CompetitorView() {
 
       {loading && <LinearProgress sx={{ mb: 2 }} />}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {notice && (
+        <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice(null)}>
+          {notice}
+        </Alert>
+      )}
+
+      <Card sx={{ mb: 2 }}>
+        <CardContent>
+          <Typography variant="subtitle1" gutterBottom>
+            発見コントロール
+          </Typography>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={1}
+            sx={{ mb: 1, flexWrap: 'wrap' }}
+          >
+            <Button
+              variant="contained"
+              onClick={autoDiscover}
+              disabled={loading}
+              sx={{ whiteSpace: 'nowrap' }}
+            >
+              最新記事から自動発見
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={fetchCompetitors}
+              disabled={loading}
+              sx={{ whiteSpace: 'nowrap' }}
+            >
+              更新
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={saveWatchlist}
+              disabled={loading}
+              sx={{ whiteSpace: 'nowrap' }}
+            >
+              ウォッチリスト保存
+            </Button>
+          </Stack>
+          <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+            <TextField
+              size="small"
+              fullWidth
+              label="競合企業を追加"
+              value={watchlistInput}
+              onChange={(e) => setWatchlistInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  void addWatchlistCompetitor();
+                }
+              }}
+            />
+            <Button
+              variant="outlined"
+              onClick={() => void addWatchlistCompetitor()}
+              sx={{ whiteSpace: 'nowrap', flexShrink: 0, minWidth: 80 }}
+            >
+              追加
+            </Button>
+          </Box>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+            {watchlist.map((name) => (
+              <Chip
+                key={name}
+                label={name}
+                onDelete={() => void removeWatchlistCompetitor(name)}
+                sx={{
+                  maxWidth: '100%',
+                  height: 'auto',
+                  alignItems: 'flex-start',
+                  '& .MuiChip-label': {
+                    display: 'block',
+                    whiteSpace: 'normal',
+                    lineHeight: 1.3,
+                    py: 0.5,
+                  },
+                }}
+              />
+            ))}
+          </Box>
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+            Detected {detectedCount}/{watchlistCount || watchlist.length} competitor(s) in {sourceArticles} collected articles.
+          </Typography>
+          {undetectedWatchlist.length > 0 && (
+            <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
+              Not detected yet: {undetectedWatchlist.slice(0, 8).join(', ')}
+              {undetectedWatchlist.length > 8 ? ' ...' : ''}
+            </Typography>
+          )}
+        </CardContent>
+      </Card>
+
+      {!loading && detectedCompetitors.length === 0 && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          No competitor mentions detected yet. Run data collection first, then click
+          {' '}Auto Discover.
+        </Alert>
+      )}
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={3}>
@@ -176,7 +417,7 @@ export default function CompetitorView() {
               <Typography variant="subtitle2" color="text.secondary">
                 Tracked
               </Typography>
-              <Typography variant="h3">{competitors.length}</Typography>
+              <Typography variant="h3">{detectedCompetitors.length}</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -226,7 +467,7 @@ export default function CompetitorView() {
                 Threat / Opportunity Matrix
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                <ThreatOpportunityChart competitors={competitors} />
+                <ThreatOpportunityChart competitors={detectedCompetitors} />
               </Box>
             </CardContent>
           </Card>
@@ -252,8 +493,8 @@ export default function CompetitorView() {
                   <LinearProgress
                     variant="determinate"
                     value={
-                      competitors.length > 0
-                        ? ((positionDist[pos] || 0) / competitors.length) * 100
+                      detectedCompetitors.length > 0
+                        ? ((positionDist[pos] || 0) / detectedCompetitors.length) * 100
                         : 0
                     }
                     sx={{ flex: 1, height: 8 }}
@@ -281,6 +522,15 @@ export default function CompetitorView() {
             </TableRow>
           </TableHead>
           <TableBody>
+            {competitors.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    No competitor profile yet
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
             {competitors.map((c) => (
               <TableRow key={c.name}>
                 <TableCell>
@@ -334,9 +584,11 @@ export default function CompetitorView() {
                 </TableCell>
                 <TableCell>
                   <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 200 }}>
-                    {c.recent_activities.length > 0
-                      ? c.recent_activities[0].slice(0, 60) + '...'
-                      : 'No recent activity'}
+                    {Number(c.metadata?.article_count || 0) <= 0
+                      ? 'No mention in recent data'
+                      : c.recent_activities.length > 0
+                        ? c.recent_activities[0].slice(0, 60) + '...'
+                        : 'No recent activity'}
                   </Typography>
                 </TableCell>
               </TableRow>

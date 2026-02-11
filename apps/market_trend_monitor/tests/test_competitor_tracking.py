@@ -29,6 +29,7 @@ def _make_article(
     article_id: str = "a-1",
     title: str = "IBM launches new COBOL migration tool",
     content: str = "IBM announced a new AI-powered tool for legacy modernization",
+    metadata: dict | None = None,
 ) -> Article:
     """テスト用 Article を生成."""
     return Article(
@@ -39,6 +40,7 @@ def _make_article(
         published_at=datetime(2026, 1, 15),
         content=content,
         keywords=["COBOL", "migration"],
+        metadata=metadata or {},
     )
 
 
@@ -221,6 +223,26 @@ class TestCompetitorTrackingAgent:
         assert len(profiles) == 2
         assert profiles[0].threat_level >= profiles[1].threat_level
 
+    def test_set_competitors_normalize(self) -> None:
+        """追跡対象競合の正規化更新テスト."""
+        agent = CompetitorTrackingAgent(llm=_make_mock_llm())
+        updated = agent.set_competitors([" IBM ", "ibm", "Accenture", ""])
+        assert updated == ["IBM", "Accenture"]
+        assert agent.get_competitors() == ["IBM", "Accenture"]
+
+    async def test_track_competitors_include_unmatched(self) -> None:
+        """未検出競合をプレースホルダー表示するテスト."""
+        agent = CompetitorTrackingAgent(
+            llm=_make_mock_llm(),
+            competitors=["IBM", "Accenture"],
+        )
+        articles = [_make_article("a-1", "IBM launch", "IBM updates")]
+        profiles = await agent.track_competitors(articles, include_unmatched=True)
+        assert len(profiles) == 2
+        acc = next(p for p in profiles if p.name == "Accenture")
+        assert int(acc.metadata.get("article_count", 0)) == 0
+        assert acc.metadata.get("detection") == "not_found"
+
     def test_parse_analysis_valid(self) -> None:
         """正常なJSONパーステスト."""
         raw = '{"focus_areas": ["AI"], "threat_level": 0.8}'
@@ -249,6 +271,63 @@ class TestCompetitorTrackingAgent:
         ]
         profiles = await agent.track_competitors(articles)
         assert len(profiles) == 1
+
+    async def test_track_alias_full_name(self) -> None:
+        """正式名称から正規名へ統一されるテスト."""
+        agent = CompetitorTrackingAgent(
+            llm=_make_mock_llm(),
+            competitors=["IBM"],
+        )
+        articles = [
+            _make_article(
+                "a-1",
+                "International Business Machines launches modernization suite",
+                "International Business Machines expands AI migration tools",
+            ),
+        ]
+        profiles = await agent.track_competitors(articles)
+        assert len(profiles) == 1
+        assert profiles[0].name == "IBM"
+        aliases = list(profiles[0].metadata.get("matched_aliases", []))
+        assert "International Business Machines" in aliases
+
+    async def test_track_alias_from_metadata_entities(self) -> None:
+        """メタデータエンティティから競合が検出できるテスト."""
+        agent = CompetitorTrackingAgent(
+            llm=_make_mock_llm(),
+            competitors=["IBM"],
+        )
+        articles = [
+            _make_article(
+                "a-1",
+                "Legacy migration trend report",
+                "Industry report highlights platform shifts.",
+                metadata={"entities": [{"name": "International Business Machines"}]},
+            ),
+        ]
+        profiles = await agent.track_competitors(articles)
+        assert len(profiles) == 1
+        assert profiles[0].name == "IBM"
+
+    async def test_set_competitor_aliases_custom(self) -> None:
+        """カスタム別名を追加して検出できるテスト."""
+        agent = CompetitorTrackingAgent(
+            llm=_make_mock_llm(),
+            competitors=["IBM"],
+        )
+        aliases = agent.set_competitor_aliases({"IBM": ["Big Blue"]})
+        assert "Big Blue" in aliases["IBM"]
+
+        articles = [
+            _make_article(
+                "a-1",
+                "Big Blue invests in modernization",
+                "Big Blue enters legacy transformation market",
+            ),
+        ]
+        profiles = await agent.track_competitors(articles)
+        assert len(profiles) == 1
+        assert profiles[0].name == "IBM"
 
     async def test_existing_profile_preserved(self) -> None:
         """記事なし時の既存プロファイル保持テスト."""

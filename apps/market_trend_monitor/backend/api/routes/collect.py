@@ -11,7 +11,12 @@ from apps.market_trend_monitor.backend.agents import (
 )
 from apps.market_trend_monitor.backend.api.state import store
 from apps.market_trend_monitor.backend.config import config
-from apps.market_trend_monitor.backend.services.registry import evidence_service
+from apps.market_trend_monitor.backend.models import DateRange
+from apps.market_trend_monitor.backend.services.metrics_service import metrics_service
+from apps.market_trend_monitor.backend.services.registry import (
+    evidence_service,
+    prediction_service,
+)
 from apps.market_trend_monitor.backend.workflow import run as run_workflow
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -26,6 +31,7 @@ class CollectRequest(BaseModel):
 
     keywords: list[str] = Field(default_factory=list, description="検索キーワード")
     sources: list[str] = Field(default_factory=list, description="データソース")
+    date_range: DateRange | None = Field(default=None, description="収集対象期間")
 
 
 class CollectResponse(BaseModel):
@@ -53,6 +59,7 @@ def _extract_flow_results(result: dict[str, Any]) -> tuple[dict[str, Any], dict[
 async def _run_fallback_collection(
     keywords: list[str],
     sources: list[str],
+    date_range: dict[str, str] | None,
 ) -> dict[str, Any]:
     """フォールバック収集を実行（collector + analyzer + reporter）."""
     collector_agent = CollectorAgent()
@@ -65,7 +72,7 @@ async def _run_fallback_collection(
 
     try:
         collector_result = await collector_agent.run(
-            {"keywords": keywords, "sources": sources}
+            {"keywords": keywords, "sources": sources, "date_range": date_range}
         )
         analyzer_result = await analyzer_agent.run(
             {
@@ -123,20 +130,47 @@ async def _ensure_reporter_result(result: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
+async def _auto_create_predictions_from_trends(trends: list[dict[str, Any]]) -> int:
+    """分析結果トレンドから予測を自動生成."""
+    if not trends:
+        return 0
+    result = prediction_service.bootstrap_from_trends(
+        trends=trends,
+        horizon_days=30,
+        limit=8,
+    )
+    created_ids = list(result.get("created_ids", []))
+    if created_ids:
+        await prediction_service.persist_predictions_by_ids(created_ids)
+    created_count = int(result.get("created_count", 0))
+    if created_count > 0:
+        metrics_service.record_predictions(created_count)
+    return created_count
+
+
 @router.post("/collect", response_model=CollectResponse)
 async def collect(request: CollectRequest) -> CollectResponse:
     """手動データ収集をトリガー."""
     try:
         keywords = request.keywords or config.collector.keywords
         sources = request.sources or config.collector.sources
+        date_range_payload = (
+            request.date_range.model_dump(exclude_none=True)
+            if request.date_range is not None
+            else None
+        )
         result: dict[str, Any] = await run_workflow(
-            {"keywords": keywords, "sources": sources}
+            {"keywords": keywords, "sources": sources, "date_range": date_range_payload}
         )
         collector, analyzer = _extract_flow_results(result)
 
         # 下流ノード失敗時に collector/analyzer が欠落するケースを救済する
         if not collector and not analyzer:
-            result = await _run_fallback_collection(keywords, sources)
+            result = await _run_fallback_collection(
+                keywords,
+                sources,
+                date_range_payload,
+            )
             collector, analyzer = _extract_flow_results(result)
 
         result = await _ensure_reporter_result(result)
@@ -145,6 +179,12 @@ async def collect(request: CollectRequest) -> CollectResponse:
 
         articles_count = len(collector.get("articles", []))
         trends_count = len(analyzer.get("trends", []))
+        metrics_service.record_articles(articles_count)
+        created_predictions = await _auto_create_predictions_from_trends(
+            list(analyzer.get("trends", []))
+        )
+        if created_predictions > 0:
+            logger.info("予測を自動生成: %s件", created_predictions)
 
         if articles_count == 0 and trends_count == 0:
             return CollectResponse(

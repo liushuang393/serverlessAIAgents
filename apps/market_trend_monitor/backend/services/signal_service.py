@@ -4,17 +4,23 @@
 5軸評価体系に基づく統一的な信号強度評価を提供します。
 """
 
+import asyncio
 import logging
 import uuid
 from datetime import datetime
 from typing import Any
 
+from apps.market_trend_monitor.backend.db import init_db
+from apps.market_trend_monitor.backend.db.models import SignalModel
+from apps.market_trend_monitor.backend.db.session import async_session
 from apps.market_trend_monitor.backend.models import (
     Signal,
     SignalGrade,
     SignalScore,
     Trend,
 )
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 
 class SignalService:
@@ -47,20 +53,25 @@ class SignalService:
         *,
         adaptive_scoring_service: Any | None = None,
         bayesian_confidence_service: Any | None = None,
+        session_factory: Any | None = None,
     ) -> None:
         """初期化.
 
         Args:
             adaptive_scoring_service: 適応的スコアリングサービス（Phase 9）
             bayesian_confidence_service: ベイズ信頼度サービス（Phase 12）
+            session_factory: DB セッションファクトリ
         """
         self._logger = logging.getLogger(self.__class__.__name__)
-        # インメモリストレージ（将来的にDB化）
+        # 起動中の高速参照用キャッシュ
         self._signals: dict[str, Signal] = {}
         # Phase 9: 適応的スコアリング
         self._adaptive_scoring = adaptive_scoring_service
         # Phase 12: ベイズ信頼度
         self._bayesian_confidence = bayesian_confidence_service
+        self._session_factory = session_factory or async_session
+        self._loaded_from_db = False
+        self._persist_lock = asyncio.Lock()
         # 対象キーワード（関連性評価用）
         self._target_keywords: list[str] = [
             "COBOL",
@@ -71,6 +82,35 @@ class SignalService:
             "modernization",
             "legacy",
         ]
+
+    async def initialize(self) -> None:
+        """永続層から信号データをロード."""
+        if self._loaded_from_db:
+            return
+        await init_db()
+
+        async with self._session_factory() as session:
+            rows = (await session.execute(select(SignalModel))).scalars().all()
+
+        signals: dict[str, Signal] = {}
+        for row in rows:
+            signals[row.id] = Signal(
+                id=row.id,
+                trend_id=row.trend_id,
+                score=SignalScore(
+                    reliability=float(row.reliability),
+                    leading=float(row.leading),
+                    relevance=float(row.relevance),
+                    actionability=float(row.actionability),
+                    convergence=float(row.convergence),
+                ),
+                evaluated_at=row.evaluated_at,
+                metadata=dict(row.metadata_json or {}),
+            )
+
+        self._signals = signals
+        self._loaded_from_db = True
+        self._logger.info("SignalService 初期化: signals=%s", len(signals))
 
     async def _get_weights(self) -> dict[str, float]:
         """Phase 9: 現在の重みを取得.
@@ -159,7 +199,60 @@ class SignalService:
             f"Signal evaluated: {signal.id}, "
             f"grade={signal.grade.value}, total={score.total:.2f}"
         )
+        await self.persist_signal(signal)
         return signal
+
+    async def persist_signal(self, signal: Signal) -> None:
+        """信号を永続化（upsert）."""
+        async with self._persist_lock:
+            await init_db()
+            async with self._session_factory() as session:
+                try:
+                    row = await session.get(SignalModel, signal.id)
+                    if row is None:
+                        row = SignalModel(id=signal.id)
+                        session.add(row)
+
+                    self._apply_signal_row(row, signal)
+                    await session.commit()
+                    return
+                except IntegrityError as exc:
+                    await session.rollback()
+                    self._logger.warning(
+                        "信号の同時保存競合を解消: signal_id=%s",
+                        signal.id,
+                    )
+                    row = await session.get(SignalModel, signal.id)
+                    if row is None:
+                        raise exc
+
+                    self._apply_signal_row(row, signal)
+                    await session.commit()
+
+    async def persist_signals_by_ids(self, signal_ids: list[str]) -> int:
+        """ID一覧で信号を永続化."""
+        persisted = 0
+        for signal_id in signal_ids:
+            signal = self._signals.get(signal_id)
+            if not signal:
+                continue
+            await self.persist_signal(signal)
+            persisted += 1
+        return persisted
+
+    @staticmethod
+    def _apply_signal_row(row: SignalModel, signal: Signal) -> None:
+        """SignalModel へ Signal の値を反映."""
+        row.trend_id = signal.trend_id
+        row.reliability = float(signal.score.reliability)
+        row.leading = float(signal.score.leading)
+        row.relevance = float(signal.score.relevance)
+        row.actionability = float(signal.score.actionability)
+        row.convergence = float(signal.score.convergence)
+        row.total = float(signal.score.total)
+        row.grade = signal.grade.value
+        row.evaluated_at = signal.evaluated_at
+        row.metadata_json = dict(signal.metadata or {})
 
     def get_signal(self, signal_id: str) -> Signal | None:
         """信号を取得."""

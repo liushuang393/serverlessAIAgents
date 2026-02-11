@@ -194,6 +194,20 @@ class ApiClient {
     const response = await this.client.post<T>(path, data, config);
     return { data: response.data };
   }
+
+  /**
+   * 汎用PUTリクエスト.
+   *
+   * 注意: pathにはbaseURL相対パスを指定（例: '/competitors/config'）
+   */
+  async put<T = Record<string, unknown>>(
+    path: string,
+    data?: unknown,
+    config?: { params?: Record<string, unknown> }
+  ): Promise<{ data: T }> {
+    const response = await this.client.put<T>(path, data, config);
+    return { data: response.data };
+  }
 }
 
 // シングルトンインスタンス

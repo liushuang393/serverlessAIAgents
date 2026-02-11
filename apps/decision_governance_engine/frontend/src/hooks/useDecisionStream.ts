@@ -126,6 +126,9 @@ export function useDecisionStream() {
       business_owner?: string;
       legal_reviewer?: string;
     };
+    technicalConstraints?: string[];
+    regulatoryConstraints?: string[];
+    team?: string;
   } | null>(null);
 
   /** Agent 状態を更新 */
@@ -585,7 +588,10 @@ export function useDecisionStream() {
         handleEvent,
         handleError,
         handleOpen,
-        params.stakeholders
+        params.stakeholders,
+        params.technicalConstraints,
+        params.regulatoryConstraints,
+        params.team
       );
       setConnectionTimeout();
     }, delay);
@@ -598,7 +604,7 @@ export function useDecisionStream() {
       tech_lead?: string;
       business_owner?: string;
       legal_reviewer?: string;
-    }) => {
+    }, technicalConstraints?: string[], regulatoryConstraints?: string[], team?: string) => {
       console.log('🔘 [STEP4] startStream() 開始', { 
         question: question?.slice(0, 50), 
         budget, 
@@ -617,7 +623,7 @@ export function useDecisionStream() {
       clearConnectionTimeout();
 
       // パラメータ保存（再接続用）
-      lastParamsRef.current = { question, budget, timeline: timelineMonths, stakeholders };
+      lastParamsRef.current = { question, budget, timeline: timelineMonths, stakeholders, technicalConstraints, regulatoryConstraints, team };
       lastReviewVerdictRef.current = null;
 
       // 状態リセット（最初のagentをrunning状態に）
@@ -646,7 +652,10 @@ export function useDecisionStream() {
         handleEvent,
         handleError,
         handleOpen,
-        stakeholders
+        stakeholders,
+        technicalConstraints,
+        regulatoryConstraints,
+        team
       );
       
       console.log('🔘 [STEP4] EventSource 作成完了, readyState=', eventSourceRef.current?.readyState);

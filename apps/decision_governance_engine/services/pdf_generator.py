@@ -269,48 +269,144 @@ class PDFGeneratorService:
                     f"- <b>{trap.get('action', '')}</b> ({trap.get('severity', '')}): {trap.get('reason', '')}",
                     warning_style
                 ))
-        elements.append(Spacer(1, 0.3*cm))
 
-        # ========== 法セクション ==========
-        elements.append(PageBreak())
-        elements.append(Paragraph("法 - 戦略選定", heading_style))
-
-        # 戦略的禁止事項
-        prohibitions = fa.get("strategic_prohibitions", [])
-        if prohibitions:
-            elements.append(Paragraph("戦略的禁止事項", subheading_style))
-            for p in prohibitions:
+        # v3.1: 制約境界条件
+        boundaries = dao.get("constraint_boundaries", [])
+        if boundaries:
+            elements.append(Paragraph("制約境界条件", subheading_style))
+            for cb in boundaries:
                 elements.append(Paragraph(
-                    f"- <b>{p.get('prohibition', '')}</b>: {p.get('rationale', '')} → {p.get('violation_consequence', '')}",
-                    warning_style
+                    f"- <b>{cb.get('constraint_name', '')}</b>: {cb.get('definition', '')} "
+                    f"(違反例: {cb.get('violation_example', '')}、例外: {cb.get('exceptions', '')})",
+                    normal_style
                 ))
 
-        # 差別化軸
-        diff_axis = fa.get("differentiation_axis", {})
-        if diff_axis:
-            elements.append(Paragraph("差別化軸", subheading_style))
-            elements.append(Paragraph(f"<b>勝負する軸:</b> {diff_axis.get('axis_name', '')}", highlight_style))
-            elements.append(Paragraph(f"理由: {diff_axis.get('why_this_axis', '')}", normal_style))
-            elements.append(Paragraph(f"<b>勝負しない軸:</b> {diff_axis.get('not_this_axis', '')}", normal_style))
+        # v3.1: 成立ルート比較
+        routes = dao.get("solution_routes", [])
+        if routes:
+            elements.append(Paragraph("成立ルート比較（解空間探索）", subheading_style))
+            for sr in routes:
+                tradeoffs_str = "、".join(sr.get("tradeoffs", []))
+                elements.append(Paragraph(
+                    f"- <b>[{sr.get('route_type', '')}]</b> {sr.get('description', '')} "
+                    f"(実現可能性: {sr.get('viability', '')}) トレードオフ: {tradeoffs_str}",
+                    normal_style
+                ))
+
+        # v3.1: 定量指標
+        metrics = dao.get("quantified_metrics", [])
+        if metrics:
+            elements.append(Paragraph("定量指標", subheading_style))
+            for qm in metrics:
+                elements.append(Paragraph(
+                    f"- P{qm.get('priority', '')} <b>{qm.get('metric_name', '')}</b>: "
+                    f"目標 {qm.get('target_value', '')} ({qm.get('tradeoff_note', '')})",
+                    normal_style
+                ))
+
+        # v3.1: 監査証拠チェックリスト
+        audit_items = dao.get("audit_evidence_checklist", [])
+        if audit_items:
+            elements.append(Paragraph("監査証拠チェックリスト", subheading_style))
+            for ae in audit_items:
+                elements.append(Paragraph(
+                    f"- [{ae.get('category', '')}] {ae.get('required_evidence', '')} "
+                    f"→ 確認: {ae.get('verification_method', '')}",
+                    normal_style
+                ))
+
+        # v3.1: セルフチェック結果
+        self_check = dao.get("self_check", {})
+        if self_check:
+            status = self_check.get("overall_status", "N/A")
+            if hasattr(status, "value"):
+                status = status.value
+            elements.append(Paragraph(f"セルフチェック: {status}", subheading_style))
+            for label, key in [
+                ("境界未定義", "boundary_undefined"),
+                ("選択肢漏れ", "missing_alternatives"),
+                ("曖昧な指標", "ambiguous_metrics"),
+                ("制約衝突", "constraint_conflicts"),
+                ("証拠不足", "evidence_gaps"),
+            ]:
+                items = self_check.get(key, [])
+                if items:
+                    elements.append(Paragraph(
+                        f"  {label}: {', '.join(items)}", warning_style
+                    ))
+
+        elements.append(Spacer(1, 0.3*cm))
+
+        # ========== 法セクション v3.1 ==========
+        elements.append(PageBreak())
+        elements.append(Paragraph("法 - 戦略選定 v3.1", heading_style))
+
+        # 戦略的禁止事項（仕組み化）
+        prohibitions = fa.get("strategic_prohibitions", [])
+        if prohibitions:
+            elements.append(Paragraph("戦略的禁止事項（仕組み化）", subheading_style))
+            for p in prohibitions:
+                elements.append(Paragraph(
+                    f"- <b>⛔ {p.get('prohibition', '')}</b>: {p.get('rationale', '')} → {p.get('violation_consequence', '')}",
+                    warning_style
+                ))
+                if p.get("prevention_measure"):
+                    elements.append(Paragraph(f"  🛡️ 防止策: {p['prevention_measure']}", normal_style))
+                if p.get("detection_metric"):
+                    elements.append(Paragraph(f"  📊 検知指標: {p['detection_metric']}", normal_style))
+                if p.get("responsible_role"):
+                    elements.append(Paragraph(f"  👤 責任者: {p['responsible_role']}", normal_style))
+
+        # v3.1: 競争優位仮説
+        comp_hyp = fa.get("competitive_hypothesis", {})
+        if comp_hyp:
+            elements.append(Paragraph("競争優位仮説", subheading_style))
+            elements.append(Paragraph(f"<b>差別化軸:</b> {comp_hyp.get('axis_name', '')}", highlight_style))
+            elements.append(Paragraph(f"<b>対象顧客:</b> {comp_hyp.get('target_customer', '')}", normal_style))
+            elements.append(Paragraph(f"<b>代替障壁:</b> {comp_hyp.get('substitution_barrier', '')}", normal_style))
+            elements.append(Paragraph(f"<b>勝ち筋指標:</b> {comp_hyp.get('winning_metric', '')}", normal_style))
+            elements.append(Paragraph(f"<b>最小検証:</b> {comp_hyp.get('minimum_verification', '')}", normal_style))
+        else:
+            # v3.0フォールバック: 差別化軸
+            diff_axis = fa.get("differentiation_axis", {})
+            if diff_axis:
+                elements.append(Paragraph("差別化軸", subheading_style))
+                elements.append(Paragraph(f"<b>勝負する軸:</b> {diff_axis.get('axis_name', '')}", highlight_style))
+                elements.append(Paragraph(f"理由: {diff_axis.get('why_this_axis', '')}", normal_style))
+                elements.append(Paragraph(f"<b>勝負しない軸:</b> {diff_axis.get('not_this_axis', '')}", normal_style))
 
         # 既存解が使えない理由
         why_existing = fa.get("why_existing_fails", "")
         if why_existing:
             elements.append(Paragraph(f"<b>既存解が使えない理由:</b> {why_existing}", warning_style))
 
-        # 推奨パス
+        # 推奨パス（v3.1: 条件付き評価）
         for path in fa.get("recommended_paths", []):
             strategy_type = path.get("strategy_type", "")
             if hasattr(strategy_type, "value"):
                 strategy_type = strategy_type.value
             elements.append(Paragraph(f"{path.get('name', '')} ({strategy_type})", subheading_style))
             elements.append(Paragraph(path.get("description", ""), normal_style))
+            rev = path.get("reversibility", "")
             elements.append(Paragraph(
-                f"成功確率: {path.get('success_probability', 0)*100:.0f}% | "
-                f"価値実現: {path.get('time_to_value', '')} | "
-                f"可逆性: {path.get('reversibility', '')}",
+                f"価値実現: {path.get('time_to_value', '')} | 可逆性: {rev}",
                 normal_style
             ))
+            # v3.1: 条件付き評価
+            cond_eval = path.get("conditional_evaluation", {})
+            if cond_eval:
+                sc = cond_eval.get("success_conditions", [])
+                if sc:
+                    elements.append(Paragraph(f"<b>成立条件:</b> {', '.join(sc)}", normal_style))
+                rf = cond_eval.get("risk_factors", [])
+                if rf:
+                    elements.append(Paragraph(f"<b>リスク要因:</b> {', '.join(rf)}", warning_style))
+                fm = cond_eval.get("failure_modes", [])
+                if fm:
+                    elements.append(Paragraph(f"<b>失敗モード:</b> {', '.join(fm)}", warning_style))
+            risk_conc = path.get("risk_concentration", "")
+            if risk_conc:
+                elements.append(Paragraph(f"<b>リスク集中点:</b> {risk_conc}", warning_style))
             pros = path.get("pros", [])
             if pros:
                 elements.append(Paragraph("<b>メリット:</b>", normal_style))
@@ -321,6 +417,44 @@ class PDFGeneratorService:
                 elements.append(Paragraph("<b>デメリット:</b>", normal_style))
                 for con in cons:
                     elements.append(Paragraph(f"  - {con}", warning_style))
+
+        # v3.1: 判断フレームワーク
+        jf = fa.get("judgment_framework", {})
+        if jf:
+            elements.append(Paragraph("判断フレームワーク（Must/Should分離）", subheading_style))
+            must_gates = jf.get("must_gates", [])
+            if must_gates:
+                elements.append(Paragraph("<b>Must（不可変ゲート）:</b>", normal_style))
+                for g in must_gates:
+                    elements.append(Paragraph(
+                        f"  🚪 {g.get('criterion', '')} — 閾値: {g.get('threshold', '')}", normal_style
+                    ))
+            should = jf.get("should_criteria", [])
+            if should:
+                elements.append(Paragraph("<b>Should（比較評価）:</b>", normal_style))
+                for s in should:
+                    elements.append(Paragraph(
+                        f"  📏 {s.get('criterion', '')} [{s.get('weight', '')}] — {s.get('scoring_method', '')}", normal_style
+                    ))
+
+        # v3.1: セルフチェック
+        fa_sc = fa.get("fa_self_check", {})
+        if fa_sc:
+            status = fa_sc.get("overall_status", "")
+            if hasattr(status, "value"):
+                status = status.value
+            sc_style = warning_style if status != "PASS" else normal_style
+            elements.append(Paragraph(f"セルフチェック結果: {status}", sc_style))
+            for label, key in [
+                ("根拠なき数値", "baseless_numbers"),
+                ("中間案漏れ", "missing_intermediate"),
+                ("ゲート不在", "missing_gates"),
+                ("見せかけ精度", "appearance_precision"),
+            ]:
+                items = fa_sc.get(key, [])
+                if items:
+                    elements.append(Paragraph(f"  {label}: {', '.join(items)}", warning_style))
+
         elements.append(Spacer(1, 0.3*cm))
 
         # ========== 術セクション ==========
@@ -772,6 +906,88 @@ th{{background:#1f2937;font-weight:bold}}
             )
             death_traps_html = f"<h3>💀 死穴（禁忌）</h3>{items}"
 
+        # v3.1: 制約境界条件
+        boundaries_html = ""
+        boundaries = dao.get("constraint_boundaries", [])
+        if boundaries:
+            rows = "".join(
+                f"<tr><td><strong>{cb.get('constraint_name', '')}</strong></td>"
+                f"<td>{cb.get('definition', '')}</td>"
+                f"<td>{cb.get('violation_example', '')}</td>"
+                f"<td>{cb.get('exceptions', '')}</td></tr>"
+                for cb in boundaries
+            )
+            boundaries_html = (
+                '<h3>🚧 制約境界条件</h3>'
+                '<table><thead><tr><th>制約名</th><th>判定条件</th><th>違反例</th><th>例外</th></tr></thead>'
+                f'<tbody>{rows}</tbody></table>'
+            )
+
+        # v3.1: 成立ルート比較
+        routes_html = ""
+        routes = dao.get("solution_routes", [])
+        if routes:
+            route_items = ""
+            for sr in routes:
+                tradeoffs_str = "、".join(sr.get("tradeoffs", []))
+                route_items += (
+                    f'<div class="card"><strong>[{sr.get("route_type", "")}]</strong> '
+                    f'{sr.get("description", "")}<br/>'
+                    f'<span class="label">実現可能性:</span> {sr.get("viability", "")} '
+                    f'<span class="label">トレードオフ:</span> {tradeoffs_str}</div>'
+                )
+            routes_html = f"<h3>🛤️ 成立ルート比較（解空間探索）</h3>{route_items}"
+
+        # v3.1: 定量指標
+        metrics_html = ""
+        metrics = dao.get("quantified_metrics", [])
+        if metrics:
+            m_rows = "".join(
+                f"<tr><td>P{qm.get('priority', '')}</td>"
+                f"<td><strong>{qm.get('metric_name', '')}</strong></td>"
+                f"<td>{qm.get('target_value', '')}</td>"
+                f"<td>{qm.get('tradeoff_note', '')}</td></tr>"
+                for qm in metrics
+            )
+            metrics_html = (
+                '<h3>📊 定量指標</h3>'
+                '<table><thead><tr><th>優先</th><th>指標名</th><th>目標値</th><th>トレードオフ</th></tr></thead>'
+                f'<tbody>{m_rows}</tbody></table>'
+            )
+
+        # v3.1: 監査証拠チェックリスト
+        audit_html = ""
+        audit_items = dao.get("audit_evidence_checklist", [])
+        if audit_items:
+            a_items = "".join(
+                f'<li><strong>[{ae.get("category", "")}]</strong> {ae.get("required_evidence", "")} '
+                f'→ 確認: {ae.get("verification_method", "")}</li>'
+                for ae in audit_items
+            )
+            audit_html = f"<h3>📋 監査証拠チェックリスト</h3><ul>{a_items}</ul>"
+
+        # v3.1: セルフチェック結果
+        selfcheck_html = ""
+        self_check = dao.get("self_check", {})
+        if self_check:
+            sc_status = self_check.get("overall_status", "N/A")
+            if hasattr(sc_status, "value"):
+                sc_status = sc_status.value
+            sc_details = ""
+            for label, key in [
+                ("境界未定義", "boundary_undefined"),
+                ("選択肢漏れ", "missing_alternatives"),
+                ("曖昧な指標", "ambiguous_metrics"),
+                ("制約衝突", "constraint_conflicts"),
+                ("証拠不足", "evidence_gaps"),
+            ]:
+                sc_items = self_check.get(key, [])
+                if sc_items:
+                    sc_details += f"<li>{label}: {', '.join(sc_items)}</li>"
+            if sc_details:
+                sc_details = f"<ul>{sc_details}</ul>"
+            selfcheck_html = f'<h3>🔬 セルフチェック: <span class="highlight">{sc_status}</span></h3>{sc_details}'
+
         return f"""<h2>🎯 道 - 本質分析</h2>
 <div class="card">
 <p><span class="label">問題タイプ:</span> {problem_type}</p>
@@ -783,58 +999,141 @@ th{{background:#1f2937;font-weight:bold}}
 {constraints_html}
 {assumptions_html}
 {gears_html}
-{death_traps_html}"""
+{death_traps_html}
+{boundaries_html}
+{routes_html}
+{metrics_html}
+{audit_html}
+{selfcheck_html}"""
 
     def _build_fa_html(self, fa: dict) -> str:
-        """法セクションHTMLを構築 v3.0."""
-        # 推奨パス
-        paths_html = ""
-        for path in fa.get("recommended_paths", []):
-            strategy_type = path.get("strategy_type", "")
-            if hasattr(strategy_type, "value"):
-                strategy_type = strategy_type.value
-
-            pros = "".join(f"<li>✅ {p}</li>" for p in path.get("pros", []))
-            cons = "".join(f"<li>❌ {c}</li>" for c in path.get("cons", []))
-
-            paths_html += f"""<div class="card">
-<h3>📌 {path.get('name', '')} ({strategy_type})</h3>
-<p>{path.get('description', '')}</p>
-<p><span class="label">成功確率:</span> {path.get('success_probability', 0)*100:.0f}%</p>
-<p><span class="label">価値実現時間:</span> {path.get('time_to_value', '')}</p>
-<p><span class="label">可逆性:</span> {path.get('reversibility', '')}</p>
-<h4>メリット</h4><ul>{pros}</ul>
-<h4>デメリット</h4><ul>{cons}</ul>
-</div>"""
-
-        # v3.0: 戦略的禁止事項
+        """法セクションHTMLを構築 v3.1."""
+        # v3.1: 戦略的禁止事項（仕組み化）
         prohibitions_html = ""
         prohibitions = fa.get("strategic_prohibitions", [])
         if prohibitions:
-            items = "".join(
-                f'<div class="prohibition"><strong>⛔ {p.get("prohibition", "")}</strong><br/>'
-                f'理由: {p.get("rationale", "")}<br/>'
-                f'違反結果: {p.get("violation_consequence", "")}</div>'
-                for p in prohibitions
-            )
-            prohibitions_html = f"<h3>🚫 戦略的禁止事項（絶対にやってはいけない）</h3>{items}"
+            items = ""
+            for p in prohibitions:
+                enforcement = ""
+                if p.get("prevention_measure"):
+                    enforcement += f"<br/>🛡️ 防止策: {p['prevention_measure']}"
+                if p.get("detection_metric"):
+                    enforcement += f"<br/>📊 検知指標: {p['detection_metric']}"
+                if p.get("responsible_role"):
+                    enforcement += f"<br/>👤 責任者: {p['responsible_role']}"
+                items += (
+                    f'<div class="prohibition"><strong>⛔ {p.get("prohibition", "")}</strong><br/>'
+                    f'理由: {p.get("rationale", "")}<br/>'
+                    f'違反結果: {p.get("violation_consequence", "")}'
+                    f'{enforcement}</div>'
+                )
+            prohibitions_html = f"<h3>🚫 戦略的禁止事項（仕組み化）</h3>{items}"
 
-        # v3.0: 差別化軸
-        diff_axis_html = ""
-        diff_axis = fa.get("differentiation_axis", {})
-        if diff_axis:
-            diff_axis_html = f"""<div class="highlight">
+        # v3.1: 競争優位仮説
+        hypothesis_html = ""
+        comp_hyp = fa.get("competitive_hypothesis", {})
+        if comp_hyp:
+            hypothesis_html = f"""<div class="highlight">
+<h3>🎯 競争優位仮説</h3>
+<p><span class="label">差別化軸:</span> <strong>{comp_hyp.get('axis_name', '')}</strong></p>
+<p><span class="label">対象顧客:</span> {comp_hyp.get('target_customer', '')}</p>
+<p><span class="label">代替障壁:</span> {comp_hyp.get('substitution_barrier', '')}</p>
+<p><span class="label">勝ち筋指標:</span> {comp_hyp.get('winning_metric', '')}</p>
+<p><span class="label">最小検証:</span> {comp_hyp.get('minimum_verification', '')}</p>
+</div>"""
+        else:
+            # v3.0フォールバック
+            diff_axis = fa.get("differentiation_axis", {})
+            if diff_axis:
+                hypothesis_html = f"""<div class="highlight">
 <h3>🎯 差別化軸</h3>
 <p><span class="label">勝負する軸:</span> <strong>{diff_axis.get('axis_name', '')}</strong></p>
 <p><span class="label">理由:</span> {diff_axis.get('why_this_axis', '')}</p>
 <p><span class="label">勝負しない軸:</span> {diff_axis.get('not_this_axis', '')}</p>
 </div>"""
 
-        # v3.0: 既存解が使えない理由
+        # 既存解が使えない理由
         why_existing_fails = fa.get("why_existing_fails", "")
         why_existing_html = ""
         if why_existing_fails:
             why_existing_html = f'<div class="warning"><span class="label">既存解が使えない理由:</span> {why_existing_fails}</div>'
+
+        # 推奨パス（v3.1: 条件付き評価）
+        paths_html = ""
+        for path in fa.get("recommended_paths", []):
+            strategy_type = path.get("strategy_type", "")
+            if hasattr(strategy_type, "value"):
+                strategy_type = strategy_type.value
+            pros = "".join(f"<li>✅ {p}</li>" for p in path.get("pros", []))
+            cons = "".join(f"<li>❌ {c}</li>" for c in path.get("cons", []))
+            # v3.1: 条件付き評価HTML
+            cond_html = ""
+            cond_eval = path.get("conditional_evaluation", {})
+            if cond_eval:
+                sc = cond_eval.get("success_conditions", [])
+                rf = cond_eval.get("risk_factors", [])
+                fm = cond_eval.get("failure_modes", [])
+                cond_items = ""
+                if sc:
+                    cond_items += f"<p><strong>成立条件:</strong> {', '.join(sc)}</p>"
+                if rf:
+                    cond_items += f"<p><strong>リスク要因:</strong> {', '.join(rf)}</p>"
+                if fm:
+                    cond_items += f"<p><strong>失敗モード:</strong> {', '.join(fm)}</p>"
+                if cond_items:
+                    cond_html = f'<div class="highlight"><h4>📋 条件付き評価</h4>{cond_items}</div>'
+            risk_conc = path.get("risk_concentration", "")
+            risk_html = f"<p><strong>⚡ リスク集中点:</strong> {risk_conc}</p>" if risk_conc else ""
+            paths_html += f"""<div class="card">
+<h3>📌 {path.get('name', '')} ({strategy_type})</h3>
+<p>{path.get('description', '')}</p>
+<p><span class="label">価値実現:</span> {path.get('time_to_value', '')} | <span class="label">可逆性:</span> {path.get('reversibility', '')}</p>
+{cond_html}{risk_html}
+<h4>メリット</h4><ul>{pros}</ul>
+<h4>デメリット</h4><ul>{cons}</ul>
+</div>"""
+
+        # v3.1: 判断フレームワーク
+        jf_html = ""
+        jf = fa.get("judgment_framework", {})
+        if jf:
+            must_html = ""
+            must_gates = jf.get("must_gates", [])
+            if must_gates:
+                must_rows = "".join(
+                    f"<tr><td>🚪 {g.get('criterion', '')}</td><td>{g.get('threshold', '')}</td></tr>"
+                    for g in must_gates
+                )
+                must_html = f'<h4>Must（不可変ゲート）</h4><table><tr><th>基準</th><th>閾値</th></tr>{must_rows}</table>'
+            should_html = ""
+            should = jf.get("should_criteria", [])
+            if should:
+                should_rows = "".join(
+                    f"<tr><td>{s.get('criterion', '')}</td><td>{s.get('weight', '')}</td><td>{s.get('scoring_method', '')}</td></tr>"
+                    for s in should
+                )
+                should_html = f'<h4>Should（比較評価）</h4><table><tr><th>基準</th><th>重み</th><th>採点方法</th></tr>{should_rows}</table>'
+            jf_html = f"<h3>⚖️ 判断フレームワーク</h3>{must_html}{should_html}"
+
+        # v3.1: セルフチェック
+        selfcheck_html = ""
+        fa_sc = fa.get("fa_self_check", {})
+        if fa_sc:
+            status = fa_sc.get("overall_status", "")
+            if hasattr(status, "value"):
+                status = status.value
+            sc_items = ""
+            for label, key in [
+                ("根拠なき数値", "baseless_numbers"),
+                ("中間案漏れ", "missing_intermediate"),
+                ("ゲート不在", "missing_gates"),
+                ("見せかけ精度", "appearance_precision"),
+            ]:
+                vals = fa_sc.get(key, [])
+                if vals:
+                    sc_items += f"<p><strong>{label}:</strong> {', '.join(vals)}</p>"
+            sc_class = "pass" if status == "PASS" else "warning"
+            selfcheck_html = f'<div class="{sc_class}"><h3>🔍 セルフチェック: {status}</h3>{sc_items}</div>'
 
         # 比較マトリックス
         comparison_html = ""
@@ -852,12 +1151,14 @@ th{{background:#1f2937;font-weight:bold}}
 <table><tr><th>パス</th>{header}</tr>{rows}</table>
 <p>{comparison.get('recommendation_summary', '')}</p>"""
 
-        return f"""<h2>⚖️ 法 - 戦略選定</h2>
+        return f"""<h2>⚖️ 法 - 戦略選定 v3.1</h2>
 {prohibitions_html}
-{diff_axis_html}
+{hypothesis_html}
 {why_existing_html}
 {paths_html}
-{comparison_html}"""
+{jf_html}
+{comparison_html}
+{selfcheck_html}"""
 
     def _build_shu_html(self, shu: dict) -> str:
         """術セクションHTMLを構築 v3.0."""
@@ -942,7 +1243,59 @@ th{{background:#1f2937;font-weight:bold}}
 <p><span class="label">次の判断:</span> {rhythm.get('next_decision_point', '')}</p>
 </div>"""
 
-        return f"""<h2>📋 術 - 実行計画</h2>
+        # v3.1: PoC完成定義
+        poc_dod_html = ""
+        poc_dod = shu.get("poc_definition_of_done", {})
+        if poc_dod:
+            exp_items = "".join(f"<li>✓ {c}</li>" for c in poc_dod.get("experience_conditions", []))
+            metric_rows = "".join(
+                f"<tr><td>{m.get('metric_name', '')}</td><td>{m.get('target_value', '')}</td>"
+                f"<td>{m.get('measurement_method', '')}</td></tr>"
+                for m in poc_dod.get("success_metrics", [])
+            )
+            fallback = poc_dod.get("fallback_strategy", "")
+            poc_dod_html = f"""<div class="success">
+<h3>🎯 PoC完成定義（Definition of Done）</h3>
+<h4>体験条件</h4><ul>{exp_items}</ul>
+<h4>成功指標</h4>
+<table><tr><th>指標</th><th>目標値</th><th>計測方法</th></tr>{metric_rows}</table>
+<p><span class="label">フォールバック:</span> {fallback}</p>
+</div>"""
+
+        # v3.1: 2段ロケット
+        rocket_html = ""
+        rocket = shu.get("two_stage_rocket", {})
+        if rocket:
+            for stage_key, label in [("stage1_minimal_pipeline", "Stage1: 最小パイプライン"), ("stage2_governance", "Stage2: 統制強化")]:
+                stage = rocket.get(stage_key, {})
+                if not stage:
+                    continue
+                phase_items = ""
+                for p in stage.get("phases", []):
+                    tasks = ", ".join(p.get("tasks", []))
+                    branches = "".join(
+                        f"<li>{b.get('branch_name', '')}: {b.get('trigger_condition', '')} → {b.get('description', '')}</li>"
+                        for b in p.get("branches", [])
+                    )
+                    branch_section = f"<h5>分岐</h5><ul>{branches}</ul>" if branches else ""
+                    phase_items += f"""<div class="card">
+<h4>Phase {p.get('phase_number', '')}: {p.get('name', '')} ({p.get('duration', '')})</h4>
+<p><span class="label">目的:</span> {p.get('purpose', '')}</p>
+<p><span class="label">作業:</span> {tasks}</p>
+{branch_section}
+</div>"""
+                gate = ", ".join(stage.get("gate_criteria", []))
+                gate_html = f"<p><span class='label'>ゲート基準:</span> {gate}</p>" if gate else ""
+                rocket_html += f"""<div class="highlight">
+<h3>🚀 {label}: {stage.get('stage_name', '')}</h3>
+<p>{stage.get('objective', '')}</p>
+{gate_html}
+{phase_items}
+</div>"""
+
+        return f"""<h2>📋 術 - 実行計画 v3.1</h2>
+{poc_dod_html}
+{rocket_html}
 {first_action_html}
 {cut_list_html}
 {context_actions_html}
@@ -1033,7 +1386,70 @@ th{{background:#1f2937;font-weight:bold}}
             items = "".join(f"<li>⚠️ {w}</li>" for w in warnings)
             warnings_html = f"<h3>⚠️ 技術負債警告</h3><ul>{items}</ul>"
 
-        return f"""<h2>🔧 器 - 技術実装</h2>
+        # v3.1: PoC最小アーキテクチャ
+        poc_arch_html = ""
+        poc_arch = qi.get("poc_minimal_architecture", {})
+        if poc_arch:
+            comp_rows = "".join(
+                f"<tr><td>{c.get('name', '')}</td><td>{c.get('purpose', '')}</td>"
+                f"<td>{c.get('technology_choice', '')}</td><td>{c.get('notes', '')}</td></tr>"
+                for c in poc_arch.get("components", [])
+            )
+            flow = poc_arch.get("data_flow_description", "")
+            logging_info = poc_arch.get("minimal_logging", {})
+            log_html = ""
+            if logging_info:
+                log_html = f"<p><span class='label'>ID戦略:</span> {logging_info.get('correlation_id_strategy', '')}</p>"
+            deferred = poc_arch.get("deferred_components", [])
+            deferred_html = f"<p><span class='label'>後回し:</span> {', '.join(deferred)}</p>" if deferred else ""
+            poc_arch_html = f"""<div class="highlight">
+<h3>🏗️ PoC最小アーキテクチャ</h3>
+<table><tr><th>コンポーネント</th><th>目的</th><th>技術選定</th><th>備考</th></tr>{comp_rows}</table>
+<p><span class="label">データフロー:</span> {flow}</p>
+{log_html}{deferred_html}
+</div>"""
+
+        # v3.1: 拡張アーキテクチャ段階
+        expansion_html = ""
+        expansion = qi.get("expansion_stages", [])
+        if expansion:
+            rows = "".join(
+                f"<tr><td>{s.get('stage_name', '')}</td><td>{s.get('introduction_condition', '')}</td>"
+                f"<td>{', '.join(s.get('added_components', []))}</td><td>{s.get('rationale', '')}</td></tr>"
+                for s in expansion
+            )
+            expansion_html = f"""<div class="card">
+<h3>📈 拡張アーキテクチャ（導入条件付き）</h3>
+<table><tr><th>段階</th><th>導入条件</th><th>追加コンポーネント</th><th>理由</th></tr>{rows}</table>
+</div>"""
+
+        # v3.1: 実装手順
+        steps_html = ""
+        steps = qi.get("implementation_steps", [])
+        if steps:
+            step_items = ""
+            for s in steps:
+                tasks = ", ".join(s.get("tasks", []))
+                pitfalls = "".join(f"<li>⚠️ {p}</li>" for p in s.get("common_pitfalls", []))
+                pitfall_section = f"<ul>{pitfalls}</ul>" if pitfalls else ""
+                step_items += f"<li><strong>Step {s.get('step_number', '')}: {s.get('objective', '')}</strong><br/>作業: {tasks}{pitfall_section}</li>"
+            steps_html = f"""<div class="card">
+<h3>📝 実装手順</h3>
+<ol>{step_items}</ol>
+</div>"""
+
+        # v3.1: 将来スケール要件
+        future_html = ""
+        future = qi.get("future_scale_requirements", [])
+        if future:
+            items = "".join(f"<li>{r}</li>" for r in future)
+            future_html = f"""<div class="card"><h3>🔮 将来スケール要件（PoC範囲外）</h3><ul>{items}</ul></div>"""
+
+        return f"""<h2>🔧 器 - 技術実装 v3.1</h2>
+{poc_arch_html}
+{expansion_html}
+{steps_html}
+{future_html}
 {domain_tech_html}
 {regulatory_html}
 {geographic_html}
@@ -1043,64 +1459,79 @@ th{{background:#1f2937;font-weight:bold}}
 {warnings_html}"""
 
     def _build_review_html(self, review: dict) -> str:
-        """検証セクションHTMLを構築."""
+        """検証セクションHTMLを構築 v3.1（差分パッチ型）."""
         verdict = review.get("overall_verdict", "N/A")
         if hasattr(verdict, "value"):
             verdict = verdict.value
 
         confidence = review.get("confidence_score", 0)
+        verdict_class = "success" if verdict == "PASS" else "prohibition" if verdict == "REJECT" else "warning"
 
-        # 所見
+        # v3.1 信頼度分解
+        breakdown_html = ""
+        breakdown = review.get("confidence_breakdown")
+        if isinstance(breakdown, dict):
+            rows: list[str] = []
+            for key in ("input_sufficiency", "logic_consistency", "implementation_feasibility", "risk_coverage"):
+                comp = breakdown.get(key, {})
+                if isinstance(comp, dict):
+                    rows.append(
+                        f"<tr><td>{comp.get('name', key)}</td>"
+                        f"<td>{comp.get('score', 0):.0f}%</td>"
+                        f"<td>+{comp.get('checkbox_boost', 0):.0f}点</td>"
+                        f"<td>{comp.get('description', '')}</td></tr>"
+                    )
+            if rows:
+                breakdown_html = (
+                    "<h3>📊 信頼度分解</h3>"
+                    "<table><tr><th>項目</th><th>スコア</th><th>チェック加点</th><th>説明</th></tr>"
+                    + "".join(rows) + "</table>"
+                )
+
+        # v3.1 差分パッチ型 所見（最大3件）
         findings_html = ""
         findings = review.get("findings", [])
         if findings:
             item_rows: list[str] = []
-            for finding in findings:
+            for finding in findings[:3]:
                 if not isinstance(finding, dict):
                     continue
-                importance_text = "<br/>人間確認: 必須" if finding.get("requires_human_review") else ""
-                hint_text = (
-                    f"<br/>確認ヒント: {finding.get('human_review_hint', '')}"
-                    if finding.get("human_review_hint")
-                    else ""
+                action = finding.get("action_type", "RECALC")
+                fp = finding.get("failure_point", "")
+                isc = finding.get("impact_scope", "")
+                mp = finding.get("minimal_patch", {})
+                cb_label = mp.get("checkbox_label", "") if isinstance(mp, dict) else ""
+                si_list = finding.get("score_improvements", [])
+                si_text = ", ".join(
+                    f"{s.get('target_score', '')}: {s.get('current_estimate', 0):.0f}%→{s.get('improved_estimate', 0):.0f}%(+{s.get('delta', 0):.0f})"
+                    for s in si_list if isinstance(s, dict)
                 )
                 item_rows.append(
-                    f"<li><strong>{finding.get('severity', '')}</strong> "
-                    f"({finding.get('category', '')}): {finding.get('description', '')}"
-                    f"<br/>影響Agent: {finding.get('affected_agent', '')} | "
-                    f"修正提案: {finding.get('suggested_revision', '')}"
-                    f"{importance_text}{hint_text}</li>"
+                    f"<li><strong>[{action}]</strong> {finding.get('description', '')}"
+                    + (f"<br/>破綻点: {fp}" if fp else "")
+                    + (f"<br/>影響範囲: {isc}" if isc else "")
+                    + (f"<br/>最小パッチ: ☐ {cb_label}" if cb_label else "")
+                    + (f"<br/>改善見込み: {si_text}" if si_text else "")
+                    + "</li>"
                 )
-            items = "".join(item_rows)
-            findings_html = f"<h3>📝 検証所見</h3><ul>{items}</ul>"
+            findings_html = f"<h3>🎯 高レバレッジ欠陥（{len(findings)}件）</h3><ul>{''.join(item_rows)}</ul>"
 
-        # 最終警告
-        warnings_html = ""
-        warnings = review.get("final_warnings", [])
-        if warnings:
-            items = "".join(f"<li>⚠️ {w}</li>" for w in warnings)
-            warnings_html = f"<h3>⚠️ 最終警告</h3><ul>{items}</ul>"
-
-        review_records_html = ""
-        review_records = review.get("human_review_records", [])
-        if isinstance(review_records, list) and review_records:
-            items = "".join(
-                f"<li>{r.get('reviewed_at', '')}: {r.get('reviewer_name', '確認者不明')} / "
-                f"{'解消' if r.get('resolved') else '未解消'} / "
-                f"{r.get('confirmation_note', '')}</li>"
-                for r in review_records[-10:]
-                if isinstance(r, dict)
+        # v3.1 チェックポイント項目
+        checkpoint_html = ""
+        checkpoints = review.get("checkpoint_items", [])
+        if checkpoints:
+            cp_items = "".join(
+                f"<li>☐ {c.get('label', '')} (+{c.get('score_boost', 0):.0f}点)"
+                f" — {c.get('default_suggestion', '')}</li>"
+                for c in checkpoints if isinstance(c, dict)
             )
-            if items:
-                review_records_html = f"<h3>🧾 人間確認履歴</h3><ul>{items}</ul>"
+            checkpoint_html = f"<h3>☑️ 確認チェックポイント</h3><ul>{cp_items}</ul>"
 
-        verdict_class = "success" if verdict == "PASS" else "prohibition" if verdict == "REJECT" else "warning"
-
-        return f"""<h2>✅ 検証 - 最終判定</h2>
+        return f"""<h2>✅ 検証 - 差分パッチ型判定 v3.1</h2>
 <div class="{verdict_class}">
 <p><span class="label">判定:</span> <strong>{verdict}</strong></p>
 <p><span class="label">信頼度:</span> {confidence*100:.0f}%</p>
 </div>
+{breakdown_html}
 {findings_html}
-{warnings_html}
-{review_records_html}"""
+{checkpoint_html}"""

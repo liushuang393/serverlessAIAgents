@@ -64,7 +64,7 @@ const TABS = [
 
 type TabId = typeof TABS[number]['id'];
 
-/** パスカード */
+/** パスカード（v3.1: 条件付き評価対応） */
 const PathCard: React.FC<{ path: RecommendedPath; isRecommended?: boolean }> = ({
   path,
   isRecommended,
@@ -73,20 +73,62 @@ const PathCard: React.FC<{ path: RecommendedPath; isRecommended?: boolean }> = (
     <div className="flex items-center justify-between mb-3">
       <div className="flex items-center gap-2">
         <span>{isRecommended ? '✓' : '✕'}</span>
-        <span className="font-semibold">{path.name}</span>
+        <span className="font-semibold">{path.path_id}: {path.name}</span>
         {!isRecommended && <span className="text-xs text-red-400 px-2 py-0.5 bg-red-500/10 rounded">不推奨</span>}
       </div>
-      <span className={`text-sm ${isRecommended ? 'text-emerald-400' : 'text-slate-500'}`}>
-        成功確率 {Math.round(path.success_probability * 100)}%
-      </span>
+      {path.reversibility && (
+        <span className="text-xs px-2 py-0.5 bg-slate-700 text-slate-300 rounded">可逆性: {path.reversibility}</span>
+      )}
     </div>
     <p className="text-sm text-slate-400 mb-4">{path.description}</p>
-    
+
+    {/* v3.1: 条件付き評価 */}
+    {path.conditional_evaluation && (
+      <div className="bg-slate-800/50 rounded-lg p-3 mb-4 space-y-2">
+        <div className="text-xs font-medium text-cyan-400 mb-2">📋 条件付き評価</div>
+        {path.conditional_evaluation.success_conditions?.length > 0 && (
+          <div>
+            <span className="text-xs text-emerald-400">成立条件:</span>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {path.conditional_evaluation.success_conditions.map((c: string, ci: number) => (
+                <span key={`sc-${ci}`} className="text-xs px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded">{c}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {path.conditional_evaluation.risk_factors?.length > 0 && (
+          <div>
+            <span className="text-xs text-amber-400">リスク要因:</span>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {path.conditional_evaluation.risk_factors.map((r: string, ri: number) => (
+                <span key={`rf-${ri}`} className="text-xs px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded">{r}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {path.conditional_evaluation.failure_modes?.length > 0 && (
+          <div>
+            <span className="text-xs text-red-400">失敗モード:</span>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {path.conditional_evaluation.failure_modes.map((f: string, fi: number) => (
+                <span key={`fm-${fi}`} className="text-xs px-2 py-0.5 bg-red-500/10 text-red-400 rounded">{f}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* リスク集中点 */}
+    {path.risk_concentration && (
+      <div className="text-xs text-amber-400 mb-3">⚡ リスク集中点: <span className="text-slate-400">{path.risk_concentration}</span></div>
+    )}
+
     <div className="grid grid-cols-2 gap-4">
       <div>
         <div className="text-xs text-emerald-400 mb-2">メリット</div>
         {path.pros.map((p, i) => (
-          <div key={i} className="text-sm text-slate-400 flex items-center gap-2 mb-1">
+          <div key={`pro-${i}`} className="text-sm text-slate-400 flex items-center gap-2 mb-1">
             <span className="text-emerald-400">+</span> {p}
           </div>
         ))}
@@ -94,12 +136,15 @@ const PathCard: React.FC<{ path: RecommendedPath; isRecommended?: boolean }> = (
       <div>
         <div className="text-xs text-amber-400 mb-2">デメリット</div>
         {path.cons.map((c, i) => (
-          <div key={i} className="text-sm text-slate-400 flex items-center gap-2 mb-1">
+          <div key={`con-${i}`} className="text-sm text-slate-400 flex items-center gap-2 mb-1">
             <span className="text-amber-400">-</span> {c}
           </div>
         ))}
       </div>
     </div>
+    {path.time_to_value && (
+      <div className="mt-3 text-xs text-slate-500">⏱️ 価値実現: {path.time_to_value}</div>
+    )}
   </div>
 );
 
@@ -135,7 +180,7 @@ const PhaseTimeline: React.FC<{ phases: Phase[] }> = ({ phases }) => (
 );
 
 export const ReportPage: React.FC = () => {
-  const { report, reportId, requestId, question, setPage, setReport, reset } = useDecisionStore();
+  const { report, reportId, requestId, question, setPage, reset } = useDecisionStore();
   const { user, performLogout } = useAuthStore();
   const [activeTab, setActiveTab] = useState<TabId>('summary');
   const [exportingType, setExportingType] = useState<"pdf" | "html" | null>(null);
@@ -143,8 +188,10 @@ export const ReportPage: React.FC = () => {
   const [notification, setNotification] = useState<{type: NotificationType; message: string} | null>(null);
   const [humanReviewNotes, setHumanReviewNotes] = useState<Record<number, string>>({});
   const [humanReviewChecks, setHumanReviewChecks] = useState<Record<number, boolean>>({});
-  const [humanReviewIssues, setHumanReviewIssues] = useState<Record<number, string[]>>({});
-  const [recheckingFindingIndex, setRecheckingFindingIndex] = useState<number | null>(null);
+
+  // v3.1 差分パッチ型: チェックポイント状態
+  const [checkpointChecks, setCheckpointChecks] = useState<Record<string, boolean>>({});
+  const [checkpointAnnotations, setCheckpointAnnotations] = useState<Record<string, string>>({});
   const [signatureStatus, setSignatureStatus] = useState<'unsigned' | 'signed'>('unsigned');
   const [signatureData, setSignatureData] = useState<SignatureData | null>(null);
   const [showSignedAnimation, setShowSignedAnimation] = useState(false);
@@ -256,82 +303,7 @@ export const ReportPage: React.FC = () => {
     setPage('input');
   }, [reset, setPage]);
 
-  /** 重要指摘かどうかを判定（設定優先 + 後方互換） */
-  const isImportantFinding = useCallback((finding: { severity: string; requires_human_review?: boolean }) => {
-    if (typeof finding.requires_human_review === "boolean") {
-      return finding.requires_human_review;
-    }
-    return finding.severity === "CRITICAL" || finding.severity === "WARNING";
-  }, []);
 
-  /** 人間確認コメントを送信して再判定 */
-  const handleRecheckFinding = useCallback(
-    async (findingIndex: number) => {
-      if (!report) {
-        return;
-      }
-
-      const note = (humanReviewNotes[findingIndex] || "").trim();
-      const acknowledged = Boolean(humanReviewChecks[findingIndex]);
-
-      if (!acknowledged) {
-        setNotification({ type: "error", message: "確認チェックボックスをオンにしてください" });
-        return;
-      }
-      if (note.length < 10) {
-        setNotification({ type: "error", message: "確認内容を10文字以上入力してください" });
-        return;
-      }
-
-      setRecheckingFindingIndex(findingIndex);
-      try {
-        const response = await decisionApi.recheckFinding({
-          report_id: report.report_id,
-          request_id: requestId || undefined,
-          finding_index: findingIndex,
-          confirmation_note: note,
-          acknowledged,
-          reviewer_name: user?.display_name,
-        });
-
-        if (response.resolved && response.updated_review) {
-          setReport({
-            ...report,
-            review: response.updated_review,
-          });
-          setNotification({ type: "success", message: response.message });
-          setHumanReviewIssues((prev) => {
-            const next = { ...prev };
-            delete next[findingIndex];
-            return next;
-          });
-          setHumanReviewNotes((prev) => {
-            const next = { ...prev };
-            delete next[findingIndex];
-            return next;
-          });
-          setHumanReviewChecks((prev) => {
-            const next = { ...prev };
-            delete next[findingIndex];
-            return next;
-          });
-          return;
-        }
-
-        setHumanReviewIssues((prev) => ({
-          ...prev,
-          [findingIndex]: response.issues || ["確認内容が不足しています"],
-        }));
-        setNotification({ type: "info", message: response.message });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "再判定に失敗しました";
-        setNotification({ type: "error", message });
-      } finally {
-        setRecheckingFindingIndex(null);
-      }
-    },
-    [humanReviewChecks, humanReviewNotes, report, requestId, setReport, user]
-  );
 
   if (!report) return null;
 
@@ -398,6 +370,9 @@ export const ReportPage: React.FC = () => {
     strategic_prohibitions: [],
     differentiation_axis: null,
     why_existing_fails: '',
+    competitive_hypothesis: null,
+    judgment_framework: null,
+    fa_self_check: null,
   };
 
   const safeShu = shu || {
@@ -846,7 +821,7 @@ export const ReportPage: React.FC = () => {
             <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <span className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">🎯</span>
-                道 / 本質分析 v3.0
+                道 / 本質分析 v3.1
               </h3>
 
               <div className="grid grid-cols-2 gap-4">
@@ -994,6 +969,156 @@ export const ReportPage: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* v3.1: 制約境界条件 */}
+              {safeDao.constraint_boundaries && safeDao.constraint_boundaries.length > 0 && (
+                <div className="bg-[#0a0a0f] rounded-lg p-4">
+                  <div className="text-sm font-medium text-orange-400 mb-3 flex items-center gap-2">
+                    <span>🚧</span> 制約境界条件
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-700">
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">制約名</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">判定条件</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">違反例</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">例外</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {safeDao.constraint_boundaries.map((cb: any, i: number) => (
+                          <tr key={i} className="border-b border-slate-800">
+                            <td className="py-2 px-3 text-orange-300 font-medium">{cb.constraint_name}</td>
+                            <td className="py-2 px-3 text-slate-300">{cb.definition}</td>
+                            <td className="py-2 px-3 text-red-400/80">{cb.violation_example}</td>
+                            <td className="py-2 px-3 text-slate-500">{cb.exceptions}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* v3.1: 成立ルート比較 */}
+              {safeDao.solution_routes && safeDao.solution_routes.length > 0 && (
+                <div className="bg-[#0a0a0f] rounded-lg p-4">
+                  <div className="text-sm font-medium text-teal-400 mb-3 flex items-center gap-2">
+                    <span>🛤️</span> 成立ルート比較（解空間探索）
+                  </div>
+                  <div className="grid gap-3">
+                    {safeDao.solution_routes.map((sr: any, i: number) => (
+                      <div key={i} className="bg-teal-500/5 rounded p-3 border border-teal-500/10">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="px-2 py-0.5 bg-teal-500/20 text-teal-400 rounded text-xs font-medium">{sr.route_type}</span>
+                          <span className="text-xs text-slate-500">実現可能性: {sr.viability}</span>
+                        </div>
+                        <div className="text-sm text-slate-300">{sr.description}</div>
+                        {sr.tradeoffs && sr.tradeoffs.length > 0 && (
+                          <div className="flex gap-2 mt-2 flex-wrap">
+                            {sr.tradeoffs.map((t: string, j: number) => (
+                              <span key={j} className="text-xs px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded">⚖️ {t}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* v3.1: 定量指標 */}
+              {safeDao.quantified_metrics && safeDao.quantified_metrics.length > 0 && (
+                <div className="bg-[#0a0a0f] rounded-lg p-4">
+                  <div className="text-sm font-medium text-sky-400 mb-3 flex items-center gap-2">
+                    <span>📊</span> 定量指標
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-700">
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">優先</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">指標名</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">目標値</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">トレードオフ</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {safeDao.quantified_metrics.map((qm: any, i: number) => (
+                          <tr key={i} className="border-b border-slate-800">
+                            <td className="py-2 px-3">
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                                qm.priority <= 2 ? 'bg-red-500/20 text-red-400' : qm.priority <= 5 ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-500/20 text-slate-400'
+                              }`}>P{qm.priority}</span>
+                            </td>
+                            <td className="py-2 px-3 text-sky-300 font-medium">{qm.metric_name}</td>
+                            <td className="py-2 px-3 text-slate-300">{qm.target_value}</td>
+                            <td className="py-2 px-3 text-slate-500">{qm.tradeoff_note}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* v3.1: 監査証拠チェックリスト */}
+              {safeDao.audit_evidence_checklist && safeDao.audit_evidence_checklist.length > 0 && (
+                <div className="bg-[#0a0a0f] rounded-lg p-4">
+                  <div className="text-sm font-medium text-emerald-400 mb-3 flex items-center gap-2">
+                    <span>📋</span> 監査証拠チェックリスト
+                  </div>
+                  <div className="space-y-2">
+                    {safeDao.audit_evidence_checklist.map((ae: any, i: number) => (
+                      <div key={i} className="bg-emerald-500/5 rounded p-3 border border-emerald-500/10">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded text-xs font-medium">{ae.category}</span>
+                        </div>
+                        <div className="text-sm text-slate-300">{ae.required_evidence}</div>
+                        <div className="text-xs text-slate-500 mt-1">確認方法: {ae.verification_method}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* v3.1: セルフチェック結果 */}
+              {safeDao.self_check && (
+                <div className={`rounded-lg p-4 border ${
+                  safeDao.self_check.overall_status === 'PASS' ? 'bg-emerald-500/5 border-emerald-500/20' :
+                  safeDao.self_check.overall_status === 'FATAL' ? 'bg-red-500/5 border-red-500/20' :
+                  'bg-amber-500/5 border-amber-500/20'
+                }`}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="text-sm font-medium flex items-center gap-2">
+                      <span>🔬</span> セルフチェック
+                    </div>
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      safeDao.self_check.overall_status === 'PASS' ? 'bg-emerald-500/20 text-emerald-400' :
+                      safeDao.self_check.overall_status === 'FATAL' ? 'bg-red-500/20 text-red-400' :
+                      'bg-amber-500/20 text-amber-400'
+                    }`}>{safeDao.self_check.overall_status}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {safeDao.self_check.boundary_undefined?.length > 0 && (
+                      <div className="text-slate-400"><span className="text-amber-400">⚠</span> 境界未定義: {safeDao.self_check.boundary_undefined.join(', ')}</div>
+                    )}
+                    {safeDao.self_check.missing_alternatives?.length > 0 && (
+                      <div className="text-slate-400"><span className="text-amber-400">⚠</span> 選択肢漏れ: {safeDao.self_check.missing_alternatives.join(', ')}</div>
+                    )}
+                    {safeDao.self_check.ambiguous_metrics?.length > 0 && (
+                      <div className="text-slate-400"><span className="text-amber-400">⚠</span> 曖昧な指標: {safeDao.self_check.ambiguous_metrics.join(', ')}</div>
+                    )}
+                    {safeDao.self_check.constraint_conflicts?.length > 0 && (
+                      <div className="text-slate-400"><span className="text-red-400">❌</span> 制約衝突: {safeDao.self_check.constraint_conflicts.join(', ')}</div>
+                    )}
+                    {safeDao.self_check.evidence_gaps?.length > 0 && (
+                      <div className="text-slate-400"><span className="text-amber-400">⚠</span> 証拠不足: {safeDao.self_check.evidence_gaps.join(', ')}</div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1001,24 +1126,38 @@ export const ReportPage: React.FC = () => {
             <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <span className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">🛤️</span>
-                法 / 戦略選定 v3.0
+                法 / 戦略選定 v3.1
               </h3>
 
-              {/* v3.0: 戦略的禁止事項 */}
+              {/* v3.1: 戦略的禁止事項（仕組み化） */}
               {safeFa.strategic_prohibitions && safeFa.strategic_prohibitions.length > 0 && (
                 <div className="bg-red-500/5 rounded-lg p-5 border border-red-500/20">
                   <div className="text-sm font-medium text-red-400 mb-4 flex items-center gap-2">
-                    <span>🚫</span> 戦略的禁止事項（絶対にやってはいけない）
+                    <span>🚫</span> 戦略的禁止事項（仕組み化）
                   </div>
                   <div className="space-y-3">
                     {safeFa.strategic_prohibitions.map((p: any, i: number) => (
-                      <div key={i} className="bg-red-500/10 rounded p-4">
+                      <div key={`proh-${i}`} className="bg-red-500/10 rounded p-4">
                         <div className="flex items-start gap-2">
                           <span className="text-red-400 mt-0.5">⛔</span>
                           <div className="flex-1">
                             <div className="font-medium text-sm">{p.prohibition}</div>
                             <div className="text-sm text-slate-400 mt-2">理由: {p.rationale}</div>
                             <div className="text-sm text-red-400 mt-1">違反結果: {p.violation_consequence}</div>
+                            {/* v3.1: 仕組み化フィールド */}
+                            {(p.prevention_measure || p.detection_metric || p.responsible_role) && (
+                              <div className="mt-3 pt-3 border-t border-red-500/10 space-y-1">
+                                {p.prevention_measure && (
+                                  <div className="text-xs text-cyan-400">🛡️ 防止策: <span className="text-slate-400">{p.prevention_measure}</span></div>
+                                )}
+                                {p.detection_metric && (
+                                  <div className="text-xs text-cyan-400">📊 検知指標: <span className="text-slate-400">{p.detection_metric}</span></div>
+                                )}
+                                {p.responsible_role && (
+                                  <div className="text-xs text-cyan-400">👤 責任者: <span className="text-slate-400">{p.responsible_role}</span></div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1027,8 +1166,39 @@ export const ReportPage: React.FC = () => {
                 </div>
               )}
 
-              {/* v3.0: 差別化軸 */}
-              {safeFa.differentiation_axis && (
+              {/* v3.1: 競争優位仮説 */}
+              {safeFa.competitive_hypothesis && (
+                <div className="bg-gradient-to-r from-violet-500/10 to-purple-500/10 rounded-lg p-5 border border-violet-500/20">
+                  <div className="text-sm font-medium text-violet-400 mb-4 flex items-center gap-2">
+                    <span>🎯</span> 競争優位仮説（v3.1）
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-violet-500/10 rounded p-4">
+                      <div className="text-xs text-slate-500 mb-1">差別化軸</div>
+                      <div className="text-lg font-medium text-violet-400">{safeFa.competitive_hypothesis.axis_name}</div>
+                    </div>
+                    <div className="bg-violet-500/10 rounded p-4">
+                      <div className="text-xs text-slate-500 mb-1">対象顧客・利用シーン</div>
+                      <div className="text-sm text-slate-400">{safeFa.competitive_hypothesis.target_customer}</div>
+                    </div>
+                    <div className="bg-violet-500/10 rounded p-4">
+                      <div className="text-xs text-slate-500 mb-1">代替が難しい理由</div>
+                      <div className="text-sm text-slate-400">{safeFa.competitive_hypothesis.substitution_barrier}</div>
+                    </div>
+                    <div className="bg-violet-500/10 rounded p-4">
+                      <div className="text-xs text-slate-500 mb-1">勝ち筋指標</div>
+                      <div className="text-sm text-slate-400">{safeFa.competitive_hypothesis.winning_metric}</div>
+                    </div>
+                  </div>
+                  <div className="mt-4 bg-slate-800/50 rounded p-4">
+                    <div className="text-xs text-slate-500 mb-1">最小検証計画</div>
+                    <div className="text-sm text-slate-400">{safeFa.competitive_hypothesis.minimum_verification}</div>
+                  </div>
+                </div>
+              )}
+
+              {/* v3.0互換: 差別化軸（competitive_hypothesisが無い場合のフォールバック） */}
+              {!safeFa.competitive_hypothesis && safeFa.differentiation_axis && (
                 <div className="bg-gradient-to-r from-violet-500/10 to-purple-500/10 rounded-lg p-5 border border-violet-500/20">
                   <div className="text-sm font-medium text-violet-400 mb-4 flex items-center gap-2">
                     <span>🎯</span> 差別化軸
@@ -1057,24 +1227,123 @@ export const ReportPage: React.FC = () => {
                 </div>
               )}
 
-              {/* 推奨パス */}
+              {/* 推奨パス（v3.1: 最低4案） */}
               {safeFa.recommended_paths?.map((path: RecommendedPath, i: number) => (
-                <PathCard key={i} path={path} isRecommended />
+                <PathCard key={`rec-${path.path_id || i}`} path={path} isRecommended />
               ))}
 
               {/* 不推奨パス */}
               {safeFa.rejected_paths?.map((path: RecommendedPath, i: number) => (
-                <PathCard key={i} path={path} isRecommended={false} />
+                <PathCard key={`rej-${path.path_id || i}`} path={path} isRecommended={false} />
               ))}
 
-              {/* 判断基準 */}
-              {safeFa.decision_criteria && (
+              {/* v3.1: 判断フレームワーク（Must/Should分離） */}
+              {safeFa.judgment_framework && (
+                <div className="bg-slate-800/50 rounded-lg p-5 border border-slate-700">
+                  <div className="text-sm font-medium text-cyan-400 mb-4 flex items-center gap-2">
+                    <span>⚖️</span> 判断フレームワーク（Must/Should分離）
+                  </div>
+                  {/* Must Gates */}
+                  {safeFa.judgment_framework.must_gates?.length > 0 && (
+                    <div className="mb-4">
+                      <div className="text-xs text-red-400 font-medium mb-2">Must（不可変ゲート）— 不合格=即却下</div>
+                      <div className="space-y-2">
+                        {safeFa.judgment_framework.must_gates.map((gate: any, gi: number) => (
+                          <div key={`must-${gi}`} className="bg-red-500/10 rounded p-3 flex items-start gap-3">
+                            <span className="text-red-400 text-xs mt-0.5">🚪</span>
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-red-300">{gate.criterion}</div>
+                              <div className="text-xs text-slate-400 mt-1">閾値: {gate.threshold}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {/* Should Criteria */}
+                  {safeFa.judgment_framework.should_criteria?.length > 0 && (
+                    <div>
+                      <div className="text-xs text-emerald-400 font-medium mb-2">Should（比較評価）— 重み付きスコア</div>
+                      <div className="space-y-2">
+                        {safeFa.judgment_framework.should_criteria.map((crit: any, si: number) => (
+                          <div key={`should-${si}`} className="bg-emerald-500/10 rounded p-3">
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm font-medium text-emerald-300">{crit.criterion}</div>
+                              <span className={`text-xs px-2 py-0.5 rounded ${
+                                crit.weight === 'High' ? 'bg-red-500/20 text-red-400' :
+                                crit.weight === 'Med' ? 'bg-amber-500/20 text-amber-400' :
+                                'bg-slate-700 text-slate-400'
+                              }`}>{crit.weight}</span>
+                            </div>
+                            <div className="text-xs text-slate-400 mt-1">採点: {crit.scoring_method}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 判断基準（v3.0互換フォールバック） */}
+              {!safeFa.judgment_framework && safeFa.decision_criteria && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-xs text-slate-500 mb-2">判断基準</div>
                   <div className="flex flex-wrap gap-2">
-                    {safeFa.decision_criteria.map((c: string, i: number) => (
-                      <span key={i} className="px-2 py-1 bg-slate-800 text-slate-400 rounded text-xs">{c}</span>
+                    {safeFa.decision_criteria.map((c: string, ci: number) => (
+                      <span key={`dc-${ci}`} className="px-2 py-1 bg-slate-800 text-slate-400 rounded text-xs">{c}</span>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* v3.1: セルフチェック結果 */}
+              {safeFa.fa_self_check && (
+                <div className={`rounded-lg p-4 border ${
+                  safeFa.fa_self_check.overall_status === 'PASS' ? 'bg-emerald-500/5 border-emerald-500/20' :
+                  safeFa.fa_self_check.overall_status === 'WARNING' ? 'bg-amber-500/5 border-amber-500/20' :
+                  'bg-red-500/5 border-red-500/20'
+                }`}>
+                  <div className="text-sm font-medium mb-3 flex items-center gap-2">
+                    <span>🔍</span> セルフチェック結果
+                    <span className={`text-xs px-2 py-0.5 rounded ${
+                      safeFa.fa_self_check.overall_status === 'PASS' ? 'bg-emerald-500/20 text-emerald-400' :
+                      safeFa.fa_self_check.overall_status === 'WARNING' ? 'bg-amber-500/20 text-amber-400' :
+                      'bg-red-500/20 text-red-400'
+                    }`}>{safeFa.fa_self_check.overall_status}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    {safeFa.fa_self_check.baseless_numbers?.length > 0 && (
+                      <div className="bg-red-500/10 rounded p-2">
+                        <div className="text-red-400 font-medium mb-1">根拠なき数値</div>
+                        {safeFa.fa_self_check.baseless_numbers.map((item: string, bi: number) => (
+                          <div key={`bn-${bi}`} className="text-slate-400">• {item}</div>
+                        ))}
+                      </div>
+                    )}
+                    {safeFa.fa_self_check.missing_intermediate?.length > 0 && (
+                      <div className="bg-amber-500/10 rounded p-2">
+                        <div className="text-amber-400 font-medium mb-1">中間案漏れ</div>
+                        {safeFa.fa_self_check.missing_intermediate.map((item: string, mi: number) => (
+                          <div key={`mi-${mi}`} className="text-slate-400">• {item}</div>
+                        ))}
+                      </div>
+                    )}
+                    {safeFa.fa_self_check.missing_gates?.length > 0 && (
+                      <div className="bg-amber-500/10 rounded p-2">
+                        <div className="text-amber-400 font-medium mb-1">ゲート不在</div>
+                        {safeFa.fa_self_check.missing_gates.map((item: string, mgi: number) => (
+                          <div key={`mg-${mgi}`} className="text-slate-400">• {item}</div>
+                        ))}
+                      </div>
+                    )}
+                    {safeFa.fa_self_check.appearance_precision?.length > 0 && (
+                      <div className="bg-red-500/10 rounded p-2">
+                        <div className="text-red-400 font-medium mb-1">見せかけ精度</div>
+                        {safeFa.fa_self_check.appearance_precision.map((item: string, api: number) => (
+                          <div key={`ap-${api}`} className="text-slate-400">• {item}</div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1085,8 +1354,101 @@ export const ReportPage: React.FC = () => {
             <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <span className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">📋</span>
-                術 / 実行計画 v3.0
+                術 / 実行計画 v3.1
               </h3>
+
+              {/* v3.1: PoC完成定義 (DoD) */}
+              {safeShu.poc_definition_of_done && (
+                <div className="bg-emerald-500/5 rounded-lg p-5 border border-emerald-500/20">
+                  <div className="text-sm font-medium text-emerald-400 mb-4 flex items-center gap-2">
+                    <span>🎯</span> PoC完成定義（Definition of Done）
+                  </div>
+                  <div className="space-y-4">
+                    {safeShu.poc_definition_of_done.experience_conditions?.length > 0 && (
+                      <div>
+                        <div className="text-xs text-slate-500 mb-2">体験条件</div>
+                        {safeShu.poc_definition_of_done.experience_conditions.map((c: string, i: number) => (
+                          <div key={i} className="text-sm flex items-center gap-2 mb-1"><span className="text-emerald-400">✓</span> {c}</div>
+                        ))}
+                      </div>
+                    )}
+                    <div>
+                      <div className="text-xs text-slate-500 mb-2">成功指標</div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b border-slate-700">
+                            <th className="text-left py-1 text-slate-500">指標</th>
+                            <th className="text-left py-1 text-slate-500">目標値</th>
+                            <th className="text-left py-1 text-slate-500">計測方法</th>
+                          </tr></thead>
+                          <tbody>
+                            {safeShu.poc_definition_of_done.success_metrics?.map((m: any, i: number) => (
+                              <tr key={i} className="border-b border-slate-800">
+                                <td className="py-1 text-emerald-400">{m.metric_name}</td>
+                                <td className="py-1">{m.target_value}</td>
+                                <td className="py-1 text-slate-400">{m.measurement_method}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                    <div className="bg-amber-500/10 rounded p-3">
+                      <div className="text-xs text-amber-400">フォールバック</div>
+                      <div className="text-sm mt-1">{safeShu.poc_definition_of_done.fallback_strategy}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* v3.1: 2段ロケット */}
+              {safeShu.two_stage_rocket && (
+                <div className="space-y-4">
+                  {[safeShu.two_stage_rocket.stage1_minimal_pipeline, safeShu.two_stage_rocket.stage2_governance].map((stage: any, si: number) => stage && (
+                    <div key={si} className={`rounded-lg p-5 border ${si === 0 ? 'bg-blue-500/5 border-blue-500/20' : 'bg-purple-500/5 border-purple-500/20'}`}>
+                      <div className={`text-sm font-medium mb-3 flex items-center gap-2 ${si === 0 ? 'text-blue-400' : 'text-purple-400'}`}>
+                        <span>{si === 0 ? '🚀' : '🛡️'}</span> {stage.stage_name}
+                      </div>
+                      <div className="text-sm text-slate-400 mb-3">{stage.objective}</div>
+                      {stage.gate_criteria?.length > 0 && (
+                        <div className="mb-3 flex flex-wrap gap-2">
+                          {stage.gate_criteria.map((g: string, gi: number) => (
+                            <span key={gi} className="text-xs px-2 py-1 bg-slate-700 rounded">ゲート: {g}</span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="space-y-3">
+                        {stage.phases?.map((p: any, pi: number) => (
+                          <div key={pi} className="bg-[#0a0a0f] rounded p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-medium text-sm">Phase {p.phase_number}: {p.name}</span>
+                              <span className="text-xs text-slate-500">{p.duration}</span>
+                            </div>
+                            <div className="text-xs text-slate-500 mb-2">目的: {p.purpose}</div>
+                            <div className="text-xs text-slate-400 mb-1">作業: {p.tasks?.join(', ')}</div>
+                            {p.deliverables?.length > 0 && <div className="text-xs text-slate-500">成果物: {p.deliverables.join(', ')}</div>}
+                            {p.measurement && <div className="text-xs text-emerald-400 mt-1">計測: {p.measurement}</div>}
+                            {p.notes?.length > 0 && <div className="text-xs text-amber-400 mt-1">注意: {p.notes.join(', ')}</div>}
+                            {p.branches?.length > 0 && (
+                              <div className="mt-2 space-y-1">
+                                <div className="text-xs text-slate-500">分岐（代替案）:</div>
+                                {p.branches.map((b: any, bi: number) => (
+                                  <div key={bi} className="text-xs bg-blue-500/10 rounded p-2">
+                                    <span className="text-blue-400">{b.branch_name}</span>
+                                    <span className="text-slate-500 mx-1">→</span>
+                                    <span className="text-slate-400">{b.trigger_condition}</span>
+                                    <div className="text-slate-500 mt-1">{b.description}</div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {safeShu.first_action && (
                 <div className="bg-emerald-500/5 rounded-lg p-4 border border-emerald-500/20">
@@ -1241,8 +1603,126 @@ export const ReportPage: React.FC = () => {
             <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <span className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">🔧</span>
-                器 / 技術実装 v3.0
+                器 / 技術実装 v3.1
               </h3>
+
+              {/* v3.1: PoC最小アーキテクチャ */}
+              {safeQi.poc_minimal_architecture && (
+                <div className="bg-emerald-500/5 rounded-lg p-5 border border-emerald-500/20">
+                  <div className="text-sm font-medium text-emerald-400 mb-4 flex items-center gap-2">
+                    <span>🏗️</span> PoC最小アーキテクチャ
+                  </div>
+                  <div className="space-y-4">
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead><tr className="border-b border-slate-700">
+                          <th className="text-left py-2 text-slate-500">コンポーネント</th>
+                          <th className="text-left py-2 text-slate-500">目的</th>
+                          <th className="text-left py-2 text-slate-500">技術選定</th>
+                          <th className="text-left py-2 text-slate-500">備考</th>
+                        </tr></thead>
+                        <tbody>
+                          {safeQi.poc_minimal_architecture.components?.map((c: any, i: number) => (
+                            <tr key={i} className="border-b border-slate-800">
+                              <td className="py-2 text-emerald-400 font-medium">{c.name}</td>
+                              <td className="py-2 text-slate-300">{c.purpose}</td>
+                              <td className="py-2 text-blue-400">{c.technology_choice}</td>
+                              <td className="py-2 text-slate-500">{c.notes}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {safeQi.poc_minimal_architecture.data_flow_description && (
+                      <div className="bg-[#0a0a0f] rounded p-3">
+                        <div className="text-xs text-slate-500 mb-1">データフロー</div>
+                        <div className="text-sm text-slate-300 font-mono">{safeQi.poc_minimal_architecture.data_flow_description}</div>
+                      </div>
+                    )}
+                    {safeQi.poc_minimal_architecture.minimal_logging && (
+                      <div className="bg-blue-500/5 rounded p-3 border border-blue-500/10">
+                        <div className="text-xs text-blue-400 mb-2">最小ログ設定</div>
+                        <div className="text-sm text-slate-400">ID戦略: {safeQi.poc_minimal_architecture.minimal_logging.correlation_id_strategy}</div>
+                        {safeQi.poc_minimal_architecture.minimal_logging.timestamp_points?.length > 0 && (
+                          <div className="text-sm text-slate-500 mt-1">計測点: {safeQi.poc_minimal_architecture.minimal_logging.timestamp_points.join(' → ')}</div>
+                        )}
+                        {safeQi.poc_minimal_architecture.minimal_logging.storage && (
+                          <div className="text-sm text-slate-500 mt-1">保存先: {safeQi.poc_minimal_architecture.minimal_logging.storage}</div>
+                        )}
+                      </div>
+                    )}
+                    {safeQi.poc_minimal_architecture.deferred_components?.length > 0 && (
+                      <div>
+                        <div className="text-xs text-slate-500 mb-2">後回しにするコンポーネント</div>
+                        <div className="flex flex-wrap gap-2">
+                          {safeQi.poc_minimal_architecture.deferred_components.map((d: string, i: number) => (
+                            <span key={i} className="text-xs px-2 py-1 bg-slate-700/50 text-slate-400 rounded">⏳ {d}</span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* v3.1: 拡張アーキテクチャ段階 */}
+              {safeQi.expansion_stages && safeQi.expansion_stages.length > 0 && (
+                <div className="bg-purple-500/5 rounded-lg p-5 border border-purple-500/20">
+                  <div className="text-sm font-medium text-purple-400 mb-4 flex items-center gap-2">
+                    <span>📈</span> 拡張アーキテクチャ（導入条件付き）
+                  </div>
+                  <div className="space-y-3">
+                    {safeQi.expansion_stages.map((s: any, i: number) => (
+                      <div key={i} className="bg-purple-500/10 rounded p-4">
+                        <div className="font-medium text-purple-400 mb-1">{s.stage_name}</div>
+                        <div className="text-xs text-amber-400 mb-1">導入条件: {s.introduction_condition}</div>
+                        <div className="text-xs text-slate-400 mb-1">追加: {s.added_components?.join(', ')}</div>
+                        <div className="text-xs text-slate-500">理由: {s.rationale}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* v3.1: 実装手順 */}
+              {safeQi.implementation_steps && safeQi.implementation_steps.length > 0 && (
+                <div className="bg-blue-500/5 rounded-lg p-5 border border-blue-500/20">
+                  <div className="text-sm font-medium text-blue-400 mb-4 flex items-center gap-2">
+                    <span>📝</span> 実装手順（Step1〜StepN）
+                  </div>
+                  <div className="space-y-3">
+                    {safeQi.implementation_steps.map((step: any, i: number) => (
+                      <div key={i} className="bg-[#0a0a0f] rounded p-4">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-blue-400 font-bold">Step {step.step_number}</span>
+                          <span className="font-medium text-sm">{step.objective}</span>
+                        </div>
+                        <div className="text-xs text-slate-400 mb-1">作業: {step.tasks?.join(', ')}</div>
+                        {step.notes?.length > 0 && <div className="text-xs text-emerald-400 mt-1">📌 {step.notes.join(', ')}</div>}
+                        {step.common_pitfalls?.length > 0 && (
+                          <div className="mt-1 space-y-1">
+                            {step.common_pitfalls.map((p: string, pi: number) => (
+                              <div key={pi} className="text-xs text-amber-400">⚠️ {p}</div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* v3.1: 将来スケール要件 */}
+              {safeQi.future_scale_requirements && safeQi.future_scale_requirements.length > 0 && (
+                <div className="bg-slate-500/5 rounded-lg p-4 border border-slate-500/20">
+                  <div className="text-xs text-slate-500 mb-2">🔮 将来スケール要件（PoC範囲外）</div>
+                  <div className="flex flex-wrap gap-2">
+                    {safeQi.future_scale_requirements.map((r: string, i: number) => (
+                      <span key={i} className="text-xs px-2 py-1 bg-slate-700/50 text-slate-400 rounded">{r}</span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* v3.0: ドメイン固有技術 */}
               {safeQi.domain_technologies && safeQi.domain_technologies.length > 0 && (
@@ -1436,121 +1916,108 @@ export const ReportPage: React.FC = () => {
                         )}
                         {safeReview.overall_verdict === 'REVISE' && (
                           <>
-                            <span className="text-amber-400">⚠ 修正必要：</span>
-                            以下の指摘事項を確認し、入力条件を修正して再分析を行ってください。
+                            <span className="text-amber-400">⚠ 差分パッチで補完可能：</span>
+                            以下のチェックボックスで不足項目を補完すると、スコアが自動再計算されます。
                           </>
                         )}
                         {safeReview.overall_verdict === 'REJECT' && (
                           <>
-                            <span className="text-red-400">✕ 却下：</span>
-                            重大な問題があります。根本的な見直しが必要です。
+                            <span className="text-red-400">✕ 要再走：</span>
+                            スコアが40点未満のため、入力条件を見直して全体再分析が必要です。
                           </>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  {/* 指摘事項セクション */}
+                  {/* v3.1 差分パッチ型: 指摘事項（最大3件） */}
                   {safeReview.findings && safeReview.findings.length > 0 && (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
-                        <span>📋</span> 指摘事項 ({safeReview.findings.length}件)
+                        <span>🎯</span> 高レバレッジ欠陥 ({safeReview.findings.length}件、最大3件)
                       </div>
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         {safeReview.findings.map((finding, i) => (
                           <div key={i} className={`rounded-lg p-4 border ${
                             finding.severity === 'CRITICAL'
                               ? 'bg-red-500/5 border-red-500/20'
-                              : finding.severity === 'WARNING'
-                              ? 'bg-amber-500/5 border-amber-500/20'
-                              : 'bg-blue-500/5 border-blue-500/20'
+                              : 'bg-amber-500/5 border-amber-500/20'
                           }`}>
-                            <div className="flex items-center gap-2 mb-2">
+                            {/* ヘッダー: 重大度 + カテゴリ + アクションタイプ */}
+                            <div className="flex items-center gap-2 mb-3">
                               <span className={`text-xs px-2 py-0.5 rounded font-medium ${
-                                finding.severity === 'CRITICAL'
-                                  ? 'bg-red-500/20 text-red-400'
-                                  : finding.severity === 'WARNING'
-                                  ? 'bg-amber-500/20 text-amber-400'
-                                  : 'bg-blue-500/20 text-blue-400'
+                                finding.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'
                               }`}>
-                                {finding.severity === 'CRITICAL' ? '重大' :
-                                 finding.severity === 'WARNING' ? '警告' : '情報'}
+                                {finding.severity === 'CRITICAL' ? '重大' : '警告'}
                               </span>
-                              <span className="text-xs text-slate-500 px-2 py-0.5 bg-slate-800 rounded">
-                                {finding.category}
-                              </span>
-                              {finding.affected_agent && (
-                                <span className="text-xs text-slate-500">
-                                  対象: {finding.affected_agent}
+                              {finding.action_type && (
+                                <span className={`text-xs px-2 py-0.5 rounded font-medium ${
+                                  finding.action_type === 'PATCH' ? 'bg-emerald-500/20 text-emerald-400' :
+                                  finding.action_type === 'RECALC' ? 'bg-blue-500/20 text-blue-400' :
+                                  'bg-red-500/20 text-red-400'
+                                }`}>
+                                  {finding.action_type}
                                 </span>
                               )}
+                              {finding.affected_agent && (
+                                <span className="text-xs text-slate-500">→ {finding.affected_agent}</span>
+                              )}
                             </div>
-                            <p className="text-sm text-slate-300 mb-2">{finding.description}</p>
-                            {finding.suggested_revision && (
-                              <div className="mt-3 p-3 bg-slate-800/50 rounded-lg">
-                                <div className="text-xs text-emerald-400 mb-1 flex items-center gap-1">
-                                  <span>💡</span> 修正提案
-                                </div>
-                                <p className="text-sm text-slate-400">{finding.suggested_revision}</p>
+
+                            {/* 破綻点 */}
+                            {finding.failure_point && (
+                              <div className="mb-2">
+                                <span className="text-xs text-red-400 font-medium">破綻点: </span>
+                                <span className="text-sm text-slate-300">{finding.failure_point}</span>
                               </div>
                             )}
 
-                            {isImportantFinding(finding) && safeReview.overall_verdict !== "PASS" && (
-                              <div className="mt-4 p-4 rounded-lg border border-indigo-500/20 bg-indigo-500/5 space-y-3">
-                                <div className="text-sm font-medium text-indigo-300">
-                                  人間確認でこの指摘を再判定
-                                </div>
-                                {finding.human_review_hint && (
-                                  <div className="text-xs text-indigo-200">{finding.human_review_hint}</div>
-                                )}
-                                <textarea
-                                  value={humanReviewNotes[i] ?? ""}
-                                  onChange={(event) =>
-                                    setHumanReviewNotes((prev) => ({
-                                      ...prev,
-                                      [i]: event.target.value,
-                                    }))
-                                  }
-                                  placeholder="対応内容・責任者・期限・承認方法を具体的に記載してください"
-                                  className="w-full min-h-[100px] px-3 py-2 rounded-lg bg-[#0a0a0f] border border-white/10 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50"
-                                />
+                            {/* 影響範囲 */}
+                            {finding.impact_scope && (
+                              <div className="mb-3">
+                                <span className="text-xs text-amber-400 font-medium">影響範囲: </span>
+                                <span className="text-sm text-slate-400">{finding.impact_scope}</span>
+                              </div>
+                            )}
+
+                            {/* 最小パッチ（チェックボックス＋注釈） */}
+                            {finding.minimal_patch && (
+                              <div className="mt-3 p-3 bg-slate-800/50 rounded-lg border border-indigo-500/20">
+                                <div className="text-xs text-indigo-400 mb-2 font-medium">最小パッチ</div>
                                 <label className="flex items-center gap-2 text-sm text-slate-300">
                                   <input
                                     type="checkbox"
                                     checked={Boolean(humanReviewChecks[i])}
-                                    onChange={(event) =>
-                                      setHumanReviewChecks((prev) => ({
-                                        ...prev,
-                                        [i]: event.target.checked,
-                                      }))
-                                    }
+                                    onChange={(e) => setHumanReviewChecks((prev) => ({ ...prev, [i]: e.target.checked }))}
                                     className="rounded border-slate-500 bg-transparent"
                                   />
-                                  指摘内容を確認し、上記内容で妥当性再判定を依頼します
+                                  {finding.minimal_patch.checkbox_label}
                                 </label>
-                                {humanReviewIssues[i] && humanReviewIssues[i].length > 0 && (
-                                  <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-3">
-                                    <div className="text-xs text-amber-300 mb-1">不足点</div>
-                                    <ul className="space-y-1">
-                                      {humanReviewIssues[i].map((issue, issueIdx) => (
-                                        <li key={issueIdx} className="text-sm text-amber-200">
-                                          • {issue}
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
+                                {finding.minimal_patch.annotation_hint && (
+                                  <input
+                                    type="text"
+                                    value={humanReviewNotes[i] ?? finding.minimal_patch.default_value ?? ''}
+                                    onChange={(e) => setHumanReviewNotes((prev) => ({ ...prev, [i]: e.target.value }))}
+                                    placeholder={finding.minimal_patch.annotation_hint}
+                                    className="mt-2 w-full px-3 py-1.5 rounded bg-[#0a0a0f] border border-white/10 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50"
+                                  />
                                 )}
-                                <button
-                                  onClick={() => handleRecheckFinding(i)}
-                                  disabled={recheckingFindingIndex === i}
-                                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                                    recheckingFindingIndex === i
-                                      ? "bg-slate-700 text-slate-400 cursor-wait"
-                                      : "bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30"
-                                  }`}
-                                >
-                                  {recheckingFindingIndex === i ? "再判定中..." : "チェックして再判定"}
-                                </button>
+                              </div>
+                            )}
+
+                            {/* スコア改善見込み */}
+                            {finding.score_improvements && finding.score_improvements.length > 0 && (
+                              <div className="mt-3">
+                                <div className="text-xs text-slate-500 mb-1">パッチ適用後のスコア改善見込み:</div>
+                                {finding.score_improvements.map((si, si_idx) => (
+                                  <div key={si_idx} className="flex items-center gap-2 text-xs text-slate-400">
+                                    <span>{si.target_score}:</span>
+                                    <span className="text-slate-500">{si.current_estimate}%</span>
+                                    <span>→</span>
+                                    <span className="text-emerald-400">{si.improved_estimate}%</span>
+                                    <span className="text-emerald-400 font-medium">(+{si.delta}点)</span>
+                                  </div>
+                                ))}
                               </div>
                             )}
                           </div>
@@ -1559,57 +2026,93 @@ export const ReportPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* 最終警告 */}
-                  {safeReview.final_warnings && safeReview.final_warnings.length > 0 && (
-                    <div className="bg-amber-500/5 rounded-lg p-4 border border-amber-500/20">
-                      <div className="text-sm font-medium text-amber-400 mb-3 flex items-center gap-2">
-                        <span>⚠️</span> 最終警告（意思決定者への注意事項）
+                  {/* v3.1 信頼度分解 */}
+                  {safeReview.confidence_breakdown && (
+                    <div className="bg-slate-800/30 rounded-lg p-4 border border-white/5">
+                      <div className="text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
+                        <span>📊</span> 信頼度分解
                       </div>
-                      <ul className="space-y-2">
-                        {safeReview.final_warnings.map((w: string, i: number) => (
-                          <li key={i} className="text-sm text-slate-400 flex items-start gap-2">
-                            <span className="text-amber-400 mt-0.5">•</span>
-                            <span>{w}</span>
-                          </li>
+                      <div className="grid grid-cols-2 gap-3">
+                        {(['input_sufficiency', 'logic_consistency', 'implementation_feasibility', 'risk_coverage'] as const).map((key) => {
+                          const comp = safeReview.confidence_breakdown?.[key];
+                          if (!comp) return null;
+                          const hasChecks = Object.values(checkpointChecks).some(Boolean);
+                          const displayScore = hasChecks ? Math.min(100, comp.score + comp.checkbox_boost) : comp.score;
+                          return (
+                            <div key={key} className="bg-[#0a0a0f] rounded-lg p-3 border border-white/5">
+                              <div className="text-xs text-slate-500 mb-1">{comp.name}</div>
+                              <div className="flex items-baseline gap-2">
+                                <span className={`text-lg font-bold ${
+                                  displayScore >= 70 ? 'text-emerald-400' : displayScore >= 40 ? 'text-amber-400' : 'text-red-400'
+                                }`}>{Math.round(displayScore)}%</span>
+                                {comp.checkbox_boost > 0 && (
+                                  <span className="text-xs text-emerald-400/70">✓で+{comp.checkbox_boost}点</span>
+                                )}
+                              </div>
+                              {comp.description && <div className="text-xs text-slate-600 mt-1">{comp.description}</div>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* v3.1 チェックポイント項目 */}
+                  {safeReview.checkpoint_items && safeReview.checkpoint_items.length > 0 && (
+                    <div className="bg-indigo-500/5 rounded-lg p-4 border border-indigo-500/20">
+                      <div className="text-sm font-medium text-indigo-400 mb-3 flex items-center gap-2">
+                        <span>☑️</span> 確認チェックポイント
+                      </div>
+                      <div className="space-y-3">
+                        {safeReview.checkpoint_items.map((item) => (
+                          <div key={item.item_id} className="flex items-start gap-3 p-3 bg-[#0a0a0f] rounded-lg border border-white/5">
+                            <input
+                              type="checkbox"
+                              checked={checkpointChecks[item.item_id] ?? item.checked}
+                              onChange={(e) => setCheckpointChecks((prev) => ({ ...prev, [item.item_id]: e.target.checked }))}
+                              className="mt-0.5 rounded border-slate-500 bg-transparent"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm text-slate-300">{item.label}</span>
+                                <span className="text-xs text-emerald-400/70">+{item.score_boost}点</span>
+                              </div>
+                              {item.default_suggestion && (
+                                <div className="text-xs text-slate-500 mt-1">暫定案: {item.default_suggestion}</div>
+                              )}
+                              <input
+                                type="text"
+                                value={checkpointAnnotations[item.item_id] ?? ''}
+                                onChange={(e) => setCheckpointAnnotations((prev) => ({ ...prev, [item.item_id]: e.target.value }))}
+                                placeholder="注釈（任意）"
+                                className="mt-2 w-full px-2 py-1 rounded bg-slate-800/50 border border-white/5 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/30"
+                              />
+                            </div>
+                          </div>
                         ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* 修正アクションガイド（PASS以外の場合） */}
-                  {safeReview.overall_verdict !== 'PASS' && (
-                    <div className="bg-indigo-500/5 rounded-lg p-5 border border-indigo-500/20">
-                      <div className="text-sm font-medium text-indigo-400 mb-4 flex items-center gap-2">
-                        <span>🔧</span> 次のステップ
                       </div>
-                      <ol className="space-y-3 text-sm text-slate-400">
-                        <li className="flex items-start gap-3">
-                          <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold shrink-0">1</span>
-                          <span>上記の指摘事項を確認し、問題点を把握してください</span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold shrink-0">2</span>
-                          <span>画面右上の「🔄 再分析」ボタンをクリックして入力画面に戻ります</span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                          <span className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center text-xs font-bold shrink-0">3</span>
-                          <span>質問や制約条件を修正して、再度分析を実行してください</span>
-                        </li>
-                      </ol>
-                      <button
-                        onClick={handleNewQuestion}
-                        className="mt-4 w-full px-4 py-3 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2"
-                      >
-                        🔄 入力内容を修正して再分析
-                      </button>
+
+                      {/* 自動再計算ボタン */}
+                      {safeReview.auto_recalc_enabled !== false && (
+                        <button
+                          disabled={!Object.values(checkpointChecks).some(Boolean)}
+                          className={`mt-4 w-full px-4 py-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                            Object.values(checkpointChecks).some(Boolean)
+                              ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-slate-800/50 text-slate-500 cursor-not-allowed border border-white/5'
+                          }`}
+                        >
+                          ⚡ チェック項目を反映してスコア自動再計算
+                        </button>
+                      )}
                     </div>
                   )}
 
-                  {/* 指摘事項がない場合 */}
+                  {/* 指摘なし */}
                   {(!safeReview.findings || safeReview.findings.length === 0) && (
                     <div className="text-center py-6 text-slate-500 bg-[#0a0a0f] rounded-lg">
                       <span className="text-3xl mb-2 block">✨</span>
-                      <p>重大な指摘事項はありません</p>
+                      <p>高レバレッジ欠陥は検出されませんでした</p>
                     </div>
                   )}
                 </>

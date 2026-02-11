@@ -18,7 +18,11 @@ from apps.market_trend_monitor.backend.api.routes import (
     sources_router,
     trends_router,
 )
-from apps.market_trend_monitor.backend.api.state import source_registry_service
+from apps.market_trend_monitor.backend.api.state import (
+    prediction_service,
+    signal_service,
+    source_registry_service,
+)
 from apps.market_trend_monitor.backend.config import config
 from apps.market_trend_monitor.backend.db import init_db
 from apps.market_trend_monitor.backend.workflow import workflow
@@ -48,6 +52,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     logger.info("Market Trend Monitor API を起動中")
     await init_db()
     await source_registry_service.ensure_defaults()
+    await prediction_service.initialize()
+    await signal_service.initialize()
     from apps.market_trend_monitor.backend.api.state import store
     await store.initialize()
     await workflow.initialize()

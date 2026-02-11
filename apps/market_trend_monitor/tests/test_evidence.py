@@ -6,6 +6,7 @@ Evidence/Claim モデルおよび EvidenceService のテスト。
 from __future__ import annotations
 
 import hashlib
+from datetime import datetime, timedelta
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -199,6 +200,7 @@ def _make_article(
     url: str = "https://example.com/article",
     content: str = "テスト内容",
     keywords: list[str] | None = None,
+    collected_at: datetime | None = None,
 ) -> Article:
     """テスト用 Article を生成."""
     return Article(
@@ -206,9 +208,10 @@ def _make_article(
         title=title,
         url=url,
         source=source,
-        published_at=__import__("datetime").datetime.now(),
+        published_at=datetime.now(),
         content=content,
         keywords=keywords or ["AI", "test"],
+        collected_at=collected_at or datetime.now(),
     )
 
 
@@ -432,3 +435,66 @@ class TestEvidenceService:
         ]
         results = await evidence_service.register_evidences_batch(articles)
         assert len(results) == 3
+
+    async def test_get_grounding_guard_ready(
+        self, evidence_service: EvidenceService
+    ) -> None:
+        """Grounding Guard が ready を返すテスト."""
+        long_content = "市場分析データ " * 20
+        articles = [
+            _make_article(
+                article_id="n-ready",
+                source=SourceType.NEWS,
+                url="https://example.com/news-ready",
+                content=long_content,
+            ),
+            _make_article(
+                article_id="g-ready",
+                source=SourceType.GITHUB,
+                url="https://github.com/example/ready",
+                content=long_content,
+            ),
+            _make_article(
+                article_id="a-ready",
+                source=SourceType.ARXIV,
+                url="https://arxiv.org/abs/2501.00001",
+                content=long_content,
+            ),
+        ]
+        evidences = await evidence_service.register_evidences_batch(articles)
+        claim = await evidence_service.create_claim(
+            statement="AI市場は継続成長する",
+            evidence_ids=[e.id for e in evidences],
+        )
+        guard = await evidence_service.get_grounding_guard()
+
+        assert guard["status"] == "ready"
+        assert guard["blockers"] == []
+        assert guard["summary"]["citation_ready_ratio"] >= 0.7
+        claim_diag = next(item for item in guard["claim_diagnostics"] if item["claim_id"] == claim.id)
+        assert claim_diag["status"] == "supported"
+
+    async def test_get_grounding_guard_needs_more_evidence(
+        self, evidence_service: EvidenceService
+    ) -> None:
+        """Grounding Guard が不足状態を検出するテスト."""
+        stale = datetime.now() - timedelta(days=60)
+        article = _make_article(
+            article_id="rss-weak",
+            source=SourceType.RSS,
+            url="https://example.com/rss-weak",
+            content="短い本文",
+            collected_at=stale,
+        )
+        evidence = await evidence_service.register_evidence_from_article(article)
+        await evidence_service.create_claim(
+            statement="根拠が薄い主張",
+            evidence_ids=[evidence.id],
+        )
+
+        guard = await evidence_service.get_grounding_guard()
+        blocker_codes = {item["code"] for item in guard["blockers"]}
+
+        assert guard["status"] == "needs_more_evidence"
+        assert "LOW_EVIDENCE_COUNT" in blocker_codes
+        assert "LOW_CITATION_READY_RATIO" in blocker_codes

@@ -363,6 +363,9 @@ class PipelineEngine(BaseEngine):
 
     async def _execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """Pipelineフローを実行（Flowを活用）."""
+        # 入力を保存（レポート生成時に使用）
+        self._inputs = inputs.copy()
+
         if self._flow:
             # Flowを使用して実行
             result = await self._flow.run(inputs)
@@ -598,6 +601,9 @@ class PipelineEngine(BaseEngine):
         self, inputs: dict[str, Any]
     ) -> AsyncIterator[dict[str, Any]]:
         """Pipelineをストリーム実行（Flowを活用）."""
+        # 入力を保存（レポート生成時に使用）
+        self._inputs = inputs.copy()
+
         if self._flow:
             # Flowのrun_streamを使用
             # レポートジェネレーターがある場合、flow_complete イベントを変換

@@ -210,6 +210,14 @@ export type StrategyType =
   | 'BUY'
   | 'HYBRID';
 
+/** 条件付き評価 (v3.1) */
+export interface ConditionalEvaluation {
+  success_conditions: string[];
+  risk_factors: string[];
+  failure_modes: string[];
+  probability_basis?: string;
+}
+
 /** 推奨パス */
 export interface RecommendedPath {
   path_id: string;
@@ -221,30 +229,80 @@ export interface RecommendedPath {
   success_probability: number;
   time_to_value?: string;      // v3.0
   reversibility?: string;      // v3.0
+  // v3.1
+  conditional_evaluation?: ConditionalEvaluation;
+  risk_concentration?: string;
 }
 
-/** 戦略的禁止事項 (v3.0) */
+/** 戦略的禁止事項 (v3.1) */
 export interface StrategicProhibition {
-  prohibition: string;           // 禁止事項
-  rationale: string;             // 理由
-  violation_consequence: string; // 違反結果
+  prohibition: string;
+  rationale: string;
+  violation_consequence: string;
+  // v3.1: 仕組み化
+  prevention_measure?: string;
+  detection_metric?: string;
+  responsible_role?: string;
 }
 
-/** 差別化軸 (v3.0) */
+/** 差別化軸 (v3.0互換) */
 export interface DifferentiationAxis {
-  axis_name: string;             // 勝負する軸
-  why_this_axis: string;         // 理由
-  not_this_axis: string;         // 勝負しない軸
+  axis_name: string;
+  why_this_axis: string;
+  not_this_axis: string;
 }
 
-/** 法（Fa）出力 v3.0 */
+/** 競争優位仮説 (v3.1) */
+export interface CompetitiveHypothesis {
+  axis_name: string;
+  target_customer: string;
+  substitution_barrier: string;
+  winning_metric: string;
+  minimum_verification: string;
+}
+
+/** Must判断基準 (v3.1) */
+export interface MustGate {
+  criterion: string;
+  threshold: string;
+}
+
+/** Should判断基準 (v3.1) */
+export interface ShouldCriterion {
+  criterion: string;
+  weight: string;
+  scoring_method: string;
+}
+
+/** 判断フレームワーク (v3.1) */
+export interface JudgmentFramework {
+  must_gates: MustGate[];
+  should_criteria: ShouldCriterion[];
+  gate_results: Record<string, boolean[]>;
+  should_scores: Record<string, number[]>;
+}
+
+/** 法セルフチェック結果 (v3.1) */
+export interface FaSelfCheckResult {
+  baseless_numbers: string[];
+  missing_intermediate: string[];
+  missing_gates: string[];
+  appearance_precision: string[];
+  overall_status: 'PASS' | 'WARNING' | 'FAIL';
+}
+
+/** 法（Fa）出力 v3.1 */
 export interface FaOutput {
   recommended_paths: RecommendedPath[];
   rejected_paths: RecommendedPath[];
   decision_criteria: string[];
-  strategic_prohibitions?: StrategicProhibition[];  // v3.0
-  differentiation_axis?: DifferentiationAxis;       // v3.0
-  why_existing_fails?: string;                      // v3.0
+  strategic_prohibitions?: StrategicProhibition[];
+  differentiation_axis?: DifferentiationAxis;
+  why_existing_fails?: string;
+  // v3.1
+  competitive_hypothesis?: CompetitiveHypothesis;
+  judgment_framework?: JudgmentFramework;
+  fa_self_check?: FaSelfCheckResult;
 }
 
 /** フェーズ */
@@ -294,6 +352,54 @@ export interface RhythmControl {
 }
 
 /** 術（Shu）出力 v3.0 */
+/** PoC成功指標 (v3.1) */
+export interface PoCSuccessMetric {
+  metric_name: string;
+  target_value: string;
+  measurement_method: string;
+}
+
+/** PoC完成定義 (v3.1) */
+export interface PoCDefinitionOfDone {
+  experience_conditions: string[];
+  success_metrics: PoCSuccessMetric[];
+  fallback_strategy: string;
+}
+
+/** フェーズ分岐 (v3.1) */
+export interface PhaseBranch {
+  branch_name: string;
+  trigger_condition: string;
+  description: string;
+}
+
+/** 提案フェーズ (v3.1) */
+export interface ProposalPhase {
+  phase_number: number;
+  name: string;
+  duration: string;
+  purpose: string;
+  tasks: string[];
+  deliverables?: string[];
+  measurement?: string;
+  notes?: string[];
+  branches?: PhaseBranch[];
+}
+
+/** ステージ計画 (v3.1) */
+export interface StagePlan {
+  stage_name: string;
+  objective: string;
+  phases: ProposalPhase[];
+  gate_criteria?: string[];
+}
+
+/** 2段ロケット (v3.1) */
+export interface TwoStageRocket {
+  stage1_minimal_pipeline: StagePlan;
+  stage2_governance: StagePlan;
+}
+
 export interface ShuOutput {
   phases: Phase[];
   first_action: string;
@@ -303,6 +409,10 @@ export interface ShuOutput {
   single_validation_point?: SingleValidationPoint;  // v3.0
   exit_criteria?: ExitCriteria;                     // v3.0
   rhythm_control?: RhythmControl;                   // v3.0
+  // v3.1 新フィールド
+  poc_definition_of_done?: PoCDefinitionOfDone;
+  two_stage_rocket?: TwoStageRocket;
+  proposal_phases?: ProposalPhase[];
 }
 
 /** 実装項目 */
@@ -336,7 +446,47 @@ export interface GeographicConsideration {
   infrastructure_need: string; // インフラ要件
 }
 
-/** 器（Qi）出力 v3.0 */
+/** アーキテクチャコンポーネント (v3.1) */
+export interface ArchitectureComponent {
+  name: string;
+  purpose: string;
+  technology_choice: string;
+  notes?: string;
+}
+
+/** 最小ログ設定 (v3.1) */
+export interface MinimalLogging {
+  correlation_id_strategy: string;
+  timestamp_points?: string[];
+  storage?: string;
+}
+
+/** PoC最小アーキテクチャ (v3.1) */
+export interface PoCMinimalArchitecture {
+  components: ArchitectureComponent[];
+  data_flow_description: string;
+  minimal_logging?: MinimalLogging;
+  deferred_components?: string[];
+}
+
+/** 拡張アーキテクチャ段階 (v3.1) */
+export interface ExpansionStage {
+  stage_name: string;
+  introduction_condition: string;
+  added_components: string[];
+  rationale: string;
+}
+
+/** 実装手順Step (v3.1) */
+export interface ImplementationStep {
+  step_number: number;
+  objective: string;
+  tasks: string[];
+  notes?: string[];
+  common_pitfalls?: string[];
+}
+
+/** 器（Qi）出力 v3.1 */
 export interface QiOutput {
   implementations: Implementation[];
   tool_recommendations: string[];
@@ -345,9 +495,32 @@ export interface QiOutput {
   domain_technologies?: DomainSpecificTechnology[];     // v3.0
   regulatory_considerations?: RegulatoryConsideration[];  // v3.0
   geographic_considerations?: GeographicConsideration[];  // v3.0
+  // v3.1 新フィールド
+  poc_minimal_architecture?: PoCMinimalArchitecture;
+  expansion_stages?: ExpansionStage[];
+  implementation_steps?: ImplementationStep[];
+  future_scale_requirements?: string[];
 }
 
-/** 検証所見 */
+/** 修正アクション分類 (v3.1) */
+export type ActionType = 'PATCH' | 'RECALC' | 'RERUN';
+
+/** スコア改善見込み (v3.1) */
+export interface ScoreImprovement {
+  target_score: string;
+  current_estimate: number;
+  improved_estimate: number;
+  delta: number;
+}
+
+/** 最小パッチ (v3.1) */
+export interface MinimalPatch {
+  checkbox_label: string;
+  annotation_hint?: string;
+  default_value?: string;
+}
+
+/** 検証所見 v3.1（差分パッチ型） */
 export interface ReviewFinding {
   severity: 'CRITICAL' | 'WARNING' | 'INFO';
   category: string;
@@ -356,14 +529,52 @@ export interface ReviewFinding {
   suggested_revision?: string;
   requires_human_review?: boolean;
   human_review_hint?: string;
+  // v3.1 差分パッチ型フィールド
+  failure_point?: string;
+  impact_scope?: string;
+  minimal_patch?: MinimalPatch;
+  score_improvements?: ScoreImprovement[];
+  action_type?: ActionType;
 }
 
-/** 検証出力 */
+/** 信頼度コンポーネント (v3.1) */
+export interface ConfidenceComponent {
+  name: string;
+  score: number;
+  max_score?: number;
+  checkbox_boost: number;
+  description?: string;
+}
+
+/** 信頼度分解 (v3.1) */
+export interface ConfidenceBreakdown {
+  input_sufficiency: ConfidenceComponent;
+  logic_consistency: ConfidenceComponent;
+  implementation_feasibility: ConfidenceComponent;
+  risk_coverage: ConfidenceComponent;
+}
+
+/** チェックポイント項目 (v3.1) */
+export interface CheckpointItem {
+  item_id: string;
+  label: string;
+  checked: boolean;
+  annotation?: string;
+  score_boost: number;
+  target_component?: string;
+  default_suggestion?: string;
+}
+
+/** 検証出力 v3.1（差分パッチ型） */
 export interface ReviewOutput {
   overall_verdict: 'PASS' | 'REVISE' | 'REJECT';
   confidence_score: number;
   findings: ReviewFinding[];
   final_warnings: string[];
+  // v3.1 差分パッチ型フィールド
+  confidence_breakdown?: ConfidenceBreakdown;
+  checkpoint_items?: CheckpointItem[];
+  auto_recalc_enabled?: boolean;
 }
 
 /** 人間確認による重要指摘の再チェック要求 */

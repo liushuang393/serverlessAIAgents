@@ -209,10 +209,27 @@ def build_input_dict(
     constraint_list.extend(constraints.regulatory)
     constraint_list.extend(constraints.human_resources)
 
+    # FaAgent用: 利用可能リソース辞書を構築
+    available_resources: dict[str, str] = {}
+    if constraints.budget:
+        available_resources["budget"] = f"{constraints.budget.amount}万円"
+    if constraints.human_resources:
+        available_resources["team"] = ", ".join(constraints.human_resources)
+
+    # FaAgent用: 時間軸を文字列化
+    time_horizon = ""
+    if constraints.timeline:
+        time_horizon = f"{constraints.timeline.months}ヶ月"
+
     result: dict = {
         "raw_question": question,
         "question": question,  # 後方互換のために残す
         "constraints": constraint_list,
+        # QiAgent用: 技術制約を分離（QiInput.tech_constraints へマッピング）
+        "tech_constraints": list(constraints.technical),
+        # FaAgent用: リソースと時間軸（FaInput.available_resources, time_horizon へマッピング）
+        "available_resources": available_resources,
+        "time_horizon": time_horizon,
     }
 
     # ステークホルダー情報を list[str] 形式に変換（DaoInput.stakeholders の型に合わせる）
@@ -597,6 +614,9 @@ async def process_decision_stream(
     stakeholder_tech_lead: str = Query("", max_length=100, description="技術責任者"),
     stakeholder_business_owner: str = Query("", max_length=100, description="事業責任者"),
     stakeholder_legal_reviewer: str = Query("", max_length=100, description="法務担当"),
+    technical_constraints: list[str] = Query(default=[], description="技術制約"),
+    regulatory_constraints: list[str] = Query(default=[], description="規制・コンプライアンス制約"),
+    human_resources: str = Query("", max_length=100, description="人的リソース（チーム人数等）"),
 ) -> StreamingResponse:
     """SSEストリーム付きで意思決定を処理.
 
@@ -616,6 +636,11 @@ async def process_decision_stream(
         constraints.budget = BudgetConstraint(amount=budget, currency="JPY")
     if timeline_months is not None:
         constraints.timeline = TimelineConstraint(months=timeline_months)
+    # 技術制約・規制制約・人的リソースを設定
+    constraints.technical = technical_constraints
+    constraints.regulatory = regulatory_constraints
+    if human_resources:
+        constraints.human_resources = [human_resources]
 
     # ステークホルダー情報を構築（いずれかの値が設定されている場合のみ）
     stakeholders: StakeholderInfo | None = None

@@ -1,7 +1,7 @@
-"""ReviewAgent - 検証Agent.
+"""ReviewAgent - 検証Agent v3.1（差分パッチ型UX）.
 
-全層の結果を検証し、最終判定を下す。
-最も重要なAgent。
+全層の結果を検証し、高レバレッジ欠陥のみを提示。
+最小入力（checkbox＋注釈）でスコアを自動再計算し、再分析コストを最小化する。
 """
 
 import json
@@ -9,15 +9,21 @@ import logging
 from typing import Any
 
 from apps.decision_governance_engine.schemas.agent_schemas import (
+    ActionType,
+    CheckpointItem,
+    ConfidenceBreakdown,
+    ConfidenceComponent,
     DaoOutput,
     FaOutput,
     FindingCategory,
     FindingSeverity,
+    MinimalPatch,
     QiOutput,
     ReviewFinding,
     ReviewInput,
     ReviewOutput,
     ReviewVerdict,
+    ScoreImprovement,
     ShuOutput,
 )
 
@@ -56,34 +62,50 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
         super().__init__(llm_client)
         self._logger = logging.getLogger(self.name)
 
-    SYSTEM_PROMPT = """あなたはReviewAgent（検証）です。
-全ての分析結果を俯瞰し、最終的な判定を下します。
+    SYSTEM_PROMPT = """あなたはReviewAgent v3.1（差分パッチ型検証）です。
+ユーザーが"考えにくい/見落としやすい"高レバレッジ欠陥だけを提示し、
+最小入力（checkbox＋短い注釈）でスコアを自動再計算する。再分析コストを最小化する。
 
-【あなたの唯一の責任】
-道・法・術・器の結果を検証し、実行可能性と整合性を評価すること。
+【目的】
+道・法・術・器の結果を検証し、"見落としやすい破綻点"のみを最大3件に統合して提示する。
+一般論やコピペ再掲は厳禁。ユーザーはチェックボックスと短い注釈だけで確認・補完できる。
+
+【絶対禁止】
+- 一般論（RACIが必要、会議で決めるべき等）だけで終わる指摘
+- 「再分析してください」をデフォルトにする
+- 同じ指摘の重複（最終警告でのコピペ再掲も禁止）
+- ユーザーに"分かりきった作業"を要求して終了すること
 
 【重要な境界条件】
 - 入力質問が対象範囲かどうかの判定は GatekeeperAgent の責務。ReviewAgent は「対象外」判定をしてはいけない。
-- 情報不足・不確実性がある場合は、原則 REVISE を選ぶ（安易に REJECT しない）。
+- 情報不足・不確実性がある場合は、PATCH/RECALCで補完可能な差分パッチを提示する。
 
-【必須チェック項目】
-1. 責任者が明確か
-2. 最悪ケースの想定があるか
-3. 撤退条件が定義されているか
-4. 最初の一歩が明日実行可能か
+【指摘ルール（最大3件、重複除去）】
+各指摘は必ず以下の形式で出す：
+- failure_point: 破綻点（このままだとどこで失敗するか）
+- impact_scope: 影響範囲（どのAgent/どの成果物が無効になるか）
+- minimal_patch: 最小パッチ（checkbox_label＋annotation_hint＋default_value）
+- score_improvements: パッチ適用後のスコア改善見込み [{target_score, current_estimate, improved_estimate, delta}]
+- action_type: "PATCH"（追記だけ）/ "RECALC"（追記→再計算）/ "RERUN"（全体再走、原則40点未満のみ）
 
-【判定基準】
-- PASS: 全チェッククリア、CRITICALなし
-- REVISE: WARNINGあり、または修正により改善可能
-- REJECT: CRITICALあり、かつ1回の修正で改善困難
+【修正アクション3段階】
+- PATCH: 追記だけでOK（再走不要）
+- RECALC: 追記→自動再計算（再走不要）
+- RERUN: 全体再走が必要（原則40点未満のときだけ）
 
-【REJECTの厳格条件（すべて満たす場合のみ）】
-1. CRITICAL所見が1件以上ある
-2. そのCRITICALが入力データに基づく具体的証拠で説明できる
-3. 根本的な再設計が必要で、通常の再分析では解消できない
+【信頼度分解】
+信頼度は4項目に分解する：
+- input_sufficiency（入力充足度）
+- logic_consistency（論理整合）
+- implementation_feasibility（実装可能性）
+- risk_coverage（リスク網羅）
+各項目に「チェックで+何点」を付ける。
 
-【出力形式】
-必ず以下のJSON形式で出力してください：
+【デフォルト案】
+「誰が判断するか」が未確定な場合、ユーザーに会議を要求するのではなく、
+デフォルト案（暫定責任者ロール）を提示し、ユーザーはチェックで確定できるようにする。
+
+【出力形式（JSON）】
 {
     "overall_verdict": "PASS" | "REVISE" | "REJECT",
     "findings": [
@@ -92,11 +114,22 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
             "category": "LOGIC_FLAW" | "OVER_OPTIMISM" | "RESPONSIBILITY_GAP" | "RESOURCE_MISMATCH" | "TIMELINE_UNREALISTIC",
             "description": "説明",
             "affected_agent": "DaoAgent",
-            "suggested_revision": "修正提案"
+            "suggested_revision": "修正提案",
+            "failure_point": "破綻点の具体的説明",
+            "impact_scope": "影響範囲",
+            "minimal_patch": {"checkbox_label": "ラベル", "annotation_hint": "ヒント", "default_value": "デフォルト案"},
+            "score_improvements": [{"target_score": "入力充足度", "current_estimate": 60, "improved_estimate": 80, "delta": 20}],
+            "action_type": "PATCH" | "RECALC" | "RERUN"
         }
     ],
-    "confidence_score": 0.85,
-    "final_warnings": ["最終警告1"]
+    "confidence_score": 0.65,
+    "confidence_breakdown": {
+        "input_sufficiency": {"name": "入力充足度", "score": 70, "checkbox_boost": 10, "description": "説明"},
+        "logic_consistency": {"name": "論理整合", "score": 80, "checkbox_boost": 5, "description": "説明"},
+        "implementation_feasibility": {"name": "実装可能性", "score": 60, "checkbox_boost": 15, "description": "説明"},
+        "risk_coverage": {"name": "リスク網羅", "score": 50, "checkbox_boost": 10, "description": "説明"}
+    },
+    "final_warnings": []
 }"""
 
     def _parse_input(self, input_data: dict[str, Any]) -> ReviewInput:
@@ -119,21 +152,22 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
         return self._review_rule_based(input_data)
 
     async def _review_with_llm(self, input_data: ReviewInput) -> ReviewOutput:
-        """LLMを使用した検証."""
+        """LLMを使用した差分パッチ型検証 v3.1."""
         summary = self._create_summary(input_data)
 
         user_prompt = f"""【分析結果サマリー】
 {summary}
 
-上記を検証し、最終判定をJSON形式で出力してください。"""
+上記を差分パッチ型で検証してください。
+指摘は最大3件に統合し、各指摘にfailure_point/impact_scope/minimal_patch/score_improvements/action_typeを付けてください。
+信頼度はconfidence_breakdownで4項目に分解してください。
+JSON形式で出力してください。"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
-        # 詳細ログ: LLM生出力を記録（デバッグ用）
         self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
 
         try:
-            # JSON部分を抽出してパース（堅牢な抽出）
             from agentflow.utils import extract_json
             data = extract_json(response)
 
@@ -142,15 +176,23 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
                 msg = "No valid JSON found"
                 raise json.JSONDecodeError(msg, response, 0)
 
-            # 詳細ログ: 抽出されたJSON
             self._logger.debug(f"Extracted JSON: {data}")
 
-            findings = [ReviewFinding(**f) for f in data.get("findings", [])]
+            # v3.1: findingsパース（最大3件に制限、重複除去）
+            raw_findings = data.get("findings", [])[:3]
+            findings = self._parse_findings_v31(raw_findings)
+
             llm_verdict = self._parse_verdict(data.get("overall_verdict"))
             verdict, confidence = self.derive_verdict_and_confidence(
                 findings=findings,
                 llm_verdict=llm_verdict,
             )
+
+            # v3.1: 信頼度分解パース
+            breakdown = self._parse_confidence_breakdown(data.get("confidence_breakdown", {}))
+
+            # v3.1: チェックポイント項目を生成
+            checkpoint_items = self._generate_checkpoint_items(input_data, findings)
 
             return ReviewOutput(
                 overall_verdict=verdict,
@@ -160,20 +202,34 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
                     findings=findings,
                     llm_warnings=data.get("final_warnings", []),
                 ),
+                confidence_breakdown=breakdown,
+                checkpoint_items=checkpoint_items,
+                auto_recalc_enabled=True,
             )
         except json.JSONDecodeError:
             return self._review_rule_based(input_data)
 
     def _review_rule_based(self, input_data: ReviewInput) -> ReviewOutput:
-        """ルールベース検証."""
+        """ルールベース差分パッチ型検証 v3.1."""
         findings = self._check_all(input_data)
+        # v3.1: 最大3件に制限
+        findings = findings[:3]
         verdict, confidence = self.derive_verdict_and_confidence(findings=findings)
+
+        # v3.1: 信頼度分解を生成
+        breakdown = self._calculate_confidence_breakdown(input_data)
+
+        # v3.1: チェックポイント項目を生成
+        checkpoint_items = self._generate_checkpoint_items(input_data, findings)
 
         return ReviewOutput(
             overall_verdict=verdict,
             findings=findings,
             confidence_score=confidence,
             final_warnings=self._generate_warnings(findings),
+            confidence_breakdown=breakdown,
+            checkpoint_items=checkpoint_items,
+            auto_recalc_enabled=True,
         )
 
     @classmethod
@@ -254,10 +310,10 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
 【器】技術負債警告: {', '.join(input_data.qi_result.technical_debt_warnings) or "なし"}"""
 
     def _check_all(self, input_data: ReviewInput) -> list[ReviewFinding]:
-        """全チェックを実行."""
-        findings = []
+        """全チェックを実行（v3.1差分パッチ型）."""
+        findings: list[ReviewFinding] = []
 
-        # タイムラインチェック
+        # チェック1: タイムライン破綻
         total_months = sum(
             self._parse_duration(p.duration)
             for p in input_data.shu_result.phases
@@ -266,19 +322,57 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
             findings.append(ReviewFinding(
                 severity=FindingSeverity.WARNING,
                 category=FindingCategory.TIMELINE_UNREALISTIC,
-                description=f"計画期間が{total_months}ヶ月と長期。バッファを推奨。",
+                description=f"計画期間が{total_months}ヶ月と長期",
                 affected_agent="ShuAgent",
-                suggested_revision="フェーズの期間を見直し、バッファを追加",
+                suggested_revision="フェーズ期間の短縮またはPoC範囲の限定",
+                failure_point=f"計画が{total_months}ヶ月に及び、環境変化で前提が崩れるリスク",
+                impact_scope="術（実行計画）全フェーズ、器（技術実装）の技術選定",
+                minimal_patch=MinimalPatch(
+                    checkbox_label="PoC期間を3ヶ月以内に限定する",
+                    annotation_hint="対象フェーズ番号",
+                ),
+                score_improvements=[ScoreImprovement(target_score="実装可能性", current_estimate=55.0, improved_estimate=75.0, delta=20.0)],
+                action_type=ActionType.RECALC,
             ))
 
-        # 技術負債警告チェック
-        if len(input_data.qi_result.technical_debt_warnings) > 2:
+        # チェック2: 技術負債集中
+        debt_count = len(input_data.qi_result.technical_debt_warnings)
+        if debt_count > 2:
             findings.append(ReviewFinding(
                 severity=FindingSeverity.WARNING,
                 category=FindingCategory.OVER_OPTIMISM,
-                description="技術負債警告が多い。リスク対策を強化推奨。",
+                description=f"技術負債警告が{debt_count}件。PoC段階での対応優先度が未定義",
                 affected_agent="QiAgent",
-                suggested_revision="技術負債の優先対応計画を策定",
+                suggested_revision="PoC段階で対応すべき負債と後回しにする負債を分類",
+                failure_point=f"技術負債{debt_count}件が未整理のまま実装開始すると手戻りが発生",
+                impact_scope="器（技術実装）のコンポーネント選定、術（実行計画）の工数見積",
+                minimal_patch=MinimalPatch(
+                    checkbox_label="PoC対応必須の負債を特定済み",
+                    annotation_hint="対応する負債名",
+                ),
+                score_improvements=[ScoreImprovement(target_score="リスク網羅", current_estimate=50.0, improved_estimate=70.0, delta=20.0)],
+                action_type=ActionType.PATCH,
+            ))
+
+        # チェック3: 撤退基準未定義
+        exit_criteria = input_data.shu_result.exit_criteria
+        has_exit = bool(exit_criteria and getattr(exit_criteria, "exit_trigger", ""))
+        if not has_exit:
+            findings.append(ReviewFinding(
+                severity=FindingSeverity.CRITICAL,
+                category=FindingCategory.RESPONSIBILITY_GAP,
+                description="撤退基準が未定義。損切りポイントが不明確",
+                affected_agent="ShuAgent",
+                suggested_revision="撤退トリガー条件と撤退時行動を定義",
+                failure_point="損切り判断が遅れ、リソースを浪費する",
+                impact_scope="術（実行計画）全体、法（戦略選定）の推奨戦略",
+                minimal_patch=MinimalPatch(
+                    checkbox_label="撤退基準を定義済み",
+                    annotation_hint="撤退トリガー条件",
+                    default_value="PoC3ヶ月時点でKPI未達なら中止",
+                ),
+                score_improvements=[ScoreImprovement(target_score="リスク網羅", current_estimate=40.0, improved_estimate=65.0, delta=25.0)],
+                action_type=ActionType.RECALC,
             ))
 
         return findings
@@ -316,3 +410,161 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
             return False
 
         return True
+
+
+    # =========================================================================
+    # v3.1 差分パッチ型ヘルパーメソッド
+    # =========================================================================
+
+    def _parse_findings_v31(self, raw_findings: list[dict[str, Any]]) -> list[ReviewFinding]:
+        """LLM出力からv3.1形式のfindingsをパース."""
+        findings: list[ReviewFinding] = []
+        seen_descriptions: set[str] = set()
+
+        for f in raw_findings:
+            desc = f.get("description", "")
+            # 重複除去
+            if desc in seen_descriptions:
+                continue
+            seen_descriptions.add(desc)
+
+            # minimal_patchのパース
+            mp_data = f.get("minimal_patch")
+            minimal_patch = None
+            if isinstance(mp_data, dict):
+                minimal_patch = MinimalPatch(
+                    checkbox_label=mp_data.get("checkbox_label", "確認済み"),
+                    annotation_hint=mp_data.get("annotation_hint", ""),
+                    default_value=mp_data.get("default_value", ""),
+                )
+
+            # score_improvementsのパース
+            si_data = f.get("score_improvements", [])
+            score_improvements: list[ScoreImprovement] = []
+            for si in si_data:
+                if isinstance(si, dict):
+                    score_improvements.append(ScoreImprovement(
+                        target_score=si.get("target_score", ""),
+                        current_estimate=float(si.get("current_estimate", 50)),
+                        improved_estimate=float(si.get("improved_estimate", 70)),
+                        delta=float(si.get("delta", 20)),
+                    ))
+
+            # action_typeのパース
+            action_str = f.get("action_type", "RECALC")
+            try:
+                action_type = ActionType(action_str)
+            except ValueError:
+                action_type = ActionType.RECALC
+
+            findings.append(ReviewFinding(
+                severity=FindingSeverity(f.get("severity", "WARNING")),
+                category=FindingCategory(f.get("category", "LOGIC_FLAW")),
+                description=desc,
+                affected_agent=f.get("affected_agent", ""),
+                suggested_revision=f.get("suggested_revision", ""),
+                failure_point=f.get("failure_point", ""),
+                impact_scope=f.get("impact_scope", ""),
+                minimal_patch=minimal_patch,
+                score_improvements=score_improvements,
+                action_type=action_type,
+            ))
+
+        return findings[:3]
+
+    def _parse_confidence_breakdown(self, data: dict[str, Any]) -> ConfidenceBreakdown | None:
+        """LLM出力から信頼度分解をパース."""
+        if not data:
+            return None
+
+        def _parse_component(comp_data: dict[str, Any], default_name: str) -> ConfidenceComponent:
+            return ConfidenceComponent(
+                name=comp_data.get("name", default_name),
+                score=float(comp_data.get("score", 50)),
+                checkbox_boost=float(comp_data.get("checkbox_boost", 5)),
+                description=comp_data.get("description", ""),
+            )
+
+        return ConfidenceBreakdown(
+            input_sufficiency=_parse_component(data.get("input_sufficiency", {}), "入力充足度"),
+            logic_consistency=_parse_component(data.get("logic_consistency", {}), "論理整合"),
+            implementation_feasibility=_parse_component(data.get("implementation_feasibility", {}), "実装可能性"),
+            risk_coverage=_parse_component(data.get("risk_coverage", {}), "リスク網羅"),
+        )
+
+    def _calculate_confidence_breakdown(self, input_data: ReviewInput) -> ConfidenceBreakdown:
+        """ルールベースで信頼度分解を計算."""
+        # 入力充足度: 各Agent結果の充実度を評価
+        has_essence = bool(input_data.dao_result.essence)
+        has_paths = bool(input_data.fa_result.recommended_paths)
+        has_first_action = bool(input_data.shu_result.first_action)
+        has_impls = bool(input_data.qi_result.implementations)
+        input_score = 25.0 * sum([has_essence, has_paths, has_first_action, has_impls])
+
+        # 論理整合: 各層間の一貫性
+        logic_score = 70.0  # ルールベースではデフォルト
+
+        # 実装可能性: 器の充実度
+        impl_count = len(input_data.qi_result.implementations)
+        impl_score = min(90.0, 40.0 + impl_count * 10.0)
+
+        # リスク網羅: 撤退基準・警告の有無
+        has_exit = bool(input_data.shu_result.exit_criteria)
+        has_debt_warnings = bool(input_data.qi_result.technical_debt_warnings)
+        risk_score = 30.0 + (has_exit * 30.0) + (has_debt_warnings * 20.0)
+
+        return ConfidenceBreakdown(
+            input_sufficiency=ConfidenceComponent(name="入力充足度", score=input_score, checkbox_boost=10.0, description="全Agent結果の充実度"),
+            logic_consistency=ConfidenceComponent(name="論理整合", score=logic_score, checkbox_boost=5.0, description="道→法→術→器の一貫性"),
+            implementation_feasibility=ConfidenceComponent(name="実装可能性", score=impl_score, checkbox_boost=15.0, description="技術実装の具体性"),
+            risk_coverage=ConfidenceComponent(name="リスク網羅", score=risk_score, checkbox_boost=10.0, description="撤退基準・リスク対策の網羅"),
+        )
+
+    def _generate_checkpoint_items(
+        self, input_data: ReviewInput, findings: list[ReviewFinding]
+    ) -> list[CheckpointItem]:
+        """v3.1チェックボックス項目を生成."""
+        items: list[CheckpointItem] = []
+
+        # 承認者（ロール）確認済み
+        items.append(CheckpointItem(
+            item_id="approver_confirmed",
+            label="承認者（ロール）確認済み",
+            checked=False,
+            score_boost=8.0,
+            target_component="input_sufficiency",
+            default_suggestion="暫定: プロジェクトオーナー（PO）が承認責任者",
+        ))
+
+        # Gate0〜Gate3 定義済み
+        items.append(CheckpointItem(
+            item_id="gates_defined",
+            label="Gate0〜Gate3 定義済み",
+            checked=False,
+            score_boost=10.0,
+            target_component="logic_consistency",
+            default_suggestion="Gate0=PoC開始, Gate1=MVP判断, Gate2=スケール判断, Gate3=本番移行",
+        ))
+
+        # 撤退基準 定義済み
+        has_exit = bool(input_data.shu_result.exit_criteria and getattr(input_data.shu_result.exit_criteria, "exit_trigger", ""))
+        items.append(CheckpointItem(
+            item_id="exit_criteria_defined",
+            label="撤退基準 定義済み",
+            checked=has_exit,
+            score_boost=12.0,
+            target_component="risk_coverage",
+            default_suggestion="PoC3ヶ月時点でKPI50%未達なら撤退",
+        ))
+
+        # 最悪ケース一次対応 定義済み
+        items.append(CheckpointItem(
+            item_id="worst_case_response",
+            label="最悪ケース一次対応 定義済み",
+            checked=False,
+            score_boost=10.0,
+            target_component="risk_coverage",
+            default_suggestion="障害発生時: サービス停止→ログ保全→PO報告→24h以内に原因分析",
+        ))
+
+        return items

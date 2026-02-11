@@ -82,6 +82,10 @@ export interface Notification {
 export interface CollectRequest {
   keywords: string[];
   sources: SourceType[];
+  date_range?: {
+    start?: string;
+    end?: string;
+  };
 }
 
 export interface CollectResponse {
@@ -185,4 +189,3 @@ export interface TrendChartData {
   topic: string;
   data: ChartDataPoint[];
 }
-

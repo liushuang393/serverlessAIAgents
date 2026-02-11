@@ -51,6 +51,12 @@ async def list_evidence(
     return {"evidences": [e.to_dict() for e in evidences], "total": len(evidences)}
 
 
+@router.get("/api/evidence/grounding")
+async def get_grounding_guard() -> dict:
+    """Grounding Guard 診断を取得."""
+    return await evidence_service.get_grounding_guard()
+
+
 @router.get("/api/evidence/{evidence_id}")
 async def get_evidence(evidence_id: str) -> dict:
     """証拠詳細を取得."""

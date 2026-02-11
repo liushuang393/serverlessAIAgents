@@ -66,6 +66,16 @@ class EvidenceService:
             SourceType.ARXIV: 0.9,
             SourceType.RSS: 0.5,
         }
+        # Grounding Guard: 結論公開可否を判定するしきい値
+        self._min_evidence_for_publish = 3
+        self._min_avg_reliability = 0.65
+        self._min_source_diversity = 2
+        self._min_citation_ready_ratio = 0.7
+        self._min_fresh_ratio = 0.4
+        self._min_high_reliability = 0.75
+        self._min_citation_reliability = 0.6
+        self._freshness_window_days = 21
+        self._min_content_chars_for_quote = 120
 
     async def register_evidence_from_article(self, article: Article) -> Evidence:
         """記事から証拠を登録.
@@ -287,10 +297,233 @@ class EvidenceService:
                 stats[keyword] = stats.get(keyword, 0.0) + evidence.reliability_score
         return stats
 
+    async def get_grounding_guard(self) -> dict[str, Any]:
+        """証拠品質を集約し、結論公開可否を判定.
+
+        NotebookLM の引用トレース可能性と、MiroThinker の軌跡可監査性を
+        組み合わせた運用を想定した診断メトリクスを返します。
+        """
+        evidences = await self.list_evidences()
+        claims = await self.list_claims()
+        now = datetime.now()
+
+        evidence_diagnostics = [
+            self._build_evidence_diagnostic(evidence, now) for evidence in evidences
+        ]
+        evidence_lookup = {item["evidence_id"]: item for item in evidence_diagnostics}
+        claim_diagnostics = [
+            self._build_claim_diagnostic(claim, evidence_lookup) for claim in claims
+        ]
+
+        total_evidence = len(evidence_diagnostics)
+        source_diversity = len({item["source_type"] for item in evidence_diagnostics})
+        citation_ready_count = sum(1 for item in evidence_diagnostics if item["citation_ready"])
+        high_reliability_count = sum(
+            1
+            for item in evidence_diagnostics
+            if item["reliability_score"] >= self._min_high_reliability
+        )
+        fresh_count = sum(1 for item in evidence_diagnostics if item["is_fresh"])
+        supported_claim_count = sum(
+            1 for item in claim_diagnostics if item["status"] == "supported"
+        )
+
+        avg_reliability = (
+            sum(item["reliability_score"] for item in evidence_diagnostics) / total_evidence
+            if total_evidence
+            else 0.0
+        )
+        citation_ready_ratio = self._safe_ratio(citation_ready_count, total_evidence)
+        fresh_ratio = self._safe_ratio(fresh_count, total_evidence)
+        supported_claim_ratio = self._safe_ratio(supported_claim_count, len(claim_diagnostics))
+
+        blockers: list[dict[str, Any]] = []
+        if total_evidence < self._min_evidence_for_publish:
+            blockers.append(
+                {
+                    "code": "LOW_EVIDENCE_COUNT",
+                    "message": "証拠件数が不足しています。",
+                    "current": total_evidence,
+                    "required": self._min_evidence_for_publish,
+                }
+            )
+        if avg_reliability < self._min_avg_reliability:
+            blockers.append(
+                {
+                    "code": "LOW_AVG_RELIABILITY",
+                    "message": "平均信頼度が公開基準に達していません。",
+                    "current": round(avg_reliability, 3),
+                    "required": self._min_avg_reliability,
+                }
+            )
+        if source_diversity < self._min_source_diversity:
+            blockers.append(
+                {
+                    "code": "LOW_SOURCE_DIVERSITY",
+                    "message": "情報源の多様性が不足しています。",
+                    "current": source_diversity,
+                    "required": self._min_source_diversity,
+                }
+            )
+        if citation_ready_ratio < self._min_citation_ready_ratio:
+            blockers.append(
+                {
+                    "code": "LOW_CITATION_READY_RATIO",
+                    "message": "引用可能な証拠比率が不足しています。",
+                    "current": round(citation_ready_ratio, 3),
+                    "required": self._min_citation_ready_ratio,
+                }
+            )
+        if fresh_ratio < self._min_fresh_ratio:
+            blockers.append(
+                {
+                    "code": "LOW_FRESH_RATIO",
+                    "message": "証拠の鮮度が低下しています。",
+                    "current": round(fresh_ratio, 3),
+                    "required": self._min_fresh_ratio,
+                }
+            )
+
+        action_map = {
+            "LOW_EVIDENCE_COUNT": "同一テーマで追加収集を実行し、最低3件以上に増やしてください。",
+            "LOW_AVG_RELIABILITY": "低信頼ソース比率を下げ、一次情報ソースを優先してください。",
+            "LOW_SOURCE_DIVERSITY": "異なる source_type から最低2系統の裏取りを追加してください。",
+            "LOW_CITATION_READY_RATIO": "本文付きURL証拠を追加し、引用可能な状態へ整備してください。",
+            "LOW_FRESH_RATIO": "直近3週間以内の証拠を追加収集してください。",
+        }
+        actions = [action_map[item["code"]] for item in blockers]
+
+        status = "ready" if not blockers else "needs_more_evidence"
+        if status == "ready":
+            actions.append("出力時は主張ごとに evidence_id / URL を必ず明示してください。")
+
+        return {
+            "status": status,
+            "summary": {
+                "total_evidence": total_evidence,
+                "claims_count": len(claim_diagnostics),
+                "avg_reliability": round(avg_reliability, 3),
+                "source_diversity": source_diversity,
+                "citation_ready_count": citation_ready_count,
+                "citation_ready_ratio": round(citation_ready_ratio, 3),
+                "high_reliability_count": high_reliability_count,
+                "fresh_count": fresh_count,
+                "fresh_ratio": round(fresh_ratio, 3),
+                "supported_claim_count": supported_claim_count,
+                "supported_claim_ratio": round(supported_claim_ratio, 3),
+            },
+            "thresholds": {
+                "min_evidence_for_publish": self._min_evidence_for_publish,
+                "min_avg_reliability": self._min_avg_reliability,
+                "min_source_diversity": self._min_source_diversity,
+                "min_citation_ready_ratio": self._min_citation_ready_ratio,
+                "min_fresh_ratio": self._min_fresh_ratio,
+                "freshness_window_days": self._freshness_window_days,
+                "min_content_chars_for_quote": self._min_content_chars_for_quote,
+            },
+            "blockers": blockers,
+            "actions": actions,
+            "evidence_diagnostics": evidence_diagnostics,
+            "claim_diagnostics": claim_diagnostics,
+        }
+
     def _compute_content_hash(self, url: str, content: str) -> str:
         """コンテンツハッシュを計算."""
         data = f"{url}:{content}".encode()
         return hashlib.sha256(data).hexdigest()[:16]
+
+    def _build_evidence_diagnostic(self, evidence: Evidence, now: datetime) -> dict[str, Any]:
+        """証拠単位のトレーサビリティ診断を作成."""
+        content = str(evidence.extracted_data.get("content", "")).strip()
+        content_length = len(content)
+        has_content = content_length >= self._min_content_chars_for_quote
+        has_keywords = bool(evidence.extracted_data.get("keywords"))
+        has_url = bool(evidence.url)
+        freshness_days = max((now - evidence.collected_at).days, 0)
+        is_fresh = freshness_days <= self._freshness_window_days
+
+        citation_ready = (
+            has_url
+            and has_content
+            and evidence.reliability_score >= self._min_citation_reliability
+        )
+
+        traceability_score = (
+            evidence.reliability_score * 0.45
+            + (1.0 if has_url else 0.0) * 0.25
+            + (1.0 if has_content else 0.0) * 0.2
+            + (1.0 if has_keywords else 0.0) * 0.1
+        )
+
+        return {
+            "evidence_id": evidence.id,
+            "source_type": evidence.source_type.value,
+            "reliability_score": round(evidence.reliability_score, 3),
+            "content_length": content_length,
+            "freshness_days": freshness_days,
+            "is_fresh": is_fresh,
+            "citation_ready": citation_ready,
+            "traceability_score": round(self._clamp(traceability_score), 3),
+            "quote_preview": self._build_quote_preview(content),
+        }
+
+    def _build_claim_diagnostic(
+        self,
+        claim: Claim,
+        evidence_lookup: dict[str, dict[str, Any]],
+    ) -> dict[str, Any]:
+        """主張単位の被支持度診断を作成."""
+        linked = [evidence_lookup[eid] for eid in claim.evidence_ids if eid in evidence_lookup]
+        evidence_count = len(claim.evidence_ids)
+        linked_count = len(linked)
+        citation_ready_count = sum(1 for item in linked if item["citation_ready"])
+        avg_traceability = (
+            sum(float(item["traceability_score"]) for item in linked) / linked_count
+            if linked_count
+            else 0.0
+        )
+        coverage_score = self._safe_ratio(citation_ready_count, evidence_count)
+
+        if evidence_count == 0:
+            status = "unsupported"
+        elif coverage_score >= 0.8 and claim.confidence >= 0.7:
+            status = "supported"
+        elif coverage_score >= 0.5:
+            status = "partial"
+        else:
+            status = "weak"
+
+        return {
+            "claim_id": claim.id,
+            "statement": claim.statement,
+            "level": claim.level.value,
+            "confidence": round(claim.confidence, 3),
+            "evidence_count": evidence_count,
+            "linked_evidence_count": linked_count,
+            "citation_ready_count": citation_ready_count,
+            "coverage_score": round(coverage_score, 3),
+            "avg_traceability": round(avg_traceability, 3),
+            "status": status,
+        }
+
+    def _build_quote_preview(self, content: str) -> str:
+        """本文から引用プレビューを抽出."""
+        if not content:
+            return ""
+        normalized = " ".join(content.split())
+        if len(normalized) <= 180:
+            return normalized
+        return f"{normalized[:180]}..."
+
+    def _safe_ratio(self, numerator: int, denominator: int) -> float:
+        """ゼロ除算を回避した比率計算."""
+        if denominator <= 0:
+            return 0.0
+        return self._clamp(numerator / denominator)
+
+    def _clamp(self, value: float) -> float:
+        """0.0-1.0 に正規化."""
+        return max(0.0, min(1.0, value))
 
     async def _find_by_hash(
         self, session: AsyncSession, content_hash: str

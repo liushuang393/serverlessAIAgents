@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Any
 
-from apps.market_trend_monitor.backend.api.state import prediction_service
+from apps.market_trend_monitor.backend.api.state import prediction_service, store
 from apps.market_trend_monitor.backend.models import PredictionOutcome
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -28,6 +28,13 @@ class PredictionReviewRequest(BaseModel):
     actual_outcome: str
     outcome: str
     notes: str = ""
+
+
+class PredictionBootstrapRequest(BaseModel):
+    """トレンドから予測を自動生成するリクエスト."""
+
+    horizon_days: int = Field(default=30, ge=1, le=180)
+    limit: int = Field(default=8, ge=1, le=50)
 
 
 @router.get("/api/predictions")
@@ -73,7 +80,47 @@ async def create_prediction(request: PredictionCreateRequest) -> dict:
         target_date=target,
         metadata=request.metadata,
     )
+    await prediction_service.persist_prediction(prediction)
     return prediction.to_dict()
+
+
+@router.post("/api/predictions/bootstrap")
+async def bootstrap_predictions(request: PredictionBootstrapRequest) -> dict:
+    """最新トレンドから予測を一括生成."""
+    trends = await store.list_trends(limit=max(request.limit * 3, request.limit))
+    if not trends:
+        return {
+            "status": "empty",
+            "message": "トレンドデータがありません。先にデータ収集を実行してください。",
+            "created": [],
+            "created_count": 0,
+            "skipped_count": 0,
+            "source_trends": 0,
+        }
+
+    result = prediction_service.bootstrap_from_trends(
+        trends,
+        horizon_days=request.horizon_days,
+        limit=request.limit,
+    )
+    created_ids = list(result.get("created_ids", []))
+    if created_ids:
+        await prediction_service.persist_predictions_by_ids(created_ids)
+    created_count = int(result.get("created_count", 0))
+    status = "success" if created_count > 0 else "noop"
+    message = (
+        f"{created_count}件の予測を生成しました"
+        if created_count > 0
+        else "新規生成対象がありませんでした（既存予測と重複）"
+    )
+    return {
+        "status": status,
+        "message": message,
+        "created": result.get("created", []),
+        "created_count": created_count,
+        "skipped_count": int(result.get("skipped_count", 0)),
+        "source_trends": len(trends),
+    }
 
 
 @router.post("/api/predictions/{prediction_id}/review")
@@ -94,4 +141,8 @@ async def review_prediction(
     )
     if not review:
         raise HTTPException(status_code=404, detail="Prediction not found")
+    prediction = prediction_service.get_prediction(prediction_id)
+    if prediction:
+        await prediction_service.persist_prediction(prediction)
+    await prediction_service.persist_review(review)
     return review.to_dict()

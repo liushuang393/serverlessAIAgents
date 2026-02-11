@@ -4,17 +4,27 @@
 過去の予測と実際の結果を比較し、精度を評価します。
 """
 
+import asyncio
 import logging
 import uuid
-from datetime import date, datetime
+from collections.abc import Awaitable, Callable
+from datetime import date, datetime, timedelta
 from typing import Any
 
+from apps.market_trend_monitor.backend.db import init_db
+from apps.market_trend_monitor.backend.db.models import (
+    PredictionModel,
+    PredictionReviewModel,
+)
+from apps.market_trend_monitor.backend.db.session import async_session
 from apps.market_trend_monitor.backend.models import (
     Prediction,
     PredictionOutcome,
     PredictionReview,
     PredictionStatus,
 )
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 
 class PredictionService:
@@ -28,6 +38,7 @@ class PredictionService:
         self,
         *,
         adaptive_scoring_service: Any | None = None,
+        session_factory: Any | None = None,
     ) -> None:
         """初期化.
 
@@ -40,6 +51,67 @@ class PredictionService:
         self._reviews: dict[str, PredictionReview] = {}
         # Phase 9: 適応的スコアリング
         self._adaptive_scoring = adaptive_scoring_service
+        self._session_factory = session_factory or async_session
+        self._loaded_from_db = False
+        self._prediction_persist_lock = asyncio.Lock()
+        self._review_persist_lock = asyncio.Lock()
+
+    async def initialize(self) -> None:
+        """永続層から予測/復盤データをロード."""
+        if self._loaded_from_db:
+            return
+        await init_db()
+
+        async with self._session_factory() as session:
+            prediction_rows = (
+                await session.execute(select(PredictionModel))
+            ).scalars().all()
+            review_rows = (
+                await session.execute(select(PredictionReviewModel))
+            ).scalars().all()
+
+        predictions: dict[str, Prediction] = {}
+        for row in prediction_rows:
+            predictions[row.id] = Prediction(
+                id=row.id,
+                statement=row.statement,
+                target_date=self._parse_iso_date(row.target_date),
+                confidence=float(row.confidence),
+                claim_id=row.claim_id,
+                created_at=row.created_at,
+                status=self._parse_prediction_status(row.status),
+                metadata=dict(row.metadata_json or {}),
+            )
+
+        reviews: dict[str, PredictionReview] = {}
+        for row in review_rows:
+            review = PredictionReview(
+                id=row.id,
+                prediction_id=row.prediction_id,
+                actual_outcome=row.actual_outcome,
+                outcome=self._parse_prediction_outcome(row.outcome),
+                accuracy_score=float(row.accuracy_score),
+                reviewed_at=row.reviewed_at,
+                notes=row.notes,
+                metadata=dict(row.metadata_json or {}),
+            )
+            reviews[review.id] = review
+
+            prediction = predictions.get(review.prediction_id)
+            if prediction:
+                prediction.status = self._status_from_outcome(review.outcome)
+                prediction.actual_outcome = review.actual_outcome
+                prediction.review_note = review.notes
+                prediction.reviewed_at = review.reviewed_at
+
+        self._predictions = predictions
+        self._reviews = reviews
+        self._loaded_from_db = True
+        self._logger.info(
+            "PredictionService 初期化: predictions=%s reviews=%s",
+            len(predictions),
+            len(reviews),
+        )
 
     def create_prediction(
         self,
@@ -74,7 +146,123 @@ class PredictionService:
 
         self._predictions[prediction.id] = prediction
         self._logger.info(f"Prediction created: {prediction.id}")
+        self._schedule_task(lambda: self.persist_prediction(prediction))
         return prediction
+
+    def bootstrap_from_trends(
+        self,
+        trends: list[dict[str, Any]],
+        *,
+        horizon_days: int = 30,
+        limit: int = 8,
+    ) -> dict[str, Any]:
+        """トレンド一覧から予測を自動生成.
+
+        重複生成を避けるため、trend_id（なければtopic）単位で既存予測を判定する。
+        """
+        if limit <= 0:
+            return {
+                "created": [],
+                "created_count": 0,
+                "skipped_count": 0,
+            }
+
+        existing_keys: set[str] = set()
+        for prediction in self._predictions.values():
+            key = self._trend_prediction_key(prediction.metadata)
+            if key:
+                existing_keys.add(key)
+
+        created: list[Prediction] = []
+        skipped_count = 0
+        target_date = date.today() + timedelta(days=max(horizon_days, 1))
+
+        sorted_trends = sorted(
+            trends,
+            key=lambda trend: float(trend.get("score", 0.0)),
+            reverse=True,
+        )
+
+        for trend in sorted_trends:
+            if len(created) >= limit:
+                break
+
+            key = self._trend_prediction_key(trend)
+            if key and key in existing_keys:
+                skipped_count += 1
+                continue
+
+            topic = str(trend.get("topic", "")).strip()
+            if not topic:
+                skipped_count += 1
+                continue
+
+            confidence = self._build_bootstrap_confidence(trend)
+            statement = (
+                f"今後{max(horizon_days, 1)}日以内に"
+                f"「{topic}」関連シグナルは現在水準以上を維持する"
+            )
+            metadata = {
+                "source": "trend_bootstrap",
+                "trend_id": str(trend.get("id", "")),
+                "topic": topic,
+                "trend_score": float(trend.get("score", 0.0)),
+                "growth_rate": float(trend.get("growth_rate", 0.0)),
+                "articles_count": int(
+                    trend.get("articles_count", trend.get("article_count", 0))
+                ),
+            }
+
+            prediction = self.create_prediction(
+                claim_id=str(trend.get("id", "")),
+                statement=statement,
+                confidence=confidence,
+                target_date=target_date,
+                metadata=metadata,
+            )
+            created.append(prediction)
+
+            if key:
+                existing_keys.add(key)
+
+        return {
+            "created": [prediction.to_dict() for prediction in created],
+            "created_count": len(created),
+            "skipped_count": skipped_count,
+            "created_ids": [prediction.id for prediction in created],
+        }
+
+    def _trend_prediction_key(self, payload: dict[str, Any]) -> str:
+        """重複回避用キーを生成."""
+        # Analyzer の trend_id は実行ごとに変わるため、topic を優先キーにする
+        topic = str(payload.get("topic", payload.get("statement", ""))).strip().casefold()
+        if topic:
+            return f"topic:{topic}"
+
+        trend_id = str(payload.get("trend_id", payload.get("id", ""))).strip()
+        if trend_id:
+            return f"trend:{trend_id}"
+        return ""
+
+    def _build_bootstrap_confidence(self, trend: dict[str, Any]) -> float:
+        """トレンド情報から初期信頼度を算出."""
+        score = float(trend.get("score", 0.5))
+        growth_rate = float(trend.get("growth_rate", 0.0))
+        articles_count = int(trend.get("articles_count", trend.get("article_count", 0)))
+
+        confidence = score
+        if growth_rate > 0:
+            confidence += 0.08
+        elif growth_rate < 0:
+            confidence -= 0.08
+
+        if articles_count >= 8:
+            confidence += 0.05
+        elif articles_count <= 1:
+            confidence -= 0.05
+
+        # 極端値を避ける
+        return max(0.2, min(confidence, 0.95))
 
     def review_prediction(
         self,
@@ -121,6 +309,11 @@ class PredictionService:
             metadata=review_metadata,
         )
 
+        prediction.review(
+            status=self._status_from_outcome(outcome),
+            actual_outcome=actual_outcome,
+            review_note=notes,
+        )
         self._reviews[review.id] = review
         self._logger.info(
             f"Prediction reviewed: {review.id}, "
@@ -130,15 +323,158 @@ class PredictionService:
         # Phase 9: フィードバックループ - 重みの自動調整
         if self._adaptive_scoring:
             try:
-                import asyncio
                 recent_reviews = list(self._reviews.values())[-10:]
-                asyncio.ensure_future(
-                    self._adaptive_scoring.update_weights(recent_reviews)
+                self._schedule_task(
+                    lambda: self._adaptive_scoring.update_weights(recent_reviews)
                 )
             except Exception as e:
                 self._logger.warning("適応的スコアリング更新失敗: %s", e)
 
+        self._schedule_task(lambda: self.persist_prediction(prediction))
+        self._schedule_task(lambda: self.persist_review(review))
         return review
+
+    async def persist_prediction(self, prediction: Prediction) -> None:
+        """予測を永続化（upsert）."""
+        async with self._prediction_persist_lock:
+            await init_db()
+            async with self._session_factory() as session:
+                try:
+                    row = await session.get(PredictionModel, prediction.id)
+                    if row is None:
+                        row = PredictionModel(id=prediction.id)
+                        session.add(row)
+
+                    self._apply_prediction_row(row, prediction)
+                    await session.commit()
+                    return
+                except IntegrityError as exc:
+                    await session.rollback()
+                    self._logger.warning(
+                        "予測の同時保存競合を解消: prediction_id=%s",
+                        prediction.id,
+                    )
+                    row = await session.get(PredictionModel, prediction.id)
+                    if row is None:
+                        raise exc
+
+                    self._apply_prediction_row(row, prediction)
+                    await session.commit()
+
+    async def persist_review(self, review: PredictionReview) -> None:
+        """復盤結果を永続化（upsert）."""
+        async with self._review_persist_lock:
+            await init_db()
+            async with self._session_factory() as session:
+                try:
+                    row = await session.get(PredictionReviewModel, review.id)
+                    if row is None:
+                        row = PredictionReviewModel(id=review.id)
+                        session.add(row)
+
+                    self._apply_review_row(row, review)
+                    prediction_row = await session.get(PredictionModel, review.prediction_id)
+                    if prediction_row is not None:
+                        prediction_row.status = self._status_from_outcome(review.outcome).value
+                    await session.commit()
+                    return
+                except IntegrityError as exc:
+                    await session.rollback()
+                    self._logger.warning(
+                        "復盤結果の同時保存競合を解消: review_id=%s",
+                        review.id,
+                    )
+                    row = await session.get(PredictionReviewModel, review.id)
+                    if row is None:
+                        raise exc
+
+                    self._apply_review_row(row, review)
+                    prediction_row = await session.get(PredictionModel, review.prediction_id)
+                    if prediction_row is not None:
+                        prediction_row.status = self._status_from_outcome(review.outcome).value
+                    await session.commit()
+
+    async def persist_predictions_by_ids(self, prediction_ids: list[str]) -> int:
+        """ID一覧で予測を永続化."""
+        persisted = 0
+        for prediction_id in prediction_ids:
+            prediction = self._predictions.get(prediction_id)
+            if not prediction:
+                continue
+            await self.persist_prediction(prediction)
+            persisted += 1
+        return persisted
+
+    def _schedule_task(self, task_factory: Callable[[], Awaitable[Any]]) -> None:
+        """実行中イベントループに永続化タスクを登録."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        loop.create_task(task_factory())
+
+    @staticmethod
+    def _apply_prediction_row(
+        row: PredictionModel,
+        prediction: Prediction,
+    ) -> None:
+        """PredictionModel へ Prediction の値を反映."""
+        row.statement = prediction.statement
+        row.target_date = prediction.target_date.isoformat()
+        row.confidence = float(prediction.confidence)
+        row.claim_id = prediction.claim_id or None
+        row.status = prediction.status.value
+        row.created_at = prediction.created_at
+        row.metadata_json = dict(prediction.metadata or {})
+
+    @staticmethod
+    def _apply_review_row(
+        row: PredictionReviewModel,
+        review: PredictionReview,
+    ) -> None:
+        """PredictionReviewModel へ PredictionReview の値を反映."""
+        row.prediction_id = review.prediction_id
+        row.actual_outcome = review.actual_outcome
+        row.outcome = review.outcome.value
+        row.accuracy_score = float(review.accuracy_score)
+        row.reviewed_at = review.reviewed_at
+        row.notes = review.notes
+        row.metadata_json = dict(review.metadata or {})
+
+    @staticmethod
+    def _status_from_outcome(outcome: PredictionOutcome) -> PredictionStatus:
+        """復盤結果を PredictionStatus に変換."""
+        mapping = {
+            PredictionOutcome.CORRECT: PredictionStatus.CORRECT,
+            PredictionOutcome.PARTIAL: PredictionStatus.PARTIAL,
+            PredictionOutcome.INCORRECT: PredictionStatus.INCORRECT,
+            PredictionOutcome.UNKNOWN: PredictionStatus.PARTIAL,
+        }
+        return mapping.get(outcome, PredictionStatus.PENDING)
+
+    @staticmethod
+    def _parse_iso_date(raw: str) -> date:
+        """日付文字列を安全に date へ変換."""
+        try:
+            return date.fromisoformat(raw)
+        except ValueError:
+            return date.today()
+
+    @staticmethod
+    def _parse_prediction_status(raw: str) -> PredictionStatus:
+        """保存値から PredictionStatus を復元."""
+        try:
+            return PredictionStatus(raw)
+        except ValueError:
+            return PredictionStatus.PENDING
+
+    @staticmethod
+    def _parse_prediction_outcome(raw: str) -> PredictionOutcome:
+        """保存値から PredictionOutcome を復元."""
+        try:
+            return PredictionOutcome(raw)
+        except ValueError:
+            return PredictionOutcome.UNKNOWN
 
     def get_prediction(self, prediction_id: str) -> Prediction | None:
         """予測を取得."""

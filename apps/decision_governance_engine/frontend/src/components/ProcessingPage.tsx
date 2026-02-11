@@ -221,9 +221,12 @@ export const ProcessingPage: React.FC = () => {
     if (question) {
       const budget = constraints.budget ? Number.parseFloat(constraints.budget) : undefined;
       const timeline = constraints.timeline ? Number.parseInt(constraints.timeline, 10) : undefined;
-      startStream(question, budget, timeline, stakeholders);
+      const technical = constraints.technical.length > 0 ? constraints.technical : undefined;
+      const regulatory = constraints.regulatory.length > 0 ? constraints.regulatory : undefined;
+      const team = constraints.team || undefined;
+      startStream(question, budget, timeline, stakeholders, technical, regulatory, team);
     }
-  }, [question, constraints.budget, constraints.timeline, stakeholders, startStream]);
+  }, [question, constraints.budget, constraints.timeline, constraints.technical, constraints.regulatory, constraints.team, stakeholders, startStream]);
 
   /** レポート画面へ遷移 */
   const handleViewReport = useCallback(() => {
@@ -248,7 +251,10 @@ export const ProcessingPage: React.FC = () => {
       hasStartedRef.current = true;
       const budget = constraints.budget ? Number.parseFloat(constraints.budget) : undefined;
       const timeline = constraints.timeline ? Number.parseInt(constraints.timeline, 10) : undefined;
-      startStream(question, budget, timeline, stakeholders);
+      const technical = constraints.technical.length > 0 ? constraints.technical : undefined;
+      const regulatory = constraints.regulatory.length > 0 ? constraints.regulatory : undefined;
+      const team = constraints.team || undefined;
+      startStream(question, budget, timeline, stakeholders, technical, regulatory, team);
     } else if (!question) {
       console.log('[ProcessingPage] question が空 - hydration 待ち中');
     }
@@ -267,7 +273,7 @@ export const ProcessingPage: React.FC = () => {
       isMountedRef.current = false;
       hasStartedRef.current = false;  // 再マウント時に再開できるようにリセット
     };
-  }, [question, constraints.budget, constraints.timeline, stakeholders, startStream, stopStream]);
+  }, [question, constraints.budget, constraints.timeline, constraints.technical, constraints.regulatory, constraints.team, stakeholders, startStream, stopStream]);
 
   // 完了時にレポートを保存（自動遷移しない - ボタンで遷移）
   useEffect(() => {

@@ -248,7 +248,10 @@ export class DecisionApiClient {
       tech_lead?: string;
       business_owner?: string;
       legal_reviewer?: string;
-    }
+    },
+    technicalConstraints?: string[],
+    regulatoryConstraints?: string[],
+    team?: string
   ): EventSource {
     const params = new URLSearchParams({
       question,
@@ -262,6 +265,25 @@ export class DecisionApiClient {
       if (stakeholders.tech_lead) params.set('stakeholder_tech_lead', stakeholders.tech_lead);
       if (stakeholders.business_owner) params.set('stakeholder_business_owner', stakeholders.business_owner);
       if (stakeholders.legal_reviewer) params.set('stakeholder_legal_reviewer', stakeholders.legal_reviewer);
+    }
+
+    // 技術制約をクエリパラメータに追加（リスト → 複数パラメータ）
+    if (technicalConstraints) {
+      for (const tc of technicalConstraints) {
+        if (tc) params.append('technical_constraints', tc);
+      }
+    }
+
+    // 規制制約をクエリパラメータに追加
+    if (regulatoryConstraints) {
+      for (const rc of regulatoryConstraints) {
+        if (rc) params.append('regulatory_constraints', rc);
+      }
+    }
+
+    // 人的リソースをクエリパラメータに追加
+    if (team) {
+      params.set('human_resources', team);
     }
 
     const url = `${this.baseUrl}/api/decision/stream?${params}`;

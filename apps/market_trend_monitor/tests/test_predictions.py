@@ -483,3 +483,53 @@ class TestPredictionService:
 
         review = service.get_review_for_prediction(p.id)
         assert review is None
+
+    def test_bootstrap_from_trends_creates_predictions(self) -> None:
+        """トレンドから予測を自動生成できること."""
+        service = PredictionService()
+        trends = [
+            {
+                "id": "t-1",
+                "topic": "COBOL migration",
+                "score": 0.72,
+                "growth_rate": 0.2,
+                "articles_count": 10,
+            },
+            {
+                "id": "t-2",
+                "topic": "Legacy modernization",
+                "score": 0.61,
+                "growth_rate": 0.1,
+                "articles_count": 6,
+            },
+        ]
+        result = service.bootstrap_from_trends(trends, horizon_days=30, limit=8)
+        assert result["created_count"] == 2
+        assert len(service.list_predictions()) == 2
+
+    def test_bootstrap_from_trends_skips_duplicates(self) -> None:
+        """同一トレンドの重複生成を回避できること."""
+        service = PredictionService()
+        first_trends = [
+            {
+                "id": "t-dup-1",
+                "topic": "Mainframe to cloud",
+                "score": 0.7,
+                "growth_rate": 0.15,
+                "articles_count": 8,
+            }
+        ]
+        second_trends = [
+            {
+                "id": "t-dup-2",
+                "topic": "Mainframe to cloud",
+                "score": 0.68,
+                "growth_rate": 0.1,
+                "articles_count": 7,
+            }
+        ]
+        first = service.bootstrap_from_trends(first_trends, horizon_days=30, limit=8)
+        second = service.bootstrap_from_trends(second_trends, horizon_days=30, limit=8)
+        assert first["created_count"] == 1
+        assert second["created_count"] == 0
+        assert second["skipped_count"] == 1

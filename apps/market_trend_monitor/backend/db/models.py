@@ -74,6 +74,16 @@ class ReportHistoryModel(Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
 
+class AppSettingModel(Base):
+    """アプリ設定テーブル."""
+
+    __tablename__ = "app_settings"
+
+    key: Mapped[str] = mapped_column(String(128), primary_key=True)
+    value: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
+
+
 # ============================================================
 # Phase 11: 新規テーブル
 # ============================================================

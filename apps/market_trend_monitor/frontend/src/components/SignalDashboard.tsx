@@ -42,6 +42,16 @@ interface SignalItem {
   metadata: Record<string, unknown>;
 }
 
+interface SignalsResponse {
+  signals: SignalItem[];
+  total: number;
+}
+
+interface SignalDashboardResponse {
+  grade_distribution?: Record<string, number>;
+  [key: string]: unknown;
+}
+
 const gradeColors: Record<string, string> = {
   A: '#4caf50',
   B: '#2196f3',
@@ -79,7 +89,7 @@ function RadarChart({ score }: { score: SignalScore }) {
   const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ') + ' Z';
 
   return (
-    <svg width={size} height={size} viewBox={`-2 0 ${size} ${size}`}>
+    <svg width={size} height={size} viewBox={`-6 0 ${size} ${size}`}>
       {[0.25, 0.5, 0.75, 1].map((scale) => (
         <polygon
           key={scale}
@@ -124,8 +134,8 @@ export default function SignalDashboard() {
     setLoading(true);
     try {
       const [signalResp, dashResp] = await Promise.allSettled([
-        apiClient.get('/signals'),
-        apiClient.get('/signals/dashboard'),
+        apiClient.get<SignalsResponse>('/signals'),
+        apiClient.get<SignalDashboardResponse>('/signals/dashboard'),
       ]);
       if (signalResp.status === 'fulfilled') {
         setSignals(signalResp.value.data.signals || []);

@@ -50,6 +50,14 @@ interface CalibrationBin {
   count: number;
 }
 
+interface PredictionBootstrapResponse {
+  status: string;
+  message: string;
+  created_count: number;
+  skipped_count: number;
+  source_trends: number;
+}
+
 const statusColors: Record<string, string> = {
   pending: '#ff9800',
   correct: '#4caf50',
@@ -67,6 +75,7 @@ export default function PredictionTracker() {
   const [reviewOutcome, setReviewOutcome] = useState('correct');
   const [reviewNotes, setReviewNotes] = useState('');
   const [actualOutcome, setActualOutcome] = useState('');
+  const [notice, setNotice] = useState<string | null>(null);
 
   const fetchPredictions = useCallback(async () => {
     setLoading(true);
@@ -115,22 +124,67 @@ export default function PredictionTracker() {
       setActualOutcome('');
       setReviewNotes('');
       fetchPredictions();
-    } catch (e) {
+    } catch {
       setError('Failed to submit review');
+    }
+  };
+
+  const handleBootstrapPredictions = async () => {
+    try {
+      setLoading(true);
+      const resp = await apiClient.post<PredictionBootstrapResponse>(
+        '/predictions/bootstrap',
+        {
+          horizon_days: 30,
+          limit: 8,
+        },
+      );
+      setNotice(resp.data.message || '予測を自動生成しました');
+      setError(null);
+      await fetchPredictions();
+    } catch {
+      setError('予測の自動生成に失敗しました');
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>
-        Prediction Tracker
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Track predictions and measure calibration with Brier Score
-      </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: 1,
+          mb: 2,
+        }}
+      >
+        <Box>
+          <Typography variant="h5" gutterBottom>
+            Prediction Tracker
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Track predictions and measure calibration with Brier Score
+          </Typography>
+        </Box>
+        <Button
+          variant="outlined"
+          onClick={handleBootstrapPredictions}
+          disabled={loading}
+        >
+          予測を生成
+        </Button>
+      </Box>
 
       {loading && <LinearProgress sx={{ mb: 2 }} />}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {notice && (
+        <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice(null)}>
+          {notice}
+        </Alert>
+      )}
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         <Grid item xs={4}>
@@ -200,6 +254,12 @@ export default function PredictionTracker() {
         </Card>
       )}
 
+      {!loading && predictions.length === 0 && (
+        <Alert severity="warning" sx={{ mb: 2 }}>
+          予測データがありません。最新トレンドから自動生成してください。
+        </Alert>
+      )}
+
       <TableContainer component={Paper}>
         <Table size="small">
           <TableHead>
@@ -212,6 +272,15 @@ export default function PredictionTracker() {
             </TableRow>
           </TableHead>
           <TableBody>
+            {predictions.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5}>
+                  <Typography variant="body2" color="text.secondary">
+                    No prediction data
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
             {predictions.map((pred) => (
               <TableRow key={pred.id}>
                 <TableCell>

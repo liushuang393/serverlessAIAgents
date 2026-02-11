@@ -10,9 +10,10 @@
 """
 
 import logging
+import os
 import re
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from agentflow import ResilientAgent
@@ -78,16 +79,18 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
         self._cache: set[str] = set()  # URL キャッシュ（重複排除用）
 
         settings = get_settings()
-        news_api_key = getattr(settings, "news_api_key", None)
-        github_token = getattr(settings, "github_token", None)
+        news_api_key = getattr(settings, "news_api_key", None) or os.getenv("NEWS_API_KEY")
+        github_token = getattr(settings, "github_token", None) or os.getenv("GITHUB_TOKEN")
+        stackexchange_key = os.getenv("STACKEXCHANGE_KEY")
+        devto_api_key = os.getenv("DEVTO_API_KEY")
 
         self._news_api_client = NewsAPIClient(api_key=news_api_key)
         self._github_api_client = GitHubAPIClient(token=github_token)
         self._arxiv_client = ArxivAPIClient()
         self._rss_fetcher = RSSFetcher()
         # Phase 12: 新規情報源
-        self._stackoverflow_client = StackOverflowAPIClient()
-        self._devto_client = DevToAPIClient()
+        self._stackoverflow_client = StackOverflowAPIClient(key=stackexchange_key)
+        self._devto_client = DevToAPIClient(api_key=devto_api_key)
 
         # Phase 6: セマンティック検索・クエリ拡張
         self._semantic_search = semantic_search_service
@@ -143,7 +146,7 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
         """
         keywords = input_data.keywords
         sources = input_data.sources
-        # NOTE: date_range は将来の拡張用（現在未使用）
+        range_start, range_end = self._parse_date_range(input_data.date_range)
 
         # Phase 6: クエリ拡張
         search_keywords = await self._expand_keywords(keywords)
@@ -157,7 +160,10 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
 
         for source in sources:
             source_articles = await self._collect_from_source(
-                source=source, keywords=search_keywords,
+                source=source,
+                keywords=search_keywords,
+                range_start=range_start,
+                range_end=range_end,
             )
             articles.extend(source_articles)
             sources_stats[source] = len(source_articles)
@@ -165,6 +171,13 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
         # Phase 6: セマンティック重複排除
         if self._semantic_search and articles:
             articles = await self._semantic_search.deduplicate_batch(articles)
+
+        if range_start is not None or range_end is not None:
+            articles = self._filter_articles_by_date_range(
+                articles,
+                range_start=range_start,
+                range_end=range_end,
+            )
 
         # Phase 6: ベクトルインデックス登録
         await self._index_articles(articles)
@@ -192,7 +205,13 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
             sources_stats=sources_stats,
         )
 
-    async def _collect_from_source(self, source: str, keywords: list[str]) -> list[Article]:
+    async def _collect_from_source(
+        self,
+        source: str,
+        keywords: list[str],
+        range_start: datetime | None,
+        range_end: datetime | None,
+    ) -> list[Article]:
         """特定ソースからデータ収集."""
         self._logger.debug("ソース収集中: %s", source)
 
@@ -202,7 +221,10 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
 
         try:
             if source_key == SourceType.NEWS.value:
-                articles = await self._collect_from_news(keywords)
+                articles = await self._collect_from_news(
+                    keywords,
+                    from_date=range_start,
+                )
             elif source_key == SourceType.GITHUB.value:
                 articles = await self._collect_from_github(keywords)
             elif source_key == SourceType.ARXIV.value:
@@ -236,7 +258,12 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
 
         return articles
 
-    async def _collect_from_news(self, keywords: list[str]) -> list[Article]:
+    async def _collect_from_news(
+        self,
+        keywords: list[str],
+        *,
+        from_date: datetime | None = None,
+    ) -> list[Article]:
         """NewsAPIから収集."""
         articles: list[Article] = []
         for keyword in keywords:
@@ -245,6 +272,7 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                     query=keyword,
                     language="en",
                     page_size=5,
+                    from_date=from_date,
                 )
 
                 for news_article in news_articles:
@@ -534,6 +562,54 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
             return date_parser.parse(raw)
         except Exception:
             return datetime.now()
+
+    def _parse_date_range(
+        self,
+        date_range: Any,
+    ) -> tuple[datetime | None, datetime | None]:
+        """入力 date_range を datetime に変換."""
+        if not date_range:
+            return None, None
+
+        start_raw = getattr(date_range, "start", None)
+        end_raw = getattr(date_range, "end", None)
+
+        range_start = self._parse_datetime(start_raw) if start_raw else None
+        range_end = self._parse_datetime(end_raw) if end_raw else None
+
+        if range_start and range_end and range_start > range_end:
+            range_start, range_end = range_end, range_start
+        return range_start, range_end
+
+    @staticmethod
+    def _to_epoch_seconds(value: datetime) -> float:
+        """datetime を UTC epoch 秒へ正規化."""
+        if value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc).timestamp()
+        return value.astimezone(timezone.utc).timestamp()
+
+    def _filter_articles_by_date_range(
+        self,
+        articles: list[Article],
+        *,
+        range_start: datetime | None,
+        range_end: datetime | None,
+    ) -> list[Article]:
+        """収集結果を期間でフィルタ."""
+        if range_start is None and range_end is None:
+            return articles
+
+        start_epoch = self._to_epoch_seconds(range_start) if range_start else None
+        end_epoch = self._to_epoch_seconds(range_end) if range_end else None
+        filtered: list[Article] = []
+        for article in articles:
+            published_epoch = self._to_epoch_seconds(article.published_at)
+            if start_epoch is not None and published_epoch < start_epoch:
+                continue
+            if end_epoch is not None and published_epoch > end_epoch:
+                continue
+            filtered.append(article)
+        return filtered
 
     def validate_output(self, output: CollectorOutput) -> bool:
         """出力検証."""

@@ -1,7 +1,8 @@
-"""DaoAgent - 本質判定Agent（道）v3.0.
+"""DaoAgent - 本質判定Agent（道）v3.1.
 
 問題の本質を抽出し、因果齿轮で構造化し、死穴（禁忌）を明らかにする。
 v3.0: 制約主導型分析・本質導出プロセスの可視化を追加。
+v3.1: 制約境界条件、解空間3案比較、定量指標化、監査証拠チェックリスト、セルフチェック追加。
 
 RAG使用禁止。
 """
@@ -11,7 +12,9 @@ import logging
 from typing import Any
 
 from apps.decision_governance_engine.schemas.agent_schemas import (
+    AuditEvidenceItem,
     CausalGear,
+    ConstraintBoundary,
     DaoInput,
     DaoOutput,
     DeathTrap,
@@ -21,6 +24,10 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     LeverageLevel,
     ProblemNatureType,
     ProblemType,
+    QuantifiedMetric,
+    SelfCheckResult,
+    SelfCheckStatus,
+    SolutionRoute,
 )
 
 from agentflow import ResilientAgent
@@ -149,13 +156,11 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         ],
     }
 
-    SYSTEM_PROMPT = """あなたはDaoAgent（道）v3.0です。
+    SYSTEM_PROMPT = """あなたはDaoAgent（道）v3.1です。
 問題の本質を見抜き、構造化された分析を提供します。
 
 【最重要原則】
 「本質」とは「問題カテゴリ」ではありません。
-「中長期的な方向性の決定」は本質ではなく、単なる分類です。
-
 本質とは「なぜこの問題が存在するのか」への一刀です。
 
 例:
@@ -169,69 +174,102 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
 
 【既存解が使えない理由の追問】
 「XXを構築したい」という問題には必ず問う:
-- なぜ既存のサービス（Zoom, AWS, Salesforce等）を使わないのか？
+- なぜ既存サービスを使わないのか？
 - 使えない理由は何か？（法規制？コスト？技術的制約？）
 
+【v3.1 改修方針（厳守）】
+
+■ 方針1: 制約は「境界条件」で定義する
+制約を単語で終わらせない。各制約に以下をセットで定義する:
+- 判定条件: 何を超えたら違反か
+- 違反例: 具体的な違反パターン
+- 例外: 許容される逸脱条件
+
+■ 方針2: 結論前に成立ルートを最低3案提示して比較する
+「既存SaaSと衝突」等に早期収束しない。結論前に以下を行う:
+- 置換ルート（既存を完全に置き換える）
+- 旁路ルート（プラグイン/プロキシ/ローカル代理）
+- アプライアンスルート（専用機器/隔離環境）
+- その他の成立形
+各ルートの実現可能性とトレードオフを明示すること。
+
+■ 方針3: 要請ではなく指標（数値or段階）＋優先順位に落とす
+「低遅延」「高品質」等の曖昧な要請を禁止する。以下を明示する:
+- E2E遅延目標（例: 200ms以下）
+- 品質定義（用途別）
+- 優先順位（1=最優先）
+三角トレードオフが未解決ならdeath_trapsにFATALとして登録する。
+
+■ 方針4: 監査可能性は証拠チェックリストとして出す
+「監査可能にする必要」で終わらせない。具体的な証拠項目を列挙する:
+- データフロー図、ログ保持方針、削除証跡、権限設計
+- モデル更新手順、テレメトリ等
+
+■ 方針5: 最後にセルフチェックを必須実行する
+分析完了後、以下の観点で自己検証する:
+- 境界未定義の制約はないか
+- 漏れた選択肢はないか
+- 曖昧な指標はないか
+- 制約衝突はないか
+- 証拠不足はないか
+1つでもFATALな不足があればoverall_statusをFATALとする。
+
 【問題の本質的性質】
-- TECHNICAL_LIMITATION: 技術的に解決可能な問題
-- INVESTMENT_DECISION: ROI/リソース配分の判断
-- CONSTRAINT_DRIVEN: 既存解が使えない制約主導型（最も深い）
-- STRATEGIC_CHOICE: 方向性・ビジョンの選択
-- REGULATORY_COMPLIANCE: 規制対応が主因の問題
-- MARKET_TIMING: タイミングが本質の問題
+- TECHNICAL_LIMITATION / INVESTMENT_DECISION / CONSTRAINT_DRIVEN
+- STRATEGIC_CHOICE / REGULATORY_COMPLIANCE / MARKET_TIMING
 
 【禁止事項】
 - 解決策を提示してはいけません
 - 行動を推奨してはいけません
 - テンプレート的な本質（「XXの決定」等）は禁止
 
-【出力形式】
-必ず以下のJSON形式で出力してください：
+【出力形式】必ず以下のJSON形式で出力:
 {
-    "problem_type": "TRADE_OFF" | "RESOURCE_ALLOCATION" | "TIMING_DECISION" | "RISK_ASSESSMENT" | "STRATEGY_DIRECTION",
-    "problem_nature": "TECHNICAL_LIMITATION" | "INVESTMENT_DECISION" | "CONSTRAINT_DRIVEN" | "STRATEGIC_CHOICE" | "REGULATORY_COMPLIANCE" | "MARKET_TIMING",
+    "problem_type": "TRADE_OFF|RESOURCE_ALLOCATION|TIMING_DECISION|RISK_ASSESSMENT|STRATEGY_DIRECTION",
+    "problem_nature": "TECHNICAL_LIMITATION|INVESTMENT_DECISION|CONSTRAINT_DRIVEN|STRATEGIC_CHOICE|REGULATORY_COMPLIANCE|MARKET_TIMING",
     "essence_derivation": {
-        "surface_problem": "表面的な問題（ユーザーが言ったこと）",
-        "underlying_why": "なぜそれが問題なのか（一段深い理由）",
-        "root_constraint": "根本的な制約（これがなければ問題ではない）",
-        "essence_statement": "本質の一文（非これ不可）"
+        "surface_problem": "表面的な問題",
+        "underlying_why": "一段深い理由",
+        "root_constraint": "根本的な制約",
+        "essence_statement": "本質の一文"
     },
-    "essence": "問題の本質を一文で（50字以内、カテゴリ禁止）",
-    "existing_alternatives": [  // ★最大3個まで
-        {
-            "name": "既存解の名称（例: Zoom）",
-            "why_not_viable": "なぜこの企業では使えないか",
-            "specific_constraint": "具体的な制約"
-        }
+    "essence": "問題の本質を一文で（50字以内）",
+    "existing_alternatives": [{"name": "既存解", "why_not_viable": "使えない理由", "specific_constraint": "制約"}],
+    "immutable_constraints": ["制約1", "制約2"],
+    "constraint_boundaries": [
+        {"constraint_name": "制約名", "definition": "判定条件", "violation_example": "違反例", "exceptions": "例外"}
     ],
-    "immutable_constraints": ["制約1", "制約2", ...],  // ★最大5個まで
-    "hidden_assumptions": ["前提1", "前提2", "前提3"],  // ★最大3個まで（厳守）
-    "causal_gears": [  // ★3〜5個
-        {
-            "gear_id": 1,
-            "name": "齿轮名（20字以内）",
-            "description": "説明（100字以内）",
-            "drives": [2, 3],
-            "driven_by": [],
-            "leverage": "HIGH"
-        }
+    "solution_routes": [
+        {"route_type": "置換|旁路|アプライアンス|...", "description": "説明", "viability": "実現可能性", "tradeoffs": ["トレードオフ"]}
     ],
+    "quantified_metrics": [
+        {"metric_name": "指標名", "target_value": "目標値", "priority": 1, "tradeoff_note": "注記"}
+    ],
+    "audit_evidence_checklist": [
+        {"category": "カテゴリ", "required_evidence": "必要証拠", "verification_method": "確認方法"}
+    ],
+    "hidden_assumptions": ["前提1", "前提2"],
+    "causal_gears": [{"gear_id": 1, "name": "名", "description": "説明", "drives": [2], "driven_by": [], "leverage": "HIGH"}],
     "bottleneck_gear": 1,
-    "death_traps": [  // ★最大3個まで（厳守）
-        {
-            "action": "禁止行動",
-            "reason": "なぜ致命的か",
-            "severity": "FATAL"
-        }
-    ]
+    "death_traps": [{"action": "禁止行動", "reason": "理由", "severity": "FATAL"}],
+    "self_check": {
+        "boundary_undefined": ["未定義の制約"],
+        "missing_alternatives": ["漏れた選択肢"],
+        "ambiguous_metrics": ["曖昧な指標"],
+        "constraint_conflicts": ["制約衝突"],
+        "evidence_gaps": ["証拠不足"],
+        "overall_status": "PASS|WARNING|FATAL"
+    }
 }
 
 【重要な制約】
-- hidden_assumptions: 最大3個まで（超えないこと）
-- death_traps: 最大3個まで（超えないこと）
-- existing_alternatives: 最大3個まで
-- causal_gears: 3〜5個
-- immutable_constraints: 最大5個まで"""
+- constraint_boundaries: immutable_constraintsの各制約に対応させること
+- solution_routes: 最低3個（3種以上のルートを比較）
+- quantified_metrics: 曖昧な要請は必ず数値/段階化する
+- audit_evidence_checklist: 監査関連の制約がある場合は必須
+- self_check: 必ず出力すること。未解決トレードオフがあればFATAL
+- hidden_assumptions: 最大3個 / death_traps: 最大3個
+- existing_alternatives: 最大3個 / causal_gears: 3〜5個"""
 
     def _parse_input(self, input_data: dict[str, Any]) -> DaoInput:
         """入力をパース."""
@@ -289,10 +327,14 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
 
 上記の問題を分析し、JSON形式で出力してください。
 
-【最重要】
+【v3.1必須事項】
 1. 「essence」はカテゴリ（「XXの決定」）ではなく、問題の存在理由を一文で
 2. 「existing_alternatives」で既存解が使えない理由を明確に
-3. 「essence_derivation」で思考プロセスを可視化"""
+3. 「constraint_boundaries」で各制約の判定条件・違反例・例外を定義
+4. 「solution_routes」で最低3つの成立ルートを比較（置換/旁路/アプライアンス等）
+5. 「quantified_metrics」で曖昧な要請を数値/段階＋優先順位に変換
+6. 「audit_evidence_checklist」で監査証拠を具体的に列挙
+7. 「self_check」で分析の自己検証を必ず実行"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
@@ -364,11 +406,66 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
                     severity=DeathTrapSeverity(trap_data.get("severity", "SEVERE")),
                 ))
 
-            # v3.0: 本質の検証（テンプレート的な回答を拒否）
+            # v3.1: 制約境界条件をパース
+            constraint_boundaries = []
+            for cb_data in data.get("constraint_boundaries", [])[:5]:
+                constraint_boundaries.append(ConstraintBoundary(
+                    constraint_name=cb_data.get("constraint_name", "")[:30],
+                    definition=cb_data.get("definition", "")[:100],
+                    violation_example=cb_data.get("violation_example", "")[:100],
+                    exceptions=cb_data.get("exceptions", "")[:100],
+                ))
+
+            # v3.1: 成立ルートをパース
+            solution_routes = []
+            for sr_data in data.get("solution_routes", [])[:5]:
+                solution_routes.append(SolutionRoute(
+                    route_type=sr_data.get("route_type", "")[:20],
+                    description=sr_data.get("description", "")[:100],
+                    viability=sr_data.get("viability", "")[:50],
+                    tradeoffs=sr_data.get("tradeoffs", [])[:3],
+                ))
+
+            # v3.1: 定量指標をパース
+            quantified_metrics = []
+            for qm_data in data.get("quantified_metrics", [])[:5]:
+                quantified_metrics.append(QuantifiedMetric(
+                    metric_name=qm_data.get("metric_name", "")[:30],
+                    target_value=qm_data.get("target_value", "")[:50],
+                    priority=min(max(qm_data.get("priority", 5), 1), 10),
+                    tradeoff_note=qm_data.get("tradeoff_note", "")[:100],
+                ))
+
+            # v3.1: 監査証拠チェックリストをパース
+            audit_evidence = []
+            for ae_data in data.get("audit_evidence_checklist", [])[:8]:
+                audit_evidence.append(AuditEvidenceItem(
+                    category=ae_data.get("category", "")[:30],
+                    required_evidence=ae_data.get("required_evidence", "")[:100],
+                    verification_method=ae_data.get("verification_method", "")[:100],
+                ))
+
+            # v3.1: セルフチェック結果をパース
+            self_check = None
+            sc_data = data.get("self_check")
+            if isinstance(sc_data, dict):
+                try:
+                    overall = SelfCheckStatus(sc_data.get("overall_status", "WARNING"))
+                except ValueError:
+                    overall = SelfCheckStatus.WARNING
+                self_check = SelfCheckResult(
+                    boundary_undefined=sc_data.get("boundary_undefined", []),
+                    missing_alternatives=sc_data.get("missing_alternatives", []),
+                    ambiguous_metrics=sc_data.get("ambiguous_metrics", []),
+                    constraint_conflicts=sc_data.get("constraint_conflicts", []),
+                    evidence_gaps=sc_data.get("evidence_gaps", []),
+                    overall_status=overall,
+                )
+
+            # 本質の検証（テンプレート的な回答を拒否）
             essence = data.get("essence", "")[:50]
             if self._is_template_essence(essence):
                 self._logger.warning(f"Template essence detected: {essence}")
-                # 本質導出プロセスからessenceを再構成
                 if essence_derivation:
                     essence = essence_derivation.essence_statement
 
@@ -383,8 +480,13 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
                 causal_gears=causal_gears,
                 bottleneck_gear=data.get("bottleneck_gear"),
                 death_traps=death_traps,
+                constraint_boundaries=constraint_boundaries,
+                solution_routes=solution_routes,
+                quantified_metrics=quantified_metrics,
+                audit_evidence_checklist=audit_evidence,
+                self_check=self_check,
             )
-        except (json.JSONDecodeError, ValueError) as e:
+        except ValueError as e:
             self._logger.warning(f"LLM response parse failed: {e}")
             # パース失敗時はルールベースにフォールバック
             return self._analyze_rule_based(question, constraints, inferred_type)
@@ -442,6 +544,34 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
             self._logger.warning(f"hidden_assumptions has {len(hidden)} items (max 3), truncating")
             data["hidden_assumptions"] = hidden[:3]
 
+        # v3.1: constraint_boundaries のリスト長を検証・正規化（max 5）
+        cb = data.get("constraint_boundaries", [])
+        if isinstance(cb, list) and len(cb) > 5:
+            self._logger.warning(f"constraint_boundaries has {len(cb)} items (max 5), truncating")
+            data["constraint_boundaries"] = cb[:5]
+
+        # v3.1: solution_routes の検証（最低3個推奨）
+        sr = data.get("solution_routes", [])
+        if isinstance(sr, list) and len(sr) < 3:
+            self._logger.warning(f"solution_routes has {len(sr)} items (min 3 recommended)")
+
+        # v3.1: quantified_metrics のリスト長を検証・正規化（max 5）
+        qm = data.get("quantified_metrics", [])
+        if isinstance(qm, list) and len(qm) > 5:
+            self._logger.warning(f"quantified_metrics has {len(qm)} items (max 5), truncating")
+            data["quantified_metrics"] = qm[:5]
+
+        # v3.1: audit_evidence_checklist のリスト長を検証・正規化（max 8）
+        ae = data.get("audit_evidence_checklist", [])
+        if isinstance(ae, list) and len(ae) > 8:
+            self._logger.warning(f"audit_evidence_checklist has {len(ae)} items (max 8), truncating")
+            data["audit_evidence_checklist"] = ae[:8]
+
+        # v3.1: self_check の検証（必須）
+        sc = data.get("self_check")
+        if not sc or not isinstance(sc, dict):
+            self._logger.warning("self_check is missing or invalid")
+
     def _detect_constraint_driven(self, question: str) -> str:
         """制約主導型問題かどうかを検出."""
         matches = [kw for kw in self.CONSTRAINT_DRIVEN_KEYWORDS if kw in question]
@@ -474,7 +604,7 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         constraints: list[str],
         problem_type: ProblemType,
     ) -> DaoOutput:
-        """ルールベース分析（LLMなし）v3.0対応."""
+        """ルールベース分析（LLMなし）v3.1対応."""
         # v3.0: 問題の本質的性質を判定
         problem_nature = self._infer_problem_nature(question, constraints)
 
@@ -506,6 +636,28 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         # 死穴を生成
         death_traps = self._generate_death_traps(problem_type, constraints)
 
+        # v3.1: 制約境界条件のデフォルト生成
+        constraint_boundaries = self._generate_default_constraint_boundaries(immutable)
+
+        # v3.1: 成立ルートのデフォルト生成
+        solution_routes = self._generate_default_solution_routes(problem_type)
+
+        # v3.1: 定量指標のデフォルト生成
+        quantified_metrics = self._generate_default_quantified_metrics(problem_type)
+
+        # v3.1: 監査証拠チェックリストのデフォルト生成
+        audit_evidence = self._generate_default_audit_evidence(constraints)
+
+        # v3.1: セルフチェック結果のデフォルト生成（ルールベースなので常にWARNING）
+        self_check = SelfCheckResult(
+            boundary_undefined=["ルールベース分析のため境界条件は概算"],
+            missing_alternatives=["LLM分析でより詳細な選択肢を検討可能"],
+            ambiguous_metrics=["定量指標はLLM分析で精緻化が必要"],
+            constraint_conflicts=[],
+            evidence_gaps=["ルールベース分析のため証拠の網羅性は限定的"],
+            overall_status=SelfCheckStatus.WARNING,
+        )
+
         return DaoOutput(
             problem_type=problem_type,
             essence=essence[:50],
@@ -517,7 +669,96 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
             causal_gears=causal_gears,
             bottleneck_gear=bottleneck,
             death_traps=death_traps,
+            constraint_boundaries=constraint_boundaries,
+            solution_routes=solution_routes,
+            quantified_metrics=quantified_metrics,
+            audit_evidence_checklist=audit_evidence,
+            self_check=self_check,
         )
+
+    def _generate_default_constraint_boundaries(
+        self, immutable_constraints: list[str],
+    ) -> list[ConstraintBoundary]:
+        """制約境界条件のデフォルト生成（v3.1ルールベース用）."""
+        boundaries = []
+        for c in immutable_constraints[:5]:
+            boundaries.append(ConstraintBoundary(
+                constraint_name=c[:30],
+                definition=f"「{c[:20]}」に違反する行為全般"[:100],
+                violation_example=f"「{c[:20]}」を無視した設計・運用"[:100],
+                exceptions="経営層の明示的承認がある場合"[:100],
+            ))
+        return boundaries
+
+    def _generate_default_solution_routes(
+        self, problem_type: ProblemType,
+    ) -> list[SolutionRoute]:
+        """成立ルートのデフォルト生成（v3.1ルールベース用）."""
+        return [
+            SolutionRoute(
+                route_type="置換",
+                description="既存ソリューションを完全に置き換える",
+                viability="要詳細検討",
+                tradeoffs=["導入コスト大", "移行リスク"],
+            ),
+            SolutionRoute(
+                route_type="旁路",
+                description="プラグイン/プロキシで既存に追加機能",
+                viability="中程度",
+                tradeoffs=["機能制限の可能性", "依存関係増加"],
+            ),
+            SolutionRoute(
+                route_type="アプライアンス",
+                description="専用機器/隔離環境で要件を分離充足",
+                viability="要コスト検証",
+                tradeoffs=["運用負荷増", "統合の複雑さ"],
+            ),
+        ]
+
+    def _generate_default_quantified_metrics(
+        self, problem_type: ProblemType,
+    ) -> list[QuantifiedMetric]:
+        """定量指標のデフォルト生成（v3.1ルールベース用）."""
+        return [
+            QuantifiedMetric(
+                metric_name="導入コスト",
+                target_value="要算出",
+                priority=1,
+                tradeoff_note="品質・スピードとのバランスが必要",
+            ),
+            QuantifiedMetric(
+                metric_name="導入期間",
+                target_value="要算出",
+                priority=2,
+                tradeoff_note="コストと品質に影響",
+            ),
+        ]
+
+    def _generate_default_audit_evidence(
+        self, constraints: list[str],
+    ) -> list[AuditEvidenceItem]:
+        """監査証拠チェックリストのデフォルト生成（v3.1ルールベース用）."""
+        evidence = [
+            AuditEvidenceItem(
+                category="データフロー",
+                required_evidence="データフロー図（入力→処理→出力→保存）",
+                verification_method="設計レビューで図面を確認",
+            ),
+            AuditEvidenceItem(
+                category="ログ保持",
+                required_evidence="ログ保持方針（期間・形式・アクセス権）",
+                verification_method="運用手順書に記載を確認",
+            ),
+        ]
+        # 制約にセキュリティ関連があれば追加
+        security_keywords = ["セキュリティ", "機密", "暗号", "認証", "権限"]
+        if any(kw in " ".join(constraints) for kw in security_keywords):
+            evidence.append(AuditEvidenceItem(
+                category="権限設計",
+                required_evidence="アクセス制御マトリクス",
+                verification_method="権限設定の実機確認",
+            ))
+        return evidence
 
     def _infer_problem_nature(self, question: str, constraints: list[str]) -> ProblemNatureType:
         """問題の本質的性質を推定（v3.0）."""
@@ -751,5 +992,24 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         if not output.death_traps:
             self._logger.warning("Validation warning: death_traps is empty")
             # 警告のみ、通過させる
+
+        # v3.1: 成立ルートが3個以上あるか
+        if len(output.solution_routes) < 3:
+            self._logger.warning(
+                f"Validation warning: solution_routes has {len(output.solution_routes)} items (min 3)"
+            )
+            # 警告のみ、通過させる
+
+        # v3.1: セルフチェックが存在するか
+        if not output.self_check:
+            self._logger.warning("Validation warning: self_check is missing")
+            # 警告のみ、通過させる
+        elif output.self_check.overall_status == SelfCheckStatus.FATAL:
+            self._logger.warning("Validation warning: self_check overall_status is FATAL")
+            # 警告のみ、通過させる（FATALでもレポートは出力する）
+
+        # v3.1: 制約境界条件の存在チェック
+        if not output.constraint_boundaries:
+            self._logger.warning("Validation warning: constraint_boundaries is empty")
 
         return True
