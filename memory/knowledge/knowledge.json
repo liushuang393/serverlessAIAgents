@@ -1,6 +1,29 @@
 {
   "entries": [
     {
+      "id": "13b74be0-1c6f-4387-8579-c8c5d9192a45",
+      "title": "AgentFlow開発規約（外部公開インターフェース版）",
+      "body": "AgentFlowの開発規約、公開抽象インターフェース、Engine/Workflow選定、SSE進捗追跡、HITL承認、人間参加、Agent間連携パターンを日本語で統合したガイド。参照: code-rules/CLAUDE.md",
+      "tags": [
+        "agentflow",
+        "開発規約",
+        "公開API",
+        "workflow",
+        "hitl",
+        "sse"
+      ],
+      "source": "document",
+      "source_id": "code-rules/CLAUDE.md",
+      "timestamp": "2026-02-11T00:00:00+00:00",
+      "updated_at": null,
+      "importance": 0.95,
+      "access_count": 1,
+      "metadata": {
+        "language": "ja",
+        "scope": "project_guideline"
+      }
+    },
+    {
       "id": "7e7bde43-63ef-4e6e-a1b8-728f7cc00d03",
       "title": "タイトル1",
       "body": "内容1",
@@ -61,5 +84,5 @@
       "metadata": {}
     }
   ],
-  "saved_at": "2026-01-21T08:43:42.461349+00:00"
+  "saved_at": "2026-02-11T00:00:00+00:00"
 }

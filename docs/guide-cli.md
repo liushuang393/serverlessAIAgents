@@ -14,10 +14,9 @@ AgentFlow CLI は、ターミナルからエージェントを実行・管理す
 2. [基本操作](#基本操作)
 3. [エージェントの実行](#エージェントの実行)
 4. [エージェントの管理](#エージェントの管理)
-5. [ワークフローの実行](#ワークフローの実行)
-6. [注意事項](#注意事項)
-7. [ベストプラクティス](#ベストプラクティス)
-8. [トラブルシューティング](#トラブルシューティング)
+5. [注意事項](#注意事項)
+6. [ベストプラクティス](#ベストプラクティス)
+7. [トラブルシューティング](#トラブルシューティング)
 
 ---
 
@@ -78,9 +77,10 @@ agentflow [OPTIONS] COMMAND [ARGS]...
 | `run` | エージェントを実行 | `agentflow run ./my-agent` |
 | `create` | エージェントを作成 | `agentflow create agent text-processor` |
 | `list` | インストール済みエージェント一覧 | `agentflow list` |
-| `search` | マーケットプレイスを検索 | `agentflow search --query "text"` |
-| `install` | エージェントをインストール | `agentflow install text-processor` |
+| `marketplace` | 検索・インストール | `agentflow marketplace search "text"` |
 | `info` | エージェント情報を表示 | `agentflow info text-processor` |
+| `chat` | 対話チャット（簡易） | `agentflow chat` |
+| `studio` | Studio サーバー起動 | `agentflow studio --reload` |
 
 ---
 
@@ -93,7 +93,7 @@ agentflow [OPTIONS] COMMAND [ARGS]...
 agentflow run ./my-agent
 
 # 入力データを JSON 文字列で指定
-agentflow run ./my-agent --input '{"message": "hello"}'
+agentflow run ./my-agent --input '{"input": "hello"}'
 
 # 入力ファイルから読み込み
 agentflow run ./my-agent --input input.json
@@ -102,7 +102,7 @@ agentflow run ./my-agent --input input.json
 agentflow run ./my-agent --input input.json --output output.json
 
 # JSON 形式で出力
-agentflow run ./my-agent --input '{"message": "hello"}' --json
+agentflow run ./my-agent --input '{"input": "hello"}' --json
 ```
 
 ### 入力ファイルの作成
@@ -111,8 +111,7 @@ agentflow run ./my-agent --input '{"message": "hello"}' --json
 
 ```json
 {
-  "message": "Hello, AgentFlow!",
-  "operation": "upper"
+  "input": "Hello, AgentFlow!"
 }
 ```
 
@@ -209,53 +208,37 @@ agentflow info text-processor
 
 ```bash
 # エージェントを検索
-agentflow search --query "text processor"
+agentflow marketplace search "text processor"
 
 # カテゴリでフィルター
-agentflow search --category utility
+agentflow marketplace search --category utility
 
 # プロトコルでフィルター
-agentflow search --protocols mcp,a2a
+agentflow marketplace search -p mcp -p a2a
 
 # エージェントをインストール
-agentflow install text-processor
+agentflow marketplace install text-processor
 
 # 強制上書き
-agentflow install text-processor --force
+agentflow marketplace install text-processor --force
 ```
 
 ### エージェントのアンインストール
 
 ```bash
-agentflow uninstall text-processor
+agentflow marketplace uninstall text-processor
 ```
 
 ---
 
-## 🔄 ワークフローの実行
+## 🔄 ワークフローの実行（注意）
 
-### ワークフローファイルの作成
+現状の CLI は `workflow.yaml` の直接実行に対応していません（`agentflow run` はエージェントディレクトリ、または `--agent-name` 指定の `@agent` 実装を対象とします）。
 
-`workflow.yaml` を作成：
+ワークフロー実行は Python から Engine を利用してください：
 
-```yaml
-name: My Workflow
-description: A simple workflow
-agents:
-  - id: text-processor
-    inputs:
-      message: "Hello"
-  - id: data-analyzer
-    inputs:
-      data: "{{text-processor.output}}"
-```
-
-### ワークフローの実行
-
-```bash
-# ワークフローファイルを指定
-agentflow run workflow.yaml --input input.json
-```
+- `docs/engines.md`（`PipelineEngine` / `GateEngine` など）
+- `docs/api.md`（`WorkflowService`）
 
 ---
 
@@ -286,13 +269,13 @@ which agentflow  # agentflow コマンドのパスが表示される
 
 **正しい例**:
 ```bash
-agentflow run . --input '{"message": "hello"}'
+agentflow run . --input '{"input": "hello"}'
 ```
 
 **間違った例**:
 ```bash
-agentflow run . --input {"message": "hello"}  # シェルエラー
-agentflow run . --input "{\"message\": \"hello\"}"  # エスケープが必要
+agentflow run . --input {"input": "hello"}  # シェルエラー
+agentflow run . --input "{\"input\": \"hello\"}"  # エスケープが必要
 ```
 
 ### 4. エラーハンドリング
@@ -427,7 +410,7 @@ pip install -e .
 
 ```bash
 # JSON の形式を確認
-echo '{"message": "hello"}' | python -m json.tool
+echo '{"input": "hello"}' | python -m json.tool
 
 # ファイルのエンコーディングを確認
 file input.json
@@ -435,7 +418,7 @@ file input.json
 # 正しい形式で再作成
 cat > input.json << EOF
 {
-  "message": "hello"
+  "input": "hello"
 }
 EOF
 ```
@@ -511,8 +494,7 @@ cd text-processor
 # 2. 入力ファイルを作成
 cat > input.json << EOF
 {
-  "message": "Hello, World!",
-  "operation": "upper"
+  "input": "Hello, World!"
 }
 EOF
 
@@ -570,4 +552,3 @@ fi
 ---
 
 **CLI で AI エージェントを高速に実行・管理しましょう！** ⚡
-

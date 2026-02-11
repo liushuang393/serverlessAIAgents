@@ -12,6 +12,10 @@ import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
 import Settings from './components/Settings';
 import Reports from './components/Reports';
+import EvidenceViewer from './components/EvidenceViewer';
+import SignalDashboard from './components/SignalDashboard';
+import PredictionTracker from './components/PredictionTracker';
+import CompetitorView from './components/CompetitorView';
 
 const theme = createTheme({
   palette: {
@@ -228,6 +232,10 @@ const App: React.FC = () => {
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/evidence" element={<EvidenceViewer />} />
+            <Route path="/signals" element={<SignalDashboard />} />
+            <Route path="/predictions" element={<PredictionTracker />} />
+            <Route path="/competitors" element={<CompetitorView />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </Layout>

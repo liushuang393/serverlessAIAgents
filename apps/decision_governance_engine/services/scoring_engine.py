@@ -213,15 +213,10 @@ class ScoringEngine:
             if not dim_config:
                 continue
 
-            # inverse 次元の場合、低スコアが悪い
-            # 通常次元の場合、高スコアが悪い（risk など）
-            is_veto = False
-            if dim_config.inverse:
-                # inverse: スコアが低すぎる場合 veto
-                is_veto = score <= (dim_config.max_score - hard_veto_score + 1)
-            else:
-                # 通常: スコアが高すぎる場合 veto
-                is_veto = score >= hard_veto_score
+            # raw_score は 1-5 の共通評価尺度を想定し、
+            # hard_veto は「高リスク/高コストなど悪化方向」を閾値で判定する。
+            # inverse 次元でも raw_score の意味は同じため、閾値以上を veto とする。
+            is_veto = score >= hard_veto_score
 
             if is_veto:
                 reason = (

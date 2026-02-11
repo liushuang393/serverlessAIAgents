@@ -193,6 +193,36 @@ class TestFlowStream:
         assert "node_complete" in event_types
         assert "flow_complete" in event_types
 
+    @pytest.mark.asyncio
+    async def test_review_reject_emits_structured_early_return(self):
+        """Review REJECT 時に構造化された early_return を返す."""
+        agent = MockAgent("agent")
+        review = MockReviewAgent(verdicts=["REJECT"])
+
+        flow = (
+            create_flow("test")
+            .then(agent, ids=["agent"])
+            .review(review, id="review", retry_from="agent")
+            .build()
+        )
+
+        events = []
+        async for event in flow.run_stream({"input": "test"}):
+            events.append(event)
+
+        review_verdict_event = next(e for e in events if e.get("type") == "review_verdict")
+        assert review_verdict_event.get("data", {}).get("verdict") == "REJECT"
+
+        early_return_event = next(e for e in events if e.get("type") == "early_return")
+        payload = early_return_event.get("data", {})
+        assert payload.get("source") == "review"
+        assert payload.get("stage") == "review"
+        assert payload.get("verdict") == "REJECT"
+        assert isinstance(payload.get("rejection_message"), str)
+        assert payload.get("rejection_message")
+        assert isinstance(payload.get("rejection_reason"), str)
+        assert payload.get("rejection_reason")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

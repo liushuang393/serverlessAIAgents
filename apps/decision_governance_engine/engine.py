@@ -25,6 +25,10 @@ PipelineEngine パターンを使用した意思決定支援エンジン。
 設計改善（v3.1）:
     - AI安全防護統合（幻覚検出、データ脱敏、注入防護）
 
+設計改善（v3.2）:
+    - ステージ単位DB保存（各ステージ完了後にupsert、途中失敗でも結果保持）
+    - 完了済みステージのスキップ（再分析防止）
+
 使用例:
     >>> from apps.decision_governance_engine.engine import DecisionEngine
     >>>
@@ -38,7 +42,9 @@ PipelineEngine パターンを使用した意思決定支援エンジン。
 """
 
 import logging
+import os
 from typing import Any
+from uuid import UUID
 
 from apps.decision_governance_engine.services.agent_registry import AgentRegistry
 from apps.decision_governance_engine.services.decision_report_builder import (
@@ -49,6 +55,7 @@ from apps.decision_governance_engine.services.deep_agent_adapter import (
 )
 
 from agentflow.engines import EngineConfig, PipelineEngine
+from agentflow.engines.pipeline_engine import StageConfig
 from agentflow.providers import get_llm
 from agentflow.security import SafetyMixin
 
@@ -129,8 +136,19 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         # AI安全防護初期化（v3.1）
         self.init_safety(enabled=enable_safety)
 
-    async def run(self, input_data: dict[str, Any]) -> Any:
+        # ステージ単位DB保存設定（v3.2）
+        self._enable_stage_persist = (
+            os.getenv("ENABLE_DECISION_HISTORY", "true").lower() == "true"
+        )
+        # DB保存対象のステージ名
+        self._persist_stages: set[str] = {
+            "cognitive_gate", "gatekeeper", "dao", "fa", "shu", "qi", "review",
+        }
+        # 実行中の request_id / question（run() 呼出し時にセット）
+        self._current_request_id: UUID | None = None
+        self._current_question: str | None = None
 
+    async def run(self, input_data: dict[str, Any]) -> Any:
         """DecisionEngine を実行（入力キー互換）.
 
         目的:
@@ -150,7 +168,52 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
             normalized["raw_question"] = normalized.get("question")
             input_data = normalized
 
+        # ステージ単位DB保存用: request_id / question を保持
+        if "_request_id" in input_data:
+            self._current_request_id = input_data["_request_id"]
+        if "raw_question" in input_data:
+            self._current_question = input_data["raw_question"]
+        elif "question" in input_data:
+            self._current_question = input_data["question"]
+
         return await super().run(input_data)
+
+    async def _run_stage(
+        self, stage: StageConfig, inputs: dict[str, Any],
+    ) -> dict[str, Any]:
+        """ステージ実行 + 完了後のDB自動保存（v3.2）.
+
+        親クラスの _run_stage() を呼び出した後、対象ステージの結果を
+        即座にDBへupsertする。これにより途中失敗時でも結果が保持される。
+        """
+        result = await super()._run_stage(stage, inputs)
+
+        # DB保存対象ステージの場合、非同期でupsert
+        if (
+            self._enable_stage_persist
+            and stage.name in self._persist_stages
+            and self._current_request_id is not None
+        ):
+            await self._persist_stage_result(stage.name, result)
+
+        return result
+
+    async def _persist_stage_result(
+        self, stage_name: str, stage_result: dict[str, Any],
+    ) -> None:
+        """ステージ結果をDBへ即時保存（失敗しても処理は継続）."""
+        try:
+            from apps.decision_governance_engine.repositories import DecisionRepository
+            repo = DecisionRepository()
+            await repo.upsert_stage(
+                request_id=self._current_request_id,  # type: ignore[arg-type]
+                question=self._current_question or "",
+                stage_name=stage_name,
+                stage_result=stage_result,
+            )
+            self._logger.info(f"Stage '{stage_name}' persisted to DB: {self._current_request_id}")
+        except Exception as e:
+            self._logger.warning(f"Stage '{stage_name}' DB persist failed (continuing): {e}")
 
     async def _setup_stages(self) -> None:
         """ステージを動的に設定.

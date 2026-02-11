@@ -17,14 +17,14 @@ from agentflow.core.agent_block import AgentBlock
 ```python
 def __init__(
     self,
-    metadata_path: str | Path | None = None,
+    metadata_path: str | Path = "agent.yaml",
     engine: AgentFlowEngine | None = None
 ) -> None
 ```
 
 **パラメータ:**
 
-- `metadata_path` (str | Path | None): agent.yaml ファイルのパス。デフォルトは `./agent.yaml`
+- `metadata_path` (str | Path): agent.yaml ファイルのパス。デフォルトは `agent.yaml`
 - `engine` (AgentFlowEngine | None): カスタムエンジンインスタンス。デフォルトは新規作成
 
 #### プロパティ
@@ -33,14 +33,12 @@ def __init__(
 
 ```python
 @property
-def metadata(self) -> AgentMetadata
+def metadata(self) -> AgentMetadata | None
 ```
 
 エージェントのメタデータを取得。
 
-**戻り値:** `AgentMetadata` - エージェントメタデータ
-
-**例外:** `ValueError` - メタデータが未ロードの場合
+**戻り値:** `AgentMetadata | None` - エージェントメタデータ（未ロードの場合は None）
 
 ##### `engine`
 
@@ -161,7 +159,7 @@ def get_a2a_card(self) -> AgentCard
 
 A2A エージェントカードを取得（`@auto_adapt` により自動注入）。
 
-**戻り値:** `AgentCard` - A2A エージェントカード
+**戻り値:** `AgentCard | None` - A2A エージェントカード（未設定の場合は None）
 
 ##### `create_agui_emitter`
 
@@ -176,21 +174,26 @@ AG-UI イベントエミッターを作成（`@auto_adapt` により自動注入
 - `engine` (Any): ワークフローエンジン
 
 **戻り値:** `AGUIEventEmitter` - イベントエミッター
+**例外:** `ValueError` - メタデータが未ロードの場合（`@auto_adapt` の挙動）
 
 ##### `get_metadata`
 
 ```python
-def get_metadata(self) -> AgentMetadata
+def get_metadata(self) -> AgentMetadata | None
 ```
 
 メタデータを取得（`@auto_adapt` により自動注入）。
 
-**戻り値:** `AgentMetadata` - エージェントメタデータ
+**戻り値:** `AgentMetadata | None` - エージェントメタデータ（未ロードの場合は None）
 
 #### コンテキストマネージャー
 
 ```python
-async with AgentBlock(metadata_path="agent.yaml") as agent:
+class MyAgent(AgentBlock):
+    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
+        return {"result": "ok"}
+
+async with MyAgent(metadata_path="agent.yaml") as agent:
     result = await agent.run({"input": "data"})
 ```
 
@@ -211,7 +214,7 @@ from agentflow.core.engine import AgentFlowEngine
 #### コンストラクタ
 
 ```python
-def __init__(self) -> None
+def __init__(self, *, logger: logging.Logger | None = None) -> None
 ```
 
 #### メソッド
@@ -221,8 +224,7 @@ def __init__(self) -> None
 ```python
 def register_workflow(
     self,
-    workflow_id: str,
-    flow: AsyncFlow | Flow
+    workflow: WorkflowConfig
 ) -> None
 ```
 
@@ -230,17 +232,16 @@ def register_workflow(
 
 **パラメータ:**
 
-- `workflow_id` (str): ワークフロー ID
-- `flow` (AsyncFlow | Flow): ワークフローインスタンス
+- `workflow` (WorkflowConfig): ワークフロー設定
 
-##### `execute_workflow`
+##### `execute`
 
 ```python
-async def execute_workflow(
+async def execute(
     self,
     workflow_id: str,
-    input_data: dict[str, Any]
-) -> dict[str, Any]
+    inputs: dict[str, Any]
+) -> ExecutionResult
 ```
 
 ワークフローを実行。
@@ -248,11 +249,11 @@ async def execute_workflow(
 **パラメータ:**
 
 - `workflow_id` (str): ワークフロー ID
-- `input_data` (dict[str, Any]): 入力データ
+- `inputs` (dict[str, Any]): 入力データ
 
-**戻り値:** `dict[str, Any]` - 実行結果
+**戻り値:** `ExecutionResult` - 実行結果（status/output/error など）
 
-**例外:** `ValueError` - ワークフローが未登録の場合
+**例外:** `WorkflowNotFoundError` - ワークフローが未登録の場合
 
 ##### `list_workflows`
 
@@ -279,10 +280,11 @@ from agentflow.core.metadata import AgentMetadata
 #### フィールド
 
 - `meta` (MetaInfo): 基本情報
+- `interfaces` (InterfaceDefinition): 入出力インターフェース定義
 - `protocols` (ProtocolConfig): プロトコル設定
-- `inputs` (list[InputField]): 入力フィールド
-- `outputs` (list[OutputField]): 出力フィールド
-- `skills` (list[Skill]): スキル定義
+- `dependencies` (DependencySpec): 依存関係
+- `pocketflow` (PocketFlowConfig): PocketFlow 設定
+- `visual` (VisualConfig): UI 表示設定
 
 ### MetaInfo
 
@@ -293,11 +295,19 @@ from agentflow.core.metadata import AgentMetadata
 - `id` (str): エージェント ID（kebab-case）
 - `name` (str): 表示名
 - `version` (str): バージョン（semver）
-- `description` (str): 説明
 - `author` (str): 作者
-- `license` (str): ライセンス
 - `icon` (str): アイコン（絵文字）
 - `category` (str): カテゴリ
+- `description` (str): 説明
+
+### InterfaceDefinition
+
+入出力インターフェース定義。
+
+#### フィールド
+
+- `inputs` (list[InputField]): 入力フィールド定義
+- `outputs` (list[OutputField]): 出力フィールド定義
 
 ### ProtocolConfig
 
@@ -305,9 +315,37 @@ from agentflow.core.metadata import AgentMetadata
 
 #### フィールド
 
-- `mcp` (bool): MCP 有効化
+- `mcp` (MCPConfig | None): MCP 設定
 - `a2a` (A2AConfig | None): A2A 設定
-- `agui` (bool): AG-UI 有効化
+- `agui` (AGUIConfig | None): AG-UI 設定
+
+### MCPConfig
+
+MCP 設定。
+
+#### フィールド
+
+- `tools` (list[str]): ツール URI リスト（例: `mcp://server/tool`）
+- `resources` (list[str]): リソース URI リスト
+
+### A2AConfig
+
+A2A 設定。
+
+#### フィールド
+
+- `enabled` (bool): A2A を有効化
+- `skills` (list[str]): 公開スキル名リスト
+- `card_path` (str | None): AgentCard YAML パス（任意）
+
+### AGUIConfig
+
+AG-UI 設定。
+
+#### フィールド
+
+- `enabled` (bool): AG-UI を有効化
+- `events` (list[str]): 発行するイベントタイプ（例: `flow.start`）
 
 ### InputField
 
@@ -321,7 +359,7 @@ from agentflow.core.metadata import AgentMetadata
 - `required` (bool): 必須フラグ
 - `default` (Any | None): デフォルト値
 - `options` (list[str] | None): 選択肢（enum）
-- `accept` (str | None): ファイル受け入れ形式
+- `accept` (list[str] | None): ファイル受け入れ拡張子（fileタイプ用）
 
 ### OutputField
 
@@ -332,18 +370,36 @@ from agentflow.core.metadata import AgentMetadata
 - `name` (str): フィールド名
 - `type` (str): データ型
 - `description` (str): 説明
-- `schema` (dict[str, Any] | None): JSON Schema
+- `schema` (dict[str, Any] | None): JSON Schema（複雑型の場合、任意）
 
-### Skill
+### DependencySpec
 
-スキル定義。
+依存関係。
 
 #### フィールド
 
-- `name` (str): スキル名
-- `description` (str): 説明
-- `inputs` (list[str]): 入力フィールド名
-- `outputs` (list[str]): 出力フィールド名
+- `agents` (list[str]): 依存する Agent ID
+- `tools` (list[str]): 依存するツール URI
+- `packages` (list[str]): 追加で必要な Python パッケージ
+
+### PocketFlowConfig
+
+PocketFlow 設定。
+
+#### フィールド
+
+- `entry` (str): エントリーポイント（例: `main.py:flow`）
+- `shared_schema` (str): 共有スキーマ（例: `schemas.py:SharedSchema`）
+
+### VisualConfig
+
+UI 表示設定。
+
+#### フィールド
+
+- `color` (str): 16進数カラーコード（例: `#3B82F6`）
+- `size` (str): `small` / `medium` / `large`
+- `ports` (dict[str, Any]): 入出力ポート位置
 
 ### SchemaLoader
 
@@ -369,7 +425,7 @@ YAML ファイルからメタデータを読み込む。
 
 **戻り値:** `AgentMetadata` - メタデータ
 
-**例外:** `FileNotFoundError`, `ValidationError`
+**例外:** `FileNotFoundError`, `SchemaValidationError`
 
 ##### `save_to_file`
 
@@ -440,7 +496,7 @@ class MyAgent:
 **パラメータ:**
 
 - `protocols` (list[str] | None): 有効化するプロトコル。None の場合は自動判定
-- `metadata_path` (str | None): メタデータファイルパス
+- `metadata_path` (str | Path): メタデータファイルパス
 
 **注入されるメソッド:**
 
@@ -574,13 +630,13 @@ from agentflow.services import ServiceEvent, ProgressEvent, ResultEvent
 
 | タイプ | 説明 |
 |--------|------|
-| `START` | 実行開始 |
-| `PROGRESS` | 進捗更新 |
-| `COMPLETE` | 実行完了 |
-| `ERROR` | エラー発生 |
-| `AGENT_START` | Agent開始 |
-| `AGENT_COMPLETE` | Agent完了 |
-| `APPROVAL_REQUIRED` | HITL承認待ち |
+| `start` | 実行開始 |
+| `progress` | 進捗更新 |
+| `complete` | 実行完了 |
+| `error` | エラー発生 |
+| `agent.start` | Agent開始 |
+| `agent.complete` | Agent完了 |
+| `approval.required` | HITL承認待ち |
 
 ---
 

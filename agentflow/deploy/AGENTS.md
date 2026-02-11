@@ -1,29 +1,11 @@
-# agentflow/deploy/
+# Unified Agent Instructions
 
-## Overview
-- Deployment/config generation + deploy target execution wiring.
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-agentflow/deploy/
-├── __init__.py         # public deploy functions
-├── config/             # DeployTarget -> ConfigTemplate
-├── targets/            # per-platform deploy targets
-├── templates/          # static templates (Dockerfile)
-└── workflow_generator.py # workflow -> code/zip
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| Public deploy API | `agentflow/deploy/__init__.py` | Functions like `generate_all`, `generate_workflow_code`.
-| Target implementations | `agentflow/deploy/targets/` | Docker, Vercel, AWS Lambda, GitHub Actions, etc.
-| Config templates (UI fields) | `agentflow/deploy/config/manager.py` | `DeployTarget` -> `ConfigTemplate` mapping.
-| Static deploy templates | `agentflow/deploy/templates/` | Dockerfile templates.
-| Workflow -> code path | `agentflow/deploy/workflow_generator.py` | Studio workflow to generated code/zip.
+適用ルール:
 
-## Notes
-- CI/CD reusable workflows live in `.github/workflows/` and mirror deploy targets.
-
-## Anti-Patterns
-- Committing `.env` or credentials; secrets scanning is enforced by pre-commit.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

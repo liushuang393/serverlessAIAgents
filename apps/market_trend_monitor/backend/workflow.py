@@ -28,9 +28,14 @@ from apps.market_trend_monitor.backend.agents import (
     SignalScorerAgent,
 )
 from apps.market_trend_monitor.backend.config import config
+from apps.market_trend_monitor.backend.services.metrics_service import metrics_service
 from apps.market_trend_monitor.backend.services.registry import (
+    adaptive_scoring_service,
+    bayesian_confidence_service,
     evidence_service,
+    prediction_service,
     signal_service,
+    source_reliability_tracker,
 )
 
 from agentflow import Flow, create_flow
@@ -43,15 +48,25 @@ logger = logging.getLogger(__name__)
 # Flow 作成（FlowBuilder パターン）
 # ============================================================
 
+def _safe_get_result(ctx: Any, node_id: str) -> dict[str, Any]:
+    """Phase 13: エラー回復付きの結果取得."""
+    try:
+        result = ctx.get_result(node_id)
+        return result if isinstance(result, dict) else {}
+    except Exception as e:
+        logger.warning("ノード '%s' の結果取得失敗: %s", node_id, e)
+        return {}
+
+
 def _map_evidence_input(ctx: Any) -> dict[str, Any]:
     """証拠台帳の入力を構築."""
-    collector = ctx.get_result("collector")
+    collector = _safe_get_result(ctx, "collector")
     return {"articles": collector.get("articles", [])}
 
 
 def _map_analyzer_input(ctx: Any) -> dict[str, Any]:
     """分析の入力を構築."""
-    collector = ctx.get_result("collector")
+    collector = _safe_get_result(ctx, "collector")
     return {
         "articles": collector.get("articles", []),
         "enable_sentiment": config.analyzer.enable_sentiment_analysis,
@@ -60,8 +75,8 @@ def _map_analyzer_input(ctx: Any) -> dict[str, Any]:
 
 def _map_signal_input(ctx: Any) -> dict[str, Any]:
     """信号評価の入力を構築."""
-    analyzer = ctx.get_result("analyzer")
-    collector = ctx.get_result("collector")
+    analyzer = _safe_get_result(ctx, "analyzer")
+    collector = _safe_get_result(ctx, "collector")
     trends = analyzer.get("trends", [])
     articles = collector.get("articles", [])
 
@@ -91,7 +106,7 @@ def _map_signal_input(ctx: Any) -> dict[str, Any]:
 
 def _map_reporter_input(ctx: Any) -> dict[str, Any]:
     """レポート生成の入力を構築."""
-    analyzer = ctx.get_result("analyzer")
+    analyzer = _safe_get_result(ctx, "analyzer")
     return {
         "trends": analyzer.get("trends", []),
         "summary": analyzer.get("summary", ""),
@@ -101,7 +116,7 @@ def _map_reporter_input(ctx: Any) -> dict[str, Any]:
 
 def _map_redteam_input(ctx: Any) -> dict[str, Any]:
     """Red Team の入力を構築."""
-    analyzer = ctx.get_result("analyzer")
+    analyzer = _safe_get_result(ctx, "analyzer")
     trends = analyzer.get("trends", [])
     now = datetime.now().isoformat()
 
@@ -127,7 +142,7 @@ def _map_redteam_input(ctx: Any) -> dict[str, Any]:
 
 def _map_notifier_input(ctx: Any) -> dict[str, Any]:
     """通知の入力を構築."""
-    analyzer = ctx.get_result("analyzer")
+    analyzer = _safe_get_result(ctx, "analyzer")
     return {
         "trends": analyzer.get("trends", []),
         "alert_threshold": config.notifier.alert_growth_rate_threshold,
@@ -137,7 +152,7 @@ def _map_notifier_input(ctx: Any) -> dict[str, Any]:
 flow: Flow = (
     create_flow("market-trend-monitor", name="Market Trend Monitor")
     .then(
-        CollectorAgent(),
+        CollectorAgent(source_reliability_tracker=source_reliability_tracker),
         EvidenceLedgerAgent(evidence_service=evidence_service),
         AnalyzerAgent(evidence_service=evidence_service),
         SignalScorerAgent(signal_service=signal_service),
@@ -187,9 +202,15 @@ async def run(input_data: dict[str, Any] | None = None) -> dict[str, Any]:
         }
 
     logger.info("市場動向ワークフローを開始")
-    result = await flow.run(input_data)
-    logger.info("市場動向ワークフローが完了")
-    return result
+    metrics_service.start_run()
+    try:
+        result = await flow.run(input_data)
+        metrics_service.end_run(success=True)
+        logger.info("市場動向ワークフローが完了")
+        return result
+    except Exception as exc:
+        metrics_service.end_run(success=False, error=str(exc))
+        raise
 
 
 async def run_stream(

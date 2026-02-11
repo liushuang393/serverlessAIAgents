@@ -108,6 +108,15 @@ class TestGatekeeperAgentPatterns:
         assert result.is_acceptable is True
         assert result.category == QuestionCategory.TIMING_JUDGMENT
 
+    @pytest.mark.asyncio
+    async def test_now_word_in_decision_question_is_not_auto_rejected(
+        self, gatekeeper_agent: GatekeeperAgent
+    ) -> None:
+        """「現在/现在」を含んでも意思決定文脈なら即時拒否しない."""
+        input_data = GatekeeperInput(raw_question="现在这个季度我们是否应该追加投资到新产品线？")
+        result = await gatekeeper_agent.process(input_data)
+        assert result.is_acceptable is True
+
 
 class TestGatekeeperAgentProcess:
     """Test cases for GatekeeperAgent.process."""

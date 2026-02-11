@@ -53,7 +53,7 @@ router = APIRouter(tags=["決策処理"])
 
 class DecisionAPIRequest(BaseModel):
     """API リクエストスキーマ."""
-    question: str = Field(..., min_length=10, max_length=2000, description="意思決定の質問")
+    question: str = Field(..., min_length=15, max_length=2000, description="意思決定の質問")
     budget: float | None = Field(None, ge=0, description="予算制約（万円）")
     timeline_months: int | None = Field(None, ge=1, le=120, description="期間制約（月）")
     technical_constraints: list[str] = Field(default_factory=list, description="技術制約")
@@ -252,6 +252,8 @@ async def process_decision(
     engine = get_engine()
     constraints = build_constraints(req)
     inputs = build_input_dict(req.question, constraints, req.stakeholders)
+    # ステージ単位DB保存用に request_id を入力に渡す
+    inputs["_request_id"] = request_id
     result = await engine.run(inputs)
 
     processing_time_ms = int((time.time() - start_time) * 1000)
@@ -260,8 +262,8 @@ async def process_decision(
     if isinstance(result, dict) and result.get("status") == "rejected":
         return RejectionResponse(**result)
 
-    # 成功の場合 - 履歴保存
-    decision_role = "PILOT"  # デフォルト
+    # 成功の場合 - 最終メタ情報を確定（ステージ結果は Engine 側で保存済み）
+    decision_role = "PILOT"
     confidence = None
     report_case_id: str | None = None
     results_dict: dict[str, Any] = {}
@@ -286,21 +288,31 @@ async def process_decision(
         report_case_id = str(result.get("report_id", "")) or None
         results_dict = _extract_results_for_history(result)
 
-    # 非同期で履歴保存（失敗しても処理は継続）
+    # パイプライン完了後にメタ情報を確定（失敗しても処理は継続）
     if ENABLE_HISTORY:
         try:
             from apps.decision_governance_engine.repositories import DecisionRepository
             repo = DecisionRepository()
-            await repo.save(
+            # まず finalize を試みる（ステージ単位保存で既にレコードが存在する場合）
+            finalized = await repo.finalize(
                 request_id=request_id,
-                question=req.question,
                 decision_role=decision_role,
-                mode="STANDARD",
                 confidence=confidence,
                 report_case_id=report_case_id,
-                results=results_dict,
                 processing_time_ms=processing_time_ms,
             )
+            if not finalized:
+                # レコード未存在の場合はフル保存（フォールバック）
+                await repo.save(
+                    request_id=request_id,
+                    question=req.question,
+                    decision_role=decision_role,
+                    mode="STANDARD",
+                    confidence=confidence,
+                    report_case_id=report_case_id,
+                    results=results_dict,
+                    processing_time_ms=processing_time_ms,
+                )
             logger.info(f"決策履歴保存完了: {request_id}")
         except Exception as e:
             logger.warning(f"決策履歴保存失敗（処理は継続）: {e}")
@@ -389,6 +401,15 @@ def _infer_decision_role(data: dict[str, Any]) -> str:
     # 明示的な decision_role があればそれを使用
     if "decision_role" in data:
         return data["decision_role"]
+
+    # scoring.verdict があれば最優先
+    scoring = data.get("scoring")
+    if hasattr(scoring, "model_dump"):
+        scoring = scoring.model_dump()
+    if isinstance(scoring, dict):
+        verdict = str(scoring.get("verdict", "")).upper()
+        if verdict in {"GO", "NO_GO", "DELAY", "PILOT"}:
+            return verdict
 
     # recommendation から推論
     recommendation = data.get("recommendation", "").lower()
@@ -569,7 +590,7 @@ async def get_decision_detail(request_id: str) -> HistoryDetailResponse:
 
 @router.get("/api/decision/stream")
 async def process_decision_stream(
-    question: str = Query(..., min_length=10, max_length=2000, description="意思決定の質問"),
+    question: str = Query(..., min_length=15, max_length=2000, description="意思決定の質問"),
     budget: float | None = Query(None, ge=0, description="予算制約（万円）"),
     timeline_months: int | None = Query(None, ge=1, le=120, description="期間制約（月）"),
     stakeholder_product_owner: str = Query("", max_length=100, description="プロダクトオーナー"),
@@ -612,6 +633,8 @@ async def process_decision_stream(
         )
 
     inputs = build_input_dict(question, constraints, stakeholders)
+    # ステージ単位DB保存用に request_id を入力に渡す
+    inputs["_request_id"] = request_id
 
     def serialize_event(event: dict) -> str:
         """イベントをJSON文字列に変換（enum対応）."""
@@ -623,7 +646,7 @@ async def process_decision_stream(
         return json.dumps(event, ensure_ascii=False, default=str)
 
     async def save_history(result_data: dict[str, Any]) -> None:
-        """完了時に履歴を保存."""
+        """完了時にメタ情報を確定（ステージ結果は Engine 側で保存済み）."""
         if not ENABLE_HISTORY:
             return
 
@@ -636,16 +659,26 @@ async def process_decision_stream(
         try:
             from apps.decision_governance_engine.repositories import DecisionRepository
             repo = DecisionRepository()
-            await repo.save(
+            # まず finalize を試みる（ステージ単位保存で既にレコードが存在する場合）
+            finalized = await repo.finalize(
                 request_id=request_id,
-                question=question,
                 decision_role=decision_role,
-                mode="STANDARD",
                 confidence=confidence,
                 report_case_id=report_case_id,
-                results=results_dict,
                 processing_time_ms=processing_time_ms,
             )
+            if not finalized:
+                # レコード未存在の場合はフル保存（フォールバック）
+                await repo.save(
+                    request_id=request_id,
+                    question=question,
+                    decision_role=decision_role,
+                    mode="STANDARD",
+                    confidence=confidence,
+                    report_case_id=report_case_id,
+                    results=results_dict,
+                    processing_time_ms=processing_time_ms,
+                )
             logger.info(f"[SSE] 決策履歴保存完了: {request_id}")
         except Exception as e:
             logger.warning(f"[SSE] 決策履歴保存失敗（処理は継続）: {e}")
@@ -778,10 +811,10 @@ async def websocket_decision(websocket: WebSocket) -> None:
             budget = data.get("budget")
             timeline_months = data.get("timeline_months")
 
-            if not question or len(question) < 10:
+            if not question or len(question) < 15:
                 await websocket.send_json({
                     "type": "error",
-                    "message": "質問は10文字以上必要です",
+                    "message": "質問は15文字以上必要です",
                 })
                 continue
 

@@ -14,7 +14,7 @@ Engine（パターン） → Agent（実行） → Skill（プロンプト）
 
 ## 前提条件
 
-- Python 3.13 以上
+- Python 3.13 以上（`adk-agui-middleware` 依存のため）
 - pip パッケージマネージャー
 
 ## インストール
@@ -26,16 +26,21 @@ pip install agentflow
 ## 0. 最速スタート（5行で動く）
 
 ```python
-from agentflow.engines import SimpleEngine
-from agentflow.core.agent_block import AgentBlock
+import asyncio
+
+from agentflow import AgentBlock, SimpleEngine
 
 class MyAgent(AgentBlock):
     async def run(self, input_data: dict) -> dict:
         return {"result": f"処理: {input_data.get('task', '')}"}
 
-# SimpleEngine で単一Agentを実行
-engine = SimpleEngine(agent=MyAgent)
-result = await engine.run({"task": "hello"})
+async def main() -> None:
+    engine = SimpleEngine(agent=MyAgent)
+    result = await engine.run({"task": "hello"})
+    print(result)
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
 ## 1. プロジェクトの初期化
@@ -51,55 +56,80 @@ cd my-first-agent
 
 ```
 my-first-agent/
-├── main.py             # FastAPI + AgentFlow統合
-├── engine.py           # Engine定義（推奨）
-├── agents/             # Agent実装
-├── skills/             # SKILL.md形式プロンプト
-├── schemas/            # Pydantic入出力定義
-├── agent.yaml          # メタデータ
-└── requirements.txt    # 依存関係
+├── agent.yaml          # メタデータ（プロトコル/入出力/可視化）
+├── main.py             # FastAPI + Flow（create_flow）統合
+├── README.md           # 使い方（生成）
+├── requirements.txt    # 依存関係（生成）
+├── .gitignore          # 生成
+└── tests/              # テスト雛形
 ```
 
 ## 2. エージェントメタデータの設定
 
-`agent.yaml` を編集してエージェントの情報を設定します：
+`agent.yaml` を編集してエージェントの情報を設定します。
+
+Note:
+- `agentflow init` / `agentflow create agent` が生成するテンプレートは、リポジトリ内のスキーマ（`agentflow/core/metadata.py`）と一致しないフィールドを含む場合があります。
+- `agentflow run` 実行時に `SchemaValidationError` が出た場合は、このセクションの形式に合わせて `agent.yaml` を修正してください。
 
 ```yaml
 meta:
   id: my-first-agent
   name: My First Agent
-  version: 0.1.0
-  description: 私の最初の AgentFlow エージェント
+  version: 1.0.0
   author: Your Name
-  license: MIT
   icon: 🤖
-  category: utility
+  category: general
+  description: 私の最初の AgentFlow エージェント
+
+interfaces:
+  inputs:
+    - name: input
+      type: string
+      required: true
+      description: 入力テキスト
+      default: ""
+
+  outputs:
+    - name: output
+      type: string
+      description: 出力テキスト
 
 protocols:
-  mcp: true
   a2a:
     enabled: true
-    endpoint: http://localhost:8000
-  agui: true
+    skills: ["process"]
+    card_path: null
+  agui:
+    enabled: true
+    events: ["flow.start", "node.start", "progress", "node.complete", "flow.complete", "flow.error"]
 
-inputs:
-  - name: message
-    type: string
-    description: 処理するメッセージ
-    required: true
+dependencies:
+  agents: []
+  tools: []
+  packages: []
 
-outputs:
-  - name: result
-    type: string
-    description: 処理結果
+pocketflow:
+  entry: "main.py:flow"
+  shared_schema: "schemas.py:SharedSchema"
 
-skills:
-  - name: process
-    description: メッセージを処理する
-    inputs:
-      - message
-    outputs:
-      - result
+visual:
+  color: "#3B82F6"
+  size: "medium"
+  ports:
+    input: [100, 50]
+    output: [300, 50]
+```
+
+`schemas.py` も用意します（`pocketflow.shared_schema` の参照先）：
+
+```python
+from pydantic import BaseModel
+
+
+class SharedSchema(BaseModel):
+    input: str = ""
+    output: str = ""
 ```
 
 ## 3. エージェントの実装（推奨パターン）
@@ -109,12 +139,14 @@ skills:
 ```python
 """My First Agent - FastAPI + AgentFlow統合."""
 
+import json
 from typing import Any
+
 from fastapi import FastAPI
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from agentflow.engines import SimpleEngine
-from agentflow.core.agent_block import AgentBlock
+from agentflow import AgentBlock, create_flow
 
 
 # Agent定義
@@ -125,15 +157,17 @@ class MyFirstAgent(AgentBlock):
 
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """メッセージを処理."""
-        message = input_data.get("message", "")
-        return {
-            "result": f"処理完了: {message.upper()}",
-            "original": message,
-        }
+        input_text = input_data.get("input", "")
+        return {"output": f"Processed: {input_text}"}
 
 
-# Engine定義（SimpleEngine を使用）
-engine = SimpleEngine(agent=MyFirstAgent)
+# Flow 定義（agent.yaml の pocketflow.entry と一致させる）
+flow = create_flow(
+    agents=[MyFirstAgent()],
+    pattern="sequential",
+    enable_memory=True,
+    name="MainFlow",
+)
 
 
 # FastAPI アプリ
@@ -141,14 +175,23 @@ app = FastAPI(title="My First Agent")
 
 
 class TaskRequest(BaseModel):
-    message: str
+    input: str
 
 
-@app.post("/api/process")
+@app.post("/api/task")
 async def process(request: TaskRequest) -> dict:
     """同期処理エンドポイント."""
-    result = await engine.run({"message": request.message})
+    result = await flow.run({"input": request.input})
     return {"status": "success", "data": result}
+
+@app.get("/api/task/stream")
+async def stream(input_text: str) -> StreamingResponse:
+    """ストリーム処理エンドポイント（SSE）."""
+    async def event_generator():
+        async for event in flow.run_stream({"input": input_text}):
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
 if __name__ == "__main__":
@@ -161,16 +204,14 @@ if __name__ == "__main__":
 ### CLI から実行
 
 ```bash
-agentflow run . --input '{"message": "hello world"}'
+agentflow run . --input '{"input": "hello world"}' --json
 ```
 
 出力：
 
 ```json
 {
-  "result": "処理完了: HELLO WORLD",
-  "original": "hello world",
-  "length": 11
+  "output": "Processed: hello world"
 }
 ```
 
@@ -183,14 +224,14 @@ from agentflow.core.agent_block import AgentBlock
 
 class MyAgent(AgentBlock):
     async def run(self, input_data: dict) -> dict:
-        return {"result": f"処理: {input_data.get('message', '')}"}
+        return {"output": f"処理: {input_data.get('input', '')}"}
 
 async def main():
     # Engine を作成
     engine = SimpleEngine(agent=MyAgent)
     
     # 実行
-    result = await engine.run({"message": "hello world"})
+    result = await engine.run({"input": "hello world"})
     print(f"結果: {result}")
 
 asyncio.run(main())
@@ -267,7 +308,7 @@ async for event in engine.run_stream({"question": "..."}):
 ```json
 // input.json
 {
-  "message": "hello from file"
+  "input": "hello from file"
 }
 ```
 
@@ -280,10 +321,10 @@ agentflow run . --input input.json --output output.json
 ## 7. 次のステップ
 
 - [インストールガイド](../INSTALLATION_GUIDE_JA.md) - 詳細なセットアップ手順
-- [Engine パターンガイド](../README.md#方式4-engine-pattern配置即用new) - 4種類のEngine詳細
+- [Engine パターンガイド](./engines.md) - 4種類のEngine詳細
 - [CLI ガイド](guide-cli.md) - CLI コマンドの詳細
 - [Skills ガイド](guide-skills.md) - Skills 自動進化システム
-- [サンプル集](../examples/) - より高度な例
+- [サンプル集](./examples/README.md) - ドキュメント内サンプル一覧
 
 ## トラブルシューティング
 

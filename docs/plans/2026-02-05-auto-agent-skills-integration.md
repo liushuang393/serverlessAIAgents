@@ -274,7 +274,7 @@ class MyAgent:
     pass
 ```
 
-詳細は [Skills ガイド](../docs/guide-skills.md) を参照。
+詳細は [Skills ガイド](../guide-skills.md) を参照。
 ```
 
 **Step 3: Write test for root skills directory loading**

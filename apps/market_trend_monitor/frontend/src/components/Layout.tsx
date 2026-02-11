@@ -25,6 +25,10 @@ import {
   Dashboard as DashboardIcon,
   Assessment as ReportIcon,
   Settings as SettingsIcon,
+  FindInPage as EvidenceIcon,
+  Sensors as SignalIcon,
+  TrackChanges as PredictionIcon,
+  Groups as CompetitorIcon,
 } from '@mui/icons-material';
 
 const drawerWidth = 260;
@@ -44,6 +48,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const menuItems = [
     { text: 'ダッシュボード', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: 'シグナル', icon: <SignalIcon />, path: '/signals' },
+    { text: '証拠台帳', icon: <EvidenceIcon />, path: '/evidence' },
+    { text: '予測追跡', icon: <PredictionIcon />, path: '/predictions' },
+    { text: '競合分析', icon: <CompetitorIcon />, path: '/competitors' },
     { text: 'レポート', icon: <ReportIcon />, path: '/reports' },
     { text: '設定', icon: <SettingsIcon />, path: '/settings' },
   ];

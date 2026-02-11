@@ -1,30 +1,11 @@
-# .github/workflows/
+# Unified Agent Instructions
 
-## Overview
-- CI/CD workflows, including reusable deploy workflows for multiple platforms.
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-.github/workflows/
-├── lint.yml
-├── test.yml
-├── publish.yml
-├── release.yml
-└── reusable-deploy-*.yml
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Need | Location | Notes |
-|------|----------|-------|
-| Linting | `.github/workflows/lint.yml` | Ruff + mypy checks.
-| Tests | `.github/workflows/test.yml` | Cross-platform tests.
-| Release automation | `.github/workflows/release.yml` | Versioning + changelog + release.
-| Publish to PyPI | `.github/workflows/publish.yml` | Build + upload.
-| Reusable Python CI | `.github/workflows/reusable-python-ci.yml` | Shared lint/test workflow.
-| Reusable deploy templates | `.github/workflows/reusable-deploy-*.yml` | AWS Lambda, Vercel, GCP, Azure, etc.
+適用ルール:
 
-## Notes
-- These workflows correspond closely to deploy targets in `agentflow/deploy/targets/`.
-
-## Anti-Patterns
-- Editing reusable deploy workflows without updating the corresponding deploy target implementation.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

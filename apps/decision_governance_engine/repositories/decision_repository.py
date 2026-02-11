@@ -138,6 +138,150 @@ class DecisionRepository:
 
             return record
 
+    # ステージ名 → DecisionRecord カラム名のマッピング
+    _STAGE_COLUMN_MAP: dict[str, str] = {
+        "cognitive_gate": "cognitive_gate_result",
+        "gatekeeper": "gatekeeper_result",
+        "clarification": "cognitive_gate_result",  # clarification は cognitive_gate に含める
+        "dao": "dao_result",
+        "fa": "fa_result",
+        "shu": "shu_result",
+        "qi": "qi_result",
+        "review": "review_result",
+    }
+
+    async def upsert_stage(
+        self,
+        request_id: UUID,
+        question: str,
+        stage_name: str,
+        stage_result: dict[str, Any],
+        decision_role: str = "PILOT",
+        mode: str = "STANDARD",
+    ) -> DecisionRecord:
+        """ステージ単位で決策記録をINSERT/UPDATE（upsert）.
+
+        各ステージ完了後に呼ばれ、該当カラムのみ更新する。
+        request_id が未登録なら新規INSERT、既存なら部分UPDATE。
+
+        Args:
+            request_id: リクエスト一意ID
+            question: 入力された質問
+            stage_name: ステージ名（dao, fa, shu, qi 等）
+            stage_result: ステージの実行結果
+            decision_role: 暫定の決策結果
+            mode: 実行モード
+
+        Returns:
+            更新された DecisionRecord
+        """
+        column_name = self._STAGE_COLUMN_MAP.get(stage_name)
+        if not column_name:
+            logger.warning(f"Unknown stage for upsert: {stage_name}")
+            return None  # type: ignore[return-value]
+
+        normalized_result = self._to_jsonable(stage_result)
+
+        async with get_db_session() as session:
+            # 既存レコードを検索
+            result = await session.execute(
+                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
+            )
+            record = result.scalar_one_or_none()
+
+            if record is None:
+                # 新規レコード作成（最初のステージ）
+                kwargs: dict[str, Any] = {
+                    "request_id": request_id,
+                    "question": question,
+                    "mode": mode,
+                    "decision_role": decision_role,
+                    column_name: normalized_result,
+                }
+                record = DecisionRecord(**kwargs)
+                session.add(record)
+            else:
+                # 既存レコードの該当カラムを更新
+                setattr(record, column_name, normalized_result)
+
+            await session.flush()
+            logger.info(f"Stage '{stage_name}' upserted for request {request_id}")
+
+            await self._invalidate_cache(str(request_id))
+            return record
+
+    async def get_completed_stages(self, request_id: UUID) -> set[str]:
+        """完了済みステージ名の集合を返す（再分析スキップ用）.
+
+        Args:
+            request_id: リクエスト一意ID
+
+        Returns:
+            完了済みステージ名のセット（例: {"dao", "fa"}）
+        """
+        async with get_db_session() as session:
+            result = await session.execute(
+                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
+            )
+            record = result.scalar_one_or_none()
+            if record is None:
+                return set()
+
+            completed: set[str] = set()
+            # 逆マッピング：カラム名 → ステージ名
+            for stage_name, col_name in self._STAGE_COLUMN_MAP.items():
+                if stage_name == "clarification":
+                    continue  # clarification は cognitive_gate と共用
+                val = getattr(record, col_name, None)
+                if val is not None:
+                    completed.add(stage_name)
+            return completed
+
+    async def finalize(
+        self,
+        request_id: UUID,
+        decision_role: str = "PILOT",
+        confidence: float | None = None,
+        report_case_id: str | None = None,
+        processing_time_ms: int | None = None,
+    ) -> bool:
+        """パイプライン完了後にメタ情報を確定（decision_role, confidence 等）.
+
+        ステージ単位保存で作成済みレコードの最終更新を行う。
+        レコードが存在しない場合は False を返す。
+
+        Args:
+            request_id: リクエスト一意ID
+            decision_role: 最終決策結果（GO/NO_GO/DELAY/PILOT）
+            confidence: 最終確信度
+            report_case_id: 提案書ID
+            processing_time_ms: 全体処理時間
+
+        Returns:
+            更新成功なら True
+        """
+        async with get_db_session() as session:
+            result = await session.execute(
+                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
+            )
+            record = result.scalar_one_or_none()
+            if record is None:
+                logger.warning(f"finalize: record not found for {request_id}")
+                return False
+
+            record.decision_role = decision_role
+            if confidence is not None:
+                record.confidence = confidence
+            if report_case_id:
+                record.report_case_id = report_case_id
+            if processing_time_ms is not None:
+                record.processing_time_ms = processing_time_ms
+
+            await session.flush()
+            logger.info(f"Decision record finalized: {request_id}")
+            await self._invalidate_cache(str(request_id))
+            return True
+
     async def find_by_request_id(self, request_id: UUID) -> DecisionRecord | None:
         """リクエストIDで決策記録を検索."""
         async with get_db_session() as session:

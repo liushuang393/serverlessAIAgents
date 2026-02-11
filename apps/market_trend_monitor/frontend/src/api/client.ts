@@ -137,11 +137,11 @@ class ApiClient {
   }
 
   /**
-   * レポートをバイナリ形式でエクスポート.
+   * レポートをPDF形式でエクスポート.
    */
   async exportReport(
     reportId: string,
-    format: 'pdf' | 'pptx'
+    format: 'pdf'
   ): Promise<{ blob: Blob; filename: string }> {
     const response = await this.client.get<Blob>(
       `/reports/${reportId}/export/${format}`,
@@ -152,7 +152,7 @@ class ApiClient {
 
     const disposition = response.headers['content-disposition'] as string | undefined;
     const matched = disposition?.match(/filename=\"?([^\";]+)\"?/i);
-    const filename = matched?.[1] ?? `market_report_${reportId}.${format}`;
+    const filename = matched?.[1] ?? `market_trend_report_${reportId}.pdf`;
 
     return {
       blob: response.data,
@@ -166,6 +166,33 @@ class ApiClient {
   async healthCheck(): Promise<{ status: string }> {
     const response = await this.client.get<{ status: string }>('/health');
     return response.data;
+  }
+
+  /**
+   * 汎用GETリクエスト.
+   *
+   * 注意: pathにはbaseURL相対パスを指定（例: '/signals'）
+   */
+  async get<T = Record<string, unknown>>(
+    path: string,
+    config?: { params?: Record<string, unknown> }
+  ): Promise<{ data: T }> {
+    const response = await this.client.get<T>(path, config);
+    return { data: response.data };
+  }
+
+  /**
+   * 汎用POSTリクエスト.
+   *
+   * 注意: pathにはbaseURL相対パスを指定（例: '/predictions'）
+   */
+  async post<T = Record<string, unknown>>(
+    path: string,
+    data?: unknown,
+    config?: { params?: Record<string, unknown> }
+  ): Promise<{ data: T }> {
+    const response = await this.client.post<T>(path, data, config);
+    return { data: response.data };
   }
 }
 

@@ -9,6 +9,8 @@ from typing import Any
 
 import httpx
 
+from apps.market_trend_monitor.backend.integrations.rate_limiter import rate_limiter
+
 
 class GitHubAPIClient:
     """GitHub API クライアント."""
@@ -46,6 +48,7 @@ class GitHubAPIClient:
 
         for attempt in range(self._max_retries + 1):
             try:
+                await rate_limiter.acquire("github")
                 async with httpx.AsyncClient(timeout=20.0) as client:
                     response = await client.get(url, params=params, headers=headers)
 

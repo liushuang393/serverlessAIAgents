@@ -1,23 +1,11 @@
-# agentflow/cli/
+# Unified Agent Instructions
 
-## Overview
-- Click-based CLI: `agentflow` command (defined in `pyproject.toml`).
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-agentflow/cli/
-├── main.py        # click group + wiring
-└── commands/      # subcommands
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| CLI entrypoint | `agentflow/cli/main.py` | Defines `cli` group and subcommands.
-| Subcommands | `agentflow/cli/commands/` | init/create/run/template/skills/etc.
+適用ルール:
 
-## Notes
-- `agentflow run` supports both agent.yaml-based agents and `@agent` decorator agents.
-
-## Anti-Patterns
-- Adding new commands without wiring them into the top-level `cli` group.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

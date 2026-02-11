@@ -1,25 +1,11 @@
-# apps/faq_system/
+# Unified Agent Instructions
 
-## Overview
-- FAQ demo application; designed as a thin app layer (most logic in `agentflow/`).
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-apps/faq_system/
-├── main.py
-├── main_enhanced.py
-└── (additional versions)
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| App API entrypoints | `apps/faq_system/main.py`, `apps/faq_system/main_enhanced.py` | Multiple versions/ports.
-| Framework agent | `agentflow/agents/faq_agent.py` | Where the real agent logic lives.
-| Framework services | `agentflow/services/` | RAG/Text2SQL/Chart/etc.
+適用ルール:
 
-## Anti-Patterns
-- Do not add custom agents under `apps/faq_system/backend/agents/` (keep app thin; follow README guidance).
-
-## Notes
-- Framework-owned FAQ logic: `agentflow/agents/faq_agent.py` and `agentflow/services/`.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

@@ -500,7 +500,7 @@ async def test_agent_with_context_manager():
 
 ## 🔗 関連リンク
 
-- [クイックスタートガイド](../docs/quickstart.md)
-- [API リファレンス](../docs/api.md)
-- [プロトコルガイド](../docs/protocols.md)
-- [CLI リファレンス](../docs/cli.md)
+- [クイックスタートガイド](../quickstart.md)
+- [API リファレンス](../api.md)
+- [プロトコルガイド](../protocols.md)
+- [CLI リファレンス](../cli.md)

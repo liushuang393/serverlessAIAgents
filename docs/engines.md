@@ -10,9 +10,9 @@ AgentFlow の Engine は AI エージェント実行の統一入口です。4種
 ┌─────────────────────────────────────────────────────────────┐
 │                        BaseEngine                            │
 │  ┌─────────────────────────────────────────────────────────┐│
-│  │ run()              → 同期実行                           ││
-│  │ run_stream()       → SSE ストリーム実行                 ││
-│  │ checkpoint / resume → 中断・再開                        ││
+│  │ run()              → 非ストリーム実行（結果 dict）      ││
+│  │ run_stream()       → イベントストリーム（dict を yield）││
+│  │ HITL（任意）        → 中断・再開（checkpointer）        ││
 │  └─────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────┘
            ↓ 継承
@@ -57,9 +57,15 @@ from agentflow import SimpleEngine, EngineConfig
 engine = SimpleEngine(
     agent=QAAgent,
     config=EngineConfig(
-        timeout=60.0,              # タイムアウト秒数
-        retry_count=3,             # リトライ回数
-        enable_observability=True, # メトリクス収集
+        name="qa-engine",          # Engine名（flow_id プレフィックス）
+        timeout_seconds=60,        # グローバルタイムアウト秒
+        max_retries=3,             # グローバル最大リトライ回数
+        enable_events=True,        # AG-UIイベントを発行
+        enable_memory=True,        # メモリ機能を有効化（対応Engine/Flowで利用）
+        llm_config={               # LLM設定（Provider側で参照）
+            "model": "gpt-4.1-mini",
+            "temperature": 0.2,
+        },
     )
 )
 ```
@@ -99,11 +105,11 @@ engine = GateEngine(
 # 実行
 result = await engine.run({"text": "正常なテキスト"})
 # Gate 通過 → Main 実行
-print(result)  # {"result": "処理完了: 正常なテキスト"}
+print(result)  # {"status": "success", "gate_result": {...}, "result": {...}}
 
 result = await engine.run({"text": "禁止ワード含む"})
 # Gate 拒否 → Main 実行されず
-print(result)  # {"gate_rejected": True, "reason": "禁止ワード検出"}
+print(result)  # {"status": "rejected", "reason": "禁止ワード検出", "gate_result": {...}}
 ```
 
 ---
@@ -182,16 +188,21 @@ class KnowledgeAgent(AgentBlock):
     
     async def run(self, input_data: dict) -> dict:
         query = input_data.get("query", "")
-        context = input_data.get("rag_context", [])  # 検索結果が注入される
+        # RAGEngine は以下を注入する:
+        # - context: 文字列（検索結果を整形したコンテキスト）
+        # - documents: list[dict]（検索結果の生データ）
+        # - augmented_prompt: context_template で整形したプロンプト
+        context = input_data.get("context", "")
+        documents = input_data.get("documents", [])
         
         # コンテキストを使って回答生成
-        return {"answer": f"回答（{len(context)}件の参考資料使用）"}
+        return {"answer": f"回答（{len(documents)}件の参考資料使用）"}
 
 engine = RAGEngine(
     agent=KnowledgeAgent,
     vector_store="company_docs",  # VectorDB コレクション名
     top_k=5,                       # 検索件数
-    similarity_threshold=0.7,      # 類似度しきい値
+    chunk_size=500,                # チャンクサイズ（RAGPipeline 側で利用）
 )
 
 result = await engine.run({"query": "社内規定について教えて"})
@@ -218,11 +229,16 @@ async def stream_endpoint(question: str):
 ### イベント形式（AG-UI 準拠）
 
 ```json
-{"type": "RUN_STARTED", "run_id": "xxx"}
-{"type": "AGENT_STATE_MESSAGE", "node_name": "analysis", "message": "..."}
-{"type": "TEXT_MESSAGE_CONTENT", "content": "回答テキスト..."}
-{"type": "RUN_FINISHED", "result": {...}}
+{"event_type":"flow.start","timestamp":1730000000.0,"flow_id":"qa-engine-acde1234","data":{"engine":"SimpleEngine"}}
+{"event_type":"node.start","timestamp":1730000001.0,"flow_id":"qa-engine-acde1234","node_id":"QAAgent","node_name":"QAAgent","data":{}}
+{"event_type":"node.complete","timestamp":1730000002.0,"flow_id":"qa-engine-acde1234","node_id":"QAAgent","node_name":"QAAgent","data":{"answer":"..."}}
+{"type":"result","data":{"answer":"..."}}
+{"event_type":"flow.complete","timestamp":1730000003.0,"flow_id":"qa-engine-acde1234","data":{}}
 ```
+
+Note:
+- `event_type` は AG-UI 標準イベント（`flow.start` / `node.start` / `progress` など）。
+- 一部 Engine は互換性のため `type` ベースの補助イベント（例: `result`, `review_verdict`）も併用します。
 
 ---
 
@@ -259,7 +275,6 @@ class MyCustomEngine(BaseEngine):
 
 ## 📚 関連ドキュメント
 
-- [QUICKSTART.md](./QUICKSTART.md) - 5分で動かす
+- [quickstart.md](./quickstart.md) - 5分で動かす
 - [guide-coding.md](./guide-coding.md) - Agent 開発
 - [PATTERNS_GUIDE.md](./PATTERNS_GUIDE.md) - デザインパターン
-

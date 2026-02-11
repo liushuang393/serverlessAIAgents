@@ -4,7 +4,7 @@
 > **最終更新**: 2025-01-15  
 > **適用範囲**: AgentFlow Framework の全コード
 
-**他の言語**: [English](DEVELOPMENT_STANDARDS_EN.md) | [中文](DEVELOPMENT_STANDARDS.md)
+**統一規約（全AIアシスタント向け）**: [../code-rules/CLAUDE.md](../code-rules/CLAUDE.md)
 
 ---
 

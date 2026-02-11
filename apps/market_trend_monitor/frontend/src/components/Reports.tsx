@@ -27,7 +27,6 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DownloadIcon from '@mui/icons-material/Download';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
-import SlideshowIcon from '@mui/icons-material/Slideshow';
 import { useAppStore } from '@/store/useAppStore';
 import { apiClient } from '@/api/client';
 import type { Report, Trend } from '@/types';
@@ -40,15 +39,6 @@ const safeFormatDate = (value: string, pattern: string = 'yyyy/MM/dd HH:mm'): st
   }
   return format(date, pattern);
 };
-
-const stripMarkdownSyntax = (text: string): string =>
-  text
-    .replace(/^#{1,6}\s+/gm, '')
-    .replace(/^[-*]\s+/gm, '')
-    .replace(/^\d+\.\s+/gm, '')
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/`(.*?)`/g, '$1')
-    .trim();
 
 const escapeHtml = (value: string): string =>
   value
@@ -109,37 +99,7 @@ const buildReportMarkdown = (report: Report): string => {
   return lines.join('\n');
 };
 
-const buildPptOutlineMarkdown = (report: Report): string => {
-  const topTrends = report.trends.slice(0, 3).map((trend) => trend.topic).join(' / ') || '主要トレンドなし';
 
-  return [
-    '---',
-    'marp: true',
-    'theme: default',
-    `paginate: true`,
-    `title: ${report.title}`,
-    '---',
-    '',
-    `# ${report.title}`,
-    '',
-    `- 生成日時: ${safeFormatDate(report.created_at)}`,
-    `- 期間: ${safeFormatDate(report.period_start, 'yyyy/MM/dd')} - ${safeFormatDate(report.period_end, 'yyyy/MM/dd')}`,
-    '',
-    '---',
-    '',
-    '# 主要トピック',
-    '',
-    `- ${topTrends}`,
-    '- NEW は前期間に基準データがない新規検知',
-    '',
-    '---',
-    '',
-    '# 意思決定ポイント',
-    '',
-    ...report.sections.slice(0, 3).map((section) => `- ${section.title}: ${stripMarkdownSyntax(section.content).slice(0, 80)}`),
-    '',
-  ].join('\n');
-};
 
 const downloadText = (filename: string, content: string): void => {
   const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
@@ -347,19 +307,16 @@ const Reports: React.FC = () => {
     };
   }, [reports]);
 
-  const handleDownloadMarkdown = (report: Report): void => {
-    const slug = report.title.replace(/[^a-zA-Z0-9_-]/g, '_');
-    downloadText(`${slug || report.id}.md`, buildReportMarkdown(report));
+  const buildExportFilename = (report: Report, extension: string): string => {
+    const date = new Date(report.created_at);
+    const timestamp = Number.isNaN(date.getTime())
+      ? 'unknown'
+      : format(date, 'yyyyMMdd_HHmmss');
+    return `market_trend_report_${timestamp}.${extension}`;
   };
 
-  const handleDownloadPptOutline = async (report: Report): Promise<void> => {
-    try {
-      const exported = await apiClient.exportReport(report.id, 'pptx');
-      downloadBlob(exported.filename, exported.blob);
-    } catch {
-      const slug = report.title.replace(/[^a-zA-Z0-9_-]/g, '_');
-      downloadText(`${slug || report.id}_slides.md`, buildPptOutlineMarkdown(report));
-    }
+  const handleDownloadMarkdown = (report: Report): void => {
+    downloadText(buildExportFilename(report, 'md'), buildReportMarkdown(report));
   };
 
   const handleExportPdf = async (report: Report): Promise<void> => {
@@ -432,7 +389,7 @@ const Reports: React.FC = () => {
           レポートセンター
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          指標の根拠を明示しながら、配布用の Markdown / PDF / PPT 下書きを出力できます。
+          指標の根拠を明示しながら、配布用の Markdown / PDF を出力できます。
         </Typography>
 
         <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -520,14 +477,7 @@ const Reports: React.FC = () => {
                   >
                     PDF
                   </Button>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<SlideshowIcon />}
-                    onClick={() => handleDownloadPptOutline(report)}
-                  >
-                    PPT下書き
-                  </Button>
+
                 </Stack>
 
                 <Paper sx={{ p: 2.5, mb: 2, backgroundColor: 'rgba(15,23,42,0.72)' }}>

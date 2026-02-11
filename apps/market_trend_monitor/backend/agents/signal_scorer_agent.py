@@ -124,8 +124,8 @@ class SignalScorerAgent(ResilientAgent[SignalScorerInput, SignalScorerOutput]):
             ev_count = evidence_counts.get(trend.id, 0)
             src_types = source_types.get(trend.id, [])
 
-            # 信号評価を実行
-            signal = self._signal_service.evaluate_trend(
+            # 信号評価を実行（Phase 10: async化）
+            signal = await self._signal_service.evaluate_trend(
                 trend=trend,
                 evidence_count=ev_count,
                 source_types=src_types,

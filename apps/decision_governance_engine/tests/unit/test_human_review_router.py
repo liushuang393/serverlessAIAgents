@@ -69,11 +69,19 @@ async def test_recheck_finding_resolved_updates_review(
         assert "RACI" in confirmation_note
         return True, []
 
+    async def _mock_persist(**_: object) -> None:
+        return None
+
     monkeypatch.setattr(human_review_router, "_get_report_from_db", _mock_get_report)
     monkeypatch.setattr(
         human_review_router,
         "_evaluate_resolution_with_ai",
         _mock_evaluate,
+    )
+    monkeypatch.setattr(
+        human_review_router,
+        "_persist_human_review_record",
+        _mock_persist,
     )
 
     response = await human_review_router.recheck_finding(
@@ -108,18 +116,26 @@ async def test_recheck_finding_unresolved_returns_issues(
         _ = confirmation_note
         return False, ["責任者の氏名と承認手順が不足しています。"]
 
+    async def _mock_persist(**_: object) -> None:
+        return None
+
     monkeypatch.setattr(human_review_router, "_get_report_from_db", _mock_get_report)
     monkeypatch.setattr(
         human_review_router,
         "_evaluate_resolution_with_ai",
         _mock_evaluate,
     )
+    monkeypatch.setattr(
+        human_review_router,
+        "_persist_human_review_record",
+        _mock_persist,
+    )
 
     response = await human_review_router.recheck_finding(
         human_review_router.FindingRecheckRequest(
             report_id=report.report_id,
             finding_index=0,
-            confirmation_note="対応済みです。",
+            confirmation_note="対応済みですが、責任者と承認手順の記載はこれから追記します。",
             acknowledged=True,
             reviewer_name="山田 太郎",
         )

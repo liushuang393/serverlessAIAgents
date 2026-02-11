@@ -151,11 +151,6 @@ AgentFlowフレームワークを活用した「情報収集→判断→行動�
 }
 ```
 
-**実装**:
-- MCP プロトコルで外部 API と連携
-- レート制限とエラーハンドリング
-- キャッシュ機構で重複収集を防止
-
 ### 3.2 AnalyzerAgent (分析エージェント)
 
 **役割**: 収集データを分析し、トレンドを抽出
@@ -178,12 +173,6 @@ AgentFlowフレームワークを活用した「情報収集→判断→行動�
     "summary": "今週はCOBOL移行案件が23%増加..."
 }
 ```
-
-**実装**:
-- キーワード抽出（TF-IDF）
-- トピック分類（LLM API 使用）
-- センチメント分析
-- トレンド計算（時系列分析）
 
 ### 3.3 ReporterAgent (レポート生成エージェント)
 
@@ -211,11 +200,6 @@ AgentFlowフレームワークを活用した「情報収集→判断→行動�
 }
 ```
 
-**実装**:
-- LLM API でサマリー生成
-- Markdown/HTML フォーマット
-- グラフデータ生成
-
 ### 3.4 NotifierAgent (通知エージェント)
 
 **役割**: 重要な変化を検知して通知
@@ -236,11 +220,6 @@ AgentFlowフレームワークを活用した「情報収集→判断→行動�
 }
 ```
 
-**実装**:
-- 閾値ベースのアラート
-- 通知チャネル（メール、Slack、WebSocket）
-- 通知履歴管理
-- MemoryManager との連携（重複通知防止）
 
 ### 3.5 EvidenceLedgerAgent (証拠台帳エージェント) 【NEW】
 
@@ -339,12 +318,6 @@ AgentFlowフレームワークを活用した「情報収集→判断→行動�
 }
 ```
 
-**機能**:
-- 反論生成 (Counter-Arguments)
-- 失効条件特定 (Invalidation Conditions)
-- トリガー条件定義 (Trigger Conditions)
-- 不確実性定量化 (Uncertainty Quantification)
-
 ---
 
 ## 4. API設計
@@ -407,172 +380,9 @@ event: prediction_due         # 予測レビュー期限通知
 
 ---
 
-## 5. データモデル
 
-### 5.1 基本モデル
 
-#### Article (記事)
-```python
-@dataclass
-class Article:
-    id: str
-    title: str
-    url: str
-    source: str
-    published_at: datetime
-    content: str
-    keywords: list[str]
-    collected_at: datetime
-```
-
-#### Trend (トレンド)
-```python
-@dataclass
-class Trend:
-    id: str
-    topic: str
-    score: float
-    articles_count: int
-    keywords: list[str]
-    sentiment: str
-    growth_rate: float
-    created_at: datetime
-    signal_id: str | None  # 関連Signal ID
-```
-
-#### Report (レポート)
-```python
-@dataclass
-class Report:
-    id: str
-    title: str
-    sections: list[ReportSection]
-    generated_at: datetime
-    period: str
-```
-
-### 5.2 Evidence Ledger モデル
-
-#### Evidence (証拠)
-```python
-class SourceType(Enum):
-    NEWS = "news"
-    GITHUB = "github"
-    ARXIV = "arxiv"
-    RSS = "rss"
-
-@dataclass
-class Evidence:
-    id: str
-    source_id: str                 # 情報源ID
-    source_type: SourceType        # 情報源タイプ
-    url: str
-    title: str
-    content_hash: str              # 重複検出用
-    extracted_data: dict           # 抽出データ
-    collected_at: datetime
-    reliability_score: float       # 信頼度スコア (0-1)
-```
-
-#### Claim (主張)
-```python
-class ClaimLevel(Enum):
-    LEAD = "lead"               # 初期手がかり
-    HYPOTHESIS = "hypothesis"   # 仮説
-    FINDING = "finding"         # 発見
-    CONCLUSION = "conclusion"   # 結論
-
-@dataclass
-class Claim:
-    id: str
-    statement: str                 # 主張内容
-    level: ClaimLevel              # 主張レベル
-    confidence: float              # 信頼度 (0-1)
-    evidence_ids: list[str]        # 根拠となる証拠ID
-    created_at: datetime
-    updated_at: datetime
-```
-
-### 5.3 Signal Scoring モデル
-
-```python
-class SignalGrade(Enum):
-    A = "A"  # 強信号 (≥4.0)
-    B = "B"  # 中信号 (3.0-3.9)
-    C = "C"  # 弱信号 (2.0-2.9)
-    D = "D"  # 雑音 (<2.0)
-
-@dataclass
-class SignalScore:
-    reliability: float      # 信頼性 (0-1)
-    leading: float          # 先行性 (0-1)
-    relevance: float        # 関連性 (0-1)
-    actionability: float    # 実行可能性 (0-1)
-    convergence: float      # 収束性 (0-1)
-
-    @property
-    def total(self) -> float:
-        return (self.reliability + self.leading + self.relevance +
-                self.actionability + self.convergence)
-
-@dataclass
-class Signal:
-    id: str
-    trend_id: str
-    score: SignalScore
-    grade: SignalGrade
-    evaluated_at: datetime
-```
-
-### 5.4 Red Team モデル
-
-```python
-@dataclass
-class CounterArgument:
-    argument: str
-    strength: float         # 反論の強さ (0-1)
-
-@dataclass
-class InvalidationCondition:
-    condition: str          # 失効条件
-    probability: float      # 発生確率
-
-@dataclass
-class RedTeamAnalysis:
-    id: str
-    claim_id: str
-    counter_arguments: list[CounterArgument]
-    invalidation_conditions: list[InvalidationCondition]
-    overall_uncertainty: float  # 総合不確実性 (0-1)
-    recommendation: str
-    analyzed_at: datetime
-```
-
-### 5.5 Prediction Review モデル
-
-```python
-class PredictionStatus(Enum):
-    PENDING = "pending"     # 期限未到来
-    CORRECT = "correct"     # 的中
-    PARTIAL = "partial"     # 部分的中
-    INCORRECT = "incorrect" # 外れ
-
-@dataclass
-class Prediction:
-    id: str
-    statement: str          # 予測内容
-    target_date: date       # 予測対象日
-    confidence: float       # 予測時信頼度
-    claim_id: str | None    # 関連主張ID
-    created_at: datetime
-    status: PredictionStatus
-    actual_outcome: str | None    # 実際の結果
-    reviewed_at: datetime | None
-```
-
----
-
-## 6. ディレクトリ構造
+## 5. ディレクトリ構造
 
 ```
 apps/market_trend_monitor/
@@ -583,106 +393,87 @@ apps/market_trend_monitor/
 │   │   ├── analyzer_agent.py      # トレンド分析
 │   │   ├── reporter_agent.py      # レポート生成
 │   │   ├── notifier_agent.py      # 通知
-│   │   ├── evidence_ledger_agent.py  # 証拠管理【NEW】
-│   │   ├── signal_scorer_agent.py    # 信号評価【NEW】
-│   │   └── red_team_agent.py         # 反証分析【NEW】
+│   │   ├── evidence_ledger_agent.py  # 証拠管理
+│   │   ├── signal_scorer_agent.py    # 信号評価
+│   │   ├── redteam_agent.py          # 反証分析
+│   │   └── prediction_review_agent.py # 予測復盤
 │   │
 │   ├── api/
 │   │   ├── __init__.py
 │   │   ├── main.py
+│   │   ├── state.py               # アプリケーション状態管理
 │   │   └── routes/                # ルート分割
 │   │       ├── __init__.py
-│   │       ├── trends.py
-│   │       ├── evidence.py        # 【NEW】
-│   │       ├── signals.py         # 【NEW】
-│   │       ├── predictions.py     # 【NEW】
-│   │       └── sources.py         # 【NEW】
+│   │       ├── collect.py         # データ収集トリガー
+│   │       ├── trends.py          # トレンド・記事・レポート
+│   │       ├── evidence.py        # 証拠台帳
+│   │       ├── signals.py         # 信号評価
+│   │       ├── predictions.py     # 予測復盤
+│   │       ├── sources.py         # 情報源管理
+│   │       └── settings.py        # 設定管理
 │   │
 │   ├── models/                    # データモデル
 │   │   ├── __init__.py
 │   │   ├── schemas.py             # 基本スキーマ
 │   │   ├── agent_schemas.py       # エージェントI/O
-│   │   ├── evidence.py            # 証拠モデル【NEW】
-│   │   ├── signal.py              # 信号モデル【NEW】
-│   │   ├── red_team.py            # Red Team モデル【NEW】
-│   │   └── prediction.py          # 予測モデル【NEW】
+│   │   ├── evidence.py            # 証拠モデル
+│   │   ├── signal.py              # 信号モデル
+│   │   ├── red_team.py            # Red Team モデル
+│   │   ├── prediction.py          # 予測モデル
+│   │   └── source_registry.py     # 情報源台帳モデル
 │   │
 │   ├── services/                  # ビジネスロジック層
 │   │   ├── __init__.py
-│   │   ├── evidence_service.py    # 【NEW】
-│   │   ├── signal_service.py      # 【NEW】
-│   │   ├── prediction_service.py  # 【NEW】
-│   │   ├── source_registry.py     # 情報源管理【NEW】
-│   │   └── scheduler.py
+│   │   ├── evidence_service.py    # 証拠管理サービス
+│   │   ├── signal_service.py      # 信号評価サービス
+│   │   ├── prediction_service.py  # 予測復盤サービス
+│   │   ├── redteam_service.py     # 反証分析サービス
+│   │   ├── source_registry.py     # 情報源管理サービス
+│   │   ├── registry.py            # サービスレジストリ
+│   │   ├── market_store.py        # データ永続化
+│   │   └── report_export_service.py # PDF/PPTXエクスポート
 │   │
 │   ├── integrations/              # 外部連携
 │   │   ├── __init__.py
 │   │   ├── news_api.py
-│   │   ├── github_api.py          # 【NEW】
-│   │   ├── arxiv_api.py           # 【NEW】
-│   │   └── rss_fetcher.py         # 【NEW】
+│   │   ├── github_api.py          # GitHub API連携
+│   │   ├── arxiv_api.py           # arXiv API連携
+│   │   └── rss_fetcher.py         # RSSフィード取得
+│   │
+│   ├── db/                        # データベース層
+│   │   ├── __init__.py
+│   │   ├── base.py                # SQLAlchemy Base
+│   │   ├── models.py              # ORMモデル
+│   │   └── session.py             # セッション管理
 │   │
 │   ├── config.py
-│   ├── workflow.py
+│   ├── workflow.py                # FlowBuilder パターン
+│   ├── workflow_engine.py         # PipelineEngine パターン
 │   └── requirements.txt
 │
-├── configs/                       # 設定ファイル
-│   ├── flows/
-│   │   └── market_trend_monitor.yaml
-│   └── sources/
-│       └── source_registry.yaml   # 情報源台帳
+├── frontend/                      # React フロントエンド
+│   ├── src/
+│   │   ├── main.tsx
+│   │   └── types/index.ts
+│   ├── package.json
+│   └── tsconfig.json
 │
-├── frontend/                      # 将来実装
 ├── tests/
 │   ├── __init__.py
 │   ├── conftest.py
-│   ├── test_agents.py
-│   ├── test_workflow.py
-│   ├── test_evidence.py           # 【NEW】
-│   ├── test_signals.py            # 【NEW】
-│   └── test_red_team.py           # 【NEW】
+│   ├── test_agents.py             # エージェントユニットテスト
+│   ├── test_workflow.py           # ワークフローテスト
+│   ├── test_integration.py        # 統合テスト
+│   ├── test_evidence.py           # Evidence Ledger テスト
+│   ├── test_signals.py            # Signal Scoring テスト
+│   ├── test_red_team.py           # Red Team テスト
+│   └── test_predictions.py        # Prediction Review テスト
 │
+├── app_config.json                # アプリケーション設定
+├── AGENTS.md                      # エージェント仕様
 ├── DESIGN.md
 └── README.md
 ```
 
 ---
 
-## 7. 実装計画
-
-### Phase 1: データモデル拡張 & 基盤構築
-- [x] エージェント基底クラス実装
-- [x] Multi-Agent Coordinator 設定
-- [x] 基本データモデル定義
-- [ ] Evidence Ledger モデル実装
-- [ ] Signal Scoring モデル実装
-- [ ] Red Team モデル実装
-- [ ] Prediction Review モデル実装
-- [ ] Evidence Ledger Agent 実装
-- [ ] Evidence Service 実装
-
-### Phase 2: 信号評価 & 反証分析
-- [ ] Signal Scorer Agent 実装
-- [ ] Signal Service 実装
-- [ ] Red Team Agent 実装
-- [ ] 既存 CollectorAgent 拡張（Evidence連携）
-- [ ] 既存 AnalyzerAgent 拡張（Signal連携）
-
-### Phase 3: API拡張 & 予測復盤
-- [ ] Evidence API エンドポイント実装
-- [ ] Signal API エンドポイント実装
-- [ ] Prediction Review 機能実装
-- [ ] Prediction API エンドポイント実装
-
-### Phase 4: 統合 & 外部連携
-- [ ] GitHub API 連携実装
-- [ ] arXiv API 連携実装
-- [ ] RSS フィード連携実装
-- [ ] 情報源台帳 (Source Registry) 実装
-
-### Phase 5: テスト & 品質保証
-- [ ] Evidence Ledger ユニットテスト
-- [ ] Signal Scoring ユニットテスト
-- [ ] Red Team ユニットテスト
-- [ ] 統合テスト
-- [ ] 予測精度評価テスト

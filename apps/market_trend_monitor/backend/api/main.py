@@ -9,7 +9,9 @@ from contextlib import asynccontextmanager
 
 from apps.market_trend_monitor.backend.api.routes import (
     collect_router,
+    competitors_router,
     evidence_router,
+    metrics_router,
     predictions_router,
     settings_router,
     signals_router,
@@ -105,16 +107,23 @@ app.include_router(evidence_router)
 app.include_router(signals_router)
 app.include_router(predictions_router)
 app.include_router(sources_router)
+app.include_router(competitors_router)
+app.include_router(metrics_router)
 app.include_router(settings_router)
 
 
 if __name__ == "__main__":
     import uvicorn
+    from pathlib import Path
+
+    # バックエンドソースディレクトリのみを監視対象にして高速リロード
+    _backend_dir = str(Path(__file__).resolve().parents[2])
 
     uvicorn.run(
         "apps.market_trend_monitor.backend.api.main:app",
         host=config.api.host,
         port=config.api.port,
         reload=True,
+        reload_dirs=[_backend_dir],
         reload_excludes=["**/__pycache__/**", "**/data/**", "**/*.pyc"],
     )

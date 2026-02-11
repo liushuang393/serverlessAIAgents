@@ -1,29 +1,11 @@
-# apps/market_trend_monitor/
+# Unified Agent Instructions
 
-## Overview
-- Market trend monitoring demo: collector/analyzer/reporter/notifier agents.
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-apps/market_trend_monitor/
-└── backend/
-    ├── api/
-    ├── agents/
-    └── workflow.py
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| API server | `apps/market_trend_monitor/backend/api/main.py` | FastAPI entry.
-| Agents | `apps/market_trend_monitor/backend/agents/` | Collector/Analyzer/Reporter/Notifier.
-| Workflow wiring | `apps/market_trend_monitor/backend/workflow.py` | Orchestration glue.
-| App tests | `apps/market_trend_monitor/tests/` | App-level tests.
+適用ルール:
 
-## Run (Typical)
-```bash
-python -m apps.market_trend_monitor.backend.api.main
-```
-
-## Notes
-- README describes a frontend as planned/"not implemented"; treat this app as backend-first.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

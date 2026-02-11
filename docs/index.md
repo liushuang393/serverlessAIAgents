@@ -8,9 +8,8 @@
 
 | ドキュメント | 説明 |
 |-------------|------|
-| **[QUICKSTART.md](./QUICKSTART.md)** | ⭐ **まずここから** - 5分で動かす |
-| [getting-started-ja.md](./getting-started-ja.md) | 日本語入門ガイド |
-| [quickstart.md](./quickstart.md) | 英語版クイックスタート |
+| **[quickstart.md](./quickstart.md)** | ⭐ **まずここから** - 5分で動かす |
+| [getting-started-ja.md](./getting-started-ja.md) | 日本語入門（セットアップから日常運用まで） |
 
 ---
 
@@ -61,6 +60,7 @@
 | ドキュメント | 説明 |
 |-------------|------|
 | [DEVELOPMENT_STANDARDS_JA.md](./DEVELOPMENT_STANDARDS_JA.md) | 開発規約 |
+| [../code-rules/CLAUDE.md](../code-rules/CLAUDE.md) | プロジェクト開発規約 + 公開インターフェース設計ガイド（統合版） |
 | [FRAMEWORK_ABSTRACTION_PLAN.md](./FRAMEWORK_ABSTRACTION_PLAN.md) | フレームワーク抽象化計画 |
 | [design/APP_REFACTORING_PROPOSAL_JA.md](./design/APP_REFACTORING_PROPOSAL_JA.md) | アプリ リファクタリング提案 |
 | [design/DATALAKE_INTEGRATION_DESIGN.md](./design/DATALAKE_INTEGRATION_DESIGN.md) | DataLake 統合設計 |
@@ -150,4 +150,4 @@ agentflow studio --port 8000
 
 ---
 
-> 💡 **ヒント**: まずは [QUICKSTART.md](./QUICKSTART.md) を読んで、5分で最初の Agent を作成してみてください！
+> 💡 **ヒント**: まずは [quickstart.md](./quickstart.md) を読んで、5分で最初の Agent を作成してみてください！

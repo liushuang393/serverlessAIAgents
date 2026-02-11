@@ -177,6 +177,26 @@ class APIConfig:
 
 
 @dataclass
+class VectorDBConfig:
+    """ベクトルDB設定."""
+
+    collection_name: str = "market_trend_articles"
+    embedding_dimension: int = 1536
+    similarity_threshold: float = 0.92
+    mmr_lambda: float = 0.7
+
+
+@dataclass
+class EmbeddingConfig:
+    """Embedding設定."""
+
+    model_name: str = field(
+        default_factory=lambda: os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+    )
+    batch_size: int = 32
+
+
+@dataclass
 class AppConfig:
     """アプリケーション全体設定."""
 
@@ -187,6 +207,8 @@ class AppConfig:
     notifier: NotifierConfig = field(default_factory=NotifierConfig)
     database: DatabaseConfig = field(default_factory=DatabaseConfig)
     api: APIConfig = field(default_factory=APIConfig)
+    vectordb: VectorDBConfig = field(default_factory=VectorDBConfig)
+    embedding: EmbeddingConfig = field(default_factory=EmbeddingConfig)
 
     # ログ設定
     log_level: str = field(default_factory=lambda: os.getenv("LOG_LEVEL", "INFO"))

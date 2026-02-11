@@ -24,6 +24,9 @@ from apps.decision_governance_engine.schemas.output_schemas import (
 from apps.decision_governance_engine.services.human_review_policy import (
     enrich_review_with_policy,
 )
+from apps.decision_governance_engine.services.decision_scoring_service import (
+    score_decision_results,
+)
 
 
 class ReportGenerator:
@@ -77,6 +80,13 @@ class ReportGenerator:
         shu_result = results.get("shu", {})
         qi_result = results.get("qi", {})
         review_result = enrich_review_with_policy(results.get("review", {}))
+        scoring_result = score_decision_results({
+            "dao": dao_result,
+            "fa": fa_result,
+            "shu": shu_result,
+            "qi": qi_result,
+            "review": review_result,
+        })
 
         # ExecutiveSummary生成
         summary = self._generate_executive_summary(
@@ -106,6 +116,7 @@ class ReportGenerator:
             shu=shu_result,
             qi=qi_result,
             review=review_result,
+            scoring=scoring_result,
             executive_summary=summary,
         )
 

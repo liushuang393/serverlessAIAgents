@@ -1,31 +1,11 @@
-# studio/
+# Unified Agent Instructions
 
-## Overview
-- React/Vite frontend for AgentFlow Studio.
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-studio/
-├── vite.config.ts
-├── package.json
-└── src/  # React app
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| Dev scripts and dependencies | `studio/package.json` | `dev`, `build`, `lint`, `type-check`.
-| Vite dev server proxy | `studio/vite.config.ts` | Proxies `/api` + `/ws` to backend port 8000.
-| App entry | `studio/src/main.tsx` | React entrypoint.
-| Main UI components | `studio/src/components/` | Canvas/Sidebar/PropertiesPanel/etc.
-| State management | `studio/src/stores/workflowStore.ts` | Zustand store.
+適用ルール:
 
-## Notes
-- Backend API is `agentflow/studio/` (FastAPI). Frontend calls `/api/*` and `/ws/*` via proxy in dev.
-
-## Commands
-```bash
-cd studio && npm install
-cd studio && npm run dev
-cd studio && npm run build
-```
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

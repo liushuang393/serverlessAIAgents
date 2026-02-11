@@ -24,7 +24,7 @@
 抽出した情報に基づき、以下の階層化されたルール体系を設計：
 
 code-rules/
-├── claude.md                    # インデックス & ナビゲーション
+├── CLAUDE.md                    # インデックス & ナビゲーション
 ├── global/                      # 一般的なルール & ベストプラクティス
 │   ├── principles.md           # 開発原則
 │   ├── naming-guidelines.md    # 命名規則
@@ -66,7 +66,7 @@ code-rules/
 
 あなたはプロジェクトの README.md または index_ja.md を分析し、そのプロジェクトに最適化された包括的なルール体系を生成する専門家です。生成するルール体系は以下の構造に従ってください：
 
-#### 1. ルール体系インデックス（claude.md - 簡潔版）
+#### 1. ルール体系インデックス（CLAUDE.md - 簡潔版）
 ```markdown
 # 📌 Clause Code Rules インデックス
 
@@ -100,7 +100,7 @@ code-rules/
 #### 2. フォルダ構造（階層化アーキテクチャ）
 ```plaintext
 code-rules/
-├── claude.md                    # インデックス & ナビゲーション
+├── CLAUDE.md                    # インデックス & ナビゲーション
 ├── global/                      # 一般的なルール & ベストプラクティス
 │   ├── principles.md           # 開発原則
 │   ├── naming-guidelines.md    # 命名規則
@@ -327,7 +327,7 @@ ai-extract --source ./src --lang python --patterns "db.session|with context" --t
    ```bash
    # Clause Code Rules パターンでフォルダ構造を設計
    code-rules/
-   ├── claude.md              # 簡潔なインデックス
+   ├── CLAUDE.md              # 簡潔なインデックス
    ├── global/                # 普遍的なルール
    ├── languages/             # 言語別ルール
    ├── project/               # プロジェクト固有
@@ -338,7 +338,7 @@ ai-extract --source ./src --lang python --patterns "db.session|with context" --t
 3. **ルール文書生成**:
    ```bash
    # 各フォルダに対して詳細な文書を生成
-   - claude.md: ナビゲーション用インデックス
+   - CLAUDE.md: ナビゲーション用インデックス
    - global/principles.md: 開発原則
    - languages/python-rules.md: Python固有ルール
    - company-specific/[会社名]-python.md: 会社固有Pythonルール

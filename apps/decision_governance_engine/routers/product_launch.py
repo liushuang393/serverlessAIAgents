@@ -50,7 +50,7 @@ router = APIRouter(tags=["产品立项"])
 
 class ProductLaunchRequest(BaseModel):
     """产品立项リクエスト."""
-    question: str = Field(..., min_length=10, max_length=2000, description="立項質問（例: 新SaaS製品を立ち上げるべきか）")
+    question: str = Field(..., min_length=15, max_length=2000, description="立項質問（例: 新SaaS製品を立ち上げるべきか）")
     product_name: str = Field(default="", description="製品名（オプション）")
     target_market: str = Field(default="", description="ターゲット市場")
     budget_万円: float | None = Field(None, ge=0, description="予算制約（万円）")
@@ -168,4 +168,3 @@ async def process_product_launch(req: ProductLaunchRequest) -> ProductLaunchResp
         summary=contract.summary_bullets[:5],
         warnings=contract.warnings,
     )
-

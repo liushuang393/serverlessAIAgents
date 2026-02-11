@@ -39,6 +39,9 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
     - トピック分類
     - センチメント分析（LLM）
     - トレンド計算（成長率、スコア）
+    - エンティティ抽出（Phase 7）
+    - トピッククラスタリング（Phase 7）
+    - 異常検知（Phase 7）
 
     Note:
         LLM プロバイダー/モデルは環境変数から自動検出されます（松耦合）。
@@ -55,6 +58,9 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
         skill_router: SkillRouter | None = None,
         skill_runtime: SkillRuntime | None = None,
         evidence_service: EvidenceService | None = None,
+        entity_extraction_service: Any | None = None,
+        topic_clustering_service: Any | None = None,
+        anomaly_detection_service: Any | None = None,
     ) -> None:
         """初期化.
 
@@ -64,6 +70,10 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
         引数:
             skill_router: Skillルーター（None の場合は新規作成）
             skill_runtime: Skill実行環境（None の場合は新規作成）
+            evidence_service: 証拠管理サービス
+            entity_extraction_service: エンティティ抽出サービス（Phase 7）
+            topic_clustering_service: トピッククラスタリングサービス（Phase 7）
+            anomaly_detection_service: 異常検知サービス（Phase 7）
         """
         super().__init__()  # ResilientAgent が内部で get_llm() を呼び出す
         self._logger = logging.getLogger(self.name)
@@ -73,6 +83,11 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
         self._skill_runtime = skill_runtime or SkillRuntime()
         self._market_trend_skill: Skill | None = None
         self._evidence_service = evidence_service
+
+        # Phase 7: 分析エンジン強化
+        self._entity_extraction = entity_extraction_service
+        self._topic_clustering = topic_clustering_service
+        self._anomaly_detection = anomaly_detection_service
 
     def _parse_input(self, input_data: dict[str, Any]) -> AnalyzerInput:
         """入力データを Pydantic モデルに変換."""
@@ -106,6 +121,13 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
             trend_context,
             enable_sentiment,
         )
+
+        # Phase 7: エンティティ抽出・異常検知
+        entities = await self._extract_entities_from_articles(articles)
+        anomalies = await self._detect_anomalies(trends)
+        for trend in trends:
+            trend.entities = entities
+            trend.metadata["anomalies"] = anomalies
 
         # サマリー生成
         summary = await self._generate_summary(trends, keywords_stats)
@@ -158,8 +180,42 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
             metadata=schema.metadata,
         )
 
+    async def _extract_entities_from_articles(
+        self, articles: list[Article],
+    ) -> list[dict[str, Any]]:
+        """Phase 7: 記事からエンティティを抽出."""
+        if not self._entity_extraction:
+            return []
+        try:
+            all_entities = []
+            for article in articles[:20]:
+                text = f"{article.title}\n{article.content}"
+                entities = await self._entity_extraction.extract_entities(text)
+                all_entities.extend(entities)
+            merged = self._entity_extraction.merge_entities(all_entities)
+            return [e.to_dict() for e in merged[:20]]
+        except Exception as e:
+            self._logger.warning("エンティティ抽出失敗: %s", e)
+            return []
+
+    async def _detect_anomalies(
+        self, trends: list[Trend],
+    ) -> list[dict[str, Any]]:
+        """Phase 7: 異常検知."""
+        if not self._anomaly_detection:
+            return []
+        try:
+            anomalies = await self._anomaly_detection.detect_growth_rate_anomalies(trends)
+            return [a.to_dict() for a in anomalies[:10]]
+        except Exception as e:
+            self._logger.warning("異常検知失敗: %s", e)
+            return []
+
     async def _extract_keywords(self, articles: list[Article]) -> dict[str, int]:
         """キーワード抽出.
+
+        Phase 7: EntityExtractionService統合。
+        エンティティ名をキーワードとして優先的に使用。
 
         引数:
             articles: 記事リスト
@@ -171,6 +227,20 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
             stats = await self._extract_keywords_from_evidence()
             if stats:
                 return stats
+
+        # Phase 7: エンティティベースのキーワード抽出
+        if self._entity_extraction:
+            try:
+                all_entities = []
+                for article in articles[:20]:
+                    text = f"{article.title}\n{article.content}"
+                    entities = await self._entity_extraction.extract_entities(text)
+                    all_entities.extend(entities)
+                merged = self._entity_extraction.merge_entities(all_entities)
+                if merged:
+                    return {e.name: e.mentions for e in merged[:20]}
+            except Exception as e:
+                self._logger.warning("エンティティベースキーワード抽出失敗: %s", e)
 
         all_keywords: list[str] = []
         for article in articles:
@@ -325,17 +395,18 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
     def _calculate_growth_rate(self, current: float, previous: float) -> tuple[float, str]:
         """成長率と状態を計算.
 
-        Note:
-            previous が 0 以下のケースは数学的に比率が定義しづらいため、
-            成長率を 0.0 に固定し「new」として扱います。
+        Phase 10修正: 前期=0で新規トピックの場合はgrowth_rate=1.0を返す。
+        新興トレンドの重要性を正しく反映するためのラプラス平滑化を適用。
         """
         if current <= 0 and previous <= 0:
             return 0.0, "no_signal"
         if previous <= 0 and current > 0:
-            return 0.0, "new"
+            # Phase 10: 新規トピックは最大成長率を付与
+            return 1.0, "new"
 
-        # 微小母数で成長率が暴騰しないように平滑化し、可視化可能な範囲にクリップする
-        raw_rate = (current - previous) / (previous + 1.0)
+        # ラプラス平滑化: 分母にε=0.5を加えて微小母数の暴騰を抑制
+        epsilon = 0.5
+        raw_rate = (current - previous) / (previous + epsilon)
         growth_rate = max(min(raw_rate, 3.0), -1.0)
 
         if growth_rate > 0.05:

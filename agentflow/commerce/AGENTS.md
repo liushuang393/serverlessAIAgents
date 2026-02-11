@@ -1,21 +1,11 @@
-# agentflow/commerce/
+# Unified Agent Instructions
 
-## Overview
-- Commerce domain modules (interfaces, models, providers) and UCP integration points.
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-agentflow/commerce/
-├── interfaces/
-├── models/
-└── providers/
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| UCP messages/client | `agentflow/protocols/ucp/` | Protocol message schema and client.
-| Commerce interfaces/models | `agentflow/commerce/interfaces/`, `agentflow/commerce/models/` | Domain contracts.
+適用ルール:
 
-## Notes
-- Protocol definitions for UCP live under `agentflow/protocols/ucp/`.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

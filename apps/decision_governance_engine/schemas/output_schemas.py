@@ -324,6 +324,10 @@ class DecisionReport(BaseModel):
     shu: dict[str, Any] | ShuOutput = Field(..., description="ShuAgent結果（術 - 実行計画）")
     qi: dict[str, Any] | QiOutput = Field(..., description="QiAgent結果（器 - 技術実装）")
     review: dict[str, Any] | ReviewOutput = Field(..., description="ReviewAgent結果（検証）")
+    scoring: dict[str, Any] | None = Field(
+        default=None,
+        description="定量スコアリング結果（8次元評価）",
+    )
 
     # エグゼクティブサマリー
     executive_summary: ExecutiveSummary = Field(..., description="エグゼクティブサマリー")

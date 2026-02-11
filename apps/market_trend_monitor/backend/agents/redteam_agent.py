@@ -126,30 +126,46 @@ class RedTeamAgent(ResilientAgent[RedTeamInput, RedTeamOutput]):
             # ClaimSchema から Claim に変換
             claim = self._schema_to_claim(claim_schema)
 
-            # 各チャレンジタイプで分析
+            # Phase 10: LLMベースのチャレンジ生成・評価
+            prompts = self._redteam_service.generate_challenge_prompts(claim)
+
             for challenge_type in challenge_types:
-                # チャレンジを生成
+                # 該当タイプのプロンプトを取得
+                prompt_entry = next(
+                    (p for p in prompts if p["type"] == challenge_type.value),
+                    None,
+                )
+                if not prompt_entry:
+                    continue
+
+                # LLMで反論を生成
+                argument = await self._generate_challenge_argument(
+                    prompt_entry["prompt"],
+                    claim.statement,
+                    challenge_type.value,
+                )
+
                 challenge = self._redteam_service.create_challenge(
                     claim=claim,
                     challenge_type=challenge_type,
-                    argument=f"Auto-generated challenge for {claim.statement}",
+                    argument=argument,
                 )
 
-                # 簡易評価（実際はLLMで評価）
-                is_valid = claim.confidence < 0.8
-                impact = 0.3 if is_valid else 0.1
+                # LLMで有効性を評価
+                is_valid, impact = await self._evaluate_challenge_with_llm(
+                    claim.statement, argument, challenge_type.value,
+                )
 
                 result = self._redteam_service.evaluate_challenge(
                     challenge=challenge,
                     is_valid=is_valid,
                     impact_score=impact,
-                    evaluator_notes="Auto-evaluated",
+                    evaluator_notes="LLM-evaluated",
                 )
 
                 if is_valid:
                     valid_count += 1
 
-                # スキーマに変換
                 all_challenges.append(self._challenge_to_schema(challenge))
                 all_results.append(self._result_to_schema(result))
 
@@ -199,6 +215,64 @@ class RedTeamAgent(ResilientAgent[RedTeamInput, RedTeamOutput]):
             counter_evidence_ids=challenge.counter_evidence_ids,
             created_at=challenge.created_at.isoformat(),
         )
+
+    async def _generate_challenge_argument(
+        self,
+        prompt: str,
+        statement: str,
+        challenge_type: str,
+    ) -> str:
+        """LLMで反論を生成.
+
+        Args:
+            prompt: チャレンジプロンプト
+            statement: 主張文
+            challenge_type: チャレンジタイプ
+
+        Returns:
+            生成された反論
+        """
+        try:
+            response = await self._call_llm(prompt)
+            if response and response.strip():
+                return response.strip()[:500]
+        except Exception as e:
+            self._logger.warning("LLMチャレンジ生成失敗: %s", e)
+        return f"[{challenge_type}] {statement} に対する検証が必要"
+
+    async def _evaluate_challenge_with_llm(
+        self,
+        statement: str,
+        argument: str,
+        challenge_type: str,
+    ) -> tuple[bool, float]:
+        """LLMでチャレンジの有効性を評価.
+
+        Returns:
+            (is_valid, impact_score) のタプル
+        """
+        prompt = (
+            f"以下の主張に対する反論の有効性を評価してください。\n\n"
+            f"主張: {statement}\n"
+            f"反論タイプ: {challenge_type}\n"
+            f"反論: {argument}\n\n"
+            f"JSON形式で回答: "
+            f'{{"is_valid": true/false, "impact": 0.0-1.0, "reason": "..."}}'
+        )
+        try:
+            response = await self._call_llm(prompt)
+            if response:
+                import json
+                start = response.find("{")
+                end = response.rfind("}")
+                if start != -1 and end > start:
+                    data = json.loads(response[start:end + 1])
+                    is_valid = bool(data.get("is_valid", False))
+                    impact = min(max(float(data.get("impact", 0.3)), 0.0), 1.0)
+                    return is_valid, impact
+        except Exception as e:
+            self._logger.warning("LLMチャレンジ評価失敗: %s", e)
+        return False, 0.1
 
     def _result_to_schema(
         self, result: Any

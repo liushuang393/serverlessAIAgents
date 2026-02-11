@@ -28,6 +28,5 @@ feedparser>=6.0.11
 # Utilities
 python-dotenv>=1.0.0
 
-# Export (PDF / PPTX)
+# Export (PDF)
 reportlab>=4.0.0
-python-pptx>=0.6.23

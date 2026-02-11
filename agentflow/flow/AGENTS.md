@@ -1,25 +1,11 @@
-# agentflow/flow/
+# Unified Agent Instructions
 
-## Overview
-- Declarative Flow DSL used to compose multi-step executions (gate/then/parallel/review).
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-agentflow/flow/
-├── builder.py    # create_flow() builder API
-├── nodes.py      # node model + execution
-└── progress.py   # progress/event shaping
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| Flow builder API | `agentflow/flow/builder.py` | `create_flow()` entrypoint.
-| Nodes and execution model | `agentflow/flow/nodes.py` | Node types: Agent/Gate/Parallel/Review.
-| Progress/events | `agentflow/flow/progress.py` | Bridges flow progress to AG-UI shapes.
+適用ルール:
 
-## Notes
-- `PipelineEngine` composes a Flow; changes here affect multi-stage engine behavior.
-
-## Anti-Patterns
-- Emitting AG-UI-ish dicts directly from Flow code; prefer `agentflow/protocols/agui_events.py` models.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

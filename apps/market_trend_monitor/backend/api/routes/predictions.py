@@ -37,6 +37,18 @@ async def list_predictions(reviewed: bool | None = None) -> dict:
     return {"predictions": [p.to_dict() for p in predictions], "total": len(predictions)}
 
 
+@router.get("/api/predictions/accuracy")
+async def get_prediction_accuracy() -> dict:
+    """精度統計を取得."""
+    return prediction_service.get_accuracy_stats()
+
+
+@router.get("/api/predictions/calibration")
+async def get_calibration_metrics() -> dict:
+    """Phase 12: 予測キャリブレーション（Brier Score）を取得."""
+    return prediction_service.get_calibration_metrics()
+
+
 @router.get("/api/predictions/{prediction_id}")
 async def get_prediction(prediction_id: str) -> dict:
     """予測詳細を取得."""
@@ -83,9 +95,3 @@ async def review_prediction(
     if not review:
         raise HTTPException(status_code=404, detail="Prediction not found")
     return review.to_dict()
-
-
-@router.get("/api/predictions/accuracy")
-async def get_prediction_accuracy() -> dict:
-    """精度統計を取得."""
-    return prediction_service.get_accuracy_stats()

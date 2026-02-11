@@ -31,7 +31,7 @@
 
 ```
 📁 docs/rules2/
-├── 📄 claude.md                    # 🔍 インデックス（最初に読む）
+├── 📄 CLAUDE.md                    # 🔍 インデックス（最初に読む）
 ├── 📁 global/                      # 🌍 普遍的な原則
 ├── 📁 languages/                   # 🐍 言語固有ルール
 ├── 📁 project/                     # 🏢 AgentFlow 固有
@@ -53,7 +53,7 @@
 ### Step 1: 事前準備（5分）
 ```bash
 # 1. インデックスを読む
-cat docs/rules2/claude.md
+cat docs/rules2/CLAUDE.md
 
 # 2. グローバルルールを確認
 head -20 docs/rules2/global/principles.md
@@ -579,7 +579,7 @@ OpenAI Provider を統合せよ
 
 ## 📚 関連リソース
 
-- **[claude.md](claude.md)**: ルール体系インデックス
+- **[CLAUDE.md](CLAUDE.md)**: ルール体系インデックス
 - **[ai-extract.py](ai-extract.py)**: AI ルール自動抽出スクリプト
 - **[generate-zip.py](generate-zip.py)**: ルールパッケージ生成スクリプト
 - **[プロジェクトルート](../../../README.md)**: AgentFlow 概要

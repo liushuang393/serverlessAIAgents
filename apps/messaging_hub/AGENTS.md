@@ -1,29 +1,11 @@
-# apps/messaging_hub/
+# Unified Agent Instructions
 
-## Overview
-- Multi-platform chatbot gateway (Telegram/Slack/Discord) with unified session management.
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-apps/messaging_hub/
-├── main.py
-├── agents/
-└── admin_ui/  # optional
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| FastAPI app + runtime entry | `apps/messaging_hub/main.py` | Contains FastAPI app + `__main__` runner.
-| Agents | `apps/messaging_hub/agents/` | App-level agents.
-| Env config | `apps/messaging_hub/.env.example` | Platform tokens + LLM provider.
+適用ルール:
 
-## Run (Typical)
-```bash
-python apps/messaging_hub/main.py
-# or
-uvicorn apps.messaging_hub.main:app --reload --port 8000
-```
-
-## Notes
-- Requires at least one LLM provider key and one platform token (see `.env.example`).
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

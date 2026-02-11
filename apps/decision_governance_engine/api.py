@@ -54,11 +54,19 @@ logger = logging.getLogger("decision_api")
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     """アプリケーションライフサイクル管理.
 
-    起動時: 設定情報をログ出力
-    終了時: クリーンアップ処理
+    起動時: DB初期化 + 設定情報をログ出力
+    終了時: DB接続クローズ + クリーンアップ処理
     """
     log_level = LogLevel.DEBUG if os.getenv("DEBUG") else LogLevel.INFO
     setup_logging(level=log_level, format="text")
+
+    # データベース接続を確立（履歴保存に必須）
+    from apps.decision_governance_engine.repositories.database import close_db, init_db
+    try:
+        await init_db()
+        logger.info("Database connection established")
+    except Exception as e:
+        logger.warning(f"Database initialization failed (history will use fallback): {e}")
 
     register_flow_definition()
     setup_result_store()
@@ -67,6 +75,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
     yield
 
+    # DB接続をクリーンアップ
+    try:
+        await close_db()
+    except Exception as e:
+        logger.warning(f"Database cleanup error: {e}")
     logger.info("Decision Governance Engine API shutting down")
 
 

@@ -1,45 +1,53 @@
 # Market Trend Monitor
 
-**市場動向監視システム** - COBOL→Java移行、AI関連技術の市場動向を自動収集・分析
+**市場動向監視システム** — COBOL→Java移行、AI関連技術の市場動向を自動収集・分析
 
 ## 概要
 
-Market Trend Monitor は、AgentFlow フレームワークを使用した実用的なアプリケーション例です。Multi-Agent パターンで複数のエージェントが協調動作し、
-市場動向を自動的に監視・分析します。
+Market Trend Monitor は、AgentFlow フレームワークを使用した Multi-Agent アプリケーションです。
+9 つのエージェントが協調動作し、市場動向を自動的に監視・分析します。
 
 ### 主要機能
 
-- 📊 **データ収集**: 複数ソース（ニュース、GitHub、arXiv、RSS）から自動収集
-- 🔍 **トレンド分析**: キーワード抽出、トピック分類、センチメント分析
-- 📝 **レポート生成**: 日次/週次レポートの自動生成
+- 📊 **データ収集**: 複数ソース（ニュース、GitHub、arXiv、RSS、Dev.to、StackOverflow）から自動収集
+- 🔍 **トレンド分析**: キーワード抽出、トピッククラスタリング、センチメント分析
+- 🛡️ **信頼性評価**: シグナルスコアリング、ベイズ信頼度、Red Team 検証
+- 📝 **レポート生成**: 日次/週次レポートの自動生成（PDF エクスポート対応）
 - 🔔 **リアルタイム通知**: 重要な変化を即座に検知
-- 📈 **ダッシュボード**: トレンドグラフ、最新ニュースの可視化
+- 📈 **ダッシュボード**: React + TypeScript によるトレンド可視化
 
 ## アーキテクチャ
 
 ```
-Frontend (React) ←→ REST API / WebSocket ←→ Backend (AgentFlow)
-                                                    ↓
-                                          Multi-Agent Coordinator
-                                                    ↓
-                        ┌───────────────┬───────────────┬───────────────┐
-                        ↓               ↓               ↓               ↓
-                  CollectorAgent  AnalyzerAgent  ReporterAgent  NotifierAgent
+Frontend (React/Vite) ←→ REST API ←→ Backend (FastAPI + AgentFlow)
+                                              ↓
+                                    Flow (create_flow パイプライン)
+                                              ↓
+  ┌──────────┬──────────────┬──────────┬──────────────┬──────────┬──────────┬──────────┐
+  ↓          ↓              ↓          ↓              ↓          ↓          ↓
+Collector → EvidenceLedger → Analyzer → SignalScorer → Reporter → RedTeam → Notifier
 ```
 
 ### エージェント構成
 
-1. **CollectorAgent**: データ収集
-2. **AnalyzerAgent**: トレンド分析
-3. **ReporterAgent**: レポート生成
-4. **NotifierAgent**: 通知送信
+| # | エージェント | 役割 |
+|---|------------|------|
+| 1 | **CollectorAgent** | 複数ソースからデータ収集 |
+| 2 | **EvidenceLedgerAgent** | 証拠台帳の管理 |
+| 3 | **AnalyzerAgent** | トレンド分析・センチメント分析 |
+| 4 | **SignalScorerAgent** | シグナル信頼度スコアリング |
+| 5 | **ReporterAgent** | レポート生成 |
+| 6 | **RedTeamAgent** | 仮説の反証検証 |
+| 7 | **NotifierAgent** | アラート通知 |
+| 8 | **CompetitorTrackingAgent** | 競合動向追跡 |
+| 9 | **PredictionReviewAgent** | 予測レビュー |
 
 ## セットアップ
 
 ### 前提条件
 
 - Python 3.13+
-- Node.js 18+ (フロントエンド用)
+- Node.js 18+（フロントエンド用）
 - AgentFlow フレームワーク
 
 ### ポート設定（一元管理）
@@ -54,149 +62,111 @@ Frontend (React) ←→ REST API / WebSocket ←→ Backend (AgentFlow)
 }
 ```
 
-### バックエンドセットアップ
+環境変数で上書きも可能です:
+
+| 環境変数 | 説明 | デフォルト |
+|---------|------|----------|
+| `MARKET_TREND_MONITOR_API_HOST` | API ホスト | `app_config.json` の値 |
+| `MARKET_TREND_MONITOR_API_PORT` | API ポート | `8002` |
+| `MARKET_TREND_MONITOR_FRONTEND_PORT` | フロントエンドポート | `3002` |
+| `OPENAI_API_KEY` | OpenAI API キー | — |
+| `DATABASE_URL` | DB 接続先 | `sqlite:///./market_trend.db` |
+| `LOG_LEVEL` | ログレベル | `INFO` |
+
+## 起動方法
+
+### バックエンド
 
 ```bash
-# 依存関係インストール
-cd ./apps/market_trend_monitor/backend
+# 依存関係インストール（初回のみ）
+cd apps/market_trend_monitor/backend
 pip install -r requirements.txt
+```
 
-# 環境変数設定（オプション）
-export OPENAI_API_KEY=
-export DATABASE_URL="sqlite:///./market_trend.db"
-export LOG_LEVEL="INFO"
+#### ローカル開発（ホットリロード有効）
 
-# サーバー起動
+プロジェクトルートから実行します。
+コード変更時に自動リロードされます（`apps/market_trend_monitor/` 配下を監視）。
+
+```bash
 python -m apps.market_trend_monitor.backend.api.main
 ```
 
-サーバーはデフォルトで `http://localhost:8002` で起動します。
-
-### フロントエンドセットアップ
+#### 本番起動
 
 ```bash
-# 依存関係インストール
-cd ./apps/market_trend_monitor/frontend
+uvicorn apps.market_trend_monitor.backend.api.main:app \
+  --host 0.0.0.0 --port 8002
+```
+
+バックエンドは `http://localhost:8002` で起動します。
+
+### フロントエンド
+
+```bash
+# 依存関係インストール（初回のみ）
+cd apps/market_trend_monitor/frontend
 npm install
 
-# 開発サーバー起動
+# 開発サーバー起動（ホットリロード有効）
 npm run dev
 ```
 
-フロントエンドはデフォルトで `http://localhost:3002` で起動します。
+フロントエンドは `http://localhost:3002` で起動します。
+Vite の HMR により、ソース変更は即座にブラウザへ反映されます。
 
 ### API ドキュメント
 
-起動後、以下の URL でドキュメントを確認できます:
-- Swagger UI: http://localhost:<api_port>/docs
-- ReDoc: http://localhost:<api_port>/redoc
+バックエンド起動後、以下の URL で確認できます:
 
-## 使用方法
-
-### 手動データ収集
-
-```bash
-curl -X POST http://localhost:<api_port>/api/collect \
-  -H "Content-Type: application/json" \
-  -d '{
-    "keywords": ["COBOL", "Java migration", "AI"],
-    "sources": ["news", "github"]
-  }'
-```
-
-### レポートのバイナリエクスポート（PDF / PPTX）
-
-```bash
-# PDF
-curl -L -o market_report.pdf \
-  http://localhost:<api_port>/api/reports/<report_id>/export/pdf
-
-# PPTX
-curl -L -o market_report.pptx \
-  http://localhost:<api_port>/api/reports/<report_id>/export/pptx
-```
-
-出力テンプレートは以下の構成です。
-- 表紙
-- 目次
-- KPIサマリー
-- トレンドチャート
-- 詳細分析
-- 結論と次アクション
-
-### Python API
-
-```python
-from apps.market_trend_monitor.backend.workflow import workflow
-
-# ワークフロー初期化
-await workflow.initialize()
-
-# 実行
-result = await workflow.run({
-    "keywords": ["COBOL", "Java migration"],
-    "sources": ["news"]
-})
-
-# クリーンアップ
-await workflow.cleanup()
-```
+- Swagger UI: http://localhost:8002/docs
+- ReDoc: http://localhost:8002/redoc
 
 ## テスト
 
 ```bash
-# ユニットテスト実行
-cd apps/market-trend-monitor
-pytest tests/ -v
+# バックエンド ユニットテスト
+pytest apps/market_trend_monitor/tests/ -v
 
 # カバレッジ付き
-pytest tests/ --cov=backend --cov-report=html
-```
+pytest apps/market_trend_monitor/tests/ --cov=apps/market_trend_monitor/backend --cov-report=html
 
-## 設定
-
-設定は `backend/config.py` で管理されています:
-
-```python
-from apps.market_trend_monitor.backend.config import config
-
-# 収集設定
-config.collector.keywords = ["COBOL", "Java", "AI"]
-config.collector.interval_seconds = 3600
-
-# 分析設定
-config.analyzer.llm_provider = "openai"
-config.analyzer.llm_model = "gpt-4"
-
-# 通知設定
-config.notifier.alert_growth_rate_threshold = 0.3
+# フロントエンド テスト
+cd apps/market_trend_monitor/frontend
+npm test
 ```
 
 ## ディレクトリ構造
 
 ```
-apps/market-trend-monitor/
+apps/market_trend_monitor/
+├── app_config.json              # ポート設定（一元管理）
 ├── backend/
-│   ├── agents/              # エージェント実装
-│   │   ├── collector_agent.py
-│   │   ├── analyzer_agent.py
-│   │   ├── reporter_agent.py
-│   │   └── notifier_agent.py
-│   ├── api/                 # FastAPI サーバー
-│   │   └── main.py
-│   ├── models/              # データモデル
-│   │   └── schemas.py
-│   ├── config.py            # 設定管理
-│   ├── workflow.py          # ワークフロー定義
-│   └── requirements.txt
-├── frontend/                # React フロントエンド（未実装）
-├── tests/                   # テスト
-│   ├── test_agents.py
-│   └── test_workflow.py
-├── DESIGN.md                # 設計書
-└── README.md                # このファイル
+│   ├── agents/                  # エージェント実装（9 エージェント）
+│   ├── api/                     # FastAPI サーバー
+│   │   ├── main.py              # エントリポイント
+│   │   ├── state.py             # アプリケーション状態
+│   │   └── routes/              # API ルーティング
+│   ├── db/                      # データベース（SQLAlchemy）
+│   ├── integrations/            # 外部 API 連携
+│   ├── models/                  # データモデル・スキーマ
+│   ├── services/                # ビジネスロジック
+│   ├── config.py                # 設定管理
+│   ├── workflow.py              # Flow パイプライン定義
+│   ├── workflow_engine.py       # ワークフローエンジン
+│   └── requirements.txt         # Python 依存関係
+├── frontend/                    # React + Vite + TypeScript
+│   ├── src/
+│   │   ├── components/          # UI コンポーネント
+│   │   ├── api/                 # API クライアント
+│   │   ├── store/               # Zustand 状態管理
+│   │   └── types/               # 型定義
+│   ├── package.json
+│   └── vite.config.ts
+├── tests/                       # バックエンドテスト
+├── DESIGN.md                    # 設計書
+└── README.md                    # このファイル
 ```
-
 
 ## ライセンス
 
@@ -205,4 +175,3 @@ MIT License
 ## 関連ドキュメント
 
 - [設計書](DESIGN.md)
-- [AgentFlow ドキュメント](../../../docs/)

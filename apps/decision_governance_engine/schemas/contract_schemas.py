@@ -16,14 +16,11 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from pydantic import BaseModel, Field
-
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 
 class DecisionRole(str, Enum):
@@ -124,6 +121,7 @@ class DecisionGovResponseV1(BaseModel):
     shu: dict[str, Any] = Field(default_factory=dict, description="術（実行計画）")
     qi: dict[str, Any] = Field(default_factory=dict, description="器（技術実装）")
     review: dict[str, Any] = Field(default_factory=dict, description="検証")
+    scoring: dict[str, Any] = Field(default_factory=dict, description="定量スコアリング結果")
 
     evidence: list[EvidenceItem] = Field(default_factory=list, description="証拠プール")
     claims: list[Claim] = Field(default_factory=list, description="主張一覧")

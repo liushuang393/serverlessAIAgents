@@ -1,7 +1,7 @@
-"""レポート二進制エクスポートサービス.
+"""レポートPDFエクスポートサービス.
 
 Market Trend Monitor のレポートを企業向けテンプレートで
-PDF / PPTX 形式へ出力します。
+PDF 形式へ出力します。
 """
 
 from __future__ import annotations
@@ -15,12 +15,11 @@ from typing import Any
 
 
 class ReportExportService:
-    """レポートのPDF/PPTX生成サービス."""
+    """レポートのPDF生成サービス."""
 
     def __init__(self) -> None:
         self._logger = logging.getLogger(self.__class__.__name__)
         self._has_reportlab = self._check_reportlab()
-        self._has_python_pptx = self._check_python_pptx()
 
     def _check_reportlab(self) -> bool:
         """ReportLab 利用可否を確認."""
@@ -30,16 +29,6 @@ class ReportExportService:
             return True
         except ImportError:
             self._logger.warning("ReportLab が未インストールのため PDF 出力は利用不可")
-            return False
-
-    def _check_python_pptx(self) -> bool:
-        """python-pptx 利用可否を確認."""
-        try:
-            from pptx import Presentation  # noqa: F401
-
-            return True
-        except ImportError:
-            self._logger.warning("python-pptx が未インストールのため PPTX 出力は利用不可")
             return False
 
     def export_pdf(self, report: dict[str, Any]) -> bytes:
@@ -53,16 +42,6 @@ class ReportExportService:
             self._logger.error("PDF生成に失敗: %s", exc, exc_info=True)
             raise RuntimeError(f"PDF生成に失敗しました: {exc}") from exc
 
-    def export_pptx(self, report: dict[str, Any]) -> bytes:
-        """PPTXバイナリを生成."""
-        if not self._has_python_pptx:
-            raise RuntimeError("python-pptx が未インストールのため PPTX 出力できません")
-
-        try:
-            return self._build_pptx(report)
-        except Exception as exc:
-            self._logger.error("PPTX生成に失敗: %s", exc, exc_info=True)
-            raise RuntimeError(f"PPTX生成に失敗しました: {exc}") from exc
 
     def _build_pdf(self, report: dict[str, Any]) -> bytes:
         """企業テンプレートPDFを生成."""
@@ -265,144 +244,6 @@ class ReportExportService:
         doc.build(elements)
         return buffer.getvalue()
 
-    def _build_pptx(self, report: dict[str, Any]) -> bytes:
-        """企業テンプレートPPTXを生成."""
-        from pptx import Presentation
-        from pptx.chart.data import CategoryChartData
-        from pptx.dml.color import RGBColor
-        from pptx.enum.chart import XL_CHART_TYPE
-        from pptx.util import Inches, Pt
-
-        title = str(report.get("title", "市場動向レポート"))
-        report_id = str(report.get("id", "-"))
-        created_at = self._safe_datetime(str(report.get("created_at", "")))
-        period_start = self._safe_datetime(str(report.get("period_start", "")))
-        period_end = self._safe_datetime(str(report.get("period_end", "")))
-        sections = self._sections(report)
-        trends = self._trends(report)
-
-        presentation = Presentation()
-
-        # 1. 表紙
-        slide = presentation.slides.add_slide(presentation.slide_layouts[0])
-        slide.shapes.title.text = title
-        subtitle = slide.placeholders[1]
-        subtitle.text = (
-            "企業向け 市場動向分析レポート\n"
-            f"レポートID: {report_id}\n"
-            f"作成日時: {created_at}\n"
-            f"対象期間: {period_start} - {period_end}"
-        )
-
-        # 2. 目次
-        slide = presentation.slides.add_slide(presentation.slide_layouts[1])
-        slide.shapes.title.text = "目次"
-        content_frame = slide.placeholders[1].text_frame
-        content_frame.clear()
-        toc_items = [
-            "1. KPIサマリー",
-            "2. トレンドチャート",
-            "3. 成長率チャート",
-            "4. 詳細分析",
-            "5. 結論と次アクション",
-        ]
-        for item in toc_items:
-            paragraph = content_frame.add_paragraph()
-            paragraph.text = item
-            paragraph.level = 0
-
-        # 3. KPIサマリー
-        slide = presentation.slides.add_slide(presentation.slide_layouts[5])
-        slide.shapes.title.text = "KPIサマリー"
-        textbox = slide.shapes.add_textbox(Inches(0.8), Inches(1.5), Inches(8.2), Inches(3.5))
-        tf = textbox.text_frame
-        tf.word_wrap = True
-        avg_score = sum(self._as_float(t.get("score")) for t in trends) / max(len(trends), 1)
-        total_articles = sum(self._as_int(t.get("articles_count")) for t in trends)
-        lines = [
-            f"トレンド件数: {len(trends)}",
-            f"総記事件数: {total_articles}",
-            f"平均スコア: {avg_score:.2f}",
-            f"分析セクション件数: {len(sections)}",
-            "注: NEW は前期間データがない新規検知",
-        ]
-        tf.text = lines[0]
-        for line in lines[1:]:
-            p = tf.add_paragraph()
-            p.text = line
-
-        # 4. トレンドスコア棒グラフ
-        slide = presentation.slides.add_slide(presentation.slide_layouts[5])
-        slide.shapes.title.text = "トレンドスコア"
-        score_data = CategoryChartData()
-        score_data.categories = [self._truncate(str(t.get("topic", "-")), 18) for t in trends[:8]]
-        score_data.add_series("スコア", [self._as_float(t.get("score")) for t in trends[:8]])
-        score_chart = slide.shapes.add_chart(
-            XL_CHART_TYPE.COLUMN_CLUSTERED,
-            Inches(0.7),
-            Inches(1.5),
-            Inches(8.6),
-            Inches(4.3),
-            score_data,
-        ).chart
-        score_chart.has_legend = False
-        score_chart.value_axis.maximum_scale = max(1.0, score_chart.value_axis.maximum_scale or 1.0)
-
-        # 5. 成長率折れ線グラフ
-        slide = presentation.slides.add_slide(presentation.slide_layouts[5])
-        slide.shapes.title.text = "成長率"
-        growth_data = CategoryChartData()
-        growth_data.categories = [self._truncate(str(t.get("topic", "-")), 18) for t in trends[:8]]
-        growth_data.add_series(
-            "成長率(%)",
-            [self._growth_value_percent(t) for t in trends[:8]],
-        )
-        growth_chart = slide.shapes.add_chart(
-            XL_CHART_TYPE.LINE_MARKERS,
-            Inches(0.7),
-            Inches(1.5),
-            Inches(8.6),
-            Inches(4.3),
-            growth_data,
-        ).chart
-        growth_chart.has_legend = False
-
-        # 6. 詳細分析と結論
-        slide = presentation.slides.add_slide(presentation.slide_layouts[1])
-        slide.shapes.title.text = "結論と次アクション"
-        tf = slide.placeholders[1].text_frame
-        tf.clear()
-
-        top_trend = trends[0] if trends else {}
-        top_topic = str(top_trend.get("topic", "主要トピックなし"))
-        top_score = self._as_float(top_trend.get("score"))
-        top_growth = self._growth_label(top_trend)
-
-        conclusion_lines = [
-            f"最注目トピック: {top_topic} (スコア {top_score:.2f}, 成長 {top_growth})",
-            "NEW 判定トピックは母数確認後に優先順位を決定する",
-            "上位3トピックの追加証拠収集を次周期計画へ反映する",
-        ]
-        if sections:
-            section_titles = ", ".join(
-                self._truncate(str(s.get("title", "")), 24) for s in sections[:3]
-            )
-            conclusion_lines.append(f"主要分析セクション: {section_titles}")
-
-        tf.text = conclusion_lines[0]
-        first_run = tf.paragraphs[0].runs[0]
-        first_run.font.bold = True
-        first_run.font.size = Pt(20)
-        first_run.font.color.rgb = RGBColor(30, 64, 175)
-        for line in conclusion_lines[1:]:
-            p = tf.add_paragraph()
-            p.text = line
-            p.level = 0
-            p.font.size = Pt(16)
-
-        output = io.BytesIO()
-        presentation.save(output)
-        return output.getvalue()
 
     def _sections(self, report: dict[str, Any]) -> list[dict[str, Any]]:
         """セクション一覧を正規化."""
@@ -471,10 +312,4 @@ class ReportExportService:
             return "N/A"
         return f"{self._as_float(trend.get('growth_rate')) * 100:.1f}%"
 
-    def _growth_value_percent(self, trend: dict[str, Any]) -> float:
-        """チャート用成長率(%)."""
-        metadata = trend.get("metadata", {})
-        growth_state = metadata.get("growth_state") if isinstance(metadata, dict) else None
-        if growth_state == "new":
-            return 0.0
-        return self._as_float(trend.get("growth_rate")) * 100.0
+

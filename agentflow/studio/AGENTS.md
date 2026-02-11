@@ -1,33 +1,11 @@
-# agentflow/studio/
+# Unified Agent Instructions
 
-## Overview
-- Studio backend (FastAPI): agent/workflow management, preview, publish, knowledge, marketplace.
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-agentflow/studio/
-├── server.py        # Uvicorn runner
-├── api.py           # FastAPI app factory
-├── models.py        # shared pydantic models
-└── routes/          # feature routers
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| Server entrypoint | `agentflow/studio/server.py` | CLI entry; runs Uvicorn.
-| App factory | `agentflow/studio/api.py` | `create_app()` wires routers + CORS.
-| Routes | `agentflow/studio/routes/` | Feature routers (agents/workflows/preview/publish/etc.).
-| Shared request/response models | `agentflow/studio/models.py` | Pydantic models for API.
+適用ルール:
 
-## Integration Notes
-- Frontend (Vite/React) lives in `studio/` and proxies `/api` and `/ws` to backend port 8000.
-
-## Commands
-```bash
-make dev-backend
-cd studio && npm run dev
-```
-
-## Anti-Patterns
-- Adding routes directly in `api.py` instead of a dedicated router module under `agentflow/studio/routes/`.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

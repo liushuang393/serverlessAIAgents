@@ -1,26 +1,11 @@
-# agentflow/codegen/
+# Unified Agent Instructions
 
-## Overview
-- Workflow -> code generator. Output types: backend, frontend, fullstack.
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-agentflow/codegen/
-├── generator.py  # CodeGenerator
-└── builders/     # backend/frontend/fullstack
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| Main entrypoint | `agentflow/codegen/generator.py` | `CodeGenerator.generate(...)`.
-| Builders | `agentflow/codegen/builders/` | Backend/Frontend/Fullstack build implementations.
-| Backend builder | `agentflow/codegen/builders/backend.py` | Generates FastAPI backend files.
-| Frontend builder | `agentflow/codegen/builders/frontend.py` | Generates React/Vite frontend files.
-| Fullstack builder | `agentflow/codegen/builders/fullstack.py` | Composes backend + frontend outputs.
+適用ルール:
 
-## Notes
-- Codegen templates are mostly Python-string generators in builders (not only static files).
-
-## Anti-Patterns
-- Adding a new output type without updating `CodeGenerator` routing and its returned commands/entrypoint.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

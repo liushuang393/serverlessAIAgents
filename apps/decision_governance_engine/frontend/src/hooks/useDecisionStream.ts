@@ -114,6 +114,7 @@ export function useDecisionStream() {
   const stateRef = useLatestRef(state);
 
   const eventSourceRef = useRef<EventSource | null>(null);
+  const lastReviewVerdictRef = useRef<string | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastParamsRef = useRef<{
     question: string;
@@ -230,6 +231,15 @@ export function useDecisionStream() {
             // 早期リターン（Gate拒否またはReview REJECT）
             {
               const data = legacyEvent.data || {};
+              const stage = data.stage as string || '';
+              const source = data.source as string || '';
+              const verdict = data.verdict as string || '';
+              const isReviewReject =
+                stage === 'review' ||
+                source === 'review' ||
+                verdict === 'REJECT' ||
+                lastReviewVerdictRef.current === 'REJECT';
+              const findings = Array.isArray(data.findings) ? data.findings : [];
               const rejectionMessage = data.rejection_message as string || '';
               const rejectionReason = data.rejection_reason as string || '';
               const suggestedRephrase = data.suggested_rephrase as string || '';
@@ -238,10 +248,15 @@ export function useDecisionStream() {
               // 拒否理由をログに表示（より詳細なメッセージを構築）
               if (rejectionMessage) {
                 addThinkingLog('system', 'System', `⚠️ ${rejectionMessage}`);
+              } else if (isReviewReject) {
+                addThinkingLog('system', 'System', '⚠️ 最終検証で分析が不合格になりました。');
               } else {
                 // フォールバック: 具体的なガイダンスを表示
                 addThinkingLog('system', 'System', '⚠️ この質問は意思決定支援の対象外です。');
                 addThinkingLog('system', 'System', '企業の新事業・新製品/サービス投入に関する意思決定課題を入力してください。');
+              }
+              if (isReviewReject && findings.length > 0) {
+                addThinkingLog('review', '検証：ReviewAgent', `📋 指摘事項: ${findings.length}件`);
               }
               if (rejectionReason) {
                 addThinkingLog('system', 'System', `📋 理由: ${rejectionReason}`);
@@ -256,14 +271,25 @@ export function useDecisionStream() {
               // 具体的なエラーメッセージを構築
               let errorMessage = rejectionMessage;
               if (!errorMessage) {
-                errorMessage = 'この質問は意思決定支援の対象外です。\n\n';
-                if (rejectionReason) {
-                  errorMessage += `理由: ${rejectionReason}\n\n`;
+                if (isReviewReject) {
+                  errorMessage = '最終検証で分析が不合格になりました。\n\n';
+                  if (rejectionReason) {
+                    errorMessage += `理由: ${rejectionReason}\n\n`;
+                  }
+                  if (findings.length > 0) {
+                    errorMessage += `指摘事項: ${findings.length}件\n\n`;
+                  }
+                  errorMessage += '検証で指摘された内容を修正して再分析してください。';
+                } else {
+                  errorMessage = 'この質問は意思決定支援の対象外です。\n\n';
+                  if (rejectionReason) {
+                    errorMessage += `理由: ${rejectionReason}\n\n`;
+                  }
+                  errorMessage += '【対応可能な質問例】\n';
+                  errorMessage += '• 「SaaS市場に新規参入すべきか？」\n';
+                  errorMessage += '• 「新製品を来年Q1に投入すべきか？」\n';
+                  errorMessage += '• 「海外市場への進出タイミングは？」';
                 }
-                errorMessage += '【対応可能な質問例】\n';
-                errorMessage += '• 「SaaS市場に新規参入すべきか？」\n';
-                errorMessage += '• 「新製品を来年Q1に投入すべきか？」\n';
-                errorMessage += '• 「海外市場への進出タイミングは？」';
               }
 
               // 状態を設定（エラーとして表示し、再試行可能にする）
@@ -275,7 +301,13 @@ export function useDecisionStream() {
                 isRetryable: true,
                 agents: prev.agents.map((a) =>
                   a.status === 'running'
-                    ? { ...a, status: 'completed' as const, progress: 100, message: '拒否', result: data }
+                    ? {
+                        ...a,
+                        status: 'completed' as const,
+                        progress: 100,
+                        message: isReviewReject ? '検証不合格' : '拒否',
+                        result: data,
+                      }
                     : a
                 ),
               }));
@@ -287,6 +319,7 @@ export function useDecisionStream() {
             {
               const data = legacyEvent.data || {};
               const verdict = data.verdict as string;
+              lastReviewVerdictRef.current = verdict || null;
               if (verdict === 'REVISE') {
                 addThinkingLog('review', '検証：ReviewAgent', `⚠️ 指摘あり - 再分析を開始します`);
               } else if (verdict === 'PASS') {
@@ -585,6 +618,7 @@ export function useDecisionStream() {
 
       // パラメータ保存（再接続用）
       lastParamsRef.current = { question, budget, timeline: timelineMonths, stakeholders };
+      lastReviewVerdictRef.current = null;
 
       // 状態リセット（最初のagentをrunning状態に）
       const startingAgents = initialAgents.map((a, i) =>
@@ -632,6 +666,7 @@ export function useDecisionStream() {
       eventSourceRef.current = null;
     }
     lastParamsRef.current = null;
+    lastReviewVerdictRef.current = null;
     setState((prev) => ({ ...prev, isConnected: false }));
   }, [clearConnectionTimeout]);
 

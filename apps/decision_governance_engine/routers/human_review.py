@@ -10,9 +10,10 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
@@ -38,6 +39,7 @@ from agentflow.utils import extract_json
 
 
 logger = logging.getLogger(__name__)
+DB_IO_TIMEOUT_SECONDS = 2.0
 
 router = APIRouter(prefix="/human-review", tags=["human-review"])
 
@@ -119,7 +121,7 @@ async def approve_decision(request: ReviewApprovalRequest) -> ReviewApprovalResp
         reviewer_name=request.reviewer_name,
         reviewer_email=request.reviewer_email,
         review_notes=request.review_notes,
-        reviewed_at=datetime.utcnow().isoformat(),
+        reviewed_at=datetime.now(UTC).isoformat(),
     )
 
     # ストレージに保存
@@ -358,10 +360,16 @@ async def _resolve_request_id_from_report(report_id: str | None) -> UUID | None:
         return None
     try:
         repo = DecisionRepository()
-        record = await repo.find_by_report_case_id(report_id)
+        record = await asyncio.wait_for(
+            repo.find_by_report_case_id(report_id),
+            timeout=DB_IO_TIMEOUT_SECONDS,
+        )
         if record is None:
             return None
         return record.request_id
+    except TimeoutError:
+        logger.warning(f"report_id 逆引きがタイムアウト: report_id={report_id}")
+        return None
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"report_id 逆引きに失敗: report_id={report_id}, error={exc}")
         return None
@@ -383,13 +391,18 @@ async def _persist_human_review_record(
 
     try:
         repo = DecisionRepository()
-        stored = await repo.append_human_review_record(
-            request_id=request_uuid,
-            review_record=review_record,
-            updated_review=updated_review,
+        stored = await asyncio.wait_for(
+            repo.append_human_review_record(
+                request_id=request_uuid,
+                review_record=review_record,
+                updated_review=updated_review,
+            ),
+            timeout=DB_IO_TIMEOUT_SECONDS,
         )
         if not stored:
             logger.warning(f"人間確認ログ保存対象が見つかりません: request_id={request_uuid}")
+    except TimeoutError:
+        logger.warning(f"人間確認ログ保存がタイムアウト: request_id={request_uuid}")
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"人間確認ログ保存に失敗: {exc}")
 
@@ -432,7 +445,7 @@ async def recheck_finding(request: FindingRecheckRequest) -> FindingRecheckRespo
                 "acknowledged": request.acknowledged,
                 "reviewer_name": request.reviewer_name,
                 "issues": issues,
-                "reviewed_at": datetime.utcnow().isoformat(),
+                "reviewed_at": datetime.now(UTC).isoformat(),
             },
         )
         return FindingRecheckResponse(
@@ -487,7 +500,7 @@ async def recheck_finding(request: FindingRecheckRequest) -> FindingRecheckRespo
             "acknowledged": request.acknowledged,
             "reviewer_name": request.reviewer_name,
             "issues": [],
-            "reviewed_at": datetime.utcnow().isoformat(),
+            "reviewed_at": datetime.now(UTC).isoformat(),
         },
         updated_review=updated_review.model_dump(),
     )

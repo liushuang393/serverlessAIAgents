@@ -16,6 +16,8 @@ from typing import Any
 
 import aiohttp
 
+from apps.market_trend_monitor.backend.integrations.rate_limiter import rate_limiter
+
 
 class NewsAPIClient:
     """NewsAPIクライアント.
@@ -53,17 +55,9 @@ class NewsAPIClient:
     async def _wait_for_rate_limit(self) -> None:
         """レート制限のための待機.
 
-        前回のリクエストから一定時間経過していない場合は待機します。
+        共有トークンバケットを使用。
         """
-        import time
-
-        current_time = time.time()
-        elapsed = current_time - self._last_request_time
-        if elapsed < self._rate_limit_delay:
-            wait_time = self._rate_limit_delay - elapsed
-            self._logger.debug(f"Rate limit: waiting {wait_time:.2f}s")
-            await asyncio.sleep(wait_time)
-        self._last_request_time = time.time()
+        await rate_limiter.acquire("news")
 
     async def search_everything(
         self,

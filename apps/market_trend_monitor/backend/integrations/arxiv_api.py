@@ -9,6 +9,8 @@ from typing import Any
 import feedparser
 import httpx
 
+from apps.market_trend_monitor.backend.integrations.rate_limiter import rate_limiter
+
 
 class ArxivAPIClient:
     """arXiv API クライアント."""
@@ -35,6 +37,7 @@ class ArxivAPIClient:
 
         for attempt in range(self._max_retries + 1):
             try:
+                await rate_limiter.acquire("arxiv")
                 async with httpx.AsyncClient(timeout=20.0) as client:
                     response = await client.get(self._base_url, params=params)
 

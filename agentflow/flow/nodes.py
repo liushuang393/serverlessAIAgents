@@ -184,6 +184,51 @@ class ReviewNode(FlowNode):
         super().__post_init__()
         object.__setattr__(self, "node_type", NodeType.REVIEW)
 
+    def _build_reject_payload(self, result: dict[str, Any]) -> dict[str, Any]:
+        """Review REJECT 時の早期リターン情報を生成."""
+        findings_raw = result.get("findings", [])
+        findings = findings_raw if isinstance(findings_raw, list) else []
+
+        warnings_raw = result.get("final_warnings", [])
+        final_warnings = warnings_raw if isinstance(warnings_raw, list) else []
+
+        default_reason = (
+            f"ReviewAgentが{len(findings)}件の重要所見を検出"
+            if findings
+            else "ReviewAgentが実行計画の重大な課題を検出"
+        )
+        rejection_reason = str(
+            result.get("rejection_reason")
+            or result.get("reason")
+            or default_reason
+        )
+
+        message_raw = result.get("rejection_message")
+        rejection_message = (
+            message_raw
+            if isinstance(message_raw, str) and message_raw.strip()
+            else "最終検証で重大な課題が検出されたため、分析を中断しました。"
+        )
+
+        suggest_raw = result.get("suggested_rephrase")
+        suggested_rephrase = (
+            suggest_raw
+            if isinstance(suggest_raw, str) and suggest_raw.strip()
+            else "検証で指摘された所見（findings）を修正して再実行してください。"
+        )
+
+        return {
+            "status": "rejected",
+            "stage": self.id,
+            "source": "review",
+            "verdict": "REJECT",
+            "rejection_message": rejection_message,
+            "rejection_reason": rejection_reason,
+            "suggested_rephrase": suggested_rephrase,
+            "findings": findings,
+            "final_warnings": final_warnings,
+        }
+
     async def execute(self, ctx: FlowContext) -> NodeResult:
         """レビューを実行."""
         try:
@@ -215,7 +260,7 @@ class ReviewNode(FlowNode):
                     success=True,
                     data=reject_data,
                     action=NextAction.EARLY_RETURN,
-                    early_return_data={"status": "rejected", "reason": result.get("findings")},
+                    early_return_data=self._build_reject_payload(result),
                 )
 
             # REVISE

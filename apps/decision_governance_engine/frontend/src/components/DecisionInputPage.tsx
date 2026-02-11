@@ -30,6 +30,8 @@ const checkInstantReject = (text: string) => {
   return null;
 };
 
+const MIN_QUESTION_LENGTH = 15;
+
 export const DecisionInputPage: React.FC = () => {
   const {
     question,
@@ -78,7 +80,7 @@ export const DecisionInputPage: React.FC = () => {
   const handleSubmitWithStream = useCallback(() => {
     console.log('🔘 [STEP1] handleSubmitWithStream 呼び出し', { questionLength: question.length, isSubmitting });
     
-    if (question.length < 10 || isSubmitting) {
+    if (question.length < MIN_QUESTION_LENGTH || isSubmitting) {
       console.log('🔘 [STEP1] バリデーション失敗 - 処理中止');
       return;
     }
@@ -101,7 +103,7 @@ export const DecisionInputPage: React.FC = () => {
     console.log('🔘 [STEP1] setPage 完了');
   }, [question, isSubmitting, setPage]);
 
-  const isValid = question.length >= 10;
+  const isValid = question.length >= MIN_QUESTION_LENGTH;
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -219,7 +221,7 @@ export const DecisionInputPage: React.FC = () => {
             />
             <div className="flex justify-between mt-2">
               <span className="text-xs text-slate-600">
-                {question.length < 10 ? '最低10文字以上入力してください' : '✓ 入力OK'}
+                {question.length < MIN_QUESTION_LENGTH ? '最低15文字以上入力してください' : '✓ 入力OK'}
               </span>
               <span className="text-xs text-slate-600">{question.length} 文字</span>
             </div>

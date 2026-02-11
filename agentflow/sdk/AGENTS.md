@@ -1,20 +1,11 @@
-# agentflow/sdk/
+# Unified Agent Instructions
 
-## Overview
-- SDK surface for integrating with Studio/API from other contexts; includes a small frontend SDK.
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-agentflow/sdk/
-├── api/       # python SDK pieces
-└── frontend/  # frontend SDK docs
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| Frontend SDK docs | `agentflow/sdk/frontend/README.md` | How frontend pieces integrate.
-| SDK API package | `agentflow/sdk/api/` | Python SDK entrypoints.
+適用ルール:
 
-## Notes
-- Treat this as the integration layer; avoid coupling app code directly to internal Studio APIs.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

@@ -28,13 +28,39 @@ class SignalService:
     - 関連性 (Relevance): ドメイン関連度
     - 実行可能性 (Actionability): 行動可能性
     - 収束性 (Convergence): 多ソース一致度
+
+    Phase 9: AdaptiveScoringServiceによる重みの動的調整をサポート。
+    Phase 12: BayesianConfidenceServiceとの統合。
     """
 
-    def __init__(self) -> None:
-        """初期化."""
+    # デフォルト重み（AdaptiveScoringService未初期化時のフォールバック）
+    DEFAULT_WEIGHTS: dict[str, float] = {
+        "reliability": 0.2,
+        "leading": 0.2,
+        "relevance": 0.2,
+        "actionability": 0.2,
+        "convergence": 0.2,
+    }
+
+    def __init__(
+        self,
+        *,
+        adaptive_scoring_service: Any | None = None,
+        bayesian_confidence_service: Any | None = None,
+    ) -> None:
+        """初期化.
+
+        Args:
+            adaptive_scoring_service: 適応的スコアリングサービス（Phase 9）
+            bayesian_confidence_service: ベイズ信頼度サービス（Phase 12）
+        """
         self._logger = logging.getLogger(self.__class__.__name__)
         # インメモリストレージ（将来的にDB化）
         self._signals: dict[str, Signal] = {}
+        # Phase 9: 適応的スコアリング
+        self._adaptive_scoring = adaptive_scoring_service
+        # Phase 12: ベイズ信頼度
+        self._bayesian_confidence = bayesian_confidence_service
         # 対象キーワード（関連性評価用）
         self._target_keywords: list[str] = [
             "COBOL",
@@ -46,7 +72,21 @@ class SignalService:
             "legacy",
         ]
 
-    def evaluate_trend(
+    async def _get_weights(self) -> dict[str, float]:
+        """Phase 9: 現在の重みを取得.
+
+        AdaptiveScoringServiceが利用可能な場合はそこから取得、
+        そうでない場合はデフォルト重みを返す（後方互換性）。
+        """
+        if self._adaptive_scoring:
+            try:
+                scoring_weights = await self._adaptive_scoring.get_current_weights()
+                return scoring_weights.as_weight_dict()
+            except Exception as e:
+                self._logger.warning("適応的重み取得失敗、デフォルトを使用: %s", e)
+        return dict(self.DEFAULT_WEIGHTS)
+
+    async def evaluate_trend(
         self,
         trend: Trend,
         evidence_count: int = 0,
@@ -64,14 +104,41 @@ class SignalService:
         """
         source_types = source_types or []
 
-        # 5軸スコアを計算
+        # Phase 10: 適応的重みを取得して適用
+        weights = await self._get_weights()
+
+        # 各軸の生スコア(0-1)を計算
+        raw_scores = {
+            "reliability": self._calculate_reliability(source_types),
+            "leading": self._calculate_leading(trend.growth_rate),
+            "relevance": self._calculate_relevance(trend.keywords),
+            "actionability": self._calculate_actionability(trend.sentiment.value),
+            "convergence": self._calculate_convergence(evidence_count),
+        }
+
+        # 重み適用: 各軸 = raw_score * 5 * weight → total範囲 0-5 維持
         score = SignalScore(
-            reliability=self._calculate_reliability(source_types),
-            leading=self._calculate_leading(trend.growth_rate),
-            relevance=self._calculate_relevance(trend.keywords),
-            actionability=self._calculate_actionability(trend.sentiment.value),
-            convergence=self._calculate_convergence(evidence_count),
+            reliability=raw_scores["reliability"] * 5 * weights["reliability"],
+            leading=raw_scores["leading"] * 5 * weights["leading"],
+            relevance=raw_scores["relevance"] * 5 * weights["relevance"],
+            actionability=raw_scores["actionability"] * 5 * weights["actionability"],
+            convergence=raw_scores["convergence"] * 5 * weights["convergence"],
         )
+
+        # Phase 12: ベイズ信頼度情報をメタデータに含める
+        bayesian_info = {}
+        if self._bayesian_confidence:
+            try:
+                claim_id = trend.metadata.get("claim_id", f"trend-{trend.id}")
+                mean, std = await self._bayesian_confidence.get_confidence_with_uncertainty(
+                    claim_id,
+                )
+                bayesian_info = {
+                    "bayesian_mean": round(mean, 4),
+                    "bayesian_std": round(std, 4),
+                }
+            except Exception as e:
+                self._logger.debug("ベイズ信頼度取得失敗: %s", e)
 
         signal = Signal(
             id=str(uuid.uuid4()),
@@ -81,6 +148,9 @@ class SignalService:
             metadata={
                 "trend_topic": trend.topic,
                 "evidence_count": evidence_count,
+                "raw_scores": raw_scores,
+                "weights": weights,
+                **bayesian_info,
             },
         )
 
@@ -165,11 +235,15 @@ class SignalService:
         return max(0.0, min(1.0, normalized))
 
     def _calculate_relevance(self, keywords: list[str]) -> float:
-        """キーワードに基づく関連性スコアを計算."""
+        """キーワードに基づく関連性スコアを計算.
+
+        トレンドのキーワードのうち、ターゲットキーワードにマッチする割合を算出。
+        分母はトレンド側のキーワード数（ターゲット数ではない）。
+        """
         if not keywords:
             return 0.2
 
-        # ターゲットキーワードとの一致率
+        # トレンドキーワードのうちターゲットにマッチする数
         matches = sum(
             1 for kw in keywords
             if any(
@@ -178,7 +252,7 @@ class SignalService:
             )
         )
 
-        return min(matches / max(len(self._target_keywords), 1), 1.0)
+        return max(matches / len(keywords), 0.1)
 
     def _calculate_actionability(self, sentiment: str) -> float:
         """センチメントに基づく実行可能性スコアを計算.

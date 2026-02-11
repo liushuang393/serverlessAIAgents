@@ -425,16 +425,12 @@ class PipelineEngine(BaseEngine):
 
                 # Reviewチェック
                 if stage.review:
-                    verdict = stage_result.get("verdict", "PASS")
+                    verdict = stage_result.get("verdict", stage_result.get("overall_verdict", "PASS"))
                     if verdict == "PASS":
                         break
                     elif verdict == "REJECT":
-                        return {
-                            "status": "rejected",
-                            "stage": stage.name,
-                            "reason": stage_result.get("reason", "Review rejected"),
-                            "results": self._results,
-                        }
+                        rejection_data = self._build_review_rejection_data(stage.name, stage_result)
+                        return {**rejection_data, "results": self._results}
                     elif verdict == "REVISE" and revision < self._max_revisions:
                         self._logger.info(f"REVISE requested, retry from {retry_from_idx}")
                         break
@@ -505,6 +501,55 @@ class PipelineEngine(BaseEngine):
             await self._request_stage_approval(stage, inputs, "after", result)
 
         return result
+
+    @staticmethod
+    def _build_review_rejection_data(
+        stage_name: str,
+        stage_result: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Review REJECT時の標準化された拒否データを生成."""
+        findings_raw = stage_result.get("findings", [])
+        findings = findings_raw if isinstance(findings_raw, list) else []
+
+        warnings_raw = stage_result.get("final_warnings", [])
+        final_warnings = warnings_raw if isinstance(warnings_raw, list) else []
+
+        default_reason = (
+            f"ReviewAgentが{len(findings)}件の重要所見を検出"
+            if findings
+            else "ReviewAgentが実行計画の重大な課題を検出"
+        )
+        rejection_reason = str(
+            stage_result.get("rejection_reason")
+            or stage_result.get("reason")
+            or default_reason
+        )
+
+        message_raw = stage_result.get("rejection_message")
+        rejection_message = (
+            message_raw
+            if isinstance(message_raw, str) and message_raw.strip()
+            else "最終検証で重大な課題が検出されたため、分析を中断しました。"
+        )
+
+        suggest_raw = stage_result.get("suggested_rephrase")
+        suggested_rephrase = (
+            suggest_raw
+            if isinstance(suggest_raw, str) and suggest_raw.strip()
+            else "検証で指摘された所見（findings）を修正して再実行してください。"
+        )
+
+        return {
+            "status": "rejected",
+            "stage": stage_name,
+            "source": "review",
+            "verdict": "REJECT",
+            "rejection_message": rejection_message,
+            "rejection_reason": rejection_reason,
+            "suggested_rephrase": suggested_rephrase,
+            "findings": findings,
+            "final_warnings": final_warnings,
+        }
 
     def _should_interrupt(self, stage_name: str, timing: str) -> bool:
         """ステージで割り込みが必要かどうかを判定."""
@@ -678,9 +723,11 @@ class PipelineEngine(BaseEngine):
                         review_passed = True
                         break
                     elif verdict == "REJECT":
+                        rejection_data = self._build_review_rejection_data(stage.name, stage_result)
+                        yield {"type": "early_return", "data": rejection_data}
                         yield {
                             "type": "result",
-                            "data": {"status": "rejected", "results": self._results},
+                            "data": {**rejection_data, "results": self._results},
                         }
                         return
                     elif verdict == "REVISE" and revision < self._max_revisions:

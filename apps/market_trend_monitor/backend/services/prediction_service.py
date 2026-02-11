@@ -21,14 +21,25 @@ class PredictionService:
     """予測復盤サービス.
 
     過去の予測と実際の結果を比較し、精度を評価します。
+    Phase 9: 復盤完了後にAdaptiveScoringServiceへフィードバック。
     """
 
-    def __init__(self) -> None:
-        """初期化."""
+    def __init__(
+        self,
+        *,
+        adaptive_scoring_service: Any | None = None,
+    ) -> None:
+        """初期化.
+
+        Args:
+            adaptive_scoring_service: 適応的スコアリングサービス（Phase 9）
+        """
         self._logger = logging.getLogger(self.__class__.__name__)
         # インメモリストレージ（将来的にDB化）
         self._predictions: dict[str, Prediction] = {}
         self._reviews: dict[str, PredictionReview] = {}
+        # Phase 9: 適応的スコアリング
+        self._adaptive_scoring = adaptive_scoring_service
 
     def create_prediction(
         self,
@@ -94,6 +105,11 @@ class PredictionService:
             outcome=outcome,
         )
 
+        # Phase 10: signal_scoresをメタデータに引き継いで軸別帰属分析に利用
+        review_metadata = {}
+        if prediction.metadata.get("signal_scores"):
+            review_metadata["signal_scores"] = prediction.metadata["signal_scores"]
+
         review = PredictionReview(
             id=str(uuid.uuid4()),
             prediction_id=prediction_id,
@@ -102,6 +118,7 @@ class PredictionService:
             accuracy_score=accuracy_score,
             reviewed_at=datetime.now(),
             notes=notes,
+            metadata=review_metadata,
         )
 
         self._reviews[review.id] = review
@@ -109,6 +126,18 @@ class PredictionService:
             f"Prediction reviewed: {review.id}, "
             f"outcome={outcome.value}, accuracy={accuracy_score:.2f}"
         )
+
+        # Phase 9: フィードバックループ - 重みの自動調整
+        if self._adaptive_scoring:
+            try:
+                import asyncio
+                recent_reviews = list(self._reviews.values())[-10:]
+                asyncio.ensure_future(
+                    self._adaptive_scoring.update_weights(recent_reviews)
+                )
+            except Exception as e:
+                self._logger.warning("適応的スコアリング更新失敗: %s", e)
+
         return review
 
     def get_prediction(self, prediction_id: str) -> Prediction | None:
@@ -218,3 +247,62 @@ class PredictionService:
             if review.prediction_id == prediction_id:
                 return review
         return None
+
+    def get_calibration_metrics(self) -> dict[str, Any]:
+        """Phase 12: 予測キャリブレーションメトリクス（Brier Score）を取得.
+
+        Brier score = mean((confidence - outcome)²)
+        低いほど良い。完璧な校正で0.0。
+        """
+        reviews = list(self._reviews.values())
+        if not reviews:
+            return {
+                "brier_score": None,
+                "total_reviewed": 0,
+                "calibration_bins": [],
+            }
+
+        # Brier Score計算
+        brier_sum = 0.0
+        bin_data: dict[int, dict[str, float]] = {}  # bin -> {sum_conf, sum_outcome, count}
+
+        for review in reviews:
+            prediction = self._predictions.get(review.prediction_id)
+            if not prediction:
+                continue
+
+            confidence = prediction.confidence
+            outcome_val = {
+                PredictionOutcome.CORRECT: 1.0,
+                PredictionOutcome.PARTIAL: 0.5,
+                PredictionOutcome.INCORRECT: 0.0,
+                PredictionOutcome.UNKNOWN: 0.5,
+            }.get(review.outcome, 0.5)
+
+            brier_sum += (confidence - outcome_val) ** 2
+
+            # 10分割ビンでキャリブレーション
+            bin_idx = min(int(confidence * 10), 9)
+            if bin_idx not in bin_data:
+                bin_data[bin_idx] = {"sum_conf": 0.0, "sum_outcome": 0.0, "count": 0.0}
+            bin_data[bin_idx]["sum_conf"] += confidence
+            bin_data[bin_idx]["sum_outcome"] += outcome_val
+            bin_data[bin_idx]["count"] += 1
+
+        brier_score = brier_sum / len(reviews)
+
+        calibration_bins = []
+        for bin_idx in sorted(bin_data.keys()):
+            d = bin_data[bin_idx]
+            calibration_bins.append({
+                "bin_range": f"{bin_idx * 10}-{(bin_idx + 1) * 10}%",
+                "avg_confidence": d["sum_conf"] / d["count"],
+                "avg_outcome": d["sum_outcome"] / d["count"],
+                "count": int(d["count"]),
+            })
+
+        return {
+            "brier_score": round(brier_score, 4),
+            "total_reviewed": len(reviews),
+            "calibration_bins": calibration_bins,
+        }

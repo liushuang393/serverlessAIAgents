@@ -1,0 +1,413 @@
+"filename", "language", "Python", "TypeScript", "HTML", "JavaScript", "PostCSS", "TypeScript JSX", "JSON", "JSON with Comments", "Markdown", "Docker", "YAML", "Ini", "Java", "Shell Script", "Properties", "XML", "MS SQL", "pip requirements", "comment", "blank", "total"
+"/home/liush/projects/serverlessAIAgents/apps/AGENTS.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 12
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/AGENTS.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 12
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/README.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 253, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 77, 330
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/__init__.py", "Python", 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17, 5, 28
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/adapters/__init__.py", "Python", 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 4, 55
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/adapters/base.py", "Python", 53, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 94, 23, 170
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/adapters/factory.py", "Python", 135, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 103, 42, 280
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/adapters/skills.py", "Python", 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 46
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/adapters/source/__init__.py", "Python", 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5, 8
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/adapters/source/cobol_adapter.py", "Python", 122, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 59, 32, 213
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/adapters/source/fortran_adapter.py", "Python", 291, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 74, 53, 418
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/adapters/source/pli_adapter.py", "Python", 300, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 73, 55, 428
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/adapters/source/rpg_adapter.py", "Python", 323, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 75, 62, 460
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/adapters/target/__init__.py", "Python", 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5, 8
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/adapters/target/java_adapter.py", "Python", 177, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 60, 42, 279
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/adapters/target/springboot_adapter.py", "Python", 83, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 29, 15, 127
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/agent.py", "Python", 179, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 145, 56, 380
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/agents/__init__.py", "Python", 36, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 40
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/agents/cards.py", "Python", 171, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 8, 187
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/agents/code_transformation_agent.py", "Python", 93, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 17, 121
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/agents/compliance_reporter_agent.py", "Python", 47, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 8, 62
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/agents/differential_verification_agent.py", "Python", 263, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 41, 316
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/agents/legacy_analysis_agent.py", "Python", 85, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 19, 114
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/agents/limited_fixer_agent.py", "Python", 81, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 21, 112
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/agents/migration_design_agent.py", "Python", 74, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 17, 97
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/agents/prompts.py", "Python", 39, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 19, 14, 72
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/agents/quality_gate_agent.py", "Python", 140, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 26, 172
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/agents/test_synthesis_agent.py", "Python", 53, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 14, 71
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/api.py", "Python", 576, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 116, 70, 762
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/backend/app.py", "Python", 177, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 38, 237
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/cli.py", "Python", 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 29, 149
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/config/migration_types.yaml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 44, 0, 0, 0, 0, 0, 0, 0, 56, 6, 106
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/config/type_mappings/cobol_java_types.yaml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 78, 0, 0, 0, 0, 0, 0, 0, 14, 19, 111
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/docs/DESIGN.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 130, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 38, 168
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/docs/architecture.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 59
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/docs/plan/agents改善.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 210, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 295
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/engine.py", "Python", 721, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 81, 117, 919
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/examples/Calculator.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 16, 3, 28
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/examples/EmployeeManager.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 0, 0, 0, 0, 38, 4, 60
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/frontend/app.js", "JavaScript", 0, 0, 0, 170, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 29, 209
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/frontend/index.html", "HTML", 0, 0, 173, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 12, 192
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/frontend/style.css", "PostCSS", 0, 0, 0, 0, 452, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 74, 537
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/frontend/webapp.py", "Python", 110, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 29, 155
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/i18n.py", "Python", 27, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 9, 38
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/locales/en.json", "JSON", 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/locales/ja.json", "JSON", 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/locales/zh.json", "JSON", 0, 0, 0, 0, 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/mcp_tools/__init__.py", "Python", 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 5, 33
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/mcp_tools/cobol_parser.py", "Python", 162, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 131, 45, 338
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/mcp_tools/code_validator.py", "Python", 189, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 131, 52, 372
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/mcp_tools/java_generator.py", "Python", 202, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 154, 57, 413
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/mcp_tools/memory_system.py", "Python", 77, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 77, 25, 179
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/mcp_tools/pdf_exporter.py", "Python", 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 11, 67
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/mcp_tools/reflection_pattern.py", "Python", 126, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 82, 31, 239
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/orchestrator.py", "Python", 138, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 142, 28, 308
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/parsers/__init__.py", "Python", 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 11
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/parsers/ply_cobol_parser.py", "Python", 94, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 65, 27, 186
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/run_server.sh", "Shell Script", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 3, 5, 16
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/skills/__init__.py", "Python", 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 5, 17
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/skills/business-semantics/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 107, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 19, 126
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/skills/cobol-migration/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 110, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 142
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/skills/cobol-migration/__init__.py", "Python", 126, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 57, 34, 217
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/skills/compliance-reporter/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 136, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 161
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/skills/legacy-ingestion/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 110, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 125
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/skills/modernization-generator/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 146
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/skills/pdf-export/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 17, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 22
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/specs/TaskSpec.yaml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 2, 1, 13
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/specs/known_legacy_issues.json", "JSON", 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/specs/schemas/differential_verification.schema.json", "JSON", 0, 0, 0, 0, 0, 0, 26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 27
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/specs/schemas/legacy_analysis.schema.json", "JSON", 0, 0, 0, 0, 0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 31
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/specs/schemas/limited_fix.schema.json", "JSON", 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 25
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/specs/schemas/migration_design.schema.json", "JSON", 0, 0, 0, 0, 0, 0, 28, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 29
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/specs/schemas/quality_gate.schema.json", "JSON", 0, 0, 0, 0, 0, 0, 26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 27
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/specs/schemas/test_synthesis.schema.json", "JSON", 0, 0, 0, 0, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 23
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/specs/schemas/transformation.schema.json", "JSON", 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 25
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/test_cli_integration.py", "Python", 113, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 42, 173
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/tests/__init__.py", "Python", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/tests/test_cobol_parser.py", "Python", 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 35, 158
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/tests/test_integration.py", "Python", 164, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 40, 213
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/tests/test_pipeline_v4.py", "Python", 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 19, 120
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/tests/test_unit_v4.py", "Python", 78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 27, 112
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/tools/__init__.py", "Python", 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 5, 19
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/tools/junit_runner.py", "Python", 226, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 57, 53, 336
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/verify_implementation.py", "Python", 117, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 49, 190
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/workflow/__init__.py", "Python", 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3, 29
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/workflow/artifacts.py", "Python", 90, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 18, 131
+"/home/liush/projects/serverlessAIAgents/apps/code_migration_assistant/workflow/models.py", "Python", 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 47, 168
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/.github/workflows/ci.yml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 66, 0, 0, 0, 0, 0, 0, 0, 50, 10, 126
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/AGENTS.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 12
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/CHANGELOG_v2.0.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 199, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 253
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/CHANGELOG_v3.0.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 220, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 62, 282
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/Dockerfile", "Docker", 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 0, 0, 0, 0, 0, 0, 0, 0, 33, 18, 78
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/README.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 353, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 109, 462
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/__init__.py", "Python", 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 6, 31
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/agent.yaml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 313, 0, 0, 0, 0, 0, 0, 0, 9, 16, 338
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/agents/__init__.py", "Python", 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 4, 27
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/agents/agent_definitions.yaml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 128, 0, 0, 0, 0, 0, 0, 0, 15, 12, 155
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/agents/clarification_agent.py", "Python", 315, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30, 18, 363
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/agents/cognitive_gate_agent.py", "Python", 225, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 124, 17, 366
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/agents/dao_agent.py", "Python", 640, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 31, 756
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/agents/fa_agent.py", "Python", 544, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 78, 22, 644
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/agents/gatekeeper_agent.py", "Python", 202, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53, 31, 286
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/agents/qi_agent.py", "Python", 155, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 120, 28, 303
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/agents/rag_config_helper.py", "Python", 53, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 47, 21, 121
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/agents/review_agent.py", "Python", 246, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 25, 310
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/agents/shu_agent.py", "Python", 502, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 129, 35, 666
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/alembic.ini", "Ini", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 125, 0, 0, 0, 0, 0, 0, 0, 28, 153
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/api.py", "Python", 59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31, 22, 112
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/config/__init__.py", "Python", 71, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 44, 39, 154
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/config/decision_weights.yaml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 190, 0, 0, 0, 0, 0, 0, 0, 35, 29, 254
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/config/human_review_policy.yaml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 3, 4, 14
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/db/init/01_schema.sql", "MS SQL", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 75, 0, 25, 23, 123
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/design/decision-agent-spec.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 863, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127, 990
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/design/decision-input-ui.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 284, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 23, 321
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/design/decision-processing-ui.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 216, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 18, 243
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/design/decision-report-ui.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 313, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 27, 350
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/docker-compose.dev.yml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 33, 0, 0, 0, 0, 0, 0, 0, 37, 4, 74
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/docker-compose.yml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 107, 0, 0, 0, 0, 0, 0, 0, 48, 8, 163
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/docs/SCORING_SYSTEM.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 289, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 75, 364
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/engine.py", "Python", 126, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 121, 30, 277
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/flow_config.py", "Python", 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 14, 58
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/Dockerfile", "Docker", 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 0, 0, 0, 0, 0, 0, 0, 0, 35, 18, 78
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/eslint.config.js", "JavaScript", 0, 0, 0, 61, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 12, 88
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/index.html", "HTML", 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 15
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/nginx/nginx.conf", "Properties", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 82, 0, 0, 0, 45, 28, 155
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/package-lock.json", "JSON", 0, 0, 0, 0, 0, 0, 5316, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5317
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/package.json", "JSON", 0, 0, 0, 0, 0, 0, 41, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 42
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/postcss.config.js", "JavaScript", 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 8
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/public/favicon.svg", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 2, 5
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/App.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 108, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 19, 151
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/__tests__/api/client.test.ts", "TypeScript", 0, 137, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17, 32, 186
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/__tests__/setup.ts", "TypeScript", 0, 33, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 13, 61
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/__tests__/store/useDecisionStore.test.ts", "TypeScript", 0, 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 23, 135
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/api/client.ts", "TypeScript", 0, 347, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 137, 67, 551
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/components/DecisionInputPage.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 416, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 35, 35, 486
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/components/HankoSeal.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 224, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 45, 20, 289
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/components/HistoryPage.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 276, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 27, 330
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/components/KnowledgePage.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 191, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 16, 225
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/components/LoginPage.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 188, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 18, 226
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/components/ProcessingPage.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 345, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 41, 34, 420
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/components/ReportPage.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 1578, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 99, 114, 1791
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/components/SettingsModal.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 211, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 21, 256
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/hooks/useDecisionStream.ts", "TypeScript", 0, 522, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 77, 55, 654
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/index.css", "PostCSS", 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 5
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/main.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 16
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/store/useAuthStore.ts", "TypeScript", 0, 136, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 17, 176
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/store/useDecisionStore.ts", "TypeScript", 0, 161, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 37, 35, 233
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/types/index.ts", "TypeScript", 0, 360, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 71, 55, 486
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/src/vite-env.d.ts", "TypeScript", 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 4, 18
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/tailwind.config.js", "JavaScript", 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 10
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/tests/e2e/helpers/assertions.ts", "TypeScript", 0, 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 38
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/tests/e2e/helpers/mocks.ts", "TypeScript", 0, 564, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 76, 640
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/tests/e2e/history.spec.ts", "TypeScript", 0, 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 44
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/tests/e2e/knowledge.spec.ts", "TypeScript", 0, 45, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 63
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/tests/e2e/processing.spec.ts", "TypeScript", 0, 131, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 24, 155
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/tests/e2e/report.spec.ts", "TypeScript", 0, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 150
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/tests/e2e/settings.spec.ts", "TypeScript", 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 46
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/tests/e2e/smoke-login.spec.ts", "TypeScript", 0, 29, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 40
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/tsconfig.json", "JSON with Comments", 0, 0, 0, 0, 0, 0, 0, 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 26
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/tsconfig.node.json", "JSON", 0, 0, 0, 0, 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 13
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/frontend/vite.config.ts", "TypeScript", 0, 53, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 4, 78
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/knowledge/case_studies/README.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 22
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/knowledge/compliance/README.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 23
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/knowledge/industry_practices/README.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 22
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/knowledge/tech_docs/README.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 22
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/main.py", "Python", 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31, 30, 177
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/migrations/env.py", "Python", 43, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 45, 18, 106
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/migrations/versions/20260118_0001_initial_schema.py", "Python", 90, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 15, 128
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/migrations/versions/20260202_1842_8bf2ccdc3fc1_add_progressive_save_fields.py", "Python", 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 10, 59
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/migrations/versions/20260210_2100_add_report_case_id_and_human_review_records.py", "Python", 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 10, 62
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/prompts/__init__.py", "Python", 28, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 46, 18, 92
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/prompts/cognitive_gate.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17, 76
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/prompts/common_system.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 31
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/prompts/dao.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 62, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 84
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/prompts/fa.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 112
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/prompts/qi.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 102, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 122
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/prompts/review.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 101, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 124
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/prompts/shu.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 87, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 107
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/repositories/__init__.py", "Python", 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 32
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/repositories/database.py", "Python", 86, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 37, 31, 154
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/repositories/decision_repository.py", "Python", 243, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 58, 32, 333
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/repositories/models.py", "Python", 78, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 35, 27, 140
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/routers/__init__.py", "Python", 26, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 5, 43
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/routers/auth.py", "Python", 110, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 33, 41, 184
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/routers/config.py", "Python", 260, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 77, 87, 424
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/routers/decision.py", "Python", 601, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 122, 109, 832
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/routers/human_review.py", "Python", 397, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 55, 52, 504
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/routers/knowledge.py", "Python", 92, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 48, 40, 180
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/routers/product_launch.py", "Python", 97, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 33, 172
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/routers/report.py", "Python", 223, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 65, 60, 348
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/routers/workflow.py", "Python", 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 38, 29, 130
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/schemas/__init__.py", "Python", 70, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 5, 83
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/schemas/agent_schemas.py", "Python", 416, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 148, 192, 756
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/schemas/contract_schemas.py", "Python", 70, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 32, 142
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/schemas/input_schemas.py", "Python", 109, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 23, 150
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/schemas/output_schemas.py", "Python", 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 71, 45, 371
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/services/agent_registry.py", "Python", 162, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 167, 45, 374
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/services/decision_contract_builder.py", "Python", 103, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 24, 181
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/services/decision_report_builder.py", "Python", 88, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 55, 24, 167
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/services/deep_agent_adapter.py", "Python", 194, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 135, 24, 353
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/services/human_review_policy.py", "Python", 48, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 17, 74
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/services/intelligence_service.py", "Python", 217, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 89, 62, 368
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/services/pdf_generator.py", "Python", 958, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 76, 73, 1107
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/services/report_generator.py", "Python", 112, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 74, 23, 209
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/services/rich_report_builder.py", "Python", 106, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 246, 28, 380
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/services/scoring_engine.py", "Python", 165, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 76, 52, 293
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/services/ui_components.py", "Python", 277, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 64, 71, 412
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/skills/clarification/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 213, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 241
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/skills/dao/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 306, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 40, 346
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/skills/fa/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 301, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 39, 340
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/skills/gatekeeper/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 97, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 108
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/skills/qi/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 181, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 19, 200
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/skills/review/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 187, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 213
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/skills/shu/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 325, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31, 356
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/skills/utils/SKILL.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 244, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 55, 299
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/startup.py", "Python", 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 15, 71
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/__init__.py", "Python", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/integration/__init__.py", "Python", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/unit/__init__.py", "Python", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/unit/test_clarification_agent.py", "Python", 97, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 31, 149
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/unit/test_cognitive_gate_agent.py", "Python", 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 38, 188
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/unit/test_dao_agent.py", "Python", 156, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31, 54, 241
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/unit/test_fa_agent.py", "Python", 129, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 34, 185
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/unit/test_gatekeeper_agent.py", "Python", 119, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 32, 177
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/unit/test_human_review_router.py", "Python", 108, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 19, 132
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/unit/test_qi_agent.py", "Python", 151, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 34, 208
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/unit/test_report_persistence.py", "Python", 46, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 57
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/unit/test_review_agent.py", "Python", 278, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 29, 46, 353
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/unit/test_scoring_engine.py", "Python", 206, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 48, 277
+"/home/liush/projects/serverlessAIAgents/apps/decision_governance_engine/tests/unit/test_shu_agent.py", "Python", 152, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 33, 208
+"/home/liush/projects/serverlessAIAgents/apps/design_skills_engine/README.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 321, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 94, 415
+"/home/liush/projects/serverlessAIAgents/apps/design_skills_engine/__init__.py", "Python", 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 17, 4, 23
+"/home/liush/projects/serverlessAIAgents/apps/design_skills_engine/docker-compose.cpu.yml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 0, 12, 2, 26
+"/home/liush/projects/serverlessAIAgents/apps/design_skills_engine/docker-compose.yml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 0, 0, 0, 0, 0, 26, 4, 60
+"/home/liush/projects/serverlessAIAgents/apps/design_skills_engine/scripts/setup_comfyui.sh", "Shell Script", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 0, 0, 0, 0, 19, 10, 56
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/.github/workflows/ci.yml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 0, 0, 0, 0, 0, 0, 0, 46, 9, 109
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/AGENTS.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 12
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/DESIGN.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 1859, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 446, 2305
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/Dockerfile", "Docker", 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 0, 0, 0, 0, 0, 0, 0, 0, 20, 16, 61
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/README.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 346, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 110, 456
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/__init__.py", "Python", 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 4, 24
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/__init__.py", "Python", 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4, 7
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/agents/__init__.py", "Python", 54, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 4, 72
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/agents/analytics_agent.py", "Python", 637, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 140, 113, 890
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/agents/enhanced_faq_agent.py", "Python", 330, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 93, 89, 512
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/agents/external_kb_agent.py", "Python", 148, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 50, 240
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/agents/internal_kb_agent.py", "Python", 351, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 152, 91, 594
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/agents/maintenance_agent.py", "Python", 393, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 101, 103, 597
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/security/__init__.py", "Python", 40, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 4, 55
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/security/appi_compliance.py", "Python", 329, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 172, 83, 584
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/security/audit_logger.py", "Python", 365, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 165, 71, 601
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/security/permission_config.py", "Python", 265, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 129, 47, 441
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/services/__init__.py", "Python", 66, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 6, 88
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/services/citation_service.py", "Python", 251, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 137, 68, 456
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/services/coverage_dashboard.py", "Python", 309, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 142, 80, 531
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/services/faq_service.py", "Python", 356, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 67, 76, 499
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/services/feedback_service.py", "Python", 276, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 176, 71, 523
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/backend/services/glossary_service.py", "Python", 255, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 166, 60, 481
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/frontend/index.html", "HTML", 0, 0, 11, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 12
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/frontend/src/components/ChatWindow.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 61, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 68
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/main.py", "Python", 273, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 73, 71, 417
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/main_enhanced.py", "Python", 456, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 48, 62, 566
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/tests/__init__.py", "Python", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 1, 9
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/tests/data/analytics_test_cases.yaml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 247, 0, 0, 0, 0, 0, 0, 0, 38, 24, 309
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/tests/data/expected_answers.json", "JSON", 0, 0, 0, 0, 0, 0, 134, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 141
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/tests/data/internal_faq_test_cases.yaml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 228, 0, 0, 0, 0, 0, 0, 0, 41, 27, 296
+"/home/liush/projects/serverlessAIAgents/apps/faq_system/tests/data/maintenance_test_cases.yaml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 229, 0, 0, 0, 0, 0, 0, 0, 42, 24, 295
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/AGENTS.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 12
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/DESIGN.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 613, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 95, 708
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/README.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 154, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 55, 209
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/app_config.json", "JSON", 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 6
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/__init__.py", "Python", 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 3, 5
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/agents/__init__.py", "Python", 42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 5, 55
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/agents/analyzer_agent.py", "Python", 316, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 79, 49, 444
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/agents/collector_agent.py", "Python", 312, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 50, 42, 404
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/agents/evidence_ledger_agent.py", "Python", 87, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 48, 29, 164
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/agents/notifier_agent.py", "Python", 135, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 99, 38, 272
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/agents/prediction_review_agent.py", "Python", 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 54, 36, 194
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/agents/redteam_agent.py", "Python", 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 53, 35, 216
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/agents/reporter_agent.py", "Python", 299, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 96, 34, 429
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/agents/signal_scorer_agent.py", "Python", 107, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 49, 31, 187
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/api/__init__.py", "Python", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/api/main.py", "Python", 73, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 21, 121
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/api/main_enhanced.py", "Python", 485, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 144, 69, 698
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/api/routes/__init__.py", "Python", 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4, 21
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/api/routes/collect.py", "Python", 124, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 33, 165
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/api/routes/evidence.py", "Python", 85, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 24, 118
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/api/routes/predictions.py", "Python", 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 21, 92
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/api/routes/settings.py", "Python", 44, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 12, 60
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/api/routes/signals.py", "Python", 24, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 10, 38
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/api/routes/sources.py", "Python", 54, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 18, 78
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/api/routes/trends.py", "Python", 93, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 30, 132
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/api/state.py", "Python", 15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 25
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/config.py", "Python", 109, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 47, 53, 209
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/db/__init__.py", "Python", 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4, 8
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/db/base.py", "Python", 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 5, 9
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/db/models.py", "Python", 45, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 20, 70
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/db/session.py", "Python", 38, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 14, 55
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/integrations/__init__.py", "Python", 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 13
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/integrations/arxiv_api.py", "Python", 35, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 13, 52
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/integrations/github_api.py", "Python", 54, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 16, 74
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/integrations/news_api.py", "Python", 143, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 70, 22, 235
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/integrations/rss_fetcher.py", "Python", 31, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 13, 48
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/integrations/test_news_api.py", "Python", 104, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 32, 159
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/requirements.txt", "pip requirements", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 9, 9, 33
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/services/__init__.py", "Python", 30, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 4, 42
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/services/evidence_service.py", "Python", 282, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 35, 44, 361
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/services/market_store.py", "Python", 200, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 25, 35, 260
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/services/prediction_service.py", "Python", 138, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 56, 27, 221
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/services/redteam_service.py", "Python", 140, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 68, 28, 236
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/services/registry.py", "Python", 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 16
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/services/report_export_service.py", "Python", 252, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 41, 316
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/services/signal_service.py", "Python", 118, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 57, 27, 202
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/services/source_registry.py", "Python", 138, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 22, 172
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/workflow.py", "Python", 175, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42, 49, 266
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/backend/workflow_engine.py", "Python", 59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 49, 21, 129
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/.eslintrc.cjs", "JavaScript", 0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 22
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/eslint.config.js", "JavaScript", 0, 0, 0, 61, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 12, 88
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/index.html", "HTML", 0, 0, 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 21
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/package-lock.json", "JSON", 0, 0, 0, 0, 0, 0, 7066, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 7067
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/package.json", "JSON", 0, 0, 0, 0, 0, 0, 49, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 50
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/public/favicon.svg", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 2, 5
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/App.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 230, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 240
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/__tests__/integration.test.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 84, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 20, 116
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/api/__tests__/client.test.ts", "TypeScript", 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 23
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/api/client.ts", "TypeScript", 0, 119, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 33, 22, 174
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/components/Dashboard.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 252, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 13, 276
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/components/Layout.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 189, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 10, 204
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/components/Reports.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 469, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 54, 532
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/components/Settings.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 195, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 17, 223
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/components/TrendChart.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 82, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 7, 98
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/components/TrendList.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 157, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 10, 175
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/components/__tests__/TrendChart.test.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 54, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 11, 72
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/components/__tests__/TrendList.test.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 62, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 16, 83
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/main.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 11
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/store/__tests__/useAppStore.test.ts", "TypeScript", 0, 111, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 26, 144
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/store/useAppStore.ts", "TypeScript", 0, 147, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 33, 202
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/test/setup.ts", "TypeScript", 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 6, 26
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/test/vitest.d.ts", "TypeScript", 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 4, 15
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/types/index.ts", "TypeScript", 0, 90, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 16, 114
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/src/vite-env.d.ts", "TypeScript", 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4, 12
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/tsconfig.json", "JSON with Comments", 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 5, 40
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/tsconfig.node.json", "JSON", 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 12
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/frontend/vite.config.ts", "TypeScript", 0, 92, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 12, 105
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/tests/__init__.py", "Python", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/tests/conftest.py", "Python", 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 5, 11
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/tests/test_agents.py", "Python", 247, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 31, 69, 347
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/tests/test_evidence.py", "Python", 329, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 43, 63, 435
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/tests/test_integration.py", "Python", 143, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 26, 48, 217
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/tests/test_predictions.py", "Python", 356, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 56, 74, 486
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/tests/test_red_team.py", "Python", 312, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 58, 80, 450
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/tests/test_signals.py", "Python", 237, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 52, 56, 345
+"/home/liush/projects/serverlessAIAgents/apps/market_trend_monitor/tests/test_workflow.py", "Python", 27, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 15, 51
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/AGENTS.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 12
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/README.md", "Markdown", 0, 0, 0, 0, 0, 0, 0, 0, 241, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 84, 325
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/__init__.py", "Python", 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 4
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/index.html", "HTML", 0, 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 15
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/package-lock.json", "JSON", 0, 0, 0, 0, 0, 0, 4056, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4057
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/package.json", "JSON", 0, 0, 0, 0, 0, 0, 36, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 38
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/postcss.config.js", "JavaScript", 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 8
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/App.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 4, 28
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/api/client.ts", "TypeScript", 0, 62, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 33, 15, 110
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/components/Approvals.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 344, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 26, 380
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/components/Conversations.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 81, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 11, 100
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/components/Dashboard.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 116, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 10, 138
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/components/FileOrganizer.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 353, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 374
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/components/Layout.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 51, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 6, 67
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/components/Platforms.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 91, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 7, 104
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/components/Sessions.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 81, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 5, 91
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/components/Settings.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 96, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 11, 118
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/components/SkillsManager.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 397, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 35, 442
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/components/Timeline.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 258, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15, 24, 297
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/hooks/useWebSocket.ts", "TypeScript", 0, 47, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 9, 15, 71
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/index.css", "PostCSS", 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 13
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/src/main.tsx", "TypeScript JSX", 0, 0, 0, 0, 0, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 27
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/tailwind.config.js", "JavaScript", 0, 0, 0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 25
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/tsconfig.json", "JSON with Comments", 0, 0, 0, 0, 0, 0, 0, 25, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 27
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/tsconfig.node.json", "JSON", 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 12
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/admin_ui/vite.config.ts", "TypeScript", 0, 22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 25
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/agents/__init__.py", "Python", 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 14
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/agents/file_organizer_agent.py", "Python", 417, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 133, 77, 627
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/agents/meeting_agent.py", "Python", 312, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 142, 42, 496
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/approval_manager.py", "Python", 307, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 133, 68, 508
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/coordinator.py", "Python", 417, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 94, 63, 574
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/execution_tracker.py", "Python", 245, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 138, 51, 434
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/main.py", "Python", 395, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 153, 124, 672
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/skills_manager.py", "Python", 285, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 335, 54, 674
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/tests/__init__.py", "Python", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 3
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/tests/unit/__init__.py", "Python", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 3
+"/home/liush/projects/serverlessAIAgents/apps/messaging_hub/tests/unit/test_meeting_agent.py", "Python", 82, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 20, 115
+"/home/liush/projects/serverlessAIAgents/apps/platform/__init__.py", "Python", 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 22, 5, 47
+"/home/liush/projects/serverlessAIAgents/apps/platform/agents/__init__.py", "Python", 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 16
+"/home/liush/projects/serverlessAIAgents/apps/platform/agents/analytics_agent.py", "Python", 142, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 65, 35, 242
+"/home/liush/projects/serverlessAIAgents/apps/platform/agents/gallery_agent.py", "Python", 58, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 28, 17, 103
+"/home/liush/projects/serverlessAIAgents/apps/platform/agents/publish_agent.py", "Python", 108, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 46, 27, 181
+"/home/liush/projects/serverlessAIAgents/apps/platform/engine.py", "Python", 137, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 177, 42, 356
+"/home/liush/projects/serverlessAIAgents/apps/platform/main.py", "Python", 218, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 35, 61, 314
+"/home/liush/projects/serverlessAIAgents/apps/platform/routers/__init__.py", "Python", 10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 18
+"/home/liush/projects/serverlessAIAgents/apps/platform/routers/components.py", "Python", 179, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 94, 34, 307
+"/home/liush/projects/serverlessAIAgents/apps/platform/routers/dashboard.py", "Python", 63, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 58, 19, 140
+"/home/liush/projects/serverlessAIAgents/apps/platform/routers/gallery.py", "Python", 83, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 67, 19, 169
+"/home/liush/projects/serverlessAIAgents/apps/platform/routers/publish.py", "Python", 90, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 68, 24, 182
+"/home/liush/projects/serverlessAIAgents/apps/platform/schemas/__init__.py", "Python", 34, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 4, 45
+"/home/liush/projects/serverlessAIAgents/apps/platform/schemas/component_schemas.py", "Python", 76, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 27, 111
+"/home/liush/projects/serverlessAIAgents/apps/platform/schemas/gallery_schemas.py", "Python", 70, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 27, 105
+"/home/liush/projects/serverlessAIAgents/apps/platform/schemas/publish_schemas.py", "Python", 84, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 38, 140
+"/home/liush/projects/serverlessAIAgents/apps/platform/services/__init__.py", "Python", 18, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 4, 26
+"/home/liush/projects/serverlessAIAgents/apps/platform/services/component_library.py", "Python", 253, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 169, 74, 496
+"/home/liush/projects/serverlessAIAgents/apps/platform/services/gallery_service.py", "Python", 227, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 139, 44, 410
+"/home/liush/projects/serverlessAIAgents/apps/platform/services/publish_orchestrator.py", "Python", 336, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 141, 59, 536
+"/home/liush/projects/serverlessAIAgents/apps/platform/services/tenant_dashboard.py", "Python", 193, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 85, 42, 320
+"Total", "-", 34003, 3576, 228, 353, 465, 8114, 16954, 81, 9185, 77, 1776, 125, 27, 35, 82, 6, 75, 15, 13261, 11428, 99866

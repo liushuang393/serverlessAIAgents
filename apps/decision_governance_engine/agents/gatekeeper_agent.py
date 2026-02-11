@@ -66,7 +66,7 @@ class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
     INSTANT_REJECT_PATTERNS: list[tuple[str, QuestionCategory, str]] = [
         # (正規表現, カテゴリ, 拒否メッセージ)
         # 天気・事実検索系（日本語/簡体中文/英語）
-        (r"(天気|天气|気温|气温|weather|何時|几点|today|現在|现在)", QuestionCategory.FACTUAL_LOOKUP,
+        (r"(天気|天气|気温|气温|weather|何時|几点)", QuestionCategory.FACTUAL_LOOKUP,
          "天気や時刻の情報にはお答えできません。"),
         # 「〜怎么样/どうですか」パターン（雑談・意見要求）
         (r"(怎么样|怎麼樣|どうですか|どう\?|如何\?)", QuestionCategory.CASUAL_CHAT,
@@ -282,4 +282,3 @@ class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
             return False
 
         return True
-

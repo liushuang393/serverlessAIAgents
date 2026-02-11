@@ -1,24 +1,11 @@
-# agentflow/memory/
+# Unified Agent Instructions
 
-## Overview
-- Memory and knowledge-store integrations (in-memory + optional memvid-backed store).
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-agentflow/memory/
-├── knowledge/        # knowledge store implementations
-├── embeddings/       # embedding adapters
-└── vector_store.py   # vector store facade
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| Knowledge store API | `agentflow/memory/knowledge/` | `get_knowledge_store`, memvid integration.
-| Vector store/search | `agentflow/memory/vector_store.py`, `agentflow/memory/vector_search.py` | Retrieval primitives.
+適用ルール:
 
-## Notes
-- memvid support is optional (`pyproject.toml` extra `memvid`).
-
-## Anti-Patterns
-- Assuming memvid is installed; use capability checks (`is_memvid_available`) and fallbacks.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

@@ -6,6 +6,7 @@ from datetime import datetime
 
 from apps.market_trend_monitor.backend.api.state import store
 from apps.market_trend_monitor.backend.services.report_export_service import ReportExportService
+from apps.market_trend_monitor.backend.services.trend_history_service import TrendHistoryService
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
@@ -13,6 +14,7 @@ from fastapi.responses import StreamingResponse
 router = APIRouter(prefix="/api", tags=["トレンド"])
 logger = logging.getLogger(__name__)
 report_export_service = ReportExportService()
+trend_history_service = TrendHistoryService()
 
 
 def _to_frontend_report(report: dict, fallback_trends: list[dict] | None = None) -> dict:
@@ -128,34 +130,29 @@ async def export_report_pdf(report_id: str) -> StreamingResponse:
     )
 
 
-@router.get("/reports/{report_id}/export/pptx")
-async def export_report_pptx(report_id: str) -> StreamingResponse:
-    """レポートを PPTX 形式でエクスポート."""
-    report = await store.get_report(report_id)
-    if not report:
-        raise HTTPException(status_code=404, detail="Report not found")
+@router.get("/trends/{topic}/velocity")
+async def get_trend_velocity(topic: str, window: int = Query(default=5, ge=2, le=20)) -> dict:
+    """Phase 12: トレンド速度（1階微分）を取得."""
+    velocity = await trend_history_service.get_velocity(topic, window=window)
+    return {"topic": topic, "velocity": velocity, "window": window}
 
-    fallback_trends = await store.list_trends()
-    export_payload = _to_frontend_report(report, fallback_trends)
 
-    try:
-        pptx_bytes = report_export_service.export_pptx(export_payload)
-    except RuntimeError as exc:
-        detail = str(exc)
-        status_code = 503 if "未インストール" in detail else 500
-        raise HTTPException(status_code=status_code, detail=detail) from exc
-    except Exception as exc:
-        logger.error(
-            "PPTX出力で予期せぬ失敗: report_id=%s, error=%s",
-            report_id,
-            exc,
-            exc_info=True,
-        )
-        raise HTTPException(status_code=500, detail="PPTX export failed") from exc
+@router.get("/trends/{topic}/acceleration")
+async def get_trend_acceleration(
+    topic: str,
+    window: int = Query(default=5, ge=2, le=20),
+) -> dict:
+    """Phase 12: トレンド加速度（2階微分）を取得."""
+    acceleration = await trend_history_service.get_acceleration(topic, window=window)
+    return {"topic": topic, "acceleration": acceleration, "window": window}
 
-    filename = _sanitize_filename(f"market_trend_report_{report_id}.pptx")
-    return StreamingResponse(
-        io.BytesIO(pptx_bytes),
-        media_type="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
-    )
+
+@router.get("/trends/{topic}/history")
+async def get_trend_history(
+    topic: str,
+    limit: int = Query(default=50, ge=1, le=200),
+) -> dict:
+    """Phase 12: トレンド履歴を取得."""
+    history = await trend_history_service.get_topic_history(topic, limit=limit)
+    return {"topic": topic, "history": history, "total": len(history)}
+

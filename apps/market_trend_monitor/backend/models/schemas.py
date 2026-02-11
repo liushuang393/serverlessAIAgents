@@ -16,6 +16,8 @@ class SourceType(str, Enum):
     GITHUB = "github"
     ARXIV = "arxiv"
     RSS = "rss"
+    STACKOVERFLOW = "stackoverflow"
+    DEVTO = "devto"
 
 
 class SentimentType(str, Enum):
@@ -86,6 +88,7 @@ class Trend:
     article_count: int = 0
     created_at: datetime = field(default_factory=datetime.now)
     metadata: dict[str, Any] = field(default_factory=dict)
+    entities: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """辞書形式に変換."""
@@ -102,6 +105,7 @@ class Trend:
             "article_count": self.article_count,
             "created_at": self.created_at.isoformat(),
             "metadata": self.metadata,
+            "entities": self.entities,
         }
 
 

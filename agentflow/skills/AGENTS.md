@@ -1,25 +1,11 @@
-# agentflow/skills/
+# Unified Agent Instructions
 
-## Overview
-- Skills system: built-in skills + runtime skill resolution ("learn/evolve" mechanics).
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-agentflow/skills/
-├── __init__.py          # entrypoints
-├── builtin/             # built-in skills (often SKILL.md)
-└── (skill engine files) # resolution/execution
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| Skill system entrypoints | `agentflow/skills/__init__.py` | Skill registry and high-level API.
-| Built-in skills catalog | `agentflow/skills/builtin/` | Each skill typically has a `SKILL.md`.
-| Market trend analysis skill | `agentflow/skills/builtin/market-trend-analysis/` | Includes deterministic scripts + references.
+適用ルール:
 
-## Notes
-- Built-in skills documentation lives next to code as `SKILL.md` (good onboarding surface).
-
-## Anti-Patterns
-- Treating built-in skills as ad-hoc scripts; prefer a consistent SKILL.md + implementation layout.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

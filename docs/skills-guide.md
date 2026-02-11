@@ -240,8 +240,8 @@ description: |
 [基本的な使い方]
 
 ## 詳細
-- フォーム記入: [FORMS.md](FORMS.md) を参照
-- API リファレンス: [REFERENCE.md](REFERENCE.md) を参照
+- フォーム記入: `forms.md` を参照（任意で追加）
+- API リファレンス: `reference.md` を参照（任意で追加）
 ```
 
 ### 4. エラーハンドリング

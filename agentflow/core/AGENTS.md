@@ -1,31 +1,11 @@
-# agentflow/core/
+# Unified Agent Instructions
 
-## Overview
-- Base agent abstractions, shared schemas/types, and the error model.
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-agentflow/core/
-├── agent_block.py        # AgentBlock base
-├── resilient_agent.py    # ResilientAgent family
-├── exceptions.py         # framework error taxonomy
-├── types.py              # shared types
-└── engine.py             # legacy engine (compat)
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| Implement a new agent | `agentflow/core/agent_block.py` | `AgentBlock` async lifecycle (`initialize/run/cleanup`).
-| Reliability patterns | `agentflow/core/resilient_agent.py` | `ResilientAgent` and decision-agent variants.
-| Error taxonomy | `agentflow/core/exceptions.py` | Framework exceptions used across layers.
-| Shared types | `agentflow/core/types.py` | `AgentMetadata`, `WorkflowConfig`, etc.
-| Legacy engine | `agentflow/core/engine.py` | Kept for backward compatibility; prefer `agentflow/engines/`.
+適用ルール:
 
-## Conventions
-- Agents are async-first; prefer explicit input/output schemas (Pydantic) for safety.
-- Keep exceptions in `agentflow/core/exceptions.py` and reuse them across layers.
-
-## Anti-Patterns
-- Raising generic `Exception` in framework code when a specific `AgentFlowError` subclass fits.
-- Putting app-specific business logic into core (keep it reusable).
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

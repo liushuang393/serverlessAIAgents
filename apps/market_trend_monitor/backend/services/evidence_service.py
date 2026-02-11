@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import math
 import uuid
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from apps.market_trend_monitor.backend.db.models import ClaimModel, EvidenceModel
 from apps.market_trend_monitor.backend.db.session import async_session, init_db
@@ -34,13 +35,31 @@ class EvidenceService:
     """証拠管理サービス.
 
     全ての結論に対する証拠の追跡可能性を確保します。
+    Phase 9: BayesianConfidenceServiceによる信頼度のベイズ更新。
+    Phase 12: SourceReliabilityTrackerによる動的信頼度。
     """
 
-    def __init__(self, session_factory: async_sessionmaker[AsyncSession] | None = None) -> None:
-        """初期化."""
+    def __init__(
+        self,
+        session_factory: async_sessionmaker[AsyncSession] | None = None,
+        *,
+        bayesian_confidence_service: Any | None = None,
+        source_reliability_tracker: Any | None = None,
+    ) -> None:
+        """初期化.
+
+        Args:
+            session_factory: セッションファクトリ
+            bayesian_confidence_service: ベイズ信頼度サービス（Phase 9）
+            source_reliability_tracker: 情報源信頼度追跡（Phase 12）
+        """
         self._logger = logging.getLogger(self.__class__.__name__)
         self._session_factory = session_factory or async_session
-        # 情報源別信頼度設定
+        # Phase 9: ベイズ信頼度サービス
+        self._bayesian_confidence = bayesian_confidence_service
+        # Phase 12: 動的信頼度追跡
+        self._reliability_tracker = source_reliability_tracker
+        # 情報源別信頼度設定（fallback）
         self._source_reliability: dict[SourceType, float] = {
             SourceType.NEWS: 0.6,
             SourceType.GITHUB: 0.8,
@@ -130,8 +149,19 @@ class EvidenceService:
             self._logger.info("主張を作成: %s, level=%s", claim.id, claim.level.value)
             return claim
 
-    async def add_evidence_to_claim(self, claim_id: str, evidence_id: str) -> Claim | None:
-        """主張に証拠を追加."""
+    async def add_evidence_to_claim(
+        self,
+        claim_id: str,
+        evidence_id: str,
+        is_supporting: bool = True,
+    ) -> Claim | None:
+        """主張に証拠を追加.
+
+        Args:
+            claim_id: 主張ID
+            evidence_id: 証拠ID
+            is_supporting: 支持証拠かどうか（Phase 9）
+        """
         await init_db()
         async with self._session_factory() as session:
             claim_model = await self._get_claim_model(session, claim_id)
@@ -142,7 +172,7 @@ class EvidenceService:
                 return self._model_to_claim(claim_model)
 
             if evidence_id not in claim_model.evidence_ids:
-                claim_model.evidence_ids.append(evidence_id)
+                claim_model.evidence_ids = [*claim_model.evidence_ids, evidence_id]
                 claim_model.confidence = await self._calculate_claim_confidence(
                     session, claim_model.evidence_ids
                 )
@@ -154,6 +184,19 @@ class EvidenceService:
                 claim_model.updated_at = datetime.now()
                 await session.commit()
                 await session.refresh(claim_model)
+
+            # Phase 9: ベイズ信頼度更新
+            if self._bayesian_confidence:
+                try:
+                    evidence_model = await self._get_evidence_model(session, evidence_id)
+                    weight = evidence_model.reliability_score if evidence_model else 0.5
+                    await self._bayesian_confidence.update_confidence(
+                        claim_id=claim_id,
+                        is_supporting=is_supporting,
+                        weight=weight,
+                    )
+                except Exception as e:
+                    self._logger.warning("ベイズ信頼度更新失敗: %s", e)
 
             return self._model_to_claim(claim_model)
 
@@ -260,25 +303,47 @@ class EvidenceService:
         return row[0] if row else None
 
     def _calculate_reliability(self, source_type: SourceType) -> float:
-        """情報源タイプに基づく信頼度を計算."""
+        """情報源タイプに基づく信頼度を計算.
+
+        Phase 12: 動的追跡サービスが利用可能な場合はそちらを優先。
+        """
+        if self._reliability_tracker:
+            return self._reliability_tracker.get_reliability(source_type.value)
         return self._source_reliability.get(source_type, 0.5)
+
+    def _apply_time_decay(self, reliability: float, collected_at: datetime) -> float:
+        """Phase 12: 証拠の時間減衰を適用.
+
+        指数減衰関数: decay = exp(-age_days / 180)
+        半減期 ≈ 125日。下限30%。
+        """
+        age_days = (datetime.now() - collected_at).days
+        decay = math.exp(-age_days / 180.0)
+        return reliability * (0.3 + 0.7 * decay)
 
     async def _calculate_claim_confidence(
         self, session: AsyncSession, evidence_ids: list[str]
     ) -> float:
-        """証拠に基づく主張信頼度を計算."""
+        """証拠に基づく主張信頼度を計算（時間減衰適用）."""
         if not evidence_ids:
             return 0.0
 
         result = await session.execute(
-            select(EvidenceModel.reliability_score).where(EvidenceModel.id.in_(evidence_ids))
+            select(
+                EvidenceModel.reliability_score,
+                EvidenceModel.collected_at,
+            ).where(EvidenceModel.id.in_(evidence_ids))
         )
-        scores = [row[0] for row in result.fetchall()]
-        if not scores:
+        rows = result.fetchall()
+        if not rows:
             return 0.0
 
-        avg_reliability = sum(scores) / len(scores)
-        evidence_bonus = min(len(scores) / 5, 1.0) * 0.15
+        # Phase 12: 時間減衰を適用した信頼度
+        decayed_scores = [
+            self._apply_time_decay(row[0], row[1]) for row in rows
+        ]
+        avg_reliability = sum(decayed_scores) / len(decayed_scores)
+        evidence_bonus = min(len(decayed_scores) / 5, 1.0) * 0.15
         return min(avg_reliability + evidence_bonus, 1.0)
 
     async def _filter_existing_evidence_ids(

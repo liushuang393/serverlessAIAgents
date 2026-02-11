@@ -113,6 +113,7 @@ class PredictionReview:
     accuracy_score: float
     reviewed_at: datetime = field(default_factory=datetime.now)
     notes: str = ""
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """辞書形式に変換."""
@@ -124,6 +125,7 @@ class PredictionReview:
             "accuracy_score": self.accuracy_score,
             "reviewed_at": self.reviewed_at.isoformat(),
             "notes": self.notes,
+            "metadata": self.metadata,
         }
 
 

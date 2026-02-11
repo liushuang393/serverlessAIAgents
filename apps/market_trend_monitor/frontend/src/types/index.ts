@@ -10,6 +10,8 @@ export enum SourceType {
   GITHUB = 'github',
   ARXIV = 'arxiv',
   RSS = 'rss',
+  STACKOVERFLOW = 'stackoverflow',
+  DEVTO = 'devto',
 }
 
 export enum SentimentType {
@@ -97,6 +99,79 @@ export interface TrendsResponse {
 export interface ReportsResponse {
   reports: Report[];
   total: number;
+}
+
+// Phase 13: Signal types
+export interface SignalScore {
+  reliability: number;
+  leading: number;
+  relevance: number;
+  actionability: number;
+  convergence: number;
+  total: number;
+  grade: string;
+}
+
+export interface Signal {
+  id: string;
+  trend_id: string;
+  score: SignalScore;
+  grade: string;
+  evaluated_at: string;
+  metadata: Record<string, unknown>;
+}
+
+// Phase 13: Prediction types
+export interface Prediction {
+  id: string;
+  statement: string;
+  target_date: string;
+  confidence: number;
+  claim_id?: string;
+  status: string;
+  created_at: string;
+  metadata: Record<string, unknown>;
+}
+
+export interface PredictionReview {
+  id: string;
+  prediction_id: string;
+  actual_outcome: string;
+  outcome: string;
+  accuracy_score: number;
+  reviewed_at: string;
+  notes: string;
+}
+
+// Phase 13: Evidence types
+export interface Evidence {
+  id: string;
+  source_type: string;
+  url: string;
+  title: string;
+  collected_at: string;
+  reliability_score: number;
+  extracted_data: Record<string, unknown>;
+}
+
+export interface Claim {
+  id: string;
+  statement: string;
+  level: string;
+  confidence: number;
+  evidence_ids: string[];
+  created_at: string;
+}
+
+// Phase 13: Recommendation
+export interface Recommendation {
+  topic: string;
+  grade: string;
+  score: number;
+  priority: string;
+  action_type: string;
+  recommendation: string;
+  growth_note: string;
 }
 
 // チャートデータ型

@@ -1,27 +1,11 @@
-# agentflow/services/
+# Unified Agent Instructions
 
-## Overview
-- Service layer used by API/CLI/Studio as the unified backend surface.
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-agentflow/services/
-├── base.py             # service base + event model
-├── agent_service.py    # agent execution
-├── workflow_service.py # workflow execution
-└── (domain services)   # rag/text2sql/chart/etc
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| Service base + events | `agentflow/services/base.py` | Service event model; progress callbacks.
-| Agent execution service | `agentflow/services/agent_service.py` | Execute agents, emit progress.
-| Workflow execution service | `agentflow/services/workflow_service.py` | Runs workflows and streams events.
-| RAG / Text2SQL services | `agentflow/services/rag_service.py`, `agentflow/services/text2sql_service.py` | Used by demo apps (e.g., FAQ).
+適用ルール:
 
-## Notes
-- Prefer services for UI-facing integrations; keep apps thin when possible.
-
-## Anti-Patterns
-- Duplicating service logic inside apps when it already exists in `agentflow/services/`.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

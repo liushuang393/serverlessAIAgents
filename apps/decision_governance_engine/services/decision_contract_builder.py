@@ -71,6 +71,14 @@ class DecisionGovContractBuilder:
         """
 
         data = _to_mapping(report)
+        scoring = _to_mapping(data.get("scoring", {}))
+        scoring_verdict = str(scoring.get("verdict", "")).upper()
+        if scoring_verdict:
+            try:
+                return DecisionRole(scoring_verdict)
+            except ValueError:
+                pass
+
         review = _to_mapping(data.get("review", {}))
         verdict = str(review.get("overall_verdict", "")).upper()
         if verdict == "REJECT":
@@ -171,6 +179,7 @@ class DecisionGovContractBuilder:
             shu=dict(_to_mapping(data.get("shu", {}))),
             qi=dict(_to_mapping(data.get("qi", {}))),
             review=dict(_to_mapping(data.get("review", {}))),
+            scoring=dict(_to_mapping(data.get("scoring", {}))),
             evidence=[],
             claims=claims,
             warnings=warnings,

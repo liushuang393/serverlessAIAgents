@@ -1,22 +1,11 @@
-# agentflow/templates/
+# Unified Agent Instructions
 
-## Overview
-- Project/app templates (scenarios) used by code generation and project scaffolding.
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-agentflow/templates/
-└── scenarios/  # template packs (fullstack-app, chatbot, etc.)
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| Scenario templates | `agentflow/templates/scenarios/` | fullstack-app, chatbot, data-pipeline, invoice-processor.
-| Template README | `agentflow/templates/scenarios/fullstack-app/README.md` | Template usage + structure.
+適用ルール:
 
-## Notes
-- Template Python files are excluded from Ruff/MyPy in `pyproject.toml`.
-
-## Anti-Patterns
-- Treating scenario templates as production code: they are excluded from lint/type checks by design.
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。

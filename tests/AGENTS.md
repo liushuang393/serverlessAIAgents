@@ -1,32 +1,11 @@
-# tests/
+# Unified Agent Instructions
 
-## Overview
-- pytest suite for the framework and integrations.
+このリポジトリの規約ソースは **1つだけ** です。
 
-## Structure
-```
-tests/
-├── conftest.py
-├── unit/
-├── integration/
-└── memory/
-```
+- Canonical Rules: `code-rules/CLAUDE.md`（大文字）
 
-## Where To Look
-| Task | Location | Notes |
-|------|----------|-------|
-| pytest configuration | `pyproject.toml` | `[tool.pytest.ini_options]` defines markers and defaults.
-| Global fixtures | `tests/conftest.py` | Provides shared fixtures (engine, sample_workflow).
-| Unit tests | `tests/unit/` | Primary unit test suite.
-| Integration tests | `tests/integration/` | Marker-driven integration tests.
+適用ルール:
 
-## Conventions
-- Markers: `unit`, `integration`, `e2e`, `slow` (strict markers enabled).
-
-## Commands
-```bash
-make test
-make test-cov
-pytest -m "unit"
-pytest -m "integration"
-```
+1. Codex / Claude CLI / Cursor / Augment を含む全エージェントは、必ず `code-rules/CLAUDE.md` を読み込んで従う。
+2. このファイル（AGENTS.md）はローカル規約を持たない。差分規約を追加しない。
+3. 競合時は常に `code-rules/CLAUDE.md` を優先する。
