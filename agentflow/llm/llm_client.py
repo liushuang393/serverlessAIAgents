@@ -332,6 +332,23 @@ class LLMClient:
             # ツール呼び出しの解析
             tool_calls_list: list[ToolCall] = []
             message = response.choices[0].message
+            finish_reason = response.choices[0].finish_reason
+
+            # 診断ログ: 空レスポンス検出
+            if message.content is None or message.content == "":
+                refusal = getattr(message, "refusal", None)
+                usage_info = (
+                    f"prompt={response.usage.prompt_tokens}, "
+                    f"completion={response.usage.completion_tokens}"
+                ) if response.usage else "N/A"
+                self._logger.warning(
+                    f"OpenAI: content が空 "
+                    f"(finish_reason={finish_reason}, "
+                    f"usage=[{usage_info}], "
+                    f"refusal={refusal}, "
+                    f"has_tool_calls={bool(getattr(message, 'tool_calls', None))})"
+                )
+
             if hasattr(message, "tool_calls") and message.tool_calls:
                 for tc in message.tool_calls:
                     tool_calls_list.append(ToolCall(
@@ -348,7 +365,7 @@ class LLMClient:
                     "completion_tokens": response.usage.completion_tokens,
                     "total_tokens": response.usage.total_tokens,
                 },
-                finish_reason=response.choices[0].finish_reason,
+                finish_reason=finish_reason,
                 tool_calls=tool_calls_list,
             )
         except TimeoutError:

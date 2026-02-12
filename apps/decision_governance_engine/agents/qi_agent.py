@@ -27,7 +27,6 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
 )
 
 from agentflow import ResilientAgent
-from agentflow.core.exceptions import AgentOutputValidationError
 
 
 class QiAgent(ResilientAgent[QiInput, QiOutput]):
@@ -174,33 +173,49 @@ JSON形式で出力してください。"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
+        # LLMレスポンスのチェック: 空ならフォールバック
         self._logger.debug(f"QiAgent LLM response length: {len(response) if response else 0}")
         if not response or not response.strip():
-            self._logger.warning("QiAgent: LLM returned empty response - triggering retry")
-            raise AgentOutputValidationError(
-                agent_name=self.name,
-                field_name="response",
-                expected="non-empty JSON response",
-                actual="empty response from LLM",
+            self._logger.warning(
+                "QiAgent: LLMレスポンスが空 → デフォルト出力にフォールバック"
             )
+            return self._create_default_output(shu_result)
 
+        # JSONパース: 失敗ならフォールバック
         from agentflow.utils import extract_json
         data = extract_json(response)
         if data is None:
-            self._logger.warning(f"QiAgent: Failed to extract JSON. Response preview: {response[:500]}")
-            raise AgentOutputValidationError(
-                agent_name=self.name,
-                field_name="response",
-                expected="valid JSON",
-                actual=f"invalid JSON: {response[:100]}...",
+            self._logger.warning(
+                "QiAgent: JSONパース失敗 → デフォルト出力にフォールバック。"
+                f" Response preview: {response[:200]}"
             )
+            return self._create_default_output(shu_result)
 
         self._logger.debug(f"Extracted JSON keys: {list(data.keys())}")
 
         # リスト長を正規化（max_length制約を遵守）
         self._normalize_list_lengths(data)
 
-        # v3.0: 文字列長を正規化してからPydanticに渡す
+        # --- 必須フィールド: implementations ---
+        implementations = self._safe_build_implementations(
+            data.get("implementations", [])
+        )
+        if not implementations:
+            self._logger.warning(
+                "QiAgent: 必須フィールド implementations が空 → "
+                "ShuResultからデフォルト生成"
+            )
+            for phase in shu_result.phases[:3]:
+                implementations.append(
+                    Implementation(
+                        component=phase.name,
+                        technology="要検討",
+                        estimated_effort=phase.duration,
+                        risks=["詳細検討が必要"],
+                    )
+                )
+
+        # --- 任意フィールド: 欠損時は空リスト/None ---
         domain_techs = [
             self._normalize_domain_technology(dt)
             for dt in data.get("domain_technologies", [])[:5]
@@ -214,31 +229,87 @@ JSON形式で出力してください。"""
             for gc in data.get("geographic_considerations", [])[:5]
         ]
 
-        # v3.1: PoC最小アーキテクチャをパース
-        poc_arch = self._parse_poc_minimal_architecture(data.get("poc_minimal_architecture", {}))
-
-        # v3.1: 拡張アーキテクチャ段階をパース
-        expansion = self._parse_expansion_stages(data.get("expansion_stages", []))
-
-        # v3.1: 実装手順をパース
-        impl_steps = self._parse_implementation_steps(data.get("implementation_steps", []))
-
-        # v3.1: 将来スケール要件
-        future_reqs = [str(r)[:100] for r in data.get("future_scale_requirements", [])[:10]]
-
-        return QiOutput(
-            implementations=[Implementation(**i) for i in data.get("implementations", [])],
-            tool_recommendations=data.get("tool_recommendations", []),
-            integration_points=data.get("integration_points", []),
-            technical_debt_warnings=data.get("technical_debt_warnings", []),
-            domain_technologies=[DomainSpecificTechnology(**dt) for dt in domain_techs],
-            regulatory_considerations=[RegulatoryConsideration(**rc) for rc in regulatory],
-            geographic_considerations=[GeographicConsideration(**gc) for gc in geographic],
-            poc_minimal_architecture=poc_arch,
-            expansion_stages=expansion,
-            implementation_steps=impl_steps,
-            future_scale_requirements=future_reqs,
+        # v3.1: 任意フィールド（欠損時はNone/空リスト）
+        poc_arch = self._parse_poc_minimal_architecture(
+            data.get("poc_minimal_architecture", {})
         )
+        expansion = self._parse_expansion_stages(
+            data.get("expansion_stages", [])
+        )
+        impl_steps = self._parse_implementation_steps(
+            data.get("implementation_steps", [])
+        )
+        future_reqs = [
+            str(r)[:100] for r in data.get("future_scale_requirements", [])[:10]
+        ]
+
+        # QiOutput構築（Pydanticバリデーションエラー時はフォールバック）
+        try:
+            return QiOutput(
+                implementations=implementations,
+                tool_recommendations=data.get("tool_recommendations", []),
+                integration_points=data.get("integration_points", []),
+                technical_debt_warnings=data.get("technical_debt_warnings", []),
+                domain_technologies=[
+                    DomainSpecificTechnology(**dt) for dt in domain_techs
+                ],
+                regulatory_considerations=[
+                    RegulatoryConsideration(**rc) for rc in regulatory
+                ],
+                geographic_considerations=[
+                    GeographicConsideration(**gc) for gc in geographic
+                ],
+                poc_minimal_architecture=poc_arch,
+                expansion_stages=expansion,
+                implementation_steps=impl_steps,
+                future_scale_requirements=future_reqs,
+            )
+        except Exception as e:
+            self._logger.warning(
+                f"QiAgent: QiOutput構築失敗 → デフォルト出力にフォールバック: {e}"
+            )
+            return self._create_default_output(shu_result)
+
+    def _safe_build_implementations(
+        self, raw_list: list,
+    ) -> list[Implementation]:
+        """Implementation リストを安全に構築.
+
+        各要素の必須フィールド(component, technology, estimated_effort)が
+        欠損していればデフォルト値で補完。パース失敗時はスキップして警告。
+
+        Args:
+            raw_list: LLM出力から取得した implementations 生データ
+
+        Returns:
+            安全に構築された Implementation リスト
+        """
+        results: list[Implementation] = []
+        if not isinstance(raw_list, list):
+            return results
+
+        for idx, item in enumerate(raw_list):
+            if not isinstance(item, dict):
+                self._logger.warning(
+                    f"implementations[{idx}]: dict以外のデータをスキップ"
+                )
+                continue
+            try:
+                results.append(Implementation(
+                    component=str(item.get("component", "不明"))[:80],
+                    technology=str(item.get("technology", "要検討"))[:80],
+                    estimated_effort=str(
+                        item.get("estimated_effort", "要見積"),
+                    )[:50],
+                    risks=[
+                        str(r)[:100] for r in item.get("risks", [])[:5]
+                    ],
+                ))
+            except Exception as e:
+                self._logger.warning(
+                    f"implementations[{idx}] 構築失敗（スキップ）: {e}"
+                )
+        return results
 
     def _normalize_domain_technology(self, dt: dict) -> dict:
         """DomainSpecificTechnologyの文字列長を正規化.
