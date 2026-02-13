@@ -89,7 +89,7 @@ class FAQOutput(BaseModel):
 
     question: str = ""
     answer: str = ""
-    query_type: str = "faq"  # "faq" | "sql" | "sales_material"
+    query_type: str = "faq"  # "chat" | "faq" | "sql" | "sales_material"
     documents: list[DocumentSchema] = Field(default_factory=list)
     sql: str = ""
     data: list[dict[str, Any]] = Field(default_factory=list)
@@ -227,12 +227,15 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                 a2a=self._build_a2a_metadata("faq"),
             )
 
-        # クエリタイプを判定
-        query_type = self._classify_query(question)
+        # クエリタイプを判定(LLM意図分類)
+        query_type = await self._classify_query(question)
         self._append_report_phase(execution_report, "start", "ok", {"query_type": query_type})
 
         try:
-            if query_type == "sql":
+            if query_type == "chat":
+                self._append_report_phase(execution_report, "call", "ok", {"service": "llm_direct"})
+                response = await self._handle_chat_query(question, query_type)
+            elif query_type == "sql":
                 self._append_report_phase(execution_report, "call", "ok", {"service": "text2sql"})
                 response = await self._handle_sql_query(question, query_type)
             elif query_type == "sales_material":
@@ -279,6 +282,29 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                 ),
                 a2a=self._build_a2a_metadata(query_type),
             )
+
+    async def _handle_chat_query(self, question: str, query_type: str) -> FAQOutput:
+        """チャット・日常会話クエリを処理（LLM直接回答、RAG不要）."""
+        chat_prompt = (
+            f"{self.SYSTEM_PROMPT}\n\n"
+            "ユーザーからの挨拶や日常的な質問には、親しみやすく簡潔に回答してください。\n"
+            "ナレッジベース検索は不要です。あなた自身の知識で直接回答してください。\n\n"
+            f"ユーザー: {question}"
+        )
+        answer = await self._call_llm(chat_prompt)
+        if not answer:
+            answer = "こんにちは！何かお手伝いできることはありますか？"
+
+        suggestions = await self._generate_suggestions(question, query_type, True)
+
+        return FAQOutput(
+            question=question,
+            query_type=query_type,
+            answer=answer,
+            documents=[],
+            rich_response=self._build_chat_rich_response(answer).to_dict(),
+            suggestions=suggestions,
+        )
 
     async def _handle_faq_query(self, question: str, query_type: str) -> FAQOutput:
         """FAQ クエリを処理."""
@@ -418,6 +444,12 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             suggestions=suggestions,
             error="" if generated_count > 0 else ("; ".join(errors) if errors else ""),
         )
+
+    def _build_chat_rich_response(self, answer: str) -> RichResponse:
+        """チャット向け A2UI レスポンスを構築（引用なし）."""
+        response = RichResponse()
+        response.add_markdown(answer or "こんにちは！何かお手伝いできることはありますか？")
+        return response
 
     def _build_faq_rich_response(
         self,
@@ -563,8 +595,10 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         from agentflow.services import (
             ChartConfig,
             ChartService,
+            ChunkStrategy,
             RAGConfig,
             RAGService,
+            RerankerType,
             SuggestionConfig,
             SuggestionService,
             Text2SQLConfig,
@@ -584,8 +618,8 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         self.__rag_service = RAGService(
             RAGConfig(
                 collection=self._config.rag_collection,
-                chunk_strategy=self._config.rag_chunk_strategy,
-                reranker_type=self._config.rag_reranker,
+                chunk_strategy=ChunkStrategy(self._config.rag_chunk_strategy),
+                reranker=RerankerType(self._config.rag_reranker),
                 top_k=self._config.rag_top_k,
             )
         )
@@ -612,47 +646,77 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
 
         self._services_initialized = True
 
-    def _classify_query(self, question: str) -> str:
-        """クエリタイプを判定（私有メソッド）.
+    # LLM意図分類プロンプト
+    _INTENT_PROMPT = (
+        "You are an intent classifier for an enterprise FAQ system.\n"
+        "Classify the following user message into exactly ONE category.\n\n"
+        "Categories:\n"
+        "- chat: greetings, self-introduction questions, small talk, thank you, "
+        "capability questions, or any message that does NOT require a knowledge base "
+        "search or data analysis. Any language is possible.\n"
+        "- sales_material: requests to create/generate sales materials, posters, "
+        "banners, pitch decks, flyers, promotional images.\n"
+        "- sql: questions about sales figures, revenue, statistics, rankings, "
+        "trends, comparisons, counts, totals, averages, or any data analytics query.\n"
+        "- faq: questions about company policies, procedures, rules, regulations, "
+        "technical how-to, or anything that should be answered from a knowledge base.\n\n"
+        "Reply with ONLY the category name (chat, sales_material, sql, or faq). "
+        "No explanation.\n\n"
+        "User message: {question}"
+    )
+
+    _VALID_QUERY_TYPES = frozenset({"chat", "sales_material", "sql", "faq"})
+
+    async def _classify_query(self, question: str) -> str:
+        """LLMで意図を分類し、クエリタイプを判定.
+
+        LLMが利用可能なら意図分類プロンプトで判定する。
+        LLMが使えない場合のみキーワードヒューリスティックにフォールバック。
 
         Args:
             question: 質問文
 
         Returns:
-            "sql" または "faq"
+            "chat" | "sales_material" | "sql" | "faq"
         """
+        # LLM意図分類を試行
+        if self._llm is not None:
+            try:
+                prompt = self._INTENT_PROMPT.format(question=question)
+                raw = await self._call_llm(prompt)
+                category = raw.strip().lower().split()[0] if raw.strip() else ""
+                if category in self._VALID_QUERY_TYPES:
+                    return category
+                self._logger.warning(
+                    "LLM intent classification returned unexpected value: %r, "
+                    "falling back to heuristic",
+                    raw,
+                )
+            except Exception as e:
+                self._logger.warning("LLM intent classification failed: %s", e)
+
+        # フォールバック: 軽量キーワードヒューリスティック(LLM不可時のみ)
+        return self._classify_query_heuristic(question)
+
+    def _classify_query_heuristic(self, question: str) -> str:
+        """キーワードベースのフォールバック分類(LLM不可時のみ使用)."""
+        question_lower = question.lower().strip()
+
         sales_material_keywords = [
-            "営業資料",
-            "营业资料",
-            "提案書",
-            "宣伝画像",
-            "宣传图",
-            "資料図",
-            "素材画像",
-            "提案デッキ",
-            "pitch deck",
-            "sales deck",
-            "poster",
-            "flyer",
-            "バナー",
-            "海报",
-            "画像生成",
-            "出图",
+            "pitch deck", "sales deck", "poster", "flyer", "banner",
         ]
-        sql_keywords = [
-            "売上", "収入", "数量", "統計", "報表", "レポート",
-            "top", "ランキング", "トレンド", "比較", "同比", "前年比",
-            "金額", "注文", "顧客数", "件数", "合計", "平均",
-            "月別", "年別", "日別", "カテゴリ別",
-        ]
-
-        question_lower = question.lower()
-        material_score = sum(1 for k in sales_material_keywords if k.lower() in question_lower)
-        sql_score = sum(1 for k in sql_keywords if k in question_lower)
-
-        if material_score >= 1:
+        if any(k in question_lower for k in sales_material_keywords):
             return "sales_material"
-        return "sql" if sql_score >= 2 else "faq"
+
+        sql_indicators = [
+            "top", "ranking", "trend", "total", "average", "count",
+        ]
+        sql_score = sum(1 for k in sql_indicators if k in question_lower)
+        if sql_score >= 2:
+            return "sql"
+
+        # LLMが無い環境ではFAQにルーティング
+        return "faq"
 
     def _parse_sales_material_request(self, question: str) -> dict[str, Any]:
         """営業資料画像生成の入力を抽出."""

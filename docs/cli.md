@@ -17,6 +17,7 @@ agentflow [OPTIONS] COMMAND [ARGS]...
 ## コマンド一覧（トップレベル）
 
 - `run`: エージェントを実行
+- `flow`: ワークフローを実行（サブコマンド）
 - `init`: 新規プロジェクトを初期化
 - `create`: エージェント等を作成（サブコマンド）
 - `marketplace`: 検索/インストール（サブコマンド）
@@ -105,6 +106,48 @@ agentflow run . --agent-name QAAgent --input '{"question": "hello"}' --json
 agentflow run ./my-agent --input input.json --stream
 ```
 
+## `flow run` - workflow YAML 実行
+
+```bash
+agentflow flow run WORKFLOW_PATH [OPTIONS]
+```
+
+- `WORKFLOW_PATH`: workflow YAML ファイル（存在必須）
+- `--input, -i`: 追加入力データ（JSON 文字列または JSON ファイルパス）
+- `--output, -o`: 出力ファイル
+- `--json`: JSON 形式で出力
+- `--stream, -s`: ストリームモードで実行
+
+YAML 仕様（最小）:
+
+```yaml
+workflow_type: reflection
+task: "Analyze the issue"
+input_data:
+  text: "sample"
+config:
+  max_iterations: 1
+```
+
+互換キー:
+- `type` は `workflow_type` の別名として利用可能
+
+例:
+
+```bash
+# 標準実行
+agentflow flow run workflow.yaml
+
+# JSON 出力
+agentflow flow run workflow.yaml --json
+
+# CLI 入力を上書きマージ
+agentflow flow run workflow.yaml --input '{"text":"override"}'
+
+# ストリーム実行
+agentflow flow run workflow.yaml --stream --json
+```
+
 ## `marketplace` - 検索/インストール
 
 ```bash
@@ -146,5 +189,6 @@ agentflow studio [--host/-h HOST] [--port/-p PORT] [--reload]
 
 - `agentflow sandbox --help`
 - `agentflow skills --help`（参考: `docs/skills-guide.md`, `docs/guide-skills.md`）
+- `agentflow skills mount SOURCE --scope project|global [--name NAME] [--force]`
 - `agentflow template --help`
 - `agentflow workspace --help`

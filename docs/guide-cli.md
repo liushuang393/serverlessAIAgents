@@ -14,9 +14,11 @@ AgentFlow CLI は、ターミナルからエージェントを実行・管理す
 2. [基本操作](#基本操作)
 3. [エージェントの実行](#エージェントの実行)
 4. [エージェントの管理](#エージェントの管理)
-5. [注意事項](#注意事項)
-6. [ベストプラクティス](#ベストプラクティス)
-7. [トラブルシューティング](#トラブルシューティング)
+5. [ワークフローの実行](#ワークフローの実行)
+6. [Skills の管理](#skills-の管理)
+7. [注意事項](#注意事項)
+8. [ベストプラクティス](#ベストプラクティス)
+9. [トラブルシューティング](#トラブルシューティング)
 
 ---
 
@@ -75,6 +77,8 @@ agentflow [OPTIONS] COMMAND [ARGS]...
 |---------|------|--------|
 | `init` | プロジェクトを初期化 | `agentflow init my-agent` |
 | `run` | エージェントを実行 | `agentflow run ./my-agent` |
+| `flow` | workflow YAML を実行 | `agentflow flow run workflow.yaml` |
+| `skills` | Skills を管理 | `agentflow skills list` |
 | `create` | エージェントを作成 | `agentflow create agent text-processor` |
 | `list` | インストール済みエージェント一覧 | `agentflow list` |
 | `marketplace` | 検索・インストール | `agentflow marketplace search "text"` |
@@ -231,14 +235,57 @@ agentflow marketplace uninstall text-processor
 
 ---
 
-## 🔄 ワークフローの実行（注意）
+## 🔄 ワークフローの実行
 
-現状の CLI は `workflow.yaml` の直接実行に対応していません（`agentflow run` はエージェントディレクトリ、または `--agent-name` 指定の `@agent` 実装を対象とします）。
+`workflow.yaml` を CLI から直接実行できます。
 
-ワークフロー実行は Python から Engine を利用してください：
+```bash
+# 最小実行
+agentflow flow run workflow.yaml
 
-- `docs/engines.md`（`PipelineEngine` / `GateEngine` など）
-- `docs/api.md`（`WorkflowService`）
+# JSON で結果を表示
+agentflow flow run workflow.yaml --json
+
+# 入力を上書き
+agentflow flow run workflow.yaml --input '{"text":"hello"}'
+
+# ストリーム実行
+agentflow flow run workflow.yaml --stream --json
+```
+
+最小 YAML 例:
+
+```yaml
+workflow_type: reflection
+task: "Summarize this ticket"
+input_data:
+  text: "..."
+config:
+  max_iterations: 1
+```
+
+注意:
+- `workflow_type` は必須です（`type` でも可）。
+- `agentflow run` は従来どおり Agent 実行用です。
+
+## 🧩 Skills の管理
+
+外部 Skills をプロジェクトまたはグローバルに取り込めます。
+
+```bash
+# 単一 Skill をプロジェクトにマウント
+agentflow skills mount ./external/my-skill --scope project
+
+# 複数 Skill を含むディレクトリを一括マウント
+agentflow skills mount ./external/skills --scope project
+
+# 既存 Skill を上書き
+agentflow skills mount ./external/my-skill --scope global --force
+```
+
+補足:
+- `SOURCE` は Skill ディレクトリ、`SKILL.md`、または複数 Skill ルートを指定できます。
+- `--name` は単一 Skill マウント時のみ利用できます。
 
 ---
 

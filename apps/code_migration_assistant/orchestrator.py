@@ -96,6 +96,40 @@ class CodeMigrationOrchestrator:
 
         return result
 
+    async def get_latest_training_samples(self) -> list[dict[str, Any]]:
+        """直近実行の学習用トランジションを取得."""
+        engine = self._get_engine()
+        if hasattr(engine, "get_latest_transition_samples"):
+            return await engine.get_latest_transition_samples()
+        return []
+
+    async def train_latest_run(
+        self,
+        *,
+        apply_optimized_profile: bool = True,
+    ) -> dict[str, Any]:
+        """直近 run を Lightning 学習へ投入."""
+        engine = self._get_engine()
+        if hasattr(engine, "train_latest_run"):
+            return await engine.train_latest_run(
+                apply_optimized_profile=apply_optimized_profile
+            )
+        return {
+            "success": False,
+            "backend": "none",
+            "trained": False,
+            "optimized": False,
+            "num_samples": 0,
+            "message": "engine does not support training",
+        }
+
+    def get_optimized_llm_profile(self) -> dict[str, Any]:
+        """現在の最適化 LLM プロファイルを取得."""
+        engine = self._get_engine()
+        if hasattr(engine, "get_optimized_llm_profile"):
+            return engine.get_optimized_llm_profile()
+        return {}
+
     # ========================================
     # 製品パッケージ入口
     # ========================================
@@ -228,7 +262,7 @@ class CodeMigrationOrchestrator:
                     "name": f"{module_name}{agent_role}",
                     "protocol": "A2A",
                     "skills": ["legacy-knowledge", "java-coding", "unit-testing"],
-                    "governance_policy": "enterprise-standard"
+                    "governance_policy": "enterprise-standard",
                 },
                 "message": f"Agent Factory: Created new {agent_role} for {module_name}",
             }
@@ -304,4 +338,3 @@ class CodeMigrationOrchestrator:
     def name(self) -> str:
         """Flow名."""
         return f"legacy-to-agent-{self._migration_type}"
-

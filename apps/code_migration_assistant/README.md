@@ -327,3 +327,58 @@ compliance-reporter Skill で日本語の監査報告書を生成。
 `config/prompts/` および `config/type_mappings/` に言語固有のルールを配置します。
 
 ---
+
+## 🧠 学習連携（Agent Lightning backend）
+
+既定では収集/学習は無効です。必要時にのみ opt-in してください。
+
+```python
+from apps.code_migration_assistant.lightning import create_lightning_engine_config
+from apps.code_migration_assistant.engine import CodeMigrationEngine
+
+config = create_lightning_engine_config(
+    enable_collection=False,       # 既定: 収集しない
+    enable_training=False,         # 既定: 学習しない
+    enable_api_optimization=False, # 既定: 最適化しない
+    backend="auto",  # auto|builtin|microsoft
+)
+engine = CodeMigrationEngine(config=config)
+```
+
+必要案件では「収集」と「訓練」を分けて実行します。
+
+1. 実行（通常）
+
+```python
+result = await engine.run({"source_code": source_code})
+```
+
+2. 収集（必要時のみ）
+
+```python
+config = create_lightning_engine_config(
+    enable_collection=True,
+    enable_training=False,
+    backend="auto",
+)
+engine = CodeMigrationEngine(config=config)
+```
+
+3. 訓練（別ジョブ）
+
+```python
+result = await engine.train_latest_run(apply_optimized_profile=True)
+profile = engine.get_optimized_llm_profile()
+```
+
+Note:
+- `backend="microsoft"` 指定時、ライブラリ未導入なら `strict_backend=False` で builtin fallback
+- 外部I/F（Engine 入出力）は変更しません
+- 実行フローから自動訓練を起動しないでください（運用分離）
+
+---
+
+## 🙏 謝辞
+
+本アプリの実行/改善分離、およびトレース・報酬の設計改善は  
+[Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning) の思想とアーキテクチャを参考にしています。

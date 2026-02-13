@@ -92,8 +92,24 @@ AgentFlow 本体でスキルを自動発見する際の既定探索先は次の�
 
 ```
 agentflow/skills/builtin/   # フレームワーク提供スキル
-~/.agentflow/skills/        # ユーザースキル
-apps/*/skills/              # アプリ固有スキル
+~/.agentflow/skills/        # ユーザースキル（グローバル）
+~/.agentflow/learned_skills/ # 自動学習スキル
+.agentflow/skills/          # プロジェクトローカルスキル
+```
+
+## CLI で Skill を取り込む
+
+外部 Skills を CLI でマウントできます。
+
+```bash
+# 単一 Skill をプロジェクトに取り込む
+agentflow skills mount ./external/my-skill --scope project
+
+# グローバルに取り込む
+agentflow skills mount ./external/my-skill --scope global
+
+# 既存と衝突した場合に上書き
+agentflow skills mount ./external/my-skill --scope project --force
 ```
 
 ## 使用方法

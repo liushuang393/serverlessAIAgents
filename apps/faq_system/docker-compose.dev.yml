@@ -1,0 +1,49 @@
+# ==============================================================================
+# FAQ System - 開発用 Docker Compose オーバーライド
+# ==============================================================================
+# 使用方法:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# 前提:
+#   - 必ず docker-compose.yml と一緒に使用すること
+#   - .env に API_PORT=8001 を設定すること（開発用ポート自動切替）
+#
+# ポート設定:
+#   - 容器内は常に 8001（統一）
+#   - ホスト側ポートは docker-compose.yml の API_PORT 変数で制御
+#
+# 機能:
+#   - バックエンド: uvicorn --reload（ホットリロード）
+#   - ソースコード読み書きマウント（リアルタイム反映）
+# ==============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # バックエンド: 開発モード（docker-compose.yml の backend をオーバーライド）
+  # ---------------------------------------------------------------------------
+  backend:
+    # 容器内ポートは 8001 のまま（docker-compose.yml と統一）
+    command:
+      [
+        "bash",
+        "-lc",
+        "alembic -c /app/apps/faq_system/alembic.ini upgrade head && uvicorn apps.faq_system.main:app --host 0.0.0.0 --port 8001 --reload",
+      ]
+    volumes:
+      # ソースコードをマウント（リアルタイム反映、読み書き可能）
+      - ../../agentflow:/app/agentflow
+      - .:/app/apps/faq_system
+    environment:
+      # LLM 設定（ホストの環境変数をそのまま継承、値を上書きしない）
+      - OPENAI_API_KEY
+      - ANTHROPIC_API_KEY
+      - AZURE_OPENAI_API_KEY
+      - AZURE_OPENAI_ENDPOINT
+      # アプリ設定
+      - LOG_LEVEL=DEBUG
+      - RAG_COLLECTION=${RAG_COLLECTION:-faq_knowledge}
+      - DB_SCHEMA=${DB_SCHEMA:-{}}
+      - FAQ_SALES_MATERIAL_DIR=${FAQ_SALES_MATERIAL_DIR:-/tmp/faq_sales_material}
+      - FAQ_DATABASE_URL=${FAQ_DATABASE_URL:-postgresql+asyncpg://faq:faq_password@faq-db:5432/faq_system}
+      - FAQ_DB_AUTO_CREATE=${FAQ_DB_AUTO_CREATE:-false}
+      - FAQ_AUTH_PROVIDER=${FAQ_AUTH_PROVIDER:-local_db}

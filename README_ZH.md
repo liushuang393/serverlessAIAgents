@@ -197,6 +197,7 @@ AgentFlow 提供三种操作方式，根据用途选择最适合的方式。
 | [内置 Skills 指南](docs/guide-builtin-skills.md) | 数据库/支付/认证/部署（NEW） |
 | [LLM 路由器](docs/guide-llm-router.md) | 多模型切换（NEW） |
 | [架构](docs/architecture.md) | 设计思想与结构 |
+| [Agent Lightning 对齐设计](docs/design/AGENT_LIGHTNING_ALIGNMENT_DESIGN.md) | 借鉴 Agent Lightning 的改进设计（NEW） |
 | [协议](docs/protocols.md) | MCP/A2A/AG-UI/A2UI |
 | [API](docs/api.md) | API 参考 |
 | [CLI](docs/cli.md) | 命令列表 |
@@ -209,6 +210,13 @@ AgentFlow 提供三种操作方式，根据用途选择最适合的方式。
 
 - [贡献指南](CONTRIBUTING.md)
 - [变更日志](CHANGELOG.md)
+
+---
+
+## 🙏 致谢
+
+本项目在“执行/训练解耦、轨迹标准化、奖励信号”方面的近期改进，  
+参考了 [Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning) 的思想与架构。
 
 ---
 
@@ -225,4 +233,3 @@ AgentFlow 提供三种操作方式，根据用途选择最适合的方式。
 Made with ❤️ by the AgentFlow Team
 
 </div>
-

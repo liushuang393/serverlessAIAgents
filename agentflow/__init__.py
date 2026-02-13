@@ -354,7 +354,26 @@ from agentflow.reasoner import (
 # =============================================================================
 # 公開API: Run/Replay/Compare
 # =============================================================================
-from agentflow.run import MemoryRunStore, RunDiff, RunRecord, RunStore
+from agentflow.run import (
+    LightningEventRecord,
+    LightningRuntimeConfig,
+    LightningStore,
+    LightningTrainingRequest,
+    LightningTrainingResult,
+    MemoryLightningStore,
+    MemoryRunStore,
+    PromptRewardSample,
+    RewardSignal,
+    RunDiff,
+    RunRecord,
+    RunStore,
+    TrajectoryAdapter,
+    TransitionSample,
+    build_optimized_llm_profile,
+    is_microsoft_lightning_available,
+    resolve_lightning_store,
+    train_with_lightning_backend,
+)
 from agentflow.security.evidence_collector import (
     FileEvidence,
     NetworkCallEvidence,
@@ -635,6 +654,7 @@ __all__ = [
     "MarkdownContent",
     "MemoryAccessor",
     "MemoryCheckpointer",
+    "MemoryLightningStore",
     "MemoryRunStore",
     # ストア実装
     "MemvidKnowledgeStore",
@@ -687,6 +707,7 @@ __all__ = [
     "RetrievalReason",
     "ReviewNode",
     "ReviewVerdict",
+    "RewardSignal",
     # コンポーネント
     "RichComponent",
     # =========================================================================
@@ -703,8 +724,20 @@ __all__ = [
     # =========================================================================
     # Run/Replay/Compare
     # =========================================================================
+    "LightningEventRecord",
+    "LightningRuntimeConfig",
+    "LightningStore",
+    "LightningTrainingRequest",
+    "LightningTrainingResult",
+    "PromptRewardSample",
     "RunRecord",
     "RunStore",
+    "TrajectoryAdapter",
+    "TransitionSample",
+    "build_optimized_llm_profile",
+    "is_microsoft_lightning_available",
+    "resolve_lightning_store",
+    "train_with_lightning_backend",
     # =========================================================================
     # Runtime Context（プラットフォーム向け）
     # =========================================================================

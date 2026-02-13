@@ -215,6 +215,27 @@ agentflow run . --input '{"input": "hello world"}' --json
 }
 ```
 
+### workflow YAML を直接実行
+
+`WorkflowService` ベースのワークフローは CLI から直接実行できます。
+
+1. `workflow.yaml` を作成:
+
+```yaml
+workflow_type: reflection
+task: "Summarize this text"
+input_data:
+  text: "hello world"
+config:
+  max_iterations: 1
+```
+
+2. 実行:
+
+```bash
+agentflow flow run workflow.yaml --json
+```
+
 ### Python スクリプトから実行
 
 ```python

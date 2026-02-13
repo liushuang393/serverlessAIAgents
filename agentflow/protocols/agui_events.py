@@ -42,6 +42,11 @@ class AGUIEventType(str, Enum):
     CLARIFICATION_REQUIRED = "clarification.required"
     CLARIFICATION_RECEIVED = "clarification.received"
 
+    # 承認イベント（HITL）
+    APPROVAL_REQUIRED = "approval_required"
+    APPROVAL_SUBMITTED = "approval_submitted"
+    APPROVAL_TIMEOUT = "approval_timeout"
+
 
 class AGUIEvent(BaseModel):
     """AG-UI イベントベースクラス.
@@ -113,7 +118,9 @@ class FlowCompleteEvent(AGUIEvent):
         default=AGUIEventType.FLOW_COMPLETE, description="イベントタイプ"
     )
     result_id: str | None = Field(default=None, description="結果ID（ストア参照用）")
-    result: dict[str, Any] | None = Field(default=None, description="完整結果（小サイズ時直接含む）")
+    result: dict[str, Any] | None = Field(
+        default=None, description="完整結果（小サイズ時直接含む）"
+    )
     include_result: bool = Field(default=False, description="結果をイベントに含むか")
 
 
@@ -245,6 +252,48 @@ class ClarificationReceivedEvent(AGUIEvent):
     answers: dict[str, Any] = Field(..., description="ユーザー回答")
 
 
+class ApprovalRequiredEvent(AGUIEvent):
+    """承認要求イベント."""
+
+    event_type: AGUIEventType = Field(
+        default=AGUIEventType.APPROVAL_REQUIRED,
+        description="イベントタイプ",
+    )
+    request_id: str = Field(..., description="承認要求ID")
+    action: str = Field(..., description="対象アクション")
+    reason: str = Field(..., description="承認理由")
+    risk_level: str = Field(default="normal", description="リスクレベル")
+    context: dict[str, Any] = Field(default_factory=dict, description="追加コンテキスト")
+    options: list[dict[str, Any]] = Field(default_factory=list, description="選択肢")
+    timeout_seconds: int = Field(default=300, description="承認タイムアウト秒")
+    requester: str | None = Field(default=None, description="リクエスター")
+
+
+class ApprovalSubmittedEvent(AGUIEvent):
+    """承認結果イベント."""
+
+    event_type: AGUIEventType = Field(
+        default=AGUIEventType.APPROVAL_SUBMITTED,
+        description="イベントタイプ",
+    )
+    request_id: str = Field(..., description="承認要求ID")
+    approved: bool = Field(..., description="承認されたか")
+    approver: str | None = Field(default=None, description="承認者")
+    comment: str | None = Field(default=None, description="コメント")
+    modifications: dict[str, Any] = Field(default_factory=dict, description="修正内容")
+
+
+class ApprovalTimeoutEvent(AGUIEvent):
+    """承認タイムアウトイベント."""
+
+    event_type: AGUIEventType = Field(
+        default=AGUIEventType.APPROVAL_TIMEOUT,
+        description="イベントタイプ",
+    )
+    request_id: str = Field(..., description="承認要求ID")
+    action: str = Field(..., description="対象アクション")
+
+
 LEGACY_EVENT_TYPE_MAP: dict[AGUIEventType, str] = {
     AGUIEventType.FLOW_START: "flow_start",
     AGUIEventType.FLOW_COMPLETE: "flow_complete",
@@ -257,6 +306,9 @@ LEGACY_EVENT_TYPE_MAP: dict[AGUIEventType, str] = {
     AGUIEventType.LOG: "log",
     AGUIEventType.CLARIFICATION_REQUIRED: "clarification_required",
     AGUIEventType.CLARIFICATION_RECEIVED: "clarification_received",
+    AGUIEventType.APPROVAL_REQUIRED: "approval_required",
+    AGUIEventType.APPROVAL_SUBMITTED: "approval_submitted",
+    AGUIEventType.APPROVAL_TIMEOUT: "approval_timeout",
 }
 
 
@@ -276,6 +328,9 @@ __all__ = [
     "LEGACY_EVENT_TYPE_MAP",
     "AGUIEvent",
     "AGUIEventType",
+    "ApprovalRequiredEvent",
+    "ApprovalSubmittedEvent",
+    "ApprovalTimeoutEvent",
     "ClarificationQuestion",
     "ClarificationReceivedEvent",
     "ClarificationRequiredEvent",

@@ -17,6 +17,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.text import Text
 
 from agentflow.cli.commands.create import create
+from agentflow.cli.commands.flow import flow
 from agentflow.cli.commands.init import init
 from agentflow.cli.commands.marketplace import marketplace
 from agentflow.cli.commands.sandbox import sandbox
@@ -546,6 +547,7 @@ cli.add_command(sandbox)
 cli.add_command(skills)
 cli.add_command(template)
 cli.add_command(workspace)
+cli.add_command(flow)
 
 
 def main() -> None:

@@ -1015,6 +1015,7 @@ python -m agentflow.cli template generate fullstack-app apps/my_app -i
 | [ポート管理](docs/PORT_MANAGEMENT.md) | App ポート自動管理（NEW） |
 | [アーキテクチャ](docs/architecture.md) | 設計思想・構成 |
 | [Auto-Agent](docs/auto-agent-architecture.md) | 統一ツール・Agentレジストリ (v1.8.0 NEW) |
+| [Agent Lightning Alignment](docs/design/AGENT_LIGHTNING_ALIGNMENT_DESIGN.md) | Agent Lightning 着想の実装方針（NEW） |
 | [プロトコル](docs/protocols.md) | MCP/A2A/AG-UI/A2UI |
 | [API](docs/api.md) | API リファレンス |
 | [CLI](docs/cli.md) | コマンド一覧 |
@@ -1037,6 +1038,13 @@ AgentFlow への貢献を歓迎します！
 他の優秀な AI エージェント開発フレームワーク:
 
 - [agno](https://github.com/agno-agi/agno) - 高性能 AI エージェントフレームワーク
+
+---
+
+## 謝辞
+
+本プロジェクトの実行/学習分離、トレース標準化、報酬信号設計は  
+[Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning) の思想とアーキテクチャに着想を得ています。
 
 ---
 

@@ -1,0 +1,107 @@
+# ==============================================================================
+# FAQ System - Docker Compose
+# ==============================================================================
+# FastAPI バックエンド（WebSocket + 富文本 UI 統合済み）
+#
+# ポート設定:
+#   1. .env を作成（cp ../../.env.example .env → 編集）
+#   2. または下記デフォルト値を使用
+#
+# 使用方法:
+#   本番（イメージビルド）:
+#     docker compose up --build -d
+#
+#   開発（ホットリロード）:
+#     docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+#   停止:
+#     docker compose down
+#
+#   ログ確認:
+#     docker compose logs -f backend
+# ==============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # ローカルDB: PostgreSQL
+  # ---------------------------------------------------------------------------
+  faq-db:
+    image: postgres:16-alpine
+    container_name: faq-db
+    environment:
+      - POSTGRES_DB=${FAQ_DB_NAME:-faq_system}
+      - POSTGRES_USER=${FAQ_DB_USER:-faq}
+      - POSTGRES_PASSWORD=${FAQ_DB_PASSWORD:-faq_password}
+    ports:
+      - "${FAQ_DB_PORT:-5433}:5432"
+    volumes:
+      - faq-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${FAQ_DB_USER:-faq} -d ${FAQ_DB_NAME:-faq_system}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - faq-network
+
+  # ---------------------------------------------------------------------------
+  # バックエンド: FastAPI + Uvicorn
+  # ---------------------------------------------------------------------------
+  backend:
+    build:
+      context: ../..
+      dockerfile: apps/faq_system/Dockerfile
+    container_name: faq-backend
+    ports:
+      - "${API_PORT:-8001}:8001"
+    environment:
+      # LLM 設定（.env から読み込み）
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - AZURE_OPENAI_API_KEY=${AZURE_OPENAI_API_KEY:-}
+      - AZURE_OPENAI_ENDPOINT=${AZURE_OPENAI_ENDPOINT:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      # アプリ設定
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - RAG_COLLECTION=${RAG_COLLECTION:-faq_knowledge}
+      - DB_SCHEMA=${DB_SCHEMA:-{}}
+      - FAQ_SALES_MATERIAL_DIR=${FAQ_SALES_MATERIAL_DIR:-/tmp/faq_sales_material}
+      # FAQ 認証/履歴/KB 設定 DB
+      - FAQ_DATABASE_URL=${FAQ_DATABASE_URL:-postgresql+asyncpg://faq:faq_password@faq-db:5432/faq_system}
+      - FAQ_DB_AUTO_CREATE=${FAQ_DB_AUTO_CREATE:-false}
+      - FAQ_AUTH_PROVIDER=${FAQ_AUTH_PROVIDER:-local_db}
+      - FAQ_TRUST_PROXY_AUTH=${FAQ_TRUST_PROXY_AUTH:-false}
+      - FAQ_PROXY_AUTH_SHARED_SECRET=${FAQ_PROXY_AUTH_SHARED_SECRET:-}
+    volumes:
+      # 開発時: ソースコードをマウント（ホットリロード用）
+      - ../../agentflow:/app/agentflow:ro
+      - .:/app/apps/faq_system:ro
+    command:
+      [
+        "bash",
+        "-lc",
+        "alembic -c /app/apps/faq_system/alembic.ini upgrade head && uvicorn apps.faq_system.main:app --host 0.0.0.0 --port 8001",
+      ]
+    depends_on:
+      faq-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - faq-network
+
+# ---------------------------------------------------------------------------
+# ネットワーク
+# ---------------------------------------------------------------------------
+networks:
+  faq-network:
+    driver: bridge
+
+volumes:
+  faq-db-data:

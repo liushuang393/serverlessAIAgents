@@ -9,6 +9,7 @@
 """
 
 import re
+import shutil
 from pathlib import Path
 
 import click
@@ -51,6 +52,17 @@ def load_all_skills() -> list[Skill]:
         skills.extend(loaded)
 
     return skills
+
+
+def discover_skill_dirs(source: Path) -> list[Path]:
+    """SOURCE から Skill ディレクトリを検出."""
+    if source.is_file():
+        return [source.parent] if source.name == "SKILL.md" else []
+
+    if (source / "SKILL.md").exists():
+        return [source]
+
+    return sorted({path.parent for path in source.rglob("SKILL.md")})
 
 
 @click.group()
@@ -396,7 +408,78 @@ def delete(ctx: click.Context, name: str, scope: str, force: bool) -> None:
         return
 
     # 削除
-    import shutil
     shutil.rmtree(skill_dir)
     console.print(f"[green]✓ Deleted skill: {name}[/green]")
 
+
+@skills.command()
+@click.argument("source", type=click.Path(exists=True, path_type=Path))
+@click.option(
+    "--scope",
+    "-s",
+    type=click.Choice(["project", "global"]),
+    default="project",
+    help="マウント先の範囲",
+)
+@click.option("--name", "-n", help="ターゲットのスキル名（単一スキルをマウントする場合のみ使用可）")
+@click.option("--force", "-f", is_flag=True, help="ターゲットが存在する場合に上書きする")
+@click.pass_context
+def mount(
+    ctx: click.Context,
+    source: Path,
+    scope: str,
+    name: str | None,
+    force: bool,
+) -> None:
+    """外部 Skill ディレクトリをマウントします。
+
+    SOURCE: 単一の Skill ディレクトリ、SKILL.md ファイル、または複数の Skill を含むディレクトリ
+    """
+    skill_dirs = discover_skill_dirs(source)
+    if not skill_dirs:
+        console.print(f"[red]No SKILL.md found in source: {source}[/red]")
+        raise click.exceptions.Exit(1)
+
+    if name and len(skill_dirs) != 1:
+        console.print("[red]--name can only be used when mounting a single skill.[/red]")
+        raise click.exceptions.Exit(1)
+
+    target_root = Path(".agentflow") / "skills" if scope == "project" else Path.home() / ".agentflow" / "skills"
+    target_root.mkdir(parents=True, exist_ok=True)
+
+    validator = SkillValidator(strict=False)
+    mounted: list[str] = []
+
+    for skill_dir in skill_dirs:
+        try:
+            skill = Skill.load(skill_dir)
+        except Exception as e:
+            console.print(f"[red]Failed to load skill at {skill_dir}: {e}[/red]")
+            raise click.exceptions.Exit(1) from e
+
+        result = validator.validate(skill)
+        if not result.valid:
+            console.print(f"[red]Skill validation failed: {skill.name}[/red]")
+            for err in result.errors:
+                console.print(f"[red]  - {err}[/red]")
+            raise click.exceptions.Exit(1)
+
+        target_name = name or skill.name
+        destination = target_root / target_name
+
+        if destination.exists():
+            if not force:
+                console.print(f"[red]Target already exists: {destination} (use --force to overwrite)[/red]")
+                raise click.exceptions.Exit(1)
+            shutil.rmtree(destination)
+
+        shutil.copytree(skill_dir, destination)
+        mounted.append(target_name)
+
+    console.print(Panel(
+        f"[green]✓ Mounted {len(mounted)} skill(s)[/green]\n\n"
+        f"[dim]Target:[/dim] {target_root}\n"
+        f"[dim]Skills:[/dim] {', '.join(mounted)}",
+        title="Mount Success",
+        border_style="green",
+    ))

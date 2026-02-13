@@ -14,9 +14,11 @@ from __future__ import annotations
 import functools
 import logging
 import os
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from inspect import isawaitable
 from typing import Any, TypeVar
 
 
@@ -101,6 +103,12 @@ class AuthUser:
         return permission in self.permissions
 
 
+ExternalAuthHandler = Callable[
+    [str | None, str | None],
+    AuthUser | Awaitable[AuthUser | None] | None,
+]
+
+
 class AuthMiddleware:
     """認証ミドルウェア.
 
@@ -115,15 +123,18 @@ class AuthMiddleware:
         self,
         jwt_config: JWTConfig | None = None,
         api_key_manager: Any = None,
+        external_authenticator: ExternalAuthHandler | None = None,
     ) -> None:
         """初期化.
 
         Args:
             jwt_config: JWT 設定
             api_key_manager: API Key マネージャー
+            external_authenticator: 外部認証ハンドラ
         """
         self._jwt_config = jwt_config
         self._api_key_manager = api_key_manager
+        self._external_authenticator = external_authenticator
         self._logger = logging.getLogger(__name__)
 
     async def authenticate(
@@ -146,6 +157,12 @@ class AuthMiddleware:
             if user:
                 return user
 
+        # 外部認証ハンドラを試行（OIDC/SAMLゲートウェイ統合向け）
+        if self._external_authenticator:
+            user = await self._authenticate_external(authorization, api_key)
+            if user:
+                return user
+
         # JWT 認証を試行
         if authorization and self._jwt_config:
             user = await self._authenticate_jwt(authorization)
@@ -153,6 +170,19 @@ class AuthMiddleware:
                 return user
 
         return None
+
+    async def _authenticate_external(
+        self,
+        authorization: str | None,
+        api_key: str | None,
+    ) -> AuthUser | None:
+        """外部認証ハンドラを実行."""
+        if not self._external_authenticator:
+            return None
+        result = self._external_authenticator(authorization, api_key)
+        if isawaitable(result):
+            return await result
+        return result
 
     async def _authenticate_api_key(self, api_key: str) -> AuthUser | None:
         """API Key 認証.
@@ -293,21 +323,23 @@ class AuthMiddleware:
 def create_auth_middleware(
     jwt_config: JWTConfig | None = None,
     api_key_manager: Any = None,
+    external_authenticator: ExternalAuthHandler | None = None,
 ) -> AuthMiddleware:
     """認証ミドルウェアを作成.
 
     Args:
         jwt_config: JWT 設定
         api_key_manager: API Key マネージャー
+        external_authenticator: 外部認証ハンドラ
 
     Returns:
         AuthMiddleware インスタンス
     """
-    return AuthMiddleware(jwt_config, api_key_manager)
+    return AuthMiddleware(jwt_config, api_key_manager, external_authenticator)
 
 
 # 現在のユーザーを保持（リクエストスコープ）
-_current_user: AuthUser | None = None
+_current_user: ContextVar[AuthUser | None] = ContextVar("agentflow_current_user", default=None)
 
 
 def set_current_user(user: AuthUser | None) -> None:
@@ -316,8 +348,7 @@ def set_current_user(user: AuthUser | None) -> None:
     Args:
         user: ユーザー
     """
-    global _current_user
-    _current_user = user
+    _current_user.set(user)
 
 
 def get_current_user() -> AuthUser | None:
@@ -326,7 +357,7 @@ def get_current_user() -> AuthUser | None:
     Returns:
         現在のユーザー、または None
     """
-    return _current_user
+    return _current_user.get()
 
 
 def require_auth[F: Callable[..., Any]](func: F) -> F:
@@ -413,4 +444,3 @@ def require_permission(permission: str) -> Callable[[F], F]:
         return sync_wrapper  # type: ignore
 
     return decorator
-

@@ -1,0 +1,6 @@
+Single-database configuration for FAQ System.
+
+Usage:
+  alembic -c apps/faq_system/alembic.ini revision --autogenerate -m "message"
+  alembic -c apps/faq_system/alembic.ini upgrade head
+  alembic -c apps/faq_system/alembic.ini downgrade -1

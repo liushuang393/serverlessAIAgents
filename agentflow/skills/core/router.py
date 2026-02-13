@@ -129,7 +129,7 @@ class SkillRouter:
         """
         from pathlib import Path
 
-        from agentflow.skills.loader import SkillLoader
+        from agentflow.skills.core.loader import SkillLoader
 
         loader = SkillLoader()
         skills: list[Skill] = []
@@ -141,7 +141,7 @@ class SkillRouter:
                 skills.extend(loaded)
         else:
             # デフォルト: ビルトインSkillディレクトリから読み込み
-            builtin_dir = Path(__file__).parent / "builtin"
+            builtin_dir = Path(__file__).resolve().parents[1] / "builtin"
             if builtin_dir.exists():
                 skills = loader.load_directory(builtin_dir, recursive=True)
 
@@ -266,4 +266,3 @@ class SkillRouter:
     def skill_count(self) -> int:
         """登録Skill数."""
         return len(self._skill_metas)
-

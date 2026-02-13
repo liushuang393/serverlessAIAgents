@@ -570,6 +570,36 @@ class TestAuthMiddleware(unittest.TestCase):
         finally:
             loop.close()
 
+    def test_authenticate_external_authenticator(self):
+        """外部認証ハンドラ経由で認証できる."""
+        from agentflow.security.auth_middleware import AuthMiddleware, AuthUser
+
+        async def external_auth(
+            authorization: str | None,
+            _api_key: str | None,
+        ) -> AuthUser | None:
+            if authorization == "SSO demo-token":
+                return AuthUser(
+                    id="sso-user",
+                    email="sso@example.com",
+                    roles=["employee"],
+                )
+            return None
+
+        middleware = AuthMiddleware(external_authenticator=external_auth)
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            user = loop.run_until_complete(
+                middleware.authenticate(authorization="SSO demo-token")
+            )
+            self.assertIsNotNone(user)
+            assert user is not None
+            self.assertEqual(user.id, "sso-user")
+        finally:
+            loop.close()
+
 
 class TestCreateAuthMiddleware(unittest.TestCase):
     """create_auth_middleware 函数的测试."""
@@ -580,6 +610,30 @@ class TestCreateAuthMiddleware(unittest.TestCase):
 
         middleware = create_auth_middleware()
         self.assertIsNotNone(middleware)
+
+    def test_creation_with_external_authenticator(self):
+        """外部認証ハンドラ付きで作成できる."""
+        from agentflow.security.auth_middleware import AuthUser, create_auth_middleware
+
+        def external_auth(
+            authorization: str | None,
+            _api_key: str | None,
+        ) -> AuthUser | None:
+            if authorization:
+                return AuthUser(id="external-user")
+            return None
+
+        middleware = create_auth_middleware(external_authenticator=external_auth)
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            user = loop.run_until_complete(
+                middleware.authenticate(authorization="External token")
+            )
+            self.assertIsNotNone(user)
+        finally:
+            loop.close()
 
 
 class TestPermission(unittest.TestCase):

@@ -261,6 +261,30 @@ EVALS/
 
 ---
 
+## 4.4 Agent Lightning 着想の改善（2026-02-12 追記）
+
+### 実施内容（本リポジトリ反映済み）
+
+* `EngineConfig` に学習連携フックを追加
+
+  * `lightning`: `enabled` / `backend(auto|builtin|microsoft)` / `enable_training` などを統一設定
+  * `lightning_store`: 実行イベント/報酬を標準化保存（外部I/F固定）
+  * `reward_evaluator`: 実行結果→報酬変換
+* `BaseEngine` の `run()` / `run_stream()` で実行ライフサイクルを保存
+* `BaseEngine.train_lightning()` で run 履歴から学習投入を実行
+* `TrajectoryAdapter` で `node_complete` 系イベントから `(s,a,r,s')` を生成
+* `agentflow/run/lightning_backend.py` を追加し、Microsoft Agent Lightning 利用時は内部で `Trainer` / `trace_context` を利用
+* `CodeMigrationEngine` は既定で収集/学習を無効化（opt-in）
+
+### 期待効果
+
+* 既存 Agent 実装を壊さずに改善ループへ接続可能（外部I/F不変）
+* diff/quality 判定を報酬として再利用し、変換品質の継続改善が可能
+* stream 実行も含めて学習データ欠落を減らせる
+* Microsoft ライブラリ未導入時も builtin fallback で機能継続できる
+
+---
+
 # 5) その他の補足（見落としがちな重要点）
 
 ## 5.1 セキュリティ/事故対策（P0）
@@ -291,4 +315,3 @@ EVALS/
 - Agent間通信は会話ではなく artifacts/ 配下の JSON と生成物で行う。
 - 失敗時は QualityGate により責任工程（設計/変換/テスト/環境/既知旧不具合）を特定し、次に動かすAgentを決める。
 - すべての出力は指定Schemaに従い、unknowns に不明点を明示し、証拠（ログ/テスト/差分）を残す。
-

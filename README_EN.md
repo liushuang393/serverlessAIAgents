@@ -197,6 +197,7 @@ AgentFlow provides three ways to operate. Choose the best method for your use ca
 | [Built-in Skills Guide](docs/guide-builtin-skills.md) | DB/Payment/Auth/Deploy (NEW) |
 | [LLM Router](docs/guide-llm-router.md) | Multi-model switching (NEW) |
 | [Architecture](docs/architecture.md) | Design & Structure |
+| [Agent Lightning Alignment](docs/design/AGENT_LIGHTNING_ALIGNMENT_DESIGN.md) | Agent Lightning inspired design updates (NEW) |
 | [Protocols](docs/protocols.md) | MCP/A2A/AG-UI/A2UI |
 | [API](docs/api.md) | API Reference |
 | [CLI](docs/cli.md) | Commands |
@@ -209,6 +210,13 @@ AgentFlow provides three ways to operate. Choose the best method for your use ca
 
 - [Contributing Guide](CONTRIBUTING.md)
 - [Changelog](CHANGELOG.md)
+
+---
+
+## 🙏 Acknowledgements
+
+Our recent execution/training decoupling and trace/reward design are inspired by  
+[Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning).
 
 ---
 
@@ -225,4 +233,3 @@ AgentFlow provides three ways to operate. Choose the best method for your use ca
 Made with ❤️ by the AgentFlow Team
 
 </div>
-

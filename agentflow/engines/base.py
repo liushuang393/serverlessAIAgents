@@ -17,12 +17,26 @@ import logging
 import time
 import uuid
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 from pydantic import BaseModel
 
-from agentflow.run import MemoryRunStore, RunRecord
+from agentflow.run import (
+    LightningTracer,
+    LightningRuntimeConfig,
+    LightningStore,
+    LightningTrainingRequest,
+    LightningTrainingResult,
+    MemoryRunStore,
+    PromptRewardSample,
+    RunRecord,
+    RunStore,
+    TrajectoryAdapter,
+    resolve_lightning_store,
+    train_with_lightning_backend,
+)
 
 
 # AG-UI イベント（遅延インポートで循環依存回避）
@@ -66,6 +80,10 @@ class EngineConfig:
         timeout_seconds: グローバルタイムアウト時間
         llm_config: LLM設定（model、temperature等）
         hitl: HITL（Human-in-the-Loop）設定
+        run_store: 実行記録ストア
+        lightning: Lightning 実行/学習設定
+        lightning_store: 標準化イベント/報酬ストア（学習連携用）
+        reward_evaluator: 結果から報酬を計算する関数
         extra: 追加設定
     """
 
@@ -76,7 +94,10 @@ class EngineConfig:
     timeout_seconds: int = 300
     llm_config: dict[str, Any] = field(default_factory=dict)
     hitl: HITLEngineConfig = field(default_factory=HITLEngineConfig)
-    run_store: object = field(default_factory=MemoryRunStore)
+    run_store: RunStore = field(default_factory=MemoryRunStore)
+    lightning: LightningRuntimeConfig = field(default_factory=LightningRuntimeConfig)
+    lightning_store: LightningStore | None = None
+    reward_evaluator: Callable[[dict[str, Any]], float | None] | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
 
@@ -114,7 +135,16 @@ class BaseEngine(ABC):
         self._progress_emitter: ProgressEmitter | None = None
         self._thread_id: str | None = None
         self._run_id: str | None = None
-        self._run_store = cast("MemoryRunStore", self._config.run_store)
+        self._run_store = cast("RunStore", self._config.run_store)
+        if not isinstance(self._config.lightning, LightningRuntimeConfig):
+            self._config.lightning = LightningRuntimeConfig.model_validate(self._config.lightning)
+        if self._config.lightning_store is None:
+            self._config.lightning_store = resolve_lightning_store(self._config.lightning)
+        self._lightning_tracer = (
+            LightningTracer(self._config.lightning_store)
+            if self._config.lightning_store is not None
+            else None
+        )
         self._is_resuming: bool = False
         self._resume_checkpoint_id: str | None = None
 
@@ -202,6 +232,10 @@ class BaseEngine(ABC):
             metrics={},
         )
         await self._run_store.save(run_record)
+        await self._trace_custom_event(
+            "engine.run.start",
+            {"mode": "run", "input_keys": sorted(str(key) for key in inputs)},
+        )
 
         # HITL コンテキストを設定
         self._setup_hitl_context()
@@ -210,6 +244,10 @@ class BaseEngine(ABC):
             result = await self._execute(inputs)
             self._logger.info(f"Engine run completed: {self._flow_id}")
             run_record.status = "completed"
+            await self._trace_custom_event(
+                "engine.run.result", {"result": self._serialize_result(result)}
+            )
+            await self._record_reward_signal(result=result, source="run")
             return result
         except Exception as e:
             # InterruptSignal の場合は状態を保存
@@ -218,6 +256,14 @@ class BaseEngine(ABC):
                 await self._handle_interrupt(e, inputs)
             else:
                 run_record.status = "failed"
+            await self._trace_custom_event(
+                "engine.run.error",
+                {
+                    "error_message": str(e),
+                    "error_type": type(e).__name__,
+                },
+                status="error",
+            )
             self._logger.exception(f"Engine run failed: {self._flow_id}")
             raise
         finally:
@@ -226,6 +272,14 @@ class BaseEngine(ABC):
                 run_record.completed_at - run_record.started_at
             ) * 1000
             await self._run_store.save(run_record)
+            await self._trace_custom_event(
+                "engine.run.end",
+                {
+                    "status": run_record.status,
+                    "metrics": run_record.metrics,
+                },
+                status="ok" if run_record.status == "completed" else "error",
+            )
             self._cleanup_hitl_context()
 
     async def run_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
@@ -242,6 +296,29 @@ class BaseEngine(ABC):
             self._initialized = True
 
         self._flow_id = f"{self._config.name}-{uuid.uuid4().hex[:8]}"
+        self._thread_id = f"thread-{uuid.uuid4().hex[:8]}"
+        self._run_id = f"run-{uuid.uuid4().hex[:12]}"
+        started_at = time.time()
+
+        from agentflow.integrations.context_bridge import get_current_context
+
+        context = get_current_context()
+        run_record = RunRecord(
+            run_id=self._run_id,
+            flow_id=self._flow_id,
+            thread_id=self._thread_id,
+            trace_id=context.trace_id if context else None,
+            tenant_id=context.tenant_id if context else None,
+            status="running",
+            started_at=started_at,
+            completed_at=None,
+            metrics={},
+        )
+        await self._run_store.save(run_record)
+        await self._trace_custom_event(
+            "engine.run.start",
+            {"mode": "run_stream", "input_keys": sorted(str(key) for key in inputs)},
+        )
 
         # 運行時インポート（循環依存回避）
         from agentflow.patterns.progress_emitter import ProgressEmitter as PE
@@ -256,39 +333,82 @@ class BaseEngine(ABC):
             flow_id=self._flow_id,
             total_agents=0,
         )
+        latest_result: dict[str, Any] = {}
+
+        self._setup_hitl_context()
 
         # Flow開始イベント（to_dict() で event_type を文字列に変換）
         if self._config.enable_events:
-            yield FlowStartEvent(
+            start_event = FlowStartEvent(
                 timestamp=time.time(),
                 flow_id=self._flow_id,
                 data={"engine": self.__class__.__name__},
             ).to_dict()
+            await self._trace_event(start_event)
+            yield start_event
 
         try:
             # 実行してイベントを収集
             async for event in self._execute_stream(inputs):
+                await self._trace_event(event)
+                result_candidate = self._extract_result_candidate(event)
+                if result_candidate is not None:
+                    latest_result = result_candidate
                 yield event
 
             # Flow完了イベント
+            run_record.status = "completed"
+            await self._record_reward_signal(result=latest_result, source="run_stream")
             if self._config.enable_events:
-                yield FlowCompleteEvent(
+                complete_event = FlowCompleteEvent(
                     timestamp=time.time(),
                     flow_id=self._flow_id,
                     data={},
                 ).to_dict()
+                await self._trace_event(complete_event)
+                yield complete_event
 
         except Exception as e:
+            if self._is_interrupt_signal(e):
+                run_record.status = "interrupted"
+                await self._handle_interrupt(e, inputs)
+            else:
+                run_record.status = "failed"
             self._logger.exception(f"Engine stream failed: {self._flow_id}")
+            await self._trace_custom_event(
+                "engine.run.error",
+                {
+                    "error_message": str(e),
+                    "error_type": type(e).__name__,
+                },
+                status="error",
+            )
             if self._config.enable_events:
-                yield FlowErrorEvent(
+                error_event = FlowErrorEvent(
                     timestamp=time.time(),
                     flow_id=self._flow_id or "",
                     error_message=str(e),
                     error_type=type(e).__name__,
                     data={},
                 ).to_dict()
+                await self._trace_event(error_event)
+                yield error_event
             raise
+        finally:
+            run_record.completed_at = time.time()
+            run_record.metrics["duration_ms"] = (
+                run_record.completed_at - run_record.started_at
+            ) * 1000
+            await self._run_store.save(run_record)
+            await self._trace_custom_event(
+                "engine.run.end",
+                {
+                    "status": run_record.status,
+                    "metrics": run_record.metrics,
+                },
+                status="ok" if run_record.status == "completed" else "error",
+            )
+            self._cleanup_hitl_context()
 
     async def _execute_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """ストリーム実行のコアロジック（サブクラスでオーバーライド可能）.
@@ -298,6 +418,152 @@ class BaseEngine(ABC):
         """
         result = await self._execute(inputs)
         yield {"type": "result", "data": result}
+
+    async def _trace_event(self, event: dict[str, Any]) -> None:
+        """イベントを LightningStore へ記録."""
+        if self._lightning_tracer is None:
+            return
+        if self._run_id is None or self._flow_id is None:
+            return
+        await self._lightning_tracer.record_event(
+            run_id=self._run_id,
+            flow_id=self._flow_id,
+            event=event,
+        )
+
+    async def _trace_custom_event(
+        self,
+        event_type: str,
+        payload: dict[str, Any] | None = None,
+        *,
+        node_id: str | None = None,
+        node_name: str | None = None,
+        status: str = "ok",
+    ) -> None:
+        """任意イベントを LightningStore へ記録."""
+        if self._lightning_tracer is None:
+            return
+        if self._run_id is None or self._flow_id is None:
+            return
+        await self._lightning_tracer.record_custom_event(
+            run_id=self._run_id,
+            flow_id=self._flow_id,
+            event_type=event_type,
+            payload=payload,
+            node_id=node_id,
+            node_name=node_name,
+            status=status,
+        )
+
+    async def _record_reward_signal(
+        self,
+        *,
+        result: dict[str, Any],
+        source: str,
+    ) -> None:
+        """報酬評価関数に基づく報酬信号を記録."""
+        evaluator = self._config.reward_evaluator
+        if evaluator is None or self._lightning_tracer is None:
+            return
+        if self._run_id is None or self._flow_id is None:
+            return
+
+        try:
+            reward = evaluator(result)
+        except Exception as exc:  # noqa: BLE001
+            self._logger.warning("reward_evaluator failed: %s", exc)
+            return
+        if reward is None:
+            return
+
+        await self._lightning_tracer.record_reward(
+            run_id=self._run_id,
+            flow_id=self._flow_id,
+            value=reward,
+            source=source,
+            metadata={"thread_id": self._thread_id or ""},
+        )
+
+    async def train_lightning(
+        self,
+        request: LightningTrainingRequest | None = None,
+    ) -> LightningTrainingResult:
+        """蓄積済みトレースから Lightning 学習/最適化を実行."""
+        store = self._config.lightning_store
+        if store is None:
+            return LightningTrainingResult(
+                success=False,
+                backend="none",
+                trained=False,
+                optimized=False,
+                num_samples=0,
+                message="lightning_store is not configured",
+            )
+
+        req = request or LightningTrainingRequest()
+        runtime = self._config.lightning.model_copy(deep=True)
+        if req.backend is not None:
+            runtime.backend = req.backend
+        if req.algorithm is not None:
+            runtime.algorithm = req.algorithm
+
+        target_run_id = req.run_id
+        if target_run_id is None:
+            run_ids = await store.list_run_ids()
+            if not run_ids:
+                return LightningTrainingResult(
+                    success=True,
+                    backend=runtime.backend,
+                    trained=False,
+                    optimized=False,
+                    num_samples=0,
+                    message="no recorded runs",
+                )
+            target_run_id = run_ids[-1]
+
+        events = await store.list_events(target_run_id)
+        rewards = await store.list_rewards(target_run_id)
+        samples = TrajectoryAdapter.to_prompt_reward_samples(events=events, rewards=rewards)
+        samples = self._trim_training_samples(samples=samples, max_samples=req.max_samples)
+
+        result = await train_with_lightning_backend(samples=samples, runtime=runtime)
+        if req.apply_optimized_profile and result.optimized_llm_profile:
+            self._apply_optimized_profile(result.optimized_llm_profile)
+        return result
+
+    def _extract_result_candidate(self, event: dict[str, Any]) -> dict[str, Any] | None:
+        """イベントから結果候補を抽出."""
+        event_type = event.get("type")
+        if event_type == "result":
+            data = event.get("data")
+            if isinstance(data, dict):
+                return data
+
+        flow_result = event.get("result")
+        if isinstance(flow_result, dict):
+            return flow_result
+        return None
+
+    def _trim_training_samples(
+        self,
+        *,
+        samples: list[PromptRewardSample],
+        max_samples: int,
+    ) -> list[PromptRewardSample]:
+        """学習サンプル数を上限制御."""
+        if len(samples) <= max_samples:
+            return samples
+        return samples[-max_samples:]
+
+    def _apply_optimized_profile(self, profile: dict[str, Any]) -> None:
+        """最適化プロファイルを Engine の LLM 設定へ反映."""
+        self._config.llm_config = dict(self._config.llm_config)
+        self._config.llm_config["optimized_profile"] = profile
+
+        if "temperature" in profile:
+            self._config.llm_config["temperature"] = profile["temperature"]
+        if "max_tokens" in profile:
+            self._config.llm_config["max_tokens"] = profile["max_tokens"]
 
     def _setup_progress_emitter(self, agent_metas: list[AgentMeta]) -> None:
         """進捗エミッターを設定.

@@ -165,6 +165,8 @@ class TestSkillsCommand:
         assert "validate" in result.output.lower()
         assert "search" in result.output.lower()
         assert "delete" in result.output.lower()
+        assert "mount" in result.output.lower()
+
 
     def test_skills_list(self) -> None:
         """skills list コマンドが動作することをテスト."""
@@ -268,6 +270,18 @@ class TestSkillsCommand:
         assert "name" in result.output.lower()
         assert "--scope" in result.output
         assert "--force" in result.output
+
+
+class TestFlowGroup:
+    """flow コマンドグループのテスト."""
+
+    def test_flow_help(self) -> None:
+        """flow --help が動作することをテスト."""
+        runner = CliRunner()
+        result = runner.invoke(cli, ["flow", "--help"])
+
+        assert result.exit_code == 0
+        assert "run" in result.output.lower()
 
 
 class TestErrorHandling:

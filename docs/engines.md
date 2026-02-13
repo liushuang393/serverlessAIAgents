@@ -52,7 +52,19 @@ print(result)  # {"answer": "回答: AIとは何ですか？"}
 ### 設定オプション
 
 ```python
-from agentflow import SimpleEngine, EngineConfig
+from agentflow import (
+    EngineConfig,
+    LightningRuntimeConfig,
+    SimpleEngine,
+    resolve_lightning_store,
+)
+
+runtime = LightningRuntimeConfig(
+    enabled=False,                 # 既定: 収集しない
+    backend="auto",                # auto|builtin|microsoft
+    enable_training=False,         # 既定: 学習しない
+    enable_api_optimization=False, # 既定: 最適化しない
+)
 
 engine = SimpleEngine(
     agent=QAAgent,
@@ -66,9 +78,46 @@ engine = SimpleEngine(
             "model": "gpt-4.1-mini",
             "temperature": 0.2,
         },
+        # 学習連携（既定は無効、必要時に opt-in）
+        lightning=runtime,
+        lightning_store=resolve_lightning_store(runtime),
+        reward_evaluator=lambda result: 1.0 if result.get("success") else -1.0,
     )
 )
 ```
+
+### 学習連携フック（NEW）
+
+`EngineConfig` の以下項目で、実行と改善ループを疎結合に接続できる:
+
+- `lightning`: 収集/学習/最適化の有効化とバックエンド選択
+- `lightning_store`: 標準化イベント/報酬の保存先
+- `reward_evaluator`: 実行結果を報酬へ変換する関数
+
+`BaseEngine.train_lightning()` を呼び出すと、保存済みトレースを学習投入できる。
+
+Note:
+- 既定は `lightning.enabled=False`（収集/学習しない）
+- `backend="microsoft"` かつライブラリ未導入時は `builtin` へフォールバック
+- `strict_backend=True` を指定するとフォールバックせずエラー化
+
+### 運用手順（実行と訓練を分離）
+
+1. 通常実行（推奨デフォルト）
+   - `lightning.enabled=False`
+   - `lightning.enable_training=False`
+2. 限定収集（必要案件のみ）
+   - `lightning.enabled=True`
+   - `lightning.enable_training=False`
+   - `reward_evaluator` を設定
+3. オフライン訓練（別ジョブ）
+   - `train_lightning()` を明示呼び出し
+   - 必要に応じて `apply_optimized_profile=False` で先に評価
+
+設計原則:
+- 実行フローの責務は実行のみ
+- 訓練フローの責務は訓練のみ
+- 収集は常時有効化せず、必要時のみ
 
 ---
 

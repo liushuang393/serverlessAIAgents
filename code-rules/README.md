@@ -30,11 +30,11 @@
 ### 階層構造
 
 ```
-📁 docs/rules2/
+📁 code-rules/
 ├── 📄 CLAUDE.md                    # 🔍 インデックス（最初に読む）
 ├── 📁 global/                      # 🌍 普遍的な原則
 ├── 📁 languages/                   # 🐍 言語固有ルール
-├── 📁 project/                     # 🏢 AgentFlow 固有
+├── 📁 project/                     # 🏢 AgentFlow 固有（例: Agent Lightning 統合規約）
 ├── 📁 company-specific/            # 🏭 企業固有指針
 └── 📁 tools/                       # 🛠️ 自動化ツール
 ```
@@ -46,6 +46,8 @@
 3. **🟢 プロジェクトルール**（状況次第）- AgentFlow の文脈
 4. **🔵 企業固有ルール**（任意）- 組織の慣習
 
+学習連携（Agent Lightning backend）を扱う場合は、`project/agent-lightning-integration.md` を追加で必ず参照してください。
+
 ---
 
 ## 🚀 AI 開発時の基本フロー
@@ -53,14 +55,17 @@
 ### Step 1: 事前準備（5分）
 ```bash
 # 1. インデックスを読む
-cat docs/rules2/CLAUDE.md
+cat code-rules/CLAUDE.md
 
 # 2. グローバルルールを確認
-head -20 docs/rules2/global/principles.md
-head -20 docs/rules2/global/naming-guidelines.md
+head -20 code-rules/global/principles.md
+head -20 code-rules/global/naming-guidelines.md
 
 # 3. 言語ルールを確認
-head -20 docs/rules2/languages/python-rules.md
+head -20 code-rules/languages/python-rules.md
+
+# 4. 学習連携を扱う場合のみ確認
+head -40 code-rules/project/agent-lightning-integration.md
 ```
 
 ### Step 2: AI への指示作成（10分）

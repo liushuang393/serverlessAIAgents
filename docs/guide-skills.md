@@ -167,6 +167,16 @@ project/
             └── SKILL.md
 ```
 
+外部 Skill を取り込む場合は、CLI で同じ配置へマウントできます。
+
+```bash
+# プロジェクトローカルにマウント
+agentflow skills mount ./external/my-skill --scope project
+
+# グローバルにマウント
+agentflow skills mount ./external/my-skill --scope global
+```
+
 ### 読み込み優先順位
 
 1. `~/.agentflow/skills/` - グローバル
@@ -333,6 +343,25 @@ triggers:
 EOF
 ```
 
+### 方法1-b: CLI で外部 Skill をマウント
+
+既存リポジトリや共有ディレクトリの Skill をそのまま取り込む場合:
+
+```bash
+# 単一 Skill
+agentflow skills mount ./third_party/pdf-extractor --scope project
+
+# 複数 Skill を含むルート
+agentflow skills mount ./third_party/skills --scope project
+
+# 既存を上書き
+agentflow skills mount ./third_party/pdf-extractor --scope project --force
+```
+
+補足:
+- `SOURCE` は Skill ディレクトリ、`SKILL.md`、複数 Skill ルートを指定可能です。
+- `--name` は単一 Skill のときのみ指定できます。
+
 ### 方法2: 自動生成
 
 ```python
@@ -368,4 +397,3 @@ await evolver.learn_from_success(
 - [コーディングガイド](guide-coding.md) - Python 開発ガイド
 - [API リファレンス](api.md) - 全 API 詳細
 - [DeepAgent 設計](design/DEEP_AGENT_COORDINATOR_DESIGN.md) - Coordinator 詳細
-

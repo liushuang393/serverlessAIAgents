@@ -60,8 +60,7 @@
 
 ```
 apps/faq_system/
-├── main.py                    # v1.0 基本版（RAG + SQL + Chart）
-├── main_enhanced.py           # v2.0 強化版（リッチテキスト + WebSocket）
+├── main.py                    # 統合版（RAG + SQL + Chart + WebSocket + 富文本 UI）
 ├── backend/
 │   └── agents/
 │       └── enhanced_faq_agent.py  # 強化版FAQAgent

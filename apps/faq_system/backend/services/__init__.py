@@ -36,6 +36,7 @@ from apps.faq_system.backend.services.feedback_service import (
     FeedbackType,
     ImprovementSuggestion,
 )
+from apps.faq_system.backend.services.chat_history_service import ChatHistoryService
 
 # FAQ System 固有サービス
 from apps.faq_system.backend.services.glossary_service import (
@@ -62,6 +63,7 @@ __all__ = [
     "CoverageLevel",
     "CoverageReport",
     "CoverageStats",
+    "ChatHistoryService",
     "FAQConfig",
     # フレームワーク層
     "FAQService",

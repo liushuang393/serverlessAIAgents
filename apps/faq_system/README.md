@@ -1,87 +1,150 @@
-# FAQ System Demo
+# FAQ System
 
-AgentFlow フレームワーク級 Agent/サービスを使用した FAQ システムのデモアプリケーションです。
+AgentFlow フレームワーク級 Agent/サービスを使用した FAQ システムです。
 
-## 🆕 v3.0 企業級強化版
+## クイックスタート
 
-最新の v3.0 では、企業向けの本格的な機能が実装されました。
+### 前提条件
 
-### v3.0 新機能一覧
+| 要件 | バージョン | 確認コマンド |
+|------|-----------|-------------|
+| **Python** | 3.13+ | `python --version` |
+| **pip** | 最新 | `pip --version` |
+| **Git** | 最新 | `git --version` |
 
-| 機能カテゴリ | 機能 | 説明 |
-|-------------|------|------|
-| **社内FAQ** | 双KB隔離 | 社内/対客KB を物理的に隔離 |
-| | 保守モード | 規則類は直接摘録優先、自由発揮を抑制 |
-| | 必須引用 | 来源/バージョン/更新日を必ず提示 |
-| | 工単自動生成 | 不確定回答時に自動でチケット生成 |
-| **メンテナンス支援** | 仕様差分総結 | 新旧ドキュメントの差分を自動抽出 |
-| | 影響範囲分析 | モジュール/API/DB/テストへの影響を特定 |
-| | 成果物自動生成 | Release Note、FAQ更新草案等を自動生成 |
-| **高層データ分析** | 語義層 | 指標・ディメンション辞書による口径統一 |
-| | SQL護欄 | SELECT限定、ブラックリスト、LIMIT自動付与 |
-| | 証拠チェーン | データソース、前提条件、制限事項を明示 |
-| **セキュリティ** | RBAC/ABAC | ロール・属性ベースのアクセス制御 |
-| | APPI準拠 | PII検出/マスク、MyNumber完全除外 |
-| | 監査ログ | 全操作記録、異常検知 |
+### ローカル環境構築
+
+```bash
+# 1. リポジトリをクローン（初回のみ）
+git clone https://github.com/liushuang393/serverlessAIAgents.git
+cd serverlessAIAgents
+
+# 2. Python 仮想環境を作成
+python -m venv .venv
+source .venv/bin/activate        # Linux / macOS
+# .venv\Scripts\activate         # Windows
+
+# 3. 依存関係をインストール（apps オプション含む）
+pip install -e ".[dev,apps]"
+
+# 4. 環境変数を設定
+cp .env.example .env
+# .env を編集して以下を設定:
+#   OPENAI_API_KEY=sk-...        （または ANTHROPIC_API_KEY）
+#   RAG_COLLECTION=faq_knowledge （任意）
+#   DB_SCHEMA={}                 （任意: JSON 形式の DB スキーマ）
+#   FAQ_SALES_MATERIAL_DIR=/tmp/faq_sales_material （任意）
+#   FAQ_DATABASE_URL=postgresql+asyncpg://faq:faq_password@localhost:5433/faq_system
+#   FAQ_AUTH_PROVIDER=local_db   （local_db / ldap / idp）
+```
+
+### DB マイグレーション（必須）
+
+```bash
+# FAQ システムのスキーマを最新化
+alembic -c apps/faq_system/alembic.ini upgrade head
+```
 
 ### 起動方法
 
 ```bash
-# v3.0 企業級強化版
-uvicorn apps.faq_system.main_v3:app --reload --port 8003
+# 本番推奨
+uvicorn apps.faq_system.main:app --port 8001
 
-# v2.0 強化版
-uvicorn apps.faq_system.main_enhanced:app --reload --port 8002
-
-# v1.0 オリジナル版
+# 開発時（ホットリロード）
 uvicorn apps.faq_system.main:app --reload --port 8001
 ```
 
-### 詳細設計書
+起動後、ブラウザで `http://localhost:8001` を開くと WebSocket 対応の富文本チャット UI が表示されます。
 
-詳細な設計と使用方法は [DESIGN.md](./DESIGN.md) を参照してください。
+**統合済み機能:**
+- WebSocket リアルタイム双方向通信（自動再接続付き）
+- 富文本レスポンス（Markdown・コードブロック・表・ECharts チャート）
+- リアルタイム進捗表示
+- 引用/ソース表示
+- フィードバック収集（`/api/feedback`）
 
-### テスト手順
+### テスト確認手順
 
 ```bash
-# 1. NL2SQL 増強サービスの単体テスト（28テスト）
+# 1. 単体テスト
 pytest tests/unit/test_nl2sql_services.py -v --no-cov
 
-# 2. FAQ システム全体のテスト
+# 2. FAQ システムテスト
 pytest apps/faq_system/tests/ -v --no-cov
 
-# 3. サーバー起動してAPIテスト
-uvicorn apps.faq_system.main_v3:app --reload --port 8003
-
-# 4. API テスト（別ターミナル）
-curl -X POST http://localhost:8003/api/chat \
+# 3. サーバー起動後の API 動作確認（別ターミナル）
+curl -X POST http://localhost:8001/api/chat \
   -H "Content-Type: application/json" \
-  -d '{"message": "今月の売上TOP10を教えて"}'
+  -d '{"message": "返品ポリシーを教えて"}'
+
+# 4. ヘルスチェック
+curl http://localhost:8001/api/health
 ```
 
 ---
 
-## v2.0 強化版
+## 本番環境デプロイ（Docker Compose）
 
-強化版（`main_enhanced.py`）の機能：
+### 起動
 
-### 新機能
+```bash
+cd apps/faq_system
 
-| 機能 | 説明 |
-|------|------|
-| **富文本レスポンス** | Markdown、コードブロック、表格、チャートを統合表示 |
-| **リアルタイム進捗** | WebSocket/SSE による処理進捗のリアルタイム表示 |
-| **引用表示** | 回答のソース/引用を明示表示 |
-| **チャート自動生成** | データから自動的にEChartsグラフを生成 |
-| **ギャップ分析** | 知識ベースの不足を自動検出 |
+# .env を準備（API キー等を設定）
+cp ../../.env.example .env
+# .env を編集: OPENAI_API_KEY=sk-... 等
 
-### 対応コンポーネント
+# 本番（イメージビルド & バックグラウンド起動）
+docker compose up --build -d
 
-- **Markdown**: 見出し、リスト、リンク、引用
-- **コードブロック**: シンタックスハイライト（Python, SQL, JSON等）
-- **データテーブル**: ソート、フィルタ、ページネーション
-- **チャート**: 棒グラフ、折れ線、円グラフ（ECharts）
-- **引用/Citation**: ソース表示、関連度スコア
+# 開発（ホットリロード）
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+# ヘルスチェック確認
+curl http://localhost:8001/api/health
+
+# ログ確認
+docker compose logs -f backend
+
+# 停止
+docker compose down
+```
+
+### ポート設定
+
+| 変数名 | 説明 | デフォルト |
+|--------|------|----------|
+| `API_PORT` | ホスト側公開ポート | `8001` |
+
+コンテナ内部は常に `8001` で統一。ホスト側ポートのみ `API_PORT` で変更可能。
+
+### 環境変数一覧
+
+| 変数名 | 説明 | デフォルト | 必須 |
+|--------|------|----------|------|
+| `OPENAI_API_KEY` | OpenAI API キー | — | ✅ |
+| `ANTHROPIC_API_KEY` | Anthropic API キー | — | — |
+| `AZURE_OPENAI_API_KEY` | Azure OpenAI API キー | — | — |
+| `AZURE_OPENAI_ENDPOINT` | Azure OpenAI エンドポイント | — | — |
+| `RAG_COLLECTION` | RAG コレクション名 | `faq_knowledge` | — |
+| `DB_SCHEMA` | DB スキーマ JSON | `{}` | — |
+| `FAQ_SALES_MATERIAL_DIR` | 営業資料画像の出力先 | `/tmp/faq_sales_material` | — |
+| `FAQ_DATABASE_URL` | FAQ 認証/履歴用 DB 接続先 | `postgresql+asyncpg://faq:faq_password@faq-db:5432/faq_system` | — |
+| `FAQ_DB_AUTO_CREATE` | モデルから自動テーブル作成（ローカル検証向け） | `false` | — |
+| `FAQ_AUTH_PROVIDER` | 認証方式 (`local_db`/`ldap`/`idp`) | `local_db` | — |
+| `JWT_SECRET_KEY` | JWT 署名シークレット | ランダム生成 | — |
+| `JWT_EXPIRE_MINUTES` | JWT 有効期限(分) | `60` | — |
+| `FAQ_AUTH_DEV_MODE` | パスワード再設定トークンをレスポンスに含める (開発用) | `true` | — |
+| `FAQ_TRUST_PROXY_AUTH` | 認証プロキシヘッダーを信頼する | `false` | — |
+| `FAQ_PROXY_AUTH_SHARED_SECRET` | 認証プロキシ署名検証の共有鍵 | — | 推奨 |
+| `FAQ_PROXY_AUTH_REQUIRE_SIGNATURE` | 署名検証を必須化 | `true` | — |
+| `FAQ_PROXY_AUTH_MAX_SKEW_SECONDS` | 署名時刻の許容ズレ秒数 | `300` | — |
+| `FAQ_KB_INTERNAL_COLLECTION` | 社内KBコレクション | `internal_kb` | — |
+| `FAQ_KB_EXTERNAL_COLLECTION` | 対客KBコレクション | `external_kb` | — |
+| `FAQ_KB_CONFIDENTIAL_COLLECTION` | 機密KBコレクション | `confidential_kb` | — |
+| `FAQ_KB_DEFAULT_TYPE` | 既定KB種別 (`internal/external/confidential`) | `internal` | — |
+| `LOG_LEVEL` | ログレベル | `INFO` | — |
 
 ---
 
@@ -89,6 +152,12 @@ curl -X POST http://localhost:8003/api/chat \
 
 このアプリは **薄い App 層** として設計されています。
 **業務ロジックはすべてフレームワーク側で実装** されています。
+
+## ⚠️ 学習連携の運用方針
+
+- 現在の FAQ app は「実行優先」で運用し、収集/訓練は既定で有効化しません。
+- 学習データ収集が必要な案件のみ、期間限定で収集を有効化してください。
+- 訓練処理は API 実行経路に混在させず、必ず別ジョブで実行してください。
 
 ### Agent/サービスの場所
 
@@ -156,25 +225,58 @@ class MyAgent(ResilientAgent[MyInput, MyOutput]):
 | 提案生成 | `SuggestionService` | フォローアップ質問を提案 |
 | 認証 | `AuthService` | JWT/API Key 認証 |
 
-## 起動方法
+## API エンドポイント
+
+### 認証
 
 ```bash
-# 開発サーバー起動
-uvicorn apps.faq_system.main:app --reload --port 8001
+# ログイン / ログアウト / 自身情報 / トークン更新
+POST /api/auth/login
+POST /api/auth/logout
+GET  /api/auth/me
+POST /api/auth/token
 
-# または
-python -m apps.faq_system.main
+# パスワード運用
+POST /api/auth/password/change
+POST /api/auth/password/forgot
+POST /api/auth/password/reset
+
+# 個人属性更新
+PATCH /api/auth/profile
 ```
 
-## 環境変数
+### 企業認証システム接続
 
-| 変数名 | 説明 | デフォルト |
-|--------|------|----------|
-| `RAG_COLLECTION` | RAGコレクション名 | `faq_knowledge` |
-| `DB_SCHEMA` | DBスキーマJSON | `{}` |
-| `FAQ_SALES_MATERIAL_DIR` | 営業資料画像の出力先ディレクトリ | `/tmp/faq_sales_material` |
+- 既定: `FAQ_AUTH_PROVIDER=local_db`（FAQ 自前 DB 認証）。
+- LDAP: `FAQ_AUTH_PROVIDER=ldap`。テスト時は `FAQ_LDAP_USERS_JSON` でモック連携可能。
+- IdP: `FAQ_AUTH_PROVIDER=idp`。テスト時は `FAQ_IDP_USERS_JSON`、本番は `FAQ_IDP_TOKEN_URL` / `FAQ_IDP_USERINFO_URL` を使用。
+- 認証ゲートウェイ連携: `FAQ_TRUST_PROXY_AUTH=true` で `X-Forwarded-*`（互換で `X-Auth-*`）ヘッダーを受ける。
 
-## API エンドポイント
+#### `FAQ_TRUST_PROXY_AUTH` 署名ヘッダー仕様
+
+必要ヘッダー:
+- `X-Forwarded-User`（互換: `X-Auth-User`）
+- `X-Auth-Timestamp`（UNIX 秒）
+- `X-Auth-Nonce`（再送防止）
+- `X-Auth-Signature`（`sha256=<hex>` または `<hex>`）
+
+canonical 文字列:
+
+```text
+{HTTP_METHOD}
+{REQUEST_PATH}
+{USERNAME}
+{DISPLAY_NAME}
+{ROLE}
+{DEPARTMENT}
+{POSITION}
+{TIMESTAMP}
+{NONCE}
+```
+
+署名:
+- `HMAC-SHA256(shared_secret, canonical).hexdigest()`
+- nonce は DB 保存し、再利用を拒否
 
 ### チャット
 
@@ -191,6 +293,9 @@ POST /api/chat/stream
   "message": "今月の売上TOP10は？"
 }
 
+# 履歴取得（DB 永続化）
+GET /api/chat/history?session_id=sess-xxx&limit=100
+
 # MAQ統合入口（FAQ/SQL/営業資料を自動振り分け）
 POST /api/maq/chat
 {
@@ -205,15 +310,32 @@ POST /api/maq/chat
 POST /api/rag/query
 {
   "question": "返品ポリシーは？",
-  "collection": "faq_knowledge",
+  "kb_type": "internal",
+  "collection": "internal_kb",
   "top_k": 5
 }
 
 # ドキュメント追加
 POST /api/rag/add
 {
+  "kb_type": "internal",
   "content": "返品は30日以内に...",
   "metadata": {"category": "policy"}
+}
+```
+
+### KB 設定
+
+```bash
+# 現在のKB設定を参照（認証必須・DB永続化）
+GET /api/kb/settings
+
+# KB設定を更新（admin/manager・即時反映）
+PATCH /api/kb/settings
+{
+  "internal_collection": "internal_kb_v2",
+  "external_collection": "external_kb_v2",
+  "default_kb": "internal"
 }
 ```
 
@@ -223,6 +345,15 @@ POST /api/rag/add
 POST /api/sql/query
 {
   "question": "今月の売上合計は？"
+}
+```
+
+### 売上分析
+
+```bash
+POST /api/sales/analyze
+{
+  "question": "今四半期の売上推移を分析して"
 }
 ```
 
@@ -238,6 +369,37 @@ GET /api/assets/{artifact_id}/download
 
 ```bash
 GET /api/a2a/card
+```
+
+### WebSocket（リアルタイム双方向通信）
+
+```
+WS /ws/{client_id}?access_token={JWT}
+
+# クライアントから送信:
+{ "type": "chat", "message": "質問内容", "sessionId": "...", "options": {} }
+
+# サーバーから受信:
+{ "type": "progress", "progress": 50, "message": "処理中..." }
+{ "type": "result", "data": { "answer": "..." } }
+```
+
+### フィードバック
+
+```bash
+POST /api/feedback
+{
+  "message_id": "msg-xxx",
+  "helpful": true,
+  "comment": "分かりやすい回答でした"
+}
+```
+
+### ヘルスチェック
+
+```bash
+GET /api/health
+→ {"status": "ok", "service": "faq-system", "version": "2.0.0", "timestamp": "..."}
 ```
 
 ## Studio からの利用
@@ -292,7 +454,7 @@ GET /api/nodes/service
 └─────────────────────────────────────────────────┘
 ```
 
-## 注意事項（利用者向け）
+## 注意事項（開発者向け）
 
 ### ❌ やってはいけないこと
 
@@ -316,136 +478,34 @@ GET /api/nodes/service
 
 ---
 
-## v3.0 クイックスタート
+## 将来構想（backend/ 配下の拡張 Agent）
 
-### 社内FAQ検索
+`apps/faq_system/backend/agents/` に以下の拡張 Agent が設計・実装されています。
+現在は `main.py` のルーティングには未結線ですが、将来的に統合予定です。
 
-```python
-from apps.faq_system.backend.agents import InternalKBAgent, InternalKBConfig
+| Agent | ファイル | 説明 |
+|-------|---------|------|
+| `InternalKBAgent` | `backend/agents/internal_kb_agent.py` | 社内 KB 検索（保守モード・引用必須） |
+| `ExternalKBAgent` | `backend/agents/external_kb_agent.py` | 対客 KB 検索 |
+| `MaintenanceAgent` | `backend/agents/maintenance_agent.py` | 仕様差分分析・影響範囲分析 |
+| `AnalyticsAgent` | `backend/agents/analytics_agent.py` | NL2SQL 増強版データ分析 |
+| `EnhancedFAQAgent` | `backend/agents/enhanced_faq_agent.py` | 統合 FAQ Agent |
 
-# Agent 初期化
-config = InternalKBConfig(
-    conservative_mode=True,  # 規則類は保守モード
-    require_citation=True,   # 引用必須
-)
-agent = InternalKBAgent(config=config)
+詳細な設計は [DESIGN.md](./DESIGN.md) を参照してください。
 
-# 質問実行
-result = await agent.run({
-    "question": "年次有給休暇は何日もらえますか？",
-    "user_context": {
-        "user_id": "user123",
-        "role": "employee",
-        "department": "営業部",
-    },
-})
+---
 
-print(f"回答: {result['answer']}")
-print(f"信頼度: {result['confidence']}")
-print(f"引用: {result['citations']}")
-```
+## CLI 参照（運用メモ）
 
-### メンテナンス支援
+```bash
+# workflow YAML を直接実行
+agentflow flow run workflow.yaml --json
 
-```python
-from apps.faq_system.backend.agents import MaintenanceAgent
+# 外部 Skill をマウント
+agentflow skills mount ./external/faq-policy-check --scope project
 
-agent = MaintenanceAgent()
-
-# 仕様差分分析
-result = await agent.run({
-    "action": "full",
-    "old_document": old_spec,
-    "new_document": new_spec,
-})
-
-print(f"差分: {result['diffs']}")
-print(f"影響: {result['impact']}")
-print(f"Release Note: {result['deliverables']['release_note']}")
-```
-
-### データ分析（NL2SQL 増強版）
-
-```python
-from apps.faq_system.backend.agents import AnalyticsAgent, AnalyticsConfig, NL2SQLEnhancementConfig
-
-# NL2SQL 増強設定
-nl2sql_config = NL2SQLEnhancementConfig(
-    enable_schema_linking=True,   # Schema Linking 有効
-    schema_linking_use_llm=False, # LLM スコアリング（オプション）
-    enable_fewshot=True,          # Few-shot 動的選択
-    fewshot_k=3,                  # 類似例の数
-    enable_postprocess=True,      # SQL 後処理（検証・修正）
-)
-
-config = AnalyticsConfig(
-    nl2sql_enhancement=nl2sql_config,
-)
-
-agent = AnalyticsAgent(config=config)
-
-result = await agent.run({
-    "question": "今月の売上TOP10を教えてください",
-    "user_context": {"role": "analyst"},
-})
-
-print(f"回答: {result['answer']}")
-print(f"SQL: {result['sql']}")
-print(f"証拠チェーン: {result['evidence_chain']}")
-```
-
-#### NL2SQL 増強機能
-
-| 機能 | 説明 | 設定 |
-|------|------|------|
-| **Schema Linking** | 関連テーブル・カラムを自動選択（全スキーマをLLMに渡さない） | `enable_schema_linking` |
-| **Few-shot 動的選択** | BM25 類似度で最適な例を選択（ベクトルDB不要） | `enable_fewshot`, `fewshot_k` |
-| **SQL 後処理** | 構文検証、セキュリティ検証、自動修正 | `enable_postprocess` |
-
-#### DataAnalyticsAgent（統一入口）
-
-フレームワーク層の統一 Agent も利用可能：
-
-```python
-from agentflow.agents import DataAnalyticsAgent, DataAnalyticsConfig
-
-agent = DataAnalyticsAgent(config=DataAnalyticsConfig(
-    db_schema={"sales": ["id", "amount", "date", "region"]},
-    auto_chart=True,
-    auto_insights=True,
-    enable_dsl_pipeline=True,  # NL → DSL → SQL パイプライン
-))
-
-result = await agent.run({"question": "今月の売上TOP10を教えて"})
-print(f"SQL: {result['sql']}")
-print(f"DSL: {result['dsl']}")      # 中間表現
-print(f"Chart: {result['chart']}")  # 自動生成チャート
-print(f"Insights: {result['insights']}")  # データインサイト
-```
-
-### 術語辞書
-
-```python
-from apps.faq_system.backend.services import GlossaryService
-
-glossary = GlossaryService()
-
-# クエリ拡張（同義語展開）
-expanded = glossary.expand_query("有休申請")
-# ["有休申請", "年次有給休暇申請", "休暇申請", ...]
-```
-
-### APPI準拠（PII検出）
-
-```python
-from apps.faq_system.backend.security import APPIComplianceChecker
-
-checker = APPIComplianceChecker()
-
-# PII検出＆マスク
-text = "山田太郎のマイナンバーは123456789012です"
-masked = checker.mask_pii(text)
-# "山田太郎のマイナンバーは************です"
+# マウント済み Skill を確認
+agentflow skills list --project
 ```
 
 ---
