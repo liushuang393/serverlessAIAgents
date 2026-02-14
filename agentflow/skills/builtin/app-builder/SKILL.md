@@ -2,7 +2,7 @@
 name: app-builder
 description: |
   新規 App 基盤構築スキル。
-  FastAPI + PostgreSQL + Redis + Alembic + React の完全な App 骨架を自動生成。
+  FastAPI + PostgreSQL + Redis + Alembic + React の完全な App 骨組みを自動生成。
   ユーザーの要件に基づいてカスタマイズ可能。
 version: 1.0.0
 author: agentflow-team
@@ -196,4 +196,3 @@ docker-compose down -v
 - [ ] ヘルスチェックエンドポイントが動作する
 - [ ] テストが実行可能
 - [ ] 他の App とポートが衝突していない
-

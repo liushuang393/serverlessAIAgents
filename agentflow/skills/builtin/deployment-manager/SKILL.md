@@ -1,14 +1,13 @@
 ---
 name: deployment-manager
 description: |
-  统一部署管理接口，支持 Vercel、Cloudflare Pages/Workers、AWS Lambda 等平台。
-  提供一键部署、预览环境、回滚、环境变量管理、域名配置等功能。
-  让 Agent 系统快速上线。
+  デプロイ管理を統一的に扱うインターフェース。
+  Vercel、Cloudflare Pages/Workers、AWS Lambda などに対応し、
+  ワンクリックデプロイ、プレビュー環境、ロールバック、環境変数管理、ドメイン設定を提供。
 version: 1.0.0
 author: AgentFlow Team
 triggers:
   - deploy
-  - 部署
   - デプロイ
   - vercel
   - cloudflare
@@ -27,10 +26,10 @@ tags:
   - serverless
   - production-ready
 examples:
-  - "部署到 Vercel"
-  - "创建预览环境"
-  - "回滚到上一个版本"
-  - "配置自定义域名"
+  - "Vercel へデプロイ"
+  - "プレビュー環境を作成"
+  - "前のバージョンへロールバック"
+  - "カスタムドメインを設定"
 allowed-tools:
   - Bash
   - Read
@@ -40,11 +39,11 @@ user-invocable: true
 
 # Deployment Manager Skill
 
-## 概述
+## 概要
 
 统一的部署管理接口，支持主流 Serverless 平台，实现一键部署和环境管理。
 
-## 支持的平台
+## 対応プラットフォーム
 
 | 平台 | 类型 | 免费额度 | 特点 |
 |------|------|----------|------|
@@ -53,7 +52,7 @@ user-invocable: true
 | **Cloudflare Workers** | Edge Function | 100k 请求/天 | 超低延迟、KV 存储 |
 | **AWS Lambda** | Serverless | 1M 请求/月 | AWS 生态、高度可配置 |
 
-## 快速开始
+## クイックスタート
 
 ### 1. Vercel 部署
 
@@ -577,4 +576,3 @@ await deployer.set_env_var(
 | API/函数 | Cloudflare Workers | 超低延迟、免费额度大 |
 | 复杂后端 | AWS Lambda | 完整生态、高度可配置 |
 | Python/AI | Modal.com | GPU 支持、按需扩展 |
-

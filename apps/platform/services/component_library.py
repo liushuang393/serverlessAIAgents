@@ -298,14 +298,32 @@ class ComponentLibrary(Registry[ComponentEntry]):
 
         if entry.visibility == ComponentVisibility.TENANT:
             # テナント内共有: 同じテナントIDならアクセス可
-            return bool(tenant and entry.tenant_id == tenant.tenant_id)
+            if tenant is not None:
+                return entry.tenant_id == tenant.tenant_id
+            # テナントコンテキストが無いローカル単一テナント運用では
+            # tenant_id 未設定コンポーネントを可視化する。
+            return entry.tenant_id is None
 
         if entry.visibility == ComponentVisibility.PRIVATE:
             # プライベート: 所有者のみ（簡易実装）
             # 本来は owner_id チェックが必要
-            return bool(tenant and entry.tenant_id == tenant.tenant_id)
+            if tenant is not None:
+                return entry.tenant_id == tenant.tenant_id
+            return entry.tenant_id is None
 
         return False
+
+    @staticmethod
+    def _matches_query(entry: ComponentEntry, query: str) -> bool:
+        """検索クエリ一致判定."""
+        if not query:
+            return True
+        query_lower = query.lower()
+        return (
+            query_lower in entry.name.lower()
+            or query_lower in entry.description.lower()
+            or query_lower in entry.id.lower()
+        )
 
     def search(
         self,
@@ -333,7 +351,6 @@ class ComponentLibrary(Registry[ComponentEntry]):
             マッチしたコンポーネントのリスト
         """
         results: list[ComponentEntry] = []
-        query_lower = query.lower()
 
         for entry in self.list_all().values():
             # 可視性チェック
@@ -341,11 +358,7 @@ class ComponentLibrary(Registry[ComponentEntry]):
                 continue
 
             # クエリマッチ
-            if query and (
-                query_lower not in entry.name.lower()
-                and query_lower not in entry.description.lower()
-                and query_lower not in entry.id.lower()
-            ):
+            if not self._matches_query(entry, query):
                 continue
 
             # タイプフィルター
@@ -371,6 +384,44 @@ class ComponentLibrary(Registry[ComponentEntry]):
 
         # ページネーション
         return results[offset : offset + limit]
+
+    def count(
+        self,
+        query: str = "",
+        *,
+        types: list[ComponentType] | None = None,
+        categories: list[str] | None = None,
+        tags: list[str] | None = None,
+        visibility: ComponentVisibility | None = None,
+    ) -> int:
+        """条件一致するコンポーネント件数を取得.
+
+        Args:
+            query: 検索クエリ
+            types: タイプフィルター
+            categories: カテゴリフィルター
+            tags: タグフィルター
+            visibility: 可視性フィルター
+
+        Returns:
+            件数
+        """
+        count = 0
+        for entry in self.list_all().values():
+            if not self._check_visibility(entry):
+                continue
+            if not self._matches_query(entry, query):
+                continue
+            if types and entry.type not in types:
+                continue
+            if categories and entry.category not in categories:
+                continue
+            if tags and not any(tag in entry.tags for tag in tags):
+                continue
+            if visibility and entry.visibility != visibility:
+                continue
+            count += 1
+        return count
 
     def list_by_type(self, component_type: ComponentType) -> list[ComponentEntry]:
         """タイプ別にコンポーネントを取得.

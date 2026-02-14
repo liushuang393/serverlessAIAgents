@@ -1,5 +1,6 @@
 """データ収集API."""
 
+import asyncio
 import logging
 from datetime import datetime
 from typing import Any
@@ -148,6 +149,10 @@ async def _auto_create_predictions_from_trends(trends: list[dict[str, Any]]) -> 
     return created_count
 
 
+# ワークフロー全体のタイムアウト（秒）
+_WORKFLOW_TIMEOUT_SECONDS = 180
+
+
 @router.post("/collect", response_model=CollectResponse)
 async def collect(request: CollectRequest) -> CollectResponse:
     """手動データ収集をトリガー."""
@@ -159,12 +164,25 @@ async def collect(request: CollectRequest) -> CollectResponse:
             if request.date_range is not None
             else None
         )
-        result: dict[str, Any] = await run_workflow(
-            {"keywords": keywords, "sources": sources, "date_range": date_range_payload}
-        )
+
+        # ワークフロー実行（タイムアウト保護付き）
+        try:
+            result: dict[str, Any] = await asyncio.wait_for(
+                run_workflow(
+                    {"keywords": keywords, "sources": sources, "date_range": date_range_payload}
+                ),
+                timeout=_WORKFLOW_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            logger.warning(
+                "ワークフローが %d秒でタイムアウト、フォールバック収集を実行",
+                _WORKFLOW_TIMEOUT_SECONDS,
+            )
+            result = {}
+
         collector, analyzer = _extract_flow_results(result)
 
-        # 下流ノード失敗時に collector/analyzer が欠落するケースを救済する
+        # ワークフロー失敗/タイムアウト時にフォールバック収集を実行
         if not collector and not analyzer:
             result = await _run_fallback_collection(
                 keywords,

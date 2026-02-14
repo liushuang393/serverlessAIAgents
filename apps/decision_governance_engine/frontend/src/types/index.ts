@@ -182,10 +182,51 @@ export interface CausalGear {
 export interface DeathTrap {
   action: string;               // 禁忌行動
   reason: string;               // 理由
-  severity: 'FATAL' | 'CRITICAL';  // 深刻度
+  severity: 'FATAL' | 'SEVERE' | 'MODERATE' | 'CRITICAL';  // 深刻度
 }
 
-/** 道（Dao）出力 v3.0 */
+/** 制約境界条件 (v3.1) */
+export interface ConstraintBoundary {
+  constraint_name: string;
+  definition: string;
+  violation_example: string;
+  exceptions?: string;
+}
+
+/** 成立ルート (v3.1) */
+export interface SolutionRoute {
+  route_type: string;
+  description: string;
+  viability: string;
+  tradeoffs?: string[];
+}
+
+/** 定量指標 (v3.1) */
+export interface QuantifiedMetric {
+  metric_name: string;
+  target_value: string;
+  priority: number;
+  tradeoff_note?: string;
+}
+
+/** 監査証拠項目 (v3.1) */
+export interface AuditEvidenceItem {
+  category: string;
+  required_evidence: string;
+  verification_method?: string;
+}
+
+/** Dao セルフチェック (v3.1) */
+export interface DaoSelfCheckResult {
+  boundary_undefined: string[];
+  missing_alternatives: string[];
+  ambiguous_metrics: string[];
+  constraint_conflicts: string[];
+  evidence_gaps: string[];
+  overall_status: 'PASS' | 'WARNING' | 'FATAL';
+}
+
+/** 道（Dao）出力 v3.1 */
 export interface DaoOutput {
   problem_type: ProblemType;
   problem_nature?: ProblemNatureType;  // v3.0
@@ -195,8 +236,14 @@ export interface DaoOutput {
   immutable_constraints: string[];
   hidden_assumptions: string[];
   causal_gears?: CausalGear[];  // v3.0
-  bottleneck_gear?: string;     // v3.0
+  bottleneck_gear?: string | number;  // v3.0
   death_traps?: DeathTrap[];    // v3.0
+  // v3.1
+  constraint_boundaries?: ConstraintBoundary[];
+  solution_routes?: SolutionRoute[];
+  quantified_metrics?: QuantifiedMetric[];
+  audit_evidence_checklist?: AuditEvidenceItem[];
+  self_check?: DaoSelfCheckResult;
 }
 
 /** 戦略タイプ (v3.0) */

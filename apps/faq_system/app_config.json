@@ -1,0 +1,66 @@
+{
+  "name": "faq_system",
+  "display_name": "FAQ システム",
+  "description": "社内FAQ検索・SQL分析・営業資料画像生成を統合したAIチャットシステム",
+  "version": "2.0.0",
+  "icon": "💬",
+  "ports": {
+    "api": 8101,
+    "frontend": null,
+    "db": 5433,
+    "redis": null
+  },
+  "entry_points": {
+    "api_module": "apps.faq_system.main:app",
+    "health": "/api/health"
+  },
+  "agents": [
+    {
+      "name": "FAQAgent",
+      "module": "agentflow.agents.faq_agent",
+      "capabilities": [
+        "faq",
+        "rag",
+        "sql",
+        "chart",
+        "suggestion"
+      ]
+    },
+    {
+      "name": "SalesAgent",
+      "module": "agentflow.agents.sales_agent",
+      "capabilities": [
+        "sales",
+        "design_skills",
+        "image_generation"
+      ]
+    }
+  ],
+  "services": {
+    "rag": {
+      "collections": [
+        "faq_knowledge"
+      ]
+    },
+    "sql": {
+      "dialect": "postgresql"
+    },
+    "suggestion": {
+      "enabled": true
+    }
+  },
+  "dependencies": {
+    "database": "postgresql",
+    "redis": false,
+    "external": [
+      "comfyui"
+    ]
+  },
+  "tags": [
+    "faq",
+    "rag",
+    "text2sql",
+    "sales",
+    "chat"
+  ]
+}

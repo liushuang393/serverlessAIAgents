@@ -78,11 +78,17 @@ class AgentNode(FlowNode):
 
             return NodeResult(success=True, data=result, action=NextAction.CONTINUE)
         except Exception as e:
-            self._logger.exception(f"Agent実行失敗: {e}")
+            self._logger.error(f"Agent実行失敗（後続ノードは継続）: {e}")
+            # エラー情報を context に保存し、後続ノードが実行できるよう CONTINUE を返す
+            error_data: dict[str, Any] = {
+                "error": str(e),
+                "error_type": type(e).__name__,
+            }
+            ctx.set_result(self.id, error_data)
             return NodeResult(
                 success=False,
-                data={"error": str(e), "error_type": type(e).__name__},
-                action=NextAction.STOP,
+                data=error_data,
+                action=NextAction.CONTINUE,
             )
 
 
@@ -184,6 +190,39 @@ class ReviewNode(FlowNode):
         super().__post_init__()
         object.__setattr__(self, "node_type", NodeType.REVIEW)
 
+    @staticmethod
+    def _extract_finding_summary(findings: list[Any], max_items: int = 3) -> str | None:
+        """所見リストからユーザー向け重大課題サマリーを生成."""
+        if not findings:
+            return None
+
+        summaries: list[str] = []
+        for finding in findings:
+            if not isinstance(finding, dict):
+                continue
+
+            severity = str(finding.get("severity", "")).upper()
+            is_critical = severity.endswith("CRITICAL")
+            if not is_critical:
+                continue
+
+            raw_text = (
+                finding.get("description")
+                or finding.get("failure_point")
+                or finding.get("impact_scope")
+                or ""
+            )
+            text = str(raw_text).strip()
+            if text and text not in summaries:
+                summaries.append(text)
+            if len(summaries) >= max_items:
+                break
+
+        if not summaries:
+            return None
+
+        return "重大課題: " + " / ".join(summaries)
+
     def _build_reject_payload(self, result: dict[str, Any]) -> dict[str, Any]:
         """Review REJECT 時の早期リターン情報を生成."""
         findings_raw = result.get("findings", [])
@@ -204,10 +243,11 @@ class ReviewNode(FlowNode):
         )
 
         message_raw = result.get("rejection_message")
+        findings_summary = self._extract_finding_summary(findings)
         rejection_message = (
             message_raw
             if isinstance(message_raw, str) and message_raw.strip()
-            else "最終検証で重大な課題が検出されたため、分析を中断しました。"
+            else findings_summary or "重大課題が検出されました。findings を確認してください。"
         )
 
         suggest_raw = result.get("suggested_rephrase")

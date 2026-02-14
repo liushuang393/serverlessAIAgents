@@ -223,6 +223,44 @@ class TestFlowStream:
         assert isinstance(payload.get("rejection_reason"), str)
         assert payload.get("rejection_reason")
 
+    @pytest.mark.asyncio
+    async def test_review_reject_summarizes_critical_findings(self):
+        """Review REJECT で重大課題が rejection_message に要約される."""
+
+        class MockCriticalReviewAgent:
+            name = "review"
+
+            async def run(self, inputs: dict[str, Any]) -> dict[str, Any]:
+                return {
+                    "overall_verdict": "REJECT",
+                    "findings": [
+                        {
+                            "severity": "CRITICAL",
+                            "description": "責任者が未確定で最終承認が不能",
+                        }
+                    ],
+                }
+
+        agent = MockAgent("agent")
+        review = MockCriticalReviewAgent()
+
+        flow = (
+            create_flow("test")
+            .then(agent, ids=["agent"])
+            .review(review, id="review", retry_from="agent")
+            .build()
+        )
+
+        events = []
+        async for event in flow.run_stream({"input": "test"}):
+            events.append(event)
+
+        early_return_event = next(e for e in events if e.get("type") == "early_return")
+        payload = early_return_event.get("data", {})
+        message = str(payload.get("rejection_message", ""))
+        assert message.startswith("重大課題:")
+        assert "責任者が未確定で最終承認が不能" in message
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

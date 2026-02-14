@@ -1,0 +1,46 @@
+{
+  "name": "messaging_hub",
+  "display_name": "メッセージングハブ",
+  "description": "Telegram・Slack・Discord等マルチプラットフォーム統合AIチャットボット",
+  "version": "1.0.0",
+  "icon": "📨",
+  "ports": {
+    "api": 8000,
+    "frontend": null,
+    "db": null,
+    "redis": null
+  },
+  "entry_points": {
+    "api_module": "apps.messaging_hub.main:app",
+    "health": "/health"
+  },
+  "agents": [
+    {
+      "name": "PersonalAssistantCoordinator",
+      "module": "apps.messaging_hub.coordinator",
+      "capabilities": ["coordination", "intent_routing", "summary"]
+    },
+    {
+      "name": "FileOrganizerAgent",
+      "module": "apps.messaging_hub.agents.file_organizer_agent",
+      "capabilities": ["file_organization", "categorization"]
+    },
+    {
+      "name": "MeetingAgent",
+      "module": "apps.messaging_hub.agents.meeting_agent",
+      "capabilities": ["meeting", "calendar", "notes"]
+    }
+  ],
+  "services": {
+    "chatbot": { "skill": "ChatBotSkill" },
+    "websocket": { "hub": "WebSocketHub" },
+    "gateway": { "channels": ["telegram", "slack", "discord", "teams", "whatsapp", "signal"] }
+  },
+  "dependencies": {
+    "database": null,
+    "redis": false,
+    "external": ["telegram_api", "slack_api", "discord_api"]
+  },
+  "tags": ["messaging", "chatbot", "telegram", "slack", "discord", "multi-platform"]
+}
+

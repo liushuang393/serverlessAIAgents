@@ -1,8 +1,8 @@
 ---
 name: knowledge-discovery
 description: >
-  Unifies Corporate FAQ, Data Analysis (SQL), and Maintenance Support.
-  Provides "Next Step" logic and Auto-Charting.
+  社内 FAQ、SQL データ分析、保守支援を統合するスキル。
+  次アクション提案（Next Step）と自動チャート生成を提供。
 version: 1.0.0
 triggers:
   - knowledge

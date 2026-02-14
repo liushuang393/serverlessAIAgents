@@ -36,6 +36,7 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
 
 from agentflow import ResilientAgent
 from agentflow.core.exceptions import AgentOutputValidationError
+from agentflow.core.type_safe import safe_enum
 
 
 class FaAgent(ResilientAgent[FaInput, FaOutput]):
@@ -328,20 +329,29 @@ JSON形式で出力してください。"""
             # 戦略オプションのパース
             recommended = []
             for p in data.get("recommended_paths", []):
+                if not isinstance(p, dict):
+                    continue
                 recommended.append(self._parse_path_option(p))
 
             rejected = []
             for p in data.get("rejected_paths", []):
+                if not isinstance(p, dict):
+                    continue
                 rejected.append(self._parse_path_option(p))
 
             # 比較マトリックス
             comparison = None
             if "path_comparison" in data:
-                comparison = PathComparisonMatrix(**data["path_comparison"])
+                try:
+                    comparison = PathComparisonMatrix(**data["path_comparison"])
+                except Exception as e:
+                    self._logger.warning("Invalid path_comparison, fallback to None: %s", e)
 
             # v3.1: 戦略的禁止事項（仕組み化付き）
             strategic_prohibitions = []
             for sp in data.get("strategic_prohibitions", []):
+                if not isinstance(sp, dict):
+                    continue
                 strategic_prohibitions.append(StrategicProhibition(
                     prohibition=sp.get("prohibition", "")[:50],
                     rationale=sp.get("rationale", "")[:100],
@@ -370,6 +380,7 @@ JSON形式で出力してください。"""
                 must_gates = [
                     MustGate(criterion=mg.get("criterion", "")[:50], threshold=mg.get("threshold", "")[:100])
                     for mg in jf_data.get("must_gates", [])
+                    if isinstance(mg, dict)
                 ]
                 should_criteria = [
                     ShouldCriterion(
@@ -378,6 +389,7 @@ JSON形式で出力してください。"""
                         scoring_method=sc.get("scoring_method", "")[:100],
                     )
                     for sc in jf_data.get("should_criteria", [])
+                    if isinstance(sc, dict)
                 ]
                 judgment_framework = JudgmentFramework(
                     must_gates=must_gates,
@@ -395,7 +407,11 @@ JSON形式で出力してください。"""
                     missing_intermediate=sc_data.get("missing_intermediate", []),
                     missing_gates=sc_data.get("missing_gates", []),
                     appearance_precision=sc_data.get("appearance_precision", []),
-                    overall_status=SelfCheckStatus(sc_data.get("overall_status", "WARNING")),
+                    overall_status=safe_enum(
+                        SelfCheckStatus,
+                        sc_data.get("overall_status", "WARNING"),
+                        SelfCheckStatus.WARNING,
+                    ),
                 )
 
             # v3.0互換: 差別化軸
@@ -426,7 +442,7 @@ JSON形式で出力してください。"""
                 fa_self_check=fa_self_check,
                 why_existing_fails=data.get("why_existing_fails", "")[:100],
             )
-        except json.JSONDecodeError as e:
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
             self._logger.warning("LLM response parse failed: %s", e)
             return self._analyze_rule_based(dao_result, input_data)
 
@@ -474,7 +490,7 @@ JSON形式で出力してください。"""
         if not data.get("fa_self_check"):
             self._logger.warning("fa_self_check is missing in LLM output")
 
-    def _parse_path_option(self, data: dict) -> PathOption:
+    def _parse_path_option(self, data: dict[str, Any]) -> PathOption:
         """パスオプションをパース（v3.1: 条件付き評価対応）."""
         # v3.1: conditional_evaluation のパース
         conditional_eval = None
@@ -491,14 +507,22 @@ JSON形式で出力してください。"""
             path_id=data.get("path_id", "X"),
             name=data.get("name", "")[:20],
             description=data.get("description", "")[:100],
-            strategy_type=StrategyType(data.get("strategy_type", "BALANCED")),
+            strategy_type=safe_enum(
+                StrategyType,
+                data.get("strategy_type", "BALANCED"),
+                StrategyType.BALANCED,
+            ),
             pros=data.get("pros", [])[:3],
             cons=data.get("cons", [])[:3],
             suitable_conditions=data.get("suitable_conditions", [])[:3],
             risks=data.get("risks", [])[:3],
             costs=data.get("costs", [])[:3],
             time_to_value=data.get("time_to_value", ""),
-            reversibility=ReversibilityLevel(data.get("reversibility", "MEDIUM")),
+            reversibility=safe_enum(
+                ReversibilityLevel,
+                data.get("reversibility", "MEDIUM"),
+                ReversibilityLevel.MEDIUM,
+            ),
             success_probability=0.0,
             conditional_evaluation=conditional_eval,
             risk_concentration=data.get("risk_concentration", "")[:100],

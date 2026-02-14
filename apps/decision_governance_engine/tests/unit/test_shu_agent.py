@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Unit tests for ShuAgent."""
+import json
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
@@ -144,6 +145,33 @@ class TestShuAgentProcess:
         assert len(result.first_action) > 0
         # Should have clear phases
         assert all(p.duration for p in result.phases)
+
+    @pytest.mark.asyncio
+    async def test_process_with_invalid_phase_payload_falls_back_defaults(
+        self, sample_input: ShuInput
+    ) -> None:
+        """LLMの不正フェーズ型でもデフォルト計画にフォールバックする."""
+        agent = ShuAgent(llm_client=MagicMock())
+        agent._call_llm = AsyncMock(
+            return_value=json.dumps(
+                {
+                    "phases": [
+                        {
+                            "phase_number": "not_int",
+                            "name": "フェーズX",
+                            "duration": 123,
+                            "actions": "invalid_actions",
+                        }
+                    ],
+                    "first_action": "最初の一歩",
+                },
+                ensure_ascii=False,
+            )
+        )
+
+        result = await agent.process(sample_input)
+        assert isinstance(result, ShuOutput)
+        assert len(result.phases) >= 3
 
 
 class TestShuAgentValidation:

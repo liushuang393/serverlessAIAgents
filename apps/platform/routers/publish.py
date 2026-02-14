@@ -51,21 +51,16 @@ async def deploy(
     Returns:
         発布開始情報（publish_id を含む）
     """
-    # 非同期で発布開始
-    publish_id: str | None = None
+    publish_id = await engine.start_publish(request)
+    response = engine.get_publish_status(publish_id)
+    if response is not None:
+        return {
+            "success": True,
+            "publish_id": publish_id,
+            "message": "Publish started",
+            "status": response.status.value,
+        }
 
-    async for event in engine.publish(request):
-        publish_id = event.publish_id
-        # 最初のイベントで返す
-        if event.event_type == "phase_start" and event.phase == "validate":
-            return {
-                "success": True,
-                "publish_id": publish_id,
-                "message": "Publish started",
-                "status": event.status.value,
-            }
-
-    # ストリームが即座に終了した場合
     return {
         "success": False,
         "publish_id": publish_id,
@@ -152,22 +147,27 @@ async def stream_publish(
     Returns:
         SSE ストリーム
     """
-    response = engine.get_publish_status(publish_id)
-    if response is None:
+    current = engine.get_publish_status(publish_id)
+    if current is None:
         raise HTTPException(status_code=404, detail=f"Publish not found: {publish_id}")
 
     async def event_generator():
         """SSE イベントジェネレーター."""
-        # 現在のステータスを送信
-        data = response.model_dump_json()
-        yield f"event: status\ndata: {data}\n\n"
+        async for event in engine.stream_publish_events(publish_id):
+            yield f"event: {event.event_type}\ndata: {event.model_dump_json()}\n\n"
+            if event.status in {
+                PublishStatus.COMPLETED,
+                PublishStatus.FAILED,
+                PublishStatus.CANCELLED,
+            }:
+                break
 
-        # 完了済みの場合は終了
-        if response.status in [
-            PublishStatus.COMPLETED,
-            PublishStatus.FAILED,
-            PublishStatus.CANCELLED,
-        ]:
+        # 保険: 最終ステータスを done で通知
+        final_response = engine.get_publish_status(publish_id)
+        if final_response is not None:
+            payload = final_response.model_dump_json()
+            yield f"event: done\ndata: {payload}\n\n"
+        else:
             yield "event: done\ndata: {}\n\n"
 
     return StreamingResponse(

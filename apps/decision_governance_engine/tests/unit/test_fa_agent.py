@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Unit tests for FaAgent."""
+import json
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
@@ -10,6 +11,7 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     DaoOutput,
     ProblemType,
     PathOption,
+    SelfCheckStatus,
     StrategyType,
 )
 
@@ -150,6 +152,45 @@ class TestFaAgentProcess:
                 if path.path_id in result.path_comparison.scores:
                     scores = result.path_comparison.scores[path.path_id]
                     assert all(1 <= s <= 5 for s in scores)
+
+    @pytest.mark.asyncio
+    async def test_process_with_invalid_enum_values_is_normalized(
+        self, sample_input: FaInput
+    ) -> None:
+        """LLMの不正な列挙値を安全に正規化できること."""
+        agent = FaAgent(llm_client=MagicMock())
+        agent._call_llm = AsyncMock(
+            return_value=json.dumps(
+                {
+                    "recommended_paths": [
+                        {
+                            "path_id": "A",
+                            "name": "戦略A",
+                            "description": "説明",
+                            "strategy_type": "INVALID_TYPE",
+                            "reversibility": "BROKEN",
+                            "pros": ["利点"],
+                            "cons": ["欠点"],
+                        }
+                    ],
+                    "decision_criteria": ["ROI"],
+                    "fa_self_check": {
+                        "baseless_numbers": [],
+                        "missing_intermediate": [],
+                        "missing_gates": [],
+                        "appearance_precision": [],
+                        "overall_status": "NOT_A_STATUS",
+                    },
+                },
+                ensure_ascii=False,
+            )
+        )
+
+        result = await agent.process(sample_input)
+        assert result.recommended_paths[0].strategy_type == StrategyType.BALANCED
+        assert result.recommended_paths[0].reversibility.value == "MEDIUM"
+        assert result.fa_self_check is not None
+        assert result.fa_self_check.overall_status == SelfCheckStatus.WARNING
 
 
 class TestFaAgentValidation:

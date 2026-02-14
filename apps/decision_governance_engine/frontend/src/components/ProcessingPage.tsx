@@ -10,6 +10,9 @@ import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { useDecisionStore } from '../store/useDecisionStore';
 import { useDecisionStream, AgentProgress, ThinkingLog } from '../hooks/useDecisionStream';
 
+/** 開発時ログ（lint no-console 対応） */
+const debugLog = (..._args: unknown[]): void => {};
+
 /** Agent アイコン設定（8 Agent対応） - Decision Governance Engine v1.1 */
 const AGENT_ICONS: Record<string, string> = {
   cognitive_gate: '🧠',
@@ -256,7 +259,7 @@ export const ProcessingPage: React.FC = () => {
       const team = constraints.team || undefined;
       startStream(question, budget, timeline, stakeholders, technical, regulatory, team);
     } else if (!question) {
-      console.log('[ProcessingPage] question が空 - hydration 待ち中');
+      debugLog('[ProcessingPage] question が空 - hydration 待ち中');
     }
 
     // Cleanup: React Strict Mode 対応
@@ -266,7 +269,7 @@ export const ProcessingPage: React.FC = () => {
       // 少し遅延して、Strict Mode の再マウントかどうかを確認
       setTimeout(() => {
         if (!isMountedRef.current) {
-          console.log('[ProcessingPage] 真のアンマウント - ストリーム停止');
+          debugLog('[ProcessingPage] 真のアンマウント - ストリーム停止');
           stopStream();
         }
       }, 100);
@@ -304,6 +307,9 @@ export const ProcessingPage: React.FC = () => {
 
   const completedCount = agents.filter((a) => a.status === 'completed').length;
   const overallProgress = Math.round((completedCount / agents.length) * 100);
+  const isReviewIssue =
+    Boolean(error) &&
+    (String(error).startsWith('重大課題') || String(error).startsWith('検証で重大課題'));
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -331,14 +337,18 @@ export const ProcessingPage: React.FC = () => {
             {overallProgress}%
           </div>
           <div className="text-slate-400 mt-2">
-            {isComplete ? '✅ 分析完了' : '⏳ 分析処理中...'}
+            {error ? '⚠️ 検証で重大課題を検出' : isComplete ? '✅ 分析完了' : '⏳ 分析処理中...'}
           </div>
         </div>
 
         {/* エラー表示 */}
         {error && (
-          <div className="mb-8 bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400">
-            🚨 {error}
+          <div className={`mb-8 rounded-xl p-4 ${
+            isReviewIssue
+              ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300'
+              : 'bg-red-500/10 border border-red-500/30 text-red-400'
+          }`}>
+            {isReviewIssue ? '⚠️ ' : '🚨 '}{error}
           </div>
         )}
 
@@ -369,7 +379,7 @@ export const ProcessingPage: React.FC = () => {
                 onClick={handleRetry}
                 className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-medium transition-all flex items-center gap-2"
               >
-                🔄 リトライ
+                {isReviewIssue ? '🛠 指摘を反映して再分析' : '🔄 リトライ'}
               </button>
               <button 
                 onClick={handleCancel}

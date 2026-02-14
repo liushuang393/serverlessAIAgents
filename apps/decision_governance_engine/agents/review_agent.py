@@ -28,6 +28,7 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
 )
 
 from agentflow import ResilientAgent
+from agentflow.core.type_safe import safe_enum, safe_float
 
 
 class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
@@ -56,6 +57,14 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
         "撤退条件が定義されているか",
         "最初の一歩が明日実行可能か",
     ]
+    MAX_CHECKBOX_LABEL_LEN = 80
+    MAX_ANNOTATION_HINT_LEN = 30
+    MAX_DEFAULT_VALUE_LEN = 50
+    MAX_FAILURE_POINT_LEN = 200
+    MAX_IMPACT_SCOPE_LEN = 200
+    MAX_TARGET_SCORE_LEN = 50
+    MAX_COMPONENT_NAME_LEN = 30
+    MAX_COMPONENT_DESC_LEN = 100
 
     def __init__(self, llm_client: Any = None) -> None:
         """初期化."""
@@ -104,6 +113,14 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
 【デフォルト案】
 「誰が判断するか」が未確定な場合、ユーザーに会議を要求するのではなく、
 デフォルト案（暫定責任者ロール）を提示し、ユーザーはチェックで確定できるようにする。
+
+【文字数制約（厳守）】
+- minimal_patch.checkbox_label: 80文字以内
+- minimal_patch.annotation_hint: 30文字以内
+- minimal_patch.default_value: 50文字以内
+- failure_point / impact_scope: 200文字以内
+- score_improvements.target_score: 50文字以内
+- 超過しそうなら要約して短くする（例文の長文は出さない）
 
 【出力形式（JSON）】
 {
@@ -161,6 +178,7 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
 上記を差分パッチ型で検証してください。
 指摘は最大3件に統合し、各指摘にfailure_point/impact_scope/minimal_patch/score_improvements/action_typeを付けてください。
 信頼度はconfidence_breakdownで4項目に分解してください。
+minimal_patch は checkbox_label<=80文字, annotation_hint<=30文字, default_value<=50文字 を厳守してください。
 JSON形式で出力してください。"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
@@ -179,7 +197,8 @@ JSON形式で出力してください。"""
             self._logger.debug(f"Extracted JSON: {data}")
 
             # v3.1: findingsパース（最大3件に制限、重複除去）
-            raw_findings = data.get("findings", [])[:3]
+            raw_findings_data = data.get("findings", [])
+            raw_findings = raw_findings_data[:3] if isinstance(raw_findings_data, list) else []
             findings = self._parse_findings_v31(raw_findings)
 
             llm_verdict = self._parse_verdict(data.get("overall_verdict"))
@@ -200,7 +219,7 @@ JSON形式で出力してください。"""
                 confidence_score=confidence,
                 final_warnings=self._build_final_warnings(
                     findings=findings,
-                    llm_warnings=data.get("final_warnings", []),
+                    llm_warnings=data.get("final_warnings", []) if isinstance(data.get("final_warnings"), list) else [],
                 ),
                 confidence_breakdown=breakdown,
                 checkpoint_items=checkpoint_items,
@@ -289,6 +308,16 @@ JSON形式で出力してください。"""
             return ReviewVerdict(value)
         except ValueError:
             return None
+
+    @staticmethod
+    def _truncate_text(value: Any, max_length: int) -> str:
+        """文字列を安全に正規化して切り詰め."""
+        if value is None:
+            return ""
+        text = str(value).strip()
+        if len(text) <= max_length:
+            return text
+        return text[:max_length]
 
     def _build_final_warnings(
         self,
@@ -422,7 +451,9 @@ JSON形式で出力してください。"""
         seen_descriptions: set[str] = set()
 
         for f in raw_findings:
-            desc = f.get("description", "")
+            if not isinstance(f, dict):
+                continue
+            desc = self._truncate_text(f.get("description", ""), self.MAX_IMPACT_SCOPE_LEN)
             # 重複除去
             if desc in seen_descriptions:
                 continue
@@ -432,10 +463,22 @@ JSON形式で出力してください。"""
             mp_data = f.get("minimal_patch")
             minimal_patch = None
             if isinstance(mp_data, dict):
+                checkbox_label = self._truncate_text(
+                    mp_data.get("checkbox_label", "確認済み"),
+                    self.MAX_CHECKBOX_LABEL_LEN,
+                ) or "確認済み"
+                annotation_hint = self._truncate_text(
+                    mp_data.get("annotation_hint", ""),
+                    self.MAX_ANNOTATION_HINT_LEN,
+                )
+                default_value = self._truncate_text(
+                    mp_data.get("default_value", ""),
+                    self.MAX_DEFAULT_VALUE_LEN,
+                )
                 minimal_patch = MinimalPatch(
-                    checkbox_label=mp_data.get("checkbox_label", "確認済み"),
-                    annotation_hint=mp_data.get("annotation_hint", ""),
-                    default_value=mp_data.get("default_value", ""),
+                    checkbox_label=checkbox_label,
+                    annotation_hint=annotation_hint,
+                    default_value=default_value,
                 )
 
             # score_improvementsのパース
@@ -444,27 +487,35 @@ JSON形式で出力してください。"""
             for si in si_data:
                 if isinstance(si, dict):
                     score_improvements.append(ScoreImprovement(
-                        target_score=si.get("target_score", ""),
-                        current_estimate=float(si.get("current_estimate", 50)),
-                        improved_estimate=float(si.get("improved_estimate", 70)),
-                        delta=float(si.get("delta", 20)),
+                        target_score=self._truncate_text(si.get("target_score", ""), self.MAX_TARGET_SCORE_LEN),
+                        current_estimate=safe_float(si.get("current_estimate", 50), 50.0),
+                        improved_estimate=safe_float(si.get("improved_estimate", 70), 70.0),
+                        delta=safe_float(si.get("delta", 20), 20.0),
                     ))
 
             # action_typeのパース
-            action_str = f.get("action_type", "RECALC")
-            try:
-                action_type = ActionType(action_str)
-            except ValueError:
-                action_type = ActionType.RECALC
+            action_type = safe_enum(
+                ActionType,
+                f.get("action_type", "RECALC"),
+                ActionType.RECALC,
+            )
 
             findings.append(ReviewFinding(
-                severity=FindingSeverity(f.get("severity", "WARNING")),
-                category=FindingCategory(f.get("category", "LOGIC_FLAW")),
+                severity=safe_enum(
+                    FindingSeverity,
+                    f.get("severity", "WARNING"),
+                    FindingSeverity.WARNING,
+                ),
+                category=safe_enum(
+                    FindingCategory,
+                    f.get("category", "LOGIC_FLAW"),
+                    FindingCategory.LOGIC_FLAW,
+                ),
                 description=desc,
-                affected_agent=f.get("affected_agent", ""),
-                suggested_revision=f.get("suggested_revision", ""),
-                failure_point=f.get("failure_point", ""),
-                impact_scope=f.get("impact_scope", ""),
+                affected_agent=self._truncate_text(f.get("affected_agent", ""), 30),
+                suggested_revision=self._truncate_text(f.get("suggested_revision", ""), self.MAX_IMPACT_SCOPE_LEN),
+                failure_point=self._truncate_text(f.get("failure_point", ""), self.MAX_FAILURE_POINT_LEN),
+                impact_scope=self._truncate_text(f.get("impact_scope", ""), self.MAX_IMPACT_SCOPE_LEN),
                 minimal_patch=minimal_patch,
                 score_improvements=score_improvements,
                 action_type=action_type,
@@ -474,15 +525,16 @@ JSON形式で出力してください。"""
 
     def _parse_confidence_breakdown(self, data: dict[str, Any]) -> ConfidenceBreakdown | None:
         """LLM出力から信頼度分解をパース."""
-        if not data:
+        if not data or not isinstance(data, dict):
             return None
 
-        def _parse_component(comp_data: dict[str, Any], default_name: str) -> ConfidenceComponent:
+        def _parse_component(comp_data: Any, default_name: str) -> ConfidenceComponent:
+            normalized = comp_data if isinstance(comp_data, dict) else {}
             return ConfidenceComponent(
-                name=comp_data.get("name", default_name),
-                score=float(comp_data.get("score", 50)),
-                checkbox_boost=float(comp_data.get("checkbox_boost", 5)),
-                description=comp_data.get("description", ""),
+                name=self._truncate_text(normalized.get("name", default_name), self.MAX_COMPONENT_NAME_LEN),
+                score=safe_float(normalized.get("score", 50), 50.0),
+                checkbox_boost=safe_float(normalized.get("checkbox_boost", 5), 5.0),
+                description=self._truncate_text(normalized.get("description", ""), self.MAX_COMPONENT_DESC_LEN),
             )
 
         return ConfidenceBreakdown(

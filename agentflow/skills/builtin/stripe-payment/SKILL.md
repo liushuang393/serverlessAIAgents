@@ -1,18 +1,17 @@
 ---
 name: stripe-payment
 description: |
-  Stripe 支付集成统一接口。支持 Checkout Session、订阅管理、Webhook 处理、
-  Customer Portal、退款等功能。让 Agent 能快速实现支付功能上线。
+  Stripe 決済連携を統一的に扱うインターフェース。
+  Checkout Session、サブスクリプション管理、Webhook 処理、
+  Customer Portal、返金機能を提供。
 version: 1.0.0
 author: AgentFlow Team
 triggers:
   - stripe
   - payment
-  - 支付
   - 決済
   - checkout
   - subscription
-  - 订阅
   - サブスクリプション
   - billing
   - invoice
@@ -26,10 +25,10 @@ tags:
   - subscription
   - production-ready
 examples:
-  - "创建 Stripe Checkout Session"
-  - "处理 Stripe Webhook"
-  - "管理订阅"
-  - "生成 Customer Portal 链接"
+  - "Stripe Checkout Session を作成"
+  - "Stripe Webhook を処理"
+  - "サブスクリプションを管理"
+  - "Customer Portal リンクを生成"
 allowed-tools:
   - Bash
   - Read
@@ -39,11 +38,11 @@ user-invocable: true
 
 # Stripe Payment Skill
 
-## 概述
+## 概要
 
 完整的 Stripe 支付集成方案，支持一次性支付和订阅模式。
 
-## 支持的功能
+## 対応機能
 
 | 功能 | 说明 |
 |------|------|
@@ -54,7 +53,7 @@ user-invocable: true
 | **Refund** | 退款处理 |
 | **Invoice** | 发票管理 |
 
-## 快速开始
+## クイックスタート
 
 ### 1. 初始化
 
@@ -447,4 +446,3 @@ async def sync_subscription_status():
 | **年付优惠** | 长期客户 | 创建年度价格，给予折扣 |
 | **使用量计费** | API、存储 | Metered billing |
 | **免费试用** | 获客 | `trial_period_days=14` |
-

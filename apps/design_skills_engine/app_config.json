@@ -1,0 +1,45 @@
+{
+  "name": "design_skills_engine",
+  "display_name": "デザインスキルエンジン",
+  "description": "自然言語ブリーフからComfyUI経由で統一スタイルのマルチ画像セットを生成",
+  "version": "1.0.0",
+  "icon": "🎨",
+  "ports": {
+    "api": null,
+    "frontend": null,
+    "db": null,
+    "redis": null
+  },
+  "entry_points": {
+    "api_module": null,
+    "health": null
+  },
+  "agents": [
+    {
+      "name": "IntentAnalyzerAgent",
+      "module": "agentflow.skills.builtin.design_skills.agents.intent_analyzer_agent",
+      "capabilities": ["intent_analysis", "design_brief"]
+    },
+    {
+      "name": "PromptPlannerAgent",
+      "module": "agentflow.skills.builtin.design_skills.agents.prompt_planner_agent",
+      "capabilities": ["prompt_planning", "style_generation"]
+    },
+    {
+      "name": "WorkflowExecutorAgent",
+      "module": "agentflow.skills.builtin.design_skills.agents.workflow_executor_agent",
+      "capabilities": ["image_generation", "comfyui", "openai_images"]
+    }
+  ],
+  "services": {
+    "comfyui": { "default_url": "http://localhost:8188" },
+    "pipeline": { "engine": "DesignSkillsEngine" }
+  },
+  "dependencies": {
+    "database": null,
+    "redis": false,
+    "external": ["comfyui"]
+  },
+  "tags": ["design", "image-generation", "comfyui", "pipeline", "skill"]
+}
+

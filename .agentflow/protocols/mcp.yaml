@@ -1,36 +1,31 @@
-# MCP サーバー設定例
-#
-# この設定ファイルは AgentFlow が接続する MCP サーバーを定義します。
-# 各サーバーは stdio プロトコルを使用して起動されます。
-
 servers:
-  # ファイルシステムツールサーバー
-  - name: filesystem
-    command: npx
-    args:
-      - "-y"
-      - "@modelcontextprotocol/server-filesystem"
-      - "/path/to/allowed/directory"
-    env:
-      NODE_ENV: production
-    enabled: true
-
-  # Git ツールサーバー
-  - name: git
-    command: npx
-    args:
-      - "-y"
-      - "@modelcontextprotocol/server-git"
-    env:
-      NODE_ENV: production
-    enabled: true
-
-  # カスタムツールサーバー (例)
-  - name: custom
-    command: python
-    args:
-      - "-m"
-      - "my_mcp_server"
-    env:
-      PYTHONPATH: /path/to/server
-    enabled: false
+- name: filesystem
+  command: npx
+  args:
+  - -y
+  - '@modelcontextprotocol/server-filesystem'
+  - /path/to/allowed/directory
+  env:
+    NODE_ENV: production
+  enabled: true
+- name: git
+  command: npx
+  args:
+  - -y
+  - '@modelcontextprotocol/server-git'
+  env:
+    NODE_ENV: production
+  enabled: true
+- name: custom
+  command: python
+  args:
+  - -m
+  - my_mcp_server
+  env:
+    PYTHONPATH: /path/to/server
+  enabled: false
+lazy_loading:
+  enabled: true
+  threshold: 10
+  auto_load_on_call: true
+  cache_session: true

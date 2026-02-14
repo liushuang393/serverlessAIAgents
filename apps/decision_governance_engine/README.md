@@ -208,7 +208,7 @@ alembic downgrade -1
 # プロジェクトルートで実行
 cd apps/decision_governance_engine
 
-docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d
 
 # 開発モードで起動（ホットリロード有効）
 # バックグラウンドで起動

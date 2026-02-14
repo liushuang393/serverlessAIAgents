@@ -38,6 +38,7 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
 
 from agentflow import ResilientAgent
 from agentflow.core.exceptions import AgentOutputValidationError
+from agentflow.core.type_safe import safe_enum
 from agentflow.skills import RAGConfig, RAGSkill
 
 
@@ -338,7 +339,11 @@ JSON形式で出力してください。"""
             # phases の検証・正規化
             self._validate_and_normalize_phases(data)
 
-            phases = [ActionPhase(**p) for p in data.get("phases", [])]
+            phases: list[ActionPhase] = []
+            for i, p in enumerate(data.get("phases", [])[:5]):
+                phase = self._parse_action_phase(p, default_phase_number=i + 1)
+                if phase is not None:
+                    phases.append(phase)
             if len(phases) < 3:
                 phases = self._generate_default_phases()
 
@@ -354,6 +359,8 @@ JSON形式で出力してください。"""
             # v3.0: 文脈特化行動
             context_specific_actions = []
             for csa in data.get("context_specific_actions", [])[:5]:
+                if not isinstance(csa, dict):
+                    continue
                 context_specific_actions.append(ContextSpecificAction(
                     action=str(csa.get("action", ""))[:50],
                     why_this_context=str(csa.get("why_this_context", ""))[:50],
@@ -362,7 +369,7 @@ JSON形式で出力してください。"""
 
             # v3.0: 単一検証ポイント
             single_validation_point = None
-            if "single_validation_point" in data:
+            if "single_validation_point" in data and isinstance(data["single_validation_point"], dict):
                 svp = data["single_validation_point"]
                 single_validation_point = SingleValidationPoint(
                     validation_target=str(svp.get("validation_target", ""))[:50],
@@ -372,7 +379,7 @@ JSON形式で出力してください。"""
 
             # v3.0: 撤退基準
             exit_criteria = None
-            if "exit_criteria" in data:
+            if "exit_criteria" in data and isinstance(data["exit_criteria"], dict):
                 ec = data["exit_criteria"]
                 exit_criteria = ExitCriteria(
                     checkpoint=str(ec.get("checkpoint", ""))[:30],
@@ -402,7 +409,7 @@ JSON形式で出力してください。"""
                 two_stage_rocket=two_stage,
                 proposal_phases=proposal_phases,
             )
-        except json.JSONDecodeError as e:
+        except (json.JSONDecodeError, ValueError, TypeError) as e:
             self._logger.warning(f"LLM response parse failed: {e}")
             return self._plan_rule_based(selected_path)
 
@@ -576,8 +583,11 @@ JSON形式で出力してください。"""
             )
 
             # periodをパース
-            period_str = data.get("period", "MONTH_1")
-            period = RhythmPeriod(period_str) if period_str in RhythmPeriod.__members__ else RhythmPeriod.MONTH_1
+            period = safe_enum(
+                RhythmPeriod,
+                data.get("period", "MONTH_1"),
+                RhythmPeriod.MONTH_1,
+            )
 
             return RhythmControl(
                 period=period,
@@ -671,6 +681,54 @@ JSON形式で出力してください。"""
                 success_criteria=["経営判断完了"],
             ),
         ]
+
+    def _parse_action_phase(
+        self, phase_data: Any, default_phase_number: int
+    ) -> ActionPhase | None:
+        """LLM出力の1フェーズを安全にActionPhaseへ変換."""
+        if not isinstance(phase_data, dict):
+            return None
+
+        try:
+            phase_number = int(phase_data.get("phase_number", default_phase_number))
+        except (TypeError, ValueError):
+            phase_number = default_phase_number
+
+        actions_raw = phase_data.get("actions", [])
+        actions = (
+            [str(a)[:50] for a in actions_raw if a is not None][:5]
+            if isinstance(actions_raw, list)
+            else []
+        )
+        if not actions:
+            actions = ["要定義"]
+
+        deliverables_raw = phase_data.get("deliverables", [])
+        deliverables = (
+            [str(d)[:50] for d in deliverables_raw if d is not None][:5]
+            if isinstance(deliverables_raw, list)
+            else []
+        )
+
+        success_criteria_raw = phase_data.get("success_criteria", [])
+        success_criteria = (
+            [str(c)[:50] for c in success_criteria_raw if c is not None][:5]
+            if isinstance(success_criteria_raw, list)
+            else []
+        )
+
+        try:
+            return ActionPhase(
+                phase_number=phase_number,
+                name=str(phase_data.get("name", f"フェーズ{default_phase_number}"))[:20],
+                duration=str(phase_data.get("duration", "2週間"))[:30],
+                actions=actions,
+                deliverables=deliverables,
+                success_criteria=success_criteria,
+            )
+        except Exception as e:
+            self._logger.warning("ActionPhase parse failed, skip phase: %s", e)
+            return None
 
 
     # --- v3.1 ヘルパーメソッド ---

@@ -171,7 +171,14 @@ from agentflow.core.resilient_agent import (
     BaseDecisionAgent,
     ResilientAgent,
 )
+from agentflow.core.retry_advisor import (
+    RetryAction,
+    RetryAdvice,
+    RetryAdvisor,
+    RetryContext,
+)
 from agentflow.core.tool_binding import BoundTools, ToolBinder, ToolExecutor
+from agentflow.core.type_safe import safe_enum, safe_float, safe_int
 
 # =============================================================================
 # 公開API: 統一ツール・Agentレジストリ（Auto-Agent Architecture）
@@ -701,6 +708,10 @@ __all__ = [
     "RAGEngine",
     "ResilientAgent",
     "ResultVerifier",
+    "RetryAction",
+    "RetryAdvice",
+    "RetryAdvisor",
+    "RetryContext",
     "RetrievalDecision",
     # RAG検索判定
     "RetrievalGate",
@@ -870,4 +881,7 @@ __all__ = [
     "setup_observability",
     "tool",
     "use_runtime_context",
+    "safe_enum",
+    "safe_float",
+    "safe_int",
 ]

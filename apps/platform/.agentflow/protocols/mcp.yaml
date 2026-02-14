@@ -1,0 +1,6 @@
+servers: []
+lazy_loading:
+  enabled: true
+  threshold: 10
+  auto_load_on_call: true
+  cache_session: true

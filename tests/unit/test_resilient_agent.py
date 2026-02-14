@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from agentflow.core.exceptions import (
     AgentExecutionError,
+    AgentOutputValidationError,
     AgentRetryExhaustedError,
     AgentTimeoutError,
 )
@@ -91,6 +92,30 @@ class TestResilientAgent:
         assert call_count == 2
 
     @pytest.mark.asyncio
+    async def test_run_output_validation_error_repairs_and_retries(self) -> None:
+        """出力検証エラー時は repair 判定で再実行される."""
+        agent = ConcreteAgent()
+        call_count = 0
+
+        async def flaky_process(input_data: TestInput) -> TestOutput:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise AgentOutputValidationError(
+                    agent_name="ConcreteAgent",
+                    field_name="answer",
+                    expected="non-empty",
+                    actual="",
+                )
+            return TestOutput(answer="fixed")
+
+        agent.process = flaky_process  # type: ignore
+
+        result = await agent.run({"query": "hello"})
+        assert result["answer"] == "fixed"
+        assert call_count == 2
+
+    @pytest.mark.asyncio
     async def test_run_retry_exhausted(self) -> None:
         """リトライ上限到達のテスト."""
         agent = ConcreteAgent()
@@ -106,6 +131,17 @@ class TestResilientAgent:
 
         assert "ConcreteAgent" in str(exc_info.value)
         assert exc_info.value.max_retries == 3  # max_retries + 1
+
+    @pytest.mark.asyncio
+    async def test_run_validation_error_is_not_retried(self) -> None:
+        """Pydantic 検証エラーは無駄なリトライをしない."""
+        agent = ConcreteAgent()
+        agent.max_retries = 3
+
+        with pytest.raises(AgentRetryExhaustedError) as exc_info:
+            await agent.run({})
+
+        assert exc_info.value.max_retries == 1
 
     @pytest.mark.asyncio
     async def test_run_timeout(self) -> None:
@@ -196,4 +232,3 @@ class TestAgentExceptions:
 
         assert error.max_retries == 3
         assert "3" in str(error)
-

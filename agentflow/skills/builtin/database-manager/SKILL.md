@@ -1,8 +1,9 @@
 ---
 name: database-manager
 description: |
-  数据库管理统一接口，支持 Supabase (PostgreSQL)、PlanetScale (MySQL)、Turso (SQLite) 等主流数据库服务。
-  提供连接管理、CRUD 操作、迁移、RLS 策略配置等功能。用于快速集成数据库到 Agent 系统。
+  データベース管理を統一的に扱うインターフェース。
+  Supabase（PostgreSQL）、PlanetScale（MySQL）、Turso（SQLite）などに対応し、
+  接続管理・CRUD 操作・マイグレーション・RLS 設定を提供。
 version: 1.0.0
 author: AgentFlow Team
 triggers:
@@ -29,10 +30,10 @@ tags:
   - infrastructure
   - production-ready
 examples:
-  - "连接 Supabase 数据库"
-  - "创建用户表并设置 RLS"
-  - "执行数据库迁移"
-  - "CRUD 操作示例"
+  - "Supabase データベースへ接続"
+  - "ユーザーテーブル作成と RLS 設定"
+  - "データベースマイグレーション実行"
+  - "CRUD 操作のサンプル"
 allowed-tools:
   - Bash
   - Read
@@ -42,11 +43,11 @@ user-invocable: true
 
 # Database Manager Skill
 
-## 概述
+## 概要
 
 统一的数据库管理接口，让 Agent 能够快速、安全地操作数据库。
 
-## 支持的数据库
+## 対応データベース
 
 | 数据库 | 类型 | 免费额度 | 特点 |
 |--------|------|----------|------|
@@ -55,7 +56,7 @@ user-invocable: true
 | **Turso** | SQLite (libSQL) | 9GB | 边缘部署、低延迟 |
 | **Neon** | PostgreSQL | 512MB | Serverless、分支 |
 
-## 快速开始
+## クイックスタート
 
 ### 1. Supabase 连接
 
@@ -307,7 +308,7 @@ async def save_to_database(table: str, data: dict) -> dict:
     return await db.insert(table, data)
 ```
 
-## 技术选型指南
+## 技術選定ガイド
 
 | 场景 | 推荐 | 理由 |
 |------|------|------|
@@ -315,4 +316,3 @@ async def save_to_database(table: str, data: dict) -> dict:
 | 高并发 | PlanetScale | 水平扩展、无锁 DDL |
 | 边缘计算 | Turso | 全球复制、低延迟 |
 | 开发测试 | SQLite | 零配置、本地运行 |
-

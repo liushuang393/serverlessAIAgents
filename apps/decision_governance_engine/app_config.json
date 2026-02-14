@@ -1,0 +1,70 @@
+{
+  "name": "decision_governance_engine",
+  "display_name": "意思決定ガバナンスエンジン",
+  "description": "道法術器フレームワークに基づくAI意思決定支援パイプライン",
+  "version": "1.0.0",
+  "icon": "⚖️",
+  "ports": {
+    "api": 8001,
+    "frontend": 5174,
+    "db": 5432,
+    "redis": 6379
+  },
+  "entry_points": {
+    "api_module": "apps.decision_governance_engine.api:app",
+    "health": "/health"
+  },
+  "agents": [
+    {
+      "name": "CognitiveGateAgent",
+      "module": "apps.decision_governance_engine.agents.cognitive_gate_agent",
+      "capabilities": ["gate", "cognitive_check"]
+    },
+    {
+      "name": "GatekeeperAgent",
+      "module": "apps.decision_governance_engine.agents.gatekeeper_agent",
+      "capabilities": ["gate", "validation"]
+    },
+    {
+      "name": "ClarificationAgent",
+      "module": "apps.decision_governance_engine.agents.clarification_agent",
+      "capabilities": ["diagnosis", "clarification"]
+    },
+    {
+      "name": "DaoAgent",
+      "module": "apps.decision_governance_engine.agents.dao_agent",
+      "capabilities": ["analysis", "dao", "philosophy"]
+    },
+    {
+      "name": "FaAgent",
+      "module": "apps.decision_governance_engine.agents.fa_agent",
+      "capabilities": ["analysis", "fa", "rules"]
+    },
+    {
+      "name": "ShuAgent",
+      "module": "apps.decision_governance_engine.agents.shu_agent",
+      "capabilities": ["analysis", "shu", "strategy"]
+    },
+    {
+      "name": "QiAgent",
+      "module": "apps.decision_governance_engine.agents.qi_agent",
+      "capabilities": ["analysis", "qi", "tools"]
+    },
+    {
+      "name": "ReviewAgent",
+      "module": "apps.decision_governance_engine.agents.review_agent",
+      "capabilities": ["review", "synthesis"]
+    }
+  ],
+  "services": {
+    "rag": { "collections": ["decision_knowledge"] },
+    "pipeline": { "engine": "DecisionGovernanceEngine" }
+  },
+  "dependencies": {
+    "database": "postgresql",
+    "redis": true,
+    "external": []
+  },
+  "tags": ["decision", "governance", "pipeline", "dao", "multi-agent"]
+}
+

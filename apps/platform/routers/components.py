@@ -95,16 +95,20 @@ async def list_components(
         types=types,
         categories=categories,
         tags=tags,
-        limit=limit + 1,  # has_more 判定用
+        limit=limit,
+        offset=offset,
     )
 
-    # ページネーション
-    has_more = len(entries) > limit
-    paginated = entries[offset : offset + limit]
+    total = engine.count_components(
+        query=query,
+        types=types,
+        categories=categories,
+        tags=tags,
+    )
 
     return ComponentListResponse(
-        items=[_entry_to_response(e) for e in paginated],
-        total=len(entries) - (1 if has_more else 0),
+        items=[_entry_to_response(e) for e in entries],
+        total=total,
         limit=limit,
         offset=offset,
     )

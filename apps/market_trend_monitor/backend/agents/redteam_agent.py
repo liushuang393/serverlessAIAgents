@@ -77,6 +77,8 @@ class RedTeamAgent(ResilientAgent[RedTeamInput, RedTeamOutput]):
 
     # ResilientAgent 設定
     name = "RedTeamAgent"
+    timeout_seconds = 60  # LLM呼び出し複数回のため短縮（デフォルト300sは過剰）
+    max_retries = 1  # 最大1回リトライ（計2回試行、合計最大120秒）
     temperature = 0.7  # 創造的な反証には高めの温度
 
     def __init__(

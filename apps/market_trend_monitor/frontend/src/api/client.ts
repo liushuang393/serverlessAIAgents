@@ -189,7 +189,7 @@ class ApiClient {
   async post<T = Record<string, unknown>>(
     path: string,
     data?: unknown,
-    config?: { params?: Record<string, unknown> }
+    config?: { params?: Record<string, unknown>; timeout?: number }
   ): Promise<{ data: T }> {
     const response = await this.client.post<T>(path, data, config);
     return { data: response.data };

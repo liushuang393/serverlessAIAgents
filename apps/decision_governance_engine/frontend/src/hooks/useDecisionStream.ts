@@ -31,6 +31,9 @@ const useLatestRef = <T,>(value: T) => {
   return ref;
 };
 
+/** 開発時ログ（lint no-console 対応） */
+const debugLog = (..._args: unknown[]): void => {};
+
 /** Agent 進捗状態 */
 export interface AgentProgress {
   id: string;
@@ -80,6 +83,38 @@ const agentClassNameMap: Record<string, string> = {
 const getUnifiedLogName = (agentId: string, japaneseName: string): string => {
   const className = agentClassNameMap[agentId] || agentId;
   return `${japaneseName}：${className}`;
+};
+
+/** Review findings から重大課題文を抽出 */
+const extractCriticalFindingTexts = (
+  findings: unknown[],
+  maxItems = 3
+): string[] => {
+  const summaries: string[] = [];
+  for (const finding of findings) {
+    if (!finding || typeof finding !== 'object') {
+      continue;
+    }
+    const findingRecord = finding as Record<string, unknown>;
+    const severity = String(findingRecord.severity || '').toUpperCase();
+    if (!severity.endsWith('CRITICAL')) {
+      continue;
+    }
+
+    const rawText =
+      findingRecord.description ||
+      findingRecord.failure_point ||
+      findingRecord.impact_scope ||
+      '';
+    const text = String(rawText).trim();
+    if (text && !summaries.includes(text)) {
+      summaries.push(text);
+    }
+    if (summaries.length >= maxItems) {
+      break;
+    }
+  }
+  return summaries;
 };
 
 /** 初期 Agent 状態（認知前処理・門番・診断・道・法・術・器・検証の8 Agent） */
@@ -163,7 +198,7 @@ export function useDecisionStream() {
     (event: AGUIEvent) => {
       // 統一フォーマット: type → event_type に正規化
       const eventType = event.event_type || (event as unknown as { type?: string }).type;
-      console.log('[useDecisionStream] handleEvent 受信:', eventType, event.node_id || '', JSON.stringify(event).slice(0, 200));
+      debugLog('[useDecisionStream] handleEvent 受信:', eventType, event.node_id || '', JSON.stringify(event).slice(0, 200));
       
       // type フィールドのイベントを処理（PipelineEngine形式）
       if (!event.event_type && (event as unknown as { type?: string }).type) {
@@ -243,6 +278,7 @@ export function useDecisionStream() {
                 verdict === 'REJECT' ||
                 lastReviewVerdictRef.current === 'REJECT';
               const findings = Array.isArray(data.findings) ? data.findings : [];
+              const criticalFindings = extractCriticalFindingTexts(findings);
               const rejectionMessage = data.rejection_message as string || '';
               const rejectionReason = data.rejection_reason as string || '';
               const suggestedRephrase = data.suggested_rephrase as string || '';
@@ -252,7 +288,7 @@ export function useDecisionStream() {
               if (rejectionMessage) {
                 addThinkingLog('system', 'System', `⚠️ ${rejectionMessage}`);
               } else if (isReviewReject) {
-                addThinkingLog('system', 'System', '⚠️ 最終検証で分析が不合格になりました。');
+                addThinkingLog('system', 'System', '⚠️ 最終検証で重大課題が検出されました。');
               } else {
                 // フォールバック: 具体的なガイダンスを表示
                 addThinkingLog('system', 'System', '⚠️ この質問は意思決定支援の対象外です。');
@@ -260,6 +296,9 @@ export function useDecisionStream() {
               }
               if (isReviewReject && findings.length > 0) {
                 addThinkingLog('review', '検証：ReviewAgent', `📋 指摘事項: ${findings.length}件`);
+                criticalFindings.forEach((item, index) => {
+                  addThinkingLog('review', '検証：ReviewAgent', `${index + 1}. ${item}`);
+                });
               }
               if (rejectionReason) {
                 addThinkingLog('system', 'System', `📋 理由: ${rejectionReason}`);
@@ -273,16 +312,19 @@ export function useDecisionStream() {
 
               // 具体的なエラーメッセージを構築
               let errorMessage = rejectionMessage;
+              if (isReviewReject && criticalFindings.length > 0 && !errorMessage) {
+                errorMessage = `重大課題:\n${criticalFindings.map((item) => `• ${item}`).join('\n')}`;
+              }
               if (!errorMessage) {
                 if (isReviewReject) {
-                  errorMessage = '最終検証で分析が不合格になりました。\n\n';
+                  errorMessage = '検証で重大課題が検出されました。';
                   if (rejectionReason) {
-                    errorMessage += `理由: ${rejectionReason}\n\n`;
+                    errorMessage += `\n${rejectionReason}`;
                   }
                   if (findings.length > 0) {
-                    errorMessage += `指摘事項: ${findings.length}件\n\n`;
+                    errorMessage += `\n指摘事項: ${findings.length}件`;
                   }
-                  errorMessage += '検証で指摘された内容を修正して再分析してください。';
+                  errorMessage += '\n指摘事項を修正して再分析してください。';
                 } else {
                   errorMessage = 'この質問は意思決定支援の対象外です。\n\n';
                   if (rejectionReason) {
@@ -340,8 +382,6 @@ export function useDecisionStream() {
               const data = legacyEvent.data || {};
               const retryFromIdx = data.retry_from as number;
               // インデックスに対応するAgent ID
-              const agentIds = initialAgents.map(a => a.id);
-
               addThinkingLog('system', 'System', `🔄 指摘に基づき再分析を実行（ステージ${retryFromIdx}から）`);
 
               // retry_from以降のAgentをリセット（waitingに戻す）
@@ -363,7 +403,7 @@ export function useDecisionStream() {
       switch (event.event_type) {
         case 'connection.established':
           // 接続確認イベント（サーバーから即座に送信される）
-          console.log('[useDecisionStream] 接続確認イベント受信');
+          debugLog('[useDecisionStream] 接続確認イベント受信');
           {
             const reqId = (event.data as Record<string, unknown> | undefined)?.request_id;
             setState((prev) => ({
@@ -443,7 +483,7 @@ export function useDecisionStream() {
             // 既にfailed状態の場合は上書きしない（error後のcomplete防止）
             const currentAgent = stateRef.current.agents.find(a => a.id === event.node_id);
             if (currentAgent?.status === 'failed') {
-              console.log('[useDecisionStream] node.complete無視（既にfailed）:', event.node_id);
+              debugLog('[useDecisionStream] node.complete無視（既にfailed）:', event.node_id);
               break;
             }
             const agentComplete = initialAgents.find(a => a.id === event.node_id);
@@ -501,7 +541,7 @@ export function useDecisionStream() {
 
       }
     },
-    [updateAgent, addThinkingLog]
+    [updateAgent, addThinkingLog, stateRef]
   );
 
   /** タイムアウトをクリア */
@@ -518,12 +558,12 @@ export function useDecisionStream() {
     timeoutRef.current = setTimeout(() => {
       // stateRef を使用して最新の状態を参照（stale closure 回避）
       const currentState = stateRef.current;
-      console.log('[useDecisionStream] タイムアウトチェック:', {
+      debugLog('[useDecisionStream] タイムアウトチェック:', {
         isConnected: currentState.isConnected,
         isComplete: currentState.isComplete
       });
       if (!currentState.isConnected && !currentState.isComplete) {
-        console.log('[useDecisionStream] タイムアウト発火 - 接続をクローズ');
+        debugLog('[useDecisionStream] タイムアウト発火 - 接続をクローズ');
         eventSourceRef.current?.close();
         setState((prev) => ({
           ...prev,
@@ -532,14 +572,14 @@ export function useDecisionStream() {
         }));
       }
     }, CONNECTION_TIMEOUT);
-  }, [clearConnectionTimeout]);
+  }, [clearConnectionTimeout, stateRef]);
 
   /** SSE 接続成功ハンドラー */
   const handleOpen = useCallback(() => {
-    console.log('[useDecisionStream] handleOpen - 接続成功！');
+    debugLog('[useDecisionStream] handleOpen - 接続成功！');
     clearConnectionTimeout();
     setState((prev) => {
-      console.log('[useDecisionStream] setState: isConnected = true');
+      debugLog('[useDecisionStream] setState: isConnected = true');
       return {
         ...prev,
         isConnected: true,
@@ -551,10 +591,10 @@ export function useDecisionStream() {
 
   /** SSE 接続エラーハンドラー */
   const handleError = useCallback((errorMessage: string, isRetryable?: boolean) => {
-    console.log('[useDecisionStream] handleError:', errorMessage);
+    debugLog('[useDecisionStream] handleError:', errorMessage);
     clearConnectionTimeout();
     setState((prev) => {
-      console.log('[useDecisionStream] setState: isConnected = false, error =', errorMessage);
+      debugLog('[useDecisionStream] setState: isConnected = false, error =', errorMessage);
       return {
         ...prev,
         isConnected: false,
@@ -595,7 +635,7 @@ export function useDecisionStream() {
       );
       setConnectionTimeout();
     }, delay);
-  }, [handleEvent, handleError, handleOpen, setConnectionTimeout]);
+  }, [handleEvent, handleError, handleOpen, setConnectionTimeout, stateRef]);
 
   /** ストリーム開始 */
   const startStream = useCallback(
@@ -605,7 +645,7 @@ export function useDecisionStream() {
       business_owner?: string;
       legal_reviewer?: string;
     }, technicalConstraints?: string[], regulatoryConstraints?: string[], team?: string) => {
-      console.log('🔘 [STEP4] startStream() 開始', { 
+      debugLog('🔘 [STEP4] startStream() 開始', {
         question: question?.slice(0, 50), 
         budget, 
         timelineMonths,
@@ -614,7 +654,7 @@ export function useDecisionStream() {
       
       // 既に接続中の場合はスキップ（React Strict Mode 対策）
       if (eventSourceRef.current && eventSourceRef.current.readyState !== EventSource.CLOSED) {
-        console.log('🔘 [STEP4] ⚠️ 既存接続あり、スキップ readyState=', eventSourceRef.current.readyState);
+        debugLog('🔘 [STEP4] ⚠️ 既存接続あり、スキップ readyState=', eventSourceRef.current.readyState);
         return;
       }
 
@@ -642,7 +682,7 @@ export function useDecisionStream() {
         thinkingLogs: [{ timestamp: Date.now(), agentId: 'system', agentName: 'System', content: '🚀 分析を開始します...' }],
       });
 
-      console.log('🔘 [STEP4] → decisionApi.streamDecision() を呼び出し');
+      debugLog('🔘 [STEP4] → decisionApi.streamDecision() を呼び出し');
 
       // SSE 接続開始
       eventSourceRef.current = decisionApi.streamDecision(
@@ -658,7 +698,7 @@ export function useDecisionStream() {
         team
       );
       
-      console.log('🔘 [STEP4] EventSource 作成完了, readyState=', eventSourceRef.current?.readyState);
+      debugLog('🔘 [STEP4] EventSource 作成完了, readyState=', eventSourceRef.current?.readyState);
 
       // タイムアウト設定
       setConnectionTimeout();
@@ -668,7 +708,7 @@ export function useDecisionStream() {
 
   /** ストリーム停止 */
   const stopStream = useCallback(() => {
-    console.log('[SSE] ストリーム停止');
+    debugLog('[SSE] ストリーム停止');
     clearConnectionTimeout();
     if (eventSourceRef.current) {
       eventSourceRef.current.close();

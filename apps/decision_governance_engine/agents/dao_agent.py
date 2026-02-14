@@ -32,6 +32,7 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
 
 from agentflow import ResilientAgent
 from agentflow.core.exceptions import AgentOutputValidationError
+from agentflow.core.type_safe import safe_enum, safe_int
 
 
 class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
@@ -379,6 +380,8 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
             # v3.0: 既存代替手段をパース
             existing_alternatives = []
             for alt_data in data.get("existing_alternatives", [])[:3]:
+                if not isinstance(alt_data, dict):
+                    continue
                 existing_alternatives.append(ExistingAlternative(
                     name=alt_data.get("name", "")[:30],
                     why_not_viable=alt_data.get("why_not_viable", "")[:100],
@@ -388,27 +391,41 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
             # 因果齿轮をパース
             causal_gears = []
             for gear_data in data.get("causal_gears", [])[:5]:
+                if not isinstance(gear_data, dict):
+                    continue
                 causal_gears.append(CausalGear(
-                    gear_id=gear_data.get("gear_id", 1),
+                    gear_id=safe_int(gear_data.get("gear_id", 1), 1),
                     name=gear_data.get("name", "")[:20],
                     description=gear_data.get("description", "")[:100],
                     drives=gear_data.get("drives", []),
                     driven_by=gear_data.get("driven_by", []),
-                    leverage=LeverageLevel(gear_data.get("leverage", "MEDIUM")),
+                    leverage=safe_enum(
+                        LeverageLevel,
+                        gear_data.get("leverage", "MEDIUM"),
+                        LeverageLevel.MEDIUM,
+                    ),
                 ))
 
             # 死穴をパース
             death_traps = []
             for trap_data in data.get("death_traps", [])[:3]:
+                if not isinstance(trap_data, dict):
+                    continue
                 death_traps.append(DeathTrap(
                     action=trap_data.get("action", ""),
                     reason=trap_data.get("reason", ""),
-                    severity=DeathTrapSeverity(trap_data.get("severity", "SEVERE")),
+                    severity=safe_enum(
+                        DeathTrapSeverity,
+                        trap_data.get("severity", "SEVERE"),
+                        DeathTrapSeverity.SEVERE,
+                    ),
                 ))
 
             # v3.1: 制約境界条件をパース
             constraint_boundaries = []
             for cb_data in data.get("constraint_boundaries", [])[:5]:
+                if not isinstance(cb_data, dict):
+                    continue
                 constraint_boundaries.append(ConstraintBoundary(
                     constraint_name=cb_data.get("constraint_name", "")[:30],
                     definition=cb_data.get("definition", "")[:100],
@@ -419,6 +436,8 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
             # v3.1: 成立ルートをパース
             solution_routes = []
             for sr_data in data.get("solution_routes", [])[:5]:
+                if not isinstance(sr_data, dict):
+                    continue
                 solution_routes.append(SolutionRoute(
                     route_type=sr_data.get("route_type", "")[:20],
                     description=sr_data.get("description", "")[:100],
@@ -429,16 +448,21 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
             # v3.1: 定量指標をパース
             quantified_metrics = []
             for qm_data in data.get("quantified_metrics", [])[:5]:
+                if not isinstance(qm_data, dict):
+                    continue
+                priority_raw = safe_int(qm_data.get("priority", 5), 5)
                 quantified_metrics.append(QuantifiedMetric(
                     metric_name=qm_data.get("metric_name", "")[:30],
                     target_value=qm_data.get("target_value", "")[:50],
-                    priority=min(max(qm_data.get("priority", 5), 1), 10),
+                    priority=min(max(priority_raw, 1), 10),
                     tradeoff_note=qm_data.get("tradeoff_note", "")[:100],
                 ))
 
             # v3.1: 監査証拠チェックリストをパース
             audit_evidence = []
             for ae_data in data.get("audit_evidence_checklist", [])[:8]:
+                if not isinstance(ae_data, dict):
+                    continue
                 audit_evidence.append(AuditEvidenceItem(
                     category=ae_data.get("category", "")[:30],
                     required_evidence=ae_data.get("required_evidence", "")[:100],
@@ -449,17 +473,17 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
             self_check = None
             sc_data = data.get("self_check")
             if isinstance(sc_data, dict):
-                try:
-                    overall = SelfCheckStatus(sc_data.get("overall_status", "WARNING"))
-                except ValueError:
-                    overall = SelfCheckStatus.WARNING
                 self_check = SelfCheckResult(
                     boundary_undefined=sc_data.get("boundary_undefined", []),
                     missing_alternatives=sc_data.get("missing_alternatives", []),
                     ambiguous_metrics=sc_data.get("ambiguous_metrics", []),
                     constraint_conflicts=sc_data.get("constraint_conflicts", []),
                     evidence_gaps=sc_data.get("evidence_gaps", []),
-                    overall_status=overall,
+                    overall_status=safe_enum(
+                        SelfCheckStatus,
+                        sc_data.get("overall_status", "WARNING"),
+                        SelfCheckStatus.WARNING,
+                    ),
                 )
 
             # 本質の検証（テンプレート的な回答を拒否）
@@ -470,7 +494,11 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
                     essence = essence_derivation.essence_statement
 
             return DaoOutput(
-                problem_type=ProblemType(data.get("problem_type", inferred_type.value)),
+                problem_type=safe_enum(
+                    ProblemType,
+                    data.get("problem_type", inferred_type.value),
+                    inferred_type,
+                ),
                 essence=essence,
                 immutable_constraints=data.get("immutable_constraints", [])[:5],
                 hidden_assumptions=data.get("hidden_assumptions", [])[:3],

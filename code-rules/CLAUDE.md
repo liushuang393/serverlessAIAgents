@@ -140,6 +140,42 @@ pytest --cov=agentflow --cov-fail-under=80  # テスト
 - 複雑な内容は段階的に説明する
 - 出力の最後に次のアクションを示す
 
+## 開発環境（必須）
+
+| 項目 | バージョン | 備考 |
+|------|-----------|------|
+| **Python 環境** | conda activate agentflow | **必ず conda 環境を使用** |
+| Python | 3.13+ | conda agentflow 内 |
+| Node.js | 22+ LTS | フロントエンド用 |
+| npm | 11+ | フロントエンド用 |
+| Docker | 29+ | App 発布/起動/停止用 |
+| Docker Compose | v5+ | App ライフサイクル管理 |
+| FastAPI | 0.123+ | バックエンド |
+| Pydantic | 2.12+ | スキーマ定義 |
+| Uvicorn | 0.40+ | ASGI サーバー |
+
+### サーバー起動コマンド
+
+```bash
+# バックエンド（ローカル開発 ポート 8001）
+conda activate agentflow
+python -m apps.platform.main serve --port 8001
+
+# フロントエンド（別ターミナル）
+cd apps/platform/frontend
+npm run dev
+```
+
+> **注意**: ユーザーの実行中プロセス（サーバー等）を勝手に kill しないこと。
+
+## 環境設定管理（必須）
+- **host / port / API URL 等の環境依存値はソースコードにハードコード禁止**
+- 環境変数（`.env`）または設定ファイルで一元管理する
+- ローカル開発・テスト・本番は環境別ファイル（`.env` / `.env.test` / `.env.production`）で分離する
+- 本番環境はテスト環境と可能な限り同一構成にする
+- `.env.example` を変更したら必ず `.env` も同期する
+- 詳細: [開発原則 - 環境設定管理](global/principles.md#環境設定管理environment-configuration)
+
 ## モジュラー設計ルール
 ## 基本原則
 

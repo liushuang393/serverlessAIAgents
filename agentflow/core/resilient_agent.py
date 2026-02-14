@@ -32,12 +32,19 @@ from abc import abstractmethod
 from pathlib import Path
 from typing import Any, TypeVar
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from agentflow.core.agent_block import AgentBlock
 from agentflow.core.exceptions import (
+    AgentOutputValidationError,
     AgentRetryExhaustedError,
     AgentTimeoutError,
+)
+from agentflow.core.retry_advisor import (
+    RetryAction,
+    RetryAdvice,
+    RetryAdvisor,
+    RetryContext,
 )
 
 
@@ -51,6 +58,15 @@ __all__ = [
     "OutputT",
     "ResilientAgent",
 ]
+
+
+class _RunStageError(Exception):
+    """実行段階情報を付与する内部例外."""
+
+    def __init__(self, stage: str, original_error: Exception) -> None:
+        self.stage = stage
+        self.original_error = original_error
+        super().__init__(str(original_error))
 
 
 class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
@@ -122,6 +138,9 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
         self._logger = logging.getLogger(f"agentflow.{self.name}")
         self._cached_skill_prompt: str | None = None
         self._tool_provider: Any = None
+        self._retry_advisor = RetryAdvisor()
+        self._retry_prompt_hint: str | None = None
+        self._retry_temperature_override: float | None = None
 
         # コード実行機能の設定
         if enable_code_execution is not None:
@@ -168,40 +187,59 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
             AgentTimeoutError: タイムアウト時
             AgentRetryExhaustedError: リトライ上限到達時
         """
+        self._reset_retry_runtime_state()
         last_error: Exception | None = None
+        attempts_used = 0
 
-        for attempt in range(self.max_retries + 1):
-            try:
-                return await self._run_with_timeout(input_data, attempt)
-            except TimeoutError:
-                self._logger.warning(
-                    f"{self.name} タイムアウト (attempt {attempt + 1}/{self.max_retries + 1})"
-                )
-                last_error = TimeoutError(
-                    f"Timeout after {self.timeout_seconds}s"
-                )
-            except Exception as e:
-                self._logger.warning(
-                    f"{self.name} エラー (attempt {attempt + 1}/{self.max_retries + 1}): {e}"
-                )
-                last_error = e
+        try:
+            for attempt in range(self.max_retries + 1):
+                attempts_used = attempt + 1
+                try:
+                    return await self._run_with_timeout(input_data, attempt)
+                except Exception as e:
+                    stage, raw_error = self._unwrap_stage_error(e)
+                    advice = self._retry_advisor.advise(RetryContext(
+                        agent_name=self.name,
+                        attempt=attempt,
+                        max_retries=self.max_retries,
+                        stage=stage,
+                        error=raw_error,
+                        has_llm=self._llm is not None,
+                    ))
+                    self._logger.warning(
+                        f"{self.name} エラー (attempt {attempt + 1}/{self.max_retries + 1}, "
+                        f"stage={stage}, action={advice.action.value}, reason={advice.reason}): {raw_error}"
+                    )
+                    last_error = raw_error
 
-            # リトライ前にディレイ
-            if attempt < self.max_retries:
-                delay = self._calculate_retry_delay(attempt)
-                await asyncio.sleep(delay)
+                    if advice.action == RetryAction.SKIP:
+                        break
+
+                    if advice.action == RetryAction.REPAIR:
+                        self._apply_repair_advice(advice)
+
+                    if attempt >= self.max_retries:
+                        break
+
+                    delay = advice.delay_override
+                    if delay is None:
+                        delay = self._calculate_retry_delay(attempt)
+                    if delay > 0:
+                        await asyncio.sleep(delay)
+        finally:
+            self._reset_retry_runtime_state()
 
         # 全リトライ失敗
-        if isinstance(last_error, asyncio.TimeoutError):
+        if isinstance(last_error, (asyncio.TimeoutError, TimeoutError)):
             raise AgentTimeoutError(
                 self.name,
                 self.timeout_seconds,
-                self.max_retries + 1,
+                attempts_used,
                 last_error,
             )
         raise AgentRetryExhaustedError(
             self.name,
-            self.max_retries + 1,
+            attempts_used,
             last_error,
         )
 
@@ -218,6 +256,36 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
             return self.retry_delay * (2**attempt)
         return self.retry_delay
 
+    def _is_retryable_error(self, error: Exception) -> bool:
+        """後方互換: リトライ可否のみ判定."""
+        advice = self._retry_advisor.advise(RetryContext(
+            agent_name=self.name,
+            attempt=0,
+            max_retries=max(self.max_retries, 1),
+            stage="execution",
+            error=error,
+            has_llm=self._llm is not None,
+        ))
+        return advice.action != RetryAction.SKIP
+
+    def _unwrap_stage_error(self, error: Exception) -> tuple[str, Exception]:
+        """段階付き例外から元例外を抽出."""
+        if isinstance(error, _RunStageError):
+            return error.stage, error.original_error
+        return "execution", error
+
+    def _apply_repair_advice(self, advice: RetryAdvice) -> None:
+        """修復アドバイスをランタイムに適用."""
+        if advice.repair_prompt_hint:
+            self._retry_prompt_hint = advice.repair_prompt_hint
+        if advice.temperature_override is not None:
+            self._retry_temperature_override = advice.temperature_override
+
+    def _reset_retry_runtime_state(self) -> None:
+        """リトライ中に使う一時状態をリセット."""
+        self._retry_prompt_hint = None
+        self._retry_temperature_override = None
+
     async def _run_with_timeout(
         self, input_data: dict[str, Any], attempt: int
     ) -> dict[str, Any]:
@@ -232,11 +300,19 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
         """
         async with asyncio.timeout(self.timeout_seconds):
             # 入力を Pydantic モデルに変換
-            typed_input = self._parse_input(input_data)
+            try:
+                typed_input = self._parse_input(input_data)
+            except Exception as e:
+                raise _RunStageError("input_parse", e) from e
 
             # メイン処理
             self._logger.info(f"{self.name} 実行開始 (attempt {attempt + 1})")
-            output = await self.process(typed_input)
+            try:
+                output = await self.process(typed_input)
+            except Exception as e:
+                if isinstance(e, (ValidationError, AgentOutputValidationError)):
+                    raise _RunStageError("output_validation", e) from e
+                raise _RunStageError("process", e) from e
             self._logger.info(f"{self.name} 実行完了")
 
             # 出力検証
@@ -364,20 +440,30 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
             self._logger.warning("LLM クライアント未設定、モック応答を返します")
             return ""
 
+        prompt_for_call = prompt
+        if self._retry_prompt_hint:
+            prompt_for_call = f"{prompt}\n\n{self._retry_prompt_hint}"
+
+        temperature = (
+            self._retry_temperature_override
+            if self._retry_temperature_override is not None
+            else self.temperature
+        )
+
         # LLMProvider.complete() または chat() を使用
         if hasattr(self._llm, "complete"):
             response = await self._llm.complete(
-                prompt,
+                prompt_for_call,
                 max_tokens=self.max_tokens,
-                temperature=self.temperature,
+                temperature=temperature,
             )
             # LLMResponse（Pydantic モデル）または dict に対応
             return self._extract_content(response)
         if hasattr(self._llm, "chat"):
             response = await self._llm.chat(
-                [{"role": "user", "content": prompt}],
+                [{"role": "user", "content": prompt_for_call}],
                 max_tokens=self.max_tokens,
-                temperature=self.temperature,
+                temperature=temperature,
             )
             # LLMResponse（Pydantic モデル）または dict に対応
             return self._extract_content(response)
@@ -430,6 +516,7 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
             "has_llm": self._llm is not None,
+            "retry_advisor_enabled": True,
         }
 
 
@@ -439,4 +526,3 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
 
 # BaseDecisionAgent として使用可能（後方互換）
 BaseDecisionAgent = ResilientAgent
-

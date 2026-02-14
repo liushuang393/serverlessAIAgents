@@ -281,6 +281,10 @@ export default function CompetitorView() {
           refresh_with_watchlist: true,
           max_focus_keywords: 24,
         },
+        {
+          // 競合発見は外部API収集+LLM分析を含むため長いタイムアウトを設定
+          timeout: 120000,
+        },
       );
       const payload = resp.data;
       setCompetitors(payload.competitors || []);

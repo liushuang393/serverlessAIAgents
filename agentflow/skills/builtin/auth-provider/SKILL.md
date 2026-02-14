@@ -1,16 +1,15 @@
 ---
 name: auth-provider
 description: |
-  认证提供商统一接口，支持 Supabase Auth、Clerk、Firebase Auth 等主流认证服务。
-  提供用户注册、登录、OAuth、会话管理、权限验证等功能。
+  認証プロバイダを統一的に扱うインターフェース。
+  Supabase Auth、Clerk、Firebase Auth などに対応し、
+  ユーザー登録・ログイン・OAuth・セッション管理・権限検証を提供。
 version: 1.0.0
 author: AgentFlow Team
 triggers:
   - auth
-  - 认证
   - 認証
   - login
-  - 登录
   - ログイン
   - oauth
   - session
@@ -27,10 +26,10 @@ tags:
   - identity
   - production-ready
 examples:
-  - "用户注册和登录"
-  - "OAuth 社交登录"
-  - "JWT 验证"
-  - "会话管理"
+  - "ユーザー登録とログイン"
+  - "OAuth ソーシャルログイン"
+  - "JWT 検証"
+  - "セッション管理"
 allowed-tools:
   - Bash
   - Read
@@ -40,11 +39,11 @@ user-invocable: true
 
 # Auth Provider Skill
 
-## 概述
+## 概要
 
 统一的认证接口，支持主流认证服务，让 Agent 系统快速实现用户认证。
 
-## 支持的提供商
+## 対応プロバイダ
 
 | 提供商 | 类型 | 免费额度 | 特点 |
 |--------|------|----------|------|
@@ -53,7 +52,7 @@ user-invocable: true
 | **Firebase Auth** | 商用 | 50k MAU | Google 生态、多平台 |
 | **Auth0** | 商用 | 7.5k MAU | 企业级、SAML/LDAP |
 
-## 快速开始
+## クイックスタート
 
 ### 1. Supabase Auth
 
@@ -174,7 +173,7 @@ await auth.sign_out(scope="global")
 
 ## OAuth 社交登录
 
-### 支持的提供商
+### 対応プロバイダ
 
 - Google
 - Apple (iOS 必须支持)
@@ -507,7 +506,7 @@ await auth.sign_up(
 )
 ```
 
-## 提供商选择指南
+## プロバイダ選定ガイド
 
 | 场景 | 推荐 | 理由 |
 |------|------|------|
@@ -515,4 +514,3 @@ await auth.sign_up(
 | 最佳开发体验 | Clerk | 预构建 UI、组织管理 |
 | Google 生态 | Firebase Auth | Firestore/FCM 集成 |
 | 企业 SSO | Auth0 | SAML/LDAP/Active Directory |
-

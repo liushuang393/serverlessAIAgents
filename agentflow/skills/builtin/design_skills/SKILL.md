@@ -1,9 +1,9 @@
 ---
 name: design-skills
 description: >
-  Generate professional multi-image design sets from natural language briefs.
-  Auto-fallback: ComfyUI (local GPU) -> OpenAI gpt-image-1 (cloud).
-  Use when asked to create product images, brand visuals, social media assets.
+  自然言語ブリーフから、プロ品質の複数デザイン画像セットを生成。
+  ComfyUI（ローカルGPU）から OpenAI gpt-image-1（クラウド）へ自動フォールバック。
+  商品画像、ブランドビジュアル、SNS 用アセット生成に使用。
 version: 1.0.1
 triggers:
   - design

@@ -132,7 +132,7 @@ class FlowExecutor:
                 # ノードを実行
                 result = await node.execute(ctx)
 
-                # ノード失敗時はエラーイベントを発行（completeは発行しない）
+                # ノード失敗時はエラーイベントを発行
                 if not result.success:
                     error_msg = result.data.get("error", "Unknown error")
                     error_type = result.data.get("error_type", "AgentError")
@@ -148,6 +148,7 @@ class FlowExecutor:
                             error_type=error_type,
                         )
                         yield to_legacy_dict(event)
+                    # 失敗でも CONTINUE なら後続ノードを実行するためここでは return しない
                 elif result.action in (NextAction.CONTINUE, NextAction.STOP):
                     # ノード正常完了時のみ完了イベントを発行
                     # EARLY_RETURN（Gate失敗）や RETRY_FROM（REVISE）では発行しない

@@ -12,11 +12,13 @@ Validate → CodeGen → Deploy → Register のフローを統合。
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from apps.platform.schemas.publish_schemas import (
     PublishEvent,
@@ -37,12 +39,9 @@ from apps.platform.services.component_library import (
 from agentflow.core.interfaces import (
     CodeOutputType,
     DeployTarget,
+    GeneratedCode,
 )
 from agentflow.services.publish_service import PublishService
-
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
 
 
 class PublishOrchestrator:
@@ -66,16 +65,23 @@ class PublishOrchestrator:
         self._library = component_library or get_component_library()
         self._logger = logging.getLogger(__name__)
 
-        # 進行中の発布を追跡
+        # 進行中/完了済みの発布状態
         self._active_publishes: dict[str, PublishResponse] = {}
 
-    async def publish(
-        self,
-        request: PublishRequest,
-    ) -> AsyncIterator[PublishEvent]:
-        """一键发布を実行.
+        # 発布イベント履歴（SSE再接続向け）
+        self._event_history: dict[str, list[PublishEvent]] = {}
 
-        フロー: Validate → CodeGen → Deploy → Register
+        # SSE購読キュー
+        self._subscribers: dict[str, set[asyncio.Queue[PublishEvent | None]]] = {}
+
+        # 実行中タスク
+        self._publish_tasks: dict[str, asyncio.Task[None]] = {}
+
+        # キャンセル要求
+        self._cancel_requests: set[str] = set()
+
+    async def publish(self, request: PublishRequest) -> AsyncIterator[PublishEvent]:
+        """一键发布を実行してイベントを逐次返す.
 
         Args:
             request: 発布リクエスト
@@ -83,32 +89,146 @@ class PublishOrchestrator:
         Yields:
             発布イベント
         """
+        publish_id = await self.start_publish(request)
+        async for event in self.stream_events(publish_id):
+            yield event
+
+    async def start_publish(self, request: PublishRequest) -> str:
+        """発布処理をバックグラウンド開始し publish_id を返す.
+
+        Args:
+            request: 発布リクエスト
+
+        Returns:
+            発布ID
+        """
         publish_id = f"pub_{uuid.uuid4().hex[:12]}"
         start_time = datetime.now(UTC)
 
-        # 初期レスポンスを作成
         response = PublishResponse(
             publish_id=publish_id,
             status=PublishStatus.PENDING,
             target=request.target,
             phases=[],
             started_at=start_time,
+            progress=0.0,
+            current_phase="",
         )
         self._active_publishes[publish_id] = response
+        self._event_history[publish_id] = []
+        self._subscribers.setdefault(publish_id, set())
+
+        task = asyncio.create_task(
+            self._run_publish_task(publish_id, request),
+            name=f"platform-publish-{publish_id}",
+        )
+        self._publish_tasks[publish_id] = task
+        task.add_done_callback(lambda _task, pid=publish_id: self._publish_tasks.pop(pid, None))
+
+        return publish_id
+
+    async def stream_events(
+        self,
+        publish_id: str,
+        *,
+        from_index: int = 0,
+    ) -> AsyncIterator[PublishEvent]:
+        """発布イベントを履歴+リアルタイムで購読.
+
+        Args:
+            publish_id: 発布ID
+            from_index: 履歴の開始インデックス
+
+        Yields:
+            発布イベント
+
+        Raises:
+            KeyError: 発布ID が存在しない場合
+        """
+        if publish_id not in self._active_publishes:
+            msg = f"Publish not found: {publish_id}"
+            raise KeyError(msg)
+
+        history = self._event_history.get(publish_id, [])
+        safe_index = max(0, from_index)
+        for event in history[safe_index:]:
+            yield event
+
+        current = self._active_publishes.get(publish_id)
+        if current is None or self._is_terminal_status(current.status):
+            return
+
+        queue: asyncio.Queue[PublishEvent | None] = asyncio.Queue()
+        self._subscribers.setdefault(publish_id, set()).add(queue)
 
         try:
+            while True:
+                item = await queue.get()
+                if item is None:
+                    break
+                yield item
+                if self._is_terminal_status(item.status):
+                    break
+        finally:
+            subscribers = self._subscribers.get(publish_id)
+            if subscribers is not None:
+                subscribers.discard(queue)
+
+    def get_publish_events(self, publish_id: str) -> list[PublishEvent]:
+        """発布イベント履歴を取得.
+
+        Args:
+            publish_id: 発布ID
+
+        Returns:
+            イベント履歴
+        """
+        return list(self._event_history.get(publish_id, []))
+
+    async def _run_publish_task(self, publish_id: str, request: PublishRequest) -> None:
+        """発布タスク実行ラッパー.
+
+        Args:
+            publish_id: 発布ID
+            request: 発布リクエスト
+        """
+        try:
+            await self._execute_publish(publish_id, request)
+        finally:
+            self._notify_stream_done(publish_id)
+            self._cancel_requests.discard(publish_id)
+
+    async def _execute_publish(self, publish_id: str, request: PublishRequest) -> None:
+        """発布の実処理.
+
+        Args:
+            publish_id: 発布ID
+            request: 発布リクエスト
+        """
+        response = self._active_publishes[publish_id]
+
+        try:
+            if self._is_cancel_requested(publish_id):
+                self._mark_cancelled(response, "Publish cancelled before start")
+                return
+
             # Phase 1: Validate
-            yield self._create_event(
-                publish_id, "phase_start", "validate", PublishStatus.VALIDATING,
-                "Validating component...", 0.0
+            self._emit_event(
+                response=response,
+                event_type="phase_start",
+                phase="validate",
+                status=PublishStatus.VALIDATING,
+                message="Validating component...",
+                progress=0.0,
             )
 
             validation_result = await self._validate(request)
             if not validation_result["valid"]:
-                yield self._create_event(
-                    publish_id, "error", "validate", PublishStatus.FAILED,
-                    f"Validation failed: {validation_result['error']}", 0.0,
-                    data=validation_result
+                self._mark_failed(
+                    response=response,
+                    phase="validate",
+                    message=f"Validation failed: {validation_result['error']}",
+                    details=validation_result,
                 )
                 return
 
@@ -121,17 +241,29 @@ class PublishOrchestrator:
                     completed_at=datetime.now(UTC),
                 )
             )
-            yield self._create_event(
-                publish_id, "phase_complete", "validate", PublishStatus.VALIDATING,
-                "Validation passed", 25.0
+            self._emit_event(
+                response=response,
+                event_type="phase_complete",
+                phase="validate",
+                status=PublishStatus.VALIDATING,
+                message="Validation passed",
+                progress=25.0,
             )
 
+            if self._is_cancel_requested(publish_id):
+                self._mark_cancelled(response, "Publish cancelled after validation")
+                return
+
             # Phase 2: CodeGen (該当する場合)
-            generated_code = None
+            generated_code: GeneratedCode | None = None
             if self._needs_codegen(request):
-                yield self._create_event(
-                    publish_id, "phase_start", "codegen", PublishStatus.GENERATING,
-                    "Generating code...", 25.0
+                self._emit_event(
+                    response=response,
+                    event_type="phase_start",
+                    phase="codegen",
+                    status=PublishStatus.GENERATING,
+                    message="Generating code...",
+                    progress=25.0,
                 )
 
                 generated_code = await self._generate_code(request, validation_result)
@@ -140,29 +272,46 @@ class PublishOrchestrator:
                     PublishPhase(
                         name="codegen",
                         status=PublishStatus.COMPLETED,
-                        message=f"Generated {len(generated_code.get('files', []))} files",
+                        message=f"Generated {len(generated_code.files)} files",
                         progress=100.0,
                         completed_at=datetime.now(UTC),
+                        details={
+                            "entry_point": generated_code.entry_point,
+                            "output_type": generated_code.output_type.value,
+                        },
                     )
                 )
-                yield self._create_event(
-                    publish_id, "phase_complete", "codegen", PublishStatus.GENERATING,
-                    "Code generation complete", 50.0
+                self._emit_event(
+                    response=response,
+                    event_type="phase_complete",
+                    phase="codegen",
+                    status=PublishStatus.GENERATING,
+                    message="Code generation complete",
+                    progress=50.0,
                 )
 
+                if self._is_cancel_requested(publish_id):
+                    self._mark_cancelled(response, "Publish cancelled after code generation")
+                    return
+
             # Phase 3: Deploy
-            yield self._create_event(
-                publish_id, "phase_start", "deploy", PublishStatus.DEPLOYING,
-                "Deploying...", 50.0
+            self._emit_event(
+                response=response,
+                event_type="phase_start",
+                phase="deploy",
+                status=PublishStatus.DEPLOYING,
+                message="Deploying...",
+                progress=50.0,
             )
 
             deploy_result = await self._deploy(request, generated_code)
 
             if not deploy_result["success"]:
-                yield self._create_event(
-                    publish_id, "error", "deploy", PublishStatus.FAILED,
-                    f"Deployment failed: {deploy_result.get('error', 'Unknown error')}", 50.0,
-                    data=deploy_result
+                self._mark_failed(
+                    response=response,
+                    phase="deploy",
+                    message=f"Deployment failed: {deploy_result.get('error', 'Unknown error')}",
+                    details=deploy_result,
                 )
                 return
 
@@ -178,17 +327,29 @@ class PublishOrchestrator:
                     details=deploy_result,
                 )
             )
-            yield self._create_event(
-                publish_id, "phase_complete", "deploy", PublishStatus.DEPLOYING,
-                "Deployment successful", 75.0,
-                data={"url": deploy_result.get("url")}
+            self._emit_event(
+                response=response,
+                event_type="phase_complete",
+                phase="deploy",
+                status=PublishStatus.DEPLOYING,
+                message="Deployment successful",
+                progress=75.0,
+                data={"url": deploy_result.get("url")},
             )
+
+            if self._is_cancel_requested(publish_id):
+                self._mark_cancelled(response, "Publish cancelled after deployment")
+                return
 
             # Phase 4: Register (Gallery に登録する場合)
             if request.publish_to_gallery:
-                yield self._create_event(
-                    publish_id, "phase_start", "register", PublishStatus.REGISTERING,
-                    "Registering to Gallery...", 75.0
+                self._emit_event(
+                    response=response,
+                    event_type="phase_start",
+                    phase="register",
+                    status=PublishStatus.REGISTERING,
+                    message="Registering to Gallery...",
+                    progress=75.0,
                 )
 
                 register_result = await self._register_to_gallery(request, deploy_result)
@@ -203,40 +364,172 @@ class PublishOrchestrator:
                         completed_at=datetime.now(UTC),
                     )
                 )
-                yield self._create_event(
-                    publish_id, "phase_complete", "register", PublishStatus.REGISTERING,
-                    "Registered to Gallery", 90.0
+                self._emit_event(
+                    response=response,
+                    event_type="phase_complete",
+                    phase="register",
+                    status=PublishStatus.REGISTERING,
+                    message="Registered to Gallery",
+                    progress=90.0,
                 )
 
             # 完了
-            response.status = PublishStatus.COMPLETED
             response.completed_at = datetime.now(UTC)
-            response.progress = 100.0
-
-            yield self._create_event(
-                publish_id, "complete", "", PublishStatus.COMPLETED,
-                "Publish completed successfully", 100.0,
+            response.error = None
+            response.error_details = None
+            self._emit_event(
+                response=response,
+                event_type="complete",
+                phase="",
+                status=PublishStatus.COMPLETED,
+                message="Publish completed successfully",
+                progress=100.0,
                 data={
                     "deployment_id": response.deployment_id,
                     "deployment_url": response.deployment_url,
                     "gallery_id": response.gallery_id,
-                }
+                },
             )
 
-        except Exception as e:
-            self._logger.exception(f"Publish failed: {e}")
-            response.status = PublishStatus.FAILED
-            response.error = str(e)
-            response.completed_at = datetime.now(UTC)
-
-            yield self._create_event(
-                publish_id, "error", "", PublishStatus.FAILED,
-                f"Publish failed: {e}", response.progress
+        except asyncio.CancelledError:
+            if not self._is_terminal_status(response.status):
+                self._mark_cancelled(response, "Publish task cancelled")
+            raise
+        except Exception as exc:  # noqa: BLE001
+            self._logger.exception("Publish failed: %s", exc)
+            self._mark_failed(
+                response=response,
+                phase=response.current_phase,
+                message=f"Publish failed: {exc}",
+                details={"exception": str(exc)},
             )
 
-        finally:
-            # クリーンアップ（一定時間後に削除）
-            pass
+    def _emit_event(
+        self,
+        *,
+        response: PublishResponse,
+        event_type: str,
+        phase: str,
+        status: PublishStatus,
+        message: str,
+        progress: float,
+        data: dict[str, Any] | None = None,
+    ) -> PublishEvent:
+        """状態更新とイベント配信を一括実行.
+
+        Args:
+            response: 発布レスポンス
+            event_type: イベントタイプ
+            phase: フェーズ名
+            status: ステータス
+            message: メッセージ
+            progress: 進捗率
+            data: 追加データ
+
+        Returns:
+            生成したイベント
+        """
+        response.status = status
+        response.current_phase = phase
+        response.progress = progress
+        response.logs.append(
+            f"{datetime.now(UTC).isoformat()} [{phase or 'system'}] {message}"
+        )
+
+        event = self._create_event(
+            publish_id=response.publish_id,
+            event_type=event_type,
+            phase=phase,
+            status=status,
+            message=message,
+            progress=progress,
+            data=data,
+        )
+
+        history = self._event_history.setdefault(response.publish_id, [])
+        history.append(event)
+
+        subscribers = list(self._subscribers.get(response.publish_id, set()))
+        for queue in subscribers:
+            queue.put_nowait(event)
+
+        return event
+
+    def _mark_failed(
+        self,
+        *,
+        response: PublishResponse,
+        phase: str,
+        message: str,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        """失敗状態に更新してエラーイベント送信.
+
+        Args:
+            response: 発布レスポンス
+            phase: フェーズ
+            message: エラーメッセージ
+            details: 詳細情報
+        """
+        response.completed_at = datetime.now(UTC)
+        response.error = message
+        response.error_details = details or {}
+        self._emit_event(
+            response=response,
+            event_type="error",
+            phase=phase,
+            status=PublishStatus.FAILED,
+            message=message,
+            progress=response.progress,
+            data=details,
+        )
+
+    def _mark_cancelled(self, response: PublishResponse, message: str) -> None:
+        """キャンセル状態に更新してイベント送信.
+
+        Args:
+            response: 発布レスポンス
+            message: メッセージ
+        """
+        if self._is_terminal_status(response.status):
+            return
+
+        response.completed_at = datetime.now(UTC)
+        response.error = message
+        self._emit_event(
+            response=response,
+            event_type="cancelled",
+            phase=response.current_phase,
+            status=PublishStatus.CANCELLED,
+            message=message,
+            progress=response.progress,
+        )
+
+    def _notify_stream_done(self, publish_id: str) -> None:
+        """購読中キューに終了通知を送る.
+
+        Args:
+            publish_id: 発布ID
+        """
+        subscribers = self._subscribers.get(publish_id)
+        if not subscribers:
+            return
+
+        for queue in list(subscribers):
+            queue.put_nowait(None)
+
+    def _is_cancel_requested(self, publish_id: str) -> bool:
+        """キャンセル要求の有無を取得."""
+        return publish_id in self._cancel_requests
+
+    @staticmethod
+    def _is_terminal_status(status: PublishStatus) -> bool:
+        """終端ステータス判定."""
+        return status in {
+            PublishStatus.COMPLETED,
+            PublishStatus.FAILED,
+            PublishStatus.CANCELLED,
+        }
 
     async def _validate(self, request: PublishRequest) -> dict[str, Any]:
         """コンポーネントを検証.
@@ -286,17 +579,17 @@ class PublishOrchestrator:
             コード生成が必要な場合 True
         """
         # Docker/Lambda/Vercel へのデプロイはコード生成が必要
-        return request.target in [
+        return request.target in {
             PublishTarget.DOCKER,
             PublishTarget.VERCEL,
             PublishTarget.AWS_LAMBDA,
-        ]
+        }
 
     async def _generate_code(
         self,
         request: PublishRequest,
         validation_result: dict[str, Any],
-    ) -> dict[str, Any]:
+    ) -> GeneratedCode:
         """コードを生成.
 
         Args:
@@ -322,15 +615,10 @@ class PublishOrchestrator:
 
         # コード生成を実行
         output_type = self._get_output_type(request.target)
-        code = await self._publish_service.generate_code(
+        return await self._publish_service.generate_code(
             workflow=workflow_data,
             output_type=output_type,
         )
-
-        return {
-            "files": [{"path": f.path, "content": f.content} for f in code.files],
-            "main_file": code.main_file,
-        }
 
     def _get_output_type(self, target: PublishTarget) -> CodeOutputType:
         """発布ターゲットから出力タイプを取得.
@@ -370,7 +658,7 @@ class PublishOrchestrator:
     async def _deploy(
         self,
         request: PublishRequest,
-        generated_code: dict[str, Any] | None,
+        generated_code: GeneratedCode | None,
     ) -> dict[str, Any]:
         """デプロイを実行.
 
@@ -397,6 +685,17 @@ class PublishOrchestrator:
                 "url": None,
             }
 
+        source: GeneratedCode | Path
+        if request.source_path:
+            source = Path(request.source_path)
+        elif generated_code is not None:
+            source = generated_code
+        else:
+            return {
+                "success": False,
+                "error": "No deployment source available",
+            }
+
         # 実際のデプロイ
         deploy_target = self._get_deploy_target(request.target)
         config = request.config.copy()
@@ -404,7 +703,7 @@ class PublishOrchestrator:
 
         try:
             result = await self._publish_service.deploy_sync(
-                source=Path(request.source_path) if request.source_path else generated_code,
+                source=source,
                 target=deploy_target,
                 config=config,
             )
@@ -415,10 +714,10 @@ class PublishOrchestrator:
                 "logs": result.logs,
                 "error": result.error,
             }
-        except Exception as e:
+        except Exception as exc:  # noqa: BLE001
             return {
                 "success": False,
-                "error": str(e),
+                "error": str(exc),
             }
 
     async def _register_to_gallery(
@@ -521,14 +820,19 @@ class PublishOrchestrator:
             キャンセル成功の場合 True
         """
         response = self._active_publishes.get(publish_id)
-        if not response:
+        if response is None:
             return False
 
-        if response.status in [PublishStatus.COMPLETED, PublishStatus.FAILED, PublishStatus.CANCELLED]:
+        if self._is_terminal_status(response.status):
             return False
 
-        response.status = PublishStatus.CANCELLED
-        response.completed_at = datetime.now(UTC)
+        self._cancel_requests.add(publish_id)
+        self._mark_cancelled(response, "Publish cancelled by user")
+
+        task = self._publish_tasks.get(publish_id)
+        if task and not task.done():
+            task.cancel()
+
         return True
 
 

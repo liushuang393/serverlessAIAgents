@@ -146,6 +146,12 @@ from agentflow.core.reliability import (
     get_circuit_breaker,
     reliable,
 )
+from agentflow.core.retry_advisor import (
+    RetryAction,
+    RetryAdvice,
+    RetryAdvisor,
+    RetryContext,
+)
 from agentflow.core.resilient_agent import (
     BaseDecisionAgent,
     InputT,
@@ -172,6 +178,7 @@ from agentflow.core.rollback_manager import (
 )
 from agentflow.core.schemas import SchemaLoader, SchemaValidationError
 from agentflow.core.tool_binding import BoundTools, ToolBinder, ToolExecutor
+from agentflow.core.type_safe import safe_enum, safe_float, safe_int
 
 # ==========================================================================
 # NEW: 統一ツール・Agent レジストリ（Auto-Agent Architecture）
@@ -295,8 +302,12 @@ __all__ = [
     "ResultStore",
     "ResultStoreManager",
     "RetryConfig",
+    "RetryAction",
+    "RetryAdvice",
+    "RetryAdvisor",
     "RetryStrategy",
     "RetryableAgent",
+    "RetryContext",
     "RollbackManager",
     "RollbackResult",
     "RollbackRetryConfig",
@@ -317,6 +328,9 @@ __all__ = [
     "ToolExecutor",
     "ToolRegistry",
     "ToolSource",
+    "safe_enum",
+    "safe_float",
+    "safe_int",
     "ValidationResult",
     "ValidationSeverity",
     "VerifyResult",

@@ -1,0 +1,47 @@
+{
+  "name": "platform",
+  "display_name": "AgentFlow Platform",
+  "description": "全App統合管理プラットフォーム - Gallery・コンポーネント・Publish・Dashboard",
+  "version": "1.0.0",
+  "icon": "🏗️",
+  "ports": {
+    "api": 8100,
+    "frontend": 3000,
+    "db": null,
+    "redis": null
+  },
+  "entry_points": {
+    "api_module": "apps.platform.main:create_app",
+    "health": "/health"
+  },
+  "agents": [],
+  "services": {
+    "gallery": {
+      "enabled": true
+    },
+    "components": {
+      "enabled": true
+    },
+    "publish": {
+      "enabled": true
+    },
+    "dashboard": {
+      "enabled": true
+    },
+    "app_discovery": {
+      "enabled": true
+    }
+  },
+  "dependencies": {
+    "database": null,
+    "redis": false,
+    "external": []
+  },
+  "tags": [
+    "platform",
+    "management",
+    "gallery",
+    "publish",
+    "dashboard"
+  ]
+}

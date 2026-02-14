@@ -1,0 +1,119 @@
+# -*- coding: utf-8 -*-
+"""Agents Router エンドポイントのユニットテスト.
+
+テスト対象: apps/platform/routers/agents.py
+phase3_test_client を使用してエンドポイントを検証する。
+"""
+
+from __future__ import annotations
+
+from fastapi.testclient import TestClient
+
+
+class TestListAgents:
+    """GET /api/agents テスト."""
+
+    def test_returns_agent_list(self, phase3_test_client: TestClient) -> None:
+        """Agent 一覧を返す."""
+        resp = phase3_test_client.get("/api/agents")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "agents" in data
+        assert "total" in data
+        # test_app(2) + rag_app(2) = 4
+        assert data["total"] == 4
+
+    def test_agent_item_structure(self, phase3_test_client: TestClient) -> None:
+        """各 Agent アイテムに必要なフィールドがある."""
+        resp = phase3_test_client.get("/api/agents")
+        agents = resp.json()["agents"]
+        assert len(agents) > 0
+        agent = agents[0]
+        required_keys = {"name", "app_name", "app_display_name", "app_icon", "module", "capabilities"}
+        assert required_keys.issubset(agent.keys())
+
+
+class TestGetAgentStats:
+    """GET /api/agents/stats テスト."""
+
+    def test_returns_stats(self, phase3_test_client: TestClient) -> None:
+        """Agent 統計を返す."""
+        resp = phase3_test_client.get("/api/agents/stats")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "total_agents" in data
+        assert "total_apps_with_agents" in data
+        assert "total_capabilities" in data
+        assert data["total_agents"] == 4
+
+
+class TestListCapabilities:
+    """GET /api/agents/capabilities テスト."""
+
+    def test_returns_capabilities(self, phase3_test_client: TestClient) -> None:
+        """能力タグ一覧を返す."""
+        resp = phase3_test_client.get("/api/agents/capabilities")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "capabilities" in data
+        assert "total" in data
+        assert data["total"] > 0
+
+    def test_capability_structure(self, phase3_test_client: TestClient) -> None:
+        """各能力タグに tag, count, apps フィールドがある."""
+        resp = phase3_test_client.get("/api/agents/capabilities")
+        caps = resp.json()["capabilities"]
+        assert len(caps) > 0
+        cap = caps[0]
+        assert "tag" in cap
+        assert "count" in cap
+        assert "apps" in cap
+
+
+class TestAgentsByApp:
+    """GET /api/agents/by-app テスト."""
+
+    def test_returns_groups(self, phase3_test_client: TestClient) -> None:
+        """App 別グループを返す."""
+        resp = phase3_test_client.get("/api/agents/by-app")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "groups" in data
+        assert "total_apps" in data
+        assert data["total_apps"] == 2
+
+    def test_group_contains_agents(self, phase3_test_client: TestClient) -> None:
+        """各グループに Agent リストが含まれる."""
+        resp = phase3_test_client.get("/api/agents/by-app")
+        groups = resp.json()["groups"]
+        assert "test_app" in groups
+        assert "rag_app" in groups
+        assert len(groups["test_app"]) == 2
+        assert len(groups["rag_app"]) == 2
+
+
+class TestSearchAgents:
+    """GET /api/agents/search テスト."""
+
+    def test_search_found(self, phase3_test_client: TestClient) -> None:
+        """能力タグ検索でマッチする Agent を返す."""
+        resp = phase3_test_client.get("/api/agents/search", params={"capability": "rag"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] >= 1
+        assert data["query"] == "rag"
+        names = {a["name"] for a in data["agents"]}
+        assert "RAGAgent" in names
+
+    def test_search_no_match(self, phase3_test_client: TestClient) -> None:
+        """マッチしない検索は空リストを返す."""
+        resp = phase3_test_client.get("/api/agents/search", params={"capability": "nonexistent_xyz"})
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 0
+        assert resp.json()["agents"] == []
+
+    def test_search_missing_param_returns_422(self, phase3_test_client: TestClient) -> None:
+        """必須パラメータなしは 422 を返す."""
+        resp = phase3_test_client.get("/api/agents/search")
+        assert resp.status_code == 422
+

@@ -16,19 +16,80 @@ import argparse
 import asyncio
 import logging
 import sys
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 import uvicorn
 from apps.platform.engine import PlatformEngine
 from apps.platform.routers import (
+    agents_router,
+    apps_router,
     components_router,
     dashboard_router,
     gallery_router,
+    mcp_router,
     publish_router,
+    rag_router,
+    skills_router,
 )
+from apps.platform.routers.agents import init_agent_services
+from apps.platform.routers.apps import init_app_services
+from apps.platform.routers.mcp import init_mcp_services
+from apps.platform.routers.rag import init_rag_services
+from apps.platform.routers.skills import init_skill_services
+from apps.platform.services.app_scaffolder import AppScaffolderService
 from apps.platform.schemas.publish_schemas import PublishRequest, PublishTarget
+from apps.platform.services.agent_aggregator import AgentAggregatorService
+from apps.platform.services.app_discovery import AppDiscoveryService
+from apps.platform.services.app_lifecycle import AppLifecycleManager
+from apps.platform.services.mcp_registry import MCPRegistryService
+from apps.platform.services.port_allocator import PortAllocatorService
+from apps.platform.services.rag_overview import RAGOverviewService
+from apps.platform.services.skill_catalog import SkillCatalogService
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """アプリケーション起動/終了時のライフサイクル処理."""
+    _logger = logging.getLogger(__name__)
+
+    # --- 起動時: App Discovery スキャン ---
+    discovery = AppDiscoveryService()
+    lifecycle = AppLifecycleManager()
+    scaffolder = AppScaffolderService(discovery)
+    port_allocator = PortAllocatorService(discovery)
+    init_app_services(
+        discovery,
+        lifecycle,
+        scaffolder=scaffolder,
+        port_allocator=port_allocator,
+    )
+
+    count = await discovery.scan()
+    _logger.info("Platform 起動完了: %d 件の App を検出", count)
+
+    # --- Phase 3: Agent / Skill / RAG サービス初期化 ---
+    aggregator = AgentAggregatorService(discovery)
+    init_agent_services(aggregator)
+
+    skill_catalog = SkillCatalogService()
+    init_skill_services(skill_catalog)
+    skill_count = await skill_catalog.scan()
+    _logger.info("SkillCatalog: %d 件のスキルを検出", skill_count)
+
+    rag_overview = RAGOverviewService(discovery)
+    init_rag_services(rag_overview)
+
+    mcp_registry = MCPRegistryService()
+    init_mcp_services(mcp_registry)
+
+    yield
+
+    # --- 終了時: クリーンアップ ---
+    _logger.info("Platform シャットダウン")
 
 
 def create_app() -> FastAPI:
@@ -39,10 +100,11 @@ def create_app() -> FastAPI:
     """
     app = FastAPI(
         title="AgentFlow Platform",
-        description="AgentFlow Platform API - Gallery, Components, Publish, Dashboard",
-        version="1.0.0",
+        description="AgentFlow Platform API - Gallery, Components, Publish, Dashboard, App Management",
+        version="2.0.0",
         docs_url="/docs",
         redoc_url="/redoc",
+        lifespan=_lifespan,
     )
 
     # CORS設定
@@ -59,19 +121,25 @@ def create_app() -> FastAPI:
     app.include_router(components_router)
     app.include_router(publish_router)
     app.include_router(dashboard_router)
+    app.include_router(apps_router)
+    app.include_router(agents_router)
+    app.include_router(skills_router)
+    app.include_router(rag_router)
+    app.include_router(mcp_router)
 
     @app.get("/health")
     async def health_check() -> dict[str, Any]:
         """ヘルスチェック."""
-        return {"status": "healthy", "service": "platform"}
+        return {"status": "healthy", "service": "platform", "version": "2.0.0"}
 
     @app.get("/")
     async def root() -> dict[str, Any]:
         """ルートエンドポイント."""
         return {
             "name": "AgentFlow Platform",
-            "version": "1.0.0",
+            "version": "2.0.0",
             "docs": "/docs",
+            "apps_api": "/api/apps",
         }
 
     return app
@@ -115,7 +183,7 @@ async def cli_publish(
     name: str | None = None,
     gallery: bool = False,
 ) -> None:
-    """CLI: 一键发布."""
+    """CLI: ワンクリック公開。"""
     engine = PlatformEngine()
 
     # ターゲットを変換
@@ -260,7 +328,7 @@ def main() -> None:
     search_parser.add_argument("--limit", type=int, default=10, help="最大結果数")
 
     # publish コマンド
-    publish_parser = subparsers.add_parser("publish", help="一键发布")
+    publish_parser = subparsers.add_parser("publish", help="ワンクリック公開")
     publish_parser.add_argument("source", help="ソースパス")
     publish_parser.add_argument("--target", default="docker", help="発布ターゲット")
     publish_parser.add_argument("--name", help="発布名")

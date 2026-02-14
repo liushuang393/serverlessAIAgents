@@ -1,15 +1,15 @@
 ---
 name: ecommerce-operations
-description: 跨境電商運営のための包括的なスキルセット。競品採集、価格分析、Listing生成、在庫調整、広告監視、日報生成を提供。
+description: 越境 EC 運営向けの包括的スキルセット。競合調査、価格分析、Listing 生成、在庫調整、広告監視、日報生成を提供。
 version: "1.0.0"
 triggers:
-  - 競品
+  - 競合調査
   - 価格分析
   - listing
   - 在庫
   - 広告
   - EC運営
-  - 電商
+  - 越境EC
 requirements:
   - httpx
   - pydantic
@@ -24,15 +24,15 @@ allowed-tools:
 user-invocable: true
 ---
 
-# 跨境電商運営スキルパッケージ
+# 越境EC運営スキルパッケージ
 
 ## 概要
 
-このスキルパッケージは、跨境電商運営に必要な一連の作業を自動化します。
+このスキルパッケージは、越境EC運営に必要な一連の作業を自動化します。
 
 ## 含まれるスキル
 
-### 1. CompetitorScraper（競品採集）
+### 1. CompetitorScraper（競合収集）
 ECプラットフォームから競合商品の情報を収集します。
 
 ```python

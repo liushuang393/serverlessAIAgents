@@ -506,6 +506,39 @@ class PipelineEngine(BaseEngine):
         return result
 
     @staticmethod
+    def _extract_finding_summary(findings: list[Any], max_items: int = 3) -> str | None:
+        """所見リストからユーザー向け重大課題サマリーを生成."""
+        if not findings:
+            return None
+
+        summaries: list[str] = []
+        for finding in findings:
+            if not isinstance(finding, dict):
+                continue
+
+            severity = str(finding.get("severity", "")).upper()
+            is_critical = severity.endswith("CRITICAL")
+            if not is_critical:
+                continue
+
+            raw_text = (
+                finding.get("description")
+                or finding.get("failure_point")
+                or finding.get("impact_scope")
+                or ""
+            )
+            text = str(raw_text).strip()
+            if text and text not in summaries:
+                summaries.append(text)
+            if len(summaries) >= max_items:
+                break
+
+        if not summaries:
+            return None
+
+        return "重大課題: " + " / ".join(summaries)
+
+    @staticmethod
     def _build_review_rejection_data(
         stage_name: str,
         stage_result: dict[str, Any],
@@ -529,10 +562,11 @@ class PipelineEngine(BaseEngine):
         )
 
         message_raw = stage_result.get("rejection_message")
+        findings_summary = PipelineEngine._extract_finding_summary(findings)
         rejection_message = (
             message_raw
             if isinstance(message_raw, str) and message_raw.strip()
-            else "最終検証で重大な課題が検出されたため、分析を中断しました。"
+            else findings_summary or "重大課題が検出されました。findings を確認してください。"
         )
 
         suggest_raw = stage_result.get("suggested_rephrase")

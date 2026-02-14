@@ -16,6 +16,7 @@ Gallery、一键发布、多租户Dashboard を統合したエンジン。
 from __future__ import annotations
 
 import logging
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
 from apps.platform.schemas.publish_schemas import (
@@ -179,6 +180,7 @@ class PlatformEngine(SimpleEngine):
         categories: list[str] | None = None,
         tags: list[str] | None = None,
         limit: int = 50,
+        offset: int = 0,
     ) -> list[ComponentEntry]:
         """コンポーネントを検索.
 
@@ -188,6 +190,7 @@ class PlatformEngine(SimpleEngine):
             categories: カテゴリフィルター
             tags: タグフィルター
             limit: 最大取得数
+            offset: オフセット
 
         Returns:
             コンポーネントリスト
@@ -198,6 +201,33 @@ class PlatformEngine(SimpleEngine):
             categories=categories,
             tags=tags,
             limit=limit,
+            offset=offset,
+        )
+
+    def count_components(
+        self,
+        query: str = "",
+        *,
+        types: list[ComponentType] | None = None,
+        categories: list[str] | None = None,
+        tags: list[str] | None = None,
+    ) -> int:
+        """コンポーネント件数を取得.
+
+        Args:
+            query: 検索クエリ
+            types: タイプフィルター
+            categories: カテゴリフィルター
+            tags: タグフィルター
+
+        Returns:
+            条件一致件数
+        """
+        return self._library.count(
+            query=query,
+            types=types,
+            categories=categories,
+            tags=tags,
         )
 
     def list_components_by_type(self, component_type: ComponentType) -> list[ComponentEntry]:
@@ -227,6 +257,35 @@ class PlatformEngine(SimpleEngine):
         async for event in self._publisher.publish(request):
             yield event
 
+    async def start_publish(self, request: PublishRequest) -> str:
+        """一键发布を非同期開始.
+
+        Args:
+            request: 発布リクエスト
+
+        Returns:
+            発布ID
+        """
+        return await self._publisher.start_publish(request)
+
+    async def stream_publish_events(
+        self,
+        publish_id: str,
+        *,
+        from_index: int = 0,
+    ) -> AsyncIterator[PublishEvent]:
+        """発布イベントを購読.
+
+        Args:
+            publish_id: 発布ID
+            from_index: 履歴開始位置
+
+        Yields:
+            発布イベント
+        """
+        async for event in self._publisher.stream_events(publish_id, from_index=from_index):
+            yield event
+
     async def publish_sync(self, request: PublishRequest) -> PublishResponse:
         """一键发布を同期実行.
 
@@ -245,7 +304,7 @@ class PlatformEngine(SimpleEngine):
             publish_id="",
             status=PublishResponse.model_fields["status"].default,
             target=request.target,
-            started_at=None,
+            started_at=datetime.now(UTC),
         )
 
     def get_publish_status(self, publish_id: str) -> PublishResponse | None:

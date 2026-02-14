@@ -1643,19 +1643,19 @@ export const ReportPage: React.FC = () => {
                       <div className="bg-blue-500/5 rounded p-3 border border-blue-500/10">
                         <div className="text-xs text-blue-400 mb-2">最小ログ設定</div>
                         <div className="text-sm text-slate-400">ID戦略: {safeQi.poc_minimal_architecture.minimal_logging.correlation_id_strategy}</div>
-                        {safeQi.poc_minimal_architecture.minimal_logging.timestamp_points?.length > 0 && (
-                          <div className="text-sm text-slate-500 mt-1">計測点: {safeQi.poc_minimal_architecture.minimal_logging.timestamp_points.join(' → ')}</div>
+                        {(safeQi.poc_minimal_architecture.minimal_logging.timestamp_points?.length ?? 0) > 0 && (
+                          <div className="text-sm text-slate-500 mt-1">計測点: {(safeQi.poc_minimal_architecture.minimal_logging.timestamp_points ?? []).join(' → ')}</div>
                         )}
                         {safeQi.poc_minimal_architecture.minimal_logging.storage && (
                           <div className="text-sm text-slate-500 mt-1">保存先: {safeQi.poc_minimal_architecture.minimal_logging.storage}</div>
                         )}
                       </div>
                     )}
-                    {safeQi.poc_minimal_architecture.deferred_components?.length > 0 && (
+                    {(safeQi.poc_minimal_architecture.deferred_components?.length ?? 0) > 0 && (
                       <div>
                         <div className="text-xs text-slate-500 mb-2">後回しにするコンポーネント</div>
                         <div className="flex flex-wrap gap-2">
-                          {safeQi.poc_minimal_architecture.deferred_components.map((d: string, i: number) => (
+                          {(safeQi.poc_minimal_architecture.deferred_components ?? []).map((d: string, i: number) => (
                             <span key={i} className="text-xs px-2 py-1 bg-slate-700/50 text-slate-400 rounded">⏳ {d}</span>
                           ))}
                         </div>

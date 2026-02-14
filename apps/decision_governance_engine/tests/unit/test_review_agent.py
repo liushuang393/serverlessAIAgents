@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Unit tests for ReviewAgent."""
+import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -331,6 +332,55 @@ class TestReviewAgentScoringConsistency:
         result = await review_agent.process(sample_input)
         assert result.overall_verdict == ReviewVerdict.REVISE
         assert result.confidence_score <= 0.79
+
+    @pytest.mark.asyncio
+    async def test_llm_minimal_patch_is_truncated_to_schema_limits(
+        self, sample_input: ReviewInput
+    ) -> None:
+        """minimal_patch の超過文字列がスキーマ上限に収まること."""
+        review_agent = ReviewAgent(llm_client=MagicMock())
+        review_agent._call_llm = AsyncMock(
+            return_value=json.dumps(
+                {
+                    "overall_verdict": "REVISE",
+                    "findings": [
+                        {
+                            "severity": "WARNING",
+                            "category": "LOGIC_FLAW",
+                            "description": "境界条件の定義が不足",
+                            "affected_agent": "ReviewAgent",
+                            "suggested_revision": "入力条件の境界を明示する",
+                            "failure_point": "F" * 260,
+                            "impact_scope": "I" * 260,
+                            "minimal_patch": {
+                                "checkbox_label": "L" * 120,
+                                "annotation_hint": "H" * 60,
+                                "default_value": "D" * 120,
+                            },
+                            "score_improvements": [
+                                {
+                                    "target_score": "T" * 80,
+                                    "current_estimate": 45,
+                                    "improved_estimate": 65,
+                                    "delta": 20,
+                                }
+                            ],
+                            "action_type": "RECALC",
+                        }
+                    ],
+                },
+                ensure_ascii=False,
+            )
+        )
+
+        result = await review_agent.process(sample_input)
+        finding = result.findings[0]
+        assert finding.minimal_patch is not None
+        assert len(finding.minimal_patch.checkbox_label) <= 80
+        assert len(finding.minimal_patch.annotation_hint) <= 30
+        assert len(finding.minimal_patch.default_value) <= 50
+        assert len(finding.failure_point) <= 200
+        assert len(finding.impact_scope) <= 200
 
     def test_validate_output_with_revise_verdict(self, review_agent: ReviewAgent) -> None:
         """Test validation passes with REVISE verdict and findings."""
