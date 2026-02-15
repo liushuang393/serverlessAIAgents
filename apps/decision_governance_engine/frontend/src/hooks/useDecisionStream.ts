@@ -67,6 +67,13 @@ export interface StreamState {
   thinkingLogs: ThinkingLog[];
 }
 
+/** ストリーム開始オプション */
+export interface StreamStartOptions {
+  requestId?: string;
+  resume?: boolean;
+  preserveProgress?: boolean;
+}
+
 /** Agent ID → 英語クラス名 マッピング */
 const agentClassNameMap: Record<string, string> = {
   cognitive_gate: 'CognitiveGateAgent',
@@ -132,6 +139,7 @@ export function useDecisionStream() {
     technicalConstraints?: string[];
     regulatoryConstraints?: string[];
     team?: string;
+    streamOptions?: StreamStartOptions;
   } | null>(null);
 
   /** Agent 状態を更新 */
@@ -349,6 +357,33 @@ export function useDecisionStream() {
           addThinkingLog('system', 'System', '🔗 サーバーに接続しました');
           break;
 
+        case 'resume.context':
+          {
+            const data = (event.data as Record<string, unknown> | undefined) || {};
+            const completedStages = Array.isArray(data.completed_stages)
+              ? data.completed_stages.filter((s): s is string => typeof s === 'string')
+              : [];
+            const resumeFromStage = typeof data.resume_from_stage === 'string'
+              ? data.resume_from_stage
+              : null;
+            setState((prev) => ({
+              ...prev,
+              agents: prev.agents.map((agent) => (
+                completedStages.includes(agent.id)
+                  ? { ...agent, status: 'completed' as const, progress: 100, message: '完了（復元）' }
+                  : agent
+              )),
+            }));
+            addThinkingLog(
+              'system',
+              'System',
+              resumeFromStage
+                ? `♻️ 前回の続きから再開します（${resumeFromStage} 以降）`
+                : '♻️ 前回の続きから再開します'
+            );
+          }
+          break;
+
         case 'flow.start':
           // 接続開始時、最初のagentをrunning状態に
           setState((prev) => ({
@@ -457,7 +492,7 @@ export function useDecisionStream() {
             ...prev,
             isComplete: true,
             report: (event.result as unknown as DecisionReport) || null,
-            requestId: typeof event.result_id === 'string' ? event.result_id : prev.requestId,
+            requestId: prev.requestId,
           }));
           addThinkingLog('system', 'System', '✅ 全分析が完了しました');
           eventSourceRef.current?.close();
@@ -565,7 +600,8 @@ export function useDecisionStream() {
         params.stakeholders,
         params.technicalConstraints,
         params.regulatoryConstraints,
-        params.team
+        params.team,
+        params.streamOptions
       );
       setConnectionTimeout();
     }, delay);
@@ -578,11 +614,12 @@ export function useDecisionStream() {
       tech_lead?: string;
       business_owner?: string;
       legal_reviewer?: string;
-    }, technicalConstraints?: string[], regulatoryConstraints?: string[], team?: string) => {
+    }, technicalConstraints?: string[], regulatoryConstraints?: string[], team?: string, streamOptions?: StreamStartOptions) => {
       debugLog('🔘 [STEP4] startStream() 開始', {
         question: question?.slice(0, 50), 
         budget, 
         timelineMonths,
+        streamOptions,
         existingConnection: eventSourceRef.current?.readyState 
       });
       
@@ -597,24 +634,62 @@ export function useDecisionStream() {
       clearConnectionTimeout();
 
       // パラメータ保存（再接続用）
-      lastParamsRef.current = { question, budget, timeline: timelineMonths, stakeholders, technicalConstraints, regulatoryConstraints, team };
+      lastParamsRef.current = {
+        question,
+        budget,
+        timeline: timelineMonths,
+        stakeholders,
+        technicalConstraints,
+        regulatoryConstraints,
+        team,
+        streamOptions,
+      };
       lastReviewVerdictRef.current = null;
 
-      // 状態リセット（最初のagentをrunning状態に）
-      const startingAgents = initialAgents.map((a, i) =>
-        i === 0 ? { ...a, status: 'running' as const, progress: 5, message: '接続中...' } : { ...a }
-      );
-      setState({
-        isConnected: false,
-        isComplete: false,
-        error: null,
-        isRetryable: false,
-        retryCount: 0,
-        agents: startingAgents,
-        report: null,
-        requestId: null,
-        thinkingLogs: [{ timestamp: Date.now(), agentId: 'system', agentName: 'System', content: '🚀 分析を開始します...' }],
-      });
+      const preserveProgress = streamOptions?.preserveProgress === true;
+      if (preserveProgress) {
+        setState((prev) => ({
+          ...prev,
+          isConnected: false,
+          isComplete: false,
+          error: null,
+          isRetryable: false,
+          retryCount: 0,
+          requestId: streamOptions?.requestId || prev.requestId,
+          agents: prev.agents.map((agent) => (
+            agent.status === 'failed'
+              ? { ...agent, status: 'waiting' as const, progress: 0, message: '再開待ち...' }
+              : agent
+          )),
+          thinkingLogs: [
+            ...prev.thinkingLogs,
+            {
+              timestamp: Date.now(),
+              agentId: 'system',
+              agentName: 'System',
+              content: streamOptions?.requestId
+                ? `♻️ request_id=${streamOptions.requestId} で途中再開します...`
+                : '♻️ 途中再開します...',
+            },
+          ],
+        }));
+      } else {
+        // 状態リセット（最初のagentをrunning状態に）
+        const startingAgents = initialAgents.map((a, i) =>
+          i === 0 ? { ...a, status: 'running' as const, progress: 5, message: '接続中...' } : { ...a }
+        );
+        setState({
+          isConnected: false,
+          isComplete: false,
+          error: null,
+          isRetryable: false,
+          retryCount: 0,
+          agents: startingAgents,
+          report: null,
+          requestId: streamOptions?.requestId || null,
+          thinkingLogs: [{ timestamp: Date.now(), agentId: 'system', agentName: 'System', content: '🚀 分析を開始します...' }],
+        });
+      }
 
       debugLog('🔘 [STEP4] → decisionApi.streamDecision() を呼び出し');
 
@@ -629,7 +704,8 @@ export function useDecisionStream() {
         stakeholders,
         technicalConstraints,
         regulatoryConstraints,
-        team
+        team,
+        streamOptions
       );
       
       debugLog('🔘 [STEP4] EventSource 作成完了, readyState=', eventSourceRef.current?.readyState);

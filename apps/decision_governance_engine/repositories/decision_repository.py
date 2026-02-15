@@ -149,6 +149,15 @@ class DecisionRepository:
         "qi": "qi_result",
         "review": "review_result",
     }
+    _RESUME_RESULT_COLUMN_MAP: dict[str, str] = {
+        "cognitive_gate": "cognitive_gate_result",
+        "gatekeeper": "gatekeeper_result",
+        "dao": "dao_result",
+        "fa": "fa_result",
+        "shu": "shu_result",
+        "qi": "qi_result",
+        "review": "review_result",
+    }
 
     async def upsert_stage(
         self,
@@ -235,7 +244,118 @@ class DecisionRepository:
                 val = getattr(record, col_name, None)
                 if val is not None:
                     completed.add(stage_name)
+
+            # 入出力ログからも完了判定（clarification 等の専用カラムがないステージ向け）
+            stage_io_logs = record.stage_io_logs or {}
+            if isinstance(stage_io_logs, dict):
+                for stage_name, raw_entries in stage_io_logs.items():
+                    entries = raw_entries if isinstance(raw_entries, list) else []
+                    latest_output = self._latest_stage_output(entries)
+                    if latest_output is not None:
+                        completed.add(stage_name)
             return completed
+
+    async def get_resume_context(
+        self,
+        request_id: UUID,
+    ) -> tuple[set[str], dict[str, dict[str, Any]], str | None]:
+        """Resume用に完了済みステージと結果を取得.
+
+        Returns:
+            (completed_stages, stage_results, question)
+        """
+        async with get_db_session() as session:
+            result = await session.execute(
+                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
+            )
+            record = result.scalar_one_or_none()
+            if record is None:
+                return set(), {}, None
+
+            completed: set[str] = set()
+            stage_results: dict[str, dict[str, Any]] = {}
+
+            # 専用カラムを優先して復元
+            for stage_name, col_name in self._RESUME_RESULT_COLUMN_MAP.items():
+                val = getattr(record, col_name, None)
+                if isinstance(val, dict):
+                    completed.add(stage_name)
+                    stage_results[stage_name] = self._to_jsonable(val)
+
+            # stage_io_logs から不足分を補完（clarification を含む）
+            stage_io_logs = record.stage_io_logs or {}
+            if isinstance(stage_io_logs, dict):
+                for stage_name, raw_entries in stage_io_logs.items():
+                    entries = raw_entries if isinstance(raw_entries, list) else []
+                    latest_output = self._latest_stage_output(entries)
+                    if latest_output is None:
+                        continue
+                    completed.add(stage_name)
+                    if stage_name not in stage_results:
+                        stage_results[stage_name] = latest_output
+
+            return completed, stage_results, record.question
+
+    async def append_stage_io_log(
+        self,
+        request_id: UUID,
+        stage_name: str,
+        stage_input: dict[str, Any],
+        stage_output: dict[str, Any] | None,
+        *,
+        question: str = "",
+        mode: str = "STANDARD",
+        status: str = "completed",
+        error_message: str | None = None,
+        skipped: bool = False,
+        resumed: bool = False,
+    ) -> bool:
+        """Agent入出力ログを decision_records.stage_io_logs に追記."""
+        normalized_input = self._to_jsonable(stage_input)
+        normalized_output = self._to_jsonable(stage_output)
+
+        async with get_db_session() as session:
+            result = await session.execute(
+                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
+            )
+            record = result.scalar_one_or_none()
+
+            # 途中失敗ケースでもログを保持できるよう、必要に応じて骨組みレコードを作成
+            if record is None:
+                record = DecisionRecord(
+                    request_id=request_id,
+                    question=question or "",
+                    mode=mode,
+                    decision_role="PILOT",
+                )
+                session.add(record)
+                await session.flush()
+
+            stage_io_logs = record.stage_io_logs or {}
+            if not isinstance(stage_io_logs, dict):
+                stage_io_logs = {}
+
+            entries = stage_io_logs.get(stage_name, [])
+            if not isinstance(entries, list):
+                entries = []
+
+            entries.append(
+                {
+                    "timestamp": datetime.utcnow().isoformat() + "Z",
+                    "status": status,
+                    "input": normalized_input,
+                    "output": normalized_output,
+                    "error_message": error_message,
+                    "skipped": skipped,
+                    "resumed": resumed,
+                }
+            )
+            stage_io_logs[stage_name] = entries[-20:]
+            record.stage_io_logs = stage_io_logs
+
+            await session.flush()
+            await self._invalidate_cache(str(request_id))
+            return True
 
     async def finalize(
         self,
@@ -424,6 +544,19 @@ class DecisionRepository:
         if isinstance(value, tuple):
             return [self._to_jsonable(v) for v in value]
         return str(value)
+
+    def _latest_stage_output(self, entries: list[Any]) -> dict[str, Any] | None:
+        """ステージ入出力ログから最新の完了出力を取得."""
+        for item in reversed(entries):
+            if not isinstance(item, dict):
+                continue
+            status = str(item.get("status", "")).lower()
+            if status not in {"completed", "resumed", "success"}:
+                continue
+            output = item.get("output")
+            if isinstance(output, dict):
+                return self._to_jsonable(output)
+        return None
 
     async def _get_from_cache(self, key: str) -> dict[str, Any] | None:
         """Redis キャッシュから取得."""

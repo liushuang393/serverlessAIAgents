@@ -192,7 +192,7 @@ const ThinkingLogPanel: React.FC<{ logs: ThinkingLog[]; isExpanded: boolean; onT
 };
 
 export const ProcessingPage: React.FC = () => {
-  const { question, constraints, stakeholders, setPage, setReport, setRequestId, addToHistory } = useDecisionStore();
+  const { question, constraints, stakeholders, requestId, setPage, setReport, setRequestId, addToHistory } = useDecisionStore();
   const {
     isConnected,
     isComplete,
@@ -227,9 +227,23 @@ export const ProcessingPage: React.FC = () => {
       const technical = constraints.technical.length > 0 ? constraints.technical : undefined;
       const regulatory = constraints.regulatory.length > 0 ? constraints.regulatory : undefined;
       const team = constraints.team || undefined;
-      startStream(question, budget, timeline, stakeholders, technical, regulatory, team);
+      const resumeRequestId = streamRequestId || requestId || undefined;
+      startStream(
+        question,
+        budget,
+        timeline,
+        stakeholders,
+        technical,
+        regulatory,
+        team,
+        {
+          requestId: resumeRequestId,
+          resume: Boolean(resumeRequestId),
+          preserveProgress: Boolean(resumeRequestId),
+        }
+      );
     }
-  }, [question, constraints.budget, constraints.timeline, constraints.technical, constraints.regulatory, constraints.team, stakeholders, startStream]);
+  }, [question, constraints.budget, constraints.timeline, constraints.technical, constraints.regulatory, constraints.team, stakeholders, startStream, streamRequestId, requestId]);
 
   /** レポート画面へ遷移 */
   const handleViewReport = useCallback(() => {
@@ -292,6 +306,13 @@ export const ProcessingPage: React.FC = () => {
       // 自動遷移を削除 - ユーザーがボタンをクリックして遷移
     }
   }, [isComplete, report, question, setReport, streamRequestId, setRequestId, addToHistory]);
+
+  // 実行中でも request_id をストアへ反映（resume 用）
+  useEffect(() => {
+    if (streamRequestId) {
+      setRequestId(streamRequestId);
+    }
+  }, [streamRequestId, setRequestId]);
 
   // エラー時に履歴に記録（自動遷移しない）
   useEffect(() => {

@@ -18,6 +18,8 @@ import type {
   AGUIEvent,
   FindingRecheckRequest,
   FindingRecheckResponse,
+  FindingNoteRequest,
+  FindingNoteResponse,
   SignatureResponse,
   HistoryListResponse,
   HistoryDetailResponse,
@@ -251,7 +253,11 @@ export class DecisionApiClient {
     },
     technicalConstraints?: string[],
     regulatoryConstraints?: string[],
-    team?: string
+    team?: string,
+    streamOptions?: {
+      requestId?: string;
+      resume?: boolean;
+    }
   ): EventSource {
     const params = new URLSearchParams({
       question,
@@ -284,6 +290,14 @@ export class DecisionApiClient {
     // 人的リソースをクエリパラメータに追加
     if (team) {
       params.set('human_resources', team);
+    }
+
+    // 途中再開（同一 request_id）
+    if (streamOptions?.requestId) {
+      params.set('request_id', streamOptions.requestId);
+    }
+    if (streamOptions?.resume) {
+      params.set('resume', 'true');
     }
 
     const url = `${this.baseUrl}/api/decision/stream?${params}`;
@@ -488,6 +502,22 @@ export class DecisionApiClient {
   async recheckFinding(request: FindingRecheckRequest): Promise<FindingRecheckResponse> {
     const response = await this.fetchWithRetry(
       `${this.baseUrl}/human-review/recheck-finding`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      }
+    );
+
+    return response.json();
+  }
+
+  /**
+   * 重要指摘に対する任意メモを保存.
+   */
+  async logFindingNote(request: FindingNoteRequest): Promise<FindingNoteResponse> {
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/human-review/log-finding-note`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

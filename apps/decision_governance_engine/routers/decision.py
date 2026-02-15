@@ -251,6 +251,56 @@ def build_input_dict(
     return result
 
 
+_STAGE_EXECUTION_ORDER = [
+    "cognitive_gate",
+    "gatekeeper",
+    "clarification",
+    "dao",
+    "fa",
+    "shu",
+    "qi",
+    "review",
+]
+
+
+def _parse_request_uuid(request_id: str | None) -> UUID | None:
+    """request_id 文字列を UUID に変換."""
+    if not request_id:
+        return None
+    try:
+        return UUID(request_id)
+    except (ValueError, TypeError):
+        return None
+
+
+def _detect_resume_from_stage(completed_stages: set[str]) -> str:
+    """完了済みステージから再開ステージを推定."""
+    for stage_name in _STAGE_EXECUTION_ORDER:
+        if stage_name not in completed_stages:
+            return stage_name
+    return "review"
+
+
+async def _load_resume_context(
+    request_id: UUID,
+    question: str,
+) -> tuple[set[str], dict[str, dict[str, Any]], str]:
+    """DBからresume実行用コンテキストを取得."""
+    if not ENABLE_HISTORY:
+        return set(), {}, question
+
+    try:
+        from apps.decision_governance_engine.repositories import DecisionRepository
+
+        repo = DecisionRepository()
+        completed_stages, stage_results, recorded_question = await repo.get_resume_context(request_id)
+        effective_question = recorded_question or question
+        return completed_stages, stage_results, effective_question
+    except Exception as e:
+        logger.warning(f"[SSE] resumeコンテキスト取得失敗（通常実行へフォールバック）: {e}")
+        return set(), {}, question
+
+
 @router.post("/api/decision", response_model=DecisionAPIResponse | RejectionResponse)
 async def process_decision(
     req: DecisionAPIRequest,
@@ -586,6 +636,8 @@ async def get_decision_detail(request_id: str) -> HistoryDetailResponse:
             "fa_result": record.fa_result,
             "shu_result": record.shu_result,
             "qi_result": record.qi_result,
+            "review_result": record.review_result,
+            "stage_io_logs": record.stage_io_logs,
             "summary_bullets": record.summary_bullets,
             "warnings": record.warnings,
             "processing_time_ms": record.processing_time_ms,
@@ -617,6 +669,14 @@ async def process_decision_stream(
     technical_constraints: list[str] = Query(default=[], description="技術制約"),
     regulatory_constraints: list[str] = Query(default=[], description="規制・コンプライアンス制約"),
     human_resources: str = Query("", max_length=100, description="人的リソース（チーム人数等）"),
+    request_id: str | None = Query(
+        default=None,
+        description="既存request_id（resume時に指定）",
+    ),
+    resume: bool = Query(
+        default=False,
+        description="true の場合、完了済みステージをスキップして再開",
+    ),
 ) -> StreamingResponse:
     """SSEストリーム付きで意思決定を処理.
 
@@ -628,7 +688,10 @@ async def process_decision_stream(
     logger.info(f"[SSE] question={question[:50]}...")
 
     start_time = time.time()
-    request_id = uuid4()
+    request_uuid = _parse_request_uuid(request_id)
+    if resume and request_uuid is None:
+        logger.warning("[SSE] resume=true だが request_id が不正なため新規実行へフォールバック")
+    request_uuid = request_uuid or uuid4()
 
     engine = get_engine()
     constraints = ConstraintSet()
@@ -658,8 +721,26 @@ async def process_decision_stream(
         )
 
     inputs = build_input_dict(question, constraints, stakeholders)
+
+    completed_stages: set[str] = set()
+    resume_stage_results: dict[str, dict[str, Any]] = {}
+    effective_question = question
+    if resume:
+        (
+            completed_stages,
+            resume_stage_results,
+            effective_question,
+        ) = await _load_resume_context(request_uuid, question)
+        if effective_question:
+            inputs["raw_question"] = effective_question
+            inputs["question"] = effective_question
+        if completed_stages:
+            inputs["_resume_completed_stages"] = sorted(completed_stages)
+        if resume_stage_results:
+            inputs["_resume_stage_results"] = resume_stage_results
+
     # ステージ単位DB保存用に request_id を入力に渡す
-    inputs["_request_id"] = request_id
+    inputs["_request_id"] = request_uuid
 
     def serialize_event(event: dict) -> str:
         """イベントをJSON文字列に変換（enum対応）."""
@@ -686,7 +767,7 @@ async def process_decision_stream(
             repo = DecisionRepository()
             # まず finalize を試みる（ステージ単位保存で既にレコードが存在する場合）
             finalized = await repo.finalize(
-                request_id=request_id,
+                request_id=request_uuid,
                 decision_role=decision_role,
                 confidence=confidence,
                 report_case_id=report_case_id,
@@ -695,8 +776,8 @@ async def process_decision_stream(
             if not finalized:
                 # レコード未存在の場合はフル保存（フォールバック）
                 await repo.save(
-                    request_id=request_id,
-                    question=question,
+                    request_id=request_uuid,
+                    question=effective_question,
                     decision_role=decision_role,
                     mode="STANDARD",
                     confidence=confidence,
@@ -704,12 +785,12 @@ async def process_decision_stream(
                     results=results_dict,
                     processing_time_ms=processing_time_ms,
                 )
-            logger.info(f"[SSE] 決策履歴保存完了: {request_id}")
+            logger.info(f"[SSE] 決策履歴保存完了: {request_uuid}")
         except Exception as e:
             logger.warning(f"[SSE] 決策履歴保存失敗（処理は継続）: {e}")
             _save_fallback_history(
-                request_id=request_id,
-                question=question,
+                request_id=request_uuid,
+                question=effective_question,
                 decision_role=decision_role,
                 confidence=confidence,
                 mode="STANDARD",
@@ -729,12 +810,31 @@ async def process_decision_stream(
                 {
                     "event_type": "connection.established",
                     "timestamp": time_module.time(),
-                    "data": {"request_id": str(request_id)},
+                    "data": {"request_id": str(request_uuid)},
                 },
                 ensure_ascii=False,
             )
             + "\n\n"
         )
+
+        if resume:
+            resume_from_stage = _detect_resume_from_stage(completed_stages)
+            yield (
+                "data: "
+                + json.dumps(
+                    {
+                        "event_type": "resume.context",
+                        "timestamp": time_module.time(),
+                        "data": {
+                            "request_id": str(request_uuid),
+                            "completed_stages": sorted(completed_stages),
+                            "resume_from_stage": resume_from_stage,
+                        },
+                    },
+                    ensure_ascii=False,
+                )
+                + "\n\n"
+            )
 
         final_result: dict[str, Any] = {}
         is_rejected = False
@@ -750,7 +850,7 @@ async def process_decision_stream(
                     final_result = event.get("result", {})
                     if final_result and not is_rejected:
                         # PDF出力の即時性を優先し、DB保存前にキャッシュへ格納
-                        _cache_report_from_result(final_result, request_id=str(request_id))
+                        _cache_report_from_result(final_result, request_id=str(request_uuid))
                 elif event_type == "result" and event.get("data"):
                     data = event.get("data", {})
                     if data.get("status") == "rejected":
@@ -770,7 +870,7 @@ async def process_decision_stream(
                 await save_history(final_result)
 
                 # レポートキャッシュに保存（PDF出力用）
-                _cache_report_from_result(final_result, request_id=str(request_id))
+                _cache_report_from_result(final_result, request_id=str(request_uuid))
 
         except asyncio.CancelledError:
             # クライアント切断時

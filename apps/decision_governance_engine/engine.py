@@ -44,6 +44,7 @@ PipelineEngine パターンを使用した意思決定支援エンジン。
 
 import logging
 import os
+from collections.abc import AsyncIterator
 from typing import Any
 from uuid import UUID
 
@@ -148,6 +149,8 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         # 実行中の request_id / question（run() 呼出し時にセット）
         self._current_request_id: UUID | None = None
         self._current_question: str | None = None
+        self._resume_completed_stages: set[str] = set()
+        self._resume_stage_results: dict[str, dict[str, Any]] = {}
 
     async def run(self, input_data: dict[str, Any]) -> Any:
         """DecisionEngine を実行（入力キー互換）.
@@ -163,21 +166,52 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
             PipelineEngine.run() の戻り値（DecisionReport または拒否時 dict）。
         """
 
+        prepared_inputs = self._prepare_run_inputs(input_data)
+        return await super().run(prepared_inputs)
+
+    async def run_stream(self, input_data: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
+        """DecisionEngine をストリーム実行（入力キー互換 + resume設定）."""
+        prepared_inputs = self._prepare_run_inputs(input_data)
+        async for event in super().run_stream(prepared_inputs):
+            yield event
+
+    def _prepare_run_inputs(self, input_data: dict[str, Any]) -> dict[str, Any]:
+        """run/run_stream 共通の入力前処理."""
+        normalized = dict(input_data)
+
         # 入力キー互換（question -> raw_question）
-        if "raw_question" not in input_data and "question" in input_data:
-            normalized = dict(input_data)
+        if "raw_question" not in normalized and "question" in normalized:
             normalized["raw_question"] = normalized.get("question")
-            input_data = normalized
 
         # ステージ単位DB保存用: request_id / question を保持
-        if "_request_id" in input_data:
-            self._current_request_id = input_data["_request_id"]
-        if "raw_question" in input_data:
-            self._current_question = input_data["raw_question"]
-        elif "question" in input_data:
-            self._current_question = input_data["question"]
+        if "_request_id" in normalized:
+            self._current_request_id = normalized["_request_id"]
+        if "raw_question" in normalized:
+            self._current_question = normalized["raw_question"]
+        elif "question" in normalized:
+            self._current_question = normalized["question"]
 
-        return await super().run(input_data)
+        # Resume用の完了済みステージと復元結果を保持
+        completed_stages_raw = normalized.pop("_resume_completed_stages", [])
+        stage_results_raw = normalized.pop("_resume_stage_results", {})
+        if isinstance(completed_stages_raw, list):
+            self._resume_completed_stages = {
+                str(item)
+                for item in completed_stages_raw
+                if isinstance(item, str)
+            }
+        else:
+            self._resume_completed_stages = set()
+        if isinstance(stage_results_raw, dict):
+            self._resume_stage_results = {
+                str(k): v
+                for k, v in stage_results_raw.items()
+                if isinstance(k, str) and isinstance(v, dict)
+            }
+        else:
+            self._resume_stage_results = {}
+
+        return normalized
 
     async def _run_stage(
         self, stage: StageConfig, inputs: dict[str, Any],
@@ -187,7 +221,36 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         親クラスの _run_stage() を呼び出した後、対象ステージの結果を
         即座にDBへupsertする。これにより途中失敗時でも結果が保持される。
         """
-        result = await super()._run_stage(stage, inputs)
+        # Resume 実行時: 完了済みステージは DB の保存結果を再利用（再分析しない）
+        if stage.name in self._resume_completed_stages:
+            cached = self._resume_stage_results.get(stage.name)
+            if isinstance(cached, dict):
+                self._logger.info(
+                    f"Stage '{stage.name}' skipped (resume): {self._current_request_id}"
+                )
+                await self._persist_stage_io(
+                    stage_name=stage.name,
+                    stage_input=inputs,
+                    stage_output=cached,
+                    status="resumed",
+                    skipped=True,
+                    resumed=True,
+                )
+                return cached
+
+        try:
+            result = await super()._run_stage(stage, inputs)
+        except Exception as e:
+            await self._persist_stage_io(
+                stage_name=stage.name,
+                stage_input=inputs,
+                stage_output=None,
+                status="failed",
+                error_message=str(e),
+                skipped=False,
+                resumed=False,
+            )
+            raise
 
         # DB保存対象ステージの場合、非同期でupsert
         if (
@@ -197,6 +260,15 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         ):
             await self._persist_stage_result(stage.name, result)
 
+        # 全ステージの入出力を保存（pfpf用の情报蓄積）
+        await self._persist_stage_io(
+            stage_name=stage.name,
+            stage_input=inputs,
+            stage_output=result,
+            status="completed",
+            skipped=False,
+            resumed=False,
+        )
         return result
 
     async def _persist_stage_result(
@@ -215,6 +287,39 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
             self._logger.info(f"Stage '{stage_name}' persisted to DB: {self._current_request_id}")
         except Exception as e:
             self._logger.warning(f"Stage '{stage_name}' DB persist failed (continuing): {e}")
+
+    async def _persist_stage_io(
+        self,
+        stage_name: str,
+        stage_input: dict[str, Any],
+        stage_output: dict[str, Any] | None,
+        status: str,
+        *,
+        error_message: str | None = None,
+        skipped: bool = False,
+        resumed: bool = False,
+    ) -> None:
+        """ステージ入出力ログをDBへ保存（失敗しても実行継続）."""
+        if self._current_request_id is None:
+            return
+
+        try:
+            from apps.decision_governance_engine.repositories import DecisionRepository
+
+            repo = DecisionRepository()
+            await repo.append_stage_io_log(
+                request_id=self._current_request_id,
+                question=self._current_question or "",
+                stage_name=stage_name,
+                stage_input=stage_input,
+                stage_output=stage_output,
+                status=status,
+                error_message=error_message,
+                skipped=skipped,
+                resumed=resumed,
+            )
+        except Exception as e:
+            self._logger.warning(f"Stage '{stage_name}' IO DB persist failed (continuing): {e}")
 
     async def _setup_stages(self) -> None:
         """ステージを動的に設定.
@@ -337,4 +442,3 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
 
 
 __all__ = ["DecisionEngine"]
-

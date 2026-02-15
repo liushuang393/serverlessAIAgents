@@ -502,6 +502,18 @@ JSON形式で出力してください。"""
                 f.get("action_type", "RECALC"),
                 ActionType.RECALC,
             )
+            suggested_revision = self._truncate_text(
+                f.get("suggested_revision", ""),
+                self.MAX_IMPACT_SCOPE_LEN,
+            )
+            if not suggested_revision:
+                if minimal_patch and minimal_patch.checkbox_label:
+                    suggested_revision = self._truncate_text(
+                        f"{minimal_patch.checkbox_label} を実施",
+                        self.MAX_IMPACT_SCOPE_LEN,
+                    )
+                else:
+                    suggested_revision = "指摘事項を解消する具体策を追記"
 
             findings.append(ReviewFinding(
                 severity=safe_enum(
@@ -516,7 +528,7 @@ JSON形式で出力してください。"""
                 ),
                 description=desc,
                 affected_agent=self._truncate_text(f.get("affected_agent", ""), 30),
-                suggested_revision=self._truncate_text(f.get("suggested_revision", ""), self.MAX_IMPACT_SCOPE_LEN),
+                suggested_revision=suggested_revision,
                 failure_point=self._truncate_text(f.get("failure_point", ""), self.MAX_FAILURE_POINT_LEN),
                 impact_scope=self._truncate_text(f.get("impact_scope", ""), self.MAX_IMPACT_SCOPE_LEN),
                 minimal_patch=minimal_patch,

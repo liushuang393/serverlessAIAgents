@@ -92,6 +92,28 @@ class FindingRecheckResponse(BaseModel):
     )
 
 
+class FindingNoteRequest(BaseModel):
+    """重要指摘メモ（任意）保存リクエスト."""
+
+    report_id: str = Field(..., description="レポートID")
+    finding_index: int = Field(..., ge=0, description="対象の指摘インデックス")
+    acknowledged: bool = Field(default=False, description="ユーザー確認チェック（任意）")
+    memo: str | None = Field(
+        default=None,
+        max_length=2000,
+        description="ユーザーメモ（任意）",
+    )
+    request_id: str | None = Field(default=None, description="履歴リクエストID（UUID）")
+    reviewer_name: str | None = Field(default=None, description="確認者名")
+
+
+class FindingNoteResponse(BaseModel):
+    """重要指摘メモ保存レスポンス."""
+
+    success: bool = Field(..., description="保存成功可否")
+    message: str = Field(..., description="結果メッセージ")
+
+
 # インメモリストレージ（本番環境では DB を使用）
 _review_storage: dict[str, HumanReview] = {}
 
@@ -510,6 +532,44 @@ async def recheck_finding(request: FindingRecheckRequest) -> FindingRecheckRespo
         message="確認内容が妥当と判断され、判定を再計算しました。",
         issues=[],
         updated_review=updated_review.model_dump(),
+    )
+
+
+@router.post("/log-finding-note", response_model=FindingNoteResponse)
+async def log_finding_note(request: FindingNoteRequest) -> FindingNoteResponse:
+    """重要指摘に対する任意メモを保存."""
+    report = await _get_report_from_db(request.report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail=f"レポート {request.report_id} が見つかりません")
+
+    try:
+        review = _resolve_report_review(report)
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if request.finding_index >= len(review.findings):
+        raise HTTPException(status_code=400, detail="finding_index が範囲外です")
+
+    target_finding = review.findings[request.finding_index]
+    memo_text = (request.memo or "").strip()
+
+    await _persist_human_review_record(
+        request_id_text=request.request_id,
+        report_id_text=request.report_id,
+        review_record={
+            "event_type": "finding_note",
+            "report_id": request.report_id,
+            "finding_index": request.finding_index,
+            "finding": target_finding.model_dump(),
+            "acknowledged": request.acknowledged,
+            "memo": memo_text,
+            "reviewer_name": request.reviewer_name,
+            "reviewed_at": datetime.now(UTC).isoformat(),
+        },
+    )
+    return FindingNoteResponse(
+        success=True,
+        message="メモを保存しました",
     )
 
 

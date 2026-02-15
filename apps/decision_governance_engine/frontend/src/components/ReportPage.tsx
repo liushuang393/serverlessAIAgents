@@ -188,6 +188,7 @@ export const ReportPage: React.FC = () => {
   const [notification, setNotification] = useState<{type: NotificationType; message: string} | null>(null);
   const [humanReviewNotes, setHumanReviewNotes] = useState<Record<number, string>>({});
   const [humanReviewChecks, setHumanReviewChecks] = useState<Record<number, boolean>>({});
+  const [savingFindingNotes, setSavingFindingNotes] = useState<Record<number, boolean>>({});
 
   // v3.1 差分パッチ型: チェックポイント状態
   const [checkpointChecks, setCheckpointChecks] = useState<Record<string, boolean>>({});
@@ -303,6 +304,31 @@ export const ReportPage: React.FC = () => {
     setPage('input');
   }, [reset, setPage]);
 
+  /** 所見メモ（任意）を保存 */
+  const handleSaveFindingMemo = useCallback(async (findingIndex: number) => {
+    if (!reportId) return;
+    const memo = humanReviewNotes[findingIndex] ?? '';
+    const acknowledged = Boolean(humanReviewChecks[findingIndex]);
+
+    setSavingFindingNotes((prev) => ({ ...prev, [findingIndex]: true }));
+    try {
+      await decisionApi.logFindingNote({
+        report_id: reportId,
+        request_id: requestId || undefined,
+        finding_index: findingIndex,
+        acknowledged,
+        memo,
+        reviewer_name: user?.display_name || undefined,
+      });
+      setNotification({ type: 'success', message: `所見 #${findingIndex + 1} のメモを保存しました` });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '所見メモの保存に失敗しました';
+      setNotification({ type: 'error', message });
+    } finally {
+      setSavingFindingNotes((prev) => ({ ...prev, [findingIndex]: false }));
+    }
+  }, [humanReviewChecks, humanReviewNotes, reportId, requestId, user?.display_name]);
+
 
 
   if (!report) return null;
@@ -402,6 +428,9 @@ export const ReportPage: React.FC = () => {
     confidence_score: 0,
     final_warnings: [],
   };
+  const missingCountermeasureCount = (safeReview.findings || []).filter(
+    (finding) => !(finding.suggested_revision || '').trim()
+  ).length;
 
   // レビューが未生成の古いデータでは「未検証」を表示
   const reviewVerdict = review?.overall_verdict;
@@ -1936,6 +1965,11 @@ export const ReportPage: React.FC = () => {
                       <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
                         <span>🎯</span> 高レバレッジ欠陥 ({safeReview.findings.length}件、最大3件)
                       </div>
+                      {missingCountermeasureCount > 0 && (
+                        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+                          ⚠️ 対策案が未生成の指摘が {missingCountermeasureCount} 件あります。メモ欄に補足を残してください。
+                        </div>
+                      )}
                       <div className="space-y-4">
                         {safeReview.findings.map((finding, i) => (
                           <div key={i} className={`rounded-lg p-4 border ${
@@ -1964,6 +1998,9 @@ export const ReportPage: React.FC = () => {
                               )}
                             </div>
 
+                            {/* 所見本文 */}
+                            <div className="mb-3 text-sm text-slate-300">{finding.description}</div>
+
                             {/* 破綻点 */}
                             {finding.failure_point && (
                               <div className="mb-2">
@@ -1980,30 +2017,44 @@ export const ReportPage: React.FC = () => {
                               </div>
                             )}
 
-                            {/* 最小パッチ（チェックボックス＋注釈） */}
-                            {finding.minimal_patch && (
-                              <div className="mt-3 p-3 bg-slate-800/50 rounded-lg border border-indigo-500/20">
-                                <div className="text-xs text-indigo-400 mb-2 font-medium">最小パッチ</div>
-                                <label className="flex items-center gap-2 text-sm text-slate-300">
-                                  <input
-                                    type="checkbox"
-                                    checked={Boolean(humanReviewChecks[i])}
-                                    onChange={(e) => setHumanReviewChecks((prev) => ({ ...prev, [i]: e.target.checked }))}
-                                    className="rounded border-slate-500 bg-transparent"
-                                  />
-                                  {finding.minimal_patch.checkbox_label}
-                                </label>
-                                {finding.minimal_patch.annotation_hint && (
-                                  <input
-                                    type="text"
-                                    value={humanReviewNotes[i] ?? finding.minimal_patch.default_value ?? ''}
-                                    onChange={(e) => setHumanReviewNotes((prev) => ({ ...prev, [i]: e.target.value }))}
-                                    placeholder={finding.minimal_patch.annotation_hint}
-                                    className="mt-2 w-full px-3 py-1.5 rounded bg-[#0a0a0f] border border-white/10 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50"
-                                  />
-                                )}
+                            {/* 対策案 */}
+                            <div className="mb-3 p-3 bg-emerald-500/5 rounded-lg border border-emerald-500/20">
+                              <div className="text-xs text-emerald-400 font-medium mb-1">対策案</div>
+                              <div className="text-sm text-slate-300">
+                                {(finding.suggested_revision || '').trim() || '（対策案が未生成です。必要に応じて再分析してください）'}
                               </div>
-                            )}
+                            </div>
+
+                            {/* 任意チェック＋メモ（最小パッチ有無に関係なく表示） */}
+                            <div className="mt-3 p-3 bg-slate-800/50 rounded-lg border border-indigo-500/20">
+                              <div className="text-xs text-indigo-400 mb-2 font-medium">ユーザー確認メモ（任意）</div>
+                              <label className="flex items-center gap-2 text-sm text-slate-300">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(humanReviewChecks[i])}
+                                  onChange={(e) => setHumanReviewChecks((prev) => ({ ...prev, [i]: e.target.checked }))}
+                                  className="rounded border-slate-500 bg-transparent"
+                                />
+                                {finding.minimal_patch?.checkbox_label || 'この対策案を確認した'}
+                              </label>
+                              <textarea
+                                value={humanReviewNotes[i] ?? finding.minimal_patch?.default_value ?? ''}
+                                onChange={(e) => setHumanReviewNotes((prev) => ({ ...prev, [i]: e.target.value }))}
+                                placeholder={finding.minimal_patch?.annotation_hint || 'メモ（任意）'}
+                                rows={2}
+                                className="mt-2 w-full px-3 py-2 rounded bg-[#0a0a0f] border border-white/10 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 resize-y"
+                              />
+                              <div className="mt-2 flex justify-end">
+                                <button
+                                  type="button"
+                                  onClick={() => void handleSaveFindingMemo(i)}
+                                  disabled={Boolean(savingFindingNotes[i])}
+                                  className="px-3 py-1.5 text-xs rounded bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 disabled:opacity-60"
+                                >
+                                  {savingFindingNotes[i] ? '保存中...' : 'メモ保存'}
+                                </button>
+                              </div>
+                            </div>
 
                             {/* スコア改善見込み */}
                             {finding.score_improvements && finding.score_improvements.length > 0 && (

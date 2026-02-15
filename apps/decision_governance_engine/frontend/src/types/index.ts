@@ -643,6 +643,22 @@ export interface FindingRecheckResponse {
   updated_review?: ReviewOutput;
 }
 
+/** 人間確認メモ（任意）保存リクエスト */
+export interface FindingNoteRequest {
+  report_id: string;
+  request_id?: string;
+  finding_index: number;
+  acknowledged?: boolean;
+  memo?: string;
+  reviewer_name?: string;
+}
+
+/** 人間確認メモ（任意）保存レスポンス */
+export interface FindingNoteResponse {
+  success: boolean;
+  message: string;
+}
+
 /** エグゼクティブサマリー v3.0 */
 export interface ExecutiveSummary {
   one_line_decision: string;
@@ -700,6 +716,7 @@ export interface DecisionReport {
 /** AG-UI イベントタイプ */
 export type AGUIEventType =
   | 'connection.established'
+  | 'resume.context'
   | 'flow.start'
   | 'flow.complete'
   | 'flow.error'
