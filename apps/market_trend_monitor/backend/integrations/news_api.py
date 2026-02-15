@@ -62,7 +62,7 @@ class NewsAPIClient:
     async def search_everything(
         self,
         query: str,
-        language: str = "en",
+        languages: list[str] | None = None,
         sort_by: str = "publishedAt",
         page_size: int = 10,
         from_date: datetime | None = None,
@@ -71,7 +71,7 @@ class NewsAPIClient:
 
         Args:
             query: 検索クエリ
-            language: 言語コード（en, ja等）
+            languages: 言語コードリスト（en, ja, zh等）。Noneの場合は 'en'
             sort_by: ソート順（publishedAt, relevancy, popularity）
             page_size: 取得件数
             from_date: 開始日時（Noneの場合は7日前）
@@ -79,6 +79,30 @@ class NewsAPIClient:
         Returns:
             ニュース記事リスト
         """
+        if languages is None:
+            languages = ["en"]
+        
+        all_articles = []
+        for lang in languages:
+            lang_articles = await self._search_single_lang(
+                query=query,
+                language=lang,
+                sort_by=sort_by,
+                page_size=page_size,
+                from_date=from_date
+            )
+            all_articles.extend(lang_articles)
+        
+        return all_articles
+
+    async def _search_single_lang(
+        self,
+        query: str,
+        language: str = "en",
+        sort_by: str = "publishedAt",
+        page_size: int = 10,
+        from_date: datetime | None = None,
+    ) -> list[dict[str, Any]]:
         if self._mock_mode:
             return self._generate_mock_articles(query, page_size)
 

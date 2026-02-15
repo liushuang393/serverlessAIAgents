@@ -351,7 +351,27 @@ Flow を使う場合も最終的な API 提供面は Engine で包むことを�
 ### 4.3 失敗戦略
 
 - 例外を握りつぶさず、境界で意味のあるエラーへ変換する。
-- Gate 失敗・Review REJECT・REVISE を仕様として分離する。
+- Gate 失敗・Review COACH（旧 REJECT）・REVISE を仕様として分離する。
+
+### 4.4 返回値バリデーション（必須）
+
+- **裸の `Enum(value)` 変換は禁止**。必ず `safe_enum()` を経由する。
+- Agent 出力の Enum フィールドは `safe_enum(EnumCls, value, default, aliases=...)` で変換する。
+- `aliases` で後方互換マッピングを明示する（例: `{"REJECT": "COACH"}`）。
+- 未知の値はクラッシュせず、フォールバックデフォルトを返しログに警告を出力する。
+- LLM 出力は揺れるため、`.strip().upper()` で正規化してからパースする。
+
+```python
+# ❌ 禁止: 裸の Enum 変換（未知値でクラッシュ）
+verdict = ReviewVerdict(verdict_str)
+
+# ✅ 必須: safe_enum 経由（フォールバック + エイリアス付き）
+from agentflow.core.type_safe import safe_enum
+verdict = safe_enum(
+    ReviewVerdict, verdict_str, ReviewVerdict.REVISE,
+    aliases={"REJECT": "COACH"},
+)
+```
 
 ---
 
@@ -457,7 +477,7 @@ Flow を使う場合も最終的な API 提供面は Engine で包むことを�
 
 ## 9.3 評価ループ（REVISE）
 
-- `Review` で `PASS/REVISE/REJECT` を返す。
+- `Review` で `PASS/REVISE/COACH` を返す。
 - `REVISE` は `retry_from` を起点に再分析。
 
 ## 9.4 リモート委譲（A2A）
@@ -512,6 +532,7 @@ Flow を使う場合も最終的な API 提供面は Engine で包むことを�
 - `{"type": "...", "data": ...}` のみで独自イベントを乱立する。
 - 1 Agent に複数責務（収集 + 分析 + 出力）を同居させる。
 - Review 判定を曖昧文字列で返し、分岐規則を持たない。
+- **裸の `Enum(value)` を使い、未知値でクラッシュする**（必ず `safe_enum()` を使う）。
 - SSE だけで承認コマンドまで処理しようとする（双方向はWS/RESTを使う）。
 - `interrupt()` 前にDB更新を行い、再開時に二重実行を起こす。
 

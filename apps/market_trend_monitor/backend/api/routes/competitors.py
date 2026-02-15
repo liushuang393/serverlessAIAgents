@@ -357,6 +357,8 @@ async def discover_competitors(request: CompetitorDiscoverRequest) -> dict:
             max_keywords=request.max_focus_keywords,
         )
         focus_sources = list(config.collector.sources)
+        if "official_site" not in focus_sources:
+            focus_sources.append("official_site")
         try:
             focused_collected_articles = await _collect_articles_for_watchlist_focus(
                 keywords=focus_keywords,

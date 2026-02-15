@@ -20,6 +20,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
+from agentflow.core.type_safe import safe_enum
 from agentflow.flow.types import (
     AgentProtocol,
     NextAction,
@@ -27,6 +28,9 @@ from agentflow.flow.types import (
     NodeType,
     ReviewVerdict,
 )
+
+# 後方互換: LLM が旧 "REJECT" を返した場合 → COACH にマッピング
+_VERDICT_ALIASES: dict[str, str] = {"REJECT": "COACH"}
 
 
 if TYPE_CHECKING:
@@ -276,17 +280,21 @@ class ReviewNode(FlowNode):
             result = await self.agent.run(inputs)
             ctx.set_result(self.id, result)
 
-            # 判定を取得
+            # 判定を取得（防御的パーシング: 未知値はクラッシュせずフォールバック）
             verdict_raw = result.get(self.verdict_key, "PASS")
             if isinstance(verdict_raw, ReviewVerdict):
                 verdict = verdict_raw
             else:
                 # LLMが "REVIEWVERDICT.REVISE" のような形式で返す場合に対応
-                verdict_str = str(verdict_raw).upper()
-                # "REVIEWVERDICT." プレフィックスを除去
+                verdict_str = str(verdict_raw).strip().upper()
                 if verdict_str.startswith("REVIEWVERDICT."):
                     verdict_str = verdict_str.replace("REVIEWVERDICT.", "")
-                verdict = ReviewVerdict(verdict_str)
+                verdict = safe_enum(
+                    ReviewVerdict,
+                    verdict_str,
+                    ReviewVerdict.REVISE,
+                    aliases=_VERDICT_ALIASES,
+                )
 
             self._logger.info(f"レビュー判定: {verdict.value}")
 

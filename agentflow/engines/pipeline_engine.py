@@ -429,6 +429,10 @@ class PipelineEngine(BaseEngine):
                 # Reviewチェック
                 if stage.review:
                     verdict = stage_result.get("verdict", stage_result.get("overall_verdict", "PASS"))
+                    # 後方互換: REJECT → COACH にマッピング
+                    if verdict == "REJECT":
+                        self._logger.info("REJECT→COACH 後方互換マッピング適用")
+                        verdict = "COACH"
                     if verdict == "PASS":
                         break
                     elif verdict == "COACH":
@@ -758,6 +762,10 @@ class PipelineEngine(BaseEngine):
 
                 if stage.review:
                     verdict = stage_result.get("verdict", stage_result.get("overall_verdict", "PASS"))
+                    # 後方互換: REJECT → COACH にマッピング
+                    if verdict == "REJECT":
+                        self._logger.info("REJECT→COACH 後方互換マッピング適用")
+                        verdict = "COACH"
                     yield {"type": "review_verdict", "data": {"verdict": verdict}}
 
                     if verdict == "PASS":

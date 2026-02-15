@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "icon": "📨",
   "ports": {
-    "api": 8000,
+    "api": 8004,
     "frontend": null,
     "db": null,
     "redis": null

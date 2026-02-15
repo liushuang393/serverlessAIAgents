@@ -18,6 +18,7 @@ class SourceType(str, Enum):
     RSS = "rss"
     STACKOVERFLOW = "stackoverflow"
     DEVTO = "devto"
+    OFFICIAL_SITE = "official_site"
 
 
 class SentimentType(str, Enum):

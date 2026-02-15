@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS decision_records (
     summary_bullets JSONB,  -- string[]
     warnings JSONB,         -- string[]
     human_review_records JSONB,  -- 人間確認ログ
+    stage_io_logs JSONB,  -- Agentごとの入出力・失敗ログ
     
     -- メタ情報
     requester_role VARCHAR(50),

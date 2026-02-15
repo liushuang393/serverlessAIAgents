@@ -26,7 +26,7 @@ class NodeType(Enum):
     GATE = auto()      # ゲートノード：条件インターセプト
     AGENT = auto()     # Agentノード：Agent実行
     PARALLEL = auto()  # 並列ノード：複数Agentを並列実行
-    REVIEW = auto()    # レビューノード：PASS/REVISE/REJECT
+    REVIEW = auto()    # レビューノード：PASS/REVISE/COACH
 
 
 class NextAction(Enum):
@@ -39,11 +39,16 @@ class NextAction(Enum):
 
 
 class ReviewVerdict(Enum):
-    """Review判定結果."""
+    """Review判定結果.
+
+    - PASS: 全チェッククリア、問題なし
+    - REVISE: 軽微な問題あり、修正推奨（差戻し）
+    - COACH: 重大課題検出、コーチング型改善指導（即終了せずレポートに指摘表示）
+    """
 
     PASS = "PASS"
     REVISE = "REVISE"
-    REJECT = "REJECT"
+    COACH = "COACH"
 
 
 # ============================================================
@@ -132,8 +137,8 @@ OnFailFunc = "Callable[[FlowContext], dict[str, Any] | Any]"
 # 成功処理: (context) -> dict
 OnPassFunc = "Callable[[FlowContext], dict[str, Any]]"
 
-# 拒否処理: (context) -> dict
-OnRejectFunc = "Callable[[FlowContext], dict[str, Any]]"
+# コーチング処理: (context) -> dict
+OnCoachFunc = "Callable[[FlowContext], dict[str, Any]]"
 
 # 入力マッピング: (context) -> dict
 InputMapper = "Callable[[FlowContext], dict[str, Any]]"
@@ -151,7 +156,7 @@ __all__ = [
     "NodeType",
     "OnFailFunc",
     "OnPassFunc",
-    "OnRejectFunc",
+    "OnCoachFunc",
     "ReviewVerdict",
 ]
 

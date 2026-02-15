@@ -26,6 +26,7 @@ from apps.market_trend_monitor.backend.integrations import (
     DevToAPIClient,
     GitHubAPIClient,
     NewsAPIClient,
+    OfficialSiteScraper,
     RSSFetcher,
     StackOverflowAPIClient,
 )
@@ -85,6 +86,7 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
         devto_api_key = os.getenv("DEVTO_API_KEY")
 
         self._news_api_client = NewsAPIClient(api_key=news_api_key)
+        self._official_site_scraper = OfficialSiteScraper()
         self._github_api_client = GitHubAPIClient(token=github_token)
         self._arxiv_client = ArxivAPIClient()
         self._rss_fetcher = RSSFetcher()
@@ -235,6 +237,9 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                 articles = await self._collect_from_stackoverflow(keywords)
             elif source_key == SourceType.DEVTO.value:
                 articles = await self._collect_from_devto(keywords)
+            elif source_key == SourceType.OFFICIAL_SITE.value:
+                # 競合追跡用の特化収集
+                articles = await self._collect_from_official_sites(keywords)
             else:
                 self._logger.warning("未対応ソース: %s", source)
                 return []
@@ -268,10 +273,12 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
         articles: list[Article] = []
         for keyword in keywords:
             try:
+                # 日本語、英語、中国語で検索
+                languages = ["ja", "en", "zh"]
                 news_articles = await self._news_api_client.search_everything(
                     query=keyword,
-                    language="en",
-                    page_size=5,
+                    languages=languages,
+                    page_size=10,
                     from_date=from_date,
                 )
 
@@ -522,6 +529,20 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                     self._cache.add(url)
             except Exception as exc:
                 self._logger.warning("DEV.to収集失敗 '%s': %s", keyword, exc)
+        return articles
+
+    async def _collect_from_official_sites(self, keywords: list[str]) -> list[Article]:
+        """監視対象企業の公式サイトから収集."""
+        articles: list[Article] = []
+        # Collector に渡されたキーワードが企業名であると想定（api/routes/competitors.py のロジックと連動）
+        for competitor in keywords:
+            # 簡易URL生成（本来は SourceRegistry から取得すべきだが、まずは動的に特定）
+            # 実際にはここでは特定のシグナルや競合名が来るため、それを利用
+            site_articles = await self._official_site_scraper.scrape_official_news(
+                competitor_name=competitor,
+                urls=[]
+            )
+            articles.extend(site_articles)
         return articles
 
     def _match_keywords_in_text(self, text: str, keywords: list[str]) -> list[str]:

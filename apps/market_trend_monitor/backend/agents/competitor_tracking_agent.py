@@ -59,6 +59,7 @@ class CompetitorProfile:
 DEFAULT_COMPETITORS: list[str] = [
     "IBM", "Accenture", "TCS", "Infosys", "NTT DATA",
     "Fujitsu", "Wipro", "Capgemini", "DXC Technology", "Micro Focus",
+    "Deloitte", "OptiSol Business Solutions", "Daiwa Institute of Research",
 ]
 
 # 競合企業別の別名辞書（Entity Normalization 用）
@@ -103,6 +104,21 @@ DEFAULT_COMPETITOR_ALIASES: dict[str, list[str]] = {
         "TIS INTEC Group",
         "TIS株式会社",
         "ティーアイエス",
+    ],
+    "Deloitte": [
+        "Deloitte Touche Tohmatsu",
+        "デロイト",
+        "デロイト トーマツ",
+        "DTT",
+    ],
+    "OptiSol Business Solutions": [
+        "OptiSol",
+        "OptiSol Business",
+    ],
+    "Daiwa Institute of Research": [
+        "DIR",
+        "株式会社大和総研",
+        "大和総研",
     ],
 }
 

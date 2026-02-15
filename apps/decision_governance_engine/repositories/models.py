@@ -75,6 +75,8 @@ class DecisionRecord(Base):
     summary_bullets: Mapped[list[str] | None] = mapped_column(JSONB)
     warnings: Mapped[list[str] | None] = mapped_column(JSONB)
     human_review_records: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
+    # Agentごとの入出力・失敗情報（resume用）
+    stage_io_logs: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
     # メタ情報
     requester_role: Mapped[str | None] = mapped_column(String(50))
