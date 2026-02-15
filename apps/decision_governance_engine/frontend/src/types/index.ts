@@ -614,7 +614,7 @@ export interface CheckpointItem {
 
 /** 検証出力 v3.1（差分パッチ型） */
 export interface ReviewOutput {
-  overall_verdict: 'PASS' | 'REVISE' | 'REJECT';
+  overall_verdict: 'PASS' | 'REVISE' | 'COACH';
   confidence_score: number;
   findings: ReviewFinding[];
   final_warnings: string[];

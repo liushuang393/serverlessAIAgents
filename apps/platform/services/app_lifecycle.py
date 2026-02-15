@@ -175,6 +175,7 @@ class AppLifecycleManager:
     def __init__(self) -> None:
         """初期化."""
         self._health_cache: dict[str, HealthCheckResult] = {}
+        self._health_tasks: dict[str, asyncio.Task[HealthCheckResult]] = {}
 
     async def check_health(
         self,
@@ -190,7 +191,29 @@ class AppLifecycleManager:
         Returns:
             ヘルスチェック結果
         """
-        docker_info = self._inspect_docker_runtime(config_path)
+        existing = self._health_tasks.get(config.name)
+        if existing is not None and not existing.done():
+            return await asyncio.shield(existing)
+
+        task = asyncio.create_task(
+            self._check_health_once(config, config_path=config_path),
+            name=f"health-check:{config.name}",
+        )
+        self._health_tasks[config.name] = task
+        try:
+            return await asyncio.shield(task)
+        finally:
+            if self._health_tasks.get(config.name) is task:
+                self._health_tasks.pop(config.name, None)
+
+    async def _check_health_once(
+        self,
+        config: AppConfig,
+        *,
+        config_path: Path | None = None,
+    ) -> HealthCheckResult:
+        """App のヘルスチェック本体."""
+        docker_info = await self._inspect_docker_runtime(config_path)
         health_paths = self._resolve_health_paths(config.entry_points.health)
         candidate_urls = self._build_candidate_urls(config, health_paths, docker_info)
 
@@ -707,12 +730,17 @@ class AppLifecycleManager:
         Returns:
             ヘルスチェック結果リスト
         """
-        results: list[HealthCheckResult] = []
-        for config in configs:
-            path = None if config_paths is None else config_paths.get(config.name)
-            result = await self.check_health(config, config_path=path)
-            results.append(result)
-        return results
+        if not configs:
+            return []
+        return await asyncio.gather(
+            *(
+                self.check_health(
+                    config,
+                    config_path=None if config_paths is None else config_paths.get(config.name),
+                )
+                for config in configs
+            ),
+        )
 
     @staticmethod
     def _resolve_health_paths(configured_health_path: str | None) -> list[str]:
@@ -752,8 +780,8 @@ class AppLifecycleManager:
                         urls.append(url)
         return urls
 
-    def _inspect_docker_runtime(self, config_path: Path | None) -> dict[str, Any]:
-        """docker compose の稼働状態と公開ポートを取得."""
+    async def _inspect_docker_runtime(self, config_path: Path | None) -> dict[str, Any]:
+        """docker compose の稼働状態と公開ポートを取得（非同期）."""
         if config_path is None:
             return {
                 "detected": False,
@@ -774,6 +802,18 @@ class AppLifecycleManager:
                 "services": [],
             }
 
+        return await asyncio.to_thread(
+            self._inspect_docker_runtime_sync,
+            app_dir,
+            compose_files,
+        )
+
+    def _inspect_docker_runtime_sync(
+        self,
+        app_dir: Path,
+        compose_files: list[Path],
+    ) -> dict[str, Any]:
+        """docker compose の稼働状態と公開ポートを取得."""
         command = ["docker", "compose"]
         for compose_file in compose_files:
             command.extend(["-f", compose_file.name])

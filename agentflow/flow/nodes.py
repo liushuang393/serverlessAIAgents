@@ -5,7 +5,7 @@
 - AgentNode: Agent実行ノード
 - GateNode: ゲートノード（条件インターセプト）
 - ParallelNode: 並列実行ノード
-- ReviewNode: レビューノード（PASS/REVISE/REJECT）
+- ReviewNode: レビューノード（PASS/REVISE/COACH）
 
 設計原則:
 - 単一責任：各ノードは1つのロジックのみを処理
@@ -176,12 +176,12 @@ class ParallelNode(FlowNode):
 
 @dataclass
 class ReviewNode(FlowNode):
-    """レビューノード：判定結果に基づいてPASS/REVISE/REJECTを決定."""
+    """レビューノード：判定結果に基づいてPASS/REVISE/COACHを決定."""
 
     agent: AgentProtocol | None = None
     input_mapper: Callable[[FlowContext], dict[str, Any]] | None = None
     on_pass: Callable[[FlowContext], dict[str, Any]] | None = None
-    on_reject: Callable[[FlowContext], dict[str, Any]] | None = None
+    on_coach: Callable[[FlowContext], dict[str, Any]] | None = None
     retry_from: str | None = None  # REVISE時にロールバックするノード
     max_revisions: int = 2
     verdict_key: str = "overall_verdict"  # 判定結果フィールド名
@@ -223,8 +223,8 @@ class ReviewNode(FlowNode):
 
         return "重大課題: " + " / ".join(summaries)
 
-    def _build_reject_payload(self, result: dict[str, Any]) -> dict[str, Any]:
-        """Review REJECT 時の早期リターン情報を生成."""
+    def _build_coach_payload(self, result: dict[str, Any]) -> dict[str, Any]:
+        """Review COACH 時のコーチング情報を生成."""
         findings_raw = result.get("findings", [])
         findings = findings_raw if isinstance(findings_raw, list) else []
 
@@ -258,10 +258,10 @@ class ReviewNode(FlowNode):
         )
 
         return {
-            "status": "rejected",
+            "status": "coach",
             "stage": self.id,
             "source": "review",
-            "verdict": "REJECT",
+            "verdict": "COACH",
             "rejection_message": rejection_message,
             "rejection_reason": rejection_reason,
             "suggested_rephrase": suggested_rephrase,
@@ -294,13 +294,13 @@ class ReviewNode(FlowNode):
                 final_data = self.on_pass(ctx) if self.on_pass else result
                 return NodeResult(success=True, data=final_data, action=NextAction.STOP)
 
-            if verdict == ReviewVerdict.REJECT:
-                reject_data = self.on_reject(ctx) if self.on_reject else result
+            if verdict == ReviewVerdict.COACH:
+                # コーチング型改善指導: 即終了せず、レポート生成を継続
+                coach_data = self.on_coach(ctx) if self.on_coach else result
                 return NodeResult(
                     success=True,
-                    data=reject_data,
-                    action=NextAction.EARLY_RETURN,
-                    early_return_data=self._build_reject_payload(result),
+                    data=coach_data,
+                    action=NextAction.STOP,
                 )
 
             # REVISE

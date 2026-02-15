@@ -85,38 +85,6 @@ const getUnifiedLogName = (agentId: string, japaneseName: string): string => {
   return `${japaneseName}：${className}`;
 };
 
-/** Review findings から重大課題文を抽出 */
-const extractCriticalFindingTexts = (
-  findings: unknown[],
-  maxItems = 3
-): string[] => {
-  const summaries: string[] = [];
-  for (const finding of findings) {
-    if (!finding || typeof finding !== 'object') {
-      continue;
-    }
-    const findingRecord = finding as Record<string, unknown>;
-    const severity = String(findingRecord.severity || '').toUpperCase();
-    if (!severity.endsWith('CRITICAL')) {
-      continue;
-    }
-
-    const rawText =
-      findingRecord.description ||
-      findingRecord.failure_point ||
-      findingRecord.impact_scope ||
-      '';
-    const text = String(rawText).trim();
-    if (text && !summaries.includes(text)) {
-      summaries.push(text);
-    }
-    if (summaries.length >= maxItems) {
-      break;
-    }
-  }
-  return summaries;
-};
-
 /** 初期 Agent 状態（認知前処理・門番・診断・道・法・術・器・検証の8 Agent） */
 const initialAgents: AgentProgress[] = [
   { id: 'cognitive_gate', name: '認知', label: '認知前処理', status: 'waiting', progress: 0, message: '' },
@@ -266,39 +234,20 @@ export function useDecisionStream() {
             }
             return;
           case 'early_return':
-            // 早期リターン（Gate拒否またはReview REJECT）
+            // 早期リターン（Gate拒否のみ。COACH は early_return を発行しない）
             {
               const data = legacyEvent.data || {};
-              const stage = data.stage as string || '';
-              const source = data.source as string || '';
-              const verdict = data.verdict as string || '';
-              const isReviewReject =
-                stage === 'review' ||
-                source === 'review' ||
-                verdict === 'REJECT' ||
-                lastReviewVerdictRef.current === 'REJECT';
-              const findings = Array.isArray(data.findings) ? data.findings : [];
-              const criticalFindings = extractCriticalFindingTexts(findings);
               const rejectionMessage = data.rejection_message as string || '';
               const rejectionReason = data.rejection_reason as string || '';
               const suggestedRephrase = data.suggested_rephrase as string || '';
               const category = data.category as string || '';
 
-              // 拒否理由をログに表示（より詳細なメッセージを構築）
+              // 拒否理由をログに表示
               if (rejectionMessage) {
                 addThinkingLog('system', 'System', `⚠️ ${rejectionMessage}`);
-              } else if (isReviewReject) {
-                addThinkingLog('system', 'System', '⚠️ 最終検証で重大課題が検出されました。');
               } else {
-                // フォールバック: 具体的なガイダンスを表示
                 addThinkingLog('system', 'System', '⚠️ この質問は意思決定支援の対象外です。');
                 addThinkingLog('system', 'System', '企業の新事業・新製品/サービス投入に関する意思決定課題を入力してください。');
-              }
-              if (isReviewReject && findings.length > 0) {
-                addThinkingLog('review', '検証：ReviewAgent', `📋 指摘事項: ${findings.length}件`);
-                criticalFindings.forEach((item, index) => {
-                  addThinkingLog('review', '検証：ReviewAgent', `${index + 1}. ${item}`);
-                });
               }
               if (rejectionReason) {
                 addThinkingLog('system', 'System', `📋 理由: ${rejectionReason}`);
@@ -310,35 +259,20 @@ export function useDecisionStream() {
                 addThinkingLog('system', 'System', `💡 提案: ${suggestedRephrase}`);
               }
 
-              // 具体的なエラーメッセージを構築
+              // Gate拒否のエラーメッセージを構築
               let errorMessage = rejectionMessage;
-              if (isReviewReject && criticalFindings.length > 0 && !errorMessage) {
-                errorMessage = `重大課題:\n${criticalFindings.map((item) => `• ${item}`).join('\n')}`;
-              }
               if (!errorMessage) {
-                if (isReviewReject) {
-                  errorMessage = '検証で重大課題が検出されました。';
-                  if (rejectionReason) {
-                    errorMessage += `\n${rejectionReason}`;
-                  }
-                  if (findings.length > 0) {
-                    errorMessage += `\n指摘事項: ${findings.length}件`;
-                  }
-                  errorMessage += '\n指摘事項を修正して再分析してください。';
-                } else {
-                  errorMessage = 'この質問は意思決定支援の対象外です。\n\n';
-                  if (rejectionReason) {
-                    errorMessage += `理由: ${rejectionReason}\n\n`;
-                  }
-                  errorMessage += '【対応可能な質問例】\n';
-                  errorMessage += '• 「SaaS市場に新規参入すべきか？」\n';
-                  errorMessage += '• 「新製品を来年Q1に投入すべきか？」\n';
-                  errorMessage += '• 「海外市場への進出タイミングは？」';
+                errorMessage = 'この質問は意思決定支援の対象外です。\n\n';
+                if (rejectionReason) {
+                  errorMessage += `理由: ${rejectionReason}\n\n`;
                 }
+                errorMessage += '【対応可能な質問例】\n';
+                errorMessage += '• 「SaaS市場に新規参入すべきか？」\n';
+                errorMessage += '• 「新製品を来年Q1に投入すべきか？」\n';
+                errorMessage += '• 「海外市場への進出タイミングは？」';
               }
 
               // 状態を設定（エラーとして表示し、再試行可能にする）
-              // 現在runningのAgentをcompletedに更新（結果データも設定）
               setState((prev) => ({
                 ...prev,
                 isComplete: true,
@@ -350,7 +284,7 @@ export function useDecisionStream() {
                         ...a,
                         status: 'completed' as const,
                         progress: 100,
-                        message: isReviewReject ? '検証不合格' : '拒否',
+                        message: '拒否',
                         result: data,
                       }
                     : a
@@ -369,8 +303,8 @@ export function useDecisionStream() {
                 addThinkingLog('review', '検証：ReviewAgent', `⚠️ 指摘あり - 再分析を開始します`);
               } else if (verdict === 'PASS') {
                 addThinkingLog('review', '検証：ReviewAgent', `✅ 分析品質OK`);
-              } else if (verdict === 'REJECT') {
-                addThinkingLog('review', '検証：ReviewAgent', `❌ 分析不合格`);
+              } else if (verdict === 'COACH') {
+                addThinkingLog('review', '検証：ReviewAgent', `📋 改善指導あり - レポートで確認してください`);
               }
             }
             return;

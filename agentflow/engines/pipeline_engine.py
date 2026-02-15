@@ -431,9 +431,10 @@ class PipelineEngine(BaseEngine):
                     verdict = stage_result.get("verdict", stage_result.get("overall_verdict", "PASS"))
                     if verdict == "PASS":
                         break
-                    elif verdict == "REJECT":
-                        rejection_data = self._build_review_rejection_data(stage.name, stage_result)
-                        return {**rejection_data, "results": self._results}
+                    elif verdict == "COACH":
+                        # コーチング型改善指導: 即終了せず、レポートを生成して指摘を表示
+                        self._logger.info("COACH verdict: レポート生成を継続（指摘付き）")
+                        break
                     elif verdict == "REVISE" and revision < self._max_revisions:
                         self._logger.info(f"REVISE requested, retry from {retry_from_idx}")
                         break
@@ -543,7 +544,7 @@ class PipelineEngine(BaseEngine):
         stage_name: str,
         stage_result: dict[str, Any],
     ) -> dict[str, Any]:
-        """Review REJECT時の標準化された拒否データを生成."""
+        """Review 検証データを生成（後方互換のため保持）."""
         findings_raw = stage_result.get("findings", [])
         findings = findings_raw if isinstance(findings_raw, list) else []
 
@@ -577,10 +578,10 @@ class PipelineEngine(BaseEngine):
         )
 
         return {
-            "status": "rejected",
+            "status": "coach",
             "stage": stage_name,
             "source": "review",
-            "verdict": "REJECT",
+            "verdict": "COACH",
             "rejection_message": rejection_message,
             "rejection_reason": rejection_reason,
             "suggested_rephrase": suggested_rephrase,
@@ -762,14 +763,11 @@ class PipelineEngine(BaseEngine):
                     if verdict == "PASS":
                         review_passed = True
                         break
-                    elif verdict == "REJECT":
-                        rejection_data = self._build_review_rejection_data(stage.name, stage_result)
-                        yield {"type": "early_return", "data": rejection_data}
-                        yield {
-                            "type": "result",
-                            "data": {**rejection_data, "results": self._results},
-                        }
-                        return
+                    elif verdict == "COACH":
+                        # コーチング型改善指導: 即終了せず、レポートを生成して指摘を表示
+                        review_passed = True
+                        self._logger.info("COACH verdict: レポート生成を継続（指摘付き）")
+                        break
                     elif verdict == "REVISE" and revision < self._max_revisions:
                         yield {"type": "revise", "data": {"retry_from": retry_from_idx}}
                         break

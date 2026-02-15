@@ -26,19 +26,25 @@ interface TrendChartProps {
 }
 
 const TrendChart: React.FC<TrendChartProps> = ({ trends }) => {
-  // トレンドデータをチャート用に変換
-  const chartData = trends
-    .slice(0, 20)
-    .map((trend) => ({
-      name:
-        trend.topic.length > 16
-          ? `${trend.topic.substring(0, 16)}...`
-          : trend.topic,
-      score: trend.score,
-      growth: trend.growth_rate * 100,
-      date: format(new Date(trend.created_at), 'MM/dd'),
+  // トレンドデータを日付ごとに集約
+  const aggregatedData = trends.reduce((acc: Record<string, { score: number; growth: number; count: number }>, trend) => {
+    const dateStr = format(new Date(trend.created_at), 'MM/dd');
+    if (!acc[dateStr]) {
+      acc[dateStr] = { score: 0, growth: 0, count: 0 };
+    }
+    acc[dateStr].score += trend.score;
+    acc[dateStr].growth += trend.growth_rate * 100;
+    acc[dateStr].count += 1;
+    return acc;
+  }, {});
+
+  const chartData = Object.entries(aggregatedData)
+    .map(([date, values]) => ({
+      date,
+      score: values.score / values.count,
+      growth: values.growth / values.count,
     }))
-    .reverse();
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   if (chartData.length === 0) {
     return (

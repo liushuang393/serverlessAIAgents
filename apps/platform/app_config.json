@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "icon": "🏗️",
   "ports": {
-    "api": 8100,
+    "api": 8000,
     "frontend": 3000,
     "db": null,
     "redis": null
@@ -39,9 +39,9 @@
   },
   "runtime": {
     "urls": {
-      "backend": "http://localhost:8100",
+      "backend": "http://localhost:8000",
       "frontend": "http://localhost:3000",
-      "health": "http://localhost:8100/health",
+      "health": "http://localhost:8000/health",
       "database": null
     },
     "database": {

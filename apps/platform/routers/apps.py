@@ -23,10 +23,11 @@ POST  /api/apps/{app_name}/stop        — App 停止（docker compose down）
 from __future__ import annotations
 
 import asyncio
+import logging
 from typing import Any
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, HTTPException, Query
 
 from apps.platform.schemas.provisioning_schemas import AppCreateRequest
 from apps.platform.services.app_scaffolder import AppScaffolderService
@@ -39,12 +40,14 @@ from apps.platform.services.port_allocator import PortAllocatorService
 
 
 router = APIRouter(prefix="/api/apps", tags=["apps"])
+_logger = logging.getLogger(__name__)
 
 # モジュールレベルのシングルトン（main.py で初期化）
 _discovery: AppDiscoveryService | None = None
 _lifecycle: AppLifecycleManager | None = None
 _scaffolder: AppScaffolderService | None = None
 _port_allocator: PortAllocatorService | None = None
+_health_prime_task: asyncio.Task[None] | None = None
 
 
 def init_app_services(
@@ -279,44 +282,87 @@ async def _prime_health_cache(
     )
 
 
+def _schedule_health_prime(
+    lifecycle: AppLifecycleManager,
+    discovery: AppDiscoveryService,
+    app_configs: list[Any],
+) -> None:
+    """ヘルスキャッシュの非同期プリフェッチを開始する."""
+    global _health_prime_task  # noqa: PLW0603
+    if _health_prime_task is not None and not _health_prime_task.done():
+        return
+
+    task = asyncio.create_task(_prime_health_cache(lifecycle, discovery, app_configs))
+    _health_prime_task = task
+
+    def _done_callback(done_task: asyncio.Task[None]) -> None:
+        global _health_prime_task  # noqa: PLW0603
+        if _health_prime_task is done_task:
+            _health_prime_task = None
+        try:
+            done_task.result()
+        except Exception as exc:  # noqa: BLE001
+            _logger.warning("health cache prefetch failed: %s", exc)
+
+    task.add_done_callback(_done_callback)
+
+
 # ------------------------------------------------------------------
 # エンドポイント
 # ------------------------------------------------------------------
 
 
 @router.get("")
-async def list_apps() -> dict[str, Any]:
+async def list_apps(
+    wait_for_health: bool = Query(
+        default=True,
+        description="true の場合はヘルスチェック完了を待ってから返す",
+    ),
+    include_runtime: bool = Query(
+        default=True,
+        description="true の場合は runtime / contracts / visibility / blueprint を含める",
+    ),
+) -> dict[str, Any]:
     """全 App 一覧を取得."""
     discovery = _get_discovery()
     lifecycle = _get_lifecycle()
     apps = discovery.list_apps()
-    await _prime_health_cache(lifecycle, discovery, apps)
+    if wait_for_health:
+        await _prime_health_cache(lifecycle, discovery, apps)
+    else:
+        _schedule_health_prime(lifecycle, discovery, apps)
 
     items: list[dict[str, Any]] = []
     for app_config in apps:
         cached = lifecycle.get_cached_health(app_config.name)
         status = cached.status.value if cached else AppStatus.UNKNOWN.value
-        config_path = discovery.get_config_path(app_config.name)
-        runtime = _runtime_payload(app_config)
-        items.append(
-            {
-                "name": app_config.name,
-                "display_name": app_config.display_name,
-                "description": app_config.description,
-                "version": app_config.version,
-                "icon": app_config.icon,
-                "status": status,
-                "ports": app_config.ports.model_dump(),
-                "agent_count": len(app_config.agents),
-                "tags": app_config.tags,
-                "config_path": str(config_path) if config_path else None,
-                "contracts": app_config.contracts.model_dump(),
-                "visibility": app_config.visibility.model_dump(),
-                "blueprint": app_config.blueprint.model_dump(),
-                "urls": runtime["urls"],
-                "runtime": runtime,
-            }
-        )
+        item: dict[str, Any] = {
+            "name": app_config.name,
+            "display_name": app_config.display_name,
+            "description": app_config.description,
+            "version": app_config.version,
+            "icon": app_config.icon,
+            "status": status,
+            "ports": app_config.ports.model_dump(),
+            "agent_count": len(app_config.agents),
+            "tags": app_config.tags,
+            "urls": _runtime_urls(app_config),
+        }
+
+        if include_runtime:
+            config_path = discovery.get_config_path(app_config.name)
+            runtime = _runtime_payload(app_config)
+            item.update(
+                {
+                    "config_path": str(config_path) if config_path else None,
+                    "contracts": app_config.contracts.model_dump(),
+                    "visibility": app_config.visibility.model_dump(),
+                    "blueprint": app_config.blueprint.model_dump(),
+                    "runtime": runtime,
+                },
+            )
+
+        items.append(item)
 
     return {"apps": items, "total": len(items)}
 

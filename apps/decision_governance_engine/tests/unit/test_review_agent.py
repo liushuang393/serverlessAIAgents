@@ -155,7 +155,7 @@ class TestReviewAgentOutputStructure:
         assert result.overall_verdict in [
             ReviewVerdict.PASS,
             ReviewVerdict.REVISE,
-            ReviewVerdict.REJECT,
+            ReviewVerdict.COACH,
         ]
         assert 0.0 <= result.confidence_score <= 1.0
 
@@ -237,7 +237,7 @@ class TestReviewAgentOutputStructure:
         assert result.overall_verdict in [
             ReviewVerdict.PASS,
             ReviewVerdict.REVISE,
-            ReviewVerdict.REJECT,
+            ReviewVerdict.COACH,
         ]
 
 

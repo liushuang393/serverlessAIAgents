@@ -55,16 +55,54 @@ const longRunningApi = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+const inflightRequests = new Map<string, Promise<unknown>>();
+
+async function withInflightDedup<T>(
+  key: string,
+  request: () => Promise<T>,
+): Promise<T> {
+  const existing = inflightRequests.get(key) as Promise<T> | undefined;
+  if (existing) {
+    return existing;
+  }
+
+  const next = request().finally(() => {
+    inflightRequests.delete(key);
+  });
+  inflightRequests.set(key, next);
+  return next;
+}
+
+/** App 一覧取得オプション */
+export interface FetchAppsOptions {
+  waitForHealth?: boolean;
+  includeRuntime?: boolean;
+}
+
 /** App 一覧を取得 */
-export async function fetchApps(): Promise<AppListResponse> {
-  const { data } = await api.get<AppListResponse>('/apps');
-  return data;
+export async function fetchApps(
+  options: FetchAppsOptions = {},
+): Promise<AppListResponse> {
+  const waitForHealth = options.waitForHealth ?? false;
+  const includeRuntime = options.includeRuntime ?? false;
+  const key = `/apps?wait_for_health=${waitForHealth}&include_runtime=${includeRuntime}`;
+  return withInflightDedup(key, async () => {
+    const { data } = await api.get<AppListResponse>('/apps', {
+      params: {
+        wait_for_health: waitForHealth,
+        include_runtime: includeRuntime,
+      },
+    });
+    return data;
+  });
 }
 
 /** App 概要統計を取得 */
 export async function fetchSummary(): Promise<AppSummaryResponse> {
-  const { data } = await api.get<AppSummaryResponse>('/apps/summary');
-  return data;
+  return withInflightDedup('/apps/summary', async () => {
+    const { data } = await api.get<AppSummaryResponse>('/apps/summary');
+    return data;
+  });
 }
 
 /** App 詳細を取得 */
@@ -135,8 +173,10 @@ export async function createApp(request: AppCreateRequest): Promise<AppCreateRes
 
 /** ポート重複レポート */
 export async function fetchPortConflicts(): Promise<PortConflictReport> {
-  const { data } = await api.get<PortConflictReport>('/apps/ports/conflicts');
-  return data;
+  return withInflightDedup('/apps/ports/conflicts', async () => {
+    const { data } = await api.get<PortConflictReport>('/apps/ports/conflicts');
+    return data;
+  });
 }
 
 /** 重複ポート再割当 */

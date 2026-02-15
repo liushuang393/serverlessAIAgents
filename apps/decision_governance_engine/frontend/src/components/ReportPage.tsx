@@ -412,15 +412,15 @@ export const ReportPage: React.FC = () => {
     ? "bg-emerald-500/20 text-emerald-400"
     : reviewVerdict === "REVISE"
     ? "bg-amber-500/20 text-amber-400"
-    : "bg-red-500/20 text-red-400";
+    : "bg-blue-500/20 text-blue-400";
   const reviewStatusClassWithBorder = !reviewVerdict
     ? "bg-slate-500/10 text-slate-400 border border-slate-500/30"
     : reviewVerdict === "PASS"
     ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30"
     : reviewVerdict === "REVISE"
     ? "bg-amber-500/10 text-amber-400 border border-amber-500/30"
-    : "bg-red-500/10 text-red-400 border border-red-500/30";
-  const reviewStatusIcon = !reviewVerdict ? "🕒" : reviewVerdict === "PASS" ? "✅" : reviewVerdict === "REVISE" ? "⚠️" : "❌";
+    : "bg-blue-500/10 text-blue-400 border border-blue-500/30";
+  const reviewStatusIcon = !reviewVerdict ? "🕒" : reviewVerdict === "PASS" ? "✅" : reviewVerdict === "REVISE" ? "⚠️" : "📋";
   const analysisQuestion = toDisplayText(
     report.original_question ?? (report as unknown as { question?: unknown }).question ?? question,
     "（質問が設定されていません）"
@@ -546,7 +546,7 @@ export const ReportPage: React.FC = () => {
               <div className="text-right">
                 <div className="flex items-center gap-2 justify-end mb-1">
                   <span className={`text-xs px-2 py-0.5 rounded ${reviewStatusClass}`}>
-                    {!reviewVerdict ? "未検証" : reviewVerdict === "PASS" ? "検証通過" : reviewVerdict === "REVISE" ? "要修正" : "却下"}
+                    {!reviewVerdict ? "未検証" : reviewVerdict === "PASS" ? "検証通過" : reviewVerdict === "REVISE" ? "要修正" : "改善指導"}
                   </span>
                 </div>
                 <div className="text-xs text-slate-500 mb-1">
@@ -645,7 +645,7 @@ export const ReportPage: React.FC = () => {
               ? 'bg-emerald-500'
               : safeReview.overall_verdict === 'REVISE'
               ? 'bg-amber-500'
-              : 'bg-red-500';
+              : 'bg-blue-500';
 
             return (
               <button
@@ -774,7 +774,7 @@ export const ReportPage: React.FC = () => {
                       ? 'bg-emerald-500/5 border-emerald-500/30 hover:border-emerald-500/50'
                       : safeReview.overall_verdict === 'REVISE'
                       ? 'bg-amber-500/5 border-amber-500/30 hover:border-amber-500/50'
-                      : 'bg-red-500/5 border-red-500/30 hover:border-red-500/50'
+                      : 'bg-blue-500/5 border-blue-500/30 hover:border-blue-500/50'
                   }`}
                 >
                   <div className="flex items-center justify-between">
@@ -792,7 +792,7 @@ export const ReportPage: React.FC = () => {
                     <span className={`text-sm font-medium ${
                       !reviewVerdict ? 'text-slate-400' :
                       safeReview.overall_verdict === 'PASS' ? 'text-emerald-400' :
-                      safeReview.overall_verdict === 'REVISE' ? 'text-amber-400' : 'text-red-400'
+                      safeReview.overall_verdict === 'REVISE' ? 'text-amber-400' : 'text-blue-400'
                     }`}>
                       {reviewStatusLabel} →
                     </span>
@@ -1920,10 +1920,10 @@ export const ReportPage: React.FC = () => {
                             以下のチェックボックスで不足項目を補完すると、スコアが自動再計算されます。
                           </>
                         )}
-                        {safeReview.overall_verdict === 'REJECT' && (
+                        {safeReview.overall_verdict === 'COACH' && (
                           <>
-                            <span className="text-red-400">✕ 要再走：</span>
-                            スコアが40点未満のため、入力条件を見直して全体再分析が必要です。
+                            <span className="text-blue-400">📋 改善指導：</span>
+                            重大な指摘がありますが、レポートに改善提案を記載しています。指摘事項を確認し、改善を進めてください。
                           </>
                         )}
                       </div>
@@ -2239,28 +2239,27 @@ export const ReportPage: React.FC = () => {
                 <div className={`w-24 h-24 rounded-full border-2 border-dashed flex items-center justify-center ${
                   safeReview.overall_verdict === 'REVISE'
                     ? 'border-amber-500/50 text-amber-500'
-                    : 'border-red-500/50 text-red-500'
+                    : 'border-blue-500/50 text-blue-500'
                 }`}>
                   <div className="text-center">
                     <div className="text-2xl mb-1">
-                      {safeReview.overall_verdict === 'REVISE' ? '⚠️' : '❌'}
+                      {safeReview.overall_verdict === 'REVISE' ? '⚠️' : '📋'}
                     </div>
                     <div className="text-xs">
-                      {safeReview.overall_verdict === 'REVISE' ? '要修正' : '却下'}
+                      {safeReview.overall_verdict === 'REVISE' ? '要修正' : '改善指導'}
                     </div>
                   </div>
                 </div>
                 <div className="text-center">
                   <div className={`text-sm mb-3 ${
-                    safeReview.overall_verdict === 'REVISE' ? 'text-amber-400' : 'text-red-400'
+                    safeReview.overall_verdict === 'REVISE' ? 'text-amber-400' : 'text-blue-400'
                   }`}>
                     {safeReview.overall_verdict === 'REVISE'
                       ? '⚠️ 検証で修正が必要と判定されました'
-                      : '❌ 検証で却下されました'}
+                      : '📋 改善指導あり — 指摘事項を確認してください'}
                   </div>
                   <div className="text-sm text-slate-400 mb-4">
-                    「検証」タブで指摘事項を確認し、<br />
-                    入力内容を修正して再分析してください。
+                    「検証」タブで指摘事項と改善提案を確認してください。
                   </div>
                   <div className="flex gap-3 justify-center">
                     <button

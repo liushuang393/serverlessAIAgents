@@ -207,7 +207,7 @@ class FlowBuilder:
         max_revisions: int = 2,
         input_mapper: Callable[[FlowContext], dict[str, Any]] | None = None,
         on_pass: Callable[[FlowContext], dict[str, Any]] | None = None,
-        on_reject: Callable[[FlowContext], dict[str, Any]] | None = None,
+        on_coach: Callable[[FlowContext], dict[str, Any]] | None = None,
         verdict_key: str = "overall_verdict",
     ) -> FlowBuilder:
         """レビューノードを追加.
@@ -215,7 +215,7 @@ class FlowBuilder:
         レビューノードは判定結果に基づいて決定:
         - PASS: フローを終了し、成功を返す
         - REVISE: 指定ノードにロールバックして再実行
-        - REJECT: フローを終了し、拒否を返す
+        - COACH: コーチング型改善指導（即終了せずレポートに指摘を表示）
 
         Args:
             agent: レビューAgent
@@ -225,7 +225,7 @@ class FlowBuilder:
             max_revisions: 最大リビジョン回数
             input_mapper: 入力マッピング関数
             on_pass: PASS時の処理関数
-            on_reject: REJECT時の処理関数
+            on_coach: COACH時の処理関数
             verdict_key: 判定結果フィールド名
 
         Returns:
@@ -249,7 +249,7 @@ class FlowBuilder:
             agent=resolved,
             input_mapper=input_mapper,
             on_pass=on_pass,
-            on_reject=on_reject,
+            on_coach=on_coach,
             retry_from=retry_from,
             max_revisions=max_revisions,
             verdict_key=verdict_key,

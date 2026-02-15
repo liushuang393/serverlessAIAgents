@@ -307,9 +307,10 @@ export const ProcessingPage: React.FC = () => {
 
   const completedCount = agents.filter((a) => a.status === 'completed').length;
   const overallProgress = Math.round((completedCount / agents.length) * 100);
+  // Gate拒否以外のエラー（後方互換: 旧REJECT由来のメッセージ検出）
   const isReviewIssue =
     Boolean(error) &&
-    (String(error).startsWith('重大課題') || String(error).startsWith('検証で重大課題'));
+    (String(error).startsWith('重大課題') || String(error).startsWith('検証で重大課題') || String(error).startsWith('検証で'));
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -337,7 +338,7 @@ export const ProcessingPage: React.FC = () => {
             {overallProgress}%
           </div>
           <div className="text-slate-400 mt-2">
-            {error ? '⚠️ 検証で重大課題を検出' : isComplete ? '✅ 分析完了' : '⏳ 分析処理中...'}
+            {error ? (isReviewIssue ? '📋 検証で指摘事項あり' : '⚠️ エラーが発生しました') : isComplete ? '✅ 分析完了' : '⏳ 分析処理中...'}
           </div>
         </div>
 
@@ -379,7 +380,7 @@ export const ProcessingPage: React.FC = () => {
                 onClick={handleRetry}
                 className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-medium transition-all flex items-center gap-2"
               >
-                {isReviewIssue ? '🛠 指摘を反映して再分析' : '🔄 リトライ'}
+                {isReviewIssue ? '📋 指摘を確認して再分析' : '🔄 リトライ'}
               </button>
               <button 
                 onClick={handleCancel}
