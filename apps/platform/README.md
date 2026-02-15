@@ -18,6 +18,14 @@
 | 7 | **Publish** | Validate → CodeGen → Deploy → Register の一括発布 |
 | 8 | **Dashboard** | テナント単位の利用統計/人気コンポーネント/アクティビティ |
 
+### P0 基盤統一（2026-02-15）
+
+1. 能力本体（Capability Ontology v1）を導入し、`rag/skill/agent` を同じ能力モデルで扱う。
+2. `GET /api/agents/*` を標準能力オブジェクト契約へ置換し、legacy は `capabilities_legacy` として保持。
+3. `GET /api/apps/summary` の件数字段を `agent_count` に統一し、`has_api` を追加。
+4. `POST /api/apps/migrate-manifests` を追加し、全 `apps/*/app_config.json` を標準契約へ移行可能にした。
+5. 全 App manifest に `contracts / blueprint / visibility` を補完し、幂等マイグレーション対応。
+
 主要エントリポイント:
 
 - バックエンド API: `apps/platform/main.py`
@@ -73,20 +81,21 @@ cp .env.example .env
 
 ```bash
 # リポジトリルートで実行（conda agentflow 環境内）
-# ローカル開発: ポート 8001
-python -m apps.platform.main serve --port 8001
+# バックエンド（--port 不要、app_config.json の 8000 が使われる）
+uvicorn apps.platform.main:app --reload --host 0.0.0.0
+
 
 # 本番: ポート 8000
-python -m apps.platform.main serve --host 0.0.0.0 --port 8000
+uvicorn apps.platform.main:app  --host 0.0.0.0 --port 8000
 ```
 
 起動後の確認 URL（ローカル開発時）:
 
 | URL | 内容 |
 |-----|------|
-| http://localhost:8001/health | ヘルスチェック |
-| http://localhost:8001/docs | Swagger UI |
-| http://localhost:8001/redoc | ReDoc |
+| http://localhost:8000/health | ヘルスチェック |
+| http://localhost:8000/docs | Swagger UI |
+| http://localhost:8000/redoc | ReDoc |
 
 ### 手順 5: フロントエンド開発サーバーを起動
 
@@ -160,6 +169,7 @@ npm run type-check   # TypeScript 型チェック
 | `GET` | `/api/apps` | 全 App 一覧 |
 | `GET` | `/api/apps/summary` | App 概要統計 |
 | `POST` | `/api/apps/refresh` | App 一覧再スキャン |
+| `POST` | `/api/apps/migrate-manifests` | manifest 標準化（dry-run / apply） |
 | `GET` | `/api/apps/{app_name}` | App 詳細 |
 | `GET` | `/api/apps/{app_name}/config` | app_config.json 取得 |
 | `PATCH` | `/api/apps/{app_name}/config` | app_config.json 部分更新 |
@@ -169,6 +179,7 @@ npm run type-check   # TypeScript 型チェック
 | `POST` | `/api/apps/{app_name}/publish` | App 発布（`docker compose up -d --build`） |
 | `POST` | `/api/apps/{app_name}/start` | App 起動（`docker compose up -d`） |
 | `POST` | `/api/apps/{app_name}/stop` | App 停止（`docker compose down`） |
+| `POST` | `/api/apps/{app_name}/local-start` | App をローカル開発モード起動 |
 
 ### 2. Agents（Agent 管理）
 
@@ -180,6 +191,11 @@ npm run type-check   # TypeScript 型チェック
 | `GET` | `/api/agents/by-app` | App 別グルーピング |
 | `GET` | `/api/agents/search` | 能力ベース検索 |
 
+補足:
+
+1. `GET /api/agents/by-app` は `groups` 配列を返す（map ではない）。
+2. `GET /api/agents` は `capabilities`（標準能力）と `capabilities_legacy` を返す。
+
 ### 3. Skills（スキルカタログ）
 
 | メソッド | パス | 説明 |
@@ -189,6 +205,11 @@ npm run type-check   # TypeScript 型チェック
 | `GET` | `/api/skills/tags` | 全タグ一覧 |
 | `GET` | `/api/skills/search` | タグベース検索 |
 | `GET` | `/api/skills/{skill_name}` | スキル詳細 |
+
+補足:
+
+1. `GET /api/skills*` は `label` を必須返却。
+2. `tags` は標準化済み能力 ID、`tags_legacy` は元タグ。
 
 ### 4. RAG（検索拡張生成）
 
@@ -283,24 +304,19 @@ python3 -m apps.platform.main -v serve --port 8000
 ### バックエンド
 
 ```bash
-PYTHONDONTWRITEBYTECODE=1 \
-python3 -m pytest -q \
-  tests/apps/platform/test_gallery_agent.py \
-  tests/unit/test_platform.py \
-  -p no:cacheprovider
+conda activate agentflow
+pytest -q --no-cov tests/apps/platform
 ```
 
 ### フロントエンド
 
 ```bash
 cd apps/platform/frontend
-npm run test
-npm run lint
 npm run type-check
+npm run test
 ```
 
-> **補足**: `ModuleNotFoundError: pydantic` / `No module named pytest` が出る場合、
-> 先に `pip install -e ".[apps,dev]"` を実行してください。
+> **補足**: `npm run test` は Vitest 用テストファイルと `jsdom` 依存が必要です。
 
 ---
 
@@ -415,6 +431,7 @@ apps/platform/
 │   ├── app_discovery.py               # App 自動検出
 │   ├── app_lifecycle.py               # App ライフサイクル管理
 │   ├── agent_aggregator.py            # Agent 横断集約
+│   ├── capability_registry.py         # 能力本体正規化/集約
 │   ├── skill_catalog.py               # スキルカタログ
 │   ├── rag_overview.py                # RAG 概要集約
 │   ├── component_library.py           # コンポーネント管理
@@ -423,6 +440,7 @@ apps/platform/
 │   └── tenant_dashboard.py            # テナント統計
 ├── schemas/
 │   ├── app_config_schemas.py          # App Config Pydantic モデル
+│   ├── capability_schemas.py          # 能力本体スキーマ
 │   ├── gallery_schemas.py             # Gallery Pydantic モデル
 │   ├── component_schemas.py           # Component Pydantic モデル
 │   └── publish_schemas.py             # Publish Pydantic モデル

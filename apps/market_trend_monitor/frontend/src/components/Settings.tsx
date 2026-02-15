@@ -266,7 +266,7 @@ const Settings: React.FC = () => {
         <Typography variant="h4" gutterBottom>
           設定
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           監視対象と収集頻度を調整して、重要シグナルの感度を最適化します。
         </Typography>
       </Paper>

@@ -17,6 +17,7 @@ from apps.platform.services.component_library import (
     ComponentType,
     ComponentVisibility,
 )
+from apps.platform.services.capability_registry import CapabilityRegistry
 from apps.platform.services.framework_env import FrameworkEnvService
 from apps.platform.services.gallery_service import GalleryService
 from apps.platform.services.publish_orchestrator import PublishOrchestrator
@@ -37,6 +38,7 @@ __all__ = [
     "ComponentLibrary",
     "ComponentType",
     "ComponentVisibility",
+    "CapabilityRegistry",
     "FrameworkEnvService",
     "GalleryService",
     "HealthCheckResult",

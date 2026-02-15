@@ -7,6 +7,43 @@
 /** App ヘルスステータス */
 export type AppStatus = 'healthy' | 'unhealthy' | 'unknown' | 'stopped';
 
+/** ランタイムURL */
+export interface RuntimeUrls {
+  backend: string | null;
+  frontend: string | null;
+  health: string | null;
+  database: string | null;
+}
+
+/** DB 接続情報 */
+export interface RuntimeDatabase {
+  kind: string | null;
+  url: string | null;
+  host: string | null;
+  port: number | null;
+  name: string | null;
+  user: string | null;
+  password: string | null;
+  password_env: string | null;
+  note: string | null;
+}
+
+/** 実行コマンド情報 */
+export interface RuntimeCommands {
+  backend_dev: string | null;
+  frontend_dev: string | null;
+  publish: string | null;
+  start: string | null;
+  stop: string | null;
+}
+
+/** ランタイム設定 */
+export interface RuntimeConfig {
+  urls: RuntimeUrls;
+  database: RuntimeDatabase;
+  commands: RuntimeCommands;
+}
+
 /** ポート設定 */
 export interface PortsConfig {
   api: number | null;
@@ -39,18 +76,15 @@ export interface DependenciesConfig {
 export interface AppListItem {
   name: string;
   display_name: string;
+  description?: string;
   version: string;
   icon: string;
   status: AppStatus;
   ports: PortsConfig;
   agent_count: number;
   tags: string[];
-  urls?: {
-    backend: string | null;
-    frontend: string | null;
-    health: string | null;
-    database: string | null;
-  };
+  urls?: RuntimeUrls;
+  runtime?: RuntimeConfig;
   visibility?: {
     mode: 'private' | 'public' | 'tenant_allowlist';
     tenants: string[];
@@ -90,12 +124,8 @@ export interface AppDetail {
     mcp_servers: string[];
   };
   tags: string[];
-  urls?: {
-    backend: string | null;
-    frontend: string | null;
-    health: string | null;
-    database: string | null;
-  };
+  urls?: RuntimeUrls;
+  runtime?: RuntimeConfig;
 }
 
 /** ヘルスチェック結果（GET /api/apps/{name}/health 用） */
@@ -194,13 +224,23 @@ export interface RefreshResponse {
  * ============================================================ */
 
 /** 集約済み Agent（GET /api/agents 用） */
+export interface CanonicalCapability {
+  id: string;
+  domain: string;
+  task: string;
+  qualifier: string | null;
+  label: string;
+  aliases: string[];
+}
+
 export interface AggregatedAgent {
   name: string;
   app_name: string;
   app_display_name: string;
   app_icon: string;
   module: string | null;
-  capabilities: string[];
+  capabilities: CanonicalCapability[];
+  capabilities_legacy: string[];
 }
 
 /** Agent 一覧レスポンス */
@@ -218,7 +258,12 @@ export interface AgentStatsResponse {
 
 /** Capability タグ情報 */
 export interface CapabilityTag {
-  tag: string;
+  id: string;
+  domain: string;
+  task: string;
+  qualifier: string | null;
+  label: string;
+  aliases: string[];
   count: number;
   apps: string[];
 }
@@ -251,7 +296,9 @@ export interface SkillInfo {
   description: string;
   author: string;
   tags: string[];
+  tags_legacy?: string[];
   triggers: string[];
+  requirements?: string[];
   path: string;
 }
 
@@ -509,6 +556,19 @@ export interface PortConflictItem {
 export interface PortConflictReport {
   has_conflicts: boolean;
   conflicts: PortConflictItem[];
+}
+
+export interface ManifestMigrationItem {
+  name: string;
+  updated_fields: string[];
+}
+
+export interface ManifestMigrationReport {
+  total: number;
+  changed: number;
+  unchanged: number;
+  dry_run: boolean;
+  apps: ManifestMigrationItem[];
 }
 
 export interface MCPServerConfig {

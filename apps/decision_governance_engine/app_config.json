@@ -12,59 +12,185 @@
   },
   "entry_points": {
     "api_module": "apps.decision_governance_engine.api:app",
-    "health": "/health"
+    "health": "/api/health"
   },
   "agents": [
     {
       "name": "CognitiveGateAgent",
       "module": "apps.decision_governance_engine.agents.cognitive_gate_agent",
-      "capabilities": ["gate", "cognitive_check"]
+      "capabilities": [
+        "gate",
+        "cognitive_check"
+      ]
     },
     {
       "name": "GatekeeperAgent",
       "module": "apps.decision_governance_engine.agents.gatekeeper_agent",
-      "capabilities": ["gate", "validation"]
+      "capabilities": [
+        "gate",
+        "validation"
+      ]
     },
     {
       "name": "ClarificationAgent",
       "module": "apps.decision_governance_engine.agents.clarification_agent",
-      "capabilities": ["diagnosis", "clarification"]
+      "capabilities": [
+        "diagnosis",
+        "clarification"
+      ]
     },
     {
       "name": "DaoAgent",
       "module": "apps.decision_governance_engine.agents.dao_agent",
-      "capabilities": ["analysis", "dao", "philosophy"]
+      "capabilities": [
+        "analysis",
+        "dao",
+        "philosophy"
+      ]
     },
     {
       "name": "FaAgent",
       "module": "apps.decision_governance_engine.agents.fa_agent",
-      "capabilities": ["analysis", "fa", "rules"]
+      "capabilities": [
+        "analysis",
+        "fa",
+        "rules"
+      ]
     },
     {
       "name": "ShuAgent",
       "module": "apps.decision_governance_engine.agents.shu_agent",
-      "capabilities": ["analysis", "shu", "strategy"]
+      "capabilities": [
+        "analysis",
+        "shu",
+        "strategy"
+      ]
     },
     {
       "name": "QiAgent",
       "module": "apps.decision_governance_engine.agents.qi_agent",
-      "capabilities": ["analysis", "qi", "tools"]
+      "capabilities": [
+        "analysis",
+        "qi",
+        "tools"
+      ]
     },
     {
       "name": "ReviewAgent",
       "module": "apps.decision_governance_engine.agents.review_agent",
-      "capabilities": ["review", "synthesis"]
+      "capabilities": [
+        "review",
+        "synthesis"
+      ]
     }
   ],
   "services": {
-    "rag": { "collections": ["decision_knowledge"] },
-    "pipeline": { "engine": "DecisionGovernanceEngine" }
+    "rag": {
+      "collections": [
+        "decision_knowledge"
+      ]
+    },
+    "pipeline": {
+      "engine": "DecisionGovernanceEngine"
+    }
   },
   "dependencies": {
     "database": "postgresql",
     "redis": true,
     "external": []
   },
-  "tags": ["decision", "governance", "pipeline", "dao", "multi-agent"]
+  "runtime": {
+    "urls": {
+      "backend": "http://localhost:8001",
+      "frontend": "http://localhost:5174",
+      "health": "http://localhost:8001/api/health",
+      "database": "postgresql+asyncpg://dge:dge_password@localhost:5432/decision_governance"
+    },
+    "database": {
+      "kind": "postgresql",
+      "url": "postgresql+asyncpg://dge:dge_password@localhost:5432/decision_governance",
+      "host": "localhost",
+      "port": 5432,
+      "name": "decision_governance",
+      "user": "dge",
+      "password": "dge_password",
+      "password_env": "POSTGRES_PASSWORD",
+      "note": "ローカル開発既定値（docker-compose.yml）。"
+    },
+    "commands": {
+      "backend_dev": "python -m apps.decision_governance_engine.api",
+      "frontend_dev": "cd apps/decision_governance_engine/frontend && npm run dev",
+      "publish": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build",
+      "start": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
+      "stop": "docker compose -f docker-compose.yml -f docker-compose.dev.yml down"
+    }
+  },
+  "tags": [
+    "decision",
+    "governance",
+    "pipeline",
+    "dao",
+    "multi-agent"
+  ],
+  "contracts": {
+    "auth": {
+      "enabled": false,
+      "providers": [],
+      "allow_anonymous": true,
+      "required_scopes": [],
+      "session_ttl_minutes": 60
+    },
+    "rag": {
+      "enabled": true,
+      "pattern": null,
+      "provider": null,
+      "collections": [
+        "decision_governance_engine_knowledge"
+      ],
+      "data_sources": [],
+      "chunk_strategy": "recursive",
+      "chunk_size": 800,
+      "chunk_overlap": 120,
+      "retrieval_method": "hybrid",
+      "embedding_model": null,
+      "rerank_model": null,
+      "default_top_k": 5,
+      "score_threshold": null,
+      "indexing_schedule": null
+    },
+    "skills": {
+      "auto_install": false,
+      "hot_reload": true,
+      "allowed_sources": [],
+      "default_skills": []
+    },
+    "release": {
+      "strategy": "manual",
+      "targets": [],
+      "environments": [
+        "dev"
+      ],
+      "require_approval": true
+    }
+  },
+  "blueprint": {
+    "engine_pattern": "pipeline",
+    "flow_pattern": null,
+    "system_prompt": "",
+    "llm_provider": null,
+    "llm_base_url": null,
+    "llm_api_key_env": null,
+    "default_model": null,
+    "default_skills": [],
+    "vector_db_provider": null,
+    "vector_db_url": null,
+    "vector_db_collection": null,
+    "vector_db_api_key_env": null,
+    "mcp_servers": [],
+    "agents": []
+  },
+  "visibility": {
+    "mode": "private",
+    "tenants": []
+  }
 }
-

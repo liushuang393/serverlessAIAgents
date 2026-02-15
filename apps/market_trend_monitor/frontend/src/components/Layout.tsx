@@ -47,13 +47,13 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const menuItems = [
-    { text: 'ダッシュボード', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'シグナル', icon: <SignalIcon />, path: '/signals' },
-    { text: '証拠台帳', icon: <EvidenceIcon />, path: '/evidence' },
-    { text: '予測追跡', icon: <PredictionIcon />, path: '/predictions' },
-    { text: '競合分析', icon: <CompetitorIcon />, path: '/competitors' },
-    { text: 'レポート', icon: <ReportIcon />, path: '/reports' },
-    { text: '設定', icon: <SettingsIcon />, path: '/settings' },
+    { text: 'ダッシュボード', secondary: '市場の全体像を確認', icon: <DashboardIcon />, path: '/dashboard' },
+    { text: 'シグナル', secondary: 'AIが選んだ兆候と変化', icon: <SignalIcon />, path: '/signals' },
+    { text: '証拠台帳', secondary: '情報の裏付けを確認', icon: <EvidenceIcon />, path: '/evidence' },
+    { text: '予測追跡', secondary: 'AI予測の答え合わせ', icon: <PredictionIcon />, path: '/predictions' },
+    { text: '競合分析', secondary: 'ライバルの動向を地図化', icon: <CompetitorIcon />, path: '/competitors' },
+    { text: 'レポート', secondary: '分析結果の書き出し', icon: <ReportIcon />, path: '/reports' },
+    { text: '設定', secondary: 'システムの詳細設定', icon: <SettingsIcon />, path: '/settings' },
   ];
 
   const drawer = (
@@ -107,7 +107,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               }}
             >
               <ListItemIcon sx={{ minWidth: 40 }}>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
+              <ListItemText
+                primary={item.text}
+                secondary={item.secondary}
+                secondaryTypographyProps={{ fontSize: '0.7rem', color: 'text.secondary' }}
+              />
             </ListItemButton>
           </ListItem>
         ))}

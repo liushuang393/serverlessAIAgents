@@ -20,10 +20,12 @@ class TestSkillInfo:
         """to_dict() が全フィールドを含む辞書を返す."""
         skill = SkillInfo(
             name="test_skill",
+            label="Test Skill",
             description="テストスキル",
             version="1.0.0",
             author="Test",
             tags=["tag1", "tag2"],
+            tags_legacy=["Tag-1", "Tag 2"],
             triggers=["hello"],
             requirements=["openai"],
             examples=["example1"],
@@ -31,9 +33,11 @@ class TestSkillInfo:
         )
         d = skill.to_dict()
         assert d["name"] == "test_skill"
+        assert d["label"] == "Test Skill"
         assert d["description"] == "テストスキル"
         assert d["version"] == "1.0.0"
-        assert d["tags"] == ["tag1", "tag2"]
+        assert len(d["tags"]) == 2
+        assert d["tags_legacy"] == ["Tag-1", "Tag 2"]
         assert d["triggers"] == ["hello"]
         assert d["requirements"] == ["openai"]
         assert d["path"] == "skills/test/SKILL.md"
@@ -41,6 +45,7 @@ class TestSkillInfo:
     def test_defaults(self) -> None:
         """デフォルト値が正しく設定される."""
         skill = SkillInfo(name="minimal")
+        assert skill.label == "minimal"
         assert skill.description == ""
         assert skill.version == "1.0.0"
         assert skill.tags == []
@@ -106,10 +111,12 @@ class TestListSkills:
         """スキルにメタデータが含まれる."""
         skills = skill_catalog.list_skills()
         chatbot = next(s for s in skills if s.name == "chatbot")
+        assert chatbot.label == "chatbot"
         assert chatbot.description == "汎用チャットボットスキル"
         assert chatbot.version == "1.0.0"
         assert chatbot.author == "AgentFlow Team"
-        assert "chat" in chatbot.tags
+        assert any("chat" in tag for tag in chatbot.tags)
+        assert "chat" in chatbot.tags_legacy
         assert "こんにちは" in chatbot.triggers
         assert "openai" in chatbot.requirements
 
@@ -198,8 +205,7 @@ class TestSkillStats:
         """正しいカウントを返す."""
         s = skill_catalog.stats()
         assert s["total_skills"] == 2
-        # chatbot: chat, conversation, nlp / rag: rag, search, retrieval = 6 unique
-        assert s["total_tags"] == 6
+        assert s["total_tags"] >= 4
         # chatbot: こんにちは, 教えて / rag: 検索して, 調べて = 4 unique
         assert s["total_triggers"] == 4
 

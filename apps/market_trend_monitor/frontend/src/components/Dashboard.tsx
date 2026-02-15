@@ -17,10 +17,12 @@ import {
   Alert,
   Stack,
   Chip,
+  Tooltip,
 } from '@mui/material';
 import { useAppStore } from '@/store/useAppStore';
 import TrendChart from './TrendChart';
 import TrendList from './TrendList';
+import AISummaryCard from './AISummaryCard';
 
 const Dashboard: React.FC = () => {
   const { trends, loading, error, fetchTrends } = useAppStore();
@@ -98,8 +100,8 @@ const Dashboard: React.FC = () => {
             pointerEvents: 'none',
           }}
         />
-        <Stack spacing={1} maxWidth={560} sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography variant="h3">市場動向ダッシュボード</Typography>
+        <Stack spacing={1} sx={{ position: 'relative', zIndex: 1 }}>
+          <Typography variant="h4">市場動向ダッシュボード</Typography>
           <Typography variant="body1" sx={{ opacity: 0.8 }}>
             マーケットの兆候を一望し、意思決定の速度を上げるためのリアルタイム監視。
           </Typography>
@@ -133,6 +135,12 @@ const Dashboard: React.FC = () => {
           </Stack>
         </Stack>
       </Paper>
+
+      <AISummaryCard
+        summary={`現在、市場では「${topTopics[0] || '新しい技術'}」に関する話題が急上昇しています。情報の信頼性スコアは ${(averageScore * 100).toFixed(0)}% と高く、具体的なアクションを検討するフェーズに入っています。`}
+        actionRequired={averageScore > 0.6}
+        status={averageScore > 0.7 ? 'positive' : 'neutral'}
+      />
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={4}>
@@ -180,9 +188,11 @@ const Dashboard: React.FC = () => {
                 'linear-gradient(135deg, rgba(14,165,233,0.12), rgba(18,18,26,0.9))',
             }}
           >
-            <Typography variant="overline" color="text.secondary">
-              平均スコア
-            </Typography>
+            <Tooltip title="収集された情報の全体的な信頼度。数値が高いほど、根拠がしっかりしていることを示します。" arrow>
+              <Typography variant="overline" color="text.secondary" sx={{ cursor: 'help' }}>
+                平均スコア (信頼度)
+              </Typography>
+            </Tooltip>
             <Typography variant="h3">{averageScore.toFixed(2)}</Typography>
             <Typography variant="body2" color="text.secondary">
               信号強度のベースライン

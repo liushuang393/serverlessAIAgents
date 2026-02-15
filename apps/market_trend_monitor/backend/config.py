@@ -7,6 +7,7 @@ import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 def _parse_port(value: str | int | None, default: int) -> int:
@@ -44,9 +45,28 @@ def _load_app_config() -> dict[str, object]:
 
 
 APP_CONFIG = _load_app_config()
-DEFAULT_API_HOST = str(APP_CONFIG.get("api_host", "localhost"))
-DEFAULT_API_PORT = _parse_port(APP_CONFIG.get("api_port"), 8002)
-DEFAULT_FRONTEND_PORT = _parse_port(APP_CONFIG.get("frontend_port"), 3002)
+_runtime = APP_CONFIG.get("runtime", {}) if isinstance(APP_CONFIG.get("runtime"), dict) else {}
+_runtime_urls = _runtime.get("urls", {}) if isinstance(_runtime.get("urls"), dict) else {}
+_runtime_database = _runtime.get("database", {}) if isinstance(_runtime.get("database"), dict) else {}
+_ports = APP_CONFIG.get("ports", {}) if isinstance(APP_CONFIG.get("ports"), dict) else {}
+
+_backend_host_from_url = "localhost"
+if isinstance(_runtime_urls.get("backend"), str):
+    parsed_backend = urlparse(_runtime_urls["backend"])
+    if parsed_backend.hostname:
+        _backend_host_from_url = parsed_backend.hostname
+
+DEFAULT_API_HOST = str(APP_CONFIG.get("api_host") or _backend_host_from_url or "localhost")
+DEFAULT_API_PORT = _parse_port(_ports.get("api"), _parse_port(APP_CONFIG.get("api_port"), 8002))
+DEFAULT_FRONTEND_PORT = _parse_port(
+    _ports.get("frontend"),
+    _parse_port(APP_CONFIG.get("frontend_port"), 3002),
+)
+DEFAULT_DATABASE_URL = str(
+    _runtime_database.get("url")
+    or _runtime_urls.get("database")
+    or "sqlite:///./market_trend.db"
+)
 
 
 def _default_cors_origins() -> list[str]:
@@ -147,7 +167,7 @@ class DatabaseConfig:
     """データベース設定."""
 
     # データベースURL
-    url: str = field(default_factory=lambda: os.getenv("DATABASE_URL", "sqlite:///./market_trend.db"))
+    url: str = field(default_factory=lambda: os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL))
 
     # 接続プール設定
     pool_size: int = 5

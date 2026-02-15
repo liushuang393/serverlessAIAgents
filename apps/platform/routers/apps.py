@@ -4,6 +4,7 @@
 GET   /api/apps                        — 全 App 一覧
 GET   /api/apps/summary                — App 概要統計
 POST  /api/apps/refresh                — App 一覧再スキャン
+POST  /api/apps/migrate-manifests      — app_config 標準化マイグレーション
 GET   /api/apps/ports/conflicts        — ポート重複検出
 POST  /api/apps/ports/rebalance        — 重複ポート再割当（dry-run対応）
 GET   /api/apps/create/options         — App 作成オプション
@@ -23,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 from typing import Any
+from urllib.parse import urlparse
 
 from fastapi import APIRouter, Body, HTTPException
 
@@ -109,46 +111,142 @@ def _get_app_or_404(discovery: AppDiscoveryService, app_name: str):
     return config
 
 
-def _to_local_http_url(port: int | None) -> str | None:
-    """localhost ベースの URL を返す."""
-    if port is None:
-        return None
-    return f"http://localhost:{port}"
-
-
-def _to_health_url(api_port: int | None, health_path: str | None) -> str | None:
-    """ヘルスチェック URL を返す."""
-    if api_port is None:
-        return None
-    path = health_path or "/health"
-    if not path.startswith("/"):
-        path = f"/{path}"
-    return f"http://localhost:{api_port}{path}"
-
-
 def _to_database_url(db_kind: str | None, db_port: int | None) -> str | None:
-    """DB 接続先の表示 URL を返す（ローカル / docker 公開ポート前提）."""
+    """DB 接続URLを返す（ローカル公開ポート前提）."""
     if db_port is None:
         return None
     kind = (db_kind or "").lower()
     if "postgres" in kind:
-        return f"postgresql://localhost:{db_port} (docker)"
+        return f"postgresql://localhost:{db_port}"
     if "mysql" in kind:
-        return f"mysql://localhost:{db_port} (docker)"
+        return f"mysql://localhost:{db_port}"
     if "redis" in kind:
-        return f"redis://localhost:{db_port} (docker)"
+        return f"redis://localhost:{db_port}"
     if "sqlite" in kind:
-        return f"sqlite(local) / port:{db_port} (docker)"
-    return f"db://localhost:{db_port} (docker)"
+        return "sqlite:///./app.db"
+    return f"db://localhost:{db_port}"
+
+
+def _normalize_text(value: Any) -> str | None:
+    """文字列を正規化（空文字は None）."""
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    return text if text else None
+
+
+def _runtime_or_local_http_url(
+    runtime_url: str | None,
+    *,
+    port: int | None,
+    default_path: str = "",
+) -> str | None:
+    """localhost 系の runtime URL は ports.* に合わせて補正する."""
+    runtime = _normalize_text(runtime_url)
+    if port is None:
+        return runtime
+
+    fallback = f"http://localhost:{port}{default_path}"
+    if runtime is None:
+        return fallback
+
+    try:
+        parsed = urlparse(runtime)
+    except Exception:  # noqa: BLE001
+        return fallback
+
+    host = (parsed.hostname or "").lower()
+    if host not in {"localhost", "127.0.0.1"}:
+        return runtime
+
+    scheme = parsed.scheme or "http"
+    path = parsed.path or default_path
+    rebuilt = f"{scheme}://{host}:{port}{path}"
+    if parsed.query:
+        rebuilt = f"{rebuilt}?{parsed.query}"
+    return rebuilt
 
 
 def _runtime_urls(app_config: Any) -> dict[str, str | None]:
-    """App 表示用 URL セットを作成."""
+    """App 表示用 URL セットを作成（runtime 優先）."""
+    configured = app_config.runtime.urls
+    health_path = app_config.entry_points.health or "/health"
+    if not health_path.startswith("/"):
+        health_path = f"/{health_path}"
+
+    backend = _runtime_or_local_http_url(
+        _normalize_text(configured.backend),
+        port=app_config.ports.api,
+    )
+    frontend = _runtime_or_local_http_url(
+        _normalize_text(configured.frontend),
+        port=app_config.ports.frontend,
+    )
+    health = _runtime_or_local_http_url(
+        _normalize_text(configured.health),
+        port=app_config.ports.api,
+        default_path=health_path,
+    )
+    database = _normalize_text(configured.database) or _to_database_url(
+        app_config.dependencies.database,
+        app_config.ports.db,
+    )
     return {
-        "backend": _to_local_http_url(app_config.ports.api),
-        "frontend": _to_local_http_url(app_config.ports.frontend),
-        "health": _to_health_url(app_config.ports.api, app_config.entry_points.health),
-        "database": _to_database_url(app_config.dependencies.database, app_config.ports.db),
+        "backend": backend,
+        "frontend": frontend,
+        "health": health,
+        "database": database,
+    }
+
+
+def _runtime_database(app_config: Any, urls: dict[str, str | None]) -> dict[str, Any]:
+    """App 表示用 DB 設定を作成（runtime 優先）."""
+    runtime_db = app_config.runtime.database.model_dump()
+    kind = _normalize_text(runtime_db.get("kind")) or app_config.dependencies.database
+    port = runtime_db.get("port")
+    if not isinstance(port, int):
+        port = app_config.ports.db
+
+    host = _normalize_text(runtime_db.get("host"))
+    if host is None and port is not None:
+        host = "localhost"
+
+    return {
+        "kind": kind,
+        "url": (
+            _normalize_text(runtime_db.get("url"))
+            or urls.get("database")
+            or _to_database_url(kind, port)
+        ),
+        "host": host,
+        "port": port,
+        "name": _normalize_text(runtime_db.get("name")),
+        "user": _normalize_text(runtime_db.get("user")),
+        "password": _normalize_text(runtime_db.get("password")),
+        "password_env": _normalize_text(runtime_db.get("password_env")),
+        "note": _normalize_text(runtime_db.get("note")),
+    }
+
+
+def _runtime_commands(app_config: Any) -> dict[str, str | None]:
+    """App 表示用コマンド設定を作成."""
+    commands = app_config.runtime.commands.model_dump()
+    return {
+        "backend_dev": _normalize_text(commands.get("backend_dev")),
+        "frontend_dev": _normalize_text(commands.get("frontend_dev")),
+        "publish": _normalize_text(commands.get("publish")),
+        "start": _normalize_text(commands.get("start")),
+        "stop": _normalize_text(commands.get("stop")),
+    }
+
+
+def _runtime_payload(app_config: Any) -> dict[str, Any]:
+    """App 表示用 runtime payload を作成."""
+    urls = _runtime_urls(app_config)
+    return {
+        "urls": urls,
+        "database": _runtime_database(app_config, urls),
+        "commands": _runtime_commands(app_config),
     }
 
 
@@ -199,10 +297,12 @@ async def list_apps() -> dict[str, Any]:
         cached = lifecycle.get_cached_health(app_config.name)
         status = cached.status.value if cached else AppStatus.UNKNOWN.value
         config_path = discovery.get_config_path(app_config.name)
+        runtime = _runtime_payload(app_config)
         items.append(
             {
                 "name": app_config.name,
                 "display_name": app_config.display_name,
+                "description": app_config.description,
                 "version": app_config.version,
                 "icon": app_config.icon,
                 "status": status,
@@ -213,7 +313,8 @@ async def list_apps() -> dict[str, Any]:
                 "contracts": app_config.contracts.model_dump(),
                 "visibility": app_config.visibility.model_dump(),
                 "blueprint": app_config.blueprint.model_dump(),
-                "urls": _runtime_urls(app_config),
+                "urls": runtime["urls"],
+                "runtime": runtime,
             }
         )
 
@@ -246,6 +347,18 @@ async def refresh_apps() -> dict[str, Any]:
         "unchanged": unchanged,
         "errors": discovery.list_errors(),
     }
+
+
+@router.post("/migrate-manifests")
+async def migrate_manifests(
+    dry_run: bool = Body(default=True, embed=True, description="true の場合は更新せず計画のみ返す"),
+) -> dict[str, Any]:
+    """全 app_config.json を標準契約へ移行する."""
+    discovery = _get_discovery()
+    report = discovery.migrate_manifests(dry_run=dry_run)
+    if not dry_run:
+        await discovery.scan()
+    return report
 
 
 @router.get("/ports/conflicts")
@@ -336,6 +449,7 @@ async def get_app_detail(app_name: str) -> dict[str, Any]:
     status = cached.status.value if cached else AppStatus.UNKNOWN.value
 
     config_path = discovery.get_config_path(app_name)
+    runtime = _runtime_payload(config)
     return {
         "name": config.name,
         "display_name": config.display_name,
@@ -352,7 +466,8 @@ async def get_app_detail(app_name: str) -> dict[str, Any]:
         "visibility": config.visibility.model_dump(),
         "blueprint": config.blueprint.model_dump(),
         "tags": config.tags,
-        "urls": _runtime_urls(config),
+        "urls": runtime["urls"],
+        "runtime": runtime,
         "config_path": str(config_path) if config_path else None,
     }
 
@@ -528,6 +643,19 @@ async def stop_app(app_name: str) -> dict[str, Any]:
     lifecycle = _get_lifecycle()
     config = _get_app_or_404(discovery, app_name)
     result = await lifecycle.stop_app(
+        config,
+        config_path=discovery.get_config_path(app_name),
+    )
+    return result.to_dict()
+
+
+@router.post("/{app_name}/local-start")
+async def local_start_app(app_name: str) -> dict[str, Any]:
+    """App をローカル開発モードで起動（バックエンド・フロントエンドをバックグラウンド起動）."""
+    discovery = _get_discovery()
+    lifecycle = _get_lifecycle()
+    config = _get_app_or_404(discovery, app_name)
+    result = await lifecycle.start_local_dev(
         config,
         config_path=discovery.get_config_path(app_name),
     )

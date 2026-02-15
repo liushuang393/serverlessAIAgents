@@ -24,6 +24,7 @@ import type {
   MCPConfigResponse,
   MCPLazyLoadingConfig,
   MCPServerConfig,
+  ManifestMigrationReport,
   PortConflictReport,
   RAGOverviewResponse,
   RAGPattern,
@@ -39,7 +40,7 @@ import type {
 /** axios インスタンス（通常 API 用） */
 const api = axios.create({
   baseURL: '/api',
-  timeout: 15000,
+  timeout: 60_000,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -100,9 +101,23 @@ export async function stopApp(appName: string): Promise<AppActionResponse> {
   return data;
 }
 
+/** App ローカル開発起動（バックエンド・フロントエンドをローカルで起動） */
+export async function localStartApp(appName: string): Promise<AppActionResponse> {
+  const { data } = await longRunningApi.post<AppActionResponse>(`/apps/${appName}/local-start`);
+  return data;
+}
+
 /** App 一覧を再スキャン */
 export async function refreshApps(): Promise<RefreshResponse> {
   const { data } = await api.post<RefreshResponse>('/apps/refresh');
+  return data;
+}
+
+/** app_config マニフェスト標準化 */
+export async function migrateManifests(dryRun = true): Promise<ManifestMigrationReport> {
+  const { data } = await api.post<ManifestMigrationReport>('/apps/migrate-manifests', {
+    dry_run: dryRun,
+  });
   return data;
 }
 

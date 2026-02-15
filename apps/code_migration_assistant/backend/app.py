@@ -50,6 +50,13 @@ class ApprovalRequest(BaseModel):
     approved: bool
     comment: str | None = None
 
+
+@app.get("/api/health")
+async def health_check() -> dict[str, str]:
+    """ヘルスチェック."""
+    return {"status": "ok", "service": "code_migration_assistant"}
+
+
 async def run_migration_task(task_id: str, engine: CodeMigrationEngine, inputs: dict):
     """Background task to run the engine and stream events via WebSocket."""
     logger.info(f"Starting migration task {task_id}")
@@ -233,4 +240,15 @@ app.mount("/", StaticFiles(directory="apps/code_migration_assistant/frontend", h
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8003)
+    import json
+
+    config_path = Path(__file__).resolve().parents[1] / "app_config.json"
+    config_raw: dict = {}
+    if config_path.is_file():
+        try:
+            config_raw = json.loads(config_path.read_text("utf-8"))
+        except json.JSONDecodeError:
+            config_raw = {}
+
+    api_port = config_raw.get("ports", {}).get("api", 8003)
+    uvicorn.run(app, host="0.0.0.0", port=int(api_port))

@@ -56,11 +56,98 @@
       "comfyui"
     ]
   },
+  "runtime": {
+    "urls": {
+      "backend": "http://localhost:8101",
+      "frontend": null,
+      "health": "http://localhost:8101/api/health",
+      "database": "postgresql+asyncpg://faq:faq_password@localhost:5433/faq_system"
+    },
+    "database": {
+      "kind": "postgresql",
+      "url": "postgresql+asyncpg://faq:faq_password@localhost:5433/faq_system",
+      "host": "localhost",
+      "port": 5433,
+      "name": "faq_system",
+      "user": "faq",
+      "password": "faq_password",
+      "password_env": "FAQ_DB_PASSWORD",
+      "note": "ローカル開発既定値（docker-compose.yml）。"
+    },
+    "commands": {
+      "backend_dev": "python -m apps.faq_system.main",
+      "frontend_dev": null,
+      "publish": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build",
+      "start": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
+      "stop": "docker compose -f docker-compose.yml -f docker-compose.dev.yml down"
+    }
+  },
   "tags": [
     "faq",
     "rag",
     "text2sql",
     "sales",
     "chat"
-  ]
+  ],
+  "contracts": {
+    "auth": {
+      "enabled": false,
+      "providers": [],
+      "allow_anonymous": true,
+      "required_scopes": [],
+      "session_ttl_minutes": 60
+    },
+    "rag": {
+      "enabled": true,
+      "pattern": null,
+      "provider": null,
+      "collections": [
+        "faq_system_knowledge"
+      ],
+      "data_sources": [],
+      "chunk_strategy": "recursive",
+      "chunk_size": 800,
+      "chunk_overlap": 120,
+      "retrieval_method": "hybrid",
+      "embedding_model": null,
+      "rerank_model": null,
+      "default_top_k": 5,
+      "score_threshold": null,
+      "indexing_schedule": null
+    },
+    "skills": {
+      "auto_install": false,
+      "hot_reload": true,
+      "allowed_sources": [],
+      "default_skills": []
+    },
+    "release": {
+      "strategy": "manual",
+      "targets": [],
+      "environments": [
+        "dev"
+      ],
+      "require_approval": true
+    }
+  },
+  "blueprint": {
+    "engine_pattern": "simple",
+    "flow_pattern": null,
+    "system_prompt": "",
+    "llm_provider": null,
+    "llm_base_url": null,
+    "llm_api_key_env": null,
+    "default_model": null,
+    "default_skills": [],
+    "vector_db_provider": null,
+    "vector_db_url": null,
+    "vector_db_collection": null,
+    "vector_db_api_key_env": null,
+    "mcp_servers": [],
+    "agents": []
+  },
+  "visibility": {
+    "mode": "private",
+    "tenants": []
+  }
 }

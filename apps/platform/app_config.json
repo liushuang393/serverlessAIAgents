@@ -11,7 +11,7 @@
     "redis": null
   },
   "entry_points": {
-    "api_module": "apps.platform.main:create_app",
+    "api_module": "apps.platform.main:app",
     "health": "/health"
   },
   "agents": [],
@@ -37,11 +37,96 @@
     "redis": false,
     "external": []
   },
+  "runtime": {
+    "urls": {
+      "backend": "http://localhost:8100",
+      "frontend": "http://localhost:3000",
+      "health": "http://localhost:8100/health",
+      "database": null
+    },
+    "database": {
+      "kind": null,
+      "url": null,
+      "host": null,
+      "port": null,
+      "name": null,
+      "user": null,
+      "password": null,
+      "password_env": null,
+      "note": null
+    },
+    "commands": {
+      "backend_dev": "python -m apps.platform.main serve",
+      "frontend_dev": "cd apps/platform/frontend && npm run dev",
+      "publish": null,
+      "start": null,
+      "stop": null
+    }
+  },
   "tags": [
     "platform",
     "management",
     "gallery",
     "publish",
     "dashboard"
-  ]
+  ],
+  "contracts": {
+    "auth": {
+      "enabled": false,
+      "providers": [],
+      "allow_anonymous": true,
+      "required_scopes": [],
+      "session_ttl_minutes": 60
+    },
+    "rag": {
+      "enabled": false,
+      "pattern": null,
+      "provider": null,
+      "collections": [],
+      "data_sources": [],
+      "chunk_strategy": "recursive",
+      "chunk_size": 800,
+      "chunk_overlap": 120,
+      "retrieval_method": "hybrid",
+      "embedding_model": null,
+      "rerank_model": null,
+      "default_top_k": 5,
+      "score_threshold": null,
+      "indexing_schedule": null
+    },
+    "skills": {
+      "auto_install": false,
+      "hot_reload": true,
+      "allowed_sources": [],
+      "default_skills": []
+    },
+    "release": {
+      "strategy": "manual",
+      "targets": [],
+      "environments": [
+        "dev"
+      ],
+      "require_approval": true
+    }
+  },
+  "blueprint": {
+    "engine_pattern": "simple",
+    "flow_pattern": null,
+    "system_prompt": "",
+    "llm_provider": null,
+    "llm_base_url": null,
+    "llm_api_key_env": null,
+    "default_model": null,
+    "default_skills": [],
+    "vector_db_provider": null,
+    "vector_db_url": null,
+    "vector_db_collection": null,
+    "vector_db_api_key_env": null,
+    "mcp_servers": [],
+    "agents": []
+  },
+  "visibility": {
+    "mode": "private",
+    "tenants": []
+  }
 }

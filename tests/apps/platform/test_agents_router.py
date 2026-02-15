@@ -29,8 +29,18 @@ class TestListAgents:
         agents = resp.json()["agents"]
         assert len(agents) > 0
         agent = agents[0]
-        required_keys = {"name", "app_name", "app_display_name", "app_icon", "module", "capabilities"}
+        required_keys = {
+            "name",
+            "app_name",
+            "app_display_name",
+            "app_icon",
+            "module",
+            "capabilities",
+            "capabilities_legacy",
+        }
         assert required_keys.issubset(agent.keys())
+        if agent["capabilities"]:
+            assert "id" in agent["capabilities"][0]
 
 
 class TestGetAgentStats:
@@ -60,14 +70,17 @@ class TestListCapabilities:
         assert data["total"] > 0
 
     def test_capability_structure(self, phase3_test_client: TestClient) -> None:
-        """各能力タグに tag, count, apps フィールドがある."""
+        """各能力タグに canonical フィールドがある."""
         resp = phase3_test_client.get("/api/agents/capabilities")
         caps = resp.json()["capabilities"]
         assert len(caps) > 0
         cap = caps[0]
-        assert "tag" in cap
+        assert "id" in cap
+        assert "domain" in cap
+        assert "label" in cap
         assert "count" in cap
         assert "apps" in cap
+        assert "aliases" in cap
 
 
 class TestAgentsByApp:
@@ -86,10 +99,13 @@ class TestAgentsByApp:
         """各グループに Agent リストが含まれる."""
         resp = phase3_test_client.get("/api/agents/by-app")
         groups = resp.json()["groups"]
-        assert "test_app" in groups
-        assert "rag_app" in groups
-        assert len(groups["test_app"]) == 2
-        assert len(groups["rag_app"]) == 2
+        assert isinstance(groups, list)
+        assert len(groups) == 2
+        by_app = {g["app_name"]: g for g in groups}
+        assert "test_app" in by_app
+        assert "rag_app" in by_app
+        assert len(by_app["test_app"]["agents"]) == 2
+        assert len(by_app["rag_app"]["agents"]) == 2
 
 
 class TestSearchAgents:
@@ -116,4 +132,3 @@ class TestSearchAgents:
         """必須パラメータなしは 422 を返す."""
         resp = phase3_test_client.get("/api/agents/search")
         assert resp.status_code == 422
-

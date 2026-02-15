@@ -110,6 +110,9 @@ class TestAppConfig:
         assert cfg.version == "1.0.0"
         assert cfg.icon == "📦"
         assert cfg.agents == []
+        assert cfg.runtime.urls.backend is None
+        assert cfg.runtime.database.user is None
+        assert cfg.runtime.commands.start is None
 
     def test_invalid_name_uppercase(self) -> None:
         """大文字を含む App 名を拒否する."""
@@ -140,4 +143,3 @@ class TestAppConfig:
         restored = AppConfig.model_validate(dumped)
         assert original.name == restored.name
         assert len(original.agents) == len(restored.agents)
-

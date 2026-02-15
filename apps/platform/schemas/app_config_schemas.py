@@ -103,6 +103,62 @@ class DependenciesConfig(BaseModel):
     )
 
 
+class RuntimeUrlsConfig(BaseModel):
+    """ランタイムURL設定."""
+
+    backend: str | None = Field(default=None, description="バックエンドURL")
+    frontend: str | None = Field(default=None, description="フロントエンドURL")
+    health: str | None = Field(default=None, description="ヘルスチェックURL")
+    database: str | None = Field(default=None, description="DB 接続URL（表示用）")
+
+
+class RuntimeDatabaseConfig(BaseModel):
+    """ランタイムDB接続設定."""
+
+    kind: str | None = Field(default=None, description="DB 種別")
+    url: str | None = Field(default=None, description="接続URL")
+    host: str | None = Field(default=None, description="ホスト")
+    port: int | None = Field(default=None, description="ポート")
+    name: str | None = Field(default=None, description="DB 名")
+    user: str | None = Field(default=None, description="ユーザー名")
+    password: str | None = Field(default=None, description="パスワード（ローカル開発用のみ）")
+    password_env: str | None = Field(default=None, description="パスワード環境変数名")
+    note: str | None = Field(default=None, description="補足")
+
+    @field_validator("port", mode="before")
+    @classmethod
+    def validate_port_range(cls, v: int | None) -> int | None:
+        """ポート番号が有効範囲内か検証."""
+        if v is not None and not (_PORT_MIN <= v <= _PORT_MAX):
+            msg = f"ポート番号は {_PORT_MIN}〜{_PORT_MAX} の範囲: {v}"
+            raise ValueError(msg)
+        return v
+
+
+class RuntimeCommandsConfig(BaseModel):
+    """ランタイムコマンド設定."""
+
+    backend_dev: str | None = Field(default=None, description="バックエンド開発起動コマンド")
+    frontend_dev: str | None = Field(default=None, description="フロントエンド開発起動コマンド")
+    publish: str | None = Field(default=None, description="publish コマンド")
+    start: str | None = Field(default=None, description="start コマンド")
+    stop: str | None = Field(default=None, description="stop コマンド")
+
+
+class RuntimeConfig(BaseModel):
+    """ランタイム設定."""
+
+    urls: RuntimeUrlsConfig = Field(default_factory=RuntimeUrlsConfig, description="URL 設定")
+    database: RuntimeDatabaseConfig = Field(
+        default_factory=RuntimeDatabaseConfig,
+        description="DB 接続設定",
+    )
+    commands: RuntimeCommandsConfig = Field(
+        default_factory=RuntimeCommandsConfig,
+        description="起動/停止コマンド設定",
+    )
+
+
 class AuthContractConfig(BaseModel):
     """認証契約設定."""
 
@@ -230,6 +286,7 @@ class AppConfig(BaseModel):
         agents: Agent メタデータ一覧
         services: 利用サービス情報（自由形式）
         dependencies: 依存設定
+        runtime: ランタイムURL/DB/コマンド設定
         contracts: プラットフォーム契約設定
         tags: 検索用タグ
     """
@@ -257,6 +314,10 @@ class AppConfig(BaseModel):
     )
     dependencies: DependenciesConfig = Field(
         default_factory=DependenciesConfig, description="依存設定"
+    )
+    runtime: RuntimeConfig = Field(
+        default_factory=RuntimeConfig,
+        description="ランタイム設定",
     )
     contracts: ContractsConfig = Field(
         default_factory=ContractsConfig,

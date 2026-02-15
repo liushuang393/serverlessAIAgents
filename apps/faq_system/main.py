@@ -1106,5 +1106,16 @@ async def health_check() -> dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
+    import json
+    from pathlib import Path
 
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    config_path = Path(__file__).resolve().parent / "app_config.json"
+    config_raw: dict = {}
+    if config_path.is_file():
+        try:
+            config_raw = json.loads(config_path.read_text("utf-8"))
+        except json.JSONDecodeError:
+            config_raw = {}
+
+    api_port = config_raw.get("ports", {}).get("api", 8001)
+    uvicorn.run(app, host="0.0.0.0", port=int(api_port))

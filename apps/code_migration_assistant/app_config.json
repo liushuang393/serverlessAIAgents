@@ -18,42 +18,182 @@
     {
       "name": "CodeMigrationAgent",
       "module": "apps.code_migration_assistant.agent",
-      "capabilities": ["migration", "cobol", "java", "parsing", "transform"]
+      "capabilities": [
+        "migration",
+        "cobol",
+        "java",
+        "parsing",
+        "transform"
+      ]
     },
     {
       "name": "TransformAgent",
       "module": "apps.code_migration_assistant.agents.transform_agent",
-      "capabilities": ["code_transform"]
+      "capabilities": [
+        "code_transform"
+      ]
     },
     {
       "name": "TestGenAgent",
       "module": "apps.code_migration_assistant.agents.testgen_agent",
-      "capabilities": ["test_generation"]
+      "capabilities": [
+        "test_generation"
+      ]
     },
     {
       "name": "CheckerAgent",
       "module": "apps.code_migration_assistant.agents.checker_agent",
-      "capabilities": ["verification"]
+      "capabilities": [
+        "verification"
+      ]
     },
     {
       "name": "FixerAgent",
       "module": "apps.code_migration_assistant.agents.fixer_agent",
-      "capabilities": ["auto_fix"]
+      "capabilities": [
+        "auto_fix"
+      ]
     },
     {
       "name": "CoordinatorAgent",
       "module": "apps.code_migration_assistant.agents.coordinator_agent",
-      "capabilities": ["orchestration"]
+      "capabilities": [
+        "orchestration"
+      ]
     }
   ],
   "services": {
-    "mcp": { "tools": ["cobol_parser", "java_generator", "code_validator"] }
+    "mcp": {
+      "tools": [
+        "cobol_parser",
+        "java_generator",
+        "code_validator"
+      ]
+    },
+    "rag": {
+      "enabled": true,
+      "pattern": null,
+      "chunking": {
+        "strategy": "recursive",
+        "size": 800,
+        "overlap": 120
+      },
+      "retrieval": {
+        "method": "hybrid",
+        "reranker": null,
+        "top_k": 5,
+        "score_threshold": null
+      },
+      "data_sources": [],
+      "indexing_schedule": null
+    },
+    "vector_db": {
+      "provider": "qdrant",
+      "url": null,
+      "collection": "code_migration_assistant_knowledge"
+    }
   },
   "dependencies": {
     "database": null,
     "redis": false,
-    "external": []
+    "external": [
+      "qdrant",
+      "vector_store"
+    ]
   },
-  "tags": ["migration", "cobol", "java", "legacy", "code-transform"]
+  "runtime": {
+    "urls": {
+      "backend": "http://localhost:8003",
+      "frontend": null,
+      "health": "http://localhost:8003/api/health",
+      "database": null
+    },
+    "database": {
+      "kind": null,
+      "url": null,
+      "host": null,
+      "port": null,
+      "name": null,
+      "user": null,
+      "password": null,
+      "password_env": null,
+      "note": null
+    },
+    "commands": {
+      "backend_dev": "bash run_server.sh",
+      "frontend_dev": null,
+      "publish": null,
+      "start": null,
+      "stop": null
+    }
+  },
+  "tags": [
+    "cobol",
+    "code-transform",
+    "java",
+    "legacy",
+    "migration",
+    "rag"
+  ],
+  "contracts": {
+    "rag": {
+      "enabled": true,
+      "pattern": null,
+      "provider": "qdrant",
+      "collections": [
+        "code_migration_assistant_knowledge"
+      ],
+      "data_sources": [],
+      "chunk_strategy": "recursive",
+      "chunk_size": 800,
+      "chunk_overlap": 120,
+      "retrieval_method": "hybrid",
+      "embedding_model": null,
+      "rerank_model": null,
+      "default_top_k": 5,
+      "score_threshold": null,
+      "indexing_schedule": null
+    },
+    "auth": {
+      "enabled": false,
+      "providers": [],
+      "allow_anonymous": true,
+      "required_scopes": [],
+      "session_ttl_minutes": 60
+    },
+    "skills": {
+      "auto_install": false,
+      "hot_reload": true,
+      "allowed_sources": [],
+      "default_skills": []
+    },
+    "release": {
+      "strategy": "manual",
+      "targets": [],
+      "environments": [
+        "dev"
+      ],
+      "require_approval": true
+    }
+  },
+  "blueprint": {
+    "engine_pattern": "simple",
+    "flow_pattern": null,
+    "system_prompt": "",
+    "llm_provider": null,
+    "llm_base_url": null,
+    "llm_api_key_env": null,
+    "default_model": null,
+    "default_skills": [],
+    "vector_db_provider": null,
+    "vector_db_url": null,
+    "vector_db_collection": null,
+    "vector_db_api_key_env": null,
+    "mcp_servers": [],
+    "agents": []
+  },
+  "visibility": {
+    "mode": "private",
+    "tenants": []
+  }
 }
-

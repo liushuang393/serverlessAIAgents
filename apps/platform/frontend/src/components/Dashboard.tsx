@@ -80,12 +80,15 @@ export function Dashboard() {
               </Link>
             </div>
             <div className="divide-y divide-slate-800/50">
-              {apps.map((app) => (
-                <Link
-                  key={app.name}
-                  to={`/apps/${app.name}`}
-                  className="flex items-center gap-4 px-5 py-3 hover:bg-slate-800/30 transition-colors"
-                >
+              {apps.map((app) => {
+                const backendUrl = app.ports.api ? `http://localhost:${app.ports.api}` : app.urls?.backend;
+                const frontendUrl = app.ports.frontend ? `http://localhost:${app.ports.frontend}` : app.urls?.frontend;
+                return (
+                  <Link
+                    key={app.name}
+                    to={`/apps/${app.name}`}
+                    className="flex items-center gap-4 px-5 py-3 hover:bg-slate-800/30 transition-colors"
+                  >
                   <span className="text-2xl">{app.icon}</span>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-200 truncate">
@@ -93,14 +96,14 @@ export function Dashboard() {
                     </p>
                     <p className="text-xs text-slate-500">{app.name}</p>
                     <div className="mt-1 space-y-0.5">
-                      {app.urls?.backend && (
+                      {backendUrl && (
                         <p className="text-[11px] text-slate-500 font-mono truncate">
-                          API: {app.urls.backend}
+                          API: {backendUrl}
                         </p>
                       )}
-                      {app.urls?.frontend && (
+                      {frontendUrl && (
                         <p className="text-[11px] text-slate-500 font-mono truncate">
-                          FE: {app.urls.frontend}
+                          FE: {frontendUrl}
                         </p>
                       )}
                       {app.urls?.database && (
@@ -114,8 +117,9 @@ export function Dashboard() {
                     {app.agent_count} agents
                   </span>
                   <AppHealthBadge status={app.status} />
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
               {apps.length === 0 && (
                 <p className="px-5 py-8 text-center text-sm text-slate-500">
                   No apps registered

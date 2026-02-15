@@ -3,7 +3,10 @@
 CLI および FastAPI サーバーのエントリーポイント。
 
 使用例:
-    # サーバー起動
+    # サーバー起動（uvicorn 直接）
+    uvicorn apps.platform.main:app --reload --host 0.0.0.0 --port 8000
+
+    # サーバー起動（CLI 経由）
     python -m apps.platform.main serve
 
     # CLI操作
@@ -14,10 +17,12 @@ CLI および FastAPI サーバーのエントリーポイント。
 
 import argparse
 import asyncio
+import json
 import logging
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 import uvicorn
@@ -49,6 +54,12 @@ from apps.platform.services.rag_overview import RAGOverviewService
 from apps.platform.services.skill_catalog import SkillCatalogService
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# --- app_config.json からポート設定を読み取る（単一定義元） ---
+_CONFIG_PATH = Path(__file__).resolve().parent / "app_config.json"
+_app_config: dict = json.loads(_CONFIG_PATH.read_text("utf-8")) if _CONFIG_PATH.is_file() else {}
+DEFAULT_API_PORT: int = _app_config.get("ports", {}).get("api", 8000)
+"""API サーバーのデフォルトポート（app_config.json の ports.api）."""
 
 
 @asynccontextmanager
@@ -320,7 +331,7 @@ def main() -> None:
     # serve コマンド
     serve_parser = subparsers.add_parser("serve", help="APIサーバーを起動")
     serve_parser.add_argument("--host", default="0.0.0.0", help="ホスト")
-    serve_parser.add_argument("--port", type=int, default=8000, help="ポート")
+    serve_parser.add_argument("--port", type=int, default=DEFAULT_API_PORT, help="ポート")
 
     # search コマンド
     search_parser = subparsers.add_parser("search", help="Gallery検索")
@@ -376,6 +387,10 @@ def main() -> None:
     else:
         parser.print_help()
 
+
+# --- モジュールレベル app インスタンス ---
+# uvicorn apps.platform.main:app で直接起動するために必要。
+app = create_app()
 
 if __name__ == "__main__":
     main()

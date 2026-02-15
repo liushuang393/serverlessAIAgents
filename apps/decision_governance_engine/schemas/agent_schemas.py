@@ -50,7 +50,7 @@ class ReviewVerdict(str, Enum):
 
     PASS = "PASS"
     REVISE = "REVISE"
-    REJECT = "REJECT"
+    COACH = "COACH"  # 旧 REJECT → コーチング型改善指導（即終了せずレポートに指摘を表示）
 
 
 class FindingSeverity(str, Enum):

@@ -153,7 +153,9 @@ workflow:
       agent: qi
     - name: verification
       agent: review
+      on_coach: interactive_improvement  # COACHの場合はユーザーと対話して改善指導
       on_revise: rollback  # REVISEの場合は該当Agentに回退
+      description: 検証 + コーチング型改善指導（REJECT廃止、課題があればCOACHモードで改善ループ）
 
 # Studio UI（React Flow）用ノード定義
 studio:

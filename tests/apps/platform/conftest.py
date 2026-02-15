@@ -7,13 +7,15 @@ Phase 0-1 および Phase 3 (Agent/Skill/RAG) のテストで共有する。
 
 from __future__ import annotations
 
+import asyncio
 import json
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
+import httpx
 import pytest
-from fastapi.testclient import TestClient
+from httpx import Response
 
 from apps.platform.schemas.app_config_schemas import AppConfig
 from apps.platform.services.agent_aggregator import AgentAggregatorService
@@ -21,6 +23,31 @@ from apps.platform.services.app_discovery import AppDiscoveryService
 from apps.platform.services.app_lifecycle import AppLifecycleManager
 from apps.platform.services.rag_overview import RAGOverviewService
 from apps.platform.services.skill_catalog import SkillCatalogService
+
+
+class SyncASGIClient:
+    """pytest 用の同期 ASGI クライアント."""
+
+    def __init__(self, app: Any, base_url: str = "http://testserver") -> None:
+        self._loop = asyncio.new_event_loop()
+        self._transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
+        self._client = httpx.AsyncClient(transport=self._transport, base_url=base_url)
+
+    def request(self, method: str, url: str, **kwargs: Any) -> Response:
+        return self._loop.run_until_complete(self._client.request(method, url, **kwargs))
+
+    def get(self, url: str, **kwargs: Any) -> Response:
+        return self.request("GET", url, **kwargs)
+
+    def post(self, url: str, **kwargs: Any) -> Response:
+        return self.request("POST", url, **kwargs)
+
+    def patch(self, url: str, **kwargs: Any) -> Response:
+        return self.request("PATCH", url, **kwargs)
+
+    def close(self) -> None:
+        self._loop.run_until_complete(self._client.aclose())
+        self._loop.close()
 
 
 # ------------------------------------------------------------------
@@ -172,7 +199,7 @@ def lifecycle() -> AppLifecycleManager:
 
 
 @pytest.fixture()
-def test_client(apps_dir: Path) -> TestClient:
+def test_client(apps_dir: Path) -> SyncASGIClient:
     """Platform FastAPI TestClient を返す（サービス初期化 + scan 済み）."""
     import asyncio
 
@@ -193,10 +220,13 @@ def test_client(apps_dir: Path) -> TestClient:
     init_app_services(disc, lc)
 
     # scan() を同期的に実行してレジストリにデータを投入
-    asyncio.get_event_loop().run_until_complete(disc.scan())
+    asyncio.run(disc.scan())
 
-    with TestClient(app, raise_server_exceptions=False) as client:
+    client = SyncASGIClient(app)
+    try:
         yield client
+    finally:
+        client.close()
 
 
 # ------------------------------------------------------------------
@@ -237,16 +267,14 @@ def discovery_with_rag(apps_dir_with_rag: Path) -> AppDiscoveryService:
 @pytest.fixture()
 def aggregator(discovery: AppDiscoveryService) -> AgentAggregatorService:
     """スキャン済み AppDiscoveryService を使う AgentAggregatorService."""
-    import asyncio
-    asyncio.get_event_loop().run_until_complete(discovery.scan())
+    asyncio.run(discovery.scan())
     return AgentAggregatorService(discovery)
 
 
 @pytest.fixture()
 def aggregator_with_rag(discovery_with_rag: AppDiscoveryService) -> AgentAggregatorService:
     """RAG 対応 App を含む AgentAggregatorService."""
-    import asyncio
-    asyncio.get_event_loop().run_until_complete(discovery_with_rag.scan())
+    asyncio.run(discovery_with_rag.scan())
     return AgentAggregatorService(discovery_with_rag)
 
 
@@ -277,22 +305,20 @@ def skills_dir(tmp_path: Path) -> Path:
 @pytest.fixture()
 def skill_catalog(skills_dir: Path) -> SkillCatalogService:
     """テスト用 SkillCatalogService（スキャン済み）."""
-    import asyncio
     catalog = SkillCatalogService(skills_dir=skills_dir)
-    asyncio.get_event_loop().run_until_complete(catalog.scan())
+    asyncio.run(catalog.scan())
     return catalog
 
 
 @pytest.fixture()
 def rag_overview(discovery_with_rag: AppDiscoveryService) -> RAGOverviewService:
     """RAG 対応 App を含む RAGOverviewService."""
-    import asyncio
-    asyncio.get_event_loop().run_until_complete(discovery_with_rag.scan())
+    asyncio.run(discovery_with_rag.scan())
     return RAGOverviewService(discovery_with_rag)
 
 
 @pytest.fixture()
-def phase3_test_client(apps_dir_with_rag: Path, skills_dir: Path) -> TestClient:
+def phase3_test_client(apps_dir_with_rag: Path, skills_dir: Path) -> SyncASGIClient:
     """Phase 3 全サービス初期化済み TestClient."""
     import asyncio
     from contextlib import asynccontextmanager
@@ -315,7 +341,7 @@ def phase3_test_client(apps_dir_with_rag: Path, skills_dir: Path) -> TestClient:
     disc = AppDiscoveryService(apps_dir=apps_dir_with_rag)
     lc = AppLifecycleManager()
     init_app_services(disc, lc)
-    asyncio.get_event_loop().run_until_complete(disc.scan())
+    asyncio.run(disc.scan())
 
     # Agent サービス
     agg = AgentAggregatorService(disc)
@@ -323,12 +349,15 @@ def phase3_test_client(apps_dir_with_rag: Path, skills_dir: Path) -> TestClient:
 
     # Skill サービス
     catalog = SkillCatalogService(skills_dir=skills_dir)
-    asyncio.get_event_loop().run_until_complete(catalog.scan())
+    asyncio.run(catalog.scan())
     init_skill_services(catalog)
 
     # RAG サービス
     rag = RAGOverviewService(disc)
     init_rag_services(rag)
 
-    with TestClient(app, raise_server_exceptions=False) as client:
+    client = SyncASGIClient(app)
+    try:
         yield client
+    finally:
+        client.close()

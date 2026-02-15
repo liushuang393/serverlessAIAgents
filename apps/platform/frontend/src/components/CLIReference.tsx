@@ -163,8 +163,8 @@ const PLATFORM_CLI_GROUPS: CLIGroup[] = [
       {
         command: 'serve',
         description: 'Platform API サーバーを起動',
-        usage: 'python -m apps.platform.main serve --port 8001',
-        options: ['--host: バインドホスト（デフォルト: 0.0.0.0）', '--port: ポート番号（開発: 8001 / 本番: 8000）'],
+        usage: 'python -m apps.platform.main serve',
+        options: ['--host: バインドホスト（デフォルト: 0.0.0.0）', '--port: 明示上書き（通常は app_config.json を使用）'],
       },
     ],
   },
@@ -376,7 +376,7 @@ export function CLIReference() {
           </div>
           <div className="bg-slate-900/60 rounded px-4 py-3">
             <p className="text-slate-500 mb-1"># バックエンド起動（ローカル開発）</p>
-            <p className="text-emerald-400">$ python -m apps.platform.main serve --port 8001</p>
+            <p className="text-emerald-400">$ python -m apps.platform.main serve</p>
           </div>
           <div className="bg-slate-900/60 rounded px-4 py-3">
             <p className="text-slate-500 mb-1"># フロントエンド起動（別ターミナル）</p>
@@ -392,4 +392,3 @@ export function CLIReference() {
     </div>
   );
 }
-

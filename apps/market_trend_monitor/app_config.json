@@ -4,9 +4,6 @@
   "description": "AIエージェント群による市場トレンド収集・分析・レポート生成システム",
   "version": "1.0.0",
   "icon": "📈",
-  "api_host": "0.0.0.0",
-  "api_port": 8002,
-  "frontend_port": 3002,
   "ports": {
     "api": 8002,
     "frontend": 3002,
@@ -21,56 +18,176 @@
     {
       "name": "CollectorAgent",
       "module": "apps.market_trend_monitor.backend.agents.collector_agent",
-      "capabilities": ["data_collection", "web_scraping"]
+      "capabilities": [
+        "data_collection",
+        "web_scraping"
+      ]
     },
     {
       "name": "AnalyzerAgent",
       "module": "apps.market_trend_monitor.backend.agents.analyzer_agent",
-      "capabilities": ["analysis", "trend_detection"]
+      "capabilities": [
+        "analysis",
+        "trend_detection"
+      ]
     },
     {
       "name": "SignalScorerAgent",
       "module": "apps.market_trend_monitor.backend.agents.signal_scorer_agent",
-      "capabilities": ["signal_scoring", "ranking"]
+      "capabilities": [
+        "signal_scoring",
+        "ranking"
+      ]
     },
     {
       "name": "EvidenceLedgerAgent",
       "module": "apps.market_trend_monitor.backend.agents.evidence_ledger_agent",
-      "capabilities": ["evidence_tracking", "audit"]
+      "capabilities": [
+        "evidence_tracking",
+        "audit"
+      ]
     },
     {
       "name": "CompetitorTrackingAgent",
       "module": "apps.market_trend_monitor.backend.agents.competitor_tracking_agent",
-      "capabilities": ["competitor_analysis", "benchmarking"]
+      "capabilities": [
+        "competitor_analysis",
+        "benchmarking"
+      ]
     },
     {
       "name": "PredictionReviewAgent",
       "module": "apps.market_trend_monitor.backend.agents.prediction_review_agent",
-      "capabilities": ["prediction", "review"]
+      "capabilities": [
+        "prediction",
+        "review"
+      ]
     },
     {
       "name": "RedteamAgent",
       "module": "apps.market_trend_monitor.backend.agents.redteam_agent",
-      "capabilities": ["adversarial", "validation"]
+      "capabilities": [
+        "adversarial",
+        "validation"
+      ]
     },
     {
       "name": "ReporterAgent",
       "module": "apps.market_trend_monitor.backend.agents.reporter_agent",
-      "capabilities": ["reporting", "summarization"]
+      "capabilities": [
+        "reporting",
+        "summarization"
+      ]
     },
     {
       "name": "NotifierAgent",
       "module": "apps.market_trend_monitor.backend.agents.notifier_agent",
-      "capabilities": ["notification", "alerting"]
+      "capabilities": [
+        "notification",
+        "alerting"
+      ]
     }
   ],
   "services": {
-    "workflow": { "engine": "MarketTrendWorkflow" }
+    "workflow": {
+      "engine": "MarketTrendWorkflow"
+    }
   },
   "dependencies": {
     "database": "sqlite",
     "redis": false,
     "external": []
   },
-  "tags": ["market", "trend", "monitoring", "analysis", "prediction"]
+  "runtime": {
+    "urls": {
+      "backend": "http://localhost:8002",
+      "frontend": "http://localhost:3002",
+      "health": "http://localhost:8002/health",
+      "database": "sqlite:///./market_trend.db"
+    },
+    "database": {
+      "kind": "sqlite",
+      "url": "sqlite:///./market_trend.db",
+      "host": null,
+      "port": null,
+      "name": "market_trend.db",
+      "user": null,
+      "password": null,
+      "password_env": null,
+      "note": "ローカルファイルDB"
+    },
+    "commands": {
+      "backend_dev": "python -m apps.market_trend_monitor.backend.api.main",
+      "frontend_dev": "cd apps/market_trend_monitor/frontend && npm run dev",
+      "publish": null,
+      "start": null,
+      "stop": null
+    }
+  },
+  "tags": [
+    "market",
+    "trend",
+    "monitoring",
+    "analysis",
+    "prediction"
+  ],
+  "contracts": {
+    "auth": {
+      "enabled": false,
+      "providers": [],
+      "allow_anonymous": true,
+      "required_scopes": [],
+      "session_ttl_minutes": 60
+    },
+    "rag": {
+      "enabled": false,
+      "pattern": null,
+      "provider": null,
+      "collections": [],
+      "data_sources": [],
+      "chunk_strategy": "recursive",
+      "chunk_size": 800,
+      "chunk_overlap": 120,
+      "retrieval_method": "hybrid",
+      "embedding_model": null,
+      "rerank_model": null,
+      "default_top_k": 5,
+      "score_threshold": null,
+      "indexing_schedule": null
+    },
+    "skills": {
+      "auto_install": false,
+      "hot_reload": true,
+      "allowed_sources": [],
+      "default_skills": []
+    },
+    "release": {
+      "strategy": "manual",
+      "targets": [],
+      "environments": [
+        "dev"
+      ],
+      "require_approval": true
+    }
+  },
+  "blueprint": {
+    "engine_pattern": "simple",
+    "flow_pattern": null,
+    "system_prompt": "",
+    "llm_provider": null,
+    "llm_base_url": null,
+    "llm_api_key_env": null,
+    "default_model": null,
+    "default_skills": [],
+    "vector_db_provider": null,
+    "vector_db_url": null,
+    "vector_db_collection": null,
+    "vector_db_api_key_env": null,
+    "mcp_servers": [],
+    "agents": []
+  },
+  "visibility": {
+    "mode": "private",
+    "tenants": []
+  }
 }

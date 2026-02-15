@@ -170,3 +170,35 @@ class TestAppLifecycleManager:
 
             result = await lifecycle.check_health(cfg)
             assert result.status == AppStatus.STOPPED
+
+    @pytest.mark.asyncio()
+    async def test_start_uses_runtime_command_override(
+        self, lifecycle: AppLifecycleManager, tmp_path,
+    ) -> None:
+        """runtime.commands.start がある場合は compose より優先する."""
+        cfg = AppConfig(
+            name="cmd_app",
+            display_name="Command App",
+            ports={"api": None},
+            entry_points={"health": None},
+            runtime={"commands": {"start": "echo start-from-config"}},
+        )
+        app_dir = tmp_path / "cmd_app"
+        app_dir.mkdir()
+        config_path = app_dir / "app_config.json"
+        config_path.write_text("{}", encoding="utf-8")
+
+        class _Proc:
+            returncode = 0
+
+            async def communicate(self):
+                return b"started", b""
+
+        with patch("apps.platform.services.app_lifecycle.asyncio.create_subprocess_exec", new=AsyncMock(return_value=_Proc())) as mocked:
+            result = await lifecycle.start_app(cfg, config_path=config_path)
+
+        assert result.success is True
+        assert result.return_code == 0
+        assert result.command[:2] == ["bash", "-lc"]
+        assert result.cwd == str(app_dir)
+        mocked.assert_called_once()

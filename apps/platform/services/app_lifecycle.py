@@ -364,6 +364,107 @@ class AppLifecycleManager:
             run_health_check=False,
         )
 
+    async def start_local_dev(
+        self,
+        config: AppConfig,
+        *,
+        config_path: Path | None = None,
+    ) -> AppActionResult:
+        """App をローカル開発モードで起動（バックエンド・フロントエンドをバックグラウンドで起動）.
+
+        runtime.commands.backend_dev / frontend_dev のコマンドを実行する。
+        DBはDockerで起動済みを前提とし、アプリのみをローカルで実行する。
+
+        Args:
+            config: App 設定
+            config_path: app_config.json のパス
+
+        Returns:
+            実行結果
+        """
+        _logger.info("[%s] local_start 開始", config.name)
+
+        if config_path is None:
+            _logger.warning("[%s] config_path が None — 中断", config.name)
+            return AppActionResult(
+                app_name=config.name,
+                action="local_start",
+                success=False,
+                command=[],
+                cwd="",
+                error="app_config.json のパスが取得できません",
+            )
+
+        # プロジェクトルートを取得（app_config.json の2階層上）
+        project_root = config_path.parent.parent.parent
+
+        # runtime.commands から開発コマンドを取得
+        backend_cmd = self._resolve_action_command(config, "backend_dev")
+        frontend_cmd = self._resolve_action_command(config, "frontend_dev")
+
+        if backend_cmd is None and frontend_cmd is None:
+            return AppActionResult(
+                app_name=config.name,
+                action="local_start",
+                success=False,
+                command=[],
+                cwd=str(project_root),
+                error="runtime.commands に backend_dev/frontend_dev が設定されていません",
+            )
+
+        results: list[str] = []
+        errors: list[str] = []
+
+        # バックエンド起動（バックグラウンド）
+        if backend_cmd:
+            try:
+                # nohup でバックグラウンド実行
+                full_cmd = f"nohup bash -lc '{backend_cmd}' > /tmp/{config.name}_backend.log 2>&1 &"
+                _logger.info("[%s] バックエンド起動: %s", config.name, backend_cmd)
+                proc = await asyncio.create_subprocess_shell(
+                    full_cmd,
+                    cwd=str(project_root),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                await proc.communicate()
+                results.append(f"backend: {backend_cmd}")
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"backend error: {exc}")
+                _logger.exception("[%s] バックエンド起動失敗", config.name)
+
+        # フロントエンド起動（バックグラウンド）
+        if frontend_cmd:
+            try:
+                full_cmd = f"nohup bash -lc '{frontend_cmd}' > /tmp/{config.name}_frontend.log 2>&1 &"
+                _logger.info("[%s] フロントエンド起動: %s", config.name, frontend_cmd)
+                proc = await asyncio.create_subprocess_shell(
+                    full_cmd,
+                    cwd=str(project_root),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                await proc.communicate()
+                results.append(f"frontend: {frontend_cmd}")
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"frontend error: {exc}")
+                _logger.exception("[%s] フロントエンド起動失敗", config.name)
+
+        success = len(errors) == 0 and len(results) > 0
+        stdout_msg = "\n".join(results) if results else ""
+        error_msg = "\n".join(errors) if errors else None
+
+        return AppActionResult(
+            app_name=config.name,
+            action="local_start",
+            success=success,
+            command=["bash", "-lc", backend_cmd or "", frontend_cmd or ""],
+            cwd=str(project_root),
+            stdout=stdout_msg,
+            stderr="",
+            error=error_msg,
+        )
+
     async def _run_compose_action(
         self,
         config: AppConfig,
@@ -396,6 +497,17 @@ class AppLifecycleManager:
             )
 
         app_dir = config_path.parent
+        command_override = self._resolve_action_command(config, action)
+        if command_override is not None:
+            return await self._run_shell_action(
+                config,
+                app_dir=app_dir,
+                config_path=config_path,
+                action=action,
+                shell_command=command_override,
+                run_health_check=run_health_check,
+            )
+
         compose_files = self._resolve_compose_files(app_dir, include_dev=True)
         if not compose_files:
             _logger.warning(
@@ -408,7 +520,10 @@ class AppLifecycleManager:
                 success=False,
                 command=[],
                 cwd=str(app_dir),
-                error=f"docker-compose.yml が見つかりません (dir={app_dir})",
+                error=(
+                    f"実行コマンド未設定かつ docker-compose.yml が見つかりません"
+                    f" (dir={app_dir})"
+                ),
             )
 
         command = ["docker", "compose"]
@@ -451,6 +566,88 @@ class AppLifecycleManager:
             stdout = ""
             stderr = ""
             error = f"docker compose がタイムアウトしました（{_ACTION_TIMEOUT:.0f}s）"
+            proc = None
+            _logger.error("[%s] %s: %s", config.name, action, error)
+        except Exception as exc:  # noqa: BLE001
+            success = False
+            stdout = ""
+            stderr = ""
+            error = str(exc)
+            proc = None
+            _logger.exception("[%s] %s: 予期しないエラー", config.name, action)
+
+        checked_health: HealthCheckResult | None = None
+        if success and run_health_check:
+            checked_health = await self.check_health(config, config_path=config_path)
+        elif success and action == "stop":
+            checked_health = HealthCheckResult(
+                config.name,
+                AppStatus.STOPPED,
+                details={"message": "停止コマンドを実行しました"},
+            )
+            self._health_cache[config.name] = checked_health
+
+        return AppActionResult(
+            app_name=config.name,
+            action=action,
+            success=success,
+            command=command,
+            cwd=str(app_dir),
+            return_code=None if proc is None else proc.returncode,
+            stdout=self._trim_output(stdout),
+            stderr=self._trim_output(stderr),
+            error=error,
+            checked_health=checked_health,
+        )
+
+    async def _run_shell_action(
+        self,
+        config: AppConfig,
+        *,
+        app_dir: Path,
+        config_path: Path | None,
+        action: str,
+        shell_command: str,
+        run_health_check: bool,
+    ) -> AppActionResult:
+        """runtime.commands の shell コマンドを実行."""
+        command = ["bash", "-lc", shell_command]
+        _logger.info("[%s] 実行: %s (cwd=%s)", config.name, shell_command, app_dir)
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *command,
+                cwd=str(app_dir),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(
+                proc.communicate(),
+                timeout=_ACTION_TIMEOUT,
+            )
+            stdout = stdout_bytes.decode("utf-8", errors="ignore").strip()
+            stderr = stderr_bytes.decode("utf-8", errors="ignore").strip()
+            success = proc.returncode == 0
+            error = None if success else (stderr or stdout or "コマンド実行に失敗")
+            if success:
+                _logger.info("[%s] %s 成功 (rc=%s)", config.name, action, proc.returncode)
+            else:
+                _logger.warning(
+                    "[%s] %s 失敗 (rc=%s): %s",
+                    config.name, action, proc.returncode, error,
+                )
+        except FileNotFoundError:
+            success = False
+            stdout = ""
+            stderr = ""
+            error = "bash コマンドが見つかりません"
+            proc = None
+            _logger.error("[%s] %s: %s", config.name, action, error)
+        except TimeoutError:
+            success = False
+            stdout = ""
+            stderr = ""
+            error = f"コマンドがタイムアウトしました（{_ACTION_TIMEOUT:.0f}s）"
             proc = None
             _logger.error("[%s] %s: %s", config.name, action, error)
         except Exception as exc:  # noqa: BLE001
@@ -738,6 +935,20 @@ class AppLifecycleManager:
                     files.append(path)
                     break
         return files
+
+    @staticmethod
+    def _resolve_action_command(config: AppConfig, action: str) -> str | None:
+        """runtime.commands から action 用コマンドを取得."""
+        commands = config.runtime.commands
+        value = {
+            "publish": commands.publish,
+            "start": commands.start,
+            "stop": commands.stop,
+        }.get(action)
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped if stripped else None
 
     @staticmethod
     def _extract_json_payload(response: httpx.Response) -> dict[str, Any] | list[Any] | None:

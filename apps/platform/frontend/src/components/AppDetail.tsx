@@ -7,9 +7,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import axios from 'axios';
-import { publishApp, startApp, stopApp } from '@/api/client';
+import { localStartApp, publishApp, startApp, stopApp } from '@/api/client';
 import { useAppStore } from '@/store/useAppStore';
-import type { AppActionResponse, HealthCheckAttempt } from '@/types';
+import type { AppActionResponse, HealthCheckAttempt, RuntimeCommands } from '@/types';
 import { AppHealthBadge } from './AppHealthBadge';
 
 export function AppDetail() {
@@ -22,7 +22,7 @@ export function AppDetail() {
     loadAppDetail,
     checkHealth,
   } = useAppStore();
-  const [actionLoading, setActionLoading] = useState<'publish' | 'start' | 'stop' | null>(null);
+  const [actionLoading, setActionLoading] = useState<'publish' | 'start' | 'stop' | 'local-start' | null>(null);
   const [actionResult, setActionResult] = useState<AppActionResponse | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -40,12 +40,27 @@ export function AppDetail() {
   const healthDetails = health?.details;
   const attempts = (healthDetails?.attempts ?? []) as HealthCheckAttempt[];
 
-  const runAction = async (action: 'publish' | 'start' | 'stop') => {
+  const runAction = async (action: 'publish' | 'start' | 'stop' | 'local-start') => {
     if (!name) return;
     setActionLoading(action);
     setActionError(null);
     try {
-      const handler = action === 'publish' ? publishApp : action === 'start' ? startApp : stopApp;
+      // アクションに応じたハンドラを選択
+      let handler: (appName: string) => Promise<AppActionResponse>;
+      switch (action) {
+        case 'publish':
+          handler = publishApp;
+          break;
+        case 'start':
+          handler = startApp;
+          break;
+        case 'stop':
+          handler = stopApp;
+          break;
+        case 'local-start':
+          handler = localStartApp;
+          break;
+      }
       const result = await handler(name);
       setActionResult(result);
       await checkHealth(name);
@@ -103,6 +118,25 @@ export function AppDetail() {
   }
 
   const app = selectedApp;
+  const runtime = app.runtime;
+  const db = runtime?.database;
+  const commands = runtime?.commands;
+  const healthPath = app.entry_points.health?.startsWith('/')
+    ? app.entry_points.health
+    : `/${app.entry_points.health ?? 'health'}`;
+  const backendUrl = app.ports.api
+    ? `http://localhost:${app.ports.api}`
+    : (runtime?.urls.backend ?? app.urls?.backend ?? null);
+  const frontendUrl = app.ports.frontend
+    ? `http://localhost:${app.ports.frontend}`
+    : (runtime?.urls.frontend ?? app.urls?.frontend ?? null);
+  const healthUrl = app.ports.api
+    ? `http://localhost:${app.ports.api}${healthPath}`
+    : (runtime?.urls.health ?? app.urls?.health ?? null);
+  const databaseUrl = runtime?.urls.database ?? app.urls?.database ?? db?.url ?? null;
+  const healthCurlTarget =
+    healthUrl ??
+    (backendUrl ? `${backendUrl}/health` : null);
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -148,7 +182,18 @@ export function AppDetail() {
               {actionLoading === 'stop' ? 'Stopping...' : '■ Stop'}
             </button>
             <button
-              onClick={() => name && checkHealth(name)}
+              onClick={() => runAction('local-start')}
+              disabled={actionLoading !== null}
+              className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs rounded-lg transition-colors"
+            >
+              {actionLoading === 'local-start' ? 'Starting...' : '🖥️ Local'}
+            </button>
+            <button
+              onClick={async () => {
+                if (!name) return;
+                await checkHealth(name);
+                await loadAppDetail(name);
+              }}
               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors"
             >
               🔍 Health Check
@@ -228,20 +273,17 @@ export function AppDetail() {
 
       <Section title="Runtime URLs">
         <div className="space-y-2">
-          <RuntimeUrlRow label="Backend" url={app.urls?.backend ?? null} />
-          <RuntimeUrlRow label="Frontend" url={app.urls?.frontend ?? null} />
-          <RuntimeUrlRow label="Health URL" url={app.urls?.health ?? null} />
-          <InfoItem label="Database" value={app.urls?.database ?? 'N/A'} />
-          {app.urls?.backend && (
+          <RuntimeUrlRow label="Backend" url={backendUrl} />
+          <RuntimeUrlRow label="Frontend" url={frontendUrl} />
+          <RuntimeUrlRow label="Health URL" url={healthUrl} />
+          <RuntimeUrlRow label="Database URL" url={databaseUrl} />
+          {healthCurlTarget && (
             <InfoItem
               label="Framework Call"
-              value={`curl ${app.urls.health ?? `${app.urls.backend}/health`}`}
+              value={`curl ${healthCurlTarget}`}
             />
           )}
-          <p className="text-xs text-slate-500">
-            DB はローカル Docker 公開ポート前提で表示しています。
-          </p>
-          </div>
+        </div>
       </Section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -266,6 +308,36 @@ export function AppDetail() {
           </div>
         </Section>
       </div>
+
+      <Section title="Database Connection">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <InfoItem label="Kind" value={db?.kind ?? app.dependencies.database ?? 'N/A'} />
+          <InfoItem label="URL" value={db?.url ?? databaseUrl ?? 'N/A'} />
+          <InfoItem label="Host" value={db?.host ?? 'N/A'} />
+          <InfoItem label="Port" value={db?.port ? String(db.port) : 'N/A'} />
+          <InfoItem label="Name" value={db?.name ?? 'N/A'} />
+          <InfoItem label="User" value={db?.user ?? 'N/A'} />
+          <InfoItem label="Password" value={db?.password ?? 'N/A'} />
+          <InfoItem label="Password ENV" value={db?.password_env ?? 'N/A'} />
+          {db?.note && <InfoItem label="Note" value={db.note} />}
+        </div>
+      </Section>
+
+      <Section title="Startup Commands">
+        <div className="space-y-2">
+          <CommandRow label="Backend Dev" command={commands?.backend_dev ?? null} />
+          <CommandRow label="Frontend Dev" command={commands?.frontend_dev ?? null} />
+          <CommandRow label="Publish" command={commands?.publish ?? null} />
+          <CommandRow label="Start" command={commands?.start ?? null} />
+          <CommandRow label="Stop" command={commands?.stop ?? null} />
+          {!hasAnyCommand(commands) && (
+            <p className="text-xs text-slate-500">
+              <code>app_config.json</code> -&gt; <code>runtime.commands</code> に
+              コマンドを設定すると、Platform から一元表示・実行できます。
+            </p>
+          )}
+        </div>
+      </Section>
 
       {app.blueprint && (
         <Section title="Runtime Blueprint">
@@ -338,6 +410,30 @@ function RuntimeUrlRow({ label, url }: { label: string; url: string | null }) {
         >
           Open
         </a>
+      )}
+    </div>
+  );
+}
+
+function hasAnyCommand(commands: RuntimeCommands | undefined): boolean {
+  if (!commands) {
+    return false;
+  }
+  return [commands.backend_dev, commands.frontend_dev, commands.publish, commands.start, commands.stop]
+    .some((value) => typeof value === 'string' && value.trim().length > 0);
+}
+
+function CommandRow({ label, command }: { label: string; command: string | null }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <InfoItem label={label} value={command ?? 'N/A'} />
+      {command && (
+        <button
+          onClick={() => navigator.clipboard.writeText(command).catch(() => {})}
+          className="text-xs px-2.5 py-1 rounded-md border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
+        >
+          Copy
+        </button>
       )}
     </div>
   );

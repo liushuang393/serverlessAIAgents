@@ -165,11 +165,11 @@ export default function EvidenceViewer() {
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>
-        Evidence Ledger
+      <Typography variant="h4" gutterBottom>
+        証拠台帳
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Collected evidence from all sources with reliability scoring and grounding diagnostics
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        収集されたすべての情報の裏付けと、AIによる信頼性診断の結果を確認できます。
       </Typography>
 
       {guard && (
@@ -185,7 +185,7 @@ export default function EvidenceViewer() {
                 mb: 1,
               }}
             >
-              <Typography variant="subtitle1">Grounding Guard</Typography>
+              <Typography variant="subtitle1">公開前チェック (Grounding Guard)</Typography>
               <Chip
                 size="small"
                 color={guard.status === 'ready' ? 'success' : 'warning'}
@@ -193,31 +193,46 @@ export default function EvidenceViewer() {
               />
             </Box>
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1 }}>
-              <Chip
-                size="small"
-                variant="outlined"
-                label={`Avg Reliability ${(guard.summary.avg_reliability * 100).toFixed(0)}%`}
-              />
-              <Chip
-                size="small"
-                variant="outlined"
-                label={`Citation Ready ${(guard.summary.citation_ready_ratio * 100).toFixed(0)}%`}
-              />
-              <Chip
-                size="small"
-                variant="outlined"
-                label={`Fresh Evidence ${(guard.summary.fresh_ratio * 100).toFixed(0)}%`}
-              />
-              <Chip
-                size="small"
-                variant="outlined"
-                label={`Source Diversity ${guard.summary.source_diversity}`}
-              />
-              <Chip
-                size="small"
-                variant="outlined"
-                label={`Supported Claims ${supportedClaims}/${guard.summary.claims_count}`}
-              />
+              <Tooltip title="各根拠の信頼性スコアの平均。AIが情報の確からしさを評価。" arrow>
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={`平均信頼度 ${(guard.summary.avg_reliability * 100).toFixed(0)}%`}
+                  sx={{ cursor: 'help' }}
+                />
+              </Tooltip>
+              <Tooltip title="必要な引用メタデータ（著者、日付、URL等）が揃っている割合。" arrow>
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={`引用準備完了 ${(guard.summary.citation_ready_ratio * 100).toFixed(0)}%`}
+                  sx={{ cursor: 'help' }}
+                />
+              </Tooltip>
+              <Tooltip title="収集された情報の新しさ。7日以内を「鮮度が高い」と定義。" arrow>
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={`情報の鮮度 ${(guard.summary.fresh_ratio * 100).toFixed(0)}%`}
+                  sx={{ cursor: 'help' }}
+                />
+              </Tooltip>
+              <Tooltip title="異なるドメインやプラットフォームから多角的に収集されているか。" arrow>
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={`ソース多様性 ${guard.summary.source_diversity}`}
+                  sx={{ cursor: 'help' }}
+                />
+              </Tooltip>
+              <Tooltip title="兆候として特定された主張のうち、具体的な証拠で裏付けられた数。" arrow>
+                <Chip
+                  size="small"
+                  variant="outlined"
+                  label={`立証済み主張 ${supportedClaims}/${guard.summary.claims_count}`}
+                  sx={{ cursor: 'help' }}
+                />
+              </Tooltip>
             </Box>
             {guard.blockers.length > 0 && (
               <Alert severity="warning" sx={{ mb: 1 }}>
@@ -239,7 +254,7 @@ export default function EvidenceViewer() {
       <TextField
         fullWidth
         size="small"
-        placeholder="Search by title, source, or URL..."
+        placeholder="タイトル、ソース、URLで検索..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         sx={{ mb: 2 }}
@@ -264,11 +279,11 @@ export default function EvidenceViewer() {
           <TableHead>
             <TableRow>
               <TableCell />
-              <TableCell>Title</TableCell>
-              <TableCell>Source</TableCell>
-              <TableCell>Reliability</TableCell>
-              <TableCell>Collected</TableCell>
-              <TableCell>Link</TableCell>
+              <TableCell>タイトル</TableCell>
+              <TableCell>ソース</TableCell>
+              <TableCell>信頼度</TableCell>
+              <TableCell>収集日</TableCell>
+              <TableCell>リンク</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -291,7 +306,7 @@ export default function EvidenceViewer() {
                     </IconButton>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="body2" noWrap sx={{ maxWidth: 300 }}>
+                    <Typography variant="body2" sx={{ maxWidth: 500 }}>
                       {evidence.title}
                     </Typography>
                     {diagnosticsById[evidence.id] && (
@@ -300,15 +315,15 @@ export default function EvidenceViewer() {
                           size="small"
                           label={
                             diagnosticsById[evidence.id].citation_ready
-                              ? 'Citation Ready'
-                              : 'Trace Gap'
+                              ? '引用準備完了'
+                              : '追跡ギャップ'
                           }
                           color={diagnosticsById[evidence.id].citation_ready ? 'success' : 'warning'}
                         />
                         <Chip
                           size="small"
                           variant="outlined"
-                          label={`Trace ${(diagnosticsById[evidence.id].traceability_score * 100).toFixed(0)}%`}
+                          label={`追跡率 ${(diagnosticsById[evidence.id].traceability_score * 100).toFixed(0)}%`}
                         />
                       </Box>
                     )}
@@ -335,7 +350,7 @@ export default function EvidenceViewer() {
                           },
                         }}
                       />
-                      <Typography variant="caption">
+                      <Typography variant="caption" sx={{ whiteSpace: 'nowrap' }}>
                         {(evidence.reliability_score * 100).toFixed(0)}%
                       </Typography>
                     </Box>
@@ -362,7 +377,7 @@ export default function EvidenceViewer() {
                     <Collapse in={expandedId === evidence.id}>
                       <Card variant="outlined" sx={{ m: 1 }}>
                         <CardContent>
-                          <Typography variant="subtitle2">Keywords</Typography>
+                          <Typography variant="subtitle2">キーワード</Typography>
                           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1 }}>
                             {((evidence.extracted_data?.keywords as string[]) || []).map(
                               (kw: string, i: number) => (
@@ -370,14 +385,14 @@ export default function EvidenceViewer() {
                               ),
                             )}
                           </Box>
-                          <Typography variant="subtitle2">Content Preview</Typography>
+                          <Typography variant="subtitle2">コンテンツ・プレビュー</Typography>
                           <Typography variant="body2" color="text.secondary">
                             {String(evidence.extracted_data?.content || '').slice(0, 300)}...
                           </Typography>
                           {diagnosticsById[evidence.id]?.quote_preview && (
                             <>
                               <Typography variant="subtitle2" sx={{ mt: 1 }}>
-                                Quote Preview
+                                引用プレビュー
                               </Typography>
                               <Typography variant="body2" color="text.secondary">
                                 {diagnosticsById[evidence.id].quote_preview}
@@ -389,7 +404,7 @@ export default function EvidenceViewer() {
                               <Chip
                                 size="small"
                                 variant="outlined"
-                                label={`Freshness ${diagnosticsById[evidence.id].freshness_days}d`}
+                                label={`鮮度 ${diagnosticsById[evidence.id].freshness_days}日`}
                               />
                               <Chip
                                 size="small"
@@ -403,7 +418,7 @@ export default function EvidenceViewer() {
                               <Chip
                                 size="small"
                                 variant="outlined"
-                                label={`Content ${diagnosticsById[evidence.id].content_length} chars`}
+                                label={`文字数 ${diagnosticsById[evidence.id].content_length} 文字`}
                               />
                             </Box>
                           )}
@@ -419,7 +434,7 @@ export default function EvidenceViewer() {
       </TableContainer>
 
       <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-        Showing {filtered.length} of {evidences.length} evidence items
+        {evidences.length} 件のエビデンス中 {filtered.length} 件を表示中
       </Typography>
     </Box>
   );

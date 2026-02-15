@@ -35,6 +35,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import json
+from pathlib import Path
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -663,9 +665,18 @@ if __name__ == "__main__":
         logger.exception("Please set OPENAI_API_KEY or other LLM provider keys")
 
     # 启动服务
+    config_path = Path(__file__).resolve().parent / "app_config.json"
+    config_raw: dict = {}
+    if config_path.is_file():
+        try:
+            config_raw = json.loads(config_path.read_text("utf-8"))
+        except json.JSONDecodeError:
+            config_raw = {}
+    api_port = config_raw.get("ports", {}).get("api", 8000)
+
     uvicorn.run(
         app,
         host="0.0.0.0",
-        port=8000,
+        port=int(api_port),
         log_level="info",
     )

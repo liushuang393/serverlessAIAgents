@@ -7,6 +7,16 @@ type AppConfig = {
   api_host?: string;
   api_port?: number;
   frontend_port?: number;
+  ports?: {
+    api?: number;
+    frontend?: number;
+  };
+  runtime?: {
+    urls?: {
+      backend?: string;
+      frontend?: string;
+    };
+  };
 };
 
 function parsePort(value: string | number | undefined, fallback: number): number {
@@ -45,19 +55,30 @@ export default defineConfig(({ mode }) => {
   const appConfig = readAppConfig();
   const env = loadEnv(mode, path.resolve(__dirname, '..'), '');
 
-  const apiHost = env.MARKET_TREND_MONITOR_API_HOST || appConfig.api_host || 'localhost';
+  const runtimeBackend = appConfig.runtime?.urls?.backend;
+  const backendFromRuntime = typeof runtimeBackend === 'string' ? normalizeBaseURL(runtimeBackend) : '';
+  const runtimeBackendHost = (() => {
+    if (!backendFromRuntime) return '';
+    try {
+      return new URL(backendFromRuntime).hostname;
+    } catch {
+      return '';
+    }
+  })();
+
+  const apiHost = env.MARKET_TREND_MONITOR_API_HOST || appConfig.api_host || runtimeBackendHost || 'localhost';
   const apiPort = parsePort(
     env.MARKET_TREND_MONITOR_API_PORT,
-    parsePort(appConfig.api_port, 8002)
+    parsePort(appConfig.ports?.api, parsePort(appConfig.api_port, 8002))
   );
   const frontendPort = parsePort(
     env.MARKET_TREND_MONITOR_FRONTEND_PORT,
-    parsePort(appConfig.frontend_port, 3002)
+    parsePort(appConfig.ports?.frontend, parsePort(appConfig.frontend_port, 3002))
   );
 
   const apiProxyHost = apiHost === '0.0.0.0' ? 'localhost' : apiHost;
   const backendOrigin = normalizeBaseURL(
-    env.MARKET_TREND_MONITOR_API_ORIGIN || `http://${apiProxyHost}:${apiPort}`
+    env.MARKET_TREND_MONITOR_API_ORIGIN || backendFromRuntime || `http://${apiProxyHost}:${apiPort}`
   );
   const apiBaseURL = normalizeBaseURL(
     env.VITE_API_BASE_URL || `${backendOrigin}/api`

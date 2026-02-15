@@ -19,6 +19,8 @@ from typing import Any
 
 import yaml
 
+from apps.platform.services.capability_registry import CapabilityRegistry
+
 
 _logger = logging.getLogger(__name__)
 
@@ -45,17 +47,19 @@ class SkillInfo:
     """
 
     __slots__ = (
-        "name", "description", "version", "author",
-        "tags", "triggers", "requirements", "examples", "path",
+        "name", "label", "description", "version", "author",
+        "tags", "tags_legacy", "triggers", "requirements", "examples", "path",
     )
 
     def __init__(
         self,
         name: str,
+        label: str | None = None,
         description: str = "",
         version: str = "1.0.0",
         author: str = "",
         tags: list[str] | None = None,
+        tags_legacy: list[str] | None = None,
         triggers: list[str] | None = None,
         requirements: list[str] | None = None,
         examples: list[str] | None = None,
@@ -63,10 +67,12 @@ class SkillInfo:
     ) -> None:
         """初期化."""
         self.name = name
+        self.label = (label or name).strip() or name
         self.description = description
         self.version = version
         self.author = author
         self.tags = tags or []
+        self.tags_legacy = tags_legacy or []
         self.triggers = triggers or []
         self.requirements = requirements or []
         self.examples = examples or []
@@ -76,10 +82,12 @@ class SkillInfo:
         """辞書に変換."""
         return {
             "name": self.name,
+            "label": self.label,
             "description": self.description,
             "version": self.version,
             "author": self.author,
             "tags": self.tags,
+            "tags_legacy": self.tags_legacy,
             "triggers": self.triggers,
             "requirements": self.requirements,
             "examples": self.examples,
@@ -106,6 +114,7 @@ class SkillCatalogService:
             skills_dir = Path.cwd() / _DEFAULT_SKILLS_DIR
         self._skills_dir = skills_dir
         self._skills: dict[str, SkillInfo] = {}
+        self._capability_registry = CapabilityRegistry()
 
     async def scan(self) -> int:
         """スキルディレクトリをスキャンし、SKILL.md を解析.
@@ -157,6 +166,7 @@ class SkillCatalogService:
         return [
             s for s in self.list_skills()
             if any(tag_lower in t.lower() for t in s.tags)
+            or any(tag_lower in t.lower() for t in s.tags_legacy)
         ]
 
     def all_tags(self) -> list[dict[str, Any]]:
@@ -209,12 +219,16 @@ class SkillCatalogService:
                 return
 
             name = str(data.get("name", skill_md_path.parent.name))
+            raw_tags = self._ensure_list(data.get("tags"))
+            canonical_tags = self._capability_registry.canonicalize_many(raw_tags)
             skill = SkillInfo(
                 name=name,
+                label=str(data.get("label", name)),
                 description=str(data.get("description", "")).strip(),
                 version=str(data.get("version", "1.0.0")),
                 author=str(data.get("author", "")),
-                tags=self._ensure_list(data.get("tags")),
+                tags=[tag.id for tag in canonical_tags],
+                tags_legacy=raw_tags,
                 triggers=self._ensure_list(data.get("triggers")),
                 requirements=self._ensure_list(data.get("requirements")),
                 examples=self._ensure_list(data.get("examples")),
@@ -236,4 +250,3 @@ class SkillCatalogService:
         if isinstance(value, list):
             return [str(v) for v in value]
         return [str(value)]
-

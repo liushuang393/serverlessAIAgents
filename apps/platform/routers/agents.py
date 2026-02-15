@@ -98,4 +98,3 @@ async def search_agents(
         "total": len(agents),
         "query": capability,
     }
-

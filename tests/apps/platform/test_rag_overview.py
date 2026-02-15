@@ -147,6 +147,11 @@ class TestPatternsAndConfigs:
         with pytest.raises(ValueError, match="Unknown RAG pattern"):
             rag_overview.update_app_config("rag_app", {"pattern": "unknown"})
 
+    def test_contract_priority_over_service(self, rag_overview: RAGOverviewService) -> None:
+        """contracts.rag.enabled が services.rag より優先される."""
+        updated = rag_overview.update_app_config("rag_app", {"enabled": False})
+        assert updated["rag"]["enabled"] is False
+
 
 class TestAppsUsingRag:
     """apps_using_rag() メソッドのテスト."""

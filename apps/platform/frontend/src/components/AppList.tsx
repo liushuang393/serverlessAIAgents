@@ -4,11 +4,11 @@
  * 全登録 App をカード形式で表示。再スキャンボタン付き。
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { fetchPortConflicts, rebalancePorts } from '@/api/client';
 import { useAppStore } from '@/store/useAppStore';
-import type { PortConflictReport } from '@/types';
+import type { AppStatus, PortConflictReport } from '@/types';
 import { AppHealthBadge } from './AppHealthBadge';
 import { AppCreateModal } from './AppCreateModal';
 
@@ -20,6 +20,9 @@ export function AppList() {
   const [rebalancing, setRebalancing] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [conflicts, setConflicts] = useState<PortConflictReport | null>(null);
+  const [keyword, setKeyword] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | AppStatus>('all');
+  const [sortKey, setSortKey] = useState<'name' | 'api' | 'frontend'>('name');
 
   useEffect(() => {
     loadApps();
@@ -54,6 +57,52 @@ export function AppList() {
     }
   };
 
+  const statusCounts = useMemo(() => {
+    const counts: Record<'healthy' | 'unhealthy' | 'unknown' | 'stopped', number> = {
+      healthy: 0,
+      unhealthy: 0,
+      unknown: 0,
+      stopped: 0,
+    };
+    for (const app of apps) {
+      counts[app.status] += 1;
+    }
+    return counts;
+  }, [apps]);
+
+  const filteredApps = useMemo(() => {
+    const lowerKeyword = keyword.trim().toLowerCase();
+    const matches = apps.filter((app) => {
+      if (statusFilter !== 'all' && app.status !== statusFilter) {
+        return false;
+      }
+      if (!lowerKeyword) {
+        return true;
+      }
+      const haystack = [
+        app.name,
+        app.display_name,
+        app.description ?? '',
+        app.tags.join(' '),
+        app.urls?.backend ?? '',
+        app.urls?.frontend ?? '',
+      ]
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(lowerKeyword);
+    });
+
+    return [...matches].sort((a, b) => {
+      if (sortKey === 'api') {
+        return (a.ports.api ?? Number.MAX_SAFE_INTEGER) - (b.ports.api ?? Number.MAX_SAFE_INTEGER);
+      }
+      if (sortKey === 'frontend') {
+        return (a.ports.frontend ?? Number.MAX_SAFE_INTEGER) - (b.ports.frontend ?? Number.MAX_SAFE_INTEGER);
+      }
+      return a.display_name.localeCompare(b.display_name, 'ja');
+    });
+  }, [apps, keyword, statusFilter, sortKey]);
+
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       {/* ヘッダー */}
@@ -83,6 +132,46 @@ export function AppList() {
             )}
             Refresh
           </button>
+        </div>
+      </div>
+
+      <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <input
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            placeholder="名称 / tag / URL で検索..."
+            className="input"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value as 'all' | AppStatus)}
+            className="input"
+          >
+            <option value="all">All Status</option>
+            <option value="healthy">Healthy</option>
+            <option value="unhealthy">Unhealthy</option>
+            <option value="unknown">Unknown</option>
+            <option value="stopped">Stopped</option>
+          </select>
+          <select
+            value={sortKey}
+            onChange={(e) => setSortKey(e.target.value as 'name' | 'api' | 'frontend')}
+            className="input"
+          >
+            <option value="name">Sort: Name</option>
+            <option value="api">Sort: API Port</option>
+            <option value="frontend">Sort: Frontend Port</option>
+          </select>
+        </div>
+        <div className="flex flex-wrap gap-2 text-xs text-slate-400">
+          <span className="px-2 py-1 rounded-md bg-slate-800/70">healthy: {statusCounts.healthy}</span>
+          <span className="px-2 py-1 rounded-md bg-slate-800/70">unhealthy: {statusCounts.unhealthy}</span>
+          <span className="px-2 py-1 rounded-md bg-slate-800/70">unknown: {statusCounts.unknown}</span>
+          <span className="px-2 py-1 rounded-md bg-slate-800/70">stopped: {statusCounts.stopped}</span>
+          <span className="px-2 py-1 rounded-md bg-indigo-500/10 text-indigo-300">
+            filtered: {filteredApps.length}
+          </span>
         </div>
       </div>
 
@@ -134,33 +223,43 @@ export function AppList() {
       {/* App カードグリッド */}
       {!loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {apps.map((app) => (
-            <Link
-              key={app.name}
-              to={`/apps/${app.name}`}
-              className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 hover:border-indigo-500/30 hover:bg-slate-900/80 transition-all group"
-            >
-              <div className="flex items-start justify-between mb-3">
+          {filteredApps.map((app) => {
+            const backendUrl = app.ports.api ? `http://localhost:${app.ports.api}` : (app.urls?.backend ?? null);
+            const frontendUrl = app.ports.frontend ? `http://localhost:${app.ports.frontend}` : (app.urls?.frontend ?? null);
+            return (
+              <Link
+                key={app.name}
+                to={`/apps/${app.name}`}
+                className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 hover:border-indigo-500/40 hover:bg-slate-900/80 transition-all group"
+              >
+              <div className="flex items-start justify-between mb-2">
                 <span className="text-3xl">{app.icon}</span>
                 <AppHealthBadge status={app.status} />
               </div>
               <h3 className="text-base font-semibold text-slate-200 group-hover:text-indigo-400 transition-colors">
                 {app.display_name}
               </h3>
-              <p className="text-xs text-slate-500 mt-0.5 mb-3">{app.name}</p>
-              <div className="flex items-center gap-3 text-xs text-slate-400">
+              <p className="text-xs text-slate-500 mt-0.5">{app.name}</p>
+              {app.description && (
+                <p className="text-xs text-slate-400 mt-2 line-clamp-2">{app.description}</p>
+              )}
+
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mt-3">
                 <span>v{app.version}</span>
-                <span className="text-slate-700">|</span>
-                <span>🤖 {app.agent_count} agents</span>
-                {app.ports.api && (
-                  <>
-                    <span className="text-slate-700">|</span>
-                    <span>API:{app.ports.api}</span>
-                  </>
-                )}
-                <span className="text-slate-700">|</span>
-                <span>🖥 {app.ports.frontend ?? '-'}</span>
+                <span className="px-2 py-0.5 bg-slate-800/80 rounded-md">API:{app.ports.api ?? '-'}</span>
+                <span className="px-2 py-0.5 bg-slate-800/80 rounded-md">FE:{app.ports.frontend ?? '-'}</span>
+                <span className="px-2 py-0.5 bg-slate-800/80 rounded-md">DB:{app.ports.db ?? '-'}</span>
+                <span className="px-2 py-0.5 bg-slate-800/80 rounded-md">🤖 {app.agent_count}</span>
               </div>
+
+                <div className="mt-3 space-y-1">
+                  {backendUrl && (
+                    <p className="text-[11px] text-slate-500 font-mono truncate">BE: {backendUrl}</p>
+                  )}
+                  {frontendUrl && (
+                    <p className="text-[11px] text-slate-500 font-mono truncate">FE: {frontendUrl}</p>
+                  )}
+                </div>
               {app.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mt-3">
                   {app.tags.slice(0, 4).map((tag) => (
@@ -178,16 +277,19 @@ export function AppList() {
                   )}
                 </div>
               )}
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
 
       {/* 空状態 */}
-      {!loading && apps.length === 0 && (
+      {!loading && filteredApps.length === 0 && (
         <div className="text-center py-16">
           <p className="text-4xl mb-4">📭</p>
-          <p className="text-slate-400">No apps registered yet</p>
+          <p className="text-slate-400">
+            {apps.length === 0 ? 'No apps registered yet' : 'No apps matched your filter'}
+          </p>
           <button
             onClick={handleRefresh}
             className="mt-4 text-sm text-indigo-400 hover:text-indigo-300"

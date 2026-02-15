@@ -11,7 +11,20 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import fs from 'node:fs';
 import path from 'path';
+
+const appConfigPath = path.resolve(__dirname, '../app_config.json');
+let appConfig: { ports?: { api?: number; frontend?: number } } = {};
+if (fs.existsSync(appConfigPath)) {
+  try {
+    appConfig = JSON.parse(fs.readFileSync(appConfigPath, 'utf-8')) as { ports?: { api?: number; frontend?: number } };
+  } catch {
+    appConfig = {};
+  }
+}
+const apiPort = appConfig.ports?.api ?? 8001;
+const frontendPort = appConfig.ports?.frontend ?? 5174;
 
 export default defineConfig({
   plugins: [react()],
@@ -25,14 +38,14 @@ export default defineConfig({
   // 本番環境では Nginx が /api/ を backend:8000 にプロキシ
   // -------------------------------------------------------------------------
   server: {
-    port: 5174,
+    port: frontendPort,
     host: '0.0.0.0',  // WSL2 から Windows ブラウザにアクセス可能にするため
     proxy: {
       '/api': {
         // PROXY_TARGET: 容器内では Docker 内部ネットワーク名を使用
         // ※ VITE_ プレフィックスを使うとブラウザ側に注入されてしまうため、
         //    proxy target 専用に PROXY_TARGET を使用する
-        target: process.env.PROXY_TARGET || 'http://localhost:8001',
+        target: process.env.PROXY_TARGET || `http://localhost:${apiPort}`,
         changeOrigin: true,
         // SSE ストリーミング対応 - 重要な設定
         ws: false,  // WebSocket を無効化（SSE と競合防止）

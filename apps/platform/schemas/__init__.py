@@ -18,6 +18,11 @@ from apps.platform.schemas.app_config_schemas import (
     SkillsContractConfig,
     VisibilityConfig,
 )
+from apps.platform.schemas.capability_schemas import (
+    CAPABILITY_DOMAINS,
+    CanonicalCapability,
+    CapabilityAggregate,
+)
 from apps.platform.schemas.component_schemas import (
     ComponentCreateRequest,
     ComponentListResponse,
@@ -67,6 +72,10 @@ __all__ = [
     "ReleaseContractConfig",
     "SkillsContractConfig",
     "VisibilityConfig",
+    # Capability
+    "CAPABILITY_DOMAINS",
+    "CanonicalCapability",
+    "CapabilityAggregate",
     # Component
     "ComponentCreateRequest",
     "ComponentListResponse",

@@ -2,17 +2,18 @@
 
 PipelineEngine パターンを使用した意思決定支援エンジン。
 
-アーキテクチャ（8ステージ順次実行）:
+アーキテクチャ（8ステージ順次実行 + コーチング型改善ループ）:
     前処理層: CognitiveGate（認知分析）→ Gatekeeper（門番、Gate判断）
     診断層: Clarification（問題精緻化）
     分析層: Dao → Fa → Shu → Qi（順次実行、依存チェーン）
-    検証層: ReviewAgent（PASS/REVISE/REJECT、REVISEはDaoへ戻る）
+    検証層: ReviewAgent（PASS/COACH、COACHは改善指導モード）
 
 実行フロー:
     CognitiveGate → Gatekeeper → Clarification → Dao → Fa → Shu → Qi → Review
          ↓              ↓                                              ↓
-       分析のみ      拦截判断                                    PASS/REVISE/REJECT
-       (通過)      (不適格拒否)                                   (REVISEはDaoへ戻る)
+       分析のみ      拦截判断                                    PASS / COACH
+       (通過)      (不適格拒否)                           (COACHは改善提案→ユーザー対話
+                                                          →個別再評価→再スコアリング)
 
 設計改善（v2.3）:
     - ReportBuilder インターフェースを使用

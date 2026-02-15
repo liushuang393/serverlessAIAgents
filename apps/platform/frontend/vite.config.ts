@@ -10,14 +10,18 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
+import fs from 'fs';
 
 /**
- * バックエンド API ポート.
+ * app_config.json からバックエンド API ポートを読み取る.
  *
- * Platform サーバーのデフォルトは 8000。
- * 環境変数 VITE_API_PORT で上書き可能。
+ * ポートの定義元は app_config.json の ports.api（単一定義元）。
+ * 環境変数 VITE_API_PORT で上書きも可能。
  */
-const API_PORT = process.env.VITE_API_PORT ?? '8000';
+const appConfig = JSON.parse(
+  fs.readFileSync(path.resolve(__dirname, '../app_config.json'), 'utf-8'),
+);
+const API_PORT = process.env.VITE_API_PORT ?? String(appConfig.ports?.api ?? 8000);
 
 export default defineConfig({
   plugins: [react()],
@@ -27,7 +31,7 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3000,
+    port: appConfig.ports?.frontend ?? 3000,
     proxy: {
       '/api': {
         target: `http://localhost:${API_PORT}`,

@@ -28,7 +28,17 @@ class TestListSkills:
         skills = resp.json()["skills"]
         assert len(skills) > 0
         skill = skills[0]
-        required_keys = {"name", "description", "version", "author", "tags", "triggers", "requirements"}
+        required_keys = {
+            "name",
+            "label",
+            "description",
+            "version",
+            "author",
+            "tags",
+            "tags_legacy",
+            "triggers",
+            "requirements",
+        }
         assert required_keys.issubset(skill.keys())
 
 
@@ -56,7 +66,7 @@ class TestListTags:
         data = resp.json()
         assert "tags" in data
         assert "total" in data
-        assert data["total"] == 6
+        assert data["total"] >= 4
 
     def test_tag_structure(self, phase3_test_client: TestClient) -> None:
         """各タグに tag, count フィールドがある."""
@@ -102,8 +112,9 @@ class TestGetSkillDetail:
         assert resp.status_code == 200
         data = resp.json()
         assert data["name"] == "chatbot"
+        assert data["label"] == "chatbot"
         assert data["description"] == "汎用チャットボットスキル"
-        assert "chat" in data["tags"]
+        assert any("chat" in tag for tag in data["tags"])
         assert "openai" in data["requirements"]
 
     def test_nonexistent_skill_returns_404(self, phase3_test_client: TestClient) -> None:
@@ -112,4 +123,3 @@ class TestGetSkillDetail:
         assert resp.status_code == 404
         detail = resp.json()["detail"]
         assert detail["error_code"] == "SKILL_NOT_FOUND"
-

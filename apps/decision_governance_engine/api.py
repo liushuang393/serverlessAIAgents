@@ -23,8 +23,10 @@ load_dotenv()
 
 import logging
 import os
+from pathlib import Path
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+import json
 
 from apps.decision_governance_engine.flow_config import (
     register_flow_definition,
@@ -121,4 +123,13 @@ app.include_router(workflow_router)
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    config_path = Path(__file__).resolve().parent / "app_config.json"
+    config_raw: dict = {}
+    if config_path.is_file():
+        try:
+            config_raw = json.loads(config_path.read_text("utf-8"))
+        except json.JSONDecodeError:
+            config_raw = {}
+
+    api_port = config_raw.get("ports", {}).get("api", 8000)
+    uvicorn.run(app, host="0.0.0.0", port=int(api_port))

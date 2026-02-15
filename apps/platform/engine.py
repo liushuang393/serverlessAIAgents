@@ -78,7 +78,7 @@ class PlatformEngine(SimpleEngine):
                 name="platform-engine",
                 enable_events=True,
                 enable_memory=True,
-                timeout_seconds=600,
+                timeout_seconds=900,  # 15分（Dashboard等の重い処理用）
             ),
         )
 

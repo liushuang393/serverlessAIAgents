@@ -1,150 +1,197 @@
-# App 管理 API 設計書
+# Platform API 設計書（P0 安定化）
 
-> **最終更新**: 2026-02-14
-> **Router**: `apps/platform/routers/apps.py`
-> **Prefix**: `/api/apps`
-
----
-
-## 1. エンドポイント一覧
-
-| メソッド | パス | 説明 |
-|---------|------|------|
-| `GET` | `/api/apps` | 全 App 一覧取得 |
-| `GET` | `/api/apps/{app_name}` | App 詳細取得 |
-| `GET` | `/api/apps/{app_name}/health` | ヘルスチェック |
-| `POST` | `/api/apps/{app_name}/start` | App 起動 |
-| `POST` | `/api/apps/{app_name}/stop` | App 停止 |
-| `POST` | `/api/apps/refresh` | App 一覧を再スキャン |
+> 最終更新: 2026-02-15  
+> 対象: `apps/platform/routers/*.py`  
+> 互換方針: **破壊的変更を直接適用（双轨なし）**
 
 ---
 
-## 2. レスポンスモデル
+## 1. 目的
 
-### GET /api/apps
+`platform` を単なる App 一覧 UI から、全 App を横断する統一コントロールプレーンへ移行する。  
+P0 では `rag / skill / agent` の分類・契約・出力形を統一し、前後端の型ドリフトを止める。
+
+---
+
+## 2. P0 で確定した API 変更
+
+1. `GET /api/agents/by-app` は map 返却を廃止し、`groups` 配列を返す。
+2. `GET /api/agents` と `GET /api/agents/search` は、`capabilities`（標準能力オブジェクト）と `capabilities_legacy`（旧タグ）を返す。
+3. `GET /api/agents/capabilities` は標準能力集約 `{id, domain, task, qualifier, label, aliases, count, apps}` を返す。
+4. `GET /api/skills` と `GET /api/skills/{name}` は `label` を必須返却する。
+5. `GET /api/apps/summary` の件数字段は `agent_count` に統一し、`has_api` を返す。
+6. `POST /api/apps/migrate-manifests` を新設し、全 `apps/*/app_config.json` の標準化を実行する。
+
+---
+
+## 3. エンドポイント契約（P0）
+
+### 3.1 Apps
+
+`GET /api/apps/summary`
 
 ```json
 {
+  "total_apps": 7,
+  "total_agents": 18,
   "apps": [
     {
       "name": "faq_system",
       "display_name": "FAQ システム",
-      "version": "1.0.0",
       "icon": "💬",
-      "status": "healthy",
-      "ports": { "api": 8001, "frontend": null },
       "agent_count": 3,
-      "tags": ["faq", "rag"]
+      "has_api": true,
+      "port": 8001,
+      "config_path": "apps/faq_system/app_config.json",
+      "contracts": {
+        "auth": false,
+        "rag": true,
+        "skills": false,
+        "release_targets": 0
+      }
     }
   ],
-  "total": 6
+  "errors": {}
 }
 ```
 
-### GET /api/apps/{app_name}
+`POST /api/apps/migrate-manifests`
+
+Request:
+
+```json
+{ "dry_run": true }
+```
+
+Response:
 
 ```json
 {
-  "name": "faq_system",
-  "display_name": "FAQ システム",
-  "description": "社内FAQ/SQL分析/営業資料画像生成",
-  "version": "1.0.0",
-  "icon": "💬",
-  "status": "healthy",
-  "ports": { "api": 8001, "frontend": null, "db": 5433, "redis": null },
-  "entry_points": {
-    "api_module": "apps.faq_system.main:app",
-    "health": "/health"
-  },
+  "total": 7,
+  "changed": 0,
+  "unchanged": 7,
+  "apps": [],
+  "dry_run": true
+}
+```
+
+### 3.2 Agents
+
+`GET /api/agents`
+
+```json
+{
   "agents": [
-    { "name": "FAQAgent", "module": "agentflow.agents.faq_agent", "capabilities": ["faq", "rag"] }
+    {
+      "name": "RAGAgent",
+      "app_name": "faq_system",
+      "app_display_name": "FAQ システム",
+      "app_icon": "💬",
+      "module": "apps.faq_system.agent:RAGAgent",
+      "capabilities": [
+        {
+          "id": "knowledge.retrieval.rag",
+          "domain": "knowledge",
+          "task": "retrieval",
+          "qualifier": "rag",
+          "label": "Retrieval Rag",
+          "aliases": ["rag"]
+        }
+      ],
+      "capabilities_legacy": ["rag", "search"]
+    }
   ],
-  "services": { "rag": { "collections": ["faq_knowledge"] } },
-  "dependencies": { "database": "postgresql", "redis": false },
-  "tags": ["faq", "rag"],
-  "config_path": "apps/faq_system/app_config.json"
+  "total": 1
 }
 ```
 
-### GET /api/apps/{app_name}/health
+`GET /api/agents/by-app`
 
 ```json
 {
-  "app_name": "faq_system",
-  "status": "healthy",
-  "response_time_ms": 42,
-  "checked_at": "2026-02-14T10:30:00Z",
-  "details": { "uptime": "2h 15m" }
+  "groups": [
+    {
+      "app_name": "faq_system",
+      "display_name": "FAQ システム",
+      "icon": "💬",
+      "agents": []
+    }
+  ],
+  "total_apps": 1
 }
 ```
 
-### POST /api/apps/{app_name}/start, /stop
+`GET /api/agents/capabilities`
 
 ```json
 {
-  "app_name": "faq_system",
-  "action": "start",
-  "success": true,
-  "message": "App started successfully"
+  "capabilities": [
+    {
+      "id": "knowledge.retrieval.rag",
+      "domain": "knowledge",
+      "task": "retrieval",
+      "qualifier": "rag",
+      "label": "Retrieval Rag",
+      "aliases": ["rag"],
+      "count": 3,
+      "apps": ["faq_system", "market_trend_monitor"]
+    }
+  ],
+  "total": 1
 }
 ```
 
-### POST /api/apps/refresh
+### 3.3 Skills
+
+`GET /api/skills`
 
 ```json
 {
-  "discovered": 6,
-  "new": ["inventory_manager"],
-  "removed": [],
-  "unchanged": ["faq_system", "market_trend_monitor", "decision_governance_engine"]
+  "skills": [
+    {
+      "name": "chatbot",
+      "label": "Chatbot",
+      "description": "汎用チャットボットスキル",
+      "version": "1.0.0",
+      "author": "AgentFlow Team",
+      "tags": ["interaction.conversation.chat"],
+      "tags_legacy": ["chat", "conversation"],
+      "triggers": ["こんにちは"],
+      "requirements": ["openai"],
+      "examples": ["こんにちは、今日の天気は？"],
+      "path": "agentflow/skills/builtin/chatbot/SKILL.md"
+    }
+  ],
+  "total": 1
 }
 ```
 
 ---
 
-## 3. エラーレスポンス
+## 4. エラー契約
 
-全エンドポイント共通:
+HTTP エラーは `detail` に構造化情報を返す。
 
 ```json
 {
-  "detail": "App not found: unknown_app",
-  "error_code": "APP_NOT_FOUND"
+  "detail": {
+    "message": "App not found: unknown_app",
+    "error_code": "APP_NOT_FOUND"
+  }
 }
 ```
 
-| HTTP | error_code | 説明 |
-|------|-----------|------|
-| 404 | `APP_NOT_FOUND` | 指定 App が存在しない |
-| 503 | `APP_UNHEALTHY` | App がヘルスチェックに応答しない |
-| 500 | `LIFECYCLE_ERROR` | 起動/停止操作に失敗 |
-| 422 | `VALIDATION_ERROR` | リクエストパラメータ不正 |
+代表コード:
+
+1. `APP_NOT_FOUND`（404）
+2. `APP_CONFIG_NOT_FOUND`（404）
+3. `APP_CONFIG_INVALID`（400）
+4. `SKILL_NOT_FOUND`（404）
 
 ---
 
-## 4. 依存関係
+## 5. 直接置換ポリシー
 
-```mermaid
-graph LR
-    Router["routers/apps.py"] --> Discovery["AppDiscoveryService"]
-    Router --> Lifecycle["AppLifecycleManager"]
-    Discovery --> Schema["app_config_schemas.py"]
-    Discovery --> FS["ファイルシステム<br/>apps/*/app_config.json"]
-    Lifecycle --> HTTP["httpx<br/>ヘルスチェック"]
-    Lifecycle --> Docker["subprocess<br/>docker-compose"]
-```
-
----
-
-## 5. 既存 API との共存
-
-新規 `/api/apps/*` は既存ルーターと独立:
-
-| Prefix | Router | 状態 |
-|--------|--------|------|
-| `/api/gallery/*` | `gallery.py` | 既存（変更なし） |
-| `/api/components/*` | `components.py` | 既存（変更なし） |
-| `/api/publish/*` | `publish.py` | 既存（変更なし） |
-| `/api/dashboard/*` | `dashboard.py` | 既存（変更なし） |
-| `/api/apps/*` | `apps.py` | **新規** |
-
+1. 本 P0 は旧レスポンスとの二重提供を行わない。
+2. フロント型は常に現行 API 契約を唯一正とする。
+3. 破壊的変更は `docs/api-design.md` と `apps/platform/frontend/src/types/index.ts` を同時更新する。

@@ -1,14 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Agent Aggregator Service — 全 App 横断の Agent 集約・検索.
-
-AppDiscoveryService が保持する app_config.json の agents 情報を
-横断的に集約し、能力ベースの検索やグルーピングを提供する。
-
-使用例:
-    >>> aggregator = AgentAggregatorService(discovery)
-    >>> all_agents = aggregator.list_all()
-    >>> rag_agents = aggregator.search_by_capability("rag")
-"""
+"""Agent Aggregator Service — 全 App 横断の Agent 集約・検索."""
 
 from __future__ import annotations
 
@@ -16,6 +7,7 @@ import logging
 from typing import Any
 
 from apps.platform.services.app_discovery import AppDiscoveryService
+from apps.platform.services.capability_registry import CapabilityRegistry
 
 
 _logger = logging.getLogger(__name__)
@@ -35,7 +27,7 @@ class AggregatedAgent:
 
     __slots__ = (
         "name", "app_name", "app_display_name", "app_icon",
-        "module", "capabilities",
+        "module", "capabilities", "capabilities_legacy",
     )
 
     def __init__(
@@ -45,7 +37,8 @@ class AggregatedAgent:
         app_display_name: str,
         app_icon: str,
         module: str | None,
-        capabilities: list[str],
+        capabilities: list[dict[str, Any]],
+        capabilities_legacy: list[str],
     ) -> None:
         """初期化."""
         self.name = name
@@ -54,6 +47,7 @@ class AggregatedAgent:
         self.app_icon = app_icon
         self.module = module
         self.capabilities = capabilities
+        self.capabilities_legacy = capabilities_legacy
 
     def to_dict(self) -> dict[str, Any]:
         """辞書に変換."""
@@ -64,6 +58,7 @@ class AggregatedAgent:
             "app_icon": self.app_icon,
             "module": self.module,
             "capabilities": self.capabilities,
+            "capabilities_legacy": self.capabilities_legacy,
         }
 
 
@@ -81,6 +76,7 @@ class AgentAggregatorService:
             discovery: App 検出サービス
         """
         self._discovery = discovery
+        self._capability_registry = CapabilityRegistry()
 
     def list_all(self) -> list[AggregatedAgent]:
         """全 App の Agent を一覧取得.
@@ -91,13 +87,15 @@ class AgentAggregatorService:
         agents: list[AggregatedAgent] = []
         for app_config in self._discovery.list_apps():
             for agent_info in app_config.agents:
+                canonical = self._capability_registry.canonicalize_many(agent_info.capabilities)
                 agents.append(AggregatedAgent(
                     name=agent_info.name,
                     app_name=app_config.name,
                     app_display_name=app_config.display_name,
                     app_icon=app_config.icon,
                     module=agent_info.module,
-                    capabilities=list(agent_info.capabilities),
+                    capabilities=[item.model_dump() for item in canonical],
+                    capabilities_legacy=list(agent_info.capabilities),
                 ))
         return agents
 
@@ -111,44 +109,54 @@ class AgentAggregatorService:
             マッチした AggregatedAgent のリスト
         """
         cap_lower = capability.lower()
-        return [
-            a for a in self.list_all()
-            if any(cap_lower in c.lower() for c in a.capabilities)
-        ]
+        matches: list[AggregatedAgent] = []
+        for agent in self.list_all():
+            if any(cap_lower in item.lower() for item in agent.capabilities_legacy):
+                matches.append(agent)
+                continue
 
-    def group_by_app(self) -> dict[str, list[dict[str, Any]]]:
+            canonical_values = [
+                f"{cap.get('id', '')} {cap.get('label', '')} {' '.join(cap.get('aliases', []))}".lower()
+                for cap in agent.capabilities
+            ]
+            if any(cap_lower in item for item in canonical_values):
+                matches.append(agent)
+        return matches
+
+    def group_by_app(self) -> list[dict[str, Any]]:
         """App 別にグルーピング.
 
         Returns:
-            App 名 → Agent 辞書リスト
+            [{app_name, display_name, icon, agents}]
         """
-        groups: dict[str, list[dict[str, Any]]] = {}
+        grouped: dict[str, dict[str, Any]] = {}
         for agent in self.list_all():
-            groups.setdefault(agent.app_name, []).append(agent.to_dict())
-        return groups
+            if agent.app_name not in grouped:
+                grouped[agent.app_name] = {
+                    "app_name": agent.app_name,
+                    "display_name": agent.app_display_name,
+                    "icon": agent.app_icon,
+                    "agents": [],
+                }
+            grouped[agent.app_name]["agents"].append(agent.to_dict())
+
+        return [grouped[key] for key in sorted(grouped.keys())]
 
     def all_capabilities(self) -> list[dict[str, Any]]:
         """全能力タグとその出現回数を取得.
 
         Returns:
-            [{"tag": str, "count": int, "apps": list[str]}]
+            [{"id": str, "domain": str, "label": str, "count": int, "apps": list[str], "aliases": list[str]}]
         """
-        cap_map: dict[str, dict[str, Any]] = {}
-        for agent in self.list_all():
-            for cap in agent.capabilities:
-                if cap not in cap_map:
-                    cap_map[cap] = {"tag": cap, "count": 0, "apps": set()}
-                cap_map[cap]["count"] += 1
-                cap_map[cap]["apps"].add(agent.app_name)
-
-        result = []
-        for item in sorted(cap_map.values(), key=lambda x: x["count"], reverse=True):
-            result.append({
-                "tag": item["tag"],
-                "count": item["count"],
-                "apps": sorted(item["apps"]),
-            })
-        return result
+        return self._capability_registry.aggregate(
+            [
+                (
+                    agent.app_name,
+                    self._capability_registry.canonicalize_many(agent.capabilities_legacy),
+                )
+                for agent in self.list_all()
+            ],
+        )
 
     def stats(self) -> dict[str, Any]:
         """Agent 統計情報.
@@ -161,6 +169,5 @@ class AgentAggregatorService:
         return {
             "total_agents": len(agents),
             "total_apps_with_agents": len(apps_with_agents),
-            "total_capabilities": len({c for a in agents for c in a.capabilities}),
+            "total_capabilities": len({c["id"] for a in agents for c in a.capabilities}),
         }
-

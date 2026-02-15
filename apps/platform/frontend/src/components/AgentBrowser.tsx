@@ -71,15 +71,15 @@ export function AgentBrowser() {
             </button>
             {capabilities.map((cap) => (
               <button
-                key={cap.tag}
-                onClick={() => handleFilter(cap.tag)}
+                key={cap.id}
+                onClick={() => handleFilter(cap.id)}
                 className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                  selectedCap === cap.tag
+                  selectedCap === cap.id
                     ? 'bg-indigo-600 text-white'
                     : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                 }`}
               >
-                {cap.tag}
+                {cap.label}
                 <span className="ml-1.5 opacity-60">({cap.count})</span>
               </button>
             ))}
@@ -115,15 +115,20 @@ export function AgentBrowser() {
                   <div className="flex flex-wrap gap-1.5 max-w-xs">
                     {agent.capabilities.map((cap) => (
                       <span
-                        key={cap}
-                        onClick={() => handleFilter(cap)}
+                        key={cap.id}
+                        onClick={() => handleFilter(cap.id)}
                         className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 text-[10px] rounded-full cursor-pointer hover:bg-indigo-500/20 transition-colors"
                       >
-                        {cap}
+                        {cap.label}
                       </span>
                     ))}
                   </div>
                 </div>
+                {agent.capabilities_legacy.length > 0 && (
+                  <p className="text-[10px] text-slate-600 mt-2">
+                    legacy: {agent.capabilities_legacy.join(', ')}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -140,4 +145,3 @@ export function AgentBrowser() {
     </div>
   );
 }
-

@@ -112,7 +112,7 @@ function ThreatOpportunityChart({ competitors }: { competitors: CompetitorProfil
       ))}
       {/* Axis labels */}
       <text x={size / 2} y={size - 4} textAnchor="middle" fontSize="10" fill="rgba(255,255,255,0.6)">
-        Threat Level →
+        脅威レベル (Threat) →
       </text>
       <text
         x={8}
@@ -122,7 +122,7 @@ function ThreatOpportunityChart({ competitors }: { competitors: CompetitorProfil
         fill="rgba(255,255,255,0.6)"
         transform={`rotate(-90, 8, ${size / 2})`}
       >
-        Opportunity →
+        機会レベル (Opportunity) →
       </text>
       {/* Data points */}
       {competitors.map((c) => {
@@ -139,23 +139,23 @@ function ThreatOpportunityChart({ competitors }: { competitors: CompetitorProfil
               fontSize="8"
               fill="rgba(255,255,255,0.8)"
             >
-              {c.name.length > 10 ? c.name.slice(0, 10) + '...' : c.name}
+              {c.name.length > 15 ? c.name.slice(0, 15) + '...' : c.name}
             </text>
           </g>
         );
       })}
       {/* Quadrant labels */}
       <text x={padding + 8} y={padding + 14} fontSize="8" fill="rgba(255,255,255,0.3)">
-        Low Risk / High Opp
+        低リスク / 高機会
       </text>
       <text x={padding + plotSize - 8} y={padding + 14} textAnchor="end" fontSize="8" fill="rgba(255,255,255,0.3)">
-        High Risk / High Opp
+        高リスク / 高機会
       </text>
       <text x={padding + 8} y={padding + plotSize - 4} fontSize="8" fill="rgba(255,255,255,0.3)">
-        Low Risk / Low Opp
+        低リスク / 低機会
       </text>
       <text x={padding + plotSize - 8} y={padding + plotSize - 4} textAnchor="end" fontSize="8" fill="rgba(255,255,255,0.3)">
-        High Risk / Low Opp
+        高リスク / 低機会
       </text>
     </svg>
   );
@@ -304,11 +304,11 @@ export default function CompetitorView() {
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>
-        Competitor Landscape
+      <Typography variant="h4" gutterBottom>
+        競合分析マップ
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Market positioning, threat assessment, and opportunity analysis
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        市場におけるプレイヤーの立ち位置、脅威レベル、および成長の機会を可視化します。
       </Typography>
 
       {loading && <LinearProgress sx={{ mb: 2 }} />}
@@ -396,11 +396,11 @@ export default function CompetitorView() {
             ))}
           </Box>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-            Detected {detectedCount}/{watchlistCount || watchlist.length} competitor(s) in {sourceArticles} collected articles.
+            {sourceArticles} 件の記事から {watchlistCount || watchlist.length} 社中 {detectedCount} 社の競合を検出しました。
           </Typography>
           {undetectedWatchlist.length > 0 && (
             <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
-              Not detected yet: {undetectedWatchlist.slice(0, 8).join(', ')}
+              未検出: {undetectedWatchlist.slice(0, 8).join(', ')}
               {undetectedWatchlist.length > 8 ? ' ...' : ''}
             </Typography>
           )}
@@ -419,7 +419,7 @@ export default function CompetitorView() {
           <Card>
             <CardContent sx={{ textAlign: 'center', py: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                Tracked
+                追跡・検出済み
               </Typography>
               <Typography variant="h3">{detectedCompetitors.length}</Typography>
             </CardContent>
@@ -429,7 +429,7 @@ export default function CompetitorView() {
           <Card>
             <CardContent sx={{ textAlign: 'center', py: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                High Threat
+                高脅威ターゲット
               </Typography>
               <Typography variant="h3" color="error.main">
                 {highThreats.length}
@@ -441,7 +441,7 @@ export default function CompetitorView() {
           <Card>
             <CardContent sx={{ textAlign: 'center', py: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                Opportunities
+                成長機会あり
               </Typography>
               <Typography variant="h3" color="success.main">
                 {highOpportunities.length}
@@ -453,7 +453,7 @@ export default function CompetitorView() {
           <Card>
             <CardContent sx={{ textAlign: 'center', py: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                Leaders
+                リーダー企業数
               </Typography>
               <Typography variant="h3" color="warning.main">
                 {positionDist.leader || 0}
@@ -468,7 +468,7 @@ export default function CompetitorView() {
           <Card>
             <CardContent>
               <Typography variant="subtitle1" gutterBottom>
-                Threat / Opportunity Matrix
+                脅威 / 機会マトリクス
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                 <ThreatOpportunityChart competitors={detectedCompetitors} />
@@ -480,7 +480,7 @@ export default function CompetitorView() {
           <Card>
             <CardContent>
               <Typography variant="subtitle1" gutterBottom>
-                Position Distribution
+                ポジション分布
               </Typography>
               {['leader', 'challenger', 'follower', 'niche'].map((pos) => (
                 <Box key={pos} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -517,12 +517,12 @@ export default function CompetitorView() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Competitor</TableCell>
-              <TableCell>Position</TableCell>
-              <TableCell>Threat</TableCell>
-              <TableCell>Opportunity</TableCell>
-              <TableCell>Focus Areas</TableCell>
-              <TableCell>Activities</TableCell>
+              <TableCell>競合企業</TableCell>
+              <TableCell>ポジション</TableCell>
+              <TableCell>脅威</TableCell>
+              <TableCell>機会</TableCell>
+              <TableCell>注力分野</TableCell>
+              <TableCell>最近の動向</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -530,7 +530,7 @@ export default function CompetitorView() {
               <TableRow>
                 <TableCell colSpan={6}>
                   <Typography variant="body2" color="text.secondary">
-                    No competitor profile yet
+                    競合プロファイルがまだありません
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -543,15 +543,27 @@ export default function CompetitorView() {
                   </Typography>
                 </TableCell>
                 <TableCell>
-                  <Chip
-                    label={positionLabels[c.market_position] || c.market_position}
-                    size="small"
-                    sx={{
-                      bgcolor: positionColors[c.market_position] || '#666',
-                      color: 'white',
-                      fontWeight: 'bold',
-                    }}
-                  />
+                  <Tooltip
+                    arrow
+                    placement="right"
+                    title={
+                      c.market_position === 'leader' ? '市場を牽引するトップ企業。広範な影響力を持つ。' :
+                        c.market_position === 'challenger' ? 'リーダーを追随する有力企業。革新的な動きを重視。' :
+                          c.market_position === 'follower' ? '既存市場で安定した地位を持つ企業。トレンドに追随。' :
+                            '特定分野に特化した強みを持つ企業。独自の市場を形成。'
+                    }
+                  >
+                    <Chip
+                      label={positionLabels[c.market_position] || c.market_position}
+                      size="small"
+                      sx={{
+                        bgcolor: positionColors[c.market_position] || '#666',
+                        color: 'white',
+                        fontWeight: 'bold',
+                        cursor: 'help'
+                      }}
+                    />
+                  </Tooltip>
                 </TableCell>
                 <TableCell>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -589,10 +601,10 @@ export default function CompetitorView() {
                 <TableCell>
                   <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 200 }}>
                     {Number(c.metadata?.article_count || 0) <= 0
-                      ? 'No mention in recent data'
+                      ? '最近のデータに言及なし'
                       : c.recent_activities.length > 0
                         ? c.recent_activities[0].slice(0, 60) + '...'
-                        : 'No recent activity'}
+                        : '最近の活動なし'}
                   </Typography>
                 </TableCell>
               </TableRow>

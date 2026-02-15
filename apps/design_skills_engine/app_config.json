@@ -18,28 +18,134 @@
     {
       "name": "IntentAnalyzerAgent",
       "module": "agentflow.skills.builtin.design_skills.agents.intent_analyzer_agent",
-      "capabilities": ["intent_analysis", "design_brief"]
+      "capabilities": [
+        "intent_analysis",
+        "design_brief"
+      ]
     },
     {
       "name": "PromptPlannerAgent",
       "module": "agentflow.skills.builtin.design_skills.agents.prompt_planner_agent",
-      "capabilities": ["prompt_planning", "style_generation"]
+      "capabilities": [
+        "prompt_planning",
+        "style_generation"
+      ]
     },
     {
       "name": "WorkflowExecutorAgent",
       "module": "agentflow.skills.builtin.design_skills.agents.workflow_executor_agent",
-      "capabilities": ["image_generation", "comfyui", "openai_images"]
+      "capabilities": [
+        "image_generation",
+        "comfyui",
+        "openai_images"
+      ]
     }
   ],
   "services": {
-    "comfyui": { "default_url": "http://localhost:8188" },
-    "pipeline": { "engine": "DesignSkillsEngine" }
+    "comfyui": {
+      "default_url": "http://localhost:8188"
+    },
+    "pipeline": {
+      "engine": "DesignSkillsEngine"
+    }
   },
   "dependencies": {
     "database": null,
     "redis": false,
-    "external": ["comfyui"]
+    "external": [
+      "comfyui"
+    ]
   },
-  "tags": ["design", "image-generation", "comfyui", "pipeline", "skill"]
+  "runtime": {
+    "urls": {
+      "backend": null,
+      "frontend": null,
+      "health": null,
+      "database": null
+    },
+    "database": {
+      "kind": null,
+      "url": null,
+      "host": null,
+      "port": null,
+      "name": null,
+      "user": null,
+      "password": null,
+      "password_env": null,
+      "note": null
+    },
+    "commands": {
+      "backend_dev": null,
+      "frontend_dev": null,
+      "publish": "docker compose up -d --build",
+      "start": "docker compose up -d",
+      "stop": "docker compose down"
+    }
+  },
+  "tags": [
+    "design",
+    "image-generation",
+    "comfyui",
+    "pipeline",
+    "skill"
+  ],
+  "contracts": {
+    "auth": {
+      "enabled": false,
+      "providers": [],
+      "allow_anonymous": true,
+      "required_scopes": [],
+      "session_ttl_minutes": 60
+    },
+    "rag": {
+      "enabled": false,
+      "pattern": null,
+      "provider": null,
+      "collections": [],
+      "data_sources": [],
+      "chunk_strategy": "recursive",
+      "chunk_size": 800,
+      "chunk_overlap": 120,
+      "retrieval_method": "hybrid",
+      "embedding_model": null,
+      "rerank_model": null,
+      "default_top_k": 5,
+      "score_threshold": null,
+      "indexing_schedule": null
+    },
+    "skills": {
+      "auto_install": false,
+      "hot_reload": true,
+      "allowed_sources": [],
+      "default_skills": []
+    },
+    "release": {
+      "strategy": "manual",
+      "targets": [],
+      "environments": [
+        "dev"
+      ],
+      "require_approval": true
+    }
+  },
+  "blueprint": {
+    "engine_pattern": "pipeline",
+    "flow_pattern": null,
+    "system_prompt": "",
+    "llm_provider": null,
+    "llm_base_url": null,
+    "llm_api_key_env": null,
+    "default_model": null,
+    "default_skills": [],
+    "vector_db_provider": null,
+    "vector_db_url": null,
+    "vector_db_collection": null,
+    "vector_db_api_key_env": null,
+    "mcp_servers": [],
+    "agents": []
+  },
+  "visibility": {
+    "mode": "private",
+    "tenants": []
+  }
 }
-

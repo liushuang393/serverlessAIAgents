@@ -313,6 +313,14 @@ class RAGOverviewService:
         raise ValueError(msg)
 
     def _extract_app_rag(self, app_config: Any) -> dict[str, Any]:
+        raw_config = self._discovery.get_raw_config(app_config.name) or {}
+        raw_contract_rag = (
+            raw_config.get("contracts", {}).get("rag", {})
+            if isinstance(raw_config.get("contracts"), dict)
+            and isinstance(raw_config.get("contracts", {}).get("rag"), dict)
+            else {}
+        )
+
         rag_contract = app_config.contracts.rag
         services = app_config.services if isinstance(app_config.services, dict) else {}
         rag_service = services.get("rag", {}) if isinstance(services.get("rag"), dict) else {}
@@ -331,13 +339,20 @@ class RAGOverviewService:
             for agent in app_config.agents
             for capability in agent.capabilities
         )
-        inferred_enabled = bool(rag_service) or has_rag_agent
+        enabled = self._resolve_enabled(
+            raw_contract_rag=raw_contract_rag,
+            contract_enabled=rag_contract.enabled,
+            rag_service=rag_service,
+            has_rag_agent=has_rag_agent,
+        )
 
-        data_sources = rag_contract.data_sources
-        if not data_sources:
-            maybe_sources = rag_service.get("data_sources")
-            if isinstance(maybe_sources, list):
-                data_sources = maybe_sources
+        data_sources = self._select(
+            raw_contract_rag,
+            "data_sources",
+            rag_contract.data_sources,
+            rag_service.get("data_sources"),
+            [],
+        )
 
         return {
             "app_name": app_config.name,
@@ -345,20 +360,133 @@ class RAGOverviewService:
             "icon": app_config.icon,
             "config_path": str(self._discovery.get_config_path(app_config.name) or ""),
             "rag": {
-                "enabled": bool(rag_contract.enabled or inferred_enabled),
-                "pattern": rag_contract.pattern or rag_service.get("pattern"),
-                "vector_provider": rag_contract.provider or vector_service.get("provider"),
+                "enabled": enabled,
+                "pattern": self._select(
+                    raw_contract_rag,
+                    "pattern",
+                    rag_contract.pattern,
+                    rag_service.get("pattern"),
+                    None,
+                ),
+                "vector_provider": self._select(
+                    raw_contract_rag,
+                    "provider",
+                    rag_contract.provider,
+                    vector_service.get("provider"),
+                    None,
+                ),
                 "vector_url": vector_service.get("url"),
-                "vector_collection": collection,
-                "embedding_model": rag_contract.embedding_model,
-                "chunk_strategy": rag_contract.chunk_strategy or chunking.get("strategy") or "recursive",
-                "chunk_size": rag_contract.chunk_size or chunking.get("size") or 800,
-                "chunk_overlap": rag_contract.chunk_overlap or chunking.get("overlap") or 120,
-                "retrieval_method": rag_contract.retrieval_method or retrieval.get("method") or "hybrid",
-                "reranker": rag_contract.rerank_model or retrieval.get("reranker"),
-                "top_k": rag_contract.default_top_k or retrieval.get("top_k") or 5,
-                "score_threshold": rag_contract.score_threshold or retrieval.get("score_threshold"),
-                "indexing_schedule": rag_contract.indexing_schedule or rag_service.get("indexing_schedule"),
+                "vector_collection": self._select_collection(
+                    raw_contract_rag,
+                    rag_contract.collections,
+                    collection,
+                ),
+                "embedding_model": self._select(
+                    raw_contract_rag,
+                    "embedding_model",
+                    rag_contract.embedding_model,
+                    rag_service.get("embedding_model"),
+                    None,
+                ),
+                "chunk_strategy": self._select(
+                    raw_contract_rag,
+                    "chunk_strategy",
+                    rag_contract.chunk_strategy,
+                    chunking.get("strategy"),
+                    "recursive",
+                ),
+                "chunk_size": self._select(
+                    raw_contract_rag,
+                    "chunk_size",
+                    rag_contract.chunk_size,
+                    chunking.get("size"),
+                    800,
+                ),
+                "chunk_overlap": self._select(
+                    raw_contract_rag,
+                    "chunk_overlap",
+                    rag_contract.chunk_overlap,
+                    chunking.get("overlap"),
+                    120,
+                ),
+                "retrieval_method": self._select(
+                    raw_contract_rag,
+                    "retrieval_method",
+                    rag_contract.retrieval_method,
+                    retrieval.get("method"),
+                    "hybrid",
+                ),
+                "reranker": self._select(
+                    raw_contract_rag,
+                    "rerank_model",
+                    rag_contract.rerank_model,
+                    retrieval.get("reranker"),
+                    None,
+                ),
+                "top_k": self._select(
+                    raw_contract_rag,
+                    "default_top_k",
+                    rag_contract.default_top_k,
+                    retrieval.get("top_k"),
+                    5,
+                ),
+                "score_threshold": self._select(
+                    raw_contract_rag,
+                    "score_threshold",
+                    rag_contract.score_threshold,
+                    retrieval.get("score_threshold"),
+                    None,
+                ),
+                "indexing_schedule": self._select(
+                    raw_contract_rag,
+                    "indexing_schedule",
+                    rag_contract.indexing_schedule,
+                    rag_service.get("indexing_schedule"),
+                    None,
+                ),
                 "data_sources": data_sources,
             },
         }
+
+    @staticmethod
+    def _resolve_enabled(
+        *,
+        raw_contract_rag: dict[str, Any],
+        contract_enabled: bool,
+        rag_service: dict[str, Any],
+        has_rag_agent: bool,
+    ) -> bool:
+        """Resolve RAG enablement with priority contracts > services > inference."""
+        if "enabled" in raw_contract_rag:
+            return bool(contract_enabled)
+        if "enabled" in rag_service:
+            return bool(rag_service.get("enabled"))
+        if rag_service:
+            return True
+        return has_rag_agent
+
+    @staticmethod
+    def _select(
+        raw_contract_rag: dict[str, Any],
+        contract_key: str,
+        contract_value: Any,
+        service_value: Any,
+        default: Any,
+    ) -> Any:
+        """Pick value by priority contracts > services > default."""
+        if contract_key in raw_contract_rag and contract_value is not None:
+            return contract_value
+        if service_value is not None:
+            return service_value
+        return default
+
+    @staticmethod
+    def _select_collection(
+        raw_contract_rag: dict[str, Any],
+        contract_collections: list[str],
+        fallback_collection: Any,
+    ) -> Any:
+        """Pick vector collection with contract priority."""
+        if "collections" in raw_contract_rag and contract_collections:
+            return contract_collections[0]
+        return fallback_collection

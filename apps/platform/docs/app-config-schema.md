@@ -1,24 +1,19 @@
-# app_config.json スキーマ仕様
+# app_config.json スキーマ仕様（P0 統一契約）
 
-> **最終更新**: 2026-02-14
-> **対象**: 全 `apps/*/app_config.json`
-
----
-
-## 1. 概要
-
-`app_config.json` は各 App のメタデータを宣言するマニフェストファイル。
-Platform がこのファイルをスキャンして App を自動発見・管理する。
-
-### 設計原則
-
-- **必須フィールドは最小限** — 既存 App への導入コストを下げる
-- **Pydantic v2 でバリデーション** — 型安全を保証
-- **後方互換** — `market_trend_monitor` の既存形式を包含する
+> 最終更新: 2026-02-15  
+> 対象: 全 `apps/*/app_config.json`  
+> 実装: `apps/platform/schemas/app_config_schemas.py`
 
 ---
 
-## 2. スキーマ定義
+## 1. 目的
+
+全 App の manifest 契約を統一し、`platform` が推論ではなく明示契約を優先して管理できる状態を作る。  
+P0 では `contracts`、`blueprint`、`visibility` を全 App に補完する。
+
+---
+
+## 2. ルート構造
 
 ```json
 {
@@ -27,102 +22,83 @@ Platform がこのファイルをスキャンして App を自動発見・管理
   "description": "社内FAQ/SQL分析/営業資料画像生成",
   "version": "1.0.0",
   "icon": "💬",
-
-  "ports": {
-    "api": 8001,
-    "frontend": null,
-    "db": 5433,
-    "redis": null
+  "ports": { "api": 8001, "frontend": null, "db": 5433, "redis": null },
+  "entry_points": { "api_module": "apps.faq_system.main:app", "health": "/health" },
+  "agents": [{ "name": "FAQAgent", "module": null, "capabilities": ["rag", "faq"] }],
+  "services": {},
+  "dependencies": { "database": "postgresql", "redis": false, "external": [] },
+  "runtime": {
+    "urls": { "backend": null, "frontend": null, "health": null, "database": null },
+    "database": { "kind": null, "url": null, "host": null, "port": null, "name": null, "user": null, "password": null, "password_env": null, "note": null },
+    "commands": { "backend_dev": null, "frontend_dev": null, "publish": null, "start": null, "stop": null }
   },
-
-  "entry_points": {
-    "api_module": "apps.faq_system.main:app",
-    "health": "/health"
+  "contracts": {
+    "auth": { "enabled": false, "providers": [], "allow_anonymous": true, "required_scopes": [], "session_ttl_minutes": 60 },
+    "rag": { "enabled": true, "pattern": null, "provider": null, "collections": ["faq_system_knowledge"], "data_sources": [], "chunk_strategy": "recursive", "chunk_size": 800, "chunk_overlap": 120, "retrieval_method": "hybrid", "embedding_model": null, "rerank_model": null, "default_top_k": 5, "score_threshold": null, "indexing_schedule": null },
+    "skills": { "auto_install": false, "hot_reload": true, "allowed_sources": [], "default_skills": [] },
+    "release": { "strategy": "manual", "targets": [], "environments": ["dev"], "require_approval": true }
   },
-
-  "agents": [
-    {
-      "name": "FAQAgent",
-      "module": "agentflow.agents.faq_agent",
-      "capabilities": ["faq", "rag", "sql"]
-    }
-  ],
-
-  "services": {
-    "rag": { "collections": ["faq_knowledge"] },
-    "sql": { "dialect": "postgresql" }
+  "blueprint": {
+    "engine_pattern": "simple",
+    "flow_pattern": null,
+    "system_prompt": "",
+    "llm_provider": null,
+    "llm_base_url": null,
+    "llm_api_key_env": null,
+    "default_model": null,
+    "default_skills": [],
+    "vector_db_provider": null,
+    "vector_db_url": null,
+    "vector_db_collection": null,
+    "vector_db_api_key_env": null,
+    "mcp_servers": [],
+    "agents": []
   },
-
-  "dependencies": {
-    "database": "postgresql",
-    "redis": false,
-    "external": ["comfyui"]
-  },
-
-  "tags": ["faq", "rag", "sql"]
+  "visibility": { "mode": "private", "tenants": [] },
+  "tags": ["faq", "rag"]
 }
 ```
 
 ---
 
-## 3. フィールド定義
+## 3. P0 マイグレーション規則
 
-### 必須フィールド
+`POST /api/apps/migrate-manifests` および `AppDiscoveryService.migrate_manifests()` は以下を保証する。
 
-| フィールド | 型 | 説明 |
-|-----------|-----|------|
-| `name` | `str` | App 識別子（snake_case、ディレクトリ名と一致） |
-| `display_name` | `str` | UI 表示用の名前 |
-| `version` | `str` | セマンティックバージョニング |
-
-### 任意フィールド
-
-| フィールド | 型 | デフォルト | 説明 |
-|-----------|-----|----------|------|
-| `description` | `str` | `""` | App の説明文 |
-| `icon` | `str` | `"📦"` | 絵文字アイコン |
-| `ports.api` | `int \| null` | `null` | API ポート番号 |
-| `ports.frontend` | `int \| null` | `null` | フロントエンドポート |
-| `ports.db` | `int \| null` | `null` | DB ポート |
-| `ports.redis` | `int \| null` | `null` | Redis ポート |
-| `entry_points.api_module` | `str \| null` | `null` | FastAPI モジュールパス |
-| `entry_points.health` | `str` | `"/health"` | ヘルスチェックパス |
-| `agents` | `list[AgentInfo]` | `[]` | Agent 一覧 |
-| `services` | `dict` | `{}` | 利用サービス情報 |
-| `dependencies.database` | `str \| null` | `null` | DB 種別 |
-| `dependencies.redis` | `bool` | `false` | Redis 使用有無 |
-| `dependencies.external` | `list[str]` | `[]` | 外部依存 |
-| `tags` | `list[str]` | `[]` | 検索用タグ |
-
-### AgentInfo
-
-| フィールド | 型 | 説明 |
-|-----------|-----|------|
-| `name` | `str` | Agent 名 |
-| `module` | `str \| null` | Python モジュールパス |
-| `capabilities` | `list[str]` | 能力タグ |
+1. `contracts` が欠落時は `auth / rag / skills / release` を補完。
+2. `contracts.rag` は `services.rag + services.vector_db + tags + agents.capabilities` から推論して補完。
+3. `blueprint` が欠落時は補完し、`engine_pattern` は `services.engine.pattern` 優先、なければ `services.pipeline` 存在時 `pipeline`、それ以外は `simple`。
+4. `visibility` が欠落時は `{ "mode": "private", "tenants": [] }` を補完。
+5. 既存の業務独自フィールドは削除しない。
+6. 再実行しても差分が増えない（幂等）。
 
 ---
 
-## 4. 後方互換性
+## 4. RAG 設定の優先順位
 
-`market_trend_monitor` の既存形式:
+RAG 概要サービスの抽出優先度は以下。
 
-```json
-{ "api_host": "0.0.0.0", "api_port": 8002, "frontend_port": 3002 }
-```
+1. `contracts.rag`
+2. `services.rag`
+3. 推論値（タグ/Agent/デフォルト）
 
-新スキーマでは `api_host` → 不要（`entry_points` で管理）、
-`api_port` → `ports.api`、`frontend_port` → `ports.frontend` に移行。
-既存の `vite.config.ts` は `ports.api` / `ports.frontend` を読むよう更新する。
+この順序により、明示契約が常に最優先される。
 
 ---
 
-## 5. バリデーションルール
+## 5. バリデーション要点
 
-1. `name` は `^[a-z][a-z0-9_]*$` に一致すること
-2. `ports.*` は 1024〜65535 の範囲
-3. `version` はセマンティックバージョニング形式
-4. `agents[].name` は App 内で一意
-5. ファイルが存在しない App は Platform に表示されない（エラーではない）
+1. `name`: `^[a-z][a-z0-9_]*$`
+2. `version`: SemVer
+3. `ports.*`: 1024-65535
+4. `agents[].name`: App 内で重複不可
+5. `visibility.mode`: `private | public | tenant_allowlist`
 
+---
+
+## 6. 運用フロー
+
+1. 開発者が `app_config.json` を更新。
+2. `POST /api/apps/migrate-manifests` を `dry_run=true` で確認。
+3. 問題なければ `dry_run=false` で適用。
+4. `GET /api/apps/summary` で `agent_count` / `has_api` / `contracts` を確認。

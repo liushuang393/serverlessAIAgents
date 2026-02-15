@@ -388,7 +388,7 @@ const Reports: React.FC = () => {
         <Typography variant="h4" gutterBottom>
           レポートセンター
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           指標の根拠を明示しながら、配布用の Markdown / PDF を出力できます。
         </Typography>
 

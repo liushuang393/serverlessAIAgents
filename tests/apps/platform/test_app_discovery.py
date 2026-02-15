@@ -137,4 +137,29 @@ class TestAppDiscoveryLookup:
         # test_app(2) + minimal_app(0) + library_app(1) = 3
         assert s["total_agents"] == 3
         assert len(s["apps"]) == 3
+        first = s["apps"][0]
+        assert "agent_count" in first
+        assert "has_api" in first
 
+
+class TestManifestMigration:
+    """migrate_manifests() のテスト."""
+
+    @pytest.mark.asyncio()
+    async def test_migrate_manifests_dry_run(self, discovery: AppDiscoveryService) -> None:
+        """dry_run で変更計画を返す."""
+        await discovery.scan()
+        report = discovery.migrate_manifests(dry_run=True)
+        assert report["total"] == 3
+        assert report["dry_run"] is True
+        assert report["changed"] >= 1
+
+    @pytest.mark.asyncio()
+    async def test_migrate_manifests_apply_idempotent(self, discovery: AppDiscoveryService) -> None:
+        """適用後の再実行は差分 0 になる."""
+        await discovery.scan()
+        first = discovery.migrate_manifests(dry_run=False)
+        await discovery.scan()
+        second = discovery.migrate_manifests(dry_run=False)
+        assert first["changed"] >= 1
+        assert second["changed"] == 0

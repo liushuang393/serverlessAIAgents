@@ -37,8 +37,8 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
     職責:
     - 全層の整合性検証
     - リスク評価
-    - 最終判定（PASS/REVISE/REJECT）
-    - 警告の提示
+    - 最終判定（PASS/REVISE/COACH）
+    - 警告の提示（COACH: コーチング型改善指導）
 
     必須チェック項目:
     - 責任者が明確か
@@ -124,7 +124,7 @@ class ReviewAgent(ResilientAgent[ReviewInput, ReviewOutput]):
 
 【出力形式（JSON）】
 {
-    "overall_verdict": "PASS" | "REVISE" | "REJECT",
+    "overall_verdict": "PASS" | "REVISE" | "COACH",
     "findings": [
         {
             "severity": "CRITICAL" | "WARNING" | "INFO",
@@ -271,7 +271,7 @@ JSON形式で出力してください。"""
         confidence = max(0.0, min(1.0, confidence))
 
         if has_critical:
-            verdict = ReviewVerdict.REJECT
+            verdict = ReviewVerdict.COACH  # コーチング型改善指導（即終了しない）
         elif warning_count > 0 or confidence < 0.70:
             verdict = ReviewVerdict.REVISE
         else:
@@ -284,7 +284,7 @@ JSON形式で出力してください。"""
         # 判定と信頼度の不整合を防止
         if verdict == ReviewVerdict.REVISE:
             confidence = min(confidence, 0.79)
-        elif verdict == ReviewVerdict.REJECT:
+        elif verdict == ReviewVerdict.COACH:
             confidence = min(confidence, 0.59)
 
         return verdict, round(confidence, 2)
@@ -295,15 +295,18 @@ JSON形式で出力してください。"""
         order = {
             ReviewVerdict.PASS: 0,
             ReviewVerdict.REVISE: 1,
-            ReviewVerdict.REJECT: 2,
+            ReviewVerdict.COACH: 2,
         }
         return order[verdict]
 
     @staticmethod
     def _parse_verdict(value: Any) -> ReviewVerdict | None:
-        """文字列を ReviewVerdict に変換."""
+        """文字列を ReviewVerdict に変換（後方互換: REJECT → COACH）."""
         if not isinstance(value, str):
             return None
+        # LLM が旧 REJECT を返した場合は COACH にマッピング
+        if value.upper() == "REJECT":
+            return ReviewVerdict.COACH
         try:
             return ReviewVerdict(value)
         except ValueError:

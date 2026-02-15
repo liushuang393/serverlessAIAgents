@@ -18,29 +18,148 @@
     {
       "name": "PersonalAssistantCoordinator",
       "module": "apps.messaging_hub.coordinator",
-      "capabilities": ["coordination", "intent_routing", "summary"]
+      "capabilities": [
+        "coordination",
+        "intent_routing",
+        "summary"
+      ]
     },
     {
       "name": "FileOrganizerAgent",
       "module": "apps.messaging_hub.agents.file_organizer_agent",
-      "capabilities": ["file_organization", "categorization"]
+      "capabilities": [
+        "file_organization",
+        "categorization"
+      ]
     },
     {
       "name": "MeetingAgent",
       "module": "apps.messaging_hub.agents.meeting_agent",
-      "capabilities": ["meeting", "calendar", "notes"]
+      "capabilities": [
+        "meeting",
+        "calendar",
+        "notes"
+      ]
     }
   ],
   "services": {
-    "chatbot": { "skill": "ChatBotSkill" },
-    "websocket": { "hub": "WebSocketHub" },
-    "gateway": { "channels": ["telegram", "slack", "discord", "teams", "whatsapp", "signal"] }
+    "chatbot": {
+      "skill": "ChatBotSkill"
+    },
+    "websocket": {
+      "hub": "WebSocketHub"
+    },
+    "gateway": {
+      "channels": [
+        "telegram",
+        "slack",
+        "discord",
+        "teams",
+        "whatsapp",
+        "signal"
+      ]
+    }
   },
   "dependencies": {
     "database": null,
     "redis": false,
-    "external": ["telegram_api", "slack_api", "discord_api"]
+    "external": [
+      "telegram_api",
+      "slack_api",
+      "discord_api"
+    ]
   },
-  "tags": ["messaging", "chatbot", "telegram", "slack", "discord", "multi-platform"]
+  "runtime": {
+    "urls": {
+      "backend": "http://localhost:8000",
+      "frontend": null,
+      "health": "http://localhost:8000/health",
+      "database": null
+    },
+    "database": {
+      "kind": null,
+      "url": null,
+      "host": null,
+      "port": null,
+      "name": null,
+      "user": null,
+      "password": null,
+      "password_env": null,
+      "note": null
+    },
+    "commands": {
+      "backend_dev": "python -m apps.messaging_hub.main",
+      "frontend_dev": "cd apps/messaging_hub/admin_ui && npm run dev",
+      "publish": null,
+      "start": null,
+      "stop": null
+    }
+  },
+  "tags": [
+    "messaging",
+    "chatbot",
+    "telegram",
+    "slack",
+    "discord",
+    "multi-platform"
+  ],
+  "contracts": {
+    "auth": {
+      "enabled": false,
+      "providers": [],
+      "allow_anonymous": true,
+      "required_scopes": [],
+      "session_ttl_minutes": 60
+    },
+    "rag": {
+      "enabled": false,
+      "pattern": null,
+      "provider": null,
+      "collections": [],
+      "data_sources": [],
+      "chunk_strategy": "recursive",
+      "chunk_size": 800,
+      "chunk_overlap": 120,
+      "retrieval_method": "hybrid",
+      "embedding_model": null,
+      "rerank_model": null,
+      "default_top_k": 5,
+      "score_threshold": null,
+      "indexing_schedule": null
+    },
+    "skills": {
+      "auto_install": false,
+      "hot_reload": true,
+      "allowed_sources": [],
+      "default_skills": []
+    },
+    "release": {
+      "strategy": "manual",
+      "targets": [],
+      "environments": [
+        "dev"
+      ],
+      "require_approval": true
+    }
+  },
+  "blueprint": {
+    "engine_pattern": "simple",
+    "flow_pattern": null,
+    "system_prompt": "",
+    "llm_provider": null,
+    "llm_base_url": null,
+    "llm_api_key_env": null,
+    "default_model": null,
+    "default_skills": [],
+    "vector_db_provider": null,
+    "vector_db_url": null,
+    "vector_db_collection": null,
+    "vector_db_api_key_env": null,
+    "mcp_servers": [],
+    "agents": []
+  },
+  "visibility": {
+    "mode": "private",
+    "tenants": []
+  }
 }
-

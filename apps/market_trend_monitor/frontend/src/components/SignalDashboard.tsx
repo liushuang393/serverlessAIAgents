@@ -20,6 +20,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Tooltip,
 } from '@mui/material';
 import { apiClient } from '../api/client';
 
@@ -166,11 +167,11 @@ export default function SignalDashboard() {
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom>
-        Signal Dashboard
+      <Typography variant="h4" gutterBottom>
+        シグナル分析
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        5-axis signal evaluation with adaptive weighting
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        AIが収集した兆候を5つの指標で多角的に評価し、重要度を判定します。
       </Typography>
 
       {loading && <LinearProgress sx={{ mb: 2 }} />}
@@ -179,15 +180,25 @@ export default function SignalDashboard() {
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {['A', 'B', 'C', 'D'].map((grade) => (
           <Grid item xs={3} key={grade}>
-            <Card>
-              <CardContent sx={{ textAlign: 'center', py: 1 }}>
-                <Chip
-                  label={`Grade ${grade}`}
-                  sx={{ bgcolor: gradeColors[grade], color: 'white', fontWeight: 'bold', mb: 1 }}
-                />
-                <Typography variant="h4">{(gradeDist[grade] as number) || 0}</Typography>
-              </CardContent>
-            </Card>
+            <Tooltip
+              arrow
+              title={
+                grade === 'A' ? '最高重要度：即時アクションが推奨される強いシグナル' :
+                  grade === 'B' ? '高重要度：継続的な監視と詳細分析が必要な兆候' :
+                    grade === 'C' ? '中重要度：注意深く見守る必要がある変化' :
+                      '低重要度：現時点ではノイズの可能性が高い情報'
+              }
+            >
+              <Card sx={{ cursor: 'help' }}>
+                <CardContent sx={{ textAlign: 'center', py: 1 }}>
+                  <Chip
+                    label={`グレード ${grade}`}
+                    sx={{ bgcolor: gradeColors[grade], color: 'white', fontWeight: 'bold', mb: 1 }}
+                  />
+                  <Typography variant="h4">{(gradeDist[grade] as number) || 0}</Typography>
+                </CardContent>
+              </Card>
+            </Tooltip>
           </Grid>
         ))}
       </Grid>
@@ -196,11 +207,11 @@ export default function SignalDashboard() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Trend</TableCell>
-              <TableCell>Grade</TableCell>
-              <TableCell>Score</TableCell>
-              <TableCell>Radar</TableCell>
-              <TableCell>Details</TableCell>
+              <TableCell>トレンド</TableCell>
+              <TableCell>グレード</TableCell>
+              <TableCell>スコア</TableCell>
+              <TableCell>分析マップ</TableCell>
+              <TableCell>評価詳細</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -212,11 +223,21 @@ export default function SignalDashboard() {
                   </Typography>
                 </TableCell>
                 <TableCell>
-                  <Chip
-                    label={signal.grade}
-                    size="small"
-                    sx={{ bgcolor: gradeColors[signal.grade], color: 'white', fontWeight: 'bold' }}
-                  />
+                  <Tooltip
+                    arrow
+                    title={
+                      signal.grade === 'A' ? '最高重要度：即時の対応を推奨' :
+                        signal.grade === 'B' ? '高重要度：詳細分析を推奨' :
+                          signal.grade === 'C' ? '中重要度：継続監視を推奨' :
+                            '低重要度：ノイズの可能性'
+                    }
+                  >
+                    <Chip
+                      label={signal.grade}
+                      size="small"
+                      sx={{ bgcolor: gradeColors[signal.grade], color: 'white', fontWeight: 'bold', cursor: 'help' }}
+                    />
+                  </Tooltip>
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2" fontWeight="bold">
@@ -228,19 +249,30 @@ export default function SignalDashboard() {
                 </TableCell>
                 <TableCell>
                   <Box>
-                    {Object.entries(axisLabels).map(([key, label]) => (
-                      <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Typography variant="caption" sx={{ width: 90 }}>{label}</Typography>
-                        <LinearProgress
-                          variant="determinate"
-                          value={signal.score[key as keyof SignalScore] as number * 100}
-                          sx={{ width: 60, height: 6 }}
-                        />
-                        <Typography variant="caption">
-                          {(signal.score[key as keyof SignalScore] as number).toFixed(2)}
-                        </Typography>
-                      </Box>
-                    ))}
+                    {Object.entries(axisLabels).map(([key, label]) => {
+                      const tips: Record<string, string> = {
+                        reliability: '情報の信頼性。事実に基づいているか。',
+                        leading: '先行指標性。未来のトレンドを先取りしているか。',
+                        relevance: '関連性。自社のビジネスにどれだけ関係があるか。',
+                        actionability: '実行可能性。具体的なアクションに繋げやすいか。',
+                        convergence: '収束性。複数の情報源が同じ方向を指しているか。',
+                      };
+                      return (
+                        <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Tooltip title={tips[key]} placement="left" arrow>
+                            <Typography variant="caption" sx={{ width: 90, cursor: 'help' }}>{label}</Typography>
+                          </Tooltip>
+                          <LinearProgress
+                            variant="determinate"
+                            value={signal.score[key as keyof SignalScore] as number * 100}
+                            sx={{ width: 60, height: 6 }}
+                          />
+                          <Typography variant="caption">
+                            {(signal.score[key as keyof SignalScore] as number).toFixed(2)}
+                          </Typography>
+                        </Box>
+                      );
+                    })}
                   </Box>
                 </TableCell>
               </TableRow>

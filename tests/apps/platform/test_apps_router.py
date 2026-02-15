@@ -31,6 +31,10 @@ class TestListApps:
         item = items[0]
         required_keys = {"name", "display_name", "version", "icon", "status", "ports", "agent_count", "tags"}
         assert required_keys.issubset(item.keys())
+        assert "runtime" in item
+        assert "urls" in item["runtime"]
+        assert "database" in item["runtime"]
+        assert "commands" in item["runtime"]
 
 
 class TestGetSummary:
@@ -141,6 +145,26 @@ class TestRefreshApps:
         assert "new" in data
         assert "removed" in data
         assert "unchanged" in data
+
+
+class TestMigrateManifests:
+    """POST /api/apps/migrate-manifests テスト."""
+
+    def test_migrate_dry_run(self, test_client: TestClient) -> None:
+        resp = test_client.post("/api/apps/migrate-manifests", json={"dry_run": True})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["dry_run"] is True
+        assert "total" in data
+        assert "changed" in data
+        assert "apps" in data
+
+    def test_migrate_apply(self, test_client: TestClient) -> None:
+        resp = test_client.post("/api/apps/migrate-manifests", json={"dry_run": False})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["dry_run"] is False
+        assert data["total"] == 3
 
 
 class TestRootAndHealth:

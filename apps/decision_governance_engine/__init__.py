@@ -7,7 +7,7 @@ PipelineEngine パターンを使用した Multi-Agent 意思決定支援シス�
 アーキテクチャ:
     Gate層: CognitiveGate → Gatekeeper
     分析層: Clarification → [Dao, Fa, Shu, Qi]
-    検証層: ReviewAgent（REVISE対応）
+    検証層: ReviewAgent（COACH改善指導 / REVISE対応）
 
 使用例:
     >>> from apps.decision_governance_engine import DecisionEngine

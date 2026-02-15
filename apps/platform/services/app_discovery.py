@@ -12,12 +12,18 @@ Platform の App 管理 API が依存するコアサービス。
 
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 import logging
 from pathlib import Path
 from typing import Any
 
-from apps.platform.schemas.app_config_schemas import AppConfig
+from apps.platform.schemas.app_config_schemas import (
+    AppConfig,
+    BlueprintConfig,
+    ContractsConfig,
+    VisibilityConfig,
+)
 
 
 _logger = logging.getLogger(__name__)
@@ -165,7 +171,8 @@ class AppDiscoveryService:
                     "name": a.name,
                     "display_name": a.display_name,
                     "icon": a.icon,
-                    "agents_count": len(a.agents),
+                    "agent_count": len(a.agents),
+                    "has_api": a.ports.api is not None,
                     "port": a.ports.api,
                     "config_path": self._to_relative(self._config_paths.get(a.name)),
                     "contracts": {
@@ -178,6 +185,56 @@ class AppDiscoveryService:
                 for a in apps
             ],
             "errors": self._errors,
+        }
+
+    def migrate_manifests(self, *, dry_run: bool = True) -> dict[str, Any]:
+        """全 app_config.json を標準契約へ移行する.
+
+        Args:
+            dry_run: True の場合はファイルを書き換えない
+
+        Returns:
+            移行レポート
+        """
+        results: list[dict[str, Any]] = []
+        changed = 0
+        total = len(self._config_paths)
+
+        for app_name in sorted(self._config_paths.keys()):
+            config_path = self._config_paths[app_name]
+            raw = self.get_raw_config(app_name)
+            if raw is None:
+                continue
+
+            migrated, updated_fields = self._migrate_one(raw)
+            if not updated_fields:
+                continue
+
+            changed += 1
+            results.append(
+                {
+                    "name": app_name,
+                    "updated_fields": updated_fields,
+                },
+            )
+
+            if dry_run:
+                continue
+
+            config_path.write_text(
+                json.dumps(migrated, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+            validated = AppConfig.model_validate(migrated)
+            self._registry[validated.name] = validated
+            self._errors.pop(config_path.parent.name, None)
+
+        return {
+            "total": total,
+            "changed": changed,
+            "unchanged": total - changed,
+            "apps": results,
+            "dry_run": dry_run,
         }
 
     def update_app_config(self, name: str, patch: dict[str, Any]) -> AppConfig:
@@ -251,6 +308,188 @@ class AppDiscoveryService:
         except Exception as exc:  # noqa: BLE001
             self._errors[dir_name] = f"検証エラー: {exc}"
             _logger.warning("検証エラー (%s): %s", dir_name, exc)
+
+    def _migrate_one(self, raw: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
+        """単一 manifest を標準契約へ移行."""
+        manifest = deepcopy(raw)
+        updated_fields: list[str] = []
+
+        contracts_defaults = ContractsConfig().model_dump()
+        inferred_rag = self._infer_contract_rag(manifest)
+        contracts = manifest.get("contracts")
+        if not isinstance(contracts, dict):
+            contracts = deepcopy(contracts_defaults)
+            contracts["rag"] = inferred_rag
+            manifest["contracts"] = contracts
+            self._mark_updated(updated_fields, "contracts")
+        else:
+            for key, default_value in contracts_defaults.items():
+                if not isinstance(contracts.get(key), dict):
+                    contracts[key] = deepcopy(default_value)
+                    self._mark_updated(updated_fields, f"contracts.{key}")
+
+            rag_contract = contracts.get("rag", {})
+            if not isinstance(rag_contract, dict):
+                contracts["rag"] = inferred_rag
+                self._mark_updated(updated_fields, "contracts.rag")
+            else:
+                for key, value in inferred_rag.items():
+                    if key not in rag_contract:
+                        rag_contract[key] = deepcopy(value)
+                        self._mark_updated(updated_fields, f"contracts.rag.{key}")
+
+        blueprint_defaults = BlueprintConfig().model_dump()
+        engine_pattern = self._infer_engine_pattern(manifest)
+        flow_pattern = self._infer_flow_pattern(manifest)
+
+        blueprint = manifest.get("blueprint")
+        if not isinstance(blueprint, dict):
+            blueprint = deepcopy(blueprint_defaults)
+            blueprint["engine_pattern"] = engine_pattern
+            blueprint["flow_pattern"] = flow_pattern
+            manifest["blueprint"] = blueprint
+            self._mark_updated(updated_fields, "blueprint")
+        else:
+            for key, default_value in blueprint_defaults.items():
+                if key not in blueprint:
+                    blueprint[key] = deepcopy(default_value)
+                    self._mark_updated(updated_fields, f"blueprint.{key}")
+            if "engine_pattern" not in blueprint or not str(blueprint.get("engine_pattern", "")).strip():
+                blueprint["engine_pattern"] = engine_pattern
+                self._mark_updated(updated_fields, "blueprint.engine_pattern")
+            if "flow_pattern" not in blueprint and flow_pattern is not None:
+                blueprint["flow_pattern"] = flow_pattern
+                self._mark_updated(updated_fields, "blueprint.flow_pattern")
+
+        visibility_defaults = VisibilityConfig().model_dump()
+        visibility = manifest.get("visibility")
+        if not isinstance(visibility, dict):
+            manifest["visibility"] = deepcopy(visibility_defaults)
+            self._mark_updated(updated_fields, "visibility")
+        else:
+            for key, default_value in visibility_defaults.items():
+                if key not in visibility:
+                    visibility[key] = deepcopy(default_value)
+                    self._mark_updated(updated_fields, f"visibility.{key}")
+
+        return manifest, sorted(updated_fields)
+
+    @staticmethod
+    def _infer_engine_pattern(manifest: dict[str, Any]) -> str:
+        """services から engine_pattern を推論."""
+        services = manifest.get("services")
+        if not isinstance(services, dict):
+            return "simple"
+
+        engine = services.get("engine")
+        if isinstance(engine, dict):
+            pattern = engine.get("pattern")
+            if isinstance(pattern, str) and pattern.strip():
+                return pattern.strip()
+
+        if "pipeline" in services:
+            return "pipeline"
+        return "simple"
+
+    @staticmethod
+    def _infer_flow_pattern(manifest: dict[str, Any]) -> str | None:
+        """services.engine.flow_pattern を推論."""
+        services = manifest.get("services")
+        if not isinstance(services, dict):
+            return None
+        engine = services.get("engine")
+        if not isinstance(engine, dict):
+            return None
+        flow = engine.get("flow_pattern")
+        if isinstance(flow, str) and flow.strip():
+            return flow.strip()
+        return None
+
+    @staticmethod
+    def _infer_contract_rag(manifest: dict[str, Any]) -> dict[str, Any]:
+        """services / tags / agents から contracts.rag を推論."""
+        rag_defaults = ContractsConfig().rag.model_dump()
+
+        services = manifest.get("services", {})
+        if not isinstance(services, dict):
+            services = {}
+        rag_service = services.get("rag", {})
+        if not isinstance(rag_service, dict):
+            rag_service = {}
+        vector_service = services.get("vector_db", {})
+        if not isinstance(vector_service, dict):
+            vector_service = {}
+
+        tags = manifest.get("tags", [])
+        tags_lower = {str(tag).lower() for tag in tags} if isinstance(tags, list) else set()
+
+        agents = manifest.get("agents", [])
+        has_rag_agent = False
+        if isinstance(agents, list):
+            for agent in agents:
+                if not isinstance(agent, dict):
+                    continue
+                capabilities = agent.get("capabilities", [])
+                if not isinstance(capabilities, list):
+                    continue
+                if any("rag" in str(cap).lower() for cap in capabilities):
+                    has_rag_agent = True
+                    break
+
+        enabled: bool
+        if "enabled" in rag_service:
+            enabled = bool(rag_service.get("enabled"))
+        elif rag_service:
+            enabled = True
+        elif "rag" in tags_lower:
+            enabled = True
+        else:
+            enabled = has_rag_agent
+
+        chunking = rag_service.get("chunking", {})
+        if not isinstance(chunking, dict):
+            chunking = {}
+        retrieval = rag_service.get("retrieval", {})
+        if not isinstance(retrieval, dict):
+            retrieval = {}
+
+        app_name = str(manifest.get("name", "app")).strip() or "app"
+        collection = vector_service.get("collection")
+        if not isinstance(collection, str) or not collection.strip():
+            collection = f"{app_name}_knowledge" if enabled else None
+        else:
+            collection = collection.strip()
+
+        inferred = deepcopy(rag_defaults)
+        inferred.update(
+            {
+                "enabled": enabled,
+                "pattern": rag_service.get("pattern"),
+                "provider": vector_service.get("provider"),
+                "collections": [collection] if collection else [],
+                "data_sources": (
+                    rag_service.get("data_sources")
+                    if isinstance(rag_service.get("data_sources"), list)
+                    else []
+                ),
+                "chunk_strategy": chunking.get("strategy", rag_defaults["chunk_strategy"]),
+                "chunk_size": chunking.get("size", rag_defaults["chunk_size"]),
+                "chunk_overlap": chunking.get("overlap", rag_defaults["chunk_overlap"]),
+                "retrieval_method": retrieval.get("method", rag_defaults["retrieval_method"]),
+                "embedding_model": rag_service.get("embedding_model"),
+                "rerank_model": retrieval.get("reranker"),
+                "default_top_k": retrieval.get("top_k", rag_defaults["default_top_k"]),
+                "score_threshold": retrieval.get("score_threshold"),
+                "indexing_schedule": rag_service.get("indexing_schedule"),
+            },
+        )
+        return inferred
+
+    @staticmethod
+    def _mark_updated(updated_fields: list[str], field: str) -> None:
+        """更新項目を重複なしで登録."""
+        if field not in updated_fields:
+            updated_fields.append(field)
 
     @staticmethod
     def _deep_merge(base: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
