@@ -43,7 +43,7 @@ graph TB
         direction LR
         A1[decision_governance_engine]
         A2[market_trend_monitor]
-        A3[Legacy-to-Agent (code_migration_assistant)]
+        A3["Legacy-to-Agent (code_migration_assistant)"]
         A4[Your Custom App]
     end
 
