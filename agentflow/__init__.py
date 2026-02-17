@@ -195,6 +195,17 @@ from agentflow.core.tool_binding import BoundTools, ToolBinder, ToolExecutor
 from agentflow.core.type_safe import safe_enum, safe_float, safe_int
 
 # =============================================================================
+# 公開API: 統一ツールカタログ（全ツールソース統合）
+# =============================================================================
+from agentflow.core.tool_catalog import (
+    CatalogEntry,
+    CatalogSource,
+    ToolCatalogManager,
+    get_tool_catalog,
+    reset_tool_catalog,
+)
+
+# =============================================================================
 # 公開API: 統一ツール・Agentレジストリ（Auto-Agent Architecture）
 # =============================================================================
 from agentflow.core.tool_definition import ToolDefinition, ToolSource
@@ -805,6 +816,12 @@ __all__ = [
     "TokenBudgetManager",
     "ToolBinder",
     # =========================================================================
+    # 統一ツールカタログ（全ツールソース統合）
+    # =========================================================================
+    "CatalogEntry",
+    "CatalogSource",
+    "ToolCatalogManager",
+    # =========================================================================
     # 統一ツール・Agentレジストリ（Auto-Agent Architecture）
     # =========================================================================
     # ツール定義
@@ -861,6 +878,7 @@ __all__ = [
     "get_embedding",
     "get_global_agent_registry",
     "get_global_tool_registry",
+    "get_tool_catalog",
     # =========================================================================
     # Knowledge Store（Memvid長期知識記憶）
     # =========================================================================
@@ -893,6 +911,7 @@ __all__ = [
     "reset_embedding",
     "reset_global_agent_registry",
     "reset_global_tool_registry",
+    "reset_tool_catalog",
     "reset_knowledge_manager",
     "reset_llm",
     "reset_vectordb",

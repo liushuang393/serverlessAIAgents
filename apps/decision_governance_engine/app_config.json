@@ -130,7 +130,7 @@
       "port": 5432,
       "name": "decision_governance",
       "user": "dge",
-      "password": "dge_password",
+      "password": null,
       "password_env": "POSTGRES_PASSWORD",
       "note": "ローカル開発既定値（docker-compose.yml）。"
     },
@@ -162,7 +162,7 @@
       "pattern": null,
       "provider": null,
       "collections": [
-        "decision_governance_engine_knowledge"
+        "decision_knowledge"
       ],
       "data_sources": [],
       "chunk_strategy": "recursive",

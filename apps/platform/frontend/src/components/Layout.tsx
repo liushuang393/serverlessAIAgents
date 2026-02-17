@@ -11,6 +11,8 @@ const NAV_ITEMS = [
   { to: '/', icon: '📊', label: 'Dashboard' },
   { to: '/apps', icon: '📦', label: 'Apps' },
   { to: '/agents', icon: '🤖', label: 'Agents' },
+  { to: '/agent-orchestration', icon: '🔀', label: 'Orchestration' },
+  { to: '/agent-patterns', icon: '🧬', label: 'Patterns' },
   { to: '/skills', icon: '🧩', label: 'Skills' },
   { to: '/rag', icon: '📚', label: 'RAG' },
   { to: '/mcp', icon: '🔌', label: 'MCP' },

@@ -1211,6 +1211,7 @@ class AgentPool:
         skill_engine: SkillEngine | None = None,
         mcp_config: MCPConfig | None = None,
         enable_lazy_mcp: bool = True,
+        tool_catalog: Any = None,
     ) -> None:
         """初期化.
 
@@ -1222,10 +1223,12 @@ class AgentPool:
             skill_engine: SkillEngine（動的 Skill 解析用）
             mcp_config: MCPサーバー設定（Noneの場合はMCP無効）
             enable_lazy_mcp: MCP懒加載を有効にするか（デフォルト: True）
+            tool_catalog: ToolCatalogManager（全ツール統一カタログ、Noneの場合は後で初期化）
         """
         self._llm = llm_client
         self._agents: dict[str, AgentBlock] = predefined_agents or {}
         self._dynamic_agents: dict[str, AgentBlock] = {}
+        self._tool_catalog: Any = tool_catalog
         self._logger = logging.getLogger(__name__)
 
         # ツールプロバイダー（@tool登録されたツールを自動発見）
@@ -2538,6 +2541,9 @@ class DeepAgentCoordinator(CoordinatorBase):
 
         # SkillEngine 初期化（越用越厉害）
         self._skill_engine = SkillEngine(auto_learn=enable_skill_auto_learn)
+
+        # ToolCatalog（全ツールソースの統一カタログ）
+        self._tool_catalog: Any = None
 
         # コンポーネント初期化（ストレージ注入、SkillEngine 共有）
         self._agent_pool = AgentPool(

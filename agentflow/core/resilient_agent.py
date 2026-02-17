@@ -120,6 +120,7 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
         prompts_dir: Path | None = None,
         skills_dir: Path | None = None,
         enable_code_execution: bool | None = None,
+        tool_catalog: Any = None,
         **kwargs: Any,
     ) -> None:
         """初期化.
@@ -129,6 +130,7 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
             prompts_dir: プロンプトテンプレートディレクトリ（旧方式）
             skills_dir: Skills ディレクトリ（SKILL.md 形式）
             enable_code_execution: コード実行機能（None でクラス設定使用）
+            tool_catalog: ToolCatalogManager インスタンス（None の場合は自動初期化）
             **kwargs: AgentBlock への引数
         """
         super().__init__(**kwargs)
@@ -138,6 +140,7 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
         self._logger = logging.getLogger(f"agentflow.{self.name}")
         self._cached_skill_prompt: str | None = None
         self._tool_provider: Any = None
+        self._tool_catalog: Any = tool_catalog
         self._retry_advisor = RetryAdvisor()
         self._retry_prompt_hint: str | None = None
         self._retry_temperature_override: float | None = None
@@ -151,7 +154,8 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
     async def initialize(self) -> None:
         """エージェント初期化.
 
-        LLM クライアントの自動取得、内蔵ツールの登録を行います。
+        LLM クライアントの自動取得、内蔵ツールの登録、
+        ToolCatalog の自動初期化を行います。
         """
         await super().initialize()
 
@@ -173,6 +177,16 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
                 self._logger.debug(f"{self.name}: 内蔵ツール登録完了")
             except Exception as e:
                 self._logger.debug(f"{self.name}: 内蔵ツール登録スキップ: {e}")
+
+        # ToolCatalog 自動初期化（全ツールソースの統一カタログ）
+        if self._tool_catalog is None:
+            try:
+                from agentflow.core.tool_catalog import get_tool_catalog
+
+                self._tool_catalog = await get_tool_catalog()
+                self._logger.debug(f"{self.name}: ToolCatalog 自動初期化完了")
+            except Exception as e:
+                self._logger.debug(f"{self.name}: ToolCatalog 初期化スキップ: {e}")
 
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """エージェント実行（リトライ + タイムアウト）.

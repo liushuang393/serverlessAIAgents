@@ -33,18 +33,18 @@
 from __future__ import annotations
 
 import asyncio
+import json
+from contextlib import asynccontextmanager
 import logging
 import os
-import json
 from pathlib import Path
-from contextlib import asynccontextmanager
 from typing import Any
 
 from apps.messaging_hub.coordinator import AssistantConfig, PersonalAssistantCoordinator
-from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 
-from agentflow import ChatBotSkill, WebSocketHub, get_llm
+from agentflow import WebSocketHub, get_llm
 from agentflow.channels import (
     DiscordAdapter,
     MessageGateway,
@@ -54,7 +54,7 @@ from agentflow.channels import (
     TelegramAdapter,
     WhatsAppAdapter,
 )
-from agentflow.skills import ConversationExportSkill, ExportFormat
+from agentflow.skills import ChatBotSkill, ConversationExportSkill, ExportFormat
 
 
 # 配置日志
@@ -92,6 +92,92 @@ gateway = MessageGateway(hub, chatbot)
 
 # 后台任务列表
 background_tasks: list[asyncio.Task[None]] = []
+
+_APP_CONFIG_PATH = Path(__file__).resolve().parent / "app_config.json"
+_AUTH_HEADER = "x-api-key"
+_WS_AUTH_QUERY_KEY = "api_key"
+_PUBLIC_PATHS = {"/", "/health", "/api/health", "/docs", "/redoc", "/openapi.json"}
+_WEBHOOK_PREFIX = "/webhook/"
+
+
+def _load_app_config() -> dict[str, Any]:
+    """Load app_config.json or return an empty dict."""
+    if not _APP_CONFIG_PATH.is_file():
+        return {}
+    try:
+        return json.loads(_APP_CONFIG_PATH.read_text("utf-8"))
+    except json.JSONDecodeError:
+        return {}
+
+
+def _get_auth_contract() -> dict[str, Any]:
+    """Return contracts.auth from app config."""
+    raw = _load_app_config()
+    contracts = raw.get("contracts", {})
+    if not isinstance(contracts, dict):
+        return {}
+    auth = contracts.get("auth", {})
+    if not isinstance(auth, dict):
+        return {}
+    return auth
+
+
+def _is_auth_required() -> bool:
+    """Evaluate whether API key auth must be enforced."""
+    auth = _get_auth_contract()
+    enabled = bool(auth.get("enabled", False))
+    allow_anonymous = bool(auth.get("allow_anonymous", True))
+    return enabled and not allow_anonymous
+
+
+def _api_key_env_name() -> str:
+    """Return API key env var name."""
+    return os.getenv("MESSAGING_HUB_API_KEY_ENV", "MESSAGING_HUB_API_KEY")
+
+
+def _verify_api_key(incoming_key: str | None) -> None:
+    """Validate API key when auth is required."""
+    if not _is_auth_required():
+        return
+
+    env_name = _api_key_env_name()
+    expected_key = os.getenv(env_name)
+    if not expected_key:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Auth required but env '{env_name}' is not configured",
+        )
+
+    if incoming_key != expected_key:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
+
+def _is_public_http_path(path: str) -> bool:
+    """Return True when HTTP path can bypass API key auth."""
+    return path in _PUBLIC_PATHS or path.startswith(_WEBHOOK_PREFIX)
+
+
+def _require_http_api_key(request: Request) -> None:
+    """Enforce API key for protected HTTP routes."""
+    if _is_public_http_path(request.url.path):
+        return
+    _verify_api_key(request.headers.get(_AUTH_HEADER))
+
+
+async def _require_ws_api_key(websocket: WebSocket) -> bool:
+    """Enforce API key for websocket handshake."""
+    if not _is_auth_required():
+        return True
+    incoming_key = websocket.headers.get(_AUTH_HEADER) or websocket.query_params.get(
+        _WS_AUTH_QUERY_KEY
+    )
+    try:
+        _verify_api_key(incoming_key)
+    except HTTPException as exc:
+        close_code = 4401 if exc.status_code == 401 else 1011
+        await websocket.close(code=close_code, reason=str(exc.detail))
+        return False
+    return True
 
 
 # =========================================================================
@@ -230,6 +316,16 @@ app = FastAPI(
 )
 
 
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next: Any) -> Any:
+    """Apply app-level auth contract to HTTP requests."""
+    try:
+        _require_http_api_key(request)
+    except HTTPException as exc:
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+    return await call_next(request)
+
+
 # =========================================================================
 # WebSocket 端点
 # =========================================================================
@@ -241,6 +337,9 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
 
     前端可以通过此端点接收实时消息更新。
     """
+    if not await _require_ws_api_key(websocket):
+        return
+
     client_id = websocket.query_params.get("client_id", "anonymous")
 
     try:
@@ -402,6 +501,22 @@ async def health() -> dict[str, Any]:
     return {
         "status": "healthy",
         "statistics": stats,
+    }
+
+
+@app.get("/api/a2a/card")
+async def get_a2a_card() -> dict[str, Any]:
+    """A2A AgentCard 相当の情報を返す."""
+    return {
+        "name": "messaging-hub-coordinator",
+        "description": "マルチチャネル入力を専門Agentへ振り分ける coordinator",
+        "version": "1.0.0",
+        "protocol": "a2a",
+        "skills": [
+            {"name": "intent_routing", "description": "要求に応じた Agent 振り分け"},
+            {"name": "meeting_support", "description": "会議要約・アクション抽出"},
+            {"name": "file_organize", "description": "ファイル分類と整理提案"},
+        ],
     }
 
 

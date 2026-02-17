@@ -112,10 +112,14 @@
   ],
   "contracts": {
     "auth": {
-      "enabled": false,
-      "providers": [],
-      "allow_anonymous": true,
-      "required_scopes": [],
+      "enabled": true,
+      "providers": [
+        "api_key"
+      ],
+      "allow_anonymous": false,
+      "required_scopes": [
+        "api"
+      ],
       "session_ttl_minutes": 60
     },
     "rag": {

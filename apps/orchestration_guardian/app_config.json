@@ -1,73 +1,52 @@
 {
-  "name": "design_skills_engine",
-  "display_name": "デザインスキルエンジン",
-  "description": "自然言語ブリーフからComfyUI経由で統一スタイルのマルチ画像セットを生成",
-  "business_base": "media",
+  "name": "orchestration_guardian",
+  "display_name": "Orchestration Guardian",
+  "description": "Agent orchestration and protocol readiness checker",
+  "business_base": "governance",
   "version": "1.0.0",
-  "icon": "🎨",
+  "icon": "🛡️",
   "ports": {
-    "api": 8006,
+    "api": 8007,
     "frontend": null,
     "db": null,
     "redis": null
   },
   "entry_points": {
-    "api_module": "apps.design_skills_engine.main:app",
+    "api_module": "apps.orchestration_guardian.main:app",
     "health": "/api/health"
   },
   "agents": [
     {
-      "name": "IntentAnalyzerAgent",
-      "module": "agentflow.skills.builtin.design_skills.agents.intent_analyzer_agent",
+      "name": "OrchestrationGuardianAgent",
+      "module": "apps.orchestration_guardian.main",
       "capabilities": [
-        "intent_analysis",
-        "design_brief"
+        "orchestration_validation",
+        "protocol_contract_check",
+        "readiness_scoring"
       ],
-      "business_base": "media",
-      "pattern": "analyzer"
-    },
-    {
-      "name": "PromptPlannerAgent",
-      "module": "agentflow.skills.builtin.design_skills.agents.prompt_planner_agent",
-      "capabilities": [
-        "prompt_planning",
-        "style_generation"
-      ],
-      "business_base": "media",
-      "pattern": "pipeline_stage"
-    },
-    {
-      "name": "WorkflowExecutorAgent",
-      "module": "agentflow.skills.builtin.design_skills.agents.workflow_executor_agent",
-      "capabilities": [
-        "image_generation",
-        "comfyui",
-        "openai_images"
-      ],
-      "business_base": "media",
-      "pattern": "executor"
+      "business_base": "governance",
+      "pattern": "reviewer"
     }
   ],
   "services": {
-    "comfyui": {
-      "default_url": "http://localhost:8188"
-    },
-    "pipeline": {
-      "engine": "DesignSkillsEngine"
+    "governance": {
+      "checks": [
+        "orchestration",
+        "protocols",
+        "security_baseline"
+      ]
     }
   },
   "dependencies": {
     "database": null,
     "redis": false,
-    "external": [
-      "comfyui"
-    ]
+    "external": []
   },
   "runtime": {
     "urls": {
-      "backend": "http://localhost:8006",
+      "backend": "http://localhost:8007",
       "frontend": null,
-      "health": "http://localhost:8006/api/health",
+      "health": "http://localhost:8007/api/health",
       "database": null
     },
     "database": {
@@ -82,30 +61,25 @@
       "note": null
     },
     "commands": {
-      "backend_dev": "python -m apps.design_skills_engine.main",
+      "backend_dev": "python -m apps.orchestration_guardian.main",
       "frontend_dev": null,
-      "publish": "docker compose up -d --build",
-      "start": "docker compose up -d",
-      "stop": "docker compose down"
+      "publish": null,
+      "start": null,
+      "stop": null
     }
   },
   "tags": [
-    "design",
-    "image-generation",
-    "comfyui",
-    "pipeline",
-    "skill"
+    "orchestration",
+    "governance",
+    "protocol",
+    "audit"
   ],
   "contracts": {
     "auth": {
-      "enabled": true,
-      "providers": [
-        "api_key"
-      ],
-      "allow_anonymous": false,
-      "required_scopes": [
-        "api"
-      ],
+      "enabled": false,
+      "providers": [],
+      "allow_anonymous": true,
+      "required_scopes": [],
       "session_ttl_minutes": 60
     },
     "rag": {
@@ -140,7 +114,7 @@
     }
   },
   "blueprint": {
-    "engine_pattern": "pipeline",
+    "engine_pattern": "simple",
     "flow_pattern": null,
     "system_prompt": "",
     "llm_provider": null,
@@ -160,3 +134,4 @@
     "tenants": []
   }
 }
+

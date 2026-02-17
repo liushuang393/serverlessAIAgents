@@ -288,6 +288,32 @@ export interface AgentsByAppResponse {
   total_apps: number;
 }
 
+/** Agent by-pattern グループ */
+export interface AgentPatternGroup {
+  pattern: string;
+  count: number;
+  agents: AggregatedAgent[];
+}
+
+/** Agent by-pattern レスポンス */
+export interface AgentsByPatternResponse {
+  groups: AgentPatternGroup[];
+  total_groups: number;
+}
+
+/** Agent by-business-base グループ */
+export interface AgentBusinessBaseGroup {
+  business_base: string;
+  count: number;
+  agents: AggregatedAgent[];
+}
+
+/** Agent by-business-base レスポンス */
+export interface AgentsByBusinessBaseResponse {
+  groups: AgentBusinessBaseGroup[];
+  total_groups: number;
+}
+
 /** Skill 情報 */
 export interface SkillInfo {
   name: string;

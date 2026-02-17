@@ -64,7 +64,7 @@
   "runtime": {
     "urls": {
       "backend": "http://localhost:8005",
-      "frontend": null,
+      "frontend": "http://localhost:3004",
       "health": "http://localhost:8005/api/health",
       "database": "postgresql+asyncpg://faq:faq_password@localhost:5433/faq_system"
     },
@@ -75,7 +75,7 @@
       "port": 5433,
       "name": "faq_system",
       "user": "faq",
-      "password": "faq_password",
+      "password": null,
       "password_env": "FAQ_DB_PASSWORD",
       "note": "ローカル開発既定値（docker-compose.yml）。"
     },
@@ -96,10 +96,14 @@
   ],
   "contracts": {
     "auth": {
-      "enabled": false,
-      "providers": [],
-      "allow_anonymous": true,
-      "required_scopes": [],
+      "enabled": true,
+      "providers": [
+        "api_key"
+      ],
+      "allow_anonymous": false,
+      "required_scopes": [
+        "api"
+      ],
       "session_ttl_minutes": 60
     },
     "rag": {
@@ -107,7 +111,7 @@
       "pattern": null,
       "provider": null,
       "collections": [
-        "faq_system_knowledge"
+        "faq_knowledge"
       ],
       "data_sources": [],
       "chunk_strategy": "recursive",

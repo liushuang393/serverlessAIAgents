@@ -947,11 +947,13 @@ agentflow/                    # フレームワーク本体
 └── ...
 
 apps/                         # サンプルアプリケーション（独立）
+├── code_migration_assistant/     # Legacy-to-Agent Platform
 ├── decision_governance_engine/   # PipelineEngine 活用例
-├── market_trend_monitor/         # マルチAgent データ収集例
-├── code_migration_assistant/     # Legacy-to-Agent Platform (旧 code_migration_assistant)
+├── design_skills_engine/         # 画像生成パイプライン例
 ├── faq_system/                   # FAQ システム例
+├── market_trend_monitor/         # マルチAgent データ収集例
 ├── messaging_hub/                # Channels 統合例
+├── orchestration_guardian/       # 編排/プロトコル検証例
 └── platform/                     # マルチテナントプラットフォーム例
 ```
 
@@ -982,11 +984,13 @@ result = await engine.run({"question": "投資判断をしたい"})
 
 | App | 説明 | 使用パターン |
 |-----|------|-------------|
+| **code_migration_assistant** | 旧システム現代化プラットフォーム | MCP/AgentFlow 統合 |
 | **decision_governance_engine** | 多Agent 意思決定支援システム | PipelineEngine + Gate + Review |
-| **market_trend_monitor** | 市場トレンド分析 | マルチAgent データ収集 |
-| **Legacy-to-Agent** | 旧システム現代化プラットフォーム | MCP/AgentFlow 統合 |
+| **design_skills_engine** | デザイン画像生成パイプライン | PipelineEngine + ComfyUI |
 | **faq_system** | FAQ 検索システム | RAG + NL2SQL |
+| **market_trend_monitor** | 市場トレンド分析 | マルチAgent データ収集 |
 | **messaging_hub** | マルチプラットフォームチャット | Channels 統合 |
+| **orchestration_guardian** | 編排準備性チェック | Governance API |
 | **platform** | マルチテナントプラットフォーム | RuntimeContext |
 
 ### 新規 App の作成

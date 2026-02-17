@@ -236,6 +236,9 @@ ignore = [
 "agentflow/core/agent_block.py" = [
     "PLC0415", # Import at top-level not required (circular import)
 ]
+"agentflow/core/tool_catalog.py" = [
+    "PLC0415", # Lazy imports to avoid circular dependencies and reduce startup overhead
+]
 "agentflow/studio/server.py" = [
     "PLC0415", # Import at top-level not required (CLI entry point)
 ]

@@ -15,6 +15,44 @@ class MigrationUI {
         this.attachListeners();
     }
 
+    getApiKey() {
+        return (
+            localStorage.getItem("CODE_MIGRATION_API_KEY")
+            || new URLSearchParams(window.location.search).get("api_key")
+            || ""
+        );
+    }
+
+    buildHeaders(extraHeaders = {}) {
+        const headers = { ...extraHeaders };
+        const apiKey = this.getApiKey();
+        if (apiKey) {
+            headers["x-api-key"] = apiKey;
+        }
+        return headers;
+    }
+
+    buildWebSocketUrl(taskId) {
+        const apiKey = this.getApiKey();
+        const params = new URLSearchParams();
+        if (apiKey) {
+            params.set("api_key", apiKey);
+        }
+        const suffix = params.toString() ? `?${params.toString()}` : "";
+        return `ws://localhost:8003/api/ws/${taskId}${suffix}`;
+    }
+
+    parseSocketPayload(rawPayload) {
+        const payload = (rawPayload || "").trim();
+        if (!payload) return null;
+
+        if (payload.startsWith("data:")) {
+            const jsonPart = payload.replace(/^data:\s*/, "").trim();
+            return JSON.parse(jsonPart);
+        }
+        return JSON.parse(payload);
+    }
+
     initElements() {
         this.startBtn = document.getElementById('startBtn');
         this.logContent = document.getElementById('logContent');
@@ -57,14 +95,19 @@ class MigrationUI {
             // 1. Start Task via API
             const response = await fetch(`${this.apiBase}/api/migration/start`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: this.buildHeaders({ "Content-Type": "application/json" }),
                 body: JSON.stringify({
                     source_code: sourceCode,
                     migration_type: "cobol-to-springboot"
                 })
             });
 
-            if (!response.ok) throw new Error("Failed to start migration");
+            if (!response.ok) {
+                const message = response.status === 401
+                    ? "Unauthorized. Set CODE_MIGRATION_API_KEY in localStorage."
+                    : "Failed to start migration";
+                throw new Error(message);
+            }
 
             const data = await response.json();
             this.currentTaskId = data.task_id;
@@ -81,15 +124,21 @@ class MigrationUI {
     }
 
     connectWebSocket(taskId) {
-        this.socket = new WebSocket(`ws://localhost:8003/api/ws/${taskId}`);
+        this.socket = new WebSocket(this.buildWebSocketUrl(taskId));
 
         this.socket.onopen = () => {
             this.addLog("Connected to Migration Engine stream.", "success");
         };
 
         this.socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            this.handleEvent(data);
+            try {
+                const data = this.parseSocketPayload(event.data);
+                if (data) {
+                    this.handleEvent(data);
+                }
+            } catch (e) {
+                this.addLog(`Failed to parse stream event: ${e.message}`, "danger");
+            }
         };
 
         this.socket.onclose = () => {
@@ -102,7 +151,7 @@ class MigrationUI {
 
     handleEvent(data) {
         // Handle AG-UI Standard Events
-        const eventType = data.event_type;
+        const eventType = data.event_type || data.type;
 
         switch (eventType) {
             case "flow.start":
@@ -121,6 +170,7 @@ class MigrationUI {
                 this.addLog(data.message, levelClass);
                 break;
             case "approval.required":
+            case "approval_required":
                 this.showApprovalModal(data);
                 break;
             case "flow.complete":
@@ -175,7 +225,7 @@ class MigrationUI {
         try {
             await fetch(`${this.apiBase}/api/approvals/${this.currentTaskId}/${this.approvalRequestId}`, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: this.buildHeaders({ "Content-Type": "application/json" }),
                 body: JSON.stringify({
                     approved: approved,
                     comment: approved ? "Approved via Dashboard" : "Rejected via Dashboard"

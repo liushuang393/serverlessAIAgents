@@ -11,6 +11,8 @@ import { Dashboard } from '@/components/Dashboard';
 import { AppList } from '@/components/AppList';
 import { AppDetail } from '@/components/AppDetail';
 import { AgentBrowser } from '@/components/AgentBrowser';
+import { AgentOrchestration } from '@/components/AgentOrchestration';
+import { AgentPatterns } from '@/components/AgentPatterns';
 import { SkillCatalog } from '@/components/SkillCatalog';
 import { RAGOverview } from '@/components/RAGOverview';
 import { MCPManager } from '@/components/MCPManager';
@@ -48,6 +50,8 @@ export default function App() {
         <Route path="apps" element={<AppList />} />
         <Route path="apps/:name" element={<AppDetail />} />
         <Route path="agents" element={<AgentBrowser />} />
+        <Route path="agent-orchestration" element={<AgentOrchestration />} />
+        <Route path="agent-patterns" element={<AgentPatterns />} />
         <Route path="skills" element={<SkillCatalog />} />
         <Route path="rag" element={<RAGOverview />} />
         <Route path="mcp" element={<MCPManager />} />

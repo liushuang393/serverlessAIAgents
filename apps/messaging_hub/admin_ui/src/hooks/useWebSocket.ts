@@ -21,7 +21,20 @@ export function useWebSocket(url: string) {
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
-    const ws = new WebSocket(url);
+    const apiKey =
+      window.localStorage.getItem('MESSAGING_HUB_API_KEY')
+      ?? new URLSearchParams(window.location.search).get('api_key')
+      ?? '';
+    const wsUrl = new URL(url, window.location.href);
+    if (wsUrl.protocol === 'http:') {
+      wsUrl.protocol = 'ws:';
+    } else if (wsUrl.protocol === 'https:') {
+      wsUrl.protocol = 'wss:';
+    }
+    if (apiKey) {
+      wsUrl.searchParams.set('api_key', apiKey);
+    }
+    const ws = new WebSocket(wsUrl.toString());
 
     ws.onopen = () => {
       setIsConnected(true);
@@ -67,4 +80,3 @@ export function useWebSocket(url: string) {
 
   return { isConnected, lastMessage, sendMessage };
 }
-

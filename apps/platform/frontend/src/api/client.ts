@@ -9,9 +9,11 @@ import axios from 'axios';
 import type {
   AgentListResponse,
   AgentStatsResponse,
+  AgentsByAppResponse,
+  AgentsByBusinessBaseResponse,
+  AgentsByPatternResponse,
   AppRAGConfig,
   AppRAGConfigPatchRequest,
-  AgentsByAppResponse,
   AppActionResponse,
   AppCreateOptionsResponse,
   AppCreateRequest,
@@ -225,6 +227,18 @@ export async function searchAgents(capability: string): Promise<AgentListRespons
   const { data } = await api.get<AgentListResponse>('/agents/search', {
     params: { capability },
   });
+  return data;
+}
+
+/** Agent pattern 別グルーピング */
+export async function fetchAgentsByPattern(): Promise<AgentsByPatternResponse> {
+  const { data } = await api.get<AgentsByPatternResponse>('/agents/by-pattern');
+  return data;
+}
+
+/** 業務基盤別 Agent グルーピング */
+export async function fetchAgentsByBusinessBase(): Promise<AgentsByBusinessBaseResponse> {
+  const { data } = await api.get<AgentsByBusinessBaseResponse>('/agents/by-business-base');
   return data;
 }
 

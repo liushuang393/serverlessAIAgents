@@ -181,6 +181,17 @@ from agentflow.core.tool_binding import BoundTools, ToolBinder, ToolExecutor
 from agentflow.core.type_safe import safe_enum, safe_float, safe_int
 
 # ==========================================================================
+# NEW: 統一ツールカタログ（全ツールソース統合）
+# ==========================================================================
+from agentflow.core.tool_catalog import (
+    CatalogEntry,
+    CatalogSource,
+    ToolCatalogManager,
+    get_tool_catalog,
+    reset_tool_catalog,
+)
+
+# ==========================================================================
 # NEW: 統一ツール・Agent レジストリ（Auto-Agent Architecture）
 # ==========================================================================
 from agentflow.core.tool_definition import ToolDefinition, ToolSource
@@ -321,6 +332,12 @@ __all__ = [
     "ToolCallConstraint",
     "ToolConfig",
     # ==========================================================================
+    # 統一ツールカタログ（全ツールソース統合）
+    # ==========================================================================
+    "CatalogEntry",
+    "CatalogSource",
+    "ToolCatalogManager",
+    # ==========================================================================
     # 統一ツール・Agent レジストリ（Auto-Agent Architecture）
     # ==========================================================================
     "ToolDefinition",
@@ -348,7 +365,9 @@ __all__ = [
     "get_circuit_breaker",
     "get_global_agent_registry",
     "get_global_tool_registry",
+    "get_tool_catalog",
     "reliable",
     "reset_global_agent_registry",
     "reset_global_tool_registry",
+    "reset_tool_catalog",
 ]
