@@ -245,7 +245,7 @@ router = create_agent_router(
     
     # 自动生成端点：
     # - GET /api/health
-    # - GET /api/agents
+    # - GET /api/studios/framework/agents
     # - POST /api/decision
     # - GET /api/decision/stream (SSE)
     # - GET /api/report/{id}/pdf

@@ -14,7 +14,7 @@ from apps.platform.schemas.provisioning_schemas import (
 from apps.platform.services.mcp_registry import MCPRegistryService
 
 
-router = APIRouter(prefix="/api/mcp", tags=["mcp"])
+router = APIRouter(prefix="/api/studios/framework/mcp", tags=["mcp"])
 
 _registry: MCPRegistryService | None = None
 

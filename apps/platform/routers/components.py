@@ -1,11 +1,11 @@
 """Components Router - コンポーネント API エンドポイント.
 
-GET /api/components - コンポーネント一覧
-POST /api/components - コンポーネント作成
-GET /api/components/{component_id} - コンポーネント詳細
-PUT /api/components/{component_id} - コンポーネント更新
-DELETE /api/components/{component_id} - コンポーネント削除
-GET /api/components/{component_id}/dependencies - 依存関係取得
+GET /api/studios/framework/components - コンポーネント一覧
+POST /api/studios/framework/components - コンポーネント作成
+GET /api/studios/framework/components/{component_id} - コンポーネント詳細
+PUT /api/studios/framework/components/{component_id} - コンポーネント更新
+DELETE /api/studios/framework/components/{component_id} - コンポーネント削除
+GET /api/studios/framework/components/{component_id}/dependencies - 依存関係取得
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from apps.platform.services.component_library import (
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 
-router = APIRouter(prefix="/api/components", tags=["components"])
+router = APIRouter(prefix="/api/studios/framework/components", tags=["components"])
 
 # 依存性注入用のエンジンインスタンス
 _engine: PlatformEngine | None = None

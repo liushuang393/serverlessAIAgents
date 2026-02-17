@@ -1,0 +1,37 @@
+{
+  "id": "official.cobol-migration-pack",
+  "version": "1.0.0",
+  "type": "skillpack",
+  "capabilities": [
+    "legacy.cobol.parse",
+    "migration.java.transform",
+    "migration.risk.assess"
+  ],
+  "risk_tier": "medium",
+  "side_effects": [
+    "filesystem.read",
+    "filesystem.write",
+    "subprocess.exec"
+  ],
+  "required_permissions": [
+    "repo.read",
+    "repo.write",
+    "os.exec"
+  ],
+  "signature": {
+    "algorithm": "ed25519",
+    "issuer": "agentflow-official",
+    "key_id": "af-official-2026-q1"
+  },
+  "compatibility": {
+    "kernel": ">=2.0.0",
+    "product_lines": [
+      "migration"
+    ]
+  },
+  "tests_required": [
+    "unit",
+    "integration",
+    "golden-report"
+  ]
+}

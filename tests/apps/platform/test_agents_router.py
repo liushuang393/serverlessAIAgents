@@ -11,11 +11,11 @@ from fastapi.testclient import TestClient
 
 
 class TestListAgents:
-    """GET /api/agents テスト."""
+    """GET /api/studios/framework/agents テスト."""
 
     def test_returns_agent_list(self, phase3_test_client: TestClient) -> None:
         """Agent 一覧を返す."""
-        resp = phase3_test_client.get("/api/agents")
+        resp = phase3_test_client.get("/api/studios/framework/agents")
         assert resp.status_code == 200
         data = resp.json()
         assert "agents" in data
@@ -25,7 +25,7 @@ class TestListAgents:
 
     def test_agent_item_structure(self, phase3_test_client: TestClient) -> None:
         """各 Agent アイテムに必要なフィールドがある."""
-        resp = phase3_test_client.get("/api/agents")
+        resp = phase3_test_client.get("/api/studios/framework/agents")
         agents = resp.json()["agents"]
         assert len(agents) > 0
         agent = agents[0]
@@ -48,11 +48,11 @@ class TestListAgents:
 
 
 class TestGetAgentStats:
-    """GET /api/agents/stats テスト."""
+    """GET /api/studios/framework/agents/stats テスト."""
 
     def test_returns_stats(self, phase3_test_client: TestClient) -> None:
         """Agent 統計を返す."""
-        resp = phase3_test_client.get("/api/agents/stats")
+        resp = phase3_test_client.get("/api/studios/framework/agents/stats")
         assert resp.status_code == 200
         data = resp.json()
         assert "total_agents" in data
@@ -62,11 +62,11 @@ class TestGetAgentStats:
 
 
 class TestListCapabilities:
-    """GET /api/agents/capabilities テスト."""
+    """GET /api/studios/framework/agents/capabilities テスト."""
 
     def test_returns_capabilities(self, phase3_test_client: TestClient) -> None:
         """能力タグ一覧を返す."""
-        resp = phase3_test_client.get("/api/agents/capabilities")
+        resp = phase3_test_client.get("/api/studios/framework/agents/capabilities")
         assert resp.status_code == 200
         data = resp.json()
         assert "capabilities" in data
@@ -75,7 +75,7 @@ class TestListCapabilities:
 
     def test_capability_structure(self, phase3_test_client: TestClient) -> None:
         """各能力タグに canonical フィールドがある."""
-        resp = phase3_test_client.get("/api/agents/capabilities")
+        resp = phase3_test_client.get("/api/studios/framework/agents/capabilities")
         caps = resp.json()["capabilities"]
         assert len(caps) > 0
         cap = caps[0]
@@ -88,11 +88,11 @@ class TestListCapabilities:
 
 
 class TestAgentsByApp:
-    """GET /api/agents/by-app テスト."""
+    """GET /api/studios/framework/agents/by-app テスト."""
 
     def test_returns_groups(self, phase3_test_client: TestClient) -> None:
         """App 別グループを返す."""
-        resp = phase3_test_client.get("/api/agents/by-app")
+        resp = phase3_test_client.get("/api/studios/framework/agents/by-app")
         assert resp.status_code == 200
         data = resp.json()
         assert "groups" in data
@@ -101,7 +101,7 @@ class TestAgentsByApp:
 
     def test_group_contains_agents(self, phase3_test_client: TestClient) -> None:
         """各グループに Agent リストが含まれる."""
-        resp = phase3_test_client.get("/api/agents/by-app")
+        resp = phase3_test_client.get("/api/studios/framework/agents/by-app")
         groups = resp.json()["groups"]
         assert isinstance(groups, list)
         assert len(groups) == 2
@@ -113,10 +113,10 @@ class TestAgentsByApp:
 
 
 class TestAgentsByBusinessBase:
-    """GET /api/agents/by-business-base テスト."""
+    """GET /api/studios/framework/agents/by-business-base テスト."""
 
     def test_returns_groups(self, phase3_test_client: TestClient) -> None:
-        resp = phase3_test_client.get("/api/agents/by-business-base")
+        resp = phase3_test_client.get("/api/studios/framework/agents/by-business-base")
         assert resp.status_code == 200
         data = resp.json()
         assert "groups" in data
@@ -125,10 +125,10 @@ class TestAgentsByBusinessBase:
 
 
 class TestAgentsByPattern:
-    """GET /api/agents/by-pattern テスト."""
+    """GET /api/studios/framework/agents/by-pattern テスト."""
 
     def test_returns_groups(self, phase3_test_client: TestClient) -> None:
-        resp = phase3_test_client.get("/api/agents/by-pattern")
+        resp = phase3_test_client.get("/api/studios/framework/agents/by-pattern")
         assert resp.status_code == 200
         data = resp.json()
         assert "groups" in data
@@ -137,11 +137,11 @@ class TestAgentsByPattern:
 
 
 class TestSearchAgents:
-    """GET /api/agents/search テスト."""
+    """GET /api/studios/framework/agents/search テスト."""
 
     def test_search_found(self, phase3_test_client: TestClient) -> None:
         """能力タグ検索でマッチする Agent を返す."""
-        resp = phase3_test_client.get("/api/agents/search", params={"capability": "rag"})
+        resp = phase3_test_client.get("/api/studios/framework/agents/search", params={"capability": "rag"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] >= 1
@@ -152,7 +152,7 @@ class TestSearchAgents:
     def test_search_no_match(self, phase3_test_client: TestClient) -> None:
         """マッチしない検索は空リストを返す."""
         resp = phase3_test_client.get(
-            "/api/agents/search", params={"capability": "nonexistent_xyz"}
+            "/api/studios/framework/agents/search", params={"capability": "nonexistent_xyz"}
         )
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
@@ -160,5 +160,5 @@ class TestSearchAgents:
 
     def test_search_missing_param_returns_422(self, phase3_test_client: TestClient) -> None:
         """必須パラメータなしは 422 を返す."""
-        resp = phase3_test_client.get("/api/agents/search")
+        resp = phase3_test_client.get("/api/studios/framework/agents/search")
         assert resp.status_code == 422

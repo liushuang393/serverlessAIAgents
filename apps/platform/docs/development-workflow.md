@@ -122,13 +122,13 @@ Platform API で App が正しく認識されることを確認:
 
 ```bash
 # App 一覧を再スキャン
-curl -X POST http://localhost:8000/api/apps/refresh
+curl -X POST http://localhost:8000/api/studios/framework/apps/refresh
 
 # 新規 App が表示されることを確認
-curl http://localhost:8000/api/apps/inventory_manager
+curl http://localhost:8000/api/studios/framework/apps/inventory_manager
 
 # ヘルスチェック
-curl http://localhost:8000/api/apps/inventory_manager/health
+curl http://localhost:8000/api/studios/framework/apps/inventory_manager/health
 ```
 
 ### ⑦ デプロイ

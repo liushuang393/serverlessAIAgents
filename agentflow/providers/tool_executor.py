@@ -34,7 +34,12 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
-from agentflow.governance import GovernanceDecision, GovernanceEngine, ToolExecutionContext
+from agentflow.governance import (
+    GovernanceDecision,
+    GovernanceEngine,
+    GovernanceResult,
+    ToolExecutionContext,
+)
 from agentflow.hitl import interrupt
 from agentflow.hitl.types import ApprovalRequest
 from agentflow.providers.tool_provider import RegisteredTool, ToolProvider
@@ -546,13 +551,24 @@ class ToolExecutor:
                 status=ToolCallStatus.FAILED,
                 execution_time_ms=execution_time,
                 error=governance_result.reason,
+                metadata={
+                    "governance_warnings": governance_result.warnings,
+                    "plugin_id": governance_result.plugin_id,
+                    "plugin_version": governance_result.plugin_version,
+                    "plugin_risk_tier": governance_result.plugin_risk_tier,
+                },
             )
             if self._on_complete:
                 self._on_complete(result)
             return result
 
         if governance_result.decision == GovernanceDecision.APPROVAL_REQUIRED:
-            await self._interrupt_for_approval(tool_info, tool_call, execution_context)
+            await self._interrupt_for_approval(
+                tool_info,
+                tool_call,
+                execution_context,
+                governance_result=governance_result,
+            )
 
         # リトライループ
         last_error: Exception | None = None
@@ -575,6 +591,12 @@ class ToolExecutor:
                     content=self._serialize_result(result_value),
                     status=ToolCallStatus.SUCCESS,
                     execution_time_ms=execution_time,
+                    metadata={
+                        "governance_warnings": governance_result.warnings,
+                        "plugin_id": governance_result.plugin_id,
+                        "plugin_version": governance_result.plugin_version,
+                        "plugin_risk_tier": governance_result.plugin_risk_tier,
+                    },
                 )
 
                 if self._on_complete:
@@ -615,6 +637,12 @@ class ToolExecutor:
             status=ToolCallStatus.FAILED,
             execution_time_ms=execution_time,
             error=str(last_error),
+            metadata={
+                "governance_warnings": governance_result.warnings,
+                "plugin_id": governance_result.plugin_id,
+                "plugin_version": governance_result.plugin_version,
+                "plugin_risk_tier": governance_result.plugin_risk_tier,
+            },
         )
 
         if self._on_complete:
@@ -627,6 +655,7 @@ class ToolExecutor:
         tool_info: RegisteredTool,
         tool_call: ToolCall,
         execution_context: ToolExecutionContext | None,
+        governance_result: GovernanceResult | None = None,
     ) -> None:
         """承認が必要な場合に割り込みを発火."""
 
@@ -649,6 +678,17 @@ class ToolExecutor:
             metadata={
                 "tool_call_id": tool_call.id,
                 "audit_required": tool_info.needs_audit(),
+                "plugin_id": (
+                    governance_result.plugin_id if governance_result else tool_info.plugin_id
+                ),
+                "plugin_version": (
+                    governance_result.plugin_version
+                    if governance_result
+                    else tool_info.plugin_version
+                ),
+                "plugin_risk_tier": (
+                    governance_result.plugin_risk_tier if governance_result else None
+                ),
             },
         )
 

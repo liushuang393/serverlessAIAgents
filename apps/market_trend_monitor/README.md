@@ -2,6 +2,8 @@
 
 **市場動向監視システム** — COBOL→Java移行、AI関連技術の市場動向を自動収集・分析
 
+`product_line`: `framework` / `surface_profile`: `developer`
+
 ## 概要
 
 Market Trend Monitor は、AgentFlow フレームワークを使用した Multi-Agent アプリケーションです。

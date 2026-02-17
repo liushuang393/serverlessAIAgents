@@ -291,8 +291,8 @@ async def health():
 ### 后端 API
 
 ```yaml
-# /api/publish
-POST /api/publish/export:
+# /api/studios/framework/publish
+POST /api/studios/framework/publish/export:
   description: 导出工作流代码
   request:
     workflow_id: string
@@ -306,7 +306,7 @@ POST /api/publish/export:
     content_type: application/zip
     filename: {workflow_name}-{target}.zip
 
-POST /api/publish/deploy:
+POST /api/studios/framework/publish/deploy:
   description: 部署工作流
   request:
     workflow_id: string
@@ -320,7 +320,7 @@ POST /api/publish/deploy:
     status: enum[deploying, deployed, failed]
     logs: string[]
 
-GET /api/publish/status/{deployment_id}:
+GET /api/studios/framework/publish/status/{deployment_id}:
   description: 获取部署状态
   response:
     status: enum[deploying, deployed, failed]

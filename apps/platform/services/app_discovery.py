@@ -165,15 +165,24 @@ class AppDiscoveryService:
         """
         apps = self.list_apps()
         total_agents = sum(len(a.agents) for a in apps)
+        product_line_counts: dict[str, int] = {}
+        for app in apps:
+            key = app.product_line
+            product_line_counts[key] = product_line_counts.get(key, 0) + 1
         return {
             "total_apps": len(apps),
             "total_agents": total_agents,
+            "product_line_counts": product_line_counts,
             "apps": [
                 {
                     "name": a.name,
                     "display_name": a.display_name,
                     "icon": a.icon,
                     "business_base": self._resolve_business_base(a),
+                    "product_line": a.product_line,
+                    "surface_profile": a.surface_profile,
+                    "audit_profile": a.audit_profile,
+                    "security_mode": a.security_mode,
                     "agent_count": len(a.agents),
                     "has_api": a.ports.api is not None,
                     "port": a.ports.api,
@@ -406,6 +415,51 @@ class AppDiscoveryService:
                     visibility[key] = deepcopy(default_value)
                     self._mark_updated(updated_fields, f"visibility.{key}")
 
+        inferred_product_line = self._infer_product_line(manifest)
+        product_line = manifest.get("product_line")
+        if not isinstance(product_line, str) or not product_line.strip():
+            manifest["product_line"] = inferred_product_line
+            self._mark_updated(updated_fields, "product_line")
+        else:
+            normalized = product_line.strip().lower()
+            if normalized not in {"migration", "faq", "assistant", "framework"}:
+                manifest["product_line"] = inferred_product_line
+                self._mark_updated(updated_fields, "product_line")
+            elif normalized != product_line:
+                manifest["product_line"] = normalized
+                self._mark_updated(updated_fields, "product_line")
+
+        inferred_surface_profile = self._infer_surface_profile(
+            manifest,
+            product_line=str(manifest.get("product_line") or "framework"),
+        )
+        if not isinstance(manifest.get("surface_profile"), str) or not str(
+            manifest.get("surface_profile"),
+        ).strip():
+            manifest["surface_profile"] = inferred_surface_profile
+            self._mark_updated(updated_fields, "surface_profile")
+
+        inferred_audit_profile = self._infer_audit_profile(
+            product_line=str(manifest.get("product_line") or "framework"),
+        )
+        if not isinstance(manifest.get("audit_profile"), str) or not str(
+            manifest.get("audit_profile"),
+        ).strip():
+            manifest["audit_profile"] = inferred_audit_profile
+            self._mark_updated(updated_fields, "audit_profile")
+
+        plugin_bindings = manifest.get("plugin_bindings")
+        if not isinstance(plugin_bindings, list):
+            manifest["plugin_bindings"] = []
+            self._mark_updated(updated_fields, "plugin_bindings")
+
+        if (
+            str(manifest.get("product_line") or "").strip().lower() == "assistant"
+            and not str(manifest.get("security_mode") or "").strip()
+        ):
+            manifest["security_mode"] = "approval_required"
+            self._mark_updated(updated_fields, "security_mode")
+
         return manifest, sorted(updated_fields)
 
     @staticmethod
@@ -446,6 +500,35 @@ class AppDiscoveryService:
         if isinstance(flow, str) and flow.strip():
             return flow.strip()
         return None
+
+    @staticmethod
+    def _infer_product_line(manifest: dict[str, Any]) -> str:
+        """App 名から product_line を推論."""
+        app_name = str(manifest.get("name") or "").strip().lower()
+        if app_name == "code_migration_assistant":
+            return "migration"
+        if app_name == "faq_system":
+            return "faq"
+        if app_name == "messaging_hub":
+            return "assistant"
+        return "framework"
+
+    @staticmethod
+    def _infer_surface_profile(manifest: dict[str, Any], *, product_line: str) -> str:
+        """App と product_line から surface_profile を推論."""
+        app_name = str(manifest.get("name") or "").strip().lower()
+        if app_name in {"platform", "orchestration_guardian"}:
+            return "operator"
+        if product_line in {"migration", "faq", "assistant"}:
+            return "business"
+        return "developer"
+
+    @staticmethod
+    def _infer_audit_profile(*, product_line: str) -> str:
+        """product_line から audit_profile を推論."""
+        if product_line in {"migration", "faq", "assistant"}:
+            return "business"
+        return "developer"
 
     @staticmethod
     def _infer_contract_rag(manifest: dict[str, Any]) -> dict[str, Any]:

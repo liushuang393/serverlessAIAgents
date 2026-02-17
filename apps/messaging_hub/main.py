@@ -72,15 +72,6 @@ logger = logging.getLogger("messaging_hub")
 # WebSocket Hub
 hub = WebSocketHub()
 
-# Personal Assistant Coordinator（新機能）
-assistant_config = AssistantConfig(
-    enable_os_skills=True,
-    enable_browser_skills=True,
-    summary_language="ja",
-    use_emoji=True,
-)
-assistant = PersonalAssistantCoordinator(config=assistant_config)
-
 # ChatBot Skill（复用现有、assistantと連携）
 chatbot = ChatBotSkill(
     # 可以在这里添加 coordinator 或 rag_skill
@@ -98,6 +89,8 @@ _AUTH_HEADER = "x-api-key"
 _WS_AUTH_QUERY_KEY = "api_key"
 _PUBLIC_PATHS = {"/", "/health", "/api/health", "/docs", "/redoc", "/openapi.json"}
 _WEBHOOK_PREFIX = "/webhook/"
+_DEFAULT_SECURITY_MODE = "approval_required"
+_VALID_SECURITY_MODES = {"read_only", "approval_required", "autonomous"}
 
 
 def _load_app_config() -> dict[str, Any]:
@@ -120,6 +113,28 @@ def _get_auth_contract() -> dict[str, Any]:
     if not isinstance(auth, dict):
         return {}
     return auth
+
+
+def _get_security_mode() -> str:
+    """Return assistant security mode from app_config."""
+    raw = _load_app_config()
+    mode = str(raw.get("security_mode", "")).strip().lower()
+    if mode in _VALID_SECURITY_MODES:
+        return mode
+    return _DEFAULT_SECURITY_MODE
+
+
+def _build_assistant_config() -> AssistantConfig:
+    """Build assistant config from security mode."""
+    mode = _get_security_mode()
+    enable_unsafe_ops = mode == "autonomous"
+    return AssistantConfig(
+        enable_os_skills=enable_unsafe_ops,
+        enable_browser_skills=enable_unsafe_ops,
+        security_mode=mode,
+        summary_language="ja",
+        use_emoji=True,
+    )
 
 
 def _is_auth_required() -> bool:
@@ -178,6 +193,11 @@ async def _require_ws_api_key(websocket: WebSocket) -> bool:
         await websocket.close(code=close_code, reason=str(exc.detail))
         return False
     return True
+
+
+# Personal Assistant Coordinator（新機能）
+assistant_config = _build_assistant_config()
+assistant = PersonalAssistantCoordinator(config=assistant_config)
 
 
 # =========================================================================
@@ -490,6 +510,7 @@ async def root() -> dict[str, Any]:
         "service": "Messaging Hub",
         "version": "1.0.0",
         "status": "running",
+        "security_mode": _get_security_mode(),
         "platforms": gateway.list_channels(),
     }
 
@@ -500,6 +521,7 @@ async def health() -> dict[str, Any]:
     stats = gateway.get_statistics()
     return {
         "status": "healthy",
+        "security_mode": _get_security_mode(),
         "statistics": stats,
     }
 
@@ -595,6 +617,7 @@ async def api_health() -> dict[str, Any]:
     stats = gateway.get_statistics()
     return {
         "status": "healthy",
+        "security_mode": _get_security_mode(),
         "uptime": time.time(),  # TODO: 実際の uptime を計算
         "statistics": stats,
     }

@@ -1,31 +1,31 @@
 # -*- coding: utf-8 -*-
 """Apps Router — App 管理 API エンドポイント.
 
-GET   /api/apps                        — 全 App 一覧
-GET   /api/apps/summary                — App 概要統計
-POST  /api/apps/refresh                — App 一覧再スキャン
-POST  /api/apps/migrate-manifests      — app_config 標準化マイグレーション
-GET   /api/apps/ports/conflicts        — ポート重複検出
-POST  /api/apps/ports/rebalance        — 重複ポート再割当（dry-run対応）
-GET   /api/apps/framework-audit        — 基盤/フレームワーク準拠監査
-GET   /api/apps/create/options         — App 作成オプション
-POST  /api/apps/create                 — 新規 App 自動生成
-GET   /api/apps/{app_name}             — App 詳細
-GET   /api/apps/{app_name}/config      — app_config.json 取得
-PATCH /api/apps/{app_name}/config      — app_config.json 部分更新
-GET   /api/apps/{app_name}/contracts   — 契約設定取得
-PATCH /api/apps/{app_name}/contracts   — 契約設定部分更新
-GET   /api/apps/{app_name}/health      — ヘルスチェック
-POST  /api/apps/{app_name}/publish     — App 発布（docker compose up --build）
-POST  /api/apps/{app_name}/start       — App 起動（docker compose up）
-POST  /api/apps/{app_name}/stop        — App 停止（docker compose down）
+GET   /api/studios/framework/apps                        — 全 App 一覧
+GET   /api/studios/framework/apps/summary                — App 概要統計
+POST  /api/studios/framework/apps/refresh                — App 一覧再スキャン
+POST  /api/studios/framework/apps/migrate-manifests      — app_config 標準化マイグレーション
+GET   /api/studios/framework/apps/ports/conflicts        — ポート重複検出
+POST  /api/studios/framework/apps/ports/rebalance        — 重複ポート再割当（dry-run対応）
+GET   /api/studios/framework/apps/framework-audit        — 基盤/フレームワーク準拠監査
+GET   /api/studios/framework/apps/create/options         — App 作成オプション
+POST  /api/studios/framework/apps/create                 — 新規 App 自動生成
+GET   /api/studios/framework/apps/{app_name}             — App 詳細
+GET   /api/studios/framework/apps/{app_name}/config      — app_config.json 取得
+PATCH /api/studios/framework/apps/{app_name}/config      — app_config.json 部分更新
+GET   /api/studios/framework/apps/{app_name}/contracts   — 契約設定取得
+PATCH /api/studios/framework/apps/{app_name}/contracts   — 契約設定部分更新
+GET   /api/studios/framework/apps/{app_name}/health      — ヘルスチェック
+POST  /api/studios/framework/apps/{app_name}/publish     — App 発布（docker compose up --build）
+POST  /api/studios/framework/apps/{app_name}/start       — App 起動（docker compose up）
+POST  /api/studios/framework/apps/{app_name}/stop        — App 停止（docker compose down）
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Body, HTTPException, Query
@@ -41,7 +41,7 @@ from apps.platform.services.app_lifecycle import (
 from apps.platform.services.port_allocator import PortAllocatorService
 
 
-router = APIRouter(prefix="/api/apps", tags=["apps"])
+router = APIRouter(prefix="/api/studios/framework/apps", tags=["framework-apps"])
 _logger = logging.getLogger(__name__)
 
 # モジュールレベルのシングルトン（main.py で初期化）
@@ -332,6 +332,10 @@ async def list_apps(
         default=True,
         description="true の場合は runtime / contracts / visibility / blueprint を含める",
     ),
+    surface_profile: Literal["business", "developer", "operator"] = Query(
+        default="developer",
+        description="表示面プロファイル（business は底層設定を非表示）",
+    ),
 ) -> dict[str, Any]:
     """全 App 一覧を取得."""
     discovery = _get_discovery()
@@ -351,6 +355,10 @@ async def list_apps(
             "display_name": app_config.display_name,
             "description": app_config.description,
             "business_base": app_config.business_base,
+            "product_line": app_config.product_line,
+            "surface_profile": app_config.surface_profile,
+            "audit_profile": app_config.audit_profile,
+            "security_mode": app_config.security_mode,
             "version": app_config.version,
             "icon": app_config.icon,
             "status": status,
@@ -360,7 +368,7 @@ async def list_apps(
             "urls": _runtime_urls(app_config),
         }
 
-        if include_runtime:
+        if include_runtime and surface_profile != "business":
             config_path = discovery.get_config_path(app_config.name)
             runtime = _runtime_payload(app_config)
             item.update(
@@ -372,6 +380,8 @@ async def list_apps(
                     "runtime": runtime,
                 },
             )
+        elif include_runtime:
+            item["runtime"] = {"urls": _runtime_urls(app_config)}
 
         items.append(item)
 
@@ -456,15 +466,26 @@ async def rebalance_ports(
 
 
 @router.get("/framework-audit")
-async def get_framework_audit_report() -> dict[str, Any]:
+async def get_framework_audit_report(
+    audit_profile: Literal["auto", "business", "developer"] = Query(
+        default="auto",
+        description="監査プロファイル（auto は app_config.audit_profile を使用）",
+    ),
+) -> dict[str, Any]:
     """全 App の基盤/フレームワーク準拠監査結果を返す."""
-    return _get_framework_audit().audit_all()
+    override = None if audit_profile == "auto" else audit_profile
+    return _get_framework_audit().audit_all(audit_profile=override)
 
 
 @router.get("/create/options")
-async def get_create_options() -> dict[str, Any]:
+async def get_create_options(
+    surface_profile: Literal["business", "developer", "operator"] = Query(
+        default="developer",
+        description="作成画面の表示面プロファイル",
+    ),
+) -> dict[str, Any]:
     """App 作成画面向けの選択肢を取得."""
-    return AppScaffolderService.create_options()
+    return AppScaffolderService.create_options(surface_profile=surface_profile)
 
 
 @router.post("/create")
@@ -493,7 +514,13 @@ async def create_app(request: AppCreateRequest) -> dict[str, Any]:
 
 
 @router.get("/{app_name}")
-async def get_app_detail(app_name: str) -> dict[str, Any]:
+async def get_app_detail(
+    app_name: str,
+    surface_profile: Literal["business", "developer", "operator"] = Query(
+        default="developer",
+        description="表示面プロファイル（business は底層設定を非表示）",
+    ),
+) -> dict[str, Any]:
     """App 詳細情報を取得.
 
     Args:
@@ -513,15 +540,31 @@ async def get_app_detail(app_name: str) -> dict[str, Any]:
 
     config_path = discovery.get_config_path(app_name)
     runtime = _runtime_payload(config)
-    return {
+    base_payload: dict[str, Any] = {
         "name": config.name,
         "display_name": config.display_name,
         "description": config.description,
         "business_base": config.business_base,
+        "product_line": config.product_line,
+        "surface_profile": config.surface_profile,
+        "audit_profile": config.audit_profile,
+        "security_mode": config.security_mode,
         "version": config.version,
         "icon": config.icon,
         "status": status,
         "ports": config.ports.model_dump(),
+        "agent_count": len(config.agents),
+        "tags": config.tags,
+        "urls": runtime["urls"],
+        "runtime": {"urls": runtime["urls"]},
+    }
+
+    if surface_profile == "business":
+        base_payload["run_flow"] = ["template", "data_permissions", "run", "artifacts"]
+        return base_payload
+
+    return {
+        **base_payload,
         "entry_points": config.entry_points.model_dump(),
         "agents": [a.model_dump() for a in config.agents],
         "services": config.services,
@@ -529,20 +572,33 @@ async def get_app_detail(app_name: str) -> dict[str, Any]:
         "contracts": config.contracts.model_dump(),
         "visibility": config.visibility.model_dump(),
         "blueprint": config.blueprint.model_dump(),
-        "tags": config.tags,
-        "urls": runtime["urls"],
         "runtime": runtime,
         "config_path": str(config_path) if config_path else None,
     }
 
 
 @router.get("/{app_name}/config")
-async def get_app_config(app_name: str) -> dict[str, Any]:
+async def get_app_config(
+    app_name: str,
+    surface_profile: Literal["business", "developer", "operator"] = Query(
+        default="developer",
+        description="表示面プロファイル（business はアクセス不可）",
+    ),
+) -> dict[str, Any]:
     """app_config.json を取得.
 
     Args:
         app_name: App 識別子（snake_case）
     """
+    if surface_profile == "business":
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "message": "business profile では app_config の直接参照はできません",
+                "error_code": "SURFACE_ACCESS_DENIED",
+            },
+        )
+
     discovery = _get_discovery()
     _get_app_or_404(discovery, app_name)
 
@@ -568,6 +624,10 @@ async def get_app_config(app_name: str) -> dict[str, Any]:
 async def patch_app_config(
     app_name: str,
     patch: dict[str, Any] = Body(..., description="app_config 更新パッチ"),
+    surface_profile: Literal["business", "developer", "operator"] = Query(
+        default="developer",
+        description="表示面プロファイル（business はアクセス不可）",
+    ),
 ) -> dict[str, Any]:
     """app_config.json を部分更新.
 
@@ -575,6 +635,15 @@ async def patch_app_config(
         app_name: App 識別子（snake_case）
         patch: deep merge パッチ
     """
+    if surface_profile == "business":
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "message": "business profile では app_config の更新はできません",
+                "error_code": "SURFACE_ACCESS_DENIED",
+            },
+        )
+
     discovery = _get_discovery()
     _get_app_or_404(discovery, app_name)
 
@@ -604,12 +673,27 @@ async def patch_app_config(
 
 
 @router.get("/{app_name}/contracts")
-async def get_app_contracts(app_name: str) -> dict[str, Any]:
+async def get_app_contracts(
+    app_name: str,
+    surface_profile: Literal["business", "developer", "operator"] = Query(
+        default="developer",
+        description="表示面プロファイル（business はアクセス不可）",
+    ),
+) -> dict[str, Any]:
     """App 契約設定を取得.
 
     Args:
         app_name: App 識別子（snake_case）
     """
+    if surface_profile == "business":
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "message": "business profile では contracts の参照はできません",
+                "error_code": "SURFACE_ACCESS_DENIED",
+            },
+        )
+
     discovery = _get_discovery()
     config = _get_app_or_404(discovery, app_name)
 
@@ -623,6 +707,10 @@ async def get_app_contracts(app_name: str) -> dict[str, Any]:
 async def patch_app_contracts(
     app_name: str,
     contracts_patch: dict[str, Any] = Body(..., description="contracts 更新パッチ"),
+    surface_profile: Literal["business", "developer", "operator"] = Query(
+        default="developer",
+        description="表示面プロファイル（business はアクセス不可）",
+    ),
 ) -> dict[str, Any]:
     """App 契約設定を部分更新.
 
@@ -630,6 +718,15 @@ async def patch_app_contracts(
         app_name: App 識別子（snake_case）
         contracts_patch: contracts セクションの deep merge パッチ
     """
+    if surface_profile == "business":
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "message": "business profile では contracts の更新はできません",
+                "error_code": "SURFACE_ACCESS_DENIED",
+            },
+        )
+
     discovery = _get_discovery()
     _get_app_or_404(discovery, app_name)
 

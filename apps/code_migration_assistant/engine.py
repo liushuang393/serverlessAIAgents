@@ -267,6 +267,8 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             trace_id=task_id,
             run_id=self._run_id,
             flow_id=self._flow_id,
+            app_name="code_migration_assistant",
+            product_line="migration",
             auth_context=None,  # 認証コンテキストが必要な場合はここで設定
         )
 

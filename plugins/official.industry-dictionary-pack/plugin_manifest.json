@@ -1,0 +1,32 @@
+{
+  "id": "official.industry-dictionary-pack",
+  "version": "1.0.0",
+  "type": "skillpack",
+  "capabilities": [
+    "faq.term.normalize",
+    "faq.domain.synonym",
+    "faq.multilingual.glossary"
+  ],
+  "risk_tier": "low",
+  "side_effects": [
+    "database.read"
+  ],
+  "required_permissions": [
+    "kb.read"
+  ],
+  "signature": {
+    "algorithm": "ed25519",
+    "issuer": "agentflow-official",
+    "key_id": "af-official-2026-q1"
+  },
+  "compatibility": {
+    "kernel": ">=2.0.0",
+    "product_lines": [
+      "faq"
+    ]
+  },
+  "tests_required": [
+    "unit",
+    "integration"
+  ]
+}

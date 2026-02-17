@@ -3,6 +3,9 @@
   "display_name": "意思決定ガバナンスエンジン",
   "description": "道法術器フレームワークに基づくAI意思決定支援パイプライン",
   "business_base": "governance",
+  "product_line": "framework",
+  "surface_profile": "developer",
+  "audit_profile": "developer",
   "version": "1.0.0",
   "icon": "⚖️",
   "ports": {
@@ -190,6 +193,7 @@
       "require_approval": true
     }
   },
+  "plugin_bindings": [],
   "blueprint": {
     "engine_pattern": "pipeline",
     "flow_pattern": null,

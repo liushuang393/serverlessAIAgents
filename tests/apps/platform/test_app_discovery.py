@@ -126,7 +126,14 @@ class TestAppDiscoveryLookup:
     def test_register_manual(self) -> None:
         """手動登録が動作する."""
         svc = AppDiscoveryService()
-        cfg = AppConfig(name="manual_app", display_name="Manual")
+        cfg = AppConfig(
+            name="manual_app",
+            display_name="Manual",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+        )
         svc.register(cfg)
         assert svc.get_app("manual_app") is not None
 
@@ -141,11 +148,14 @@ class TestAppDiscoveryLookup:
         assert s["total_apps"] == 3
         # test_app(2) + minimal_app(0) + library_app(1) = 3
         assert s["total_agents"] == 3
+        assert "product_line_counts" in s
         assert len(s["apps"]) == 3
         first = s["apps"][0]
         assert "agent_count" in first
         assert "has_api" in first
         assert "business_base" in first
+        assert "product_line" in first
+        assert "surface_profile" in first
 
 
 class TestManifestMigration:

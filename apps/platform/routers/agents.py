@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 """Agents Router — Agent 管理 API エンドポイント.
 
-GET  /api/agents              — 全 App 横断の Agent 一覧
-GET  /api/agents/stats        — Agent 統計
-GET  /api/agents/capabilities — 全能力タグ一覧
-GET  /api/agents/by-app       — App 別グルーピング
-GET  /api/agents/by-business-base — 業務基盤別グルーピング
-GET  /api/agents/by-pattern   — Agent pattern 別グルーピング
-GET  /api/agents/search       — 能力ベース検索
+GET  /api/studios/framework/agents              — 全 App 横断の Agent 一覧
+GET  /api/studios/framework/agents/stats        — Agent 統計
+GET  /api/studios/framework/agents/capabilities — 全能力タグ一覧
+GET  /api/studios/framework/agents/by-app       — App 別グルーピング
+GET  /api/studios/framework/agents/by-business-base — 業務基盤別グルーピング
+GET  /api/studios/framework/agents/by-pattern   — Agent pattern 別グルーピング
+GET  /api/studios/framework/agents/search       — 能力ベース検索
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from fastapi import APIRouter, Query
 from apps.platform.services.agent_aggregator import AgentAggregatorService
 
 
-router = APIRouter(prefix="/api/agents", tags=["agents"])
+router = APIRouter(prefix="/api/studios/framework/agents", tags=["agents"])
 
 # モジュールレベルのシングルトン（main.py で初期化）
 _aggregator: AgentAggregatorService | None = None

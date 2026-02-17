@@ -58,6 +58,10 @@ SAMPLE_APP_CONFIG: dict[str, Any] = {
     "name": "test_app",
     "display_name": "テストアプリ",
     "description": "テスト用アプリケーション",
+    "product_line": "migration",
+    "surface_profile": "business",
+    "audit_profile": "business",
+    "plugin_bindings": [],
     "version": "1.0.0",
     "icon": "🧪",
     "ports": {"api": 8099, "frontend": 3099},
@@ -74,11 +78,19 @@ SAMPLE_APP_CONFIG: dict[str, Any] = {
 SAMPLE_APP_CONFIG_MINIMAL: dict[str, Any] = {
     "name": "minimal_app",
     "display_name": "最小アプリ",
+    "product_line": "framework",
+    "surface_profile": "developer",
+    "audit_profile": "developer",
+    "plugin_bindings": [],
 }
 
 SAMPLE_APP_CONFIG_NO_API: dict[str, Any] = {
     "name": "library_app",
     "display_name": "ライブラリアプリ",
+    "product_line": "framework",
+    "surface_profile": "developer",
+    "audit_profile": "developer",
+    "plugin_bindings": [],
     "ports": {},
     "entry_points": {"health": None},
     "agents": [{"name": "LibAgent", "capabilities": ["lib"]}],
@@ -87,6 +99,10 @@ SAMPLE_APP_CONFIG_NO_API: dict[str, Any] = {
 SAMPLE_APP_CONFIG_RAG: dict[str, Any] = {
     "name": "rag_app",
     "display_name": "RAG アプリ",
+    "product_line": "framework",
+    "surface_profile": "developer",
+    "audit_profile": "developer",
+    "plugin_bindings": [],
     "icon": "📚",
     "agents": [
         {"name": "RAGAgent", "capabilities": ["rag", "search"]},
@@ -205,6 +221,8 @@ def test_client(apps_dir: Path) -> SyncASGIClient:
 
     from apps.platform.main import create_app
     from apps.platform.routers.apps import init_app_services
+    from apps.platform.routers.studios import init_studio_services
+    from apps.platform.services.studio_service import StudioService
 
     app = create_app()
 
@@ -218,6 +236,7 @@ def test_client(apps_dir: Path) -> SyncASGIClient:
     disc = AppDiscoveryService(apps_dir=apps_dir)
     lc = AppLifecycleManager()
     init_app_services(disc, lc)
+    init_studio_services(StudioService(disc, lc))
 
     # scan() を同期的に実行してレジストリにデータを投入
     asyncio.run(disc.scan())
@@ -328,6 +347,8 @@ def phase3_test_client(apps_dir_with_rag: Path, skills_dir: Path) -> SyncASGICli
     from apps.platform.routers.apps import init_app_services
     from apps.platform.routers.rag import init_rag_services
     from apps.platform.routers.skills import init_skill_services
+    from apps.platform.routers.studios import init_studio_services
+    from apps.platform.services.studio_service import StudioService
 
     app = create_app()
 
@@ -341,6 +362,7 @@ def phase3_test_client(apps_dir_with_rag: Path, skills_dir: Path) -> SyncASGICli
     disc = AppDiscoveryService(apps_dir=apps_dir_with_rag)
     lc = AppLifecycleManager()
     init_app_services(disc, lc)
+    init_studio_services(StudioService(disc, lc))
     asyncio.run(disc.scan())
 
     # Agent サービス

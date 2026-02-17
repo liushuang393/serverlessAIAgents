@@ -72,7 +72,7 @@ class FrameworkAuditService:
         self._discovery = discovery
         self._taxonomy = AgentTaxonomyService()
 
-    def audit_all(self) -> dict[str, Any]:
+    def audit_all(self, *, audit_profile: str | None = None) -> dict[str, Any]:
         """全 App を監査."""
         rows: list[dict[str, Any]] = []
         pass_count = 0
@@ -81,7 +81,7 @@ class FrameworkAuditService:
         total_issues = 0
 
         for app_config in self._discovery.list_apps():
-            row = self._audit_one(app_config)
+            row = self._audit_one(app_config, audit_profile=audit_profile)
             rows.append(row)
             total_issues += row["issue_count"]
             if row["status"] == "pass":
@@ -97,15 +97,17 @@ class FrameworkAuditService:
             "warning": warning_count,
             "fail": fail_count,
             "total_issues": total_issues,
+            "audit_profile": audit_profile or "auto",
             "apps": rows,
         }
 
-    def _audit_one(self, app_config: AppConfig) -> dict[str, Any]:
+    def _audit_one(self, app_config: AppConfig, *, audit_profile: str | None = None) -> dict[str, Any]:
         """単一 App を監査."""
         issues: list[FrameworkAuditIssue] = []
         config_path = self._discovery.get_config_path(app_config.name)
         app_dir = config_path.parent if config_path is not None else None
         source_text = self._collect_python_sources(app_dir) if app_dir is not None else ""
+        resolved_profile = self._resolve_audit_profile(app_config, audit_profile)
 
         issues.extend(self._check_agent_modules(app_config))
         issues.extend(self._check_runtime_ports(app_config))
@@ -113,7 +115,13 @@ class FrameworkAuditService:
         issues.extend(self._check_engine_pattern(app_config, source_text))
         issues.extend(self._check_framework_usage(app_config, source_text))
         issues.extend(self._check_contract_consistency(app_config))
-        issues.extend(self._check_orchestration_protocols(app_config, source_text))
+        issues.extend(
+            self._check_orchestration_protocols(
+                app_config,
+                source_text,
+                audit_profile=resolved_profile,
+            ),
+        )
         issues.extend(self._check_auth_runtime_enforcement(app_config, source_text))
         issues.extend(self._check_security_baseline(app_config))
         issues.extend(self._check_taxonomy_fields(app_config))
@@ -126,6 +134,7 @@ class FrameworkAuditService:
             "app_name": app_config.name,
             "display_name": app_config.display_name,
             "status": status,
+            "audit_profile": resolved_profile,
             "issue_count": len(issues),
             "issues": [issue.to_dict() for issue in issues],
         }
@@ -423,6 +432,8 @@ class FrameworkAuditService:
         self,
         app_config: AppConfig,
         source_text: str,
+        *,
+        audit_profile: str,
     ) -> list[FrameworkAuditIssue]:
         """Agent 編成とプロトコル面の最低限を検証."""
         issues: list[FrameworkAuditIssue] = []
@@ -433,8 +444,11 @@ class FrameworkAuditService:
             app_config.blueprint.engine_pattern
         )
         agent_count = len(app_config.agents)
+        enforce_protocol_surface = audit_profile == "developer"
         has_stream_surface = _STREAM_SURFACE_RE.search(source_text) is not None
         if (
+            enforce_protocol_surface
+            and
             engine_pattern in {"flow", "pipeline", "coordinator", "deep_agent"}
             and not has_stream_surface
         ):
@@ -456,6 +470,8 @@ class FrameworkAuditService:
         )
         has_a2a_surface = _A2A_SURFACE_RE.search(source_text) is not None
         if (
+            enforce_protocol_surface
+            and
             agent_count >= _MIN_AGENT_COUNT_FOR_A2A
             and coordinator_like
             and not has_a2a_surface
@@ -480,7 +496,7 @@ class FrameworkAuditService:
             or bool(app_config.blueprint.mcp_servers)
             or ("mcp" in dependencies_external)
         )
-        if expects_mcp and _MCP_SURFACE_RE.search(source_text) is None:
+        if enforce_protocol_surface and expects_mcp and _MCP_SURFACE_RE.search(source_text) is None:
             issues.append(
                 FrameworkAuditIssue(
                     severity="warning",
@@ -515,6 +531,14 @@ class FrameworkAuditService:
             )
 
         return issues
+
+    @staticmethod
+    def _resolve_audit_profile(app_config: AppConfig, override: str | None) -> str:
+        """監査プロファイルを解決."""
+        if override in {"business", "developer"}:
+            return override
+        configured = str(app_config.audit_profile or "").strip().lower()
+        return configured if configured in {"business", "developer"} else "developer"
 
     def _check_security_baseline(self, app_config: AppConfig) -> list[FrameworkAuditIssue]:
         """manifest の最低限セキュリティ基準を検証."""

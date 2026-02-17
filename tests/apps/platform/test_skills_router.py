@@ -11,11 +11,11 @@ from fastapi.testclient import TestClient
 
 
 class TestListSkills:
-    """GET /api/skills テスト."""
+    """GET /api/studios/framework/skills テスト."""
 
     def test_returns_skill_list(self, phase3_test_client: TestClient) -> None:
         """スキル一覧を返す."""
-        resp = phase3_test_client.get("/api/skills")
+        resp = phase3_test_client.get("/api/studios/framework/skills")
         assert resp.status_code == 200
         data = resp.json()
         assert "skills" in data
@@ -24,7 +24,7 @@ class TestListSkills:
 
     def test_skill_item_structure(self, phase3_test_client: TestClient) -> None:
         """各スキルアイテムに必要なフィールドがある."""
-        resp = phase3_test_client.get("/api/skills")
+        resp = phase3_test_client.get("/api/studios/framework/skills")
         skills = resp.json()["skills"]
         assert len(skills) > 0
         skill = skills[0]
@@ -43,11 +43,11 @@ class TestListSkills:
 
 
 class TestGetSkillStats:
-    """GET /api/skills/stats テスト."""
+    """GET /api/studios/framework/skills/stats テスト."""
 
     def test_returns_stats(self, phase3_test_client: TestClient) -> None:
         """スキル統計を返す."""
-        resp = phase3_test_client.get("/api/skills/stats")
+        resp = phase3_test_client.get("/api/studios/framework/skills/stats")
         assert resp.status_code == 200
         data = resp.json()
         assert "total_skills" in data
@@ -57,11 +57,11 @@ class TestGetSkillStats:
 
 
 class TestListTags:
-    """GET /api/skills/tags テスト."""
+    """GET /api/studios/framework/skills/tags テスト."""
 
     def test_returns_tags(self, phase3_test_client: TestClient) -> None:
         """タグ一覧を返す."""
-        resp = phase3_test_client.get("/api/skills/tags")
+        resp = phase3_test_client.get("/api/studios/framework/skills/tags")
         assert resp.status_code == 200
         data = resp.json()
         assert "tags" in data
@@ -70,7 +70,7 @@ class TestListTags:
 
     def test_tag_structure(self, phase3_test_client: TestClient) -> None:
         """各タグに tag, count フィールドがある."""
-        resp = phase3_test_client.get("/api/skills/tags")
+        resp = phase3_test_client.get("/api/studios/framework/skills/tags")
         tags = resp.json()["tags"]
         assert len(tags) > 0
         tag = tags[0]
@@ -79,11 +79,11 @@ class TestListTags:
 
 
 class TestSearchSkills:
-    """GET /api/skills/search テスト."""
+    """GET /api/studios/framework/skills/search テスト."""
 
     def test_search_found(self, phase3_test_client: TestClient) -> None:
         """タグ検索でマッチするスキルを返す."""
-        resp = phase3_test_client.get("/api/skills/search", params={"tag": "chat"})
+        resp = phase3_test_client.get("/api/studios/framework/skills/search", params={"tag": "chat"})
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] >= 1
@@ -93,22 +93,22 @@ class TestSearchSkills:
 
     def test_search_no_match(self, phase3_test_client: TestClient) -> None:
         """マッチしない検索は空リストを返す."""
-        resp = phase3_test_client.get("/api/skills/search", params={"tag": "nonexistent_xyz"})
+        resp = phase3_test_client.get("/api/studios/framework/skills/search", params={"tag": "nonexistent_xyz"})
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
 
     def test_search_missing_param_returns_422(self, phase3_test_client: TestClient) -> None:
         """必須パラメータなしは 422 を返す."""
-        resp = phase3_test_client.get("/api/skills/search")
+        resp = phase3_test_client.get("/api/studios/framework/skills/search")
         assert resp.status_code == 422
 
 
 class TestGetSkillDetail:
-    """GET /api/skills/{skill_name} テスト."""
+    """GET /api/studios/framework/skills/{skill_name} テスト."""
 
     def test_existing_skill(self, phase3_test_client: TestClient) -> None:
         """存在するスキルの詳細を返す."""
-        resp = phase3_test_client.get("/api/skills/chatbot")
+        resp = phase3_test_client.get("/api/studios/framework/skills/chatbot")
         assert resp.status_code == 200
         data = resp.json()
         assert data["name"] == "chatbot"
@@ -119,7 +119,7 @@ class TestGetSkillDetail:
 
     def test_nonexistent_skill_returns_404(self, phase3_test_client: TestClient) -> None:
         """存在しないスキルは 404 を返す."""
-        resp = phase3_test_client.get("/api/skills/nonexistent")
+        resp = phase3_test_client.get("/api/studios/framework/skills/nonexistent")
         assert resp.status_code == 404
         detail = resp.json()["detail"]
         assert detail["error_code"] == "SKILL_NOT_FOUND"

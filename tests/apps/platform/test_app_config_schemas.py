@@ -112,9 +112,16 @@ class TestAppConfig:
         assert len(cfg.agents) == 2
         assert cfg.ports.api == 8099
 
-    def test_minimal_config(self) -> None:
-        """最小限の設定（name + display_name のみ）を受け付ける."""
-        cfg = AppConfig(name="my_app", display_name="My App")
+    def test_minimal_valid_config(self) -> None:
+        """必須分類項目を含む最小構成を受け付ける."""
+        cfg = AppConfig(
+            name="my_app",
+            display_name="My App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+        )
         assert cfg.version == "1.0.0"
         assert cfg.icon == "📦"
         assert cfg.agents == []
@@ -122,26 +129,64 @@ class TestAppConfig:
         assert cfg.runtime.database.user is None
         assert cfg.runtime.commands.start is None
         assert cfg.business_base is None
+        assert cfg.product_line == "framework"
+        assert cfg.surface_profile == "developer"
+        assert cfg.audit_profile == "developer"
+        assert cfg.plugin_bindings == []
+        assert cfg.security_mode is None
+
+    def test_missing_classification_fields_rejected(self) -> None:
+        """分類必須項目が未指定なら拒否する."""
+        with pytest.raises(ValidationError):
+            AppConfig(name="my_app", display_name="My App")
 
     def test_invalid_name_uppercase(self) -> None:
         """大文字を含む App 名を拒否する."""
         with pytest.raises(ValidationError, match="snake_case"):
-            AppConfig(name="MyApp", display_name="X")
+            AppConfig(
+                name="MyApp",
+                display_name="X",
+                product_line="framework",
+                surface_profile="developer",
+                audit_profile="developer",
+                plugin_bindings=[],
+            )
 
     def test_invalid_name_starts_with_number(self) -> None:
         """数字始まりの App 名を拒否する."""
         with pytest.raises(ValidationError, match="snake_case"):
-            AppConfig(name="1app", display_name="X")
+            AppConfig(
+                name="1app",
+                display_name="X",
+                product_line="framework",
+                surface_profile="developer",
+                audit_profile="developer",
+                plugin_bindings=[],
+            )
 
     def test_invalid_name_hyphen(self) -> None:
         """ハイフンを含む App 名を拒否する."""
         with pytest.raises(ValidationError, match="snake_case"):
-            AppConfig(name="my-app", display_name="X")
+            AppConfig(
+                name="my-app",
+                display_name="X",
+                product_line="framework",
+                surface_profile="developer",
+                audit_profile="developer",
+                plugin_bindings=[],
+            )
 
     def test_empty_name_rejected(self) -> None:
         """空の App 名を拒否する."""
         with pytest.raises(ValidationError):
-            AppConfig(name="", display_name="X")
+            AppConfig(
+                name="",
+                display_name="X",
+                product_line="framework",
+                surface_profile="developer",
+                audit_profile="developer",
+                plugin_bindings=[],
+            )
 
     def test_model_dump_roundtrip(self) -> None:
         """model_dump → model_validate のラウンドトリップが成功する."""
@@ -152,3 +197,35 @@ class TestAppConfig:
         restored = AppConfig.model_validate(dumped)
         assert original.name == restored.name
         assert len(original.agents) == len(restored.agents)
+
+    def test_product_and_plugin_fields(self) -> None:
+        """製品線/プラグイン関連フィールドを受け付ける."""
+        cfg = AppConfig(
+            name="migration_app",
+            display_name="Migration App",
+            product_line="Migration",
+            surface_profile="business",
+            audit_profile="business",
+            security_mode="approval_required",
+            plugin_bindings=[
+                {"id": "lang-cobol", "version": "1.2.0", "config": {"strict": True}},
+            ],
+        )
+        assert cfg.product_line == "migration"
+        assert cfg.surface_profile == "business"
+        assert cfg.audit_profile == "business"
+        assert cfg.security_mode == "approval_required"
+        assert len(cfg.plugin_bindings) == 1
+        assert cfg.plugin_bindings[0].id == "lang-cobol"
+
+    def test_assistant_requires_security_mode(self) -> None:
+        """assistant は security_mode 未指定を拒否する."""
+        with pytest.raises(ValidationError, match="security_mode"):
+            AppConfig(
+                name="assistant_app",
+                display_name="Assistant App",
+                product_line="assistant",
+                surface_profile="business",
+                audit_profile="business",
+                plugin_bindings=[],
+            )

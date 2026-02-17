@@ -2,6 +2,12 @@
 
 統一メッセージプラットフォームゲートウェイ。[moltbot](https://github.com/moltbot/moltbot) に類似した実装で、Telegram、Slack、Discord などのマルチプラットフォーム統合をサポート。
 
+## Product Position
+
+- `product_line`: `assistant`
+- `surface_profile`: `business`
+- `security_mode` 既定値: `approval_required`（明示指定なし時）
+
 ## 🚀 機能
 
 - ✅ **マルチプラットフォーム対応**: Telegram, Slack, Discord

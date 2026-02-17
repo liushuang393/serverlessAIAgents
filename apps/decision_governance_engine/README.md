@@ -2,6 +2,8 @@
 
 企業級意思決定支援システム - PipelineEngine パターンによる Multi-Agent システム
 
+`product_line`: `framework` / `surface_profile`: `developer`
+
 ---
 
 ## 1. システム概要

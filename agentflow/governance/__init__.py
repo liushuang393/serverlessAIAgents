@@ -7,6 +7,13 @@ from agentflow.governance.engine import (
     GovernanceResult,
     ToolExecutionContext,
 )
+from agentflow.governance.plugin_registry import (
+    AppPluginSnapshot,
+    PluginBindingRecord,
+    PluginManifestRecord,
+    PluginRegistry,
+    PluginRuntimeAssessment,
+)
 from agentflow.governance.enterprise_audit import (
     AuditEventType,
     AuditSeverity,
@@ -36,6 +43,11 @@ __all__ = [
     "GovernanceResult",
     "InMemoryAuditStorage",
     "LoggingAuditLogger",
+    "PluginBindingRecord",
+    "PluginManifestRecord",
+    "PluginRegistry",
+    "PluginRuntimeAssessment",
+    "AppPluginSnapshot",
     "PostgresAuditStorage",
     "ToolExecutionContext",
 ]

@@ -70,11 +70,11 @@ graph LR
         React["React + Vite + Tailwind"]
     end
     subgraph L2["API 層"]
-        Apps["/api/apps/*"]
-        Gallery["/api/gallery/*"]
-        Components["/api/components/*"]
-        Publish["/api/publish/*"]
-        Dashboard["/api/dashboard/*"]
+        Apps["/api/studios/framework/apps/*"]
+        Gallery["/api/studios/framework/gallery/*"]
+        Components["/api/studios/framework/components/*"]
+        Publish["/api/studios/framework/publish/*"]
+        Dashboard["/api/studios/framework/dashboard/*"]
     end
     subgraph L3["Service 層"]
         AppDisc["AppDiscoveryService"]
@@ -141,14 +141,14 @@ sequenceDiagram
     participant APP as 対象 App
 
     U->>FE: ダッシュボード表示
-    FE->>BE: GET /api/apps
+    FE->>BE: GET /api/studios/framework/apps
     BE->>FS: ファイルシステムスキャン
     FS-->>BE: app_config.json 一覧
     BE-->>FE: App 一覧 + メタデータ
     FE-->>U: ダッシュボード描画
 
     U->>FE: App 起動ボタン
-    FE->>BE: POST /api/apps/{name}/start
+    FE->>BE: POST /api/studios/framework/apps/{name}/start
     BE->>APP: docker-compose up -d
     BE->>APP: GET /health (ポーリング)
     APP-->>BE: {"status": "healthy"}

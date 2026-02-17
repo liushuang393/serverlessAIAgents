@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """Skills Router — Skill カタログ API エンドポイント.
 
-GET  /api/skills              — 全スキル一覧
-GET  /api/skills/stats        — スキル統計
-GET  /api/skills/tags         — 全タグ一覧
-GET  /api/skills/search       — タグベース検索
-GET  /api/skills/{skill_name} — スキル詳細
+GET  /api/studios/framework/skills              — 全スキル一覧
+GET  /api/studios/framework/skills/stats        — スキル統計
+GET  /api/studios/framework/skills/tags         — 全タグ一覧
+GET  /api/studios/framework/skills/search       — タグベース検索
+GET  /api/studios/framework/skills/{skill_name} — スキル詳細
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from fastapi import APIRouter, HTTPException, Query
 from apps.platform.services.skill_catalog import SkillCatalogService
 
 
-router = APIRouter(prefix="/api/skills", tags=["skills"])
+router = APIRouter(prefix="/api/studios/framework/skills", tags=["skills"])
 
 # モジュールレベルのシングルトン（main.py で初期化）
 _catalog: SkillCatalogService | None = None

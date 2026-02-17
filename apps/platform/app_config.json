@@ -3,6 +3,9 @@
   "display_name": "AgentFlow Platform",
   "description": "全App統合管理プラットフォーム - Gallery・コンポーネント・Publish・Dashboard",
   "business_base": "platform",
+  "product_line": "framework",
+  "surface_profile": "operator",
+  "audit_profile": "developer",
   "version": "1.0.0",
   "icon": "🏗️",
   "ports": {
@@ -144,6 +147,7 @@
       "require_approval": true
     }
   },
+  "plugin_bindings": [],
   "blueprint": {
     "engine_pattern": "simple",
     "flow_pattern": null,

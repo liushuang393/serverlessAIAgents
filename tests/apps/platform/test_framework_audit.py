@@ -20,6 +20,10 @@ def _base_manifest() -> dict:
         "name": "sample_app",
         "display_name": "Sample App",
         "business_base": "operations",
+        "product_line": "framework",
+        "surface_profile": "developer",
+        "audit_profile": "developer",
+        "plugin_bindings": [],
         "version": "1.0.0",
         "ports": {"api": None, "frontend": None, "db": None, "redis": None},
         "entry_points": {"api_module": None, "health": None},
@@ -98,11 +102,33 @@ def test_orchestration_protocols_warn_when_stream_and_a2a_missing(tmp_path: Path
     issues = service._check_orchestration_protocols(
         config,
         source_text="class CoordinatorAgent:\n    pass\n",
+        audit_profile="developer",
     )
     codes = {issue.code for issue in issues}
 
     assert "ORCHESTRATION_STREAM_SURFACE_MISSING" in codes
     assert "A2A_SURFACE_NOT_FOUND" in codes
+
+
+def test_orchestration_protocols_business_profile_skips_protocol_surface_checks(
+    tmp_path: Path,
+) -> None:
+    """business profile では stream/A2A/MCP の面チェックを強制しない."""
+    service = _audit_service(tmp_path)
+    manifest = _base_manifest()
+    manifest["services"] = {"mcp": {"tools": ["search_docs"]}}
+    manifest["blueprint"]["mcp_servers"] = ["filesystem"]
+    config = AppConfig.model_validate(manifest)
+
+    issues = service._check_orchestration_protocols(
+        config,
+        source_text="class CoordinatorAgent:\n    pass\n",
+        audit_profile="business",
+    )
+    codes = {issue.code for issue in issues}
+    assert "ORCHESTRATION_STREAM_SURFACE_MISSING" not in codes
+    assert "A2A_SURFACE_NOT_FOUND" not in codes
+    assert "MCP_DECLARED_BUT_SURFACE_MISSING" not in codes
 
 
 def test_security_baseline_detects_plaintext_password_and_anonymous_external(

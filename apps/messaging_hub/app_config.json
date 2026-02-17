@@ -3,6 +3,10 @@
   "display_name": "メッセージングハブ",
   "description": "Telegram・Slack・Discord等マルチプラットフォーム統合AIチャットボット",
   "business_base": "interaction",
+  "product_line": "assistant",
+  "surface_profile": "business",
+  "audit_profile": "business",
+  "security_mode": "approval_required",
   "version": "1.0.0",
   "icon": "📨",
   "ports": {
@@ -153,6 +157,29 @@
       "require_approval": true
     }
   },
+  "plugin_bindings": [
+    {
+      "id": "official.channel-adapter-pack",
+      "version": "1.0.0",
+      "config": {
+        "channels": [
+          "telegram",
+          "slack",
+          "discord",
+          "teams",
+          "whatsapp",
+          "signal"
+        ]
+      }
+    },
+    {
+      "id": "official.assistant-memory-pack",
+      "version": "1.0.0",
+      "config": {
+        "strategy": "managed"
+      }
+    }
+  ],
   "blueprint": {
     "engine_pattern": "coordinator",
     "flow_pattern": null,

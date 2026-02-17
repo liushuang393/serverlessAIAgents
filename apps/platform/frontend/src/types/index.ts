@@ -1,7 +1,7 @@
 /**
  * AgentFlow Platform - 型定義.
  *
- * バックエンド /api/apps/* のレスポンスに対応する TypeScript 型。
+ * バックエンド /api/studios/framework/apps/* のレスポンスに対応する TypeScript 型。
  */
 
 /** App ヘルスステータス */
@@ -72,7 +72,7 @@ export interface DependenciesConfig {
   external: string[];
 }
 
-/** App 一覧アイテム（GET /api/apps 用） */
+/** App 一覧アイテム（GET /api/studios/framework/apps 用） */
 export interface AppListItem {
   name: string;
   display_name: string;
@@ -91,7 +91,7 @@ export interface AppListItem {
   };
 }
 
-/** App 詳細（GET /api/apps/{name} 用） */
+/** App 詳細（GET /api/studios/framework/apps/{name} 用） */
 export interface AppDetail {
   name: string;
   display_name: string;
@@ -128,7 +128,7 @@ export interface AppDetail {
   runtime?: RuntimeConfig;
 }
 
-/** ヘルスチェック結果（GET /api/apps/{name}/health 用） */
+/** ヘルスチェック結果（GET /api/studios/framework/apps/{name}/health 用） */
 export interface HealthCheckAttempt {
   url: string;
   http_status?: number;
@@ -223,7 +223,7 @@ export interface RefreshResponse {
  * Phase 3: Agent / Skill / RAG 型定義
  * ============================================================ */
 
-/** 集約済み Agent（GET /api/agents 用） */
+/** 集約済み Agent（GET /api/studios/framework/agents 用） */
 export interface CanonicalCapability {
   id: string;
   domain: string;
@@ -498,6 +498,21 @@ export type LLMProviderKind =
   | 'ollama'
   | 'openrouter'
   | 'custom';
+export type ProductLineKind = 'migration' | 'faq' | 'assistant' | 'framework';
+export type SurfaceProfileKind = 'business' | 'developer' | 'operator';
+export type AuditProfileKind = 'business' | 'developer';
+export type SecurityModeKind = 'read_only' | 'approval_required' | 'autonomous';
+export type RiskLevelKind = 'low' | 'medium' | 'high';
+export type BusinessBaseKind =
+  | 'platform'
+  | 'knowledge'
+  | 'reasoning'
+  | 'interaction'
+  | 'integration'
+  | 'operations'
+  | 'governance'
+  | 'media'
+  | 'custom';
 
 export interface AgentBlueprintInput {
   name: string;
@@ -506,11 +521,27 @@ export interface AgentBlueprintInput {
   capabilities: string[];
 }
 
+export interface PluginBindingInput {
+  id: string;
+  version: string;
+  config: Record<string, unknown>;
+}
+
 export interface AppCreateRequest {
   name: string;
   display_name: string;
   description: string;
   icon: string;
+  business_base: BusinessBaseKind;
+  product_line: ProductLineKind;
+  surface_profile: SurfaceProfileKind;
+  audit_profile: AuditProfileKind;
+  security_mode: SecurityModeKind | null;
+  plugin_bindings: PluginBindingInput[];
+  template: string | null;
+  data_sources: string[];
+  permission_scopes: string[];
+  risk_level: RiskLevelKind | null;
   engine_pattern: EnginePattern;
   flow_pattern: string | null;
   system_prompt: string;
@@ -550,24 +581,47 @@ export interface AppCreateResponse {
 }
 
 export interface AppCreateOptionsResponse {
-  engine_patterns: Array<{
+  surface_profile?: SurfaceProfileKind;
+  templates?: Array<{
+    id: string;
+    studio: ProductLineKind;
+    label: string;
+    description: string;
+  }>;
+  data_source_options?: Array<{
+    value: string;
+    label: string;
+  }>;
+  permission_scopes?: Array<{
+    value: string;
+    label: string;
+  }>;
+  risk_levels?: Array<{
+    value: RiskLevelKind;
+    label: string;
+  }>;
+  security_modes?: Array<{
+    value: SecurityModeKind;
+    label: string;
+  }>;
+  engine_patterns?: Array<{
     value: EnginePattern;
     label: string;
     description: string;
   }>;
-  database_options: Array<{
+  database_options?: Array<{
     value: DatabaseKind;
     label: string;
   }>;
-  vector_database_options: Array<{
+  vector_database_options?: Array<{
     value: VectorDatabaseKind;
     label: string;
   }>;
-  llm_provider_options: Array<{
+  llm_provider_options?: Array<{
     value: LLMProviderKind;
     label: string;
   }>;
-  visibility_modes: Array<{
+  visibility_modes?: Array<{
     value: 'private' | 'public' | 'tenant_allowlist';
     label: string;
   }>;

@@ -1,10 +1,10 @@
 """Dashboard Router - ダッシュボード API エンドポイント.
 
-GET /api/dashboard/{tenant_id} - ダッシュボードサマリー
-GET /api/dashboard/{tenant_id}/stats - テナント統計
-GET /api/dashboard/{tenant_id}/top-components - 人気コンポーネント
-GET /api/dashboard/{tenant_id}/activities - 最近のアクティビティ
-GET /api/dashboard/{tenant_id}/trends - 使用傾向
+GET /api/studios/framework/dashboard/{tenant_id} - ダッシュボードサマリー
+GET /api/studios/framework/dashboard/{tenant_id}/stats - テナント統計
+GET /api/studios/framework/dashboard/{tenant_id}/top-components - 人気コンポーネント
+GET /api/studios/framework/dashboard/{tenant_id}/activities - 最近のアクティビティ
+GET /api/studios/framework/dashboard/{tenant_id}/trends - 使用傾向
 """
 
 from __future__ import annotations
@@ -15,7 +15,7 @@ from apps.platform.engine import PlatformEngine
 from fastapi import APIRouter, Depends, Query
 
 
-router = APIRouter(prefix="/api/dashboard", tags=["dashboard"])
+router = APIRouter(prefix="/api/studios/framework/dashboard", tags=["dashboard"])
 
 # 依存性注入用のエンジンインスタンス
 _engine: PlatformEngine | None = None

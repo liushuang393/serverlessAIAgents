@@ -12,6 +12,7 @@
 4. [非同期設計パターン](#非同期設計パターン)
 5. [プロトコル設計](#プロトコル設計)
 6. [データフロー設計](#データフロー設計)
+7. [3 Studio + Kernel 境界規約](#3-studio--kernel-境界規約)
 
 ---
 
@@ -98,6 +99,43 @@ AgentFlow は明確な責任分離に基づく8層アーキテクチャを採用
 | **Provider層** | リソース抽象化、統一アクセス | 依存性逆転、インターフェース分離 |
 | **プロトコル層** | 通信標準、相互運用性 | 標準準拠、拡張性 |
 | **インフラ層** | データ永続化、外部サービス | 疎結合、設定駆動 |
+
+---
+
+## 3 Studio + Kernel 境界規約
+
+### 目的
+
+- 外部向けは `Migration Studio` / `Enterprise FAQ Studio` / `Computer Assistant Studio` の 3 主線で提供する。
+- Kernel は長期安定 API（ロード・実行・ポリシー・監査・実行文脈）のみを保持する。
+- それ以外の能力はプラグインとして実装する。
+
+### 必須ルール
+
+1. コア不変要素以外の機能を `agentflow` コアへ直接追加しない。
+2. 副作用を持つ操作（ファイル書き込み・ネットワーク送信・コマンド実行・ブラウザ制御）は、必ずポリシーと監査を経由する。
+3. Business 面ではプロトコル詳細（MCP/A2A/stream）を UI と API から隠蔽する。
+4. `app_config.json` には下記分類を明示する。
+   - `product_line`: `migration|faq|assistant|framework`
+   - `surface_profile`: `business|developer|operator`
+   - `audit_profile`: `business|developer`
+
+### ドキュメント運用規約
+
+- 対外説明は `docs/external/` に集約し、成果物中心で記述する。
+- 対内実装は `docs/internal/` に集約し、手順・設計思想・注意事項を記述する。
+- `docs/index.md` を文書入口の単一ソースとして維持する。
+
+### Platform API 契約規約
+
+- Product API は `/api/studios/*` を使用する。
+- Framework App 管理 API は `/api/studios/framework/apps/*` を使用する。
+- 旧 `/api/apps/*` への新規記述・再導入は禁止する。
+
+### 監査方針
+
+- `audit_profile=developer` は従来のプロトコル面チェックを維持。
+- `audit_profile=business` は A2A/stream/MCP surface の強制チェックを無効化し、安全基線のみを維持。
 
 ---
 

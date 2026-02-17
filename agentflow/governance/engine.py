@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel, Field
 
 from agentflow.governance.audit import AuditEvent, AuditLogger, LoggingAuditLogger
+from agentflow.governance.plugin_registry import PluginRegistry, PluginRuntimeAssessment
 from agentflow.security.policy_engine import (
     AuthContext,
     AuthDecision,
@@ -41,6 +42,8 @@ class ToolExecutionContext(BaseModel):
     trace_id: str | None = Field(default=None, description="トレースID")
     thread_id: str | None = Field(default=None, description="スレッドID")
     flow_id: str | None = Field(default=None, description="フローID")
+    app_name: str | None = Field(default=None, description="実行対象 App 名")
+    product_line: str | None = Field(default=None, description="製品主線")
     metadata: dict[str, object] = Field(default_factory=dict, description="追加メタデータ")
 
 
@@ -52,6 +55,10 @@ class GovernanceResult(BaseModel):
     auth_result: AuthResult | None = Field(default=None)
     missing_permissions: list[str] = Field(default_factory=list)
     requires_approval: bool = Field(default=False)
+    warnings: list[str] = Field(default_factory=list)
+    plugin_id: str | None = Field(default=None)
+    plugin_version: str | None = Field(default=None)
+    plugin_risk_tier: str | None = Field(default=None)
 
     @property
     def allowed(self) -> bool:
@@ -67,6 +74,7 @@ class GovernanceEngine:
         self,
         policy_engine: PolicyEngine | None = None,
         audit_logger: AuditLogger | None = None,
+        plugin_registry: PluginRegistry | None = None,
         auth_mode: AuthMode = AuthMode.HYBRID,
     ) -> None:
         """初期化.
@@ -81,6 +89,7 @@ class GovernanceEngine:
         self._audit_logger: AuditLogger = audit_logger or LoggingAuditLogger(
             logging.getLogger(__name__)
         )
+        self._plugin_registry: PluginRegistry = plugin_registry or PluginRegistry()
         self._auth_mode: AuthMode = auth_mode
 
     async def evaluate_tool(
@@ -104,14 +113,25 @@ class GovernanceEngine:
 
         effective_context = context or ToolExecutionContext()
         auth_context = effective_context.auth_context
+        plugin_assessment: PluginRuntimeAssessment | None = None
 
         if auth_context is None:
             result = GovernanceResult(
                 decision=GovernanceDecision.DENY,
                 reason="認証コンテキストが存在しないため拒否",
                 requires_approval=tool.requires_approval,
+                plugin_id=tool.plugin_id,
+                plugin_version=tool.plugin_version,
             )
-            self._emit_audit(tool, tool_call_id, result, None, effective_context, arguments)
+            self._emit_audit(
+                tool,
+                tool_call_id,
+                result,
+                None,
+                effective_context,
+                arguments,
+                plugin_assessment=plugin_assessment,
+            )
             return result
 
         normalized_context = self._normalize_auth_context(auth_context, tool)
@@ -125,8 +145,18 @@ class GovernanceEngine:
                 auth_result=auth_result,
                 missing_permissions=missing_permissions,
                 requires_approval=tool.requires_approval,
+                plugin_id=tool.plugin_id,
+                plugin_version=tool.plugin_version,
             )
-            self._emit_audit(tool, tool_call_id, result, auth_result, effective_context, arguments)
+            self._emit_audit(
+                tool,
+                tool_call_id,
+                result,
+                auth_result,
+                effective_context,
+                arguments,
+                plugin_assessment=plugin_assessment,
+            )
             return result
 
         if auth_result.decision != AuthDecision.ALLOW:
@@ -135,8 +165,41 @@ class GovernanceEngine:
                 reason=auth_result.reason or "認可されませんでした",
                 auth_result=auth_result,
                 requires_approval=tool.requires_approval,
+                plugin_id=tool.plugin_id,
+                plugin_version=tool.plugin_version,
             )
-            self._emit_audit(tool, tool_call_id, result, auth_result, effective_context, arguments)
+            self._emit_audit(
+                tool,
+                tool_call_id,
+                result,
+                auth_result,
+                effective_context,
+                arguments,
+                plugin_assessment=plugin_assessment,
+            )
+            return result
+
+        plugin_assessment = self._plugin_registry.evaluate_tool(tool, effective_context)
+        if plugin_assessment.errors:
+            result = GovernanceResult(
+                decision=GovernanceDecision.DENY,
+                reason=plugin_assessment.errors[0],
+                auth_result=auth_result,
+                requires_approval=tool.requires_approval,
+                warnings=list(plugin_assessment.warnings),
+                plugin_id=tool.plugin_id,
+                plugin_version=tool.plugin_version,
+                plugin_risk_tier=plugin_assessment.plugin_risk_tier,
+            )
+            self._emit_audit(
+                tool,
+                tool_call_id,
+                result,
+                auth_result,
+                effective_context,
+                arguments,
+                plugin_assessment=plugin_assessment,
+            )
             return result
 
         if tool.requires_approval:
@@ -145,8 +208,20 @@ class GovernanceEngine:
                 reason="承認が必要なツールです",
                 auth_result=auth_result,
                 requires_approval=True,
+                warnings=list(plugin_assessment.warnings),
+                plugin_id=tool.plugin_id,
+                plugin_version=tool.plugin_version,
+                plugin_risk_tier=plugin_assessment.plugin_risk_tier,
             )
-            self._emit_audit(tool, tool_call_id, result, auth_result, effective_context, arguments)
+            self._emit_audit(
+                tool,
+                tool_call_id,
+                result,
+                auth_result,
+                effective_context,
+                arguments,
+                plugin_assessment=plugin_assessment,
+            )
             return result
 
         result = GovernanceResult(
@@ -154,8 +229,20 @@ class GovernanceEngine:
             reason="ポリシーにより許可されました",
             auth_result=auth_result,
             requires_approval=False,
+            warnings=list(plugin_assessment.warnings),
+            plugin_id=tool.plugin_id,
+            plugin_version=tool.plugin_version,
+            plugin_risk_tier=plugin_assessment.plugin_risk_tier,
         )
-        self._emit_audit(tool, tool_call_id, result, auth_result, effective_context, arguments)
+        self._emit_audit(
+            tool,
+            tool_call_id,
+            result,
+            auth_result,
+            effective_context,
+            arguments,
+            plugin_assessment=plugin_assessment,
+        )
         return result
 
     def _normalize_auth_context(
@@ -193,12 +280,26 @@ class GovernanceEngine:
         auth_result: AuthResult | None,
         context: ToolExecutionContext,
         arguments: dict[str, object],
+        *,
+        plugin_assessment: PluginRuntimeAssessment | None,
     ) -> None:
         """監査イベントを出力."""
 
         user_id = None
         if context.auth_context is not None:
             user_id = context.auth_context.subject.get("user_id")
+
+        metadata: dict[str, object] = {"arguments": arguments, **context.metadata}
+        metadata["governance_warnings"] = list(result.warnings)
+        metadata["plugin_id"] = result.plugin_id
+        metadata["plugin_version"] = result.plugin_version
+        metadata["plugin_risk_tier"] = result.plugin_risk_tier
+        if context.app_name is not None:
+            metadata["app_name"] = context.app_name
+        if context.product_line is not None:
+            metadata["product_line"] = context.product_line
+        if plugin_assessment is not None and plugin_assessment.binding is not None:
+            metadata["plugin_binding_version"] = plugin_assessment.binding.version
 
         event = AuditEvent(
             tool_name=tool.name,
@@ -217,7 +318,7 @@ class GovernanceEngine:
             thread_id=context.thread_id,
             flow_id=context.flow_id,
             user_id=user_id,
-            metadata={"arguments": arguments, **context.metadata},
+            metadata=metadata,
         )
         self._audit_logger.log_event(event)
 

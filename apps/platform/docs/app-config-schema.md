@@ -39,6 +39,13 @@ P0 では `contracts`、`blueprint`、`visibility` を全 App に補完する。
     "skills": { "auto_install": false, "hot_reload": true, "allowed_sources": [], "default_skills": [] },
     "release": { "strategy": "manual", "targets": [], "environments": ["dev"], "require_approval": true }
   },
+  "product_line": "faq",
+  "surface_profile": "business",
+  "audit_profile": "business",
+  "plugin_bindings": [
+    { "id": "official.enterprise-connector-pack", "version": "1.0.0", "config": {} }
+  ],
+  "security_mode": null,
   "blueprint": {
     "engine_pattern": "simple",
     "flow_pattern": null,
@@ -64,7 +71,7 @@ P0 では `contracts`、`blueprint`、`visibility` を全 App に補完する。
 
 ## 3. P0 マイグレーション規則
 
-`POST /api/apps/migrate-manifests` および `AppDiscoveryService.migrate_manifests()` は以下を保証する。
+`POST /api/studios/framework/apps/migrate-manifests` および `AppDiscoveryService.migrate_manifests()` は以下を保証する。
 
 1. `contracts` が欠落時は `auth / rag / skills / release` を補完。
 2. `contracts.rag` は `services.rag + services.vector_db + tags + agents.capabilities` から推論して補完。
@@ -96,12 +103,23 @@ RAG 概要サービスの抽出優先度は以下。
 3. `ports.*`: 1024-65535
 4. `agents[].name`: App 内で重複不可
 5. `visibility.mode`: `private | public | tenant_allowlist`
+6. `product_line`: `migration | faq | assistant | framework`
+7. `surface_profile`: `business | developer | operator`
+8. `audit_profile`: `business | developer`
+9. `security_mode`: `read_only | approval_required | autonomous`（assistant 向け）
 
 ---
 
-## 6. 運用フロー
+## 6. Plugin Manifest
+
+プラグインは `plugins/<plugin_id>/plugin_manifest.json` で管理する。
+必須項目は `id/version/type/capabilities/risk_tier/side_effects/required_permissions/signature/compatibility/tests_required`。
+
+---
+
+## 7. 運用フロー
 
 1. 開発者が `app_config.json` を更新。
-2. `POST /api/apps/migrate-manifests` を `dry_run=true` で確認。
+2. `POST /api/studios/framework/apps/migrate-manifests` を `dry_run=true` で確認。
 3. 問題なければ `dry_run=false` で適用。
-4. `GET /api/apps/summary` で `agent_count` / `has_api` / `contracts` を確認。
+4. `GET /api/studios/framework/apps/summary` で `agent_count` / `has_api` / `contracts` を確認。

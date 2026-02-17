@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 """RAG Router — RAG 概要 API エンドポイント.
 
-GET  /api/rag/overview   — RAG 機能概要
-GET  /api/rag/strategies — チャンキング戦略一覧
-GET  /api/rag/rerankers  — リランカー一覧
-GET  /api/rag/retrieval-methods — 検索方式一覧
-GET  /api/rag/patterns — 推奨 RAG パターン一覧
-GET  /api/rag/apps       — RAG 使用 App 一覧
-GET  /api/rag/apps/configs — 全 App の RAG 設定一覧
-GET  /api/rag/apps/{app_name}/config — App 単位 RAG 設定
-PATCH /api/rag/apps/{app_name}/config — App 単位 RAG 設定更新
-GET  /api/rag/stats      — RAG 統計
+GET  /api/studios/framework/rag/overview   — RAG 機能概要
+GET  /api/studios/framework/rag/strategies — チャンキング戦略一覧
+GET  /api/studios/framework/rag/rerankers  — リランカー一覧
+GET  /api/studios/framework/rag/retrieval-methods — 検索方式一覧
+GET  /api/studios/framework/rag/patterns — 推奨 RAG パターン一覧
+GET  /api/studios/framework/rag/apps       — RAG 使用 App 一覧
+GET  /api/studios/framework/rag/apps/configs — 全 App の RAG 設定一覧
+GET  /api/studios/framework/rag/apps/{app_name}/config — App 単位 RAG 設定
+PATCH /api/studios/framework/rag/apps/{app_name}/config — App 単位 RAG 設定更新
+GET  /api/studios/framework/rag/stats      — RAG 統計
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from apps.platform.schemas.rag_schemas import RAGConfigPatchRequest
 from apps.platform.services.rag_overview import RAGOverviewService
 
 
-router = APIRouter(prefix="/api/rag", tags=["rag"])
+router = APIRouter(prefix="/api/studios/framework/rag", tags=["rag"])
 
 # モジュールレベルのシングルトン（main.py で初期化）
 _overview: RAGOverviewService | None = None

@@ -460,7 +460,7 @@ try:
 
     __version__ = version("agentflow")
 except PackageNotFoundError:
-    __version__ = "1.6.1"
+    __version__ = "2.0.0"
 
 # =============================================================================
 # 公開API: Runtime Context（プラットフォーム向け）

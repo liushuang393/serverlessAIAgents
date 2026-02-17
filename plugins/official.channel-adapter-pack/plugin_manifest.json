@@ -1,0 +1,40 @@
+{
+  "id": "official.channel-adapter-pack",
+  "version": "1.0.0",
+  "type": "channel",
+  "capabilities": [
+    "channel.telegram",
+    "channel.slack",
+    "channel.discord",
+    "channel.teams",
+    "channel.whatsapp",
+    "channel.signal"
+  ],
+  "risk_tier": "high",
+  "side_effects": [
+    "network.egress",
+    "message.send"
+  ],
+  "required_permissions": [
+    "network.egress",
+    "message.send",
+    "audit.write"
+  ],
+  "signature": {
+    "algorithm": "ed25519",
+    "issuer": "agentflow-official",
+    "key_id": "af-official-2026-q1"
+  },
+  "compatibility": {
+    "kernel": ">=2.0.0",
+    "product_lines": [
+      "assistant"
+    ]
+  },
+  "tests_required": [
+    "unit",
+    "integration",
+    "security",
+    "channel-e2e"
+  ]
+}

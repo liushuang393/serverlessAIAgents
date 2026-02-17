@@ -3,6 +3,9 @@
   "display_name": "FAQ システム",
   "description": "社内FAQ検索・SQL分析・営業資料画像生成を統合したAIチャットシステム",
   "business_base": "knowledge",
+  "product_line": "faq",
+  "surface_profile": "business",
+  "audit_profile": "business",
   "version": "2.0.0",
   "icon": "💬",
   "ports": {
@@ -139,6 +142,25 @@
       "require_approval": true
     }
   },
+  "plugin_bindings": [
+    {
+      "id": "official.enterprise-connector-pack",
+      "version": "1.0.0",
+      "config": {
+        "connectors": [
+          "confluence",
+          "sharepoint"
+        ]
+      }
+    },
+    {
+      "id": "official.industry-dictionary-pack",
+      "version": "1.0.0",
+      "config": {
+        "locale": "ja-JP"
+      }
+    }
+  ],
   "blueprint": {
     "engine_pattern": "simple",
     "flow_pattern": null,

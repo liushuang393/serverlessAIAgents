@@ -1,9 +1,9 @@
 """Gallery Router - Gallery API エンドポイント.
 
-GET /api/gallery/search - 検索
-GET /api/gallery/featured - 推荐リスト
-GET /api/gallery/{item_id} - アイテム詳細
-POST /api/gallery/install - マーケットプレイスからインストール
+GET /api/studios/framework/gallery/search - 検索
+GET /api/studios/framework/gallery/featured - 推荐リスト
+GET /api/studios/framework/gallery/{item_id} - アイテム詳細
+POST /api/studios/framework/gallery/install - マーケットプレイスからインストール
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from apps.platform.schemas.gallery_schemas import (
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 
-router = APIRouter(prefix="/api/gallery", tags=["gallery"])
+router = APIRouter(prefix="/api/studios/framework/gallery", tags=["gallery"])
 
 # 依存性注入用のエンジンインスタンス
 _engine: PlatformEngine | None = None

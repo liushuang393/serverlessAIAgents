@@ -3,6 +3,9 @@
   "display_name": "Orchestration Guardian",
   "description": "Agent orchestration and protocol readiness checker",
   "business_base": "governance",
+  "product_line": "framework",
+  "surface_profile": "operator",
+  "audit_profile": "developer",
   "version": "1.0.0",
   "icon": "🛡️",
   "ports": {
@@ -113,6 +116,7 @@
       "require_approval": true
     }
   },
+  "plugin_bindings": [],
   "blueprint": {
     "engine_pattern": "simple",
     "flow_pattern": null,
@@ -134,4 +138,3 @@
     "tenants": []
   }
 }
-

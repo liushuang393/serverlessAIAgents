@@ -25,6 +25,14 @@ class AgentBlueprintInput(BaseModel):
     pattern: str | None = Field(default=None, description="Agent pattern")
 
 
+class PluginBindingInput(BaseModel):
+    """App 作成時のプラグインバインド入力."""
+
+    id: str = Field(..., min_length=1, max_length=120, description="プラグインID")
+    version: str = Field(..., min_length=1, max_length=50, description="要求バージョン")
+    config: dict[str, Any] = Field(default_factory=dict, description="プラグイン設定")
+
+
 class AppCreateRequest(BaseModel):
     """新規 App 作成リクエスト."""
 
@@ -43,6 +51,36 @@ class AppCreateRequest(BaseModel):
         "media",
         "custom",
     ] = Field(default="custom", description="業務基盤分類")
+    product_line: Literal["migration", "faq", "assistant", "framework"] = Field(
+        ...,
+        description="製品主線",
+    )
+    surface_profile: Literal["business", "developer", "operator"] = Field(
+        ...,
+        description="表示/操作プロファイル",
+    )
+    audit_profile: Literal["business", "developer"] = Field(
+        ...,
+        description="監査プロファイル",
+    )
+    security_mode: Literal["read_only", "approval_required", "autonomous"] | None = Field(
+        default=None,
+        description="セキュリティ実行モード（assistant 向け）",
+    )
+    plugin_bindings: list[PluginBindingInput] = Field(
+        ...,
+        description="バインド済みプラグイン",
+    )
+    template: str | None = Field(default=None, description="Business 作成向けテンプレートID")
+    data_sources: list[str] = Field(default_factory=list, description="Business 作成向けデータソース")
+    permission_scopes: list[str] = Field(
+        default_factory=list,
+        description="Business 作成向け権限スコープ",
+    )
+    risk_level: Literal["low", "medium", "high"] | None = Field(
+        default=None,
+        description="Business 作成向けリスクレベル",
+    )
 
     engine_pattern: Literal[
         "simple",
@@ -122,6 +160,12 @@ class AppCreateRequest(BaseModel):
             raise ValueError(msg)
         return value
 
+    @field_validator("product_line", "surface_profile", "audit_profile", mode="before")
+    @classmethod
+    def normalize_profile_fields(cls, value: str) -> str:
+        """分類フィールドを小文字へ正規化する."""
+        return str(value).strip().lower()
+
     @field_validator("llm_api_key_env", "vector_db_api_key_env")
     @classmethod
     def validate_env_key(cls, value: str | None) -> str | None:
@@ -153,6 +197,9 @@ class AppCreateRequest(BaseModel):
         """RAG と vector DB の整合性を検証."""
         if self.rag_enabled and self.vector_database == "none":
             msg = "rag_enabled=true の場合は vector_database を選択してください"
+            raise ValueError(msg)
+        if self.product_line == "assistant" and self.security_mode is None:
+            msg = "product_line='assistant' の App 作成では security_mode が必須です"
             raise ValueError(msg)
         return self
 

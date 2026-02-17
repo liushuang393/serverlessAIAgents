@@ -86,6 +86,8 @@ class RegisteredTool(BaseModel):
         audit_required: 監査ログ必須か
         max_execution_time: 最大実行時間（秒）
         rate_limit: レート制限（毎秒）
+        plugin_id: 紐付け plugin ID
+        plugin_version: 紐付け plugin バージョン
     """
 
     name: str = Field(..., description="ツール名")
@@ -124,6 +126,14 @@ class RegisteredTool(BaseModel):
     rate_limit: int | None = Field(
         default=None,
         description="レート制限（毎秒の最大呼び出し数、Noneは無制限）",
+    )
+    plugin_id: str | None = Field(
+        default=None,
+        description="紐付け plugin ID",
+    )
+    plugin_version: str | None = Field(
+        default=None,
+        description="紐付け plugin バージョン",
     )
 
     model_config = {"arbitrary_types_allowed": True}
@@ -164,6 +174,8 @@ def tool(
     audit_required: bool = False,
     max_execution_time: float = 30.0,
     rate_limit: int | None = None,
+    plugin_id: str | None = None,
+    plugin_version: str | None = None,
 ) -> Callable[[T], T]:
     """ツール登録デコレータ.
 
@@ -183,6 +195,8 @@ def tool(
         audit_required: 監査ログ必須か
         max_execution_time: 最大実行時間（秒）
         rate_limit: レート制限（毎秒の最大呼び出し数）
+        plugin_id: 紐付け plugin ID
+        plugin_version: 紐付け plugin バージョン
 
     Returns:
         デコレートされた関数
@@ -252,6 +266,8 @@ def tool(
             audit_required=audit_required,
             max_execution_time=max_execution_time,
             rate_limit=rate_limit,
+            plugin_id=plugin_id,
+            plugin_version=plugin_version,
         )
         _tool_registry[tool_name] = registered
 
@@ -571,4 +587,3 @@ class ToolProvider:
             "audit_required": len([t for t in tools if t.audit_required]),
             "safe_tools": len([t for t in tools if t.is_safe()]),
         }
-

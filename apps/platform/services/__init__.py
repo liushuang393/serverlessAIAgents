@@ -26,6 +26,7 @@ from apps.platform.services.mcp_registry import MCPRegistryService
 from apps.platform.services.port_allocator import PortAllocatorService
 from apps.platform.services.rag_overview import RAGOverviewService
 from apps.platform.services.skill_catalog import SkillCatalogService
+from apps.platform.services.studio_service import StudioService
 from apps.platform.services.tenant_dashboard import TenantDashboard
 
 
@@ -49,5 +50,6 @@ __all__ = [
     "PublishOrchestrator",
     "RAGOverviewService",
     "SkillCatalogService",
+    "StudioService",
     "TenantDashboard",
 ]

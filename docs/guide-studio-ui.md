@@ -288,7 +288,7 @@ npm run dev -- --port 3001
 agentflow list
 
 # バックエンド API が起動しているか確認
-curl http://localhost:8000/api/agents
+curl http://localhost:8000/api/studios/framework/agents
 ```
 
 ### 問題 3: ノードを接続できない

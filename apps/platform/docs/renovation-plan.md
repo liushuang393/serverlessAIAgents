@@ -103,11 +103,10 @@ gantt
 ## 6. 完了条件（DoD）
 
 - [ ] 全 App に `app_config.json` が存在する
-- [ ] `GET /api/apps` が全 App の情報を返す
-- [ ] `GET /api/apps/{name}` が App 詳細（Agent 一覧含む）を返す
-- [ ] `GET /api/apps/{name}/health` がヘルスチェック結果を返す
-- [ ] `POST /api/apps/{name}/start` / `stop` が動作する
+- [ ] `GET /api/studios/framework/apps` が全 App の情報を返す
+- [ ] `GET /api/studios/framework/apps/{name}` が App 詳細（Agent 一覧含む）を返す
+- [ ] `GET /api/studios/framework/apps/{name}/health` がヘルスチェック結果を返す
+- [ ] `POST /api/studios/framework/apps/{name}/start` / `stop` が動作する
 - [ ] 既存の Gallery/Components/Publish/Dashboard API が壊れていない
 - [ ] Pydantic バリデーションが全エンドポイントで機能する
 - [ ] 新規コードに型アノテーションが 100% 付与されている
-

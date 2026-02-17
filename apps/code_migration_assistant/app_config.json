@@ -3,6 +3,9 @@
   "display_name": "コード移行アシスタント",
   "description": "COBOL等レガシーコードからJava等モダン言語へのAI支援移行ツール",
   "business_base": "operations",
+  "product_line": "migration",
+  "surface_profile": "business",
+  "audit_profile": "business",
   "version": "2.0.0",
   "icon": "🔄",
   "ports": {
@@ -240,6 +243,22 @@
       "require_approval": true
     }
   },
+  "plugin_bindings": [
+    {
+      "id": "official.cobol-migration-pack",
+      "version": "1.0.0",
+      "config": {
+        "target_runtime": "java17"
+      }
+    },
+    {
+      "id": "official.test-synthesis-pack",
+      "version": "1.0.0",
+      "config": {
+        "with_e2e": true
+      }
+    }
+  ],
   "blueprint": {
     "engine_pattern": "pipeline",
     "flow_pattern": null,

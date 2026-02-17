@@ -83,6 +83,10 @@ class TestAppLifecycleManager:
         return AppConfig(
             name=name,
             display_name="Test",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
             ports={"api": api_port},
             entry_points={"health": health},
         )
@@ -179,6 +183,10 @@ class TestAppLifecycleManager:
         cfg = AppConfig(
             name="cmd_app",
             display_name="Command App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
             ports={"api": None},
             entry_points={"health": None},
             runtime={"commands": {"start": "echo start-from-config"}},
@@ -208,6 +216,10 @@ class TestAppLifecycleManager:
         cfg = AppConfig(
             name="local_cmd_app",
             display_name="Local Command App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
             runtime={
                 "commands": {
                     "backend_dev": "  python -m apps.local_cmd_app.main  ",
@@ -233,6 +245,10 @@ class TestAppLifecycleManager:
         cfg = AppConfig(
             name="local_backend_only",
             display_name="Local Backend Only",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
             ports={"api": None},
             entry_points={"health": None},
             runtime={"commands": {"backend_dev": "python -m apps.local_backend_only.main"}},

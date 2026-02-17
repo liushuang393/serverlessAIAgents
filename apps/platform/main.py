@@ -37,12 +37,14 @@ from apps.platform.routers import (
     publish_router,
     rag_router,
     skills_router,
+    studios_router,
 )
 from apps.platform.routers.agents import init_agent_services
 from apps.platform.routers.apps import init_app_services
 from apps.platform.routers.mcp import init_mcp_services
 from apps.platform.routers.rag import init_rag_services
 from apps.platform.routers.skills import init_skill_services
+from apps.platform.routers.studios import init_studio_services
 from apps.platform.services.app_scaffolder import AppScaffolderService
 from apps.platform.schemas.publish_schemas import PublishRequest, PublishTarget
 from apps.platform.services.agent_aggregator import AgentAggregatorService
@@ -52,6 +54,7 @@ from apps.platform.services.mcp_registry import MCPRegistryService
 from apps.platform.services.port_allocator import PortAllocatorService
 from apps.platform.services.rag_overview import RAGOverviewService
 from apps.platform.services.skill_catalog import SkillCatalogService
+from apps.platform.services.studio_service import StudioService
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -78,6 +81,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
         scaffolder=scaffolder,
         port_allocator=port_allocator,
     )
+    studio_service = StudioService(discovery, lifecycle)
+    init_studio_services(studio_service)
 
     count = await discovery.scan()
     _logger.info("Platform 起動完了: %d 件の App を検出", count)
@@ -137,6 +142,7 @@ def create_app() -> FastAPI:
     app.include_router(skills_router)
     app.include_router(rag_router)
     app.include_router(mcp_router)
+    app.include_router(studios_router)
 
     @app.get("/health")
     async def health_check() -> dict[str, Any]:
@@ -150,7 +156,8 @@ def create_app() -> FastAPI:
             "name": "AgentFlow Platform",
             "version": "2.0.0",
             "docs": "/docs",
-            "apps_api": "/api/apps",
+            "studios_api": "/api/studios",
+            "framework_apps_api": "/api/studios/framework/apps",
         }
 
     return app

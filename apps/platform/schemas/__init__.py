@@ -13,6 +13,7 @@ from apps.platform.schemas.app_config_schemas import (
     DependenciesConfig,
     EntryPointsConfig,
     PortsConfig,
+    PluginBindingConfig,
     RAGContractConfig,
     ReleaseContractConfig,
     SkillsContractConfig,
@@ -55,6 +56,11 @@ from apps.platform.schemas.provisioning_schemas import (
     PortConflictItem,
     PortConflictReport,
 )
+from apps.platform.schemas.plugin_manifest_schemas import (
+    PluginCompatibility,
+    PluginManifest,
+    PluginSignature,
+)
 
 
 __all__ = [
@@ -68,6 +74,7 @@ __all__ = [
     "DependenciesConfig",
     "EntryPointsConfig",
     "PortsConfig",
+    "PluginBindingConfig",
     "RAGContractConfig",
     "ReleaseContractConfig",
     "SkillsContractConfig",
@@ -103,4 +110,8 @@ __all__ = [
     "MCPServerUpsertRequest",
     "PortConflictItem",
     "PortConflictReport",
+    # Plugin Manifest
+    "PluginCompatibility",
+    "PluginManifest",
+    "PluginSignature",
 ]

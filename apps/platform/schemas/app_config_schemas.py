@@ -274,6 +274,14 @@ class ReleaseContractConfig(BaseModel):
     require_approval: bool = Field(default=True, description="承認必須")
 
 
+class PluginBindingConfig(BaseModel):
+    """プラグインバインディング設定."""
+
+    id: str = Field(..., min_length=1, max_length=120, description="プラグインID")
+    version: str = Field(..., min_length=1, max_length=50, description="要求バージョン")
+    config: dict[str, Any] = Field(default_factory=dict, description="プラグイン設定")
+
+
 class ContractsConfig(BaseModel):
     """プラットフォーム契約セクション."""
 
@@ -301,6 +309,11 @@ class AppConfig(BaseModel):
         dependencies: 依存設定
         runtime: ランタイムURL/DB/コマンド設定
         contracts: プラットフォーム契約設定
+        product_line: 製品主線（migration / faq / assistant / framework）
+        surface_profile: UI/操作面プロファイル（business / developer / operator）
+        audit_profile: 監査プロファイル（business / developer）
+        plugin_bindings: バインド済みプラグイン一覧
+        security_mode: セキュリティ動作モード（assistant 向け）
         tags: 検索用タグ
     """
 
@@ -330,6 +343,26 @@ class AppConfig(BaseModel):
         default_factory=ContractsConfig,
         description="プラットフォーム契約設定",
     )
+    product_line: Literal["migration", "faq", "assistant", "framework"] = Field(
+        ...,
+        description="製品主線",
+    )
+    surface_profile: Literal["business", "developer", "operator"] = Field(
+        ...,
+        description="表示/操作プロファイル",
+    )
+    audit_profile: Literal["business", "developer"] = Field(
+        ...,
+        description="監査プロファイル",
+    )
+    plugin_bindings: list[PluginBindingConfig] = Field(
+        ...,
+        description="バインド済みプラグイン",
+    )
+    security_mode: Literal["read_only", "approval_required", "autonomous"] | None = Field(
+        default=None,
+        description="セキュリティ実行モード（assistant 向け）",
+    )
     blueprint: BlueprintConfig = Field(
         default_factory=BlueprintConfig,
         description="AgentFlow 設計ブループリント",
@@ -348,6 +381,26 @@ class AppConfig(BaseModel):
             return None
         text = str(v).strip().lower()
         return text or None
+
+    @field_validator("product_line", mode="before")
+    @classmethod
+    def normalize_product_line(cls, v: str) -> str:
+        """product_line を小文字へ正規化する."""
+        text = str(v).strip().lower()
+        if not text:
+            msg = "product_line は空文字を許可しません"
+            raise ValueError(msg)
+        return text
+
+    @field_validator("surface_profile", "audit_profile", mode="before")
+    @classmethod
+    def normalize_profiles(cls, v: str) -> str:
+        """surface/audit profile を小文字へ正規化する."""
+        text = str(v).strip().lower()
+        if not text:
+            msg = "surface_profile / audit_profile は空文字を許可しません"
+            raise ValueError(msg)
+        return text
 
     @field_validator("name")
     @classmethod
@@ -369,7 +422,7 @@ class AppConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_unique_agent_names(self) -> AppConfig:
-        """Agent 名の重複を検証."""
+        """Agent 名重複と assistant の security_mode を検証."""
         seen: set[str] = set()
         duplicates: set[str] = set()
         for agent in self.agents:
@@ -380,6 +433,10 @@ class AppConfig(BaseModel):
         if duplicates:
             dup = ", ".join(sorted(duplicates))
             msg = f"agents[].name は App 内で一意である必要があります: {dup}"
+            raise ValueError(msg)
+
+        if self.product_line == "assistant" and self.security_mode is None:
+            msg = "product_line='assistant' の App では security_mode が必須です"
             raise ValueError(msg)
 
         return self

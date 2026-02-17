@@ -1,0 +1,36 @@
+{
+  "id": "official.enterprise-connector-pack",
+  "version": "1.0.0",
+  "type": "tool",
+  "capabilities": [
+    "connector.confluence",
+    "connector.sharepoint",
+    "connector.slack"
+  ],
+  "risk_tier": "medium",
+  "side_effects": [
+    "network.egress",
+    "database.read"
+  ],
+  "required_permissions": [
+    "network.egress",
+    "kb.read",
+    "db.read"
+  ],
+  "signature": {
+    "algorithm": "ed25519",
+    "issuer": "agentflow-official",
+    "key_id": "af-official-2026-q1"
+  },
+  "compatibility": {
+    "kernel": ">=2.0.0",
+    "product_lines": [
+      "faq"
+    ]
+  },
+  "tests_required": [
+    "unit",
+    "integration",
+    "security"
+  ]
+}

@@ -48,6 +48,7 @@ class AssistantConfig:
         workspace_path: 作業ディレクトリ
         enable_os_skills: OS操作を有効化
         enable_browser_skills: ブラウザ操作を有効化
+        security_mode: 実行セキュリティモード
         summary_language: サマリー言語
         use_emoji: 絵文字を使用
     """
@@ -55,6 +56,7 @@ class AssistantConfig:
     workspace_path: Path = field(default_factory=lambda: Path.cwd())
     enable_os_skills: bool = True
     enable_browser_skills: bool = True
+    security_mode: str = "approval_required"
     summary_language: str = "ja"
     use_emoji: bool = True
 
@@ -101,6 +103,21 @@ class PersonalAssistantCoordinator:
         self._agents: dict[str, Any] = {}
 
         self._logger.info("PersonalAssistantCoordinator 初期化完了")
+
+    def _blocked_result(self, capability: str) -> dict[str, Any]:
+        """セキュリティモードでブロックされた場合の共通レスポンス."""
+        return {
+            "processed": 0,
+            "blocked": True,
+            "security_mode": self._config.security_mode,
+            "summary_points": [
+                f"{capability} 操作は security_mode='{self._config.security_mode}' でブロックされました",
+            ],
+            "recommended_actions": [
+                "管理者に承認を依頼してください",
+                "必要であれば autonomous モードを明示的に有効化してください",
+            ],
+        }
 
     def _register_templates(self) -> None:
         """タスクテンプレートを登録."""
@@ -408,6 +425,9 @@ class PersonalAssistantCoordinator:
         context: dict[str, Any],
     ) -> dict[str, Any]:
         """ファイル整理を実行."""
+        if not self._config.enable_os_skills:
+            return self._blocked_result("filesystem")
+
         import asyncio
         await asyncio.sleep(0)  # 非同期コンテキスト維持
 
@@ -441,6 +461,9 @@ class PersonalAssistantCoordinator:
         context: dict[str, Any],
     ) -> dict[str, Any]:
         """システム最適化を実行."""
+        if not self._config.enable_os_skills:
+            return self._blocked_result("os_command")
+
         level = params.get("level", "軽度")
 
         self._logger.info("システム最適化: level=%s", level)
@@ -502,6 +525,9 @@ class PersonalAssistantCoordinator:
         context: dict[str, Any],
     ) -> dict[str, Any]:
         """競合分析を実行."""
+        if not self._config.enable_browser_skills:
+            return self._blocked_result("browser_control")
+
         import asyncio
         await asyncio.sleep(0)  # 非同期コンテキスト維持
 
@@ -570,4 +596,3 @@ class PersonalAssistantCoordinator:
             }
         except Exception as e:
             return {"error": str(e), "processed": 0}
-

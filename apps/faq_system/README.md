@@ -2,6 +2,12 @@
 
 AgentFlow フレームワーク級 Agent/サービスを使用した FAQ システムです。
 
+## Product Position
+
+- `product_line`: `faq`
+- `surface_profile`: `business`
+- 顧客導線: `テンプレート選択 → データ/権限設定 → 実行 → 成果物確認`
+
 ## クイックスタート
 
 ### 前提条件

@@ -33,6 +33,18 @@ _Unified Protocol Interface Based on PocketFlow_
 
 A lightweight AI agent framework providing unified interface for **MCP / A2A / AG-UI / A2UI** protocols.
 
+## 🧩 3 Studio Product Lines (External Surface)
+
+For business-facing delivery, the recommended product narrative is:
+
+- `Migration Studio`
+- `Enterprise FAQ Studio`
+- `Computer Assistant Studio`
+
+Customer flow is intentionally simplified to:
+`Template -> Data/Permission Setup -> Run -> Artifacts`.
+See `docs/studios.md` for details.
+
 ### ✨ Key Features
 
 | Feature | Description |
@@ -193,14 +205,16 @@ AgentFlow provides three ways to operate. Choose the best method for your use ca
 | [Studio UI Guide](docs/guide-studio-ui.md) | Visual editor operation |
 | [CLI Guide](docs/guide-cli.md) | Command line operation |
 | [Coding Guide](docs/guide-coding.md) | Python development |
+| [Docs Index](docs/index.md) | Unified entry for external/internal docs |
+| [External Docs](docs/external/README.md) | Customer-facing 3 Studio narrative |
+| [Internal Docs](docs/internal/README.md) | Platform build/extend/operate handbook |
+| [3 Studio Guide](docs/studios.md) | Product lines, personas, audit policy |
 | [Skills Guide](docs/guide-skills.md) | Auto-evolution system |
 | [Built-in Skills Guide](docs/guide-builtin-skills.md) | DB/Payment/Auth/Deploy (NEW) |
 | [LLM Router](docs/guide-llm-router.md) | Multi-model switching (NEW) |
 | [Architecture](docs/architecture.md) | Design & Structure |
 | [Agent Lightning Alignment](docs/design/AGENT_LIGHTNING_ALIGNMENT_DESIGN.md) | Agent Lightning inspired design updates (NEW) |
 | [Protocols](docs/protocols.md) | MCP/A2A/AG-UI/A2UI |
-| [API](docs/api.md) | API Reference |
-| [CLI](docs/cli.md) | Commands |
 | [Quick Start](docs/quickstart.md) | Getting Started |
 | [Standards](docs/DEVELOPMENT_STANDARDS_JA.md) | Coding Standards |
 

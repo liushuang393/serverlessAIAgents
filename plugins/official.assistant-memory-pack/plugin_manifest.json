@@ -1,0 +1,36 @@
+{
+  "id": "official.assistant-memory-pack",
+  "version": "1.0.0",
+  "type": "runner_sandbox",
+  "capabilities": [
+    "assistant.memory.store",
+    "assistant.memory.recall",
+    "assistant.memory.retention"
+  ],
+  "risk_tier": "medium",
+  "side_effects": [
+    "filesystem.read",
+    "filesystem.write",
+    "database.read"
+  ],
+  "required_permissions": [
+    "memory.read",
+    "memory.write"
+  ],
+  "signature": {
+    "algorithm": "ed25519",
+    "issuer": "agentflow-official",
+    "key_id": "af-official-2026-q1"
+  },
+  "compatibility": {
+    "kernel": ">=2.0.0",
+    "product_lines": [
+      "assistant"
+    ]
+  },
+  "tests_required": [
+    "unit",
+    "integration",
+    "security"
+  ]
+}

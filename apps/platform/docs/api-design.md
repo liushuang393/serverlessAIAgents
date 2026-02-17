@@ -15,12 +15,12 @@ P0 では `rag / skill / agent` の分類・契約・出力形を統一し、前
 
 ## 2. P0 で確定した API 変更
 
-1. `GET /api/agents/by-app` は map 返却を廃止し、`groups` 配列を返す。
-2. `GET /api/agents` と `GET /api/agents/search` は、`capabilities`（標準能力オブジェクト）と `capabilities_legacy`（旧タグ）を返す。
-3. `GET /api/agents/capabilities` は標準能力集約 `{id, domain, task, qualifier, label, aliases, count, apps}` を返す。
-4. `GET /api/skills` と `GET /api/skills/{name}` は `label` を必須返却する。
-5. `GET /api/apps/summary` の件数字段は `agent_count` に統一し、`has_api` を返す。
-6. `POST /api/apps/migrate-manifests` を新設し、全 `apps/*/app_config.json` の標準化を実行する。
+1. `GET /api/studios/framework/agents/by-app` は map 返却を廃止し、`groups` 配列を返す。
+2. `GET /api/studios/framework/agents` と `GET /api/studios/framework/agents/search` は、`capabilities`（標準能力オブジェクト）と `capabilities_legacy`（旧タグ）を返す。
+3. `GET /api/studios/framework/agents/capabilities` は標準能力集約 `{id, domain, task, qualifier, label, aliases, count, apps}` を返す。
+4. `GET /api/studios/framework/skills` と `GET /api/studios/framework/skills/{name}` は `label` を必須返却する。
+5. `GET /api/studios/framework/apps/summary` の件数字段は `agent_count` に統一し、`has_api` を返す。
+6. `POST /api/studios/framework/apps/migrate-manifests` を新設し、全 `apps/*/app_config.json` の標準化を実行する。
 
 ---
 
@@ -28,7 +28,7 @@ P0 では `rag / skill / agent` の分類・契約・出力形を統一し、前
 
 ### 3.1 Apps
 
-`GET /api/apps/summary`
+`GET /api/studios/framework/apps/summary`
 
 ```json
 {
@@ -55,7 +55,7 @@ P0 では `rag / skill / agent` の分類・契約・出力形を統一し、前
 }
 ```
 
-`POST /api/apps/migrate-manifests`
+`POST /api/studios/framework/apps/migrate-manifests`
 
 Request:
 
@@ -77,7 +77,7 @@ Response:
 
 ### 3.2 Agents
 
-`GET /api/agents`
+`GET /api/studios/framework/agents`
 
 ```json
 {
@@ -105,7 +105,7 @@ Response:
 }
 ```
 
-`GET /api/agents/by-app`
+`GET /api/studios/framework/agents/by-app`
 
 ```json
 {
@@ -121,7 +121,7 @@ Response:
 }
 ```
 
-`GET /api/agents/capabilities`
+`GET /api/studios/framework/agents/capabilities`
 
 ```json
 {
@@ -143,7 +143,7 @@ Response:
 
 ### 3.3 Skills
 
-`GET /api/skills`
+`GET /api/studios/framework/skills`
 
 ```json
 {

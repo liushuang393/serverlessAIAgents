@@ -3,6 +3,9 @@
   "display_name": "市場動向モニター",
   "description": "AIエージェント群による市場トレンド収集・分析・レポート生成システム",
   "business_base": "reasoning",
+  "product_line": "framework",
+  "surface_profile": "developer",
+  "audit_profile": "developer",
   "version": "1.0.0",
   "icon": "📈",
   "ports": {
@@ -189,6 +192,7 @@
       "require_approval": true
     }
   },
+  "plugin_bindings": [],
   "blueprint": {
     "engine_pattern": "pipeline",
     "flow_pattern": null,

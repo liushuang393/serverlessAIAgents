@@ -1,9 +1,9 @@
 """Publish Router - 発布 API エンドポイント.
 
-POST /api/publish/deploy - 一键发布
-GET /api/publish/{publish_id} - 発布ステータス取得
-POST /api/publish/{publish_id}/cancel - 発布キャンセル
-GET /api/publish/stream/{publish_id} - SSE ストリーム
+POST /api/studios/framework/publish/deploy - 一键发布
+GET /api/studios/framework/publish/{publish_id} - 発布ステータス取得
+POST /api/studios/framework/publish/{publish_id}/cancel - 発布キャンセル
+GET /api/studios/framework/publish/stream/{publish_id} - SSE ストリーム
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
 
-router = APIRouter(prefix="/api/publish", tags=["publish"])
+router = APIRouter(prefix="/api/studios/framework/publish", tags=["publish"])
 
 # 依存性注入用のエンジンインスタンス
 _engine: PlatformEngine | None = None
@@ -42,7 +42,7 @@ async def deploy(
     """一键发布を実行.
 
     非同期で発布を開始し、publish_id を返します。
-    ステータスは /api/publish/{publish_id} または SSE で確認できます。
+    ステータスは /api/studios/framework/publish/{publish_id} または SSE で確認できます。
 
     Args:
         request: 発布リクエスト

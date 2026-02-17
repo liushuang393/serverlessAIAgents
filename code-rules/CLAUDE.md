@@ -40,6 +40,14 @@
 
 **AgentFlow** は MCP / A2A / AG-UI / A2UI の 4 プロトコルを統一インターフェースで扱う軽量 AI エージェント開発フレームワークです。
 
+### 外部提供優先ルール（2026-02）
+
+- 対外説明は `Migration Studio / Enterprise FAQ Studio / Computer Assistant Studio` の 3 主線を優先する。
+- `business` surface ではプロトコル・内部層詳細を露出しない。
+- 副作用を伴う操作は必ずポリシーと監査を経由する。
+- ドキュメントは `docs/external/`（対外）と `docs/internal/`（対内）に分離して管理する。
+- Platform API は `/api/studios/*` と `/api/studios/framework/apps/*` を正規経路とし、`/api/apps/*` を再導入しない。
+
 ### 主要特徴
 - **8層アーキテクチャ**: アプリ・UI・フロー・Agent・ツール・Provider・プロトコル・インフラの明確分離
 - **統一プロトコル**: 4つの標準プロトコルを1つのAPIで利用
@@ -134,6 +142,8 @@ pytest --cov=agentflow --cov-fail-under=80  # テスト
 ## 言語設定
 - 回答は日本語で行う
 - コードコメントは日本語を使用する
+- 顧客向け文書・既定AIプロンプトは日本語を標準とする
+- 中国語は `README_ZH.md` と `**/locales/zh*.json`、および多言語機能維持に必須な判定語彙/正規表現/テストのみ許可する（`i18n-zh-keep`）
 
 ## 出力規則
 - 原則として構造化された形式で出力する

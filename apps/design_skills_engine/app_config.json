@@ -3,6 +3,9 @@
   "display_name": "デザインスキルエンジン",
   "description": "自然言語ブリーフからComfyUI経由で統一スタイルのマルチ画像セットを生成",
   "business_base": "media",
+  "product_line": "framework",
+  "surface_profile": "developer",
+  "audit_profile": "developer",
   "version": "1.0.0",
   "icon": "🎨",
   "ports": {
@@ -139,6 +142,7 @@
       "require_approval": true
     }
   },
+  "plugin_bindings": [],
   "blueprint": {
     "engine_pattern": "pipeline",
     "flow_pattern": null,

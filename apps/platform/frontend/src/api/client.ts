@@ -1,7 +1,7 @@
 /**
  * AgentFlow Platform - API クライアント.
  *
- * バックエンド /api/apps/* とのHTTP通信。
+ * バックエンド /api/studios/framework/apps/* とのHTTP通信。
  * Vite dev server のプロキシ経由で API にアクセスする。
  */
 
@@ -58,6 +58,7 @@ const longRunningApi = axios.create({
 });
 
 const inflightRequests = new Map<string, Promise<unknown>>();
+const FRAMEWORK_APPS_BASE = '/studios/framework/apps';
 
 async function withInflightDedup<T>(
   key: string,
@@ -87,9 +88,9 @@ export async function fetchApps(
 ): Promise<AppListResponse> {
   const waitForHealth = options.waitForHealth ?? false;
   const includeRuntime = options.includeRuntime ?? false;
-  const key = `/apps?wait_for_health=${waitForHealth}&include_runtime=${includeRuntime}`;
+  const key = `${FRAMEWORK_APPS_BASE}?wait_for_health=${waitForHealth}&include_runtime=${includeRuntime}`;
   return withInflightDedup(key, async () => {
-    const { data } = await api.get<AppListResponse>('/apps', {
+    const { data } = await api.get<AppListResponse>(FRAMEWORK_APPS_BASE, {
       params: {
         wait_for_health: waitForHealth,
         include_runtime: includeRuntime,
@@ -101,15 +102,15 @@ export async function fetchApps(
 
 /** App 概要統計を取得 */
 export async function fetchSummary(): Promise<AppSummaryResponse> {
-  return withInflightDedup('/apps/summary', async () => {
-    const { data } = await api.get<AppSummaryResponse>('/apps/summary');
+  return withInflightDedup(`${FRAMEWORK_APPS_BASE}/summary`, async () => {
+    const { data } = await api.get<AppSummaryResponse>(`${FRAMEWORK_APPS_BASE}/summary`);
     return data;
   });
 }
 
 /** App 詳細を取得 */
 export async function fetchAppDetail(appName: string): Promise<AppDetail> {
-  const { data } = await api.get<AppDetail>(`/apps/${appName}`);
+  const { data } = await api.get<AppDetail>(`${FRAMEWORK_APPS_BASE}/${appName}`);
   return data;
 }
 
@@ -118,44 +119,44 @@ export async function fetchAppHealth(
   appName: string,
 ): Promise<HealthCheckResult> {
   const { data } = await api.get<HealthCheckResult>(
-    `/apps/${appName}/health`,
+    `${FRAMEWORK_APPS_BASE}/${appName}/health`,
   );
   return data;
 }
 
 /** App publish（docker compose up -d --build） — 長時間操作 */
 export async function publishApp(appName: string): Promise<AppActionResponse> {
-  const { data } = await longRunningApi.post<AppActionResponse>(`/apps/${appName}/publish`);
+  const { data } = await longRunningApi.post<AppActionResponse>(`${FRAMEWORK_APPS_BASE}/${appName}/publish`);
   return data;
 }
 
 /** App start（docker compose up -d） — 長時間操作 */
 export async function startApp(appName: string): Promise<AppActionResponse> {
-  const { data } = await longRunningApi.post<AppActionResponse>(`/apps/${appName}/start`);
+  const { data } = await longRunningApi.post<AppActionResponse>(`${FRAMEWORK_APPS_BASE}/${appName}/start`);
   return data;
 }
 
 /** App stop（docker compose down） — 長時間操作 */
 export async function stopApp(appName: string): Promise<AppActionResponse> {
-  const { data } = await longRunningApi.post<AppActionResponse>(`/apps/${appName}/stop`);
+  const { data } = await longRunningApi.post<AppActionResponse>(`${FRAMEWORK_APPS_BASE}/${appName}/stop`);
   return data;
 }
 
 /** App ローカル開発起動（バックエンド・フロントエンドをローカルで起動） */
 export async function localStartApp(appName: string): Promise<AppActionResponse> {
-  const { data } = await longRunningApi.post<AppActionResponse>(`/apps/${appName}/local-start`);
+  const { data } = await longRunningApi.post<AppActionResponse>(`${FRAMEWORK_APPS_BASE}/${appName}/local-start`);
   return data;
 }
 
 /** App 一覧を再スキャン */
 export async function refreshApps(): Promise<RefreshResponse> {
-  const { data } = await api.post<RefreshResponse>('/apps/refresh');
+  const { data } = await api.post<RefreshResponse>(`${FRAMEWORK_APPS_BASE}/refresh`);
   return data;
 }
 
 /** app_config マニフェスト標準化 */
 export async function migrateManifests(dryRun = true): Promise<ManifestMigrationReport> {
-  const { data } = await api.post<ManifestMigrationReport>('/apps/migrate-manifests', {
+  const { data } = await api.post<ManifestMigrationReport>(`${FRAMEWORK_APPS_BASE}/migrate-manifests`, {
     dry_run: dryRun,
   });
   return data;
@@ -163,20 +164,20 @@ export async function migrateManifests(dryRun = true): Promise<ManifestMigration
 
 /** App 作成オプション取得 */
 export async function fetchAppCreateOptions(): Promise<AppCreateOptionsResponse> {
-  const { data } = await api.get<AppCreateOptionsResponse>('/apps/create/options');
+  const { data } = await api.get<AppCreateOptionsResponse>(`${FRAMEWORK_APPS_BASE}/create/options`);
   return data;
 }
 
 /** 新規 App 作成 */
 export async function createApp(request: AppCreateRequest): Promise<AppCreateResponse> {
-  const { data } = await api.post<AppCreateResponse>('/apps/create', request);
+  const { data } = await api.post<AppCreateResponse>(`${FRAMEWORK_APPS_BASE}/create`, request);
   return data;
 }
 
 /** ポート重複レポート */
 export async function fetchPortConflicts(): Promise<PortConflictReport> {
-  return withInflightDedup('/apps/ports/conflicts', async () => {
-    const { data } = await api.get<PortConflictReport>('/apps/ports/conflicts');
+  return withInflightDedup(`${FRAMEWORK_APPS_BASE}/ports/conflicts`, async () => {
+    const { data } = await api.get<PortConflictReport>(`${FRAMEWORK_APPS_BASE}/ports/conflicts`);
     return data;
   });
 }
@@ -190,7 +191,7 @@ export async function rebalancePorts(
   updated_apps?: string[];
   total_updates: number;
 }> {
-  const { data } = await api.post('/apps/ports/rebalance', { dry_run: dryRun });
+  const { data } = await api.post(`${FRAMEWORK_APPS_BASE}/ports/rebalance`, { dry_run: dryRun });
   return data;
 }
 
@@ -200,31 +201,31 @@ export async function rebalancePorts(
 
 /** 全 Agent 一覧 */
 export async function fetchAgents(): Promise<AgentListResponse> {
-  const { data } = await api.get<AgentListResponse>('/agents');
+  const { data } = await api.get<AgentListResponse>('/studios/framework/agents');
   return data;
 }
 
 /** Agent 統計 */
 export async function fetchAgentStats(): Promise<AgentStatsResponse> {
-  const { data } = await api.get<AgentStatsResponse>('/agents/stats');
+  const { data } = await api.get<AgentStatsResponse>('/studios/framework/agents/stats');
   return data;
 }
 
 /** Capability タグ一覧 */
 export async function fetchCapabilities(): Promise<CapabilitiesResponse> {
-  const { data } = await api.get<CapabilitiesResponse>('/agents/capabilities');
+  const { data } = await api.get<CapabilitiesResponse>('/studios/framework/agents/capabilities');
   return data;
 }
 
 /** App 別 Agent グルーピング */
 export async function fetchAgentsByApp(): Promise<AgentsByAppResponse> {
-  const { data } = await api.get<AgentsByAppResponse>('/agents/by-app');
+  const { data } = await api.get<AgentsByAppResponse>('/studios/framework/agents/by-app');
   return data;
 }
 
 /** Capability 検索 */
 export async function searchAgents(capability: string): Promise<AgentListResponse> {
-  const { data } = await api.get<AgentListResponse>('/agents/search', {
+  const { data } = await api.get<AgentListResponse>('/studios/framework/agents/search', {
     params: { capability },
   });
   return data;
@@ -232,13 +233,13 @@ export async function searchAgents(capability: string): Promise<AgentListRespons
 
 /** Agent pattern 別グルーピング */
 export async function fetchAgentsByPattern(): Promise<AgentsByPatternResponse> {
-  const { data } = await api.get<AgentsByPatternResponse>('/agents/by-pattern');
+  const { data } = await api.get<AgentsByPatternResponse>('/studios/framework/agents/by-pattern');
   return data;
 }
 
 /** 業務基盤別 Agent グルーピング */
 export async function fetchAgentsByBusinessBase(): Promise<AgentsByBusinessBaseResponse> {
-  const { data } = await api.get<AgentsByBusinessBaseResponse>('/agents/by-business-base');
+  const { data } = await api.get<AgentsByBusinessBaseResponse>('/studios/framework/agents/by-business-base');
   return data;
 }
 
@@ -248,25 +249,25 @@ export async function fetchAgentsByBusinessBase(): Promise<AgentsByBusinessBaseR
 
 /** 全 Skill 一覧 */
 export async function fetchSkills(): Promise<SkillListResponse> {
-  const { data } = await api.get<SkillListResponse>('/skills');
+  const { data } = await api.get<SkillListResponse>('/studios/framework/skills');
   return data;
 }
 
 /** Skill 統計 */
 export async function fetchSkillStats(): Promise<SkillStatsResponse> {
-  const { data } = await api.get<SkillStatsResponse>('/skills/stats');
+  const { data } = await api.get<SkillStatsResponse>('/studios/framework/skills/stats');
   return data;
 }
 
 /** タグ一覧 */
 export async function fetchSkillTags(): Promise<TagsResponse> {
-  const { data } = await api.get<TagsResponse>('/skills/tags');
+  const { data } = await api.get<TagsResponse>('/studios/framework/skills/tags');
   return data;
 }
 
 /** タグ検索 */
 export async function searchSkills(tag: string): Promise<SkillListResponse> {
-  const { data } = await api.get<SkillListResponse>('/skills/search', {
+  const { data } = await api.get<SkillListResponse>('/studios/framework/skills/search', {
     params: { tag },
   });
   return data;
@@ -274,7 +275,7 @@ export async function searchSkills(tag: string): Promise<SkillListResponse> {
 
 /** Skill 詳細 */
 export async function fetchSkillDetail(name: string): Promise<SkillInfo> {
-  const { data } = await api.get<SkillInfo>(`/skills/${name}`);
+  const { data } = await api.get<SkillInfo>(`/studios/framework/skills/${name}`);
   return data;
 }
 
@@ -284,37 +285,39 @@ export async function fetchSkillDetail(name: string): Promise<SkillInfo> {
 
 /** RAG 概要 */
 export async function fetchRAGOverview(): Promise<RAGOverviewResponse> {
-  const { data } = await api.get<RAGOverviewResponse>('/rag/overview');
+  const { data } = await api.get<RAGOverviewResponse>('/studios/framework/rag/overview');
   return data;
 }
 
 /** RAG 統計 */
 export async function fetchRAGStats(): Promise<RAGStatsResponse> {
-  const { data } = await api.get<RAGStatsResponse>('/rag/stats');
+  const { data } = await api.get<RAGStatsResponse>('/studios/framework/rag/stats');
   return data;
 }
 
 /** RAG 検索方式一覧 */
 export async function fetchRAGRetrievalMethods(): Promise<{ methods: RetrievalMethod[]; total: number }> {
-  const { data } = await api.get<{ methods: RetrievalMethod[]; total: number }>('/rag/retrieval-methods');
+  const { data } = await api.get<{ methods: RetrievalMethod[]; total: number }>('/studios/framework/rag/retrieval-methods');
   return data;
 }
 
 /** RAG パターン一覧 */
 export async function fetchRAGPatterns(): Promise<{ patterns: RAGPattern[]; total: number }> {
-  const { data } = await api.get<{ patterns: RAGPattern[]; total: number }>('/rag/patterns');
+  const { data } = await api.get<{ patterns: RAGPattern[]; total: number }>('/studios/framework/rag/patterns');
   return data;
 }
 
 /** 全 App の RAG 設定一覧 */
 export async function fetchAppRAGConfigs(): Promise<{ apps: AppRAGConfig[]; total: number }> {
-  const { data } = await api.get<{ apps: AppRAGConfig[]; total: number }>('/rag/apps/configs');
+  const { data } = await api.get<{ apps: AppRAGConfig[]; total: number }>('/studios/framework/rag/apps/configs');
   return data;
 }
 
 /** App 単位 RAG 設定 */
 export async function fetchAppRAGConfig(appName: string): Promise<AppRAGConfig> {
-  const { data } = await api.get<AppRAGConfig>(`/rag/apps/${appName}/config`);
+  const { data } = await api.get<AppRAGConfig>(
+    `/studios/framework/rag/apps/${appName}/config`,
+  );
   return data;
 }
 
@@ -323,7 +326,10 @@ export async function patchAppRAGConfig(
   appName: string,
   patch: AppRAGConfigPatchRequest,
 ): Promise<AppRAGConfig> {
-  const { data } = await api.patch<AppRAGConfig>(`/rag/apps/${appName}/config`, patch);
+  const { data } = await api.patch<AppRAGConfig>(
+    `/studios/framework/rag/apps/${appName}/config`,
+    patch,
+  );
   return data;
 }
 
@@ -333,7 +339,7 @@ export async function patchAppRAGConfig(
 
 /** MCP 設定全体 */
 export async function fetchMCPConfig(): Promise<MCPConfigResponse> {
-  const { data } = await api.get<MCPConfigResponse>('/mcp/config');
+  const { data } = await api.get<MCPConfigResponse>('/studios/framework/mcp/config');
   return data;
 }
 
@@ -342,7 +348,7 @@ export async function upsertMCPServer(
   server: MCPServerConfig,
 ): Promise<{ success: boolean; server: MCPServerConfig }> {
   const { data } = await api.post<{ success: boolean; server: MCPServerConfig }>(
-    '/mcp/servers',
+    '/studios/framework/mcp/servers',
     server,
   );
   return data;
@@ -350,7 +356,9 @@ export async function upsertMCPServer(
 
 /** MCP サーバー削除 */
 export async function deleteMCPServer(name: string): Promise<{ success: boolean; deleted: string }> {
-  const { data } = await api.delete<{ success: boolean; deleted: string }>(`/mcp/servers/${name}`);
+  const { data } = await api.delete<{ success: boolean; deleted: string }>(
+    `/studios/framework/mcp/servers/${name}`,
+  );
   return data;
 }
 
@@ -359,7 +367,7 @@ export async function patchMCPLazyLoading(
   patch: Partial<MCPLazyLoadingConfig>,
 ): Promise<{ success: boolean; lazy_loading: MCPLazyLoadingConfig }> {
   const { data } = await api.patch<{ success: boolean; lazy_loading: MCPLazyLoadingConfig }>(
-    '/mcp/lazy-loading',
+    '/studios/framework/mcp/lazy-loading',
     patch,
   );
   return data;

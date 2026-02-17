@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from apps.platform.schemas.provisioning_schemas import (
     AgentBlueprintInput,
@@ -91,6 +91,26 @@ class AppScaffolderService:
         {"value": "router", "label": "Router"},
         {"value": "reporter", "label": "Reporter"},
     )
+    _BUSINESS_TEMPLATES: tuple[dict[str, str], ...] = (
+        {
+            "id": "migration_safe_assessment",
+            "studio": "migration",
+            "label": "安全性・拡張性評価",
+            "description": "リポジトリ解析、リスク一覧、証拠付きレポートを生成",
+        },
+        {
+            "id": "faq_cited_service",
+            "studio": "faq",
+            "label": "引用付きFAQ",
+            "description": "検索＋引用、索引状態、運用レポートを構築",
+        },
+        {
+            "id": "assistant_controlled_ops",
+            "studio": "assistant",
+            "label": "制御付きアシスタント",
+            "description": "承認付きのOS/ブラウザ操作と監査ログを提供",
+        },
+    )
 
     def __init__(
         self,
@@ -108,9 +128,43 @@ class AppScaffolderService:
         self._port_allocator = PortAllocatorService(discovery)
 
     @classmethod
-    def create_options(cls) -> dict[str, Any]:
+    def create_options(
+        cls,
+        surface_profile: Literal["business", "developer", "operator"] = "developer",
+    ) -> dict[str, Any]:
         """App 作成 UI 向け選択肢を返す."""
+        if surface_profile == "business":
+            return {
+                "surface_profile": "business",
+                "templates": list(cls._BUSINESS_TEMPLATES),
+                "data_source_options": [
+                    {"value": "git_repository", "label": "Git Repository"},
+                    {"value": "knowledge_base", "label": "Knowledge Base"},
+                    {"value": "database", "label": "Database"},
+                    {"value": "object_storage", "label": "Object Storage"},
+                ],
+                "permission_scopes": [
+                    {"value": "repo.read", "label": "Repo Read"},
+                    {"value": "repo.write", "label": "Repo Write"},
+                    {"value": "db.read", "label": "DB Read"},
+                    {"value": "network.egress", "label": "Network Egress"},
+                    {"value": "os.exec", "label": "OS Command"},
+                    {"value": "browser.control", "label": "Browser Control"},
+                ],
+                "risk_levels": [
+                    {"value": "low", "label": "Low"},
+                    {"value": "medium", "label": "Medium"},
+                    {"value": "high", "label": "High"},
+                ],
+                "security_modes": [
+                    {"value": "read_only", "label": "Read-only"},
+                    {"value": "approval_required", "label": "Approval Required"},
+                    {"value": "autonomous", "label": "Autonomous"},
+                ],
+            }
+
         return {
+            "surface_profile": surface_profile,
             "engine_patterns": list(cls._ENGINE_OPTIONS),
             "database_options": [
                 {"value": "none", "label": "なし"},
@@ -247,6 +301,11 @@ class AppScaffolderService:
             None if ports["frontend"] is None else f"http://localhost:{ports['frontend']}"
         )
         health_url = None if backend_url is None else f"{backend_url}/health"
+        auth_enabled = bool(request.permission_scopes)
+        auth_providers = ["rbac"] if auth_enabled else []
+        release_require_approval = (
+            request.risk_level in {"medium", "high"} if request.risk_level is not None else True
+        )
 
         return {
             "name": request.name,
@@ -255,6 +314,18 @@ class AppScaffolderService:
             "business_base": request.business_base,
             "version": "0.1.0",
             "icon": request.icon,
+            "product_line": request.product_line,
+            "surface_profile": request.surface_profile,
+            "audit_profile": request.audit_profile,
+            "plugin_bindings": [
+                {
+                    "id": binding.id,
+                    "version": binding.version,
+                    "config": binding.config,
+                }
+                for binding in request.plugin_bindings
+            ],
+            "security_mode": request.security_mode,
             "ports": ports,
             "entry_points": {
                 "api_module": f"apps.{request.name}.main:app",
@@ -274,6 +345,11 @@ class AppScaffolderService:
                 "engine": {
                     "pattern": request.engine_pattern,
                     "flow_pattern": request.flow_pattern,
+                },
+                "business_setup": {
+                    "template": request.template,
+                    "data_sources": request.data_sources,
+                    "risk_level": request.risk_level,
                 },
                 "mcp": {
                     "servers": request.mcp_servers,
@@ -347,10 +423,10 @@ class AppScaffolderService:
             },
             "contracts": {
                 "auth": {
-                    "enabled": False,
-                    "providers": [],
-                    "allow_anonymous": True,
-                    "required_scopes": [],
+                    "enabled": auth_enabled,
+                    "providers": auth_providers,
+                    "allow_anonymous": not auth_enabled,
+                    "required_scopes": request.permission_scopes,
                     "session_ttl_minutes": 60,
                 },
                 "rag": {
@@ -379,7 +455,7 @@ class AppScaffolderService:
                     "strategy": "manual",
                     "targets": ["local", "docker"],
                     "environments": ["dev"],
-                    "require_approval": True,
+                    "require_approval": release_require_approval,
                 },
             },
             "blueprint": {
@@ -418,6 +494,11 @@ class AppScaffolderService:
                 request.database,
                 request.llm_provider,
                 request.vector_database,
+                request.surface_profile,
+                *(["risk-low"] if request.risk_level == "low" else []),
+                *(["risk-medium"] if request.risk_level == "medium" else []),
+                *(["risk-high"] if request.risk_level == "high" else []),
+                *(["template"] if request.template else []),
                 *(["rag"] if request.rag_enabled else []),
                 "app-builder",
             ],

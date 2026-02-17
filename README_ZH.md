@@ -1,4 +1,5 @@
 # AgentFlow
+<!-- i18n-zh-keep: 中文文档资产保留 -->
 
 <div align="center">
 
@@ -32,6 +33,18 @@ _基于 PocketFlow 的统一协议接口_
 ## 🎯 什么是 AgentFlow
 
 轻量级 AI 代理框架，统一接口提供 **MCP / A2A / AG-UI / A2UI** 四种协议。
+
+## 🧩 对外 3 条 Studio 产品线
+
+面向业务客户时，统一采用以下产品主线叙事：
+
+- `Migration Studio`
+- `Enterprise FAQ Studio`
+- `Computer Assistant Studio`
+
+客户操作路径统一为：
+`选择模板 -> 配置数据/权限 -> 执行 -> 查看成果物`。
+详见 `docs/studios.md`。
 
 ### ✨ 主要特性
 
@@ -193,14 +206,16 @@ AgentFlow 提供三种操作方式，根据用途选择最适合的方式。
 | [Studio UI 指南](docs/guide-studio-ui.md) | 可视化编辑器操作 |
 | [CLI 指南](docs/guide-cli.md) | 命令行操作 |
 | [编码指南](docs/guide-coding.md) | Python 开发 |
+| [文档索引](docs/index.md) | 对外/对内文档统一入口 |
+| [对外文档](docs/external/README.md) | 面向客户的 3 Studio 叙事 |
+| [对内文档](docs/internal/README.md) | 平台开发/扩展/运维手册 |
+| [3 Studio 指南](docs/studios.md) | 产品线、角色分层、审计策略 |
 | [Skills 指南](docs/guide-skills.md) | 自动进化系统 |
 | [内置 Skills 指南](docs/guide-builtin-skills.md) | 数据库/支付/认证/部署（NEW） |
 | [LLM 路由器](docs/guide-llm-router.md) | 多模型切换（NEW） |
 | [架构](docs/architecture.md) | 设计思想与结构 |
 | [Agent Lightning 对齐设计](docs/design/AGENT_LIGHTNING_ALIGNMENT_DESIGN.md) | 借鉴 Agent Lightning 的改进设计（NEW） |
 | [协议](docs/protocols.md) | MCP/A2A/AG-UI/A2UI |
-| [API](docs/api.md) | API 参考 |
-| [CLI](docs/cli.md) | 命令列表 |
 | [快速入门](docs/quickstart.md) | 入门指南 |
 | [开发规范](docs/DEVELOPMENT_STANDARDS_JA.md) | 编码规范 |
 

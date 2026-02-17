@@ -4,6 +4,8 @@ Lovart風「Design Skills」思想をAgentFlowフレームワークで実装し�
 
 自然言語のデザインブリーフから、統一スタイルの画像セットをComfyUI経由で生成する。
 
+`product_line`: `framework` / `surface_profile`: `developer`
+
 ---
 
 ## 使用手順
