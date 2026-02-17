@@ -2,6 +2,7 @@
   "name": "design_skills_engine",
   "display_name": "デザインスキルエンジン",
   "description": "自然言語ブリーフからComfyUI経由で統一スタイルのマルチ画像セットを生成",
+  "business_base": "media",
   "version": "1.0.0",
   "icon": "🎨",
   "ports": {
@@ -21,7 +22,9 @@
       "capabilities": [
         "intent_analysis",
         "design_brief"
-      ]
+      ],
+      "business_base": "media",
+      "pattern": "analyzer"
     },
     {
       "name": "PromptPlannerAgent",
@@ -29,7 +32,9 @@
       "capabilities": [
         "prompt_planning",
         "style_generation"
-      ]
+      ],
+      "business_base": "media",
+      "pattern": "pipeline_stage"
     },
     {
       "name": "WorkflowExecutorAgent",
@@ -38,7 +43,9 @@
         "image_generation",
         "comfyui",
         "openai_images"
-      ]
+      ],
+      "business_base": "media",
+      "pattern": "executor"
     }
   ],
   "services": {

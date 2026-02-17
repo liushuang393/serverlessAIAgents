@@ -39,13 +39,30 @@ class AgentInfo(BaseModel):
         name: Agent 名（App 内で一意）
         module: Python モジュールパス（省略可）
         capabilities: 能力タグ一覧
+        business_base: Agent の業務基盤分類（省略時は推論）
+        pattern: Agent パターン分類（省略時は推論）
     """
 
     name: str = Field(..., min_length=1, max_length=100, description="Agent 名")
     module: str | None = Field(default=None, description="Python モジュールパス")
-    capabilities: list[str] = Field(
-        default_factory=list, description="能力タグ"
+    capabilities: list[str] = Field(default_factory=list, description="能力タグ")
+    business_base: str | None = Field(
+        default=None,
+        description="業務基盤分類（knowledge / governance など）",
     )
+    pattern: str | None = Field(
+        default=None,
+        description="Agent パターン分類（specialist / coordinator など）",
+    )
+
+    @field_validator("business_base", "pattern", mode="before")
+    @classmethod
+    def normalize_optional_label(cls, v: str | None) -> str | None:
+        """任意分類文字列を正規化（空文字は None）."""
+        if v is None:
+            return None
+        text = str(v).strip().lower()
+        return text or None
 
 
 class PortsConfig(BaseModel):
@@ -81,9 +98,7 @@ class EntryPointsConfig(BaseModel):
         health: ヘルスチェックパス
     """
 
-    api_module: str | None = Field(
-        default=None, description="FastAPI モジュールパス"
-    )
+    api_module: str | None = Field(default=None, description="FastAPI モジュールパス")
     health: str | None = Field(default="/health", description="ヘルスチェックパス")
 
 
@@ -98,9 +113,7 @@ class DependenciesConfig(BaseModel):
 
     database: str | None = Field(default=None, description="DB 種別")
     redis: bool = Field(default=False, description="Redis 使用有無")
-    external: list[str] = Field(
-        default_factory=list, description="外部依存サービス"
-    )
+    external: list[str] = Field(default_factory=list, description="外部依存サービス")
 
 
 class RuntimeUrlsConfig(BaseModel):
@@ -291,27 +304,21 @@ class AppConfig(BaseModel):
         tags: 検索用タグ
     """
 
-    name: str = Field(
-        ..., min_length=1, max_length=50, description="App 識別子"
-    )
-    display_name: str = Field(
-        ..., min_length=1, max_length=100, description="表示名"
-    )
+    name: str = Field(..., min_length=1, max_length=50, description="App 識別子")
+    display_name: str = Field(..., min_length=1, max_length=100, description="表示名")
     description: str = Field(default="", max_length=500, description="説明文")
+    business_base: str | None = Field(
+        default=None,
+        description="App の業務基盤分類（省略時は推論）",
+    )
     version: str = Field(default="1.0.0", description="バージョン")
     icon: str = Field(default="📦", max_length=10, description="絵文字アイコン")
-    ports: PortsConfig = Field(
-        default_factory=PortsConfig, description="ポート設定"
-    )
+    ports: PortsConfig = Field(default_factory=PortsConfig, description="ポート設定")
     entry_points: EntryPointsConfig = Field(
         default_factory=EntryPointsConfig, description="エントリーポイント"
     )
-    agents: list[AgentInfo] = Field(
-        default_factory=list, description="Agent 一覧"
-    )
-    services: dict[str, Any] = Field(
-        default_factory=dict, description="利用サービス情報"
-    )
+    agents: list[AgentInfo] = Field(default_factory=list, description="Agent 一覧")
+    services: dict[str, Any] = Field(default_factory=dict, description="利用サービス情報")
     dependencies: DependenciesConfig = Field(
         default_factory=DependenciesConfig, description="依存設定"
     )
@@ -332,6 +339,15 @@ class AppConfig(BaseModel):
         description="テナント可視性設定",
     )
     tags: list[str] = Field(default_factory=list, description="検索用タグ")
+
+    @field_validator("business_base", mode="before")
+    @classmethod
+    def normalize_business_base(cls, v: str | None) -> str | None:
+        """business_base を正規化（空文字は None）."""
+        if v is None:
+            return None
+        text = str(v).strip().lower()
+        return text or None
 
     @field_validator("name")
     @classmethod

@@ -119,17 +119,47 @@ app.include_router(settings_router)
 
 
 if __name__ == "__main__":
+    import argparse
+
     import uvicorn
     from pathlib import Path
 
-    # バックエンドソースディレクトリのみを監視対象にして高速リロード
-    _backend_dir = str(Path(__file__).resolve().parents[2])
-
-    uvicorn.run(
-        "apps.market_trend_monitor.backend.api.main:app",
-        host=config.api.host,
-        port=config.api.port,
-        reload=True,
-        reload_dirs=[_backend_dir],
-        reload_excludes=["**/__pycache__/**", "**/data/**", "**/*.pyc"],
+    parser = argparse.ArgumentParser(
+        description="Market Trend Monitor - FastAPI Backend"
     )
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="開発モード（ホットリロード有効）",
+    )
+    parser.add_argument(
+        "--host",
+        default=None,
+        help="ホスト（省略時: config / デフォルト 0.0.0.0）",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help="ポート（省略時: config / app_config.json）",
+    )
+    args = parser.parse_args()
+
+    _host = args.host or config.api.host
+    _port = args.port or config.api.port
+
+    print(f"[Market Trend Monitor] Starting on {_host}:{_port} (reload={args.reload})")
+
+    if args.reload:
+        # バックエンドソースディレクトリのみを監視対象にして高速リロード
+        _backend_dir = str(Path(__file__).resolve().parents[2])
+        uvicorn.run(
+            "apps.market_trend_monitor.backend.api.main:app",
+            host=_host,
+            port=_port,
+            reload=True,
+            reload_dirs=[_backend_dir],
+            reload_excludes=["**/__pycache__/**", "**/data/**", "**/*.pyc"],
+        )
+    else:
+        uvicorn.run(app, host=_host, port=_port)

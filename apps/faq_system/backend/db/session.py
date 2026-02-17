@@ -1,46 +1,34 @@
-"""FAQ システム DB セッション管理."""
+"""FAQ システム DB セッション管理.
+
+agentflow.database.DatabaseManager を利用した統一セッション管理。
+エンジン/セッションファクトリのライフサイクルはフレームワークに委譲し、
+アプリ固有ロジック（ensure_ready, SyncSessionAdapter）のみ保持する。
+"""
 
 from __future__ import annotations
 
 import asyncio
 import os
-from collections.abc import Callable
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from sqlalchemy import create_engine
-from sqlalchemy.engine import Engine
-from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.orm import Session, sessionmaker
-
 from apps.faq_system.backend.db.models import Base
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
-DEFAULT_DATABASE_URL = "sqlite+aiosqlite:///./faq_system.db"
-
-_engine: AsyncEngine | None = None
-_session_factory: async_sessionmaker[AsyncSession] | None = None
-_sync_engine: Engine | None = None
-_sync_session_factory: sessionmaker[Session] | None = None
-_sync_mode = False
-_is_ready = False
-_ready_lock: asyncio.Lock | None = None
-_ready_lock_loop_id: int | None = None
+from agentflow.database import DatabaseConfig, DatabaseManager
 
 
-def get_database_url() -> str:
-    """DB URL を取得."""
-    url = os.getenv("FAQ_DATABASE_URL", DEFAULT_DATABASE_URL)
-    if url.startswith("postgresql://") and "+asyncpg" not in url:
-        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-    return url
+# ---------------------------------------------------------------------------
+# 環境変数ヘルパー
+# ---------------------------------------------------------------------------
 
-
-def _is_sqlite(url: str) -> bool:
-    return url.startswith("sqlite+")
+_FAQ_DEFAULT_URL = "sqlite+aiosqlite:///./faq_system.db"
 
 
 def _sqlite_sync_mode_enabled() -> bool:
+    """SQLite 同期モードが有効か判定."""
     return os.getenv("FAQ_SQLITE_SYNC_MODE", "true").lower() in {
         "1",
         "true",
@@ -50,6 +38,7 @@ def _sqlite_sync_mode_enabled() -> bool:
 
 
 def _db_auto_create_enabled() -> bool:
+    """起動時テーブル自動作成が有効か判定."""
     return os.getenv("FAQ_DB_AUTO_CREATE", "false").lower() in {
         "1",
         "true",
@@ -58,64 +47,48 @@ def _db_auto_create_enabled() -> bool:
     }
 
 
+# ---------------------------------------------------------------------------
+# フレームワーク DatabaseManager インスタンス
+# ---------------------------------------------------------------------------
+
+_db = DatabaseManager(
+    config=DatabaseConfig(
+        url=_FAQ_DEFAULT_URL,
+        url_env_key="FAQ_DATABASE_URL",
+        echo_env_key="FAQ_DB_ECHO",
+    ),
+    metadata=Base.metadata,
+    force_sync=_sqlite_sync_mode_enabled(),
+)
+
+# 初期化ガード
+_is_ready = False
+_ready_lock: asyncio.Lock | None = None
+_ready_lock_loop_id: int | None = None
+
+
+# ---------------------------------------------------------------------------
+# 公開 API（後方互換）
+# ---------------------------------------------------------------------------
+
+
+def get_database_url() -> str:
+    """DB URL を取得."""
+    return _db.resolved_url
+
+
 async def init_db() -> None:
     """DB エンジンを初期化."""
-    global _engine, _session_factory, _sync_engine, _sync_session_factory, _sync_mode
-
-    if (_engine is not None and _session_factory is not None) or (
-        _sync_engine is not None and _sync_session_factory is not None
-    ):
-        return
-
-    url = get_database_url()
-    engine_kwargs: dict[str, object] = {
-        "echo": os.getenv("FAQ_DB_ECHO", "false").lower() in {"1", "true", "yes", "on"},
-    }
-
-    if _is_sqlite(url) and _sqlite_sync_mode_enabled():
-        sync_url = url.replace("+aiosqlite", "")
-        _sync_engine = create_engine(
-            sync_url,
-            connect_args={"check_same_thread": False},
-            future=True,
-            **engine_kwargs,
-        )
-        _sync_session_factory = sessionmaker(bind=_sync_engine, expire_on_commit=False)
-        _sync_mode = True
-        return
-
-    if not _is_sqlite(url):
-        engine_kwargs["pool_pre_ping"] = True
-        engine_kwargs.update(
-            {
-                "pool_size": int(os.getenv("FAQ_DB_POOL_SIZE", "5")),
-                "max_overflow": int(os.getenv("FAQ_DB_MAX_OVERFLOW", "10")),
-            }
-        )
-
-    _engine = create_async_engine(url, **engine_kwargs)
-    _session_factory = async_sessionmaker(bind=_engine, class_=AsyncSession, expire_on_commit=False)
-    _sync_mode = False
+    await _db.init()
 
 
 async def create_all_tables() -> None:
     """モデル定義からテーブルを作成（ローカル/テスト用）."""
-    if _sync_mode:
-        if _sync_engine is None:
-            await init_db()
-        assert _sync_engine is not None
-        Base.metadata.create_all(bind=_sync_engine)
-        return
-
-    if _engine is None:
-        await init_db()
-    assert _engine is not None
-    async with _engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    await _db.create_all_tables()
 
 
 async def ensure_database_ready() -> None:
-    """DB 利用可能状態を保証."""
+    """DB 利用可能状態を保証（二重初期化防止付き）."""
     global _is_ready
 
     if _is_ready:
@@ -141,12 +114,9 @@ def _get_ready_lock() -> asyncio.Lock:
     return _ready_lock
 
 
-def get_session_factory() -> async_sessionmaker[AsyncSession]:
-    """セッションファクトリを取得."""
-    if _session_factory is None:
-        msg = "Database is not initialized. Call ensure_database_ready() first."
-        raise RuntimeError(msg)
-    return _session_factory
+# ---------------------------------------------------------------------------
+# SyncSessionAdapter（SQLite 同期モード互換層）
+# ---------------------------------------------------------------------------
 
 
 class SyncSessionAdapter:
@@ -156,28 +126,34 @@ class SyncSessionAdapter:
         self._session = session
 
     def add(self, instance: Any) -> None:
+        """インスタンスを追加."""
         self._session.add(instance)
 
     async def execute(self, statement: Any, *args: Any, **kwargs: Any) -> Any:
+        """クエリ実行."""
         return self._session.execute(statement, *args, **kwargs)
 
     async def scalar(self, statement: Any, *args: Any, **kwargs: Any) -> Any:
+        """スカラー取得."""
         return self._session.scalar(statement, *args, **kwargs)
 
     async def get(self, entity: Any, ident: Any, *args: Any, **kwargs: Any) -> Any:
+        """主キーでエンティティ取得."""
         return self._session.get(entity, ident, *args, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# セッション提供
+# ---------------------------------------------------------------------------
 
 
 @asynccontextmanager
 async def get_db_session() -> AsyncGenerator[AsyncSession | SyncSessionAdapter]:
-    """DB セッションを提供."""
+    """DB セッションを提供（async/sync 自動判定）."""
     await ensure_database_ready()
 
-    if _sync_mode:
-        if _sync_session_factory is None:
-            msg = "Database is not initialized. Call ensure_database_ready() first."
-            raise RuntimeError(msg)
-        sync_session = _sync_session_factory()
+    if _db.is_sync_mode:
+        sync_session = _db.session_sync()
         adapter = SyncSessionAdapter(sync_session)
         try:
             yield adapter
@@ -189,30 +165,14 @@ async def get_db_session() -> AsyncGenerator[AsyncSession | SyncSessionAdapter]:
             sync_session.close()
         return
 
-    session_factory = get_session_factory()
-    async with session_factory() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+    async with _db.session() as session:
+        yield session
 
 
 async def close_db() -> None:
     """DB 接続をクローズ."""
-    global _engine, _session_factory, _sync_engine, _sync_session_factory
-    global _is_ready, _ready_lock, _ready_lock_loop_id, _sync_mode
-
-    if _engine is not None:
-        await _engine.dispose()
-    if _sync_engine is not None:
-        _sync_engine.dispose()
-    _engine = None
-    _session_factory = None
-    _sync_engine = None
-    _sync_session_factory = None
-    _sync_mode = False
+    global _is_ready, _ready_lock, _ready_lock_loop_id
+    await _db.close()
     _is_ready = False
     _ready_lock = None
     _ready_lock_loop_id = None

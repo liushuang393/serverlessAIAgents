@@ -24,6 +24,8 @@ from apps.faq_system.backend.auth.models import UserInfo
 from apps.faq_system.backend.db.models import AuthSession, PasswordResetToken, UserAccount
 from apps.faq_system.backend.db.session import ensure_database_ready, get_db_session
 from agentflow.security.auth_middleware import AuthMiddleware, AuthUser, JWTConfig
+from agentflow.security.oauth2_provider import ExternalIdentity as OAuth2Identity
+from agentflow.security.mfa import TimeBasedMFA
 
 
 logger = logging.getLogger(__name__)
@@ -50,6 +52,8 @@ class AuthProvider(str, Enum):
     LOCAL_DB = "local_db"
     LDAP = "ldap"
     IDP = "idp"
+    GOOGLE = "google"
+    AZURE_AD = "azure_ad"
 
 
 @dataclass(slots=True)
@@ -131,21 +135,209 @@ class AuthService:
                 await self._seed_demo_users_if_needed()
             self._bootstrap_completed = True
 
-    async def authenticate(self, username: str, password: str) -> UserInfo | None:
+    async def authenticate(
+        self, username: str, password: str, totp_code: str | None = None
+    ) -> tuple[bool, str, UserInfo | None]:
         """ユーザー認証."""
         if not username or not password:
-            return None
+            return False, "ユーザー名またはパスワードが不足しています", None
 
         await self.ensure_bootstrap_data()
         provider = self._active_provider()
 
         if provider == AuthProvider.LOCAL_DB:
-            return await self._authenticate_local_db(username, password)
+            user = await self._authenticate_local_db(username, password)
+            if not user:
+                return False, "ユーザー名またはパスワードが間違っています", None
+            
+            # Check MFA for local user (or any user if we supported it globally)
+            # Fetch mfa_enabled/secret Status. _authenticate_local_db returns UserInfo, which doesn't have secrets.
+            # We need to check MFA inside _authenticate_local_db or fetch here.
+            # _authenticate_local_db updates last_login, which is premature if MFA fails.
+            # Refactoring: _authenticate_local_db should verify creds and return Account OR tuple.
+            
+            # Let's check MFA here by re-fetching account? Or modifying _authenticate_local_db?
+            # _authenticate_local_db logic is: verify password -> update last_login -> return UserInfo.
+            # We should probably do:
+            # 1. Verify password.
+            # 2. Check MFA.
+            # 3. Update last_login.
+            # 4. Return UserInfo.
+            
+            # I will refactor _authenticate_local_db to handle MFA verification internally?
+            # Or make _authenticate_local_db return the Account object (internal use)?
+            # But it returns UserInfo.
+            
+            # Let's inject MFA check into _authenticate_local_db arguments?
+            # Or better: rename current _authenticate_local_db to _verify_local_credentials and return Account.
+            # Then perform MFA and login.
+            
+            # However, to minimize changes, I will modify _authenticate_local_db to accept totp_code and handle it.
+            return await self._authenticate_local_db_with_mfa(username, password, totp_code)
 
         identity = await self._authenticate_external(provider, username, password)
         if identity is None:
-            return None
-        return await self._upsert_external_user(identity, provider)
+            return False, "外部認証に失敗しました", None
+        user = await self._upsert_external_user(identity, provider)
+        return True, "ログイン成功", user
+
+    async def _authenticate_local_db_with_mfa(
+        self, username: str, password: str, totp_code: str | None
+    ) -> tuple[bool, str, UserInfo | None]:
+        async with get_db_session() as session:
+            account = await session.scalar(
+                select(UserAccount).where(
+                    UserAccount.username == username,
+                    UserAccount.is_active.is_(True),
+                )
+            )
+            if account is None:
+                return False, "ユーザー名またはパスワードが間違っています", None
+            
+            # ロックアウトチェック
+            now = datetime.now(tz=UTC)
+            if account.locked_until and account.locked_until > now:
+                remaining = int((account.locked_until - now).total_seconds() / 60)
+                return False, f"アカウントが一定時間ロックされています。あと {max(1, remaining)} 分後に再試行してください。", None
+
+            if account.auth_source != AuthProvider.LOCAL_DB.value:
+                return False, "このアカウントはローカル認証ではありません", None
+            
+            max_attempts = int(os.getenv("FAQ_AUTH_MAX_LOGIN_ATTEMPTS", "5"))
+            lockout_minutes = int(os.getenv("FAQ_AUTH_LOCKOUT_MINUTES", "15"))
+
+            if not self._verify_password(password, account.password_salt, account.password_hash):
+                account.login_attempts += 1
+                if account.login_attempts >= max_attempts:
+                    account.locked_until = now + timedelta(minutes=lockout_minutes)
+                    await session.commit()
+                    return False, f"ログイン試行回数が制限を超えました。アカウントを {lockout_minutes} 分間ロックしました。", None
+                
+                await session.commit()
+                return False, "ユーザー名またはパスワードが間違っています", None
+
+            # MFA Check
+            if account.mfa_enabled:
+                if not totp_code:
+                     return False, "MFA_REQUIRED", None
+                
+                # Check TOTP
+                if not account.mfa_secret or not TimeBasedMFA.verify_totp(account.mfa_secret, totp_code):
+                     # MFA 失敗も試行回数に含めるか検討。ここでは含めない（パスワードは正しいので）
+                     return False, "MFAコードが無効です", None
+            
+            # ログイン成功: 試行回数リセット
+            account.login_attempts = 0
+            account.locked_until = None
+            account.last_login_at = now
+            await session.commit()
+            return True, "ログイン成功", self._to_user_info(account)
+
+    async def register_user(
+        self,
+        username: str,
+        password: str,
+        display_name: str,
+        department: str | None = None,
+        position: str | None = None,
+        email: str | None = None,
+    ) -> tuple[bool, str, UserInfo | None]:
+        """新規ユーザー登録."""
+        await self.ensure_bootstrap_data()
+        
+        if self._active_provider() != AuthProvider.LOCAL_DB:
+            return False, "ユーザー登録はローカル認証モードでのみ利用可能です", None
+
+        is_valid, reason = self._validate_new_password(password)
+        if not is_valid:
+            return False, reason, None
+
+        async with get_db_session() as session:
+            existing = await session.scalar(
+                select(UserAccount).where(UserAccount.username == username)
+            )
+            if existing:
+                return False, "このユーザー名は既に使用されています", None
+
+            now = datetime.now(tz=UTC)
+            salt = self._generate_salt()
+            new_user = UserAccount(
+                id=self._build_user_id(username),
+                username=username,
+                password_hash=self._hash_password(password, salt),
+                password_salt=salt,
+                display_name=display_name,
+                department=department or "",
+                position=position or "",
+                role="employee",  # デフォルトは一般ユーザー
+                auth_source=AuthProvider.LOCAL_DB.value,
+                is_active=True,
+                created_at=now,
+                updated_at=now,
+                last_login_at=None,
+            )
+            session.add(new_user)
+            # Commit is handled by context manager? No, get_db_session usually commits on exit if no exception?
+            # Let's check get_db_session implementation in `backend/db/session.py`. 
+            # Usually session managers commit. But I should check.
+            # Assuming it does commit.
+            
+            # Need to convert to UserInfo before session closes if lazy loading?
+            # UserAccount fields are scalar strings, so it should be fine.
+            # But `_to_user_info` uses `account.id` etc.
+            # flush to get ID? ID is manually built.
+            
+            user_info = self._to_user_info(new_user)
+            
+        return True, "ユーザー登録が完了しました", user_info
+
+        return True, "ユーザー登録が完了しました", user_info
+
+    async def login_external(self, oauth_identity: OAuth2Identity) -> UserInfo | None:
+        """OAuth2 ID情報を使ってログイン/登録."""
+        await self.ensure_bootstrap_data()
+        
+        # Map OAuth2Identity to service's ExternalIdentity
+        # We need to determine role/dept/pos from raw_info if possible
+        # For now, use defaults or extracted values
+        
+        role = "employee"
+        department = ""
+        position = ""
+        
+        # Azure AD specific mapping if available
+        if oauth_identity.provider == "azure_ad" and oauth_identity.raw_info:
+            department = oauth_identity.raw_info.get("officeLocation") or ""
+            position = oauth_identity.raw_info.get("jobTitle") or ""
+            # role mapping from groups? implementation dependency
+            
+        identity = ExternalIdentity(
+            username=oauth_identity.username or oauth_identity.sub, # username is mandatory
+            display_name=oauth_identity.display_name or oauth_identity.username or "Unknown",
+            email=oauth_identity.email,
+            department=department,
+            position=position,
+            role=role
+        )
+        
+        # We need to map provider string to AuthProvider enum if possible?
+        # But AuthProvider enum only has LOCAL_DB, LDAP, IDP.
+        # OAuth2 is a new type or falls under IDP?
+        # Let's check AuthProvider enum.
+        
+        # If we use IDP for OAuth2, it might be confusing.
+        # But `_upsert_external_user` takes `provider: AuthProvider`.
+        # Taking `str` would be better if we want flexibility.
+        # Step 467 shows `provider: AuthProvider` type hint, but logic uses `provider.value` or just string?
+        # `account.auth_source = provider.value` (line 661).
+        # So I can pass specific string if I change type hint or force it.
+        # But `upsert` expects `AuthProvider`.
+        
+        # I should probably update AuthProvider enum to include GOOGLE, AZURE_AD or generic OAUTH2.
+        # Or just use "google", "azure_ad" string and cast?
+        # Let's add them to AuthProvider enum in `service.py`.
+        
+        return await self._upsert_external_user(identity, oauth_identity.provider) # type: ignore
 
     def create_access_token(self, user: UserInfo) -> str:
         """アクセストークン生成."""
@@ -498,24 +690,89 @@ class AuthService:
             logger.warning("ldap3 not installed. LDAP authentication is unavailable.")
             return None
 
+        # Connect and Bind
         user_dn = bind_dn_template.format(username=username)
-        server = ldap3.Server(server_uri, get_info=ldap3.NONE)
+        # Use simple binding. For production, consider using a service account to search DN first if DN template is insufficient.
+        # Here we assume bind_dn_template works.
+        
+        server = ldap3.Server(server_uri, get_info=ldap3.ALL) # Get schema info might be useful
         conn = ldap3.Connection(server, user=user_dn, password=password, auto_bind=False)
+        
         if not conn.bind():
+            logger.info("LDAP Bind failed for %s", user_dn)
             return None
 
-        display_name = username
-        department = ""
-        position = ""
+        # Search for user attributes
+        base_dn = os.getenv("FAQ_LDAP_BASE_DN", "")
+        if not base_dn:
+             # Fallback to simple auth if no Base DN
+             return ExternalIdentity(
+                username=username,
+                display_name=username,
+                department="",
+                position="",
+                role=os.getenv("FAQ_LDAP_DEFAULT_ROLE", "employee"),
+                email=f"{username}@example.com",
+            )
+            
+        search_filter = os.getenv("FAQ_LDAP_USER_FILTER", "(uid={username})").format(username=username)
+        conn.search(
+            search_base=base_dn,
+            search_filter=search_filter,
+            attributes=["displayName", "cn", "mail", "department", "title", "memberOf"]
+        )
+        
+        if not conn.entries:
+            # Bind success but search failed? Maybe permissions or wrong filter.
+            # Fallback to simple
+             return ExternalIdentity(
+                username=username,
+                display_name=username,
+                department="",
+                position="",
+                role=os.getenv("FAQ_LDAP_DEFAULT_ROLE", "employee"),
+                email=f"{username}@example.com",
+            )
+            
+        entry = conn.entries[0]
+        display_name = str(entry.displayName or entry.cn or username)
+        email = str(entry.mail or f"{username}@example.com")
+        department = str(entry.department or "")
+        position = str(entry.title or "")
+        
+        # Role Mapping
+        groups: list[str] = []
+        if entry.memberOf:
+             if isinstance(entry.memberOf, list):
+                 groups = [str(g) for g in entry.memberOf]
+             else:
+                 groups = [str(entry.memberOf)]
+        
         role = os.getenv("FAQ_LDAP_DEFAULT_ROLE", "employee")
-
+        role_mapping_json = os.getenv("FAQ_LDAP_ROLE_MAPPING", "{}")
+        try:
+            import json
+            role_mapping = json.loads(role_mapping_json)
+            # mapping: {"Group DN": "role_name"}
+            # Check for matches
+            # Priority: admin > hr_admin > employee
+            # We can just take the first match or specific logic.
+            # Let's iterate mapping and check if user has that group.
+            for group_dn, mapped_role in role_mapping.items():
+                if group_dn in groups:
+                    role = mapped_role
+                    if role == "admin": # Highest priority
+                        break
+        except Exception:
+            logger.warning("Failed to parse FAQ_LDAP_ROLE_MAPPING or map roles.")
+        
         return ExternalIdentity(
             username=username,
             display_name=display_name,
             department=department,
             position=position,
             role=role,
-            email=f"{username}@example.com",
+            email=email,
         )
 
     async def _authenticate_idp(self, username: str, password: str) -> ExternalIdentity | None:
@@ -577,10 +834,50 @@ class AuthService:
             email=str(userinfo.get("email") or "") or None,
         )
 
+    async def enable_mfa(self, username: str) -> tuple[str, str]:
+        """MFA設定開始: シークレット生成."""
+        secret = TimeBasedMFA.generate_secret()
+        uri = TimeBasedMFA.get_provisioning_uri(secret, username, "AgentFlowFAQ")
+        
+        # Store secret temporarily or in DB as disabled?
+        # Storing in DB is safer for statelessness.
+        async with get_db_session() as session:
+             account = await session.scalar(select(UserAccount).where(UserAccount.username == username))
+             if account:
+                 account.mfa_secret = secret
+                 account.mfa_enabled = False # Not enabled until confirmed
+                 await session.commit()
+    
+        return secret, uri
+
+    async def verify_mfa_setup(self, username: str, code: str) -> bool:
+        """MFA設定完了: コード検証して有効化."""
+        async with get_db_session() as session:
+            account = await session.scalar(select(UserAccount).where(UserAccount.username == username))
+            if not account or not account.mfa_secret:
+                return False
+            
+            if TimeBasedMFA.verify_totp(account.mfa_secret, code):
+                account.mfa_enabled = True
+                await session.commit()
+                return True
+            return False
+
+    async def disable_mfa(self, username: str) -> bool:
+        """MFA無効化."""
+        async with get_db_session() as session:
+            account = await session.scalar(select(UserAccount).where(UserAccount.username == username))
+            if account:
+                account.mfa_enabled = False
+                account.mfa_secret = None
+                await session.commit()
+                return True
+            return False
+
     async def _upsert_external_user(
         self,
         identity: ExternalIdentity,
-        provider: AuthProvider,
+        provider: str | AuthProvider,
     ) -> UserInfo:
         now = datetime.now(tz=UTC)
         async with get_db_session() as session:

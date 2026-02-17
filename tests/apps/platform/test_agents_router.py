@@ -37,6 +37,10 @@ class TestListAgents:
             "module",
             "capabilities",
             "capabilities_legacy",
+            "business_base",
+            "agent_pattern",
+            "app_business_base",
+            "app_engine_pattern",
         }
         assert required_keys.issubset(agent.keys())
         if agent["capabilities"]:
@@ -108,6 +112,30 @@ class TestAgentsByApp:
         assert len(by_app["rag_app"]["agents"]) == 2
 
 
+class TestAgentsByBusinessBase:
+    """GET /api/agents/by-business-base テスト."""
+
+    def test_returns_groups(self, phase3_test_client: TestClient) -> None:
+        resp = phase3_test_client.get("/api/agents/by-business-base")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "groups" in data
+        assert "total_groups" in data
+        assert data["total_groups"] >= 1
+
+
+class TestAgentsByPattern:
+    """GET /api/agents/by-pattern テスト."""
+
+    def test_returns_groups(self, phase3_test_client: TestClient) -> None:
+        resp = phase3_test_client.get("/api/agents/by-pattern")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "groups" in data
+        assert "total_groups" in data
+        assert data["total_groups"] >= 1
+
+
 class TestSearchAgents:
     """GET /api/agents/search テスト."""
 
@@ -123,7 +151,9 @@ class TestSearchAgents:
 
     def test_search_no_match(self, phase3_test_client: TestClient) -> None:
         """マッチしない検索は空リストを返す."""
-        resp = phase3_test_client.get("/api/agents/search", params={"capability": "nonexistent_xyz"})
+        resp = phase3_test_client.get(
+            "/api/agents/search", params={"capability": "nonexistent_xyz"}
+        )
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
         assert resp.json()["agents"] == []

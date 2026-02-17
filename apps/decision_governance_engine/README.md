@@ -214,19 +214,38 @@ npm install
 cd ../../..
 echo "OPENAI_API_KEY=" > .env
 ```
-# 4. データベースのセットアップ
+### DB マイグレーション（必須）
+
+```bash
 # DB コンテナ起動
 cd apps/decision_governance_engine
 docker-compose up -d postgres-main redis
-# マイグレーション適用
-alembic upgrade head
 
-# マイグレーション履歴確認
-alembic history
+# スキーマを最新化（新規DB作成 / 既存DB差分適用 を自動判定）
+alembic -c apps/decision_governance_engine/alembic.ini upgrade head
 
+# 現在の適用済みリビジョンを確認
+alembic -c apps/decision_governance_engine/alembic.ini current
 
-# ロールバック
-alembic downgrade -1
+# マイグレーション履歴を一覧表示
+alembic -c apps/decision_governance_engine/alembic.ini history --verbose
+
+# 1つ前のリビジョンにロールバック
+alembic -c apps/decision_governance_engine/alembic.ini downgrade -1
+
+# 特定リビジョンまでロールバック
+alembic -c apps/decision_governance_engine/alembic.ini downgrade <revision_id>
+
+# 新しいマイグレーションファイルを自動生成（モデル変更後）
+alembic -c apps/decision_governance_engine/alembic.ini revision --autogenerate -m "変更内容の説明"
+
+# 空のマイグレーションファイルを手動作成
+alembic -c apps/decision_governance_engine/alembic.ini revision -m "変更内容の説明"
+```
+
+> **補足:** 既存DBに `alembic_version` が無い場合（`create_all()` で作成済み等）、
+> `upgrade head` 実行時に初期リビジョンが自動 stamp されるため、手動操作は不要です。
+
 ---
 
 ## 5. 起動手順
@@ -276,8 +295,12 @@ http://localhost:5174
 # 依存関係インストール
 pip install -e ".[dev]"
 
-# APIサーバー起動（ポート8000）
-uvicorn apps.decision_governance_engine.api:app --host 0.0.0.0 --port 8000 --reload
+# ローカル開発（ホットリロード有効）
+# ポートは app_config.json から自動読み込み（8001）
+python -m apps.decision_governance_engine.api --reload
+
+# 本番起動（リロードなし）
+python -m apps.decision_governance_engine.api
 ```
 
 **ターミナル2: フロントエンド起動**
@@ -299,7 +322,7 @@ http://localhost:5174
 ### 5.2 動作確認
 
 ```bash
-# APIヘルスチェック
+# APIヘルスチェック（ポート 8001）
 curl http://localhost:8001/api/health
 # 期待出力: {"status":"ok","version":"1.0.0"}
 

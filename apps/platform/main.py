@@ -332,6 +332,11 @@ def main() -> None:
     serve_parser = subparsers.add_parser("serve", help="APIサーバーを起動")
     serve_parser.add_argument("--host", default="0.0.0.0", help="ホスト")
     serve_parser.add_argument("--port", type=int, default=DEFAULT_API_PORT, help="ポート")
+    serve_parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="開発モード（ホットリロード有効）",
+    )
 
     # search コマンド
     search_parser = subparsers.add_parser("search", help="Gallery検索")
@@ -361,8 +366,18 @@ def main() -> None:
     setup_logging(args.verbose)
 
     if args.command == "serve":
-        app = create_app()
-        uvicorn.run(app, host=args.host, port=args.port)
+        print(f"[Platform] Starting on {args.host}:{args.port} (reload={args.reload})")
+        if args.reload:
+            uvicorn.run(
+                "apps.platform.main:app",
+                host=args.host,
+                port=args.port,
+                reload=True,
+                reload_dirs=["apps/platform", "agentflow"],
+            )
+        else:
+            app = create_app()
+            uvicorn.run(app, host=args.host, port=args.port)
 
     elif args.command == "search":
         asyncio.run(cli_search(args.query, args.limit))

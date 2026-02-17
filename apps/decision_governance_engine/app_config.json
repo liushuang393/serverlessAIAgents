@@ -2,6 +2,7 @@
   "name": "decision_governance_engine",
   "display_name": "意思決定ガバナンスエンジン",
   "description": "道法術器フレームワークに基づくAI意思決定支援パイプライン",
+  "business_base": "governance",
   "version": "1.0.0",
   "icon": "⚖️",
   "ports": {
@@ -21,7 +22,9 @@
       "capabilities": [
         "gate",
         "cognitive_check"
-      ]
+      ],
+      "business_base": "governance",
+      "pattern": "gatekeeper"
     },
     {
       "name": "GatekeeperAgent",
@@ -29,7 +32,9 @@
       "capabilities": [
         "gate",
         "validation"
-      ]
+      ],
+      "business_base": "governance",
+      "pattern": "gatekeeper"
     },
     {
       "name": "ClarificationAgent",
@@ -37,7 +42,9 @@
       "capabilities": [
         "diagnosis",
         "clarification"
-      ]
+      ],
+      "business_base": "reasoning",
+      "pattern": "analyzer"
     },
     {
       "name": "DaoAgent",
@@ -46,7 +53,9 @@
         "analysis",
         "dao",
         "philosophy"
-      ]
+      ],
+      "business_base": "reasoning",
+      "pattern": "analyzer"
     },
     {
       "name": "FaAgent",
@@ -55,7 +64,9 @@
         "analysis",
         "fa",
         "rules"
-      ]
+      ],
+      "business_base": "reasoning",
+      "pattern": "analyzer"
     },
     {
       "name": "ShuAgent",
@@ -64,7 +75,9 @@
         "analysis",
         "shu",
         "strategy"
-      ]
+      ],
+      "business_base": "reasoning",
+      "pattern": "analyzer"
     },
     {
       "name": "QiAgent",
@@ -73,7 +86,9 @@
         "analysis",
         "qi",
         "tools"
-      ]
+      ],
+      "business_base": "reasoning",
+      "pattern": "analyzer"
     },
     {
       "name": "ReviewAgent",
@@ -81,7 +96,9 @@
       "capabilities": [
         "review",
         "synthesis"
-      ]
+      ],
+      "business_base": "governance",
+      "pattern": "reviewer"
     }
   ],
   "services": {

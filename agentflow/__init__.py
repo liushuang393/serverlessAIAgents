@@ -107,6 +107,20 @@ from agentflow.channels import (
 from agentflow.channels.base import MessageType
 
 # =============================================================================
+# 公開API: 統一データベース管理（DB セッション + Alembic マイグレーション）
+# =============================================================================
+from agentflow.database import (
+    DatabaseConfig,
+    DatabaseManager,
+    MigrationEnv,
+    get_dialect,
+    is_async_url,
+    is_sqlite,
+    to_async_url,
+    to_sync_url,
+)
+
+# =============================================================================
 # 公開API: Context Engineering（上下文エンジニアリング）
 # =============================================================================
 from agentflow.context import (
@@ -614,6 +628,11 @@ __all__ = [
     "ContextEngineer",
     "ControlPlane",
     "DBProvider",
+    # =========================================================================
+    # 統一データベース管理（DB セッション + Alembic マイグレーション）
+    # =========================================================================
+    "DatabaseConfig",
+    "DatabaseManager",
     "DataTable",
     "DelegationResult",
     "EmbeddingProvider",
@@ -660,6 +679,7 @@ __all__ = [
     "MCPToolResponse",
     "MarkdownContent",
     "MemoryAccessor",
+    "MigrationEnv",
     "MemoryCheckpointer",
     "MemoryLightningStore",
     "MemoryRunStore",
@@ -837,6 +857,7 @@ __all__ = [
     "create_websocket_router",
     "get_checkpointer",
     "get_db",
+    "get_dialect",
     "get_embedding",
     "get_global_agent_registry",
     "get_global_tool_registry",
@@ -861,7 +882,9 @@ __all__ = [
     # Human-in-the-Loop (HITL)
     # =========================================================================
     "interrupt",
+    "is_async_url",
     "is_memvid_available",
+    "is_sqlite",
     "is_terminal",
     "list_skills",
     "register_parser",
@@ -879,6 +902,8 @@ __all__ = [
     # =========================================================================
     "setup_logging",
     "setup_observability",
+    "to_async_url",
+    "to_sync_url",
     "tool",
     "use_runtime_context",
     "safe_enum",

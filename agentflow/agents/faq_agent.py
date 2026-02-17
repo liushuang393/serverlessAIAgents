@@ -877,10 +877,19 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             "card": card.to_a2a_format(),
         }
 
+    # クエリタイプ別の進捗メッセージ
+    _QUERY_TYPE_LABELS: dict[str, str] = {
+        "chat": "LLM で回答を生成中...",
+        "faq": "ナレッジベースを検索中...",
+        "sql": "SQL クエリを生成中...",
+        "sales_material": "営業資料を作成中...",
+    }
+
     async def run_stream(self, inputs: dict[str, Any]) -> Any:
         """ストリーム実行.
 
         既存 app の SSE 実装互換のため、軽量な進捗イベントを返す。
+        進捗ステップ: 10→20→40→60→90→100
         """
         question = str(inputs.get("question", ""))
         execution_id = f"stream-{uuid.uuid4().hex[:12]}"
@@ -888,20 +897,40 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             yield {"type": "error", "execution_id": execution_id, "message": "質問が指定されていません"}
             return
 
-        query_type = self._classify_query(question)
         yield {
             "type": "progress",
             "execution_id": execution_id,
             "progress": 10,
             "message": "ロード完了",
         }
+
+        # クエリタイプ判定
+        query_type = await self._classify_query(question)
         yield {
             "type": "progress",
             "execution_id": execution_id,
-            "progress": 30,
+            "progress": 20,
             "message": f"ルーティング: {query_type}",
         }
+
+        # サービス呼び出し開始を通知
+        service_label = self._QUERY_TYPE_LABELS.get(query_type, "処理中...")
+        yield {
+            "type": "progress",
+            "execution_id": execution_id,
+            "progress": 40,
+            "message": service_label,
+        }
+
+        # メイン処理（LLM呼び出し含む）
         result = await self.run(inputs)
+
+        yield {
+            "type": "progress",
+            "execution_id": execution_id,
+            "progress": 90,
+            "message": "回答を整形中...",
+        }
         yield {
             "type": "progress",
             "execution_id": execution_id,

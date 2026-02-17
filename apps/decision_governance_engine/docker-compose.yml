@@ -85,7 +85,7 @@ services:
       dockerfile: apps/decision_governance_engine/Dockerfile
     container_name: dge-backend
     ports:
-      - "${API_PORT:-8000}:8000"
+      - "${API_PORT:-8001}:8001"
     environment:
       # LLM 設定（.env から読み込み）
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -109,7 +109,7 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/health')"]
       interval: 30s
       timeout: 10s
       retries: 3

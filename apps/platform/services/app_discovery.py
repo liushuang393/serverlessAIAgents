@@ -24,6 +24,7 @@ from apps.platform.schemas.app_config_schemas import (
     ContractsConfig,
     VisibilityConfig,
 )
+from apps.platform.services.agent_taxonomy import AgentTaxonomyService
 
 
 _logger = logging.getLogger(__name__)
@@ -56,6 +57,7 @@ class AppDiscoveryService:
         self._registry: dict[str, AppConfig] = {}
         self._config_paths: dict[str, Path] = {}
         self._errors: dict[str, str] = {}
+        self._taxonomy = AgentTaxonomyService()
 
     # ------------------------------------------------------------------
     # 公開 API
@@ -171,6 +173,7 @@ class AppDiscoveryService:
                     "name": a.name,
                     "display_name": a.display_name,
                     "icon": a.icon,
+                    "business_base": self._resolve_business_base(a),
                     "agent_count": len(a.agents),
                     "has_api": a.ports.api is not None,
                     "port": a.ports.api,
@@ -354,12 +357,43 @@ class AppDiscoveryService:
                 if key not in blueprint:
                     blueprint[key] = deepcopy(default_value)
                     self._mark_updated(updated_fields, f"blueprint.{key}")
-            if "engine_pattern" not in blueprint or not str(blueprint.get("engine_pattern", "")).strip():
+            if (
+                "engine_pattern" not in blueprint
+                or not str(blueprint.get("engine_pattern", "")).strip()
+            ):
                 blueprint["engine_pattern"] = engine_pattern
                 self._mark_updated(updated_fields, "blueprint.engine_pattern")
             if "flow_pattern" not in blueprint and flow_pattern is not None:
                 blueprint["flow_pattern"] = flow_pattern
                 self._mark_updated(updated_fields, "blueprint.flow_pattern")
+
+        app_business_base = self._taxonomy.normalize_business_base(
+            manifest.get("business_base"),
+        )
+        inferred_business_base = self._taxonomy.infer_app_business_base(
+            app_name=str(manifest.get("name", "")),
+            tags=manifest.get("tags", []) if isinstance(manifest.get("tags"), list) else [],
+            contracts_rag_enabled=bool(
+                isinstance(manifest.get("contracts"), dict)
+                and isinstance(manifest["contracts"].get("rag"), dict)
+                and manifest["contracts"]["rag"].get("enabled")
+            ),
+            agent_capabilities=self._iter_agent_capabilities(manifest.get("agents")),
+        )
+        if app_business_base is None:
+            manifest["business_base"] = inferred_business_base
+            self._mark_updated(updated_fields, "business_base")
+            app_business_base = inferred_business_base
+        elif app_business_base != manifest.get("business_base"):
+            manifest["business_base"] = app_business_base
+            self._mark_updated(updated_fields, "business_base")
+
+        self._migrate_agent_taxonomy(
+            manifest=manifest,
+            updated_fields=updated_fields,
+            app_business_base=app_business_base or inferred_business_base,
+            engine_pattern=engine_pattern,
+        )
 
         visibility_defaults = VisibilityConfig().model_dump()
         visibility = manifest.get("visibility")
@@ -389,6 +423,14 @@ class AppDiscoveryService:
 
         if "pipeline" in services:
             return "pipeline"
+        if "workflow" in services:
+            return "pipeline"
+        if "coordinator" in services or "gateway" in services:
+            return "coordinator"
+        if "flow" in services:
+            return "flow"
+        if "deep_agent" in services:
+            return "deep_agent"
         return "simple"
 
     @staticmethod
@@ -492,6 +534,70 @@ class AppDiscoveryService:
             updated_fields.append(field)
 
     @staticmethod
+    def _iter_agent_capabilities(agents_raw: Any) -> list[list[str]]:
+        """agents セクションから capabilities 一覧を抽出."""
+        if not isinstance(agents_raw, list):
+            return []
+        rows: list[list[str]] = []
+        for agent in agents_raw:
+            if not isinstance(agent, dict):
+                continue
+            capabilities = agent.get("capabilities")
+            if not isinstance(capabilities, list):
+                continue
+            rows.append([str(cap) for cap in capabilities])
+        return rows
+
+    def _migrate_agent_taxonomy(
+        self,
+        *,
+        manifest: dict[str, Any],
+        updated_fields: list[str],
+        app_business_base: str,
+        engine_pattern: str,
+    ) -> None:
+        """agents[].business_base / pattern を補完・正規化する."""
+        agents_raw = manifest.get("agents")
+        if not isinstance(agents_raw, list):
+            return
+
+        for index, agent in enumerate(agents_raw):
+            if not isinstance(agent, dict):
+                continue
+
+            capabilities = agent.get("capabilities")
+            capabilities_list = (
+                [str(c) for c in capabilities] if isinstance(capabilities, list) else []
+            )
+
+            inferred_base = self._taxonomy.infer_agent_business_base(
+                raw_business_base=agent.get("business_base"),
+                capabilities=capabilities_list,
+                fallback_app_base=app_business_base,
+            )
+            normalized_base = self._taxonomy.normalize_business_base(agent.get("business_base"))
+            if normalized_base is None:
+                agent["business_base"] = inferred_base
+                self._mark_updated(updated_fields, f"agents[{index}].business_base")
+            elif normalized_base != agent.get("business_base"):
+                agent["business_base"] = normalized_base
+                self._mark_updated(updated_fields, f"agents[{index}].business_base")
+
+            inferred_pattern = self._taxonomy.infer_agent_pattern(
+                raw_pattern=agent.get("pattern"),
+                name=str(agent.get("name", "")),
+                module=str(agent.get("module")) if isinstance(agent.get("module"), str) else None,
+                engine_pattern=engine_pattern,
+            )
+            normalized_pattern = self._taxonomy.normalize_agent_pattern(agent.get("pattern"))
+            if normalized_pattern is None:
+                agent["pattern"] = inferred_pattern
+                self._mark_updated(updated_fields, f"agents[{index}].pattern")
+            elif normalized_pattern != agent.get("pattern"):
+                agent["pattern"] = normalized_pattern
+                self._mark_updated(updated_fields, f"agents[{index}].pattern")
+
+    @staticmethod
     def _deep_merge(base: dict[str, Any], patch: dict[str, Any]) -> dict[str, Any]:
         """辞書を deep merge する（patch 優先）."""
         merged = dict(base)
@@ -511,3 +617,15 @@ class AppDiscoveryService:
             return str(path.relative_to(Path.cwd()))
         except ValueError:
             return str(path)
+
+    def _resolve_business_base(self, app_config: AppConfig) -> str:
+        """AppConfig の business_base を解決（未設定時は推論）."""
+        normalized = self._taxonomy.normalize_business_base(app_config.business_base)
+        if normalized is not None:
+            return normalized
+        return self._taxonomy.infer_app_business_base(
+            app_name=app_config.name,
+            tags=app_config.tags,
+            contracts_rag_enabled=app_config.contracts.rag.enabled,
+            agent_capabilities=[agent.capabilities for agent in app_config.agents],
+        )

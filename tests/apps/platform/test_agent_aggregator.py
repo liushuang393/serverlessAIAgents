@@ -31,11 +31,17 @@ class TestAggregatedAgent:
                 },
             ],
             capabilities_legacy=["rag"],
+            business_base="knowledge",
+            agent_pattern="specialist",
+            app_business_base="knowledge",
+            app_engine_pattern="simple",
         )
         payload = agent.to_dict()
         assert payload["name"] == "TestAgent"
         assert payload["capabilities"][0]["id"] == "knowledge.retrieval.rag"
         assert payload["capabilities_legacy"] == ["rag"]
+        assert payload["business_base"] == "knowledge"
+        assert payload["agent_pattern"] == "specialist"
 
 
 class TestListAll:
@@ -94,6 +100,9 @@ class TestGroupByApp:
         first = groups[0]
         assert {"app_name", "display_name", "icon", "agents"} <= set(first.keys())
         assert isinstance(first["agents"], list)
+        if first["agents"]:
+            assert "business_base" in first["agents"][0]
+            assert "agent_pattern" in first["agents"][0]
 
 
 class TestAllCapabilities:
@@ -121,10 +130,11 @@ class TestStats:
     def test_returns_expected_keys(self, aggregator: AgentAggregatorService) -> None:
         stats = aggregator.stats()
         assert {"total_agents", "total_apps_with_agents", "total_capabilities"} <= set(stats.keys())
+        assert "by_business_base" in stats
+        assert "by_agent_pattern" in stats
 
     def test_with_rag(self, aggregator_with_rag: AgentAggregatorService) -> None:
         stats = aggregator_with_rag.stats()
         assert stats["total_agents"] == 4
         assert stats["total_apps_with_agents"] == 2
         assert stats["total_capabilities"] >= 3
-

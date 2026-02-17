@@ -121,7 +121,30 @@ app.include_router(workflow_router)
 # アプリ起動（直接実行用）
 # ========================================
 if __name__ == "__main__":
+    import argparse
+
     import uvicorn
+
+    parser = argparse.ArgumentParser(
+        description="Decision Governance Engine - FastAPI Backend"
+    )
+    parser.add_argument(
+        "--reload",
+        action="store_true",
+        help="開発モード（ホットリロード有効）",
+    )
+    parser.add_argument(
+        "--host",
+        default=None,
+        help="ホスト（省略時: 環境変数 DGE_HOST / デフォルト 0.0.0.0）",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=None,
+        help="ポート（省略時: 環境変数 DGE_PORT / app_config.json）",
+    )
+    args = parser.parse_args()
 
     config_path = Path(__file__).resolve().parent / "app_config.json"
     config_raw: dict = {}
@@ -131,5 +154,19 @@ if __name__ == "__main__":
         except json.JSONDecodeError:
             config_raw = {}
 
-    api_port = config_raw.get("ports", {}).get("api", 8000)
-    uvicorn.run(app, host="0.0.0.0", port=int(api_port))
+    _default_port = config_raw.get("ports", {}).get("api", 8001)
+    _host = args.host or os.getenv("DGE_HOST", "0.0.0.0")
+    _port = args.port or int(os.getenv("DGE_PORT", str(_default_port)))
+
+    print(f"[DGE] Starting on {_host}:{_port} (reload={args.reload})")
+
+    if args.reload:
+        uvicorn.run(
+            "apps.decision_governance_engine.api:app",
+            host=_host,
+            port=_port,
+            reload=True,
+            reload_dirs=["apps/decision_governance_engine", "agentflow"],
+        )
+    else:
+        uvicorn.run(app, host=_host, port=_port)

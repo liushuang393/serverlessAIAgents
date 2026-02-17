@@ -18,6 +18,7 @@
 """
 
 import asyncio
+import json
 import logging
 import os
 from collections.abc import AsyncIterator
@@ -105,8 +106,8 @@ class LLMConfig(BaseModel):
     base_url: str | None = Field(default=None, description="カスタムベースURL")
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="温度パラメータ")
     max_tokens: int = Field(default=2000, gt=0, description="最大トークン数")
-    # LLM API超时：复杂分析任务可能需要较长时间，默认180秒
-    timeout: int = Field(default=180, gt=0, description="タイムアウト（秒）")
+    # LLM APIタイムアウト：ローカルOllama等を考慮し360秒
+    timeout: int = Field(default=360, gt=0, description="タイムアウト（秒）")
 
 
 class LLMClient:
@@ -211,18 +212,44 @@ class LLMClient:
         base_url = self._config.base_url or os.environ.get(
             "OLLAMA_BASE_URL", "http://localhost:11434"
         )
-        self._base_url = f"{base_url}/v1"
+        normalized_base_url = self._normalize_base_url(base_url)
+        self._base_url = f"{normalized_base_url}/v1"
+        self._ollama_native_base_url = normalized_base_url
         self._client = "ollama"
-        self._logger.info(f"Ollama client initialized: {base_url}")
+        self._logger.info(f"Ollama client initialized: {normalized_base_url}")
 
     def _initialize_localai(self) -> None:
         """LocalAIクライアント初期化（OpenAI互換API使用）."""
         base_url = self._config.base_url or os.environ.get(
             "LOCALAI_BASE_URL", "http://localhost:8080"
         )
-        self._base_url = f"{base_url}/v1"
+        normalized_base_url = self._normalize_base_url(base_url)
+        self._base_url = f"{normalized_base_url}/v1"
         self._client = "localai"
-        self._logger.info(f"LocalAI client initialized: {base_url}")
+        self._logger.info(f"LocalAI client initialized: {normalized_base_url}")
+
+    @staticmethod
+    def _normalize_base_url(base_url: str) -> str:
+        """ベースURLを正規化（末尾スラッシュと重複 /v1 を除去）."""
+        normalized = base_url.rstrip("/")
+        if normalized.endswith("/v1"):
+            normalized = normalized[:-3].rstrip("/")
+        return normalized
+
+    @staticmethod
+    def _is_ollama_model_not_found(response: httpx.Response) -> bool:
+        """Ollama 404 がモデル未取得エラーかどうかを判定する."""
+        try:
+            data = response.json()
+        except ValueError:
+            return False
+
+        error = data.get("error")
+        if isinstance(error, dict):
+            message = str(error.get("message", "")).lower()
+        else:
+            message = str(error).lower()
+        return "model" in message and "not found" in message
 
     async def complete(self, prompt: str, **kwargs: Any) -> LLMResponse:
         """テキスト生成.
@@ -595,18 +622,29 @@ class LLMClient:
             LLMレスポンス
         """
         try:
+            payload = {
+                "model": self._config.model,
+                "messages": [
+                    {"role": msg.role, "content": msg.content} for msg in messages
+                ],
+                "temperature": kwargs.get("temperature", self._config.temperature),
+                "max_tokens": kwargs.get("max_tokens", self._config.max_tokens),
+            }
             async with httpx.AsyncClient(timeout=self._config.timeout) as client:
                 response = await client.post(
                     f"{self._base_url}/chat/completions",
-                    json={
-                        "model": self._config.model,
-                        "messages": [
-                            {"role": msg.role, "content": msg.content} for msg in messages
-                        ],
-                        "temperature": kwargs.get("temperature", self._config.temperature),
-                        "max_tokens": kwargs.get("max_tokens", self._config.max_tokens),
-                    },
+                    json=payload,
                 )
+                if (
+                    self._config.provider == "ollama"
+                    and response.status_code == httpx.codes.NOT_FOUND
+                    and not self._is_ollama_model_not_found(response)
+                ):
+                    self._logger.warning(
+                        "Ollama OpenAI-compatible endpoint returned 404. "
+                        "Falling back to native /api/chat endpoint."
+                    )
+                    return await self._chat_ollama_native(messages, **kwargs)
                 response.raise_for_status()
                 data = response.json()
 
@@ -620,9 +658,84 @@ class LLMClient:
             self._logger.exception(f"API timeout after {self._config.timeout}s")
             msg = f"Timeout after {self._config.timeout}s"
             raise TimeoutError(msg)
-        except Exception as e:
-            self._logger.exception(f"API error: {e}")
+        except httpx.HTTPStatusError as e:
+            response_body = ""
+            status_code: int | str = "unknown"
+            if e.response is not None:
+                status_code = e.response.status_code
+                response_body = e.response.text[:500]
+            self._logger.exception(
+                "API status error: base_url=%s, provider=%s, model=%s, "
+                "status=%s, detail=%s, body=%s",
+                getattr(self, "_base_url", "unknown"),
+                self._config.provider,
+                self._config.model,
+                status_code,
+                e,
+                response_body,
+            )
             raise
+        except httpx.ConnectError as e:
+            self._logger.exception(
+                "API connection error: base_url=%s, provider=%s, model=%s, detail=%s",
+                getattr(self, "_base_url", "unknown"),
+                self._config.provider,
+                self._config.model,
+                e,
+            )
+            raise
+        except Exception as e:
+            self._logger.exception(
+                "API error: base_url=%s, provider=%s, model=%s, detail=%s",
+                getattr(self, "_base_url", "unknown"),
+                self._config.provider,
+                self._config.model,
+                e,
+            )
+            raise
+
+    async def _chat_ollama_native(
+        self, messages: list[LLMMessage], **kwargs: Any
+    ) -> LLMResponse:
+        """OllamaネイティブAPIチャット（/api/chat）."""
+        options: dict[str, Any] = {
+            "temperature": kwargs.get("temperature", self._config.temperature),
+        }
+        max_tokens = kwargs.get("max_tokens", self._config.max_tokens)
+        if max_tokens is not None:
+            options["num_predict"] = max_tokens
+
+        payload = {
+            "model": self._config.model,
+            "messages": [
+                {"role": msg.role, "content": msg.content} for msg in messages
+            ],
+            "stream": False,
+            "options": options,
+        }
+        async with httpx.AsyncClient(timeout=self._config.timeout) as client:
+            response = await client.post(
+                f"{self._ollama_native_base_url}/api/chat",
+                json=payload,
+            )
+            response.raise_for_status()
+            data = response.json()
+
+        message = data.get("message", {})
+        content = message.get("content") if isinstance(message, dict) else None
+        prompt_tokens = int(data.get("prompt_eval_count") or 0)
+        completion_tokens = int(data.get("eval_count") or 0)
+
+        return LLMResponse(
+            content=content,
+            model=data.get("model", self._config.model),
+            usage={
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+            },
+            finish_reason=data.get("done_reason"),
+        )
 
     async def stream(
         self, messages: list[LLMMessage], **kwargs: Any
@@ -781,33 +894,98 @@ class LLMClient:
         Yields:
             生成されたテキストチャンク
         """
+        payload = {
+            "model": self._config.model,
+            "messages": [
+                {"role": msg.role, "content": msg.content} for msg in messages
+            ],
+            "temperature": kwargs.get("temperature", self._config.temperature),
+            "max_tokens": kwargs.get("max_tokens", self._config.max_tokens),
+            "stream": True,
+        }
+        use_native_fallback = False
+
         async with httpx.AsyncClient(timeout=self._config.timeout) as client, client.stream(
             "POST",
             f"{self._base_url}/chat/completions",
-            json={
-                "model": self._config.model,
-                "messages": [
-                    {"role": msg.role, "content": msg.content} for msg in messages
-                ],
-                "temperature": kwargs.get("temperature", self._config.temperature),
-                "max_tokens": kwargs.get("max_tokens", self._config.max_tokens),
-                "stream": True,
-            },
+            json=payload,
         ) as response:
-            async for line in response.aiter_lines():
-                if line.startswith("data: "):
-                    data = line[6:]
-                    if data == "[DONE]":
-                        break
-                    try:
-                        import json
+            if (
+                self._config.provider == "ollama"
+                and response.status_code == httpx.codes.NOT_FOUND
+            ):
+                use_native_fallback = True
+            else:
+                response.raise_for_status()
 
-                        chunk = json.loads(data)
-                        content = chunk["choices"][0]["delta"].get("content", "")
+            if use_native_fallback:
+                # コンテキストを抜けてからネイティブAPIへフォールバックする。
+                pass
+            else:
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        data = line[6:]
+                        if data == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data)
+                            content = chunk["choices"][0]["delta"].get("content", "")
+                            if content:
+                                yield content
+                        except (json.JSONDecodeError, KeyError, IndexError, TypeError):
+                            continue
+
+        if use_native_fallback:
+            self._logger.warning(
+                "Ollama OpenAI-compatible stream endpoint returned 404. "
+                "Falling back to native /api/chat stream."
+            )
+            async for chunk in self._stream_ollama_native(messages, **kwargs):
+                yield chunk
+
+    async def _stream_ollama_native(
+        self, messages: list[LLMMessage], **kwargs: Any
+    ) -> AsyncIterator[str]:
+        """OllamaネイティブAPIストリーミング（/api/chat）."""
+        options: dict[str, Any] = {
+            "temperature": kwargs.get("temperature", self._config.temperature),
+        }
+        max_tokens = kwargs.get("max_tokens", self._config.max_tokens)
+        if max_tokens is not None:
+            options["num_predict"] = max_tokens
+
+        payload = {
+            "model": self._config.model,
+            "messages": [
+                {"role": msg.role, "content": msg.content} for msg in messages
+            ],
+            "stream": True,
+            "options": options,
+        }
+
+        async with httpx.AsyncClient(timeout=self._config.timeout) as client, client.stream(
+            "POST",
+            f"{self._ollama_native_base_url}/api/chat",
+            json=payload,
+        ) as response:
+            response.raise_for_status()
+            async for line in response.aiter_lines():
+                if not line:
+                    continue
+                data_line = line[6:] if line.startswith("data: ") else line
+                if data_line == "[DONE]":
+                    break
+                try:
+                    chunk = json.loads(data_line)
+                except json.JSONDecodeError:
+                    continue
+
+                if isinstance(chunk, dict):
+                    message = chunk.get("message", {})
+                    if isinstance(message, dict):
+                        content = message.get("content", "")
                         if content:
                             yield content
-                    except (json.JSONDecodeError, KeyError):
-                        continue
 
     def _mock_response(self, messages: list[LLMMessage]) -> LLMResponse:
         """モックレスポンス生成.
@@ -827,4 +1005,3 @@ class LLMClient:
             usage={"prompt_tokens": 10, "completion_tokens": 20, "total_tokens": 30},
             finish_reason="stop",
         )
-

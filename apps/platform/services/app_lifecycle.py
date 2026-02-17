@@ -981,6 +981,8 @@ class AppLifecycleManager:
         """runtime.commands から action 用コマンドを取得."""
         commands = config.runtime.commands
         value = {
+            "backend_dev": commands.backend_dev,
+            "frontend_dev": commands.frontend_dev,
             "publish": commands.publish,
             "start": commands.start,
             "stop": commands.stop,

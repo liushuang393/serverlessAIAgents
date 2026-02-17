@@ -81,12 +81,13 @@ cp .env.example .env
 
 ```bash
 # リポジトリルートで実行（conda agentflow 環境内）
-# バックエンド（--port 不要、app_config.json の 8000 が使われる）
-uvicorn apps.platform.main:app --reload --host 0.0.0.0
 
+# ローカル開発（ホットリロード有効）
+# ポートは app_config.json から自動読み込み（8000）
+python -m apps.platform.main serve --reload
 
-# 本番: ポート 8000
-uvicorn apps.platform.main:app  --host 0.0.0.0 --port 8000
+# 本番起動（リロードなし）
+python -m apps.platform.main serve
 ```
 
 起動後の確認 URL（ローカル開発時）:
@@ -170,6 +171,7 @@ npm run type-check   # TypeScript 型チェック
 | `GET` | `/api/apps/summary` | App 概要統計 |
 | `POST` | `/api/apps/refresh` | App 一覧再スキャン |
 | `POST` | `/api/apps/migrate-manifests` | manifest 標準化（dry-run / apply） |
+| `GET` | `/api/apps/framework-audit` | 全 App の基盤/フレームワーク準拠監査 |
 | `GET` | `/api/apps/{app_name}` | App 詳細 |
 | `GET` | `/api/apps/{app_name}/config` | app_config.json 取得 |
 | `PATCH` | `/api/apps/{app_name}/config` | app_config.json 部分更新 |
@@ -189,12 +191,15 @@ npm run type-check   # TypeScript 型チェック
 | `GET` | `/api/agents/stats` | Agent 統計 |
 | `GET` | `/api/agents/capabilities` | 全能力タグ一覧 |
 | `GET` | `/api/agents/by-app` | App 別グルーピング |
+| `GET` | `/api/agents/by-business-base` | 業務基盤タイプ別グルーピング |
+| `GET` | `/api/agents/by-pattern` | Agent pattern 別グルーピング |
 | `GET` | `/api/agents/search` | 能力ベース検索 |
 
 補足:
 
 1. `GET /api/agents/by-app` は `groups` 配列を返す（map ではない）。
 2. `GET /api/agents` は `capabilities`（標準能力）と `capabilities_legacy` を返す。
+3. `GET /api/agents` は `business_base` / `agent_pattern` など分類情報を返す。
 
 ### 3. Skills（スキルカタログ）
 
@@ -403,11 +408,59 @@ python3 -m pytest -q tests/apps/platform -p no:cacheprovider
 │    PlatformEngine (統合層)                             │
 └──────────────────────────────────────────────────────┘
 ```
+## DB マイグレーション
+```mermaid
+graph TB
+    subgraph "agentflow/database/ (NEW)"
+        Config["DatabaseConfig<br/>(Pydantic設定)"]
+        URL["url_utils<br/>(URL正規化)"]
+        Session["DatabaseManager<br/>(エンジン/セッション)"]
+        Migration["MigrationEnv<br/>(Alembic統合+auto-stamp)"]
+    end
+
+    subgraph "apps/faq_system/"
+        FAQ_Models["models.py<br/>(Base + Models)"]
+        FAQ_Session["session.py<br/>(6行: DatabaseManager利用)"]
+        FAQ_Env["migrations/env.py<br/>(6行: MigrationEnv利用)"]
+    end
+
+    subgraph "apps/decision_governance_engine/"
+        DGE_Models["models.py<br/>(Base + Models)"]
+        DGE_DB["database.py<br/>(6行: DatabaseManager利用)"]
+        DGE_Env["migrations/env.py<br/>(6行: MigrationEnv利用)"]
+    end
+
+    Config --> Session
+    Config --> Migration
+    URL --> Session
+    URL --> Migration
+    FAQ_Models --> FAQ_Session
+    FAQ_Session --> Session
+    FAQ_Env --> Migration
+    DGE_Models --> DGE_DB
+    DGE_DB --> Session
+    DGE_Env --> Migration
+
+    style Config fill:#4a90d9,color:#fff
+    style Session fill:#4a90d9,color:#fff
+    style Migration fill:#4a90d9,color:#fff
+    style URL fill:#4a90d9,color:#fff
+    style FAQ_Models fill:#4a90d9,color:#fff
+    style FAQ_Session fill:#4a90d9,color:#fff
+    style FAQ_Env fill:#4a90d9,color:#fff
+    style DGE_Models fill:#4a90d9,color:#fff
+    style DGE_DB fill:#4a90d9,color:#fff
+    style DGE_Env fill:#4a90d9,color:#fff
+    style apps/platform fill:#4a90d9,color:#fff
+    style apps/faq_system fill:#4a90d9,color:#fff
+    style apps/decision_governance_engine fill:#4a90d9,color:#fff
+    style agentflow/database/ fill:#4a90d9,color:#fff
+    style agentflow/ fill:#4a90d9,color:#fff
+```
 
 ---
 
 ## フォルダ構造
-
 ```
 apps/platform/
 ├── __init__.py                        # 外部公開 API エクスポート

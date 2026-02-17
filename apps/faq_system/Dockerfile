@@ -8,7 +8,7 @@
 #   （リポジトリルートから agentflow パッケージを含める）
 #
 # 実行:
-#   docker run -p 8001:8001 faq-backend
+#   docker run -p 8005:8005 faq-backend
 #
 # ※ 通常は docker compose 経由で起動してください:
 #   cd apps/faq_system && docker compose up --build
@@ -67,11 +67,11 @@ USER appuser
 
 # ヘルスチェック
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8005/api/health')" || exit 1
 
 # ポート公開
-EXPOSE 8001
+EXPOSE 8005
 
-# 起動コマンド
-CMD ["uvicorn", "apps.faq_system.main:app", "--host", "0.0.0.0", "--port", "8001"]
+# 起動コマンド（app_config.json のポート 8005 を使用）
+CMD ["python", "-m", "apps.faq_system.main"]
 

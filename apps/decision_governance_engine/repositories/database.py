@@ -1,7 +1,8 @@
 """データベース接続管理.
 
 目的:
-    PostgreSQL（SQLAlchemy + asyncpg）と Redis の接続管理
+    PostgreSQL（SQLAlchemy + asyncpg）と Redis の接続管理。
+    agentflow.database.DatabaseManager を使用してエンジン/セッションを統一管理。
 
 環境変数:
     DATABASE_URL: PostgreSQL 接続 URL
@@ -15,86 +16,59 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from apps.decision_governance_engine.repositories.models import Base
-from sqlalchemy.ext.asyncio import (
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from agentflow.database import DatabaseConfig, DatabaseManager
 
 
 logger = logging.getLogger(__name__)
 
 # デフォルト接続 URL（開発用、本番は環境変数で上書き）
-DEFAULT_DATABASE_URL = "postgresql+asyncpg://dge:dge_password@localhost:5432/decision_governance"
-DEFAULT_REDIS_URL = "redis://localhost:6379/0"
+_DEFAULT_DATABASE_URL = "postgresql+asyncpg://dge:dge_password@localhost:5432/decision_governance"
+_DEFAULT_REDIS_URL = "redis://localhost:6379/0"
 
-# グローバルエンジン/セッションファクトリ
-_engine = None
-_session_factory: async_sessionmaker[AsyncSession] | None = None
+# フレームワーク統一 DatabaseManager インスタンス
+_db = DatabaseManager(
+    config=DatabaseConfig(
+        url=_DEFAULT_DATABASE_URL,
+        url_env_key="DATABASE_URL",
+        echo_env_key="DB_ECHO",
+    ),
+    metadata=Base.metadata,
+)
+
+# Redis クライアント（DB フレームワーク外で管理）
 _redis_client: Any = None
 
 
 def get_database_url() -> str:
-    """データベース URL を取得.
-
-    PostgreSQL + asyncpg ドライバーを使用。
-    """
-    url = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
-
-    # postgresql:// → postgresql+asyncpg:// 自動変換
-    if url.startswith("postgresql://") and "+asyncpg" not in url:
-        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
-
-    return url
+    """データベース URL を取得."""
+    return _db.resolved_url
 
 
 def get_redis_url() -> str:
     """Redis URL を取得."""
-    return os.getenv("REDIS_URL", DEFAULT_REDIS_URL)
+    return os.getenv("REDIS_URL", _DEFAULT_REDIS_URL)
 
 
 async def init_db(create_tables: bool = False) -> None:
-    """データベース初期化（PostgreSQL）.
+    """データベース初期化.
 
     Args:
         create_tables: True の場合、テーブルを自動作成（開発用）
     """
-    global _engine, _session_factory
-
-    database_url = get_database_url()
-    logger.info(f"Initializing database: {database_url[:50]}...")
-
-    _engine = create_async_engine(
-        database_url,
-        echo=os.getenv("DB_ECHO", "false").lower() == "true",
-        pool_size=5,
-        max_overflow=10,
-        pool_pre_ping=True,
-    )
-
-    _session_factory = async_sessionmaker(
-        bind=_engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-    )
-
+    await _db.init()
     if create_tables:
-        async with _engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-            logger.info("Database tables created")
+        await _db.create_all_tables()
 
 
 async def close_db() -> None:
-    """データベース接続をクローズ."""
-    global _engine, _session_factory, _redis_client
+    """データベース/Redis 接続をクローズ."""
+    global _redis_client
 
-    if _engine:
-        await _engine.dispose()
-        _engine = None
-        _session_factory = None
-        logger.info("Database connection closed")
+    await _db.close()
 
-    if _redis_client:
+    if _redis_client is not None:
         await _redis_client.close()
         _redis_client = None
         logger.info("Redis connection closed")
@@ -108,16 +82,8 @@ async def get_db_session() -> AsyncGenerator[AsyncSession]:
         async with get_db_session() as session:
             result = await session.execute(query)
     """
-    if _session_factory is None:
-        await init_db()
-
-    async with _session_factory() as session:
-        try:
-            yield session
-            await session.commit()
-        except Exception:
-            await session.rollback()
-            raise
+    async with _db.session() as session:
+        yield session
 
 
 async def get_redis() -> Any:
@@ -136,18 +102,18 @@ async def get_redis() -> Any:
 
     try:
         import redis.asyncio as aioredis
+
         redis_url = get_redis_url()
         _redis_client = aioredis.from_url(
             redis_url,
             encoding="utf-8",
             decode_responses=True,
         )
-        logger.info(f"Redis connected: {redis_url[:20]}...")
+        logger.info("Redis connected: %s...", redis_url[:20])
         return _redis_client
     except ImportError:
         logger.warning("redis package not installed, cache disabled")
         return None
-    except Exception as e:
-        logger.warning(f"Redis connection failed: {e}")
+    except Exception:
+        logger.warning("Redis connection failed", exc_info=True)
         return None
-

@@ -21,6 +21,8 @@ class AgentBlueprintInput(BaseModel):
     role: str = Field(default="specialist", description="Agent ロール")
     prompt: str = Field(default="", description="Agent 個別プロンプト")
     capabilities: list[str] = Field(default_factory=list, description="能力タグ")
+    business_base: str | None = Field(default=None, description="業務基盤分類")
+    pattern: str | None = Field(default=None, description="Agent pattern")
 
 
 class AppCreateRequest(BaseModel):
@@ -30,6 +32,17 @@ class AppCreateRequest(BaseModel):
     display_name: str = Field(..., min_length=1, max_length=100, description="表示名")
     description: str = Field(default="", max_length=500, description="説明")
     icon: str = Field(default="📦", max_length=10, description="アイコン")
+    business_base: Literal[
+        "platform",
+        "knowledge",
+        "reasoning",
+        "interaction",
+        "integration",
+        "operations",
+        "governance",
+        "media",
+        "custom",
+    ] = Field(default="custom", description="業務基盤分類")
 
     engine_pattern: Literal[
         "simple",
@@ -78,7 +91,9 @@ class AppCreateRequest(BaseModel):
     vector_db_url: str | None = Field(default=None, description="VectorDB URL")
     vector_db_collection: str | None = Field(default=None, description="VectorDB 既定コレクション")
     vector_db_api_key: str | None = Field(default=None, description="VectorDB API キー")
-    vector_db_api_key_env: str | None = Field(default=None, description="VectorDB API キーの env 名")
+    vector_db_api_key_env: str | None = Field(
+        default=None, description="VectorDB API キーの env 名"
+    )
 
     write_framework_env: bool = Field(
         default=True,

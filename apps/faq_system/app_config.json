@@ -2,11 +2,12 @@
   "name": "faq_system",
   "display_name": "FAQ システム",
   "description": "社内FAQ検索・SQL分析・営業資料画像生成を統合したAIチャットシステム",
+  "business_base": "knowledge",
   "version": "2.0.0",
   "icon": "💬",
   "ports": {
     "api": 8005,
-    "frontend": null,
+    "frontend": 3004,
     "db": 5433,
     "redis": null
   },
@@ -24,7 +25,9 @@
         "sql",
         "chart",
         "suggestion"
-      ]
+      ],
+      "business_base": "knowledge",
+      "pattern": "specialist"
     },
     {
       "name": "SalesAgent",
@@ -33,7 +36,9 @@
         "sales",
         "design_skills",
         "image_generation"
-      ]
+      ],
+      "business_base": "interaction",
+      "pattern": "specialist"
     }
   ],
   "services": {
@@ -58,9 +63,9 @@
   },
   "runtime": {
     "urls": {
-      "backend": "http://localhost:8101",
+      "backend": "http://localhost:8005",
       "frontend": null,
-      "health": "http://localhost:8101/api/health",
+      "health": "http://localhost:8005/api/health",
       "database": "postgresql+asyncpg://faq:faq_password@localhost:5433/faq_system"
     },
     "database": {

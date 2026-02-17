@@ -63,6 +63,14 @@ class TestAgentInfo:
         agent = AgentInfo(name="A")
         assert agent.module is None
         assert agent.capabilities == []
+        assert agent.business_base is None
+        assert agent.pattern is None
+
+    def test_normalize_taxonomy_fields(self) -> None:
+        """分類フィールドを小文字で正規化する."""
+        agent = AgentInfo(name="A", business_base="Knowledge", pattern="Coordinator")
+        assert agent.business_base == "knowledge"
+        assert agent.pattern == "coordinator"
 
 
 class TestEntryPointsConfig:
@@ -113,6 +121,7 @@ class TestAppConfig:
         assert cfg.runtime.urls.backend is None
         assert cfg.runtime.database.user is None
         assert cfg.runtime.commands.start is None
+        assert cfg.business_base is None
 
     def test_invalid_name_uppercase(self) -> None:
         """大文字を含む App 名を拒否する."""

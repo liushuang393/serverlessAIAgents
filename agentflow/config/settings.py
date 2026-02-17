@@ -18,6 +18,7 @@
 
 対応環境変数:
     LLM関連:
+        - LLM_PROVIDER (auto/openai/anthropic/google/deepseek/ollama/mock)
         - OPENAI_API_KEY, OPENAI_MODEL
         - ANTHROPIC_API_KEY, ANTHROPIC_MODEL
         - GOOGLE_API_KEY, GOOGLE_MODEL
@@ -34,11 +35,23 @@
 """
 
 import logging
+import os
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover - optional dependency
+    load_dotenv = None
+
+_logger = logging.getLogger(__name__)
+_SUPPORTED_LLM_PROVIDERS = frozenset(
+    {"openai", "anthropic", "google", "deepseek", "ollama", "mock"},
+)
 
 
 class AgentFlowSettings(BaseSettings):
@@ -103,10 +116,14 @@ class AgentFlowSettings(BaseSettings):
     # ========================================
     # LLM共通設定
     # ========================================
+    llm_provider: str = Field(
+        default="auto",
+        description="LLMプロバイダー明示指定 (auto/openai/anthropic/google/deepseek/ollama/mock)",
+    )
     llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="LLM温度")
     llm_max_tokens: int = Field(default=4096, gt=0, description="最大トークン数")
-    # LLM APIタイムアウト（複雑な分析タスクには180秒以上推奨）
-    llm_timeout: int = Field(default=180, gt=0, description="LLM APIタイムアウト（秒）")
+    # LLM APIタイムアウト（ローカルOllama等の遅いモデルを考慮し360秒）
+    llm_timeout: int = Field(default=360, gt=0, description="LLM APIタイムアウト（秒）")
 
     # ========================================
     # メモリ設定
@@ -144,12 +161,8 @@ class AgentFlowSettings(BaseSettings):
         extra="ignore",
     )
 
-    def get_active_provider(self) -> str:
-        """有効なLLMプロバイダーを検出.
-
-        Returns:
-            プロバイダー名（openai/anthropic/google/deepseek/ollama/mock）
-        """
+    def _detect_provider_from_credentials(self) -> str:
+        """資格情報の有無から LLM プロバイダーを自動判定する."""
         if self.openai_api_key:
             return "openai"
         if self.anthropic_api_key:
@@ -161,6 +174,25 @@ class AgentFlowSettings(BaseSettings):
         if self.ollama_base_url:
             return "ollama"
         return "mock"
+
+    def get_active_provider(self) -> str:
+        """有効なLLMプロバイダーを検出.
+
+        Returns:
+            プロバイダー名（openai/anthropic/google/deepseek/ollama/mock）
+        """
+        provider = (self.llm_provider or "auto").strip().lower()
+        if provider in {"", "auto"}:
+            return self._detect_provider_from_credentials()
+
+        if provider not in _SUPPORTED_LLM_PROVIDERS:
+            _logger.warning(
+                "Unsupported LLM_PROVIDER=%s. Falling back to auto-detection.",
+                provider,
+            )
+            return self._detect_provider_from_credentials()
+
+        return provider
 
     def get_active_model(self) -> str:
         """有効なモデル名を取得.
@@ -257,6 +289,41 @@ class AgentFlowSettings(BaseSettings):
         )
 
 
+def _iter_override_env_files() -> list[Path]:
+    """追加で読み込む env ファイル一覧を解決."""
+    raw_files = os.getenv("AGENTFLOW_ENV_FILES", "").strip()
+    raw_file = os.getenv("AGENTFLOW_ENV_FILE", "").strip()
+
+    candidates: list[str] = []
+    if raw_files:
+        candidates.extend(
+            token.strip()
+            for token in raw_files.replace(";", ",").replace(":", ",").split(",")
+            if token.strip()
+        )
+    if raw_file:
+        candidates.append(raw_file)
+
+    resolved: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        path = Path(candidate).expanduser().resolve()
+        key = str(path)
+        if key in seen or not path.is_file():
+            continue
+        seen.add(key)
+        resolved.append(path)
+    return resolved
+
+
+def _load_override_env_files() -> None:
+    """AGENTFLOW_ENV_FILE(S) で指定された env を環境変数へ上書き適用."""
+    if load_dotenv is None:
+        return
+    for path in _iter_override_env_files():
+        load_dotenv(path, override=True)
+
+
 @lru_cache
 def get_settings() -> AgentFlowSettings:
     """設定シングルトンを取得.
@@ -276,6 +343,7 @@ def get_settings() -> AgentFlowSettings:
         print(settings.get_active_model())  # "gpt-5.2"
         ```
     """
+    _load_override_env_files()
     settings = AgentFlowSettings()
     settings.configure_logging()
     return settings
@@ -284,4 +352,3 @@ def get_settings() -> AgentFlowSettings:
 def clear_settings_cache() -> None:
     """設定キャッシュをクリア（テスト用）."""
     get_settings.cache_clear()
-

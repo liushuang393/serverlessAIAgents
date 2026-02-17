@@ -39,7 +39,8 @@ class TestAppDiscoveryScan:
 
     @pytest.mark.asyncio()
     async def test_scan_finds_all_apps(
-        self, discovery: AppDiscoveryService,
+        self,
+        discovery: AppDiscoveryService,
     ) -> None:
         """全 app_config.json を検出・登録する."""
         count = await discovery.scan()
@@ -88,7 +89,8 @@ class TestAppDiscoveryScan:
 
     @pytest.mark.asyncio()
     async def test_scan_clears_previous(
-        self, discovery: AppDiscoveryService,
+        self,
+        discovery: AppDiscoveryService,
     ) -> None:
         """再スキャン時に前回の結果をクリアする."""
         await discovery.scan()
@@ -103,7 +105,8 @@ class TestAppDiscoveryLookup:
 
     @pytest.mark.asyncio()
     async def test_get_app_found(
-        self, discovery: AppDiscoveryService,
+        self,
+        discovery: AppDiscoveryService,
     ) -> None:
         """登録済み App を取得できる."""
         await discovery.scan()
@@ -113,7 +116,8 @@ class TestAppDiscoveryLookup:
 
     @pytest.mark.asyncio()
     async def test_get_app_not_found(
-        self, discovery: AppDiscoveryService,
+        self,
+        discovery: AppDiscoveryService,
     ) -> None:
         """未登録 App は None を返す."""
         await discovery.scan()
@@ -128,7 +132,8 @@ class TestAppDiscoveryLookup:
 
     @pytest.mark.asyncio()
     async def test_summary(
-        self, discovery: AppDiscoveryService,
+        self,
+        discovery: AppDiscoveryService,
     ) -> None:
         """summary() が正しい統計を返す."""
         await discovery.scan()
@@ -140,6 +145,7 @@ class TestAppDiscoveryLookup:
         first = s["apps"][0]
         assert "agent_count" in first
         assert "has_api" in first
+        assert "business_base" in first
 
 
 class TestManifestMigration:

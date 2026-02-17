@@ -20,11 +20,12 @@ P0 では `contracts`、`blueprint`、`visibility` を全 App に補完する。
   "name": "faq_system",
   "display_name": "FAQ システム",
   "description": "社内FAQ/SQL分析/営業資料画像生成",
+  "business_base": "knowledge",
   "version": "1.0.0",
   "icon": "💬",
   "ports": { "api": 8001, "frontend": null, "db": 5433, "redis": null },
   "entry_points": { "api_module": "apps.faq_system.main:app", "health": "/health" },
-  "agents": [{ "name": "FAQAgent", "module": null, "capabilities": ["rag", "faq"] }],
+  "agents": [{ "name": "FAQAgent", "module": null, "capabilities": ["rag", "faq"], "business_base": "knowledge", "pattern": "specialist" }],
   "services": {},
   "dependencies": { "database": "postgresql", "redis": false, "external": [] },
   "runtime": {
@@ -67,10 +68,12 @@ P0 では `contracts`、`blueprint`、`visibility` を全 App に補完する。
 
 1. `contracts` が欠落時は `auth / rag / skills / release` を補完。
 2. `contracts.rag` は `services.rag + services.vector_db + tags + agents.capabilities` から推論して補完。
-3. `blueprint` が欠落時は補完し、`engine_pattern` は `services.engine.pattern` 優先、なければ `services.pipeline` 存在時 `pipeline`、それ以外は `simple`。
-4. `visibility` が欠落時は `{ "mode": "private", "tenants": [] }` を補完。
-5. 既存の業務独自フィールドは削除しない。
-6. 再実行しても差分が増えない（幂等）。
+3. `blueprint` が欠落時は補完し、`engine_pattern` は `services.engine.pattern` 優先、`services.workflow / services.pipeline` は `pipeline` として推論。
+4. `business_base` が欠落時は `tags / contracts.rag / agents.capabilities` から推論して補完。
+5. `agents[].business_base` と `agents[].pattern` が欠落時は推論して補完。
+6. `visibility` が欠落時は `{ "mode": "private", "tenants": [] }` を補完。
+7. 既存の業務独自フィールドは削除しない。
+8. 再実行しても差分が増えない（幂等）。
 
 ---
 

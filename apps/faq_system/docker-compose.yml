@@ -55,7 +55,7 @@ services:
       dockerfile: apps/faq_system/Dockerfile
     container_name: faq-backend
     ports:
-      - "${API_PORT:-8001}:8001"
+      - "${API_PORT:-8005}:8005"
     environment:
       # LLM 設定（.env から読み込み）
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
@@ -81,13 +81,13 @@ services:
       [
         "bash",
         "-lc",
-        "alembic -c /app/apps/faq_system/alembic.ini upgrade head && uvicorn apps.faq_system.main:app --host 0.0.0.0 --port 8001",
+        "alembic -c /app/apps/faq_system/alembic.ini upgrade head && python -m apps.faq_system.main",
       ]
     depends_on:
       faq-db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8005/api/health')"]
       interval: 30s
       timeout: 10s
       retries: 3

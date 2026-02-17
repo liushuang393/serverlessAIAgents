@@ -36,26 +36,72 @@ cp .env.example .env
 #   FAQ_SALES_MATERIAL_DIR=/tmp/faq_sales_material （任意）
 #   FAQ_DATABASE_URL=postgresql+asyncpg://faq:faq_password@localhost:5433/faq_system
 #   FAQ_AUTH_PROVIDER=local_db   （local_db / ldap / idp）
+
+# 5. FAQ アプリ専用の上書き設定（任意）
+cp apps/faq_system/.env.example apps/faq_system/.env
+# apps/faq_system/.env は FAQ 起動時に自動ロードされ、
+# ルート .env より優先して適用されます。
+# LLM は apps/faq_system/.env の LLM_PROVIDER で明示選択:
+#   LLM_PROVIDER=ollama  または  LLM_PROVIDER=openai
 ```
 
 ### DB マイグレーション（必須）
 
 ```bash
-# FAQ システムのスキーマを最新化
+# スキーマを最新化（新規DB作成 / 既存DB差分適用 を自動判定）
 alembic -c apps/faq_system/alembic.ini upgrade head
+
+# 現在の適用済みリビジョンを確認
+alembic -c apps/faq_system/alembic.ini current
+
+# マイグレーション履歴を一覧表示
+alembic -c apps/faq_system/alembic.ini history --verbose
+
+# 1つ前のリビジョンにロールバック
+alembic -c apps/faq_system/alembic.ini downgrade -1
+
+# 特定リビジョンまでロールバック
+alembic -c apps/faq_system/alembic.ini downgrade <revision_id>
+
+# 新しいマイグレーションファイルを自動生成（モデル変更後）
+alembic -c apps/faq_system/alembic.ini revision --autogenerate -m "変更内容の説明"
+
+# 空のマイグレーションファイルを手動作成
+alembic -c apps/faq_system/alembic.ini revision -m "変更内容の説明"
 ```
+
+> **補足:** 既存DBに `alembic_version` が無い場合（`create_all()` で作成済み等）、
+> `upgrade head` 実行時に初期リビジョンが自動 stamp されるため、手動操作は不要です。
 
 ### 起動方法
 
 ```bash
-# 本番推奨
-uvicorn apps.faq_system.main:app --port 8001
+# ローカル開発（ホットリロード有効）
+# ポートは app_config.json から自動読み込み（8005）
+python -m apps.faq_system.main --reload
 
-# 開発時（ホットリロード）
-uvicorn apps.faq_system.main:app --reload --port 8001
+# 本番起動（リロードなし）
+python -m apps.faq_system.main
+
+### フロントエンド開発 (React/TypeScript)
+
+```bash
+cd apps/faq_system/frontend
+
+# 1. 依存関係のインストール
+npm install
+
+# 2. 開発サーバー起動 (HMR 有効)
+npm run dev
+
+# 3. 本番ビルド (ビルド後、バックエンドが自動でサーブします)
+npm run build
 ```
 
-起動後、ブラウザで `http://localhost:8001` を開くと WebSocket 対応の富文本チャット UI が表示されます。
+
+`FAQ_HOST` / `FAQ_PORT` は一時的な上書き用です。通常は `app_config.json` の `ports.api` を使用します。
+
+起動後、ブラウザで `http://localhost:8005` を開くと WebSocket 対応の富文本チャット UI が表示されます。
 
 **統合済み機能:**
 - WebSocket リアルタイム双方向通信（自動再接続付き）
@@ -63,6 +109,24 @@ uvicorn apps.faq_system.main:app --reload --port 8001
 - リアルタイム進捗表示
 - 引用/ソース表示
 - フィードバック収集（`/api/feedback`）
+
+### Ollama 接続トラブルシュート
+
+`API error: All connection attempts failed` が出る場合は FAQ プロセスから Ollama URL に到達できていません。
+
+```bash
+# FAQ 実行環境から接続確認
+curl http://localhost:11434/api/tags
+```
+
+- WSL で FAQ を動かし、Windows 側 Ollama を動かしている場合:
+  - `apps/faq_system/.env` に `OLLAMA_BASE_URL=http://host.docker.internal:11434` を設定
+  - つながらない場合は Windows Firewall と Ollama の bind 設定を確認
+- OpenAI に切り替える場合:
+  - `apps/faq_system/.env` で `LLM_PROVIDER=openai` と `OPENAI_API_KEY` を設定
+- `404 model 'xxx' not found` が出る場合:
+  - `curl http://localhost:11434/api/tags` で利用可能モデルを確認
+  - FAQ 側の `OLLAMA_MODEL` と一致するモデルを pull（例: `ollama pull llama3.2`）
 
 ### テスト確認手順
 
@@ -74,12 +138,12 @@ pytest tests/unit/test_nl2sql_services.py -v --no-cov
 pytest apps/faq_system/tests/ -v --no-cov
 
 # 3. サーバー起動後の API 動作確認（別ターミナル）
-curl -X POST http://localhost:8001/api/chat \
+curl -X POST http://localhost:8005/api/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "返品ポリシーを教えて"}'
 
 # 4. ヘルスチェック
-curl http://localhost:8001/api/health
+curl http://localhost:8005/api/health
 ```
 
 ---
@@ -133,9 +197,14 @@ docker compose down
 | `FAQ_DATABASE_URL` | FAQ 認証/履歴用 DB 接続先 | `postgresql+asyncpg://faq:faq_password@faq-db:5432/faq_system` | — |
 | `FAQ_DB_AUTO_CREATE` | モデルから自動テーブル作成（ローカル検証向け） | `false` | — |
 | `FAQ_AUTH_PROVIDER` | 認証方式 (`local_db`/`ldap`/`idp`) | `local_db` | — |
+| `FAQ_AUTH_MAX_LOGIN_ATTEMPTS` | アカウントロックまでの試行回数 | `5` | — |
+| `FAQ_AUTH_LOCKOUT_MINUTES` | アカウントロック時間(分) | `15` | — |
 | `JWT_SECRET_KEY` | JWT 署名シークレット | ランダム生成 | — |
 | `JWT_EXPIRE_MINUTES` | JWT 有効期限(分) | `60` | — |
 | `FAQ_AUTH_DEV_MODE` | パスワード再設定トークンをレスポンスに含める (開発用) | `true` | — |
+| `FAQ_LDAP_SERVER_URI` | LDAP サーバー URI | — | LDAP時 |
+| `FAQ_LDAP_BASE_DN` | LDAP 検索ベース DN | — | LDAP時 |
+| `FAQ_SAML_IDP_ENTITY_ID` | SAML IdP Entity ID | — | SAML時 |
 | `FAQ_TRUST_PROXY_AUTH` | 認証プロキシヘッダーを信頼する | `false` | — |
 | `FAQ_PROXY_AUTH_SHARED_SECRET` | 認証プロキシ署名検証の共有鍵 | — | 推奨 |
 | `FAQ_PROXY_AUTH_REQUIRE_SIGNATURE` | 署名検証を必須化 | `true` | — |
@@ -145,6 +214,7 @@ docker compose down
 | `FAQ_KB_CONFIDENTIAL_COLLECTION` | 機密KBコレクション | `confidential_kb` | — |
 | `FAQ_KB_DEFAULT_TYPE` | 既定KB種別 (`internal/external/confidential`) | `internal` | — |
 | `LOG_LEVEL` | ログレベル | `INFO` | — |
+
 
 ---
 

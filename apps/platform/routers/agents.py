@@ -5,6 +5,8 @@ GET  /api/agents              — 全 App 横断の Agent 一覧
 GET  /api/agents/stats        — Agent 統計
 GET  /api/agents/capabilities — 全能力タグ一覧
 GET  /api/agents/by-app       — App 別グルーピング
+GET  /api/agents/by-business-base — 業務基盤別グルーピング
+GET  /api/agents/by-pattern   — Agent pattern 別グルーピング
 GET  /api/agents/search       — 能力ベース検索
 """
 
@@ -79,6 +81,28 @@ async def agents_by_app() -> dict[str, Any]:
     return {
         "groups": groups,
         "total_apps": len(groups),
+    }
+
+
+@router.get("/by-business-base")
+async def agents_by_business_base() -> dict[str, Any]:
+    """業務基盤別にグルーピングした Agent 一覧."""
+    aggregator = _get_aggregator()
+    groups = aggregator.grouped_business_bases()
+    return {
+        "groups": groups,
+        "total_groups": len(groups),
+    }
+
+
+@router.get("/by-pattern")
+async def agents_by_pattern() -> dict[str, Any]:
+    """Agent pattern 別にグルーピングした Agent 一覧."""
+    aggregator = _get_aggregator()
+    groups = aggregator.grouped_patterns()
+    return {
+        "groups": groups,
+        "total_groups": len(groups),
     }
 
 

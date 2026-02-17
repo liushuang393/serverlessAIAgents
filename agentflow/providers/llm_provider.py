@@ -55,8 +55,8 @@ class LLMProviderConfig(BaseModel):
 
     temperature: float = Field(default=0.7, ge=0.0, le=2.0, description="温度パラメータ")
     max_tokens: int = Field(default=2000, gt=0, description="最大トークン数")
-    # LLM API超时设置为180秒（复杂分析任务需要较长时间）
-    timeout: int = Field(default=180, gt=0, description="タイムアウト秒数")
+    # LLM APIタイムアウト：ローカルOllama等を考慮し360秒
+    timeout: int = Field(default=360, gt=0, description="タイムアウト秒数")
 
 
 def _detect_provider_from_env(

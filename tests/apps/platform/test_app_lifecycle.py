@@ -202,3 +202,56 @@ class TestAppLifecycleManager:
         assert result.command[:2] == ["bash", "-lc"]
         assert result.cwd == str(app_dir)
         mocked.assert_called_once()
+
+    def test_resolve_action_command_supports_local_dev_commands(self) -> None:
+        """backend_dev / frontend_dev を解決できる."""
+        cfg = AppConfig(
+            name="local_cmd_app",
+            display_name="Local Command App",
+            runtime={
+                "commands": {
+                    "backend_dev": "  python -m apps.local_cmd_app.main  ",
+                    "frontend_dev": "  cd apps/local_cmd_app/frontend && npm run dev  ",
+                },
+            },
+        )
+
+        assert (
+            AppLifecycleManager._resolve_action_command(cfg, "backend_dev")
+            == "python -m apps.local_cmd_app.main"
+        )
+        assert (
+            AppLifecycleManager._resolve_action_command(cfg, "frontend_dev")
+            == "cd apps/local_cmd_app/frontend && npm run dev"
+        )
+
+    @pytest.mark.asyncio()
+    async def test_local_start_runs_backend_only_when_frontend_missing(
+        self, lifecycle: AppLifecycleManager, tmp_path,
+    ) -> None:
+        """frontend_dev なしでも backend_dev があれば local_start できる."""
+        cfg = AppConfig(
+            name="local_backend_only",
+            display_name="Local Backend Only",
+            ports={"api": None},
+            entry_points={"health": None},
+            runtime={"commands": {"backend_dev": "python -m apps.local_backend_only.main"}},
+        )
+        config_path = tmp_path / "apps" / "local_backend_only" / "app_config.json"
+        config_path.parent.mkdir(parents=True)
+        config_path.write_text("{}", encoding="utf-8")
+
+        class _Proc:
+            async def communicate(self):
+                return b"", b""
+
+        with patch(
+            "apps.platform.services.app_lifecycle.asyncio.create_subprocess_shell",
+            new=AsyncMock(return_value=_Proc()),
+        ) as mocked:
+            result = await lifecycle.start_local_dev(cfg, config_path=config_path)
+
+        assert result.success is True
+        assert result.error is None
+        assert "backend: python -m apps.local_backend_only.main" in result.stdout
+        mocked.assert_called_once()

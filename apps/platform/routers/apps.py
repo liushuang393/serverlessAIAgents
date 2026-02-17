@@ -7,6 +7,7 @@ POST  /api/apps/refresh                — App 一覧再スキャン
 POST  /api/apps/migrate-manifests      — app_config 標準化マイグレーション
 GET   /api/apps/ports/conflicts        — ポート重複検出
 POST  /api/apps/ports/rebalance        — 重複ポート再割当（dry-run対応）
+GET   /api/apps/framework-audit        — 基盤/フレームワーク準拠監査
 GET   /api/apps/create/options         — App 作成オプション
 POST  /api/apps/create                 — 新規 App 自動生成
 GET   /api/apps/{app_name}             — App 詳細
@@ -32,6 +33,7 @@ from fastapi import APIRouter, Body, HTTPException, Query
 from apps.platform.schemas.provisioning_schemas import AppCreateRequest
 from apps.platform.services.app_scaffolder import AppScaffolderService
 from apps.platform.services.app_discovery import AppDiscoveryService
+from apps.platform.services.framework_audit import FrameworkAuditService
 from apps.platform.services.app_lifecycle import (
     AppLifecycleManager,
     AppStatus,
@@ -47,6 +49,7 @@ _discovery: AppDiscoveryService | None = None
 _lifecycle: AppLifecycleManager | None = None
 _scaffolder: AppScaffolderService | None = None
 _port_allocator: PortAllocatorService | None = None
+_framework_audit: FrameworkAuditService | None = None
 _health_prime_task: asyncio.Task[None] | None = None
 
 
@@ -55,6 +58,7 @@ def init_app_services(
     lifecycle: AppLifecycleManager,
     scaffolder: AppScaffolderService | None = None,
     port_allocator: PortAllocatorService | None = None,
+    framework_audit: FrameworkAuditService | None = None,
 ) -> None:
     """サービスインスタンスを設定.
 
@@ -64,11 +68,12 @@ def init_app_services(
         discovery: App 検出サービス
         lifecycle: ライフサイクル管理サービス
     """
-    global _discovery, _lifecycle, _scaffolder, _port_allocator  # noqa: PLW0603
+    global _discovery, _lifecycle, _scaffolder, _port_allocator, _framework_audit  # noqa: PLW0603
     _discovery = discovery
     _lifecycle = lifecycle
     _scaffolder = scaffolder or AppScaffolderService(discovery)
     _port_allocator = port_allocator or PortAllocatorService(discovery)
+    _framework_audit = framework_audit or FrameworkAuditService(discovery)
 
 
 def _get_discovery() -> AppDiscoveryService:
@@ -101,6 +106,14 @@ def _get_port_allocator() -> PortAllocatorService:
         msg = "PortAllocatorService が未初期化です"
         raise RuntimeError(msg)
     return _port_allocator
+
+
+def _get_framework_audit() -> FrameworkAuditService:
+    """FrameworkAuditService を取得（未初期化時はエラー）."""
+    if _framework_audit is None:
+        msg = "FrameworkAuditService が未初期化です"
+        raise RuntimeError(msg)
+    return _framework_audit
 
 
 def _get_app_or_404(discovery: AppDiscoveryService, app_name: str):
@@ -264,10 +277,7 @@ async def _prime_health_cache(
         lifecycle: ライフサイクルサービス
         app_configs: AppConfig リスト
     """
-    targets = [
-        config for config in app_configs
-        if lifecycle.get_cached_health(config.name) is None
-    ]
+    targets = [config for config in app_configs if lifecycle.get_cached_health(config.name) is None]
     if not targets:
         return
 
@@ -340,6 +350,7 @@ async def list_apps(
             "name": app_config.name,
             "display_name": app_config.display_name,
             "description": app_config.description,
+            "business_base": app_config.business_base,
             "version": app_config.version,
             "icon": app_config.icon,
             "status": status,
@@ -444,6 +455,12 @@ async def rebalance_ports(
     }
 
 
+@router.get("/framework-audit")
+async def get_framework_audit_report() -> dict[str, Any]:
+    """全 App の基盤/フレームワーク準拠監査結果を返す."""
+    return _get_framework_audit().audit_all()
+
+
 @router.get("/create/options")
 async def get_create_options() -> dict[str, Any]:
     """App 作成画面向けの選択肢を取得."""
@@ -500,6 +517,7 @@ async def get_app_detail(app_name: str) -> dict[str, Any]:
         "name": config.name,
         "display_name": config.display_name,
         "description": config.description,
+        "business_base": config.business_base,
         "version": config.version,
         "icon": config.icon,
         "status": status,

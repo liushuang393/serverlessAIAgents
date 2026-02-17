@@ -8,7 +8,7 @@
 #   （リポジトリルートから agentflow パッケージを含める）
 #
 # 実行:
-#   docker run -p 8000:8000 dge-backend
+#   docker run -p 8001:8001 dge-backend
 # ==============================================================================
 
 FROM python:3.12-slim AS base
@@ -67,11 +67,11 @@ USER appuser
 
 # ヘルスチェック
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')" || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8001/api/health')" || exit 1
 
 # ポート公開
-EXPOSE 8000
+EXPOSE 8001
 
-# 起動コマンド
-CMD ["uvicorn", "apps.decision_governance_engine.api:app", "--host", "0.0.0.0", "--port", "8000"]
+# 起動コマンド（app_config.json のポート 8001 を使用）
+CMD ["python", "-m", "apps.decision_governance_engine.api"]
 

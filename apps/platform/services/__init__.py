@@ -19,6 +19,7 @@ from apps.platform.services.component_library import (
 )
 from apps.platform.services.capability_registry import CapabilityRegistry
 from apps.platform.services.framework_env import FrameworkEnvService
+from apps.platform.services.framework_audit import FrameworkAuditService
 from apps.platform.services.gallery_service import GalleryService
 from apps.platform.services.publish_orchestrator import PublishOrchestrator
 from apps.platform.services.mcp_registry import MCPRegistryService
@@ -40,6 +41,7 @@ __all__ = [
     "ComponentVisibility",
     "CapabilityRegistry",
     "FrameworkEnvService",
+    "FrameworkAuditService",
     "GalleryService",
     "HealthCheckResult",
     "MCPRegistryService",

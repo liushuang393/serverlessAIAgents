@@ -56,17 +56,18 @@ vim apps/messaging_hub/.env
 ### 3. サービスの起動
 
 ```bash
-# 開発モード
-python apps/messaging_hub/main.py
+# ローカル開発（ホットリロード有効）
+# ポートは app_config.json から自動読み込み（8004）
+python -m apps.messaging_hub.main --reload
 
-# または uvicorn を使用
-uvicorn apps.messaging_hub.main:app --reload --port 8000
+# 本番起動（リロードなし）
+python -m apps.messaging_hub.main
 ```
 
 起動後のアクセス先：
-- **API ドキュメント**: http://localhost:8000/docs
-- **ヘルスチェック**: http://localhost:8000/health
-- **WebSocket**: ws://localhost:8000/ws
+- **API ドキュメント**: http://localhost:8004/docs
+- **ヘルスチェック**: http://localhost:8004/health
+- **WebSocket**: ws://localhost:8004/ws
 
 ## 🤖 プラットフォーム設定
 
@@ -146,7 +147,7 @@ uvicorn apps.messaging_hub.main:app --reload --port 8000
 
 ```javascript
 // WebSocket に接続
-const ws = new WebSocket('ws://localhost:8000/ws?client_id=user123');
+const ws = new WebSocket('ws://localhost:8004/ws?client_id=user123');
 
 // リアルタイムメッセージを受信
 ws.onmessage = (event) => {
@@ -181,7 +182,7 @@ ws.onmessage = (event) => {
 
 ```bash
 # Telegram にメッセージを送信
-curl -X POST http://localhost:8000/send \
+curl -X POST http://localhost:8004/send \
   -H "Content-Type: application/json" \
   -d '{
     "platform": "telegram",
@@ -190,10 +191,10 @@ curl -X POST http://localhost:8000/send \
   }'
 
 # アクティブセッションを確認
-curl http://localhost:8000/sessions
+curl http://localhost:8004/sessions
 
 # プラットフォーム状態を確認
-curl http://localhost:8000/platforms
+curl http://localhost:8004/platforms
 ```
 
 ## 🎯 高度な使用方法
@@ -247,7 +248,7 @@ class PersistentChatBot(ChatBotSkill):
 統計情報の確認：
 
 ```bash
-curl http://localhost:8000/health
+curl http://localhost:8004/health
 ```
 
 レスポンス：
@@ -289,7 +290,8 @@ COPY . .
 RUN pip install -e ".[dev]" && \
     pip install python-telegram-bot slack-sdk discord.py
 
-CMD ["uvicorn", "apps.messaging_hub.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# app_config.json のポート（8004）を自動使用
+CMD ["python", "-m", "apps.messaging_hub.main"]
 ```
 
 ### 環境変数（本番環境）

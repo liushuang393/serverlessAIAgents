@@ -3,10 +3,12 @@
 
 from __future__ import annotations
 
+from collections import Counter
 import logging
 from typing import Any
 
 from apps.platform.services.app_discovery import AppDiscoveryService
+from apps.platform.services.agent_taxonomy import AgentTaxonomyService
 from apps.platform.services.capability_registry import CapabilityRegistry
 
 
@@ -23,11 +25,24 @@ class AggregatedAgent:
         app_icon: 所属 App アイコン
         module: Python モジュールパス
         capabilities: 能力タグ一覧
+        business_base: Agent 業務基盤分類
+        agent_pattern: Agent パターン分類
+        app_business_base: App 業務基盤分類
+        app_engine_pattern: App エンジンパターン
     """
 
     __slots__ = (
-        "name", "app_name", "app_display_name", "app_icon",
-        "module", "capabilities", "capabilities_legacy",
+        "name",
+        "app_name",
+        "app_display_name",
+        "app_icon",
+        "module",
+        "capabilities",
+        "capabilities_legacy",
+        "business_base",
+        "agent_pattern",
+        "app_business_base",
+        "app_engine_pattern",
     )
 
     def __init__(
@@ -39,6 +54,10 @@ class AggregatedAgent:
         module: str | None,
         capabilities: list[dict[str, Any]],
         capabilities_legacy: list[str],
+        business_base: str,
+        agent_pattern: str,
+        app_business_base: str,
+        app_engine_pattern: str | None,
     ) -> None:
         """初期化."""
         self.name = name
@@ -48,6 +67,10 @@ class AggregatedAgent:
         self.module = module
         self.capabilities = capabilities
         self.capabilities_legacy = capabilities_legacy
+        self.business_base = business_base
+        self.agent_pattern = agent_pattern
+        self.app_business_base = app_business_base
+        self.app_engine_pattern = app_engine_pattern
 
     def to_dict(self) -> dict[str, Any]:
         """辞書に変換."""
@@ -59,6 +82,10 @@ class AggregatedAgent:
             "module": self.module,
             "capabilities": self.capabilities,
             "capabilities_legacy": self.capabilities_legacy,
+            "business_base": self.business_base,
+            "agent_pattern": self.agent_pattern,
+            "app_business_base": self.app_business_base,
+            "app_engine_pattern": self.app_engine_pattern,
         }
 
 
@@ -77,6 +104,7 @@ class AgentAggregatorService:
         """
         self._discovery = discovery
         self._capability_registry = CapabilityRegistry()
+        self._taxonomy = AgentTaxonomyService(self._capability_registry)
 
     def list_all(self) -> list[AggregatedAgent]:
         """全 App の Agent を一覧取得.
@@ -86,17 +114,38 @@ class AgentAggregatorService:
         """
         agents: list[AggregatedAgent] = []
         for app_config in self._discovery.list_apps():
+            app_business_base = self._resolve_app_business_base(app_config)
+            app_engine_pattern = self._taxonomy.normalize_engine_pattern(
+                app_config.blueprint.engine_pattern,
+            )
             for agent_info in app_config.agents:
                 canonical = self._capability_registry.canonicalize_many(agent_info.capabilities)
-                agents.append(AggregatedAgent(
+                agent_business_base = self._taxonomy.infer_agent_business_base(
+                    raw_business_base=agent_info.business_base,
+                    capabilities=agent_info.capabilities,
+                    fallback_app_base=app_business_base,
+                )
+                agent_pattern = self._taxonomy.infer_agent_pattern(
+                    raw_pattern=agent_info.pattern,
                     name=agent_info.name,
-                    app_name=app_config.name,
-                    app_display_name=app_config.display_name,
-                    app_icon=app_config.icon,
                     module=agent_info.module,
-                    capabilities=[item.model_dump() for item in canonical],
-                    capabilities_legacy=list(agent_info.capabilities),
-                ))
+                    engine_pattern=app_engine_pattern,
+                )
+                agents.append(
+                    AggregatedAgent(
+                        name=agent_info.name,
+                        app_name=app_config.name,
+                        app_display_name=app_config.display_name,
+                        app_icon=app_config.icon,
+                        module=agent_info.module,
+                        capabilities=[item.model_dump() for item in canonical],
+                        capabilities_legacy=list(agent_info.capabilities),
+                        business_base=agent_business_base,
+                        agent_pattern=agent_pattern,
+                        app_business_base=app_business_base,
+                        app_engine_pattern=app_engine_pattern,
+                    )
+                )
         return agents
 
     def search_by_capability(self, capability: str) -> list[AggregatedAgent]:
@@ -170,4 +219,47 @@ class AgentAggregatorService:
             "total_agents": len(agents),
             "total_apps_with_agents": len(apps_with_agents),
             "total_capabilities": len({c["id"] for a in agents for c in a.capabilities}),
+            "by_business_base": self._aggregate_counter([a.business_base for a in agents]),
+            "by_agent_pattern": self._aggregate_counter([a.agent_pattern for a in agents]),
         }
+
+    def grouped_business_bases(self) -> list[dict[str, Any]]:
+        """business base 別に Agent を集約."""
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for agent in self.list_all():
+            grouped.setdefault(agent.business_base, []).append(agent.to_dict())
+        return [
+            {"business_base": key, "count": len(grouped[key]), "agents": grouped[key]}
+            for key in sorted(grouped.keys())
+        ]
+
+    def grouped_patterns(self) -> list[dict[str, Any]]:
+        """Agent pattern 別に Agent を集約."""
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for agent in self.list_all():
+            grouped.setdefault(agent.agent_pattern, []).append(agent.to_dict())
+        return [
+            {"pattern": key, "count": len(grouped[key]), "agents": grouped[key]}
+            for key in sorted(grouped.keys())
+        ]
+
+    def _resolve_app_business_base(self, app_config: Any) -> str:
+        """App の business base を解決."""
+        normalized = self._taxonomy.normalize_business_base(app_config.business_base)
+        if normalized is not None:
+            return normalized
+        return self._taxonomy.infer_app_business_base(
+            app_name=app_config.name,
+            tags=app_config.tags,
+            contracts_rag_enabled=app_config.contracts.rag.enabled,
+            agent_capabilities=[agent.capabilities for agent in app_config.agents],
+        )
+
+    @staticmethod
+    def _aggregate_counter(items: list[str]) -> list[dict[str, Any]]:
+        """文字列リストを count 降順で集計."""
+        counter = Counter(items)
+        return [
+            {"name": key, "count": counter[key]}
+            for key in sorted(counter.keys(), key=lambda name: (-counter[name], name))
+        ]

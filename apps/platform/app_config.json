@@ -2,6 +2,7 @@
   "name": "platform",
   "display_name": "AgentFlow Platform",
   "description": "全App統合管理プラットフォーム - Gallery・コンポーネント・Publish・Dashboard",
+  "business_base": "platform",
   "version": "1.0.0",
   "icon": "🏗️",
   "ports": {
@@ -14,7 +15,41 @@
     "api_module": "apps.platform.main:app",
     "health": "/health"
   },
-  "agents": [],
+  "agents": [
+    {
+      "name": "GalleryAgent",
+      "module": "apps.platform.agents.gallery_agent",
+      "capabilities": [
+        "component_discovery",
+        "search",
+        "recommendation"
+      ],
+      "business_base": "platform",
+      "pattern": "router"
+    },
+    {
+      "name": "PublishAgent",
+      "module": "apps.platform.agents.publish_agent",
+      "capabilities": [
+        "publish",
+        "deployment",
+        "release"
+      ],
+      "business_base": "platform",
+      "pattern": "coordinator"
+    },
+    {
+      "name": "AnalyticsAgent",
+      "module": "apps.platform.agents.analytics_agent",
+      "capabilities": [
+        "analysis",
+        "dashboard",
+        "recommendations"
+      ],
+      "business_base": "platform",
+      "pattern": "analyzer"
+    }
+  ],
   "services": {
     "gallery": {
       "enabled": true

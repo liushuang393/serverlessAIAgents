@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FAQ System</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        .chat-message { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .typing-indicator span { animation: bounce 1.4s infinite ease-in-out both; }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        pre code { border-radius: 8px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #e5e7eb; padding: 8px 12px; text-align: left; }
+        th { background: #f9fafb; font-weight: 600; }
+        .citation { background: #f3f4f6; border-left: 4px solid #3b82f6; padding: 8px 12px; margin: 8px 0; border-radius: 4px; }
+        .login-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+        .login-box { background: white; border-radius: 12px; padding: 2rem; width: 400px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .login-box input { width: 100%; padding: 10px 14px; border: 1px solid #d1d5db; border-radius: 8px; margin-bottom: 12px; font-size: 14px; }
+        .login-box input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .login-btn { width: 100%; padding: 12px; background: #2563eb; color: white; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; }
+        .login-btn:hover { background: #1d4ed8; }
+        .login-btn:disabled { background: #93c5fd; cursor: not-allowed; }
+        .login-error { color: #dc2626; font-size: 13px; margin-bottom: 12px; display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col">
+    <!-- ログインオーバーレイ -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-box">
+            <h2 class="text-xl font-bold text-gray-800 mb-1 text-center">🔐 FAQ System</h2>
+            <p class="text-sm text-gray-500 mb-6 text-center">ログインしてください</p>
+            <div id="login-error" class="login-error"></div>
+            <form id="login-form">
+                <input type="text" id="login-username" placeholder="ユーザー名" autocomplete="username" required>
+                <input type="password" id="login-password" placeholder="パスワード" autocomplete="current-password" required>
+                <button type="submit" id="login-btn" class="login-btn">ログイン</button>
+            </form>
+            <div class="mt-4 text-xs text-gray-400 text-center">
+                デモアカウント: admin / admin123
+            </div>
+        </div>
+    </div>
+    <header class="bg-white shadow-sm border-b px-6 py-4">
+        <div class="flex items-center justify-between max-w-4xl mx-auto">
+            <h1 class="text-xl font-bold text-gray-800">🤖 FAQ System</h1>
+            <div class="flex items-center gap-4">
+                <span id="user-info" class="text-sm text-gray-600 hidden"></span>
+                <button id="logout-btn" class="text-sm text-red-500 hover:text-red-700 hidden" onclick="doLogout()">ログアウト</button>
+                <span id="status" class="text-sm text-green-600">● 接続中</span>
+            </div>
+        </div>
+    </header>
+    <main class="flex-1 overflow-hidden max-w-4xl mx-auto w-full">
+        <div id="chat-messages" class="h-full overflow-y-auto p-4 space-y-4"></div>
+    </main>
+    <div id="progress-container" class="hidden bg-white border-t px-6 py-2">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex items-center gap-3">
+                <span id="progress-spinner" class="inline-block w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></span>
+                <div class="flex-1 bg-gray-200 rounded-full h-2">
+                    <div id="progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <span id="progress-text" class="text-sm text-gray-600 whitespace-nowrap">処理中...</span>
+                <span id="progress-elapsed" class="text-xs text-gray-400 whitespace-nowrap"></span>
+            </div>
+        </div>
+    </div>
+    <footer class="bg-white border-t px-6 py-4">
+        <form id="chat-form" class="max-w-4xl mx-auto flex gap-3">
+            <input type="text" id="message-input" placeholder="質問を入力..."
+                class="flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button type="submit" id="send-btn"
+                class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                送信
+            </button>
+        </form>
+    </footer>
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+        const statusEl = document.getElementById('status');
+        const loginOverlay = document.getElementById('login-overlay');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const userInfoEl = document.getElementById('user-info');
+        const logoutBtn = document.getElementById('logout-btn');
+        let ws = null;
+        function createSessionId() { return 'session-' + Date.now(); }
+        function getOrCreateSessionId() {
+            const stored = localStorage.getItem('faq_session_id');
+            if (stored && stored.trim()) return stored;
+            const created = createSessionId();
+            localStorage.setItem('faq_session_id', created);
+            return created;
+        }
+        let sessionId = getOrCreateSessionId();
+        let accessToken = localStorage.getItem('faq_access_token');
+
+        /* --- 認証関連 --- */
+        function showLogin() { loginOverlay.style.display = 'flex'; }
+        function hideLogin() { loginOverlay.style.display = 'none'; }
+        function showUserInfo(user) {
+            userInfoEl.textContent = '👤 ' + (user.display_name || user.username) + ' (' + user.role + ')';
+            userInfoEl.classList.remove('hidden'); logoutBtn.classList.remove('hidden');
+        }
+        function authHeaders() {
+            const h = { 'Content-Type': 'application/json' };
+            if (accessToken) h['Authorization'] = 'Bearer ' + accessToken;
+            return h;
+        }
+        async function loadChatHistory() {
+            if (!accessToken || !sessionId) return;
+            try {
+                const res = await fetch(`/api/chat/history?session_id=${encodeURIComponent(sessionId)}`, { headers: authHeaders() });
+                if (!res.ok) return;
+                const payload = await res.json();
+                if (!payload.messages || payload.messages.length === 0) return;
+                chatMessages.innerHTML = '';
+                payload.messages.forEach((msg) => {
+                    if (msg.role === 'user') { addUserMessage(msg.content || ''); }
+                    else if (msg.role === 'assistant') { addAssistantMessage({ answer: msg.content || '' }); }
+                    else { addErrorMessage(msg.content || 'Unknown system message'); }
+                });
+            } catch (_) {}
+        }
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('login-btn');
+            btn.disabled = true; loginError.style.display = 'none';
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: document.getElementById('login-username').value, password: document.getElementById('login-password').value })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    accessToken = data.access_token;
+                    localStorage.setItem('faq_access_token', accessToken);
+                    showUserInfo(data.user); hideLogin(); await loadChatHistory(); connectWebSocket();
+                } else {
+                    loginError.textContent = data.message; loginError.style.display = 'block';
+                }
+            } catch (err) { loginError.textContent = '接続エラー'; loginError.style.display = 'block'; }
+            finally { btn.disabled = false; }
+        });
+        async function doLogout() {
+            try { await fetch('/api/auth/logout', { method: 'POST', headers: authHeaders() }); } catch (_) {}
+            accessToken = null; localStorage.removeItem('faq_access_token');
+            userInfoEl.classList.add('hidden'); logoutBtn.classList.add('hidden');
+            if (ws) { ws.close(); ws = null; }
+            showLogin();
+        }
+        async function checkAuth() {
+            if (!accessToken) { showLogin(); return; }
+            try {
+                const res = await fetch('/api/auth/me', { headers: authHeaders() });
+                const data = await res.json();
+                if (data.success && data.user) { showUserInfo(data.user); hideLogin(); await loadChatHistory(); connectWebSocket(); }
+                else { accessToken = null; localStorage.removeItem('faq_access_token'); showLogin(); }
+            } catch (_) { showLogin(); }
+        }
+        checkAuth();
+
+        /* --- WebSocket --- */
+        function connectWebSocket() {
+            if (ws && ws.readyState === WebSocket.OPEN) return;
+            if (!accessToken) return;
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            ws = new WebSocket(`${wsProtocol}://${window.location.host}/ws/${sessionId}?access_token=${encodeURIComponent(accessToken)}`);
+            ws.onopen = () => { statusEl.textContent = '● 接続中'; statusEl.className = 'text-sm text-green-600'; };
+            ws.onclose = () => { statusEl.textContent = '○ 切断'; statusEl.className = 'text-sm text-red-600'; setTimeout(() => { if (accessToken) connectWebSocket(); }, 3000); };
+            ws.onmessage = (event) => handleMessage(JSON.parse(event.data));
+        }
+        function handleMessage(msg) {
+            if (msg && msg.data && msg.data.session_id) {
+                sessionId = msg.data.session_id;
+                localStorage.setItem('faq_session_id', sessionId);
+            }
+            if (msg.type === 'progress') { showProgress(msg.progress, msg.message); }
+            else if (msg.type === 'result') { hideProgress(); addAssistantMessage(msg.data); }
+            else if (msg.type === 'error') { hideProgress(); addErrorMessage(msg.message); }
+        }
+        /* --- 進捗表示（経過時間・擬似アニメーション付き） --- */
+        let _progStart = 0;
+        let _progTimer = null;
+        let _progSimTimer = null;
+        let _progCurrent = 0;
+        let _progTarget = 0;
+        const progressElapsed = document.getElementById('progress-elapsed');
+
+        function showProgress(value, text) {
+            progressContainer.classList.remove('hidden');
+            _progTarget = value;
+            progressText.textContent = text;
+            if (!_progStart) {
+                _progStart = Date.now();
+                _progCurrent = 0;
+                progressBar.style.width = '0%';
+                progressElapsed.textContent = '0秒';
+                _progTimer = setInterval(() => {
+                    const sec = Math.floor((Date.now() - _progStart) / 1000);
+                    progressElapsed.textContent = sec < 60 ? sec + '秒' : Math.floor(sec / 60) + '分' + (sec % 60) + '秒';
+                }, 1000);
+                _progSimTimer = setInterval(() => {
+                    if (_progCurrent < _progTarget) {
+                        _progCurrent = Math.min(_progCurrent + 1, _progTarget);
+                    } else if (_progTarget < 90) {
+                        _progCurrent = Math.min(_progCurrent + 0.3, _progTarget + 15, 90);
+                    }
+                    progressBar.style.width = _progCurrent.toFixed(1) + '%';
+                }, 500);
+            } else {
+                if (value >= _progCurrent) { _progCurrent = value; }
+                progressBar.style.width = _progCurrent.toFixed(1) + '%';
+            }
+        }
+        function hideProgress() {
+            progressBar.style.width = '100%';
+            setTimeout(() => {
+                progressContainer.classList.add('hidden');
+                progressBar.style.width = '0%';
+            }, 400);
+            clearInterval(_progTimer); clearInterval(_progSimTimer);
+            _progTimer = null; _progSimTimer = null; _progStart = 0; _progCurrent = 0; _progTarget = 0;
+            progressElapsed.textContent = '';
+        }
+        function addUserMessage(text) {
+            const div = document.createElement('div');
+            div.className = 'chat-message flex justify-end';
+            div.innerHTML = `<div class="max-w-2xl bg-blue-600 text-white rounded-lg px-4 py-3"><p>${escapeHtml(text)}</p></div>`;
+            chatMessages.appendChild(div); scrollToBottom();
+        }
+        function addAssistantMessage(data) {
+            const div = document.createElement('div');
+            div.className = 'chat-message flex justify-start';
+            let content = '';
+            if (data.rich_response && data.rich_response.components) { content = renderRichComponents(data.rich_response.components); }
+            else { content = `<div class="prose">${marked.parse(data.answer || '')}</div>`; }
+            if (data.citations && data.citations.length > 0) {
+                content += '<div class="mt-4"><h4 class="text-sm font-semibold text-gray-600 mb-2">📚 参照ソース</h4>';
+                data.citations.forEach((c, i) => { content += `<div class="citation"><strong>[${i+1}] ${escapeHtml(c.title || 'ソース')}</strong><p class="text-sm text-gray-600 mt-1">${escapeHtml(c.snippet || '')}</p></div>`; });
+                content += '</div>';
+            }
+            if (data.suggestions && data.suggestions.length > 0) {
+                content += '<div class="mt-4 flex flex-wrap gap-2">';
+                data.suggestions.forEach(s => { content += `<button onclick="fillMessage('${escapeHtml(s.text)}')" class="px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-full text-sm text-gray-700">${escapeHtml(s.text)}</button>`; });
+                content += '</div>';
+            }
+            div.innerHTML = `<div class="max-w-3xl bg-white shadow rounded-lg px-4 py-3">${content}</div>`;
+            chatMessages.appendChild(div);
+            if (data.chart) { setTimeout(() => initCharts(), 100); }
+            div.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
+            scrollToBottom();
+        }
+        function addErrorMessage(text) {
+            const div = document.createElement('div');
+            div.className = 'chat-message flex justify-start';
+            div.innerHTML = `<div class="max-w-2xl bg-red-50 border border-red-200 text-red-700 rounded-lg px-4 py-3"><p>❌ ${escapeHtml(text)}</p></div>`;
+            chatMessages.appendChild(div); scrollToBottom();
+        }
+        function renderRichComponents(components) {
+            return components.map(c => {
+                switch (c.type) {
+                    case 'markdown': return `<div class="prose max-w-none">${marked.parse(c.props.content || '')}</div>`;
+                    case 'code_block': return `<div class="my-3">${c.props.title ? `<div class="text-sm text-gray-500 mb-1">${escapeHtml(c.props.title)}</div>` : ''}<pre><code class="language-${c.props.language || 'text'}">${escapeHtml(c.props.code || '')}</code></pre></div>`;
+                    case 'data_table': return renderTable(c.props);
+                    case 'chart': return `<div id="chart-${Date.now()}" class="w-full h-64 my-3" data-chart='${JSON.stringify(c.props.data)}'></div>`;
+                    case 'citation': return `<div class="citation"><strong>${escapeHtml(c.props.title || '')}</strong><p class="text-sm text-gray-600">${escapeHtml(c.props.snippet || '')}</p></div>`;
+                    case 'alert':
+                        const ac = { info: 'bg-blue-50 border-blue-200 text-blue-700', success: 'bg-green-50 border-green-200 text-green-700', warning: 'bg-yellow-50 border-yellow-200 text-yellow-700', error: 'bg-red-50 border-red-200 text-red-700' };
+                        return `<div class="my-2 p-3 rounded border ${ac[c.props.alertType] || ac.info}">${c.props.title ? `<strong>${escapeHtml(c.props.title)}</strong><br>` : ''}${escapeHtml(c.props.message || '')}</div>`;
+                    default: return '';
+                }
+            }).join('');
+        }
+        function renderTable(props) {
+            if (!props.data || !props.data.length) return '';
+            const columns = props.columns || Object.keys(props.data[0]).map(k => ({key: k, label: k}));
+            let html = '<div class="overflow-x-auto my-3">';
+            if (props.title) html += `<div class="text-sm font-semibold text-gray-700 mb-2">${escapeHtml(props.title)}</div>`;
+            html += '<table class="min-w-full"><thead><tr>';
+            columns.forEach(col => { html += `<th>${escapeHtml(col.label || col.key)}</th>`; });
+            html += '</tr></thead><tbody>';
+            props.data.slice(0, props.pageSize || 10).forEach(row => { html += '<tr>'; columns.forEach(col => { html += `<td>${escapeHtml(String(row[col.key] ?? ''))}</td>`; }); html += '</tr>'; });
+            html += '</tbody></table></div>';
+            return html;
+        }
+        function initCharts() {
+            document.querySelectorAll('[data-chart]').forEach(el => { if (!el.dataset.chartInit) { const chart = echarts.init(el); chart.setOption(JSON.parse(el.dataset.chart)); el.dataset.chartInit = 'true'; } });
+        }
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!accessToken) { showLogin(); return; }
+            const message = messageInput.value.trim();
+            if (!message) return;
+            addUserMessage(message); messageInput.value = ''; sendBtn.disabled = true; showProgress(0, '処理を開始...');
+            try {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ type: 'chat', message, sessionId }));
+                } else {
+                    const response = await fetch('/api/chat/stream', { method: 'POST', headers: authHeaders(), body: JSON.stringify({ message, session_id: sessionId }) });
+                    if (response.status === 401) { doLogout(); return; }
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+                        const lines = decoder.decode(value).split('\\n');
+                        for (const line of lines) { if (line.startsWith('data: ')) { handleMessage(JSON.parse(line.slice(6))); } }
+                    }
+                }
+            } catch (error) { hideProgress(); addErrorMessage(error.message); }
+            finally { sendBtn.disabled = false; }
+        });
+        function fillMessage(text) { messageInput.value = text; messageInput.focus(); }
+        function escapeHtml(text) { const div = document.createElement('div'); div.textContent = text; return div.innerHTML; }
+        function scrollToBottom() { chatMessages.scrollTop = chatMessages.scrollHeight; }
+    </script>
+</body>
+</html>

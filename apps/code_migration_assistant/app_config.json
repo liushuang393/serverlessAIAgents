@@ -2,6 +2,7 @@
   "name": "code_migration_assistant",
   "display_name": "コード移行アシスタント",
   "description": "COBOL等レガシーコードからJava等モダン言語へのAI支援移行ツール",
+  "business_base": "operations",
   "version": "2.0.0",
   "icon": "🔄",
   "ports": {
@@ -16,53 +17,112 @@
   },
   "agents": [
     {
+      "name": "LegacyAnalysisAgent",
+      "module": "apps.code_migration_assistant.agents.legacy_analysis_agent",
+      "capabilities": [
+        "parsing",
+        "analysis",
+        "migration"
+      ],
+      "business_base": "operations",
+      "pattern": "analyzer"
+    },
+    {
+      "name": "MigrationDesignAgent",
+      "module": "apps.code_migration_assistant.agents.migration_design_agent",
+      "capabilities": [
+        "migration_design",
+        "architecture"
+      ],
+      "business_base": "operations",
+      "pattern": "pipeline_stage"
+    },
+    {
+      "name": "CodeTransformationAgent",
+      "module": "apps.code_migration_assistant.agents.code_transformation_agent",
+      "capabilities": [
+        "code_transform",
+        "migration"
+      ],
+      "business_base": "operations",
+      "pattern": "executor"
+    },
+    {
+      "name": "TestSynthesisAgent",
+      "module": "apps.code_migration_assistant.agents.test_synthesis_agent",
+      "capabilities": [
+        "test_generation"
+      ],
+      "business_base": "operations",
+      "pattern": "executor"
+    },
+    {
+      "name": "DifferentialVerificationAgent",
+      "module": "apps.code_migration_assistant.agents.differential_verification_agent",
+      "capabilities": [
+        "verification",
+        "review"
+      ],
+      "business_base": "governance",
+      "pattern": "reviewer"
+    },
+    {
+      "name": "QualityGateAgent",
+      "module": "apps.code_migration_assistant.agents.quality_gate_agent",
+      "capabilities": [
+        "quality_gate",
+        "validation",
+        "compliance"
+      ],
+      "business_base": "governance",
+      "pattern": "gatekeeper"
+    },
+    {
+      "name": "LimitedFixerAgent",
+      "module": "apps.code_migration_assistant.agents.limited_fixer_agent",
+      "capabilities": [
+        "auto_fix"
+      ],
+      "business_base": "operations",
+      "pattern": "executor"
+    },
+    {
+      "name": "ComplianceReporterAgent",
+      "module": "apps.code_migration_assistant.agents.compliance_reporter_agent",
+      "capabilities": [
+        "reporting",
+        "audit"
+      ],
+      "business_base": "governance",
+      "pattern": "reporter"
+    },
+    {
       "name": "CodeMigrationAgent",
       "module": "apps.code_migration_assistant.agent",
       "capabilities": [
         "migration",
         "cobol",
         "java",
-        "parsing",
         "transform"
-      ]
+      ],
+      "business_base": "operations",
+      "pattern": "coordinator"
     },
     {
-      "name": "TransformAgent",
-      "module": "apps.code_migration_assistant.agents.transform_agent",
+      "name": "CodeMigrationEngine",
+      "module": "apps.code_migration_assistant.engine",
       "capabilities": [
-        "code_transform"
-      ]
-    },
-    {
-      "name": "TestGenAgent",
-      "module": "apps.code_migration_assistant.agents.testgen_agent",
-      "capabilities": [
-        "test_generation"
-      ]
-    },
-    {
-      "name": "CheckerAgent",
-      "module": "apps.code_migration_assistant.agents.checker_agent",
-      "capabilities": [
-        "verification"
-      ]
-    },
-    {
-      "name": "FixerAgent",
-      "module": "apps.code_migration_assistant.agents.fixer_agent",
-      "capabilities": [
-        "auto_fix"
-      ]
-    },
-    {
-      "name": "CoordinatorAgent",
-      "module": "apps.code_migration_assistant.agents.coordinator_agent",
-      "capabilities": [
-        "orchestration"
-      ]
+        "orchestration",
+        "pipeline"
+      ],
+      "business_base": "operations",
+      "pattern": "coordinator"
     }
   ],
   "services": {
+    "engine": {
+      "pattern": "pipeline"
+    },
     "mcp": {
       "tools": [
         "cobol_parser",
@@ -177,7 +237,7 @@
     }
   },
   "blueprint": {
-    "engine_pattern": "simple",
+    "engine_pattern": "pipeline",
     "flow_pattern": null,
     "system_prompt": "",
     "llm_provider": null,

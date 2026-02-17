@@ -87,16 +87,16 @@ pip install -r requirements.txt
 
 プロジェクトルートから実行します。
 コード変更時に自動リロードされます（`apps/market_trend_monitor/` 配下を監視）。
+ポートは設定ファイルから自動読み込み（8002）。
+
+```bash
+python -m apps.market_trend_monitor.backend.api.main --reload
+```
+
+#### 本番起動（リロードなし）
 
 ```bash
 python -m apps.market_trend_monitor.backend.api.main
-```
-
-#### 本番起動
-
-```bash
-uvicorn apps.market_trend_monitor.backend.api.main:app \
-  --host 0.0.0.0 --port 8002
 ```
 
 バックエンドは `http://localhost:8002` で起動します。

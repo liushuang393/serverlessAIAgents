@@ -29,7 +29,17 @@ class TestListApps:
         items = resp.json()["apps"]
         assert len(items) > 0
         item = items[0]
-        required_keys = {"name", "display_name", "version", "icon", "status", "ports", "agent_count", "tags"}
+        required_keys = {
+            "name",
+            "display_name",
+            "version",
+            "icon",
+            "status",
+            "ports",
+            "agent_count",
+            "tags",
+            "business_base",
+        }
         assert required_keys.issubset(item.keys())
         assert "runtime" in item
         assert "urls" in item["runtime"]
@@ -165,6 +175,19 @@ class TestMigrateManifests:
         data = resp.json()
         assert data["dry_run"] is False
         assert data["total"] == 3
+
+
+class TestFrameworkAudit:
+    """GET /api/apps/framework-audit テスト."""
+
+    def test_returns_report(self, test_client: TestClient) -> None:
+        resp = test_client.get("/api/apps/framework-audit")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "total_apps" in data
+        assert "apps" in data
+        assert data["total_apps"] == 3
+        assert isinstance(data["apps"], list)
 
 
 class TestRootAndHealth:

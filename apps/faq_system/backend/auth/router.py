@@ -27,7 +27,10 @@ from apps.faq_system.backend.auth.models import (
     ForgotPasswordRequest,
     LoginRequest,
     ProfileUpdateRequest,
+    RegisterRequest,
     ResetPasswordRequest,
+    MfaSetupResponse,
+    MfaVerifyRequest,
     UserInfo,
 )
 from apps.faq_system.backend.auth.service import get_auth_service
@@ -48,24 +51,24 @@ def _auth_service() -> Any:
 
 @router.post("/login", response_model=AuthResponse)
 async def login(req: LoginRequest, response: Response) -> AuthResponse:
-    """ログイン処理.
-
-    ユーザー名とパスワードで認証し、JWT トークンとセッション Cookie を返す。
-
-    Args:
-        req: ログインリクエスト
-        response: HTTP レスポンス (Cookie 設定用)
-
-    Returns:
-        認証結果
-    """
+    """ログイン処理."""
     service = _auth_service()
-    user = await service.authenticate(req.username, req.password)
-    if not user:
-        logger.warning("ログイン失敗: username=%s", req.username)
+    # Updated authenticate returns tuple(bool, str, UserInfo | None)
+    success, message, user = await service.authenticate(req.username, req.password, req.totp_code)
+
+    if not success or not user:
+        if message == "MFA_REQUIRED":
+            # Return specific message for frontend to detect
+            logger.info("ログイン: MFAコードが必要: username=%s", req.username)
+            return AuthResponse(
+                success=False,
+                message="MFA_REQUIRED",
+            )
+            
+        logger.warning("ログイン失敗: username=%s, reason=%s", req.username, message)
         return AuthResponse(
             success=False,
-            message="ユーザー名またはパスワードが正しくありません",
+            message=message,
         )
 
     # JWT トークン生成
@@ -86,7 +89,46 @@ async def login(req: LoginRequest, response: Response) -> AuthResponse:
     logger.info("ログイン成功: username=%s, role=%s", req.username, user.role)
     return AuthResponse(
         success=True,
-        message="ログイン成功",
+        message=message,
+        user=user,
+        access_token=access_token,
+        token_type="bearer",
+    )
+
+
+@router.post("/register", response_model=AuthResponse, status_code=201)
+async def register(req: RegisterRequest, response: Response) -> AuthResponse:
+    """ユーザー登録."""
+    service = _auth_service()
+    success, message, user = await service.register_user(
+        username=req.username,
+        password=req.password,
+        display_name=req.display_name,
+        department=req.department,
+        position=req.position,
+        email=req.email,
+    )
+
+    if not success or not user:
+        logger.warning("登録失敗: username=%s, reason=%s", req.username, message)
+        return AuthResponse(success=False, message=message)
+
+    # 自動ログイン
+    access_token = service.create_access_token(user)
+    session_token = await service.create_session(user)
+
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        samesite="lax",
+        max_age=_SESSION_COOKIE_MAX_AGE,
+    )
+
+    logger.info("登録成功: username=%s", req.username)
+    return AuthResponse(
+        success=True,
+        message="ユーザー登録が完了しました",
         user=user,
         access_token=access_token,
         token_type="bearer",
@@ -228,3 +270,33 @@ async def update_profile(
         message="プロフィールを更新しました",
         user=updated,
     )
+
+
+@router.post("/mfa/setup", response_model=MfaSetupResponse)
+async def setup_mfa(
+    user: UserInfo = Depends(require_auth),
+) -> MfaSetupResponse:
+    """MFA設定開始."""
+    secret, uri = await _auth_service().enable_mfa(user.username)
+    return MfaSetupResponse(secret=secret, uri=uri)
+
+
+@router.post("/mfa/verify")
+async def verify_mfa(
+    req: MfaVerifyRequest,
+    user: UserInfo = Depends(require_auth),
+) -> dict[str, Any]:
+    """MFA設定検証 (有効化)."""
+    success = await _auth_service().verify_mfa_setup(user.username, req.totp_code)
+    if not success:
+        return {"success": False, "message": "コードが無効です"}
+    return {"success": True, "message": "MFAを有効化しました"}
+
+
+@router.post("/mfa/disable")
+async def disable_mfa(
+    user: UserInfo = Depends(require_auth),
+) -> dict[str, Any]:
+    """MFA無効化."""
+    await _auth_service().disable_mfa(user.username)
+    return {"success": True, "message": "MFAを無効化しました"}

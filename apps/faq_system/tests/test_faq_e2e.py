@@ -300,7 +300,29 @@ class TestProcessIntegration:
 
 
 # ---------------------------------------------------------------------------
-# 4. Edge cases & robustness
+# 4. run_stream tests
+# ---------------------------------------------------------------------------
+
+
+class TestRunStream:
+    """run_stream integration behavior."""
+
+    @pytest.mark.asyncio
+    async def test_run_stream_awaits_query_classification(self, agent: FAQAgent) -> None:
+        """Routing progress should contain concrete query_type, not coroutine object."""
+        agent._llm = _llm_mock("chat")
+        agent.run = AsyncMock(return_value={"answer": "ok"})  # type: ignore[method-assign]
+
+        events = [event async for event in agent.run_stream({"question": "hello"})]
+
+        routing_event = events[1]
+        assert routing_event["type"] == "progress"
+        assert "coroutine object" not in routing_event["message"]
+        assert "chat" in routing_event["message"]
+
+
+# ---------------------------------------------------------------------------
+# 5. Edge cases & robustness
 # ---------------------------------------------------------------------------
 
 
@@ -351,7 +373,7 @@ class TestEdgeCases:
 
 
 # ---------------------------------------------------------------------------
-# 5. IntentRouter integration
+# 6. IntentRouter integration
 # ---------------------------------------------------------------------------
 
 
@@ -378,4 +400,3 @@ class TestIntentRouterIntegration:
         router = IntentRouter()
         intent = await router.route("営業資料を作成してください")
         assert intent.category == IntentCategory.TASK_EXECUTION
-

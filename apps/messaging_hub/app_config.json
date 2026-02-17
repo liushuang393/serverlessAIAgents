@@ -2,6 +2,7 @@
   "name": "messaging_hub",
   "display_name": "メッセージングハブ",
   "description": "Telegram・Slack・Discord等マルチプラットフォーム統合AIチャットボット",
+  "business_base": "interaction",
   "version": "1.0.0",
   "icon": "📨",
   "ports": {
@@ -22,7 +23,9 @@
         "coordination",
         "intent_routing",
         "summary"
-      ]
+      ],
+      "business_base": "interaction",
+      "pattern": "coordinator"
     },
     {
       "name": "FileOrganizerAgent",
@@ -30,7 +33,9 @@
       "capabilities": [
         "file_organization",
         "categorization"
-      ]
+      ],
+      "business_base": "operations",
+      "pattern": "specialist"
     },
     {
       "name": "MeetingAgent",
@@ -39,7 +44,9 @@
         "meeting",
         "calendar",
         "notes"
-      ]
+      ],
+      "business_base": "interaction",
+      "pattern": "specialist"
     }
   ],
   "services": {
@@ -71,9 +78,9 @@
   },
   "runtime": {
     "urls": {
-      "backend": "http://localhost:8000",
+      "backend": "http://localhost:8004",
       "frontend": null,
-      "health": "http://localhost:8000/health",
+      "health": "http://localhost:8004/health",
       "database": null
     },
     "database": {
@@ -143,7 +150,7 @@
     }
   },
   "blueprint": {
-    "engine_pattern": "simple",
+    "engine_pattern": "coordinator",
     "flow_pattern": null,
     "system_prompt": "",
     "llm_provider": null,

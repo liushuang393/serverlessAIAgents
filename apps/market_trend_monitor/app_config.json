@@ -2,6 +2,7 @@
   "name": "market_trend_monitor",
   "display_name": "市場動向モニター",
   "description": "AIエージェント群による市場トレンド収集・分析・レポート生成システム",
+  "business_base": "reasoning",
   "version": "1.0.0",
   "icon": "📈",
   "ports": {
@@ -21,7 +22,9 @@
       "capabilities": [
         "data_collection",
         "web_scraping"
-      ]
+      ],
+      "business_base": "integration",
+      "pattern": "executor"
     },
     {
       "name": "AnalyzerAgent",
@@ -29,7 +32,9 @@
       "capabilities": [
         "analysis",
         "trend_detection"
-      ]
+      ],
+      "business_base": "reasoning",
+      "pattern": "analyzer"
     },
     {
       "name": "SignalScorerAgent",
@@ -37,7 +42,9 @@
       "capabilities": [
         "signal_scoring",
         "ranking"
-      ]
+      ],
+      "business_base": "reasoning",
+      "pattern": "analyzer"
     },
     {
       "name": "EvidenceLedgerAgent",
@@ -45,7 +52,9 @@
       "capabilities": [
         "evidence_tracking",
         "audit"
-      ]
+      ],
+      "business_base": "governance",
+      "pattern": "reviewer"
     },
     {
       "name": "CompetitorTrackingAgent",
@@ -53,7 +62,9 @@
       "capabilities": [
         "competitor_analysis",
         "benchmarking"
-      ]
+      ],
+      "business_base": "reasoning",
+      "pattern": "analyzer"
     },
     {
       "name": "PredictionReviewAgent",
@@ -61,7 +72,9 @@
       "capabilities": [
         "prediction",
         "review"
-      ]
+      ],
+      "business_base": "governance",
+      "pattern": "reviewer"
     },
     {
       "name": "RedteamAgent",
@@ -69,7 +82,9 @@
       "capabilities": [
         "adversarial",
         "validation"
-      ]
+      ],
+      "business_base": "governance",
+      "pattern": "reviewer"
     },
     {
       "name": "ReporterAgent",
@@ -77,7 +92,9 @@
       "capabilities": [
         "reporting",
         "summarization"
-      ]
+      ],
+      "business_base": "interaction",
+      "pattern": "reporter"
     },
     {
       "name": "NotifierAgent",
@@ -85,7 +102,9 @@
       "capabilities": [
         "notification",
         "alerting"
-      ]
+      ],
+      "business_base": "interaction",
+      "pattern": "executor"
     }
   ],
   "services": {
@@ -171,7 +190,7 @@
     }
   },
   "blueprint": {
-    "engine_pattern": "simple",
+    "engine_pattern": "pipeline",
     "flow_pattern": null,
     "system_prompt": "",
     "llm_provider": null,

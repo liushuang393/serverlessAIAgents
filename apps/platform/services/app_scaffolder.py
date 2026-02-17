@@ -69,6 +69,28 @@ class AppScaffolderService:
         {"value": "openrouter", "label": "OpenRouter"},
         {"value": "custom", "label": "Custom"},
     )
+    _BUSINESS_BASE_OPTIONS: tuple[dict[str, str], ...] = (
+        {"value": "custom", "label": "Custom"},
+        {"value": "platform", "label": "Platform"},
+        {"value": "knowledge", "label": "Knowledge"},
+        {"value": "reasoning", "label": "Reasoning"},
+        {"value": "interaction", "label": "Interaction"},
+        {"value": "integration", "label": "Integration"},
+        {"value": "operations", "label": "Operations"},
+        {"value": "governance", "label": "Governance"},
+        {"value": "media", "label": "Media"},
+    )
+    _AGENT_PATTERN_OPTIONS: tuple[dict[str, str], ...] = (
+        {"value": "specialist", "label": "Specialist"},
+        {"value": "coordinator", "label": "Coordinator"},
+        {"value": "pipeline_stage", "label": "Pipeline Stage"},
+        {"value": "gatekeeper", "label": "Gatekeeper"},
+        {"value": "reviewer", "label": "Reviewer"},
+        {"value": "analyzer", "label": "Analyzer"},
+        {"value": "executor", "label": "Executor"},
+        {"value": "router", "label": "Router"},
+        {"value": "reporter", "label": "Reporter"},
+    )
 
     def __init__(
         self,
@@ -97,6 +119,8 @@ class AppScaffolderService:
             ],
             "vector_database_options": list(cls._VECTOR_DB_OPTIONS),
             "llm_provider_options": list(cls._LLM_PROVIDER_OPTIONS),
+            "business_base_options": list(cls._BUSINESS_BASE_OPTIONS),
+            "agent_pattern_options": list(cls._AGENT_PATTERN_OPTIONS),
             "visibility_modes": [
                 {"value": "private", "label": "Private"},
                 {"value": "public", "label": "Public"},
@@ -198,7 +222,9 @@ class AppScaffolderService:
         db_kind = None if request.database == "none" else request.database
         rag_provider: str | None = None
         if request.rag_enabled:
-            rag_provider = request.vector_database if request.vector_database != "none" else "qdrant"
+            rag_provider = (
+                request.vector_database if request.vector_database != "none" else "qdrant"
+            )
         rag_pattern = "balanced_knowledge" if request.rag_enabled else None
 
         db_url: str | None = None
@@ -217,13 +243,16 @@ class AppScaffolderService:
             db_url = "sqlite:///./data/app.db"
 
         backend_url = None if ports["api"] is None else f"http://localhost:{ports['api']}"
-        frontend_url = None if ports["frontend"] is None else f"http://localhost:{ports['frontend']}"
+        frontend_url = (
+            None if ports["frontend"] is None else f"http://localhost:{ports['frontend']}"
+        )
         health_url = None if backend_url is None else f"{backend_url}/health"
 
         return {
             "name": request.name,
             "display_name": request.display_name,
             "description": request.description,
+            "business_base": request.business_base,
             "version": "0.1.0",
             "icon": request.icon,
             "ports": ports,
@@ -236,6 +265,8 @@ class AppScaffolderService:
                     "name": agent["name"],
                     "module": f"apps.{request.name}.agents.{agent['module_name']}",
                     "capabilities": agent["capabilities"],
+                    "business_base": agent["business_base"] or request.business_base,
+                    "pattern": agent["pattern"],
                 }
                 for agent in agents
             ],
@@ -254,7 +285,9 @@ class AppScaffolderService:
                     "api_key_env": llm_api_key_env,
                 },
                 "vector_db": {
-                    "provider": None if request.vector_database == "none" else request.vector_database,
+                    "provider": None
+                    if request.vector_database == "none"
+                    else request.vector_database,
                     "url": request.vector_db_url,
                     "collection": request.vector_db_collection,
                     "api_key_env": vector_db_api_key_env,
@@ -358,7 +391,9 @@ class AppScaffolderService:
                 "llm_api_key_env": llm_api_key_env,
                 "default_model": request.default_model,
                 "default_skills": request.default_skills,
-                "vector_db_provider": None if request.vector_database == "none" else request.vector_database,
+                "vector_db_provider": None
+                if request.vector_database == "none"
+                else request.vector_database,
                 "vector_db_url": request.vector_db_url,
                 "vector_db_collection": request.vector_db_collection,
                 "vector_db_api_key_env": vector_db_api_key_env,
@@ -519,10 +554,7 @@ class AppScaffolderService:
         if vector_db_api_key_env and request.vector_db_api_key:
             values[vector_db_api_key_env] = request.vector_db_api_key
 
-        filtered = {
-            key: value for key, value in values.items()
-            if value != ""
-        }
+        filtered = {key: value for key, value in values.items() if value != ""}
         updated = service.upsert(filtered)
         try:
             relative = str(env_path.relative_to(Path.cwd()))
@@ -573,6 +605,16 @@ class AppScaffolderService:
                     "role": item.role.strip() or "specialist",
                     "prompt": item.prompt.strip(),
                     "capabilities": [c.strip() for c in item.capabilities if c.strip()],
+                    "business_base": (
+                        item.business_base.strip().lower()
+                        if isinstance(item.business_base, str) and item.business_base.strip()
+                        else None
+                    ),
+                    "pattern": (
+                        item.pattern.strip().lower()
+                        if isinstance(item.pattern, str) and item.pattern.strip()
+                        else "specialist"
+                    ),
                 }
             )
 
@@ -606,11 +648,13 @@ class AppScaffolderService:
         """agents/__init__.py を生成."""
         imports = [f"from .{a['module_name']} import {a['class_name']}" for a in agents]
         export_list = ", ".join([f'"{a["class_name"]}"' for a in agents])
-        return "\n".join([
-            *imports,
-            "",
-            f"__all__ = [{export_list}]",
-        ])
+        return "\n".join(
+            [
+                *imports,
+                "",
+                f"__all__ = [{export_list}]",
+            ]
+        )
 
     @staticmethod
     def _render_engine_py(request: AppCreateRequest) -> str:
@@ -700,18 +744,20 @@ async def run_agent(body: AgentRunRequest) -> dict[str, Any]:
         prompt = agent["prompt"] or "ユーザー要求を解釈し、行動可能な応答を返してください。"
         caps = ", ".join([f'"{c}"' for c in agent["capabilities"]])
 
-        return f'''"""{agent['name']} - Agent スタブ."""
+        return f'''"""{agent["name"]} - Agent スタブ."""
 
 from __future__ import annotations
 
 from typing import Any
 
 
-class {agent['class_name']}:
-    """{agent['role']} Agent."""
+class {agent["class_name"]}:
+    """{agent["role"]} Agent."""
 
-    name = "{agent['name']}"
-    role = "{agent['role']}"
+    name = "{agent["name"]}"
+    role = "{agent["role"]}"
+    business_base = "{agent["business_base"] or "custom"}"
+    pattern = "{agent["pattern"]}"
     default_prompt = "{prompt}"
     capabilities = [{caps}]
 
@@ -720,6 +766,8 @@ class {agent['class_name']}:
         return {{
             "agent": self.name,
             "role": self.role,
+            "business_base": self.business_base,
+            "pattern": self.pattern,
             "capabilities": self.capabilities,
             "received": payload,
         }}
@@ -751,30 +799,36 @@ class {agent['class_name']}:
             lines.append(f"{llm_api_key_env}=<your-api-key>")
 
         if request.database == "postgresql" and ports["db"] is not None:
-            lines.extend([
-                f"DB_PORT={ports['db']}",
-                f"DB_USER={request.name}",
-                f"DB_PASSWORD={request.name}_password",
-                f"DB_NAME={request.name}",
-                (
-                    "DATABASE_URL="
-                    f"postgresql+asyncpg://{request.name}:{request.name}_password"
-                    f"@localhost:{ports['db']}/{request.name}"
-                ),
-            ])
+            lines.extend(
+                [
+                    f"DB_PORT={ports['db']}",
+                    f"DB_USER={request.name}",
+                    f"DB_PASSWORD={request.name}_password",
+                    f"DB_NAME={request.name}",
+                    (
+                        "DATABASE_URL="
+                        f"postgresql+asyncpg://{request.name}:{request.name}_password"
+                        f"@localhost:{ports['db']}/{request.name}"
+                    ),
+                ]
+            )
         elif request.database == "sqlite":
             lines.append("DATABASE_URL=sqlite:///./data/app.db")
 
         if request.redis_enabled and ports["redis"] is not None:
-            lines.extend([
-                f"REDIS_PORT={ports['redis']}",
-                f"REDIS_URL=redis://localhost:{ports['redis']}/0",
-            ])
+            lines.extend(
+                [
+                    f"REDIS_PORT={ports['redis']}",
+                    f"REDIS_URL=redis://localhost:{ports['redis']}/0",
+                ]
+            )
 
         if request.vector_database != "none":
-            lines.extend([
-                f"VECTOR_DB_PROVIDER={request.vector_database}",
-            ])
+            lines.extend(
+                [
+                    f"VECTOR_DB_PROVIDER={request.vector_database}",
+                ]
+            )
             if request.vector_db_url:
                 lines.append(f"VECTOR_DB_URL={request.vector_db_url}")
             if request.vector_db_collection:
@@ -787,7 +841,7 @@ class {agent['class_name']}:
     @staticmethod
     def _render_readme(request: AppCreateRequest, ports: dict[str, int | None]) -> str:
         """README.md を生成."""
-        return f'''# {request.display_name}
+        return f"""# {request.display_name}
 
 {request.description or "Platform 生成の新規 App"}
 
@@ -800,7 +854,7 @@ python -m apps.{request.name}.main
 または:
 
 ```bash
-uvicorn apps.{request.name}.main:app --reload --port {ports['api']}
+uvicorn apps.{request.name}.main:app --reload --port {ports["api"]}
 ```
 
 ## エンドポイント
@@ -811,14 +865,15 @@ uvicorn apps.{request.name}.main:app --reload --port {ports['api']}
 ## 設計メモ
 
 - Engine Pattern: `{request.engine_pattern}`
-- Flow Pattern: `{request.flow_pattern or 'default'}`
+- Business Base: `{request.business_base}`
+- Flow Pattern: `{request.flow_pattern or "default"}`
 - Database: `{request.database}`
 - Vector DB: `{request.vector_database}`
 - LLM Provider: `{request.llm_provider}`
-- Default Model: `{request.default_model or 'auto'}`
+- Default Model: `{request.default_model or "auto"}`
 - Redis: `{request.redis_enabled}`
 - Frontend: `{request.frontend_enabled}`
-'''
+"""
 
     @staticmethod
     def _render_docker_compose(
@@ -831,43 +886,49 @@ uvicorn apps.{request.name}.main:app --reload --port {ports['api']}
         ]
 
         if request.database == "postgresql" and ports["db"] is not None:
-            blocks.extend([
-                "  db:",
-                "    image: postgres:16-alpine",
-                f"    container_name: {request.name}_db",
-                "    restart: unless-stopped",
-                "    environment:",
-                f"      POSTGRES_DB: {request.name}",
-                f"      POSTGRES_USER: {request.name}",
-                f"      POSTGRES_PASSWORD: {request.name}_password",
-                "    ports:",
-                f"      - \"{ports['db']}:5432\"",
-            ])
+            blocks.extend(
+                [
+                    "  db:",
+                    "    image: postgres:16-alpine",
+                    f"    container_name: {request.name}_db",
+                    "    restart: unless-stopped",
+                    "    environment:",
+                    f"      POSTGRES_DB: {request.name}",
+                    f"      POSTGRES_USER: {request.name}",
+                    f"      POSTGRES_PASSWORD: {request.name}_password",
+                    "    ports:",
+                    f'      - "{ports["db"]}:5432"',
+                ]
+            )
 
         if request.redis_enabled and ports["redis"] is not None:
-            blocks.extend([
-                "  redis:",
-                "    image: redis:7-alpine",
-                f"    container_name: {request.name}_redis",
-                "    restart: unless-stopped",
-                "    ports:",
-                f"      - \"{ports['redis']}:6379\"",
-            ])
+            blocks.extend(
+                [
+                    "  redis:",
+                    "    image: redis:7-alpine",
+                    f"    container_name: {request.name}_redis",
+                    "    restart: unless-stopped",
+                    "    ports:",
+                    f'      - "{ports["redis"]}:6379"',
+                ]
+            )
 
-        blocks.extend([
-            "  api:",
-            "    image: python:3.13-slim",
-            f"    container_name: {request.name}_api",
-            "    working_dir: /workspace",
-            "    command: >",
-            (
-                f"      bash -lc \"pip install -e .[apps] && "
-                f"uvicorn apps.{request.name}.main:app --host 0.0.0.0 --port 8000\""
-            ),
-            "    ports:",
-            f"      - \"{ports['api']}:8000\"",
-            "    volumes:",
-            "      - ../../:/workspace",
-        ])
+        blocks.extend(
+            [
+                "  api:",
+                "    image: python:3.13-slim",
+                f"    container_name: {request.name}_api",
+                "    working_dir: /workspace",
+                "    command: >",
+                (
+                    f'      bash -lc "pip install -e .[apps] && '
+                    f'uvicorn apps.{request.name}.main:app --host 0.0.0.0 --port 8000"'
+                ),
+                "    ports:",
+                f'      - "{ports["api"]}:8000"',
+                "    volumes:",
+                "      - ../../:/workspace",
+            ]
+        )
 
         return "\n".join(blocks)

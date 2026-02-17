@@ -174,6 +174,8 @@ npm run dev
 - ローカル開発・テスト・本番は環境別ファイル（`.env` / `.env.test` / `.env.production`）で分離する
 - 本番環境はテスト環境と可能な限り同一構成にする
 - `.env.example` を変更したら必ず `.env` も同期する
+- LLM プロバイダーは `LLM_PROVIDER` で明示指定する（`auto` 常用を避ける）
+- `app_config.json` を持つ App のポートは `app_config.json` を単一定義元とし、`<APP>_HOST/PORT` は一時上書き用途に限定する
 - 詳細: [開発原則 - 環境設定管理](global/principles.md#環境設定管理environment-configuration)
 
 ## モジュラー設計ルール
