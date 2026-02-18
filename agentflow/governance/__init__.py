@@ -14,6 +14,11 @@ from agentflow.governance.plugin_registry import (
     PluginRegistry,
     PluginRuntimeAssessment,
 )
+from agentflow.governance.plugin_signature import (
+    PluginSignatureVerifier,
+    SignatureVerificationResult,
+    canonical_manifest_bytes,
+)
 from agentflow.governance.enterprise_audit import (
     AuditEventType,
     AuditSeverity,
@@ -47,7 +52,10 @@ __all__ = [
     "PluginManifestRecord",
     "PluginRegistry",
     "PluginRuntimeAssessment",
+    "PluginSignatureVerifier",
+    "SignatureVerificationResult",
     "AppPluginSnapshot",
     "PostgresAuditStorage",
     "ToolExecutionContext",
+    "canonical_manifest_bytes",
 ]

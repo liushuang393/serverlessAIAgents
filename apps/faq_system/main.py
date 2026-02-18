@@ -58,7 +58,10 @@ import sys  # noqa: E402
 from apps.faq_system.backend.config import kb_registry  # noqa: E402
 from agentflow.database import DatabaseConfig, DatabaseManager  # noqa: E402
 from apps.faq_system.backend.db.models import Base  # noqa: E402
-from apps.faq_system.backend.auth.dependencies import get_auth_service  # noqa: E402
+from apps.faq_system.backend.auth.dependencies import (  # noqa: E402
+    get_auth_service,
+    get_faq_contract_auth_guard,
+)
 from apps.faq_system.backend.auth.router import router as auth_router  # noqa: E402
 from apps.faq_system.backend.auth import oauth2_router, saml_router  # noqa: E402
 from apps.faq_system.routers import (  # noqa: E402
@@ -145,6 +148,7 @@ db_manager = DatabaseManager(
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """アプリ起動/終了時の初期化."""
+    get_faq_contract_auth_guard().reset_cache()
     await db_manager.init()
     if db_manager.resolved_url.startswith("sqlite"):
         await db_manager.create_all_tables()

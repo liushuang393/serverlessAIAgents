@@ -53,6 +53,10 @@ from agentflow.security.api_key import (
     APIKeyManager,
     generate_api_key,
 )
+from agentflow.security.contract_auth_guard import (
+    ContractAuthGuard,
+    ContractAuthGuardConfig,
+)
 from agentflow.security.auth_middleware import (
     AuthMiddleware,
     JWTConfig,
@@ -120,6 +124,8 @@ __all__ = [
     "AuthMiddleware",
     "ContractRegistry",
     "ContractValidator",
+    "ContractAuthGuard",
+    "ContractAuthGuardConfig",
     # AI Safety - Data Sanitizer
     "DataSanitizer",
     "DetectionConfig",
@@ -170,4 +176,3 @@ __all__ = [
     "require_auth",
     "require_permission",
 ]
-

@@ -158,6 +158,15 @@ See [Quick Start](docs/quickstart.md) for details.
 
 ---
 
+## ✅ Pre-Run Checklist (Required)
+
+- Default runtime environment: `conda activate agentflow`.
+- Before running commands, check `code-rules/CLAUDE.md` and the target app README.
+- Ask the customer only when the environment is not documented.
+- Once confirmed, update project rules/README to avoid repeated questions.
+
+---
+
 ## 🎨 Usage Scenarios
 
 AgentFlow provides three ways to operate. Choose the best method for your use case.

@@ -24,10 +24,15 @@ from apps.platform.services.gallery_service import GalleryService
 from apps.platform.services.publish_orchestrator import PublishOrchestrator
 from apps.platform.services.mcp_registry import MCPRegistryService
 from apps.platform.services.port_allocator import PortAllocatorService
+from apps.platform.services.protocol_surface_inspector import (
+    ProtocolSurfaceReport,
+    inspect_protocol_surface,
+)
 from apps.platform.services.rag_overview import RAGOverviewService
 from apps.platform.services.skill_catalog import SkillCatalogService
 from apps.platform.services.studio_service import StudioService
 from apps.platform.services.tenant_dashboard import TenantDashboard
+from apps.platform.services.tenant_invitation import TenantInvitationService
 
 
 __all__ = [
@@ -47,9 +52,12 @@ __all__ = [
     "HealthCheckResult",
     "MCPRegistryService",
     "PortAllocatorService",
+    "ProtocolSurfaceReport",
     "PublishOrchestrator",
     "RAGOverviewService",
     "SkillCatalogService",
     "StudioService",
     "TenantDashboard",
+    "TenantInvitationService",
+    "inspect_protocol_surface",
 ]

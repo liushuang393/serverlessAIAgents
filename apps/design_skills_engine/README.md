@@ -414,3 +414,18 @@ cd apps/design_skills_engine && docker compose down
 4. **バッチ並列生成** - 複数画像の同時生成
 5. **Studio UI統合** - リアルタイムプレビュー + AG-UIイベント
 6. **A2A対応** - 他のエージェントからの画像生成リクエスト受付
+
+## 共有テスト env 自動生成
+
+```bash
+conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
+```
+
+- `DESIGN_SKILLS_API_KEY_ENV` / `DESIGN_SKILLS_API_KEY` を自動補完します。
+- `contracts.auth` が有効なため、テストでも API キー未設定のままにはしないでください。
+
+## 本番運用と多租户招待メール
+
+- 本番 API キーは Secret Manager から注入してください。
+- テナント向け初回案内メールでは URL を載せず、必要時のみ別メールでワンタイム URL を送信します。
+- 詳細手順: `docs/internal/env-bootstrap-and-tenant-invite-security.md`

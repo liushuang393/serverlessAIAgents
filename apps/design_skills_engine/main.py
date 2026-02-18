@@ -12,10 +12,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from agentflow.skills.builtin.design_skills.engine import DesignSkillsEngine
 
 
@@ -25,63 +26,32 @@ if TYPE_CHECKING:
 
 _APP_ROOT = Path(__file__).resolve().parent
 _APP_CONFIG_PATH = _APP_ROOT / "app_config.json"
-_AUTH_HEADER = "x-api-key"
 _PUBLIC_PATHS = {"/api/health", "/docs", "/redoc", "/openapi.json"}
+_auth_guard = ContractAuthGuard(
+    ContractAuthGuardConfig(
+        app_config_path=_APP_CONFIG_PATH,
+        public_http_paths=_PUBLIC_PATHS,
+        auth_header_name="x-api-key",
+        ws_query_key="api_key",
+        api_key_env_selector_var="DESIGN_SKILLS_API_KEY_ENV",
+        default_api_key_env_var="DESIGN_SKILLS_API_KEY",
+    ),
+)
 
 
 def _load_app_config() -> dict[str, Any]:
     """Load app_config.json or return an empty dict."""
-    if not _APP_CONFIG_PATH.is_file():
-        return {}
-    try:
-        return json.loads(_APP_CONFIG_PATH.read_text("utf-8"))
-    except json.JSONDecodeError:
-        return {}
-
-
-def _get_auth_contract() -> dict[str, Any]:
-    """Return contracts.auth from app config."""
-    raw = _load_app_config()
-    contracts = raw.get("contracts", {})
-    if not isinstance(contracts, dict):
-        return {}
-    auth = contracts.get("auth", {})
-    if not isinstance(auth, dict):
-        return {}
-    return auth
+    return _auth_guard.load_app_config()
 
 
 def _is_auth_required() -> bool:
     """Evaluate whether API key auth must be enforced."""
-    auth = _get_auth_contract()
-    enabled = bool(auth.get("enabled", False))
-    allow_anonymous = bool(auth.get("allow_anonymous", True))
-    return enabled and not allow_anonymous
+    return _auth_guard.is_auth_required()
 
 
-def _api_key_env_name() -> str:
-    """Return API key env var name."""
-    return os.getenv("DESIGN_SKILLS_API_KEY_ENV", "DESIGN_SKILLS_API_KEY")
-
-
-def _require_api_key(request: Request) -> None:
+async def _require_api_key(request: Request) -> None:
     """Validate API key when auth is required."""
-    if request.url.path in _PUBLIC_PATHS:
-        return
-    if not _is_auth_required():
-        return
-
-    env_name = _api_key_env_name()
-    expected_key = os.getenv(env_name)
-    if not expected_key:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Auth required but env '{env_name}' is not configured",
-        )
-
-    incoming_key = request.headers.get(_AUTH_HEADER)
-    if incoming_key != expected_key:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+    await _auth_guard.require_http(request)
 
 
 def _to_jsonable(payload: Any) -> dict[str, Any]:
@@ -141,7 +111,7 @@ async def health() -> dict[str, Any]:
 @app.post("/api/design")
 async def generate_design(request: Request, body: DesignRequest) -> dict[str, Any]:
     """Run design pipeline and return final result."""
-    _require_api_key(request)
+    await _require_api_key(request)
     engine = _get_engine()
     result = await engine.run(body.to_payload())
     return _to_jsonable(result)
@@ -150,7 +120,7 @@ async def generate_design(request: Request, body: DesignRequest) -> dict[str, An
 @app.post("/api/design/stream")
 async def stream_design(request: Request, body: DesignRequest) -> StreamingResponse:
     """Run design pipeline as SSE stream."""
-    _require_api_key(request)
+    await _require_api_key(request)
     engine = _get_engine()
     payload = body.to_payload()
 

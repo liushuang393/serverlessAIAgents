@@ -232,3 +232,18 @@ MIT License
 ## 関連ドキュメント
 
 - [設計書](DESIGN.md)
+
+## 共有テスト env 自動生成
+
+```bash
+conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
+```
+
+- 共通テストの env 値は手動作成せず、スクリプトで空値補完します。
+- 既存の `DATABASE_URL` / `OPENAI_API_KEY` など非空値は保持されます。
+
+## 本番運用と多租户招待メール
+
+- 本番は Secret Manager 注入を使用し、`.env` の直接配布は行いません。
+- テナント案内メールは機密最小化し、ログイン URL は別メールで送信します。
+- 詳細手順: `docs/internal/env-bootstrap-and-tenant-invite-security.md`

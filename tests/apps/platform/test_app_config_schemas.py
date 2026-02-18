@@ -229,3 +229,30 @@ class TestAppConfig:
                 audit_profile="business",
                 plugin_bindings=[],
             )
+
+    def test_plugin_binding_version_requires_semver(self) -> None:
+        """plugin_bindings.version は SemVer 形式を必須化する."""
+        with pytest.raises(ValidationError, match="plugin version"):
+            AppConfig(
+                name="framework_app",
+                display_name="Framework App",
+                product_line="framework",
+                surface_profile="developer",
+                audit_profile="developer",
+                plugin_bindings=[{"id": "official.sample", "version": "latest"}],
+            )
+
+    def test_plugin_binding_ids_must_be_unique(self) -> None:
+        """plugin_bindings[].id の重複を拒否する."""
+        with pytest.raises(ValidationError, match="plugin_bindings\\[\\]\\.id"):
+            AppConfig(
+                name="framework_app",
+                display_name="Framework App",
+                product_line="framework",
+                surface_profile="developer",
+                audit_profile="developer",
+                plugin_bindings=[
+                    {"id": "official.sample", "version": "1.0.0"},
+                    {"id": "official.sample", "version": "1.0.0"},
+                ],
+            )

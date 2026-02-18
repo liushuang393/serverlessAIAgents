@@ -35,6 +35,10 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
 - `GET /api/studios/framework/components`
 - `GET /api/studios/framework/dashboard/{tenant_id}`
 - `POST /api/studios/framework/publish/deploy`
+- `POST /api/studios/framework/tenants/invitations`
+- `POST /api/studios/framework/tenants/invitations/{invitation_id}/challenge`
+- `POST /api/studios/framework/tenants/invitations/consume`
+- `GET /api/studios/framework/tenants/invitations/outbox`（開発時のみ）
 
 ## 4. 開発起動
 
@@ -42,9 +46,66 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
 2. `python -m apps.platform.main serve --port 8000`
 3. `cd apps/platform/frontend && npm run dev`
 
+### 4.1 実行前チェック（必須）
+
+- 既定実行環境は `conda activate agentflow`。
+- コマンド実行前に `code-rules/CLAUDE.md` と対象 app の README を確認する。
+- 文書で環境が確定できない場合のみ顧客へ確認する。
+- 確定した内容はルール/READMEへ追記し、同じ質問を繰り返さない。
+
 ## 5. 参照ドキュメント
 
 - 外部向け: `docs/external/README.md`
 - 内部向け: `docs/internal/README.md`
 - アーキテクチャ: `docs/architecture.md`
 - app_config 契約: `apps/platform/docs/app-config-schema.md`
+
+## 6. 共有テスト env 自動生成
+
+```bash
+conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
+```
+
+- 手動でテスト用シークレットを作成しない（空値のみ自動補完）。
+- Platform 単体では API キー必須契約はないが、共通 JWT/DB シークレットは同コマンドで補完される。
+
+## 7. 本番 / テナント運用
+
+- 本番は `.env` ではなく Secret Manager 注入を使用する。
+- 多租户招待メールは「通知メール」と「ログイン URL メール」を分離送信する。
+- 詳細手順: `docs/internal/env-bootstrap-and-tenant-invite-security.md`
+
+## 8. 招待メール API
+
+- `POST /api/studios/framework/tenants/invitations`
+- `POST /api/studios/framework/tenants/invitations/{invitation_id}/challenge`
+- `POST /api/studios/framework/tenants/invitations/consume`
+
+運用ポイント:
+- 1通目は通知のみ（URL/OTP なし）
+- 2通目で URL または OTP を別送
+- URL はワンタイムトークンのみを含む
+
+## 9. Framework 監査（AST モード）
+
+- プロトコル面（SSE/WS/A2A/MCP）は AST（Python 構文木）解析で判定する。
+- 正規表現フォールバックは廃止。
+- 構文エラー時は `AST_PARSE_WARNING` を返し、修正提案と影響を併記する。
+- 必須プロトコルが AST 解析不能で立証不可の場合は `*_UNVERIFIED` を `error` 扱いにする。
+
+## 10. 認証共通モジュール
+
+- 共通ガード: `agentflow/security/contract_auth_guard.py`
+- `app_config.json` の `contracts.auth` を基準に HTTP/WS 認証を統一する。
+- 標準ステータス:
+  - HTTP: `401`（認証失敗）, `503`（鍵未設定）
+  - WS: close code `4401`（認証失敗）, `1011`（サーバー設定不備）
+
+## 11. Plugin 署名運用（P1）
+
+- sidecar 署名: `plugins/<plugin_id>/plugin_manifest.sig`
+- trust store: `plugins/trust_store.json`
+- env:
+  - `AGENTFLOW_PLUGIN_TRUST_STORE`
+  - `AGENTFLOW_PLUGIN_SIGNATURE_ENFORCEMENT`（既定 `warn`）
+- P1 は warning 運用（署名不整合で deny しない）。

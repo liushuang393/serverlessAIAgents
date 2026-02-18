@@ -294,6 +294,12 @@ class GovernanceEngine:
         metadata["plugin_id"] = result.plugin_id
         metadata["plugin_version"] = result.plugin_version
         metadata["plugin_risk_tier"] = result.plugin_risk_tier
+        metadata["plugin_signature_status"] = (
+            plugin_assessment.plugin_signature_status if plugin_assessment else None
+        )
+        metadata["plugin_signature_reason"] = (
+            plugin_assessment.plugin_signature_reason if plugin_assessment else None
+        )
         if context.app_name is not None:
             metadata["app_name"] = context.app_name
         if context.product_line is not None:

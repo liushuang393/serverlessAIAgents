@@ -515,3 +515,19 @@ uvicorn apps.decision_governance_engine.api:app --port 8001
 - [設計仕様書](design/decision-agent-spec.md)
 - [変更履歴](CHANGELOG_v2.0.md) / [CHANGELOG_v3.0.md](CHANGELOG_v3.0.md)
 - [AgentFlow メイン README](../../README.md) - フレームワーク全体の説明
+
+## 11. 共有テスト env 自動生成
+
+```bash
+conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
+```
+
+- `POSTGRES_PASSWORD` と `SESSION_SECRET` を含むテスト用値を自動補完します。
+- 手動で共通テスト鍵を作成せず、空値補完のみで運用してください。
+
+## 12. 本番運用と多租户招待メール
+
+- 本番では `.env` を配布せず、Secret Manager 注入を使用してください。
+- DB 初期化時に tenant 分離情報を先に作成し、監査ログを有効化してください。
+- 招待メールは通知と URL を分離送信してください。
+- 詳細手順: `docs/internal/env-bootstrap-and-tenant-invite-security.md`

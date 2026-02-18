@@ -159,6 +159,15 @@ agentflow run . --input '{"text": "hello"}'
 
 ---
 
+## ✅ 运行前检查（必需）
+
+- 默认运行环境：`conda activate agentflow`。
+- 执行命令前先检查 `code-rules/CLAUDE.md` 与目标 app 的 README。
+- 仅在文档无法确认环境时再询问客户。
+- 一旦确认，需回写到项目规则/README，避免重复提问同一问题。
+
+---
+
 ## 🎨 使用场景
 
 AgentFlow 提供三种操作方式，根据用途选择最适合的方式。

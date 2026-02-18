@@ -10,6 +10,7 @@
 4. `plugin-extension-handbook.md`
 5. `core-extension-playbook.md`
 6. `architecture-kernel.md`
+7. `env-bootstrap-and-tenant-invite-security.md`
 
 ## 方針
 

@@ -12,12 +12,14 @@ from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from apps.faq_system.backend.auth.models import UserInfo
 from apps.faq_system.backend.auth.service import AuthService, get_auth_service
 from apps.faq_system.backend.security.proxy_auth import proxy_auth_verifier
-from fastapi import Cookie, Depends, Header, HTTPException, Request
+from fastapi import Cookie, Depends, Header, HTTPException, Request, WebSocket
+from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 
 
 if TYPE_CHECKING:
@@ -26,6 +28,18 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+_APP_CONFIG_PATH = Path(__file__).resolve().parents[2] / "app_config.json"
+_FAQ_PUBLIC_HTTP_PATHS = {
+    "/api/auth/login",
+    "/api/auth/register",
+    "/api/auth/password/forgot",
+    "/api/auth/password/reset",
+    "/api/health",
+    "/docs",
+    "/redoc",
+    "/openapi.json",
+}
+_faq_auth_guard: ContractAuthGuard | None = None
 
 def _trust_proxy_auth_enabled() -> bool:
     return os.getenv("FAQ_TRUST_PROXY_AUTH", "false").lower() in {"1", "true", "yes", "on"}
@@ -76,23 +90,8 @@ def _proxy_user_id(username: str) -> str:
     return f"user-{digest}"
 
 
-async def get_current_user(
-    request: Request,
-    authorization: str | None = Header(None),
-    session_token: str | None = Cookie(None, alias="session_token"),
-) -> UserInfo | None:
-    """現在のユーザーを取得 (任意).
-
-    JWT トークン / セッション Cookie / (任意)認証プロキシヘッダーから認証する。
-
-    Args:
-        authorization: Authorization ヘッダー
-        session_token: セッション Cookie
-    Returns:
-        認証ユーザー、または None
-    """
-    headers = request.headers
-    proxy_values = {
+def _collect_proxy_values(headers: Mapping[str, str]) -> dict[str, str | None]:
+    return {
         "x_auth_user": _pick_header(
             headers,
             _get_header_candidates(
@@ -114,7 +113,7 @@ async def get_current_user(
                     "FAQ_PROXY_AUTH_ROLE_HEADERS",
                     "x-forwarded-groups,x-auth-role",
                 ),
-            )
+            ),
         ),
         "x_auth_department": _pick_header(
             headers,
@@ -153,12 +152,45 @@ async def get_current_user(
         ),
     }
 
+
+async def _resolve_user_from_request_payload(
+    *,
+    headers: Mapping[str, str],
+    authorization: str | None,
+    session_token: str | None,
+    request_method: str,
+    request_path: str,
+) -> UserInfo | None:
     return await resolve_user(
+        authorization=authorization,
+        session_token=session_token,
+        request_method=request_method,
+        request_path=request_path,
+        **_collect_proxy_values(headers),
+    )
+
+
+async def get_current_user(
+    request: Request,
+    authorization: str | None = Header(None),
+    session_token: str | None = Cookie(None, alias="session_token"),
+) -> UserInfo | None:
+    """現在のユーザーを取得 (任意).
+
+    JWT トークン / セッション Cookie / (任意)認証プロキシヘッダーから認証する。
+
+    Args:
+        authorization: Authorization ヘッダー
+        session_token: セッション Cookie
+    Returns:
+        認証ユーザー、または None
+    """
+    return await _resolve_user_from_request_payload(
+        headers=request.headers,
         authorization=authorization,
         session_token=session_token,
         request_method=request.method,
         request_path=request.url.path,
-        **proxy_values,
     )
 
 
@@ -255,13 +287,73 @@ async def resolve_user(
     return None
 
 
+async def resolve_user_from_http_request(request: Request) -> UserInfo | None:
+    """HTTP リクエストからユーザーを解決."""
+    return await _resolve_user_from_request_payload(
+        headers=request.headers,
+        authorization=request.headers.get("authorization"),
+        session_token=request.cookies.get("session_token"),
+        request_method=request.method,
+        request_path=request.url.path,
+    )
+
+
+async def resolve_user_from_websocket(websocket: WebSocket) -> UserInfo | None:
+    """WebSocket ハンドシェイク情報からユーザーを解決."""
+    access_token = websocket.query_params.get("access_token")
+    authorization_header = websocket.headers.get("authorization")
+    authorization = authorization_header or (
+        f"Bearer {access_token}" if access_token else None
+    )
+    return await _resolve_user_from_request_payload(
+        headers=websocket.headers,
+        authorization=authorization,
+        session_token=websocket.cookies.get("session_token"),
+        request_method="GET",
+        request_path=websocket.url.path,
+    )
+
+
+def get_faq_contract_auth_guard() -> ContractAuthGuard:
+    """FAQ 認証用 ContractAuthGuard を取得."""
+    global _faq_auth_guard  # noqa: PLW0603
+    if _faq_auth_guard is None:
+        _faq_auth_guard = ContractAuthGuard(
+            ContractAuthGuardConfig(
+                app_config_path=_APP_CONFIG_PATH,
+                public_http_paths=_FAQ_PUBLIC_HTTP_PATHS,
+                auth_header_name="x-api-key",
+                ws_query_key="api_key",
+                api_key_env_selector_var="FAQ_API_KEY_ENV",
+                default_api_key_env_var="FAQ_API_KEY",
+            ),
+            http_backend=resolve_user_from_http_request,
+            ws_backend=resolve_user_from_websocket,
+        )
+    return _faq_auth_guard
+
+
+async def require_ws_auth(websocket: WebSocket) -> UserInfo | None:
+    """WebSocket 認証を共通ガード経由で実行."""
+    guard = get_faq_contract_auth_guard()
+    ok, user = await guard.require_ws(websocket)
+    if not ok:
+        return None
+    if isinstance(user, UserInfo):
+        return user
+    fallback = await resolve_user_from_websocket(websocket)
+    if fallback is None:
+        await websocket.close(code=4401, reason="Unauthorized")
+    return fallback
+
+
 async def get_optional_user(
     user: UserInfo | None = Depends(get_current_user),
 ) -> UserInfo | None:
     """オプショナルユーザー取得 (未認証でもエラーにならない).
 
     Args:
-        user: 現在のユーザー
+        user: 現在のユーザー（任意）
 
     Returns:
         ユーザー情報、または None
@@ -270,14 +362,14 @@ async def get_optional_user(
 
 
 async def require_auth(
-    user: UserInfo | None = Depends(get_current_user),
+    request: Request,
 ) -> UserInfo:
     """認証必須.
 
     未認証の場合は 401 エラーを返す。
 
     Args:
-        user: 現在のユーザー
+        request: HTTP リクエスト
 
     Returns:
         認証済みユーザー
@@ -285,7 +377,13 @@ async def require_auth(
     Raises:
         HTTPException: 未認証の場合
     """
-    if not user:
+    guard = get_faq_contract_auth_guard()
+    resolved = await guard.require_http(request)
+    if isinstance(resolved, UserInfo):
+        return resolved
+
+    user = await resolve_user_from_http_request(request)
+    if user is None:
         raise HTTPException(
             status_code=401,
             detail="認証が必要です。ログインしてください。",

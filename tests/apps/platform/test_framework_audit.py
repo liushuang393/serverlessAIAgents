@@ -3,15 +3,13 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from apps.platform.schemas.app_config_schemas import AppConfig
 from apps.platform.services.app_discovery import AppDiscoveryService
 from apps.platform.services.framework_audit import FrameworkAuditService
-
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _base_manifest() -> dict:
@@ -76,6 +74,53 @@ def _audit_service(tmp_path: Path) -> FrameworkAuditService:
     return FrameworkAuditService(discovery)
 
 
+def _write_app_source(
+    tmp_path: Path,
+    source: str,
+    *,
+    app_name: str = "sample_app",
+) -> Path:
+    app_dir = tmp_path / app_name
+    app_dir.mkdir(parents=True, exist_ok=True)
+    (app_dir / "main.py").write_text(source, encoding="utf-8")
+    return app_dir
+
+
+def _write_plugin_manifest(
+    tmp_path: Path,
+    *,
+    plugin_id: str,
+    version: str = "1.0.0",
+    product_lines: list[str] | None = None,
+) -> None:
+    """テスト用 plugin manifest を配置する."""
+    plugin_dir = tmp_path.parent / "plugins" / plugin_id
+    plugin_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "id": plugin_id,
+        "version": version,
+        "type": "tool",
+        "capabilities": ["test.capability"],
+        "risk_tier": "medium",
+        "side_effects": ["network.egress"],
+        "required_permissions": ["network.egress"],
+        "signature": {
+            "algorithm": "ed25519",
+            "issuer": "test",
+            "key_id": "k1",
+        },
+        "compatibility": {
+            "kernel": ">=2.0.0",
+            "product_lines": product_lines or ["framework"],
+        },
+        "tests_required": ["unit"],
+    }
+    (plugin_dir / "plugin_manifest.json").write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
 def test_contract_consistency_detects_rag_and_mcp_mismatch(tmp_path: Path) -> None:
     """RAG/MCP 契約の齟齬を検出できる."""
     service = _audit_service(tmp_path)
@@ -98,10 +143,12 @@ def test_orchestration_protocols_warn_when_stream_and_a2a_missing(tmp_path: Path
     """coordinator 編成で stream/A2A がなければ警告を出す."""
     service = _audit_service(tmp_path)
     config = AppConfig.model_validate(_base_manifest())
+    app_dir = _write_app_source(tmp_path, "class CoordinatorAgent:\n    pass\n")
 
     issues = service._check_orchestration_protocols(
         config,
         source_text="class CoordinatorAgent:\n    pass\n",
+        app_dir=app_dir,
         audit_profile="developer",
     )
     codes = {issue.code for issue in issues}
@@ -119,16 +166,61 @@ def test_orchestration_protocols_business_profile_skips_protocol_surface_checks(
     manifest["services"] = {"mcp": {"tools": ["search_docs"]}}
     manifest["blueprint"]["mcp_servers"] = ["filesystem"]
     config = AppConfig.model_validate(manifest)
+    app_dir = _write_app_source(tmp_path, "class CoordinatorAgent:\n    pass\n")
 
     issues = service._check_orchestration_protocols(
         config,
         source_text="class CoordinatorAgent:\n    pass\n",
+        app_dir=app_dir,
         audit_profile="business",
     )
     codes = {issue.code for issue in issues}
     assert "ORCHESTRATION_STREAM_SURFACE_MISSING" not in codes
     assert "A2A_SURFACE_NOT_FOUND" not in codes
     assert "MCP_DECLARED_BUT_SURFACE_MISSING" not in codes
+
+
+def test_orchestration_protocols_ast_parse_warning_and_unverified_error(tmp_path: Path) -> None:
+    """AST 解析不能時は警告 + 判定不能 error を返す."""
+    service = _audit_service(tmp_path)
+    config = AppConfig.model_validate(_base_manifest())
+    app_dir = _write_app_source(tmp_path, "def broken(:\n    pass\n")
+
+    issues = service._check_orchestration_protocols(
+        config,
+        source_text="def broken(:\n    pass\n",
+        app_dir=app_dir,
+        audit_profile="developer",
+    )
+    issue_map = {issue.code: issue.severity for issue in issues}
+
+    assert issue_map["AST_PARSE_WARNING"] == "warning"
+    assert issue_map["ORCHESTRATION_STREAM_SURFACE_MISSING_UNVERIFIED"] == "error"
+    assert issue_map["A2A_SURFACE_NOT_FOUND_UNVERIFIED"] == "error"
+
+
+def test_orchestration_protocols_detects_mcp_surface_via_ast(tmp_path: Path) -> None:
+    """MCP 利用シグナルを AST で検出できる."""
+    service = _audit_service(tmp_path)
+    manifest = _base_manifest()
+    manifest["services"] = {"mcp": {"tools": ["search_docs"]}}
+    manifest["blueprint"]["mcp_servers"] = ["filesystem"]
+    config = AppConfig.model_validate(manifest)
+    app_dir = _write_app_source(
+        tmp_path,
+        "from agentflow.protocols import MCPClient\n"
+        "client = MCPClient\n",
+    )
+
+    issues = service._check_orchestration_protocols(
+        config,
+        source_text="",
+        app_dir=app_dir,
+        audit_profile="developer",
+    )
+    codes = {issue.code for issue in issues}
+    assert "MCP_DECLARED_BUT_SURFACE_MISSING" not in codes
+    assert "MCP_DECLARED_BUT_SURFACE_MISSING_UNVERIFIED" not in codes
 
 
 def test_security_baseline_detects_plaintext_password_and_anonymous_external(
@@ -196,3 +288,54 @@ def test_auth_runtime_enforcement_accepts_api_key_guard(tmp_path: Path) -> None:
     )
     codes = {issue.code for issue in issues}
     assert "AUTH_CONTRACT_WITHOUT_RUNTIME_GUARD" not in codes
+
+
+def test_plugin_binding_missing_manifest_is_error_for_strict_product_line(tmp_path: Path) -> None:
+    """migration/faq/assistant では未登録 plugin を error として検出する."""
+    service = _audit_service(tmp_path)
+    manifest = deepcopy(_base_manifest())
+    manifest["product_line"] = "migration"
+    manifest["plugin_bindings"] = [{"id": "missing.plugin", "version": "1.0.0"}]
+    config = AppConfig.model_validate(manifest)
+
+    issues = service._check_plugin_bindings(config)
+    issue_map = {issue.code: issue.severity for issue in issues}
+    assert issue_map["PLUGIN_MANIFEST_NOT_FOUND"] == "error"
+
+
+def test_plugin_binding_version_mismatch_warns_for_framework(tmp_path: Path) -> None:
+    """framework では plugin version 不一致を warning として検出する."""
+    _write_plugin_manifest(
+        tmp_path,
+        plugin_id="official.test-framework-pack",
+        version="2.0.0",
+        product_lines=["framework"],
+    )
+    service = _audit_service(tmp_path)
+    manifest = deepcopy(_base_manifest())
+    manifest["plugin_bindings"] = [{"id": "official.test-framework-pack", "version": "1.0.0"}]
+    config = AppConfig.model_validate(manifest)
+
+    issues = service._check_plugin_bindings(config)
+    issue_map = {issue.code: issue.severity for issue in issues}
+    assert issue_map["PLUGIN_BINDING_VERSION_MISMATCH"] == "warning"
+
+
+def test_plugin_binding_product_line_mismatch_is_error_for_strict_line(tmp_path: Path) -> None:
+    """strict product_line では互換外 plugin の利用を error で検出する."""
+    _write_plugin_manifest(
+        tmp_path,
+        plugin_id="official.test-faq-pack",
+        version="1.0.0",
+        product_lines=["faq"],
+    )
+    service = _audit_service(tmp_path)
+    manifest = deepcopy(_base_manifest())
+    manifest["product_line"] = "assistant"
+    manifest["security_mode"] = "approval_required"
+    manifest["plugin_bindings"] = [{"id": "official.test-faq-pack", "version": "1.0.0"}]
+    config = AppConfig.model_validate(manifest)
+
+    issues = service._check_plugin_bindings(config)
+    issue_map = {issue.code: issue.severity for issue in issues}
+    assert issue_map["PLUGIN_PRODUCT_LINE_MISMATCH"] == "error"

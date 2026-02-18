@@ -56,6 +56,14 @@ from apps.platform.schemas.provisioning_schemas import (
     PortConflictItem,
     PortConflictReport,
 )
+from apps.platform.schemas.tenant_invitation_schemas import (
+    TenantInvitationChallengeRequest,
+    TenantInvitationConsumeRequest,
+    TenantInvitationConsumeResponse,
+    TenantInvitationCreateRequest,
+    TenantInvitationCreateResponse,
+    TenantInvitationStatusResponse,
+)
 from apps.platform.schemas.plugin_manifest_schemas import (
     PluginCompatibility,
     PluginManifest,
@@ -110,6 +118,13 @@ __all__ = [
     "MCPServerUpsertRequest",
     "PortConflictItem",
     "PortConflictReport",
+    # Tenant Invitation
+    "TenantInvitationChallengeRequest",
+    "TenantInvitationConsumeRequest",
+    "TenantInvitationConsumeResponse",
+    "TenantInvitationCreateRequest",
+    "TenantInvitationCreateResponse",
+    "TenantInvitationStatusResponse",
     # Plugin Manifest
     "PluginCompatibility",
     "PluginManifest",

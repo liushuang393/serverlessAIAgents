@@ -54,6 +54,7 @@ from agentflow.channels import (
     TelegramAdapter,
     WhatsAppAdapter,
 )
+from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from agentflow.skills import ChatBotSkill, ConversationExportSkill, ExportFormat
 
 
@@ -85,34 +86,36 @@ gateway = MessageGateway(hub, chatbot)
 background_tasks: list[asyncio.Task[None]] = []
 
 _APP_CONFIG_PATH = Path(__file__).resolve().parent / "app_config.json"
-_AUTH_HEADER = "x-api-key"
-_WS_AUTH_QUERY_KEY = "api_key"
-_PUBLIC_PATHS = {"/", "/health", "/api/health", "/docs", "/redoc", "/openapi.json"}
-_WEBHOOK_PREFIX = "/webhook/"
+_PUBLIC_PATHS = {
+    "/",
+    "/health",
+    "/api/health",
+    "/docs",
+    "/redoc",
+    "/openapi.json",
+    "/webhook/telegram",
+    "/webhook/slack",
+    "/webhook/teams",
+    "/webhook/signal",
+}
 _DEFAULT_SECURITY_MODE = "approval_required"
 _VALID_SECURITY_MODES = {"read_only", "approval_required", "autonomous"}
+_auth_guard = ContractAuthGuard(
+    ContractAuthGuardConfig(
+        app_config_path=_APP_CONFIG_PATH,
+        public_http_paths=_PUBLIC_PATHS,
+        http_path_prefixes=("/",),
+        auth_header_name="x-api-key",
+        ws_query_key="api_key",
+        api_key_env_selector_var="MESSAGING_HUB_API_KEY_ENV",
+        default_api_key_env_var="MESSAGING_HUB_API_KEY",
+    ),
+)
 
 
 def _load_app_config() -> dict[str, Any]:
     """Load app_config.json or return an empty dict."""
-    if not _APP_CONFIG_PATH.is_file():
-        return {}
-    try:
-        return json.loads(_APP_CONFIG_PATH.read_text("utf-8"))
-    except json.JSONDecodeError:
-        return {}
-
-
-def _get_auth_contract() -> dict[str, Any]:
-    """Return contracts.auth from app config."""
-    raw = _load_app_config()
-    contracts = raw.get("contracts", {})
-    if not isinstance(contracts, dict):
-        return {}
-    auth = contracts.get("auth", {})
-    if not isinstance(auth, dict):
-        return {}
-    return auth
+    return _auth_guard.load_app_config()
 
 
 def _get_security_mode() -> str:
@@ -139,60 +142,28 @@ def _build_assistant_config() -> AssistantConfig:
 
 def _is_auth_required() -> bool:
     """Evaluate whether API key auth must be enforced."""
-    auth = _get_auth_contract()
-    enabled = bool(auth.get("enabled", False))
-    allow_anonymous = bool(auth.get("allow_anonymous", True))
-    return enabled and not allow_anonymous
-
-
-def _api_key_env_name() -> str:
-    """Return API key env var name."""
-    return os.getenv("MESSAGING_HUB_API_KEY_ENV", "MESSAGING_HUB_API_KEY")
+    return _auth_guard.is_auth_required()
 
 
 def _verify_api_key(incoming_key: str | None) -> None:
     """Validate API key when auth is required."""
-    if not _is_auth_required():
-        return
-
-    env_name = _api_key_env_name()
-    expected_key = os.getenv(env_name)
-    if not expected_key:
-        raise HTTPException(
-            status_code=503,
-            detail=f"Auth required but env '{env_name}' is not configured",
-        )
-
-    if incoming_key != expected_key:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+    _auth_guard.verify_api_key(incoming_key)
 
 
 def _is_public_http_path(path: str) -> bool:
     """Return True when HTTP path can bypass API key auth."""
-    return path in _PUBLIC_PATHS or path.startswith(_WEBHOOK_PREFIX)
+    return not _auth_guard.should_protect_http_path(path)
 
 
-def _require_http_api_key(request: Request) -> None:
+async def _require_http_api_key(request: Request) -> None:
     """Enforce API key for protected HTTP routes."""
-    if _is_public_http_path(request.url.path):
-        return
-    _verify_api_key(request.headers.get(_AUTH_HEADER))
+    await _auth_guard.require_http(request)
 
 
 async def _require_ws_api_key(websocket: WebSocket) -> bool:
     """Enforce API key for websocket handshake."""
-    if not _is_auth_required():
-        return True
-    incoming_key = websocket.headers.get(_AUTH_HEADER) or websocket.query_params.get(
-        _WS_AUTH_QUERY_KEY
-    )
-    try:
-        _verify_api_key(incoming_key)
-    except HTTPException as exc:
-        close_code = 4401 if exc.status_code == 401 else 1011
-        await websocket.close(code=close_code, reason=str(exc.detail))
-        return False
-    return True
+    ok, _ = await _auth_guard.require_ws(websocket)
+    return ok
 
 
 # Personal Assistant Coordinator（新機能）
@@ -339,11 +310,7 @@ app = FastAPI(
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next: Any) -> Any:
     """Apply app-level auth contract to HTTP requests."""
-    try:
-        _require_http_api_key(request)
-    except HTTPException as exc:
-        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
-    return await call_next(request)
+    return await _auth_guard.http_middleware(request, call_next)
 
 
 # =========================================================================

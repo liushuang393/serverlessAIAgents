@@ -35,6 +35,13 @@ flowchart LR
 3. `python -m apps.platform.main serve --port 8000`
 4. `cd apps/platform/frontend && npm install && npm run dev`
 
+## 実行前チェック（必須）
+
+- 既定実行環境は `conda activate agentflow`。
+- コマンド実行前に `code-rules/CLAUDE.md` と対象 app README を確認する。
+- 文書で環境が確定できない場合のみ、顧客に確認する。
+- 確定した内容はルール/READMEへ追記し、同じ確認を繰り返さない。
+
 ## ドキュメント
 
 - 目次: `docs/index.md`
