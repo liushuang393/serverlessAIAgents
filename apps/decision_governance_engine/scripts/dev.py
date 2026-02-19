@@ -16,14 +16,14 @@ def ensure_env_file(app_dir: Path):
 
     # Candidates for example files
     candidates = [".env.example", "env.example", "example.env", "sample.env"]
-    
+
     for candidate in candidates:
         candidate_path = app_dir / candidate
         if candidate_path.exists():
             print(f"Creating .env from {candidate}...")
             shutil.copy(candidate_path, env_path)
             return
-            
+
     # If no example file found, create an empty one or just skip
     print("Warning: No .env or .env.example found. Application might fail if it requires environment variables.")
 

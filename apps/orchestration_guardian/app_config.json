@@ -33,11 +33,7 @@
   ],
   "services": {
     "governance": {
-      "checks": [
-        "orchestration",
-        "protocols",
-        "security_baseline"
-      ]
+      "checks": ["orchestration", "protocols", "security_baseline"]
     }
   },
   "dependencies": {
@@ -71,12 +67,7 @@
       "stop": null
     }
   },
-  "tags": [
-    "orchestration",
-    "governance",
-    "protocol",
-    "audit"
-  ],
+  "tags": ["orchestration", "governance", "protocol", "audit"],
   "contracts": {
     "auth": {
       "enabled": false,
@@ -110,9 +101,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },

@@ -1,4 +1,4 @@
-import type React from 'react';
+import type React from "react";
 
 /**
  * RichContent 型定義
@@ -8,26 +8,26 @@ import type React from 'react';
 
 /** コンポーネントタイプ */
 export type RichComponentType =
-  | 'markdown'
-  | 'code_block'
-  | 'data_table'
-  | 'chart'
-  | 'citation'
-  | 'collapsible'
-  | 'link'
-  | 'progress'
-  | 'alert'
-  | 'tabs'
-  | 'timeline';
+  | "markdown"
+  | "code_block"
+  | "data_table"
+  | "chart"
+  | "citation"
+  | "collapsible"
+  | "link"
+  | "progress"
+  | "alert"
+  | "tabs"
+  | "timeline";
 
 /** チャートタイプ */
-export type ChartType = 'bar' | 'line' | 'pie' | 'scatter' | 'area' | 'radar';
+export type ChartType = "bar" | "line" | "pie" | "scatter" | "area" | "radar";
 
 /** アラートタイプ */
-export type AlertType = 'info' | 'success' | 'warning' | 'error';
+export type AlertType = "info" | "success" | "warning" | "error";
 
 /** Agent ステータス */
-export type AgentStatus = 'healthy' | 'unhealthy' | 'degraded' | 'unknown';
+export type AgentStatus = "healthy" | "unhealthy" | "degraded" | "unknown";
 
 /**
  * コンポーネント Props 型
@@ -200,7 +200,7 @@ export interface RichContentRendererProps {
   /** エラーフォールバック */
   fallback?: React.ReactNode;
   /** テーマ */
-  theme?: 'light' | 'dark';
+  theme?: "light" | "dark";
   /** CSS クラス */
   className?: string;
 }

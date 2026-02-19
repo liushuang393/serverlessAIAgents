@@ -22,90 +22,63 @@
     {
       "name": "CollectorAgent",
       "module": "apps.market_trend_monitor.backend.agents.collector_agent",
-      "capabilities": [
-        "data_collection",
-        "web_scraping"
-      ],
+      "capabilities": ["data_collection", "web_scraping"],
       "business_base": "integration",
       "pattern": "executor"
     },
     {
       "name": "AnalyzerAgent",
       "module": "apps.market_trend_monitor.backend.agents.analyzer_agent",
-      "capabilities": [
-        "analysis",
-        "trend_detection"
-      ],
+      "capabilities": ["analysis", "trend_detection"],
       "business_base": "reasoning",
       "pattern": "analyzer"
     },
     {
       "name": "SignalScorerAgent",
       "module": "apps.market_trend_monitor.backend.agents.signal_scorer_agent",
-      "capabilities": [
-        "signal_scoring",
-        "ranking"
-      ],
+      "capabilities": ["signal_scoring", "ranking"],
       "business_base": "reasoning",
       "pattern": "analyzer"
     },
     {
       "name": "EvidenceLedgerAgent",
       "module": "apps.market_trend_monitor.backend.agents.evidence_ledger_agent",
-      "capabilities": [
-        "evidence_tracking",
-        "audit"
-      ],
+      "capabilities": ["evidence_tracking", "audit"],
       "business_base": "governance",
       "pattern": "reviewer"
     },
     {
       "name": "CompetitorTrackingAgent",
       "module": "apps.market_trend_monitor.backend.agents.competitor_tracking_agent",
-      "capabilities": [
-        "competitor_analysis",
-        "benchmarking"
-      ],
+      "capabilities": ["competitor_analysis", "benchmarking"],
       "business_base": "reasoning",
       "pattern": "analyzer"
     },
     {
       "name": "PredictionReviewAgent",
       "module": "apps.market_trend_monitor.backend.agents.prediction_review_agent",
-      "capabilities": [
-        "prediction",
-        "review"
-      ],
+      "capabilities": ["prediction", "review"],
       "business_base": "governance",
       "pattern": "reviewer"
     },
     {
       "name": "RedteamAgent",
       "module": "apps.market_trend_monitor.backend.agents.redteam_agent",
-      "capabilities": [
-        "adversarial",
-        "validation"
-      ],
+      "capabilities": ["adversarial", "validation"],
       "business_base": "governance",
       "pattern": "reviewer"
     },
     {
       "name": "ReporterAgent",
       "module": "apps.market_trend_monitor.backend.agents.reporter_agent",
-      "capabilities": [
-        "reporting",
-        "summarization"
-      ],
+      "capabilities": ["reporting", "summarization"],
       "business_base": "interaction",
       "pattern": "reporter"
     },
     {
       "name": "NotifierAgent",
       "module": "apps.market_trend_monitor.backend.agents.notifier_agent",
-      "capabilities": [
-        "notification",
-        "alerting"
-      ],
+      "capabilities": ["notification", "alerting"],
       "business_base": "interaction",
       "pattern": "executor"
     }
@@ -146,13 +119,7 @@
       "stop": null
     }
   },
-  "tags": [
-    "market",
-    "trend",
-    "monitoring",
-    "analysis",
-    "prediction"
-  ],
+  "tags": ["market", "trend", "monitoring", "analysis", "prediction"],
   "contracts": {
     "auth": {
       "enabled": false,
@@ -186,9 +153,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },

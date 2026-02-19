@@ -7,21 +7,21 @@
 
 以下は `python scripts/mypy_error_summary.py` で集計したコード別件数に基づく。**AI は新規・修正コードでこれらを絶対に発生させないこと。**
 
-| コード | 件数目安 | 禁止（やってはいけないこと） | すること |
-|--------|----------|------------------------------|----------|
-| **call-arg** | 138 | モデル/関数の必須引数を省略する。存在しないキーワードを渡す。 | 呼び出し前にモデル定義を確認し、必須引数をすべて渡す。Pydantic モデル変更時は grep で全呼び出し元を更新。 |
-| **no-any-return** | 120 | 戻り型を `-> dict[str, Any]` 等にしておきながら `return response.json()` のように Any をそのまま返す。 | `return cast(宣言型, 式)` を使うか、実装で具体型を返す。 |
-| **attr-defined** | 71 | オブジェクトに存在しない属性を書く。Optional を None チェックせず `.attr` する。 | 正しい属性名を使う。`x: T \| None` の場合は `if x is not None:` のブロック内でのみ `x.attr`。 |
-| **assignment** | 62 | 変数を `A` 型で宣言したあとに `変数 = B型の値` と代入する（A ≠ B）。 | 複数型を代入する場合は `変数: A \| B` またはプロトコルで宣言する。 |
-| **union-attr** | 58 | `x: Foo \| None` に対して `x.method()` や `x.attr` をいきなり書く。 | 必ず `if x is not None:` で分岐してからアクセスする。 |
-| **type-arg** | 46 | `dict` / `list` / `Callable` に型パラメータを付けない。型として `callable` を使う。 | `dict[str, Any]`、`list[T]`、`Callable[[Arg], Ret]`（typing.Callable）を明示する。 |
-| **unreachable** | 39 | 型推論で既に分岐が決まっている後の `elif` を書く。 | 不要な分岐を削除する。または型の絞り込みを見直す。 |
-| **arg-type** | 36 | 引数が `str` のところに `str \| None` を渡す。 | 呼び出し前に `x or ""` や `if x is not None:` で型を合わせる。 |
-| **no-untyped-call** | 36 | 型アノテーションのない関数を呼ぶ（その関数が未型付け）。 | 被呼び出し側の関数に引数・戻り値の型を付ける。 |
-| **no-untyped-def** | 34 | 公開関数・メソッドに型アノテーションを付けない。 | すべての public な `def` に引数型と `-> 戻り型` を付ける。 |
-| **valid-type** | 7 | 型注釈で `callable` を使う。 | `from typing import Callable` し、`Callable[[Arg], Ret]` を使う。 |
-| **override** | 4 | サブクラスでメソッドの戻り型を基底と異なる型にする。 | オーバーライドの戻り型は基底と同一または共変にする。 |
-| **unused-ignore** | 9 | 修正後も不要な `# type: ignore` を残す。 | 不要になったら削除。`python scripts/fix_mypy_safe.py` で一括削除可。 |
+| コード              | 件数目安 | 禁止（やってはいけないこと）                                                                           | すること                                                                                                  |
+| ------------------- | -------- | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
+| **call-arg**        | 138      | モデル/関数の必須引数を省略する。存在しないキーワードを渡す。                                          | 呼び出し前にモデル定義を確認し、必須引数をすべて渡す。Pydantic モデル変更時は grep で全呼び出し元を更新。 |
+| **no-any-return**   | 120      | 戻り型を `-> dict[str, Any]` 等にしておきながら `return response.json()` のように Any をそのまま返す。 | `return cast(宣言型, 式)` を使うか、実装で具体型を返す。                                                  |
+| **attr-defined**    | 71       | オブジェクトに存在しない属性を書く。Optional を None チェックせず `.attr` する。                       | 正しい属性名を使う。`x: T \| None` の場合は `if x is not None:` のブロック内でのみ `x.attr`。             |
+| **assignment**      | 62       | 変数を `A` 型で宣言したあとに `変数 = B型の値` と代入する（A ≠ B）。                                   | 複数型を代入する場合は `変数: A \| B` またはプロトコルで宣言する。                                        |
+| **union-attr**      | 58       | `x: Foo \| None` に対して `x.method()` や `x.attr` をいきなり書く。                                    | 必ず `if x is not None:` で分岐してからアクセスする。                                                     |
+| **type-arg**        | 46       | `dict` / `list` / `Callable` に型パラメータを付けない。型として `callable` を使う。                    | `dict[str, Any]`、`list[T]`、`Callable[[Arg], Ret]`（typing.Callable）を明示する。                        |
+| **unreachable**     | 39       | 型推論で既に分岐が決まっている後の `elif` を書く。                                                     | 不要な分岐を削除する。または型の絞り込みを見直す。                                                        |
+| **arg-type**        | 36       | 引数が `str` のところに `str \| None` を渡す。                                                         | 呼び出し前に `x or ""` や `if x is not None:` で型を合わせる。                                            |
+| **no-untyped-call** | 36       | 型アノテーションのない関数を呼ぶ（その関数が未型付け）。                                               | 被呼び出し側の関数に引数・戻り値の型を付ける。                                                            |
+| **no-untyped-def**  | 34       | 公開関数・メソッドに型アノテーションを付けない。                                                       | すべての public な `def` に引数型と `-> 戻り型` を付ける。                                                |
+| **valid-type**      | 7        | 型注釈で `callable` を使う。                                                                           | `from typing import Callable` し、`Callable[[Arg], Ret]` を使う。                                         |
+| **override**        | 4        | サブクラスでメソッドの戻り型を基底と異なる型にする。                                                   | オーバーライドの戻り型は基底と同一または共変にする。                                                      |
+| **unused-ignore**   | 9        | 修正後も不要な `# type: ignore` を残す。                                                               | 不要になったら削除。`python scripts/fix_mypy_safe.py` で一括削除可。                                      |
 
 ---
 

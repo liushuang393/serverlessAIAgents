@@ -22,33 +22,21 @@
     {
       "name": "FAQAgent",
       "module": "agentflow.agents.faq_agent",
-      "capabilities": [
-        "faq",
-        "rag",
-        "sql",
-        "chart",
-        "suggestion"
-      ],
+      "capabilities": ["faq", "rag", "sql", "chart", "suggestion"],
       "business_base": "knowledge",
       "pattern": "specialist"
     },
     {
       "name": "SalesAgent",
       "module": "agentflow.agents.sales_agent",
-      "capabilities": [
-        "sales",
-        "design_skills",
-        "image_generation"
-      ],
+      "capabilities": ["sales", "design_skills", "image_generation"],
       "business_base": "interaction",
       "pattern": "specialist"
     }
   ],
   "services": {
     "rag": {
-      "collections": [
-        "faq_knowledge"
-      ]
+      "collections": ["faq_knowledge"]
     },
     "sql": {
       "dialect": "postgresql"
@@ -60,9 +48,7 @@
   "dependencies": {
     "database": "postgresql",
     "redis": false,
-    "external": [
-      "comfyui"
-    ]
+    "external": ["comfyui"]
   },
   "runtime": {
     "urls": {
@@ -90,32 +76,20 @@
       "stop": "docker compose -f docker-compose.yml -f docker-compose.dev.yml down"
     }
   },
-  "tags": [
-    "faq",
-    "rag",
-    "text2sql",
-    "sales",
-    "chat"
-  ],
+  "tags": ["faq", "rag", "text2sql", "sales", "chat"],
   "contracts": {
     "auth": {
       "enabled": true,
-      "providers": [
-        "api_key"
-      ],
+      "providers": ["api_key"],
       "allow_anonymous": false,
-      "required_scopes": [
-        "api"
-      ],
+      "required_scopes": ["api"],
       "session_ttl_minutes": 60
     },
     "rag": {
       "enabled": true,
       "pattern": null,
       "provider": null,
-      "collections": [
-        "faq_knowledge"
-      ],
+      "collections": ["faq_knowledge"],
       "data_sources": [],
       "chunk_strategy": "recursive",
       "chunk_size": 800,
@@ -136,9 +110,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },
@@ -147,10 +119,7 @@
       "id": "official.enterprise-connector-pack",
       "version": "1.0.0",
       "config": {
-        "connectors": [
-          "confluence",
-          "sharepoint"
-        ]
+        "connectors": ["confluence", "sharepoint"]
       }
     },
     {

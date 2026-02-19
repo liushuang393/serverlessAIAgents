@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useWorkflowStore } from '../stores/workflowStore';
+import { useState, useEffect, useCallback } from "react";
+import { useWorkflowStore } from "../stores/workflowStore";
 
 /**
  * 発行ダイアログ - ワークフローのエクスポートとデプロイ
@@ -36,7 +36,7 @@ interface DeployTarget {
 interface ConfigField {
   name: string;
   label: string;
-  type: 'string' | 'password' | 'select' | 'boolean' | 'number' | 'textarea';
+  type: "string" | "password" | "select" | "boolean" | "number" | "textarea";
   required: boolean;
   default?: unknown;
   options?: string[];
@@ -61,26 +61,33 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
 
   // Output type state
   const [outputTypes, setOutputTypes] = useState<OutputType[]>([]);
-  const [selectedOutputType, setSelectedOutputType] = useState<string>('backend');
+  const [selectedOutputType, setSelectedOutputType] =
+    useState<string>("backend");
 
   // Deploy target state
   const [deployTargets, setDeployTargets] = useState<DeployTarget[]>([]);
-  const [selectedDeployTarget, setSelectedDeployTarget] = useState<string>('vercel');
+  const [selectedDeployTarget, setSelectedDeployTarget] =
+    useState<string>("vercel");
 
   // Config fields state
   const [configFields, setConfigFields] = useState<ConfigField[]>([]);
   const [configValues, setConfigValues] = useState<Record<string, unknown>>({});
 
   // Common options
-  const [appName, setAppName] = useState('');
-  const [version, setVersion] = useState('1.0.0');
+  const [appName, setAppName] = useState("");
+  const [version, setVersion] = useState("1.0.0");
   const [includeTests, setIncludeTests] = useState(true);
   const [includeReadme, setIncludeReadme] = useState(true);
 
   // Preview state
-  const [previewFiles, setPreviewFiles] = useState<Record<string, PreviewFile> | null>(null);
+  const [previewFiles, setPreviewFiles] = useState<Record<
+    string,
+    PreviewFile
+  > | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [activePreviewFile, setActivePreviewFile] = useState<string | null>(null);
+  const [activePreviewFile, setActivePreviewFile] = useState<string | null>(
+    null,
+  );
 
   // Export/Deploy state
   const [exporting, setExporting] = useState(false);
@@ -93,12 +100,12 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
   } | null>(null);
 
   // Active tab
-  const [activeTab, setActiveTab] = useState<'export' | 'deploy'>('export');
+  const [activeTab, setActiveTab] = useState<"export" | "deploy">("export");
 
   // Fetch targets on open
   useEffect(() => {
     if (open) {
-      fetch('/api/publish/targets')
+      fetch("/api/publish/targets")
         .then((res) => res.json())
         .then((data: TargetsResponse) => {
           setOutputTypes(data.output_types || []);
@@ -111,13 +118,13 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
   // Set default app name
   useEffect(() => {
     if (workflow.name && !appName) {
-      setAppName(workflow.name.toLowerCase().replace(/\s+/g, '-'));
+      setAppName(workflow.name.toLowerCase().replace(/\s+/g, "-"));
     }
   }, [workflow.name, appName]);
 
   // Fetch config fields when deploy target changes
   useEffect(() => {
-    if (selectedDeployTarget && activeTab === 'deploy') {
+    if (selectedDeployTarget && activeTab === "deploy") {
       fetch(`/api/publish/config-fields/${selectedDeployTarget}`)
         .then((res) => res.json())
         .then((fields: ConfigField[]) => {
@@ -140,21 +147,31 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
     const value = configValues[field.name];
 
     switch (field.type) {
-      case 'password':
+      case "password":
         return (
           <input
             type="password"
-            value={(value as string) || ''}
-            onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
+            value={(value as string) || ""}
+            onChange={(e) =>
+              setConfigValues((prev) => ({
+                ...prev,
+                [field.name]: e.target.value,
+              }))
+            }
             className="w-full px-3 py-2 border rounded-md text-sm"
-            placeholder={field.placeholder || '••••••••'}
+            placeholder={field.placeholder || "••••••••"}
           />
         );
-      case 'select':
+      case "select":
         return (
           <select
-            value={String((value as string) || field.default || '')}
-            onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
+            value={String((value as string) || field.default || "")}
+            onChange={(e) =>
+              setConfigValues((prev) => ({
+                ...prev,
+                [field.name]: e.target.value,
+              }))
+            }
             className="w-full px-3 py-2 border rounded-md text-sm"
           >
             {field.options?.map((opt) => (
@@ -164,37 +181,48 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
             ))}
           </select>
         );
-      case 'boolean':
+      case "boolean":
         return (
           <label className="flex items-center gap-2">
             <input
               type="checkbox"
               checked={Boolean(value)}
               onChange={(e) =>
-                setConfigValues((prev) => ({ ...prev, [field.name]: e.target.checked }))
+                setConfigValues((prev) => ({
+                  ...prev,
+                  [field.name]: e.target.checked,
+                }))
               }
               className="rounded"
             />
             <span className="text-sm">{field.description}</span>
           </label>
         );
-      case 'number':
+      case "number":
         return (
           <input
             type="number"
             value={Number((value as number) || field.default || 0)}
             onChange={(e) =>
-              setConfigValues((prev) => ({ ...prev, [field.name]: parseInt(e.target.value) }))
+              setConfigValues((prev) => ({
+                ...prev,
+                [field.name]: parseInt(e.target.value),
+              }))
             }
             className="w-full px-3 py-2 border rounded-md text-sm"
             placeholder={field.placeholder}
           />
         );
-      case 'textarea':
+      case "textarea":
         return (
           <textarea
-            value={(value as string) || ''}
-            onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
+            value={(value as string) || ""}
+            onChange={(e) =>
+              setConfigValues((prev) => ({
+                ...prev,
+                [field.name]: e.target.value,
+              }))
+            }
             className="w-full px-3 py-2 border rounded-md text-sm min-h-20"
             placeholder={field.placeholder}
           />
@@ -203,8 +231,13 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
         return (
           <input
             type="text"
-            value={(value as string) || ''}
-            onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
+            value={(value as string) || ""}
+            onChange={(e) =>
+              setConfigValues((prev) => ({
+                ...prev,
+                [field.name]: e.target.value,
+              }))
+            }
             className="w-full px-3 py-2 border rounded-md text-sm"
             placeholder={field.placeholder}
           />
@@ -215,7 +248,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
   // Group config fields
   const groupedFields = configFields.reduce(
     (acc, field) => {
-      const group = field.group || 'general';
+      const group = field.group || "general";
       if (!acc[group]) {
         acc[group] = [];
       }
@@ -231,9 +264,9 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
     setPreviewFiles(null);
 
     try {
-      const response = await fetch('/api/publish/preview', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/publish/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workflow: {
             id: workflow.id,
@@ -251,26 +284,33 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
       });
 
       const data = await response.json();
-      if (data.status === 'success') {
+      if (data.status === "success") {
         setPreviewFiles(data.files);
         const firstFile = Object.keys(data.files)[0];
         setActivePreviewFile(firstFile || null);
       }
     } catch (error) {
-      console.error('Preview failed:', error);
+      console.error("Preview failed:", error);
     } finally {
       setPreviewLoading(false);
     }
-  }, [workflow, selectedOutputType, appName, version, includeTests, includeReadme]);
+  }, [
+    workflow,
+    selectedOutputType,
+    appName,
+    version,
+    includeTests,
+    includeReadme,
+  ]);
 
   // Export (download)
   const handleExport = useCallback(async () => {
     setExporting(true);
 
     try {
-      const response = await fetch('/api/publish/export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/publish/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workflow: {
             id: workflow.id,
@@ -288,25 +328,32 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Export failed');
+        throw new Error("Export failed");
       }
 
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `${appName || 'workflow'}-${selectedOutputType}.zip`;
+      a.download = `${appName || "workflow"}-${selectedOutputType}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Export failed:', error);
-      alert('エクスポートに失敗しました');
+      console.error("Export failed:", error);
+      alert("エクスポートに失敗しました");
     } finally {
       setExporting(false);
     }
-  }, [workflow, selectedOutputType, appName, version, includeTests, includeReadme]);
+  }, [
+    workflow,
+    selectedOutputType,
+    appName,
+    version,
+    includeTests,
+    includeReadme,
+  ]);
 
   // Deploy with streaming
   const handleDeploy = useCallback(async () => {
@@ -315,9 +362,9 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
     setDeployLogs([]);
 
     try {
-      const response = await fetch('/api/publish/deploy/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/publish/deploy/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workflow: {
             id: workflow.id,
@@ -345,21 +392,21 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
         }
 
         const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        const lines = chunk.split("\n");
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
+          if (line.startsWith("data: ")) {
             try {
               const event = JSON.parse(line.slice(6));
               setDeployLogs((prev) => [...prev, event.message]);
 
-              if (event.type === 'success') {
+              if (event.type === "success") {
                 setDeployResult({
-                  status: 'success',
+                  status: "success",
                   url: event.data?.url,
                 });
-              } else if (event.type === 'error') {
+              } else if (event.type === "error") {
                 setDeployResult({
-                  status: 'error',
+                  status: "error",
                   error: event.message,
                 });
               }
@@ -371,7 +418,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
       }
     } catch (error) {
       setDeployResult({
-        status: 'error',
+        status: "error",
         error: (error as Error).message,
       });
     } finally {
@@ -406,21 +453,21 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
         {/* Tabs */}
         <div className="flex border-b">
           <button
-            onClick={() => setActiveTab('export')}
+            onClick={() => setActiveTab("export")}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'export'
-                ? 'border-primary text-primary'
-                : 'border-transparent hover:text-foreground'
+              activeTab === "export"
+                ? "border-primary text-primary"
+                : "border-transparent hover:text-foreground"
             }`}
           >
             📦 エクスポート
           </button>
           <button
-            onClick={() => setActiveTab('deploy')}
+            onClick={() => setActiveTab("deploy")}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === 'deploy'
-                ? 'border-primary text-primary'
-                : 'border-transparent hover:text-foreground'
+              activeTab === "deploy"
+                ? "border-primary text-primary"
+                : "border-transparent hover:text-foreground"
             }`}
           >
             🚀 デプロイ
@@ -432,11 +479,13 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
           <div className="grid grid-cols-2 gap-6">
             {/* Left Column: Settings */}
             <div className="space-y-4">
-              {activeTab === 'export' ? (
+              {activeTab === "export" ? (
                 <>
                   {/* Output Type Selection */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">出力タイプ</label>
+                    <label className="text-sm font-medium mb-2 block">
+                      出力タイプ
+                    </label>
                     <div className="grid grid-cols-1 gap-2">
                       {outputTypes.map((type) => (
                         <button
@@ -444,15 +493,19 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
                           onClick={() => setSelectedOutputType(type.id)}
                           className={`p-3 border rounded-lg text-left transition-colors ${
                             selectedOutputType === type.id
-                              ? 'border-primary bg-primary/5'
-                              : 'hover:border-muted-foreground/50'
+                              ? "border-primary bg-primary/5"
+                              : "hover:border-muted-foreground/50"
                           }`}
                         >
                           <div className="flex items-center gap-2">
                             <span className="text-lg">{type.icon}</span>
-                            <span className="font-medium text-sm">{type.name}</span>
+                            <span className="font-medium text-sm">
+                              {type.name}
+                            </span>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">{type.description}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {type.description}
+                          </p>
                         </button>
                       ))}
                     </div>
@@ -460,7 +513,9 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
 
                   {/* App Name */}
                   <div>
-                    <label className="text-sm font-medium mb-1 block">アプリケーション名</label>
+                    <label className="text-sm font-medium mb-1 block">
+                      アプリケーション名
+                    </label>
                     <input
                       type="text"
                       value={appName}
@@ -472,7 +527,9 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
 
                   {/* Version */}
                   <div>
-                    <label className="text-sm font-medium mb-1 block">バージョン</label>
+                    <label className="text-sm font-medium mb-1 block">
+                      バージョン
+                    </label>
                     <input
                       type="text"
                       value={version}
@@ -508,7 +565,9 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
                 <>
                   {/* Deploy Target Selection */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">デプロイ先</label>
+                    <label className="text-sm font-medium mb-2 block">
+                      デプロイ先
+                    </label>
                     <div className="grid grid-cols-2 gap-2">
                       {deployTargets
                         .filter((t) => t.supports_direct_deploy)
@@ -518,13 +577,15 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
                             onClick={() => setSelectedDeployTarget(target.id)}
                             className={`p-3 border rounded-lg text-left transition-colors ${
                               selectedDeployTarget === target.id
-                                ? 'border-primary bg-primary/5'
-                                : 'hover:border-muted-foreground/50'
+                                ? "border-primary bg-primary/5"
+                                : "hover:border-muted-foreground/50"
                             }`}
                           >
                             <div className="flex items-center gap-2">
                               <span className="text-lg">{target.icon}</span>
-                              <span className="font-medium text-sm">{target.name}</span>
+                              <span className="font-medium text-sm">
+                                {target.name}
+                              </span>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1">
                               {target.description}
@@ -538,16 +599,18 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
                   {Object.entries(groupedFields).map(([group, fields]) => (
                     <div key={group} className="space-y-3">
                       <h4 className="text-sm font-medium capitalize">
-                        {group === 'credentials' ? '🔐 認証情報' : '⚙️ 設定'}
+                        {group === "credentials" ? "🔐 認証情報" : "⚙️ 設定"}
                       </h4>
                       {fields.map((field) => (
                         <div key={field.name}>
                           <label className="text-sm text-muted-foreground mb-1 block">
                             {field.label}
-                            {field.required && <span className="text-destructive ml-1">*</span>}
+                            {field.required && (
+                              <span className="text-destructive ml-1">*</span>
+                            )}
                           </label>
                           {renderConfigField(field)}
-                          {field.description && field.type !== 'boolean' && (
+                          {field.description && field.type !== "boolean" && (
                             <p className="text-xs text-muted-foreground mt-1">
                               {field.description}
                             </p>
@@ -573,13 +636,15 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
                   {deployResult && (
                     <div
                       className={`p-3 rounded-md text-sm ${
-                        deployResult.status === 'error'
-                          ? 'bg-destructive/10 text-destructive'
-                          : 'bg-green-50 text-green-700'
+                        deployResult.status === "error"
+                          ? "bg-destructive/10 text-destructive"
+                          : "bg-green-50 text-green-700"
                       }`}
                     >
                       <p className="font-medium">
-                        {deployResult.status === 'error' ? '❌ デプロイ失敗' : '✅ デプロイ完了'}
+                        {deployResult.status === "error"
+                          ? "❌ デプロイ失敗"
+                          : "✅ デプロイ完了"}
                       </p>
                       {deployResult.url && (
                         <a
@@ -591,7 +656,9 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
                           {deployResult.url}
                         </a>
                       )}
-                      {deployResult.error && <p className="mt-1">{deployResult.error}</p>}
+                      {deployResult.error && (
+                        <p className="mt-1">{deployResult.error}</p>
+                      )}
                     </div>
                   )}
                 </>
@@ -607,7 +674,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
                   disabled={previewLoading}
                   className="px-3 py-1.5 bg-secondary text-secondary-foreground rounded-md text-xs hover:bg-secondary/90 disabled:opacity-50"
                 >
-                  {previewLoading ? '読み込み中...' : 'プレビュー更新'}
+                  {previewLoading ? "読み込み中..." : "プレビュー更新"}
                 </button>
               </div>
 
@@ -621,8 +688,8 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
                         onClick={() => setActivePreviewFile(filename)}
                         className={`px-3 py-2 text-xs whitespace-nowrap border-b-2 transition-colors ${
                           activePreviewFile === filename
-                            ? 'border-primary bg-background'
-                            : 'border-transparent hover:bg-muted'
+                            ? "border-primary bg-background"
+                            : "border-transparent hover:bg-muted"
                         }`}
                       >
                         {filename}
@@ -635,7 +702,12 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
                     <div className="p-3 bg-background">
                       <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
                         <span>{previewFiles[activePreviewFile].lines} 行</span>
-                        <span>{(previewFiles[activePreviewFile].size / 1024).toFixed(1)} KB</span>
+                        <span>
+                          {(
+                            previewFiles[activePreviewFile].size / 1024
+                          ).toFixed(1)}{" "}
+                          KB
+                        </span>
                       </div>
                       <pre className="text-xs font-mono bg-muted p-3 rounded-md overflow-auto max-h-64">
                         {previewFiles[activePreviewFile].content}
@@ -658,10 +730,13 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
 
         {/* Footer */}
         <div className="p-4 border-t flex justify-end gap-3">
-          <button onClick={onClose} className="px-4 py-2 border rounded-md text-sm hover:bg-muted">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 border rounded-md text-sm hover:bg-muted"
+          >
             キャンセル
           </button>
-          {activeTab === 'export' ? (
+          {activeTab === "export" ? (
             <button
               onClick={handleExport}
               disabled={exporting || workflow.nodes.length === 0}
