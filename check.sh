@@ -11,7 +11,9 @@
 #   type-check    - 型チェック
 #   test          - テストを実行
 #   test-cov      - カバレッジ付きテスト
-#   all           - すべてのチェックを実行
+#   build         - フロントエンド(studio)ビルド確認
+#   audit         - npm 脆弱性チェック (studio)
+#   all           - すべてのチェックを実行（format/lint/type-check/test/build）
 #   pre-commit    - Pre-commit を全ファイルに実行
 #   clean         - 一時ファイルを削除
 
@@ -26,8 +28,10 @@ show_help() {
     echo "  ./check.sh type-check    - 型チェック (Python + TypeScript)"
     echo "  ./check.sh test          - テストを実行"
     echo "  ./check.sh test-cov      - カバレッジ付きでテストを実行"
+    echo "  ./check.sh build         - フロントエンド(studio)ビルド確認"
+    echo "  ./check.sh audit         - npm 脆弱性チェック (studio)"
     echo ""
-    echo "  ./check.sh all           - すべてのチェックを実行"
+    echo "  ./check.sh all           - すべてのチェックを実行 (format/lint/type-check/test/build)"
     echo "  ./check.sh pre-commit    - Pre-commit を全ファイルに実行"
     echo "  ./check.sh clean         - 一時ファイルとキャッシュを削除"
     echo ""
@@ -147,6 +151,49 @@ do_test_cov() {
     return 0
 }
 
+do_build() {
+    echo "========================================"
+    echo "フロントエンド(studio)ビルド確認中..."
+    echo "========================================"
+    echo ""
+    if [ ! -d "studio" ]; then
+        echo "[スキップ] studio ディレクトリがありません"
+        return 0
+    fi
+    cd studio
+    npm run build
+    if [ $? -ne 0 ]; then
+        echo "[エラー] studio ビルドに失敗しました"
+        cd ..
+        return 1
+    fi
+    cd ..
+    echo ""
+    echo "✅ studio ビルドが完了しました"
+    return 0
+}
+
+do_audit() {
+    echo "========================================"
+    echo "npm 脆弱性チェック中 (studio)..."
+    echo "========================================"
+    echo ""
+    if [ ! -d "studio" ]; then
+        echo "[スキップ] studio ディレクトリがありません"
+        return 0
+    fi
+    cd studio
+    npm audit --audit-level=high
+    local ret=$?
+    cd ..
+    if [ $ret -ne 0 ]; then
+        echo "[警告] 高以上の脆弱性が検出されました。対応するか code-rules の方針に従って記録してください"
+    fi
+    echo ""
+    echo "✅ npm audit が完了しました"
+    return 0
+}
+
 do_all() {
     echo "========================================"
     echo "すべてのチェックを実行中..."
@@ -162,6 +209,9 @@ do_all() {
     if [ $? -ne 0 ]; then return 1; fi
     echo ""
     do_test
+    if [ $? -ne 0 ]; then return 1; fi
+    echo ""
+    do_build
     if [ $? -ne 0 ]; then return 1; fi
     echo ""
     echo "========================================"
@@ -229,6 +279,12 @@ case "${1:-help}" in
         ;;
     test-cov)
         do_test_cov
+        ;;
+    build)
+        do_build
+        ;;
+    audit)
+        do_audit
         ;;
     all)
         do_all

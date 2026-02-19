@@ -2,8 +2,8 @@
 
 > **プロジェクト**: AgentFlow - MCP/A2A/AG-UI/A2UI 統一インターフェース AI エージェントフレームワーク
 > **バージョン**: 1.0.0
-> **最終更新**: 2026-01-19
-> **適用範囲**: AgentFlow 全 Python コードベース
+> **最終更新**: 2026-02-19
+> **適用範囲**: AgentFlow 全コードベース（Python バックエンド・React/Vite/TS フロント・AI 関連・CI）
 
 ## 🧠 全体方針（Global）
 
@@ -23,6 +23,7 @@
 - [Agent Lightning 統合規約](project/agent-lightning-integration.md)
 - [リポジトリ構造](project/repo-structure.md)
 - [CI/CDガイドライン](project/ci-cd-guidelines.md)
+- [依存関係管理・Dependabot](project/dependency-management.md)
 - [ファイル管理規約](project/file-management.md)
 
 ## 🧠 AgentFlow固有指針
@@ -62,11 +63,13 @@
 - **Engine Pattern**: 配置即用、4種類の予定義パターン
 
 ### 技術スタック
-- **言語**: Python 3.13+
+- **バックエンド**: Python 3.13+, FastAPI, Pydantic, Uvicorn
+- **フロントエンド**: React, Vite, TypeScript, ESLint, Prettier（studio / apps/*/frontend）
+- **AI 関連**: MCP, A2A, AG-UI, A2UI, LLM プロバイダ
 - **アーキテクチャ**: 8層クリーンアーキテクチャ
-- **プロトコル**: MCP, A2A, AG-UI, A2UI
 - **インフラ**: Supabase/PostgreSQL/Turso, Pinecone/Qdrant, Redis
-- **品質**: Ruff, mypy, pytest, 92% カバレッジ
+- **品質**: Ruff, mypy, pytest（80%+ カバレッジ）, ESLint, tsc, pre-commit
+- **依存更新**: Dependabot グループ化・週次一括マージ（[依存関係管理](project/dependency-management.md)）
 
 ### 品質基準
 - **型安全**: 100% 型アノテーション必須
@@ -83,14 +86,28 @@
 2. **言語別ルール** - Python 生態系のベストプラクティス
 3. **グローバルルール** - 普遍的な開発原則
 
-### 自動化チェック
+### 自動化チェック（本プロジェクト全体）
+
+本リポジトリは **バックエンド（Python）・フロントエンド（React/Vite/TypeScript）・AI 関連** を併用するため、以下のいずれかで **全領域** をカバーすること。
+
 ```bash
-# コミット前必須チェック
-ruff format .                    # フォーマット
-ruff check .                     # リント
-mypy agentflow                   # 型チェック
-pytest --cov=agentflow --cov-fail-under=80  # テスト
+# 推奨: 一括実行（Python + フロント format/lint/type-check/test + studio ビルド）
+./check.sh all
 ```
+
+個別実行する場合は以下をすべて通過させること。
+
+| 領域 | チェック | コマンド例 |
+|------|----------|-------------|
+| **Python** | フォーマット・リント | `ruff format .` / `ruff check .` |
+| **Python** | 型チェック | `mypy agentflow` |
+| **Python** | テスト | `pytest --cov=agentflow --cov-fail-under=80` |
+| **フロント (React/TS)** | リント | `cd studio && npm run lint` |
+| **フロント (React/TS)** | 型チェック | `cd studio && npm run type-check` |
+| **フロント (React/TS)** | ビルド | `cd studio && npm run build` |
+| **共通** | 軽量フック | `pre-commit run --all-files` |
+
+依存関係を更新した場合（Dependabot マージ含む）も上記を実行すること。詳細は [依存関係管理](project/dependency-management.md) を参照。
 
 ### AI生成コードの品質保証
 - **仕様明文化テンプレート**強制
@@ -104,11 +121,21 @@ pytest --cov=agentflow --cov-fail-under=80  # テスト
 ### 自動化チェックリスト
 
 #### コミット前チェック (Pre-commit)
-- [ ] `ruff format .` - コードフォーマット
-- [ ] `ruff check .` - リントチェック
-- [ ] `mypy agentflow` - 型チェック
-- [ ] `pytest --cov=agentflow --cov-fail-under=80` - テスト実行
-- [ ] `pre-commit run --all-files` - 全自動チェック
+
+**必須（推奨は `./check.sh all` で一括）:**
+
+- [ ] **Python**: `ruff format .` / `ruff check .` - フォーマット・リント
+- [ ] **Python**: `mypy agentflow` - 型チェック
+- [ ] **Python**: `pytest --cov=agentflow --cov-fail-under=80` - テスト
+- [ ] **フロント (studio)**: `cd studio && npm run lint` - ESLint
+- [ ] **フロント (studio)**: `cd studio && npm run type-check` - TypeScript
+- [ ] **フロント (studio)**: `cd studio && npm run build` - ビルド成功確認
+- [ ] **共通**: `pre-commit run --all-files` - フック（Ruff, Prettier, YAML, シークレット等）
+
+**推奨（マージ前・依存更新後）:**
+
+- [ ] **フロント**: `cd studio && npm audit --audit-level=high` - 脆弱性確認（失敗時は対応または記録）
+- [ ] 他フロント（`apps/*/frontend`, `agentflow/sdk/frontend`）を変更した場合は、当該ディレクトリで同様に lint / type-check / build を実行
 
 #### マージ前チェック (Pre-merge)
 - [ ] すべての自動化チェック通過

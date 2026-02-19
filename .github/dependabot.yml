@@ -5,7 +5,7 @@ version: 2
 
 updates:
   # ---------------------------------------------------------------------------
-  # Python 依存関係 (フレームワーク)
+  # Python 依存関係 (フレームワーク)（1 PR にまとめて Dependabot PR 数を抑制）
   # ---------------------------------------------------------------------------
   - package-ecosystem: "pip"
     directory: "/"
@@ -14,7 +14,7 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "Asia/Tokyo"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
       - "python"
@@ -29,7 +29,7 @@ updates:
           - "patch"
 
   # ---------------------------------------------------------------------------
-  # Node.js 依存関係 (Studio UI)
+  # Node.js 依存関係 (Studio UI)（1 PR にまとめて Dependabot PR 数を抑制）
   # ---------------------------------------------------------------------------
   - package-ecosystem: "npm"
     directory: "/studio"
@@ -38,7 +38,7 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "Asia/Tokyo"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
       - "javascript"
@@ -53,7 +53,7 @@ updates:
           - "patch"
 
   # ---------------------------------------------------------------------------
-  # GitHub Actions
+  # GitHub Actions（1 PR にまとめて「低レベルな更新」の氾濫を防ぐ）
   # ---------------------------------------------------------------------------
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -62,12 +62,16 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "Asia/Tokyo"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 1
     labels:
       - "dependencies"
       - "github-actions"
     commit-message:
       prefix: "chore(ci)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
 
   # ---------------------------------------------------------------------------
   # Docker 依存関係
