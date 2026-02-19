@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """PEV (Plan-Execute-Verify) エンジンのユニットテスト.
 
 HierarchicalPlanner, MonitoredExecutor, ResultVerifier, PEVEngineの機能をテストする。
@@ -7,21 +6,18 @@ HierarchicalPlanner, MonitoredExecutor, ResultVerifier, PEVEngineの機能をテ
 import pytest
 
 from agentflow.pev import (
+    ExecutionMonitor,
+    HierarchicalPlanner,
+    MonitoredExecutor,
     PEVEngine,
     PEVEngineConfig,
-    HierarchicalPlanner,
-    HierarchicalPlan,
     PlanLevel,
-    SubGoal,
-    MonitoredExecutor,
-    ExecutionMonitor,
-    ExecutionResult,
     ResultVerifier,
-    VerificationResult,
+    SubGoal,
     VerificationStrategy,
 )
 from agentflow.pev.hierarchical_planner import GoalStatus
-from agentflow.pev.monitored_executor import ExecutionEvent, ExecutionEventType
+from agentflow.pev.monitored_executor import ExecutionEventType
 
 
 class TestHierarchicalPlanner:
@@ -314,6 +310,7 @@ class TestPEVEngine:
     @pytest.mark.asyncio
     async def test_create_engine(self) -> None:
         """エンジン作成のテスト."""
+
         class SimpleAgent:
             async def run(self, inputs: dict) -> dict:
                 return {"status": "completed"}
@@ -336,6 +333,7 @@ class TestPEVEngine:
     @pytest.mark.asyncio
     async def test_engine_run(self) -> None:
         """エンジン実行のテスト."""
+
         class SimpleAgent:
             async def run(self, inputs: dict) -> dict:
                 return {"status": "completed", "score": 0.9}
@@ -722,4 +720,3 @@ class TestExecutionMonitorAdvanced:
         # 進捗があるとリセット
         is_stall = monitor.check_stall(0.6)
         assert is_stall is False
-

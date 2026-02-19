@@ -83,8 +83,7 @@ class GapAnalyzer(AgentBlock):
                 "end": report.period_end.isoformat(),
             },
             "unanswered_questions": [
-                {"question": q.question, "count": q.count}
-                for q in report.unanswered_questions
+                {"question": q.question, "count": q.count} for q in report.unanswered_questions
             ],
             "low_confidence_answers": [
                 {

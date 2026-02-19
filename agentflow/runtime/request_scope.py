@@ -141,10 +141,7 @@ class RequestScope:
             # 清理
             await scope.cleanup()
             _current_scope.reset(token)
-            _logger.debug(
-                f"Request scope completed: {scope.request_id} "
-                f"({scope.elapsed_ms:.1f}ms)"
-            )
+            _logger.debug(f"Request scope completed: {scope.request_id} ({scope.elapsed_ms:.1f}ms)")
 
 
 # 当前请求作用域

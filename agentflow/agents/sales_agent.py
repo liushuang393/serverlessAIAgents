@@ -142,15 +142,19 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
             Text2SQLService,
         )
 
-        self.__sql_service = Text2SQLService(Text2SQLConfig(
-            schema=self._config.sql_schema,
-            dialect=self._config.sql_dialect,
-            auto_chart=True,
-        ))
+        self.__sql_service = Text2SQLService(
+            Text2SQLConfig(
+                schema=self._config.sql_schema,
+                dialect=self._config.sql_dialect,
+                auto_chart=True,
+            )
+        )
 
-        self.__suggestion_service = SuggestionService(SuggestionConfig(
-            max_suggestions=5,
-        ))
+        self.__suggestion_service = SuggestionService(
+            SuggestionConfig(
+                max_suggestions=5,
+            )
+        )
 
         self._services_initialized = True
 
@@ -251,13 +255,15 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
             try:
                 values = [float(row.get(col, 0)) for row in data if row.get(col) is not None]
                 if values:
-                    numeric_cols.append({
-                        "name": col,
-                        "sum": sum(values),
-                        "avg": sum(values) / len(values),
-                        "max": max(values),
-                        "min": min(values),
-                    })
+                    numeric_cols.append(
+                        {
+                            "name": col,
+                            "sum": sum(values),
+                            "avg": sum(values) / len(values),
+                            "max": max(values),
+                            "min": min(values),
+                        }
+                    )
             except (ValueError, TypeError):
                 continue
 
@@ -269,8 +275,8 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
 
         # 傾向分析
         if len(data) >= 2:
-            first_half = data[:len(data)//2]
-            second_half = data[len(data)//2:]
+            first_half = data[: len(data) // 2]
+            second_half = data[len(data) // 2 :]
 
             for col_stats in numeric_cols:
                 col = col_stats["name"]
@@ -352,7 +358,12 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
             ],
             "config": [
                 {"name": "sql_schema", "type": "json", "label": "DBスキーマ"},
-                {"name": "default_period", "type": "number", "label": "デフォルト期間", "default": 30},
+                {
+                    "name": "default_period",
+                    "type": "number",
+                    "label": "デフォルト期間",
+                    "default": 30,
+                },
                 {"name": "compare_yoy", "type": "boolean", "label": "前年比較", "default": True},
             ],
         }

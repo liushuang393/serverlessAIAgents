@@ -41,12 +41,12 @@ if TYPE_CHECKING:
 class RelationType(str, Enum):
     """因果関係のタイプ."""
 
-    INCREASES = "increases"       # 原因が増えると結果が増える
-    DECREASES = "decreases"       # 原因が増えると結果が減る
-    ENABLES = "enables"           # 原因が真なら結果が可能
-    PREVENTS = "prevents"         # 原因が真なら結果が不可能
-    TRIGGERS = "triggers"         # 原因が発生すると結果が発生
-    CUSTOM = "custom"             # カスタム関数で定義
+    INCREASES = "increases"  # 原因が増えると結果が増える
+    DECREASES = "decreases"  # 原因が増えると結果が減る
+    ENABLES = "enables"  # 原因が真なら結果が可能
+    PREVENTS = "prevents"  # 原因が真なら結果が不可能
+    TRIGGERS = "triggers"  # 原因が発生すると結果が発生
+    CUSTOM = "custom"  # カスタム関数で定義
 
 
 class CausalNode(BaseModel):
@@ -335,19 +335,23 @@ class CausalModel:
 
             if not causes:
                 # 直接介入が必要
-                interventions.append({
-                    "variable": var_name,
-                    "value": target_value,
-                    "reason": "直接介入（因果関係なし）",
-                })
+                interventions.append(
+                    {
+                        "variable": var_name,
+                        "value": target_value,
+                        "reason": "直接介入（因果関係なし）",
+                    }
+                )
             else:
                 # 原因への介入を検討
                 for cause in causes:
-                    interventions.append({
-                        "variable": cause.name,
-                        "value": True,  # 簡易: 原因を有効化
-                        "reason": f"{cause.name} を変更して {var_name} に影響",
-                    })
+                    interventions.append(
+                        {
+                            "variable": cause.name,
+                            "value": True,  # 簡易: 原因を有効化
+                            "reason": f"{cause.name} を変更して {var_name} に影響",
+                        }
+                    )
 
         return interventions
 
@@ -379,4 +383,3 @@ __all__ = [
     "CausalRelation",
     "RelationType",
 ]
-

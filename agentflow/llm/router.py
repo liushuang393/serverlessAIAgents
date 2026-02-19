@@ -435,10 +435,9 @@ class ModelRouter:
             # コストを計算
             info = self.get_model_info(model_name)
             if info:
-                cost = (
-                    (input_tokens / 1000) * info.input_cost_per_1k
-                    + (output_tokens / 1000) * info.output_cost_per_1k
-                )
+                cost = (input_tokens / 1000) * info.input_cost_per_1k + (
+                    output_tokens / 1000
+                ) * info.output_cost_per_1k
                 stats.total_cost += cost
         else:
             stats.failed_requests += 1
@@ -636,4 +635,3 @@ def _check_service_available(url: str, timeout: float = 1.0) -> bool:
             return response.status_code < 500
     except Exception:
         return False
-

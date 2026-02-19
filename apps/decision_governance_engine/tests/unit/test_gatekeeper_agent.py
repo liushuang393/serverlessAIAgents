@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """Unit tests for GatekeeperAgent."""
-import pytest
-from unittest.mock import MagicMock
 
+import pytest
 from apps.decision_governance_engine.agents.gatekeeper_agent import GatekeeperAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
     GatekeeperInput,
@@ -23,6 +21,7 @@ class TestGatekeeperAgentInit:
     def test_agent_inherits_resilient_agent(self, gatekeeper_agent: GatekeeperAgent) -> None:
         """Test that GatekeeperAgent inherits from ResilientAgent."""
         from agentflow import ResilientAgent
+
         assert isinstance(gatekeeper_agent, ResilientAgent)
 
     def test_agent_has_correct_name(self, gatekeeper_agent: GatekeeperAgent) -> None:
@@ -83,7 +82,9 @@ class TestGatekeeperAgentPatterns:
         self, gatekeeper_agent: GatekeeperAgent
     ) -> None:
         """Test detection of trade-off questions."""
-        input_data = GatekeeperInput(raw_question="新規事業でAとBのどちらを選ぶべきか？予算制約あり")
+        input_data = GatekeeperInput(
+            raw_question="新規事業でAとBのどちらを選ぶべきか？予算制約あり"
+        )
         result = await gatekeeper_agent.process(input_data)
         assert result.is_acceptable is True
         assert result.category == QuestionCategory.TRADE_OFF_CHOICE
@@ -103,7 +104,9 @@ class TestGatekeeperAgentPatterns:
         self, gatekeeper_agent: GatekeeperAgent
     ) -> None:
         """Test detection of timing questions."""
-        input_data = GatekeeperInput(raw_question="新規事業にいつ着手すべきか？競合の動向を考慮したい")
+        input_data = GatekeeperInput(
+            raw_question="新規事業にいつ着手すべきか？競合の動向を考慮したい"
+        )
         result = await gatekeeper_agent.process(input_data)
         assert result.is_acceptable is True
         assert result.category == QuestionCategory.TIMING_JUDGMENT
@@ -148,9 +151,7 @@ class TestGatekeeperAgentProcess:
         assert result.is_acceptable is True
 
     @pytest.mark.asyncio
-    async def test_process_with_ambiguous_question(
-        self, gatekeeper_agent: GatekeeperAgent
-    ) -> None:
+    async def test_process_with_ambiguous_question(self, gatekeeper_agent: GatekeeperAgent) -> None:
         """Test process with ambiguous question falls back to rule-based."""
         input_data = GatekeeperInput(raw_question="これについて考えたい")
         result = await gatekeeper_agent.process(input_data)

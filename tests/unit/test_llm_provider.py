@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """LLMProvider のユニットテスト.
 
 このモジュールは、agentflow/providers/llm_provider.py の機能をテストします。

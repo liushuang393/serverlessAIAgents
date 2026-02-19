@@ -162,7 +162,8 @@ class HierarchicalPlan(BaseModel):
         if total == 0:
             return 0.0
         completed = sum(
-            1 for level in self.levels
+            1
+            for level in self.levels
             for goal in level.goals
             if goal.status == GoalStatus.COMPLETED
         )
@@ -218,9 +219,7 @@ class HierarchicalPlanner:
 
         # 総工数を計算
         plan.total_effort = sum(
-            goal.estimated_effort
-            for level in plan.levels
-            for goal in level.goals
+            goal.estimated_effort for level in plan.levels for goal in level.goals
         )
 
         self._logger.info(
@@ -278,6 +277,7 @@ JSON形式で回答:
             content = response.get("content", str(response))
 
             import json
+
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
@@ -399,6 +399,7 @@ JSON形式で代替目標を提案:
             content = response.get("content", str(response))
 
             import json
+
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
@@ -429,4 +430,3 @@ __all__ = [
     "PlanLevel",
     "SubGoal",
 ]
-

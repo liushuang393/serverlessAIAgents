@@ -236,11 +236,7 @@ def build_optimized_llm_profile(samples: list[PromptRewardSample]) -> dict[str, 
     else:
         temperature = 0.15
 
-    routing_mode = (
-        "quality_first"
-        if positive_ratio < QUALITY_FIRST_RATIO_THRESHOLD
-        else "balanced"
-    )
+    routing_mode = "quality_first" if positive_ratio < QUALITY_FIRST_RATIO_THRESHOLD else "balanced"
     max_tokens = 4096 if positive_ratio < QUALITY_FIRST_RATIO_THRESHOLD else 3072
 
     return {
@@ -294,11 +290,7 @@ async def _train_with_microsoft(
         trainer = module.Trainer(**trainer_kwargs)
         fit_output = trainer.fit(agent, train_dataset=dataset)
 
-        profile = (
-            build_optimized_llm_profile(samples)
-            if runtime.enable_api_optimization
-            else {}
-        )
+        profile = build_optimized_llm_profile(samples) if runtime.enable_api_optimization else {}
         rewards = [sample.reward for sample in samples]
         metrics = {
             "avg_reward": float(mean(rewards)),
@@ -335,11 +327,7 @@ def _train_with_builtin(
 ) -> LightningTrainingResult:
     rewards = [sample.reward for sample in samples]
     avg_reward = float(mean(rewards))
-    profile = (
-        build_optimized_llm_profile(samples)
-        if runtime.enable_api_optimization
-        else {}
-    )
+    profile = build_optimized_llm_profile(samples) if runtime.enable_api_optimization else {}
 
     return LightningTrainingResult(
         success=True,

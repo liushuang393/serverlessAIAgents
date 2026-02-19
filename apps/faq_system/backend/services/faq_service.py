@@ -230,9 +230,20 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
     def _classify_query(self, question: str) -> QueryType:
         """クエリタイプを分類."""
         sql_keywords = [
-            "销售", "收入", "数量", "统计", "报表",
-            "top", "排名", "趋势", "对比", "同比",
-            "环比", "金额", "订单", "客户数",
+            "销售",
+            "收入",
+            "数量",
+            "统计",
+            "报表",
+            "top",
+            "排名",
+            "趋势",
+            "对比",
+            "同比",
+            "环比",
+            "金额",
+            "订单",
+            "客户数",
         ]
         question_lower = question.lower()
         sql_score = sum(1 for k in sql_keywords if k in question_lower)
@@ -354,7 +365,9 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
             {
                 "answer": "\n".join(answer_parts) if answer_parts else "No relevant information.",
                 "query_type": QueryType.HYBRID.value,
-                "sources": faq_result.data.get("documents", []) if not isinstance(faq_result, Exception) else [],
+                "sources": faq_result.data.get("documents", [])
+                if not isinstance(faq_result, Exception)
+                else [],
                 "sql_result": sql_data,
                 "chart": chart.model_dump() if chart else None,
                 "suggestions": suggestions,
@@ -432,8 +445,7 @@ SQL:"""
         chart_type = ChartType.PIE if len(result.data) <= 5 else ChartType.BAR
         labels = [str(r.get(result.columns[0], "")) for r in result.data[:50]]
         values = [
-            r.get(result.columns[1], 0) if len(result.columns) > 1 else 0
-            for r in result.data[:50]
+            r.get(result.columns[1], 0) if len(result.columns) > 1 else 0 for r in result.data[:50]
         ]
 
         return ChartData(
@@ -453,11 +465,7 @@ SQL:"""
         prompt = f"Based on '{question}', suggest 3 follow-up questions (one per line):"
         response = await self._llm.chat([{"role": "user", "content": prompt}])
         content = response.get("content", "")
-        return [
-            line.strip().lstrip("123.-) ")
-            for line in content.split("\n")
-            if line.strip()
-        ][:3]
+        return [line.strip().lstrip("123.-) ") for line in content.split("\n") if line.strip()][:3]
 
     def _format_schema(self) -> str:
         """スキーマをフォーマット."""

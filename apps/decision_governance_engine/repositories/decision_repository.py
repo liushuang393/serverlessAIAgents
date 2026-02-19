@@ -417,9 +417,7 @@ class DecisionRepository:
         """提案書ID（PROP-*）で決策記録を検索."""
         async with get_db_session() as session:
             result = await session.execute(
-                select(DecisionRecord).where(
-                    DecisionRecord.report_case_id == report_case_id
-                )
+                select(DecisionRecord).where(DecisionRecord.report_case_id == report_case_id)
             )
             return result.scalar_one_or_none()
 
@@ -535,10 +533,7 @@ class DecisionRepository:
             except Exception:
                 return self._to_jsonable(dict(value))  # type: ignore[arg-type]
         if isinstance(value, dict):
-            return {
-                str(k): self._to_jsonable(v)
-                for k, v in value.items()
-            }
+            return {str(k): self._to_jsonable(v) for k, v in value.items()}
         if isinstance(value, list):
             return [self._to_jsonable(v) for v in value]
         if isinstance(value, tuple):

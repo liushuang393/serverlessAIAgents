@@ -172,9 +172,7 @@ class DataLake:
             DataItemのリスト
         """
         connector, path = self._resolve(uri)
-        return await connector.list(
-            path, recursive=recursive, pattern=pattern, limit=limit
-        )
+        return await connector.list(path, recursive=recursive, pattern=pattern, limit=limit)
 
     async def read(
         self,
@@ -237,6 +235,7 @@ class DataLake:
             else:
                 # デフォルトでJSON
                 import json
+
                 content = json.dumps(content, ensure_ascii=False, indent=2).encode()
 
         item = await connector.write(path, content, content_type=content_type)
@@ -321,9 +320,7 @@ class DataLake:
         if scheme not in self._connectors:
             available = ", ".join(self._connectors.keys()) or "none"
             msg = f"Unknown scheme: {scheme}. Available: {available}"
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
         # パス構築
         path = parsed.path
@@ -366,6 +363,7 @@ def _register_default_connectors(datalake: DataLake) -> None:
     # LocalFileConnector（常に登録）
     try:
         from agentflow.datalake.connectors.local import LocalFileConnector
+
         datalake.register_connector(LocalFileConnector())
     except ImportError:
         logger.debug("LocalFileConnector not available")
@@ -373,6 +371,7 @@ def _register_default_connectors(datalake: DataLake) -> None:
     # S3Connector（boto3がある場合）
     try:
         from agentflow.datalake.connectors.s3 import S3Connector
+
         datalake.register_connector(S3Connector())
     except ImportError:
         logger.debug("S3Connector not available (boto3 not installed)")
@@ -380,7 +379,7 @@ def _register_default_connectors(datalake: DataLake) -> None:
     # RestAPIConnector（常に登録）
     try:
         from agentflow.datalake.connectors.rest import RestAPIConnector
+
         datalake.register_connector(RestAPIConnector())
     except ImportError:
         logger.debug("RestAPIConnector not available")
-

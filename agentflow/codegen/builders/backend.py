@@ -165,7 +165,7 @@ async def stream_workflow(input_data: WorkflowInput):
             async for event in workflow_runner.run_stream(input_data.data):
                 yield f"data: {{json.dumps(event.to_dict())}}\\n\\n"
         except Exception as e:
-            yield f"data: {{\\"type\\": \\"error\\", \\"message\\": \\"{e!s}\\"}}\\n\\n"
+            yield f"data: {{\\"type\\": \\"error\\", \\"message\\": \\"{{e!s}}\\"}}\\n\\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 

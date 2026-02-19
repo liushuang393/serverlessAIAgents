@@ -131,4 +131,3 @@ class A2UIEmitter:
     def clear_events(self) -> None:
         """イベントキューをクリア."""
         self._event_queue.clear()
-

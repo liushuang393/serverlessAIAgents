@@ -395,7 +395,7 @@ class PublishOrchestrator:
             if not self._is_terminal_status(response.status):
                 self._mark_cancelled(response, "Publish task cancelled")
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._logger.exception("Publish failed: %s", exc)
             self._mark_failed(
                 response=response,
@@ -432,9 +432,7 @@ class PublishOrchestrator:
         response.status = status
         response.current_phase = phase
         response.progress = progress
-        response.logs.append(
-            f"{datetime.now(UTC).isoformat()} [{phase or 'system'}] {message}"
-        )
+        response.logs.append(f"{datetime.now(UTC).isoformat()} [{phase or 'system'}] {message}")
 
         event = self._create_event(
             publish_id=response.publish_id,
@@ -611,7 +609,9 @@ class PublishOrchestrator:
         if "entry" in validation_result:
             entry_data = validation_result["entry"]
             workflow_data["name"] = entry_data.get("name", workflow_data["name"])
-            workflow_data["description"] = entry_data.get("description", workflow_data["description"])
+            workflow_data["description"] = entry_data.get(
+                "description", workflow_data["description"]
+            )
 
         # コード生成を実行
         output_type = self._get_output_type(request.target)
@@ -714,7 +714,7 @@ class PublishOrchestrator:
                 "logs": result.logs,
                 "error": result.error,
             }
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return {
                 "success": False,
                 "error": str(exc),
@@ -743,7 +743,8 @@ class PublishOrchestrator:
         visibility = visibility_map.get(request.gallery_visibility, ComponentVisibility.PRIVATE)
 
         entry = ComponentEntry(
-            id=request.component_id or self._library.generate_id(
+            id=request.component_id
+            or self._library.generate_id(
                 request.name or "published-component",
                 ComponentType.AGENT,
             ),

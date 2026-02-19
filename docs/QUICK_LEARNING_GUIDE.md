@@ -482,7 +482,10 @@ emitter.emit(TextComponent(text="Hello"))
 | `NETWORK_ERROR` | 网络错误 | ✅ |
 
 ---
-
+型エラーを減らす: code-rules/global/mypy-avoid-patterns.md に従って修正し、AI にコードを書かせる際もこのルールを参照させる。
+進捗確認: python scripts/mypy_error_summary.py でコード別・ファイル別の残り件数を確認。
+その他のチェックだけ通したい
+ ./check.sh all --no-type-check または make check-nomypy を使用。
 ## 📚 更多资源
 
 - **[Context Engineering 指南](./context-engineering.md)** - ⭐ 上下文预算管理详细教程

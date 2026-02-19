@@ -1,10 +1,7 @@
-# -*- coding: utf-8 -*-
 """AI商取引インターフェースのテスト.
 
 抽象インターフェースの契約テストとモック実装テスト。
 """
-
-from typing import Any
 
 import pytest
 
@@ -27,16 +24,8 @@ from agentflow.commerce.interfaces.flow import (
     FlowStepType,
 )
 from agentflow.commerce.models import (
-    Cart,
-    CartItem,
-    DirectOffer,
     IntentType,
-    Offer,
-    OfferType,
-    Product,
-    ProductCategory,
     PurchaseIntent,
-    Transaction,
 )
 
 
@@ -175,4 +164,3 @@ class TestInterfaceContracts:
         """ICommerceAI が抽象クラスであること."""
         with pytest.raises(TypeError):
             ICommerceAI()  # type: ignore[abstract]
-

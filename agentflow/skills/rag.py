@@ -214,4 +214,3 @@ class RAGSkill:
             },
             "memory": memory_status,
         }
-

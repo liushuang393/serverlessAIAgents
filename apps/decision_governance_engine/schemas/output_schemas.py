@@ -333,9 +333,7 @@ class DecisionReport(BaseModel):
     executive_summary: ExecutiveSummary = Field(..., description="エグゼクティブサマリー")
 
     # v3.1: 署名欄（強化版）
-    signature_block: SignatureBlock | None = Field(
-        default=None, description="署名欄情報"
-    )
+    signature_block: SignatureBlock | None = Field(default=None, description="署名欄情報")
 
     # v3.2: 人間確認フロー
     human_review: HumanReview = Field(

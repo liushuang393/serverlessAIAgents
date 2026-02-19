@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """Unit tests for RLM controller module."""
 
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 

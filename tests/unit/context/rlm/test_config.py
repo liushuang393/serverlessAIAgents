@@ -1,7 +1,4 @@
-# -*- coding: utf-8 -*-
 """Unit tests for RLM config module."""
-
-import pytest
 
 from agentflow.context.rlm.config import (
     ActionType,

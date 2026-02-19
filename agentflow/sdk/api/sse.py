@@ -89,4 +89,3 @@ def create_sse_response(
             "X-Accel-Buffering": "no",  # nginx バッファリング無効化
         },
     )
-

@@ -100,12 +100,11 @@ class SensoryMemory:
         """
         # 簡易実装: 最初の文からキーワード抽出
         # 実際にはLLMやNLPモデルを使用可能
-        first_sentence = text.split(".")[0] if "." in text else text[:100]
+        first_sentence = text.split(".", maxsplit=1)[0] if "." in text else text[:100]
         words = re.findall(r"\b\w+\b", first_sentence.lower())
 
         # 最も長い単語をトピックとする（簡易版）
         return max(words, key=len) if words else "general"
-
 
     def _score_importance(self, text: str) -> list[float]:
         """テキストの重要度をスコアリング.
@@ -157,7 +156,9 @@ class SensoryMemory:
 
         # 閾値以上の単語のみ保持
         compressed_words = [
-            word for word, score in zip(words, importance_scores, strict=False) if score >= threshold
+            word
+            for word, score in zip(words, importance_scores, strict=False)
+            if score >= threshold
         ]
 
         return " ".join(compressed_words)
@@ -177,8 +178,9 @@ class SensoryMemory:
         # 圧縮率に基づく百分位数
         sorted_scores = sorted(scores)
         percentile_index = int(len(sorted_scores) * (1 - self._config.compression_ratio))
-        threshold = sorted_scores[percentile_index] if percentile_index < len(sorted_scores) else 0.0
+        threshold = (
+            sorted_scores[percentile_index] if percentile_index < len(sorted_scores) else 0.0
+        )
 
         # 最小閾値を適用
         return max(threshold, self._config.min_importance_threshold)
-

@@ -51,19 +51,19 @@ logger = logging.getLogger(__name__)
 class TaskGranularity(str, Enum):
     """タスク粒度."""
 
-    COARSE = "coarse"      # 粗い（さらに分解可能）
-    MEDIUM = "medium"      # 中程度
-    FINE = "fine"          # 細かい（これ以上分解不要）
-    ATOMIC = "atomic"      # 原子的（分解不可）
+    COARSE = "coarse"  # 粗い（さらに分解可能）
+    MEDIUM = "medium"  # 中程度
+    FINE = "fine"  # 細かい（これ以上分解不要）
+    ATOMIC = "atomic"  # 原子的（分解不可）
 
 
 class TaskPriority(str, Enum):
     """タスク優先度."""
 
     CRITICAL = "critical"  # 最優先
-    HIGH = "high"          # 高
-    MEDIUM = "medium"      # 中
-    LOW = "low"            # 低
+    HIGH = "high"  # 高
+    MEDIUM = "medium"  # 中
+    LOW = "low"  # 低
     BACKGROUND = "background"  # バックグラウンド
 
 
@@ -133,14 +133,11 @@ class DecompositionPlan(BaseModel):
 
     def get_ready_tasks(self) -> list[DecomposedTask]:
         """実行準備完了のタスクを取得."""
-        completed_ids = {
-            tid for tid, task in self.tasks.items()
-            if task.status == "completed"
-        }
+        completed_ids = {tid for tid, task in self.tasks.items() if task.status == "completed"}
         return [
-            task for task in self.tasks.values()
-            if task.status == "pending"
-            and all(dep in completed_ids for dep in task.dependencies)
+            task
+            for task in self.tasks.values()
+            if task.status == "pending" and all(dep in completed_ids for dep in task.dependencies)
         ]
 
 
@@ -205,9 +202,7 @@ class DependencyGraph:
         """
         # 循環依存チェック
         if self._would_create_cycle(task_id, depends_on):
-            self._logger.warning(
-                f"循環依存を検出: {task_id} -> {depends_on}"
-            )
+            self._logger.warning(f"循環依存を検出: {task_id} -> {depends_on}")
             return False
 
         if task_id not in self._graph:
@@ -270,10 +265,7 @@ class DependencyGraph:
 
         while remaining:
             # 依存関係が全て解決済みのタスク
-            ready = [
-                tid for tid in remaining
-                if self._graph[tid].issubset(completed)
-            ]
+            ready = [tid for tid in remaining if self._graph[tid].issubset(completed)]
             if not ready:
                 break
 
@@ -484,6 +476,7 @@ JSON形式で回答:
             response = await self._llm.generate(prompt)
             # JSONパース（実際の実装ではより堅牢なパースが必要）
             import json
+
             content = response.get("content", str(response))
             # JSON部分を抽出
             if "```json" in content:
@@ -511,9 +504,7 @@ JSON形式で回答:
             for i, item in enumerate(data.get("subtasks", [])):
                 dep_names = item.get("dependencies", [])
                 subtasks[i].dependencies = [
-                    name_to_id[name]
-                    for name in dep_names
-                    if name in name_to_id
+                    name_to_id[name] for name in dep_names if name in name_to_id
                 ]
 
             return subtasks
@@ -571,18 +562,14 @@ JSON形式で回答:
         """
         for group in plan.parallel_groups:
             # グループ内のタスクを並行実行
-            tasks_to_run = [
-                plan.tasks[tid]
-                for tid in group
-                if plan.tasks[tid].status == "pending"
-            ]
+            tasks_to_run = [plan.tasks[tid] for tid in group if plan.tasks[tid].status == "pending"]
 
             if not tasks_to_run:
                 continue
 
             # 並行実行数を制限
             for i in range(0, len(tasks_to_run), max_parallel):
-                batch = tasks_to_run[i:i + max_parallel]
+                batch = tasks_to_run[i : i + max_parallel]
                 results = await asyncio.gather(
                     *[self._execute_task(task) for task in batch],
                     return_exceptions=True,
@@ -660,4 +647,3 @@ JSON形式で回答:
             plan.parallel_groups = dep_graph.get_parallel_groups()
 
         return plan
-

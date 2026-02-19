@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
 """Provisioning スキーマのユニットテスト."""
 
 from __future__ import annotations
 
 import pytest
-from pydantic import ValidationError
-
 from apps.platform.schemas.provisioning_schemas import AppCreateRequest
+from pydantic import ValidationError
 
 
 class TestAppCreateRequest:

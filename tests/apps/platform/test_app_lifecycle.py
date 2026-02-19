@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AppLifecycleManager のユニットテスト.
 
 テスト対象: apps/platform/services/app_lifecycle.py
@@ -10,7 +9,6 @@ from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
-
 from apps.platform.schemas.app_config_schemas import AppConfig
 from apps.platform.services.app_lifecycle import (
     AppLifecycleManager,
@@ -46,7 +44,8 @@ class TestHealthCheckResult:
     def test_to_dict_with_details(self) -> None:
         """詳細情報付き結果の辞書変換."""
         r = HealthCheckResult(
-            "app3", AppStatus.HEALTHY,
+            "app3",
+            AppStatus.HEALTHY,
             response_time_ms=5.0,
             details={"version": "1.0"},
         )
@@ -91,18 +90,20 @@ class TestAppLifecycleManager:
             entry_points={"health": health},
         )
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_no_api_port_returns_unknown(
-        self, lifecycle: AppLifecycleManager,
+        self,
+        lifecycle: AppLifecycleManager,
     ) -> None:
         """API ポートなしの App は UNKNOWN を返す."""
         cfg = self._make_config(api_port=None)
         result = await lifecycle.check_health(cfg)
         assert result.status == AppStatus.UNKNOWN
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_no_health_path_still_checks_fallback_paths(
-        self, lifecycle: AppLifecycleManager,
+        self,
+        lifecycle: AppLifecycleManager,
     ) -> None:
         """ヘルスパスなしでもフォールバックURLを試行する."""
         cfg = self._make_config(health=None)
@@ -116,9 +117,10 @@ class TestAppLifecycleManager:
             result = await lifecycle.check_health(cfg)
             assert result.status == AppStatus.STOPPED
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_healthy_response(
-        self, lifecycle: AppLifecycleManager,
+        self,
+        lifecycle: AppLifecycleManager,
     ) -> None:
         """HTTP 200 で HEALTHY を返す."""
         cfg = self._make_config()
@@ -138,9 +140,10 @@ class TestAppLifecycleManager:
             assert result.status == AppStatus.HEALTHY
             assert result.response_time_ms > 0
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_unhealthy_response(
-        self, lifecycle: AppLifecycleManager,
+        self,
+        lifecycle: AppLifecycleManager,
     ) -> None:
         """HTTP 500 で UNHEALTHY を返す."""
         cfg = self._make_config()
@@ -159,9 +162,10 @@ class TestAppLifecycleManager:
             assert result.status == AppStatus.UNHEALTHY
             assert "HTTP 500" in (result.error or "")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_connect_error_returns_stopped(
-        self, lifecycle: AppLifecycleManager,
+        self,
+        lifecycle: AppLifecycleManager,
     ) -> None:
         """接続拒否で STOPPED を返す."""
         cfg = self._make_config()
@@ -175,9 +179,11 @@ class TestAppLifecycleManager:
             result = await lifecycle.check_health(cfg)
             assert result.status == AppStatus.STOPPED
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_start_uses_runtime_command_override(
-        self, lifecycle: AppLifecycleManager, tmp_path,
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
     ) -> None:
         """runtime.commands.start がある場合は compose より優先する."""
         cfg = AppConfig(
@@ -202,7 +208,10 @@ class TestAppLifecycleManager:
             async def communicate(self):
                 return b"started", b""
 
-        with patch("apps.platform.services.app_lifecycle.asyncio.create_subprocess_exec", new=AsyncMock(return_value=_Proc())) as mocked:
+        with patch(
+            "apps.platform.services.app_lifecycle.asyncio.create_subprocess_exec",
+            new=AsyncMock(return_value=_Proc()),
+        ) as mocked:
             result = await lifecycle.start_app(cfg, config_path=config_path)
 
         assert result.success is True
@@ -237,9 +246,11 @@ class TestAppLifecycleManager:
             == "cd apps/local_cmd_app/frontend && npm run dev"
         )
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_local_start_runs_backend_only_when_frontend_missing(
-        self, lifecycle: AppLifecycleManager, tmp_path,
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
     ) -> None:
         """frontend_dev なしでも backend_dev があれば local_start できる."""
         cfg = AppConfig(

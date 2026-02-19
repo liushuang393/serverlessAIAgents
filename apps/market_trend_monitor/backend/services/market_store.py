@@ -73,7 +73,7 @@ class MarketStore:
                 # 証拠を取得（間接的に記事情報を復元）
                 evidences = await self._evidence_service.list_evidences()
                 self._evidences = [self._evidence_to_dict(e) for e in evidences]
-                
+
                 # 記事情報を復元
                 self._articles = [
                     {
@@ -125,11 +125,7 @@ class MarketStore:
         if not report_id:
             return existing_reports
 
-        filtered = [
-            item
-            for item in existing_reports
-            if str(item.get("id", "")) != report_id
-        ]
+        filtered = [item for item in existing_reports if str(item.get("id", "")) != report_id]
         return [report, *filtered]
 
     def _attach_report_snapshot(
@@ -184,7 +180,11 @@ class MarketStore:
                 .limit(limit)
             )
             rows = await session.execute(stmt)
-            return [dict(model.payload) for model in rows.scalars().all() if isinstance(model.payload, dict)]
+            return [
+                dict(model.payload)
+                for model in rows.scalars().all()
+                if isinstance(model.payload, dict)
+            ]
 
     def _parse_iso_datetime(self, value: str) -> datetime:
         """ISO文字列を安全にdatetimeへ変換."""

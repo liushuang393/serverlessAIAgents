@@ -126,10 +126,12 @@ class JavaParser(CodeParser):
             import_infos: list[ImportInfo] = []
 
             for imp in imports:
-                import_infos.append(ImportInfo(
-                    module=imp["module"],
-                    is_static=imp.get("is_static", False),
-                ))
+                import_infos.append(
+                    ImportInfo(
+                        module=imp["module"],
+                        is_static=imp.get("is_static", False),
+                    )
+                )
 
             # ASTルートを構築
             root = ASTNode(
@@ -250,10 +252,12 @@ class JavaParser(CodeParser):
         """インポートを抽出."""
         imports = []
         for match in self.IMPORT_PATTERN.finditer(source):
-            imports.append({
-                "module": match.group(2),
-                "is_static": bool(match.group(1)),
-            })
+            imports.append(
+                {
+                    "module": match.group(2),
+                    "is_static": bool(match.group(1)),
+                }
+            )
         return imports
 
     def _extract_classes(self, source: str) -> list[dict[str, Any]]:
@@ -301,15 +305,17 @@ class JavaParser(CodeParser):
             methods = self._extract_methods(class_body)
             fields = self._extract_fields(class_body)
 
-            classes.append({
-                "name": name,
-                "kind": kind,
-                "modifiers": modifiers,
-                "extends": extends,
-                "implements": implements,
-                "methods": methods,
-                "fields": fields,
-            })
+            classes.append(
+                {
+                    "name": name,
+                    "kind": kind,
+                    "modifiers": modifiers,
+                    "extends": extends,
+                    "implements": implements,
+                    "methods": methods,
+                    "fields": fields,
+                }
+            )
 
         return classes
 
@@ -345,17 +351,21 @@ class JavaParser(CodeParser):
                     if param:
                         parts = param.rsplit(" ", 1)
                         if len(parts) == 2:
-                            parameters.append({
-                                "type": parts[0].strip(),
-                                "name": parts[1].strip(),
-                            })
+                            parameters.append(
+                                {
+                                    "type": parts[0].strip(),
+                                    "name": parts[1].strip(),
+                                }
+                            )
 
-            methods.append({
-                "name": name,
-                "return_type": return_type,
-                "parameters": parameters,
-                "modifiers": modifiers,
-            })
+            methods.append(
+                {
+                    "name": name,
+                    "return_type": return_type,
+                    "parameters": parameters,
+                    "modifiers": modifiers,
+                }
+            )
 
         return methods
 
@@ -378,11 +388,13 @@ class JavaParser(CodeParser):
             if is_final:
                 modifiers.append("final")
 
-            fields.append({
-                "name": name,
-                "type": field_type,
-                "modifiers": modifiers,
-            })
+            fields.append(
+                {
+                    "name": name,
+                    "type": field_type,
+                    "modifiers": modifiers,
+                }
+            )
 
         return fields
 
@@ -392,6 +404,7 @@ def _register() -> None:
     """パーサーをレジストリに登録."""
     try:
         from agentflow.code_intelligence.parsers.registry import register_parser
+
         register_parser("java", JavaParser)
     except ImportError:
         pass

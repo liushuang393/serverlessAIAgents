@@ -221,9 +221,7 @@ class MigrationPlanner(AgentBlock):
             rollback_plan="各フェーズ完了後にロールバックポイントを設定",
         )
 
-    def _determine_strategy(
-        self, analysis: dict[str, Any]
-    ) -> MigrationStrategy:
+    def _determine_strategy(self, analysis: dict[str, Any]) -> MigrationStrategy:
         """移行戦略を決定."""
         total_loc = analysis.get("total_loc", 0)
         complexity_score = analysis.get("complexity_score", 0.5)
@@ -244,109 +242,115 @@ class MigrationPlanner(AgentBlock):
         phases = []
 
         # フェーズ1: 準備
-        phases.append(MigrationPhase(
-            phase_id="phase-1",
-            name="準備フェーズ",
-            description="移行環境の構築と基盤整備",
-            scope=["インフラ構築", "CI/CD設定", "テスト環境"],
-            tasks=[
-                MigrationTask(
-                    task_id="task-1-1",
-                    title="移行先環境構築",
-                    description="開発/ステージング/本番環境の構築",
-                    estimated_hours=40,
-                ),
-                MigrationTask(
-                    task_id="task-1-2",
-                    title="CI/CDパイプライン構築",
-                    description="自動ビルド・テスト・デプロイの設定",
-                    estimated_hours=24,
-                ),
-            ],
-            estimated_days=10,
-            risk=MigrationRisk.LOW,
-            deliverables=["環境構築完了", "CI/CDパイプライン稼働"],
-            success_criteria=["全環境でアプリ起動確認"],
-        ))
+        phases.append(
+            MigrationPhase(
+                phase_id="phase-1",
+                name="準備フェーズ",
+                description="移行環境の構築と基盤整備",
+                scope=["インフラ構築", "CI/CD設定", "テスト環境"],
+                tasks=[
+                    MigrationTask(
+                        task_id="task-1-1",
+                        title="移行先環境構築",
+                        description="開発/ステージング/本番環境の構築",
+                        estimated_hours=40,
+                    ),
+                    MigrationTask(
+                        task_id="task-1-2",
+                        title="CI/CDパイプライン構築",
+                        description="自動ビルド・テスト・デプロイの設定",
+                        estimated_hours=24,
+                    ),
+                ],
+                estimated_days=10,
+                risk=MigrationRisk.LOW,
+                deliverables=["環境構築完了", "CI/CDパイプライン稼働"],
+                success_criteria=["全環境でアプリ起動確認"],
+            )
+        )
 
         # フェーズ2: コアモジュール移行
-        phases.append(MigrationPhase(
-            phase_id="phase-2",
-            name="コアモジュール移行",
-            description="ビジネスロジックの移行",
-            scope=["データモデル", "ビジネスロジック", "API層"],
-            tasks=[
-                MigrationTask(
-                    task_id="task-2-1",
-                    title="データモデル移行",
-                    description="エンティティとスキーマの移行",
-                    estimated_hours=80,
-                    dependencies=["task-1-1"],
-                ),
-                MigrationTask(
-                    task_id="task-2-2",
-                    title="ビジネスロジック移行",
-                    description="コアビジネスルールの移行",
-                    estimated_hours=120,
-                    dependencies=["task-2-1"],
-                ),
-            ],
-            estimated_days=30,
-            risk=MigrationRisk.MEDIUM,
-            prerequisites=["phase-1完了"],
-            deliverables=["コアモジュール移行完了"],
-            success_criteria=["単体テスト80%以上カバレッジ"],
-        ))
+        phases.append(
+            MigrationPhase(
+                phase_id="phase-2",
+                name="コアモジュール移行",
+                description="ビジネスロジックの移行",
+                scope=["データモデル", "ビジネスロジック", "API層"],
+                tasks=[
+                    MigrationTask(
+                        task_id="task-2-1",
+                        title="データモデル移行",
+                        description="エンティティとスキーマの移行",
+                        estimated_hours=80,
+                        dependencies=["task-1-1"],
+                    ),
+                    MigrationTask(
+                        task_id="task-2-2",
+                        title="ビジネスロジック移行",
+                        description="コアビジネスルールの移行",
+                        estimated_hours=120,
+                        dependencies=["task-2-1"],
+                    ),
+                ],
+                estimated_days=30,
+                risk=MigrationRisk.MEDIUM,
+                prerequisites=["phase-1完了"],
+                deliverables=["コアモジュール移行完了"],
+                success_criteria=["単体テスト80%以上カバレッジ"],
+            )
+        )
 
         # フェーズ3: 統合テスト
-        phases.append(MigrationPhase(
-            phase_id="phase-3",
-            name="統合テスト・検証",
-            description="移行システムの検証",
-            scope=["統合テスト", "性能テスト", "UAT"],
-            tasks=[
-                MigrationTask(
-                    task_id="task-3-1",
-                    title="統合テスト実施",
-                    description="End-to-Endテストの実行",
-                    estimated_hours=60,
-                    dependencies=["task-2-2"],
-                ),
-            ],
-            estimated_days=15,
-            risk=MigrationRisk.MEDIUM,
-            prerequisites=["phase-2完了"],
-            deliverables=["テスト完了レポート"],
-            success_criteria=["全テストケース合格"],
-        ))
+        phases.append(
+            MigrationPhase(
+                phase_id="phase-3",
+                name="統合テスト・検証",
+                description="移行システムの検証",
+                scope=["統合テスト", "性能テスト", "UAT"],
+                tasks=[
+                    MigrationTask(
+                        task_id="task-3-1",
+                        title="統合テスト実施",
+                        description="End-to-Endテストの実行",
+                        estimated_hours=60,
+                        dependencies=["task-2-2"],
+                    ),
+                ],
+                estimated_days=15,
+                risk=MigrationRisk.MEDIUM,
+                prerequisites=["phase-2完了"],
+                deliverables=["テスト完了レポート"],
+                success_criteria=["全テストケース合格"],
+            )
+        )
 
         # フェーズ4: 本番移行
-        phases.append(MigrationPhase(
-            phase_id="phase-4",
-            name="本番移行",
-            description="本番環境への切り替え",
-            scope=["データ移行", "本番切替", "監視"],
-            tasks=[
-                MigrationTask(
-                    task_id="task-4-1",
-                    title="データ移行",
-                    description="本番データの移行",
-                    estimated_hours=24,
-                    dependencies=["task-3-1"],
-                ),
-            ],
-            estimated_days=5,
-            risk=MigrationRisk.HIGH,
-            prerequisites=["phase-3完了", "Go/No-Go判定"],
-            deliverables=["本番稼働"],
-            success_criteria=["SLA達成", "ロールバックなし"],
-        ))
+        phases.append(
+            MigrationPhase(
+                phase_id="phase-4",
+                name="本番移行",
+                description="本番環境への切り替え",
+                scope=["データ移行", "本番切替", "監視"],
+                tasks=[
+                    MigrationTask(
+                        task_id="task-4-1",
+                        title="データ移行",
+                        description="本番データの移行",
+                        estimated_hours=24,
+                        dependencies=["task-3-1"],
+                    ),
+                ],
+                estimated_days=5,
+                risk=MigrationRisk.HIGH,
+                prerequisites=["phase-3完了", "Go/No-Go判定"],
+                deliverables=["本番稼働"],
+                success_criteria=["SLA達成", "ロールバックなし"],
+            )
+        )
 
         return phases
 
-    def _assess_risks(
-        self, analysis: dict[str, Any]
-    ) -> tuple[MigrationRisk, list[str]]:
+    def _assess_risks(self, analysis: dict[str, Any]) -> tuple[MigrationRisk, list[str]]:
         """リスクを評価."""
         risks = []
         risk_level = MigrationRisk.MEDIUM
@@ -370,9 +374,7 @@ class MigrationPlanner(AgentBlock):
 
         return risk_level, risks
 
-    def _generate_mitigation_strategies(
-        self, risks: list[str]
-    ) -> list[str]:
+    def _generate_mitigation_strategies(self, risks: list[str]) -> list[str]:
         """緩和策を生成."""
         return [
             "段階的な移行で各フェーズのリスクを最小化",

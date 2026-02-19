@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RAGOverviewService のユニットテスト.
 
 テスト対象: apps/platform/services/rag_overview.py
@@ -13,7 +12,8 @@ class TestGetOverview:
     """get_overview() メソッドのテスト."""
 
     def test_returns_expected_keys(
-        self, rag_overview: RAGOverviewService,
+        self,
+        rag_overview: RAGOverviewService,
     ) -> None:
         """概要辞書に必要なキーが含まれる."""
         overview = rag_overview.get_overview()
@@ -24,7 +24,8 @@ class TestGetOverview:
         assert "stats" in overview
 
     def test_description_is_string(
-        self, rag_overview: RAGOverviewService,
+        self,
+        rag_overview: RAGOverviewService,
     ) -> None:
         """description が文字列."""
         overview = rag_overview.get_overview()
@@ -32,7 +33,8 @@ class TestGetOverview:
         assert len(overview["description"]) > 0
 
     def test_stats_embedded(
-        self, rag_overview: RAGOverviewService,
+        self,
+        rag_overview: RAGOverviewService,
     ) -> None:
         """stats が概要に埋め込まれている."""
         overview = rag_overview.get_overview()
@@ -52,14 +54,16 @@ class TestListStrategies:
     """list_strategies() メソッドのテスト."""
 
     def test_returns_five_strategies(
-        self, rag_overview: RAGOverviewService,
+        self,
+        rag_overview: RAGOverviewService,
     ) -> None:
         """5 つのチャンキング戦略を返す."""
         strategies = rag_overview.list_strategies()
         assert len(strategies) == 5
 
     def test_strategy_structure(
-        self, rag_overview: RAGOverviewService,
+        self,
+        rag_overview: RAGOverviewService,
     ) -> None:
         """各戦略に name, label, description が含まれる."""
         strategies = rag_overview.list_strategies()
@@ -69,7 +73,8 @@ class TestListStrategies:
             assert "description" in s
 
     def test_known_strategy_names(
-        self, rag_overview: RAGOverviewService,
+        self,
+        rag_overview: RAGOverviewService,
     ) -> None:
         """既知の戦略名が含まれる."""
         names = {s["name"] for s in rag_overview.list_strategies()}
@@ -84,14 +89,16 @@ class TestListRerankers:
     """list_rerankers() メソッドのテスト."""
 
     def test_returns_four_rerankers(
-        self, rag_overview: RAGOverviewService,
+        self,
+        rag_overview: RAGOverviewService,
     ) -> None:
         """4 つのリランカーを返す."""
         rerankers = rag_overview.list_rerankers()
         assert len(rerankers) == 4
 
     def test_reranker_structure(
-        self, rag_overview: RAGOverviewService,
+        self,
+        rag_overview: RAGOverviewService,
     ) -> None:
         """各リランカーに name, label, description が含まれる."""
         for r in rag_overview.list_rerankers():
@@ -100,7 +107,8 @@ class TestListRerankers:
             assert "description" in r
 
     def test_known_reranker_names(
-        self, rag_overview: RAGOverviewService,
+        self,
+        rag_overview: RAGOverviewService,
     ) -> None:
         """既知のリランカー名が含まれる."""
         names = {r["name"] for r in rag_overview.list_rerankers()}
@@ -157,7 +165,8 @@ class TestAppsUsingRag:
     """apps_using_rag() メソッドのテスト."""
 
     def test_finds_rag_app(
-        self, rag_overview: RAGOverviewService,
+        self,
+        rag_overview: RAGOverviewService,
     ) -> None:
         """RAG 対応 App を検出する."""
         apps = rag_overview.apps_using_rag()
@@ -166,7 +175,8 @@ class TestAppsUsingRag:
         assert "rag_app" in app_names
 
     def test_app_structure(
-        self, rag_overview: RAGOverviewService,
+        self,
+        rag_overview: RAGOverviewService,
     ) -> None:
         """各 App に必要なフィールドが含まれる."""
         apps = rag_overview.apps_using_rag()
@@ -178,7 +188,8 @@ class TestAppsUsingRag:
             assert isinstance(app["rag_details"], list)
 
     def test_rag_details_content(
-        self, rag_overview: RAGOverviewService,
+        self,
+        rag_overview: RAGOverviewService,
     ) -> None:
         """rag_details に取得方式情報が含まれる."""
         apps = rag_overview.apps_using_rag()
@@ -187,7 +198,8 @@ class TestAppsUsingRag:
         assert any("retrieval:" in d for d in details)
 
     def test_non_rag_app_excluded(
-        self, rag_overview: RAGOverviewService,
+        self,
+        rag_overview: RAGOverviewService,
     ) -> None:
         """RAG 非対応 App は除外される."""
         apps = rag_overview.apps_using_rag()

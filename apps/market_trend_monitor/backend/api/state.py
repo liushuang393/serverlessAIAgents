@@ -16,9 +16,9 @@ store = MarketStore(evidence_service=evidence_service)
 
 # Re-export services from registry
 __all__ = [
-    "store",
-    "source_registry_service",
-    "prediction_service",
     "evidence_service",
+    "prediction_service",
     "signal_service",
+    "source_registry_service",
+    "store",
 ]

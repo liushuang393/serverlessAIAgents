@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Port Allocator Service.
 
 App 間のポート重複検出と、新規 App 用の安全な自動割り当てを提供する。

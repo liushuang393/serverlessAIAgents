@@ -103,10 +103,7 @@ class AzureContainerAppsTarget(BaseDeployTarget):
                                 "cpu": config.settings.get("cpu", 0.5),
                                 "memory": config.settings.get("memory", "1Gi"),
                             },
-                            env=[
-                                {"name": k, "value": v}
-                                for k, v in config.env_vars.items()
-                            ],
+                            env=[{"name": k, "value": v} for k, v in config.env_vars.items()],
                         )
                     ],
                     scale={
@@ -150,20 +147,36 @@ class AzureContainerAppsTarget(BaseDeployTarget):
         """設定フィールドを取得."""
         return [
             ConfigField(
-                name="subscription_id", label="Subscription ID", type="string",
-                required=True, description="Azure サブスクリプション ID", group="credentials",
+                name="subscription_id",
+                label="Subscription ID",
+                type="string",
+                required=True,
+                description="Azure サブスクリプション ID",
+                group="credentials",
             ),
             ConfigField(
-                name="resource_group", label="Resource Group", type="string",
-                required=True, description="リソースグループ名", group="settings",
+                name="resource_group",
+                label="Resource Group",
+                type="string",
+                required=True,
+                description="リソースグループ名",
+                group="settings",
             ),
             ConfigField(
-                name="app_name", label="App Name", type="string",
-                required=True, placeholder="my-agentflow-app", group="settings",
+                name="app_name",
+                label="App Name",
+                type="string",
+                required=True,
+                placeholder="my-agentflow-app",
+                group="settings",
             ),
             ConfigField(
-                name="environment_name", label="Environment Name", type="string",
-                required=True, description="Container Apps 環境名", group="settings",
+                name="environment_name",
+                label="Environment Name",
+                type="string",
+                required=True,
+                description="Container Apps 環境名",
+                group="settings",
             ),
         ]
 
@@ -177,4 +190,3 @@ class AzureContainerAppsTarget(BaseDeployTarget):
 
 
 __all__ = ["AzureContainerAppsTarget"]
-

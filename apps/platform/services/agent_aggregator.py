@@ -1,14 +1,13 @@
-# -*- coding: utf-8 -*-
 """Agent Aggregator Service — 全 App 横断の Agent 集約・検索."""
 
 from __future__ import annotations
 
-from collections import Counter
 import logging
+from collections import Counter
 from typing import Any
 
-from apps.platform.services.app_discovery import AppDiscoveryService
 from apps.platform.services.agent_taxonomy import AgentTaxonomyService
+from apps.platform.services.app_discovery import AppDiscoveryService
 from apps.platform.services.capability_registry import CapabilityRegistry
 
 
@@ -32,17 +31,17 @@ class AggregatedAgent:
     """
 
     __slots__ = (
-        "name",
-        "app_name",
-        "app_display_name",
-        "app_icon",
-        "module",
-        "capabilities",
-        "capabilities_legacy",
-        "business_base",
         "agent_pattern",
         "app_business_base",
+        "app_display_name",
         "app_engine_pattern",
+        "app_icon",
+        "app_name",
+        "business_base",
+        "capabilities",
+        "capabilities_legacy",
+        "module",
+        "name",
     )
 
     def __init__(

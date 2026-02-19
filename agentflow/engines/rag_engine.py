@@ -104,6 +104,7 @@ class RAGEngine(BaseEngine):
         if not self._retriever and self._vector_store:
             try:
                 from agentflow.knowledge.rag_pipeline import RAGPipeline
+
                 self._rag_pipeline = RAGPipeline(
                     vector_store=self._vector_store,
                     top_k=self._top_k,
@@ -175,9 +176,7 @@ class RAGEngine(BaseEngine):
             **inputs,
             "context": context,
             "documents": documents,
-            "augmented_prompt": self._context_template.format(
-                context=context, question=query
-            ),
+            "augmented_prompt": self._context_template.format(context=context, question=query),
         }
 
         # Step 4: Agentを実行
@@ -189,9 +188,7 @@ class RAGEngine(BaseEngine):
             "query": query,
         }
 
-    async def _execute_stream(
-        self, inputs: dict[str, Any]
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def _execute_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """RAG + Agentをストリーム実行."""
         query = inputs.get("question") or inputs.get("query") or str(inputs)
 
@@ -216,15 +213,11 @@ class RAGEngine(BaseEngine):
             **inputs,
             "context": context,
             "documents": documents,
-            "augmented_prompt": self._context_template.format(
-                context=context, question=query
-            ),
+            "augmented_prompt": self._context_template.format(context=context, question=query),
         }
 
         # Agent実行
-        agent_name = getattr(
-            self._agent_instance, "name", self._agent_instance.__class__.__name__
-        )
+        agent_name = getattr(self._agent_instance, "name", self._agent_instance.__class__.__name__)
         if event := self._emit_node_start(agent_name):
             yield event
 
@@ -241,4 +234,3 @@ class RAGEngine(BaseEngine):
                 "query": query,
             },
         }
-

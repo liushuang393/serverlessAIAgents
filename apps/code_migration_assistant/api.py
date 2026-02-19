@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Code Migration Assistant Enhanced API.
 
 改善点:
@@ -18,22 +17,26 @@ import asyncio
 import json
 import logging
 import os
-import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request, UploadFile, File
+from fastapi import (
+    FastAPI,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from agentflow.protocols.a2ui.rich_content import (
-    ChartType,
-    RichResponse,
     AlertType,
+    RichResponse,
 )
 from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

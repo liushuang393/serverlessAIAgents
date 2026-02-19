@@ -12,19 +12,21 @@ class TestWorkflowExecutorAgent:
         client.health_check = AsyncMock(return_value=True)
         client.build_workflow_payload = MagicMock(return_value={"prompt": {}})
         client.queue_prompt = AsyncMock(return_value="prompt-001")
-        client.poll_until_complete = AsyncMock(return_value={
-            "outputs": {
-                "7": {
-                    "images": [
-                        {
-                            "filename": "img_001_00001_.png",
-                            "subfolder": "",
-                            "type": "output",
-                        }
-                    ]
+        client.poll_until_complete = AsyncMock(
+            return_value={
+                "outputs": {
+                    "7": {
+                        "images": [
+                            {
+                                "filename": "img_001_00001_.png",
+                                "subfolder": "",
+                                "type": "output",
+                            }
+                        ]
+                    }
                 }
             }
-        })
+        )
         client.get_image = AsyncMock(return_value=b"\x89PNG fake")
         client.close = AsyncMock()
         return client
@@ -34,6 +36,7 @@ class TestWorkflowExecutorAgent:
         from agentflow.skills.builtin.design_skills.agents.workflow_executor_agent import (
             WorkflowExecutorAgent,
         )
+
         agent = WorkflowExecutorAgent(llm_client=None)
         agent._comfyui = mock_comfyui
         return agent
@@ -46,6 +49,7 @@ class TestWorkflowExecutorAgent:
             ImageSpec,
             PromptPlanOutput,
         )
+
         return PromptPlanOutput(
             design_concept="テクノ風商品撮影",
             global_style=GlobalStyle(

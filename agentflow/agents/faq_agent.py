@@ -216,7 +216,9 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         self._append_report_phase(execution_report, "load", "ok", {"agent": self.name})
 
         if not question:
-            self._append_report_phase(execution_report, "start", "error", {"reason": "empty_question"})
+            self._append_report_phase(
+                execution_report, "start", "error", {"reason": "empty_question"}
+            )
             return FAQOutput(
                 error="質問が指定されていません",
                 execution_report=self._finish_execution_report(
@@ -239,7 +241,9 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                 self._append_report_phase(execution_report, "call", "ok", {"service": "text2sql"})
                 response = await self._handle_sql_query(question, query_type)
             elif query_type == "sales_material":
-                self._append_report_phase(execution_report, "call", "ok", {"service": "design_skills"})
+                self._append_report_phase(
+                    execution_report, "call", "ok", {"service": "design_skills"}
+                )
                 response = await self._handle_sales_material_query(question, query_type)
             else:
                 self._append_report_phase(execution_report, "call", "ok", {"service": "rag"})
@@ -496,11 +500,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             response.add_table(data, title="クエリ結果")
             keys = list(data[0].keys())
             numeric_key = next(
-                (
-                    key
-                    for key in keys
-                    if isinstance(data[0].get(key), (int, float))
-                ),
+                (key for key in keys if isinstance(data[0].get(key), (int, float))),
                 None,
             )
             x_key = next((key for key in keys if key != numeric_key), keys[0])
@@ -703,13 +703,22 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         question_lower = question.lower().strip()
 
         sales_material_keywords = [
-            "pitch deck", "sales deck", "poster", "flyer", "banner",
+            "pitch deck",
+            "sales deck",
+            "poster",
+            "flyer",
+            "banner",
         ]
         if any(k in question_lower for k in sales_material_keywords):
             return "sales_material"
 
         sql_indicators = [
-            "top", "ranking", "trend", "total", "average", "count",
+            "top",
+            "ranking",
+            "trend",
+            "total",
+            "average",
+            "count",
         ]
         sql_score = sum(1 for k in sql_indicators if k in question_lower)
         if sql_score >= 2:
@@ -894,7 +903,11 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         question = str(inputs.get("question", ""))
         execution_id = f"stream-{uuid.uuid4().hex[:12]}"
         if not question:
-            yield {"type": "error", "execution_id": execution_id, "message": "質問が指定されていません"}
+            yield {
+                "type": "error",
+                "execution_id": execution_id,
+                "message": "質問が指定されていません",
+            }
             return
 
         yield {
@@ -1002,7 +1015,12 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                     "default": "faq_knowledge",
                 },
                 {"name": "sql_schema", "type": "json", "label": "DBスキーマ"},
-                {"name": "auto_chart", "type": "boolean", "label": "チャート自動生成", "default": True},
+                {
+                    "name": "auto_chart",
+                    "type": "boolean",
+                    "label": "チャート自動生成",
+                    "default": True,
+                },
                 {
                     "name": "sales_material_output_root",
                     "type": "string",

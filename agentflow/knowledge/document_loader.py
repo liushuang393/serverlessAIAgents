@@ -160,9 +160,7 @@ class DocumentLoader(ABC):
         if config.separator:
             parts = text.split(config.separator)
             if config.keep_separator and len(parts) > 1:
-                parts = [
-                    (config.separator if i > 0 else "") + part for i, part in enumerate(parts)
-                ]
+                parts = [(config.separator if i > 0 else "") + part for i, part in enumerate(parts)]
         else:
             parts = [text]
 
@@ -621,8 +619,5 @@ class UniversalLoader:
                 except Exception as e:
                     self._logger.warning(f"Failed to load {file_path}: {e}")
 
-        self._logger.info(
-            f"Loaded {len(all_chunks)} chunks from {len(files)} files in {directory}"
-        )
+        self._logger.info(f"Loaded {len(all_chunks)} chunks from {len(files)} files in {directory}")
         return all_chunks
-

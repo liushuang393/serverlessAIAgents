@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """app_config.json Pydantic スキーマ.
 
 全 App 共通マニフェストの型定義とバリデーション。

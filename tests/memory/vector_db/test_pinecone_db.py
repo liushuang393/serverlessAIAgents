@@ -114,7 +114,9 @@ async def test_search(pinecone_db, sample_entry, sample_embedding):
     mock_results.matches = [mock_match]
     pinecone_db._index.query.return_value = mock_results
 
-    results = await pinecone_db.search(query_embedding=sample_embedding, limit=10, min_similarity=0.5)
+    results = await pinecone_db.search(
+        query_embedding=sample_embedding, limit=10, min_similarity=0.5
+    )
 
     assert len(results) == 1
     entry, score = results[0]
@@ -155,7 +157,9 @@ async def test_search_min_similarity_filter(pinecone_db, sample_entry, sample_em
     mock_results.matches = [mock_match]
     pinecone_db._index.query.return_value = mock_results
 
-    results = await pinecone_db.search(query_embedding=sample_embedding, limit=10, min_similarity=0.5)
+    results = await pinecone_db.search(
+        query_embedding=sample_embedding, limit=10, min_similarity=0.5
+    )
 
     # 類似度が低いのでフィルタされる
     assert len(results) == 0
@@ -194,4 +198,3 @@ def test_get_status(pinecone_db):
     assert status["environment"] == "us-west1-gcp"
     assert status["index_name"] == "test-index"
     assert status["connected"] is True
-

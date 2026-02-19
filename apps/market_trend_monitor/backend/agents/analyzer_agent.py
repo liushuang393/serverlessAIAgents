@@ -181,7 +181,8 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
         )
 
     async def _extract_entities_from_articles(
-        self, articles: list[Article],
+        self,
+        articles: list[Article],
     ) -> list[dict[str, Any]]:
         """Phase 7: 記事からエンティティを抽出."""
         if not self._entity_extraction:
@@ -199,7 +200,8 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
             return []
 
     async def _detect_anomalies(
-        self, trends: list[Trend],
+        self,
+        trends: list[Trend],
     ) -> list[dict[str, Any]]:
         """Phase 7: 異常検知."""
         if not self._anomaly_detection:
@@ -379,12 +381,16 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
 
         for evidence in current_evidences:
             for keyword in evidence.extracted_data.get("keywords", []):
-                weighted_current[keyword] = weighted_current.get(keyword, 0.0) + evidence.reliability_score
+                weighted_current[keyword] = (
+                    weighted_current.get(keyword, 0.0) + evidence.reliability_score
+                )
                 count_current[keyword] = count_current.get(keyword, 0) + 1
 
         for evidence in previous_evidences:
             for keyword in evidence.extracted_data.get("keywords", []):
-                weighted_previous[keyword] = weighted_previous.get(keyword, 0.0) + evidence.reliability_score
+                weighted_previous[keyword] = (
+                    weighted_previous.get(keyword, 0.0) + evidence.reliability_score
+                )
 
         return {
             "weighted_current": weighted_current,
@@ -426,8 +432,7 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
         """成長率の説明文を生成."""
         if growth_state == "new":
             return (
-                "前期間に同一トピックの証拠が存在しないため、"
-                "比率ではなく新規検知として扱いました。"
+                "前期間に同一トピックの証拠が存在しないため、比率ではなく新規検知として扱いました。"
             )
         if growth_state == "no_signal":
             return "現期間・前期間ともに有効な証拠がないため、変化は判定できません。"

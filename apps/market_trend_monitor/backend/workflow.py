@@ -30,10 +30,7 @@ from apps.market_trend_monitor.backend.agents import (
 from apps.market_trend_monitor.backend.config import config
 from apps.market_trend_monitor.backend.services.metrics_service import metrics_service
 from apps.market_trend_monitor.backend.services.registry import (
-    adaptive_scoring_service,
-    bayesian_confidence_service,
     evidence_service,
-    prediction_service,
     signal_service,
     source_reliability_tracker,
 )
@@ -47,6 +44,7 @@ logger = logging.getLogger(__name__)
 # ============================================================
 # Flow 作成（FlowBuilder パターン）
 # ============================================================
+
 
 def _safe_get_result(ctx: Any, node_id: str) -> dict[str, Any]:
     """Phase 13: エラー回復付きの結果取得."""
@@ -86,12 +84,8 @@ def _map_signal_input(ctx: Any) -> dict[str, Any]:
     for trend in trends:
         trend_id = trend.get("id", "")
         topic = trend.get("topic", "")
-        matched = [
-            article for article in articles if topic in article.get("keywords", [])
-        ]
-        evidence_counts[trend_id] = (
-            len(matched) if matched else int(trend.get("articles_count", 0))
-        )
+        matched = [article for article in articles if topic in article.get("keywords", [])]
+        evidence_counts[trend_id] = len(matched) if matched else int(trend.get("articles_count", 0))
         sources = {article.get("source") for article in matched if article.get("source")}
         if not sources:
             sources = {article.get("source") for article in articles if article.get("source")}

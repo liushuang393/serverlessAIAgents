@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Engine Pattern テスト.
 
 4 種類の Engine Pattern をテスト:
@@ -11,8 +10,6 @@
 import pytest
 
 from agentflow.engines import (
-    BaseEngine,
-    EngineConfig,
     GateEngine,
     PipelineEngine,
     RAGEngine,

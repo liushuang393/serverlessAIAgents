@@ -175,7 +175,7 @@ class SkillGenerator:
         try:
             yaml_content = fm_match.group(1)
             meta_dict = yaml.safe_load(yaml_content) or {}
-            instructions = content[fm_match.end():].strip()
+            instructions = content[fm_match.end() :].strip()
 
             # 自動学習フラグを設定
             meta_dict["learned"] = True
@@ -187,4 +187,3 @@ class SkillGenerator:
         except yaml.YAMLError as e:
             self._logger.warning(f"YAML parse error: {e}")
             return None
-

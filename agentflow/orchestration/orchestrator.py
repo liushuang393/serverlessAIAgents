@@ -54,12 +54,12 @@ if TYPE_CHECKING:
 class ExecutionPhase(str, Enum):
     """実行フェーズ."""
 
-    PLANNING = "planning"      # 計画中
-    EXECUTING = "executing"    # 実行中
+    PLANNING = "planning"  # 計画中
+    EXECUTING = "executing"  # 実行中
     MONITORING = "monitoring"  # 監視中
-    COMPLETED = "completed"    # 完了
-    FAILED = "failed"          # 失敗
-    CANCELLED = "cancelled"    # キャンセル
+    COMPLETED = "completed"  # 完了
+    FAILED = "failed"  # 失敗
+    CANCELLED = "cancelled"  # キャンセル
 
 
 class ExecutionStatus(str, Enum):
@@ -354,8 +354,7 @@ class Orchestrator:
             output = self._build_output(step_results, context)
 
             self._logger.info(
-                f"タスク完了: {execution_id} ({duration_ms:.0f}ms, "
-                f"{len(step_results)}ステップ)"
+                f"タスク完了: {execution_id} ({duration_ms:.0f}ms, {len(step_results)}ステップ)"
             )
 
             return ExecutionResult(
@@ -549,10 +548,12 @@ class Orchestrator:
         outputs = []
         for result in step_results:
             if result.success and result.output:
-                outputs.append({
-                    "step_id": result.step_id,
-                    "output": result.output,
-                })
+                outputs.append(
+                    {
+                        "step_id": result.step_id,
+                        "output": result.output,
+                    }
+                )
 
         # 最後の成功出力があればそれを返す
         if outputs:
@@ -566,9 +567,7 @@ class Orchestrator:
         Args:
             event: 監視イベント
         """
-        self._logger.warning(
-            f"アラート [{event.severity.value}]: {event.message}"
-        )
+        self._logger.warning(f"アラート [{event.severity.value}]: {event.message}")
 
         # 自動リカバリ
         if self._config.auto_recovery and event.severity == AlertSeverity.CRITICAL:

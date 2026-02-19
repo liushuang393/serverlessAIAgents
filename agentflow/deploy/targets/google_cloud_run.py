@@ -85,8 +85,7 @@ class GoogleCloudRunTarget(BaseDeployTarget):
                                 }
                             ),
                             env=[
-                                run_v2.EnvVar(name=k, value=v)
-                                for k, v in config.env_vars.items()
+                                run_v2.EnvVar(name=k, value=v) for k, v in config.env_vars.items()
                             ],
                         )
                     ],
@@ -173,4 +172,3 @@ class GoogleCloudRunTarget(BaseDeployTarget):
 
 
 __all__ = ["GoogleCloudRunTarget"]
-

@@ -2,7 +2,6 @@
 """ComfyUI で利用可能なモデルをリスト."""
 
 import asyncio
-import json
 
 import httpx
 
@@ -12,13 +11,13 @@ async def list_models():
     async with httpx.AsyncClient(base_url="http://localhost:8188", timeout=30.0) as client:
         # オブジェクト情報を取得
         response = await client.get("/object_info")
-        
+
         if response.status_code != 200:
             print(f"エラー: {response.status_code}")
             return
-        
+
         data = response.json()
-        
+
         # CheckpointLoaderSimple の情報を取得
         if "CheckpointLoaderSimple" in data:
             checkpoint_info = data["CheckpointLoaderSimple"]

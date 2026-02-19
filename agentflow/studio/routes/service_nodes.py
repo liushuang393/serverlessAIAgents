@@ -86,4 +86,3 @@ def create_service_nodes_router() -> APIRouter:
         return node_cls.get_config_schema()
 
     return router
-

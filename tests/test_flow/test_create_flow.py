@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """新しい create_flow チェーン API のテスト.
 
 検証:
@@ -9,15 +8,14 @@
 - 進捗イベントの送出
 """
 
-import pytest
 from typing import Any
 
+import pytest
+
 from agentflow.flow import (
-    create_flow,
     Flow,
     FlowBuilder,
-    AgentProtocol,
-    ReviewVerdict,
+    create_flow,
 )
 
 

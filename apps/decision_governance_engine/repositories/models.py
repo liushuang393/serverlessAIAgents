@@ -34,8 +34,18 @@ class Base(DeclarativeBase):
 claim_evidence_refs = Table(
     "claim_evidence_refs",
     Base.metadata,
-    Column("claim_id", PG_UUID(as_uuid=True), ForeignKey("claims.id", ondelete="CASCADE"), primary_key=True),
-    Column("evidence_id", PG_UUID(as_uuid=True), ForeignKey("evidence_items.id", ondelete="CASCADE"), primary_key=True),
+    Column(
+        "claim_id",
+        PG_UUID(as_uuid=True),
+        ForeignKey("claims.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    Column(
+        "evidence_id",
+        PG_UUID(as_uuid=True),
+        ForeignKey("evidence_items.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
 )
 
 
@@ -48,6 +58,7 @@ class DecisionRecord(Base):
         - decision_role: GO/NO_GO/DELAY/PILOT
         - confidence: 確信度 (0.0-1.0)
     """
+
     __tablename__ = "decision_records"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
@@ -84,14 +95,20 @@ class DecisionRecord(Base):
 
     # 監査情報
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow
+    )
     processing_time_ms: Mapped[int | None] = mapped_column(Integer)
     llm_tokens_used: Mapped[int | None] = mapped_column(Integer)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # リレーション
-    evidence_items: Mapped[list["EvidenceItem"]] = relationship(back_populates="decision_record", cascade="all, delete-orphan")
-    claims: Mapped[list["Claim"]] = relationship(back_populates="decision_record", cascade="all, delete-orphan")
+    evidence_items: Mapped[list["EvidenceItem"]] = relationship(
+        back_populates="decision_record", cascade="all, delete-orphan"
+    )
+    claims: Mapped[list["Claim"]] = relationship(
+        back_populates="decision_record", cascade="all, delete-orphan"
+    )
 
 
 class EvidenceItem(Base):
@@ -99,10 +116,13 @@ class EvidenceItem(Base):
 
     外部情報源からの証拠データを格納。
     """
+
     __tablename__ = "evidence_items"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-    decision_record_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("decision_records.id", ondelete="CASCADE"), nullable=False)
+    decision_record_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("decision_records.id", ondelete="CASCADE"), nullable=False
+    )
 
     url: Mapped[str | None] = mapped_column(Text)
     title: Mapped[str | None] = mapped_column(Text)
@@ -117,7 +137,9 @@ class EvidenceItem(Base):
 
     # リレーション
     decision_record: Mapped["DecisionRecord"] = relationship(back_populates="evidence_items")
-    claims: Mapped[list["Claim"]] = relationship(secondary=claim_evidence_refs, back_populates="evidence_refs")
+    claims: Mapped[list["Claim"]] = relationship(
+        secondary=claim_evidence_refs, back_populates="evidence_refs"
+    )
 
 
 class Claim(Base):
@@ -125,12 +147,17 @@ class Claim(Base):
 
     決策過程で生成された主張・断言を格納。
     """
+
     __tablename__ = "claims"
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
-    decision_record_id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("decision_records.id", ondelete="CASCADE"), nullable=False)
+    decision_record_id: Mapped[UUID] = mapped_column(
+        PG_UUID(as_uuid=True), ForeignKey("decision_records.id", ondelete="CASCADE"), nullable=False
+    )
 
-    claim_type: Mapped[str] = mapped_column(String(20), nullable=False)  # FACT/INFERENCE/ASSUMPTION/RECOMMENDATION
+    claim_type: Mapped[str] = mapped_column(
+        String(20), nullable=False
+    )  # FACT/INFERENCE/ASSUMPTION/RECOMMENDATION
     statement: Mapped[str] = mapped_column(Text, nullable=False)
     source_section: Mapped[str | None] = mapped_column(String(20))
     confidence: Mapped[float | None] = mapped_column(Numeric(5, 4))
@@ -138,4 +165,6 @@ class Claim(Base):
 
     # リレーション
     decision_record: Mapped["DecisionRecord"] = relationship(back_populates="claims")
-    evidence_refs: Mapped[list["EvidenceItem"]] = relationship(secondary=claim_evidence_refs, back_populates="claims")
+    evidence_refs: Mapped[list["EvidenceItem"]] = relationship(
+        secondary=claim_evidence_refs, back_populates="claims"
+    )

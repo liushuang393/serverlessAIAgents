@@ -143,9 +143,7 @@ class CSVHandler(FormatHandler):
 
         output = io.StringIO()
         fieldnames = list(data[0].keys())
-        writer = csv.DictWriter(
-            output, fieldnames=fieldnames, delimiter=delimiter, **kwargs
-        )
+        writer = csv.DictWriter(output, fieldnames=fieldnames, delimiter=delimiter, **kwargs)
         writer.writeheader()
         writer.writerows(data)
         return output.getvalue().encode(encoding)
@@ -213,15 +211,10 @@ class JSONHandler(FormatHandler):
             バイナリデータ
         """
         if jsonl and isinstance(data, list):
-            lines = [
-                json.dumps(item, ensure_ascii=ensure_ascii, **kwargs)
-                for item in data
-            ]
+            lines = [json.dumps(item, ensure_ascii=ensure_ascii, **kwargs) for item in data]
             return "\n".join(lines).encode(encoding)
 
-        return json.dumps(
-            data, indent=indent, ensure_ascii=ensure_ascii, **kwargs
-        ).encode(encoding)
+        return json.dumps(data, indent=indent, ensure_ascii=ensure_ascii, **kwargs).encode(encoding)
 
 
 class ExcelHandler(FormatHandler):
@@ -259,13 +252,8 @@ class ExcelHandler(FormatHandler):
         try:
             import openpyxl
         except ImportError as e:
-            msg = (
-                "openpyxl is required for Excel support. "
-                "Install with: pip install openpyxl"
-            )
-            raise ImportError(
-                msg
-            ) from e
+            msg = "openpyxl is required for Excel support. Install with: pip install openpyxl"
+            raise ImportError(msg) from e
 
         workbook = openpyxl.load_workbook(io.BytesIO(content), read_only=True)
 
@@ -302,13 +290,8 @@ class ExcelHandler(FormatHandler):
         try:
             import openpyxl
         except ImportError as e:
-            msg = (
-                "openpyxl is required for Excel support. "
-                "Install with: pip install openpyxl"
-            )
-            raise ImportError(
-                msg
-            ) from e
+            msg = "openpyxl is required for Excel support. Install with: pip install openpyxl"
+            raise ImportError(msg) from e
 
         workbook = openpyxl.Workbook()
         sheet = workbook.active
@@ -366,13 +349,8 @@ class ParquetHandler(FormatHandler):
         try:
             import pyarrow.parquet as pq
         except ImportError as e:
-            msg = (
-                "pyarrow is required for Parquet support. "
-                "Install with: pip install pyarrow"
-            )
-            raise ImportError(
-                msg
-            ) from e
+            msg = "pyarrow is required for Parquet support. Install with: pip install pyarrow"
+            raise ImportError(msg) from e
 
         table = pq.read_table(io.BytesIO(content), columns=columns)
         return table.to_pylist()
@@ -395,13 +373,8 @@ class ParquetHandler(FormatHandler):
             import pyarrow as pa
             import pyarrow.parquet as pq
         except ImportError as e:
-            msg = (
-                "pyarrow is required for Parquet support. "
-                "Install with: pip install pyarrow"
-            )
-            raise ImportError(
-                msg
-            ) from e
+            msg = "pyarrow is required for Parquet support. Install with: pip install pyarrow"
+            raise ImportError(msg) from e
 
         table = pa.Table.from_pylist(data)
         output = io.BytesIO()
@@ -443,4 +416,3 @@ def _register_default_handlers() -> None:
 
 
 _register_default_handlers()
-

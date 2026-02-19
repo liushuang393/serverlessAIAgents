@@ -79,9 +79,19 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
 
     # v3.0: 制約主導型検出キーワード
     CONSTRAINT_DRIVEN_KEYWORDS: list[str] = [
-        "構築", "開発", "自社", "独自", "内製",
-        "国際", "グローバル", "規制", "法規制", "コンプライアンス",
-        "データ主権", "セキュリティ", "機密",
+        "構築",
+        "開発",
+        "自社",
+        "独自",
+        "内製",
+        "国際",
+        "グローバル",
+        "規制",
+        "法規制",
+        "コンプライアンス",
+        "データ主権",
+        "セキュリティ",
+        "機密",
     ]
 
     # v3.0: 既存代替手段の一般例
@@ -324,7 +334,7 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
 {is_constraint_driven}
 
 【考えられる既存代替手段】
-{', '.join(potential_alternatives) if potential_alternatives else "不明"}
+{", ".join(potential_alternatives) if potential_alternatives else "不明"}
 
 上記の問題を分析し、JSON形式で出力してください。
 
@@ -340,11 +350,14 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
         # 詳細ログ: LLM生出力を記録（デバッグ用）
-        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
+        self._logger.debug(
+            f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}"
+        )
 
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
             from agentflow.utils import extract_json
+
             data = extract_json(response)
 
             if data is None:
@@ -382,68 +395,78 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
             for alt_data in data.get("existing_alternatives", [])[:3]:
                 if not isinstance(alt_data, dict):
                     continue
-                existing_alternatives.append(ExistingAlternative(
-                    name=alt_data.get("name", "")[:30],
-                    why_not_viable=alt_data.get("why_not_viable", "")[:100],
-                    specific_constraint=alt_data.get("specific_constraint", "")[:50],
-                ))
+                existing_alternatives.append(
+                    ExistingAlternative(
+                        name=alt_data.get("name", "")[:30],
+                        why_not_viable=alt_data.get("why_not_viable", "")[:100],
+                        specific_constraint=alt_data.get("specific_constraint", "")[:50],
+                    )
+                )
 
             # 因果齿轮をパース
             causal_gears = []
             for gear_data in data.get("causal_gears", [])[:5]:
                 if not isinstance(gear_data, dict):
                     continue
-                causal_gears.append(CausalGear(
-                    gear_id=safe_int(gear_data.get("gear_id", 1), 1),
-                    name=gear_data.get("name", "")[:20],
-                    description=gear_data.get("description", "")[:100],
-                    drives=gear_data.get("drives", []),
-                    driven_by=gear_data.get("driven_by", []),
-                    leverage=safe_enum(
-                        LeverageLevel,
-                        gear_data.get("leverage", "MEDIUM"),
-                        LeverageLevel.MEDIUM,
-                    ),
-                ))
+                causal_gears.append(
+                    CausalGear(
+                        gear_id=safe_int(gear_data.get("gear_id", 1), 1),
+                        name=gear_data.get("name", "")[:20],
+                        description=gear_data.get("description", "")[:100],
+                        drives=gear_data.get("drives", []),
+                        driven_by=gear_data.get("driven_by", []),
+                        leverage=safe_enum(
+                            LeverageLevel,
+                            gear_data.get("leverage", "MEDIUM"),
+                            LeverageLevel.MEDIUM,
+                        ),
+                    )
+                )
 
             # 死穴をパース
             death_traps = []
             for trap_data in data.get("death_traps", [])[:3]:
                 if not isinstance(trap_data, dict):
                     continue
-                death_traps.append(DeathTrap(
-                    action=trap_data.get("action", ""),
-                    reason=trap_data.get("reason", ""),
-                    severity=safe_enum(
-                        DeathTrapSeverity,
-                        trap_data.get("severity", "SEVERE"),
-                        DeathTrapSeverity.SEVERE,
-                    ),
-                ))
+                death_traps.append(
+                    DeathTrap(
+                        action=trap_data.get("action", ""),
+                        reason=trap_data.get("reason", ""),
+                        severity=safe_enum(
+                            DeathTrapSeverity,
+                            trap_data.get("severity", "SEVERE"),
+                            DeathTrapSeverity.SEVERE,
+                        ),
+                    )
+                )
 
             # v3.1: 制約境界条件をパース
             constraint_boundaries = []
             for cb_data in data.get("constraint_boundaries", [])[:5]:
                 if not isinstance(cb_data, dict):
                     continue
-                constraint_boundaries.append(ConstraintBoundary(
-                    constraint_name=cb_data.get("constraint_name", "")[:30],
-                    definition=cb_data.get("definition", "")[:100],
-                    violation_example=cb_data.get("violation_example", "")[:100],
-                    exceptions=cb_data.get("exceptions", "")[:100],
-                ))
+                constraint_boundaries.append(
+                    ConstraintBoundary(
+                        constraint_name=cb_data.get("constraint_name", "")[:30],
+                        definition=cb_data.get("definition", "")[:100],
+                        violation_example=cb_data.get("violation_example", "")[:100],
+                        exceptions=cb_data.get("exceptions", "")[:100],
+                    )
+                )
 
             # v3.1: 成立ルートをパース
             solution_routes = []
             for sr_data in data.get("solution_routes", [])[:5]:
                 if not isinstance(sr_data, dict):
                     continue
-                solution_routes.append(SolutionRoute(
-                    route_type=sr_data.get("route_type", "")[:20],
-                    description=sr_data.get("description", "")[:100],
-                    viability=sr_data.get("viability", "")[:50],
-                    tradeoffs=sr_data.get("tradeoffs", [])[:3],
-                ))
+                solution_routes.append(
+                    SolutionRoute(
+                        route_type=sr_data.get("route_type", "")[:20],
+                        description=sr_data.get("description", "")[:100],
+                        viability=sr_data.get("viability", "")[:50],
+                        tradeoffs=sr_data.get("tradeoffs", [])[:3],
+                    )
+                )
 
             # v3.1: 定量指標をパース
             quantified_metrics = []
@@ -451,23 +474,27 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
                 if not isinstance(qm_data, dict):
                     continue
                 priority_raw = safe_int(qm_data.get("priority", 5), 5)
-                quantified_metrics.append(QuantifiedMetric(
-                    metric_name=qm_data.get("metric_name", "")[:30],
-                    target_value=qm_data.get("target_value", "")[:50],
-                    priority=min(max(priority_raw, 1), 10),
-                    tradeoff_note=qm_data.get("tradeoff_note", "")[:100],
-                ))
+                quantified_metrics.append(
+                    QuantifiedMetric(
+                        metric_name=qm_data.get("metric_name", "")[:30],
+                        target_value=qm_data.get("target_value", "")[:50],
+                        priority=min(max(priority_raw, 1), 10),
+                        tradeoff_note=qm_data.get("tradeoff_note", "")[:100],
+                    )
+                )
 
             # v3.1: 監査証拠チェックリストをパース
             audit_evidence = []
             for ae_data in data.get("audit_evidence_checklist", [])[:8]:
                 if not isinstance(ae_data, dict):
                     continue
-                audit_evidence.append(AuditEvidenceItem(
-                    category=ae_data.get("category", "")[:30],
-                    required_evidence=ae_data.get("required_evidence", "")[:100],
-                    verification_method=ae_data.get("verification_method", "")[:100],
-                ))
+                audit_evidence.append(
+                    AuditEvidenceItem(
+                        category=ae_data.get("category", "")[:30],
+                        required_evidence=ae_data.get("required_evidence", "")[:100],
+                        verification_method=ae_data.get("verification_method", "")[:100],
+                    )
+                )
 
             # v3.1: セルフチェック結果をパース
             self_check = None
@@ -563,7 +590,9 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         # existing_alternatives のリスト長を検証・正規化（max 3）
         existing_alts = data.get("existing_alternatives", [])
         if isinstance(existing_alts, list) and len(existing_alts) > 3:
-            self._logger.warning(f"existing_alternatives has {len(existing_alts)} items (max 3), truncating")
+            self._logger.warning(
+                f"existing_alternatives has {len(existing_alts)} items (max 3), truncating"
+            )
             data["existing_alternatives"] = existing_alts[:3]
 
         # hidden_assumptions のリスト長を検証・正規化（max 3）
@@ -592,7 +621,9 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         # v3.1: audit_evidence_checklist のリスト長を検証・正規化（max 8）
         ae = data.get("audit_evidence_checklist", [])
         if isinstance(ae, list) and len(ae) > 8:
-            self._logger.warning(f"audit_evidence_checklist has {len(ae)} items (max 8), truncating")
+            self._logger.warning(
+                f"audit_evidence_checklist has {len(ae)} items (max 8), truncating"
+            )
             data["audit_evidence_checklist"] = ae[:8]
 
         # v3.1: self_check の検証（必須）
@@ -620,9 +651,16 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
     def _is_template_essence(self, essence: str) -> bool:
         """本質がテンプレート的かどうかを判定."""
         template_patterns = [
-            "の決定", "の判断", "の選択", "の評価",
-            "方向性", "方針", "戦略",
-            "最適な", "効果的な", "適切な",
+            "の決定",
+            "の判断",
+            "の選択",
+            "の評価",
+            "方向性",
+            "方針",
+            "戦略",
+            "最適な",
+            "効果的な",
+            "適切な",
         ]
         return any(pattern in essence for pattern in template_patterns)
 
@@ -705,21 +743,25 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         )
 
     def _generate_default_constraint_boundaries(
-        self, immutable_constraints: list[str],
+        self,
+        immutable_constraints: list[str],
     ) -> list[ConstraintBoundary]:
         """制約境界条件のデフォルト生成（v3.1ルールベース用）."""
         boundaries = []
         for c in immutable_constraints[:5]:
-            boundaries.append(ConstraintBoundary(
-                constraint_name=c[:30],
-                definition=f"「{c[:20]}」に違反する行為全般"[:100],
-                violation_example=f"「{c[:20]}」を無視した設計・運用"[:100],
-                exceptions="経営層の明示的承認がある場合"[:100],
-            ))
+            boundaries.append(
+                ConstraintBoundary(
+                    constraint_name=c[:30],
+                    definition=f"「{c[:20]}」に違反する行為全般"[:100],
+                    violation_example=f"「{c[:20]}」を無視した設計・運用"[:100],
+                    exceptions="経営層の明示的承認がある場合"[:100],
+                )
+            )
         return boundaries
 
     def _generate_default_solution_routes(
-        self, problem_type: ProblemType,
+        self,
+        problem_type: ProblemType,
     ) -> list[SolutionRoute]:
         """成立ルートのデフォルト生成（v3.1ルールベース用）."""
         return [
@@ -744,7 +786,8 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         ]
 
     def _generate_default_quantified_metrics(
-        self, problem_type: ProblemType,
+        self,
+        problem_type: ProblemType,
     ) -> list[QuantifiedMetric]:
         """定量指標のデフォルト生成（v3.1ルールベース用）."""
         return [
@@ -763,7 +806,8 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         ]
 
     def _generate_default_audit_evidence(
-        self, constraints: list[str],
+        self,
+        constraints: list[str],
     ) -> list[AuditEvidenceItem]:
         """監査証拠チェックリストのデフォルト生成（v3.1ルールベース用）."""
         evidence = [
@@ -781,18 +825,29 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         # 制約にセキュリティ関連があれば追加
         security_keywords = ["セキュリティ", "機密", "暗号", "認証", "権限"]
         if any(kw in " ".join(constraints) for kw in security_keywords):
-            evidence.append(AuditEvidenceItem(
-                category="権限設計",
-                required_evidence="アクセス制御マトリクス",
-                verification_method="権限設定の実機確認",
-            ))
+            evidence.append(
+                AuditEvidenceItem(
+                    category="権限設計",
+                    required_evidence="アクセス制御マトリクス",
+                    verification_method="権限設定の実機確認",
+                )
+            )
         return evidence
 
     def _infer_problem_nature(self, question: str, constraints: list[str]) -> ProblemNatureType:
         """問題の本質的性質を推定（v3.0）."""
         # 制約主導型のキーワードチェック
-        constraint_keywords = ["規制", "法規", "コンプライアンス", "データ主権", "セキュリティ", "機密"]
-        if any(kw in question for kw in constraint_keywords) or any(kw in " ".join(constraints) for kw in constraint_keywords):
+        constraint_keywords = [
+            "規制",
+            "法規",
+            "コンプライアンス",
+            "データ主権",
+            "セキュリティ",
+            "機密",
+        ]
+        if any(kw in question for kw in constraint_keywords) or any(
+            kw in " ".join(constraints) for kw in constraint_keywords
+        ):
             return ProblemNatureType.CONSTRAINT_DRIVEN
 
         # 規制対応
@@ -874,11 +929,13 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
                     elif any("国際" in question or "グローバル" in question for _ in [1]):
                         constraint_reason = "地域別のデータ主権要件への対応が困難"
 
-                    alternatives.append(ExistingAlternative(
-                        name=alt,
-                        why_not_viable=f"標準サービスでは{constraint_reason}",
-                        specific_constraint=constraint_reason[:50],
-                    ))
+                    alternatives.append(
+                        ExistingAlternative(
+                            name=alt,
+                            why_not_viable=f"標準サービスでは{constraint_reason}",
+                            specific_constraint=constraint_reason[:50],
+                        )
+                    )
 
         return alternatives[:3]
 
@@ -969,19 +1026,23 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         # 問題タイプに応じたテンプレートを取得
         templates = self.DEATH_TRAP_TEMPLATES.get(problem_type, [])
         for template in templates[:2]:
-            traps.append(DeathTrap(
-                action=template["action"],
-                reason=template["reason"],
-                severity=DeathTrapSeverity(template["severity"]),
-            ))
+            traps.append(
+                DeathTrap(
+                    action=template["action"],
+                    reason=template["reason"],
+                    severity=DeathTrapSeverity(template["severity"]),
+                )
+            )
 
         # 制約に基づいた死穴を追加
         if any("予算" in c or "円" in c for c in constraints):
-            traps.append(DeathTrap(
-                action="キャッシュフローを無視した投資判断",
-                reason="運転資金の枯渇は事業継続を不可能にする",
-                severity=DeathTrapSeverity.FATAL,
-            ))
+            traps.append(
+                DeathTrap(
+                    action="キャッシュフローを無視した投資判断",
+                    reason="運転資金の枯渇は事業継続を不可能にする",
+                    severity=DeathTrapSeverity.FATAL,
+                )
+            )
 
         return traps[:3]
 

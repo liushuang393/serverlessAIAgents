@@ -156,18 +156,31 @@ def web():
         """設定フィールドを取得."""
         return [
             ConfigField(
-                name="app_name", label="App Name", type="string",
-                required=True, placeholder="my-agentflow-app", group="settings",
+                name="app_name",
+                label="App Name",
+                type="string",
+                required=True,
+                placeholder="my-agentflow-app",
+                group="settings",
             ),
             ConfigField(
-                name="gpu", label="GPU Type", type="select",
-                required=False, default=None,
+                name="gpu",
+                label="GPU Type",
+                type="select",
+                required=False,
+                default=None,
                 options=[None, "T4", "A10G", "A100"],
-                description="GPU タイプ (オプション)", group="settings",
+                description="GPU タイプ (オプション)",
+                group="settings",
             ),
             ConfigField(
-                name="memory", label="Memory (MB)", type="number",
-                required=False, default=1024, description="メモリサイズ", group="settings",
+                name="memory",
+                label="Memory (MB)",
+                type="number",
+                required=False,
+                default=1024,
+                description="メモリサイズ",
+                group="settings",
             ),
         ]
 
@@ -180,4 +193,3 @@ def web():
 
 
 __all__ = ["ModalTarget"]
-

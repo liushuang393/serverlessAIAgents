@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Studio Service.
 
 3 つの製品主線（Migration / FAQ / Assistant）向けの

@@ -101,6 +101,7 @@ class RenderTarget(BaseDeployTarget):
 
                     # デプロイ完了を待機
                     import asyncio
+
                     for _ in range(60):
                         await asyncio.sleep(5)
                         status_response = await client.get(
@@ -158,16 +159,28 @@ class RenderTarget(BaseDeployTarget):
         """設定フィールドを取得."""
         return [
             ConfigField(
-                name="render_api_key", label="Render API Key", type="password",
-                required=True, description="Render API キー", group="credentials",
+                name="render_api_key",
+                label="Render API Key",
+                type="password",
+                required=True,
+                description="Render API キー",
+                group="credentials",
             ),
             ConfigField(
-                name="service_id", label="Service ID", type="string",
-                required=False, description="既存サービス ID", group="settings",
+                name="service_id",
+                label="Service ID",
+                type="string",
+                required=False,
+                description="既存サービス ID",
+                group="settings",
             ),
             ConfigField(
-                name="deploy_hook", label="Deploy Hook URL", type="string",
-                required=False, description="Render Deploy Hook URL", group="settings",
+                name="deploy_hook",
+                label="Deploy Hook URL",
+                type="string",
+                required=False,
+                description="Render Deploy Hook URL",
+                group="settings",
             ),
         ]
 
@@ -180,4 +193,3 @@ class RenderTarget(BaseDeployTarget):
 
 
 __all__ = ["RenderTarget"]
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """データ収集エージェント.
 
 複数のソースから市場動向データを収集します。
@@ -13,12 +12,8 @@ import logging
 import os
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-
-from agentflow import ResilientAgent
-from agentflow.config import get_settings
-from dateutil import parser as date_parser
 
 from apps.market_trend_monitor.backend.config import config
 from apps.market_trend_monitor.backend.integrations import (
@@ -37,6 +32,10 @@ from apps.market_trend_monitor.backend.models import (
     CollectorOutput,
     SourceType,
 )
+from dateutil import parser as date_parser
+
+from agentflow import ResilientAgent
+from agentflow.config import get_settings
 
 
 class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
@@ -154,7 +153,9 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
         search_keywords = await self._expand_keywords(keywords)
         self._logger.info(
             "収集開始: keywords=%s, expanded=%s, sources=%s",
-            keywords, len(search_keywords), sources,
+            keywords,
+            len(search_keywords),
+            sources,
         )
 
         articles: list[Article] = []
@@ -249,11 +250,7 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
 
         # Phase 12: 信頼度追跡に結果を報告
         if self._reliability_tracker:
-            avg_len = (
-                sum(len(a.content) for a in articles) / len(articles)
-                if articles
-                else 0.0
-            )
+            avg_len = sum(len(a.content) for a in articles) / len(articles) if articles else 0.0
             self._reliability_tracker.report_request(
                 source_type=source_key,
                 success=success and len(articles) > 0,
@@ -290,12 +287,19 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                     # ブレイクスルー（新発見・重要動向）の検知強化
                     title = news_article.get("title", f"{keyword} に関する最新動向")
                     content = news_article.get("content", news_article.get("description", ""))
-                    
+
                     is_breakthrough = any(
-                        word in (title + content).lower() 
-                        for word in ["breakthrough", "innovative", "新手法", "画期的", "突破口", "automated"]
+                        word in (title + content).lower()
+                        for word in [
+                            "breakthrough",
+                            "innovative",
+                            "新手法",
+                            "画期的",
+                            "突破口",
+                            "automated",
+                        ]
                     )
-                    
+
                     article = Article(
                         id=str(uuid.uuid4()),
                         title=title,
@@ -517,11 +521,13 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                             "source_type": "devto",
                             "query": keyword,
                             "positive_reactions_count": item.get(
-                                "positive_reactions_count", 0,
+                                "positive_reactions_count",
+                                0,
                             ),
                             "comments_count": item.get("comments_count", 0),
                             "reading_time_minutes": item.get(
-                                "reading_time_minutes", 0,
+                                "reading_time_minutes",
+                                0,
                             ),
                         },
                     )
@@ -539,8 +545,7 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
             # 簡易URL生成（本来は SourceRegistry から取得すべきだが、まずは動的に特定）
             # 実際にはここでは特定のシグナルや競合名が来るため、それを利用
             site_articles = await self._official_site_scraper.scrape_official_news(
-                competitor_name=competitor,
-                urls=[]
+                competitor_name=competitor, urls=[]
             )
             articles.extend(site_articles)
         return articles
@@ -606,8 +611,8 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
     def _to_epoch_seconds(value: datetime) -> float:
         """datetime を UTC epoch 秒へ正規化."""
         if value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc).timestamp()
-        return value.astimezone(timezone.utc).timestamp()
+            return value.replace(tzinfo=UTC).timestamp()
+        return value.astimezone(UTC).timestamp()
 
     def _filter_articles_by_date_range(
         self,

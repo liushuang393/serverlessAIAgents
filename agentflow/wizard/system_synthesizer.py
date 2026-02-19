@@ -159,6 +159,7 @@ class SystemSynthesizer:
 
         # JSON 抽出
         import json
+
         try:
             start = content.find("{")
             end = content.rfind("}") + 1
@@ -219,6 +220,7 @@ class SystemSynthesizer:
 
         # JSON 抽出
         import json
+
         try:
             start = content.find("{")
             end = content.rfind("}") + 1
@@ -278,6 +280,7 @@ class SystemSynthesizer:
 
         # JSON 抽出
         import json
+
         try:
             start = content.find("{")
             end = content.rfind("}") + 1

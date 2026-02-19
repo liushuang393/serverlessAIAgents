@@ -100,12 +100,8 @@ class ReportBuilder(AgentBlock):
             report_id=report_id,
             title=title,
             executive_summary=summary,
-            market_trends=[
-                {"topic": "Enterprise AI", "direction": "up", "comment": "急成長中"}
-            ],
-            tech_trends=[
-                {"topic": "LLM Agents", "direction": "up", "comment": "注目分野"}
-            ],
+            market_trends=[{"topic": "Enterprise AI", "direction": "up", "comment": "急成長中"}],
+            tech_trends=[{"topic": "LLM Agents", "direction": "up", "comment": "注目分野"}],
             competitor_insights=[
                 {"name": "Competitor A", "activity": "新製品リリース", "risk": "medium"}
             ],
@@ -120,9 +116,14 @@ class ReportBuilder(AgentBlock):
         """エグゼクティブサマリーを生成."""
         if self._llm_client:
             try:
-                response = await self._llm_client.chat([
-                    {"role": "user", "content": f"以下のデータに基づいてサマリーを生成: {trend_data}"}
-                ])
+                response = await self._llm_client.chat(
+                    [
+                        {
+                            "role": "user",
+                            "content": f"以下のデータに基づいてサマリーを生成: {trend_data}",
+                        }
+                    ]
+                )
                 return response.get("content", "")
             except Exception as e:
                 logger.warning("LLMサマリー生成エラー: %s", e)

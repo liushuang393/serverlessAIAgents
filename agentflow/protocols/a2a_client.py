@@ -118,8 +118,7 @@ class A2AClient:
             except httpx.HTTPError:
                 if attempt == self._max_retries - 1:
                     self._logger.exception(
-                        f"Failed to discover agent at {endpoint} "
-                        f"after {self._max_retries} attempts"
+                        f"Failed to discover agent at {endpoint} after {self._max_retries} attempts"
                     )
                     raise
 

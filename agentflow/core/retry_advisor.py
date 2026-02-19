@@ -93,10 +93,11 @@ class RetryAdvisor:
                     temperature_override=0.2,
                     repair_prompt_hint=self._REPAIR_HINT,
                 )
-            return RetryAdvice(action=RetryAction.SKIP, reason="deterministic schema validation failed")
+            return RetryAdvice(
+                action=RetryAction.SKIP, reason="deterministic schema validation failed"
+            )
 
         if isinstance(error, (TimeoutError, ConnectionError)):
             return RetryAdvice(action=RetryAction.RETRY, reason=type(error).__name__)
 
         return RetryAdvice(action=RetryAction.RETRY, reason="default-retry")
-

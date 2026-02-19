@@ -139,8 +139,5 @@ class HITLConfig(BaseModel):
         default_factory=list,
         description="通知チャンネル（slack, email, webhook）",
     )
-    escalation_timeout_seconds: int = Field(
-        1800, description="エスカレーションまでの時間（30分）"
-    )
+    escalation_timeout_seconds: int = Field(1800, description="エスカレーションまでの時間（30分）")
     max_pending_requests: int = Field(100, description="最大保留リクエスト数")
-

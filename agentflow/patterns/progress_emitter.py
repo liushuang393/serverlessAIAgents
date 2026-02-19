@@ -268,9 +268,7 @@ class ProgressEmitter:
         """
         meta = self.get_agent_meta(index)
         if meta:
-            async for event in self.emit_node_complete(
-                meta.id, meta.name, result_summary
-            ):
+            async for event in self.emit_node_complete(meta.id, meta.name, result_summary):
                 yield event
 
     def reset(self) -> None:
@@ -282,4 +280,3 @@ __all__ = [
     "AgentMeta",
     "ProgressEmitter",
 ]
-

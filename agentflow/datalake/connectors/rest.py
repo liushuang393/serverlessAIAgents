@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """RestAPIConnector - REST/GraphQL APIコネクタ.
 
 REST APIおよびGraphQL APIへのアクセスを提供。
@@ -35,9 +37,7 @@ class RestAPIConfig(ConnectorConfig):
     """
 
     base_url: str | None = Field(default=None, description="ベースURL")
-    default_headers: dict[str, str] = Field(
-        default_factory=dict, description="デフォルトヘッダー"
-    )
+    default_headers: dict[str, str] = Field(default_factory=dict, description="デフォルトヘッダー")
     auth_header_name: str = Field(default="Authorization", description="認証ヘッダー名")
 
 
@@ -86,13 +86,8 @@ class RestAPIConnector(DataConnector):
             try:
                 import aiohttp
             except ImportError as e:
-                msg = (
-                    "aiohttp is required for REST API support. "
-                    "Install with: pip install aiohttp"
-                )
-                raise ImportError(
-                    msg
-                ) from e
+                msg = "aiohttp is required for REST API support. Install with: pip install aiohttp"
+                raise ImportError(msg) from e
 
             timeout = aiohttp.ClientTimeout(total=self._config.timeout)
             self._session = aiohttp.ClientSession(
@@ -143,9 +138,8 @@ class RestAPIConnector(DataConnector):
                     headers[self._config.auth_header_name] = creds.api_key
                 elif creds.username and creds.password:
                     import base64
-                    auth = base64.b64encode(
-                        f"{creds.username}:{creds.password}".encode()
-                    ).decode()
+
+                    auth = base64.b64encode(f"{creds.username}:{creds.password}".encode()).decode()
                     headers[self._config.auth_header_name] = f"Basic {auth}"
 
             except KeyError:
@@ -249,7 +243,7 @@ class RestAPIConnector(DataConnector):
 
             return DataItem(
                 uri=url,
-                name=path.split("/")[-1],
+                name=path.rsplit("/", maxsplit=1)[-1],
                 size=len(response_content),
                 metadata={
                     "status_code": response.status,
@@ -382,4 +376,3 @@ class RestAPIConnector(DataConnector):
         if self._session:
             await self._session.close()
             self._session = None
-

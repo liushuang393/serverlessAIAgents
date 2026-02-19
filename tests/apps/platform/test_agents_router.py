@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Agents Router エンドポイントのユニットテスト.
 
 テスト対象: apps/platform/routers/agents.py
@@ -141,7 +140,9 @@ class TestSearchAgents:
 
     def test_search_found(self, phase3_test_client: TestClient) -> None:
         """能力タグ検索でマッチする Agent を返す."""
-        resp = phase3_test_client.get("/api/studios/framework/agents/search", params={"capability": "rag"})
+        resp = phase3_test_client.get(
+            "/api/studios/framework/agents/search", params={"capability": "rag"}
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] >= 1

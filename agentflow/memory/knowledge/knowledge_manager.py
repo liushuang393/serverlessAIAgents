@@ -148,6 +148,7 @@ class KnowledgeManager:
         effective_title = title or content[:50] + ("..." if len(content) > 50 else "")
 
         import uuid
+
         entry = KnowledgeEntry(
             id=str(uuid.uuid4()),
             title=effective_title,
@@ -177,6 +178,7 @@ class KnowledgeManager:
 
         knowledge_entries = []
         import uuid
+
         for entry_data in entries:
             entry = KnowledgeEntry(
                 id=str(uuid.uuid4()),
@@ -344,4 +346,3 @@ class KnowledgeManager:
         if not self._is_started:
             msg = "Manager is not started. Call start() first."
             raise RuntimeError(msg)
-

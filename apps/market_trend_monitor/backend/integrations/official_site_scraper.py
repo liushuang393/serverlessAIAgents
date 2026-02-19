@@ -8,8 +8,9 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from agentflow import get_llm
 from apps.market_trend_monitor.backend.models import Article, SourceType
+
+from agentflow import get_llm
 
 
 class OfficialSiteScraper:
@@ -44,13 +45,15 @@ class OfficialSiteScraper:
 
         # TODO: Phase 7 実装において、browser_api を使用した実スクレイピングを統合
         # 現時点では、特定企業の主要な動向をシミュレートする高品質な記事を生成
-        
+
         # モックロジック（後続の統合確認用）
         mock_news = [
             {
                 "title": f"{competitor_name}: クラウドネイティブな基幹系刷新ソリューションを発表",
                 "content": f"{competitor_name}は本日、COBOLからJavaへの移行を加速させる自動変換エンジンの最新版をリリースしました。",
-                "url": urls[0] if urls else f"https://www.{competitor_name.lower().replace(' ', '')}.com/news/1",
+                "url": urls[0]
+                if urls
+                else f"https://www.{competitor_name.lower().replace(' ', '')}.com/news/1",
             }
         ]
 

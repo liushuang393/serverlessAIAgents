@@ -139,10 +139,12 @@ class TeamsAdapter(MessageChannelAdapter):
                 if adaptive_card:
                     activity = Activity(
                         type=ActivityTypes.message,
-                        attachments=[{
-                            "contentType": "application/vnd.microsoft.card.adaptive",
-                            "content": adaptive_card,
-                        }],
+                        attachments=[
+                            {
+                                "contentType": "application/vnd.microsoft.card.adaptive",
+                                "content": adaptive_card,
+                            }
+                        ],
                     )
                     response = await turn_context.send_activity(activity)
                 else:
@@ -270,9 +272,7 @@ class TeamsAdapter(MessageChannelAdapter):
                             "service_url": activity.service_url,
                             "channel_type": activity.channel_id,
                             "tenant_id": (
-                                activity.conversation.tenant_id
-                                if activity.conversation
-                                else None
+                                activity.conversation.tenant_id if activity.conversation else None
                             ),
                         },
                     )
@@ -304,4 +304,3 @@ class TeamsAdapter(MessageChannelAdapter):
             text,
             adaptive_card=card,
         )
-

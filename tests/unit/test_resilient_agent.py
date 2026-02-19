@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ResilientAgent 単体テスト.
 
 agentflow/core/resilient_agent.py のテスト。
@@ -6,7 +5,6 @@ agentflow/core/resilient_agent.py のテスト。
 
 import asyncio
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import BaseModel

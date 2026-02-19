@@ -51,6 +51,7 @@ logger = logging.getLogger(__name__)
 
 class SQLDialect(str, Enum):
     """SQLダイアレクト."""
+
     POSTGRESQL = "postgresql"
     MYSQL = "mysql"
     SQLITE = "sqlite"
@@ -59,6 +60,7 @@ class SQLDialect(str, Enum):
 
 class ChartType(str, Enum):
     """チャートタイプ."""
+
     BAR = "bar"
     LINE = "line"
     PIE = "pie"
@@ -119,6 +121,7 @@ class Text2SQLConfig:
 @dataclass
 class SQLResult:
     """SQL実行結果."""
+
     sql: str
     data: list[dict[str, Any]]
     columns: list[str]
@@ -131,6 +134,7 @@ class SQLResult:
 @dataclass
 class ChartData:
     """チャートデータ."""
+
     chart_type: ChartType
     title: str
     data: dict[str, Any]
@@ -193,6 +197,7 @@ class Text2SQLService(ServiceBase):
                 SchemaLinker,
                 SchemaLinkerConfig,
             )
+
             linker_config = SchemaLinkerConfig(
                 use_llm=self._config.schema_linking_use_llm,
             )
@@ -209,6 +214,7 @@ class Text2SQLService(ServiceBase):
                 FewshotManager,
                 FewshotManagerConfig,
             )
+
             fewshot_config = FewshotManagerConfig(
                 default_k=self._config.fewshot_k,
             )
@@ -221,6 +227,7 @@ class Text2SQLService(ServiceBase):
                 PostProcessorConfig,
                 SQLPostProcessor,
             )
+
             pp_config = PostProcessorConfig(
                 enable_execution_test=self._db is not None,
             )
@@ -296,11 +303,7 @@ class Text2SQLService(ServiceBase):
         sql_result = await self._execute_sql_internal(sql)
 
         if not sql_result.success:
-            yield self._emit_error(
-                execution_id,
-                "sql_error",
-                f"SQL実行エラー: {sql_result.error}"
-            )
+            yield self._emit_error(execution_id, "sql_error", f"SQL実行エラー: {sql_result.error}")
             return
 
         yield self._emit_progress(execution_id, 60, "結果を分析中...", phase="analyze")
@@ -343,10 +346,14 @@ class Text2SQLService(ServiceBase):
 
         sql = await self._generate_sql_internal(question)
 
-        yield self._emit_result(execution_id, {
-            "sql": sql,
-            "question": question,
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "sql": sql,
+                "question": question,
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     async def _do_execute_sql(
         self,
@@ -362,11 +369,7 @@ class Text2SQLService(ServiceBase):
         sql_result = await self._execute_sql_internal(sql)
 
         if not sql_result.success:
-            yield self._emit_error(
-                execution_id,
-                "sql_error",
-                f"SQL実行エラー: {sql_result.error}"
-            )
+            yield self._emit_error(execution_id, "sql_error", f"SQL実行エラー: {sql_result.error}")
             return
 
         chart = None
@@ -421,9 +424,7 @@ class Text2SQLService(ServiceBase):
                 self._logger.debug(f"Few-shot: {len(examples)} 例を選択")
 
         # 3. プロンプト構築
-        prompt = self._build_enhanced_prompt(
-            question, schema_info, fewshot_prompt
-        )
+        prompt = self._build_enhanced_prompt(question, schema_info, fewshot_prompt)
 
         response = await self._llm.chat([{"role": "user", "content": prompt}])
         sql = self._extract_sql(response["content"])
@@ -437,9 +438,7 @@ class Text2SQLService(ServiceBase):
                 schema_context=schema_info,
             )
             if pp_result.total_corrections > 0:
-                self._logger.info(
-                    f"SQL 修正: {pp_result.total_corrections} 回の修正を適用"
-                )
+                self._logger.info(f"SQL 修正: {pp_result.total_corrections} 回の修正を適用")
             sql = pp_result.final_sql
 
         return sql
@@ -549,7 +548,7 @@ SQLクエリのみを出力してください（説明不要）:
 
 ## 結果概要
 - 取得行数: {result.row_count}行
-- カラム: {', '.join(result.columns)}
+- カラム: {", ".join(result.columns)}
 
 ## データサンプル（最大10行）
 {sample}
@@ -583,10 +582,16 @@ SQLクエリのみを出力してください（説明不要）:
                 "datasets": [{"data": values}],
                 "xAxis": {"type": "category", "data": labels},
                 "yAxis": {"type": "value"},
-                "series": [{
-                    "type": chart_type.value if chart_type != ChartType.PIE else "pie",
-                    "data": [{"name": l, "value": v} for l, v in zip(labels, values, strict=False)] if chart_type == ChartType.PIE else values,
-                }],
+                "series": [
+                    {
+                        "type": chart_type.value if chart_type != ChartType.PIE else "pie",
+                        "data": [
+                            {"name": l, "value": v} for l, v in zip(labels, values, strict=False)
+                        ]
+                        if chart_type == ChartType.PIE
+                        else values,
+                    }
+                ],
             },
         )
 

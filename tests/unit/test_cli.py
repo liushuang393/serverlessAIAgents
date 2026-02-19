@@ -167,7 +167,6 @@ class TestSkillsCommand:
         assert "delete" in result.output.lower()
         assert "mount" in result.output.lower()
 
-
     def test_skills_list(self) -> None:
         """skills list コマンドが動作することをテスト."""
         runner = CliRunner()
@@ -176,7 +175,11 @@ class TestSkillsCommand:
         # exit_code 0 または出力があればOK
         assert result.exit_code == 0
         # "skills" または "Total" が出力に含まれる
-        assert "skill" in result.output.lower() or "total" in result.output.lower() or "No skills" in result.output
+        assert (
+            "skill" in result.output.lower()
+            or "total" in result.output.lower()
+            or "No skills" in result.output
+        )
 
     def test_skills_list_learned_option(self) -> None:
         """skills list --learned オプションが動作することをテスト."""

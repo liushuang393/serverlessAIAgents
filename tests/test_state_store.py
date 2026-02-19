@@ -1,28 +1,26 @@
-# -*- coding: utf-8 -*-
 """GlobalStateStore 単体テスト."""
 
 import pytest
 
-from agentflow.state.store import GlobalStateStore, StateSnapshot
 from agentflow.state.actions import (
-    Action,
     ActionType,
-    create_action,
-    update_progress,
-    set_execution_status,
-    set_context,
-    update_context,
     add_result,
+    create_action,
+    set_context,
     set_error,
+    set_execution_status,
+    update_context,
+    update_progress,
 )
 from agentflow.state.selectors import (
-    select,
     StateSelector,
+    select,
+    select_context,
     select_execution_status,
     select_progress,
-    select_context,
     select_results,
 )
+from agentflow.state.store import GlobalStateStore
 
 
 class TestActions:

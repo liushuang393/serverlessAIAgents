@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Plugin sidecar 署名検証の単体テスト."""
 
 from __future__ import annotations

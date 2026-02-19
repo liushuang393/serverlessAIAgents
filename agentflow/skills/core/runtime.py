@@ -156,19 +156,15 @@ class SkillRuntime:
 
         # Route by file extension
         if script_path.suffix == ".sh":
-            return await self._execute_shell_script(
-                skill, script_path, input_data
-            )
+            return await self._execute_shell_script(skill, script_path, input_data)
 
-        should_use_sandbox = use_sandbox if use_sandbox is not None else bool(self._sandbox_provider)
+        should_use_sandbox = (
+            use_sandbox if use_sandbox is not None else bool(self._sandbox_provider)
+        )
 
         if should_use_sandbox and self._sandbox_provider:
-            return await self._execute_in_sandbox(
-                skill, script_path, input_data, effective_timeout
-            )
-        return await self._execute_directly(
-            skill, script_path, input_data
-        )
+            return await self._execute_in_sandbox(skill, script_path, input_data, effective_timeout)
+        return await self._execute_directly(skill, script_path, input_data)
 
     def _resolve_script_path(self, skill: Skill, script_name: str) -> Path | None:
         """スクリプトパスを解決.
@@ -219,7 +215,8 @@ class SkillRuntime:
             return []
 
         return [
-            p.stem for p in scripts_dir.glob("*")
+            p.stem
+            for p in scripts_dir.glob("*")
             if p.suffix in (".py", ".sh") and not p.name.startswith("_")
         ]
 
@@ -249,8 +246,7 @@ class SkillRuntime:
         try:
             # 動的インポート
             spec = importlib.util.spec_from_file_location(
-                f"skill_script_{skill.name}_{script_path.stem}",
-                script_path
+                f"skill_script_{skill.name}_{script_path.stem}", script_path
             )
             if not spec or not spec.loader:
                 return ScriptResult(
@@ -293,7 +289,8 @@ class SkillRuntime:
 
             # スクリプト名の一部を含む関数を検索
             matching_funcs = [
-                name for name in defined_funcs
+                name
+                for name in defined_funcs
                 if expected_func_name.replace("_", "") in name.replace("_", "").lower()
             ]
 
@@ -357,7 +354,8 @@ class SkillRuntime:
         try:
             input_json = json.dumps(input_data, ensure_ascii=False)
             proc = await asyncio.create_subprocess_exec(
-                "bash", str(script_path),
+                "bash",
+                str(script_path),
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
@@ -476,9 +474,7 @@ class SkillRuntime:
             script_code = script_path.read_text(encoding="utf-8")
 
             # ラッパーコード生成（入力データ注入 + 関数呼び出し + JSON出力）
-            wrapper_code = self._generate_wrapper_code(
-                script_code, script_path.stem, input_data
-            )
+            wrapper_code = self._generate_wrapper_code(script_code, script_path.stem, input_data)
 
             # 依存パッケージ取得
             packages = skill.metadata.requirements.copy() if skill.metadata.requirements else []
@@ -564,4 +560,3 @@ if __name__ == "__main__":
         print(json.dumps({{"error": str(e)}}))
         sys.exit(1)
 """
-

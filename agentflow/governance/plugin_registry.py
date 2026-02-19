@@ -176,10 +176,7 @@ class PluginRegistry:
         assessment.plugin_risk_tier = manifest.risk_tier
         assessment.plugin_signature_status = manifest.signature_status
         assessment.plugin_signature_reason = manifest.signature_reason
-        if (
-            self._signature_enforcement == "warn"
-            and manifest.signature_status != "verified"
-        ):
+        if self._signature_enforcement == "warn" and manifest.signature_status != "verified":
             assessment.warnings.append(
                 "plugin 署名検証 warning: "
                 f"status={manifest.signature_status}, reason={manifest.signature_reason}",
@@ -293,10 +290,14 @@ class PluginRegistry:
     @staticmethod
     def _resolve_signature_enforcement() -> str:
         """署名検証ポリシーを解決する（P1 は warn 固定運用）。"""
-        raw = os.getenv(
-            _PLUGIN_SIGNATURE_ENFORCEMENT_ENV,
-            _DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT,
-        ).strip().lower()
+        raw = (
+            os.getenv(
+                _PLUGIN_SIGNATURE_ENFORCEMENT_ENV,
+                _DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT,
+            )
+            .strip()
+            .lower()
+        )
         if raw != _DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT:
             _logger.warning(
                 "未対応の %s=%s が指定されました。P1 では warn 固定運用です",
@@ -328,9 +329,7 @@ class PluginRegistry:
                     _logger.warning("plugin manifest 必須項目不足: %s", manifest_path)
                     continue
 
-                kernel_constraint = (
-                    self._normalize_optional_text(compatibility.get("kernel")) or ""
-                )
+                kernel_constraint = self._normalize_optional_text(compatibility.get("kernel")) or ""
                 product_lines = self._normalize_product_lines(
                     compatibility.get("product_lines"),
                 )
@@ -349,7 +348,7 @@ class PluginRegistry:
                     signature_reason=signature_result.reason,
                     raw=raw,
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 _logger.warning("plugin manifest 読み込み失敗 (%s): %s", manifest_path, exc)
 
     def _load_app_snapshot(self, app_name: str) -> AppPluginSnapshot | None:
@@ -379,7 +378,9 @@ class PluginRegistry:
                     bindings[binding_id] = PluginBindingRecord(
                         id=binding_id,
                         version=binding_version,
-                        config=item.get("config", {}) if isinstance(item.get("config"), dict) else {},
+                        config=item.get("config", {})
+                        if isinstance(item.get("config"), dict)
+                        else {},
                     )
             snapshot = AppPluginSnapshot(
                 app_name=app_name,
@@ -388,7 +389,7 @@ class PluginRegistry:
             )
             self._app_snapshots[app_name] = snapshot
             return snapshot
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             _logger.warning("app_config 読み込み失敗 (%s): %s", config_path, exc)
             self._app_snapshots[app_name] = None
             return None

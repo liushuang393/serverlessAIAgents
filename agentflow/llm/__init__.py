@@ -45,4 +45,3 @@ __all__ = [
     "ToolCall",
     "create_router_from_env",
 ]
-

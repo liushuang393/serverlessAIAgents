@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Skills Router エンドポイントのユニットテスト.
 
 テスト対象: apps/platform/routers/skills.py
@@ -83,7 +82,9 @@ class TestSearchSkills:
 
     def test_search_found(self, phase3_test_client: TestClient) -> None:
         """タグ検索でマッチするスキルを返す."""
-        resp = phase3_test_client.get("/api/studios/framework/skills/search", params={"tag": "chat"})
+        resp = phase3_test_client.get(
+            "/api/studios/framework/skills/search", params={"tag": "chat"}
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["total"] >= 1
@@ -93,7 +94,9 @@ class TestSearchSkills:
 
     def test_search_no_match(self, phase3_test_client: TestClient) -> None:
         """マッチしない検索は空リストを返す."""
-        resp = phase3_test_client.get("/api/studios/framework/skills/search", params={"tag": "nonexistent_xyz"})
+        resp = phase3_test_client.get(
+            "/api/studios/framework/skills/search", params={"tag": "nonexistent_xyz"}
+        )
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
 

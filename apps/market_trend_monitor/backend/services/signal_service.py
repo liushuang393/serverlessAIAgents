@@ -196,8 +196,7 @@ class SignalService:
 
         self._signals[signal.id] = signal
         self._logger.info(
-            f"Signal evaluated: {signal.id}, "
-            f"grade={signal.grade.value}, total={score.total:.2f}"
+            f"Signal evaluated: {signal.id}, grade={signal.grade.value}, total={score.total:.2f}"
         )
         await self.persist_signal(signal)
         return signal
@@ -275,14 +274,9 @@ class SignalService:
         if min_grade:
             grade_order = {"A": 4, "B": 3, "C": 2, "D": 1}
             min_order = grade_order.get(min_grade.value, 0)
-            signals = [
-                s for s in signals
-                if grade_order.get(s.grade.value, 0) >= min_order
-            ]
+            signals = [s for s in signals if grade_order.get(s.grade.value, 0) >= min_order]
 
-        return sorted(
-            signals, key=lambda s: s.score.total, reverse=True
-        )
+        return sorted(signals, key=lambda s: s.score.total, reverse=True)
 
     def get_dashboard_stats(self) -> dict[str, Any]:
         """ダッシュボード用統計を取得."""
@@ -338,11 +332,9 @@ class SignalService:
 
         # トレンドキーワードのうちターゲットにマッチする数
         matches = sum(
-            1 for kw in keywords
-            if any(
-                target.lower() in kw.lower()
-                for target in self._target_keywords
-            )
+            1
+            for kw in keywords
+            if any(target.lower() in kw.lower() for target in self._target_keywords)
         )
 
         return max(matches / len(keywords), 0.1)

@@ -49,10 +49,8 @@ class InterruptError(Exception):
     """割り込み関連のエラー."""
 
 
-
 class InterruptTimeoutError(InterruptError):
     """割り込みタイムアウトエラー."""
-
 
 
 def get_current_interrupt() -> InterruptPayload | None:
@@ -122,9 +120,7 @@ async def interrupt(
             "Checkpointer が設定されていません。"
             "Engine に checkpointer を設定するか、set_checkpointer() を呼び出してください。"
         )
-        raise InterruptError(
-            msg
-        )
+        raise InterruptError(msg)
 
     if thread_id is None:
         thread_id = str(uuid.uuid4())
@@ -253,4 +249,3 @@ async def resume_with_command(
         approver=command.issuer,
         modifications=command.value if isinstance(command.value, dict) else {},
     )
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Capability ontology schemas for Platform."""
 
 from __future__ import annotations
@@ -34,4 +33,3 @@ class CapabilityAggregate(CanonicalCapability):
 
     count: int = Field(default=0, ge=0, description="Observed count")
     apps: list[str] = Field(default_factory=list, description="Apps using this capability")
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Skills 統合テスト - Claude Code Skills 互換性検証.
 
 このテストモジュールは以下を検証します：
@@ -10,20 +9,22 @@
 
 実行方法:
     pytest tests/test_skills_integration.py -v
-    
+
 環境変数:
     OPENAI_API_KEY: OpenAI API キー（LLM テスト用）
 """
 
 import asyncio
 import os
+
+# Skills モジュールを直接インポート（pocketflow 依存回避）
+import sys
 import tempfile
 from pathlib import Path
 
 import pytest
 
-# Skills モジュールを直接インポート（pocketflow 依存回避）
-import sys
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agentflow.skills.base import Skill, SkillMetadata
@@ -67,15 +68,15 @@ class TestSkillLoading:
     def test_load_builtin_skills(self):
         """ビルトイン Skills を正常に読み込み."""
         builtin_dir = Path(__file__).parent.parent / "agentflow" / "skills" / "builtin"
-        
+
         if not builtin_dir.exists():
             pytest.skip("builtin ディレクトリが存在しません")
-        
+
         loader = SkillLoader()
         skills = loader.load_directory(builtin_dir, recursive=True)
-        
+
         assert len(skills) > 0, "少なくとも1つの Skill が読み込まれる"
-        
+
         # 各 Skill の必須フィールド検証
         for skill in skills:
             assert skill.name, f"name が必須: {skill}"
@@ -88,9 +89,10 @@ class TestSkillLoading:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "test-skill"
             skill_dir.mkdir()
-            
+
             skill_md = skill_dir / "SKILL.md"
-            skill_md.write_text("""---
+            skill_md.write_text(
+                """---
 name: test-skill
 description: テスト用 Skill です。テストデータの処理に使用。
 version: 1.0.0
@@ -103,11 +105,13 @@ triggers:
 
 ## 指示
 これはテスト用の指示です。
-""", encoding="utf-8")
-            
+""",
+                encoding="utf-8",
+            )
+
             # 読み込み
             skill = Skill.load(skill_dir)
-            
+
             assert skill.name == "test-skill"
             assert "テスト用 Skill" in skill.metadata.description
             assert "テスト用の指示" in skill.instructions
@@ -143,17 +147,17 @@ class TestSkillRegistry:
     def test_register_and_get(self):
         """登録と取得."""
         registry = SkillRegistry()
-        
+
         # テスト Skill 作成
         skill = Skill.create(
             name="test-registry-skill",
             description="レジストリテスト用",
             instructions="テスト指示",
         )
-        
+
         registry.register_skill(skill)
         retrieved = registry.get("test-registry-skill")
-        
+
         assert retrieved is skill
         assert retrieved.name == "test-registry-skill"
 
@@ -172,7 +176,7 @@ class TestProgressiveDisclosure:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "progressive-skill"
             skill_dir.mkdir()
-            
+
             # 大きな SKILL.md（500行以上）
             skill_content = """---
 name: progressive-skill
@@ -182,18 +186,18 @@ description: Progressive Disclosure テスト用 Skill
 # Progressive Skill
 
 """ + "\n".join([f"## セクション {i}\nコンテンツ {i}" for i in range(200)])
-            
+
             (skill_dir / "SKILL.md").write_text(skill_content, encoding="utf-8")
-            
+
             # 完全読み込み
             skill = Skill.load(skill_dir)
-            
+
             # メタデータのみ取得（Context 節約）
             metadata_only = {
                 "name": skill.metadata.name,
                 "description": skill.metadata.description,
             }
-            
+
             # 完全な instructions は別途必要時に使用
             assert len(metadata_only["name"]) < 100
             assert len(metadata_only["description"]) < 1024
@@ -202,7 +206,7 @@ description: Progressive Disclosure テスト用 Skill
 
 class TestLLMIntegration:
     """LLM 統合テスト（実際の API 呼び出し）.
-    
+
     OPENAI_API_KEY 環境変数が必要。
     """
 
@@ -222,9 +226,9 @@ class TestLLMIntegration:
             from openai import AsyncOpenAI
         except ImportError:
             pytest.skip("openai パッケージがインストールされていません")
-        
+
         client = AsyncOpenAI(api_key=api_key)
-        
+
         # Skill からシステムプロンプト生成
         skill = Skill.create(
             name="qa-assistant",
@@ -238,9 +242,9 @@ class TestLLMIntegration:
 3. 不明な場合は「わかりません」と回答
 """,
         )
-        
+
         system_prompt = skill.to_prompt()
-        
+
         # LLM 呼び出し
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
@@ -250,7 +254,7 @@ class TestLLMIntegration:
             ],
             max_tokens=100,
         )
-        
+
         answer = response.choices[0].message.content
         assert "東京" in answer, f"予期しない回答: {answer}"
 
@@ -261,9 +265,9 @@ class TestLLMIntegration:
             from openai import AsyncOpenAI
         except ImportError:
             pytest.skip("openai パッケージがインストールされていません")
-        
+
         client = AsyncOpenAI(api_key=api_key)
-        
+
         # 複数 Skills
         skills = [
             Skill.create(
@@ -277,12 +281,10 @@ class TestLLMIntegration:
                 instructions="回答は「結果: [値]」の形式で出力してください。",
             ),
         ]
-        
+
         # Skills を結合してシステムプロンプト生成
-        combined_prompt = "# Active Skills\n\n" + "\n\n".join(
-            skill.to_prompt() for skill in skills
-        )
-        
+        combined_prompt = "# Active Skills\n\n" + "\n\n".join(skill.to_prompt() for skill in skills)
+
         response = await client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -291,7 +293,7 @@ class TestLLMIntegration:
             ],
             max_tokens=50,
         )
-        
+
         answer = response.choices[0].message.content
         # フォーマット指示に従っているか確認
         assert "8" in answer, f"計算結果が含まれていない: {answer}"
@@ -307,9 +309,9 @@ class TestSkillToPrompt:
             description="プロンプト生成テスト",
             instructions="これは指示です。",
         )
-        
+
         prompt = skill.to_prompt()
-        
+
         assert "Skill: test-prompt" in prompt
         assert "Description:" in prompt
         assert "これは指示です" in prompt
@@ -328,9 +330,9 @@ class TestSkillToPrompt:
             triggers=["trigger1", "trigger2"],
             requirements=["package1", "package2"],
         )
-        
+
         prompt = skill.to_prompt()
-        
+
         assert "full-skill" in prompt
         assert "ステップ1" in prompt
 
@@ -339,28 +341,28 @@ class TestSkillToPrompt:
 if __name__ == "__main__":
     # 基本テスト（API 不要）
     print("=== Skills 基本テスト ===")
-    
+
     # メタデータテスト
     meta_test = TestSkillMetadataLimits()
     meta_test.test_name_max_length()
     meta_test.test_description_max_length()
     print("✅ メタデータ制限テスト OK")
-    
+
     # 読み込みテスト
     load_test = TestSkillLoading()
     load_test.test_load_builtin_skills()
     print("✅ ビルトイン Skills 読み込み OK")
-    
+
     # Progressive Disclosure テスト
     pd_test = TestProgressiveDisclosure()
     pd_test.test_metadata_only_loading()
     print("✅ Progressive Disclosure テスト OK")
-    
+
     # プロンプト変換テスト
     prompt_test = TestSkillToPrompt()
     prompt_test.test_to_prompt_format()
     print("✅ プロンプト変換テスト OK")
-    
+
     # LLM 統合テスト（API キーがある場合のみ）
     if os.environ.get("OPENAI_API_KEY"):
         print("\n=== LLM 統合テスト ===")
@@ -369,5 +371,5 @@ if __name__ == "__main__":
         print("✅ LLM 統合テスト OK")
     else:
         print("\n⚠️ OPENAI_API_KEY が未設定のため LLM テストをスキップ")
-    
+
     print("\n✅ すべてのテストが完了しました")

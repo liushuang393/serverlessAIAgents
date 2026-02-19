@@ -137,20 +137,36 @@ class RailwayTarget(BaseDeployTarget):
         """設定フィールドを取得."""
         return [
             ConfigField(
-                name="railway_token", label="Railway Token", type="password",
-                required=True, description="Railway API トークン", group="credentials",
+                name="railway_token",
+                label="Railway Token",
+                type="password",
+                required=True,
+                description="Railway API トークン",
+                group="credentials",
             ),
             ConfigField(
-                name="project_id", label="Project ID", type="string",
-                required=False, description="既存プロジェクト ID (空で新規作成)", group="settings",
+                name="project_id",
+                label="Project ID",
+                type="string",
+                required=False,
+                description="既存プロジェクト ID (空で新規作成)",
+                group="settings",
             ),
             ConfigField(
-                name="service_name", label="Service Name", type="string",
-                required=True, placeholder="my-agentflow-app", group="settings",
+                name="service_name",
+                label="Service Name",
+                type="string",
+                required=True,
+                placeholder="my-agentflow-app",
+                group="settings",
             ),
             ConfigField(
-                name="deploy_hook", label="Deploy Hook URL", type="string",
-                required=False, description="Railway Deploy Hook URL", group="settings",
+                name="deploy_hook",
+                label="Deploy Hook URL",
+                type="string",
+                required=False,
+                description="Railway Deploy Hook URL",
+                group="settings",
             ),
         ]
 
@@ -163,4 +179,3 @@ class RailwayTarget(BaseDeployTarget):
 
 
 __all__ = ["RailwayTarget"]
-

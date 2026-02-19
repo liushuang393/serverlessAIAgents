@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Framework Env Service.
 
 リポジトリローカルの `.env` 系ファイルを、コメントを保ったまま
@@ -14,9 +13,7 @@ from pathlib import Path
 class FrameworkEnvService:
     """ローカル env 更新サービス."""
 
-    _KEY_VALUE_PATTERN = re.compile(
-        r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$"
-    )
+    _KEY_VALUE_PATTERN = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$")
 
     def __init__(self, env_path: Path) -> None:
         """初期化.

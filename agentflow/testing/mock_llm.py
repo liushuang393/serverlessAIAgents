@@ -100,9 +100,7 @@ class MockLLMProvider:
         self._sequence_responses: list[MockResponse] = []
         self._sequence_index = 0
         self._call_records: list[CallRecord] = []
-        self._response_callback: Callable[
-            [list[dict[str, Any]]], MockResponse
-        ] | None = None
+        self._response_callback: Callable[[list[dict[str, Any]]], MockResponse] | None = None
         self._logger = logging.getLogger(__name__)
 
     def set_response(self, content: str, **kwargs: Any) -> None:
@@ -122,9 +120,7 @@ class MockLLMProvider:
             content: レスポンス内容
             **kwargs: MockResponse への追加引数
         """
-        self._pattern_responses.append(
-            (pattern, MockResponse(content=content, **kwargs))
-        )
+        self._pattern_responses.append((pattern, MockResponse(content=content, **kwargs)))
 
     def add_sequence_response(self, content: str, **kwargs: Any) -> None:
         """シーケンスレスポンスを追加.
@@ -164,9 +160,7 @@ class MockLLMProvider:
         response = self._get_response(messages)
 
         # 呼び出しを記録
-        self._call_records.append(
-            CallRecord(messages=messages, kwargs=kwargs, response=response)
-        )
+        self._call_records.append(CallRecord(messages=messages, kwargs=kwargs, response=response))
 
         return response.to_dict()
 
@@ -187,9 +181,7 @@ class MockLLMProvider:
         response = self._get_response(messages)
 
         # 呼び出しを記録
-        self._call_records.append(
-            CallRecord(messages=messages, kwargs=kwargs, response=response)
-        )
+        self._call_records.append(CallRecord(messages=messages, kwargs=kwargs, response=response))
 
         # チャンクに分割
         content = response.content
@@ -304,4 +296,3 @@ def create_mock_llm(
     mock = MockLLMProvider()
     mock.set_response(default_response, **kwargs)
     return mock
-

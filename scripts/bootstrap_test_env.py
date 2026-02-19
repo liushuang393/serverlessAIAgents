@@ -44,7 +44,10 @@ def _default_specs() -> list[EnvSpec]:
         EnvSpec("MESSAGING_HUB_API_KEY", _token("mh")),
         EnvSpec("CODE_MIGRATION_API_KEY_ENV", "CODE_MIGRATION_API_KEY"),
         EnvSpec("CODE_MIGRATION_API_KEY", _token("cma")),
-        EnvSpec("CODE_MIGRATION_CORS_ORIGINS", "http://localhost:3000,http://localhost:5173,http://localhost:5174"),
+        EnvSpec(
+            "CODE_MIGRATION_CORS_ORIGINS",
+            "http://localhost:3000,http://localhost:5173,http://localhost:5174",
+        ),
         EnvSpec("DESIGN_SKILLS_API_KEY_ENV", "DESIGN_SKILLS_API_KEY"),
         EnvSpec("DESIGN_SKILLS_API_KEY", _token("dse")),
         EnvSpec("JWT_SECRET_KEY", _token("jwt")),
@@ -77,11 +80,7 @@ def bootstrap_env(
     force: bool = False,
 ) -> tuple[int, int]:
     """Update env file and return (updated_count, skipped_count)."""
-    lines = (
-        env_file.read_text("utf-8").splitlines(keepends=True)
-        if env_file.exists()
-        else []
-    )
+    lines = env_file.read_text("utf-8").splitlines(keepends=True) if env_file.exists() else []
 
     existing = _parse_existing(lines)
     updated = 0
@@ -119,8 +118,7 @@ def bootstrap_env(
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
-            "Bootstrap test env vars into root/app env files "
-            "without touching committed examples."
+            "Bootstrap test env vars into root/app env files without touching committed examples."
         ),
     )
     parser.add_argument(
@@ -128,19 +126,13 @@ def _build_parser() -> argparse.ArgumentParser:
         action="append",
         dest="env_files",
         default=[],
-        help=(
-            "Target env file path. Can be passed multiple times. "
-            "Default: .env"
-        ),
+        help=("Target env file path. Can be passed multiple times. Default: .env"),
     )
     parser.add_argument(
         "--sync-app-env",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help=(
-            "Also update apps/*/.env where apps/*/.env.example exists "
-            "(default: true)"
-        ),
+        help=("Also update apps/*/.env where apps/*/.env.example exists (default: true)"),
     )
     parser.add_argument(
         "--force",

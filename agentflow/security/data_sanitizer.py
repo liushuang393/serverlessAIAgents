@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """データマスカー（Data Sanitizer）- AI セキュリティとプライバシー保護.
 
 LLM アプリにおけるセキュリティ/プライバシー課題に対応:
@@ -33,14 +32,14 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable
+from typing import Any
 
 from pydantic import BaseModel, Field
 
 
 class ThreatType(str, Enum):
     """脅威タイプ."""
-    
+
     PROMPT_INJECTION = "prompt_injection"  # プロンプトインジェクション
     DATA_EXFILTRATION = "data_exfiltration"  # データ持ち出し
     PRIVILEGE_ESCALATION = "privilege_escalation"  # 権限昇格
@@ -50,7 +49,7 @@ class ThreatType(str, Enum):
 
 class PIIType(str, Enum):
     """PII（個人識別情報）の種別."""
-    
+
     EMAIL = "email"
     PHONE = "phone"
     ID_CARD = "id_card"
@@ -65,7 +64,7 @@ class PIIType(str, Enum):
 @dataclass
 class ThreatDetection:
     """脅威検知結果.
-    
+
     Attributes:
         threat_type: 脅威タイプ
         severity: 深刻度（0.0-1.0）
@@ -73,13 +72,13 @@ class ThreatDetection:
         location: 位置
         blocked: ブロックしたか
     """
-    
+
     threat_type: ThreatType
     severity: float
     description: str
     location: str = ""
     blocked: bool = False
-    
+
     def to_dict(self) -> dict[str, Any]:
         """dict に変換する."""
         return {
@@ -94,20 +93,20 @@ class ThreatDetection:
 @dataclass
 class SanitizationResult:
     """マスキング結果.
-    
+
     Attributes:
         original_text: 元のテキスト
         sanitized_text: マスキング後のテキスト
         detections: 検知されたセンシティブ情報
         is_safe: 安全と判断できるか
     """
-    
+
     original_text: str
     sanitized_text: str
     detections: list[dict[str, Any]] = field(default_factory=list)
     is_safe: bool = True
     processed_at: datetime = field(default_factory=datetime.now)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """dict に変換する."""
         return {
@@ -232,13 +231,15 @@ class DataSanitizer:
         for pattern, injection_type in self.INJECTION_PATTERNS:
             matches = re.findall(pattern, text_lower, re.IGNORECASE)
             for match in matches:
-                threats.append(ThreatDetection(
-                    threat_type=ThreatType.PROMPT_INJECTION,
-                    severity=0.8,
-                    description=f"プロンプトインジェクションを検知: {injection_type}",
-                    location=match if isinstance(match, str) else str(match),
-                    blocked=self._config.block_injection,
-                ))
+                threats.append(
+                    ThreatDetection(
+                        threat_type=ThreatType.PROMPT_INJECTION,
+                        severity=0.8,
+                        description=f"プロンプトインジェクションを検知: {injection_type}",
+                        location=match if isinstance(match, str) else str(match),
+                        blocked=self._config.block_injection,
+                    )
+                )
 
         return threats
 
@@ -255,21 +256,30 @@ class DataSanitizer:
 
         # 脱獄キーワード
         jailbreak_keywords = [
-            "DAN", "jailbreak", "bypass", "hack",
-            "developer mode", "unrestricted",
-            "無制限", "脱獄", "制限回避", "制限を回避",
+            "DAN",
+            "jailbreak",
+            "bypass",
+            "hack",
+            "developer mode",
+            "unrestricted",
+            "無制限",
+            "脱獄",
+            "制限回避",
+            "制限を回避",
         ]
 
         text_lower = text.lower()
         for keyword in jailbreak_keywords:
             if keyword.lower() in text_lower:
-                threats.append(ThreatDetection(
-                    threat_type=ThreatType.JAILBREAK,
-                    severity=0.9,
-                    description=f"脱獄キーワードを検知: {keyword}",
-                    location=keyword,
-                    blocked=self._config.strict_mode,
-                ))
+                threats.append(
+                    ThreatDetection(
+                        threat_type=ThreatType.JAILBREAK,
+                        severity=0.9,
+                        description=f"脱獄キーワードを検知: {keyword}",
+                        location=keyword,
+                        blocked=self._config.strict_mode,
+                    )
+                )
 
         return threats
 
@@ -296,10 +306,12 @@ class DataSanitizer:
         for pii_type, pattern in self.PII_PATTERNS.items():
             matches = re.findall(pattern, text)
             for match in matches:
-                detections.append({
-                    "type": pii_type.value,
-                    "value": match[:4] + "..." if len(match) > 4 else "***",
-                })
+                detections.append(
+                    {
+                        "type": pii_type.value,
+                        "value": match[:4] + "..." if len(match) > 4 else "***",
+                    }
+                )
 
                 if self._config.mask_pii:
                     # 種別に応じてマスク方法を選択
@@ -344,11 +356,13 @@ class DataSanitizer:
         for pattern, key_type in self.API_KEY_PATTERNS:
             matches = re.findall(pattern, text)
             for match in matches:
-                detections.append({
-                    "type": "api_key",
-                    "provider": key_type,
-                    "value": match[:8] + "...",
-                })
+                detections.append(
+                    {
+                        "type": "api_key",
+                        "provider": key_type,
+                        "value": match[:8] + "...",
+                    }
+                )
 
                 # API キーは常にマスクする
                 masked = match[:8] + "*" * (len(match) - 8)
@@ -433,11 +447,13 @@ class DataSanitizer:
         # API キー漏洩を検知
         api_result = self.sanitize_api_keys(output)
         if not api_result.is_safe:
-            result["threats"].append({
-                "type": "api_key_leak",
-                "severity": "critical",
-                "details": api_result.detections,
-            })
+            result["threats"].append(
+                {
+                    "type": "api_key_leak",
+                    "severity": "critical",
+                    "details": api_result.detections,
+                }
+            )
             result["is_safe"] = False
 
         # context がある場合、潜在的なデータ持ち出しを検知
@@ -447,11 +463,13 @@ class DataSanitizer:
             for detection in context_pii.detections:
                 pii_value = detection.get("value", "")
                 if pii_value and pii_value in output:
-                    result["threats"].append({
-                        "type": "data_exfiltration",
-                        "severity": "high",
-                        "description": "出力がコンテキスト内のセンシティブ情報を含む可能性があります",
-                    })
+                    result["threats"].append(
+                        {
+                            "type": "data_exfiltration",
+                            "severity": "high",
+                            "description": "出力がコンテキスト内のセンシティブ情報を含む可能性があります",
+                        }
+                    )
                     result["is_safe"] = False
 
         return result

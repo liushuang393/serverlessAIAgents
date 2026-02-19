@@ -188,8 +188,7 @@ class TurnBasedCompressor:
 
         self._messages.append(message)
         self._logger.debug(
-            "メッセージ追加: turn=%d, role=%s, len=%d",
-            self._turn_count, role.value, len(content)
+            "メッセージ追加: turn=%d, role=%s, len=%d", self._turn_count, role.value, len(content)
         )
 
         return message
@@ -250,16 +249,16 @@ class TurnBasedCompressor:
 
         # 要約をシステムメッセージとして追加
         if summary:
-            compressed_messages.append(Message(
-                role=MessageRole.SYSTEM,
-                content=f"[会話要約]\n{summary}",
-                metadata={"is_summary": True},
-            ))
+            compressed_messages.append(
+                Message(
+                    role=MessageRole.SYSTEM,
+                    content=f"[会話要約]\n{summary}",
+                    metadata={"is_summary": True},
+                )
+            )
 
         # 最近のメッセージを追加
-        compressed_messages.extend([
-            m for m in recent_messages if m.role != MessageRole.SYSTEM
-        ])
+        compressed_messages.extend([m for m in recent_messages if m.role != MessageRole.SYSTEM])
 
         # Token削減率計算
         original_tokens = sum(len(m.content) // 4 for m in self._messages)
@@ -281,8 +280,10 @@ class TurnBasedCompressor:
 
         self._logger.info(
             "会話圧縮完了: %d -> %d (削減率: %.1f%%, Notes: %d)",
-            original_count, len(compressed_messages),
-            reduction * 100, extracted_count
+            original_count,
+            len(compressed_messages),
+            reduction * 100,
+            extracted_count,
         )
 
         return result
@@ -383,10 +384,7 @@ class TurnBasedCompressor:
         Returns:
             辞書形式のメッセージリスト
         """
-        return [
-            {"role": m.role.value, "content": m.content}
-            for m in self._messages
-        ]
+        return [{"role": m.role.value, "content": m.content} for m in self._messages]
 
     def get_turn_count(self) -> int:
         """現在のターン数を取得.

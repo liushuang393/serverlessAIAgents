@@ -794,4 +794,3 @@ class AuthProvider:
         else:
             msg = f"{self._provider_name} 不支持 MFA"
             raise AuthError(msg)
-

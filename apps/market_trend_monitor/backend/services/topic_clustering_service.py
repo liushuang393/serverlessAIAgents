@@ -12,9 +12,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Any
 
-from agentflow import get_embedding
-
 from apps.market_trend_monitor.backend.models import Article
+
+from agentflow import get_embedding
 
 
 @dataclass
@@ -131,7 +131,8 @@ class TopicClusteringService:
 
         self._logger.info(
             "クラスタリング完了: %d記事 → %d クラスタ",
-            len(articles), len(clusters),
+            len(articles),
+            len(clusters),
         )
         return sorted(clusters, key=lambda c: len(c.article_ids), reverse=True)
 
@@ -162,7 +163,8 @@ class TopicClusteringService:
 
         for cluster in self._clusters.values():
             similarity = self._cosine_similarity(
-                article_embedding, cluster.centroid_embedding,
+                article_embedding,
+                cluster.centroid_embedding,
             )
             if similarity >= threshold and similarity > best_similarity:
                 best_similarity = similarity
@@ -172,7 +174,9 @@ class TopicClusteringService:
             best_cluster.article_ids.append(article.id)
             self._logger.debug(
                 "記事 %s をクラスタ %s に割り当て (similarity=%.3f)",
-                article.id, best_cluster.id, best_similarity,
+                article.id,
+                best_cluster.id,
+                best_similarity,
             )
 
         return best_cluster
@@ -193,9 +197,9 @@ class TopicClusteringService:
         """
         cutoff = datetime.now() - timedelta(days=window_days)
         trending = [
-            cluster for cluster in self._clusters.values()
-            if cluster.created_at >= cutoff
-            and len(cluster.article_ids) >= min_articles
+            cluster
+            for cluster in self._clusters.values()
+            if cluster.created_at >= cutoff and len(cluster.article_ids) >= min_articles
         ]
 
         return sorted(trending, key=lambda c: len(c.article_ids), reverse=True)

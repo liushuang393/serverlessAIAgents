@@ -166,9 +166,7 @@ class AdMonitor(AgentBlock):
         analysis = await self.analyze_campaigns(campaigns, time_range)
 
         return {
-            "performances": [
-                self._performance_to_dict(p) for p in analysis.performances
-            ],
+            "performances": [self._performance_to_dict(p) for p in analysis.performances],
             "alerts": [self._alert_to_dict(a) for a in analysis.alerts],
             "total_spend": analysis.total_spend,
             "total_revenue": analysis.total_revenue,
@@ -213,13 +211,10 @@ class AdMonitor(AgentBlock):
             alerts.extend(campaign_alerts)
 
         # ランキング
-        sorted_perfs = sorted(
-            performances, key=lambda p: p.metrics.roas, reverse=True
-        )
+        sorted_perfs = sorted(performances, key=lambda p: p.metrics.roas, reverse=True)
         top_performers = [p.campaign_id for p in sorted_perfs[:3]]
         underperformers = [
-            p.campaign_id for p in sorted_perfs
-            if p.metrics.roas < self._roas_threshold
+            p.campaign_id for p in sorted_perfs if p.metrics.roas < self._roas_threshold
         ][:3]
 
         overall_roas = total_revenue / total_spend if total_spend > 0 else 0.0
@@ -311,31 +306,35 @@ class AdMonitor(AgentBlock):
 
         # CTRアラート
         if metrics.ctr < self._ctr_threshold * 0.5:
-            alerts.append(AdAlert(
-                alert_id=f"alert-{uuid.uuid4().hex[:8]}",
-                campaign_id=performance.campaign_id,
-                severity=AlertSeverity.WARNING,
-                title="低CTR警告",
-                message=f"CTRが{metrics.ctr:.2%}と低下しています",
-                metric_name="ctr",
-                current_value=metrics.ctr,
-                threshold_value=self._ctr_threshold,
-                recommended_action="広告クリエイティブを見直してください",
-            ))
+            alerts.append(
+                AdAlert(
+                    alert_id=f"alert-{uuid.uuid4().hex[:8]}",
+                    campaign_id=performance.campaign_id,
+                    severity=AlertSeverity.WARNING,
+                    title="低CTR警告",
+                    message=f"CTRが{metrics.ctr:.2%}と低下しています",
+                    metric_name="ctr",
+                    current_value=metrics.ctr,
+                    threshold_value=self._ctr_threshold,
+                    recommended_action="広告クリエイティブを見直してください",
+                )
+            )
 
         # ROASアラート
         if metrics.roas < 1.0:
-            alerts.append(AdAlert(
-                alert_id=f"alert-{uuid.uuid4().hex[:8]}",
-                campaign_id=performance.campaign_id,
-                severity=AlertSeverity.CRITICAL,
-                title="ROAS危機",
-                message=f"ROASが{metrics.roas:.1f}で赤字状態です",
-                metric_name="roas",
-                current_value=metrics.roas,
-                threshold_value=self._roas_threshold,
-                recommended_action="キャンペーンの一時停止を検討してください",
-            ))
+            alerts.append(
+                AdAlert(
+                    alert_id=f"alert-{uuid.uuid4().hex[:8]}",
+                    campaign_id=performance.campaign_id,
+                    severity=AlertSeverity.CRITICAL,
+                    title="ROAS危機",
+                    message=f"ROASが{metrics.roas:.1f}で赤字状態です",
+                    metric_name="roas",
+                    current_value=metrics.roas,
+                    threshold_value=self._roas_threshold,
+                    recommended_action="キャンペーンの一時停止を検討してください",
+                )
+            )
 
         return alerts
 

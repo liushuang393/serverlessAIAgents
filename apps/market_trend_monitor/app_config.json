@@ -139,7 +139,7 @@
       "note": "ローカルファイルDB"
     },
     "commands": {
-      "backend_dev": "python -m apps.market_trend_monitor.backend.api.main",
+      "backend_dev": "python apps/market_trend_monitor/scripts/dev.py",
       "frontend_dev": "cd apps/market_trend_monitor/frontend && npm run dev",
       "publish": null,
       "start": null,

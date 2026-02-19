@@ -411,4 +411,3 @@ class SignalAdapter(MessageChannelAdapter):
         """リソースをクリーンアップ."""
         await self.stop_polling()
         await self._client.aclose()
-

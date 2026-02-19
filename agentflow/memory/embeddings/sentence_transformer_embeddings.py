@@ -46,13 +46,13 @@ class SentenceTransformerEmbeddings(EmbeddingEngine):
 
             self._model = SentenceTransformer(model_name, device=device)
             self._dimension = self._model.get_sentence_embedding_dimension()
-            self._logger.info(f"Loaded Sentence Transformer model: {model_name} (dim={self._dimension})")
+            self._logger.info(
+                f"Loaded Sentence Transformer model: {model_name} (dim={self._dimension})"
+            )
 
         except ImportError:
             msg = "sentence-transformers package is required. Install with: pip install sentence-transformers"
-            raise ImportError(
-                msg
-            )
+            raise ImportError(msg)
 
     async def embed_text(self, text: str) -> list[float]:
         """テキストをベクトル埋め込みに変換."""
@@ -112,4 +112,3 @@ class SentenceTransformerEmbeddings(EmbeddingEngine):
     def get_model_name(self) -> str:
         """モデル名を取得."""
         return self._model_name
-

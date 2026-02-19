@@ -60,6 +60,7 @@ class FlyioTarget(BaseDeployTarget):
 
         try:
             import os
+
             env = os.environ.copy()
             env["FLY_API_TOKEN"] = api_token
 
@@ -146,9 +147,7 @@ class FlyioTarget(BaseDeployTarget):
             logger.exception("Fly.io deployment failed")
             yield DeployEvent(type="error", message=f"Deployment failed: {e}")
 
-    def _generate_fly_toml(
-        self, app_name: str, region: str, config: DeployConfig
-    ) -> str:
+    def _generate_fly_toml(self, app_name: str, region: str, config: DeployConfig) -> str:
         """fly.toml 設定を生成."""
         return f"""# Fly.io Configuration
 app = "{app_name}"
@@ -173,18 +172,30 @@ primary_region = "{region}"
         """設定フィールドを取得."""
         return [
             ConfigField(
-                name="fly_api_token", label="Fly.io API Token", type="password",
-                required=True, description="Fly.io API トークン", group="credentials",
+                name="fly_api_token",
+                label="Fly.io API Token",
+                type="password",
+                required=True,
+                description="Fly.io API トークン",
+                group="credentials",
             ),
             ConfigField(
-                name="app_name", label="App Name", type="string",
-                required=True, placeholder="my-agentflow-app", group="settings",
+                name="app_name",
+                label="App Name",
+                type="string",
+                required=True,
+                placeholder="my-agentflow-app",
+                group="settings",
             ),
             ConfigField(
-                name="region", label="Primary Region", type="select",
-                required=False, default="nrt",
+                name="region",
+                label="Primary Region",
+                type="select",
+                required=False,
+                default="nrt",
                 options=["nrt", "hnd", "sin", "syd", "lax", "ord", "iad", "lhr", "fra"],
-                description="プライマリリージョン", group="settings",
+                description="プライマリリージョン",
+                group="settings",
             ),
         ]
 
@@ -199,4 +210,3 @@ primary_region = "{region}"
 
 
 __all__ = ["FlyioTarget"]
-

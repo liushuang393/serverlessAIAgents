@@ -9,6 +9,7 @@
 """
 
 # フレームワーク層のサービスを再エクスポート
+from apps.faq_system.backend.services.chat_history_service import ChatHistoryService
 from apps.faq_system.backend.services.citation_service import (
     Citation,
     CitationService,
@@ -36,7 +37,6 @@ from apps.faq_system.backend.services.feedback_service import (
     FeedbackType,
     ImprovementSuggestion,
 )
-from apps.faq_system.backend.services.chat_history_service import ChatHistoryService
 
 # FAQ System 固有サービス
 from apps.faq_system.backend.services.glossary_service import (

@@ -9,8 +9,6 @@ from __future__ import annotations
 import json
 from unittest.mock import AsyncMock
 
-import pytest
-
 from apps.market_trend_monitor.backend.services.entity_extraction_service import (
     Entity,
     EntityExtractionService,
@@ -63,8 +61,10 @@ class TestEntityRelationModel:
     def test_relation_creation(self) -> None:
         """関係生成テスト."""
         rel = EntityRelation(
-            source="IBM", target="COBOL",
-            relation_type="develops", confidence=0.8,
+            source="IBM",
+            target="COBOL",
+            relation_type="develops",
+            confidence=0.8,
         )
         assert rel.source == "IBM"
         assert rel.target == "COBOL"
@@ -72,7 +72,8 @@ class TestEntityRelationModel:
     def test_relation_to_dict(self) -> None:
         """to_dict 変換テスト."""
         rel = EntityRelation(
-            source="Java", target="COBOL",
+            source="Java",
+            target="COBOL",
             relation_type="migrates_from",
         )
         d = rel.to_dict()
@@ -91,10 +92,14 @@ class TestEntityExtractionService:
     async def test_extract_entities(self) -> None:
         """エンティティ抽出テスト."""
         mock_llm = AsyncMock()
-        mock_llm.chat = AsyncMock(return_value=json.dumps([
-            {"name": "IBM", "type": "company", "confidence": 0.95},
-            {"name": "Java", "type": "technology", "confidence": 0.9},
-        ]))
+        mock_llm.chat = AsyncMock(
+            return_value=json.dumps(
+                [
+                    {"name": "IBM", "type": "company", "confidence": 0.95},
+                    {"name": "Java", "type": "technology", "confidence": 0.9},
+                ]
+            )
+        )
         service = EntityExtractionService(llm=mock_llm)
 
         entities = await service.extract_entities("IBM migrates COBOL to Java")
@@ -121,12 +126,18 @@ class TestEntityExtractionService:
     async def test_extract_relations(self) -> None:
         """関係抽出テスト."""
         mock_llm = AsyncMock()
-        mock_llm.chat = AsyncMock(return_value=json.dumps([
-            {
-                "source": "IBM", "target": "COBOL",
-                "relation_type": "develops", "confidence": 0.8,
-            },
-        ]))
+        mock_llm.chat = AsyncMock(
+            return_value=json.dumps(
+                [
+                    {
+                        "source": "IBM",
+                        "target": "COBOL",
+                        "relation_type": "develops",
+                        "confidence": 0.8,
+                    },
+                ]
+            )
+        )
         service = EntityExtractionService(llm=mock_llm)
 
         entities = [

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ContractAuthGuard の単体テスト."""
 
 from __future__ import annotations
@@ -91,7 +90,9 @@ def _build_websocket(
     return WebSocket(scope=scope, receive=_receive, send=_send), sent
 
 
-def test_verify_api_key_returns_503_when_env_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_verify_api_key_returns_503_when_env_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     config_path = tmp_path / "app_config.json"
     _write_app_config(config_path)
     monkeypatch.delenv("TEST_API_KEY", raising=False)

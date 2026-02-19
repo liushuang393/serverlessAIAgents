@@ -29,9 +29,7 @@ class TaskGraph:
     tasks: dict[TaskID, Task] = field(default_factory=dict)
     version: int = 1
 
-    def add_task(
-        self, task: Task, blocked_by: list[TaskID] | None = None
-    ) -> TaskID:
+    def add_task(self, task: Task, blocked_by: list[TaskID] | None = None) -> TaskID:
         """Add a task to the graph with optional dependencies.
 
         Args:

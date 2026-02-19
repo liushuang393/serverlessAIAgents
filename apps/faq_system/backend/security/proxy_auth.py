@@ -9,10 +9,9 @@ import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import delete, select
-
 from apps.faq_system.backend.db.models import ProxyAuthNonce
 from apps.faq_system.backend.db.session import get_db_session
+from sqlalchemy import delete, select
 
 
 @dataclass(slots=True)

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Awaitable, Callable, TypeVar
+from typing import Any, TypeVar
 
 from fastapi import HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse
@@ -156,8 +157,8 @@ class ContractAuthGuard:
 
 async def _maybe_await(value: _T | Awaitable[_T]) -> _T:
     if hasattr(value, "__await__"):
-        return await value  # type: ignore[return-value]
-    return value  # type: ignore[return-value]
+        return await value
+    return value
 
 
 __all__ = [

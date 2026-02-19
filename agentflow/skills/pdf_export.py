@@ -71,7 +71,7 @@ class PDFExportSkill:
     def _check_reportlab(self) -> bool:
         """ReportLabが利用可能か確認."""
         try:
-            from reportlab.lib.pagesizes import A4  # noqa: F401
+            from reportlab.lib.pagesizes import A4
 
             return True
         except ImportError:

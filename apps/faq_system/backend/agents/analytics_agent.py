@@ -74,22 +74,45 @@ class SQLGuardrails:
     allowed_operations: list[str] = field(default_factory=lambda: ["SELECT"])
 
     # 禁止キーワード
-    forbidden_keywords: list[str] = field(default_factory=lambda: [
-        "INSERT", "UPDATE", "DELETE", "DROP", "TRUNCATE",
-        "ALTER", "CREATE", "GRANT", "REVOKE", "EXEC",
-    ])
+    forbidden_keywords: list[str] = field(
+        default_factory=lambda: [
+            "INSERT",
+            "UPDATE",
+            "DELETE",
+            "DROP",
+            "TRUNCATE",
+            "ALTER",
+            "CREATE",
+            "GRANT",
+            "REVOKE",
+            "EXEC",
+        ]
+    )
 
     # ホワイトリストテーブル
-    whitelist_tables: list[str] = field(default_factory=lambda: [
-        "sales", "orders", "products", "categories", "regions",
-    ])
+    whitelist_tables: list[str] = field(
+        default_factory=lambda: [
+            "sales",
+            "orders",
+            "products",
+            "categories",
+            "regions",
+        ]
+    )
 
     # ブラックリストカラム
-    blacklist_columns: list[str] = field(default_factory=lambda: [
-        "*.password", "*.mynumber", "*.salary", "*.ssn",
-        "employees.salary", "customers.credit_card",
-        "customers.phone", "customers.address",
-    ])
+    blacklist_columns: list[str] = field(
+        default_factory=lambda: [
+            "*.password",
+            "*.mynumber",
+            "*.salary",
+            "*.ssn",
+            "employees.salary",
+            "customers.credit_card",
+            "customers.phone",
+            "customers.address",
+        ]
+    )
 
     # 自動制限
     auto_limit: int = 1000
@@ -119,17 +142,13 @@ class AnalyticsConfig:
     """分析Agent設定."""
 
     # 語義層
-    semantic_layer_config: SemanticLayerConfig = field(
-        default_factory=SemanticLayerConfig
-    )
+    semantic_layer_config: SemanticLayerConfig = field(default_factory=SemanticLayerConfig)
 
     # SQL護欄
     guardrails: SQLGuardrails = field(default_factory=SQLGuardrails)
 
     # NL2SQL 増強（学術研究に基づく）
-    nl2sql_enhancement: NL2SQLEnhancementConfig = field(
-        default_factory=NL2SQLEnhancementConfig
-    )
+    nl2sql_enhancement: NL2SQLEnhancementConfig = field(default_factory=NL2SQLEnhancementConfig)
 
     # 出力設定
     include_evidence_chain: bool = True
@@ -358,9 +377,7 @@ ORDER BY total_sales DESC""",
         user_context = input_data.get("user_context", {})
 
         if not question:
-            return AnalyticsResponse(
-                error="質問が指定されていません"
-            ).model_dump()
+            return AnalyticsResponse(error="質問が指定されていません").model_dump()
 
         try:
             # 0. NL2SQL 増強コンポーネント初期化
@@ -378,9 +395,7 @@ ORDER BY total_sales DESC""",
             resolved = await self._semantic_layer.resolve(question)
 
             # 3. アクセス検証
-            access_ok, violations = self._semantic_layer.validate_access(
-                resolved, user_context
-            )
+            access_ok, violations = self._semantic_layer.validate_access(resolved, user_context)
             if not access_ok:
                 return AnalyticsResponse(
                     question=question,
@@ -412,9 +427,7 @@ ORDER BY total_sales DESC""",
                 chart = self._generate_chart(question, data, columns)
 
             # 9. 証拠チェーン構築
-            evidence = self._build_evidence_chain(
-                question, sql, resolved, data
-            )
+            evidence = self._build_evidence_chain(question, sql, resolved, data)
 
             # 10. 信頼度評価
             confidence = self._calculate_confidence(resolved, data)
@@ -432,9 +445,7 @@ ORDER BY total_sales DESC""",
                 needs_verification=confidence < 0.7,
                 resolved_metrics=[m.name for m in resolved.metrics],
                 resolved_dimensions=[d.name for d in resolved.dimensions],
-                execution_time_ms=(
-                    datetime.now() - start_time
-                ).total_seconds() * 1000,
+                execution_time_ms=(datetime.now() - start_time).total_seconds() * 1000,
             )
 
             return response.model_dump()
@@ -446,9 +457,7 @@ ORDER BY total_sales DESC""",
                 error=str(e),
             ).model_dump()
 
-    async def run_stream(
-        self, input_data: dict[str, Any]
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def run_stream(self, input_data: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """ストリーム実行."""
         input_data.get("question", "")
 
@@ -495,9 +504,7 @@ ORDER BY total_sales DESC""",
             "data": result,
         }
 
-    async def _check_permission(
-        self, user_context: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _check_permission(self, user_context: dict[str, Any]) -> dict[str, Any]:
         """権限チェック."""
         if not user_context.get("user_id"):
             return {"allowed": False, "reason": "認証が必要です"}
@@ -602,9 +609,7 @@ ORDER BY total_sales DESC""",
         hints = self._semantic_layer.get_sql_hints(resolved)
 
         # 4. LLM でSQL生成
-        sql = await self._generate_sql_with_llm(
-            question, schema_info, fewshot_prompt, hints
-        )
+        sql = await self._generate_sql_with_llm(question, schema_info, fewshot_prompt, hints)
 
         # 5. Post-Processing
         if self._postprocessor:
@@ -614,9 +619,7 @@ ORDER BY total_sales DESC""",
                 schema_context=schema_info,
             )
             if pp_result.total_corrections > 0:
-                self._logger.info(
-                    f"SQL 修正: {pp_result.total_corrections} 回の修正を適用"
-                )
+                self._logger.info(f"SQL 修正: {pp_result.total_corrections} 回の修正を適用")
             sql = pp_result.final_sql
 
         return sql, schema_link_result
@@ -680,7 +683,6 @@ SQLクエリのみを出力してください（説明不要）:
         response = await llm.chat([{"role": "user", "content": prompt}])
         return self._extract_sql(response["content"])
 
-
     def _extract_sql(self, content: str) -> str:
         """レスポンスからSQLを抽出."""
         # コードブロックから抽出
@@ -731,9 +733,7 @@ SQLクエリのみを出力してください（説明不要）:
 
         return {"valid": True}
 
-    async def _execute_sql(
-        self, sql: str
-    ) -> tuple[list[dict[str, Any]], list[str]]:
+    async def _execute_sql(self, sql: str) -> tuple[list[dict[str, Any]], list[str]]:
         """SQL実行（プレースホルダー）."""
         # 実際の実装では DB プロバイダーを使用
         # ここではサンプルデータを返す
@@ -799,10 +799,12 @@ SQLクエリのみを出力してください（説明不要）:
             "title": question[:50],
             "xAxis": {"type": "category", "data": labels},
             "yAxis": {"type": "value"},
-            "series": [{
-                "type": "bar",
-                "data": values,
-            }],
+            "series": [
+                {
+                    "type": "bar",
+                    "data": values,
+                }
+            ],
         }
 
     def _build_evidence_chain(
@@ -817,10 +819,12 @@ SQLクエリのみを出力してください（説明不要）:
 
         # データソース
         for metric in resolved.metrics:
-            evidence.data_sources.append({
-                "table": metric.table,
-                "description": metric.description,
-            })
+            evidence.data_sources.append(
+                {
+                    "table": metric.table,
+                    "description": metric.description,
+                }
+            )
 
         # クエリ条件
         if resolved.time_range:
@@ -831,24 +835,20 @@ SQLクエリのみを出力してください（説明不要）:
         # 前提条件
         for metric in resolved.metrics:
             if metric.scope_note:
-                evidence.assumptions.append(
-                    f"{metric.name}定義: {metric.scope_note}"
-                )
+                evidence.assumptions.append(f"{metric.name}定義: {metric.scope_note}")
 
         # 制限事項
-        evidence.limitations.append(
-            f"データ取得上限: {self._config.guardrails.auto_limit}件"
-        )
-        evidence.limitations.append(
-            f"データ更新: {datetime.now().strftime('%Y-%m-%d %H:%M')}時点"
-        )
+        evidence.limitations.append(f"データ取得上限: {self._config.guardrails.auto_limit}件")
+        evidence.limitations.append(f"データ更新: {datetime.now().strftime('%Y-%m-%d %H:%M')}時点")
 
         # 代替案
         if self._config.include_alternatives:
-            evidence.alternatives.extend([
-                "GMVベースで見る場合は「GMVでTOP10」と質問してください",
-                "カテゴリ別内訳は「カテゴリ別売上」で確認できます",
-            ])
+            evidence.alternatives.extend(
+                [
+                    "GMVベースで見る場合は「GMVでTOP10」と質問してください",
+                    "カテゴリ別内訳は「カテゴリ別売上」で確認できます",
+                ]
+            )
 
         return evidence
 

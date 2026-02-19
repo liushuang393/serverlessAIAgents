@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """PolicyEngine 単体テスト."""
 
 from __future__ import annotations
@@ -264,21 +263,25 @@ class TestPolicyEngine:
     async def test_pbac_priority(self, engine: PolicyEngine) -> None:
         """PBAC: 優先度."""
         # 低優先度のDENY
-        engine.add_policy(Policy(
-            policy_id="deny-all",
-            name="Deny All",
-            priority=1,
-            effect=AuthDecision.DENY,
-        ))
+        engine.add_policy(
+            Policy(
+                policy_id="deny-all",
+                name="Deny All",
+                priority=1,
+                effect=AuthDecision.DENY,
+            )
+        )
 
         # 高優先度のALLOW
-        engine.add_policy(Policy(
-            policy_id="allow-admin",
-            name="Allow Admin",
-            subject_conditions={"role": "admin"},
-            priority=10,
-            effect=AuthDecision.ALLOW,
-        ))
+        engine.add_policy(
+            Policy(
+                policy_id="allow-admin",
+                name="Allow Admin",
+                subject_conditions={"role": "admin"},
+                priority=10,
+                effect=AuthDecision.ALLOW,
+            )
+        )
 
         ctx = AuthContext(subject={"role": "admin"}, action="read")
         result = await engine.authorize(ctx, mode=AuthMode.PBAC)

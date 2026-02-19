@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
 """@agent デコレータと AgentRegistry 統合テスト."""
 
 import pytest
+
 from agentflow.core.agent_registry import get_global_agent_registry, reset_global_agent_registry
 
 
@@ -49,9 +49,7 @@ def test_agent_decorator_creates_capability_spec():
 
     assert capability is not None
     # スキルがタグまたは required_tools に含まれていることを確認
-    has_rag = "rag" in capability.tags or any(
-        "rag" in t for t in capability.required_tools
-    )
+    has_rag = "rag" in capability.tags or any("rag" in t for t in capability.required_tools)
     assert has_rag
     assert "スキル付きAgent" in capability.description
 

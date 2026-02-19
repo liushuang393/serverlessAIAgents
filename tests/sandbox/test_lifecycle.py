@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """サンドボックスライフサイクル管理のテスト.
 
 ManagedSandbox、SandboxManager、Workspaceのテスト。
@@ -11,8 +10,8 @@ import pytest
 
 from agentflow.sandbox.base import ExecutionResult, SandboxConfig, SandboxState
 from agentflow.sandbox.lifecycle import EventType, ManagedSandbox, SandboxEvent
-from agentflow.sandbox.manager import SandboxManager, get_sandbox_manager
-from agentflow.sandbox.workspace import FileInfo, Workspace, WorkspaceState
+from agentflow.sandbox.manager import SandboxManager
+from agentflow.sandbox.workspace import Workspace, WorkspaceState
 
 
 class TestSandboxState:
@@ -56,12 +55,14 @@ class TestManagedSandbox:
     def mock_provider(self) -> MagicMock:
         """モックプロバイダを作成."""
         provider = MagicMock()
-        provider.execute = AsyncMock(return_value=ExecutionResult(
-            exit_code=0,
-            stdout="Hello",
-            stderr="",
-            duration_ms=100.0,
-        ))
+        provider.execute = AsyncMock(
+            return_value=ExecutionResult(
+                exit_code=0,
+                stdout="Hello",
+                stderr="",
+                duration_ms=100.0,
+            )
+        )
         provider.close = AsyncMock()
         return provider
 
@@ -231,12 +232,14 @@ class TestWorkspace:
         sandbox.start = AsyncMock()
         sandbox.stop = AsyncMock()
         sandbox.delete = AsyncMock()
-        sandbox.execute = AsyncMock(return_value=ExecutionResult(
-            exit_code=0,
-            stdout="2",
-            stderr="",
-            duration_ms=50.0,
-        ))
+        sandbox.execute = AsyncMock(
+            return_value=ExecutionResult(
+                exit_code=0,
+                stdout="2",
+                stderr="",
+                duration_ms=50.0,
+            )
+        )
         return sandbox
 
     @pytest.fixture
@@ -346,4 +349,3 @@ class TestWorkspace:
         assert stats["workspace_id"] == workspace.workspace_id
         assert stats["name"] == "test-workspace"
         assert stats["file_count"] == 0
-

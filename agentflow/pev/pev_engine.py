@@ -60,9 +60,7 @@ class PEVEngineConfig(BaseModel):
     max_replans: int = Field(default=3, ge=0, description="最大再計画回数")
     timeout_seconds: float = Field(default=600.0, gt=0, description="タイムアウト")
     max_concurrent: int = Field(default=5, ge=1, description="最大同時実行")
-    verification_strategy: VerificationStrategy = Field(
-        default=VerificationStrategy.THRESHOLD
-    )
+    verification_strategy: VerificationStrategy = Field(default=VerificationStrategy.THRESHOLD)
     acceptance_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     auto_replan: bool = Field(default=True, description="自動再計画")
 
@@ -202,7 +200,9 @@ class PEVEngine:
                     break
 
                 # 4. Replan - 再計画
-                self._logger.info(f"再計画開始 ({result.replan_count + 1}/{self.config.max_replans})")
+                self._logger.info(
+                    f"再計画開始 ({result.replan_count + 1}/{self.config.max_replans})"
+                )
 
                 if failed_goal:
                     plan = await self._planner.replan(
@@ -278,4 +278,3 @@ __all__ = [
     "PEVEngineConfig",
     "PEVResult",
 ]
-

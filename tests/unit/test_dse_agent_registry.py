@@ -9,6 +9,7 @@ class TestDesignAgentRegistry:
         from agentflow.skills.builtin.design_skills.services.agent_registry import (
             DesignAgentRegistry,
         )
+
         return DesignAgentRegistry(llm_client=None)
 
     async def test_initialize_loads_agents(self) -> None:

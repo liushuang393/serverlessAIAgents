@@ -9,13 +9,13 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
-
-from agentflow import get_llm
 
 from apps.market_trend_monitor.backend.models import Trend
 from apps.market_trend_monitor.backend.services.signal_service import SignalService
+
+from agentflow import get_llm
 
 
 @dataclass
@@ -91,8 +91,7 @@ class StakeholderReportService:
         """
         top_trends = sorted(trends, key=lambda t: t.score, reverse=True)[:5]
         trend_summaries = [
-            f"- {t.topic}: score={t.score:.2f}, growth={t.growth_rate:.1%}"
-            for t in top_trends
+            f"- {t.topic}: score={t.score:.2f}, growth={t.growth_rate:.1%}" for t in top_trends
         ]
 
         dashboard_stats = {}
@@ -302,10 +301,11 @@ class StakeholderReportService:
         """LLMレスポンスをパース."""
         try:
             import json
+
             start = raw.find("{")
             end = raw.rfind("}")
             if start != -1 and end != -1 and end > start:
-                return json.loads(raw[start:end + 1])
+                return json.loads(raw[start : end + 1])
         except (json.JSONDecodeError, ValueError):
             pass
         return {}

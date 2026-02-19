@@ -176,7 +176,11 @@ class RecursiveChunker(BaseChunker):
         current_chunk = ""
 
         for split in splits:
-            potential = current_chunk + (separator if current_chunk and self._config.keep_separator else "") + split
+            potential = (
+                current_chunk
+                + (separator if current_chunk and self._config.keep_separator else "")
+                + split
+            )
 
             if len(potential) <= self._config.chunk_size:
                 current_chunk = potential
@@ -202,7 +206,7 @@ class RecursiveChunker(BaseChunker):
         """サイズで分割."""
         chunks = []
         for i in range(0, len(text), self._config.chunk_size - self._config.chunk_overlap):
-            chunk = text[i:i + self._config.chunk_size]
+            chunk = text[i : i + self._config.chunk_size]
             if chunk:
                 chunks.append(chunk)
         return chunks
@@ -216,7 +220,7 @@ class RecursiveChunker(BaseChunker):
         for i, chunk in enumerate(chunks):
             if i > 0:
                 # 前のチャンクの末尾を追加
-                prev_overlap = chunks[i - 1][-self._config.chunk_overlap:]
+                prev_overlap = chunks[i - 1][-self._config.chunk_overlap :]
                 chunk = prev_overlap + chunk
             result.append(chunk)
         return result
@@ -245,15 +249,18 @@ class SemanticChunker(BaseChunker):
         sentences = self._split_into_sentences(text)
 
         if len(sentences) <= 1:
-            return [Chunk.create(
-                content=text.strip(),
-                index=0,
-                metadata={**(metadata or {}), "strategy": "semantic"},
-            )]
+            return [
+                Chunk.create(
+                    content=text.strip(),
+                    index=0,
+                    metadata={**(metadata or {}), "strategy": "semantic"},
+                )
+            ]
 
         try:
             # 埋め込みを取得
             from agentflow.providers import get_embedding
+
             embedding_provider = get_embedding()
             embeddings = await embedding_provider.embed_batch(sentences)
 
@@ -406,6 +413,7 @@ class TokenChunker(BaseChunker):
         """トークンベースで分割."""
         try:
             import tiktoken
+
             self._encoder = tiktoken.encoding_for_model(self._model)
         except ImportError:
             self._logger.warning("tiktoken not installed, falling back to recursive")
@@ -423,7 +431,7 @@ class TokenChunker(BaseChunker):
         i = 0
         while i < len(tokens):
             # チャンクのトークンを取得
-            chunk_tokens = tokens[i:i + chunk_size]
+            chunk_tokens = tokens[i : i + chunk_size]
             content = self._encoder.decode(chunk_tokens)
 
             chunk = Chunk.create(

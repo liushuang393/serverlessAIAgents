@@ -186,7 +186,9 @@ class AgentTestCase(unittest.TestCase):
         """
         assert key in response, f"Response should contain '{key}'"
         if substring:
-            assert substring in str(response[key]), f"Response['{key}'] should contain '{substring}'"
+            assert substring in str(response[key]), (
+                f"Response['{key}'] should contain '{substring}'"
+            )
 
     def assertResponseSuccess(self, response: dict[str, Any]) -> None:
         """レスポンスが成功を示すことを検証.
@@ -305,4 +307,3 @@ async def agent_test_context(
                     await agent.cleanup()
                 except Exception as e:
                     logger.warning(f"Agent cleanup failed: {e}")
-

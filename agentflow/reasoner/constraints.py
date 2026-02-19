@@ -50,9 +50,7 @@ class StructuredConstraint(BaseModel):
         source: Where this constraint came from
     """
 
-    constraint_id: str = Field(
-        default_factory=lambda: f"const-{uuid.uuid4().hex[:8]}"
-    )
+    constraint_id: str = Field(default_factory=lambda: f"const-{uuid.uuid4().hex[:8]}")
     constraint_type: ConstraintType
     name: str
     description: str
@@ -137,9 +135,7 @@ class StructuredConstraints(BaseModel):
             )
         )
 
-    def add_prohibition(
-        self, name: str, description: str, is_hard: bool = True
-    ) -> None:
+    def add_prohibition(self, name: str, description: str, is_hard: bool = True) -> None:
         """Add a prohibition constraint.
 
         Args:

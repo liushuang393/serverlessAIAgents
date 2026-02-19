@@ -164,9 +164,7 @@ class LazyMCPClient(MCPClient):
         self._build_tool_index()
 
         if self._enable_lazy_loading:
-            self._logger.info(
-                f"懒加載モード: {len(self._tool_index)} ツールをインデックス化"
-            )
+            self._logger.info(f"懒加載モード: {len(self._tool_index)} ツールをインデックス化")
 
     def _build_tool_index(self) -> None:
         """ツールインデックスを構築（軽量メタデータ抽出）."""
@@ -213,14 +211,18 @@ class LazyMCPClient(MCPClient):
         ]
 
         for entry in self._tool_index.values():
-            desc = entry.description[:80] + "..." if len(entry.description) > 80 else entry.description
+            desc = (
+                entry.description[:80] + "..." if len(entry.description) > 80 else entry.description
+            )
             lines.append(f"- **{entry.name}** ({entry.server}): {desc}")
 
-        lines.extend([
-            "",
-            'ツールを使用する場合は `MCPSearch(query: "キーワード")` または',
-            '`MCPSearch(query: "select:tool_name")` で検索してください。',
-        ])
+        lines.extend(
+            [
+                "",
+                'ツールを使用する場合は `MCPSearch(query: "キーワード")` または',
+                '`MCPSearch(query: "select:tool_name")` で検索してください。',
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -448,4 +450,3 @@ class LazyMCPClient(MCPClient):
         self._loaded_tools.clear()
         self._search_history.clear()
         await super().disconnect()
-

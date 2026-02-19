@@ -176,9 +176,7 @@ class EnhancedFAQAgent(AgentBlock):
                 response.gap_info = gap_info
 
             # 実行時間
-            response.execution_time_ms = (
-                datetime.now() - start_time
-            ).total_seconds() * 1000
+            response.execution_time_ms = (datetime.now() - start_time).total_seconds() * 1000
 
             return response.model_dump()
 
@@ -190,9 +188,7 @@ class EnhancedFAQAgent(AgentBlock):
                 execution_time_ms=(datetime.now() - start_time).total_seconds() * 1000,
             ).model_dump()
 
-    async def run_stream(
-        self, input_data: dict[str, Any]
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def run_stream(self, input_data: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """ストリーム実行.
 
         Args:
@@ -266,26 +262,28 @@ class EnhancedFAQAgent(AgentBlock):
             "data": response.model_dump(),
         }
 
-    async def _handle_faq_query(
-        self, question: str, agent_trace: list[str]
-    ) -> FAQResponse:
+    async def _handle_faq_query(self, question: str, agent_trace: list[str]) -> FAQResponse:
         """FAQ クエリを処理."""
         agent_trace.append("Executing RAG retrieval")
 
         # Retriever で検索
-        retrieval_result = await self._retriever.run({
-            "query": question,
-            "top_k": self._config.rag_top_k,
-        })
+        retrieval_result = await self._retriever.run(
+            {
+                "query": question,
+                "top_k": self._config.rag_top_k,
+            }
+        )
 
         chunks = retrieval_result.get("chunks", [])
         agent_trace.append(f"Retrieved {len(chunks)} chunks")
 
         # AnswerGenerator で回答生成
-        answer_result = await self._answer_generator.run({
-            "question": question,
-            "context": chunks,
-        })
+        answer_result = await self._answer_generator.run(
+            {
+                "question": question,
+                "context": chunks,
+            }
+        )
 
         answer = answer_result.get("answer", "")
         confidence = answer_result.get("confidence", 0.8)
@@ -322,9 +320,7 @@ class EnhancedFAQAgent(AgentBlock):
             agent_trace=agent_trace,
         )
 
-    async def _handle_sql_query(
-        self, question: str, agent_trace: list[str]
-    ) -> FAQResponse:
+    async def _handle_sql_query(self, question: str, agent_trace: list[str]) -> FAQResponse:
         """SQL クエリを処理."""
         agent_trace.append("Generating SQL query")
 
@@ -435,9 +431,7 @@ class EnhancedFAQAgent(AgentBlock):
 
         return response
 
-    async def _generate_suggestions(
-        self, question: str, query_type: str
-    ) -> list[dict[str, Any]]:
+    async def _generate_suggestions(self, question: str, query_type: str) -> list[dict[str, Any]]:
         """フォローアップ提案を生成."""
         # 簡易実装
         if query_type == "sql":
@@ -452,21 +446,23 @@ class EnhancedFAQAgent(AgentBlock):
             {"text": "例を見せて", "type": "followup"},
         ]
 
-    async def _analyze_gap(
-        self, question: str, response: FAQResponse
-    ) -> dict[str, Any]:
+    async def _analyze_gap(self, question: str, response: FAQResponse) -> dict[str, Any]:
         """ギャップ分析を実行."""
         if not self._gap_analyzer:
             return {}
 
         try:
-            return await self._gap_analyzer.run({
-                "query_logs": [{
-                    "question": question,
-                    "confidence": response.confidence,
-                    "answered": bool(response.answer),
-                }]
-            })
+            return await self._gap_analyzer.run(
+                {
+                    "query_logs": [
+                        {
+                            "question": question,
+                            "confidence": response.confidence,
+                            "answered": bool(response.answer),
+                        }
+                    ]
+                }
+            )
         except Exception as e:
             self._logger.warning("ギャップ分析エラー: %s", e)
             return {}
@@ -474,10 +470,24 @@ class EnhancedFAQAgent(AgentBlock):
     def _classify_query(self, question: str) -> str:
         """クエリタイプを判定."""
         sql_keywords = [
-            "売上", "収入", "数量", "統計", "レポート",
-            "top", "ランキング", "トレンド", "比較",
-            "金額", "注文", "顧客数", "件数", "合計", "平均",
-            "月別", "年別", "日別",
+            "売上",
+            "収入",
+            "数量",
+            "統計",
+            "レポート",
+            "top",
+            "ランキング",
+            "トレンド",
+            "比較",
+            "金額",
+            "注文",
+            "顧客数",
+            "件数",
+            "合計",
+            "平均",
+            "月別",
+            "年別",
+            "日別",
         ]
 
         question_lower = question.lower()

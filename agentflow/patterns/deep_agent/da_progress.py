@@ -157,8 +157,7 @@ class ProgressManager:
     def _check_all_completed(self) -> None:
         """全タスク完了チェック."""
         all_done = all(
-            t.status in (TaskStatus.COMPLETED, TaskStatus.FAILED)
-            for t in self._todos.values()
+            t.status in (TaskStatus.COMPLETED, TaskStatus.FAILED) for t in self._todos.values()
         )
         if all_done and not self._completed_at:
             self._completed_at = datetime.now()
@@ -179,10 +178,12 @@ class ProgressManager:
         """
         group = ParallelGroup(todo_ids=todo_ids)
         self._parallel_groups[group.group_id] = group
-        self._emit(ProgressEvent(
-            "parallel_group_created",
-            data={"group_id": group.group_id, "todo_ids": todo_ids},
-        ))
+        self._emit(
+            ProgressEvent(
+                "parallel_group_created",
+                data={"group_id": group.group_id, "todo_ids": todo_ids},
+            )
+        )
         return group
 
     def mark_group_started(self, group_id: str) -> None:
@@ -196,10 +197,12 @@ class ProgressManager:
         """グループ完了をマーク."""
         if group := self._parallel_groups.get(group_id):
             group.status = TaskStatus.COMPLETED
-            self._emit(ProgressEvent(
-                "parallel_group_completed",
-                data={"group_id": group_id},
-            ))
+            self._emit(
+                ProgressEvent(
+                    "parallel_group_completed",
+                    data={"group_id": group_id},
+                )
+            )
 
     # =========================================================================
     # イベントリスナー
@@ -270,7 +273,9 @@ class ProgressManager:
             "pending": pending,
             "blocked": blocked,
             "progress_percent": (completed / total * 100) if total > 0 else 0,
-            "success_rate": (completed / (completed + failed) * 100) if (completed + failed) > 0 else 0,
+            "success_rate": (completed / (completed + failed) * 100)
+            if (completed + failed) > 0
+            else 0,
             "elapsed_seconds": elapsed,
             "started_at": self._started_at.isoformat() if self._started_at else None,
             "completed_at": self._completed_at.isoformat() if self._completed_at else None,
@@ -278,10 +283,7 @@ class ProgressManager:
 
     def get_ready_todos(self) -> list[TodoItem]:
         """実行準備完了のTodoを取得."""
-        completed_ids = {
-            t.id for t in self._todos.values()
-            if t.status == TaskStatus.COMPLETED
-        }
+        completed_ids = {t.id for t in self._todos.values() if t.status == TaskStatus.COMPLETED}
         return [t for t in self._todos.values() if t.is_ready(completed_ids)]
 
     def get_next_parallel_group(self) -> list[TodoItem] | None:
@@ -313,4 +315,3 @@ __all__ = [
     "ProgressEvent",
     "ProgressManager",
 ]
-

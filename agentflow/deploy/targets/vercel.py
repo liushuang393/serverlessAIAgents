@@ -86,10 +86,12 @@ class VercelTarget(BaseDeployTarget):
                     if file_path.is_file():
                         rel_path = file_path.relative_to(source_path)
                         content = file_path.read_text(encoding="utf-8")
-                        files_to_upload.append({
-                            "file": str(rel_path),
-                            "data": content,
-                        })
+                        files_to_upload.append(
+                            {
+                                "file": str(rel_path),
+                                "data": content,
+                            }
+                        )
 
                 yield DeployEvent(
                     type="progress",

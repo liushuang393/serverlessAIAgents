@@ -406,8 +406,9 @@ class QuotaManager:
                 keys_to_remove = []
                 for key in quota.usage:
                     qt, p = key.split(":")
-                    if (quota_type is None or qt == quota_type.value) and \
-                       (period is None or p == period.value):
+                    if (quota_type is None or qt == quota_type.value) and (
+                        period is None or p == period.value
+                    ):
                         keys_to_remove.append(key)
                 for key in keys_to_remove:
                     del quota.usage[key]

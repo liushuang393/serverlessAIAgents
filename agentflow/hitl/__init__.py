@@ -124,6 +124,7 @@ def get_checkpointer(
     if resolved_backend == "redis":
         try:
             from agentflow.hitl.redis_checkpointer import RedisCheckpointer
+
             _checkpointer_logger.info("Using RedisCheckpointer")
             return RedisCheckpointer(**kwargs)
         except ImportError:
@@ -133,6 +134,7 @@ def get_checkpointer(
     elif resolved_backend == "postgres":
         try:
             from agentflow.hitl.postgres_checkpointer import PostgresCheckpointer
+
             _checkpointer_logger.info("Using PostgresCheckpointer")
             return PostgresCheckpointer(**kwargs)
         except ImportError:
@@ -176,4 +178,3 @@ __all__ = [
     "set_checkpointer",
     "set_thread_id",
 ]
-

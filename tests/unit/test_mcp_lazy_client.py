@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """MCP 懒加載クライアントのユニットテスト.
 
 LazyMCPClient の懒加載機能をテストします。
@@ -497,4 +496,3 @@ class TestLazyMCPClient:
         assert "利用可能な MCP ツール" in prompt
         assert "tool1" in prompt
         assert "MCPSearch" in prompt
-

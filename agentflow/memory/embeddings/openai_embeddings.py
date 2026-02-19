@@ -8,6 +8,12 @@ from typing import Any
 
 from agentflow.memory.embeddings.embedding_interface import EmbeddingEngine
 
+# オプション依存: テストでのモック（patch）が効くようにモジュールレベルで import
+try:
+    from openai import AsyncOpenAI  # type: ignore[import-untyped]
+except ImportError:
+    AsyncOpenAI = None  # type: ignore[assignment, misc]
+
 
 class OpenAIEmbeddings(EmbeddingEngine):
     """OpenAI Embeddings実装.
@@ -54,11 +60,13 @@ class OpenAIEmbeddings(EmbeddingEngine):
             self._dimension = self._default_dimensions.get(model, 1536)
 
         # OpenAIクライアントを初期化
+        if AsyncOpenAI is None:
+            msg = "openai package is required. Install with: pip install openai"
+            raise ImportError(msg)
         try:
-            from openai import AsyncOpenAI
-
             self._client = AsyncOpenAI(api_key=api_key)
         except ImportError:
+            # テスト時に side_effect=ImportError でパッチされた場合も正しいメッセージを返す
             msg = "openai package is required. Install with: pip install openai"
             raise ImportError(msg)
 
@@ -118,4 +126,3 @@ class OpenAIEmbeddings(EmbeddingEngine):
     def get_model_name(self) -> str:
         """モデル名を取得."""
         return self._model
-

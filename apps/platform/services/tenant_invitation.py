@@ -263,9 +263,8 @@ class TenantInvitationService:
             )
 
         if supplied_token:
-            is_valid_token = (
-                record.token_hash is not None
-                and self._is_hash_match(record.token_hash, supplied_token)
+            is_valid_token = record.token_hash is not None and self._is_hash_match(
+                record.token_hash, supplied_token
             )
             if not is_valid_token:
                 msg = "ワンタイムリンクが無効です"
@@ -406,9 +405,7 @@ class TenantInvitationService:
 
     def _build_notification_mail_body(self, record: InvitationRecord) -> str:
         inviter_line = (
-            f"- 招待者: {record.inviter_display_name}\n"
-            if record.inviter_display_name
-            else ""
+            f"- 招待者: {record.inviter_display_name}\n" if record.inviter_display_name else ""
         )
         return (
             "AgentFlow への招待を受け付けました。\n"

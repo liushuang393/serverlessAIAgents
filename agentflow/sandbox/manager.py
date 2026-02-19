@@ -179,7 +179,9 @@ class SandboxManager:
             should_delete = False
             if sandbox.state == SandboxState.DELETED:
                 should_delete = True
-            elif sandbox.state == SandboxState.ARCHIVED or (sandbox.state == SandboxState.STOPPED and include_stopped):
+            elif sandbox.state == SandboxState.ARCHIVED or (
+                sandbox.state == SandboxState.STOPPED and include_stopped
+            ):
                 should_delete = idle_seconds > max_idle_seconds
 
             if should_delete:
@@ -248,8 +250,7 @@ class SandboxManager:
             "total_executions": total_executions,
             "total_execution_ms": total_execution_ms,
             "auto_cleanup_active": (
-                self._cleanup_task is not None
-                and not self._cleanup_task.done()
+                self._cleanup_task is not None and not self._cleanup_task.done()
             ),
         }
 
@@ -280,4 +281,3 @@ def get_sandbox_manager() -> SandboxManager:
     if _manager is None:
         _manager = SandboxManager()
     return _manager
-

@@ -1,8 +1,7 @@
-import pytest
 from agentflow.security.local_first import (
-    LocalFirstPolicy,
-    LocalFirstEnforcer,
     ExecutionLocation,
+    LocalFirstEnforcer,
+    LocalFirstPolicy,
     NetworkAccessDecision,
 )
 

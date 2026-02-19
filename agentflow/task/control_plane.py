@@ -44,9 +44,7 @@ class ControlPlane(ABC):
         ...
 
     @abstractmethod
-    async def update_task_state(
-        self, task_id: TaskID, new_state: TaskState
-    ) -> bool:
+    async def update_task_state(self, task_id: TaskID, new_state: TaskState) -> bool:
         """Update the state of a task.
 
         Args:
@@ -59,9 +57,7 @@ class ControlPlane(ABC):
         ...
 
     @abstractmethod
-    async def create_plan(
-        self, goal: str, context: dict[str, Any]
-    ) -> "TaskGraph":
+    async def create_plan(self, goal: str, context: dict[str, Any]) -> "TaskGraph":
         """Create a plan (TaskGraph) to achieve a goal.
 
         Args:
@@ -74,9 +70,7 @@ class ControlPlane(ABC):
         ...
 
     @abstractmethod
-    async def replan(
-        self, failed_task: Task, feedback: str
-    ) -> "TaskGraph":
+    async def replan(self, failed_task: Task, feedback: str) -> "TaskGraph":
         """Re-plan after a task failure or verification issue.
 
         Args:

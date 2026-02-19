@@ -125,7 +125,8 @@ class MockOfferProvider(IOffer):
     ) -> list[Offer]:
         """商品に適用可能なオファーを取得."""
         return [
-            offer for offer in self._offers.values()
+            offer
+            for offer in self._offers.values()
             if offer.product_id == product_id and offer.is_valid()
         ]
 
@@ -541,4 +542,3 @@ class MockCommerceAI(ICommerceAI):
             "counter_offer": min_price,
             "message": f"申し訳ございませんが、{min_price}円が最低価格です。",
         }
-

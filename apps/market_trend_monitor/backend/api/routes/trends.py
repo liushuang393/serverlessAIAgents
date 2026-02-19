@@ -21,7 +21,9 @@ def _to_frontend_report(report: dict, fallback_trends: list[dict] | None = None)
     """フロントエンド互換のレポート形式に変換."""
     sections = report.get("sections", [])
     summary = sections[0]["content"] if sections else ""
-    generated_at = report.get("generated_at") or report.get("created_at") or datetime.now().isoformat()
+    generated_at = (
+        report.get("generated_at") or report.get("created_at") or datetime.now().isoformat()
+    )
     trend_snapshot = report.get("trend_snapshot", [])
 
     trends: list[dict]
@@ -155,4 +157,3 @@ async def get_trend_history(
     """Phase 12: トレンド履歴を取得."""
     history = await trend_history_service.get_topic_history(topic, limit=limit)
     return {"topic": topic, "history": history, "total": len(history)}
-

@@ -36,9 +36,9 @@ _logger = logging.getLogger(__name__)
 class ScoringStrategy(str, Enum):
     """スコアリング戦略."""
 
-    KEYWORD = "keyword"       # キーワードマッチングのみ（高速）
-    SEMANTIC = "semantic"     # セマンティック類似度（高精度）
-    HYBRID = "hybrid"         # キーワード + セマンティック
+    KEYWORD = "keyword"  # キーワードマッチングのみ（高速）
+    SEMANTIC = "semantic"  # セマンティック類似度（高精度）
+    HYBRID = "hybrid"  # キーワード + セマンティック
 
 
 @dataclass
@@ -112,12 +112,48 @@ class ToolRelevanceSelector:
     """
 
     # 日本語・中国語ストップワード
-    _STOP_WORDS = frozenset([
-        "の", "は", "が", "を", "に", "で", "と", "から", "まで", "より",
-        "的", "是", "在", "和", "了", "有", "把", "被", "给", "从",
-        "the", "a", "an", "is", "are", "was", "were", "be", "been",
-        "to", "of", "in", "for", "on", "with", "at", "by", "from",
-    ])
+    _STOP_WORDS = frozenset(
+        [
+            "の",
+            "は",
+            "が",
+            "を",
+            "に",
+            "で",
+            "と",
+            "から",
+            "まで",
+            "より",
+            "的",
+            "是",
+            "在",
+            "和",
+            "了",
+            "有",
+            "把",
+            "被",
+            "给",
+            "从",
+            "the",
+            "a",
+            "an",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "to",
+            "of",
+            "in",
+            "for",
+            "on",
+            "with",
+            "at",
+            "by",
+            "from",
+        ]
+    )
 
     def __init__(
         self,
@@ -189,9 +225,7 @@ class ToolRelevanceSelector:
 
             # セマンティックスコア
             if query_embedding is not None:
-                score.semantic_score = await self._calculate_semantic_score(
-                    query_embedding, tool
-                )
+                score.semantic_score = await self._calculate_semantic_score(query_embedding, tool)
 
             # 安全性スコア
             score.safety_score = self._calculate_safety_score(tool)
@@ -252,7 +286,6 @@ class ToolRelevanceSelector:
 
         # ストップワード除去
         return {w for w in words if w not in self._STOP_WORDS and len(w) > 1}
-
 
     def _calculate_keyword_score(
         self,
@@ -395,9 +428,7 @@ class ToolRelevanceSelector:
 
         # 正規化
         total_weight = (
-            self._config.keyword_weight
-            + self._config.semantic_weight
-            + self._config.safety_weight
+            self._config.keyword_weight + self._config.semantic_weight + self._config.safety_weight
         )
 
         return weighted / total_weight if total_weight > 0 else 0.0

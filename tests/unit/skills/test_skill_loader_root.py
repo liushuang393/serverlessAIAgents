@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 """ルートスキルディレクトリからの読み込みテスト."""
 
-import pytest
 from pathlib import Path
 
 

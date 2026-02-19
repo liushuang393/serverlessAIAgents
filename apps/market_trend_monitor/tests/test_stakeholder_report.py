@@ -7,10 +7,7 @@ Mock LLM を使用（外部依存なし）。
 from __future__ import annotations
 
 import json
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
-
-import pytest
 
 from apps.market_trend_monitor.backend.models import SentimentType, Trend
 from apps.market_trend_monitor.backend.services.stakeholder_report_service import (
@@ -48,12 +45,16 @@ def _make_trend(
 def _make_mock_llm():
     """テスト用 Mock LLM を生成."""
     mock = AsyncMock()
-    mock.chat = AsyncMock(return_value=json.dumps({
-        "summary": "Market shows strong growth in AI-powered migration tools.",
-        "findings": ["AI migration adoption increasing", "COBOL skills declining"],
-        "recommendations": ["Invest in AI tooling", "Build Java expertise"],
-        "risks": ["Skills shortage", "Migration complexity"],
-    }))
+    mock.chat = AsyncMock(
+        return_value=json.dumps(
+            {
+                "summary": "Market shows strong growth in AI-powered migration tools.",
+                "findings": ["AI migration adoption increasing", "COBOL skills declining"],
+                "recommendations": ["Invest in AI tooling", "Build Java expertise"],
+                "risks": ["Skills shortage", "Migration complexity"],
+            }
+        )
+    )
     return mock
 
 
@@ -154,11 +155,15 @@ class TestStakeholderReportService:
     async def test_generate_executive_report_with_signal_service(self) -> None:
         """SignalService統合の経営層レポートテスト."""
         mock_signal = MagicMock()
-        mock_signal.get_dashboard_stats = MagicMock(return_value={
-            "total_signals": 10, "average_score": 3.5,
-        })
+        mock_signal.get_dashboard_stats = MagicMock(
+            return_value={
+                "total_signals": 10,
+                "average_score": 3.5,
+            }
+        )
         service = StakeholderReportService(
-            llm=_make_mock_llm(), signal_service=mock_signal,
+            llm=_make_mock_llm(),
+            signal_service=mock_signal,
         )
         trends = [_make_trend()]
         report = await service.generate_executive_report(trends)
@@ -220,9 +225,13 @@ class TestStakeholderReportService:
         """レポート取得テスト."""
         service = StakeholderReportService(llm=_make_mock_llm())
         report = StakeholderReport(
-            id="r-1", report_type="executive", title="Test",
-            executive_summary="", key_findings=[],
-            recommendations=[], risk_factors=[],
+            id="r-1",
+            report_type="executive",
+            title="Test",
+            executive_summary="",
+            key_findings=[],
+            recommendations=[],
+            risk_factors=[],
         )
         service._reports["r-1"] = report
         assert service.get_report("r-1") is report

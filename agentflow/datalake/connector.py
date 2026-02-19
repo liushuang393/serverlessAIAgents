@@ -174,4 +174,3 @@ class DataConnector(ABC):
         )
         for i in range(0, len(content), chunk_size):
             yield content[i : i + chunk_size]
-

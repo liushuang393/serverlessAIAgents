@@ -7,10 +7,9 @@ Mock embedding/vectordb を使用（外部依存なし）。
 from __future__ import annotations
 
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 from apps.market_trend_monitor.backend.models import Article, SourceType
 from apps.market_trend_monitor.backend.services.query_expansion_service import (
     QueryExpansionService,
@@ -105,7 +104,8 @@ class TestSemanticSearchService:
     async def test_index_articles_batch_empty(self) -> None:
         """空リストの一括インデックス登録テスト."""
         service = SemanticSearchService(
-            embedding=_make_mock_embedding(), vectordb=_make_mock_vectordb(),
+            embedding=_make_mock_embedding(),
+            vectordb=_make_mock_vectordb(),
         )
         service._initialized = True
         ids = await service.index_articles_batch([])
@@ -115,10 +115,12 @@ class TestSemanticSearchService:
         """セマンティック検索テスト."""
         emb = _make_mock_embedding()
         vdb = _make_mock_vectordb()
-        vdb.search = AsyncMock(return_value=[
-            {"id": "a-1", "score": 0.95, "document": "test"},
-            {"id": "a-2", "score": 0.85, "document": "test2"},
-        ])
+        vdb.search = AsyncMock(
+            return_value=[
+                {"id": "a-1", "score": 0.95, "document": "test"},
+                {"id": "a-2", "score": 0.85, "document": "test2"},
+            ]
+        )
         service = SemanticSearchService(embedding=emb, vectordb=vdb)
         service._initialized = True
 
@@ -136,7 +138,8 @@ class TestSemanticSearchService:
         service._initialized = True
 
         results = await service.semantic_search(
-            "test", filter_metadata={"source": "arxiv"},
+            "test",
+            filter_metadata={"source": "arxiv"},
         )
         assert len(results) == 1
         call_kwargs = vdb.search.call_args[1]
@@ -146,11 +149,13 @@ class TestSemanticSearchService:
         """類似記事検索テスト."""
         emb = _make_mock_embedding()
         vdb = _make_mock_vectordb()
-        vdb.search = AsyncMock(return_value=[
-            {"id": "a-1", "score": 1.0},  # 自分自身
-            {"id": "a-2", "score": 0.95},
-            {"id": "a-3", "score": 0.80},
-        ])
+        vdb.search = AsyncMock(
+            return_value=[
+                {"id": "a-1", "score": 1.0},  # 自分自身
+                {"id": "a-2", "score": 0.95},
+                {"id": "a-3", "score": 0.80},
+            ]
+        )
         service = SemanticSearchService(embedding=emb, vectordb=vdb)
         service._initialized = True
 
@@ -165,9 +170,11 @@ class TestSemanticSearchService:
         """類似記事なしテスト."""
         emb = _make_mock_embedding()
         vdb = _make_mock_vectordb()
-        vdb.search = AsyncMock(return_value=[
-            {"id": "a-1", "score": 1.0},  # 自分自身のみ
-        ])
+        vdb.search = AsyncMock(
+            return_value=[
+                {"id": "a-1", "score": 1.0},  # 自分自身のみ
+            ]
+        )
         service = SemanticSearchService(embedding=emb, vectordb=vdb)
         service._initialized = True
 
@@ -178,11 +185,13 @@ class TestSemanticSearchService:
     async def test_deduplicate_batch(self) -> None:
         """バッチ重複排除テスト."""
         emb = AsyncMock()
-        emb.embed_batch = AsyncMock(return_value=[
-            [1.0, 0.0, 0.0, 0.0],  # a-1
-            [0.99, 0.01, 0.0, 0.0],  # a-2: a-1と非常に類似
-            [0.0, 1.0, 0.0, 0.0],  # a-3: a-1とは異なる
-        ])
+        emb.embed_batch = AsyncMock(
+            return_value=[
+                [1.0, 0.0, 0.0, 0.0],  # a-1
+                [0.99, 0.01, 0.0, 0.0],  # a-2: a-1と非常に類似
+                [0.0, 1.0, 0.0, 0.0],  # a-3: a-1とは異なる
+            ]
+        )
         vdb = _make_mock_vectordb()
         service = SemanticSearchService(embedding=emb, vectordb=vdb)
         service._initialized = True
@@ -202,7 +211,8 @@ class TestSemanticSearchService:
     async def test_deduplicate_batch_empty(self) -> None:
         """空リスト重複排除テスト."""
         service = SemanticSearchService(
-            embedding=_make_mock_embedding(), vectordb=_make_mock_vectordb(),
+            embedding=_make_mock_embedding(),
+            vectordb=_make_mock_vectordb(),
         )
         service._initialized = True
         unique = await service.deduplicate_batch([])
@@ -224,11 +234,13 @@ class TestSemanticSearchService:
         """MMR検索テスト."""
         emb = _make_mock_embedding()
         vdb = _make_mock_vectordb()
-        vdb.search = AsyncMock(return_value=[
-            {"id": "a-1", "score": 0.95, "embedding": [1.0, 0.0, 0.0, 0.0]},
-            {"id": "a-2", "score": 0.90, "embedding": [0.9, 0.1, 0.0, 0.0]},
-            {"id": "a-3", "score": 0.80, "embedding": [0.0, 1.0, 0.0, 0.0]},
-        ])
+        vdb.search = AsyncMock(
+            return_value=[
+                {"id": "a-1", "score": 0.95, "embedding": [1.0, 0.0, 0.0, 0.0]},
+                {"id": "a-2", "score": 0.90, "embedding": [0.9, 0.1, 0.0, 0.0]},
+                {"id": "a-3", "score": 0.80, "embedding": [0.0, 1.0, 0.0, 0.0]},
+            ]
+        )
         service = SemanticSearchService(embedding=emb, vectordb=vdb)
         service._initialized = True
 
@@ -249,14 +261,16 @@ class TestSemanticSearchService:
     def test_cosine_similarity_identical(self) -> None:
         """コサイン類似度: 同一ベクトル."""
         result = SemanticSearchService._cosine_similarity(
-            [1.0, 0.0, 0.0], [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
         )
         assert result == pytest.approx(1.0)
 
     def test_cosine_similarity_orthogonal(self) -> None:
         """コサイン類似度: 直交ベクトル."""
         result = SemanticSearchService._cosine_similarity(
-            [1.0, 0.0, 0.0], [0.0, 1.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
         )
         assert result == pytest.approx(0.0)
 
@@ -270,9 +284,13 @@ class TestSemanticSearchService:
 
     def test_cosine_similarity_zero_vector(self) -> None:
         """コサイン類似度: ゼロベクトル."""
-        assert SemanticSearchService._cosine_similarity(
-            [0.0, 0.0], [1.0, 0.0],
-        ) == 0.0
+        assert (
+            SemanticSearchService._cosine_similarity(
+                [0.0, 0.0],
+                [1.0, 0.0],
+            )
+            == 0.0
+        )
 
     async def test_ensure_initialized_lazy(self) -> None:
         """遅延初期化テスト."""

@@ -9,6 +9,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+
 from agentflow.skills.builtin.design_skills.tools.comfyui_client import ComfyUIClient
 
 

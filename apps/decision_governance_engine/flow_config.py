@@ -54,4 +54,3 @@ def register_flow_definition() -> None:
 def setup_result_store() -> None:
     """結果ストアを設定."""
     ResultStoreManager.set_store(MemoryResultStore(max_size=500))
-

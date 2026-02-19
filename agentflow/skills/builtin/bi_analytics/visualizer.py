@@ -280,7 +280,9 @@ class ChartGenerator:
                 "series": [
                     {
                         "type": "pie",
-                        "data": [{"name": l, "value": v} for l, v in zip(labels, values, strict=False)],
+                        "data": [
+                            {"name": l, "value": v} for l, v in zip(labels, values, strict=False)
+                        ],
                     }
                 ],
             },
@@ -297,10 +299,7 @@ class ChartGenerator:
         if not column:
             column = data.columns[0] if data.columns else ""
 
-        values = [
-            row.get(column) for row in data.rows
-            if isinstance(row.get(column), (int, float))
-        ]
+        values = [row.get(column) for row in data.rows if isinstance(row.get(column), (int, float))]
 
         if not values:
             return Chart(chart_type=ChartType.HISTOGRAM, title=title, data={})
@@ -350,7 +349,7 @@ class ChartGenerator:
             title=title or "Data Table",
             data={
                 "columns": data.columns,
-                "rows": data.to_dict()[:kwargs.get("max_rows", 100)],
+                "rows": data.to_dict()[: kwargs.get("max_rows", 100)],
             },
         )
 

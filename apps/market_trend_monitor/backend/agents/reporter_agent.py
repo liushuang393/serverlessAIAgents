@@ -130,7 +130,11 @@ class ReporterAgent(ResilientAgent[ReporterInput, ReporterOutput]):
 
     def _build_empty_report(self, summary: str, period: str) -> Report:
         """トレンド未検出時の軽量レポートを生成."""
-        content = summary.strip() if summary.strip() else "今回の収集では有効なトレンドを検出できませんでした。"
+        content = (
+            summary.strip()
+            if summary.strip()
+            else "今回の収集では有効なトレンドを検出できませんでした。"
+        )
         section = ReportSection(
             title="収集結果サマリー",
             content=content,
@@ -269,10 +273,12 @@ class ReporterAgent(ResilientAgent[ReporterInput, ReporterOutput]):
 
     async def _generate_trends_section(self, trends: list[Trend]) -> str:
         """LLM を使用してトレンドセクションを生成."""
-        trends_text = "\n".join([
-            f"{i+1}. {t.topic} (スコア: {t.score:.2f}, 記事数: {t.articles_count}, 成長: {self._format_growth_label(t)})"
-            for i, t in enumerate(trends[:5])
-        ])
+        trends_text = "\n".join(
+            [
+                f"{i + 1}. {t.topic} (スコア: {t.score:.2f}, 記事数: {t.articles_count}, 成長: {self._format_growth_label(t)})"
+                for i, t in enumerate(trends[:5])
+            ]
+        )
 
         prompt = f"""以下のトレンドを日本語で分析し、Markdownで出力してください。
 制約:
@@ -304,12 +310,12 @@ Trends:
 - 120-180文字
 
 Growing trends ({len(growing)}):
-{', '.join([f"{t.topic} (+{t.growth_rate:.1%})" for t in growing[:5]])}
+{", ".join([f"{t.topic} (+{t.growth_rate:.1%})" for t in growing[:5]])}
 
 Declining trends ({len(declining)}):
-{', '.join([f"{t.topic} ({t.growth_rate:.1%})" for t in declining[:5]])}
+{", ".join([f"{t.topic} ({t.growth_rate:.1%})" for t in declining[:5]])}
 New topics ({len(new_topics)}):
-{', '.join([t.topic for t in new_topics[:5]])}
+{", ".join([t.topic for t in new_topics[:5]])}
 """
 
         try:
@@ -321,7 +327,12 @@ New topics ({len(new_topics)}):
 
     def _format_trends(self, trends: list[Trend]) -> str:
         """トレンドをフォーマット（フォールバック用）."""
-        lines = ["## 📈 主要トレンド", "", "| トピック | スコア | 記事数 | 成長 |", "|---|---:|---:|---|"]
+        lines = [
+            "## 📈 主要トレンド",
+            "",
+            "| トピック | スコア | 記事数 | 成長 |",
+            "|---|---:|---:|---|",
+        ]
         for i, trend in enumerate(trends[:5], 1):
             lines.append(
                 f"| {i}. {trend.topic} | {trend.score:.2f} | {trend.articles_count} | "
@@ -361,7 +372,9 @@ New topics ({len(new_topics)}):
             if top
             else "現時点で主要トレンドは未検出です。"
         )
-        base_summary = summary.strip() if summary.strip() else "収集データから市場動向を要約しました。"
+        base_summary = (
+            summary.strip() if summary.strip() else "収集データから市場動向を要約しました。"
+        )
         return "\n".join(
             [
                 "## 📌 エグゼクティブサマリー",

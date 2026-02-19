@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """Test Synthesis Agent - Golden Master 生成."""
 
 from __future__ import annotations
 
 from typing import Any
-
-from agentflow import agent
 
 from apps.code_migration_assistant.agents.prompts import TEST_SYNTHESIS_PROMPT
 from apps.code_migration_assistant.workflow.models import (
@@ -13,6 +10,8 @@ from apps.code_migration_assistant.workflow.models import (
     UnknownItem,
     build_meta,
 )
+
+from agentflow import agent
 
 
 @agent

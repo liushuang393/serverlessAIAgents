@@ -4,16 +4,16 @@ Pydantic モデル定義。
 """
 
 from apps.platform.schemas.app_config_schemas import (
-    AgentInfo,
     AgentBlueprintConfig,
-    AuthContractConfig,
+    AgentInfo,
     AppConfig,
+    AuthContractConfig,
     BlueprintConfig,
     ContractsConfig,
     DependenciesConfig,
     EntryPointsConfig,
-    PortsConfig,
     PluginBindingConfig,
+    PortsConfig,
     RAGContractConfig,
     ReleaseContractConfig,
     SkillsContractConfig,
@@ -37,15 +37,10 @@ from apps.platform.schemas.gallery_schemas import (
     GallerySearchRequest,
     GallerySearchResponse,
 )
-from apps.platform.schemas.publish_schemas import (
-    PublishRequest,
-    PublishResponse,
-    PublishStatus,
-    PublishTarget,
-)
-from apps.platform.schemas.rag_schemas import (
-    RAGConfigPatchRequest,
-    RAGDataSourceInput,
+from apps.platform.schemas.plugin_manifest_schemas import (
+    PluginCompatibility,
+    PluginManifest,
+    PluginSignature,
 )
 from apps.platform.schemas.provisioning_schemas import (
     AgentBlueprintInput,
@@ -56,6 +51,16 @@ from apps.platform.schemas.provisioning_schemas import (
     PortConflictItem,
     PortConflictReport,
 )
+from apps.platform.schemas.publish_schemas import (
+    PublishRequest,
+    PublishResponse,
+    PublishStatus,
+    PublishTarget,
+)
+from apps.platform.schemas.rag_schemas import (
+    RAGConfigPatchRequest,
+    RAGDataSourceInput,
+)
 from apps.platform.schemas.tenant_invitation_schemas import (
     TenantInvitationChallengeRequest,
     TenantInvitationConsumeRequest,
@@ -63,11 +68,6 @@ from apps.platform.schemas.tenant_invitation_schemas import (
     TenantInvitationCreateRequest,
     TenantInvitationCreateResponse,
     TenantInvitationStatusResponse,
-)
-from apps.platform.schemas.plugin_manifest_schemas import (
-    PluginCompatibility,
-    PluginManifest,
-    PluginSignature,
 )
 
 

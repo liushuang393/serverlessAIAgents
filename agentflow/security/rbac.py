@@ -341,4 +341,3 @@ class RBACManager:
             },
             "user_roles": dict(self._user_roles),
         }
-

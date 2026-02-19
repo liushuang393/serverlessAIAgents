@@ -81,10 +81,10 @@ def auto_adapt(
                 except Exception:
                     # 旧形式の agent.yaml など、スキーマ検証に失敗した場合はスキップ
                     # ログ出力は SchemaLoader 内で行われる
-                    self._metadata = None  # type: ignore
+                    self._metadata = None
             else:
                 # メタデータファイルが見つからない場合、空のメタデータを作成 (テスト用)
-                self._metadata = None  # type: ignore
+                self._metadata = None
 
             # プロトコルアダプターを生成
             if self._metadata:

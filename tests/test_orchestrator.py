@@ -1,32 +1,29 @@
-# -*- coding: utf-8 -*-
 """Orchestrator のテスト."""
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
-from agentflow.orchestration.planner import (
-    StepType,
-    StepStatus,
-    PlanStep,
-    ExecutionPlan,
-    PlannerAgent,
-)
 from agentflow.orchestration.executor import (
-    StepResult,
     ExecutorAgent,
+    StepResult,
 )
 from agentflow.orchestration.monitor import (
-    MonitorEventType,
     AlertSeverity,
-    MonitorEvent,
     MonitorAgent,
+    MonitorEvent,
+    MonitorEventType,
 )
 from agentflow.orchestration.orchestrator import (
-    ExecutionPhase,
-    ExecutionStatus,
     ExecutionContext,
+    ExecutionStatus,
     Orchestrator,
     OrchestratorConfig,
+)
+from agentflow.orchestration.planner import (
+    ExecutionPlan,
+    PlannerAgent,
+    PlanStep,
+    StepStatus,
+    StepType,
 )
 
 
@@ -217,14 +214,18 @@ class TestMonitorEvent:
 
 
 class TestMonitorAgent:
-    """MonitorAgent のテスト."""
+    """MonitorAgent のテスト。
+
+    start_monitoring は asyncio.create_task を使うため、各テストを async にする。
+    """
 
     @pytest.fixture
     def monitor(self) -> MonitorAgent:
         """監視Agentを作成."""
         return MonitorAgent()
 
-    def test_start_monitoring(self, monitor: MonitorAgent) -> None:
+    @pytest.mark.asyncio
+    async def test_start_monitoring(self, monitor: MonitorAgent) -> None:
         """監視開始."""
         monitor.start_monitoring("exec-123")
 
@@ -232,7 +233,8 @@ class TestMonitorAgent:
         assert state is not None
         assert state.execution_id == "exec-123"
 
-    def test_stop_monitoring(self, monitor: MonitorAgent) -> None:
+    @pytest.mark.asyncio
+    async def test_stop_monitoring(self, monitor: MonitorAgent) -> None:
         """監視停止."""
         monitor.start_monitoring("exec-123")
         monitor.stop_monitoring("exec-123")
@@ -240,7 +242,8 @@ class TestMonitorAgent:
         state = monitor.get_execution_state("exec-123")
         assert state is None
 
-    def test_report_progress(self, monitor: MonitorAgent) -> None:
+    @pytest.mark.asyncio
+    async def test_report_progress(self, monitor: MonitorAgent) -> None:
         """進捗報告."""
         monitor.start_monitoring("exec-123")
         monitor.report_progress("exec-123", 0.5, "処理中")
@@ -248,7 +251,8 @@ class TestMonitorAgent:
         state = monitor.get_execution_state("exec-123")
         assert state.progress == 0.5
 
-    def test_report_step_completed(self, monitor: MonitorAgent) -> None:
+    @pytest.mark.asyncio
+    async def test_report_step_completed(self, monitor: MonitorAgent) -> None:
         """ステップ完了報告."""
         monitor.start_monitoring("exec-123")
         monitor.report_step_completed("exec-123", "step-1", "テストステップ", 100.0)
@@ -257,7 +261,8 @@ class TestMonitorAgent:
         assert state.completed_steps == 1
         assert state.consecutive_failures == 0
 
-    def test_report_step_failed(self, monitor: MonitorAgent) -> None:
+    @pytest.mark.asyncio
+    async def test_report_step_failed(self, monitor: MonitorAgent) -> None:
         """ステップ失敗報告."""
         monitor.start_monitoring("exec-123")
         monitor.report_step_failed("exec-123", "step-1", "テストステップ", "エラー")

@@ -235,40 +235,46 @@ Skill 名: {spec.name}
 
         # トリガーパターンごとのテスト
         for i, pattern in enumerate(spec.trigger_patterns[:3]):
-            tests.append(TestCase(
-                name=f"test_{spec.name}_trigger_{i+1}",
-                description=f"Test trigger pattern: {pattern}",
-                input_data={"query": pattern},
-                expected_output={"matched": True},
-                assertions=[
-                    "result is not None",
-                    "result.get('matched', False) == True",
-                ],
-                tags=["trigger", "pattern"],
-            ))
+            tests.append(
+                TestCase(
+                    name=f"test_{spec.name}_trigger_{i + 1}",
+                    description=f"Test trigger pattern: {pattern}",
+                    input_data={"query": pattern},
+                    expected_output={"matched": True},
+                    assertions=[
+                        "result is not None",
+                        "result.get('matched', False) == True",
+                    ],
+                    tags=["trigger", "pattern"],
+                )
+            )
 
         # 例に基づくテスト
         for i, example in enumerate(spec.examples[:2]):
-            tests.append(TestCase(
-                name=f"test_{spec.name}_example_{i+1}",
-                description=f"Test example: {example[:50]}...",
-                input_data={"query": example},
-                expected_output={},
-                assertions=[
-                    "result is not None",
-                ],
-                tags=["example"],
-            ))
+            tests.append(
+                TestCase(
+                    name=f"test_{spec.name}_example_{i + 1}",
+                    description=f"Test example: {example[:50]}...",
+                    input_data={"query": example},
+                    expected_output={},
+                    assertions=[
+                        "result is not None",
+                    ],
+                    tags=["example"],
+                )
+            )
 
         # エッジケース
-        tests.append(TestCase(
-            name=f"test_{spec.name}_no_match",
-            description="Test with non-matching input",
-            input_data={"query": "completely unrelated random text xyz123"},
-            expected_output={"matched": False},
-            assertions=[],
-            tags=["edge", "no_match"],
-        ))
+        tests.append(
+            TestCase(
+                name=f"test_{spec.name}_no_match",
+                description="Test with non-matching input",
+                input_data={"query": "completely unrelated random text xyz123"},
+                expected_output={"matched": False},
+                assertions=[],
+                tags=["edge", "no_match"],
+            )
+        )
 
         return tests
 
@@ -291,14 +297,14 @@ Skill 名: {spec.name}
 
         for test in tests:
             import time
+
             start = time.time()
 
             try:
                 # Skill マッチングをシミュレート
                 query = test.input_data.get("query", "")
                 matched = any(
-                    pattern.lower() in query.lower()
-                    for pattern in skill.trigger_patterns
+                    pattern.lower() in query.lower() for pattern in skill.trigger_patterns
                 )
 
                 passed = True
@@ -316,21 +322,25 @@ Skill 名: {spec.name}
                 duration = (time.time() - start) * 1000
                 total_duration += duration
 
-                results.append(TestResult(
-                    test_name=test.name,
-                    passed=passed,
-                    duration_ms=duration,
-                    output={"matched": matched},
-                    assertions_passed=len(test.assertions) if passed else 0,
-                    assertions_failed=0 if passed else len(test.assertions),
-                ))
+                results.append(
+                    TestResult(
+                        test_name=test.name,
+                        passed=passed,
+                        duration_ms=duration,
+                        output={"matched": matched},
+                        assertions_passed=len(test.assertions) if passed else 0,
+                        assertions_failed=0 if passed else len(test.assertions),
+                    )
+                )
 
             except Exception as e:
-                results.append(TestResult(
-                    test_name=test.name,
-                    passed=False,
-                    error=str(e),
-                ))
+                results.append(
+                    TestResult(
+                        test_name=test.name,
+                        passed=False,
+                        error=str(e),
+                    )
+                )
 
         passed_count = sum(1 for r in results if r.passed)
 

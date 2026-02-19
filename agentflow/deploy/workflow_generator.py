@@ -212,9 +212,7 @@ class WorkflowCodeGenerator:
 
         for node in ordered_nodes:
             config_str = json.dumps(node.config, ensure_ascii=False, indent=8)
-            lines.append(
-                f"    .then({node.agent_type}, config={config_str})  # {node.id}"
-            )
+            lines.append(f"    .then({node.agent_type}, config={config_str})  # {node.id}")
 
         lines.append("    .build()")
 
@@ -346,7 +344,7 @@ async def stream_workflow(input_data: WorkflowInput) -> StreamingResponse:
                 yield f"data: {{json.dumps(event, ensure_ascii=False)}}\\n\\n"
             yield "data: {{\\"type\\": \\"complete\\"}}\\n\\n"
         except Exception as e:
-            yield f"data: {{\\"type\\": \\"error\\", \\"message\\": \\"{e!s}\\"}}\\n\\n"
+            yield f"data: {{\\"type\\": \\"error\\", \\"message\\": \\"{{e!s}}\\"}}\\n\\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
@@ -511,9 +509,7 @@ dependencies = [
             "routes": [
                 {"src": "/(.*)", "dest": "app.py"},
             ],
-            "functions": {
-                "app.py": {"memory": 1024, "maxDuration": 30}
-            },
+            "functions": {"app.py": {"memory": 1024, "maxDuration": 30}},
         }
         files["vercel.json"] = json.dumps(vercel_config, indent=2)
 

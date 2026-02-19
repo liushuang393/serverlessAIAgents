@@ -1,5 +1,6 @@
 from agentflow.protocols.a2a_card import AgentCard, AgentSkill
 
+
 # 1. Legacy Analysis Agent
 legacy_analysis_card = AgentCard(
     name="legacy-analysis-agent",
@@ -11,21 +12,18 @@ legacy_analysis_card = AgentCard(
             description="Parse and analyze source code.",
             input_schema={
                 "type": "object",
-                "properties": {
-                    "source_code": {"type": "string"},
-                    "task_spec": {"type": "object"}
-                },
-                "required": ["source_code"]
+                "properties": {"source_code": {"type": "string"}, "task_spec": {"type": "object"}},
+                "required": ["source_code"],
             },
             output_schema={
                 "type": "object",
                 "properties": {
                     "programs": {"type": "array"},
-                    "data_structures": {"type": "object"}
-                }
-            }
+                    "data_structures": {"type": "object"},
+                },
+            },
         )
-    ]
+    ],
 )
 
 # 2. Migration Design Agent
@@ -39,20 +37,18 @@ migration_design_card = AgentCard(
             description="Generate migration design and mapping rules.",
             input_schema={
                 "type": "object",
-                "properties": {
-                    "legacy_analysis": {"type": "object"}
-                },
-                "required": ["legacy_analysis"]
+                "properties": {"legacy_analysis": {"type": "object"}},
+                "required": ["legacy_analysis"],
             },
             output_schema={
                 "type": "object",
                 "properties": {
                     "package_structure": {"type": "array"},
-                    "mapping_rules": {"type": "array"}
-                }
-            }
+                    "mapping_rules": {"type": "array"},
+                },
+            },
         )
-    ]
+    ],
 )
 
 # 3. Code Transformation Agent
@@ -68,18 +64,13 @@ code_transformation_card = AgentCard(
                 "type": "object",
                 "properties": {
                     "source_code": {"type": "string"},
-                    "migration_design": {"type": "object"}
+                    "migration_design": {"type": "object"},
                 },
-                "required": ["source_code", "migration_design"]
+                "required": ["source_code", "migration_design"],
             },
-            output_schema={
-                "type": "object",
-                "properties": {
-                    "target_code": {"type": "string"}
-                }
-            }
+            output_schema={"type": "object", "properties": {"target_code": {"type": "string"}}},
         )
-    ]
+    ],
 )
 
 # 4. Test Synthesis Agent
@@ -95,11 +86,11 @@ test_synthesis_card = AgentCard(
                 "type": "object",
                 "properties": {
                     "legacy_analysis": {"type": "object"},
-                    "expected_outputs": {"type": "object"}
-                }
-            }
+                    "expected_outputs": {"type": "object"},
+                },
+            },
         )
-    ]
+    ],
 )
 
 # 5. Differential Verification Agent
@@ -115,11 +106,11 @@ differential_verification_card = AgentCard(
                 "type": "object",
                 "properties": {
                     "transformation": {"type": "object"},
-                    "test_synthesis": {"type": "object"}
-                }
-            }
+                    "test_synthesis": {"type": "object"},
+                },
+            },
         )
-    ]
+    ],
 )
 
 # 6. Quality Gate Agent
@@ -135,11 +126,11 @@ quality_gate_card = AgentCard(
                 "type": "object",
                 "properties": {
                     "differential": {"type": "object"},
-                    "known_legacy_issues": {"type": "array"}
-                }
-            }
+                    "known_legacy_issues": {"type": "array"},
+                },
+            },
         )
-    ]
+    ],
 )
 
 # 7. Limited Fixer Agent
@@ -155,11 +146,11 @@ limited_fixer_card = AgentCard(
                 "type": "object",
                 "properties": {
                     "quality_gate": {"type": "object"},
-                    "transformation": {"type": "object"}
-                }
-            }
+                    "transformation": {"type": "object"},
+                },
+            },
         )
-    ]
+    ],
 )
 # 8. Compliance Reporter Agent
 compliance_reporter_card = AgentCard(
@@ -177,10 +168,10 @@ compliance_reporter_card = AgentCard(
                     "analysis": {"type": "object"},
                     "design": {"type": "object"},
                     "transformation": {"type": "object"},
-                    "quality": {"type": "object"}
+                    "quality": {"type": "object"},
                 },
-                "required": ["task_id", "analysis", "design", "quality"]
-            }
+                "required": ["task_id", "analysis", "design", "quality"],
+            },
         )
-    ]
+    ],
 )

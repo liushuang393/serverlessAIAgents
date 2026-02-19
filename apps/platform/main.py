@@ -47,11 +47,11 @@ from apps.platform.routers.rag import init_rag_services
 from apps.platform.routers.skills import init_skill_services
 from apps.platform.routers.studios import init_studio_services
 from apps.platform.routers.tenant_invitations import init_tenant_invitation_services
-from apps.platform.services.app_scaffolder import AppScaffolderService
 from apps.platform.schemas.publish_schemas import PublishRequest, PublishTarget
 from apps.platform.services.agent_aggregator import AgentAggregatorService
 from apps.platform.services.app_discovery import AppDiscoveryService
 from apps.platform.services.app_lifecycle import AppLifecycleManager
+from apps.platform.services.app_scaffolder import AppScaffolderService
 from apps.platform.services.mcp_registry import MCPRegistryService
 from apps.platform.services.port_allocator import PortAllocatorService
 from apps.platform.services.rag_overview import RAGOverviewService
@@ -60,6 +60,7 @@ from apps.platform.services.studio_service import StudioService
 from apps.platform.services.tenant_invitation import TenantInvitationService
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
 
 # --- app_config.json からポート設定を読み取る（単一定義元） ---
 _CONFIG_PATH = Path(__file__).resolve().parent / "app_config.json"
@@ -335,7 +336,8 @@ def main() -> None:
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="詳細ログを出力",
     )
@@ -397,12 +399,14 @@ def main() -> None:
         asyncio.run(cli_search(args.query, args.limit))
 
     elif args.command == "publish":
-        asyncio.run(cli_publish(
-            args.source,
-            args.target,
-            args.name,
-            args.gallery,
-        ))
+        asyncio.run(
+            cli_publish(
+                args.source,
+                args.target,
+                args.name,
+                args.gallery,
+            )
+        )
 
     elif args.command == "components":
         if args.subcommand == "list":

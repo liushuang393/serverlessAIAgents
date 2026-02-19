@@ -96,7 +96,9 @@ class MemoryManager:
         # 重要度自動調整エンジン（オプション）
         self._enable_importance_adjustment = enable_importance_adjustment
         self._importance_adjuster = (
-            ImportanceAdjuster(decay_constant, access_boost_factor) if enable_importance_adjustment else None
+            ImportanceAdjuster(decay_constant, access_boost_factor)
+            if enable_importance_adjustment
+            else None
         )
 
         # 自動蒸留エンジン（Evo-Memory）
@@ -304,21 +306,17 @@ class MemoryManager:
 
         # 対象記憶を取得
         if memory_ids:
-            memories = [
-                m for m in self._long_term._memories.values()
-                if m.id in memory_ids
-            ]
+            memories = [m for m in self._long_term._memories.values() if m.id in memory_ids]
         elif topic:
             memories = self._long_term.retrieve(topic, limit=20)
         else:
             # 最近アクセスした記憶を対象
             recent_ids = sorted(
-                self._importance_adjuster._last_access.items(),
-                key=lambda x: x[1],
-                reverse=True
+                self._importance_adjuster._last_access.items(), key=lambda x: x[1], reverse=True
             )[:10]
             memories = [
-                m for m in self._long_term._memories.values()
+                m
+                for m in self._long_term._memories.values()
                 if m.id in [id for id, _ in recent_ids]
             ]
 
@@ -402,4 +400,3 @@ class MemoryManager:
             self._logger.info(f"忘却完了: {len(forgettable_ids)}件の記憶を削除")
 
         return len(forgettable_ids)
-

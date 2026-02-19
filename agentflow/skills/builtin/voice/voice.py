@@ -148,9 +148,7 @@ class VoiceSkill:
             data["prompt"] = prompt
 
         try:
-            response = await self._http_client.post(
-                url, headers=headers, files=files, data=data
-            )
+            response = await self._http_client.post(url, headers=headers, files=files, data=data)
             response.raise_for_status()
 
             if response_format == "text":
@@ -242,9 +240,7 @@ class VoiceSkill:
             data["prompt"] = prompt
 
         try:
-            response = await self._http_client.post(
-                url, headers=headers, files=files, data=data
-            )
+            response = await self._http_client.post(url, headers=headers, files=files, data=data)
             response.raise_for_status()
             return response.json().get("text", "")
 
@@ -375,4 +371,3 @@ class VoiceSkill:
     async def close(self) -> None:
         """HTTP クライアントをクローズ."""
         await self._http_client.aclose()
-

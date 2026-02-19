@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """human_review ルーターの単体テスト."""
 
 import pytest
-
 from apps.decision_governance_engine.routers import human_review as human_review_router
 from apps.decision_governance_engine.schemas.output_schemas import (
     DecisionReport,

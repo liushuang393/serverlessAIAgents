@@ -57,7 +57,9 @@ class AgentDefinition(BaseModel):
     icon: str = Field(default="○", description="表示アイコン（絵文字）")
     description: str = Field(default="", description="Agent説明")
     class_name: str = Field(default="", description="Agent実装クラス名")
-    module_path: str = Field(default="", description="Agentモジュールパス（省略時はclass_nameから推測）")
+    module_path: str = Field(
+        default="", description="Agentモジュールパス（省略時はclass_nameから推測）"
+    )
 
     # Pipeline 設定
     is_gate: bool = Field(default=False, description="ゲートAgent（拒否時に早期終了）")
@@ -72,8 +74,7 @@ class AgentDefinition(BaseModel):
 
     # 進捗メッセージ
     progress_messages: list[tuple[int, str]] = Field(
-        default_factory=list,
-        description="進捗メッセージ [(progress%, message), ...]"
+        default_factory=list, description="進捗メッセージ [(progress%, message), ...]"
     )
 
     def to_dict(self) -> dict[str, Any]:
@@ -119,13 +120,8 @@ class FlowDefinition(BaseModel):
         try:
             import yaml
         except ImportError as e:
-            msg = (
-                "PyYAML is required for YAML loading. "
-                "Install it with: pip install pyyaml"
-            )
-            raise ImportError(
-                msg
-            ) from e
+            msg = "PyYAML is required for YAML loading. Install it with: pip install pyyaml"
+            raise ImportError(msg) from e
 
         path = Path(yaml_path)
         if not path.exists():
@@ -148,10 +144,7 @@ class FlowDefinition(BaseModel):
             FlowDefinition インスタンス
         """
         # agents リストを AgentDefinition に変換
-        agents = [
-            AgentDefinition(**agent_data)
-            for agent_data in data.get("agents", [])
-        ]
+        agents = [AgentDefinition(**agent_data) for agent_data in data.get("agents", [])]
 
         return cls(
             flow_id=data.get("flow_id", ""),
@@ -206,6 +199,7 @@ class FlowDefinition(BaseModel):
         if not module_path:
             # class_name から推測（CamelCase → snake_case）
             import re
+
             snake_name = re.sub(r"(?<!^)(?=[A-Z])", "_", agent_def.class_name).lower()
             # デフォルトは agentflow.agents.{snake_name}
             module_path = f"agentflow.agents.{snake_name}"
@@ -323,13 +317,8 @@ class FlowDefinition(BaseModel):
         try:
             import yaml
         except ImportError:
-            msg = (
-                "PyYAML is required for YAML export. "
-                "Install it with: pip install pyyaml"
-            )
-            raise ImportError(
-                msg
-            )
+            msg = "PyYAML is required for YAML export. Install it with: pip install pyyaml"
+            raise ImportError(msg)
 
         return yaml.dump(
             self.model_dump(),
@@ -373,18 +362,22 @@ class FlowDefinition(BaseModel):
         ]
 
         for agent in self.agents:
-            lines.append(f"  {{ id: '{agent.id}', name: '{agent.name}', label: '{agent.label}', icon: '{agent.icon}' }},")
+            lines.append(
+                f"  {{ id: '{agent.id}', name: '{agent.name}', label: '{agent.label}', icon: '{agent.icon}' }},"
+            )
 
-        lines.extend([
-            "];",
-            "",
-            "/** Flow 情報 */",
-            "export const FLOW_INFO = {",
-            f"  flowId: '{self.flow_id}',",
-            f"  name: '{self.name}',",
-            f"  version: '{self.version}',",
-            "} as const;",
-        ])
+        lines.extend(
+            [
+                "];",
+                "",
+                "/** Flow 情報 */",
+                "export const FLOW_INFO = {",
+                f"  flowId: '{self.flow_id}',",
+                f"  name: '{self.name}',",
+                f"  version: '{self.version}',",
+                "} as const;",
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -562,4 +555,3 @@ class FlowDefinitionRegistry:
             self._logger.info(f"Saved TypeScript definition to {output_path}")
             return True
         return False
-

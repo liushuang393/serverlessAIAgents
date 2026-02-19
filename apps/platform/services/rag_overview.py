@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RAG Overview Service — RAG 機能概要・App別設定管理."""
 
 from __future__ import annotations
@@ -60,10 +59,22 @@ _RERANKERS: list[dict[str, str]] = [
 ]
 
 _RETRIEVAL_METHODS: list[dict[str, str]] = [
-    {"name": "hybrid", "label": "Hybrid", "description": "ベクトル + キーワードのハイブリッド検索。"},
+    {
+        "name": "hybrid",
+        "label": "Hybrid",
+        "description": "ベクトル + キーワードのハイブリッド検索。",
+    },
     {"name": "vector", "label": "Vector", "description": "ベクトル類似検索のみ。低遅延。"},
-    {"name": "keyword", "label": "Keyword", "description": "キーワード/BM25 中心。説明可能性重視。"},
-    {"name": "multi_query", "label": "Multi Query", "description": "クエリ拡張で取りこぼしを抑える方式。"},
+    {
+        "name": "keyword",
+        "label": "Keyword",
+        "description": "キーワード/BM25 中心。説明可能性重視。",
+    },
+    {
+        "name": "multi_query",
+        "label": "Multi Query",
+        "description": "クエリ拡張で取りこぼしを抑える方式。",
+    },
 ]
 
 _RAG_PATTERNS: list[dict[str, Any]] = [
@@ -324,15 +335,27 @@ class RAGOverviewService:
         rag_contract = app_config.contracts.rag
         services = app_config.services if isinstance(app_config.services, dict) else {}
         rag_service = services.get("rag", {}) if isinstance(services.get("rag"), dict) else {}
-        vector_service = services.get("vector_db", {}) if isinstance(services.get("vector_db"), dict) else {}
+        vector_service = (
+            services.get("vector_db", {}) if isinstance(services.get("vector_db"), dict) else {}
+        )
 
-        chunking = rag_service.get("chunking", {}) if isinstance(rag_service.get("chunking"), dict) else {}
-        retrieval = rag_service.get("retrieval", {}) if isinstance(rag_service.get("retrieval"), dict) else {}
+        chunking = (
+            rag_service.get("chunking", {}) if isinstance(rag_service.get("chunking"), dict) else {}
+        )
+        retrieval = (
+            rag_service.get("retrieval", {})
+            if isinstance(rag_service.get("retrieval"), dict)
+            else {}
+        )
         service_collections = rag_service.get("collections", [])
         collection = (
             rag_contract.collections[0]
             if rag_contract.collections
-            else (service_collections[0] if isinstance(service_collections, list) and service_collections else vector_service.get("collection"))
+            else (
+                service_collections[0]
+                if isinstance(service_collections, list) and service_collections
+                else vector_service.get("collection")
+            )
         )
         has_rag_agent = any(
             "rag" in capability.lower()

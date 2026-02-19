@@ -48,13 +48,18 @@ class MarketplaceClient:
         """
         self.marketplace_url = marketplace_url
 
+        # ディレクトリ作成は install() などの実際の使用時まで遅延する
+        # これにより初期化時のパーミッションエラーを防ぐ
         if install_dir is None:
             install_dir = Path.home() / ".agentflow" / "agents"
         self.install_dir = install_dir
-        self.install_dir.mkdir(parents=True, exist_ok=True)
 
         self.registry = registry or LocalRegistry()
         self.client = httpx.Client(timeout=30.0)
+
+    def _ensure_install_dir(self) -> None:
+        """インストールディレクトリが存在することを確保する（遅延作成）。"""
+        self.install_dir.mkdir(parents=True, exist_ok=True)
 
     def search(
         self,

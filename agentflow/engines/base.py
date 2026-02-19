@@ -24,9 +24,9 @@ from typing import TYPE_CHECKING, Any, TypeVar, cast
 from pydantic import BaseModel
 
 from agentflow.run import (
-    LightningTracer,
     LightningRuntimeConfig,
     LightningStore,
+    LightningTracer,
     LightningTrainingRequest,
     LightningTrainingResult,
     MemoryRunStore,
@@ -470,7 +470,7 @@ class BaseEngine(ABC):
 
         try:
             reward = evaluator(result)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._logger.warning("reward_evaluator failed: %s", exc)
             return
         if reward is None:

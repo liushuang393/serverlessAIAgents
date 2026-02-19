@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """App Lifecycle Manager — App のヘルスチェック・起動/停止管理.
 
 各 App の稼働状態を HTTP ヘルスチェックで確認し、
@@ -24,7 +23,6 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-
 from apps.platform.schemas.app_config_schemas import AppConfig
 
 
@@ -35,7 +33,15 @@ _HEALTH_TIMEOUT = 2.0
 _ACTION_TIMEOUT = 300.0
 _HEALTH_FALLBACK_PATHS = ("/api/health", "/health", "/healthz")
 _HEALTHY_PAYLOAD_STATES = {"ok", "healthy", "up", "ready", "pass"}
-_NON_HEALTHY_PAYLOAD_STATES = {"error", "failed", "fail", "down", "degraded", "starting", "initializing"}
+_NON_HEALTHY_PAYLOAD_STATES = {
+    "error",
+    "failed",
+    "fail",
+    "down",
+    "degraded",
+    "starting",
+    "initializing",
+}
 _DOCKER_COMPOSE_FILES = ("docker-compose.yml", "compose.yml")
 _DOCKER_COMPOSE_DEV_FILES = ("docker-compose.dev.yml", "compose.override.yml")
 _BACKEND_SERVICE_HINTS = ("backend", "api", "server")
@@ -269,8 +275,7 @@ class AppLifecycleManager:
                             and payload_state in _NON_HEALTHY_PAYLOAD_STATES
                         )
                         payload_marked_good = (
-                            payload_state is not None
-                            and payload_state in _HEALTHY_PAYLOAD_STATES
+                            payload_state is not None and payload_state in _HEALTHY_PAYLOAD_STATES
                         )
 
                         # 2xx かつ payload が明示的に bad でない場合のみ healthy
@@ -294,7 +299,9 @@ class AppLifecycleManager:
                         if is_2xx and not payload_marked_good and payload_state is None:
                             attempt["error"] = "2xx response without explicit status field"
                         elif payload_marked_bad:
-                            attempt["error"] = f"payload indicates non-healthy state: {payload_state}"
+                            attempt["error"] = (
+                                f"payload indicates non-healthy state: {payload_state}"
+                            )
                         else:
                             attempt["error"] = f"HTTP {response.status_code}"
                         last_error = attempt["error"]
@@ -310,10 +317,10 @@ class AppLifecycleManager:
                         if port is not None:
                             unreachable_ports.add(port)
                         attempts.append({"url": url, "error": "timeout", "message": str(exc)})
-                    except Exception as exc:  # noqa: BLE001
+                    except Exception as exc:
                         last_error = str(exc)
                         attempts.append({"url": url, "error": "exception", "message": str(exc)})
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             last_error = str(exc)
             attempts.append({"url": "client_setup", "error": "exception", "message": str(exc)})
 
@@ -452,14 +459,16 @@ class AppLifecycleManager:
                 )
                 await proc.communicate()
                 results.append(f"backend: {backend_cmd}")
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 errors.append(f"backend error: {exc}")
                 _logger.exception("[%s] バックエンド起動失敗", config.name)
 
         # フロントエンド起動（バックグラウンド）
         if frontend_cmd:
             try:
-                full_cmd = f"nohup bash -lc '{frontend_cmd}' > /tmp/{config.name}_frontend.log 2>&1 &"
+                full_cmd = (
+                    f"nohup bash -lc '{frontend_cmd}' > /tmp/{config.name}_frontend.log 2>&1 &"
+                )
                 _logger.info("[%s] フロントエンド起動: %s", config.name, frontend_cmd)
                 proc = await asyncio.create_subprocess_shell(
                     full_cmd,
@@ -469,7 +478,7 @@ class AppLifecycleManager:
                 )
                 await proc.communicate()
                 results.append(f"frontend: {frontend_cmd}")
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 errors.append(f"frontend error: {exc}")
                 _logger.exception("[%s] フロントエンド起動失敗", config.name)
 
@@ -500,7 +509,9 @@ class AppLifecycleManager:
         """docker compose を実行して App 操作を行う."""
         _logger.info(
             "[%s] %s 開始 (config_path=%s)",
-            config.name, action, config_path,
+            config.name,
+            action,
+            config_path,
         )
 
         if config_path is None:
@@ -535,7 +546,8 @@ class AppLifecycleManager:
         if not compose_files:
             _logger.warning(
                 "[%s] docker-compose ファイルが見つかりません: dir=%s",
-                config.name, app_dir,
+                config.name,
+                app_dir,
             )
             return AppActionResult(
                 app_name=config.name,
@@ -544,8 +556,7 @@ class AppLifecycleManager:
                 command=[],
                 cwd=str(app_dir),
                 error=(
-                    f"実行コマンド未設定かつ docker-compose.yml が見つかりません"
-                    f" (dir={app_dir})"
+                    f"実行コマンド未設定かつ docker-compose.yml が見つかりません (dir={app_dir})"
                 ),
             )
 
@@ -575,7 +586,10 @@ class AppLifecycleManager:
             else:
                 _logger.warning(
                     "[%s] %s 失敗 (rc=%s): %s",
-                    config.name, action, proc.returncode, error,
+                    config.name,
+                    action,
+                    proc.returncode,
+                    error,
                 )
         except FileNotFoundError:
             success = False
@@ -591,7 +605,7 @@ class AppLifecycleManager:
             error = f"docker compose がタイムアウトしました（{_ACTION_TIMEOUT:.0f}s）"
             proc = None
             _logger.error("[%s] %s: %s", config.name, action, error)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             success = False
             stdout = ""
             stderr = ""
@@ -657,7 +671,10 @@ class AppLifecycleManager:
             else:
                 _logger.warning(
                     "[%s] %s 失敗 (rc=%s): %s",
-                    config.name, action, proc.returncode, error,
+                    config.name,
+                    action,
+                    proc.returncode,
+                    error,
                 )
         except FileNotFoundError:
             success = False
@@ -673,7 +690,7 @@ class AppLifecycleManager:
             error = f"コマンドがタイムアウトしました（{_ACTION_TIMEOUT:.0f}s）"
             proc = None
             _logger.error("[%s] %s: %s", config.name, action, error)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             success = False
             stdout = ""
             stderr = ""
@@ -747,7 +764,11 @@ class AppLifecycleManager:
         """ヘルスチェック用パス候補を作成."""
         paths: list[str] = []
         if configured_health_path:
-            path = configured_health_path if configured_health_path.startswith("/") else f"/{configured_health_path}"
+            path = (
+                configured_health_path
+                if configured_health_path.startswith("/")
+                else f"/{configured_health_path}"
+            )
             paths.append(path)
         for fallback in _HEALTH_FALLBACK_PATHS:
             if fallback not in paths:
@@ -838,7 +859,7 @@ class AppLifecycleManager:
                 "backend_published_ports": [],
                 "services": [],
             }
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return {
                 "detected": True,
                 "available": False,
@@ -853,7 +874,8 @@ class AppLifecycleManager:
             return {
                 "detected": True,
                 "available": False,
-                "error": (proc.stderr or proc.stdout).strip() or f"docker compose ps failed ({proc.returncode})",
+                "error": (proc.stderr or proc.stdout).strip()
+                or f"docker compose ps failed ({proc.returncode})",
                 "command": " ".join(command),
                 "backend_running": False,
                 "backend_published_ports": [],
@@ -879,7 +901,9 @@ class AppLifecycleManager:
             )
 
         backend_service = self._select_backend_service(services)
-        backend_ports = [] if backend_service is None else backend_service.get("published_ports", [])
+        backend_ports = (
+            [] if backend_service is None else backend_service.get("published_ports", [])
+        )
         return {
             "detected": True,
             "available": True,
@@ -887,7 +911,9 @@ class AppLifecycleManager:
             "compose_files": [f.name for f in compose_files],
             "services": services,
             "backend_service": None if backend_service is None else backend_service.get("service"),
-            "backend_running": False if backend_service is None else bool(backend_service.get("running")),
+            "backend_running": False
+            if backend_service is None
+            else bool(backend_service.get("running")),
             "backend_published_ports": backend_ports,
         }
 
@@ -1000,7 +1026,7 @@ class AppLifecycleManager:
             return None
         try:
             payload = response.json()
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
         if isinstance(payload, (dict, list)):
             return payload

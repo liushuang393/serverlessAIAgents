@@ -153,4 +153,3 @@ class TestMemoryManager:
         assert len(high_importance) <= len(all_memories)
 
         await manager.stop()
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Code Migration Engine - 工程固定型パイプライン.
 
 固定工程:
@@ -16,34 +15,16 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from agentflow.engines.base import BaseEngine, EngineConfig
-from agentflow.governance.engine import GovernanceEngine, ToolExecutionContext
-from agentflow.governance.enterprise_audit import (
-    EnterpriseAuditLogger,
-    EnterpriseAuditEvent,
-    AuditEventType,
-    AuditSeverity,
-)
-from agentflow.hitl.approval_flow import ApprovalFlow
-from agentflow.integrations.context_bridge import get_current_context
-from agentflow.providers.tool_provider import (
-    OperationType,
-    RegisteredTool,
-    RiskLevel,
-)
-from agentflow.run import LightningTrainingRequest, TrajectoryAdapter
-from agentflow.security import SafetyMixin
-
 from apps.code_migration_assistant.adapters import get_adapter_factory
 from apps.code_migration_assistant.agents import (
     CodeTransformationAgent,
+    ComplianceReporterAgent,
     DifferentialVerificationAgent,
     LegacyAnalysisAgent,
     LimitedFixerAgent,
     MigrationDesignAgent,
     QualityGateAgent,
     TestSynthesisAgent,
-    ComplianceReporterAgent,
 )
 from apps.code_migration_assistant.lightning import create_lightning_engine_config
 from apps.code_migration_assistant.workflow.artifacts import ArtifactStore
@@ -59,13 +40,30 @@ from apps.code_migration_assistant.workflow.models import (
     TransformationArtifact,
 )
 
+from agentflow.engines.base import BaseEngine, EngineConfig
+from agentflow.governance.engine import GovernanceEngine, ToolExecutionContext
+from agentflow.governance.enterprise_audit import (
+    AuditEventType,
+    AuditSeverity,
+    EnterpriseAuditEvent,
+    EnterpriseAuditLogger,
+)
+from agentflow.hitl.approval_flow import ApprovalFlow
+from agentflow.integrations.context_bridge import get_current_context
+from agentflow.providers.tool_provider import (
+    OperationType,
+    RegisteredTool,
+    RiskLevel,
+)
+from agentflow.run import LightningTrainingRequest, TrajectoryAdapter
+from agentflow.security import SafetyMixin
+
 
 # =============================================================================
 # Virtual Tools (Governance Policy Hooks)
 # =============================================================================
 def _virtual_tool_func(*args, **kwargs):
     """Virtual tool dummy implementation."""
-    pass
 
 
 MIGRATION_ANALYSIS = RegisteredTool(
@@ -931,7 +929,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         """成果物のスキーマ検証を行う."""
         try:
             return model.model_validate(payload)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._logger.error("%s stage artifact validation failed: %s", stage, exc)
             return None
 

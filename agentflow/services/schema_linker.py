@@ -112,10 +112,7 @@ class SchemaLinker:
             schema: テーブル→カラムのマッピング
         """
         for table_name, columns in schema.items():
-            col_infos = [
-                ColumnInfo(name=col, table=table_name)
-                for col in columns
-            ]
+            col_infos = [ColumnInfo(name=col, table=table_name) for col in columns]
             self._tables[table_name] = TableInfo(
                 name=table_name,
                 columns=col_infos,
@@ -136,6 +133,7 @@ class SchemaLinker:
 
         if self._config.use_llm:
             from agentflow.providers import get_llm
+
             self._llm = get_llm(temperature=0)
 
         self._started = True
@@ -172,11 +170,12 @@ class SchemaLinker:
 
         # 閾値以上のテーブルを選択
         result.relevant_tables = [
-            t for t, score in sorted(
+            t
+            for t, score in sorted(
                 result.table_scores.items(),
                 key=lambda x: x[1],
                 reverse=True,
-            )[:self._config.max_tables]
+            )[: self._config.max_tables]
             if score >= self._config.min_confidence
         ]
 
@@ -185,7 +184,7 @@ class SchemaLinker:
             table_info = self._tables.get(table)
             if not table_info:
                 continue
-            for col in table_info.columns[:self._config.max_columns_per_table]:
+            for col in table_info.columns[: self._config.max_columns_per_table]:
                 col_key = f"{table}.{col.name}"
                 if result.column_scores.get(col_key, 0) >= self._config.min_confidence:
                     result.relevant_columns.append(col_key)
@@ -287,6 +286,7 @@ JSON出力:"""
 
             # JSON抽出
             import json
+
             json_match = re.search(r"\{[^}]+\}", content, re.DOTALL)
             if json_match:
                 return json.loads(json_match.group())
@@ -317,8 +317,8 @@ JSON出力:"""
 
             if llm_scores:
                 combined_tables[table] = (
-                    str_score * self._config.string_match_weight +
-                    llm_score * self._config.llm_weight
+                    str_score * self._config.string_match_weight
+                    + llm_score * self._config.llm_weight
                 )
             else:
                 combined_tables[table] = str_score
@@ -344,7 +344,7 @@ JSON出力:"""
                 continue
 
             columns_str = ", ".join(
-                col.name for col in table_info.columns[:self._config.max_columns_per_table]
+                col.name for col in table_info.columns[: self._config.max_columns_per_table]
             )
             lines.append(f"Table: {table_name}")
             lines.append(f"  Columns: {columns_str}")
@@ -390,4 +390,3 @@ __all__ = [
     "SchemaLinkerConfig",
     "TableInfo",
 ]
-

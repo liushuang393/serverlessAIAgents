@@ -115,6 +115,7 @@ def create_agent_router(
             ).model_dump()
 
     if config.enable_stream:
+
         @router.post("/run/stream")
         async def run_agent_stream(request: AgentRequest) -> StreamingResponse:
             """Agent を SSE ストリームで実行."""
@@ -151,12 +152,14 @@ def create_agent_router(
             )
 
     if config.enable_health:
+
         @router.get("/health")
         async def health_check() -> dict[str, str]:
             """ヘルスチェック."""
             return {"status": "ok", "agent": agent_class.__name__}
 
     if config.enable_schema:
+
         @router.get("/schema")
         async def get_schema() -> dict[str, Any]:
             """Agent スキーマ取得."""

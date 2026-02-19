@@ -73,9 +73,7 @@ class RichReportBuilder:
             },
         }
 
-    def _add_executive_summary(
-        self, response: RichResponse, report: dict[str, Any]
-    ) -> None:
+    def _add_executive_summary(self, response: RichResponse, report: dict[str, Any]) -> None:
         """エグゼクティブサマリーを追加."""
         summary = report.get("executive_summary", {})
         if not summary:
@@ -85,10 +83,10 @@ class RichReportBuilder:
         content = f"""# エグゼクティブサマリー
 
 ## 結論
-{summary.get('one_line_decision', 'N/A')}
+{summary.get("one_line_decision", "N/A")}
 
 ## 最初の一歩（明日実行可能）
-{summary.get('first_step', 'N/A')}
+{summary.get("first_step", "N/A")}
 
 """
         response.add_markdown(content)
@@ -102,9 +100,7 @@ class RichReportBuilder:
                 title="⚠️ 注意事項",
             )
 
-    def _add_dao_section(
-        self, response: RichResponse, dao: dict[str, Any]
-    ) -> None:
+    def _add_dao_section(self, response: RichResponse, dao: dict[str, Any]) -> None:
         """道（本質分析）セクションを追加."""
         if not dao:
             return
@@ -112,10 +108,10 @@ class RichReportBuilder:
         content = f"""## 道 / 本質分析
 
 ### 問題の本質
-{dao.get('essence', 'N/A')}
+{dao.get("essence", "N/A")}
 
 ### 問題タイプ
-{dao.get('problem_type', 'N/A')}
+{dao.get("problem_type", "N/A")}
 
 """
         response.add_markdown(content)
@@ -207,8 +203,10 @@ class RichReportBuilder:
             if hasattr(sc_status, "value"):
                 sc_status = sc_status.value
             alert_type = (
-                AlertType.SUCCESS if sc_status == "PASS"
-                else AlertType.ERROR if sc_status == "FATAL"
+                AlertType.SUCCESS
+                if sc_status == "PASS"
+                else AlertType.ERROR
+                if sc_status == "FATAL"
                 else AlertType.WARNING
             )
             response.add_alert(
@@ -217,9 +215,7 @@ class RichReportBuilder:
                 title="🔬 セルフチェック",
             )
 
-    def _add_fa_section(
-        self, response: RichResponse, fa: dict[str, Any]
-    ) -> None:
+    def _add_fa_section(self, response: RichResponse, fa: dict[str, Any]) -> None:
         """法（戦略選定）セクションを追加 v3.1."""
         if not fa:
             return
@@ -232,33 +228,41 @@ class RichReportBuilder:
         # v3.1: 戦略的禁止事項（仕組み化）
         prohibitions = fa.get("strategic_prohibitions", [])
         if prohibitions:
-            prohibition_text = "絶対にやってはいけない: " + ", ".join([
-                p.get("prohibition", "") for p in prohibitions[:3]
-            ])
+            prohibition_text = "絶対にやってはいけない: " + ", ".join(
+                [p.get("prohibition", "") for p in prohibitions[:3]]
+            )
             response.add_alert(prohibition_text, AlertType.ERROR, title="🚫 戦略的禁止事項")
             # 仕組み化テーブル
             enforcement_data = []
             for p in prohibitions:
-                if p.get("prevention_measure") or p.get("detection_metric") or p.get("responsible_role"):
-                    enforcement_data.append({
-                        "禁止事項": p.get("prohibition", ""),
-                        "防止策": p.get("prevention_measure", "—"),
-                        "検知指標": p.get("detection_metric", "—"),
-                        "責任者": p.get("responsible_role", "—"),
-                    })
+                if (
+                    p.get("prevention_measure")
+                    or p.get("detection_metric")
+                    or p.get("responsible_role")
+                ):
+                    enforcement_data.append(
+                        {
+                            "禁止事項": p.get("prohibition", ""),
+                            "防止策": p.get("prevention_measure", "—"),
+                            "検知指標": p.get("detection_metric", "—"),
+                            "責任者": p.get("responsible_role", "—"),
+                        }
+                    )
             if enforcement_data:
                 response.add_table(enforcement_data, title="禁止事項の仕組み化")
 
         # v3.1: 競争優位仮説
         comp_hyp = fa.get("competitive_hypothesis", {})
         if comp_hyp:
-            hyp_data = [{
-                "差別化軸": comp_hyp.get("axis_name", ""),
-                "対象顧客": comp_hyp.get("target_customer", ""),
-                "代替障壁": comp_hyp.get("substitution_barrier", ""),
-                "勝ち筋指標": comp_hyp.get("winning_metric", ""),
-                "最小検証": comp_hyp.get("minimum_verification", ""),
-            }]
+            hyp_data = [
+                {
+                    "差別化軸": comp_hyp.get("axis_name", ""),
+                    "対象顧客": comp_hyp.get("target_customer", ""),
+                    "代替障壁": comp_hyp.get("substitution_barrier", ""),
+                    "勝ち筋指標": comp_hyp.get("winning_metric", ""),
+                    "最小検証": comp_hyp.get("minimum_verification", ""),
+                }
+            ]
             response.add_table(hyp_data, title="🎯 競争優位仮説")
 
         # 推奨パステーブル（v3.1: 条件付き評価）
@@ -317,9 +321,7 @@ class RichReportBuilder:
             sc_text = "; ".join(issues) if issues else "問題なし"
             response.add_alert(sc_text, alert_type, title=f"🔍 セルフチェック: {status}")
 
-    def _add_shu_section(
-        self, response: RichResponse, shu: dict[str, Any]
-    ) -> None:
+    def _add_shu_section(self, response: RichResponse, shu: dict[str, Any]) -> None:
         """術（実行計画）セクションを追加 v3.1."""
         if not shu:
             return
@@ -338,11 +340,18 @@ class RichReportBuilder:
         if poc_dod:
             conditions = poc_dod.get("experience_conditions", [])
             if conditions:
-                response.add_markdown("### 🎯 PoC完成定義（DoD）\n\n**体験条件**\n" + "\n".join(f"- ✓ {c}" for c in conditions))
+                response.add_markdown(
+                    "### 🎯 PoC完成定義（DoD）\n\n**体験条件**\n"
+                    + "\n".join(f"- ✓ {c}" for c in conditions)
+                )
             metrics = poc_dod.get("success_metrics", [])
             if metrics:
                 table_data = [
-                    {"指標": m.get("metric_name", ""), "目標値": m.get("target_value", ""), "計測方法": m.get("measurement_method", "")}
+                    {
+                        "指標": m.get("metric_name", ""),
+                        "目標値": m.get("target_value", ""),
+                        "計測方法": m.get("measurement_method", ""),
+                    }
                     for m in metrics
                 ]
                 response.add_table(table_data, title="📊 成功指標")
@@ -353,21 +362,33 @@ class RichReportBuilder:
         # v3.1: 2段ロケット
         rocket = shu.get("two_stage_rocket", {})
         if rocket:
-            for stage_key, label in [("stage1_minimal_pipeline", "🚀 Stage1: 最小パイプライン"), ("stage2_governance", "🛡️ Stage2: 統制強化")]:
+            for stage_key, label in [
+                ("stage1_minimal_pipeline", "🚀 Stage1: 最小パイプライン"),
+                ("stage2_governance", "🛡️ Stage2: 統制強化"),
+            ]:
                 stage = rocket.get(stage_key, {})
                 if not stage:
                     continue
-                response.add_markdown(f"### {label}: {stage.get('stage_name', '')}\n\n{stage.get('objective', '')}")
+                response.add_markdown(
+                    f"### {label}: {stage.get('stage_name', '')}\n\n{stage.get('objective', '')}"
+                )
                 phases_data = stage.get("phases", [])
                 if phases_data:
                     table_data = [
-                        {"Phase": p.get("phase_number", ""), "名前": p.get("name", ""), "期間": p.get("duration", ""), "作業": ", ".join(p.get("tasks", [])[:3])}
+                        {
+                            "Phase": p.get("phase_number", ""),
+                            "名前": p.get("name", ""),
+                            "期間": p.get("duration", ""),
+                            "作業": ", ".join(p.get("tasks", [])[:3]),
+                        }
                         for p in phases_data
                     ]
                     response.add_table(table_data, title=f"{stage.get('stage_name', '')} フェーズ")
                 gate = stage.get("gate_criteria", [])
                 if gate:
-                    response.add_alert("ゲート基準: " + ", ".join(gate[:3]), AlertType.INFO, title="🚪 ゲート")
+                    response.add_alert(
+                        "ゲート基準: " + ", ".join(gate[:3]), AlertType.INFO, title="🚪 ゲート"
+                    )
 
         # フェーズテーブル（v3.0互換）
         phases = shu.get("phases", [])
@@ -390,15 +411,17 @@ class RichReportBuilder:
                     "tooltip": {"trigger": "axis"},
                     "xAxis": {
                         "type": "category",
-                        "data": [p.get("name", f"Phase {i+1}") for i, p in enumerate(phases)],
+                        "data": [p.get("name", f"Phase {i + 1}") for i, p in enumerate(phases)],
                     },
                     "yAxis": {"type": "value", "name": "進捗"},
-                    "series": [{
-                        "type": "line",
-                        "data": list(range(len(phases), 0, -1)),
-                        "smooth": True,
-                        "areaStyle": {"opacity": 0.3},
-                    }],
+                    "series": [
+                        {
+                            "type": "line",
+                            "data": list(range(len(phases), 0, -1)),
+                            "smooth": True,
+                            "areaStyle": {"opacity": 0.3},
+                        }
+                    ],
                 }
                 response.add_chart(ChartType.LINE, chart_data, title="タイムライン")
 
@@ -411,9 +434,7 @@ class RichReportBuilder:
                 title="✂️ 切り捨て",
             )
 
-    def _add_qi_section(
-        self, response: RichResponse, qi: dict[str, Any]
-    ) -> None:
+    def _add_qi_section(self, response: RichResponse, qi: dict[str, Any]) -> None:
         """器（技術実装）セクションを追加 v3.1."""
         if not qi:
             return
@@ -429,7 +450,12 @@ class RichReportBuilder:
             comps = poc_arch.get("components", [])
             if comps:
                 table_data = [
-                    {"コンポーネント": c.get("name", ""), "目的": c.get("purpose", ""), "技術": c.get("technology_choice", ""), "備考": c.get("notes", "")}
+                    {
+                        "コンポーネント": c.get("name", ""),
+                        "目的": c.get("purpose", ""),
+                        "技術": c.get("technology_choice", ""),
+                        "備考": c.get("notes", ""),
+                    }
                     for c in comps
                 ]
                 response.add_table(table_data, title="🏗️ PoC最小アーキテクチャ")
@@ -438,13 +464,22 @@ class RichReportBuilder:
                 response.add_markdown(f"**データフロー**: {flow}")
             deferred = poc_arch.get("deferred_components", [])
             if deferred:
-                response.add_alert("後回し: " + ", ".join(deferred), AlertType.INFO, title="⏳ 後回しコンポーネント")
+                response.add_alert(
+                    "後回し: " + ", ".join(deferred),
+                    AlertType.INFO,
+                    title="⏳ 後回しコンポーネント",
+                )
 
         # v3.1: 拡張アーキテクチャ段階
         expansion = qi.get("expansion_stages", [])
         if expansion:
             table_data = [
-                {"段階": s.get("stage_name", ""), "導入条件": s.get("introduction_condition", ""), "追加": ", ".join(s.get("added_components", [])), "理由": s.get("rationale", "")}
+                {
+                    "段階": s.get("stage_name", ""),
+                    "導入条件": s.get("introduction_condition", ""),
+                    "追加": ", ".join(s.get("added_components", [])),
+                    "理由": s.get("rationale", ""),
+                }
                 for s in expansion
             ]
             response.add_table(table_data, title="📈 拡張アーキテクチャ")
@@ -453,7 +488,12 @@ class RichReportBuilder:
         steps = qi.get("implementation_steps", [])
         if steps:
             table_data = [
-                {"Step": s.get("step_number", ""), "目標": s.get("objective", ""), "作業": ", ".join(s.get("tasks", [])[:3]), "落とし穴": ", ".join(s.get("common_pitfalls", [])[:2])}
+                {
+                    "Step": s.get("step_number", ""),
+                    "目標": s.get("objective", ""),
+                    "作業": ", ".join(s.get("tasks", [])[:3]),
+                    "落とし穴": ", ".join(s.get("common_pitfalls", [])[:2]),
+                }
                 for s in steps
             ]
             response.add_table(table_data, title="📝 実装手順")
@@ -461,7 +501,9 @@ class RichReportBuilder:
         # v3.1: 将来スケール要件
         future = qi.get("future_scale_requirements", [])
         if future:
-            response.add_alert("将来要件: " + ", ".join(future[:3]), AlertType.INFO, title="🔮 将来スケール要件")
+            response.add_alert(
+                "将来要件: " + ", ".join(future[:3]), AlertType.INFO, title="🔮 将来スケール要件"
+            )
 
         # 技術スタックテーブル（v3.0互換）
         techs = qi.get("domain_technologies", [])
@@ -498,9 +540,7 @@ class RichReportBuilder:
                 title="⚠️ 技術負債警告",
             )
 
-    def _add_review_section(
-        self, response: RichResponse, review: dict[str, Any]
-    ) -> None:
+    def _add_review_section(self, response: RichResponse, review: dict[str, Any]) -> None:
         """検証結果セクションを追加 v3.1（差分パッチ型）."""
         if not review:
             return
@@ -520,15 +560,22 @@ class RichReportBuilder:
         breakdown = review.get("confidence_breakdown")
         if isinstance(breakdown, dict):
             bd_rows: list[dict[str, str]] = []
-            for key in ("input_sufficiency", "logic_consistency", "implementation_feasibility", "risk_coverage"):
+            for key in (
+                "input_sufficiency",
+                "logic_consistency",
+                "implementation_feasibility",
+                "risk_coverage",
+            ):
                 comp = breakdown.get(key, {})
                 if isinstance(comp, dict):
-                    bd_rows.append({
-                        "項目": comp.get("name", key),
-                        "スコア": f"{comp.get('score', 0):.0f}%",
-                        "チェック加点": f"+{comp.get('checkbox_boost', 0):.0f}点",
-                        "説明": comp.get("description", ""),
-                    })
+                    bd_rows.append(
+                        {
+                            "項目": comp.get("name", key),
+                            "スコア": f"{comp.get('score', 0):.0f}%",
+                            "チェック加点": f"+{comp.get('checkbox_boost', 0):.0f}点",
+                            "説明": comp.get("description", ""),
+                        }
+                    )
             if bd_rows:
                 response.add_table(bd_rows, title="📊 信頼度分解")
 
@@ -542,7 +589,8 @@ class RichReportBuilder:
                     "影響範囲": (f.get("impact_scope", "") or "")[:30],
                     "最小パッチ": (
                         f.get("minimal_patch", {}).get("checkbox_label", "")
-                        if isinstance(f.get("minimal_patch"), dict) else ""
+                        if isinstance(f.get("minimal_patch"), dict)
+                        else ""
                     )[:30],
                 }
                 for f in findings[:3]
@@ -555,13 +603,12 @@ class RichReportBuilder:
         if checkpoints:
             cp_text = "\n".join(
                 f"- ☐ {c.get('label', '')} (+{c.get('score_boost', 0):.0f}点) — {c.get('default_suggestion', '')}"
-                for c in checkpoints if isinstance(c, dict)
+                for c in checkpoints
+                if isinstance(c, dict)
             )
             response.add_markdown(f"### ☑️ 確認チェックポイント\n\n{cp_text}\n")
 
-    def _add_confidence_chart(
-        self, response: RichResponse, report: dict[str, Any]
-    ) -> None:
+    def _add_confidence_chart(self, response: RichResponse, report: dict[str, Any]) -> None:
         """信頼度チャートを追加."""
         review = report.get("review", {})
         if not review:
@@ -581,19 +628,23 @@ class RichReportBuilder:
                     {"name": "リスク対策", "max": 100},
                 ],
             },
-            "series": [{
-                "type": "radar",
-                "data": [{
-                    "value": [
-                        confidence * 100 * 0.9,
-                        confidence * 100 * 0.85,
-                        confidence * 100 * 0.95,
-                        confidence * 100 * 0.88,
-                        confidence * 100 * 0.8,
+            "series": [
+                {
+                    "type": "radar",
+                    "data": [
+                        {
+                            "value": [
+                                confidence * 100 * 0.9,
+                                confidence * 100 * 0.85,
+                                confidence * 100 * 0.95,
+                                confidence * 100 * 0.88,
+                                confidence * 100 * 0.8,
+                            ],
+                            "name": "評価",
+                        }
                     ],
-                    "name": "評価",
-                }],
-            }],
+                }
+            ],
         }
         response.add_chart(ChartType.RADAR, chart_data, title="多次元評価")
 

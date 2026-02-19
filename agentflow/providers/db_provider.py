@@ -153,8 +153,7 @@ class MockDBProvider:
             return 0
         original = len(self._data[table])
         self._data[table] = [
-            r for r in self._data[table]
-            if not all(r.get(k) == v for k, v in filters.items())
+            r for r in self._data[table] if not all(r.get(k) == v for k, v in filters.items())
         ]
         return original - len(self._data[table])
 
@@ -183,6 +182,7 @@ class SupabaseDBProvider:
         """Supabase に接続."""
         try:
             from supabase import create_client
+
             self._client = create_client(self._url, self._key)
             logger.info(f"Connected to Supabase: {self._url[:30]}...")
         except ImportError:
@@ -201,9 +201,7 @@ class SupabaseDBProvider:
         limit: int | None = None,
     ) -> list[dict[str, Any]]:
         """Select."""
-        query = self._client.table(table).select(
-            ",".join(columns) if columns else "*"
-        )
+        query = self._client.table(table).select(",".join(columns) if columns else "*")
         if filters:
             for k, v in filters.items():
                 query = query.eq(k, v)
@@ -275,9 +273,7 @@ def get_db(
     settings = resolve_settings(context) if context is not None else None
 
     # Supabase
-    supabase_url = (
-        settings.supabase_url if settings else get_env("SUPABASE_URL", context=context)
-    )
+    supabase_url = settings.supabase_url if settings else get_env("SUPABASE_URL", context=context)
     supabase_key = (
         (settings.supabase_key if settings else None)
         or get_env("SUPABASE_KEY", context=context)
@@ -291,17 +287,13 @@ def get_db(
         return provider
 
     # Turso (TODO: 実装)
-    turso_url = (
-        settings.turso_url if settings else get_env("TURSO_URL", context=context)
-    )
+    turso_url = settings.turso_url if settings else get_env("TURSO_URL", context=context)
     turso_token = get_env("TURSO_AUTH_TOKEN", context=context)
     if turso_url and turso_token:
         logger.warning("Turso provider not yet implemented, using mock")
 
     # DATABASE_URL (PostgreSQL/SQLite) - TODO: 実装
-    db_url = (
-        settings.database_url if settings else get_env("DATABASE_URL", context=context)
-    )
+    db_url = settings.database_url if settings else get_env("DATABASE_URL", context=context)
     if db_url:
         logger.warning(f"DATABASE_URL detected but not implemented: {db_url[:20]}...")
 

@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { useWorkflowStore } from '../stores/workflowStore';
+import { useState, useCallback } from "react";
+import { useWorkflowStore } from "../stores/workflowStore";
 
 /**
  * プレビューパネル - ワークフローのリアルタイム実行とデバッグ
@@ -12,7 +12,7 @@ import { useWorkflowStore } from '../stores/workflowStore';
  */
 
 interface LogEntry {
-  type: 'info' | 'progress' | 'complete' | 'error';
+  type: "info" | "progress" | "complete" | "error";
   message?: string;
   node_id?: string;
   agent_type?: string;
@@ -31,12 +31,12 @@ interface PreviewResult {
 export default function PreviewPanel() {
   const { workflow } = useWorkflowStore();
 
-  const [input, setInput] = useState<string>('{\n  \n}');
+  const [input, setInput] = useState<string>("{\n  \n}");
   const [inputError, setInputError] = useState<string | null>(null);
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [isRunning, setIsRunning] = useState(false);
-  const [activeTab, setActiveTab] = useState<'input' | 'output' | 'logs'>(
-    'input',
+  const [activeTab, setActiveTab] = useState<"input" | "output" | "logs">(
+    "input",
   );
   const [debugMode, setDebugMode] = useState(false);
 
@@ -66,13 +66,13 @@ export default function PreviewPanel() {
 
     setIsRunning(true);
     setResult(null);
-    setActiveTab('output');
+    setActiveTab("output");
 
     try {
-      const response = await fetch('/api/preview/run', {
-        method: 'POST',
+      const response = await fetch("/api/preview/run", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           workflow: {
@@ -95,11 +95,11 @@ export default function PreviewPanel() {
       setResult(data);
 
       if (data.logs && data.logs.length > 0) {
-        setActiveTab('logs');
+        setActiveTab("logs");
       }
     } catch (error) {
       setResult({
-        status: 'error',
+        status: "error",
         result: null,
         logs: [],
         duration_ms: null,
@@ -117,19 +117,19 @@ export default function PreviewPanel() {
 
     setIsRunning(true);
     setResult({
-      status: 'running',
+      status: "running",
       result: null,
       logs: [],
       duration_ms: null,
       error: null,
     });
-    setActiveTab('logs');
+    setActiveTab("logs");
 
     try {
-      const response = await fetch('/api/preview/stream', {
-        method: 'POST',
+      const response = await fetch("/api/preview/stream", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           workflow: {
@@ -146,7 +146,7 @@ export default function PreviewPanel() {
 
       const reader = response.body?.getReader();
       if (!reader) {
-        throw new Error('Failed to get response reader');
+        throw new Error("Failed to get response reader");
       }
 
       const decoder = new TextDecoder();
@@ -155,14 +155,14 @@ export default function PreviewPanel() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
-break;
-}
+          break;
+        }
 
         const chunk = decoder.decode(value);
-        const lines = chunk.split('\n');
+        const lines = chunk.split("\n");
 
         for (const line of lines) {
-          if (line.startsWith('data: ')) {
+          if (line.startsWith("data: ")) {
             try {
               const event = JSON.parse(line.slice(6));
               logs.push({
@@ -172,8 +172,8 @@ break;
               setResult((prev) => ({
                 ...prev!,
                 logs: [...logs],
-                result: event.type === 'complete' ? event.result : prev?.result,
-                status: event.type === 'complete' ? 'success' : 'running',
+                result: event.type === "complete" ? event.result : prev?.result,
+                status: event.type === "complete" ? "success" : "running",
               }));
             } catch {
               // Invalid JSON, skip
@@ -184,7 +184,7 @@ break;
     } catch (error) {
       setResult((prev) => ({
         ...prev!,
-        status: 'error',
+        status: "error",
         error: (error as Error).message,
       }));
     } finally {
@@ -241,19 +241,20 @@ break;
 
       {/* タブ */}
       <div className="flex border-b">
-        {(['input', 'output', 'logs'] as const).map((tab) => (
+        {(["input", "output", "logs"] as const).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`flex-1 px-3 py-2 text-xs font-medium border-b-2 transition-colors ${
               activeTab === tab
-                ? 'border-primary text-primary'
-                : 'border-transparent text-muted-foreground hover:text-foreground'
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {tab === 'input' && '📝 Input'}
-            {tab === 'output' && '📊 Output'}
-            {tab === 'logs' && `📋 Logs ${result?.logs?.length ? `(${result.logs.length})` : ''}`}
+            {tab === "input" && "📝 Input"}
+            {tab === "output" && "📊 Output"}
+            {tab === "logs" &&
+              `📋 Logs ${result?.logs?.length ? `(${result.logs.length})` : ""}`}
           </button>
         ))}
       </div>
@@ -261,7 +262,7 @@ break;
       {/* コンテンツ */}
       <div className="flex-1 overflow-auto p-3">
         {/* Input タブ */}
-        {activeTab === 'input' && (
+        {activeTab === "input" && (
           <div className="space-y-2">
             <label className="text-xs text-muted-foreground">
               入力データ (JSON)
@@ -270,7 +271,7 @@ break;
               value={input}
               onChange={(e) => handleInputChange(e.target.value)}
               className={`w-full h-48 p-2 text-xs font-mono bg-muted rounded-md resize-none focus:outline-none focus:ring-2 ${
-                inputError ? 'ring-2 ring-destructive' : 'focus:ring-primary'
+                inputError ? "ring-2 ring-destructive" : "focus:ring-primary"
               }`}
               placeholder='{\n  "key": "value"\n}'
             />
@@ -281,7 +282,7 @@ break;
         )}
 
         {/* Output タブ */}
-        {activeTab === 'output' && (
+        {activeTab === "output" && (
           <div className="space-y-3">
             {result ? (
               <>
@@ -289,11 +290,11 @@ break;
                 <div className="flex items-center gap-2 text-xs">
                   <span
                     className={`px-2 py-0.5 rounded-full ${
-                      result.status === 'success'
-                        ? 'bg-green-100 text-green-700'
-                        : result.status === 'error'
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-yellow-100 text-yellow-700'
+                      result.status === "success"
+                        ? "bg-green-100 text-green-700"
+                        : result.status === "error"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-yellow-100 text-yellow-700"
                     }`}
                   >
                     {result.status}
@@ -333,28 +334,28 @@ break;
         )}
 
         {/* Logs タブ */}
-        {activeTab === 'logs' && (
+        {activeTab === "logs" && (
           <div className="space-y-2">
             {result?.logs && result.logs.length > 0 ? (
               result.logs.map((log, index) => (
                 <div
                   key={index}
                   className={`p-2 rounded-md text-xs ${
-                    log.type === 'error'
-                      ? 'bg-destructive/10 text-destructive'
-                      : log.type === 'complete'
-                      ? 'bg-green-50 text-green-700'
-                      : log.type === 'progress'
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'bg-muted'
+                    log.type === "error"
+                      ? "bg-destructive/10 text-destructive"
+                      : log.type === "complete"
+                        ? "bg-green-50 text-green-700"
+                        : log.type === "progress"
+                          ? "bg-blue-50 text-blue-700"
+                          : "bg-muted"
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <span>
-                      {log.type === 'error' && '❌'}
-                      {log.type === 'complete' && '✅'}
-                      {log.type === 'progress' && '⏳'}
-                      {log.type === 'info' && 'ℹ️'}
+                      {log.type === "error" && "❌"}
+                      {log.type === "complete" && "✅"}
+                      {log.type === "progress" && "⏳"}
+                      {log.type === "info" && "ℹ️"}
                     </span>
                     {log.node_id && (
                       <span className="font-mono text-xs bg-background px-1 rounded">

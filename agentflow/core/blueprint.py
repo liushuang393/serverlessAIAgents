@@ -263,6 +263,7 @@ class AgentBlueprint:
             AgentBlueprint
         """
         import json
+
         data = json.loads(json_string)
         return cls.from_dict(data)
 
@@ -340,7 +341,9 @@ class AgentBlueprint:
 
                     if self._tool_provider:
                         result = await self._tool_provider.call(tool_uri, input_data)
-                        results.append(result.to_dict() if hasattr(result, "to_dict") else {"result": result})
+                        results.append(
+                            result.to_dict() if hasattr(result, "to_dict") else {"result": result}
+                        )
 
                 return {
                     "agent_name": self._blueprint._model.name,
@@ -416,10 +419,7 @@ class AgentBlueprint:
         Returns:
             スキル名リスト
         """
-        return [
-            skill if isinstance(skill, str) else skill.name
-            for skill in self._model.skills
-        ]
+        return [skill if isinstance(skill, str) else skill.name for skill in self._model.skills]
 
     def get_tool_uris(self) -> list[str]:
         """ツールURIリストを取得.
@@ -427,10 +427,7 @@ class AgentBlueprint:
         Returns:
             ツールURIリスト
         """
-        return [
-            tool if isinstance(tool, str) else tool.uri
-            for tool in self._model.tools
-        ]
+        return [tool if isinstance(tool, str) else tool.uri for tool in self._model.tools]
 
     def __repr__(self) -> str:
         """文字列表現."""

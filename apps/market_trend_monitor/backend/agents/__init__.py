@@ -51,4 +51,3 @@ __all__ = [
     "SignalScorerInput",
     "SignalScorerOutput",
 ]
-

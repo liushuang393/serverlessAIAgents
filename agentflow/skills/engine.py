@@ -106,9 +106,9 @@ class SkillEngine:
         """Skill を全ディレクトリから読み込み."""
         # デフォルトディレクトリ
         default_dirs = [
-            Path.home() / ".agentflow" / "skills",        # グローバル
-            Path.home() / ".agentflow" / "learned_skills", # 学習済み
-            Path(".agentflow") / "skills",                 # プロジェクト
+            Path.home() / ".agentflow" / "skills",  # グローバル
+            Path.home() / ".agentflow" / "learned_skills",  # 学習済み
+            Path(".agentflow") / "skills",  # プロジェクト
         ]
 
         all_dirs = default_dirs + (extra_dirs or [])
@@ -231,15 +231,11 @@ class SkillEngine:
             # 既に登録済みならスキップ
             if self.get_skill(dep_name):
                 continue
-            self._logger.info(
-                f"Auto-resolving dependency '{dep_name}' for skill '{skill.name}'"
-            )
+            self._logger.info(f"Auto-resolving dependency '{dep_name}' for skill '{skill.name}'")
             try:
                 await self._resolve_internal(dep_name, depth + 1)
             except Exception as e:
-                self._logger.warning(
-                    f"Failed to resolve dependency '{dep_name}': {e}"
-                )
+                self._logger.warning(f"Failed to resolve dependency '{dep_name}': {e}")
 
     def find(self, query: str, top_k: int = 5) -> list[MatchResult]:
         """クエリにマッチする Skill を検索（生成なし）."""
@@ -265,4 +261,3 @@ class SkillEngine:
             内部の SkillRegistry インスタンス
         """
         return self._registry
-

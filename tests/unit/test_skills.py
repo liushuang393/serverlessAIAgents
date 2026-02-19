@@ -11,13 +11,11 @@ import pytest
 from agentflow.skills import (
     Skill,
     SkillLoader,
-    SkillMetadata,
-    SkillRegistry,
     SkillMatcher,
-    MatchResult,
-    SkillValidator,
-    ValidationResult,
+    SkillMetadata,
     SkillPersister,
+    SkillRegistry,
+    SkillValidator,
 )
 
 
@@ -244,7 +242,9 @@ class TestSkill:
     def test_skill_repr(self, skill_dir: Path) -> None:
         """__repr__ が正しく動作することをテスト."""
         skill_file = skill_dir / "SKILL.md"
-        skill_file.write_text("---\nname: repr-test\nversion: 3.0.0\n---\nContent", encoding="utf-8")
+        skill_file.write_text(
+            "---\nname: repr-test\nversion: 3.0.0\n---\nContent", encoding="utf-8"
+        )
         skill = Skill.load(skill_dir)
         assert "repr-test" in repr(skill)
         assert "3.0.0" in repr(skill)
@@ -569,4 +569,3 @@ class TestSkillLoader:
         # Directly test load_directory since we can't easily mock cwd/home
         skills = loader.load_directory(tmp_path / ".claude" / "skills")
         assert any(s.name == "my-custom" for s in skills)
-

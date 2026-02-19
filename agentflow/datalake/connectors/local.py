@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """LocalFileConnector - ローカルファイルシステムコネクタ.
 
 ローカルファイルシステムへのアクセスを提供。
@@ -33,9 +35,7 @@ class LocalFileConfig(ConnectorConfig):
         encoding: デフォルトエンコーディング
     """
 
-    base_path: str | None = Field(
-        default=None, description="ベースパス（Noneで制限なし）"
-    )
+    base_path: str | None = Field(default=None, description="ベースパス（Noneで制限なし）")
     follow_symlinks: bool = Field(default=True, description="シンボリックリンクを追跡")
     encoding: str = Field(default="utf-8", description="デフォルトエンコーディング")
 
@@ -89,9 +89,7 @@ class LocalFileConnector(DataConnector):
                 resolved.relative_to(self._base_path)
             except ValueError as e:
                 msg = f"Access denied: {path} is outside base path {self._base_path}"
-                raise ValueError(
-                    msg
-                ) from e
+                raise ValueError(msg) from e
 
         return resolved
 
@@ -145,9 +143,7 @@ class LocalFileConnector(DataConnector):
                         uri=f"file://{entry}",
                         name=entry.name,
                         size=stat.st_size if entry.is_file() else None,
-                        modified_at=datetime.fromtimestamp(
-                            stat.st_mtime, tz=UTC
-                        ),
+                        modified_at=datetime.fromtimestamp(stat.st_mtime, tz=UTC),
                         content_type=mimetypes.guess_type(str(entry))[0],
                         is_directory=entry.is_dir(),
                     )
@@ -258,6 +254,7 @@ class LocalFileConnector(DataConnector):
 
         if resolved.is_dir():
             import shutil
+
             shutil.rmtree(resolved)
         else:
             resolved.unlink()
@@ -287,6 +284,7 @@ class LocalFileConnector(DataConnector):
 
         try:
             import aiofiles
+
             async with aiofiles.open(resolved, "rb") as f:
                 while True:
                     chunk = await f.read(chunk_size)
@@ -295,10 +293,9 @@ class LocalFileConnector(DataConnector):
                     yield chunk
         except ImportError:
             # aiofiles がない場合は同期読み取り
-            with open(resolved, "rb") as f:  # noqa: ASYNC230
+            with open(resolved, "rb") as f:
                 while True:
                     chunk = f.read(chunk_size)
                     if not chunk:
                         break
                     yield chunk
-

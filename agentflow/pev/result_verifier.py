@@ -31,12 +31,12 @@ from pydantic import BaseModel, Field
 class VerificationStrategy(str, Enum):
     """検証戦略."""
 
-    EXACT_MATCH = "exact_match"         # 完全一致
-    THRESHOLD = "threshold"             # 閾値ベース
-    SEMANTIC = "semantic"               # 意味的類似度
-    CONSTRAINT = "constraint"           # 制約ベース
-    LLM_JUDGE = "llm_judge"             # LLM判定
-    COMPOSITE = "composite"             # 複合
+    EXACT_MATCH = "exact_match"  # 完全一致
+    THRESHOLD = "threshold"  # 閾値ベース
+    SEMANTIC = "semantic"  # 意味的類似度
+    CONSTRAINT = "constraint"  # 制約ベース
+    LLM_JUDGE = "llm_judge"  # LLM判定
+    COMPOSITE = "composite"  # 複合
 
 
 class VerificationResult(BaseModel):
@@ -54,9 +54,7 @@ class VerificationResult(BaseModel):
 
     is_acceptable: bool = Field(default=True, description="合格判定")
     score: float = Field(default=1.0, ge=0.0, le=1.0, description="スコア")
-    strategy_used: VerificationStrategy = Field(
-        default=VerificationStrategy.THRESHOLD
-    )
+    strategy_used: VerificationStrategy = Field(default=VerificationStrategy.THRESHOLD)
     feedback: str = Field(default="", description="フィードバック")
     suggestions: list[str] = Field(default_factory=list, description="改善提案")
     details: dict[str, Any] = Field(default_factory=dict, description="詳細")
@@ -123,8 +121,7 @@ class ResultVerifier:
         verification.strategy_used = strategy
 
         self._logger.info(
-            f"検証完了: 合格={verification.is_acceptable}, "
-            f"スコア={verification.score:.2f}"
+            f"検証完了: 合格={verification.is_acceptable}, スコア={verification.score:.2f}"
         )
 
         return verification
@@ -214,6 +211,7 @@ JSON形式で回答:
             content = response.get("content", str(response))
 
             import json
+
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
@@ -334,6 +332,7 @@ JSON形式で回答:
             content = response.get("content", str(response))
 
             import json
+
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
@@ -368,10 +367,13 @@ JSON形式で回答:
         expected: dict[str, Any],
     ) -> VerificationResult:
         """複合検証 - 複数の検証戦略を組み合わせる."""
-        strategies = expected.get("strategies", [
-            VerificationStrategy.THRESHOLD,
-            VerificationStrategy.CONSTRAINT,
-        ])
+        strategies = expected.get(
+            "strategies",
+            [
+                VerificationStrategy.THRESHOLD,
+                VerificationStrategy.CONSTRAINT,
+            ],
+        )
 
         weights = expected.get("weights", {})
         default_weight = 1.0 / len(strategies) if strategies else 1.0
@@ -399,11 +401,13 @@ JSON形式で回答:
             else:
                 continue
 
-            results.append({
-                "strategy": strategy.value,
-                "result": ver_result,
-                "weight": weight,
-            })
+            results.append(
+                {
+                    "strategy": strategy.value,
+                    "result": ver_result,
+                    "weight": weight,
+                }
+            )
 
             weighted_score += ver_result.score * weight
             total_weight += weight
@@ -444,4 +448,3 @@ __all__ = [
     "VerificationResult",
     "VerificationStrategy",
 ]
-

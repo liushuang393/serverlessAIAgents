@@ -107,20 +107,6 @@ from agentflow.channels import (
 from agentflow.channels.base import MessageType
 
 # =============================================================================
-# 公開API: 統一データベース管理（DB セッション + Alembic マイグレーション）
-# =============================================================================
-from agentflow.database import (
-    DatabaseConfig,
-    DatabaseManager,
-    MigrationEnv,
-    get_dialect,
-    is_async_url,
-    is_sqlite,
-    to_async_url,
-    to_sync_url,
-)
-
-# =============================================================================
 # 公開API: Context Engineering（上下文エンジニアリング）
 # =============================================================================
 from agentflow.context import (
@@ -192,7 +178,6 @@ from agentflow.core.retry_advisor import (
     RetryContext,
 )
 from agentflow.core.tool_binding import BoundTools, ToolBinder, ToolExecutor
-from agentflow.core.type_safe import safe_enum, safe_float, safe_int
 
 # =============================================================================
 # 公開API: 統一ツールカタログ（全ツールソース統合）
@@ -215,7 +200,22 @@ from agentflow.core.tool_registry import (
     get_global_tool_registry,
     reset_global_tool_registry,
 )
+from agentflow.core.type_safe import safe_enum, safe_float, safe_int
 from agentflow.core.types import AgentMetadata, WorkflowConfig
+
+# =============================================================================
+# 公開API: 統一データベース管理（DB セッション + Alembic マイグレーション）
+# =============================================================================
+from agentflow.database import (
+    DatabaseConfig,
+    DatabaseManager,
+    MigrationEnv,
+    get_dialect,
+    is_async_url,
+    is_sqlite,
+    to_async_url,
+    to_sync_url,
+)
 from agentflow.engines import (
     BaseEngine,
     EngineConfig,
@@ -251,6 +251,8 @@ from agentflow.flow import (
     ReviewVerdict,
     create_flow,
 )
+# テスト・後方互換用エイリアス
+FlowWrapper = Flow
 
 # =============================================================================
 # 公開API: Human-in-the-Loop (HITL)
@@ -653,6 +655,7 @@ __all__ = [
     "ExecutionPlane",
     "FileEvidence",
     "Flow",
+    "FlowWrapper",
     "FlowBuilder",
     "FlowConfig",
     "FlowContext",

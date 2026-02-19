@@ -425,9 +425,7 @@ class PermissionConfig:
             restriction: フィールド制限
         """
         self._config.restricted_fields.append(restriction)
-        self._logger.info(
-            "Added field restriction: %s", restriction.field_pattern
-        )
+        self._logger.info("Added field restriction: %s", restriction.field_pattern)
 
 
 __all__ = [

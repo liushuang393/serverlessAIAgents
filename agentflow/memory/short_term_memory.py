@@ -76,8 +76,7 @@ class ShortTermMemory:
         self._buffers[topic].add_entry(entry, token_count)
 
         self._logger.debug(
-            f"Added entry to topic '{topic}': "
-            f"{self._buffers[topic].total_tokens} tokens"
+            f"Added entry to topic '{topic}': {self._buffers[topic].total_tokens} tokens"
         )
 
     def should_summarize(self, topic: str) -> bool:
@@ -138,10 +137,7 @@ class ShortTermMemory:
         # バッファをクリア
         self._buffers[topic] = TopicBuffer(topic=topic)
 
-        self._logger.info(
-            f"Summarized topic '{topic}': "
-            f"{len(buffer.entries)} entries -> 1 summary"
-        )
+        self._logger.info(f"Summarized topic '{topic}': {len(buffer.entries)} entries -> 1 summary")
 
         return summary_entry
 
@@ -202,4 +198,3 @@ class ShortTermMemory:
             }
             for topic, buffer in self._buffers.items()
         }
-

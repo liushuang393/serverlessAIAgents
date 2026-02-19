@@ -45,10 +45,10 @@ if TYPE_CHECKING:
 class ToolType(str, Enum):
     """ツール種別."""
 
-    SKILL = "skill"        # Skills (SKILL.md)
-    MCP = "mcp"            # MCP外部ツール
-    BUILTIN = "builtin"    # 内蔵ツール
-    CUSTOM = "custom"      # カスタムツール
+    SKILL = "skill"  # Skills (SKILL.md)
+    MCP = "mcp"  # MCP外部ツール
+    BUILTIN = "builtin"  # 内蔵ツール
+    CUSTOM = "custom"  # カスタムツール
 
 
 class ToolStatus(str, Enum):
@@ -166,6 +166,7 @@ class SkillToolProvider(ToolProvider):
         """初期化（SkillEngineをロード）."""
         try:
             from agentflow.skills.engine import SkillEngine
+
             self._engine = SkillEngine(auto_learn=False)
 
             # スキルをツール定義として登録
@@ -497,6 +498,7 @@ class BuiltinToolProvider(ToolProvider):
     async def _parse_json(self, params: dict[str, Any]) -> dict[str, Any]:
         """JSON解析ハンドラー."""
         import json
+
         json_string = params.get("json_string", "{}")
         return json.loads(json_string)
 
@@ -702,14 +704,16 @@ class UnifiedToolProvider:
             if not tool_def.enabled:
                 continue
 
-            tools.append({
-                "type": "function",
-                "function": {
-                    "name": tool_def.uri,
-                    "description": tool_def.description,
-                    "parameters": tool_def.parameters,
-                },
-            })
+            tools.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool_def.uri,
+                        "description": tool_def.description,
+                        "parameters": tool_def.parameters,
+                    },
+                }
+            )
 
         return tools
 

@@ -149,4 +149,3 @@ def _normalize_options(options: dict[str, Any]) -> dict[str, Any]:
         "min_keyword_frequency": int(options.get("min_keyword_frequency", 2)),
         "top_trends_count": int(options.get("top_trends_count", 10)),
     }
-

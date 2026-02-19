@@ -416,9 +416,7 @@ class CodeInventory:
                 continue
 
             try:
-                content = file_path.read_text(
-                    encoding=file_info.encoding, errors="ignore"
-                )
+                content = file_path.read_text(encoding=file_info.encoding, errors="ignore")
                 lines = content.splitlines()
 
                 for line_no, line in enumerate(lines, 1):
@@ -517,9 +515,7 @@ class CodeInventory:
             outgoing_score = outgoing * 5
 
             # 被依存数
-            incoming = sum(
-                1 for deps in dep_graph.values() if file_info.path in deps
-            )
+            incoming = sum(1 for deps in dep_graph.values() if file_info.path in deps)
             incoming_score = incoming * 3
 
             complexity[file_info.path] = loc_score + outgoing_score + incoming_score

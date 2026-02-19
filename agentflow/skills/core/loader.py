@@ -48,10 +48,7 @@ class SkillRegistry(Registry[Skill]):
         Returns:
             マッチした Skill リスト
         """
-        return [
-            skill for skill in self._items.values()
-            if tag in skill.metadata.tags
-        ]
+        return [skill for skill in self._items.values() if tag in skill.metadata.tags]
 
 
 class SkillLoader:
@@ -174,4 +171,3 @@ class SkillLoader:
 
         _resolve(skill)
         return resolved
-

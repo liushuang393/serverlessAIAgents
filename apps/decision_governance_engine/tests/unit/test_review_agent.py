@@ -1,26 +1,26 @@
-# -*- coding: utf-8 -*-
 """Unit tests for ReviewAgent."""
+
 import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from apps.decision_governance_engine.agents.review_agent import ReviewAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
+    ActionPhase,
+    DaoOutput,
+    FaOutput,
+    FindingCategory,
+    FindingSeverity,
+    Implementation,
+    PathOption,
+    ProblemType,
+    QiOutput,
+    ReviewFinding,
     ReviewInput,
     ReviewOutput,
     ReviewVerdict,
-    ReviewFinding,
-    FindingSeverity,
-    FindingCategory,
-    DaoOutput,
-    FaOutput,
     ShuOutput,
-    QiOutput,
-    ProblemType,
-    PathOption,
     StrategyType,
-    ActionPhase,
-    Implementation,
 )
 
 
@@ -112,6 +112,7 @@ class TestReviewAgentInit:
     def test_agent_inherits_resilient_agent(self, review_agent: ReviewAgent) -> None:
         """Test that ReviewAgent inherits from ResilientAgent."""
         from agentflow import ResilientAgent
+
         assert isinstance(review_agent, ResilientAgent)
 
     def test_agent_has_correct_name(self, review_agent: ReviewAgent) -> None:
@@ -182,9 +183,7 @@ class TestReviewAgentOutputStructure:
             ]
 
     @pytest.mark.asyncio
-    async def test_output_with_problematic_input(
-        self, review_agent: ReviewAgent
-    ) -> None:
+    async def test_output_with_problematic_input(self, review_agent: ReviewAgent) -> None:
         """Test output with incomplete input data."""
         # Create input with potential issues
         dao_output = DaoOutput(
@@ -287,9 +286,7 @@ class TestReviewAgentValidation:
 class TestReviewAgentScoringConsistency:
     """判定と信頼度の整合性テスト."""
 
-    def test_warning_forces_revise_with_capped_confidence(
-        self, review_agent: ReviewAgent
-    ) -> None:
+    def test_warning_forces_revise_with_capped_confidence(self, review_agent: ReviewAgent) -> None:
         """WARNING がある場合は REVISE かつ 80% 未満."""
         findings = [
             ReviewFinding(
@@ -305,9 +302,7 @@ class TestReviewAgentScoringConsistency:
         assert confidence <= 0.79
 
     @pytest.mark.asyncio
-    async def test_llm_output_is_normalized_by_findings(
-        self, sample_input: ReviewInput
-    ) -> None:
+    async def test_llm_output_is_normalized_by_findings(self, sample_input: ReviewInput) -> None:
         """LLM の高信頼 REVISE/PASS 不整合を正規化できること."""
         review_agent = ReviewAgent(llm_client=MagicMock())
         review_agent._call_llm = AsyncMock(

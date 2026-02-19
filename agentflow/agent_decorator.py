@@ -49,6 +49,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar
 
+from agentflow.providers.llm_provider import LLMProvider
 from agentflow.providers.tool_provider import ToolProvider
 
 
@@ -184,6 +185,7 @@ class RegisteredAgent:
             # LLMProviderを注入（get_llm() 松耦合API を使用）
             try:
                 from agentflow.providers import get_llm
+
                 self._llm_provider = get_llm(
                     temperature=self.temperature,
                     max_tokens=self.max_tokens,
@@ -413,7 +415,9 @@ def agent[T: type](
                     messages.append({"role": "system", "content": self.system_prompt})
 
                 # ユーザー入力
-                user_content = input_data.get("question") or input_data.get("message") or str(input_data)
+                user_content = (
+                    input_data.get("question") or input_data.get("message") or str(input_data)
+                )
                 messages.append({"role": "user", "content": user_content})
 
                 # LLM呼び出し

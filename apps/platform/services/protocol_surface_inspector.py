@@ -71,9 +71,7 @@ class ProtocolSurfaceReport:
 class _ProtocolSurfaceVisitor(ast.NodeVisitor):
     def __init__(self, *, file: str) -> None:
         self._file = file
-        self._evidence: dict[str, list[ProtocolEvidence]] = {
-            name: [] for name in _PROTOCOLS
-        }
+        self._evidence: dict[str, list[ProtocolEvidence]] = {name: [] for name in _PROTOCOLS}
 
     @property
     def evidence(self) -> dict[str, list[ProtocolEvidence]]:
@@ -90,7 +88,7 @@ class _ProtocolSurfaceVisitor(ast.NodeVisitor):
             ),
         )
 
-    def visit_Import(self, node: ast.Import) -> None:  # noqa: N802
+    def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
             mod = alias.name
             lowered = mod.lower()
@@ -104,7 +102,7 @@ class _ProtocolSurfaceVisitor(ast.NodeVisitor):
                 self._record("mcp", node, f"import {mod}")
         self.generic_visit(node)
 
-    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:  # noqa: N802
+    def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
         module = (node.module or "").lower()
         imported_names = {name.name for name in node.names}
 
@@ -124,11 +122,11 @@ class _ProtocolSurfaceVisitor(ast.NodeVisitor):
 
         self.generic_visit(node)
 
-    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # noqa: N802
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         self._visit_function_like(node)
         self.generic_visit(node)
 
-    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:  # noqa: N802
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
         self._visit_function_like(node)
         self.generic_visit(node)
 
@@ -151,7 +149,7 @@ class _ProtocolSurfaceVisitor(ast.NodeVisitor):
                 if _has_streaming_response_class(call):
                     self._record("sse", decorator, "response_class=StreamingResponse")
 
-    def visit_Call(self, node: ast.Call) -> None:  # noqa: N802
+    def visit_Call(self, node: ast.Call) -> None:
         dotted = _dotted_name(node.func)
         lowered = dotted.lower()
         tail = lowered.split(".")[-1]
@@ -173,7 +171,7 @@ class _ProtocolSurfaceVisitor(ast.NodeVisitor):
 
         self.generic_visit(node)
 
-    def visit_Constant(self, node: ast.Constant) -> None:  # noqa: N802
+    def visit_Constant(self, node: ast.Constant) -> None:
         value = node.value
         if not isinstance(value, str):
             return

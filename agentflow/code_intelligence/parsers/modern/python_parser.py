@@ -147,19 +147,23 @@ class PythonParser(CodeParser):
 
         if isinstance(node, python_ast.Import):
             for alias in node.names:
-                imports.append(ImportInfo(
-                    module=alias.name,
-                    alias=alias.asname,
-                ))
+                imports.append(
+                    ImportInfo(
+                        module=alias.name,
+                        alias=alias.asname,
+                    )
+                )
             return None
 
         if isinstance(node, python_ast.ImportFrom):
             module = node.module or ""
             for alias in node.names:
-                imports.append(ImportInfo(
-                    module=f"{module}.{alias.name}" if module else alias.name,
-                    alias=alias.asname,
-                ))
+                imports.append(
+                    ImportInfo(
+                        module=f"{module}.{alias.name}" if module else alias.name,
+                        alias=alias.asname,
+                    )
+                )
             return None
 
         if isinstance(node, python_ast.ClassDef):
@@ -303,6 +307,7 @@ def _register() -> None:
     """パーサーをレジストリに登録."""
     try:
         from agentflow.code_intelligence.parsers.registry import register_parser
+
         register_parser("python", PythonParser)
     except ImportError:
         pass

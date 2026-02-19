@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """PipelineEngine 继承场景测试.
 
 测试 PipelineEngine 的继承模式，确保子类能够安全地扩展而不遗漏关键步骤。
@@ -10,10 +9,11 @@
 4. 验证 run_stream() 正常工作
 """
 
-import pytest
 from typing import Any
 
-from agentflow.engines import PipelineEngine, EngineConfig
+import pytest
+
+from agentflow.engines import EngineConfig, PipelineEngine
 
 
 # ============================================================
@@ -111,28 +111,30 @@ class DynamicPipelineEngine(PipelineEngine):
         """动态设置 stages."""
         await self._registry.initialize()
 
-        self._stage_configs = self._parse_stages([
-            {
-                "name": "gate",
-                "agent": self._registry.get_agent("gate"),
-                "gate": True,
-                "gate_check": lambda r: r.get("is_acceptable", False),
-            },
-            {
-                "name": "process1",
-                "agent": self._registry.get_agent("process1"),
-            },
-            {
-                "name": "process2",
-                "agent": self._registry.get_agent("process2"),
-            },
-            {
-                "name": "review",
-                "agent": self._registry.get_agent("review"),
-                "review": True,
-                "retry_from": "process1",
-            },
-        ])
+        self._stage_configs = self._parse_stages(
+            [
+                {
+                    "name": "gate",
+                    "agent": self._registry.get_agent("gate"),
+                    "gate": True,
+                    "gate_check": lambda r: r.get("is_acceptable", False),
+                },
+                {
+                    "name": "process1",
+                    "agent": self._registry.get_agent("process1"),
+                },
+                {
+                    "name": "process2",
+                    "agent": self._registry.get_agent("process2"),
+                },
+                {
+                    "name": "review",
+                    "agent": self._registry.get_agent("review"),
+                    "review": True,
+                    "retry_from": "process1",
+                },
+            ]
+        )
 
         # 设置 stage_instances
         for stage in self._stage_configs:
@@ -157,10 +159,12 @@ class CorrectOverrideEngine(PipelineEngine):
         self._custom_initialized = True
 
         # 动态设置 stages
-        self._stage_configs = self._parse_stages([
-            {"name": "step1", "agent": MockAgent("Step1")},
-            {"name": "step2", "agent": MockAgent("Step2")},
-        ])
+        self._stage_configs = self._parse_stages(
+            [
+                {"name": "step1", "agent": MockAgent("Step1")},
+                {"name": "step2", "agent": MockAgent("Step2")},
+            ]
+        )
 
         for stage in self._stage_configs:
             instances = []
@@ -186,9 +190,11 @@ class BrokenOverrideEngine(PipelineEngine):
 
     async def _initialize(self) -> None:
         # 设置 stages
-        self._stage_configs = self._parse_stages([
-            {"name": "step1", "agent": MockAgent("Step1")},
-        ])
+        self._stage_configs = self._parse_stages(
+            [
+                {"name": "step1", "agent": MockAgent("Step1")},
+            ]
+        )
 
         for stage in self._stage_configs:
             instances = []

@@ -259,7 +259,14 @@ class WorldState:
             if not prediction.is_valid:
                 return False, {
                     "error": "制約違反",
-                    "violations": [v.model_dump() for v in (prediction.constraint_result.violations if prediction.constraint_result else [])],
+                    "violations": [
+                        v.model_dump()
+                        for v in (
+                            prediction.constraint_result.violations
+                            if prediction.constraint_result
+                            else []
+                        )
+                    ],
                 }
 
             new_state = prediction.predicted_state
@@ -379,4 +386,3 @@ __all__ = [
     "WorldState",
     "WorldStateSnapshot",
 ]
-

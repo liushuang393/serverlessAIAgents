@@ -131,9 +131,7 @@ class AgentApiException(Exception):
         )
 
     @classmethod
-    def server_error(
-        cls, message: str = "サーバーエラーが発生しました"
-    ) -> "AgentApiException":
+    def server_error(cls, message: str = "サーバーエラーが発生しました") -> "AgentApiException":
         """サーバーエラーを生成."""
         return cls(
             code=ErrorCode.SERVER_ERROR,
@@ -160,4 +158,3 @@ async def error_handler(request: Request, exc: AgentApiException) -> JSONRespons
         status_code=exc.status_code,
         content=exc.to_response().model_dump(),
     )
-

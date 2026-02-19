@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """MCP Registry Service.
 
 `.agentflow/protocols/mcp.yaml` を読み書きし、Platform から
@@ -11,7 +10,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
 from apps.platform.schemas.provisioning_schemas import (
     MCPLazyLoadingPatchRequest,
     MCPServerUpsertRequest,

@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
 """Unit tests for FaAgent."""
-import json
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
+import json
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from apps.decision_governance_engine.agents.fa_agent import FaAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
+    DaoOutput,
     FaInput,
     FaOutput,
-    DaoOutput,
-    ProblemType,
     PathOption,
+    ProblemType,
     SelfCheckStatus,
     StrategyType,
 )
@@ -51,6 +51,7 @@ class TestFaAgentInit:
     def test_agent_inherits_resilient_agent(self, fa_agent: FaAgent) -> None:
         """Test that FaAgent inherits from ResilientAgent."""
         from agentflow import ResilientAgent
+
         assert isinstance(fa_agent, ResilientAgent)
 
     def test_agent_has_correct_name(self, fa_agent: FaAgent) -> None:
@@ -83,9 +84,7 @@ class TestFaAgentOutputStructure:
     """Test cases for FaAgent output structure via process()."""
 
     @pytest.mark.asyncio
-    async def test_output_returns_fa_output(
-        self, fa_agent: FaAgent, sample_input: FaInput
-    ) -> None:
+    async def test_output_returns_fa_output(self, fa_agent: FaAgent, sample_input: FaInput) -> None:
         """Test that output is valid FaOutput."""
         result = await fa_agent.process(sample_input)
 
@@ -129,9 +128,7 @@ class TestFaAgentProcess:
     """Test cases for FaAgent.process."""
 
     @pytest.mark.asyncio
-    async def test_process_without_llm(
-        self, fa_agent: FaAgent, sample_input: FaInput
-    ) -> None:
+    async def test_process_without_llm(self, fa_agent: FaAgent, sample_input: FaInput) -> None:
         """Test process falls back to rule-based when no LLM."""
         result = await fa_agent.process(sample_input)
 

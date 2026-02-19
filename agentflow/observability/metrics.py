@@ -520,8 +520,8 @@ class MetricsCollector:
                 for bucket, count in stats.get("buckets", {}).items():
                     lines.append(f'{name}_bucket{{le="{bucket}"}} {count}')
                 lines.append(f'{name}_bucket{{le="+Inf"}} {stats["count"]}')
-                lines.append(f'{name}_sum {stats["sum"]}')
-                lines.append(f'{name}_count {stats["count"]}')
+                lines.append(f"{name}_sum {stats['sum']}")
+                lines.append(f"{name}_count {stats['count']}")
 
         return "\n".join(lines)
 
@@ -550,4 +550,3 @@ def get_metrics() -> MetricsCollector:
     if _metrics_instance is None:
         _metrics_instance = MetricsCollector()
     return _metrics_instance
-

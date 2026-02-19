@@ -137,6 +137,7 @@ class SafetyMixin:
         """
         if not self.safety_enabled:
             from agentflow.security.ai_safety_guard import OutputCheckResult
+
             return OutputCheckResult(
                 is_safe=True,
                 needs_review=False,
@@ -157,6 +158,7 @@ class SafetyMixin:
         except Exception as e:
             _logger.exception("出力安全検査エラー: %s", e)
             from agentflow.security.ai_safety_guard import OutputCheckResult
+
             return OutputCheckResult(
                 is_safe=True,
                 needs_review=True,
@@ -188,4 +190,3 @@ class SafetyMixin:
 
 
 __all__ = ["SafetyMixin"]
-

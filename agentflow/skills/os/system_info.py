@@ -112,8 +112,14 @@ class SystemInfoSkill(OSSkillBase):
         """
         # セキュリティ上、一部の環境変数は取得禁止
         forbidden_keys = {
-            "AWS_SECRET_ACCESS_KEY", "OPENAI_API_KEY", "ANTHROPIC_API_KEY",
-            "DATABASE_URL", "PASSWORD", "SECRET", "TOKEN", "PRIVATE_KEY",
+            "AWS_SECRET_ACCESS_KEY",
+            "OPENAI_API_KEY",
+            "ANTHROPIC_API_KEY",
+            "DATABASE_URL",
+            "PASSWORD",
+            "SECRET",
+            "TOKEN",
+            "PRIVATE_KEY",
         }
 
         if any(forbidden in key.upper() for forbidden in forbidden_keys):
@@ -161,4 +167,3 @@ class SystemInfoSkill(OSSkillBase):
             "allow_write": self._config.allow_write,
             "allow_delete": self._config.allow_delete,
         }
-

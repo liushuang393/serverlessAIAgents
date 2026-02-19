@@ -19,12 +19,12 @@ from apps.faq_system.backend.auth.models import UserInfo
 from apps.faq_system.backend.auth.service import AuthService, get_auth_service
 from apps.faq_system.backend.security.proxy_auth import proxy_auth_verifier
 from fastapi import Cookie, Depends, Header, HTTPException, Request, WebSocket
+
 from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,7 @@ _FAQ_PUBLIC_HTTP_PATHS = {
     "/openapi.json",
 }
 _faq_auth_guard: ContractAuthGuard | None = None
+
 
 def _trust_proxy_auth_enabled() -> bool:
     return os.getenv("FAQ_TRUST_PROXY_AUTH", "false").lower() in {"1", "true", "yes", "on"}
@@ -302,9 +303,7 @@ async def resolve_user_from_websocket(websocket: WebSocket) -> UserInfo | None:
     """WebSocket ハンドシェイク情報からユーザーを解決."""
     access_token = websocket.query_params.get("access_token")
     authorization_header = websocket.headers.get("authorization")
-    authorization = authorization_header or (
-        f"Bearer {access_token}" if access_token else None
-    )
+    authorization = authorization_header or (f"Bearer {access_token}" if access_token else None)
     return await _resolve_user_from_request_payload(
         headers=websocket.headers,
         authorization=authorization,
@@ -316,7 +315,7 @@ async def resolve_user_from_websocket(websocket: WebSocket) -> UserInfo | None:
 
 def get_faq_contract_auth_guard() -> ContractAuthGuard:
     """FAQ 認証用 ContractAuthGuard を取得."""
-    global _faq_auth_guard  # noqa: PLW0603
+    global _faq_auth_guard
     if _faq_auth_guard is None:
         _faq_auth_guard = ContractAuthGuard(
             ContractAuthGuardConfig(

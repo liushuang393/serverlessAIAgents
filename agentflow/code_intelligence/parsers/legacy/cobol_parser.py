@@ -235,12 +235,14 @@ class CobolParser(CodeParser):
                 pic = match.group(3)
                 cobol_type = self._infer_type_from_pic(pic)
 
-                variables.append({
-                    "level": level,
-                    "name": name,
-                    "pic": pic,
-                    "type": cobol_type,
-                })
+                variables.append(
+                    {
+                        "level": level,
+                        "name": name,
+                        "pic": pic,
+                        "type": cobol_type,
+                    }
+                )
 
         return variables
 
@@ -262,8 +264,7 @@ class CobolParser(CodeParser):
         for line in proc_lines:
             # PARAGRAPH/SECTIONを検出
             if line.endswith(".") and not any(
-                kw in line.upper()
-                for kw in ["MOVE", "ADD", "DISPLAY", "IF", "PERFORM", "STOP"]
+                kw in line.upper() for kw in ["MOVE", "ADD", "DISPLAY", "IF", "PERFORM", "STOP"]
             ):
                 # 前のプロシージャを保存
                 if current_proc:
@@ -290,6 +291,7 @@ def _register() -> None:
     """パーサーをレジストリに登録."""
     try:
         from agentflow.code_intelligence.parsers.registry import register_parser
+
         register_parser("cobol", CobolParser)
     except ImportError:
         pass

@@ -205,4 +205,3 @@ class MemoryDistiller:
                 episodic_count[m.topic] = episodic_count.get(m.topic, 0) + 1
 
         return any(count >= self._min_cluster_size for count in episodic_count.values())
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Platform テスト共有フィクスチャ.
 
 目的: テスト用の一時 app_config.json、TestClient、Mock サービスを提供。
@@ -16,8 +15,6 @@ from typing import Any
 
 import httpx
 import pytest
-from httpx import Response
-
 from apps.platform.schemas.app_config_schemas import AppConfig
 from apps.platform.services.agent_aggregator import AgentAggregatorService
 from apps.platform.services.app_discovery import AppDiscoveryService
@@ -25,6 +22,7 @@ from apps.platform.services.app_lifecycle import AppLifecycleManager
 from apps.platform.services.rag_overview import RAGOverviewService
 from apps.platform.services.skill_catalog import SkillCatalogService
 from apps.platform.services.tenant_invitation import TenantInvitationService
+from httpx import Response
 
 
 class SyncASGIClient:
@@ -174,49 +172,52 @@ Just plain text content.
 # ------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 def sample_config() -> AppConfig:
     """検証済み AppConfig インスタンスを返す."""
     return AppConfig.model_validate(SAMPLE_APP_CONFIG)
 
 
-@pytest.fixture()
+@pytest.fixture
 def apps_dir(tmp_path: Path) -> Path:
     """一時 apps ディレクトリに app_config.json を配置して返す."""
     # test_app
     app_dir = tmp_path / "test_app"
     app_dir.mkdir()
     (app_dir / "app_config.json").write_text(
-        json.dumps(SAMPLE_APP_CONFIG, ensure_ascii=False), encoding="utf-8",
+        json.dumps(SAMPLE_APP_CONFIG, ensure_ascii=False),
+        encoding="utf-8",
     )
     # minimal_app
     min_dir = tmp_path / "minimal_app"
     min_dir.mkdir()
     (min_dir / "app_config.json").write_text(
-        json.dumps(SAMPLE_APP_CONFIG_MINIMAL, ensure_ascii=False), encoding="utf-8",
+        json.dumps(SAMPLE_APP_CONFIG_MINIMAL, ensure_ascii=False),
+        encoding="utf-8",
     )
     # library_app (API ポートなし)
     lib_dir = tmp_path / "library_app"
     lib_dir.mkdir()
     (lib_dir / "app_config.json").write_text(
-        json.dumps(SAMPLE_APP_CONFIG_NO_API, ensure_ascii=False), encoding="utf-8",
+        json.dumps(SAMPLE_APP_CONFIG_NO_API, ensure_ascii=False),
+        encoding="utf-8",
     )
     return tmp_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def discovery(apps_dir: Path) -> AppDiscoveryService:
     """一時ディレクトリを使う AppDiscoveryService を返す."""
     return AppDiscoveryService(apps_dir=apps_dir)
 
 
-@pytest.fixture()
+@pytest.fixture
 def lifecycle() -> AppLifecycleManager:
     """AppLifecycleManager インスタンスを返す."""
     return AppLifecycleManager()
 
 
-@pytest.fixture()
+@pytest.fixture
 def test_client(apps_dir: Path) -> SyncASGIClient:
     """Platform FastAPI TestClient を返す（サービス初期化 + scan 済み）."""
     import asyncio
@@ -258,75 +259,81 @@ def test_client(apps_dir: Path) -> SyncASGIClient:
 # ------------------------------------------------------------------
 
 
-@pytest.fixture()
+@pytest.fixture
 def apps_dir_with_rag(tmp_path: Path) -> Path:
     """RAG 対応 App を含む一時 apps ディレクトリ."""
     # test_app（Agent あり、RAG なし）
     app_dir = tmp_path / "test_app"
     app_dir.mkdir()
     (app_dir / "app_config.json").write_text(
-        json.dumps(SAMPLE_APP_CONFIG, ensure_ascii=False), encoding="utf-8",
+        json.dumps(SAMPLE_APP_CONFIG, ensure_ascii=False),
+        encoding="utf-8",
     )
     # rag_app（RAG 対応 Agent + RAG サービス設定あり）
     rag_dir = tmp_path / "rag_app"
     rag_dir.mkdir()
     (rag_dir / "app_config.json").write_text(
-        json.dumps(SAMPLE_APP_CONFIG_RAG, ensure_ascii=False), encoding="utf-8",
+        json.dumps(SAMPLE_APP_CONFIG_RAG, ensure_ascii=False),
+        encoding="utf-8",
     )
     # minimal_app（Agent なし）
     min_dir = tmp_path / "minimal_app"
     min_dir.mkdir()
     (min_dir / "app_config.json").write_text(
-        json.dumps(SAMPLE_APP_CONFIG_MINIMAL, ensure_ascii=False), encoding="utf-8",
+        json.dumps(SAMPLE_APP_CONFIG_MINIMAL, ensure_ascii=False),
+        encoding="utf-8",
     )
     return tmp_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def discovery_with_rag(apps_dir_with_rag: Path) -> AppDiscoveryService:
     """RAG 対応 App を含む AppDiscoveryService."""
     return AppDiscoveryService(apps_dir=apps_dir_with_rag)
 
 
-@pytest.fixture()
+@pytest.fixture
 def aggregator(discovery: AppDiscoveryService) -> AgentAggregatorService:
     """スキャン済み AppDiscoveryService を使う AgentAggregatorService."""
     asyncio.run(discovery.scan())
     return AgentAggregatorService(discovery)
 
 
-@pytest.fixture()
+@pytest.fixture
 def aggregator_with_rag(discovery_with_rag: AppDiscoveryService) -> AgentAggregatorService:
     """RAG 対応 App を含む AgentAggregatorService."""
     asyncio.run(discovery_with_rag.scan())
     return AgentAggregatorService(discovery_with_rag)
 
 
-@pytest.fixture()
+@pytest.fixture
 def skills_dir(tmp_path: Path) -> Path:
     """テスト用スキルディレクトリ（SKILL.md 配置済み）."""
     # chatbot スキル
     chatbot_dir = tmp_path / "chatbot"
     chatbot_dir.mkdir()
     (chatbot_dir / "SKILL.md").write_text(
-        SAMPLE_SKILL_MD_CHATBOT, encoding="utf-8",
+        SAMPLE_SKILL_MD_CHATBOT,
+        encoding="utf-8",
     )
     # rag スキル
     rag_dir = tmp_path / "rag"
     rag_dir.mkdir()
     (rag_dir / "SKILL.md").write_text(
-        SAMPLE_SKILL_MD_RAG, encoding="utf-8",
+        SAMPLE_SKILL_MD_RAG,
+        encoding="utf-8",
     )
     # invalid スキル（frontmatter なし）
     invalid_dir = tmp_path / "invalid_skill"
     invalid_dir.mkdir()
     (invalid_dir / "SKILL.md").write_text(
-        SAMPLE_SKILL_MD_INVALID, encoding="utf-8",
+        SAMPLE_SKILL_MD_INVALID,
+        encoding="utf-8",
     )
     return tmp_path
 
 
-@pytest.fixture()
+@pytest.fixture
 def skill_catalog(skills_dir: Path) -> SkillCatalogService:
     """テスト用 SkillCatalogService（スキャン済み）."""
     catalog = SkillCatalogService(skills_dir=skills_dir)
@@ -334,14 +341,14 @@ def skill_catalog(skills_dir: Path) -> SkillCatalogService:
     return catalog
 
 
-@pytest.fixture()
+@pytest.fixture
 def rag_overview(discovery_with_rag: AppDiscoveryService) -> RAGOverviewService:
     """RAG 対応 App を含む RAGOverviewService."""
     asyncio.run(discovery_with_rag.scan())
     return RAGOverviewService(discovery_with_rag)
 
 
-@pytest.fixture()
+@pytest.fixture
 def phase3_test_client(apps_dir_with_rag: Path, skills_dir: Path) -> SyncASGIClient:
     """Phase 3 全サービス初期化済み TestClient."""
     import asyncio

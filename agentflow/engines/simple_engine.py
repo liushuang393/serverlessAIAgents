@@ -112,8 +112,7 @@ class SimpleEngine(BaseEngine):
 
             # AgentCapabilitySpec を作成
             agent_name = getattr(
-                self._agent_cls, "__name__",
-                self._agent_instance.__class__.__name__
+                self._agent_cls, "__name__", self._agent_instance.__class__.__name__
             )
             capability = AgentCapabilitySpec(
                 id=f"{agent_name}_runtime",
@@ -147,9 +146,7 @@ class SimpleEngine(BaseEngine):
             result = await self._agent_instance.process(inputs)
         else:
             msg = f"Agent {self._agent_instance} has no run/invoke/process method"
-            raise AttributeError(
-                msg
-            )
+            raise AttributeError(msg)
 
         # dictを返却することを保証
         if isinstance(result, dict):
@@ -158,13 +155,9 @@ class SimpleEngine(BaseEngine):
             return result.model_dump()
         return {"result": result}
 
-    async def _execute_stream(
-        self, inputs: dict[str, Any]
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def _execute_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """ストリーム実行（ノードイベントを発行）."""
-        agent_name = getattr(
-            self._agent_instance, "name", self._agent_instance.__class__.__name__
-        )
+        agent_name = getattr(self._agent_instance, "name", self._agent_instance.__class__.__name__)
 
         # ノード開始
         event = self._emit_node_start(agent_name)
@@ -181,4 +174,3 @@ class SimpleEngine(BaseEngine):
 
         # 結果
         yield {"type": "result", "data": result}
-

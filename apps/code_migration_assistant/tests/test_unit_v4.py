@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for v4 fixed pipeline components."""
 
 from __future__ import annotations
@@ -7,7 +6,6 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-
 from apps.code_migration_assistant.agents import DifferentialVerificationAgent
 from apps.code_migration_assistant.orchestrator import CodeMigrationOrchestrator
 from apps.code_migration_assistant.workflow.artifacts import ArtifactStore
@@ -101,7 +99,7 @@ def test_differential_verification_compare_outputs_whitespace_and_value() -> Non
     """比較ロジックの差分種別テスト."""
     agent = DifferentialVerificationAgent()
 
-    diffs = agent._compare_outputs(  # noqa: SLF001
+    diffs = agent._compare_outputs(
         expected={"A": "X", "B": "100"},
         actual={"A": " X ", "B": "101"},
     )

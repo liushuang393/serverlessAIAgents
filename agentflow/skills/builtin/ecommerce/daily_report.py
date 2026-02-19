@@ -214,9 +214,7 @@ class DailyReportGenerator(AgentBlock):
         sections.append(self._create_inventory_section(inventory_data))
 
         # エグゼクティブサマリー生成
-        executive_summary = await self._generate_executive_summary(
-            summary, sections
-        )
+        executive_summary = await self._generate_executive_summary(summary, sections)
 
         # アクションアイテム抽出
         action_items = self._extract_action_items(sections)
@@ -291,7 +289,7 @@ class DailyReportGenerator(AgentBlock):
 | リピーター | {summary.returning_customers} | - |
 
 ### トップ商品
-{chr(10).join(f'- {p}' for p in summary.top_products[:5]) or '- データなし'}
+{chr(10).join(f"- {p}" for p in summary.top_products[:5]) or "- データなし"}
 """
 
         return ReportSection(
@@ -331,7 +329,7 @@ class DailyReportGenerator(AgentBlock):
 | ROAS | {summary.roas:.2f}x |
 
 ### キャンペーン別パフォーマンス
-{self._format_campaign_table(ad_data.get('campaigns', []))}
+{self._format_campaign_table(ad_data.get("campaigns", []))}
 """
 
         return ReportSection(
@@ -366,10 +364,10 @@ class DailyReportGenerator(AgentBlock):
 - アラート件数: {alert_count}
 
 ### 在庫切れ警告
-{chr(10).join(f'- {item}' for item in low_stock[:5]) or '- なし'}
+{chr(10).join(f"- {item}" for item in low_stock[:5]) or "- なし"}
 
 ### 過剰在庫
-{chr(10).join(f'- {item}' for item in overstock[:5]) or '- なし'}
+{chr(10).join(f"- {item}" for item in overstock[:5]) or "- なし"}
 """
 
         return ReportSection(
@@ -412,9 +410,7 @@ class DailyReportGenerator(AgentBlock):
 - 在庫アラート: {summary.inventory_alerts}件
 """
             try:
-                response = await self._llm_client.chat([
-                    {"role": "user", "content": prompt}
-                ])
+                response = await self._llm_client.chat([{"role": "user", "content": prompt}])
                 return response.get("content", "")
             except Exception as e:
                 logger.warning("LLMサマリー生成エラー: %s", e)
@@ -422,7 +418,7 @@ class DailyReportGenerator(AgentBlock):
         # フォールバック
         return f"""
 本日の売上は${summary.total_sales:,.2f}（{summary.total_orders}件）でした。
-広告ROASは{summary.roas:.2f}xで{'好調' if summary.roas >= 2 else '改善が必要'}です。
+広告ROASは{summary.roas:.2f}xで{"好調" if summary.roas >= 2 else "改善が必要"}です。
 在庫アラートは{summary.inventory_alerts}件あります。
 """.strip()
 

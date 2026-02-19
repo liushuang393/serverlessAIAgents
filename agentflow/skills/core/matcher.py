@@ -168,4 +168,3 @@ class SkillMatcher:
     def threshold(self) -> float:
         """マッチ閾値."""
         return self._threshold
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """NL2SQL 増強サービス 単体テスト.
 
 Schema Linker、Few-shot Manager、SQL Post-Processor のテスト。
@@ -8,26 +7,21 @@ from __future__ import annotations
 
 import pytest
 
+from agentflow.services.fewshot_manager import (
+    BM25,
+    FewshotExample,
+    FewshotManager,
+    FewshotManagerConfig,
+)
 from agentflow.services.schema_linker import (
     SchemaLinker,
     SchemaLinkerConfig,
     SchemaLinkResult,
-    TableInfo,
-    ColumnInfo,
-)
-from agentflow.services.fewshot_manager import (
-    FewshotManager,
-    FewshotManagerConfig,
-    FewshotExample,
-    BM25,
 )
 from agentflow.services.sql_postprocessor import (
-    SQLPostProcessor,
     PostProcessorConfig,
     PostProcessResult,
-    ValidationResult,
-    ValidationLevel,
-    SQLErrorType,
+    SQLPostProcessor,
 )
 
 
@@ -395,9 +389,7 @@ class TestNL2SQLIntegration:
         assert len(examples) >= 0  # 例があれば取得
 
         # 3. Post-Processor
-        processor = SQLPostProcessor(
-            config=PostProcessorConfig(enable_llm_correction=False)
-        )
+        processor = SQLPostProcessor(config=PostProcessorConfig(enable_llm_correction=False))
         await processor.start()
 
         pp_result = await processor.process(
@@ -451,9 +443,9 @@ class TestQueryDSL:
     async def test_dsl_to_sql(self) -> None:
         """DSL→SQL変換."""
         from agentflow.services.semantic_layer import (
-            SemanticLayerService,
-            QueryDSL,
             OrderByDSL,
+            QueryDSL,
+            SemanticLayerService,
             SortDirection,
             TimeRangeDSL,
         )
@@ -493,9 +485,9 @@ class TestQueryDSL:
     def test_dsl_to_dict(self) -> None:
         """DSL辞書変換."""
         from agentflow.services.semantic_layer import (
-            QueryDSL,
             FilterDSL,
             FilterOperator,
+            QueryDSL,
         )
 
         dsl = QueryDSL(
@@ -531,4 +523,3 @@ class TestQueryDSL:
         assert len(dsl.filters) == 1
         assert len(dsl.order_by) == 1
         assert dsl.limit == 5
-

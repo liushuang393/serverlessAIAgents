@@ -1,21 +1,12 @@
-# -*- coding: utf-8 -*-
 """World Model層のユニットテスト.
 
 CausalModel, ConstraintSolver, WorldStateの機能をテストする。
 """
 
-import pytest
-
 from agentflow.world_model import (
     CausalModel,
-    CausalNode,
-    CausalRelation,
     ConstraintSolver,
-    ConstraintViolation,
-    SolverResult,
     WorldState,
-    WorldStateSnapshot,
-    ActionPrediction,
 )
 
 
@@ -637,4 +628,3 @@ class TestWorldState:
         world.reset()
 
         assert world.get_state() == {}
-

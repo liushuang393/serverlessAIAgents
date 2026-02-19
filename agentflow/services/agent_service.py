@@ -89,31 +89,21 @@ class AgentService(ServiceBase[dict[str, Any]]):
         input_data = input_data or {}
 
         # フェーズ1: Agent 読み込み
-        yield self._emit_progress(
-            execution_id, 10.0, "Loading agent...", phase="load"
-        )
+        yield self._emit_progress(execution_id, 10.0, "Loading agent...", phase="load")
 
         try:
             agent = await self._load_agent(agent_id, agent_path)
         except Exception as e:
-            yield self._emit_error(
-                execution_id, "agent_not_found", f"Failed to load agent: {e}"
-            )
+            yield self._emit_error(execution_id, "agent_not_found", f"Failed to load agent: {e}")
             return
 
-        yield self._emit_log(
-            execution_id, f"Agent loaded: {agent_id or agent_path}", LogLevel.INFO
-        )
+        yield self._emit_log(execution_id, f"Agent loaded: {agent_id or agent_path}", LogLevel.INFO)
 
         # フェーズ2: 入力検証
-        yield self._emit_progress(
-            execution_id, 20.0, "Validating input...", phase="validate"
-        )
+        yield self._emit_progress(execution_id, 20.0, "Validating input...", phase="validate")
 
         # フェーズ3: 実行
-        yield self._emit_progress(
-            execution_id, 30.0, "Executing agent...", phase="execute"
-        )
+        yield self._emit_progress(execution_id, 30.0, "Executing agent...", phase="execute")
 
         try:
             # ストリームモードの場合
@@ -145,16 +135,12 @@ class AgentService(ServiceBase[dict[str, Any]]):
             raise
         except Exception as e:
             self._logger.exception("Agent execution error")
-            yield self._emit_error(
-                execution_id, "execution_error", f"Agent execution failed: {e}"
-            )
+            yield self._emit_error(execution_id, "execution_error", f"Agent execution failed: {e}")
             return
 
         # フェーズ4: 完了
         duration_ms = (time.time() - start_time) * 1000
-        yield self._emit_progress(
-            execution_id, 100.0, "Completed", phase="complete"
-        )
+        yield self._emit_progress(execution_id, 100.0, "Completed", phase="complete")
         yield self._emit_result(execution_id, result, duration_ms)
 
     async def _load_agent(
@@ -175,6 +161,7 @@ class AgentService(ServiceBase[dict[str, Any]]):
         if agent_id:
             try:
                 from agentflow.agent_decorator import AgentClient
+
                 return AgentClient.get(agent_id)
             except Exception as e:
                 self._logger.warning(f"Failed to load decorated agent: {e}")
@@ -186,6 +173,7 @@ class AgentService(ServiceBase[dict[str, Any]]):
                 agent_yaml = path / "agent.yaml"
                 if agent_yaml.exists():
                     from agentflow.core.schemas import SchemaLoader
+
                     loader = SchemaLoader()
                     loader.load_from_file(agent_yaml)
                     # TODO: メタデータからAgentをロード
@@ -213,12 +201,15 @@ class AgentService(ServiceBase[dict[str, Any]]):
         # @agent デコレータで定義されたAgent
         try:
             from agentflow.agent_decorator import AgentClient
+
             for name in AgentClient.list_agents():
-                agents.append({
-                    "id": name,
-                    "type": "decorator",
-                    "description": f"Decorator-based agent: {name}",
-                })
+                agents.append(
+                    {
+                        "id": name,
+                        "type": "decorator",
+                        "description": f"Decorator-based agent: {name}",
+                    }
+                )
         except Exception:
             pass
 
@@ -238,6 +229,7 @@ class AgentService(ServiceBase[dict[str, Any]]):
         """
         try:
             from agentflow.agent_decorator import AgentClient
+
             client = AgentClient.get(agent_id)
             return {
                 "id": agent_id,
@@ -258,6 +250,7 @@ class AgentService(ServiceBase[dict[str, Any]]):
         """
         try:
             from agentflow.agent_decorator import AgentClient
+
             client = AgentClient.get(agent_id)
             return {
                 "input": getattr(client, "input_schema", {}),

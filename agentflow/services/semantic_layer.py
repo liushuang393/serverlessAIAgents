@@ -297,10 +297,7 @@ class QueryDSL:
                 }
                 for f in self.filters
             ],
-            "order_by": [
-                {"field": o.field, "direction": o.direction.value}
-                for o in self.order_by
-            ],
+            "order_by": [{"field": o.field, "direction": o.direction.value} for o in self.order_by],
             "limit": self.limit,
             "time_range": {
                 "start": self.time_range.start if self.time_range else None,
@@ -311,7 +308,9 @@ class QueryDSL:
                     else None
                 ),
                 "relative": self.time_range.relative if self.time_range else None,
-            } if self.time_range else None,
+            }
+            if self.time_range
+            else None,
             "confidence": self.confidence,
             "raw_query": self.raw_query,
             "warnings": self.warnings,
@@ -322,19 +321,23 @@ class QueryDSL:
         """辞書から生成."""
         filters = []
         for f in data.get("filters", []):
-            filters.append(FilterDSL(
-                field=f["field"],
-                operator=FilterOperator(f["operator"]),
-                value=f.get("value"),
-                values=f.get("values", []),
-            ))
+            filters.append(
+                FilterDSL(
+                    field=f["field"],
+                    operator=FilterOperator(f["operator"]),
+                    value=f.get("value"),
+                    values=f.get("values", []),
+                )
+            )
 
         order_by = []
         for o in data.get("order_by", []):
-            order_by.append(OrderByDSL(
-                field=o["field"],
-                direction=SortDirection(o.get("direction", "DESC")),
-            ))
+            order_by.append(
+                OrderByDSL(
+                    field=o["field"],
+                    direction=SortDirection(o.get("direction", "DESC")),
+                )
+            )
 
         time_range = None
         if data.get("time_range"):
@@ -342,11 +345,7 @@ class QueryDSL:
             time_range = TimeRangeDSL(
                 start=tr.get("start"),
                 end=tr.get("end"),
-                granularity=(
-                    TimeGranularity(tr["granularity"])
-                    if tr.get("granularity")
-                    else None
-                ),
+                granularity=(TimeGranularity(tr["granularity"]) if tr.get("granularity") else None),
                 relative=tr.get("relative"),
             )
 
@@ -649,9 +648,7 @@ class SemanticLayerService:
         resolved.confidence = self._calculate_confidence(resolved)
 
         # 7. 未解決の用語を特定
-        resolved.unresolved_terms = self._find_unresolved_terms(
-            query, resolved
-        )
+        resolved.unresolved_terms = self._find_unresolved_terms(query, resolved)
 
         return resolved
 
@@ -670,17 +667,11 @@ class SemanticLayerService:
         for metric in resolved.metrics:
             agg = metric.aggregation.value.upper()
             col = f"{metric.table}.{metric.column}"
-            hints.select_clause.append(
-                f"{agg}({col}) AS {metric.metric_id}"
-            )
+            hints.select_clause.append(f"{agg}({col}) AS {metric.metric_id}")
 
         for dim in resolved.dimensions:
-            hints.select_clause.append(
-                f"{dim.table}.{dim.column} AS {dim.dimension_id}"
-            )
-            hints.group_by_clause.append(
-                f"{dim.table}.{dim.column}"
-            )
+            hints.select_clause.append(f"{dim.table}.{dim.column} AS {dim.dimension_id}")
+            hints.group_by_clause.append(f"{dim.table}.{dim.column}")
 
         # FROM句
         tables = set()
@@ -698,13 +689,9 @@ class SemanticLayerService:
             date_col = self._get_date_column(resolved)
             if date_col:
                 if resolved.time_range.get("start"):
-                    hints.where_clause.append(
-                        f"{date_col} >= '{resolved.time_range['start']}'"
-                    )
+                    hints.where_clause.append(f"{date_col} >= '{resolved.time_range['start']}'")
                 if resolved.time_range.get("end"):
-                    hints.where_clause.append(
-                        f"{date_col} <= '{resolved.time_range['end']}'"
-                    )
+                    hints.where_clause.append(f"{date_col} <= '{resolved.time_range['end']}'")
 
         # ORDER BY句
         for col, direction in resolved.order_by:
@@ -738,18 +725,14 @@ class SemanticLayerService:
         if self._config.whitelist_tables:
             for metric in resolved.metrics:
                 if metric.table and metric.table not in self._config.whitelist_tables:
-                    violations.append(
-                        f"Table not in whitelist: {metric.table}"
-                    )
+                    violations.append(f"Table not in whitelist: {metric.table}")
 
         # ブラックリストチェック
         for metric in resolved.metrics:
             col_pattern = f"{metric.table}.{metric.column}"
             for blacklisted in self._config.blacklist_columns:
                 if self._match_column_pattern(col_pattern, blacklisted):
-                    violations.append(
-                        f"Column blacklisted: {col_pattern}"
-                    )
+                    violations.append(f"Column blacklisted: {col_pattern}")
 
         return len(violations) == 0, violations
 
@@ -850,7 +833,9 @@ class SemanticLayerService:
 
         # デフォルト: 過去30日
         return {
-            "start": (now - timedelta(days=self._config.default_time_range_days)).strftime("%Y-%m-%d"),
+            "start": (now - timedelta(days=self._config.default_time_range_days)).strftime(
+                "%Y-%m-%d"
+            ),
             "end": now.strftime("%Y-%m-%d"),
         }
 
@@ -1041,10 +1026,14 @@ class SemanticLayerService:
             dsl.limit = sort_info["limit"]
         if sort_info.get("order_by"):
             for field, direction in sort_info["order_by"]:
-                dsl.order_by.append(OrderByDSL(
-                    field=field if field != "metric" else (dsl.metrics[0] if dsl.metrics else ""),
-                    direction=SortDirection.DESC if direction == "DESC" else SortDirection.ASC,
-                ))
+                dsl.order_by.append(
+                    OrderByDSL(
+                        field=field
+                        if field != "metric"
+                        else (dsl.metrics[0] if dsl.metrics else ""),
+                        direction=SortDirection.DESC if direction == "DESC" else SortDirection.ASC,
+                    )
+                )
 
         # 5. 信頼度計算
         dsl.confidence = self._calculate_dsl_confidence(dsl)

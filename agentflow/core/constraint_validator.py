@@ -38,20 +38,20 @@ logger = logging.getLogger(__name__)
 class ValidationSeverity(str, Enum):
     """検証結果の深刻度."""
 
-    INFO = "info"          # 情報のみ
-    WARNING = "warning"    # 警告（続行可能）
-    ERROR = "error"        # エラー（続行不可）
+    INFO = "info"  # 情報のみ
+    WARNING = "warning"  # 警告（続行可能）
+    ERROR = "error"  # エラー（続行不可）
     CRITICAL = "critical"  # 重大（即座に停止）
 
 
 class ConstraintType(str, Enum):
     """制約の種類."""
 
-    SCHEMA = "schema"          # スキーマ検証
+    SCHEMA = "schema"  # スキーマ検証
     TOOL_WHITELIST = "tool_whitelist"  # ツールホワイトリスト
-    VALUE_RANGE = "value_range"    # 値の範囲
-    PATTERN = "pattern"        # パターンマッチ
-    CUSTOM = "custom"          # カスタム検証
+    VALUE_RANGE = "value_range"  # 値の範囲
+    PATTERN = "pattern"  # パターンマッチ
+    CUSTOM = "custom"  # カスタム検証
 
 
 @dataclass
@@ -114,15 +114,21 @@ class DangerousOperationConfig(BaseModel):
 
     blocked_keywords: list[str] = Field(
         default_factory=lambda: [
-            "DROP", "DELETE", "TRUNCATE",  # SQL危険操作
-            "rm -rf", "format",  # システム危険操作
-            "transfer", "withdraw",  # 金融危険操作
+            "DROP",
+            "DELETE",
+            "TRUNCATE",  # SQL危険操作
+            "rm -rf",
+            "format",  # システム危険操作
+            "transfer",
+            "withdraw",  # 金融危険操作
         ]
     )
     require_approval_keywords: list[str] = Field(
         default_factory=lambda: [
-            "UPDATE", "INSERT",  # SQL変更操作
-            "send", "publish",  # 外部送信
+            "UPDATE",
+            "INSERT",  # SQL変更操作
+            "send",
+            "publish",  # 外部送信
         ]
     )
     max_impact_level: int = Field(default=3, ge=1, le=5)
@@ -384,12 +390,14 @@ class ConstraintValidator:
                 result = validator(data)
                 results.append(result)
             except Exception as e:
-                results.append(ValidationResult(
-                    is_valid=False,
-                    severity=ValidationSeverity.ERROR,
-                    constraint_type=ConstraintType.CUSTOM,
-                    message=f"カスタムバリデータでエラー: {e}",
-                ))
+                results.append(
+                    ValidationResult(
+                        is_valid=False,
+                        severity=ValidationSeverity.ERROR,
+                        constraint_type=ConstraintType.CUSTOM,
+                        message=f"カスタムバリデータでエラー: {e}",
+                    )
+                )
         return results
 
     def reset_counts(self) -> None:
@@ -409,4 +417,3 @@ class ConstraintValidator:
             "has_output_schema": self._output_schema is not None,
             "custom_validator_count": len(self._custom_validators),
         }
-

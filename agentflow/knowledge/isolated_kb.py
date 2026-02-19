@@ -288,9 +288,7 @@ class IsolatedKBManager:
         # 権限チェック
         user_context = user_context or {}
         if config.required_auth:
-            auth_result = await self._check_access(
-                kb_type, "search", user_context
-            )
+            auth_result = await self._check_access(kb_type, "search", user_context)
             if not auth_result:
                 self._log_access(
                     user_context.get("user_id", "anonymous"),
@@ -301,9 +299,7 @@ class IsolatedKBManager:
                     error="Permission denied",
                 )
                 msg = f"Access denied to {kb_type.value} KB"
-                raise PermissionError(
-                    msg
-                )
+                raise PermissionError(msg)
 
         # 検索実行
         pipeline = self._pipelines[kb_type]
@@ -371,9 +367,7 @@ class IsolatedKBManager:
 
         # 権限チェック（追加は常に認証必須）
         user_context = user_context or {}
-        auth_result = await self._check_access(
-            kb_type, "write", user_context
-        )
+        auth_result = await self._check_access(kb_type, "write", user_context)
         if not auth_result:
             self._log_access(
                 user_context.get("user_id", "anonymous"),
@@ -383,19 +377,19 @@ class IsolatedKBManager:
                 error="Permission denied",
             )
             msg = f"Write access denied to {kb_type.value} KB"
-            raise PermissionError(
-                msg
-            )
+            raise PermissionError(msg)
 
         # メタデータを構築
         doc_metadata = metadata or {}
-        doc_metadata.update({
-            "visibility": (visibility or config.visibility).value,
-            "owner_id": user_context.get("user_id", ""),
-            "owner_department": user_context.get("department", ""),
-            "created_at": datetime.now().isoformat(),
-            "created_by": user_context.get("user_id", ""),
-        })
+        doc_metadata.update(
+            {
+                "visibility": (visibility or config.visibility).value,
+                "owner_id": user_context.get("user_id", ""),
+                "owner_department": user_context.get("department", ""),
+                "created_at": datetime.now().isoformat(),
+                "created_by": user_context.get("user_id", ""),
+            }
+        )
 
         # 追加実行
         pipeline = self._pipelines[kb_type]
@@ -444,14 +438,10 @@ class IsolatedKBManager:
         # 権限チェック
         user_context = user_context or {}
         if config.required_auth:
-            auth_result = await self._check_access(
-                kb_type, "read", user_context
-            )
+            auth_result = await self._check_access(kb_type, "read", user_context)
             if not auth_result:
                 msg = f"Access denied to {kb_type.value} KB"
-                raise PermissionError(
-                    msg
-                )
+                raise PermissionError(msg)
 
         # RAGクエリ実行
         pipeline = self._pipelines[kb_type]
@@ -465,9 +455,7 @@ class IsolatedKBManager:
         }
 
         if include_citations:
-            result["citations"] = [
-                self._build_citation(s) for s in rag_result.sources
-            ]
+            result["citations"] = [self._build_citation(s) for s in rag_result.sources]
 
         return result
 
@@ -586,12 +574,18 @@ class IsolatedKBManager:
         if success:
             self._logger.info(
                 "KB access: user=%s, kb=%s, action=%s, results=%d",
-                user_id, kb_type.value, action, results_count,
+                user_id,
+                kb_type.value,
+                action,
+                results_count,
             )
         else:
             self._logger.warning(
                 "KB access denied: user=%s, kb=%s, action=%s, error=%s",
-                user_id, kb_type.value, action, error,
+                user_id,
+                kb_type.value,
+                action,
+                error,
             )
 
     def get_access_logs(
@@ -629,9 +623,7 @@ class IsolatedKBManager:
         """開始済みであることを確認."""
         if not self._started:
             msg = "IsolatedKBManager not started. Call start() first."
-            raise RuntimeError(
-                msg
-            )
+            raise RuntimeError(msg)
 
     async def __aenter__(self) -> IsolatedKBManager:
         """非同期コンテキストマネージャーのエントリー."""

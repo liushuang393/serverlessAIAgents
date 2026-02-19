@@ -192,4 +192,3 @@ class ICommerceAI(ABC):
         Returns:
             交渉結果（受諾/拒否、カウンターオファー等）
         """
-

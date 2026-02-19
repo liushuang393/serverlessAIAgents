@@ -95,7 +95,9 @@ class Claim(BaseModel):
     text: str = Field(..., description="主張本文")
     confidence: float = Field(default=0.5, ge=0.0, le=1.0, description="確信度")
     evidence_refs: list[str] = Field(default_factory=list, description="参照証拠ID一覧")
-    related_section: str | None = Field(default=None, description="関連セクション（dao/fa/shu/qi等）")
+    related_section: str | None = Field(
+        default=None, description="関連セクション（dao/fa/shu/qi等）"
+    )
 
 
 class DecisionGovResponseV1(BaseModel):

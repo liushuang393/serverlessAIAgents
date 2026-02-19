@@ -61,9 +61,11 @@ def _create_agent(agent_type: AgentType) -> Any:
     """Agent インスタンスを生成."""
     match agent_type:
         case AgentType.INTERNAL_KB:
-            return InternalKBAgent(InternalKBConfig(
-                collection=resolve_default_collection(),
-            ))
+            return InternalKBAgent(
+                InternalKBConfig(
+                    collection=resolve_default_collection(),
+                )
+            )
         case AgentType.EXTERNAL_KB:
             return ExternalKBAgent(ExternalKBConfig())
         case AgentType.MAINTENANCE:
@@ -73,10 +75,12 @@ def _create_agent(agent_type: AgentType) -> Any:
             return AnalyticsAgent(AnalyticsConfig(), db_schema=schema)
         case AgentType.ENHANCED_FAQ:
             schema = json.loads(os.getenv("DB_SCHEMA", "{}"))
-            return EnhancedFAQAgent(EnhancedFAQConfig(
-                rag_collection=resolve_default_collection(),
-                sql_schema=schema,
-            ))
+            return EnhancedFAQAgent(
+                EnhancedFAQConfig(
+                    rag_collection=resolve_default_collection(),
+                    sql_schema=schema,
+                )
+            )
 
 
 def get_agent(agent_type: AgentType) -> Any:

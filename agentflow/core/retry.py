@@ -98,14 +98,11 @@ class RetryableAgent(AgentBlock):
 
             except Exception as e:
                 last_exception = e
-                self._logger.warning(
-                    f"Attempt {attempt} failed: {type(e).__name__}: {e}"
-                )
+                self._logger.warning(f"Attempt {attempt} failed: {type(e).__name__}: {e}")
 
                 # リトライ対象の例外かチェック
                 if not any(
-                    isinstance(e, exc_type)
-                    for exc_type in self._retry_config.retry_on_exceptions
+                    isinstance(e, exc_type) for exc_type in self._retry_config.retry_on_exceptions
                 ):
                     self._logger.exception(f"Non-retryable exception: {type(e).__name__}")
                     raise
@@ -148,4 +145,3 @@ class RetryableAgent(AgentBlock):
         """
         msg = "Subclass must implement _run_impl method"
         raise NotImplementedError(msg)
-

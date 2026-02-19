@@ -316,10 +316,7 @@ class RAGPipeline:
         )
 
         # 類似度フィルタリング
-        return [
-            r for r in results if r.get("distance", 1.0) <= (1.0 - min_similarity)
-        ]
-
+        return [r for r in results if r.get("distance", 1.0) <= (1.0 - min_similarity)]
 
     async def query(
         self,
@@ -480,4 +477,3 @@ class RAGPipeline:
     ) -> None:
         """非同期コンテキストマネージャーの終了."""
         await self.stop()
-

@@ -89,7 +89,10 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
 
     # 曖昧さパターン
     AMBIGUITY_PATTERNS: list[dict[str, str]] = [
-        {"pattern": "成功", "question": "「成功」とは具体的に何を指しますか？数値目標はありますか？"},
+        {
+            "pattern": "成功",
+            "question": "「成功」とは具体的に何を指しますか？数値目標はありますか？",
+        },
         {"pattern": "うまく", "question": "「うまくいく」とはどのような状態を指しますか？"},
         {"pattern": "良い", "question": "「良い」の判断基準は何ですか？"},
         {"pattern": "適切", "question": "「適切」とは誰にとって、何の観点から適切ですか？"},
@@ -157,11 +160,14 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
         # 詳細ログ: LLM生出力を記録（デバッグ用）
-        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
+        self._logger.debug(
+            f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}"
+        )
 
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
             from agentflow.utils import extract_json
+
             data = extract_json(response)
 
             if data is None:
@@ -172,15 +178,11 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
             # 詳細ログ: 抽出されたJSON
             self._logger.debug(f"Extracted JSON: {data}")
 
-            ambiguities = [
-                Ambiguity(**a) for a in data.get("ambiguities", [])
-            ][:3]
+            ambiguities = [Ambiguity(**a) for a in data.get("ambiguities", [])][:3]
             hidden_assumptions = [
                 HiddenAssumption(**h) for h in data.get("hidden_assumptions", [])
             ][:3]
-            cognitive_biases = [
-                CognitiveBias(**c) for c in data.get("cognitive_biases", [])
-            ][:2]
+            cognitive_biases = [CognitiveBias(**c) for c in data.get("cognitive_biases", [])][:2]
 
             # diagnosis_confidence の範囲を正規化（ge=0.0, le=1.0）
             confidence = data.get("diagnosis_confidence", 0.7)
@@ -199,9 +201,7 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
         except json.JSONDecodeError:
             return self._diagnose_rule_based(question, constraints)
 
-    def _diagnose_rule_based(
-        self, question: str, constraints: list[str]
-    ) -> ClarificationOutput:
+    def _diagnose_rule_based(self, question: str, constraints: list[str]) -> ClarificationOutput:
         """ルールベース診断（LLMなし）."""
         # Step 1: 質問の復唱
         restated = self._restate_question(question)
@@ -219,9 +219,7 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
         refined = self._refine_question(question, ambiguities, hidden_assumptions)
 
         # 確信度を計算
-        confidence = self._calculate_confidence(
-            ambiguities, hidden_assumptions, cognitive_biases
-        )
+        confidence = self._calculate_confidence(ambiguities, hidden_assumptions, cognitive_biases)
 
         return ClarificationOutput(
             restated_question=restated[:100],
@@ -247,18 +245,22 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
 
         for pattern_info in self.AMBIGUITY_PATTERNS:
             if pattern_info["pattern"] in question:
-                ambiguities.append(Ambiguity(
-                    point=f"「{pattern_info['pattern']}」の定義",
-                    clarification_needed=pattern_info["question"],
-                ))
+                ambiguities.append(
+                    Ambiguity(
+                        point=f"「{pattern_info['pattern']}」の定義",
+                        clarification_needed=pattern_info["question"],
+                    )
+                )
 
         # 時間軸の欠如をチェック
         time_keywords = ["いつ", "期限", "月", "週", "年"]
         if not any(kw in question for kw in time_keywords):
-            ambiguities.append(Ambiguity(
-                point="時間軸の不明確さ",
-                clarification_needed="この判断はいつまでに必要ですか？成果をいつまでに期待しますか？",
-            ))
+            ambiguities.append(
+                Ambiguity(
+                    point="時間軸の不明確さ",
+                    clarification_needed="この判断はいつまでに必要ですか？成果をいつまでに期待しますか？",
+                )
+            )
 
         return ambiguities[:3]
 
@@ -270,30 +272,38 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
 
         # 二者択一の仮定
         if "か" in question and ("AとB" in question or "どちら" in question):
-            assumptions.append(HiddenAssumption(
-                assumption="選択肢はAとBの二つだけと仮定",
-                validity_question="第三の選択肢や、両方を部分的に実行する可能性は検討しましたか？",
-            ))
+            assumptions.append(
+                HiddenAssumption(
+                    assumption="選択肢はAとBの二つだけと仮定",
+                    validity_question="第三の選択肢や、両方を部分的に実行する可能性は検討しましたか？",
+                )
+            )
 
         # リソース固定の仮定
         if constraints:
-            assumptions.append(HiddenAssumption(
-                assumption="現在のリソース制約は固定と仮定",
-                validity_question="追加の資金調達や外部パートナーの活用は検討しましたか？",
-            ))
+            assumptions.append(
+                HiddenAssumption(
+                    assumption="現在のリソース制約は固定と仮定",
+                    validity_question="追加の資金調達や外部パートナーの活用は検討しましたか？",
+                )
+            )
 
         # チーム固定の仮定
         if any("名" in c or "人" in c for c in constraints):
-            assumptions.append(HiddenAssumption(
-                assumption="チーム構成は変えられないと仮定",
-                validity_question="採用、業務委託、パートナーシップの可能性は？",
-            ))
+            assumptions.append(
+                HiddenAssumption(
+                    assumption="チーム構成は変えられないと仮定",
+                    validity_question="採用、業務委託、パートナーシップの可能性は？",
+                )
+            )
 
         # 市場環境固定の仮定
-        assumptions.append(HiddenAssumption(
-            assumption="現在の市場環境が継続すると仮定",
-            validity_question="市場環境が急変した場合のシナリオは検討しましたか？",
-        ))
+        assumptions.append(
+            HiddenAssumption(
+                assumption="現在の市場環境が継続すると仮定",
+                validity_question="市場環境が急変した場合のシナリオは検討しましたか？",
+            )
+        )
 
         return assumptions[:3]
 
@@ -303,10 +313,12 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
 
         for _bias_id, bias_info in self.COGNITIVE_BIAS_PATTERNS.items():
             if any(kw in question for kw in bias_info["keywords"]):
-                biases.append(CognitiveBias(
-                    bias=bias_info["name"],
-                    manifestation=f"質問に「{'」「'.join(kw for kw in bias_info['keywords'] if kw in question)}」が含まれており、{bias_info['description']}の可能性。",
-                ))
+                biases.append(
+                    CognitiveBias(
+                        bias=bias_info["name"],
+                        manifestation=f"質問に「{'」「'.join(kw for kw in bias_info['keywords'] if kw in question)}」が含まれており、{bias_info['description']}の可能性。",
+                    )
+                )
 
         return biases[:2]
 
@@ -359,4 +371,3 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
         """出力検証."""
         # 復唱と精緻化は必須
         return not (not output.restated_question or not output.refined_question)
-

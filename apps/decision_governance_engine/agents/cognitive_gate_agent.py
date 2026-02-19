@@ -85,9 +85,7 @@ JSON形式で出力してください。"""
             return await self._analyze_with_llm(input_data)
         return self._analyze_rule_based(input_data)
 
-    async def _analyze_with_llm(
-        self, input_data: CognitiveGateInput
-    ) -> CognitiveGateOutput:
+    async def _analyze_with_llm(self, input_data: CognitiveGateInput) -> CognitiveGateOutput:
         """LLMを使用した分析."""
         # Clarification結果があれば活用
         clarification_info = ""
@@ -100,7 +98,7 @@ JSON形式で出力してください。"""
 - 認知バイアス: {[b.bias for b in cr.cognitive_biases]}"""
 
         user_prompt = f"""【質問】{input_data.raw_question}
-【制約条件】{', '.join(input_data.constraints) if input_data.constraints else "なし"}
+【制約条件】{", ".join(input_data.constraints) if input_data.constraints else "なし"}
 {clarification_info}
 
 上記について、認知的前提条件を診断してください。
@@ -110,11 +108,14 @@ JSON形式で出力してください。"""
         response = await self._call_llm(f"{system_prompt}\n\n{user_prompt}")
 
         # 詳細ログ: LLM生出力を記録（デバッグ用）
-        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
+        self._logger.debug(
+            f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}"
+        )
 
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
             from agentflow.utils import extract_json
+
             data = extract_json(response)
 
             if data is None:
@@ -202,7 +203,11 @@ JSON形式で出力してください。"""
         if not isinstance(irr_data, dict):
             irr_data = {}
         level_str = irr_data.get("level", "MEDIUM")
-        level = IrreversibilityLevel(level_str) if level_str in IrreversibilityLevel.__members__ else IrreversibilityLevel.MEDIUM
+        level = (
+            IrreversibilityLevel(level_str)
+            if level_str in IrreversibilityLevel.__members__
+            else IrreversibilityLevel.MEDIUM
+        )
 
         irreversibility = Irreversibility(
             level=level,
@@ -212,7 +217,9 @@ JSON形式で出力してください。"""
         # criteria: 事前検証済みだが、保守的にデフォルト値を設定
         raw_criteria = data.get("criteria")
         if not raw_criteria or not isinstance(raw_criteria, list) or len(raw_criteria) == 0:
-            self._logger.warning("criteria was empty after validation - using default (should not happen)")
+            self._logger.warning(
+                "criteria was empty after validation - using default (should not happen)"
+            )
             criteria = ["要定義"]
         else:
             criteria = [str(c)[:50] for c in raw_criteria[:5] if c and str(c).strip()]
@@ -222,7 +229,11 @@ JSON形式で出力してください。"""
 
         # evaluation_object: 事前検証済みだが、保守的にデフォルト値を設定
         evaluation_object = data.get("evaluation_object", "")
-        if not evaluation_object or not isinstance(evaluation_object, str) or not str(evaluation_object).strip():
+        if (
+            not evaluation_object
+            or not isinstance(evaluation_object, str)
+            or not str(evaluation_object).strip()
+        ):
             self._logger.warning("evaluation_object was empty after validation - using default")
             evaluation_object = "評価対象未特定"
 
@@ -242,9 +253,7 @@ JSON形式で出力してください。"""
             clarification_questions=data.get("clarification_questions", [])[:3],
         )
 
-    def _analyze_rule_based(
-        self, input_data: CognitiveGateInput
-    ) -> CognitiveGateOutput:
+    def _analyze_rule_based(self, input_data: CognitiveGateInput) -> CognitiveGateOutput:
         """ルールベース分析."""
         question = input_data.raw_question
         constraints = input_data.constraints
@@ -337,19 +346,14 @@ JSON形式で出力してください。"""
         for kw in high_keywords:
             if kw in question:
                 return Irreversibility(
-                    level=IrreversibilityLevel.HIGH,
-                    description="一度決定すると撤退コストが大きい"
+                    level=IrreversibilityLevel.HIGH, description="一度決定すると撤退コストが大きい"
                 )
         for kw in low_keywords:
             if kw in question:
                 return Irreversibility(
-                    level=IrreversibilityLevel.LOW,
-                    description="容易に方向転換可能"
+                    level=IrreversibilityLevel.LOW, description="容易に方向転換可能"
                 )
-        return Irreversibility(
-            level=IrreversibilityLevel.MEDIUM,
-            description="中程度の不可逆性"
-        )
+        return Irreversibility(level=IrreversibilityLevel.MEDIUM, description="中程度の不可逆性")
 
     def _generate_questions(self, missing_info: list[str]) -> list[str]:
         """追加質問を生成."""
@@ -362,4 +366,3 @@ JSON形式で出力してください。"""
             if "評価軸" in info:
                 questions.append("何を基準に判断しますか？（コスト、リスク、時間等）")
         return questions[:3]
-

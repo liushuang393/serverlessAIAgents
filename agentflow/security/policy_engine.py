@@ -323,7 +323,12 @@ class PolicyEngine:
         if resource_dept and user_dept and resource_dept != user_dept:
             # 管理者は部門を超えてアクセス可能
             if role not in ["admin"]:
-                checks.append((False, f"部門 '{user_dept}' のユーザーは部門 '{resource_dept}' のリソースにアクセスできません"))
+                checks.append(
+                    (
+                        False,
+                        f"部門 '{user_dept}' のユーザーは部門 '{resource_dept}' のリソースにアクセスできません",
+                    )
+                )
 
         # 環境チェック
         allowed_ips = context.environment.get("allowed_ips", [])

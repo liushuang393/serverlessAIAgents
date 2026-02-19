@@ -34,10 +34,10 @@ class BudgetCategory(str, Enum):
     """予算カテゴリ."""
 
     SYSTEM_PROMPT = "system_prompt"  # システムプロンプト
-    TOOLS = "tools"                   # ツール説明
-    RAG_CONTEXT = "rag_context"       # RAG検索結果
-    HISTORY = "history"               # 会話履歴
-    KEY_NOTES = "key_notes"           # 重要Notes
+    TOOLS = "tools"  # ツール説明
+    RAG_CONTEXT = "rag_context"  # RAG検索結果
+    HISTORY = "history"  # 会話履歴
+    KEY_NOTES = "key_notes"  # 重要Notes
 
 
 @dataclass
@@ -419,8 +419,7 @@ class TokenBudgetManager:
             budget_used=budget,
             truncated=len(selected_messages) < len(messages),
             original_token_count=sum(
-                self.count_tokens(f"{m.get('role', '')}: {m.get('content', '')}")
-                for m in messages
+                self.count_tokens(f"{m.get('role', '')}: {m.get('content', '')}") for m in messages
             ),
         )
 
@@ -436,9 +435,7 @@ class TokenBudgetManager:
         """
         return {
             "usage": {cat.value: tokens for cat, tokens in self._usage.items()},
-            "remaining": {
-                cat.value: self.get_remaining_budget(cat) for cat in BudgetCategory
-            },
+            "remaining": {cat.value: self.get_remaining_budget(cat) for cat in BudgetCategory},
             "total_used": sum(self._usage.values()),
             "total_budget": self._config.total_budget,
         }

@@ -81,12 +81,14 @@ class ComponentFactory:
     ) -> ChartView:
         """スコアゲージ."""
         chart_data = {
-            "series": [{
-                "type": "gauge",
-                "data": [{"value": value, "name": title}],
-                "max": max_value,
-                "detail": {"formatter": f"{{value}}/{max_value}"},
-            }],
+            "series": [
+                {
+                    "type": "gauge",
+                    "data": [{"value": value, "name": title}],
+                    "max": max_value,
+                    "detail": {"formatter": f"{{value}}/{max_value}"},
+                }
+            ],
         }
         return ChartView(chart_type="gauge", data=chart_data, title=title)
 
@@ -274,9 +276,7 @@ class RichResponseBuilder:
         Returns:
             self
         """
-        return self._add_component(
-            ChartView(chart_type, data, title=title, height=height)
-        )
+        return self._add_component(ChartView(chart_type, data, title=title, height=height))
 
     def add_bar_chart(
         self,

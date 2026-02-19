@@ -25,6 +25,7 @@ router = APIRouter(prefix="/api/auth", tags=["認証"])
 # スキーマ定義
 # ========================================
 
+
 class LoginRequest(BaseModel):
     """ログインリクエスト."""
 
@@ -90,6 +91,7 @@ _sessions: dict[str, UserInfo] = {}
 # 依存関係
 # ========================================
 
+
 def verify_password(username: str, password: str) -> bool:
     """パスワードを検証."""
     if username not in DEMO_USERS:
@@ -111,6 +113,7 @@ def get_current_user(
 def require_auth(user: UserInfo | None = Depends(get_current_user)) -> UserInfo:
     """認証必須の依存関係."""
     from fastapi import HTTPException
+
     if not user:
         raise HTTPException(status_code=401, detail="認証が必要です")
     return user
@@ -119,6 +122,7 @@ def require_auth(user: UserInfo | None = Depends(get_current_user)) -> UserInfo:
 # ========================================
 # エンドポイント
 # ========================================
+
 
 @router.post("/login", response_model=AuthResponse)
 async def login(req: LoginRequest, response: Response) -> AuthResponse:

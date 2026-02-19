@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """OS/Browser スキルの単体テスト.
 
 セキュリティ隔離設計に基づくOS/Browserスキルのテスト。
@@ -9,28 +8,27 @@
 """
 
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
-from agentflow.skills.os.config import ExecutionMode, OSSkillConfig
-from agentflow.skills.os.filesystem import FileSystemSkill, FileInfo
-from agentflow.skills.os.command import CommandSkill
 from agentflow.skills.gateway import (
     GatewayConfig,
+    HumanConfirmationRequired,
     RiskLevel,
     SkillCategory,
     SkillDefinition,
     SkillGateway,
     SkillNotFoundError,
     SkillPermissionError,
-    HumanConfirmationRequired,
 )
 from agentflow.skills.mode_switcher import (
-    ModeSwitcher,
     ModeSwitchDenied,
-    ModeTransition,
+    ModeSwitcher,
 )
+from agentflow.skills.os.command import CommandSkill
+from agentflow.skills.os.config import ExecutionMode, OSSkillConfig
+from agentflow.skills.os.filesystem import FileSystemSkill
 
 
 # ========== OSSkillConfig テスト ==========
@@ -136,9 +134,7 @@ class TestFileSystemSkill:
         assert await fs_skill.exists("not_exists.txt") is False
 
     @pytest.mark.asyncio
-    async def test_write_file_denied_in_isolated(
-        self, fs_skill: FileSystemSkill
-    ) -> None:
+    async def test_write_file_denied_in_isolated(self, fs_skill: FileSystemSkill) -> None:
         """isolated モードで書き込みが拒否されることをテスト."""
         from agentflow.skills.os.base import ExecutionModeError
 
@@ -146,9 +142,7 @@ class TestFileSystemSkill:
             await fs_skill.write_file("output.txt", "content")
 
     @pytest.mark.asyncio
-    async def test_write_file_allowed_with_permission(
-        self, workspace: Path
-    ) -> None:
+    async def test_write_file_allowed_with_permission(self, workspace: Path) -> None:
         """書き込み許可時にファイル書き込みが成功することをテスト."""
         config = OSSkillConfig(
             workspace_path=workspace,
@@ -185,9 +179,7 @@ class TestCommandSkill:
         return CommandSkill(config)
 
     @pytest.mark.asyncio
-    async def test_run_whitelisted_command(
-        self, cmd_skill: CommandSkill, workspace: Path
-    ) -> None:
+    async def test_run_whitelisted_command(self, cmd_skill: CommandSkill, workspace: Path) -> None:
         """ホワイトリストコマンドの実行テスト."""
         result = await cmd_skill.run_command(
             os_type="linux",
@@ -214,9 +206,7 @@ class TestCommandSkill:
             )
 
     @pytest.mark.asyncio
-    async def test_dry_run_mode(
-        self, cmd_skill: CommandSkill, workspace: Path
-    ) -> None:
+    async def test_dry_run_mode(self, cmd_skill: CommandSkill, workspace: Path) -> None:
         """dry_run モードのテスト."""
         result = await cmd_skill.run_command(
             os_type="linux",
@@ -381,9 +371,7 @@ class TestModeSwitcher:
             await switcher.switch_to_real_machine(reason="テスト")
 
     @pytest.mark.asyncio
-    async def test_switch_to_real_machine_with_handler(
-        self, gateway: SkillGateway
-    ) -> None:
+    async def test_switch_to_real_machine_with_handler(self, gateway: SkillGateway) -> None:
         """確認ハンドラ付きで real_machine への切替が成功することをテスト."""
         confirm_handler = AsyncMock(return_value=True)
         switcher = ModeSwitcher(gateway, confirmation_handler=confirm_handler)
@@ -394,9 +382,7 @@ class TestModeSwitcher:
         confirm_handler.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_switch_denied_when_user_rejects(
-        self, gateway: SkillGateway
-    ) -> None:
+    async def test_switch_denied_when_user_rejects(self, gateway: SkillGateway) -> None:
         """ユーザーが拒否した場合に切替が失敗することをテスト."""
         confirm_handler = AsyncMock(return_value=False)
         switcher = ModeSwitcher(gateway, confirmation_handler=confirm_handler)
@@ -418,4 +404,3 @@ class TestModeSwitcher:
         assert len(switcher.history) == 2
         assert switcher.history[0].to_mode == ExecutionMode.REAL_MACHINE
         assert switcher.history[1].to_mode == ExecutionMode.ISOLATED
-

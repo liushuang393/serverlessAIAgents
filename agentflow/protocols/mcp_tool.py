@@ -50,9 +50,7 @@ class MCPToolResponse(BaseModel):
     """
 
     success: bool = Field(..., description="実行成功フラグ")
-    output: dict[str, Any] | None = Field(
-        default=None, description="工具特定の出力データ"
-    )
+    output: dict[str, Any] | None = Field(default=None, description="工具特定の出力データ")
     metadata: dict[str, Any] = Field(default_factory=dict, description="実行メタデータ")
     errors: list[str] = Field(default_factory=list, description="エラーリスト")
 
@@ -139,10 +137,12 @@ class MCPTool(ABC):
             response = await self.handle_request(request)
 
             # メタデータを追加
-            response.metadata.update({
-                "tool_name": self.tool_name,
-                "tool_version": self.version,
-            })
+            response.metadata.update(
+                {
+                    "tool_name": self.tool_name,
+                    "tool_version": self.version,
+                }
+            )
 
             return response
 
@@ -282,4 +282,3 @@ class MCPToolClient:
 
 # MCPClient として使用可能（後方互換）
 MCPClient = MCPToolClient
-

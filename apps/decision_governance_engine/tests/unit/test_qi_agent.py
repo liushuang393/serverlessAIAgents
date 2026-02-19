@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
 """Unit tests for QiAgent."""
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
+import pytest
 from apps.decision_governance_engine.agents.qi_agent import QiAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
+    ActionPhase,
+    Implementation,
     QiInput,
     QiOutput,
     ShuOutput,
-    ActionPhase,
-    Implementation,
 )
 
 
@@ -62,6 +60,7 @@ class TestQiAgentInit:
     def test_agent_inherits_resilient_agent(self, qi_agent: QiAgent) -> None:
         """Test that QiAgent inherits from ResilientAgent."""
         from agentflow import ResilientAgent
+
         assert isinstance(qi_agent, ResilientAgent)
 
     def test_agent_has_correct_name(self, qi_agent: QiAgent) -> None:
@@ -89,9 +88,7 @@ class TestQiAgentOutputStructure:
     """Test cases for QiAgent output structure via process()."""
 
     @pytest.mark.asyncio
-    async def test_output_returns_qi_output(
-        self, qi_agent: QiAgent, sample_input: QiInput
-    ) -> None:
+    async def test_output_returns_qi_output(self, qi_agent: QiAgent, sample_input: QiInput) -> None:
         """Test that output is valid QiOutput."""
         result = await qi_agent.process(sample_input)
 
@@ -127,9 +124,7 @@ class TestQiAgentProcess:
     """Test cases for QiAgent.process."""
 
     @pytest.mark.asyncio
-    async def test_process_without_llm(
-        self, qi_agent: QiAgent, sample_input: QiInput
-    ) -> None:
+    async def test_process_without_llm(self, qi_agent: QiAgent, sample_input: QiInput) -> None:
         """Test process falls back to rule-based when no LLM."""
         result = await qi_agent.process(sample_input)
 
@@ -137,9 +132,7 @@ class TestQiAgentProcess:
         assert len(result.implementations) >= 1
 
     @pytest.mark.asyncio
-    async def test_process_respects_tech_constraints(
-        self, qi_agent: QiAgent
-    ) -> None:
+    async def test_process_respects_tech_constraints(self, qi_agent: QiAgent) -> None:
         """Test that process respects technical constraints."""
         shu_output = ShuOutput(
             phases=[

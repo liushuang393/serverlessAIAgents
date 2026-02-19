@@ -1,17 +1,16 @@
-# -*- coding: utf-8 -*-
 """Decision Governance Engine - ユニットテスト.
 
 各Agentの基本機能とWorkflowの動作を検証する。
 """
 
 import pytest
-
 from apps.decision_governance_engine.agents.dao_agent import DaoAgent
 from apps.decision_governance_engine.agents.fa_agent import FaAgent
 from apps.decision_governance_engine.agents.gatekeeper_agent import GatekeeperAgent
 from apps.decision_governance_engine.agents.qi_agent import QiAgent
 from apps.decision_governance_engine.agents.review_agent import ReviewAgent
 from apps.decision_governance_engine.agents.shu_agent import ShuAgent
+from apps.decision_governance_engine.engine import DecisionEngine
 from apps.decision_governance_engine.schemas.agent_schemas import (
     DaoOutput,
     FaOutput,
@@ -32,7 +31,6 @@ from apps.decision_governance_engine.services.pdf_generator import PDFGeneratorS
 from apps.decision_governance_engine.services.ui_components import (
     DecisionUIComponentBuilder,
 )
-from apps.decision_governance_engine.engine import DecisionEngine
 
 
 class TestGatekeeperAgent:
@@ -82,10 +80,12 @@ class TestDaoAgent:
     @pytest.mark.asyncio
     async def test_analyze_trade_off(self, agent: DaoAgent) -> None:
         """トレードオフ問題の分析."""
-        result = await agent.run({
-            "question": "新規事業AとBのどちらに投資すべきか",
-            "constraints": ["予算1億円", "期間6ヶ月"],
-        })
+        result = await agent.run(
+            {
+                "question": "新規事業AとBのどちらに投資すべきか",
+                "constraints": ["予算1億円", "期間6ヶ月"],
+            }
+        )
         # 結果はProblemType enumオブジェクト
         assert result["problem_type"] in [
             ProblemType.TRADE_OFF,
@@ -97,10 +97,12 @@ class TestDaoAgent:
     @pytest.mark.asyncio
     async def test_analyze_timing(self, agent: DaoAgent) -> None:
         """タイミング問題の分析."""
-        result = await agent.run({
-            "question": "新システムの導入はいつ着手すべきか",
-            "constraints": [],
-        })
+        result = await agent.run(
+            {
+                "question": "新システムの導入はいつ着手すべきか",
+                "constraints": [],
+            }
+        )
         # 結果はProblemType enumオブジェクト
         assert result["problem_type"] == ProblemType.TIMING_DECISION
 
@@ -126,11 +128,13 @@ class TestFaAgent:
     @pytest.mark.asyncio
     async def test_generate_paths(self, agent: FaAgent, dao_result: dict) -> None:
         """戦略パスの生成."""
-        result = await agent.run({
-            "dao_result": dao_result,
-            "available_resources": {"budget": 10000},
-            "time_horizon": "6ヶ月",
-        })
+        result = await agent.run(
+            {
+                "dao_result": dao_result,
+                "available_resources": {"budget": 10000},
+                "time_horizon": "6ヶ月",
+            }
+        )
         assert len(result["recommended_paths"]) >= 1
         assert len(result["recommended_paths"]) <= 2  # 最大2個
         assert len(result["rejected_paths"]) >= 1  # 不推奨必須
@@ -149,14 +153,16 @@ class TestShuAgent:
     def fa_result(self) -> dict:
         """テスト用FaOutput."""
         return FaOutput(
-            recommended_paths=[{
-                "path_id": "A",
-                "name": "推奨案A",
-                "description": "段階的アプローチ",
-                "pros": ["リスク低減"],
-                "cons": ["時間がかかる"],
-                "success_probability": 0.7,
-            }],
+            recommended_paths=[
+                {
+                    "path_id": "A",
+                    "name": "推奨案A",
+                    "description": "段階的アプローチ",
+                    "pros": ["リスク低減"],
+                    "cons": ["時間がかかる"],
+                    "success_probability": 0.7,
+                }
+            ],
             rejected_paths=[],
             decision_criteria=["リスク対リターン"],
         ).model_dump()
@@ -164,10 +170,12 @@ class TestShuAgent:
     @pytest.mark.asyncio
     async def test_generate_phases(self, agent: ShuAgent, fa_result: dict) -> None:
         """フェーズの生成."""
-        result = await agent.run({
-            "fa_result": fa_result,
-            "selected_path_id": "A",
-        })
+        result = await agent.run(
+            {
+                "fa_result": fa_result,
+                "selected_path_id": "A",
+            }
+        )
         assert 3 <= len(result["phases"]) <= 5
         assert result["first_action"]
         assert len(result["dependencies"]) > 0
@@ -218,10 +226,12 @@ class TestQiAgent:
     @pytest.mark.asyncio
     async def test_generate_implementations(self, agent: QiAgent, shu_result: dict) -> None:
         """実装要素の生成."""
-        result = await agent.run({
-            "shu_result": shu_result,
-            "tech_constraints": ["Python使用"],
-        })
+        result = await agent.run(
+            {
+                "shu_result": shu_result,
+                "tech_constraints": ["Python使用"],
+            }
+        )
         assert len(result["implementations"]) > 0
         assert len(result["tool_recommendations"]) > 0
 
@@ -245,14 +255,16 @@ class TestReviewAgent:
                 hidden_assumptions=["前提1"],
             ).model_dump(),
             "fa_result": FaOutput(
-                recommended_paths=[{
-                    "path_id": "A",
-                    "name": "推奨案A",
-                    "description": "説明",
-                    "pros": ["メリット"],
-                    "cons": ["デメリット"],
-                    "success_probability": 0.7,
-                }],
+                recommended_paths=[
+                    {
+                        "path_id": "A",
+                        "name": "推奨案A",
+                        "description": "説明",
+                        "pros": ["メリット"],
+                        "cons": ["デメリット"],
+                        "success_probability": 0.7,
+                    }
+                ],
                 rejected_paths=[],
                 decision_criteria=["基準1"],
             ).model_dump(),
@@ -368,33 +380,58 @@ class TestUIComponents:
                 "hidden_assumptions": ["前提1"],
             },
             fa={
-                "recommended_paths": [{
-                    "path_id": "A",
-                    "name": "案A",
-                    "description": "説明",
-                    "pros": ["メリット"],
-                    "cons": ["デメリット"],
-                    "success_probability": 0.8,
-                }],
+                "recommended_paths": [
+                    {
+                        "path_id": "A",
+                        "name": "案A",
+                        "description": "説明",
+                        "pros": ["メリット"],
+                        "cons": ["デメリット"],
+                        "success_probability": 0.8,
+                    }
+                ],
                 "rejected_paths": [],
                 "decision_criteria": ["基準1"],
             },
             shu={
                 "phases": [
-                    {"phase_number": 1, "name": "準備", "duration": "2週間", "actions": ["行動1"], "deliverables": ["成果物"], "success_criteria": ["条件"]},
-                    {"phase_number": 2, "name": "実行", "duration": "1ヶ月", "actions": ["行動2"], "deliverables": ["成果物2"], "success_criteria": ["条件2"]},
-                    {"phase_number": 3, "name": "評価", "duration": "1週間", "actions": ["行動3"], "deliverables": ["成果物3"], "success_criteria": ["条件3"]},
+                    {
+                        "phase_number": 1,
+                        "name": "準備",
+                        "duration": "2週間",
+                        "actions": ["行動1"],
+                        "deliverables": ["成果物"],
+                        "success_criteria": ["条件"],
+                    },
+                    {
+                        "phase_number": 2,
+                        "name": "実行",
+                        "duration": "1ヶ月",
+                        "actions": ["行動2"],
+                        "deliverables": ["成果物2"],
+                        "success_criteria": ["条件2"],
+                    },
+                    {
+                        "phase_number": 3,
+                        "name": "評価",
+                        "duration": "1週間",
+                        "actions": ["行動3"],
+                        "deliverables": ["成果物3"],
+                        "success_criteria": ["条件3"],
+                    },
                 ],
                 "first_action": "MTG",
                 "dependencies": [],
             },
             qi={
-                "implementations": [{
-                    "component": "API",
-                    "technology": "FastAPI",
-                    "estimated_effort": "1人月",
-                    "risks": [],
-                }],
+                "implementations": [
+                    {
+                        "component": "API",
+                        "technology": "FastAPI",
+                        "estimated_effort": "1人月",
+                        "risks": [],
+                    }
+                ],
                 "tool_recommendations": ["Jira"],
                 "integration_points": [],
                 "technical_debt_warnings": [],
@@ -432,22 +469,45 @@ class TestPDFGenerator:
                 "hidden_assumptions": [],
             },
             fa={
-                "recommended_paths": [{
-                    "path_id": "A",
-                    "name": "案A",
-                    "description": "説明",
-                    "pros": [],
-                    "cons": [],
-                    "success_probability": 0.7,
-                }],
+                "recommended_paths": [
+                    {
+                        "path_id": "A",
+                        "name": "案A",
+                        "description": "説明",
+                        "pros": [],
+                        "cons": [],
+                        "success_probability": 0.7,
+                    }
+                ],
                 "rejected_paths": [],
                 "decision_criteria": [],
             },
             shu={
                 "phases": [
-                    {"phase_number": 1, "name": "準備", "duration": "2週間", "actions": [], "deliverables": [], "success_criteria": []},
-                    {"phase_number": 2, "name": "実行", "duration": "1ヶ月", "actions": [], "deliverables": [], "success_criteria": []},
-                    {"phase_number": 3, "name": "評価", "duration": "1週間", "actions": [], "deliverables": [], "success_criteria": []},
+                    {
+                        "phase_number": 1,
+                        "name": "準備",
+                        "duration": "2週間",
+                        "actions": [],
+                        "deliverables": [],
+                        "success_criteria": [],
+                    },
+                    {
+                        "phase_number": 2,
+                        "name": "実行",
+                        "duration": "1ヶ月",
+                        "actions": [],
+                        "deliverables": [],
+                        "success_criteria": [],
+                    },
+                    {
+                        "phase_number": 3,
+                        "name": "評価",
+                        "duration": "1週間",
+                        "actions": [],
+                        "deliverables": [],
+                        "success_criteria": [],
+                    },
                 ],
                 "first_action": "MTG",
                 "dependencies": [],
@@ -489,16 +549,33 @@ class TestDecisionGovContractV1:
         report = DecisionReport(
             report_id="CONTRACT-001",
             original_question="テスト質問",
-            dao={"problem_type": "TRADE_OFF", "essence": "本質", "immutable_constraints": [], "hidden_assumptions": []},
+            dao={
+                "problem_type": "TRADE_OFF",
+                "essence": "本質",
+                "immutable_constraints": [],
+                "hidden_assumptions": [],
+            },
             fa={
                 "recommended_paths": [
-                    {"path_id": "A", "name": "案A", "description": "", "pros": [], "cons": [], "success_probability": 0.8}
+                    {
+                        "path_id": "A",
+                        "name": "案A",
+                        "description": "",
+                        "pros": [],
+                        "cons": [],
+                        "success_probability": 0.8,
+                    }
                 ],
                 "rejected_paths": [],
                 "decision_criteria": [],
             },
             shu={"phases": [], "first_action": "", "dependencies": []},
-            qi={"implementations": [], "tool_recommendations": [], "integration_points": [], "technical_debt_warnings": []},
+            qi={
+                "implementations": [],
+                "tool_recommendations": [],
+                "integration_points": [],
+                "technical_debt_warnings": [],
+            },
             review={"overall_verdict": "PASS", "findings": []},
             executive_summary=ExecutiveSummary(
                 one_line_decision="案Aを選択",
@@ -522,10 +599,20 @@ class TestDecisionGovContractV1:
 
         report = DecisionReport(
             report_id="CONTRACT-REJECT-001",
-            dao={"problem_type": "TRADE_OFF", "essence": "本質", "immutable_constraints": [], "hidden_assumptions": []},
+            dao={
+                "problem_type": "TRADE_OFF",
+                "essence": "本質",
+                "immutable_constraints": [],
+                "hidden_assumptions": [],
+            },
             fa={"recommended_paths": [], "rejected_paths": [], "decision_criteria": []},
             shu={"phases": [], "first_action": "", "dependencies": []},
-            qi={"implementations": [], "tool_recommendations": [], "integration_points": [], "technical_debt_warnings": []},
+            qi={
+                "implementations": [],
+                "tool_recommendations": [],
+                "integration_points": [],
+                "technical_debt_warnings": [],
+            },
             review={"overall_verdict": "REJECT", "findings": []},
             executive_summary=ExecutiveSummary(
                 one_line_decision="",
@@ -537,4 +624,3 @@ class TestDecisionGovContractV1:
         )
         contract = DecisionGovContractBuilder.build_from_report(report)
         assert contract.decision_role.value == "NO_GO"
-

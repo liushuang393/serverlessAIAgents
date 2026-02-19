@@ -151,4 +151,3 @@ class VectorSearch:
         """キャッシュをクリア."""
         self._embedding_cache.clear()
         self._logger.info("Vector search cache cleared")
-

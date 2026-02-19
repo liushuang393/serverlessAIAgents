@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Skill Catalog Service — agentflow/skills/builtin/ の SKILL.md スキャン.
 
 ビルトインスキルディレクトリを走査し、SKILL.md の YAML frontmatter を
@@ -18,7 +17,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-
 from apps.platform.services.capability_registry import CapabilityRegistry
 
 
@@ -47,8 +45,17 @@ class SkillInfo:
     """
 
     __slots__ = (
-        "name", "label", "description", "version", "author",
-        "tags", "tags_legacy", "triggers", "requirements", "examples", "path",
+        "author",
+        "description",
+        "examples",
+        "label",
+        "name",
+        "path",
+        "requirements",
+        "tags",
+        "tags_legacy",
+        "triggers",
+        "version",
     )
 
     def __init__(
@@ -164,7 +171,8 @@ class SkillCatalogService:
         """
         tag_lower = tag.lower()
         return [
-            s for s in self.list_skills()
+            s
+            for s in self.list_skills()
             if any(tag_lower in t.lower() for t in s.tags)
             or any(tag_lower in t.lower() for t in s.tags_legacy)
         ]
@@ -239,7 +247,7 @@ class SkillCatalogService:
                 ),
             )
             self._skills[name] = skill
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             _logger.warning("SKILL.md パースエラー (%s): %s", skill_md_path, exc)
 
     @staticmethod

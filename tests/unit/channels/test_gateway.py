@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for message gateway."""
 
 import pytest
@@ -24,11 +23,13 @@ class MockAdapter(MessageChannelAdapter):
 
     async def send_message(self, channel_id: str, text: str, **kwargs) -> str:  # type: ignore[no-untyped-def]
         """Send message."""
-        self.sent_messages.append({
-            "channel_id": channel_id,
-            "text": text,
-            "kwargs": kwargs,
-        })
+        self.sent_messages.append(
+            {
+                "channel_id": channel_id,
+                "text": text,
+                "kwargs": kwargs,
+            }
+        )
         return f"msg_{len(self.sent_messages)}"
 
     async def send_typing_indicator(self, channel_id: str) -> None:
@@ -189,7 +190,9 @@ def test_get_statistics(gateway: MessageGateway, mock_adapter: MockAdapter) -> N
 
 
 @pytest.mark.asyncio
-async def test_typing_indicator_disabled(gateway: MessageGateway, mock_adapter: MockAdapter) -> None:
+async def test_typing_indicator_disabled(
+    gateway: MessageGateway, mock_adapter: MockAdapter
+) -> None:
     """Test routing with typing indicator disabled."""
     gateway.register_channel("mock", mock_adapter)
 

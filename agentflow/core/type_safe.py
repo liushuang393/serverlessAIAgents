@@ -12,6 +12,7 @@ import logging
 from enum import Enum
 from typing import Any, TypeVar
 
+
 _logger = logging.getLogger(__name__)
 
 EnumT = TypeVar("EnumT", bound=Enum)
@@ -45,7 +46,9 @@ def safe_enum(
         mapped = aliases[raw]
         _logger.info(
             "%s: エイリアス適用 '%s' → '%s'",
-            enum_cls.__name__, raw, mapped,
+            enum_cls.__name__,
+            raw,
+            mapped,
         )
         raw = mapped
 
@@ -54,7 +57,9 @@ def safe_enum(
     except (TypeError, ValueError, KeyError):
         _logger.warning(
             "%s: 未知の値 '%s' → デフォルト '%s' にフォールバック",
-            enum_cls.__name__, value, default.value,
+            enum_cls.__name__,
+            value,
+            default.value,
         )
         return default
 
@@ -97,4 +102,3 @@ def safe_float(
     if max_value is not None:
         result = min(max_value, result)
     return result
-

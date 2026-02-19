@@ -511,7 +511,6 @@ class FileOrganizerAgent:
 
         # TODO: LLMを使用してファイル名を分析し、統一的なリネームを提案
 
-
     async def find_duplicates(
         self,
         path: str,

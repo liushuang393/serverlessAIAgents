@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Deploy 模块的完整测试.
 
 覆盖 docker_generator.py, serverless_generator.py, ci_cd_generator.py
@@ -7,7 +6,6 @@
 import json
 import tempfile
 import unittest
-from pathlib import Path
 
 
 class TestDockerConfig(unittest.TestCase):
@@ -49,7 +47,7 @@ class TestGenerateDockerfile(unittest.TestCase):
 
     def test_basic_generation(self):
         """基本生成测试."""
-        from agentflow.deploy.docker_generator import generate_dockerfile, DockerConfig
+        from agentflow.deploy.docker_generator import DockerConfig, generate_dockerfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = DockerConfig(python_version="3.13", port=8000)
@@ -92,7 +90,7 @@ class TestGenerateDockerCompose(unittest.TestCase):
 
     def test_with_env_vars(self):
         """带环境变量测试."""
-        from agentflow.deploy.docker_generator import generate_docker_compose, DockerConfig
+        from agentflow.deploy.docker_generator import DockerConfig, generate_docker_compose
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = DockerConfig(
@@ -179,14 +177,10 @@ class TestGenerateVercelConfig(unittest.TestCase):
 
     def test_with_env_vars(self):
         """带环境变量测试."""
-        from agentflow.deploy.serverless_generator import (
-            generate_vercel_config, ServerlessConfig
-        )
+        from agentflow.deploy.serverless_generator import ServerlessConfig, generate_vercel_config
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            serverless_config = ServerlessConfig(
-                env_vars={"API_KEY": "secret"}
-            )
+            serverless_config = ServerlessConfig(env_vars={"API_KEY": "secret"})
             path = generate_vercel_config(tmpdir, serverless_config)
 
             content = json.loads(path.read_text())
@@ -214,7 +208,8 @@ class TestGenerateAWSLambdaConfig(unittest.TestCase):
     def test_with_config(self):
         """带配置测试."""
         from agentflow.deploy.serverless_generator import (
-            generate_aws_lambda_config, ServerlessConfig
+            ServerlessConfig,
+            generate_aws_lambda_config,
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -311,7 +306,7 @@ class TestGenerateGitHubActions(unittest.TestCase):
 
     def test_with_config(self):
         """带配置生成测试."""
-        from agentflow.deploy.ci_cd_generator import generate_github_actions, CICDConfig
+        from agentflow.deploy.ci_cd_generator import CICDConfig, generate_github_actions
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = CICDConfig(
@@ -344,7 +339,7 @@ class TestGenerateGitLabCI(unittest.TestCase):
 
     def test_with_config(self):
         """带配置生成测试."""
-        from agentflow.deploy.ci_cd_generator import generate_gitlab_ci, CICDConfig
+        from agentflow.deploy.ci_cd_generator import CICDConfig, generate_gitlab_ci
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = CICDConfig(python_version="3.12")
@@ -378,14 +373,9 @@ class TestDeployModuleExports(unittest.TestCase):
     def test_imports(self):
         """导入测试."""
         from agentflow.deploy import (
-            generate_dockerfile,
-            generate_docker_compose,
-            generate_dockerignore,
-            generate_vercel_config,
-            generate_aws_lambda_config,
-            generate_github_actions,
-            generate_gitlab_ci,
             generate_all,
+            generate_docker_compose,
+            generate_dockerfile,
         )
 
         # All should be callable

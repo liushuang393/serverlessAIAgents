@@ -76,13 +76,15 @@ PROCEDURE DIVISION の **ロジック部分を Java コードに翻訳する** �
 
         # LLM クライアント（コード翻訳用）
         settings = get_settings()
-        self._llm = LLMClient(LLMConfig(
-            provider=settings.llm_provider,
-            api_key=settings.llm_api_key,
-            model=settings.llm_model,
-            temperature=0.2,  # コード生成は低温度
-            max_tokens=4000,
-        ))
+        self._llm = LLMClient(
+            LLMConfig(
+                provider=settings.llm_provider,
+                api_key=settings.llm_api_key,
+                model=settings.llm_model,
+                temperature=0.2,  # コード生成は低温度
+                max_tokens=4000,
+            )
+        )
 
         # 状態管理
         self._current_ast: AST | None = None
@@ -171,9 +173,7 @@ PROCEDURE DIVISION の **ロジック部分を Java コードに翻訳する** �
         }
 
     @tool
-    def compare_outputs(
-        self, expected: dict[str, Any], actual: dict[str, Any]
-    ) -> dict[str, Any]:
+    def compare_outputs(self, expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any]:
         """出力を比較.
 
         Args:
@@ -190,11 +190,13 @@ PROCEDURE DIVISION の **ロジック部分を Java コードに翻訳する** �
             act_val = actual.get(key)
 
             if exp_val != act_val:
-                differences.append({
-                    "field": key,
-                    "expected": exp_val,
-                    "actual": act_val,
-                })
+                differences.append(
+                    {
+                        "field": key,
+                        "expected": exp_val,
+                        "actual": act_val,
+                    }
+                )
 
         return {
             "is_equal": len(differences) == 0,
@@ -261,9 +263,7 @@ PROCEDURE DIVISION の **ロジック部分を Java コードに翻訳する** �
 
         # Step 5: コンパイルエラーがあれば LLM で修復
         if not compile_result["success"]:
-            java_code = await self._fix_compile_errors(
-                java_code, compile_result["errors"]
-            )
+            java_code = await self._fix_compile_errors(java_code, compile_result["errors"])
             compile_result = self.compile_code(java_code)
 
         return {
@@ -306,7 +306,7 @@ PROCEDURE DIVISION の **ロジック部分を Java コードに翻訳する** �
 ```
 
 ### 変数マッピング:
-{parse_result.get('variables', [])}
+{parse_result.get("variables", [])}
 
 ### Java コード骨格:
 ```java
@@ -335,9 +335,7 @@ Java コードのみを出力してください（```java などのマークダ�
 
         return java_code
 
-    async def _fix_compile_errors(
-        self, java_code: str, errors: list[str]
-    ) -> str:
+    async def _fix_compile_errors(self, java_code: str, errors: list[str]) -> str:
         """コンパイルエラーを LLM で修復.
 
         Args:
@@ -376,4 +374,3 @@ Java コードのみを出力してください（```java などのマークダ�
             fixed_code = "\n".join(lines[1:-1] if lines[-1].startswith("```") else lines[1:])
 
         return fixed_code
-

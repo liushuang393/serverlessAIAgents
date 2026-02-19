@@ -31,6 +31,7 @@ def _get_competitor_agent():
         from apps.market_trend_monitor.backend.agents.competitor_tracking_agent import (
             CompetitorTrackingAgent,
         )
+
         _competitor_agent = CompetitorTrackingAgent()
     return _competitor_agent
 
@@ -79,9 +80,7 @@ async def _save_competitor_config(
     await init_db()
     payload = {
         "competitors": list(competitors),
-        "competitor_aliases": {
-            key: list(values) for key, values in competitor_aliases.items()
-        },
+        "competitor_aliases": {key: list(values) for key, values in competitor_aliases.items()},
     }
     async with async_session() as session:
         row = await session.get(AppSettingModel, COMPETITOR_CONFIG_KEY)
@@ -198,9 +197,7 @@ async def _collect_articles_for_watchlist_focus(
     collector_agent = CollectorAgent()
     await collector_agent.initialize()
     try:
-        collector_result = await collector_agent.run(
-            {"keywords": keywords, "sources": sources}
-        )
+        collector_result = await collector_agent.run({"keywords": keywords, "sources": sources})
     finally:
         await collector_agent.cleanup()
 
@@ -219,6 +216,7 @@ def _get_maturity_service():
         from apps.market_trend_monitor.backend.services.maturity_assessment_service import (
             MaturityAssessmentService,
         )
+
         _maturity_service = MaturityAssessmentService()
     return _maturity_service
 
@@ -229,6 +227,7 @@ def _get_stakeholder_service():
         from apps.market_trend_monitor.backend.services.stakeholder_report_service import (
             StakeholderReportService,
         )
+
         _stakeholder_service = StakeholderReportService()
     return _stakeholder_service
 
@@ -260,13 +259,9 @@ async def list_competitors() -> dict:
     )
     watchlist = agent.get_competitors()
     detected_competitors = [
-        profile.name
-        for profile in profiles
-        if int(profile.metadata.get("article_count", 0)) > 0
+        profile.name for profile in profiles if int(profile.metadata.get("article_count", 0)) > 0
     ]
-    undetected_watchlist = [
-        name for name in watchlist if name not in set(detected_competitors)
-    ]
+    undetected_watchlist = [name for name in watchlist if name not in set(detected_competitors)]
     return {
         "competitors": [p.to_dict() for p in profiles],
         "total": len(profiles),
@@ -393,13 +388,9 @@ async def discover_competitors(request: CompetitorDiscoverRequest) -> dict:
         include_unmatched=request.include_unmatched,
     )
     detected_competitors = [
-        profile.name
-        for profile in profiles
-        if int(profile.metadata.get("article_count", 0)) > 0
+        profile.name for profile in profiles if int(profile.metadata.get("article_count", 0)) > 0
     ]
-    undetected_watchlist = [
-        name for name in watchlist if name not in set(detected_competitors)
-    ]
+    undetected_watchlist = [name for name in watchlist if name not in set(detected_competitors)]
     detected_count = sum(
         1 for profile in profiles if int(profile.metadata.get("article_count", 0)) > 0
     )

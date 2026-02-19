@@ -149,7 +149,8 @@ class ListingGenerator(AgentBlock):
 
         logger.info(
             "Listing生成開始: platform=%s, language=%s",
-            platform, lang,
+            platform,
+            lang,
         )
 
         # キーワード抽出
@@ -159,22 +160,16 @@ class ListingGenerator(AgentBlock):
         title = await self._generate_title(product_info, keywords, platform)
 
         # 箇条書き生成
-        bullet_points = await self._generate_bullet_points(
-            product_info, keywords, platform
-        )
+        bullet_points = await self._generate_bullet_points(product_info, keywords, platform)
 
         # 説明文生成
-        description = await self._generate_description(
-            product_info, keywords, platform
-        )
+        description = await self._generate_description(product_info, keywords, platform)
 
         # バックエンドキーワード生成
         backend_keywords = self._generate_backend_keywords(keywords)
 
         # SEOスコア計算
-        seo_score = self._calculate_seo_score(
-            title, bullet_points, description, keywords
-        )
+        seo_score = self._calculate_seo_score(title, bullet_points, description, keywords)
 
         return GeneratedListing(
             title=title,
@@ -211,10 +206,7 @@ class ListingGenerator(AgentBlock):
         keywords.extend(self._config.include_keywords)
 
         # 除外キーワードを削除
-        keywords = [
-            k for k in keywords
-            if k not in self._config.exclude_keywords
-        ]
+        keywords = [k for k in keywords if k not in self._config.exclude_keywords]
 
         # 重複削除
         return list(dict.fromkeys(keywords))
@@ -230,17 +222,15 @@ class ListingGenerator(AgentBlock):
             # LLMを使用してタイトル生成
             prompt = f"""
 商品情報: {product_info}
-キーワード: {', '.join(keywords[:10])}
+キーワード: {", ".join(keywords[:10])}
 プラットフォーム: {platform}
 
 上記の情報に基づいて、SEO最適化された商品タイトルを生成してください。
 最大{self._config.max_title_length}文字以内で。
 """
             try:
-                response = await self._llm_client.chat([
-                    {"role": "user", "content": prompt}
-                ])
-                return response.get("content", "")[:self._config.max_title_length]
+                response = await self._llm_client.chat([{"role": "user", "content": prompt}])
+                return response.get("content", "")[: self._config.max_title_length]
             except Exception as e:
                 logger.warning("LLMタイトル生成エラー: %s", e)
 
@@ -254,7 +244,7 @@ class ListingGenerator(AgentBlock):
             parts.append(" - ".join(features))
 
         title = " | ".join(filter(None, parts))
-        return title[:self._config.max_title_length]
+        return title[: self._config.max_title_length]
 
     async def _generate_bullet_points(
         self,
@@ -269,18 +259,18 @@ class ListingGenerator(AgentBlock):
         bullet_points: list[str] = []
 
         # 特徴から箇条書き生成
-        for feature in features[:self._config.max_bullet_points]:
+        for feature in features[: self._config.max_bullet_points]:
             bullet_points.append(f"【特徴】{feature}")
 
         # 利点から追加
-        for benefit in benefits[:self._config.max_bullet_points - len(bullet_points)]:
+        for benefit in benefits[: self._config.max_bullet_points - len(bullet_points)]:
             bullet_points.append(f"【利点】{benefit}")
 
         # 不足分を補完
         if len(bullet_points) < self._config.max_bullet_points:
             bullet_points.append("【品質】高品質素材使用")
 
-        return bullet_points[:self._config.max_bullet_points]
+        return bullet_points[: self._config.max_bullet_points]
 
     async def _generate_description(
         self,
@@ -292,14 +282,12 @@ class ListingGenerator(AgentBlock):
         if self._llm_client:
             prompt = f"""
 商品情報: {product_info}
-キーワード: {', '.join(keywords[:15])}
+キーワード: {", ".join(keywords[:15])}
 
 上記の情報に基づいて、魅力的な商品説明文を300-500文字で生成してください。
 """
             try:
-                response = await self._llm_client.chat([
-                    {"role": "user", "content": prompt}
-                ])
+                response = await self._llm_client.chat([{"role": "user", "content": prompt}])
                 return response.get("content", "")
             except Exception as e:
                 logger.warning("LLM説明生成エラー: %s", e)

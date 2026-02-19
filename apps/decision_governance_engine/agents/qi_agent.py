@@ -137,11 +137,15 @@ class QiAgent(ResilientAgent[QiInput, QiOutput]):
             phases_info = f"【Stage1】{rocket.stage1_minimal_pipeline.stage_name}\n"
             phases_info += f"  目標: {rocket.stage1_minimal_pipeline.objective}\n"
             for p in rocket.stage1_minimal_pipeline.phases:
-                phases_info += f"  Phase {p.phase_number}: {p.name} ({p.duration}) - {', '.join(p.tasks)}\n"
+                phases_info += (
+                    f"  Phase {p.phase_number}: {p.name} ({p.duration}) - {', '.join(p.tasks)}\n"
+                )
             phases_info += f"【Stage2】{rocket.stage2_governance.stage_name}\n"
             phases_info += f"  目標: {rocket.stage2_governance.objective}\n"
             for p in rocket.stage2_governance.phases:
-                phases_info += f"  Phase {p.phase_number}: {p.name} ({p.duration}) - {', '.join(p.tasks)}\n"
+                phases_info += (
+                    f"  Phase {p.phase_number}: {p.name} ({p.duration}) - {', '.join(p.tasks)}\n"
+                )
         else:
             phases_info = "\n".join(
                 f"Phase {p.phase_number}: {p.name} ({p.duration}) - {', '.join(p.actions)}"
@@ -158,7 +162,7 @@ class QiAgent(ResilientAgent[QiInput, QiOutput]):
 
         user_prompt = f"""{phases_info}
 {dod_info}
-【技術制約】{', '.join(tech_constraints) if tech_constraints else "特になし"}
+【技術制約】{", ".join(tech_constraints) if tech_constraints else "特になし"}
 
 上記の実行計画を技術実装に落とし込む。提案口調で書くこと。
 
@@ -176,13 +180,12 @@ JSON形式で出力してください。"""
         # LLMレスポンスのチェック: 空ならフォールバック
         self._logger.debug(f"QiAgent LLM response length: {len(response) if response else 0}")
         if not response or not response.strip():
-            self._logger.warning(
-                "QiAgent: LLMレスポンスが空 → デフォルト出力にフォールバック"
-            )
+            self._logger.warning("QiAgent: LLMレスポンスが空 → デフォルト出力にフォールバック")
             return self._create_default_output(shu_result)
 
         # JSONパース: 失敗ならフォールバック
         from agentflow.utils import extract_json
+
         data = extract_json(response)
         if data is None:
             self._logger.warning(
@@ -197,13 +200,10 @@ JSON形式で出力してください。"""
         self._normalize_list_lengths(data)
 
         # --- 必須フィールド: implementations ---
-        implementations = self._safe_build_implementations(
-            data.get("implementations", [])
-        )
+        implementations = self._safe_build_implementations(data.get("implementations", []))
         if not implementations:
             self._logger.warning(
-                "QiAgent: 必須フィールド implementations が空 → "
-                "ShuResultからデフォルト生成"
+                "QiAgent: 必須フィールド implementations が空 → ShuResultからデフォルト生成"
             )
             for phase in shu_result.phases[:3]:
                 implementations.append(
@@ -217,8 +217,7 @@ JSON形式で出力してください。"""
 
         # --- 任意フィールド: 欠損時は空リスト/None ---
         domain_techs = [
-            self._normalize_domain_technology(dt)
-            for dt in data.get("domain_technologies", [])[:5]
+            self._normalize_domain_technology(dt) for dt in data.get("domain_technologies", [])[:5]
         ]
         regulatory = [
             self._normalize_regulatory_consideration(rc)
@@ -230,18 +229,10 @@ JSON形式で出力してください。"""
         ]
 
         # v3.1: 任意フィールド（欠損時はNone/空リスト）
-        poc_arch = self._parse_poc_minimal_architecture(
-            data.get("poc_minimal_architecture", {})
-        )
-        expansion = self._parse_expansion_stages(
-            data.get("expansion_stages", [])
-        )
-        impl_steps = self._parse_implementation_steps(
-            data.get("implementation_steps", [])
-        )
-        future_reqs = [
-            str(r)[:100] for r in data.get("future_scale_requirements", [])[:10]
-        ]
+        poc_arch = self._parse_poc_minimal_architecture(data.get("poc_minimal_architecture", {}))
+        expansion = self._parse_expansion_stages(data.get("expansion_stages", []))
+        impl_steps = self._parse_implementation_steps(data.get("implementation_steps", []))
+        future_reqs = [str(r)[:100] for r in data.get("future_scale_requirements", [])[:10]]
 
         # QiOutput構築（Pydanticバリデーションエラー時はフォールバック）
         try:
@@ -250,28 +241,21 @@ JSON形式で出力してください。"""
                 tool_recommendations=data.get("tool_recommendations", []),
                 integration_points=data.get("integration_points", []),
                 technical_debt_warnings=data.get("technical_debt_warnings", []),
-                domain_technologies=[
-                    DomainSpecificTechnology(**dt) for dt in domain_techs
-                ],
-                regulatory_considerations=[
-                    RegulatoryConsideration(**rc) for rc in regulatory
-                ],
-                geographic_considerations=[
-                    GeographicConsideration(**gc) for gc in geographic
-                ],
+                domain_technologies=[DomainSpecificTechnology(**dt) for dt in domain_techs],
+                regulatory_considerations=[RegulatoryConsideration(**rc) for rc in regulatory],
+                geographic_considerations=[GeographicConsideration(**gc) for gc in geographic],
                 poc_minimal_architecture=poc_arch,
                 expansion_stages=expansion,
                 implementation_steps=impl_steps,
                 future_scale_requirements=future_reqs,
             )
         except Exception as e:
-            self._logger.warning(
-                f"QiAgent: QiOutput構築失敗 → デフォルト出力にフォールバック: {e}"
-            )
+            self._logger.warning(f"QiAgent: QiOutput構築失敗 → デフォルト出力にフォールバック: {e}")
             return self._create_default_output(shu_result)
 
     def _safe_build_implementations(
-        self, raw_list: list,
+        self,
+        raw_list: list,
     ) -> list[Implementation]:
         """Implementation リストを安全に構築.
 
@@ -290,25 +274,21 @@ JSON形式で出力してください。"""
 
         for idx, item in enumerate(raw_list):
             if not isinstance(item, dict):
-                self._logger.warning(
-                    f"implementations[{idx}]: dict以外のデータをスキップ"
-                )
+                self._logger.warning(f"implementations[{idx}]: dict以外のデータをスキップ")
                 continue
             try:
-                results.append(Implementation(
-                    component=str(item.get("component", "不明"))[:80],
-                    technology=str(item.get("technology", "要検討"))[:80],
-                    estimated_effort=str(
-                        item.get("estimated_effort", "要見積"),
-                    )[:50],
-                    risks=[
-                        str(r)[:100] for r in item.get("risks", [])[:5]
-                    ],
-                ))
-            except Exception as e:
-                self._logger.warning(
-                    f"implementations[{idx}] 構築失敗（スキップ）: {e}"
+                results.append(
+                    Implementation(
+                        component=str(item.get("component", "不明"))[:80],
+                        technology=str(item.get("technology", "要検討"))[:80],
+                        estimated_effort=str(
+                            item.get("estimated_effort", "要見積"),
+                        )[:50],
+                        risks=[str(r)[:100] for r in item.get("risks", [])[:5]],
+                    )
                 )
+            except Exception as e:
+                self._logger.warning(f"implementations[{idx}] 構築失敗（スキップ）: {e}")
         return results
 
     def _normalize_domain_technology(self, dt: dict) -> dict:
@@ -373,19 +353,25 @@ JSON形式で出力してください。"""
         # domain_technologies (max 5)
         domain_tech = data.get("domain_technologies", [])
         if isinstance(domain_tech, list) and len(domain_tech) > 5:
-            self._logger.warning(f"domain_technologies has {len(domain_tech)} items (max 5), truncating")
+            self._logger.warning(
+                f"domain_technologies has {len(domain_tech)} items (max 5), truncating"
+            )
             data["domain_technologies"] = domain_tech[:5]
 
         # regulatory_considerations (max 5)
         regulatory = data.get("regulatory_considerations", [])
         if isinstance(regulatory, list) and len(regulatory) > 5:
-            self._logger.warning(f"regulatory_considerations has {len(regulatory)} items (max 5), truncating")
+            self._logger.warning(
+                f"regulatory_considerations has {len(regulatory)} items (max 5), truncating"
+            )
             data["regulatory_considerations"] = regulatory[:5]
 
         # geographic_considerations (max 5)
         geographic = data.get("geographic_considerations", [])
         if isinstance(geographic, list) and len(geographic) > 5:
-            self._logger.warning(f"geographic_considerations has {len(geographic)} items (max 5), truncating")
+            self._logger.warning(
+                f"geographic_considerations has {len(geographic)} items (max 5), truncating"
+            )
             data["geographic_considerations"] = geographic[:5]
 
         # domain_technologies内の alternatives (max 3)
@@ -393,7 +379,9 @@ JSON形式で出力してください。"""
             if isinstance(dt, dict):
                 alts = dt.get("alternatives", [])
                 if isinstance(alts, list) and len(alts) > 3:
-                    self._logger.warning(f"domain_technologies[{i}].alternatives has {len(alts)} items (max 3), truncating")
+                    self._logger.warning(
+                        f"domain_technologies[{i}].alternatives has {len(alts)} items (max 3), truncating"
+                    )
                     dt["alternatives"] = alts[:3]
 
     def validate_output(self, output: QiOutput) -> bool:
@@ -470,12 +458,14 @@ JSON形式で出力してください。"""
             components = []
             for c in data.get("components", [])[:10]:
                 if isinstance(c, dict):
-                    components.append(ArchitectureComponent(
-                        name=str(c.get("name", ""))[:50],
-                        purpose=str(c.get("purpose", ""))[:80],
-                        technology_choice=str(c.get("technology_choice", ""))[:80],
-                        notes=str(c.get("notes", ""))[:100],
-                    ))
+                    components.append(
+                        ArchitectureComponent(
+                            name=str(c.get("name", ""))[:50],
+                            purpose=str(c.get("purpose", ""))[:80],
+                            technology_choice=str(c.get("technology_choice", ""))[:80],
+                            notes=str(c.get("notes", ""))[:100],
+                        )
+                    )
             if not components:
                 return None
 
@@ -484,7 +474,9 @@ JSON形式で出力してください。"""
             minimal_logging = None
             if ml_data and isinstance(ml_data, dict):
                 minimal_logging = MinimalLogging(
-                    correlation_id_strategy=str(ml_data.get("correlation_id_strategy", "UUID"))[:100],
+                    correlation_id_strategy=str(ml_data.get("correlation_id_strategy", "UUID"))[
+                        :100
+                    ],
                     timestamp_points=ml_data.get("timestamp_points", [])[:5],
                     storage=str(ml_data.get("storage", ""))[:80],
                 )
@@ -511,12 +503,14 @@ JSON形式で出力してください。"""
                 added = s.get("added_components", [])
                 if not added:
                     continue
-                stages.append(ExpansionStage(
-                    stage_name=str(s.get("stage_name", ""))[:50],
-                    introduction_condition=str(s.get("introduction_condition", ""))[:100],
-                    added_components=[str(c)[:50] for c in added[:5]],
-                    rationale=str(s.get("rationale", ""))[:150],
-                ))
+                stages.append(
+                    ExpansionStage(
+                        stage_name=str(s.get("stage_name", ""))[:50],
+                        introduction_condition=str(s.get("introduction_condition", ""))[:100],
+                        added_components=[str(c)[:50] for c in added[:5]],
+                        rationale=str(s.get("rationale", ""))[:150],
+                    )
+                )
             except Exception as e:
                 self._logger.warning(f"ExpansionStage parse failed: {e}")
         return stages
@@ -533,13 +527,15 @@ JSON形式で出力してください。"""
                 tasks = s.get("tasks", [])
                 if not tasks:
                     continue
-                steps.append(ImplementationStep(
-                    step_number=int(s.get("step_number", len(steps) + 1)),
-                    objective=str(s.get("objective", ""))[:80],
-                    tasks=[str(t)[:80] for t in tasks[:5]],
-                    notes=[str(n)[:100] for n in s.get("notes", [])[:3]],
-                    common_pitfalls=[str(p)[:100] for p in s.get("common_pitfalls", [])[:3]],
-                ))
+                steps.append(
+                    ImplementationStep(
+                        step_number=int(s.get("step_number", len(steps) + 1)),
+                        objective=str(s.get("objective", ""))[:80],
+                        tasks=[str(t)[:80] for t in tasks[:5]],
+                        notes=[str(n)[:100] for n in s.get("notes", [])[:3]],
+                        common_pitfalls=[str(p)[:100] for p in s.get("common_pitfalls", [])[:3]],
+                    )
+                )
             except Exception as e:
                 self._logger.warning(f"ImplementationStep parse failed: {e}")
         return steps
@@ -549,16 +545,22 @@ JSON形式で出力してください。"""
         return PoCMinimalArchitecture(
             components=[
                 ArchitectureComponent(
-                    name="入力取得", purpose="ユーザー入力を受け付ける",
-                    technology_choice="要選定", notes="最小構成で開始する",
+                    name="入力取得",
+                    purpose="ユーザー入力を受け付ける",
+                    technology_choice="要選定",
+                    notes="最小構成で開始する",
                 ),
                 ArchitectureComponent(
-                    name="コア処理", purpose="主要なビジネスロジックを実行する",
-                    technology_choice="要選定", notes="最小機能に限定する",
+                    name="コア処理",
+                    purpose="主要なビジネスロジックを実行する",
+                    technology_choice="要選定",
+                    notes="最小機能に限定する",
                 ),
                 ArchitectureComponent(
-                    name="出力配信", purpose="処理結果をユーザーに提供する",
-                    technology_choice="要選定", notes="基本的な表示のみ",
+                    name="出力配信",
+                    purpose="処理結果をユーザーに提供する",
+                    technology_choice="要選定",
+                    notes="基本的な表示のみ",
                 ),
             ],
             data_flow_description="入力取得 → コア処理 → 出力配信（最小限のパイプライン）",

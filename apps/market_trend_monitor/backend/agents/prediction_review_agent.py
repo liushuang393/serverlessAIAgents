@@ -52,9 +52,7 @@ class PredictionReviewOutput(BaseModel):
 # ============================================================
 
 
-class PredictionReviewAgent(
-    ResilientAgent[PredictionReviewInput, PredictionReviewOutput]
-):
+class PredictionReviewAgent(ResilientAgent[PredictionReviewInput, PredictionReviewOutput]):
     """予測復盤エージェント（ResilientAgent 継承・型安全）.
 
     役割:
@@ -86,15 +84,11 @@ class PredictionReviewAgent(
         self._logger = logging.getLogger(self.name)
         self._prediction_service = prediction_service or PredictionService()
 
-    def _parse_input(
-        self, input_data: dict[str, Any]
-    ) -> PredictionReviewInput:
+    def _parse_input(self, input_data: dict[str, Any]) -> PredictionReviewInput:
         """入力データを Pydantic モデルに変換."""
         return PredictionReviewInput(**input_data)
 
-    async def process(
-        self, input_data: PredictionReviewInput
-    ) -> PredictionReviewOutput:
+    async def process(self, input_data: PredictionReviewInput) -> PredictionReviewOutput:
         """予測復盤を実行.
 
         Args:
@@ -115,6 +109,7 @@ class PredictionReviewAgent(
             prediction = self._prediction_service.get_prediction(pred_schema.id)
             if not prediction:
                 from datetime import date as date_type
+
                 target = date_type.fromisoformat(pred_schema.target_date)
                 prediction = self._prediction_service.create_prediction(
                     claim_id=pred_schema.claim_id or "",
@@ -163,9 +158,7 @@ class PredictionReviewAgent(
             accuracy_stats=accuracy_stats,
         )
 
-    def _determine_outcome(
-        self, predicted: str, actual: str
-    ) -> PredictionOutcome:
+    def _determine_outcome(self, predicted: str, actual: str) -> PredictionOutcome:
         """結果判定.
 
         簡易版：文字列の類似度で判定。
@@ -190,4 +183,3 @@ class PredictionReviewAgent(
             return PredictionOutcome.PARTIAL
 
         return PredictionOutcome.INCORRECT
-

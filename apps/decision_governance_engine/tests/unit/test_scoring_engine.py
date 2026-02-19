@@ -2,8 +2,8 @@
 
 スコア計算、inverse 次元の正規化、閾値判定をテスト。
 """
-import pytest
 
+import pytest
 from apps.decision_governance_engine.config import (
     DecisionWeightsConfig,
     DimensionConfig,

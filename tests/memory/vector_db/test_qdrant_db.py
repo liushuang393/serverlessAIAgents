@@ -1,5 +1,10 @@
 """QdrantDBのテスト."""
 
+import pytest
+
+# qdrant_client はオプション依存 - 未インストールの場合はテストをスキップ
+pytest.importorskip("qdrant_client")
+
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
@@ -189,4 +194,3 @@ def test_get_status(qdrant_db):
     assert status["collection_name"] == "test-collection"
     assert status["dimension"] == 384
     assert status["connected"] is True
-

@@ -53,10 +53,10 @@ from agentflow.security.reasoning_monitor import (
 class SafetyLevel(str, Enum):
     """安全级别."""
 
-    SAFE = "safe"           # 安全
-    WARNING = "warning"     # 警告
-    DANGER = "danger"       # 危险
-    BLOCKED = "blocked"     # 已阻止
+    SAFE = "safe"  # 安全
+    WARNING = "warning"  # 警告
+    DANGER = "danger"  # 危险
+    BLOCKED = "blocked"  # 已阻止
 
 
 @dataclass
@@ -405,4 +405,3 @@ class AISafetyGuard:
                 "strict_mode": self._config.strict_mode,
             },
         }
-

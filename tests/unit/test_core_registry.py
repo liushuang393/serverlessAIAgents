@@ -16,8 +16,6 @@ from agentflow.core.registry import ProtocolRegistry, Registry
 class ConcreteRegistry(Registry[str]):
     """テスト用の具象レジストリ."""
 
-    pass
-
 
 class TestRegistry:
     """Registry 基類のテスト."""
@@ -109,7 +107,9 @@ class TestRegistry:
         registry.register("item1", "value1")
         assert "item1" in registry
 
-    def test_overwrite_warning(self, registry: ConcreteRegistry, caplog: pytest.LogCaptureFixture) -> None:
+    def test_overwrite_warning(
+        self, registry: ConcreteRegistry, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """上書き時に警告が出ることをテスト."""
         registry.register("item1", "value1")
         registry.register("item1", "value2")
@@ -145,4 +145,3 @@ class TestProtocolRegistry:
         r1 = ProtocolRegistry()
         r2 = ProtocolRegistry()
         assert r1 is r2
-

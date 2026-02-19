@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """サンドボックスプロバイダのテスト.
 
 各プロバイダの生命周期追跡機能をテスト。
@@ -122,4 +121,3 @@ class TestGetSandbox:
         provider = get_sandbox(provider="docker", config=config)
         assert provider._config.timeout == 60.0
         assert provider._config.memory_mb == 1024
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for the Platform module.
 
 Tests cover:
@@ -8,20 +7,17 @@ Tests cover:
 - Pydantic model validation
 """
 
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 from apps.platform.schemas.component_schemas import (
     ComponentCreateRequest,
     ComponentListResponse,
     ComponentResponse,
     ComponentType,
-    ComponentUpdateRequest,
     ComponentVisibility,
 )
 from apps.platform.schemas.gallery_schemas import (
     FeaturedItem,
-    FeaturedResponse,
     GalleryFilter,
     GalleryItem,
     GalleryItemType,

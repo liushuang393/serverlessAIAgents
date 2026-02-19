@@ -118,6 +118,7 @@ def create_selector[T](
     Returns:
         セレクター関数
     """
+
     def selector(state: dict[str, Any]) -> T:
         value = select(state, path, default)
         if transform and value is not None:
@@ -138,16 +139,15 @@ def compose_selectors(
     Returns:
         合成されたセレクター
     """
+
     def composed(state: dict[str, Any]) -> dict[str, Any]:
-        return {
-            f"value_{i}": selector(state)
-            for i, selector in enumerate(selectors)
-        }
+        return {f"value_{i}": selector(state) for i, selector in enumerate(selectors)}
 
     return composed
 
 
 # 便利なセレクター
+
 
 def select_execution_status(state: dict[str, Any]) -> str:
     """実行状態を選択."""

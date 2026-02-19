@@ -37,7 +37,7 @@ _service: TenantInvitationService | None = None
 
 def init_tenant_invitation_services(service: TenantInvitationService) -> None:
     """サービスインスタンスを設定."""
-    global _service  # noqa: PLW0603
+    global _service
     _service = service
 
 

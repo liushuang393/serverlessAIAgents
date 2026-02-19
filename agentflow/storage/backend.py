@@ -204,7 +204,7 @@ class BaseStorageBackend(ABC):
         """名前空間プレフィックスを除去."""
         prefix = f"{self._namespace}:"
         if key.startswith(prefix):
-            return key[len(prefix):]
+            return key[len(prefix) :]
         return key
 
     async def connect(self) -> None:

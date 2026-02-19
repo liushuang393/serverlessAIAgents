@@ -188,7 +188,9 @@ class ResourcePool[T]:
 
         # 启动维护任务
         self._maintenance_task = asyncio.create_task(self._maintenance_loop())
-        _logger.info(f"Resource pool '{self._name}' started with {self._config.min_size} connections")
+        _logger.info(
+            f"Resource pool '{self._name}' started with {self._config.min_size} connections"
+        )
 
     async def stop(self) -> None:
         """停止连接池."""

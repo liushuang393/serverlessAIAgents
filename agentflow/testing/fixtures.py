@@ -205,4 +205,3 @@ def generate_conftest(output_path: str = "tests/conftest.py") -> str:
     path.write_text(CONFTEST_TEMPLATE, encoding="utf-8")
 
     return CONFTEST_TEMPLATE
-

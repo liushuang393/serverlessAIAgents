@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Capability registry and ontology mapping."""
 
 from __future__ import annotations
@@ -287,4 +286,3 @@ class CapabilityRegistry:
             if any(keyword in normalized for keyword in keywords):
                 return domain
         return "custom"
-

@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 """ToolRegistryインターフェースのテスト.
 
 統一ツールレジストリのユニットテスト。
 """
+
 import pytest
 
 
@@ -10,6 +10,7 @@ import pytest
 def tool_registry():
     """新しいToolRegistryインスタンスを作成."""
     from agentflow.core.tool_registry import ToolRegistry
+
     return ToolRegistry()
 
 
@@ -17,6 +18,7 @@ def tool_registry():
 def sample_tool():
     """サンプルToolDefinitionを作成."""
     from agentflow.core.tool_definition import ToolDefinition, ToolSource
+
     return ToolDefinition(
         uri="tool://builtin/test_tool",
         name="test_tool",

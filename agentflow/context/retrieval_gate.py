@@ -35,18 +35,18 @@ class RetrievalReason(str, Enum):
     """検索判定理由."""
 
     # 検索すべき理由
-    EXPLICIT_REQUEST = "explicit_request"       # 明示的な検索要求
-    FACTUAL_QUESTION = "factual_question"       # 事実に関する質問
-    DOMAIN_RELATED = "domain_related"           # ドメイン関連
-    REFERENCE_NEEDED = "reference_needed"       # 参照が必要
-    UNKNOWN_TOPIC = "unknown_topic"             # 未知のトピック
+    EXPLICIT_REQUEST = "explicit_request"  # 明示的な検索要求
+    FACTUAL_QUESTION = "factual_question"  # 事実に関する質問
+    DOMAIN_RELATED = "domain_related"  # ドメイン関連
+    REFERENCE_NEEDED = "reference_needed"  # 参照が必要
+    UNKNOWN_TOPIC = "unknown_topic"  # 未知のトピック
 
     # 検索不要の理由
-    CASUAL_CHAT = "casual_chat"                 # 雑談
-    CONTEXT_SUFFICIENT = "context_sufficient"   # 既存コンテキストで十分
-    META_QUESTION = "meta_question"             # メタ質問（システムについて）
-    SIMPLE_TASK = "simple_task"                 # 単純タスク（翻訳、計算等）
-    RECENT_RETRIEVAL = "recent_retrieval"       # 直近で検索済み
+    CASUAL_CHAT = "casual_chat"  # 雑談
+    CONTEXT_SUFFICIENT = "context_sufficient"  # 既存コンテキストで十分
+    META_QUESTION = "meta_question"  # メタ質問（システムについて）
+    SIMPLE_TASK = "simple_task"  # 単純タスク（翻訳、計算等）
+    RECENT_RETRIEVAL = "recent_retrieval"  # 直近で検索済み
 
 
 @dataclass
@@ -102,48 +102,132 @@ class RetrievalGate:
     # 検索を示唆するキーワード（多言語）
     _RETRIEVAL_KEYWORDS = {
         # 日本語
-        "文書", "ドキュメント", "資料", "参照", "調べ", "検索", "探し",
-        "仕様", "マニュアル", "ガイド", "手順", "根拠", "出典", "ソース",
-        "教えて", "説明", "詳細", "内容", "情報", "確認",
+        "文書",
+        "ドキュメント",
+        "資料",
+        "参照",
+        "調べ",
+        "検索",
+        "探し",
+        "仕様",
+        "マニュアル",
+        "ガイド",
+        "手順",
+        "根拠",
+        "出典",
+        "ソース",
+        "教えて",
+        "説明",
+        "詳細",
+        "内容",
+        "情報",
+        "確認",
         # 中国語
-        "文档", "资料", "参考", "查找", "搜索", "规范", "手册",
-        "指南", "依据", "来源", "根据", "告诉", "说明", "详细", # 英語
-        "document", "documentation", "reference", "search", "find",
-        "specification", "manual", "guide", "procedure", "source",
-        "based on", "according to", "explain", "tell me", "information",
+        "文档",
+        "资料",
+        "参考",
+        "查找",
+        "搜索",
+        "规范",
+        "手册",
+        "指南",
+        "依据",
+        "来源",
+        "根据",
+        "告诉",
+        "说明",
+        "详细",  # 英語
+        "document",
+        "documentation",
+        "reference",
+        "search",
+        "find",
+        "specification",
+        "manual",
+        "guide",
+        "procedure",
+        "source",
+        "based on",
+        "according to",
+        "explain",
+        "tell me",
+        "information",
     }
 
     # 雑談を示唆するキーワード
     _CASUAL_KEYWORDS = {
         # 日本語
-        "こんにちは", "ありがとう", "さようなら", "おはよう", "お疲れ",
-        "どう思う", "感想", "意見", "気持ち", "元気",
+        "こんにちは",
+        "ありがとう",
+        "さようなら",
+        "おはよう",
+        "お疲れ",
+        "どう思う",
+        "感想",
+        "意見",
+        "気持ち",
+        "元気",
         # 中国語
-        "你好", "谢谢", "再见", "早上好", "辛苦",
-        "怎么看", "意见", "心情",
+        "你好",
+        "谢谢",
+        "再见",
+        "早上好",
+        "辛苦",
+        "怎么看",
+        "意见",
+        "心情",
         # 英語
-        "hello", "hi", "thanks", "thank you", "bye", "goodbye",
-        "how are you", "what do you think", "opinion", "feel",
+        "hello",
+        "hi",
+        "thanks",
+        "thank you",
+        "bye",
+        "goodbye",
+        "how are you",
+        "what do you think",
+        "opinion",
+        "feel",
     }
 
     # メタ質問キーワード
     _META_KEYWORDS = {
         # 日本語
-        "あなたは", "君は", "お前は", "何ができる", "機能", "使い方",
+        "あなたは",
+        "君は",
+        "お前は",
+        "何ができる",
+        "機能",
+        "使い方",
         # 中国語
-        "你是", "你能", "功能", "怎么用",
+        "你是",
+        "你能",
+        "功能",
+        "怎么用",
         # 英語
-        "who are you", "what can you", "how to use", "your function",
+        "who are you",
+        "what can you",
+        "how to use",
+        "your function",
     }
 
     # 単純タスクキーワード
     _SIMPLE_TASK_KEYWORDS = {
         # 日本語
-        "翻訳", "計算", "変換", "フォーマット", "整形",
+        "翻訳",
+        "計算",
+        "変換",
+        "フォーマット",
+        "整形",
         # 中国語
-        "翻译", "计算", "转换", "格式化",
+        "翻译",
+        "计算",
+        "转换",
+        "格式化",
         # 英語
-        "translate", "calculate", "convert", "format",
+        "translate",
+        "calculate",
+        "convert",
+        "format",
     }
 
     def __init__(
@@ -183,7 +267,9 @@ class RetrievalGate:
                 should_retrieve=True,
                 confidence=explicit_score,
                 reason=RetrievalReason.EXPLICIT_REQUEST,
-                suggested_query=self._rewrite_query(query) if self._config.enable_query_rewrite else query,
+                suggested_query=self._rewrite_query(query)
+                if self._config.enable_query_rewrite
+                else query,
             )
 
         # 2. 雑談チェック
@@ -220,7 +306,9 @@ class RetrievalGate:
                 should_retrieve=True,
                 confidence=domain_score,
                 reason=RetrievalReason.DOMAIN_RELATED,
-                suggested_query=self._rewrite_query(query) if self._config.enable_query_rewrite else query,
+                suggested_query=self._rewrite_query(query)
+                if self._config.enable_query_rewrite
+                else query,
             )
 
         # 6. 事実質問チェック
@@ -230,7 +318,9 @@ class RetrievalGate:
                 should_retrieve=True,
                 confidence=factual_score,
                 reason=RetrievalReason.FACTUAL_QUESTION,
-                suggested_query=self._rewrite_query(query) if self._config.enable_query_rewrite else query,
+                suggested_query=self._rewrite_query(query)
+                if self._config.enable_query_rewrite
+                else query,
             )
 
         # 7. コンテキスト充足チェック
@@ -321,9 +411,7 @@ class RetrievalGate:
         if not self._config.domain_keywords:
             return 0.0
 
-        matches = sum(
-            1 for kw in self._config.domain_keywords if kw.lower() in query
-        )
+        matches = sum(1 for kw in self._config.domain_keywords if kw.lower() in query)
         return min(1.0, matches * 0.4)
 
     def _check_factual_question(self, query: str) -> float:

@@ -11,7 +11,6 @@ from agentflow.discovery import (
     AgentStatus,
     LoadBalanceStrategy,
 )
-from agentflow.discovery.health import HealthChecker
 
 
 @pytest.fixture
@@ -74,9 +73,7 @@ class TestAgentDiscovery:
         assert result.name == "TestAgent"
 
     @pytest.mark.asyncio
-    async def test_unregister(
-        self, discovery: AgentDiscovery, sample_entry: AgentEntry
-    ) -> None:
+    async def test_unregister(self, discovery: AgentDiscovery, sample_entry: AgentEntry) -> None:
         """登録解除のテスト."""
         await discovery.register(sample_entry)
         await discovery.unregister("agent-001")
@@ -130,9 +127,7 @@ class TestAgentDiscovery:
         assert results[0].agent_id == "healthy-agent"
 
     @pytest.mark.asyncio
-    async def test_heartbeat(
-        self, discovery: AgentDiscovery, sample_entry: AgentEntry
-    ) -> None:
+    async def test_heartbeat(self, discovery: AgentDiscovery, sample_entry: AgentEntry) -> None:
         """ハートビートのテスト."""
         await discovery.register(sample_entry)
         result = await discovery.heartbeat("agent-001")
@@ -193,4 +188,3 @@ class TestLoadBalancing:
         """候補なしの選択テスト."""
         result = await discovery.select("non_existent")
         assert result is None
-

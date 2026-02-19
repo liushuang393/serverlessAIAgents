@@ -13,10 +13,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+
 try:  # pragma: no cover - import error branch is environment dependent
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-except Exception:  # noqa: BLE001
+except Exception:
     InvalidSignature = Exception  # type: ignore[assignment]
     Ed25519PublicKey = None  # type: ignore[assignment]
 
@@ -87,13 +88,13 @@ class PluginSignatureVerifier:
             return {}
         try:
             payload = json.loads(path.read_text("utf-8"))
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._trust_store_error = f"trust store 読み込み失敗: {exc}"
             return None
         if not isinstance(payload, dict):
             self._trust_store_error = "trust store 形式不正: object が必要です"
             return None
-        return payload  # type: ignore[return-value]
+        return payload
 
     def verify_manifest(
         self,
@@ -143,7 +144,7 @@ class PluginSignatureVerifier:
         try:
             signature_value = sidecar_path.read_text("utf-8").strip()
             signature_bytes = base64.b64decode(signature_value, validate=True)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return SignatureVerificationResult("parse_error", f"sidecar 署名の解釈失敗: {exc}")
 
         key_entry = self._resolve_key_entry(issuer=issuer, key_id=key_id)
@@ -170,7 +171,7 @@ class PluginSignatureVerifier:
             verifier.verify(signature_bytes, canonical_manifest_bytes(manifest))
         except InvalidSignature:
             return SignatureVerificationResult("bad_signature", "署名検証に失敗しました")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return SignatureVerificationResult("parse_error", f"署名検証処理失敗: {exc}")
 
         return SignatureVerificationResult("verified", "ok")
@@ -193,7 +194,7 @@ class PluginSignatureVerifier:
                 "missing_key",
                 f"trust store に key_id が存在しません: {issuer}/{key_id}",
             )
-        return entry  # type: ignore[return-value]
+        return entry
 
 
 __all__ = [

@@ -44,19 +44,19 @@ if TYPE_CHECKING:
 class DistillationStrategy(str, Enum):
     """蒸馏策略."""
 
-    SIMILARITY = "similarity"      # 基于相似度合并
-    TEMPORAL = "temporal"          # 基于时间窗口合并
-    SEMANTIC = "semantic"          # 基于语义关系合并
+    SIMILARITY = "similarity"  # 基于相似度合并
+    TEMPORAL = "temporal"  # 基于时间窗口合并
+    SEMANTIC = "semantic"  # 基于语义关系合并
     HIERARCHICAL = "hierarchical"  # 层次化抽象
 
 
 class ForgettingStrategy(str, Enum):
     """遗忘策略."""
 
-    LRU = "lru"                    # 最近最少使用
-    IMPORTANCE = "importance"      # 基于重要性
-    DECAY = "decay"                # 时间衰减
-    ADAPTIVE = "adaptive"          # 自适应（综合多因素）
+    LRU = "lru"  # 最近最少使用
+    IMPORTANCE = "importance"  # 基于重要性
+    DECAY = "decay"  # 时间衰减
+    ADAPTIVE = "adaptive"  # 自适应（综合多因素）
 
 
 @dataclass
@@ -81,7 +81,7 @@ class MemoryConfig:
     auto_distillation: bool = True
     auto_forgetting: bool = True
     distillation_interval: int = 300  # 秒
-    forgetting_interval: int = 600    # 秒
+    forgetting_interval: int = 600  # 秒
 
 
 @dataclass
@@ -197,8 +197,7 @@ class MemoryImportanceTracker:
     def get_low_importance_memories(self, threshold: float = 0.1) -> list[str]:
         """获取低重要性记忆列表."""
         return [
-            mid for mid, imp in self._importance.items()
-            if self.get_importance(mid) < threshold
+            mid for mid, imp in self._importance.items() if self.get_importance(mid) < threshold
         ]
 
 
@@ -240,9 +239,7 @@ class EnhancedMemoryManager:
         self._distilled: dict[str, DistilledKnowledge] = {}
 
         # 重要性追踪
-        self._tracker = MemoryImportanceTracker(
-            decay_rate=self._config.importance_decay_rate
-        )
+        self._tracker = MemoryImportanceTracker(decay_rate=self._config.importance_decay_rate)
 
         # 统计
         self._stats = MemoryStats()
@@ -259,15 +256,11 @@ class EnhancedMemoryManager:
 
         # 启动自动蒸馏
         if self._config.auto_distillation:
-            self._distillation_task = asyncio.create_task(
-                self._auto_distillation_loop()
-            )
+            self._distillation_task = asyncio.create_task(self._auto_distillation_loop())
 
         # 启动自动遗忘
         if self._config.auto_forgetting:
-            self._forgetting_task = asyncio.create_task(
-                self._auto_forgetting_loop()
-            )
+            self._forgetting_task = asyncio.create_task(self._auto_forgetting_loop())
 
         self._logger.info("增强记忆系统已启动")
 
@@ -312,9 +305,7 @@ class EnhancedMemoryManager:
         # 更新统计
         self._stats.total_memories += 1
         if topic:
-            self._stats.topic_distribution[topic] = (
-                self._stats.topic_distribution.get(topic, 0) + 1
-            )
+            self._stats.topic_distribution[topic] = self._stats.topic_distribution.get(topic, 0) + 1
 
         return entry
 
@@ -386,7 +377,7 @@ class EnhancedMemoryManager:
         prompt = f"""请将以下关于"{topic}"的多条记忆抽象为一条高级知识:
 
 记忆内容:
-{chr(10).join(f'- {c}' for c in contents)}
+{chr(10).join(f"- {c}" for c in contents)}
 
 要求:
 1. 提取共同的核心信息
@@ -401,6 +392,7 @@ class EnhancedMemoryManager:
             content = response.get("content", str(response))
 
             import uuid
+
             return DistilledKnowledge(
                 id=f"dk-{uuid.uuid4().hex[:8]}",
                 content=content.strip(),
@@ -553,9 +545,9 @@ class EnhancedMemoryManager:
         """获取统计信息."""
         # 计算平均重要性
         if self._tracker._importance:
-            self._stats.avg_importance = sum(
-                self._tracker._importance.values()
-            ) / len(self._tracker._importance)
+            self._stats.avg_importance = sum(self._tracker._importance.values()) / len(
+                self._tracker._importance
+            )
 
         return self._stats
 
@@ -580,4 +572,3 @@ class EnhancedMemoryManager:
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """async with支持."""
         await self.stop()
-

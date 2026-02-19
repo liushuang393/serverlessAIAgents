@@ -245,4 +245,3 @@ def create_publish_router() -> APIRouter:
         return [f.to_dict() for f in fields]
 
     return router
-

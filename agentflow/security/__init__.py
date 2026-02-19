@@ -53,16 +53,16 @@ from agentflow.security.api_key import (
     APIKeyManager,
     generate_api_key,
 )
-from agentflow.security.contract_auth_guard import (
-    ContractAuthGuard,
-    ContractAuthGuardConfig,
-)
 from agentflow.security.auth_middleware import (
     AuthMiddleware,
     JWTConfig,
     create_auth_middleware,
     require_auth,
     require_permission,
+)
+from agentflow.security.contract_auth_guard import (
+    ContractAuthGuard,
+    ContractAuthGuardConfig,
 )
 from agentflow.security.data_sanitizer import (
     DataSanitizer,

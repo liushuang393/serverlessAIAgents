@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """新機能のユニットテスト - Messaging Hub 追加機能.
 
 テスト対象：
@@ -12,7 +11,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -37,7 +35,7 @@ from agentflow.skills.voice import TTSVoice, VoiceConfig, VoiceProvider, VoiceSk
 # Teams アダプターはオプショナルな依存関係（botbuilder-core）が必要
 try:
     # botbuilder がインストールされているか確認
-    import botbuilder.core  # noqa: F401
+    import botbuilder.core
 
     BOTBUILDER_AVAILABLE = True
 except ImportError:
@@ -411,4 +409,3 @@ class TestConversationExportSkill:
         assert stats["users"]["u1"] == 2
         assert stats["roles"]["user"] == 2
         assert stats["roles"]["assistant"] == 1
-

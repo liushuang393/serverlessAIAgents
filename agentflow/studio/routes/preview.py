@@ -39,12 +39,14 @@ def create_preview_router() -> APIRouter:
             service = PreviewService()
 
             async for event in service.run_stream(request.workflow, request.input_data):
-                logs.append({
-                    "type": event.type,
-                    "message": event.message,
-                    "timestamp": time.time(),
-                    "data": event.data,
-                })
+                logs.append(
+                    {
+                        "type": event.type,
+                        "message": event.message,
+                        "timestamp": time.time(),
+                        "data": event.data,
+                    }
+                )
 
                 if event.type == "complete" and event.data:
                     result = event.data
@@ -68,11 +70,13 @@ def create_preview_router() -> APIRouter:
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
-            logs.append({
-                "type": "error",
-                "message": str(e),
-                "timestamp": time.time(),
-            })
+            logs.append(
+                {
+                    "type": "error",
+                    "message": str(e),
+                    "timestamp": time.time(),
+                }
+            )
             return PreviewRunResponse(
                 status="error",
                 logs=logs,
@@ -121,4 +125,3 @@ def create_preview_router() -> APIRouter:
         }
 
     return router
-

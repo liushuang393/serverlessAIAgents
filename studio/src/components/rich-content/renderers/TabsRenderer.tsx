@@ -27,10 +27,7 @@ interface TabItem {
   content: RichComponent[];
 }
 
-export function TabsRenderer({
-  component,
-  renderComponent,
-}: TabsRendererProps): React.JSX.Element {
+export function TabsRenderer({ component, renderComponent }: TabsRendererProps): React.JSX.Element {
   const rawTabs = component.props.tabs;
   const tabs: TabItem[] = Array.isArray(rawTabs) ? rawTabs : [];
   const defaultValue = component.props.defaultValue;
@@ -73,11 +70,7 @@ export function TabsRenderer({
       </div>
 
       {/* タブコンテンツ */}
-      <div
-        className="p-4 bg-white dark:bg-gray-900"
-        role="tabpanel"
-        aria-labelledby={activeTab}
-      >
+      <div className="p-4 bg-white dark:bg-gray-900" role="tabpanel" aria-labelledby={activeTab}>
         {activeContent.map((child, idx) => renderComponent(child, idx))}
       </div>
     </div>
@@ -85,4 +78,3 @@ export function TabsRenderer({
 }
 
 export default TabsRenderer;
-

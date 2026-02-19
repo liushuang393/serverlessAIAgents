@@ -186,11 +186,13 @@ class MessageGateway:
 
         # 创建新会话
         session_metadata = metadata or {}
-        session_metadata.update({
-            "platform": platform,
-            "user_id": user_id,
-            "session_key": session_key,
-        })
+        session_metadata.update(
+            {
+                "platform": platform,
+                "user_id": user_id,
+                "session_key": session_key,
+            }
+        )
 
         session = self._chatbot.create_session(metadata=session_metadata)
         self._user_sessions[session_key] = session.id
@@ -293,9 +295,7 @@ class MessageGateway:
             )
 
             # 3. 发送输入指示器
-            should_send_typing = (
-                send_typing if send_typing is not None else self._enable_typing
-            )
+            should_send_typing = send_typing if send_typing is not None else self._enable_typing
             if should_send_typing:
                 try:
                     await adapter.send_typing_indicator(channel_id)
@@ -378,12 +378,14 @@ class MessageGateway:
             )
 
         # 加入队列
-        await self._message_queues[session_key].put({
-            "platform": platform,
-            "user_id": user_id,
-            "text": text,
-            "kwargs": kwargs,
-        })
+        await self._message_queues[session_key].put(
+            {
+                "platform": platform,
+                "user_id": user_id,
+                "text": text,
+                "kwargs": kwargs,
+            }
+        )
 
     async def _process_message_queue(self, session_key: str) -> None:
         """处理消息队列.

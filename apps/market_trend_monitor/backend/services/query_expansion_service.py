@@ -24,27 +24,48 @@ class QueryExpansionService:
         "COBOL": ["mainframe", "legacy system", "レガシー", "メインフレーム", "汎用機"],
         "Java": ["JVM", "Spring", "Jakarta EE", "Java EE", "マイクロサービス"],
         "migration": [
-            "modernization", "transformation", "移行", "刷新",
-            "リプレース", "マイグレーション",
+            "modernization",
+            "transformation",
+            "移行",
+            "刷新",
+            "リプレース",
+            "マイグレーション",
         ],
         "AI": [
-            "artificial intelligence", "machine learning", "deep learning",
-            "人工知能", "機械学習", "LLM", "生成AI",
+            "artificial intelligence",
+            "machine learning",
+            "deep learning",
+            "人工知能",
+            "機械学習",
+            "LLM",
+            "生成AI",
         ],
         "LLM": [
-            "large language model", "GPT", "Claude", "大規模言語モデル",
-            "生成AI", "Generative AI",
+            "large language model",
+            "GPT",
+            "Claude",
+            "大規模言語モデル",
+            "生成AI",
+            "Generative AI",
         ],
         "modernization": [
-            "DX", "digital transformation", "デジタル変革",
-            "レガシーモダナイゼーション", "システム刷新",
+            "DX",
+            "digital transformation",
+            "デジタル変革",
+            "レガシーモダナイゼーション",
+            "システム刷新",
         ],
         "legacy": [
-            "レガシー", "旧システム", "old system", "technical debt",
+            "レガシー",
+            "旧システム",
+            "old system",
+            "technical debt",
             "技術的負債",
         ],
         "refactoring": [
-            "リファクタリング", "code transformation", "コード変換",
+            "リファクタリング",
+            "code transformation",
+            "コード変換",
             "自動変換",
         ],
     }
@@ -104,7 +125,8 @@ class QueryExpansionService:
             text = response if isinstance(response, str) else str(response)
 
             llm_queries = [
-                line.strip() for line in text.strip().split("\n")
+                line.strip()
+                for line in text.strip().split("\n")
                 if line.strip() and len(line.strip()) > 3
             ][:max_expansions]
 
@@ -133,8 +155,7 @@ class QueryExpansionService:
             llm = self._get_llm()
 
             is_japanese = any(
-                "\u3040" <= ch <= "\u9fff" or "\uff00" <= ch <= "\uffef"
-                for ch in query
+                "\u3040" <= ch <= "\u9fff" or "\uff00" <= ch <= "\uffef" for ch in query
             )
 
             if is_japanese:

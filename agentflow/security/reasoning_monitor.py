@@ -37,23 +37,23 @@ from pydantic import BaseModel, Field
 class DeviationType(str, Enum):
     """偏离类型."""
 
-    GOAL_DRIFT = "goal_drift"           # 目标偏离
-    CONTEXT_LOSS = "context_loss"       # 上下文丢失
+    GOAL_DRIFT = "goal_drift"  # 目标偏离
+    CONTEXT_LOSS = "context_loss"  # 上下文丢失
     CONSTRAINT_VIOLATION = "constraint_violation"  # 约束违反
-    LOGICAL_ERROR = "logical_error"     # 逻辑错误
-    TOOL_MISUSE = "tool_misuse"         # 工具误用
-    INFINITE_LOOP = "infinite_loop"     # 无限循环
-    PREMATURE_END = "premature_end"     # 过早结束
+    LOGICAL_ERROR = "logical_error"  # 逻辑错误
+    TOOL_MISUSE = "tool_misuse"  # 工具误用
+    INFINITE_LOOP = "infinite_loop"  # 无限循环
+    PREMATURE_END = "premature_end"  # 过早结束
 
 
 class ReasoningState(str, Enum):
     """推理状态."""
 
-    ON_TRACK = "on_track"           # 正常进行
-    MINOR_DEVIATION = "minor"       # 轻微偏离
-    MAJOR_DEVIATION = "major"       # 严重偏离
-    FAILED = "failed"               # 失败
-    RECOVERED = "recovered"         # 已恢复
+    ON_TRACK = "on_track"  # 正常进行
+    MINOR_DEVIATION = "minor"  # 轻微偏离
+    MAJOR_DEVIATION = "major"  # 严重偏离
+    FAILED = "failed"  # 失败
+    RECOVERED = "recovered"  # 已恢复
 
 
 @dataclass
@@ -257,13 +257,15 @@ class ReasoningMonitor:
 
         # 1. 检查步骤数限制
         if len(self._steps) > self._config.max_steps:
-            deviations.append(DeviationReport(
-                deviation_type=DeviationType.PREMATURE_END,
-                severity=0.8,
-                description="超过最大步骤数限制",
-                affected_step=step.step_id,
-                suggestion="建议终止或重新规划",
-            ))
+            deviations.append(
+                DeviationReport(
+                    deviation_type=DeviationType.PREMATURE_END,
+                    severity=0.8,
+                    description="超过最大步骤数限制",
+                    affected_step=step.step_id,
+                    suggestion="建议终止或重新规划",
+                )
+            )
 
         # 2. 检查循环
         loop_deviation = self._detect_loop()
@@ -310,7 +312,7 @@ class ReasoningMonitor:
         if len(self._steps) < self._config.loop_detection_window:
             return None
 
-        recent = self._steps[-self._config.loop_detection_window:]
+        recent = self._steps[-self._config.loop_detection_window :]
         actions = [s.action for s in recent]
 
         # 检查完全相同的动作
@@ -369,16 +371,20 @@ class ReasoningMonitor:
             # 检查禁止词
             if "不要" in constraint or "禁止" in constraint:
                 # 提取被禁止的动作
-                forbidden_keywords = constraint_lower.replace("不要", "").replace("禁止", "").split()
+                forbidden_keywords = (
+                    constraint_lower.replace("不要", "").replace("禁止", "").split()
+                )
                 for kw in forbidden_keywords:
                     if kw in step_text:
-                        deviations.append(DeviationReport(
-                            deviation_type=DeviationType.CONSTRAINT_VIOLATION,
-                            severity=0.8,
-                            description=f"违反约束: {constraint}",
-                            affected_step=step.step_id,
-                            suggestion="请修改操作以遵守约束",
-                        ))
+                        deviations.append(
+                            DeviationReport(
+                                deviation_type=DeviationType.CONSTRAINT_VIOLATION,
+                                severity=0.8,
+                                description=f"违反约束: {constraint}",
+                                affected_step=step.step_id,
+                                suggestion="请修改操作以遵守约束",
+                            )
+                        )
 
         return deviations
 
@@ -392,10 +398,7 @@ class ReasoningMonitor:
         current_thought = step.thought.lower()
 
         # 如果思考中没有引用最近的动作，可能丢失了上下文
-        has_reference = any(
-            action.lower()[:10] in current_thought
-            for action in recent_actions
-        )
+        has_reference = any(action.lower()[:10] in current_thought for action in recent_actions)
 
         if not has_reference and len(self._steps) > 5:
             return DeviationReport(
@@ -498,4 +501,3 @@ class ReasoningMonitor:
     def get_steps(self) -> list[ReasoningStep]:
         """获取所有步骤."""
         return self._steps.copy()
-

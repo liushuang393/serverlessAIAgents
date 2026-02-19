@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """Unit tests for MeetingAgent."""
-from datetime import datetime
 
-import pytest
+from datetime import datetime
 
 from apps.messaging_hub.agents.meeting_agent import (
     MeetingAgent,
@@ -81,9 +79,7 @@ class TestMeetingNotes:
             attendees=["Alice", "Bob"],
             summary="Planned next sprint tasks",
             decisions=["Start feature X"],
-            action_items=[
-                {"assignee": "Alice", "task": "Design review", "due_date": "2024-01-25"}
-            ],
+            action_items=[{"assignee": "Alice", "task": "Design review", "due_date": "2024-01-25"}],
         )
         markdown = notes.to_markdown()
 
@@ -105,6 +101,7 @@ class TestMeetingAgentInit:
 
     def test_agent_creation_with_calendar(self) -> None:
         """Test creating MeetingAgent with calendar skill."""
+
         # Mock calendar skill
         class MockCalendarSkill:
             pass

@@ -21,7 +21,7 @@ class BayesianState:
     """
 
     alpha: float = 2.0  # 成功パラメータ（事前: 中立的）
-    beta: float = 2.0   # 失敗パラメータ（事前: 中立的）
+    beta: float = 2.0  # 失敗パラメータ（事前: 中立的）
     updated_at: datetime = field(default_factory=datetime.now)
     update_count: int = 0
 
@@ -39,7 +39,7 @@ class BayesianState:
         total = self.alpha + self.beta
         if total == 0:
             return 0.0
-        return (self.alpha * self.beta) / (total ** 2 * (total + 1))
+        return (self.alpha * self.beta) / (total**2 * (total + 1))
 
     @property
     def std(self) -> float:
@@ -110,10 +110,13 @@ class BayesianConfidenceService:
         state.update_count += 1
 
         self._logger.debug(
-            "ベイズ更新: claim=%s, supporting=%s, weight=%.2f, "
-            "alpha=%.2f, beta=%.2f, mean=%.4f",
-            claim_id, is_supporting, weight,
-            state.alpha, state.beta, state.mean,
+            "ベイズ更新: claim=%s, supporting=%s, weight=%.2f, alpha=%.2f, beta=%.2f, mean=%.4f",
+            claim_id,
+            is_supporting,
+            weight,
+            state.alpha,
+            state.beta,
+            state.mean,
         )
 
         return state.mean

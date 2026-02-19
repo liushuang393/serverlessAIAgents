@@ -59,12 +59,14 @@ def generate_report_skeleton(
     sections: list[dict[str, Any]] = []
 
     # 1. エグゼクティブサマリーセクション
-    sections.append({
-        "title": "エグゼクティブサマリー",
-        "type": "summary",
-        "placeholder": "[LLM生成: 主要トレンドの要約]",
-        "data": {"trends_count": len(trends)},
-    })
+    sections.append(
+        {
+            "title": "エグゼクティブサマリー",
+            "type": "summary",
+            "placeholder": "[LLM生成: 主要トレンドの要約]",
+            "data": {"trends_count": len(trends)},
+        }
+    )
 
     # 2. 主要トレンドセクション
     top_trends = sorted(trends, key=lambda t: t.get("score", 0), reverse=True)[:5]
@@ -74,13 +76,15 @@ def generate_report_skeleton(
         "items": [],
     }
     for i, trend in enumerate(top_trends, 1):
-        trends_section["items"].append({
-            "rank": i,
-            "topic": trend.get("topic", "Unknown"),
-            "score": trend.get("score", 0),
-            "sentiment": trend.get("sentiment", "neutral"),
-            "growth_rate": trend.get("growth_rate", 0),
-        })
+        trends_section["items"].append(
+            {
+                "rank": i,
+                "topic": trend.get("topic", "Unknown"),
+                "score": trend.get("score", 0),
+                "sentiment": trend.get("sentiment", "neutral"),
+                "growth_rate": trend.get("growth_rate", 0),
+            }
+        )
     sections.append(trends_section)
 
     # 3. センチメント分析セクション
@@ -89,18 +93,22 @@ def generate_report_skeleton(
         sentiment = trend.get("sentiment", "neutral")
         if sentiment in sentiment_counts:
             sentiment_counts[sentiment] += 1
-    sections.append({
-        "title": "センチメント分析",
-        "type": "sentiment",
-        "data": sentiment_counts,
-    })
+    sections.append(
+        {
+            "title": "センチメント分析",
+            "type": "sentiment",
+            "data": sentiment_counts,
+        }
+    )
 
     # 4. 推奨アクションセクション
-    sections.append({
-        "title": "推奨アクション",
-        "type": "recommendations",
-        "placeholder": "[LLM生成: トレンドに基づく推奨事項]",
-    })
+    sections.append(
+        {
+            "title": "推奨アクション",
+            "type": "recommendations",
+            "placeholder": "[LLM生成: トレンドに基づく推奨事項]",
+        }
+    )
 
     # Markdown生成
     markdown = _generate_markdown(title, sections)
@@ -144,7 +152,7 @@ def _generate_markdown(title: str, sections: list[dict[str, Any]]) -> str:
             lines.append("| 順位 | トピック | スコア | センチメント | 成長率 |")
             lines.append("|------|----------|--------|--------------|--------|")
             for item in section.get("items", []):
-                growth_pct = f"{item['growth_rate']*100:+.1f}%"
+                growth_pct = f"{item['growth_rate'] * 100:+.1f}%"
                 lines.append(
                     f"| {item['rank']} | {item['topic']} | {item['score']:.2f} | "
                     f"{item['sentiment']} | {growth_pct} |"
@@ -162,4 +170,3 @@ def _generate_markdown(title: str, sections: list[dict[str, Any]]) -> str:
         lines.append("")
 
     return "\n".join(lines)
-

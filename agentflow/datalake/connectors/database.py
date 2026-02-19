@@ -93,20 +93,14 @@ class DatabaseConnector(DataConnector):
                     "SQLAlchemy is required for database support. "
                     "Install with: pip install sqlalchemy[asyncio]"
                 )
-                raise ImportError(
-                    msg
-                ) from e
+                raise ImportError(msg) from e
 
             import os
+
             conn_str = self._config.connection_string or os.getenv("DATABASE_URL")
             if not conn_str:
-                msg = (
-                    "Database connection string required. "
-                    "Set DATABASE_URL environment variable."
-                )
-                raise ValueError(
-                    msg
-                )
+                msg = "Database connection string required. Set DATABASE_URL environment variable."
+                raise ValueError(msg)
 
             self._engine = create_async_engine(
                 conn_str,
@@ -286,6 +280,7 @@ class DatabaseConnector(DataConnector):
         schema, table = self._parse_path(path)
 
         async with engine.connect() as conn:
+
             def check_table(connection):
                 inspector = inspect(connection)
                 return table in inspector.get_table_names(schema=schema)
@@ -382,4 +377,3 @@ class DatabaseConnector(DataConnector):
         if self._engine:
             await self._engine.dispose()
             self._engine = None
-

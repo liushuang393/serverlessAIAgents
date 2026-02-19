@@ -21,11 +21,11 @@ from apps.decision_governance_engine.schemas.output_schemas import (
     generate_proposal_title,
     generate_signature_block,
 )
-from apps.decision_governance_engine.services.human_review_policy import (
-    enrich_review_with_policy,
-)
 from apps.decision_governance_engine.services.decision_scoring_service import (
     score_decision_results,
+)
+from apps.decision_governance_engine.services.human_review_policy import (
+    enrich_review_with_policy,
 )
 
 
@@ -80,18 +80,18 @@ class ReportGenerator:
         shu_result = results.get("shu", {})
         qi_result = results.get("qi", {})
         review_result = enrich_review_with_policy(results.get("review", {}))
-        scoring_result = score_decision_results({
-            "dao": dao_result,
-            "fa": fa_result,
-            "shu": shu_result,
-            "qi": qi_result,
-            "review": review_result,
-        })
+        scoring_result = score_decision_results(
+            {
+                "dao": dao_result,
+                "fa": fa_result,
+                "shu": shu_result,
+                "qi": qi_result,
+                "review": review_result,
+            }
+        )
 
         # ExecutiveSummary生成
-        summary = self._generate_executive_summary(
-            dao_result, fa_result, shu_result
-        )
+        summary = self._generate_executive_summary(dao_result, fa_result, shu_result)
 
         # 提案書タイトル自動生成
         problem_type = dao_result.get("problem_type", "")
@@ -157,24 +157,19 @@ class ReportGenerator:
         strategic_prohibition_summary = ""
         strategic_prohibitions = fa_result.get("strategic_prohibitions", [])
         if strategic_prohibitions:
-            strategic_prohibition_summary = strategic_prohibitions[0].get(
-                "prohibition", ""
-            )
+            strategic_prohibition_summary = strategic_prohibitions[0].get("prohibition", "")
 
         # 撤退基準サマリーを取得
         exit_criteria_summary = ""
         exit_criteria = shu_result.get("exit_criteria", {})
         if exit_criteria:
             exit_criteria_summary = (
-                f"{exit_criteria.get('checkpoint', '')}: "
-                f"{exit_criteria.get('exit_trigger', '')}"
+                f"{exit_criteria.get('checkpoint', '')}: {exit_criteria.get('exit_trigger', '')}"
             )
 
         return ExecutiveSummary(
             one_line_decision=f"{recommended.get('name', '推奨案')}を選択すべき"[:30],
-            recommended_action=recommended.get(
-                "description", "詳細は法セクション参照"
-            ),
+            recommended_action=recommended.get("description", "詳細は法セクション参照"),
             key_risks=key_risks[:3],
             first_step=shu_result.get("first_action", "キックオフMTG設定"),
             estimated_impact="計画実行により目標達成を見込む",

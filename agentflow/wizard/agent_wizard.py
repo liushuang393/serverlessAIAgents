@@ -178,6 +178,7 @@ class AgentWizard:
 
         # JSON 抽出
         import json
+
         try:
             # JSON 部分を抽出
             start = content.find("{")
@@ -355,7 +356,7 @@ class AgentWizard:
         prompt = f"""以下の Agent 仕様に基づいて、システムプロンプトを生成してください。
 
 目的: {intent}
-能力: {', '.join(capabilities)}
+能力: {", ".join(capabilities)}
 ドメイン: {domain}
 
 システムプロンプトは以下の要素を含めてください:
@@ -423,7 +424,6 @@ class AgentWizard:
             capabilities=agent_spec.capabilities,
             required_skills=agent_spec.required_skills,
         )
-
 
     def _get_agent_template(self, engine_type: EngineType) -> str:
         """Agent テンプレートを取得.
@@ -499,11 +499,13 @@ __all__ = ["{name}"]
         results = []
         for test_case in test_cases:
             # TODO: 実際のテスト実行
-            results.append({
-                "test_name": test_case.name,
-                "passed": True,  # シミュレーション
-                "duration_ms": 100.0,
-            })
+            results.append(
+                {
+                    "test_name": test_case.name,
+                    "passed": True,  # シミュレーション
+                    "duration_ms": 100.0,
+                }
+            )
 
         passed = sum(1 for r in results if r["passed"])
         failed = len(results) - passed

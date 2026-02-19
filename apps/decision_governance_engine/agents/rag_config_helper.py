@@ -69,7 +69,9 @@ def apply_rag_config(
     if config_data.get("min_similarity") is not None:
         rag_config.min_similarity = config_data["min_similarity"]
 
-    logger.info(f"Applied RAG config for {agent_id}: top_k={rag_config.top_k}, min_sim={rag_config.min_similarity}")
+    logger.info(
+        f"Applied RAG config for {agent_id}: top_k={rag_config.top_k}, min_sim={rag_config.min_similarity}"
+    )
     return rag_config
 
 
@@ -117,4 +119,3 @@ async def initialize_agent_rag(
 
     logger.info(f"RAG initialized for agent: {agent_id}")
     return rag
-

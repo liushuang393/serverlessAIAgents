@@ -67,4 +67,3 @@ def log_startup_info() -> dict[str, Any]:
         app_name="Decision Governance Engine",
         extra_info=extra_info,
     )
-

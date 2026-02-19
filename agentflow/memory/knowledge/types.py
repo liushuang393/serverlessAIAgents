@@ -156,4 +156,3 @@ class SearchResult:
     entry: KnowledgeEntry
     score: float
     search_type: SearchType = SearchType.HYBRID
-

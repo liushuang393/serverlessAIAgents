@@ -328,6 +328,7 @@ class DiffEngine:
 
         # 检测函数变更
         import re
+
         func_pattern = re.compile(r"^\s*(def|async def)\s+(\w+)")
         class_pattern = re.compile(r"^\s*class\s+(\w+)")
         import_pattern = re.compile(r"^\s*(import|from)\s+")

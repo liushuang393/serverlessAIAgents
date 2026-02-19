@@ -368,4 +368,3 @@ class UCPDealRecommenderAdapter(IDealRecommender):
         """代替案を取得."""
         # 代替案の取得はUCP経由では制限あり
         return []
-

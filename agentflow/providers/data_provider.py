@@ -186,12 +186,14 @@ class VectorProvider:
         output = []
         if results and "documents" in results:
             for i, doc in enumerate(results["documents"][0]):
-                output.append({
-                    "id": results["ids"][0][i] if "ids" in results else f"doc_{i}",
-                    "document": doc,
-                    "distance": results["distances"][0][i] if "distances" in results else 0,
-                    "metadata": results["metadatas"][0][i] if "metadatas" in results else {},
-                })
+                output.append(
+                    {
+                        "id": results["ids"][0][i] if "ids" in results else f"doc_{i}",
+                        "document": doc,
+                        "distance": results["distances"][0][i] if "distances" in results else 0,
+                        "metadata": results["metadatas"][0][i] if "metadatas" in results else {},
+                    }
+                )
         return output
 
 
@@ -329,4 +331,3 @@ class DataProvider:
                 config = CacheConfig(provider="memory")
             cls._cache_instance = CacheProvider(config)
         return cls._cache_instance
-

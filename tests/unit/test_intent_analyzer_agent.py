@@ -9,6 +9,7 @@ class TestIntentAnalyzerAgent:
         from agentflow.skills.builtin.design_skills.agents.intent_analyzer_agent import (
             IntentAnalyzerAgent,
         )
+
         return IntentAnalyzerAgent(llm_client=None)
 
     def test_agent_name(self) -> None:
@@ -26,7 +27,7 @@ class TestIntentAnalyzerAgent:
         agent = self._make_agent()
         input_data = DesignBriefInput(
             brief="Create product images for an outdoor bluetooth speaker, "
-                  "tech style, black and blue colors",
+            "tech style, black and blue colors",
             style_preferences=["tech", "dark"],
             target_platform="amazon",
             num_images=6,

@@ -106,9 +106,9 @@ class SkillEngine:
         """Skill を全ディレクトリから読み込み."""
         # デフォルトディレクトリ
         default_dirs = [
-            Path.home() / ".agentflow" / "skills",        # グローバル
-            Path.home() / ".agentflow" / "learned_skills", # 学習済み
-            Path(".agentflow") / "skills",                 # プロジェクト
+            Path.home() / ".agentflow" / "skills",  # グローバル
+            Path.home() / ".agentflow" / "learned_skills",  # 学習済み
+            Path(".agentflow") / "skills",  # プロジェクト
         ]
 
         all_dirs = default_dirs + (extra_dirs or [])
@@ -208,4 +208,3 @@ class SkillEngine:
             内部の SkillRegistry インスタンス
         """
         return self._registry
-

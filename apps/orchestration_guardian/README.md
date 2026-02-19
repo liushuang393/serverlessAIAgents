@@ -1,31 +1,69 @@
-# Orchestration Guardian
+# Orchestration Guardian (オーケストレーション・ガーディアン)
 
-Lightweight app for validating orchestration readiness and protocol contract coverage.
+オーケストレーションの準備状況、プロトコル規約、および自律型AIアプリケーションのアーキテクチャ準拠を検証するための軽量マイクロサービスです。
+AgentFlowエコシステム内のすべてのアプリが定義された標準に準拠していることを保証する「守護者（Guardian）」として機能します。
 
 `product_line`: `framework` / `surface_profile`: `operator`
 
-## Run
+## 概要と目的
+
+このサービスは、開発されたAIエージェントやアプリケーションが、本番環境で他のエージェントと連携（オーケストレーション）するための要件を満たしているかを自動的に診断します。
+
+### 主な機能
+
+1. **プロトコル検証**: アプリが必須プロトコル（SSE、WebSocket、A2A通信など）を正しく実装しているかチェックします。
+2. **Readiness（準備完了）スコアリング**: 実装された機能を分析し、オーケストレーション参加への準備状況をスコア化します。
+3. **契約（Contract）監査**: RAG、認証、スキル定義などの「契約（Contract）」が正しく定義されているか検証します。
+
+## 利用シーンと対象者
+
+### 誰が使うのか？
+
+- **プラットフォーム管理者**: システム全体の健全性を保つために、新規アプリの準拠状況を確認する際。
+- **アプリケーション開発者**: 開発中のアプリがフレームワークの標準仕様満たしているかセルフチェックする際。
+- **CI/CDパイプライン**: デプロイ前の自動テストとして組み込み、品質ゲートとして利用。
+
+### いつ使うのか？
+
+- **開発フェーズ**: ローカル環境でアプリを起動し、実装漏れがないか確認するとき。
+- **デプロイ前**: 本番環境へのリリース判定の一部として。
+- **トラブルシューティング**: エージェント間の連携がうまくいかない場合、基本プロトコルに違反していないか診断するとき。
+
+## 使用方法 (Run)
+
+### ローカル開発 (Local Development)
+
+APIサーバーをローカルで起動するには、以下の統合スクリプトを使用します（依存するDockerサービスも自動確認します）：
+
+```bash
+python apps/orchestration_guardian/scripts/dev.py
+```
+
+または、標準的なモジュールコマンドでも起動可能です：
 
 ```bash
 python -m apps.orchestration_guardian.main
 ```
 
-## Endpoints
+### API エンドポイント
 
-- `GET /api/health`
-- `GET /api/checklist`
-- `POST /api/verify`
+ブラウザやcurl、またはPlatformのUIから以下のエンドポイントにアクセスして利用します。
 
-## Test Env Bootstrap
+- `GET /`: APIルート（ウェルカムメッセージと基本情報）
+- `GET /api/health`: ヘルスチェック（サービスの稼働確認）
+- `GET /api/checklist`: オーケストレーション準拠のためのベースラインチェックリストを取得
+- `POST /api/verify`: 対象アプリの情報を送信し、Readinessスコアと診断結果を取得
+
+## テスト環境のセットアップ (Test Environment Bootstrap)
+
+テスト環境をセットアップするには、以下のスクリプトを実行します：
 
 ```bash
-conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
+python scripts/bootstrap_test_env.py --env-file .env
 ```
 
-- 共有テスト時の env は手動作成せず、上記コマンドで自動補完する。
+## 本番運用 / テナントメールポリシー
 
-## Production / Tenant Mail Policy
-
-- 本番シークレットは Secret Manager 注入を使用する。
-- 多租户招待メールは「通知」と「ログイン URL」を別メールに分離する。
-- 詳細手順: `docs/internal/env-bootstrap-and-tenant-invite-security.md`
+- **シークレット**: 本番環境のシークレット（機密情報）は Secret Manager 経由で注入されます。
+- **テナント招待**: セキュリティのため、招待メールは「通知」と「ログインURL」の2通に分けて送信されます。
+- **詳細ドキュメント**: 詳細は `docs/internal/env-bootstrap-and-tenant-invite-security.md` を参照してください。

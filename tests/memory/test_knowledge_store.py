@@ -1,16 +1,12 @@
-# -*- coding: utf-8 -*-
 """知識ストアシステムの単体テスト.
 
 InMemoryKnowledgeStore、KnowledgeManager、ファクトリ関数のテスト。
 """
 
-import asyncio
-import json
 import tempfile
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -24,7 +20,6 @@ from agentflow.memory.knowledge import (
     is_memvid_available,
     reset_knowledge_manager,
 )
-from agentflow.memory.knowledge.types import SearchResult, SearchType
 
 
 class TestKnowledgeEntry:
@@ -47,7 +42,7 @@ class TestKnowledgeEntry:
 
     def test_create_with_all_params(self) -> None:
         """全パラメータで作成."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         entry = KnowledgeEntry(
             id="test-2",
             title="FAQ質問",
@@ -86,7 +81,7 @@ class TestKnowledgeEntry:
             "tags": ["restored"],
             "source": "faq",
             "importance": 0.8,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
         }
         entry = KnowledgeEntry.from_dict(data)
         assert entry.id == "test-4"
@@ -163,8 +158,12 @@ class TestInMemoryKnowledgeStore:
 
         # テストデータを追加
         entries = [
-            KnowledgeEntry(id="1", title="Pythonプログラミング", body="Pythonは人気のプログラミング言語です"),
-            KnowledgeEntry(id="2", title="Javaプログラミング", body="Javaはエンタープライズ向け言語です"),
+            KnowledgeEntry(
+                id="1", title="Pythonプログラミング", body="Pythonは人気のプログラミング言語です"
+            ),
+            KnowledgeEntry(
+                id="2", title="Javaプログラミング", body="Javaはエンタープライズ向け言語です"
+            ),
             KnowledgeEntry(id="3", title="機械学習入門", body="機械学習はAIの重要な分野です"),
         ]
         await store.store_batch(entries)
@@ -233,8 +232,7 @@ class TestInMemoryKnowledgeStore:
         """クリアとカウントテスト."""
         await store.connect()
         entries = [
-            KnowledgeEntry(id=f"cnt-{i}", title=f"エントリ{i}", body="本文")
-            for i in range(5)
+            KnowledgeEntry(id=f"cnt-{i}", title=f"エントリ{i}", body="本文") for i in range(5)
         ]
         await store.store_batch(entries)
 
@@ -415,4 +413,3 @@ class TestFactoryFunctions:
         # memvid-sdkがない場合はmemoryにフォールバック
         provider = store.get_provider_name()
         assert provider in ("memvid", "memory")
-

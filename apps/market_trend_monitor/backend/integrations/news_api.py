@@ -15,7 +15,6 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import aiohttp
-
 from apps.market_trend_monitor.backend.integrations.rate_limiter import rate_limiter
 
 
@@ -81,7 +80,7 @@ class NewsAPIClient:
         """
         if languages is None:
             languages = ["en"]
-        
+
         all_articles = []
         for lang in languages:
             lang_articles = await self._search_single_lang(
@@ -89,10 +88,10 @@ class NewsAPIClient:
                 language=lang,
                 sort_by=sort_by,
                 page_size=page_size,
-                from_date=from_date
+                from_date=from_date,
             )
             all_articles.extend(lang_articles)
-        
+
         return all_articles
 
     async def _search_single_lang(
@@ -124,28 +123,36 @@ class NewsAPIClient:
                 # レート制限待機
                 await self._wait_for_rate_limit()
 
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(
-                        f"{self._base_url}/everything", params=params, timeout=aiohttp.ClientTimeout(total=30)
-                    ) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            return data.get("articles", [])
-                        if response.status == 429:
-                            # レート制限エラー
-                            self._logger.warning(f"Rate limit exceeded (attempt {attempt + 1}/{self._max_retries})")
-                            if attempt < self._max_retries - 1:
-                                wait_time = self._rate_limit_delay * (2 ** attempt)
-                                await asyncio.sleep(wait_time)
-                                continue
-                        else:
-                            self._logger.error(f"NewsAPI error: {response.status}")
-                            if attempt < self._max_retries - 1:
-                                await asyncio.sleep(1.0)
-                                continue
-                            return self._generate_mock_articles(query, page_size)
+                async with (
+                    aiohttp.ClientSession() as session,
+                    session.get(
+                        f"{self._base_url}/everything",
+                        params=params,
+                        timeout=aiohttp.ClientTimeout(total=30),
+                    ) as response,
+                ):
+                    if response.status == 200:
+                        data = await response.json()
+                        return data.get("articles", [])
+                    if response.status == 429:
+                        # レート制限エラー
+                        self._logger.warning(
+                            f"Rate limit exceeded (attempt {attempt + 1}/{self._max_retries})"
+                        )
+                        if attempt < self._max_retries - 1:
+                            wait_time = self._rate_limit_delay * (2**attempt)
+                            await asyncio.sleep(wait_time)
+                            continue
+                    else:
+                        self._logger.error(f"NewsAPI error: {response.status}")
+                        if attempt < self._max_retries - 1:
+                            await asyncio.sleep(1.0)
+                            continue
+                        return self._generate_mock_articles(query, page_size)
             except TimeoutError:
-                self._logger.exception(f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})")
+                self._logger.exception(
+                    f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})"
+                )
                 if attempt < self._max_retries - 1:
                     await asyncio.sleep(1.0)
                     continue
@@ -192,28 +199,36 @@ class NewsAPIClient:
                 # レート制限待機
                 await self._wait_for_rate_limit()
 
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(
-                        f"{self._base_url}/top-headlines", params=params, timeout=aiohttp.ClientTimeout(total=30)
-                    ) as response:
-                        if response.status == 200:
-                            data = await response.json()
-                            return data.get("articles", [])
-                        if response.status == 429:
-                            # レート制限エラー
-                            self._logger.warning(f"Rate limit exceeded (attempt {attempt + 1}/{self._max_retries})")
-                            if attempt < self._max_retries - 1:
-                                wait_time = self._rate_limit_delay * (2 ** attempt)
-                                await asyncio.sleep(wait_time)
-                                continue
-                        else:
-                            self._logger.error(f"NewsAPI error: {response.status}")
-                            if attempt < self._max_retries - 1:
-                                await asyncio.sleep(1.0)
-                                continue
-                            return self._generate_mock_articles(f"top headlines {country}", page_size)
+                async with (
+                    aiohttp.ClientSession() as session,
+                    session.get(
+                        f"{self._base_url}/top-headlines",
+                        params=params,
+                        timeout=aiohttp.ClientTimeout(total=30),
+                    ) as response,
+                ):
+                    if response.status == 200:
+                        data = await response.json()
+                        return data.get("articles", [])
+                    if response.status == 429:
+                        # レート制限エラー
+                        self._logger.warning(
+                            f"Rate limit exceeded (attempt {attempt + 1}/{self._max_retries})"
+                        )
+                        if attempt < self._max_retries - 1:
+                            wait_time = self._rate_limit_delay * (2**attempt)
+                            await asyncio.sleep(wait_time)
+                            continue
+                    else:
+                        self._logger.error(f"NewsAPI error: {response.status}")
+                        if attempt < self._max_retries - 1:
+                            await asyncio.sleep(1.0)
+                            continue
+                        return self._generate_mock_articles(f"top headlines {country}", page_size)
             except TimeoutError:
-                self._logger.exception(f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})")
+                self._logger.exception(
+                    f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})"
+                )
                 if attempt < self._max_retries - 1:
                     await asyncio.sleep(1.0)
                     continue
@@ -238,15 +253,16 @@ class NewsAPIClient:
         """
         articles = []
         for i in range(count):
-            articles.append({
-                "source": {"id": None, "name": f"Mock Source {i+1}"},
-                "author": f"Mock Author {i+1}",
-                "title": f"Mock Article about {query} - {i+1}",
-                "description": f"This is a mock article about {query}. Article number {i+1}.",
-                "url": f"https://example.com/article-{i+1}",
-                "urlToImage": None,
-                "publishedAt": datetime.now().isoformat(),
-                "content": f"Mock content for article {i+1} about {query}.",
-            })
+            articles.append(
+                {
+                    "source": {"id": None, "name": f"Mock Source {i + 1}"},
+                    "author": f"Mock Author {i + 1}",
+                    "title": f"Mock Article about {query} - {i + 1}",
+                    "description": f"This is a mock article about {query}. Article number {i + 1}.",
+                    "url": f"https://example.com/article-{i + 1}",
+                    "urlToImage": None,
+                    "publishedAt": datetime.now().isoformat(),
+                    "content": f"Mock content for article {i + 1} about {query}.",
+                }
+            )
         return articles
-

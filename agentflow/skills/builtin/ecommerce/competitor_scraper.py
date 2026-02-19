@@ -121,9 +121,7 @@ class CompetitorScraper(AgentBlock):
         """
         keywords = input_data.get("keywords", [])
         platforms = input_data.get("platforms", self._config.platforms)
-        max_results = input_data.get(
-            "max_results", self._config.max_results_per_platform
-        )
+        max_results = input_data.get("max_results", self._config.max_results_per_platform)
 
         result = await self.scrape_competitors(
             keywords=keywords,
@@ -171,13 +169,9 @@ class CompetitorScraper(AgentBlock):
 
         for platform in platforms:
             try:
-                products = await self._scrape_platform(
-                    platform, keywords, max_results
-                )
+                products = await self._scrape_platform(platform, keywords, max_results)
                 all_products.extend(products)
-                logger.info(
-                    "Platform %s: %d products found", platform.value, len(products)
-                )
+                logger.info("Platform %s: %d products found", platform.value, len(products))
             except Exception as e:
                 error_msg = f"{platform.value}: {e!s}"
                 errors.append(error_msg)
@@ -226,9 +220,7 @@ class CompetitorScraper(AgentBlock):
 
         return products
 
-    def _normalize_platforms(
-        self, platforms: list[Platform] | list[str] | None
-    ) -> list[Platform]:
+    def _normalize_platforms(self, platforms: list[Platform] | list[str] | None) -> list[Platform]:
         """プラットフォームリストを正規化."""
         if platforms is None:
             return list(self._config.platforms)

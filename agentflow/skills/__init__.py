@@ -230,4 +230,3 @@ __all__ = [
     # ファクトリ
     "create_skill_gateway",
 ]
-

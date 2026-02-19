@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Agents Router — Agent 管理 API エンドポイント.
 
 GET  /api/studios/framework/agents              — 全 App 横断の Agent 一覧
@@ -14,9 +13,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Query
-
 from apps.platform.services.agent_aggregator import AgentAggregatorService
+from fastapi import APIRouter, Query
 
 
 router = APIRouter(prefix="/api/studios/framework/agents", tags=["agents"])
@@ -31,7 +29,7 @@ def init_agent_services(aggregator: AgentAggregatorService) -> None:
     Args:
         aggregator: Agent 集約サービス
     """
-    global _aggregator  # noqa: PLW0603
+    global _aggregator
     _aggregator = aggregator
 
 

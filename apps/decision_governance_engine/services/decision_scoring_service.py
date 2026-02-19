@@ -12,10 +12,9 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-from pydantic import BaseModel
-
 from apps.decision_governance_engine.config import get_config
 from apps.decision_governance_engine.services.scoring_engine import ScoringEngine
+from pydantic import BaseModel
 
 
 logger = logging.getLogger(__name__)
@@ -73,7 +72,8 @@ class DecisionScoringService:
         recommended_paths = fa.get("recommended_paths", [])
         first_path = (
             recommended_paths[0]
-            if isinstance(recommended_paths, list) and recommended_paths
+            if isinstance(recommended_paths, list)
+            and recommended_paths
             and isinstance(recommended_paths[0], Mapping)
             else {}
         )
@@ -90,29 +90,38 @@ class DecisionScoringService:
             )
             for phase in phases
         )
-        dependencies = shu.get("dependencies", []) if isinstance(shu.get("dependencies"), list) else []
+        dependencies = (
+            shu.get("dependencies", []) if isinstance(shu.get("dependencies"), list) else []
+        )
         first_action = str(shu.get("first_action", "")).strip()
 
-        implementations = qi.get("implementations", []) if isinstance(qi.get("implementations"), list) else []
+        implementations = (
+            qi.get("implementations", []) if isinstance(qi.get("implementations"), list) else []
+        )
         integration_points = (
             qi.get("integration_points", [])
-            if isinstance(qi.get("integration_points"), list) else []
+            if isinstance(qi.get("integration_points"), list)
+            else []
         )
         debt_warnings = (
             qi.get("technical_debt_warnings", [])
-            if isinstance(qi.get("technical_debt_warnings"), list) else []
+            if isinstance(qi.get("technical_debt_warnings"), list)
+            else []
         )
         domain_tech = (
             qi.get("domain_technologies", [])
-            if isinstance(qi.get("domain_technologies"), list) else []
+            if isinstance(qi.get("domain_technologies"), list)
+            else []
         )
         regulatory = (
             qi.get("regulatory_considerations", [])
-            if isinstance(qi.get("regulatory_considerations"), list) else []
+            if isinstance(qi.get("regulatory_considerations"), list)
+            else []
         )
         geographic = (
             qi.get("geographic_considerations", [])
-            if isinstance(qi.get("geographic_considerations"), list) else []
+            if isinstance(qi.get("geographic_considerations"), list)
+            else []
         )
 
         findings = review.get("findings", []) if isinstance(review.get("findings"), list) else []
@@ -129,10 +138,13 @@ class DecisionScoringService:
             and str(finding.get("severity", "")).upper() == "WARNING"
         )
         death_traps = dao.get("death_traps", []) if isinstance(dao.get("death_traps"), list) else []
-        causal_gears = dao.get("causal_gears", []) if isinstance(dao.get("causal_gears"), list) else []
+        causal_gears = (
+            dao.get("causal_gears", []) if isinstance(dao.get("causal_gears"), list) else []
+        )
         existing_alternatives = (
             dao.get("existing_alternatives", [])
-            if isinstance(dao.get("existing_alternatives"), list) else []
+            if isinstance(dao.get("existing_alternatives"), list)
+            else []
         )
 
         reversibility_map = {"HIGH": 4.8, "MEDIUM": 3.4, "LOW": 2.0}
@@ -167,10 +179,7 @@ class DecisionScoringService:
             + max(0, total_months - 6) * 0.08
         )
         risk = _clamp_score(
-            1.6
-            + critical_count * 1.8
-            + warning_count * 0.5
-            + len(death_traps) * 0.35
+            1.6 + critical_count * 1.8 + warning_count * 0.5 + len(death_traps) * 0.35
         )
         reversibility = _clamp_score(reversibility_raw - critical_count * 0.3)
         dependencies_complexity = _clamp_score(
@@ -216,7 +225,7 @@ def score_decision_results(results: Mapping[str, Any]) -> dict[str, Any] | None:
     try:
         service = DecisionScoringService()
         return service.score(results)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(f"意思決定スコアリングに失敗: {exc}")
         return None
 

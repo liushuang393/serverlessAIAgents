@@ -276,10 +276,7 @@ class CoverageDashboard:
         by_topic = self._group_by_topic(logs)
         for topic, topic_logs in by_topic.items():
             stats = self._calculate_stats(topic_logs)
-            sample_misses = [
-                log.query_text for log in topic_logs
-                if not log.hit
-            ][:5]
+            sample_misses = [log.query_text for log in topic_logs if not log.hit][:5]
 
             topic_coverage = TopicCoverage(
                 topic=topic,
@@ -337,17 +334,9 @@ class CoverageDashboard:
             hit_queries=len(hit_logs),
             miss_queries=len(miss_logs),
             hit_rate=len(hit_logs) / total,
-            avg_hit_count=(
-                sum(l.hit_count for l in hit_logs) / len(hit_logs)
-                if hit_logs else 0
-            ),
-            avg_top_score=(
-                sum(l.top_score for l in hit_logs) / len(hit_logs)
-                if hit_logs else 0
-            ),
-            avg_response_time_ms=(
-                sum(l.response_time_ms for l in logs) / total
-            ),
+            avg_hit_count=(sum(l.hit_count for l in hit_logs) / len(hit_logs) if hit_logs else 0),
+            avg_top_score=(sum(l.top_score for l in hit_logs) / len(hit_logs) if hit_logs else 0),
+            avg_response_time_ms=(sum(l.response_time_ms for l in logs) / total),
         )
 
         # レベル判定
@@ -362,9 +351,7 @@ class CoverageDashboard:
 
         return stats
 
-    def _group_by_topic(
-        self, logs: list[QueryLog]
-    ) -> dict[str, list[QueryLog]]:
+    def _group_by_topic(self, logs: list[QueryLog]) -> dict[str, list[QueryLog]]:
         """トピック別にグループ化."""
         by_topic: dict[str, list[QueryLog]] = defaultdict(list)
         for log in logs:
@@ -372,9 +359,7 @@ class CoverageDashboard:
             by_topic[topic].append(log)
         return dict(by_topic)
 
-    def _group_by_department(
-        self, logs: list[QueryLog]
-    ) -> dict[str, list[QueryLog]]:
+    def _group_by_department(self, logs: list[QueryLog]) -> dict[str, list[QueryLog]]:
         """部門別にグループ化."""
         by_dept: dict[str, list[QueryLog]] = defaultdict(list)
         for log in logs:
@@ -382,9 +367,7 @@ class CoverageDashboard:
             by_dept[dept].append(log)
         return dict(by_dept)
 
-    def _group_by_kb_type(
-        self, logs: list[QueryLog]
-    ) -> dict[str, list[QueryLog]]:
+    def _group_by_kb_type(self, logs: list[QueryLog]) -> dict[str, list[QueryLog]]:
         """KBタイプ別にグループ化."""
         by_kb: dict[str, list[QueryLog]] = defaultdict(list)
         for log in logs:
@@ -392,53 +375,36 @@ class CoverageDashboard:
             by_kb[kb].append(log)
         return dict(by_kb)
 
-    def _generate_recommendations(
-        self, stats: CoverageStats
-    ) -> list[str]:
+    def _generate_recommendations(self, stats: CoverageStats) -> list[str]:
         """推奨事項を生成."""
         recommendations = []
 
         if stats.hit_rate < self._config.critical_hit_rate_threshold:
-            recommendations.append(
-                "⚠️ 命中率が非常に低いです。コンテンツの追加が急務です。"
-            )
+            recommendations.append("⚠️ 命中率が非常に低いです。コンテンツの追加が急務です。")
         elif stats.hit_rate < self._config.fair_threshold:
-            recommendations.append(
-                "📝 命中率が低いです。関連ドキュメントの追加をご検討ください。"
-            )
+            recommendations.append("📝 命中率が低いです。関連ドキュメントの追加をご検討ください。")
 
         if stats.avg_top_score < 0.5:
-            recommendations.append(
-                "🎯 検索精度が低いです。術語辞書の充実をご検討ください。"
-            )
+            recommendations.append("🎯 検索精度が低いです。術語辞書の充実をご検討ください。")
 
         if stats.avg_response_time_ms > 2000:
-            recommendations.append(
-                "⏱️ 応答時間が遅いです。インデックスの最適化をご検討ください。"
-            )
+            recommendations.append("⏱️ 応答時間が遅いです。インデックスの最適化をご検討ください。")
 
         return recommendations
 
-    def _calculate_trend(
-        self, topic: str, logs: list[QueryLog]
-    ) -> str:
+    def _calculate_trend(self, topic: str, logs: list[QueryLog]) -> str:
         """トレンドを計算."""
         now = datetime.now()
         comparison_days = self._config.trend_comparison_days
 
         # 直近期間
         recent_start = now - timedelta(days=comparison_days)
-        recent_logs = [
-            l for l in logs
-            if l.topic == topic and l.created_at >= recent_start
-        ]
+        recent_logs = [l for l in logs if l.topic == topic and l.created_at >= recent_start]
 
         # 前期間
         previous_start = recent_start - timedelta(days=comparison_days)
         previous_logs = [
-            l for l in logs
-            if l.topic == topic
-            and previous_start <= l.created_at < recent_start
+            l for l in logs if l.topic == topic and previous_start <= l.created_at < recent_start
         ]
 
         if not recent_logs or not previous_logs:

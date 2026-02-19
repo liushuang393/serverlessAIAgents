@@ -117,8 +117,7 @@ class LongTermMemory:
 
         # 並行マージ: 各エントリの更新キューを並行処理
         tasks = [
-            self._merge_updates(entry_id, queue)
-            for entry_id, queue in self._update_queues.items()
+            self._merge_updates(entry_id, queue) for entry_id, queue in self._update_queues.items()
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -196,8 +195,7 @@ class LongTermMemory:
         filtered = [
             entry
             for entry in self._memories.values()
-            if (topic is None or entry.topic == topic)
-            and entry.importance_score >= min_importance
+            if (topic is None or entry.topic == topic) and entry.importance_score >= min_importance
         ]
 
         # 重要度とタイムスタンプでソート
@@ -208,4 +206,3 @@ class LongTermMemory:
         )
 
         return sorted_entries[:limit]
-

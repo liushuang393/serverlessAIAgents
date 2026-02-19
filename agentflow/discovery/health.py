@@ -82,4 +82,3 @@ class HealthChecker:
     async def __aexit__(self, *args: object) -> None:
         """コンテキストマネージャーエグジット."""
         await self.stop()
-

@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
 """AgentCapabilitySpecモデルのテスト.
 
 Agent能力仕様モデルのユニットテスト。
 """
-import pytest
 
 
 def test_capability_spec_creation():

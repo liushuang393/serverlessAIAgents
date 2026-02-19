@@ -141,9 +141,7 @@ class SecurityScanner(AgentBlock):
                 "low_count": report.summary.low_count,
                 "risk_score": report.summary.risk_score,
             },
-            "vulnerabilities": [
-                self._vuln_to_dict(v) for v in report.vulnerabilities[:50]
-            ],
+            "vulnerabilities": [self._vuln_to_dict(v) for v in report.vulnerabilities[:50]],
             "scan_types": report.scan_types,
             "compliance_status": report.compliance_status,
             "recommendations": report.recommendations,
@@ -241,9 +239,7 @@ class SecurityScanner(AgentBlock):
             ),
         ]
 
-    def _create_summary(
-        self, vulnerabilities: list[Vulnerability]
-    ) -> ScanSummary:
+    def _create_summary(self, vulnerabilities: list[Vulnerability]) -> ScanSummary:
         """サマリーを作成."""
         severity_counts = dict.fromkeys(VulnerabilitySeverity, 0)
         for v in vulnerabilities:
@@ -257,9 +253,7 @@ class SecurityScanner(AgentBlock):
             VulnerabilitySeverity.LOW: 5,
             VulnerabilitySeverity.INFO: 1,
         }
-        risk_score = min(100, sum(
-            severity_counts[s] * w for s, w in weights.items()
-        ))
+        risk_score = min(100, sum(severity_counts[s] * w for s, w in weights.items()))
 
         return ScanSummary(
             total_vulnerabilities=len(vulnerabilities),
@@ -271,13 +265,13 @@ class SecurityScanner(AgentBlock):
             risk_score=risk_score,
         )
 
-    def _check_compliance(
-        self, vulnerabilities: list[Vulnerability]
-    ) -> dict[str, bool]:
+    def _check_compliance(self, vulnerabilities: list[Vulnerability]) -> dict[str, bool]:
         """コンプライアンスをチェック."""
         critical_high = sum(
-            1 for v in vulnerabilities
-            if v.severity in [
+            1
+            for v in vulnerabilities
+            if v.severity
+            in [
                 VulnerabilitySeverity.CRITICAL,
                 VulnerabilitySeverity.HIGH,
             ]
@@ -289,25 +283,17 @@ class SecurityScanner(AgentBlock):
             "SOC2": critical_high <= 2,
         }
 
-    def _generate_recommendations(
-        self, vulnerabilities: list[Vulnerability]
-    ) -> list[str]:
+    def _generate_recommendations(self, vulnerabilities: list[Vulnerability]) -> list[str]:
         """推奨事項を生成."""
         recommendations = []
 
-        critical = [
-            v for v in vulnerabilities
-            if v.severity == VulnerabilitySeverity.CRITICAL
-        ]
+        critical = [v for v in vulnerabilities if v.severity == VulnerabilitySeverity.CRITICAL]
         if critical:
             recommendations.append(
                 f"[緊急] {len(critical)}件のCritical脆弱性を即座に修正してください"
             )
 
-        dep_vulns = [
-            v for v in vulnerabilities
-            if v.vuln_type == VulnerabilityType.DEPENDENCY
-        ]
+        dep_vulns = [v for v in vulnerabilities if v.vuln_type == VulnerabilityType.DEPENDENCY]
         if dep_vulns:
             recommendations.append(
                 f"[高優先] {len(dep_vulns)}件の依存関係をアップデートしてください"

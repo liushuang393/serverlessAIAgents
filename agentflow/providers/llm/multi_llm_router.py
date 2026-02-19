@@ -320,8 +320,10 @@ class MultiLLMRouter:
             # 速度優先：レイテンシが最も低いモデル
             return min(
                 candidates,
-                key=lambda m: self._performance_cache.get(m, ProviderPerformance()).avg_latency_ms
-                or float("inf"),
+                key=lambda m: (
+                    self._performance_cache.get(m, ProviderPerformance()).avg_latency_ms
+                    or float("inf")
+                ),
             )
         # 品質優先：最高階層のモデル
         tier_order = {ModelTier.PREMIUM: 0, ModelTier.STANDARD: 1, ModelTier.ECONOMY: 2}

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """MCP Tool 単体テスト.
 
 agentflow/protocols/mcp_tool.py のテスト。
@@ -237,4 +236,3 @@ class TestMCPToolClient:
         response = await client.call_tool_by_name("echo", {"message": "hi"}, "2.0.0")
 
         assert response.success is True
-

@@ -6,7 +6,6 @@ SignalScore/Signal モデルおよび SignalService のテスト。
 from __future__ import annotations
 
 import pytest
-
 from apps.market_trend_monitor.backend.models import (
     SentimentType,
     Signal,
@@ -125,8 +124,11 @@ class TestSignalModel:
     def test_signal_creation(self) -> None:
         """信号の生成テスト."""
         score = SignalScore(
-            reliability=0.9, leading=0.8, relevance=0.9,
-            actionability=0.8, convergence=0.8,
+            reliability=0.9,
+            leading=0.8,
+            relevance=0.9,
+            actionability=0.8,
+            convergence=0.8,
         )
         signal = Signal(id="sig-1", trend_id="t-1", score=score)
         assert signal.id == "sig-1"
@@ -250,12 +252,16 @@ class TestSignalService:
         service = SignalService()
         # 高スコアトレンド
         t_high = _make_trend(
-            trend_id="t-high", score=0.95, growth_rate=0.5,
+            trend_id="t-high",
+            score=0.95,
+            growth_rate=0.5,
             keywords=["COBOL", "Java", "migration", "AI", "LLM", "modernization"],
         )
         # 低スコアトレンド
         t_low = _make_trend(
-            trend_id="t-low", score=0.1, growth_rate=-0.3,
+            trend_id="t-low",
+            score=0.1,
+            growth_rate=-0.3,
             keywords=["unrelated"],
             sentiment=SentimentType.NEGATIVE,
         )

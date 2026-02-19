@@ -234,9 +234,7 @@ class VersionMigration:
             if dry_run:
                 result.status = MigrationStatus.COMPLETED
                 result.completed_at = datetime.now(UTC)
-                _logger.info(
-                    f"Dry run migration {skill_name}: {from_version} -> {to_version}"
-                )
+                _logger.info(f"Dry run migration {skill_name}: {from_version} -> {to_version}")
                 return result
 
             # 执行迁移步骤
@@ -245,6 +243,7 @@ class VersionMigration:
 
             for step in self._migration_steps:
                 import time
+
                 start = time.time()
 
                 try:
@@ -386,9 +385,7 @@ class VersionMigration:
             return []
 
         # 构建版本图
-        version_list = sorted(
-            [SkillVersion.parse(v.version) for v in versions]
-        )
+        version_list = sorted([SkillVersion.parse(v.version) for v in versions])
 
         from_v = SkillVersion.parse(from_version)
         to_v = SkillVersion.parse(to_version)

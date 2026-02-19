@@ -22,93 +22,63 @@
     {
       "name": "CognitiveGateAgent",
       "module": "apps.decision_governance_engine.agents.cognitive_gate_agent",
-      "capabilities": [
-        "gate",
-        "cognitive_check"
-      ],
+      "capabilities": ["gate", "cognitive_check"],
       "business_base": "governance",
       "pattern": "gatekeeper"
     },
     {
       "name": "GatekeeperAgent",
       "module": "apps.decision_governance_engine.agents.gatekeeper_agent",
-      "capabilities": [
-        "gate",
-        "validation"
-      ],
+      "capabilities": ["gate", "validation"],
       "business_base": "governance",
       "pattern": "gatekeeper"
     },
     {
       "name": "ClarificationAgent",
       "module": "apps.decision_governance_engine.agents.clarification_agent",
-      "capabilities": [
-        "diagnosis",
-        "clarification"
-      ],
+      "capabilities": ["diagnosis", "clarification"],
       "business_base": "reasoning",
       "pattern": "analyzer"
     },
     {
       "name": "DaoAgent",
       "module": "apps.decision_governance_engine.agents.dao_agent",
-      "capabilities": [
-        "analysis",
-        "dao",
-        "philosophy"
-      ],
+      "capabilities": ["analysis", "dao", "philosophy"],
       "business_base": "reasoning",
       "pattern": "analyzer"
     },
     {
       "name": "FaAgent",
       "module": "apps.decision_governance_engine.agents.fa_agent",
-      "capabilities": [
-        "analysis",
-        "fa",
-        "rules"
-      ],
+      "capabilities": ["analysis", "fa", "rules"],
       "business_base": "reasoning",
       "pattern": "analyzer"
     },
     {
       "name": "ShuAgent",
       "module": "apps.decision_governance_engine.agents.shu_agent",
-      "capabilities": [
-        "analysis",
-        "shu",
-        "strategy"
-      ],
+      "capabilities": ["analysis", "shu", "strategy"],
       "business_base": "reasoning",
       "pattern": "analyzer"
     },
     {
       "name": "QiAgent",
       "module": "apps.decision_governance_engine.agents.qi_agent",
-      "capabilities": [
-        "analysis",
-        "qi",
-        "tools"
-      ],
+      "capabilities": ["analysis", "qi", "tools"],
       "business_base": "reasoning",
       "pattern": "analyzer"
     },
     {
       "name": "ReviewAgent",
       "module": "apps.decision_governance_engine.agents.review_agent",
-      "capabilities": [
-        "review",
-        "synthesis"
-      ],
+      "capabilities": ["review", "synthesis"],
       "business_base": "governance",
       "pattern": "reviewer"
     }
   ],
   "services": {
     "rag": {
-      "collections": [
-        "decision_knowledge"
-      ]
+      "collections": ["decision_knowledge"]
     },
     "pipeline": {
       "engine": "DecisionGovernanceEngine"
@@ -138,20 +108,14 @@
       "note": "ローカル開発既定値（docker-compose.yml）。"
     },
     "commands": {
-      "backend_dev": "python -m apps.decision_governance_engine.api",
+      "backend_dev": "python apps/decision_governance_engine/scripts/dev.py",
       "frontend_dev": "cd apps/decision_governance_engine/frontend && npm run dev",
       "publish": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build",
       "start": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
       "stop": "docker compose -f docker-compose.yml -f docker-compose.dev.yml down"
     }
   },
-  "tags": [
-    "decision",
-    "governance",
-    "pipeline",
-    "dao",
-    "multi-agent"
-  ],
+  "tags": ["decision", "governance", "pipeline", "dao", "multi-agent"],
   "contracts": {
     "auth": {
       "enabled": false,
@@ -164,9 +128,7 @@
       "enabled": true,
       "pattern": null,
       "provider": null,
-      "collections": [
-        "decision_knowledge"
-      ],
+      "collections": ["decision_knowledge"],
       "data_sources": [],
       "chunk_strategy": "recursive",
       "chunk_size": 800,
@@ -187,9 +149,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },

@@ -8,8 +8,8 @@ import time
 from typing import Any
 
 import httpx
-
 from apps.market_trend_monitor.backend.integrations.rate_limiter import rate_limiter
+
 
 # レート制限リトライ設定
 _MIN_RATE_LIMIT_WAIT: float = 2.0  # 最低待機秒数（0s ループ防止）
@@ -71,14 +71,14 @@ class GitHubAPIClient:
                     wait = self._calc_rate_limit_wait(response)
                     self._logger.warning(
                         "GitHubレート制限、%.1fs 待機 (attempt=%d/%d)",
-                        wait, attempt + 1, self._max_retries + 1,
+                        wait,
+                        attempt + 1,
+                        self._max_retries + 1,
                     )
                     await asyncio.sleep(wait)
                     continue
 
-                self._logger.warning(
-                    "GitHub APIエラー: status=%s", response.status_code
-                )
+                self._logger.warning("GitHub APIエラー: status=%s", response.status_code)
             except Exception as exc:
                 self._logger.warning("GitHub API 失敗: %s", exc)
 

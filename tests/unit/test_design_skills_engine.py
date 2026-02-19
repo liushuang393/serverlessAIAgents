@@ -1,6 +1,6 @@
 """DesignSkillsEngine のテスト."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 
 class TestDesignSkillsEngine:
@@ -12,17 +12,21 @@ class TestDesignSkillsEngine:
         client.health_check = AsyncMock(return_value=True)
         client.build_workflow_payload = MagicMock(return_value={"prompt": {}})
         client.queue_prompt = AsyncMock(return_value="prompt-001")
-        client.poll_until_complete = AsyncMock(return_value={
-            "outputs": {
-                "7": {
-                    "images": [{
-                        "filename": "out.png",
-                        "subfolder": "",
-                        "type": "output",
-                    }]
+        client.poll_until_complete = AsyncMock(
+            return_value={
+                "outputs": {
+                    "7": {
+                        "images": [
+                            {
+                                "filename": "out.png",
+                                "subfolder": "",
+                                "type": "output",
+                            }
+                        ]
+                    }
                 }
             }
-        })
+        )
         client.get_image = AsyncMock(return_value=b"\x89PNG")
         client.close = AsyncMock()
         return client
@@ -49,12 +53,14 @@ class TestDesignSkillsSkill:
     def test_skill_md_exists(self) -> None:
         """SKILL.mdが存在すること."""
         from pathlib import Path
+
         skill_path = Path("agentflow/skills/builtin/design_skills/SKILL.md")
         assert skill_path.exists()
 
     def test_skill_md_has_required_fields(self) -> None:
         """SKILL.mdに必須フィールドが含まれること."""
         from pathlib import Path
+
         skill_path = Path("agentflow/skills/builtin/design_skills/SKILL.md")
         content = skill_path.read_text()
         assert "name:" in content
@@ -64,6 +70,7 @@ class TestDesignSkillsSkill:
     def test_skill_module_exists(self) -> None:
         """スキルモジュールディレクトリが存在すること."""
         from pathlib import Path
+
         design_skill_dir = Path("agentflow/skills/builtin/design_skills")
         assert design_skill_dir.exists()
         assert (design_skill_dir / "__init__.py").exists()

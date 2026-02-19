@@ -331,9 +331,7 @@ class WebSocketHub:
         exclude = exclude or set()
         client_ids = self._rooms.get(room, set())
         tasks = [
-            self.send(client_id, message)
-            for client_id in client_ids
-            if client_id not in exclude
+            self.send(client_id, message) for client_id in client_ids if client_id not in exclude
         ]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return sum(1 for r in results if r is True)
@@ -351,11 +349,13 @@ class WebSocketHub:
         Returns:
             デコレータ
         """
+
         def decorator(handler: WSHandler) -> WSHandler:
             if event_type not in self._handlers:
                 self._handlers[event_type] = []
             self._handlers[event_type].append(handler)
             return handler
+
         return decorator
 
     def add_handler(self, event_type: str, handler: WSHandler) -> None:

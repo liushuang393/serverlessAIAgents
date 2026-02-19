@@ -1,25 +1,23 @@
-# -*- coding: utf-8 -*-
 """BI Analytics Skill 単体テスト."""
 
 from __future__ import annotations
 
 import pytest
 
-from agentflow.skills.builtin.bi_analytics.connector import (
-    DataFrame,
-    DataConnector,
-    MemoryConnector,
-    ConnectorType,
-)
 from agentflow.skills.builtin.bi_analytics.analyzer import (
-    BIAnalyzer,
-    AnalysisType,
     AnalysisResult,
+    AnalysisType,
+    BIAnalyzer,
+)
+from agentflow.skills.builtin.bi_analytics.connector import (
+    DataConnector,
+    DataFrame,
+    MemoryConnector,
 )
 from agentflow.skills.builtin.bi_analytics.visualizer import (
+    Chart,
     ChartGenerator,
     ChartType,
-    Chart,
 )
 
 
@@ -115,13 +113,15 @@ class TestBIAnalyzer:
     @pytest.fixture
     def sample_data(self) -> DataFrame:
         """サンプルデータ."""
-        return DataFrame([
-            {"date": "2024-01-01", "amount": 100, "quantity": 10},
-            {"date": "2024-01-02", "amount": 150, "quantity": 15},
-            {"date": "2024-01-03", "amount": 120, "quantity": 12},
-            {"date": "2024-01-04", "amount": 180, "quantity": 18},
-            {"date": "2024-01-05", "amount": 200, "quantity": 20},
-        ])
+        return DataFrame(
+            [
+                {"date": "2024-01-01", "amount": 100, "quantity": 10},
+                {"date": "2024-01-02", "amount": 150, "quantity": 15},
+                {"date": "2024-01-03", "amount": 120, "quantity": 12},
+                {"date": "2024-01-04", "amount": 180, "quantity": 18},
+                {"date": "2024-01-05", "amount": 200, "quantity": 20},
+            ]
+        )
 
     @pytest.mark.asyncio
     async def test_statistical_analysis(
@@ -152,13 +152,15 @@ class TestBIAnalyzer:
         analyzer: BIAnalyzer,
     ) -> None:
         """異常検出."""
-        data = DataFrame([
-            {"value": 10},
-            {"value": 12},
-            {"value": 11},
-            {"value": 100},  # 異常値
-            {"value": 9},
-        ])
+        data = DataFrame(
+            [
+                {"value": 10},
+                {"value": 12},
+                {"value": 11},
+                {"value": 100},  # 異常値
+                {"value": 9},
+            ]
+        )
         result = await analyzer.analyze(data, AnalysisType.ANOMALY, column="value")
         assert result.success is True
         assert result.data["anomaly_count"] >= 1
@@ -197,11 +199,13 @@ class TestChartGenerator:
     @pytest.fixture
     def sample_data(self) -> DataFrame:
         """サンプルデータ."""
-        return DataFrame([
-            {"category": "A", "value": 100},
-            {"category": "B", "value": 150},
-            {"category": "C", "value": 80},
-        ])
+        return DataFrame(
+            [
+                {"category": "A", "value": 100},
+                {"category": "B", "value": 150},
+                {"category": "C", "value": 80},
+            ]
+        )
 
     @pytest.mark.asyncio
     async def test_bar_chart(
@@ -247,11 +251,13 @@ class TestChartGenerator:
         generator: ChartGenerator,
     ) -> None:
         """散布図."""
-        data = DataFrame([
-            {"x": 1, "y": 2},
-            {"x": 2, "y": 4},
-            {"x": 3, "y": 6},
-        ])
+        data = DataFrame(
+            [
+                {"x": 1, "y": 2},
+                {"x": 2, "y": 4},
+                {"x": 3, "y": 6},
+            ]
+        )
         chart = await generator.generate(data, ChartType.SCATTER, x="x", y="y")
         assert chart.chart_type == ChartType.SCATTER
 

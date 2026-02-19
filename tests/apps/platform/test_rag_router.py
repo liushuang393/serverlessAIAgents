@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RAG Router エンドポイントのユニットテスト.
 
 テスト対象: apps/platform/routers/rag.py

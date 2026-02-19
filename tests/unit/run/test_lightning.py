@@ -161,9 +161,7 @@ async def test_base_engine_train_lightning_applies_profile() -> None:
     async for _event in engine.run_stream({"question": "q1"}):
         pass
 
-    result = await engine.train_lightning(
-        LightningTrainingRequest(apply_optimized_profile=True)
-    )
+    result = await engine.train_lightning(LightningTrainingRequest(apply_optimized_profile=True))
     assert result.success is True
     assert result.backend == "builtin"
     assert result.optimized is True

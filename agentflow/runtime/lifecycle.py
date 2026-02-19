@@ -172,9 +172,7 @@ class LifecycleManager:
         required: bool = True,
     ) -> None:
         """注册启动钩子."""
-        self._add_hook(
-            self._startup_hooks, handler, name, priority, timeout, required
-        )
+        self._add_hook(self._startup_hooks, handler, name, priority, timeout, required)
 
     def on_shutdown(
         self,
@@ -186,9 +184,7 @@ class LifecycleManager:
         required: bool = False,  # 默认shutdown不强制
     ) -> None:
         """注册关闭钩子."""
-        self._add_hook(
-            self._shutdown_hooks, handler, name, priority, timeout, required
-        )
+        self._add_hook(self._shutdown_hooks, handler, name, priority, timeout, required)
 
     def on_request_start(
         self,
@@ -200,9 +196,7 @@ class LifecycleManager:
         required: bool = False,
     ) -> None:
         """注册请求开始钩子."""
-        self._add_hook(
-            self._request_start_hooks, handler, name, priority, timeout, required
-        )
+        self._add_hook(self._request_start_hooks, handler, name, priority, timeout, required)
 
     def on_request_end(
         self,
@@ -214,9 +208,7 @@ class LifecycleManager:
         required: bool = False,
     ) -> None:
         """注册请求结束钩子."""
-        self._add_hook(
-            self._request_end_hooks, handler, name, priority, timeout, required
-        )
+        self._add_hook(self._request_end_hooks, handler, name, priority, timeout, required)
 
     def on_error(
         self,
@@ -228,9 +220,7 @@ class LifecycleManager:
         required: bool = False,
     ) -> None:
         """注册错误钩子."""
-        self._add_hook(
-            self._error_hooks, handler, name, priority, timeout, required
-        )
+        self._add_hook(self._error_hooks, handler, name, priority, timeout, required)
 
     async def _run_hooks(
         self,

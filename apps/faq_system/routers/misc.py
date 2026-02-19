@@ -13,15 +13,15 @@ from typing import Any
 
 from apps.faq_system.backend.auth.dependencies import require_auth
 from apps.faq_system.backend.auth.models import UserInfo
-from apps.faq_system.backend.db.session import get_database_url, get_db_session
 from apps.faq_system.backend.db import ensure_database_ready
+from apps.faq_system.backend.db.session import get_database_url, get_db_session
 from apps.faq_system.routers.dependencies import (
     get_artifact_path,
     get_faq_agent,
     get_feedback_service,
 )
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import text
 
@@ -173,9 +173,7 @@ async def health_check() -> dict[str, Any]:
     db_error: str | None = None
     resolved_db_url = get_database_url()
     masked_db_url = (
-        f"***@{resolved_db_url.split('@', 1)[1]}"
-        if "@" in resolved_db_url
-        else resolved_db_url
+        f"***@{resolved_db_url.split('@', 1)[1]}" if "@" in resolved_db_url else resolved_db_url
     )
 
     try:

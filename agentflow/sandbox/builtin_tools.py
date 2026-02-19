@@ -48,12 +48,15 @@ def _get_sandbox(provider: str = "microsandbox") -> SandboxProvider:
 
     if provider == "microsandbox":
         from agentflow.sandbox.microsandbox_provider import MicrosandboxProvider
+
         instance = MicrosandboxProvider(config)
     elif provider == "docker":
         from agentflow.sandbox.docker_provider import DockerProvider
+
         instance = DockerProvider(config)
     elif provider == "e2b":
         from agentflow.sandbox.e2b_provider import E2BProvider
+
         instance = E2BProvider(config)
     else:
         msg = f"Unknown sandbox provider: {provider}. Use: microsandbox/docker/e2b"
@@ -133,6 +136,7 @@ def create_sandbox_tool(provider: str = "microsandbox") -> dict[str, Any]:
     Returns:
         Tool 信息字典（包含执行函数）
     """
+
     async def _execute(code: str, packages: list[str] | None = None) -> dict[str, Any]:
         return await execute_python_code(code, packages, _provider=provider)
 
@@ -147,4 +151,3 @@ def create_sandbox_tool(provider: str = "microsandbox") -> dict[str, Any]:
 def get_tool_definition() -> dict[str, Any]:
     """获取 Tool 定义（OpenAI 格式）."""
     return EXECUTE_CODE_TOOL_DEFINITION
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """サーキットブレーカーのユニットテスト."""
 
 import asyncio
@@ -154,4 +153,3 @@ class TestCircuitBreaker:
         assert stats["name"] == "test"
         assert stats["state"] == "closed"
         assert "failure_count" in stats
-

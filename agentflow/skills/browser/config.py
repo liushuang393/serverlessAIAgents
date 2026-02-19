@@ -94,4 +94,3 @@ class BrowserSkillConfig:
             "viewport_width": self.viewport_width,
             "viewport_height": self.viewport_height,
         }
-

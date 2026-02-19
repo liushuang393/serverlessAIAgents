@@ -252,12 +252,14 @@ class TestWorkflowExecutorInput:
                 mood="pro",
                 negative_prompt="blurry",
             ),
-            images=[ImageSpec(
-                image_id="img_001",
-                role=ImageRole.HERO,
-                prompt="test",
-                seed=42,
-            )],
+            images=[
+                ImageSpec(
+                    image_id="img_001",
+                    role=ImageRole.HERO,
+                    prompt="test",
+                    seed=42,
+                )
+            ],
             consistency_seed=42,
         )
         executor_input = WorkflowExecutorInput(prompt_plan=plan)

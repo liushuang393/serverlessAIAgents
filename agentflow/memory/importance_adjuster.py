@@ -252,20 +252,19 @@ class ImportanceAdjuster:
             context: フィードバックコンテキスト
         """
         # 強化スコアを更新（累積、ただし範囲制限）
-        entry.reinforcement_score = max(
-            -1.0,
-            min(1.0, entry.reinforcement_score + reward * 0.1)
-        )
+        entry.reinforcement_score = max(-1.0, min(1.0, entry.reinforcement_score + reward * 0.1))
 
         # 履歴を記録
         if "reinforcement_history" not in entry.metadata:
             entry.metadata["reinforcement_history"] = []
 
-        entry.metadata["reinforcement_history"].append({
-            "timestamp": datetime.now().isoformat(),
-            "reward": reward,
-            "context": context,
-        })
+        entry.metadata["reinforcement_history"].append(
+            {
+                "timestamp": datetime.now().isoformat(),
+                "reward": reward,
+                "context": context,
+            }
+        )
 
         # 継続的な正のフィードバックで安定性を昇格
         if entry.reinforcement_score > 0.5:
@@ -273,9 +272,7 @@ class ImportanceAdjuster:
                 entry.stability = MemoryStability.CONSOLIDATED
                 self._logger.debug(f"記憶 {entry.id} を固定済みに昇格")
             elif (
-                entry.stability == MemoryStability.CONSOLIDATED
-                and entry.reinforcement_score > 0.8
+                entry.stability == MemoryStability.CONSOLIDATED and entry.reinforcement_score > 0.8
             ):
                 entry.stability = MemoryStability.CRYSTALLIZED
                 self._logger.debug(f"記憶 {entry.id} を結晶化に昇格")
-

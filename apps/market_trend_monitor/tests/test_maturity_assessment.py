@@ -10,8 +10,6 @@ import json
 from datetime import datetime
 from unittest.mock import AsyncMock
 
-import pytest
-
 from apps.market_trend_monitor.backend.models import Evidence, SourceType
 from apps.market_trend_monitor.backend.services.maturity_assessment_service import (
     DEFAULT_TECHNOLOGIES,
@@ -49,10 +47,14 @@ def _make_evidence(
 def _make_mock_llm(phase: str = "slope_of_enlightenment", confidence: float = 0.8):
     """テスト用 Mock LLM を生成."""
     mock = AsyncMock()
-    mock.chat = AsyncMock(return_value=json.dumps({
-        "phase": phase,
-        "confidence": confidence,
-    }))
+    mock.chat = AsyncMock(
+        return_value=json.dumps(
+            {
+                "phase": phase,
+                "confidence": confidence,
+            }
+        )
+    )
     return mock
 
 
@@ -213,10 +215,12 @@ class TestMaturityAssessmentService:
         """評価結果一覧テスト."""
         service = MaturityAssessmentService(llm=_make_mock_llm())
         service._assessments["A"] = TechnologyMaturity(
-            technology="A", phase=MaturityPhase.INNOVATION_TRIGGER,
+            technology="A",
+            phase=MaturityPhase.INNOVATION_TRIGGER,
         )
         service._assessments["B"] = TechnologyMaturity(
-            technology="B", phase=MaturityPhase.PLATEAU_OF_PRODUCTIVITY,
+            technology="B",
+            phase=MaturityPhase.PLATEAU_OF_PRODUCTIVITY,
         )
         assert len(service.list_assessments()) == 2
 

@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
 """Unit tests for ShuAgent."""
-import json
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
+import json
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from apps.decision_governance_engine.agents.shu_agent import ShuAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
-    ShuInput,
-    ShuOutput,
+    ActionPhase,
     FaOutput,
     PathOption,
+    ShuInput,
+    ShuOutput,
     StrategyType,
-    ActionPhase,
 )
 
 
@@ -55,6 +55,7 @@ class TestShuAgentInit:
     def test_agent_inherits_resilient_agent(self, shu_agent: ShuAgent) -> None:
         """Test that ShuAgent inherits from ResilientAgent."""
         from agentflow import ResilientAgent
+
         assert isinstance(shu_agent, ResilientAgent)
 
     def test_agent_has_correct_name(self, shu_agent: ShuAgent) -> None:
@@ -124,9 +125,7 @@ class TestShuAgentProcess:
     """Test cases for ShuAgent.process."""
 
     @pytest.mark.asyncio
-    async def test_process_without_llm(
-        self, shu_agent: ShuAgent, sample_input: ShuInput
-    ) -> None:
+    async def test_process_without_llm(self, shu_agent: ShuAgent, sample_input: ShuInput) -> None:
         """Test process falls back to rule-based when no LLM."""
         result = await shu_agent.process(sample_input)
 

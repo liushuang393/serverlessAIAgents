@@ -26,6 +26,7 @@
     >>> # 全ソースを発見
     >>> await service.discover_all()
 """
+
 from __future__ import annotations
 
 import logging

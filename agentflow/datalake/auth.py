@@ -34,9 +34,9 @@ class AuthCredentials(BaseModel):
         extra: 追加情報
     """
 
-    credential_type: Literal[
-        "oauth2", "api_key", "basic", "iam_role", "service_account"
-    ] = Field(default="api_key", description="認証タイプ")
+    credential_type: Literal["oauth2", "api_key", "basic", "iam_role", "service_account"] = Field(
+        default="api_key", description="認証タイプ"
+    )
 
     # OAuth2
     access_token: str | None = Field(default=None, description="アクセストークン")
@@ -115,9 +115,7 @@ class AuthProvider(ABC):
             NotImplementedError: 未実装の場合
         """
         msg = f"Token refresh not implemented for {connector_type}"
-        raise NotImplementedError(
-            msg
-        )
+        raise NotImplementedError(msg)
 
 
 class SimpleAuthProvider(AuthProvider):
@@ -186,4 +184,3 @@ class SimpleAuthProvider(AuthProvider):
 
         msg = f"No credentials found for {connector_type}/{resource_id}"
         raise KeyError(msg)
-

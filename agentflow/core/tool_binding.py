@@ -18,6 +18,7 @@
     >>> # バインドされたツールをMCP形式で取得
     >>> mcp_tools = bound_agent._tools.to_mcp_format()
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any

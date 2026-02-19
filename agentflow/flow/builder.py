@@ -278,10 +278,18 @@ class FlowBuilder:
             self
         """
         self._config = FlowConfig(
-            enable_progress=enable_progress if enable_progress is not None else self._config.enable_progress,
-            enable_memory=enable_memory if enable_memory is not None else self._config.enable_memory,
-            max_revisions=max_revisions if max_revisions is not None else self._config.max_revisions,
-            auto_initialize=auto_initialize if auto_initialize is not None else self._config.auto_initialize,
+            enable_progress=enable_progress
+            if enable_progress is not None
+            else self._config.enable_progress,
+            enable_memory=enable_memory
+            if enable_memory is not None
+            else self._config.enable_memory,
+            max_revisions=max_revisions
+            if max_revisions is not None
+            else self._config.max_revisions,
+            auto_initialize=auto_initialize
+            if auto_initialize is not None
+            else self._config.auto_initialize,
         )
         return self
 
@@ -335,4 +343,3 @@ def create_flow(flow_id: str, *, name: str | None = None) -> FlowBuilder:
 
 
 __all__ = ["FlowBuilder", "create_flow"]
-

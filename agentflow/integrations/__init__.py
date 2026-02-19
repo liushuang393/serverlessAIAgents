@@ -129,4 +129,3 @@ __all__ = [
     "reset_context",
     "set_current_context",
 ]
-

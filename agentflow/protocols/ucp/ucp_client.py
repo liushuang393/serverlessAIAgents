@@ -109,6 +109,7 @@ class UCPClient:
         """キャッシュキーを生成."""
         import hashlib
         import json
+
         param_str = json.dumps(params, sort_keys=True)
         return f"{operation}:{hashlib.md5(param_str.encode()).hexdigest()}"
 
@@ -185,10 +186,9 @@ class UCPClient:
             except httpx.HTTPError as e:
                 last_error = e
                 if attempt < endpoint.max_retries - 1:
-                    wait_time = 2 ** attempt
+                    wait_time = 2**attempt
                     self._logger.warning(
-                        f"UCP request failed (attempt {attempt + 1}), "
-                        f"retrying in {wait_time}s: {e}"
+                        f"UCP request failed (attempt {attempt + 1}), retrying in {wait_time}s: {e}"
                     )
                     await asyncio.sleep(wait_time)
 
@@ -375,4 +375,3 @@ class UCPClient:
             return {"status": "ok", "endpoint": endpoint.name, "data": response.json()}
         except Exception as e:
             return {"status": "error", "endpoint": endpoint.name, "message": str(e)}
-

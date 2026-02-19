@@ -299,7 +299,9 @@ class AuditLogger:
         if self._config.alert_on_sensitive_access:
             self._logger.warning(
                 "SENSITIVE DATA ACCESS: user=%s, field=%s, reason=%s",
-                user_id, field_name, reason,
+                user_id,
+                field_name,
+                reason,
             )
 
         return event
@@ -342,7 +344,10 @@ class AuditLogger:
         if self._config.alert_on_access_denied:
             self._logger.warning(
                 "ACCESS DENIED: user=%s, resource=%s, action=%s, reason=%s",
-                user_id, resource, action, reason,
+                user_id,
+                resource,
+                action,
+                reason,
             )
 
         return event
@@ -393,7 +398,8 @@ class AuditLogger:
             if self._config.alert_on_bulk_access:
                 self._logger.warning(
                     "BULK DATA ACCESS: user=%s, row_count=%d",
-                    user_id, row_count,
+                    user_id,
+                    row_count,
                 )
 
         return event
@@ -438,7 +444,11 @@ class AuditLogger:
         # ログ出力
         self._logger.info(
             "AUDIT: %s | user=%s | action=%s | resource=%s | success=%s",
-            event_type.value, user_id, action, resource, success,
+            event_type.value,
+            user_id,
+            action,
+            resource,
+            success,
         )
 
         return event
@@ -456,8 +466,7 @@ class AuditLogger:
 
         # 古いエントリを削除
         self._query_counts[user_id] = [
-            ts for ts in self._query_counts[user_id]
-            if ts > one_minute_ago
+            ts for ts in self._query_counts[user_id] if ts > one_minute_ago
         ]
 
         # 閾値チェック
@@ -475,12 +484,11 @@ class AuditLogger:
             )
             self._logger.warning(
                 "ANOMALY: Rate limit exceeded for user=%s, count=%d",
-                user_id, len(self._query_counts[user_id]),
+                user_id,
+                len(self._query_counts[user_id]),
             )
 
-    def _determine_event_type(
-        self, action: str, resource: str
-    ) -> AuditEventType:
+    def _determine_event_type(self, action: str, resource: str) -> AuditEventType:
         """イベントタイプを決定."""
         action_lower = action.lower()
         resource.lower()
@@ -502,9 +510,7 @@ class AuditLogger:
 
         return AuditEventType.KB_SEARCH
 
-    def _determine_severity(
-        self, event_type: AuditEventType, success: bool
-    ) -> AuditSeverity:
+    def _determine_severity(self, event_type: AuditEventType, success: bool) -> AuditSeverity:
         """深刻度を決定."""
         if not success:
             return AuditSeverity.WARNING
@@ -584,8 +590,7 @@ class AuditLogger:
             "success_count": len([e for e in events if e.success]),
             "failure_count": len([e for e in events if not e.success]),
             "by_type": {
-                t.value: len([e for e in events if e.event_type == t])
-                for t in AuditEventType
+                t.value: len([e for e in events if e.event_type == t]) for t in AuditEventType
             },
             "unique_users": len({e.user_id for e in events}),
         }

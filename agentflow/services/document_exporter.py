@@ -43,6 +43,7 @@ _logger = logging.getLogger(__name__)
 
 class ExportFormat(str, Enum):
     """エクスポートフォーマット."""
+
     PDF = "pdf"
     HTML = "html"
     MARKDOWN = "markdown"
@@ -51,6 +52,7 @@ class ExportFormat(str, Enum):
 
 class TemplateType(str, Enum):
     """テンプレートタイプ."""
+
     REPORT = "report"
     PROPOSAL = "proposal"
     ANALYSIS = "analysis"
@@ -60,6 +62,7 @@ class TemplateType(str, Enum):
 @dataclass
 class ExportConfig:
     """エクスポート設定."""
+
     format: ExportFormat = ExportFormat.HTML
     template: TemplateType = TemplateType.REPORT
     title: str = "Document"
@@ -73,6 +76,7 @@ class ExportConfig:
 @dataclass
 class Section:
     """ドキュメントセクション."""
+
     title: str
     content: str
     level: int = 1
@@ -96,7 +100,8 @@ class DocumentExporter(ServiceBase[bytes]):
     def _check_reportlab(self) -> bool:
         """ReportLabが利用可能か確認."""
         try:
-            from reportlab.lib.pagesizes import A4  # noqa: F401
+            from reportlab.lib.pagesizes import A4
+
             return True
         except ImportError:
             _logger.info("ReportLabなし。PDF出力はHTML代替を使用。")
@@ -260,4 +265,3 @@ __all__ = [
     "Section",
     "TemplateType",
 ]
-

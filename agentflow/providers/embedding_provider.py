@@ -64,6 +64,7 @@ class MockEmbeddingProvider:
         """簡易埋め込み（文字コードベース）."""
         # テキストのハッシュから擬似ベクトル生成
         import hashlib
+
         h = hashlib.sha256(text.encode()).digest()
         # 384次元に拡張
         vector = []
@@ -101,6 +102,7 @@ class OpenAIEmbeddingProvider:
         if self._client is None:
             try:
                 from openai import AsyncOpenAI
+
                 self._client = AsyncOpenAI(api_key=self._api_key)
             except ImportError:
                 msg = "openai package required: pip install openai"
@@ -147,6 +149,7 @@ class SentenceTransformerProvider:
         if self._model is None:
             try:
                 from sentence_transformers import SentenceTransformer
+
                 self._model = SentenceTransformer(self._model_name)
                 self._dimension = self._model.get_sentence_embedding_dimension()
                 logger.info(f"Loaded SentenceTransformer: {self._model_name}")
@@ -210,9 +213,7 @@ def get_embedding(
     settings = resolve_settings(context) if context is not None else None
 
     # OpenAI
-    openai_key = (
-        settings.openai_api_key if settings else get_env("OPENAI_API_KEY", context=context)
-    )
+    openai_key = settings.openai_api_key if settings else get_env("OPENAI_API_KEY", context=context)
     if openai_key:
         emb_model = model
         if emb_model is None:
@@ -234,9 +235,7 @@ def get_embedding(
     # SentenceTransformer（ローカル）
     if get_env("USE_LOCAL_EMBEDDING", context=context):
         local_model = (
-            model
-            or get_env("LOCAL_EMBEDDING_MODEL", context=context)
-            or "all-MiniLM-L6-v2"
+            model or get_env("LOCAL_EMBEDDING_MODEL", context=context) or "all-MiniLM-L6-v2"
         )
         logger.info(f"Using local embedding: {local_model}")
         provider = SentenceTransformerProvider(local_model)

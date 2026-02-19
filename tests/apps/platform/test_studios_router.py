@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Studios Router エンドポイントのユニットテスト."""
 
 from __future__ import annotations
@@ -52,4 +51,3 @@ class TestStudiosRouter:
         resp = test_client.get("/api/studios/unknown/templates")
         assert resp.status_code == 404
         assert resp.json()["detail"]["error_code"] == "STUDIO_NOT_FOUND"
-

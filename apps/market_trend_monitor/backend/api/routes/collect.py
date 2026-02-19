@@ -173,7 +173,7 @@ async def collect(request: CollectRequest) -> CollectResponse:
                 ),
                 timeout=_WORKFLOW_TIMEOUT_SECONDS,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(
                 "ワークフローが %d秒でタイムアウト、フォールバック収集を実行",
                 _WORKFLOW_TIMEOUT_SECONDS,

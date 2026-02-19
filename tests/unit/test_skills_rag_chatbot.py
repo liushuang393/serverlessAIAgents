@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RAG Skill と ChatBot Skill のユニットテスト."""
 
 import pytest
@@ -176,6 +175,6 @@ class TestChatSession:
 
         llm_messages = session.to_llm_messages()
         assert len(llm_messages) == 2
-        assert llm_messages[0].role == "system"
-        assert llm_messages[1].role == "user"
-
+        # to_llm_messages() は dict リストを返す
+        assert llm_messages[0]["role"] == "system"
+        assert llm_messages[1]["role"] == "user"

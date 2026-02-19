@@ -58,4 +58,3 @@ def downgrade() -> None:
         DROP COLUMN IF EXISTS report_case_id
         """
     )
-

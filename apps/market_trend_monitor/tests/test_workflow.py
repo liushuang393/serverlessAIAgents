@@ -47,4 +47,3 @@ class TestMarketTrendWorkflow:
         assert result is not None
 
         await workflow.cleanup()
-

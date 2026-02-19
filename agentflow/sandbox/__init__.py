@@ -62,6 +62,7 @@ from agentflow.sandbox.manager import (
     SandboxManager,
     get_sandbox_manager,
 )
+from agentflow.sandbox.mock_provider import MockSandbox
 from agentflow.sandbox.workspace import (
     FileInfo,
     Workspace,
@@ -72,6 +73,14 @@ from agentflow.sandbox.workspace import (
 
 
 logger = logging.getLogger(__name__)
+
+# テスト用: get_sandbox(provider="mock") のキャッシュ。reset_sandbox() でクリア。
+_sandbox_cache: dict[str, SandboxProvider] = {}
+
+
+def reset_sandbox() -> None:
+    """サンドボックスキャッシュをクリアする。主にテスト用。"""
+    _sandbox_cache.clear()
 
 
 def get_sandbox(
@@ -94,26 +103,30 @@ def get_sandbox(
 
     logger.info(f"Sandbox provider: {provider}")
 
+    if provider == "mock":
+        key = "mock"
+        if key not in _sandbox_cache:
+            _sandbox_cache[key] = MockSandbox(config)
+        return _sandbox_cache[key]
     if provider == "microsandbox":
         from agentflow.sandbox.microsandbox_provider import MicrosandboxProvider
+
         return MicrosandboxProvider(config)
     if provider == "docker":
         from agentflow.sandbox.docker_provider import DockerProvider
+
         return DockerProvider(config)
     if provider == "e2b":
         from agentflow.sandbox.e2b_provider import E2BProvider
+
         return E2BProvider(config)
-    msg = (
-        f"Unknown sandbox provider: {provider}. "
-        "Supported: microsandbox, docker, e2b"
-    )
-    raise ValueError(
-        msg
-    )
+    msg = f"Unknown sandbox provider: {provider}. Supported: mock, microsandbox, docker, e2b"
+    raise ValueError(msg)
 
 
 __all__ = [
     "ActionResult",
+    "MockSandbox",
     "ActionTemplate",
     "ActionType",
     # CodeAct執行器
@@ -137,9 +150,9 @@ __all__ = [
     "Workspace",
     "WorkspaceManager",
     "WorkspaceState",
-    # プロバイダ取得
+    # プロバイダ取得・テスト用
     "get_sandbox",
     "get_sandbox_manager",
+    "reset_sandbox",
     "get_workspace_manager",
 ]
-

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """OneDriveConnector - Microsoft Graph API コネクタ.
 
 OneDrive / SharePoint へのアクセスを提供。
@@ -95,13 +97,8 @@ class OneDriveConnector(DataConnector):
             try:
                 import aiohttp
             except ImportError as e:
-                msg = (
-                    "aiohttp is required for OneDrive support. "
-                    "Install with: pip install aiohttp"
-                )
-                raise ImportError(
-                    msg
-                ) from e
+                msg = "aiohttp is required for OneDrive support. Install with: pip install aiohttp"
+                raise ImportError(msg) from e
 
             timeout = aiohttp.ClientTimeout(total=self._config.timeout)
             self._session = aiohttp.ClientSession(timeout=timeout)
@@ -139,9 +136,7 @@ class OneDriveConnector(DataConnector):
                 "Microsoft credentials required. Set MICROSOFT_CLIENT_ID and "
                 "MICROSOFT_CLIENT_SECRET environment variables."
             )
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
         session = await self._get_session()
         token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
@@ -373,4 +368,3 @@ class OneDriveConnector(DataConnector):
         if self._session:
             await self._session.close()
             self._session = None
-

@@ -98,23 +98,29 @@ class PublishAgent(AgentBlock):
 
         # 簡易的な推薦ロジック
         if "serverless" in requirements:
-            recommendations.append({
-                "target": "vercel",
-                "reason": "サーバーレス要件に最適",
-                "priority": 1,
-            })
-            recommendations.append({
-                "target": "aws_lambda",
-                "reason": "AWS環境でのサーバーレス実行",
-                "priority": 2,
-            })
+            recommendations.append(
+                {
+                    "target": "vercel",
+                    "reason": "サーバーレス要件に最適",
+                    "priority": 1,
+                }
+            )
+            recommendations.append(
+                {
+                    "target": "aws_lambda",
+                    "reason": "AWS環境でのサーバーレス実行",
+                    "priority": 2,
+                }
+            )
 
         if "container" in requirements or "docker" in requirements:
-            recommendations.append({
-                "target": "docker",
-                "reason": "コンテナ化による移植性",
-                "priority": 1,
-            })
+            recommendations.append(
+                {
+                    "target": "docker",
+                    "reason": "コンテナ化による移植性",
+                    "priority": 1,
+                }
+            )
 
         if not recommendations:
             # デフォルト推薦
@@ -162,12 +168,14 @@ class PublishAgent(AgentBlock):
         final_status = PublishStatus.PENDING
 
         async for event in self._orchestrator.publish(request):
-            events.append({
-                "phase": event.phase,
-                "status": event.status.value,
-                "message": event.message,
-                "progress": event.progress,
-            })
+            events.append(
+                {
+                    "phase": event.phase,
+                    "status": event.status.value,
+                    "message": event.message,
+                    "progress": event.progress,
+                }
+            )
             final_status = event.status
 
         return {

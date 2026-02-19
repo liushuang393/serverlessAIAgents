@@ -94,7 +94,15 @@ class JavaGenerator(MCPTool):
 
         # Java生成実行（async）
         try:
-            java_code, class_name, package_name, imports, report, warnings, mappings = await self._generate_java(
+            (
+                java_code,
+                class_name,
+                package_name,
+                imports,
+                report,
+                warnings,
+                mappings,
+            ) = await self._generate_java(
                 ast=ast,
                 metadata=metadata,
                 patterns=patterns,
@@ -319,7 +327,9 @@ class JavaGenerator(MCPTool):
             return "String"
         return "Object"
 
-    async def _generate_methods(self, procedure_lines: list[str]) -> tuple[str, list[dict[str, Any]]]:
+    async def _generate_methods(
+        self, procedure_lines: list[str]
+    ) -> tuple[str, list[dict[str, Any]]]:
         """メソッドを生成（LLM使用）.
 
         Args:
@@ -409,4 +419,3 @@ Java Code:
         complexity += methods_code.count("switch ")
 
         return complexity
-

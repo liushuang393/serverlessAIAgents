@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for new AgentFlow modules (v0.3.0).
 
 Tests for:
@@ -10,12 +9,8 @@ Tests for:
 """
 
 import asyncio
-import os
 import tempfile
 import unittest
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
 
 
 class TestDocumentLoader(unittest.TestCase):
@@ -294,9 +289,7 @@ class TestMockLLM(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            response = loop.run_until_complete(
-                mock.chat([{"role": "user", "content": "Hi"}])
-            )
+            response = loop.run_until_complete(mock.chat([{"role": "user", "content": "Hi"}]))
             self.assertEqual(response["content"], "Hello, I'm a mock!")
         finally:
             loop.close()
@@ -349,7 +342,7 @@ class TestDeployGenerators(unittest.TestCase):
 
     def test_generate_dockerfile(self):
         """Dockerfile 生成テスト."""
-        from agentflow.deploy.docker_generator import generate_dockerfile, DockerConfig
+        from agentflow.deploy.docker_generator import DockerConfig, generate_dockerfile
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = DockerConfig(app_name="test-app")
@@ -362,7 +355,7 @@ class TestDeployGenerators(unittest.TestCase):
 
     def test_generate_github_actions(self):
         """GitHub Actions 生成テスト."""
-        from agentflow.deploy.ci_cd_generator import generate_github_actions, CICDConfig
+        from agentflow.deploy.ci_cd_generator import CICDConfig, generate_github_actions
 
         with tempfile.TemporaryDirectory() as tmpdir:
             config = CICDConfig(app_name="test-app")
@@ -376,4 +369,3 @@ class TestDeployGenerators(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

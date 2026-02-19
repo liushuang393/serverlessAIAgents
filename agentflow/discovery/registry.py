@@ -145,4 +145,3 @@ class InMemoryAgentRegistry(AgentDiscoveryBase):
                         entry.status = AgentStatus.UNHEALTHY
                         count += 1
             return count
-

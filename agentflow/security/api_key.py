@@ -363,4 +363,3 @@ class APIKeyManager:
             self._logger.info(f"Cleaned up {count} expired API keys")
 
         return count
-

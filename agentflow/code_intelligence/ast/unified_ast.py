@@ -360,10 +360,7 @@ class UnifiedAST:
         Returns:
             関数ノードのリスト
         """
-        return (
-            self.find_nodes(ASTNodeType.FUNCTION)
-            + self.find_nodes(ASTNodeType.METHOD)
-        )
+        return self.find_nodes(ASTNodeType.FUNCTION) + self.find_nodes(ASTNodeType.METHOD)
 
     def get_classes(self) -> list[ASTNode]:
         """クラスノードを取得.

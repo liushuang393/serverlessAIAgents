@@ -67,13 +67,15 @@ def create_sandbox(
 
     stats = asyncio.run(_create())
 
-    console.print(Panel(
-        f"[bold green]✓[/] サンドボックスを作成しました\n\n"
-        f"ID: [cyan]{stats['sandbox_id']}[/]\n"
-        f"状態: [yellow]{stats['state']}[/]",
-        title="サンドボックス作成",
-        border_style="green",
-    ))
+    console.print(
+        Panel(
+            f"[bold green]✓[/] サンドボックスを作成しました\n\n"
+            f"ID: [cyan]{stats['sandbox_id']}[/]\n"
+            f"状態: [yellow]{stats['state']}[/]",
+            title="サンドボックス作成",
+            border_style="green",
+        )
+    )
 
 
 @sandbox.command("list")
@@ -206,17 +208,21 @@ def exec_code(sandbox_id: str, code: str, timeout: float) -> None:
         return
 
     if result["success"]:
-        console.print(Panel(
-            result["stdout"] or "[dim]出力なし[/]",
-            title=f"実行結果 ({result['duration_ms']:.1f}ms)",
-            border_style="green",
-        ))
+        console.print(
+            Panel(
+                result["stdout"] or "[dim]出力なし[/]",
+                title=f"実行結果 ({result['duration_ms']:.1f}ms)",
+                border_style="green",
+            )
+        )
     else:
-        console.print(Panel(
-            result["stderr"] or result.get("error", "不明なエラー"),
-            title=f"エラー (exit: {result['exit_code']})",
-            border_style="red",
-        ))
+        console.print(
+            Panel(
+                result["stderr"] or result.get("error", "不明なエラー"),
+                title=f"エラー (exit: {result['exit_code']})",
+                border_style="red",
+            )
+        )
 
 
 @sandbox.command("stats")
@@ -286,4 +292,3 @@ def cleanup_sandboxes(max_idle: int, dry_run: bool) -> None:
 
     deleted = asyncio.run(_cleanup())
     console.print(f"[green]✓[/] {len(deleted)} 個のサンドボックスを削除しました")
-

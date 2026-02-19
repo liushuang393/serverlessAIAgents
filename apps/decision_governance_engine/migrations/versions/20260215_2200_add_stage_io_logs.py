@@ -35,4 +35,3 @@ def downgrade() -> None:
         DROP COLUMN IF EXISTS stage_io_logs
         """
     )
-

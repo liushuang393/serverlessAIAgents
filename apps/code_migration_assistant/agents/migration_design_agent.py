@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """Migration Design Agent - 等価移行設計."""
 
 from __future__ import annotations
 
 from typing import Any
-
-from agentflow import agent
 
 from apps.code_migration_assistant.adapters import get_adapter_factory
 from apps.code_migration_assistant.agents.prompts import MIGRATION_DESIGN_PROMPT
@@ -14,6 +11,8 @@ from apps.code_migration_assistant.workflow.models import (
     UnknownItem,
     build_meta,
 )
+
+from agentflow import agent
 
 
 @agent

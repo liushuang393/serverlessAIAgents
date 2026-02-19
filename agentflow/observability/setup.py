@@ -228,4 +228,3 @@ def get_prometheus_endpoint() -> Any:
         return metrics.to_prometheus()
 
     return router
-

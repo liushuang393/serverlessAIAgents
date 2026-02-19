@@ -115,17 +115,20 @@ def main() -> None:
         help="意思決定の質問",
     )
     parser.add_argument(
-        "-i", "--interactive",
+        "-i",
+        "--interactive",
         action="store_true",
         help="インタラクティブモードで実行",
     )
     parser.add_argument(
-        "-v", "--verbose",
+        "-v",
+        "--verbose",
         action="store_true",
         help="詳細ログを出力",
     )
     parser.add_argument(
-        "-o", "--output",
+        "-o",
+        "--output",
         type=str,
         help="結果をファイルに出力",
     )
@@ -173,4 +176,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -68,9 +68,7 @@ class ActionDecision(BaseModel):
         timestamp: When the decision was made
     """
 
-    decision_id: str = Field(
-        default_factory=lambda: f"dec-{uuid.uuid4().hex[:8]}"
-    )
+    decision_id: str = Field(default_factory=lambda: f"dec-{uuid.uuid4().hex[:8]}")
     next_action: ActionType
     action_params: dict[str, Any] = Field(default_factory=dict)
     reason: str

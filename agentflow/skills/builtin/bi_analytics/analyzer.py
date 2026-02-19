@@ -126,10 +126,7 @@ class BIAnalyzer:
         columns = [column] if column else data.columns
 
         for col in columns:
-            values = [
-                row.get(col) for row in data.rows
-                if isinstance(row.get(col), (int, float))
-            ]
+            values = [row.get(col) for row in data.rows if isinstance(row.get(col), (int, float))]
 
             if not values:
                 continue
@@ -153,7 +150,9 @@ class BIAnalyzer:
 
             # インサイト生成
             if std_dev / mean > 0.5 if mean != 0 else False:
-                insights.append(f"{col}: データのばらつきが大きい (CV={round(std_dev/mean*100, 1)}%)")
+                insights.append(
+                    f"{col}: データのばらつきが大きい (CV={round(std_dev / mean * 100, 1)}%)"
+                )
 
         return AnalysisResult(
             analysis_type=AnalysisType.STATISTICAL,
@@ -184,7 +183,8 @@ class BIAnalyzer:
             )
 
         values = [
-            row.get(value_column) for row in data.rows
+            row.get(value_column)
+            for row in data.rows
             if isinstance(row.get(value_column), (int, float))
         ]
 
@@ -256,7 +256,8 @@ class BIAnalyzer:
             )
 
         values = [
-            (i, row.get(column)) for i, row in enumerate(data.rows)
+            (i, row.get(column))
+            for i, row in enumerate(data.rows)
             if isinstance(row.get(column), (int, float))
         ]
 
@@ -305,7 +306,8 @@ class BIAnalyzer:
         """相関分析."""
         # 数値カラムを抽出
         numeric_columns = [
-            col for col in data.columns
+            col
+            for col in data.columns
             if any(isinstance(row.get(col), (int, float)) for row in data.rows)
         ]
 
@@ -322,13 +324,15 @@ class BIAnalyzer:
 
         for i, col1 in enumerate(numeric_columns):
             correlations[col1] = {}
-            for col2 in numeric_columns[i + 1:]:
+            for col2 in numeric_columns[i + 1 :]:
                 corr = self._pearson_correlation(data, col1, col2)
                 correlations[col1][col2] = round(corr, 3)
 
                 if abs(corr) > 0.7:
                     direction = "正" if corr > 0 else "負"
-                    insights.append(f"{col1}と{col2}に強い{direction}の相関があります (r={round(corr, 2)})")
+                    insights.append(
+                        f"{col1}と{col2}に強い{direction}の相関があります (r={round(corr, 2)})"
+                    )
 
         return AnalysisResult(
             analysis_type=AnalysisType.CORRELATION,
@@ -388,10 +392,7 @@ class BIAnalyzer:
                 summary="数値カラムが見つかりませんでした",
             )
 
-        values = [
-            row.get(column) for row in data.rows
-            if isinstance(row.get(column), (int, float))
-        ]
+        values = [row.get(column) for row in data.rows if isinstance(row.get(column), (int, float))]
 
         if not values:
             return AnalysisResult(
@@ -406,10 +407,12 @@ class BIAnalyzer:
         std_dev = math.sqrt(variance)
 
         # 歪度（Skewness）
-        skewness = sum((x - mean) ** 3 for x in values) / (n * std_dev ** 3) if std_dev != 0 else 0
+        skewness = sum((x - mean) ** 3 for x in values) / (n * std_dev**3) if std_dev != 0 else 0
 
         # 尖度（Kurtosis）
-        kurtosis = sum((x - mean) ** 4 for x in values) / (n * std_dev ** 4) - 3 if std_dev != 0 else 0
+        kurtosis = (
+            sum((x - mean) ** 4 for x in values) / (n * std_dev**4) - 3 if std_dev != 0 else 0
+        )
 
         # ヒストグラムデータ
         min_val = min(values)
@@ -422,11 +425,13 @@ class BIAnalyzer:
             bin_start = min_val + i * bin_width
             bin_end = bin_start + bin_width
             count = sum(1 for v in values if bin_start <= v < bin_end)
-            histogram.append({
-                "bin_start": round(bin_start, 2),
-                "bin_end": round(bin_end, 2),
-                "count": count,
-            })
+            histogram.append(
+                {
+                    "bin_start": round(bin_start, 2),
+                    "bin_end": round(bin_end, 2),
+                    "count": count,
+                }
+            )
 
         insights: list[str] = []
         if abs(skewness) > 1:

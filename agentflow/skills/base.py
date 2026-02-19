@@ -112,11 +112,23 @@ class SkillMetadata:
             raise TypeError(msg)
 
         known_fields = {
-            "name", "description", "version", "author", "tags",
-            "triggers", "requirements", "dependencies",
-            "depends_on", "depends-on", "provides", "phase",
+            "name",
+            "description",
+            "version",
+            "author",
+            "tags",
+            "triggers",
+            "requirements",
+            "dependencies",
+            "depends_on",
+            "depends-on",
+            "provides",
+            "phase",
             "examples",
-            "created_at", "learned", "confidence", "usage_count",
+            "created_at",
+            "learned",
+            "confidence",
+            "usage_count",
         }
         extra = {k: v for k, v in data.items() if k not in known_fields}
 
@@ -137,9 +149,7 @@ class SkillMetadata:
             triggers=_ensure_list(data.get("triggers")),
             requirements=_ensure_list(data.get("requirements")),
             dependencies=_ensure_list(data.get("dependencies")),
-            depends_on=_ensure_list(
-                data.get("depends_on", data.get("depends-on"))
-            ),
+            depends_on=_ensure_list(data.get("depends_on", data.get("depends-on"))),
             provides=_ensure_list(data.get("provides")),
             phase=str(data.get("phase", "")),
             examples=_ensure_list(data.get("examples")),
@@ -355,7 +365,7 @@ class Skill:
         match = cls._FRONTMATTER_PATTERN.match(content)
         if match:
             yaml_content = match.group(1)
-            instructions = content[match.end():].strip()
+            instructions = content[match.end() :].strip()
             try:
                 meta_dict = yaml.safe_load(yaml_content) or {}
             except yaml.YAMLError as e:
@@ -429,4 +439,3 @@ class Skill:
         """文字列表現."""
         learned_mark = " [learned]" if self._metadata.learned else ""
         return f"Skill(name={self.name!r}, v={self._metadata.version!r}{learned_mark})"
-

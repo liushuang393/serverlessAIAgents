@@ -47,4 +47,3 @@ __all__ = [
     # 便利関数
     "create_router_from_env",
 ]
-

@@ -280,26 +280,30 @@ class MigrationTracker:
         # フェーズサマリー
         phase_summary = []
         for record in project.phases:
-            phase_summary.append({
-                "phase": record.phase.value,
-                "status": record.status.value,
-                "files_processed": record.files_processed,
-                "errors": record.errors,
-                "duration_minutes": (
-                    (record.completed_at - record.started_at).total_seconds() / 60
-                    if record.started_at and record.completed_at
-                    else None
-                ),
-            })
+            phase_summary.append(
+                {
+                    "phase": record.phase.value,
+                    "status": record.status.value,
+                    "files_processed": record.files_processed,
+                    "errors": record.errors,
+                    "duration_minutes": (
+                        (record.completed_at - record.started_at).total_seconds() / 60
+                        if record.started_at and record.completed_at
+                        else None
+                    ),
+                }
+            )
 
         # 問題サマリー
         all_issues: list[dict[str, Any]] = []
         for file in project.source_files.values():
             for issue in file.issues:
-                all_issues.append({
-                    "file": file.path,
-                    **issue,
-                })
+                all_issues.append(
+                    {
+                        "file": file.path,
+                        **issue,
+                    }
+                )
 
         return {
             "project": {
@@ -323,17 +327,19 @@ class MigrationTracker:
         projects_summary = []
         for project in self._projects.values():
             progress = project.get_progress()
-            projects_summary.append({
-                "id": str(project.id),
-                "name": project.name,
-                "source_language": project.source_language,
-                "target_language": project.target_language,
-                "total_files": progress["total_files"],
-                "file_progress": progress["file_progress"],
-                "phase_progress": progress["phase_progress"],
-                "current_phase": progress["current_phase"],
-                "overall_quality": project.quality_metrics.overall_score,
-            })
+            projects_summary.append(
+                {
+                    "id": str(project.id),
+                    "name": project.name,
+                    "source_language": project.source_language,
+                    "target_language": project.target_language,
+                    "total_files": progress["total_files"],
+                    "file_progress": progress["file_progress"],
+                    "phase_progress": progress["phase_progress"],
+                    "current_phase": progress["current_phase"],
+                    "overall_quality": project.quality_metrics.overall_score,
+                }
+            )
 
         return {
             "total_projects": len(self._projects),

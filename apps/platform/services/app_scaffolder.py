@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """App Scaffolder Service.
 
 Platform の「APPを追加」から、最小構成の App 骨格を自動生成する。

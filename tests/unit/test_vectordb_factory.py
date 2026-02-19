@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """VectorDB 工厂函数和实现的单元测试.
 
 黒盒設計テスト: Agent/サービスは get_vectordb() のみを使用し、
@@ -238,4 +237,3 @@ class TestSupabaseVectorProvider:
             table="documents",
         )
         assert provider._table == "documents"
-

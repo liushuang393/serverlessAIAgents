@@ -7,6 +7,16 @@ from agentflow.governance.engine import (
     GovernanceResult,
     ToolExecutionContext,
 )
+from agentflow.governance.enterprise_audit import (
+    AuditEventType,
+    AuditSeverity,
+    AuditStorage,
+    ComplianceReport,
+    EnterpriseAuditEvent,
+    EnterpriseAuditLogger,
+    InMemoryAuditStorage,
+    PostgresAuditStorage,
+)
 from agentflow.governance.plugin_registry import (
     AppPluginSnapshot,
     PluginBindingRecord,
@@ -18,16 +28,6 @@ from agentflow.governance.plugin_signature import (
     PluginSignatureVerifier,
     SignatureVerificationResult,
     canonical_manifest_bytes,
-)
-from agentflow.governance.enterprise_audit import (
-    AuditEventType,
-    AuditSeverity,
-    AuditStorage,
-    ComplianceReport,
-    EnterpriseAuditEvent,
-    EnterpriseAuditLogger,
-    InMemoryAuditStorage,
-    PostgresAuditStorage,
 )
 
 

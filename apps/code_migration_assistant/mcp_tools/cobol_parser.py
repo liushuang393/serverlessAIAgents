@@ -334,4 +334,3 @@ class COBOLParser(MCPTool):
                 )
 
         return file_controls
-

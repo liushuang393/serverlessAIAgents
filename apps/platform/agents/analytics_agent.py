@@ -90,11 +90,15 @@ class AnalyticsAgent(AgentBlock):
             if agent_ratio > 70:
                 insights.append("Agent中心の構成です。Flowの活用で効率化できる可能性があります。")
             elif agent_ratio < 30:
-                insights.append("Tool/Skill中心の構成です。複雑なタスクにはAgentの活用を検討してください。")
+                insights.append(
+                    "Tool/Skill中心の構成です。複雑なタスクにはAgentの活用を検討してください。"
+                )
 
         # 使用頻度の分析
         if stats.total_usage == 0:
-            insights.append("まだコンポーネントが使用されていません。テストを実行してみてください。")
+            insights.append(
+                "まだコンポーネントが使用されていません。テストを実行してみてください。"
+            )
         elif stats.total_usage > 1000:
             insights.append("活発に使用されています。パフォーマンス最適化を検討してください。")
 
@@ -124,7 +128,11 @@ class AnalyticsAgent(AgentBlock):
             recent_total = sum(t.api_calls for t in recent_week)
             previous_total = sum(t.api_calls for t in previous_week) if previous_week else 0
 
-            change = ((recent_total - previous_total) / previous_total * 100) if previous_total > 0 else 0
+            change = (
+                ((recent_total - previous_total) / previous_total * 100)
+                if previous_total > 0
+                else 0
+            )
 
             trend_direction = "増加" if change > 0 else "減少" if change < 0 else "横ばい"
         else:
@@ -169,7 +177,9 @@ class AnalyticsAgent(AgentBlock):
 
         insights = []
         if concentration > 50:
-            insights.append("使用が特定のコンポーネントに集中しています。依存リスクを検討してください。")
+            insights.append(
+                "使用が特定のコンポーネントに集中しています。依存リスクを検討してください。"
+            )
         elif concentration < 20 and len(top_components) > 5:
             insights.append("使用が分散しています。共通化の機会があるかもしれません。")
 
@@ -205,30 +215,36 @@ class AnalyticsAgent(AgentBlock):
 
         # コンポーネント数に基づく提案
         if stats.component_count < 5:
-            recommendations.append({
-                "category": "growth",
-                "title": "コンポーネントの追加",
-                "description": "Galleryから便利なコンポーネントを探してみてください。",
-                "priority": "medium",
-            })
+            recommendations.append(
+                {
+                    "category": "growth",
+                    "title": "コンポーネントの追加",
+                    "description": "Galleryから便利なコンポーネントを探してみてください。",
+                    "priority": "medium",
+                }
+            )
 
         # Flowの活用提案
         if stats.flow_count == 0 and stats.agent_count >= 3:
-            recommendations.append({
-                "category": "optimization",
-                "title": "Flowの活用",
-                "description": "複数のAgentをFlowで連携させることで、複雑なタスクを効率化できます。",
-                "priority": "high",
-            })
+            recommendations.append(
+                {
+                    "category": "optimization",
+                    "title": "Flowの活用",
+                    "description": "複数のAgentをFlowで連携させることで、複雑なタスクを効率化できます。",
+                    "priority": "high",
+                }
+            )
 
         # Skillの再利用提案
         if stats.skill_count < stats.agent_count:
-            recommendations.append({
-                "category": "reusability",
-                "title": "Skillの抽出",
-                "description": "Agent内の共通機能をSkillとして抽出し、再利用性を高めましょう。",
-                "priority": "medium",
-            })
+            recommendations.append(
+                {
+                    "category": "reusability",
+                    "title": "Skillの抽出",
+                    "description": "Agent内の共通機能をSkillとして抽出し、再利用性を高めましょう。",
+                    "priority": "medium",
+                }
+            )
 
         return {
             "success": True,

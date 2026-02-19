@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """共通システムプロンプト定義.
 
 agents改善.md §2.1 に基づく全 Agent 共通プロンプトと、個別プロンプト断片を管理する。
@@ -60,12 +59,9 @@ DIFFERENTIAL_VERIFICATION_PROMPT = build_system_prompt(
 )
 
 QUALITY_GATE_PROMPT = build_system_prompt(
-    "品質裁定工程では差分から責任工程を判定し、次に動かすAgentを指示する。\n"
-    "修正は行わない。"
+    "品質裁定工程では差分から責任工程を判定し、次に動かすAgentを指示する。\n修正は行わない。"
 )
 
 LIMITED_FIXER_PROMPT = build_system_prompt(
-    "限定修正工程では QualityGate の裁定に従い、指定範囲外を変更しない。\n"
-    "影響拡大を禁止する。"
+    "限定修正工程では QualityGate の裁定に従い、指定範囲外を変更しない。\n影響拡大を禁止する。"
 )
-

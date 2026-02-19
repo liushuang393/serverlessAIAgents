@@ -1,5 +1,8 @@
 # AgentFlow Makefile
 # コード品質チェックと自動修正のためのコマンド集
+# 使用する Python: conda 環境の場合は conda activate agentflow 後に make を実行すること。
+# 未指定時は python3 を使用（上書き: make PYTHON=python check-all）
+PYTHON ?= python3
 
 .PHONY: help install install-dev install-hooks format lint type-check test test-cov clean check-all pre-commit
 
@@ -18,6 +21,7 @@ help:
 	@echo "  make test-cov         - カバレッジ付きでテストを実行"
 	@echo ""
 	@echo "  make check-all        - すべてのチェックを実行 (format + lint + type + test)"
+	@echo "  make check-nomypy     - 型チェックをスキップして実行 (format + lint + test)"
 	@echo "  make pre-commit       - pre-commit を全ファイルに実行"
 	@echo "  make clean            - 一時ファイルとキャッシュを削除"
 
@@ -27,18 +31,18 @@ help:
 
 install:
 	@echo "📦 本番環境用の依存関係をインストール中..."
-	pip install -e .
+	$(PYTHON) -m pip install -e .
 
 install-dev:
 	@echo "📦 開発環境用の依存関係をインストール中..."
-	pip install -e ".[dev]"
+	$(PYTHON) -m pip install -e ".[dev]"
 	@echo "📦 フロントエンド依存関係をインストール中..."
 	cd studio && npm install
 
 install-hooks:
 	@echo "🪝 pre-commit フックをインストール中..."
-	pip install pre-commit
-	pre-commit install
+	$(PYTHON) -m pip install pre-commit
+	$(PYTHON) -m pre_commit install
 	@echo "✅ pre-commit フックがインストールされました"
 
 # ========================================
@@ -47,16 +51,18 @@ install-hooks:
 
 format-python:
 	@echo "🎨 Python コードをフォーマット中..."
-	ruff format .
-	ruff check --fix .
+	@echo "  → 不要な type: ignore を削除..."
+	-$(PYTHON) scripts/fix_mypy_safe.py
+	$(PYTHON) -m ruff format .
+	$(PYTHON) -m ruff check --fix .
 
 lint-python:
 	@echo "🔍 Python コードをリントチェック中..."
-	ruff check .
+	$(PYTHON) -m ruff check .
 
 type-check-python:
 	@echo "🔍 Python 型チェック中..."
-	mypy agentflow --strict --ignore-missing-imports
+	$(PYTHON) -m mypy agentflow --strict --ignore-missing-imports
 
 # ========================================
 # JavaScript/TypeScript: フォーマットとリント
@@ -93,16 +99,16 @@ type-check: type-check-python type-check-js
 
 test:
 	@echo "🧪 テストを実行中..."
-	pytest -v
+	$(PYTHON) -m pytest -v
 
 test-cov:
 	@echo "🧪 カバレッジ付きでテストを実行中..."
-	pytest --cov=agentflow --cov-report=html --cov-report=term-missing -v
+	$(PYTHON) -m pytest --cov=agentflow --cov-report=html --cov-report=term-missing -v
 	@echo "📊 カバレッジレポート: htmlcov/index.html"
 
 test-watch:
 	@echo "🧪 テストを監視モードで実行中..."
-	pytest-watch
+	$(PYTHON) -m ptw
 
 # ========================================
 # すべてのチェック
@@ -111,13 +117,17 @@ test-watch:
 check-all: format lint type-check test
 	@echo "✅ すべてのチェックが完了しました！"
 
+# 型チェックをスキップ（型エラー解消中に format/lint/test のみ確認する用）
+check-nomypy: format lint test
+	@echo "✅ フォーマット・リント・テストが完了しました（型チェックはスキップ）"
+
 # ========================================
 # Pre-commit
 # ========================================
 
 pre-commit:
 	@echo "🪝 pre-commit を全ファイルに実行中..."
-	pre-commit run --all-files
+	$(PYTHON) -m pre_commit run --all-files
 
 pre-commit-update:
 	@echo "🔄 pre-commit フックを更新中..."
@@ -157,7 +167,7 @@ clean-all: clean
 
 build:
 	@echo "📦 パッケージをビルド中..."
-	python -m build
+	$(PYTHON) -m build
 
 build-frontend:
 	@echo "📦 フロントエンドをビルド中..."

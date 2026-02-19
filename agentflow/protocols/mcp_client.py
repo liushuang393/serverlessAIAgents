@@ -7,11 +7,11 @@ import asyncio
 import logging
 from typing import Any
 
-from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from agentflow.core.security import AuditLogger, ParameterValidator, ToolWhitelist
 from agentflow.protocols.mcp_config import MCPConfig, MCPServerConfig
+from mcp import ClientSession, StdioServerParameters
 
 
 class ToolNotAllowedError(Exception):
@@ -258,7 +258,6 @@ class MCPClient:
             arguments=arguments,
             user_id=user_id,
         )
-
 
     async def _call_tool_with_retry(
         self,

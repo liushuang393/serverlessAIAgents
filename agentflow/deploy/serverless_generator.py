@@ -58,9 +58,7 @@ VERCEL_CONFIG_TEMPLATE = {
         {"src": "/(.*)", "dest": "main.py"},
     ],
     "env": {},
-    "functions": {
-        "main.py": {"memory": 1024, "maxDuration": 30}
-    },
+    "functions": {"main.py": {"memory": 1024, "maxDuration": 30}},
 }
 
 
@@ -220,9 +218,7 @@ def generate_vercel_config(
     vercel_config["functions"]["main.py"]["maxDuration"] = config.timeout
 
     vercel_path = output_path / "vercel.json"
-    vercel_path.write_text(
-        json.dumps(vercel_config, indent=2), encoding="utf-8"
-    )
+    vercel_path.write_text(json.dumps(vercel_config, indent=2), encoding="utf-8")
 
     # main.py (entry point)
     main_content = VERCEL_MAIN_TEMPLATE.format(app_name=config.app_name)
@@ -320,4 +316,3 @@ def generate_requirements_txt(
 
     logger.info(f"Generated requirements.txt: {requirements_path}")
     return requirements_path
-

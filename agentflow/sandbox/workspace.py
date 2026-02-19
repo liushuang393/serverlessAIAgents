@@ -269,10 +269,12 @@ class Workspace:
         for path, content in self._files.items():
             if directory and not path.startswith(directory):
                 continue
-            result.append(FileInfo(
-                path=path,
-                size=len(content),
-            ))
+            result.append(
+                FileInfo(
+                    path=path,
+                    size=len(content),
+                )
+            )
         return result
 
     # コード実行
@@ -580,4 +582,3 @@ class WorkspaceManager:
 def get_workspace_manager() -> WorkspaceManager:
     """WorkspaceManagerシングルトンを取得."""
     return WorkspaceManager.get_instance()
-

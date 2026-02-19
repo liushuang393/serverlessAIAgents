@@ -4,8 +4,8 @@
  * @description 折りたたみ可能なセクションをレンダリング
  */
 
-import React, { useState } from 'react';
-import type { RichComponent } from '../types';
+import React, { useState } from "react";
+import type { RichComponent } from "../types";
 
 interface CollapsibleRendererProps {
   /** RichComponent */
@@ -24,7 +24,7 @@ export function CollapsibleRenderer({
   component,
   renderComponent,
 }: CollapsibleRendererProps): React.JSX.Element {
-  const { title = '', content, defaultOpen } = component.props;
+  const { title = "", content, defaultOpen } = component.props;
   const [isOpen, setIsOpen] = useState(Boolean(defaultOpen));
   const contentArr: RichComponent[] = Array.isArray(content) ? content : [];
 
@@ -40,7 +40,7 @@ export function CollapsibleRenderer({
           {String(title)}
         </span>
         <span
-          className={`transform transition-transform ${isOpen ? 'rotate-180' : ''}`}
+          className={`transform transition-transform ${isOpen ? "rotate-180" : ""}`}
           aria-hidden="true"
         >
           ▼
@@ -58,4 +58,3 @@ export function CollapsibleRenderer({
 }
 
 export default CollapsibleRenderer;
-

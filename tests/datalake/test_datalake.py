@@ -1,7 +1,5 @@
-# -*- coding: utf-8 -*-
 """DataLake モジュールテスト."""
 
-import asyncio
 import tempfile
 from pathlib import Path
 
@@ -14,30 +12,29 @@ class TestDataLakeImports:
     def test_core_imports(self):
         """コアモジュールのインポート."""
         from agentflow.datalake import (
-            DataLake,
             DataItem,
-            ReadResult,
-            WriteResult,
-            get_datalake,
-            reset_datalake,
+            DataLake,
         )
+
         assert DataLake is not None
         assert DataItem is not None
 
     def test_connector_imports(self):
         """コネクタのインポート."""
-        from agentflow.datalake import DataConnector, ConnectorConfig
+        from agentflow.datalake import DataConnector
         from agentflow.datalake.connectors import LocalFileConnector
+
         assert DataConnector is not None
         assert LocalFileConnector is not None
 
     def test_cloud_connector_imports(self):
         """クラウドコネクタのインポート."""
         from agentflow.datalake.connectors import (
-            OneDriveConnector,
-            GoogleDriveConnector,
             DatabaseConnector,
+            GoogleDriveConnector,
+            OneDriveConnector,
         )
+
         assert OneDriveConnector is not None
         assert GoogleDriveConnector is not None
         assert DatabaseConnector is not None
@@ -45,23 +42,20 @@ class TestDataLakeImports:
     def test_auth_imports(self):
         """認証モジュールのインポート."""
         from agentflow.datalake import (
-            AuthProvider,
             AuthCredentials,
-            SimpleAuthProvider,
+            AuthProvider,
         )
+
         assert AuthProvider is not None
         assert AuthCredentials is not None
 
     def test_format_handler_imports(self):
         """フォーマットハンドラのインポート."""
         from agentflow.datalake import (
-            FormatHandler,
             CSVHandler,
             JSONHandler,
-            ExcelHandler,
-            ParquetHandler,
-            get_format_handler,
         )
+
         assert CSVHandler is not None
         assert JSONHandler is not None
 
@@ -73,6 +67,7 @@ class TestLocalFileConnector:
     def connector(self):
         """コネクタインスタンス."""
         from agentflow.datalake.connectors import LocalFileConnector
+
         return LocalFileConnector()
 
     @pytest.fixture
@@ -249,24 +244,27 @@ class TestConnectorSchemes:
     def test_local_scheme(self):
         """ローカルファイルスキーム."""
         from agentflow.datalake.connectors import LocalFileConnector
+
         connector = LocalFileConnector()
         assert connector.scheme == "file"
 
     def test_onedrive_scheme(self):
         """OneDriveスキーム."""
         from agentflow.datalake.connectors import OneDriveConnector
+
         connector = OneDriveConnector()
         assert connector.scheme == "onedrive"
 
     def test_gdrive_scheme(self):
         """Google Driveスキーム."""
         from agentflow.datalake.connectors import GoogleDriveConnector
+
         connector = GoogleDriveConnector()
         assert connector.scheme == "gdrive"
 
     def test_database_scheme(self):
         """データベーススキーム."""
         from agentflow.datalake.connectors import DatabaseConnector
+
         connector = DatabaseConnector()
         assert connector.scheme == "db"
-

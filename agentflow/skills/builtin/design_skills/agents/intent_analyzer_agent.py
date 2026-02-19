@@ -214,7 +214,7 @@ class IntentAnalyzerAgent(ResilientAgent[DesignBriefInput, IntentAnalysis]):
         for indicator in feature_indicators:
             if indicator in lower:
                 idx = lower.index(indicator) + len(indicator)
-                chunk = brief[idx:].split(",")[0].strip()
+                chunk = brief[idx:].split(",", maxsplit=1)[0].strip()
                 if chunk:
                     features.append(chunk[:50])
         if not features:

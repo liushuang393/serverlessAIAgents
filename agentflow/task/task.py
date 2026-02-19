@@ -57,9 +57,7 @@ class Task(BaseModel):
         """
         if not can_transition(self.state, new_state):
             msg = f"Invalid transition from {self.state} to {new_state}"
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
         # Record the transition
         self.state_history.append((self.state, datetime.now()))

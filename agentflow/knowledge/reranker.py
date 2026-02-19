@@ -33,8 +33,7 @@ class BaseReranker(ABC):
 
     @property
     @abstractmethod
-    def reranker_type(self) -> RerankerType:
-        ...
+    def reranker_type(self) -> RerankerType: ...
 
     @abstractmethod
     async def rerank(
@@ -42,8 +41,7 @@ class BaseReranker(ABC):
         query: str,
         documents: list[str] | list[dict[str, Any]],
         top_k: int = 5,
-    ) -> list[RankedDocument]:
-        ...
+    ) -> list[RankedDocument]: ...
 
     def _normalize_docs(self, documents: list) -> list[str]:
         doc_texts = []
@@ -80,18 +78,23 @@ class CohereReranker(BaseReranker):
         doc_texts = self._normalize_docs(documents)
         try:
             import cohere
+
             if self._client is None:
                 self._client = cohere.Client(self._api_key)
-            response = self._client.rerank(query=query, documents=doc_texts, top_n=top_k, model=self._model)
+            response = self._client.rerank(
+                query=query, documents=doc_texts, top_n=top_k, model=self._model
+            )
             results = []
             for result in response.results:
                 metadata = self._get_metadata(documents[result.index])
-                results.append(RankedDocument(
-                    content=doc_texts[result.index],
-                    score=result.relevance_score,
-                    original_index=result.index,
-                    metadata=metadata,
-                ))
+                results.append(
+                    RankedDocument(
+                        content=doc_texts[result.index],
+                        score=result.relevance_score,
+                        original_index=result.index,
+                        metadata=metadata,
+                    )
+                )
             return results
         except ImportError:
             msg = "cohere package required: pip install cohere"
@@ -112,16 +115,26 @@ class CrossEncoderReranker(BaseReranker):
         doc_texts = self._normalize_docs(documents)
         try:
             from sentence_transformers import CrossEncoder
+
             if self._model is None:
                 self._model = CrossEncoder(self._model_name)
             pairs = [(query, doc) for doc in doc_texts]
             scores = self._model.predict(pairs)
-            scored_docs = list(zip(range(len(documents)), doc_texts, scores, documents, strict=False))
+            scored_docs = list(
+                zip(range(len(documents)), doc_texts, scores, documents, strict=False)
+            )
             scored_docs.sort(key=lambda x: x[2], reverse=True)
             results = []
             for original_idx, text, score, original_doc in scored_docs[:top_k]:
                 metadata = self._get_metadata(original_doc)
-                results.append(RankedDocument(content=text, score=float(score), original_index=original_idx, metadata=metadata))
+                results.append(
+                    RankedDocument(
+                        content=text,
+                        score=float(score),
+                        original_index=original_idx,
+                        metadata=metadata,
+                    )
+                )
             return results
         except ImportError:
             msg = "sentence-transformers required: pip install sentence-transformers"
@@ -150,7 +163,11 @@ class BM25Reranker(BaseReranker):
         results = []
         for original_idx, text, score, original_doc in scored_docs[:top_k]:
             metadata = self._get_metadata(original_doc)
-            results.append(RankedDocument(content=text, score=score, original_index=original_idx, metadata=metadata))
+            results.append(
+                RankedDocument(
+                    content=text, score=score, original_index=original_idx, metadata=metadata
+                )
+            )
         return results
 
 
@@ -164,6 +181,7 @@ def get_reranker(reranker_type: RerankerType | str | None = None) -> BaseReranke
         else:
             try:
                 import sentence_transformers
+
                 reranker_type = RerankerType.CROSS_ENCODER
             except ImportError:
                 reranker_type = RerankerType.BM25
@@ -182,4 +200,12 @@ def get_reranker(reranker_type: RerankerType | str | None = None) -> BaseReranke
         return BM25Reranker()
 
 
-__all__ = ["BM25Reranker", "BaseReranker", "CohereReranker", "CrossEncoderReranker", "RankedDocument", "RerankerType", "get_reranker"]
+__all__ = [
+    "BM25Reranker",
+    "BaseReranker",
+    "CohereReranker",
+    "CrossEncoderReranker",
+    "RankedDocument",
+    "RerankerType",
+    "get_reranker",
+]

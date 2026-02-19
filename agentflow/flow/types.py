@@ -23,19 +23,19 @@ from typing import Any, Protocol, runtime_checkable
 class NodeType(Enum):
     """ノード型."""
 
-    GATE = auto()      # ゲートノード：条件インターセプト
-    AGENT = auto()     # Agentノード：Agent実行
+    GATE = auto()  # ゲートノード：条件インターセプト
+    AGENT = auto()  # Agentノード：Agent実行
     PARALLEL = auto()  # 並列ノード：複数Agentを並列実行
-    REVIEW = auto()    # レビューノード：PASS/REVISE/COACH
+    REVIEW = auto()  # レビューノード：PASS/REVISE/COACH
 
 
 class NextAction(Enum):
     """ノード実行後の次のアクション."""
 
-    CONTINUE = auto()      # 次のノードに続行
-    STOP = auto()          # フローを停止
+    CONTINUE = auto()  # 次のノードに続行
+    STOP = auto()  # フローを停止
     EARLY_RETURN = auto()  # 早期リターン（Gateインターセプト）
-    RETRY_FROM = auto()    # 指定ノードからリトライ
+    RETRY_FROM = auto()  # 指定ノードからリトライ
 
 
 class ReviewVerdict(Enum):
@@ -154,9 +154,8 @@ __all__ = [
     "NextAction",
     "NodeResult",
     "NodeType",
+    "OnCoachFunc",
     "OnFailFunc",
     "OnPassFunc",
-    "OnCoachFunc",
     "ReviewVerdict",
 ]
-

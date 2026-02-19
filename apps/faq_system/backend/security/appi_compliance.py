@@ -507,7 +507,9 @@ class APPIComplianceChecker:
 
         self._logger.critical(
             "BREACH REPORT CREATED: %s, affected=%d, severity=%s",
-            report_id, affected_count, severity.value,
+            report_id,
+            affected_count,
+            severity.value,
         )
 
         return report
@@ -524,8 +526,10 @@ class APPIComplianceChecker:
 
         # 要配慮個人情報は HIGH
         sensitive_types = {
-            PIIType.HEALTH_INFO, PIIType.CRIMINAL_RECORD,
-            PIIType.RACE_ETHNICITY, PIIType.RELIGION,
+            PIIType.HEALTH_INFO,
+            PIIType.CRIMINAL_RECORD,
+            PIIType.RACE_ETHNICITY,
+            PIIType.RELIGION,
         }
         if any(t in sensitive_types for t in pii_types):
             return PIISeverity.HIGH

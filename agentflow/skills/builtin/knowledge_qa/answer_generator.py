@@ -93,9 +93,7 @@ class AnswerGenerator(AgentBlock):
         # LLMを使用して回答生成
         if self._llm_client:
             try:
-                context_text = "\n".join(
-                    c.get("content", "") for c in context
-                )
+                context_text = "\n".join(c.get("content", "") for c in context)
                 prompt = f"""以下のコンテキストに基づいて質問に回答してください。
 
 コンテキスト:
@@ -104,9 +102,7 @@ class AnswerGenerator(AgentBlock):
 質問: {question}
 
 回答:"""
-                response = await self._llm_client.chat([
-                    {"role": "user", "content": prompt}
-                ])
+                response = await self._llm_client.chat([{"role": "user", "content": prompt}])
                 answer = response.get("content", "")
                 confidence = 0.9
             except Exception as e:

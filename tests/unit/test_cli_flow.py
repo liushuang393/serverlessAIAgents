@@ -55,4 +55,3 @@ class TestFlowCommand:
 
         assert result.exit_code != 0
         assert "workflow_type" in result.output
-

@@ -14,9 +14,9 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from agentflow import get_llm
-
 from apps.market_trend_monitor.backend.models import Article
+
+from agentflow import get_llm
 
 
 class MarketPosition(str, Enum):
@@ -57,9 +57,19 @@ class CompetitorProfile:
 
 # 追跡対象競合企業
 DEFAULT_COMPETITORS: list[str] = [
-    "IBM", "Accenture", "TCS", "Infosys", "NTT DATA",
-    "Fujitsu", "Wipro", "Capgemini", "DXC Technology", "Micro Focus",
-    "Deloitte", "OptiSol Business Solutions", "Daiwa Institute of Research",
+    "IBM",
+    "Accenture",
+    "TCS",
+    "Infosys",
+    "NTT DATA",
+    "Fujitsu",
+    "Wipro",
+    "Capgemini",
+    "DXC Technology",
+    "Micro Focus",
+    "Deloitte",
+    "OptiSol Business Solutions",
+    "Daiwa Institute of Research",
 ]
 
 # 競合企業別の別名辞書（Entity Normalization 用）
@@ -170,12 +180,8 @@ class CompetitorTrackingAgent:
         Returns:
             競合プロファイルリスト
         """
-        competitor_articles: dict[str, list[Article]] = {
-            c: [] for c in self._competitors
-        }
-        alias_hit_counts: dict[str, dict[str, int]] = {
-            c: {} for c in self._competitors
-        }
+        competitor_articles: dict[str, list[Article]] = {c: [] for c in self._competitors}
+        alias_hit_counts: dict[str, dict[str, int]] = {c: {} for c in self._competitors}
 
         for article in articles:
             mentions = self._extract_competitor_mentions(article)
@@ -327,7 +333,9 @@ class CompetitorTrackingAgent:
         """競合別の別名辞書を取得."""
         return {key: list(values) for key, values in self._competitor_aliases.items()}
 
-    def set_competitor_aliases(self, competitor_aliases: dict[str, list[str]]) -> dict[str, list[str]]:
+    def set_competitor_aliases(
+        self, competitor_aliases: dict[str, list[str]]
+    ) -> dict[str, list[str]]:
         """競合別の別名辞書を更新."""
         self._merge_aliases(competitor_aliases)
         self._rebuild_alias_index()
@@ -485,7 +493,7 @@ class CompetitorTrackingAgent:
             start = raw.find("{")
             end = raw.rfind("}")
             if start != -1 and end != -1 and end > start:
-                return json.loads(raw[start:end + 1])
+                return json.loads(raw[start : end + 1])
         except (json.JSONDecodeError, ValueError):
             pass
         return {}

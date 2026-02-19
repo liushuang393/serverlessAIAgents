@@ -96,4 +96,3 @@ def create_knowledge_router() -> APIRouter:
         return {"status": "deleted", "topic": topic}
 
     return router
-

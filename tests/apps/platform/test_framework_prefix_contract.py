@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Framework API prefix 契約テスト.
 
 旧 prefix は 404、新 prefix は 404 以外を返すことを検証する。

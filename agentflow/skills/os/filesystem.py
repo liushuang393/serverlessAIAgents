@@ -108,7 +108,9 @@ class FileSystemSkill(OSSkillBase):
             lambda: validated_path.read_text(encoding=encoding),
         )
 
-    async def write_file(self, path: str, content: str, encoding: str = "utf-8") -> FileOperationResult:
+    async def write_file(
+        self, path: str, content: str, encoding: str = "utf-8"
+    ) -> FileOperationResult:
         """ファイルに書き込む.
 
         Args:
@@ -201,4 +203,3 @@ class FileSystemSkill(OSSkillBase):
             is_dir=validated_path.is_dir(),
             modified_at=datetime.fromtimestamp(stat.st_mtime),
         )
-

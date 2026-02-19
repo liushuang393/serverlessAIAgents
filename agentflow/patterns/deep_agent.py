@@ -72,12 +72,12 @@ class TaskStatus(str, Enum):
 class AgentType(str, Enum):
     """通用Agent種別（5-6個の基本Agent）."""
 
-    RESEARCH = "research"      # 調研・検索
-    ANALYSIS = "analysis"      # 分析・推理
-    PLANNING = "planning"      # 規劃・設計
-    EXECUTION = "execution"    # 執行・操作
-    REVIEW = "review"          # 審核・検証
-    REPORT = "report"          # 報告・総結
+    RESEARCH = "research"  # 調研・検索
+    ANALYSIS = "analysis"  # 分析・推理
+    PLANNING = "planning"  # 規劃・設計
+    EXECUTION = "execution"  # 執行・操作
+    REVIEW = "review"  # 審核・検証
+    REPORT = "report"  # 報告・総結
 
 
 class TodoItem(BaseModel):
@@ -197,11 +197,11 @@ class EvolutionRecord(BaseModel):
 class MessageType(str, Enum):
     """Agent間メッセージ種別."""
 
-    RESULT = "result"      # 実行結果
-    REQUEST = "request"    # 協力依頼
-    NOTIFY = "notify"      # 通知・情報共有
-    ERROR = "error"        # エラー報告
-    SYSTEM = "system"      # システムメッセージ（圧縮要約など）
+    RESULT = "result"  # 実行結果
+    REQUEST = "request"  # 協力依頼
+    NOTIFY = "notify"  # 通知・情報共有
+    ERROR = "error"  # エラー報告
+    SYSTEM = "system"  # システムメッセージ（圧縮要約など）
 
 
 class AgentMessage(BaseModel):
@@ -455,10 +455,12 @@ class MemoryRuntimeStore(RuntimeStore):
 
         for path, metadata in self._artifact_metadata.items():
             if path.startswith(normalized_prefix):
-                results.append({
-                    "path": path,
-                    **metadata,
-                })
+                results.append(
+                    {
+                        "path": path,
+                        **metadata,
+                    }
+                )
 
         return sorted(results, key=lambda x: x["path"])
 
@@ -730,8 +732,7 @@ class ContextCompressor:
 
         if original_tokens <= max_tokens:
             return messages, CompactionResult(
-                original_tokens, original_tokens, 1.0,
-                [m.id for m in messages]
+                original_tokens, original_tokens, 1.0, [m.id for m in messages]
             )
 
         # 戦略に基づいて圧縮
@@ -833,10 +834,9 @@ class ContextCompressor:
         recent_messages = messages[split_point:]
 
         # 古いメッセージを要約
-        old_content = "\n".join([
-            f"[{m.from_agent}→{m.to_agent}] {m.content}"
-            for m in old_messages
-        ])
+        old_content = "\n".join(
+            [f"[{m.from_agent}→{m.to_agent}] {m.content}" for m in old_messages]
+        )
 
         prompt = f"""以下のAgent間メッセージ履歴を簡潔に要約してください。
 重要な決定、結果、エラーを優先的に保持してください。
@@ -1066,8 +1066,12 @@ class ConversationManager:
         original_tokens = self.current_token_count()
 
         # 直近N件は完全保持
-        preserve_messages = self._messages[-self._recent_keep_count:]
-        to_summarize = self._messages[:-self._recent_keep_count] if len(self._messages) > self._recent_keep_count else []
+        preserve_messages = self._messages[-self._recent_keep_count :]
+        to_summarize = (
+            self._messages[: -self._recent_keep_count]
+            if len(self._messages) > self._recent_keep_count
+            else []
+        )
 
         if not to_summarize:
             return {"status": "nothing_to_summarize", "compressed": False}
@@ -1088,7 +1092,9 @@ class ConversationManager:
             "summarized_messages": len(to_summarize),
             "original_tokens": original_tokens,
             "new_tokens": self.current_token_count(),
-            "compression_ratio": self.current_token_count() / original_tokens if original_tokens > 0 else 1.0,
+            "compression_ratio": self.current_token_count() / original_tokens
+            if original_tokens > 0
+            else 1.0,
         }
 
     async def _generate_summary(self, messages: list[AgentMessage]) -> str | None:
@@ -1101,10 +1107,12 @@ class ConversationManager:
             return self._simple_summary(messages)
 
         # LLMで要約生成
-        content = "\n".join([
-            f"[{m.from_agent}→{m.to_agent}] {m.msg_type.value}: {str(m.content)[:200]}"
-            for m in messages
-        ])
+        content = "\n".join(
+            [
+                f"[{m.from_agent}→{m.to_agent}] {m.msg_type.value}: {str(m.content)[:200]}"
+                for m in messages
+            ]
+        )
 
         prompt = f"""以下の会話を簡潔に要約してください（重要な決定・結果・エラーを優先）:
 
@@ -1113,10 +1121,12 @@ class ConversationManager:
 要約（100-200文字）:"""
 
         try:
-            response = await self._llm.chat([
-                {"role": "system", "content": "あなたは会話を簡潔に要約する専門家です。"},
-                {"role": "user", "content": prompt},
-            ])
+            response = await self._llm.chat(
+                [
+                    {"role": "system", "content": "あなたは会話を簡潔に要約する専門家です。"},
+                    {"role": "user", "content": prompt},
+                ]
+            )
             return response.content if hasattr(response, "content") else str(response)
         except Exception as e:
             self._logger.warning(f"要約生成失敗: {e}")
@@ -1238,7 +1248,9 @@ class AgentPool:
         self._skill_engine = skill_engine
 
         # Skillsレジストリ（SkillEngine があればその内部レジストリを使用）
-        self._skills = skill_registry or (skill_engine.get_registry() if skill_engine else SkillRegistry())
+        self._skills = skill_registry or (
+            skill_engine.get_registry() if skill_engine else SkillRegistry()
+        )
 
         # MCPクライアント（外部ツール統合用、懒加載対応）
         self._mcp_config = mcp_config
@@ -1290,9 +1302,7 @@ class AgentPool:
             # 懒加載モードの統計をログ
             if use_lazy and isinstance(self._mcp_client, LazyMCPClient):
                 stats = self._mcp_client.get_stats()
-                self._logger.info(
-                    f"MCPツールインデックス: {stats['total_tools']} ツール登録済み"
-                )
+                self._logger.info(f"MCPツールインデックス: {stats['total_tools']} ツール登録済み")
 
             return True
         except Exception as e:
@@ -1723,8 +1733,10 @@ class DynamicAgent(AgentBlock):
         # LLM呼び出し
         try:
             response = await self._llm.chat(messages)
-            content = response.get("content", "") if isinstance(response, dict) else (
-                response.content if hasattr(response, "content") else str(response)
+            content = (
+                response.get("content", "")
+                if isinstance(response, dict)
+                else (response.content if hasattr(response, "content") else str(response))
             )
             return {
                 "agent": self._name,
@@ -1828,12 +1840,10 @@ class ProgressManager:
         依存関係が解決済みで、まだPENDING状態のTodoを全て返す。
         優先度順にソート。
         """
-        completed_ids = {
-            t.id for t in self._todos.values()
-            if t.status == TaskStatus.COMPLETED
-        }
+        completed_ids = {t.id for t in self._todos.values() if t.status == TaskStatus.COMPLETED}
         ready = [
-            t for t in self._todos.values()
+            t
+            for t in self._todos.values()
             if t.status == TaskStatus.PENDING and t.is_ready(completed_ids)
         ]
         # 優先度でソート（高い順）
@@ -1911,10 +1921,7 @@ class ProgressManager:
 
         while remaining:
             # 現在実行可能なTodo
-            ready_ids = [
-                tid for tid in remaining
-                if self._todos[tid].is_ready(completed)
-            ]
+            ready_ids = [tid for tid in remaining if self._todos[tid].is_ready(completed)]
             if not ready_ids:
                 break  # 残りは全て依存関係未解決
 
@@ -1938,8 +1945,7 @@ class ProgressManager:
             "failed": failed,
             "progress": completed / total if total > 0 else 0.0,
             "todos": [
-                {"id": t.id, "task": t.task, "status": t.status.value}
-                for t in self._todos.values()
+                {"id": t.id, "task": t.task, "status": t.status.value} for t in self._todos.values()
             ],
         }
 
@@ -2298,11 +2304,14 @@ class Evolver:
 
         # 永続化ストアがあれば保存
         if self._store:
-            await self._store.save_pattern(pattern_key, {
-                "task": task[:200],
-                "approach": str(approach)[:500],
-                "confidence": new_score,
-            })
+            await self._store.save_pattern(
+                pattern_key,
+                {
+                    "task": task[:200],
+                    "approach": str(approach)[:500],
+                    "confidence": new_score,
+                },
+            )
             await self._store.save_feedback(record)
 
         self._logger.info(f"成功パターン学習: {pattern_key} (信頼度: {new_score:.2f})")
@@ -2364,8 +2373,7 @@ class Evolver:
             if skill_result.generated and skill_result.saved:
                 self._consolidated_skills.add(pattern_key)
                 self._logger.info(
-                    f"Skill 固化成功: {skill_result.skill.name} "
-                    f"(パターン: {pattern_key})"
+                    f"Skill 固化成功: {skill_result.skill.name} (パターン: {pattern_key})"
                 )
                 return True
 
@@ -2442,7 +2450,8 @@ class Evolver:
             "feedback_count": sum(1 for r in self._records if "feedback" in r.event_type),
             "avg_confidence": (
                 sum(self._pattern_scores.values()) / len(self._pattern_scores)
-                if self._pattern_scores else 0.0
+                if self._pattern_scores
+                else 0.0
             ),
             "high_confidence_patterns": sum(
                 1 for score in self._pattern_scores.values() if score >= 0.8
@@ -2594,9 +2603,7 @@ class DeepAgentCoordinator(CoordinatorBase):
             "phase": phase,
             "timestamp": datetime.now().isoformat(),
             "progress": self._progress.get_progress(),
-            "todos": [
-                t.model_dump() for t in self._progress._todos.values()
-            ],
+            "todos": [t.model_dump() for t in self._progress._todos.values()],
             "context": self._progress.context.get_all(),
             "extra": extra_data or {},
         }
@@ -2659,10 +2666,13 @@ class DeepAgentCoordinator(CoordinatorBase):
         for key, value in context_data.items():
             self._progress.context.set(key, value)
 
-        self._emit_progress("checkpoint_resumed", {
-            "checkpoint_id": checkpoint_id,
-            "phase": phase,
-        })
+        self._emit_progress(
+            "checkpoint_resumed",
+            {
+                "checkpoint_id": checkpoint_id,
+                "phase": phase,
+            },
+        )
 
         # 指定されたフェーズから再開
         if phase in ("execute", "review"):
@@ -2772,7 +2782,10 @@ class DeepAgentCoordinator(CoordinatorBase):
             if not cognitive.is_clear:
                 clarification = await self._clarify(task, cognitive.clarification_needed)
                 if clarification.get("need_user_input"):
-                    return {"status": "need_clarification", "questions": cognitive.clarification_needed}
+                    return {
+                        "status": "need_clarification",
+                        "questions": cognitive.clarification_needed,
+                    }
                 task = clarification.get("refined_task", task)
 
             # Phase 3: 任務分解
@@ -2861,12 +2874,19 @@ class DeepAgentCoordinator(CoordinatorBase):
 JSON形式で回答:"""
 
         try:
-            response = await self._llm.chat([
-                {"role": "system", "content": "あなたはタスク分析の専門家です。JSON形式で回答してください。"},
-                {"role": "user", "content": prompt},
-            ], response_format={"type": "json_object"})
+            response = await self._llm.chat(
+                [
+                    {
+                        "role": "system",
+                        "content": "あなたはタスク分析の専門家です。JSON形式で回答してください。",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+            )
 
             import json
+
             data = json.loads(response.content if hasattr(response, "content") else str(response))
 
             return CognitiveAnalysis(
@@ -2907,8 +2927,12 @@ JSON形式で回答:"""
             # デフォルト分解（Skill マッチングあり）
             todos = [
                 TodoItem(task="調査・情報収集", agent_type=AgentType.RESEARCH, priority=3),
-                TodoItem(task="分析・評価", agent_type=AgentType.ANALYSIS, priority=2, dependencies=[]),
-                TodoItem(task="結論・報告作成", agent_type=AgentType.REPORT, priority=1, dependencies=[]),
+                TodoItem(
+                    task="分析・評価", agent_type=AgentType.ANALYSIS, priority=2, dependencies=[]
+                ),
+                TodoItem(
+                    task="結論・報告作成", agent_type=AgentType.REPORT, priority=1, dependencies=[]
+                ),
             ]
             # 各 Todo に Skill をマッチング
             return await self._resolve_skills_for_todos(todos)
@@ -2923,22 +2947,28 @@ JSON形式で回答:
 {{"steps": [{{"task": "...", "agent_type": "research|analysis|planning|execution|review|report", "priority": 1-5, "dependencies": []}}]}}"""
 
         try:
-            response = await self._llm.chat([
-                {"role": "system", "content": "あなたは計画立案の専門家です。"},
-                {"role": "user", "content": prompt},
-            ], response_format={"type": "json_object"})
+            response = await self._llm.chat(
+                [
+                    {"role": "system", "content": "あなたは計画立案の専門家です。"},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+            )
 
             import json
+
             data = json.loads(response.content if hasattr(response, "content") else str(response))
 
             todos = []
             for i, step in enumerate(data.get("steps", [])):
-                todos.append(TodoItem(
-                    task=step.get("task", f"Step {i+1}"),
-                    agent_type=step.get("agent_type", AgentType.EXECUTION),
-                    priority=step.get("priority", 1),
-                    dependencies=step.get("dependencies", []),
-                ))
+                todos.append(
+                    TodoItem(
+                        task=step.get("task", f"Step {i + 1}"),
+                        agent_type=step.get("agent_type", AgentType.EXECUTION),
+                        priority=step.get("priority", 1),
+                        dependencies=step.get("dependencies", []),
+                    )
+                )
             todos = todos if todos else self._default_todos(task)
 
             # 各 Todo に Skill をマッチング/生成
@@ -2988,7 +3018,13 @@ JSON形式で回答:
         """デフォルトTodo生成."""
         return [
             TodoItem(id="todo-1", task=f"分析: {task}", agent_type=AgentType.ANALYSIS, priority=2),
-            TodoItem(id="todo-2", task="結論作成", agent_type=AgentType.REPORT, priority=1, dependencies=["todo-1"]),
+            TodoItem(
+                id="todo-2",
+                task="結論作成",
+                agent_type=AgentType.REPORT,
+                priority=1,
+                dependencies=["todo-1"],
+            ),
         ]
 
     async def _execute_todos(self) -> tuple[dict[str, Any], list[tuple[str, Exception]]]:
@@ -3045,7 +3081,9 @@ JSON形式で回答:
         )
 
         if not agent:
-            self._progress.update_todo(todo.id, status=TaskStatus.FAILED, error="Agent not available")
+            self._progress.update_todo(
+                todo.id, status=TaskStatus.FAILED, error="Agent not available"
+            )
             return None
 
         try:
@@ -3053,9 +3091,13 @@ JSON形式で回答:
             todo.result = result
 
             if result.get("status") == "failed":
-                self._progress.update_todo(todo.id, status=TaskStatus.FAILED, error=result.get("error"))
+                self._progress.update_todo(
+                    todo.id, status=TaskStatus.FAILED, error=result.get("error")
+                )
             else:
-                self._progress.update_todo(todo.id, status=TaskStatus.COMPLETED, completed_at=datetime.now())
+                self._progress.update_todo(
+                    todo.id, status=TaskStatus.COMPLETED, completed_at=datetime.now()
+                )
                 await self._progress.send_message_async(str(todo.agent_type), "coordinator", result)
                 return result
         except Exception as e:
@@ -3081,7 +3123,10 @@ JSON形式で回答:
             (結果dict, エラーリスト) のタプル
             エラーリストは (todo_id, Exception) のタプルリスト
         """
-        async def execute_one(todo: TodoItem) -> tuple[str, dict[str, Any] | None, Exception | None]:
+
+        async def execute_one(
+            todo: TodoItem,
+        ) -> tuple[str, dict[str, Any] | None, Exception | None]:
             try:
                 result = await self._execute_single(todo, context)
                 return (todo.id, result, None)
@@ -3110,11 +3155,14 @@ JSON形式で回答:
             elif result:
                 results[todo_id] = result
 
-        self._emit_progress("parallel_end", {
-            "completed": len(results),
-            "failed": len(errors),
-            "error_ids": [e[0] for e in errors],
-        })
+        self._emit_progress(
+            "parallel_end",
+            {
+                "completed": len(results),
+                "failed": len(errors),
+                "error_ids": [e[0] for e in errors],
+            },
+        )
 
         return results, errors
 
@@ -3182,12 +3230,19 @@ JSON形式で回答:
 }}"""
 
         try:
-            response = await self._llm.chat([
-                {"role": "system", "content": "あなたは品質評価の専門家です。多次元で厳密に評価してください。"},
-                {"role": "user", "content": prompt},
-            ], response_format={"type": "json_object"})
+            response = await self._llm.chat(
+                [
+                    {
+                        "role": "system",
+                        "content": "あなたは品質評価の専門家です。多次元で厳密に評価してください。",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+            )
 
             import json
+
             data = json.loads(response.content if hasattr(response, "content") else str(response))
 
             return QualityReview(
@@ -3212,7 +3267,9 @@ JSON形式で回答:
     def _emit_progress(self, event: str, data: dict[str, Any]) -> None:
         """進捗イベント発火."""
         if self._on_progress:
-            self._on_progress({"event": event, "data": data, "timestamp": datetime.now().isoformat()})
+            self._on_progress(
+                {"event": event, "data": data, "timestamp": datetime.now().isoformat()}
+            )
 
     # =========================================================================
     # 公開API
@@ -3286,4 +3343,3 @@ __all__ = [
     # データモデル - 構造体
     "TodoItem",
 ]
-

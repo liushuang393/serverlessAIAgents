@@ -85,7 +85,7 @@
       "note": null
     },
     "commands": {
-      "backend_dev": "python -m apps.design_skills_engine.main",
+      "backend_dev": "python apps/design_skills_engine/scripts/dev.py",
       "frontend_dev": null,
       "publish": "docker compose up -d --build",
       "start": "docker compose up -d",

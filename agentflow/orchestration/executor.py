@@ -170,9 +170,7 @@ class ExecutorAgent:
                 step.result = output
                 self._results[step.id] = result
 
-                self._logger.info(
-                    f"ステップ完了: {step.name} ({duration_ms:.0f}ms)"
-                )
+                self._logger.info(f"ステップ完了: {step.name} ({duration_ms:.0f}ms)")
                 return result
 
             except TimeoutError:

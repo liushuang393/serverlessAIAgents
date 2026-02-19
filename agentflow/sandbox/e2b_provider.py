@@ -56,16 +56,11 @@ class E2BProvider(SandboxProvider):
         super().__init__(config)
 
         # API キー
-        self._api_key = (
-            config.api_key
-            if config and config.api_key
-            else os.getenv("E2B_API_KEY")
-        )
+        self._api_key = config.api_key if config and config.api_key else os.getenv("E2B_API_KEY")
 
         if not self._api_key:
             logger.warning(
-                "E2B_API_KEY が設定されていません。"
-                "https://e2b.dev で API キーを取得してください。"
+                "E2B_API_KEY が設定されていません。https://e2b.dev で API キーを取得してください。"
             )
 
         # 生命周期追跡（Daytonaスタイル）
@@ -77,7 +72,8 @@ class E2BProvider(SandboxProvider):
 
         # SDK インポートチェック
         try:
-            from e2b_code_interpreter import Sandbox  # noqa: F401
+            from e2b_code_interpreter import Sandbox
+
             self._sdk_available = True
         except ImportError:
             self._sdk_available = False
@@ -206,4 +202,3 @@ class E2BProvider(SandboxProvider):
         """リソース解放."""
         self._state = SandboxState.STOPPED
         logger.info("E2B provider closed")
-

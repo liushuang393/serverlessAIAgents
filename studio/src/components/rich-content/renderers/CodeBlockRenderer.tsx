@@ -4,8 +4,8 @@
  * @description シンタックスハイライト付きコードブロックをレンダリング
  */
 
-import React, { useCallback, useState } from 'react';
-import type { RichComponent } from '../types';
+import React, { useCallback, useState } from "react";
+import type { RichComponent } from "../types";
 
 /**
  * シンプルなシンタックスハイライト（依存ライブラリなし）
@@ -14,9 +14,63 @@ import type { RichComponent } from '../types';
 function highlightCode(code: string, language: string): React.ReactNode {
   // 基本的なキーワードハイライト
   const keywords: Record<string, string[]> = {
-    python: ['def', 'class', 'import', 'from', 'return', 'if', 'else', 'for', 'in', 'while', 'try', 'except', 'async', 'await', 'None', 'True', 'False'],
-    typescript: ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'class', 'interface', 'type', 'export', 'import', 'async', 'await', 'null', 'undefined'],
-    javascript: ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'class', 'export', 'import', 'async', 'await', 'null', 'undefined'],
+    python: [
+      "def",
+      "class",
+      "import",
+      "from",
+      "return",
+      "if",
+      "else",
+      "for",
+      "in",
+      "while",
+      "try",
+      "except",
+      "async",
+      "await",
+      "None",
+      "True",
+      "False",
+    ],
+    typescript: [
+      "const",
+      "let",
+      "var",
+      "function",
+      "return",
+      "if",
+      "else",
+      "for",
+      "while",
+      "class",
+      "interface",
+      "type",
+      "export",
+      "import",
+      "async",
+      "await",
+      "null",
+      "undefined",
+    ],
+    javascript: [
+      "const",
+      "let",
+      "var",
+      "function",
+      "return",
+      "if",
+      "else",
+      "for",
+      "while",
+      "class",
+      "export",
+      "import",
+      "async",
+      "await",
+      "null",
+      "undefined",
+    ],
   };
 
   const langKeywords = keywords[language.toLowerCase()] || [];
@@ -24,7 +78,7 @@ function highlightCode(code: string, language: string): React.ReactNode {
     return <code>{code}</code>;
   }
 
-  const pattern = new RegExp(`\\b(${langKeywords.join('|')})\\b`, 'g');
+  const pattern = new RegExp(`\\b(${langKeywords.join("|")})\\b`, "g");
   const parts = code.split(pattern);
 
   return (
@@ -34,7 +88,7 @@ function highlightCode(code: string, language: string): React.ReactNode {
         return (
           <span
             key={idx}
-            className={isKeyword ? 'text-purple-400 font-semibold' : ''}
+            className={isKeyword ? "text-purple-400 font-semibold" : ""}
           >
             {part}
           </span>
@@ -55,8 +109,15 @@ interface CodeBlockRendererProps {
  * @param props - CodeBlockRendererProps
  * @returns JSX.Element
  */
-export function CodeBlockRenderer({ component }: CodeBlockRendererProps): React.JSX.Element {
-  const { code = '', language = 'text', filename, showLineNumbers } = component.props;
+export function CodeBlockRenderer({
+  component,
+}: CodeBlockRendererProps): React.JSX.Element {
+  const {
+    code = "",
+    language = "text",
+    filename,
+    showLineNumbers,
+  } = component.props;
   const [copied, setCopied] = useState(false);
 
   const codeStr = String(code);
@@ -89,7 +150,7 @@ export function CodeBlockRenderer({ component }: CodeBlockRendererProps): React.
           className="px-2 py-1 text-xs rounded hover:bg-gray-700 transition-colors"
           aria-label="コードをコピー"
         >
-          {copied ? '✓ コピー済み' : 'コピー'}
+          {copied ? "✓ コピー済み" : "コピー"}
         </button>
       </div>
 
@@ -98,13 +159,13 @@ export function CodeBlockRenderer({ component }: CodeBlockRendererProps): React.
         className={`
           p-4 bg-gray-900 text-gray-100 overflow-x-auto
           font-mono text-sm leading-relaxed
-          ${showLineNumbers ? 'pl-12' : ''}
+          ${showLineNumbers ? "pl-12" : ""}
         `}
       >
         {showLineNumbers ? (
           <div className="relative">
             <div className="absolute left-0 top-0 text-gray-500 select-none text-right pr-4">
-              {codeStr.split('\n').map((_, idx) => (
+              {codeStr.split("\n").map((_, idx) => (
                 <div key={`line-${idx}`}>{idx + 1}</div>
               ))}
             </div>
@@ -119,4 +180,3 @@ export function CodeBlockRenderer({ component }: CodeBlockRendererProps): React.
 }
 
 export default CodeBlockRenderer;
-

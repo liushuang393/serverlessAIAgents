@@ -235,12 +235,16 @@ class LLMReflectionGenerator(ReflectionGenerator):
 }}"""
 
         try:
-            response = await self._llm.chat([
-                {"role": "system", "content": self._system_prompt},
-                {"role": "user", "content": prompt},
-            ], response_format={"type": "json_object"})
+            response = await self._llm.chat(
+                [
+                    {"role": "system", "content": self._system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+            )
 
             import json
+
             content = response.get("content", "") if isinstance(response, dict) else str(response)
             if hasattr(response, "content"):
                 content = response.content
@@ -287,12 +291,16 @@ class LLMReflectionGenerator(ReflectionGenerator):
 改善された反省をJSON形式で返してください。"""
 
         try:
-            response = await self._llm.chat([
-                {"role": "system", "content": "あなたは反省を改善する専門家です。"},
-                {"role": "user", "content": prompt},
-            ], response_format={"type": "json_object"})
+            response = await self._llm.chat(
+                [
+                    {"role": "system", "content": "あなたは反省を改善する専門家です。"},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+            )
 
             import json
+
             content = response.get("content", "") if isinstance(response, dict) else str(response)
             if hasattr(response, "content"):
                 content = response.content
@@ -350,12 +358,15 @@ class LLMReflectionGenerator(ReflectionGenerator):
             },
         }
 
-        template = templates.get(error_type, {
-            "what_went_wrong": f"エラーが発生: {error_type}",
-            "why_it_failed": error_message[:100],
-            "how_to_avoid": "エラーハンドリングを追加し、原因を調査する",
-            "severity": Severity.MEDIUM,
-        })
+        template = templates.get(
+            error_type,
+            {
+                "what_went_wrong": f"エラーが発生: {error_type}",
+                "why_it_failed": error_message[:100],
+                "how_to_avoid": "エラーハンドリングを追加し、原因を調査する",
+                "severity": Severity.MEDIUM,
+            },
+        )
 
         return Reflection(
             type=ReflectionType.FAILURE_ANALYSIS,

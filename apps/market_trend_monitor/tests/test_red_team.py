@@ -6,7 +6,6 @@ Challenge/ChallengeResult/RedTeamAnalysis モデルおよび RedTeamService の�
 from __future__ import annotations
 
 import pytest
-
 from apps.market_trend_monitor.backend.models import (
     Challenge,
     ChallengeResult,
@@ -308,15 +307,9 @@ class TestRedTeamService:
         claim1 = _make_claim(claim_id="c-1")
         claim2 = _make_claim(claim_id="c-2")
 
-        service.create_challenge(
-            claim1, ChallengeType.COUNTER_EVIDENCE, "反論1"
-        )
-        service.create_challenge(
-            claim1, ChallengeType.ALTERNATIVE_EXPLANATION, "代替説明"
-        )
-        service.create_challenge(
-            claim2, ChallengeType.BIAS_CHECK, "バイアス"
-        )
+        service.create_challenge(claim1, ChallengeType.COUNTER_EVIDENCE, "反論1")
+        service.create_challenge(claim1, ChallengeType.ALTERNATIVE_EXPLANATION, "代替説明")
+        service.create_challenge(claim2, ChallengeType.BIAS_CHECK, "バイアス")
 
         c1_challenges = service.list_challenges_for_claim("c-1")
         assert len(c1_challenges) == 2
@@ -329,9 +322,7 @@ class TestRedTeamService:
         service = RedTeamService()
         claim = _make_claim(confidence=0.8)
 
-        ch1 = service.create_challenge(
-            claim, ChallengeType.COUNTER_EVIDENCE, "反証1"
-        )
+        ch1 = service.create_challenge(claim, ChallengeType.COUNTER_EVIDENCE, "反証1")
         service.evaluate_challenge(ch1, is_valid=True, impact_score=0.5)
 
         adjusted = service.get_adjusted_confidence(claim)
@@ -351,9 +342,7 @@ class TestRedTeamService:
         service = RedTeamService()
         claim = _make_claim(confidence=0.1)
 
-        ch = service.create_challenge(
-            claim, ChallengeType.COUNTER_EVIDENCE, "強い反証"
-        )
+        ch = service.create_challenge(claim, ChallengeType.COUNTER_EVIDENCE, "強い反証")
         service.evaluate_challenge(ch, is_valid=True, impact_score=1.0)
 
         adjusted = service.get_adjusted_confidence(claim)
@@ -398,12 +387,8 @@ class TestRedTeamService:
         service = RedTeamService()
         claim = _make_claim()
 
-        ch1 = service.create_challenge(
-            claim, ChallengeType.COUNTER_EVIDENCE, "反論1"
-        )
-        ch2 = service.create_challenge(
-            claim, ChallengeType.BIAS_CHECK, "バイアス"
-        )
+        ch1 = service.create_challenge(claim, ChallengeType.COUNTER_EVIDENCE, "反論1")
+        ch2 = service.create_challenge(claim, ChallengeType.BIAS_CHECK, "バイアス")
         service.evaluate_challenge(ch1, is_valid=True, impact_score=0.6)
         service.evaluate_challenge(ch2, is_valid=False, impact_score=0.2)
 
@@ -417,9 +402,7 @@ class TestRedTeamService:
         """チャレンジ取得テスト."""
         service = RedTeamService()
         claim = _make_claim()
-        ch = service.create_challenge(
-            claim, ChallengeType.COUNTER_EVIDENCE, "反論"
-        )
+        ch = service.create_challenge(claim, ChallengeType.COUNTER_EVIDENCE, "反論")
 
         retrieved = service.get_challenge(ch.id)
         assert retrieved is not None
@@ -434,9 +417,7 @@ class TestRedTeamService:
         """評価結果取得テスト."""
         service = RedTeamService()
         claim = _make_claim()
-        ch = service.create_challenge(
-            claim, ChallengeType.COUNTER_EVIDENCE, "反論"
-        )
+        ch = service.create_challenge(claim, ChallengeType.COUNTER_EVIDENCE, "反論")
         result = service.evaluate_challenge(ch, is_valid=True, impact_score=0.5)
 
         retrieved = service.get_result(result.id)

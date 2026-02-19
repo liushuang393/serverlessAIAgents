@@ -26,11 +26,11 @@ from apps.faq_system.backend.auth.models import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
+    MfaSetupResponse,
+    MfaVerifyRequest,
     ProfileUpdateRequest,
     RegisterRequest,
     ResetPasswordRequest,
-    MfaSetupResponse,
-    MfaVerifyRequest,
     UserInfo,
 )
 from apps.faq_system.backend.auth.service import get_auth_service
@@ -64,7 +64,7 @@ async def login(req: LoginRequest, response: Response) -> AuthResponse:
                 success=False,
                 message="MFA_REQUIRED",
             )
-            
+
         logger.warning("ログイン失敗: username=%s, reason=%s", req.username, message)
         return AuthResponse(
             success=False,

@@ -336,4 +336,3 @@ class IPayment(ABC):
         Returns:
             決済ステータス
         """
-

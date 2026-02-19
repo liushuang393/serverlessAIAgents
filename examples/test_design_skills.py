@@ -159,7 +159,7 @@ def check_prerequisites() -> bool:
     # 检查 httpx
     print("3. 检查 Python 依赖...")
     try:
-        import httpx  # noqa: F401
+        import httpx
 
         print("   ✓ httpx 已安装")
     except ImportError:
@@ -204,4 +204,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-

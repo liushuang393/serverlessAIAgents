@@ -63,12 +63,8 @@ class PredictionService:
         await init_db()
 
         async with self._session_factory() as session:
-            prediction_rows = (
-                await session.execute(select(PredictionModel))
-            ).scalars().all()
-            review_rows = (
-                await session.execute(select(PredictionReviewModel))
-            ).scalars().all()
+            prediction_rows = (await session.execute(select(PredictionModel))).scalars().all()
+            review_rows = (await session.execute(select(PredictionReviewModel))).scalars().all()
 
         predictions: dict[str, Prediction] = {}
         for row in prediction_rows:
@@ -199,8 +195,7 @@ class PredictionService:
 
             confidence = self._build_bootstrap_confidence(trend)
             statement = (
-                f"今後{max(horizon_days, 1)}日以内に"
-                f"「{topic}」関連シグナルは現在水準以上を維持する"
+                f"今後{max(horizon_days, 1)}日以内に「{topic}」関連シグナルは現在水準以上を維持する"
             )
             metadata = {
                 "source": "trend_bootstrap",
@@ -208,9 +203,7 @@ class PredictionService:
                 "topic": topic,
                 "trend_score": float(trend.get("score", 0.0)),
                 "growth_rate": float(trend.get("growth_rate", 0.0)),
-                "articles_count": int(
-                    trend.get("articles_count", trend.get("article_count", 0))
-                ),
+                "articles_count": int(trend.get("articles_count", trend.get("article_count", 0))),
             }
 
             prediction = self.create_prediction(
@@ -324,9 +317,7 @@ class PredictionService:
         if self._adaptive_scoring:
             try:
                 recent_reviews = list(self._reviews.values())[-10:]
-                self._schedule_task(
-                    lambda: self._adaptive_scoring.update_weights(recent_reviews)
-                )
+                self._schedule_task(lambda: self._adaptive_scoring.update_weights(recent_reviews))
             except Exception as e:
                 self._logger.warning("適応的スコアリング更新失敗: %s", e)
 
@@ -499,21 +490,13 @@ class PredictionService:
         predictions = list(self._predictions.values())
 
         if reviewed is not None:
-            reviewed_ids = {
-                r.prediction_id for r in self._reviews.values()
-            }
+            reviewed_ids = {r.prediction_id for r in self._reviews.values()}
             if reviewed:
-                predictions = [
-                    p for p in predictions if p.id in reviewed_ids
-                ]
+                predictions = [p for p in predictions if p.id in reviewed_ids]
             else:
-                predictions = [
-                    p for p in predictions if p.id not in reviewed_ids
-                ]
+                predictions = [p for p in predictions if p.id not in reviewed_ids]
 
-        return sorted(
-            predictions, key=lambda p: p.created_at, reverse=True
-        )
+        return sorted(predictions, key=lambda p: p.created_at, reverse=True)
 
     def get_accuracy_stats(self) -> dict[str, Any]:
         """精度統計を取得."""
@@ -571,13 +554,12 @@ class PredictionService:
         today = date.today()
 
         return [
-            p for p in self._predictions.values()
+            p
+            for p in self._predictions.values()
             if p.id not in reviewed_ids and p.target_date <= today
         ]
 
-    def get_review_for_prediction(
-        self, prediction_id: str
-    ) -> PredictionReview | None:
+    def get_review_for_prediction(self, prediction_id: str) -> PredictionReview | None:
         """予測に対する復盤結果を取得."""
         for review in self._reviews.values():
             if review.prediction_id == prediction_id:
@@ -630,12 +612,14 @@ class PredictionService:
         calibration_bins = []
         for bin_idx in sorted(bin_data.keys()):
             d = bin_data[bin_idx]
-            calibration_bins.append({
-                "bin_range": f"{bin_idx * 10}-{(bin_idx + 1) * 10}%",
-                "avg_confidence": d["sum_conf"] / d["count"],
-                "avg_outcome": d["sum_outcome"] / d["count"],
-                "count": int(d["count"]),
-            })
+            calibration_bins.append(
+                {
+                    "bin_range": f"{bin_idx * 10}-{(bin_idx + 1) * 10}%",
+                    "avg_confidence": d["sum_conf"] / d["count"],
+                    "avg_outcome": d["sum_outcome"] / d["count"],
+                    "count": int(d["count"]),
+                }
+            )
 
         return {
             "brier_score": round(brier_score, 4),

@@ -260,9 +260,7 @@ class VisionSkill:
         # マルチ画像分析
         try:
             llm = get_llm(temperature=0.3)
-            response = await self._call_vision_api_multi(
-                llm, image_data_list, comparison_prompt
-            )
+            response = await self._call_vision_api_multi(llm, image_data_list, comparison_prompt)
             return response.get("content", "")
         except Exception as e:
             self._logger.error(f"Image comparison failed: {e}", exc_info=True)
@@ -373,22 +371,26 @@ class VisionSkill:
         content: list[dict[str, Any]] = [{"type": "text", "text": prompt}]
 
         if image_data["type"] == "url":
-            content.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": image_data["url"],
-                    "detail": self._config.detail,
-                },
-            })
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": image_data["url"],
+                        "detail": self._config.detail,
+                    },
+                }
+            )
         else:
             data_url = f"data:{image_data['mime_type']};base64,{image_data['data']}"
-            content.append({
-                "type": "image_url",
-                "image_url": {
-                    "url": data_url,
-                    "detail": self._config.detail,
-                },
-            })
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": data_url,
+                        "detail": self._config.detail,
+                    },
+                }
+            )
 
         messages = [{"role": "user", "content": content}]
 
@@ -414,22 +416,26 @@ class VisionSkill:
 
         for image_data in image_data_list:
             if image_data["type"] == "url":
-                content.append({
-                    "type": "image_url",
-                    "image_url": {
-                        "url": image_data["url"],
-                        "detail": self._config.detail,
-                    },
-                })
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": image_data["url"],
+                            "detail": self._config.detail,
+                        },
+                    }
+                )
             else:
                 data_url = f"data:{image_data['mime_type']};base64,{image_data['data']}"
-                content.append({
-                    "type": "image_url",
-                    "image_url": {
-                        "url": data_url,
-                        "detail": self._config.detail,
-                    },
-                })
+                content.append(
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": data_url,
+                            "detail": self._config.detail,
+                        },
+                    }
+                )
 
         messages = [{"role": "user", "content": content}]
 
@@ -476,4 +482,3 @@ class VisionSkill:
     async def close(self) -> None:
         """HTTP クライアントをクローズ."""
         await self._http_client.aclose()
-

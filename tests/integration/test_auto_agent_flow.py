@@ -1,16 +1,16 @@
-# -*- coding: utf-8 -*-
 """Auto-Agent フロー統合テスト.
 
 統一ツール・Agentレジストリアーキテクチャの完全なワークフローをテスト。
 """
+
 import pytest
 
 
 @pytest.fixture(autouse=True)
 def reset_registries():
     """テスト前後にレジストリをリセット."""
-    from agentflow.core.tool_registry import reset_global_tool_registry
     from agentflow.core.agent_registry import reset_global_agent_registry
+    from agentflow.core.tool_registry import reset_global_tool_registry
 
     reset_global_tool_registry()
     reset_global_agent_registry()
@@ -27,9 +27,9 @@ class TestAutoAgentFlow:
         """ツール登録と発見のテスト."""
         from agentflow import (
             ToolDefinition,
-            ToolSource,
-            ToolRegistry,
             ToolDiscoveryService,
+            ToolRegistry,
+            ToolSource,
         )
 
         registry = ToolRegistry()
@@ -50,6 +50,7 @@ class TestAutoAgentFlow:
             {"name": "summarize", "description": "テキストを要約"},
         ]
         import asyncio
+
         asyncio.get_event_loop().run_until_complete(service.discover_skills(skills))
 
         # 検証
@@ -60,8 +61,8 @@ class TestAutoAgentFlow:
     def test_agent_registration_and_capability_matching(self):
         """Agent登録と能力マッチングのテスト."""
         from agentflow import (
-            AgentRegistry,
             AgentCapabilitySpec,
+            AgentRegistry,
             CapabilityRequirement,
         )
 
@@ -103,27 +104,31 @@ class TestAutoAgentFlow:
     async def test_tool_binding_for_agent(self):
         """Agent へのツールバインディングのテスト."""
         from agentflow import (
-            ToolDefinition,
-            ToolSource,
-            ToolRegistry,
-            ToolBinder,
             AgentCapabilitySpec,
+            ToolBinder,
+            ToolDefinition,
+            ToolRegistry,
+            ToolSource,
         )
 
         # ツールレジストリを設定
         registry = ToolRegistry()
-        registry.register(ToolDefinition(
-            uri="tool://builtin/search",
-            name="search",
-            description="ドキュメントを検索",
-            source=ToolSource.BUILTIN,
-        ))
-        registry.register(ToolDefinition(
-            uri="tool://mcp/fs/read",
-            name="read",
-            description="ファイルを読み取る",
-            source=ToolSource.MCP,
-        ))
+        registry.register(
+            ToolDefinition(
+                uri="tool://builtin/search",
+                name="search",
+                description="ドキュメントを検索",
+                source=ToolSource.BUILTIN,
+            )
+        )
+        registry.register(
+            ToolDefinition(
+                uri="tool://mcp/fs/read",
+                name="read",
+                description="ファイルを読み取る",
+                source=ToolSource.MCP,
+            )
+        )
 
         # Agent能力を定義
         cap = AgentCapabilitySpec(
@@ -152,15 +157,11 @@ class TestAutoAgentFlow:
     def test_full_workflow_tool_to_agent(self):
         """ツール登録からAgent発見までの完全ワークフロー."""
         from agentflow import (
-            ToolDefinition,
-            ToolSource,
-            ToolRegistry,
-            get_global_tool_registry,
-            AgentRegistry,
-            get_global_agent_registry,
             AgentCapabilitySpec,
             CapabilityRequirement,
             ToolDiscoveryService,
+            get_global_agent_registry,
+            get_global_tool_registry,
         )
 
         # Step 1: グローバルレジストリを取得
@@ -210,24 +211,27 @@ class TestAutoAgentFlow:
 
     def test_capability_to_mcp_format(self):
         """能力が必要とするツールをMCP形式に変換."""
-        from agentflow import (
-            ToolDefinition,
-            ToolSource,
-            ToolRegistry,
-            ToolBinder,
-            AgentCapabilitySpec,
-        )
         import asyncio
+
+        from agentflow import (
+            AgentCapabilitySpec,
+            ToolBinder,
+            ToolDefinition,
+            ToolRegistry,
+            ToolSource,
+        )
 
         # レジストリを設定
         registry = ToolRegistry()
-        registry.register(ToolDefinition(
-            uri="tool://builtin/calc",
-            name="calc",
-            description="計算",
-            source=ToolSource.BUILTIN,
-            input_schema={"type": "object", "properties": {"expr": {"type": "string"}}},
-        ))
+        registry.register(
+            ToolDefinition(
+                uri="tool://builtin/calc",
+                name="calc",
+                description="計算",
+                source=ToolSource.BUILTIN,
+                input_schema={"type": "object", "properties": {"expr": {"type": "string"}}},
+            )
+        )
 
         # Agent能力
         cap = AgentCapabilitySpec(
@@ -244,9 +248,7 @@ class TestAutoAgentFlow:
 
         agent = MockAgent()
         binder = ToolBinder(registry)
-        asyncio.get_event_loop().run_until_complete(
-            binder.bind_for_capability(agent, cap)
-        )
+        asyncio.get_event_loop().run_until_complete(binder.bind_for_capability(agent, cap))
 
         # MCP形式に変換
         mcp_tools = agent._tools.to_mcp_format()

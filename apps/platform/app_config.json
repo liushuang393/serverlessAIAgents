@@ -22,33 +22,21 @@
     {
       "name": "GalleryAgent",
       "module": "apps.platform.agents.gallery_agent",
-      "capabilities": [
-        "component_discovery",
-        "search",
-        "recommendation"
-      ],
+      "capabilities": ["component_discovery", "search", "recommendation"],
       "business_base": "platform",
       "pattern": "router"
     },
     {
       "name": "PublishAgent",
       "module": "apps.platform.agents.publish_agent",
-      "capabilities": [
-        "publish",
-        "deployment",
-        "release"
-      ],
+      "capabilities": ["publish", "deployment", "release"],
       "business_base": "platform",
       "pattern": "coordinator"
     },
     {
       "name": "AnalyticsAgent",
       "module": "apps.platform.agents.analytics_agent",
-      "capabilities": [
-        "analysis",
-        "dashboard",
-        "recommendations"
-      ],
+      "capabilities": ["analysis", "dashboard", "recommendations"],
       "business_base": "platform",
       "pattern": "analyzer"
     }
@@ -94,20 +82,14 @@
       "note": null
     },
     "commands": {
-      "backend_dev": "python -m apps.platform.main serve",
+      "backend_dev": "python apps/platform/scripts/dev.py",
       "frontend_dev": "cd apps/platform/frontend && npm run dev",
       "publish": null,
       "start": null,
       "stop": null
     }
   },
-  "tags": [
-    "platform",
-    "management",
-    "gallery",
-    "publish",
-    "dashboard"
-  ],
+  "tags": ["platform", "management", "gallery", "publish", "dashboard"],
   "contracts": {
     "auth": {
       "enabled": false,
@@ -141,9 +123,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },

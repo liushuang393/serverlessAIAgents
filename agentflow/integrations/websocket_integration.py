@@ -246,11 +246,14 @@ class WebSocketManager(ConnectionManager):
             self._on_connect(session_id)
 
         # 接続イベント送信
-        await self.send(session_id, WSEvent(
-            type=WSEventType.CONNECT,
-            session_id=session_id,
-            data={"message": "Connected successfully"},
-        ))
+        await self.send(
+            session_id,
+            WSEvent(
+                type=WSEventType.CONNECT,
+                session_id=session_id,
+                data={"message": "Connected successfully"},
+            ),
+        )
 
     async def disconnect(self, session_id: str) -> None:
         """接続を解除."""
@@ -442,7 +445,8 @@ class WebSocketManager(ConnectionManager):
 
                 # タイムアウトした接続をクリーンアップ
                 stale_sessions = [
-                    sid for sid, state in self._states.items()
+                    sid
+                    for sid, state in self._states.items()
                     if state.is_stale(int(self._connection_timeout))
                 ]
                 for sid in stale_sessions:

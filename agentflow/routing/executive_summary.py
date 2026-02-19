@@ -287,4 +287,3 @@ class ExecutiveSummaryBuilder:
         except Exception as e:
             self._logger.warning("LLM要約失敗: %s", e)
             return []
-

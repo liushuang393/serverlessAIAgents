@@ -24,12 +24,10 @@ import logging
 import os
 
 from alembic import context
-from sqlalchemy import create_engine, pool, text
+from sqlalchemy import MetaData, create_engine, pool, text
 from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
-
-from sqlalchemy import MetaData
 
 from agentflow.database.url_utils import is_sqlite, to_async_url, to_sync_url
 

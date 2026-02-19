@@ -36,13 +36,12 @@ async def test_comfyui_connection():
             print("✓ ComfyUI 服务器运行中")
             print(f"  URL: {client._base_url}")
             return True
-        else:
-            print("✗ ComfyUI 服务器未响应")
-            print(f"  URL: {client._base_url}")
-            print()
-            print("请确保 ComfyUI 服务器正在运行:")
-            print("  curl -sf http://localhost:8188/system_stats")
-            return False
+        print("✗ ComfyUI 服务器未响应")
+        print(f"  URL: {client._base_url}")
+        print()
+        print("请确保 ComfyUI 服务器正在运行:")
+        print("  curl -sf http://localhost:8188/system_stats")
+        return False
 
     except Exception as e:
         print(f"✗ 连接失败: {e}")

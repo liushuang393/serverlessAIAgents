@@ -259,9 +259,7 @@ class ContextEngineer:
         # 4. RAG検索判定・実行
         rag_results = None
         if rag_search_func:
-            rag_results = await self._maybe_retrieve(
-                query, rag_search_func, existing_context
-            )
+            rag_results = await self._maybe_retrieve(query, rag_search_func, existing_context)
 
         # 5. RAG結果をシステムプロンプトに追加
         if rag_results:

@@ -29,6 +29,7 @@ from agentflow.flow.types import (
     ReviewVerdict,
 )
 
+
 # 後方互換: LLM が旧 "REJECT" を返した場合 → COACH にマッピング
 _VERDICT_ALIASES: dict[str, str] = {"REJECT": "COACH"}
 
@@ -154,6 +155,7 @@ class ParallelNode(FlowNode):
     async def execute(self, ctx: FlowContext) -> NodeResult:
         """すべてのAgentを並列実行."""
         try:
+
             async def run_one(agent_id: str, agent: AgentProtocol) -> tuple[str, dict]:
                 mapper = self.input_mappers.get(agent_id)
                 inputs = mapper(ctx) if mapper else ctx.get_inputs()
@@ -241,9 +243,7 @@ class ReviewNode(FlowNode):
             else "ReviewAgentが実行計画の重大な課題を検出"
         )
         rejection_reason = str(
-            result.get("rejection_reason")
-            or result.get("reason")
-            or default_reason
+            result.get("rejection_reason") or result.get("reason") or default_reason
         )
 
         message_raw = result.get("rejection_message")

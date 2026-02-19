@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RuntimeContext platform tests."""
 
 import pytest
@@ -28,7 +27,13 @@ def test_runtime_context_scope():
 
 
 def test_llm_context_settings_override():
-    settings = AgentFlowSettings(openai_api_key="sk-test", openai_model="gpt-test")
+    # llm_provider="auto" を指定してクレデンシャルからの自動検出を強制する
+    # (.env の LLM_PROVIDER=mock が上書きされないように)
+    settings = AgentFlowSettings(
+        openai_api_key="sk-test",
+        openai_model="gpt-test",
+        llm_provider="auto",
+    )
     ctx = RuntimeContext(tenant_id="tenant-1", settings=settings)
     llm = get_llm(context=ctx, _new_instance=True)
     assert llm._provider_info[0] == "openai"

@@ -32,6 +32,7 @@ show_help() {
     echo "  ./check.sh audit         - npm 脆弱性チェック (studio)"
     echo ""
     echo "  ./check.sh all           - すべてのチェックを実行 (format/lint/type-check/test/build)"
+    echo "  ./check.sh all --no-type-check  - 型チェックをスキップして実行"
     echo "  ./check.sh pre-commit    - Pre-commit を全ファイルに実行"
     echo "  ./check.sh clean         - 一時ファイルとキャッシュを削除"
     echo ""
@@ -41,6 +42,12 @@ do_format() {
     echo "========================================"
     echo "コードを自動フォーマット中..."
     echo "========================================"
+    echo ""
+    echo "[Python] 不要な type: ignore コメントを削除中..."
+    python scripts/fix_mypy_safe.py
+    if [ $? -ne 0 ]; then
+        echo "[警告] fix_mypy_safe.py に問題があります（続行します）"
+    fi
     echo ""
     echo "[Python] Ruff フォーマット中..."
     ruff format .
@@ -195,6 +202,12 @@ do_audit() {
 }
 
 do_all() {
+    local skip_type_check=0
+    if [ "${1:-}" = "--no-type-check" ]; then
+        skip_type_check=1
+        echo "[オプション] 型チェックをスキップします"
+        echo ""
+    fi
     echo "========================================"
     echo "すべてのチェックを実行中..."
     echo "========================================"
@@ -205,9 +218,11 @@ do_all() {
     do_lint
     if [ $? -ne 0 ]; then return 1; fi
     echo ""
-    do_type_check
-    if [ $? -ne 0 ]; then return 1; fi
-    echo ""
+    if [ $skip_type_check -eq 0 ]; then
+        do_type_check
+        if [ $? -ne 0 ]; then return 1; fi
+        echo ""
+    fi
     do_test
     if [ $? -ne 0 ]; then return 1; fi
     echo ""
@@ -287,7 +302,7 @@ case "${1:-help}" in
         do_audit
         ;;
     all)
-        do_all
+        do_all "$2"
         ;;
     pre-commit)
         do_pre_commit

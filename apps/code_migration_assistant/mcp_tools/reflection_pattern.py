@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ReflectionPattern MCP Tool.
 
 このモジュールはリフレクションパターンのオーケストレーションを提供するMCPツールを実装する。
@@ -99,7 +98,13 @@ class ReflectionPattern(MCPTool):
 
         # リフレクションパターン実行
         try:
-            final_output, final_score, iterations, history, is_acceptable = await self._run_reflection_loop(
+            (
+                final_output,
+                final_score,
+                iterations,
+                history,
+                is_acceptable,
+            ) = await self._run_reflection_loop(
                 generator_tool=generator_tool,
                 evaluator_tool=evaluator_tool,
                 improver_tool=improver_tool,
@@ -122,7 +127,7 @@ class ReflectionPattern(MCPTool):
         except Exception as e:
             return MCPToolResponse(
                 success=False,
-                errors=[f"Reflection loop failed: {str(e)}"],
+                errors=[f"Reflection loop failed: {e!s}"],
             )
 
     async def _run_reflection_loop(
@@ -234,5 +239,4 @@ class ReflectionPattern(MCPTool):
         # 実際の実装では、MCPClientを使用してリモートツールを呼び出す
         if self.mcp_client:
             return await self.mcp_client.call_tool(request)
-        else:
-            raise RuntimeError("MCP Client is not configured")
+        raise RuntimeError("MCP Client is not configured")

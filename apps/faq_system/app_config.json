@@ -83,7 +83,7 @@
       "note": "ローカル開発既定値（docker-compose.yml）。"
     },
     "commands": {
-      "backend_dev": "python -m apps.faq_system.main",
+      "backend_dev": "python apps/faq_system/scripts/dev.py",
       "frontend_dev": null,
       "publish": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build",
       "start": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d",

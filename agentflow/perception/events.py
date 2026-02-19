@@ -56,9 +56,7 @@ class PerceptionEvent(BaseModel):
         requires_response: Whether this event requires a response
     """
 
-    event_id: str = Field(
-        default_factory=lambda: f"perc-{uuid.uuid4().hex[:12]}"
-    )
+    event_id: str = Field(default_factory=lambda: f"perc-{uuid.uuid4().hex[:12]}")
     event_type: PerceptionEventType
     timestamp: float = Field(default_factory=time.time)
     payload: dict[str, Any] = Field(default_factory=dict)

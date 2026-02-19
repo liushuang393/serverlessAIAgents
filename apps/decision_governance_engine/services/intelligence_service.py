@@ -39,6 +39,7 @@ REQUEST_TIMEOUT_SECONDS = 10
 
 class IntelligenceConfig(BaseModel):
     """情報収集設定."""
+
     mode: str = Field(default="STANDARD", description="FAST/STANDARD/AUDIT")
     max_sources: int = Field(default=15, description="最大取得ソース数")
     enable_cache: bool = Field(default=True, description="キャッシュ有効化")
@@ -47,6 +48,7 @@ class IntelligenceConfig(BaseModel):
 
 class IntelligenceResult(BaseModel):
     """情報収集結果."""
+
     query: str = Field(..., description="検索クエリ")
     evidence: list[EvidenceItem] = Field(default_factory=list, description="証拠リスト")
     total_sources_checked: int = Field(default=0, description="チェックしたソース数")
@@ -147,7 +149,7 @@ class IntelligenceService:
         evidence = self._score_reliability(evidence)
 
         # 最大件数制限
-        evidence = evidence[:self.config.max_sources]
+        evidence = evidence[: self.config.max_sources]
 
         # カバレッジスコア計算
         high_count = sum(1 for e in evidence if e.reliability == EvidenceReliability.HIGH)
@@ -184,17 +186,19 @@ class IntelligenceService:
 
         evidence = []
         for r in mock_results:
-            evidence.append(EvidenceItem(
-                evidence_id=f"ev-{uuid4().hex[:12]}",
-                url=r["url"],
-                title=r["title"],
-                publisher=r["publisher"],
-                snippet=r["snippet"],
-                summary=f"Summary of {r['title']}",
-                retrieved_at=datetime.utcnow(),
-                reliability=EvidenceReliability.MEDIUM,
-                tags=["web_search"],
-            ))
+            evidence.append(
+                EvidenceItem(
+                    evidence_id=f"ev-{uuid4().hex[:12]}",
+                    url=r["url"],
+                    title=r["title"],
+                    publisher=r["publisher"],
+                    snippet=r["snippet"],
+                    summary=f"Summary of {r['title']}",
+                    retrieved_at=datetime.utcnow(),
+                    reliability=EvidenceReliability.MEDIUM,
+                    tags=["web_search"],
+                )
+            )
         return evidence
 
     async def _fetch_industry_reports(self, query: str) -> list[EvidenceItem]:
@@ -204,17 +208,19 @@ class IntelligenceService:
         # 本番環境では Statista, Gartner, etc. API を呼び出す
         evidence = []
         if "market" in query.lower() or "product" in query.lower():
-            evidence.append(EvidenceItem(
-                evidence_id=f"ev-{uuid4().hex[:12]}",
-                url="https://reports.example.com/market-analysis",
-                title="Market Size Analysis 2026",
-                publisher="Industry Research Institute",
-                snippet="The global market is expected to reach...",
-                summary="Market size and growth projections",
-                retrieved_at=datetime.utcnow(),
-                reliability=EvidenceReliability.HIGH,
-                tags=["industry_report", "market_size"],
-            ))
+            evidence.append(
+                EvidenceItem(
+                    evidence_id=f"ev-{uuid4().hex[:12]}",
+                    url="https://reports.example.com/market-analysis",
+                    title="Market Size Analysis 2026",
+                    publisher="Industry Research Institute",
+                    snippet="The global market is expected to reach...",
+                    summary="Market size and growth projections",
+                    retrieved_at=datetime.utcnow(),
+                    reliability=EvidenceReliability.HIGH,
+                    tags=["industry_report", "market_size"],
+                )
+            )
         return evidence
 
     def _deduplicate(self, evidence: list[EvidenceItem]) -> list[EvidenceItem]:
@@ -298,9 +304,7 @@ class IntelligenceService:
 
         return domain_scores.get("default", 0.50)
 
-    def _get_freshness_factor(
-        self, age_days: int, freshness_decay: dict[str, float]
-    ) -> float:
+    def _get_freshness_factor(self, age_days: int, freshness_decay: dict[str, float]) -> float:
         """鮮度減衰係数を取得.
 
         Args:
@@ -320,9 +324,7 @@ class IntelligenceService:
             return freshness_decay.get("days_365", 0.5)
         return freshness_decay.get("older", 0.3)
 
-    def _score_reliability_fallback(
-        self, evidence: list[EvidenceItem]
-    ) -> list[EvidenceItem]:
+    def _score_reliability_fallback(self, evidence: list[EvidenceItem]) -> list[EvidenceItem]:
         """フォールバック用の簡易スコアリング（v1 互換）."""
         high_domains = {".gov", ".edu", ".ac.jp", "reuters.com", "bloomberg.com", "nikkei.com"}
 
@@ -364,4 +366,3 @@ __all__ = [
     "IntelligenceService",
     "get_intelligence_service",
 ]
-

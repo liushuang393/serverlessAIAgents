@@ -1,13 +1,10 @@
 """SkillRuntime のテスト - シェルスクリプト対応."""
 
-import json
 import stat
 from pathlib import Path
 
-import pytest
-
-from agentflow.skills.core.base import Skill, SkillMetadata
-from agentflow.skills.core.runtime import ScriptResult, SkillRuntime
+from agentflow.skills.core.base import Skill
+from agentflow.skills.core.runtime import SkillRuntime
 
 
 def _make_skill(tmp_path: Path, scripts: dict[str, str]) -> Skill:
@@ -48,10 +45,13 @@ class TestResolveScriptPath:
 
     def test_py_preferred_over_sh(self, tmp_path: Path) -> None:
         """.py is checked before .sh when both exist."""
-        skill = _make_skill(tmp_path, {
-            "run.py": "def run(d): return d",
-            "run.sh": "#!/bin/bash\necho hi",
-        })
+        skill = _make_skill(
+            tmp_path,
+            {
+                "run.py": "def run(d): return d",
+                "run.sh": "#!/bin/bash\necho hi",
+            },
+        )
         runtime = SkillRuntime()
         path = runtime._resolve_script_path(skill, "run")
         assert path is not None
@@ -77,22 +77,28 @@ class TestListScripts:
 
     def test_lists_both_py_and_sh(self, tmp_path: Path) -> None:
         """.py と .sh の両方がリストされること."""
-        skill = _make_skill(tmp_path, {
-            "generate.py": "def generate(d): pass",
-            "setup.sh": "#!/bin/bash\necho setup",
-            "_internal.py": "# private",
-        })
+        skill = _make_skill(
+            tmp_path,
+            {
+                "generate.py": "def generate(d): pass",
+                "setup.sh": "#!/bin/bash\necho setup",
+                "_internal.py": "# private",
+            },
+        )
         runtime = SkillRuntime()
         scripts = runtime.list_scripts(skill)
         assert sorted(scripts) == ["generate", "setup"]
 
     def test_excludes_other_extensions(self, tmp_path: Path) -> None:
         """Other extensions are excluded."""
-        skill = _make_skill(tmp_path, {
-            "run.py": "def run(d): pass",
-            "data.json": "{}",
-            "notes.txt": "text",
-        })
+        skill = _make_skill(
+            tmp_path,
+            {
+                "run.py": "def run(d): pass",
+                "data.json": "{}",
+                "notes.txt": "text",
+            },
+        )
         runtime = SkillRuntime()
         scripts = runtime.list_scripts(skill)
         assert scripts == ["run"]
@@ -103,9 +109,12 @@ class TestExecuteShellScript:
 
     async def test_simple_echo_script(self, tmp_path: Path) -> None:
         """Simple shell script that outputs JSON."""
-        skill = _make_skill(tmp_path, {
-            "echo_json.sh": '#!/bin/bash\necho \'{"result": "ok"}\'',
-        })
+        skill = _make_skill(
+            tmp_path,
+            {
+                "echo_json.sh": '#!/bin/bash\necho \'{"result": "ok"}\'',
+            },
+        )
         runtime = SkillRuntime()
         result = await runtime._execute_shell_script(
             skill,
@@ -131,9 +140,12 @@ class TestExecuteShellScript:
 
     async def test_script_failure(self, tmp_path: Path) -> None:
         """Non-zero exit code marks result as failed."""
-        skill = _make_skill(tmp_path, {
-            "fail.sh": "#!/bin/bash\necho 'error msg' >&2\nexit 1",
-        })
+        skill = _make_skill(
+            tmp_path,
+            {
+                "fail.sh": "#!/bin/bash\necho 'error msg' >&2\nexit 1",
+            },
+        )
         runtime = SkillRuntime()
         result = await runtime._execute_shell_script(
             skill,
@@ -146,9 +158,12 @@ class TestExecuteShellScript:
 
     async def test_non_json_stdout(self, tmp_path: Path) -> None:
         """Non-JSON stdout is captured as raw output."""
-        skill = _make_skill(tmp_path, {
-            "text.sh": '#!/bin/bash\necho "plain text"',
-        })
+        skill = _make_skill(
+            tmp_path,
+            {
+                "text.sh": '#!/bin/bash\necho "plain text"',
+            },
+        )
         runtime = SkillRuntime()
         result = await runtime._execute_shell_script(
             skill,
@@ -164,9 +179,12 @@ class TestExecuteScriptRouting:
 
     async def test_routes_sh_to_shell_executor(self, tmp_path: Path) -> None:
         """Shell scripts are routed through _execute_shell_script."""
-        skill = _make_skill(tmp_path, {
-            "greet.sh": '#!/bin/bash\necho \'{"greeting": "hello"}\'',
-        })
+        skill = _make_skill(
+            tmp_path,
+            {
+                "greet.sh": '#!/bin/bash\necho \'{"greeting": "hello"}\'',
+            },
+        )
         runtime = SkillRuntime()
         result = await runtime.execute_script(skill, "greet", {})
         assert result.success is True
@@ -174,9 +192,12 @@ class TestExecuteScriptRouting:
 
     async def test_routes_py_to_direct_executor(self, tmp_path: Path) -> None:
         """Python scripts are routed through _execute_directly."""
-        skill = _make_skill(tmp_path, {
-            "add.py": "def add(data):\n    return {'sum': data['a'] + data['b']}",
-        })
+        skill = _make_skill(
+            tmp_path,
+            {
+                "add.py": "def add(data):\n    return {'sum': data['a'] + data['b']}",
+            },
+        )
         runtime = SkillRuntime()
         result = await runtime.execute_script(skill, "add", {"a": 1, "b": 2})
         assert result.success is True

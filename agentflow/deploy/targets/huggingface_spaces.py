@@ -151,22 +151,39 @@ Deployed with AgentFlow Framework.
         """設定フィールドを取得."""
         return [
             ConfigField(
-                name="hf_token", label="HF Token", type="password",
-                required=True, description="Hugging Face API トークン", group="credentials",
+                name="hf_token",
+                label="HF Token",
+                type="password",
+                required=True,
+                description="Hugging Face API トークン",
+                group="credentials",
             ),
             ConfigField(
-                name="space_name", label="Space Name", type="string",
-                required=True, placeholder="username/my-space", group="settings",
+                name="space_name",
+                label="Space Name",
+                type="string",
+                required=True,
+                placeholder="username/my-space",
+                group="settings",
             ),
             ConfigField(
-                name="sdk", label="SDK", type="select",
-                required=False, default="gradio",
+                name="sdk",
+                label="SDK",
+                type="select",
+                required=False,
+                default="gradio",
                 options=["gradio", "streamlit", "docker", "static"],
-                description="Space SDK タイプ", group="settings",
+                description="Space SDK タイプ",
+                group="settings",
             ),
             ConfigField(
-                name="private", label="Private", type="boolean",
-                required=False, default=False, description="プライベート Space", group="settings",
+                name="private",
+                label="Private",
+                type="boolean",
+                required=False,
+                default=False,
+                description="プライベート Space",
+                group="settings",
             ),
         ]
 
@@ -181,4 +198,3 @@ Deployed with AgentFlow Framework.
 
 
 __all__ = ["HuggingFaceSpacesTarget"]
-

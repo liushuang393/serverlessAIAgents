@@ -11,6 +11,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+
 from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
     DesignBriefInput,
     GlobalStyle,
@@ -124,9 +125,7 @@ class TestSingleImageGeneration:
         # PNGマジックバイト検証
         assert image_bytes[:8] == _PNG_MAGIC, "PNG形式ではない"
         # 最小サイズ検証 (1KB以上)
-        assert len(image_bytes) > _MIN_IMAGE_SIZE, (
-            f"画像が小さすぎる: {len(image_bytes)} bytes"
-        )
+        assert len(image_bytes) > _MIN_IMAGE_SIZE, f"画像が小さすぎる: {len(image_bytes)} bytes"
 
         # ローカル保存
         output_path = e2e_output_dir / "hero.png"

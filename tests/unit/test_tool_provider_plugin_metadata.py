@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ToolProvider の plugin metadata テスト."""
 
 from __future__ import annotations

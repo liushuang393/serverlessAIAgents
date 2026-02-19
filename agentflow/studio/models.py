@@ -157,4 +157,3 @@ class PublishDeployResponse(BaseModel):
     url: str | None = Field(None, description="デプロイ URL")
     logs: list[str] = Field(default_factory=list, description="デプロイログ")
     error: str | None = Field(None, description="エラーメッセージ")
-

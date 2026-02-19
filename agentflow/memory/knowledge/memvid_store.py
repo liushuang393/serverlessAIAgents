@@ -35,8 +35,8 @@ _memvid_create: Any = None
 _memvid_use: Any = None
 
 try:
-    from memvid_sdk import create as memvid_create  # type: ignore[import-not-found]
-    from memvid_sdk import use as memvid_use  # type: ignore[import-not-found]
+    from memvid_sdk import create as memvid_create
+    from memvid_sdk import use as memvid_use
 
     _memvid_create = memvid_create
     _memvid_use = memvid_use
@@ -79,10 +79,7 @@ class MemvidKnowledgeStore:
             auto_save: 自動保存を有効化（disconnect時にsealを呼ぶ）
         """
         if not _MEMVID_AVAILABLE:
-            msg = (
-                "memvid-sdk is not installed. "
-                "Install with: pip install memvid-sdk"
-            )
+            msg = "memvid-sdk is not installed. Install with: pip install memvid-sdk"
             raise ImportError(msg)
 
         self._file_path = Path(file_path)
@@ -172,20 +169,22 @@ class MemvidKnowledgeStore:
             if not entry.id:
                 entry.id = str(uuid.uuid4())
 
-            documents.append({
-                "title": entry.title,
-                "label": entry.source.value,
-                "text": entry.body,
-                "metadata": {
-                    "id": entry.id,
-                    "tags": entry.tags,
-                    "source_id": entry.source_id,
-                    "timestamp": entry.timestamp.isoformat(),
-                    "importance": entry.importance,
-                    "access_count": entry.access_count,
-                    **entry.metadata,
-                },
-            })
+            documents.append(
+                {
+                    "title": entry.title,
+                    "label": entry.source.value,
+                    "text": entry.body,
+                    "metadata": {
+                        "id": entry.id,
+                        "tags": entry.tags,
+                        "source_id": entry.source_id,
+                        "timestamp": entry.timestamp.isoformat(),
+                        "importance": entry.importance,
+                        "access_count": entry.access_count,
+                        **entry.metadata,
+                    },
+                }
+            )
             self._entries[entry.id] = entry
             ids.append(entry.id)
 
@@ -260,11 +259,13 @@ class MemvidKnowledgeStore:
                 continue
 
             entry.record_access()
-            results.append(SearchResult(
-                entry=entry,
-                score=score,
-                search_type=effective_type,
-            ))
+            results.append(
+                SearchResult(
+                    entry=entry,
+                    score=score,
+                    search_type=effective_type,
+                )
+            )
 
             if len(results) >= top_k:
                 break
@@ -389,4 +390,3 @@ class MemvidKnowledgeStore:
         if not self._is_connected:
             msg = "Store is not connected. Call connect() first."
             raise RuntimeError(msg)
-

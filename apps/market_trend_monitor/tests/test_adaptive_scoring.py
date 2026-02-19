@@ -6,10 +6,7 @@ AdaptiveScoringService のテスト。
 
 from __future__ import annotations
 
-from datetime import datetime
-
 import pytest
-
 from apps.market_trend_monitor.backend.models import PredictionOutcome, PredictionReview
 from apps.market_trend_monitor.backend.services.adaptive_scoring_service import (
     AdaptiveScoringService,

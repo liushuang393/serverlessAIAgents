@@ -112,15 +112,17 @@ class DeepAgentAdapter:
 JSON形式で回答:"""
 
         try:
-            response = await self._llm.chat([
-                {"role": "system", "content": "あなたは意思決定分析の専門家です。"},
-                {"role": "user", "content": prompt},
-            ], response_format={"type": "json_object"})
+            response = await self._llm.chat(
+                [
+                    {"role": "system", "content": "あなたは意思決定分析の専門家です。"},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+            )
 
             import json
-            data = json.loads(
-                response.content if hasattr(response, "content") else str(response)
-            )
+
+            data = json.loads(response.content if hasattr(response, "content") else str(response))
 
             return CognitiveAnalysis(
                 intent=data.get("intent", question),
@@ -267,10 +269,7 @@ JSON形式で回答:"""
         """
         if not self._llm:
             # ルールベース簡易評価
-            has_all_sections = all(
-                key in results
-                for key in ["dao", "fa", "shu", "qi"]
-            )
+            has_all_sections = all(key in results for key in ["dao", "fa", "shu", "qi"])
             score = 80.0 if has_all_sections else 50.0
 
             return QualityReview(
@@ -309,15 +308,17 @@ JSON形式で回答:
 }}"""
 
         try:
-            response = await self._llm.chat([
-                {"role": "system", "content": "あなたは意思決定品質評価の専門家です。"},
-                {"role": "user", "content": prompt},
-            ], response_format={"type": "json_object"})
+            response = await self._llm.chat(
+                [
+                    {"role": "system", "content": "あなたは意思決定品質評価の専門家です。"},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+            )
 
             import json
-            data = json.loads(
-                response.content if hasattr(response, "content") else str(response)
-            )
+
+            data = json.loads(response.content if hasattr(response, "content") else str(response))
 
             return QualityReview(
                 is_acceptable=data.get("is_acceptable", False),
@@ -349,4 +350,3 @@ JSON形式で回答:
 
 
 __all__ = ["DeepAgentAdapter"]
-

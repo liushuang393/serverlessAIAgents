@@ -288,9 +288,7 @@ class AuthMiddleware:
             import jwt
 
             now = datetime.now(UTC)
-            expire = now + timedelta(
-                minutes=expire_minutes or self._jwt_config.expire_minutes
-            )
+            expire = now + timedelta(minutes=expire_minutes or self._jwt_config.expire_minutes)
 
             payload = {
                 "sub": user_id,

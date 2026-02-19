@@ -7,13 +7,12 @@ AgentFlowの get_embedding() / get_vectordb() を使用します。
 from __future__ import annotations
 
 import logging
-import uuid
 from typing import Any
-
-from agentflow import get_embedding, get_vectordb
 
 from apps.market_trend_monitor.backend.config import config
 from apps.market_trend_monitor.backend.models import Article
+
+from agentflow import get_embedding, get_vectordb
 
 
 class SemanticSearchService:
@@ -68,12 +67,14 @@ class SemanticSearchService:
             documents=[text],
             ids=[doc_id],
             embeddings=[embedding],
-            metadatas=[{
-                "title": article.title,
-                "url": article.url,
-                "source": article.source.value,
-                "published_at": article.published_at.isoformat(),
-            }],
+            metadatas=[
+                {
+                    "title": article.title,
+                    "url": article.url,
+                    "source": article.source.value,
+                    "published_at": article.published_at.isoformat(),
+                }
+            ],
         )
 
         self._logger.debug("記事をインデックスに登録: %s", doc_id)
@@ -96,7 +97,7 @@ class SemanticSearchService:
 
         all_ids: list[str] = []
         for i in range(0, len(articles), batch_size):
-            batch = articles[i:i + batch_size]
+            batch = articles[i : i + batch_size]
             texts = [f"{a.title}\n{a.content}" for a in batch]
             embeddings = await self._embedding.embed_batch(texts)
             ids = [a.id for a in batch]

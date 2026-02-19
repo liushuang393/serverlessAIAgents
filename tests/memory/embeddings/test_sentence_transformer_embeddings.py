@@ -1,18 +1,24 @@
 """SentenceTransformerEmbeddingsのテスト."""
 
-import asyncio
 from unittest.mock import MagicMock, patch
 
-import numpy as np
 import pytest
 
-from agentflow.memory.embeddings.sentence_transformer_embeddings import SentenceTransformerEmbeddings
+# オプション依存: numpy / sentence_transformers が無い環境ではスキップ
+np = pytest.importorskip("numpy")
+pytest.importorskip("sentence_transformers")
+
+from agentflow.memory.embeddings.sentence_transformer_embeddings import (
+    SentenceTransformerEmbeddings,
+)
 
 
 @pytest.fixture
 def sentence_transformer_embeddings():
     """SentenceTransformerEmbeddingsのフィクスチャ."""
-    with patch("agentflow.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer") as mock_st:
+    with patch(
+        "agentflow.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer"
+    ) as mock_st:
         mock_model = MagicMock()
         mock_model.get_sentence_embedding_dimension.return_value = 384
         mock_st.return_value = mock_model
@@ -74,7 +80,9 @@ async def test_embed_batch_all_empty(sentence_transformer_embeddings):
 @pytest.mark.asyncio
 async def test_embed_text_error(sentence_transformer_embeddings):
     """エンコードエラーテスト."""
-    sentence_transformer_embeddings._model.encode = MagicMock(side_effect=Exception("Encoding Error"))
+    sentence_transformer_embeddings._model.encode = MagicMock(
+        side_effect=Exception("Encoding Error")
+    )
 
     with pytest.raises(RuntimeError, match="Failed to generate embedding"):
         await sentence_transformer_embeddings.embed_text("テストテキスト")
@@ -92,17 +100,21 @@ def test_get_model_name(sentence_transformer_embeddings):
 
 def test_init_without_sentence_transformers():
     """Sentence Transformersパッケージなしの初期化テスト."""
-    with patch(
-        "agentflow.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer",
-        side_effect=ImportError,
+    with (
+        patch(
+            "agentflow.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer",
+            side_effect=ImportError,
+        ),
+        pytest.raises(ImportError, match="sentence-transformers package is required"),
     ):
-        with pytest.raises(ImportError, match="sentence-transformers package is required"):
-            SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+        SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 
 
 def test_init_with_different_models():
     """異なるモデルでの初期化テスト."""
-    with patch("agentflow.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer") as mock_st:
+    with patch(
+        "agentflow.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer"
+    ) as mock_st:
         # all-MiniLM-L6-v2
         mock_model1 = MagicMock()
         mock_model1.get_sentence_embedding_dimension.return_value = 384
@@ -116,4 +128,3 @@ def test_init_with_different_models():
         mock_st.return_value = mock_model2
         emb2 = SentenceTransformerEmbeddings(model_name="all-mpnet-base-v2")
         assert emb2.get_dimension() == 768
-

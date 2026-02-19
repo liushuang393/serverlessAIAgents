@@ -1,5 +1,7 @@
 import httpx
-from agentflow.security.oauth2_provider import OAuth2Provider, OAuth2Token, ExternalIdentity
+
+from agentflow.security.oauth2_provider import ExternalIdentity, OAuth2Provider, OAuth2Token
+
 
 class GoogleOAuth2Provider(OAuth2Provider):
     """Google OAuth2 プロバイダー."""

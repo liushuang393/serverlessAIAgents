@@ -1,12 +1,12 @@
 """Phase 3 Backend API 全エンドポイント検証スクリプト."""
+
 import asyncio
 import sys
 from pathlib import Path
 
+
 # プロジェクトルートをパスに追加
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from httpx import ASGITransport, AsyncClient
 
 from apps.platform.main import create_app
 from apps.platform.routers.agents import init_agent_services
@@ -18,6 +18,8 @@ from apps.platform.services.app_discovery import AppDiscoveryService
 from apps.platform.services.app_lifecycle import AppLifecycleManager
 from apps.platform.services.rag_overview import RAGOverviewService
 from apps.platform.services.skill_catalog import SkillCatalogService
+from httpx import ASGITransport, AsyncClient
+
 
 PASS = 0
 FAIL = 0
@@ -25,7 +27,7 @@ FAIL = 0
 
 def check(label: str, condition: bool) -> None:
     """テスト結果を判定・表示."""
-    global PASS, FAIL  # noqa: PLW0603
+    global PASS, FAIL
     if condition:
         PASS += 1
         print(f"  ✅ {label}")
@@ -65,13 +67,22 @@ async def main() -> None:
         check(f"GET /api/agents/stats -> 200, {r.json()}", r.status_code == 200)
 
         r = await c.get("/api/agents/capabilities")
-        check(f"GET /api/agents/capabilities -> 200, total={r.json().get('total')}", r.status_code == 200)
+        check(
+            f"GET /api/agents/capabilities -> 200, total={r.json().get('total')}",
+            r.status_code == 200,
+        )
 
         r = await c.get("/api/agents/by-app")
-        check(f"GET /api/agents/by-app -> 200, apps={r.json().get('total_apps')}", r.status_code == 200)
+        check(
+            f"GET /api/agents/by-app -> 200, apps={r.json().get('total_apps')}",
+            r.status_code == 200,
+        )
 
         r = await c.get("/api/agents/search?capability=rag")
-        check(f"GET /api/agents/search?cap=rag -> 200, results={r.json().get('total')}", r.status_code == 200)
+        check(
+            f"GET /api/agents/search?cap=rag -> 200, results={r.json().get('total')}",
+            r.status_code == 200,
+        )
 
         # --- Skills (5) ---
         print("\n=== Skills API ===")
@@ -86,7 +97,7 @@ async def main() -> None:
         check(f"GET /api/skills/tags -> 200, total={r.json().get('total')}", r.status_code == 200)
 
         r = await c.get("/api/skills/search?tag=core-skill")
-        check(f"GET /api/skills/search?tag=core-skill -> 200", r.status_code == 200)
+        check("GET /api/skills/search?tag=core-skill -> 200", r.status_code == 200)
 
         if d.get("total", 0) > 0:
             name = d["skills"][0]["name"]
@@ -98,10 +109,15 @@ async def main() -> None:
         # --- RAG (5) ---
         print("\n=== RAG API ===")
         r = await c.get("/api/rag/overview")
-        check(f"GET /api/rag/overview -> 200, strats={len(r.json().get('chunk_strategies', []))}", r.status_code == 200)
+        check(
+            f"GET /api/rag/overview -> 200, strats={len(r.json().get('chunk_strategies', []))}",
+            r.status_code == 200,
+        )
 
         r = await c.get("/api/rag/strategies")
-        check(f"GET /api/rag/strategies -> 200, total={r.json().get('total')}", r.status_code == 200)
+        check(
+            f"GET /api/rag/strategies -> 200, total={r.json().get('total')}", r.status_code == 200
+        )
 
         r = await c.get("/api/rag/rerankers")
         check(f"GET /api/rag/rerankers -> 200, total={r.json().get('total')}", r.status_code == 200)
@@ -112,7 +128,7 @@ async def main() -> None:
         r = await c.get("/api/rag/stats")
         check(f"GET /api/rag/stats -> 200, {r.json()}", r.status_code == 200)
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print(f"Result: {PASS} passed, {FAIL} failed / {PASS + FAIL} total")
     if FAIL > 0:
         sys.exit(1)
@@ -121,4 +137,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-

@@ -47,9 +47,7 @@ class UCPSecurityConfig(BaseModel):
 class UCPConfig(BaseModel):
     """UCP設定."""
 
-    endpoints: list[UCPEndpoint] = Field(
-        default_factory=list, description="エンドポイントリスト"
-    )
+    endpoints: list[UCPEndpoint] = Field(default_factory=list, description="エンドポイントリスト")
     default_endpoint: str | None = Field(default=None, description="デフォルトエンドポイント")
     security: UCPSecurityConfig = Field(
         default_factory=UCPSecurityConfig, description="セキュリティ設定"
@@ -115,4 +113,3 @@ class UCPConfig(BaseModel):
             default_endpoint="default" if endpoints else None,
             security=security,
         )
-

@@ -8,6 +8,7 @@
 
 作成日: 2026-01-18
 """
+
 from __future__ import annotations
 
 import os
@@ -150,4 +151,3 @@ def reload_config() -> DecisionWeightsConfig:
 def get_config() -> DecisionWeightsConfig:
     """設定を取得（キャッシュ利用）."""
     return load_config()
-

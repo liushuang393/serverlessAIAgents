@@ -1,28 +1,46 @@
 """Pytest configuration and shared fixtures."""
 
+from __future__ import annotations
+
+import pathlib
+from pathlib import Path
+from unittest.mock import patch
+
 import pytest
+
+# Phase 系は PowerShell 依存のスタンドアロンスクリプトのため収集から除外（Linux/WSL では powershell が無い）
+# Windows では python tests/test_phase1_coverage.py のように直接実行可
+collect_ignore_glob = [
+    "test_phase1_coverage.py",
+    "test_phase2_task*.py",
+]
 
 from agentflow.core.engine import AgentFlowEngine
 from agentflow.core.types import WorkflowConfig
 
 
+@pytest.fixture(autouse=True)
+def _redirect_home_to_tmp(tmp_path: Path) -> None:  # type: ignore[misc]
+    """全テストで Path.home() を一時ディレクトリにリダイレクトする。
+
+    これにより ~/.agentflow など、ホームディレクトリへの書き込みを
+    サンドボックスや CI 環境でも安全に実行できる。
+    """
+    fake_home = tmp_path / "home"
+    fake_home.mkdir(parents=True, exist_ok=True)
+    with patch.object(pathlib.Path, "home", staticmethod(lambda: fake_home)):
+        yield
+
+
 @pytest.fixture
 def engine() -> AgentFlowEngine:
-    """Create a test AgentFlow engine instance.
-
-    Returns:
-        AgentFlowEngine instance for testing.
-    """
+    """テスト用 AgentFlowEngine インスタンスを生成する。"""
     return AgentFlowEngine()
 
 
 @pytest.fixture
 def sample_workflow() -> WorkflowConfig:
-    """Create a sample workflow configuration.
-
-    Returns:
-        WorkflowConfig instance for testing.
-    """
+    """テスト用サンプルワークフロー設定を生成する。"""
     return WorkflowConfig(
         workflow_id="test-workflow",
         name="Test Workflow",

@@ -135,10 +135,7 @@ class BM25:
         Returns:
             [(doc_idx, score), ...]
         """
-        scores = [
-            (i, self.score(query_tokens, i))
-            for i in range(len(self.corpus))
-        ]
+        scores = [(i, self.score(query_tokens, i)) for i in range(len(self.corpus))]
         scores.sort(key=lambda x: x[1], reverse=True)
         return scores[:k]
 
@@ -385,4 +382,3 @@ __all__ = [
     "FewshotManager",
     "FewshotManagerConfig",
 ]
-

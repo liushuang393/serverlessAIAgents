@@ -73,4 +73,3 @@ class TestSkillsMountCommand:
             assert first.exit_code == 0
             assert second.exit_code != 0
             assert "Target already exists" in second.output
-

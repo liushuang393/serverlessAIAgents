@@ -25,8 +25,10 @@ logger = logging.getLogger("decision_api.knowledge")
 # スキーマ定義
 # ========================================
 
+
 class KnowledgeDocument(BaseModel):
     """知識ドキュメント追加リクエスト."""
+
     content: str = Field(..., min_length=10, max_length=5000, description="ドキュメント内容")
     topic: str = Field(default="default", description="トピック分類")
     metadata: dict[str, Any] = Field(default_factory=dict, description="メタデータ")
@@ -34,6 +36,7 @@ class KnowledgeDocument(BaseModel):
 
 class KnowledgeListResponse(BaseModel):
     """知識一覧レスポンス."""
+
     agent: str
     agent_name: str
     documents: list[dict[str, Any]]
@@ -42,6 +45,7 @@ class KnowledgeListResponse(BaseModel):
 
 class KnowledgeAddResponse(BaseModel):
     """知識追加レスポンス."""
+
     status: str = "success"
     doc_id: str
     agent: str
@@ -50,6 +54,7 @@ class KnowledgeAddResponse(BaseModel):
 
 class KnowledgeDeleteResponse(BaseModel):
     """知識削除レスポンス."""
+
     status: str = "success"
     doc_id: str
     agent: str
@@ -60,6 +65,7 @@ class KnowledgeDeleteResponse(BaseModel):
 # Agent取得用依存関係（遅延インポート）
 # ========================================
 
+
 async def _get_agent(agent_type: str) -> Any:
     """AgentTypeに応じたAgentインスタンスを取得.
 
@@ -67,6 +73,7 @@ async def _get_agent(agent_type: str) -> Any:
     初期化されていない場合は自動的に初期化を行う。
     """
     from apps.decision_governance_engine.routers.decision import get_engine
+
     engine = get_engine()
 
     # AgentRegistry が初期化されていない場合は初期化
@@ -83,6 +90,7 @@ async def _get_agent(agent_type: str) -> Any:
 # ========================================
 # 通用路由工厂
 # ========================================
+
 
 def create_knowledge_router(
     agent_type: str,
@@ -176,4 +184,3 @@ def create_knowledge_router(
 router = APIRouter()
 router.include_router(create_knowledge_router("shu", "術", "実行計画"))
 router.include_router(create_knowledge_router("qi", "器", "技術実装"))
-

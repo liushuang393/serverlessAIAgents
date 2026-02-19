@@ -9,7 +9,6 @@ from __future__ import annotations
 import math
 
 import pytest
-
 from apps.market_trend_monitor.backend.services.bayesian_confidence_service import (
     BayesianConfidenceService,
     BayesianState,

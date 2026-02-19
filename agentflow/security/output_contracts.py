@@ -43,22 +43,22 @@ from pydantic import BaseModel, Field
 class EvidenceType(str, Enum):
     """根拠タイプ."""
 
-    TOOL_RESULT = "tool_result"     # ツール実行結果
-    RAG_CITATION = "rag_citation"   # RAG検索からの引用
-    USER_INPUT = "user_input"       # ユーザー入力
-    CALCULATION = "calculation"     # 計算結果
-    SYSTEM_DATA = "system_data"     # システムデータ
-    EXTERNAL_API = "external_api"   # 外部API
+    TOOL_RESULT = "tool_result"  # ツール実行結果
+    RAG_CITATION = "rag_citation"  # RAG検索からの引用
+    USER_INPUT = "user_input"  # ユーザー入力
+    CALCULATION = "calculation"  # 計算結果
+    SYSTEM_DATA = "system_data"  # システムデータ
+    EXTERNAL_API = "external_api"  # 外部API
 
 
 class FallbackAction(str, Enum):
     """フォールバックアクション."""
 
-    REJECT = "reject"                       # 出力を拒否
+    REJECT = "reject"  # 出力を拒否
     REQUEST_HUMAN_REVIEW = "request_human_review"  # 人間レビュー要求
-    USE_DEFAULT = "use_default"             # デフォルト値を使用
-    RETRY = "retry"                         # 再試行
-    PARTIAL_ACCEPT = "partial_accept"       # 検証通過部分のみ受入
+    USE_DEFAULT = "use_default"  # デフォルト値を使用
+    RETRY = "retry"  # 再試行
+    PARTIAL_ACCEPT = "partial_accept"  # 検証通過部分のみ受入
 
 
 class Evidence(BaseModel):
@@ -182,7 +182,9 @@ class ValidationResult(BaseModel):
     is_valid: bool = Field(default=True, description="検証成功か")
     quality_score: float = Field(default=1.0, ge=0.0, le=1.0, description="品質スコア")
     missing_fields: list[str] = Field(default_factory=list, description="欠落フィールド")
-    invalid_fields: list[dict[str, Any]] = Field(default_factory=list, description="無効フィールド詳細")
+    invalid_fields: list[dict[str, Any]] = Field(
+        default_factory=list, description="無効フィールド詳細"
+    )
     missing_evidence: list[str] = Field(default_factory=list, description="欠落根拠")
     insufficient_evidence: list[dict[str, Any]] = Field(
         default_factory=list,
@@ -334,12 +336,14 @@ class ContractValidator:
             # 型チェック
             expected_type = self.TYPE_CHECKS.get(field.field_type)
             if expected_type and not isinstance(value, expected_type):
-                result.invalid_fields.append({
-                    "field": field.name,
-                    "expected_type": field.field_type,
-                    "actual_type": type(value).__name__,
-                    "value": str(value)[:100],
-                })
+                result.invalid_fields.append(
+                    {
+                        "field": field.name,
+                        "expected_type": field.field_type,
+                        "actual_type": type(value).__name__,
+                        "value": str(value)[:100],
+                    }
+                )
                 result.errors.append(
                     f"フィールド '{field.name}' の型が不正です"
                     f"（期待: {field.field_type}, 実際: {type(value).__name__}）"
@@ -360,24 +364,28 @@ class ContractValidator:
 
         # 最小値
         if "min" in rules and isinstance(value, (int, float)) and value < rules["min"]:
-            result.invalid_fields.append({
-                "field": field.name,
-                "rule": "min",
-                "expected": rules["min"],
-                "actual": value,
-            })
+            result.invalid_fields.append(
+                {
+                    "field": field.name,
+                    "rule": "min",
+                    "expected": rules["min"],
+                    "actual": value,
+                }
+            )
             result.errors.append(
                 f"フィールド '{field.name}' が最小値({rules['min']})を下回っています"
             )
 
         # 最大値
         if "max" in rules and isinstance(value, (int, float)) and value > rules["max"]:
-            result.invalid_fields.append({
-                "field": field.name,
-                "rule": "max",
-                "expected": rules["max"],
-                "actual": value,
-            })
+            result.invalid_fields.append(
+                {
+                    "field": field.name,
+                    "rule": "max",
+                    "expected": rules["max"],
+                    "actual": value,
+                }
+            )
             result.errors.append(
                 f"フィールド '{field.name}' が最大値({rules['max']})を超えています"
             )
@@ -385,27 +393,27 @@ class ContractValidator:
         # 正規表現パターン
         if "pattern" in rules and isinstance(value, str):
             if not re.match(rules["pattern"], value):
-                result.invalid_fields.append({
-                    "field": field.name,
-                    "rule": "pattern",
-                    "pattern": rules["pattern"],
-                    "value": value[:100],
-                })
-                result.errors.append(
-                    f"フィールド '{field.name}' がパターンに一致しません"
+                result.invalid_fields.append(
+                    {
+                        "field": field.name,
+                        "rule": "pattern",
+                        "pattern": rules["pattern"],
+                        "value": value[:100],
+                    }
                 )
+                result.errors.append(f"フィールド '{field.name}' がパターンに一致しません")
 
         # 列挙値
         if "enum" in rules and value not in rules["enum"]:
-            result.invalid_fields.append({
-                "field": field.name,
-                "rule": "enum",
-                "allowed": rules["enum"],
-                "actual": value,
-            })
-            result.errors.append(
-                f"フィールド '{field.name}' が許可された値ではありません"
+            result.invalid_fields.append(
+                {
+                    "field": field.name,
+                    "rule": "enum",
+                    "allowed": rules["enum"],
+                    "actual": value,
+                }
             )
+            result.errors.append(f"フィールド '{field.name}' が許可された値ではありません")
 
         # 最小長
         if "min_length" in rules and isinstance(value, (str, list)):
@@ -420,7 +428,6 @@ class ContractValidator:
                 result.warnings.append(
                     f"フィールド '{field.name}' が最大長({rules['max_length']})を超えています"
                 )
-
 
     def _validate_evidence(
         self,
@@ -450,9 +457,7 @@ class ContractValidator:
 
             # 根拠がない場合は警告
             if not field_evidence:
-                result.warnings.append(
-                    f"フィールド '{rule.field}' に根拠がありません"
-                )
+                result.warnings.append(f"フィールド '{rule.field}' に根拠がありません")
                 continue
 
             # 各根拠を検証
@@ -466,13 +471,15 @@ class ContractValidator:
 
                 # 信頼度チェック
                 if ev.confidence < rule.min_confidence:
-                    result.insufficient_evidence.append({
-                        "field": rule.field,
-                        "evidence_type": ev.evidence_type.value,
-                        "source": ev.source,
-                        "confidence": ev.confidence,
-                        "required_confidence": rule.min_confidence,
-                    })
+                    result.insufficient_evidence.append(
+                        {
+                            "field": rule.field,
+                            "evidence_type": ev.evidence_type.value,
+                            "source": ev.source,
+                            "confidence": ev.confidence,
+                            "required_confidence": rule.min_confidence,
+                        }
+                    )
                     result.warnings.append(
                         f"フィールド '{rule.field}' の根拠信頼度({ev.confidence:.2f})が"
                         f"要求値({rule.min_confidence:.2f})を下回っています"

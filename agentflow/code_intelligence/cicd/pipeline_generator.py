@@ -68,9 +68,7 @@ class PipelineConfig:
     target_language: str
     source_dir: str = "./source"
     target_dir: str = "./target"
-    stages: list[PipelineStage] = field(
-        default_factory=lambda: list(PipelineStage)
-    )
+    stages: list[PipelineStage] = field(default_factory=lambda: list(PipelineStage))
     parallel_jobs: int = 4
     quality_threshold: float = 80.0
     test_coverage_threshold: float = 70.0

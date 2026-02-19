@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """成果物ストア.
 
 Agent 間通信を artifacts/ 配下の JSON/生成物に限定するための I/O ユーティリティ。
@@ -10,6 +9,7 @@ import asyncio
 import json
 from pathlib import Path
 from typing import Any
+
 
 _APP_ROOT = Path(__file__).resolve().parents[1]
 

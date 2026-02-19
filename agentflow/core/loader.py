@@ -91,8 +91,7 @@ class AgentLoader:
         """
         if ":" not in entry_point:
             msg = (
-                f"Invalid entry point format: {entry_point}. "
-                "Expected format: 'module.py:function'"
+                f"Invalid entry point format: {entry_point}. Expected format: 'module.py:function'"
             )
             raise AgentBlockValidationError(msg)
 

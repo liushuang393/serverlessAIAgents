@@ -3,32 +3,31 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
-
-from apps.faq_system.routers.agents import AgentType, _agent_cache
 from apps.faq_system.main import app
+from apps.faq_system.routers.agents import AgentType, _agent_cache
 
 
 @pytest.fixture
 def mock_agents(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     """各 Agent をモック化."""
     _agent_cache.clear()
-    
+
     mock_internal = AsyncMock()
     mock_internal.run.return_value = {"answer": "internal answer", "query_type": "internal_kb"}
-    
+
     mock_external = AsyncMock()
     mock_external.run.return_value = {"answer": "external answer", "query_type": "external_kb"}
-    
+
     mock_maintenance = AsyncMock()
     mock_maintenance.run.return_value = {"action": "full", "diffs": []}
-    
+
     mock_analytics = AsyncMock()
     mock_analytics.run.return_value = {"answer": "analytics answer", "sql": "SELECT *"}
-    
+
     mock_enhanced = AsyncMock()
     mock_enhanced.run.return_value = {"answer": "enhanced answer", "query_type": "faq"}
 
@@ -69,6 +68,7 @@ async def client(mock_auth: None) -> Any:
 from apps.faq_system.backend.auth.dependencies import require_auth
 from apps.faq_system.backend.auth.models import UserInfo
 
+
 async def mock_require_auth() -> UserInfo:
     return UserInfo(
         user_id="user-1",
@@ -78,6 +78,7 @@ async def mock_require_auth() -> UserInfo:
         department="IT",
         position="Developer",
     )
+
 
 @pytest.fixture
 def mock_auth(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -95,7 +96,7 @@ async def test_internal_kb_routing(client: httpx.AsyncClient, mock_agents: dict[
     assert response.status_code == 200
     data = response.json()
     assert data["answer"] == "internal answer"
-    
+
     # 呼び出し確認
     mock_agents["internal"].run.assert_called_once()
     call_args = mock_agents["internal"].run.call_args[0][0]
@@ -119,16 +120,12 @@ async def test_external_kb_routing(client: httpx.AsyncClient, mock_agents: dict[
 async def test_maintenance_routing(client: httpx.AsyncClient, mock_agents: dict[str, Any]) -> None:
     response = await client.post(
         "/api/agents/maintenance/analyze",
-        json={
-            "action": "diff",
-            "old_doc": "ver1",
-            "new_doc": "ver2"
-        },
+        json={"action": "diff", "old_doc": "ver1", "new_doc": "ver2"},
     )
     assert response.status_code == 200
     data = response.json()
     assert data["action"] == "full"  # モックの返り値
-    
+
     mock_agents["maintenance"].run.assert_called_once()
     call_args = mock_agents["maintenance"].run.call_args[0][0]
     assert call_args["action"] == "diff"
@@ -144,7 +141,7 @@ async def test_analytics_routing(client: httpx.AsyncClient, mock_agents: dict[st
     assert response.status_code == 200
     data = response.json()
     assert data["sql"] == "SELECT *"
-    
+
     mock_agents["analytics"].run.assert_called_once()
 
 
@@ -157,7 +154,7 @@ async def test_enhanced_faq_routing(client: httpx.AsyncClient, mock_agents: dict
     assert response.status_code == 200
     data = response.json()
     assert data["answer"] == "enhanced answer"
-    
+
     mock_agents["enhanced"].run.assert_called_once()
 
 
@@ -165,7 +162,7 @@ async def test_enhanced_faq_routing(client: httpx.AsyncClient, mock_agents: dict
 async def test_agent_error_handling(client: httpx.AsyncClient, mock_agents: dict[str, Any]) -> None:
     # エラーを発生させる
     mock_agents["internal"].run.side_effect = Exception("Agent internal error")
-    
+
     response = await client.post(
         "/api/agents/internal-kb/query",
         json={"question": "Error trigger"},

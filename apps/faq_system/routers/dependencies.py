@@ -16,6 +16,7 @@ from uuid import uuid4
 from apps.faq_system.backend.config import kb_registry
 from apps.faq_system.backend.services.chat_history_service import ChatHistoryService
 from apps.faq_system.backend.services.feedback_service import FeedbackService
+
 from agentflow.agents import (
     FAQAgent,
     FAQAgentConfig,
@@ -191,9 +192,6 @@ def get_artifact_path(artifact_id: str) -> Path | None:
 
 def invalidate_service_cache(*prefixes: str) -> None:
     """指定プレフィックスにマッチするサービスキャッシュを破棄."""
-    stale_keys = [
-        key for key in _services
-        if any(key.startswith(p) or key == p for p in prefixes)
-    ]
+    stale_keys = [key for key in _services if any(key.startswith(p) or key == p for p in prefixes)]
     for key in stale_keys:
         _services.pop(key, None)

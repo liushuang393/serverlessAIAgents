@@ -32,34 +32,84 @@ class ExecutionMode(str, Enum):
 # デフォルトのコマンドホワイトリスト（安全なコマンドのみ）
 DEFAULT_COMMAND_WHITELIST: list[str] = [
     # ファイル閲覧系
-    "ls", "cat", "head", "tail", "less", "more",
-    "find", "grep", "wc", "file", "stat",
+    "ls",
+    "cat",
+    "head",
+    "tail",
+    "less",
+    "more",
+    "find",
+    "grep",
+    "wc",
+    "file",
+    "stat",
     # ディレクトリ操作
-    "pwd", "cd", "mkdir",
+    "pwd",
+    "cd",
+    "mkdir",
     # テキスト処理
-    "echo", "printf", "sort", "uniq", "cut", "awk", "sed",
+    "echo",
+    "printf",
+    "sort",
+    "uniq",
+    "cut",
+    "awk",
+    "sed",
     # システム情報
-    "date", "whoami", "hostname", "uname", "env",
-    "df", "du", "free", "uptime", "ps",
+    "date",
+    "whoami",
+    "hostname",
+    "uname",
+    "env",
+    "df",
+    "du",
+    "free",
+    "uptime",
+    "ps",
     # 開発ツール
-    "python", "python3", "pip", "node", "npm", "git",
+    "python",
+    "python3",
+    "pip",
+    "node",
+    "npm",
+    "git",
     # ネットワーク（読み取りのみ）
-    "curl", "wget", "ping",
+    "curl",
+    "wget",
+    "ping",
 ]
 
 # 絶対禁止コマンド
 DEFAULT_COMMAND_BLACKLIST: list[str] = [
     # 危険なシステム操作
-    "rm", "rmdir", "dd", "mkfs", "fdisk",
+    "rm",
+    "rmdir",
+    "dd",
+    "mkfs",
+    "fdisk",
     # 権限昇格
-    "sudo", "su", "chmod", "chown", "chgrp",
+    "sudo",
+    "su",
+    "chmod",
+    "chown",
+    "chgrp",
     # システム制御
-    "shutdown", "reboot", "init", "systemctl",
-    "kill", "killall", "pkill",
+    "shutdown",
+    "reboot",
+    "init",
+    "systemctl",
+    "kill",
+    "killall",
+    "pkill",
     # ネットワーク変更
-    "iptables", "ip", "ifconfig", "route",
+    "iptables",
+    "ip",
+    "ifconfig",
+    "route",
     # 危険なシェル操作
-    "eval", "exec", "source",
+    "eval",
+    "exec",
+    "source",
 ]
 
 
@@ -99,7 +149,7 @@ class OSSkillConfig:
 
     def is_command_allowed(self, command: str) -> bool:
         """コマンドが許可されているか判定."""
-        base_cmd = command.split()[0] if command else ""
+        base_cmd = command.split(maxsplit=1)[0] if command else ""
         if base_cmd in self.command_blacklist:
             return False
         return base_cmd in self.command_whitelist
@@ -109,8 +159,7 @@ class OSSkillConfig:
         if not self.domain_whitelist:
             return False  # ホワイトリスト空の場合は全て拒否
         return any(
-            domain == allowed or domain.endswith(f".{allowed}")
-            for allowed in self.domain_whitelist
+            domain == allowed or domain.endswith(f".{allowed}") for allowed in self.domain_whitelist
         )
 
     def is_path_in_workspace(self, path: Path) -> bool:
@@ -135,4 +184,3 @@ class OSSkillConfig:
             "allow_delete": self.allow_delete,
             "require_human_confirmation": self.require_human_confirmation,
         }
-

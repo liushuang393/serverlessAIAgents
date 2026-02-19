@@ -77,19 +77,38 @@ class TestClassifyQuery:
     @pytest.mark.parametrize(
         "question",
         [
-            "你是谁", "你是什么", "你叫什么",
-            "あなたは誰ですか", "自己紹介してください",
-            "who are you", "What are you?",
-            "hello", "hi", "你好", "こんにちは", "おはよう",
-            "good morning", "hey there",
-            "ありがとう", "谢谢", "thanks", "thank you very much",
-            "何ができますか", "你能做什么", "what can you do",
-            "how are you", "元気ですか",
-            "OK", "はい", "yes",
+            "你是谁",
+            "你是什么",
+            "你叫什么",
+            "あなたは誰ですか",
+            "自己紹介してください",
+            "who are you",
+            "What are you?",
+            "hello",
+            "hi",
+            "你好",
+            "こんにちは",
+            "おはよう",
+            "good morning",
+            "hey there",
+            "ありがとう",
+            "谢谢",
+            "thanks",
+            "thank you very much",
+            "何ができますか",
+            "你能做什么",
+            "what can you do",
+            "how are you",
+            "元気ですか",
+            "OK",
+            "はい",
+            "yes",
         ],
     )
     async def test_chat_routing(
-        self, agent: FAQAgent, question: str,
+        self,
+        agent: FAQAgent,
+        question: str,
     ) -> None:
         """LLM classifies chat queries correctly."""
         agent._llm = _llm_mock("chat")
@@ -111,7 +130,9 @@ class TestClassifyQuery:
         ],
     )
     async def test_sales_material_routing(
-        self, agent: FAQAgent, question: str,
+        self,
+        agent: FAQAgent,
+        question: str,
     ) -> None:
         """LLM classifies sales-material queries correctly."""
         agent._llm = _llm_mock("sales_material")
@@ -132,7 +153,9 @@ class TestClassifyQuery:
         ],
     )
     async def test_sql_routing(
-        self, agent: FAQAgent, question: str,
+        self,
+        agent: FAQAgent,
+        question: str,
     ) -> None:
         """LLM classifies SQL/analytics queries correctly."""
         agent._llm = _llm_mock("sql")
@@ -153,7 +176,9 @@ class TestClassifyQuery:
         ],
     )
     async def test_faq_routing(
-        self, agent: FAQAgent, question: str,
+        self,
+        agent: FAQAgent,
+        question: str,
     ) -> None:
         """LLM classifies FAQ queries correctly."""
         agent._llm = _llm_mock("faq")

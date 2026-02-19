@@ -45,7 +45,7 @@ def get_dialect(url: str) -> str:
         >>> get_dialect("postgresql+asyncpg://localhost/db")
         'postgresql'
     """
-    scheme = url.split("://")[0] if "://" in url else url
+    scheme = url.split("://", maxsplit=1)[0] if "://" in url else url
     # "postgresql+asyncpg" → "postgresql"
     return scheme.split("+")[0]
 
@@ -65,7 +65,7 @@ def to_async_url(url: str) -> str:
         >>> to_async_url("postgresql://user:pass@host/db")
         'postgresql+asyncpg://user:pass@host/db'
     """
-    scheme = url.split("://")[0] if "://" in url else ""
+    scheme = url.split("://", maxsplit=1)[0] if "://" in url else ""
     if scheme in _ASYNC_DRIVER_MAP:
         new_scheme = _ASYNC_DRIVER_MAP[scheme]
         return url.replace(f"{scheme}://", f"{new_scheme}://", 1)
@@ -87,7 +87,7 @@ def to_sync_url(url: str) -> str:
         >>> to_sync_url("postgresql+asyncpg://user:pass@host/db")
         'postgresql+psycopg2://user:pass@host/db'
     """
-    scheme = url.split("://")[0] if "://" in url else ""
+    scheme = url.split("://", maxsplit=1)[0] if "://" in url else ""
     if scheme in _SYNC_DRIVER_MAP:
         new_scheme = _SYNC_DRIVER_MAP[scheme]
         return url.replace(f"{scheme}://", f"{new_scheme}://", 1)
@@ -115,5 +115,5 @@ def is_async_url(url: str) -> bool:
     Returns:
         非同期ドライバの場合 True
     """
-    scheme = url.split("://")[0] if "://" in url else ""
+    scheme = url.split("://", maxsplit=1)[0] if "://" in url else ""
     return scheme in _SYNC_DRIVER_MAP

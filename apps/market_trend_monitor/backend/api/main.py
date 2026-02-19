@@ -55,6 +55,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     await prediction_service.initialize()
     await signal_service.initialize()
     from apps.market_trend_monitor.backend.api.state import store
+
     await store.initialize()
     await workflow.initialize()
 
@@ -120,13 +121,11 @@ app.include_router(settings_router)
 
 if __name__ == "__main__":
     import argparse
-
-    import uvicorn
     from pathlib import Path
 
-    parser = argparse.ArgumentParser(
-        description="Market Trend Monitor - FastAPI Backend"
-    )
+    import uvicorn
+
+    parser = argparse.ArgumentParser(description="Market Trend Monitor - FastAPI Backend")
     parser.add_argument(
         "--reload",
         action="store_true",

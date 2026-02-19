@@ -175,4 +175,3 @@ class KnowledgeStore(Protocol):
             プロバイダー名（例：memvid, memory）
         """
         ...
-

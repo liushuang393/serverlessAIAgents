@@ -175,4 +175,3 @@ class FormComponent(A2UIComponent):
             props={"action": action, **kwargs},
             children=fields or [],
         )
-

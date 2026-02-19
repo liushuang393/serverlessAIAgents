@@ -15,28 +15,21 @@ class BuildError(DeploymentError):
     """构建错误."""
 
 
-
 class ConfigError(DeploymentError):
     """配置错误."""
-
 
 
 class DomainError(DeploymentError):
     """域名错误."""
 
 
-
 class RollbackError(DeploymentError):
     """回滚错误."""
-
 
 
 class ProviderError(DeploymentError):
     """提供商 API 错误."""
 
 
-
 class TimeoutError(DeploymentError):
     """超时错误."""
-
-

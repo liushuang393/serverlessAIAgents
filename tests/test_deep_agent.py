@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeepAgent パターンのテスト.
 
 モジュール構成:
@@ -195,9 +194,7 @@ class TestContextCompressor:
     async def test_compact_within_limit(self) -> None:
         """制限内メッセージは圧縮しない."""
         compressor = ContextCompressor()
-        messages = [
-            AgentMessage(from_agent="a", to_agent="b", content="短いメッセージ")
-        ]
+        messages = [AgentMessage(from_agent="a", to_agent="b", content="短いメッセージ")]
         result, stats = await compressor.compact_messages(messages, max_tokens=1000)
         assert len(result) == 1
         assert abs(stats.compression_ratio - 1.0) < 0.01
@@ -241,7 +238,9 @@ class TestSelfEvolver:
         review = QualityReview(is_acceptable=True, score=90.0)
         await evolver.learn_success_pattern(todos, {}, analysis, review)
         # 類似パターンを検索
-        similar_analysis = CognitiveAnalysis(intent="市場分析", domains=["market"], complexity="medium")
+        similar_analysis = CognitiveAnalysis(
+            intent="市場分析", domains=["market"], complexity="medium"
+        )
         pattern = await evolver.find_similar_pattern(similar_analysis)
         assert pattern is not None
 
@@ -262,10 +261,7 @@ class TestDeepAgentCoordinator:
     async def test_execute_with_context(self) -> None:
         """コンテキスト付き実行テスト."""
         coordinator = DeepAgentCoordinator()
-        result = await coordinator.execute(
-            "データ分析",
-            context={"data_source": "test.csv"}
-        )
+        result = await coordinator.execute("データ分析", context={"data_source": "test.csv"})
         assert result["status"] in ("completed", "partial")
 
     @pytest.mark.asyncio
@@ -275,4 +271,3 @@ class TestDeepAgentCoordinator:
         await coordinator.execute("タスク1")
         # 圧縮実行（エラーなく完了すればOK）
         await coordinator.compress_context(max_tokens=2000)
-

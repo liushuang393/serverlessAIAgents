@@ -22,7 +22,6 @@ if [ "$CONDA_DEFAULT_ENV" = "agentflow" ]; then
 elif conda env list | grep -q "^agentflow "; then
     echo "Conda 環境 'agentflow' が存在します。アクティベートしてください:"
     echo "  conda activate agentflow"
-    echo "  bash setup_dev.sh"
     exit 1
 else
     echo "Conda 環境 'agentflow' を作成中..."
@@ -32,7 +31,6 @@ else
     echo ""
     echo "次のコマンドを実行してください:"
     echo "  conda activate agentflow"
-    echo "  bash setup_dev.sh"
     exit 0
 fi
 echo ""

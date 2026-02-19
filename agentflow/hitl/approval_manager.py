@@ -216,4 +216,3 @@ class ApprovalManager:
                 await callback(request)
             except Exception as e:
                 logger.exception(f"Escalation callback failed: {e}")
-

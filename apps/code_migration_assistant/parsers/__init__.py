@@ -7,4 +7,3 @@ from apps.code_migration_assistant.parsers.ply_cobol_parser import PLYCobolParse
 
 
 __all__ = ["PLYCobolParser"]
-

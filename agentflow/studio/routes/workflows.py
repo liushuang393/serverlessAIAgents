@@ -38,11 +38,13 @@ def create_workflows_router(workflows_dir: Path) -> APIRouter:
         """ワークフロー一覧を取得."""
         workflows = []
         for workflow_file in workflows_dir.glob("*.yaml"):
-            workflows.append({
-                "id": workflow_file.stem,
-                "name": workflow_file.stem,
-                "path": str(workflow_file),
-            })
+            workflows.append(
+                {
+                    "id": workflow_file.stem,
+                    "name": workflow_file.stem,
+                    "path": str(workflow_file),
+                }
+            )
         return workflows
 
     @router.post("")
@@ -151,4 +153,3 @@ def create_workflows_router(workflows_dir: Path) -> APIRouter:
             return AgentRunResponse(status="error", result=None, error=str(e))
 
     return router
-

@@ -262,9 +262,7 @@ def sentry_trace(name: str | None = None) -> Callable[[F], F]:
             try:
                 import sentry_sdk
 
-                with sentry_sdk.start_transaction(
-                    op="function", name=transaction_name
-                ):
+                with sentry_sdk.start_transaction(op="function", name=transaction_name):
                     return await func(*args, **kwargs)
             except ImportError:
                 return await func(*args, **kwargs)
@@ -277,9 +275,7 @@ def sentry_trace(name: str | None = None) -> Callable[[F], F]:
             try:
                 import sentry_sdk
 
-                with sentry_sdk.start_transaction(
-                    op="function", name=transaction_name
-                ):
+                with sentry_sdk.start_transaction(op="function", name=transaction_name):
                     return func(*args, **kwargs)
             except ImportError:
                 return func(*args, **kwargs)
@@ -301,4 +297,3 @@ def is_sentry_initialized() -> bool:
         初期化されている場合 True
     """
     return _sentry_initialized
-

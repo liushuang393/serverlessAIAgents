@@ -145,4 +145,3 @@ class MemoryBackend(ABC):
         Returns:
             状態情報
         """
-

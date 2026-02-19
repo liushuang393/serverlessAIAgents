@@ -12,6 +12,7 @@ from apps.faq_system.routers.rag import router as rag_router
 from apps.faq_system.routers.sql import router as sql_router
 from apps.faq_system.routers.websocket import router as ws_router
 
+
 __all__ = [
     "agents_router",
     "chat_router",

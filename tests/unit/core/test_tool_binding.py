@@ -1,31 +1,36 @@
-# -*- coding: utf-8 -*-
 """ToolBinderインターフェースのテスト.
 
 ランタイムツールバインディングのユニットテスト。
 """
-import pytest
+
 from unittest.mock import MagicMock
+
+import pytest
 
 
 @pytest.fixture
 def tool_registry():
     """ツールが登録されたToolRegistryを作成."""
-    from agentflow.core.tool_registry import ToolRegistry
     from agentflow.core.tool_definition import ToolDefinition, ToolSource
+    from agentflow.core.tool_registry import ToolRegistry
 
     registry = ToolRegistry()
-    registry.register(ToolDefinition(
-        uri="tool://builtin/calculator",
-        name="calculator",
-        description="計算を実行",
-        source=ToolSource.BUILTIN,
-    ))
-    registry.register(ToolDefinition(
-        uri="tool://mcp/fs/read",
-        name="read",
-        description="ファイルを読み取る",
-        source=ToolSource.MCP,
-    ))
+    registry.register(
+        ToolDefinition(
+            uri="tool://builtin/calculator",
+            name="calculator",
+            description="計算を実行",
+            source=ToolSource.BUILTIN,
+        )
+    )
+    registry.register(
+        ToolDefinition(
+            uri="tool://mcp/fs/read",
+            name="read",
+            description="ファイルを読み取る",
+            source=ToolSource.MCP,
+        )
+    )
     return registry
 
 
@@ -33,6 +38,7 @@ def tool_registry():
 def tool_binder(tool_registry):
     """ToolBinderを作成."""
     from agentflow.core.tool_binding import ToolBinder
+
     return ToolBinder(tool_registry)
 
 
@@ -90,7 +96,7 @@ class TestToolBinder:
         uris = ["tool://builtin/calculator"]
         bound = await tool_binder.bind(mock_agent, tool_uris=uris)
 
-        assert hasattr(bound, '_tool_executor')
+        assert hasattr(bound, "_tool_executor")
 
     @pytest.mark.asyncio
     async def test_bind_empty_list(self, tool_binder):

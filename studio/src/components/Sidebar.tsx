@@ -63,9 +63,7 @@ export default function Sidebar() {
     <div className="w-64 border-r border-border bg-card flex flex-col">
       {/* ヘッダー */}
       <div className="p-4 border-b border-border">
-        <h2 className="text-lg font-semibold text-foreground mb-3">
-          エージェント
-        </h2>
+        <h2 className="text-lg font-semibold text-foreground mb-3">エージェント</h2>
 
         {/* 検索ボックス */}
         <div className="relative">
@@ -101,12 +99,8 @@ export default function Sidebar() {
                 className="p-3 rounded-lg border border-border bg-background hover:bg-accent cursor-move transition-colors"
               >
                 <div className="flex items-start justify-between gap-2 mb-1">
-                  <div className="font-medium text-sm text-foreground">
-                    {agent.name}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    v{agent.version}
-                  </div>
+                  <div className="font-medium text-sm text-foreground">{agent.name}</div>
+                  <div className="text-xs text-muted-foreground">v{agent.version}</div>
                 </div>
                 <div className="text-xs text-muted-foreground line-clamp-2">
                   {agent.description}

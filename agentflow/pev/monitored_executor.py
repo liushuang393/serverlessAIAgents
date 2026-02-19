@@ -215,12 +215,9 @@ class MonitoredExecutor:
                     continue
 
                 # 並列実行（最大同時実行数まで）
-                batch = ready_goals[:self.max_concurrent]
+                batch = ready_goals[: self.max_concurrent]
 
-                tasks = [
-                    self._execute_goal(goal, plan, context, results)
-                    for goal in batch
-                ]
+                tasks = [self._execute_goal(goal, plan, context, results) for goal in batch]
 
                 for task_result in await asyncio.gather(*tasks, return_exceptions=True):
                     if isinstance(task_result, Exception):
@@ -329,7 +326,8 @@ class MonitoredExecutor:
         """実行結果を取得."""
         total = sum(len(level.goals) for level in plan.levels)
         completed = sum(
-            1 for level in plan.levels
+            1
+            for level in plan.levels
             for goal in level.goals
             if goal.status == GoalStatus.COMPLETED
         )
@@ -358,4 +356,3 @@ __all__ = [
     "ExecutionResult",
     "MonitoredExecutor",
 ]
-

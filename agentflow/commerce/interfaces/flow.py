@@ -20,16 +20,16 @@ from typing import Any
 class FlowStepType(str, Enum):
     """フローステップタイプ."""
 
-    INTENT_ANALYSIS = "intent_analysis"     # 意図分析
-    PRODUCT_SEARCH = "product_search"       # 商品検索
-    PRICE_COMPARE = "price_compare"         # 価格比較
-    OFFER_MATCH = "offer_match"             # オファー照合
-    RECOMMENDATION = "recommendation"       # 推薦
-    CART_MANAGEMENT = "cart_management"     # カート管理
-    CHECKOUT = "checkout"                   # チェックアウト
-    PAYMENT = "payment"                     # 決済
-    ORDER_COMPLETE = "order_complete"       # 注文完了
-    CLARIFICATION = "clarification"         # 確認対話
+    INTENT_ANALYSIS = "intent_analysis"  # 意図分析
+    PRODUCT_SEARCH = "product_search"  # 商品検索
+    PRICE_COMPARE = "price_compare"  # 価格比較
+    OFFER_MATCH = "offer_match"  # オファー照合
+    RECOMMENDATION = "recommendation"  # 推薦
+    CART_MANAGEMENT = "cart_management"  # カート管理
+    CHECKOUT = "checkout"  # チェックアウト
+    PAYMENT = "payment"  # 決済
+    ORDER_COMPLETE = "order_complete"  # 注文完了
+    CLARIFICATION = "clarification"  # 確認対話
 
 
 class FlowStatus(str, Enum):
@@ -225,4 +225,3 @@ class ICommerceFlow(ABC):
         Returns:
             フローステータス
         """
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for the AgentWizard module.
 
 Tests cover:
@@ -9,7 +8,6 @@ Tests cover:
 """
 
 import pytest
-from datetime import datetime, UTC
 
 from agentflow.wizard.models import (
     AgentSpec,

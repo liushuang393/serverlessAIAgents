@@ -59,12 +59,14 @@ class SharedContext:
     def set(self, key: str, value: Any) -> None:
         """値を設定."""
         self._data[key] = value
-        self._history.append({
-            "action": "set",
-            "key": key,
-            "value": value,
-            "timestamp": datetime.now().isoformat(),
-        })
+        self._history.append(
+            {
+                "action": "set",
+                "key": key,
+                "value": value,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
         self._logger.debug(f"SharedContext.set: {key}")
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -83,11 +85,13 @@ class SharedContext:
         """値を削除."""
         if key in self._data:
             del self._data[key]
-            self._history.append({
-                "action": "remove",
-                "key": key,
-                "timestamp": datetime.now().isoformat(),
-            })
+            self._history.append(
+                {
+                    "action": "remove",
+                    "key": key,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
             self._logger.debug(f"SharedContext.remove: {key}")
 
     def clear(self) -> None:
@@ -143,4 +147,3 @@ class SharedContext:
 
 
 __all__ = ["SharedContext"]
-

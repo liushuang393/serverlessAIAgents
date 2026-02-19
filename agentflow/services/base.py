@@ -99,6 +99,7 @@ class ServiceEvent(BaseModel):
     def to_json(self) -> str:
         """JSON文字列に変換."""
         import json
+
         return json.dumps(self.to_dict(), ensure_ascii=False, default=str)
 
     def to_sse(self) -> str:
@@ -210,6 +211,7 @@ class ServiceError(Exception):
     def to_event(self, execution_id: str = "") -> ErrorEvent:
         """ErrorEvent に変換."""
         import traceback
+
         return ErrorEvent(
             execution_id=execution_id,
             error_code=self.code,

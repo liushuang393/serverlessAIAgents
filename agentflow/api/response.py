@@ -261,6 +261,7 @@ class StreamEvent(BaseModel):
     def to_sse(self) -> str:
         """SSE形式に変換."""
         import json
+
         return f"data: {json.dumps(self.model_dump(), ensure_ascii=False, default=str)}\n\n"
 
 

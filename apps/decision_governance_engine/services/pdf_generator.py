@@ -27,7 +27,8 @@ class PDFGeneratorService:
     def _check_reportlab(self) -> bool:
         """ReportLabが利用可能か確認."""
         try:
-            from reportlab.lib.pagesizes import A4  # noqa: F401
+            from reportlab.lib.pagesizes import A4
+
             return True
         except ImportError:
             self._logger.warning("ReportLab not installed. PDF export is unavailable.")
@@ -118,7 +119,7 @@ class PDFGeneratorService:
         cjk_font = "HeiseiMin-W3"
 
         buffer = io.BytesIO()
-        doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm)
+        doc = SimpleDocTemplate(buffer, pagesize=A4, topMargin=2 * cm, bottomMargin=2 * cm)
         styles = getSampleStyleSheet()
         elements: list[Any] = []
 
@@ -178,8 +179,10 @@ class PDFGeneratorService:
             )
         )
         if any([author_dept, author_pos, author_name]):
-            elements.append(Paragraph(f"作成: {author_dept} {author_pos} {author_name}".strip(), normal_style))
-        elements.append(Spacer(1, 0.5*cm))
+            elements.append(
+                Paragraph(f"作成: {author_dept} {author_pos} {author_name}".strip(), normal_style)
+            )
+        elements.append(Spacer(1, 0.5 * cm))
 
         # ========== エグゼクティブサマリー ==========
         elements.append(Paragraph("エグゼクティブサマリー", heading_style))
@@ -188,19 +191,30 @@ class PDFGeneratorService:
 
         if hasattr(summary, "essence_statement") and summary.essence_statement:
             elements.append(Paragraph(f"<b>本質:</b> {summary.essence_statement}", normal_style))
-        elements.append(Paragraph(f"<b>推奨アクション:</b> {summary.recommended_action}", normal_style))
+        elements.append(
+            Paragraph(f"<b>推奨アクション:</b> {summary.recommended_action}", normal_style)
+        )
         elements.append(Paragraph(f"<b>最初の一歩:</b> {summary.first_step}", normal_style))
 
-        if hasattr(summary, "strategic_prohibition_summary") and summary.strategic_prohibition_summary:
-            elements.append(Paragraph(f"<b>戦略的禁止:</b> {summary.strategic_prohibition_summary}", warning_style))
+        if (
+            hasattr(summary, "strategic_prohibition_summary")
+            and summary.strategic_prohibition_summary
+        ):
+            elements.append(
+                Paragraph(
+                    f"<b>戦略的禁止:</b> {summary.strategic_prohibition_summary}", warning_style
+                )
+            )
         if hasattr(summary, "exit_criteria_summary") and summary.exit_criteria_summary:
-            elements.append(Paragraph(f"<b>撤退基準:</b> {summary.exit_criteria_summary}", warning_style))
+            elements.append(
+                Paragraph(f"<b>撤退基準:</b> {summary.exit_criteria_summary}", warning_style)
+            )
 
         if summary.key_risks:
             elements.append(Paragraph("<b>主要リスク:</b>", normal_style))
             for risk in summary.key_risks:
                 elements.append(Paragraph(f"  - {risk}", normal_style))
-        elements.append(Spacer(1, 0.5*cm))
+        elements.append(Spacer(1, 0.5 * cm))
 
         # ========== 道セクション ==========
         elements.append(Paragraph("道 - 本質分析", heading_style))
@@ -220,19 +234,25 @@ class PDFGeneratorService:
         if ed:
             elements.append(Paragraph("本質導出プロセス", subheading_style))
             elements.append(Paragraph(f"表面的問題: {ed.get('surface_problem', '')}", normal_style))
-            elements.append(Paragraph(f"一段深い理由: {ed.get('underlying_why', '')}", normal_style))
+            elements.append(
+                Paragraph(f"一段深い理由: {ed.get('underlying_why', '')}", normal_style)
+            )
             elements.append(Paragraph(f"根本制約: {ed.get('root_constraint', '')}", normal_style))
-            elements.append(Paragraph(f"<b>本質の一文:</b> {ed.get('essence_statement', '')}", highlight_style))
+            elements.append(
+                Paragraph(f"<b>本質の一文:</b> {ed.get('essence_statement', '')}", highlight_style)
+            )
 
         # 既存代替手段
         alternatives = dao.get("existing_alternatives", [])
         if alternatives:
             elements.append(Paragraph("既存代替手段", subheading_style))
             for alt in alternatives:
-                elements.append(Paragraph(
-                    f"• <b>{alt.get('name', '')}</b>: {alt.get('why_not_viable', '')} (制約: {alt.get('specific_constraint', '')})",
-                    normal_style
-                ))
+                elements.append(
+                    Paragraph(
+                        f"• <b>{alt.get('name', '')}</b>: {alt.get('why_not_viable', '')} (制約: {alt.get('specific_constraint', '')})",
+                        normal_style,
+                    )
+                )
 
         immutable_constraints = dao.get("immutable_constraints", [])
         if immutable_constraints:
@@ -265,21 +285,25 @@ class PDFGeneratorService:
         if traps:
             elements.append(Paragraph("死穴（禁忌）", subheading_style))
             for trap in traps:
-                elements.append(Paragraph(
-                    f"- <b>{trap.get('action', '')}</b> ({trap.get('severity', '')}): {trap.get('reason', '')}",
-                    warning_style
-                ))
+                elements.append(
+                    Paragraph(
+                        f"- <b>{trap.get('action', '')}</b> ({trap.get('severity', '')}): {trap.get('reason', '')}",
+                        warning_style,
+                    )
+                )
 
         # v3.1: 制約境界条件
         boundaries = dao.get("constraint_boundaries", [])
         if boundaries:
             elements.append(Paragraph("制約境界条件", subheading_style))
             for cb in boundaries:
-                elements.append(Paragraph(
-                    f"- <b>{cb.get('constraint_name', '')}</b>: {cb.get('definition', '')} "
-                    f"(違反例: {cb.get('violation_example', '')}、例外: {cb.get('exceptions', '')})",
-                    normal_style
-                ))
+                elements.append(
+                    Paragraph(
+                        f"- <b>{cb.get('constraint_name', '')}</b>: {cb.get('definition', '')} "
+                        f"(違反例: {cb.get('violation_example', '')}、例外: {cb.get('exceptions', '')})",
+                        normal_style,
+                    )
+                )
 
         # v3.1: 成立ルート比較
         routes = dao.get("solution_routes", [])
@@ -287,33 +311,39 @@ class PDFGeneratorService:
             elements.append(Paragraph("成立ルート比較（解空間探索）", subheading_style))
             for sr in routes:
                 tradeoffs_str = "、".join(sr.get("tradeoffs", []))
-                elements.append(Paragraph(
-                    f"- <b>[{sr.get('route_type', '')}]</b> {sr.get('description', '')} "
-                    f"(実現可能性: {sr.get('viability', '')}) トレードオフ: {tradeoffs_str}",
-                    normal_style
-                ))
+                elements.append(
+                    Paragraph(
+                        f"- <b>[{sr.get('route_type', '')}]</b> {sr.get('description', '')} "
+                        f"(実現可能性: {sr.get('viability', '')}) トレードオフ: {tradeoffs_str}",
+                        normal_style,
+                    )
+                )
 
         # v3.1: 定量指標
         metrics = dao.get("quantified_metrics", [])
         if metrics:
             elements.append(Paragraph("定量指標", subheading_style))
             for qm in metrics:
-                elements.append(Paragraph(
-                    f"- P{qm.get('priority', '')} <b>{qm.get('metric_name', '')}</b>: "
-                    f"目標 {qm.get('target_value', '')} ({qm.get('tradeoff_note', '')})",
-                    normal_style
-                ))
+                elements.append(
+                    Paragraph(
+                        f"- P{qm.get('priority', '')} <b>{qm.get('metric_name', '')}</b>: "
+                        f"目標 {qm.get('target_value', '')} ({qm.get('tradeoff_note', '')})",
+                        normal_style,
+                    )
+                )
 
         # v3.1: 監査証拠チェックリスト
         audit_items = dao.get("audit_evidence_checklist", [])
         if audit_items:
             elements.append(Paragraph("監査証拠チェックリスト", subheading_style))
             for ae in audit_items:
-                elements.append(Paragraph(
-                    f"- [{ae.get('category', '')}] {ae.get('required_evidence', '')} "
-                    f"→ 確認: {ae.get('verification_method', '')}",
-                    normal_style
-                ))
+                elements.append(
+                    Paragraph(
+                        f"- [{ae.get('category', '')}] {ae.get('required_evidence', '')} "
+                        f"→ 確認: {ae.get('verification_method', '')}",
+                        normal_style,
+                    )
+                )
 
         # v3.1: セルフチェック結果
         self_check = dao.get("self_check", {})
@@ -331,11 +361,9 @@ class PDFGeneratorService:
             ]:
                 items = self_check.get(key, [])
                 if items:
-                    elements.append(Paragraph(
-                        f"  {label}: {', '.join(items)}", warning_style
-                    ))
+                    elements.append(Paragraph(f"  {label}: {', '.join(items)}", warning_style))
 
-        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Spacer(1, 0.3 * cm))
 
         # ========== 法セクション v3.1 ==========
         elements.append(PageBreak())
@@ -346,52 +374,89 @@ class PDFGeneratorService:
         if prohibitions:
             elements.append(Paragraph("戦略的禁止事項（仕組み化）", subheading_style))
             for p in prohibitions:
-                elements.append(Paragraph(
-                    f"- <b>⛔ {p.get('prohibition', '')}</b>: {p.get('rationale', '')} → {p.get('violation_consequence', '')}",
-                    warning_style
-                ))
+                elements.append(
+                    Paragraph(
+                        f"- <b>⛔ {p.get('prohibition', '')}</b>: {p.get('rationale', '')} → {p.get('violation_consequence', '')}",
+                        warning_style,
+                    )
+                )
                 if p.get("prevention_measure"):
-                    elements.append(Paragraph(f"  🛡️ 防止策: {p['prevention_measure']}", normal_style))
+                    elements.append(
+                        Paragraph(f"  🛡️ 防止策: {p['prevention_measure']}", normal_style)
+                    )
                 if p.get("detection_metric"):
-                    elements.append(Paragraph(f"  📊 検知指標: {p['detection_metric']}", normal_style))
+                    elements.append(
+                        Paragraph(f"  📊 検知指標: {p['detection_metric']}", normal_style)
+                    )
                 if p.get("responsible_role"):
-                    elements.append(Paragraph(f"  👤 責任者: {p['responsible_role']}", normal_style))
+                    elements.append(
+                        Paragraph(f"  👤 責任者: {p['responsible_role']}", normal_style)
+                    )
 
         # v3.1: 競争優位仮説
         comp_hyp = fa.get("competitive_hypothesis", {})
         if comp_hyp:
             elements.append(Paragraph("競争優位仮説", subheading_style))
-            elements.append(Paragraph(f"<b>差別化軸:</b> {comp_hyp.get('axis_name', '')}", highlight_style))
-            elements.append(Paragraph(f"<b>対象顧客:</b> {comp_hyp.get('target_customer', '')}", normal_style))
-            elements.append(Paragraph(f"<b>代替障壁:</b> {comp_hyp.get('substitution_barrier', '')}", normal_style))
-            elements.append(Paragraph(f"<b>勝ち筋指標:</b> {comp_hyp.get('winning_metric', '')}", normal_style))
-            elements.append(Paragraph(f"<b>最小検証:</b> {comp_hyp.get('minimum_verification', '')}", normal_style))
+            elements.append(
+                Paragraph(f"<b>差別化軸:</b> {comp_hyp.get('axis_name', '')}", highlight_style)
+            )
+            elements.append(
+                Paragraph(f"<b>対象顧客:</b> {comp_hyp.get('target_customer', '')}", normal_style)
+            )
+            elements.append(
+                Paragraph(
+                    f"<b>代替障壁:</b> {comp_hyp.get('substitution_barrier', '')}", normal_style
+                )
+            )
+            elements.append(
+                Paragraph(f"<b>勝ち筋指標:</b> {comp_hyp.get('winning_metric', '')}", normal_style)
+            )
+            elements.append(
+                Paragraph(
+                    f"<b>最小検証:</b> {comp_hyp.get('minimum_verification', '')}", normal_style
+                )
+            )
         else:
             # v3.0フォールバック: 差別化軸
             diff_axis = fa.get("differentiation_axis", {})
             if diff_axis:
                 elements.append(Paragraph("差別化軸", subheading_style))
-                elements.append(Paragraph(f"<b>勝負する軸:</b> {diff_axis.get('axis_name', '')}", highlight_style))
-                elements.append(Paragraph(f"理由: {diff_axis.get('why_this_axis', '')}", normal_style))
-                elements.append(Paragraph(f"<b>勝負しない軸:</b> {diff_axis.get('not_this_axis', '')}", normal_style))
+                elements.append(
+                    Paragraph(
+                        f"<b>勝負する軸:</b> {diff_axis.get('axis_name', '')}", highlight_style
+                    )
+                )
+                elements.append(
+                    Paragraph(f"理由: {diff_axis.get('why_this_axis', '')}", normal_style)
+                )
+                elements.append(
+                    Paragraph(
+                        f"<b>勝負しない軸:</b> {diff_axis.get('not_this_axis', '')}", normal_style
+                    )
+                )
 
         # 既存解が使えない理由
         why_existing = fa.get("why_existing_fails", "")
         if why_existing:
-            elements.append(Paragraph(f"<b>既存解が使えない理由:</b> {why_existing}", warning_style))
+            elements.append(
+                Paragraph(f"<b>既存解が使えない理由:</b> {why_existing}", warning_style)
+            )
 
         # 推奨パス（v3.1: 条件付き評価）
         for path in fa.get("recommended_paths", []):
             strategy_type = path.get("strategy_type", "")
             if hasattr(strategy_type, "value"):
                 strategy_type = strategy_type.value
-            elements.append(Paragraph(f"{path.get('name', '')} ({strategy_type})", subheading_style))
+            elements.append(
+                Paragraph(f"{path.get('name', '')} ({strategy_type})", subheading_style)
+            )
             elements.append(Paragraph(path.get("description", ""), normal_style))
             rev = path.get("reversibility", "")
-            elements.append(Paragraph(
-                f"価値実現: {path.get('time_to_value', '')} | 可逆性: {rev}",
-                normal_style
-            ))
+            elements.append(
+                Paragraph(
+                    f"価値実現: {path.get('time_to_value', '')} | 可逆性: {rev}", normal_style
+                )
+            )
             # v3.1: 条件付き評価
             cond_eval = path.get("conditional_evaluation", {})
             if cond_eval:
@@ -426,16 +491,22 @@ class PDFGeneratorService:
             if must_gates:
                 elements.append(Paragraph("<b>Must（不可変ゲート）:</b>", normal_style))
                 for g in must_gates:
-                    elements.append(Paragraph(
-                        f"  🚪 {g.get('criterion', '')} — 閾値: {g.get('threshold', '')}", normal_style
-                    ))
+                    elements.append(
+                        Paragraph(
+                            f"  🚪 {g.get('criterion', '')} — 閾値: {g.get('threshold', '')}",
+                            normal_style,
+                        )
+                    )
             should = jf.get("should_criteria", [])
             if should:
                 elements.append(Paragraph("<b>Should（比較評価）:</b>", normal_style))
                 for s in should:
-                    elements.append(Paragraph(
-                        f"  📏 {s.get('criterion', '')} [{s.get('weight', '')}] — {s.get('scoring_method', '')}", normal_style
-                    ))
+                    elements.append(
+                        Paragraph(
+                            f"  📏 {s.get('criterion', '')} [{s.get('weight', '')}] — {s.get('scoring_method', '')}",
+                            normal_style,
+                        )
+                    )
 
         # v3.1: セルフチェック
         fa_sc = fa.get("fa_self_check", {})
@@ -455,7 +526,7 @@ class PDFGeneratorService:
                 if items:
                     elements.append(Paragraph(f"  {label}: {', '.join(items)}", warning_style))
 
-        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Spacer(1, 0.3 * cm))
 
         # ========== 術セクション ==========
         elements.append(Paragraph("術 - 実行計画", heading_style))
@@ -468,7 +539,9 @@ class PDFGeneratorService:
         # 切り捨てリスト
         cut_list = shu.get("cut_list", [])
         if cut_list:
-            elements.append(Paragraph("切り捨てリスト（最初の30日間でやらないこと）", subheading_style))
+            elements.append(
+                Paragraph("切り捨てリスト（最初の30日間でやらないこと）", subheading_style)
+            )
             for c in cut_list:
                 elements.append(Paragraph(f"  - {c}", warning_style))
 
@@ -477,32 +550,38 @@ class PDFGeneratorService:
         if context_actions:
             elements.append(Paragraph("文脈特化行動", subheading_style))
             for a in context_actions:
-                elements.append(Paragraph(
-                    f"• <b>{a.get('action', '')}</b> → {a.get('expected_output', '')}",
-                    normal_style
-                ))
+                elements.append(
+                    Paragraph(
+                        f"• <b>{a.get('action', '')}</b> → {a.get('expected_output', '')}",
+                        normal_style,
+                    )
+                )
 
         # 単一検証ポイント
         validation = shu.get("single_validation_point", {})
         if validation:
             elements.append(Paragraph("単一検証ポイント", subheading_style))
-            elements.append(Paragraph(
-                f"検証: {validation.get('validation_target', '')} | "
-                f"基準: {validation.get('success_criteria', '')} | "
-                f"失敗時: {validation.get('failure_action', '')}",
-                warning_style
-            ))
+            elements.append(
+                Paragraph(
+                    f"検証: {validation.get('validation_target', '')} | "
+                    f"基準: {validation.get('success_criteria', '')} | "
+                    f"失敗時: {validation.get('failure_action', '')}",
+                    warning_style,
+                )
+            )
 
         # 撤退基準
         exit_criteria = shu.get("exit_criteria", {})
         if exit_criteria:
             elements.append(Paragraph("撤退基準", subheading_style))
-            elements.append(Paragraph(
-                f"チェック: {exit_criteria.get('checkpoint', '')} | "
-                f"トリガー: {exit_criteria.get('exit_trigger', '')} | "
-                f"行動: {exit_criteria.get('exit_action', '')}",
-                warning_style
-            ))
+            elements.append(
+                Paragraph(
+                    f"チェック: {exit_criteria.get('checkpoint', '')} | "
+                    f"トリガー: {exit_criteria.get('exit_trigger', '')} | "
+                    f"行動: {exit_criteria.get('exit_action', '')}",
+                    warning_style,
+                )
+            )
 
         dependencies = shu.get("dependencies", [])
         if dependencies:
@@ -513,15 +592,17 @@ class PDFGeneratorService:
         # フェーズ
         elements.append(Paragraph("フェーズ", subheading_style))
         for phase in shu.get("phases", []):
-            elements.append(Paragraph(
-                f"Phase {phase.get('phase_number', '?')}: {phase.get('name', '')} ({phase.get('duration', '')})",
-                normal_style
-            ))
+            elements.append(
+                Paragraph(
+                    f"Phase {phase.get('phase_number', '?')}: {phase.get('name', '')} ({phase.get('duration', '')})",
+                    normal_style,
+                )
+            )
             actions = phase.get("actions", [])
             if actions:
                 for action in actions:
                     elements.append(Paragraph(f"    • {action}", normal_style))
-        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Spacer(1, 0.3 * cm))
 
         # ========== 器セクション ==========
         elements.append(PageBreak())
@@ -532,10 +613,12 @@ class PDFGeneratorService:
         if domain_techs:
             elements.append(Paragraph("ドメイン固有技術", subheading_style))
             for t in domain_techs:
-                elements.append(Paragraph(
-                    f"• <b>{t.get('technology_name', '')}</b> ({t.get('category', '')}): {t.get('why_required', '')}",
-                    highlight_style
-                ))
+                elements.append(
+                    Paragraph(
+                        f"• <b>{t.get('technology_name', '')}</b> ({t.get('category', '')}): {t.get('why_required', '')}",
+                        highlight_style,
+                    )
+                )
 
         # 規制対応
         regulations = qi.get("regulatory_considerations", [])
@@ -543,19 +626,25 @@ class PDFGeneratorService:
             elements.append(Paragraph("規制対応事項", subheading_style))
             reg_data = [["地域", "規制", "要件", "影響"]]
             for r in regulations:
-                reg_data.append([
-                    r.get("region", ""),
-                    r.get("regulation", ""),
-                    r.get("requirement", ""),
-                    r.get("implementation_impact", ""),
-                ])
-            reg_table = Table(reg_data, colWidths=[2*cm, 3*cm, 5*cm, 5*cm])
-            reg_table.setStyle(TableStyle([
-                ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-                ("FONTNAME", (0, 0), (-1, -1), cjk_font),
-                ("FONTSIZE", (0, 0), (-1, -1), 8),
-                ("BACKGROUND", (0, 0), (-1, 0), colors.Color(0.9, 0.9, 0.9)),
-            ]))
+                reg_data.append(
+                    [
+                        r.get("region", ""),
+                        r.get("regulation", ""),
+                        r.get("requirement", ""),
+                        r.get("implementation_impact", ""),
+                    ]
+                )
+            reg_table = Table(reg_data, colWidths=[2 * cm, 3 * cm, 5 * cm, 5 * cm])
+            reg_table.setStyle(
+                TableStyle(
+                    [
+                        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                        ("FONTNAME", (0, 0), (-1, -1), cjk_font),
+                        ("FONTSIZE", (0, 0), (-1, -1), 8),
+                        ("BACKGROUND", (0, 0), (-1, 0), colors.Color(0.9, 0.9, 0.9)),
+                    ]
+                )
+            )
             elements.append(reg_table)
 
         # 地理的考慮
@@ -563,17 +652,21 @@ class PDFGeneratorService:
         if geographics:
             elements.append(Paragraph("地理的考慮事項", subheading_style))
             for g in geographics:
-                elements.append(Paragraph(
-                    f"• {g.get('region', '')}: {g.get('latency_requirement', '')} | {g.get('infrastructure_need', '')}",
-                    normal_style
-                ))
+                elements.append(
+                    Paragraph(
+                        f"• {g.get('region', '')}: {g.get('latency_requirement', '')} | {g.get('infrastructure_need', '')}",
+                        normal_style,
+                    )
+                )
 
         # 実装要素
         for impl in qi.get("implementations", []):
-            elements.append(Paragraph(
-                f"{impl.get('component', '')}: {impl.get('technology', '')} ({impl.get('estimated_effort', '')})",
-                normal_style
-            ))
+            elements.append(
+                Paragraph(
+                    f"{impl.get('component', '')}: {impl.get('technology', '')} ({impl.get('estimated_effort', '')})",
+                    normal_style,
+                )
+            )
             risks = impl.get("risks", [])
             if risks:
                 for r in risks:
@@ -596,7 +689,7 @@ class PDFGeneratorService:
             elements.append(Paragraph("技術負債警告", subheading_style))
             for w in debt_warnings:
                 elements.append(Paragraph(f"  - {w}", warning_style))
-        elements.append(Spacer(1, 0.3*cm))
+        elements.append(Spacer(1, 0.3 * cm))
 
         # ========== 検証セクション ==========
         elements.append(Paragraph("検証 - 最終判定", heading_style))
@@ -605,21 +698,24 @@ class PDFGeneratorService:
             verdict = verdict.value
         confidence = review.get("confidence_score", 0)
         verdict_style = highlight_style if verdict == "PASS" else warning_style
-        elements.append(Paragraph(f"<b>判定: {verdict}</b> | 信頼度: {confidence*100:.0f}%", verdict_style))
+        elements.append(
+            Paragraph(f"<b>判定: {verdict}</b> | 信頼度: {confidence * 100:.0f}%", verdict_style)
+        )
 
         findings = review.get("findings", [])
         if findings:
             for f in findings:
-                elements.append(Paragraph(
-                    f"• {f.get('severity', '')}: {f.get('description', '')}",
-                    normal_style
-                ))
+                elements.append(
+                    Paragraph(
+                        f"• {f.get('severity', '')}: {f.get('description', '')}", normal_style
+                    )
+                )
         final_warnings = review.get("final_warnings", [])
         if final_warnings:
             elements.append(Paragraph("最終警告", subheading_style))
             for w in final_warnings:
                 elements.append(Paragraph(f"  - {w}", warning_style))
-        elements.append(Spacer(1, 0.5*cm))
+        elements.append(Spacer(1, 0.5 * cm))
 
         # ========== 署名欄 ==========
         elements.append(Paragraph("署名欄", heading_style))
@@ -630,11 +726,15 @@ class PDFGeneratorService:
             ["", "氏名", "", "日付", ""],
         ]
         sig_table = Table(sig_data, colWidths=[1.6 * cm, 2.2 * cm, 6.0 * cm, 1.6 * cm, 4.6 * cm])
-        sig_table.setStyle(TableStyle([
-            ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
-            ("FONTNAME", (0, 0), (-1, -1), cjk_font),
-            ("BACKGROUND", (0, 0), (-1, 0), colors.Color(0.95, 0.95, 0.95)),
-        ]))
+        sig_table.setStyle(
+            TableStyle(
+                [
+                    ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+                    ("FONTNAME", (0, 0), (-1, -1), cjk_font),
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.Color(0.95, 0.95, 0.95)),
+                ]
+            )
+        )
         elements.append(sig_table)
 
         doc.build(elements)
@@ -799,7 +899,7 @@ th{{background:#1f2937;font-weight:bold}}
 
 <div class="footer">
 <p>本提案書は AI Decision Support により自動生成されました</p>
-<p>案件ID: {case_id} | Version: {report.version} | 生成日時: {report.created_at.strftime('%Y-%m-%d %H:%M')}</p>
+<p>案件ID: {case_id} | Version: {report.version} | 生成日時: {report.created_at.strftime("%Y-%m-%d %H:%M")}</p>
 </div>
 
 </body></html>"""
@@ -817,7 +917,10 @@ th{{background:#1f2937;font-weight:bold}}
             essence_html = f'<p class="essence">📍 本質: {summary.essence_statement}</p>'
 
         prohibition_html = ""
-        if hasattr(summary, "strategic_prohibition_summary") and summary.strategic_prohibition_summary:
+        if (
+            hasattr(summary, "strategic_prohibition_summary")
+            and summary.strategic_prohibition_summary
+        ):
             prohibition_html = f'<div class="prohibition">⛔ 戦略的禁止: {summary.strategic_prohibition_summary}</div>'
 
         exit_html = ""
@@ -852,10 +955,10 @@ th{{background:#1f2937;font-weight:bold}}
         if ed:
             essence_derivation_html = f"""<div class="card">
 <h3>🔍 本質導出プロセス</h3>
-<p><span class="label">表面的問題:</span> {ed.get('surface_problem', '')}</p>
-<p><span class="label">一段深い理由:</span> {ed.get('underlying_why', '')}</p>
-<p><span class="label">根本制約:</span> {ed.get('root_constraint', '')}</p>
-<p class="essence"><span class="label">本質の一文:</span> {ed.get('essence_statement', '')}</p>
+<p><span class="label">表面的問題:</span> {ed.get("surface_problem", "")}</p>
+<p><span class="label">一段深い理由:</span> {ed.get("underlying_why", "")}</p>
+<p><span class="label">根本制約:</span> {ed.get("root_constraint", "")}</p>
+<p class="essence"><span class="label">本質の一文:</span> {ed.get("essence_statement", "")}</p>
 </div>"""
 
         # v3.0: 既存代替手段
@@ -894,7 +997,9 @@ th{{background:#1f2937;font-weight:bold}}
                 for g in gears
             )
             bottleneck = dao.get("bottleneck_gear", "")
-            gears_html = f"<h3>⚙️ 因果齿轮</h3><ul>{items}</ul><p>🎯 ボトルネック: Gear {bottleneck}</p>"
+            gears_html = (
+                f"<h3>⚙️ 因果齿轮</h3><ul>{items}</ul><p>🎯 ボトルネック: Gear {bottleneck}</p>"
+            )
 
         # 死穴
         death_traps_html = ""
@@ -918,9 +1023,9 @@ th{{background:#1f2937;font-weight:bold}}
                 for cb in boundaries
             )
             boundaries_html = (
-                '<h3>🚧 制約境界条件</h3>'
-                '<table><thead><tr><th>制約名</th><th>判定条件</th><th>違反例</th><th>例外</th></tr></thead>'
-                f'<tbody>{rows}</tbody></table>'
+                "<h3>🚧 制約境界条件</h3>"
+                "<table><thead><tr><th>制約名</th><th>判定条件</th><th>違反例</th><th>例外</th></tr></thead>"
+                f"<tbody>{rows}</tbody></table>"
             )
 
         # v3.1: 成立ルート比較
@@ -932,7 +1037,7 @@ th{{background:#1f2937;font-weight:bold}}
                 tradeoffs_str = "、".join(sr.get("tradeoffs", []))
                 route_items += (
                     f'<div class="card"><strong>[{sr.get("route_type", "")}]</strong> '
-                    f'{sr.get("description", "")}<br/>'
+                    f"{sr.get('description', '')}<br/>"
                     f'<span class="label">実現可能性:</span> {sr.get("viability", "")} '
                     f'<span class="label">トレードオフ:</span> {tradeoffs_str}</div>'
                 )
@@ -950,9 +1055,9 @@ th{{background:#1f2937;font-weight:bold}}
                 for qm in metrics
             )
             metrics_html = (
-                '<h3>📊 定量指標</h3>'
-                '<table><thead><tr><th>優先</th><th>指標名</th><th>目標値</th><th>トレードオフ</th></tr></thead>'
-                f'<tbody>{m_rows}</tbody></table>'
+                "<h3>📊 定量指標</h3>"
+                "<table><thead><tr><th>優先</th><th>指標名</th><th>目標値</th><th>トレードオフ</th></tr></thead>"
+                f"<tbody>{m_rows}</tbody></table>"
             )
 
         # v3.1: 監査証拠チェックリスト
@@ -960,8 +1065,8 @@ th{{background:#1f2937;font-weight:bold}}
         audit_items = dao.get("audit_evidence_checklist", [])
         if audit_items:
             a_items = "".join(
-                f'<li><strong>[{ae.get("category", "")}]</strong> {ae.get("required_evidence", "")} '
-                f'→ 確認: {ae.get("verification_method", "")}</li>'
+                f"<li><strong>[{ae.get('category', '')}]</strong> {ae.get('required_evidence', '')} "
+                f"→ 確認: {ae.get('verification_method', '')}</li>"
                 for ae in audit_items
             )
             audit_html = f"<h3>📋 監査証拠チェックリスト</h3><ul>{a_items}</ul>"
@@ -992,7 +1097,7 @@ th{{background:#1f2937;font-weight:bold}}
 <div class="card">
 <p><span class="label">問題タイプ:</span> {problem_type}</p>
 <p><span class="label">問題の本質的性質:</span> {problem_nature}</p>
-<p class="essence"><span class="label">本質:</span> {dao.get('essence', 'N/A')}</p>
+<p class="essence"><span class="label">本質:</span> {dao.get("essence", "N/A")}</p>
 </div>
 {essence_derivation_html}
 {alternatives_html}
@@ -1023,9 +1128,9 @@ th{{background:#1f2937;font-weight:bold}}
                     enforcement += f"<br/>👤 責任者: {p['responsible_role']}"
                 items += (
                     f'<div class="prohibition"><strong>⛔ {p.get("prohibition", "")}</strong><br/>'
-                    f'理由: {p.get("rationale", "")}<br/>'
-                    f'違反結果: {p.get("violation_consequence", "")}'
-                    f'{enforcement}</div>'
+                    f"理由: {p.get('rationale', '')}<br/>"
+                    f"違反結果: {p.get('violation_consequence', '')}"
+                    f"{enforcement}</div>"
                 )
             prohibitions_html = f"<h3>🚫 戦略的禁止事項（仕組み化）</h3>{items}"
 
@@ -1035,11 +1140,11 @@ th{{background:#1f2937;font-weight:bold}}
         if comp_hyp:
             hypothesis_html = f"""<div class="highlight">
 <h3>🎯 競争優位仮説</h3>
-<p><span class="label">差別化軸:</span> <strong>{comp_hyp.get('axis_name', '')}</strong></p>
-<p><span class="label">対象顧客:</span> {comp_hyp.get('target_customer', '')}</p>
-<p><span class="label">代替障壁:</span> {comp_hyp.get('substitution_barrier', '')}</p>
-<p><span class="label">勝ち筋指標:</span> {comp_hyp.get('winning_metric', '')}</p>
-<p><span class="label">最小検証:</span> {comp_hyp.get('minimum_verification', '')}</p>
+<p><span class="label">差別化軸:</span> <strong>{comp_hyp.get("axis_name", "")}</strong></p>
+<p><span class="label">対象顧客:</span> {comp_hyp.get("target_customer", "")}</p>
+<p><span class="label">代替障壁:</span> {comp_hyp.get("substitution_barrier", "")}</p>
+<p><span class="label">勝ち筋指標:</span> {comp_hyp.get("winning_metric", "")}</p>
+<p><span class="label">最小検証:</span> {comp_hyp.get("minimum_verification", "")}</p>
 </div>"""
         else:
             # v3.0フォールバック
@@ -1047,9 +1152,9 @@ th{{background:#1f2937;font-weight:bold}}
             if diff_axis:
                 hypothesis_html = f"""<div class="highlight">
 <h3>🎯 差別化軸</h3>
-<p><span class="label">勝負する軸:</span> <strong>{diff_axis.get('axis_name', '')}</strong></p>
-<p><span class="label">理由:</span> {diff_axis.get('why_this_axis', '')}</p>
-<p><span class="label">勝負しない軸:</span> {diff_axis.get('not_this_axis', '')}</p>
+<p><span class="label">勝負する軸:</span> <strong>{diff_axis.get("axis_name", "")}</strong></p>
+<p><span class="label">理由:</span> {diff_axis.get("why_this_axis", "")}</p>
+<p><span class="label">勝負しない軸:</span> {diff_axis.get("not_this_axis", "")}</p>
 </div>"""
 
         # 既存解が使えない理由
@@ -1085,9 +1190,9 @@ th{{background:#1f2937;font-weight:bold}}
             risk_conc = path.get("risk_concentration", "")
             risk_html = f"<p><strong>⚡ リスク集中点:</strong> {risk_conc}</p>" if risk_conc else ""
             paths_html += f"""<div class="card">
-<h3>📌 {path.get('name', '')} ({strategy_type})</h3>
-<p>{path.get('description', '')}</p>
-<p><span class="label">価値実現:</span> {path.get('time_to_value', '')} | <span class="label">可逆性:</span> {path.get('reversibility', '')}</p>
+<h3>📌 {path.get("name", "")} ({strategy_type})</h3>
+<p>{path.get("description", "")}</p>
+<p><span class="label">価値実現:</span> {path.get("time_to_value", "")} | <span class="label">可逆性:</span> {path.get("reversibility", "")}</p>
 {cond_html}{risk_html}
 <h4>メリット</h4><ul>{pros}</ul>
 <h4>デメリット</h4><ul>{cons}</ul>
@@ -1104,7 +1209,7 @@ th{{background:#1f2937;font-weight:bold}}
                     f"<tr><td>🚪 {g.get('criterion', '')}</td><td>{g.get('threshold', '')}</td></tr>"
                     for g in must_gates
                 )
-                must_html = f'<h4>Must（不可変ゲート）</h4><table><tr><th>基準</th><th>閾値</th></tr>{must_rows}</table>'
+                must_html = f"<h4>Must（不可変ゲート）</h4><table><tr><th>基準</th><th>閾値</th></tr>{must_rows}</table>"
             should_html = ""
             should = jf.get("should_criteria", [])
             if should:
@@ -1112,7 +1217,7 @@ th{{background:#1f2937;font-weight:bold}}
                     f"<tr><td>{s.get('criterion', '')}</td><td>{s.get('weight', '')}</td><td>{s.get('scoring_method', '')}</td></tr>"
                     for s in should
                 )
-                should_html = f'<h4>Should（比較評価）</h4><table><tr><th>基準</th><th>重み</th><th>採点方法</th></tr>{should_rows}</table>'
+                should_html = f"<h4>Should（比較評価）</h4><table><tr><th>基準</th><th>重み</th><th>採点方法</th></tr>{should_rows}</table>"
             jf_html = f"<h3>⚖️ 判断フレームワーク</h3>{must_html}{should_html}"
 
         # v3.1: セルフチェック
@@ -1133,7 +1238,9 @@ th{{background:#1f2937;font-weight:bold}}
                 if vals:
                     sc_items += f"<p><strong>{label}:</strong> {', '.join(vals)}</p>"
             sc_class = "pass" if status == "PASS" else "warning"
-            selfcheck_html = f'<div class="{sc_class}"><h3>🔍 セルフチェック: {status}</h3>{sc_items}</div>'
+            selfcheck_html = (
+                f'<div class="{sc_class}"><h3>🔍 セルフチェック: {status}</h3>{sc_items}</div>'
+            )
 
         # 比較マトリックス
         comparison_html = ""
@@ -1149,7 +1256,7 @@ th{{background:#1f2937;font-weight:bold}}
                     rows += f"<tr><th>{path_id}</th>{cells}</tr>"
                 comparison_html = f"""<h3>📊 比較マトリックス</h3>
 <table><tr><th>パス</th>{header}</tr>{rows}</table>
-<p>{comparison.get('recommendation_summary', '')}</p>"""
+<p>{comparison.get("recommendation_summary", "")}</p>"""
 
         return f"""<h2>⚖️ 法 - 戦略選定 v3.1</h2>
 {prohibitions_html}
@@ -1169,7 +1276,7 @@ th{{background:#1f2937;font-weight:bold}}
             deliverables = "".join(f"<li>{d}</li>" for d in phase.get("deliverables", []))
             criteria = "".join(f"<li>{c}</li>" for c in phase.get("success_criteria", []))
             phases_html += f"""<div class="card">
-<h3>Phase {phase.get('phase_number', '?')}: {phase.get('name', '')} ({phase.get('duration', '')})</h3>
+<h3>Phase {phase.get("phase_number", "?")}: {phase.get("name", "")} ({phase.get("duration", "")})</h3>
 <h4>行動</h4><ul>{actions}</ul>
 <h4>成果物</h4><ul>{deliverables}</ul>
 <h4>完了条件</h4><ul>{criteria}</ul>
@@ -1177,7 +1284,11 @@ th{{background:#1f2937;font-weight:bold}}
 
         # 最初の一歩
         first_action = shu.get("first_action", "")
-        first_action_html = f'<div class="success"><strong>🎯 最初の一歩:</strong> {first_action}</div>' if first_action else ""
+        first_action_html = (
+            f'<div class="success"><strong>🎯 最初の一歩:</strong> {first_action}</div>'
+            if first_action
+            else ""
+        )
 
         # v3.0: 切り捨てリスト
         cut_list_html = ""
@@ -1210,9 +1321,9 @@ th{{background:#1f2937;font-weight:bold}}
         if validation:
             validation_html = f"""<div class="warning">
 <h3>🔬 単一検証ポイント（PoCで絶対に検証すべき1点）</h3>
-<p><span class="label">検証対象:</span> {validation.get('validation_target', '')}</p>
-<p><span class="label">成功基準:</span> {validation.get('success_criteria', '')}</p>
-<p><span class="label">失敗時行動:</span> {validation.get('failure_action', '')}</p>
+<p><span class="label">検証対象:</span> {validation.get("validation_target", "")}</p>
+<p><span class="label">成功基準:</span> {validation.get("success_criteria", "")}</p>
+<p><span class="label">失敗時行動:</span> {validation.get("failure_action", "")}</p>
 </div>"""
 
         # v3.0: 撤退基準
@@ -1221,9 +1332,9 @@ th{{background:#1f2937;font-weight:bold}}
         if exit_criteria:
             exit_html = f"""<div class="prohibition">
 <h3>🚪 撤退基準（どこで止めるか）</h3>
-<p><span class="label">チェックポイント:</span> {exit_criteria.get('checkpoint', '')}</p>
-<p><span class="label">撤退トリガー:</span> {exit_criteria.get('exit_trigger', '')}</p>
-<p><span class="label">撤退時行動:</span> {exit_criteria.get('exit_action', '')}</p>
+<p><span class="label">チェックポイント:</span> {exit_criteria.get("checkpoint", "")}</p>
+<p><span class="label">撤退トリガー:</span> {exit_criteria.get("exit_trigger", "")}</p>
+<p><span class="label">撤退時行動:</span> {exit_criteria.get("exit_action", "")}</p>
 </div>"""
 
         # 30天节奏控制
@@ -1235,12 +1346,12 @@ th{{background:#1f2937;font-weight:bold}}
             avoid_items = "".join(f"<li>❌ {a}</li>" for a in avoid_list)
             rhythm_html = f"""<div class="card">
 <h3>⏱️ 30天行動節奏</h3>
-<p><span class="label">聚焦:</span> <strong>{focus.get('name', '')}</strong></p>
-<p>{focus.get('description', '')}</p>
-<p><span class="label">成功指標:</span> {focus.get('success_metric', '')}</p>
+<p><span class="label">聚焦:</span> <strong>{focus.get("name", "")}</strong></p>
+<p>{focus.get("description", "")}</p>
+<p><span class="label">成功指標:</span> {focus.get("success_metric", "")}</p>
 <h4>この期間やらないこと</h4><ul>{avoid_items}</ul>
-<p><span class="label">チェックポイント:</span> {rhythm.get('checkpoint_date', '')}</p>
-<p><span class="label">次の判断:</span> {rhythm.get('next_decision_point', '')}</p>
+<p><span class="label">チェックポイント:</span> {rhythm.get("checkpoint_date", "")}</p>
+<p><span class="label">次の判断:</span> {rhythm.get("next_decision_point", "")}</p>
 </div>"""
 
         # v3.1: PoC完成定義
@@ -1266,7 +1377,10 @@ th{{background:#1f2937;font-weight:bold}}
         rocket_html = ""
         rocket = shu.get("two_stage_rocket", {})
         if rocket:
-            for stage_key, label in [("stage1_minimal_pipeline", "Stage1: 最小パイプライン"), ("stage2_governance", "Stage2: 統制強化")]:
+            for stage_key, label in [
+                ("stage1_minimal_pipeline", "Stage1: 最小パイプライン"),
+                ("stage2_governance", "Stage2: 統制強化"),
+            ]:
                 stage = rocket.get(stage_key, {})
                 if not stage:
                     continue
@@ -1279,16 +1393,16 @@ th{{background:#1f2937;font-weight:bold}}
                     )
                     branch_section = f"<h5>分岐</h5><ul>{branches}</ul>" if branches else ""
                     phase_items += f"""<div class="card">
-<h4>Phase {p.get('phase_number', '')}: {p.get('name', '')} ({p.get('duration', '')})</h4>
-<p><span class="label">目的:</span> {p.get('purpose', '')}</p>
+<h4>Phase {p.get("phase_number", "")}: {p.get("name", "")} ({p.get("duration", "")})</h4>
+<p><span class="label">目的:</span> {p.get("purpose", "")}</p>
 <p><span class="label">作業:</span> {tasks}</p>
 {branch_section}
 </div>"""
                 gate = ", ".join(stage.get("gate_criteria", []))
                 gate_html = f"<p><span class='label'>ゲート基準:</span> {gate}</p>" if gate else ""
                 rocket_html += f"""<div class="highlight">
-<h3>🚀 {label}: {stage.get('stage_name', '')}</h3>
-<p>{stage.get('objective', '')}</p>
+<h3>🚀 {label}: {stage.get("stage_name", "")}</h3>
+<p>{stage.get("objective", "")}</p>
 {gate_html}
 {phase_items}
 </div>"""
@@ -1311,9 +1425,9 @@ th{{background:#1f2937;font-weight:bold}}
         for impl in qi.get("implementations", []):
             risks = "".join(f"<li>{r}</li>" for r in impl.get("risks", []))
             impl_html += f"""<div class="card">
-<h3>🔧 {impl.get('component', '')}</h3>
-<p><span class="label">技術:</span> {impl.get('technology', '')}</p>
-<p><span class="label">工数:</span> {impl.get('estimated_effort', '')}</p>
+<h3>🔧 {impl.get("component", "")}</h3>
+<p><span class="label">技術:</span> {impl.get("technology", "")}</p>
+<p><span class="label">工数:</span> {impl.get("estimated_effort", "")}</p>
 <h4>リスク</h4><ul>{risks}</ul>
 </div>"""
 
@@ -1401,7 +1515,11 @@ th{{background:#1f2937;font-weight:bold}}
             if logging_info:
                 log_html = f"<p><span class='label'>ID戦略:</span> {logging_info.get('correlation_id_strategy', '')}</p>"
             deferred = poc_arch.get("deferred_components", [])
-            deferred_html = f"<p><span class='label'>後回し:</span> {', '.join(deferred)}</p>" if deferred else ""
+            deferred_html = (
+                f"<p><span class='label'>後回し:</span> {', '.join(deferred)}</p>"
+                if deferred
+                else ""
+            )
             poc_arch_html = f"""<div class="highlight">
 <h3>🏗️ PoC最小アーキテクチャ</h3>
 <table><tr><th>コンポーネント</th><th>目的</th><th>技術選定</th><th>備考</th></tr>{comp_rows}</table>
@@ -1465,14 +1583,21 @@ th{{background:#1f2937;font-weight:bold}}
             verdict = verdict.value
 
         confidence = review.get("confidence_score", 0)
-        verdict_class = "success" if verdict == "PASS" else "prohibition" if verdict == "REJECT" else "warning"
+        verdict_class = (
+            "success" if verdict == "PASS" else "prohibition" if verdict == "REJECT" else "warning"
+        )
 
         # v3.1 信頼度分解
         breakdown_html = ""
         breakdown = review.get("confidence_breakdown")
         if isinstance(breakdown, dict):
             rows: list[str] = []
-            for key in ("input_sufficiency", "logic_consistency", "implementation_feasibility", "risk_coverage"):
+            for key in (
+                "input_sufficiency",
+                "logic_consistency",
+                "implementation_feasibility",
+                "risk_coverage",
+            ):
                 comp = breakdown.get(key, {})
                 if isinstance(comp, dict):
                     rows.append(
@@ -1485,7 +1610,8 @@ th{{background:#1f2937;font-weight:bold}}
                 breakdown_html = (
                     "<h3>📊 信頼度分解</h3>"
                     "<table><tr><th>項目</th><th>スコア</th><th>チェック加点</th><th>説明</th></tr>"
-                    + "".join(rows) + "</table>"
+                    + "".join(rows)
+                    + "</table>"
                 )
 
         # v3.1 差分パッチ型 所見（最大3件）
@@ -1504,7 +1630,8 @@ th{{background:#1f2937;font-weight:bold}}
                 si_list = finding.get("score_improvements", [])
                 si_text = ", ".join(
                     f"{s.get('target_score', '')}: {s.get('current_estimate', 0):.0f}%→{s.get('improved_estimate', 0):.0f}%(+{s.get('delta', 0):.0f})"
-                    for s in si_list if isinstance(s, dict)
+                    for s in si_list
+                    if isinstance(s, dict)
                 )
                 item_rows.append(
                     f"<li><strong>[{action}]</strong> {finding.get('description', '')}"
@@ -1514,7 +1641,9 @@ th{{background:#1f2937;font-weight:bold}}
                     + (f"<br/>改善見込み: {si_text}" if si_text else "")
                     + "</li>"
                 )
-            findings_html = f"<h3>🎯 高レバレッジ欠陥（{len(findings)}件）</h3><ul>{''.join(item_rows)}</ul>"
+            findings_html = (
+                f"<h3>🎯 高レバレッジ欠陥（{len(findings)}件）</h3><ul>{''.join(item_rows)}</ul>"
+            )
 
         # v3.1 チェックポイント項目
         checkpoint_html = ""
@@ -1523,14 +1652,15 @@ th{{background:#1f2937;font-weight:bold}}
             cp_items = "".join(
                 f"<li>☐ {c.get('label', '')} (+{c.get('score_boost', 0):.0f}点)"
                 f" — {c.get('default_suggestion', '')}</li>"
-                for c in checkpoints if isinstance(c, dict)
+                for c in checkpoints
+                if isinstance(c, dict)
             )
             checkpoint_html = f"<h3>☑️ 確認チェックポイント</h3><ul>{cp_items}</ul>"
 
         return f"""<h2>✅ 検証 - 差分パッチ型判定 v3.1</h2>
 <div class="{verdict_class}">
 <p><span class="label">判定:</span> <strong>{verdict}</strong></p>
-<p><span class="label">信頼度:</span> {confidence*100:.0f}%</p>
+<p><span class="label">信頼度:</span> {confidence * 100:.0f}%</p>
 </div>
 {breakdown_html}
 {findings_html}

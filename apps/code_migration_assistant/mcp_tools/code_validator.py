@@ -87,14 +87,16 @@ class CodeValidator(MCPTool):
 
         # 検証実行
         try:
-            score, scores, is_acceptable, feedback, suggestions, errors, warnings = self._validate_code(
-                java_code=java_code,
-                ast=ast,
-                metadata=metadata,
-                mappings=mappings,
-                strict_mode=validation_options.get("strict_mode", False),
-                check_style=validation_options.get("check_style", True),
-                check_performance=validation_options.get("check_performance", True),
+            score, scores, is_acceptable, feedback, suggestions, errors, warnings = (
+                self._validate_code(
+                    java_code=java_code,
+                    ast=ast,
+                    metadata=metadata,
+                    mappings=mappings,
+                    strict_mode=validation_options.get("strict_mode", False),
+                    check_style=validation_options.get("check_style", True),
+                    check_performance=validation_options.get("check_performance", True),
+                )
             )
 
             return MCPToolResponse(
@@ -150,7 +152,9 @@ class CodeValidator(MCPTool):
         feedback.extend(syntax_feedback)
 
         # 2. 意味的等価性検証（40点）
-        semantic_score, semantic_feedback = self._check_semantics(java_code, ast, metadata, mappings)
+        semantic_score, semantic_feedback = self._check_semantics(
+            java_code, ast, metadata, mappings
+        )
         feedback.extend(semantic_feedback)
 
         # 3. コード品質検証（20点）
@@ -158,7 +162,9 @@ class CodeValidator(MCPTool):
         feedback.extend(quality_feedback)
 
         # 4. パフォーマンス検証（10点）
-        performance_score, performance_feedback = self._check_performance(java_code, check_performance)
+        performance_score, performance_feedback = self._check_performance(
+            java_code, check_performance
+        )
         feedback.extend(performance_feedback)
 
         # 総合スコア計算
@@ -177,7 +183,9 @@ class CodeValidator(MCPTool):
 
         # 改善提案生成
         if not is_acceptable:
-            suggestions.append(f"総合スコアが{self.acceptance_threshold}点未満です。以下の改善を検討してください：")
+            suggestions.append(
+                f"総合スコアが{self.acceptance_threshold}点未満です。以下の改善を検討してください："
+            )
             if syntax_score < 25:
                 suggestions.append("- 構文エラーを修正してください")
             if semantic_score < 30:
@@ -223,9 +231,13 @@ class CodeValidator(MCPTool):
         missing_semicolons = 0
         for line in lines:
             line_stripped = line.strip()
-            if line_stripped and not line_stripped.startswith("//") and not line_stripped.startswith("/*"):
-                if (
-                    line_stripped.endswith(("{", "}")) or line_stripped.startswith(("package", "import", "public", "private"))
+            if (
+                line_stripped
+                and not line_stripped.startswith("//")
+                and not line_stripped.startswith("/*")
+            ):
+                if line_stripped.endswith(("{", "}")) or line_stripped.startswith(
+                    ("package", "import", "public", "private")
                 ):
                     continue
                 if not line_stripped.endswith(";") and not line_stripped.endswith("{"):
@@ -314,8 +326,12 @@ class CodeValidator(MCPTool):
 
         # 2. コメント・Javadocチェック（5点）
         lines = java_code.split("\n")
-        comment_lines = sum(1 for line in lines if line.strip().startswith("//") or line.strip().startswith("/*"))
-        code_lines = len([line for line in lines if line.strip() and not line.strip().startswith("//")])
+        comment_lines = sum(
+            1 for line in lines if line.strip().startswith("//") or line.strip().startswith("/*")
+        )
+        code_lines = len(
+            [line for line in lines if line.strip() and not line.strip().startswith("//")]
+        )
 
         if code_lines > 0:
             comment_ratio = comment_lines / code_lines
@@ -332,7 +348,9 @@ class CodeValidator(MCPTool):
 
         return max(0, score), feedback
 
-    def _check_performance(self, java_code: str, check_performance: bool) -> tuple[float, list[str]]:
+    def _check_performance(
+        self, java_code: str, check_performance: bool
+    ) -> tuple[float, list[str]]:
         """パフォーマンスを検証.
 
         Args:
@@ -368,4 +386,3 @@ class CodeValidator(MCPTool):
             feedback.append("String連結にStringBuilderの使用を検討してください")
 
         return max(0, score), feedback
-

@@ -47,6 +47,7 @@ logger = logging.getLogger(__name__)
 
 class ChartType(str, Enum):
     """チャートタイプ."""
+
     BAR = "bar"
     LINE = "line"
     PIE = "pie"
@@ -67,6 +68,7 @@ class ChartType(str, Enum):
 
 class ChartFormat(str, Enum):
     """出力フォーマット."""
+
     ECHARTS = "echarts"
     CHARTJS = "chartjs"
     BOTH = "both"
@@ -80,6 +82,7 @@ class ChartFormat(str, Enum):
 @dataclass
 class DrillDownConfig:
     """ドリルダウン設定 - クリック時の詳細表示設定."""
+
     enabled: bool = True
     drill_fields: list[str] = field(default_factory=list)  # ドリルダウン可能なフィールド
     drill_query_template: str = ""  # ドリルダウン時のクエリテンプレート
@@ -89,6 +92,7 @@ class DrillDownConfig:
 @dataclass
 class DashboardPanel:
     """ダッシュボードパネル - 1つのチャート設定."""
+
     panel_id: str
     title: str
     chart_type: ChartType
@@ -104,6 +108,7 @@ class DashboardPanel:
 @dataclass
 class DashboardConfig:
     """ダッシュボード設定."""
+
     dashboard_id: str
     title: str
     panels: list[DashboardPanel] = field(default_factory=list)
@@ -115,6 +120,7 @@ class DashboardConfig:
 @dataclass
 class ChartRecommendation:
     """チャート推薦結果 - より詳細な分析結果."""
+
     primary_type: ChartType
     primary_reason: str
     confidence: float
@@ -134,10 +140,19 @@ class ChartConfig:
     # 増強: ドリルダウン・ダッシュボード対応
     enable_drill_down: bool = True
     enable_interactivity: bool = True
-    color_palette: list[str] = field(default_factory=lambda: [
-        "#5470c6", "#91cc75", "#fac858", "#ee6666", "#73c0de",
-        "#3ba272", "#fc8452", "#9a60b4", "#ea7ccc"
-    ])
+    color_palette: list[str] = field(
+        default_factory=lambda: [
+            "#5470c6",
+            "#91cc75",
+            "#fac858",
+            "#ee6666",
+            "#73c0de",
+            "#3ba272",
+            "#fc8452",
+            "#9a60b4",
+            "#ea7ccc",
+        ]
+    )
     pivot_aggregation: str = "sum"  # sum, count, avg, min, max
 
     @classmethod
@@ -191,6 +206,7 @@ class ChartConfig:
 @dataclass
 class ChartOutput:
     """チャート出力."""
+
     chart_type: ChartType
     title: str
     echarts: dict[str, Any] | None = None
@@ -266,7 +282,7 @@ class ChartService(ServiceBase):
             yield self._emit_error(execution_id, "no_data", "データがありません")
             return
 
-        data = data[:self._config.max_data_points]
+        data = data[: self._config.max_data_points]
         columns = columns or (list(data[0].keys()) if data else [])
 
         yield self._emit_progress(execution_id, 20, "チャートタイプを分析中...", phase="analyze")
@@ -291,14 +307,18 @@ class ChartService(ServiceBase):
         if self._config.format in (ChartFormat.CHARTJS, ChartFormat.BOTH):
             chartjs_config = self._build_chartjs(data, columns, selected_type, title)
 
-        yield self._emit_result(execution_id, {
-            "chart_type": selected_type.value,
-            "title": title,
-            "echarts": echarts_config,
-            "chartjs": chartjs_config,
-            "recommendation": recommendation,
-            "data_points": len(data),
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "chart_type": selected_type.value,
+                "title": title,
+                "echarts": echarts_config,
+                "chartjs": chartjs_config,
+                "recommendation": recommendation,
+                "data_points": len(data),
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     async def _do_recommend(
         self,
@@ -317,11 +337,15 @@ class ChartService(ServiceBase):
         columns = columns or (list(data[0].keys()) if data else [])
         selected_type, recommendation = self._recommend_chart_type(data, columns)
 
-        yield self._emit_result(execution_id, {
-            "recommended_type": selected_type.value,
-            "recommendation": recommendation,
-            "alternatives": self._get_alternatives(data, columns),
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "recommended_type": selected_type.value,
+                "recommendation": recommendation,
+                "alternatives": self._get_alternatives(data, columns),
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     def _recommend_chart_type(
         self,
@@ -405,11 +429,13 @@ class ChartService(ServiceBase):
         }
 
         if chart_type == ChartType.PIE:
-            config["series"] = [{
-                "type": "pie",
-                "radius": "50%",
-                "data": [{"name": l, "value": v} for l, v in zip(labels, values, strict=False)],
-            }]
+            config["series"] = [
+                {
+                    "type": "pie",
+                    "radius": "50%",
+                    "data": [{"name": l, "value": v} for l, v in zip(labels, values, strict=False)],
+                }
+            ]
         elif chart_type == ChartType.SCATTER:
             if len(columns) >= 2:
                 scatter_data = [[r.get(columns[0], 0), r.get(columns[1], 0)] for r in data]
@@ -419,10 +445,12 @@ class ChartService(ServiceBase):
         else:
             config["xAxis"] = {"type": "category", "data": labels}
             config["yAxis"] = {"type": "value"}
-            config["series"] = [{
-                "type": chart_type.value,
-                "data": values,
-            }]
+            config["series"] = [
+                {
+                    "type": chart_type.value,
+                    "data": values,
+                }
+            ]
 
         return config
 
@@ -448,11 +476,13 @@ class ChartService(ServiceBase):
             "type": chartjs_type,
             "data": {
                 "labels": labels,
-                "datasets": [{
-                    "label": y_col,
-                    "data": values,
-                    "fill": chart_type == ChartType.AREA,
-                }],
+                "datasets": [
+                    {
+                        "label": y_col,
+                        "data": values,
+                        "fill": chart_type == ChartType.AREA,
+                    }
+                ],
             },
             "options": {
                 "responsive": True,
@@ -465,6 +495,7 @@ class ChartService(ServiceBase):
     def _is_date_like(self, value: Any) -> bool:
         """値が日付っぽいか判定."""
         import re
+
         if value is None:
             return False
         s = str(value)
@@ -493,18 +524,22 @@ class ChartService(ServiceBase):
         characteristics = self._analyze_data_characteristics(data, columns)
         recommendation = self._recommend_chart_with_details(data, columns, characteristics)
 
-        yield self._emit_result(execution_id, {
-            "characteristics": characteristics,
-            "recommendation": {
-                "primary_type": recommendation.primary_type.value,
-                "primary_reason": recommendation.primary_reason,
-                "confidence": recommendation.confidence,
-                "alternatives": [
-                    {"type": t.value, "reason": r, "confidence": c}
-                    for t, r, c in recommendation.alternatives
-                ],
+        yield self._emit_result(
+            execution_id,
+            {
+                "characteristics": characteristics,
+                "recommendation": {
+                    "primary_type": recommendation.primary_type.value,
+                    "primary_reason": recommendation.primary_reason,
+                    "confidence": recommendation.confidence,
+                    "alternatives": [
+                        {"type": t.value, "reason": r, "confidence": c}
+                        for t, r, c in recommendation.alternatives
+                    ],
+                },
             },
-        }, (time.time() - start_time) * 1000)
+            (time.time() - start_time) * 1000,
+        )
 
     async def _do_pivot(
         self,
@@ -531,12 +566,16 @@ class ChartService(ServiceBase):
 
         pivot_result = self._build_pivot_table(data, rows, cols, values, aggregation)
 
-        yield self._emit_result(execution_id, {
-            "pivot_data": pivot_result["data"],
-            "row_headers": pivot_result["row_headers"],
-            "col_headers": pivot_result["col_headers"],
-            "aggregation": aggregation,
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "pivot_data": pivot_result["data"],
+                "row_headers": pivot_result["row_headers"],
+                "col_headers": pivot_result["col_headers"],
+                "aggregation": aggregation,
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     async def _do_drill_down(
         self,
@@ -555,7 +594,9 @@ class ChartService(ServiceBase):
             return
 
         if not drill_field:
-            yield self._emit_error(execution_id, "no_drill_field", "ドリルダウンフィールドを指定してください")
+            yield self._emit_error(
+                execution_id, "no_drill_field", "ドリルダウンフィールドを指定してください"
+            )
             return
 
         parent_filters = parent_filters or {}
@@ -571,13 +612,17 @@ class ChartService(ServiceBase):
         # ドリルダウン可能なフィールドを検出
         next_drill_fields = self._detect_drill_fields(filtered_data, drill_field)
 
-        yield self._emit_result(execution_id, {
-            "filtered_data": filtered_data[:self._config.max_data_points],
-            "total_count": len(filtered_data),
-            "drill_field": drill_field,
-            "drill_value": drill_value,
-            "next_drill_fields": next_drill_fields,
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "filtered_data": filtered_data[: self._config.max_data_points],
+                "total_count": len(filtered_data),
+                "drill_field": drill_field,
+                "drill_value": drill_value,
+                "next_drill_fields": next_drill_fields,
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     def _analyze_data_characteristics(
         self,
@@ -640,8 +685,12 @@ class ChartService(ServiceBase):
         has_time_series = characteristics.get("has_time_series", False)
         has_categorical = characteristics.get("has_categorical", False)
 
-        numeric_cols = [c for c, info in characteristics["columns"].items() if info.get("type") == "numeric"]
-        text_cols = [c for c, info in characteristics["columns"].items() if info.get("type") == "text"]
+        numeric_cols = [
+            c for c, info in characteristics["columns"].items() if info.get("type") == "numeric"
+        ]
+        text_cols = [
+            c for c, info in characteristics["columns"].items() if info.get("type") == "text"
+        ]
         [c for c, info in characteristics["columns"].items() if info.get("type") == "date"]
 
         alternatives: list[tuple[ChartType, str, float]] = []

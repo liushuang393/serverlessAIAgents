@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Apps Router エンドポイントのユニットテスト.
 
 テスト対象: apps/platform/routers/apps.py
@@ -7,7 +6,6 @@ FastAPI TestClient を使用してエンドポイントを検証する。
 
 from __future__ import annotations
 
-import pytest
 from fastapi.testclient import TestClient
 
 
@@ -185,7 +183,9 @@ class TestMigrateManifests:
     """POST /api/studios/framework/apps/migrate-manifests テスト."""
 
     def test_migrate_dry_run(self, test_client: TestClient) -> None:
-        resp = test_client.post("/api/studios/framework/apps/migrate-manifests", json={"dry_run": True})
+        resp = test_client.post(
+            "/api/studios/framework/apps/migrate-manifests", json={"dry_run": True}
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["dry_run"] is True
@@ -194,7 +194,9 @@ class TestMigrateManifests:
         assert "apps" in data
 
     def test_migrate_apply(self, test_client: TestClient) -> None:
-        resp = test_client.post("/api/studios/framework/apps/migrate-manifests", json={"dry_run": False})
+        resp = test_client.post(
+            "/api/studios/framework/apps/migrate-manifests", json={"dry_run": False}
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["dry_run"] is False
@@ -252,7 +254,9 @@ class TestCreateOptions:
         assert data["surface_profile"] == "developer"
 
     def test_business_profile_returns_simplified_options(self, test_client: TestClient) -> None:
-        resp = test_client.get("/api/studios/framework/apps/create/options?surface_profile=business")
+        resp = test_client.get(
+            "/api/studios/framework/apps/create/options?surface_profile=business"
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["surface_profile"] == "business"
@@ -265,11 +269,15 @@ class TestBusinessSurfaceAccessControl:
     """business surface のアクセス制御テスト."""
 
     def test_config_access_denied_for_business(self, test_client: TestClient) -> None:
-        resp = test_client.get("/api/studios/framework/apps/test_app/config?surface_profile=business")
+        resp = test_client.get(
+            "/api/studios/framework/apps/test_app/config?surface_profile=business"
+        )
         assert resp.status_code == 403
         assert resp.json()["detail"]["error_code"] == "SURFACE_ACCESS_DENIED"
 
     def test_contracts_access_denied_for_business(self, test_client: TestClient) -> None:
-        resp = test_client.get("/api/studios/framework/apps/test_app/contracts?surface_profile=business")
+        resp = test_client.get(
+            "/api/studios/framework/apps/test_app/contracts?surface_profile=business"
+        )
         assert resp.status_code == 403
         assert resp.json()["detail"]["error_code"] == "SURFACE_ACCESS_DENIED"

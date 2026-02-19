@@ -43,6 +43,7 @@ from typing import Any
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
 try:
     from dotenv import load_dotenv
 except ImportError:  # pragma: no cover - optional dependency
@@ -135,17 +136,12 @@ class AgentFlowSettings(BaseSettings):
     # 知識ストア設定（長期記憶）
     # ========================================
     knowledge_storage_path: str = Field(
-        default="memory/knowledge",
-        description="知識ストレージのパス"
+        default="memory/knowledge", description="知識ストレージのパス"
     )
     knowledge_backend: str = Field(
-        default="auto",
-        description="知識ストアバックエンド (auto/memvid/memory)"
+        default="auto", description="知識ストアバックエンド (auto/memvid/memory)"
     )
-    knowledge_auto_persist: bool = Field(
-        default=True,
-        description="知識の自動永続化を有効化"
-    )
+    knowledge_auto_persist: bool = Field(default=True, description="知識の自動永続化を有効化")
 
     # ========================================
     # ログ設定
@@ -262,11 +258,19 @@ class AgentFlowSettings(BaseSettings):
             VectorDB設定辞書
         """
         if self.pinecone_api_key:
-            return {"backend": "pinecone", "api_key": self.pinecone_api_key, "index": self.pinecone_index}
+            return {
+                "backend": "pinecone",
+                "api_key": self.pinecone_api_key,
+                "index": self.pinecone_index,
+            }
         if self.qdrant_url:
             return {"backend": "qdrant", "url": self.qdrant_url}
         if self.chroma_persist_dir:
-            return {"backend": "chroma", "persist_dir": self.chroma_persist_dir, "collection": self.chroma_collection}
+            return {
+                "backend": "chroma",
+                "persist_dir": self.chroma_persist_dir,
+                "collection": self.chroma_collection,
+            }
         return {"backend": "memory"}
 
     def get_knowledge_config(self) -> dict[str, Any]:

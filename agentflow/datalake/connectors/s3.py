@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """S3Connector - AWS S3 / MinIO 互換コネクタ.
 
 S3互換ストレージへのアクセスを提供。
@@ -45,9 +47,7 @@ class S3Config(ConnectorConfig):
         use_ssl: SSLを使用するか
     """
 
-    endpoint_url: str | None = Field(
-        default=None, description="エンドポイントURL（MinIO用）"
-    )
+    endpoint_url: str | None = Field(default=None, description="エンドポイントURL（MinIO用）")
     region: str = Field(default="us-east-1", description="リージョン")
     access_key_id: str | None = Field(default=None, description="アクセスキー")
     secret_access_key: str | None = Field(default=None, description="シークレットキー")
@@ -113,12 +113,9 @@ class S3Connector(DataConnector):
                 from aiobotocore.session import get_session
             except ImportError as e:
                 msg = (
-                    "aiobotocore is required for S3 support. "
-                    "Install with: pip install aiobotocore"
+                    "aiobotocore is required for S3 support. Install with: pip install aiobotocore"
                 )
-                raise ImportError(
-                    msg
-                ) from e
+                raise ImportError(msg) from e
 
             session = get_session()
 
@@ -357,4 +354,3 @@ class S3Connector(DataConnector):
         if self._client:
             await self._client.close()
             self._client = None
-

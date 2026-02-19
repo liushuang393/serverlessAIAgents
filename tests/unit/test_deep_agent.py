@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeepAgentCoordinator 単体テスト.
 
 このモジュールは DeepAgentCoordinator とその関連コンポーネントのテストを提供します。
@@ -6,10 +5,8 @@
 
 from __future__ import annotations
 
-import asyncio
-from datetime import datetime
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -19,7 +16,6 @@ from agentflow.patterns.deep_agent import (
     AgentType,
     CognitiveAnalysis,
     DeepAgentCoordinator,
-    SelfEvolver,
     EvolutionRecord,
     MemoryEvolutionStore,
     MemoryRuntimeStore,
@@ -782,18 +778,14 @@ class TestDeepAgentCoordinator:
         assert "cognitive_analysis" in event_types
 
     @pytest.mark.asyncio
-    async def test_cognitive_analysis_without_llm(
-        self, coordinator: DeepAgentCoordinator
-    ) -> None:
+    async def test_cognitive_analysis_without_llm(self, coordinator: DeepAgentCoordinator) -> None:
         """LLMなしの認知分析."""
         result = await coordinator._cognitive_analysis("テストタスク")
         assert result.intent == "テストタスク"
         assert result.is_clear is True
 
     @pytest.mark.asyncio
-    async def test_decompose_task_without_llm(
-        self, coordinator: DeepAgentCoordinator
-    ) -> None:
+    async def test_decompose_task_without_llm(self, coordinator: DeepAgentCoordinator) -> None:
         """LLMなしのタスク分解."""
         cognitive = CognitiveAnalysis(
             intent="テスト",
@@ -805,9 +797,7 @@ class TestDeepAgentCoordinator:
         assert all(isinstance(t, TodoItem) for t in todos)
 
     @pytest.mark.asyncio
-    async def test_quality_review_without_llm(
-        self, coordinator: DeepAgentCoordinator
-    ) -> None:
+    async def test_quality_review_without_llm(self, coordinator: DeepAgentCoordinator) -> None:
         """LLMなしの品質評審."""
         # 全タスク完了の場合
         coordinator._progress.add_todo(
@@ -926,11 +916,13 @@ class TestConversationManager:
         assert manager.current_token_count() == 0
 
         # メッセージ追加後
-        manager.add_message(AgentMessage(
-            from_agent="a",
-            to_agent="b",
-            content="x" * 100,  # 約25トークン
-        ))
+        manager.add_message(
+            AgentMessage(
+                from_agent="a",
+                to_agent="b",
+                content="x" * 100,  # 約25トークン
+            )
+        )
         assert manager.current_token_count() > 0
 
     def test_utilization(self, manager: ConversationManager) -> None:
@@ -938,11 +930,13 @@ class TestConversationManager:
         assert manager.utilization() == 0.0
 
         # 半分くらい埋める
-        manager.add_message(AgentMessage(
-            from_agent="a",
-            to_agent="b",
-            content="x" * 2000,  # 約500トークン（max 1000の半分）
-        ))
+        manager.add_message(
+            AgentMessage(
+                from_agent="a",
+                to_agent="b",
+                content="x" * 2000,  # 約500トークン（max 1000の半分）
+            )
+        )
         util = manager.utilization()
         assert 0.3 < util < 0.7
 
@@ -951,11 +945,13 @@ class TestConversationManager:
         assert manager.needs_summarization() is False
 
         # 閾値を超える
-        manager.add_message(AgentMessage(
-            from_agent="a",
-            to_agent="b",
-            content="x" * 4000,  # 1000トークン以上
-        ))
+        manager.add_message(
+            AgentMessage(
+                from_agent="a",
+                to_agent="b",
+                content="x" * 4000,  # 1000トークン以上
+            )
+        )
         assert manager.needs_summarization() is True
 
     @pytest.mark.asyncio
@@ -963,11 +959,13 @@ class TestConversationManager:
         """自動要約."""
         # 複数メッセージを追加
         for i in range(10):
-            manager.add_message(AgentMessage(
-                from_agent=f"agent{i}",
-                to_agent="coordinator",
-                content=f"Message {i}" * 50,
-            ))
+            manager.add_message(
+                AgentMessage(
+                    from_agent=f"agent{i}",
+                    to_agent="coordinator",
+                    content=f"Message {i}" * 50,
+                )
+            )
 
         original_count = len(manager._messages)
         result = await manager.auto_summarize()
@@ -1301,9 +1299,7 @@ class TestCheckpointRecovery:
         coordinator._progress.add_todo(
             TodoItem(id="t1", task="タスク1", status=TaskStatus.COMPLETED)
         )
-        coordinator._progress.add_todo(
-            TodoItem(id="t2", task="タスク2", status=TaskStatus.PENDING)
-        )
+        coordinator._progress.add_todo(TodoItem(id="t2", task="タスク2", status=TaskStatus.PENDING))
 
         # チェックポイント保存
         checkpoint_id = await coordinator.save_checkpoint("execute")

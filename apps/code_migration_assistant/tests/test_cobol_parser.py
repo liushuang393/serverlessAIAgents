@@ -154,4 +154,3 @@ async def test_cobol_parser_metadata() -> None:
     assert "string" in var_types
     assert "numeric" in var_types
     assert "decimal" in var_types
-

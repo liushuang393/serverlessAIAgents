@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for RLM task_router module."""
 
 import pytest

@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from pydantic import BaseModel, Field
 
 from agentflow import __version__ as agentflow_version
@@ -48,6 +48,22 @@ app = FastAPI(
     description="Orchestration and protocol readiness checker",
     version="1.0.0",
 )
+
+
+@app.get("/")
+async def root() -> dict[str, str]:
+    """Root endpoint to avoid 404."""
+    return {
+        "message": "Orchestration Guardian API",
+        "docs_url": "/docs",
+        "health_url": "/api/health",
+    }
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon() -> Response:
+    """Favicon endpoint to avoid 404."""
+    return Response(content=b"", media_type="image/x-icon")
 
 
 @app.get("/api/health")

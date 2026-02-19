@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """App Discovery Service — apps/*/app_config.json のスキャンと登録.
 
 apps ディレクトリを走査し、各 App の app_config.json を検証・登録する。
@@ -12,9 +11,9 @@ Platform の App 管理 API が依存するコアサービス。
 
 from __future__ import annotations
 
-from copy import deepcopy
 import json
 import logging
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -322,7 +321,7 @@ class AppDiscoveryService:
         except json.JSONDecodeError as exc:
             self._errors[dir_name] = f"JSON パースエラー: {exc}"
             _logger.warning("JSON パースエラー (%s): %s", dir_name, exc)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._errors[dir_name] = f"検証エラー: {exc}"
             _logger.warning("検証エラー (%s): %s", dir_name, exc)
 
@@ -438,18 +437,24 @@ class AppDiscoveryService:
             manifest,
             product_line=str(manifest.get("product_line") or "framework"),
         )
-        if not isinstance(manifest.get("surface_profile"), str) or not str(
-            manifest.get("surface_profile"),
-        ).strip():
+        if (
+            not isinstance(manifest.get("surface_profile"), str)
+            or not str(
+                manifest.get("surface_profile"),
+            ).strip()
+        ):
             manifest["surface_profile"] = inferred_surface_profile
             self._mark_updated(updated_fields, "surface_profile")
 
         inferred_audit_profile = self._infer_audit_profile(
             product_line=str(manifest.get("product_line") or "framework"),
         )
-        if not isinstance(manifest.get("audit_profile"), str) or not str(
-            manifest.get("audit_profile"),
-        ).strip():
+        if (
+            not isinstance(manifest.get("audit_profile"), str)
+            or not str(
+                manifest.get("audit_profile"),
+            ).strip()
+        ):
             manifest["audit_profile"] = inferred_audit_profile
             self._mark_updated(updated_fields, "audit_profile")
 
@@ -569,9 +574,7 @@ class AppDiscoveryService:
         enabled: bool
         if "enabled" in rag_service:
             enabled = bool(rag_service.get("enabled"))
-        elif rag_service:
-            enabled = True
-        elif "rag" in tags_lower:
+        elif rag_service or "rag" in tags_lower:
             enabled = True
         else:
             enabled = has_rag_agent

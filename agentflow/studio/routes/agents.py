@@ -47,15 +47,17 @@ def create_agents_router(
         # レジストリから取得
         installed = registry.list_agents()
         for agent in installed:
-            result.append({
-                "id": agent.id,
-                "name": agent.name,
-                "version": agent.version,
-                "description": agent.description,
-                "category": agent.category,
-                "installed_at": agent.installed_at,
-                "type": "yaml",
-            })
+            result.append(
+                {
+                    "id": agent.id,
+                    "name": agent.name,
+                    "version": agent.version,
+                    "description": agent.description,
+                    "category": agent.category,
+                    "installed_at": agent.installed_at,
+                    "type": "yaml",
+                }
+            )
 
         # @agent デコレータで定義されたAgent
         try:
@@ -64,15 +66,17 @@ def create_agents_router(
             decorated_agents = AgentClient.list_agents()
             for agent_name in decorated_agents:
                 if not any(a["id"] == agent_name for a in result):
-                    result.append({
-                        "id": agent_name,
-                        "name": agent_name,
-                        "version": "0.2.0",
-                        "description": f"@agent decorator agent: {agent_name}",
-                        "category": "decorator",
-                        "installed_at": None,
-                        "type": "decorator",
-                    })
+                    result.append(
+                        {
+                            "id": agent_name,
+                            "name": agent_name,
+                            "version": "0.2.0",
+                            "description": f"@agent decorator agent: {agent_name}",
+                            "category": "decorator",
+                            "installed_at": None,
+                            "type": "decorator",
+                        }
+                    )
         except Exception:
             pass
 
@@ -128,7 +132,7 @@ def create_agents_router(
 
                 # フォールバック
                 for i in range(5):
-                    yield f"data: {{'type': 'log', 'message': 'Step {i+1}'}}\n\n"
+                    yield f"data: {{'type': 'log', 'message': 'Step {i + 1}'}}\n\n"
                     await asyncio.sleep(1)
                 yield "data: {'type': 'complete', 'message': 'Done'}\n\n"
 
@@ -154,4 +158,3 @@ def create_agents_router(
             del active_connections[connection_id]
 
     return router
-

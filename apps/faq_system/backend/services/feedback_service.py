@@ -242,7 +242,9 @@ class FeedbackService:
 
         self._logger.info(
             "Feedback submitted: %s, helpful=%s, topic=%s",
-            feedback_id, helpful, topic,
+            feedback_id,
+            helpful,
+            topic,
         )
 
         # 自動提案チェック
@@ -260,9 +262,7 @@ class FeedbackService:
             return
 
         # トピック別のフィードバックを集計
-        topic_feedbacks = [
-            f for f in self._feedbacks.values() if f.topic == topic
-        ]
+        topic_feedbacks = [f for f in self._feedbacks.values() if f.topic == topic]
 
         if len(topic_feedbacks) < self._config.auto_suggest_threshold:
             return
@@ -290,7 +290,8 @@ class FeedbackService:
         """
         # 既存の提案がないか確認
         existing = [
-            s for s in self._suggestions.values()
+            s
+            for s in self._suggestions.values()
             if s.topic == topic and s.created_at > datetime.now() - timedelta(days=7)
         ]
         if existing:
@@ -321,7 +322,8 @@ class FeedbackService:
 
         self._logger.info(
             "Generated improvement suggestion: %s for topic %s",
-            suggestion_id, topic,
+            suggestion_id,
+            topic,
         )
 
     def _analyze_issue_type(self, comments: list[str]) -> str:
@@ -413,9 +415,7 @@ class FeedbackService:
         Returns:
             統計
         """
-        feedbacks = self.get_feedbacks(
-            since=since, until=until, limit=10000
-        )
+        feedbacks = self.get_feedbacks(since=since, until=until, limit=10000)
 
         stats = FeedbackStats(
             total=len(feedbacks),
@@ -497,13 +497,15 @@ class FeedbackService:
 
             helpful_rate = counts["helpful"] / total
             if helpful_rate < threshold:
-                results.append({
-                    "topic": topic,
-                    "helpful_rate": helpful_rate,
-                    "total_feedbacks": total,
-                    "helpful_count": counts["helpful"],
-                    "not_helpful_count": counts["not_helpful"],
-                })
+                results.append(
+                    {
+                        "topic": topic,
+                        "helpful_rate": helpful_rate,
+                        "total_feedbacks": total,
+                        "helpful_count": counts["helpful"],
+                        "not_helpful_count": counts["not_helpful"],
+                    }
+                )
 
         # 有用率昇順
         results.sort(key=lambda x: x["helpful_rate"])

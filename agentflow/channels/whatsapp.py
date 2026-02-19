@@ -326,9 +326,7 @@ class WhatsAppAdapter(MessageChannelAdapter):
             data = response.json()
             return data.get("messages", [{}])[0].get("id", "")
         except Exception as e:
-            self._logger.error(
-                f"Failed to send WhatsApp interactive: {e}", exc_info=True
-            )
+            self._logger.error(f"Failed to send WhatsApp interactive: {e}", exc_info=True)
             raise
 
     def verify_webhook(self, mode: str, token: str, challenge: str) -> str | None:
@@ -458,4 +456,3 @@ class WhatsAppAdapter(MessageChannelAdapter):
     async def close(self) -> None:
         """HTTP クライアントをクローズ."""
         await self._client.aclose()
-

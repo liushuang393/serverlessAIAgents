@@ -51,9 +51,7 @@ class AgentEngineProtocol(Protocol):
         """同期処理."""
         ...
 
-    async def process_with_events(
-        self, request: dict[str, Any]
-    ) -> Any:  # AsyncGenerator
+    async def process_with_events(self, request: dict[str, Any]) -> Any:  # AsyncGenerator
         """イベント付きストリーム処理."""
         ...
 
@@ -162,9 +160,7 @@ def create_agent_router(
             """利用可能な Agent 一覧を取得."""
             eng = get_engine()
             agents_data = eng.get_agents()
-            return AgentsResponse(
-                agents=[AgentInfo(**a) for a in agents_data]
-            )
+            return AgentsResponse(agents=[AgentInfo(**a) for a in agents_data])
 
     # ----------------------------------------
     # POST /process
@@ -231,4 +227,3 @@ def create_agent_router(
             return results_store[result_id]
 
     return router
-

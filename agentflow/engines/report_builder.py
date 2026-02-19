@@ -39,6 +39,7 @@ _logger = logging.getLogger(__name__)
 
 class OutputFormat(Enum):
     """レポート出力フォーマット."""
+
     JSON = "json"
     MARKDOWN = "markdown"
     HTML = "html"
@@ -54,6 +55,7 @@ class ChartData:
         data: グラフデータ（形式はchart_typeによる）
         options: 追加オプション
     """
+
     chart_type: str
     title: str
     data: list[dict[str, Any]]
@@ -80,6 +82,7 @@ class ReportSection:
         metadata: メタデータ
         subsections: サブセクション（入れ子可）
     """
+
     title: str
     content: str = ""
     charts: list[ChartData] = field(default_factory=list)
@@ -119,6 +122,7 @@ class ExecutiveSummary:
         risks: 主要リスク
         next_step: 次のステップ
     """
+
     one_line: str
     recommendation: str = ""
     key_points: list[str] = field(default_factory=list)
@@ -347,11 +351,13 @@ class SectionedReportBuilder(ReportBuilder):
         sections = []
         for stage_name, stage_result in results.items():
             content = str(stage_result)[:500] if stage_result else ""
-            sections.append(ReportSection(
-                title=stage_name,
-                content=content,
-                metadata={"stage": stage_name},
-            ))
+            sections.append(
+                ReportSection(
+                    title=stage_name,
+                    content=content,
+                    metadata={"stage": stage_name},
+                )
+            )
         return sections
 
     def build_executive_summary(
@@ -436,6 +442,7 @@ class SectionedReportBuilder(ReportBuilder):
 # ============================================================
 # ユーティリティ: グラフデータ生成ヘルパー
 # ============================================================
+
 
 def create_bar_chart(
     title: str,
@@ -524,4 +531,3 @@ __all__ = [
     "create_line_chart",
     "create_pie_chart",
 ]
-

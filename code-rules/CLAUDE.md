@@ -34,6 +34,8 @@
 
 - [リンター & フォーマッター](tools/lint-format.md)
 - [テスト方針](tools/testing.md)
+- [check-all エラー分類と対処](tools/check-errors-analysis.md)（型エラー解消時の参照）
+- [Mypy 回避パターン（AI 向け）](global/mypy-avoid-patterns.md)（コード生成時に必須）
 
 ---
 
@@ -93,7 +95,13 @@
 ```bash
 # 推奨: 一括実行（Python + フロント format/lint/type-check/test + studio ビルド）
 ./check.sh all
+
+# 型チェックをスキップ（型エラー解消中に format/lint/test/build のみ確認する場合）
+./check.sh all --no-type-check
+# または make check-nomypy
 ```
+
+型チェックで失敗する場合は [check-errors-analysis.md](tools/check-errors-analysis.md) で分類を確認し、**AI は [mypy-avoid-patterns.md](global/mypy-avoid-patterns.md) に従って修正すること。** 不要な `# type: ignore` は `python scripts/fix_mypy_safe.py` で一括削除できる。
 
 個別実行する場合は以下をすべて通過させること。
 
@@ -125,12 +133,14 @@
 **必須（推奨は `./check.sh all` で一括）:**
 
 - [ ] **Python**: `ruff format .` / `ruff check .` - フォーマット・リント
-- [ ] **Python**: `mypy agentflow` - 型チェック
+- [ ] **Python**: `mypy agentflow` - 型チェック（未解消時は `./check.sh all --no-type-check` で他を通したうえで [check-errors-analysis.md](tools/check-errors-analysis.md) を参照）
 - [ ] **Python**: `pytest --cov=agentflow --cov-fail-under=80` - テスト
 - [ ] **フロント (studio)**: `cd studio && npm run lint` - ESLint
 - [ ] **フロント (studio)**: `cd studio && npm run type-check` - TypeScript
 - [ ] **フロント (studio)**: `cd studio && npm run build` - ビルド成功確認
 - [ ] **共通**: `pre-commit run --all-files` - フック（Ruff, Prettier, YAML, シークレット等）
+
+**AI がコードを書く・修正する際:** 型エラーを出さないため [Mypy 回避パターン](global/mypy-avoid-patterns.md) に必ず従うこと。
 
 **推奨（マージ前・依存更新後）:**
 
@@ -168,8 +178,8 @@
 
 ## 言語設定
 - 回答は日本語で行う
-- コードコメントは日本語を使用する
-- 顧客向け文書・既定AIプロンプトは日本語を標準とする
+- コードコメントは必ず日本語を使用する
+- AIプロンプト、顧客向け文書、内部ドキュメント等は全て日本語を使用する
 - 中国語は `README_ZH.md` と `**/locales/zh*.json`、および多言語機能維持に必須な判定語彙/正規表現/テストのみ許可する（`i18n-zh-keep`）
 
 ## 出力規則

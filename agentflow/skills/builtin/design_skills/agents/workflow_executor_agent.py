@@ -54,7 +54,7 @@ class WorkflowExecutorAgent(ResilientAgent[WorkflowExecutorInput, WorkflowResult
 
     def _parse_input(self, input_data: dict[str, Any]) -> WorkflowExecutorInput:
         """入力辞書をWorkflowExecutorInputにパース.
-        
+
         PipelineEngine から渡される場合、prompt_planner_result フィールドに
         PromptPlanOutput が含まれているため、それを prompt_plan フィールドに変換する。
         """
@@ -66,10 +66,11 @@ class WorkflowExecutorAgent(ResilientAgent[WorkflowExecutorInput, WorkflowResult
                 from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
                     PromptPlanOutput,
                 )
+
                 input_data["prompt_plan"] = PromptPlanOutput(**prompt_result)
             else:
                 input_data["prompt_plan"] = prompt_result
-        
+
         return WorkflowExecutorInput(**input_data)
 
     async def _detect_backend(self) -> str:

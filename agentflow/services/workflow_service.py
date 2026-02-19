@@ -115,9 +115,7 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
             ):
                 yield event
         elif wf_type == WorkflowType.PIPELINE:
-            async for event in self._execute_pipeline(
-                execution_id, input_data, config, start_time
-            ):
+            async for event in self._execute_pipeline(execution_id, input_data, config, start_time):
                 yield event
         elif wf_type == WorkflowType.REFLECTION:
             async for event in self._execute_reflection(
@@ -167,26 +165,20 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
 
             # フェーズごとに進捗を報告
             for progress, phase, message in phases:
-                yield self._emit_progress(
-                    execution_id, progress, message, phase=phase
-                )
+                yield self._emit_progress(execution_id, progress, message, phase=phase)
                 await asyncio.sleep(0.1)  # UI更新のため
 
             # 実行
             result = await coordinator.execute(task, **input_data)
 
             duration_ms = (time.time() - start_time) * 1000
-            yield self._emit_progress(
-                execution_id, 100.0, "完了", phase="complete"
-            )
+            yield self._emit_progress(execution_id, 100.0, "完了", phase="complete")
             yield self._emit_result(execution_id, result, duration_ms)
 
         except ImportError:
             # DeepAgentCoordinator がない場合はシミュレーション
             for progress, phase, message in phases:
-                yield self._emit_progress(
-                    execution_id, progress, message, phase=phase
-                )
+                yield self._emit_progress(execution_id, progress, message, phase=phase)
                 await asyncio.sleep(0.5)
 
             duration_ms = (time.time() - start_time) * 1000
@@ -195,15 +187,17 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
             )
             yield self._emit_result(
                 execution_id,
-                {"task": task, "status": "simulated", "message": "DeepAgentCoordinator not available"},
+                {
+                    "task": task,
+                    "status": "simulated",
+                    "message": "DeepAgentCoordinator not available",
+                },
                 duration_ms,
             )
 
         except Exception as e:
             self._logger.exception("DeepAgent execution error")
-            yield self._emit_error(
-                execution_id, "execution_error", f"DeepAgent failed: {e}"
-            )
+            yield self._emit_error(execution_id, "execution_error", f"DeepAgent failed: {e}")
 
     async def _execute_pipeline(
         self,
@@ -256,9 +250,7 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
             )
 
         duration_ms = (time.time() - start_time) * 1000
-        yield self._emit_progress(
-            execution_id, 100.0, "Pipeline completed", phase="complete"
-        )
+        yield self._emit_progress(execution_id, 100.0, "Pipeline completed", phase="complete")
         yield self._emit_result(execution_id, current_data, duration_ms)
 
     async def _execute_reflection(
@@ -303,9 +295,7 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
             await asyncio.sleep(0.3)
 
         duration_ms = (time.time() - start_time) * 1000
-        yield self._emit_progress(
-            execution_id, 100.0, "Reflection completed", phase="complete"
-        )
+        yield self._emit_progress(execution_id, 100.0, "Reflection completed", phase="complete")
         yield self._emit_result(
             execution_id,
             {"task": task, "iterations": max_iterations},

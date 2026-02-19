@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """LLM Tool Calling の統合テスト.
 
 本モジュールは実 LLM API を使用し、各プロバイダーのツール/関数呼び出し対応を検証する。
@@ -91,7 +90,8 @@ def has_gemini_key() -> bool:
 def has_gemini_library() -> bool:
     """google-genai ライブラリがインストール済みか確認する."""
     try:
-        from google import genai  # noqa: F401
+        from google import genai
+
         return True
     except ImportError:
         return False
@@ -169,7 +169,9 @@ class TestAnthropicToolCalling:
         print(f"\n[Anthropic] Response: {response}")
         print(f"[Anthropic] Tool calls: {response.tool_calls}")
 
-        assert response.has_tool_calls(), "Anthropic は get_weather の呼び出しが必要だと判断するはず"
+        assert response.has_tool_calls(), (
+            "Anthropic は get_weather の呼び出しが必要だと判断するはず"
+        )
 
         tool_call = response.tool_calls[0]
         assert tool_call.name == "get_weather"
@@ -183,7 +185,7 @@ class TestGeminiToolCalling:
 
     @pytest.mark.skipif(
         not has_gemini_key() or not has_gemini_library(),
-        reason="GEMINI_API_KEY not set or google-generativeai not installed"
+        reason="GEMINI_API_KEY not set or google-generativeai not installed",
     )
     @pytest.mark.asyncio
     async def test_single_tool_call(self):
@@ -213,6 +215,15 @@ class TestCrossProviderComparison:
     """跨提供商比较测试."""
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(
+        not any([
+            os.environ.get("OPENAI_API_KEY"),
+            os.environ.get("ANTHROPIC_API_KEY"),
+            os.environ.get("GEMINI_API_KEY"),
+            os.environ.get("GOOGLE_API_KEY"),
+        ]),
+        reason="LLM API キーが未設定のためスキップ（OPENAI_API_KEY / ANTHROPIC_API_KEY / GEMINI_API_KEY を設定してください）",
+    )
     async def test_all_providers_recognize_tool(self):
         """测试所有可用的提供商都能识别工具调用."""
         results = {}
@@ -231,7 +242,9 @@ class TestCrossProviderComparison:
                 results["openai"] = {
                     "recognized": response.has_tool_calls(),
                     "tool_name": response.tool_calls[0].name if response.tool_calls else None,
-                    "arguments": response.tool_calls[0].get_arguments_dict() if response.tool_calls else None,
+                    "arguments": response.tool_calls[0].get_arguments_dict()
+                    if response.tool_calls
+                    else None,
                 }
             except Exception as e:
                 results["openai"] = {"error": str(e)}
@@ -245,7 +258,9 @@ class TestCrossProviderComparison:
                 results["anthropic"] = {
                     "recognized": response.has_tool_calls(),
                     "tool_name": response.tool_calls[0].name if response.tool_calls else None,
-                    "arguments": response.tool_calls[0].get_arguments_dict() if response.tool_calls else None,
+                    "arguments": response.tool_calls[0].get_arguments_dict()
+                    if response.tool_calls
+                    else None,
                 }
             except Exception as e:
                 results["anthropic"] = {"error": str(e)}
@@ -259,7 +274,9 @@ class TestCrossProviderComparison:
                 results["gemini"] = {
                     "recognized": response.has_tool_calls(),
                     "tool_name": response.tool_calls[0].name if response.tool_calls else None,
-                    "arguments": response.tool_calls[0].get_arguments_dict() if response.tool_calls else None,
+                    "arguments": response.tool_calls[0].get_arguments_dict()
+                    if response.tool_calls
+                    else None,
                 }
             except Exception as e:
                 results["gemini"] = {"error": str(e)}

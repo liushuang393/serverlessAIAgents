@@ -148,7 +148,6 @@ async def _collect_data(
     ]
 
 
-
 async def _analyze_trends(
     articles: list[dict[str, Any]],
     progress_callback: Any = None,
@@ -163,7 +162,7 @@ async def _analyze_trends(
     return [
         {
             "id": f"trend-{i}",
-            "topic": f"トレンド{i+1}",
+            "topic": f"トレンド{i + 1}",
             "score": 0.9 - (i * 0.1),
             "articles_count": 10 - i,
             "sentiment": ["positive", "neutral", "negative"][i % 3],
@@ -172,7 +171,6 @@ async def _analyze_trends(
         }
         for i in range(5)
     ]
-
 
 
 async def _generate_report(
@@ -194,8 +192,8 @@ async def _generate_report(
 本週の市場動向分析により、{len(trends)}件の主要トレンドを検出しました。
 
 ### 主要ハイライト
-- **最注目トレンド**: {trends[0]['topic']}（スコア: {trends[0]['score']:.2f}）
-- **成長中**: {sum(1 for t in trends if t['growth_rate'] > 0)}件
+- **最注目トレンド**: {trends[0]["topic"]}（スコア: {trends[0]["score"]:.2f}）
+- **成長中**: {sum(1 for t in trends if t["growth_rate"] > 0)}件
 - **全体センチメント**: 主にポジティブ
 """
     response.add_markdown(summary)
@@ -222,11 +220,13 @@ async def _generate_report(
             "data": [t["topic"] for t in trends],
         },
         "yAxis": {"type": "value", "max": 1},
-        "series": [{
-            "type": "bar",
-            "data": [t["score"] for t in trends],
-            "itemStyle": {"color": "#3b82f6"},
-        }],
+        "series": [
+            {
+                "type": "bar",
+                "data": [t["score"] for t in trends],
+                "itemStyle": {"color": "#3b82f6"},
+            }
+        ],
     }
     response.add_chart(ChartType.BAR, chart_data, title="トレンドスコア分析")
 
@@ -239,12 +239,14 @@ async def _generate_report(
             "data": [t["topic"] for t in trends],
         },
         "yAxis": {"type": "value"},
-        "series": [{
-            "type": "line",
-            "data": [t["growth_rate"] * 100 for t in trends],
-            "itemStyle": {"color": "#10b981"},
-            "areaStyle": {"opacity": 0.3},
-        }],
+        "series": [
+            {
+                "type": "line",
+                "data": [t["growth_rate"] * 100 for t in trends],
+                "itemStyle": {"color": "#10b981"},
+                "areaStyle": {"opacity": 0.3},
+            }
+        ],
     }
     response.add_chart(ChartType.LINE, growth_chart, title="成長率分析")
 
@@ -257,14 +259,13 @@ async def _generate_report(
     pie_chart = {
         "title": {"text": "センチメント分布"},
         "tooltip": {"trigger": "item"},
-        "series": [{
-            "type": "pie",
-            "radius": "50%",
-            "data": [
-                {"name": k, "value": v}
-                for k, v in sentiment_counts.items()
-            ],
-        }],
+        "series": [
+            {
+                "type": "pie",
+                "radius": "50%",
+                "data": [{"name": k, "value": v} for k, v in sentiment_counts.items()],
+            }
+        ],
     }
     response.add_chart(ChartType.PIE, pie_chart, title="センチメント分析")
 
@@ -616,12 +617,15 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str) -> None:
                 sources = data.get("sources", ["news"])
 
                 async def progress_cb(progress: int, message: str, step: str = "") -> None:
-                    await manager.send_message(client_id, {
-                        "type": "progress",
-                        "progress": progress,
-                        "message": message,
-                        "step": step,
-                    })
+                    await manager.send_message(
+                        client_id,
+                        {
+                            "type": "progress",
+                            "progress": progress,
+                            "message": message,
+                            "step": step,
+                        },
+                    )
 
                 # Step 1: 収集
                 await progress_cb(10, "データを収集中...", "collect")
@@ -639,19 +643,25 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str) -> None:
 
                 # Step 4: 完了
                 await progress_cb(100, "完了", "notify")
-                await manager.send_message(client_id, {
-                    "type": "result",
-                    "data": report,
-                })
+                await manager.send_message(
+                    client_id,
+                    {
+                        "type": "result",
+                        "data": report,
+                    },
+                )
 
     except WebSocketDisconnect:
         manager.disconnect(client_id)
     except Exception as e:
         logger.exception("WebSocket error: %s", e)
-        await manager.send_message(client_id, {
-            "type": "error",
-            "message": str(e),
-        })
+        await manager.send_message(
+            client_id,
+            {
+                "type": "error",
+                "message": str(e),
+            },
+        )
 
 
 @app.get("/api/v2/trends")
@@ -660,7 +670,7 @@ async def get_trends_v2(filter: TrendFilter | None = None) -> dict[str, Any]:
     trends = [
         {
             "id": f"trend-{i}",
-            "topic": f"トレンド{i+1}",
+            "topic": f"トレンド{i + 1}",
             "score": 0.9 - (i * 0.1),
             "articles_count": 10 - i,
             "sentiment": ["positive", "neutral", "negative"][i % 3],
@@ -694,4 +704,5 @@ async def health_check() -> dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8003)

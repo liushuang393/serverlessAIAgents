@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """Code Transformation Agent - 設計拘束下の機械的変換."""
 
 from __future__ import annotations
 
 import re
 from typing import Any
-
-from agentflow import agent
 
 from apps.code_migration_assistant.adapters import (
     SourceLanguageAdapter,
@@ -20,6 +17,8 @@ from apps.code_migration_assistant.workflow.models import (
     UnknownItem,
     build_meta,
 )
+
+from agentflow import agent
 
 
 @agent
@@ -85,7 +84,7 @@ class CodeTransformationAgent:
             # blocks[0] は最初のセパレータの前（通常は空）
             for i in range(1, len(blocks), 2):
                 file_path = blocks[i]
-                file_content = blocks[i+1].strip()
+                file_content = blocks[i + 1].strip()
                 generated_files.append(GeneratedFile(path=file_path, content=file_content))
         else:
             generated_files = [

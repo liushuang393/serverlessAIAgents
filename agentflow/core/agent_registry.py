@@ -24,6 +24,7 @@
     >>> factory = registry.get_factory("pdf_analyzer")
     >>> agent = factory()
 """
+
 from __future__ import annotations
 
 import threading

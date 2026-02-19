@@ -259,6 +259,7 @@ class SelfImprovementLoop:
         self._logger.info(f"Improving gap: {gap.description[:50]}...")
 
         import uuid
+
         record_id = f"imp_{uuid.uuid4().hex[:12]}"
 
         try:

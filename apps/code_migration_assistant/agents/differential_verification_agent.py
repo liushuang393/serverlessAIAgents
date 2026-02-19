@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Differential Verification Agent - 差分検証."""
 
 from __future__ import annotations
@@ -7,8 +6,6 @@ import json
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from agentflow import agent
-
 from apps.code_migration_assistant.adapters import TargetLanguageAdapter, get_adapter_factory
 from apps.code_migration_assistant.agents.prompts import DIFFERENTIAL_VERIFICATION_PROMPT
 from apps.code_migration_assistant.workflow.models import (
@@ -16,6 +13,8 @@ from apps.code_migration_assistant.workflow.models import (
     UnknownItem,
     build_meta,
 )
+
+from agentflow import agent
 
 
 @agent
@@ -123,13 +122,17 @@ class DifferentialVerificationAgent:
             name = str(case.get("name", "default"))
             inputs = case.get("inputs", {})
             expected_outputs = case.get("expected_outputs", {})
-            execution = self._target_adapter.execute(target_code, inputs if isinstance(inputs, dict) else {})
+            execution = self._target_adapter.execute(
+                target_code, inputs if isinstance(inputs, dict) else {}
+            )
             if not execution.success:
                 has_exec_error = True
                 results.append(
                     {
                         "name": name,
-                        "execution_error": execution.error or execution.stderr or "execution failed",
+                        "execution_error": execution.error
+                        or execution.stderr
+                        or "execution failed",
                     }
                 )
                 continue

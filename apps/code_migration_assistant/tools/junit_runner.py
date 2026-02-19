@@ -118,9 +118,7 @@ class JUnitRunner:
         match = re.search(r"class\s+(\w+)", code)
         return match.group(1) if match else None
 
-    def _compile(
-        self, work_dir: Path, source_files: list[Path]
-    ) -> dict[str, Any]:
+    def _compile(self, work_dir: Path, source_files: list[Path]) -> dict[str, Any]:
         """Java ソースをコンパイル."""
         # JUnit JAR をクラスパスに追加
         classpath = str(work_dir)
@@ -129,8 +127,10 @@ class JUnitRunner:
 
         cmd = [
             "javac",
-            "-cp", classpath,
-            "-d", str(work_dir),
+            "-cp",
+            classpath,
+            "-d",
+            str(work_dir),
         ] + [str(f) for f in source_files]
 
         result = subprocess.run(
@@ -146,9 +146,7 @@ class JUnitRunner:
             "stderr": result.stderr,
         }
 
-    def _execute_junit(
-        self, work_dir: Path, test_class: str, timeout: int
-    ) -> JUnitResult:
+    def _execute_junit(self, work_dir: Path, test_class: str, timeout: int) -> JUnitResult:
         """JUnit テストを実行."""
         # JUnit Platform Console を使用
         if Path(self._junit_jar).exists():
@@ -156,19 +154,21 @@ class JUnitRunner:
         # フォールバック: 直接 Java で実行（基本的なテスト用）
         return self._run_simple(work_dir, test_class, timeout)
 
-    def _run_with_console(
-        self, work_dir: Path, test_class: str, timeout: int
-    ) -> JUnitResult:
+    def _run_with_console(self, work_dir: Path, test_class: str, timeout: int) -> JUnitResult:
         """JUnit Console で実行."""
         reports_dir = work_dir / "test-reports"
         reports_dir.mkdir(exist_ok=True)
 
         cmd = [
             "java",
-            "-jar", self._junit_jar,
-            "--class-path", str(work_dir),
-            "--select-class", test_class,
-            "--reports-dir", str(reports_dir),
+            "-jar",
+            self._junit_jar,
+            "--class-path",
+            str(work_dir),
+            "--select-class",
+            test_class,
+            "--reports-dir",
+            str(reports_dir),
         ]
 
         result = subprocess.run(
@@ -182,9 +182,7 @@ class JUnitRunner:
         # XML レポートをパース
         return self._parse_junit_xml(reports_dir, result)
 
-    def _run_simple(
-        self, work_dir: Path, test_class: str, timeout: int
-    ) -> JUnitResult:
+    def _run_simple(self, work_dir: Path, test_class: str, timeout: int) -> JUnitResult:
         """簡易実行（JUnit JAR なし）.
 
         テストクラスの main メソッドを直接実行。
@@ -271,13 +269,15 @@ class JUnitRunner:
                         message = ""
                         stack = ""
 
-                    tests.append(TestResult(
-                        name=f"{classname}.{name}" if classname else name,
-                        status=status,
-                        duration_ms=duration,
-                        message=message,
-                        stack_trace=stack,
-                    ))
+                    tests.append(
+                        TestResult(
+                            name=f"{classname}.{name}" if classname else name,
+                            status=status,
+                            duration_ms=duration,
+                            message=message,
+                            stack_trace=stack,
+                        )
+                    )
 
             except ET.ParseError as e:
                 return JUnitResult(
@@ -300,9 +300,7 @@ class JUnitRunner:
             stderr=run_result.stderr,
         )
 
-    def _parse_from_stdout(
-        self, run_result: subprocess.CompletedProcess
-    ) -> JUnitResult:
+    def _parse_from_stdout(self, run_result: subprocess.CompletedProcess) -> JUnitResult:
         """stdout からテスト結果を解析."""
         stdout = run_result.stdout
 
@@ -332,4 +330,3 @@ class JUnitRunner:
             stdout=stdout,
             stderr=run_result.stderr,
         )
-

@@ -1,17 +1,15 @@
-# -*- coding: utf-8 -*-
 """MCP Router — MCP 設定管理 API."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
-
 from apps.platform.schemas.provisioning_schemas import (
     MCPLazyLoadingPatchRequest,
     MCPServerUpsertRequest,
 )
 from apps.platform.services.mcp_registry import MCPRegistryService
+from fastapi import APIRouter, HTTPException
 
 
 router = APIRouter(prefix="/api/studios/framework/mcp", tags=["mcp"])
@@ -21,7 +19,7 @@ _registry: MCPRegistryService | None = None
 
 def init_mcp_services(registry: MCPRegistryService) -> None:
     """サービスインスタンスを設定."""
-    global _registry  # noqa: PLW0603
+    global _registry
     _registry = registry
 
 

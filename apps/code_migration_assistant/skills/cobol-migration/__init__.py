@@ -63,11 +63,11 @@ class CobolMigrationSkill:
 
     # COBOL PIC → Java 型マッピング（確定的ルール）
     TYPE_MAPPINGS = {
-        "numeric_small": "int",      # PIC 9(1-9)
-        "numeric_large": "long",     # PIC 9(10+)
-        "decimal": "BigDecimal",     # PIC 9V9
-        "string": "String",          # PIC X
-        "comp3": "BigDecimal",       # COMP-3
+        "numeric_small": "int",  # PIC 9(1-9)
+        "numeric_large": "long",  # PIC 9(10+)
+        "decimal": "BigDecimal",  # PIC 9V9
+        "string": "String",  # PIC X
+        "comp3": "BigDecimal",  # COMP-3
     }
 
     def __init__(self) -> None:
@@ -133,13 +133,15 @@ class CobolMigrationSkill:
             java_name = self._convert_variable_name(var["name"])
             java_type = self._convert_type(var.get("type", ""), var.get("pic_clause", ""))
 
-            mappings.append(TypeMapping(
-                cobol_name=var["name"],
-                cobol_type=var.get("type", "unknown"),
-                pic_clause=var.get("pic_clause", ""),
-                java_name=java_name,
-                java_type=java_type,
-            ))
+            mappings.append(
+                TypeMapping(
+                    cobol_name=var["name"],
+                    cobol_type=var.get("type", "unknown"),
+                    pic_clause=var.get("pic_clause", ""),
+                    java_name=java_name,
+                    java_type=java_type,
+                )
+            )
 
         return mappings
 
@@ -158,6 +160,7 @@ class CobolMigrationSkill:
         if cobol_type == "numeric":
             # 桁数で int/long を判定
             import re
+
             match = re.search(r"9\((\d+)\)", pic_clause)
             if match:
                 digits = int(match.group(1))
@@ -167,9 +170,7 @@ class CobolMigrationSkill:
             return "String"
         return "Object"
 
-    def compare_outputs(
-        self, expected: dict[str, Any], actual: dict[str, Any]
-    ) -> dict[str, Any]:
+    def compare_outputs(self, expected: dict[str, Any], actual: dict[str, Any]) -> dict[str, Any]:
         """出力を比較.
 
         Args:
@@ -188,12 +189,14 @@ class CobolMigrationSkill:
 
             if exp_val != act_val:
                 is_equal = False
-                differences.append({
-                    "field": key,
-                    "expected": exp_val,
-                    "actual": act_val,
-                    "type": self._classify_difference(exp_val, act_val),
-                })
+                differences.append(
+                    {
+                        "field": key,
+                        "expected": exp_val,
+                        "actual": act_val,
+                        "type": self._classify_difference(exp_val, act_val),
+                    }
+                )
 
         return {
             "is_equal": is_equal,
@@ -213,4 +216,3 @@ class CobolMigrationSkill:
             if expected.strip() == actual.strip():
                 return "whitespace_diff"
         return "type_or_value_diff"
-

@@ -4,8 +4,8 @@
  * @description 引用元情報をレンダリング
  */
 
-import React from 'react';
-import type { RichComponent } from '../types';
+import React from "react";
+import type { RichComponent } from "../types";
 
 interface CitationRendererProps {
   /** RichComponent */
@@ -26,7 +26,9 @@ interface Source {
   date?: string;
 }
 
-export function CitationRenderer({ component }: CitationRendererProps): React.JSX.Element {
+export function CitationRenderer({
+  component,
+}: CitationRendererProps): React.JSX.Element {
   const rawSources = component.props.sources;
   const sources: Source[] = Array.isArray(rawSources) ? rawSources : [];
 
@@ -41,7 +43,10 @@ export function CitationRenderer({ component }: CitationRendererProps): React.JS
       </h4>
       <ol className="list-decimal list-inside space-y-2">
         {sources.map((source, idx) => (
-          <li key={`cite-${source.title}-${idx}`} className="text-sm text-gray-600 dark:text-gray-400">
+          <li
+            key={`cite-${source.title}-${idx}`}
+            className="text-sm text-gray-600 dark:text-gray-400"
+          >
             {source.url ? (
               <a
                 href={source.url}
@@ -68,4 +73,3 @@ export function CitationRenderer({ component }: CitationRendererProps): React.JS
 }
 
 export default CitationRenderer;
-

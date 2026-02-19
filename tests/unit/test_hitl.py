@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """HITL (Human-in-the-Loop) モジュールのユニットテスト."""
 
 import asyncio
@@ -15,7 +14,6 @@ from agentflow.hitl import (
     Command,
     CommandType,
     HITLConfig,
-    InterruptError,
     InterruptPayload,
     InterruptSignal,
     InterruptType,
@@ -129,9 +127,7 @@ class TestMemoryCheckpointer:
     @pytest.mark.asyncio
     async def test_delete(self, checkpointer: MemoryCheckpointer) -> None:
         """削除のテスト."""
-        await checkpointer.save(
-            CheckpointData(checkpoint_id="cp-del", thread_id="t1", state={})
-        )
+        await checkpointer.save(CheckpointData(checkpoint_id="cp-del", thread_id="t1", state={}))
 
         result = await checkpointer.delete("cp-del")
         assert result is True
@@ -276,4 +272,3 @@ class TestHITLConfig:
         assert config.enabled is False
         assert config.default_timeout_seconds == 1800
         assert "slack" in config.notification_channels
-

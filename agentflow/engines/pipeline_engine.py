@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """PipelineEngine - 複数Agent順次実行 + Reviewパターン.
 
 最も複雑なEngine Pattern、以下に適用：
@@ -83,6 +82,7 @@ from typing import TYPE_CHECKING, Any
 from agentflow.engines.base import BaseEngine, EngineConfig
 from agentflow.engines.report_builder import ReportBuilder
 from agentflow.protocols.agui_events import ProgressEvent
+
 
 if TYPE_CHECKING:
     from agentflow.flow import Flow
@@ -210,7 +210,7 @@ class PipelineEngine(BaseEngine):
             ...         ...
             ...     ])
         """
-        pass  # デフォルトは何もしない
+        # デフォルトは何もしない
 
     async def _initialize_agents(self) -> None:
         """すべてのAgentインスタンスを初期化."""
@@ -242,7 +242,7 @@ class PipelineEngine(BaseEngine):
         self._flow = self._build_flow()
         self._logger.info(f"PipelineEngine initialized with {len(self._stage_configs)} stages")
 
-    def _build_flow(self) -> "Flow":
+    def _build_flow(self) -> Flow:
         """ステージ設定からFlowを構築."""
         from agentflow.flow import create_flow
 
@@ -276,10 +276,7 @@ class PipelineEngine(BaseEngine):
                 completed_stages.append(stage.name)
             elif stage.parallel and len(instances) > 1:
                 # 並列ステージ
-                agent_tuples = [
-                    (f"{stage.name}_{i}", inst)
-                    for i, inst in enumerate(instances)
-                ]
+                agent_tuples = [(f"{stage.name}_{i}", inst) for i, inst in enumerate(instances)]
                 builder.parallel(*agent_tuples, id=stage.name)
                 completed_stages.append(stage.name)
             else:
@@ -292,7 +289,7 @@ class PipelineEngine(BaseEngine):
                 else:
                     # 複数Agent: 各Agentに固有のIDを付与して input_mapper を渡す
                     node_ids = [f"{stage.name}_{i}" for i in range(len(instances))]
-                    input_mappers = {node_id: input_mapper for node_id in node_ids}
+                    input_mappers = dict.fromkeys(node_ids, input_mapper)
                     for i, inst in enumerate(instances):
                         builder.then(inst, ids=[node_ids[i]], input_mappers=input_mappers)
                 completed_stages.append(stage.name)
@@ -301,7 +298,7 @@ class PipelineEngine(BaseEngine):
 
     def _create_stage_input_mapper(
         self, completed_stages: list[str]
-    ) -> Callable[["FlowContext"], dict[str, Any]]:
+    ) -> Callable[[FlowContext], dict[str, Any]]:
         """ステージ用の入力マッパーを生成.
 
         前ステージの結果を {stage_name}_result として渡し、
@@ -313,6 +310,7 @@ class PipelineEngine(BaseEngine):
         Returns:
             入力マッピング関数
         """
+
         def mapper(ctx: FlowContext) -> dict[str, Any]:
             # 1. 元の入力を取得
             inputs = ctx.get_inputs()
@@ -330,7 +328,7 @@ class PipelineEngine(BaseEngine):
 
         return mapper
 
-    def _create_review_input_mapper(self) -> Callable[["FlowContext"], dict[str, Any]]:
+    def _create_review_input_mapper(self) -> Callable[[FlowContext], dict[str, Any]]:
         """Review用の入力マッパーを生成.
 
         すべての結果を {stage_name}_result 形式で渡す。
@@ -338,10 +336,13 @@ class PipelineEngine(BaseEngine):
         Returns:
             入力マッピング関数
         """
+
         def mapper(ctx: FlowContext) -> dict[str, Any]:
             # 元の結果を取得
             all_results = ctx.get_all_results()
-            self._logger.debug(f"[review_input_mapper] all_results keys: {list(all_results.keys())}")
+            self._logger.debug(
+                f"[review_input_mapper] all_results keys: {list(all_results.keys())}"
+            )
 
             # {stage_name}_result 形式に変換
             formatted_results: dict[str, Any] = {}
@@ -356,7 +357,9 @@ class PipelineEngine(BaseEngine):
             inputs = ctx.get_inputs()
             formatted_results.update(inputs)
 
-            self._logger.debug(f"[review_input_mapper] formatted keys: {list(formatted_results.keys())}")
+            self._logger.debug(
+                f"[review_input_mapper] formatted keys: {list(formatted_results.keys())}"
+            )
             return formatted_results
 
         return mapper
@@ -428,18 +431,20 @@ class PipelineEngine(BaseEngine):
 
                 # Reviewチェック
                 if stage.review:
-                    verdict = stage_result.get("verdict", stage_result.get("overall_verdict", "PASS"))
+                    verdict = stage_result.get(
+                        "verdict", stage_result.get("overall_verdict", "PASS")
+                    )
                     # 後方互換: REJECT → COACH にマッピング
                     if verdict == "REJECT":
                         self._logger.info("REJECT→COACH 後方互換マッピング適用")
                         verdict = "COACH"
                     if verdict == "PASS":
                         break
-                    elif verdict == "COACH":
+                    if verdict == "COACH":
                         # コーチング型改善指導: 即終了せず、レポートを生成して指摘を表示
                         self._logger.info("COACH verdict: レポート生成を継続（指摘付き）")
                         break
-                    elif verdict == "REVISE" and revision < self._max_revisions:
+                    if verdict == "REVISE" and revision < self._max_revisions:
                         self._logger.info(f"REVISE requested, retry from {retry_from_idx}")
                         break
 
@@ -468,13 +473,11 @@ class PipelineEngine(BaseEngine):
 
         if isinstance(result, dict):
             return result
-        elif hasattr(result, "model_dump"):
+        if hasattr(result, "model_dump"):
             return result.model_dump()
         return {"result": result}
 
-    async def _run_stage(
-        self, stage: StageConfig, inputs: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _run_stage(self, stage: StageConfig, inputs: dict[str, Any]) -> dict[str, Any]:
         """単一ステージを実行.
 
         HITL が有効でステージに interrupt_before/after が設定されている場合、
@@ -561,9 +564,7 @@ class PipelineEngine(BaseEngine):
             else "ReviewAgentが実行計画の重大な課題を検出"
         )
         rejection_reason = str(
-            stage_result.get("rejection_reason")
-            or stage_result.get("reason")
-            or default_reason
+            stage_result.get("rejection_reason") or stage_result.get("reason") or default_reason
         )
 
         message_raw = stage_result.get("rejection_message")
@@ -636,9 +637,7 @@ class PipelineEngine(BaseEngine):
             state={"stage": stage.name, "timing": timing, "result": result},
         )
 
-    async def _execute_stream(
-        self, inputs: dict[str, Any]
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def _execute_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """Pipelineをストリーム実行（Flowを活用）."""
         # 入力を保存（レポート生成時に使用）
         self._inputs = inputs.copy()
@@ -761,7 +760,9 @@ class PipelineEngine(BaseEngine):
                         return
 
                 if stage.review:
-                    verdict = stage_result.get("verdict", stage_result.get("overall_verdict", "PASS"))
+                    verdict = stage_result.get(
+                        "verdict", stage_result.get("overall_verdict", "PASS")
+                    )
                     # 後方互換: REJECT → COACH にマッピング
                     if verdict == "REJECT":
                         self._logger.info("REJECT→COACH 後方互換マッピング適用")
@@ -810,13 +811,12 @@ class PipelineEngine(BaseEngine):
                 results=self._results,
                 inputs=self._inputs,
             )
-        elif self._report_generator:
+        if self._report_generator:
             return self._report_generator(self._results)
-        else:
-            return {
-                "status": "success",
-                "results": self._results,
-            }
+        return {
+            "status": "success",
+            "results": self._results,
+        }
 
     def _emit_thinking_logs(
         self, stage_name: str, stage_result: dict[str, Any]
@@ -842,28 +842,32 @@ class PipelineEngine(BaseEngine):
 
         # Agent別の思考過程抽出
         thinking_content = self._extract_thinking_content(stage_name, stage_result)
-        self._logger.debug(f"[_emit_thinking_logs] stage={stage_name}, contents={len(thinking_content)}")
+        self._logger.debug(
+            f"[_emit_thinking_logs] stage={stage_name}, contents={len(thinking_content)}"
+        )
         if not thinking_content:
             # 結果キーをログ出力（デバッグ用）
-            self._logger.debug(f"[_emit_thinking_logs] result_keys={list(stage_result.keys()) if stage_result else 'empty'}")
+            self._logger.debug(
+                f"[_emit_thinking_logs] result_keys={list(stage_result.keys()) if stage_result else 'empty'}"
+            )
 
         for content in thinking_content:
-            events.append({
-                "event_type": "log",
-                "timestamp": time.time(),
-                "flow_id": self._flow_id or "",
-                "node_id": stage_name,
-                "node_name": stage_name,
-                "level": "INFO",
-                "message": content,
-                "source": stage_name,
-            })
+            events.append(
+                {
+                    "event_type": "log",
+                    "timestamp": time.time(),
+                    "flow_id": self._flow_id or "",
+                    "node_id": stage_name,
+                    "node_name": stage_name,
+                    "level": "INFO",
+                    "message": content,
+                    "source": stage_name,
+                }
+            )
 
         return events
 
-    def _extract_thinking_content(
-        self, stage_name: str, result: dict[str, Any]
-    ) -> list[str]:
+    def _extract_thinking_content(self, stage_name: str, result: dict[str, Any]) -> list[str]:
         """Agentの思考過程コンテンツを抽出.
 
         各Agent固有のフィールドから思考過程を人間可読な形式で抽出。
@@ -926,14 +930,18 @@ class PipelineEngine(BaseEngine):
                     contents.append(f"【不可変制約】{', '.join(str(c) for c in ic[:3])}")
             if dt := result.get("death_traps"):
                 if isinstance(dt, list) and dt:
-                    trap_names = [t.get("name", str(t)) if isinstance(t, dict) else str(t) for t in dt[:2]]
+                    trap_names = [
+                        t.get("name", str(t)) if isinstance(t, dict) else str(t) for t in dt[:2]
+                    ]
                     contents.append(f"【死穴（禁忌）】{', '.join(trap_names)}")
 
         # 法（Fa）- 戦略選定
         elif stage_name == "fa":
             if rp := result.get("recommended_paths"):
                 if isinstance(rp, list) and rp:
-                    path_names = [p.get("name", str(p)) if isinstance(p, dict) else str(p) for p in rp[:2]]
+                    path_names = [
+                        p.get("name", str(p)) if isinstance(p, dict) else str(p) for p in rp[:2]
+                    ]
                     contents.append(f"【推奨戦略】{', '.join(path_names)}")
             if sp := result.get("strategic_prohibitions"):
                 if isinstance(sp, list) and sp:
@@ -952,7 +960,9 @@ class PipelineEngine(BaseEngine):
                 contents.append(f"【最初の一歩】{fa}")
             if phases := result.get("phases"):
                 if isinstance(phases, list) and phases:
-                    phase_names = [p.get("name", str(p)) if isinstance(p, dict) else str(p) for p in phases[:3]]
+                    phase_names = [
+                        p.get("name", str(p)) if isinstance(p, dict) else str(p) for p in phases[:3]
+                    ]
                     contents.append(f"【実行フェーズ】{', '.join(phase_names)}")
             if cl := result.get("cut_list"):
                 if isinstance(cl, list) and cl:
@@ -973,7 +983,10 @@ class PipelineEngine(BaseEngine):
             if impls := result.get("implementations"):
                 if isinstance(impls, list) and impls:
                     # Implementation モデル: component フィールドを使用
-                    impl_names = [i.get("component", i.get("name", str(i))) if isinstance(i, dict) else str(i) for i in impls[:3]]
+                    impl_names = [
+                        i.get("component", i.get("name", str(i))) if isinstance(i, dict) else str(i)
+                        for i in impls[:3]
+                    ]
                     contents.append(f"【実装要素】{', '.join(impl_names)}")
             if tools := result.get("tool_recommendations"):
                 if isinstance(tools, list) and tools:
@@ -981,7 +994,12 @@ class PipelineEngine(BaseEngine):
             if dtech := result.get("domain_technologies"):
                 if isinstance(dtech, list) and dtech:
                     # DomainSpecificTechnology モデル: technology_name フィールドを使用
-                    tech_names = [d.get("technology_name", d.get("name", str(d))) if isinstance(d, dict) else str(d) for d in dtech[:2]]
+                    tech_names = [
+                        d.get("technology_name", d.get("name", str(d)))
+                        if isinstance(d, dict)
+                        else str(d)
+                        for d in dtech[:2]
+                    ]
                     contents.append(f"【ドメイン固有技術】{', '.join(tech_names)}")
 
         # 検証（Review）
@@ -992,7 +1010,10 @@ class PipelineEngine(BaseEngine):
                 contents.append(f"【信頼度スコア】{score}")
             if findings := result.get("findings"):
                 if isinstance(findings, list) and findings:
-                    finding_types = [f.get("finding_type", str(f)) if isinstance(f, dict) else str(f) for f in findings[:3]]
+                    finding_types = [
+                        f.get("finding_type", str(f)) if isinstance(f, dict) else str(f)
+                        for f in findings[:3]
+                    ]
                     contents.append(f"【検証所見】{', '.join(finding_types)}")
 
         return contents

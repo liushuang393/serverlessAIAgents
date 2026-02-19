@@ -4,4 +4,3 @@ from apps.code_migration_assistant.adapters.source.cobol_adapter import CobolAda
 
 
 __all__ = ["CobolAdapter"]
-

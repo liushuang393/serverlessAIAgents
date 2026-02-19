@@ -6,7 +6,7 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Callable
 
 from agentflow.core.registry import Registry
 from agentflow.protocols.a2ui.components import A2UIComponent, ComponentType
@@ -27,7 +27,7 @@ class A2UIRenderer(ABC):
     def __init__(self) -> None:
         """初期化."""
         self._logger = logging.getLogger(self.__class__.__name__)
-        self._custom_renderers: dict[str, callable] = {}
+        self._custom_renderers: dict[str, Callable[..., Any]] = {}
 
     def render(self, component: A2UIComponent) -> Any:
         """コンポーネントを描画.
@@ -41,7 +41,7 @@ class A2UIRenderer(ABC):
         renderer_method = self._get_renderer(component.component_type)
         return renderer_method(component)
 
-    def _get_renderer(self, component_type: ComponentType) -> callable:
+    def _get_renderer(self, component_type: ComponentType) -> Callable[..., Any]:
         """コンポーネント種別に応じたレンダラーを取得.
 
         Args:
@@ -119,7 +119,7 @@ class A2UIRenderer(ABC):
     def register_custom_renderer(
         self,
         custom_type: str,
-        renderer: callable,
+        renderer: Callable[..., Any],
     ) -> None:
         """カスタムレンダラーを登録.
 
@@ -146,4 +146,3 @@ class ComponentRegistry(Registry[type[A2UIComponent]]):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
-

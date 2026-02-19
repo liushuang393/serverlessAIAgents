@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """SkillCatalogService のユニットテスト.
 
 テスト対象: apps/platform/services/skill_catalog.py
@@ -9,7 +8,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from apps.platform.services.skill_catalog import SkillCatalogService, SkillInfo
 
 
@@ -55,7 +53,7 @@ class TestSkillInfo:
 class TestScan:
     """scan() メソッドのテスト."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_scan_finds_valid_skills(self, skills_dir: Path) -> None:
         """有効な SKILL.md を検出する."""
         catalog = SkillCatalogService(skills_dir=skills_dir)
@@ -63,21 +61,21 @@ class TestScan:
         # chatbot + rag = 2（invalid_skill は frontmatter なしで除外）
         assert count == 2
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_scan_nonexistent_dir(self, tmp_path: Path) -> None:
         """存在しないディレクトリでは 0 を返す."""
         catalog = SkillCatalogService(skills_dir=tmp_path / "nonexistent")
         count = await catalog.scan()
         assert count == 0
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_scan_empty_dir(self, tmp_path: Path) -> None:
         """空ディレクトリでは 0 を返す."""
         catalog = SkillCatalogService(skills_dir=tmp_path)
         count = await catalog.scan()
         assert count == 0
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_scan_clears_previous(self, skills_dir: Path) -> None:
         """再スキャン時に前回の結果をクリアする."""
         catalog = SkillCatalogService(skills_dir=skills_dir)
@@ -86,7 +84,7 @@ class TestScan:
         await catalog.scan()
         assert len(catalog.list_skills()) == 2
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_scan_skips_no_frontmatter(self, skills_dir: Path) -> None:
         """frontmatter なしの SKILL.md をスキップする."""
         catalog = SkillCatalogService(skills_dir=skills_dir)
@@ -98,7 +96,8 @@ class TestListSkills:
     """list_skills() メソッドのテスト."""
 
     def test_returns_sorted_by_name(
-        self, skill_catalog: SkillCatalogService,
+        self,
+        skill_catalog: SkillCatalogService,
     ) -> None:
         """名前順でソートされる."""
         skills = skill_catalog.list_skills()
@@ -106,7 +105,8 @@ class TestListSkills:
         assert names == sorted(names)
 
     def test_skill_has_metadata(
-        self, skill_catalog: SkillCatalogService,
+        self,
+        skill_catalog: SkillCatalogService,
     ) -> None:
         """スキルにメタデータが含まれる."""
         skills = skill_catalog.list_skills()
@@ -155,13 +155,12 @@ class TestSearchByTag:
         assert skill_catalog.search_by_tag("nonexistent") == []
 
 
-
-
 class TestAllTags:
     """all_tags() メソッドのテスト."""
 
     def test_returns_tag_count(
-        self, skill_catalog: SkillCatalogService,
+        self,
+        skill_catalog: SkillCatalogService,
     ) -> None:
         """tag, count フィールドを含む."""
         tags = skill_catalog.all_tags()
@@ -171,7 +170,8 @@ class TestAllTags:
         assert "count" in first
 
     def test_sorted_by_count_desc(
-        self, skill_catalog: SkillCatalogService,
+        self,
+        skill_catalog: SkillCatalogService,
     ) -> None:
         """出現回数の降順でソートされる."""
         tags = skill_catalog.all_tags()
@@ -179,7 +179,8 @@ class TestAllTags:
         assert counts == sorted(counts, reverse=True)
 
     def test_unique_tags(
-        self, skill_catalog: SkillCatalogService,
+        self,
+        skill_catalog: SkillCatalogService,
     ) -> None:
         """各タグが一意."""
         tags = skill_catalog.all_tags()
@@ -191,7 +192,8 @@ class TestSkillStats:
     """stats() メソッドのテスト."""
 
     def test_returns_expected_keys(
-        self, skill_catalog: SkillCatalogService,
+        self,
+        skill_catalog: SkillCatalogService,
     ) -> None:
         """統計辞書に必要なキーが含まれる."""
         s = skill_catalog.stats()
@@ -200,7 +202,8 @@ class TestSkillStats:
         assert "total_triggers" in s
 
     def test_correct_counts(
-        self, skill_catalog: SkillCatalogService,
+        self,
+        skill_catalog: SkillCatalogService,
     ) -> None:
         """正しいカウントを返す."""
         s = skill_catalog.stats()

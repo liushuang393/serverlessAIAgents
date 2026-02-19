@@ -206,6 +206,7 @@ class DeepAgentCoordinator:
         try:
             response = await self._llm.generate(prompt)
             import json
+
             data = json.loads(response)
             return CognitiveAnalysis(**data)
         except Exception as e:
@@ -254,6 +255,7 @@ class DeepAgentCoordinator:
         try:
             response = await self._llm.generate(prompt)
             import json
+
             data = json.loads(response)
             return [TodoItem(**item) for item in data]
         except Exception as e:
@@ -270,42 +272,52 @@ class DeepAgentCoordinator:
 
         # 複雑度に応じた分解
         if analysis.complexity == "low":
-            todos.append(TodoItem(
-                task=request,
-                agent_type=AgentType.EXECUTION.value,
-                priority=5,
-            ))
+            todos.append(
+                TodoItem(
+                    task=request,
+                    agent_type=AgentType.EXECUTION.value,
+                    priority=5,
+                )
+            )
         else:
             # 標準的な分解パターン
             if "research" in analysis.suggested_agents:
-                todos.append(TodoItem(
-                    task=f"調査: {request}",
-                    agent_type=AgentType.RESEARCH.value,
-                    priority=10,
-                ))
+                todos.append(
+                    TodoItem(
+                        task=f"調査: {request}",
+                        agent_type=AgentType.RESEARCH.value,
+                        priority=10,
+                    )
+                )
 
             if "analysis" in analysis.suggested_agents:
-                todos.append(TodoItem(
-                    task=f"分析: {request}",
-                    agent_type=AgentType.ANALYSIS.value,
-                    priority=8,
-                    dependencies=[todos[-1].id] if todos else [],
-                ))
+                todos.append(
+                    TodoItem(
+                        task=f"分析: {request}",
+                        agent_type=AgentType.ANALYSIS.value,
+                        priority=8,
+                        dependencies=[todos[-1].id] if todos else [],
+                    )
+                )
 
-            todos.append(TodoItem(
-                task=f"実行: {request}",
-                agent_type=AgentType.EXECUTION.value,
-                priority=5,
-                dependencies=[todos[-1].id] if todos else [],
-            ))
+            todos.append(
+                TodoItem(
+                    task=f"実行: {request}",
+                    agent_type=AgentType.EXECUTION.value,
+                    priority=5,
+                    dependencies=[todos[-1].id] if todos else [],
+                )
+            )
 
             if "review" in analysis.suggested_agents:
-                todos.append(TodoItem(
-                    task=f"検証: {request}",
-                    agent_type=AgentType.REVIEW.value,
-                    priority=3,
-                    dependencies=[todos[-1].id] if todos else [],
-                ))
+                todos.append(
+                    TodoItem(
+                        task=f"検証: {request}",
+                        agent_type=AgentType.REVIEW.value,
+                        priority=3,
+                        dependencies=[todos[-1].id] if todos else [],
+                    )
+                )
 
         return todos
 
@@ -320,12 +332,14 @@ class DeepAgentCoordinator:
 
         while True:
             # 実行可能なタスクを取得
-            ready_todos = [t for t in todos if t.is_ready(completed_ids) and t.status == TaskStatus.PENDING]
+            ready_todos = [
+                t for t in todos if t.is_ready(completed_ids) and t.status == TaskStatus.PENDING
+            ]
             if not ready_todos:
                 break
 
             # 並行実行（最大数制限）
-            batch = ready_todos[:self._max_parallel]
+            batch = ready_todos[: self._max_parallel]
             _logger.info("並行実行: %d個のタスク", len(batch))
 
             tasks = []
@@ -401,6 +415,7 @@ class DeepAgentCoordinator:
         try:
             response = await self._llm.generate(prompt)
             import json
+
             data = json.loads(response)
             return QualityReview(**data)
         except Exception as e:
@@ -460,7 +475,7 @@ class DeepAgentCoordinator:
     async def _generate_report(
         self,
         todos: list[TodoItem],
-        results: dict[str, Any],  # noqa: ARG002 - 将来の拡張用
+        results: dict[str, Any],
         review: QualityReview,
     ) -> str:
         """最終レポートを生成.
@@ -510,9 +525,7 @@ class DeepAgentCoordinator:
     ) -> None:
         """コンテキストを圧縮."""
         messages = self._agent_pool.get_message_history()
-        _, result = await self._compressor.compact_messages(
-            messages, max_tokens, strategy
-        )
+        _, result = await self._compressor.compact_messages(messages, max_tokens, strategy)
         _logger.info(
             "コンテキスト圧縮: %d → %d トークン (%.1f%%)",
             result.original_tokens,
@@ -526,4 +539,3 @@ class DeepAgentCoordinator:
 # =============================================================================
 
 __all__ = ["DeepAgentCoordinator"]
-

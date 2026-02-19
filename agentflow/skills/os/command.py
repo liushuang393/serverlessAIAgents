@@ -118,12 +118,15 @@ class CommandSkill(OSSkillBase):
                 dry_run=True,
             )
 
-        self._audit_log("run_command", {
-            "command": command,
-            "args": args,
-            "cwd": str(work_dir),
-            "timeout": timeout,
-        })
+        self._audit_log(
+            "run_command",
+            {
+                "command": command,
+                "args": args,
+                "cwd": str(work_dir),
+                "timeout": timeout,
+            },
+        )
 
         # コマンド実行
         start_time = asyncio.get_event_loop().time()
@@ -187,7 +190,16 @@ class CommandSkill(OSSkillBase):
         self._check_real_machine_mode()
 
         # 危険なパターンチェック
-        dangerous_patterns = ["|", ">", "<", "&&", "||", ";", "`", "$(",]
+        dangerous_patterns = [
+            "|",
+            ">",
+            "<",
+            "&&",
+            "||",
+            ";",
+            "`",
+            "$(",
+        ]
         for pattern in dangerous_patterns:
             if pattern in script:
                 msg = f"シェルスクリプトに危険なパターン '{pattern}' が含まれています"
@@ -215,4 +227,3 @@ class CommandSkill(OSSkillBase):
             ["-c", script],
             timeout=timeout,
         )
-

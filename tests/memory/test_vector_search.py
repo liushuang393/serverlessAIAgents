@@ -134,7 +134,9 @@ class TestVectorSearch:
         ]
 
         # 高い閾値で検索
-        results = await vector_search.search_similar("AgentFlow", memories, top_k=10, min_similarity=0.5)
+        results = await vector_search.search_similar(
+            "AgentFlow", memories, top_k=10, min_similarity=0.5
+        )
 
         # 類似度が低い記憶は除外される
         assert len(results) <= len(memories)
@@ -147,4 +149,3 @@ class TestVectorSearch:
 
         vector_search.clear_cache()
         assert len(vector_search._embedding_cache) == 0
-

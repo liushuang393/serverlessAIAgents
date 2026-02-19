@@ -11,13 +11,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
-from agentflow.governance.plugin_registry import PluginRegistry
+from apps.platform.services.agent_taxonomy import AgentTaxonomyService
 from apps.platform.services.protocol_surface_inspector import (
     ProtocolSurfaceReport,
     inspect_protocol_surface,
 )
 
-from apps.platform.services.agent_taxonomy import AgentTaxonomyService
+from agentflow.governance.plugin_registry import PluginRegistry
 
 
 if TYPE_CHECKING:
@@ -109,7 +109,9 @@ class FrameworkAuditService:
             "apps": rows,
         }
 
-    def _audit_one(self, app_config: AppConfig, *, audit_profile: str | None = None) -> dict[str, Any]:
+    def _audit_one(
+        self, app_config: AppConfig, *, audit_profile: str | None = None
+    ) -> dict[str, Any]:
         """単一 App を監査."""
         issues: list[FrameworkAuditIssue] = []
         config_path = self._discovery.get_config_path(app_config.name)
@@ -198,9 +200,7 @@ class FrameworkAuditService:
                 FrameworkAuditIssue(
                     severity="warning",
                     code="PLUGIN_BINDINGS_EMPTY_WITH_EXTERNAL_SURFACE",
-                    message=(
-                        "外部依存または MCP 面を持つ App だが plugin_bindings が空です"
-                    ),
+                    message=("外部依存または MCP 面を持つ App だが plugin_bindings が空です"),
                     hint="副作用を伴う統合機能は plugin_bindings で明示管理してください",
                 ),
             )
@@ -404,8 +404,7 @@ class FrameworkAuditService:
                         severity="warning",
                         code="FRONTEND_URL_MISSING",
                         message=(
-                            "ports.frontend が設定されているが "
-                            "runtime.urls.frontend が未設定です"
+                            "ports.frontend が設定されているが runtime.urls.frontend が未設定です"
                         ),
                         hint="runtime.urls.frontend を設定し Frontend 接続先を明示してください",
                     ),
@@ -466,8 +465,7 @@ class FrameworkAuditService:
                         severity="warning",
                         code="RAG_COLLECTION_MISMATCH",
                         message=(
-                            "contracts.rag.collections と services.rag.collections "
-                            "が一致しません"
+                            "contracts.rag.collections と services.rag.collections が一致しません"
                         ),
                         hint="RAG の既定コレクション名を 1 つの値へ統一してください",
                     ),
@@ -505,8 +503,7 @@ class FrameworkAuditService:
                     severity="warning",
                     code="SKILLS_CONTRACT_BLUEPRINT_MISMATCH",
                     message=(
-                        "contracts.skills.default_skills があるが "
-                        "blueprint.default_skills が空です"
+                        "contracts.skills.default_skills があるが blueprint.default_skills が空です"
                     ),
                     hint="skills の既定値は contracts と blueprint の両方で統一してください",
                 ),
@@ -517,8 +514,7 @@ class FrameworkAuditService:
                     severity="warning",
                     code="SKILLS_DEFAULT_MISMATCH",
                     message=(
-                        "contracts.skills.default_skills と "
-                        "blueprint.default_skills が一致しません"
+                        "contracts.skills.default_skills と blueprint.default_skills が一致しません"
                     ),
                     hint="default_skills の重複定義を解消してください",
                 ),
@@ -550,8 +546,7 @@ class FrameworkAuditService:
         has_stream_surface = surface_report.has("sse") or surface_report.has("ws")
         if (
             enforce_protocol_surface
-            and
-            engine_pattern in {"flow", "pipeline", "coordinator", "deep_agent"}
+            and engine_pattern in {"flow", "pipeline", "coordinator", "deep_agent"}
             and not has_stream_surface
         ):
             issues.append(
@@ -574,8 +569,7 @@ class FrameworkAuditService:
         has_a2a_surface = surface_report.has("a2a")
         if (
             enforce_protocol_surface
-            and
-            agent_count >= _MIN_AGENT_COUNT_FOR_A2A
+            and agent_count >= _MIN_AGENT_COUNT_FOR_A2A
             and coordinator_like
             and not has_a2a_surface
         ):
@@ -584,8 +578,7 @@ class FrameworkAuditService:
                     code="A2A_SURFACE_NOT_FOUND",
                     declared="複数 Agent + coordinator/router 構成だが A2A 面が検出できません",
                     expected=(
-                        "A2A card / A2A routing のいずれかを実装し、"
-                        "Agent 間契約を明示してください"
+                        "A2A card / A2A routing のいずれかを実装し、Agent 間契約を明示してください"
                     ),
                     evidence_protocols=("a2a",),
                     report=surface_report,
@@ -667,20 +660,16 @@ class FrameworkAuditService:
         for protocol in evidence_protocols:
             locations.extend(report.evidence_locations(protocol))
         has_any_evidence = bool(locations)
-        cannot_prove = report.parse_failed_all or (report.parse_failed_files > 0 and not has_any_evidence)
+        cannot_prove = report.parse_failed_all or (
+            report.parse_failed_files > 0 and not has_any_evidence
+        )
 
         if cannot_prove:
             return FrameworkAuditIssue(
                 severity="error",
                 code=f"{code}_UNVERIFIED",
-                message=(
-                    f"{declared}。関連ファイルの AST 解析に失敗し、"
-                    "実装有無を立証できません"
-                ),
-                hint=(
-                    "構文エラーを修正して AST 監査を再実行してください。"
-                    f"期待要件: {expected}"
-                ),
+                message=(f"{declared}。関連ファイルの AST 解析に失敗し、実装有無を立証できません"),
+                hint=(f"構文エラーを修正して AST 監査を再実行してください。期待要件: {expected}"),
             )
 
         evidence_note = ", ".join(sorted(set(locations))[:4]) if locations else "証拠なし"
@@ -758,8 +747,7 @@ class FrameworkAuditService:
                     severity="warning",
                     code="AUTH_CONTRACT_WITHOUT_RUNTIME_GUARD",
                     message=(
-                        "contracts.auth で認証必須だが、実装側の認証ガード"
-                        "シグナルが検出できません"
+                        "contracts.auth で認証必須だが、実装側の認証ガードシグナルが検出できません"
                     ),
                     hint=(
                         "Depends(require_auth) または API key 検証"

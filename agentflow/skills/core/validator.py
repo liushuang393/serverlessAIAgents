@@ -54,9 +54,9 @@ class SkillValidator:
     # 禁止パターン（セキュリティリスク）
     FORBIDDEN_PATTERNS = [
         r"rm\s+-rf\s+/",  # 危険な削除コマンド
-        r"eval\s*\(",     # eval 関数
-        r"exec\s*\(",     # exec 関数
-        r"__import__",    # 動的インポート
+        r"eval\s*\(",  # eval 関数
+        r"exec\s*\(",  # exec 関数
+        r"__import__",  # 動的インポート
         r"subprocess\.call.*shell\s*=\s*True",  # シェルインジェクション
     ]
 
@@ -161,4 +161,3 @@ class SkillValidator:
             有効かどうか
         """
         return self.validate(skill).valid
-

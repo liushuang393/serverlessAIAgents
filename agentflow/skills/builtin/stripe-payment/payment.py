@@ -98,9 +98,7 @@ class StripePayment:
 
         stripe.api_key = self._config.secret_key
         self._stripe = stripe
-        logger.info(
-            f"Stripe 已初始化 ({'测试模式' if self._config.test_mode else '生产模式'})"
-        )
+        logger.info(f"Stripe 已初始化 ({'测试模式' if self._config.test_mode else '生产模式'})")
 
     # ========================================================================
     # Checkout Session
@@ -425,8 +423,7 @@ class StripePayment:
                 cancelled = self._stripe.Subscription.cancel(subscription_id)
 
             logger.info(
-                f"已取消订阅: {subscription_id} "
-                f"({'周期结束' if cancel_at_period_end else '立即'})"
+                f"已取消订阅: {subscription_id} ({'周期结束' if cancel_at_period_end else '立即'})"
             )
             return cancelled
 
@@ -803,4 +800,3 @@ class StripePayment:
             return clock
         except self._stripe.error.StripeError as e:
             raise PaymentError(str(e), getattr(e, "code", None))
-

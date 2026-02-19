@@ -176,4 +176,3 @@ class TestA2UIEmitter:
         assert events[0]["type"] == "a2ui_component"
         assert events[0]["surface_id"] == "main"
         assert events[0]["component"]["type"] == "card"
-

@@ -443,9 +443,7 @@ class EvidenceService:
         is_fresh = freshness_days <= self._freshness_window_days
 
         citation_ready = (
-            has_url
-            and has_content
-            and evidence.reliability_score >= self._min_citation_reliability
+            has_url and has_content and evidence.reliability_score >= self._min_citation_reliability
         )
 
         traceability_score = (
@@ -525,9 +523,7 @@ class EvidenceService:
         """0.0-1.0 に正規化."""
         return max(0.0, min(1.0, value))
 
-    async def _find_by_hash(
-        self, session: AsyncSession, content_hash: str
-    ) -> EvidenceModel | None:
+    async def _find_by_hash(self, session: AsyncSession, content_hash: str) -> EvidenceModel | None:
         """ハッシュで証拠を検索."""
         result = await session.execute(
             select(EvidenceModel).where(EvidenceModel.content_hash == content_hash)
@@ -572,9 +568,7 @@ class EvidenceService:
             return 0.0
 
         # Phase 12: 時間減衰を適用した信頼度
-        decayed_scores = [
-            self._apply_time_decay(row[0], row[1]) for row in rows
-        ]
+        decayed_scores = [self._apply_time_decay(row[0], row[1]) for row in rows]
         avg_reliability = sum(decayed_scores) / len(decayed_scores)
         evidence_bonus = min(len(decayed_scores) / 5, 1.0) * 0.15
         return min(avg_reliability + evidence_bonus, 1.0)
@@ -602,15 +596,11 @@ class EvidenceService:
     async def _get_evidence_model(
         self, session: AsyncSession, evidence_id: str
     ) -> EvidenceModel | None:
-        result = await session.execute(
-            select(EvidenceModel).where(EvidenceModel.id == evidence_id)
-        )
+        result = await session.execute(select(EvidenceModel).where(EvidenceModel.id == evidence_id))
         row = result.first()
         return row[0] if row else None
 
-    async def _get_claim_model(
-        self, session: AsyncSession, claim_id: str
-    ) -> ClaimModel | None:
+    async def _get_claim_model(self, session: AsyncSession, claim_id: str) -> ClaimModel | None:
         result = await session.execute(select(ClaimModel).where(ClaimModel.id == claim_id))
         row = result.first()
         return row[0] if row else None

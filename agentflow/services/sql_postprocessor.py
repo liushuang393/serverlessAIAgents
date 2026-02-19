@@ -101,9 +101,17 @@ class PostProcessorConfig:
     enable_llm_correction: bool = True
     timeout_seconds: float = 30.0
     allowed_tables: list[str] | None = None
-    blocked_keywords: list[str] = field(default_factory=lambda: [
-        "DROP", "DELETE", "TRUNCATE", "ALTER", "CREATE", "INSERT", "UPDATE",
-    ])
+    blocked_keywords: list[str] = field(
+        default_factory=lambda: [
+            "DROP",
+            "DELETE",
+            "TRUNCATE",
+            "ALTER",
+            "CREATE",
+            "INSERT",
+            "UPDATE",
+        ]
+    )
 
 
 # SQL 構文パターン
@@ -166,6 +174,7 @@ class SQLPostProcessor:
 
         if self._config.enable_llm_correction:
             from agentflow.providers import get_llm
+
             self._llm = get_llm(temperature=0)
 
         self._started = True
@@ -249,7 +258,6 @@ class SQLPostProcessor:
 
         # 末尾のセミコロンを除去（一般的に不要）
         return sql.rstrip(";")
-
 
     def _validate_syntax(self, sql: str) -> ValidationResult:
         """構文を検証.
@@ -507,4 +515,3 @@ __all__ = [
     "ValidationLevel",
     "ValidationResult",
 ]
-

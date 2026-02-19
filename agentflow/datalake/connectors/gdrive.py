@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """GoogleDriveConnector - Google Drive API コネクタ.
 
 Google Drive へのアクセスを提供。
@@ -106,9 +108,7 @@ class GoogleDriveConnector(DataConnector):
                     "aiohttp is required for Google Drive support. "
                     "Install with: pip install aiohttp"
                 )
-                raise ImportError(
-                    msg
-                ) from e
+                raise ImportError(msg) from e
 
             timeout = aiohttp.ClientTimeout(total=self._config.timeout)
             self._session = aiohttp.ClientSession(timeout=timeout)
@@ -152,13 +152,8 @@ class GoogleDriveConnector(DataConnector):
         try:
             import jwt
         except ImportError as e:
-            msg = (
-                "PyJWT is required for service account auth. "
-                "Install with: pip install PyJWT"
-            )
-            raise ImportError(
-                msg
-            ) from e
+            msg = "PyJWT is required for service account auth. Install with: pip install PyJWT"
+            raise ImportError(msg) from e
 
         with open(sa_file) as f:
             sa_info = json.load(f)
@@ -185,9 +180,7 @@ class GoogleDriveConnector(DataConnector):
             response.raise_for_status()
             result = await response.json()
             self._access_token = result["access_token"]
-            self._token_expires = datetime.now(UTC).replace(
-                second=datetime.now(UTC).second + 3540
-            )
+            self._token_expires = datetime.now(UTC).replace(second=datetime.now(UTC).second + 3540)
             return self._access_token
 
     async def _refresh_oauth_token(self) -> str:
@@ -201,9 +194,7 @@ class GoogleDriveConnector(DataConnector):
                 "Google credentials required. Set GOOGLE_CLIENT_ID, "
                 "GOOGLE_CLIENT_SECRET, and GOOGLE_REFRESH_TOKEN."
             )
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
         session = await self._get_session()
         async with session.post(
@@ -312,9 +303,7 @@ class GoogleDriveConnector(DataConnector):
             is_folder = file["mimeType"] == FOLDER_MIME_TYPE
             modified_at = None
             if "modifiedTime" in file:
-                modified_at = datetime.fromisoformat(
-                    file["modifiedTime"].replace("Z", "+00:00")
-                )
+                modified_at = datetime.fromisoformat(file["modifiedTime"].replace("Z", "+00:00"))
 
             items.append(
                 DataItem(
@@ -411,7 +400,9 @@ class GoogleDriveConnector(DataConnector):
 
         headers = {
             "Authorization": f"Bearer {token}",
-            "Content-Type": content_type or mimetypes.guess_type(name)[0] or "application/octet-stream",
+            "Content-Type": content_type
+            or mimetypes.guess_type(name)[0]
+            or "application/octet-stream",
         }
 
         if existing_id:
@@ -423,15 +414,20 @@ class GoogleDriveConnector(DataConnector):
         else:
             # 新規作成
             import json
+
             file_metadata = {"name": name, "parents": [parent_id]}
             boundary = "boundary_string"
             body = (
-                f"--{boundary}\r\n"
-                f"Content-Type: application/json; charset=UTF-8\r\n\r\n"
-                f"{json.dumps(file_metadata)}\r\n"
-                f"--{boundary}\r\n"
-                f"Content-Type: {headers['Content-Type']}\r\n\r\n"
-            ).encode() + content + f"\r\n--{boundary}--".encode()
+                (
+                    f"--{boundary}\r\n"
+                    f"Content-Type: application/json; charset=UTF-8\r\n\r\n"
+                    f"{json.dumps(file_metadata)}\r\n"
+                    f"--{boundary}\r\n"
+                    f"Content-Type: {headers['Content-Type']}\r\n\r\n"
+                ).encode()
+                + content
+                + f"\r\n--{boundary}--".encode()
+            )
 
             headers["Content-Type"] = f"multipart/related; boundary={boundary}"
             url = f"{self.UPLOAD_URL}/files?uploadType=multipart"
@@ -478,4 +474,3 @@ class GoogleDriveConnector(DataConnector):
         if self._session:
             await self._session.close()
             self._session = None
-

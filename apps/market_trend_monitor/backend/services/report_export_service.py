@@ -24,7 +24,7 @@ class ReportExportService:
     def _check_reportlab(self) -> bool:
         """ReportLab 利用可否を確認."""
         try:
-            from reportlab.lib.pagesizes import A4  # noqa: F401
+            from reportlab.lib.pagesizes import A4
 
             return True
         except ImportError:
@@ -42,18 +42,24 @@ class ReportExportService:
             self._logger.error("PDF生成に失敗: %s", exc, exc_info=True)
             raise RuntimeError(f"PDF生成に失敗しました: {exc}") from exc
 
-
     def _build_pdf(self, report: dict[str, Any]) -> bytes:
         """企業テンプレートPDFを生成."""
+        from reportlab.graphics.charts.barcharts import VerticalBarChart
+        from reportlab.graphics.shapes import Drawing
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import cm
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-        from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-        from reportlab.graphics.charts.barcharts import VerticalBarChart
-        from reportlab.graphics.shapes import Drawing
+        from reportlab.platypus import (
+            PageBreak,
+            Paragraph,
+            SimpleDocTemplate,
+            Spacer,
+            Table,
+            TableStyle,
+        )
 
         font_name = "Helvetica"
         try:
@@ -244,7 +250,6 @@ class ReportExportService:
         doc.build(elements)
         return buffer.getvalue()
 
-
     def _sections(self, report: dict[str, Any]) -> list[dict[str, Any]]:
         """セクション一覧を正規化."""
         sections = report.get("sections", [])
@@ -311,5 +316,3 @@ class ReportExportService:
         if growth_state in {"insufficient_history", "no_signal"}:
             return "N/A"
         return f"{self._as_float(trend.get('growth_rate')) * 100:.1f}%"
-
-

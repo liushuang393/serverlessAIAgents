@@ -126,9 +126,16 @@ class PersonalAssistantCoordinator:
             TaskTemplate(
                 name="email_organize",
                 triggers=[
-                    "メール整理", "メールを整理", "受信箱整理", "メールを片付け",
-                    "邮件整理", "整理邮件", "收件箱整理",
-                    "organize email", "clean inbox", "sort emails",
+                    "メール整理",
+                    "メールを整理",
+                    "受信箱整理",
+                    "メールを片付け",
+                    "邮件整理",
+                    "整理邮件",
+                    "收件箱整理",
+                    "organize email",
+                    "clean inbox",
+                    "sort emails",
                 ],
                 description="メールを重要度別に整理し、サマリーを作成",
                 required_skills=["email", "summarizer"],
@@ -145,9 +152,16 @@ class PersonalAssistantCoordinator:
             TaskTemplate(
                 name="file_organize",
                 triggers=[
-                    "ファイル整理", "ディスク整理", "ダウンロード整理", "フォルダ整理",
-                    "文件整理", "磁盘整理", "下载整理",
-                    "organize files", "clean disk", "sort downloads",
+                    "ファイル整理",
+                    "ディスク整理",
+                    "ダウンロード整理",
+                    "フォルダ整理",
+                    "文件整理",
+                    "磁盘整理",
+                    "下载整理",
+                    "organize files",
+                    "clean disk",
+                    "sort downloads",
                 ],
                 description="ファイルを分類・整理し、不要ファイルを特定",
                 required_skills=["filesystem"],
@@ -164,9 +178,15 @@ class PersonalAssistantCoordinator:
             TaskTemplate(
                 name="system_optimize",
                 triggers=[
-                    "システム最適化", "PC最適化", "パフォーマンス改善",
-                    "系统优化", "电脑优化", "性能优化",
-                    "optimize system", "speed up pc", "improve performance",
+                    "システム最適化",
+                    "PC最適化",
+                    "パフォーマンス改善",
+                    "系统优化",
+                    "电脑优化",
+                    "性能优化",
+                    "optimize system",
+                    "speed up pc",
+                    "improve performance",
                 ],
                 description="システムリソースを分析し、最適化を実施",
                 required_skills=["system_info", "command"],
@@ -182,14 +202,26 @@ class PersonalAssistantCoordinator:
             TaskTemplate(
                 name="research",
                 triggers=[
-                    "調査", "情報収集", "調べて", "最新動向", "トレンド",
-                    "调查", "情报收集", "查一下", "最新动态",
-                    "research", "investigate", "find out", "latest trends",
+                    "調査",
+                    "情報収集",
+                    "調べて",
+                    "最新動向",
+                    "トレンド",
+                    "调查",
+                    "情报收集",
+                    "查一下",
+                    "最新动态",
+                    "research",
+                    "investigate",
+                    "find out",
+                    "latest trends",
                 ],
                 description="指定トピックについて調査し、要点をまとめる",
                 required_skills=["web_search", "summarizer"],
                 parameters=[
-                    TaskParameter(name="topic", pattern=r"「(.+?)」について|(.+?)を調査", required=True),
+                    TaskParameter(
+                        name="topic", pattern=r"「(.+?)」について|(.+?)を調査", required=True
+                    ),
                     TaskParameter(name="depth", pattern=r"(簡潔|詳細|徹底)", default="簡潔"),
                 ],
                 tags=["research", "intelligence"],
@@ -201,9 +233,15 @@ class PersonalAssistantCoordinator:
             TaskTemplate(
                 name="competitor_analysis",
                 triggers=[
-                    "競合分析", "競合調査", "ライバル調査", "競合他社",
-                    "竞争分析", "竞品调研", "对手调查",
-                    "competitor analysis", "competitive research",
+                    "競合分析",
+                    "競合調査",
+                    "ライバル調査",
+                    "競合他社",
+                    "竞争分析",
+                    "竞品调研",
+                    "对手调查",
+                    "competitor analysis",
+                    "competitive research",
                 ],
                 description="競合他社の情報を収集・分析",
                 required_skills=["web_search", "browser", "analyzer"],
@@ -220,15 +258,24 @@ class PersonalAssistantCoordinator:
             TaskTemplate(
                 name="report",
                 triggers=[
-                    "レポート作成", "報告書作成", "資料作成", "まとめ作成",
-                    "报告制作", "报告书制作", "资料制作",
-                    "create report", "make report", "write summary",
+                    "レポート作成",
+                    "報告書作成",
+                    "資料作成",
+                    "まとめ作成",
+                    "报告制作",
+                    "报告书制作",
+                    "资料制作",
+                    "create report",
+                    "make report",
+                    "write summary",
                 ],
                 description="指定テーマのレポートを作成",
                 required_skills=["summarizer", "report_builder"],
                 parameters=[
                     TaskParameter(name="title", pattern=r"「(.+?)」", required=True),
-                    TaskParameter(name="format", pattern=r"(markdown|pdf|pptx)", default="markdown"),
+                    TaskParameter(
+                        name="format", pattern=r"(markdown|pdf|pptx)", default="markdown"
+                    ),
                 ],
                 tags=["report", "document"],
             )
@@ -258,7 +305,9 @@ class PersonalAssistantCoordinator:
             intent = await self._intent_router.route(message, context)
             self._logger.info(
                 "意図解析: category=%s, template=%s, confidence=%.2f",
-                intent.category, intent.template_name, intent.confidence,
+                intent.category,
+                intent.template_name,
+                intent.confidence,
             )
 
             # 2. カテゴリ別処理
@@ -341,10 +390,12 @@ class PersonalAssistantCoordinator:
         # LLMで回答生成
         try:
             llm = get_llm(temperature=0.7)
-            response = await llm.chat([
-                {"role": "system", "content": "簡潔に回答してください。"},
-                {"role": "user", "content": intent.rewritten_query},
-            ])
+            response = await llm.chat(
+                [
+                    {"role": "system", "content": "簡潔に回答してください。"},
+                    {"role": "user", "content": intent.rewritten_query},
+                ]
+            )
             return {
                 "answer": response.get("content", ""),
                 "processed": 1,
@@ -361,6 +412,7 @@ class PersonalAssistantCoordinator:
         """状態確認."""
         # 非同期操作のプレースホルダー（将来の拡張用）
         import asyncio
+
         await asyncio.sleep(0)  # 非同期コンテキスト維持
         status_info = {
             "assistant_status": "running",
@@ -394,6 +446,7 @@ class PersonalAssistantCoordinator:
             ここではモック結果を返す（実装時に置き換え）。
         """
         import asyncio
+
         await asyncio.sleep(0)  # 非同期コンテキスト維持
 
         days = params.get("days", 7)
@@ -429,6 +482,7 @@ class PersonalAssistantCoordinator:
             return self._blocked_result("filesystem")
 
         import asyncio
+
         await asyncio.sleep(0)  # 非同期コンテキスト維持
 
         path = params.get("path", "~/Downloads")
@@ -495,6 +549,7 @@ class PersonalAssistantCoordinator:
     ) -> dict[str, Any]:
         """調査を実行."""
         import asyncio
+
         await asyncio.sleep(0)  # 非同期コンテキスト維持
 
         topic = params.get("topic", "指定なし")
@@ -529,6 +584,7 @@ class PersonalAssistantCoordinator:
             return self._blocked_result("browser_control")
 
         import asyncio
+
         await asyncio.sleep(0)  # 非同期コンテキスト維持
 
         competitor = params.get("competitor", "指定なし")
@@ -556,6 +612,7 @@ class PersonalAssistantCoordinator:
     ) -> dict[str, Any]:
         """レポート作成を実行."""
         import asyncio
+
         await asyncio.sleep(0)  # 非同期コンテキスト維持
 
         title = params.get("title", "レポート")
@@ -586,10 +643,12 @@ class PersonalAssistantCoordinator:
         """汎用タスク実行（LLM使用）."""
         try:
             llm = get_llm(temperature=0.5)
-            response = await llm.chat([
-                {"role": "system", "content": "タスクを実行し、結果を報告してください。"},
-                {"role": "user", "content": request},
-            ])
+            response = await llm.chat(
+                [
+                    {"role": "system", "content": "タスクを実行し、結果を報告してください。"},
+                    {"role": "user", "content": request},
+                ]
+            )
             return {
                 "processed": 1,
                 "result": response.get("content", ""),

@@ -321,9 +321,7 @@ class RAGHook:
         top_k = top_k or self._top_k
 
         # 1. 関連ドキュメントを検索
-        search_results = await self._search_hook(
-            query, top_k=top_k, filters=filters
-        )
+        search_results = await self._search_hook(query, top_k=top_k, filters=filters)
 
         # 2. コンテキストを構築
         context_parts = []
@@ -412,4 +410,3 @@ def use_rag(
         min_similarity=min_similarity,
         system_prompt=system_prompt,
     )
-
