@@ -108,7 +108,7 @@ class PreviewService(IWorkflowRunner):
         try:
             # 実際の FlowExecutor を使用して実行
             try:
-                from agentflow.flow import FlowBuilder, FlowExecutor
+                from agentflow.flow import FlowBuilder
 
                 # ワークフローからフローを構築
                 FlowBuilder(workflow.id)
@@ -337,7 +337,11 @@ class PreviewService(IWorkflowRunner):
         if execution is None:
             return None
 
-        return execution.get("results", {}).get(node_id)
+        results = execution.get("results", {})
+        if not isinstance(results, dict):
+            return None
+        node_result = results.get(node_id)
+        return node_result if isinstance(node_result, dict) else None
 
     def get_execution_status(self, execution_id: str) -> dict[str, Any] | None:
         """実行状態を取得.

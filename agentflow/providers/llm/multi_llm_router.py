@@ -130,8 +130,7 @@ class MultiLLMRouter:
         self._initialized = False
 
         logger.info(
-            f"MultiLLMRouter初期化: priority={self._config.priority}, "
-            f"default_model={self._agent_mapping.default_model}"
+            f"MultiLLMRouter初期化: priority={self._config.priority}, default_model={self._agent_mapping.default_model}"
         )
 
     async def initialize(self) -> None:
@@ -191,9 +190,7 @@ class MultiLLMRouter:
         Returns:
             モデル名
         """
-        return self._agent_mapping.task_type_models.get(
-            task_type, self._agent_mapping.default_model
-        )
+        return self._agent_mapping.task_type_models.get(task_type, self._agent_mapping.default_model)
 
     async def get_provider_for_agent(self, agent_id: str) -> LLMClient:
         """Agent IDに対応するプロバイダーを取得.
@@ -311,17 +308,14 @@ class MultiLLMRouter:
             return min(
                 candidates,
                 key=lambda m: (
-                    MODELS[m].input_cost_per_1k + MODELS[m].output_cost_per_1k
-                    if m in MODELS
-                    else float("inf")
+                    MODELS[m].input_cost_per_1k + MODELS[m].output_cost_per_1k if m in MODELS else float("inf")
                 ),
             )
         if priority == "speed":
             # 速度優先：レイテンシが最も低いモデル
             return min(
                 candidates,
-                key=lambda m: self._performance_cache.get(m, ProviderPerformance()).avg_latency_ms
-                or float("inf"),
+                key=lambda m: self._performance_cache.get(m, ProviderPerformance()).avg_latency_ms or float("inf"),
             )
         # 品質優先：最高階層のモデル
         tier_order = {ModelTier.PREMIUM: 0, ModelTier.STANDARD: 1, ModelTier.ECONOMY: 2}
@@ -358,13 +352,9 @@ class MultiLLMRouter:
 
         # 成功率を更新
         if success:
-            perf.success_rate = (
-                perf.success_rate * (perf.total_requests - 1) + 1
-            ) / perf.total_requests
+            perf.success_rate = (perf.success_rate * (perf.total_requests - 1) + 1) / perf.total_requests
         else:
-            perf.success_rate = (
-                perf.success_rate * (perf.total_requests - 1)
-            ) / perf.total_requests
+            perf.success_rate = (perf.success_rate * (perf.total_requests - 1)) / perf.total_requests
 
     def get_stats(self) -> dict[str, Any]:
         """統計情報を取得.

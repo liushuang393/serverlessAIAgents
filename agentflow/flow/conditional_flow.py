@@ -143,9 +143,7 @@ class SwitchNode(FlowNode):
         """switch-caseを評価して実行."""
         try:
             if not self.expression:
-                return NodeResult(
-                    success=False, data={"error": "式が未定義"}, action=NextAction.STOP
-                )
+                return NodeResult(success=False, data={"error": "式が未定義"}, action=NextAction.STOP)
 
             value = self.expression(ctx)
             self._logger.debug(f"switch値: {value}")

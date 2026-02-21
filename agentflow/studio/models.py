@@ -25,8 +25,8 @@ class AgentRunResponse(BaseModel):
     """エージェント実行レスポンス."""
 
     status: str = Field(..., description="実行ステータス")
-    result: dict[str, Any] | None = Field(None, description="実行結果")
-    error: str | None = Field(None, description="エラーメッセージ")
+    result: dict[str, Any] | None = Field(default=None, description="実行結果")
+    error: str | None = Field(default=None, description="エラーメッセージ")
 
 
 # =============================================================================
@@ -46,10 +46,10 @@ class WorkflowCreateRequest(BaseModel):
 class WorkflowUpdateRequest(BaseModel):
     """ワークフロー更新リクエスト."""
 
-    name: str | None = Field(None, description="ワークフロー名")
-    description: str | None = Field(None, description="ワークフロー説明")
-    nodes: list[dict[str, Any]] | None = Field(None, description="ノードリスト")
-    edges: list[dict[str, Any]] | None = Field(None, description="エッジリスト")
+    name: str | None = Field(default=None, description="ワークフロー名")
+    description: str | None = Field(default=None, description="ワークフロー説明")
+    nodes: list[dict[str, Any]] | None = Field(default=None, description="ノードリスト")
+    edges: list[dict[str, Any]] | None = Field(default=None, description="エッジリスト")
 
 
 # =============================================================================
@@ -60,9 +60,9 @@ class WorkflowUpdateRequest(BaseModel):
 class MarketplaceSearchRequest(BaseModel):
     """マーケットプレイス検索リクエスト."""
 
-    query: str | None = Field(None, description="検索クエリ")
-    category: str | None = Field(None, description="カテゴリフィルター")
-    protocols: list[str] | None = Field(None, description="プロトコルフィルター")
+    query: str | None = Field(default=None, description="検索クエリ")
+    category: str | None = Field(default=None, description="カテゴリフィルター")
+    protocols: list[str] | None = Field(default=None, description="プロトコルフィルター")
 
 
 class MarketplaceInstallRequest(BaseModel):
@@ -95,7 +95,7 @@ class RAGQueryRequest(BaseModel):
 class ChatRequest(BaseModel):
     """チャットリクエスト."""
 
-    session_id: str | None = Field(None, description="セッション ID")
+    session_id: str | None = Field(default=None, description="セッション ID")
     message: str = Field(..., description="ユーザーメッセージ")
 
 
@@ -116,10 +116,10 @@ class PreviewRunResponse(BaseModel):
     """プレビュー実行レスポンス."""
 
     status: str = Field(..., description="実行ステータス")
-    result: dict[str, Any] | None = Field(None, description="実行結果")
+    result: dict[str, Any] | None = Field(default=None, description="実行結果")
     logs: list[dict[str, Any]] = Field(default_factory=list, description="実行ログ")
-    duration_ms: float | None = Field(None, description="実行時間（ミリ秒）")
-    error: str | None = Field(None, description="エラーメッセージ")
+    duration_ms: float | None = Field(default=None, description="実行時間（ミリ秒）")
+    error: str | None = Field(default=None, description="エラーメッセージ")
 
 
 # =============================================================================
@@ -131,10 +131,8 @@ class PublishExportRequest(BaseModel):
     """エクスポートリクエスト."""
 
     workflow: dict[str, Any] = Field(..., description="ワークフロー定義")
-    target: Literal["fastapi", "cli", "vercel", "lambda", "docker"] = Field(
-        ..., description="出力タイプ"
-    )
-    app_name: str | None = Field(None, description="アプリケーション名")
+    target: Literal["fastapi", "cli", "vercel", "lambda", "docker"] = Field(..., description="出力タイプ")
+    app_name: str | None = Field(default=None, description="アプリケーション名")
     version: str = Field("1.0.0", description="バージョン")
     include_tests: bool = Field(True, description="テストコードを含める")
     include_readme: bool = Field(True, description="README を含める")
@@ -145,7 +143,7 @@ class PublishDeployRequest(BaseModel):
 
     workflow: dict[str, Any] = Field(..., description="ワークフロー定義")
     target: Literal["vercel", "docker_hub"] = Field(..., description="デプロイ先")
-    app_name: str | None = Field(None, description="アプリケーション名")
+    app_name: str | None = Field(default=None, description="アプリケーション名")
     credentials: dict[str, str] = Field(default_factory=dict, description="認証情報")
 
 
@@ -153,8 +151,7 @@ class PublishDeployResponse(BaseModel):
     """デプロイレスポンス."""
 
     status: str = Field(..., description="デプロイステータス")
-    deployment_id: str | None = Field(None, description="デプロイメント ID")
-    url: str | None = Field(None, description="デプロイ URL")
+    deployment_id: str | None = Field(default=None, description="デプロイメント ID")
+    url: str | None = Field(default=None, description="デプロイ URL")
     logs: list[str] = Field(default_factory=list, description="デプロイログ")
-    error: str | None = Field(None, description="エラーメッセージ")
-
+    error: str | None = Field(default=None, description="エラーメッセージ")

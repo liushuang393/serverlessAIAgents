@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 class SwitchDirection(str, Enum):
     """切替方向."""
 
-    TO_ISOLATED = "to_isolated"          # 安全方向（即時可）
+    TO_ISOLATED = "to_isolated"  # 安全方向（即時可）
     TO_REAL_MACHINE = "to_real_machine"  # 危険方向（要確認）
 
 
@@ -89,7 +89,7 @@ class ModeSwitcher:
         self,
         gateway: Any,  # SkillGateway（循環インポート回避）
         *,
-        confirmation_handler: Callable[[str, dict], Awaitable[bool]] | None = None,
+        confirmation_handler: Callable[[str, dict[str, Any]], Awaitable[bool]] | None = None,
         auto_revert_seconds: int | None = None,
     ) -> None:
         """初期化.
@@ -160,7 +160,9 @@ class ModeSwitcher:
 
         self._logger.info(
             "AUDIT: モード切替 %s → %s (理由: %s)",
-            current.value, ExecutionMode.ISOLATED.value, reason,
+            current.value,
+            ExecutionMode.ISOLATED.value,
+            reason,
         )
 
         return transition
@@ -202,9 +204,7 @@ class ModeSwitcher:
         if not skip_confirmation:
             if self._confirmation_handler is None:
                 msg = "real_machine モードへの切替には人工確認ハンドラが必要です"
-                raise ModeSwitchDenied(
-                    msg
-                )
+                raise ModeSwitchDenied(msg)
 
             confirmed = await self._confirmation_handler(
                 f"real_machine モードへの切替を許可しますか？\n理由: {reason}",
@@ -239,7 +239,10 @@ class ModeSwitcher:
 
         self._logger.warning(
             "AUDIT: モード切替 %s → %s (理由: %s, 承認者: %s)",
-            current.value, ExecutionMode.REAL_MACHINE.value, reason, approved_by,
+            current.value,
+            ExecutionMode.REAL_MACHINE.value,
+            reason,
+            approved_by,
         )
 
         # 自動復帰タイマー設定
@@ -269,4 +272,3 @@ class ModeSwitcher:
         if self._revert_task and not self._revert_task.done():
             self._revert_task.cancel()
             self._revert_task = None
-

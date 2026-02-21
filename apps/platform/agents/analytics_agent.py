@@ -205,30 +205,36 @@ class AnalyticsAgent(AgentBlock):
 
         # コンポーネント数に基づく提案
         if stats.component_count < 5:
-            recommendations.append({
-                "category": "growth",
-                "title": "コンポーネントの追加",
-                "description": "Galleryから便利なコンポーネントを探してみてください。",
-                "priority": "medium",
-            })
+            recommendations.append(
+                {
+                    "category": "growth",
+                    "title": "コンポーネントの追加",
+                    "description": "Galleryから便利なコンポーネントを探してみてください。",
+                    "priority": "medium",
+                }
+            )
 
         # Flowの活用提案
         if stats.flow_count == 0 and stats.agent_count >= 3:
-            recommendations.append({
-                "category": "optimization",
-                "title": "Flowの活用",
-                "description": "複数のAgentをFlowで連携させることで、複雑なタスクを効率化できます。",
-                "priority": "high",
-            })
+            recommendations.append(
+                {
+                    "category": "optimization",
+                    "title": "Flowの活用",
+                    "description": "複数のAgentをFlowで連携させることで、複雑なタスクを効率化できます。",
+                    "priority": "high",
+                }
+            )
 
         # Skillの再利用提案
         if stats.skill_count < stats.agent_count:
-            recommendations.append({
-                "category": "reusability",
-                "title": "Skillの抽出",
-                "description": "Agent内の共通機能をSkillとして抽出し、再利用性を高めましょう。",
-                "priority": "medium",
-            })
+            recommendations.append(
+                {
+                    "category": "reusability",
+                    "title": "Skillの抽出",
+                    "description": "Agent内の共通機能をSkillとして抽出し、再利用性を高めましょう。",
+                    "priority": "medium",
+                }
+            )
 
         return {
             "success": True,

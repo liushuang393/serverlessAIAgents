@@ -5,13 +5,18 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from apps.faq_system.backend.auth.dependencies import require_auth
-from apps.faq_system.backend.auth.models import UserInfo
 from apps.faq_system.routers.dependencies import get_sales_agent, get_sql_service
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from apps.faq_system.backend.auth.models import UserInfo
+else:
+    UserInfo = Any
 
 
 router = APIRouter(tags=["SQL / 売上分析"])

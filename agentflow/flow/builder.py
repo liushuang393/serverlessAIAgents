@@ -23,7 +23,7 @@ Example:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from agentflow.flow.graph import FlowGraph
 from agentflow.flow.nodes import AgentNode, GateNode, ParallelNode, ReviewNode
@@ -70,7 +70,7 @@ class FlowBuilder:
     def _resolve_agent(self, agent: AgentProtocol | type) -> AgentProtocol:
         """Agentを解決：クラスの場合はインスタンス化."""
         if isinstance(agent, type):
-            return agent()
+            return cast("AgentProtocol", agent())
         return agent
 
     def gate(
@@ -107,7 +107,8 @@ class FlowBuilder:
         """
         resolved = self._resolve_agent(agent)
         node_id = id or self._next_id("gate")
-        node_name = name or getattr(resolved, "name", node_id)
+        resolved_name = getattr(resolved, "name", node_id)
+        node_name = name if name is not None else (resolved_name if isinstance(resolved_name, str) else node_id)
 
         node = GateNode(
             id=node_id,
@@ -241,7 +242,8 @@ class FlowBuilder:
         """
         resolved = self._resolve_agent(agent)
         node_id = id or self._next_id("review")
-        node_name = name or getattr(resolved, "name", "レビュー")
+        resolved_name = getattr(resolved, "name", "レビュー")
+        node_name = name if name is not None else (resolved_name if isinstance(resolved_name, str) else "レビュー")
 
         node = ReviewNode(
             id=node_id,
@@ -335,4 +337,3 @@ def create_flow(flow_id: str, *, name: str | None = None) -> FlowBuilder:
 
 
 __all__ = ["FlowBuilder", "create_flow"]
-

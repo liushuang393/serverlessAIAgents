@@ -183,9 +183,7 @@ class EvidenceService:
 
             if evidence_id not in claim_model.evidence_ids:
                 claim_model.evidence_ids = [*claim_model.evidence_ids, evidence_id]
-                claim_model.confidence = await self._calculate_claim_confidence(
-                    session, claim_model.evidence_ids
-                )
+                claim_model.confidence = await self._calculate_claim_confidence(session, claim_model.evidence_ids)
                 level = self._calculate_claim_level(
                     evidence_count=len(claim_model.evidence_ids),
                     confidence=claim_model.confidence,
@@ -307,31 +305,21 @@ class EvidenceService:
         claims = await self.list_claims()
         now = datetime.now()
 
-        evidence_diagnostics = [
-            self._build_evidence_diagnostic(evidence, now) for evidence in evidences
-        ]
+        evidence_diagnostics = [self._build_evidence_diagnostic(evidence, now) for evidence in evidences]
         evidence_lookup = {item["evidence_id"]: item for item in evidence_diagnostics}
-        claim_diagnostics = [
-            self._build_claim_diagnostic(claim, evidence_lookup) for claim in claims
-        ]
+        claim_diagnostics = [self._build_claim_diagnostic(claim, evidence_lookup) for claim in claims]
 
         total_evidence = len(evidence_diagnostics)
         source_diversity = len({item["source_type"] for item in evidence_diagnostics})
         citation_ready_count = sum(1 for item in evidence_diagnostics if item["citation_ready"])
         high_reliability_count = sum(
-            1
-            for item in evidence_diagnostics
-            if item["reliability_score"] >= self._min_high_reliability
+            1 for item in evidence_diagnostics if item["reliability_score"] >= self._min_high_reliability
         )
         fresh_count = sum(1 for item in evidence_diagnostics if item["is_fresh"])
-        supported_claim_count = sum(
-            1 for item in claim_diagnostics if item["status"] == "supported"
-        )
+        supported_claim_count = sum(1 for item in claim_diagnostics if item["status"] == "supported")
 
         avg_reliability = (
-            sum(item["reliability_score"] for item in evidence_diagnostics) / total_evidence
-            if total_evidence
-            else 0.0
+            sum(item["reliability_score"] for item in evidence_diagnostics) / total_evidence if total_evidence else 0.0
         )
         citation_ready_ratio = self._safe_ratio(citation_ready_count, total_evidence)
         fresh_ratio = self._safe_ratio(fresh_count, total_evidence)
@@ -442,11 +430,7 @@ class EvidenceService:
         freshness_days = max((now - evidence.collected_at).days, 0)
         is_fresh = freshness_days <= self._freshness_window_days
 
-        citation_ready = (
-            has_url
-            and has_content
-            and evidence.reliability_score >= self._min_citation_reliability
-        )
+        citation_ready = has_url and has_content and evidence.reliability_score >= self._min_citation_reliability
 
         traceability_score = (
             evidence.reliability_score * 0.45
@@ -478,9 +462,7 @@ class EvidenceService:
         linked_count = len(linked)
         citation_ready_count = sum(1 for item in linked if item["citation_ready"])
         avg_traceability = (
-            sum(float(item["traceability_score"]) for item in linked) / linked_count
-            if linked_count
-            else 0.0
+            sum(float(item["traceability_score"]) for item in linked) / linked_count if linked_count else 0.0
         )
         coverage_score = self._safe_ratio(citation_ready_count, evidence_count)
 
@@ -525,13 +507,9 @@ class EvidenceService:
         """0.0-1.0 に正規化."""
         return max(0.0, min(1.0, value))
 
-    async def _find_by_hash(
-        self, session: AsyncSession, content_hash: str
-    ) -> EvidenceModel | None:
+    async def _find_by_hash(self, session: AsyncSession, content_hash: str) -> EvidenceModel | None:
         """ハッシュで証拠を検索."""
-        result = await session.execute(
-            select(EvidenceModel).where(EvidenceModel.content_hash == content_hash)
-        )
+        result = await session.execute(select(EvidenceModel).where(EvidenceModel.content_hash == content_hash))
         row = result.first()
         return row[0] if row else None
 
@@ -554,9 +532,7 @@ class EvidenceService:
         decay = math.exp(-age_days / 180.0)
         return reliability * (0.3 + 0.7 * decay)
 
-    async def _calculate_claim_confidence(
-        self, session: AsyncSession, evidence_ids: list[str]
-    ) -> float:
+    async def _calculate_claim_confidence(self, session: AsyncSession, evidence_ids: list[str]) -> float:
         """証拠に基づく主張信頼度を計算（時間減衰適用）."""
         if not evidence_ids:
             return 0.0
@@ -572,53 +548,35 @@ class EvidenceService:
             return 0.0
 
         # Phase 12: 時間減衰を適用した信頼度
-        decayed_scores = [
-            self._apply_time_decay(row[0], row[1]) for row in rows
-        ]
+        decayed_scores = [self._apply_time_decay(row[0], row[1]) for row in rows]
         avg_reliability = sum(decayed_scores) / len(decayed_scores)
         evidence_bonus = min(len(decayed_scores) / 5, 1.0) * 0.15
         return min(avg_reliability + evidence_bonus, 1.0)
 
-    async def _filter_existing_evidence_ids(
-        self, session: AsyncSession, evidence_ids: list[str]
-    ) -> list[str]:
+    async def _filter_existing_evidence_ids(self, session: AsyncSession, evidence_ids: list[str]) -> list[str]:
         if not evidence_ids:
             return []
-        result = await session.execute(
-            select(EvidenceModel.id).where(EvidenceModel.id.in_(evidence_ids))
-        )
+        result = await session.execute(select(EvidenceModel.id).where(EvidenceModel.id.in_(evidence_ids)))
         return [row[0] for row in result.fetchall()]
 
-    async def _get_evidences_by_ids(
-        self, session: AsyncSession, evidence_ids: list[str]
-    ) -> list[Evidence]:
+    async def _get_evidences_by_ids(self, session: AsyncSession, evidence_ids: list[str]) -> list[Evidence]:
         if not evidence_ids:
             return []
-        result = await session.execute(
-            select(EvidenceModel).where(EvidenceModel.id.in_(evidence_ids))
-        )
+        result = await session.execute(select(EvidenceModel).where(EvidenceModel.id.in_(evidence_ids)))
         return [self._model_to_evidence(row[0]) for row in result.fetchall()]
 
-    async def _get_evidence_model(
-        self, session: AsyncSession, evidence_id: str
-    ) -> EvidenceModel | None:
-        result = await session.execute(
-            select(EvidenceModel).where(EvidenceModel.id == evidence_id)
-        )
+    async def _get_evidence_model(self, session: AsyncSession, evidence_id: str) -> EvidenceModel | None:
+        result = await session.execute(select(EvidenceModel).where(EvidenceModel.id == evidence_id))
         row = result.first()
         return row[0] if row else None
 
-    async def _get_claim_model(
-        self, session: AsyncSession, claim_id: str
-    ) -> ClaimModel | None:
+    async def _get_claim_model(self, session: AsyncSession, claim_id: str) -> ClaimModel | None:
         result = await session.execute(select(ClaimModel).where(ClaimModel.id == claim_id))
         row = result.first()
         return row[0] if row else None
 
     async def _has_evidence(self, session: AsyncSession, evidence_id: str) -> bool:
-        result = await session.execute(
-            select(EvidenceModel.id).where(EvidenceModel.id == evidence_id)
-        )
+        result = await session.execute(select(EvidenceModel.id).where(EvidenceModel.id == evidence_id))
         return result.first() is not None
 
     def _model_to_evidence(self, model: EvidenceModel) -> Evidence:

@@ -1,16 +1,7 @@
-# -*- coding: utf-8 -*-
 """Orchestration モジュール単体テスト."""
 
 import pytest
 
-from agentflow.orchestration.planner import (
-    ExecutionPlan,
-    PlannerAgent,
-    PlannerConfig,
-    PlanStep,
-    StepStatus,
-    StepType,
-)
 from agentflow.orchestration.executor import (
     ExecutorAgent,
     ExecutorConfig,
@@ -18,7 +9,6 @@ from agentflow.orchestration.executor import (
 )
 from agentflow.orchestration.monitor import (
     AlertSeverity,
-    ExecutionState,
     MonitorAgent,
     MonitorEvent,
     MonitorEventType,
@@ -26,11 +16,18 @@ from agentflow.orchestration.monitor import (
 )
 from agentflow.orchestration.orchestrator import (
     ExecutionContext,
-    ExecutionPhase,
     ExecutionResult,
     ExecutionStatus,
     Orchestrator,
     OrchestratorConfig,
+)
+from agentflow.orchestration.planner import (
+    ExecutionPlan,
+    PlannerAgent,
+    PlannerConfig,
+    PlanStep,
+    StepStatus,
+    StepType,
 )
 
 

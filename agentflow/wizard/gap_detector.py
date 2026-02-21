@@ -74,11 +74,13 @@ class CapabilityGapDetector:
             query: 検索クエリ
             context: コンテキスト情報
         """
-        self._skill_misses.append({
-            "query": query,
-            "context": context or {},
-            "timestamp": datetime.now(UTC),
-        })
+        self._skill_misses.append(
+            {
+                "query": query,
+                "context": context or {},
+                "timestamp": datetime.now(UTC),
+            }
+        )
         self._logger.debug(f"Recorded skill miss: {query}")
 
     def record_agent_failure(
@@ -96,13 +98,15 @@ class CapabilityGapDetector:
             input_data: 入力データ
             context: コンテキスト情報
         """
-        self._agent_failures.append({
-            "agent_name": agent_name,
-            "error": error,
-            "input_data": input_data or {},
-            "context": context or {},
-            "timestamp": datetime.now(UTC),
-        })
+        self._agent_failures.append(
+            {
+                "agent_name": agent_name,
+                "error": error,
+                "input_data": input_data or {},
+                "context": context or {},
+                "timestamp": datetime.now(UTC),
+            }
+        )
         self._logger.debug(f"Recorded agent failure: {agent_name} - {error}")
 
     def record_user_feedback(
@@ -120,13 +124,15 @@ class CapabilityGapDetector:
             related_feature: 関連機能
             severity: 重大度
         """
-        self._user_feedback.append({
-            "type": feedback_type,
-            "message": message,
-            "related_feature": related_feature,
-            "severity": severity,
-            "timestamp": datetime.now(UTC),
-        })
+        self._user_feedback.append(
+            {
+                "type": feedback_type,
+                "message": message,
+                "related_feature": related_feature,
+                "severity": severity,
+                "timestamp": datetime.now(UTC),
+            }
+        )
         self._logger.debug(f"Recorded user feedback: {feedback_type}")
 
     async def analyze(self) -> GapAnalysis:
@@ -161,10 +167,7 @@ class CapabilityGapDetector:
         )
 
         # 優先缺口を抽出
-        priority_gaps = [
-            g for g in sorted_gaps
-            if g.severity >= self._severity_threshold
-        ]
+        priority_gaps = [g for g in sorted_gaps if g.severity >= self._severity_threshold]
 
         # 推奨アクションを生成
         recommendations = self._generate_recommendations(priority_gaps)
@@ -192,26 +195,25 @@ class CapabilityGapDetector:
         gaps = []
 
         # 期間内のミスをフィルタ
-        recent_misses = [
-            m for m in self._skill_misses
-            if m["timestamp"] >= cutoff_time
-        ]
+        recent_misses = [m for m in self._skill_misses if m["timestamp"] >= cutoff_time]
 
         # クエリごとの頻度をカウント
         query_counts = Counter(m["query"] for m in recent_misses)
 
         for query, count in query_counts.items():
             if count >= self._min_frequency:
-                gaps.append(CapabilityGap(
-                    gap_id=f"skill_{uuid.uuid4().hex[:8]}",
-                    gap_type=GapType.SKILL,
-                    description=f"Skill not found for: {query}",
-                    frequency=count,
-                    severity=min(count / 10, 1.0),
-                    suggested_solution=f"Create a new Skill for '{query}'",
-                    auto_fixable=True,
-                    source="skill_engine",
-                ))
+                gaps.append(
+                    CapabilityGap(
+                        gap_id=f"skill_{uuid.uuid4().hex[:8]}",
+                        gap_type=GapType.SKILL,
+                        description=f"Skill not found for: {query}",
+                        frequency=count,
+                        severity=min(count / 10, 1.0),
+                        suggested_solution=f"Create a new Skill for '{query}'",
+                        auto_fixable=True,
+                        source="skill_engine",
+                    )
+                )
 
         return gaps
 
@@ -230,10 +232,7 @@ class CapabilityGapDetector:
         gaps = []
 
         # 期間内の失敗をフィルタ
-        recent_failures = [
-            f for f in self._agent_failures
-            if f["timestamp"] >= cutoff_time
-        ]
+        recent_failures = [f for f in self._agent_failures if f["timestamp"] >= cutoff_time]
 
         # Agent ごとの失敗をグループ化
         agent_failures: dict[str, list[dict[str, Any]]] = {}
@@ -249,17 +248,19 @@ class CapabilityGapDetector:
                 error_patterns = Counter(f["error"][:50] for f in failures)
                 most_common_error = error_patterns.most_common(1)[0][0] if error_patterns else "Unknown"
 
-                gaps.append(CapabilityGap(
-                    gap_id=f"agent_{uuid.uuid4().hex[:8]}",
-                    gap_type=GapType.AGENT,
-                    description=f"Agent '{agent_name}' failures: {most_common_error}",
-                    frequency=len(failures),
-                    severity=min(len(failures) / 20, 1.0),
-                    suggested_solution=f"Improve error handling in '{agent_name}' or add fallback logic",
-                    auto_fixable=False,
-                    source="agent_execution",
-                    metadata={"error_patterns": dict(error_patterns)},
-                ))
+                gaps.append(
+                    CapabilityGap(
+                        gap_id=f"agent_{uuid.uuid4().hex[:8]}",
+                        gap_type=GapType.AGENT,
+                        description=f"Agent '{agent_name}' failures: {most_common_error}",
+                        frequency=len(failures),
+                        severity=min(len(failures) / 20, 1.0),
+                        suggested_solution=f"Improve error handling in '{agent_name}' or add fallback logic",
+                        auto_fixable=False,
+                        source="agent_execution",
+                        metadata={"error_patterns": dict(error_patterns)},
+                    )
+                )
 
         return gaps
 
@@ -278,10 +279,7 @@ class CapabilityGapDetector:
         gaps = []
 
         # 期間内のフィードバックをフィルタ
-        recent_feedback = [
-            f for f in self._user_feedback
-            if f["timestamp"] >= cutoff_time
-        ]
+        recent_feedback = [f for f in self._user_feedback if f["timestamp"] >= cutoff_time]
 
         # 機能ごとにグループ化
         feature_feedback: dict[str, list[dict[str, Any]]] = {}
@@ -306,17 +304,19 @@ class CapabilityGapDetector:
                     "complaint": GapType.PATTERN,
                 }.get(primary_type, GapType.KNOWLEDGE)
 
-                gaps.append(CapabilityGap(
-                    gap_id=f"feedback_{uuid.uuid4().hex[:8]}",
-                    gap_type=gap_type,
-                    description=f"User feedback for '{feature}': {primary_type}",
-                    frequency=len(feedbacks),
-                    severity=avg_severity,
-                    suggested_solution=f"Review and address user feedback for '{feature}'",
-                    auto_fixable=False,
-                    source="user_feedback",
-                    metadata={"feedback_types": dict(types)},
-                ))
+                gaps.append(
+                    CapabilityGap(
+                        gap_id=f"feedback_{uuid.uuid4().hex[:8]}",
+                        gap_type=gap_type,
+                        description=f"User feedback for '{feature}': {primary_type}",
+                        frequency=len(feedbacks),
+                        severity=avg_severity,
+                        suggested_solution=f"Review and address user feedback for '{feature}'",
+                        auto_fixable=False,
+                        source="user_feedback",
+                        metadata={"feedback_types": dict(types)},
+                    )
+                )
 
         return gaps
 
@@ -374,32 +374,27 @@ class CapabilityGapDetector:
         auto_fixable = [g for g in priority_gaps if g.auto_fixable]
         if auto_fixable:
             recommendations.append(
-                f"{len(auto_fixable)} gaps can be auto-fixed. "
-                f"Run SystemSynthesizer to generate solutions."
+                f"{len(auto_fixable)} gaps can be auto-fixed. Run SystemSynthesizer to generate solutions."
             )
 
         # Skill 缺口
         skill_gaps = [g for g in priority_gaps if g.gap_type == GapType.SKILL]
         if skill_gaps:
             recommendations.append(
-                f"{len(skill_gaps)} Skill gaps detected. "
-                f"Consider using SkillForge to create new Skills."
+                f"{len(skill_gaps)} Skill gaps detected. Consider using SkillForge to create new Skills."
             )
 
         # Agent 缺口
         agent_gaps = [g for g in priority_gaps if g.gap_type == GapType.AGENT]
         if agent_gaps:
             recommendations.append(
-                f"{len(agent_gaps)} Agent issues detected. "
-                f"Review Agent implementations and add error handling."
+                f"{len(agent_gaps)} Agent issues detected. Review Agent implementations and add error handling."
             )
 
         # 高頻度缺口
         high_freq = [g for g in priority_gaps if g.frequency >= 10]
         if high_freq:
-            recommendations.append(
-                f"{len(high_freq)} high-frequency gaps need immediate attention."
-            )
+            recommendations.append(f"{len(high_freq)} high-frequency gaps need immediate attention.")
 
         return recommendations
 

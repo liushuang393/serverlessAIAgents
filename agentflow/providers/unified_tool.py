@@ -33,7 +33,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, Field
 
@@ -45,10 +45,10 @@ if TYPE_CHECKING:
 class ToolType(str, Enum):
     """ツール種別."""
 
-    SKILL = "skill"        # Skills (SKILL.md)
-    MCP = "mcp"            # MCP外部ツール
-    BUILTIN = "builtin"    # 内蔵ツール
-    CUSTOM = "custom"      # カスタムツール
+    SKILL = "skill"  # Skills (SKILL.md)
+    MCP = "mcp"  # MCP外部ツール
+    BUILTIN = "builtin"  # 内蔵ツール
+    CUSTOM = "custom"  # カスタムツール
 
 
 class ToolStatus(str, Enum):
@@ -166,6 +166,7 @@ class SkillToolProvider(ToolProvider):
         """初期化（SkillEngineをロード）."""
         try:
             from agentflow.skills.engine import SkillEngine
+
             self._engine = SkillEngine(auto_learn=False)
 
             # スキルをツール定義として登録
@@ -497,8 +498,13 @@ class BuiltinToolProvider(ToolProvider):
     async def _parse_json(self, params: dict[str, Any]) -> dict[str, Any]:
         """JSON解析ハンドラー."""
         import json
+
         json_string = params.get("json_string", "{}")
-        return json.loads(json_string)
+        parsed = json.loads(str(json_string))
+        if isinstance(parsed, dict):
+            return cast("dict[str, Any]", parsed)
+        msg = "JSON object is required"
+        raise ValueError(msg)
 
     async def _calculate(self, params: dict[str, Any]) -> dict[str, Any]:
         """計算ハンドラー."""
@@ -702,14 +708,16 @@ class UnifiedToolProvider:
             if not tool_def.enabled:
                 continue
 
-            tools.append({
-                "type": "function",
-                "function": {
-                    "name": tool_def.uri,
-                    "description": tool_def.description,
-                    "parameters": tool_def.parameters,
-                },
-            })
+            tools.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool_def.uri,
+                        "description": tool_def.description,
+                        "parameters": tool_def.parameters,
+                    },
+                }
+            )
 
         return tools
 

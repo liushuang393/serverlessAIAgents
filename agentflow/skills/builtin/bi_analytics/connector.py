@@ -11,7 +11,11 @@ import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 logger = logging.getLogger(__name__)
@@ -70,7 +74,7 @@ class DataFrame:
         """行数."""
         return len(self._data)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[dict[str, Any]]:
         """イテレート."""
         return iter(self._data)
 
@@ -87,7 +91,7 @@ class DataFrame:
 
         # 数値列の統計
         for col in self._columns:
-            values = [row.get(col) for row in self._data if isinstance(row.get(col), (int, float))]
+            values: list[float] = [float(row[col]) for row in self._data if isinstance(row.get(col), (int, float))]
             if values:
                 stats[col] = {
                     "min": min(values),
@@ -214,17 +218,23 @@ class MemoryConnector(DataConnector):
     def add_sample_data(self) -> None:
         """サンプルデータを追加."""
         # 売上データ
-        self.add_table("sales", [
-            {"date": "2024-01-01", "product": "A", "amount": 1000, "quantity": 10},
-            {"date": "2024-01-02", "product": "B", "amount": 1500, "quantity": 15},
-            {"date": "2024-01-03", "product": "A", "amount": 1200, "quantity": 12},
-            {"date": "2024-01-04", "product": "C", "amount": 800, "quantity": 8},
-            {"date": "2024-01-05", "product": "B", "amount": 2000, "quantity": 20},
-        ])
+        self.add_table(
+            "sales",
+            [
+                {"date": "2024-01-01", "product": "A", "amount": 1000, "quantity": 10},
+                {"date": "2024-01-02", "product": "B", "amount": 1500, "quantity": 15},
+                {"date": "2024-01-03", "product": "A", "amount": 1200, "quantity": 12},
+                {"date": "2024-01-04", "product": "C", "amount": 800, "quantity": 8},
+                {"date": "2024-01-05", "product": "B", "amount": 2000, "quantity": 20},
+            ],
+        )
 
         # ユーザーデータ
-        self.add_table("users", [
-            {"id": 1, "name": "Alice", "age": 28, "department": "sales"},
-            {"id": 2, "name": "Bob", "age": 35, "department": "engineering"},
-            {"id": 3, "name": "Carol", "age": 42, "department": "sales"},
-        ])
+        self.add_table(
+            "users",
+            [
+                {"id": 1, "name": "Alice", "age": 28, "department": "sales"},
+                {"id": 2, "name": "Bob", "age": 35, "department": "engineering"},
+                {"id": 3, "name": "Carol", "age": 42, "department": "sales"},
+            ],
+        )

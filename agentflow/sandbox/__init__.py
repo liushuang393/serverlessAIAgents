@@ -37,6 +37,7 @@ Daytonaの設計思想を参考に、ライフサイクル管理とワークス�
 """
 
 import logging
+from typing import Any
 
 from agentflow.sandbox.base import (
     ExecutionResult,
@@ -62,6 +63,7 @@ from agentflow.sandbox.manager import (
     SandboxManager,
     get_sandbox_manager,
 )
+from agentflow.sandbox.mock_provider import MockSandbox
 from agentflow.sandbox.workspace import (
     FileInfo,
     Workspace,
@@ -73,10 +75,22 @@ from agentflow.sandbox.workspace import (
 
 logger = logging.getLogger(__name__)
 
+# get_sandbox() のキャッシュ（同一プロバイダは同一インスタンスを返す）
+_sandbox_cache: dict[str, SandboxProvider] = {}
+
+
+def reset_sandbox() -> None:
+    """サンドボックスキャッシュをリセットする.
+
+    テスト等でサンドボックスの状態をリセットしたい場合に使用。
+    """
+    _sandbox_cache.clear()
+
 
 def get_sandbox(
-    provider: str = "microsandbox",
+    provider: str = "mock",
     config: SandboxConfig | None = None,
+    **kwargs: Any,
 ) -> SandboxProvider:
     """サンドボックスプロバイダを取得.
 
@@ -90,26 +104,33 @@ def get_sandbox(
     Raises:
         ValueError: 不明なプロバイダ
     """
-    config = config or SandboxConfig()
+    # キャッシュヒット
+    if provider in _sandbox_cache:
+        return _sandbox_cache[provider]
 
+    config = config or SandboxConfig()
     logger.info(f"Sandbox provider: {provider}")
 
-    if provider == "microsandbox":
+    if provider == "mock":
+        instance: SandboxProvider = MockSandbox(config)
+    elif provider == "microsandbox":
         from agentflow.sandbox.microsandbox_provider import MicrosandboxProvider
-        return MicrosandboxProvider(config)
-    if provider == "docker":
+
+        instance = MicrosandboxProvider(config)
+    elif provider == "docker":
         from agentflow.sandbox.docker_provider import DockerProvider
-        return DockerProvider(config)
-    if provider == "e2b":
+
+        instance = DockerProvider(config)
+    elif provider == "e2b":
         from agentflow.sandbox.e2b_provider import E2BProvider
-        return E2BProvider(config)
-    msg = (
-        f"Unknown sandbox provider: {provider}. "
-        "Supported: microsandbox, docker, e2b"
-    )
-    raise ValueError(
-        msg
-    )
+
+        instance = E2BProvider(config)
+    else:
+        msg = f"Unknown sandbox provider: {provider}. Supported: mock, microsandbox, docker, e2b"
+        raise ValueError(msg)
+
+    _sandbox_cache[provider] = instance
+    return instance
 
 
 __all__ = [
@@ -124,6 +145,8 @@ __all__ = [
     "FileInfo",
     # ライフサイクル管理（Daytonaスタイル）
     "ManagedSandbox",
+    # テスト・開発用モックプロバイダ
+    "MockSandbox",
     "ResourceLimits",
     "ResourceUsage",
     "SandboxConfig",
@@ -137,9 +160,9 @@ __all__ = [
     "Workspace",
     "WorkspaceManager",
     "WorkspaceState",
-    # プロバイダ取得
+    # プロバイダ取得・制御
     "get_sandbox",
     "get_sandbox_manager",
     "get_workspace_manager",
+    "reset_sandbox",
 ]
-

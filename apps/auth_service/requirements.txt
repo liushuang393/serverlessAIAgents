@@ -1,0 +1,27 @@
+# auth_service 依存関係
+# ルートの pyproject.toml で管理されている場合は不要
+
+# --- コア ---
+fastapi>=0.123.0
+uvicorn[standard]>=0.40.0
+pydantic>=2.12.0
+pydantic-settings>=2.0.0
+
+# --- JWT ---
+pyjwt>=2.8.0
+
+# --- DB ---
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0  # SQLite 非同期
+
+# --- MFA ---
+pyotp>=2.9.0
+
+# --- HTTP クライアント（OAuth2用） ---
+httpx>=0.27.0
+
+# --- オプション（必要に応じてインストール） ---
+# ldap3>=2.9.0         # LDAP 認証
+# python3-saml>=1.16.0 # SAML 2.0 認証
+# asyncpg>=0.29.0      # PostgreSQL 非同期
+# psycopg2-binary>=2.9 # PostgreSQL 同期（Alembic用）

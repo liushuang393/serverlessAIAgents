@@ -17,16 +17,15 @@ import logging
 import time
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from pydantic import BaseModel
 
 from agentflow.run import (
-    LightningTracer,
     LightningRuntimeConfig,
     LightningStore,
+    LightningTracer,
     LightningTrainingRequest,
     LightningTrainingResult,
     MemoryRunStore,
@@ -41,7 +40,7 @@ from agentflow.run import (
 
 # AG-UI イベント（遅延インポートで循環依存回避）
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
+    from collections.abc import AsyncIterator, Callable
 
     from agentflow.hitl.checkpointer import Checkpointer
     from agentflow.patterns.progress_emitter import AgentMeta, ProgressEmitter
@@ -135,15 +134,11 @@ class BaseEngine(ABC):
         self._progress_emitter: ProgressEmitter | None = None
         self._thread_id: str | None = None
         self._run_id: str | None = None
-        self._run_store = cast("RunStore", self._config.run_store)
-        if not isinstance(self._config.lightning, LightningRuntimeConfig):
-            self._config.lightning = LightningRuntimeConfig.model_validate(self._config.lightning)
+        self._run_store = self._config.run_store
         if self._config.lightning_store is None:
             self._config.lightning_store = resolve_lightning_store(self._config.lightning)
         self._lightning_tracer = (
-            LightningTracer(self._config.lightning_store)
-            if self._config.lightning_store is not None
-            else None
+            LightningTracer(self._config.lightning_store) if self._config.lightning_store is not None else None
         )
         self._is_resuming: bool = False
         self._resume_checkpoint_id: str | None = None
@@ -244,9 +239,7 @@ class BaseEngine(ABC):
             result = await self._execute(inputs)
             self._logger.info(f"Engine run completed: {self._flow_id}")
             run_record.status = "completed"
-            await self._trace_custom_event(
-                "engine.run.result", {"result": self._serialize_result(result)}
-            )
+            await self._trace_custom_event("engine.run.result", {"result": self._serialize_result(result)})
             await self._record_reward_signal(result=result, source="run")
             return result
         except Exception as e:
@@ -268,9 +261,7 @@ class BaseEngine(ABC):
             raise
         finally:
             run_record.completed_at = time.time()
-            run_record.metrics["duration_ms"] = (
-                run_record.completed_at - run_record.started_at
-            ) * 1000
+            run_record.metrics["duration_ms"] = (run_record.completed_at - run_record.started_at) * 1000
             await self._run_store.save(run_record)
             await self._trace_custom_event(
                 "engine.run.end",
@@ -396,9 +387,7 @@ class BaseEngine(ABC):
             raise
         finally:
             run_record.completed_at = time.time()
-            run_record.metrics["duration_ms"] = (
-                run_record.completed_at - run_record.started_at
-            ) * 1000
+            run_record.metrics["duration_ms"] = (run_record.completed_at - run_record.started_at) * 1000
             await self._run_store.save(run_record)
             await self._trace_custom_event(
                 "engine.run.end",
@@ -470,7 +459,7 @@ class BaseEngine(ABC):
 
         try:
             reward = evaluator(result)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._logger.warning("reward_evaluator failed: %s", exc)
             return
         if reward is None:
@@ -752,9 +741,7 @@ class BaseEngine(ABC):
             msg = f"チェックポイントが見つかりません: {thread_id}"
             raise InterruptError(msg)
 
-        self._logger.info(
-            f"Resuming from checkpoint: {checkpoint.checkpoint_id} (command: {command.type.value})"
-        )
+        self._logger.info(f"Resuming from checkpoint: {checkpoint.checkpoint_id} (command: {command.type.value})")
 
         # スキーマバージョンの検証
         schema_version = checkpoint.schema_version or 1
@@ -763,9 +750,7 @@ class BaseEngine(ABC):
             raise InterruptError(msg)
 
         if schema_version >= 2 and checkpoint.cursor is None:
-            self._logger.warning(
-                "カーソル情報が欠落しているため、旧式の再開処理にフォールバックします"
-            )
+            self._logger.warning("カーソル情報が欠落しているため、旧式の再開処理にフォールバックします")
 
         # コマンドに基づいて承認レスポンスを生成
         response = await resume_with_command(

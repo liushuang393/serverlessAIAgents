@@ -61,4 +61,3 @@ class EmbeddingEngine(ABC):
         Returns:
             モデル名
         """
-

@@ -81,26 +81,32 @@ class CobolAdapter(SourceLanguageAdapter):
 
             # ファイル操作
             if any(kw in line_upper for kw in ["OPEN", "CLOSE", "READ", "WRITE"]):
-                calls.append({
-                    "type": "file_io",
-                    "operation": self._extract_operation(line_upper),
-                    "line": line.strip(),
-                })
+                calls.append(
+                    {
+                        "type": "file_io",
+                        "operation": self._extract_operation(line_upper),
+                        "line": line.strip(),
+                    }
+                )
 
             # CALL文
             if "CALL" in line_upper:
-                calls.append({
-                    "type": "program_call",
-                    "target": self._extract_call_target(line),
-                    "line": line.strip(),
-                })
+                calls.append(
+                    {
+                        "type": "program_call",
+                        "target": self._extract_call_target(line),
+                        "line": line.strip(),
+                    }
+                )
 
             # SQL操作
             if "EXEC SQL" in line_upper:
-                calls.append({
-                    "type": "sql",
-                    "line": line.strip(),
-                })
+                calls.append(
+                    {
+                        "type": "sql",
+                        "line": line.strip(),
+                    }
+                )
 
         return calls
 
@@ -163,12 +169,14 @@ class CobolAdapter(SourceLanguageAdapter):
             match = re.search(r"(\d{2})\s+(\S+)\s+PIC\s+([^\s.]+)", line, re.IGNORECASE)
             if match:
                 pic_clause = match.group(3)
-                variables.append({
-                    "level": match.group(1),
-                    "name": match.group(2),
-                    "pic_clause": pic_clause,
-                    "type": self._infer_type(pic_clause),
-                })
+                variables.append(
+                    {
+                        "level": match.group(1),
+                        "name": match.group(2),
+                        "pic_clause": pic_clause,
+                        "type": self._infer_type(pic_clause),
+                    }
+                )
 
         return variables
 
@@ -189,13 +197,13 @@ class CobolAdapter(SourceLanguageAdapter):
 
         for line in proc_lines:
             match = re.search(r"^(\S+)\.", line)
-            if match and not any(
-                kw in line.upper() for kw in ["MOVE", "ADD", "DISPLAY", "STOP"]
-            ):
-                procedures.append({
-                    "name": match.group(1),
-                    "type": "paragraph",
-                })
+            if match and not any(kw in line.upper() for kw in ["MOVE", "ADD", "DISPLAY", "STOP"]):
+                procedures.append(
+                    {
+                        "name": match.group(1),
+                        "type": "paragraph",
+                    }
+                )
 
         return procedures
 

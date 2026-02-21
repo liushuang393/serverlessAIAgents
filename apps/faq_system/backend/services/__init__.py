@@ -9,6 +9,7 @@
 """
 
 # フレームワーク層のサービスを再エクスポート
+from apps.faq_system.backend.services.chat_history_service import ChatHistoryService
 from apps.faq_system.backend.services.citation_service import (
     Citation,
     CitationService,
@@ -36,7 +37,6 @@ from apps.faq_system.backend.services.feedback_service import (
     FeedbackType,
     ImprovementSuggestion,
 )
-from apps.faq_system.backend.services.chat_history_service import ChatHistoryService
 
 # FAQ System 固有サービス
 from apps.faq_system.backend.services.glossary_service import (
@@ -52,6 +52,7 @@ from agentflow.agents import FAQAgentConfig as FAQConfig
 
 
 __all__ = [
+    "ChatHistoryService",
     "Citation",
     # 引用
     "CitationService",
@@ -63,7 +64,6 @@ __all__ = [
     "CoverageLevel",
     "CoverageReport",
     "CoverageStats",
-    "ChatHistoryService",
     "FAQConfig",
     # フレームワーク層
     "FAQService",

@@ -33,7 +33,7 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from agentflow.channels.base import MessageChannelAdapter, UserInfo
 
@@ -79,10 +79,7 @@ class SlackAdapter(MessageChannelAdapter):
         try:
             from slack_sdk.web.async_client import AsyncWebClient
         except ImportError as e:
-            msg = (
-                "slack-sdk is required for SlackAdapter. "
-                "Install it with: pip install slack-sdk>=3.0"
-            )
+            msg = "slack-sdk is required for SlackAdapter. Install it with: pip install slack-sdk>=3.0"
             raise ImportError(msg) from e
 
         self._token = token
@@ -137,7 +134,7 @@ class SlackAdapter(MessageChannelAdapter):
                 msg = f"Slack API error: {response.get('error')}"
                 raise Exception(msg)
 
-            return response["ts"]
+            return str(response["ts"])
 
         except Exception as e:
             self._logger.exception(f"Failed to send Slack message: {e}")
@@ -175,7 +172,7 @@ class SlackAdapter(MessageChannelAdapter):
         """
         try:
             # 使用 attachments 或 blocks 发送图片
-            blocks = [
+            blocks: list[dict[str, Any]] = [
                 {
                     "type": "image",
                     "image_url": image_url,
@@ -198,7 +195,7 @@ class SlackAdapter(MessageChannelAdapter):
                 text=caption or "Image",
             )
 
-            return response["ts"]
+            return str(response["ts"])
 
         except Exception as e:
             self._logger.exception(f"Failed to send image: {e}")
@@ -231,7 +228,8 @@ class SlackAdapter(MessageChannelAdapter):
                 initial_comment=kwargs.get("comment"),
             )
 
-            return response["file"]["id"]
+            file_payload = cast("dict[str, Any]", response.get("file", {}))
+            return str(file_payload.get("id", ""))
 
         except Exception as e:
             self._logger.exception(f"Failed to send file: {e}")
@@ -256,7 +254,7 @@ class SlackAdapter(MessageChannelAdapter):
                 channel=channel_id,
                 ts=message_id,
             )
-            return response["ok"]
+            return bool(response["ok"])
         except Exception as e:
             self._logger.warning(f"Failed to delete message: {e}")
             return False
@@ -286,7 +284,7 @@ class SlackAdapter(MessageChannelAdapter):
                 text=new_text,
                 blocks=kwargs.get("blocks"),
             )
-            return response["ok"]
+            return bool(response["ok"])
         except Exception as e:
             self._logger.warning(f"Failed to edit message: {e}")
             return False
@@ -417,8 +415,9 @@ class SlackAdapter(MessageChannelAdapter):
 
             timestamp = headers.get("x-slack-request-timestamp", "")
             signature = headers.get("x-slack-signature", "")
+            secret = self._signing_secret
 
-            if not timestamp or not signature:
+            if not timestamp or not signature or secret is None:
                 return False
 
             # 防止重放攻击（5分钟内）
@@ -430,7 +429,7 @@ class SlackAdapter(MessageChannelAdapter):
             my_signature = (
                 "v0="
                 + hmac.new(
-                    self._signing_secret.encode(),
+                    secret.encode(),
                     sig_basestring.encode(),
                     hashlib.sha256,
                 ).hexdigest()
@@ -454,12 +453,15 @@ class SlackAdapter(MessageChannelAdapter):
         """
         try:
             response = await self._client.auth_test()
-            return {
-                "user_id": response["user_id"],
-                "bot_id": response.get("bot_id"),
-                "team_id": response["team_id"],
-                "user": response["user"],
-            }
+            return cast(
+                "dict[str, Any]",
+                {
+                    "user_id": response["user_id"],
+                    "bot_id": response.get("bot_id"),
+                    "team_id": response["team_id"],
+                    "user": response["user"],
+                },
+            )
         except Exception as e:
             self._logger.exception(f"Failed to get bot info: {e}")
             return {}
@@ -476,7 +478,7 @@ class SlackAdapter(MessageChannelAdapter):
         try:
             response = await self._client.conversations_info(channel=channel_id)
             if response["ok"]:
-                return response["channel"]
+                return cast("dict[str, Any]", response.get("channel", {}))
             return {}
         except Exception as e:
             self._logger.exception(f"Failed to get channel info: {e}")

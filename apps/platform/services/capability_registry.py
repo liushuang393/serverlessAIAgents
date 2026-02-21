@@ -1,19 +1,21 @@
-# -*- coding: utf-8 -*-
 """Capability registry and ontology mapping."""
 
 from __future__ import annotations
 
 import re
 from collections import OrderedDict
-from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from apps.platform.schemas.capability_schemas import (
     CAPABILITY_DOMAINS,
     CanonicalCapability,
     CapabilityAggregate,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 _LEGACY_ALIAS_MAP: dict[str, str] = {
@@ -242,8 +244,7 @@ class CapabilityRegistry:
     def _normalize(raw: str) -> str:
         value = raw.strip().lower()
         value = _SEGMENT_RE.sub("_", value)
-        value = re.sub(r"_+", "_", value).strip("_")
-        return value
+        return re.sub(r"_+", "_", value).strip("_")
 
     @staticmethod
     def _build_id(domain: str, normalized: str) -> str:
@@ -287,4 +288,3 @@ class CapabilityRegistry:
             if any(keyword in normalized for keyword in keywords):
                 return domain
         return "custom"
-

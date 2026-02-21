@@ -20,35 +20,11 @@ AgentFlow フレームワーク級 Agent/サービスを使用した FAQ シス�
 
 ### ローカル環境構築
 
+推奨（統一手順）:
+
 ```bash
-# 1. リポジトリをクローン（初回のみ）
-git clone https://github.com/liushuang393/serverlessAIAgents.git
-cd serverlessAIAgents
-
-# 2. Python 仮想環境を作成
-python -m venv .venv
-source .venv/bin/activate        # Linux / macOS
-# .venv\Scripts\activate         # Windows
-
-# 3. 依存関係をインストール（apps オプション含む）
-pip install -e ".[dev,apps]"
-
-# 4. 環境変数を設定
-cp .env.example .env
-# .env を編集して以下を設定:
-#   OPENAI_API_KEY=sk-...        （または ANTHROPIC_API_KEY）
-#   RAG_COLLECTION=faq_knowledge （任意）
-#   DB_SCHEMA={}                 （任意: JSON 形式の DB スキーマ）
-#   FAQ_SALES_MATERIAL_DIR=/tmp/faq_sales_material （任意）
-#   FAQ_DATABASE_URL=postgresql+asyncpg://faq:faq_password@localhost:5433/faq_system
-#   FAQ_AUTH_PROVIDER=local_db   （local_db / ldap / idp）
-
-# 5. FAQ アプリ専用の上書き設定（任意）
-cp apps/faq_system/.env.example apps/faq_system/.env
-# apps/faq_system/.env は FAQ 起動時に自動ロードされ、
-# ルート .env より優先して適用されます。
-# LLM は apps/faq_system/.env の LLM_PROVIDER で明示選択:
-#   LLM_PROVIDER=ollama  または  LLM_PROVIDER=openai
+cd <repo-root>
+bash setup_dev.sh
 ```
 
 ### DB マイグレーション（必須）
@@ -88,6 +64,7 @@ python -m apps.faq_system.main --reload
 
 # 本番起動（リロードなし）
 python -m apps.faq_system.main
+```
 
 ### フロントエンド開発 (React/TypeScript)
 
@@ -103,6 +80,17 @@ npm run dev
 # 3. 本番ビルド (ビルド後、バックエンドが自動でサーブします)
 npm run build
 ```
+
+### 本番ビルド/発布（Platform に統一）
+
+Platform（Control Plane）に publish/deploy を統一する場合:
+
+```bash
+conda activate agentflow
+python -m apps.platform.main publish ./apps/faq_system --target docker
+```
+
+（この app は `apps/faq_system/app_config.json` の `runtime.commands.publish` に docker compose の発布手順を保持しています）
 
 
 `FAQ_HOST` / `FAQ_PORT` は一時的な上書き用です。通常は `app_config.json` の `ports.api` を使用します。
@@ -153,6 +141,366 @@ curl http://localhost:8005/api/health
 ```
 
 ---
+
+## 認証テスト手順
+
+### システム起動方法
+
+> **重要**: バックエンドとフロントエンドを**別々に**起動する必要があります。
+
+**ターミナル 1 — バックエンド**
+
+```bash
+cd <repo-root>
+conda activate agentflow
+python -m apps.faq_system.main --reload
+# → http://localhost:8005 でAPIが起動
+```
+
+**ターミナル 2 — フロントエンド**
+
+```bash
+cd apps/faq_system/frontend
+npm install        # 初回のみ
+npm run dev
+# → http://localhost:3004 でUIが起動
+```
+
+ブラウザで **http://localhost:3004** を開いてログイン画面にアクセスしてください。
+
+---
+
+### 1. ユーザー名/パスワード ログイン
+
+初回起動時に以下のデモユーザーが自動作成されます。
+
+| ユーザー名 | パスワード | 表示名 | 役職 | ロール |
+|------------|-----------|--------|------|--------|
+| `admin` | `admin123` | 管理者 太郎 | 情報システム部 部長 | admin |
+| `tanaka` | `tanaka123` | 田中 一郎 | 人事部 課長 | manager |
+| `suzuki` | `suzuki123` | 鈴木 花子 | 営業部 主任 | employee |
+| `yamamoto` | `yamamoto123` | 山本 健太 | DX推進部 データアナリスト | analyst |
+| `sato` | `sato123` | 佐藤 美咲 | 人事部 マネージャー | hr_admin |
+
+**curl でのテスト:**
+
+```bash
+# ログイン（成功確認）
+curl -X POST http://localhost:8005/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "admin", "password": "admin123"}'
+
+# 期待レスポンス:
+# {"success": true, "message": "ログイン成功", "user": {...}, "access_token": "eyJ..."}
+
+# 取得したトークンで認証確認
+TOKEN="<上記の access_token>"
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8005/api/auth/me
+```
+
+**デモユーザーのリセット（テスト用）:**
+
+```bash
+curl -X POST http://localhost:8005/api/auth/reset-demo \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+> **トラブルシュート:**
+> - `{"success": false, ...}` → ユーザー名/パスワードを上記テーブルと照合
+> - `Connection refused` → バックエンドが起動しているか確認 (`ps aux | grep faq`)
+> - ログイン画面が表示されない → フロントエンド (port 3004) が起動しているか確認
+
+---
+
+### 2. Google アカウント認証
+
+**事前準備（Google Cloud Console）:**
+
+1. [Google Cloud Console](https://console.cloud.google.com/) にアクセス
+2. 「APIs & Services」→「Credentials」→「Create Credentials」→「OAuth 2.0 Client ID」
+3. Application type: **Web application**
+4. Authorized redirect URIs に追加:
+   ```
+   http://localhost:8005/api/auth/oauth2/google/callback
+   ```
+5. クライアントID と クライアントシークレット を取得
+
+**`.env` 設定 (`apps/faq_system/.env`):**
+
+```env
+GOOGLE_CLIENT_ID=<取得したクライアントID>.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=<取得したクライアントシークレット>
+```
+
+**テスト手順:**
+
+1. バックエンドを再起動（`.env` 変更を反映）
+2. ブラウザで http://localhost:3004/login を開く
+3. 「Continue with Google」ボタンをクリック
+4. Google ログイン画面が表示されることを確認
+5. Google アカウントでログインすると FAQ システムにリダイレクトされる
+
+**curl でのリダイレクト先確認（直接テスト）:**
+
+```bash
+curl -v http://localhost:8005/api/auth/oauth2/google/authorize 2>&1 | grep "Location:"
+# → Google の認可 URL にリダイレクトされる
+```
+
+> **注意:** Google OAuth は `localhost` での動作確認が可能。本番環境では本番ドメインを追加すること。
+
+---
+
+### 3. Microsoft Azure AD 認証
+
+**事前準備（Azure Portal）:**
+
+1. [Azure Portal](https://portal.azure.com/) にアクセス
+2. 「Azure Active Directory」→「App registrations」→「New registration」
+3. Redirect URI に追加:
+   ```
+   http://localhost:8005/api/auth/oauth2/azure_ad/callback
+   ```
+4. 「Certificates & secrets」→「New client secret」でシークレット作成
+5. 「Overview」から Application (client) ID と Directory (tenant) ID を取得
+
+**`.env` 設定:**
+
+```env
+AZURE_AD_CLIENT_ID=<Application ID>
+AZURE_AD_CLIENT_SECRET=<クライアントシークレット値>
+AZURE_AD_TENANT_ID=<Directory Tenant ID>
+# マルチテナント（任意のMicrosoftアカウント）の場合:
+# AZURE_AD_TENANT_ID=common
+```
+
+**テスト手順:**
+
+1. バックエンドを再起動
+2. ブラウザで http://localhost:3004/login を開く
+3. 「Continue with Microsoft」ボタンをクリック
+4. Microsoft ログイン画面が表示されることを確認
+5. Microsoft アカウントでログインすると FAQ システムにリダイレクトされる
+
+**curl でのテスト:**
+
+```bash
+curl -v http://localhost:8005/api/auth/oauth2/azure_ad/authorize 2>&1 | grep "Location:"
+# → Microsoft の認可 URL にリダイレクトされる
+```
+
+---
+
+### 4. LDAP / Active Directory 認証
+
+**`.env` 設定:**
+
+```env
+FAQ_AUTH_PROVIDER=ldap
+FAQ_LDAP_SERVER_URI=ldap://your-ad-server:389
+FAQ_LDAP_BIND_DN_TEMPLATE=DOMAIN\{username}
+# または OpenLDAP の場合:
+# FAQ_LDAP_BIND_DN_TEMPLATE=uid={username},ou=users,dc=example,dc=com
+
+FAQ_LDAP_BASE_DN=ou=users,dc=example,dc=com
+FAQ_LDAP_USER_FILTER=(sAMAccountName={username})
+FAQ_LDAP_DEFAULT_ROLE=employee
+# ロールマッピング (AD グループ → FAQ ロール):
+FAQ_LDAP_ROLE_MAPPING={"CN=FAQ-Admins,OU=Groups,DC=example,DC=com":"admin","CN=FAQ-Managers,OU=Groups,DC=example,DC=com":"manager"}
+```
+
+**ローカルテスト（モックユーザーで確認）:**
+
+実際の LDAP サーバーなしでテストする場合、`FAQ_LDAP_USERS_JSON` でモックユーザーを定義できます:
+
+```env
+FAQ_AUTH_PROVIDER=ldap
+FAQ_LDAP_USERS_JSON={"testuser": {"password": "testpass", "display_name": "テストユーザー", "department": "IT部", "position": "エンジニア", "role": "employee", "email": "test@example.com"}}
+```
+
+テスト:
+
+```bash
+curl -X POST http://localhost:8005/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "testuser", "password": "testpass"}'
+```
+
+**ldap3 のインストール（LDAP を使う場合）:**
+
+```bash
+pip install ldap3
+```
+
+---
+
+### 5. SAML 企業認証（Okta / Azure AD SAML）
+
+**`.env` 設定:**
+
+```env
+FAQ_AUTH_PROVIDER=saml   # 現在未使用。SAML は OAuth2 とは別エンドポイント
+
+# IdP 設定（Okta の例）
+FAQ_SAML_IDP_ENTITY_ID=http://www.okta.com/<your-app-id>
+FAQ_SAML_IDP_SSO_URL=https://your-org.okta.com/app/<app-name>/sso/saml
+FAQ_SAML_IDP_CERT=-----BEGIN CERTIFICATE-----\nMIIC...\n-----END CERTIFICATE-----
+
+# SP 証明書（省略可：本番環境では設定推奨）
+# FAQ_SAML_SP_CERT=-----BEGIN CERTIFICATE-----\n...
+# FAQ_SAML_SP_KEY=-----BEGIN PRIVATE KEY-----\n...
+```
+
+**IdP 側（例: Okta）への SP 設定:**
+
+| 項目 | 値 |
+|------|-----|
+| Single Sign On URL | `http://localhost:8005/api/auth/saml/acs` |
+| Audience URI (SP Entity ID) | `http://localhost:8005/api/auth/saml/metadata` |
+| Name ID Format | `EmailAddress` |
+| Attribute Statements | `email` → `user.email`, `displayName` → `user.displayName` |
+
+**SP メタデータ確認:**
+
+```bash
+curl http://localhost:8005/api/auth/saml/metadata
+```
+
+**SAML ログインフロー:**
+
+1. ブラウザで http://localhost:8005/api/auth/saml/login にアクセス
+2. IdP (Okta 等) のログイン画面にリダイレクト
+3. 認証後、`/api/auth/saml/acs` に POST で戻ってくる
+4. JWT と session_token が発行され、フロントエンドにリダイレクト
+
+**pysaml2 のインストール:**
+
+```bash
+pip install python3-saml
+```
+
+---
+
+### 6. 認証プロキシ連携（nginx / Apache リバースプロキシ）
+
+既存の企業 SSO ゲートウェイ（nginx/Keycloak/Okta など）の後ろに FAQ を置く場合。
+
+**`.env` 設定:**
+
+```env
+FAQ_TRUST_PROXY_AUTH=true
+FAQ_PROXY_AUTH_SHARED_SECRET=your-very-long-random-secret-here
+FAQ_PROXY_AUTH_REQUIRE_SIGNATURE=true
+FAQ_PROXY_AUTH_MAX_SKEW_SECONDS=300
+```
+
+**プロキシからのリクエストヘッダー形式:**
+
+```
+X-Forwarded-User: tanaka
+X-Forwarded-Display-Name: 田中 一郎
+X-Forwarded-Role: manager
+X-Forwarded-Department: 人事部
+X-Forwarded-Position: 課長
+X-Auth-Timestamp: 1700000000
+X-Auth-Nonce: random-uuid-per-request
+X-Auth-Signature: sha256=<HMAC-SHA256 hex>
+```
+
+**署名生成例（Python）:**
+
+```python
+import hmac, hashlib, time, secrets
+
+secret = "your-very-long-random-secret-here"
+method = "GET"
+path = "/api/chat"
+username = "tanaka"
+display_name = "田中 一郎"
+role = "manager"
+department = "人事部"
+position = "課長"
+timestamp = str(int(time.time()))
+nonce = secrets.token_hex(16)
+
+canonical = "\n".join([method, path, username, display_name, role, department, position, timestamp, nonce])
+sig = hmac.new(secret.encode(), canonical.encode(), hashlib.sha256).hexdigest()
+
+headers = {
+    "X-Forwarded-User": username,
+    "X-Forwarded-Display-Name": display_name,
+    "X-Forwarded-Role": role,
+    "X-Forwarded-Department": department,
+    "X-Forwarded-Position": position,
+    "X-Auth-Timestamp": timestamp,
+    "X-Auth-Nonce": nonce,
+    "X-Auth-Signature": f"sha256={sig}",
+}
+```
+
+**curl テスト:**
+
+```bash
+python3 - <<'EOF'
+import hmac, hashlib, time, secrets, subprocess
+
+SECRET = "your-very-long-random-secret-here"
+METHOD, PATH = "GET", "/api/auth/me"
+USERNAME, DISPLAY_NAME, ROLE = "tanaka", "田中 一郎", "manager"
+DEPT, POS = "人事部", "課長"
+TS = str(int(time.time()))
+NONCE = secrets.token_hex(16)
+
+canonical = "\n".join([METHOD, PATH, USERNAME, DISPLAY_NAME, ROLE, DEPT, POS, TS, NONCE])
+sig = hmac.new(SECRET.encode(), canonical.encode(), hashlib.sha256).hexdigest()
+
+print(f"curl http://localhost:8005/api/auth/me \\")
+print(f'  -H "X-Forwarded-User: {USERNAME}" \\')
+print(f'  -H "X-Forwarded-Display-Name: {DISPLAY_NAME}" \\')
+print(f'  -H "X-Forwarded-Role: {ROLE}" \\')
+print(f'  -H "X-Auth-Timestamp: {TS}" \\')
+print(f'  -H "X-Auth-Nonce: {NONCE}" \\')
+print(f'  -H "X-Auth-Signature: sha256={sig}"')
+EOF
+```
+
+---
+
+### 認証フロー早見表
+
+| 方式 | .env 設定 | ユーザー自前管理 | 備考 |
+|------|-----------|--------------|------|
+| ローカルDB | `FAQ_AUTH_PROVIDER=local_db` | ✅ FAQ DB | デフォルト |
+| Google OAuth2 | `GOOGLE_CLIENT_ID/SECRET` 設定 | ❌ Google 管理 | GCP Console 要設定 |
+| Microsoft | `AZURE_AD_CLIENT_ID/SECRET/TENANT` 設定 | ❌ Azure 管理 | Azure Portal 要設定 |
+| LDAP/AD | `FAQ_AUTH_PROVIDER=ldap` | ❌ AD 管理 | `pip install ldap3` 必要 |
+| SAML | IdP で SP 設定 | ❌ IdP 管理 | `pip install python3-saml` 必要 |
+| プロキシ | `FAQ_TRUST_PROXY_AUTH=true` | ❌ ゲートウェイ管理 | HMAC署名推奨 |
+
+---
+
+<!-- README_REQUIRED_SECTIONS_START -->
+## 機能概要
+- FAQ 応答、RAG 検索、SQL 質問応答を単一 API で提供。
+- WebSocket/SSE によるリアルタイム対話と進捗表示をサポート。
+- KB 設定、フィードバック、履歴永続化を含む運用機能を内蔵。
+
+## 優位性
+- 引用付き回答とソース追跡で、回答根拠の説明責任を確保。
+- FAQ/RAG/SQL の複合ルーティングで、問い合わせ種別に柔軟対応。
+- AgentFlow サービス共通基盤を活用し、拡張時の実装コストを抑制。
+
+## 技術アーキテクチャ
+- Backend: FastAPI + AgentFlow Skills + 永続化ストア。
+- Frontend: React/TypeScript チャット UI（Markdown/Chart 表示対応）。
+- Retrieval: ベクトル検索・再ランキング・設定管理を API 化。
+
+## アプリケーション階層
+- Presentation: Web UI / API / Auth。
+- Intent Routing: FAQ / RAG / SQL への振り分け。
+- Agent Services: 回答生成・検証・引用付与。
+- Data Layer: KB、会話履歴、設定、監査ログ。
+<!-- README_REQUIRED_SECTIONS_END -->
 
 ## 本番環境デプロイ（Docker Compose）
 

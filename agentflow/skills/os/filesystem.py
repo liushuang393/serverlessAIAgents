@@ -201,4 +201,3 @@ class FileSystemSkill(OSSkillBase):
             is_dir=validated_path.is_dir(),
             modified_at=datetime.fromtimestamp(stat.st_mtime),
         )
-

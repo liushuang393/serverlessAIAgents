@@ -4,16 +4,20 @@ Pydantic モデル定義。
 """
 
 from apps.platform.schemas.app_config_schemas import (
-    AgentInfo,
     AgentBlueprintConfig,
-    AuthContractConfig,
+    AgentInfo,
     AppConfig,
+    AuthContractConfig,
     BlueprintConfig,
     ContractsConfig,
     DependenciesConfig,
     EntryPointsConfig,
-    PortsConfig,
+    EvolutionConfig,
+    EvolutionRetrievalConfig,
+    EvolutionSuspicionConfig,
+    EvolutionValidatorQueueConfig,
     PluginBindingConfig,
+    PortsConfig,
     RAGContractConfig,
     ReleaseContractConfig,
     SkillsContractConfig,
@@ -37,6 +41,24 @@ from apps.platform.schemas.gallery_schemas import (
     GallerySearchRequest,
     GallerySearchResponse,
 )
+from apps.platform.schemas.plugin_manifest_schemas import (
+    PluginCompatibility,
+    PluginManifest,
+    PluginSignature,
+)
+from apps.platform.schemas.provisioning_schemas import (
+    AgentBlueprintInput,
+    AppCreateRequest,
+    AppCreateResponse,
+    EvolutionConfigInput,
+    EvolutionRetrievalInput,
+    EvolutionSuspicionInput,
+    EvolutionValidatorQueueInput,
+    MCPLazyLoadingPatchRequest,
+    MCPServerUpsertRequest,
+    PortConflictItem,
+    PortConflictReport,
+)
 from apps.platform.schemas.publish_schemas import (
     PublishRequest,
     PublishResponse,
@@ -47,40 +69,21 @@ from apps.platform.schemas.rag_schemas import (
     RAGConfigPatchRequest,
     RAGDataSourceInput,
 )
-from apps.platform.schemas.provisioning_schemas import (
-    AgentBlueprintInput,
-    AppCreateRequest,
-    AppCreateResponse,
-    MCPLazyLoadingPatchRequest,
-    MCPServerUpsertRequest,
-    PortConflictItem,
-    PortConflictReport,
-)
-from apps.platform.schemas.plugin_manifest_schemas import (
-    PluginCompatibility,
-    PluginManifest,
-    PluginSignature,
-)
 
 
 __all__ = [
-    # AppConfig
-    "AgentInfo",
-    "AgentBlueprintConfig",
-    "AuthContractConfig",
-    "AppConfig",
-    "BlueprintConfig",
-    "ContractsConfig",
-    "DependenciesConfig",
-    "EntryPointsConfig",
-    "PortsConfig",
-    "PluginBindingConfig",
-    "RAGContractConfig",
-    "ReleaseContractConfig",
-    "SkillsContractConfig",
-    "VisibilityConfig",
     # Capability
     "CAPABILITY_DOMAINS",
+    "AgentBlueprintConfig",
+    # Provisioning
+    "AgentBlueprintInput",
+    # AppConfig
+    "AgentInfo",
+    "AppConfig",
+    "AppCreateRequest",
+    "AppCreateResponse",
+    "AuthContractConfig",
+    "BlueprintConfig",
     "CanonicalCapability",
     "CapabilityAggregate",
     # Component
@@ -88,12 +91,33 @@ __all__ = [
     "ComponentListResponse",
     "ComponentResponse",
     "ComponentUpdateRequest",
+    "ContractsConfig",
+    "DependenciesConfig",
+    "EntryPointsConfig",
+    "EvolutionConfig",
+    "EvolutionConfigInput",
+    "EvolutionRetrievalConfig",
+    "EvolutionRetrievalInput",
+    "EvolutionSuspicionConfig",
+    "EvolutionSuspicionInput",
+    "EvolutionValidatorQueueConfig",
+    "EvolutionValidatorQueueInput",
     # Gallery
     "GalleryFilter",
     "GalleryItem",
     "GalleryItemType",
     "GallerySearchRequest",
     "GallerySearchResponse",
+    "MCPLazyLoadingPatchRequest",
+    "MCPServerUpsertRequest",
+    "PluginBindingConfig",
+    # Plugin Manifest
+    "PluginCompatibility",
+    "PluginManifest",
+    "PluginSignature",
+    "PortConflictItem",
+    "PortConflictReport",
+    "PortsConfig",
     # Publish
     "PublishRequest",
     "PublishResponse",
@@ -101,17 +125,9 @@ __all__ = [
     "PublishTarget",
     # RAG 管理
     "RAGConfigPatchRequest",
+    "RAGContractConfig",
     "RAGDataSourceInput",
-    # Provisioning
-    "AgentBlueprintInput",
-    "AppCreateRequest",
-    "AppCreateResponse",
-    "MCPLazyLoadingPatchRequest",
-    "MCPServerUpsertRequest",
-    "PortConflictItem",
-    "PortConflictReport",
-    # Plugin Manifest
-    "PluginCompatibility",
-    "PluginManifest",
-    "PluginSignature",
+    "ReleaseContractConfig",
+    "SkillsContractConfig",
+    "VisibilityConfig",
 ]

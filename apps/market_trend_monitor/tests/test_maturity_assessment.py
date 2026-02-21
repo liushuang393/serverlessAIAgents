@@ -10,8 +10,6 @@ import json
 from datetime import datetime
 from unittest.mock import AsyncMock
 
-import pytest
-
 from apps.market_trend_monitor.backend.models import Evidence, SourceType
 from apps.market_trend_monitor.backend.services.maturity_assessment_service import (
     DEFAULT_TECHNOLOGIES,
@@ -49,10 +47,14 @@ def _make_evidence(
 def _make_mock_llm(phase: str = "slope_of_enlightenment", confidence: float = 0.8):
     """テスト用 Mock LLM を生成."""
     mock = AsyncMock()
-    mock.chat = AsyncMock(return_value=json.dumps({
-        "phase": phase,
-        "confidence": confidence,
-    }))
+    mock.chat = AsyncMock(
+        return_value=json.dumps(
+            {
+                "phase": phase,
+                "confidence": confidence,
+            }
+        )
+    )
     return mock
 
 
@@ -213,10 +215,12 @@ class TestMaturityAssessmentService:
         """評価結果一覧テスト."""
         service = MaturityAssessmentService(llm=_make_mock_llm())
         service._assessments["A"] = TechnologyMaturity(
-            technology="A", phase=MaturityPhase.INNOVATION_TRIGGER,
+            technology="A",
+            phase=MaturityPhase.INNOVATION_TRIGGER,
         )
         service._assessments["B"] = TechnologyMaturity(
-            technology="B", phase=MaturityPhase.PLATEAU_OF_PRODUCTIVITY,
+            technology="B",
+            phase=MaturityPhase.PLATEAU_OF_PRODUCTIVITY,
         )
         assert len(service.list_assessments()) == 2
 
@@ -226,19 +230,11 @@ class TestMaturityAssessmentService:
         Phase 10: この関数は最小フォールバック用。
         多因子ヒューリスティック (_estimate_phase_from_evidence) が優先使用される。
         """
-        assert MaturityAssessmentService._estimate_phase_from_evidence_count(0) == (
-            MaturityPhase.INNOVATION_TRIGGER
-        )
-        assert MaturityAssessmentService._estimate_phase_from_evidence_count(1) == (
-            MaturityPhase.INNOVATION_TRIGGER
-        )
-        assert MaturityAssessmentService._estimate_phase_from_evidence_count(2) == (
-            MaturityPhase.PEAK_OF_EXPECTATIONS
-        )
+        assert MaturityAssessmentService._estimate_phase_from_evidence_count(0) == (MaturityPhase.INNOVATION_TRIGGER)
+        assert MaturityAssessmentService._estimate_phase_from_evidence_count(1) == (MaturityPhase.INNOVATION_TRIGGER)
+        assert MaturityAssessmentService._estimate_phase_from_evidence_count(2) == (MaturityPhase.PEAK_OF_EXPECTATIONS)
         # 5件: PEAK_OF_EXPECTATIONS（count-only fallbackは保守的）
-        assert MaturityAssessmentService._estimate_phase_from_evidence_count(5) == (
-            MaturityPhase.PEAK_OF_EXPECTATIONS
-        )
+        assert MaturityAssessmentService._estimate_phase_from_evidence_count(5) == (MaturityPhase.PEAK_OF_EXPECTATIONS)
         # 10件: TROUGH_OF_DISILLUSIONMENT
         assert MaturityAssessmentService._estimate_phase_from_evidence_count(10) == (
             MaturityPhase.TROUGH_OF_DISILLUSIONMENT

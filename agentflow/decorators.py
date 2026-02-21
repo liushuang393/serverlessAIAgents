@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import functools
+import inspect
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -67,24 +68,26 @@ def auto_adapt(
             loader = SchemaLoader()
             metadata_file = Path(metadata_path)
 
-            # クラスの __file__ 属性からディレクトリを取得
-            if hasattr(cls, "__file__"):
-                class_dir = Path(cls.__file__).parent
-                metadata_file = class_dir / metadata_path
+            # クラスが定義されたモジュールのファイルパスから探索
+            module = inspect.getmodule(cls)
+            module_file = getattr(module, "__file__", None) if module else None
+            if module_file:
+                class_dir = Path(module_file).parent
+                metadata_file = class_dir / Path(metadata_path)
             elif not metadata_file.is_absolute():
                 # 相対パスの場合、カレントディレクトリから探す
                 metadata_file = Path.cwd() / metadata_path
 
             if metadata_file.exists():
                 try:
-                    self._metadata: AgentMetadata = loader.load_from_file(metadata_file)
+                    self._metadata = loader.load_from_file(metadata_file)
                 except Exception:
                     # 旧形式の agent.yaml など、スキーマ検証に失敗した場合はスキップ
                     # ログ出力は SchemaLoader 内で行われる
-                    self._metadata = None  # type: ignore
+                    self._metadata = None
             else:
                 # メタデータファイルが見つからない場合、空のメタデータを作成 (テスト用)
-                self._metadata = None  # type: ignore
+                self._metadata = None
 
             # プロトコルアダプターを生成
             if self._metadata:
@@ -97,17 +100,13 @@ def auto_adapt(
 
                 # A2A プロトコル
                 if "a2a" in protocols or (
-                    not protocols
-                    and self._metadata.protocols.a2a
-                    and self._metadata.protocols.a2a.enabled
+                    not protocols and self._metadata.protocols.a2a and self._metadata.protocols.a2a.enabled
                 ):
                     self._a2a_card = ProtocolAdapter.generate_a2a_card(self._metadata)
 
                 # AG-UI プロトコル
                 if "agui" in protocols or (
-                    not protocols
-                    and self._metadata.protocols.agui
-                    and self._metadata.protocols.agui.enabled
+                    not protocols and self._metadata.protocols.agui and self._metadata.protocols.agui.enabled
                 ):
                     # AGUIEventEmitter は engine が必要なので、ここでは準備だけ
                     self._agui_enabled = True

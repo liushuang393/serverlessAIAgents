@@ -13,6 +13,10 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+def _default_price_range() -> dict[str, float | None]:
+    return {"min": None, "max": None}
+
+
 class UCPMessageType(str, Enum):
     """UCPメッセージタイプ."""
 
@@ -46,45 +50,31 @@ class UCPMessage(BaseModel):
 class UCPIntentRequest(UCPMessage):
     """意図分析リクエスト."""
 
-    message_type: UCPMessageType = Field(
-        default=UCPMessageType.INTENT_REQUEST, frozen=True
-    )
+    message_type: UCPMessageType = Field(default=UCPMessageType.INTENT_REQUEST, frozen=True)
     user_input: str = Field(..., description="ユーザー入力テキスト")
     user_id: str | None = Field(default=None, description="ユーザーID")
     session_id: str | None = Field(default=None, description="セッションID")
-    conversation_history: list[dict[str, str]] = Field(
-        default_factory=list, description="会話履歴"
-    )
+    conversation_history: list[dict[str, str]] = Field(default_factory=list, description="会話履歴")
     context: dict[str, Any] = Field(default_factory=dict, description="追加コンテキスト")
 
 
 class UCPIntentResponse(UCPMessage):
     """意図分析レスポンス."""
 
-    message_type: UCPMessageType = Field(
-        default=UCPMessageType.INTENT_RESPONSE, frozen=True
-    )
+    message_type: UCPMessageType = Field(default=UCPMessageType.INTENT_RESPONSE, frozen=True)
     intent_id: str = Field(..., description="意図ID")
     intent_type: str = Field(..., description="意図タイプ")
     confidence: float = Field(..., ge=0.0, le=1.0, description="信頼度スコア")
-    product_categories: list[str] = Field(
-        default_factory=list, description="商品カテゴリ"
-    )
+    product_categories: list[str] = Field(default_factory=list, description="商品カテゴリ")
     keywords: list[str] = Field(default_factory=list, description="キーワード")
-    price_range: dict[str, float | None] = Field(
-        default_factory=lambda: {"min": None, "max": None}, description="価格範囲"
-    )
-    recommended_actions: list[str] = Field(
-        default_factory=list, description="推奨アクション"
-    )
+    price_range: dict[str, float | None] = Field(default_factory=_default_price_range, description="価格範囲")
+    recommended_actions: list[str] = Field(default_factory=list, description="推奨アクション")
 
 
 class UCPOfferRequest(UCPMessage):
     """オファー取得リクエスト."""
 
-    message_type: UCPMessageType = Field(
-        default=UCPMessageType.OFFER_REQUEST, frozen=True
-    )
+    message_type: UCPMessageType = Field(default=UCPMessageType.OFFER_REQUEST, frozen=True)
     intent_id: str = Field(..., description="意図ID")
     user_id: str | None = Field(default=None, description="ユーザーID")
     product_ids: list[str] = Field(default_factory=list, description="商品IDリスト")
@@ -96,40 +86,30 @@ class UCPOfferRequest(UCPMessage):
 class UCPOfferResponse(UCPMessage):
     """オファー取得レスポンス."""
 
-    message_type: UCPMessageType = Field(
-        default=UCPMessageType.OFFER_RESPONSE, frozen=True
-    )
+    message_type: UCPMessageType = Field(default=UCPMessageType.OFFER_RESPONSE, frozen=True)
     offers: list[dict[str, Any]] = Field(default_factory=list, description="オファーリスト")
     total_count: int = Field(default=0, ge=0, description="総オファー数")
     has_more: bool = Field(default=False, description="追加オファーの有無")
-    recommendations: list[dict[str, Any]] = Field(
-        default_factory=list, description="AI推薦"
-    )
+    recommendations: list[dict[str, Any]] = Field(default_factory=list, description="AI推薦")
 
 
 class UCPTransactionRequest(UCPMessage):
     """トランザクションリクエスト."""
 
-    message_type: UCPMessageType = Field(
-        default=UCPMessageType.TRANSACTION_REQUEST, frozen=True
-    )
+    message_type: UCPMessageType = Field(default=UCPMessageType.TRANSACTION_REQUEST, frozen=True)
     action: str = Field(..., description="アクション（create/update/complete/cancel）")
     cart_id: str | None = Field(default=None, description="カートID")
     transaction_id: str | None = Field(default=None, description="トランザクションID")
     items: list[dict[str, Any]] = Field(default_factory=list, description="商品アイテム")
     offers: list[str] = Field(default_factory=list, description="適用オファーID")
     payment_method: str | None = Field(default=None, description="決済方法")
-    payment_details: dict[str, Any] = Field(
-        default_factory=dict, description="決済詳細"
-    )
+    payment_details: dict[str, Any] = Field(default_factory=dict, description="決済詳細")
 
 
 class UCPTransactionResponse(UCPMessage):
     """トランザクションレスポンス."""
 
-    message_type: UCPMessageType = Field(
-        default=UCPMessageType.TRANSACTION_RESPONSE, frozen=True
-    )
+    message_type: UCPMessageType = Field(default=UCPMessageType.TRANSACTION_RESPONSE, frozen=True)
     transaction_id: str = Field(..., description="トランザクションID")
     status: str = Field(..., description="ステータス")
     cart_id: str | None = Field(default=None, description="カートID")
@@ -148,4 +128,3 @@ class UCPError(UCPMessage):
     error_message: str = Field(..., description="エラーメッセージ")
     details: dict[str, Any] = Field(default_factory=dict, description="エラー詳細")
     recoverable: bool = Field(default=True, description="リカバリ可能かどうか")
-

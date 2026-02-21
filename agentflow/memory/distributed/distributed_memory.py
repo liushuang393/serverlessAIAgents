@@ -155,8 +155,6 @@ class DistributedMemoryManager:
         """
         return await self._cache.exists(entry_id) or await self._storage.exists(entry_id)
 
-
-
     async def count(self, topic: str | None = None) -> int:
         """記憶の数を取得.
 

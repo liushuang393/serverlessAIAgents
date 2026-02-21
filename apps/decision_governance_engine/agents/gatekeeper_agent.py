@@ -66,29 +66,53 @@ class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
     INSTANT_REJECT_PATTERNS: list[tuple[str, QuestionCategory, str]] = [
         # (正規表現, カテゴリ, 拒否メッセージ)
         # 天気・事実検索系（日本語/簡体中文/英語）
-        (r"(天気|天气|気温|气温|weather|何時|几点)", QuestionCategory.FACTUAL_LOOKUP,
-         "天気や時刻の情報にはお答えできません。"),
+        (
+            r"(天気|天气|気温|气温|weather|何時|几点)",
+            QuestionCategory.FACTUAL_LOOKUP,
+            "天気や時刻の情報にはお答えできません。",
+        ),
         # 「〜怎么样/どうですか」パターン（雑談・意見要求）
-        (r"(怎么样|怎麼樣|どうですか|どう\?|如何\?)", QuestionCategory.CASUAL_CHAT,
-         "意見や感想を求める質問には対応していません。意思決定課題を入力してください。"),
+        (
+            r"(怎么样|怎麼樣|どうですか|どう\?|如何\?)",
+            QuestionCategory.CASUAL_CHAT,
+            "意見や感想を求める質問には対応していません。意思決定課題を入力してください。",
+        ),
         # システム質問
-        (r"(このシステム|このAI|どうやって作|仕組み|这个系统|这个AI|how.*work)", QuestionCategory.SYSTEM_INQUIRY,
-         "システム自体への質問にはお答えできません。"),
+        (
+            r"(このシステム|このAI|どうやって作|仕組み|这个系统|这个AI|how.*work)",
+            QuestionCategory.SYSTEM_INQUIRY,
+            "システム自体への質問にはお答えできません。",
+        ),
         # 知識質問
-        (r"(.+)(とは何|って何|とは？|what is|是什么|是啥)", QuestionCategory.GENERAL_KNOWLEDGE,
-         "用語や概念の説明にはお答えできません。"),
+        (
+            r"(.+)(とは何|って何|とは？|what is|是什么|是啥)",
+            QuestionCategory.GENERAL_KNOWLEDGE,
+            "用語や概念の説明にはお答えできません。",
+        ),
         # 挨拶・雑談
-        (r"^(こんにちは|hello|hi|ありがとう|thank|你好|谢谢|哈喽)", QuestionCategory.CASUAL_CHAT,
-         "雑談には対応していません。"),
+        (
+            r"^(こんにちは|hello|hi|ありがとう|thank|你好|谢谢|哈喽)",
+            QuestionCategory.CASUAL_CHAT,
+            "雑談には対応していません。",
+        ),
         # コード生成
-        (r"(コード.*書いて|write.*code|プログラム.*作成|写代码|编程)", QuestionCategory.TECHNICAL_HOWTO,
-         "コード生成には対応していません。"),
+        (
+            r"(コード.*書いて|write.*code|プログラム.*作成|写代码|编程)",
+            QuestionCategory.TECHNICAL_HOWTO,
+            "コード生成には対応していません。",
+        ),
         # 創作
-        (r"(物語|story|poem|詩|小説|作文|故事|诗|小说)", QuestionCategory.CREATIVE_REQUEST,
-         "創作・コンテンツ生成には対応していません。"),
+        (
+            r"(物語|story|poem|詩|小説|作文|故事|诗|小说)",
+            QuestionCategory.CREATIVE_REQUEST,
+            "創作・コンテンツ生成には対応していません。",
+        ),
         # 計算・翻訳
-        (r"(計算して|convert|換算|translate|计算|翻译|换算)", QuestionCategory.FACTUAL_LOOKUP,
-         "計算や変換には対応していません。"),
+        (
+            r"(計算して|convert|換算|translate|计算|翻译|换算)",
+            QuestionCategory.FACTUAL_LOOKUP,
+            "計算や変換には対応していません。",
+        ),
     ]
 
     # 受理可能なパターン
@@ -204,8 +228,7 @@ class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
                     "入力された質問は対象外と判定されました。"
                 ),
                 suggested_rephrase=(
-                    "企業の新規事業立ち上げ、新製品/サービス投入、市場参入などに関する"
-                    "意思決定課題を入力してください。"
+                    "企業の新規事業立ち上げ、新製品/サービス投入、市場参入などに関する意思決定課題を入力してください。"
                 ),
             )
 
@@ -251,6 +274,7 @@ class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
             # JSON パース（堅牢な抽出）
             content = response.content if hasattr(response, "content") else str(response)
             from agentflow.utils import extract_json
+
             data = extract_json(content)
             if data:
                 return data

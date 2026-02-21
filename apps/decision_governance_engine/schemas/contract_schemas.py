@@ -16,11 +16,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 class DecisionRole(str, Enum):
@@ -76,9 +79,7 @@ class EvidenceItem(BaseModel):
     published_at: datetime | None = Field(default=None, description="公開日時（不明ならNone）")
     snippet: str = Field(default="", description="原文抜粋（短文推奨）")
     summary: str = Field(default="", description="要約")
-    reliability: EvidenceReliability = Field(
-        default=EvidenceReliability.MEDIUM, description="信頼度"
-    )
+    reliability: EvidenceReliability = Field(default=EvidenceReliability.MEDIUM, description="信頼度")
     tags: list[str] = Field(default_factory=list, description="タグ")
     metadata: dict[str, Any] = Field(default_factory=dict, description="追加メタ情報")
 

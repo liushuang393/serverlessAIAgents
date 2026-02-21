@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 
 
 if TYPE_CHECKING:
@@ -83,7 +83,7 @@ def select(
         return state
 
     parts = path.split(".")
-    current = state
+    current: Any = state
 
     for part in parts:
         if isinstance(current, dict):
@@ -118,11 +118,12 @@ def create_selector[T](
     Returns:
         セレクター関数
     """
+
     def selector(state: dict[str, Any]) -> T:
         value = select(state, path, default)
         if transform and value is not None:
             return transform(value)
-        return value
+        return cast("T", value)
 
     return selector
 
@@ -138,66 +139,83 @@ def compose_selectors(
     Returns:
         合成されたセレクター
     """
+
     def composed(state: dict[str, Any]) -> dict[str, Any]:
-        return {
-            f"value_{i}": selector(state)
-            for i, selector in enumerate(selectors)
-        }
+        return {f"value_{i}": selector(state) for i, selector in enumerate(selectors)}
 
     return composed
 
 
 # 便利なセレクター
 
+
 def select_execution_status(state: dict[str, Any]) -> str:
     """実行状態を選択."""
-    return select(state, "execution.status", "unknown")
+    value = select(state, "execution.status", "unknown")
+    return value if isinstance(value, str) else "unknown"
 
 
 def select_progress(state: dict[str, Any]) -> float:
     """進捗を選択."""
-    return select(state, "execution.progress", 0.0)
+    value = select(state, "execution.progress", 0.0)
+    if isinstance(value, (int, float)):
+        return float(value)
+    return 0.0
 
 
 def select_current_step(state: dict[str, Any]) -> str | None:
     """現在のステップを選択."""
-    return select(state, "execution.current_step")
+    value = select(state, "execution.current_step")
+    return value if isinstance(value, str) else None
 
 
 def select_context(state: dict[str, Any]) -> dict[str, Any]:
     """コンテキストを選択."""
-    return select(state, "context", {})
+    value = select(state, "context", {})
+    return value if isinstance(value, dict) else {}
 
 
 def select_results(state: dict[str, Any]) -> dict[str, Any]:
     """結果を選択."""
-    return select(state, "results", {})
+    value = select(state, "results", {})
+    return value if isinstance(value, dict) else {}
 
 
 def select_error(state: dict[str, Any]) -> str | None:
     """エラーを選択."""
-    return select(state, "execution.error")
+    value = select(state, "execution.error")
+    return value if isinstance(value, str) else None
 
 
 def select_plan(state: dict[str, Any]) -> dict[str, Any] | None:
     """計画を選択."""
-    return select(state, "plan")
+    value = select(state, "plan")
+    return value if isinstance(value, dict) else None
 
 
 def select_history(state: dict[str, Any], limit: int = 10) -> list[dict[str, Any]]:
     """履歴を選択."""
     history = select(state, "history", [])
-    return history[-limit:] if isinstance(history, list) else []
+    if not isinstance(history, list):
+        return []
+    filtered = [item for item in history if isinstance(item, dict)]
+    return filtered[-limit:]
 
 
 def select_checkpoints(state: dict[str, Any]) -> list[str]:
     """チェックポイント一覧を選択."""
-    return select(state, "checkpoints", [])
+    checkpoints = select(state, "checkpoints", [])
+    if not isinstance(checkpoints, list):
+        return []
+    return [cp for cp in checkpoints if isinstance(cp, str)]
 
 
 def select_pending_approvals(state: dict[str, Any]) -> list[dict[str, Any]]:
     """保留中の承認を選択."""
-    return select(state, "hitl.pending_approvals", [])
+    approvals = select(state, "hitl.pending_approvals", [])
+    if not isinstance(approvals, list):
+        return []
+    return [approval for approval in approvals if isinstance(approval, dict)]
 
 
 # エクスポート

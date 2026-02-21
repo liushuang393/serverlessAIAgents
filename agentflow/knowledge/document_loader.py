@@ -160,14 +160,12 @@ class DocumentLoader(ABC):
         if config.separator:
             parts = text.split(config.separator)
             if config.keep_separator and len(parts) > 1:
-                parts = [
-                    (config.separator if i > 0 else "") + part for i, part in enumerate(parts)
-                ]
+                parts = [(config.separator if i > 0 else "") + part for i, part in enumerate(parts)]
         else:
             parts = [text]
 
         # チャンクを構築
-        chunks: list[DocumentChunk] = []
+        chunks: list[str] = []
         current_chunk = ""
 
         for part in parts:
@@ -402,9 +400,7 @@ class JSONLoader(DocumentLoader):
         self._logger.info(f"Loaded {len(chunks)} objects from {path}")
         return chunks
 
-    def _create_chunk_from_object(
-        self, obj: dict[str, Any], source: str, index: int
-    ) -> DocumentChunk:
+    def _create_chunk_from_object(self, obj: dict[str, Any], source: str, index: int) -> DocumentChunk:
         """オブジェクトからチャンクを作成."""
         # コンテンツを抽出
         if self._content_key and self._content_key in obj:
@@ -526,7 +522,7 @@ class HTMLLoader(DocumentLoader):
             for tag in soup(["script", "style", "nav", "footer", "header"]):
                 tag.decompose()
 
-            return soup.get_text(separator="\n", strip=True)
+            return str(soup.get_text(separator="\n", strip=True))
         except ImportError:
             # BeautifulSoup がない場合は正規表現で除去
             text = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.DOTALL)
@@ -621,8 +617,5 @@ class UniversalLoader:
                 except Exception as e:
                     self._logger.warning(f"Failed to load {file_path}: {e}")
 
-        self._logger.info(
-            f"Loaded {len(all_chunks)} chunks from {len(files)} files in {directory}"
-        )
+        self._logger.info(f"Loaded {len(all_chunks)} chunks from {len(files)} files in {directory}")
         return all_chunks
-

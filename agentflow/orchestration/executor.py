@@ -20,7 +20,7 @@ import asyncio
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.orchestration.planner import (
     ExecutionPlan,
@@ -28,6 +28,10 @@ from agentflow.orchestration.planner import (
     StepStatus,
     StepType,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 @dataclass
@@ -110,6 +114,7 @@ class ExecutorAgent:
         self,
         tool_provider: Any = None,
         llm_client: Any = None,
+        execution_recorder: Any | None = None,
         config: ExecutorConfig | None = None,
     ) -> None:
         """初期化.
@@ -121,6 +126,7 @@ class ExecutorAgent:
         """
         self._tool_provider = tool_provider
         self._llm = llm_client
+        self._recorder = execution_recorder
         self._config = config or ExecutorConfig()
         self._results: dict[str, StepResult] = {}
         self._logger = logging.getLogger(__name__)
@@ -146,6 +152,17 @@ class ExecutorAgent:
 
         self._logger.info(f"ステップ実行開始: {step.name} ({step.step_type.value})")
         step.status = StepStatus.RUNNING
+        await self._safe_record(
+            "on_step_start",
+            self._run_id(context),
+            step.id,
+            {
+                "step_name": step.name,
+                "step_type": step.step_type.value,
+                "tool_uri": step.tool_uri,
+                "params": step.params,
+            },
+        )
 
         while retries <= self._config.max_retries:
             try:
@@ -169,10 +186,17 @@ class ExecutorAgent:
                 step.status = StepStatus.COMPLETED
                 step.result = output
                 self._results[step.id] = result
-
-                self._logger.info(
-                    f"ステップ完了: {step.name} ({duration_ms:.0f}ms)"
+                await self._safe_record(
+                    "on_step_success",
+                    self._run_id(context),
+                    step.id,
+                    {
+                        "duration_ms": duration_ms,
+                        "retries": retries,
+                    },
                 )
+
+                self._logger.info(f"ステップ完了: {step.name} ({duration_ms:.0f}ms)")
                 return result
 
             except TimeoutError:
@@ -203,6 +227,16 @@ class ExecutorAgent:
         step.status = StepStatus.FAILED
         step.error = last_error
         self._results[step.id] = result
+        await self._safe_record(
+            "on_step_error",
+            self._run_id(context),
+            step.id,
+            {
+                "duration_ms": duration_ms,
+                "retries": retries - 1,
+                "error": last_error,
+            },
+        )
 
         self._logger.error(f"ステップ最終失敗: {step.name} - {last_error}")
         return result
@@ -257,6 +291,17 @@ class ExecutorAgent:
             msg = f"ツール呼び出し失敗: {result.error}"
             raise RuntimeError(msg)
 
+        await self._safe_record(
+            "on_tool_result",
+            self._run_id(context),
+            step.id,
+            {
+                "tool_uri": step.tool_uri,
+                "params": params,
+                "success": result.success,
+            },
+        )
+
         return result.output
 
     async def _execute_llm_generation(
@@ -273,7 +318,17 @@ class ExecutorAgent:
         prompt = step.params.get("prompt", step.description)
         prompt = self._expand_template(prompt, context)
 
-        return await self._llm.generate(prompt)
+        response = await self._llm.generate(prompt)
+        await self._safe_record(
+            "on_llm_result",
+            self._run_id(context),
+            step.id,
+            {
+                "prompt": prompt,
+                "response_preview": str(response)[:500],
+            },
+        )
+        return response
 
     async def _execute_human_input(
         self,
@@ -312,10 +367,10 @@ class ExecutorAgent:
 
         outputs = []
         for r in results:
-            if isinstance(r, Exception):
+            if isinstance(r, BaseException):
                 outputs.append({"error": str(r)})
             else:
-                outputs.append(r.output if r.success else {"error": r.error})
+                outputs.append(r.output if r.success else {"error": str(r.error or "")})
 
         return outputs
 
@@ -350,7 +405,7 @@ class ExecutorAgent:
 
         {{key}}形式のプレースホルダーをコンテキスト値で置換。
         """
-        expanded = {}
+        expanded: dict[str, Any] = {}
         for key, value in params.items():
             if isinstance(value, str):
                 expanded[key] = self._expand_template(value, context)
@@ -375,7 +430,7 @@ class ExecutorAgent:
         self,
         plan: ExecutionPlan,
         context: dict[str, Any] | None = None,
-    ):
+    ) -> AsyncIterator[StepResult]:
         """計画全体を実行.
 
         依存関係を考慮して順次/並列で実行。
@@ -435,6 +490,30 @@ class ExecutorAgent:
             "has_tool_provider": self._tool_provider is not None,
             "has_llm": self._llm is not None,
         }
+
+    async def _safe_record(
+        self,
+        method_name: str,
+        run_id: str,
+        step_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """レコーダーがあればフックを呼び出す."""
+        if self._recorder is None:
+            return
+        method = getattr(self._recorder, method_name, None)
+        if method is None:
+            return
+        try:
+            await method(run_id, step_id, payload)
+        except Exception as exc:
+            self._logger.debug("execution recorder error (%s): %s", method_name, exc)
+
+    def _run_id(self, context: dict[str, Any]) -> str:
+        """実行IDをコンテキストから取得."""
+        return str(
+            context.get("_execution_id") or context.get("execution_id") or context.get("run_id") or "unknown-run"
+        )
 
 
 # エクスポート

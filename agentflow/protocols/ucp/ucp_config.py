@@ -47,13 +47,9 @@ class UCPSecurityConfig(BaseModel):
 class UCPConfig(BaseModel):
     """UCP設定."""
 
-    endpoints: list[UCPEndpoint] = Field(
-        default_factory=list, description="エンドポイントリスト"
-    )
+    endpoints: list[UCPEndpoint] = Field(default_factory=list, description="エンドポイントリスト")
     default_endpoint: str | None = Field(default=None, description="デフォルトエンドポイント")
-    security: UCPSecurityConfig = Field(
-        default_factory=UCPSecurityConfig, description="セキュリティ設定"
-    )
+    security: UCPSecurityConfig = Field(default_factory=UCPSecurityConfig, description="セキュリティ設定")
     version: str = Field(default="1.0", description="UCPバージョン")
     enable_caching: bool = Field(default=True, description="キャッシュ有効化")
     cache_ttl: float = Field(default=300.0, ge=0.0, description="キャッシュTTL（秒）")
@@ -102,12 +98,8 @@ class UCPConfig(BaseModel):
             )
 
         security = UCPSecurityConfig(
-            api_key=SecretStr(os.environ.get("UCP_API_KEY", ""))
-            if os.environ.get("UCP_API_KEY")
-            else None,
-            auth_token=SecretStr(os.environ.get("UCP_AUTH_TOKEN", ""))
-            if os.environ.get("UCP_AUTH_TOKEN")
-            else None,
+            api_key=SecretStr(os.environ.get("UCP_API_KEY", "")) if os.environ.get("UCP_API_KEY") else None,
+            auth_token=SecretStr(os.environ.get("UCP_AUTH_TOKEN", "")) if os.environ.get("UCP_AUTH_TOKEN") else None,
         )
 
         return cls(
@@ -115,4 +107,3 @@ class UCPConfig(BaseModel):
             default_endpoint="default" if endpoints else None,
             security=security,
         )
-

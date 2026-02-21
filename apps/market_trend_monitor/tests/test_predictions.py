@@ -5,10 +5,9 @@ Prediction/PredictionReview/PredictionAccuracy モデルおよび PredictionServ
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 
 import pytest
-
 from apps.market_trend_monitor.backend.models import (
     Prediction,
     PredictionAccuracy,
@@ -366,12 +365,8 @@ class TestPredictionService:
     def test_list_predictions(self) -> None:
         """予測一覧テスト."""
         service = PredictionService()
-        service.create_prediction(
-            "c-1", "予測1", 0.5, date(2025, 3, 1)
-        )
-        service.create_prediction(
-            "c-2", "予測2", 0.7, date(2025, 6, 1)
-        )
+        service.create_prediction("c-1", "予測1", 0.5, date(2025, 3, 1))
+        service.create_prediction("c-2", "予測2", 0.7, date(2025, 6, 1))
 
         predictions = service.list_predictions()
         assert len(predictions) == 2
@@ -379,16 +374,10 @@ class TestPredictionService:
     def test_list_predictions_reviewed_filter(self) -> None:
         """復盤済みフィルタテスト."""
         service = PredictionService()
-        p1 = service.create_prediction(
-            "c-1", "予測1", 0.5, date(2025, 1, 1)
-        )
-        service.create_prediction(
-            "c-2", "予測2", 0.7, date(2025, 6, 1)
-        )
+        p1 = service.create_prediction("c-1", "予測1", 0.5, date(2025, 1, 1))
+        service.create_prediction("c-2", "予測2", 0.7, date(2025, 6, 1))
 
-        service.review_prediction(
-            p1.id, "結果", PredictionOutcome.CORRECT
-        )
+        service.review_prediction(p1.id, "結果", PredictionOutcome.CORRECT)
 
         reviewed = service.list_predictions(reviewed=True)
         assert len(reviewed) == 1
@@ -409,19 +398,11 @@ class TestPredictionService:
     def test_get_accuracy_stats(self) -> None:
         """精度統計テスト."""
         service = PredictionService()
-        p1 = service.create_prediction(
-            "c-1", "予測1", 0.8, date(2025, 1, 1)
-        )
-        p2 = service.create_prediction(
-            "c-2", "予測2", 0.6, date(2025, 1, 1)
-        )
+        p1 = service.create_prediction("c-1", "予測1", 0.8, date(2025, 1, 1))
+        p2 = service.create_prediction("c-2", "予測2", 0.6, date(2025, 1, 1))
 
-        service.review_prediction(
-            p1.id, "的中", PredictionOutcome.CORRECT
-        )
-        service.review_prediction(
-            p2.id, "外れ", PredictionOutcome.INCORRECT
-        )
+        service.review_prediction(p1.id, "的中", PredictionOutcome.CORRECT)
+        service.review_prediction(p2.id, "外れ", PredictionOutcome.INCORRECT)
 
         stats = service.get_accuracy_stats()
         assert stats["total_predictions"] == 2
@@ -435,13 +416,9 @@ class TestPredictionService:
         """復盤待ち予測取得テスト."""
         service = PredictionService()
         # 過去の期限（復盤待ち）
-        p1 = service.create_prediction(
-            "c-1", "過去予測", 0.7, date(2020, 1, 1)
-        )
+        p1 = service.create_prediction("c-1", "過去予測", 0.7, date(2020, 1, 1))
         # 未来の期限（まだ復盤不要）
-        service.create_prediction(
-            "c-2", "未来予測", 0.5, date.today() + timedelta(days=365)
-        )
+        service.create_prediction("c-2", "未来予測", 0.5, date.today() + timedelta(days=365))
 
         pending = service.get_pending_reviews()
         assert len(pending) == 1
@@ -450,12 +427,8 @@ class TestPredictionService:
     def test_get_pending_reviews_excludes_reviewed(self) -> None:
         """復盤済みは復盤待ちから除外テスト."""
         service = PredictionService()
-        p = service.create_prediction(
-            "c-1", "過去予測", 0.7, date(2020, 1, 1)
-        )
-        service.review_prediction(
-            p.id, "結果", PredictionOutcome.CORRECT
-        )
+        p = service.create_prediction("c-1", "過去予測", 0.7, date(2020, 1, 1))
+        service.review_prediction(p.id, "結果", PredictionOutcome.CORRECT)
 
         pending = service.get_pending_reviews()
         assert len(pending) == 0
@@ -463,12 +436,8 @@ class TestPredictionService:
     def test_get_review_for_prediction(self) -> None:
         """予測の復盤結果取得テスト."""
         service = PredictionService()
-        p = service.create_prediction(
-            "c-1", "テスト", 0.8, date(2025, 1, 1)
-        )
-        service.review_prediction(
-            p.id, "結果", PredictionOutcome.CORRECT
-        )
+        p = service.create_prediction("c-1", "テスト", 0.8, date(2025, 1, 1))
+        service.review_prediction(p.id, "結果", PredictionOutcome.CORRECT)
 
         review = service.get_review_for_prediction(p.id)
         assert review is not None
@@ -477,9 +446,7 @@ class TestPredictionService:
     def test_get_review_for_prediction_not_found(self) -> None:
         """復盤結果なしのテスト."""
         service = PredictionService()
-        p = service.create_prediction(
-            "c-1", "テスト", 0.5, date(2025, 6, 1)
-        )
+        p = service.create_prediction("c-1", "テスト", 0.5, date(2025, 6, 1))
 
         review = service.get_review_for_prediction(p.id)
         assert review is None

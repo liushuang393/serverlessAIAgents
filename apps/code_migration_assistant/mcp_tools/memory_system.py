@@ -175,4 +175,3 @@ class MemorySystem(MCPTool):
             "memories": memories,
             "count": len(memories),
         }
-

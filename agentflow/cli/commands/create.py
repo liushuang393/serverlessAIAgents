@@ -68,8 +68,8 @@ def create_agent_from_template(
         msg = f"Template directory not found: {template_dir}"
         raise FileNotFoundError(msg)
 
-    # Jinja2 環境を設定
-    env = Environment(loader=FileSystemLoader(str(template_dir)))
+    # Jinja2 環境を設定（CLIコード生成用途 - HTML出力なし）
+    env = Environment(loader=FileSystemLoader(str(template_dir)))  # nosec B701
 
     # テンプレート変数
     context = {

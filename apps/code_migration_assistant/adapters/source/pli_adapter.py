@@ -319,9 +319,7 @@ class PLIAdapter(SourceLanguageAdapter):
         procedures: list[dict[str, Any]] = []
 
         for line in lines:
-            match = re.match(
-                r"(\w+)\s*:\s*(?:PROCEDURE|PROC)(?:\s*\(([^)]*)\))?", line, re.IGNORECASE
-            )
+            match = re.match(r"(\w+)\s*:\s*(?:PROCEDURE|PROC)(?:\s*\(([^)]*)\))?", line, re.IGNORECASE)
             if match:
                 args = []
                 if match.group(2):

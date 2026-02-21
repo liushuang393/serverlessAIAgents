@@ -1,14 +1,16 @@
 import httpx
-from agentflow.security.oauth2_provider import OAuth2Provider, OAuth2Token, ExternalIdentity
+
+from agentflow.security.oauth2_provider import ExternalIdentity, OAuth2Provider, OAuth2Token
+
 
 class AzureADOAuth2Provider(OAuth2Provider):
     """Azure AD OAuth2 プロバイダー."""
 
-    def __init__(self, client_id: str, client_secret: str, redirect_uri: str, tenant_id: str = "common"):
+    def __init__(self, client_id: str, client_secret: str, redirect_uri: str, tenant_id: str = "common") -> None:
         super().__init__(client_id, client_secret, redirect_uri)
         self.tenant_id = tenant_id
 
-    async def _get_endpoints(self):
+    async def _get_endpoints(self) -> dict[str, str]:
         return {
             "authorization_endpoint": f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/authorize",
             "token_endpoint": f"https://login.microsoftonline.com/{self.tenant_id}/oauth2/v2.0/token",
@@ -61,7 +63,7 @@ class AzureADOAuth2Provider(OAuth2Provider):
                 username=data.get("userPrincipalName") or data.get("mail"),
                 email=data.get("mail") or data.get("userPrincipalName"),
                 display_name=data.get("displayName"),
-                picture=None, # Need separate call to https://graph.microsoft.com/v1.0/me/photo/$value
+                picture=None,  # Need separate call to https://graph.microsoft.com/v1.0/me/photo/$value
                 provider="azure_ad",
                 raw_info=data,
             )

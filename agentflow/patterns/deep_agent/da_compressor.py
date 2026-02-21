@@ -108,6 +108,17 @@ class ContextCompressor:
         self._key_access_count[key] = self._key_access_count.get(key, 0) + 1
         self._key_last_access[key] = datetime.now()
 
+    def get_stats(self) -> dict[str, int]:
+        """圧縮器のメモリ統計を返す."""
+        return {
+            "working_tokens": self._working.token_count(),
+            "session_tokens": self._session.token_count(),
+            "archival_tokens": self._archival.token_count(),
+            "working_items": len(self._working.content),
+            "session_items": len(self._session.content),
+            "archival_items": len(self._archival.content),
+        }
+
     async def compact_messages(
         self,
         messages: list[AgentMessage],
@@ -120,9 +131,7 @@ class ContextCompressor:
 
         original_tokens = sum(len(str(m.content)) // 4 for m in messages)
         if original_tokens <= max_tokens:
-            return messages, CompactionResult(
-                original_tokens, original_tokens, 1.0, [m.id for m in messages]
-            )
+            return messages, CompactionResult(original_tokens, original_tokens, 1.0, [m.id for m in messages])
 
         if strategy == CompactionStrategy.SELECTIVE:
             return await self._selective_compact(messages, max_tokens)
@@ -148,7 +157,8 @@ class ContextCompressor:
         kept.sort(key=lambda m: m.timestamp)
         original_tokens = sum(len(str(m.content)) // 4 for m in messages)
         return kept, CompactionResult(
-            original_tokens, current_tokens,
+            original_tokens,
+            current_tokens,
             current_tokens / original_tokens if original_tokens > 0 else 1.0,
             preserved_ids,
         )
@@ -156,8 +166,11 @@ class ContextCompressor:
     def _score_message_importance(self, msg: AgentMessage) -> float:
         """メッセージの重要度をスコアリング."""
         type_scores = {
-            MessageType.RESULT: 0.9, MessageType.ERROR: 0.95,
-            MessageType.REQUEST: 0.6, MessageType.NOTIFY: 0.4, MessageType.SYSTEM: 0.7,
+            MessageType.RESULT: 0.9,
+            MessageType.ERROR: 0.95,
+            MessageType.REQUEST: 0.6,
+            MessageType.NOTIFY: 0.4,
+            MessageType.SYSTEM: 0.7,
         }
         score = type_scores.get(msg.msg_type, 0.5)
         age_minutes = (datetime.now() - msg.timestamp).total_seconds() / 60
@@ -187,8 +200,10 @@ class ContextCompressor:
 
         if not to_summarize:
             return recent, CompactionResult(
-                original_tokens, sum(len(str(m.content)) // 4 for m in recent),
-                1.0, [m.id for m in recent],
+                original_tokens,
+                sum(len(str(m.content)) // 4 for m in recent),
+                1.0,
+                [m.id for m in recent],
             )
 
         # 要約生成（LLM呼び出し）
@@ -203,9 +218,11 @@ class ContextCompressor:
         result_messages = [summary_msg, *recent]
         compressed_tokens = sum(len(str(m.content)) // 4 for m in result_messages)
         return result_messages, CompactionResult(
-            original_tokens, compressed_tokens,
+            original_tokens,
+            compressed_tokens,
             compressed_tokens / original_tokens if original_tokens > 0 else 1.0,
-            [m.id for m in recent], summary=summary_text,
+            [m.id for m in recent],
+            summary=summary_text,
         )
 
     async def _generate_summary(self, messages: list[AgentMessage]) -> str:
@@ -213,10 +230,7 @@ class ContextCompressor:
         if not self._llm:
             return f"[{len(messages)}件のメッセージを要約]"
 
-        content_text = "\n".join(
-            f"[{m.from_agent}→{m.to_agent}] {m.msg_type.value}: {m.content}"
-            for m in messages
-        )
+        content_text = "\n".join(f"[{m.from_agent}→{m.to_agent}] {m.msg_type.value}: {m.content}" for m in messages)
         prompt = f"""以下のAgent間通信履歴を簡潔に要約してください。
 重要な決定、結果、エラーを優先的に含めてください。
 
@@ -228,7 +242,7 @@ class ContextCompressor:
 
         try:
             response = await self._llm.generate(prompt)
-            return response.strip()
+            return str(response).strip()
         except Exception as e:
             _logger.warning("要約生成失敗: %s", e)
             return f"[{len(messages)}件のメッセージ - 要約生成失敗]"
@@ -276,7 +290,8 @@ class ContextCompressor:
         compressed_tokens = working_tokens + session_tokens
 
         return result, CompactionResult(
-            original_tokens, compressed_tokens,
+            original_tokens,
+            compressed_tokens,
             compressed_tokens / original_tokens if original_tokens > 0 else 1.0,
             [m.id for m in result],
         )
@@ -309,7 +324,8 @@ class ContextCompressor:
         if normal and remaining_budget > 500 and self._llm:
             summary_text = await self._generate_summary(normal)
             summary_msg = AgentMessage(
-                from_agent="system", to_agent="*",
+                from_agent="system",
+                to_agent="*",
                 msg_type=MessageType.SYSTEM,
                 content={"summary": summary_text, "summarized_count": len(normal)},
             )
@@ -318,7 +334,8 @@ class ContextCompressor:
 
         kept.sort(key=lambda m: m.timestamp)
         return kept, CompactionResult(
-            original_tokens, current_tokens,
+            original_tokens,
+            current_tokens,
             current_tokens / original_tokens if original_tokens > 0 else 1.0,
             [m.id for m in kept if m.id.startswith("msg-")],
         )
@@ -329,4 +346,3 @@ class ContextCompressor:
 # =============================================================================
 
 __all__ = ["ContextCompressor"]
-

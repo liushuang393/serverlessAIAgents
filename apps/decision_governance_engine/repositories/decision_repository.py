@@ -193,9 +193,7 @@ class DecisionRepository:
 
         async with get_db_session() as session:
             # 既存レコードを検索
-            result = await session.execute(
-                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
-            )
+            result = await session.execute(select(DecisionRecord).where(DecisionRecord.request_id == request_id))
             record = result.scalar_one_or_none()
 
             if record is None:
@@ -229,9 +227,7 @@ class DecisionRepository:
             完了済みステージ名のセット（例: {"dao", "fa"}）
         """
         async with get_db_session() as session:
-            result = await session.execute(
-                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
-            )
+            result = await session.execute(select(DecisionRecord).where(DecisionRecord.request_id == request_id))
             record = result.scalar_one_or_none()
             if record is None:
                 return set()
@@ -265,9 +261,7 @@ class DecisionRepository:
             (completed_stages, stage_results, question)
         """
         async with get_db_session() as session:
-            result = await session.execute(
-                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
-            )
+            result = await session.execute(select(DecisionRecord).where(DecisionRecord.request_id == request_id))
             record = result.scalar_one_or_none()
             if record is None:
                 return set(), {}, None
@@ -315,9 +309,7 @@ class DecisionRepository:
         normalized_output = self._to_jsonable(stage_output)
 
         async with get_db_session() as session:
-            result = await session.execute(
-                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
-            )
+            result = await session.execute(select(DecisionRecord).where(DecisionRecord.request_id == request_id))
             record = result.scalar_one_or_none()
 
             # 途中失敗ケースでもログを保持できるよう、必要に応じて骨組みレコードを作成
@@ -381,9 +373,7 @@ class DecisionRepository:
             更新成功なら True
         """
         async with get_db_session() as session:
-            result = await session.execute(
-                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
-            )
+            result = await session.execute(select(DecisionRecord).where(DecisionRecord.request_id == request_id))
             record = result.scalar_one_or_none()
             if record is None:
                 logger.warning(f"finalize: record not found for {request_id}")
@@ -405,9 +395,7 @@ class DecisionRepository:
     async def find_by_request_id(self, request_id: UUID) -> DecisionRecord | None:
         """リクエストIDで決策記録を検索."""
         async with get_db_session() as session:
-            result = await session.execute(
-                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
-            )
+            result = await session.execute(select(DecisionRecord).where(DecisionRecord.request_id == request_id))
             return result.scalar_one_or_none()
 
     async def find_by_report_case_id(
@@ -417,9 +405,7 @@ class DecisionRepository:
         """提案書ID（PROP-*）で決策記録を検索."""
         async with get_db_session() as session:
             result = await session.execute(
-                select(DecisionRecord).where(
-                    DecisionRecord.report_case_id == report_case_id
-                )
+                select(DecisionRecord).where(DecisionRecord.report_case_id == report_case_id)
             )
             return result.scalar_one_or_none()
 
@@ -472,9 +458,7 @@ class DecisionRepository:
     async def soft_delete(self, request_id: UUID) -> bool:
         """決策記録をソフト削除."""
         async with get_db_session() as session:
-            result = await session.execute(
-                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
-            )
+            result = await session.execute(select(DecisionRecord).where(DecisionRecord.request_id == request_id))
             record = result.scalar_one_or_none()
             if record:
                 record.deleted_at = datetime.utcnow()
@@ -490,9 +474,7 @@ class DecisionRepository:
     ) -> bool:
         """人間確認レコードを review_result に追記."""
         async with get_db_session() as session:
-            result = await session.execute(
-                select(DecisionRecord).where(DecisionRecord.request_id == request_id)
-            )
+            result = await session.execute(select(DecisionRecord).where(DecisionRecord.request_id == request_id))
             record = result.scalar_one_or_none()
             if record is None:
                 return False
@@ -535,10 +517,7 @@ class DecisionRepository:
             except Exception:
                 return self._to_jsonable(dict(value))  # type: ignore[arg-type]
         if isinstance(value, dict):
-            return {
-                str(k): self._to_jsonable(v)
-                for k, v in value.items()
-            }
+            return {str(k): self._to_jsonable(v) for k, v in value.items()}
         if isinstance(value, list):
             return [self._to_jsonable(v) for v in value]
         if isinstance(value, tuple):

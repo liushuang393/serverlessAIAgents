@@ -90,10 +90,7 @@ class ConsoleNotificationProvider(NotificationProvider):
         **kwargs: Any,
     ) -> bool:
         """コンソールに通知を出力."""
-        logger.info(
-            f"[NOTIFICATION] action={request.action}, "
-            f"priority={request.priority}, message={message}"
-        )
+        logger.info(f"[NOTIFICATION] action={request.action}, priority={request.priority}, message={message}")
         return True
 
 
@@ -300,7 +297,7 @@ class NotificationManager:
         if tasks:
             completed = await asyncio.gather(*tasks, return_exceptions=True)
             for channel, result in zip(target_channels, completed, strict=False):
-                if isinstance(result, Exception):
+                if isinstance(result, BaseException):
                     logger.error(f"通知エラー ({channel.value}): {result}")
                     results[channel] = False
                 else:

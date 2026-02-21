@@ -35,20 +35,20 @@ if TYPE_CHECKING:
 class SkillCategory(str, Enum):
     """スキルカテゴリ."""
 
-    OS_READ = "os_read"        # OS読み取り（安全）
-    OS_WRITE = "os_write"      # OS書き込み（要注意）
+    OS_READ = "os_read"  # OS読み取り（安全）
+    OS_WRITE = "os_write"  # OS書き込み（要注意）
     OS_EXECUTE = "os_execute"  # OS実行（要監視）
-    BROWSER = "browser"        # ブラウザ操作
-    NETWORK = "network"        # ネットワーク
+    BROWSER = "browser"  # ブラウザ操作
+    NETWORK = "network"  # ネットワーク
 
 
 class RiskLevel(str, Enum):
     """リスクレベル."""
 
-    LOW = "low"           # 低リスク（自動承認可）
-    MEDIUM = "medium"     # 中リスク（監査推奨）
-    HIGH = "high"         # 高リスク（承認推奨）
-    CRITICAL = "critical" # 重大リスク（承認必須）
+    LOW = "low"  # 低リスク（自動承認可）
+    MEDIUM = "medium"  # 中リスク（監査推奨）
+    HIGH = "high"  # 高リスク（承認推奨）
+    CRITICAL = "critical"  # 重大リスク（承認必須）
 
 
 @dataclass
@@ -148,7 +148,7 @@ class SkillGateway:
         self._skills: dict[str, SkillDefinition] = {}
         self._logger = logging.getLogger(__name__)
         self._call_count = 0
-        self._confirmation_handler: Callable[[str, str, dict], Awaitable[bool]] | None = None
+        self._confirmation_handler: Callable[[str, str, dict[str, Any]], Awaitable[bool]] | None = None
         self._mode_switcher: Any = None  # ModeSwitcher（遅延初期化）
 
     @property
@@ -165,6 +165,7 @@ class SkillGateway:
         """モード切替機構を取得（遅延初期化）."""
         if self._mode_switcher is None:
             from agentflow.skills.mode_switcher import ModeSwitcher
+
             self._mode_switcher = ModeSwitcher(self)
         return self._mode_switcher
 
@@ -181,13 +182,14 @@ class SkillGateway:
         """現在の実行モードで利用可能なスキル一覧."""
         is_isolated = self._config.execution_mode == "isolated"
         return [
-            s for s in self._skills.values()
+            s
+            for s in self._skills.values()
             if (is_isolated and s.allowed_in_isolated) or (not is_isolated and s.allowed_in_real_machine)
         ]
 
     def set_confirmation_handler(
         self,
-        handler: Callable[[str, str, dict], Awaitable[bool]],
+        handler: Callable[[str, str, dict[str, Any]], Awaitable[bool]],
     ) -> None:
         """人工確認ハンドラを設定."""
         self._confirmation_handler = handler
@@ -233,10 +235,8 @@ class SkillGateway:
             )
 
         # 3. 人工確認チェック
-        needs_confirmation = (
-            skill.requires_confirmation
-            or (skill.risk_level in (RiskLevel.HIGH, RiskLevel.CRITICAL)
-                and self._config.require_confirmation_for_high_risk)
+        needs_confirmation = skill.requires_confirmation or (
+            skill.risk_level in (RiskLevel.HIGH, RiskLevel.CRITICAL) and self._config.require_confirmation_for_high_risk
         )
 
         if needs_confirmation and not skip_confirmation and not dry_run:
@@ -258,7 +258,10 @@ class SkillGateway:
         if self._config.audit_all_calls:
             self._logger.info(
                 "GATEWAY: skill=%s, params=%s, dry_run=%s, mode=%s",
-                skill_name, params, dry_run, self._config.execution_mode,
+                skill_name,
+                params,
+                dry_run,
+                self._config.execution_mode,
             )
 
         # 5. dry_run の場合は検証のみ
@@ -293,4 +296,3 @@ class SkillGateway:
                 error=str(e),
                 duration_ms=duration_ms,
             )
-

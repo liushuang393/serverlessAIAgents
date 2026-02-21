@@ -235,4 +235,3 @@ def test_get_status(distributed_manager):
     assert "storage" in status
     assert status["cache"]["backend"] == "redis"
     assert status["storage"]["backend"] == "postgres"
-

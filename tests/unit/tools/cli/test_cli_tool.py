@@ -1,4 +1,5 @@
 import pytest
+
 from agentflow.tools.cli.base import CLIToolConfig
 from agentflow.tools.cli.validators import CLIValidator
 
@@ -42,7 +43,7 @@ def test_command_whitelist_validation():
     validator.validate_command(["git", "log", "--oneline"])
 
     # Should fail
-    with pytest.raises(ValueError, match="(?i)forbidden"):
+    with pytest.raises(ValueError, match=r"(?i)forbidden"):
         validator.validate_command(["git", "push"])
 
 
@@ -54,10 +55,10 @@ def test_command_forbidden_with_dashes():
     )
     validator = CLIValidator(config)
 
-    with pytest.raises(ValueError, match="(?i)forbidden"):
+    with pytest.raises(ValueError, match=r"(?i)forbidden"):
         validator.validate_command(["git", "push", "--force"])
 
-    with pytest.raises(ValueError, match="(?i)forbidden"):
+    with pytest.raises(ValueError, match=r"(?i)forbidden"):
         validator.validate_command(["git", "reset", "--hard"])
 
 

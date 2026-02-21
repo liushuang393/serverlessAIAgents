@@ -16,6 +16,7 @@ from apps.market_trend_monitor.backend.db.models import TrendHistoryModel
 from apps.market_trend_monitor.backend.db.session import async_session, init_db
 from sqlalchemy import select
 
+
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -112,7 +113,7 @@ class TrendHistoryService:
             return 0.0
 
         recent = history[-window:]
-        older = history[-(window * 2):-window]
+        older = history[-(window * 2) : -window]
 
         if not older:
             return 0.0
@@ -139,8 +140,8 @@ class TrendHistoryService:
 
         # 3区間に分割して速度を2つ計算
         seg1 = history[:window]
-        seg2 = history[window:window * 2]
-        seg3 = history[window * 2:]
+        seg2 = history[window : window * 2]
+        seg3 = history[window * 2 :]
 
         if not seg1 or not seg2 or not seg3:
             return 0.0

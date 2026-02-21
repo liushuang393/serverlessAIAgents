@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Port Allocator Service.
 
 App 間のポート重複検出と、新規 App 用の安全な自動割り当てを提供する。
@@ -7,10 +6,13 @@ App 間のポート重複検出と、新規 App 用の安全な自動割り当�
 from __future__ import annotations
 
 import socket
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from apps.platform.schemas.provisioning_schemas import PortConflictItem, PortConflictReport
-from apps.platform.services.app_discovery import AppDiscoveryService
+
+
+if TYPE_CHECKING:
+    from apps.platform.services.app_discovery import AppDiscoveryService
 
 
 PortType = Literal["api", "frontend", "db", "redis"]

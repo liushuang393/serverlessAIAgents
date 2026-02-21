@@ -163,7 +163,6 @@ class RepoConnector(AgentBlock):
             local_path=local_path,
         )
 
-
     def _detect_vcs_type(self, url: str) -> VCSType:
         """VCSタイプを検出."""
         url_lower = url.lower()
@@ -226,7 +225,20 @@ class RepoConnector(AgentBlock):
     def get_supported_languages(self) -> list[str]:
         """サポートする言語一覧を取得."""
         return [
-            "Python", "JavaScript", "TypeScript", "Java", "Go",
-            "Rust", "C", "C++", "C#", "Ruby", "PHP", "Swift",
-            "Kotlin", "Scala", "COBOL", "Fortran",
+            "Python",
+            "JavaScript",
+            "TypeScript",
+            "Java",
+            "Go",
+            "Rust",
+            "C",
+            "C++",
+            "C#",
+            "Ruby",
+            "PHP",
+            "Swift",
+            "Kotlin",
+            "Scala",
+            "COBOL",
+            "Fortran",
         ]

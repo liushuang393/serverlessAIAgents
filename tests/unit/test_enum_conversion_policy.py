@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """列挙型変換ポリシーテスト.
 
 LLM由来データに対する直接Enum変換を禁止し、
@@ -33,4 +32,3 @@ def test_no_direct_enum_cast_for_llm_payload() -> None:
         content = file_path.read_text(encoding="utf-8")
         for pattern in FORBIDDEN_PATTERNS:
             assert pattern not in content, f"{file_path}: forbidden enum cast pattern '{pattern}'"
-

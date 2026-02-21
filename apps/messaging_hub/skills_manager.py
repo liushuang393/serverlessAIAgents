@@ -134,12 +134,8 @@ class Workflow:
             steps=steps,
             entry_step_id=data.get("entry_step_id", steps[0].id if steps else ""),
             status=WorkflowStatus(data.get("status", "draft")),
-            created_at=datetime.fromisoformat(data["created_at"])
-            if "created_at" in data
-            else datetime.now(),
-            updated_at=datetime.fromisoformat(data["updated_at"])
-            if "updated_at" in data
-            else datetime.now(),
+            created_at=datetime.fromisoformat(data["created_at"]) if "created_at" in data else datetime.now(),
+            updated_at=datetime.fromisoformat(data["updated_at"]) if "updated_at" in data else datetime.now(),
             metadata=data.get("metadata", {}),
         )
 
@@ -583,11 +579,7 @@ JSON のみを出力してください。"""
 
         # 最終結果
         completed_at = datetime.now()
-        final_status = (
-            "success"
-            if all(r.get("status") in ("success", "skipped") for r in step_results)
-            else "failed"
-        )
+        final_status = "success" if all(r.get("status") in ("success", "skipped") for r in step_results) else "failed"
 
         result = WorkflowRunResult(
             workflow_id=workflow_id,

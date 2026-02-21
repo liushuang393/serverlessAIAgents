@@ -51,6 +51,7 @@ logger = logging.getLogger(__name__)
 
 class SQLDialect(str, Enum):
     """SQLダイアレクト."""
+
     POSTGRESQL = "postgresql"
     MYSQL = "mysql"
     SQLITE = "sqlite"
@@ -59,6 +60,7 @@ class SQLDialect(str, Enum):
 
 class ChartType(str, Enum):
     """チャートタイプ."""
+
     BAR = "bar"
     LINE = "line"
     PIE = "pie"
@@ -119,6 +121,7 @@ class Text2SQLConfig:
 @dataclass
 class SQLResult:
     """SQL実行結果."""
+
     sql: str
     data: list[dict[str, Any]]
     columns: list[str]
@@ -131,6 +134,7 @@ class SQLResult:
 @dataclass
 class ChartData:
     """チャートデータ."""
+
     chart_type: ChartType
     title: str
     data: dict[str, Any]
@@ -142,7 +146,7 @@ class ChartData:
 # =============================================================================
 
 
-class Text2SQLService(ServiceBase):
+class Text2SQLService(ServiceBase[dict[str, Any]]):
     """Text2SQL Service - フレームワーク級サービス.
 
     Studio/CLI/SDK/API 全てで同一インターフェース。
@@ -157,8 +161,8 @@ class Text2SQLService(ServiceBase):
         """初期化."""
         super().__init__()
         self._config = config or Text2SQLConfig()
-        self._llm = None
-        self._db = None
+        self._llm: Any = None
+        self._db: Any = None
         self._started = False
         # NL2SQL 増強コンポーネント
         self._schema_linker: Any = None
@@ -193,6 +197,7 @@ class Text2SQLService(ServiceBase):
                 SchemaLinker,
                 SchemaLinkerConfig,
             )
+
             linker_config = SchemaLinkerConfig(
                 use_llm=self._config.schema_linking_use_llm,
             )
@@ -209,6 +214,7 @@ class Text2SQLService(ServiceBase):
                 FewshotManager,
                 FewshotManagerConfig,
             )
+
             fewshot_config = FewshotManagerConfig(
                 default_k=self._config.fewshot_k,
             )
@@ -221,6 +227,7 @@ class Text2SQLService(ServiceBase):
                 PostProcessorConfig,
                 SQLPostProcessor,
             )
+
             pp_config = PostProcessorConfig(
                 enable_execution_test=self._db is not None,
             )
@@ -232,12 +239,15 @@ class Text2SQLService(ServiceBase):
             await self._postprocessor.start()
             self._logger.info("SQL Post-Processor 初期化完了")
 
-    async def _execute_sql_raw(self, sql: str) -> list[dict]:
+    async def _execute_sql_raw(self, sql: str) -> list[dict[str, Any]]:
         """後処理テスト用の SQL 実行関数."""
         if not self._db:
             msg = "データベース未接続"
             raise RuntimeError(msg)
-        return await self._db.execute_raw(sql)
+        rows = await self._db.execute_raw(sql)
+        if not isinstance(rows, list):
+            return []
+        return [row if isinstance(row, dict) else {"value": row} for row in rows]
 
     async def stop(self) -> None:
         """サービス停止."""
@@ -296,11 +306,7 @@ class Text2SQLService(ServiceBase):
         sql_result = await self._execute_sql_internal(sql)
 
         if not sql_result.success:
-            yield self._emit_error(
-                execution_id,
-                "sql_error",
-                f"SQL実行エラー: {sql_result.error}"
-            )
+            yield self._emit_error(execution_id, "sql_error", f"SQL実行エラー: {sql_result.error}")
             return
 
         yield self._emit_progress(execution_id, 60, "結果を分析中...", phase="analyze")
@@ -343,10 +349,14 @@ class Text2SQLService(ServiceBase):
 
         sql = await self._generate_sql_internal(question)
 
-        yield self._emit_result(execution_id, {
-            "sql": sql,
-            "question": question,
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "sql": sql,
+                "question": question,
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     async def _do_execute_sql(
         self,
@@ -362,11 +372,7 @@ class Text2SQLService(ServiceBase):
         sql_result = await self._execute_sql_internal(sql)
 
         if not sql_result.success:
-            yield self._emit_error(
-                execution_id,
-                "sql_error",
-                f"SQL実行エラー: {sql_result.error}"
-            )
+            yield self._emit_error(execution_id, "sql_error", f"SQL実行エラー: {sql_result.error}")
             return
 
         chart = None
@@ -413,20 +419,17 @@ class Text2SQLService(ServiceBase):
         # 2. Few-shot Selection（有効な場合）
         fewshot_prompt = ""
         if self._fewshot_manager:
-            examples = self._fewshot_manager.get_similar_examples(
-                question, k=self._config.fewshot_k
-            )
+            examples = self._fewshot_manager.get_similar_examples(question, k=self._config.fewshot_k)
             if examples:
                 fewshot_prompt = self._fewshot_manager.format_examples_prompt(examples)
                 self._logger.debug(f"Few-shot: {len(examples)} 例を選択")
 
         # 3. プロンプト構築
-        prompt = self._build_enhanced_prompt(
-            question, schema_info, fewshot_prompt
-        )
+        prompt = self._build_enhanced_prompt(question, schema_info, fewshot_prompt)
 
         response = await self._llm.chat([{"role": "user", "content": prompt}])
-        sql = self._extract_sql(response["content"])
+        response_content = response.get("content")
+        sql = self._extract_sql(response_content if isinstance(response_content, str) else "")
         sql = self._sanitize_sql(sql)
 
         # 4. Post-Processing（有効な場合）
@@ -437,9 +440,7 @@ class Text2SQLService(ServiceBase):
                 schema_context=schema_info,
             )
             if pp_result.total_corrections > 0:
-                self._logger.info(
-                    f"SQL 修正: {pp_result.total_corrections} 回の修正を適用"
-                )
+                self._logger.info(f"SQL 修正: {pp_result.total_corrections} 回の修正を適用")
             sql = pp_result.final_sql
 
         return sql
@@ -549,7 +550,7 @@ SQLクエリのみを出力してください（説明不要）:
 
 ## 結果概要
 - 取得行数: {result.row_count}行
-- カラム: {', '.join(result.columns)}
+- カラム: {", ".join(result.columns)}
 
 ## データサンプル（最大10行）
 {sample}
@@ -562,7 +563,8 @@ SQLクエリのみを出力してください（説明不要）:
 回答:"""
 
         response = await self._llm.chat([{"role": "user", "content": prompt}])
-        return response["content"].strip()
+        content = response.get("content")
+        return content.strip() if isinstance(content, str) else ""
 
     def _generate_chart(self, question: str, result: SQLResult) -> ChartData | None:
         """チャート生成."""
@@ -583,10 +585,14 @@ SQLクエリのみを出力してください（説明不要）:
                 "datasets": [{"data": values}],
                 "xAxis": {"type": "category", "data": labels},
                 "yAxis": {"type": "value"},
-                "series": [{
-                    "type": chart_type.value if chart_type != ChartType.PIE else "pie",
-                    "data": [{"name": l, "value": v} for l, v in zip(labels, values, strict=False)] if chart_type == ChartType.PIE else values,
-                }],
+                "series": [
+                    {
+                        "type": chart_type.value if chart_type != ChartType.PIE else "pie",
+                        "data": [{"name": l, "value": v} for l, v in zip(labels, values, strict=False)]
+                        if chart_type == ChartType.PIE
+                        else values,
+                    }
+                ],
             },
         )
 

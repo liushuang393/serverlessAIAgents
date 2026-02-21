@@ -189,4 +189,3 @@ def test_get_status(qdrant_db):
     assert status["collection_name"] == "test-collection"
     assert status["dimension"] == 384
     assert status["connected"] is True
-

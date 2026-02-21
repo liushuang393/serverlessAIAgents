@@ -60,7 +60,6 @@ class NetworkSecurityError(OSSkillError):
     """ネットワークセキュリティ違反."""
 
 
-
 class NetworkSkill(OSSkillBase):
     """ネットワークスキル.
 
@@ -77,6 +76,7 @@ class NetworkSkill(OSSkillBase):
         if self._client is None:
             try:
                 import httpx
+
                 self._client = httpx.AsyncClient(timeout=self._config.max_timeout_seconds)
             except ImportError:
                 msg = "httpx がインストールされていません: pip install httpx"
@@ -143,11 +143,14 @@ class NetworkSkill(OSSkillBase):
         validated_url = self._validate_url(url)
         timeout = timeout or self._config.max_timeout_seconds
 
-        self._audit_log("http_request", {
-            "method": method,
-            "url": validated_url,
-            "has_body": body is not None,
-        })
+        self._audit_log(
+            "http_request",
+            {
+                "method": method,
+                "url": validated_url,
+                "has_body": body is not None,
+            },
+        )
 
         client = self._get_client()
         start_time = asyncio.get_event_loop().time()
@@ -196,4 +199,3 @@ class NetworkSkill(OSSkillBase):
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """クリーンアップ."""
         await self.close()
-

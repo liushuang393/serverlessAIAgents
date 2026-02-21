@@ -119,9 +119,7 @@ class KnowledgeEntry:
             timestamp=datetime.fromisoformat(data["timestamp"])
             if isinstance(data.get("timestamp"), str)
             else data.get("timestamp", datetime.now(UTC)),
-            updated_at=datetime.fromisoformat(data["updated_at"])
-            if data.get("updated_at")
-            else None,
+            updated_at=datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else None,
             importance=data.get("importance", 0.5),
             access_count=data.get("access_count", 0),
             metadata=data.get("metadata", {}),
@@ -156,4 +154,3 @@ class SearchResult:
     entry: KnowledgeEntry
     score: float
     search_type: SearchType = SearchType.HYBRID
-

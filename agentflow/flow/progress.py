@@ -90,9 +90,7 @@ class ProgressTracker:
         )
         return to_legacy_dict(event)
 
-    def on_node_complete(
-        self, node: FlowNode, result: dict[str, Any], *, success: bool = True
-    ) -> dict[str, Any]:
+    def on_node_complete(self, node: FlowNode, result: dict[str, Any], *, success: bool = True) -> dict[str, Any]:
         """ノード完了イベント.
 
         Args:
@@ -125,9 +123,7 @@ class ProgressTracker:
         )
         return to_legacy_dict(event)
 
-    def on_node_error(
-        self, node: FlowNode, error: str, error_type: str = "AgentError"
-    ) -> dict[str, Any]:
+    def on_node_error(self, node: FlowNode, error: str, error_type: str = "AgentError") -> dict[str, Any]:
         """ノードエラーイベント.
 
         Args:

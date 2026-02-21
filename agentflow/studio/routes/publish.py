@@ -6,7 +6,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response, StreamingResponse
@@ -16,6 +16,10 @@ from agentflow.studio.models import (
     PublishDeployResponse,
     PublishExportRequest,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 def create_publish_router() -> APIRouter:
@@ -153,19 +157,34 @@ def create_publish_router() -> APIRouter:
                         deployment_id=event.data.get("deployment_id"),
                         url=event.data.get("url"),
                         logs=logs,
+                        error=None,
                     )
                 if event.type == "error":
                     return PublishDeployResponse(
                         status="error",
+                        deployment_id=None,
+                        url=None,
                         logs=logs,
                         error=event.message,
                     )
 
-            return PublishDeployResponse(status="success", logs=logs)
+            return PublishDeployResponse(
+                status="success",
+                deployment_id=None,
+                url=None,
+                logs=logs,
+                error=None,
+            )
 
         except Exception as e:
             logs.append(f"❌ エラー: {e!s}")
-            return PublishDeployResponse(status="error", logs=logs, error=str(e))
+            return PublishDeployResponse(
+                status="error",
+                deployment_id=None,
+                url=None,
+                logs=logs,
+                error=str(e),
+            )
 
     @router.post("/deploy/stream")
     async def publish_deploy_stream(
@@ -175,7 +194,7 @@ def create_publish_router() -> APIRouter:
         from agentflow.core.interfaces import CodeOutputType, DeployTarget
         from agentflow.services import PublishService
 
-        async def event_generator():
+        async def event_generator() -> AsyncIterator[str]:
             try:
                 service = PublishService()
 
@@ -245,4 +264,3 @@ def create_publish_router() -> APIRouter:
         return [f.to_dict() for f in fields]
 
     return router
-

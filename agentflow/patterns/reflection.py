@@ -120,9 +120,7 @@ class ReflectorAgent(AgentBlock):
                 suggestions=["LLM を設定してください"],
             )
 
-        self._logger.info(
-            f"評価完了: スコア={reflection.score}, 合格={reflection.is_acceptable}"
-        )
+        self._logger.info(f"評価完了: スコア={reflection.score}, 合格={reflection.is_acceptable}")
 
         return {
             "is_acceptable": reflection.is_acceptable,
@@ -135,9 +133,7 @@ class ReflectorAgent(AgentBlock):
 
     def _build_evaluation_prompt(self, output: str, task: str) -> str:
         """評価 Prompt を構築."""
-        criteria_text = "\n".join(
-            [f"- {key}: {value}" for key, value in self._criteria.items()]
-        )
+        criteria_text = "\n".join([f"- {key}: {value}" for key, value in self._criteria.items()])
 
         return f"""あなたは品質評価の専門家です。以下の出力を評価してください。
 
@@ -347,18 +343,22 @@ class ReflectionLoop:
             self._logger.info(f"反復 {iteration + 1}/{self._max_iterations}")
 
             # 評価
-            reflection = await self._reflector.run({
-                "output": current_output,
-                "task": task,
-            })
+            reflection = await self._reflector.run(
+                {
+                    "output": current_output,
+                    "task": task,
+                }
+            )
 
-            history.append({
-                "iteration": iteration + 1,
-                "output": current_output,
-                "score": reflection["score"],
-                "feedback": reflection["feedback"],
-                "is_acceptable": reflection["is_acceptable"],
-            })
+            history.append(
+                {
+                    "iteration": iteration + 1,
+                    "output": current_output,
+                    "score": reflection["score"],
+                    "feedback": reflection["feedback"],
+                    "is_acceptable": reflection["is_acceptable"],
+                }
+            )
 
             # 合格判定
             if reflection["is_acceptable"]:
@@ -367,12 +367,14 @@ class ReflectionLoop:
 
             # 改善
             if iteration < self._max_iterations - 1:
-                improvement = await self._improver.run({
-                    "output": current_output,
-                    "feedback": reflection["feedback"],
-                    "suggestions": reflection["suggestions"],
-                    "task": task,
-                })
+                improvement = await self._improver.run(
+                    {
+                        "output": current_output,
+                        "feedback": reflection["feedback"],
+                        "suggestions": reflection["suggestions"],
+                        "task": task,
+                    }
+                )
                 current_output = improvement["improved_output"]
 
         self._logger.info(f"Reflection ループ完了: 反復回数={iteration + 1}")
@@ -482,4 +484,3 @@ __all__ = [
     "ReflectionWorkflow",
     "ReflectorAgent",
 ]
-

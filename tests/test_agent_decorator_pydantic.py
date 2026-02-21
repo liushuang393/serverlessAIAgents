@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """@agent デコレーターの Pydantic 対応テスト.
 
 検証:
@@ -12,7 +11,7 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from agentflow.agent_decorator import agent, AgentClient, _agent_registry
+from agentflow.agent_decorator import AgentClient, _agent_registry, agent
 
 
 # ============================================================
@@ -38,11 +37,14 @@ class AnswerOutput(BaseModel):
 # Test Agents (定义在 fixture 中，避免全局副作用)
 # ============================================================
 
+
 def _create_simple_agent():
     """シンプルな Agent を作成."""
+
     @agent
     class SimpleAgent:
         """型なしのシンプルな Agent."""
+
         system_prompt = "あなたはアシスタントです。"
 
         async def process(self, input_data: dict) -> dict:
@@ -53,9 +55,11 @@ def _create_simple_agent():
 
 def _create_typed_agent():
     """型付きの Agent を作成."""
+
     @agent
     class TypedAgent:
         """Pydantic の型付き Agent."""
+
         system_prompt = "あなたは型付きのアシスタントです。"
         input_schema = QuestionInput
         output_schema = AnswerOutput

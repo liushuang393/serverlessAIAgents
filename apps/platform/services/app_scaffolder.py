@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """App Scaffolder Service.
 
 Platform の「APPを追加」から、最小構成の App 骨格を自動生成する。
@@ -9,16 +8,19 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from apps.platform.schemas.provisioning_schemas import (
     AgentBlueprintInput,
     AppCreateRequest,
     AppCreateResponse,
 )
-from apps.platform.services.app_discovery import AppDiscoveryService
 from apps.platform.services.framework_env import FrameworkEnvService
 from apps.platform.services.port_allocator import PortAllocatorService
+
+
+if TYPE_CHECKING:
+    from apps.platform.services.app_discovery import AppDiscoveryService
 
 
 class AppScaffolderService:
@@ -180,6 +182,15 @@ class AppScaffolderService:
                 {"value": "public", "label": "Public"},
                 {"value": "tenant_allowlist", "label": "Tenant Allowlist"},
             ],
+            "evolution_scope_options": [
+                {"value": "tenant_app", "label": "Tenant + App"},
+                {"value": "tenant_product_line", "label": "Tenant + Product Line"},
+                {"value": "global_verified", "label": "Global Verified"},
+            ],
+            "evolution_validator_backends": [
+                {"value": "redis_stream", "label": "Redis Streams"},
+                {"value": "none", "label": "No Queue"},
+            ],
         }
 
     async def create_app(self, request: AppCreateRequest) -> AppCreateResponse:
@@ -272,13 +283,13 @@ class AppScaffolderService:
             dependencies_external.append(request.vector_database)
         if request.rag_enabled:
             dependencies_external.append("vector_store")
+        if request.evolution and request.evolution.strategy_service_url:
+            dependencies_external.append("strategy_service")
 
         db_kind = None if request.database == "none" else request.database
         rag_provider: str | None = None
         if request.rag_enabled:
-            rag_provider = (
-                request.vector_database if request.vector_database != "none" else "qdrant"
-            )
+            rag_provider = request.vector_database if request.vector_database != "none" else "qdrant"
         rag_pattern = "balanced_knowledge" if request.rag_enabled else None
 
         db_url: str | None = None
@@ -289,23 +300,45 @@ class AppScaffolderService:
             db_user = request.name
             db_password = f"{request.name}_password"
             db_password_env = f"{request.name.upper()}_DB_PASSWORD"
-            db_url = (
-                f"postgresql+asyncpg://{db_user}:{db_password}"
-                f"@localhost:{ports['db']}/{request.name}"
-            )
+            db_url = f"postgresql+asyncpg://{db_user}:{db_password}@localhost:{ports['db']}/{request.name}"
         elif request.database == "sqlite":
             db_url = "sqlite:///./data/app.db"
 
         backend_url = None if ports["api"] is None else f"http://localhost:{ports['api']}"
-        frontend_url = (
-            None if ports["frontend"] is None else f"http://localhost:{ports['frontend']}"
-        )
+        frontend_url = None if ports["frontend"] is None else f"http://localhost:{ports['frontend']}"
         health_url = None if backend_url is None else f"{backend_url}/health"
         auth_enabled = bool(request.permission_scopes)
         auth_providers = ["rbac"] if auth_enabled else []
-        release_require_approval = (
-            request.risk_level in {"medium", "high"} if request.risk_level is not None else True
+        release_require_approval = request.risk_level in {"medium", "high"} if request.risk_level is not None else True
+        evolution_config = (
+            request.evolution.model_dump()
+            if request.evolution is not None
+            else {
+                "enabled": True,
+                "strategy_service_url": None,
+                "validator_queue": {
+                    "backend": "redis_stream",
+                    "redis_url": "redis://localhost:6379/0",
+                    "stream_key": "evolution:validate:stream",
+                    "consumer_group": "evolution-validator-v1",
+                    "max_retries": 5,
+                },
+                "scope_policy": ["tenant_app", "tenant_product_line", "global_verified"],
+                "retrieval": {
+                    "high_confidence_skip_threshold": 0.82,
+                    "high_complexity_threshold": 0.70,
+                    "low_confidence_threshold": 0.55,
+                },
+                "suspicion": {
+                    "max_age_days": 30,
+                    "failure_streak_threshold": 2,
+                    "performance_drop_ratio": 0.2,
+                },
+            }
         )
+        if not request.redis_enabled and evolution_config["validator_queue"]["backend"] == "redis_stream":
+            evolution_config["validator_queue"]["backend"] = "none"
+            evolution_config["validator_queue"]["redis_url"] = None
 
         return {
             "name": request.name,
@@ -317,6 +350,7 @@ class AppScaffolderService:
             "product_line": request.product_line,
             "surface_profile": request.surface_profile,
             "audit_profile": request.audit_profile,
+            "evolution": evolution_config,
             "plugin_bindings": [
                 {
                     "id": binding.id,
@@ -361,9 +395,7 @@ class AppScaffolderService:
                     "api_key_env": llm_api_key_env,
                 },
                 "vector_db": {
-                    "provider": None
-                    if request.vector_database == "none"
-                    else request.vector_database,
+                    "provider": None if request.vector_database == "none" else request.vector_database,
                     "url": request.vector_db_url,
                     "collection": request.vector_db_collection,
                     "api_key_env": vector_db_api_key_env,
@@ -412,9 +444,7 @@ class AppScaffolderService:
                 "commands": {
                     "backend_dev": f"python -m apps.{request.name}.main",
                     "frontend_dev": (
-                        f"cd apps/{request.name}/frontend && npm run dev"
-                        if request.frontend_enabled
-                        else None
+                        f"cd apps/{request.name}/frontend && npm run dev" if request.frontend_enabled else None
                     ),
                     "publish": "docker compose up -d --build",
                     "start": "docker compose up -d",
@@ -467,9 +497,7 @@ class AppScaffolderService:
                 "llm_api_key_env": llm_api_key_env,
                 "default_model": request.default_model,
                 "default_skills": request.default_skills,
-                "vector_db_provider": None
-                if request.vector_database == "none"
-                else request.vector_database,
+                "vector_db_provider": None if request.vector_database == "none" else request.vector_database,
                 "vector_db_url": request.vector_db_url,
                 "vector_db_collection": request.vector_db_collection,
                 "vector_db_api_key_env": vector_db_api_key_env,

@@ -4,13 +4,15 @@ from __future__ import annotations
 
 import secrets
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import Select, delete, func, select, update
-
-from apps.faq_system.backend.auth.models import UserInfo
 from apps.faq_system.backend.db.models import ChatMessage
 from apps.faq_system.backend.db.session import ensure_database_ready, get_db_session
+from sqlalchemy import Select, delete, func, select
+
+
+if TYPE_CHECKING:
+    from apps.faq_system.backend.auth.models import UserInfo
 
 
 class ChatHistoryService:
@@ -58,9 +60,7 @@ class ChatHistoryService:
             return []
 
         await ensure_database_ready()
-        stmt: Select[tuple[ChatMessage]] = select(ChatMessage).where(
-            ChatMessage.session_id == session_id
-        )
+        stmt: Select[tuple[ChatMessage]] = select(ChatMessage).where(ChatMessage.session_id == session_id)
         if user is not None:
             stmt = stmt.where(ChatMessage.user_id == user.user_id)
 
@@ -137,13 +137,15 @@ class ChatHistoryService:
             async with get_db_session() as session2:
                 preview_row = (await session2.execute(preview_stmt)).scalar_one_or_none()
 
-            results.append({
-                "session_id": row.session_id,
-                "title": self._auto_title_from_text(preview_row) if preview_row else row.session_id,
-                "message_count": row.message_count,
-                "last_message_at": row.last_message_at.isoformat() if row.last_message_at else None,
-                "preview": (preview_row or "")[:80],
-            })
+            results.append(
+                {
+                    "session_id": row.session_id,
+                    "title": self._auto_title_from_text(preview_row) if preview_row else row.session_id,
+                    "message_count": row.message_count,
+                    "last_message_at": row.last_message_at.isoformat() if row.last_message_at else None,
+                    "preview": (preview_row or "")[:80],
+                }
+            )
 
         return results
 
@@ -158,12 +160,9 @@ class ChatHistoryService:
             削除が行われた場合 True。
         """
         await ensure_database_ready()
-        stmt = (
-            delete(ChatMessage)
-            .where(
-                ChatMessage.session_id == session_id,
-                ChatMessage.user_id == user.user_id,
-            )
+        stmt = delete(ChatMessage).where(
+            ChatMessage.session_id == session_id,
+            ChatMessage.user_id == user.user_id,
         )
         async with get_db_session() as session:
             result = await session.execute(stmt)
@@ -181,4 +180,3 @@ class ChatHistoryService:
         if len(text.strip()) > 30:
             title += "…"
         return title
-

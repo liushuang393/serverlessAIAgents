@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Auto-Agent + Skills 統合テスト.
 
 ToolDiscoveryService、AgentRegistry、SimpleEngine、ToolBinder の
@@ -6,8 +5,9 @@ ToolDiscoveryService、AgentRegistry、SimpleEngine、ToolBinder の
 """
 
 import pytest
-from agentflow.core.tool_registry import reset_global_tool_registry
+
 from agentflow.core.agent_registry import reset_global_agent_registry
+from agentflow.core.tool_registry import reset_global_tool_registry
 
 
 @pytest.fixture(autouse=True)
@@ -25,11 +25,11 @@ def reset_registries():
 async def test_full_auto_agent_skills_workflow():
     """Auto-Agent + Skills の完全統合ワークフロー."""
     from agentflow import agent
-    from agentflow.engines import SimpleEngine
-    from agentflow.core.tool_registry import get_global_tool_registry
     from agentflow.core.agent_registry import get_global_agent_registry
-    from agentflow.core.tool_discovery import ToolDiscoveryService
     from agentflow.core.capability_spec import CapabilityRequirement
+    from agentflow.core.tool_discovery import ToolDiscoveryService
+    from agentflow.core.tool_registry import get_global_tool_registry
+    from agentflow.engines import SimpleEngine
 
     # Step 1: Skills を発見
     tool_registry = get_global_tool_registry()
@@ -76,9 +76,9 @@ async def test_full_auto_agent_skills_workflow():
 @pytest.mark.asyncio
 async def test_skill_discovery_registers_all_sources():
     """スキル発見が全ソースを登録することを確認."""
-    from agentflow.core.tool_registry import get_global_tool_registry
-    from agentflow.core.tool_discovery import ToolDiscoveryService
     from agentflow.core.tool_definition import ToolSource
+    from agentflow.core.tool_discovery import ToolDiscoveryService
+    from agentflow.core.tool_registry import get_global_tool_registry
 
     tool_registry = get_global_tool_registry()
     service = ToolDiscoveryService(tool_registry)
@@ -108,16 +108,19 @@ async def test_agent_capability_matching():
     @agent(skills=["rag", "search"])
     class SearchAgent:
         """検索Agent."""
+
         system_prompt = "検索を行う"
 
     @agent(skills=["chatbot"])
     class ChatAgent:
         """チャットAgent."""
+
         system_prompt = "チャット"
 
     @agent(skills=["analytics", "chart"])
     class AnalyticsAgent:
         """分析Agent."""
+
         system_prompt = "分析"
 
     registry = get_global_agent_registry()

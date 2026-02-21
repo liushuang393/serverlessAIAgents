@@ -104,9 +104,7 @@ class TenantContext:
 
 
 # 当前租户上下文
-_current_tenant: ContextVar[TenantContext | None] = ContextVar(
-    "agentflow_tenant_context", default=None
-)
+_current_tenant: ContextVar[TenantContext | None] = ContextVar("agentflow_tenant_context", default=None)
 
 
 class TenantIsolation:

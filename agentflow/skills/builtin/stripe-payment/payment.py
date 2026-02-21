@@ -34,12 +34,8 @@ class StripeConfig(BaseModel):
 
     secret_key: str = Field(..., description="Stripe 密钥 (sk_test_... 或 sk_live_...)")
     webhook_secret: str | None = Field(default=None, description="Webhook 签名密钥")
-    success_url: str = Field(
-        default="https://example.com/success", description="支付成功后的跳转 URL"
-    )
-    cancel_url: str = Field(
-        default="https://example.com/cancel", description="支付取消后的跳转 URL"
-    )
+    success_url: str = Field(default="https://example.com/success", description="支付成功后的跳转 URL")
+    cancel_url: str = Field(default="https://example.com/cancel", description="支付取消后的跳转 URL")
     test_mode: bool = Field(default=False, description="测试模式")
 
 
@@ -98,9 +94,7 @@ class StripePayment:
 
         stripe.api_key = self._config.secret_key
         self._stripe = stripe
-        logger.info(
-            f"Stripe 已初始化 ({'测试模式' if self._config.test_mode else '生产模式'})"
-        )
+        logger.info(f"Stripe 已初始化 ({'测试模式' if self._config.test_mode else '生产模式'})")
 
     # ========================================================================
     # Checkout Session
@@ -424,10 +418,7 @@ class StripePayment:
             else:
                 cancelled = self._stripe.Subscription.cancel(subscription_id)
 
-            logger.info(
-                f"已取消订阅: {subscription_id} "
-                f"({'周期结束' if cancel_at_period_end else '立即'})"
-            )
+            logger.info(f"已取消订阅: {subscription_id} ({'周期结束' if cancel_at_period_end else '立即'})")
             return cancelled
 
         except self._stripe.error.StripeError as e:
@@ -500,10 +491,7 @@ class StripePayment:
                 params["reason"] = reason
 
             refund = self._stripe.Refund.create(**params)
-            logger.info(
-                f"已创建退款: {refund.id} "
-                f"(金额: {refund.amount}, PaymentIntent: {payment_intent_id})"
-            )
+            logger.info(f"已创建退款: {refund.id} (金额: {refund.amount}, PaymentIntent: {payment_intent_id})")
             return refund
 
         except self._stripe.error.StripeError as e:
@@ -768,9 +756,7 @@ class StripePayment:
             raise PaymentError(msg)
 
         try:
-            clock = self._stripe.test_helpers.TestClock.create(
-                frozen_time=int(frozen_time.timestamp())
-            )
+            clock = self._stripe.test_helpers.TestClock.create(frozen_time=int(frozen_time.timestamp()))
             logger.info(f"已创建测试时钟: {clock.id}")
             return clock
         except self._stripe.error.StripeError as e:
@@ -803,4 +789,3 @@ class StripePayment:
             return clock
         except self._stripe.error.StripeError as e:
             raise PaymentError(str(e), getattr(e, "code", None))
-

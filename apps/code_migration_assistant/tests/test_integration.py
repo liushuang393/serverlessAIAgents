@@ -1,13 +1,12 @@
-# -*- coding: utf-8 -*-
 """Integration tests for Code Migration Assistant (v4 pipeline)."""
 
 from __future__ import annotations
 
 import pytest
-
-from agentflow import MCPToolClient as MCPClient
 from apps.code_migration_assistant.mcp_tools.cobol_parser import COBOLParser
 from apps.code_migration_assistant.orchestrator import CodeMigrationOrchestrator
+
+from agentflow import MCPToolClient as MCPClient
 
 
 @pytest.mark.asyncio

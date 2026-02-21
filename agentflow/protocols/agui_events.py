@@ -99,9 +99,7 @@ class FlowStartEvent(AGUIEvent):
     フローの実行が開始されたときに発行されます。
     """
 
-    event_type: AGUIEventType = Field(
-        default=AGUIEventType.FLOW_START, description="イベントタイプ"
-    )
+    event_type: AGUIEventType = Field(default=AGUIEventType.FLOW_START, description="イベントタイプ")
 
 
 class FlowCompleteEvent(AGUIEvent):
@@ -114,13 +112,9 @@ class FlowCompleteEvent(AGUIEvent):
     - result が設定されている場合: イベント内に完整結果を含む
     """
 
-    event_type: AGUIEventType = Field(
-        default=AGUIEventType.FLOW_COMPLETE, description="イベントタイプ"
-    )
+    event_type: AGUIEventType = Field(default=AGUIEventType.FLOW_COMPLETE, description="イベントタイプ")
     result_id: str | None = Field(default=None, description="結果ID（ストア参照用）")
-    result: dict[str, Any] | None = Field(
-        default=None, description="完整結果（小サイズ時直接含む）"
-    )
+    result: dict[str, Any] | None = Field(default=None, description="完整結果（小サイズ時直接含む）")
     include_result: bool = Field(default=False, description="結果をイベントに含むか")
 
 
@@ -130,9 +124,7 @@ class FlowErrorEvent(AGUIEvent):
     フローの実行中にエラーが発生したときに発行されます。
     """
 
-    event_type: AGUIEventType = Field(
-        default=AGUIEventType.FLOW_ERROR, description="イベントタイプ"
-    )
+    event_type: AGUIEventType = Field(default=AGUIEventType.FLOW_ERROR, description="イベントタイプ")
     error_message: str = Field(..., description="エラーメッセージ")
     error_type: str = Field(..., description="エラータイプ")
 
@@ -143,9 +135,7 @@ class FlowCancelEvent(AGUIEvent):
     フローの実行がキャンセルされたときに発行されます。
     """
 
-    event_type: AGUIEventType = Field(
-        default=AGUIEventType.FLOW_CANCEL, description="イベントタイプ"
-    )
+    event_type: AGUIEventType = Field(default=AGUIEventType.FLOW_CANCEL, description="イベントタイプ")
 
 
 class NodeStartEvent(AGUIEvent):
@@ -154,9 +144,7 @@ class NodeStartEvent(AGUIEvent):
     ノードの実行が開始されたときに発行されます。
     """
 
-    event_type: AGUIEventType = Field(
-        default=AGUIEventType.NODE_START, description="イベントタイプ"
-    )
+    event_type: AGUIEventType = Field(default=AGUIEventType.NODE_START, description="イベントタイプ")
     node_id: str = Field(..., description="ノード ID")
     node_name: str = Field(..., description="ノード名")
 
@@ -167,9 +155,7 @@ class NodeCompleteEvent(AGUIEvent):
     ノードの実行が正常に完了したときに発行されます。
     """
 
-    event_type: AGUIEventType = Field(
-        default=AGUIEventType.NODE_COMPLETE, description="イベントタイプ"
-    )
+    event_type: AGUIEventType = Field(default=AGUIEventType.NODE_COMPLETE, description="イベントタイプ")
     node_id: str = Field(..., description="ノード ID")
     node_name: str = Field(..., description="ノード名")
 
@@ -180,9 +166,7 @@ class NodeErrorEvent(AGUIEvent):
     ノードの実行中にエラーが発生したときに発行されます。
     """
 
-    event_type: AGUIEventType = Field(
-        default=AGUIEventType.NODE_ERROR, description="イベントタイプ"
-    )
+    event_type: AGUIEventType = Field(default=AGUIEventType.NODE_ERROR, description="イベントタイプ")
     node_id: str = Field(..., description="ノード ID")
     node_name: str = Field(..., description="ノード名")
     error_message: str = Field(..., description="エラーメッセージ")
@@ -231,9 +215,7 @@ class ClarificationRequiredEvent(AGUIEvent):
     フロントエンドはこのイベントを受信したら補足入力フォームを表示します。
     """
 
-    event_type: AGUIEventType = Field(
-        default=AGUIEventType.CLARIFICATION_REQUIRED, description="イベントタイプ"
-    )
+    event_type: AGUIEventType = Field(default=AGUIEventType.CLARIFICATION_REQUIRED, description="イベントタイプ")
     original_question: str = Field(..., description="元の質問")
     questions: list[ClarificationQuestion] = Field(..., description="補足質問リスト")
     message: str = Field(default="", description="ユーザーへのメッセージ")
@@ -246,9 +228,7 @@ class ClarificationReceivedEvent(AGUIEvent):
     ユーザーが補足情報を提供した際に発行されます。
     """
 
-    event_type: AGUIEventType = Field(
-        default=AGUIEventType.CLARIFICATION_RECEIVED, description="イベントタイプ"
-    )
+    event_type: AGUIEventType = Field(default=AGUIEventType.CLARIFICATION_RECEIVED, description="イベントタイプ")
     answers: dict[str, Any] = Field(..., description="ユーザー回答")
 
 

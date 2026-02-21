@@ -165,4 +165,3 @@ class MfaVerifyRequest(BaseModel):
     """MFA 検証リクエスト."""
 
     totp_code: str = Field(..., min_length=6, max_length=6, description="MFAコード")
-

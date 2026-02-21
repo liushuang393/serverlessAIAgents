@@ -35,9 +35,7 @@ export default function PreviewPanel() {
   const [inputError, setInputError] = useState<string | null>(null);
   const [result, setResult] = useState<PreviewResult | null>(null);
   const [isRunning, setIsRunning] = useState(false);
-  const [activeTab, setActiveTab] = useState<'input' | 'output' | 'logs'>(
-    'input',
-  );
+  const [activeTab, setActiveTab] = useState<'input' | 'output' | 'logs'>('input');
   const [debugMode, setDebugMode] = useState(false);
 
   const validateJson = useCallback((json: string): boolean => {
@@ -155,8 +153,8 @@ export default function PreviewPanel() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
-break;
-}
+          break;
+        }
 
         const chunk = decoder.decode(value);
         const lines = chunk.split('\n');
@@ -263,9 +261,7 @@ break;
         {/* Input タブ */}
         {activeTab === 'input' && (
           <div className="space-y-2">
-            <label className="text-xs text-muted-foreground">
-              入力データ (JSON)
-            </label>
+            <label className="text-xs text-muted-foreground">入力データ (JSON)</label>
             <textarea
               value={input}
               onChange={(e) => handleInputChange(e.target.value)}
@@ -274,9 +270,7 @@ break;
               }`}
               placeholder='{\n  "key": "value"\n}'
             />
-            {inputError && (
-              <p className="text-xs text-destructive">{inputError}</p>
-            )}
+            {inputError && <p className="text-xs text-destructive">{inputError}</p>}
           </div>
         )}
 
@@ -292,25 +286,21 @@ break;
                       result.status === 'success'
                         ? 'bg-green-100 text-green-700'
                         : result.status === 'error'
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-yellow-100 text-yellow-700'
+                          ? 'bg-red-100 text-red-700'
+                          : 'bg-yellow-100 text-yellow-700'
                     }`}
                   >
                     {result.status}
                   </span>
                   {result.duration_ms && (
-                    <span className="text-muted-foreground">
-                      {result.duration_ms.toFixed(1)}ms
-                    </span>
+                    <span className="text-muted-foreground">{result.duration_ms.toFixed(1)}ms</span>
                   )}
                 </div>
 
                 {/* 結果 */}
                 {result.result && (
                   <div>
-                    <label className="text-xs text-muted-foreground mb-1 block">
-                      実行結果
-                    </label>
+                    <label className="text-xs text-muted-foreground mb-1 block">実行結果</label>
                     <pre className="p-2 bg-muted rounded-md text-xs font-mono overflow-auto max-h-64">
                       {JSON.stringify(result.result, null, 2)}
                     </pre>
@@ -343,10 +333,10 @@ break;
                     log.type === 'error'
                       ? 'bg-destructive/10 text-destructive'
                       : log.type === 'complete'
-                      ? 'bg-green-50 text-green-700'
-                      : log.type === 'progress'
-                      ? 'bg-blue-50 text-blue-700'
-                      : 'bg-muted'
+                        ? 'bg-green-50 text-green-700'
+                        : log.type === 'progress'
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'bg-muted'
                   }`}
                 >
                   <div className="flex items-center gap-2">
@@ -362,23 +352,15 @@ break;
                       </span>
                     )}
                     {log.agent_type && (
-                      <span className="text-muted-foreground">
-                        {log.agent_type}
-                      </span>
+                      <span className="text-muted-foreground">{log.agent_type}</span>
                     )}
                   </div>
                   {log.message && <p className="mt-1">{log.message}</p>}
-                  {log.status && (
-                    <p className="mt-1 text-muted-foreground">
-                      Status: {log.status}
-                    </p>
-                  )}
+                  {log.status && <p className="mt-1 text-muted-foreground">Status: {log.status}</p>}
                 </div>
               ))
             ) : (
-              <p className="text-xs text-muted-foreground text-center py-8">
-                実行ログがありません
-              </p>
+              <p className="text-xs text-muted-foreground text-center py-8">実行ログがありません</p>
             )}
           </div>
         )}

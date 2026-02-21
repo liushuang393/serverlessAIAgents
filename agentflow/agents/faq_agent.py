@@ -188,13 +188,13 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         self._services_initialized = False
 
         # サービスインスタンス（遅延初期化・私有化）
-        self.__rag_service = None
-        self.__sql_service = None
-        self.__chart_service = None
-        self.__suggestion_service = None
-        self.__design_intent_agent = None
-        self.__design_prompt_agent = None
-        self.__design_workflow_agent = None
+        self.__rag_service: Any = None
+        self.__sql_service: Any = None
+        self.__chart_service: Any = None
+        self.__suggestion_service: Any = None
+        self.__design_intent_agent: Any = None
+        self.__design_prompt_agent: Any = None
+        self.__design_workflow_agent: Any = None
 
     def _parse_input(self, input_data: dict[str, Any]) -> FAQInput:
         """入力データを Pydantic モデルに変換."""
@@ -353,9 +353,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                 data=chart_data.get("data", {}),
             )
 
-        suggestions = await self._generate_suggestions(
-            question, query_type, bool(sql_result.data.get("data"))
-        )
+        suggestions = await self._generate_suggestions(question, query_type, bool(sql_result.data.get("data")))
 
         return FAQOutput(
             question=question,
@@ -417,10 +415,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         generated_count = len(artifacts)
 
         if generated_count == 0 and errors:
-            answer = (
-                "営業資料画像の生成に失敗しました。"
-                " ComfyUI起動状態または OPENAI_API_KEY を確認してください。"
-            )
+            answer = "営業資料画像の生成に失敗しました。 ComfyUI起動状態または OPENAI_API_KEY を確認してください。"
         else:
             answer = f"営業資料向け画像を {generated_count} 枚生成しました。"
             if errors:
@@ -496,11 +491,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             response.add_table(data, title="クエリ結果")
             keys = list(data[0].keys())
             numeric_key = next(
-                (
-                    key
-                    for key in keys
-                    if isinstance(data[0].get(key), (int, float))
-                ),
+                (key for key in keys if isinstance(data[0].get(key), (int, float))),
                 None,
             )
             x_key = next((key for key in keys if key != numeric_key), keys[0])
@@ -563,9 +554,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                 response.add_alert(error, AlertType.WARNING)
         return response
 
-    async def _generate_suggestions(
-        self, question: str, query_type: str, data_found: bool
-    ) -> list[SuggestionSchema]:
+    async def _generate_suggestions(self, question: str, query_type: str, data_found: bool) -> list[SuggestionSchema]:
         """フォローアップ提案を生成."""
         if query_type == "sales_material":
             return [
@@ -599,6 +588,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             RAGConfig,
             RAGService,
             RerankerType,
+            SQLDialect,
             SuggestionConfig,
             SuggestionService,
             Text2SQLConfig,
@@ -624,11 +614,16 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             )
         )
 
+        try:
+            dialect = SQLDialect(self._config.sql_dialect)
+        except ValueError:
+            dialect = SQLDialect.POSTGRESQL
+
         # Text2SQLサービス
         self.__sql_service = Text2SQLService(
             Text2SQLConfig(
                 schema=self._config.sql_schema,
-                dialect=self._config.sql_dialect,
+                dialect=dialect,
                 auto_chart=self._config.auto_chart,
             )
         )
@@ -637,9 +632,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         self.__chart_service = ChartService(ChartConfig())
 
         # Suggestionサービス
-        self.__suggestion_service = SuggestionService(
-            SuggestionConfig(max_suggestions=self._config.max_suggestions)
-        )
+        self.__suggestion_service = SuggestionService(SuggestionConfig(max_suggestions=self._config.max_suggestions))
         self.__design_intent_agent = IntentAnalyzerAgent(llm_client=self._llm)
         self.__design_prompt_agent = PromptPlannerAgent(llm_client=self._llm)
         self.__design_workflow_agent = WorkflowExecutorAgent(llm_client=self._llm)
@@ -688,8 +681,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                 if category in self._VALID_QUERY_TYPES:
                     return category
                 self._logger.warning(
-                    "LLM intent classification returned unexpected value: %r, "
-                    "falling back to heuristic",
+                    "LLM intent classification returned unexpected value: %r, falling back to heuristic",
                     raw,
                 )
             except Exception as e:
@@ -703,13 +695,22 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         question_lower = question.lower().strip()
 
         sales_material_keywords = [
-            "pitch deck", "sales deck", "poster", "flyer", "banner",
+            "pitch deck",
+            "sales deck",
+            "poster",
+            "flyer",
+            "banner",
         ]
         if any(k in question_lower for k in sales_material_keywords):
             return "sales_material"
 
         sql_indicators = [
-            "top", "ranking", "trend", "total", "average", "count",
+            "top",
+            "ranking",
+            "trend",
+            "total",
+            "average",
+            "count",
         ]
         sql_score = sum(1 for k in sql_indicators if k in question_lower)
         if sql_score >= 2:
@@ -894,7 +895,11 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         question = str(inputs.get("question", ""))
         execution_id = f"stream-{uuid.uuid4().hex[:12]}"
         if not question:
-            yield {"type": "error", "execution_id": execution_id, "message": "質問が指定されていません"}
+            yield {
+                "type": "error",
+                "execution_id": execution_id,
+                "message": "質問が指定されていません",
+            }
             return
 
         yield {
@@ -1002,7 +1007,12 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                     "default": "faq_knowledge",
                 },
                 {"name": "sql_schema", "type": "json", "label": "DBスキーマ"},
-                {"name": "auto_chart", "type": "boolean", "label": "チャート自動生成", "default": True},
+                {
+                    "name": "auto_chart",
+                    "type": "boolean",
+                    "label": "チャート自動生成",
+                    "default": True,
+                },
                 {
                     "name": "sales_material_output_root",
                     "type": "string",

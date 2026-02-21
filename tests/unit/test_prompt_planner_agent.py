@@ -1,7 +1,5 @@
 """PromptPlannerAgent のテスト."""
 
-import pytest
-
 
 class TestPromptPlannerAgent:
     """PromptPlannerAgent ユニットテスト（ルールベース、LLM不使用）."""
@@ -11,6 +9,7 @@ class TestPromptPlannerAgent:
         from agentflow.skills.builtin.design_skills.agents.prompt_planner_agent import (
             PromptPlannerAgent,
         )
+
         return PromptPlannerAgent(llm_client=None)
 
     def _make_sample_intent(self):
@@ -20,6 +19,7 @@ class TestPromptPlannerAgent:
             ImageRole,
             IntentAnalysis,
         )
+
         return IntentAnalysis(
             category=DesignCategory.PRODUCT_PHOTOGRAPHY,
             subject="outdoor bluetooth speaker",

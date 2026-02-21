@@ -3,8 +3,10 @@ import { useChatStore } from '../../stores/chatStore';
 import { Plus, Trash2, LogOut, Settings, Hash, MessageCircle } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useNavigate } from 'react-router-dom';
+import { LocaleSwitcher, useI18n } from '../../i18n';
 
 export const Sidebar = () => {
+    const { t } = useI18n();
     const { sessions, currentSessionId, selectSession, createSession, deleteSession, fetchSessions } = useChatStore();
     const { logout, user } = useAuthStore();
     const navigate = useNavigate();
@@ -45,21 +47,21 @@ export const Sidebar = () => {
                     className="w-full bg-[var(--primary)]/10 border border-[var(--primary)]/20 rounded-2xl p-4 flex items-center justify-center gap-3 hover:bg-[var(--primary)]/20 transition-all text-sm font-bold text-[var(--primary)] shadow-lg group"
                 >
                     <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
-                    New Thread
+                    {t('chat.new_chat')}
                 </button>
             </div>
 
             {/* Navigation / History */}
             <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-1 custom-scrollbar">
                 <div className="flex items-center justify-between px-2 py-3">
-                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em]">History</span>
+                    <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-[0.2em]">{t('sidebar.history')}</span>
                     <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-[var(--text-muted)]">{sessions.length}</span>
                 </div>
 
                 {sessions.length === 0 && (
                     <div className="px-2 py-8 text-center">
-                        <p className="text-xs text-[var(--text-muted)]">No conversations yet.</p>
-                        <p className="text-xs text-[var(--text-muted)] mt-1">Start a new thread above.</p>
+                        <p className="text-xs text-[var(--text-muted)]">{t('sidebar.no_conversations')}</p>
+                        <p className="text-xs text-[var(--text-muted)] mt-1">{t('sidebar.start_new')}</p>
                     </div>
                 )}
 
@@ -74,7 +76,7 @@ export const Sidebar = () => {
                     >
                         <Hash size={16} className={`flex-shrink-0 ${currentSessionId === session.session_id ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`} />
                         <div className="flex-1 truncate pr-6 font-medium" title={session.title}>
-                            {session.title || 'New Thread'}
+                            {session.title || t('chat.new_chat')}
                         </div>
 
                         <button
@@ -93,6 +95,8 @@ export const Sidebar = () => {
 
             {/* User Profile Area */}
             <div className="p-4 mt-auto">
+                {/* 言語切り替え */}
+                <LocaleSwitcher className="w-full bg-transparent border border-white/10 rounded-xl px-2 py-1.5 text-xs text-[var(--text-muted)] cursor-pointer mb-2 focus:outline-none" />
                 <div className="glass rounded-2xl p-3.5 flex items-center gap-3 border border-white/5 shadow-2xl">
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--primary)]/40 to-[var(--primary)]/10 flex items-center justify-center text-xs font-bold border border-[var(--primary)]/20">
                         {user?.username?.substring(0, 2).toUpperCase() || '??'}

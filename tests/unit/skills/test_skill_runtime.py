@@ -1,14 +1,14 @@
-# -*- coding: utf-8 -*-
 """SkillRuntime テスト.
 
 Skill実行ランタイムの単体テスト。
 """
 
-import pytest
 from pathlib import Path
 
-from agentflow.skills.runtime import SkillRuntime, ScriptResult
+import pytest
+
 from agentflow.skills.base import Skill
+from agentflow.skills.runtime import ScriptResult, SkillRuntime
 
 
 class TestScriptResult:
@@ -54,14 +54,14 @@ class TestSkillRuntime:
     async def test_execute_script_not_found(self) -> None:
         """存在しないスクリプトの実行."""
         runtime = SkillRuntime()
-        
+
         # ダミーSkill（パスなし）
         skill = Skill.create(
             name="test-skill",
             description="Test",
             instructions="Test instructions",
         )
-        
+
         result = await runtime.execute_script(skill, "nonexistent", {})
         assert result.success is False
         assert "not found" in (result.error or "").lower()
@@ -70,15 +70,15 @@ class TestSkillRuntime:
     async def test_execute_script_market_trend(self) -> None:
         """market-trend-analysisスキルのスクリプト実行."""
         runtime = SkillRuntime()
-        
+
         # 実際のSkillをロード
         skill_path = Path(__file__).parent.parent.parent.parent / "agentflow/skills/builtin/market-trend-analysis"
         if not skill_path.exists():
             pytest.skip("market-trend-analysis skill not found")
-        
+
         skill = Skill.load(skill_path)
         assert skill is not None
-        
+
         # スクリプト一覧確認
         scripts = runtime.list_scripts(skill)
         assert "validate_input" in scripts
@@ -89,14 +89,14 @@ class TestSkillRuntime:
     async def test_execute_validate_input_script(self) -> None:
         """validate_inputスクリプトの実行."""
         runtime = SkillRuntime()
-        
+
         skill_path = Path(__file__).parent.parent.parent.parent / "agentflow/skills/builtin/market-trend-analysis"
         if not skill_path.exists():
             pytest.skip("market-trend-analysis skill not found")
-        
+
         skill = Skill.load(skill_path)
         assert skill is not None
-        
+
         # 有効な入力データ（idとtitleは必須）
         input_data = {
             "articles": [
@@ -109,7 +109,7 @@ class TestSkillRuntime:
                 }
             ]
         }
-        
+
         result = await runtime.execute_script(skill, "validate_input", input_data)
         assert result.success is True
         assert result.output.get("valid") is True
@@ -118,14 +118,14 @@ class TestSkillRuntime:
     async def test_execute_extract_keywords_script(self) -> None:
         """extract_keywordsスクリプトの実行."""
         runtime = SkillRuntime()
-        
+
         skill_path = Path(__file__).parent.parent.parent.parent / "agentflow/skills/builtin/market-trend-analysis"
         if not skill_path.exists():
             pytest.skip("market-trend-analysis skill not found")
-        
+
         skill = Skill.load(skill_path)
         assert skill is not None
-        
+
         input_data = {
             "articles": [
                 {"title": "Python AI", "content": "Python and machine learning.", "keywords": []},
@@ -134,7 +134,7 @@ class TestSkillRuntime:
             "min_frequency": 1,
             "top_n": 5,
         }
-        
+
         result = await runtime.execute_script(skill, "extract_keywords", input_data)
         assert result.success is True
         assert "keywords" in result.output
@@ -149,4 +149,3 @@ class TestSkillRuntime:
         )
         scripts = runtime.list_scripts(skill)
         assert scripts == []
-

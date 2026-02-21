@@ -72,6 +72,7 @@ class MemoryStorageBackend(BaseStorageBackend):
 
         if ttl is not None:
             from datetime import timedelta
+
             self._ttl[prefixed] = datetime.now() + timedelta(seconds=ttl)
         elif prefixed in self._ttl:
             del self._ttl[prefixed]

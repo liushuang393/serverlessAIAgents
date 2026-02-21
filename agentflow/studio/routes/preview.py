@@ -7,12 +7,16 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
 from agentflow.studio.models import PreviewRunRequest, PreviewRunResponse
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 def create_preview_router() -> APIRouter:
@@ -39,12 +43,14 @@ def create_preview_router() -> APIRouter:
             service = PreviewService()
 
             async for event in service.run_stream(request.workflow, request.input_data):
-                logs.append({
-                    "type": event.type,
-                    "message": event.message,
-                    "timestamp": time.time(),
-                    "data": event.data,
-                })
+                logs.append(
+                    {
+                        "type": event.type,
+                        "message": event.message,
+                        "timestamp": time.time(),
+                        "data": event.data,
+                    }
+                )
 
                 if event.type == "complete" and event.data:
                     result = event.data
@@ -52,6 +58,7 @@ def create_preview_router() -> APIRouter:
                     duration_ms = (time.time() - start_time) * 1000
                     return PreviewRunResponse(
                         status="error",
+                        result=None,
                         logs=logs,
                         duration_ms=duration_ms,
                         error=event.message,
@@ -64,17 +71,21 @@ def create_preview_router() -> APIRouter:
                 result=result,
                 logs=logs,
                 duration_ms=duration_ms,
+                error=None,
             )
 
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
-            logs.append({
-                "type": "error",
-                "message": str(e),
-                "timestamp": time.time(),
-            })
+            logs.append(
+                {
+                    "type": "error",
+                    "message": str(e),
+                    "timestamp": time.time(),
+                }
+            )
             return PreviewRunResponse(
                 status="error",
+                result=None,
                 logs=logs,
                 duration_ms=duration_ms,
                 error=str(e),
@@ -88,7 +99,7 @@ def create_preview_router() -> APIRouter:
         """
         from agentflow.services import PreviewService
 
-        async def event_generator():
+        async def event_generator() -> AsyncIterator[str]:
             try:
                 service = PreviewService()
 
@@ -112,13 +123,12 @@ def create_preview_router() -> APIRouter:
         from agentflow.services import PreviewService
 
         service = PreviewService()
-        validation = await service.validate(request.workflow)
+        errors = await service.validate(request.workflow)
 
         return {
-            "valid": validation.is_valid,
-            "errors": validation.errors,
-            "warnings": validation.warnings,
+            "valid": len(errors) == 0,
+            "errors": errors,
+            "warnings": [],
         }
 
     return router
-

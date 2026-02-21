@@ -16,7 +16,8 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@agentflow/i18n": ["../../../agentflow/i18n/frontend/index"]
     }
   },
   "include": ["src"],

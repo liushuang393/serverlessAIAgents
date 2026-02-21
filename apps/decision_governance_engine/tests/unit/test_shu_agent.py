@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
 """Unit tests for ShuAgent."""
-import json
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
+import json
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 from apps.decision_governance_engine.agents.shu_agent import ShuAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
-    ShuInput,
-    ShuOutput,
+    ActionPhase,
     FaOutput,
     PathOption,
+    ShuInput,
+    ShuOutput,
     StrategyType,
-    ActionPhase,
 )
 
 
@@ -55,6 +55,7 @@ class TestShuAgentInit:
     def test_agent_inherits_resilient_agent(self, shu_agent: ShuAgent) -> None:
         """Test that ShuAgent inherits from ResilientAgent."""
         from agentflow import ResilientAgent
+
         assert isinstance(shu_agent, ResilientAgent)
 
     def test_agent_has_correct_name(self, shu_agent: ShuAgent) -> None:
@@ -65,9 +66,7 @@ class TestShuAgentInit:
 class TestShuAgentParseInput:
     """Test cases for ShuAgent._parse_input."""
 
-    def test_parse_input_with_valid_dict(
-        self, shu_agent: ShuAgent, sample_fa_output: FaOutput
-    ) -> None:
+    def test_parse_input_with_valid_dict(self, shu_agent: ShuAgent, sample_fa_output: FaOutput) -> None:
         """Test that _parse_input correctly parses a valid dict."""
         raw_input = {
             "fa_result": sample_fa_output.model_dump(),
@@ -82,9 +81,7 @@ class TestShuAgentOutputStructure:
     """Test cases for ShuAgent output structure via process()."""
 
     @pytest.mark.asyncio
-    async def test_output_returns_shu_output(
-        self, shu_agent: ShuAgent, sample_input: ShuInput
-    ) -> None:
+    async def test_output_returns_shu_output(self, shu_agent: ShuAgent, sample_input: ShuInput) -> None:
         """Test that output is valid ShuOutput."""
         result = await shu_agent.process(sample_input)
 
@@ -94,9 +91,7 @@ class TestShuAgentOutputStructure:
         assert len(result.first_action) > 0
 
     @pytest.mark.asyncio
-    async def test_output_generates_action_phases(
-        self, shu_agent: ShuAgent, sample_input: ShuInput
-    ) -> None:
+    async def test_output_generates_action_phases(self, shu_agent: ShuAgent, sample_input: ShuInput) -> None:
         """Test that output generates valid action phases."""
         result = await shu_agent.process(sample_input)
 
@@ -108,9 +103,7 @@ class TestShuAgentOutputStructure:
             assert len(phase.actions) >= 1
 
     @pytest.mark.asyncio
-    async def test_output_may_include_rhythm_control(
-        self, shu_agent: ShuAgent, sample_input: ShuInput
-    ) -> None:
+    async def test_output_may_include_rhythm_control(self, shu_agent: ShuAgent, sample_input: ShuInput) -> None:
         """Test that output may include 30-day rhythm control."""
         result = await shu_agent.process(sample_input)
 
@@ -124,9 +117,7 @@ class TestShuAgentProcess:
     """Test cases for ShuAgent.process."""
 
     @pytest.mark.asyncio
-    async def test_process_without_llm(
-        self, shu_agent: ShuAgent, sample_input: ShuInput
-    ) -> None:
+    async def test_process_without_llm(self, shu_agent: ShuAgent, sample_input: ShuInput) -> None:
         """Test process falls back to rule-based when no LLM."""
         result = await shu_agent.process(sample_input)
 
@@ -135,9 +126,7 @@ class TestShuAgentProcess:
         assert result.first_action is not None
 
     @pytest.mark.asyncio
-    async def test_process_with_selected_path(
-        self, shu_agent: ShuAgent, sample_input: ShuInput
-    ) -> None:
+    async def test_process_with_selected_path(self, shu_agent: ShuAgent, sample_input: ShuInput) -> None:
         """Test that process uses selected path for planning."""
         result = await shu_agent.process(sample_input)
 
@@ -147,9 +136,7 @@ class TestShuAgentProcess:
         assert all(p.duration for p in result.phases)
 
     @pytest.mark.asyncio
-    async def test_process_with_invalid_phase_payload_falls_back_defaults(
-        self, sample_input: ShuInput
-    ) -> None:
+    async def test_process_with_invalid_phase_payload_falls_back_defaults(self, sample_input: ShuInput) -> None:
         """LLMの不正フェーズ型でもデフォルト計画にフォールバックする."""
         agent = ShuAgent(llm_client=MagicMock())
         agent._call_llm = AsyncMock(

@@ -25,6 +25,7 @@ from agentflow.code_intelligence.ast.unified_ast import (
 from agentflow.code_intelligence.parsers.base import (
     CodeParser,
     ParseContext,
+    ParseError,
     ParseResult,
 )
 
@@ -69,14 +70,14 @@ class PythonParser(CodeParser):
         """
         start_time = time.time()
         context = context or ParseContext()
-        errors: list[str] = []
+        errors: list[ParseError] = []
         warnings: list[str] = []
 
         try:
             if not source_code or not source_code.strip():
                 return ParseResult(
                     success=False,
-                    errors=["Source code cannot be empty"],
+                    errors=[ParseError("Source code cannot be empty")],
                 )
 
             # Python ASTを解析
@@ -85,7 +86,7 @@ class PythonParser(CodeParser):
             except SyntaxError as e:
                 return ParseResult(
                     success=False,
-                    errors=[f"Syntax error: {e}"],
+                    errors=[ParseError(f"Syntax error: {e}")],
                 )
 
             # シンボルテーブル
@@ -134,7 +135,7 @@ class PythonParser(CodeParser):
             _logger.exception(f"Python parsing failed: {e}")
             return ParseResult(
                 success=False,
-                errors=[str(e)],
+                errors=[ParseError(str(e))],
             )
 
     def _convert_node(
@@ -147,19 +148,23 @@ class PythonParser(CodeParser):
 
         if isinstance(node, python_ast.Import):
             for alias in node.names:
-                imports.append(ImportInfo(
-                    module=alias.name,
-                    alias=alias.asname,
-                ))
+                imports.append(
+                    ImportInfo(
+                        module=alias.name,
+                        alias=alias.asname,
+                    )
+                )
             return None
 
         if isinstance(node, python_ast.ImportFrom):
             module = node.module or ""
             for alias in node.names:
-                imports.append(ImportInfo(
-                    module=f"{module}.{alias.name}" if module else alias.name,
-                    alias=alias.asname,
-                ))
+                imports.append(
+                    ImportInfo(
+                        module=f"{module}.{alias.name}" if module else alias.name,
+                        alias=alias.asname,
+                    )
+                )
             return None
 
         if isinstance(node, python_ast.ClassDef):
@@ -167,7 +172,7 @@ class PythonParser(CodeParser):
                 node_type=ASTNodeType.CLASS,
                 name=node.name,
                 start_line=node.lineno,
-                end_line=node.end_lineno,
+                end_line=node.end_lineno or node.lineno,
                 metadata={
                     "decorators": [self._get_decorator_name(d) for d in node.decorator_list],
                     "bases": [self._get_name(b) for b in node.bases],
@@ -208,7 +213,7 @@ class PythonParser(CodeParser):
                 node_type=ASTNodeType.FUNCTION,
                 name=node.name,
                 start_line=node.lineno,
-                end_line=node.end_lineno,
+                end_line=node.end_lineno or node.lineno,
                 metadata={
                     "is_async": is_async,
                     "decorators": [self._get_decorator_name(d) for d in node.decorator_list],
@@ -303,6 +308,7 @@ def _register() -> None:
     """パーサーをレジストリに登録."""
     try:
         from agentflow.code_intelligence.parsers.registry import register_parser
+
         register_parser("python", PythonParser)
     except ImportError:
         pass

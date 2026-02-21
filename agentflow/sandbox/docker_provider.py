@@ -89,9 +89,7 @@ class DockerProvider(SandboxProvider):
             "execution_count": self._execution_count,
             "total_execution_ms": self._total_execution_ms,
             "avg_execution_ms": (
-                self._total_execution_ms / self._execution_count
-                if self._execution_count > 0
-                else 0.0
+                self._total_execution_ms / self._execution_count if self._execution_count > 0 else 0.0
             ),
         }
 
@@ -154,13 +152,16 @@ class DockerProvider(SandboxProvider):
 
                 # Docker コマンド構築
                 docker_cmd = [
-                    "docker", "run",
+                    "docker",
+                    "run",
                     "--rm",
                     f"--memory={self._config.memory_mb}m",
                     f"--cpus={self._config.cpus}",
                     "--network=none",  # ネットワーク無効化（セキュリティ）
-                    "-v", f"{tmpdir_path}:/app:ro",
-                    "-w", "/app",
+                    "-v",
+                    f"{tmpdir_path}:/app:ro",
+                    "-w",
+                    "/app",
                 ]
 
                 # 環境変数追加
@@ -219,4 +220,3 @@ class DockerProvider(SandboxProvider):
         """リソース解放."""
         self._state = SandboxState.STOPPED
         logger.info("Docker provider closed")
-

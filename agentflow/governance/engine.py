@@ -86,9 +86,7 @@ class GovernanceEngine:
         """
 
         self._policy_engine: PolicyEngine = policy_engine or PolicyEngine()
-        self._audit_logger: AuditLogger = audit_logger or LoggingAuditLogger(
-            logging.getLogger(__name__)
-        )
+        self._audit_logger: AuditLogger = audit_logger or LoggingAuditLogger(logging.getLogger(__name__))
         self._plugin_registry: PluginRegistry = plugin_registry or PluginRegistry()
         self._auth_mode: AuthMode = auth_mode
 
@@ -245,9 +243,7 @@ class GovernanceEngine:
         )
         return result
 
-    def _normalize_auth_context(
-        self, auth_context: AuthContext, tool: RegisteredTool
-    ) -> AuthContext:
+    def _normalize_auth_context(self, auth_context: AuthContext, tool: RegisteredTool) -> AuthContext:
         """認可コンテキストを補完."""
 
         action = auth_context.action or tool.operation_type.value

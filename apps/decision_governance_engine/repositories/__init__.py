@@ -28,4 +28,3 @@ __all__ = [
     "get_redis",
     "init_db",
 ]
-

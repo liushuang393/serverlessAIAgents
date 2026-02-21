@@ -54,7 +54,7 @@ class WorkflowExecutorAgent(ResilientAgent[WorkflowExecutorInput, WorkflowResult
 
     def _parse_input(self, input_data: dict[str, Any]) -> WorkflowExecutorInput:
         """入力辞書をWorkflowExecutorInputにパース.
-        
+
         PipelineEngine から渡される場合、prompt_planner_result フィールドに
         PromptPlanOutput が含まれているため、それを prompt_plan フィールドに変換する。
         """
@@ -66,10 +66,11 @@ class WorkflowExecutorAgent(ResilientAgent[WorkflowExecutorInput, WorkflowResult
                 from agentflow.skills.builtin.design_skills.schemas.design_schemas import (
                     PromptPlanOutput,
                 )
+
                 input_data["prompt_plan"] = PromptPlanOutput(**prompt_result)
             else:
                 input_data["prompt_plan"] = prompt_result
-        
+
         return WorkflowExecutorInput(**input_data)
 
     async def _detect_backend(self) -> str:
@@ -92,10 +93,7 @@ class WorkflowExecutorAgent(ResilientAgent[WorkflowExecutorInput, WorkflowResult
             self._logger.info("バックエンド: OpenAI gpt-image-1(クラウド)")
             return "openai"
 
-        msg = (
-            "画像生成バックエンドが利用不可です。"
-            "ComfyUI(ローカル)を起動するか、OPENAI_API_KEY を設定してください。"
-        )
+        msg = "画像生成バックエンドが利用不可です。ComfyUI(ローカル)を起動するか、OPENAI_API_KEY を設定してください。"
         raise RuntimeError(msg)
 
     async def process(self, input_data: WorkflowExecutorInput) -> WorkflowResult:
@@ -136,9 +134,7 @@ class WorkflowExecutorAgent(ResilientAgent[WorkflowExecutorInput, WorkflowResult
                         generation_time_seconds=round(img_time, 2),
                     )
                 )
-                self._logger.info(
-                    f"生成完了: {spec.image_id} ({spec.role.value}) [{backend}] - {img_time:.1f}秒"
-                )
+                self._logger.info(f"生成完了: {spec.image_id} ({spec.role.value}) [{backend}] - {img_time:.1f}秒")
 
             except Exception as e:
                 self._logger.exception(f"生成失敗: {spec.image_id}")
@@ -220,10 +216,17 @@ class WorkflowExecutorAgent(ResilientAgent[WorkflowExecutorInput, WorkflowResult
     def _find_output_image(self, history: dict[str, Any]) -> dict[str, str] | None:
         """履歴エントリから出力画像情報を検索."""
         outputs = history.get("outputs", {})
+        if not isinstance(outputs, dict):
+            return None
         for node_output in outputs.values():
+            if not isinstance(node_output, dict):
+                continue
             images = node_output.get("images", [])
-            if images:
-                return images[0]
+            if isinstance(images, list) and images and isinstance(images[0], dict):
+                first = images[0]
+                filename = first.get("filename")
+                if isinstance(filename, str):
+                    return {"filename": filename}
         return None
 
     def _extract_output_path(

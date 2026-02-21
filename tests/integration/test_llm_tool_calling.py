@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """LLM Tool Calling の統合テスト.
 
 本モジュールは実 LLM API を使用し、各プロバイダーのツール/関数呼び出し対応を検証する。
@@ -91,7 +90,8 @@ def has_gemini_key() -> bool:
 def has_gemini_library() -> bool:
     """google-genai ライブラリがインストール済みか確認する."""
     try:
-        from google import genai  # noqa: F401
+        from google import genai
+
         return True
     except ImportError:
         return False
@@ -183,7 +183,7 @@ class TestGeminiToolCalling:
 
     @pytest.mark.skipif(
         not has_gemini_key() or not has_gemini_library(),
-        reason="GEMINI_API_KEY not set or google-generativeai not installed"
+        reason="GEMINI_API_KEY not set or google-generativeai not installed",
     )
     @pytest.mark.asyncio
     async def test_single_tool_call(self):

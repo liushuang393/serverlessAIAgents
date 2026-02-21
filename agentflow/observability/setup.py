@@ -26,6 +26,8 @@ from agentflow.observability.tracing import setup_tracing
 
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from starlette.requests import Request
     from starlette.responses import Response
 
@@ -162,7 +164,7 @@ def create_fastapi_middleware() -> Any:
     class ObservabilityMiddleware(BaseHTTPMiddleware):
         """可観測性ミドルウェア."""
 
-        async def dispatch(self, request: Request, call_next: Any) -> Response:
+        async def dispatch(self, request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
             """リクエストを処理."""
             tracer = get_tracer()
             metrics = get_metrics()
@@ -185,9 +187,7 @@ def create_fastapi_middleware() -> Any:
                 span.set_attribute("http.method", request.method)
                 span.set_attribute("http.url", str(request.url))
 
-                with request_duration.time(
-                    labels={"method": request.method, "path": request.url.path}
-                ):
+                with request_duration.time(labels={"method": request.method, "path": request.url.path}):
                     response = await call_next(request)
 
                 span.set_attribute("http.status_code", response.status_code)
@@ -228,4 +228,3 @@ def get_prometheus_endpoint() -> Any:
         return metrics.to_prometheus()
 
     return router
-

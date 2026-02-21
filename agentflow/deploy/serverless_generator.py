@@ -14,7 +14,7 @@ import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 logger = logging.getLogger(__name__)
@@ -58,9 +58,7 @@ VERCEL_CONFIG_TEMPLATE = {
         {"src": "/(.*)", "dest": "main.py"},
     ],
     "env": {},
-    "functions": {
-        "main.py": {"memory": 1024, "maxDuration": 30}
-    },
+    "functions": {"main.py": {"memory": 1024, "maxDuration": 30}},
 }
 
 
@@ -216,13 +214,13 @@ def generate_vercel_config(
     # vercel.json
     vercel_config = VERCEL_CONFIG_TEMPLATE.copy()
     vercel_config["env"] = config.env_vars
-    vercel_config["functions"]["main.py"]["memory"] = config.memory_size
-    vercel_config["functions"]["main.py"]["maxDuration"] = config.timeout
+    functions_config = cast("dict[str, dict[str, Any]]", vercel_config.setdefault("functions", {}))
+    main_config = functions_config.setdefault("main.py", {})
+    main_config["memory"] = config.memory_size
+    main_config["maxDuration"] = config.timeout
 
     vercel_path = output_path / "vercel.json"
-    vercel_path.write_text(
-        json.dumps(vercel_config, indent=2), encoding="utf-8"
-    )
+    vercel_path.write_text(json.dumps(vercel_config, indent=2), encoding="utf-8")
 
     # main.py (entry point)
     main_content = VERCEL_MAIN_TEMPLATE.format(app_name=config.app_name)
@@ -320,4 +318,3 @@ def generate_requirements_txt(
 
     logger.info(f"Generated requirements.txt: {requirements_path}")
     return requirements_path
-

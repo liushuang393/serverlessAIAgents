@@ -186,8 +186,12 @@ class ConfigManager(IConfigManager):
                         required=True,
                         default="us-east-1",
                         options=[
-                            "us-east-1", "us-west-2", "eu-west-1",
-                            "eu-central-1", "ap-northeast-1", "ap-southeast-1",
+                            "us-east-1",
+                            "us-west-2",
+                            "eu-west-1",
+                            "eu-central-1",
+                            "ap-northeast-1",
+                            "ap-southeast-1",
                         ],
                         description="AWS region",
                         group="settings",
@@ -395,14 +399,9 @@ class ConfigManager(IConfigManager):
         """
         # 機密情報を除外（credentials グループ）
         template = await self.get_template(target)
-        credential_fields = {
-            f.name for f in template.fields if f.group == "credentials"
-        }
+        credential_fields = {f.name for f in template.fields if f.group == "credentials"}
 
-        safe_config = {
-            k: v for k, v in config.items()
-            if k not in credential_fields
-        }
+        safe_config = {k: v for k, v in config.items() if k not in credential_fields}
 
         config_data = {
             "name": name,
@@ -435,7 +434,10 @@ class ConfigManager(IConfigManager):
 
         try:
             data = json.loads(config_file.read_text(encoding="utf-8"))
-            return data.get("config", {})
+            if isinstance(data, dict):
+                config_data = data.get("config", {})
+                return config_data if isinstance(config_data, dict) else {}
+            return {}
         except Exception as e:
             logger.exception(f"Failed to load config {name}: {e}")
             return None
@@ -452,12 +454,13 @@ class ConfigManager(IConfigManager):
         Returns:
             設定名のリスト
         """
-        configs = []
+        configs: list[str] = []
         for config_file in self._config_dir.glob("*.json"):
             try:
                 data = json.loads(config_file.read_text(encoding="utf-8"))
-                if target is None or data.get("target") == target.value:
-                    configs.append(data.get("name", config_file.stem))
+                if isinstance(data, dict) and (target is None or data.get("target") == target.value):
+                    name = data.get("name", config_file.stem)
+                    configs.append(str(name))
             except Exception:
                 continue
         return configs

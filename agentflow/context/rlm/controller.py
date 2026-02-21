@@ -410,8 +410,7 @@ class RLMController:
         if self._config.prefer_deterministic:
             # まだキーワード検索していないハンドルがあれば
             searched_handles = {
-                v.metadata.get("handle_id")
-                for v in self._workspace.list_variables(VariableType.SEARCH_RESULT)
+                v.metadata.get("handle_id") for v in self._workspace.list_variables(VariableType.SEARCH_RESULT)
             }
             unsearched = [h for h in handles if h.handle_id not in searched_handles]
 
@@ -637,9 +636,7 @@ class RLMController:
             base_score += 0.2
 
         # 検索結果の質
-        total_matches = sum(
-            len(v.value) if isinstance(v.value, list) else 1 for v in search_results
-        )
+        total_matches = sum(len(v.value) if isinstance(v.value, list) else 1 for v in search_results)
         if total_matches > 5:
             base_score += 0.1
         if total_matches > 10:

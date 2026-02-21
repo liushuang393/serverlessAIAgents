@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """UnifiedToolProvider 単体テスト."""
 
 import pytest

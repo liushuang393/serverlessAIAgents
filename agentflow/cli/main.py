@@ -9,6 +9,7 @@ import sys
 import traceback
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
+from typing import Any
 
 import click
 from rich.console import Console
@@ -161,7 +162,7 @@ def run(
 
     try:
         # 入力データを解析
-        shared_data: dict = {}
+        shared_data: dict[str, Any] = {}
         if input_data:
             input_path = Path(input_data)
             if input_path.exists() and input_path.is_file():
@@ -202,7 +203,10 @@ def run(
                     spec.loader.exec_module(module)
 
             # AgentClientで実行
-            async def execute_agent() -> dict:
+            async def execute_agent() -> dict[str, Any]:
+                if agent_name is None:
+                    msg = "--agent-name is required when using @agent mode"
+                    raise ValueError(msg)
                 client = AgentClient.get(agent_name)
                 if stream:
                     # ストリームモード
@@ -270,7 +274,7 @@ def run(
                 ctx.exit(1)
 
             # 実行
-            async def execute() -> dict:
+            async def execute() -> dict[str, Any]:
                 with Progress(
                     SpinnerColumn(),
                     TextColumn("[progress.description]{task.description}"),
@@ -289,7 +293,8 @@ def run(
                         console.print("[yellow]Warning: Stream mode not supported, using normal mode[/yellow]")
                     # 通常実行
                     if hasattr(flow, "run"):
-                        return await flow.run(shared_data)
+                        result_data = await flow.run(shared_data)
+                        return result_data if isinstance(result_data, dict) else {"result": result_data}
                     if hasattr(flow, "run_async"):
                         await flow.run_async(shared_data)
                         return shared_data
@@ -415,21 +420,18 @@ def chat(ctx: click.Context, system_prompt: str, model: str) -> None:
         agentflow chat --system "あなたはコード専門家です"
         agentflow chat --model gpt-4o
     """
-    from agentflow.llm.llm_client import LLMConfig
     from agentflow.skills import ChatBotConfig, ChatBotSkill
 
     console.print(
         Panel(
-            "[cyan]AgentFlow Chat[/cyan]\n"
-            "[dim]終了するには 'exit' または 'quit' と入力してください[/dim]",
+            "[cyan]AgentFlow Chat[/cyan]\n[dim]終了するには 'exit' または 'quit' と入力してください[/dim]",
             border_style="cyan",
         )
     )
 
     # ChatBot 初期化
-    llm_config = LLMConfig(model=model)
     bot_config = ChatBotConfig(system_prompt=system_prompt)
-    chatbot = ChatBotSkill(llm_config=llm_config, config=bot_config)
+    chatbot = ChatBotSkill(config=bot_config)
     session = chatbot.create_session()
 
     async def chat_loop() -> None:

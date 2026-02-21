@@ -53,10 +53,10 @@ from agentflow.security.reasoning_monitor import (
 class SafetyLevel(str, Enum):
     """安全级别."""
 
-    SAFE = "safe"           # 安全
-    WARNING = "warning"     # 警告
-    DANGER = "danger"       # 危险
-    BLOCKED = "blocked"     # 已阻止
+    SAFE = "safe"  # 安全
+    WARNING = "warning"  # 警告
+    DANGER = "danger"  # 危险
+    BLOCKED = "blocked"  # 已阻止
 
 
 @dataclass
@@ -253,9 +253,7 @@ class AISafetyGuard:
             result.sanitized_input = sanitize_result.sanitized_text
 
             if sanitize_result.detections:
-                result.warnings.append(
-                    f"检测到 {len(sanitize_result.detections)} 处敏感信息，已脱敏"
-                )
+                result.warnings.append(f"检测到 {len(sanitize_result.detections)} 处敏感信息，已脱敏")
 
         return result
 
@@ -405,4 +403,3 @@ class AISafetyGuard:
                 "strict_mode": self._config.strict_mode,
             },
         }
-

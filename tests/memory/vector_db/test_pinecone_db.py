@@ -194,4 +194,3 @@ def test_get_status(pinecone_db):
     assert status["environment"] == "us-west1-gcp"
     assert status["index_name"] == "test-index"
     assert status["connected"] is True
-

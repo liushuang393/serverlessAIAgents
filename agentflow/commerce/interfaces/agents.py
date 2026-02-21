@@ -213,4 +213,3 @@ class IDealRecommender(ABC):
         Returns:
             代替推薦リスト
         """
-

@@ -231,9 +231,7 @@ class SupabaseAuthProvider(AuthProviderBase):
     ) -> Session:
         """邮箱密码登录."""
         try:
-            response = self._client.auth.sign_in_with_password(
-                {"email": email, "password": password}
-            )
+            response = self._client.auth.sign_in_with_password({"email": email, "password": password})
 
             if response.session:
                 session = self._parse_session(response.session, response.user)
@@ -794,4 +792,3 @@ class AuthProvider:
         else:
             msg = f"{self._provider_name} 不支持 MFA"
             raise AuthError(msg)
-

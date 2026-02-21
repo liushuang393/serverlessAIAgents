@@ -72,10 +72,7 @@ class BrowserSkillConfig:
             parsed = urlparse(url)
             domain = parsed.netloc.split(":")[0]  # ポート番号を除去
 
-            return any(
-                domain == allowed or domain.endswith(f".{allowed}")
-                for allowed in self.domain_whitelist
-            )
+            return any(domain == allowed or domain.endswith(f".{allowed}") for allowed in self.domain_whitelist)
         except Exception:
             return False
 
@@ -94,4 +91,3 @@ class BrowserSkillConfig:
             "viewport_width": self.viewport_width,
             "viewport_height": self.viewport_height,
         }
-

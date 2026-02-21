@@ -225,4 +225,3 @@ async def test_clear(postgres_backend):
     result = await postgres_backend.clear(topic="test")
 
     assert result == 3
-

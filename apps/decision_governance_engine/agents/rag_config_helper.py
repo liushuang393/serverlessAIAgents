@@ -117,4 +117,3 @@ async def initialize_agent_rag(
 
     logger.info(f"RAG initialized for agent: {agent_id}")
     return rag
-

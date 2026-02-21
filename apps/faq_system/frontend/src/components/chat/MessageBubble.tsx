@@ -2,12 +2,14 @@ import React from 'react';
 import { User, Sparkles } from 'lucide-react';
 import { MarkdownRenderer } from '../rich/MarkdownRenderer';
 import type { ChatMessage } from '../../api/types';
+import { useI18n } from '../../i18n';
 
 interface MessageBubbleProps {
     message: ChatMessage;
 }
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
+    const { t } = useI18n();
     const isUser = message.role === 'user';
 
     return (
@@ -27,7 +29,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                 {/* Content Container */}
                 <div className={`flex flex-col gap-1.5 ${isUser ? 'items-end' : 'items-start'}`}>
                     <span className="text-[10px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.12em] px-1">
-                        {isUser ? 'You' : 'AI Assistant'}
+                        {isUser ? t('chat.you') : t('chat.ai_name')}
                     </span>
 
                     <div className={`p-4 rounded-2xl ${isUser
@@ -36,7 +38,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
                         }`}>
                         <div className="markdown-content">
                             {message.role === 'assistant' || message.role === 'system' ? (
-                                <MarkdownRenderer content={message.content || (message.role === 'assistant' ? 'Thinking...' : '')} />
+                                <MarkdownRenderer content={message.content || (message.role === 'assistant' ? t('chat.thinking') : '')} />
                             ) : (
                                 <div className="whitespace-pre-wrap text-[15px]">{message.content}</div>
                             )}

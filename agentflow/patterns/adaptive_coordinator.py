@@ -36,11 +36,11 @@ from pydantic import BaseModel, Field
 class PerformanceLevel(str, Enum):
     """パフォーマンスレベル."""
 
-    EXPERT = "expert"       # 専門家レベル (0.9+)
-    ADVANCED = "advanced"   # 上級レベル (0.7-0.9)
-    STANDARD = "standard"   # 標準レベル (0.5-0.7)
-    BASIC = "basic"         # 基本レベル (0.3-0.5)
-    LEARNING = "learning"   # 学習中 (0.0-0.3)
+    EXPERT = "expert"  # 専門家レベル (0.9+)
+    ADVANCED = "advanced"  # 上級レベル (0.7-0.9)
+    STANDARD = "standard"  # 標準レベル (0.5-0.7)
+    BASIC = "basic"  # 基本レベル (0.3-0.5)
+    LEARNING = "learning"  # 学習中 (0.0-0.3)
 
 
 class AgentCapability(BaseModel):
@@ -164,9 +164,7 @@ class AdaptiveCoordinator:
     _agents: dict[str, Any] = field(default_factory=dict)
     _profiles: dict[str, AgentProfile] = field(default_factory=dict)
     load_balance_threshold: float = 0.8
-    _logger: logging.Logger = field(
-        default_factory=lambda: logging.getLogger("agentflow.patterns.coordinator")
-    )
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.patterns.coordinator"))
 
     def register_agent(
         self,
@@ -197,10 +195,7 @@ class AdaptiveCoordinator:
             name=name or agent_id,
             performance_level=performance_level,
             max_concurrent=max_concurrent,
-            capabilities={
-                cap: AgentCapability(name=cap, proficiency=performance_level)
-                for cap in capabilities
-            },
+            capabilities={cap: AgentCapability(name=cap, proficiency=performance_level) for cap in capabilities},
         )
 
         self._agents[agent_id] = agent
@@ -250,30 +245,29 @@ class AdaptiveCoordinator:
 
             # 必須能力チェック
             has_required = all(
-                cap in profile.capabilities
-                and profile.capabilities[cap].proficiency >= requirements.min_proficiency
+                cap in profile.capabilities and profile.capabilities[cap].proficiency >= requirements.min_proficiency
                 for cap in requirements.required_capabilities
             )
             if not has_required:
                 continue
 
             # スコア計算
-            capability_score = self._calculate_capability_score(
-                profile, requirements
-            )
+            capability_score = self._calculate_capability_score(profile, requirements)
             load_factor = 1.0 - profile.current_load
             total_score = capability_score * 0.7 + load_factor * 0.3
 
-            candidates.append(MatchScore(
-                agent_id=agent_id,
-                score=total_score,
-                capability_match=capability_score,
-                load_factor=load_factor,
-                details={
-                    "required_match": has_required,
-                    "profile_level": profile.performance_level,
-                },
-            ))
+            candidates.append(
+                MatchScore(
+                    agent_id=agent_id,
+                    score=total_score,
+                    capability_match=capability_score,
+                    load_factor=load_factor,
+                    details={
+                        "required_match": has_required,
+                        "profile_level": profile.performance_level,
+                    },
+                )
+            )
 
         if not candidates:
             return None
@@ -446,4 +440,3 @@ __all__ = [
     "PerformanceLevel",
     "TaskRequirement",
 ]
-

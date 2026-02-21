@@ -117,10 +117,7 @@ class A2AClient:
 
             except httpx.HTTPError:
                 if attempt == self._max_retries - 1:
-                    self._logger.exception(
-                        f"Failed to discover agent at {endpoint} "
-                        f"after {self._max_retries} attempts"
-                    )
+                    self._logger.exception(f"Failed to discover agent at {endpoint} after {self._max_retries} attempts")
                     raise
 
                 # 指数バックオフで再試行
@@ -181,15 +178,12 @@ class A2AClient:
 
                 result: dict[str, Any] = response.json()
 
-                self._logger.debug(
-                    f"Remote task completed: endpoint={endpoint}, skill={skill_name}"
-                )
+                self._logger.debug(f"Remote task completed: endpoint={endpoint}, skill={skill_name}")
 
             except httpx.HTTPError:
                 if attempt == self._max_retries - 1:
                     self._logger.exception(
-                        f"Failed to call remote agent at {endpoint} "
-                        f"after {self._max_retries} attempts"
+                        f"Failed to call remote agent at {endpoint} after {self._max_retries} attempts"
                     )
                     raise
 

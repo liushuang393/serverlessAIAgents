@@ -46,6 +46,65 @@ _基于 PocketFlow 的统一协议接口_
 `选择模板 -> 配置数据/权限 -> 执行 -> 查看成果物`。
 详见 `docs/studios.md`。
 
+## 🧠 设计初衷（Apps + Kernel）
+
+- `agentflow/` 作为稳定的 Kernel 边界（编排/代理/工具/协议），能力扩展优先走插件 Blocks
+- `apps/` 不是示例集合，而是“可交付、可部署的产品单元”（包含 UI/配置/审计/运维）
+- `apps/platform` 作为控制平面，统一完成 app 的创建/配置/执行/观测
+
+## 🏗️ 技术架构与应用层级
+
+AgentFlow 采用清晰的分层模型（8 层），并把治理与进化作为横切能力：
+
+- Apps / UI（Studio UI / CLI / SDK）
+- Flow（Task/Plan/Route/Execute）
+- Agent（Patterns / Coordinator）
+- Tool（工具绑定 / MCP tools）
+- Provider（LLM / Storage / 3rd party）
+- Protocol（MCP / A2A / AG-UI / A2UI）
+- Infra（DB / Redis / Queue / Observability）
+- Kernel（作为稳定边界承载上述层）
+
+横切：Governance（策略/审计）、Evolution（Self-Evolution V2）
+
+```mermaid
+flowchart TB
+    A["Apps / Studio UI"] --> F["Flow (Orchestration)"]
+    F --> AG["Agent Patterns"]
+    AG --> T["Tools"]
+    T --> PR["Providers"]
+    PR --> PT["Protocols (MCP/A2A/AG-UI/A2UI)"]
+    PT --> INF["Infra (DB/Redis/Storage/Obs)"]
+    F -.-> GOV["Governance (Policy/Audit)"]
+    F -.-> EVO["Evolution V2 (Record/Validate/Score)"]
+```
+
+## 🗂️ 仓库结构
+
+- `agentflow/`: Kernel（flow/agent/tool/protocol）
+- `apps/`: 产品应用（Studios、Platform 等）
+- `plugins/`: 扩展能力（tools/providers/blocks）
+- `contracts/`: 版本化 JSON 契约（兼容性边界）
+- `docs/`: 对外/对内文档
+- `tests/`: 测试集
+
+## 🧬 Evolution V2（2026-02）
+
+`Task -> Plan -> Strategy Router -> Execute -> Record -> Extract -> Validate -> Register -> Score -> Return`
+
+```mermaid
+flowchart TB
+    T["Task"] --> PL["Plan"]
+    PL --> SR["Strategy Router"]
+    SR --> EX["Execute"]
+    EX --> RC["Execution Recorder"]
+    RC --> XT["Strategy Extractor"]
+    XT --> VL["Validator Worker (Redis Streams)"]
+    VL --> RG["Strategy Registry Service"]
+    RG --> SC["Success-First Scoring"]
+    SC --> RT["Return"]
+```
+
 ### ✨ 主要特性
 
 | 特性 | 说明 |

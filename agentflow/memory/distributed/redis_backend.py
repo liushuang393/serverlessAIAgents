@@ -144,7 +144,7 @@ class RedisBackend(MemoryBackend):
 
         key = f"memory:{entry_id}"
         result = await self._client.delete(key)
-        return result > 0
+        return int(result) > 0
 
     async def search(
         self,
@@ -186,7 +186,7 @@ class RedisBackend(MemoryBackend):
             raise ConnectionError(msg)
 
         key = f"memory:{entry_id}"
-        return await self._client.exists(key) > 0
+        return int(await self._client.exists(key)) > 0
 
     async def count(self, topic: str | None = None) -> int:
         """記憶の数を取得."""
@@ -196,7 +196,7 @@ class RedisBackend(MemoryBackend):
 
         if topic:
             topic_key = f"topic:{topic}"
-            return await self._client.scard(topic_key)
+            return int(await self._client.scard(topic_key))
         keys = await self._client.keys("memory:*")
         return len(keys)
 
@@ -235,4 +235,3 @@ class RedisBackend(MemoryBackend):
             "connected": self._connected,
             "ttl": self._ttl,
         }
-

@@ -167,11 +167,6 @@ class DataConnector(ABC):
             バイトチャンク
         """
         result = await self.read(path)
-        content = (
-            result.content
-            if isinstance(result.content, bytes)
-            else str(result.content).encode("utf-8")
-        )
+        content = result.content if isinstance(result.content, bytes) else str(result.content).encode("utf-8")
         for i in range(0, len(content), chunk_size):
             yield content[i : i + chunk_size]
-

@@ -107,20 +107,6 @@ from agentflow.channels import (
 from agentflow.channels.base import MessageType
 
 # =============================================================================
-# 公開API: 統一データベース管理（DB セッション + Alembic マイグレーション）
-# =============================================================================
-from agentflow.database import (
-    DatabaseConfig,
-    DatabaseManager,
-    MigrationEnv,
-    get_dialect,
-    is_async_url,
-    is_sqlite,
-    to_async_url,
-    to_sync_url,
-)
-
-# =============================================================================
 # 公開API: Context Engineering（上下文エンジニアリング）
 # =============================================================================
 from agentflow.context import (
@@ -192,7 +178,6 @@ from agentflow.core.retry_advisor import (
     RetryContext,
 )
 from agentflow.core.tool_binding import BoundTools, ToolBinder, ToolExecutor
-from agentflow.core.type_safe import safe_enum, safe_float, safe_int
 
 # =============================================================================
 # 公開API: 統一ツールカタログ（全ツールソース統合）
@@ -215,7 +200,22 @@ from agentflow.core.tool_registry import (
     get_global_tool_registry,
     reset_global_tool_registry,
 )
+from agentflow.core.type_safe import safe_enum, safe_float, safe_int
 from agentflow.core.types import AgentMetadata, WorkflowConfig
+
+# =============================================================================
+# 公開API: 統一データベース管理（DB セッション + Alembic マイグレーション）
+# =============================================================================
+from agentflow.database import (
+    DatabaseConfig,
+    DatabaseManager,
+    MigrationEnv,
+    get_dialect,
+    is_async_url,
+    is_sqlite,
+    to_async_url,
+    to_sync_url,
+)
 from agentflow.engines import (
     BaseEngine,
     EngineConfig,
@@ -251,6 +251,10 @@ from agentflow.flow import (
     ReviewVerdict,
     create_flow,
 )
+
+
+# FlowWrapper は Flow の後方互換エイリアス
+FlowWrapper = Flow
 
 # =============================================================================
 # 公開API: Human-in-the-Loop (HITL)
@@ -605,6 +609,11 @@ __all__ = [
     "CapabilityGapDetector",
     "CapabilityRequirement",
     # =========================================================================
+    # 統一ツールカタログ（全ツールソース統合）
+    # =========================================================================
+    "CatalogEntry",
+    "CatalogSource",
+    # =========================================================================
     # World Model（状態・因果・制約の明示的表現）
     # =========================================================================
     # 因果モデル
@@ -639,12 +648,12 @@ __all__ = [
     "ContextEngineer",
     "ControlPlane",
     "DBProvider",
+    "DataTable",
     # =========================================================================
     # 統一データベース管理（DB セッション + Alembic マイグレーション）
     # =========================================================================
     "DatabaseConfig",
     "DatabaseManager",
-    "DataTable",
     "DelegationResult",
     "EmbeddingProvider",
     "EngineConfig",
@@ -657,6 +666,7 @@ __all__ = [
     "FlowConfig",
     "FlowContext",
     "FlowNode",
+    "FlowWrapper",
     "GapAnalysis",
     "GateEngine",
     "GateNode",
@@ -678,6 +688,14 @@ __all__ = [
     "KnowledgeStore",
     "LLMProvider",
     "LLMRequirements",
+    # =========================================================================
+    # Run/Replay/Compare
+    # =========================================================================
+    "LightningEventRecord",
+    "LightningRuntimeConfig",
+    "LightningStore",
+    "LightningTrainingRequest",
+    "LightningTrainingResult",
     "Link",
     "LocalFirstEnforcer",
     # Local-First Policy
@@ -690,7 +708,6 @@ __all__ = [
     "MCPToolResponse",
     "MarkdownContent",
     "MemoryAccessor",
-    "MigrationEnv",
     "MemoryCheckpointer",
     "MemoryLightningStore",
     "MemoryRunStore",
@@ -705,6 +722,7 @@ __all__ = [
     "MessageGateway",
     "MessageMetadata",
     "MessageType",
+    "MigrationEnv",
     "MigrationPhase",
     # CI/CD
     "MigrationPipelineGenerator",
@@ -731,6 +749,7 @@ __all__ = [
     "PipelineConfig",
     "PipelineEngine",
     "Progress",
+    "PromptRewardSample",
     "ProtocolError",
     # Quality
     "QualityGate",
@@ -739,14 +758,14 @@ __all__ = [
     "RAGEngine",
     "ResilientAgent",
     "ResultVerifier",
-    "RetryAction",
-    "RetryAdvice",
-    "RetryAdvisor",
-    "RetryContext",
     "RetrievalDecision",
     # RAG検索判定
     "RetrievalGate",
     "RetrievalReason",
+    "RetryAction",
+    "RetryAdvice",
+    "RetryAdvisor",
+    "RetryContext",
     "ReviewNode",
     "ReviewVerdict",
     "RewardSignal",
@@ -763,23 +782,8 @@ __all__ = [
     "RichResponseBuilder",
     "RouterConfig",
     "RunDiff",
-    # =========================================================================
-    # Run/Replay/Compare
-    # =========================================================================
-    "LightningEventRecord",
-    "LightningRuntimeConfig",
-    "LightningStore",
-    "LightningTrainingRequest",
-    "LightningTrainingResult",
-    "PromptRewardSample",
     "RunRecord",
     "RunStore",
-    "TrajectoryAdapter",
-    "TransitionSample",
-    "build_optimized_llm_profile",
-    "is_microsoft_lightning_available",
-    "resolve_lightning_store",
-    "train_with_lightning_backend",
     # =========================================================================
     # Runtime Context（プラットフォーム向け）
     # =========================================================================
@@ -815,11 +819,6 @@ __all__ = [
     # Token予算管理
     "TokenBudgetManager",
     "ToolBinder",
-    # =========================================================================
-    # 統一ツールカタログ（全ツールソース統合）
-    # =========================================================================
-    "CatalogEntry",
-    "CatalogSource",
     "ToolCatalogManager",
     # =========================================================================
     # 統一ツール・Agentレジストリ（Auto-Agent Architecture）
@@ -835,8 +834,10 @@ __all__ = [
     "ToolRelevanceSelector",
     "ToolScore",
     "ToolSource",
+    "TrajectoryAdapter",
     "TransformContext",
     "TransformResult",
+    "TransitionSample",
     # ターン圧縮
     "TurnBasedCompressor",
     "TurnConfig",
@@ -861,6 +862,7 @@ __all__ = [
     # Decorator API（推奨）
     # =========================================================================
     "agent",
+    "build_optimized_llm_profile",
     "can_transition",
     # Router Factory
     "create_agent_router",
@@ -878,7 +880,6 @@ __all__ = [
     "get_embedding",
     "get_global_agent_registry",
     "get_global_tool_registry",
-    "get_tool_catalog",
     # =========================================================================
     # Knowledge Store（Memvid長期知識記憶）
     # =========================================================================
@@ -893,6 +894,7 @@ __all__ = [
     "get_parser",
     "get_runtime_context",
     "get_skill",
+    "get_tool_catalog",
     "get_transformer",
     "get_vectordb",
     "init_agentflow",
@@ -902,6 +904,7 @@ __all__ = [
     "interrupt",
     "is_async_url",
     "is_memvid_available",
+    "is_microsoft_lightning_available",
     "is_sqlite",
     "is_terminal",
     "list_skills",
@@ -911,10 +914,14 @@ __all__ = [
     "reset_embedding",
     "reset_global_agent_registry",
     "reset_global_tool_registry",
-    "reset_tool_catalog",
     "reset_knowledge_manager",
     "reset_llm",
+    "reset_tool_catalog",
     "reset_vectordb",
+    "resolve_lightning_store",
+    "safe_enum",
+    "safe_float",
+    "safe_int",
     "set_runtime_context",
     # =========================================================================
     # Observability
@@ -924,8 +931,6 @@ __all__ = [
     "to_async_url",
     "to_sync_url",
     "tool",
+    "train_with_lightning_backend",
     "use_runtime_context",
-    "safe_enum",
-    "safe_float",
-    "safe_int",
 ]

@@ -63,17 +63,13 @@ DEFAULT_FRONTEND_PORT = _parse_port(
     _parse_port(APP_CONFIG.get("frontend_port"), 3002),
 )
 DEFAULT_DATABASE_URL = str(
-    _runtime_database.get("url")
-    or _runtime_urls.get("database")
-    or "sqlite:///./market_trend.db"
+    _runtime_database.get("url") or _runtime_urls.get("database") or "sqlite:///./market_trend.db"
 )
 
 
 def _default_cors_origins() -> list[str]:
     """CORSのデフォルト許可オリジンを構築する."""
-    frontend_port = _parse_port(
-        os.getenv("MARKET_TREND_MONITOR_FRONTEND_PORT"), DEFAULT_FRONTEND_PORT
-    )
+    frontend_port = _parse_port(os.getenv("MARKET_TREND_MONITOR_FRONTEND_PORT"), DEFAULT_FRONTEND_PORT)
     return [f"http://localhost:{frontend_port}", "http://localhost:3000"]
 
 
@@ -179,9 +175,7 @@ class APIConfig:
     """API設定."""
 
     # サーバー設定
-    host: str = field(
-        default_factory=lambda: os.getenv("MARKET_TREND_MONITOR_API_HOST", DEFAULT_API_HOST)
-    )
+    host: str = field(default_factory=lambda: os.getenv("MARKET_TREND_MONITOR_API_HOST", DEFAULT_API_HOST))
     port: int = field(
         default_factory=lambda: _parse_port(
             os.getenv("MARKET_TREND_MONITOR_API_PORT"),
@@ -210,9 +204,7 @@ class VectorDBConfig:
 class EmbeddingConfig:
     """Embedding設定."""
 
-    model_name: str = field(
-        default_factory=lambda: os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
-    )
+    model_name: str = field(default_factory=lambda: os.getenv("EMBEDDING_MODEL", "text-embedding-3-small"))
     batch_size: int = 32
 
 

@@ -158,10 +158,13 @@ class EventProvider:
         error_type: str = "Error",
     ) -> None:
         """フローエラーイベントを発火."""
-        await self.emit("flow_error", {
-            "error_message": error_message,
-            "error_type": error_type,
-        })
+        await self.emit(
+            "flow_error",
+            {
+                "error_message": error_message,
+                "error_type": error_type,
+            },
+        )
 
     async def emit_node_start(
         self,
@@ -196,12 +199,15 @@ class EventProvider:
         message: str | None = None,
     ) -> None:
         """プログレスイベントを発火."""
-        await self.emit("progress", {
-            "current": current,
-            "total": total,
-            "percentage": (current / total) * 100 if total > 0 else 0,
-            "message": message,
-        })
+        await self.emit(
+            "progress",
+            {
+                "current": current,
+                "total": total,
+                "percentage": (current / total) * 100 if total > 0 else 0,
+                "message": message,
+            },
+        )
 
     async def emit_log(
         self,
@@ -210,11 +216,14 @@ class EventProvider:
         source: str | None = None,
     ) -> None:
         """ログイベントを発火."""
-        await self.emit("log", {
-            "message": message,
-            "level": level,
-            "source": source,
-        })
+        await self.emit(
+            "log",
+            {
+                "message": message,
+                "level": level,
+                "source": source,
+            },
+        )
 
     async def stream(self) -> AsyncIterator[EventData]:
         """イベントストリームを取得.
@@ -263,4 +272,3 @@ class EventProvider:
     def flow_id(self) -> str | None:
         """フローIDを取得."""
         return self._flow_id
-

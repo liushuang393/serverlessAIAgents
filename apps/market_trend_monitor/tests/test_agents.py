@@ -62,9 +62,7 @@ class TestAnalyzerAgent:
         # まず CollectorAgent でデータ収集
         collector = CollectorAgent()
         await collector.initialize()
-        collector_result = await collector.run(
-            {"keywords": ["COBOL", "Java"], "sources": ["news"]}
-        )
+        collector_result = await collector.run({"keywords": ["COBOL", "Java"], "sources": ["news"]})
         await collector.cleanup()
 
         # AnalyzerAgent で分析
@@ -98,9 +96,7 @@ class TestReporterAgent:
         # データ準備
         collector = CollectorAgent()
         await collector.initialize()
-        collector_result = await collector.run(
-            {"keywords": ["COBOL", "Java"], "sources": ["news"]}
-        )
+        collector_result = await collector.run({"keywords": ["COBOL", "Java"], "sources": ["news"]})
         await collector.cleanup()
 
         analyzer = AnalyzerAgent()
@@ -144,9 +140,7 @@ class TestNotifierAgent:
         # データ準備
         collector = CollectorAgent()
         await collector.initialize()
-        collector_result = await collector.run(
-            {"keywords": ["COBOL", "Java"], "sources": ["news"]}
-        )
+        collector_result = await collector.run({"keywords": ["COBOL", "Java"], "sources": ["news"]})
         await collector.cleanup()
 
         analyzer = AnalyzerAgent()
@@ -158,15 +152,12 @@ class TestNotifierAgent:
         agent = NotifierAgent()
         await agent.initialize()
 
-        result = await agent.run(
-            {"trends": analyzer_result["trends"], "alert_threshold": 0.3}
-        )
+        result = await agent.run({"trends": analyzer_result["trends"], "alert_threshold": 0.3})
 
         assert "notifications" in result
         assert "alerts_count" in result
 
         await agent.cleanup()
-
 
 
 class TestEvidenceLedgerAgent:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for base channel adapter."""
 
 import pytest
@@ -80,7 +79,6 @@ class MockAdapter(MessageChannelAdapter):
 
     async def send_typing_indicator(self, channel_id: str) -> None:
         """Send typing indicator."""
-        pass
 
     async def get_user_info(self, user_id: str) -> UserInfo:
         """Get user info."""

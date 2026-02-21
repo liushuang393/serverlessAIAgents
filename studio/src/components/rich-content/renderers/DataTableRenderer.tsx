@@ -40,14 +40,14 @@ export function DataTableRenderer({ component }: DataTableRendererProps): React.
   // ソート処理
   const sortedData = useMemo(() => {
     if (!sortKey) {
-return data;
-}
+      return data;
+    }
     return [...data].sort((a, b) => {
       const aVal = a[sortKey];
       const bVal = b[sortKey];
       if (aVal === bVal) {
-return 0;
-}
+        return 0;
+      }
       // 型安全な比較
       const aStr = String(aVal ?? '');
       const bStr = String(bVal ?? '');
@@ -90,9 +90,7 @@ return 0;
                     className="flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200"
                   >
                     {col.header}
-                    {sortKey === col.key && (
-                      <span>{sortDir === 'asc' ? '↑' : '↓'}</span>
-                    )}
+                    {sortKey === col.key && <span>{sortDir === 'asc' ? '↑' : '↓'}</span>}
                   </button>
                 ) : (
                   col.header
@@ -118,7 +116,8 @@ return 0;
       {totalPages > 1 && (
         <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            {page * pageSize + 1} - {Math.min((page + 1) * pageSize, data.length)} / {data.length} 件
+            {page * pageSize + 1} - {Math.min((page + 1) * pageSize, data.length)} / {data.length}{' '}
+            件
           </span>
           <div className="flex gap-2">
             <button
@@ -143,4 +142,3 @@ return 0;
 }
 
 export default DataTableRenderer;
-

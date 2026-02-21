@@ -18,12 +18,15 @@
     >>> # バインドされたツールをMCP形式で取得
     >>> mcp_tools = bound_agent._tools.to_mcp_format()
 """
+
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from agentflow.core.capability_spec import AgentCapabilitySpec
     from agentflow.core.tool_definition import ToolDefinition
     from agentflow.core.tool_registry import ToolRegistry
@@ -51,7 +54,7 @@ class BoundTools:
         """バインドされたツール数を返す."""
         return len(self._tools)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[ToolDefinition]:
         """ツールをイテレート."""
         return iter(self._tools.values())
 

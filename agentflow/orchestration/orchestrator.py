@@ -29,10 +29,11 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, Field
 
+from agentflow.evolution.types import RetrievalMode, StrategyDecision
 from agentflow.orchestration.executor import ExecutorAgent, ExecutorConfig, StepResult
 from agentflow.orchestration.monitor import (
     AlertSeverity,
@@ -54,12 +55,12 @@ if TYPE_CHECKING:
 class ExecutionPhase(str, Enum):
     """実行フェーズ."""
 
-    PLANNING = "planning"      # 計画中
-    EXECUTING = "executing"    # 実行中
+    PLANNING = "planning"  # 計画中
+    EXECUTING = "executing"  # 実行中
     MONITORING = "monitoring"  # 監視中
-    COMPLETED = "completed"    # 完了
-    FAILED = "failed"          # 失敗
-    CANCELLED = "cancelled"    # キャンセル
+    COMPLETED = "completed"  # 完了
+    FAILED = "failed"  # 失敗
+    CANCELLED = "cancelled"  # キャンセル
 
 
 class ExecutionStatus(str, Enum):
@@ -171,6 +172,8 @@ class OrchestratorConfig(BaseModel):
     enable_monitoring: bool = Field(default=True)
     enable_replan: bool = Field(default=True)
     auto_recovery: bool = Field(default=True)
+    enable_strategy_routing: bool = Field(default=True)
+    enable_auto_evolution: bool = Field(default=True)
     default_timeout: float = Field(default=300.0, ge=10.0)
 
 
@@ -209,6 +212,9 @@ class Orchestrator:
         planner_config: PlannerConfig | None = None,
         executor_config: ExecutorConfig | None = None,
         monitor_thresholds: MonitorThresholds | None = None,
+        strategy_router: Any | None = None,
+        execution_recorder: Any | None = None,
+        evolution_engine: Any | None = None,
     ) -> None:
         """初期化.
 
@@ -223,6 +229,9 @@ class Orchestrator:
         self._llm = llm_client
         self._tool_provider = tool_provider
         self._config = config or OrchestratorConfig()
+        self._strategy_router = strategy_router
+        self._execution_recorder = execution_recorder
+        self._evolution_engine = evolution_engine
 
         # サブコンポーネント
         self._planner = PlannerAgent(
@@ -232,6 +241,7 @@ class Orchestrator:
         self._executor = ExecutorAgent(
             tool_provider=tool_provider,
             llm_client=llm_client,
+            execution_recorder=execution_recorder,
             config=executor_config,
         )
         self._monitor = MonitorAgent(
@@ -297,6 +307,19 @@ class Orchestrator:
                 available_tools=available_tools,
             )
             exec_ctx.plan = plan
+            context["_execution_id"] = execution_id
+
+            strategy_decision = await self.route_strategy(
+                task=task,
+                plan=plan,
+                context=context,
+            )
+            context["strategy_decision"] = strategy_decision.model_dump(mode="json")
+            context["strategy_id"] = strategy_decision.selected_strategy_id
+            context["used_retrieval"] = strategy_decision.mode != RetrievalMode.SKIP
+
+            if strategy_decision.use_strategy:
+                self._apply_strategy_to_plan(plan, strategy_decision)
 
             # 2. 監視開始
             if self._config.enable_monitoring:
@@ -352,11 +375,18 @@ class Orchestrator:
 
             # 最終出力を構築
             output = self._build_output(step_results, context)
+            evolution_result: dict[str, Any] | None = None
+            if self._config.enable_auto_evolution and self._evolution_engine is not None:
+                evolution_result = await self._evolution_engine.finalize_run(
+                    run_id=execution_id,
+                    task=task,
+                    context=context,
+                    success=True,
+                    strategy_id=strategy_decision.selected_strategy_id,
+                    latency_ms=duration_ms,
+                )
 
-            self._logger.info(
-                f"タスク完了: {execution_id} ({duration_ms:.0f}ms, "
-                f"{len(step_results)}ステップ)"
-            )
+            self._logger.info(f"タスク完了: {execution_id} ({duration_ms:.0f}ms, {len(step_results)}ステップ)")
 
             return ExecutionResult(
                 execution_id=execution_id,
@@ -365,6 +395,10 @@ class Orchestrator:
                 plan=plan,
                 step_results=step_results,
                 duration_ms=duration_ms,
+                metadata={
+                    "strategy_decision": strategy_decision.model_dump(mode="json"),
+                    "evolution": evolution_result,
+                },
             )
 
         except Exception as e:
@@ -377,6 +411,16 @@ class Orchestrator:
                 self._monitor.report_failed(execution_id, str(e))
 
             duration_ms = (datetime.now() - start_time).total_seconds() * 1000
+            if self._config.enable_auto_evolution and self._evolution_engine is not None:
+                await self._evolution_engine.finalize_run(
+                    run_id=execution_id,
+                    task=task,
+                    context=context,
+                    success=False,
+                    strategy_id=context.get("strategy_id"),
+                    latency_ms=duration_ms,
+                    failure_reason=str(e),
+                )
 
             self._logger.exception(f"タスク失敗: {execution_id} - {e}")
 
@@ -436,12 +480,25 @@ class Orchestrator:
                 available_tools=available_tools,
             )
             exec_ctx.plan = plan
+            context["_execution_id"] = execution_id
+
+            strategy_decision = await self.route_strategy(
+                task=task,
+                plan=plan,
+                context=context,
+            )
+            context["strategy_decision"] = strategy_decision.model_dump(mode="json")
+            context["strategy_id"] = strategy_decision.selected_strategy_id
+            context["used_retrieval"] = strategy_decision.mode != RetrievalMode.SKIP
+            if strategy_decision.use_strategy:
+                self._apply_strategy_to_plan(plan, strategy_decision)
 
             yield {
                 "type": "plan_created",
                 "plan_id": plan.id,
                 "total_steps": plan.total_steps,
                 "estimated_duration": plan.estimated_duration,
+                "strategy_decision": strategy_decision.model_dump(mode="json"),
                 "execution_id": execution_id,
             }
 
@@ -483,13 +540,9 @@ class Orchestrator:
                 # 監視に報告
                 if self._config.enable_monitoring:
                     if result.success:
-                        self._monitor.report_step_completed(
-                            execution_id, result.step_id, step_name, result.duration_ms
-                        )
+                        self._monitor.report_step_completed(execution_id, result.step_id, step_name, result.duration_ms)
                     else:
-                        self._monitor.report_step_failed(
-                            execution_id, result.step_id, step_name, result.error or ""
-                        )
+                        self._monitor.report_step_failed(execution_id, result.step_id, step_name, result.error or "")
 
             # 4. 完了
             exec_ctx.phase = ExecutionPhase.COMPLETED
@@ -502,6 +555,16 @@ class Orchestrator:
 
             duration_ms = (datetime.now() - start_time).total_seconds() * 1000
             output = self._build_output(step_results, context)
+            evolution_result: dict[str, Any] | None = None
+            if self._config.enable_auto_evolution and self._evolution_engine is not None:
+                evolution_result = await self._evolution_engine.finalize_run(
+                    run_id=execution_id,
+                    task=task,
+                    context=context,
+                    success=True,
+                    strategy_id=strategy_decision.selected_strategy_id,
+                    latency_ms=duration_ms,
+                )
 
             yield {
                 "type": "completed",
@@ -509,6 +572,7 @@ class Orchestrator:
                 "output": output,
                 "duration_ms": duration_ms,
                 "total_steps": len(step_results),
+                "evolution": evolution_result,
                 "execution_id": execution_id,
             }
 
@@ -522,6 +586,16 @@ class Orchestrator:
                 self._monitor.report_failed(execution_id, str(e))
 
             duration_ms = (datetime.now() - start_time).total_seconds() * 1000
+            if self._config.enable_auto_evolution and self._evolution_engine is not None:
+                await self._evolution_engine.finalize_run(
+                    run_id=execution_id,
+                    task=task,
+                    context=context,
+                    success=False,
+                    strategy_id=context.get("strategy_id"),
+                    latency_ms=duration_ms,
+                    failure_reason=str(e),
+                )
 
             yield {
                 "type": "failed",
@@ -549,10 +623,12 @@ class Orchestrator:
         outputs = []
         for result in step_results:
             if result.success and result.output:
-                outputs.append({
-                    "step_id": result.step_id,
-                    "output": result.output,
-                })
+                outputs.append(
+                    {
+                        "step_id": result.step_id,
+                        "output": result.output,
+                    }
+                )
 
         # 最後の成功出力があればそれを返す
         if outputs:
@@ -566,9 +642,7 @@ class Orchestrator:
         Args:
             event: 監視イベント
         """
-        self._logger.warning(
-            f"アラート [{event.severity.value}]: {event.message}"
-        )
+        self._logger.warning(f"アラート [{event.severity.value}]: {event.message}")
 
         # 自動リカバリ
         if self._config.auto_recovery and event.severity == AlertSeverity.CRITICAL:
@@ -635,8 +709,62 @@ class Orchestrator:
                 "max_retries": self._config.max_retries,
                 "enable_monitoring": self._config.enable_monitoring,
                 "enable_replan": self._config.enable_replan,
+                "enable_strategy_routing": self._config.enable_strategy_routing,
+                "enable_auto_evolution": self._config.enable_auto_evolution,
             },
         }
+
+    async def route_strategy(
+        self,
+        task: str,
+        plan: ExecutionPlan,
+        context: dict[str, Any],
+    ) -> StrategyDecision:
+        """計画実行前にStrategy Routerを適用する."""
+        if not self._config.enable_strategy_routing or self._strategy_router is None:
+            return StrategyDecision(
+                use_strategy=False,
+                mode=RetrievalMode.SKIP,
+                reasons=["strategy_router_disabled"],
+            )
+
+        try:
+            result = await self._strategy_router.route(task=task, plan=plan, context=context)
+            return cast("StrategyDecision", result)
+        except Exception as exc:
+            self._logger.warning("strategy routing failed: %s", exc)
+            return StrategyDecision(
+                use_strategy=False,
+                mode=RetrievalMode.SKIP,
+                reasons=["strategy_router_error"],
+                metadata={"error": str(exc)},
+            )
+
+    def _apply_strategy_to_plan(
+        self,
+        plan: ExecutionPlan,
+        strategy_decision: StrategyDecision,
+    ) -> None:
+        """戦略カプセル情報を計画へ注入する."""
+        capsule = strategy_decision.selected_capsule
+        if capsule is None:
+            return
+
+        plan.context.setdefault("strategy_guidance", {})
+        plan.context["strategy_guidance"] = {
+            "strategy_id": strategy_decision.selected_strategy_id,
+            "intent": capsule.intent,
+            "tool_sequence": list(capsule.tool_sequence),
+            "guard_conditions": list(capsule.guard_conditions),
+            "validation_method": capsule.validation_method,
+        }
+
+        tool_steps = [step for step in plan.steps if step.step_type.value == "tool_call"]
+        for idx, step in enumerate(tool_steps):
+            if idx >= len(capsule.tool_sequence):
+                break
+            if not step.tool_uri:
+                step.tool_uri = capsule.tool_sequence[idx]
 
     async def close(self) -> None:
         """リソースを解放."""

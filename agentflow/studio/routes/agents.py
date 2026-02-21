@@ -12,11 +12,11 @@ from typing import TYPE_CHECKING, Any
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 
-from agentflow.core.engine import AgentFlowEngine
 from agentflow.studio.models import AgentRunRequest, AgentRunResponse
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
     from pathlib import Path
 
     from agentflow.marketplace.registry import LocalRegistry
@@ -47,15 +47,17 @@ def create_agents_router(
         # レジストリから取得
         installed = registry.list_agents()
         for agent in installed:
-            result.append({
-                "id": agent.id,
-                "name": agent.name,
-                "version": agent.version,
-                "description": agent.description,
-                "category": agent.category,
-                "installed_at": agent.installed_at,
-                "type": "yaml",
-            })
+            result.append(
+                {
+                    "id": agent.id,
+                    "name": agent.name,
+                    "version": agent.version,
+                    "description": agent.description,
+                    "category": agent.category,
+                    "installed_at": agent.installed_at,
+                    "type": "yaml",
+                }
+            )
 
         # @agent デコレータで定義されたAgent
         try:
@@ -64,15 +66,17 @@ def create_agents_router(
             decorated_agents = AgentClient.list_agents()
             for agent_name in decorated_agents:
                 if not any(a["id"] == agent_name for a in result):
-                    result.append({
-                        "id": agent_name,
-                        "name": agent_name,
-                        "version": "0.2.0",
-                        "description": f"@agent decorator agent: {agent_name}",
-                        "category": "decorator",
-                        "installed_at": None,
-                        "type": "decorator",
-                    })
+                    result.append(
+                        {
+                            "id": agent_name,
+                            "name": agent_name,
+                            "version": "0.2.0",
+                            "description": f"@agent decorator agent: {agent_name}",
+                            "category": "decorator",
+                            "installed_at": "",
+                            "type": "decorator",
+                        }
+                    )
         except Exception:
             pass
 
@@ -91,9 +95,9 @@ def create_agents_router(
             "version": agent_info.version,
             "description": agent_info.description,
             "category": agent_info.category,
-            "protocols": agent_info.protocols,
-            "inputs": agent_info.inputs,
-            "outputs": agent_info.outputs,
+            "protocols": [],
+            "inputs": [],
+            "outputs": [],
         }
 
     @router.post("/{agent_id}/run")
@@ -104,9 +108,12 @@ def create_agents_router(
             raise HTTPException(status_code=404, detail="Agent not found")
 
         try:
-            engine = AgentFlowEngine()
-            result = await engine.run(agent_id, request.input_data)
-            return AgentRunResponse(status="success", result=result)
+            from agentflow.agent_decorator import AgentClient
+
+            client = AgentClient.get(agent_id)
+            result = await client.invoke(request.input_data)
+            result_payload = result if isinstance(result, dict) else {"result": result}
+            return AgentRunResponse(status="success", result=result_payload, error=None)
 
         except Exception as e:
             return AgentRunResponse(status="error", result=None, error=str(e))
@@ -115,20 +122,19 @@ def create_agents_router(
     async def run_agent_stream(agent_id: str) -> StreamingResponse:
         """エージェントをストリーム実行（SSE）."""
 
-        async def event_generator():
+        async def event_generator() -> AsyncIterator[str]:
             try:
-                engine = AgentFlowEngine()
+                from agentflow.agent_decorator import AgentClient
 
-                async for event in engine.stream_events(agent_id, {}):
-                    event_data = {"type": event.type, "data": event.data}
+                client = AgentClient.get(agent_id)
+
+                async for chunk in client.stream({}):
+                    event_data = {"type": "chunk", "data": chunk}
                     yield f"data: {json.dumps(event_data, ensure_ascii=False)}\n\n"
-
-                    if event.type in ("complete", "error"):
-                        return
 
                 # フォールバック
                 for i in range(5):
-                    yield f"data: {{'type': 'log', 'message': 'Step {i+1}'}}\n\n"
+                    yield f"data: {{'type': 'log', 'message': 'Step {i + 1}'}}\n\n"
                     await asyncio.sleep(1)
                 yield "data: {'type': 'complete', 'message': 'Done'}\n\n"
 
@@ -139,7 +145,7 @@ def create_agents_router(
         return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     @router.websocket("/{agent_id}/ws")
-    async def agent_websocket(websocket: WebSocket, agent_id: str):
+    async def agent_websocket(websocket: WebSocket, agent_id: str) -> None:
         """エージェントWebSocket接続."""
         await websocket.accept()
         connection_id = f"{agent_id}_{id(websocket)}"
@@ -154,4 +160,3 @@ def create_agents_router(
             del active_connections[connection_id]
 
     return router
-

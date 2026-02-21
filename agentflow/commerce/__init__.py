@@ -83,4 +83,3 @@ __all__ = [
     "PurchaseIntent",
     "Transaction",
 ]
-

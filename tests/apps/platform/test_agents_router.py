@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Agents Router エンドポイントのユニットテスト.
 
 テスト対象: apps/platform/routers/agents.py
@@ -7,7 +6,11 @@ phase3_test_client を使用してエンドポイントを検証する。
 
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 
 class TestListAgents:
@@ -151,9 +154,7 @@ class TestSearchAgents:
 
     def test_search_no_match(self, phase3_test_client: TestClient) -> None:
         """マッチしない検索は空リストを返す."""
-        resp = phase3_test_client.get(
-            "/api/studios/framework/agents/search", params={"capability": "nonexistent_xyz"}
-        )
+        resp = phase3_test_client.get("/api/studios/framework/agents/search", params={"capability": "nonexistent_xyz"})
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
         assert resp.json()["agents"] == []

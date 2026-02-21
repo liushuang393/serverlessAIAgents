@@ -289,6 +289,7 @@ class ErrorResponse(BaseModel):
         """FastAPI JSONResponse 用に変換."""
         try:
             from fastapi.responses import JSONResponse
+
             return JSONResponse(
                 status_code=self.status,
                 content=self.to_dict(),

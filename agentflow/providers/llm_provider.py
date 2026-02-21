@@ -140,6 +140,14 @@ class LLMProvider:
         self._client = LLMClient(llm_config)
         logger.info(f"LLMProvider initialized: provider={provider}, model={model}, timeout={timeout}s")
 
+    def _require_client(self) -> LLMClient:
+        """初期化済みクライアントを取得."""
+        client = self._client
+        if client is None:
+            msg = "LLM client is not initialized"
+            raise RuntimeError(msg)
+        return client
+
     async def chat(
         self,
         messages: list[dict[str, str]],
@@ -157,7 +165,7 @@ class LLMProvider:
         from agentflow.llm.llm_client import LLMMessage
 
         llm_messages = [LLMMessage(**msg) for msg in messages]
-        response = await self._client.chat(llm_messages, **kwargs)
+        response = await self._require_client().chat(llm_messages, **kwargs)
         return response.model_dump()
 
     async def complete(self, prompt: str, **kwargs: Any) -> dict[str, Any]:
@@ -170,7 +178,7 @@ class LLMProvider:
         Returns:
             レスポンス
         """
-        response = await self._client.complete(prompt, **kwargs)
+        response = await self._require_client().complete(prompt, **kwargs)
         return response.model_dump()
 
     async def stream(
@@ -190,7 +198,7 @@ class LLMProvider:
         from agentflow.llm.llm_client import LLMMessage
 
         llm_messages = [LLMMessage(**msg) for msg in messages]
-        async for chunk in self._client.stream(llm_messages, **kwargs):
+        async for chunk in self._require_client().stream(llm_messages, **kwargs):
             yield chunk
 
     @property

@@ -178,8 +178,7 @@ class SubCallManager:
             return SubCallResult(
                 success=False,
                 content=None,
-                error=f"Budget exhausted: need ~{estimated_total}, "
-                f"have {self._budget.remaining_tokens}",
+                error=f"Budget exhausted: need ~{estimated_total}, have {self._budget.remaining_tokens}",
             )
 
         try:
@@ -431,8 +430,7 @@ Return JSON with:
 Only return JSON."""
 
         handles_text = "\n".join(
-            f"- {h['handle_id']}: {h.get('total_lines', '?')} lines, "
-            f"summary: {h.get('summary', 'N/A')[:100]}"
+            f"- {h['handle_id']}: {h.get('total_lines', '?')} lines, summary: {h.get('summary', 'N/A')[:100]}"
             for h in context_handles
         )
 
@@ -493,9 +491,7 @@ Guidelines:
 - Acknowledge uncertainties
 - Structure the answer clearly"""
 
-        evidence_text = "\n".join(
-            f"Evidence {i + 1}: {e[:1000]}" for i, e in enumerate(evidence[:5])
-        )
+        evidence_text = "\n".join(f"Evidence {i + 1}: {e[:1000]}" for i, e in enumerate(evidence[:5]))
 
         user_prompt = f"""Query: {query}
 

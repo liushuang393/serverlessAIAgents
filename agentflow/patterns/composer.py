@@ -44,8 +44,8 @@ class CompositionPattern(str, Enum):
     BROADCAST = "broadcast"  # ブロードキャスト（並行配信）パターン
 
     # エイリアス（使いやすさ向上）
-    SEQUENTIAL = "pipeline"  # 順次実行（PIPELINE のエイリアス）
-    PARALLEL = "broadcast"  # 並行実行（BROADCAST のエイリアス）
+    SEQUENTIAL = "pipeline"  # noqa: PIE796 - intentional alias for PIPELINE
+    PARALLEL = "broadcast"  # noqa: PIE796 - intentional alias for BROADCAST
 
 
 class AgentRole(str, Enum):
@@ -228,9 +228,7 @@ class AgentComposer:
     @property
     def workers(self) -> list[AgentNode]:
         """Workerノードリストを取得."""
-        return [
-            node for node in self._nodes.values() if node.role == AgentRole.WORKER
-        ]
+        return [node for node in self._nodes.values() if node.role == AgentRole.WORKER]
 
     def set_supervisor(
         self,
@@ -357,9 +355,7 @@ class AgentComposer:
         logger.info("Agent削除: %s", agent_id)
         return True
 
-    def on_task_complete(
-        self, callback: Callable[[TaskAssignment], Any]
-    ) -> None:
+    def on_task_complete(self, callback: Callable[[TaskAssignment], Any]) -> None:
         """タスク完了コールバックを設定."""
         self._on_task_complete = callback
 
@@ -394,9 +390,7 @@ class AgentComposer:
 
         try:
             if self._config.pattern == CompositionPattern.SUPERVISOR_WORKER:
-                results = await self._execute_supervisor_worker(
-                    task, context, subtasks
-                )
+                results = await self._execute_supervisor_worker(task, context, subtasks)
             elif self._config.pattern == CompositionPattern.MESH:
                 results = await self._execute_mesh(task, context)
             elif self._config.pattern == CompositionPattern.HIERARCHY:
@@ -410,9 +404,7 @@ class AgentComposer:
                 raise ValueError(msg)
 
             # 結果判定
-            failed_count = sum(
-                1 for t in self._completed_tasks if t.status == "failed"
-            )
+            failed_count = sum(1 for t in self._completed_tasks if t.status == "failed")
             if failed_count == 0:
                 status = "success"
             elif failed_count < len(self._completed_tasks):
@@ -501,18 +493,22 @@ class AgentComposer:
                 assignment.status = "running"
 
                 try:
-                    result = await target.agent.run({
-                        "task": assignment.task,
-                        "context": context or {},
-                    })
+                    result = await target.agent.run(
+                        {
+                            "task": assignment.task,
+                            "context": context or {},
+                        }
+                    )
                     assignment.status = "completed"
                     assignment.result = result
                     assignment.completed_at = datetime.now()
-                    results["subtask_results"].append({
-                        "task_id": assignment.task_id,
-                        "agent_id": target.agent_id,
-                        "result": result,
-                    })
+                    results["subtask_results"].append(
+                        {
+                            "task_id": assignment.task_id,
+                            "agent_id": target.agent_id,
+                            "result": result,
+                        }
+                    )
                 except Exception as e:
                     assignment.status = "failed"
                     assignment.error = str(e)
@@ -539,11 +535,13 @@ class AgentComposer:
         # Supervisorによる集約（オプション）
         if supervisor_node and results["subtask_results"]:
             try:
-                aggregated = await supervisor_node.agent.run({
-                    "task": "結果の集約",
-                    "subtask_results": results["subtask_results"],
-                    "context": context or {},
-                })
+                aggregated = await supervisor_node.agent.run(
+                    {
+                        "task": "結果の集約",
+                        "subtask_results": results["subtask_results"],
+                        "context": context or {},
+                    }
+                )
                 results["aggregated"] = aggregated
             except Exception as e:
                 logger.warning("結果集約エラー: %s", e)
@@ -560,10 +558,12 @@ class AgentComposer:
 
         async def run_agent(node: AgentNode) -> tuple[str, Any]:
             try:
-                result = await node.agent.run({
-                    "task": task,
-                    "context": context or {},
-                })
+                result = await node.agent.run(
+                    {
+                        "task": task,
+                        "context": context or {},
+                    }
+                )
                 return node.agent_id, {"status": "success", "result": result}
             except Exception as e:
                 return node.agent_id, {"status": "failed", "error": str(e)}
@@ -589,13 +589,9 @@ class AgentComposer:
         results: dict[str, Any] = {"hierarchy_results": []}
 
         # ルートノードを特定
-        root_nodes = [
-            node for node in self._nodes.values() if node.parent_id is None
-        ]
+        root_nodes = [node for node in self._nodes.values() if node.parent_id is None]
 
-        async def process_node(
-            node: AgentNode, node_task: str, depth: int = 0
-        ) -> dict[str, Any]:
+        async def process_node(node: AgentNode, node_task: str, depth: int = 0) -> dict[str, Any]:
             """ノードとその子を再帰的に処理."""
             node_result: dict[str, Any] = {
                 "agent_id": node.agent_id,
@@ -605,10 +601,12 @@ class AgentComposer:
 
             # 自身のタスク実行
             try:
-                result = await node.agent.run({
-                    "task": node_task,
-                    "context": context or {},
-                })
+                result = await node.agent.run(
+                    {
+                        "task": node_task,
+                        "context": context or {},
+                    }
+                )
                 node_result["result"] = result
                 node_result["status"] = "success"
             except Exception as e:
@@ -619,9 +617,7 @@ class AgentComposer:
             for child_id in node.children_ids:
                 if child_id in self._nodes:
                     child_node = self._nodes[child_id]
-                    child_result = await process_node(
-                        child_node, node_task, depth + 1
-                    )
+                    child_result = await process_node(child_node, node_task, depth + 1)
                     node_result["children_results"].append(child_result)
 
             return node_result
@@ -672,9 +668,7 @@ class AgentComposer:
 
                 if self._on_progress:
                     progress = (i + 1) / len(sorted_nodes)
-                    self._on_progress(
-                        progress, f"ステップ {i + 1}/{len(sorted_nodes)} 完了"
-                    )
+                    self._on_progress(progress, f"ステップ {i + 1}/{len(sorted_nodes)} 完了")
 
         return results
 

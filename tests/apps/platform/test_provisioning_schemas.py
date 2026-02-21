@@ -1,12 +1,10 @@
-# -*- coding: utf-8 -*-
 """Provisioning スキーマのユニットテスト."""
 
 from __future__ import annotations
 
 import pytest
-from pydantic import ValidationError
-
 from apps.platform.schemas.provisioning_schemas import AppCreateRequest
+from pydantic import ValidationError
 
 
 class TestAppCreateRequest:
@@ -67,3 +65,38 @@ class TestAppCreateRequest:
                 rag_enabled=True,
                 vector_database="none",
             )
+
+    def test_evolution_config_is_accepted(self) -> None:
+        """Evolution 設定を受け付ける."""
+        req = AppCreateRequest(
+            name="evo_app",
+            display_name="Evolution App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            evolution={
+                "enabled": True,
+                "strategy_service_url": "http://localhost:8089",
+                "validator_queue": {
+                    "backend": "redis_stream",
+                    "redis_url": "redis://localhost:6379/0",
+                    "stream_key": "evolution:validate:stream",
+                    "consumer_group": "evolution-validator-v1",
+                    "max_retries": 5,
+                },
+                "scope_policy": ["tenant_app", "tenant_product_line", "global_verified"],
+                "retrieval": {
+                    "high_confidence_skip_threshold": 0.82,
+                    "high_complexity_threshold": 0.7,
+                    "low_confidence_threshold": 0.55,
+                },
+                "suspicion": {
+                    "max_age_days": 30,
+                    "failure_streak_threshold": 2,
+                    "performance_drop_ratio": 0.2,
+                },
+            },
+        )
+        assert req.evolution is not None
+        assert req.evolution.validator_queue.backend == "redis_stream"

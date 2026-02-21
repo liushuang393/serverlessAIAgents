@@ -16,13 +16,13 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from apps.decision_governance_engine.engine import DecisionEngine
+from apps.decision_governance_engine.routers.report import cache_report
 from apps.decision_governance_engine.schemas.input_schemas import (
     BudgetConstraint,
     ConstraintSet,
     StakeholderInfo,
     TimelineConstraint,
 )
-from apps.decision_governance_engine.routers.report import cache_report
 from apps.decision_governance_engine.schemas.output_schemas import DecisionReport
 from apps.decision_governance_engine.services.decision_contract_builder import (
     DecisionGovContractBuilder,
@@ -51,8 +51,10 @@ router = APIRouter(tags=["決策処理"])
 # スキーマ定義
 # ========================================
 
+
 class DecisionAPIRequest(BaseModel):
     """API リクエストスキーマ."""
+
     question: str = Field(..., min_length=15, max_length=2000, description="意思決定の質問")
     budget: float | None = Field(None, ge=0, description="予算制約（万円）")
     timeline_months: int | None = Field(None, ge=1, le=120, description="期間制約（月）")
@@ -60,12 +62,14 @@ class DecisionAPIRequest(BaseModel):
     regulatory_constraints: list[str] = Field(default_factory=list, description="法規制約")
     human_resources: list[str] = Field(default_factory=list, description="人的リソース")
     stakeholders: StakeholderInfo | None = Field(
-        None, description="ステークホルダー（責任者）情報（任意）",
+        None,
+        description="ステークホルダー（責任者）情報（任意）",
     )
 
 
 class DecisionAPIResponse(BaseModel):
     """API レスポンススキーマ."""
+
     status: str = Field(..., description="処理状態")
     request_id: str | None = Field(None, description="履歴照会・PDF出力用のリクエストID（UUID）")
     report_id: str | None = Field(None, description="レポートID")
@@ -74,6 +78,7 @@ class DecisionAPIResponse(BaseModel):
 
 class RejectionResponse(BaseModel):
     """拒否レスポンススキーマ."""
+
     status: str = "rejected"
     reason: str | None = None
     message: str | None = None
@@ -114,6 +119,7 @@ def build_constraints(req: DecisionAPIRequest) -> ConstraintSet:
 # ========================================
 # エンドポイント
 # ========================================
+
 
 def _extract_results_for_history(result_data: dict[str, Any]) -> dict[str, Any]:
     """履歴保存用に各セクション結果を抽出.
@@ -185,6 +191,7 @@ def _save_fallback_history(
     if len(_fallback_history_records) > _FALLBACK_HISTORY_MAX:
         del _fallback_history_records[_FALLBACK_HISTORY_MAX:]
 
+
 def build_input_dict(
     question: str,
     constraints: ConstraintSet,
@@ -240,11 +247,7 @@ def build_input_dict(
             "business_owner": "事業責任者",
             "legal_reviewer": "法務・コンプライアンス担当",
         }
-        stakeholder_list = [
-            f"{label_map.get(k, k)}: {v}"
-            for k, v in stakeholders.model_dump().items()
-            if v
-        ]
+        stakeholder_list = [f"{label_map.get(k, k)}: {v}" for k, v in stakeholders.model_dump().items() if v]
         if stakeholder_list:
             result["stakeholders"] = stakeholder_list
 
@@ -359,6 +362,7 @@ async def process_decision(
     if ENABLE_HISTORY:
         try:
             from apps.decision_governance_engine.repositories import DecisionRepository
+
             repo = DecisionRepository()
             # まず finalize を試みる（ステージ単位保存で既にレコードが存在する場合）
             finalized = await repo.finalize(
@@ -495,8 +499,10 @@ def _infer_decision_role(data: dict[str, Any]) -> str:
 # 履歴照会エンドポイント
 # ========================================
 
+
 class HistoryListResponse(BaseModel):
     """履歴一覧レスポンス."""
+
     status: str = "success"
     total: int = 0
     items: list[dict[str, Any]] = Field(default_factory=list)
@@ -504,6 +510,7 @@ class HistoryListResponse(BaseModel):
 
 class HistoryDetailResponse(BaseModel):
     """履歴詳細レスポンス."""
+
     status: str = "success"
     data: dict[str, Any] = Field(default_factory=dict)
 
@@ -547,6 +554,7 @@ async def get_decision_history(
 
     try:
         from apps.decision_governance_engine.repositories import DecisionRepository
+
         repo = DecisionRepository()
         records = await repo.find_recent(limit=limit, decision_role=decision_role, mode=mode)
 
@@ -595,7 +603,7 @@ async def get_decision_history(
             if (not decision_role or item.get("decision_role") == decision_role)
             and (not mode or item.get("mode") == mode)
         ][:limit]
-        
+
         return HistoryListResponse(status="fallback", total=len(fallback_items), items=fallback_items)
 
 
@@ -620,6 +628,7 @@ async def get_decision_detail(request_id: str) -> HistoryDetailResponse:
 
     try:
         from apps.decision_governance_engine.repositories import DecisionRepository
+
         repo = DecisionRepository()
         record = await repo.find_by_request_id(UUID(request_id))
 
@@ -707,12 +716,14 @@ async def process_decision_stream(
 
     # ステークホルダー情報を構築（いずれかの値が設定されている場合のみ）
     stakeholders: StakeholderInfo | None = None
-    if any([
-        stakeholder_product_owner,
-        stakeholder_tech_lead,
-        stakeholder_business_owner,
-        stakeholder_legal_reviewer,
-    ]):
+    if any(
+        [
+            stakeholder_product_owner,
+            stakeholder_tech_lead,
+            stakeholder_business_owner,
+            stakeholder_legal_reviewer,
+        ]
+    ):
         stakeholders = StakeholderInfo(
             product_owner=stakeholder_product_owner,
             tech_lead=stakeholder_tech_lead,
@@ -764,6 +775,7 @@ async def process_decision_stream(
 
         try:
             from apps.decision_governance_engine.repositories import DecisionRepository
+
             repo = DecisionRepository()
             # まず finalize を試みる（ステージ単位保存で既にレコードが存在する場合）
             finalized = await repo.finalize(
@@ -802,6 +814,7 @@ async def process_decision_stream(
         """SSEイベントを生成."""
         import asyncio
         import time as time_module
+
         logger.info("[SSE] ストリーム開始")
         # 即座に接続確認イベントを送信
         yield (
@@ -902,6 +915,7 @@ async def process_decision_stream(
 # WebSocket
 # ========================================
 
+
 class ConnectionManager:
     """WebSocket接続管理."""
 
@@ -937,10 +951,12 @@ async def websocket_decision(websocket: WebSocket) -> None:
             timeline_months = data.get("timeline_months")
 
             if not question or len(question) < 15:
-                await websocket.send_json({
-                    "type": "error",
-                    "message": "質問は15文字以上必要です",
-                })
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "message": "質問は15文字以上必要です",
+                    }
+                )
                 continue
 
             constraints = ConstraintSet()
@@ -961,7 +977,9 @@ async def websocket_decision(websocket: WebSocket) -> None:
             async for event in engine.run_stream(inputs):
                 event_data = {
                     "type": "agent_event",
-                    "event_type": getattr(event, "event_type", {}).value if hasattr(getattr(event, "event_type", None), "value") else str(event.get("event_type", "")),
+                    "event_type": getattr(event, "event_type", {}).value
+                    if hasattr(getattr(event, "event_type", None), "value")
+                    else str(event.get("event_type", "")),
                     "timestamp": getattr(event, "timestamp", 0),
                     "flow_id": getattr(event, "flow_id", ""),
                     "data": getattr(event, "data", {}),
@@ -977,10 +995,12 @@ async def websocket_decision(websocket: WebSocket) -> None:
 
                 await websocket.send_json(event_data)
 
-            await websocket.send_json({
-                "type": "complete",
-                "message": "意思決定プロセスが完了しました",
-            })
+            await websocket.send_json(
+                {
+                    "type": "complete",
+                    "message": "意思決定プロセスが完了しました",
+                }
+            )
 
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)

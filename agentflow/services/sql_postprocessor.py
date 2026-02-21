@@ -101,9 +101,17 @@ class PostProcessorConfig:
     enable_llm_correction: bool = True
     timeout_seconds: float = 30.0
     allowed_tables: list[str] | None = None
-    blocked_keywords: list[str] = field(default_factory=lambda: [
-        "DROP", "DELETE", "TRUNCATE", "ALTER", "CREATE", "INSERT", "UPDATE",
-    ])
+    blocked_keywords: list[str] = field(
+        default_factory=lambda: [
+            "DROP",
+            "DELETE",
+            "TRUNCATE",
+            "ALTER",
+            "CREATE",
+            "INSERT",
+            "UPDATE",
+        ]
+    )
 
 
 # SQL 構文パターン
@@ -155,7 +163,7 @@ class SQLPostProcessor:
         """
         self._config = config or PostProcessorConfig()
         self._execute_func = execute_func
-        self._llm = None
+        self._llm: Any | None = None
         self._started = False
         self._logger = logging.getLogger(__name__)
 
@@ -166,6 +174,7 @@ class SQLPostProcessor:
 
         if self._config.enable_llm_correction:
             from agentflow.providers import get_llm
+
             self._llm = get_llm(temperature=0)
 
         self._started = True
@@ -208,9 +217,7 @@ class SQLPostProcessor:
             if not validation.is_valid:
                 # LLM 修正を試行
                 if self._config.enable_llm_correction and self._llm:
-                    correction = await self._llm_correct(
-                        cleaned_sql, query, validation.errors, schema_context
-                    )
+                    correction = await self._llm_correct(cleaned_sql, query, validation.errors, schema_context)
                     if correction.was_corrected:
                         result.corrections.append(correction)
                         result.final_sql = correction.corrected_sql
@@ -249,7 +256,6 @@ class SQLPostProcessor:
 
         # 末尾のセミコロンを除去（一般的に不要）
         return sql.rstrip(";")
-
 
     def _validate_syntax(self, sql: str) -> ValidationResult:
         """構文を検証.
@@ -507,4 +513,3 @@ __all__ = [
     "ValidationLevel",
     "ValidationResult",
 ]
-

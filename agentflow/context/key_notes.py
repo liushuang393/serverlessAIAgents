@@ -35,22 +35,22 @@ _logger = logging.getLogger(__name__)
 class NoteImportance(str, Enum):
     """重要度レベル."""
 
-    CRITICAL = "critical"   # 絶対保持（ユーザー名、設定等）
-    HIGH = "high"           # 高優先度（明示的な要求、決定事項）
-    MEDIUM = "medium"       # 中優先度（関連情報）
-    LOW = "low"             # 低優先度（補足情報）
+    CRITICAL = "critical"  # 絶対保持（ユーザー名、設定等）
+    HIGH = "high"  # 高優先度（明示的な要求、決定事項）
+    MEDIUM = "medium"  # 中優先度（関連情報）
+    LOW = "low"  # 低優先度（補足情報）
 
 
 class NoteCategory(str, Enum):
     """Noteカテゴリ."""
 
-    USER_INFO = "user_info"           # ユーザー情報
-    PREFERENCE = "preference"         # 設定・好み
-    DECISION = "decision"             # 決定事項
-    FACT = "fact"                     # 事実情報
-    CONTEXT = "context"               # コンテキスト情報
-    INSTRUCTION = "instruction"       # 指示・要求
-    SUMMARY = "summary"               # 要約
+    USER_INFO = "user_info"  # ユーザー情報
+    PREFERENCE = "preference"  # 設定・好み
+    DECISION = "decision"  # 決定事項
+    FACT = "fact"  # 事実情報
+    CONTEXT = "context"  # コンテキスト情報
+    INSTRUCTION = "instruction"  # 指示・要求
+    SUMMARY = "summary"  # 要約
 
 
 @dataclass
@@ -352,10 +352,7 @@ class KeyNotesStore:
         }
         min_order = importance_order[min_importance]
 
-        return [
-            note for note in self.get_all_notes()
-            if importance_order[note.importance] <= min_order
-        ]
+        return [note for note in self.get_all_notes() if importance_order[note.importance] <= min_order]
 
     def get_notes_by_category(self, category: NoteCategory) -> list[KeyNote]:
         """カテゴリでNotesを取得.
@@ -443,11 +440,13 @@ class KeyNotesStore:
                     # カテゴリ判定
                     category = self._detect_category(extracted)
 
-                    results.append({
-                        "content": extracted,
-                        "importance": importance,
-                        "category": category,
-                    })
+                    results.append(
+                        {
+                            "content": extracted,
+                            "importance": importance,
+                            "category": category,
+                        }
+                    )
 
         return results
 
@@ -521,10 +520,7 @@ class KeyNotesStore:
             return
 
         # CRITICALは削除しない
-        evictable = [
-            note for note in self._notes.values()
-            if note.importance != NoteImportance.CRITICAL
-        ]
+        evictable = [note for note in self._notes.values() if note.importance != NoteImportance.CRITICAL]
 
         if not evictable:
             self._logger.warning("削除可能なNoteがありません")

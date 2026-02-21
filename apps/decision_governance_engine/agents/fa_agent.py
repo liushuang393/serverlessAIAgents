@@ -250,9 +250,7 @@ class FaAgent(ResilientAgent[FaInput, FaOutput]):
         # ルールベース分析
         return self._analyze_rule_based(dao_result, input_data)
 
-    async def _analyze_with_llm(
-        self, dao_result: DaoOutput, input_data: FaInput
-    ) -> FaOutput:
+    async def _analyze_with_llm(self, dao_result: DaoOutput, input_data: FaInput) -> FaOutput:
         """LLMを使用した分析（v3.1: 根拠駆動・可実行）."""
         # 道Agent結果の情報を収集
         death_traps_info = ""
@@ -292,7 +290,7 @@ class FaAgent(ResilientAgent[FaInput, FaOutput]):
         user_prompt = f"""【問題タイプ】{dao_result.problem_type.value}
 【問題の本質的性質】{dao_result.problem_nature.value if dao_result.problem_nature else "不明"}
 【本質】{dao_result.essence}
-【不可変制約】{', '.join(dao_result.immutable_constraints)}
+【不可変制約】{", ".join(dao_result.immutable_constraints)}
 【時間軸】{input_data.time_horizon or "未指定"}
 {essence_derivation_info}
 {death_traps_info}
@@ -316,6 +314,7 @@ JSON形式で出力してください。"""
 
         try:
             from agentflow.utils import extract_json
+
             data = extract_json(response)
 
             if data is None:
@@ -352,14 +351,16 @@ JSON形式で出力してください。"""
             for sp in data.get("strategic_prohibitions", []):
                 if not isinstance(sp, dict):
                     continue
-                strategic_prohibitions.append(StrategicProhibition(
-                    prohibition=sp.get("prohibition", "")[:50],
-                    rationale=sp.get("rationale", "")[:100],
-                    violation_consequence=sp.get("violation_consequence", "")[:50],
-                    prevention_measure=sp.get("prevention_measure", "")[:100],
-                    detection_metric=sp.get("detection_metric", "")[:100],
-                    responsible_role=sp.get("responsible_role", "")[:30],
-                ))
+                strategic_prohibitions.append(
+                    StrategicProhibition(
+                        prohibition=sp.get("prohibition", "")[:50],
+                        rationale=sp.get("rationale", "")[:100],
+                        violation_consequence=sp.get("violation_consequence", "")[:50],
+                        prevention_measure=sp.get("prevention_measure", "")[:100],
+                        detection_metric=sp.get("detection_metric", "")[:100],
+                        responsible_role=sp.get("responsible_role", "")[:30],
+                    )
+                )
 
             # v3.1: 競争優位仮説
             competitive_hypothesis = None
@@ -378,7 +379,10 @@ JSON形式で出力してください。"""
             jf_data = data.get("judgment_framework")
             if jf_data and isinstance(jf_data, dict):
                 must_gates = [
-                    MustGate(criterion=mg.get("criterion", "")[:50], threshold=mg.get("threshold", "")[:100])
+                    MustGate(
+                        criterion=mg.get("criterion", "")[:50],
+                        threshold=mg.get("threshold", "")[:100],
+                    )
                     for mg in jf_data.get("must_gates", [])
                     if isinstance(mg, dict)
                 ]
@@ -469,7 +473,8 @@ JSON形式で出力してください。"""
         if len(recommended) < self.MIN_STRATEGIC_OPTIONS:
             self._logger.warning(
                 "recommended_paths has %d items (min %d). Proceeding with available options.",
-                len(recommended), self.MIN_STRATEGIC_OPTIONS,
+                len(recommended),
+                self.MIN_STRATEGIC_OPTIONS,
             )
             # 警告のみ。LLMが3案しか返さなくても続行する
 
@@ -528,22 +533,16 @@ JSON形式で出力してください。"""
             risk_concentration=data.get("risk_concentration", "")[:100],
         )
 
-    def _analyze_rule_based(
-        self, dao_result: DaoOutput, input_data: FaInput
-    ) -> FaOutput:
+    def _analyze_rule_based(self, dao_result: DaoOutput, input_data: FaInput) -> FaOutput:
         """ルールベース分析（v3.1: 根拠駆動・可実行）."""
         # v3.1: 最低4案のデフォルトパス生成
-        recommended, rejected = self._generate_default_paths(
-            dao_result.problem_type, dao_result
-        )
+        recommended, rejected = self._generate_default_paths(dao_result.problem_type, dao_result)
 
         criteria = self._generate_criteria(dao_result)
         comparison = self._generate_comparison_matrix(recommended, dao_result)
 
         # v3.1: 戦略的禁止事項（仕組み化付き）
-        strategic_prohibitions = self._generate_strategic_prohibitions(
-            dao_result.problem_type, dao_result
-        )
+        strategic_prohibitions = self._generate_strategic_prohibitions(dao_result.problem_type, dao_result)
 
         # v3.1: 競争優位仮説
         competitive_hypothesis = self._generate_default_competitive_hypothesis(dao_result)
@@ -585,45 +584,49 @@ JSON形式で出力してください。"""
         # 問題タイプ別テンプレート
         templates = self.STRATEGIC_PROHIBITIONS_TEMPLATES.get(problem_type, [])
         for template in templates[:2]:
-            prohibitions.append(StrategicProhibition(
-                prohibition=template["prohibition"],
-                rationale=template["rationale"],
-                violation_consequence=template["consequence"],
-                prevention_measure="設計レビュー時のチェックリスト確認",
-                detection_metric="レビュー記録・承認ログ",
-                responsible_role="テックリード",
-            ))
+            prohibitions.append(
+                StrategicProhibition(
+                    prohibition=template["prohibition"],
+                    rationale=template["rationale"],
+                    violation_consequence=template["consequence"],
+                    prevention_measure="設計レビュー時のチェックリスト確認",
+                    detection_metric="レビュー記録・承認ログ",
+                    responsible_role="テックリード",
+                )
+            )
 
         # 死穴から追加の禁止事項を生成
         if dao_result.death_traps:
             trap = dao_result.death_traps[0]
             if len(prohibitions) < 3:
-                prohibitions.append(StrategicProhibition(
-                    prohibition=trap.action[:50],
-                    rationale=trap.reason[:100],
-                    violation_consequence=f"{trap.severity}レベルのダメージ",
-                    prevention_measure="リスクレビュー会議での確認",
-                    detection_metric="リスク台帳の更新状況",
-                    responsible_role="プロジェクトマネージャー",
-                ))
+                prohibitions.append(
+                    StrategicProhibition(
+                        prohibition=trap.action[:50],
+                        rationale=trap.reason[:100],
+                        violation_consequence=f"{trap.severity}レベルのダメージ",
+                        prevention_measure="リスクレビュー会議での確認",
+                        detection_metric="リスク台帳の更新状況",
+                        responsible_role="プロジェクトマネージャー",
+                    )
+                )
 
         # 制約主導型の場合
         if dao_result.problem_nature == ProblemNatureType.CONSTRAINT_DRIVEN:
             if not any("独自" in p.prohibition for p in prohibitions):
-                prohibitions.append(StrategicProhibition(
-                    prohibition="独自技術・独自規格の開発",
-                    rationale="標準への適合が長期的な保守性と互換性を確保",
-                    violation_consequence="エコシステムからの孤立、保守コスト増大",
-                    prevention_measure="アーキテクチャレビューでの標準準拠チェック",
-                    detection_metric="非標準コンポーネント数の監視",
-                    responsible_role="アーキテクト",
-                ))
+                prohibitions.append(
+                    StrategicProhibition(
+                        prohibition="独自技術・独自規格の開発",
+                        rationale="標準への適合が長期的な保守性と互換性を確保",
+                        violation_consequence="エコシステムからの孤立、保守コスト増大",
+                        prevention_measure="アーキテクチャレビューでの標準準拠チェック",
+                        detection_metric="非標準コンポーネント数の監視",
+                        responsible_role="アーキテクト",
+                    )
+                )
 
         return prohibitions[:3]
 
-    def _generate_default_competitive_hypothesis(
-        self, dao_result: DaoOutput
-    ) -> CompetitiveHypothesis:
+    def _generate_default_competitive_hypothesis(self, dao_result: DaoOutput) -> CompetitiveHypothesis:
         """競争優位仮説のデフォルト生成（v3.1）."""
         if dao_result.problem_nature == ProblemNatureType.REGULATORY_COMPLIANCE:
             return CompetitiveHypothesis(
@@ -649,9 +652,7 @@ JSON形式で出力してください。"""
             minimum_verification="MVP構築→初期顧客3社でフィードバック収集",
         )
 
-    def _generate_default_judgment_framework(
-        self, recommended: list[PathOption]
-    ) -> JudgmentFramework:
+    def _generate_default_judgment_framework(self, recommended: list[PathOption]) -> JudgmentFramework:
         """判断フレームワークのデフォルト生成（v3.1）."""
         must_gates = [
             MustGate(criterion="予算上限", threshold="初期投資が承認済み予算の120%以内"),
@@ -660,7 +661,11 @@ JSON形式で出力してください。"""
         ]
         should_criteria = [
             ShouldCriterion(criterion="ROI", weight="High", scoring_method="3年NPV換算で1-5点"),
-            ShouldCriterion(criterion="リスク分散度", weight="High", scoring_method="単一障害点の数で1-5点（少ない方が高得点）"),
+            ShouldCriterion(
+                criterion="リスク分散度",
+                weight="High",
+                scoring_method="単一障害点の数で1-5点（少ない方が高得点）",
+            ),
             ShouldCriterion(criterion="可逆性", weight="Med", scoring_method="撤退コスト/期間で1-5点"),
             ShouldCriterion(criterion="実行速度", weight="Med", scoring_method="価値実現までの期間で1-5点"),
         ]
@@ -917,7 +922,8 @@ JSON形式で出力してください。"""
         if len(output.recommended_paths) < self.MIN_STRATEGIC_OPTIONS:
             self._logger.warning(
                 "Validation warning: recommended_paths has %d items (min %d)",
-                len(output.recommended_paths), self.MIN_STRATEGIC_OPTIONS,
+                len(output.recommended_paths),
+                self.MIN_STRATEGIC_OPTIONS,
             )
 
         # v3.1: 戦略的禁止事項（仕組み化）の確認
@@ -942,7 +948,8 @@ JSON形式で出力してください。"""
         for path in output.recommended_paths:
             if not path.conditional_evaluation:
                 self._logger.warning(
-                    "Validation warning: path %s missing conditional_evaluation", path.path_id,
+                    "Validation warning: path %s missing conditional_evaluation",
+                    path.path_id,
                 )
 
         return True

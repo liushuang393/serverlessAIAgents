@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 """ToolDefinitionモデルのテスト.
 
 統一ツール定義モデルのユニットテスト。
 """
+
 import pytest
 from pydantic import ValidationError
 

@@ -113,9 +113,7 @@ class TestSchemaLoader:
         loader = SchemaLoader(logger=logger)
         assert loader._logger is logger
 
-    def test_load_from_file_success(
-        self, loader: SchemaLoader, sample_metadata: AgentMetadata, tmp_path: Path
-    ) -> None:
+    def test_load_from_file_success(self, loader: SchemaLoader, sample_metadata: AgentMetadata, tmp_path: Path) -> None:
         """ファイルからの読み込み成功をテスト."""
         # メタデータファイルを作成
         metadata_file = tmp_path / "agent.yaml"
@@ -142,9 +140,7 @@ class TestSchemaLoader:
         with pytest.raises(yaml.YAMLError):
             loader.load_from_file(invalid_file)
 
-    def test_load_from_dict_success(
-        self, loader: SchemaLoader, sample_metadata_dict: dict[str, Any]
-    ) -> None:
+    def test_load_from_dict_success(self, loader: SchemaLoader, sample_metadata_dict: dict[str, Any]) -> None:
         """辞書からの読み込み成功をテスト."""
         metadata = loader.load_from_dict(sample_metadata_dict)
 
@@ -158,9 +154,7 @@ class TestSchemaLoader:
         with pytest.raises(SchemaValidationError):
             loader.load_from_dict(invalid_data)
 
-    def test_validate_success(
-        self, loader: SchemaLoader, sample_metadata_dict: dict[str, Any]
-    ) -> None:
+    def test_validate_success(self, loader: SchemaLoader, sample_metadata_dict: dict[str, Any]) -> None:
         """検証成功をテスト."""
         metadata = loader.validate(sample_metadata_dict)
 
@@ -176,9 +170,7 @@ class TestSchemaLoader:
 
         assert len(exc_info.value.errors) > 0
 
-    def test_save_to_file(
-        self, loader: SchemaLoader, sample_metadata: AgentMetadata, tmp_path: Path
-    ) -> None:
+    def test_save_to_file(self, loader: SchemaLoader, sample_metadata: AgentMetadata, tmp_path: Path) -> None:
         """ファイルへの保存をテスト."""
         output_file = tmp_path / "output.yaml"
 
@@ -224,9 +216,7 @@ class TestSchemaLoader:
         assert "meta" in str(error)
         assert "field required" in str(error)
 
-    def test_round_trip_conversion(
-        self, loader: SchemaLoader, sample_metadata: AgentMetadata, tmp_path: Path
-    ) -> None:
+    def test_round_trip_conversion(self, loader: SchemaLoader, sample_metadata: AgentMetadata, tmp_path: Path) -> None:
         """メタデータの往復変換をテスト."""
         # メタデータ -> 辞書 -> メタデータ
         data = loader.to_dict(sample_metadata)

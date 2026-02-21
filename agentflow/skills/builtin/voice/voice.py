@@ -148,14 +148,12 @@ class VoiceSkill:
             data["prompt"] = prompt
 
         try:
-            response = await self._http_client.post(
-                url, headers=headers, files=files, data=data
-            )
+            response = await self._http_client.post(url, headers=headers, files=files, data=data)
             response.raise_for_status()
 
             if response_format == "text":
                 return response.text
-            return response.json().get("text", "")
+            return self._extract_response_text(response)
 
         except httpx.HTTPStatusError as e:
             self._logger.exception(f"Whisper API error: {e.response.text}")
@@ -242,11 +240,9 @@ class VoiceSkill:
             data["prompt"] = prompt
 
         try:
-            response = await self._http_client.post(
-                url, headers=headers, files=files, data=data
-            )
+            response = await self._http_client.post(url, headers=headers, files=files, data=data)
             response.raise_for_status()
-            return response.json().get("text", "")
+            return self._extract_response_text(response)
 
         except Exception as e:
             self._logger.error(f"Translation failed: {e}", exc_info=True)
@@ -274,9 +270,7 @@ class VoiceSkill:
         output_path = Path(output_path)
         output_format = output_path.suffix.lstrip(".") or "mp3"
 
-        audio_data = await self.synthesize(
-            text, voice=voice, speed=speed, output_format=output_format
-        )
+        audio_data = await self.synthesize(text, voice=voice, speed=speed, output_format=output_format)
 
         with open(output_path, "wb") as f:
             f.write(audio_data)
@@ -361,6 +355,15 @@ class VoiceSkill:
         msg = "No audio source provided. Specify audio_path, audio_data, or audio_base64."
         raise ValueError(msg)
 
+    def _extract_response_text(self, response: httpx.Response) -> str:
+        """OpenAI 音声APIレスポンスから text を抽出."""
+        payload = response.json()
+        if isinstance(payload, dict):
+            text = payload.get("text")
+            if isinstance(text, str):
+                return text
+        return ""
+
     async def get_supported_formats(self) -> dict[str, list[str]]:
         """サポートされる音声形式を取得.
 
@@ -375,4 +378,3 @@ class VoiceSkill:
     async def close(self) -> None:
         """HTTP クライアントをクローズ."""
         await self._http_client.aclose()
-

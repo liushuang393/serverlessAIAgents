@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Code Migration Assistant Enhanced API.
 
 改善点:
@@ -18,21 +17,26 @@ import asyncio
 import json
 import logging
 import os
-import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request, UploadFile, File
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    Request,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 from agentflow.protocols.a2ui.rich_content import (
-    ChartType,
-    RichResponse,
     AlertType,
+    RichResponse,
 )
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -144,9 +148,7 @@ async def _require_ws_api_key(websocket: WebSocket) -> bool:
     """Enforce API key for websocket handshake."""
     if not _is_auth_required():
         return True
-    incoming_key = websocket.headers.get(_AUTH_HEADER) or websocket.query_params.get(
-        _WS_AUTH_QUERY_KEY
-    )
+    incoming_key = websocket.headers.get(_AUTH_HEADER) or websocket.query_params.get(_WS_AUTH_QUERY_KEY)
     try:
         _verify_api_key(incoming_key)
     except HTTPException as exc:
@@ -805,9 +807,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
 
                 # 変換
                 await progress_cb(50, "コード変換中...")
-                transform_result = await _transform_code(
-                    source_code, source_lang, target_lang, progress_cb
-                )
+                transform_result = await _transform_code(source_code, source_lang, target_lang, progress_cb)
 
                 # 検証
                 await progress_cb(80, "検証中...")

@@ -86,15 +86,13 @@ class CodeMigrationOrchestrator:
         engine = self._get_engine()
 
         # Engine で移行を実行
-        result = await engine.run(
+        return await engine.run(
             {
                 "source_code": source_code,
                 "expected_outputs": expected_outputs or {},
                 "fast_mode": not run_tests,
             }
         )
-
-        return result
 
     async def get_latest_training_samples(self) -> list[dict[str, Any]]:
         """直近実行の学習用トランジションを取得."""
@@ -111,9 +109,7 @@ class CodeMigrationOrchestrator:
         """直近 run を Lightning 学習へ投入."""
         engine = self._get_engine()
         if hasattr(engine, "train_latest_run"):
-            return await engine.train_latest_run(
-                apply_optimized_profile=apply_optimized_profile
-            )
+            return await engine.train_latest_run(apply_optimized_profile=apply_optimized_profile)
         return {
             "success": False,
             "backend": "none",
@@ -240,7 +236,7 @@ class CodeMigrationOrchestrator:
                     "agent-factory",
                 ],
             }
-        elif operation == "document":
+        if operation == "document":
             # ドキュメント生成（compliance-reporter Skill 活用）
             doc_type = inputs.get("type", "design")
             return {
@@ -250,7 +246,7 @@ class CodeMigrationOrchestrator:
                 "document_url": f"/artifacts/docs/{doc_type}.md",
                 "message": f"{doc_type} document generated via compliance-reporter skill",
             }
-        elif operation == "create_agent":
+        if operation == "create_agent":
             # Agent 工場モード: 動的にエージェント定義を生成
             module_name = inputs.get("module_name", "UNKNOWN")
             agent_role = inputs.get("role", "Maintainer")
@@ -266,7 +262,7 @@ class CodeMigrationOrchestrator:
                 },
                 "message": f"Agent Factory: Created new {agent_role} for {module_name}",
             }
-        elif operation == "analyze":
+        if operation == "analyze":
             # 変更影響分析（business-semantics Skill 活用）
             return {
                 "package": "platform",
@@ -276,12 +272,11 @@ class CodeMigrationOrchestrator:
                 "affected_modules": ["PROG001", "PROG002"],
                 "message": "Impact analysis completed via business-semantics skill",
             }
-        else:
-            return {
-                "package": "platform",
-                "error": f"Unknown operation: {operation}",
-                "available_operations": ["status", "document", "analyze", "create_agent"],
-            }
+        return {
+            "package": "platform",
+            "error": f"Unknown operation: {operation}",
+            "available_operations": ["status", "document", "analyze", "create_agent"],
+        }
 
     # ========================================
     # Flow 互換インターフェース

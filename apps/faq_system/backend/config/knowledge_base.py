@@ -173,9 +173,7 @@ class KnowledgeBaseRegistry:
             internal_collection=os.getenv("FAQ_KB_INTERNAL_COLLECTION", "internal_kb"),
             external_collection=os.getenv("FAQ_KB_EXTERNAL_COLLECTION", "external_kb"),
             confidential_collection=os.getenv("FAQ_KB_CONFIDENTIAL_COLLECTION", "confidential_kb"),
-            default_kb=KnowledgeBaseType(
-                os.getenv("FAQ_KB_DEFAULT_TYPE", KnowledgeBaseType.INTERNAL.value)
-            ),
+            default_kb=KnowledgeBaseType(os.getenv("FAQ_KB_DEFAULT_TYPE", KnowledgeBaseType.INTERNAL.value)),
         )
 
     async def _load_settings_record(self) -> KnowledgeBaseSetting | None:
@@ -192,10 +190,8 @@ class KnowledgeBaseRegistry:
                 async with get_db_session() as session:
                     return await session.get(KnowledgeBaseSetting, "default")
 
-            raise RuntimeError(
-                "Table knowledge_base_settings is missing. "
-                "Run: alembic -c apps/faq_system/alembic.ini upgrade head"
-            ) from exc
+            msg = "Table knowledge_base_settings is missing. Run: alembic -c apps/faq_system/alembic.ini upgrade head"
+            raise RuntimeError(msg) from exc
 
     @staticmethod
     def _is_missing_settings_table_error(exc: OperationalError) -> bool:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Framework Env Service.
 
 リポジトリローカルの `.env` 系ファイルを、コメントを保ったまま
@@ -8,15 +7,17 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class FrameworkEnvService:
     """ローカル env 更新サービス."""
 
-    _KEY_VALUE_PATTERN = re.compile(
-        r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$"
-    )
+    _KEY_VALUE_PATTERN = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$")
 
     def __init__(self, env_path: Path) -> None:
         """初期化.
@@ -43,10 +44,7 @@ class FrameworkEnvService:
         self._env_path.parent.mkdir(parents=True, exist_ok=True)
 
         lines: list[str]
-        if self._env_path.exists():
-            lines = self._env_path.read_text("utf-8").splitlines()
-        else:
-            lines = []
+        lines = self._env_path.read_text("utf-8").splitlines() if self._env_path.exists() else []
 
         index: dict[str, int] = {}
         for i, line in enumerate(lines):

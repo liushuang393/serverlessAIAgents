@@ -15,7 +15,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from agentflow.providers import get_llm
 
@@ -188,11 +188,7 @@ class DocumentSkill:
         Returns:
             ドキュメント作成結果
         """
-        doc_format = (
-            DocumentFormat(format)
-            if format in [f.value for f in DocumentFormat]
-            else DocumentFormat.MARKDOWN
-        )
+        doc_format = DocumentFormat(format) if format in [f.value for f in DocumentFormat] else DocumentFormat.MARKDOWN
 
         system_prompt = f"""あなたは優秀なドキュメント作成者です。
 指示に従って{doc_format.value}形式のドキュメントを作成してください。
@@ -250,11 +246,7 @@ class DocumentSkill:
         Returns:
             要約結果
         """
-        summary_style = (
-            SummaryStyle(style)
-            if style in [s.value for s in SummaryStyle]
-            else SummaryStyle.EXECUTIVE
-        )
+        summary_style = SummaryStyle(style) if style in [s.value for s in SummaryStyle] else SummaryStyle.EXECUTIVE
 
         # ファイルパスの場合は読み込み
         text = source
@@ -357,11 +349,7 @@ class DocumentSkill:
             parts = content.split("変更点:")
             rewritten = parts[0].strip().strip("-").strip()
             changes_text = parts[1] if len(parts) > 1 else ""
-            changes = [
-                c.strip().lstrip("-").strip()
-                for c in changes_text.split("\n")
-                if c.strip().lstrip("-").strip()
-            ]
+            changes = [c.strip().lstrip("-").strip() for c in changes_text.split("\n") if c.strip().lstrip("-").strip()]
 
         self._logger.info("書き換え完了: instruction=%s", instruction[:50])
 
@@ -516,7 +504,7 @@ JSON形式で出力:
         try:
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
-            result = json.loads(content.strip())
+            result: dict[str, Any] = cast("dict[str, Any]", json.loads(content.strip()))
         except json.JSONDecodeError:
             result = {
                 "differences": [],

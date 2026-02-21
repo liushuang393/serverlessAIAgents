@@ -210,9 +210,7 @@ visual:
 
         assert "Flow module not found" in str(exc_info.value)
 
-    def test_load_flow_creator_function_not_found(
-        self, loader: AgentLoader, tmp_path: Path
-    ) -> None:
+    def test_load_flow_creator_function_not_found(self, loader: AgentLoader, tmp_path: Path) -> None:
         """関数が存在しない場合のテスト."""
         # Create a Python module without the expected function
         module_path = tmp_path / "flow.py"

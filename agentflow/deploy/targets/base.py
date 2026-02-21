@@ -37,7 +37,7 @@ class BaseDeployTarget(ABC):
         ...
 
     @abstractmethod
-    async def deploy(
+    def deploy(
         self,
         source_path: Path,
         config: DeployConfig,

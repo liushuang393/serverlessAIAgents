@@ -316,7 +316,7 @@ class DiffEngine:
         result = self.diff(old_content, new_content)
 
         # 简单的语义分析
-        analysis = {
+        analysis: dict[str, list[str]] = {
             "functions_added": [],
             "functions_removed": [],
             "functions_modified": [],
@@ -328,6 +328,7 @@ class DiffEngine:
 
         # 检测函数变更
         import re
+
         func_pattern = re.compile(r"^\s*(def|async def)\s+(\w+)")
         class_pattern = re.compile(r"^\s*class\s+(\w+)")
         import_pattern = re.compile(r"^\s*(import|from)\s+")

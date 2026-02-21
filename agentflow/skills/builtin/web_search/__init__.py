@@ -85,9 +85,7 @@ class WebSearchSkill:
         if self._client is None:
             self._client = httpx.AsyncClient(
                 timeout=self._config.timeout,
-                headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                },
+                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"},
                 follow_redirects=True,
             )
         return self._client
@@ -258,4 +256,3 @@ __all__ = [
     "SearchSummary",
     "WebSearchSkill",
 ]
-

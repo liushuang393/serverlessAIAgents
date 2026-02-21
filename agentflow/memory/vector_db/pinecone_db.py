@@ -102,7 +102,10 @@ class PineconeDB(VectorDatabase):
 
         # 検索実行
         results = self._index.query(
-            vector=query_embedding, top_k=limit, include_metadata=True, filter=filter_dict if filter_dict else None
+            vector=query_embedding,
+            top_k=limit,
+            include_metadata=True,
+            filter=filter_dict if filter_dict else None,
         )
 
         # 結果を変換
@@ -115,7 +118,7 @@ class PineconeDB(VectorDatabase):
             entry = MemoryEntry(
                 id=match.id,
                 content=metadata["content"],
-                topic=metadata["topic"] if metadata["topic"] else None,
+                topic=str(metadata.get("topic") or "general"),
                 timestamp=metadata["timestamp"],
                 memory_type=MemoryType(metadata["memory_type"]),
                 importance_score=metadata["importance_score"],
@@ -157,4 +160,3 @@ class PineconeDB(VectorDatabase):
             "index_name": self._index_name,
             "connected": self._connected,
         }
-

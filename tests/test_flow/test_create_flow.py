@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """新しい create_flow チェーン API のテスト.
 
 検証:
@@ -9,15 +8,14 @@
 - 進捗イベントの送出
 """
 
-import pytest
 from typing import Any
 
+import pytest
+
 from agentflow.flow import (
-    create_flow,
     Flow,
     FlowBuilder,
-    AgentProtocol,
-    ReviewVerdict,
+    create_flow,
 )
 
 
@@ -116,7 +114,7 @@ class TestFlowExecution:
         agent = MockAgent("agent")
 
         flow = create_flow("test").gate(gate).then(agent).build()
-        result = await flow.run({"input": "test"})
+        await flow.run({"input": "test"})
 
         assert agent.call_count == 1
 
@@ -126,12 +124,7 @@ class TestFlowExecution:
         gate = MockGateAgent(should_pass=False)
         agent = MockAgent("agent")
 
-        flow = (
-            create_flow("test")
-            .gate(gate, on_fail=lambda ctx: {"status": "blocked"})
-            .then(agent)
-            .build()
-        )
+        flow = create_flow("test").gate(gate, on_fail=lambda ctx: {"status": "blocked"}).then(agent).build()
         result = await flow.run({"input": "test"})
 
         # Agent は呼び出されない
@@ -144,13 +137,8 @@ class TestFlowExecution:
         agent = MockAgent("agent")
         review = MockReviewAgent(verdicts=["PASS"])
 
-        flow = (
-            create_flow("test")
-            .then(agent, ids=["agent"])
-            .review(review, retry_from="agent")
-            .build()
-        )
-        result = await flow.run({"input": "test"})
+        flow = create_flow("test").then(agent, ids=["agent"]).review(review, retry_from="agent").build()
+        await flow.run({"input": "test"})
 
         assert agent.call_count == 1
 
@@ -162,12 +150,9 @@ class TestFlowExecution:
         review = MockReviewAgent(verdicts=["REVISE", "PASS"])
 
         flow = (
-            create_flow("test")
-            .then(agent, ids=["agent"])
-            .review(review, retry_from="agent", max_revisions=2)
-            .build()
+            create_flow("test").then(agent, ids=["agent"]).review(review, retry_from="agent", max_revisions=2).build()
         )
-        result = await flow.run({"input": "test"})
+        await flow.run({"input": "test"})
 
         # Agent は 2 回呼ばれる（初回 + REVISE 1 回）
         assert agent.call_count == 2
@@ -199,12 +184,7 @@ class TestFlowStream:
         agent = MockAgent("agent")
         review = MockReviewAgent(verdicts=["REJECT"])
 
-        flow = (
-            create_flow("test")
-            .then(agent, ids=["agent"])
-            .review(review, id="review", retry_from="agent")
-            .build()
-        )
+        flow = create_flow("test").then(agent, ids=["agent"]).review(review, id="review", retry_from="agent").build()
 
         events = []
         async for event in flow.run_stream({"input": "test"}):
@@ -244,12 +224,7 @@ class TestFlowStream:
         agent = MockAgent("agent")
         review = MockCriticalReviewAgent()
 
-        flow = (
-            create_flow("test")
-            .then(agent, ids=["agent"])
-            .review(review, id="review", retry_from="agent")
-            .build()
-        )
+        flow = create_flow("test").then(agent, ids=["agent"]).review(review, id="review", retry_from="agent").build()
 
         events = []
         async for event in flow.run_stream({"input": "test"}):

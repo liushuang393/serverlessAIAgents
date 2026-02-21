@@ -174,11 +174,7 @@ class Workspace:
         while len(self._variables) >= self._capacity:
             # 最も退避スコアが低い変数を探す
             # ただしFINALタイプは除外
-            candidates = [
-                (name, var)
-                for name, var in self._variables.items()
-                if var.var_type != VariableType.FINAL
-            ]
+            candidates = [(name, var) for name, var in self._variables.items() if var.var_type != VariableType.FINAL]
 
             if not candidates:
                 break  # FINALしか残っていない
@@ -190,11 +186,7 @@ class Workspace:
 
         # Token予算チェック
         while self._total_tokens > self._token_budget:
-            candidates = [
-                (name, var)
-                for name, var in self._variables.items()
-                if var.var_type != VariableType.FINAL
-            ]
+            candidates = [(name, var) for name, var in self._variables.items() if var.var_type != VariableType.FINAL]
 
             if not candidates:
                 break

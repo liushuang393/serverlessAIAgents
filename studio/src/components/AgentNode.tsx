@@ -37,18 +37,12 @@ function AgentNode({ id, data, selected }: NodeProps<AgentNodeData>) {
       `}
     >
       {/* 入力ハンドル */}
-      <Handle
-        type="target"
-        position={Position.Top}
-        className="w-3 h-3 !bg-primary"
-      />
+      <Handle type="target" position={Position.Top} className="w-3 h-3 !bg-primary" />
 
       {/* ノードヘッダー */}
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex-1">
-          <div className="text-sm font-semibold text-foreground">
-            {data.label}
-          </div>
+          <div className="text-sm font-semibold text-foreground">{data.label}</div>
           <div className="text-xs text-muted-foreground">{data.agentId}</div>
         </div>
 
@@ -70,11 +64,7 @@ function AgentNode({ id, data, selected }: NodeProps<AgentNodeData>) {
       )}
 
       {/* 出力ハンドル */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="w-3 h-3 !bg-primary"
-      />
+      <Handle type="source" position={Position.Bottom} className="w-3 h-3 !bg-primary" />
     </div>
   );
 }

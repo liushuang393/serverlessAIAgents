@@ -18,6 +18,7 @@
     >>> # MCP形式に変換（LLMに渡す用）
     >>> mcp_format = tool.to_mcp()
 """
+
 from __future__ import annotations
 
 from enum import Enum
@@ -32,10 +33,10 @@ class ToolSource(str, Enum):
     ツールがどこから来たかを識別する列挙型。
     """
 
-    BUILTIN = "builtin"    # @tool デコレータで定義された関数
-    MCP = "mcp"            # MCPサーバーが提供するツール
-    SKILL = "skill"        # Skills エンジンのスキル
-    DYNAMIC = "dynamic"    # 実行時に動的生成されたツール
+    BUILTIN = "builtin"  # @tool デコレータで定義された関数
+    MCP = "mcp"  # MCPサーバーが提供するツール
+    SKILL = "skill"  # Skills エンジンのスキル
+    DYNAMIC = "dynamic"  # 実行時に動的生成されたツール
 
 
 class ToolDefinition(BaseModel):
@@ -138,9 +139,7 @@ class ToolDefinition(BaseModel):
             # input_schema があれば使用、なければデフォルト
             input_schema = getattr(metadata, "input_schema", None) or {
                 "type": "object",
-                "properties": {
-                    "query": {"type": "string", "description": "スキルへの入力"}
-                },
+                "properties": {"query": {"type": "string", "description": "スキルへの入力"}},
             }
 
             # メタデータを収集
@@ -160,8 +159,7 @@ class ToolDefinition(BaseModel):
                 "properties": skill_data.get("parameters", {}),
             }
             extra_metadata = {
-                k: v for k, v in skill_data.items()
-                if k not in ("name", "description", "input_schema", "parameters")
+                k: v for k, v in skill_data.items() if k not in ("name", "description", "input_schema", "parameters")
             }
 
         return cls(

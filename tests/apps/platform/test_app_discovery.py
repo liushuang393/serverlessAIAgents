@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AppDiscoveryService のユニットテスト.
 
 テスト対象: apps/platform/services/app_discovery.py
@@ -7,12 +6,15 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
-
 from apps.platform.schemas.app_config_schemas import AppConfig
 from apps.platform.services.app_discovery import AppDiscoveryService
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class TestAppDiscoveryInit:
@@ -37,7 +39,7 @@ class TestAppDiscoveryInit:
 class TestAppDiscoveryScan:
     """scan() メソッドテスト."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_scan_finds_all_apps(
         self,
         discovery: AppDiscoveryService,
@@ -50,14 +52,14 @@ class TestAppDiscoveryScan:
         assert "minimal_app" in names
         assert "library_app" in names
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_scan_nonexistent_dir(self, tmp_path: Path) -> None:
         """存在しないディレクトリでは 0 を返す."""
         svc = AppDiscoveryService(apps_dir=tmp_path / "nonexistent")
         count = await svc.scan()
         assert count == 0
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_scan_handles_invalid_json(self, tmp_path: Path) -> None:
         """不正な JSON をエラーとして記録する."""
         bad_dir = tmp_path / "bad_app"
@@ -71,7 +73,7 @@ class TestAppDiscoveryScan:
         assert "bad_app" in errors
         assert "JSON パースエラー" in errors["bad_app"]
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_scan_handles_validation_error(self, tmp_path: Path) -> None:
         """スキーマ違反をエラーとして記録する."""
         bad_dir = tmp_path / "invalid_app"
@@ -87,7 +89,7 @@ class TestAppDiscoveryScan:
         errors = svc.list_errors()
         assert "invalid_app" in errors
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_scan_clears_previous(
         self,
         discovery: AppDiscoveryService,
@@ -103,7 +105,7 @@ class TestAppDiscoveryScan:
 class TestAppDiscoveryLookup:
     """get_app / list_apps / register テスト."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_get_app_found(
         self,
         discovery: AppDiscoveryService,
@@ -114,7 +116,7 @@ class TestAppDiscoveryLookup:
         assert app is not None
         assert app.display_name == "テストアプリ"
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_get_app_not_found(
         self,
         discovery: AppDiscoveryService,
@@ -137,7 +139,7 @@ class TestAppDiscoveryLookup:
         svc.register(cfg)
         assert svc.get_app("manual_app") is not None
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_summary(
         self,
         discovery: AppDiscoveryService,
@@ -161,7 +163,7 @@ class TestAppDiscoveryLookup:
 class TestManifestMigration:
     """migrate_manifests() のテスト."""
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_migrate_manifests_dry_run(self, discovery: AppDiscoveryService) -> None:
         """dry_run で変更計画を返す."""
         await discovery.scan()
@@ -170,7 +172,7 @@ class TestManifestMigration:
         assert report["dry_run"] is True
         assert report["changed"] >= 1
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_migrate_manifests_apply_idempotent(self, discovery: AppDiscoveryService) -> None:
         """適用後の再実行は差分 0 になる."""
         await discovery.scan()

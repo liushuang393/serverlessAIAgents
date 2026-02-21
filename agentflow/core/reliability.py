@@ -153,9 +153,7 @@ def reliable(
 
                 except Exception as e:
                     last_error = e
-                    logger.warning(
-                        f"{func_name} failed (attempt {attempt + 1}/{max_retries + 1}): {e}"
-                    )
+                    logger.warning(f"{func_name} failed (attempt {attempt + 1}/{max_retries + 1}): {e}")
 
                     # 失敗記録
                     if breaker:
@@ -183,4 +181,3 @@ def reliable(
         return wrapper  # type: ignore[return-value]
 
     return decorator
-

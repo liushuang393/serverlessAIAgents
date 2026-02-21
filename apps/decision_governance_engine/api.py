@@ -21,12 +21,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import json
 import logging
 import os
-from pathlib import Path
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-import json
+from pathlib import Path
 
 from apps.decision_governance_engine.flow_config import (
     register_flow_definition,
@@ -64,6 +64,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
     # データベース接続を確立（履歴保存に必須）
     from apps.decision_governance_engine.repositories.database import close_db, init_db
+
     try:
         await init_db()
         logger.info("Database connection established")
@@ -125,9 +126,7 @@ if __name__ == "__main__":
 
     import uvicorn
 
-    parser = argparse.ArgumentParser(
-        description="Decision Governance Engine - FastAPI Backend"
-    )
+    parser = argparse.ArgumentParser(description="Decision Governance Engine - FastAPI Backend")
     parser.add_argument(
         "--reload",
         action="store_true",

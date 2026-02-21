@@ -12,7 +12,7 @@ Agent 仕様からテストケースを自動生成します。
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from agentflow.providers import get_llm
 from agentflow.wizard.models import AgentSpec, TestCase
@@ -81,7 +81,7 @@ class TestSynthesizer:
 
         # テスト数を制限
         if len(test_cases) > self._max_tests:
-            test_cases = test_cases[:self._max_tests]
+            test_cases = test_cases[: self._max_tests]
 
         self._logger.info(f"Synthesized {len(test_cases)} test cases for {agent_spec.name}")
         return test_cases
@@ -98,30 +98,34 @@ class TestSynthesizer:
         tests = []
 
         # 正常系テスト
-        tests.append(TestCase(
-            name=f"test_{agent_spec.name.lower()}_basic_execution",
-            description=f"Test basic execution of {agent_spec.name}",
-            input_data={"query": "test input"},
-            expected_output={"success": True},
-            assertions=[
-                "result is not None",
-                "'success' in result",
-                "result['success'] == True",
-            ],
-            tags=["basic", "smoke"],
-        ))
+        tests.append(
+            TestCase(
+                name=f"test_{agent_spec.name.lower()}_basic_execution",
+                description=f"Test basic execution of {agent_spec.name}",
+                input_data={"query": "test input"},
+                expected_output={"success": True},
+                assertions=[
+                    "result is not None",
+                    "'success' in result",
+                    "result['success'] == True",
+                ],
+                tags=["basic", "smoke"],
+            )
+        )
 
         # 空入力テスト
-        tests.append(TestCase(
-            name=f"test_{agent_spec.name.lower()}_empty_input",
-            description=f"Test {agent_spec.name} with empty input",
-            input_data={},
-            expected_output={},
-            assertions=[
-                "result is not None",
-            ],
-            tags=["basic", "edge"],
-        ))
+        tests.append(
+            TestCase(
+                name=f"test_{agent_spec.name.lower()}_empty_input",
+                description=f"Test {agent_spec.name} with empty input",
+                input_data={},
+                expected_output={},
+                assertions=[
+                    "result is not None",
+                ],
+                tags=["basic", "edge"],
+            )
+        )
 
         return tests
 
@@ -137,41 +141,47 @@ class TestSynthesizer:
         tests = []
 
         # 長い入力テスト
-        tests.append(TestCase(
-            name=f"test_{agent_spec.name.lower()}_long_input",
-            description=f"Test {agent_spec.name} with long input",
-            input_data={"query": "x" * 10000},
-            expected_output={},
-            assertions=[
-                "result is not None",
-            ],
-            tags=["edge", "stress"],
-            timeout_seconds=60,
-        ))
+        tests.append(
+            TestCase(
+                name=f"test_{agent_spec.name.lower()}_long_input",
+                description=f"Test {agent_spec.name} with long input",
+                input_data={"query": "x" * 10000},
+                expected_output={},
+                assertions=[
+                    "result is not None",
+                ],
+                tags=["edge", "stress"],
+                timeout_seconds=60,
+            )
+        )
 
         # 特殊文字テスト
-        tests.append(TestCase(
-            name=f"test_{agent_spec.name.lower()}_special_chars",
-            description=f"Test {agent_spec.name} with special characters",
-            input_data={"query": '!@#$%^&*(){}[]|\\:";<>?,./~`'},
-            expected_output={},
-            assertions=[
-                "result is not None",
-            ],
-            tags=["edge", "special"],
-        ))
+        tests.append(
+            TestCase(
+                name=f"test_{agent_spec.name.lower()}_special_chars",
+                description=f"Test {agent_spec.name} with special characters",
+                input_data={"query": '!@#$%^&*(){}[]|\\:";<>?,./~`'},
+                expected_output={},
+                assertions=[
+                    "result is not None",
+                ],
+                tags=["edge", "special"],
+            )
+        )
 
         # Unicode テスト
-        tests.append(TestCase(
-            name=f"test_{agent_spec.name.lower()}_unicode",
-            description=f"Test {agent_spec.name} with unicode characters",
-            input_data={"query": "こんにちは 世界 🌍 مرحبا"},
-            expected_output={},
-            assertions=[
-                "result is not None",
-            ],
-            tags=["edge", "unicode"],
-        ))
+        tests.append(
+            TestCase(
+                name=f"test_{agent_spec.name.lower()}_unicode",
+                description=f"Test {agent_spec.name} with unicode characters",
+                input_data={"query": "こんにちは 世界 🌍 مرحبا"},
+                expected_output={},
+                assertions=[
+                    "result is not None",
+                ],
+                tags=["edge", "unicode"],
+            )
+        )
 
         return tests
 
@@ -187,28 +197,32 @@ class TestSynthesizer:
         tests = []
 
         # 不正な型テスト
-        tests.append(TestCase(
-            name=f"test_{agent_spec.name.lower()}_invalid_type",
-            description=f"Test {agent_spec.name} with invalid input type",
-            input_data={"query": 12345},  # 文字列でなく数値
-            expected_output={},
-            assertions=[
-                "result is not None",
-            ],
-            tags=["error", "type"],
-        ))
+        tests.append(
+            TestCase(
+                name=f"test_{agent_spec.name.lower()}_invalid_type",
+                description=f"Test {agent_spec.name} with invalid input type",
+                input_data={"query": 12345},  # 文字列でなく数値
+                expected_output={},
+                assertions=[
+                    "result is not None",
+                ],
+                tags=["error", "type"],
+            )
+        )
 
         # None 値テスト
-        tests.append(TestCase(
-            name=f"test_{agent_spec.name.lower()}_none_value",
-            description=f"Test {agent_spec.name} with None value",
-            input_data={"query": None},
-            expected_output={},
-            assertions=[
-                "result is not None",
-            ],
-            tags=["error", "null"],
-        ))
+        tests.append(
+            TestCase(
+                name=f"test_{agent_spec.name.lower()}_none_value",
+                description=f"Test {agent_spec.name} with None value",
+                input_data={"query": None},
+                expected_output={},
+                assertions=[
+                    "result is not None",
+                ],
+                tags=["error", "null"],
+            )
+        )
 
         return tests
 
@@ -224,17 +238,19 @@ class TestSynthesizer:
         tests = []
 
         for i, capability in enumerate(agent_spec.capabilities[:5]):
-            tests.append(TestCase(
-                name=f"test_{agent_spec.name.lower()}_capability_{i+1}",
-                description=f"Test capability: {capability}",
-                input_data={"query": f"Test {capability}"},
-                expected_output={},
-                assertions=[
-                    "result is not None",
-                    "'success' in result or 'error' not in result",
-                ],
-                tags=["capability", f"cap_{i+1}"],
-            ))
+            tests.append(
+                TestCase(
+                    name=f"test_{agent_spec.name.lower()}_capability_{i + 1}",
+                    description=f"Test capability: {capability}",
+                    input_data={"query": f"Test {capability}"},
+                    expected_output={},
+                    assertions=[
+                        "result is not None",
+                        "'success' in result or 'error' not in result",
+                    ],
+                    tags=["capability", f"cap_{i + 1}"],
+                )
+            )
 
         return tests
 
@@ -269,11 +285,13 @@ class TestSynthesizer:
     }}
 ]"""
 
-        response = await self._llm.generate(prompt)
+        llm_client = cast("Any", self._llm)
+        response = await llm_client.generate(prompt)
         content = response.content if hasattr(response, "content") else str(response)
 
         # JSON 抽出とパース
         import json
+
         try:
             start = content.find("[")
             end = content.rfind("]") + 1

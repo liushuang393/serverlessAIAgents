@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 
 
 if TYPE_CHECKING:
+    from collections.abc import Iterator
+
     from agentflow.flow.nodes import FlowNode
 
 
@@ -103,7 +105,7 @@ class FlowGraph:
         """ノード数."""
         return len(self._nodes)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[FlowNode]:
         """すべてのノードをイテレート."""
         return iter(self._nodes)
 
@@ -117,4 +119,3 @@ class FlowGraph:
 
 
 __all__ = ["FlowGraph"]
-

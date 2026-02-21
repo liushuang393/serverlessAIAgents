@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """AI商取引データモデルのテスト.
 
 Product, Offer, Cart, Transaction, PurchaseIntent モデルの単体テスト。
 """
 
 from datetime import datetime, timedelta
-
-import pytest
 
 from agentflow.commerce.models import (
     Cart,
@@ -372,4 +369,3 @@ class TestPurchaseIntent:
         assert PurchaseIntent.from_confidence_score(0.8) == IntentConfidence.HIGH
         assert PurchaseIntent.from_confidence_score(0.5) == IntentConfidence.MEDIUM
         assert PurchaseIntent.from_confidence_score(0.2) == IntentConfidence.LOW
-

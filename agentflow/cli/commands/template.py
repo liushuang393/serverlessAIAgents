@@ -4,6 +4,7 @@
 """
 
 from pathlib import Path
+from typing import Any
 
 import click
 from rich.console import Console
@@ -116,8 +117,7 @@ def show(template_id: str) -> None:
                 choices = f" [choices: {', '.join(param.choices)}]" if param.choices else ""
 
                 console.print(
-                    f"  {required} [cyan]{param.name}[/cyan] "
-                    f"([yellow]{param.type}[/yellow]){default}{choices}"
+                    f"  {required} [cyan]{param.name}[/cyan] ([yellow]{param.type}[/yellow]){default}{choices}"
                 )
                 console.print(f"    {param.description}")
             console.print()
@@ -184,8 +184,8 @@ def generate(
                 console.print("[yellow]正しい形式: key=value[/yellow]")
                 raise click.Abort
 
-            key, value = p.split("=", 1)
-            parameters[key] = value
+            key, raw_value = p.split("=", 1)
+            parameters[key] = raw_value
 
         # 対話モードの場合
         if interactive:
@@ -197,6 +197,7 @@ def generate(
             for param_def in metadata.parameters:
                 # デフォルト値を表示
                 default_str = ""
+                user_value: Any
                 if param_def.default is not None:
                     default_str = f" [{param_def.default}]"
 
@@ -204,30 +205,30 @@ def generate(
                 if param_def.choices:
                     console.print(f"[cyan]{param_def.name}[/cyan] ({param_def.description})")
                     console.print(f"  選択肢: {', '.join(param_def.choices)}")
-                    value = click.prompt(
+                    user_value = click.prompt(
                         f"  値{default_str}",
                         default=param_def.default,
                         type=click.Choice(param_def.choices),
                     )
                 # 型に応じて入力
                 elif param_def.type == "bool":
-                    value = click.confirm(
+                    user_value = click.confirm(
                         f"{param_def.name} ({param_def.description})",
                         default=param_def.default or False,
                     )
                 elif param_def.type == "int":
-                    value = click.prompt(
+                    user_value = click.prompt(
                         f"{param_def.name} ({param_def.description}){default_str}",
                         default=param_def.default,
                         type=int,
                     )
                 else:
-                    value = click.prompt(
+                    user_value = click.prompt(
                         f"{param_def.name} ({param_def.description}){default_str}",
                         default=param_def.default,
                     )
 
-                parameters[param_def.name] = value
+                parameters[param_def.name] = user_value
 
             console.print()
 

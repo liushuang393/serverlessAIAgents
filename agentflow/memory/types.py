@@ -217,8 +217,9 @@ class UpdateQueue:
         Args:
             update: 更新内容
         """
-        self.updates.append({
-            **update,
-            "timestamp": datetime.now().isoformat(),
-        })
-
+        self.updates.append(
+            {
+                **update,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )

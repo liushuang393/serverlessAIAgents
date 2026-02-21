@@ -342,9 +342,7 @@ class ContextStore:
                 # コンテキスト行を取得
                 start = max(0, i - context_lines)
                 end = min(len(lines), i + context_lines + 1)
-                context = "\n".join(
-                    f"{j + 1:5d}{'>' if j == i else ' '}| {lines[j]}" for j in range(start, end)
-                )
+                context = "\n".join(f"{j + 1:5d}{'>' if j == i else ' '}| {lines[j]}" for j in range(start, end))
 
                 results.append(
                     {
@@ -404,15 +402,11 @@ class ContextStore:
                 # コンテキスト行を取得
                 start = max(0, i - context_lines)
                 end = min(len(lines), i + context_lines + 1)
-                context = "\n".join(
-                    f"{j + 1:5d}{'>' if j == i else ' '}| {lines[j]}" for j in range(start, end)
-                )
+                context = "\n".join(f"{j + 1:5d}{'>' if j == i else ' '}| {lines[j]}" for j in range(start, end))
 
                 # マッチしたキーワードを特定
                 matched_keywords = [
-                    kw
-                    for kw, kw_lower in zip(keywords, keywords_lower, strict=False)
-                    if kw_lower in line_lower
+                    kw for kw, kw_lower in zip(keywords, keywords_lower, strict=False) if kw_lower in line_lower
                 ]
 
                 results.append(

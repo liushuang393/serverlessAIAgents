@@ -24,7 +24,7 @@ class ReportExportService:
     def _check_reportlab(self) -> bool:
         """ReportLab 利用可否を確認."""
         try:
-            from reportlab.lib.pagesizes import A4  # noqa: F401
+            from reportlab.lib.pagesizes import A4
 
             return True
         except ImportError:
@@ -34,26 +34,34 @@ class ReportExportService:
     def export_pdf(self, report: dict[str, Any]) -> bytes:
         """PDFバイナリを生成."""
         if not self._has_reportlab:
-            raise RuntimeError("ReportLab が未インストールのため PDF 出力できません")
+            msg = "ReportLab が未インストールのため PDF 出力できません"
+            raise RuntimeError(msg)
 
         try:
             return self._build_pdf(report)
         except Exception as exc:
             self._logger.error("PDF生成に失敗: %s", exc, exc_info=True)
-            raise RuntimeError(f"PDF生成に失敗しました: {exc}") from exc
-
+            msg = f"PDF生成に失敗しました: {exc}"
+            raise RuntimeError(msg) from exc
 
     def _build_pdf(self, report: dict[str, Any]) -> bytes:
         """企業テンプレートPDFを生成."""
+        from reportlab.graphics.charts.barcharts import VerticalBarChart
+        from reportlab.graphics.shapes import Drawing
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
         from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
         from reportlab.lib.units import cm
         from reportlab.pdfbase import pdfmetrics
         from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-        from reportlab.platypus import PageBreak, Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
-        from reportlab.graphics.charts.barcharts import VerticalBarChart
-        from reportlab.graphics.shapes import Drawing
+        from reportlab.platypus import (
+            PageBreak,
+            Paragraph,
+            SimpleDocTemplate,
+            Spacer,
+            Table,
+            TableStyle,
+        )
 
         font_name = "Helvetica"
         try:
@@ -180,7 +188,7 @@ class ReportExportService:
             bar.data = [chart_scores]
             bar.categoryAxis.categoryNames = chart_topics
             bar.valueAxis.valueMin = 0
-            bar.valueAxis.valueMax = max(max(chart_scores), 1.0)
+            bar.valueAxis.valueMax = max(*chart_scores, 1.0)
             bar.valueAxis.valueStep = max(bar.valueAxis.valueMax / 5, 0.2)
             bar.bars[0].fillColor = colors.HexColor("#2563EB")
             drawing.add(bar)
@@ -243,7 +251,6 @@ class ReportExportService:
 
         doc.build(elements)
         return buffer.getvalue()
-
 
     def _sections(self, report: dict[str, Any]) -> list[dict[str, Any]]:
         """セクション一覧を正規化."""
@@ -311,5 +318,3 @@ class ReportExportService:
         if growth_state in {"insufficient_history", "no_signal"}:
             return "N/A"
         return f"{self._as_float(trend.get('growth_rate')) * 100:.1f}%"
-
-

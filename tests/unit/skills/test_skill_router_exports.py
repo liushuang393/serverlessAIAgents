@@ -11,4 +11,3 @@ async def test_exported_skill_router_loads_builtin_skills() -> None:
     router = SkillRouter()
     await router.initialize()
     assert router.skill_count > 0
-

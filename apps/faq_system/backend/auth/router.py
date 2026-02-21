@@ -26,15 +26,15 @@ from apps.faq_system.backend.auth.models import (
     ChangePasswordRequest,
     ForgotPasswordRequest,
     LoginRequest,
+    MfaSetupResponse,
+    MfaVerifyRequest,
     ProfileUpdateRequest,
     RegisterRequest,
     ResetPasswordRequest,
-    MfaSetupResponse,
-    MfaVerifyRequest,
     UserInfo,
 )
 from apps.faq_system.backend.auth.service import get_auth_service
-from fastapi import APIRouter, Cookie, Depends, Response
+from fastapi import APIRouter, Cookie, Depends, Header, Response
 
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ async def login(req: LoginRequest, response: Response) -> AuthResponse:
                 success=False,
                 message="MFA_REQUIRED",
             )
-            
+
         logger.warning("ログイン失敗: username=%s, reason=%s", req.username, message)
         return AuthResponse(
             success=False,
@@ -138,16 +138,20 @@ async def register(req: RegisterRequest, response: Response) -> AuthResponse:
 @router.post("/logout")
 async def logout(
     response: Response,
-    user: UserInfo | None = Depends(get_current_user),
+    user: UserInfo = Depends(require_auth),
     session_token: str | None = Cookie(None, alias="session_token"),
+    authorization: str | None = Header(None),
 ) -> dict[str, Any]:
     """ログアウト処理.
 
     セッション Cookie を削除し、セッションストアからも削除する。
+    アクセストークンの JTI をブラックリストに登録して無効化する。
 
     Args:
         response: HTTP レスポンス
-        user: 現在のユーザー
+        user: 認証済みユーザー（必須）
+        session_token: セッション Cookie
+        authorization: Authorization ヘッダー
 
     Returns:
         処理結果
@@ -155,10 +159,9 @@ async def logout(
     response.delete_cookie(key="session_token")
     service = _auth_service()
     await service.revoke_session_token(session_token)
-
-    if user:
-        await service.revoke_sessions_for_user(user.user_id)
-        logger.info("ログアウト: username=%s", user.username)
+    await service.revoke_sessions_for_user(user.user_id)
+    await service.blacklist_token(authorization, user.user_id)
+    logger.info("ログアウト: username=%s", user.username)
 
     return {"success": True, "message": "ログアウトしました"}
 

@@ -40,19 +40,15 @@ _current_interrupt: contextvars.ContextVar[InterruptPayload | None] = contextvar
 _current_checkpointer: contextvars.ContextVar[Checkpointer | None] = contextvars.ContextVar(
     "current_checkpointer", default=None
 )
-_current_thread_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "current_thread_id", default=None
-)
+_current_thread_id: contextvars.ContextVar[str | None] = contextvars.ContextVar("current_thread_id", default=None)
 
 
 class InterruptError(Exception):
     """割り込み関連のエラー."""
 
 
-
 class InterruptTimeoutError(InterruptError):
     """割り込みタイムアウトエラー."""
-
 
 
 def get_current_interrupt() -> InterruptPayload | None:
@@ -122,9 +118,7 @@ async def interrupt(
             "Checkpointer が設定されていません。"
             "Engine に checkpointer を設定するか、set_checkpointer() を呼び出してください。"
         )
-        raise InterruptError(
-            msg
-        )
+        raise InterruptError(msg)
 
     if thread_id is None:
         thread_id = str(uuid.uuid4())
@@ -161,10 +155,7 @@ async def interrupt(
     # コンテキストに設定
     _current_interrupt.set(payload)
 
-    logger.info(
-        f"Interrupt triggered: {payload.id} "
-        f"(type={interrupt_type.value}, action={approval_request.action})"
-    )
+    logger.info(f"Interrupt triggered: {payload.id} (type={interrupt_type.value}, action={approval_request.action})")
 
     # InterruptSignal を発生させて上位レイヤーに通知
     raise InterruptSignal(payload)
@@ -253,4 +244,3 @@ async def resume_with_command(
         approver=command.issuer,
         modifications=command.value if isinstance(command.value, dict) else {},
     )
-

@@ -39,9 +39,7 @@ class RuntimeContext:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-_current_context: ContextVar[RuntimeContext | None] = ContextVar(
-    "agentflow_runtime_context", default=None
-)
+_current_context: ContextVar[RuntimeContext | None] = ContextVar("agentflow_runtime_context", default=None)
 
 
 def get_runtime_context() -> RuntimeContext | None:
@@ -96,9 +94,7 @@ def resolve_settings(context: RuntimeContext | None = None) -> AgentFlowSettings
     return get_settings()
 
 
-def get_env(
-    key: str, default: str | None = None, *, context: RuntimeContext | None = None
-) -> str | None:
+def get_env(key: str, default: str | None = None, *, context: RuntimeContext | None = None) -> str | None:
     """Get environment variable with optional runtime override."""
     if context is not None and key in context.env_overrides:
         return context.env_overrides[key]

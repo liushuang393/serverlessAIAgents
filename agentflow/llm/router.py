@@ -99,9 +99,7 @@ class ModelRouter:
         for name, config in self._models.items():
             try:
                 self._clients[name] = LLMClient(config)
-                logger.info(
-                    f"モデルクライアントを初期化しました: {name} ({config.provider}/{config.model})"
-                )
+                logger.info(f"モデルクライアントを初期化しました: {name} ({config.provider}/{config.model})")
             except Exception as e:
                 logger.warning(f"モデル {name} の初期化に失敗しました: {e}")
 
@@ -396,9 +394,7 @@ class ModelRouter:
 
             except Exception as e:
                 last_error = e
-                logger.warning(
-                    f"モデル {current_model} のリクエストが失敗しました (試行 {attempt + 1}): {e}"
-                )
+                logger.warning(f"モデル {current_model} のリクエストが失敗しました (試行 {attempt + 1}): {e}")
 
                 # 統計を更新
                 self._update_stats(
@@ -435,10 +431,7 @@ class ModelRouter:
             # コストを計算
             info = self.get_model_info(model_name)
             if info:
-                cost = (
-                    (input_tokens / 1000) * info.input_cost_per_1k
-                    + (output_tokens / 1000) * info.output_cost_per_1k
-                )
+                cost = (input_tokens / 1000) * info.input_cost_per_1k + (output_tokens / 1000) * info.output_cost_per_1k
                 stats.total_cost += cost
         else:
             stats.failed_requests += 1
@@ -636,4 +629,3 @@ def _check_service_available(url: str, timeout: float = 1.0) -> bool:
             return response.status_code < 500
     except Exception:
         return False
-

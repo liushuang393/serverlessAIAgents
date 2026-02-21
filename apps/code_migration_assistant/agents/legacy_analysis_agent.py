@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Legacy Analysis Agent - 事実抽出専用.
 
 推測を避け、旧システムコードから観測可能な事実のみを抽出する。
@@ -8,8 +7,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from agentflow import agent
-
 from apps.code_migration_assistant.adapters import SourceLanguageAdapter, get_adapter_factory
 from apps.code_migration_assistant.agents.prompts import LEGACY_ANALYSIS_PROMPT
 from apps.code_migration_assistant.workflow.models import (
@@ -17,6 +14,8 @@ from apps.code_migration_assistant.workflow.models import (
     UnknownItem,
     build_meta,
 )
+
+from agentflow import agent
 
 
 @agent
@@ -52,9 +51,7 @@ class LegacyAnalysisAgent:
         if ast.metadata.get("parse_error"):
             unknowns.append(UnknownItem(field="parse", reason=str(ast.metadata["parse_error"])))
         if not ast.procedures:
-            unknowns.append(
-                UnknownItem(field="entry_points", reason="PROCEDURE から段落名を抽出できなかった")
-            )
+            unknowns.append(UnknownItem(field="entry_points", reason="PROCEDURE から段落名を抽出できなかった"))
 
         io_contracts = self._build_io_contracts(task_spec.get("expected_outputs", {}))
         db_access = [call for call in external_calls if call.get("type") == "sql"]

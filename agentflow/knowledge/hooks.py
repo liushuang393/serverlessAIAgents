@@ -116,12 +116,14 @@ class VectorSearchHook:
             await self.connect()
 
         min_sim = min_similarity or self._min_similarity
+        embedding = self._require_embedding()
+        vectordb = self._require_vectordb()
 
         # クエリの埋め込みを生成
-        query_embedding = await self._embedding.embed_text(query)
+        query_embedding = await embedding.embed_text(query)
 
         # 検索実行
-        results = await self._vectordb.search(
+        results = await vectordb.search(
             query=query,
             query_embedding=query_embedding,
             top_k=top_k,
@@ -162,11 +164,14 @@ class VectorSearchHook:
         if not self._connected:
             await self.connect()
 
+        embedding = self._require_embedding()
+        vectordb = self._require_vectordb()
+
         # 埋め込みを生成
-        embeddings = await self._embedding.embed_batch(documents)
+        embeddings = await embedding.embed_batch(documents)
 
         # VectorDB に追加
-        await self._vectordb.add(
+        await vectordb.add(
             documents=documents,
             ids=ids,
             embeddings=embeddings,
@@ -187,7 +192,8 @@ class VectorSearchHook:
         if not self._connected:
             await self.connect()
 
-        return await self._vectordb.delete(ids)
+        vectordb = self._require_vectordb()
+        return await vectordb.delete(ids)
 
     async def __aenter__(self) -> VectorSearchHook:
         """非同期コンテキストマネージャーのエントリー."""
@@ -202,6 +208,20 @@ class VectorSearchHook:
     ) -> None:
         """非同期コンテキストマネージャーの終了."""
         await self.disconnect()
+
+    def _require_embedding(self) -> EmbeddingProvider:
+        embedding = self._embedding
+        if embedding is None:
+            msg = "Embedding provider is not initialized."
+            raise RuntimeError(msg)
+        return embedding
+
+    def _require_vectordb(self) -> VectorDBProvider:
+        vectordb = self._vectordb
+        if vectordb is None:
+            msg = "VectorDB provider is not initialized."
+            raise RuntimeError(msg)
+        return vectordb
 
 
 def use_vector_search(
@@ -321,9 +341,7 @@ class RAGHook:
         top_k = top_k or self._top_k
 
         # 1. 関連ドキュメントを検索
-        search_results = await self._search_hook(
-            query, top_k=top_k, filters=filters
-        )
+        search_results = await self._search_hook(query, top_k=top_k, filters=filters)
 
         # 2. コンテキストを構築
         context_parts = []
@@ -412,4 +430,3 @@ def use_rag(
         min_similarity=min_similarity,
         system_prompt=system_prompt,
     )
-

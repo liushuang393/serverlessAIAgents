@@ -1,11 +1,12 @@
-# -*- coding: utf-8 -*-
 """RAG Overview Service — RAG 機能概要・App別設定管理."""
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from apps.platform.services.app_discovery import AppDiscoveryService
+
+if TYPE_CHECKING:
+    from apps.platform.services.app_discovery import AppDiscoveryService
 
 
 _CHUNK_STRATEGIES: list[dict[str, str]] = [
@@ -60,10 +61,22 @@ _RERANKERS: list[dict[str, str]] = [
 ]
 
 _RETRIEVAL_METHODS: list[dict[str, str]] = [
-    {"name": "hybrid", "label": "Hybrid", "description": "ベクトル + キーワードのハイブリッド検索。"},
+    {
+        "name": "hybrid",
+        "label": "Hybrid",
+        "description": "ベクトル + キーワードのハイブリッド検索。",
+    },
     {"name": "vector", "label": "Vector", "description": "ベクトル類似検索のみ。低遅延。"},
-    {"name": "keyword", "label": "Keyword", "description": "キーワード/BM25 中心。説明可能性重視。"},
-    {"name": "multi_query", "label": "Multi Query", "description": "クエリ拡張で取りこぼしを抑える方式。"},
+    {
+        "name": "keyword",
+        "label": "Keyword",
+        "description": "キーワード/BM25 中心。説明可能性重視。",
+    },
+    {
+        "name": "multi_query",
+        "label": "Multi Query",
+        "description": "クエリ拡張で取りこぼしを抑える方式。",
+    },
 ]
 
 _RAG_PATTERNS: list[dict[str, Any]] = [
@@ -138,8 +151,7 @@ class RAGOverviewService:
         apps = self.apps_using_rag()
         return {
             "description": (
-                "AgentFlow RAG は、データソース取り込み・分割・検索・再ランクを "
-                "App 単位で統一管理するための機能です。"
+                "AgentFlow RAG は、データソース取り込み・分割・検索・再ランクを App 単位で統一管理するための機能です。"
             ),
             "chunk_strategies": _CHUNK_STRATEGIES,
             "rerankers": _RERANKERS,
@@ -332,12 +344,14 @@ class RAGOverviewService:
         collection = (
             rag_contract.collections[0]
             if rag_contract.collections
-            else (service_collections[0] if isinstance(service_collections, list) and service_collections else vector_service.get("collection"))
+            else (
+                service_collections[0]
+                if isinstance(service_collections, list) and service_collections
+                else vector_service.get("collection")
+            )
         )
         has_rag_agent = any(
-            "rag" in capability.lower()
-            for agent in app_config.agents
-            for capability in agent.capabilities
+            "rag" in capability.lower() for agent in app_config.agents for capability in agent.capabilities
         )
         enabled = self._resolve_enabled(
             raw_contract_rag=raw_contract_rag,

@@ -333,13 +333,15 @@ class EntityExtractionService:
                     canonical = self.MERGE_RULES.get(first_match.lower(), first_match)
 
                     if canonical not in seen:
-                        entities.append(Entity(
-                            name=canonical,
-                            entity_type=entity_type,
-                            mentions=len(matches),
-                            confidence=0.7,
-                            metadata={"extraction_method": "rule_based"},
-                        ))
+                        entities.append(
+                            Entity(
+                                name=canonical,
+                                entity_type=entity_type,
+                                mentions=len(matches),
+                                confidence=0.7,
+                                metadata={"extraction_method": "rule_based"},
+                            )
+                        )
                         seen.add(canonical)
 
         return self.merge_entities(entities)
@@ -365,11 +367,13 @@ class EntityExtractionService:
                 except ValueError:
                     entity_type = EntityType.TECHNOLOGY
 
-                entities.append(Entity(
-                    name=name,
-                    entity_type=entity_type,
-                    confidence=float(item.get("confidence", 0.5)),
-                ))
+                entities.append(
+                    Entity(
+                        name=name,
+                        entity_type=entity_type,
+                        confidence=float(item.get("confidence", 0.5)),
+                    )
+                )
             return entities
 
         except (json.JSONDecodeError, ValueError) as e:
@@ -392,12 +396,14 @@ class EntityExtractionService:
                 target = item.get("target", "").strip()
                 if not source or not target:
                     continue
-                relations.append(EntityRelation(
-                    source=source,
-                    target=target,
-                    relation_type=item.get("relation_type", "related"),
-                    confidence=float(item.get("confidence", 0.5)),
-                ))
+                relations.append(
+                    EntityRelation(
+                        source=source,
+                        target=target,
+                        relation_type=item.get("relation_type", "related"),
+                        confidence=float(item.get("confidence", 0.5)),
+                    )
+                )
             return relations
 
         except (json.JSONDecodeError, ValueError) as e:
@@ -411,4 +417,4 @@ class EntityExtractionService:
         end = text.rfind("]")
         if start == -1 or end == -1 or end <= start:
             return "[]"
-        return text[start:end + 1]
+        return text[start : end + 1]

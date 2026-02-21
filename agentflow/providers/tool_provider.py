@@ -52,19 +52,19 @@ _tool_registry: dict[str, RegisteredTool] = {}
 class OperationType(str, Enum):
     """ツール操作タイプ."""
 
-    READ = "read"       # 読み取り（安全）
-    WRITE = "write"     # 書き込み（要注意）
-    DELETE = "delete"   # 削除（危険）
-    EXECUTE = "execute" # 外部実行（要監視）
+    READ = "read"  # 読み取り（安全）
+    WRITE = "write"  # 書き込み（要注意）
+    DELETE = "delete"  # 削除（危険）
+    EXECUTE = "execute"  # 外部実行（要監視）
 
 
 class RiskLevel(str, Enum):
     """リスクレベル."""
 
-    LOW = "low"           # 低リスク（自動承認可）
-    MEDIUM = "medium"     # 中リスク（監査推奨）
-    HIGH = "high"         # 高リスク（承認推奨）
-    CRITICAL = "critical" # 重大リスク（承認必須）
+    LOW = "low"  # 低リスク（自動承認可）
+    MEDIUM = "medium"  # 中リスク（監査推奨）
+    HIGH = "high"  # 高リスク（承認推奨）
+    CRITICAL = "critical"  # 重大リスク（承認必須）
 
 
 class RegisteredTool(BaseModel):
@@ -397,10 +397,7 @@ class ToolProvider:
         """
         risk_order = [RiskLevel.LOW, RiskLevel.MEDIUM, RiskLevel.HIGH, RiskLevel.CRITICAL]
         max_idx = risk_order.index(max_risk)
-        return [
-            t for t in self._tools.values()
-            if risk_order.index(t.risk_level) <= max_idx
-        ]
+        return [t for t in self._tools.values() if risk_order.index(t.risk_level) <= max_idx]
 
     def list_tools_by_operation(
         self,
@@ -531,17 +528,19 @@ class ToolProvider:
         """
         result = []
         for tool_info in self._tools.values():
-            result.append({
-                "type": "function",
-                "function": {
-                    "name": tool_info.name,
-                    "description": tool_info.description,
-                    "parameters": {
-                        "type": "object",
-                        "properties": tool_info.parameters,
+            result.append(
+                {
+                    "type": "function",
+                    "function": {
+                        "name": tool_info.name,
+                        "description": tool_info.description,
+                        "parameters": {
+                            "type": "object",
+                            "properties": tool_info.parameters,
+                        },
                     },
-                },
-            })
+                }
+            )
         return result
 
     def to_mcp_tools(self) -> list[dict[str, Any]]:
@@ -552,14 +551,16 @@ class ToolProvider:
         """
         result = []
         for tool_info in self._tools.values():
-            result.append({
-                "name": tool_info.name,
-                "description": tool_info.description,
-                "inputSchema": {
-                    "type": "object",
-                    "properties": tool_info.parameters,
-                },
-            })
+            result.append(
+                {
+                    "name": tool_info.name,
+                    "description": tool_info.description,
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": tool_info.parameters,
+                    },
+                }
+            )
         return result
 
     def get_security_summary(self) -> dict[str, Any]:

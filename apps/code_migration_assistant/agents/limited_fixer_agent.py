@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """Limited Fixer Agent - 限定修正."""
 
 from __future__ import annotations
 
 from typing import Any
-
-from agentflow import agent
 
 from apps.code_migration_assistant.agents.prompts import LIMITED_FIXER_PROMPT
 from apps.code_migration_assistant.workflow.models import (
@@ -14,6 +11,8 @@ from apps.code_migration_assistant.workflow.models import (
     UnknownItem,
     build_meta,
 )
+
+from agentflow import agent
 
 
 @agent
@@ -57,9 +56,7 @@ class LimitedFixerAgent:
                 package_name=str(migration_design.get("package_mapping", {}).get("default", "")),
             )
             if not applied:
-                unknowns.append(
-                    UnknownItem(field="patch", reason="自動修正可能な限定パターンに一致しない")
-                )
+                unknowns.append(UnknownItem(field="patch", reason="自動修正可能な限定パターンに一致しない"))
 
         artifact = LimitedFixArtifact(
             meta=build_meta(

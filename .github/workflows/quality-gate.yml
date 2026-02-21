@@ -1,0 +1,51 @@
+name: Quality Gate
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  quality-gate:
+    name: Quality Gate (lint + type + security + test)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Lint (Ruff)
+        run: ruff check .
+
+      - name: Type check (MyPy)
+        run: mypy agentflow --strict --ignore-missing-imports
+
+      - name: Security scan (bandit HIGH)
+        run: bandit -r agentflow -lll -iii
+
+      - name: Tests (pytest)
+        run: pytest --tb=short -q
+
+      - name: Generate check report on failure
+        if: failure()
+        run: |
+          echo "# Quality Gate Failure Report" > check-report.md
+          echo "Generated: $(date)" >> check-report.md
+          echo "" >> check-report.md
+          ruff check . >> check-report.md 2>&1 || true
+          mypy agentflow --strict >> check-report.md 2>&1 || true
+          bandit -r agentflow -lll -iii >> check-report.md 2>&1 || true
+
+      - name: Upload failure report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: check-report
+          path: check-report.md
+          if-no-files-found: ignore

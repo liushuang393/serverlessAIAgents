@@ -66,10 +66,7 @@ class CircuitBreakerOpenError(Exception):
         """初期化."""
         self.breaker_name = breaker_name
         self.remaining_seconds = remaining_seconds
-        super().__init__(
-            f"Circuit breaker '{breaker_name}' is open. "
-            f"Retry after {remaining_seconds:.1f}s"
-        )
+        super().__init__(f"Circuit breaker '{breaker_name}' is open. Retry after {remaining_seconds:.1f}s")
 
 
 class CircuitBreaker:
@@ -189,10 +186,7 @@ class CircuitBreaker:
                 self._failure_count += 1
                 if self._failure_count >= self._config.failure_threshold:
                     self._state = CircuitState.OPEN
-                    logger.warning(
-                        f"Circuit '{self._name}' → OPEN "
-                        f"(failures: {self._failure_count})"
-                    )
+                    logger.warning(f"Circuit '{self._name}' → OPEN (failures: {self._failure_count})")
 
     def protect(self, func: F) -> F:
         """関数をサーキットブレーカーで保護するデコレータ.
@@ -203,6 +197,7 @@ class CircuitBreaker:
         Returns:
             ラップされた関数
         """
+
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             async with self:
@@ -226,4 +221,3 @@ class CircuitBreaker:
             "success_count": self._success_count,
             "last_failure_time": self._last_failure_time,
         }
-

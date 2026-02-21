@@ -65,7 +65,7 @@ class Document(BaseModel):
         super().__init__(**data)
         if self.id is None:
             # 内容ベースのIDを生成（重複防止）
-            content_hash = hashlib.md5(self.page_content.encode()).hexdigest()[:12]
+            content_hash = hashlib.md5(self.page_content.encode(), usedforsecurity=False).hexdigest()[:12]
             self.id = f"doc_{content_hash}"
 
 

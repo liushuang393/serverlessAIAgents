@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """工程固定パイプラインのテスト."""
 
 from __future__ import annotations
@@ -6,7 +5,6 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-
 from apps.code_migration_assistant.agents import (
     LegacyAnalysisAgent,
     QualityGateAgent,

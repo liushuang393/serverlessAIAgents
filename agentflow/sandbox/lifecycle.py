@@ -170,9 +170,7 @@ class ManagedSandbox:
             "execution_count": self._execution_count,
             "total_execution_ms": self._total_execution_ms,
             "avg_execution_ms": (
-                self._total_execution_ms / self._execution_count
-                if self._execution_count > 0
-                else 0.0
+                self._total_execution_ms / self._execution_count if self._execution_count > 0 else 0.0
             ),
         }
 
@@ -239,9 +237,7 @@ class ManagedSandbox:
         """
         if not SandboxState.can_transition(self._state, new_state):
             msg = f"無効な状態遷移: {self._state.value} → {new_state.value}"
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
         old_state = self._state
         self._state = new_state
@@ -391,4 +387,3 @@ class ManagedSandbox:
             await self.stop()
         if self._state != SandboxState.DELETED:
             await self.delete()
-

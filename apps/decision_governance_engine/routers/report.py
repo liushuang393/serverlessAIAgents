@@ -32,14 +32,17 @@ router = APIRouter(prefix="/api/report", tags=["レポート"])
 # スキーマ定義
 # ========================================
 
+
 class SignatureRequest(BaseModel):
     """署名リクエスト."""
+
     report_id: str = Field(..., description="レポートID")
     confirmation: bool = Field(..., description="意思決定確認フラグ")
 
 
 class SignatureResponse(BaseModel):
     """署名レスポンス."""
+
     success: bool
     message: str
     signature: dict[str, Any] | None = None
@@ -74,6 +77,7 @@ def cache_report(report_id: str, report: Any) -> None:
 # ========================================
 # エンドポイント
 # ========================================
+
 
 async def _get_report_from_db(report_id: str) -> Any:
     """キャッシュまたはDBから決策レポートを取得.
@@ -119,9 +123,18 @@ async def _get_report_from_db(report_id: str) -> Any:
 
         # DB記録からレポートを構築
         dao_data = record.dao_result or {"problem_type": "UNKNOWN", "essence": "N/A"}
-        fa_data = record.fa_result or {"recommended_paths": [], "rejected_paths": [], "decision_criteria": []}
+        fa_data = record.fa_result or {
+            "recommended_paths": [],
+            "rejected_paths": [],
+            "decision_criteria": [],
+        }
         shu_data = record.shu_result or {"phases": [], "first_action": "N/A", "dependencies": []}
-        qi_data = record.qi_result or {"implementations": [], "tool_recommendations": [], "integration_points": [], "technical_debt_warnings": []}
+        qi_data = record.qi_result or {
+            "implementations": [],
+            "tool_recommendations": [],
+            "integration_points": [],
+            "technical_debt_warnings": [],
+        }
         review_data = record.review_result or {
             "overall_verdict": "PASS",
             "confidence_score": record.confidence or 0.0,
@@ -189,8 +202,8 @@ async def export_report_pdf(report_id: str) -> StreamingResponse:
     注意:
         - システム理念「変数・返回値強化」に基づき、全エラーを適切に処理
     """
-    from fastapi import HTTPException
     from apps.decision_governance_engine.services.pdf_generator import PDFGeneratorService
+    from fastapi import HTTPException
 
     report = await _get_report_from_db(report_id)
     if not report:

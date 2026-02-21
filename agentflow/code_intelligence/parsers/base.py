@@ -77,6 +77,7 @@ class ParseContext:
     strict_mode: bool = False
     language_version: str = ""
     options: dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

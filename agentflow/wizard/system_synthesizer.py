@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from agentflow.providers import get_llm
 from agentflow.wizard.models import (
@@ -51,7 +51,7 @@ class SystemSynthesizer:
             llm_client: LLM クライアント
             test_synthesizer: テスト合成器
         """
-        self._llm = llm_client or get_llm()
+        self._llm: Any = llm_client or get_llm()
         self._test_synthesizer = test_synthesizer or TestSynthesizer(llm_client=self._llm)
         self._logger = logging.getLogger(__name__)
 
@@ -154,18 +154,19 @@ class SystemSynthesizer:
     "examples": ["例1", "例2"]
 }}"""
 
-        response = await self._llm.generate(prompt)
-        content = response.content if hasattr(response, "content") else str(response)
+        content = await self._llm_text(prompt)
 
         # JSON 抽出
         import json
+
         try:
             start = content.find("{")
             end = content.rfind("}") + 1
             if start >= 0 and end > start:
                 skill = json.loads(content[start:end])
-                skill["source_gap_id"] = gap.gap_id
-                return skill
+                if isinstance(skill, dict):
+                    skill["source_gap_id"] = gap.gap_id
+                    return cast("dict[str, Any]", skill)
         except json.JSONDecodeError:
             pass
 
@@ -214,11 +215,11 @@ class SystemSynthesizer:
     "engine_type": "simple|pipeline|gate|rag"
 }}"""
 
-        response = await self._llm.generate(prompt)
-        content = response.content if hasattr(response, "content") else str(response)
+        content = await self._llm_text(prompt)
 
         # JSON 抽出
         import json
+
         try:
             start = content.find("{")
             end = content.rfind("}") + 1
@@ -273,18 +274,19 @@ class SystemSynthesizer:
     ]
 }}"""
 
-        response = await self._llm.generate(prompt)
-        content = response.content if hasattr(response, "content") else str(response)
+        content = await self._llm_text(prompt)
 
         # JSON 抽出
         import json
+
         try:
             start = content.find("{")
             end = content.rfind("}") + 1
             if start >= 0 and end > start:
                 flow = json.loads(content[start:end])
-                flow["source_gap_id"] = gap.gap_id
-                return flow
+                if isinstance(flow, dict):
+                    flow["source_gap_id"] = gap.gap_id
+                    return cast("dict[str, Any]", flow)
         except json.JSONDecodeError:
             pass
 
@@ -327,9 +329,9 @@ class SystemSynthesizer:
         Returns:
             検証結果
         """
-        errors = []
-        warnings = []
-        suggestions = []
+        errors: list[str] = []
+        warnings: list[str] = []
+        suggestions: list[str] = []
 
         # Agent 検証
         for agent in agents:
@@ -377,6 +379,15 @@ class SystemSynthesizer:
                 "skills_count": len(skills),
             },
         )
+
+    async def _llm_text(self, prompt: str) -> str:
+        """LLMからテキスト応答を取得."""
+        llm = cast("Any", self._llm)
+        if hasattr(llm, "generate"):
+            response = await llm.generate(prompt)
+        else:
+            response = await llm.chat([{"role": "user", "content": prompt}])
+        return response.content if hasattr(response, "content") else str(response)
 
 
 __all__ = ["SystemSynthesizer"]

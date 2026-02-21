@@ -22,9 +22,7 @@ class IngestConfig:
 
     chunk_size: int = 500
     chunk_overlap: int = 50
-    supported_formats: list[str] = field(
-        default_factory=lambda: ["md", "txt", "pdf", "html"]
-    )
+    supported_formats: list[str] = field(default_factory=lambda: ["md", "txt", "pdf", "html"])
 
 
 @dataclass
@@ -91,19 +89,21 @@ class DocIngester(AgentBlock):
 
         for i, doc in enumerate(documents):
             doc_id = doc.get("id", f"doc-{uuid.uuid4().hex[:8]}")
-            title = doc.get("title", f"Document {i+1}")
+            title = doc.get("title", f"Document {i + 1}")
             content = doc.get("content", "")
 
             # チャンク化（簡易実装）
             chunks = self._chunk_text(content)
 
-            ingested.append(IngestedDoc(
-                doc_id=doc_id,
-                title=title,
-                chunks_count=len(chunks),
-                format=doc.get("format", "txt"),
-                size_bytes=len(content.encode()),
-            ))
+            ingested.append(
+                IngestedDoc(
+                    doc_id=doc_id,
+                    title=title,
+                    chunks_count=len(chunks),
+                    format=doc.get("format", "txt"),
+                    size_bytes=len(content.encode()),
+                )
+            )
             total_chunks += len(chunks)
 
         return IngestResult(
@@ -119,7 +119,7 @@ class DocIngester(AgentBlock):
 
         chunks = []
         for i in range(0, len(text), self._config.chunk_size - self._config.chunk_overlap):
-            chunk = text[i:i + self._config.chunk_size]
+            chunk = text[i : i + self._config.chunk_size]
             if chunk:
                 chunks.append(chunk)
         return chunks

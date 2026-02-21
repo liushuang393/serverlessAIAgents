@@ -1,13 +1,26 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import path from 'path'
 import fs from 'fs'
 
+interface AppConfig {
+  ports?: {
+    api?: number
+    frontend?: number
+  }
+  runtime?: {
+    urls?: {
+      backend?: string
+    }
+  }
+}
+
 // app_config.json からポート設定を読み込む
 const appConfigPath = path.resolve(__dirname, '../app_config.json')
-let appConfig: any = {}
+let appConfig: AppConfig = {}
 try {
-  appConfig = JSON.parse(fs.readFileSync(appConfigPath, 'utf-8'))
+  appConfig = JSON.parse(fs.readFileSync(appConfigPath, 'utf-8')) as AppConfig
 } catch (e) {
   console.warn('Failed to load app_config.json', e)
 }
@@ -19,7 +32,7 @@ const apiHost = process.env.VITE_API_HOST || 'localhost'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   define: {
     __APP_CONFIG__: JSON.stringify({
       apiPort,
@@ -31,6 +44,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      // agentflow フレームワーク i18n 基底実装へのエイリアス
+      '@agentflow/i18n': path.resolve(__dirname, '../../../agentflow/i18n/frontend'),
     },
   },
   server: {

@@ -1,0 +1,93 @@
+{
+  "login": {
+    "title": "意思決定ガバナンスシステム",
+    "subtitle": "組織の意思決定を支援するAIシステム",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "submit": "ログイン",
+    "demo_hint": "デモアカウントを使用する",
+    "username_placeholder": "ユーザー名を入力",
+    "password_placeholder": "パスワードを入力",
+    "authenticating": "認証中...",
+    "error": "ユーザー名またはパスワードが正しくありません"
+  },
+  "decision": {
+    "title": "意思決定入力",
+    "subject": "件名・テーマ",
+    "subject_placeholder": "例: 新製品投入戦略の承認",
+    "background": "背景・状況",
+    "background_placeholder": "意思決定の背景を記述してください",
+    "options": "選択肢",
+    "options_placeholder": "検討中の選択肢を記述してください",
+    "constraints": "制約・条件",
+    "constraints_placeholder": "予算・期間・法規制等の制約を記述してください",
+    "submit": "判断を依頼する",
+    "submitting": "送信中...",
+    "dept": "部署",
+    "dept_placeholder": "例: 経営企画部",
+    "required": "必須項目です"
+  },
+  "processing": {
+    "title": "判断処理中",
+    "gate": "事前審査",
+    "analysis": "多角的分析",
+    "risk": "リスク評価",
+    "review": "最終レビュー",
+    "complete": "処理完了",
+    "step": "{current} / {total} ステップ",
+    "please_wait": "AIが分析中です。しばらくお待ちください..."
+  },
+  "report": {
+    "title": "判断レポート",
+    "summary": "判断概要",
+    "recommendation": "推奨事項",
+    "risk": "リスク分析",
+    "evidence": "根拠・エビデンス",
+    "alternatives": "代替案",
+    "download_pdf": "PDF ダウンロード",
+    "new_decision": "新しい判断を依頼",
+    "verdict": {
+      "approve": "承認推奨",
+      "reject": "否決推奨",
+      "revise": "要修正"
+    }
+  },
+  "history": {
+    "title": "判断履歴",
+    "empty": "判断履歴がありません",
+    "date": "日時",
+    "subject": "件名",
+    "status": "判断結果",
+    "view": "詳細を見る"
+  },
+  "knowledge": {
+    "title": "ナレッジベース",
+    "search_placeholder": "ナレッジを検索...",
+    "upload": "ドキュメントを追加",
+    "empty": "ナレッジがありません"
+  },
+  "settings": {
+    "title": "設定",
+    "language": "言語",
+    "theme": "テーマ",
+    "api_key": "API キー",
+    "save": "保存",
+    "saved": "保存しました"
+  },
+  "nav": {
+    "decision": "意思決定",
+    "history": "履歴",
+    "knowledge": "ナレッジ",
+    "settings": "設定",
+    "logout": "ログアウト"
+  },
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました",
+    "retry": "再試行",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "back": "戻る"
+  }
+}
+

@@ -74,9 +74,7 @@ class MCPConfig(BaseModel):
         lazy_loading: 懒加載設定
     """
 
-    servers: list[MCPServerConfig] = Field(
-        default_factory=list, description="MCP サーバー設定のリスト"
-    )
+    servers: list[MCPServerConfig] = Field(default_factory=list, description="MCP サーバー設定のリスト")
     lazy_loading: LazyLoadingConfig = Field(
         default_factory=LazyLoadingConfig,
         description="懒加載（Lazy Loading）の設定",

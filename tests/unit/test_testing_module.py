@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Testing 模块的完整测试.
 
 覆盖 mock_llm.py, agent_test_framework.py, fixtures.py
@@ -6,7 +5,8 @@
 
 import asyncio
 import unittest
-from unittest.mock import MagicMock
+
+import pytest
 
 
 class TestMockResponse(unittest.TestCase):
@@ -66,9 +66,7 @@ class TestMockLLMProvider(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            response = loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "Hi"}])
-            )
+            response = loop.run_until_complete(provider.chat([{"role": "user", "content": "Hi"}]))
             self.assertEqual(response["content"], "Mock response")
         finally:
             loop.close()
@@ -83,9 +81,7 @@ class TestMockLLMProvider(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            response = loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "test"}])
-            )
+            response = loop.run_until_complete(provider.chat([{"role": "user", "content": "test"}]))
             self.assertEqual(response["content"], "Custom response")
         finally:
             loop.close()
@@ -101,14 +97,10 @@ class TestMockLLMProvider(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            response = loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "What's the weather?"}])
-            )
+            response = loop.run_until_complete(provider.chat([{"role": "user", "content": "What's the weather?"}]))
             self.assertEqual(response["content"], "It's sunny!")
 
-            response = loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "other question"}])
-            )
+            response = loop.run_until_complete(provider.chat([{"role": "user", "content": "other question"}]))
             self.assertEqual(response["content"], "Mock response")
         finally:
             loop.close()
@@ -125,15 +117,9 @@ class TestMockLLMProvider(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            r1 = loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "test"}])
-            )
-            r2 = loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "test"}])
-            )
-            r3 = loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "test"}])
-            )
+            r1 = loop.run_until_complete(provider.chat([{"role": "user", "content": "test"}]))
+            r2 = loop.run_until_complete(provider.chat([{"role": "user", "content": "test"}]))
+            r3 = loop.run_until_complete(provider.chat([{"role": "user", "content": "test"}]))
 
             self.assertEqual(r1["content"], "First")
             self.assertEqual(r2["content"], "Second")
@@ -150,12 +136,8 @@ class TestMockLLMProvider(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "Hello"}])
-            )
-            loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "World"}])
-            )
+            loop.run_until_complete(provider.chat([{"role": "user", "content": "Hello"}]))
+            loop.run_until_complete(provider.chat([{"role": "user", "content": "World"}]))
 
             self.assertEqual(provider.get_call_count(), 2)
         finally:
@@ -170,9 +152,7 @@ class TestMockLLMProvider(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "Hello"}])
-            )
+            loop.run_until_complete(provider.chat([{"role": "user", "content": "Hello"}]))
 
             calls = provider.get_calls()
             self.assertEqual(len(calls), 1)
@@ -189,12 +169,8 @@ class TestMockLLMProvider(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "First"}])
-            )
-            loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "Last"}])
-            )
+            loop.run_until_complete(provider.chat([{"role": "user", "content": "First"}]))
+            loop.run_until_complete(provider.chat([{"role": "user", "content": "Last"}]))
 
             last = provider.get_last_call()
             self.assertEqual(last.messages[0]["content"], "Last")
@@ -207,15 +183,13 @@ class TestMockLLMProvider(unittest.TestCase):
 
         provider = MockLLMProvider()
 
-        with self.assertRaises(AssertionError):
+        with pytest.raises(AssertionError):
             provider.assert_called()
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "test"}])
-            )
+            loop.run_until_complete(provider.chat([{"role": "user", "content": "test"}]))
             provider.assert_called()  # Should not raise
         finally:
             loop.close()
@@ -229,14 +203,12 @@ class TestMockLLMProvider(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "Hello World"}])
-            )
+            loop.run_until_complete(provider.chat([{"role": "user", "content": "Hello World"}]))
 
             provider.assert_called_with("Hello")
             provider.assert_called_with("World")
 
-            with self.assertRaises(AssertionError):
+            with pytest.raises(AssertionError):
                 provider.assert_called_with("Goodbye")
         finally:
             loop.close()
@@ -250,9 +222,7 @@ class TestMockLLMProvider(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "test"}])
-            )
+            loop.run_until_complete(provider.chat([{"role": "user", "content": "test"}]))
             self.assertEqual(provider.get_call_count(), 1)
 
             provider.reset()
@@ -270,6 +240,7 @@ class TestMockLLMProvider(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
+
             async def collect_stream():
                 chunks = []
                 async for chunk in provider.stream([{"role": "user", "content": "test"}]):
@@ -296,9 +267,7 @@ class TestMockLLMProvider(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            response = loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "test"}])
-            )
+            response = loop.run_until_complete(provider.chat([{"role": "user", "content": "test"}]))
             self.assertEqual(response["content"], "Echo: test")
         finally:
             loop.close()
@@ -316,9 +285,7 @@ class TestCreateMockLLM(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            response = loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "test"}])
-            )
+            response = loop.run_until_complete(provider.chat([{"role": "user", "content": "test"}]))
             self.assertEqual(response["content"], "Mock response")
         finally:
             loop.close()
@@ -332,9 +299,7 @@ class TestCreateMockLLM(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            response = loop.run_until_complete(
-                provider.chat([{"role": "user", "content": "test"}])
-            )
+            response = loop.run_until_complete(provider.chat([{"role": "user", "content": "test"}]))
             self.assertEqual(response["content"], "Custom")
         finally:
             loop.close()
@@ -385,11 +350,12 @@ class TestFixtures(unittest.TestCase):
     def test_clean_env_fixture(self):
         """Clean Env Fixture 测试."""
         import os
+
         from agentflow.testing.fixtures import clean_env_fixture
 
         original_val = os.environ.get("TEST_VAR")
 
-        with clean_env_fixture({"TEST_VAR": "test_value"}) as env:
+        with clean_env_fixture({"TEST_VAR": "test_value"}):
             self.assertEqual(os.environ.get("TEST_VAR"), "test_value")
 
         # Should be restored
@@ -399,6 +365,7 @@ class TestFixtures(unittest.TestCase):
         """生成 conftest 测试."""
         import tempfile
         from pathlib import Path
+
         from agentflow.testing.fixtures import generate_conftest
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -423,7 +390,7 @@ class TestAgentTestContext(unittest.TestCase):
 
     def test_import(self):
         """导入测试."""
-        from agentflow.testing.agent_test_framework import agent_test_context, TestContext
+        from agentflow.testing.agent_test_framework import TestContext, agent_test_context
 
         self.assertIsNotNone(agent_test_context)
         self.assertIsNotNone(TestContext)

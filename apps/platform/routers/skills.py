@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Skills Router — Skill カタログ API エンドポイント.
 
 GET  /api/studios/framework/skills              — 全スキル一覧
@@ -10,11 +9,13 @@ GET  /api/studios/framework/skills/{skill_name} — スキル詳細
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from apps.platform.services.skill_catalog import SkillCatalogService
+
+if TYPE_CHECKING:
+    from apps.platform.services.skill_catalog import SkillCatalogService
 
 
 router = APIRouter(prefix="/api/studios/framework/skills", tags=["skills"])
@@ -29,7 +30,7 @@ def init_skill_services(catalog: SkillCatalogService) -> None:
     Args:
         catalog: Skill カタログサービス
     """
-    global _catalog  # noqa: PLW0603
+    global _catalog
     _catalog = catalog
 
 
@@ -107,4 +108,3 @@ async def get_skill_detail(skill_name: str) -> dict[str, Any]:
             },
         )
     return skill.to_dict()
-

@@ -126,4 +126,3 @@ __all__ = [
     "create_line_chart",
     "create_pie_chart",
 ]
-

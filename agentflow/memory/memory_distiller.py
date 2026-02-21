@@ -179,7 +179,7 @@ class MemoryDistiller:
 
 抽象的な知識として簡潔にまとめてください（箇条書き可）:"""
                 response = await self._llm_client.generate(prompt)
-                return response.strip()
+                return str(response).strip()
             except Exception as e:
                 self._logger.warning(f"LLM蒸留失敗、フォールバック使用: {e}")
 
@@ -205,4 +205,3 @@ class MemoryDistiller:
                 episodic_count[m.topic] = episodic_count.get(m.topic, 0) + 1
 
         return any(count >= self._min_cluster_size for count in episodic_count.values())
-

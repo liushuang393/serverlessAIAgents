@@ -14,7 +14,7 @@ interface ChatState {
     createSession: () => void;
     deleteSession: (sessionId: string) => Promise<void>;
 
-    sendMessage: (content: string, options?: any) => Promise<void>;
+    sendMessage: (content: string, options?: Record<string, unknown>) => Promise<void>;
     addMessage: (message: ChatMessage) => void;
     updateLastMessage: (content: string) => void;
 }
@@ -56,9 +56,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
         try {
             await chatApi.deleteSession(sessionId);
             set((state) => ({
-                sessions: state.sessions.filter(s => s.session_id !== sessionId),
+                sessions: state.sessions.filter((s) => s.session_id !== sessionId),
                 currentSessionId: state.currentSessionId === sessionId ? null : state.currentSessionId,
-                messages: state.currentSessionId === sessionId ? [] : state.messages
+                messages: state.currentSessionId === sessionId ? [] : state.messages,
             }));
         } catch (error) {
             console.error('Failed to delete session', error);
@@ -91,10 +91,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const stream = chatApi.streamMessage({
                 message: content,
                 session_id: currentSessionId || undefined, // undefined for new session
-                options
+                options,
             });
 
-            // @ts-ignore
             for await (const chunk of stream) {
                 // Check for potential SSE format "data: {json}\n\n"
                 const lines = chunk.split('\n\n');
@@ -118,9 +117,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
                             } else if (event.type === 'error') {
                                 updateLastMessage(`Error: ${event.message}`);
                             }
-                        } catch (e) {
+                        } catch {
                             // Fallback for plain text or malformed json
-                            // console.error(e); 
+                            // ignore malformed chunk
                         }
                     }
                 }

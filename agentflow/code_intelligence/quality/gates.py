@@ -178,16 +178,19 @@ class SyntaxValidator(QualityGate):
         context: dict[str, Any],
     ) -> GateResult:
         import time
+
         start = time.time()
         issues = []
 
         # 基本的な構文チェック
         if not target_code.strip():
-            issues.append(QualityIssue(
-                level=QualityLevel.CRITICAL,
-                message="Target code is empty",
-                rule="non_empty_output",
-            ))
+            issues.append(
+                QualityIssue(
+                    level=QualityLevel.CRITICAL,
+                    message="Target code is empty",
+                    rule="non_empty_output",
+                )
+            )
 
         # バランスチェック
         brackets = {"(": ")", "{": "}", "[": "]"}
@@ -197,30 +200,36 @@ class SyntaxValidator(QualityGate):
                 stack.append((char, i))
             elif char in brackets.values():
                 if not stack:
-                    issues.append(QualityIssue(
-                        level=QualityLevel.ERROR,
-                        message=f"Unmatched closing bracket '{char}'",
-                        location=f"char:{i}",
-                        rule="balanced_brackets",
-                    ))
+                    issues.append(
+                        QualityIssue(
+                            level=QualityLevel.ERROR,
+                            message=f"Unmatched closing bracket '{char}'",
+                            location=f"char:{i}",
+                            rule="balanced_brackets",
+                        )
+                    )
                 else:
                     open_bracket, _ = stack.pop()
                     if brackets[open_bracket] != char:
-                        issues.append(QualityIssue(
-                            level=QualityLevel.ERROR,
-                            message=f"Mismatched brackets: '{open_bracket}' and '{char}'",
-                            location=f"char:{i}",
-                            rule="balanced_brackets",
-                        ))
+                        issues.append(
+                            QualityIssue(
+                                level=QualityLevel.ERROR,
+                                message=f"Mismatched brackets: '{open_bracket}' and '{char}'",
+                                location=f"char:{i}",
+                                rule="balanced_brackets",
+                            )
+                        )
 
         if stack:
             for open_bracket, pos in stack:
-                issues.append(QualityIssue(
-                    level=QualityLevel.ERROR,
-                    message=f"Unmatched opening bracket '{open_bracket}'",
-                    location=f"char:{pos}",
-                    rule="balanced_brackets",
-                ))
+                issues.append(
+                    QualityIssue(
+                        level=QualityLevel.ERROR,
+                        message=f"Unmatched opening bracket '{open_bracket}'",
+                        location=f"char:{pos}",
+                        rule="balanced_brackets",
+                    )
+                )
 
         duration = (time.time() - start) * 1000
         passed = not any(i.level in [QualityLevel.CRITICAL, QualityLevel.ERROR] for i in issues)
@@ -255,6 +264,7 @@ class SemanticValidator(QualityGate):
         context: dict[str, Any],
     ) -> GateResult:
         import time
+
         start = time.time()
         issues = []
 
@@ -263,12 +273,14 @@ class SemanticValidator(QualityGate):
         target_lines = len(target_code.splitlines())
 
         if target_lines < source_lines * 0.3:
-            issues.append(QualityIssue(
-                level=QualityLevel.WARNING,
-                message="Target code is significantly shorter than source",
-                rule="code_length_ratio",
-                suggestion="Verify that all functionality is preserved",
-            ))
+            issues.append(
+                QualityIssue(
+                    level=QualityLevel.WARNING,
+                    message="Target code is significantly shorter than source",
+                    rule="code_length_ratio",
+                    suggestion="Verify that all functionality is preserved",
+                )
+            )
 
         duration = (time.time() - start) * 1000
         return GateResult(
@@ -317,6 +329,7 @@ class QualityGateRunner:
             品質レポート
         """
         import time
+
         start = time.time()
         context = context or {}
 
@@ -332,15 +345,9 @@ class QualityGateRunner:
 
         # 統計を集計
         total_issues = sum(len(r.issues) for r in results)
-        critical_count = sum(
-            1 for r in results for i in r.issues if i.level == QualityLevel.CRITICAL
-        )
-        error_count = sum(
-            1 for r in results for i in r.issues if i.level == QualityLevel.ERROR
-        )
-        warning_count = sum(
-            1 for r in results for i in r.issues if i.level == QualityLevel.WARNING
-        )
+        critical_count = sum(1 for r in results for i in r.issues if i.level == QualityLevel.CRITICAL)
+        error_count = sum(1 for r in results for i in r.issues if i.level == QualityLevel.ERROR)
+        warning_count = sum(1 for r in results for i in r.issues if i.level == QualityLevel.WARNING)
 
         # スコア計算
         score = 100.0

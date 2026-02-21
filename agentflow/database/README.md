@@ -223,3 +223,22 @@ MigrationEnv(
 | `Can't locate revision` | リビジョン ID の不一致 | `alembic history` で ID を確認 |
 | 非同期セッションエラー | `force_sync=True` で非同期セッション取得 | `session_sync()` を使用するか `force_sync=False` に変更 |
 
+---
+
+## 8. 開発/テスト/ビルド（統一手順）
+
+開発環境のセットアップと品質チェックはリポジトリルートの統一スクリプトを使用します。
+
+```bash
+cd <repo-root>
+bash setup_dev.sh
+./check.sh test
+./check.sh type-check
+```
+
+本番ビルド（Python パッケージ）:
+
+```bash
+cd <repo-root>
+make build
+```

@@ -106,7 +106,6 @@ class SensoryMemory:
         # 最も長い単語をトピックとする（簡易版）
         return max(words, key=len) if words else "general"
 
-
     def _score_importance(self, text: str) -> list[float]:
         """テキストの重要度をスコアリング.
 
@@ -156,9 +155,7 @@ class SensoryMemory:
         threshold = self._calculate_threshold(importance_scores)
 
         # 閾値以上の単語のみ保持
-        compressed_words = [
-            word for word, score in zip(words, importance_scores, strict=False) if score >= threshold
-        ]
+        compressed_words = [word for word, score in zip(words, importance_scores, strict=False) if score >= threshold]
 
         return " ".join(compressed_words)
 
@@ -181,4 +178,3 @@ class SensoryMemory:
 
         # 最小閾値を適用
         return max(threshold, self._config.min_importance_threshold)
-

@@ -133,7 +133,7 @@ class SelfImprovementLoop:
         # 状態
         self._running = False
         self._current_phase = LoopPhase.IDLE
-        self._task: asyncio.Task | None = None
+        self._task: asyncio.Task[Any] | None = None
         self._stats = LoopStats()
         self._history: list[ImprovementRecord] = []
 
@@ -259,6 +259,7 @@ class SelfImprovementLoop:
         self._logger.info(f"Improving gap: {gap.description[:50]}...")
 
         import uuid
+
         record_id = f"imp_{uuid.uuid4().hex[:12]}"
 
         try:

@@ -387,10 +387,7 @@ class CodeInventory:
         result.total_loc = sum(f.loc for f in result.files)
         result.scan_time_ms = (time.time() - start) * 1000
 
-        _logger.info(
-            f"Scanned {result.total_files} files, {result.total_loc} LOC "
-            f"in {result.scan_time_ms:.1f}ms"
-        )
+        _logger.info(f"Scanned {result.total_files} files, {result.total_loc} LOC in {result.scan_time_ms:.1f}ms")
 
         return result
 
@@ -416,9 +413,7 @@ class CodeInventory:
                 continue
 
             try:
-                content = file_path.read_text(
-                    encoding=file_info.encoding, errors="ignore"
-                )
+                content = file_path.read_text(encoding=file_info.encoding, errors="ignore")
                 lines = content.splitlines()
 
                 for line_no, line in enumerate(lines, 1):
@@ -517,9 +512,7 @@ class CodeInventory:
             outgoing_score = outgoing * 5
 
             # 被依存数
-            incoming = sum(
-                1 for deps in dep_graph.values() if file_info.path in deps
-            )
+            incoming = sum(1 for deps in dep_graph.values() if file_info.path in deps)
             incoming_score = incoming * 3
 
             complexity[file_info.path] = loc_score + outgoing_score + incoming_score

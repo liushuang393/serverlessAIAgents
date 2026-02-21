@@ -1,0 +1,113 @@
+{
+  "nav": {
+    "dashboard": "ダッシュボード",
+    "apps": "アプリ",
+    "agents": "エージェント",
+    "orchestration": "オーケストレーション",
+    "patterns": "パターン",
+    "skills": "スキル",
+    "rag": "RAG",
+    "mcp": "MCP",
+    "cli": "CLI リファレンス",
+    "settings": "設定",
+    "logout": "ログアウト"
+  },
+  "dashboard": {
+    "title": "AgentFlow プラットフォーム",
+    "subtitle": "AI エージェント管理コンソール",
+    "total_apps": "アプリ合計",
+    "active_agents": "稼働中エージェント",
+    "running_flows": "実行中フロー",
+    "system_health": "システム状態"
+  },
+  "apps": {
+    "title": "アプリ一覧",
+    "create": "新規アプリ作成",
+    "no_apps": "アプリがありません",
+    "status": "状態",
+    "running": "稼働中",
+    "stopped": "停止",
+    "error": "エラー",
+    "view_detail": "詳細",
+    "start": "起動",
+    "stop": "停止",
+    "delete": "削除",
+    "name": "アプリ名",
+    "description": "説明",
+    "created_at": "作成日時"
+  },
+  "app_create": {
+    "title": "新規アプリ作成",
+    "name": "アプリ名",
+    "name_placeholder": "例: 社内FAQシステム",
+    "description": "説明",
+    "description_placeholder": "アプリの概要を記述してください",
+    "template": "テンプレート",
+    "submit": "作成",
+    "cancel": "キャンセル"
+  },
+  "agents": {
+    "title": "エージェント一覧",
+    "no_agents": "エージェントがありません",
+    "type": "種別",
+    "capability": "機能",
+    "mcp_tools": "MCP ツール数",
+    "status": "状態"
+  },
+  "orchestration": {
+    "title": "オーケストレーション",
+    "flows": "フロー",
+    "active_flows": "実行中フロー",
+    "no_flows": "フローがありません"
+  },
+  "patterns": {
+    "title": "エージェントパターン",
+    "no_patterns": "パターンがありません",
+    "use": "このパターンを使用"
+  },
+  "skills": {
+    "title": "スキルカタログ",
+    "no_skills": "スキルがありません",
+    "category": "カテゴリ",
+    "install": "インストール"
+  },
+  "rag": {
+    "title": "RAG 概要",
+    "documents": "ドキュメント数",
+    "index_size": "インデックスサイズ",
+    "status": "状態",
+    "ready": "準備完了"
+  },
+  "mcp": {
+    "title": "MCP マネージャー",
+    "servers": "MCP サーバー",
+    "tools": "ツール",
+    "connected": "接続済み",
+    "disconnected": "未接続",
+    "no_servers": "MCP サーバーがありません"
+  },
+  "cli": {
+    "title": "CLI リファレンス",
+    "copy": "コピー",
+    "copied": "コピーしました"
+  },
+  "settings": {
+    "title": "設定",
+    "language": "言語",
+    "theme": "テーマ",
+    "api_key": "API キー",
+    "save": "保存",
+    "saved": "保存しました"
+  },
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました",
+    "retry": "再試行",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "back": "戻る",
+    "confirm": "確認",
+    "delete": "削除"
+  }
+}
+

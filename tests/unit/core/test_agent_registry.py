@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 """AgentRegistryインターフェースのテスト.
 
 Agent登録・発見・インスタンス化のユニットテスト。
 """
+
 import pytest
 
 
@@ -10,6 +10,7 @@ import pytest
 def agent_registry():
     """新しいAgentRegistryインスタンスを作成."""
     from agentflow.core.agent_registry import AgentRegistry
+
     return AgentRegistry()
 
 
@@ -17,6 +18,7 @@ def agent_registry():
 def sample_capability():
     """サンプルAgentCapabilitySpecを作成."""
     from agentflow.core.capability_spec import AgentCapabilitySpec
+
     return AgentCapabilitySpec(
         id="test_agent_v1",
         name="Test Agent",
@@ -41,7 +43,10 @@ class TestAgentRegistry:
 
     def test_get_agent_factory(self, agent_registry, sample_capability):
         """Agentファクトリ取得のテスト."""
-        factory = lambda: "instance"
+
+        def factory():
+            return "instance"
+
         agent_registry.register("test", sample_capability, factory)
 
         retrieved_factory = agent_registry.get_factory("test")
@@ -60,12 +65,8 @@ class TestAgentRegistry:
         """タグでAgent検索のテスト."""
         from agentflow.core.capability_spec import AgentCapabilitySpec
 
-        cap1 = AgentCapabilitySpec(
-            id="a1", name="A1", description="", tags=["pdf", "analysis"]
-        )
-        cap2 = AgentCapabilitySpec(
-            id="a2", name="A2", description="", tags=["text", "analysis"]
-        )
+        cap1 = AgentCapabilitySpec(id="a1", name="A1", description="", tags=["pdf", "analysis"])
+        cap2 = AgentCapabilitySpec(id="a2", name="A2", description="", tags=["text", "analysis"])
 
         agent_registry.register("a1", cap1, lambda: None)
         agent_registry.register("a2", cap2, lambda: None)

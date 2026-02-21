@@ -122,9 +122,7 @@ class VectorProvider:
                 import chromadb
 
                 self._client = chromadb.Client()
-                self._collection = self._client.get_or_create_collection(
-                    name=self._config.collection
-                )
+                self._collection = self._client.get_or_create_collection(name=self._config.collection)
                 self._logger.info("ChromaDB initialized")
             except ImportError:
                 self._logger.warning("chromadb not installed, using mock")
@@ -186,12 +184,14 @@ class VectorProvider:
         output = []
         if results and "documents" in results:
             for i, doc in enumerate(results["documents"][0]):
-                output.append({
-                    "id": results["ids"][0][i] if "ids" in results else f"doc_{i}",
-                    "document": doc,
-                    "distance": results["distances"][0][i] if "distances" in results else 0,
-                    "metadata": results["metadatas"][0][i] if "metadatas" in results else {},
-                })
+                output.append(
+                    {
+                        "id": results["ids"][0][i] if "ids" in results else f"doc_{i}",
+                        "document": doc,
+                        "distance": results["distances"][0][i] if "distances" in results else 0,
+                        "metadata": results["metadatas"][0][i] if "metadatas" in results else {},
+                    }
+                )
         return output
 
 
@@ -285,7 +285,7 @@ class DataProvider:
             SQLProvider
         """
         if cls._sql_instance is None or url is not None:
-            db_url = url or os.getenv("DATABASE_URL", "sqlite:///./data.db")
+            db_url = url or os.getenv("DATABASE_URL") or "sqlite:///./data.db"
             config = SQLConfig(url=db_url)
             cls._sql_instance = SQLProvider(config)
         return cls._sql_instance
@@ -306,7 +306,7 @@ class DataProvider:
             VectorProvider
         """
         if cls._vector_instance is None or provider is not None:
-            vec_provider = provider or os.getenv("VECTOR_DB_PROVIDER", "chromadb")
+            vec_provider = provider or os.getenv("VECTOR_DB_PROVIDER") or "chromadb"
             config = VectorConfig(provider=vec_provider, collection=collection)
             cls._vector_instance = VectorProvider(config)
         return cls._vector_instance
@@ -329,4 +329,3 @@ class DataProvider:
                 config = CacheConfig(provider="memory")
             cls._cache_instance = CacheProvider(config)
         return cls._cache_instance
-

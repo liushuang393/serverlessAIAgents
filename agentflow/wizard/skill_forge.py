@@ -13,10 +13,10 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, cast
 
 from agentflow.providers import get_llm
-from agentflow.skills.base import Skill
+from agentflow.skills.base import Skill, SkillMetadata
 from agentflow.skills.validator import SkillValidator
 from agentflow.wizard.models import (
     TestCase,
@@ -97,7 +97,7 @@ class SkillForge:
             skill_validator: Skill 検証器
             test_synthesizer: テスト合成器
         """
-        self._llm = llm_client or get_llm()
+        self._llm: Any = llm_client or get_llm()
         self._validator = skill_validator or SkillValidator()
         self._test_synthesizer = test_synthesizer or TestSynthesizer(llm_client=self._llm)
         self._logger = logging.getLogger(__name__)
@@ -190,8 +190,7 @@ Skill 名: {spec.name}
 依存する可能性のある Skill 名をカンマ区切りで回答してください。
 なければ "none" と回答してください。"""
 
-            response = await self._llm.generate(prompt)
-            content = response.content if hasattr(response, "content") else str(response)
+            content = await self._llm_text(prompt)
 
             if content.lower().strip() != "none":
                 inferred = [s.strip() for s in content.split(",") if s.strip()]
@@ -210,16 +209,19 @@ Skill 名: {spec.name}
         Returns:
             作成された Skill
         """
-        return Skill(
+        metadata = SkillMetadata(
             name=spec.name,
-            trigger_patterns=spec.trigger_patterns,
-            instructions=spec.instructions,
+            description=spec.description,
+            triggers=spec.trigger_patterns,
             examples=spec.examples,
-            metadata={
-                "description": spec.description,
+            extra={
                 "forged": True,
                 **spec.metadata,
             },
+        )
+        return Skill(
+            metadata=metadata,
+            instructions=spec.instructions,
         )
 
     async def _synthesize_skill_tests(self, spec: SkillSpec) -> list[TestCase]:
@@ -235,40 +237,46 @@ Skill 名: {spec.name}
 
         # トリガーパターンごとのテスト
         for i, pattern in enumerate(spec.trigger_patterns[:3]):
-            tests.append(TestCase(
-                name=f"test_{spec.name}_trigger_{i+1}",
-                description=f"Test trigger pattern: {pattern}",
-                input_data={"query": pattern},
-                expected_output={"matched": True},
-                assertions=[
-                    "result is not None",
-                    "result.get('matched', False) == True",
-                ],
-                tags=["trigger", "pattern"],
-            ))
+            tests.append(
+                TestCase(
+                    name=f"test_{spec.name}_trigger_{i + 1}",
+                    description=f"Test trigger pattern: {pattern}",
+                    input_data={"query": pattern},
+                    expected_output={"matched": True},
+                    assertions=[
+                        "result is not None",
+                        "result.get('matched', False) == True",
+                    ],
+                    tags=["trigger", "pattern"],
+                )
+            )
 
         # 例に基づくテスト
         for i, example in enumerate(spec.examples[:2]):
-            tests.append(TestCase(
-                name=f"test_{spec.name}_example_{i+1}",
-                description=f"Test example: {example[:50]}...",
-                input_data={"query": example},
-                expected_output={},
-                assertions=[
-                    "result is not None",
-                ],
-                tags=["example"],
-            ))
+            tests.append(
+                TestCase(
+                    name=f"test_{spec.name}_example_{i + 1}",
+                    description=f"Test example: {example[:50]}...",
+                    input_data={"query": example},
+                    expected_output={},
+                    assertions=[
+                        "result is not None",
+                    ],
+                    tags=["example"],
+                )
+            )
 
         # エッジケース
-        tests.append(TestCase(
-            name=f"test_{spec.name}_no_match",
-            description="Test with non-matching input",
-            input_data={"query": "completely unrelated random text xyz123"},
-            expected_output={"matched": False},
-            assertions=[],
-            tags=["edge", "no_match"],
-        ))
+        tests.append(
+            TestCase(
+                name=f"test_{spec.name}_no_match",
+                description="Test with non-matching input",
+                input_data={"query": "completely unrelated random text xyz123"},
+                expected_output={"matched": False},
+                assertions=[],
+                tags=["edge", "no_match"],
+            )
+        )
 
         return tests
 
@@ -291,15 +299,13 @@ Skill 名: {spec.name}
 
         for test in tests:
             import time
+
             start = time.time()
 
             try:
                 # Skill マッチングをシミュレート
                 query = test.input_data.get("query", "")
-                matched = any(
-                    pattern.lower() in query.lower()
-                    for pattern in skill.trigger_patterns
-                )
+                matched = any(pattern.lower() in query.lower() for pattern in skill.metadata.triggers)
 
                 passed = True
                 for assertion in test.assertions:
@@ -316,21 +322,25 @@ Skill 名: {spec.name}
                 duration = (time.time() - start) * 1000
                 total_duration += duration
 
-                results.append(TestResult(
-                    test_name=test.name,
-                    passed=passed,
-                    duration_ms=duration,
-                    output={"matched": matched},
-                    assertions_passed=len(test.assertions) if passed else 0,
-                    assertions_failed=0 if passed else len(test.assertions),
-                ))
+                results.append(
+                    TestResult(
+                        test_name=test.name,
+                        passed=passed,
+                        duration_ms=duration,
+                        output={"matched": matched},
+                        assertions_passed=len(test.assertions) if passed else 0,
+                        assertions_failed=0 if passed else len(test.assertions),
+                    )
+                )
 
             except Exception as e:
-                results.append(TestResult(
-                    test_name=test.name,
-                    passed=False,
-                    error=str(e),
-                ))
+                results.append(
+                    TestResult(
+                        test_name=test.name,
+                        passed=False,
+                        error=str(e),
+                    )
+                )
 
         passed_count = sum(1 for r in results if r.passed)
 
@@ -342,6 +352,15 @@ Skill 名: {spec.name}
             coverage=0.8,  # シミュレーション
             duration_ms=total_duration,
         )
+
+    async def _llm_text(self, prompt: str) -> str:
+        """LLMからテキスト応答を取得."""
+        llm = cast("Any", self._llm)
+        if hasattr(llm, "generate"):
+            response = await llm.generate(prompt)
+        else:
+            response = await llm.chat([{"role": "user", "content": prompt}])
+        return response.content if hasattr(response, "content") else str(response)
 
     async def compose_skills(
         self,

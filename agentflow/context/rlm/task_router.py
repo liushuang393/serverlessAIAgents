@@ -246,8 +246,7 @@ class TaskRouter:
             confidence = min(0.5 + excess_ratio * 0.2, 1.0)
             reasons.append(
                 (
-                    f"Total tokens ({total_tokens:,}) exceeds threshold "
-                    f"({self._config.activation_threshold:,})",
+                    f"Total tokens ({total_tokens:,}) exceeds threshold ({self._config.activation_threshold:,})",
                     confidence,
                 )
             )
@@ -326,9 +325,7 @@ class TaskRouter:
         """
         long_inputs = long_inputs or []
 
-        total_tokens = self._estimate_tokens(query) + sum(
-            self._estimate_tokens(inp) for inp in long_inputs
-        )
+        total_tokens = self._estimate_tokens(query) + sum(self._estimate_tokens(inp) for inp in long_inputs)
 
         # 複雑度レベルを判定
         threshold = self._config.activation_threshold

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """StorageBackend 単体テスト."""
 
 from __future__ import annotations

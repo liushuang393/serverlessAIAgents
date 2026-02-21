@@ -77,13 +77,13 @@ class MicrosandboxProvider(SandboxProvider):
 
         # SDK インポートチェック
         try:
-            import microsandbox  # noqa: F401
+            import microsandbox
+
             self._sdk_available = True
         except ImportError:
             self._sdk_available = False
             logger.warning(
-                "microsandbox パッケージがインストールされていません。"
-                "pip install microsandbox を実行してください。"
+                "microsandbox パッケージがインストールされていません。pip install microsandbox を実行してください。"
             )
 
         logger.info(f"Microsandbox provider initialized: {self._server_url}")
@@ -162,10 +162,9 @@ class MicrosandboxProvider(SandboxProvider):
                     for filename, content in files.items():
                         # Base64 エンコードで転送
                         import base64
+
                         b64 = base64.b64encode(content).decode()
-                        await sb.run(
-                            f"import base64; open('{filename}', 'wb').write(base64.b64decode('{b64}'))"
-                        )
+                        await sb.run(f"import base64; open('{filename}', 'wb').write(base64.b64decode('{b64}'))")
 
                 # メインコード実行
                 exec_result = await sb.run(code)
@@ -201,4 +200,3 @@ class MicrosandboxProvider(SandboxProvider):
         """リソース解放."""
         self._state = SandboxState.STOPPED
         logger.info("Microsandbox provider closed")
-

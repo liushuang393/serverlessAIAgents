@@ -23,7 +23,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from agentflow.engines.base import BaseEngine, EngineConfig
 
@@ -118,7 +118,7 @@ class GateEngine(BaseEngine):
         if isinstance(result, dict):
             return result
         if hasattr(result, "model_dump"):
-            return result.model_dump()
+            return cast("dict[str, Any]", result.model_dump())
         return {"result": result}
 
     async def _execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -141,16 +141,10 @@ class GateEngine(BaseEngine):
             "result": main_result,
         }
 
-    async def _execute_stream(
-        self, inputs: dict[str, Any]
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def _execute_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """ストリーム実行."""
-        gate_name = getattr(
-            self._gate_instance, "name", self._gate_instance.__class__.__name__
-        )
-        main_name = getattr(
-            self._main_instance, "name", self._main_instance.__class__.__name__
-        )
+        gate_name = getattr(self._gate_instance, "name", self._gate_instance.__class__.__name__)
+        main_name = getattr(self._main_instance, "name", self._main_instance.__class__.__name__)
 
         # Gate開始
         if event := self._emit_node_start(gate_name):
@@ -186,4 +180,3 @@ class GateEngine(BaseEngine):
                 "result": main_result,
             },
         }
-

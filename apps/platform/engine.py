@@ -150,9 +150,7 @@ class PlatformEngine(SimpleEngine):
         """
         self._library.register(entry, overwrite=overwrite)
 
-    async def register_component_async(
-        self, entry: ComponentEntry, *, overwrite: bool = False
-    ) -> None:
+    async def register_component_async(self, entry: ComponentEntry, *, overwrite: bool = False) -> None:
         """コンポーネントを非同期登録.
 
         Args:

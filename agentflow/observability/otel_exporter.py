@@ -56,11 +56,9 @@ class OTLPExporter(SpanExporter):
             service_name: サービス名
             timeout: タイムアウト秒数
         """
-        self._endpoint = endpoint or os.getenv(
-            "OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318/v1/traces"
-        )
+        self._endpoint = endpoint or os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT") or "http://localhost:4318/v1/traces"
         self._headers = headers or self._parse_headers_env()
-        self._service_name = service_name or os.getenv("OTEL_SERVICE_NAME", "agentflow")
+        self._service_name = service_name or os.getenv("OTEL_SERVICE_NAME") or "agentflow"
         self._timeout = timeout
         self._native_exporter: Any = None
 
@@ -163,8 +161,7 @@ class OTLPExporter(SpanExporter):
                                     "endTimeUnixNano": int((span.end_time or span.start_time) * 1e9),
                                     "status": {"code": 1 if span.status == "ok" else 2},
                                     "attributes": [
-                                        {"key": k, "value": {"stringValue": str(v)}}
-                                        for k, v in span.attributes.items()
+                                        {"key": k, "value": {"stringValue": str(v)}} for k, v in span.attributes.items()
                                     ],
                                 }
                             ]
@@ -173,4 +170,3 @@ class OTLPExporter(SpanExporter):
                 }
             ]
         }
-

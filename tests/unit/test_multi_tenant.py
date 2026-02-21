@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """マルチテナント単体テスト."""
 
 from __future__ import annotations
 
 import pytest
 
-from agentflow.multi_tenant import TenantContext, TenantManager, ResourceLimits
+from agentflow.multi_tenant import ResourceLimits, TenantContext, TenantManager
 from agentflow.multi_tenant.context import IsolationLevel
 from agentflow.multi_tenant.manager import get_current_tenant, require_tenant
 
@@ -209,6 +208,7 @@ class TestHelperFunctions:
         """各テスト後にテナントをクリア."""
         yield
         from agentflow.multi_tenant.manager import _current_tenant
+
         _current_tenant.set(None)
 
     def test_get_current_tenant(self) -> None:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """適応型コーディネーターのユニットテスト.
 
 AdaptiveCoordinator, AgentProfile, TaskRequirementの機能をテストする。
@@ -8,11 +7,10 @@ import pytest
 
 from agentflow.patterns.adaptive_coordinator import (
     AdaptiveCoordinator,
-    AgentProfile,
     AgentCapability,
-    TaskRequirement,
-    DelegationResult,
+    AgentProfile,
     MatchScore,
+    TaskRequirement,
 )
 
 
@@ -309,9 +307,7 @@ class TestAdaptiveCoordinator:
         )
 
         # 最初は見つかる
-        match = coordinator.find_best_agent(
-            TaskRequirement(required_capabilities=["analysis"])
-        )
+        match = coordinator.find_best_agent(TaskRequirement(required_capabilities=["analysis"]))
         assert match is not None
         assert match.agent_id == "agent1"
 
@@ -344,7 +340,8 @@ class TestAdaptiveCoordinator:
         coordinator = AdaptiveCoordinator()
 
         async def error_agent(task: dict) -> dict:
-            raise ValueError("Agent error")
+            msg = "Agent error"
+            raise ValueError(msg)
 
         coordinator.register_agent(
             agent_id="error_agent",
@@ -467,4 +464,3 @@ class TestMatchScore:
 
         assert match.details is not None
         assert match.details.get("reason") == "best match"
-

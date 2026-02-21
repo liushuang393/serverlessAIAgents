@@ -194,10 +194,7 @@ class AgentPipeline:
             total_agents=len(self.agents),
         )
         # Agentメタデータを登録
-        self.emitter.register_agents([
-            AgentMeta(id=a.id, name=a.name, label=a.label, icon=a.icon)
-            for a in self.agents
-        ])
+        self.emitter.register_agents([AgentMeta(id=a.id, name=a.name, label=a.label, icon=a.icon) for a in self.agents])
 
         # 結果キャッシュ（ロールバック時に使用）
         self._results: dict[str, dict[str, Any]] = {}
@@ -273,11 +270,14 @@ class AgentPipeline:
         import time
 
         # Flow 開始イベント
-        yield (None, FlowStartEvent(
-            timestamp=time.time(),
-            flow_id=self.flow_id,
-            data={"total_agents": len(self.agents)},
-        ))
+        yield (
+            None,
+            FlowStartEvent(
+                timestamp=time.time(),
+                flow_id=self.flow_id,
+                data={"total_agents": len(self.agents)},
+            ),
+        )
 
         result = input_data
         self.emitter.reset()
@@ -290,17 +290,13 @@ class AgentPipeline:
                     continue
 
                 # ノード開始イベント
-                async for event in self.emitter.emit_node_start(
-                    config.id, config.name, config.label
-                ):
+                async for event in self.emitter.emit_node_start(config.id, config.name, config.label):
                     yield (None, event)
 
                 # 進捗メッセージがあれば発射（遅延付き）
                 if config.progress_messages and self.config.emit_progress_per_node:
                     for percentage, message in config.progress_messages:
-                        async for event in self.emitter.emit_node_progress(
-                            config.id, percentage, message
-                        ):
+                        async for event in self.emitter.emit_node_progress(config.id, percentage, message):
                             yield (None, event)
                         await asyncio.sleep(0.1)  # 短いディレイでUX改善
 
@@ -310,43 +306,50 @@ class AgentPipeline:
 
                 # ノード完了イベント
                 result_summary = self._extract_result_summary(config.id, result)
-                async for event in self.emitter.emit_node_complete(
-                    config.id, config.name, result_summary
-                ):
+                async for event in self.emitter.emit_node_complete(config.id, config.name, result_summary):
                     yield (None, event)
 
                 # ゲート Agent の場合、拒否されたら早期終了
                 if config.is_gate and self._is_rejected(result):
                     self._logger.warning(f"Pipeline stopped by gate: {config.id}")
-                    yield (None, FlowErrorEvent(
-                        timestamp=time.time(),
-                        flow_id=self.flow_id,
-                        data={"rejected_by": config.id},
-                        error_message=result.get("message", "拒否されました"),
-                        error_type="RejectedByGate",
-                    ))
+                    yield (
+                        None,
+                        FlowErrorEvent(
+                            timestamp=time.time(),
+                            flow_id=self.flow_id,
+                            data={"rejected_by": config.id},
+                            error_message=result.get("message", "拒否されました"),
+                            error_type="RejectedByGate",
+                        ),
+                    )
                     yield (result, None)
                     return
 
             # Flow 完了イベント
-            yield (None, FlowCompleteEvent(
-                timestamp=time.time(),
-                flow_id=self.flow_id,
-                data={},
-                result=result,
-                include_result=True,
-            ))
+            yield (
+                None,
+                FlowCompleteEvent(
+                    timestamp=time.time(),
+                    flow_id=self.flow_id,
+                    data={},
+                    result=result,
+                    include_result=True,
+                ),
+            )
             yield (result, None)
 
         except Exception as e:
             self._logger.exception(f"Pipeline error: {e}")
-            yield (None, FlowErrorEvent(
-                timestamp=time.time(),
-                flow_id=self.flow_id,
-                data={},
-                error_message=str(e),
-                error_type=type(e).__name__,
-            ))
+            yield (
+                None,
+                FlowErrorEvent(
+                    timestamp=time.time(),
+                    flow_id=self.flow_id,
+                    data={},
+                    error_message=str(e),
+                    error_type=type(e).__name__,
+                ),
+            )
             raise
 
     async def run_with_revision(
@@ -366,9 +369,7 @@ class AgentPipeline:
         import time
 
         for revision_count in range(self.config.max_revisions + 1):
-            self._logger.info(
-                f"Pipeline execution round {revision_count + 1}/{self.config.max_revisions + 1}"
-            )
+            self._logger.info(f"Pipeline execution round {revision_count + 1}/{self.config.max_revisions + 1}")
 
             # パイプライン実行
             final_result: dict[str, Any] | None = None
@@ -391,13 +392,16 @@ class AgentPipeline:
             # ロールバック処理
             if revision_count >= self.config.max_revisions:
                 self._logger.warning("Max revisions reached")
-                yield (None, FlowErrorEvent(
-                    timestamp=time.time(),
-                    flow_id=self.flow_id,
-                    data={"revision_count": revision_count},
-                    error_message=f"最大リビジョン回数（{self.config.max_revisions}回）に到達",
-                    error_type="MaxRevisionsReached",
-                ))
+                yield (
+                    None,
+                    FlowErrorEvent(
+                        timestamp=time.time(),
+                        flow_id=self.flow_id,
+                        data={"revision_count": revision_count},
+                        error_message=f"最大リビジョン回数（{self.config.max_revisions}回）に到達",
+                        error_type="MaxRevisionsReached",
+                    ),
+                )
                 yield (final_result, None)
                 return
 
@@ -413,9 +417,7 @@ class AgentPipeline:
                 input_data["revision_feedback"] = revision_request.feedback
                 input_data["revision_round"] = revision_count + 1
 
-            self._logger.info(
-                f"Revising from {revision_request.target_agent_id}"
-            )
+            self._logger.info(f"Revising from {revision_request.target_agent_id}")
 
     def _is_rejected(self, result: dict[str, Any]) -> bool:
         """結果が拒否かどうかを判定.
@@ -435,9 +437,7 @@ class AgentPipeline:
         # status が rejected の場合
         return result.get("status") == "rejected"
 
-    def _extract_result_summary(
-        self, agent_id: str, result: dict[str, Any]
-    ) -> str:
+    def _extract_result_summary(self, agent_id: str, result: dict[str, Any]) -> str:
         """結果からサマリーを抽出.
 
         Args:
@@ -486,4 +486,3 @@ __all__ = [
     "PipelineConfig",
     "RevisionRequest",
 ]
-

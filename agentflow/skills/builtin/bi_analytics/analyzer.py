@@ -74,6 +74,22 @@ class BIAnalyzer:
         self._llm = llm_client
         self._logger = logging.getLogger(__name__)
 
+    @staticmethod
+    def _to_float(value: Any) -> float | None:
+        """数値に変換可能な値だけを float 化."""
+        if isinstance(value, (int, float)):
+            return float(value)
+        return None
+
+    def _numeric_values(self, data: DataFrame, column: str) -> list[float]:
+        """指定カラムの数値値を抽出."""
+        values: list[float] = []
+        for row in data.rows:
+            numeric = self._to_float(row.get(column))
+            if numeric is not None:
+                values.append(numeric)
+        return values
+
     async def analyze(
         self,
         data: DataFrame,
@@ -93,7 +109,14 @@ class BIAnalyzer:
             分析結果
         """
         if isinstance(analysis_type, str):
-            analysis_type = AnalysisType(analysis_type)
+            try:
+                analysis_type = AnalysisType(analysis_type)
+            except ValueError:
+                return AnalysisResult(
+                    analysis_type=AnalysisType.STATISTICAL,
+                    success=False,
+                    summary=f"不明な分析タイプ: {analysis_type}",
+                )
 
         self._logger.info(f"分析開始: type={analysis_type.value}, rows={len(data)}")
 
@@ -105,13 +128,7 @@ class BIAnalyzer:
             return await self._anomaly_analysis(data, column)
         if analysis_type == AnalysisType.CORRELATION:
             return await self._correlation_analysis(data)
-        if analysis_type == AnalysisType.DISTRIBUTION:
-            return await self._distribution_analysis(data, column)
-        return AnalysisResult(
-            analysis_type=analysis_type,
-            success=False,
-            summary=f"不明な分析タイプ: {analysis_type}",
-        )
+        return await self._distribution_analysis(data, column)
 
     async def _statistical_analysis(
         self,
@@ -126,10 +143,7 @@ class BIAnalyzer:
         columns = [column] if column else data.columns
 
         for col in columns:
-            values = [
-                row.get(col) for row in data.rows
-                if isinstance(row.get(col), (int, float))
-            ]
+            values = self._numeric_values(data, col)
 
             if not values:
                 continue
@@ -153,7 +167,7 @@ class BIAnalyzer:
 
             # インサイト生成
             if std_dev / mean > 0.5 if mean != 0 else False:
-                insights.append(f"{col}: データのばらつきが大きい (CV={round(std_dev/mean*100, 1)}%)")
+                insights.append(f"{col}: データのばらつきが大きい (CV={round(std_dev / mean * 100, 1)}%)")
 
         return AnalysisResult(
             analysis_type=AnalysisType.STATISTICAL,
@@ -183,10 +197,7 @@ class BIAnalyzer:
                 summary="数値カラムが見つかりませんでした",
             )
 
-        values = [
-            row.get(value_column) for row in data.rows
-            if isinstance(row.get(value_column), (int, float))
-        ]
+        values = self._numeric_values(data, value_column)
 
         if len(values) < 2:
             return AnalysisResult(
@@ -255,10 +266,11 @@ class BIAnalyzer:
                 summary="数値カラムが見つかりませんでした",
             )
 
-        values = [
-            (i, row.get(column)) for i, row in enumerate(data.rows)
-            if isinstance(row.get(column), (int, float))
-        ]
+        values: list[tuple[int, float]] = []
+        for i, row in enumerate(data.rows):
+            numeric = self._to_float(row.get(column))
+            if numeric is not None:
+                values.append((i, numeric))
 
         if len(values) < 3:
             return AnalysisResult(
@@ -277,11 +289,7 @@ class BIAnalyzer:
         lower_bound = q1 - 1.5 * iqr
         upper_bound = q3 + 1.5 * iqr
 
-        anomalies = [
-            {"index": idx, "value": val}
-            for idx, val in values
-            if val < lower_bound or val > upper_bound
-        ]
+        anomalies = [{"index": idx, "value": val} for idx, val in values if val < lower_bound or val > upper_bound]
 
         insights: list[str] = []
         if anomalies:
@@ -305,8 +313,7 @@ class BIAnalyzer:
         """相関分析."""
         # 数値カラムを抽出
         numeric_columns = [
-            col for col in data.columns
-            if any(isinstance(row.get(col), (int, float)) for row in data.rows)
+            col for col in data.columns if any(isinstance(row.get(col), (int, float)) for row in data.rows)
         ]
 
         if len(numeric_columns) < 2:
@@ -322,7 +329,7 @@ class BIAnalyzer:
 
         for i, col1 in enumerate(numeric_columns):
             correlations[col1] = {}
-            for col2 in numeric_columns[i + 1:]:
+            for col2 in numeric_columns[i + 1 :]:
                 corr = self._pearson_correlation(data, col1, col2)
                 correlations[col1][col2] = round(corr, 3)
 
@@ -344,11 +351,12 @@ class BIAnalyzer:
         col2: str,
     ) -> float:
         """ピアソン相関係数を計算."""
-        pairs = [
-            (row.get(col1), row.get(col2))
-            for row in data.rows
-            if isinstance(row.get(col1), (int, float)) and isinstance(row.get(col2), (int, float))
-        ]
+        pairs: list[tuple[float, float]] = []
+        for row in data.rows:
+            left = self._to_float(row.get(col1))
+            right = self._to_float(row.get(col2))
+            if left is not None and right is not None:
+                pairs.append((left, right))
 
         if len(pairs) < 2:
             return 0.0
@@ -388,10 +396,7 @@ class BIAnalyzer:
                 summary="数値カラムが見つかりませんでした",
             )
 
-        values = [
-            row.get(column) for row in data.rows
-            if isinstance(row.get(column), (int, float))
-        ]
+        values = self._numeric_values(data, column)
 
         if not values:
             return AnalysisResult(
@@ -406,10 +411,10 @@ class BIAnalyzer:
         std_dev = math.sqrt(variance)
 
         # 歪度（Skewness）
-        skewness = sum((x - mean) ** 3 for x in values) / (n * std_dev ** 3) if std_dev != 0 else 0
+        skewness = sum((x - mean) ** 3 for x in values) / (n * std_dev**3) if std_dev != 0 else 0
 
         # 尖度（Kurtosis）
-        kurtosis = sum((x - mean) ** 4 for x in values) / (n * std_dev ** 4) - 3 if std_dev != 0 else 0
+        kurtosis = sum((x - mean) ** 4 for x in values) / (n * std_dev**4) - 3 if std_dev != 0 else 0
 
         # ヒストグラムデータ
         min_val = min(values)
@@ -422,11 +427,13 @@ class BIAnalyzer:
             bin_start = min_val + i * bin_width
             bin_end = bin_start + bin_width
             count = sum(1 for v in values if bin_start <= v < bin_end)
-            histogram.append({
-                "bin_start": round(bin_start, 2),
-                "bin_end": round(bin_end, 2),
-                "count": count,
-            })
+            histogram.append(
+                {
+                    "bin_start": round(bin_start, 2),
+                    "bin_end": round(bin_end, 2),
+                    "count": count,
+                }
+            )
 
         insights: list[str] = []
         if abs(skewness) > 1:

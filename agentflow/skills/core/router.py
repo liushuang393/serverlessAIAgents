@@ -200,9 +200,7 @@ class SkillRouter:
 
         return RoutingResult(matched=False, fallback_to_rag=True, reason="No matching skill")
 
-    def _calculate_match_score(
-        self, meta: SkillMeta, query_lower: str
-    ) -> tuple[float, str]:
+    def _calculate_match_score(self, meta: SkillMeta, query_lower: str) -> tuple[float, str]:
         """マッチスコアを計算（軽量・高速）.
 
         Args:

@@ -51,7 +51,16 @@ export interface RichComponent {
   /** 一意な ID */
   id?: string;
   /** タイプ固有のプロパティ */
-  props: Partial<MarkdownProps & CodeBlockProps & DataTableProps & ChartProps & AlertProps & TabsProps & CollapsibleProps & CitationProps>;
+  props: Partial<
+    MarkdownProps &
+      CodeBlockProps &
+      DataTableProps &
+      ChartProps &
+      AlertProps &
+      TabsProps &
+      CollapsibleProps &
+      CitationProps
+  >;
   /** メタデータ */
   metadata?: Record<string, unknown>;
 }
@@ -195,4 +204,3 @@ export interface RichContentRendererProps {
   /** CSS クラス */
   className?: string;
 }
-

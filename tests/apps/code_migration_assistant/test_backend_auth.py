@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from fastapi import HTTPException
-
 from apps.code_migration_assistant.backend import app as backend_app
+from fastapi import HTTPException
 
 
 def test_verify_api_key_requires_configured_env(monkeypatch) -> None:

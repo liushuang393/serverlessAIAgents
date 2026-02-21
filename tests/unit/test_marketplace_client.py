@@ -210,9 +210,7 @@ class TestMarketplaceClient:
         # クローズしてもエラーが発生しないことを確認
         client.close()
 
-    def test_install_creates_agent_yaml_with_protocols(
-        self, client: MarketplaceClient, install_dir: Path
-    ) -> None:
+    def test_install_creates_agent_yaml_with_protocols(self, client: MarketplaceClient, install_dir: Path) -> None:
         """インストール時に agent.yaml が正しく作成されることをテスト."""
         client.install("pdf-processor")
 

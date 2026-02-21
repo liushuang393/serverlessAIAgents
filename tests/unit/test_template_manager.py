@@ -161,9 +161,7 @@ class TestTemplateManager:
         """デフォルトパスで初期化できることをテスト."""
         manager = TemplateManager()
 
-        expected_path = (
-            Path(__file__).parent.parent.parent / "agentflow" / "templates" / "scenarios"
-        )
+        expected_path = Path(__file__).parent.parent.parent / "agentflow" / "templates" / "scenarios"
         assert manager.templates_dir == expected_path
 
     def test_init_with_custom_path(self, templates_dir: Path) -> None:
@@ -179,9 +177,7 @@ class TestTemplateManager:
 
         assert templates == []
 
-    def test_list_templates_single(
-        self, manager: TemplateManager, sample_template_dir: Path
-    ) -> None:
+    def test_list_templates_single(self, manager: TemplateManager, sample_template_dir: Path) -> None:
         """単一のテンプレートを一覧取得できることをテスト."""
         templates = manager.list_templates()
 
@@ -212,9 +208,7 @@ class TestTemplateManager:
 
         assert len(templates) == 3
 
-    def test_list_templates_skips_files(
-        self, manager: TemplateManager, templates_dir: Path
-    ) -> None:
+    def test_list_templates_skips_files(self, manager: TemplateManager, templates_dir: Path) -> None:
         """ファイルをスキップすることをテスト."""
         # ファイルを作成
         (templates_dir / "not-a-template.txt").write_text("test", encoding="utf-8")
@@ -223,9 +217,7 @@ class TestTemplateManager:
 
         assert templates == []
 
-    def test_list_templates_skips_invalid(
-        self, manager: TemplateManager, templates_dir: Path
-    ) -> None:
+    def test_list_templates_skips_invalid(self, manager: TemplateManager, templates_dir: Path) -> None:
         """無効なテンプレートをスキップすることをテスト."""
         # template.yaml がないディレクトリを作成
         template_dir = templates_dir / "invalid-template"
@@ -250,9 +242,7 @@ class TestTemplateManager:
 
         assert metadata is None
 
-    def test_generate_project(
-        self, manager: TemplateManager, sample_template_dir: Path, tmp_path: Path
-    ) -> None:
+    def test_generate_project(self, manager: TemplateManager, sample_template_dir: Path, tmp_path: Path) -> None:
         """プロジェクトを生成できることをテスト."""
         output_dir = tmp_path / "output"
         parameters = {
@@ -275,9 +265,7 @@ class TestTemplateManager:
         assert "name: test-project" in config_content
         assert "enabled: True" in config_content
 
-    def test_generate_project_nonexistent_template(
-        self, manager: TemplateManager, tmp_path: Path
-    ) -> None:
+    def test_generate_project_nonexistent_template(self, manager: TemplateManager, tmp_path: Path) -> None:
         """存在しないテンプレートでプロジェクト生成がエラーになることをテスト."""
         output_dir = tmp_path / "output"
 
@@ -307,9 +295,7 @@ class TestTemplateManager:
         readme_content = (output_dir / "README.md").read_text(encoding="utf-8")
         assert "# my-project" in readme_content  # デフォルト値
 
-    def test_validate_parameters_type_string(
-        self, manager: TemplateManager, templates_dir: Path
-    ) -> None:
+    def test_validate_parameters_type_string(self, manager: TemplateManager, templates_dir: Path) -> None:
         """文字列型パラメーターの検証をテスト."""
         template_dir = templates_dir / "type-test"
         template_dir.mkdir(parents=True)
@@ -344,9 +330,7 @@ class TestTemplateManager:
         with pytest.raises(ValueError, match="must be string"):
             manager._validate_parameters(metadata, {"string_param": 123})
 
-    def test_validate_parameters_type_int(
-        self, manager: TemplateManager, templates_dir: Path
-    ) -> None:
+    def test_validate_parameters_type_int(self, manager: TemplateManager, templates_dir: Path) -> None:
         """整数型パラメーターの検証をテスト."""
         template_dir = templates_dir / "int-test"
         template_dir.mkdir(parents=True)
@@ -381,9 +365,7 @@ class TestTemplateManager:
         with pytest.raises(ValueError, match="must be int"):
             manager._validate_parameters(metadata, {"int_param": "not-an-int"})
 
-    def test_validate_parameters_type_bool(
-        self, manager: TemplateManager, templates_dir: Path
-    ) -> None:
+    def test_validate_parameters_type_bool(self, manager: TemplateManager, templates_dir: Path) -> None:
         """ブール型パラメーターの検証をテスト."""
         template_dir = templates_dir / "bool-test"
         template_dir.mkdir(parents=True)
@@ -418,9 +400,7 @@ class TestTemplateManager:
         with pytest.raises(ValueError, match="must be bool"):
             manager._validate_parameters(metadata, {"bool_param": "not-a-bool"})
 
-    def test_validate_parameters_type_list(
-        self, manager: TemplateManager, templates_dir: Path
-    ) -> None:
+    def test_validate_parameters_type_list(self, manager: TemplateManager, templates_dir: Path) -> None:
         """リスト型パラメーターの検証をテスト."""
         template_dir = templates_dir / "list-test"
         template_dir.mkdir(parents=True)
@@ -455,9 +435,7 @@ class TestTemplateManager:
         with pytest.raises(ValueError, match="must be list"):
             manager._validate_parameters(metadata, {"list_param": "not-a-list"})
 
-    def test_validate_parameters_choices(
-        self, manager: TemplateManager, templates_dir: Path
-    ) -> None:
+    def test_validate_parameters_choices(self, manager: TemplateManager, templates_dir: Path) -> None:
         """選択肢パラメーターの検証をテスト."""
         template_dir = templates_dir / "choices-test"
         template_dir.mkdir(parents=True)
@@ -493,9 +471,7 @@ class TestTemplateManager:
         with pytest.raises(ValueError, match="must be one of"):
             manager._validate_parameters(metadata, {"choice_param": "invalid-option"})
 
-    def test_validate_parameters_required_without_default(
-        self, manager: TemplateManager, templates_dir: Path
-    ) -> None:
+    def test_validate_parameters_required_without_default(self, manager: TemplateManager, templates_dir: Path) -> None:
         """デフォルト値なしの必須パラメーターが不足している場合にエラーになることをテスト."""
         template_dir = templates_dir / "required-test"
         template_dir.mkdir(parents=True)

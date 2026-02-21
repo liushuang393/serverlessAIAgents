@@ -156,9 +156,7 @@ class ContextOps:
         start_time = time.time()
 
         try:
-            matches = self._store.keyword_find(
-                handle_id, keywords, operator, max_matches, context_lines
-            )
+            matches = self._store.keyword_find(handle_id, keywords, operator, max_matches, context_lines)
 
             return {
                 "success": True,
@@ -199,15 +197,9 @@ class ContextOps:
             return {
                 "success": True,
                 "outline": structure.to_outline(max_depth),
-                "headings": [
-                    {"line": h[0], "level": h[1], "text": h[2]} for h in structure.headings
-                ],
-                "sections": [
-                    {"start": s[0], "end": s[1], "title": s[2]} for s in structure.sections
-                ],
-                "code_blocks": [
-                    {"start": c[0], "end": c[1], "language": c[2]} for c in structure.code_blocks
-                ],
+                "headings": [{"line": h[0], "level": h[1], "text": h[2]} for h in structure.headings],
+                "sections": [{"start": s[0], "end": s[1], "title": s[2]} for s in structure.sections],
+                "code_blocks": [{"start": c[0], "end": c[1], "language": c[2]} for c in structure.code_blocks],
                 "tables": [{"start": t[0], "end": t[1]} for t in structure.tables],
                 "execution_time_ms": (time.time() - start_time) * 1000,
             }

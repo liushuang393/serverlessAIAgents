@@ -94,7 +94,15 @@ class JavaGenerator(MCPTool):
 
         # Java生成実行（async）
         try:
-            java_code, class_name, package_name, imports, report, warnings, mappings = await self._generate_java(
+            (
+                java_code,
+                class_name,
+                package_name,
+                imports,
+                report,
+                warnings,
+                mappings,
+            ) = await self._generate_java(
                 ast=ast,
                 metadata=metadata,
                 patterns=patterns,
@@ -409,4 +417,3 @@ Java Code:
         complexity += methods_code.count("switch ")
 
         return complexity
-

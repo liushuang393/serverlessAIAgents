@@ -50,10 +50,10 @@ T = TypeVar("T")
 class CheckpointStatus(str, Enum):
     """检查点状态."""
 
-    ACTIVE = "active"      # 活跃（可回滚）
+    ACTIVE = "active"  # 活跃（可回滚）
     COMMITTED = "committed"  # 已提交（成功完成）
     ROLLED_BACK = "rolled_back"  # 已回滚
-    EXPIRED = "expired"    # 已过期
+    EXPIRED = "expired"  # 已过期
 
 
 @dataclass
@@ -113,9 +113,9 @@ class RollbackResult:
 class RetryStrategy(Enum):
     """重试策略."""
 
-    SAME = "same"          # 相同方式重试
+    SAME = "same"  # 相同方式重试
     ALTERNATIVE = "alternative"  # 替代方式
-    SIMPLIFIED = "simplified"    # 简化方式
+    SIMPLIFIED = "simplified"  # 简化方式
     HUMAN_ASSIST = "human_assist"  # 人工辅助
 
 
@@ -268,7 +268,7 @@ class RollbackManager:
         # 标记被回滚的检查点
         rolled_back_count = 0
         target_index = self._checkpoint_order.index(target_id)
-        for cp_id in self._checkpoint_order[target_index + 1:]:
+        for cp_id in self._checkpoint_order[target_index + 1 :]:
             if cp_id in self._checkpoints:
                 self._checkpoints[cp_id].status = CheckpointStatus.ROLLED_BACK
                 rolled_back_count += 1
@@ -276,9 +276,7 @@ class RollbackManager:
         # 更新当前检查点
         self._current_checkpoint_id = target_id
 
-        self._logger.info(
-            f"回滚到检查点: {target_id[:8]}..., 回滚了{rolled_back_count}步"
-        )
+        self._logger.info(f"回滚到检查点: {target_id[:8]}..., 回滚了{rolled_back_count}步")
 
         return RollbackResult(
             success=True,
@@ -344,10 +342,7 @@ class RollbackManager:
             strategy = self._retry_config.strategies[strategy_index]
 
             try:
-                self._logger.info(
-                    f"尝试 {attempt + 1}/{self._retry_config.max_retries}, "
-                    f"策略: {strategy.value}"
-                )
+                self._logger.info(f"尝试 {attempt + 1}/{self._retry_config.max_retries}, 策略: {strategy.value}")
 
                 # 根据策略调整参数
                 adjusted_kwargs = self._adjust_for_strategy(strategy, kwargs)
@@ -369,9 +364,7 @@ class RollbackManager:
 
                 # 等待后重试
                 if attempt < self._retry_config.max_retries - 1:
-                    delay = self._retry_config.delay_seconds * (
-                        self._retry_config.backoff_multiplier ** attempt
-                    )
+                    delay = self._retry_config.delay_seconds * (self._retry_config.backoff_multiplier**attempt)
                     await asyncio.sleep(delay)
 
         # 所有重试都失败
@@ -424,11 +417,7 @@ class RollbackManager:
 
     def get_checkpoint_chain(self) -> list[Checkpoint]:
         """获取检查点链（从最早到最新）."""
-        return [
-            self._checkpoints[cp_id]
-            for cp_id in self._checkpoint_order
-            if cp_id in self._checkpoints
-        ]
+        return [self._checkpoints[cp_id] for cp_id in self._checkpoint_order if cp_id in self._checkpoints]
 
     def get_stats(self) -> dict[str, Any]:
         """获取统计信息."""
@@ -442,4 +431,3 @@ class RollbackManager:
             "current_checkpoint_id": self._current_checkpoint_id,
             "status_counts": {k.value: v for k, v in status_counts.items()},
         }
-

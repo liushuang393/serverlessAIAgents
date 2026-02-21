@@ -26,6 +26,7 @@ Agentの能力を正式に宣言し、タスク要件とのマッチングを行
     >>> req = CapabilityRequirement(description="PDFを分析", required_tags=["pdf"])
     >>> score = cap.matches(req)
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -189,9 +190,7 @@ class AgentCapabilitySpec(BaseModel):
 
         # ツールのマッチング
         if requirement.required_tools:
-            matched_tools = sum(
-                1 for t in requirement.required_tools if t in self.required_tools
-            )
+            matched_tools = sum(1 for t in requirement.required_tools if t in self.required_tools)
             score += weights["tools"] * (matched_tools / len(requirement.required_tools))
         else:
             score += weights["tools"] * 0.5  # ツール要件がない場合は中立

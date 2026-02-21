@@ -85,43 +85,48 @@ class DecisionReportBuilder(SectionedReportBuilder):
         # 道（本質分析）セクション
         dao = results.get("dao", {})
         if dao:
-            sections.append(ReportSection(
-                title="道（本質分析）",
-                content=dao.get("essence", ""),
-                metadata={"stage": "dao", "problem_type": dao.get("problem_type", "")},
-            ))
+            sections.append(
+                ReportSection(
+                    title="道（本質分析）",
+                    content=dao.get("essence", ""),
+                    metadata={"stage": "dao", "problem_type": dao.get("problem_type", "")},
+                )
+            )
 
         # 法（戦略選定）セクション
         fa = results.get("fa", {})
         if fa:
             paths = fa.get("recommended_paths", [])
-            content = "\n".join([
-                f"- {p.get('name', '')}: {p.get('description', '')}"
-                for p in paths[:3]
-            ])
-            sections.append(ReportSection(
-                title="法（戦略選定）",
-                content=content,
-                metadata={"stage": "fa", "paths_count": len(paths)},
-            ))
+            content = "\n".join([f"- {p.get('name', '')}: {p.get('description', '')}" for p in paths[:3]])
+            sections.append(
+                ReportSection(
+                    title="法（戦略選定）",
+                    content=content,
+                    metadata={"stage": "fa", "paths_count": len(paths)},
+                )
+            )
 
         # 術（実行計画）セクション
         shu = results.get("shu", {})
         if shu:
-            sections.append(ReportSection(
-                title="術（実行計画）",
-                content=shu.get("first_action", ""),
-                metadata={"stage": "shu"},
-            ))
+            sections.append(
+                ReportSection(
+                    title="術（実行計画）",
+                    content=shu.get("first_action", ""),
+                    metadata={"stage": "shu"},
+                )
+            )
 
         # 器（リソース評価）セクション
         qi = results.get("qi", {})
         if qi:
-            sections.append(ReportSection(
-                title="器（リソース評価）",
-                content=str(qi.get("resource_assessment", "")),
-                metadata={"stage": "qi"},
-            ))
+            sections.append(
+                ReportSection(
+                    title="器（リソース評価）",
+                    content=str(qi.get("resource_assessment", "")),
+                    metadata={"stage": "qi"},
+                )
+            )
 
         return sections
 
@@ -163,4 +168,3 @@ class DecisionReportBuilder(SectionedReportBuilder):
 
 
 __all__ = ["DecisionReportBuilder"]
-

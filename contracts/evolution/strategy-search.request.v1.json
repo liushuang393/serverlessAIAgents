@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/evolution/strategy-search.request.v1.json",
+  "title": "StrategySearchRequestV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["tenant_id", "app_id", "product_line", "intent", "task_signature", "decision_mode", "top_k"],
+  "properties": {
+    "tenant_id": { "type": ["string", "null"] },
+    "app_id": { "type": ["string", "null"] },
+    "product_line": { "type": ["string", "null"] },
+    "intent": { "type": "string", "minLength": 1 },
+    "task_signature": { "type": ["string", "null"] },
+    "decision_mode": {
+      "type": "string",
+      "enum": ["skip", "light_retrieval", "deep_retrieval"]
+    },
+    "top_k": { "type": "integer", "minimum": 1, "maximum": 20 }
+  }
+}

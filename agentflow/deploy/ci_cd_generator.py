@@ -400,4 +400,3 @@ repos:
 
     logger.info(f"Generated pre-commit config: {pre_commit_path}")
     return pre_commit_path
-

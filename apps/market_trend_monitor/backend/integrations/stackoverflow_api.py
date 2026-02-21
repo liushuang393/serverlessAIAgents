@@ -81,7 +81,8 @@ class StackOverflowAPIClient:
         try:
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.get(
-                    f"{self.BASE_URL}/tags/{tag_str}/info", params=params,
+                    f"{self.BASE_URL}/tags/{tag_str}/info",
+                    params=params,
                 )
                 resp.raise_for_status()
                 data = resp.json()

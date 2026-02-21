@@ -6,6 +6,8 @@ import type {
   AppCreateResponse,
   DatabaseKind,
   EnginePattern,
+  EvolutionScopeLevel,
+  EvolutionValidatorBackend,
   LLMProviderKind,
   VectorDatabaseKind,
 } from '@/types';
@@ -55,6 +57,11 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
   const [mcpServersInput, setMcpServersInput] = useState('');
   const [visibilityMode, setVisibilityMode] = useState<'private' | 'public' | 'tenant_allowlist'>('private');
   const [tenantIdsInput, setTenantIdsInput] = useState('');
+  const [evolutionEnabled, setEvolutionEnabled] = useState(true);
+  const [strategyServiceUrl, setStrategyServiceUrl] = useState('');
+  const [validatorBackend, setValidatorBackend] = useState<EvolutionValidatorBackend>('redis_stream');
+  const [validatorRedisUrl, setValidatorRedisUrl] = useState('redis://localhost:6379/0');
+  const [scopePolicyInput, setScopePolicyInput] = useState('tenant_app,tenant_product_line,global_verified');
   const [agentName, setAgentName] = useState('PrimaryAgent');
   const [agentRole, setAgentRole] = useState('specialist');
   const [agentCapabilitiesInput, setAgentCapabilitiesInput] = useState('assistant');
@@ -103,6 +110,28 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
       surface_profile: 'developer',
       audit_profile: 'developer',
       security_mode: null,
+      evolution: {
+        enabled: evolutionEnabled,
+        strategy_service_url: strategyServiceUrl.trim() || null,
+        validator_queue: {
+          backend: validatorBackend,
+          redis_url: validatorRedisUrl.trim() || null,
+          stream_key: 'evolution:validate:stream',
+          consumer_group: 'evolution-validator-v1',
+          max_retries: 5,
+        },
+        scope_policy: splitCSV(scopePolicyInput) as EvolutionScopeLevel[],
+        retrieval: {
+          high_confidence_skip_threshold: 0.82,
+          high_complexity_threshold: 0.70,
+          low_confidence_threshold: 0.55,
+        },
+        suspicion: {
+          max_age_days: 30,
+          failure_streak_threshold: 2,
+          performance_drop_ratio: 0.2,
+        },
+      },
       plugin_bindings: [],
       template: null,
       data_sources: [],
@@ -290,6 +319,52 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
             <Toggle label="Frontend" checked={frontendEnabled} onChange={setFrontendEnabled} />
             <Toggle label="Redis" checked={redisEnabled} onChange={setRedisEnabled} />
             <Toggle label="RAG" checked={ragEnabled} onChange={setRagEnabled} />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Toggle label="Evolution" checked={evolutionEnabled} onChange={setEvolutionEnabled} />
+            <Field label="Validator Backend">
+              <select
+                value={validatorBackend}
+                onChange={(e) => setValidatorBackend(e.target.value as EvolutionValidatorBackend)}
+                className="input"
+              >
+                {(
+                  options?.evolution_validator_backends ?? [
+                    { value: 'redis_stream', label: 'Redis Streams' },
+                    { value: 'none', label: 'No Queue' },
+                  ]
+                ).map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Strategy Service URL">
+              <input
+                value={strategyServiceUrl}
+                onChange={(e) => setStrategyServiceUrl(e.target.value)}
+                className="input"
+                placeholder="http://localhost:8089"
+              />
+            </Field>
+            <Field label="Validator Redis URL">
+              <input
+                value={validatorRedisUrl}
+                onChange={(e) => setValidatorRedisUrl(e.target.value)}
+                className="input"
+                placeholder="redis://localhost:6379/0"
+              />
+            </Field>
+            <Field label="Scope Policy (CSV)">
+              <input
+                value={scopePolicyInput}
+                onChange={(e) => setScopePolicyInput(e.target.value)}
+                className="input"
+                placeholder="tenant_app,tenant_product_line,global_verified"
+              />
+            </Field>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

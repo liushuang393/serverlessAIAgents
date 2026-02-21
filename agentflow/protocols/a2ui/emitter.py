@@ -105,8 +105,9 @@ class A2UIEmitter:
             event_data: イベントデータ
         """
         # AG-UI の ProgressEvent として配信
-        if hasattr(self._agui_emitter, "emit_progress"):
-            await self._agui_emitter.emit_progress(
+        emitter = self._agui_emitter
+        if emitter is not None and hasattr(emitter, "emit_progress"):
+            await emitter.emit_progress(
                 message=json.dumps(event_data),
                 progress=0.0,
             )
@@ -131,4 +132,3 @@ class A2UIEmitter:
     def clear_events(self) -> None:
         """イベントキューをクリア."""
         self._event_queue.clear()
-

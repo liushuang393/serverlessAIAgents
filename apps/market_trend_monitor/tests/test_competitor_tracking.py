@@ -10,8 +10,6 @@ import json
 from datetime import datetime
 from unittest.mock import AsyncMock
 
-import pytest
-
 from apps.market_trend_monitor.backend.agents.competitor_tracking_agent import (
     CompetitorProfile,
     CompetitorTrackingAgent,
@@ -47,12 +45,14 @@ def _make_article(
 def _make_mock_llm(response: str | None = None):
     """テスト用 Mock LLM を生成."""
     mock = AsyncMock()
-    default_response = json.dumps({
-        "focus_areas": ["AI migration", "legacy modernization"],
-        "market_position": "leader",
-        "threat_level": 0.8,
-        "opportunity_level": 0.6,
-    })
+    default_response = json.dumps(
+        {
+            "focus_areas": ["AI migration", "legacy modernization"],
+            "market_position": "leader",
+            "threat_level": 0.8,
+            "opportunity_level": 0.6,
+        }
+    )
     mock.chat = AsyncMock(return_value=response or default_response)
     return mock
 

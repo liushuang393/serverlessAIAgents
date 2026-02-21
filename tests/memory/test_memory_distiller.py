@@ -1,8 +1,9 @@
 """記憶蒸留（MemoryDistiller）のテスト."""
 
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from agentflow.memory.memory_distiller import MemoryDistiller
 from agentflow.memory.types import (
@@ -76,9 +77,7 @@ class TestMemoryDistiller:
         ]
 
     @pytest.mark.asyncio
-    async def test_distill_basic(
-        self, distiller_no_llm: MemoryDistiller, sample_memories: list[MemoryEntry]
-    ) -> None:
+    async def test_distill_basic(self, distiller_no_llm: MemoryDistiller, sample_memories: list[MemoryEntry]) -> None:
         """基本的な蒸留テスト."""
         results = await distiller_no_llm.distill(sample_memories)
 
@@ -93,9 +92,7 @@ class TestMemoryDistiller:
         assert "distilled_from" in result.metadata
 
     @pytest.mark.asyncio
-    async def test_distill_not_enough(
-        self, distiller_no_llm: MemoryDistiller
-    ) -> None:
+    async def test_distill_not_enough(self, distiller_no_llm: MemoryDistiller) -> None:
         """記憶が少なすぎる場合のテスト."""
         single_memory = [
             MemoryEntry(
@@ -113,9 +110,7 @@ class TestMemoryDistiller:
         assert len(results) == 0
 
     @pytest.mark.asyncio
-    async def test_distill_with_llm(
-        self, distiller: MemoryDistiller, sample_memories: list[MemoryEntry]
-    ) -> None:
+    async def test_distill_with_llm(self, distiller: MemoryDistiller, sample_memories: list[MemoryEntry]) -> None:
         """LLMを使用した蒸留テスト."""
         results = await distiller.distill(sample_memories)
 
@@ -124,23 +119,17 @@ class TestMemoryDistiller:
         assert distiller._llm_client.generate.called
 
     @pytest.mark.asyncio
-    async def test_cluster_memories_empty(
-        self, distiller_no_llm: MemoryDistiller
-    ) -> None:
+    async def test_cluster_memories_empty(self, distiller_no_llm: MemoryDistiller) -> None:
         """空リストの場合のクラスタリングテスト."""
         clusters = await distiller_no_llm._cluster_memories([])
         assert len(clusters) == 0
 
-    def test_should_distill_true(
-        self, distiller_no_llm: MemoryDistiller, sample_memories: list[MemoryEntry]
-    ) -> None:
+    def test_should_distill_true(self, distiller_no_llm: MemoryDistiller, sample_memories: list[MemoryEntry]) -> None:
         """蒸留が必要な場合のテスト."""
         should = distiller_no_llm.should_distill(sample_memories)
         assert should is True
 
-    def test_should_distill_false(
-        self, distiller_no_llm: MemoryDistiller
-    ) -> None:
+    def test_should_distill_false(self, distiller_no_llm: MemoryDistiller) -> None:
         """蒸留が不要な場合のテスト."""
         single_memory = [
             MemoryEntry(
@@ -161,14 +150,10 @@ class TestMemoryDistiller:
         self, distiller_no_llm: MemoryDistiller, sample_memories: list[MemoryEntry]
     ) -> None:
         """蒸留後の重要度ブーストテスト."""
-        avg_importance = sum(m.importance_score for m in sample_memories) / len(
-            sample_memories
-        )
+        avg_importance = sum(m.importance_score for m in sample_memories) / len(sample_memories)
 
         results = await distiller_no_llm.distill(sample_memories)
 
         assert len(results) >= 1
         # 蒸留後は平均より重要度が上がる
         assert results[0].importance_score >= avg_importance
-
-

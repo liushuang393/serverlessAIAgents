@@ -160,20 +160,16 @@ async def collect(request: CollectRequest) -> CollectResponse:
         keywords = request.keywords or config.collector.keywords
         sources = request.sources or config.collector.sources
         date_range_payload = (
-            request.date_range.model_dump(exclude_none=True)
-            if request.date_range is not None
-            else None
+            request.date_range.model_dump(exclude_none=True) if request.date_range is not None else None
         )
 
         # ワークフロー実行（タイムアウト保護付き）
         try:
             result: dict[str, Any] = await asyncio.wait_for(
-                run_workflow(
-                    {"keywords": keywords, "sources": sources, "date_range": date_range_payload}
-                ),
+                run_workflow({"keywords": keywords, "sources": sources, "date_range": date_range_payload}),
                 timeout=_WORKFLOW_TIMEOUT_SECONDS,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(
                 "ワークフローが %d秒でタイムアウト、フォールバック収集を実行",
                 _WORKFLOW_TIMEOUT_SECONDS,
@@ -198,9 +194,7 @@ async def collect(request: CollectRequest) -> CollectResponse:
         articles_count = len(collector.get("articles", []))
         trends_count = len(analyzer.get("trends", []))
         metrics_service.record_articles(articles_count)
-        created_predictions = await _auto_create_predictions_from_trends(
-            list(analyzer.get("trends", []))
-        )
+        created_predictions = await _auto_create_predictions_from_trends(list(analyzer.get("trends", [])))
         if created_predictions > 0:
             logger.info("予測を自動生成: %s件", created_predictions)
 

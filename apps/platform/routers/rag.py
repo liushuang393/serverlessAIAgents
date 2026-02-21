@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RAG Router — RAG 概要 API エンドポイント.
 
 GET  /api/studios/framework/rag/overview   — RAG 機能概要
@@ -15,12 +14,14 @@ GET  /api/studios/framework/rag/stats      — RAG 統計
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException
 
-from apps.platform.schemas.rag_schemas import RAGConfigPatchRequest
-from apps.platform.services.rag_overview import RAGOverviewService
+
+if TYPE_CHECKING:
+    from apps.platform.schemas.rag_schemas import RAGConfigPatchRequest
+    from apps.platform.services.rag_overview import RAGOverviewService
 
 
 router = APIRouter(prefix="/api/studios/framework/rag", tags=["rag"])
@@ -35,7 +36,7 @@ def init_rag_services(overview: RAGOverviewService) -> None:
     Args:
         overview: RAG 概要サービス
     """
-    global _overview  # noqa: PLW0603
+    global _overview
     _overview = overview
 
 

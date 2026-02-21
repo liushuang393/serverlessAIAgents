@@ -58,7 +58,7 @@ class ApiClient {
         return this.request<T>(endpoint, { method: 'GET' });
     }
 
-    post<T>(endpoint: string, body: any): Promise<T> {
+    post<T>(endpoint: string, body: unknown): Promise<T> {
         return this.request<T>(endpoint, {
             method: 'POST',
             body: JSON.stringify(body),
@@ -69,7 +69,7 @@ class ApiClient {
         return this.request<T>(endpoint, { method: 'DELETE' });
     }
 
-    async *stream(endpoint: string, body: any): AsyncGenerator<string, void, unknown> {
+    async *stream(endpoint: string, body: unknown): AsyncGenerator<string, void, unknown> {
         const token = this.getToken();
         const response = await fetch(`${BASE_URL}${endpoint}`, {
             method: 'POST',

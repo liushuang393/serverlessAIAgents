@@ -74,9 +74,7 @@ async def test_mcp_tools() -> bool:
         """
 
         # COBOLParser テスト
-        parse_request = MCPToolRequest(
-            tool="cobol_parser", version="1.0.0", input={"cobol_code": cobol_code}
-        )
+        parse_request = MCPToolRequest(tool="cobol_parser", version="1.0.0", input={"cobol_code": cobol_code})
         parse_response = await client.call_tool(parse_request)
 
         if not parse_response.success:
@@ -169,4 +167,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-

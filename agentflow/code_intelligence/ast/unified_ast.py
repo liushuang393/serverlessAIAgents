@@ -146,6 +146,7 @@ class SymbolInfo:
     is_exported: bool = False
     line: int = 0
     column: int = 0
+    location: str = ""
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -159,6 +160,7 @@ class SymbolInfo:
             "is_exported": self.is_exported,
             "line": self.line,
             "column": self.column,
+            "location": self.location,
             "metadata": self.metadata,
         }
 
@@ -178,6 +180,7 @@ class ImportInfo:
     names: list[str] = field(default_factory=list)
     alias: str | None = None
     is_default: bool = False
+    is_static: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         """辞書に変換."""
@@ -186,6 +189,7 @@ class ImportInfo:
             "names": self.names,
             "alias": self.alias,
             "is_default": self.is_default,
+            "is_static": self.is_static,
         }
 
 
@@ -217,6 +221,22 @@ class ASTNode:
     end_line: int = 0
     end_column: int = 0
     parent: ASTNode | None = field(default=None, repr=False)
+    # 互換フィールド: 旧実装の引数名を受け入れる
+    node_type: ASTNodeType | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+    start_line: int = 0
+    start_column: int = 0
+
+    def __post_init__(self) -> None:
+        """旧フィールドとの互換性を維持."""
+        if self.node_type is not None:
+            self.type = self.node_type
+        if self.start_line and self.line == 0:
+            self.line = self.start_line
+        if self.start_column and self.column == 0:
+            self.column = self.start_column
+        if self.metadata:
+            self.attributes = {**self.attributes, **self.metadata}
 
     def add_child(self, child: ASTNode) -> None:
         """子ノードを追加.
@@ -360,10 +380,7 @@ class UnifiedAST:
         Returns:
             関数ノードのリスト
         """
-        return (
-            self.find_nodes(ASTNodeType.FUNCTION)
-            + self.find_nodes(ASTNodeType.METHOD)
-        )
+        return self.find_nodes(ASTNodeType.FUNCTION) + self.find_nodes(ASTNodeType.METHOD)
 
     def get_classes(self) -> list[ASTNode]:
         """クラスノードを取得.

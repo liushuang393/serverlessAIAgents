@@ -1,17 +1,157 @@
 # AI弱点補強ルール
 
-> **バージョン**: 1.0.0
+> **バージョン**: 1.1.0
 > **適用範囲**: AgentFlow AI生成コード全般
-> **最終更新**: 2026-01-19
+> **最終更新**: 2026-02-21
 
 ## 📋 目次
 
+0. [🚨 Python型エラー（最重要・最頻出）](#python型エラー最重要最頻出)
 1. [AI生成コードの脆弱性](#ai生成コードの脆弱性)
 2. [仕様明文化テンプレート](#仕様明文化テンプレート)
 3. [自動テスト要求ルール](#自動テスト要求ルール)
 4. [コードレビューポイント](#コードレビューポイント)
 5. [品質ゲート](#品質ゲート)
 6. [自動化スクリプト](#自動化スクリプト)
+
+---
+
+## 🚨 Python型エラー（最重要・最頻出）
+
+> **2026-02-21 追加**: Python の型エラーはこのプロジェクトで最も頻発する問題です。
+> 以下のパターンを必ず頭に入れ、コードを出力するたびに自己チェックしてください。
+
+### ❌ 頻出違反パターン と ✅ 正解
+
+#### P-1: 型アノテーションの欠落
+```python
+# ❌ 禁止: 引数・戻り値の型なし
+def get_user(user_id):
+    return db.find(user_id)
+
+# ✅ 必須: 全引数・戻り値に型アノテーション
+def get_user(user_id: str) -> dict[str, Any] | None:
+    return db.find(user_id)
+```
+
+#### P-2: None 安全性の欠落（最頻出クラッシュ原因）
+```python
+# ❌ 禁止: None チェックなしで属性・メソッドにアクセス
+user = get_user("id")
+name = user["name"]          # user が None なら KeyError / TypeError
+
+# ✅ 必須: None ガードを挟む
+user = get_user("id")
+if user is None:
+    raise ValueError("ユーザーが見つかりません")
+name = user["name"]
+```
+
+#### P-3: `Any` の安易な使用
+```python
+# ❌ 禁止: Any でごまかす
+def process(data: Any) -> Any:
+    ...
+
+# ✅ 必須: 具体型を使う（本当に Any が必要な場合はコメントで理由を明記）
+def process(data: dict[str, str]) -> list[str]:
+    ...
+```
+
+#### P-4: 戻り値型と実際の return 値が不一致
+```python
+# ❌ 禁止: 宣言型と実際の値が違う
+def get_ids() -> list[str]:
+    return {"a": 1, "b": 2}   # dict を返しているのに list[str] と宣言
+
+# ✅ 正解: 宣言と実装を一致させる
+def get_ids() -> dict[str, int]:
+    return {"a": 1, "b": 2}
+```
+
+#### P-5: dict アクセスの KeyError リスク
+```python
+# ❌ 禁止: キー存在を保証せずに直接アクセス
+value = config["timeout"]     # キーがなければ KeyError
+
+# ✅ 推奨: .get() またはデフォルト値を使う
+value = config.get("timeout", 30)
+```
+
+#### P-6: `cast()` / `# type: ignore` で問題を隠蔽
+```python
+# ❌ 禁止: 型の問題を隠す
+result: str = cast(str, some_func())    # 実際に str でない場合バグ
+x = some_func()  # type: ignore         # 根本原因を放置
+
+# ✅ 正解: 正しい型を返す関数にするか、実際の型を使う
+result: str = str(some_func())          # 明示的に変換
+```
+
+#### P-7: Pydantic モデルの型誤定義
+```python
+# ❌ 禁止: 型なし / Any 使用
+class UserModel(BaseModel):
+    name: Any
+    age = None   # フィールド型なし
+
+# ✅ 必須: 全フィールドに正確な型
+class UserModel(BaseModel):
+    name: str
+    age: int | None = None
+```
+
+#### P-8: async 関数の戻り値型省略
+```python
+# ❌ 禁止: 非同期でも型を省略
+async def fetch_data(url):
+    ...
+
+# ✅ 必須: async も同様に型を付ける
+async def fetch_data(url: str) -> dict[str, Any]:
+    ...
+```
+
+#### P-9: ジェネリック型の旧スタイル（Python 3.9+以降は不要）
+```python
+# ❌ 旧スタイル（非推奨）
+from typing import List, Dict, Optional
+def fn(x: List[str]) -> Dict[str, int]: ...
+
+# ✅ 新スタイル（Python 3.13 推奨）
+def fn(x: list[str]) -> dict[str, int]: ...
+def fn2(x: str | None = None) -> str: ...
+```
+
+#### P-10: TypedDict / dataclass での型ミス
+```python
+# ❌ 禁止: TypedDict キーに型宣言なし
+class Config(TypedDict):
+    host: str
+    port    # ← 型なし、エラー
+
+# ✅ 正解
+class Config(TypedDict):
+    host: str
+    port: int
+    debug: bool
+```
+
+### 📋 Python 型エラー セルフチェックリスト
+
+コードを書いたら必ず以下を確認すること：
+
+```
+□ 全引数・戻り値に型アノテーションを付けたか？
+□ None を返す可能性がある場合 T | None を宣言したか？
+□ None の可能性がある値を .attr / ["key"] でアクセスする前に None チェックを入れたか？
+□ 戻り値の宣言型と実際に return している値の型が一致しているか？
+□ dict アクセスに .get() またはキー存在確認を使っているか？
+□ Any / cast() / # type: ignore を使っていないか？
+□ Pydantic フィールドに全て明示的な型を付けたか？
+□ async def の戻り値型を省略していないか？
+□ list / dict のジェネリックは Python 3.9+ スタイルか？
+```
 
 ---
 

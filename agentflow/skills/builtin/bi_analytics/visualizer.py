@@ -120,14 +120,14 @@ class ChartGenerator:
             return await self._from_analysis_result(data, chart_type, title, **kwargs)
 
         # データフレームの場合
-        if chart_type == ChartType.BAR:
-            return await self._bar_chart(data, x, y, title, **kwargs)
-        if chart_type == ChartType.LINE:
-            return await self._line_chart(data, x, y, title, **kwargs)
-        if chart_type == ChartType.SCATTER:
-            return await self._scatter_chart(data, x, y, title, **kwargs)
-        if chart_type == ChartType.PIE:
-            return await self._pie_chart(data, x, y, title, **kwargs)
+        chart_handlers = {
+            ChartType.BAR: self._bar_chart,
+            ChartType.LINE: self._line_chart,
+            ChartType.SCATTER: self._scatter_chart,
+            ChartType.PIE: self._pie_chart,
+        }
+        if chart_type in chart_handlers:
+            return await chart_handlers[chart_type](data, x, y, title, **kwargs)
         if chart_type == ChartType.HISTOGRAM:
             return await self._histogram_chart(data, x, title, **kwargs)
         if chart_type == ChartType.TABLE:
@@ -220,11 +220,7 @@ class ChartGenerator:
         if not y:
             y = data.columns[1] if len(data.columns) > 1 else ""
 
-        points = [
-            [row.get(x), row.get(y)]
-            for row in data.rows
-            if row.get(x) is not None and row.get(y) is not None
-        ]
+        points = [[row.get(x), row.get(y)] for row in data.rows if row.get(x) is not None and row.get(y) is not None]
 
         return Chart(
             chart_type=ChartType.SCATTER,
@@ -297,17 +293,18 @@ class ChartGenerator:
         if not column:
             column = data.columns[0] if data.columns else ""
 
-        values = [
-            row.get(column) for row in data.rows
-            if isinstance(row.get(column), (int, float))
-        ]
+        values: list[float] = []
+        for row in data.rows:
+            raw_value = row.get(column)
+            if isinstance(raw_value, (int, float)):
+                values.append(float(raw_value))
 
         if not values:
             return Chart(chart_type=ChartType.HISTOGRAM, title=title, data={})
 
         # ビン計算
-        min_val = min(values)
-        max_val = max(values)
+        min_val: float = min(values)
+        max_val: float = max(values)
         bin_count = min(10, len(values))
         bin_width = (max_val - min_val) / bin_count if max_val != min_val else 1
 
@@ -350,7 +347,7 @@ class ChartGenerator:
             title=title or "Data Table",
             data={
                 "columns": data.columns,
-                "rows": data.to_dict()[:kwargs.get("max_rows", 100)],
+                "rows": data.to_dict()[: kwargs.get("max_rows", 100)],
             },
         )
 

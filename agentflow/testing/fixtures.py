@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import os
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from agentflow.testing.mock_llm import MockLLMProvider, create_mock_llm
 
@@ -38,9 +38,10 @@ def mock_llm_fixture(
     mock = create_mock_llm(default_response)
 
     # グローバル LLM を置き換え
-    from agentflow.providers import llm_provider
+    from agentflow.providers import llm_provider as llm_provider_module
 
-    original_instance = llm_provider._llm_instance
+    llm_provider = cast("Any", llm_provider_module)
+    original_instance = getattr(llm_provider, "_llm_instance", None)
     llm_provider._llm_instance = mock
 
     try:
@@ -205,4 +206,3 @@ def generate_conftest(output_path: str = "tests/conftest.py") -> str:
     path.write_text(CONFTEST_TEMPLATE, encoding="utf-8")
 
     return CONFTEST_TEMPLATE
-

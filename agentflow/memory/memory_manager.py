@@ -304,23 +304,13 @@ class MemoryManager:
 
         # 対象記憶を取得
         if memory_ids:
-            memories = [
-                m for m in self._long_term._memories.values()
-                if m.id in memory_ids
-            ]
+            memories = [m for m in self._long_term._memories.values() if m.id in memory_ids]
         elif topic:
             memories = self._long_term.retrieve(topic, limit=20)
         else:
             # 最近アクセスした記憶を対象
-            recent_ids = sorted(
-                self._importance_adjuster._last_access.items(),
-                key=lambda x: x[1],
-                reverse=True
-            )[:10]
-            memories = [
-                m for m in self._long_term._memories.values()
-                if m.id in [id for id, _ in recent_ids]
-            ]
+            recent_ids = sorted(self._importance_adjuster._last_access.items(), key=lambda x: x[1], reverse=True)[:10]
+            memories = [m for m in self._long_term._memories.values() if m.id in [id for id, _ in recent_ids]]
 
         # 強化を適用
         for memory in memories:
@@ -402,4 +392,3 @@ class MemoryManager:
             self._logger.info(f"忘却完了: {len(forgettable_ids)}件の記憶を削除")
 
         return len(forgettable_ids)
-

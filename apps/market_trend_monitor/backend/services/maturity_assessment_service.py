@@ -11,11 +11,13 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow import get_llm
 
-from apps.market_trend_monitor.backend.models import Evidence
+
+if TYPE_CHECKING:
+    from apps.market_trend_monitor.backend.models import Evidence
 
 
 class MaturityPhase(str, Enum):
@@ -126,10 +128,7 @@ class MaturityAssessmentService:
         Returns:
             技術成熟度評価結果
         """
-        evidence_texts = [
-            f"{e.title}: {e.extracted_data.get('content', '')[:100]}"
-            for e in evidences[:10]
-        ]
+        evidence_texts = [f"{e.title}: {e.extracted_data.get('content', '')[:100]}" for e in evidences[:10]]
 
         try:
             llm = self._get_llm()
@@ -228,11 +227,7 @@ class MaturityAssessmentService:
         avg_reliability = sum(e.reliability_score for e in evidences) / len(evidences)
 
         # 総合スコア (0-1)
-        maturity_score = (
-            source_diversity * 0.3
-            + span_score * 0.4
-            + avg_reliability * 0.3
-        )
+        maturity_score = source_diversity * 0.3 + span_score * 0.4 + avg_reliability * 0.3
 
         if maturity_score >= 0.8:
             return MaturityPhase.PLATEAU_OF_PRODUCTIVITY
@@ -264,7 +259,7 @@ class MaturityAssessmentService:
             start = raw.find("{")
             end = raw.rfind("}")
             if start != -1 and end != -1 and end > start:
-                return json.loads(raw[start:end + 1])
+                return json.loads(raw[start : end + 1])
         except (json.JSONDecodeError, ValueError):
             pass
         return {}

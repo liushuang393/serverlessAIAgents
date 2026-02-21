@@ -79,9 +79,7 @@ class TestA2AServer:
         assert len(server.list_agents()) == 1
         assert "test-agent" in server.list_agents()
 
-    def test_register_duplicate_agent(
-        self, sample_agent_card: AgentCard, sample_handlers: dict
-    ) -> None:
+    def test_register_duplicate_agent(self, sample_agent_card: AgentCard, sample_handlers: dict) -> None:
         """重複エージェント登録をテスト."""
         server = A2AServer()
         server.register_agent(sample_agent_card, sample_handlers)
@@ -119,9 +117,7 @@ class TestA2AServer:
         card = server.get_agent_card("nonexistent")
         assert card is None
 
-    async def test_handle_task_success(
-        self, sample_agent_card: AgentCard, sample_handlers: dict
-    ) -> None:
+    async def test_handle_task_success(self, sample_agent_card: AgentCard, sample_handlers: dict) -> None:
         """タスク処理の成功をテスト."""
         server = A2AServer()
         server.register_agent(sample_agent_card, sample_handlers)
@@ -140,9 +136,7 @@ class TestA2AServer:
         with pytest.raises(ValueError, match="Agent not found"):
             await server.handle_task("nonexistent", "greet", {})
 
-    async def test_handle_task_nonexistent_skill(
-        self, sample_agent_card: AgentCard, sample_handlers: dict
-    ) -> None:
+    async def test_handle_task_nonexistent_skill(self, sample_agent_card: AgentCard, sample_handlers: dict) -> None:
         """存在しないスキルへのタスクをテスト."""
         server = A2AServer()
         server.register_agent(sample_agent_card, sample_handlers)

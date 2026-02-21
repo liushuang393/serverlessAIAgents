@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """type_safe ユーティリティの単体テスト."""
 
 from enum import Enum
@@ -29,4 +28,3 @@ def test_safe_int_with_bounds() -> None:
 def test_safe_float_with_default() -> None:
     """不正浮動小数はデフォルト."""
     assert safe_float("invalid", 1.5) == 1.5
-

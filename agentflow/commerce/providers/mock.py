@@ -124,10 +124,7 @@ class MockOfferProvider(IOffer):
         user_id: str | None = None,
     ) -> list[Offer]:
         """商品に適用可能なオファーを取得."""
-        return [
-            offer for offer in self._offers.values()
-            if offer.product_id == product_id and offer.is_valid()
-        ]
+        return [offer for offer in self._offers.values() if offer.product_id == product_id and offer.is_valid()]
 
     async def get_offers_for_intent(
         self,
@@ -440,9 +437,7 @@ class MockCommerceAI(ICommerceAI):
         user_context: dict[str, Any] | None = None,
     ) -> PurchaseIntent:
         """購買意図を分析."""
-        return await self._intent_analyzer.analyze(
-            user_input, conversation_context=conversation_history
-        )
+        return await self._intent_analyzer.analyze(user_input, conversation_context=conversation_history)
 
     async def detect_purchase_signal(self, user_input: str) -> tuple[bool, float]:
         """購買シグナルを検出."""
@@ -541,4 +536,3 @@ class MockCommerceAI(ICommerceAI):
             "counter_offer": min_price,
             "message": f"申し訳ございませんが、{min_price}円が最低価格です。",
         }
-

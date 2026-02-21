@@ -224,8 +224,8 @@ class CodeValidator(MCPTool):
         for line in lines:
             line_stripped = line.strip()
             if line_stripped and not line_stripped.startswith("//") and not line_stripped.startswith("/*"):
-                if (
-                    line_stripped.endswith(("{", "}")) or line_stripped.startswith(("package", "import", "public", "private"))
+                if line_stripped.endswith(("{", "}")) or line_stripped.startswith(
+                    ("package", "import", "public", "private")
                 ):
                     continue
                 if not line_stripped.endswith(";") and not line_stripped.endswith("{"):
@@ -368,4 +368,3 @@ class CodeValidator(MCPTool):
             feedback.append("String連結にStringBuilderの使用を検討してください")
 
         return max(0, score), feedback
-

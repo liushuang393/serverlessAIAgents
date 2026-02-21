@@ -186,11 +186,13 @@ class MessageGateway:
 
         # 创建新会话
         session_metadata = metadata or {}
-        session_metadata.update({
-            "platform": platform,
-            "user_id": user_id,
-            "session_key": session_key,
-        })
+        session_metadata.update(
+            {
+                "platform": platform,
+                "user_id": user_id,
+                "session_key": session_key,
+            }
+        )
 
         session = self._chatbot.create_session(metadata=session_metadata)
         self._user_sessions[session_key] = session.id
@@ -293,9 +295,7 @@ class MessageGateway:
             )
 
             # 3. 发送输入指示器
-            should_send_typing = (
-                send_typing if send_typing is not None else self._enable_typing
-            )
+            should_send_typing = send_typing if send_typing is not None else self._enable_typing
             if should_send_typing:
                 try:
                     await adapter.send_typing_indicator(channel_id)
@@ -317,9 +317,7 @@ class MessageGateway:
                     channel_id=channel_id,
                     text=response,
                 )
-                self._logger.info(
-                    f"Sent response to {platform}:{channel_id}, message_id={message_id}"
-                )
+                self._logger.info(f"Sent response to {platform}:{channel_id}, message_id={message_id}")
             except Exception as e:
                 self._logger.exception(f"Failed to send message to platform: {e}")
                 raise
@@ -373,17 +371,17 @@ class MessageGateway:
         # 创建队列（如果不存在）
         if session_key not in self._message_queues:
             self._message_queues[session_key] = asyncio.Queue()
-            self._queue_tasks[session_key] = asyncio.create_task(
-                self._process_message_queue(session_key)
-            )
+            self._queue_tasks[session_key] = asyncio.create_task(self._process_message_queue(session_key))
 
         # 加入队列
-        await self._message_queues[session_key].put({
-            "platform": platform,
-            "user_id": user_id,
-            "text": text,
-            "kwargs": kwargs,
-        })
+        await self._message_queues[session_key].put(
+            {
+                "platform": platform,
+                "user_id": user_id,
+                "text": text,
+                "kwargs": kwargs,
+            }
+        )
 
     async def _process_message_queue(self, session_key: str) -> None:
         """处理消息队列.

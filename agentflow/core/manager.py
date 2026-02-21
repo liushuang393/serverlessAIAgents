@@ -80,6 +80,14 @@ class AgentBlockManager:
         self._loader = AgentLoader()
         self._validator = AgentValidator()
 
+    def _require_metadata(self, agent_block: AgentBlock, agent_id: str) -> AgentMetadata:
+        """AgentBlock から必須メタデータを取得."""
+        metadata = agent_block.metadata
+        if metadata is None:
+            msg = f"Agent metadata is missing: {agent_id}"
+            raise AgentBlockValidationError(msg)
+        return metadata
+
     def load_agent(self, agent_path: Path) -> AgentBlock:
         """Agent を読み込む.
 
@@ -103,7 +111,8 @@ class AgentBlockManager:
         agent_block = self._loader.load_from_directory(agent_path)
 
         # メタデータを検証
-        validation_result = self.validate_agent(agent_block.metadata)
+        metadata = self._require_metadata(agent_block, str(agent_path))
+        validation_result = self.validate_agent(metadata)
         if not validation_result.is_valid:
             error_messages = "\n".join(validation_result.errors)
             msg = f"Agent validation failed:\n{error_messages}"
@@ -198,7 +207,8 @@ class AgentBlockManager:
         agent_infos: list[AgentInfo] = []
 
         for agent_id, agent_block in self.registry.items():
-            meta = agent_block.metadata.meta
+            metadata = self._require_metadata(agent_block, agent_id)
+            meta = metadata.meta
 
             # フィルター適用
             if filters:
@@ -241,7 +251,8 @@ class AgentBlockManager:
             raise AgentBlockNotFoundError(msg)
 
         agent_block = self.registry[agent_id]
-        dependencies = agent_block.metadata.dependencies
+        metadata = self._require_metadata(agent_block, agent_id)
+        dependencies = metadata.dependencies
 
         # 依存する Agent ID を収集
         dep_agent_ids: list[str] = []

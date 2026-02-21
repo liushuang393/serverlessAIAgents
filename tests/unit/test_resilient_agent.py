@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ResilientAgent 単体テスト.
 
 agentflow/core/resilient_agent.py のテスト。
@@ -6,7 +5,6 @@ agentflow/core/resilient_agent.py のテスト。
 
 import asyncio
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from pydantic import BaseModel
@@ -81,7 +79,8 @@ class TestResilientAgent:
             nonlocal call_count
             call_count += 1
             if call_count < 2:
-                raise ValueError("Temporary error")
+                msg = "Temporary error"
+                raise ValueError(msg)
             return await original_process(input_data)
 
         agent.process = flaky_process  # type: ignore
@@ -122,7 +121,8 @@ class TestResilientAgent:
         agent.max_retries = 2
 
         async def always_fail(input_data: TestInput) -> TestOutput:
-            raise ValueError("Always fail")
+            msg = "Always fail"
+            raise ValueError(msg)
 
         agent.process = always_fail  # type: ignore
 

@@ -163,9 +163,7 @@ class SwarmCoordinator(CoordinatorBase):
         """アクティブなAgentリストを取得."""
         return [aid for aid, status in self._status.items() if status.is_active]
 
-    async def broadcast(
-        self, payload: dict[str, Any], source: str = "coordinator"
-    ) -> list[SwarmMessage]:
+    async def broadcast(self, payload: dict[str, Any], source: str = "coordinator") -> list[SwarmMessage]:
         """全Agentにブロードキャスト.
 
         Args:
@@ -284,16 +282,12 @@ class SwarmCoordinator(CoordinatorBase):
         )
 
         # 負荷更新
-        self._status[selected_id].current_load = min(
-            1.0, self._status[selected_id].current_load + 0.1
-        )
+        self._status[selected_id].current_load = min(1.0, self._status[selected_id].current_load + 0.1)
 
         try:
             response = await selected_agent.process_message(message)
             self._status[selected_id].processed_count += 1
-            self._status[selected_id].current_load = max(
-                0.0, self._status[selected_id].current_load - 0.1
-            )
+            self._status[selected_id].current_load = max(0.0, self._status[selected_id].current_load - 0.1)
 
             if response:
                 return response.payload

@@ -11,19 +11,19 @@ from apps.platform.services.app_lifecycle import (
     HealthCheckResult,
 )
 from apps.platform.services.app_scaffolder import AppScaffolderService
+from apps.platform.services.capability_registry import CapabilityRegistry
 from apps.platform.services.component_library import (
     ComponentEntry,
     ComponentLibrary,
     ComponentType,
     ComponentVisibility,
 )
-from apps.platform.services.capability_registry import CapabilityRegistry
-from apps.platform.services.framework_env import FrameworkEnvService
 from apps.platform.services.framework_audit import FrameworkAuditService
+from apps.platform.services.framework_env import FrameworkEnvService
 from apps.platform.services.gallery_service import GalleryService
-from apps.platform.services.publish_orchestrator import PublishOrchestrator
 from apps.platform.services.mcp_registry import MCPRegistryService
 from apps.platform.services.port_allocator import PortAllocatorService
+from apps.platform.services.publish_orchestrator import PublishOrchestrator
 from apps.platform.services.rag_overview import RAGOverviewService
 from apps.platform.services.skill_catalog import SkillCatalogService
 from apps.platform.services.studio_service import StudioService
@@ -36,13 +36,13 @@ __all__ = [
     "AppLifecycleManager",
     "AppScaffolderService",
     "AppStatus",
+    "CapabilityRegistry",
     "ComponentEntry",
     "ComponentLibrary",
     "ComponentType",
     "ComponentVisibility",
-    "CapabilityRegistry",
-    "FrameworkEnvService",
     "FrameworkAuditService",
+    "FrameworkEnvService",
     "GalleryService",
     "HealthCheckResult",
     "MCPRegistryService",

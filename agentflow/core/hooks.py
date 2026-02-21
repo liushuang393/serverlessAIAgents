@@ -55,9 +55,7 @@ class LifecycleHooks:
 
     def __init__(self) -> None:
         """Initialize lifecycle hooks container."""
-        self._hooks: dict[HookType, list[Callable[..., Awaitable[None]]]] = {
-            hook_type: [] for hook_type in HookType
-        }
+        self._hooks: dict[HookType, list[Callable[..., Awaitable[None]]]] = {hook_type: [] for hook_type in HookType}
 
     def register(
         self,

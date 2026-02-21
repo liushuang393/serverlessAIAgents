@@ -341,7 +341,7 @@ class TelegramAdapter(MessageChannelAdapter):
             message = update.message
 
             # 只处理文本消息
-            if not message.text:
+            if not message.text or message.from_user is None:
                 return
 
             user_id = str(message.from_user.id)
@@ -386,7 +386,7 @@ class TelegramAdapter(MessageChannelAdapter):
         # 定义消息处理器
         async def handle_message(update: Update, context: Any) -> None:
             """处理消息."""
-            if not update.message or not update.message.text:
+            if not update.message or not update.message.text or update.message.from_user is None:
                 return
 
             user_id = str(update.message.from_user.id)
@@ -411,6 +411,9 @@ class TelegramAdapter(MessageChannelAdapter):
         # 启动轮询
         await app.initialize()
         await app.start()
+        if app.updater is None:
+            msg = "Telegram updater is not initialized"
+            raise RuntimeError(msg)
         await app.updater.start_polling(poll_interval=interval)
 
         self._logger.info("Telegram polling started")

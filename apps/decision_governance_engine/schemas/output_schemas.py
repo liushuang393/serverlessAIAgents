@@ -305,9 +305,7 @@ class DecisionReport(BaseModel):
     version: str = Field(default="3.1", description="バージョン")
 
     # v3.1: 提案書タイトル（自動生成）
-    proposal_title: ProposalTitle | None = Field(
-        default=None, description="提案書タイトル（日本語/英語/案件ID）"
-    )
+    proposal_title: ProposalTitle | None = Field(default=None, description="提案書タイトル（日本語/英語/案件ID）")
 
     # 元の質問（タイトル生成用）
     original_question: str = Field(default="", description="元の質問")
@@ -333,9 +331,7 @@ class DecisionReport(BaseModel):
     executive_summary: ExecutiveSummary = Field(..., description="エグゼクティブサマリー")
 
     # v3.1: 署名欄（強化版）
-    signature_block: SignatureBlock | None = Field(
-        default=None, description="署名欄情報"
-    )
+    signature_block: SignatureBlock | None = Field(default=None, description="署名欄情報")
 
     # v3.2: 人間確認フロー
     human_review: HumanReview = Field(

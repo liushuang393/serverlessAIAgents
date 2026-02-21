@@ -155,4 +155,3 @@ class AgentDiscoveryBase(ABC):
             選択された AgentEntry または None
         """
         ...
-

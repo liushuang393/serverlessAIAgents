@@ -191,9 +191,7 @@ class InventoryAdjuster(AgentBlock):
             stock_adjustment = self._evaluate_stock(sku, stock, sales_data)
 
             # 価格調整判定
-            price_adjustment = self._evaluate_price(
-                sku, current_price, recommended_price
-            )
+            price_adjustment = self._evaluate_price(sku, current_price, recommended_price)
 
             # 調整アイテム作成
             if stock_adjustment or price_adjustment:
@@ -222,15 +220,14 @@ class InventoryAdjuster(AgentBlock):
         if len(items) == 0:
             notes.append("現時点で調整が必要な商品はありません")
         else:
-            critical_count = sum(
-                1 for i in items if i.urgency == UrgencyLevel.CRITICAL
-            )
+            critical_count = sum(1 for i in items if i.urgency == UrgencyLevel.CRITICAL)
             if critical_count > 0:
                 notes.append(f"緊急対応が必要な商品: {critical_count}件")
 
         logger.info(
             "調整計画作成完了: %d items, revenue_impact=%.2f",
-            len(items), revenue_impact,
+            len(items),
+            revenue_impact,
         )
 
         return AdjustmentPlan(
@@ -238,15 +235,19 @@ class InventoryAdjuster(AgentBlock):
             items=items,
             total_items=len(items),
             price_adjustments=sum(
-                1 for i in items
-                if i.adjustment_type in [
+                1
+                for i in items
+                if i.adjustment_type
+                in [
                     AdjustmentType.PRICE_INCREASE,
                     AdjustmentType.PRICE_DECREASE,
                 ]
             ),
             stock_adjustments=sum(
-                1 for i in items
-                if i.adjustment_type in [
+                1
+                for i in items
+                if i.adjustment_type
+                in [
                     AdjustmentType.RESTOCK,
                     AdjustmentType.CLEARANCE,
                 ]

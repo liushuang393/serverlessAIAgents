@@ -124,10 +124,7 @@ class TenantDashboard:
         """
         # テナントのコンポーネントを取得
         all_components = self._library.list_all()
-        tenant_components = [
-            c for c in all_components.values()
-            if c.tenant_id == tenant_id
-        ]
+        tenant_components = [c for c in all_components.values() if c.tenant_id == tenant_id]
 
         # タイプ別カウント
         agent_count = sum(1 for c in tenant_components if c.type == ComponentType.AGENT)
@@ -201,10 +198,7 @@ class TenantDashboard:
             人気コンポーネントリスト
         """
         all_components = self._library.list_all()
-        tenant_components = [
-            c for c in all_components.values()
-            if c.tenant_id == tenant_id
-        ]
+        tenant_components = [c for c in all_components.values() if c.tenant_id == tenant_id]
 
         # 使用回数でソート
         sorted_components = sorted(

@@ -1,8 +1,8 @@
 # コーディング規約
 
-> **バージョン**: 1.0.0
+> **バージョン**: 1.1.0
 > **適用範囲**: AgentFlow Framework 全 Python コード
-> **最終更新**: 2025-01-19
+> **最終更新**: 2026-02-21
 
 ## 📋 目次
 
@@ -10,8 +10,9 @@
 2. [コードフォーマッティング](#コードフォーマッティング)
 3. [インポート管理](#インポート管理)
 4. [型アノテーション](#型アノテーション)
-5. [コード品質ツール](#コード品質ツール)
-6. [自動化チェック](#自動化チェック)
+5. [🚨 Python型エラー頻出パターン（厳重注意）](#python型エラー頻出パターン厳重注意)
+6. [コード品質ツール](#コード品質ツール)
+7. [自動化チェック](#自動化チェック)
 
 ---
 
@@ -201,6 +202,73 @@ async def execute_with_callback(
 
 ---
 
+## 🚨 Python型エラー頻出パターン（厳重注意）
+
+> **2026-02-21 追加**: AIが最も犯しやすい型エラーをパターン化しました。
+> コードを出力するたびに以下をセルフチェックしてください。
+> 詳細 → [CLAUDE.md 最重要警告](../CLAUDE.md#critical-python-型エラー-最重要警告全-ai-エージェント必読)
+> AI弱点集 → [ai-weakness.md P-1〜P-10](../global/ai-weakness.md#python型エラー最重要最頻出)
+
+### 違反パターン早見表
+
+| # | ❌ 違反 | ✅ 正解 |
+|---|---|---|
+| 1 | `def fn(x):` 型なし | `def fn(x: str) -> None:` |
+| 2 | `Optional[X]` を None チェックなしで参照 | `if v is not None:` ガード必須 |
+| 3 | `Any` をデフォルト型として使う | 具体型を明示（理由コメント必須） |
+| 4 | 宣言型と return 値が不一致 | 宣言と実装を一致させる |
+| 5 | `dict["key"]` 直アクセス | `.get("key")` または存在確認 |
+| 6 | `cast()` で型を誤魔化す | 正しい型の値を生成する |
+| 7 | `# type: ignore` 理由なし | 根本原因を修正する |
+| 8 | Pydantic フィールドに型なし | `field: str`, `field: int \| None` |
+| 9 | `list[str]` に異なる型を append | `list[str \| int]` で型拡張 |
+| 10 | `async def` の戻り値型省略 | `async def fn() -> dict[str, Any]:` |
+
+### コード例: None 安全性（最頻出クラッシュ原因）
+
+```python
+# ❌ 禁止: None チェックなしでアクセス
+def get_name(user_id: str) -> str:
+    user = db.find(user_id)
+    return user["name"]  # user が None なら TypeError
+
+# ✅ 必須: None ガード後にアクセス
+def get_name(user_id: str) -> str:
+    user = db.find(user_id)
+    if user is None:
+        raise ValueError(f"ユーザー未発見: {user_id}")
+    return user["name"]
+```
+
+### コード例: async 関数の型アノテーション
+
+```python
+# ❌ 禁止: async でも型省略は許されない
+async def fetch(url):
+    ...
+
+# ✅ 必須: async 関数も全引数・戻り値に型を付ける
+async def fetch(url: str) -> dict[str, str]:
+    ...
+```
+
+### コード例: Pydantic モデルの型定義
+
+```python
+# ❌ 禁止: 型なし / Any の Pydantic フィールド
+class Config(BaseModel):
+    host: Any
+    port = None
+
+# ✅ 必須: 全フィールドに明示的な型
+class Config(BaseModel):
+    host: str
+    port: int
+    debug: bool = False
+```
+
+---
+
 ## 🛠️ コード品質ツール
 
 ### 必須ツール
@@ -315,6 +383,9 @@ echo "✅ All checks passed!"
 
 ## 🚫 禁止パターン
 
+> 🚨 **型エラー頻出パターンは別セクションを参照** →
+> [Python型エラー頻出パターン（厳重注意）](#python型エラー頻出パターン厳重注意)
+
 ### ゼロトレランスルール
 ```python
 # ❌ 禁止: Any 型の乱用（正当な理由とコメントがない限り）
@@ -368,4 +439,4 @@ DATABASE_URL = os.getenv("DATABASE_URL")  # ✅
 
 **これらのコーディング規約を守ることで、高品質で保守性の高いコードを維持できます。** 🎯
 
-*最終更新: 2025-01-19 | バージョン: 1.0.0*
+*最終更新: 2026-02-21 | バージョン: 1.1.0*

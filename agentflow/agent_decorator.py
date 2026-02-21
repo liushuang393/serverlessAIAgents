@@ -45,11 +45,17 @@ v0.3.1: Pydantic 入出力スキーマ対応
 """
 
 import logging
-from collections.abc import Callable
+from collections.abc import AsyncIterator, Callable
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar, cast
+
+from pydantic import BaseModel
 
 from agentflow.providers.tool_provider import ToolProvider
+
+
+if TYPE_CHECKING:
+    from agentflow.providers.llm_provider import LLMProvider
 
 
 # グローバルロガー
@@ -90,9 +96,10 @@ def _load_builtin_skills() -> None:
     if builtin_dir.exists():
         loader = SkillLoader()
         skills = loader.load_directory(builtin_dir, recursive=True)
+        registry = _get_skills_registry()
 
         for skill in skills:
-            _skills_registry[skill.name] = skill
+            registry[skill.name] = skill
             logger.debug(f"Loaded builtin skill: {skill.name}")
 
         logger.info(f"Loaded {len(skills)} builtin skills")
@@ -144,8 +151,8 @@ class RegisteredAgent:
         system_prompt: str | None = None,
         tools: list[str] | None = None,
         skills: list[str] | None = None,
-        input_schema: type | None = None,
-        output_schema: type | None = None,
+        input_schema: type[BaseModel] | None = None,
+        output_schema: type[BaseModel] | None = None,
     ) -> None:
         """初期化.
 
@@ -184,6 +191,7 @@ class RegisteredAgent:
             # LLMProviderを注入（get_llm() 松耦合API を使用）
             try:
                 from agentflow.providers import get_llm
+
                 self._llm_provider = get_llm(
                     temperature=self.temperature,
                     max_tokens=self.max_tokens,
@@ -282,7 +290,7 @@ class RegisteredAgent:
 
         # Pydantic モデルの場合は model_dump()
         if hasattr(output, "model_dump"):
-            return output.model_dump()
+            return cast("dict[str, Any]", output.model_dump())
 
         # 辞書の場合はそのまま
         if isinstance(output, dict):
@@ -384,10 +392,13 @@ def agent[T: type](
             )
 
             # AgentRegistry に登録
+            def _factory() -> Any:
+                return registered.get_instance()
+
             global_registry.register(
                 agent_id=agent_name,
                 capability=capability,
-                factory=lambda r=registered: r.get_instance(),
+                factory=_factory,
             )
 
             _logger.debug(f"Agent '{agent_name}' を AgentRegistry に登録")
@@ -431,7 +442,7 @@ def agent[T: type](
             async def run(self: Any, input_data: dict[str, Any]) -> dict[str, Any]:
                 """実行メソッド."""
                 if hasattr(self, "process"):
-                    return await self.process(input_data)
+                    return cast("dict[str, Any]", await self.process(input_data))
                 return {"error": "No process method defined"}
 
             cls.run = run  # type: ignore
@@ -543,7 +554,7 @@ class AgentClient:
         self,
         input_data: dict[str, Any],
         context: dict[str, Any] | None = None,
-    ):
+    ) -> AsyncIterator[dict[str, Any]]:
         """Agentをストリームモードで呼び出し.
 
         Args:

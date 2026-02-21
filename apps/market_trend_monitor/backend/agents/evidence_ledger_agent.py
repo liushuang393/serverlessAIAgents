@@ -48,9 +48,7 @@ class EvidenceLedgerOutput(BaseModel):
 # ============================================================
 
 
-class EvidenceLedgerAgent(
-    ResilientAgent[EvidenceLedgerInput, EvidenceLedgerOutput]
-):
+class EvidenceLedgerAgent(ResilientAgent[EvidenceLedgerInput, EvidenceLedgerOutput]):
     """証拠台帳エージェント（ResilientAgent 継承・型安全）.
 
     役割:
@@ -82,15 +80,11 @@ class EvidenceLedgerAgent(
         self._logger = logging.getLogger(self.name)
         self._evidence_service = evidence_service or EvidenceService()
 
-    def _parse_input(
-        self, input_data: dict[str, Any]
-    ) -> EvidenceLedgerInput:
+    def _parse_input(self, input_data: dict[str, Any]) -> EvidenceLedgerInput:
         """入力データを Pydantic モデルに変換."""
         return EvidenceLedgerInput(**input_data)
 
-    async def process(
-        self, input_data: EvidenceLedgerInput
-    ) -> EvidenceLedgerOutput:
+    async def process(self, input_data: EvidenceLedgerInput) -> EvidenceLedgerOutput:
         """証拠登録を実行.
 
         Args:
@@ -100,9 +94,7 @@ class EvidenceLedgerAgent(
             型付き登録結果
         """
         articles = input_data.articles
-        self._logger.info(
-            f"Processing {len(articles)} articles for evidence registration"
-        )
+        self._logger.info(f"Processing {len(articles)} articles for evidence registration")
 
         evidence_ids: list[str] = []
         evidences: list[EvidenceSchema] = []
@@ -134,10 +126,7 @@ class EvidenceLedgerAgent(
                 )
             )
 
-        self._logger.info(
-            f"Registered {len(evidence_ids)} evidences from "
-            f"{len(sources)} sources"
-        )
+        self._logger.info(f"Registered {len(evidence_ids)} evidences from {len(sources)} sources")
 
         return EvidenceLedgerOutput(
             evidence_ids=evidence_ids,

@@ -110,14 +110,9 @@ class RedTeamAgent(ResilientAgent[RedTeamInput, RedTeamOutput]):
             型付き分析結果
         """
         claims = input_data.claims
-        challenge_types = [
-            ChallengeType(t) for t in input_data.challenge_types
-        ]
+        challenge_types = [ChallengeType(t) for t in input_data.challenge_types]
 
-        self._logger.info(
-            f"Red Team analysis for {len(claims)} claims, "
-            f"{len(challenge_types)} challenge types"
-        )
+        self._logger.info(f"Red Team analysis for {len(claims)} claims, {len(challenge_types)} challenge types")
 
         all_challenges: list[ChallengeSchema] = []
         all_results: list[ChallengeResultSchema] = []
@@ -155,7 +150,9 @@ class RedTeamAgent(ResilientAgent[RedTeamInput, RedTeamOutput]):
 
                 # LLMで有効性を評価
                 is_valid, impact = await self._evaluate_challenge_with_llm(
-                    claim.statement, argument, challenge_type.value,
+                    claim.statement,
+                    argument,
+                    challenge_type.value,
                 )
 
                 result = self._redteam_service.evaluate_challenge(
@@ -179,10 +176,7 @@ class RedTeamAgent(ResilientAgent[RedTeamInput, RedTeamOutput]):
 
         stats = self._redteam_service.get_redteam_stats()
 
-        self._logger.info(
-            f"Red Team completed: {len(all_challenges)} challenges, "
-            f"{valid_count} valid"
-        )
+        self._logger.info(f"Red Team completed: {len(all_challenges)} challenges, {valid_count} valid")
 
         return RedTeamOutput(
             challenges=all_challenges,
@@ -205,9 +199,7 @@ class RedTeamAgent(ResilientAgent[RedTeamInput, RedTeamOutput]):
             updated_at=datetime.fromisoformat(schema.updated_at),
         )
 
-    def _challenge_to_schema(
-        self, challenge: Any
-    ) -> ChallengeSchema:
+    def _challenge_to_schema(self, challenge: Any) -> ChallengeSchema:
         """Challenge を ChallengeSchema に変換."""
         return ChallengeSchema(
             id=challenge.id,
@@ -265,10 +257,11 @@ class RedTeamAgent(ResilientAgent[RedTeamInput, RedTeamOutput]):
             response = await self._call_llm(prompt)
             if response:
                 import json
+
                 start = response.find("{")
                 end = response.rfind("}")
                 if start != -1 and end > start:
-                    data = json.loads(response[start:end + 1])
+                    data = json.loads(response[start : end + 1])
                     is_valid = bool(data.get("is_valid", False))
                     impact = min(max(float(data.get("impact", 0.3)), 0.0), 1.0)
                     return is_valid, impact
@@ -276,9 +269,7 @@ class RedTeamAgent(ResilientAgent[RedTeamInput, RedTeamOutput]):
             self._logger.warning("LLMチャレンジ評価失敗: %s", e)
         return False, 0.1
 
-    def _result_to_schema(
-        self, result: Any
-    ) -> ChallengeResultSchema:
+    def _result_to_schema(self, result: Any) -> ChallengeResultSchema:
         """ChallengeResult を ChallengeResultSchema に変換."""
         return ChallengeResultSchema(
             id=result.id,

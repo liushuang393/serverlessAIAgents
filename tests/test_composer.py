@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AgentComposer テスト."""
 
 from __future__ import annotations

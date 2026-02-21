@@ -1,9 +1,6 @@
-# -*- coding: utf-8 -*-
 """Unit tests for code_intelligence module."""
 
 import pytest
-import asyncio
-from pathlib import Path
 
 
 class TestUnifiedAST:
@@ -41,9 +38,9 @@ class TestUnifiedAST:
     def test_unified_ast_creation(self) -> None:
         """Test UnifiedAST creation."""
         from agentflow.code_intelligence.ast.unified_ast import (
-            UnifiedAST,
             ASTNode,
             ASTNodeType,
+            UnifiedAST,
         )
 
         root = ASTNode(type=ASTNodeType.PROGRAM, name="Main")
@@ -61,7 +58,6 @@ class TestQualityGates:
         """Test SyntaxValidator gate."""
         from agentflow.code_intelligence.quality.gates import (
             SyntaxValidator,
-            QualityLevel,
         )
 
         validator = SyntaxValidator()
@@ -75,8 +71,8 @@ class TestQualityGates:
         """Test QualityGateRunner."""
         from agentflow.code_intelligence.quality.gates import (
             QualityGateRunner,
-            SyntaxValidator,
             SemanticValidator,
+            SyntaxValidator,
         )
 
         runner = QualityGateRunner()
@@ -93,8 +89,8 @@ class TestQualityGates:
     async def test_empty_target_fails(self) -> None:
         """Test that empty target code fails validation."""
         from agentflow.code_intelligence.quality.gates import (
-            SyntaxValidator,
             QualityLevel,
+            SyntaxValidator,
         )
 
         validator = SyntaxValidator()
@@ -110,8 +106,8 @@ class TestMigrationProject:
     def test_project_creation(self) -> None:
         """Test MigrationProject creation."""
         from agentflow.code_intelligence.migration.project import (
-            MigrationProject,
             MigrationPhase,
+            MigrationProject,
         )
 
         project = MigrationProject(
@@ -145,8 +141,8 @@ class TestMigrationProject:
     def test_phase_management(self) -> None:
         """Test phase start and complete."""
         from agentflow.code_intelligence.migration.project import (
-            MigrationProject,
             MigrationPhase,
+            MigrationProject,
             PhaseStatus,
         )
 
@@ -170,9 +166,9 @@ class TestPipelineGenerator:
     def test_github_pipeline(self) -> None:
         """Test GitHub Actions pipeline generation."""
         from agentflow.code_intelligence.cicd.pipeline_generator import (
+            CIPlatform,
             MigrationPipelineGenerator,
             PipelineConfig,
-            CIPlatform,
         )
 
         config = PipelineConfig(
@@ -190,9 +186,9 @@ class TestPipelineGenerator:
     def test_gitlab_pipeline(self) -> None:
         """Test GitLab CI pipeline generation."""
         from agentflow.code_intelligence.cicd.pipeline_generator import (
+            CIPlatform,
             MigrationPipelineGenerator,
             PipelineConfig,
-            CIPlatform,
         )
 
         config = PipelineConfig(
@@ -258,8 +254,8 @@ class TestSkillsVersioning:
     def test_in_memory_version_store(self) -> None:
         """Test InMemoryVersionStore."""
         from agentflow.skills.versioning.skill_version import (
-            SkillVersion,
             SkillSnapshot,
+            SkillVersion,
         )
         from agentflow.skills.versioning.version_store import InMemoryVersionStore
 

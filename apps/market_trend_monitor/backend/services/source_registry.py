@@ -75,9 +75,7 @@ class SourceRegistryService:
         """情報源を取得."""
         await init_db()
         async with self._session_factory() as session:
-            result = await session.execute(
-                select(SourceRegistryModel).where(SourceRegistryModel.id == source_id)
-            )
+            result = await session.execute(select(SourceRegistryModel).where(SourceRegistryModel.id == source_id))
             row = result.first()
             return self._model_to_entry(row[0]) if row else None
 
@@ -124,9 +122,7 @@ class SourceRegistryService:
         """情報源を更新."""
         await init_db()
         async with self._session_factory() as session:
-            result = await session.execute(
-                select(SourceRegistryModel).where(SourceRegistryModel.id == source_id)
-            )
+            result = await session.execute(select(SourceRegistryModel).where(SourceRegistryModel.id == source_id))
             row = result.first()
             if not row:
                 return None

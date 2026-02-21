@@ -267,12 +267,15 @@ class RAGPipeline:
         if not chunks:
             return
 
+        embedding = self._require_embedding()
+        vectordb = self._require_vectordb()
+
         # 埋め込みを生成
         contents = [c.content for c in chunks]
-        embeddings = await self._embedding.embed_batch(contents)
+        embeddings = await embedding.embed_batch(contents)
 
         # VectorDB に追加
-        await self._vectordb.add(
+        await vectordb.add(
             documents=contents,
             ids=[c.id for c in chunks],
             embeddings=embeddings,
@@ -303,12 +306,14 @@ class RAGPipeline:
 
         top_k = top_k or self._config.top_k
         min_similarity = min_similarity or self._config.min_similarity
+        embedding = self._require_embedding()
+        vectordb = self._require_vectordb()
 
         # クエリの埋め込みを生成
-        query_embedding = await self._embedding.embed_text(query)
+        query_embedding = await embedding.embed_text(query)
 
         # 検索実行
-        results = await self._vectordb.search(
+        results = await vectordb.search(
             query=query,
             query_embedding=query_embedding,
             top_k=top_k,
@@ -316,10 +321,7 @@ class RAGPipeline:
         )
 
         # 類似度フィルタリング
-        return [
-            r for r in results if r.get("distance", 1.0) <= (1.0 - min_similarity)
-        ]
-
+        return [r for r in results if r.get("distance", 1.0) <= (1.0 - min_similarity)]
 
     async def query(
         self,
@@ -379,7 +381,8 @@ class RAGPipeline:
             {"role": "system", "content": self._config.system_prompt},
             {"role": "user", "content": user_prompt},
         ]
-        response = await self._llm.chat(messages)
+        llm = self._require_llm()
+        response = await llm.chat(messages)
 
         return RAGResult(
             answer=response["content"],
@@ -435,13 +438,15 @@ class RAGPipeline:
             {"role": "user", "content": user_prompt},
         ]
 
-        async for chunk in self._llm.stream(messages):
+        llm = self._require_llm()
+        async for chunk in llm.stream(messages):
             yield chunk
 
     async def clear(self) -> None:
         """全ドキュメントをクリア."""
         self._ensure_started()
-        await self._vectordb.clear()
+        vectordb = self._require_vectordb()
+        await vectordb.clear()
         self._stats = {
             "documents_indexed": 0,
             "queries_processed": 0,
@@ -467,6 +472,27 @@ class RAGPipeline:
             msg = "RAG Pipeline not started. Call start() first."
             raise RuntimeError(msg)
 
+    def _require_llm(self) -> LLMProvider:
+        llm = self._llm
+        if llm is None:
+            msg = "LLM provider is not initialized."
+            raise RuntimeError(msg)
+        return llm
+
+    def _require_embedding(self) -> EmbeddingProvider:
+        embedding = self._embedding
+        if embedding is None:
+            msg = "Embedding provider is not initialized."
+            raise RuntimeError(msg)
+        return embedding
+
+    def _require_vectordb(self) -> VectorDBProvider:
+        vectordb = self._vectordb
+        if vectordb is None:
+            msg = "VectorDB provider is not initialized."
+            raise RuntimeError(msg)
+        return vectordb
+
     async def __aenter__(self) -> RAGPipeline:
         """非同期コンテキストマネージャーのエントリー."""
         await self.start()
@@ -480,4 +506,3 @@ class RAGPipeline:
     ) -> None:
         """非同期コンテキストマネージャーの終了."""
         await self.stop()
-

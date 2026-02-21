@@ -53,7 +53,7 @@ class FlowProtocol(Protocol):
 
     flow_id: str
 
-    async def run_with_events(
+    def run_with_events(
         self, input_data: dict[str, Any]
     ) -> AsyncIterator[tuple[dict[str, Any] | None, AGUIEvent | None]]:
         """イベント付きでFlowを実行.
@@ -133,9 +133,7 @@ class SSEFlowRunner:
         self._flow = flow
         self._config = config or SSEConfig()
         self._flow_id = flow_id or getattr(flow, "flow_id", None)
-        self._event_queue: asyncio.Queue[AGUIEvent] = asyncio.Queue(
-            maxsize=self._config.max_event_queue_size
-        )
+        self._event_queue: asyncio.Queue[AGUIEvent] = asyncio.Queue(maxsize=self._config.max_event_queue_size)
 
     @property
     def flow_id(self) -> str:
@@ -148,9 +146,7 @@ class SSEFlowRunner:
         """フローIDを設定."""
         self._flow_id = flow_id
 
-    async def run_with_events(
-        self, input_data: dict[str, Any]
-    ) -> AsyncIterator[AGUIEvent]:
+    async def run_with_events(self, input_data: dict[str, Any]) -> AsyncIterator[AGUIEvent]:
         """SSEイベントストリームを生成.
 
         内部のFlowを実行し、AG-UI準拠イベントをyield。
@@ -345,4 +341,3 @@ __all__ = [
     "SSEFlowRunner",
     "SimplePipelineProtocol",
 ]
-

@@ -157,12 +157,14 @@ class TicketGeneratorConfig:
 """
 
     # SLA設定
-    sla_hours: dict[TicketPriority, int] = field(default_factory=lambda: {
-        TicketPriority.LOW: 72,
-        TicketPriority.MEDIUM: 24,
-        TicketPriority.HIGH: 8,
-        TicketPriority.URGENT: 2,
-    })
+    sla_hours: dict[TicketPriority, int] = field(
+        default_factory=lambda: {
+            TicketPriority.LOW: 72,
+            TicketPriority.MEDIUM: 24,
+            TicketPriority.HIGH: 8,
+            TicketPriority.URGENT: 2,
+        }
+    )
 
 
 class TicketProviderBase(ABC):
@@ -180,9 +182,7 @@ class TicketProviderBase(ABC):
         """
 
     @abstractmethod
-    async def update_ticket(
-        self, ticket_id: str, updates: dict[str, Any]
-    ) -> Ticket:
+    async def update_ticket(self, ticket_id: str, updates: dict[str, Any]) -> Ticket:
         """工単を更新.
 
         Args:
@@ -205,9 +205,7 @@ class TicketProviderBase(ABC):
         """
 
     @abstractmethod
-    async def search_tickets(
-        self, query: str, **kwargs: Any
-    ) -> list[Ticket]:
+    async def search_tickets(self, query: str, **kwargs: Any) -> list[Ticket]:
         """工単を検索.
 
         Args:
@@ -235,9 +233,7 @@ class InMemoryTicketProvider(TicketProviderBase):
         self._tickets[ticket.ticket_id] = ticket
         return ticket
 
-    async def update_ticket(
-        self, ticket_id: str, updates: dict[str, Any]
-    ) -> Ticket:
+    async def update_ticket(self, ticket_id: str, updates: dict[str, Any]) -> Ticket:
         """工単を更新."""
         ticket = self._tickets.get(ticket_id)
         if not ticket:
@@ -255,18 +251,13 @@ class InMemoryTicketProvider(TicketProviderBase):
         """工単を取得."""
         return self._tickets.get(ticket_id)
 
-    async def search_tickets(
-        self, query: str, **kwargs: Any
-    ) -> list[Ticket]:
+    async def search_tickets(self, query: str, **kwargs: Any) -> list[Ticket]:
         """工単を検索."""
         results = []
         query_lower = query.lower()
 
         for ticket in self._tickets.values():
-            if (
-                query_lower in ticket.title.lower()
-                or query_lower in ticket.description.lower()
-            ):
+            if query_lower in ticket.title.lower() or query_lower in ticket.description.lower():
                 results.append(ticket)
 
         return results
@@ -302,7 +293,8 @@ class JiraTicketProvider(TicketProviderBase):
         # 実際の実装では jira-python ライブラリを使用
         self._logger.info(
             "Creating Jira ticket: %s in project %s",
-            ticket.title, self._project_key,
+            ticket.title,
+            self._project_key,
         )
 
         # プレースホルダー実装
@@ -311,9 +303,7 @@ class JiraTicketProvider(TicketProviderBase):
 
         return ticket
 
-    async def update_ticket(
-        self, ticket_id: str, updates: dict[str, Any]
-    ) -> Ticket:
+    async def update_ticket(self, ticket_id: str, updates: dict[str, Any]) -> Ticket:
         """工単を更新."""
         self._logger.info("Updating Jira ticket: %s", ticket_id)
         # 実装は省略
@@ -326,9 +316,7 @@ class JiraTicketProvider(TicketProviderBase):
         # 実装は省略
         return None
 
-    async def search_tickets(
-        self, query: str, **kwargs: Any
-    ) -> list[Ticket]:
+    async def search_tickets(self, query: str, **kwargs: Any) -> list[Ticket]:
         """工単を検索."""
         self._logger.info("Searching Jira tickets: %s", query)
         # 実装は省略
@@ -362,9 +350,7 @@ class ServiceNowTicketProvider(TicketProviderBase):
 
         return ticket
 
-    async def update_ticket(
-        self, ticket_id: str, updates: dict[str, Any]
-    ) -> Ticket:
+    async def update_ticket(self, ticket_id: str, updates: dict[str, Any]) -> Ticket:
         """工単を更新."""
         msg = "ServiceNow update not implemented"
         raise NotImplementedError(msg)
@@ -373,9 +359,7 @@ class ServiceNowTicketProvider(TicketProviderBase):
         """工単を取得."""
         return None
 
-    async def search_tickets(
-        self, query: str, **kwargs: Any
-    ) -> list[Ticket]:
+    async def search_tickets(self, query: str, **kwargs: Any) -> list[Ticket]:
         """工単を検索."""
         return []
 
@@ -525,7 +509,7 @@ class TicketGenerator:
 - **命中率**: {hit_rate:.0%}
 
 ### サンプル質問
-{chr(10).join(f'- {q}' for q in sample_questions[:5])}
+{chr(10).join(f"- {q}" for q in sample_questions[:5])}
 
 ### 対応依頼
 このトピックに関するドキュメントの追加・更新をお願いします。
@@ -565,7 +549,7 @@ class TicketGenerator:
         Returns:
             更新された工単
         """
-        updates = {"status": status}
+        updates: dict[str, Any] = {"status": status}
         if comment:
             updates["metadata"] = {"last_comment": comment}
 

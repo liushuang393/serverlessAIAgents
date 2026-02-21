@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Routing モジュールのユニットテスト.
 
 IntentRouter, TaskTemplate, ExecutiveSummaryBuilder のテスト。
@@ -9,7 +8,6 @@ import pytest
 from agentflow.routing import (
     ExecutiveSummary,
     ExecutiveSummaryBuilder,
-    Intent,
     IntentCategory,
     IntentRouter,
     RouterConfig,
@@ -42,7 +40,7 @@ class TestTaskTemplate:
         score, params = template.match("今日のメールを整理して")
         assert score > 0.7  # 部分一致
 
-        score, params = template.match("関係ない文章")
+        score, _params = template.match("関係ない文章")
         assert score == 0.0  # マッチなし
 
     def test_parameter_extraction(self) -> None:
@@ -103,7 +101,7 @@ class TestTaskTemplate:
             ],
         )
 
-        score, params = template.match("テスト 10件 50.5% true タグ:a,b,c")
+        _score, params = template.match("テスト 10件 50.5% true タグ:a,b,c")
         assert params.get("count") == 10
         assert params.get("ratio") == 50.5
         assert params.get("enabled") is True
@@ -146,16 +144,20 @@ class TestIntentRouter:
     def router(self) -> IntentRouter:
         """テスト用ルーター."""
         router = IntentRouter()
-        router.register_template(TaskTemplate(
-            name="email_organize",
-            triggers=["メール整理", "受信箱整理"],
-            description="メールを重要度別に整理",
-            parameters=[TaskParameter(name="days", pattern=r"(\d+)日", default=7, type="int")],
-        ))
-        router.register_template(TaskTemplate(
-            name="file_organize",
-            triggers=["ファイル整理", "ディスク整理"],
-        ))
+        router.register_template(
+            TaskTemplate(
+                name="email_organize",
+                triggers=["メール整理", "受信箱整理"],
+                description="メールを重要度別に整理",
+                parameters=[TaskParameter(name="days", pattern=r"(\d+)日", default=7, type="int")],
+            )
+        )
+        router.register_template(
+            TaskTemplate(
+                name="file_organize",
+                triggers=["ファイル整理", "ディスク整理"],
+            )
+        )
         return router
 
     @pytest.mark.asyncio
@@ -241,9 +243,7 @@ class TestIntentRouter:
         assert intent.metadata.get("used_llm_fallback") is False
 
     @pytest.mark.asyncio
-    async def test_llm_fallback_not_triggered_for_known_intent(
-        self, router: IntentRouter
-    ) -> None:
+    async def test_llm_fallback_not_triggered_for_known_intent(self, router: IntentRouter) -> None:
         """既知の意図ではLLM fallbackが発動しないことを確認."""
         intent = await router.route("メール整理して")
         # ルールベースで解決できるのでLLMは使わない
@@ -505,4 +505,3 @@ class TestTemplateRegistry:
         registry = TemplateRegistry()
         templates = registry.list_all()
         assert isinstance(templates, list)
-

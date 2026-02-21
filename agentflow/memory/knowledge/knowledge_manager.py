@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from agentflow.memory.knowledge.memory_store import InMemoryKnowledgeStore
 from agentflow.memory.knowledge.memvid_store import (
@@ -124,7 +124,7 @@ class KnowledgeManager:
         source: KnowledgeSource = KnowledgeSource.DOCUMENT,
         source_id: str | None = None,
         importance: float = 0.5,
-        metadata: dict | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """知識を追加.
 
@@ -148,6 +148,7 @@ class KnowledgeManager:
         effective_title = title or content[:50] + ("..." if len(content) > 50 else "")
 
         import uuid
+
         entry = KnowledgeEntry(
             id=str(uuid.uuid4()),
             title=effective_title,
@@ -163,7 +164,7 @@ class KnowledgeManager:
 
     async def add_batch(
         self,
-        entries: list[dict],
+        entries: list[dict[str, Any]],
     ) -> list[str]:
         """知識を一括追加.
 
@@ -177,6 +178,7 @@ class KnowledgeManager:
 
         knowledge_entries = []
         import uuid
+
         for entry_data in entries:
             entry = KnowledgeEntry(
                 id=str(uuid.uuid4()),
@@ -242,7 +244,7 @@ class KnowledgeManager:
         title: str | None = None,
         tags: list[str] | None = None,
         importance: float | None = None,
-        metadata: dict | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> bool:
         """知識を更新.
 
@@ -344,4 +346,3 @@ class KnowledgeManager:
         if not self._is_started:
             msg = "Manager is not started. Call start() first."
             raise RuntimeError(msg)
-

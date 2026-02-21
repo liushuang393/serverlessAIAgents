@@ -1,0 +1,103 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "signals": "Signals",
+    "trends": "Trends",
+    "evidence": "Evidence Ledger",
+    "competitor": "Competitor Analysis",
+    "predictions": "Prediction Tracker",
+    "reports": "Reports",
+    "settings": "Settings",
+    "logout": "Logout",
+    "dashboard_desc": "Overview of the market",
+    "signals_desc": "AI-selected signals and changes",
+    "evidence_desc": "Check information sources",
+    "predictions_desc": "AI prediction tracking",
+    "competitor_desc": "Map competitor movements",
+    "reports_desc": "Export analysis results",
+    "settings_desc": "System configuration"
+  },
+  "app": {
+    "title": "Market Trend Monitor"
+  },
+  "dashboard": {
+    "title": "Market Trend Monitor",
+    "subtitle": "Real-time Market Intelligence",
+    "last_updated": "Last updated: {time}",
+    "refresh": "Refresh",
+    "no_data": "No data available"
+  },
+  "trend": {
+    "title": "Trend List",
+    "signal_strength": "Signal Strength",
+    "confidence": "Confidence",
+    "source": "Source",
+    "category": "Category",
+    "rising": "Rising",
+    "falling": "Falling",
+    "stable": "Stable",
+    "detected_at": "Detected at",
+    "summary": "Summary",
+    "evidence": "Evidence",
+    "no_trends": "No trends found",
+    "filter": "Filter",
+    "all": "All"
+  },
+  "competitor": {
+    "title": "Competitor Analysis",
+    "name": "Company Name",
+    "activity": "Recent Activity",
+    "strength": "Strengths",
+    "weakness": "Weaknesses",
+    "threat_level": "Threat Level",
+    "no_data": "No competitor data",
+    "last_seen": "Last seen: {date}"
+  },
+  "prediction": {
+    "title": "Prediction Tracker",
+    "forecast": "Forecast",
+    "probability": "Probability",
+    "horizon": "Time Horizon",
+    "status": "Status",
+    "pending": "Tracking",
+    "confirmed": "Confirmed",
+    "rejected": "Rejected",
+    "accuracy": "Prediction Accuracy",
+    "no_predictions": "No predictions available"
+  },
+  "reports": {
+    "title": "Reports",
+    "generate": "Generate Report",
+    "generating": "Generating...",
+    "download": "Download",
+    "period": "Period",
+    "type": "Report Type",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "custom": "Custom",
+    "no_reports": "No reports available",
+    "created_at": "Created at"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "refresh_interval": "Auto-refresh interval",
+    "notifications": "Notifications",
+    "threshold": "Alert threshold",
+    "save": "Save",
+    "saved": "Saved",
+    "api_key": "API Key"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  }
+}
+

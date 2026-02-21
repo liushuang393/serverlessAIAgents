@@ -4,8 +4,17 @@ import { useNavigate } from 'react-router-dom';
 import { UserPlus, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { authApi } from '../../api/auth';
 import type { RegisterRequest } from '../../api/types';
+import { useI18n } from '../../i18n';
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+    return fallback;
+};
 
 export const RegisterForm = () => {
+    const { t } = useI18n();
     const [formData, setFormData] = useState<RegisterRequest>({
         username: '',
         password: '',
@@ -37,10 +46,10 @@ export const RegisterForm = () => {
                 setAuth(response.access_token, response.user);
                 navigate('/');
             } else {
-                setError(response.message || 'Registration failed');
+                setError(response.message || t('register.error_fallback'));
             }
-        } catch (err: any) {
-            setError(err.message || 'An error occurred during registration');
+        } catch (err: unknown) {
+            setError(getErrorMessage(err, t('register.error_occurred')));
         } finally {
             setIsLoading(false);
         }
@@ -57,8 +66,8 @@ export const RegisterForm = () => {
                         <UserPlus className="text-[var(--primary)]" size={32} />
                     </div>
                     <div>
-                        <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Create Account</h1>
-                        <p className="text-sm text-[var(--text-dim)]">Join the enterprise FAQ intelligence platform.</p>
+                        <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">{t('register.title')}</h1>
+                        <p className="text-sm text-[var(--text-dim)]">{t('register.subtitle')}</p>
                     </div>
                 </div>
 
@@ -73,7 +82,7 @@ export const RegisterForm = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">Username</label>
+                            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">{t('auth.username')}</label>
                             <input
                                 name="username"
                                 type="text"
@@ -87,7 +96,7 @@ export const RegisterForm = () => {
                             />
                         </div>
                         <div className="flex flex-col gap-2">
-                            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">Full Name</label>
+                            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">{t('register.full_name')}</label>
                             <input
                                 name="display_name"
                                 type="text"
@@ -102,7 +111,7 @@ export const RegisterForm = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">Email</label>
+                            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">{t('auth.email')}</label>
                             <input
                                 name="email"
                                 type="email"
@@ -113,11 +122,11 @@ export const RegisterForm = () => {
                             />
                         </div>
                         <div className="flex flex-col gap-2">
-                            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">Password</label>
+                            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">{t('auth.password')}</label>
                             <input
                                 name="password"
                                 type="password"
-                                placeholder="Min 8 characters"
+                                placeholder={t('register.password_placeholder')}
                                 required
                                 minLength={8}
                                 value={formData.password}
@@ -129,7 +138,7 @@ export const RegisterForm = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">Department</label>
+                            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">{t('register.department')}</label>
                             <input
                                 name="department"
                                 type="text"
@@ -139,7 +148,7 @@ export const RegisterForm = () => {
                             />
                         </div>
                         <div className="flex flex-col gap-2">
-                            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">Position</label>
+                            <label className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider ml-1">{t('register.position')}</label>
                             <input
                                 name="position"
                                 type="text"
@@ -160,7 +169,7 @@ export const RegisterForm = () => {
                         ) : (
                             <>
                                 <UserPlus size={20} />
-                                Create Account
+                                {t('register.submit')}
                             </>
                         )}
                     </button>
@@ -172,7 +181,7 @@ export const RegisterForm = () => {
                             className="text-[var(--text-dim)] hover:text-white transition-colors flex items-center gap-2 text-sm bg-transparent border-none"
                         >
                             <ArrowLeft size={16} />
-                            Already have an account? <span className="text-[var(--primary)] hover:underline font-medium">Sign in</span>
+                            {t('register.already_have_account')} <span className="text-[var(--primary)] hover:underline font-medium">{t('register.sign_in')}</span>
                         </button>
                     </div>
                 </form>

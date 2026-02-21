@@ -1,0 +1,103 @@
+{
+  "nav": {
+    "dashboard": "仪表盘",
+    "signals": "信号",
+    "trends": "趋势",
+    "evidence": "证据台账",
+    "competitor": "竞争分析",
+    "predictions": "预测追踪",
+    "reports": "报告",
+    "settings": "设置",
+    "logout": "退出",
+    "dashboard_desc": "查看市场全貌",
+    "signals_desc": "AI 选出的信号与变化",
+    "evidence_desc": "核实信息来源",
+    "predictions_desc": "AI 预测的结果对照",
+    "competitor_desc": "绘制竞争对手动向",
+    "reports_desc": "导出分析结果",
+    "settings_desc": "系统详细配置"
+  },
+  "app": {
+    "title": "市场趋势监控系统"
+  },
+  "dashboard": {
+    "title": "市场趋势监控",
+    "subtitle": "实时市场情报",
+    "last_updated": "最后更新：{time}",
+    "refresh": "刷新",
+    "no_data": "暂无数据"
+  },
+  "trend": {
+    "title": "趋势列表",
+    "signal_strength": "信号强度",
+    "confidence": "置信度",
+    "source": "来源",
+    "category": "分类",
+    "rising": "上升",
+    "falling": "下降",
+    "stable": "稳定",
+    "detected_at": "检测时间",
+    "summary": "摘要",
+    "evidence": "依据",
+    "no_trends": "暂无趋势",
+    "filter": "筛选",
+    "all": "全部"
+  },
+  "competitor": {
+    "title": "竞争分析",
+    "name": "公司名称",
+    "activity": "近期动态",
+    "strength": "优势",
+    "weakness": "劣势",
+    "threat_level": "威胁级别",
+    "no_data": "暂无竞争数据",
+    "last_seen": "最近：{date}"
+  },
+  "prediction": {
+    "title": "预测追踪",
+    "forecast": "预测内容",
+    "probability": "发生概率",
+    "horizon": "预测时段",
+    "status": "状态",
+    "pending": "追踪中",
+    "confirmed": "已确认",
+    "rejected": "未命中",
+    "accuracy": "预测准确率",
+    "no_predictions": "暂无预测数据"
+  },
+  "reports": {
+    "title": "报告",
+    "generate": "生成报告",
+    "generating": "生成中...",
+    "download": "下载",
+    "period": "时间范围",
+    "type": "报告类型",
+    "weekly": "周报",
+    "monthly": "月报",
+    "custom": "自定义",
+    "no_reports": "暂无报告",
+    "created_at": "创建时间"
+  },
+  "settings": {
+    "title": "设置",
+    "language": "语言",
+    "refresh_interval": "自动刷新间隔",
+    "notifications": "通知",
+    "threshold": "告警阈值",
+    "save": "保存",
+    "saved": "已保存",
+    "api_key": "API 密钥"
+  },
+  "common": {
+    "loading": "加载中...",
+    "error": "发生错误",
+    "retry": "重试",
+    "cancel": "取消",
+    "close": "关闭",
+    "back": "返回",
+    "high": "高",
+    "medium": "中",
+    "low": "低"
+  }
+}
+

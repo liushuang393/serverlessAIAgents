@@ -97,9 +97,7 @@ class WorldState:
     _action_handlers: dict[str, Callable[[dict[str, Any], dict[str, Any]], dict[str, Any]]] = field(
         default_factory=dict
     )
-    _logger: logging.Logger = field(
-        default_factory=lambda: logging.getLogger("agentflow.world_model.state")
-    )
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.world_model.state"))
 
     def add_state(
         self,
@@ -259,7 +257,10 @@ class WorldState:
             if not prediction.is_valid:
                 return False, {
                     "error": "制約違反",
-                    "violations": [v.model_dump() for v in (prediction.constraint_result.violations if prediction.constraint_result else [])],
+                    "violations": [
+                        v.model_dump()
+                        for v in (prediction.constraint_result.violations if prediction.constraint_result else [])
+                    ],
                 }
 
             new_state = prediction.predicted_state
@@ -379,4 +380,3 @@ __all__ = [
     "WorldState",
     "WorldStateSnapshot",
 ]
-

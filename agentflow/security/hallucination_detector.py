@@ -42,13 +42,13 @@ if TYPE_CHECKING:
 class IssueType(str, Enum):
     """问题类型."""
 
-    FACTUAL_ERROR = "factual_error"        # 事实错误
-    TEMPORAL_ERROR = "temporal_error"      # 时间错误
-    NUMERICAL_ERROR = "numerical_error"    # 数字错误
-    CITATION_ERROR = "citation_error"      # 引用错误
-    LOGICAL_ERROR = "logical_error"        # 逻辑错误
+    FACTUAL_ERROR = "factual_error"  # 事实错误
+    TEMPORAL_ERROR = "temporal_error"  # 时间错误
+    NUMERICAL_ERROR = "numerical_error"  # 数字错误
+    CITATION_ERROR = "citation_error"  # 引用错误
+    LOGICAL_ERROR = "logical_error"  # 逻辑错误
     UNSUPPORTED_CLAIM = "unsupported_claim"  # 无依据声明
-    CONTRADICTION = "contradiction"        # 自相矛盾
+    CONTRADICTION = "contradiction"  # 自相矛盾
 
 
 class Severity(str, Enum):
@@ -111,18 +111,12 @@ class DetectionResult:
     @property
     def is_reliable(self) -> bool:
         """是否可靠（无高严重度问题）."""
-        return all(
-            issue.severity not in (Severity.HIGH, Severity.CRITICAL)
-            for issue in self.issues
-        )
+        return all(issue.severity not in (Severity.HIGH, Severity.CRITICAL) for issue in self.issues)
 
     @property
     def has_critical_issues(self) -> bool:
         """是否有严重问题."""
-        return any(
-            issue.severity == Severity.CRITICAL
-            for issue in self.issues
-        )
+        return any(issue.severity == Severity.CRITICAL for issue in self.issues)
 
     def to_dict(self) -> dict[str, Any]:
         """转换为字典."""
@@ -273,32 +267,32 @@ class HallucinationDetector:
         # 计算可信度评分
         result.issues = issues
         result.confidence_score = self._calculate_confidence(issues)
-        result.needs_human_review = (
-            result.confidence_score < self._config.human_review_threshold
-        )
+        result.needs_human_review = result.confidence_score < self._config.human_review_threshold
 
         return result
 
     def _check_patterns(self, text: str) -> list[Issue]:
         """检查幻觉模式."""
-        issues = []
+        issues: list[Issue] = []
 
         for pattern, issue_type in self.HALLUCINATION_PATTERNS:
             matches = re.findall(pattern, text)
             for match in matches:
-                issues.append(Issue(
-                    type=IssueType.UNSUPPORTED_CLAIM,
-                    description=f"检测到可能的幻觉模式: {issue_type}",
-                    severity=Severity.MEDIUM,
-                    location=match if isinstance(match, str) else str(match),
-                    suggestion="建议添加具体来源或修改为更谨慎的表述",
-                ))
+                issues.append(
+                    Issue(
+                        type=IssueType.UNSUPPORTED_CLAIM,
+                        description=f"检测到可能的幻觉模式: {issue_type}",
+                        severity=Severity.MEDIUM,
+                        location=match if isinstance(match, str) else str(match),
+                        suggestion="建议添加具体来源或修改为更谨慎的表述",
+                    )
+                )
 
         return issues
 
     def _check_dates(self, text: str) -> list[Issue]:
         """检查日期合理性."""
-        issues = []
+        issues: list[Issue] = []
         current_year = datetime.now().year
 
         for pattern in self.DATE_PATTERNS:
@@ -311,29 +305,33 @@ class HallucinationDetector:
 
                     # 检查未来日期
                     if year > current_year:
-                        issues.append(Issue(
-                            type=IssueType.TEMPORAL_ERROR,
-                            description=f"日期指向未来: {match}",
-                            severity=Severity.HIGH,
-                            location=match,
-                            suggestion="请验证日期是否正确",
-                        ))
+                        issues.append(
+                            Issue(
+                                type=IssueType.TEMPORAL_ERROR,
+                                description=f"日期指向未来: {match}",
+                                severity=Severity.HIGH,
+                                location=match,
+                                suggestion="请验证日期是否正确",
+                            )
+                        )
 
                     # 检查过于久远的日期（可能是打字错误）
                     elif year < 1900:
-                        issues.append(Issue(
-                            type=IssueType.TEMPORAL_ERROR,
-                            description=f"日期异常久远: {match}",
-                            severity=Severity.MEDIUM,
-                            location=match,
-                            suggestion="请确认年份是否正确",
-                        ))
+                        issues.append(
+                            Issue(
+                                type=IssueType.TEMPORAL_ERROR,
+                                description=f"日期异常久远: {match}",
+                                severity=Severity.MEDIUM,
+                                location=match,
+                                suggestion="请确认年份是否正确",
+                            )
+                        )
 
         return issues
 
     def _check_numbers(self, text: str) -> list[Issue]:
         """检查数值合理性."""
-        issues = []
+        issues: list[Issue] = []
 
         # 检查百分比
         percentages = re.findall(r"(\d+(?:\.\d+)?)%", text)
@@ -341,13 +339,15 @@ class HallucinationDetector:
             value = float(pct)
             if value > 100:
                 # 某些场景可以超过100%，但标记为需要注意
-                issues.append(Issue(
-                    type=IssueType.NUMERICAL_ERROR,
-                    description=f"百分比超过100%: {pct}%",
-                    severity=Severity.LOW,
-                    location=f"{pct}%",
-                    suggestion="请确认数值是否正确（某些场景可能合理）",
-                ))
+                issues.append(
+                    Issue(
+                        type=IssueType.NUMERICAL_ERROR,
+                        description=f"百分比超过100%: {pct}%",
+                        severity=Severity.LOW,
+                        location=f"{pct}%",
+                        suggestion="请确认数值是否正确（某些场景可能合理）",
+                    )
+                )
 
         return issues
 
@@ -374,12 +374,14 @@ class HallucinationDetector:
         for pos, neg in negation_pairs:
             # 如果上下文说"是"但输出说"不是"
             if pos in context_lower and neg in output_lower:
-                issues.append(Issue(
-                    type=IssueType.CONTRADICTION,
-                    description=f"与上下文可能存在矛盾（{pos} vs {neg}）",
-                    severity=Severity.MEDIUM,
-                    suggestion="请检查输出与上下文是否一致",
-                ))
+                issues.append(
+                    Issue(
+                        type=IssueType.CONTRADICTION,
+                        description=f"与上下文可能存在矛盾（{pos} vs {neg}）",
+                        severity=Severity.MEDIUM,
+                        suggestion="请检查输出与上下文是否一致",
+                    )
+                )
 
         return issues
 
@@ -393,12 +395,14 @@ class HallucinationDetector:
 
         # 使用自定义事实检查器
         if self._fact_checker and not self._fact_checker(output):
-            issues.append(Issue(
-                type=IssueType.FACTUAL_ERROR,
-                description="事实检查未通过",
-                severity=Severity.HIGH,
-                suggestion="输出与已知事实不符",
-            ))
+            issues.append(
+                Issue(
+                    type=IssueType.FACTUAL_ERROR,
+                    description="事实检查未通过",
+                    severity=Severity.HIGH,
+                    suggestion="输出与已知事实不符",
+                )
+            )
 
         return issues
 
@@ -408,7 +412,7 @@ class HallucinationDetector:
         context: str | None,
     ) -> list[Issue]:
         """使用LLM辅助验证."""
-        issues = []
+        issues: list[Issue] = []
 
         if not self._llm:
             return issues
@@ -418,7 +422,7 @@ class HallucinationDetector:
 输出内容:
 {output}
 
-{f'参考上下文: {context}' if context else ''}
+{f"参考上下文: {context}" if context else ""}
 
 请只回答以下格式:
 - 是否可能有幻觉: 是/否
@@ -431,12 +435,14 @@ class HallucinationDetector:
             content = response.get("content", str(response))
 
             if "是" in content and "幻觉" in content:
-                issues.append(Issue(
-                    type=IssueType.UNSUPPORTED_CLAIM,
-                    description="LLM辅助验证发现潜在问题",
-                    severity=Severity.MEDIUM,
-                    suggestion="建议人工复核",
-                ))
+                issues.append(
+                    Issue(
+                        type=IssueType.UNSUPPORTED_CLAIM,
+                        description="LLM辅助验证发现潜在问题",
+                        severity=Severity.MEDIUM,
+                        suggestion="建议人工复核",
+                    )
+                )
 
         except Exception as e:
             self._logger.warning(f"LLM验证失败: {e}")
@@ -456,10 +462,7 @@ class HallucinationDetector:
             Severity.CRITICAL: 0.50,
         }
 
-        total_penalty = sum(
-            severity_weights.get(issue.severity, 0.1)
-            for issue in issues
-        )
+        total_penalty = sum(severity_weights.get(issue.severity, 0.1) for issue in issues)
 
         return max(0.0, 1.0 - total_penalty)
 
@@ -471,4 +474,3 @@ class HallucinationDetector:
             issue_type: 问题类型标识
         """
         self.HALLUCINATION_PATTERNS.append((pattern, issue_type))
-

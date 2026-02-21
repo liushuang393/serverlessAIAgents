@@ -89,12 +89,14 @@ class MaintenanceConfig:
     """メンテナンス支援設定."""
 
     # 差分抽出設定
-    diff_categories: list[str] = field(default_factory=lambda: [
-        DiffCategory.INTERFACE,
-        DiffCategory.FIELD,
-        DiffCategory.RULE,
-        DiffCategory.EXCEPTION,
-    ])
+    diff_categories: list[str] = field(
+        default_factory=lambda: [
+            DiffCategory.INTERFACE,
+            DiffCategory.FIELD,
+            DiffCategory.RULE,
+            DiffCategory.EXCEPTION,
+        ]
+    )
     ignore_whitespace: bool = True
     min_change_significance: float = 0.1
 
@@ -167,14 +169,10 @@ class MaintenanceAgent(ResilientAgent):
             elif action == "full":
                 result = await self._handle_full_analysis(input_data)
             else:
-                return MaintenanceResponse(
-                    error=f"Unknown action: {action}"
-                ).model_dump()
+                return MaintenanceResponse(error=f"Unknown action: {action}").model_dump()
 
             result.action = action
-            result.execution_time_ms = (
-                datetime.now() - start_time
-            ).total_seconds() * 1000
+            result.execution_time_ms = (datetime.now() - start_time).total_seconds() * 1000
 
             return result.model_dump()
 
@@ -182,17 +180,13 @@ class MaintenanceAgent(ResilientAgent):
             self._logger.exception("MaintenanceAgent エラー: %s", e)
             return MaintenanceResponse(error=str(e)).model_dump()
 
-    async def _handle_diff(
-        self, input_data: dict[str, Any]
-    ) -> MaintenanceResponse:
+    async def _handle_diff(self, input_data: dict[str, Any]) -> MaintenanceResponse:
         """差分分析."""
         old_doc = input_data.get("old_document", "")
         new_doc = input_data.get("new_document", "")
 
         if not old_doc or not new_doc:
-            return MaintenanceResponse(
-                error="old_document と new_document が必要です"
-            )
+            return MaintenanceResponse(error="old_document と new_document が必要です")
 
         diffs = await self.analyze_diff(old_doc, new_doc)
 
@@ -200,21 +194,14 @@ class MaintenanceAgent(ResilientAgent):
             diffs=[self._diff_to_dict(d) for d in diffs],
         )
 
-    async def _handle_impact(
-        self, input_data: dict[str, Any]
-    ) -> MaintenanceResponse:
+    async def _handle_impact(self, input_data: dict[str, Any]) -> MaintenanceResponse:
         """影響分析."""
         diffs = input_data.get("diffs", [])
 
         if not diffs:
-            return MaintenanceResponse(
-                error="diffs が必要です"
-            )
+            return MaintenanceResponse(error="diffs が必要です")
 
-        diff_results = [
-            DiffResult(**d) if isinstance(d, dict) else d
-            for d in diffs
-        ]
+        diff_results = [DiffResult(**d) if isinstance(d, dict) else d for d in diffs]
 
         impact = await self.analyze_impact(diff_results)
 
@@ -223,17 +210,12 @@ class MaintenanceAgent(ResilientAgent):
             coverage_info=impact.coverage_info,
         )
 
-    async def _handle_generate(
-        self, input_data: dict[str, Any]
-    ) -> MaintenanceResponse:
+    async def _handle_generate(self, input_data: dict[str, Any]) -> MaintenanceResponse:
         """成果物生成."""
         diffs = input_data.get("diffs", [])
         impact = input_data.get("impact", {})
 
-        diff_results = [
-            DiffResult(**d) if isinstance(d, dict) else d
-            for d in diffs
-        ]
+        diff_results = [DiffResult(**d) if isinstance(d, dict) else d for d in diffs]
 
         impact_result = ImpactAnalysis(**impact) if impact else ImpactAnalysis()
 
@@ -244,17 +226,13 @@ class MaintenanceAgent(ResilientAgent):
             coverage_info=impact_result.coverage_info,
         )
 
-    async def _handle_full_analysis(
-        self, input_data: dict[str, Any]
-    ) -> MaintenanceResponse:
+    async def _handle_full_analysis(self, input_data: dict[str, Any]) -> MaintenanceResponse:
         """完全分析（差分→影響→成果物）."""
         old_doc = input_data.get("old_document", "")
         new_doc = input_data.get("new_document", "")
 
         if not old_doc or not new_doc:
-            return MaintenanceResponse(
-                error="old_document と new_document が必要です"
-            )
+            return MaintenanceResponse(error="old_document と new_document が必要です")
 
         # 1. 差分分析
         diffs = await self.analyze_diff(old_doc, new_doc)
@@ -272,9 +250,7 @@ class MaintenanceAgent(ResilientAgent):
             coverage_info=impact.coverage_info,
         )
 
-    async def analyze_diff(
-        self, old_doc: str, new_doc: str
-    ) -> list[DiffResult]:
+    async def analyze_diff(self, old_doc: str, new_doc: str) -> list[DiffResult]:
         """仕様差分分析.
 
         Args:
@@ -290,11 +266,15 @@ class MaintenanceAgent(ResilientAgent):
         old_lines = old_doc.splitlines()
         new_lines = new_doc.splitlines()
 
-        diff_lines = list(unified_diff(
-            old_lines, new_lines,
-            fromfile="old", tofile="new",
-            lineterm="",
-        ))
+        diff_lines = list(
+            unified_diff(
+                old_lines,
+                new_lines,
+                fromfile="old",
+                tofile="new",
+                lineterm="",
+            )
+        )
 
         # 2. 差分を分類
         current_section = ""
@@ -309,33 +289,35 @@ class MaintenanceAgent(ResilientAgent):
                 category = self._classify_change(old_value)
                 severity = self._estimate_severity(old_value, category)
 
-                diffs.append(DiffResult(
-                    category=category,
-                    severity=severity,
-                    old_value=old_value,
-                    new_value="",
-                    location=current_section,
-                    description=f"削除: {old_value[:50]}...",
-                ))
+                diffs.append(
+                    DiffResult(
+                        category=category,
+                        severity=severity,
+                        old_value=old_value,
+                        new_value="",
+                        location=current_section,
+                        description=f"削除: {old_value[:50]}...",
+                    )
+                )
             elif line.startswith("+") and not line.startswith("+++"):
                 new_value = line[1:]
                 category = self._classify_change(new_value)
                 severity = self._estimate_severity(new_value, category)
 
-                diffs.append(DiffResult(
-                    category=category,
-                    severity=severity,
-                    old_value="",
-                    new_value=new_value,
-                    location=current_section,
-                    description=f"追加: {new_value[:50]}...",
-                ))
+                diffs.append(
+                    DiffResult(
+                        category=category,
+                        severity=severity,
+                        old_value="",
+                        new_value=new_value,
+                        location=current_section,
+                        description=f"追加: {new_value[:50]}...",
+                    )
+                )
 
         return diffs
 
-    async def analyze_impact(
-        self, diffs: list[DiffResult]
-    ) -> ImpactAnalysis:
+    async def analyze_impact(self, diffs: list[DiffResult]) -> ImpactAnalysis:
         """影響範囲分析.
 
         Args:
@@ -350,24 +332,16 @@ class MaintenanceAgent(ResilientAgent):
         for diff in diffs:
             # インターフェース変更
             if diff.category == DiffCategory.INTERFACE:
-                impact.affected_apis.append(
-                    f"API変更の可能性: {diff.description}"
-                )
+                impact.affected_apis.append(f"API変更の可能性: {diff.description}")
 
             # フィールド変更
             if diff.category == DiffCategory.FIELD:
-                impact.affected_tables.append(
-                    f"DB変更の可能性: {diff.description}"
-                )
+                impact.affected_tables.append(f"DB変更の可能性: {diff.description}")
 
             # ルール変更
             if diff.category == DiffCategory.RULE:
-                impact.affected_modules.append(
-                    f"ビジネスロジック変更: {diff.description}"
-                )
-                impact.affected_tests.append(
-                    f"テスト更新必要: {diff.description}"
-                )
+                impact.affected_modules.append(f"ビジネスロジック変更: {diff.description}")
+                impact.affected_tests.append(f"テスト更新必要: {diff.description}")
 
             analyzed_sources.append(diff.location)
 
@@ -400,9 +374,7 @@ class MaintenanceAgent(ResilientAgent):
 
         # 1. Release Note
         if self._config.generate_release_note:
-            deliverables["release_note"] = self._generate_release_note(
-                diffs, impact
-            )
+            deliverables["release_note"] = self._generate_release_note(diffs, impact)
 
         # 2. FAQ更新草案
         if self._config.generate_faq_draft:
@@ -410,15 +382,11 @@ class MaintenanceAgent(ResilientAgent):
 
         # 3. 研修通知草案
         if self._config.generate_training_notice:
-            deliverables["training_notice"] = self._generate_training_notice(
-                diffs
-            )
+            deliverables["training_notice"] = self._generate_training_notice(diffs)
 
         # 4. テスト観点リスト
         if self._config.generate_test_checklist:
-            deliverables["test_checklist"] = self._generate_test_checklist(
-                diffs, impact
-            )
+            deliverables["test_checklist"] = self._generate_test_checklist(diffs, impact)
 
         # カバレッジ提示を追加
         if self._config.require_coverage_disclosure:
@@ -451,9 +419,7 @@ class MaintenanceAgent(ResilientAgent):
 
         return DiffSeverity.LOW
 
-    def _generate_release_note(
-        self, diffs: list[DiffResult], impact: ImpactAnalysis
-    ) -> str:
+    def _generate_release_note(self, diffs: list[DiffResult], impact: ImpactAnalysis) -> str:
         """Release Note 生成."""
         lines = [
             "# Release Note",
@@ -475,11 +441,13 @@ class MaintenanceAgent(ResilientAgent):
         for d in diffs[:10]:
             lines.append(f"- [{d.category}] {d.description}")
 
-        lines.extend([
-            "",
-            "## 影響範囲",
-            "",
-        ])
+        lines.extend(
+            [
+                "",
+                "## 影響範囲",
+                "",
+            ]
+        )
 
         if impact.affected_apis:
             lines.append("### API")
@@ -503,14 +471,16 @@ class MaintenanceAgent(ResilientAgent):
         ]
 
         for i, d in enumerate(diffs[:5], 1):
-            lines.extend([
-                f"## Q{i}: {d.category}に関する変更",
-                "",
-                "**A**: [回答を記入]",
-                "",
-                f"参考: {d.description}",
-                "",
-            ])
+            lines.extend(
+                [
+                    f"## Q{i}: {d.category}に関する変更",
+                    "",
+                    "**A**: [回答を記入]",
+                    "",
+                    f"参考: {d.description}",
+                    "",
+                ]
+            )
 
         return "\n".join(lines)
 
@@ -525,7 +495,7 @@ class MaintenanceAgent(ResilientAgent):
 
 ### 主な変更点
 
-{chr(10).join(f'- {d.description}' for d in diffs[:5])}
+{chr(10).join(f"- {d.description}" for d in diffs[:5])}
 
 ### 対象者
 - [対象部門を記入]
@@ -534,9 +504,7 @@ class MaintenanceAgent(ResilientAgent):
 - [日程を記入]
 """
 
-    def _generate_test_checklist(
-        self, diffs: list[DiffResult], impact: ImpactAnalysis
-    ) -> str:
+    def _generate_test_checklist(self, diffs: list[DiffResult], impact: ImpactAnalysis) -> str:
         """テスト観点リスト生成."""
         lines = [
             "# テスト観点リスト",
@@ -552,11 +520,13 @@ class MaintenanceAgent(ResilientAgent):
             lines.append(f"{i}. {status} {d.category}: {d.description}")
 
         if impact.affected_tests:
-            lines.extend([
-                "",
-                "## 関連テストケース",
-                "",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "## 関連テストケース",
+                    "",
+                ]
+            )
             for test in impact.affected_tests:
                 lines.append(f"- {test}")
 

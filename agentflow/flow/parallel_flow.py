@@ -138,18 +138,18 @@ class EnhancedParallelNode(FlowNode):
     def _aggregate_results(
         self,
         ctx: FlowContext,
-        results: list[tuple[str, dict[str, Any] | Exception] | Exception],
+        results: list[tuple[str, dict[str, Any] | Exception] | BaseException],
     ) -> NodeResult:
         """結果を集約."""
         success_results: dict[str, Any] = {}
         errors: dict[str, str] = {}
 
         for item in results:
-            if isinstance(item, Exception):
+            if isinstance(item, BaseException):
                 errors["unknown"] = str(item)
             else:
                 task_id, result = item
-                if isinstance(result, Exception):
+                if isinstance(result, BaseException):
                     errors[task_id] = str(result)
                 else:
                     success_results[task_id] = result
@@ -176,7 +176,7 @@ class EnhancedParallelNode(FlowNode):
 
         # 集約戦略
         if self.aggregation == AggregationStrategy.FIRST:
-            first_result = next(iter(success_results.values()), {})
+            first_result: dict[str, Any] = next(iter(success_results.values()), {})
             return NodeResult(
                 success=True,
                 data={"result": first_result, "all_results": success_results},
@@ -211,9 +211,7 @@ class EnhancedParallelNode(FlowNode):
         input_mapper: Callable[[FlowContext], dict[str, Any]] | None = None,
     ) -> None:
         """タスクを追加."""
-        self.tasks.append(
-            ParallelTask(id=task_id, agent=agent, timeout=timeout, input_mapper=input_mapper)
-        )
+        self.tasks.append(ParallelTask(id=task_id, agent=agent, timeout=timeout, input_mapper=input_mapper))
 
 
 class ParallelFlowBuilder:
@@ -232,7 +230,8 @@ class ParallelFlowBuilder:
         input_mapper: Callable[[FlowContext], dict[str, Any]] | None = None,
     ) -> ParallelFlowBuilder:
         """Agentを追加."""
-        tid = task_id or getattr(agent, "name", agent.__class__.__name__)
+        raw_task_id = task_id or getattr(agent, "name", agent.__class__.__name__)
+        tid = str(raw_task_id)
         self._node.add_task(tid, agent, timeout, input_mapper)
         return self
 

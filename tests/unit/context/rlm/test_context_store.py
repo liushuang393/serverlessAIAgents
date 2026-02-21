@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for RLM context_store module."""
 
 import pytest

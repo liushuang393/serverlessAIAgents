@@ -1,30 +1,7 @@
 {
   "entries": [
     {
-      "id": "13b74be0-1c6f-4387-8579-c8c5d9192a45",
-      "title": "AgentFlow開発規約（外部公開インターフェース版）",
-      "body": "AgentFlowの開発規約、公開抽象インターフェース、Engine/Workflow選定、SSE進捗追跡、HITL承認、人間参加、Agent間連携パターンを日本語で統合したガイド。参照: code-rules/CLAUDE.md",
-      "tags": [
-        "agentflow",
-        "開発規約",
-        "公開API",
-        "workflow",
-        "hitl",
-        "sse"
-      ],
-      "source": "document",
-      "source_id": "code-rules/CLAUDE.md",
-      "timestamp": "2026-02-11T00:00:00+00:00",
-      "updated_at": null,
-      "importance": 0.95,
-      "access_count": 1,
-      "metadata": {
-        "language": "ja",
-        "scope": "project_guideline"
-      }
-    },
-    {
-      "id": "7e7bde43-63ef-4e6e-a1b8-728f7cc00d03",
+      "id": "c5894772-5db9-4bdc-b997-444de88cbb33",
       "title": "タイトル1",
       "body": "内容1",
       "tags": [
@@ -32,14 +9,14 @@
       ],
       "source": "document",
       "source_id": null,
-      "timestamp": "2026-01-21T08:43:42.396225+00:00",
+      "timestamp": "2026-02-20T07:55:32.340722+00:00",
       "updated_at": null,
       "importance": 0.5,
       "access_count": 1,
       "metadata": {}
     },
     {
-      "id": "b78a0a59-fe92-4e4b-8bf7-b05ef533000f",
+      "id": "154633c9-5c56-464e-83fa-d7bbc91cac2f",
       "title": "タイトル2",
       "body": "内容2",
       "tags": [
@@ -47,14 +24,14 @@
       ],
       "source": "document",
       "source_id": null,
-      "timestamp": "2026-01-21T08:43:42.396251+00:00",
+      "timestamp": "2026-02-20T07:55:32.340733+00:00",
       "updated_at": null,
       "importance": 0.5,
       "access_count": 1,
       "metadata": {}
     },
     {
-      "id": "eb73bf71-ba1e-4d31-96bf-b1f4541fe988",
+      "id": "99ed8608-c3fc-407f-be93-e7d28a971f0f",
       "title": "FAQ質問1",
       "body": "FAQ回答1",
       "tags": [
@@ -62,14 +39,14 @@
       ],
       "source": "document",
       "source_id": null,
-      "timestamp": "2026-01-21T08:43:42.459107+00:00",
+      "timestamp": "2026-02-20T07:55:32.343543+00:00",
       "updated_at": null,
       "importance": 0.5,
       "access_count": 1,
       "metadata": {}
     },
     {
-      "id": "cffcd1d1-e1df-4351-8f7c-e518d7888ebc",
+      "id": "3dc70f49-1396-473a-841b-1827f045206c",
       "title": "FAQ質問2",
       "body": "FAQ回答2",
       "tags": [
@@ -77,12 +54,12 @@
       ],
       "source": "document",
       "source_id": null,
-      "timestamp": "2026-01-21T08:43:42.459137+00:00",
+      "timestamp": "2026-02-20T07:55:32.343558+00:00",
       "updated_at": null,
       "importance": 0.5,
       "access_count": 1,
       "metadata": {}
     }
   ],
-  "saved_at": "2026-02-11T00:00:00+00:00"
+  "saved_at": "2026-02-20T07:55:32.343649+00:00"
 }

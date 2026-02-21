@@ -72,25 +72,14 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str) -> None:
     """WebSocket エンドポイント - リアルタイム双方向通信."""
     access_token = websocket.query_params.get("access_token")
     authorization_header = websocket.headers.get("authorization")
-    authorization = authorization_header or (
-        f"Bearer {access_token}" if access_token else None
-    )
+    authorization = authorization_header or (f"Bearer {access_token}" if access_token else None)
     session_token = websocket.cookies.get("session_token")
 
     proxy_user = websocket.headers.get("x-forwarded-user") or websocket.headers.get("x-auth-user")
-    proxy_name = (
-        websocket.headers.get("x-forwarded-preferred-username")
-        or websocket.headers.get("x-auth-name")
-    )
+    proxy_name = websocket.headers.get("x-forwarded-preferred-username") or websocket.headers.get("x-auth-name")
     proxy_role = websocket.headers.get("x-forwarded-groups") or websocket.headers.get("x-auth-role")
-    proxy_department = (
-        websocket.headers.get("x-forwarded-department")
-        or websocket.headers.get("x-auth-department")
-    )
-    proxy_position = (
-        websocket.headers.get("x-forwarded-title")
-        or websocket.headers.get("x-auth-position")
-    )
+    proxy_department = websocket.headers.get("x-forwarded-department") or websocket.headers.get("x-auth-department")
+    proxy_position = websocket.headers.get("x-forwarded-title") or websocket.headers.get("x-auth-position")
 
     user = await resolve_user(
         authorization=authorization,

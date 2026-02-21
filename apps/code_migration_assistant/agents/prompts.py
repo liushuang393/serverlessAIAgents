@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """共通システムプロンプト定義.
 
 agents改善.md §2.1 に基づく全 Agent 共通プロンプトと、個別プロンプト断片を管理する。
@@ -51,21 +50,16 @@ CODE_TRANSFORMATION_PROMPT = build_system_prompt(
     "適用した規則を rule_hits に記録すること。"
 )
 
-TEST_SYNTHESIS_PROMPT = build_system_prompt(
-    "テスト生成工程では差分検証に必要な Golden Master を生成し、証拠を残す。"
-)
+TEST_SYNTHESIS_PROMPT = build_system_prompt("テスト生成工程では差分検証に必要な Golden Master を生成し、証拠を残す。")
 
 DIFFERENTIAL_VERIFICATION_PROMPT = build_system_prompt(
     "差分検証工程では新旧の差分を分類して事実報告のみを行う。修正案は出さない。"
 )
 
 QUALITY_GATE_PROMPT = build_system_prompt(
-    "品質裁定工程では差分から責任工程を判定し、次に動かすAgentを指示する。\n"
-    "修正は行わない。"
+    "品質裁定工程では差分から責任工程を判定し、次に動かすAgentを指示する。\n修正は行わない。"
 )
 
 LIMITED_FIXER_PROMPT = build_system_prompt(
-    "限定修正工程では QualityGate の裁定に従い、指定範囲外を変更しない。\n"
-    "影響拡大を禁止する。"
+    "限定修正工程では QualityGate の裁定に従い、指定範囲外を変更しない。\n影響拡大を禁止する。"
 )
-

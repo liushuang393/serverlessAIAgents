@@ -193,9 +193,7 @@ class ComplexityScorer(AgentBlock):
         total_loc = sum(fc.total_loc for fc in file_complexities)
 
         # 保守性指数計算
-        maintainability = self._calculate_maintainability_index(
-            average_ccn, total_loc, total_functions
-        )
+        maintainability = self._calculate_maintainability_index(average_ccn, total_loc, total_functions)
 
         # 技術的負債（日数）
         tech_debt = self._calculate_tech_debt(hotspots)
@@ -255,52 +253,35 @@ class ComplexityScorer(AgentBlock):
             ),
         ]
 
-    def _identify_hotspots(
-        self, file_complexities: list[FileComplexity]
-    ) -> list[FunctionComplexity]:
+    def _identify_hotspots(self, file_complexities: list[FileComplexity]) -> list[FunctionComplexity]:
         """ホットスポットを特定."""
         all_functions = []
         for fc in file_complexities:
             all_functions.extend(fc.functions)
 
         # CCNでソートして上位を返す
-        hotspots = [
-            f for f in all_functions
-            if f.metrics.cyclomatic_complexity > self._ccn_threshold
-        ]
-        hotspots.sort(
-            key=lambda f: f.metrics.cyclomatic_complexity, reverse=True
-        )
+        hotspots = [f for f in all_functions if f.metrics.cyclomatic_complexity > self._ccn_threshold]
+        hotspots.sort(key=lambda f: f.metrics.cyclomatic_complexity, reverse=True)
         return hotspots[:20]
 
-    def _generate_recommendations(
-        self, hotspots: list[FunctionComplexity]
-    ) -> list[str]:
+    def _generate_recommendations(self, hotspots: list[FunctionComplexity]) -> list[str]:
         """リファクタリング推奨を生成."""
         recommendations = []
 
         for func in hotspots[:5]:
             if func.metrics.cyclomatic_complexity > 20:
-                recommendations.append(
-                    f"[優先度高] {func.function_name}を複数の小さな関数に分割"
-                )
+                recommendations.append(f"[優先度高] {func.function_name}を複数の小さな関数に分割")
             elif func.metrics.nesting_depth > 4:
-                recommendations.append(
-                    f"[優先度中] {func.function_name}のネスト深度を削減（ガード節使用）"
-                )
+                recommendations.append(f"[優先度中] {func.function_name}のネスト深度を削減（ガード節使用）")
             elif func.metrics.parameters_count > 5:
-                recommendations.append(
-                    f"[優先度低] {func.function_name}のパラメータをオブジェクトに集約"
-                )
+                recommendations.append(f"[優先度低] {func.function_name}のパラメータをオブジェクトに集約")
 
         if not recommendations:
             recommendations.append("複雑度は許容範囲内です")
 
         return recommendations
 
-    def _calculate_maintainability_index(
-        self, avg_ccn: float, loc: int, functions: int
-    ) -> float:
+    def _calculate_maintainability_index(self, avg_ccn: float, loc: int, functions: int) -> float:
         """保守性指数を計算（0-100）."""
         # 簡易計算: MI = 171 - 5.2*ln(V) - 0.23*G - 16.2*ln(LOC)
         # ここでは簡略化
@@ -313,9 +294,7 @@ class ComplexityScorer(AgentBlock):
         mi = max(0, min(100, mi))
         return round(mi, 1)
 
-    def _calculate_tech_debt(
-        self, hotspots: list[FunctionComplexity]
-    ) -> float:
+    def _calculate_tech_debt(self, hotspots: list[FunctionComplexity]) -> float:
         """技術的負債を日数で計算."""
         debt_hours = 0.0
         for func in hotspots:

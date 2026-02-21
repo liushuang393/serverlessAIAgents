@@ -90,9 +90,7 @@ class Episode:
             outcome=EpisodeOutcome(data.get("outcome", "unknown")),
             quality_score=data.get("quality_score", 0.0),
             duration_seconds=data.get("duration_seconds", 0.0),
-            timestamp=datetime.fromisoformat(data["timestamp"])
-            if "timestamp" in data
-            else datetime.now(UTC),
+            timestamp=datetime.fromisoformat(data["timestamp"]) if "timestamp" in data else datetime.now(UTC),
             metadata=data.get("metadata", {}),
         )
 
@@ -373,7 +371,7 @@ class EpisodicMemory:
         if norm1 == 0 or norm2 == 0:
             return 0.0
 
-        return dot_product / (norm1 * norm2)
+        return float(dot_product / (norm1 * norm2))
 
     def _enforce_capacity(self) -> None:
         """容量制限を適用."""

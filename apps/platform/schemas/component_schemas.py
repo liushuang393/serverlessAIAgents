@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 class ComponentType(str, Enum):
@@ -37,9 +40,7 @@ class ComponentCreateRequest(BaseModel):
     description: str = Field(default="", max_length=1000, description="説明")
     category: str = Field(default="general", description="カテゴリ")
     tags: list[str] = Field(default_factory=list, description="タグ")
-    visibility: ComponentVisibility = Field(
-        default=ComponentVisibility.PRIVATE, description="可視性"
-    )
+    visibility: ComponentVisibility = Field(default=ComponentVisibility.PRIVATE, description="可視性")
     source_code: str | None = Field(default=None, description="ソースコード")
     source_path: str | None = Field(default=None, description="ソースパス")
     config: dict[str, Any] = Field(default_factory=dict, description="設定")
@@ -102,6 +103,4 @@ class ComponentDependencyGraph(BaseModel):
     component_id: str = Field(..., description="コンポーネントID")
     dependencies: list[str] = Field(default_factory=list, description="直接依存")
     dependents: list[str] = Field(default_factory=list, description="被依存")
-    transitive_dependencies: list[str] = Field(
-        default_factory=list, description="推移的依存"
-    )
+    transitive_dependencies: list[str] = Field(default_factory=list, description="推移的依存")

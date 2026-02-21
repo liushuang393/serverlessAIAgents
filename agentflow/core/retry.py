@@ -98,29 +98,21 @@ class RetryableAgent(AgentBlock):
 
             except Exception as e:
                 last_exception = e
-                self._logger.warning(
-                    f"Attempt {attempt} failed: {type(e).__name__}: {e}"
-                )
+                self._logger.warning(f"Attempt {attempt} failed: {type(e).__name__}: {e}")
 
                 # リトライ対象の例外かチェック
-                if not any(
-                    isinstance(e, exc_type)
-                    for exc_type in self._retry_config.retry_on_exceptions
-                ):
+                if not any(isinstance(e, exc_type) for exc_type in self._retry_config.retry_on_exceptions):
                     self._logger.exception(f"Non-retryable exception: {type(e).__name__}")
                     raise
 
                 # 最後の試行の場合は例外を再送出
                 if attempt >= self._retry_config.max_attempts:
-                    self._logger.exception(
-                        f"Max attempts ({self._retry_config.max_attempts}) reached"
-                    )
+                    self._logger.exception(f"Max attempts ({self._retry_config.max_attempts}) reached")
                     raise
 
                 # 待機時間を計算
                 wait_time = min(
-                    self._retry_config.wait_min
-                    * (self._retry_config.wait_multiplier ** (attempt - 1)),
+                    self._retry_config.wait_min * (self._retry_config.wait_multiplier ** (attempt - 1)),
                     self._retry_config.wait_max,
                 )
                 self._logger.info(f"Waiting {wait_time:.2f}s before retry...")
@@ -148,4 +140,3 @@ class RetryableAgent(AgentBlock):
         """
         msg = "Subclass must implement _run_impl method"
         raise NotImplementedError(msg)
-

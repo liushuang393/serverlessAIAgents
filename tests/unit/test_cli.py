@@ -167,7 +167,6 @@ class TestSkillsCommand:
         assert "delete" in result.output.lower()
         assert "mount" in result.output.lower()
 
-
     def test_skills_list(self) -> None:
         """skills list コマンドが動作することをテスト."""
         runner = CliRunner()

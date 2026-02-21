@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { ChatResponse, ChatRequest, SessionListResponse } from './types';
+import type { ChatHistoryResponse, ChatRequest, ChatResponse, SessionListResponse } from './types';
 
 export const chatApi = {
     sendMessage: (data: ChatRequest) => apiClient.post<ChatResponse>('/chat', data),
@@ -13,5 +13,5 @@ export const chatApi = {
         apiClient.delete<{ success: boolean }>(`/chat/sessions/${sessionId}`),
 
     getHistory: (sessionId: string) =>
-        apiClient.get<{ messages: any[] }>(`/chat/history?session_id=${sessionId}`),
+        apiClient.get<ChatHistoryResponse>(`/chat/history?session_id=${sessionId}`),
 };

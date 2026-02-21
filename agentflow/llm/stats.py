@@ -22,4 +22,3 @@ class ModelStats:
     avg_latency_ms: float = 0.0
     last_used: float = 0.0
     error_rate: float = 0.0
-

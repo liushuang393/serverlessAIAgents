@@ -1,12 +1,12 @@
 """重要度自動調整のテスト."""
 
-import pytest
 from datetime import datetime, timedelta
+
+import pytest
 
 from agentflow.memory.importance_adjuster import ImportanceAdjuster
 from agentflow.memory.types import (
     MemoryEntry,
-    MemorySemanticLevel,
     MemoryStability,
     MemoryType,
 )
@@ -122,7 +122,6 @@ class TestImportanceAdjuster:
             importance_score=0.5,
         )
 
-        original_score = entry.importance_score
         new_score = await adjuster.adjust_importance(entry)
 
         assert entry.importance_score == new_score
@@ -176,9 +175,7 @@ class TestForgetPolicy:
             access_boost_factor=0.1,
         )
 
-    def test_identify_forgettable_low_importance(
-        self, adjuster: ImportanceAdjuster
-    ) -> None:
+    def test_identify_forgettable_low_importance(self, adjuster: ImportanceAdjuster) -> None:
         """低重要度記憶の忘却判定テスト."""
         # 低重要度、古い、負の強化
         entry = MemoryEntry(
@@ -195,9 +192,7 @@ class TestForgetPolicy:
         forgettable = adjuster.identify_forgettable([entry])
         assert "forget_1" in forgettable
 
-    def test_identify_forgettable_not_high_importance(
-        self, adjuster: ImportanceAdjuster
-    ) -> None:
+    def test_identify_forgettable_not_high_importance(self, adjuster: ImportanceAdjuster) -> None:
         """高重要度記憶は忘却されないテスト."""
         entry = MemoryEntry(
             id="keep_1",
@@ -212,9 +207,7 @@ class TestForgetPolicy:
         forgettable = adjuster.identify_forgettable([entry])
         assert "keep_1" not in forgettable
 
-    def test_identify_forgettable_not_crystallized(
-        self, adjuster: ImportanceAdjuster
-    ) -> None:
+    def test_identify_forgettable_not_crystallized(self, adjuster: ImportanceAdjuster) -> None:
         """結晶化された記憶は忘却されないテスト."""
         entry = MemoryEntry(
             id="crystal_1",
@@ -230,9 +223,7 @@ class TestForgetPolicy:
         forgettable = adjuster.identify_forgettable([entry])
         assert "crystal_1" not in forgettable
 
-    def test_identify_forgettable_not_recent(
-        self, adjuster: ImportanceAdjuster
-    ) -> None:
+    def test_identify_forgettable_not_recent(self, adjuster: ImportanceAdjuster) -> None:
         """最近の記憶は忘却されないテスト."""
         entry = MemoryEntry(
             id="recent_1",
@@ -258,9 +249,7 @@ class TestReinforcementLearning:
         return ImportanceAdjuster(decay_constant=30.0, access_boost_factor=0.1)
 
     @pytest.mark.asyncio
-    async def test_apply_reinforcement_positive(
-        self, adjuster: ImportanceAdjuster
-    ) -> None:
+    async def test_apply_reinforcement_positive(self, adjuster: ImportanceAdjuster) -> None:
         """正の強化フィードバックのテスト."""
         entry = MemoryEntry(
             id="reinforce_1",
@@ -278,9 +267,7 @@ class TestReinforcementLearning:
         assert entry.reinforcement_score > original_score
 
     @pytest.mark.asyncio
-    async def test_apply_reinforcement_negative(
-        self, adjuster: ImportanceAdjuster
-    ) -> None:
+    async def test_apply_reinforcement_negative(self, adjuster: ImportanceAdjuster) -> None:
         """負の強化フィードバックのテスト."""
         entry = MemoryEntry(
             id="reinforce_2",
@@ -298,9 +285,7 @@ class TestReinforcementLearning:
         assert entry.reinforcement_score < original_score
 
     @pytest.mark.asyncio
-    async def test_apply_reinforcement_stability_upgrade(
-        self, adjuster: ImportanceAdjuster
-    ) -> None:
+    async def test_apply_reinforcement_stability_upgrade(self, adjuster: ImportanceAdjuster) -> None:
         """強化による安定性アップグレードのテスト."""
         entry = MemoryEntry(
             id="upgrade_1",
@@ -324,9 +309,7 @@ class TestReinforcementLearning:
         ]
 
     @pytest.mark.asyncio
-    async def test_apply_reinforcement_clamps_score(
-        self, adjuster: ImportanceAdjuster
-    ) -> None:
+    async def test_apply_reinforcement_clamps_score(self, adjuster: ImportanceAdjuster) -> None:
         """強化スコアが範囲内に収まるテスト."""
         entry = MemoryEntry(
             id="clamp_1",
@@ -343,4 +326,3 @@ class TestReinforcementLearning:
 
         # スコアは1.0を超えない
         assert entry.reinforcement_score <= 1.0
-

@@ -1,0 +1,42 @@
+{
+  "error": {
+    "not_found": "見つかりません",
+    "unauthorized": "認証が必要です",
+    "forbidden": "アクセス権限がありません",
+    "server_error": "サーバーエラーが発生しました",
+    "timeout": "タイムアウトしました",
+    "bad_request": "リクエストが不正です",
+    "conflict": "データが競合しています",
+    "validation": "入力値が正しくありません: {detail}"
+  },
+  "status": {
+    "processing": "処理中...",
+    "complete": "完了",
+    "failed": "失敗",
+    "pending": "待機中",
+    "cancelled": "キャンセル済み",
+    "retrying": "再試行中..."
+  },
+  "agent": {
+    "running": "エージェント実行中...",
+    "complete": "エージェント完了",
+    "failed": "エージェントが失敗しました",
+    "timeout": "エージェントがタイムアウトしました"
+  },
+  "flow": {
+    "start": "フロー開始",
+    "complete": "フロー完了",
+    "failed": "フローが失敗しました",
+    "node_start": "ノード開始: {name}",
+    "node_complete": "ノード完了: {name}",
+    "node_failed": "ノード失敗: {name}"
+  },
+  "hitl": {
+    "approval_required": "承認が必要です",
+    "approved": "承認されました",
+    "rejected": "却下されました",
+    "expired": "承認期限が切れました"
+  },
+  "_note": "common.* はUIラベルのため各Appフロントエンドの locales/*.json に定義する。Python側はここに持たない。"
+}
+

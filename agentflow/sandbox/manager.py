@@ -30,10 +30,14 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.sandbox.base import SandboxConfig, SandboxState
 from agentflow.sandbox.lifecycle import ManagedSandbox
+
+
+if TYPE_CHECKING:
+    import builtins
 
 
 logger = logging.getLogger(__name__)
@@ -160,7 +164,7 @@ class SandboxManager:
         self,
         max_idle_seconds: int = 3600,
         include_stopped: bool = True,
-    ) -> list[str]:
+    ) -> builtins.list[str]:
         """非アクティブなサンドボックスをクリーンアップ.
 
         Args:
@@ -247,10 +251,7 @@ class SandboxManager:
             "states": states,
             "total_executions": total_executions,
             "total_execution_ms": total_execution_ms,
-            "auto_cleanup_active": (
-                self._cleanup_task is not None
-                and not self._cleanup_task.done()
-            ),
+            "auto_cleanup_active": (self._cleanup_task is not None and not self._cleanup_task.done()),
         }
 
     async def shutdown(self) -> None:
@@ -280,4 +281,3 @@ def get_sandbox_manager() -> SandboxManager:
     if _manager is None:
         _manager = SandboxManager()
     return _manager
-

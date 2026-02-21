@@ -170,7 +170,7 @@ class PostgresBackend(MemoryBackend):
 
         async with self._pool.acquire() as conn:
             result = await conn.execute("DELETE FROM memories WHERE id = $1", entry_id)
-            return result.split()[-1] != "0"
+            return str(result).split()[-1] != "0"
 
     async def search(
         self,
@@ -232,7 +232,7 @@ class PostgresBackend(MemoryBackend):
 
         async with self._pool.acquire() as conn:
             result = await conn.fetchval("SELECT COUNT(*) FROM memories WHERE id = $1", entry_id)
-            return result > 0
+            return int(result) > 0
 
     async def count(self, topic: str | None = None) -> int:
         """記憶の数を取得."""
@@ -245,7 +245,7 @@ class PostgresBackend(MemoryBackend):
                 result = await conn.fetchval("SELECT COUNT(*) FROM memories WHERE topic = $1", topic)
             else:
                 result = await conn.fetchval("SELECT COUNT(*) FROM memories")
-            return result
+            return int(result)
 
     async def clear(self, topic: str | None = None) -> int:
         """記憶をクリア."""
@@ -258,7 +258,7 @@ class PostgresBackend(MemoryBackend):
                 result = await conn.execute("DELETE FROM memories WHERE topic = $1", topic)
             else:
                 result = await conn.execute("DELETE FROM memories")
-            return int(result.split()[-1])
+            return int(str(result).split()[-1])
 
     def get_status(self) -> dict[str, Any]:
         """バックエンドの状態を取得."""

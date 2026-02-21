@@ -5,22 +5,25 @@
  */
 
 import { NavLink, Outlet } from 'react-router-dom';
-
-/** ナビゲーション項目 */
-const NAV_ITEMS = [
-  { to: '/', icon: '📊', label: 'Dashboard' },
-  { to: '/apps', icon: '📦', label: 'Apps' },
-  { to: '/agents', icon: '🤖', label: 'Agents' },
-  { to: '/agent-orchestration', icon: '🔀', label: 'Orchestration' },
-  { to: '/agent-patterns', icon: '🧬', label: 'Patterns' },
-  { to: '/skills', icon: '🧩', label: 'Skills' },
-  { to: '/rag', icon: '📚', label: 'RAG' },
-  { to: '/mcp', icon: '🔌', label: 'MCP' },
-  { to: '/cli', icon: '📖', label: 'CLI' },
-  { to: '/settings', icon: '⚙️', label: 'Settings' },
-] as const;
+import { LocaleSwitcher, useI18n } from '@/i18n';
 
 export function Layout() {
+  const { t } = useI18n();
+
+  /** ロケール変化時に再計算されるナビゲーション項目 */
+  const navItems = [
+    { to: '/',                    icon: '📊', label: t('nav.dashboard') },
+    { to: '/apps',                icon: '📦', label: t('nav.apps') },
+    { to: '/agents',              icon: '🤖', label: t('nav.agents') },
+    { to: '/agent-orchestration', icon: '🔀', label: t('nav.orchestration') },
+    { to: '/agent-patterns',      icon: '🧬', label: t('nav.patterns') },
+    { to: '/skills',              icon: '🧩', label: t('nav.skills') },
+    { to: '/rag',                 icon: '📚', label: t('nav.rag') },
+    { to: '/mcp',                 icon: '🔌', label: t('nav.mcp') },
+    { to: '/cli',                 icon: '📖', label: t('nav.cli') },
+    { to: '/settings',            icon: '⚙️', label: t('nav.settings') },
+  ];
+
   return (
     <div className="flex min-h-screen">
       {/* サイドバー */}
@@ -38,7 +41,7 @@ export function Layout() {
 
         {/* ナビゲーション */}
         <nav className="flex-1 p-3 space-y-1">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -51,7 +54,7 @@ export function Layout() {
                 }`
               }
             >
-              <span className="text-base">{item.icon}</span>
+              <span aria-hidden="true" className="text-base">{item.icon}</span>
               {item.label}
             </NavLink>
           ))}
@@ -59,6 +62,8 @@ export function Layout() {
 
         {/* フッター */}
         <div className="p-4 border-t border-slate-800">
+          {/* 言語切り替え */}
+          <LocaleSwitcher className="w-full bg-transparent border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-500 cursor-pointer mb-2" />
           <p className="text-[10px] text-slate-600 text-center">
             AgentFlow Platform © 2024
           </p>

@@ -1,18 +1,16 @@
-# -*- coding: utf-8 -*-
 """Observability 模块的完整测试.
 
 覆盖 logging.py, metrics.py, tracing.py, sentry_integration.py, setup.py
 """
 
-import asyncio
 import json
 import logging
 import tempfile
-import threading
 import time
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 class TestLogLevel(unittest.TestCase):
@@ -159,7 +157,7 @@ class TestSetupLogging(unittest.TestCase):
 
     def test_setup_logging(self):
         """设置日志测试."""
-        from agentflow.observability.logging import setup_logging, LogLevel
+        from agentflow.observability.logging import LogLevel, setup_logging
 
         setup_logging(level=LogLevel.DEBUG, format="json")
         root_logger = logging.getLogger()
@@ -216,7 +214,7 @@ class TestCounter(unittest.TestCase):
 
         counter = Counter("test", "Test")
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             counter.inc(-1)
 
     def test_properties(self):
@@ -400,7 +398,7 @@ class TestSetupMetrics(unittest.TestCase):
 
     def test_setup_and_get(self):
         """设置和获取测试."""
-        from agentflow.observability.metrics import setup_metrics, get_metrics
+        from agentflow.observability.metrics import get_metrics, setup_metrics
 
         collector = setup_metrics(prefix="myapp")
         self.assertEqual(collector._prefix, "myapp")
@@ -541,7 +539,8 @@ class TestTracer(unittest.TestCase):
 
         try:
             with tracer.span("failing-operation") as span:
-                raise ValueError("Test error")
+                msg = "Test error"
+                raise ValueError(msg)
         except ValueError:
             pass
 
@@ -555,9 +554,8 @@ class TestTracer(unittest.TestCase):
 
         tracer = Tracer("test")
 
-        with tracer.span("parent") as parent:
-            with tracer.span("child") as child:
-                pass
+        with tracer.span("parent") as parent, tracer.span("child") as child:
+            pass
 
         self.assertEqual(child.context.parent_span_id, parent.span_id)
 
@@ -605,7 +603,7 @@ class TestSetupTracing(unittest.TestCase):
 
     def test_setup_and_get(self):
         """设置和获取测试."""
-        from agentflow.observability.tracing import setup_tracing, get_tracer
+        from agentflow.observability.tracing import get_tracer, setup_tracing
 
         tracer = setup_tracing(service_name="myapp")
         self.assertEqual(tracer._service_name, "myapp")
@@ -679,4 +677,3 @@ class TestSetupObservability(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

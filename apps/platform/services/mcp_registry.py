@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """MCP Registry Service.
 
 `.agentflow/protocols/mcp.yaml` を読み書きし、Platform から
@@ -8,14 +7,16 @@ MCP サーバー設定を管理できるようにする。
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import yaml
 
-from apps.platform.schemas.provisioning_schemas import (
-    MCPLazyLoadingPatchRequest,
-    MCPServerUpsertRequest,
-)
+
+if TYPE_CHECKING:
+    from apps.platform.schemas.provisioning_schemas import (
+        MCPLazyLoadingPatchRequest,
+        MCPServerUpsertRequest,
+    )
 
 
 class MCPRegistryService:

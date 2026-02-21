@@ -68,8 +68,8 @@ export default function Canvas() {
 
       const agentData = event.dataTransfer.getData('application/reactflow');
       if (!agentData) {
-return;
-}
+        return;
+      }
 
       const agent = JSON.parse(agentData);
       const position = {

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Quick API テスト.
 
 create_flow, Flow, MemoryAccessor のテスト。
@@ -148,4 +147,3 @@ class TestFlowCleanup:
 
         await flow.cleanup()
         assert flow._initialized is False
-

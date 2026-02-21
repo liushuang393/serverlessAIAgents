@@ -3,7 +3,6 @@
 Spring Boot (MVC/Service/Repository) の構造的な生成をサポート。
 """
 
-import re
 from typing import Any
 
 from apps.code_migration_assistant.adapters.base import AST, ExecutionResult
@@ -28,7 +27,7 @@ class SpringBootAdapter(JavaAdapter):
         合体したコードブロックを返す。TransformationAgent がこれを見て分割する。
         """
         lines: list[str] = []
-        
+
         # 1. Entity
         lines.append(f"// --- [FILE: model/{class_name}Entity.java] ---")
         lines.append("package com.migration.generated.model;")
@@ -39,12 +38,12 @@ class SpringBootAdapter(JavaAdapter):
         lines.append("")
         lines.append("@Entity")
         lines.append("@Data")
-        lines.append(f"@Table(name = \"{ast.program_id.lower()}\")")
+        lines.append(f'@Table(name = "{ast.program_id.lower()}")')
         lines.append(f"public class {class_name}Entity {{")
         lines.append("    @Id")
         lines.append("    @GeneratedValue(strategy = GenerationType.IDENTITY)")
         lines.append("    private Long id;")
-        
+
         for var in ast.variables:
             java_type = self.get_type_mapping(var.get("type", ""), var.get("pic_clause", ""))
             java_name = self._to_camel_case(var["name"])
@@ -95,7 +94,7 @@ class SpringBootAdapter(JavaAdapter):
         lines.append("import lombok.RequiredArgsConstructor;")
         lines.append("")
         lines.append("@RestController")
-        lines.append(f"@RequestMapping(\"/api/{ast.program_id.lower()}\")")
+        lines.append(f'@RequestMapping("/api/{ast.program_id.lower()}")')
         lines.append("@RequiredArgsConstructor")
         lines.append(f"public class {class_name}Controller {{")
         lines.append(f"    private final {class_name}Service service;")
@@ -110,7 +109,7 @@ class SpringBootAdapter(JavaAdapter):
 
     def compile(self, code: str) -> tuple[bool, list[str]]:
         """Spring Bootコードのコンパイル.
-        
+
         注: 現状の簡易コンパイルではマルチファイル対応が難しいため、
         構文チェックのみパスさせるか、ダミーを返す。
         """

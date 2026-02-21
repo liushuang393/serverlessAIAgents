@@ -16,8 +16,6 @@ from agentflow.core.registry import ProtocolRegistry, Registry
 class ConcreteRegistry(Registry[str]):
     """テスト用の具象レジストリ."""
 
-    pass
-
 
 class TestRegistry:
     """Registry 基類のテスト."""
@@ -145,4 +143,3 @@ class TestProtocolRegistry:
         r1 = ProtocolRegistry()
         r2 = ProtocolRegistry()
         assert r1 is r2
-

@@ -106,9 +106,7 @@ TestFlow.start(ProcessNode())
                 print(f"Exception: {result.exception}")
                 import traceback
 
-                traceback.print_exception(
-                    type(result.exception), result.exception, result.exception.__traceback__
-                )
+                traceback.print_exception(type(result.exception), result.exception, result.exception.__traceback__)
 
         assert result.exit_code == 0
         assert "success" in result.output.lower() or "processed" in result.output.lower()

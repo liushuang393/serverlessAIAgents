@@ -8,7 +8,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass
@@ -36,7 +36,9 @@ class TokenBucketRateLimiter:
         "github": RateLimitConfig(max_tokens=10, refill_rate=10 / 60, name="GitHub"),
         "arxiv": RateLimitConfig(max_tokens=3, refill_rate=1 / 3, name="arXiv"),
         "stackoverflow": RateLimitConfig(
-            max_tokens=5, refill_rate=1 / 288, name="StackOverflow",
+            max_tokens=5,
+            refill_rate=1 / 288,
+            name="StackOverflow",
         ),
         "devto": RateLimitConfig(max_tokens=10, refill_rate=1.0, name="DEV.to"),
     }
@@ -47,9 +49,14 @@ class TokenBucketRateLimiter:
 
     def _get_bucket(self, source: str) -> _Bucket:
         if source not in self._buckets:
-            config = self.PRESETS.get(source, RateLimitConfig(
-                max_tokens=10, refill_rate=1.0, name=source,
-            ))
+            config = self.PRESETS.get(
+                source,
+                RateLimitConfig(
+                    max_tokens=10,
+                    refill_rate=1.0,
+                    name=source,
+                ),
+            )
             self._buckets[source] = _Bucket(
                 tokens=config.max_tokens,
                 max_tokens=config.max_tokens,
@@ -69,7 +76,9 @@ class TokenBucketRateLimiter:
             # 1トークンがリフィルされるまでの待機時間
             wait_time = (1.0 - bucket.tokens) / bucket.refill_rate
             self._logger.debug(
-                "レート制限: %s - %.1f秒待機", source, wait_time,
+                "レート制限: %s - %.1f秒待機",
+                source,
+                wait_time,
             )
             await asyncio.sleep(min(wait_time, 5.0))
 

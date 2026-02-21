@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Platform プロビジョニング関連スキーマ."""
 
 from __future__ import annotations
@@ -31,6 +30,45 @@ class PluginBindingInput(BaseModel):
     id: str = Field(..., min_length=1, max_length=120, description="プラグインID")
     version: str = Field(..., min_length=1, max_length=50, description="要求バージョン")
     config: dict[str, Any] = Field(default_factory=dict, description="プラグイン設定")
+
+
+class EvolutionValidatorQueueInput(BaseModel):
+    """Evolution validator queue input."""
+
+    backend: Literal["redis_stream", "none"] = Field(default="redis_stream")
+    redis_url: str | None = None
+    stream_key: str = Field(default="evolution:validate:stream")
+    consumer_group: str = Field(default="evolution-validator-v1")
+    max_retries: int = Field(default=5, ge=0, le=20)
+
+
+class EvolutionRetrievalInput(BaseModel):
+    """Evolution retrieval threshold input."""
+
+    high_confidence_skip_threshold: float = Field(default=0.82, ge=0.0, le=1.0)
+    high_complexity_threshold: float = Field(default=0.70, ge=0.0, le=1.0)
+    low_confidence_threshold: float = Field(default=0.55, ge=0.0, le=1.0)
+
+
+class EvolutionSuspicionInput(BaseModel):
+    """Evolution suspicion policy input."""
+
+    max_age_days: int = Field(default=30, ge=1, le=3650)
+    failure_streak_threshold: int = Field(default=2, ge=1, le=20)
+    performance_drop_ratio: float = Field(default=0.2, ge=0.01, le=1.0)
+
+
+class EvolutionConfigInput(BaseModel):
+    """Evolution config input for app provisioning."""
+
+    enabled: bool = True
+    strategy_service_url: str | None = None
+    validator_queue: EvolutionValidatorQueueInput = Field(default_factory=EvolutionValidatorQueueInput)
+    scope_policy: list[Literal["tenant_app", "tenant_product_line", "global_verified"]] = Field(
+        default_factory=lambda: ["tenant_app", "tenant_product_line", "global_verified"]
+    )
+    retrieval: EvolutionRetrievalInput = Field(default_factory=EvolutionRetrievalInput)
+    suspicion: EvolutionSuspicionInput = Field(default_factory=EvolutionSuspicionInput)
 
 
 class AppCreateRequest(BaseModel):
@@ -66,6 +104,10 @@ class AppCreateRequest(BaseModel):
     security_mode: Literal["read_only", "approval_required", "autonomous"] | None = Field(
         default=None,
         description="セキュリティ実行モード（assistant 向け）",
+    )
+    evolution: EvolutionConfigInput | None = Field(
+        default=None,
+        description="Evolution V2 設定",
     )
     plugin_bindings: list[PluginBindingInput] = Field(
         ...,
@@ -129,9 +171,7 @@ class AppCreateRequest(BaseModel):
     vector_db_url: str | None = Field(default=None, description="VectorDB URL")
     vector_db_collection: str | None = Field(default=None, description="VectorDB 既定コレクション")
     vector_db_api_key: str | None = Field(default=None, description="VectorDB API キー")
-    vector_db_api_key_env: str | None = Field(
-        default=None, description="VectorDB API キーの env 名"
-    )
+    vector_db_api_key_env: str | None = Field(default=None, description="VectorDB API キーの env 名")
 
     write_framework_env: bool = Field(
         default=True,

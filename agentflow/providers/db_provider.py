@@ -17,7 +17,7 @@ Agent/サービスは具体的なDB実装を知る必要がありません。
 """
 
 import logging
-from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 
 
 if TYPE_CHECKING:
@@ -136,9 +136,7 @@ class MockDBProvider:
         self._data[table].append(data)
         return data
 
-    async def update(
-        self, table: str, data: dict[str, Any], filters: dict[str, Any]
-    ) -> list[dict[str, Any]]:
+    async def update(self, table: str, data: dict[str, Any], filters: dict[str, Any]) -> list[dict[str, Any]]:
         """Mock update."""
         updated = []
         for row in self._data.get(table, []):
@@ -152,10 +150,7 @@ class MockDBProvider:
         if table not in self._data:
             return 0
         original = len(self._data[table])
-        self._data[table] = [
-            r for r in self._data[table]
-            if not all(r.get(k) == v for k, v in filters.items())
-        ]
+        self._data[table] = [r for r in self._data[table] if not all(r.get(k) == v for k, v in filters.items())]
         return original - len(self._data[table])
 
     async def execute(self, sql: str, params: list[Any] | None = None) -> Any:
@@ -183,6 +178,7 @@ class SupabaseDBProvider:
         """Supabase に接続."""
         try:
             from supabase import create_client
+
             self._client = create_client(self._url, self._key)
             logger.info(f"Connected to Supabase: {self._url[:30]}...")
         except ImportError:
@@ -201,29 +197,25 @@ class SupabaseDBProvider:
         limit: int | None = None,
     ) -> list[dict[str, Any]]:
         """Select."""
-        query = self._client.table(table).select(
-            ",".join(columns) if columns else "*"
-        )
+        query = self._client.table(table).select(",".join(columns) if columns else "*")
         if filters:
             for k, v in filters.items():
                 query = query.eq(k, v)
         if limit:
             query = query.limit(limit)
-        return query.execute().data
+        return cast("list[dict[str, Any]]", query.execute().data)
 
     async def insert(self, table: str, data: dict[str, Any]) -> dict[str, Any]:
         """Insert."""
         result = self._client.table(table).insert(data).execute()
         return result.data[0] if result.data else {}
 
-    async def update(
-        self, table: str, data: dict[str, Any], filters: dict[str, Any]
-    ) -> list[dict[str, Any]]:
+    async def update(self, table: str, data: dict[str, Any], filters: dict[str, Any]) -> list[dict[str, Any]]:
         """Update."""
         query = self._client.table(table).update(data)
         for k, v in filters.items():
             query = query.eq(k, v)
-        return query.execute().data
+        return cast("list[dict[str, Any]]", query.execute().data)
 
     async def delete(self, table: str, filters: dict[str, Any]) -> int:
         """Delete."""
@@ -273,11 +265,10 @@ def get_db(
     from agentflow.runtime import get_env, resolve_settings
 
     settings = resolve_settings(context) if context is not None else None
+    provider: DBProvider
 
     # Supabase
-    supabase_url = (
-        settings.supabase_url if settings else get_env("SUPABASE_URL", context=context)
-    )
+    supabase_url = settings.supabase_url if settings else get_env("SUPABASE_URL", context=context)
     supabase_key = (
         (settings.supabase_key if settings else None)
         or get_env("SUPABASE_KEY", context=context)
@@ -291,17 +282,13 @@ def get_db(
         return provider
 
     # Turso (TODO: 実装)
-    turso_url = (
-        settings.turso_url if settings else get_env("TURSO_URL", context=context)
-    )
+    turso_url = settings.turso_url if settings else get_env("TURSO_URL", context=context)
     turso_token = get_env("TURSO_AUTH_TOKEN", context=context)
     if turso_url and turso_token:
         logger.warning("Turso provider not yet implemented, using mock")
 
     # DATABASE_URL (PostgreSQL/SQLite) - TODO: 実装
-    db_url = (
-        settings.database_url if settings else get_env("DATABASE_URL", context=context)
-    )
+    db_url = settings.database_url if settings else get_env("DATABASE_URL", context=context)
     if db_url:
         logger.warning(f"DATABASE_URL detected but not implemented: {db_url[:20]}...")
 

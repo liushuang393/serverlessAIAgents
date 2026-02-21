@@ -121,7 +121,8 @@ def capture_exception(
                 else:
                     scope.set_extra(key, value)
 
-            return sentry_sdk.capture_exception(error)
+            event_id = sentry_sdk.capture_exception(error)
+            return str(event_id) if event_id else None
 
     except Exception as e:
         logger.warning(f"Failed to capture exception in Sentry: {e}")
@@ -163,7 +164,8 @@ def capture_message(
                 else:
                     scope.set_extra(key, value)
 
-            return sentry_sdk.capture_message(message, level=level)
+            event_id = sentry_sdk.capture_message(message, level=level)
+            return str(event_id) if event_id else None
 
     except Exception as e:
         logger.warning(f"Failed to capture message in Sentry: {e}")
@@ -262,9 +264,7 @@ def sentry_trace(name: str | None = None) -> Callable[[F], F]:
             try:
                 import sentry_sdk
 
-                with sentry_sdk.start_transaction(
-                    op="function", name=transaction_name
-                ):
+                with sentry_sdk.start_transaction(op="function", name=transaction_name):
                     return await func(*args, **kwargs)
             except ImportError:
                 return await func(*args, **kwargs)
@@ -277,9 +277,7 @@ def sentry_trace(name: str | None = None) -> Callable[[F], F]:
             try:
                 import sentry_sdk
 
-                with sentry_sdk.start_transaction(
-                    op="function", name=transaction_name
-                ):
+                with sentry_sdk.start_transaction(op="function", name=transaction_name):
                     return func(*args, **kwargs)
             except ImportError:
                 return func(*args, **kwargs)
@@ -301,4 +299,3 @@ def is_sentry_initialized() -> bool:
         初期化されている場合 True
     """
     return _sentry_initialized
-

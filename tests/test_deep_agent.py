@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """DeepAgent パターンのテスト.
 
 モジュール構成:
@@ -195,9 +194,7 @@ class TestContextCompressor:
     async def test_compact_within_limit(self) -> None:
         """制限内メッセージは圧縮しない."""
         compressor = ContextCompressor()
-        messages = [
-            AgentMessage(from_agent="a", to_agent="b", content="短いメッセージ")
-        ]
+        messages = [AgentMessage(from_agent="a", to_agent="b", content="短いメッセージ")]
         result, stats = await compressor.compact_messages(messages, max_tokens=1000)
         assert len(result) == 1
         assert abs(stats.compression_ratio - 1.0) < 0.01
@@ -210,9 +207,7 @@ class TestContextCompressor:
             AgentMessage(from_agent="a", msg_type=MessageType.RESULT, content="重要"),
             AgentMessage(from_agent="b", msg_type=MessageType.NOTIFY, content="通知"),
         ]
-        result, _ = await compressor.compact_messages(
-            messages, max_tokens=50, strategy=CompactionStrategy.SELECTIVE
-        )
+        result, _ = await compressor.compact_messages(messages, max_tokens=50, strategy=CompactionStrategy.SELECTIVE)
         # 重要度の高いRESULTが優先される
         assert any(m.msg_type == MessageType.RESULT for m in result)
 
@@ -262,10 +257,7 @@ class TestDeepAgentCoordinator:
     async def test_execute_with_context(self) -> None:
         """コンテキスト付き実行テスト."""
         coordinator = DeepAgentCoordinator()
-        result = await coordinator.execute(
-            "データ分析",
-            context={"data_source": "test.csv"}
-        )
+        result = await coordinator.execute("データ分析", context={"data_source": "test.csv"})
         assert result["status"] in ("completed", "partial")
 
     @pytest.mark.asyncio
@@ -275,4 +267,3 @@ class TestDeepAgentCoordinator:
         await coordinator.execute("タスク1")
         # 圧縮実行（エラーなく完了すればOK）
         await coordinator.compress_context(max_tokens=2000)
-

@@ -1,5 +1,29 @@
 # Messaging Hub - マルチプラットフォーム AI チャットボット
 
+
+<!-- README_REQUIRED_SECTIONS_START -->
+## 機能概要
+- Telegram / Slack / Discord を統合し、単一ボット基盤で運用可能。
+- セッション管理とチャネル変換を標準化し、チャット処理を共通化。
+- WebSocket 連携でリアルタイム配信とオペレーション監視を実現。
+
+## 優位性
+- マルチチャネル拡張時も中核ロジックを再利用でき、実装コストが低い。
+- LLM/Agent 層を疎結合化し、プロバイダー切替に強い。
+- 監査・セキュリティ運用を前提にした business 向け設計。
+
+## 技術アーキテクチャ
+- Channel Adapter → Message Gateway → ChatBot Skill → Agent 層の直列構成。
+- FastAPI API と WebSocket Hub を同居させ、運用統制を単純化。
+- AgentFlow マルチエージェント機能を応答生成・制御に適用。
+
+## アプリケーション階層
+- Channel Layer: 各メッセージプラットフォーム接続。
+- Routing Layer: 受信正規化・意図分配・セッション統合。
+- Agent Layer: 応答生成・ツール実行・調停。
+- Delivery Layer: 返信送信・モニタリング・監査。
+<!-- README_REQUIRED_SECTIONS_END -->
+
 統一メッセージプラットフォームゲートウェイ。[moltbot](https://github.com/moltbot/moltbot) に類似した実装で、Telegram、Slack、Discord などのマルチプラットフォーム統合をサポート。
 
 ## Product Position
@@ -29,6 +53,22 @@ Message Platforms (Telegram/Slack/Discord)
     Agent/Coordinator (AI 処理)
            ↓
     WebSocket Hub → Frontend (Live Canvas)
+```
+
+## 🛠️ 開発環境（インストール: 統一手順）
+
+この app 単体ではなく、リポジトリ全体の開発環境をセットアップします。
+
+```bash
+cd <repo-root>
+bash setup_dev.sh
+```
+
+手動で行う場合:
+
+```bash
+conda activate agentflow
+pip install -e ".[dev,apps]"
 ```
 
 ## 🛠️ クイックスタート
@@ -74,6 +114,13 @@ python -m apps.messaging_hub.main
 - **API ドキュメント**: http://localhost:8004/docs
 - **ヘルスチェック**: http://localhost:8004/health
 - **WebSocket**: ws://localhost:8004/ws
+
+## 📦 本番ビルド/発布（Platform に統一）
+
+```bash
+conda activate agentflow
+python -m apps.platform.main publish ./apps/messaging_hub --target docker
+```
 
 ## 🤖 プラットフォーム設定
 

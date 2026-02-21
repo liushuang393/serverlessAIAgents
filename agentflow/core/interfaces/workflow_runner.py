@@ -64,7 +64,7 @@ class IWorkflowRunner(Protocol):
         """
         ...
 
-    async def run_stream(
+    def run_stream(
         self,
         workflow: WorkflowDefinition,
         inputs: dict[str, Any],
@@ -86,7 +86,7 @@ class IWorkflowRunner(Protocol):
         """
         ...
 
-    async def run_debug(
+    def run_debug(
         self,
         workflow: WorkflowDefinition,
         inputs: dict[str, Any],

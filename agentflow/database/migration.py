@@ -22,16 +22,18 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+from typing import TYPE_CHECKING
 
 from alembic import context
-from sqlalchemy import create_engine, pool, text
+from sqlalchemy import MetaData, create_engine, pool, text
 from sqlalchemy import inspect as sa_inspect
-from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
-from sqlalchemy import MetaData
-
 from agentflow.database.url_utils import is_sqlite, to_async_url, to_sync_url
+
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Connection
 
 
 _logger = logging.getLogger("alembic.env")
@@ -90,10 +92,7 @@ class MigrationEnv:
         if alembic_url:
             return alembic_url
 
-        msg = (
-            f"DB URL が未設定: 環境変数 {self._db_url_env} 、"
-            "db_url_default、alembic.ini のいずれかを設定してください"
-        )
+        msg = f"DB URL が未設定: 環境変数 {self._db_url_env} 、db_url_default、alembic.ini のいずれかを設定してください"
         raise RuntimeError(msg)
 
     def auto_stamp_existing_db(self, connection: Connection) -> None:

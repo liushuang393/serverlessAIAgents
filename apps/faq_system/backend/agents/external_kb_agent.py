@@ -112,9 +112,7 @@ class ExternalKBAgent(ResilientAgent):
         question = input_data.get("question", "")
 
         if not question:
-            return ExternalKBResponse(
-                error="質問が指定されていません"
-            ).model_dump()
+            return ExternalKBResponse(error="質問が指定されていません").model_dump()
 
         await self._ensure_initialized()
 
@@ -129,9 +127,7 @@ class ExternalKBAgent(ResilientAgent):
             # 提案生成
             response.suggestions = self._generate_suggestions(question)
 
-            response.execution_time_ms = (
-                datetime.now() - start_time
-            ).total_seconds() * 1000
+            response.execution_time_ms = (datetime.now() - start_time).total_seconds() * 1000
 
             return response.model_dump()
 
@@ -142,9 +138,7 @@ class ExternalKBAgent(ResilientAgent):
                 error=str(e),
             ).model_dump()
 
-    async def run_stream(
-        self, input_data: dict[str, Any]
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def run_stream(self, input_data: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """ストリーム実行."""
         yield {"type": "progress", "progress": 0, "message": "処理中..."}
 

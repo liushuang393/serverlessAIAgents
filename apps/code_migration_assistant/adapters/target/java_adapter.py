@@ -58,8 +58,7 @@ class JavaAdapter(TargetLanguageAdapter):
 
         # BigDecimalが必要か判定
         needs_bigdecimal = any(
-            self.get_type_mapping(v.get("type", ""), v.get("pic_clause", "")) == "BigDecimal"
-            for v in ast.variables
+            self.get_type_mapping(v.get("type", ""), v.get("pic_clause", "")) == "BigDecimal" for v in ast.variables
         )
 
         if needs_bigdecimal:

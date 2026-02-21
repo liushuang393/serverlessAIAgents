@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 class QueryType(str, Enum):
     """Query type enum."""
+
     FAQ = "faq"
     SQL = "sql"
     HYBRID = "hybrid"
@@ -24,6 +25,7 @@ class QueryType(str, Enum):
 
 class ChartType(str, Enum):
     """Chart type enum."""
+
     BAR = "bar"
     LINE = "line"
     PIE = "pie"
@@ -34,6 +36,7 @@ class ChartType(str, Enum):
 @dataclass
 class FAQDocument:
     """FAQ document."""
+
     id: str
     question: str
     answer: str
@@ -45,6 +48,7 @@ class FAQDocument:
 @dataclass
 class SearchResult:
     """Search result."""
+
     documents: list[FAQDocument]
     scores: list[float]
     query: str
@@ -53,6 +57,7 @@ class SearchResult:
 @dataclass
 class SQLQueryResult:
     """SQL query result."""
+
     sql: str
     data: list[dict[str, Any]]
     columns: list[str]
@@ -64,6 +69,7 @@ class SQLQueryResult:
 @dataclass
 class ChartData:
     """Chart data for visualization."""
+
     chart_type: ChartType
     title: str
     data: dict[str, Any]
@@ -73,6 +79,7 @@ class ChartData:
 @dataclass
 class FAQResponse:
     """FAQ response."""
+
     answer: str
     query_type: QueryType
     sources: list[FAQDocument] = field(default_factory=list)
@@ -85,6 +92,7 @@ class FAQResponse:
 @dataclass
 class StreamEvent:
     """Stream event for real-time updates."""
+
     type: str
     data: dict[str, Any]
     timestamp: float = 0

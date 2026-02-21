@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Knowledge 模块的完整测试.
 
 覆盖 document_loader.py, rag_pipeline.py, hooks.py
@@ -8,9 +7,6 @@ import asyncio
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
 
 
 class TestDocumentChunk(unittest.TestCase):
@@ -195,10 +191,7 @@ Item1,Desc1,Extra1
             f.write(content)
             f.flush()
 
-            loader = CSVLoader(
-                content_columns=["description"],
-                metadata_columns=["name"]
-            )
+            loader = CSVLoader(content_columns=["description"], metadata_columns=["name"])
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
@@ -224,8 +217,9 @@ class TestJSONLoader(unittest.TestCase):
 
     def test_load_json_array(self):
         """加载 JSON 数组."""
-        from agentflow.knowledge.document_loader import JSONLoader
         import json
+
+        from agentflow.knowledge.document_loader import JSONLoader
 
         data = [
             {"name": "Item1", "content": "Content1"},
@@ -249,8 +243,9 @@ class TestJSONLoader(unittest.TestCase):
 
     def test_load_json_object(self):
         """加载单个 JSON 对象."""
-        from agentflow.knowledge.document_loader import JSONLoader
         import json
+
+        from agentflow.knowledge.document_loader import JSONLoader
 
         data = {"name": "SingleItem", "content": "SingleContent"}
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
@@ -269,8 +264,9 @@ class TestJSONLoader(unittest.TestCase):
 
     def test_load_jsonl(self):
         """加载 JSONL 文件."""
-        from agentflow.knowledge.document_loader import JSONLoader
         import json
+
+        from agentflow.knowledge.document_loader import JSONLoader
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
             f.write(json.dumps({"content": "Line1"}) + "\n")
@@ -383,9 +379,7 @@ class TestUniversalLoader(unittest.TestCase):
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
             try:
-                chunks = loop.run_until_complete(
-                    loader.load_directory(tmpdir, pattern="*.txt")
-                )
+                chunks = loop.run_until_complete(loader.load_directory(tmpdir, pattern="*.txt"))
                 self.assertEqual(len(chunks), 2)
             finally:
                 loop.close()
@@ -482,12 +476,7 @@ class TestRAGHook(unittest.TestCase):
         """工厂函数测试."""
         from agentflow.knowledge.hooks import use_rag
 
-        hook = use_rag(
-            collection="kb",
-            top_k=8,
-            min_similarity=0.4,
-            system_prompt="Custom prompt"
-        )
+        hook = use_rag(collection="kb", top_k=8, min_similarity=0.4, system_prompt="Custom prompt")
         self.assertEqual(hook._collection, "kb")
         self.assertEqual(hook._top_k, 8)
         self.assertEqual(hook._system_prompt, "Custom prompt")
@@ -514,4 +503,3 @@ class TestVectorSearchResult(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

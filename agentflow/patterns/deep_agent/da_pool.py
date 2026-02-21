@@ -18,7 +18,7 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from agentflow.patterns.deep_agent.da_models import (
     AgentMessage,
@@ -253,6 +253,73 @@ class AgentPool:
         self._skills = skills or []
         self._agents: dict[AgentType, BaseAgent] = {}
         self._message_bus: list[AgentMessage] = []
+        self._registered_agents: dict[str, Any] = {}
+        self._default_bindings: dict[str, dict[str, Any]] = {}
+
+    def register_agent(self, name: str, agent: Any) -> None:
+        """カスタムAgentを名前で登録.
+
+        Args:
+            name: Agent名
+            agent: Agentインスタンス
+        """
+        self._registered_agents[name] = agent
+
+    def list_agents(self) -> list[str]:
+        """登録済みAgent名の一覧を返す.
+
+        Returns:
+            Agent名のリスト
+        """
+        return list(self._registered_agents.keys())
+
+    async def get_or_create(self, agent_type: AgentType | str) -> Any:
+        """Agentを取得（なければ動的に作成）.
+
+        Args:
+            agent_type: Agent種別またはAgent名
+
+        Returns:
+            Agentインスタンス
+        """
+        # 名前で登録済みエージェントを探す
+        if isinstance(agent_type, str) and agent_type in self._registered_agents:
+            return self._registered_agents[agent_type]
+
+        # AgentTypeの場合、キャッシュ or DynamicAgent作成
+        type_key = str(agent_type)
+        if type_key in self._registered_agents:
+            return self._registered_agents[type_key]
+
+        # 新規DynamicAgent生成
+        from agentflow.patterns.deep_agent.da_dynamic import DynamicAgent
+
+        agent = DynamicAgent(
+            name=type_key,
+            system_prompt=f"You are a {type_key} agent.",
+            llm_client=self._llm,
+        )
+        self._registered_agents[type_key] = agent
+        return agent
+
+    def set_default_binding(
+        self,
+        agent_type: AgentType | str,
+        tools: list[str] | None = None,
+        skills: list[str] | None = None,
+    ) -> None:
+        """デフォルトバインディングを設定.
+
+        Args:
+            agent_type: Agent種別
+            tools: バインドするツール名リスト
+            skills: バインドするスキル名リスト
+        """
+        key = str(agent_type)
+        self._default_bindings[key] = {
+            "tools": tools or [],
+            "skills": skills or [],
+        }
 
     def get_agent(self, agent_type: AgentType | str) -> BaseAgent:
         """Agentを取得（なければ生成）.
@@ -267,7 +334,7 @@ class AgentPool:
             agent_type = AgentType(agent_type)
 
         if agent_type not in self._agents:
-            agent_class = self.AGENT_CLASSES.get(agent_type, ExecutionAgent)
+            agent_class: type[Any] = self.AGENT_CLASSES.get(agent_type, ExecutionAgent)
             self._agents[agent_type] = agent_class(
                 llm_client=self._llm,
                 tools=self._tools,
@@ -289,12 +356,13 @@ class AgentPool:
         if isinstance(agent_type, str):
             agent_type = AgentType(agent_type)
 
-        agent_class = self.AGENT_CLASSES.get(agent_type, ExecutionAgent)
-        return agent_class(
+        agent_class: type[Any] = self.AGENT_CLASSES.get(agent_type, ExecutionAgent)
+        agent = agent_class(
             llm_client=self._llm,
             tools=self._tools,
             skills=self._skills,
         )
+        return cast("BaseAgent", agent)
 
     async def broadcast_message(self, message: AgentMessage) -> None:
         """全Agentにメッセージをブロードキャスト."""
@@ -339,4 +407,3 @@ __all__ = [
     "ResearchAgent",
     "ReviewAgent",
 ]
-

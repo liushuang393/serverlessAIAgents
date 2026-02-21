@@ -107,9 +107,7 @@ class RecommendationService:
             rec = self.generate_recommendation(
                 topic=signal.get("metadata", {}).get("trend_topic", "Unknown"),
                 grade=signal.get("grade", "D"),
-                score=signal.get("score", {}).get("total", 0.0)
-                if isinstance(signal.get("score"), dict)
-                else 0.0,
+                score=signal.get("score", {}).get("total", 0.0) if isinstance(signal.get("score"), dict) else 0.0,
                 growth_rate=signal.get("metadata", {}).get("growth_rate", 0.0),
                 metadata=signal.get("metadata", {}),
             )

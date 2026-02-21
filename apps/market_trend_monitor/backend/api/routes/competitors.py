@@ -31,6 +31,7 @@ def _get_competitor_agent():
         from apps.market_trend_monitor.backend.agents.competitor_tracking_agent import (
             CompetitorTrackingAgent,
         )
+
         _competitor_agent = CompetitorTrackingAgent()
     return _competitor_agent
 
@@ -79,9 +80,7 @@ async def _save_competitor_config(
     await init_db()
     payload = {
         "competitors": list(competitors),
-        "competitor_aliases": {
-            key: list(values) for key, values in competitor_aliases.items()
-        },
+        "competitor_aliases": {key: list(values) for key, values in competitor_aliases.items()},
     }
     async with async_session() as session:
         row = await session.get(AppSettingModel, COMPETITOR_CONFIG_KEY)
@@ -198,9 +197,7 @@ async def _collect_articles_for_watchlist_focus(
     collector_agent = CollectorAgent()
     await collector_agent.initialize()
     try:
-        collector_result = await collector_agent.run(
-            {"keywords": keywords, "sources": sources}
-        )
+        collector_result = await collector_agent.run({"keywords": keywords, "sources": sources})
     finally:
         await collector_agent.cleanup()
 
@@ -219,6 +216,7 @@ def _get_maturity_service():
         from apps.market_trend_monitor.backend.services.maturity_assessment_service import (
             MaturityAssessmentService,
         )
+
         _maturity_service = MaturityAssessmentService()
     return _maturity_service
 
@@ -229,6 +227,7 @@ def _get_stakeholder_service():
         from apps.market_trend_monitor.backend.services.stakeholder_report_service import (
             StakeholderReportService,
         )
+
         _stakeholder_service = StakeholderReportService()
     return _stakeholder_service
 
@@ -255,18 +254,10 @@ async def list_competitors() -> dict:
             profiles = await agent.track_competitors(articles, include_unmatched=False)
             auto_discovered = True
 
-    detected_count = sum(
-        1 for profile in profiles if int(profile.metadata.get("article_count", 0)) > 0
-    )
+    detected_count = sum(1 for profile in profiles if int(profile.metadata.get("article_count", 0)) > 0)
     watchlist = agent.get_competitors()
-    detected_competitors = [
-        profile.name
-        for profile in profiles
-        if int(profile.metadata.get("article_count", 0)) > 0
-    ]
-    undetected_watchlist = [
-        name for name in watchlist if name not in set(detected_competitors)
-    ]
+    detected_competitors = [profile.name for profile in profiles if int(profile.metadata.get("article_count", 0)) > 0]
+    undetected_watchlist = [name for name in watchlist if name not in set(detected_competitors)]
     return {
         "competitors": [p.to_dict() for p in profiles],
         "total": len(profiles),
@@ -297,8 +288,7 @@ class PositioningRequest(BaseModel):
 async def compare_positioning(request: PositioningRequest) -> dict:
     """市場ポジショニング比較."""
     agent = _get_competitor_agent()
-    result = await agent.compare_positioning(request.our_strengths)
-    return result
+    return await agent.compare_positioning(request.our_strengths)
 
 
 class CompetitorDiscoverRequest(BaseModel):
@@ -392,17 +382,9 @@ async def discover_competitors(request: CompetitorDiscoverRequest) -> dict:
         articles,
         include_unmatched=request.include_unmatched,
     )
-    detected_competitors = [
-        profile.name
-        for profile in profiles
-        if int(profile.metadata.get("article_count", 0)) > 0
-    ]
-    undetected_watchlist = [
-        name for name in watchlist if name not in set(detected_competitors)
-    ]
-    detected_count = sum(
-        1 for profile in profiles if int(profile.metadata.get("article_count", 0)) > 0
-    )
+    detected_competitors = [profile.name for profile in profiles if int(profile.metadata.get("article_count", 0)) > 0]
+    undetected_watchlist = [name for name in watchlist if name not in set(detected_competitors)]
+    detected_count = sum(1 for profile in profiles if int(profile.metadata.get("article_count", 0)) > 0)
     status = "success" if detected_count > 0 else "not_found"
     if detected_count > 0:
         detected_preview = ", ".join(detected_competitors[:5])
@@ -412,10 +394,7 @@ async def discover_competitors(request: CompetitorDiscoverRequest) -> dict:
             f"（{detected_preview}{suffix}）。"
         )
     else:
-        message = (
-            f"在已采集的 {len(articles)} 条文章中未命中watchlist竞合。"
-            "请补充别名词典或先执行竞合导向的数据收集。"
-        )
+        message = f"在已采集的 {len(articles)} 条文章中未命中watchlist竞合。请补充别名词典或先执行竞合导向的数据收集。"
     if focused_collected_articles > 0:
         message = f"{message} 本次按竞合关键词新增抓取 {focused_collected_articles} 条。"
     if focus_collection_error:

@@ -9,10 +9,9 @@ import secrets
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import delete, select
-
 from apps.faq_system.backend.db.models import ProxyAuthNonce
 from apps.faq_system.backend.db.session import get_db_session
+from sqlalchemy import delete, select
 
 
 @dataclass(slots=True)
@@ -145,9 +144,7 @@ class ProxyAuthVerifier:
 
         async with get_db_session() as session:
             await session.execute(delete(ProxyAuthNonce).where(ProxyAuthNonce.expires_at < now))
-            existing = await session.scalar(
-                select(ProxyAuthNonce).where(ProxyAuthNonce.nonce_hash == nonce_hash)
-            )
+            existing = await session.scalar(select(ProxyAuthNonce).where(ProxyAuthNonce.nonce_hash == nonce_hash))
             if existing is not None:
                 return False
 

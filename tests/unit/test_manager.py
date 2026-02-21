@@ -154,9 +154,7 @@ class TestAgentBlockManager:
 
         assert "nonexistent" in str(exc_info.value)
 
-    def test_unregister_agent(
-        self, manager: AgentBlockManager, mock_agent_block: AgentBlock
-    ) -> None:
+    def test_unregister_agent(self, manager: AgentBlockManager, mock_agent_block: AgentBlock) -> None:
         """Agent の登録解除をテスト."""
         manager.register_agent("test-agent", mock_agent_block)
         manager.unregister_agent("test-agent")
@@ -185,9 +183,7 @@ class TestAgentBlockManager:
         assert agents[0].name == "Test Agent"
         assert agents[0].version == "1.0.0"
 
-    def test_list_agents_with_category_filter(
-        self, manager: AgentBlockManager, mock_agent_block: AgentBlock
-    ) -> None:
+    def test_list_agents_with_category_filter(self, manager: AgentBlockManager, mock_agent_block: AgentBlock) -> None:
         """カテゴリフィルターで Agent 一覧を取得."""
         manager.register_agent("test-agent", mock_agent_block)
 
@@ -199,9 +195,7 @@ class TestAgentBlockManager:
         agents = manager.list_agents(filters={"category": "other"})
         assert len(agents) == 0
 
-    def test_list_agents_with_author_filter(
-        self, manager: AgentBlockManager, mock_agent_block: AgentBlock
-    ) -> None:
+    def test_list_agents_with_author_filter(self, manager: AgentBlockManager, mock_agent_block: AgentBlock) -> None:
         """作者フィルターで Agent 一覧を取得."""
         manager.register_agent("test-agent", mock_agent_block)
 
@@ -213,9 +207,7 @@ class TestAgentBlockManager:
         agents = manager.list_agents(filters={"author": "Other Author"})
         assert len(agents) == 0
 
-    def test_validate_agent(
-        self, manager: AgentBlockManager, sample_metadata: AgentMetadata
-    ) -> None:
+    def test_validate_agent(self, manager: AgentBlockManager, sample_metadata: AgentMetadata) -> None:
         """Agent メタデータの検証をテスト."""
         result = manager.validate_agent(sample_metadata)
 
@@ -280,9 +272,7 @@ class TestAgentBlockManager:
 
         assert "Test error" in str(exc_info.value)
 
-    def test_resolve_dependencies_no_deps(
-        self, manager: AgentBlockManager, mock_agent_block: AgentBlock
-    ) -> None:
+    def test_resolve_dependencies_no_deps(self, manager: AgentBlockManager, mock_agent_block: AgentBlock) -> None:
         """依存関係なしの Agent の依存解決をテスト."""
         manager.register_agent("test-agent", mock_agent_block)
 
@@ -290,9 +280,7 @@ class TestAgentBlockManager:
 
         assert deps == ["test-agent"]
 
-    def test_resolve_dependencies_with_deps(
-        self, manager: AgentBlockManager, sample_metadata: AgentMetadata
-    ) -> None:
+    def test_resolve_dependencies_with_deps(self, manager: AgentBlockManager, sample_metadata: AgentMetadata) -> None:
         """依存関係ありの Agent の依存解決をテスト."""
         # Create agent with dependencies
         metadata_with_deps = AgentMetadata(

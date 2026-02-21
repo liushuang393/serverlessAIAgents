@@ -2,21 +2,19 @@
 
 from __future__ import annotations
 
-import secrets
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import httpx
 import pytest
-
 from apps.faq_system.backend.auth.dependencies import require_auth
 from apps.faq_system.backend.auth.models import UserInfo
 from apps.faq_system.backend.db import close_db, ensure_database_ready
 from apps.faq_system.backend.db.models import ChatMessage
 from apps.faq_system.backend.db.session import get_db_session
-from apps.faq_system.routers.dependencies import _services
 from apps.faq_system.main import app
+
 
 TEST_DB_PATH = Path("/tmp/faq_session_test.db")
 TEST_DB_URL = f"sqlite+aiosqlite:///{TEST_DB_PATH}"
@@ -49,6 +47,7 @@ async def mock_require_auth() -> UserInfo:
         position="Tester",
     )
 
+
 @pytest.fixture
 def mock_auth() -> None:
     app.dependency_overrides[require_auth] = mock_require_auth
@@ -68,16 +67,18 @@ async def _seed_chat_messages(session_id: str, count: int, user_id: str = "user-
     """テスト用メッセージを DB に投入."""
     async with get_db_session() as session:
         for i in range(count):
-            session.add(ChatMessage(
-                id=f"msg-{session_id}-{i}",
-                session_id=session_id,
-                user_id=user_id,
-                username="tester",
-                role="user" if i % 2 == 0 else "assistant",
-                content=f"Message {i} in {session_id}",
-                transport="test",
-                created_at=datetime.now(tz=UTC) - timedelta(minutes=count - i),
-            ))
+            session.add(
+                ChatMessage(
+                    id=f"msg-{session_id}-{i}",
+                    session_id=session_id,
+                    user_id=user_id,
+                    username="tester",
+                    role="user" if i % 2 == 0 else "assistant",
+                    content=f"Message {i} in {session_id}",
+                    transport="test",
+                    created_at=datetime.now(tz=UTC) - timedelta(minutes=count - i),
+                )
+            )
 
 
 @pytest.mark.asyncio
@@ -99,13 +100,13 @@ async def test_list_sessions_with_data(client: httpx.AsyncClient) -> None:
     assert response.status_code == 200
     data = response.json()
     assert data["count"] == 2
-    
+
     # 新しい順 (session-B が最後に追加されたメッセージを持つはず)
     sessions = data["sessions"]
     assert sessions[0]["session_id"] == "session-B"
     assert sessions[0]["message_count"] == 5
     assert sessions[0]["title"] == "Message 0 in session-B"  # 自動タイトル
-    
+
     assert sessions[1]["session_id"] == "session-A"
     assert sessions[1]["message_count"] == 3
 
@@ -113,20 +114,20 @@ async def test_list_sessions_with_data(client: httpx.AsyncClient) -> None:
 @pytest.mark.asyncio
 async def test_delete_session(client: httpx.AsyncClient) -> None:
     await _seed_chat_messages("session-DEL", 2)
-    
+
     # 削除前確認
     list_res = await client.get("/api/chat/sessions")
     assert list_res.json()["count"] == 1
-    
+
     # 削除実行
     del_res = await client.delete("/api/chat/sessions/session-DEL")
     assert del_res.status_code == 200
     assert del_res.json()["success"] is True
-    
+
     # 削除後確認
     list_res_after = await client.get("/api/chat/sessions")
     assert list_res_after.json()["count"] == 0
-    
+
     # DB からも消えているか (history API)
     hist_res = await client.get("/api/chat/history", params={"session_id": "session-DEL"})
     assert hist_res.json()["count"] == 0
@@ -144,9 +145,8 @@ async def test_session_isolation(client: httpx.AsyncClient) -> None:
     """他人のセッションが見えないことを確認."""
     await _seed_chat_messages("my-session", 1, user_id="user-session-test")
     await _seed_chat_messages("other-session", 1, user_id="other-user")
-    
+
     response = await client.get("/api/chat/sessions")
     data = response.json()
     assert data["count"] == 1
     assert data["sessions"][0]["session_id"] == "my-session"
-

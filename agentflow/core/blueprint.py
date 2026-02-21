@@ -143,7 +143,7 @@ class AgentBlueprintModel(BaseModel):
         """スキル設定を正規化."""
         if not v:
             return []
-        result = []
+        result: list[SkillConfig | str] = []
         for item in v:
             if isinstance(item, str):
                 result.append(item)
@@ -159,7 +159,7 @@ class AgentBlueprintModel(BaseModel):
         """ツール設定を正規化."""
         if not v:
             return []
-        result = []
+        result: list[ToolConfig | str] = []
         for item in v:
             if isinstance(item, str):
                 result.append(item)
@@ -263,6 +263,7 @@ class AgentBlueprint:
             AgentBlueprint
         """
         import json
+
         data = json.loads(json_string)
         return cls.from_dict(data)
 
@@ -416,10 +417,7 @@ class AgentBlueprint:
         Returns:
             スキル名リスト
         """
-        return [
-            skill if isinstance(skill, str) else skill.name
-            for skill in self._model.skills
-        ]
+        return [skill if isinstance(skill, str) else skill.name for skill in self._model.skills]
 
     def get_tool_uris(self) -> list[str]:
         """ツールURIリストを取得.
@@ -427,10 +425,7 @@ class AgentBlueprint:
         Returns:
             ツールURIリスト
         """
-        return [
-            tool if isinstance(tool, str) else tool.uri
-            for tool in self._model.tools
-        ]
+        return [tool if isinstance(tool, str) else tool.uri for tool in self._model.tools]
 
     def __repr__(self) -> str:
         """文字列表現."""

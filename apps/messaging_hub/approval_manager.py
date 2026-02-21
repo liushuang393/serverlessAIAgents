@@ -311,9 +311,7 @@ class ApprovalManager:
             return False
 
         if request.status != ApprovalStatus.PENDING:
-            self._logger.warning(
-                "リクエストは既に処理済み: %s, status=%s", request_id, request.status.value
-            )
+            self._logger.warning("リクエストは既に処理済み: %s, status=%s", request_id, request.status.value)
             return False
 
         if request.is_expired():
@@ -362,9 +360,7 @@ class ApprovalManager:
             return False
 
         if request.status != ApprovalStatus.PENDING:
-            self._logger.warning(
-                "リクエストは既に処理済み: %s, status=%s", request_id, request.status.value
-            )
+            self._logger.warning("リクエストは既に処理済み: %s, status=%s", request_id, request.status.value)
             return False
 
         request.status = ApprovalStatus.REJECTED
@@ -373,9 +369,7 @@ class ApprovalManager:
         request.rejection_reason = reason
         self._move_to_history(request_id)
 
-        self._logger.info(
-            "拒否完了: id=%s, rejecter=%s, reason=%s", request_id, rejecter_id, reason
-        )
+        self._logger.info("拒否完了: id=%s, rejecter=%s, reason=%s", request_id, rejecter_id, reason)
 
         # WebSocket通知
         if self._hub:

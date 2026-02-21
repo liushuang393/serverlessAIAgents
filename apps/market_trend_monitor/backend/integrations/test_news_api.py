@@ -70,20 +70,22 @@ async def test_news_api_successful_call() -> None:
         # 正常なレスポンスをシミュレート
         mock_response = MagicMock()
         mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={
-            "articles": [
-                {
-                    "source": {"id": "test", "name": "Test Source"},
-                    "author": "Test Author",
-                    "title": "Test Article about AI",
-                    "description": "Test description",
-                    "url": "https://example.com/article",
-                    "urlToImage": None,
-                    "publishedAt": "2025-11-21T00:00:00Z",
-                    "content": "Test content",
-                }
-            ]
-        })
+        mock_response.json = AsyncMock(
+            return_value={
+                "articles": [
+                    {
+                        "source": {"id": "test", "name": "Test Source"},
+                        "author": "Test Author",
+                        "title": "Test Article about AI",
+                        "description": "Test description",
+                        "url": "https://example.com/article",
+                        "urlToImage": None,
+                        "publishedAt": "2025-11-21T00:00:00Z",
+                        "content": "Test content",
+                    }
+                ]
+            }
+        )
         mock_response.__aenter__ = AsyncMock(return_value=mock_response)
         mock_response.__aexit__ = AsyncMock(return_value=None)
 
@@ -108,20 +110,22 @@ async def test_news_api_top_headlines() -> None:
         # 正常なレスポンスをシミュレート
         mock_response = MagicMock()
         mock_response.status = 200
-        mock_response.json = AsyncMock(return_value={
-            "articles": [
-                {
-                    "source": {"id": "test", "name": "Test Source"},
-                    "author": "Test Author",
-                    "title": "Top Headline",
-                    "description": "Test description",
-                    "url": "https://example.com/headline",
-                    "urlToImage": None,
-                    "publishedAt": "2025-11-21T00:00:00Z",
-                    "content": "Test content",
-                }
-            ]
-        })
+        mock_response.json = AsyncMock(
+            return_value={
+                "articles": [
+                    {
+                        "source": {"id": "test", "name": "Test Source"},
+                        "author": "Test Author",
+                        "title": "Top Headline",
+                        "description": "Test description",
+                        "url": "https://example.com/headline",
+                        "urlToImage": None,
+                        "publishedAt": "2025-11-21T00:00:00Z",
+                        "content": "Test content",
+                    }
+                ]
+            }
+        )
         mock_response.__aenter__ = AsyncMock(return_value=mock_response)
         mock_response.__aexit__ = AsyncMock(return_value=None)
 
@@ -155,4 +159,3 @@ async def test_news_api_error_fallback() -> None:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

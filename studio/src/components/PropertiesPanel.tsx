@@ -9,8 +9,7 @@ import { useWorkflowStore } from '../stores/workflowStore';
  */
 
 export default function PropertiesPanel() {
-  const { selectedNode, workflow, setSelectedNode, updateNodeData } =
-    useWorkflowStore();
+  const { selectedNode, workflow, setSelectedNode, updateNodeData } = useWorkflowStore();
 
   // 選択されたノードを取得
   const node = workflow.nodes.find((n) => n.id === selectedNode);
@@ -57,9 +56,7 @@ export default function PropertiesPanel() {
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* ノード名 */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
-            ノード名
-          </label>
+          <label className="block text-sm font-medium text-foreground mb-2">ノード名</label>
           <input
             type="text"
             value={node.data.label}
@@ -75,9 +72,7 @@ export default function PropertiesPanel() {
 
         {/* エージェント ID */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
-            エージェント ID
-          </label>
+          <label className="block text-sm font-medium text-foreground mb-2">エージェント ID</label>
           <div className="px-3 py-2 text-sm rounded-md border border-input bg-muted text-muted-foreground">
             {node.data.agentId}
           </div>
@@ -85,15 +80,11 @@ export default function PropertiesPanel() {
 
         {/* 設定 */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
-            設定
-          </label>
+          <label className="block text-sm font-medium text-foreground mb-2">設定</label>
           <div className="space-y-3">
             {/* 設定項目の例 */}
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">
-                入力データ
-              </label>
+              <label className="block text-xs text-muted-foreground mb-1">入力データ</label>
               <textarea
                 value={node.data.config.input || ''}
                 onChange={(e) => handleConfigChange('input', e.target.value)}
@@ -104,15 +95,11 @@ export default function PropertiesPanel() {
             </div>
 
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">
-                タイムアウト (秒)
-              </label>
+              <label className="block text-xs text-muted-foreground mb-1">タイムアウト (秒)</label>
               <input
                 type="number"
                 value={node.data.config.timeout || 30}
-                onChange={(e) =>
-                  handleConfigChange('timeout', parseInt(e.target.value))
-                }
+                onChange={(e) => handleConfigChange('timeout', parseInt(e.target.value))}
                 className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
@@ -122,9 +109,7 @@ export default function PropertiesPanel() {
                 <input
                   type="checkbox"
                   checked={node.data.config.enabled !== false}
-                  onChange={(e) =>
-                    handleConfigChange('enabled', e.target.checked)
-                  }
+                  onChange={(e) => handleConfigChange('enabled', e.target.checked)}
                   className="w-4 h-4 rounded border-input text-primary focus:ring-2 focus:ring-ring"
                 />
                 有効化
@@ -135,22 +120,16 @@ export default function PropertiesPanel() {
 
         {/* ノード位置 */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-2">
-            位置
-          </label>
+          <label className="block text-sm font-medium text-foreground mb-2">位置</label>
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">
-                X
-              </label>
+              <label className="block text-xs text-muted-foreground mb-1">X</label>
               <div className="px-3 py-2 text-sm rounded-md border border-input bg-muted text-muted-foreground">
                 {Math.round(node.position.x)}
               </div>
             </div>
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">
-                Y
-              </label>
+              <label className="block text-xs text-muted-foreground mb-1">Y</label>
               <div className="px-3 py-2 text-sm rounded-md border border-input bg-muted text-muted-foreground">
                 {Math.round(node.position.y)}
               </div>

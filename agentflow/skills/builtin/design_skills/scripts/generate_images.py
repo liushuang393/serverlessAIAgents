@@ -26,6 +26,7 @@ import sys
 import time
 import uuid
 from pathlib import Path
+from typing import Any
 
 import httpx
 
@@ -67,7 +68,7 @@ _OPENAI_SIZE_MAP: dict[tuple[int, int], str] = {
 # =========================================================================
 
 
-def build_workflow(config: dict) -> dict:
+def build_workflow(config: dict[str, Any]) -> dict[str, Any]:
     """Build a ComfyUI SDXL txt2img workflow payload."""
     prompt = config["prompt"]
     negative = config.get("negative_prompt", DEFAULT_NEGATIVE)
@@ -124,17 +125,23 @@ def build_workflow(config: dict) -> dict:
     }
 
 
-def queue_prompt(client: httpx.Client, workflow: dict) -> str:
+def queue_prompt(client: httpx.Client, workflow: dict[str, Any]) -> str:
     """Submit workflow to ComfyUI queue."""
     resp = client.post("/prompt", json=workflow)
     resp.raise_for_status()
-    return resp.json()["prompt_id"]
+    payload = resp.json()
+    if isinstance(payload, dict):
+        prompt_id = payload.get("prompt_id")
+        if isinstance(prompt_id, str):
+            return prompt_id
+    msg = "ComfyUI response missing prompt_id"
+    raise ValueError(msg)
 
 
 def poll_until_complete(
     client: httpx.Client,
     prompt_id: str,
-) -> dict:
+) -> dict[str, Any]:
     """Poll ComfyUI history until prompt completes."""
     start = time.monotonic()
     while (time.monotonic() - start) < MAX_WAIT:
@@ -142,7 +149,10 @@ def poll_until_complete(
         if resp.status_code == _HTTP_OK:
             history = resp.json()
             if prompt_id in history:
-                return history[prompt_id]
+                node = history[prompt_id]
+                if isinstance(node, dict):
+                    return node
+                return {"data": node}
         time.sleep(POLL_INTERVAL)
     msg = f"Timeout: prompt {prompt_id} did not complete within {MAX_WAIT}s"
     raise TimeoutError(msg)
@@ -182,9 +192,9 @@ def _map_size_to_openai(width: int, height: int) -> str:
 
 def generate_via_openai(
     client: httpx.Client,
-    config: dict,
+    config: dict[str, Any],
     output_dir: Path,
-) -> dict:
+) -> dict[str, Any]:
     """Generate image via OpenAI Images API."""
     prompt = config["prompt"]
     width = config.get("width", DEFAULT_WIDTH)
@@ -228,7 +238,7 @@ def generate_via_openai(
 # =========================================================================
 
 
-def _read_config() -> dict:
+def _read_config() -> dict[str, Any]:
     """Read and validate JSON config from stdin.
 
     Raises:
@@ -243,6 +253,10 @@ def _read_config() -> dict:
         config = json.loads(raw_input)
     except json.JSONDecodeError as e:
         json.dump({"success": False, "error": f"Invalid JSON: {e}"}, sys.stdout)
+        sys.exit(1)
+
+    if not isinstance(config, dict):
+        json.dump({"success": False, "error": "Input JSON must be an object"}, sys.stdout)
         sys.exit(1)
 
     if "prompt" not in config:
@@ -271,7 +285,7 @@ def _check_openai_available() -> bool:
 
 def _extract_images(
     client: httpx.Client,
-    history: dict,
+    history: dict[str, Any],
     output_dir: Path,
 ) -> Path | None:
     """Extract and download output images from ComfyUI history."""
@@ -281,9 +295,7 @@ def _extract_images(
         for img_info in node_output.get("images", []):
             filename = img_info.get("filename", "")
             if filename:
-                image_path = download_image(
-                    client, filename, output_dir, img_info.get("subfolder", "")
-                )
+                image_path = download_image(client, filename, output_dir, img_info.get("subfolder", ""))
     return image_path
 
 

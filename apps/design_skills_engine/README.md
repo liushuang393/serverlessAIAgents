@@ -8,15 +8,48 @@ Lovart風「Design Skills」思想をAgentFlowフレームワークで実装し�
 
 ---
 
+<!-- README_REQUIRED_SECTIONS_START -->
+## 機能概要
+- 自然言語ブリーフから複数画像を一括生成し、用途別アセットを出力。
+- Intent 分析と Prompt 設計を分離し、生成品質と再利用性を向上。
+- SSE で生成進捗を可視化し、長時間ジョブを運用しやすくする。
+
+## 優位性
+- ComfyUI 連携を標準化し、GPU/CPU の両実行モードを同じ操作で扱える。
+- 役割テンプレートにより、ブランド一貫性を保った生成が可能。
+- AgentFlow Skill として組み込み可能で、他 app への再利用が容易。
+
+## 技術アーキテクチャ
+- AgentFlow ベースの Design Pipeline（Intent → Plan → Generate → Review）。
+- 画像生成は ComfyUI API を利用し、パラメータはスキーマで型管理。
+- バックエンド実行基盤とフロント可視化を疎結合で接続。
+
+## アプリケーション階層
+- Brief Layer: 要件入力と制約定義。
+- Planning Layer: 意図解析・プロンプト構成。
+- Generation Layer: ComfyUI ワークフロー実行。
+- Delivery Layer: 成果物整理・進捗通知・再実行。
+<!-- README_REQUIRED_SECTIONS_END -->
+
 ## 使用手順
 
 ### 1. 前提条件
 
 #### 1.1 AgentFlow フレームワークのインストール
 
+推奨（統一手順）:
+
+```bash
+cd <repo-root>
+bash setup_dev.sh
+```
+
+手動で行う場合:
+
 ```bash
 # リポジトリルートで実行
-pip install -e ".[dev]"
+conda activate agentflow
+pip install -e ".[dev,apps]"
 ```
 
 #### 1.2 ComfyUI サーバーの起動
@@ -101,6 +134,30 @@ result = await engine.run({
     "aspect_ratio": "1:1",
 })
 ```
+
+---
+
+## 🧪 テスト/静的チェック（統一スクリプト）
+
+```bash
+cd <repo-root>
+./check.sh lint
+./check.sh type-check
+./check.sh test
+```
+
+---
+
+## 📦 本番ビルド/発布
+
+Platform に統一する場合（推奨）:
+
+```bash
+conda activate agentflow
+python -m apps.platform.main publish ./apps/design_skills_engine --target docker
+```
+
+この app は `apps/design_skills_engine/app_config.json` に `docker compose` の publish/start/stop 手順を保持しています。
 
 ### 3. SSEストリーム（リアルタイム進捗表示）
 

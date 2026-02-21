@@ -241,4 +241,3 @@ class TestSingleton:
         c2 = await get_tool_catalog()
         assert c1 is not c2
         assert c2.initialized is True
-

@@ -30,8 +30,10 @@ router = APIRouter(prefix="/api/config", tags=["設定管理"])
 # スキーマ定義
 # ========================================
 
+
 class RAGSourceConfig(BaseModel):
     """RAGソース設定."""
+
     name: str = Field(..., description="ソース名（例: industry_practices）")
     enabled: bool = Field(True, description="有効/無効")
     directory: str | None = Field(None, description="ドキュメントディレクトリ")
@@ -40,6 +42,7 @@ class RAGSourceConfig(BaseModel):
 
 class AgentRAGConfig(BaseModel):
     """Agent RAG設定."""
+
     agent_id: str = Field(..., description="Agent ID")
     agent_name: str = Field(..., description="Agent名")
     use_rag: bool = Field(False, description="RAG使用有無")
@@ -50,6 +53,7 @@ class AgentRAGConfig(BaseModel):
 
 class RAGConfigUpdate(BaseModel):
     """RAG設定更新リクエスト."""
+
     use_rag: bool | None = None
     rag_sources: list[RAGSourceConfig] | None = None
     top_k: int | None = Field(None, ge=1, le=20)
@@ -58,6 +62,7 @@ class RAGConfigUpdate(BaseModel):
 
 class RAGTestResult(BaseModel):
     """RAGテスト結果."""
+
     success: bool
     message: str
     document_count: int = 0
@@ -127,6 +132,7 @@ def _init_default_configs() -> None:
 # エンドポイント
 # ========================================
 
+
 @router.get("/rag", response_model=list[AgentRAGConfig])
 async def get_all_rag_configs() -> list[AgentRAGConfig]:
     """全AgentのRAG設定を取得."""
@@ -180,6 +186,7 @@ async def test_agent_rag(agent_id: str) -> RAGTestResult:
 
     try:
         from apps.decision_governance_engine.routers.decision import get_engine
+
         engine = get_engine()
 
         agent = None
@@ -235,6 +242,7 @@ async def get_all_agent_configs() -> dict[str, Any]:
 # RAG設定取得関数（他モジュールから参照）
 # ========================================
 
+
 def get_rag_config(agent_id: str) -> AgentRAGConfig | None:
     """特定AgentのRAG設定を取得（他モジュール向け）."""
     _init_default_configs()
@@ -244,6 +252,7 @@ def get_rag_config(agent_id: str) -> AgentRAGConfig | None:
 # ========================================
 # 評価パラメータ設定 API
 # ========================================
+
 
 class PresetSummary(BaseModel):
     """プリセット概要."""
@@ -405,8 +414,7 @@ async def switch_preset(request: SwitchPresetRequest) -> SwitchPresetResponse:
     if request.preset_id not in config.presets:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown preset: {request.preset_id}. "
-            f"Available: {list(config.presets.keys())}",
+            detail=f"Unknown preset: {request.preset_id}. Available: {list(config.presets.keys())}",
         )
 
     # メモリ内で切り替え（永続化は別途）

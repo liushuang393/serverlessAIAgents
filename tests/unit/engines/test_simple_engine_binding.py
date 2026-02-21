@@ -1,7 +1,7 @@
-# -*- coding: utf-8 -*-
 """SimpleEngine と ToolBinder 統合テスト."""
 
 import pytest
+
 from agentflow.core.tool_registry import reset_global_tool_registry
 
 
@@ -16,9 +16,9 @@ def reset_registries():
 @pytest.mark.asyncio
 async def test_simple_engine_auto_binds_tools():
     """SimpleEngine がツールを自動バインドすることを確認."""
-    from agentflow.engines import SimpleEngine
-    from agentflow.core.tool_registry import get_global_tool_registry
     from agentflow.core.tool_discovery import ToolDiscoveryService
+    from agentflow.core.tool_registry import get_global_tool_registry
+    from agentflow.engines import SimpleEngine
 
     # ツールを登録
     registry = get_global_tool_registry()
@@ -52,9 +52,9 @@ async def test_simple_engine_auto_binds_tools():
 @pytest.mark.asyncio
 async def test_simple_engine_binds_skills_as_tools():
     """SimpleEngine がスキルをツールとしてバインドすることを確認."""
-    from agentflow.engines import SimpleEngine
-    from agentflow.core.tool_registry import get_global_tool_registry
     from agentflow.core.tool_discovery import ToolDiscoveryService
+    from agentflow.core.tool_registry import get_global_tool_registry
+    from agentflow.engines import SimpleEngine
 
     # スキルを発見
     registry = get_global_tool_registry()

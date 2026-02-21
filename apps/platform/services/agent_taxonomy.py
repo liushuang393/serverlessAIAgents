@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Agent taxonomy inference service.
 
 Platform で使用する業務基盤分類（business base）と
@@ -7,11 +6,15 @@ Agent pattern 分類の推定ロジックを提供する。
 
 from __future__ import annotations
 
-from collections import Counter
-from collections.abc import Iterable
 import re
+from collections import Counter
+from typing import TYPE_CHECKING
 
 from apps.platform.services.capability_registry import CapabilityRegistry
+
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 BUSINESS_BASE_TYPES: tuple[str, ...] = (
@@ -264,5 +267,4 @@ class AgentTaxonomyService:
     def _normalize_token(value: str) -> str:
         normalized = value.strip().lower()
         normalized = _NORMALIZE_RE.sub("_", normalized)
-        normalized = re.sub(r"_+", "_", normalized).strip("_")
-        return normalized
+        return re.sub(r"_+", "_", normalized).strip("_")

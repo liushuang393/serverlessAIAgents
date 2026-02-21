@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """成果物ストア.
 
 Agent 間通信を artifacts/ 配下の JSON/生成物に限定するための I/O ユーティリティ。
@@ -10,6 +9,7 @@ import asyncio
 import json
 from pathlib import Path
 from typing import Any
+
 
 _APP_ROOT = Path(__file__).resolve().parents[1]
 
@@ -57,7 +57,8 @@ class ArtifactStore:
         """ステージディレクトリを解決."""
         directory = self._STAGE_DIR_MAP.get(stage)
         if directory is None:
-            raise ValueError(f"Unknown stage: {stage}")
+            msg = f"Unknown stage: {stage}"
+            raise ValueError(msg)
         return self._base_dir / directory
 
     async def write_json(

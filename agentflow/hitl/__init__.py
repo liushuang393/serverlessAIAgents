@@ -36,6 +36,7 @@ LangGraph の interrupt パターンを参考に、業界ベストプラクテ�
 # 工厂函数: 根据环境变量自动选择 Checkpointer
 import logging
 import os
+from typing import Any
 
 from agentflow.hitl.api import create_hitl_router
 from agentflow.hitl.approval_manager import (
@@ -76,7 +77,7 @@ _checkpointer_logger = logging.getLogger(__name__)
 
 def get_checkpointer(
     backend: str | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> Checkpointer:
     """根据配置自动选择 Checkpointer（松耦合）.
 
@@ -124,6 +125,7 @@ def get_checkpointer(
     if resolved_backend == "redis":
         try:
             from agentflow.hitl.redis_checkpointer import RedisCheckpointer
+
             _checkpointer_logger.info("Using RedisCheckpointer")
             return RedisCheckpointer(**kwargs)
         except ImportError:
@@ -133,6 +135,7 @@ def get_checkpointer(
     elif resolved_backend == "postgres":
         try:
             from agentflow.hitl.postgres_checkpointer import PostgresCheckpointer
+
             _checkpointer_logger.info("Using PostgresCheckpointer")
             return PostgresCheckpointer(**kwargs)
         except ImportError:
@@ -176,4 +179,3 @@ __all__ = [
     "set_checkpointer",
     "set_thread_id",
 ]
-

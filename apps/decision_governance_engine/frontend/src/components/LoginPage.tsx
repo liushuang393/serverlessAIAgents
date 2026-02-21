@@ -7,6 +7,7 @@
 
 import React, { useState, useCallback } from 'react';
 import { useAuthStore } from '../store/useAuthStore';
+import { LocaleSwitcher, useI18n } from '../i18n';
 
 /** デモユーザー情報（ログインヒント用） */
 const DEMO_USERS = [
@@ -17,6 +18,7 @@ const DEMO_USERS = [
 ];
 
 export const LoginPage: React.FC = () => {
+  const { t } = useI18n();
   const { login, isLoading, error } = useAuthStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -43,6 +45,10 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center p-4 relative overflow-hidden">
+      {/* 言語切り替え */}
+      <div className="absolute top-4 right-4 z-10">
+        <LocaleSwitcher className="bg-[#12121a] border border-white/10 rounded-lg px-2 py-1.5 text-xs text-slate-400 focus:outline-none cursor-pointer" />
+      </div>
       {/* 背景装飾 */}
       <div className="absolute inset-0 overflow-hidden">
         {/* グラデーションオーブ */}
@@ -88,19 +94,20 @@ export const LoginPage: React.FC = () => {
 
             {/* ユーザー名 */}
             <div>
-              <label className="block text-sm text-slate-400 mb-2">
-                ユーザー名
+              <label htmlFor="dge-username" className="block text-sm text-slate-400 mb-2">
+                {t('login.username')}
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                <span aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
                   👤
                 </span>
                 <input
+                  id="dge-username"
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full bg-[#0a0a0f] border border-white/10 rounded-xl pl-12 pr-4 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                  placeholder="ユーザー名を入力"
+                  placeholder={t('login.username_placeholder')}
                   disabled={isLoading}
                   autoComplete="username"
                 />
@@ -109,19 +116,20 @@ export const LoginPage: React.FC = () => {
 
             {/* パスワード */}
             <div>
-              <label className="block text-sm text-slate-400 mb-2">
-                パスワード
+              <label htmlFor="dge-password" className="block text-sm text-slate-400 mb-2">
+                {t('login.password')}
               </label>
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                <span aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
                   🔐
                 </span>
                 <input
+                  id="dge-password"
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-[#0a0a0f] border border-white/10 rounded-xl pl-12 pr-12 py-3 text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-                  placeholder="パスワードを入力"
+                  placeholder={t('login.password_placeholder')}
                   disabled={isLoading}
                   autoComplete="current-password"
                 />
@@ -144,12 +152,11 @@ export const LoginPage: React.FC = () => {
               {isLoading ? (
                 <>
                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  認証中...
+                  {t('login.authenticating')}
                 </>
               ) : (
                 <>
-                  <span>🚀</span>
-                  ログイン
+                  <span aria-hidden="true">🚀</span>{' '}{t('login.submit')}
                 </>
               )}
             </button>
@@ -161,8 +168,7 @@ export const LoginPage: React.FC = () => {
               onClick={() => setShowDemoHint(!showDemoHint)}
               className="w-full text-sm text-slate-500 hover:text-slate-400 flex items-center justify-center gap-2 transition-colors"
             >
-              <span>💡</span>
-              デモアカウントを使用する
+              <span aria-hidden="true">💡</span>{' '}{t('login.demo_hint')}
               <span className={`transition-transform ${showDemoHint ? 'rotate-180' : ''}`}>▼</span>
             </button>
 

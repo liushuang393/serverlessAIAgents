@@ -228,9 +228,13 @@ class GlossaryService:
         self._entries[entry.canonical] = entry
 
         # 逆引きインデックスを構築
-        all_terms = (
-            [entry.canonical, *entry.synonyms, *entry.abbreviations, *entry.katakana, *entry.english]
-        )
+        all_terms = [
+            entry.canonical,
+            *entry.synonyms,
+            *entry.abbreviations,
+            *entry.katakana,
+            *entry.english,
+        ]
 
         for term in all_terms:
             if term:
@@ -324,7 +328,7 @@ class GlossaryService:
                 if expanded_query not in expanded:
                     expanded.append(expanded_query)
 
-        return expanded[:self._config.max_expansions]
+        return expanded[: self._config.max_expansions]
 
     def normalize(self, text: str) -> str:
         """テキストを正規化.
@@ -376,17 +380,12 @@ class GlossaryService:
 
         # 部分一致で検索
         for registered_term, canonical in self._reverse_index.items():
-            if (
-                term_lower in registered_term
-                or registered_term in term_lower
-            ) and canonical not in suggestions:
+            if (term_lower in registered_term or registered_term in term_lower) and canonical not in suggestions:
                 suggestions.append(canonical)
 
         return suggestions[:5]
 
-    def list_entries(
-        self, category: str | None = None
-    ) -> list[TermEntry]:
+    def list_entries(self, category: str | None = None) -> list[TermEntry]:
         """術語エントリーを一覧.
 
         Args:

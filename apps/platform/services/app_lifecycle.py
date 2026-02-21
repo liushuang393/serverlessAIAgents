@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """App Lifecycle Manager — App のヘルスチェック・起動/停止管理.
 
 各 App の稼働状態を HTTP ヘルスチェックで確認し、
@@ -14,18 +13,23 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import re
 import shlex
+import socket
 import subprocess
 import time
 from datetime import UTC, datetime
 from enum import Enum
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 
-from apps.platform.schemas.app_config_schemas import AppConfig
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from apps.platform.schemas.app_config_schemas import AppConfig
 
 
 _logger = logging.getLogger(__name__)
@@ -35,11 +39,23 @@ _HEALTH_TIMEOUT = 2.0
 _ACTION_TIMEOUT = 300.0
 _HEALTH_FALLBACK_PATHS = ("/api/health", "/health", "/healthz")
 _HEALTHY_PAYLOAD_STATES = {"ok", "healthy", "up", "ready", "pass"}
-_NON_HEALTHY_PAYLOAD_STATES = {"error", "failed", "fail", "down", "degraded", "starting", "initializing"}
+_NON_HEALTHY_PAYLOAD_STATES = {
+    "error",
+    "failed",
+    "fail",
+    "down",
+    "degraded",
+    "starting",
+    "initializing",
+}
 _DOCKER_COMPOSE_FILES = ("docker-compose.yml", "compose.yml")
 _DOCKER_COMPOSE_DEV_FILES = ("docker-compose.dev.yml", "compose.override.yml")
 _BACKEND_SERVICE_HINTS = ("backend", "api", "server")
 _PORT_MAPPING_RE = re.compile(r"(?P<published>\d+)->(?P<target>\d+)")
+_LOCAL_BOOT_WAIT_SECONDS = 1.2
+_LOCAL_LOG_TAIL_LINES = 40
+_LOCAL_DEPENDENCY_TIMEOUT = 0.4
+_LOCAL_EXTERNAL_DB_KINDS = {"postgresql", "postgres", "mysql", "mariadb", "redis"}
 
 
 class AppStatus(str, Enum):
@@ -264,14 +280,8 @@ class AppLifecycleManager:
                         any_http_response = True
 
                         is_2xx = 200 <= response.status_code < 300
-                        payload_marked_bad = (
-                            payload_state is not None
-                            and payload_state in _NON_HEALTHY_PAYLOAD_STATES
-                        )
-                        payload_marked_good = (
-                            payload_state is not None
-                            and payload_state in _HEALTHY_PAYLOAD_STATES
-                        )
+                        payload_marked_bad = payload_state is not None and payload_state in _NON_HEALTHY_PAYLOAD_STATES
+                        payload_marked_good = payload_state is not None and payload_state in _HEALTHY_PAYLOAD_STATES
 
                         # 2xx かつ payload が明示的に bad でない場合のみ healthy
                         if is_2xx and not payload_marked_bad:
@@ -310,10 +320,10 @@ class AppLifecycleManager:
                         if port is not None:
                             unreachable_ports.add(port)
                         attempts.append({"url": url, "error": "timeout", "message": str(exc)})
-                    except Exception as exc:  # noqa: BLE001
+                    except Exception as exc:
                         last_error = str(exc)
                         attempts.append({"url": url, "error": "exception", "message": str(exc)})
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             last_error = str(exc)
             attempts.append({"url": "client_setup", "error": "exception", "message": str(exc)})
 
@@ -438,38 +448,54 @@ class AppLifecycleManager:
         results: list[str] = []
         errors: list[str] = []
 
+        preflight_notes, preflight_error = await self._preflight_local_dependencies(
+            config,
+            config_path=config_path,
+        )
+        results.extend(preflight_notes)
+        if preflight_error is not None:
+            return AppActionResult(
+                app_name=config.name,
+                action="local_start",
+                success=False,
+                command=["bash", "-lc", backend_cmd or "", frontend_cmd or ""],
+                cwd=str(project_root),
+                stdout="\n".join(results),
+                stderr="",
+                error=preflight_error,
+            )
+
         # バックエンド起動（バックグラウンド）
         if backend_cmd:
             try:
-                # nohup でバックグラウンド実行
-                full_cmd = f"nohup bash -lc '{backend_cmd}' > /tmp/{config.name}_backend.log 2>&1 &"
-                _logger.info("[%s] バックエンド起動: %s", config.name, backend_cmd)
-                proc = await asyncio.create_subprocess_shell(
-                    full_cmd,
-                    cwd=str(project_root),
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
+                started, started_msg, started_error = await self._start_local_process(
+                    app_name=config.name,
+                    command=backend_cmd,
+                    role="backend",
+                    cwd=project_root,
                 )
-                await proc.communicate()
-                results.append(f"backend: {backend_cmd}")
-            except Exception as exc:  # noqa: BLE001
+                if started and started_msg:
+                    results.append(started_msg)
+                if not started and started_error:
+                    errors.append(started_error)
+            except Exception as exc:
                 errors.append(f"backend error: {exc}")
                 _logger.exception("[%s] バックエンド起動失敗", config.name)
 
         # フロントエンド起動（バックグラウンド）
         if frontend_cmd:
             try:
-                full_cmd = f"nohup bash -lc '{frontend_cmd}' > /tmp/{config.name}_frontend.log 2>&1 &"
-                _logger.info("[%s] フロントエンド起動: %s", config.name, frontend_cmd)
-                proc = await asyncio.create_subprocess_shell(
-                    full_cmd,
-                    cwd=str(project_root),
-                    stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
+                started, started_msg, started_error = await self._start_local_process(
+                    app_name=config.name,
+                    command=frontend_cmd,
+                    role="frontend",
+                    cwd=project_root,
                 )
-                await proc.communicate()
-                results.append(f"frontend: {frontend_cmd}")
-            except Exception as exc:  # noqa: BLE001
+                if started and started_msg:
+                    results.append(started_msg)
+                if not started and started_error:
+                    errors.append(started_error)
+            except Exception as exc:
                 errors.append(f"frontend error: {exc}")
                 _logger.exception("[%s] フロントエンド起動失敗", config.name)
 
@@ -488,6 +514,105 @@ class AppLifecycleManager:
             error=error_msg,
         )
 
+    async def _preflight_local_dependencies(
+        self,
+        config: AppConfig,
+        *,
+        config_path: Path | None,
+    ) -> tuple[list[str], str | None]:
+        """Local 起動前に依存サービスの待受を確認."""
+        notes: list[str] = []
+        targets: list[tuple[str, str, int]] = []
+        db_kind = (config.dependencies.database or config.runtime.database.kind or "").strip().lower()
+        db_port = config.runtime.database.port
+        if not isinstance(db_port, int):
+            db_port = config.ports.db
+        if db_kind in _LOCAL_EXTERNAL_DB_KINDS and isinstance(db_port, int):
+            targets.append(("database", db_kind, db_port))
+
+        if config.dependencies.redis and isinstance(config.ports.redis, int):
+            targets.append(("redis", "redis", config.ports.redis))
+
+        if not targets:
+            return notes, None
+
+        first_failure: tuple[str, str, int] | None = None
+        for label, kind, port in targets:
+            reachable = self._is_tcp_port_open(
+                "127.0.0.1",
+                port,
+                _LOCAL_DEPENDENCY_TIMEOUT,
+            )
+            if reachable:
+                notes.append(f"dependency check: {label} ({kind}) localhost:{port} reachable")
+                continue
+            first_failure = (label, kind, port)
+            break
+
+        if first_failure is None:
+            return notes, None
+
+        label, kind, port = first_failure
+        compose_detected = False
+        if config_path is not None:
+            compose_detected = bool(self._resolve_compose_files(config_path.parent, include_dev=True))
+        message = f"local_start 前提チェック失敗: {label} ({kind}) が localhost:{port} で待受していません。"
+        if compose_detected:
+            notes.append("docker compose file detected for this app")
+            message += " docker compose ファイルを検出しました。先に Start/Publish を実行してください。"
+        else:
+            notes.append("docker compose file not detected for this app")
+            message += " docker compose ファイルは未検出です。DB/依存サービスを手動起動してください。"
+        message += " 先に Start/Publish で依存コンテナを起動するか、DB を手動起動してください。"
+        return notes, message
+
+    async def _start_local_process(
+        self,
+        *,
+        app_name: str,
+        command: str,
+        role: str,
+        cwd: Path,
+    ) -> tuple[bool, str | None, str | None]:
+        """Local 開発コマンドをバックグラウンド起動し、生存確認する."""
+        log_path = f"/tmp/{app_name}_{role}.log"
+        launch_cmd = f"nohup bash -lc {shlex.quote(command)} > {shlex.quote(log_path)} 2>&1 & echo $!"
+        _logger.info("[%s] %s 起動: %s", app_name, role, command)
+        proc = await asyncio.create_subprocess_shell(
+            launch_cmd,
+            cwd=str(cwd),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout_bytes, stderr_bytes = await proc.communicate()
+        stdout = stdout_bytes.decode("utf-8", errors="ignore").strip()
+        stderr = stderr_bytes.decode("utf-8", errors="ignore").strip()
+        return_code = getattr(proc, "returncode", 0)
+        if return_code not in (0, None):
+            error = stderr or stdout or f"{role} の起動コマンド実行に失敗"
+            return False, None, error
+
+        pid: int | None = None
+        if stdout:
+            try:
+                pid = int(stdout.splitlines()[-1].strip())
+            except ValueError:
+                pid = None
+
+        if pid is None:
+            return True, f"{role}: {command} (log={log_path})", None
+
+        await asyncio.sleep(_LOCAL_BOOT_WAIT_SECONDS)
+        is_running = self._is_process_running(pid)
+        if is_running:
+            return True, f"{role}: {command} (pid={pid}, log={log_path})", None
+
+        log_tail = self._read_log_tail(log_path, _LOCAL_LOG_TAIL_LINES)
+        error = f"{role} プロセスが直後に終了しました (pid={pid}, log={log_path})"
+        if log_tail:
+            error = f"{error}\n--- {role} log tail ---\n{self._trim_output(log_tail)}"
+        return False, None, error
+
     async def _run_compose_action(
         self,
         config: AppConfig,
@@ -500,7 +625,9 @@ class AppLifecycleManager:
         """docker compose を実行して App 操作を行う."""
         _logger.info(
             "[%s] %s 開始 (config_path=%s)",
-            config.name, action, config_path,
+            config.name,
+            action,
+            config_path,
         )
 
         if config_path is None:
@@ -535,7 +662,8 @@ class AppLifecycleManager:
         if not compose_files:
             _logger.warning(
                 "[%s] docker-compose ファイルが見つかりません: dir=%s",
-                config.name, app_dir,
+                config.name,
+                app_dir,
             )
             return AppActionResult(
                 app_name=config.name,
@@ -543,10 +671,7 @@ class AppLifecycleManager:
                 success=False,
                 command=[],
                 cwd=str(app_dir),
-                error=(
-                    f"実行コマンド未設定かつ docker-compose.yml が見つかりません"
-                    f" (dir={app_dir})"
-                ),
+                error=(f"実行コマンド未設定かつ docker-compose.yml が見つかりません (dir={app_dir})"),
             )
 
         command = ["docker", "compose"]
@@ -575,7 +700,10 @@ class AppLifecycleManager:
             else:
                 _logger.warning(
                     "[%s] %s 失敗 (rc=%s): %s",
-                    config.name, action, proc.returncode, error,
+                    config.name,
+                    action,
+                    proc.returncode,
+                    error,
                 )
         except FileNotFoundError:
             success = False
@@ -583,15 +711,15 @@ class AppLifecycleManager:
             stderr = ""
             error = "docker コマンドが見つかりません（docker がインストールされていない可能性）"
             proc = None
-            _logger.error("[%s] %s: %s", config.name, action, error)
+            _logger.exception("[%s] %s: %s", config.name, action, error)
         except TimeoutError:
             success = False
             stdout = ""
             stderr = ""
             error = f"docker compose がタイムアウトしました（{_ACTION_TIMEOUT:.0f}s）"
             proc = None
-            _logger.error("[%s] %s: %s", config.name, action, error)
-        except Exception as exc:  # noqa: BLE001
+            _logger.exception("[%s] %s: %s", config.name, action, error)
+        except Exception as exc:
             success = False
             stdout = ""
             stderr = ""
@@ -657,7 +785,10 @@ class AppLifecycleManager:
             else:
                 _logger.warning(
                     "[%s] %s 失敗 (rc=%s): %s",
-                    config.name, action, proc.returncode, error,
+                    config.name,
+                    action,
+                    proc.returncode,
+                    error,
                 )
         except FileNotFoundError:
             success = False
@@ -665,15 +796,15 @@ class AppLifecycleManager:
             stderr = ""
             error = "bash コマンドが見つかりません"
             proc = None
-            _logger.error("[%s] %s: %s", config.name, action, error)
+            _logger.exception("[%s] %s: %s", config.name, action, error)
         except TimeoutError:
             success = False
             stdout = ""
             stderr = ""
             error = f"コマンドがタイムアウトしました（{_ACTION_TIMEOUT:.0f}s）"
             proc = None
-            _logger.error("[%s] %s: %s", config.name, action, error)
-        except Exception as exc:  # noqa: BLE001
+            _logger.exception("[%s] %s: %s", config.name, action, error)
+        except Exception as exc:
             success = False
             stdout = ""
             stderr = ""
@@ -838,7 +969,7 @@ class AppLifecycleManager:
                 "backend_published_ports": [],
                 "services": [],
             }
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return {
                 "detected": True,
                 "available": False,
@@ -993,6 +1124,34 @@ class AppLifecycleManager:
         return stripped if stripped else None
 
     @staticmethod
+    def _is_tcp_port_open(host: str, port: int, timeout: float) -> bool:
+        """TCP ポート待受を確認."""
+        try:
+            with socket.create_connection((host, port), timeout=timeout):
+                return True
+        except OSError:
+            return False
+
+    @staticmethod
+    def _is_process_running(pid: int) -> bool:
+        """PID のプロセス生存確認."""
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            return False
+
+    @staticmethod
+    def _read_log_tail(path: str, max_lines: int) -> str:
+        """ログ末尾を取得."""
+        try:
+            with open(path, encoding="utf-8", errors="ignore") as file:
+                lines = file.readlines()
+        except OSError:
+            return ""
+        return "".join(lines[-max_lines:]).strip()
+
+    @staticmethod
     def _extract_json_payload(response: httpx.Response) -> dict[str, Any] | list[Any] | None:
         """JSON payload を安全に抽出."""
         content_type = response.headers.get("content-type", "").lower()
@@ -1000,7 +1159,7 @@ class AppLifecycleManager:
             return None
         try:
             payload = response.json()
-        except Exception:  # noqa: BLE001
+        except Exception:
             return None
         if isinstance(payload, (dict, list)):
             return payload

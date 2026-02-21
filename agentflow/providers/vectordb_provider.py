@@ -26,6 +26,7 @@ Agent/サービスは具体的なVector DB実装を知る必要がありませ�
 """
 
 import logging
+import os
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 
@@ -130,12 +131,14 @@ class MockVectorDBProvider:
         for item in self._data.values():
             # 簡易マッチ：クエリがドキュメントに含まれるか
             if query.lower() in item["document"].lower():
-                results.append({
-                    "id": item["id"],
-                    "document": item["document"],
-                    "distance": 0.1,
-                    "metadata": item.get("metadata", {}),
-                })
+                results.append(
+                    {
+                        "id": item["id"],
+                        "document": item["document"],
+                        "distance": 0.1,
+                        "metadata": item.get("metadata", {}),
+                    }
+                )
         return results[:top_k]
 
     async def delete(self, ids: list[str]) -> int:
@@ -170,13 +173,12 @@ class ChromaDBProvider:
         """ChromaDB に接続."""
         try:
             import chromadb
+
             if self._persist_dir:
                 self._client = chromadb.PersistentClient(path=self._persist_dir)
             else:
                 self._client = chromadb.Client()
-            self._collection = self._client.get_or_create_collection(
-                name=self._collection_name
-            )
+            self._collection = self._client.get_or_create_collection(name=self._collection_name)
             logger.info(f"Connected to ChromaDB: {self._collection_name}")
         except ImportError:
             msg = "chromadb package required: pip install chromadb"
@@ -224,12 +226,14 @@ class ChromaDBProvider:
         output = []
         if results and "documents" in results:
             for i, doc in enumerate(results["documents"][0]):
-                output.append({
-                    "id": results["ids"][0][i] if "ids" in results else f"doc_{i}",
-                    "document": doc,
-                    "distance": results["distances"][0][i] if "distances" in results else 0,
-                    "metadata": results["metadatas"][0][i] if "metadatas" in results else {},
-                })
+                output.append(
+                    {
+                        "id": results["ids"][0][i] if "ids" in results else f"doc_{i}",
+                        "document": doc,
+                        "distance": results["distances"][0][i] if "distances" in results else 0,
+                        "metadata": results["metadatas"][0][i] if "metadatas" in results else {},
+                    }
+                )
         return output
 
     async def delete(self, ids: list[str]) -> int:
@@ -272,7 +276,7 @@ class QdrantProvider:
             collection: コレクション名
             vector_size: ベクトルの次元数
         """
-        self._url = url or os.getenv("QDRANT_URL", "http://localhost:6333")
+        self._url: str = url or os.getenv("QDRANT_URL", "http://localhost:6333") or "http://localhost:6333"
         self._api_key = api_key or os.getenv("QDRANT_API_KEY")
         self._collection_name = collection
         self._vector_size = vector_size
@@ -329,6 +333,7 @@ class QdrantProvider:
 
         if ids is None:
             import uuid
+
             ids = [str(uuid.uuid4()) for _ in documents]
 
         points = []
@@ -360,10 +365,8 @@ class QdrantProvider:
 
         if filter_metadata:
             from qdrant_client.models import FieldCondition, Filter, MatchValue
-            conditions = [
-                FieldCondition(key=k, match=MatchValue(value=v))
-                for k, v in filter_metadata.items()
-            ]
+
+            conditions = [FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filter_metadata.items()]
             search_params["query_filter"] = Filter(must=conditions)
 
         results = self._client.search(**search_params)
@@ -381,6 +384,7 @@ class QdrantProvider:
     async def delete(self, ids: list[str]) -> int:
         """削除."""
         from qdrant_client.models import PointIdsList
+
         self._client.delete(
             collection_name=self._collection_name,
             points_selector=PointIdsList(points=ids),
@@ -390,6 +394,7 @@ class QdrantProvider:
     async def clear(self) -> None:
         """全クリア."""
         from qdrant_client.models import Distance, VectorParams
+
         self._client.delete_collection(self._collection_name)
         self._client.create_collection(
             collection_name=self._collection_name,
@@ -450,6 +455,7 @@ class FAISSProvider:
         """インデックスを保存して切断."""
         if self._index and self._index_path:
             import faiss
+
             faiss.write_index(self._index, self._index_path)
             logger.info(f"Saved FAISS index to: {self._index_path}")
         self._index = None
@@ -506,12 +512,14 @@ class FAISSProvider:
                 if filter_metadata:
                     if not all(doc["metadata"].get(k) == v for k, v in filter_metadata.items()):
                         continue
-                results.append({
-                    "id": doc["id"],
-                    "document": doc["document"],
-                    "distance": float(distances[0][i]),
-                    "metadata": doc["metadata"],
-                })
+                results.append(
+                    {
+                        "id": doc["id"],
+                        "document": doc["document"],
+                        "distance": float(distances[0][i]),
+                        "metadata": doc["metadata"],
+                    }
+                )
         return results
 
     async def delete(self, ids: list[str]) -> int:
@@ -527,6 +535,7 @@ class FAISSProvider:
     async def clear(self) -> None:
         """全クリア."""
         import faiss
+
         self._index = faiss.IndexFlatL2(self._vector_size)
         self._documents.clear()
         self._next_id = 0
@@ -614,6 +623,7 @@ class WeaviateProvider:
 
         if ids is None:
             import uuid
+
             ids = [str(uuid.uuid4()) for _ in documents]
 
         with self._client.batch as batch:
@@ -644,8 +654,7 @@ class WeaviateProvider:
 
         near_vector = {"vector": query_embedding}
         query_builder = (
-            self._client.query
-            .get(self._class_name, ["content", "doc_id"])
+            self._client.query.get(self._class_name, ["content", "doc_id"])
             .with_near_vector(near_vector)
             .with_limit(top_k)
             .with_additional(["distance"])
@@ -653,13 +662,15 @@ class WeaviateProvider:
 
         if filter_metadata:
             # Weaviate フィルター構築
-            where_filter = {"operator": "And", "operands": []}
+            where_filter: dict[str, Any] = {"operator": "And", "operands": []}
             for k, v in filter_metadata.items():
-                where_filter["operands"].append({
-                    "path": [k],
-                    "operator": "Equal",
-                    "valueString": str(v),
-                })
+                where_filter["operands"].append(
+                    {
+                        "path": [k],
+                        "operator": "Equal",
+                        "valueString": str(v),
+                    }
+                )
             query_builder = query_builder.with_where(where_filter)
 
         response = query_builder.do()
@@ -667,12 +678,14 @@ class WeaviateProvider:
         if response and "data" in response and "Get" in response["data"]:
             items = response["data"]["Get"].get(self._class_name, [])
             for item in items:
-                results.append({
-                    "id": item.get("doc_id", ""),
-                    "document": item.get("content", ""),
-                    "distance": item.get("_additional", {}).get("distance", 0),
-                    "metadata": {k: v for k, v in item.items() if k not in ["content", "doc_id", "_additional"]},
-                })
+                results.append(
+                    {
+                        "id": item.get("doc_id", ""),
+                        "document": item.get("content", ""),
+                        "distance": item.get("_additional", {}).get("distance", 0),
+                        "metadata": {k: v for k, v in item.items() if k not in ["content", "doc_id", "_additional"]},
+                    }
+                )
         return results
 
     async def delete(self, ids: list[str]) -> int:
@@ -772,11 +785,12 @@ class SupabaseVectorProvider:
 
         if ids is None:
             import uuid
+
             ids = [str(uuid.uuid4()) for _ in documents]
 
         rows = []
         for i, (doc_id, doc, emb) in enumerate(zip(ids, documents, embeddings, strict=False)):
-            row = {
+            row: dict[str, Any] = {
                 "id": doc_id,
                 "content": doc,
                 "embedding": emb,
@@ -813,12 +827,14 @@ class SupabaseVectorProvider:
         results = []
         if response.data:
             for item in response.data:
-                results.append({
-                    "id": item.get("id", ""),
-                    "document": item.get("content", ""),
-                    "distance": 1 - item.get("similarity", 0),
-                    "metadata": item.get("metadata", {}),
-                })
+                results.append(
+                    {
+                        "id": item.get("id", ""),
+                        "document": item.get("content", ""),
+                        "distance": 1 - item.get("similarity", 0),
+                        "metadata": item.get("metadata", {}),
+                    }
+                )
         return results
 
     async def delete(self, ids: list[str]) -> int:
@@ -870,6 +886,7 @@ def get_vectordb(
 
     # 1. 明示的な VECTOR_DATABASE_TYPE 指定を優先
     db_type = (get_env("VECTOR_DATABASE_TYPE", context=context) or "").lower()
+    provider: VectorDBProvider
 
     if db_type == "faiss":
         try:
@@ -883,9 +900,8 @@ def get_vectordb(
 
     if db_type == "qdrant":
         try:
-            url = (
-                (settings.qdrant_url if settings else None)
-                or get_env("QDRANT_URL", "http://localhost:6333", context=context)
+            url = (settings.qdrant_url if settings else None) or get_env(
+                "QDRANT_URL", "http://localhost:6333", context=context
             )
             logger.info(f"Using Qdrant provider: {url}")
             provider = QdrantProvider(url=url, collection=collection)
@@ -918,9 +934,8 @@ def get_vectordb(
 
     if db_type == "chromadb":
         try:
-            chroma_dir = (
-                (settings.chroma_persist_dir if settings else None)
-                or get_env("CHROMA_PERSIST_DIR", context=context)
+            chroma_dir = (settings.chroma_persist_dir if settings else None) or get_env(
+                "CHROMA_PERSIST_DIR", context=context
             )
             logger.info(f"Using ChromaDB provider: {chroma_dir or 'in-memory'}")
             provider = ChromaDBProvider(persist_dir=chroma_dir, collection=collection)
@@ -933,9 +948,7 @@ def get_vectordb(
     # 2. 環境変数から自動検出（後方互換性）
     if (settings.qdrant_url if settings else None) or get_env("QDRANT_URL", context=context):
         try:
-            url = (settings.qdrant_url if settings else None) or get_env(
-                "QDRANT_URL", context=context
-            )
+            url = (settings.qdrant_url if settings else None) or get_env("QDRANT_URL", context=context)
             logger.info(f"Auto-detected Qdrant: {url}")
             provider = QdrantProvider(url=url, collection=collection)
             if context is None and not _new_instance:
@@ -955,12 +968,8 @@ def get_vectordb(
         except ImportError:
             pass
 
-    if (
-        (settings.supabase_url if settings else None)
-        or get_env("SUPABASE_URL", context=context)
-    ) and (
-        (settings.supabase_key if settings else None)
-        or get_env("SUPABASE_KEY", context=context)
+    if ((settings.supabase_url if settings else None) or get_env("SUPABASE_URL", context=context)) and (
+        (settings.supabase_key if settings else None) or get_env("SUPABASE_KEY", context=context)
     ):
         try:
             logger.info("Auto-detected Supabase Vector")
@@ -981,9 +990,7 @@ def get_vectordb(
         except ImportError:
             pass
 
-    if get_env("CHROMA_PERSIST_DIR", context=context) or get_env(
-        "USE_CHROMADB", context=context
-    ):
+    if get_env("CHROMA_PERSIST_DIR", context=context) or get_env("USE_CHROMADB", context=context):
         try:
             chroma_dir = get_env("CHROMA_PERSIST_DIR", context=context)
             logger.info(f"Auto-detected ChromaDB: {chroma_dir or 'in-memory'}")

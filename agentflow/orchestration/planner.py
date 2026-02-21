@@ -33,13 +33,13 @@ from pydantic import BaseModel, Field
 class StepType(str, Enum):
     """ステップ種別."""
 
-    TOOL_CALL = "tool_call"        # ツール呼び出し
+    TOOL_CALL = "tool_call"  # ツール呼び出し
     LLM_GENERATION = "llm_generation"  # LLM生成
-    HUMAN_INPUT = "human_input"    # 人間入力待ち
-    CONDITIONAL = "conditional"    # 条件分岐
-    PARALLEL = "parallel"          # 並列実行
-    SEQUENTIAL = "sequential"      # 順次実行
-    SUB_PLAN = "sub_plan"          # サブ計画
+    HUMAN_INPUT = "human_input"  # 人間入力待ち
+    CONDITIONAL = "conditional"  # 条件分岐
+    PARALLEL = "parallel"  # 並列実行
+    SEQUENTIAL = "sequential"  # 順次実行
+    SUB_PLAN = "sub_plan"  # サブ計画
 
 
 class StepStatus(str, Enum):
@@ -120,14 +120,11 @@ class ExecutionPlan(BaseModel):
 
         依存関係が全て解決されたステップを返す。
         """
-        completed_ids = {
-            step.id for step in self.steps
-            if step.status == StepStatus.COMPLETED
-        }
+        completed_ids = {step.id for step in self.steps if step.status == StepStatus.COMPLETED}
         return [
-            step for step in self.steps
-            if step.status == StepStatus.PENDING
-            and all(dep in completed_ids for dep in step.dependencies)
+            step
+            for step in self.steps
+            if step.status == StepStatus.PENDING and all(dep in completed_ids for dep in step.dependencies)
         ]
 
     def get_step(self, step_id: str) -> PlanStep | None:
@@ -141,10 +138,7 @@ class ExecutionPlan(BaseModel):
         """進捗率を取得（0.0-1.0）."""
         if not self.steps:
             return 0.0
-        completed = sum(
-            1 for step in self.steps
-            if step.status == StepStatus.COMPLETED
-        )
+        completed = sum(1 for step in self.steps if step.status == StepStatus.COMPLETED)
         return completed / len(self.steps)
 
 
@@ -229,10 +223,7 @@ class PlannerAgent:
         plan.total_steps = len(plan.steps)
         plan.estimated_duration = sum(s.timeout_seconds for s in plan.steps)
 
-        self._logger.info(
-            f"計画作成完了: {plan.total_steps}ステップ, "
-            f"推定{plan.estimated_duration:.0f}秒"
-        )
+        self._logger.info(f"計画作成完了: {plan.total_steps}ステップ, 推定{plan.estimated_duration:.0f}秒")
 
         return plan
 
@@ -283,6 +274,7 @@ JSON形式で回答:
 
             # JSON部分を抽出
             import json
+
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
@@ -296,7 +288,7 @@ JSON形式で回答:
 
             for i, step_data in enumerate(data.get("steps", [])):
                 step = PlanStep(
-                    name=step_data.get("name", f"ステップ{i+1}"),
+                    name=step_data.get("name", f"ステップ{i + 1}"),
                     description=step_data.get("description", ""),
                     step_type=StepType(step_data.get("step_type", "tool_call")),
                     order=i,
@@ -310,11 +302,7 @@ JSON形式で回答:
             # 依存関係を名前からIDに変換
             for i, step_data in enumerate(data.get("steps", [])):
                 dep_names = step_data.get("dependencies", [])
-                steps[i].dependencies = [
-                    name_to_id[name]
-                    for name in dep_names
-                    if name in name_to_id
-                ]
+                steps[i].dependencies = [name_to_id[name] for name in dep_names if name in name_to_id]
 
             return ExecutionPlan(
                 name=data.get("name", "自動生成計画"),
@@ -428,6 +416,7 @@ JSON形式で代替ステップを提案:
             content = response.get("content", str(response))
 
             import json
+
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
@@ -438,7 +427,7 @@ JSON形式で代替ステップを提案:
             # 代替ステップを追加
             for i, alt_data in enumerate(data.get("alternative_steps", [])):
                 alt_step = PlanStep(
-                    name=alt_data.get("name", f"代替{i+1}"),
+                    name=alt_data.get("name", f"代替{i + 1}"),
                     description=alt_data.get("description", ""),
                     step_type=StepType(alt_data.get("step_type", "tool_call")),
                     order=len(plan.steps),

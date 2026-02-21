@@ -13,10 +13,13 @@ from __future__ import annotations
 
 import logging
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
-from apps.decision_governance_engine.config import DecisionWeightsConfig
+
+if TYPE_CHECKING:
+    from apps.decision_governance_engine.config import DecisionWeightsConfig
 
 
 logger = logging.getLogger(__name__)
@@ -52,9 +55,7 @@ class ScoringResult(BaseModel):
     evidence_coverage: float = Field(..., ge=0.0, le=1.0, description="証拠カバレッジ")
     hard_veto_triggered: bool = Field(default=False, description="Hard veto が発動したか")
     hard_veto_reason: str | None = Field(default=None, description="Hard veto の理由")
-    threshold_details: dict[str, float] = Field(
-        default_factory=dict, description="閾値詳細"
-    )
+    threshold_details: dict[str, float] = Field(default_factory=dict, description="閾値詳細")
 
 
 class ScoringEngine:
@@ -161,9 +162,7 @@ class ScoringEngine:
         hard_veto_triggered, hard_veto_reason = self._check_hard_veto(dimension_scores)
 
         # 4. 閾値判定
-        verdict = self._determine_verdict(
-            weighted_score, confidence, evidence_coverage, hard_veto_triggered
-        )
+        verdict = self._determine_verdict(weighted_score, confidence, evidence_coverage, hard_veto_triggered)
 
         # 5. 閾値詳細
         thresholds = self.config.get_thresholds()
@@ -186,9 +185,7 @@ class ScoringEngine:
             threshold_details=threshold_details,
         )
 
-    def _check_hard_veto(
-        self, dimension_scores: dict[str, float]
-    ) -> tuple[bool, str | None]:
+    def _check_hard_veto(self, dimension_scores: dict[str, float]) -> tuple[bool, str | None]:
         """Hard veto チェック.
 
         特定の次元が閾値を超えた場合、無条件で却下。
@@ -219,10 +216,7 @@ class ScoringEngine:
             is_veto = score >= hard_veto_score
 
             if is_veto:
-                reason = (
-                    f"Hard veto: {dim_id}={score} "
-                    f"(閾値: {hard_veto_score}, inverse={dim_config.inverse})"
-                )
+                reason = f"Hard veto: {dim_id}={score} (閾値: {hard_veto_score}, inverse={dim_config.inverse})"
                 logger.warning(reason)
                 return True, reason
 
@@ -280,8 +274,8 @@ class ScoringEngine:
 
 
 __all__ = [
+    "DecisionVerdict",
+    "DimensionScore",
     "ScoringEngine",
     "ScoringResult",
-    "DimensionScore",
-    "DecisionVerdict",
 ]

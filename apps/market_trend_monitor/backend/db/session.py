@@ -47,7 +47,6 @@ async def init_db() -> None:
     global _db_initialized
     if _db_initialized:
         return
-    from apps.market_trend_monitor.backend.db import models  # noqa: F401
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

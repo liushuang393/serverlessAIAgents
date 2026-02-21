@@ -185,24 +185,34 @@ class PriceAnalyzer(AgentBlock):
 
         # 推奨価格と戦略を決定
         recommended_price, strategy = self._determine_price_strategy(
-            avg_price, median_price, percentile_25, percentile_75,
-            cost, target_margin,
+            avg_price,
+            median_price,
+            percentile_25,
+            percentile_75,
+            cost,
+            target_margin,
         )
 
         # 市場ポジション判定
-        market_position = self._determine_market_position(
-            recommended_price, avg_price, std_dev
-        )
+        market_position = self._determine_market_position(recommended_price, avg_price, std_dev)
 
         # インサイト生成
         insights = self._generate_insights(
-            avg_price, median_price, std_dev, min_price, max_price,
-            strategy, market_position,
+            avg_price,
+            median_price,
+            std_dev,
+            min_price,
+            max_price,
+            strategy,
+            market_position,
         )
 
         logger.info(
             "価格分析完了: avg=%.2f, median=%.2f, recommended=%.2f, strategy=%s",
-            avg_price, median_price, recommended_price, strategy.value,
+            avg_price,
+            median_price,
+            recommended_price,
+            strategy.value,
         )
 
         return PriceAnalysis(
@@ -221,9 +231,7 @@ class PriceAnalyzer(AgentBlock):
             insights=insights,
         )
 
-    def _extract_price_points(
-        self, products: list[dict[str, Any]]
-    ) -> list[PricePoint]:
+    def _extract_price_points(self, products: list[dict[str, Any]]) -> list[PricePoint]:
         """商品リストから価格ポイントを抽出."""
         price_points: list[PricePoint] = []
         for p in products:
@@ -302,26 +310,18 @@ class PriceAnalyzer(AgentBlock):
 
         # 価格分布の傾向
         if avg_price > median_price * 1.1:
-            insights.append(
-                "価格分布は右に歪んでいます（高価格帯の商品が多い）"
-            )
+            insights.append("価格分布は右に歪んでいます（高価格帯の商品が多い）")
         elif avg_price < median_price * 0.9:
-            insights.append(
-                "価格分布は左に歪んでいます（低価格帯の商品が多い）"
-            )
+            insights.append("価格分布は左に歪んでいます（低価格帯の商品が多い）")
         else:
             insights.append("価格分布は比較的均等です")
 
         # 価格変動
         cv = std_dev / avg_price if avg_price > 0 else 0
         if cv > 0.3:
-            insights.append(
-                f"価格の変動が大きい市場です（変動係数: {cv:.2%}）"
-            )
+            insights.append(f"価格の変動が大きい市場です（変動係数: {cv:.2%}）")
         else:
-            insights.append(
-                f"価格が安定した市場です（変動係数: {cv:.2%}）"
-            )
+            insights.append(f"価格が安定した市場です（変動係数: {cv:.2%}）")
 
         # 戦略アドバイス
         strategy_advice = {

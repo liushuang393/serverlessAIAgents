@@ -48,9 +48,16 @@ router = APIRouter(tags=["产品立项"])
 # リクエスト/レスポンス スキーマ
 # ========================================
 
+
 class ProductLaunchRequest(BaseModel):
     """产品立项リクエスト."""
-    question: str = Field(..., min_length=15, max_length=2000, description="立項質問（例: 新SaaS製品を立ち上げるべきか）")
+
+    question: str = Field(
+        ...,
+        min_length=15,
+        max_length=2000,
+        description="立項質問（例: 新SaaS製品を立ち上げるべきか）",
+    )
     product_name: str = Field(default="", description="製品名（オプション）")
     target_market: str = Field(default="", description="ターゲット市場")
     budget_万円: float | None = Field(None, ge=0, description="予算制約（万円）")
@@ -61,6 +68,7 @@ class ProductLaunchRequest(BaseModel):
 
 class ProductLaunchResponse(BaseModel):
     """产品立项レスポンス（v1 契約ベース）."""
+
     status: str = Field(..., description="success/error")
     request_id: str = Field(..., description="リクエストID")
     decision_role: str = Field(..., description="GO/NO_GO/DELAY/PILOT")
@@ -90,6 +98,7 @@ def get_engine() -> DecisionEngine:
 # エンドポイント
 # ========================================
 
+
 @router.post("/api/product-launch", response_model=ProductLaunchResponse)
 async def process_product_launch(req: ProductLaunchRequest) -> ProductLaunchResponse:
     """产品立项 端到端決策.
@@ -106,7 +115,11 @@ async def process_product_launch(req: ProductLaunchRequest) -> ProductLaunchResp
     warnings: list[str] = []
 
     # モード設定
-    mode_map = {"FAST": DecisionMode.FAST, "STANDARD": DecisionMode.STANDARD, "AUDIT": DecisionMode.AUDIT}
+    mode_map = {
+        "FAST": DecisionMode.FAST,
+        "STANDARD": DecisionMode.STANDARD,
+        "AUDIT": DecisionMode.AUDIT,
+    }
     decision_mode = mode_map.get(req.mode.upper(), DecisionMode.STANDARD)
 
     logger.info(f"[产品立项] request_id={request_id}, mode={decision_mode}, question={req.question[:50]}...")

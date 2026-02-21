@@ -1,6 +1,5 @@
-import pytest
-from agentflow.state.store import GlobalStateStore
 from agentflow.state.actions import ActionType, create_action
+from agentflow.state.store import GlobalStateStore
 
 
 def test_task_created_action():

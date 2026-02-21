@@ -155,9 +155,7 @@ class A2AServer:
             self._logger.debug(f"Task completed: agent={agent_name}, skill={skill_name}")
 
         except TimeoutError:
-            self._logger.exception(
-                f"Task timeout: agent={agent_name}, skill={skill_name}, timeout={task_timeout}s"
-            )
+            self._logger.exception(f"Task timeout: agent={agent_name}, skill={skill_name}, timeout={task_timeout}s")
             return {
                 "status": "error",
                 "error": "Task timeout",

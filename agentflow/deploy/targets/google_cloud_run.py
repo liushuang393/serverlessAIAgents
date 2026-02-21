@@ -84,10 +84,7 @@ class GoogleCloudRunTarget(BaseDeployTarget):
                                     "cpu": config.settings.get("cpu", "1"),
                                 }
                             ),
-                            env=[
-                                run_v2.EnvVar(name=k, value=v)
-                                for k, v in config.env_vars.items()
-                            ],
+                            env=[run_v2.EnvVar(name=k, value=v) for k, v in config.env_vars.items()],
                         )
                     ],
                     scaling=run_v2.RevisionScaling(
@@ -173,4 +170,3 @@ class GoogleCloudRunTarget(BaseDeployTarget):
 
 
 __all__ = ["GoogleCloudRunTarget"]
-

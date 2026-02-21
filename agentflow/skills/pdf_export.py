@@ -24,7 +24,7 @@ import io
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 
 logger = logging.getLogger(__name__)
@@ -71,7 +71,7 @@ class PDFExportSkill:
     def _check_reportlab(self) -> bool:
         """ReportLabが利用可能か確認."""
         try:
-            from reportlab.lib.pagesizes import A4  # noqa: F401
+            from reportlab.lib.pagesizes import A4
 
             return True
         except ImportError:
@@ -81,7 +81,7 @@ class PDFExportSkill:
     def _to_dict(self, obj: Any) -> dict[str, Any]:
         """Pydanticオブジェクトまたはdictをdictに変換."""
         if hasattr(obj, "model_dump"):
-            return obj.model_dump()
+            return cast("dict[str, Any]", obj.model_dump())
         if isinstance(obj, dict):
             return obj
         return {}
@@ -160,24 +160,14 @@ class PDFExportSkill:
         elements: list[Any] = []
 
         # スタイル定義
-        title_style = ParagraphStyle(
-            "CJKTitle", parent=styles["Title"], fontSize=18, fontName=cjk_font
-        )
-        heading_style = ParagraphStyle(
-            "CJKHeading", parent=styles["Heading2"], fontName=cjk_font, spaceAfter=10
-        )
-        subheading_style = ParagraphStyle(
-            "CJKSubHeading", parent=styles["Heading3"], fontName=cjk_font, fontSize=11
-        )
+        title_style = ParagraphStyle("CJKTitle", parent=styles["Title"], fontSize=18, fontName=cjk_font)
+        heading_style = ParagraphStyle("CJKHeading", parent=styles["Heading2"], fontName=cjk_font, spaceAfter=10)
+        subheading_style = ParagraphStyle("CJKSubHeading", parent=styles["Heading3"], fontName=cjk_font, fontSize=11)
         normal_style = ParagraphStyle(
             "CJKNormal", parent=styles["Normal"], fontName=cjk_font, spaceBefore=3, spaceAfter=3
         )
-        highlight_style = ParagraphStyle(
-            "CJKHighlight", parent=normal_style, backColor=colors.Color(0.9, 0.95, 1)
-        )
-        warning_style = ParagraphStyle(
-            "CJKWarning", parent=normal_style, backColor=colors.Color(1, 0.95, 0.9)
-        )
+        highlight_style = ParagraphStyle("CJKHighlight", parent=normal_style, backColor=colors.Color(0.9, 0.95, 1))
+        warning_style = ParagraphStyle("CJKWarning", parent=normal_style, backColor=colors.Color(1, 0.95, 0.9))
 
         # dictに変換
         dao = self._to_dict(agent_results.get("dao", {}))
@@ -190,9 +180,7 @@ class PDFExportSkill:
         # ========== タイトル ==========
         elements.append(Paragraph(f"{title} v3.0", title_style))
         elements.append(Paragraph(f"Report ID: {report_id}", normal_style))
-        elements.append(
-            Paragraph(f"生成日時: {datetime.now().strftime('%Y-%m-%d %H:%M')}", normal_style)
-        )
+        elements.append(Paragraph(f"生成日時: {datetime.now().strftime('%Y-%m-%d %H:%M')}", normal_style))
         elements.append(Spacer(1, 0.5 * cm))
 
         # ========== 元の質問 ==========
@@ -204,19 +192,11 @@ class PDFExportSkill:
         # ========== エグゼクティブサマリー ==========
         elements.append(Paragraph("📊 エグゼクティブサマリー", heading_style))
         if summary.get("one_line_decision"):
-            elements.append(
-                Paragraph(
-                    f"<b>💡 結論:</b> {summary.get('one_line_decision', '')}", highlight_style
-                )
-            )
+            elements.append(Paragraph(f"<b>💡 結論:</b> {summary.get('one_line_decision', '')}", highlight_style))
         if summary.get("essence_statement"):
-            elements.append(
-                Paragraph(f"<b>📍 本質:</b> {summary.get('essence_statement', '')}", normal_style)
-            )
+            elements.append(Paragraph(f"<b>📍 本質:</b> {summary.get('essence_statement', '')}", normal_style))
         if summary.get("first_step"):
-            elements.append(
-                Paragraph(f"<b>🎯 最初の一歩:</b> {summary.get('first_step', '')}", normal_style)
-            )
+            elements.append(Paragraph(f"<b>🎯 最初の一歩:</b> {summary.get('first_step', '')}", normal_style))
         if summary.get("strategic_prohibition_summary"):
             elements.append(
                 Paragraph(
@@ -225,11 +205,7 @@ class PDFExportSkill:
                 )
             )
         if summary.get("exit_criteria_summary"):
-            elements.append(
-                Paragraph(
-                    f"<b>🚪 撤退基準:</b> {summary.get('exit_criteria_summary', '')}", warning_style
-                )
-            )
+            elements.append(Paragraph(f"<b>🚪 撤退基準:</b> {summary.get('exit_criteria_summary', '')}", warning_style))
         key_risks = summary.get("key_risks", [])
         if key_risks:
             elements.append(Paragraph("<b>⚠️ 主要リスク:</b>", normal_style))
@@ -245,22 +221,16 @@ class PDFExportSkill:
         problem_nature = self._get_value(dao.get("problem_nature", ""))
         elements.append(Paragraph(f"<b>問題タイプ:</b> {problem_type}", normal_style))
         elements.append(Paragraph(f"<b>問題の本質的性質:</b> {problem_nature}", normal_style))
-        elements.append(
-            Paragraph(f"<b>📍 本質（一文）:</b> {dao.get('essence', 'N/A')}", highlight_style)
-        )
+        elements.append(Paragraph(f"<b>📍 本質（一文）:</b> {dao.get('essence', 'N/A')}", highlight_style))
 
         # 本質導出プロセス
         ed = dao.get("essence_derivation", {})
         if ed:
             elements.append(Paragraph("🔍 本質導出プロセス", subheading_style))
             elements.append(Paragraph(f"表面的問題: {ed.get('surface_problem', '')}", normal_style))
-            elements.append(
-                Paragraph(f"一段深い理由: {ed.get('underlying_why', '')}", normal_style)
-            )
+            elements.append(Paragraph(f"一段深い理由: {ed.get('underlying_why', '')}", normal_style))
             elements.append(Paragraph(f"根本制約: {ed.get('root_constraint', '')}", normal_style))
-            elements.append(
-                Paragraph(f"<b>本質の一文:</b> {ed.get('essence_statement', '')}", highlight_style)
-            )
+            elements.append(Paragraph(f"<b>本質の一文:</b> {ed.get('essence_statement', '')}", highlight_style))
 
         # 既存代替手段
         alternatives = dao.get("existing_alternatives", [])
@@ -311,8 +281,7 @@ class PDFExportSkill:
             for trap in traps:
                 elements.append(
                     Paragraph(
-                        f"⚠️ <b>{trap.get('action', '')}</b> ({trap.get('severity', '')}): "
-                        f"{trap.get('reason', '')}",
+                        f"⚠️ <b>{trap.get('action', '')}</b> ({trap.get('severity', '')}): {trap.get('reason', '')}",
                         warning_style,
                     )
                 )
@@ -325,9 +294,7 @@ class PDFExportSkill:
         # 戦略的禁止事項
         prohibitions = fa.get("strategic_prohibitions", [])
         if prohibitions:
-            elements.append(
-                Paragraph("🚫 戦略的禁止事項（絶対にやってはいけない）", subheading_style)
-            )
+            elements.append(Paragraph("🚫 戦略的禁止事項（絶対にやってはいけない）", subheading_style))
             for p in prohibitions:
                 elements.append(
                     Paragraph(
@@ -341,29 +308,19 @@ class PDFExportSkill:
         diff_axis = fa.get("differentiation_axis", {})
         if diff_axis:
             elements.append(Paragraph("🎯 差別化軸", subheading_style))
-            elements.append(
-                Paragraph(f"<b>勝負する軸:</b> {diff_axis.get('axis_name', '')}", highlight_style)
-            )
+            elements.append(Paragraph(f"<b>勝負する軸:</b> {diff_axis.get('axis_name', '')}", highlight_style))
             elements.append(Paragraph(f"理由: {diff_axis.get('why_this_axis', '')}", normal_style))
-            elements.append(
-                Paragraph(
-                    f"<b>勝負しない軸:</b> {diff_axis.get('not_this_axis', '')}", normal_style
-                )
-            )
+            elements.append(Paragraph(f"<b>勝負しない軸:</b> {diff_axis.get('not_this_axis', '')}", normal_style))
 
         # 既存解が使えない理由
         why_existing = fa.get("why_existing_fails", "")
         if why_existing:
-            elements.append(
-                Paragraph(f"<b>⚠️ 既存解が使えない理由:</b> {why_existing}", warning_style)
-            )
+            elements.append(Paragraph(f"<b>⚠️ 既存解が使えない理由:</b> {why_existing}", warning_style))
 
         # 推奨パス
         for path in fa.get("recommended_paths", []):
             strategy_type = self._get_value(path.get("strategy_type", ""))
-            elements.append(
-                Paragraph(f"📌 {path.get('name', '')} ({strategy_type})", subheading_style)
-            )
+            elements.append(Paragraph(f"📌 {path.get('name', '')} ({strategy_type})", subheading_style))
             elements.append(Paragraph(path.get("description", ""), normal_style))
             elements.append(
                 Paragraph(
@@ -398,9 +355,7 @@ class PDFExportSkill:
         # 切り捨てリスト
         cut_list = shu.get("cut_list", [])
         if cut_list:
-            elements.append(
-                Paragraph("✂️ 切り捨てリスト（最初の30日間でやらないこと）", subheading_style)
-            )
+            elements.append(Paragraph("✂️ 切り捨てリスト（最初の30日間でやらないこと）", subheading_style))
             for c in cut_list:
                 elements.append(Paragraph(f"  ❌ {c}", warning_style))
 
@@ -411,39 +366,23 @@ class PDFExportSkill:
             for a in context_actions:
                 elements.append(Paragraph(f"• <b>{a.get('action', '')}</b>", normal_style))
                 elements.append(Paragraph(f"  理由: {a.get('why_this_context', '')}", normal_style))
-                elements.append(
-                    Paragraph(f"  期待出力: {a.get('expected_output', '')}", highlight_style)
-                )
+                elements.append(Paragraph(f"  期待出力: {a.get('expected_output', '')}", highlight_style))
 
         # 単一検証ポイント
         validation = shu.get("single_validation_point", {})
         if validation:
-            elements.append(
-                Paragraph("🔬 単一検証ポイント（PoCで絶対に検証すべき1点）", subheading_style)
-            )
-            elements.append(
-                Paragraph(f"検証対象: {validation.get('validation_target', '')}", normal_style)
-            )
-            elements.append(
-                Paragraph(f"成功基準: {validation.get('success_criteria', '')}", normal_style)
-            )
-            elements.append(
-                Paragraph(f"失敗時行動: {validation.get('failure_action', '')}", warning_style)
-            )
+            elements.append(Paragraph("🔬 単一検証ポイント（PoCで絶対に検証すべき1点）", subheading_style))
+            elements.append(Paragraph(f"検証対象: {validation.get('validation_target', '')}", normal_style))
+            elements.append(Paragraph(f"成功基準: {validation.get('success_criteria', '')}", normal_style))
+            elements.append(Paragraph(f"失敗時行動: {validation.get('failure_action', '')}", warning_style))
 
         # 撤退基準
         exit_criteria = shu.get("exit_criteria", {})
         if exit_criteria:
             elements.append(Paragraph("🚪 撤退基準（どこで止めるか）", subheading_style))
-            elements.append(
-                Paragraph(f"チェックポイント: {exit_criteria.get('checkpoint', '')}", normal_style)
-            )
-            elements.append(
-                Paragraph(f"撤退トリガー: {exit_criteria.get('exit_trigger', '')}", warning_style)
-            )
-            elements.append(
-                Paragraph(f"撤退時行動: {exit_criteria.get('exit_action', '')}", normal_style)
-            )
+            elements.append(Paragraph(f"チェックポイント: {exit_criteria.get('checkpoint', '')}", normal_style))
+            elements.append(Paragraph(f"撤退トリガー: {exit_criteria.get('exit_trigger', '')}", warning_style))
+            elements.append(Paragraph(f"撤退時行動: {exit_criteria.get('exit_action', '')}", normal_style))
 
         # フェーズ
         phases = shu.get("phases", [])
@@ -568,11 +507,7 @@ class PDFExportSkill:
         verdict = self._get_value(review.get("overall_verdict", "N/A"))
         confidence = review.get("confidence_score", 0)
         verdict_style = highlight_style if verdict == "PASS" else warning_style
-        elements.append(
-            Paragraph(
-                f"<b>総合判定: {verdict}</b> | 信頼度: {confidence * 100:.0f}%", verdict_style
-            )
-        )
+        elements.append(Paragraph(f"<b>総合判定: {verdict}</b> | 信頼度: {confidence * 100:.0f}%", verdict_style))
 
         # 指摘事項
         findings = review.get("findings", [])
@@ -583,9 +518,7 @@ class PDFExportSkill:
                 sty = warning_style if severity in ["CRITICAL", "WARNING"] else normal_style
                 elements.append(Paragraph(f"• [{severity}] {f.get('description', '')}", sty))
                 if f.get("suggested_revision"):
-                    elements.append(
-                        Paragraph(f"  💡 修正提案: {f.get('suggested_revision', '')}", normal_style)
-                    )
+                    elements.append(Paragraph(f"  💡 修正提案: {f.get('suggested_revision', '')}", normal_style))
 
         # 最終警告
         final_warnings = review.get("final_warnings", [])
@@ -757,9 +690,7 @@ th {{ background: #f4f4f4; }}
         constraints_html = ""
         if constraints:
             constraints_html = (
-                "<h3>🔒 不可変制約</h3><ul>"
-                + "".join(f"<li>🔒 {esc(c)}</li>" for c in constraints)
-                + "</ul>"
+                "<h3>🔒 不可変制約</h3><ul>" + "".join(f"<li>🔒 {esc(c)}</li>" for c in constraints) + "</ul>"
             )
 
         # 隠れた前提
@@ -767,9 +698,7 @@ th {{ background: #f4f4f4; }}
         assumptions_html = ""
         if assumptions:
             assumptions_html = (
-                "<h3>💭 隠れた前提</h3><ul>"
-                + "".join(f"<li>💭 {esc(a)}</li>" for a in assumptions)
-                + "</ul>"
+                "<h3>💭 隠れた前提</h3><ul>" + "".join(f"<li>💭 {esc(a)}</li>" for a in assumptions) + "</ul>"
             )
 
         # 因果歯車
@@ -819,9 +748,7 @@ th {{ background: #f4f4f4; }}
                 f'<li class="danger">⛔ <strong>{esc(p.get("prohibition", ""))}</strong>: {esc(p.get("rationale", ""))} → 違反結果: {esc(p.get("violation_consequence", ""))}</li>'
                 for p in prohibitions
             )
-            prohibitions_html = (
-                f"<h3>🚫 戦略的禁止事項（絶対にやってはいけない）</h3><ul>{prohibitions_items}</ul>"
-            )
+            prohibitions_html = f"<h3>🚫 戦略的禁止事項（絶対にやってはいけない）</h3><ul>{prohibitions_items}</ul>"
 
         # 差別化軸
         diff_axis = fa.get("differentiation_axis", {})
@@ -848,12 +775,8 @@ th {{ background: #f4f4f4; }}
                 strategy_type = self._get_value(path.get("strategy_type", ""))
                 pros = path.get("pros", [])
                 cons = path.get("cons", [])
-                pros_html = (
-                    "<br>メリット: " + ", ".join(f"+ {esc(p)}" for p in pros) if pros else ""
-                )
-                cons_html = (
-                    "<br>デメリット: " + ", ".join(f"- {esc(c)}" for c in cons) if cons else ""
-                )
+                pros_html = "<br>メリット: " + ", ".join(f"+ {esc(p)}" for p in pros) if pros else ""
+                cons_html = "<br>デメリット: " + ", ".join(f"- {esc(c)}" for c in cons) if cons else ""
                 paths_html += f"""<div class="highlight">
 <strong>📌 {esc(path.get("name", ""))} ({esc(strategy_type)})</strong><br>
 {esc(path.get("description", ""))}<br>
@@ -875,9 +798,7 @@ th {{ background: #f4f4f4; }}
         # 最初の一歩
         first_action = shu.get("first_action", "")
         first_html = (
-            f'<div class="success"><strong>🎯 最初の一歩:</strong> {esc(first_action)}</div>'
-            if first_action
-            else ""
+            f'<div class="success"><strong>🎯 最初の一歩:</strong> {esc(first_action)}</div>' if first_action else ""
         )
 
         # 切り捨てリスト
@@ -926,11 +847,7 @@ th {{ background: #f4f4f4; }}
             phases_items = ""
             for phase in phases:
                 actions = phase.get("actions", [])
-                actions_html = (
-                    "<ul>" + "".join(f"<li>{esc(a)}</li>" for a in actions[:3]) + "</ul>"
-                    if actions
-                    else ""
-                )
+                actions_html = "<ul>" + "".join(f"<li>{esc(a)}</li>" for a in actions[:3]) + "</ul>" if actions else ""
                 phases_items += f"""<li><strong>Phase {phase.get("phase_number", "?")}: {esc(phase.get("name", ""))}</strong> ({esc(phase.get("duration", ""))}){actions_html}</li>"""
             phases_html = f"<h3>📅 フェーズ</h3><ul>{phases_items}</ul>"
 
@@ -986,9 +903,7 @@ th {{ background: #f4f4f4; }}
             for impl in implementations:
                 risks = impl.get("risks", [])
                 risks_str = (
-                    f' <span class="warning">⚠️ リスク: {", ".join(esc(r) for r in risks)}</span>'
-                    if risks
-                    else ""
+                    f' <span class="warning">⚠️ リスク: {", ".join(esc(r) for r in risks)}</span>' if risks else ""
                 )
                 impl_items += f"<li>{esc(impl.get('component', ''))}: {esc(impl.get('technology', ''))} ({esc(impl.get('estimated_effort', ''))}){risks_str}</li>"
             impl_html = f"<h3>🔧 実装要素</h3><ul>{impl_items}</ul>"
@@ -1040,7 +955,9 @@ th {{ background: #f4f4f4; }}
                 sev_class = "danger" if severity in ["CRITICAL", "WARNING"] else ""
                 revision = f.get("suggested_revision", "")
                 revision_html = f"<br>💡 修正提案: {esc(revision)}" if revision else ""
-                findings_items += f'<li class="{sev_class}">[{esc(severity)}] {esc(f.get("description", ""))}{revision_html}</li>'
+                findings_items += (
+                    f'<li class="{sev_class}">[{esc(severity)}] {esc(f.get("description", ""))}{revision_html}</li>'
+                )
             findings_html = f"<h3>📋 指摘事項</h3><ul>{findings_items}</ul>"
 
         # 最終警告

@@ -13,7 +13,7 @@ import json
 import logging
 import os
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from apps.faq_system.backend.agents import (
     AnalyticsAgent,
@@ -28,10 +28,15 @@ from apps.faq_system.backend.agents import (
     MaintenanceConfig,
 )
 from apps.faq_system.backend.auth.dependencies import require_auth
-from apps.faq_system.backend.auth.models import UserInfo
 from apps.faq_system.routers.dependencies import resolve_default_collection
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from apps.faq_system.backend.auth.models import UserInfo
+else:
+    UserInfo = Any
 
 
 logger = logging.getLogger(__name__)
@@ -61,9 +66,11 @@ def _create_agent(agent_type: AgentType) -> Any:
     """Agent インスタンスを生成."""
     match agent_type:
         case AgentType.INTERNAL_KB:
-            return InternalKBAgent(InternalKBConfig(
-                collection=resolve_default_collection(),
-            ))
+            return InternalKBAgent(
+                InternalKBConfig(
+                    collection=resolve_default_collection(),
+                )
+            )
         case AgentType.EXTERNAL_KB:
             return ExternalKBAgent(ExternalKBConfig())
         case AgentType.MAINTENANCE:
@@ -73,10 +80,12 @@ def _create_agent(agent_type: AgentType) -> Any:
             return AnalyticsAgent(AnalyticsConfig(), db_schema=schema)
         case AgentType.ENHANCED_FAQ:
             schema = json.loads(os.getenv("DB_SCHEMA", "{}"))
-            return EnhancedFAQAgent(EnhancedFAQConfig(
-                rag_collection=resolve_default_collection(),
-                sql_schema=schema,
-            ))
+            return EnhancedFAQAgent(
+                EnhancedFAQConfig(
+                    rag_collection=resolve_default_collection(),
+                    sql_schema=schema,
+                )
+            )
 
 
 def get_agent(agent_type: AgentType) -> Any:

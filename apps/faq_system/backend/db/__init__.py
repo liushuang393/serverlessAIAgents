@@ -16,6 +16,7 @@ from apps.faq_system.backend.db.session import (
     get_db_session,
 )
 
+
 __all__ = [
     "AuthSession",
     "Base",

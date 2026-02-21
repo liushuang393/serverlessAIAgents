@@ -260,12 +260,21 @@ class PublishService:
         deploy_config = DeployConfig(
             target=target,
             credentials={
-                k: v for k, v in config.items()
+                k: v
+                for k, v in config.items()
                 if k in ("token", "username", "password", "aws_access_key_id", "aws_secret_access_key")
             },
             settings={
-                k: v for k, v in config.items()
-                if k not in ("token", "username", "password", "aws_access_key_id", "aws_secret_access_key")
+                k: v
+                for k, v in config.items()
+                if k
+                not in (
+                    "token",
+                    "username",
+                    "password",
+                    "aws_access_key_id",
+                    "aws_secret_access_key",
+                )
             },
             env_vars=config.get("env_vars", {}),
         )

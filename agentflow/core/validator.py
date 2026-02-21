@@ -56,10 +56,7 @@ class ValidationResult:
     def __repr__(self) -> str:
         """文字列表現を返す."""
         status = "Valid" if self.is_valid else "Invalid"
-        return (
-            f"ValidationResult(status={status}, errors={len(self.errors)}, "
-            f"warnings={len(self.warnings)})"
-        )
+        return f"ValidationResult(status={status}, errors={len(self.errors)}, warnings={len(self.warnings)})"
 
 
 class AgentValidator:
@@ -137,15 +134,12 @@ class AgentValidator:
         # ID 形式チェック
         if not self.ID_PATTERN.match(meta.id):
             result.add_error(
-                f"Invalid agent ID format: '{meta.id}'. "
-                "Must be kebab-case (lowercase, numbers, hyphens only)"
+                f"Invalid agent ID format: '{meta.id}'. Must be kebab-case (lowercase, numbers, hyphens only)"
             )
 
         # バージョン形式チェック
         if not self.VERSION_PATTERN.match(meta.version):
-            result.add_error(
-                f"Invalid version format: '{meta.version}'. Must be semver format (e.g., 1.0.0)"
-            )
+            result.add_error(f"Invalid version format: '{meta.version}'. Must be semver format (e.g., 1.0.0)")
 
         # 名前の長さチェック
         if len(meta.name) < self.MIN_NAME_LENGTH:
@@ -155,13 +149,9 @@ class AgentValidator:
 
         # 説明の長さチェック
         if len(meta.description) < self.MIN_DESCRIPTION_LENGTH:
-            result.add_warning(
-                f"Agent description is too short (<{self.MIN_DESCRIPTION_LENGTH} characters)"
-            )
+            result.add_warning(f"Agent description is too short (<{self.MIN_DESCRIPTION_LENGTH} characters)")
         elif len(meta.description) > self.MAX_DESCRIPTION_LENGTH:
-            result.add_warning(
-                f"Agent description is too long (>{self.MAX_DESCRIPTION_LENGTH} characters)"
-            )
+            result.add_warning(f"Agent description is too long (>{self.MAX_DESCRIPTION_LENGTH} characters)")
 
     def _validate_interfaces(self, metadata: AgentMetadata, result: ValidationResult) -> None:
         """インターフェースを検証.
@@ -259,8 +249,7 @@ class AgentValidator:
         # エントリーポイント形式チェック
         if ":" not in pocketflow.entry:
             result.add_error(
-                f"Invalid PocketFlow entry format: '{pocketflow.entry}'. "
-                "Expected format: 'module.py:function'"
+                f"Invalid PocketFlow entry format: '{pocketflow.entry}'. Expected format: 'module.py:function'"
             )
         else:
             module, func = pocketflow.entry.split(":", 1)

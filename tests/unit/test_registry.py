@@ -90,9 +90,7 @@ class TestLocalRegistry:
         assert agents[0].id == "test-agent"
         assert agents[0].name == "Test Agent"
 
-    def test_add_agent_updates_existing(
-        self, registry: LocalRegistry, sample_entry: AgentRegistryEntry
-    ) -> None:
+    def test_add_agent_updates_existing(self, registry: LocalRegistry, sample_entry: AgentRegistryEntry) -> None:
         """既存エージェントを更新できることをテスト."""
         # 最初のエントリを追加
         registry.add_agent(sample_entry)

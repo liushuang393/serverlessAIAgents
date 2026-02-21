@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """VectorDB 工厂函数和实现的单元测试.
 
 黒盒設計テスト: Agent/サービスは get_vectordb() のみを使用し、
@@ -157,7 +156,7 @@ class TestQdrantProvider:
             collection="test",
         )
         # 如果没有 qdrant-client 或无连接，应该抛出异常
-        try:
+        try:  # noqa: SIM105
             await provider.add(documents=["Test"])
         except Exception:
             # 预期行为：无依赖或无连接时失败
@@ -238,4 +237,3 @@ class TestSupabaseVectorProvider:
             table="documents",
         )
         assert provider._table == "documents"
-

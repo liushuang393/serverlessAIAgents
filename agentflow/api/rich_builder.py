@@ -81,12 +81,14 @@ class ComponentFactory:
     ) -> ChartView:
         """スコアゲージ."""
         chart_data = {
-            "series": [{
-                "type": "gauge",
-                "data": [{"value": value, "name": title}],
-                "max": max_value,
-                "detail": {"formatter": f"{{value}}/{max_value}"},
-            }],
+            "series": [
+                {
+                    "type": "gauge",
+                    "data": [{"value": value, "name": title}],
+                    "max": max_value,
+                    "detail": {"formatter": f"{{value}}/{max_value}"},
+                }
+            ],
         }
         return ChartView(chart_type="gauge", data=chart_data, title=title)
 
@@ -100,8 +102,7 @@ class ComponentFactory:
         """比較テーブル."""
         # 比較用に再構成
         table_data = [
-            {compare_key: item.get(compare_key, ""), **{m: item.get(m, "") for m in metrics}}
-            for item in items
+            {compare_key: item.get(compare_key, ""), **{m: item.get(m, "") for m in metrics}} for item in items
         ]
         return DataTable(table_data, title=title)
 
@@ -274,9 +275,7 @@ class RichResponseBuilder:
         Returns:
             self
         """
-        return self._add_component(
-            ChartView(chart_type, data, title=title, height=height)
-        )
+        return self._add_component(ChartView(chart_type, data, title=title, height=height))
 
     def add_bar_chart(
         self,
@@ -367,9 +366,7 @@ class RichResponseBuilder:
         Returns:
             self
         """
-        return self._add_component(
-            Citation(source_id, title, snippet, url=url, relevance_score=score)
-        )
+        return self._add_component(Citation(source_id, title, snippet, url=url, relevance_score=score))
 
     def add_citations(self, citations: list[dict[str, Any]]) -> RichResponseBuilder:
         """複数引用追加.

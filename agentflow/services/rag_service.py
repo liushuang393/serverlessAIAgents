@@ -49,6 +49,7 @@ logger = logging.getLogger(__name__)
 
 class ChunkStrategy(str, Enum):
     """チャンキング戦略."""
+
     RECURSIVE = "recursive"
     SEMANTIC = "semantic"
     SENTENCE = "sentence"
@@ -58,6 +59,7 @@ class ChunkStrategy(str, Enum):
 
 class RerankerType(str, Enum):
     """リランカータイプ."""
+
     COHERE = "cohere"
     CROSS_ENCODER = "cross_encoder"
     BM25 = "bm25"
@@ -124,6 +126,7 @@ class RAGConfig:
 @dataclass
 class RAGDocument:
     """RAG ドキュメント."""
+
     id: str
     content: str
     source: str = ""
@@ -134,6 +137,7 @@ class RAGDocument:
 @dataclass
 class RAGResult:
     """RAG 結果."""
+
     documents: list[RAGDocument]
     answer: str = ""
     query: str = ""
@@ -144,7 +148,7 @@ class RAGResult:
 # =============================================================================
 
 
-class RAGService(ServiceBase):
+class RAGService(ServiceBase[dict[str, Any]]):
     """RAG Service - 框架級可复用服務.
 
     Studio/CLI/SDK/API 全てで同一インターフェース。
@@ -160,11 +164,11 @@ class RAGService(ServiceBase):
         """初期化."""
         super().__init__()
         self._config = config or RAGConfig()
-        self._llm = None
-        self._embedding = None
-        self._vectordb = None
-        self._chunker = None
-        self._reranker = None
+        self._llm: Any = None
+        self._embedding: Any = None
+        self._vectordb: Any = None
+        self._chunker: Any = None
+        self._reranker: Any = None
         self._started = False
 
     async def start(self) -> None:
@@ -244,11 +248,15 @@ class RAGService(ServiceBase):
         yield self._emit_progress(execution_id, 50, f"{len(documents)}件のドキュメントを発見", phase="search")
 
         if not documents:
-            yield self._emit_result(execution_id, {
-                "answer": "関連する情報が見つかりませんでした。",
-                "documents": [],
-                "query": question,
-            }, (time.time() - start_time) * 1000)
+            yield self._emit_result(
+                execution_id,
+                {
+                    "answer": "関連する情報が見つかりませんでした。",
+                    "documents": [],
+                    "query": question,
+                },
+                (time.time() - start_time) * 1000,
+            )
             return
 
         yield self._emit_progress(execution_id, 60, "回答を生成中...", phase="generate")
@@ -258,14 +266,17 @@ class RAGService(ServiceBase):
 
         yield self._emit_progress(execution_id, 100, "完了", phase="complete")
 
-        yield self._emit_result(execution_id, {
-            "answer": answer,
-            "documents": [
-                {"id": d.id, "content": d.content[:500], "source": d.source, "score": d.score}
-                for d in documents
-            ],
-            "query": question,
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "answer": answer,
+                "documents": [
+                    {"id": d.id, "content": d.content[:500], "source": d.source, "score": d.score} for d in documents
+                ],
+                "query": question,
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     async def _do_search(
         self,
@@ -282,14 +293,17 @@ class RAGService(ServiceBase):
 
         documents = await self._search_internal(query, filters, top_k)
 
-        yield self._emit_result(execution_id, {
-            "documents": [
-                {"id": d.id, "content": d.content, "source": d.source, "score": d.score}
-                for d in documents
-            ],
-            "query": query,
-            "count": len(documents),
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "documents": [
+                    {"id": d.id, "content": d.content, "source": d.source, "score": d.score} for d in documents
+                ],
+                "query": query,
+                "count": len(documents),
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     async def _do_add_document(
         self,
@@ -313,8 +327,7 @@ class RAGService(ServiceBase):
         embeddings = await self._embedding.embed_batch(contents)
 
         metadatas = [
-            {"source": source, "chunk_index": c.index, **(c.metadata or {}), **(metadata or {})}
-            for c in chunks
+            {"source": source, "chunk_index": c.index, **(c.metadata or {}), **(metadata or {})} for c in chunks
         ]
 
         yield self._emit_progress(execution_id, 80, "保存中...", phase="store")
@@ -326,11 +339,15 @@ class RAGService(ServiceBase):
             metadatas=metadatas,
         )
 
-        yield self._emit_result(execution_id, {
-            "ids": ids,
-            "count": len(ids),
-            "source": source,
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "ids": ids,
+                "count": len(ids),
+                "source": source,
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     async def _do_add_file(
         self,
@@ -356,7 +373,7 @@ class RAGService(ServiceBase):
 
         for i, chunk in enumerate(doc_chunks):
             progress = 30 + (60 * (i + 1) / total)
-            yield self._emit_progress(execution_id, progress, f"チャンク {i+1}/{total} を処理中...", phase="process")
+            yield self._emit_progress(execution_id, progress, f"チャンク {i + 1}/{total} を処理中...", phase="process")
 
             contents = [chunk.content]
             ids = [chunk.id]
@@ -370,11 +387,15 @@ class RAGService(ServiceBase):
             )
             all_ids.extend(ids)
 
-        yield self._emit_result(execution_id, {
-            "ids": all_ids,
-            "count": len(all_ids),
-            "file": str(path),
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "ids": all_ids,
+                "count": len(all_ids),
+                "file": str(path),
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     async def _search_internal(
         self,
@@ -399,13 +420,15 @@ class RAGService(ServiceBase):
         for r in results:
             similarity = 1.0 - r.get("distance", 1.0)
             if similarity >= self._config.min_similarity:
-                documents.append(RAGDocument(
-                    id=r.get("id", ""),
-                    content=r.get("document", ""),
-                    source=r.get("metadata", {}).get("source", ""),
-                    metadata=r.get("metadata", {}),
-                    score=similarity,
-                ))
+                documents.append(
+                    RAGDocument(
+                        id=r.get("id", ""),
+                        content=r.get("document", ""),
+                        source=r.get("metadata", {}).get("source", ""),
+                        metadata=r.get("metadata", {}),
+                        score=similarity,
+                    )
+                )
 
         if self._reranker and len(documents) > top_k:
             ranked = await self._reranker.rerank(query, [d.content for d in documents], top_k)
@@ -425,11 +448,15 @@ class RAGService(ServiceBase):
     async def _generate_answer(self, question: str, context: str) -> str:
         """LLM回答生成."""
         messages = [
-            {"role": "system", "content": "提供されたコンテキストに基づいて回答してください。ソースを引用する際は[1]、[2]などの形式を使用してください。コンテキストに関連情報がない場合は、正直にその旨を伝えてください。"},
+            {
+                "role": "system",
+                "content": "提供されたコンテキストに基づいて回答してください。ソースを引用する際は[1]、[2]などの形式を使用してください。コンテキストに関連情報がない場合は、正直にその旨を伝えてください。",
+            },
             {"role": "user", "content": f"参考情報:\n{context}\n\n質問: {question}"},
         ]
         response = await self._llm.chat(messages)
-        return response["content"]
+        content = response.get("content")
+        return content if isinstance(content, str) else ""
 
     # =========================================================================
     # Studio 統合用メソッド

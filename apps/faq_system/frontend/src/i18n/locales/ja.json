@@ -1,0 +1,104 @@
+{
+  "auth": {
+    "login": "ログイン",
+    "logout": "ログアウト",
+    "register": "新規登録",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "email": "メールアドレス",
+    "submit": "送信",
+    "mfa_code": "認証コード",
+    "mfa_placeholder": "6桁のコードを入力",
+    "show_password": "パスワードを表示",
+    "hide_password": "パスワードを非表示",
+    "brand_badge": "インテリジェント・エンタープライズ・アシスタント",
+    "brand_title": "Enterprise FAQ Studio",
+    "brand_subtitle": "サポート・メンテナンス・分析チームが、一つの信頼できる回答システムで連携できます。",
+    "welcome": "おかえりなさい",
+    "subtitle": "エンタープライズ FAQ ワークスペースにサインインしてください。",
+    "mfa_title": "セキュリティ認証",
+    "mfa_subtitle": "6桁の認証コードを入力して続行してください。",
+    "mfa_shield": "MFA 有効",
+    "sign_in": "サインイン",
+    "mfa_verify": "認証して入る",
+    "password_placeholder": "パスワードを入力",
+    "register_hint": "初めてご利用ですか？",
+    "back_to_login": "サインインに戻る",
+    "sso": "エンタープライズ SSO",
+    "sso_google": "Google でログイン",
+    "sso_microsoft": "Microsoft でログイン",
+    "metrics": {
+      "uptime_label": "稼働率",
+      "availability_label": "ナレッジ提供時間"
+    },
+    "error": {
+      "invalid_credentials": "ユーザー名またはパスワードが正しくありません",
+      "mfa_required": "多要素認証が必要です",
+      "mfa_invalid": "認証コードが正しくありません",
+      "network": "ネットワークエラーが発生しました"
+    },
+    "trust": {
+      "knowledge": "ナレッジ即時検索",
+      "knowledge_desc": "社内ドキュメントやナレッジを一元管理し、即座に検索できます。",
+      "security": "ポリシー準拠セキュリティ",
+      "security_desc": "RBAC・監査ログ・MFA 認証でセッションを保護します。",
+      "efficiency": "業務効率化",
+      "efficiency_desc": "出典付きの回答で、チームがすばやく行動できます。"
+    }
+  },
+  "chat": {
+    "placeholder": "メッセージを入力してください...",
+    "send": "送信",
+    "thinking": "考え中...",
+    "new_chat": "新しいチャット",
+    "error": "エラーが発生しました。再度お試しください。",
+    "empty": "まだメッセージがありません",
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "online": "オンライン",
+    "you": "あなた",
+    "ai_name": "AI アシスタント",
+    "welcome_title": "何でもお手伝いします",
+    "welcome_subtitle": "ドキュメントを分析し、データベースをクエリして、ビジネスニーズへのインテリジェントな回答を取得します。",
+    "ask_placeholder": "何でも聞いてください...",
+    "shift_enter_hint": "Shift+Enter で改行",
+    "quick": {
+      "analyze_reports": "レポート分析",
+      "analyze_reports_sub": "アップロードされた PDF からインサイトを抽出",
+      "sql_query": "SQL クエリ",
+      "sql_query_sub": "自然言語でデータベースレポートを生成",
+      "tech_support": "テクニカルサポート",
+      "tech_support_sub": "ステップ別製品ガイダンス",
+      "sales_strategy": "営業戦略",
+      "sales_strategy_sub": "マーケティング資料を作成"
+    }
+  },
+  "register": {
+    "title": "アカウントを作成",
+    "subtitle": "エンタープライズ FAQ プラットフォームに参加する。",
+    "full_name": "氏名",
+    "department": "部署",
+    "position": "役職",
+    "submit": "アカウントを作成",
+    "already_have_account": "すでにアカウントをお持ちですか？",
+    "sign_in": "サインイン",
+    "password_placeholder": "8文字以上",
+    "error_fallback": "登録に失敗しました",
+    "error_occurred": "登録中にエラーが発生しました"
+  },
+  "sidebar": {
+    "history": "会話履歴",
+    "settings": "設定",
+    "no_history": "履歴がありません",
+    "no_conversations": "まだ会話がありません。",
+    "start_new": "上のボタンから新しいスレッドを作成してください。"
+  },
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラー",
+    "retry": "再試行",
+    "close": "閉じる",
+    "cancel": "キャンセル"
+  }
+}
+

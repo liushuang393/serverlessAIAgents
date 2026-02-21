@@ -161,7 +161,7 @@ class TenantContext:
             元のキー
         """
         if key.startswith(self.storage_prefix):
-            return key[len(self.storage_prefix):]
+            return key[len(self.storage_prefix) :]
         return key
 
     def to_dict(self) -> dict[str, Any]:

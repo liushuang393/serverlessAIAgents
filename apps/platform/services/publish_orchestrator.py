@@ -15,10 +15,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import uuid
-from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from apps.platform.schemas.publish_schemas import (
     PublishEvent,
@@ -42,6 +41,10 @@ from agentflow.core.interfaces import (
     GeneratedCode,
 )
 from agentflow.services.publish_service import PublishService
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 class PublishOrchestrator:
@@ -395,7 +398,7 @@ class PublishOrchestrator:
             if not self._is_terminal_status(response.status):
                 self._mark_cancelled(response, "Publish task cancelled")
             raise
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._logger.exception("Publish failed: %s", exc)
             self._mark_failed(
                 response=response,
@@ -432,9 +435,7 @@ class PublishOrchestrator:
         response.status = status
         response.current_phase = phase
         response.progress = progress
-        response.logs.append(
-            f"{datetime.now(UTC).isoformat()} [{phase or 'system'}] {message}"
-        )
+        response.logs.append(f"{datetime.now(UTC).isoformat()} [{phase or 'system'}] {message}")
 
         event = self._create_event(
             publish_id=response.publish_id,
@@ -714,7 +715,7 @@ class PublishOrchestrator:
                 "logs": result.logs,
                 "error": result.error,
             }
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             return {
                 "success": False,
                 "error": str(exc),
@@ -743,7 +744,8 @@ class PublishOrchestrator:
         visibility = visibility_map.get(request.gallery_visibility, ComponentVisibility.PRIVATE)
 
         entry = ComponentEntry(
-            id=request.component_id or self._library.generate_id(
+            id=request.component_id
+            or self._library.generate_id(
                 request.name or "published-component",
                 ComponentType.AGENT,
             ),

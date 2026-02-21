@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for RLM context_ops module."""
 
 import pytest
@@ -68,9 +67,7 @@ class TestContextOps:
         assert result["match_count"] == 0
 
     @pytest.mark.asyncio
-    async def test_ctx_regex_find_invalid_pattern(
-        self, store: ContextStore, ops: ContextOps
-    ) -> None:
+    async def test_ctx_regex_find_invalid_pattern(self, store: ContextStore, ops: ContextOps) -> None:
         """Test regex find with invalid pattern."""
         content = "Some content"
         handle = await store.store(content)
@@ -123,9 +120,7 @@ class TestContextOps:
         assert len(result["headings"]) == 2
 
     @pytest.mark.asyncio
-    async def test_ctx_get_structure_with_code_blocks(
-        self, store: ContextStore, ops: ContextOps
-    ) -> None:
+    async def test_ctx_get_structure_with_code_blocks(self, store: ContextStore, ops: ContextOps) -> None:
         """Test structure retrieval with code blocks."""
         content = "# Title\n\n```python\ndef foo():\n    pass\n```\n\nText"
         handle = await store.store(content)

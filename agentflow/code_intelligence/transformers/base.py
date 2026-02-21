@@ -93,10 +93,7 @@ class TransformResult:
             "success": self.success,
             "target_ast": self.target_ast.to_dict() if self.target_ast else None,
             "target_code": self.target_code,
-            "errors": [
-                {"message": e.message, "source_node": e.source_node, "phase": e.phase}
-                for e in self.errors
-            ],
+            "errors": [{"message": e.message, "source_node": e.source_node, "phase": e.phase} for e in self.errors],
             "warnings": self.warnings,
             "mappings": self.mappings,
             "metadata": self.metadata,
@@ -182,6 +179,7 @@ class LLMAssistedTransformer(CodeTransformer):
             llm_client: LLM クライアント
         """
         from agentflow.providers import get_llm
+
         self._llm = llm_client or get_llm()
 
     async def transform_with_llm(
@@ -205,15 +203,18 @@ Source code:
 {source_code}
 ```
 
-Requirements:
-- Preserve the original logic
-- Use {context.naming_convention} naming convention
-- Add appropriate comments
+        Requirements:
+        - Preserve the original logic
+        - Use {context.naming_convention} naming convention
+        - Add appropriate comments
 - Follow {context.target_language} best practices
 
 Output only the converted code without explanations."""
 
-        response = await self._llm.generate(prompt)
+        if hasattr(self._llm, "generate"):
+            response = await self._llm.generate(prompt)
+        else:
+            response = await self._llm.chat([{"role": "user", "content": prompt}])
         return response.content if hasattr(response, "content") else str(response)
 
 

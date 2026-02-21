@@ -34,9 +34,9 @@ from __future__ import annotations
 
 import asyncio
 import json
-from contextlib import asynccontextmanager
 import logging
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
@@ -183,9 +183,7 @@ async def _require_ws_api_key(websocket: WebSocket) -> bool:
     """Enforce API key for websocket handshake."""
     if not _is_auth_required():
         return True
-    incoming_key = websocket.headers.get(_AUTH_HEADER) or websocket.query_params.get(
-        _WS_AUTH_QUERY_KEY
-    )
+    incoming_key = websocket.headers.get(_AUTH_HEADER) or websocket.query_params.get(_WS_AUTH_QUERY_KEY)
     try:
         _verify_api_key(incoming_key)
     except HTTPException as exc:
@@ -293,9 +291,7 @@ async def setup_platforms() -> None:
     whatsapp_phone_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
     whatsapp_token = os.getenv("WHATSAPP_ACCESS_TOKEN")
     if whatsapp_phone_id and whatsapp_token and WhatsAppAdapter:
-        whatsapp = WhatsAppAdapter(
-            phone_number_id=whatsapp_phone_id, access_token=whatsapp_token
-        )
+        whatsapp = WhatsAppAdapter(phone_number_id=whatsapp_phone_id, access_token=whatsapp_token)
         gateway.register_channel("whatsapp", whatsapp)
         logger.info("✓ WhatsApp adapter registered")
     else:
@@ -444,9 +440,7 @@ async def teams_webhook(request: Request) -> JSONResponse:
 
         teams_adapter = gateway.get_channel("teams")
         if teams_adapter:
-            response = await teams_adapter.handle_webhook(
-                activity_data, auth_header, gateway
-            )
+            response = await teams_adapter.handle_webhook(activity_data, auth_header, gateway)
             return JSONResponse(response)
 
         return JSONResponse({"ok": False, "error": "Teams not configured"})
@@ -552,15 +546,19 @@ async def list_platforms() -> dict[str, Any]:
         if adapter:
             try:
                 bot_info = await adapter.get_bot_info()
-                platforms.append({
-                    "name": platform_name,
-                    "bot_info": bot_info,
-                })
+                platforms.append(
+                    {
+                        "name": platform_name,
+                        "bot_info": bot_info,
+                    }
+                )
             except Exception as e:
-                platforms.append({
-                    "name": platform_name,
-                    "error": str(e),
-                })
+                platforms.append(
+                    {
+                        "name": platform_name,
+                        "error": str(e),
+                    }
+                )
 
     return {"platforms": platforms}
 
@@ -690,14 +688,16 @@ async def api_export(format: str = "json") -> JSONResponse:
         for session in sessions:
             session_messages = session.get("messages", [])
             for msg in session_messages:
-                messages.append({
-                    "timestamp": msg.get("timestamp", ""),
-                    "platform": session.get("platform", "unknown"),
-                    "user_id": session.get("user_id", ""),
-                    "user_name": session.get("user_name", "Unknown"),
-                    "role": msg.get("role", "user"),
-                    "content": msg.get("content", ""),
-                })
+                messages.append(
+                    {
+                        "timestamp": msg.get("timestamp", ""),
+                        "platform": session.get("platform", "unknown"),
+                        "user_id": session.get("user_id", ""),
+                        "user_name": session.get("user_name", "Unknown"),
+                        "role": msg.get("role", "user"),
+                        "content": msg.get("content", ""),
+                    }
+                )
 
         # エクスポート
         exporter = ConversationExportSkill()
@@ -805,14 +805,15 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # 检查环境变量
-    if not any([
-        os.getenv("TELEGRAM_BOT_TOKEN"),
-        os.getenv("SLACK_BOT_TOKEN"),
-        os.getenv("DISCORD_BOT_TOKEN"),
-    ]):
+    if not any(
+        [
+            os.getenv("TELEGRAM_BOT_TOKEN"),
+            os.getenv("SLACK_BOT_TOKEN"),
+            os.getenv("DISCORD_BOT_TOKEN"),
+        ]
+    ):
         logger.warning(
-            "⚠️  No platform tokens configured! "
-            "Set TELEGRAM_BOT_TOKEN, SLACK_BOT_TOKEN, or DISCORD_BOT_TOKEN"
+            "⚠️  No platform tokens configured! Set TELEGRAM_BOT_TOKEN, SLACK_BOT_TOKEN, or DISCORD_BOT_TOKEN"
         )
 
     # 检查 LLM provider

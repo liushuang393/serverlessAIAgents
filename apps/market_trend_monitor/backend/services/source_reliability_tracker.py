@@ -6,7 +6,6 @@ Phase 12: API成功率、コンテンツ品質スコア、鮮度をEWMAで追跡
 from __future__ import annotations
 
 import logging
-import math
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -17,9 +16,9 @@ class SourceMetrics:
     """情報源メトリクス."""
 
     source_type: str
-    success_rate: float = 1.0       # API成功率 (EWMA)
-    quality_score: float = 0.5      # コンテンツ品質 (EWMA)
-    freshness_score: float = 1.0    # 鮮度 (EWMA)
+    success_rate: float = 1.0  # API成功率 (EWMA)
+    quality_score: float = 0.5  # コンテンツ品質 (EWMA)
+    freshness_score: float = 1.0  # 鮮度 (EWMA)
     total_requests: int = 0
     total_successes: int = 0
     last_updated: datetime = field(default_factory=datetime.now)
@@ -27,11 +26,7 @@ class SourceMetrics:
     @property
     def reliability_score(self) -> float:
         """総合信頼度スコア."""
-        return (
-            self.success_rate * 0.4
-            + self.quality_score * 0.4
-            + self.freshness_score * 0.2
-        )
+        return self.success_rate * 0.4 + self.quality_score * 0.4 + self.freshness_score * 0.2
 
     def to_dict(self) -> dict[str, Any]:
         return {

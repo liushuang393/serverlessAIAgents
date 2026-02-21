@@ -1,15 +1,17 @@
-# -*- coding: utf-8 -*-
 """Agent Aggregator Service — 全 App 横断の Agent 集約・検索."""
 
 from __future__ import annotations
 
-from collections import Counter
 import logging
-from typing import Any
+from collections import Counter
+from typing import TYPE_CHECKING, Any
 
-from apps.platform.services.app_discovery import AppDiscoveryService
 from apps.platform.services.agent_taxonomy import AgentTaxonomyService
 from apps.platform.services.capability_registry import CapabilityRegistry
+
+
+if TYPE_CHECKING:
+    from apps.platform.services.app_discovery import AppDiscoveryService
 
 
 _logger = logging.getLogger(__name__)
@@ -32,17 +34,17 @@ class AggregatedAgent:
     """
 
     __slots__ = (
-        "name",
-        "app_name",
-        "app_display_name",
-        "app_icon",
-        "module",
-        "capabilities",
-        "capabilities_legacy",
-        "business_base",
         "agent_pattern",
         "app_business_base",
+        "app_display_name",
         "app_engine_pattern",
+        "app_icon",
+        "app_name",
+        "business_base",
+        "capabilities",
+        "capabilities_legacy",
+        "module",
+        "name",
     )
 
     def __init__(
@@ -229,8 +231,7 @@ class AgentAggregatorService:
         for agent in self.list_all():
             grouped.setdefault(agent.business_base, []).append(agent.to_dict())
         return [
-            {"business_base": key, "count": len(grouped[key]), "agents": grouped[key]}
-            for key in sorted(grouped.keys())
+            {"business_base": key, "count": len(grouped[key]), "agents": grouped[key]} for key in sorted(grouped.keys())
         ]
 
     def grouped_patterns(self) -> list[dict[str, Any]]:
@@ -238,10 +239,7 @@ class AgentAggregatorService:
         grouped: dict[str, list[dict[str, Any]]] = {}
         for agent in self.list_all():
             grouped.setdefault(agent.agent_pattern, []).append(agent.to_dict())
-        return [
-            {"pattern": key, "count": len(grouped[key]), "agents": grouped[key]}
-            for key in sorted(grouped.keys())
-        ]
+        return [{"pattern": key, "count": len(grouped[key]), "agents": grouped[key]} for key in sorted(grouped.keys())]
 
     def _resolve_app_business_base(self, app_config: Any) -> str:
         """App の business base を解決."""

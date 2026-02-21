@@ -9,13 +9,15 @@ from __future__ import annotations
 import logging
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Any
+from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
 from agentflow import get_llm
 
-from apps.market_trend_monitor.backend.models import Trend
-from apps.market_trend_monitor.backend.services.signal_service import SignalService
+
+if TYPE_CHECKING:
+    from apps.market_trend_monitor.backend.models import Trend
+    from apps.market_trend_monitor.backend.services.signal_service import SignalService
 
 
 @dataclass
@@ -90,10 +92,7 @@ class StakeholderReportService:
             経営層向けレポート
         """
         top_trends = sorted(trends, key=lambda t: t.score, reverse=True)[:5]
-        trend_summaries = [
-            f"- {t.topic}: score={t.score:.2f}, growth={t.growth_rate:.1%}"
-            for t in top_trends
-        ]
+        trend_summaries = [f"- {t.topic}: score={t.score:.2f}, growth={t.growth_rate:.1%}" for t in top_trends]
 
         dashboard_stats = {}
         if self._signal_service:
@@ -174,8 +173,7 @@ class StakeholderReportService:
         try:
             llm = self._get_llm()
             trend_details = "\n".join(
-                f"- {t.topic}: score={t.score:.2f}, growth={t.growth_rate:.1%}, "
-                f"sentiment={t.sentiment.value}"
+                f"- {t.topic}: score={t.score:.2f}, growth={t.growth_rate:.1%}, sentiment={t.sentiment.value}"
                 for t in related_trends
             )
             prompt = (
@@ -302,10 +300,11 @@ class StakeholderReportService:
         """LLMレスポンスをパース."""
         try:
             import json
+
             start = raw.find("{")
             end = raw.rfind("}")
             if start != -1 and end != -1 and end > start:
-                return json.loads(raw[start:end + 1])
+                return json.loads(raw[start : end + 1])
         except (json.JSONDecodeError, ValueError):
             pass
         return {}

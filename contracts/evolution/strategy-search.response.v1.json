@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/evolution/strategy-search.response.v1.json",
+  "title": "StrategySearchResponseV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["decision", "reasons", "strategies", "score_breakdown"],
+  "properties": {
+    "decision": { "type": "string" },
+    "reasons": { "type": "array", "items": { "type": "string" } },
+    "strategies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["strategy_id", "scope_level", "status", "score", "capsule", "reasons"],
+        "properties": {
+          "strategy_id": { "type": "string" },
+          "scope_level": {
+            "type": "string",
+            "enum": ["tenant_app", "tenant_product_line", "global_verified"]
+          },
+          "status": {
+            "type": "string",
+            "enum": ["candidate", "verified", "suspect", "deprecated"]
+          },
+          "score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "reasons": { "type": "array", "items": { "type": "string" } },
+          "capsule": { "$ref": "./strategy-capsule.v1.json" },
+          "last_verified_at": { "type": ["string", "null"], "format": "date-time" }
+        }
+      }
+    },
+    "score_breakdown": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

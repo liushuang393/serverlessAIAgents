@@ -5,11 +5,7 @@
  */
 
 import React, { useCallback } from 'react';
-import type {
-  RichContentRendererProps,
-  RichComponent,
-  RichComponentType,
-} from './types';
+import type { RichContentRendererProps, RichComponent, RichComponentType } from './types';
 import {
   AlertRenderer,
   CodeBlockRenderer,
@@ -91,13 +87,7 @@ export function RichContentRenderer({
           );
 
         case 'tabs':
-          return (
-            <TabsRenderer
-              key={key}
-              component={component}
-              renderComponent={renderComponent}
-            />
-          );
+          return <TabsRenderer key={key} component={component} renderComponent={renderComponent} />;
 
         default:
           return <UnknownRenderer key={key} component={component} />;
@@ -112,9 +102,7 @@ export function RichContentRenderer({
       return <>{fallback}</>;
     }
     return (
-      <div className="text-gray-500 dark:text-gray-400 text-sm p-4">
-        コンテンツがありません
-      </div>
+      <div className="text-gray-500 dark:text-gray-400 text-sm p-4">コンテンツがありません</div>
     );
   }
 
@@ -123,12 +111,9 @@ export function RichContentRenderer({
       className={`rich-content-renderer space-y-4 ${theme === 'dark' ? 'dark' : ''} ${className}`}
       data-theme={theme}
     >
-      {response.components.map((component, idx) =>
-        renderComponent(component, idx),
-      )}
+      {response.components.map((component, idx) => renderComponent(component, idx))}
     </div>
   );
 }
 
 export default RichContentRenderer;
-

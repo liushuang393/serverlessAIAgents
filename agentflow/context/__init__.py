@@ -58,6 +58,10 @@ from agentflow.context.turn_compressor import (
     TurnBasedCompressor,
     TurnConfig,
 )
+from agentflow.evolution.types import (
+    RetrievalDecisionInput,
+    RetrievalMode,
+)
 
 
 __all__ = [
@@ -72,8 +76,10 @@ __all__ = [
     "KeyNotesStore",
     "NoteImportance",
     "RetrievalDecision",
+    "RetrievalDecisionInput",
     # 検索判断
     "RetrievalGate",
+    "RetrievalMode",
     "RetrievalReason",
     # 予算管理
     "TokenBudgetManager",

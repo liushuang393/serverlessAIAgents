@@ -1,14 +1,14 @@
-# -*- coding: utf-8 -*-
 """Unit tests for DaoAgent."""
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from apps.decision_governance_engine.agents.dao_agent import DaoAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
     DaoInput,
     DaoOutput,
-    ProblemType,
     ProblemNatureType,
+    ProblemType,
 )
 
 
@@ -113,9 +113,7 @@ class TestDaoAgentInferProblemType:
 class TestDaoAgentRuleBasedAnalysis:
     """Test cases for DaoAgent._analyze_rule_based."""
 
-    def test_rule_based_returns_dao_output(
-        self, dao_agent: DaoAgent, sample_input: DaoInput
-    ) -> None:
+    def test_rule_based_returns_dao_output(self, dao_agent: DaoAgent, sample_input: DaoInput) -> None:
         """Test that rule-based analysis returns valid DaoOutput."""
         result = dao_agent._analyze_rule_based(
             question=sample_input.question,
@@ -148,9 +146,7 @@ class TestDaoAgentProcess:
     """Test cases for DaoAgent.process."""
 
     @pytest.mark.asyncio
-    async def test_process_without_llm(
-        self, dao_agent: DaoAgent, sample_input: DaoInput
-    ) -> None:
+    async def test_process_without_llm(self, dao_agent: DaoAgent, sample_input: DaoInput) -> None:
         """Test process falls back to rule-based when no LLM."""
         result = await dao_agent.process(sample_input)
 
@@ -165,9 +161,7 @@ class TestDaoAgentProcess:
 
         agent = DaoAgent(llm_client=mock_llm)
 
-        with patch.object(
-            agent, "_analyze_with_llm", new_callable=AsyncMock
-        ) as mock_analyze:
+        with patch.object(agent, "_analyze_with_llm", new_callable=AsyncMock) as mock_analyze:
             mock_analyze.return_value = DaoOutput(
                 problem_type=ProblemType.TRADE_OFF,
                 essence="テスト本質",

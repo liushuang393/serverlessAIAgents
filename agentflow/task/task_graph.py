@@ -29,9 +29,7 @@ class TaskGraph:
     tasks: dict[TaskID, Task] = field(default_factory=dict)
     version: int = 1
 
-    def add_task(
-        self, task: Task, blocked_by: list[TaskID] | None = None
-    ) -> TaskID:
+    def add_task(self, task: Task, blocked_by: list[TaskID] | None = None) -> TaskID:
         """Add a task to the graph with optional dependencies.
 
         Args:
@@ -67,9 +65,7 @@ class TaskGraph:
             if task.state == TaskState.PLANNED:
                 # Check if all dependencies are done
                 all_deps_done = all(
-                    self.tasks[bid].state == TaskState.DONE
-                    for bid in task.blocked_by
-                    if bid in self.tasks
+                    self.tasks[bid].state == TaskState.DONE for bid in task.blocked_by if bid in self.tasks
                 )
                 if all_deps_done:
                     ready.append(task)
@@ -150,9 +146,7 @@ class TaskGraph:
             elif task.state == TaskState.PLANNED and task.blocked_by:
                 # Check if any dependency is not done
                 has_pending_dep = any(
-                    self.tasks[bid].state != TaskState.DONE
-                    for bid in task.blocked_by
-                    if bid in self.tasks
+                    self.tasks[bid].state != TaskState.DONE for bid in task.blocked_by if bid in self.tasks
                 )
                 if has_pending_dep:
                     blocked.append(task)

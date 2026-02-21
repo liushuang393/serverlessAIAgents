@@ -7,13 +7,15 @@ AgentFlowの get_embedding() / get_vectordb() を使用します。
 from __future__ import annotations
 
 import logging
-import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+from apps.market_trend_monitor.backend.config import config
 
 from agentflow import get_embedding, get_vectordb
 
-from apps.market_trend_monitor.backend.config import config
-from apps.market_trend_monitor.backend.models import Article
+
+if TYPE_CHECKING:
+    from apps.market_trend_monitor.backend.models import Article
 
 
 class SemanticSearchService:
@@ -68,12 +70,14 @@ class SemanticSearchService:
             documents=[text],
             ids=[doc_id],
             embeddings=[embedding],
-            metadatas=[{
-                "title": article.title,
-                "url": article.url,
-                "source": article.source.value,
-                "published_at": article.published_at.isoformat(),
-            }],
+            metadatas=[
+                {
+                    "title": article.title,
+                    "url": article.url,
+                    "source": article.source.value,
+                    "published_at": article.published_at.isoformat(),
+                }
+            ],
         )
 
         self._logger.debug("記事をインデックスに登録: %s", doc_id)
@@ -96,7 +100,7 @@ class SemanticSearchService:
 
         all_ids: list[str] = []
         for i in range(0, len(articles), batch_size):
-            batch = articles[i:i + batch_size]
+            batch = articles[i : i + batch_size]
             texts = [f"{a.title}\n{a.content}" for a in batch]
             embeddings = await self._embedding.embed_batch(texts)
             ids = [a.id for a in batch]
@@ -214,7 +218,7 @@ class SemanticSearchService:
         unique: list[Article] = []
         unique_embeddings: list[list[float]] = []
 
-        for article, emb in zip(articles, embeddings):
+        for article, emb in zip(articles, embeddings, strict=False):
             is_duplicate = False
             for existing_emb in unique_embeddings:
                 similarity = self._cosine_similarity(emb, existing_emb)
@@ -284,10 +288,7 @@ class SemanticSearchService:
 
                 max_sim = 0.0
                 if selected_embeddings and candidate_emb:
-                    max_sim = max(
-                        self._cosine_similarity(candidate_emb, sel_emb)
-                        for sel_emb in selected_embeddings
-                    )
+                    max_sim = max(self._cosine_similarity(candidate_emb, sel_emb) for sel_emb in selected_embeddings)
 
                 mmr_score = lambda_param * relevance - (1 - lambda_param) * max_sim
                 if mmr_score > best_score:
@@ -307,7 +308,7 @@ class SemanticSearchService:
         """コサイン類似度を計算."""
         if not a or not b or len(a) != len(b):
             return 0.0
-        dot = sum(x * y for x, y in zip(a, b))
+        dot = sum(x * y for x, y in zip(a, b, strict=False))
         norm_a = sum(x * x for x in a) ** 0.5
         norm_b = sum(x * x for x in b) ** 0.5
         if norm_a == 0 or norm_b == 0:

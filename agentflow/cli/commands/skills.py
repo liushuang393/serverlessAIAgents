@@ -128,7 +128,9 @@ def list_skills(ctx: click.Context, learned: bool, project: bool) -> None:
         table.add_row(
             skill.name,
             skill.metadata.version,
-            skill.metadata.description[:40] + "..." if len(skill.metadata.description) > 40 else skill.metadata.description,
+            skill.metadata.description[:40] + "..."
+            if len(skill.metadata.description) > 40
+            else skill.metadata.description,
             triggers,
             "✓" if skill.metadata.learned else "",
         )
@@ -170,11 +172,13 @@ def show(ctx: click.Context, name: str) -> None:
         f"[bold]Usage Count:[/bold] {meta.usage_count}",
     ]
 
-    console.print(Panel(
-        "\n".join(info_lines),
-        title=f"Skill: {name}",
-        border_style="cyan",
-    ))
+    console.print(
+        Panel(
+            "\n".join(info_lines),
+            title=f"Skill: {name}",
+            border_style="cyan",
+        )
+    )
 
     # Instructions
     console.print("\n[bold cyan]Instructions:[/bold cyan]")
@@ -221,7 +225,9 @@ def create(
         if not triggers:
             triggers = Prompt.ask("Triggers (comma-separated)", default="")
 
-        instructions = Prompt.ask("Instructions (basic content)", default="# Instructions\n\nAdd your instructions here.")
+        instructions = Prompt.ask(
+            "Instructions (basic content)", default="# Instructions\n\nAdd your instructions here."
+        )
 
     else:
         description = description or f"A skill for {name}"
@@ -236,7 +242,7 @@ name: {name}
 description: {description}
 version: 1.0.0
 triggers:
-{chr(10).join(f'  - {t}' for t in trigger_list) if trigger_list else '  []'}
+{chr(10).join(f"  - {t}" for t in trigger_list) if trigger_list else "  []"}
 tags: []
 ---
 
@@ -259,15 +265,17 @@ tags: []
 
     skill_file.write_text(skill_content, encoding="utf-8")
 
-    console.print(Panel(
-        f"[green]✓ Skill created successfully![/green]\n\n"
-        f"Location: {skill_file}\n\n"
-        f"Next steps:\n"
-        f"  1. Edit {skill_file} to add instructions\n"
-        f"  2. Run: agentflow skills show {name}",
-        title="Success",
-        border_style="green",
-    ))
+    console.print(
+        Panel(
+            f"[green]✓ Skill created successfully![/green]\n\n"
+            f"Location: {skill_file}\n\n"
+            f"Next steps:\n"
+            f"  1. Edit {skill_file} to add instructions\n"
+            f"  2. Run: agentflow skills show {name}",
+            title="Success",
+            border_style="green",
+        )
+    )
 
 
 @skills.command()
@@ -305,27 +313,33 @@ def validate(ctx: click.Context, path: Path, strict: bool) -> None:
 
     # 結果表示
     if result.valid:
-        console.print(Panel(
-            f"[green]✓ Skill '{skill.name}' is valid![/green]",
-            title="Validation Passed",
-            border_style="green",
-        ))
+        console.print(
+            Panel(
+                f"[green]✓ Skill '{skill.name}' is valid![/green]",
+                title="Validation Passed",
+                border_style="green",
+            )
+        )
     else:
         error_lines = [f"[red]✗ {e}[/red]" for e in result.errors]
-        console.print(Panel(
-            "\n".join(error_lines),
-            title="Validation Failed",
-            border_style="red",
-        ))
+        console.print(
+            Panel(
+                "\n".join(error_lines),
+                title="Validation Failed",
+                border_style="red",
+            )
+        )
 
     # 警告表示
     if result.warnings:
         warning_lines = [f"[yellow]⚠ {w}[/yellow]" for w in result.warnings]
-        console.print(Panel(
-            "\n".join(warning_lines),
-            title="Warnings",
-            border_style="yellow",
-        ))
+        console.print(
+            Panel(
+                "\n".join(warning_lines),
+                title="Warnings",
+                border_style="yellow",
+            )
+        )
 
 
 @skills.command()
@@ -369,7 +383,9 @@ def search(ctx: click.Context, query: str, top: int) -> None:
             r.skill.name,
             f"{r.score:.2f}",
             r.reason,
-            r.skill.metadata.description[:30] + "..." if len(r.skill.metadata.description) > 30 else r.skill.metadata.description,
+            r.skill.metadata.description[:30] + "..."
+            if len(r.skill.metadata.description) > 30
+            else r.skill.metadata.description,
         )
 
     console.print(table)
@@ -377,7 +393,13 @@ def search(ctx: click.Context, query: str, top: int) -> None:
 
 @skills.command()
 @click.argument("name")
-@click.option("--scope", "-s", type=click.Choice(["learned", "project", "global"]), default="learned", help="削除対象")
+@click.option(
+    "--scope",
+    "-s",
+    type=click.Choice(["learned", "project", "global"]),
+    default="learned",
+    help="削除対象",
+)
 @click.option("--force", "-f", is_flag=True, help="確認なしで削除")
 @click.pass_context
 def delete(ctx: click.Context, name: str, scope: str, force: bool) -> None:
@@ -476,10 +498,12 @@ def mount(
         shutil.copytree(skill_dir, destination)
         mounted.append(target_name)
 
-    console.print(Panel(
-        f"[green]✓ Mounted {len(mounted)} skill(s)[/green]\n\n"
-        f"[dim]Target:[/dim] {target_root}\n"
-        f"[dim]Skills:[/dim] {', '.join(mounted)}",
-        title="Mount Success",
-        border_style="green",
-    ))
+    console.print(
+        Panel(
+            f"[green]✓ Mounted {len(mounted)} skill(s)[/green]\n\n"
+            f"[dim]Target:[/dim] {target_root}\n"
+            f"[dim]Skills:[/dim] {', '.join(mounted)}",
+            title="Mount Success",
+            border_style="green",
+        )
+    )

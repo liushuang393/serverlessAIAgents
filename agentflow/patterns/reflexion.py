@@ -235,12 +235,16 @@ class LLMReflectionGenerator(ReflectionGenerator):
 }}"""
 
         try:
-            response = await self._llm.chat([
-                {"role": "system", "content": self._system_prompt},
-                {"role": "user", "content": prompt},
-            ], response_format={"type": "json_object"})
+            response = await self._llm.chat(
+                [
+                    {"role": "system", "content": self._system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+            )
 
             import json
+
             content = response.get("content", "") if isinstance(response, dict) else str(response)
             if hasattr(response, "content"):
                 content = response.content
@@ -287,12 +291,16 @@ class LLMReflectionGenerator(ReflectionGenerator):
 改善された反省をJSON形式で返してください。"""
 
         try:
-            response = await self._llm.chat([
-                {"role": "system", "content": "あなたは反省を改善する専門家です。"},
-                {"role": "user", "content": prompt},
-            ], response_format={"type": "json_object"})
+            response = await self._llm.chat(
+                [
+                    {"role": "system", "content": "あなたは反省を改善する専門家です。"},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},
+            )
 
             import json
+
             content = response.get("content", "") if isinstance(response, dict) else str(response)
             if hasattr(response, "content"):
                 content = response.content
@@ -350,19 +358,26 @@ class LLMReflectionGenerator(ReflectionGenerator):
             },
         }
 
-        template = templates.get(error_type, {
-            "what_went_wrong": f"エラーが発生: {error_type}",
-            "why_it_failed": error_message[:100],
-            "how_to_avoid": "エラーハンドリングを追加し、原因を調査する",
-            "severity": Severity.MEDIUM,
-        })
+        template = templates.get(
+            error_type,
+            {
+                "what_went_wrong": f"エラーが発生: {error_type}",
+                "why_it_failed": error_message[:100],
+                "how_to_avoid": "エラーハンドリングを追加し、原因を調査する",
+                "severity": Severity.MEDIUM,
+            },
+        )
+
+        severity = template.get("severity", Severity.MEDIUM)
+        if isinstance(severity, str):
+            severity = Severity(severity)
 
         return Reflection(
             type=ReflectionType.FAILURE_ANALYSIS,
             task_pattern=task_pattern,
             error_type=error_type,
             error_message=error_message,
-            severity=template.get("severity", Severity.MEDIUM),
+            severity=severity,
             what_went_wrong=template["what_went_wrong"],
             why_it_failed=template["why_it_failed"],
             how_to_avoid=template["how_to_avoid"],
@@ -480,10 +495,7 @@ class ReflectiveEvolver:
                 self._pattern_scores[pattern_key] - 0.15,
             )
 
-        self._logger.info(
-            f"Learned from failure: {pattern_key} ({error_type}) "
-            f"-> {reflection.how_to_avoid[:50]}..."
-        )
+        self._logger.info(f"Learned from failure: {pattern_key} ({error_type}) -> {reflection.how_to_avoid[:50]}...")
 
         # 最大数を超えたら古いものを削除
         self._cleanup_old_reflections()
@@ -655,9 +667,7 @@ class ReflectiveEvolver:
         """統計情報を取得."""
         total_reflections = len(self._reflections)
         avg_confidence = (
-            sum(r.confidence for r in self._reflections.values()) / total_reflections
-            if total_reflections > 0
-            else 0.0
+            sum(r.confidence for r in self._reflections.values()) / total_reflections if total_reflections > 0 else 0.0
         )
 
         return {
@@ -667,9 +677,7 @@ class ReflectiveEvolver:
             "resolved_patterns": sum(1 for fp in self._failure_patterns.values() if fp.resolved),
             "success_patterns": len(self._success_patterns),
             "learning_outcomes": len(self._learning_outcomes),
-            "high_confidence_reflections": sum(
-                1 for r in self._reflections.values() if r.confidence >= 0.8
-            ),
+            "high_confidence_reflections": sum(1 for r in self._reflections.values() if r.confidence >= 0.8),
         }
 
     def _extract_pattern(self, task: str) -> str:

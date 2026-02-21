@@ -36,12 +36,13 @@ export function CitationRenderer({ component }: CitationRendererProps): React.JS
 
   return (
     <div className="border-l-4 border-gray-300 dark:border-gray-600 pl-4 py-2">
-      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-        📚 引用元
-      </h4>
+      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">📚 引用元</h4>
       <ol className="list-decimal list-inside space-y-2">
         {sources.map((source, idx) => (
-          <li key={`cite-${source.title}-${idx}`} className="text-sm text-gray-600 dark:text-gray-400">
+          <li
+            key={`cite-${source.title}-${idx}`}
+            className="text-sm text-gray-600 dark:text-gray-400"
+          >
             {source.url ? (
               <a
                 href={source.url}
@@ -54,12 +55,8 @@ export function CitationRenderer({ component }: CitationRendererProps): React.JS
             ) : (
               <span>{source.title}</span>
             )}
-            {source.author && (
-              <span className="ml-2 text-gray-500">- {source.author}</span>
-            )}
-            {source.date && (
-              <span className="ml-2 text-gray-400">({source.date})</span>
-            )}
+            {source.author && <span className="ml-2 text-gray-500">- {source.author}</span>}
+            {source.date && <span className="ml-2 text-gray-400">({source.date})</span>}
           </li>
         ))}
       </ol>
@@ -68,4 +65,3 @@ export function CitationRenderer({ component }: CitationRendererProps): React.JS
 }
 
 export default CitationRenderer;
-

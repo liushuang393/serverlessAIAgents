@@ -33,7 +33,7 @@ import json
 import logging
 import sys
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 
 if TYPE_CHECKING:
@@ -67,9 +67,7 @@ class ScriptResult:
     error: str | None = None
 
     @classmethod
-    def from_execution_result(
-        cls, result: ExecutionResult, parse_json: bool = True
-    ) -> ScriptResult:
+    def from_execution_result(cls, result: ExecutionResult, parse_json: bool = True) -> ScriptResult:
         """ExecutionResultから変換.
 
         Args:
@@ -154,12 +152,8 @@ class SkillRuntime:
         should_use_sandbox = use_sandbox if use_sandbox is not None else bool(self._sandbox_provider)
 
         if should_use_sandbox and self._sandbox_provider:
-            return await self._execute_in_sandbox(
-                skill, script_path, input_data, effective_timeout
-            )
-        return await self._execute_directly(
-            skill, script_path, input_data
-        )
+            return await self._execute_in_sandbox(skill, script_path, input_data, effective_timeout)
+        return await self._execute_directly(skill, script_path, input_data)
 
     def _resolve_script_path(self, skill: Skill, script_name: str) -> Path | None:
         """スクリプトパスを解決.
@@ -202,10 +196,7 @@ class SkillRuntime:
         if not scripts_dir.exists():
             return []
 
-        return [
-            p.stem for p in scripts_dir.glob("*.py")
-            if not p.name.startswith("_")
-        ]
+        return [p.stem for p in scripts_dir.glob("*.py") if not p.name.startswith("_")]
 
     async def _execute_directly(
         self,
@@ -232,10 +223,7 @@ class SkillRuntime:
 
         try:
             # 動的インポート
-            spec = importlib.util.spec_from_file_location(
-                f"skill_script_{skill.name}_{script_path.stem}",
-                script_path
-            )
+            spec = importlib.util.spec_from_file_location(f"skill_script_{skill.name}_{script_path.stem}", script_path)
             if not spec or not spec.loader:
                 return ScriptResult(
                     success=False,
@@ -277,8 +265,7 @@ class SkillRuntime:
 
             # スクリプト名の一部を含む関数を検索
             matching_funcs = [
-                name for name in defined_funcs
-                if expected_func_name.replace("_", "") in name.replace("_", "").lower()
+                name for name in defined_funcs if expected_func_name.replace("_", "") in name.replace("_", "").lower()
             ]
 
             # 優先順位: マッチする関数 > main > 定義された最初の関数
@@ -346,19 +333,19 @@ class SkillRuntime:
 
         # to_dict() メソッドがある場合（Pydantic等）
         if hasattr(result, "to_dict") and callable(result.to_dict):
-            return result.to_dict()
+            return cast("dict[str, Any]", result.to_dict())
 
         # model_dump() メソッドがある場合（Pydantic v2）
         if hasattr(result, "model_dump") and callable(result.model_dump):
-            return result.model_dump()
+            return cast("dict[str, Any]", result.model_dump())
 
         # dict() メソッドがある場合（Pydantic v1）
         if hasattr(result, "dict") and callable(result.dict):
-            return result.dict()
+            return cast("dict[str, Any]", result.dict())
 
         # _asdict() メソッドがある場合（namedtuple）
         if hasattr(result, "_asdict") and callable(result._asdict):
-            return result._asdict()
+            return cast("dict[str, Any]", result._asdict())
 
         # プリミティブ型の場合
         if isinstance(result, (str, int, float, bool)):
@@ -405,9 +392,7 @@ class SkillRuntime:
             script_code = script_path.read_text(encoding="utf-8")
 
             # ラッパーコード生成（入力データ注入 + 関数呼び出し + JSON出力）
-            wrapper_code = self._generate_wrapper_code(
-                script_code, script_path.stem, input_data
-            )
+            wrapper_code = self._generate_wrapper_code(script_code, script_path.stem, input_data)
 
             # 依存パッケージ取得
             packages = skill.metadata.requirements.copy() if skill.metadata.requirements else []
@@ -493,4 +478,3 @@ if __name__ == "__main__":
         print(json.dumps({{"error": str(e)}}))
         sys.exit(1)
 """
-

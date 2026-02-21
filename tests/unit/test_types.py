@@ -194,10 +194,7 @@ class TestExecutionContext:
         )
 
         # 異なる実行コンテキストは異なる started_at を持つ
-        assert (
-            context1.started_at != context2.started_at
-            or context1.execution_id != context2.execution_id
-        )
+        assert context1.started_at != context2.started_at or context1.execution_id != context2.execution_id
 
 
 class TestExecutionResult:

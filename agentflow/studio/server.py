@@ -57,9 +57,7 @@ class StudioServer:
         self.console.print(f"[cyan]Port:[/cyan] {self.port}")
         self.console.print(f"[cyan]API Docs:[/cyan] http://{self.host}:{self.port}/api/docs")
         self.console.print(f"[cyan]Agents:[/cyan] {self.agents_dir or '~/.agentflow/agents'}")
-        self.console.print(
-            f"[cyan]Workflows:[/cyan] {self.workflows_dir or '~/.agentflow/workflows'}"
-        )
+        self.console.print(f"[cyan]Workflows:[/cyan] {self.workflows_dir or '~/.agentflow/workflows'}")
         self.console.print()
 
         uvicorn.run(

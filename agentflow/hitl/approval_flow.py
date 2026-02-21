@@ -165,9 +165,7 @@ class ApprovalFlow:
         self._pending[request.id] = request
         self._waiting[request.id] = asyncio.Event()
 
-        logger.info(
-            f"承認リクエスト発行: id={request.id}, action={action}, risk_level={risk_level}"
-        )
+        logger.info(f"承認リクエスト発行: id={request.id}, action={action}, risk_level={risk_level}")
 
         # 承認要求イベントを生成
         yield self._create_required_event(request, risk_level, options).to_dict()

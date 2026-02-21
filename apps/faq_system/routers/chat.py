@@ -10,7 +10,6 @@ import logging
 from typing import TYPE_CHECKING, Any
 
 from apps.faq_system.backend.auth.dependencies import require_auth
-from apps.faq_system.backend.auth.models import UserInfo
 from apps.faq_system.routers.dependencies import (
     extract_assistant_content,
     get_chat_history_service,
@@ -22,8 +21,13 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+
+    from apps.faq_system.backend.auth.models import UserInfo
+else:
+    UserInfo = Any
 
 logger = logging.getLogger(__name__)
 
@@ -226,4 +230,3 @@ async def delete_session(
     if not deleted:
         return {"success": False, "message": "セッションが見つかりません"}
     return {"success": True, "message": "セッションを削除しました"}
-

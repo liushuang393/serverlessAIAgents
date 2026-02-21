@@ -29,6 +29,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+
 try:
     from dotenv import load_dotenv
 except ImportError:  # pragma: no cover - optional dependency
@@ -53,15 +54,13 @@ def _load_faq_app_env() -> None:
 _load_faq_app_env()
 
 # --- 循環参照回避のため、FastAPI 起動前にパッケージパス等を微調整する場合に備え ---
-import sys  # noqa: E402
 
-from apps.faq_system.backend.config import kb_registry  # noqa: E402
-from agentflow.database import DatabaseConfig, DatabaseManager  # noqa: E402
-from apps.faq_system.backend.db.models import Base  # noqa: E402
-from apps.faq_system.backend.auth.dependencies import get_auth_service  # noqa: E402
-from apps.faq_system.backend.auth.router import router as auth_router  # noqa: E402
-from apps.faq_system.backend.auth import oauth2_router, saml_router  # noqa: E402
-from apps.faq_system.routers import (  # noqa: E402
+from apps.faq_system.backend.auth import oauth2_router, saml_router
+from apps.faq_system.backend.auth.dependencies import get_auth_service
+from apps.faq_system.backend.auth.router import router as auth_router
+from apps.faq_system.backend.config import kb_registry
+from apps.faq_system.backend.db.models import Base
+from apps.faq_system.routers import (
     agents_router,
     chat_router,
     kb_settings_router,
@@ -70,9 +69,11 @@ from apps.faq_system.routers import (  # noqa: E402
     sql_router,
     ws_router,
 )
-from agentflow.observability.startup import log_startup_info  # noqa: E402
-from fastapi import FastAPI, File, HTTPException, UploadFile  # noqa: E402
-from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from agentflow.database import DatabaseConfig, DatabaseManager
+from agentflow.observability.startup import log_startup_info
 
 
 logging.basicConfig(level=logging.INFO)
@@ -109,10 +110,7 @@ def _log_faq_startup(host: str, port: int) -> None:
     """
     cfg = _load_app_config()
     agents_cfg: list[dict[str, Any]] = cfg.get("agents", [])
-    agent_names = [
-        f"{a['name']} ({', '.join(a.get('capabilities', []))})"
-        for a in agents_cfg
-    ]
+    agent_names = [f"{a['name']} ({', '.join(a.get('capabilities', []))})" for a in agents_cfg]
 
     # フレームワーク共通情報（LLM / DB / VectorDB / Embedding）
     log_startup_info(
@@ -130,7 +128,7 @@ def _log_faq_startup(host: str, port: int) -> None:
     logger.info("[Access] Health:   http://%s:%s/api/health", display_host, port)
 
     # サービス一覧
-    svc_names = [k for k in cfg.get("services", {})]
+    svc_names = list(cfg.get("services", {}))
     if svc_names:
         logger.info("[Services] %s", ", ".join(svc_names))
     logger.info("=" * 60)
@@ -142,13 +140,14 @@ db_manager = DatabaseManager(
     metadata=Base.metadata,
 )
 
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """アプリ起動/終了時の初期化."""
     await db_manager.init()
     if db_manager.resolved_url.startswith("sqlite"):
         await db_manager.create_all_tables()
-    
+
     await kb_registry.ensure_initialized()
     await get_auth_service().ensure_bootstrap_data()
 

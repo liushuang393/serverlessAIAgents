@@ -207,10 +207,7 @@ class DataTable(RichComponent):
         """
         # カラム自動生成
         if columns is None and data:
-            columns = [
-                {"key": k, "label": k, "type": self._infer_type(v)}
-                for k, v in data[0].items()
-            ]
+            columns = [{"key": k, "label": k, "type": self._infer_type(v)} for k, v in data[0].items()]
 
         super().__init__(
             component_type=RichComponentType.DATA_TABLE,
@@ -606,9 +603,7 @@ class RichResponse:
         relevance_score: float | None = None,
     ) -> RichResponse:
         """引用を追加."""
-        self.components.append(Citation(
-            source_id, title, snippet, url, relevance_score
-        ))
+        self.components.append(Citation(source_id, title, snippet, url, relevance_score))
         return self
 
     def add_citations(

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Plugin manifest schema tests."""
 
 from __future__ import annotations

@@ -4,4 +4,3 @@ from apps.code_migration_assistant.adapters.target.java_adapter import JavaAdapt
 
 
 __all__ = ["JavaAdapter"]
-

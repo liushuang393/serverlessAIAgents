@@ -129,7 +129,9 @@ class DecisionUIComponentBuilder:
         alternatives = dao.get("existing_alternatives", [])
         if alternatives:
             alt_items = [
-                TextComponent(f"• {a.get('name', '')}: {a.get('why_not_viable', '')} (制約: {a.get('specific_constraint', '')})")
+                TextComponent(
+                    f"• {a.get('name', '')}: {a.get('why_not_viable', '')} (制約: {a.get('specific_constraint', '')})"
+                )
                 for a in alternatives
             ]
             children.append(ListComponent(items=alt_items, title="🔄 既存代替手段（なぜ使えないか）"))
@@ -161,7 +163,10 @@ class DecisionUIComponentBuilder:
         traps = dao.get("death_traps", [])
         if traps:
             trap_items = [
-                TextComponent(f"⚠️ {t.get('action', '')} ({t.get('severity', '')}): {t.get('reason', '')}", variant="warning")
+                TextComponent(
+                    f"⚠️ {t.get('action', '')} ({t.get('severity', '')}): {t.get('reason', '')}",
+                    variant="warning",
+                )
                 for t in traps
             ]
             children.append(ListComponent(items=trap_items, title="💀 死穴（禁忌）"))
@@ -318,14 +323,19 @@ class DecisionUIComponentBuilder:
             must_gates = jf.get("must_gates", [])
             if must_gates:
                 must_items = [
-                    TextComponent(f"🚪 {g.get('criterion', '')} — 閾値: {g.get('threshold', '')}", variant="warning")
+                    TextComponent(
+                        f"🚪 {g.get('criterion', '')} — 閾値: {g.get('threshold', '')}",
+                        variant="warning",
+                    )
                     for g in must_gates
                 ]
                 jf_children.append(ListComponent(items=must_items, title="Must（不可変ゲート）"))
             should = jf.get("should_criteria", [])
             if should:
                 should_items = [
-                    TextComponent(f"📏 {s.get('criterion', '')} [{s.get('weight', '')}] — {s.get('scoring_method', '')}")
+                    TextComponent(
+                        f"📏 {s.get('criterion', '')} [{s.get('weight', '')}] — {s.get('scoring_method', '')}"
+                    )
                     for s in should
                 ]
                 jf_children.append(ListComponent(items=should_items, title="Should（比較評価）"))
@@ -364,7 +374,11 @@ class DecisionUIComponentBuilder:
             for c in poc_dod.get("experience_conditions", []):
                 dod_children.append(TextComponent(f"✓ {c}"))
             for m in poc_dod.get("success_metrics", []):
-                dod_children.append(TextComponent(f"📊 {m.get('metric_name', '')}: {m.get('target_value', '')} ({m.get('measurement_method', '')})"))
+                dod_children.append(
+                    TextComponent(
+                        f"📊 {m.get('metric_name', '')}: {m.get('target_value', '')} ({m.get('measurement_method', '')})"
+                    )
+                )
             fallback = poc_dod.get("fallback_strategy", "")
             if fallback:
                 dod_children.append(TextComponent(f"🔄 フォールバック: {fallback}", variant="warning"))
@@ -380,9 +394,15 @@ class DecisionUIComponentBuilder:
                 stage_children: list[A2UIComponent] = [TextComponent(stage.get("objective", ""))]
                 for p in stage.get("phases", []):
                     tasks = ", ".join(p.get("tasks", []))
-                    stage_children.append(TextComponent(f"Phase {p.get('phase_number', '')}: {p.get('name', '')} ({p.get('duration', '')}) → {tasks}"))
+                    stage_children.append(
+                        TextComponent(
+                            f"Phase {p.get('phase_number', '')}: {p.get('name', '')} ({p.get('duration', '')}) → {tasks}"
+                        )
+                    )
                     for b in p.get("branches", []):
-                        stage_children.append(TextComponent(f"  ↳ 分岐: {b.get('branch_name', '')} ({b.get('trigger_condition', '')})"))
+                        stage_children.append(
+                            TextComponent(f"  ↳ 分岐: {b.get('branch_name', '')} ({b.get('trigger_condition', '')})")
+                        )
                 children.append(CardComponent(title=f"{emoji} {stage.get('stage_name', '')}", children=stage_children))
 
         # 最初の一歩
@@ -400,7 +420,9 @@ class DecisionUIComponentBuilder:
         context_actions = shu.get("context_specific_actions", [])
         if context_actions:
             context_items = [
-                TextComponent(f"🎯 {a.get('action', '')}: {a.get('why_this_context', '')} → {a.get('expected_output', '')}")
+                TextComponent(
+                    f"🎯 {a.get('action', '')}: {a.get('why_this_context', '')} → {a.get('expected_output', '')}"
+                )
                 for a in context_actions
             ]
             children.append(ListComponent(items=context_items, title="🎯 文脈特化行動（この問題固有）"))
@@ -413,7 +435,12 @@ class DecisionUIComponentBuilder:
                 TextComponent(f"成功基準: {validation.get('success_criteria', '')}"),
                 TextComponent(f"失敗時行動: {validation.get('failure_action', '')}", variant="warning"),
             ]
-            children.append(CardComponent(title="🔬 単一検証ポイント（PoCで絶対に検証すべき1点）", children=validation_children))
+            children.append(
+                CardComponent(
+                    title="🔬 単一検証ポイント（PoCで絶対に検証すべき1点）",
+                    children=validation_children,
+                )
+            )
 
         # v3.0: 撤退基準
         exit_criteria = shu.get("exit_criteria", {})
@@ -470,7 +497,9 @@ class DecisionUIComponentBuilder:
         if poc_arch:
             arch_children: list[A2UIComponent] = []
             for c in poc_arch.get("components", []):
-                arch_children.append(TextComponent(f"🏗️ {c.get('name', '')}: {c.get('purpose', '')} → {c.get('technology_choice', '')}"))
+                arch_children.append(
+                    TextComponent(f"🏗️ {c.get('name', '')}: {c.get('purpose', '')} → {c.get('technology_choice', '')}")
+                )
             flow = poc_arch.get("data_flow_description", "")
             if flow:
                 arch_children.append(TextComponent(f"📊 データフロー: {flow}"))
@@ -486,7 +515,9 @@ class DecisionUIComponentBuilder:
         expansion = qi.get("expansion_stages", [])
         if expansion:
             exp_items = [
-                TextComponent(f"📈 {s.get('stage_name', '')}: {s.get('introduction_condition', '')} → +{', '.join(s.get('added_components', []))}")
+                TextComponent(
+                    f"📈 {s.get('stage_name', '')}: {s.get('introduction_condition', '')} → +{', '.join(s.get('added_components', []))}"
+                )
                 for s in expansion
             ]
             children.append(ListComponent(items=exp_items, title="📈 拡張アーキテクチャ（導入条件付き）"))
@@ -512,7 +543,10 @@ class DecisionUIComponentBuilder:
         domain_techs = qi.get("domain_technologies", [])
         if domain_techs:
             tech_items = [
-                TextComponent(f"🛠️ {t.get('technology_name', '')} ({t.get('category', '')}): {t.get('why_required', '')}", variant="highlight")
+                TextComponent(
+                    f"🛠️ {t.get('technology_name', '')} ({t.get('category', '')}): {t.get('why_required', '')}",
+                    variant="highlight",
+                )
                 for t in domain_techs
             ]
             children.append(ListComponent(items=tech_items, title="🛠️ ドメイン固有技術（具体名詞）"))
@@ -521,7 +555,10 @@ class DecisionUIComponentBuilder:
         regulations = qi.get("regulatory_considerations", [])
         if regulations:
             reg_items = [
-                TextComponent(f"📜 {r.get('region', '')} / {r.get('regulation', '')}: {r.get('requirement', '')} → {r.get('implementation_impact', '')}", variant="warning")
+                TextComponent(
+                    f"📜 {r.get('region', '')} / {r.get('regulation', '')}: {r.get('requirement', '')} → {r.get('implementation_impact', '')}",
+                    variant="warning",
+                )
                 for r in regulations
             ]
             children.append(ListComponent(items=reg_items, title="📜 規制対応事項"))
@@ -530,7 +567,9 @@ class DecisionUIComponentBuilder:
         geographics = qi.get("geographic_considerations", [])
         if geographics:
             geo_items = [
-                TextComponent(f"🌍 {g.get('region', '')}: {g.get('latency_requirement', '')} | {g.get('infrastructure_need', '')}")
+                TextComponent(
+                    f"🌍 {g.get('region', '')}: {g.get('latency_requirement', '')} | {g.get('infrastructure_need', '')}"
+                )
                 for g in geographics
             ]
             children.append(ListComponent(items=geo_items, title="🌍 地理的考慮事項"))
@@ -539,7 +578,9 @@ class DecisionUIComponentBuilder:
         impls = qi.get("implementations", [])
         if impls:
             impl_items = [
-                TextComponent(f"🔧 {impl.get('component', '')}: {impl.get('technology', '')} ({impl.get('estimated_effort', '')})")
+                TextComponent(
+                    f"🔧 {impl.get('component', '')}: {impl.get('technology', '')} ({impl.get('estimated_effort', '')})"
+                )
                 for impl in impls
             ]
             children.append(ListComponent(items=impl_items, title="🔧 実装要素"))
@@ -574,19 +615,26 @@ class DecisionUIComponentBuilder:
         verdict_variant = "highlight" if verdict == "PASS" else "warning"
         children: list[A2UIComponent] = [
             TextComponent(f"判定: {verdict}", variant="headline"),
-            TextComponent(f"信頼度: {confidence*100:.0f}%", variant=verdict_variant),
+            TextComponent(f"信頼度: {confidence * 100:.0f}%", variant=verdict_variant),
         ]
 
         # v3.1 信頼度分解
         breakdown = review.get("confidence_breakdown")
         if isinstance(breakdown, dict):
             bd_items: list[A2UIComponent] = []
-            for key in ("input_sufficiency", "logic_consistency", "implementation_feasibility", "risk_coverage"):
+            for key in (
+                "input_sufficiency",
+                "logic_consistency",
+                "implementation_feasibility",
+                "risk_coverage",
+            ):
                 comp = breakdown.get(key, {})
                 if isinstance(comp, dict):
-                    bd_items.append(TextComponent(
-                        f"• {comp.get('name', key)}: {comp.get('score', 0):.0f}% (✓で+{comp.get('checkbox_boost', 0):.0f}点)"
-                    ))
+                    bd_items.append(
+                        TextComponent(
+                            f"• {comp.get('name', key)}: {comp.get('score', 0):.0f}% (✓で+{comp.get('checkbox_boost', 0):.0f}点)"
+                        )
+                    )
             if bd_items:
                 children.append(ListComponent(items=bd_items, title="📊 信頼度分解"))
 
@@ -612,8 +660,11 @@ class DecisionUIComponentBuilder:
         checkpoints = review.get("checkpoint_items", [])
         if checkpoints:
             cp_items: list[A2UIComponent] = [
-                TextComponent(f"☐ {c.get('label', '')} (+{c.get('score_boost', 0):.0f}点) — {c.get('default_suggestion', '')}")
-                for c in checkpoints if isinstance(c, dict)
+                TextComponent(
+                    f"☐ {c.get('label', '')} (+{c.get('score_boost', 0):.0f}点) — {c.get('default_suggestion', '')}"
+                )
+                for c in checkpoints
+                if isinstance(c, dict)
             ]
             children.append(ListComponent(items=cp_items, title="☑️ 確認チェックポイント"))
 
@@ -628,4 +679,3 @@ class DecisionUIComponentBuilder:
                 ButtonComponent(label="✍️ 署名", action=f"/api/report/{report_id}/sign"),
             ],
         )
-

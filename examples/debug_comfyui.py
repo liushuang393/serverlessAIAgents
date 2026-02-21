@@ -7,7 +7,7 @@ import json
 import httpx
 
 
-async def test_comfyui_workflow():
+async def test_comfyui_workflow() -> None:
     """ComfyUI ワークフローをテスト."""
     # 最小限のワークフロー
     workflow = {

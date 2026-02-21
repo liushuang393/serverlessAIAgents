@@ -241,9 +241,7 @@ class ConversationExportSkill:
                 lines.extend([f"## {current_date}", ""])
 
             # メッセージ
-            role_emoji = {"user": "👤", "assistant": "🤖", "system": "⚙️"}.get(
-                msg.role, "💬"
-            )
+            role_emoji = {"user": "👤", "assistant": "🤖", "system": "⚙️"}.get(msg.role, "💬")
 
             if self._config.include_timestamps:
                 time_part = msg.timestamp[11:19] if len(msg.timestamp) >= 19 else ""
@@ -276,14 +274,16 @@ class ConversationExportSkill:
             if isinstance(msg, ExportMessage):
                 normalized.append(msg)
             elif isinstance(msg, dict):
+                user_name = msg.get("user_name", msg.get("user_id", "Unknown"))
+                content = msg.get("content", msg.get("text", ""))
                 normalized.append(
                     ExportMessage(
                         timestamp=msg.get("timestamp", datetime.now().isoformat()),
                         platform=msg.get("platform", "unknown"),
                         user_id=msg.get("user_id", ""),
-                        user_name=msg.get("user_name", msg.get("user_id", "Unknown")),
+                        user_name=str(user_name) if user_name is not None else "Unknown",
                         role=msg.get("role", "user"),
-                        content=msg.get("content", msg.get("text", "")),
+                        content=str(content) if content is not None else "",
                         metadata=msg.get("metadata", {}),
                     )
                 )
@@ -323,18 +323,12 @@ class ConversationExportSkill:
         for msg in normalized:
             # 日付フィルター
             if start_date:
-                start_str = (
-                    start_date.isoformat()
-                    if isinstance(start_date, datetime)
-                    else start_date
-                )
+                start_str = start_date.isoformat() if isinstance(start_date, datetime) else start_date
                 if msg.timestamp < start_str:
                     continue
 
             if end_date:
-                end_str = (
-                    end_date.isoformat() if isinstance(end_date, datetime) else end_date
-                )
+                end_str = end_date.isoformat() if isinstance(end_date, datetime) else end_date
                 if msg.timestamp > end_str:
                     continue
 
@@ -386,4 +380,3 @@ class ConversationExportSkill:
             "first_message": normalized[0].timestamp if normalized else None,
             "last_message": normalized[-1].timestamp if normalized else None,
         }
-

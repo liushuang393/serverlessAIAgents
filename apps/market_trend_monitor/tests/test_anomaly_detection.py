@@ -6,11 +6,9 @@ AnomalyDetectionService のテスト。
 
 from __future__ import annotations
 
-import math
 from datetime import datetime, timedelta
 
 import pytest
-
 from apps.market_trend_monitor.backend.models import Evidence, SentimentType, SourceType, Trend
 from apps.market_trend_monitor.backend.services.anomaly_detection_service import (
     Anomaly,
@@ -113,17 +111,21 @@ class TestAnomalyDetectionService:
         # 通常期間: 日あたり2件
         for day in range(20):
             for j in range(2):
-                evidences.append(_make_evidence(
-                    f"e-{day}-{j}",
-                    collected_at=base_date + timedelta(days=day),
-                ))
+                evidences.append(
+                    _make_evidence(
+                        f"e-{day}-{j}",
+                        collected_at=base_date + timedelta(days=day),
+                    )
+                )
         # 異常日: 日あたり20件
         anomaly_date = base_date + timedelta(days=20)
         for j in range(20):
-            evidences.append(_make_evidence(
-                f"e-anom-{j}",
-                collected_at=anomaly_date,
-            ))
+            evidences.append(
+                _make_evidence(
+                    f"e-anom-{j}",
+                    collected_at=anomaly_date,
+                )
+            )
 
         anomalies = await service.detect_volume_anomalies(evidences)
         # 20件の急増が検知されるはず
@@ -150,10 +152,12 @@ class TestAnomalyDetectionService:
         base_date = datetime(2026, 1, 1)
         evidences = []
         for day in range(10):
-            evidences.append(_make_evidence(
-                f"e-{day}",
-                collected_at=base_date + timedelta(days=day),
-            ))
+            evidences.append(
+                _make_evidence(
+                    f"e-{day}",
+                    collected_at=base_date + timedelta(days=day),
+                )
+            )
         anomalies = await service.detect_volume_anomalies(evidences)
         assert anomalies == []  # 均一なので異常なし
 
@@ -238,7 +242,7 @@ class TestAnomalyDetectionService:
         """負のZ-score計算テスト."""
         service = AnomalyDetectionService()
         values = [10.0, 10.0, 10.0, 10.0, 10.0]
-        z = service.calculate_z_score(values + [0.0], 0.0)
+        z = service.calculate_z_score([*values, 0.0], 0.0)
         assert z < 0
 
     def test_classify_severity_high(self) -> None:

@@ -10,6 +10,7 @@
 4. `plugin-extension-handbook.md`
 5. `core-extension-playbook.md`
 6. `architecture-kernel.md`
+7. `evolution-v2-architecture.md`
 
 ## 方針
 

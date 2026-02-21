@@ -26,6 +26,7 @@
     >>> # 全ソースを発見
     >>> await service.discover_all()
 """
+
 from __future__ import annotations
 
 import logging
@@ -102,15 +103,15 @@ class ToolDiscoveryService:
         try:
             from agentflow.providers.tool_provider import ToolProvider
 
-            provider = ToolProvider()
-            tools = provider.discover()
+            provider = ToolProvider.discover()
+            tools = provider.list_tools()
 
             count = 0
             for tool_info in tools:
                 tool_def = ToolDefinition.from_builtin(
-                    name=tool_info.get("name", "unknown"),
-                    description=tool_info.get("description", ""),
-                    input_schema=tool_info.get("input_schema", {}),
+                    name=tool_info.name,
+                    description=tool_info.description,
+                    input_schema=tool_info.parameters,
                 )
                 self._registry.register(tool_def)
                 count += 1
@@ -261,9 +262,7 @@ class ToolDiscoveryService:
                         self._registry.register(tool_def)
                         count += 1
                     except Exception as e:
-                        self._logger.warning(
-                            f"{label}スキル登録エラー {getattr(skill, 'name', '?')}: {e}"
-                        )
+                        self._logger.warning(f"{label}スキル登録エラー {getattr(skill, 'name', '?')}: {e}")
 
             self._logger.debug(f"SkillEngine からスキル発見: {count}")
             return count

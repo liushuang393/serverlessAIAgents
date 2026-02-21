@@ -1,5 +1,6 @@
 import pyotp
 
+
 class TimeBasedMFA:
     """Time-based One-Time Password (TOTP) MFA implementation using pyotp."""
 

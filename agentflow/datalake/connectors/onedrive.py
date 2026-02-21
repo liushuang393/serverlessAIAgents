@@ -82,26 +82,21 @@ class OneDriveConnector(DataConnector):
         self._auth_provider = auth_provider
         self._access_token: str | None = None
         self._token_expires: datetime | None = None
-        self._session = None
+        self._session: Any = None
 
     @property
     def scheme(self) -> str:
         """URIスキーム."""
         return "onedrive"
 
-    async def _get_session(self):
+    async def _get_session(self) -> Any:
         """HTTPセッションを取得."""
         if self._session is None:
             try:
                 import aiohttp
             except ImportError as e:
-                msg = (
-                    "aiohttp is required for OneDrive support. "
-                    "Install with: pip install aiohttp"
-                )
-                raise ImportError(
-                    msg
-                ) from e
+                msg = "aiohttp is required for OneDrive support. Install with: pip install aiohttp"
+                raise ImportError(msg) from e
 
             timeout = aiohttp.ClientTimeout(total=self._config.timeout)
             self._session = aiohttp.ClientSession(timeout=timeout)
@@ -139,9 +134,7 @@ class OneDriveConnector(DataConnector):
                 "Microsoft credentials required. Set MICROSOFT_CLIENT_ID and "
                 "MICROSOFT_CLIENT_SECRET environment variables."
             )
-            raise ValueError(
-                msg
-            )
+            raise ValueError(msg)
 
         session = await self._get_session()
         token_url = f"https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
@@ -159,9 +152,7 @@ class OneDriveConnector(DataConnector):
 
             self._access_token = result["access_token"]
             expires_in = result.get("expires_in", 3600)
-            self._token_expires = datetime.now(UTC).replace(
-                second=datetime.now(UTC).second + expires_in - 60
-            )
+            self._token_expires = datetime.now(UTC).replace(second=datetime.now(UTC).second + expires_in - 60)
 
             return self._access_token
 
@@ -204,7 +195,8 @@ class OneDriveConnector(DataConnector):
         async with session.request(method, url, headers=headers, **kwargs) as response:
             response.raise_for_status()
             if response.content_type == "application/json":
-                return await response.json()
+                payload = await response.json()
+                return payload if isinstance(payload, dict) else {"data": payload}
             return {"content": await response.read()}
 
     async def list(
@@ -241,9 +233,7 @@ class OneDriveConnector(DataConnector):
             is_folder = "folder" in item
             modified_at = None
             if "lastModifiedDateTime" in item:
-                modified_at = datetime.fromisoformat(
-                    item["lastModifiedDateTime"].replace("Z", "+00:00")
-                )
+                modified_at = datetime.fromisoformat(item["lastModifiedDateTime"].replace("Z", "+00:00"))
 
             items.append(
                 DataItem(
@@ -363,7 +353,7 @@ class OneDriveConnector(DataConnector):
             headers = {"Authorization": f"Bearer {token}"}
 
             async with session.delete(url, headers=headers) as response:
-                return response.status == 204
+                return bool(response.status == 204)
         except Exception as e:
             logger.warning(f"Failed to delete {path}: {e}")
             return False
@@ -373,4 +363,3 @@ class OneDriveConnector(DataConnector):
         if self._session:
             await self._session.close()
             self._session = None
-

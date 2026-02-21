@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import BaseModel, Field
 
@@ -31,6 +31,7 @@ from agentflow.api.sse_emitter import SSEEmitter
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
+    from enum import Enum
 
     from fastapi import APIRouter, WebSocket
 
@@ -67,7 +68,7 @@ class AgentRequest(BaseModel):
 
 
 def create_agent_router(
-    agent_class: type,
+    agent_class: type[Any],
     config: RouterConfig | None = None,
 ) -> APIRouter:
     """Agent 用ルーターを作成.
@@ -89,12 +90,13 @@ def create_agent_router(
     from fastapi.responses import StreamingResponse
 
     config = config or RouterConfig()
-    router = APIRouter(prefix=config.prefix, tags=config.tags or ["Agent"])
+    router_tags = cast("list[str | Enum]", config.tags or ["Agent"])
+    router = APIRouter(prefix=config.prefix, tags=router_tags)
 
     # Agent インスタンス（遅延初期化）
-    _agent_instance = None
+    _agent_instance: Any | None = None
 
-    def get_agent():
+    def get_agent() -> Any:
         nonlocal _agent_instance
         if _agent_instance is None:
             _agent_instance = agent_class()
@@ -115,6 +117,7 @@ def create_agent_router(
             ).model_dump()
 
     if config.enable_stream:
+
         @router.post("/run/stream")
         async def run_agent_stream(request: AgentRequest) -> StreamingResponse:
             """Agent を SSE ストリームで実行."""
@@ -151,18 +154,22 @@ def create_agent_router(
             )
 
     if config.enable_health:
+
         @router.get("/health")
         async def health_check() -> dict[str, str]:
             """ヘルスチェック."""
             return {"status": "ok", "agent": agent_class.__name__}
 
     if config.enable_schema:
+
         @router.get("/schema")
         async def get_schema() -> dict[str, Any]:
             """Agent スキーマ取得."""
             agent = get_agent()
             if hasattr(agent, "get_definition"):
-                return agent.get_definition()
+                definition = agent.get_definition()
+                if isinstance(definition, dict):
+                    return cast("dict[str, Any]", definition)
             return {
                 "name": agent_class.__name__,
                 "type": "agent",
@@ -187,7 +194,8 @@ def create_websocket_router(
     from fastapi import APIRouter
 
     config = config or RouterConfig()
-    router = APIRouter(prefix=config.prefix, tags=config.tags or ["WebSocket"])
+    router_tags = cast("list[str | Enum]", config.tags or ["WebSocket"])
+    router = APIRouter(prefix=config.prefix, tags=router_tags)
 
     @router.websocket("/{client_id}")
     async def websocket_endpoint(websocket: WebSocket, client_id: str) -> None:
@@ -206,9 +214,9 @@ def create_websocket_router(
 
 
 def create_sse_endpoint(
-    handler: Callable[..., AsyncIterator[dict[str, Any]]],
+    handler: Callable[..., AsyncIterator[Any]],
     path: str = "/stream",
-) -> Callable:
+) -> Callable[..., Any]:
     """SSE エンドポイントを作成.
 
     Args:

@@ -60,9 +60,7 @@ class PEVEngineConfig(BaseModel):
     max_replans: int = Field(default=3, ge=0, description="最大再計画回数")
     timeout_seconds: float = Field(default=600.0, gt=0, description="タイムアウト")
     max_concurrent: int = Field(default=5, ge=1, description="最大同時実行")
-    verification_strategy: VerificationStrategy = Field(
-        default=VerificationStrategy.THRESHOLD
-    )
+    verification_strategy: VerificationStrategy = Field(default=VerificationStrategy.THRESHOLD)
     acceptance_threshold: float = Field(default=0.7, ge=0.0, le=1.0)
     auto_replan: bool = Field(default=True, description="自動再計画")
 
@@ -111,9 +109,7 @@ class PEVEngine:
     _planner: HierarchicalPlanner | None = None
     _executor: MonitoredExecutor | None = None
     _verifier: ResultVerifier | None = None
-    _logger: logging.Logger = field(
-        default_factory=lambda: logging.getLogger("agentflow.pev.engine")
-    )
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.pev.engine"))
 
     def __post_init__(self) -> None:
         """初期化後処理."""
@@ -148,11 +144,14 @@ class PEVEngine:
         available_agents = list(self.agents.keys())
 
         result = PEVResult(goal=goal)
+        planner = self.get_planner()
+        executor = self.get_executor()
+        verifier = self.get_verifier()
 
         try:
             # 1. Plan - 計画作成
             self._logger.info(f"計画作成開始: {goal}")
-            plan = await self._planner.create_plan(
+            plan = await planner.create_plan(
                 goal=goal,
                 context=context,
                 available_agents=available_agents,
@@ -166,7 +165,7 @@ class PEVEngine:
                 execution_results: dict[str, Any] = {}
                 failed_goal = None
 
-                async for event in self._executor.execute(plan, context):
+                async for event in executor.execute(plan, context):
                     result.events.append(event.model_dump())
 
                     if event.type == ExecutionEventType.GOAL_FAILED:
@@ -177,7 +176,7 @@ class PEVEngine:
 
                 # 3. Verify - 結果検証
                 self._logger.info("検証開始")
-                verification = await self._verifier.verify(
+                verification = await verifier.verify(
                     goal=goal,
                     result=execution_results,
                     expected=expected,
@@ -205,7 +204,7 @@ class PEVEngine:
                 self._logger.info(f"再計画開始 ({result.replan_count + 1}/{self.config.max_replans})")
 
                 if failed_goal:
-                    plan = await self._planner.replan(
+                    plan = await planner.replan(
                         plan=plan,
                         failed_goal=failed_goal,
                         error=verification.feedback,
@@ -213,7 +212,7 @@ class PEVEngine:
                     )
                 else:
                     # 失敗した目標が特定できない場合は全体を再計画
-                    plan = await self._planner.create_plan(
+                    plan = await planner.create_plan(
                         goal=goal,
                         context={**context, "previous_feedback": verification.feedback},
                         available_agents=available_agents,
@@ -242,9 +241,11 @@ class PEVEngine:
         goal = inputs.get("goal", "")
         context = inputs.get("context", {})
         available_agents = list(self.agents.keys())
+        planner = self.get_planner()
+        executor = self.get_executor()
 
         # 計画作成
-        plan = await self._planner.create_plan(
+        plan = await planner.create_plan(
             goal=goal,
             context=context,
             available_agents=available_agents,
@@ -257,19 +258,28 @@ class PEVEngine:
         )
 
         # 実行
-        async for event in self._executor.execute(plan, context):
+        async for event in executor.execute(plan, context):
             yield event
 
     def get_planner(self) -> HierarchicalPlanner:
         """プランナーを取得."""
+        if self._planner is None:
+            msg = "Planner is not initialized"
+            raise RuntimeError(msg)
         return self._planner
 
     def get_executor(self) -> MonitoredExecutor:
         """エグゼキューターを取得."""
+        if self._executor is None:
+            msg = "Executor is not initialized"
+            raise RuntimeError(msg)
         return self._executor
 
     def get_verifier(self) -> ResultVerifier:
         """検証器を取得."""
+        if self._verifier is None:
+            msg = "Verifier is not initialized"
+            raise RuntimeError(msg)
         return self._verifier
 
 
@@ -278,4 +288,3 @@ __all__ = [
     "PEVEngineConfig",
     "PEVResult",
 ]
-

@@ -211,11 +211,12 @@ class AgentFlowLogger:
         elif self._config.output == "stderr":
             output = sys.stderr
         else:
-            output = open(self._config.output, "a", encoding="utf-8")
+            output = open(self._config.output, "a", encoding="utf-8")  # noqa: SIM115
 
         handler = logging.StreamHandler(output)
 
         # フォーマッターを設定
+        formatter: logging.Formatter
         if self._config.format == "json":
             formatter = JSONFormatter(
                 include_timestamp=self._config.include_timestamp,
@@ -306,6 +307,7 @@ def setup_logging(
     root_logger.handlers.clear()
 
     # 新しいハンドラーを追加
+    handler: logging.Handler
     if output == "stdout":
         handler = logging.StreamHandler(sys.stdout)
     elif output == "stderr":

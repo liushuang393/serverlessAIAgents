@@ -174,12 +174,12 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
         self._services_initialized = False
 
         # サービスインスタンス（遅延初期化）
-        self.__semantic_layer = None
-        self.__chart_service = None
-        self.__suggestion_service = None
-        self.__schema_linker = None
-        self.__fewshot_manager = None
-        self.__sql_postprocessor = None
+        self.__semantic_layer: Any = None
+        self.__chart_service: Any = None
+        self.__suggestion_service: Any = None
+        self.__schema_linker: Any = None
+        self.__fewshot_manager: Any = None
+        self.__sql_postprocessor: Any = None
 
     async def _ensure_services(self) -> None:
         """サービスを初期化（遅延初期化パターン）."""
@@ -200,10 +200,7 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
         from agentflow.services.sql_postprocessor import SQLPostProcessor
 
         # SemanticLayerService
-        semantic_config = SemanticLayerConfig(
-            metrics={},  # 後で設定可能
-            dimensions={},
-        )
+        semantic_config = SemanticLayerConfig()
         self.__semantic_layer = SemanticLayerService(config=semantic_config)
 
         # ChartService
@@ -212,7 +209,6 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
             enable_interactivity=True,
         )
         self.__chart_service = ChartService(config=chart_config)
-        await self.__chart_service.start()
 
         # SuggestionService
         suggestion_config = SuggestionConfig(
@@ -234,7 +230,7 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
                 use_llm=self._config.nl2sql.schema_linking_use_llm,
             )
             self.__schema_linker = SchemaLinker(
-                db_schema=self._config.db_schema,
+                schema=self._config.db_schema,
                 config=linker_config,
             )
 
@@ -272,9 +268,7 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
                 similar_examples = self.__fewshot_manager.get_similar_examples(
                     question, k=self._config.nl2sql.fewshot_k
                 )
-                self.__fewshot_manager.format_examples_prompt(
-                    similar_examples
-                )
+                self.__fewshot_manager.format_examples_prompt(similar_examples)
                 query_pattern = self.__fewshot_manager._detect_pattern(question)
 
             # 3. DSL 中間層で NL → DSL → SQL
@@ -297,9 +291,7 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
 
             # 4. Post-Processing（SQL検証・修正）
             if sql and self.__sql_postprocessor:
-                result = await self.__sql_postprocessor.process(
-                    sql, question, schema_context
-                )
+                result = await self.__sql_postprocessor.process(sql, question, schema_context)
                 sql = result.final_sql
 
             # 5. SQL実行（ここではモック。実際は db_provider を使用）
@@ -313,20 +305,19 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
             # 6. チャート生成
             chart_output: ChartDataSchema | None = None
             if self._config.auto_chart and data and self.__chart_service:
-                async for event in self.__chart_service.execute(
+                chart_result = await self.__chart_service.execute(
                     action="generate",
                     data=data,
                     columns=columns,
                     title=question[:50],
-                ):
-                    if event.get("type") == "result":
-                        chart_data = event.get("data", {})
-                        chart_output = ChartDataSchema(
-                            chart_type=chart_data.get("chart_type", "bar"),
-                            title=chart_data.get("title", ""),
-                            echarts=chart_data.get("echarts", {}),
-                            chartjs=chart_data.get("chartjs", {}),
-                        )
+                )
+                chart_data = chart_result.data if chart_result.success else {}
+                chart_output = ChartDataSchema(
+                    chart_type=chart_data.get("chart_type", "bar"),
+                    title=chart_data.get("title", ""),
+                    echarts=chart_data.get("echarts", {}),
+                    chartjs=chart_data.get("chartjs", {}),
+                )
 
             # 7. インサイト・提案生成
             insights: list[InsightSchema] = []
@@ -338,30 +329,33 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
                     "data": data,
                     "columns": columns,
                 }
-                async for event in self.__suggestion_service.execute(
+                suggestion_result = await self.__suggestion_service.execute(
                     action="generate",
                     question=question,
                     context=context,
                     query_pattern=query_pattern,
                     dsl=dsl_output.model_dump() if dsl_output else None,
-                ):
-                    if event.get("type") == "result":
-                        for s in event.get("data", {}).get("suggestions", []):
-                            if s.get("type") == "insight":
-                                insights.append(InsightSchema(
-                                    text=s.get("text", ""),
-                                    type=s.get("type", "insight"),
-                                    confidence=s.get("confidence", 1.0),
-                                    priority=s.get("priority", "medium"),
-                                    reason=s.get("reason", ""),
-                                ))
-                            else:
-                                suggestions.append(SuggestionOutputSchema(
-                                    text=s.get("text", ""),
-                                    type=s.get("type", "follow_up"),
-                                    confidence=s.get("confidence", 1.0),
-                                    priority=s.get("priority", "medium"),
-                                ))
+                )
+                for s in suggestion_result.data.get("suggestions", []):
+                    if s.get("type") == "insight":
+                        insights.append(
+                            InsightSchema(
+                                text=s.get("text", ""),
+                                type=s.get("type", "insight"),
+                                confidence=s.get("confidence", 1.0),
+                                priority=s.get("priority", "medium"),
+                                reason=s.get("reason", ""),
+                            )
+                        )
+                    else:
+                        suggestions.append(
+                            SuggestionOutputSchema(
+                                text=s.get("text", ""),
+                                type=s.get("type", "follow_up"),
+                                confidence=s.get("confidence", 1.0),
+                                priority=s.get("priority", "medium"),
+                            )
+                        )
 
             # 8. 回答生成
             answer = self._generate_answer(question, sql, data)
@@ -387,9 +381,7 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
                 error=str(e),
             )
 
-    def _generate_answer(
-        self, question: str, sql: str, data: list[dict[str, Any]]
-    ) -> str:
+    def _generate_answer(self, question: str, sql: str, data: list[dict[str, Any]]) -> str:
         """回答を生成."""
         if not sql:
             return "クエリを生成できませんでした。"
@@ -422,8 +414,17 @@ class DataAnalyticsAgent(ResilientAgent[DataAnalyticsInput, DataAnalyticsOutput]
             ],
             "config": [
                 {"name": "db_schema", "type": "object", "label": "DBスキーマ"},
-                {"name": "auto_chart", "type": "boolean", "label": "自動チャート生成", "default": True},
-                {"name": "auto_insights", "type": "boolean", "label": "自動インサイト生成", "default": True},
+                {
+                    "name": "auto_chart",
+                    "type": "boolean",
+                    "label": "自動チャート生成",
+                    "default": True,
+                },
+                {
+                    "name": "auto_insights",
+                    "type": "boolean",
+                    "label": "自動インサイト生成",
+                    "default": True,
+                },
             ],
         }
-

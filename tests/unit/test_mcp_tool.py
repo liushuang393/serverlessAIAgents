@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """MCP Tool 単体テスト.
 
 agentflow/protocols/mcp_tool.py のテスト。
@@ -30,7 +29,8 @@ class FailingTool(MCPTool):
 
     async def handle_request(self, request: MCPToolRequest) -> MCPToolResponse:
         """常に失敗."""
-        raise ValueError("Tool failed")
+        msg = "Tool failed"
+        raise ValueError(msg)
 
 
 class TestMCPToolRequest:
@@ -237,4 +237,3 @@ class TestMCPToolClient:
         response = await client.call_tool_by_name("echo", {"message": "hi"}, "2.0.0")
 
         assert response.success is True
-

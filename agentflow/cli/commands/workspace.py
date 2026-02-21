@@ -38,6 +38,7 @@ def workspace() -> None:
 @click.option("--timeout", "-t", default=30.0, help="タイムアウト秒")
 def create(name: str, provider: str, timeout: float) -> None:
     """ワークスペースを作成."""
+
     async def _create() -> None:
         manager = get_workspace_manager()
         config = SandboxConfig(timeout=timeout)
@@ -76,6 +77,7 @@ def list_workspaces(state: str | None, as_json: bool) -> None:
 @click.argument("workspace_id")
 def start(workspace_id: str) -> None:
     """ワークスペースを起動."""
+
     async def _start() -> None:
         manager = get_workspace_manager()
         ws = manager.get(workspace_id)
@@ -92,6 +94,7 @@ def start(workspace_id: str) -> None:
 @click.argument("workspace_id")
 def stop(workspace_id: str) -> None:
     """ワークスペースを停止."""
+
     async def _stop() -> None:
         manager = get_workspace_manager()
         ws = manager.get(workspace_id)
@@ -108,6 +111,7 @@ def stop(workspace_id: str) -> None:
 @click.argument("workspace_id")
 def delete(workspace_id: str) -> None:
     """ワークスペースを削除."""
+
     async def _delete() -> None:
         manager = get_workspace_manager()
         if await manager.delete(workspace_id):
@@ -123,6 +127,7 @@ def delete(workspace_id: str) -> None:
 @click.option("--directory", "-d", default="", help="ディレクトリパス")
 def files(workspace_id: str, directory: str) -> None:
     """ワークスペースのファイル一覧を表示."""
+
     async def _files() -> None:
         manager = get_workspace_manager()
         ws = manager.get(workspace_id)
@@ -146,6 +151,7 @@ def files(workspace_id: str, directory: str) -> None:
 @click.argument("file_path")
 def run(workspace_id: str, file_path: str) -> None:
     """ワークスペース内のファイルを実行."""
+
     async def _run() -> None:
         manager = get_workspace_manager()
         ws = manager.get(workspace_id)
@@ -169,6 +175,7 @@ def run(workspace_id: str, file_path: str) -> None:
 @click.argument("output_path")
 def save(workspace_id: str, output_path: str) -> None:
     """ワークスペース状態をファイルに保存."""
+
     async def _save() -> None:
         manager = get_workspace_manager()
         if await manager.save_state(workspace_id, output_path):
@@ -184,6 +191,7 @@ def save(workspace_id: str, output_path: str) -> None:
 @click.option("--provider", "-p", default="docker", help="プロバイダ")
 def restore(input_path: str, provider: str) -> None:
     """ファイルからワークスペース状態を復元."""
+
     async def _restore() -> None:
         manager = get_workspace_manager()
         ws = await manager.restore_state(input_path, provider)
@@ -209,4 +217,3 @@ def stats(as_json: bool) -> None:
         click.echo("状態別:")
         for state, count in data.get("state_counts", {}).items():
             click.echo(f"  {state}: {count}")
-

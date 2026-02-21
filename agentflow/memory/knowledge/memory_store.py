@@ -244,11 +244,13 @@ class InMemoryKnowledgeStore:
         results: list[SearchResult] = []
         for entry, score in scored_entries[:top_k]:
             entry.record_access()
-            results.append(SearchResult(
-                entry=entry,
-                score=score,
-                search_type=SearchType.LEXICAL,
-            ))
+            results.append(
+                SearchResult(
+                    entry=entry,
+                    score=score,
+                    search_type=SearchType.LEXICAL,
+                )
+            )
 
         return results
 
@@ -317,4 +319,3 @@ class InMemoryKnowledgeStore:
         if not self._is_connected:
             msg = "Store is not connected. Call connect() first."
             raise RuntimeError(msg)
-

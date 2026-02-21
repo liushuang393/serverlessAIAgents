@@ -19,6 +19,7 @@
 
 import json
 import logging
+from collections.abc import AsyncIterator
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -117,7 +118,7 @@ def AgentRouter(
 
             client = AgentClient.get(agent_id)
 
-            async def event_generator():
+            async def event_generator() -> AsyncIterator[str]:
                 async for chunk in client.stream(request.input, request.context):
                     data = json.dumps(chunk) if isinstance(chunk, dict) else str(chunk)
                     yield f"data: {data}\n\n"
@@ -173,9 +174,7 @@ def FlowRouter(prefix: str = "") -> Any:
         """登録された Flow 定義一覧を取得."""
         registry = FlowDefinitionRegistry.get_instance()
         flows = registry.list_all()
-        return {
-            "flows": [{"flow_id": f.flow_id, "name": f.name, "version": f.version} for f in flows]
-        }
+        return {"flows": [{"flow_id": f.flow_id, "name": f.name, "version": f.version} for f in flows]}
 
     @router.get("/flows/{flow_id}/definition")
     async def get_flow_definition(flow_id: str) -> dict[str, Any]:
@@ -307,7 +306,7 @@ def create_sse_response(
 
     from agentflow.protocols.agui_events import AGUIEvent
 
-    async def sse_generator():
+    async def sse_generator() -> AsyncIterator[str]:
         """AGUIEvent を SSE 文字列に変換するジェネレーター."""
         try:
             async for event in event_generator:

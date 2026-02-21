@@ -100,6 +100,7 @@ class AuthConfig:
 @dataclass
 class AuthUser:
     """認証ユーザー."""
+
     id: str
     email: str
     roles: list[str] = field(default_factory=list)
@@ -110,6 +111,7 @@ class AuthUser:
 @dataclass
 class AuthToken:
     """認証トークン."""
+
     access_token: str
     refresh_token: str | None = None
     token_type: str = "Bearer"
@@ -122,7 +124,7 @@ class AuthToken:
 # =============================================================================
 
 
-class AuthService(ServiceBase):
+class AuthService(ServiceBase[dict[str, Any]]):
     """Auth Service - フレームワーク級サービス.
 
     Actions:
@@ -197,17 +199,21 @@ class AuthService(ServiceBase):
         # トークン生成
         token = self._create_token(user)
 
-        yield self._emit_result(execution_id, {
-            "access_token": token.access_token,
-            "refresh_token": token.refresh_token,
-            "token_type": token.token_type,
-            "expires_in": token.expires_in,
-            "user": {
-                "id": user["id"],
-                "email": user["email"],
-                "roles": user.get("roles", []),
+        yield self._emit_result(
+            execution_id,
+            {
+                "access_token": token.access_token,
+                "refresh_token": token.refresh_token,
+                "token_type": token.token_type,
+                "expires_in": token.expires_in,
+                "user": {
+                    "id": user["id"],
+                    "email": user["email"],
+                    "roles": user.get("roles", []),
+                },
             },
-        }, (time.time() - start_time) * 1000)
+            (time.time() - start_time) * 1000,
+        )
 
     async def _do_verify(
         self,
@@ -242,15 +248,19 @@ class AuthService(ServiceBase):
                 permissions=payload.get("permissions", []),
             )
 
-            yield self._emit_result(execution_id, {
-                "valid": True,
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "roles": user.roles,
-                    "permissions": user.permissions,
+            yield self._emit_result(
+                execution_id,
+                {
+                    "valid": True,
+                    "user": {
+                        "id": user.id,
+                        "email": user.email,
+                        "roles": user.roles,
+                        "permissions": user.permissions,
+                    },
                 },
-            }, (time.time() - start_time) * 1000)
+                (time.time() - start_time) * 1000,
+            )
 
         except jwt.ExpiredSignatureError:
             yield self._emit_error(execution_id, "token_expired", "トークンの有効期限が切れています")
@@ -291,12 +301,16 @@ class AuthService(ServiceBase):
             }
             token = self._create_token(user_data)
 
-            yield self._emit_result(execution_id, {
-                "access_token": token.access_token,
-                "refresh_token": token.refresh_token,
-                "token_type": token.token_type,
-                "expires_in": token.expires_in,
-            }, (time.time() - start_time) * 1000)
+            yield self._emit_result(
+                execution_id,
+                {
+                    "access_token": token.access_token,
+                    "refresh_token": token.refresh_token,
+                    "token_type": token.token_type,
+                    "expires_in": token.expires_in,
+                },
+                (time.time() - start_time) * 1000,
+            )
 
         except jwt.InvalidTokenError as e:
             yield self._emit_error(execution_id, "invalid_token", f"無効なトークン: {e}")
@@ -331,12 +345,16 @@ class AuthService(ServiceBase):
             "expires_at": expires_at.isoformat(),
         }
 
-        yield self._emit_result(execution_id, {
-            "key_id": key_id,
-            "api_key": key,  # 一度だけ表示
-            "name": name,
-            "expires_at": expires_at.isoformat(),
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "key_id": key_id,
+                "api_key": key,  # 一度だけ表示
+                "name": name,
+                "expires_at": expires_at.isoformat(),
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     async def _do_validate_api_key(
         self,
@@ -368,12 +386,16 @@ class AuthService(ServiceBase):
             yield self._emit_error(execution_id, "expired_api_key", "API Keyの有効期限が切れています")
             return
 
-        yield self._emit_result(execution_id, {
-            "valid": True,
-            "user_id": key_data["user_id"],
-            "permissions": key_data["permissions"],
-            "name": key_data["name"],
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "valid": True,
+                "user_id": key_data["user_id"],
+                "permissions": key_data["permissions"],
+                "name": key_data["name"],
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     async def _do_check_permission(
         self,
@@ -391,17 +413,29 @@ class AuthService(ServiceBase):
 
         # 管理者ロールは全権限
         if "admin" in user_roles:
-            yield self._emit_result(execution_id, {"allowed": True, "reason": "admin role"}, (time.time() - start_time) * 1000)
+            yield self._emit_result(
+                execution_id,
+                {"allowed": True, "reason": "admin role"},
+                (time.time() - start_time) * 1000,
+            )
             return
 
         # ワイルドカードチェック
         if "*" in user_permissions:
-            yield self._emit_result(execution_id, {"allowed": True, "reason": "wildcard permission"}, (time.time() - start_time) * 1000)
+            yield self._emit_result(
+                execution_id,
+                {"allowed": True, "reason": "wildcard permission"},
+                (time.time() - start_time) * 1000,
+            )
             return
 
         # 直接マッチ
         if required_permission in user_permissions:
-            yield self._emit_result(execution_id, {"allowed": True, "reason": "direct match"}, (time.time() - start_time) * 1000)
+            yield self._emit_result(
+                execution_id,
+                {"allowed": True, "reason": "direct match"},
+                (time.time() - start_time) * 1000,
+            )
             return
 
         # プレフィックスマッチ（例: "users:*" は "users:read" にマッチ）
@@ -409,10 +443,18 @@ class AuthService(ServiceBase):
             if perm.endswith(":*"):
                 prefix = perm[:-2]
                 if required_permission.startswith(prefix + ":"):
-                    yield self._emit_result(execution_id, {"allowed": True, "reason": "prefix match"}, (time.time() - start_time) * 1000)
+                    yield self._emit_result(
+                        execution_id,
+                        {"allowed": True, "reason": "prefix match"},
+                        (time.time() - start_time) * 1000,
+                    )
                     return
 
-        yield self._emit_result(execution_id, {"allowed": False, "reason": "permission denied"}, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {"allowed": False, "reason": "permission denied"},
+            (time.time() - start_time) * 1000,
+        )
 
     async def _do_check_rate_limit(
         self,
@@ -432,33 +474,38 @@ class AuthService(ServiceBase):
 
         # 古いリクエストを削除
         if identifier in self._rate_limits:
-            self._rate_limits[identifier] = [
-                ts for ts in self._rate_limits[identifier]
-                if ts > window_start
-            ]
+            self._rate_limits[identifier] = [ts for ts in self._rate_limits[identifier] if ts > window_start]
         else:
             self._rate_limits[identifier] = []
 
         current_count = len(self._rate_limits[identifier])
 
         if current_count >= self._config.rate_limit_requests:
-            yield self._emit_result(execution_id, {
-                "allowed": False,
-                "current_count": current_count,
-                "limit": self._config.rate_limit_requests,
-                "retry_after": int(self._rate_limits[identifier][0] - window_start),
-            }, (time.time() - start_time) * 1000)
+            yield self._emit_result(
+                execution_id,
+                {
+                    "allowed": False,
+                    "current_count": current_count,
+                    "limit": self._config.rate_limit_requests,
+                    "retry_after": int(self._rate_limits[identifier][0] - window_start),
+                },
+                (time.time() - start_time) * 1000,
+            )
             return
 
         # リクエストを記録
         self._rate_limits[identifier].append(now)
 
-        yield self._emit_result(execution_id, {
-            "allowed": True,
-            "current_count": current_count + 1,
-            "limit": self._config.rate_limit_requests,
-            "remaining": self._config.rate_limit_requests - current_count - 1,
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "allowed": True,
+                "current_count": current_count + 1,
+                "limit": self._config.rate_limit_requests,
+                "remaining": self._config.rate_limit_requests - current_count - 1,
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     def _create_token(self, user: dict[str, Any]) -> AuthToken:
         """JWT トークン生成."""

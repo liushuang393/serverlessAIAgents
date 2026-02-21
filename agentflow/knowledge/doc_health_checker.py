@@ -201,9 +201,13 @@ class DocHealthConfig:
     min_content_length: int = 100  # 最小コンテンツ長
 
     # 品質チェック
-    required_sections: list[str] = field(default_factory=lambda: [
-        "目的", "概要", "適用範囲",
-    ])
+    required_sections: list[str] = field(
+        default_factory=lambda: [
+            "目的",
+            "概要",
+            "適用範囲",
+        ]
+    )
     min_word_count: int = 50
 
     # オーナーチェック
@@ -263,38 +267,18 @@ class DocHealthChecker:
         stale_issues = await self._check_staleness(documents)
 
         # 問題を集約
-        all_issues = (
-            expired_issues
-            + duplicate_issues
-            + quality_issues
-            + owner_issues
-            + stale_issues
-        )
+        all_issues = expired_issues + duplicate_issues + quality_issues + owner_issues + stale_issues
         report.issues = all_issues
 
         # カウントを更新
-        report.expired_count = len([
-            i for i in all_issues if i.issue_type == IssueType.EXPIRED
-        ])
-        report.duplicate_count = len([
-            i for i in all_issues if i.issue_type == IssueType.DUPLICATE
-        ])
-        report.no_owner_count = len([
-            i for i in all_issues if i.issue_type == IssueType.NO_OWNER
-        ])
-        report.stale_count = len([
-            i for i in all_issues if i.issue_type == IssueType.STALE
-        ])
+        report.expired_count = len([i for i in all_issues if i.issue_type == IssueType.EXPIRED])
+        report.duplicate_count = len([i for i in all_issues if i.issue_type == IssueType.DUPLICATE])
+        report.no_owner_count = len([i for i in all_issues if i.issue_type == IssueType.NO_OWNER])
+        report.stale_count = len([i for i in all_issues if i.issue_type == IssueType.STALE])
 
         # 深刻度別カウント
-        report.critical_count = len([
-            i for i in all_issues if i.severity == IssueSeverity.CRITICAL
-        ])
-        report.warning_count = len([
-            i for i in all_issues if i.severity in (
-                IssueSeverity.MEDIUM, IssueSeverity.HIGH
-            )
-        ])
+        report.critical_count = len([i for i in all_issues if i.severity == IssueSeverity.CRITICAL])
+        report.warning_count = len([i for i in all_issues if i.severity in (IssueSeverity.MEDIUM, IssueSeverity.HIGH)])
 
         # 健康なドキュメント数
         problem_doc_ids = {i.document_id for i in all_issues}
@@ -320,11 +304,9 @@ class DocHealthChecker:
         Returns:
             問題リスト
         """
-        issues = []
+        issues: list[HealthIssue] = []
         now = datetime.now()
-        warning_threshold = now + timedelta(
-            days=self._config.expiry_warning_days
-        )
+        warning_threshold = now + timedelta(days=self._config.expiry_warning_days)
 
         for doc in documents:
             if not doc.expiry_date:
@@ -332,25 +314,29 @@ class DocHealthChecker:
 
             if doc.expiry_date < now:
                 # 期限切れ
-                issues.append(HealthIssue(
-                    issue_type=IssueType.EXPIRED,
-                    severity=IssueSeverity.CRITICAL,
-                    document_id=doc.document_id,
-                    title=doc.title,
-                    description=f"有効期限切れ: {doc.expiry_date.strftime('%Y-%m-%d')}",
-                    recommendation="ドキュメントの更新または廃止をご検討ください。",
-                ))
+                issues.append(
+                    HealthIssue(
+                        issue_type=IssueType.EXPIRED,
+                        severity=IssueSeverity.CRITICAL,
+                        document_id=doc.document_id,
+                        title=doc.title,
+                        description=f"有効期限切れ: {doc.expiry_date.strftime('%Y-%m-%d')}",
+                        recommendation="ドキュメントの更新または廃止をご検討ください。",
+                    )
+                )
             elif doc.expiry_date < warning_threshold:
                 # 期限切れ間近
                 days_until = (doc.expiry_date - now).days
-                issues.append(HealthIssue(
-                    issue_type=IssueType.EXPIRING_SOON,
-                    severity=IssueSeverity.HIGH,
-                    document_id=doc.document_id,
-                    title=doc.title,
-                    description=f"有効期限まで{days_until}日: {doc.expiry_date.strftime('%Y-%m-%d')}",
-                    recommendation="有効期限の延長または内容の更新をご検討ください。",
-                ))
+                issues.append(
+                    HealthIssue(
+                        issue_type=IssueType.EXPIRING_SOON,
+                        severity=IssueSeverity.HIGH,
+                        document_id=doc.document_id,
+                        title=doc.title,
+                        description=f"有効期限まで{days_until}日: {doc.expiry_date.strftime('%Y-%m-%d')}",
+                        recommendation="有効期限の延長または内容の更新をご検討ください。",
+                    )
+                )
 
         return issues
 
@@ -366,7 +352,7 @@ class DocHealthChecker:
         Returns:
             問題リスト
         """
-        issues = []
+        issues: list[HealthIssue] = []
         processed: set[str] = set()
 
         for i, doc1 in enumerate(documents):
@@ -378,28 +364,28 @@ class DocHealthChecker:
 
             duplicates = []
 
-            for doc2 in documents[i + 1:]:
+            for doc2 in documents[i + 1 :]:
                 if doc2.document_id in processed:
                     continue
 
-                similarity = self._calculate_similarity(
-                    doc1.content, doc2.content
-                )
+                similarity = self._calculate_similarity(doc1.content, doc2.content)
 
                 if similarity >= self._config.similarity_threshold:
                     duplicates.append(doc2.document_id)
                     processed.add(doc2.document_id)
 
             if duplicates:
-                issues.append(HealthIssue(
-                    issue_type=IssueType.DUPLICATE,
-                    severity=IssueSeverity.MEDIUM,
-                    document_id=doc1.document_id,
-                    title=doc1.title,
-                    description=f"{len(duplicates)}件の重複が検出されました。",
-                    recommendation="重複ドキュメントの統合をご検討ください。",
-                    related_documents=duplicates,
-                ))
+                issues.append(
+                    HealthIssue(
+                        issue_type=IssueType.DUPLICATE,
+                        severity=IssueSeverity.MEDIUM,
+                        document_id=doc1.document_id,
+                        title=doc1.title,
+                        description=f"{len(duplicates)}件の重複が検出されました。",
+                        recommendation="重複ドキュメントの統合をご検討ください。",
+                        related_documents=duplicates,
+                    )
+                )
 
         return issues
 
@@ -415,20 +401,22 @@ class DocHealthChecker:
         Returns:
             問題リスト
         """
-        issues = []
+        issues: list[HealthIssue] = []
 
         for doc in documents:
             # コンテンツ長チェック
             word_count = len(doc.content.split())
             if word_count < self._config.min_word_count:
-                issues.append(HealthIssue(
-                    issue_type=IssueType.LOW_QUALITY,
-                    severity=IssueSeverity.LOW,
-                    document_id=doc.document_id,
-                    title=doc.title,
-                    description=f"コンテンツが短すぎます（{word_count}語）。",
-                    recommendation="より詳細な情報の追加をご検討ください。",
-                ))
+                issues.append(
+                    HealthIssue(
+                        issue_type=IssueType.LOW_QUALITY,
+                        severity=IssueSeverity.LOW,
+                        document_id=doc.document_id,
+                        title=doc.title,
+                        description=f"コンテンツが短すぎます（{word_count}語）。",
+                        recommendation="より詳細な情報の追加をご検討ください。",
+                    )
+                )
 
             # 必須セクションチェック
             missing_sections = []
@@ -437,14 +425,16 @@ class DocHealthChecker:
                     missing_sections.append(section)
 
             if missing_sections:
-                issues.append(HealthIssue(
-                    issue_type=IssueType.MISSING_SECTION,
-                    severity=IssueSeverity.MEDIUM,
-                    document_id=doc.document_id,
-                    title=doc.title,
-                    description=f"セクション欠落: {', '.join(missing_sections)}",
-                    recommendation="必須セクションの追加をご検討ください。",
-                ))
+                issues.append(
+                    HealthIssue(
+                        issue_type=IssueType.MISSING_SECTION,
+                        severity=IssueSeverity.MEDIUM,
+                        document_id=doc.document_id,
+                        title=doc.title,
+                        description=f"セクション欠落: {', '.join(missing_sections)}",
+                        recommendation="必須セクションの追加をご検討ください。",
+                    )
+                )
 
         return issues
 
@@ -460,21 +450,23 @@ class DocHealthChecker:
         Returns:
             問題リスト
         """
-        issues = []
+        issues: list[HealthIssue] = []
 
         if not self._config.require_owner:
             return issues
 
         for doc in documents:
             if not doc.owner_id and not doc.owner_department:
-                issues.append(HealthIssue(
-                    issue_type=IssueType.NO_OWNER,
-                    severity=IssueSeverity.HIGH,
-                    document_id=doc.document_id,
-                    title=doc.title,
-                    description="オーナーが設定されていません。",
-                    recommendation="ドキュメントオーナーの設定をお願いします。",
-                ))
+                issues.append(
+                    HealthIssue(
+                        issue_type=IssueType.NO_OWNER,
+                        severity=IssueSeverity.HIGH,
+                        document_id=doc.document_id,
+                        title=doc.title,
+                        description="オーナーが設定されていません。",
+                        recommendation="ドキュメントオーナーの設定をお願いします。",
+                    )
+                )
 
         return issues
 
@@ -491,21 +483,21 @@ class DocHealthChecker:
             問題リスト
         """
         issues = []
-        stale_threshold = datetime.now() - timedelta(
-            days=self._config.stale_days
-        )
+        stale_threshold = datetime.now() - timedelta(days=self._config.stale_days)
 
         for doc in documents:
             if doc.updated_at < stale_threshold:
                 days_since = (datetime.now() - doc.updated_at).days
-                issues.append(HealthIssue(
-                    issue_type=IssueType.STALE,
-                    severity=IssueSeverity.LOW,
-                    document_id=doc.document_id,
-                    title=doc.title,
-                    description=f"{days_since}日間更新されていません。",
-                    recommendation="内容の確認・更新をご検討ください。",
-                ))
+                issues.append(
+                    HealthIssue(
+                        issue_type=IssueType.STALE,
+                        severity=IssueSeverity.LOW,
+                        document_id=doc.document_id,
+                        title=doc.title,
+                        description=f"{days_since}日間更新されていません。",
+                        recommendation="内容の確認・更新をご検討ください。",
+                    )
+                )
 
         return issues
 
@@ -579,8 +571,7 @@ class DocHealthChecker:
 
         if report.expired_count > 0:
             recommendations.append(
-                f"⚠️ {report.expired_count}件のドキュメントが期限切れです。"
-                "早急に更新または廃止をご検討ください。"
+                f"⚠️ {report.expired_count}件のドキュメントが期限切れです。早急に更新または廃止をご検討ください。"
             )
 
         if report.no_owner_count > 0:
@@ -591,20 +582,16 @@ class DocHealthChecker:
 
         if report.duplicate_count > 0:
             recommendations.append(
-                f"📑 {report.duplicate_count}件の重複ドキュメントが検出されました。"
-                "統合をご検討ください。"
+                f"📑 {report.duplicate_count}件の重複ドキュメントが検出されました。統合をご検討ください。"
             )
 
         if report.stale_count > report.total_documents * 0.3:
             recommendations.append(
-                "📅 多くのドキュメントが長期間更新されていません。"
-                "定期的なレビュープロセスの導入をご検討ください。"
+                "📅 多くのドキュメントが長期間更新されていません。定期的なレビュープロセスの導入をご検討ください。"
             )
 
         if not recommendations:
-            recommendations.append(
-                "✅ 知識ベースは健康な状態です。"
-            )
+            recommendations.append("✅ 知識ベースは健康な状態です。")
 
         return recommendations
 
@@ -625,10 +612,7 @@ class DocHealthChecker:
         threshold = datetime.now() + timedelta(days=days)
         now = datetime.now()
 
-        return [
-            doc for doc in documents
-            if doc.expiry_date and now < doc.expiry_date <= threshold
-        ]
+        return [doc for doc in documents if doc.expiry_date and now < doc.expiry_date <= threshold]
 
     def get_documents_by_owner(
         self,

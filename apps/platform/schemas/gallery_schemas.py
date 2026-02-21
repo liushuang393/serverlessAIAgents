@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
+
+
+if TYPE_CHECKING:
+    from datetime import datetime
 
 
 class GalleryItemType(str, Enum):
@@ -24,13 +27,9 @@ class GalleryItemType(str, Enum):
 class GalleryFilter(BaseModel):
     """検索フィルター."""
 
-    types: list[GalleryItemType] | None = Field(
-        default=None, description="アイテムタイプフィルター"
-    )
+    types: list[GalleryItemType] | None = Field(default=None, description="アイテムタイプフィルター")
     categories: list[str] | None = Field(default=None, description="カテゴリフィルター")
-    protocols: list[str] | None = Field(
-        default=None, description="プロトコルフィルター (mcp, a2a, agui, a2ui)"
-    )
+    protocols: list[str] | None = Field(default=None, description="プロトコルフィルター (mcp, a2a, agui, a2ui)")
     authors: list[str] | None = Field(default=None, description="作成者フィルター")
     tags: list[str] | None = Field(default=None, description="タグフィルター")
     min_rating: float | None = Field(default=None, ge=0.0, le=5.0, description="最低評価")

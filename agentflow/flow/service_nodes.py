@@ -41,6 +41,7 @@ if TYPE_CHECKING:
 
 class ServiceNodeType(Enum):
     """サービスノードタイプ."""
+
     RAG = auto()
     TEXT2SQL = auto()
     CHART = auto()
@@ -144,6 +145,7 @@ class RAGNode(ServiceNode):
     def get_studio_definition(cls) -> dict[str, Any]:
         """Studio UI用ノード定義."""
         from agentflow.services import RAGConfig
+
         return {
             "type": "rag",
             "label": "RAG検索",
@@ -231,6 +233,7 @@ class Text2SQLNode(ServiceNode):
     def get_studio_definition(cls) -> dict[str, Any]:
         """Studio UI用ノード定義."""
         from agentflow.services import Text2SQLConfig
+
         return {
             "type": "text2sql",
             "label": "Text2SQL",
@@ -323,6 +326,7 @@ class ChartNode(ServiceNode):
     def get_studio_definition(cls) -> dict[str, Any]:
         """Studio UI用ノード定義."""
         from agentflow.services import ChartConfig
+
         return {
             "type": "chart",
             "label": "チャート生成",
@@ -406,6 +410,7 @@ class SuggestionNode(ServiceNode):
     def get_studio_definition(cls) -> dict[str, Any]:
         """Studio UI用ノード定義."""
         from agentflow.services import SuggestionConfig
+
         return {
             "type": "suggestion",
             "label": "提案生成",
@@ -508,7 +513,10 @@ class FAQNode(ServiceNode):
             suggestion_service = SuggestionService(suggestion_config)
             suggestion_result = await suggestion_service.execute(
                 question=question,
-                context={"query_type": query_type, "data_found": bool(result_data.get("data") or result_data.get("documents"))},
+                context={
+                    "query_type": query_type,
+                    "data_found": bool(result_data.get("data") or result_data.get("documents")),
+                },
             )
             result_data["suggestions"] = suggestion_result.data.get("suggestions", [])
 
@@ -529,7 +537,21 @@ class FAQNode(ServiceNode):
 
     def _classify_query(self, question: str) -> str:
         """クエリタイプを判定."""
-        sql_keywords = ["売上", "収入", "数量", "統計", "報表", "top", "排名", "トレンド", "比較", "同比", "金額", "注文", "顧客数"]
+        sql_keywords = [
+            "売上",
+            "収入",
+            "数量",
+            "統計",
+            "報表",
+            "top",
+            "排名",
+            "トレンド",
+            "比較",
+            "同比",
+            "金額",
+            "注文",
+            "顧客数",
+        ]
         question_lower = question.lower()
         sql_score = sum(1 for k in sql_keywords if k in question_lower)
         return "sql" if sql_score >= 2 else "faq"
@@ -538,6 +560,7 @@ class FAQNode(ServiceNode):
     def get_studio_definition(cls) -> dict[str, Any]:
         """Studio UI用ノード定義."""
         from agentflow.services import RAGConfig, Text2SQLConfig
+
         return {
             "type": "faq",
             "label": "FAQ",

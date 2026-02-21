@@ -1,0 +1,113 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "apps": "Apps",
+    "agents": "Agents",
+    "orchestration": "Orchestration",
+    "patterns": "Patterns",
+    "skills": "Skills",
+    "rag": "RAG",
+    "mcp": "MCP",
+    "cli": "CLI Reference",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "title": "AgentFlow Platform",
+    "subtitle": "AI Agent Management Console",
+    "total_apps": "Total Apps",
+    "active_agents": "Active Agents",
+    "running_flows": "Running Flows",
+    "system_health": "System Health"
+  },
+  "apps": {
+    "title": "App List",
+    "create": "Create New App",
+    "no_apps": "No apps found",
+    "status": "Status",
+    "running": "Running",
+    "stopped": "Stopped",
+    "error": "Error",
+    "view_detail": "View Detail",
+    "start": "Start",
+    "stop": "Stop",
+    "delete": "Delete",
+    "name": "App Name",
+    "description": "Description",
+    "created_at": "Created at"
+  },
+  "app_create": {
+    "title": "Create New App",
+    "name": "App Name",
+    "name_placeholder": "e.g. Internal FAQ System",
+    "description": "Description",
+    "description_placeholder": "Describe the purpose of this app",
+    "template": "Template",
+    "submit": "Create",
+    "cancel": "Cancel"
+  },
+  "agents": {
+    "title": "Agent List",
+    "no_agents": "No agents found",
+    "type": "Type",
+    "capability": "Capability",
+    "mcp_tools": "MCP Tools",
+    "status": "Status"
+  },
+  "orchestration": {
+    "title": "Orchestration",
+    "flows": "Flows",
+    "active_flows": "Active Flows",
+    "no_flows": "No flows found"
+  },
+  "patterns": {
+    "title": "Agent Patterns",
+    "no_patterns": "No patterns found",
+    "use": "Use This Pattern"
+  },
+  "skills": {
+    "title": "Skill Catalog",
+    "no_skills": "No skills found",
+    "category": "Category",
+    "install": "Install"
+  },
+  "rag": {
+    "title": "RAG Overview",
+    "documents": "Documents",
+    "index_size": "Index Size",
+    "status": "Status",
+    "ready": "Ready"
+  },
+  "mcp": {
+    "title": "MCP Manager",
+    "servers": "MCP Servers",
+    "tools": "Tools",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "no_servers": "No MCP servers found"
+  },
+  "cli": {
+    "title": "CLI Reference",
+    "copy": "Copy",
+    "copied": "Copied"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "api_key": "API Key",
+    "save": "Save",
+    "saved": "Saved"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back",
+    "confirm": "Confirm",
+    "delete": "Delete"
+  }
+}
+

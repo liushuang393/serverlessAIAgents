@@ -678,17 +678,9 @@ class ToolExecutor:
             metadata={
                 "tool_call_id": tool_call.id,
                 "audit_required": tool_info.needs_audit(),
-                "plugin_id": (
-                    governance_result.plugin_id if governance_result else tool_info.plugin_id
-                ),
-                "plugin_version": (
-                    governance_result.plugin_version
-                    if governance_result
-                    else tool_info.plugin_version
-                ),
-                "plugin_risk_tier": (
-                    governance_result.plugin_risk_tier if governance_result else None
-                ),
+                "plugin_id": (governance_result.plugin_id if governance_result else tool_info.plugin_id),
+                "plugin_version": (governance_result.plugin_version if governance_result else tool_info.plugin_version),
+                "plugin_risk_tier": (governance_result.plugin_risk_tier if governance_result else None),
             },
         )
 

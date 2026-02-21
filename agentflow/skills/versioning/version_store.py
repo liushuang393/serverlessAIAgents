@@ -16,7 +16,7 @@ import logging
 from abc import ABC, abstractmethod
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from agentflow.skills.versioning.skill_version import (
     SkillSnapshot,
@@ -207,7 +207,10 @@ class FileVersionStore(VersionStore):
         if not index_path.exists():
             return {"versions": [], "latest": None}
         with index_path.open("r", encoding="utf-8") as f:
-            return json.load(f)
+            loaded = json.load(f)
+            if isinstance(loaded, dict):
+                return cast("dict[str, Any]", loaded)
+            return {"versions": [], "latest": None}
 
     def _save_index(self, skill_name: str, index: dict[str, Any]) -> None:
         """保存版本索引."""

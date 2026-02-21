@@ -65,19 +65,14 @@ export function AlertRenderer({ component }: AlertRendererProps): React.JSX.Elem
       data-testid={`alert-${alertType}`}
     >
       {/* アイコン */}
-      <span
-        className={`flex-shrink-0 text-lg font-bold ${style.iconColor}`}
-        aria-hidden="true"
-      >
+      <span className={`flex-shrink-0 text-lg font-bold ${style.iconColor}`} aria-hidden="true">
         {style.icon}
       </span>
 
       {/* コンテンツ */}
       <div className="flex-1 min-w-0">
         {title && (
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-            {String(title)}
-          </h4>
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">{String(title)}</h4>
         )}
         <p className="text-sm text-gray-700 dark:text-gray-300">{String(message)}</p>
       </div>
@@ -86,4 +81,3 @@ export function AlertRenderer({ component }: AlertRendererProps): React.JSX.Elem
 }
 
 export default AlertRenderer;
-

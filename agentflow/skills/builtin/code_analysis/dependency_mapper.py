@@ -131,10 +131,7 @@ class DependencyMapper(AgentBlock):
             "internal_dependencies": graph.internal_dependencies,
             "outdated_count": graph.outdated_count,
             "vulnerable_count": graph.vulnerable_count,
-            "circular_dependencies": [
-                {"path": cd.path, "severity": cd.severity}
-                for cd in graph.circular_dependencies
-            ],
+            "circular_dependencies": [{"path": cd.path, "severity": cd.severity} for cd in graph.circular_dependencies],
             "nodes": [self._node_to_dict(n) for n in graph.nodes[:50]],
             "analyzed_at": graph.analyzed_at.isoformat(),
         }
@@ -160,19 +157,11 @@ class DependencyMapper(AgentBlock):
         edges = self._build_edges(nodes)
         circular = self._detect_circular_dependencies(edges)
 
-        external_count = sum(
-            1 for n in nodes if n.dep_type == DependencyType.EXTERNAL
-        )
-        internal_count = sum(
-            1 for n in nodes if n.dep_type == DependencyType.INTERNAL
-        )
+        external_count = sum(1 for n in nodes if n.dep_type == DependencyType.EXTERNAL)
+        internal_count = sum(1 for n in nodes if n.dep_type == DependencyType.INTERNAL)
         direct_count = sum(1 for n in nodes if n.is_direct)
-        outdated_count = sum(
-            1 for n in nodes if n.health == DependencyHealth.OUTDATED
-        )
-        vulnerable_count = sum(
-            1 for n in nodes if n.health == DependencyHealth.VULNERABLE
-        )
+        outdated_count = sum(1 for n in nodes if n.health == DependencyHealth.OUTDATED)
+        vulnerable_count = sum(1 for n in nodes if n.health == DependencyHealth.VULNERABLE)
 
         return DependencyGraph(
             nodes=nodes,
@@ -229,9 +218,7 @@ class DependencyMapper(AgentBlock):
             ),
         ]
 
-    def _build_edges(
-        self, nodes: list[DependencyNode]
-    ) -> list[tuple[str, str]]:
+    def _build_edges(self, nodes: list[DependencyNode]) -> list[tuple[str, str]]:
         """依存エッジを構築."""
         edges = []
         for node in nodes:
@@ -241,9 +228,7 @@ class DependencyMapper(AgentBlock):
                 edges.append((dependent, node.name))
         return edges
 
-    def _detect_circular_dependencies(
-        self, edges: list[tuple[str, str]]
-    ) -> list[CircularDependency]:
+    def _detect_circular_dependencies(self, edges: list[tuple[str, str]]) -> list[CircularDependency]:
         """循環依存を検出."""
         # 簡易DFS実装
         graph: dict[str, list[str]] = {}

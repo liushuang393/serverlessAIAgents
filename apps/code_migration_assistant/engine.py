@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Code Migration Engine - 工程固定型パイプライン.
 
 固定工程:
@@ -16,34 +15,16 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from agentflow.engines.base import BaseEngine, EngineConfig
-from agentflow.governance.engine import GovernanceEngine, ToolExecutionContext
-from agentflow.governance.enterprise_audit import (
-    EnterpriseAuditLogger,
-    EnterpriseAuditEvent,
-    AuditEventType,
-    AuditSeverity,
-)
-from agentflow.hitl.approval_flow import ApprovalFlow
-from agentflow.integrations.context_bridge import get_current_context
-from agentflow.providers.tool_provider import (
-    OperationType,
-    RegisteredTool,
-    RiskLevel,
-)
-from agentflow.run import LightningTrainingRequest, TrajectoryAdapter
-from agentflow.security import SafetyMixin
-
 from apps.code_migration_assistant.adapters import get_adapter_factory
 from apps.code_migration_assistant.agents import (
     CodeTransformationAgent,
+    ComplianceReporterAgent,
     DifferentialVerificationAgent,
     LegacyAnalysisAgent,
     LimitedFixerAgent,
     MigrationDesignAgent,
     QualityGateAgent,
     TestSynthesisAgent,
-    ComplianceReporterAgent,
 )
 from apps.code_migration_assistant.lightning import create_lightning_engine_config
 from apps.code_migration_assistant.workflow.artifacts import ArtifactStore
@@ -59,13 +40,30 @@ from apps.code_migration_assistant.workflow.models import (
     TransformationArtifact,
 )
 
+from agentflow.engines.base import BaseEngine, EngineConfig
+from agentflow.governance.engine import GovernanceEngine, ToolExecutionContext
+from agentflow.governance.enterprise_audit import (
+    AuditEventType,
+    AuditSeverity,
+    EnterpriseAuditEvent,
+    EnterpriseAuditLogger,
+)
+from agentflow.hitl.approval_flow import ApprovalFlow
+from agentflow.integrations.context_bridge import get_current_context
+from agentflow.providers.tool_provider import (
+    OperationType,
+    RegisteredTool,
+    RiskLevel,
+)
+from agentflow.run import LightningTrainingRequest, TrajectoryAdapter
+from agentflow.security import SafetyMixin
+
 
 # =============================================================================
 # Virtual Tools (Governance Policy Hooks)
 # =============================================================================
 def _virtual_tool_func(*args, **kwargs):
     """Virtual tool dummy implementation."""
-    pass
 
 
 MIGRATION_ANALYSIS = RegisteredTool(
@@ -194,13 +192,9 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         """内部 Agent を初期化."""
         self._legacy_analysis_agent = LegacyAnalysisAgent(migration_type=self._migration_type)
         self._migration_design_agent = MigrationDesignAgent(migration_type=self._migration_type)
-        self._code_transformation_agent = CodeTransformationAgent(
-            migration_type=self._migration_type
-        )
+        self._code_transformation_agent = CodeTransformationAgent(migration_type=self._migration_type)
         self._test_synthesis_agent = TestSynthesisAgent()
-        self._differential_agent = DifferentialVerificationAgent(
-            migration_type=self._migration_type
-        )
+        self._differential_agent = DifferentialVerificationAgent(migration_type=self._migration_type)
         self._quality_gate_agent = QualityGateAgent()
         self._limited_fixer_agent = LimitedFixerAgent()
         self._compliance_reporter_agent = ComplianceReporterAgent()
@@ -227,9 +221,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
                 # Wait for next event or task completion
                 # Use wait to handle both
                 queue_get = asyncio.create_task(self._event_queue.get())
-                done, pending = await asyncio.wait(
-                    {queue_get, task}, return_when=asyncio.FIRST_COMPLETED
-                )
+                done, _pending = await asyncio.wait({queue_get, task}, return_when=asyncio.FIRST_COMPLETED)
 
                 if queue_get in done:
                     event = queue_get.result()
@@ -287,7 +279,8 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
 
         # 拒否された場合は例外
         if result.decision.value == "deny":
-            raise PermissionError(f"Governance Policy Violation: {result.reason}")
+            msg = f"Governance Policy Violation: {result.reason}"
+            raise PermissionError(msg)
 
         # Emit Node Start Event
         await self._emit_step_event("node_start", tool.name)
@@ -321,9 +314,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         # Emit Node Complete Event
         await self._emit_step_event("node_complete", tool.name, result=metadata)
 
-    async def _emit_step_event(
-        self, event_type: str, node_name: str, result: dict[str, Any] | None = None
-    ) -> None:
+    async def _emit_step_event(self, event_type: str, node_name: str, result: dict[str, Any] | None = None) -> None:
         """ステップイベントをキューに送信."""
         if self._event_queue:
             event = {
@@ -394,9 +385,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         try:
             # 1) 分析
             # Governance Check (Start Log)
-            await self._check_governance(
-                MIGRATION_ANALYSIS, task_id, {"module": module}, flow_context
-            )
+            await self._check_governance(MIGRATION_ANALYSIS, task_id, {"module": module}, flow_context)
 
             analysis = self._legacy_analysis_agent.process(
                 {
@@ -425,9 +414,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             analysis_for_next = await artifact_store.read_json(analysis_path)
 
             # Completion Log
-            await self._log_completion(
-                MIGRATION_ANALYSIS, task_id, {"path": str(analysis_path)}, flow_context
-            )
+            await self._log_completion(MIGRATION_ANALYSIS, task_id, {"path": str(analysis_path)}, flow_context)
 
             # 2) 設計
             await self._check_governance(MIGRATION_DESIGN, task_id, {}, flow_context)
@@ -453,9 +440,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             await artifact_store.append_decision(task_id, "設計工程を完了")
             design_for_next = await artifact_store.read_json(design_path)
 
-            await self._log_completion(
-                MIGRATION_DESIGN, task_id, {"path": str(design_path)}, flow_context
-            )
+            await self._log_completion(MIGRATION_DESIGN, task_id, {"path": str(design_path)}, flow_context)
 
             # ── HITL 承認ポイント（設計後） ──
             # 設計結果の人間レビューを要求
@@ -522,9 +507,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             # ── HITL 承認ポイント終了 ──
 
             # 3) 変換
-            await self._check_governance(
-                MIGRATION_TRANSFORM, task_id, {"fast_mode": fast_mode}, flow_context
-            )
+            await self._check_governance(MIGRATION_TRANSFORM, task_id, {"fast_mode": fast_mode}, flow_context)
 
             transformation = self._code_transformation_agent.process(
                 {
@@ -533,9 +516,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
                     "fast_mode": fast_mode,
                 }
             )
-            transformation_artifact = self._validate_or_fail(
-                TransformationArtifact, transformation, "code"
-            )
+            transformation_artifact = self._validate_or_fail(TransformationArtifact, transformation, "code")
             if transformation_artifact is None:
                 await artifact_store.append_failure(
                     task_id=task_id,
@@ -577,9 +558,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             await artifact_store.append_decision(task_id, "変換工程を完了")
             transformation_for_next = await artifact_store.read_json(transformation_path)
 
-            await self._log_completion(
-                MIGRATION_TRANSFORM, task_id, {"path": str(transformation_path)}, flow_context
-            )
+            await self._log_completion(MIGRATION_TRANSFORM, task_id, {"path": str(transformation_path)}, flow_context)
 
             # 4) テスト生成
             await self._check_governance(MIGRATION_TEST_GEN, task_id, {}, flow_context)
@@ -611,9 +590,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             await artifact_store.append_decision(task_id, "テスト生成工程を完了")
             tests_for_next = await artifact_store.read_json(tests_path)
 
-            await self._log_completion(
-                MIGRATION_TEST_GEN, task_id, {"path": str(tests_path)}, flow_context
-            )
+            await self._log_completion(MIGRATION_TEST_GEN, task_id, {"path": str(tests_path)}, flow_context)
 
             # 5) 差分検証
             await self._check_governance(MIGRATION_VERIFY_DIFF, task_id, {}, flow_context)
@@ -649,9 +626,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             await artifact_store.append_decision(task_id, "差分検証工程を完了")
             diff_for_next = await artifact_store.read_json(diff_path)
 
-            await self._log_completion(
-                MIGRATION_VERIFY_DIFF, task_id, {"path": str(diff_path)}, flow_context
-            )
+            await self._log_completion(MIGRATION_VERIFY_DIFF, task_id, {"path": str(diff_path)}, flow_context)
 
             # 6) 品質裁定
             await self._check_governance(MIGRATION_QUALITY_GATE, task_id, {}, flow_context)
@@ -725,9 +700,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             artifact_paths["fix"] = str(fix_path)
             await artifact_store.append_decision(task_id, "限定修正工程を完了")
 
-            await self._log_completion(
-                MIGRATION_FIX, task_id, {"applied": fix_artifact.applied}, flow_context
-            )
+            await self._log_completion(MIGRATION_FIX, task_id, {"applied": fix_artifact.applied}, flow_context)
 
             final_differential = diff_artifact
             final_quality = quality_artifact
@@ -746,9 +719,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
                         "fast_mode": fast_mode,
                     }
                 )
-                post_diff_artifact = DifferentialVerificationArtifact.model_validate(
-                    post_differential
-                )
+                post_diff_artifact = DifferentialVerificationArtifact.model_validate(post_differential)
                 post_diff_path = await artifact_store.write_json(
                     stage="diff",
                     task_id=task_id,
@@ -821,9 +792,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             )
             artifact_paths["report"] = str(report_path)
 
-            await self._log_completion(
-                MIGRATION_REPORT, task_id, {"path": str(report_path)}, flow_context
-            )
+            await self._log_completion(MIGRATION_REPORT, task_id, {"path": str(report_path)}, flow_context)
 
             class_name = design_artifact.class_mapping.get("primary_class", "MigratedProgram")
             final_target_code = (
@@ -931,8 +900,8 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         """成果物のスキーマ検証を行う."""
         try:
             return model.model_validate(payload)
-        except Exception as exc:  # noqa: BLE001
-            self._logger.error("%s stage artifact validation failed: %s", stage, exc)
+        except Exception as exc:
+            self._logger.exception("%s stage artifact validation failed: %s", stage, exc)
             return None
 
     def _ensure_agents_ready(self) -> None:

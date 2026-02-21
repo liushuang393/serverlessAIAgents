@@ -90,11 +90,14 @@ class ProcessSkill(OSSkillBase):
         if cwd:
             work_dir = self._validate_path(cwd)
 
-        self._audit_log("start_process", {
-            "command": command,
-            "args": args,
-            "background": background,
-        })
+        self._audit_log(
+            "start_process",
+            {
+                "command": command,
+                "args": args,
+                "background": background,
+            },
+        )
 
         proc = await asyncio.create_subprocess_exec(
             command,
@@ -190,4 +193,3 @@ class ProcessSkill(OSSkillBase):
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """クリーンアップ: 全プロセス停止."""
         await self.stop_all()
-

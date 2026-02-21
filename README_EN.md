@@ -45,6 +45,65 @@ Customer flow is intentionally simplified to:
 `Template -> Data/Permission Setup -> Run -> Artifacts`.
 See `docs/studios.md` for details.
 
+## 🧠 Design Intent (Apps + Kernel)
+
+- Keep `agentflow/` as a stable Kernel boundary (orchestration/agents/tools/protocols); extend capabilities via plugin blocks first
+- Treat `apps/` as deployable product units (UI/config/audit/ops included), not just examples
+- Use `apps/platform` as the control plane to create/configure/run/observe apps consistently
+
+## 🏗️ Architecture & App Layering
+
+AgentFlow separates responsibilities into a clear layering model (8 layers), plus cross-cutting governance and evolution:
+
+- Apps / UI (Studio UI / CLI / SDK)
+- Flow (Task/Plan/Route/Execute)
+- Agent (Patterns / Coordinator)
+- Tool (tool bindings / MCP tools)
+- Provider (LLM / Storage / 3rd party)
+- Protocol (MCP / A2A / AG-UI / A2UI)
+- Infra (DB / Redis / Queue / Observability)
+- Kernel (stable boundary holding the layers above)
+
+Cross-cutting: Governance (policy/audit), Evolution (Self-Evolution V2)
+
+```mermaid
+flowchart TB
+    A["Apps / Studio UI"] --> F["Flow (Orchestration)"]
+    F --> AG["Agent Patterns"]
+    AG --> T["Tools"]
+    T --> PR["Providers"]
+    PR --> PT["Protocols (MCP/A2A/AG-UI/A2UI)"]
+    PT --> INF["Infra (DB/Redis/Storage/Obs)"]
+    F -.-> GOV["Governance (Policy/Audit)"]
+    F -.-> EVO["Evolution V2 (Record/Validate/Score)"]
+```
+
+## 🗂️ Repository Structure
+
+- `agentflow/`: Kernel (flow/agent/tool/protocol)
+- `apps/`: Product apps (Studios, Platform, etc.)
+- `plugins/`: Extension blocks (tools/providers/blocks)
+- `contracts/`: Versioned JSON contracts (compatibility boundary)
+- `docs/`: External/internal documentation
+- `tests/`: Test suite
+
+## 🧬 Evolution V2 (2026-02)
+
+`Task -> Plan -> Strategy Router -> Execute -> Record -> Extract -> Validate -> Register -> Score -> Return`
+
+```mermaid
+flowchart TB
+    T["Task"] --> PL["Plan"]
+    PL --> SR["Strategy Router"]
+    SR --> EX["Execute"]
+    EX --> RC["Execution Recorder"]
+    RC --> XT["Strategy Extractor"]
+    XT --> VL["Validator Worker (Redis Streams)"]
+    VL --> RG["Strategy Registry Service"]
+    RG --> SC["Success-First Scoring"]
+    SC --> RT["Return"]
+```
+
 ### ✨ Key Features
 
 | Feature | Description |

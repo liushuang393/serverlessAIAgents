@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Studios Router — 3 製品主線 API.
 
 GET  /api/studios                               - Studio 一覧
@@ -9,12 +8,14 @@ GET  /api/studios/{studio}/runs/{run_id}/artifacts - 成果物一覧
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from apps.platform.services.studio_service import StudioService
+
+if TYPE_CHECKING:
+    from apps.platform.services.studio_service import StudioService
 
 
 router = APIRouter(prefix="/api/studios", tags=["studios"])
@@ -42,7 +43,7 @@ class StudioRunRequest(BaseModel):
 
 def init_studio_services(service: StudioService) -> None:
     """サービス初期化."""
-    global _studio_service  # noqa: PLW0603
+    global _studio_service
     _studio_service = service
 
 
@@ -105,4 +106,3 @@ async def list_run_artifacts(studio: str, run_id: str) -> dict[str, Any]:
             status_code=404,
             detail={"message": str(exc), "error_code": "RUN_NOT_FOUND"},
         )
-

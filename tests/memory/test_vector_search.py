@@ -147,4 +147,3 @@ class TestVectorSearch:
 
         vector_search.clear_cache()
         assert len(vector_search._embedding_cache) == 0
-

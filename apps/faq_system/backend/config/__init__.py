@@ -8,6 +8,7 @@ from apps.faq_system.backend.config.knowledge_base import (
     kb_registry,
 )
 
+
 __all__ = [
     "KnowledgeBaseRegistry",
     "KnowledgeBaseSettings",
@@ -15,4 +16,3 @@ __all__ = [
     "KnowledgeBaseUpdateRequest",
     "kb_registry",
 ]
-

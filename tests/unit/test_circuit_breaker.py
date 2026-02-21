@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """サーキットブレーカーのユニットテスト."""
 
 import asyncio
@@ -45,7 +44,8 @@ class TestCircuitBreaker:
         for _ in range(3):
             try:
                 async with breaker:
-                    raise ValueError("test error")
+                    msg = "test error"
+                    raise ValueError(msg)
             except ValueError:
                 pass
 
@@ -59,7 +59,8 @@ class TestCircuitBreaker:
         for _ in range(3):
             try:
                 async with breaker:
-                    raise ValueError("test error")
+                    msg = "test error"
+                    raise ValueError(msg)
             except ValueError:
                 pass
 
@@ -78,7 +79,8 @@ class TestCircuitBreaker:
         for _ in range(3):
             try:
                 async with breaker:
-                    raise ValueError("test error")
+                    msg = "test error"
+                    raise ValueError(msg)
             except ValueError:
                 pass
 
@@ -102,7 +104,8 @@ class TestCircuitBreaker:
         for _ in range(3):
             try:
                 async with breaker:
-                    raise ValueError("test error")
+                    msg = "test error"
+                    raise ValueError(msg)
             except ValueError:
                 pass
 
@@ -123,7 +126,8 @@ class TestCircuitBreaker:
         for _ in range(3):
             try:
                 async with breaker:
-                    raise ValueError("test error")
+                    msg = "test error"
+                    raise ValueError(msg)
             except ValueError:
                 pass
 
@@ -133,7 +137,8 @@ class TestCircuitBreaker:
         # HALF_OPEN 中に失敗
         try:
             async with breaker:
-                raise ValueError("test error")
+                msg = "test error"
+                raise ValueError(msg)
         except ValueError:
             pass
 
@@ -154,4 +159,3 @@ class TestCircuitBreaker:
         assert stats["name"] == "test"
         assert stats["state"] == "closed"
         assert "failure_count" in stats
-

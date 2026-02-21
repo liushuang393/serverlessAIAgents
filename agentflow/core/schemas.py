@@ -105,7 +105,8 @@ class SchemaLoader:
             self._logger.debug(f"Validated agent metadata: {metadata.meta.id}")
         except ValidationError as e:
             self._logger.exception("Schema validation failed")
-            raise SchemaValidationError(e.errors()) from e
+            error_details = [dict(err) for err in e.errors()]
+            raise SchemaValidationError(error_details) from e
         else:
             return metadata
 

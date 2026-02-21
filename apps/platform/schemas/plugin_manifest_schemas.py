@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Plugin manifest schemas."""
 
 from __future__ import annotations
@@ -46,4 +45,3 @@ class PluginManifest(BaseModel):
     compatibility: PluginCompatibility
     tests_required: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
-

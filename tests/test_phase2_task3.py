@@ -3,6 +3,12 @@
 import subprocess
 import sys
 
+import pytest
+
+
+if sys.platform != "win32":
+    pytest.skip("Windows専用テストスクリプト（powershell使用）", allow_module_level=True)
+
 
 # MCP のインポート問題を避けるため、一時的に conftest.py をリネーム
 subprocess.run(

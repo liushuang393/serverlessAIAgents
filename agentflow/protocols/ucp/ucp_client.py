@@ -16,7 +16,7 @@ import asyncio
 import logging
 import time
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import httpx
 
@@ -109,8 +109,9 @@ class UCPClient:
         """キャッシュキーを生成."""
         import hashlib
         import json
+
         param_str = json.dumps(params, sort_keys=True)
-        return f"{operation}:{hashlib.md5(param_str.encode()).hexdigest()}"
+        return f"{operation}:{hashlib.md5(param_str.encode(), usedforsecurity=False).hexdigest()}"
 
     def _get_cached(self, key: str) -> Any | None:
         """キャッシュから取得."""
@@ -138,9 +139,7 @@ class UCPClient:
         if self._config.security.api_key:
             headers["X-API-Key"] = self._config.security.api_key.get_secret_value()
         if self._config.security.auth_token:
-            headers["Authorization"] = (
-                f"Bearer {self._config.security.auth_token.get_secret_value()}"
-            )
+            headers["Authorization"] = f"Bearer {self._config.security.auth_token.get_secret_value()}"
         return headers
 
     async def _send_request(
@@ -181,15 +180,12 @@ class UCPClient:
                     headers=headers,
                 )
                 response.raise_for_status()
-                return response.json()
+                return cast("dict[str, Any]", response.json())
             except httpx.HTTPError as e:
                 last_error = e
                 if attempt < endpoint.max_retries - 1:
-                    wait_time = 2 ** attempt
-                    self._logger.warning(
-                        f"UCP request failed (attempt {attempt + 1}), "
-                        f"retrying in {wait_time}s: {e}"
-                    )
+                    wait_time = 2**attempt
+                    self._logger.warning(f"UCP request failed (attempt {attempt + 1}), retrying in {wait_time}s: {e}")
                     await asyncio.sleep(wait_time)
 
         self._logger.error(f"UCP request failed after {endpoint.max_retries} attempts")
@@ -238,7 +234,7 @@ class UCPClient:
         cached = self._get_cached(cache_key)
         if cached:
             self._logger.debug(f"Cache hit for intent analysis: {cache_key}")
-            return cached
+            return cast("UCPIntentResponse", cached)
 
         self._logger.info(f"Analyzing intent: {user_input[:50]}...")
         response_data = await self._send_request(endpoint, "/intent/analyze", request)
@@ -375,4 +371,3 @@ class UCPClient:
             return {"status": "ok", "endpoint": endpoint.name, "data": response.json()}
         except Exception as e:
             return {"status": "error", "endpoint": endpoint.name, "message": str(e)}
-

@@ -11,4 +11,3 @@ export { DataTableRenderer } from './DataTableRenderer';
 export { CollapsibleRenderer } from './CollapsibleRenderer';
 export { CitationRenderer } from './CitationRenderer';
 export { TabsRenderer } from './TabsRenderer';
-

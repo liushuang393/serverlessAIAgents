@@ -1,0 +1,103 @@
+{
+  "nav": {
+    "dashboard": "ダッシュボード",
+    "signals": "シグナル",
+    "trends": "トレンド",
+    "evidence": "証拠台帳",
+    "competitor": "競合分析",
+    "predictions": "予測追跡",
+    "reports": "レポート",
+    "settings": "設定",
+    "logout": "ログアウト",
+    "dashboard_desc": "市場の全体像を確認",
+    "signals_desc": "AIが選んだ兆候と変化",
+    "evidence_desc": "情報の裏付けを確認",
+    "predictions_desc": "AI予測の答え合わせ",
+    "competitor_desc": "ライバルの動向を地図化",
+    "reports_desc": "分析結果の書き出し",
+    "settings_desc": "システムの詳細設定"
+  },
+  "app": {
+    "title": "市場動向監視システム"
+  },
+  "dashboard": {
+    "title": "市場トレンド監視",
+    "subtitle": "リアルタイム市場インテリジェンス",
+    "last_updated": "最終更新: {time}",
+    "refresh": "更新",
+    "no_data": "データがありません"
+  },
+  "trend": {
+    "title": "トレンド一覧",
+    "signal_strength": "シグナル強度",
+    "confidence": "信頼度",
+    "source": "情報源",
+    "category": "カテゴリ",
+    "rising": "上昇",
+    "falling": "下降",
+    "stable": "安定",
+    "detected_at": "検出日時",
+    "summary": "概要",
+    "evidence": "根拠",
+    "no_trends": "トレンドがありません",
+    "filter": "絞り込み",
+    "all": "すべて"
+  },
+  "competitor": {
+    "title": "競合分析",
+    "name": "企業名",
+    "activity": "最近の活動",
+    "strength": "強み",
+    "weakness": "弱み",
+    "threat_level": "脅威レベル",
+    "no_data": "競合データがありません",
+    "last_seen": "最終確認: {date}"
+  },
+  "prediction": {
+    "title": "予測追跡",
+    "forecast": "予測内容",
+    "probability": "発生確率",
+    "horizon": "予測期間",
+    "status": "状態",
+    "pending": "追跡中",
+    "confirmed": "確認済",
+    "rejected": "外れ",
+    "accuracy": "予測精度",
+    "no_predictions": "予測データがありません"
+  },
+  "reports": {
+    "title": "レポート",
+    "generate": "レポート生成",
+    "generating": "生成中...",
+    "download": "ダウンロード",
+    "period": "対象期間",
+    "type": "レポート種別",
+    "weekly": "週次",
+    "monthly": "月次",
+    "custom": "カスタム",
+    "no_reports": "レポートがありません",
+    "created_at": "作成日時"
+  },
+  "settings": {
+    "title": "設定",
+    "language": "言語",
+    "refresh_interval": "自動更新間隔",
+    "notifications": "通知",
+    "threshold": "アラートしきい値",
+    "save": "保存",
+    "saved": "保存しました",
+    "api_key": "API キー"
+  },
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラーが発生しました",
+    "retry": "再試行",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "back": "戻る",
+    "high": "高",
+    "medium": "中",
+    "low": "低"
+  }
+}
+

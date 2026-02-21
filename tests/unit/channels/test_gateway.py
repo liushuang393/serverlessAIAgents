@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Tests for message gateway."""
 
 import pytest
@@ -24,11 +23,13 @@ class MockAdapter(MessageChannelAdapter):
 
     async def send_message(self, channel_id: str, text: str, **kwargs) -> str:  # type: ignore[no-untyped-def]
         """Send message."""
-        self.sent_messages.append({
-            "channel_id": channel_id,
-            "text": text,
-            "kwargs": kwargs,
-        })
+        self.sent_messages.append(
+            {
+                "channel_id": channel_id,
+                "text": text,
+                "kwargs": kwargs,
+            }
+        )
         return f"msg_{len(self.sent_messages)}"
 
     async def send_typing_indicator(self, channel_id: str) -> None:
@@ -40,11 +41,20 @@ class MockAdapter(MessageChannelAdapter):
         return UserInfo(user_id=user_id, display_name=f"User {user_id}")
 
 
+class MockLLM:
+    """Mock LLM provider for unit tests."""
+
+    async def chat(self, messages: list[dict[str, str]], **kwargs: object) -> dict[str, str]:
+        del messages, kwargs
+        return {"content": "Mock response"}
+
+
 @pytest.fixture
 def gateway() -> MessageGateway:
     """Create gateway fixture."""
     hub = WebSocketHub()
     chatbot = ChatBotSkill()
+    chatbot._llm = MockLLM()  # type: ignore[attr-defined]
     return MessageGateway(hub, chatbot)
 
 

@@ -1,9 +1,30 @@
 """Pytest configuration and shared fixtures."""
 
+import os
+
 import pytest
 
 from agentflow.core.engine import AgentFlowEngine
 from agentflow.core.types import WorkflowConfig
+from agentflow.providers.llm_provider import reset_llm
+
+
+@pytest.fixture(autouse=True)
+def force_mock_llm(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Force mock LLM provider in tests unless explicitly marked real_llm."""
+    if request.node.get_closest_marker("real_llm"):
+        return
+
+    monkeypatch.setenv("LLM_PROVIDER", "mock")
+    for key in (
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GOOGLE_API_KEY",
+        "DEEPSEEK_API_KEY",
+    ):
+        monkeypatch.delenv(key, raising=False)
+        os.environ.pop(key, None)
+    reset_llm()
 
 
 @pytest.fixture

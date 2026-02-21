@@ -151,4 +151,3 @@ class SkillPersister:
     def project_dir(self) -> Path:
         """プロジェクト Skill ディレクトリ."""
         return self._project_dir
-

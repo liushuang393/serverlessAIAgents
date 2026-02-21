@@ -11,13 +11,11 @@ import pytest
 from agentflow.skills import (
     Skill,
     SkillLoader,
-    SkillMetadata,
-    SkillRegistry,
     SkillMatcher,
-    MatchResult,
-    SkillValidator,
-    ValidationResult,
+    SkillMetadata,
     SkillPersister,
+    SkillRegistry,
+    SkillValidator,
 )
 
 
@@ -226,7 +224,7 @@ class TestSkill:
 
     def test_load_skill_file_not_found(self, tmp_path: Path) -> None:
         """SKILL.md が見つからない場合 FileNotFoundError が発生することをテスト."""
-        with pytest.raises(FileNotFoundError, match="SKILL.md not found"):
+        with pytest.raises(FileNotFoundError, match=r"SKILL\.md not found"):
             Skill.load(tmp_path / "nonexistent")
 
     def test_load_skill_invalid_yaml(self, skill_dir: Path) -> None:
@@ -569,4 +567,3 @@ class TestSkillLoader:
         # Directly test load_directory since we can't easily mock cwd/home
         skills = loader.load_directory(tmp_path / ".claude" / "skills")
         assert any(s.name == "my-custom" for s in skills)
-

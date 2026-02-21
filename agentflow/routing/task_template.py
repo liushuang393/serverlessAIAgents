@@ -225,4 +225,3 @@ class TemplateRegistry:
     def clear(self) -> None:
         """全クリア（テスト用）."""
         self._templates.clear()
-

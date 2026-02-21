@@ -4,7 +4,7 @@ Sentence Transformersライブラリを使用してテキストをベクトル�
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from agentflow.memory.embeddings.embedding_interface import EmbeddingEngine
 
@@ -50,9 +50,7 @@ class SentenceTransformerEmbeddings(EmbeddingEngine):
 
         except ImportError:
             msg = "sentence-transformers package is required. Install with: pip install sentence-transformers"
-            raise ImportError(
-                msg
-            )
+            raise ImportError(msg)
 
     async def embed_text(self, text: str) -> list[float]:
         """テキストをベクトル埋め込みに変換."""
@@ -69,7 +67,7 @@ class SentenceTransformerEmbeddings(EmbeddingEngine):
             # numpy配列をリストに変換
             embedding_list = embedding.tolist()
             self._logger.debug(f"Generated embedding for text (length: {len(text)})")
-            return embedding_list
+            return cast("list[float]", embedding_list)
 
         except Exception as e:
             self._logger.exception(f"Failed to generate embedding: {e}")
@@ -112,4 +110,3 @@ class SentenceTransformerEmbeddings(EmbeddingEngine):
     def get_model_name(self) -> str:
         """モデル名を取得."""
         return self._model_name
-

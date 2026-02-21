@@ -150,10 +150,7 @@ class PluginRegistry:
         if plugin_version and plugin_version != manifest.version:
             self._add_violation(
                 assessment,
-                (
-                    f"tool.plugin_version({plugin_version}) と "
-                    f"manifest.version({manifest.version}) が一致しません"
-                ),
+                (f"tool.plugin_version({plugin_version}) と manifest.version({manifest.version}) が一致しません"),
             )
 
         if not self._is_kernel_compatible(
@@ -168,16 +165,10 @@ class PluginRegistry:
                 ),
             )
 
-        if (
-            manifest.compatibility_product_lines
-            and product_line not in manifest.compatibility_product_lines
-        ):
+        if manifest.compatibility_product_lines and product_line not in manifest.compatibility_product_lines:
             self._add_violation(
                 assessment,
-                (
-                    f"plugin '{plugin_id}' は product_line="
-                    f"{manifest.compatibility_product_lines} のみ対応です"
-                ),
+                (f"plugin '{plugin_id}' は product_line={manifest.compatibility_product_lines} のみ対応です"),
             )
 
         if app_name is None:
@@ -211,18 +202,12 @@ class PluginRegistry:
         if plugin_version and binding.version != plugin_version:
             self._add_violation(
                 assessment,
-                (
-                    f"App binding version({binding.version}) と "
-                    f"tool.plugin_version({plugin_version}) が一致しません"
-                ),
+                (f"App binding version({binding.version}) と tool.plugin_version({plugin_version}) が一致しません"),
             )
         if binding.version != manifest.version:
             self._add_violation(
                 assessment,
-                (
-                    f"App binding version({binding.version}) と "
-                    f"manifest.version({manifest.version}) が一致しません"
-                ),
+                (f"App binding version({binding.version}) と manifest.version({manifest.version}) が一致しません"),
             )
 
         return assessment
@@ -257,9 +242,7 @@ class PluginRegistry:
                     _logger.warning("plugin manifest 必須項目不足: %s", manifest_path)
                     continue
 
-                kernel_constraint = (
-                    self._normalize_optional_text(compatibility.get("kernel")) or ""
-                )
+                kernel_constraint = self._normalize_optional_text(compatibility.get("kernel")) or ""
                 product_lines = self._normalize_product_lines(
                     compatibility.get("product_lines"),
                 )
@@ -271,7 +254,7 @@ class PluginRegistry:
                     compatibility_product_lines=product_lines,
                     raw=raw,
                 )
-            except Exception as exc:  # noqa: BLE001
+            except Exception as exc:
                 _logger.warning("plugin manifest 読み込み失敗 (%s): %s", manifest_path, exc)
 
     def _load_app_snapshot(self, app_name: str) -> AppPluginSnapshot | None:
@@ -310,7 +293,7 @@ class PluginRegistry:
             )
             self._app_snapshots[app_name] = snapshot
             return snapshot
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             _logger.warning("app_config 読み込み失敗 (%s): %s", config_path, exc)
             self._app_snapshots[app_name] = None
             return None

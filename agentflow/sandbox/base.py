@@ -254,7 +254,7 @@ class SandboxProvider(ABC):
         """
         ...
 
-    async def close(self) -> None:
+    async def close(self) -> None:  # noqa: B027 - intentionally non-abstract (optional override)
         """リソースを解放.
 
         オーバーライド可能。デフォルトは何もしない。
@@ -267,4 +267,3 @@ class SandboxProvider(ABC):
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         """async with サポート."""
         await self.close()
-

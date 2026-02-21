@@ -2,7 +2,7 @@
 
 import json
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -185,4 +185,3 @@ async def test_clear(redis_backend):
     result = await redis_backend.clear(topic="test")
 
     assert result == 2
-

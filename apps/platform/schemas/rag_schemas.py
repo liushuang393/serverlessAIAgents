@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RAG 管理 API 用スキーマ."""
 
 from __future__ import annotations

@@ -123,8 +123,8 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
         self._services_initialized = False
 
         # サービスインスタンス（遅延初期化・私有化）
-        self.__sql_service = None
-        self.__suggestion_service = None
+        self.__sql_service: Any = None
+        self.__suggestion_service: Any = None
 
     def _parse_input(self, input_data: dict[str, Any]) -> SalesInput:
         """入力データをパース."""
@@ -136,21 +136,31 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
             return
 
         from agentflow.services import (
+            SQLDialect,
             SuggestionConfig,
             SuggestionService,
             Text2SQLConfig,
             Text2SQLService,
         )
 
-        self.__sql_service = Text2SQLService(Text2SQLConfig(
-            schema=self._config.sql_schema,
-            dialect=self._config.sql_dialect,
-            auto_chart=True,
-        ))
+        try:
+            dialect = SQLDialect(self._config.sql_dialect)
+        except ValueError:
+            dialect = SQLDialect.POSTGRESQL
 
-        self.__suggestion_service = SuggestionService(SuggestionConfig(
-            max_suggestions=5,
-        ))
+        self.__sql_service = Text2SQLService(
+            Text2SQLConfig(
+                schema=self._config.sql_schema,
+                dialect=dialect,
+                auto_chart=True,
+            )
+        )
+
+        self.__suggestion_service = SuggestionService(
+            SuggestionConfig(
+                max_suggestions=5,
+            )
+        )
 
         self._services_initialized = True
 
@@ -169,6 +179,10 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
         if not question:
             return SalesOutput(
                 question="",
+                query_type="sales_analysis",
+                answer="",
+                sql="",
+                chart=None,
                 error="質問が指定されていません",
             )
 
@@ -189,7 +203,7 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
             chart = sql_result.data.get("chart")
 
             # インサイトを生成
-            insights = []
+            insights: list[str] = []
             if data:
                 insights = await self.__generate_insights(question, data, columns)
 
@@ -206,6 +220,7 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
 
             return SalesOutput(
                 question=question,
+                query_type="sales_analysis",
                 answer=answer,
                 sql=sql,
                 data=data,
@@ -213,14 +228,18 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
                 chart=chart,
                 insights=insights,
                 suggestions=suggestions,
+                error=None,
             )
 
         except Exception as e:
             logger.exception(f"SalesAgent実行エラー: {e}")
             return SalesOutput(
                 question=question,
+                query_type="sales_analysis",
                 error=str(e),
                 answer=f"申し訳ありません。エラーが発生しました: {e}",
+                sql="",
+                chart=None,
             )
 
     def __enhance_question(self, question: str, period: int | None = None) -> str:
@@ -240,40 +259,45 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
         columns: list[str],
     ) -> list[str]:
         """インサイトを生成（私有）."""
-        insights = []
+        insights: list[str] = []
 
         if not data:
             return insights
 
         # 基本統計を計算
-        numeric_cols = []
+        numeric_cols: list[dict[str, str | float]] = []
         for col in columns:
             try:
                 values = [float(row.get(col, 0)) for row in data if row.get(col) is not None]
                 if values:
-                    numeric_cols.append({
-                        "name": col,
-                        "sum": sum(values),
-                        "avg": sum(values) / len(values),
-                        "max": max(values),
-                        "min": min(values),
-                    })
+                    numeric_cols.append(
+                        {
+                            "name": col,
+                            "sum": sum(values),
+                            "avg": sum(values) / len(values),
+                            "max": max(values),
+                            "min": min(values),
+                        }
+                    )
             except (ValueError, TypeError):
                 continue
 
         # インサイト生成
         for col_stats in numeric_cols:
-            if "amount" in col_stats["name"].lower() or "売上" in col_stats["name"]:
-                insights.append(f"合計{col_stats['name']}: ¥{col_stats['sum']:,.0f}")
-                insights.append(f"平均{col_stats['name']}: ¥{col_stats['avg']:,.0f}")
+            col_name = str(col_stats["name"])
+            col_sum = float(col_stats["sum"])
+            col_avg = float(col_stats["avg"])
+            if "amount" in col_name.lower() or "売上" in col_name:
+                insights.append(f"合計{col_name}: ¥{col_sum:,.0f}")
+                insights.append(f"平均{col_name}: ¥{col_avg:,.0f}")
 
         # 傾向分析
         if len(data) >= 2:
-            first_half = data[:len(data)//2]
-            second_half = data[len(data)//2:]
+            first_half = data[: len(data) // 2]
+            second_half = data[len(data) // 2 :]
 
             for col_stats in numeric_cols:
-                col = col_stats["name"]
+                col = str(col_stats["name"])
                 first_sum = sum(float(r.get(col, 0)) for r in first_half if r.get(col))
                 second_sum = sum(float(r.get(col, 0)) for r in second_half if r.get(col))
 
@@ -352,7 +376,12 @@ class SalesAgent(ResilientAgent[SalesInput, SalesOutput]):
             ],
             "config": [
                 {"name": "sql_schema", "type": "json", "label": "DBスキーマ"},
-                {"name": "default_period", "type": "number", "label": "デフォルト期間", "default": 30},
+                {
+                    "name": "default_period",
+                    "type": "number",
+                    "label": "デフォルト期間",
+                    "default": 30,
+                },
                 {"name": "compare_yoy", "type": "boolean", "label": "前年比較", "default": True},
             ],
         }

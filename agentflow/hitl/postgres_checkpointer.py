@@ -20,7 +20,7 @@ import json
 import logging
 import os
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
 from agentflow.hitl.checkpointer import CheckpointData, Checkpointer
 
@@ -146,23 +146,17 @@ class PostgresCheckpointer(Checkpointer):
             """)
             # 既存テーブル互換のためカラム追加
             await conn.execute(
-                f"ALTER TABLE {self._table_name} "
-                "ADD COLUMN IF NOT EXISTS schema_version INTEGER DEFAULT 1"
+                f"ALTER TABLE {self._table_name} ADD COLUMN IF NOT EXISTS schema_version INTEGER DEFAULT 1"
             )
-            await conn.execute(
-                f"ALTER TABLE {self._table_name} ADD COLUMN IF NOT EXISTS cursor JSONB"
-            )
-            await conn.execute(
-                f"ALTER TABLE {self._table_name} ADD COLUMN IF NOT EXISTS run_id TEXT"
-            )
+            await conn.execute(f"ALTER TABLE {self._table_name} ADD COLUMN IF NOT EXISTS cursor JSONB")
+            await conn.execute(f"ALTER TABLE {self._table_name} ADD COLUMN IF NOT EXISTS run_id TEXT")
             # インデックス作成
             await conn.execute(
                 f"CREATE INDEX IF NOT EXISTS idx_{self._table_name}_thread "
                 f"ON {self._table_name}(thread_id, created_at DESC)"
             )
             await conn.execute(
-                f"CREATE INDEX IF NOT EXISTS idx_{self._table_name}_parent "
-                f"ON {self._table_name}(parent_checkpoint_id)"
+                f"CREATE INDEX IF NOT EXISTS idx_{self._table_name}_parent ON {self._table_name}(parent_checkpoint_id)"
             )
 
     async def save(self, data: CheckpointData) -> str:
@@ -202,9 +196,7 @@ class PostgresCheckpointer(Checkpointer):
                 json.dumps(data.state, ensure_ascii=False),
                 json.dumps(data.inputs, ensure_ascii=False),
                 json.dumps(data.results, ensure_ascii=False),
-                json.dumps(data.interrupt_payload, ensure_ascii=False)
-                if data.interrupt_payload
-                else None,
+                json.dumps(data.interrupt_payload, ensure_ascii=False) if data.interrupt_payload else None,
                 data.parent_checkpoint_id,
                 json.dumps(data.metadata, ensure_ascii=False),
                 data.created_at,
@@ -227,9 +219,7 @@ class PostgresCheckpointer(Checkpointer):
             state=json.loads(row["state"]) if row["state"] else {},
             inputs=json.loads(row["inputs"]) if row["inputs"] else {},
             results=json.loads(row["results"]) if row["results"] else {},
-            interrupt_payload=json.loads(row["interrupt_payload"])
-            if row["interrupt_payload"]
-            else None,
+            interrupt_payload=json.loads(row["interrupt_payload"]) if row["interrupt_payload"] else None,
             parent_checkpoint_id=row["parent_checkpoint_id"],
             metadata=json.loads(row["metadata"]) if row["metadata"] else {},
             created_at=row["created_at"],
@@ -282,7 +272,7 @@ class PostgresCheckpointer(Checkpointer):
                 f"DELETE FROM {self._table_name} WHERE checkpoint_id = $1",
                 checkpoint_id,
             )
-            return result.split()[-1] != "0"
+            return cast("str", result).split()[-1] != "0"
 
     async def list_by_thread(self, thread_id: str) -> list[CheckpointData]:
         """指定スレッドの全チェックポイントを取得."""

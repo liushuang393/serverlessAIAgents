@@ -54,7 +54,9 @@ def convert_enum[T: Enum](value: str | Enum, enum_class: type[T]) -> T:
     raise TypeError(msg)
 
 
-def safe_dict_get[T: Enum](data: dict[str, Any], key: str, default: Any = None, enum_class: type[T] | None = None) -> Any:
+def safe_dict_get[T: Enum](
+    data: dict[str, Any], key: str, default: Any = None, enum_class: type[T] | None = None
+) -> Any:
     """辞書から値を安全に取得し、必要に応じてEnum変換を行う.
 
     Args:
@@ -115,4 +117,3 @@ __all__ = [
     "flatten_dict",
     "safe_dict_get",
 ]
-

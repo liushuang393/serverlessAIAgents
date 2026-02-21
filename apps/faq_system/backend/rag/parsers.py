@@ -2,9 +2,10 @@
 
 PDF, Word, CSV などのファイルをテキストに変換する。
 """
+
 import csv
-import io
 from typing import IO
+
 
 try:
     from pypdf import PdfReader
@@ -16,6 +17,7 @@ try:
 except ImportError:
     Document = None
 
+
 class FileParser:
     """ファイルパーサークラス."""
 
@@ -23,8 +25,9 @@ class FileParser:
     def parse_pdf(file_stream: IO[bytes]) -> str:
         """PDF からテキスト抽出."""
         if not PdfReader:
-             raise ImportError("pypdf is not installed")
-        
+            msg = "pypdf is not installed"
+            raise ImportError(msg)
+
         reader = PdfReader(file_stream)
         text = []
         for page in reader.pages:
@@ -37,8 +40,9 @@ class FileParser:
     def parse_docx(file_stream: IO[bytes]) -> str:
         """Word (docx) からテキスト抽出."""
         if not Document:
-             raise ImportError("python-docx is not installed")
-             
+            msg = "python-docx is not installed"
+            raise ImportError(msg)
+
         doc = Document(file_stream)
         text = [p.text for p in doc.paragraphs if p.text.strip()]
         return "\n".join(text)
@@ -54,19 +58,19 @@ class FileParser:
         rows = list(reader)
         if not rows:
             return ""
-        
+
         headers = rows[0]
         text_chunks = []
         for row in rows[1:]:
             # Simple "Header: Value" pairs
             chunk_parts = []
             for i, val in enumerate(row):
-                 if i < len(headers):
-                     chunk_parts.append(f"{headers[i]}: {val}")
-                 else:
-                     chunk_parts.append(val)
+                if i < len(headers):
+                    chunk_parts.append(f"{headers[i]}: {val}")
+                else:
+                    chunk_parts.append(val)
             text_chunks.append(", ".join(chunk_parts))
-        
+
         return "\n---\n".join(text_chunks)
 
     @staticmethod

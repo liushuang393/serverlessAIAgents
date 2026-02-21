@@ -93,9 +93,7 @@ class TestStudioServer:
         assert call_kwargs["log_level"] == "info"
 
     @patch("agentflow.studio.server.uvicorn.Server")
-    async def test_start_server(
-        self, mock_server_class: MagicMock, temp_dirs: tuple[Path, Path]
-    ) -> None:
+    async def test_start_server(self, mock_server_class: MagicMock, temp_dirs: tuple[Path, Path]) -> None:
         """サーバーを起動できることをテスト (非同期)."""
         from unittest.mock import AsyncMock
 

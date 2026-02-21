@@ -204,7 +204,7 @@ class BaseStorageBackend(ABC):
         """名前空間プレフィックスを除去."""
         prefix = f"{self._namespace}:"
         if key.startswith(prefix):
-            return key[len(prefix):]
+            return key[len(prefix) :]
         return key
 
     async def connect(self) -> None:
@@ -222,6 +222,22 @@ class BaseStorageBackend(ABC):
     async def ping(self) -> bool:
         """疎通確認."""
         return self._connected
+
+    async def get(self, key: str) -> Any | None:
+        """値を取得（サブクラスで実装）."""
+        msg = f"{self.__class__.__name__}.get is not implemented"
+        raise NotImplementedError(msg)
+
+    async def set(
+        self,
+        key: str,
+        value: Any,
+        ttl: int | None = None,
+    ) -> None:
+        """値を設定（サブクラスで実装）."""
+        del key, value, ttl
+        msg = f"{self.__class__.__name__}.set is not implemented"
+        raise NotImplementedError(msg)
 
     # バッチ操作のデフォルト実装（個別呼び出し）
     async def mget(self, keys: list[str]) -> dict[str, Any]:

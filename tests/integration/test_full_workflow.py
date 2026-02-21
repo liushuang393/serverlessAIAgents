@@ -88,9 +88,7 @@ class TestFullWorkflow:
             visual=VisualConfig(color="#4A90E2", size="medium", ports={}),
         )
 
-    def test_create_agent_metadata(
-        self, test_project_dir: Path, sample_agent_metadata: AgentMetadata
-    ) -> None:
+    def test_create_agent_metadata(self, test_project_dir: Path, sample_agent_metadata: AgentMetadata) -> None:
         """エージェントメタデータを作成できることをテスト."""
         agent_dir = test_project_dir / "test-agent"
         agent_dir.mkdir()
@@ -108,9 +106,7 @@ class TestFullWorkflow:
         assert len(loaded_metadata.interfaces.outputs) == 2
 
     @pytest.mark.asyncio
-    async def test_create_and_run_agent(
-        self, test_project_dir: Path, sample_agent_metadata: AgentMetadata
-    ) -> None:
+    async def test_create_and_run_agent(self, test_project_dir: Path, sample_agent_metadata: AgentMetadata) -> None:
         """エージェントを作成して実行できることをテスト."""
         # エージェントディレクトリを作成
         agent_dir = test_project_dir / "test-agent"
@@ -174,9 +170,7 @@ class TestFullWorkflow:
             assert result["result"] == "ok"
 
     @pytest.mark.asyncio
-    async def test_agent_with_protocols(
-        self, test_project_dir: Path, sample_agent_metadata: AgentMetadata
-    ) -> None:
+    async def test_agent_with_protocols(self, test_project_dir: Path, sample_agent_metadata: AgentMetadata) -> None:
         """プロトコルアダプターが正しく動作することをテスト."""
         # エージェントディレクトリを作成
         agent_dir = test_project_dir / "test-agent"
@@ -212,9 +206,7 @@ class TestFullWorkflow:
         assert emitter is not None
 
     @pytest.mark.asyncio
-    async def test_multiple_agents_workflow(
-        self, test_project_dir: Path, sample_agent_metadata: AgentMetadata
-    ) -> None:
+    async def test_multiple_agents_workflow(self, test_project_dir: Path, sample_agent_metadata: AgentMetadata) -> None:
         """複数のエージェントを連携させるワークフローをテスト."""
         # エージェント1を作成
         agent1_dir = test_project_dir / "agent1"

@@ -42,6 +42,28 @@ P0 では `contracts`、`blueprint`、`visibility` を全 App に補完する。
   "product_line": "faq",
   "surface_profile": "business",
   "audit_profile": "business",
+  "evolution": {
+    "enabled": true,
+    "strategy_service_url": null,
+    "validator_queue": {
+      "backend": "redis_stream",
+      "redis_url": "redis://localhost:6379/0",
+      "stream_key": "evolution:validate:stream",
+      "consumer_group": "evolution-validator-v1",
+      "max_retries": 5
+    },
+    "scope_policy": ["tenant_app", "tenant_product_line", "global_verified"],
+    "retrieval": {
+      "high_confidence_skip_threshold": 0.82,
+      "high_complexity_threshold": 0.70,
+      "low_confidence_threshold": 0.55
+    },
+    "suspicion": {
+      "max_age_days": 30,
+      "failure_streak_threshold": 2,
+      "performance_drop_ratio": 0.2
+    }
+  },
   "plugin_bindings": [
     { "id": "official.enterprise-connector-pack", "version": "1.0.0", "config": {} }
   ],
@@ -107,6 +129,8 @@ RAG 概要サービスの抽出優先度は以下。
 7. `surface_profile`: `business | developer | operator`
 8. `audit_profile`: `business | developer`
 9. `security_mode`: `read_only | approval_required | autonomous`（assistant 向け）
+10. `evolution.scope_policy`: `tenant_app -> tenant_product_line -> global_verified`
+11. `evolution.validator_queue.backend`: `redis_stream | none`
 
 ---
 

@@ -269,10 +269,7 @@ class FAQManager:
             # 関連FAQを検索
             results = await self.search(query, limit=3)
             if results:
-                context = "\n".join([
-                    f"Q: {r.entry.question}\nA: {r.entry.answer}"
-                    for r in results
-                ])
+                context = "\n".join([f"Q: {r.entry.question}\nA: {r.entry.answer}" for r in results])
 
         if not self._llm:
             # LLMなしの場合は最も関連性の高いFAQの回答を返す
@@ -291,10 +288,12 @@ class FAQManager:
 回答:"""
 
         try:
-            response = await self._llm.chat([
-                {"role": "system", "content": "あなたはFAQサポートアシスタントです。"},
-                {"role": "user", "content": prompt},
-            ])
+            response = await self._llm.chat(
+                [
+                    {"role": "system", "content": "あなたはFAQサポートアシスタントです。"},
+                    {"role": "user", "content": prompt},
+                ]
+            )
             return response.content if hasattr(response, "content") else str(response)
         except Exception as e:
             self._logger.exception(f"回答生成エラー: {e}")

@@ -9,6 +9,29 @@
 
 ---
 
+<!-- README_REQUIRED_SECTIONS_START -->
+## 機能概要
+- レガシー資産の解析、依存関係の可視化、移行候補の抽出を一体で実行。
+- 段階移行（Strangler）前提で、変換コードと検証レポートをパッケージ化。
+- HITL 承認フローと監査ログを通し、業務判断と技術判断を接続。
+
+## 優位性
+- 単純変換ではなく「業務語義 + コード変換」を同時に扱える。
+- 移行後も Agent が運用継続を支援し、改善サイクルを維持できる。
+- 証跡付き報告書を標準出力し、監査・説明責任にそのまま利用できる。
+
+## 技術アーキテクチャ
+- FastAPI 統合サーバー上で AgentFlow のオーケストレーションを実行。
+- M1〜M5（摂取/語義/編排/生成/ガバナンス）の多層構成で責務分離。
+- AG-UI / A2A / Skills 準拠で外部連携と拡張を標準化。
+
+## アプリケーション階層
+- Presentation: API / CLI / Dashboard。
+- Orchestration: Migration Coordinator / HITL / Kill Switch。
+- Domain Services: 解析・変換・成果物生成。
+- Governance: 監査、ポリシー適合、証跡管理。
+<!-- README_REQUIRED_SECTIONS_END -->
+
 ## Product Position
 
 - `product_line`: `migration`
@@ -52,6 +75,22 @@ Legacy-to-Agent™ は AI Agent が**業務を理解**し、人間と協力し�
 
 ---
 
+## 🛠️ 開発環境（インストール: 統一手順）
+
+この app 単体ではなく、リポジトリ全体の開発環境をセットアップします。
+
+```bash
+cd <repo-root>
+bash setup_dev.sh
+```
+
+手動で行う場合:
+
+```bash
+conda activate agentflow
+pip install -e ".[dev,apps]"
+```
+
 ## 🚀 起動方法
 
 本アプリケーションは自己完結型パッケージとして設計されています。
@@ -84,6 +123,31 @@ exec uvicorn apps.code_migration_assistant.backend.app:app --host 0.0.0.0 --port
 **重要**: このスクリプトは **1つの統合サーバー** を起動します。前台と後台は分離していません。
 
 ---
+
+## 🧪 テスト
+
+```bash
+cd <repo-root>
+pytest apps/code_migration_assistant/tests -q
+```
+
+統一チェック（lint/type/test）をまとめて実行する場合:
+
+```bash
+cd <repo-root>
+./check.sh all
+```
+
+## 📦 本番ビルド/発布（Platform に統一）
+
+推奨手順（Platform CLI）:
+
+```bash
+conda activate agentflow
+python -m apps.platform.main publish ./apps/code_migration_assistant --target docker
+```
+
+自動化する場合は Platform API（`POST /api/studios/framework/publish/deploy`）を使用します。
 
 ## 🏛️ 前後台アーキテクチャ（重要）
 

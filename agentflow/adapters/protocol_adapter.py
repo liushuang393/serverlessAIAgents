@@ -89,9 +89,7 @@ class ProtocolAdapter:
                 }
 
                 for input_field in metadata.interfaces.inputs:
-                    input_schema["properties"][input_field.name] = (
-                        ProtocolAdapter._field_to_json_schema(input_field)
-                    )
+                    input_schema["properties"][input_field.name] = ProtocolAdapter._field_to_json_schema(input_field)
                     if input_field.required:
                         input_schema["required"].append(input_field.name)
 
@@ -113,9 +111,7 @@ class ProtocolAdapter:
             }
 
             for input_field in metadata.interfaces.inputs:
-                input_schema["properties"][input_field.name] = (
-                    ProtocolAdapter._field_to_json_schema(input_field)
-                )
+                input_schema["properties"][input_field.name] = ProtocolAdapter._field_to_json_schema(input_field)
                 if input_field.required:
                     input_schema["required"].append(input_field.name)
 
@@ -154,9 +150,7 @@ class ProtocolAdapter:
         }
 
         for input_field in metadata.interfaces.inputs:
-            input_schema["properties"][input_field.name] = ProtocolAdapter._field_to_json_schema(
-                input_field
-            )
+            input_schema["properties"][input_field.name] = ProtocolAdapter._field_to_json_schema(input_field)
             if input_field.required:
                 input_schema["required"].append(input_field.name)
 
@@ -167,9 +161,7 @@ class ProtocolAdapter:
         }
 
         for output_field in metadata.interfaces.outputs:
-            output_schema["properties"][output_field.name] = ProtocolAdapter._field_to_json_schema(
-                output_field
-            )
+            output_schema["properties"][output_field.name] = ProtocolAdapter._field_to_json_schema(output_field)
 
         # スキルリストを生成
         skills: list[AgentSkill] = []

@@ -8,7 +8,6 @@ from typing import Any
 
 import feedparser
 import httpx
-
 from apps.market_trend_monitor.backend.integrations.rate_limiter import rate_limiter
 
 

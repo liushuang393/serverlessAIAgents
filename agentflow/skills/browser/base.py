@@ -38,10 +38,8 @@ class DomainSecurityError(BrowserSkillError):
     """ドメインセキュリティ違反."""
 
 
-
 class BrowserStateError(BrowserSkillError):
     """ブラウザ状態エラー."""
-
 
 
 class BrowserSkillBase(ABC):
@@ -124,4 +122,3 @@ class BrowserSkillBase(ABC):
             operation,
             details,
         )
-

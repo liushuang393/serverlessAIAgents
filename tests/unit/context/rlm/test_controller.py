@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
 """Unit tests for RLM controller module."""
 
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
@@ -136,7 +135,7 @@ class TestRLMController:
         events: list[dict] = []
 
         controller = RLMController(config=config)
-        result = await controller.run(
+        await controller.run(
             query="Test query",
             long_inputs=["Test content"],
             event_callback=lambda e: events.append(e),
@@ -240,7 +239,8 @@ class TestRLMController:
 
         class FailingLLMClient:
             async def chat(self, *args: Any, **kwargs: Any) -> dict:
-                raise RuntimeError("LLM failed")
+                msg = "LLM failed"
+                raise RuntimeError(msg)
 
         controller = RLMController(config=config, llm_client=FailingLLMClient())
 

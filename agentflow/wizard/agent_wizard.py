@@ -18,7 +18,7 @@ from __future__ import annotations
 import logging
 import time
 import uuid
-from typing import Any
+from typing import Any, cast
 
 from agentflow.providers import get_llm
 from agentflow.skills.engine import SkillEngine
@@ -68,7 +68,7 @@ class AgentWizard:
             skill_engine: Skill エンジン
         """
         self._config = config or WizardConfig()
-        self._llm = llm_client or get_llm()
+        self._llm: Any = llm_client or get_llm()
         self._skill_engine = skill_engine or SkillEngine()
         self._test_synthesizer = TestSynthesizer(llm_client=self._llm)
         self._logger = logging.getLogger(__name__)
@@ -106,9 +106,7 @@ class AgentWizard:
             agent_spec = await self._design_agent(parsed, name)
 
             if agent_spec.confidence < self._config.min_confidence:
-                self._logger.warning(
-                    f"Low confidence: {agent_spec.confidence:.2f} < {self._config.min_confidence}"
-                )
+                self._logger.warning(f"Low confidence: {agent_spec.confidence:.2f} < {self._config.min_confidence}")
 
             # 3. Generate - コードを生成
             generated_code = await self._generate_code(agent_spec)
@@ -173,17 +171,19 @@ class AgentWizard:
     "keywords": ["キーワード1", "キーワード2", ...]
 }}"""
 
-        response = await self._llm.generate(prompt)
-        content = response.content if hasattr(response, "content") else str(response)
+        content = await self._llm_text(prompt)
 
         # JSON 抽出
         import json
+
         try:
             # JSON 部分を抽出
             start = content.find("{")
             end = content.rfind("}") + 1
             if start >= 0 and end > start:
-                return json.loads(content[start:end])
+                parsed = json.loads(content[start:end])
+                if isinstance(parsed, dict):
+                    return cast("dict[str, Any]", parsed)
         except json.JSONDecodeError:
             pass
 
@@ -271,8 +271,7 @@ class AgentWizard:
 
 回答（名前のみ）:"""
 
-        response = await self._llm.generate(prompt)
-        content = response.content if hasattr(response, "content") else str(response)
+        content = await self._llm_text(prompt)
         name = content.strip().split()[0]
 
         # 名前の検証
@@ -355,7 +354,7 @@ class AgentWizard:
         prompt = f"""以下の Agent 仕様に基づいて、システムプロンプトを生成してください。
 
 目的: {intent}
-能力: {', '.join(capabilities)}
+能力: {", ".join(capabilities)}
 ドメイン: {domain}
 
 システムプロンプトは以下の要素を含めてください:
@@ -366,8 +365,7 @@ class AgentWizard:
 
 簡潔かつ効果的なプロンプトを生成してください。"""
 
-        response = await self._llm.generate(prompt)
-        return response.content if hasattr(response, "content") else str(response)
+        return await self._llm_text(prompt)
 
     def _calculate_confidence(
         self,
@@ -423,7 +421,6 @@ class AgentWizard:
             capabilities=agent_spec.capabilities,
             required_skills=agent_spec.required_skills,
         )
-
 
     def _get_agent_template(self, engine_type: EngineType) -> str:
         """Agent テンプレートを取得.
@@ -496,14 +493,16 @@ __all__ = ["{name}"]
         test_cases = await self._test_synthesizer.synthesize(agent_spec)
 
         # テストを実行（シミュレーション）
-        results = []
+        results: list[dict[str, Any]] = []
         for test_case in test_cases:
             # TODO: 実際のテスト実行
-            results.append({
-                "test_name": test_case.name,
-                "passed": True,  # シミュレーション
-                "duration_ms": 100.0,
-            })
+            results.append(
+                {
+                    "test_name": test_case.name,
+                    "passed": True,  # シミュレーション
+                    "duration_ms": 100.0,
+                }
+            )
 
         passed = sum(1 for r in results if r["passed"])
         failed = len(results) - passed
@@ -513,7 +512,7 @@ __all__ = ["{name}"]
             passed_tests=passed,
             failed_tests=failed,
             coverage=0.8,  # シミュレーション
-            duration_ms=sum(r["duration_ms"] for r in results),
+            duration_ms=sum(float(r["duration_ms"]) for r in results),
         )
 
     async def _validate(
@@ -532,9 +531,9 @@ __all__ = ["{name}"]
         Returns:
             検証結果
         """
-        errors = []
-        warnings = []
-        suggestions = []
+        errors: list[str] = []
+        warnings: list[str] = []
+        suggestions: list[str] = []
         score = 0.0
 
         # 基本検証
@@ -581,6 +580,15 @@ __all__ = ["{name}"]
             suggestions=suggestions,
             score=score,
         )
+
+    async def _llm_text(self, prompt: str) -> str:
+        """LLMからテキスト応答を取得."""
+        llm = cast("Any", self._llm)
+        if hasattr(llm, "generate"):
+            response = await llm.generate(prompt)
+        else:
+            response = await llm.chat([{"role": "user", "content": prompt}])
+        return response.content if hasattr(response, "content") else str(response)
 
     async def _publish(
         self,

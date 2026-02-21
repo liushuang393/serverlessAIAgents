@@ -1,0 +1,410 @@
+我们现在直接针对：
+
+> **liushuang393/serverlessAIAgents**
+> 来做结构级优化建议。实现企业内部进化闭环agent，设计，计划，任务做成，记得更新关联文档尤其是readme，Mermaind图，都要日本语的
+一下你参照我的想法，你深入理解意图再着手
+
+我不讲概念，我讲 **具体应该改哪层、加什么模块、流程怎么插入**。
+
+---
+
+# 一、先明确：serverlessAIAgents 现状结构
+
+典型结构是：
+
+```
+Client
+ ↓
+API Layer
+ ↓
+Orchestrator (Agent Loop)
+ ↓
+Tool Executor
+ ↓
+LLM
+```
+
+特点：
+
+* 无状态函数驱动
+* 每次执行相对独立
+* 主要是 Task → Plan → Execute
+* 有工具调用
+* 有日志
+* 但没有“经验沉淀机制”
+
+---
+
+# 二、你现在缺的不是 Agent
+
+你缺的是：
+
+> 🧠 可进化的执行记忆层
+
+不是 RAG。
+不是 Tool。
+不是 Prompt。
+
+而是：
+
+> 成功路径复用系统。
+
+---
+
+# 三、serverlessAIAgents 应该怎么改
+
+我按 **架构层级** 给你拆。
+
+---
+
+# ① 技术架构层（必须新增一个“Evolution Layer”）
+
+在现有结构中插入：
+
+```
+API
+ ↓
+Orchestrator
+ ↓
+【新增】Strategy Router
+ ↓
+Tool Executor
+ ↓
+LLM
+```
+
+并新增旁路系统：
+
+```
+Execution Recorder
+Strategy Extractor
+Strategy Validator
+Strategy Registry
+Scoring Engine
+```
+
+---
+
+# 四、必须新增的五个模块
+
+## 1️⃣ Execution Recorder（执行记录器）
+
+插入点：
+
+* Tool 调用前后
+* LLM 推理结果后
+* 错误抛出时
+
+记录内容：
+
+* Intent
+* 环境指纹（语言、框架、版本）
+* Tool调用序列
+* 参数
+* 错误修复过程
+* 成功判定
+
+这是“DNA 原材料”。
+
+---
+
+## 2️⃣ Strategy Extractor（成功路径抽取器）
+
+触发条件：
+
+* 执行成功
+* 或连续成功N次
+
+做的事情：
+
+把日志转换为：
+
+```
+{
+  "intent": "...",
+  "environment": {...},
+  "tool_sequence": [...],
+  "guard_conditions": [...],
+  "expected_output": "...",
+  "validation_method": "..."
+}
+```
+
+---
+
+## 3️⃣ Strategy Registry（企业内部进化库）
+
+建议：
+
+* PostgreSQL + JSONB
+* * 向量索引（匹配Intent）
+
+功能：
+
+* register()
+* search()
+* score_update()
+* version_control()
+
+---
+
+## 4️⃣ Strategy Router（执行前继承）
+
+插入在：
+
+```
+Plan 之后
+Execute 之前
+```
+
+流程：
+
+```
+Intent 生成
+ ↓
+Registry 搜索
+ ↓
+有匹配 → 执行 Capsule
+无匹配 → 正常 Agent 执行
+```
+
+这一步可以直接节省大量 Token。
+
+---
+
+## 5️⃣ Validator（质量门控）
+
+必须单独做 Worker。
+
+验证：
+
+* 重放执行
+* 单元测试
+* 安全检查（防止危险命令）
+
+企业系统必须有这个。
+
+---
+
+# 五、流程升级（核心）
+
+现状：
+
+```
+Task
+ ↓
+Plan
+ ↓
+Execute
+ ↓
+Return
+```
+
+升级为：
+
+```
+Task
+ ↓
+Plan
+ ↓
+Strategy Router（新增）
+ ↓
+Execute
+ ↓
+Record（新增）
+ ↓
+Extract（新增）
+ ↓
+Validate（新增）
+ ↓
+Register（新增）
+ ↓
+Return
+```
+
+---
+
+# 六、serverless 架构要注意的一点
+
+serverlessAIAgents 是“无状态”的。
+
+所以：
+
+❌ 不能把 Strategy 放在内存里
+✅ 必须外部存储
+
+建议结构：
+
+```
+Lambda / Function
+   ↓
+Strategy Service (独立微服务)
+   ↓
+Postgres + Vector DB
+```
+
+---
+
+# 七、你现在的架构升级后会变成什么？
+
+原来是：
+
+> 工具执行型 Agent
+
+升级后变成：
+
+> 企业级可进化 Agent 中枢
+
+区别是：
+
+* 不重复试错
+* 多 Agent 自动继承
+* Token 成本下降
+* 成功率提高
+* 有可控回滚机制
+
+---
+
+# 八、你该追加哪些“机能”
+
+必须加的：
+
+✔ Strategy Registry
+✔ Execution Recorder
+✔ Strategy Router
+✔ Validator
+✔ Scoring
+
+可选高级功能：
+
+✔ 成功率热力图
+✔ Capsule 失效检测
+✔ 版本回滚
+✔ 企业内部悬赏系统（不是对外）
+
+---
+
+# 九、你最关键的提升点在哪里？
+
+不是模型。
+不是 Prompt。
+不是 RAG。
+
+而是：
+
+> 在 Orchestrator 层插入“继承路由”。
+
+如果你只做一个改动：
+
+👉 先做 Strategy Router。
+
+这是 Token 成本下降最快的一步。
+
+---
+
+# 十、EvoMap 和你真正的区别
+
+他们是：
+
+> 全球共享
+
+你应该做：
+
+> 企业内部进化闭环
+
+因为你做的是：
+
+* 旧系统改造
+* 工具执行
+* 自动迁移
+* 可控环境
+
+全球共享对你来说风险大于收益。
+
+---
+
+# 十一、最终结构（给你一句话总结）
+
+serverlessAIAgents v2 应该变成：
+
+> Orchestrator + Evolution Layer + Registry Service
+
+---
+
+如果你愿意，我可以下一步直接给你：
+1️⃣ Mermaid 架构图
+flowchart TB
+  %% =========================
+  %% serverlessAIAgents v2 (Evolution Layer追加)
+  %% =========================
+
+  subgraph Client["Client / UI"]
+    U["User / Caller"]
+  end
+
+  subgraph Edge["Edge / API Layer"]
+    APIGW["API Gateway / HTTP Endpoint"]
+    Auth["AuthN/AuthZ (Keycloak/IAM)"]
+    Rate["Rate Limit / Quota"]
+  end
+
+  subgraph Orchestrator["Orchestrator Layer (serverlessAIAgents)"]
+    Planner["Planner / Intent Builder"]
+    Router["Strategy Router (Inheritance)"]
+    Executor["Agent Executor / Loop"]
+    ToolWrap["Tool Wrapper (Tracing/Retry/Policy)"]
+    Recorder["Execution Recorder (Logs→Trace)"]
+  end
+
+  subgraph Tools["Tool Runtime Layer (MCP / Internal Tools)"]
+    MCP["MCP Server / Tool Catalog"]
+    ToolsSvc["Tools (DB/HTTP/Git/CI/Crawler/etc.)"]
+  end
+
+  subgraph Evolution["Evolution Layer (NEW)"]
+    RegAPI["Strategy Registry API (Service)"]
+    Extractor["Strategy Extractor (Trace→Capsule)"]
+    Validator["Strategy Validator (Sandbox/Replay)"]
+    Scorer["Scoring Engine (Success/Reuse/Recency)"]
+  end
+
+  subgraph Storage["Data Layer"]
+    Pg["PostgreSQL (Capsule JSONB, Versioning)"]
+    Vec["Vector DB (Intent/Context Embedding)"]
+    Obj["Object Storage (Artifacts: patches, logs, replays)"]
+  end
+
+  subgraph Obs["Observability"]
+    Mon["Metrics/Tracing (OTel)"]
+    Audit["Audit Log (Security/Compliance)"]
+  end
+
+  %% --------- main request path ----------
+  U --> APIGW
+  APIGW --> Auth --> Rate --> Planner
+  Planner --> Router --> Executor
+  Executor --> ToolWrap --> MCP --> ToolsSvc
+
+  %% --------- recorder / observability ----------
+  Planner --> Recorder
+  Router --> Recorder
+  Executor --> Recorder
+  ToolWrap --> Recorder
+  Recorder --> Mon
+  Recorder --> Audit
+  Recorder --> Obj
+
+  %% --------- inheritance lookup ----------
+  Router --> RegAPI
+  RegAPI --> Vec
+  RegAPI --> Pg
+
+  %% --------- evolution pipeline (async) ----------
+  Recorder --> Extractor
+  Extractor --> RegAPI
+  Extractor --> Validator
+  Validator --> Obj
+  Validator --> RegAPI
+  RegAPI --> Scorer
+  Scorer --> Pg
+

@@ -1,8 +1,6 @@
-# -*- coding: utf-8 -*-
 """Unit tests for ClarificationAgent."""
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
+import pytest
 from apps.decision_governance_engine.agents.clarification_agent import ClarificationAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
     ClarificationInput,
@@ -31,6 +29,7 @@ class TestClarificationAgentInit:
     def test_agent_inherits_resilient_agent(self, clarification_agent: ClarificationAgent) -> None:
         """Test that ClarificationAgent inherits from ResilientAgent."""
         from agentflow import ResilientAgent
+
         assert isinstance(clarification_agent, ResilientAgent)
 
     def test_agent_has_correct_name(self, clarification_agent: ClarificationAgent) -> None:
@@ -76,9 +75,7 @@ class TestClarificationAgentOutputStructure:
         assert result.diagnosis_confidence <= 1.0
 
     @pytest.mark.asyncio
-    async def test_output_with_ambiguous_input(
-        self, clarification_agent: ClarificationAgent
-    ) -> None:
+    async def test_output_with_ambiguous_input(self, clarification_agent: ClarificationAgent) -> None:
         """Test output structure with ambiguous input."""
         input_data = ClarificationInput(
             raw_question="いいシステムを作りたい",
@@ -116,9 +113,7 @@ class TestClarificationAgentProcess:
         assert result.refined_question is not None
 
     @pytest.mark.asyncio
-    async def test_process_refines_question(
-        self, clarification_agent: ClarificationAgent
-    ) -> None:
+    async def test_process_refines_question(self, clarification_agent: ClarificationAgent) -> None:
         """Test that process refines ambiguous question."""
         input_data = ClarificationInput(
             raw_question="どうすればいいですか？",

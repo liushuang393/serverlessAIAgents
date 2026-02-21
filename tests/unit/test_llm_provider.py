@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """LLMProvider のユニットテスト.
 
 このモジュールは、agentflow/providers/llm_provider.py の機能をテストします。
@@ -33,7 +32,7 @@ class TestLLMProviderConfig:
         config = LLMProviderConfig()
         assert config.temperature == 0.7
         assert config.max_tokens == 2000
-        assert config.timeout == 180
+        assert config.timeout == 360
 
     def test_custom_values(self):
         """カスタム値が正しく設定される."""
@@ -100,7 +99,7 @@ class TestDetectProviderFromEnv:
         }
         mock_get_settings.return_value = mock_settings
 
-        provider, model, api_key, base_url, _timeout = _detect_provider_from_env()
+        provider, model, api_key, _base_url, _timeout = _detect_provider_from_env()
         assert provider == "anthropic"
         assert model == "claude-3-opus"
         assert api_key == "sk-ant-test"
@@ -117,7 +116,7 @@ class TestDetectProviderFromEnv:
         }
         mock_get_settings.return_value = mock_settings
 
-        provider, model, api_key, base_url, _timeout = _detect_provider_from_env()
+        provider, model, _api_key, _base_url, _timeout = _detect_provider_from_env()
         assert provider == "mock"
         assert model == "mock"
 

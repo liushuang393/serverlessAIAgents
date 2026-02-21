@@ -41,12 +41,12 @@ if TYPE_CHECKING:
 class RelationType(str, Enum):
     """因果関係のタイプ."""
 
-    INCREASES = "increases"       # 原因が増えると結果が増える
-    DECREASES = "decreases"       # 原因が増えると結果が減る
-    ENABLES = "enables"           # 原因が真なら結果が可能
-    PREVENTS = "prevents"         # 原因が真なら結果が不可能
-    TRIGGERS = "triggers"         # 原因が発生すると結果が発生
-    CUSTOM = "custom"             # カスタム関数で定義
+    INCREASES = "increases"  # 原因が増えると結果が増える
+    DECREASES = "decreases"  # 原因が増えると結果が減る
+    ENABLES = "enables"  # 原因が真なら結果が可能
+    PREVENTS = "prevents"  # 原因が真なら結果が不可能
+    TRIGGERS = "triggers"  # 原因が発生すると結果が発生
+    CUSTOM = "custom"  # カスタム関数で定義
 
 
 class CausalNode(BaseModel):
@@ -106,9 +106,7 @@ class CausalModel:
     relations: list[CausalRelation] = field(default_factory=list)
     effect_functions: dict[str, Callable[..., Any]] = field(default_factory=dict)
     _current_state: dict[str, Any] = field(default_factory=dict)
-    _logger: logging.Logger = field(
-        default_factory=lambda: logging.getLogger("agentflow.world_model.causal")
-    )
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.world_model.causal"))
 
     def add_node(
         self,
@@ -251,9 +249,7 @@ class CausalModel:
                 if effect_fn:
                     new_value = effect_fn(cause_value, effect_value, state)
                 else:
-                    new_value = self._apply_default_effect(
-                        relation.relation_type, cause_value, effect_value
-                    )
+                    new_value = self._apply_default_effect(relation.relation_type, cause_value, effect_value)
 
                 if new_value != effect_value:
                     state[effect_node.name] = new_value
@@ -335,19 +331,23 @@ class CausalModel:
 
             if not causes:
                 # 直接介入が必要
-                interventions.append({
-                    "variable": var_name,
-                    "value": target_value,
-                    "reason": "直接介入（因果関係なし）",
-                })
+                interventions.append(
+                    {
+                        "variable": var_name,
+                        "value": target_value,
+                        "reason": "直接介入（因果関係なし）",
+                    }
+                )
             else:
                 # 原因への介入を検討
                 for cause in causes:
-                    interventions.append({
-                        "variable": cause.name,
-                        "value": True,  # 簡易: 原因を有効化
-                        "reason": f"{cause.name} を変更して {var_name} に影響",
-                    })
+                    interventions.append(
+                        {
+                            "variable": cause.name,
+                            "value": True,  # 簡易: 原因を有効化
+                            "reason": f"{cause.name} を変更して {var_name} に影響",
+                        }
+                    )
 
         return interventions
 
@@ -379,4 +379,3 @@ __all__ = [
     "CausalRelation",
     "RelationType",
 ]
-

@@ -80,9 +80,7 @@ class SystemEvidence(BaseModel):
         network_calls: Network calls made during execution
     """
 
-    evidence_id: str = Field(
-        default_factory=lambda: f"ev-{uuid.uuid4().hex[:12]}"
-    )
+    evidence_id: str = Field(default_factory=lambda: f"ev-{uuid.uuid4().hex[:12]}")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     exit_code: int | None = None
     stdout: str | None = None
@@ -117,9 +115,7 @@ class SystemEvidence(BaseModel):
         """
         return any(not nc.allowed for nc in self.network_calls)
 
-    def get_file_operations(
-        self, operation: str | None = None
-    ) -> list[FileEvidence]:
+    def get_file_operations(self, operation: str | None = None) -> list[FileEvidence]:
         """Get file operations, optionally filtered by type.
 
         Args:

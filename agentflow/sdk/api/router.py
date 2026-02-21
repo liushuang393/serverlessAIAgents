@@ -21,8 +21,9 @@ Example:
 - GET  /result/{id}  - 結果取得
 """
 
-from collections.abc import Callable
-from typing import Any, Protocol, TypeVar, runtime_checkable
+from collections.abc import AsyncGenerator, Callable
+from enum import Enum
+from typing import Any, Protocol, cast, runtime_checkable
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
@@ -51,14 +52,9 @@ class AgentEngineProtocol(Protocol):
         """同期処理."""
         ...
 
-    async def process_with_events(
-        self, request: dict[str, Any]
-    ) -> Any:  # AsyncGenerator
+    def process_with_events(self, request: dict[str, Any]) -> AsyncGenerator[dict[str, Any] | BaseModel]:
         """イベント付きストリーム処理."""
         ...
-
-
-T = TypeVar("T", bound=AgentEngineProtocol)
 
 
 # ========================================
@@ -94,9 +90,9 @@ class AgentsResponse(BaseModel):
 
 
 def create_agent_router(
-    engine: type[T] | T | Callable[[], T],
+    engine: type[AgentEngineProtocol] | AgentEngineProtocol | Callable[[], AgentEngineProtocol],
     prefix: str = "/api",
-    tags: list[str] | None = None,
+    tags: list[str | Enum] | None = None,
     version: str = "1.0.0",
     include_health: bool = True,
     include_agents: bool = True,
@@ -132,12 +128,12 @@ def create_agent_router(
     router = APIRouter(prefix=prefix, tags=tags or [])
 
     # Engine インスタンス取得
-    def get_engine() -> T:
-        if callable(engine) and not isinstance(engine, type):
-            return engine()
+    def get_engine() -> AgentEngineProtocol:
+        if isinstance(engine, AgentEngineProtocol):
+            return engine
         if isinstance(engine, type):
-            return engine()
-        return engine
+            return cast("AgentEngineProtocol", engine())
+        return engine()
 
     # 結果ストア（簡易実装）
     results_store: dict[str, dict[str, Any]] = {}
@@ -162,9 +158,7 @@ def create_agent_router(
             """利用可能な Agent 一覧を取得."""
             eng = get_engine()
             agents_data = eng.get_agents()
-            return AgentsResponse(
-                agents=[AgentInfo(**a) for a in agents_data]
-            )
+            return AgentsResponse(agents=[AgentInfo(**a) for a in agents_data])
 
     # ----------------------------------------
     # POST /process
@@ -201,7 +195,7 @@ def create_agent_router(
             question: str = Query(..., description="処理対象の質問"),
             budget: float | None = Query(None, description="予算（オプション）"),
             timeline_months: int | None = Query(None, description="期間（月）"),
-        ):
+        ) -> Any:
             """SSE ストリーム処理.
 
             AG-UI イベントをリアルタイムで配信。
@@ -213,7 +207,8 @@ def create_agent_router(
             }
 
             eng = get_engine()
-            return create_sse_response(eng.process_with_events(request_data))
+            events = eng.process_with_events(request_data)
+            return create_sse_response(events)
 
     # ----------------------------------------
     # GET /result/{result_id}
@@ -231,4 +226,3 @@ def create_agent_router(
             return results_store[result_id]
 
     return router
-

@@ -59,6 +59,7 @@ class SelfEvolver:
         self._store = store or MemoryEvolutionStore()
         self._min_confidence = min_confidence
         self._session_patterns: dict[str, dict[str, Any]] = {}
+        self._learned_hints: dict[str, str] = {}
 
     # =========================================================================
     # パターン学習
@@ -121,8 +122,7 @@ class SelfEvolver:
         if existing:
             pattern_data["success_count"] = existing.get("success_count", 0) + 1
             pattern_data["avg_score"] = (
-                existing.get("avg_score", 80) * existing.get("success_count", 1)
-                + (review.score if review else 80)
+                existing.get("avg_score", 80) * existing.get("success_count", 1) + (review.score if review else 80)
             ) / pattern_data["success_count"]
             pattern_data["created_at"] = existing.get("created_at", pattern_data["created_at"])
 
@@ -145,11 +145,12 @@ class SelfEvolver:
             components.append(analysis.complexity)
         components.extend(t.agent_type for t in todos[:5])
         key_str = "|".join(str(c) for c in components)
-        return f"pattern-{hashlib.md5(key_str.encode()).hexdigest()[:12]}"
+        return f"pattern-{hashlib.md5(key_str.encode(), usedforsecurity=False).hexdigest()[:12]}"
 
     def _extract_template(self, task: str) -> str:
         """タスクからテンプレートを抽出（具体値を抽象化）."""
         import re
+
         template = re.sub(r"\d+", "{N}", task)
         template = re.sub(r'"[^"]*"', '"{STR}"', template)
         template = re.sub(r"'[^']*'", "'{STR}'", template)
@@ -231,7 +232,7 @@ class SelfEvolver:
     async def apply_pattern(
         self,
         pattern: dict[str, Any],
-        context: dict[str, Any],  # noqa: ARG002 - 将来の拡張用
+        context: dict[str, Any],
     ) -> list[TodoItem]:
         """パターンを適用してTodoListを生成.
 
@@ -262,6 +263,63 @@ class SelfEvolver:
     # =========================================================================
     # フィードバック統合
     # =========================================================================
+
+    async def learn_from_success(
+        self,
+        task: str,
+        result: dict[str, Any],
+        context: dict[str, Any] | None = None,
+    ) -> str:
+        """互換API: タスク成功から簡易パターンを学習."""
+        context = context or {}
+        pattern_key = f"hint-{hashlib.md5(task.encode(), usedforsecurity=False).hexdigest()[:12]}"
+        hint = (
+            str(context.get("hint") or "")
+            or str(result.get("summary") or "")
+            or str(result.get("result") or "")
+            or str(result.get("output") or "")
+            or f"Task succeeded: {task[:80]}"
+        )
+
+        pattern_data = {
+            "key": pattern_key,
+            "intent": task,
+            "domains": context.get("domains", []),
+            "complexity": context.get("complexity", "medium"),
+            "todo_structure": [],
+            "success_count": 1,
+            "avg_score": 80.0,
+            "hint": hint[:240],
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+        }
+        existing = await self._store.load_pattern(pattern_key)
+        if existing:
+            pattern_data["success_count"] = int(existing.get("success_count", 0)) + 1
+            pattern_data["created_at"] = existing.get("created_at", pattern_data["created_at"])
+            pattern_data["avg_score"] = float(existing.get("avg_score", 80.0))
+
+        await self._store.save_pattern(pattern_key, pattern_data)
+        self._session_patterns[pattern_key] = pattern_data
+        self._learned_hints[task] = pattern_data["hint"]
+        return pattern_key
+
+    def get_learned_hint(self, task: str) -> str | None:
+        """互換API: 学習済みヒントを返す."""
+        if task in self._learned_hints:
+            return self._learned_hints[task]
+
+        task_words = set(task.lower().split())
+        best_hint: str | None = None
+        best_overlap = 0
+        for pattern in self._session_patterns.values():
+            intent = str(pattern.get("intent", "")).lower()
+            words = set(intent.split())
+            overlap = len(task_words & words)
+            if overlap > best_overlap:
+                best_overlap = overlap
+                best_hint = str(pattern.get("hint", "")) or None
+        return best_hint
 
     async def process_feedback(
         self,
@@ -311,10 +369,28 @@ class SelfEvolver:
             "min_confidence": self._min_confidence,
         }
 
+    def get_evolution_stats_sync(self) -> dict[str, Any]:
+        """同期コンテキスト向けの統計取得."""
+        if hasattr(self._store, "_patterns") and hasattr(self._store, "_feedbacks"):
+            total_patterns = len(self._store._patterns)
+            total_feedbacks = len(self._store._feedbacks)
+        else:
+            total_patterns = len(self._session_patterns)
+            total_feedbacks = 0
+
+        return {
+            "total_patterns": total_patterns,
+            "total_feedbacks": total_feedbacks,
+            "session_patterns": len(self._session_patterns),
+            "min_confidence": self._min_confidence,
+        }
+
+
+SelfEvolverV2 = SelfEvolver
+
 
 # =============================================================================
 # エクスポート
 # =============================================================================
 
-__all__ = ["SelfEvolver"]
-
+__all__ = ["SelfEvolver", "SelfEvolverV2"]

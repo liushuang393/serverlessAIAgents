@@ -1,0 +1,42 @@
+{
+  "error": {
+    "not_found": "未找到",
+    "unauthorized": "需要身份验证",
+    "forbidden": "访问被拒绝",
+    "server_error": "服务器错误",
+    "timeout": "请求超时",
+    "bad_request": "请求无效",
+    "conflict": "数据冲突",
+    "validation": "验证错误：{detail}"
+  },
+  "status": {
+    "processing": "处理中...",
+    "complete": "完成",
+    "failed": "失败",
+    "pending": "等待中",
+    "cancelled": "已取消",
+    "retrying": "重试中..."
+  },
+  "agent": {
+    "running": "代理运行中...",
+    "complete": "代理完成",
+    "failed": "代理失败",
+    "timeout": "代理超时"
+  },
+  "flow": {
+    "start": "流程开始",
+    "complete": "流程完成",
+    "failed": "流程失败",
+    "node_start": "节点开始：{name}",
+    "node_complete": "节点完成：{name}",
+    "node_failed": "节点失败：{name}"
+  },
+  "hitl": {
+    "approval_required": "需要审批",
+    "approved": "已批准",
+    "rejected": "已拒绝",
+    "expired": "审批已过期"
+  },
+  "_note": "common.* 是UI标签，应在各App前端的 locales/*.json 中定义，不在此处定义。"
+}
+

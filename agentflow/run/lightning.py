@@ -272,12 +272,12 @@ class TrajectoryAdapter:
 
         reward_by_node: dict[str, float] = {}
         terminal_reward = 0.0
-        for reward in rewards:
-            node_id = reward.metadata.get("node_id")
+        for reward_signal in rewards:
+            node_id = reward_signal.metadata.get("node_id")
             if isinstance(node_id, str) and node_id:
-                reward_by_node[node_id] = reward_by_node.get(node_id, 0.0) + reward.value
+                reward_by_node[node_id] = reward_by_node.get(node_id, 0.0) + reward_signal.value
             else:
-                terminal_reward += reward.value
+                terminal_reward += reward_signal.value
 
         transitions: list[TransitionSample] = []
         previous_state: dict[str, Any] = {}

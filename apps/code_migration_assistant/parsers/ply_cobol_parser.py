@@ -23,7 +23,6 @@ class ParseError(Exception):
     """COBOL解析エラー."""
 
 
-
 class PLYCobolParser:
     """PLYベースのCOBOLパーサー.
 
@@ -68,13 +67,13 @@ class PLYCobolParser:
                 "divisions": {
                     "IDENTIFICATION DIVISION": [],
                     "DATA DIVISION": [],
-                "PROCEDURE DIVISION": [],
-            },
-            "metadata": {
-                "total_lines": len(self._lines),
-                "parser": "PLY",
-            },
-        }
+                    "PROCEDURE DIVISION": [],
+                },
+                "metadata": {
+                    "total_lines": len(self._lines),
+                    "parser": "PLY",
+                },
+            }
 
             current_division = None
             current_section = None
@@ -157,12 +156,14 @@ class PLYCobolParser:
                 # PIC句から型を推定
                 cobol_type = self._infer_type_from_pic(pic)
 
-                variables.append({
-                    "level": level,
-                    "name": name,
-                    "pic": pic,
-                    "type": cobol_type,
-                })
+                variables.append(
+                    {
+                        "level": level,
+                        "name": name,
+                        "pic": pic,
+                        "type": cobol_type,
+                    }
+                )
 
         return variables
 
@@ -182,4 +183,3 @@ class PLYCobolParser:
         if "X" in pic or "A" in pic:
             return "string"
         return "unknown"
-

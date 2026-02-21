@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Apps Router エンドポイントのユニットテスト.
 
 テスト対象: apps/platform/routers/apps.py
@@ -7,8 +6,11 @@ FastAPI TestClient を使用してエンドポイントを検証する。
 
 from __future__ import annotations
 
-import pytest
-from fastapi.testclient import TestClient
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 
 class TestListApps:

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """RAG Router エンドポイントのユニットテスト.
 
 テスト対象: apps/platform/routers/rag.py
@@ -7,7 +6,11 @@ phase3_test_client を使用してエンドポイントを検証する。
 
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 
 class TestGetRagOverview:

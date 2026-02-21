@@ -41,21 +41,21 @@ logger = logging.getLogger(__name__)
 class VerifyStatus(str, Enum):
     """校验状态."""
 
-    PASS = "pass"          # 通过
-    FAIL = "fail"          # 失败
-    WARNING = "warning"    # 警告（需关注但可继续）
+    PASS = "pass"  # 通过
+    FAIL = "fail"  # 失败
+    WARNING = "warning"  # 警告（需关注但可继续）
     NEED_HUMAN = "need_human"  # 需要人工确认
 
 
 class VerifyType(str, Enum):
     """校验类型."""
 
-    SCHEMA = "schema"          # 模式匹配
-    SEMANTIC = "semantic"      # 语义检查
-    NUMERICAL = "numerical"    # 数值验证
+    SCHEMA = "schema"  # 模式匹配
+    SEMANTIC = "semantic"  # 语义检查
+    NUMERICAL = "numerical"  # 数值验证
     CONSISTENCY = "consistency"  # 一致性检查
-    SAFETY = "safety"          # 安全性检查
-    CROSS = "cross"            # 交叉验证
+    SAFETY = "safety"  # 安全性检查
+    CROSS = "cross"  # 交叉验证
 
 
 @dataclass
@@ -193,9 +193,16 @@ class SafetyVerifyStrategy(VerifyStrategy):
 
     # 危险关键词
     DANGER_KEYWORDS = [
-        "DROP", "DELETE", "TRUNCATE", "ALTER",  # SQL危险
-        "rm -rf", "format", "sudo",  # 系统危险
-        "password", "secret", "token",  # 敏感信息
+        "DROP",
+        "DELETE",
+        "TRUNCATE",
+        "ALTER",  # SQL危险
+        "rm -rf",
+        "format",
+        "sudo",  # 系统危险
+        "password",
+        "secret",
+        "token",  # 敏感信息
     ]
 
     async def verify(
@@ -306,10 +313,12 @@ class DualVerifier:
                 results.append(result)
             except Exception as e:
                 self._logger.exception(f"策略执行失败: {e}")
-                results.append(VerifyResult(
-                    status=VerifyStatus.FAIL,
-                    message=f"策略执行异常: {e}",
-                ))
+                results.append(
+                    VerifyResult(
+                        status=VerifyStatus.FAIL,
+                        message=f"策略执行异常: {e}",
+                    )
+                )
 
         return self._aggregate_results(results)
 
@@ -339,11 +348,13 @@ class DualVerifier:
             val2 = result2.get(field_name)
 
             if not self._values_match(val1, val2):
-                mismatches.append({
-                    "field": field_name,
-                    "value1": val1,
-                    "value2": val2,
-                })
+                mismatches.append(
+                    {
+                        "field": field_name,
+                        "value1": val1,
+                        "value2": val2,
+                    }
+                )
 
         if mismatches:
             return VerifyResult(
@@ -378,7 +389,7 @@ class DualVerifier:
             if val1 == 0 or val2 == 0:
                 return abs(val1 - val2) < tolerance
             return abs(val1 - val2) / max(abs(val1), abs(val2)) < tolerance
-        return val1 == val2
+        return bool(val1 == val2)
 
     def _aggregate_results(
         self,
@@ -433,8 +444,8 @@ class DualVerifier:
             status=final_status,
             confidence=avg_confidence,
             message=f"校验完成: {len(results)}项策略, "
-                   f"通过{status_counts[VerifyStatus.PASS]}, "
-                   f"失败{status_counts[VerifyStatus.FAIL]}",
+            f"通过{status_counts[VerifyStatus.PASS]}, "
+            f"失败{status_counts[VerifyStatus.FAIL]}",
             details={
                 "strategy_results": [r.to_dict() for r in results],
                 "status_counts": {k.value: v for k, v in status_counts.items()},
@@ -450,4 +461,3 @@ class DualVerifier:
             "min_confidence": self._min_confidence,
             "has_llm": self._llm is not None,
         }
-

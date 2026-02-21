@@ -1,12 +1,12 @@
-
 import json
 import logging
 import os
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
+from apps.code_migration_assistant.engine import CodeMigrationEngine
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
@@ -14,14 +14,14 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from agentflow.protocols.agui_events import (
-    FlowStartEvent,
     FlowCompleteEvent,
     FlowErrorEvent,
-    NodeStartEvent,
-    NodeCompleteEvent,
+    FlowStartEvent,
     LogEvent,
+    NodeCompleteEvent,
+    NodeStartEvent,
 )
-from apps.code_migration_assistant.engine import CodeMigrationEngine
+
 
 # Logging setup
 logging.basicConfig(level=logging.INFO)
@@ -52,8 +52,8 @@ app.add_middleware(
 )
 
 # Global State
-active_tasks: Dict[str, CodeMigrationEngine] = {}
-task_websockets: Dict[str, WebSocket] = {}
+active_tasks: dict[str, CodeMigrationEngine] = {}
+task_websockets: dict[str, WebSocket] = {}
 _APP_CONFIG_PATH = Path(__file__).resolve().parents[1] / "app_config.json"
 _AUTH_HEADER = "x-api-key"
 _WS_AUTH_QUERY_KEY = "api_key"
@@ -128,9 +128,7 @@ async def _require_ws_api_key(websocket: WebSocket) -> bool:
     """Enforce API key for websocket handshake."""
     if not _is_auth_required():
         return True
-    incoming_key = websocket.headers.get(_AUTH_HEADER) or websocket.query_params.get(
-        _WS_AUTH_QUERY_KEY
-    )
+    incoming_key = websocket.headers.get(_AUTH_HEADER) or websocket.query_params.get(_WS_AUTH_QUERY_KEY)
     try:
         _verify_api_key(incoming_key)
     except HTTPException as exc:
@@ -143,6 +141,7 @@ async def _require_ws_api_key(websocket: WebSocket) -> bool:
 class MigrationRequest(BaseModel):
     source_code: str
     migration_type: str = "cobol-to-java"
+
 
 class ApprovalRequest(BaseModel):
     approved: bool
@@ -171,11 +170,7 @@ async def run_migration_task(task_id: str, engine: CodeMigrationEngine, inputs: 
     try:
         # Flow Start Event
         if task_id in task_websockets:
-            flow_start = FlowStartEvent(
-                timestamp=time.time(),
-                flow_id=task_id,
-                data={"inputs": inputs}
-            )
+            flow_start = FlowStartEvent(timestamp=time.time(), flow_id=task_id, data={"inputs": inputs})
             await task_websockets[task_id].send_json(flow_start.to_dict())
 
         async for event in engine._execute_stream(inputs):
@@ -185,16 +180,16 @@ async def run_migration_task(task_id: str, engine: CodeMigrationEngine, inputs: 
                 try:
                     # Check if event is already a dict compatible with AGUIEvent
                     # or if it's an engine internal event that needs conversion
-                    
+
                     agui_event = None
                     event_type = event.get("event") or event.get("event_type")
-                    
+
                     if event_type == "node_start":
                         agui_event = NodeStartEvent(
                             timestamp=time.time(),
                             flow_id=task_id,
                             node_id=event.get("node", "unknown"),
-                            node_name=event.get("node", "unknown")
+                            node_name=event.get("node", "unknown"),
                         )
                     elif event_type == "node_complete":
                         agui_event = NodeCompleteEvent(
@@ -202,26 +197,26 @@ async def run_migration_task(task_id: str, engine: CodeMigrationEngine, inputs: 
                             flow_id=task_id,
                             node_id=event.get("node", "unknown"),
                             node_name=event.get("node", "unknown"),
-                            data=event.get("result", {})
+                            data=event.get("result", {}),
                         )
                     elif event_type == "log":
                         agui_event = LogEvent(
                             timestamp=time.time(),
                             flow_id=task_id,
                             level=event.get("level", "INFO"),
-                            message=event.get("message", "")
+                            message=event.get("message", ""),
                         )
                     elif event_type == "approval_required":
-                         pass
-                    
+                        pass
+
                     if agui_event:
                         await ws.send_json(agui_event.to_dict())
                     else:
                         pass
 
                 except Exception as e:
-                    logger.error(f"WebSocket send error: {e}")
-        
+                    logger.exception(f"WebSocket send error: {e}")
+
         # Flow Complete Event
         if task_id in task_websockets:
             flow_complete = FlowCompleteEvent(
@@ -229,8 +224,8 @@ async def run_migration_task(task_id: str, engine: CodeMigrationEngine, inputs: 
                 flow_id=task_id,
                 result={
                     "report_available": True,
-                    "report_url": f"/api/artifacts/{task_id}/report/compliance_report.md"
-                }
+                    "report_url": f"/api/artifacts/{task_id}/report/compliance_report.md",
+                },
             )
             await task_websockets[task_id].send_json(flow_complete.to_dict())
 
@@ -241,46 +236,48 @@ async def run_migration_task(task_id: str, engine: CodeMigrationEngine, inputs: 
                 timestamp=time.time(),
                 flow_id=task_id,
                 error_message=str(e),
-                error_type=type(e).__name__
+                error_type=type(e).__name__,
             )
             await task_websockets[task_id].send_json(flow_error.to_dict())
 
     finally:
         # Cleanup
         if task_id in active_tasks:
-            # Don't remove immediately so user can see result? 
+            # Don't remove immediately so user can see result?
             # For this demo, keep it.
             pass
+
 
 @app.post("/api/migration/start")
 async def start_migration(request: MigrationRequest, background_tasks: BackgroundTasks):
     task_id = str(uuid.uuid4())
-    
+
     # Initialize Engine
     engine = CodeMigrationEngine(migration_type=request.migration_type)
-    
+
     # Inject an event emitter that writes to WebSocket for ApprovalFlow?
     # ApprovalFlow supports event_emitter callback.
     async def ws_emitter(event_dict: dict):
         if task_id in task_websockets:
             await task_websockets[task_id].send_json(event_dict)
-            
+
     engine._approval_flow._event_emitter = ws_emitter
 
     await engine._initialize()
-    
+
     active_tasks[task_id] = engine
-    
+
     inputs = {
         "source_code": request.source_code,
         "task_id": task_id,
-        "artifacts_dir": f"/tmp/migration_artifacts/{task_id}" # Temp dir for demo
+        "artifacts_dir": f"/tmp/migration_artifacts/{task_id}",  # Temp dir for demo
     }
 
     # Start loop in background
     background_tasks.add_task(run_migration_task, task_id, engine, inputs)
-    
+
     return {"task_id": task_id, "status": "started"}
+
 
 @app.websocket("/api/ws/{task_id}")
 async def websocket_endpoint(websocket: WebSocket, task_id: str):
@@ -291,48 +288,42 @@ async def websocket_endpoint(websocket: WebSocket, task_id: str):
     try:
         while True:
             # Keep alive / listen for client messages (optional)
-            data = await websocket.receive_text()
+            await websocket.receive_text()
             # Echo or handle commands
     except WebSocketDisconnect:
         logger.info(f"Client disconnected for task {task_id}")
-        if task_id in task_websockets:
-            del task_websockets[task_id]
+        task_websockets.pop(task_id, None)
+
 
 @app.get("/api/approvals/{task_id}")
 async def get_approvals(task_id: str):
     if task_id not in active_tasks:
         raise HTTPException(status_code=404, detail="Task not found")
-    
+
     engine = active_tasks[task_id]
     # Check pending approvals
     pending = engine._approval_flow.get_pending_requests()
-    return [
-        {
-            "id": r.id,
-            "action": r.action,
-            "reason": r.reason,
-            "context": r.context
-        }
-        for r in pending
-    ]
+    return [{"id": r.id, "action": r.action, "reason": r.reason, "context": r.context} for r in pending]
+
 
 @app.post("/api/approvals/{task_id}/{request_id}")
 async def submit_approval(task_id: str, request_id: str, approval: ApprovalRequest):
     if task_id not in active_tasks:
         raise HTTPException(status_code=404, detail="Task not found")
-        
+
     engine = active_tasks[task_id]
     success = await engine._approval_flow.submit_response(
         request_id=request_id,
         approved=approval.approved,
         comment=approval.comment,
-        approver="admin"
+        approver="admin",
     )
-    
+
     if not success:
         raise HTTPException(status_code=400, detail="Failed to submit approval (invalid ID or timeout)")
-        
+
     return {"status": "submitted"}
+
 
 @app.get("/api/artifacts/{task_id}/{stage}/{filename}")
 async def get_artifact(task_id: str, stage: str, filename: str):
@@ -343,12 +334,14 @@ async def get_artifact(task_id: str, stage: str, filename: str):
         raise HTTPException(status_code=404, detail="Artifact not found")
     return FileResponse(path)
 
+
 # Serve UI
 app.mount("/", StaticFiles(directory="apps/code_migration_assistant/frontend", html=True), name="ui")
 
 if __name__ == "__main__":
-    import uvicorn
     import json
+
+    import uvicorn
 
     config_path = Path(__file__).resolve().parents[1] / "app_config.json"
     config_raw: dict = {}

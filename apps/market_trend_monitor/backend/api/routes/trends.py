@@ -25,10 +25,7 @@ def _to_frontend_report(report: dict, fallback_trends: list[dict] | None = None)
     trend_snapshot = report.get("trend_snapshot", [])
 
     trends: list[dict]
-    if isinstance(trend_snapshot, list):
-        trends = trend_snapshot
-    else:
-        trends = fallback_trends or []
+    trends = trend_snapshot if isinstance(trend_snapshot, list) else fallback_trends or []
 
     converted_sections: list[dict] = []
     for section in sections:
@@ -155,4 +152,3 @@ async def get_trend_history(
     """Phase 12: トレンド履歴を取得."""
     history = await trend_history_service.get_topic_history(topic, limit=limit)
     return {"topic": topic, "history": history, "total": len(history)}
-

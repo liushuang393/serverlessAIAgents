@@ -1,10 +1,8 @@
-# -*- coding: utf-8 -*-
 """Messaging Hub security mode tests."""
 
 from __future__ import annotations
 
 import pytest
-
 from apps.messaging_hub.coordinator import AssistantConfig, PersonalAssistantCoordinator
 
 
@@ -18,7 +16,7 @@ async def test_file_organize_blocked_when_os_skills_disabled() -> None:
             security_mode="approval_required",
         ),
     )
-    result = await coordinator._execute_file_organize({}, {})  # noqa: SLF001
+    result = await coordinator._execute_file_organize({}, {})
     assert result["blocked"] is True
     assert result["security_mode"] == "approval_required"
 
@@ -33,7 +31,6 @@ async def test_competitor_analysis_runs_when_browser_enabled() -> None:
             security_mode="autonomous",
         ),
     )
-    result = await coordinator._execute_competitor_analysis({"competitor": "A社"}, {})  # noqa: SLF001
+    result = await coordinator._execute_competitor_analysis({"competitor": "A社"}, {})
     assert result.get("blocked") is not True
     assert result["competitor"] == "A社"
-

@@ -86,8 +86,7 @@ class DesignAgentRegistry:
 
         self._initialized = True
         self._logger.info(
-            f"フロー '{self._flow_definition.flow_id}' を登録完了 "
-            f"(Agent数: {len(self._flow_definition.agents)})"
+            f"フロー '{self._flow_definition.flow_id}' を登録完了 (Agent数: {len(self._flow_definition.agents)})"
         )
 
     def _ensure_initialized(self) -> None:
@@ -95,6 +94,15 @@ class DesignAgentRegistry:
         if not self._initialized or not self._flow_definition:
             msg = "DesignAgentRegistry未初期化。initialize()を先に呼び出してください。"
             raise RuntimeError(msg)
+
+    def _get_flow_definition(self) -> FlowDefinition:
+        """初期化済みの FlowDefinition を取得."""
+        self._ensure_initialized()
+        flow_definition = self._flow_definition
+        if flow_definition is None:
+            msg = "FlowDefinition が初期化されていません。"
+            raise RuntimeError(msg)
+        return flow_definition
 
     def _create_agent(self, agent_def: AgentDefinition) -> Any:
         """Agentインスタンスを生成.
@@ -135,11 +143,12 @@ class DesignAgentRegistry:
             ValueError: Agent IDが見つからない場合
         """
         self._ensure_initialized()
+        flow_definition = self._get_flow_definition()
 
         if agent_id in self._agents:
             return self._agents[agent_id]
 
-        agent_def = self._flow_definition.get_agent(agent_id)
+        agent_def = flow_definition.get_agent(agent_id)
         if not agent_def:
             msg = f"Agentが見つかりません: {agent_id}"
             raise ValueError(msg)
@@ -154,8 +163,8 @@ class DesignAgentRegistry:
         Returns:
             Agent ID -> インスタンスの辞書
         """
-        self._ensure_initialized()
-        for agent_def in self._flow_definition.agents:
+        flow_definition = self._get_flow_definition()
+        for agent_def in flow_definition.agents:
             if agent_def.id not in self._agents:
                 self._agents[agent_def.id] = self._create_agent(agent_def)
         return self._agents.copy()
@@ -166,17 +175,17 @@ class DesignAgentRegistry:
         Returns:
             Agentインスタンスリスト(順序付き)
         """
-        self._ensure_initialized()
-        return [self.get_agent(a.id) for a in self._flow_definition.agents]
+        flow_definition = self._get_flow_definition()
+        return [self.get_agent(a.id) for a in flow_definition.agents]
 
     def get_agent_ids(self) -> list[str]:
         """全Agent IDリストを取得(定義順)."""
-        self._ensure_initialized()
-        return self._flow_definition.get_agent_ids()
+        flow_definition = self._get_flow_definition()
+        return flow_definition.get_agent_ids()
 
     def get_agent_metas(self) -> list[AgentMeta]:
         """ProgressEmitter用のAgentMetaリストを取得."""
-        self._ensure_initialized()
+        flow_definition = self._get_flow_definition()
         return [
             AgentMeta(
                 id=agent_def.id,
@@ -184,20 +193,20 @@ class DesignAgentRegistry:
                 label=agent_def.label,
                 icon=agent_def.icon,
             )
-            for agent_def in self._flow_definition.agents
+            for agent_def in flow_definition.agents
         ]
 
     @property
     def total_agents(self) -> int:
         """Agent総数."""
-        self._ensure_initialized()
-        return len(self._flow_definition.agents)
+        flow_definition = self._get_flow_definition()
+        return len(flow_definition.agents)
 
     @property
     def flow_id(self) -> str:
         """Flow ID."""
-        self._ensure_initialized()
-        return self._flow_definition.flow_id
+        flow_definition = self._get_flow_definition()
+        return flow_definition.flow_id
 
 
 __all__ = ["DesignAgentRegistry"]

@@ -7,17 +7,17 @@ import hmac
 import json
 import time
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-import httpx
 import pytest
-
 from apps.faq_system.backend.auth.dependencies import resolve_user
 from apps.faq_system.backend.auth.service import get_auth_service, reset_auth_service_singleton
 from apps.faq_system.backend.db import close_db
-from apps.faq_system.main import app
 from apps.faq_system.routers.dependencies import _services
 
+
+if TYPE_CHECKING:
+    import httpx
 
 
 TEST_DB_PATH = Path("/tmp/faq_auth_test.db")

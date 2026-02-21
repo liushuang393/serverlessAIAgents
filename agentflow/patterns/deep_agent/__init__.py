@@ -27,7 +27,15 @@ DeepAgentsフレームワーク（arXiv:2504.04755）に基づく実装。
 
 from agentflow.patterns.deep_agent.da_compressor import ContextCompressor
 from agentflow.patterns.deep_agent.da_coordinator import DeepAgentCoordinator
-from agentflow.patterns.deep_agent.da_evolver import SelfEvolver
+from agentflow.patterns.deep_agent.da_dynamic import (
+    ConversationManager,
+    DynamicAgent,
+    Evolver,
+)
+from agentflow.patterns.deep_agent.da_evolver import (
+    SelfEvolver,
+    SelfEvolverV2,
+)
 from agentflow.patterns.deep_agent.da_models import (
     AgentMessage,
     AgentType,
@@ -81,11 +89,15 @@ __all__ = [
     "CompactionStrategy",
     # コンテキスト圧縮
     "ContextCompressor",
+    # 動的コンポーネント（後方互換）
+    "ConversationManager",
     # メイン協調器
     "DeepAgentCoordinator",
     "DeepAgentResultFilter",
+    "DynamicAgent",
     "EvolutionRecord",
     "EvolutionStore",
+    "Evolver",
     "ExecutionAgent",
     "FilterLevel",
     "MemoryEvolutionStore",
@@ -108,10 +120,10 @@ __all__ = [
     "RuntimeStore",
     # 自己進化
     "SelfEvolver",
+    "SelfEvolverV2",
     "SummarizedResult",
     "SummarizerConfig",
     # データモデル
     "TaskStatus",
     "TodoItem",
 ]
-

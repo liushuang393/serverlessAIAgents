@@ -503,6 +503,8 @@ export type SurfaceProfileKind = 'business' | 'developer' | 'operator';
 export type AuditProfileKind = 'business' | 'developer';
 export type SecurityModeKind = 'read_only' | 'approval_required' | 'autonomous';
 export type RiskLevelKind = 'low' | 'medium' | 'high';
+export type EvolutionScopeLevel = 'tenant_app' | 'tenant_product_line' | 'global_verified';
+export type EvolutionValidatorBackend = 'redis_stream' | 'none';
 export type BusinessBaseKind =
   | 'platform'
   | 'knowledge'
@@ -527,6 +529,35 @@ export interface PluginBindingInput {
   config: Record<string, unknown>;
 }
 
+export interface EvolutionValidatorQueueInput {
+  backend: EvolutionValidatorBackend;
+  redis_url: string | null;
+  stream_key: string;
+  consumer_group: string;
+  max_retries: number;
+}
+
+export interface EvolutionRetrievalInput {
+  high_confidence_skip_threshold: number;
+  high_complexity_threshold: number;
+  low_confidence_threshold: number;
+}
+
+export interface EvolutionSuspicionInput {
+  max_age_days: number;
+  failure_streak_threshold: number;
+  performance_drop_ratio: number;
+}
+
+export interface EvolutionConfigInput {
+  enabled: boolean;
+  strategy_service_url: string | null;
+  validator_queue: EvolutionValidatorQueueInput;
+  scope_policy: EvolutionScopeLevel[];
+  retrieval: EvolutionRetrievalInput;
+  suspicion: EvolutionSuspicionInput;
+}
+
 export interface AppCreateRequest {
   name: string;
   display_name: string;
@@ -537,6 +568,7 @@ export interface AppCreateRequest {
   surface_profile: SurfaceProfileKind;
   audit_profile: AuditProfileKind;
   security_mode: SecurityModeKind | null;
+  evolution: EvolutionConfigInput | null;
   plugin_bindings: PluginBindingInput[];
   template: string | null;
   data_sources: string[];
@@ -623,6 +655,14 @@ export interface AppCreateOptionsResponse {
   }>;
   visibility_modes?: Array<{
     value: 'private' | 'public' | 'tenant_allowlist';
+    label: string;
+  }>;
+  evolution_scope_options?: Array<{
+    value: EvolutionScopeLevel;
+    label: string;
+  }>;
+  evolution_validator_backends?: Array<{
+    value: EvolutionValidatorBackend;
     label: string;
   }>;
 }

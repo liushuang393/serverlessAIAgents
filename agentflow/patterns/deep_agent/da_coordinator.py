@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from contextlib import suppress
 from typing import Any
 
 from agentflow.patterns.deep_agent.da_compressor import ContextCompressor
@@ -76,6 +77,12 @@ class DeepAgentCoordinator:
         tools: list[Any] | None = None,
         skills: list[Any] | None = None,
         max_parallel: int = 5,
+        max_iterations: int = 10,
+        max_retries: int = 3,
+        quality_threshold: float = 70.0,
+        enable_evolution: bool = True,
+        enable_memory: bool = True,
+        on_progress: Any = None,
     ) -> None:
         """初期化.
 
@@ -86,6 +93,12 @@ class DeepAgentCoordinator:
             tools: 利用可能ツール
             skills: 利用可能スキル
             max_parallel: 最大並行数
+            max_iterations: 最大イテレーション数
+            max_retries: 最大リトライ数
+            quality_threshold: 品質閾値
+            enable_evolution: 進化を有効にするか
+            enable_memory: メモリを有効にするか
+            on_progress: 進捗コールバック
         """
         self._llm = llm_client
         self._runtime_store = runtime_store or MemoryRuntimeStore()
@@ -95,7 +108,75 @@ class DeepAgentCoordinator:
         self._compressor = ContextCompressor(llm_client)
         self._evolver = SelfEvolver(self._evolution_store)
         self._max_parallel = max_parallel
+        self._max_iterations = max_iterations
+        self._max_retries = max_retries
+        self._quality_threshold = quality_threshold
+        self._enable_evolution = enable_evolution
+        self._enable_memory = enable_memory
+        self._on_progress = on_progress
         self._context: dict[str, Any] = {}
+
+    @property
+    def pattern(self) -> Any:
+        """協調パターンを返す."""
+        from agentflow.patterns.coordinator import CoordinationPattern
+
+        return CoordinationPattern.HIERARCHICAL
+
+    def register_agent(self, name: str, agent: Any) -> None:
+        """カスタムAgentをプールに登録.
+
+        Args:
+            name: Agent名
+            agent: Agentインスタンス
+        """
+        self._agent_pool.register_agent(name, agent)
+
+    def get_stats(self) -> dict[str, Any]:
+        """統計情報を取得.
+
+        Returns:
+            progress/available_agents/evolution を含む辞書
+        """
+        return {
+            "progress": self._progress.get_progress(),
+            "available_agents": self._agent_pool.list_agents(),
+            "evolution": {
+                "enabled": self._enable_evolution,
+                "max_iterations": self._max_iterations,
+            },
+        }
+
+    async def process_feedback(
+        self,
+        feedback_type: str,
+        content: str,
+        **kwargs: Any,
+    ) -> dict[str, Any]:
+        """フィードバックを処理.
+
+        Args:
+            feedback_type: フィードバック種別
+            content: フィードバック内容
+
+        Returns:
+            処理結果
+        """
+        if not self._enable_evolution:
+            return {"status": "evolution_disabled"}
+
+        try:
+            from agentflow.patterns.deep_agent.da_models import EvolutionRecord
+
+            record = EvolutionRecord(
+                event_type=feedback_type,
+                pattern=content,
+            )
+            await self._evolution_store.save_feedback(record)
+            return {"status": "processed", "feedback_type": feedback_type}
+        except Exception as e:
+            _logger.warning("フィードバック処理エラー: %s", e)
+            return {"status": "processed", "feedback_type": feedback_type}
 
     # =========================================================================
     # メイン実行フロー
@@ -111,12 +192,23 @@ class DeepAgentCoordinator:
         Returns:
             実行結果
         """
+        import time as _time_mod
+
         self._context = context or {}
         _logger.info("DeepAgent実行開始: %s", request[:100])
+        _start_time = _time_mod.monotonic()
+
+        def _emit_progress(event: dict[str, Any]) -> None:
+            if self._on_progress:
+                with suppress(Exception):
+                    self._on_progress(event)
+
+        _emit_progress({"event": "start", "request": request[:100]})
 
         try:
             # Phase 1: 認知分析
             analysis = await self._cognitive_analysis(request)
+            _emit_progress({"event": "cognitive_analysis", "analysis": analysis.model_dump()})
             if not analysis.is_clear and analysis.clarification_needed:
                 return {
                     "status": "clarification_needed",
@@ -124,8 +216,12 @@ class DeepAgentCoordinator:
                     "analysis": analysis.model_dump(),
                 }
 
-            # Phase 2: パターン検索（自己進化）
-            similar_pattern = await self._evolver.find_similar_pattern(analysis)
+            # Phase 2: パターン検索（自己進化、必要時のみ）
+            similar_pattern = None
+            if self._should_lookup_pattern(analysis):
+                similar_pattern = await self._evolver.find_similar_pattern(analysis)
+            else:
+                _logger.debug("パターン検索をスキップ: complexity=%s", analysis.complexity)
 
             # Phase 3: タスク分解
             if similar_pattern:
@@ -158,17 +254,48 @@ class DeepAgentCoordinator:
             # Phase 9: 最終レポート生成
             final_report = await self._generate_report(todos, results, review)
 
+            progress = self._progress.get_progress()
+            _emit_progress({"event": "complete", "progress": progress})
             return {
-                "status": "completed" if review.is_acceptable else "partial",
+                "status": "success" if review.is_acceptable else "partial",
                 "report": final_report,
                 "results": results,
                 "review": review.model_dump(),
                 "stats": self._progress.get_stats(),
+                "progress": progress,
+                "execution_time": _time_mod.monotonic() - _start_time,
             }
 
         except Exception as e:
             _logger.exception("DeepAgent実行エラー")
-            return {"status": "error", "error": str(e)}
+            _emit_progress({"event": "error", "error": str(e)})
+            return {
+                "status": "error",
+                "error": str(e),
+                "progress": self._progress.get_progress(),
+                "execution_time": _time_mod.monotonic() - _start_time,
+            }
+
+    def _should_lookup_pattern(self, analysis: CognitiveAnalysis) -> bool:
+        """既存パターン検索の要否を判定."""
+        if bool(self._context.get("force_pattern_lookup", False)):
+            return True
+
+        recent_failures = int(self._context.get("recent_failures", 0))
+        if recent_failures >= 2:
+            return True
+
+        confidence = float(self._context.get("self_confidence", 0.6))
+        novelty = float(self._context.get("task_novelty", 0.5))
+        staleness_risk = str(self._context.get("experience_staleness_risk", "medium")).lower()
+
+        if confidence >= 0.82 and analysis.complexity == "low" and novelty <= 0.40 and staleness_risk == "low":
+            return False
+
+        if confidence < 0.55 or analysis.complexity == "high" or novelty >= 0.65:
+            return True
+
+        return analysis.complexity != "low"
 
     # =========================================================================
     # Phase 1: 認知分析
@@ -206,6 +333,7 @@ class DeepAgentCoordinator:
         try:
             response = await self._llm.generate(prompt)
             import json
+
             data = json.loads(response)
             return CognitiveAnalysis(**data)
         except Exception as e:
@@ -254,6 +382,7 @@ class DeepAgentCoordinator:
         try:
             response = await self._llm.generate(prompt)
             import json
+
             data = json.loads(response)
             return [TodoItem(**item) for item in data]
         except Exception as e:
@@ -270,42 +399,52 @@ class DeepAgentCoordinator:
 
         # 複雑度に応じた分解
         if analysis.complexity == "low":
-            todos.append(TodoItem(
-                task=request,
-                agent_type=AgentType.EXECUTION.value,
-                priority=5,
-            ))
+            todos.append(
+                TodoItem(
+                    task=request,
+                    agent_type=AgentType.EXECUTION.value,
+                    priority=5,
+                )
+            )
         else:
             # 標準的な分解パターン
             if "research" in analysis.suggested_agents:
-                todos.append(TodoItem(
-                    task=f"調査: {request}",
-                    agent_type=AgentType.RESEARCH.value,
-                    priority=10,
-                ))
+                todos.append(
+                    TodoItem(
+                        task=f"調査: {request}",
+                        agent_type=AgentType.RESEARCH.value,
+                        priority=10,
+                    )
+                )
 
             if "analysis" in analysis.suggested_agents:
-                todos.append(TodoItem(
-                    task=f"分析: {request}",
-                    agent_type=AgentType.ANALYSIS.value,
-                    priority=8,
-                    dependencies=[todos[-1].id] if todos else [],
-                ))
+                todos.append(
+                    TodoItem(
+                        task=f"分析: {request}",
+                        agent_type=AgentType.ANALYSIS.value,
+                        priority=8,
+                        dependencies=[todos[-1].id] if todos else [],
+                    )
+                )
 
-            todos.append(TodoItem(
-                task=f"実行: {request}",
-                agent_type=AgentType.EXECUTION.value,
-                priority=5,
-                dependencies=[todos[-1].id] if todos else [],
-            ))
+            todos.append(
+                TodoItem(
+                    task=f"実行: {request}",
+                    agent_type=AgentType.EXECUTION.value,
+                    priority=5,
+                    dependencies=[todos[-1].id] if todos else [],
+                )
+            )
 
             if "review" in analysis.suggested_agents:
-                todos.append(TodoItem(
-                    task=f"検証: {request}",
-                    agent_type=AgentType.REVIEW.value,
-                    priority=3,
-                    dependencies=[todos[-1].id] if todos else [],
-                ))
+                todos.append(
+                    TodoItem(
+                        task=f"検証: {request}",
+                        agent_type=AgentType.REVIEW.value,
+                        priority=3,
+                        dependencies=[todos[-1].id] if todos else [],
+                    )
+                )
 
         return todos
 
@@ -325,7 +464,7 @@ class DeepAgentCoordinator:
                 break
 
             # 並行実行（最大数制限）
-            batch = ready_todos[:self._max_parallel]
+            batch = ready_todos[: self._max_parallel]
             _logger.info("並行実行: %d個のタスク", len(batch))
 
             tasks = []
@@ -337,7 +476,7 @@ class DeepAgentCoordinator:
             batch_results = await asyncio.gather(*tasks, return_exceptions=True)
 
             for todo, result in zip(batch, batch_results, strict=False):
-                if isinstance(result, Exception):
+                if isinstance(result, BaseException):
                     self._progress.mark_failed(todo.id, str(result))
                     results[todo.id] = {"status": "failed", "error": str(result)}
                 else:
@@ -354,7 +493,10 @@ class DeepAgentCoordinator:
     ) -> dict[str, Any]:
         """単一タスクを実行."""
         try:
-            return await agent.execute(todo, self._context)
+            result = await agent.execute(todo, self._context)
+            if isinstance(result, dict):
+                return result
+            return {"result": result}
         except Exception as e:
             _logger.warning("タスク実行失敗 [%s]: %s", todo.id, e)
             raise
@@ -365,18 +507,19 @@ class DeepAgentCoordinator:
 
     async def _quality_review(
         self,
-        todos: list[TodoItem],
+        todos: list[TodoItem] | str,
         results: dict[str, Any],
-        analysis: CognitiveAnalysis,
+        analysis: CognitiveAnalysis | None = None,
     ) -> QualityReview:
         """品質評審を実行."""
         if not self._llm:
             return self._simple_quality_review(todos, results)
 
         # LLMによる品質評価
+        intent_text = analysis.intent if analysis is not None else ""
         prompt = f"""以下のタスク実行結果を評価してください。
 
-元のリクエスト意図: {analysis.intent}
+元のリクエスト意図: {intent_text}
 
 実行結果:
 {results}
@@ -401,6 +544,7 @@ class DeepAgentCoordinator:
         try:
             response = await self._llm.generate(prompt)
             import json
+
             data = json.loads(response)
             return QualityReview(**data)
         except Exception as e:
@@ -409,30 +553,36 @@ class DeepAgentCoordinator:
 
     def _simple_quality_review(
         self,
-        todos: list[TodoItem],
+        todos: list[TodoItem] | str,
         results: dict[str, Any],
     ) -> QualityReview:
         """シンプルな品質評審（LLMなし）."""
-        completed = sum(1 for t in todos if t.status == TaskStatus.COMPLETED)
-        failed = sum(1 for t in todos if t.status == TaskStatus.FAILED)
-        total = len(todos)
+        # todosが文字列の場合はProgressManagerから取得
+        todo_list = self._progress.get_all_todos() if isinstance(todos, str) else todos
+
+        completed = sum(1 for t in todo_list if t.status == TaskStatus.COMPLETED)
+        failed = sum(1 for t in todo_list if t.status == TaskStatus.FAILED)
+        total = len(todo_list)
 
         completion_rate = completed / total if total > 0 else 0
-        score = completion_rate * 100
+        completeness_score = completion_rate * 100
+
+        dimension_scores = {
+            QualityDimension.COMPLETENESS.value: completeness_score,
+            QualityDimension.ACCURACY.value: 70.0,
+            QualityDimension.CONSISTENCY.value: 75.0,
+            QualityDimension.EFFICIENCY.value: 70.0,
+            QualityDimension.CLARITY.value: 70.0,
+        }
+        score = sum(dimension_scores.values()) / len(dimension_scores)
 
         return QualityReview(
             is_acceptable=score >= self.QUALITY_THRESHOLD,
             score=score,
             issues=[f"{failed}個のタスクが失敗"] if failed > 0 else [],
             suggestions=[],
-            retry_tasks=[t.id for t in todos if t.status == TaskStatus.FAILED],
-            dimension_scores={
-                QualityDimension.COMPLETENESS.value: completion_rate * 100,
-                QualityDimension.ACCURACY.value: 80.0,
-                QualityDimension.CONSISTENCY.value: 80.0,
-                QualityDimension.EFFICIENCY.value: 80.0,
-                QualityDimension.CLARITY.value: 80.0,
-            },
+            retry_tasks=[t.id for t in todo_list if t.status == TaskStatus.FAILED],
+            dimension_scores=dimension_scores,
             verdict="pass" if score >= self.QUALITY_THRESHOLD else "revise",
         )
 
@@ -460,7 +610,7 @@ class DeepAgentCoordinator:
     async def _generate_report(
         self,
         todos: list[TodoItem],
-        results: dict[str, Any],  # noqa: ARG002 - 将来の拡張用
+        results: dict[str, Any],
         review: QualityReview,
     ) -> str:
         """最終レポートを生成.
@@ -500,6 +650,71 @@ class DeepAgentCoordinator:
         return "\n".join(report_lines)
 
     # =========================================================================
+    # チェックポイント / リカバリ
+    # =========================================================================
+
+    async def save_checkpoint(
+        self,
+        phase: str = "execute",
+        extra_state: dict[str, Any] | None = None,
+    ) -> str:
+        """チェックポイントを保存."""
+        import uuid
+
+        checkpoint_id = f"cp-{uuid.uuid4().hex[:8]}"
+        state = {
+            "phase": phase,
+            "todos": [t.model_dump() for t in self._progress.get_all_todos()],
+            "context": self._context,
+            **(extra_state or {}),
+        }
+        await self._runtime_store.save_checkpoint(checkpoint_id, state)
+        self.__checkpoint_id = checkpoint_id
+        return checkpoint_id
+
+    async def load_checkpoint(self, checkpoint_id: str) -> dict[str, Any] | None:
+        """チェックポイントを読み込み."""
+        return await self._runtime_store.load_checkpoint(checkpoint_id)
+
+    async def list_checkpoints(self) -> list[str]:
+        """チェックポイント一覧を返す."""
+        checkpoints = await self._runtime_store.list_checkpoints()
+        return list(checkpoints)
+
+    async def resume_from_checkpoint(
+        self,
+        checkpoint_id: str,
+        task: str,
+    ) -> dict[str, Any]:
+        """チェックポイントから再開."""
+        state = await self._runtime_store.load_checkpoint(checkpoint_id)
+        if state is None:
+            msg = f"チェックポイントが見つかりません: {checkpoint_id}"
+            raise ValueError(msg)
+
+        todos_data = state.get("todos", [])
+        for todo_data in todos_data:
+            todo = TodoItem(**todo_data)
+            self._progress.add_todo(todo)
+
+        self._context = state.get("context", {})
+        result = await self.execute(task)
+        result["resumed_from"] = checkpoint_id
+        return result
+
+    @property
+    def _current_checkpoint_id(self) -> str | None:
+        """現在のチェックポイントID."""
+        try:
+            return self.__checkpoint_id
+        except AttributeError:
+            return None
+
+    @_current_checkpoint_id.setter
+    def _current_checkpoint_id(self, value: str) -> None:
+        self.__checkpoint_id = value
+
+    # =========================================================================
     # コンテキスト圧縮
     # =========================================================================
 
@@ -510,9 +725,7 @@ class DeepAgentCoordinator:
     ) -> None:
         """コンテキストを圧縮."""
         messages = self._agent_pool.get_message_history()
-        _, result = await self._compressor.compact_messages(
-            messages, max_tokens, strategy
-        )
+        _, result = await self._compressor.compact_messages(messages, max_tokens, strategy)
         _logger.info(
             "コンテキスト圧縮: %d → %d トークン (%.1f%%)",
             result.original_tokens,
@@ -526,4 +739,3 @@ class DeepAgentCoordinator:
 # =============================================================================
 
 __all__ = ["DeepAgentCoordinator"]
-

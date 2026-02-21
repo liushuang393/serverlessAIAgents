@@ -1,12 +1,14 @@
 import httpx
-from agentflow.security.oauth2_provider import OAuth2Provider, OAuth2Token, ExternalIdentity
+
+from agentflow.security.oauth2_provider import ExternalIdentity, OAuth2Provider, OAuth2Token
+
 
 class GoogleOAuth2Provider(OAuth2Provider):
     """Google OAuth2 プロバイダー."""
 
     DISCOVERY_URL = "https://accounts.google.com/.well-known/openid-configuration"
 
-    async def _get_endpoints(self):
+    async def _get_endpoints(self) -> dict[str, str]:
         # Cache this if possible, or fetch every time? Fetching every time is slow.
         # Hardcoding for now, or fetch once per instance?
         # Standard endpoints:

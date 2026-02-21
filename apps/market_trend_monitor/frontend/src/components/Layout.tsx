@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { LocaleSwitcher, useI18n } from '../i18n';
 import {
   Box,
   Drawer,
@@ -38,6 +39,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const { t } = useI18n();
   const [mobileOpen, setMobileOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -46,14 +48,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     setMobileOpen(!mobileOpen);
   };
 
+  /** ロケール変化時に再計算されるメニュー項目 */
   const menuItems = [
-    { text: 'ダッシュボード', secondary: '市場の全体像を確認', icon: <DashboardIcon />, path: '/dashboard' },
-    { text: 'シグナル', secondary: 'AIが選んだ兆候と変化', icon: <SignalIcon />, path: '/signals' },
-    { text: '証拠台帳', secondary: '情報の裏付けを確認', icon: <EvidenceIcon />, path: '/evidence' },
-    { text: '予測追跡', secondary: 'AI予測の答え合わせ', icon: <PredictionIcon />, path: '/predictions' },
-    { text: '競合分析', secondary: 'ライバルの動向を地図化', icon: <CompetitorIcon />, path: '/competitors' },
-    { text: 'レポート', secondary: '分析結果の書き出し', icon: <ReportIcon />, path: '/reports' },
-    { text: '設定', secondary: 'システムの詳細設定', icon: <SettingsIcon />, path: '/settings' },
+    { text: t('nav.dashboard'), secondary: t('nav.dashboard_desc'), icon: <DashboardIcon />, path: '/dashboard' },
+    { text: t('nav.signals'),   secondary: t('nav.signals_desc'),   icon: <SignalIcon />,    path: '/signals' },
+    { text: t('nav.evidence'),  secondary: t('nav.evidence_desc'),  icon: <EvidenceIcon />,  path: '/evidence' },
+    { text: t('nav.predictions'),secondary: t('nav.predictions_desc'),icon: <PredictionIcon />,path: '/predictions' },
+    { text: t('nav.competitor'),secondary: t('nav.competitor_desc'),icon: <CompetitorIcon />,path: '/competitors' },
+    { text: t('nav.reports'),   secondary: t('nav.reports_desc'),   icon: <ReportIcon />,    path: '/reports' },
+    { text: t('nav.settings'),  secondary: t('nav.settings_desc'),  icon: <SettingsIcon />,  path: '/settings' },
   ];
 
   const drawer = (
@@ -87,7 +90,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.08)' }} />
       <List sx={{ px: 1.5, pt: 1 }}>
         {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding sx={{ mb: 0.5 }}>
+          <ListItem key={item.path} disablePadding sx={{ mb: 0.5 }}>
             <ListItemButton
               selected={location.pathname === item.path}
               onClick={() => {
@@ -152,8 +155,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               WebkitTextFillColor: 'transparent',
             }}
           >
-            市場動向監視システム
+            {t('app.title')}
           </Typography>
+          {/* スペーサー + 言語切り替え */}
+          <Box sx={{ flexGrow: 1 }} />
+          <LocaleSwitcher style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: '4px 8px', fontSize: '0.75rem', color: '#94a3b8', cursor: 'pointer' }} />
         </Toolbar>
       </AppBar>
       <Box

@@ -18,12 +18,16 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 
 from pydantic import Field
 
 from agentflow.datalake.connector import ConnectorConfig, DataConnector
 from agentflow.datalake.core import DataItem, ReadResult
+
+
+if TYPE_CHECKING:
+    import builtins
 
 
 logger = logging.getLogger(__name__)
@@ -75,38 +79,29 @@ class DatabaseConnector(DataConnector):
             config: コネクタ設定
         """
         self._config = config or DatabaseConfig()
-        self._engine = None
-        self._metadata = None
+        self._engine: Any = None
+        self._metadata: Any = None
 
     @property
     def scheme(self) -> str:
         """URIスキーム."""
         return "db"
 
-    async def _get_engine(self):
+    async def _get_engine(self) -> Any:
         """SQLAlchemyエンジンを取得."""
         if self._engine is None:
             try:
                 from sqlalchemy.ext.asyncio import create_async_engine
             except ImportError as e:
-                msg = (
-                    "SQLAlchemy is required for database support. "
-                    "Install with: pip install sqlalchemy[asyncio]"
-                )
-                raise ImportError(
-                    msg
-                ) from e
+                msg = "SQLAlchemy is required for database support. Install with: pip install sqlalchemy[asyncio]"
+                raise ImportError(msg) from e
 
             import os
+
             conn_str = self._config.connection_string or os.getenv("DATABASE_URL")
             if not conn_str:
-                msg = (
-                    "Database connection string required. "
-                    "Set DATABASE_URL environment variable."
-                )
-                raise ValueError(
-                    msg
-                )
+                msg = "Database connection string required. Set DATABASE_URL environment variable."
+                raise ValueError(msg)
 
             self._engine = create_async_engine(
                 conn_str,
@@ -159,9 +154,9 @@ class DatabaseConnector(DataConnector):
 
         async with engine.connect() as conn:
             # 同期inspectorを使用
-            def get_tables(connection):
+            def get_tables(connection: Any) -> list[str]:
                 inspector = inspect(connection)
-                return inspector.get_table_names()
+                return cast("list[str]", inspector.get_table_names())
 
             tables = await conn.run_sync(get_tables)
 
@@ -224,7 +219,7 @@ class DatabaseConnector(DataConnector):
     async def write(
         self,
         path: str,
-        content: bytes | str | list[dict],
+        content: bytes | str | builtins.list[dict[str, Any]],
         content_type: str | None = None,
         metadata: dict[str, str] | None = None,
     ) -> DataItem:
@@ -247,7 +242,11 @@ class DatabaseConnector(DataConnector):
         # データ準備
         if isinstance(content, bytes):
             content = content.decode("utf-8")
-        rows = json.loads(content) if isinstance(content, str) else content
+        loaded = json.loads(content) if isinstance(content, str) else content
+        if not isinstance(loaded, list):
+            msg = "Content must be a list of records"
+            raise ValueError(msg)
+        rows: list[dict[str, Any]] = [row for row in loaded if isinstance(row, dict)]
 
         if not rows:
             msg = "No data to insert"
@@ -286,11 +285,13 @@ class DatabaseConnector(DataConnector):
         schema, table = self._parse_path(path)
 
         async with engine.connect() as conn:
-            def check_table(connection):
+
+            def check_table(connection: Any) -> bool:
                 inspector = inspect(connection)
                 return table in inspector.get_table_names(schema=schema)
 
-            return await conn.run_sync(check_table)
+            exists = await conn.run_sync(check_table)
+            return bool(exists)
 
     async def delete(self, path: str) -> bool:
         """テーブルを削除（DROP TABLE）.
@@ -328,7 +329,7 @@ class DatabaseConnector(DataConnector):
         path: str,
         query: str,
         **kwargs: Any,
-    ) -> list[dict[str, Any]]:
+    ) -> builtins.list[dict[str, Any]]:
         """SQLクエリを実行.
 
         Args:
@@ -375,11 +376,10 @@ class DatabaseConnector(DataConnector):
 
         async with engine.begin() as conn:
             result = await conn.execute(text(sql), params or {})
-            return result.rowcount
+            return int(result.rowcount or 0)
 
     async def close(self) -> None:
         """エンジンをクローズ."""
         if self._engine:
             await self._engine.dispose()
             self._engine = None
-

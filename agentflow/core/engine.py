@@ -4,7 +4,7 @@ import logging
 import time
 import uuid
 from collections.abc import Awaitable, Callable
-from typing import Any
+from typing import Any, cast
 
 from pocketflow import AsyncFlow, AsyncNode
 
@@ -81,9 +81,7 @@ class HookedNode(AsyncNode):  # type: ignore[misc]
 
         return result  # type: ignore[no-any-return]
 
-    async def exec_fallback_async(
-        self, _prep_res: dict[str, Any], exc: Exception
-    ) -> dict[str, Any]:
+    async def exec_fallback_async(self, _prep_res: dict[str, Any], exc: Exception) -> dict[str, Any]:
         """エラー発生時のフォールバック処理.
 
         Args:
@@ -262,7 +260,7 @@ class AgentFlowEngine:
                     if "outputs" in data:
                         data["outputs"]["coordinator_result"] = result
 
-                    return result
+                    return cast("dict[str, Any]", result)
 
                 return coordinator_func
 
@@ -296,9 +294,7 @@ class AgentFlowEngine:
             node_id = node_config["id"]
             # startタイプのノード、またはどのedgeのターゲットにもなっていないノード
             is_start = node_config.get("type") == "start"
-            is_not_target = not any(
-                (e.get("target") or e.get("to")) == node_id for e in workflow.edges
-            )
+            is_not_target = not any((e.get("target") or e.get("to")) == node_id for e in workflow.edges)
             if is_start or is_not_target:
                 start_node = nodes[node_id]
                 break
@@ -372,8 +368,7 @@ class AgentFlowEngine:
 
             duration = time.time() - start_time
             self._logger.info(
-                f"Execution completed: workflow={workflow_id}, "
-                f"execution={execution_id}, duration={duration:.2f}s"
+                f"Execution completed: workflow={workflow_id}, execution={execution_id}, duration={duration:.2f}s"
             )
 
             return ExecutionResult(
@@ -389,9 +384,7 @@ class AgentFlowEngine:
             await self._hooks.trigger(HookType.ON_ERROR, context, e)
 
             duration = time.time() - start_time
-            self._logger.exception(
-                f"Execution failed: workflow={workflow_id}, execution={execution_id}"
-            )
+            self._logger.exception(f"Execution failed: workflow={workflow_id}, execution={execution_id}")
 
             return ExecutionResult(
                 status="error",

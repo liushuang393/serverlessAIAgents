@@ -124,9 +124,7 @@ class UserInteractionSkill:
 
         return missing
 
-    def _is_mentioned(
-        self, question: str, field_name: str, keywords: list[str] | None = None
-    ) -> bool:
+    def _is_mentioned(self, question: str, field_name: str, keywords: list[str] | None = None) -> bool:
         """キーワードが言及されているかチェック."""
         check_words = keywords or self.COMMON_MISSING_PATTERNS.get(field_name, [])
         question_lower = question.lower()
@@ -213,4 +211,3 @@ __all__ = [
     "EnrichedQuestion",
     "UserInteractionSkill",
 ]
-

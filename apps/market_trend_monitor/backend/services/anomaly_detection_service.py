@@ -11,9 +11,11 @@ import math
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from apps.market_trend_monitor.backend.models import Evidence, Trend
+
+if TYPE_CHECKING:
+    from apps.market_trend_monitor.backend.models import Evidence, Trend
 
 
 @dataclass
@@ -97,16 +99,18 @@ class AnomalyDetectionService:
             z = self.calculate_z_score(values, float(count))
             if abs(z) >= self.LOW_THRESHOLD:
                 severity = self._classify_severity(abs(z))
-                anomalies.append(Anomaly(
-                    id=str(uuid.uuid4()),
-                    metric_name="evidence_volume",
-                    timestamp=datetime.fromisoformat(date_key),
-                    expected_value=mean_val,
-                    actual_value=float(count),
-                    z_score=z,
-                    severity=severity,
-                    metadata={"window_days": window_days, "bucket_days": bucket_days},
-                ))
+                anomalies.append(
+                    Anomaly(
+                        id=str(uuid.uuid4()),
+                        metric_name="evidence_volume",
+                        timestamp=datetime.fromisoformat(date_key),
+                        expected_value=mean_val,
+                        actual_value=float(count),
+                        z_score=z,
+                        severity=severity,
+                        metadata={"window_days": window_days, "bucket_days": bucket_days},
+                    )
+                )
 
         return sorted(anomalies, key=lambda a: abs(a.z_score), reverse=True)
 
@@ -128,7 +132,8 @@ class AnomalyDetectionService:
         sentiment_scores = []
         for trend in trends:
             score = {"positive": 1.0, "neutral": 0.0, "negative": -1.0}.get(
-                trend.sentiment.value, 0.0,
+                trend.sentiment.value,
+                0.0,
             )
             sentiment_scores.append((trend, score))
 
@@ -142,19 +147,21 @@ class AnomalyDetectionService:
             z = self.calculate_z_score(values, score)
             if abs(z) >= self.LOW_THRESHOLD:
                 severity = self._classify_severity(abs(z))
-                anomalies.append(Anomaly(
-                    id=str(uuid.uuid4()),
-                    metric_name="sentiment_shift",
-                    timestamp=trend.created_at,
-                    expected_value=sum(values) / len(values),
-                    actual_value=score,
-                    z_score=z,
-                    severity=severity,
-                    metadata={
-                        "trend_topic": trend.topic,
-                        "sentiment": trend.sentiment.value,
-                    },
-                ))
+                anomalies.append(
+                    Anomaly(
+                        id=str(uuid.uuid4()),
+                        metric_name="sentiment_shift",
+                        timestamp=trend.created_at,
+                        expected_value=sum(values) / len(values),
+                        actual_value=score,
+                        z_score=z,
+                        severity=severity,
+                        metadata={
+                            "trend_topic": trend.topic,
+                            "sentiment": trend.sentiment.value,
+                        },
+                    )
+                )
 
         return sorted(anomalies, key=lambda a: abs(a.z_score), reverse=True)
 
@@ -180,16 +187,18 @@ class AnomalyDetectionService:
             z = self.calculate_z_score(growth_rates, trend.growth_rate)
             if abs(z) >= self.LOW_THRESHOLD:
                 severity = self._classify_severity(abs(z))
-                anomalies.append(Anomaly(
-                    id=str(uuid.uuid4()),
-                    metric_name="growth_rate_anomaly",
-                    timestamp=trend.created_at,
-                    expected_value=sum(growth_rates) / len(growth_rates),
-                    actual_value=trend.growth_rate,
-                    z_score=z,
-                    severity=severity,
-                    metadata={"trend_topic": trend.topic},
-                ))
+                anomalies.append(
+                    Anomaly(
+                        id=str(uuid.uuid4()),
+                        metric_name="growth_rate_anomaly",
+                        timestamp=trend.created_at,
+                        expected_value=sum(growth_rates) / len(growth_rates),
+                        actual_value=trend.growth_rate,
+                        z_score=z,
+                        severity=severity,
+                        metadata={"trend_topic": trend.topic},
+                    )
+                )
 
         return sorted(anomalies, key=lambda a: abs(a.z_score), reverse=True)
 
@@ -250,7 +259,10 @@ class AnomalyDetectionService:
         for evidence in evidences:
             ts = evidence.collected_at
             bucket_date = ts.replace(
-                hour=0, minute=0, second=0, microsecond=0,
+                hour=0,
+                minute=0,
+                second=0,
+                microsecond=0,
             )
             if bucket_days > 1:
                 days_offset = (bucket_date - datetime(2020, 1, 1)).days

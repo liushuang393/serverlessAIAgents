@@ -57,10 +57,23 @@ class InternalKBConfig:
 
     # 保守モード（規則類）
     conservative_mode: bool = True
-    conservative_keywords: list[str] = field(default_factory=lambda: [
-        "規則", "規程", "ポリシー", "制度", "規定", "手続き", "申請",
-        "就業", "休暇", "給与", "人事", "福利厚生", "セキュリティ",
-    ])
+    conservative_keywords: list[str] = field(
+        default_factory=lambda: [
+            "規則",
+            "規程",
+            "ポリシー",
+            "制度",
+            "規定",
+            "手続き",
+            "申請",
+            "就業",
+            "休暇",
+            "給与",
+            "人事",
+            "福利厚生",
+            "セキュリティ",
+        ]
+    )
 
     # 引用設定
     require_citation: bool = True
@@ -200,9 +213,7 @@ class InternalKBAgent(ResilientAgent):
         user_context = input_data.get("user_context", {})
 
         if not question:
-            return InternalKBResponse(
-                error="質問が指定されていません"
-            ).model_dump()
+            return InternalKBResponse(error="質問が指定されていません").model_dump()
 
         await self._ensure_initialized()
 
@@ -224,28 +235,20 @@ class InternalKBAgent(ResilientAgent):
 
             # 4. 回答生成
             if is_rule_query and self._config.conservative_mode:
-                response = await self._generate_conservative_answer(
-                    question, search_results
-                )
+                response = await self._generate_conservative_answer(question, search_results)
                 response.conservative_mode_used = True
             else:
-                response = await self._generate_answer(
-                    question, search_results
-                )
+                response = await self._generate_answer(question, search_results)
 
             response.question = question
             response.query_type = "rule" if is_rule_query else "faq"
 
             # 5. 不確定判定
             if response.confidence < self._config.uncertainty_threshold:
-                response = await self._handle_uncertainty(
-                    question, response, user_context
-                )
+                response = await self._handle_uncertainty(question, response, user_context)
 
             # 実行時間
-            response.execution_time_ms = (
-                datetime.now() - start_time
-            ).total_seconds() * 1000
+            response.execution_time_ms = (datetime.now() - start_time).total_seconds() * 1000
 
             return response.model_dump()
 
@@ -254,14 +257,10 @@ class InternalKBAgent(ResilientAgent):
             return InternalKBResponse(
                 question=question,
                 error=str(e),
-                execution_time_ms=(
-                    datetime.now() - start_time
-                ).total_seconds() * 1000,
+                execution_time_ms=(datetime.now() - start_time).total_seconds() * 1000,
             ).model_dump()
 
-    async def run_stream(
-        self, input_data: dict[str, Any]
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def run_stream(self, input_data: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """ストリーム実行.
 
         Args:
@@ -311,9 +310,7 @@ class InternalKBAgent(ResilientAgent):
             "data": result,
         }
 
-    async def _check_permission(
-        self, user_context: dict[str, Any]
-    ) -> dict[str, Any]:
+    async def _check_permission(self, user_context: dict[str, Any]) -> dict[str, Any]:
         """権限チェック.
 
         Args:
@@ -358,10 +355,7 @@ class InternalKBAgent(ResilientAgent):
             規則類の場合True
         """
         question_lower = question.lower()
-        return any(
-            keyword in question_lower
-            for keyword in self._config.conservative_keywords
-        )
+        return any(keyword in question_lower for keyword in self._config.conservative_keywords)
 
     async def _search(
         self,
@@ -424,16 +418,18 @@ class InternalKBAgent(ResilientAgent):
 
         for i, result in enumerate(search_results[:5]):
             context_parts.append(f"[{i + 1}] {result['content']}")
-            citations.append(Citation(
-                index=i + 1,
-                document_id=result.get("document_id", ""),
-                title=result.get("citation", {}).get("title", ""),
-                source=result.get("citation", {}).get("source", ""),
-                version=result.get("citation", {}).get("version", ""),
-                update_date=result.get("citation", {}).get("update_date", ""),
-                snippet=result.get("content", "")[:200],
-                relevance_score=result.get("score", 0.0),
-            ))
+            citations.append(
+                Citation(
+                    index=i + 1,
+                    document_id=result.get("document_id", ""),
+                    title=result.get("citation", {}).get("title", ""),
+                    source=result.get("citation", {}).get("source", ""),
+                    version=result.get("citation", {}).get("version", ""),
+                    update_date=result.get("citation", {}).get("update_date", ""),
+                    snippet=result.get("content", "")[:200],
+                    relevance_score=result.get("score", 0.0),
+                )
+            )
 
         "\n\n".join(context_parts)
 
@@ -476,16 +472,18 @@ class InternalKBAgent(ResilientAgent):
         top_result = search_results[0]
         content = top_result.get("content", "")
 
-        citations = [Citation(
-            index=1,
-            document_id=top_result.get("document_id", ""),
-            title=top_result.get("citation", {}).get("title", ""),
-            source=top_result.get("citation", {}).get("source", ""),
-            version=top_result.get("citation", {}).get("version", ""),
-            update_date=top_result.get("citation", {}).get("update_date", ""),
-            snippet=content[:300],
-            relevance_score=top_result.get("score", 0.0),
-        )]
+        citations = [
+            Citation(
+                index=1,
+                document_id=top_result.get("document_id", ""),
+                title=top_result.get("citation", {}).get("title", ""),
+                source=top_result.get("citation", {}).get("source", ""),
+                version=top_result.get("citation", {}).get("version", ""),
+                update_date=top_result.get("citation", {}).get("update_date", ""),
+                snippet=content[:300],
+                relevance_score=top_result.get("score", 0.0),
+            )
+        ]
 
         # 直接摘録
         answer = f"規則・制度に基づく回答:\n\n「{content}」\n\n[1] より引用"
@@ -537,9 +535,7 @@ class InternalKBAgent(ResilientAgent):
 
         return response
 
-    def _get_responsible_contacts(
-        self, question: str
-    ) -> list[dict[str, str]]:
+    def _get_responsible_contacts(self, question: str) -> list[dict[str, str]]:
         """担当者連絡先を取得.
 
         Args:
@@ -566,10 +562,12 @@ class InternalKBAgent(ResilientAgent):
 
         # デフォルト連絡先
         if not contacts:
-            contacts.append({
-                "department": "総務部",
-                "email": "general@example.com",
-            })
+            contacts.append(
+                {
+                    "department": "総務部",
+                    "email": "general@example.com",
+                }
+            )
 
         return contacts
 

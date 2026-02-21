@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/evolution/strategy-capsule.v1.json",
+  "title": "StrategyCapsuleV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "intent",
+    "environment_fingerprint",
+    "tool_sequence",
+    "guard_conditions",
+    "expected_output",
+    "validation_method",
+    "keywords",
+    "scope",
+    "validity"
+  ],
+  "properties": {
+    "intent": {
+      "type": "string",
+      "minLength": 1
+    },
+    "environment_fingerprint": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "tool_sequence": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "guard_conditions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "expected_output": {
+      "type": "string"
+    },
+    "validation_method": {
+      "type": "string"
+    },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scope_level"],
+      "properties": {
+        "scope_level": {
+          "type": "string",
+          "enum": ["tenant_app", "tenant_product_line", "global_verified"]
+        },
+        "tenant_id": { "type": ["string", "null"] },
+        "app_id": { "type": ["string", "null"] },
+        "product_line": { "type": ["string", "null"] }
+      }
+    },
+    "validity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_age_days"],
+      "properties": {
+        "valid_from": { "type": ["string", "null"], "format": "date-time" },
+        "valid_to": { "type": ["string", "null"], "format": "date-time" },
+        "max_age_days": { "type": "integer", "minimum": 1, "maximum": 3650 }
+      }
+    }
+  }
+}

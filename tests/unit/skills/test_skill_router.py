@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """SkillRouter テスト.
 
 Anthropic Skills体系準拠の軽量Skill選択層をテスト。
@@ -114,7 +113,7 @@ class TestSkillRouter:
         """初期化とルーティング統合テスト."""
         router = SkillRouter()
         await router.initialize()
-        
+
         assert router._initialized is True
         assert router.skill_count > 0
 
@@ -147,4 +146,3 @@ class TestSkillRouter:
         router = SkillRouter()
         skill = router.get_skill("nonexistent")
         assert skill is None
-

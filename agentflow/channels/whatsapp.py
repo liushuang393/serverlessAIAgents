@@ -135,7 +135,7 @@ class WhatsAppAdapter(MessageChannelAdapter):
             data = response.json()
             message_id = data.get("messages", [{}])[0].get("id", "")
             self._logger.info(f"Sent WhatsApp message: {message_id}")
-            return message_id
+            return str(message_id)
 
         except httpx.HTTPStatusError as e:
             self._logger.exception(f"WhatsApp API error: {e.response.text}")
@@ -208,7 +208,7 @@ class WhatsAppAdapter(MessageChannelAdapter):
             response = await self._client.post(url, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
-            return data.get("messages", [{}])[0].get("id", "")
+            return str(data.get("messages", [{}])[0].get("id", ""))
         except Exception as e:
             self._logger.error(f"Failed to send WhatsApp image: {e}", exc_info=True)
             raise
@@ -254,7 +254,7 @@ class WhatsAppAdapter(MessageChannelAdapter):
             response = await self._client.post(url, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
-            return data.get("messages", [{}])[0].get("id", "")
+            return str(data.get("messages", [{}])[0].get("id", ""))
         except Exception as e:
             self._logger.error(f"Failed to send WhatsApp template: {e}", exc_info=True)
             raise
@@ -324,11 +324,9 @@ class WhatsAppAdapter(MessageChannelAdapter):
             response = await self._client.post(url, headers=headers, json=payload)
             response.raise_for_status()
             data = response.json()
-            return data.get("messages", [{}])[0].get("id", "")
+            return str(data.get("messages", [{}])[0].get("id", ""))
         except Exception as e:
-            self._logger.error(
-                f"Failed to send WhatsApp interactive: {e}", exc_info=True
-            )
+            self._logger.error(f"Failed to send WhatsApp interactive: {e}", exc_info=True)
             raise
 
     def verify_webhook(self, mode: str, token: str, challenge: str) -> str | None:
@@ -458,4 +456,3 @@ class WhatsAppAdapter(MessageChannelAdapter):
     async def close(self) -> None:
         """HTTP クライアントをクローズ."""
         await self._client.aclose()
-

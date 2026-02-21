@@ -83,9 +83,7 @@ class TestLifecycleHooks:
             assert hooks.get_hooks(hook_type) == []
 
     @pytest.mark.asyncio
-    async def test_register_and_trigger_hook(
-        self, hooks: LifecycleHooks, execution_context: ExecutionContext
-    ) -> None:
+    async def test_register_and_trigger_hook(self, hooks: LifecycleHooks, execution_context: ExecutionContext) -> None:
         """フックの登録とトリガーをテスト."""
         called = []
 
@@ -98,9 +96,7 @@ class TestLifecycleHooks:
         assert called == ["test-workflow"]
 
     @pytest.mark.asyncio
-    async def test_register_multiple_hooks(
-        self, hooks: LifecycleHooks, execution_context: ExecutionContext
-    ) -> None:
+    async def test_register_multiple_hooks(self, hooks: LifecycleHooks, execution_context: ExecutionContext) -> None:
         """複数のフックを登録してトリガーをテスト."""
         call_order = []
 
@@ -149,9 +145,7 @@ class TestLifecycleHooks:
         assert received_kwargs == [{"result": "success", "duration": 1.5}]
 
     @pytest.mark.asyncio
-    async def test_unregister_hook(
-        self, hooks: LifecycleHooks, execution_context: ExecutionContext
-    ) -> None:
+    async def test_unregister_hook(self, hooks: LifecycleHooks, execution_context: ExecutionContext) -> None:
         """フックの登録解除をテスト."""
         called = []
 
@@ -196,9 +190,7 @@ class TestLifecycleHooks:
         assert call_order == ["callback2"]
 
     @pytest.mark.asyncio
-    async def test_clear_specific_hook_type(
-        self, hooks: LifecycleHooks, execution_context: ExecutionContext
-    ) -> None:
+    async def test_clear_specific_hook_type(self, hooks: LifecycleHooks, execution_context: ExecutionContext) -> None:
         """特定のフックタイプをクリアをテスト."""
         called = []
 
@@ -217,9 +209,7 @@ class TestLifecycleHooks:
         assert called == ["test-workflow"]
 
     @pytest.mark.asyncio
-    async def test_clear_all_hooks(
-        self, hooks: LifecycleHooks, execution_context: ExecutionContext
-    ) -> None:
+    async def test_clear_all_hooks(self, hooks: LifecycleHooks, execution_context: ExecutionContext) -> None:
         """すべてのフックをクリアをテスト."""
         called = []
 

@@ -38,9 +38,7 @@ class AdapterFactory:
             config_path: 設定ファイルパス（省略時はデフォルト）
         """
         if config_path is None:
-            config_path = (
-                Path(__file__).parent.parent / "config" / "migration_types.yaml"
-            )
+            config_path = Path(__file__).parent.parent / "config" / "migration_types.yaml"
 
         self._config_path = config_path
         self._config: dict[str, Any] = {}
@@ -133,9 +131,7 @@ class AdapterFactory:
 
         if not language:
             # デフォルト設定を使用
-            default_type = self._config.get("defaults", {}).get(
-                "migration_type", "cobol-to-java"
-            )
+            default_type = self._config.get("defaults", {}).get("migration_type", "cobol-to-java")
             mt_config = self._migration_types.get(default_type, {})
             language = mt_config.get("source", {}).get("language", "COBOL")
 
@@ -171,9 +167,7 @@ class AdapterFactory:
             language = mt_config["target"]["language"]
 
         if not language:
-            default_type = self._config.get("defaults", {}).get(
-                "migration_type", "cobol-to-java"
-            )
+            default_type = self._config.get("defaults", {}).get("migration_type", "cobol-to-java")
             mt_config = self._migration_types.get(default_type, {})
             language = mt_config.get("target", {}).get("language", "Java")
 
@@ -219,9 +213,7 @@ class AdapterFactory:
         if not prompt_file:
             return ""
 
-        prompt_path = (
-            Path(__file__).parent.parent / "config" / "prompts" / prompt_file
-        )
+        prompt_path = Path(__file__).parent.parent / "config" / "prompts" / prompt_file
 
         if prompt_path.exists():
             return prompt_path.read_text(encoding="utf-8")
@@ -251,9 +243,7 @@ class AdapterFactory:
         if not mapping_file:
             return {}
 
-        mapping_path = (
-            Path(__file__).parent.parent / "config" / "type_mappings" / mapping_file
-        )
+        mapping_path = Path(__file__).parent.parent / "config" / "type_mappings" / mapping_file
 
         if mapping_path.exists():
             with open(mapping_path, encoding="utf-8") as f:
@@ -276,4 +266,3 @@ def get_adapter_factory() -> AdapterFactory:
     if _factory_instance is None:
         _factory_instance = AdapterFactory()
     return _factory_instance
-

@@ -73,10 +73,7 @@ class TeamsAdapter(MessageChannelAdapter):
             from botbuilder.core import TurnContext
             from botbuilder.schema import Activity, ActivityTypes
         except ImportError as e:
-            msg = (
-                "botbuilder-core is required for TeamsAdapter. "
-                "Install it with: pip install botbuilder-core>=4.14"
-            )
+            msg = "botbuilder-core is required for TeamsAdapter. Install it with: pip install botbuilder-core>=4.14"
             raise ImportError(msg) from e
 
         self._app_id = app_id
@@ -139,10 +136,12 @@ class TeamsAdapter(MessageChannelAdapter):
                 if adaptive_card:
                     activity = Activity(
                         type=ActivityTypes.message,
-                        attachments=[{
-                            "contentType": "application/vnd.microsoft.card.adaptive",
-                            "content": adaptive_card,
-                        }],
+                        attachments=[
+                            {
+                                "contentType": "application/vnd.microsoft.card.adaptive",
+                                "content": adaptive_card,
+                            }
+                        ],
                     )
                     response = await turn_context.send_activity(activity)
                 else:
@@ -254,9 +253,7 @@ class TeamsAdapter(MessageChannelAdapter):
 
                 # 会話参照を保存（Proactive メッセージ用）
                 if channel_id:
-                    self._conversation_references[channel_id] = (
-                        activity.get_conversation_reference()
-                    )
+                    self._conversation_references[channel_id] = activity.get_conversation_reference()
 
                 # ゲートウェイにルーティング
                 if user_id and channel_id and text:
@@ -269,11 +266,7 @@ class TeamsAdapter(MessageChannelAdapter):
                             "activity_id": activity.id,
                             "service_url": activity.service_url,
                             "channel_type": activity.channel_id,
-                            "tenant_id": (
-                                activity.conversation.tenant_id
-                                if activity.conversation
-                                else None
-                            ),
+                            "tenant_id": (activity.conversation.tenant_id if activity.conversation else None),
                         },
                     )
 
@@ -304,4 +297,3 @@ class TeamsAdapter(MessageChannelAdapter):
             text,
             adaptive_card=card,
         )
-

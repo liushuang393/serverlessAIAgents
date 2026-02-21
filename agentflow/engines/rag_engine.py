@@ -21,7 +21,7 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from agentflow.engines.base import BaseEngine, EngineConfig
 
@@ -52,7 +52,7 @@ class RAGEngine(BaseEngine):
         vector_store: str | Any | None = None,
         top_k: int = 5,
         chunk_size: int = 500,
-        retriever: Callable[[str], list[dict[str, Any]]] | None = None,
+        retriever: Callable[[str], Any] | None = None,
         context_template: str | None = None,
         config: EngineConfig | None = None,
     ) -> None:
@@ -103,11 +103,15 @@ class RAGEngine(BaseEngine):
         # RAG Pipelineを初期化（カスタムretrieverがない場合）
         if not self._retriever and self._vector_store:
             try:
-                from agentflow.knowledge.rag_pipeline import RAGPipeline
+                from agentflow.knowledge.rag_pipeline import RAGConfig, RAGPipeline
+
+                collection_name = self._vector_store if isinstance(self._vector_store, str) else "agentflow_rag"
+                rag_config = RAGConfig(collection_name=collection_name, top_k=self._top_k)
+
                 self._rag_pipeline = RAGPipeline(
-                    vector_store=self._vector_store,
-                    top_k=self._top_k,
+                    config=rag_config,
                 )
+                await self._rag_pipeline.start()
             except ImportError:
                 self._logger.warning("RAGPipeline not available, using mock retriever")
                 self._retriever = self._mock_retriever
@@ -124,10 +128,16 @@ class RAGEngine(BaseEngine):
             result = self._retriever(query)
             # 同期と非同期retrieverをサポート
             if hasattr(result, "__await__"):
-                return await result
-            return result
+                awaited = await result
+                result = awaited
+            if isinstance(result, list):
+                return [item if isinstance(item, dict) else {"result": item} for item in result]
+            return [result if isinstance(result, dict) else {"result": result}]
         if self._rag_pipeline:
-            return await self._rag_pipeline.retrieve(query)
+            results = await self._rag_pipeline.search(query, top_k=self._top_k)
+            if isinstance(results, list):
+                return [item if isinstance(item, dict) else {"result": item} for item in results]
+            return []
         return self._mock_retriever(query)
 
     def _format_context(self, documents: list[dict[str, Any]]) -> str:
@@ -154,7 +164,7 @@ class RAGEngine(BaseEngine):
         if isinstance(result, dict):
             return result
         if hasattr(result, "model_dump"):
-            return result.model_dump()
+            return cast("dict[str, Any]", result.model_dump())
         return {"result": result}
 
     async def _execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -175,9 +185,7 @@ class RAGEngine(BaseEngine):
             **inputs,
             "context": context,
             "documents": documents,
-            "augmented_prompt": self._context_template.format(
-                context=context, question=query
-            ),
+            "augmented_prompt": self._context_template.format(context=context, question=query),
         }
 
         # Step 4: Agentを実行
@@ -189,9 +197,7 @@ class RAGEngine(BaseEngine):
             "query": query,
         }
 
-    async def _execute_stream(
-        self, inputs: dict[str, Any]
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def _execute_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """RAG + Agentをストリーム実行."""
         query = inputs.get("question") or inputs.get("query") or str(inputs)
 
@@ -216,15 +222,11 @@ class RAGEngine(BaseEngine):
             **inputs,
             "context": context,
             "documents": documents,
-            "augmented_prompt": self._context_template.format(
-                context=context, question=query
-            ),
+            "augmented_prompt": self._context_template.format(context=context, question=query),
         }
 
         # Agent実行
-        agent_name = getattr(
-            self._agent_instance, "name", self._agent_instance.__class__.__name__
-        )
+        agent_name = getattr(self._agent_instance, "name", self._agent_instance.__class__.__name__)
         if event := self._emit_node_start(agent_name):
             yield event
 
@@ -241,4 +243,3 @@ class RAGEngine(BaseEngine):
                 "query": query,
             },
         }
-

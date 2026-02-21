@@ -25,6 +25,7 @@ from agentflow.code_intelligence.ast.unified_ast import (
 from agentflow.code_intelligence.parsers.base import (
     CodeParser,
     ParseContext,
+    ParseError,
     ParseResult,
 )
 
@@ -69,14 +70,14 @@ class CobolParser(CodeParser):
         """
         start_time = time.time()
         context = context or ParseContext()
-        errors: list[str] = []
+        errors: list[ParseError] = []
         warnings: list[str] = []
 
         try:
             if not source_code or not source_code.strip():
                 return ParseResult(
                     success=False,
-                    errors=["Source code cannot be empty"],
+                    errors=[ParseError("Source code cannot be empty")],
                 )
 
             lines = source_code.split("\n")
@@ -84,7 +85,7 @@ class CobolParser(CodeParser):
             # プログラム情報を抽出
             program_id = self._extract_program_id(lines)
             if not program_id:
-                errors.append("PROGRAM-ID not found")
+                errors.append(ParseError("PROGRAM-ID not found"))
 
             # DIVISION別に解析
             divisions = self._parse_divisions(lines)
@@ -176,7 +177,7 @@ class CobolParser(CodeParser):
             _logger.exception(f"COBOL parsing failed: {e}")
             return ParseResult(
                 success=False,
-                errors=[str(e)],
+                errors=[ParseError(str(e))],
             )
 
     def _extract_program_id(self, lines: list[str]) -> str | None:
@@ -235,12 +236,14 @@ class CobolParser(CodeParser):
                 pic = match.group(3)
                 cobol_type = self._infer_type_from_pic(pic)
 
-                variables.append({
-                    "level": level,
-                    "name": name,
-                    "pic": pic,
-                    "type": cobol_type,
-                })
+                variables.append(
+                    {
+                        "level": level,
+                        "name": name,
+                        "pic": pic,
+                        "type": cobol_type,
+                    }
+                )
 
         return variables
 
@@ -262,8 +265,7 @@ class CobolParser(CodeParser):
         for line in proc_lines:
             # PARAGRAPH/SECTIONを検出
             if line.endswith(".") and not any(
-                kw in line.upper()
-                for kw in ["MOVE", "ADD", "DISPLAY", "IF", "PERFORM", "STOP"]
+                kw in line.upper() for kw in ["MOVE", "ADD", "DISPLAY", "IF", "PERFORM", "STOP"]
             ):
                 # 前のプロシージャを保存
                 if current_proc:
@@ -290,6 +292,7 @@ def _register() -> None:
     """パーサーをレジストリに登録."""
     try:
         from agentflow.code_intelligence.parsers.registry import register_parser
+
         register_parser("cobol", CobolParser)
     except ImportError:
         pass

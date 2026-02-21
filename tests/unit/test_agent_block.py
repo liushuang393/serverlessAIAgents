@@ -103,9 +103,7 @@ class TestAgentBlock:
         result = await agent.run({"text": "hello"})
         assert result["result"] == "ok"
 
-    def test_load_metadata(
-        self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path
-    ) -> None:
+    def test_load_metadata(self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path) -> None:
         """メタデータを読み込めることをテスト."""
         agent = concrete_agent_class(metadata_path=sample_metadata_file)
         metadata = agent.load_metadata()
@@ -113,9 +111,7 @@ class TestAgentBlock:
         assert isinstance(metadata, AgentMetadata)
         assert metadata.meta.name == "Test Agent"
 
-    def test_load_metadata_with_nonexistent_file(
-        self, concrete_agent_class: type[AgentBlock], tmp_path: Path
-    ) -> None:
+    def test_load_metadata_with_nonexistent_file(self, concrete_agent_class: type[AgentBlock], tmp_path: Path) -> None:
         """存在しないメタデータファイルを読み込もうとするとエラーになることをテスト."""
         nonexistent_file = tmp_path / "nonexistent.yaml"
         agent = concrete_agent_class(metadata_path=nonexistent_file)
@@ -123,9 +119,7 @@ class TestAgentBlock:
         with pytest.raises(FileNotFoundError):
             agent.load_metadata()
 
-    def test_metadata_property(
-        self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path
-    ) -> None:
+    def test_metadata_property(self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path) -> None:
         """metadata プロパティをテスト."""
         agent = concrete_agent_class(metadata_path=sample_metadata_file)
         agent.load_metadata()
@@ -133,17 +127,13 @@ class TestAgentBlock:
         assert agent.metadata is not None
         assert isinstance(agent.metadata, AgentMetadata)
 
-    def test_engine_property(
-        self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path
-    ) -> None:
+    def test_engine_property(self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path) -> None:
         """engine プロパティをテスト."""
         agent = concrete_agent_class(metadata_path=sample_metadata_file)
 
         assert isinstance(agent.engine, AgentFlowEngine)
 
-    def test_custom_engine(
-        self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path
-    ) -> None:
+    def test_custom_engine(self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path) -> None:
         """カスタムエンジンを渡せることをテスト."""
         custom_engine = AgentFlowEngine()
         agent = concrete_agent_class(metadata_path=sample_metadata_file, engine=custom_engine)
@@ -166,9 +156,7 @@ class TestAgentBlock:
         assert not agent.is_initialized
 
     @pytest.mark.asyncio
-    async def test_context_manager(
-        self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path
-    ) -> None:
+    async def test_context_manager(self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path) -> None:
         """非同期コンテキストマネージャーをテスト."""
         agent = concrete_agent_class(metadata_path=sample_metadata_file)
 
@@ -191,9 +179,7 @@ class TestAgentBlock:
         assert hasattr(agent, "get_a2a_card")
         assert hasattr(agent, "create_agui_emitter")
 
-    def test_get_mcp_tools(
-        self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path
-    ) -> None:
+    def test_get_mcp_tools(self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path) -> None:
         """get_mcp_tools メソッドをテスト."""
         agent = concrete_agent_class(metadata_path=sample_metadata_file)
         agent.load_metadata()
@@ -201,9 +187,7 @@ class TestAgentBlock:
         tools = agent.get_mcp_tools()
         assert isinstance(tools, list)
 
-    def test_get_a2a_card(
-        self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path
-    ) -> None:
+    def test_get_a2a_card(self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path) -> None:
         """get_a2a_card メソッドをテスト."""
         agent = concrete_agent_class(metadata_path=sample_metadata_file)
         agent.load_metadata()
@@ -212,9 +196,7 @@ class TestAgentBlock:
         assert isinstance(card, AgentCard)
         assert card.name == "Test Agent"
 
-    def test_create_agui_emitter(
-        self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path
-    ) -> None:
+    def test_create_agui_emitter(self, concrete_agent_class: type[AgentBlock], sample_metadata_file: Path) -> None:
         """create_agui_emitter メソッドをテスト."""
         agent = concrete_agent_class(metadata_path=sample_metadata_file)
         agent.load_metadata()
@@ -295,9 +277,7 @@ class TestAgentBlock:
         agent.load_metadata(metadata_path=metadata_file2)
         assert agent.metadata.meta.name == "Test Agent 2"
 
-    def test_get_mcp_tools_with_mcp_protocol(
-        self, concrete_agent_class: type[AgentBlock], tmp_path: Path
-    ) -> None:
+    def test_get_mcp_tools_with_mcp_protocol(self, concrete_agent_class: type[AgentBlock], tmp_path: Path) -> None:
         """MCP プロトコルが有効な場合の get_mcp_tools をテスト."""
         metadata = AgentMetadata(
             meta=MetaInfo(
@@ -337,9 +317,7 @@ class TestAgentBlock:
         tools = agent.get_mcp_tools()
         assert isinstance(tools, list)
 
-    def test_get_a2a_card_with_a2a_protocol(
-        self, concrete_agent_class: type[AgentBlock], tmp_path: Path
-    ) -> None:
+    def test_get_a2a_card_with_a2a_protocol(self, concrete_agent_class: type[AgentBlock], tmp_path: Path) -> None:
         """A2A プロトコルが有効な場合の get_a2a_card をテスト."""
         metadata = AgentMetadata(
             meta=MetaInfo(

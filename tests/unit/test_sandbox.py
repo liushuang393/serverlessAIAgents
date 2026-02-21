@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Sandbox モジュールのユニットテスト."""
 
 import pytest
@@ -156,4 +155,3 @@ class TestGetSandbox:
         config = SandboxConfig(timeout=120.0)
         sandbox = get_sandbox(provider="mock", config=config)
         assert sandbox.config.timeout == 120.0
-

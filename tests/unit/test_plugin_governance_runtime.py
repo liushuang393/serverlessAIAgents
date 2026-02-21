@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """plugin manifest 実行時ガバナンスのテスト."""
 
 from __future__ import annotations

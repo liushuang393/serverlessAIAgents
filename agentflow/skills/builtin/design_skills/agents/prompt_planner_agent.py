@@ -42,25 +42,16 @@ class PromptPlannerAgent(ResilientAgent[PromptPlanInput, PromptPlanOutput]):
     # 役割別プロンプトテンプレート(Stable Diffusion最適化済み)
     ROLE_TEMPLATES: ClassVar[dict[ImageRole, str]] = {
         ImageRole.HERO: (
-            "{subject}, center frame, main product shot, "
-            "dramatic composition, studio backdrop, hero image"
+            "{subject}, center frame, main product shot, dramatic composition, studio backdrop, hero image"
         ),
-        ImageRole.FEATURE: (
-            "{subject}, {feature}, feature highlight, focused detail, contextual setting"
-        ),
-        ImageRole.DETAIL: (
-            "{subject}, extreme close-up, macro detail, texture visible, studio lighting"
-        ),
+        ImageRole.FEATURE: ("{subject}, {feature}, feature highlight, focused detail, contextual setting"),
+        ImageRole.DETAIL: ("{subject}, extreme close-up, macro detail, texture visible, studio lighting"),
         ImageRole.LIFESTYLE: (
-            "{subject}, in use, real-world setting, "
-            "natural environment, candid feel, lifestyle photography"
+            "{subject}, in use, real-world setting, natural environment, candid feel, lifestyle photography"
         ),
-        ImageRole.COMPARISON: (
-            "{subject}, size comparison, with everyday objects, scale reference, flat lay"
-        ),
+        ImageRole.COMPARISON: ("{subject}, size comparison, with everyday objects, scale reference, flat lay"),
         ImageRole.INFOGRAPHIC: (
-            "{subject}, clean background, space for text overlay, "
-            "minimal composition, infographic style"
+            "{subject}, clean background, space for text overlay, minimal composition, infographic style"
         ),
     }
 
@@ -213,8 +204,7 @@ class PromptPlannerAgent(ResilientAgent[PromptPlanInput, PromptPlanOutput]):
 
         return PromptPlanOutput(
             design_concept=(
-                f"{input_data.intent.category.value.replace('_', ' ').title()} "
-                f"for {input_data.intent.subject}"
+                f"{input_data.intent.category.value.replace('_', ' ').title()} for {input_data.intent.subject}"
             ),
             global_style=global_style,
             images=images,
@@ -234,9 +224,7 @@ class PromptPlannerAgent(ResilientAgent[PromptPlanInput, PromptPlanOutput]):
 
 JSON形式で出力: {"enhanced_prompts": [{"image_id": "...", "prompt": "..."}]}"""
 
-        prompts_summary = "\n".join(
-            f"- {img.image_id} ({img.role.value}): {img.prompt}" for img in base_plan.images
-        )
+        prompts_summary = "\n".join(f"- {img.image_id} ({img.role.value}): {img.prompt}" for img in base_plan.images)
         user_prompt = f"""【被写体】{input_data.intent.subject}
 【スタイル】{input_data.intent.style_direction}
 【特徴】{", ".join(input_data.intent.key_features)}

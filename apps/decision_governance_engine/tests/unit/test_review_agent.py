@@ -1,26 +1,26 @@
-# -*- coding: utf-8 -*-
 """Unit tests for ReviewAgent."""
+
 import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from apps.decision_governance_engine.agents.review_agent import ReviewAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
+    ActionPhase,
+    DaoOutput,
+    FaOutput,
+    FindingCategory,
+    FindingSeverity,
+    Implementation,
+    PathOption,
+    ProblemType,
+    QiOutput,
+    ReviewFinding,
     ReviewInput,
     ReviewOutput,
     ReviewVerdict,
-    ReviewFinding,
-    FindingSeverity,
-    FindingCategory,
-    DaoOutput,
-    FaOutput,
     ShuOutput,
-    QiOutput,
-    ProblemType,
-    PathOption,
     StrategyType,
-    ActionPhase,
-    Implementation,
 )
 
 
@@ -112,6 +112,7 @@ class TestReviewAgentInit:
     def test_agent_inherits_resilient_agent(self, review_agent: ReviewAgent) -> None:
         """Test that ReviewAgent inherits from ResilientAgent."""
         from agentflow import ResilientAgent
+
         assert isinstance(review_agent, ResilientAgent)
 
     def test_agent_has_correct_name(self, review_agent: ReviewAgent) -> None:
@@ -145,9 +146,7 @@ class TestReviewAgentOutputStructure:
     """Test cases for ReviewAgent output structure via process()."""
 
     @pytest.mark.asyncio
-    async def test_output_returns_review_output(
-        self, review_agent: ReviewAgent, sample_input: ReviewInput
-    ) -> None:
+    async def test_output_returns_review_output(self, review_agent: ReviewAgent, sample_input: ReviewInput) -> None:
         """Test that output is valid ReviewOutput."""
         result = await review_agent.process(sample_input)
 
@@ -160,9 +159,7 @@ class TestReviewAgentOutputStructure:
         assert 0.0 <= result.confidence_score <= 1.0
 
     @pytest.mark.asyncio
-    async def test_output_has_findings_structure(
-        self, review_agent: ReviewAgent, sample_input: ReviewInput
-    ) -> None:
+    async def test_output_has_findings_structure(self, review_agent: ReviewAgent, sample_input: ReviewInput) -> None:
         """Test that output findings have correct structure."""
         result = await review_agent.process(sample_input)
 
@@ -182,9 +179,7 @@ class TestReviewAgentOutputStructure:
             ]
 
     @pytest.mark.asyncio
-    async def test_output_with_problematic_input(
-        self, review_agent: ReviewAgent
-    ) -> None:
+    async def test_output_with_problematic_input(self, review_agent: ReviewAgent) -> None:
         """Test output with incomplete input data."""
         # Create input with potential issues
         dao_output = DaoOutput(
@@ -218,9 +213,7 @@ class TestReviewAgentOutputStructure:
             first_action="計画開始",
         )
         qi_output = QiOutput(
-            implementations=[
-                Implementation(component="API", technology="Python", estimated_effort="1週間")
-            ],
+            implementations=[Implementation(component="API", technology="Python", estimated_effort="1週間")],
         )
 
         input_data = ReviewInput(
@@ -245,9 +238,7 @@ class TestReviewAgentProcess:
     """Test cases for ReviewAgent.process."""
 
     @pytest.mark.asyncio
-    async def test_process_without_llm(
-        self, review_agent: ReviewAgent, sample_input: ReviewInput
-    ) -> None:
+    async def test_process_without_llm(self, review_agent: ReviewAgent, sample_input: ReviewInput) -> None:
         """Test process falls back to rule-based when no LLM."""
         result = await review_agent.process(sample_input)
 
@@ -255,17 +246,13 @@ class TestReviewAgentProcess:
         assert result.overall_verdict is not None
 
     @pytest.mark.asyncio
-    async def test_process_with_good_input_passes(
-        self, review_agent: ReviewAgent, sample_input: ReviewInput
-    ) -> None:
+    async def test_process_with_good_input_passes(self, review_agent: ReviewAgent, sample_input: ReviewInput) -> None:
         """Test that process passes well-formed input."""
         result = await review_agent.process(sample_input)
 
         # Well-formed input should PASS or have only INFO/WARNING findings
         if result.overall_verdict == ReviewVerdict.PASS:
-            critical_findings = [
-                f for f in result.findings if f.severity == FindingSeverity.CRITICAL
-            ]
+            critical_findings = [f for f in result.findings if f.severity == FindingSeverity.CRITICAL]
             assert len(critical_findings) == 0
 
 
@@ -287,9 +274,7 @@ class TestReviewAgentValidation:
 class TestReviewAgentScoringConsistency:
     """判定と信頼度の整合性テスト."""
 
-    def test_warning_forces_revise_with_capped_confidence(
-        self, review_agent: ReviewAgent
-    ) -> None:
+    def test_warning_forces_revise_with_capped_confidence(self, review_agent: ReviewAgent) -> None:
         """WARNING がある場合は REVISE かつ 80% 未満."""
         findings = [
             ReviewFinding(
@@ -305,9 +290,7 @@ class TestReviewAgentScoringConsistency:
         assert confidence <= 0.79
 
     @pytest.mark.asyncio
-    async def test_llm_output_is_normalized_by_findings(
-        self, sample_input: ReviewInput
-    ) -> None:
+    async def test_llm_output_is_normalized_by_findings(self, sample_input: ReviewInput) -> None:
         """LLM の高信頼 REVISE/PASS 不整合を正規化できること."""
         review_agent = ReviewAgent(llm_client=MagicMock())
         review_agent._call_llm = AsyncMock(
@@ -334,9 +317,7 @@ class TestReviewAgentScoringConsistency:
         assert result.confidence_score <= 0.79
 
     @pytest.mark.asyncio
-    async def test_llm_minimal_patch_is_truncated_to_schema_limits(
-        self, sample_input: ReviewInput
-    ) -> None:
+    async def test_llm_minimal_patch_is_truncated_to_schema_limits(self, sample_input: ReviewInput) -> None:
         """minimal_patch の超過文字列がスキーマ上限に収まること."""
         review_agent = ReviewAgent(llm_client=MagicMock())
         review_agent._call_llm = AsyncMock(

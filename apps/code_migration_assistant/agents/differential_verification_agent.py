@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Differential Verification Agent - 差分検証."""
 
 from __future__ import annotations
@@ -7,8 +6,6 @@ import json
 from decimal import Decimal, InvalidOperation
 from typing import Any
 
-from agentflow import agent
-
 from apps.code_migration_assistant.adapters import TargetLanguageAdapter, get_adapter_factory
 from apps.code_migration_assistant.agents.prompts import DIFFERENTIAL_VERIFICATION_PROMPT
 from apps.code_migration_assistant.workflow.models import (
@@ -16,6 +13,8 @@ from apps.code_migration_assistant.workflow.models import (
     UnknownItem,
     build_meta,
 )
+
+from agentflow import agent
 
 
 @agent
@@ -232,9 +231,7 @@ class DifferentialVerificationAgent:
 
         return result
 
-    def _compare_outputs(
-        self, expected: dict[str, Any], actual: dict[str, Any]
-    ) -> list[dict[str, Any]]:
+    def _compare_outputs(self, expected: dict[str, Any], actual: dict[str, Any]) -> list[dict[str, Any]]:
         """期待値と実測値を比較し差分を返す."""
         diffs: list[dict[str, Any]] = []
         keys = set(expected.keys()) | set(actual.keys())

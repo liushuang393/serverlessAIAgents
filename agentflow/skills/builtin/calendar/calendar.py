@@ -93,12 +93,8 @@ class CalendarEvent:
         return cls(
             id=data.get("id", str(uuid.uuid4())),
             title=data["title"],
-            start=datetime.fromisoformat(data["start"])
-            if isinstance(data["start"], str)
-            else data["start"],
-            end=datetime.fromisoformat(data["end"])
-            if isinstance(data["end"], str)
-            else data["end"],
+            start=datetime.fromisoformat(data["start"]) if isinstance(data["start"], str) else data["start"],
+            end=datetime.fromisoformat(data["end"]) if isinstance(data["end"], str) else data["end"],
             description=data.get("description", ""),
             location=data.get("location", ""),
             attendees=data.get("attendees", []),
@@ -256,15 +252,11 @@ class CalendarSkill:
             event.title = updates["title"]
         if "start" in updates:
             event.start = (
-                updates["start"]
-                if isinstance(updates["start"], datetime)
-                else datetime.fromisoformat(updates["start"])
+                updates["start"] if isinstance(updates["start"], datetime) else datetime.fromisoformat(updates["start"])
             )
         if "end" in updates:
             event.end = (
-                updates["end"]
-                if isinstance(updates["end"], datetime)
-                else datetime.fromisoformat(updates["end"])
+                updates["end"] if isinstance(updates["end"], datetime) else datetime.fromisoformat(updates["end"])
             )
         if "description" in updates:
             event.description = updates["description"]
@@ -347,9 +339,7 @@ class CalendarSkill:
                         start=busy["start"]
                         if isinstance(busy["start"], datetime)
                         else datetime.fromisoformat(busy["start"]),
-                        end=busy["end"]
-                        if isinstance(busy["end"], datetime)
-                        else datetime.fromisoformat(busy["end"]),
+                        end=busy["end"] if isinstance(busy["end"], datetime) else datetime.fromisoformat(busy["end"]),
                     )
                 )
 
@@ -364,12 +354,8 @@ class CalendarSkill:
                 continue
 
             # 営業時間内にリセット
-            work_start = current.replace(
-                hour=self._working_hours[0], minute=0, second=0, microsecond=0
-            )
-            work_end = current.replace(
-                hour=self._working_hours[1], minute=0, second=0, microsecond=0
-            )
+            work_start = current.replace(hour=self._working_hours[0], minute=0, second=0, microsecond=0)
+            work_end = current.replace(hour=self._working_hours[1], minute=0, second=0, microsecond=0)
 
             if current < work_start:
                 current = work_start

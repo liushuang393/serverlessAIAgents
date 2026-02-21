@@ -96,9 +96,7 @@ def search(
             )
 
         console.print(table)
-        console.print(
-            "\n[dim]Use 'agentflow marketplace install <agent-id>' to install an agent.[/dim]"
-        )
+        console.print("\n[dim]Use 'agentflow marketplace install <agent-id>' to install an agent.[/dim]")
 
         client.close()
 
@@ -146,7 +144,7 @@ def install(
         console.print(f"[cyan]Installing agent: {agent_id}...[/cyan]")
 
         # インストール実行
-        install_path = client.install(agent_id, version=version, force=force)
+        install_path = client.install(agent_id, _version=version, force=force)
 
         console.print(
             Panel(

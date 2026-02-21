@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Checkpointer のファクトリ関数と実装の単体テスト."""
 
 import os
@@ -35,6 +34,7 @@ class TestGetCheckpointer:
     def test_redis_backend_returns_redis_checkpointer(self) -> None:
         """redis backend 指定で RedisCheckpointer を返す."""
         from agentflow.hitl.redis_checkpointer import RedisCheckpointer
+
         cp = get_checkpointer(backend="redis")
         # RedisCheckpointer は import 可能だが、実行時には redis パッケージが必要
         assert isinstance(cp, (MemoryCheckpointer, RedisCheckpointer))
@@ -42,6 +42,7 @@ class TestGetCheckpointer:
     def test_postgres_backend_returns_postgres_checkpointer(self) -> None:
         """postgres backend 指定で PostgresCheckpointer を返す."""
         from agentflow.hitl.postgres_checkpointer import PostgresCheckpointer
+
         cp = get_checkpointer(backend="postgres")
         # PostgresCheckpointer は import 可能だが、実行時には asyncpg パッケージが必要
         assert isinstance(cp, (MemoryCheckpointer, PostgresCheckpointer))
@@ -76,9 +77,7 @@ class TestMemoryCheckpointer:
         )
 
     @pytest.mark.asyncio
-    async def test_save_and_load(
-        self, checkpointer: MemoryCheckpointer, sample_data: CheckpointData
-    ) -> None:
+    async def test_save_and_load(self, checkpointer: MemoryCheckpointer, sample_data: CheckpointData) -> None:
         """保存と読み出しのテスト."""
         await checkpointer.save(sample_data)
         loaded = await checkpointer.load("cp-001")
@@ -95,9 +94,7 @@ class TestMemoryCheckpointer:
         assert loaded is None
 
     @pytest.mark.asyncio
-    async def test_load_latest(
-        self, checkpointer: MemoryCheckpointer
-    ) -> None:
+    async def test_load_latest(self, checkpointer: MemoryCheckpointer) -> None:
         """最新のチェックポイントを読み出す."""
         # 複数のチェックポイントを保存
         for i in range(3):
@@ -113,9 +110,7 @@ class TestMemoryCheckpointer:
         assert latest.checkpoint_id == "cp-002"
 
     @pytest.mark.asyncio
-    async def test_delete(
-        self, checkpointer: MemoryCheckpointer, sample_data: CheckpointData
-    ) -> None:
+    async def test_delete(self, checkpointer: MemoryCheckpointer, sample_data: CheckpointData) -> None:
         """チェックポイントを削除する."""
         await checkpointer.save(sample_data)
         result = await checkpointer.delete("cp-001")
@@ -125,9 +120,7 @@ class TestMemoryCheckpointer:
         assert loaded is None
 
     @pytest.mark.asyncio
-    async def test_list_by_thread(
-        self, checkpointer: MemoryCheckpointer
-    ) -> None:
+    async def test_list_by_thread(self, checkpointer: MemoryCheckpointer) -> None:
         """thread ごとにチェックポイントを列挙する."""
         # 複数スレッドのチェックポイントを保存
         for i in range(3):

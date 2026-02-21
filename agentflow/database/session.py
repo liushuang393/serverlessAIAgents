@@ -22,12 +22,10 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import MetaData, create_engine
-from sqlalchemy.engine import Engine
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -36,8 +34,15 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.orm import Session, sessionmaker
 
-from agentflow.database.config import DatabaseConfig
 from agentflow.database.url_utils import is_sqlite, to_async_url, to_sync_url
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
+    from sqlalchemy.engine import Engine
+
+    from agentflow.database.config import DatabaseConfig
 
 
 _logger = logging.getLogger(__name__)

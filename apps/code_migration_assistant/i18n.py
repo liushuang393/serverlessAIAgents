@@ -31,6 +31,7 @@ class I18n:
 
 _i18n_instances: dict[str, I18n] = {}
 
+
 def get_i18n(locale: str = "ja") -> I18n:
     if locale not in _i18n_instances:
         _i18n_instances[locale] = I18n(locale)

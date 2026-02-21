@@ -43,12 +43,12 @@ logger = logging.getLogger(__name__)
 class ActionType(str, Enum):
     """操作类型."""
 
-    CODE_EXECUTE = "code_execute"      # 直接代码执行
-    DATA_ANALYSIS = "data_analysis"    # 数据分析
+    CODE_EXECUTE = "code_execute"  # 直接代码执行
+    DATA_ANALYSIS = "data_analysis"  # 数据分析
     FILE_OPERATION = "file_operation"  # 文件操作
-    API_CALL = "api_call"              # API调用
-    SHELL_COMMAND = "shell_command"    # Shell命令
-    CUSTOM = "custom"                  # 自定义操作
+    API_CALL = "api_call"  # API调用
+    SHELL_COMMAND = "shell_command"  # Shell命令
+    CUSTOM = "custom"  # 自定义操作
 
 
 class ExecutionStatus(str, Enum):
@@ -222,12 +222,15 @@ class CodeActExecutor:
         if self._sandbox is None:
             if self._provider_name == "microsandbox":
                 from agentflow.sandbox.microsandbox_provider import MicrosandboxProvider
+
                 self._sandbox = MicrosandboxProvider(self._config)
             elif self._provider_name == "docker":
                 from agentflow.sandbox.docker_provider import DockerProvider
+
                 self._sandbox = DockerProvider(self._config)
             elif self._provider_name == "e2b":
                 from agentflow.sandbox.e2b_provider import E2BProvider
+
                 self._sandbox = E2BProvider(self._config)
             else:
                 msg = f"Unknown provider: {self._provider_name}"
@@ -423,9 +426,7 @@ class CodeActExecutor:
             last_result = result
 
             if attempt < self._max_retries - 1:
-                self._logger.warning(
-                    f"执行失败 (尝试 {attempt + 1}/{self._max_retries}): {result.error}"
-                )
+                self._logger.warning(f"执行失败 (尝试 {attempt + 1}/{self._max_retries}): {result.error}")
                 await asyncio.sleep(self._retry_delay * (attempt + 1))
 
         return last_result or ActionResult(
@@ -510,4 +511,3 @@ class CodeActExecutor:
             "template_count": len(self._templates),
             "provider": self._provider_name,
         }
-

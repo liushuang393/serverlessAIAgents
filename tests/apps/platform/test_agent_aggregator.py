@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 """AgentAggregatorService のユニットテスト."""
 
 from __future__ import annotations
 
 from apps.platform.services.agent_aggregator import (
-    AggregatedAgent,
     AgentAggregatorService,
+    AggregatedAgent,
 )
 
 

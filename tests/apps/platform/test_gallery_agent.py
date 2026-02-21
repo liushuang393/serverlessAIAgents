@@ -1,12 +1,12 @@
-# -*- coding: utf-8 -*-
 """Unit tests for GalleryAgent.
 
 Note: These tests are in tests/apps/platform/ instead of apps/platform/tests/
 to avoid Python's built-in 'platform' module name conflict.
 """
-import pytest
+
 from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 from apps.platform.agents.gallery_agent import GalleryAgent
 
 

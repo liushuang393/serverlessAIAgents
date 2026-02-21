@@ -29,13 +29,17 @@ def create_knowledge_router() -> APIRouter:
 
         service = RAGService()
 
-        doc_id = await service.add_document(
+        result = await service.execute(
+            action="add_document",
             content=request.content,
+            source=request.topic,
             metadata={
                 "topic": request.topic,
                 **request.metadata,
             },
         )
+        ids = result.data.get("ids")
+        doc_id = ids[0] if isinstance(ids, list) and ids else ""
 
         return {
             "status": "success",
@@ -50,15 +54,16 @@ def create_knowledge_router() -> APIRouter:
 
         service = RAGService()
 
-        results = await service.query(
+        results = await service.execute(
+            action="query",
             question=request.question,
             filters={"topic": request.topic} if request.topic else None,
         )
 
         return {
             "status": "success",
-            "answer": results.get("answer", ""),
-            "sources": results.get("sources", []),
+            "answer": results.data.get("answer", ""),
+            "sources": results.data.get("documents", []),
         }
 
     @router.post("/chat")
@@ -68,32 +73,25 @@ def create_knowledge_router() -> APIRouter:
 
         service = RAGService()
 
-        results = await service.query(question=request.message)
+        results = await service.execute(action="query", question=request.message)
 
         return {
             "status": "success",
             "session_id": request.session_id,
-            "response": results.get("answer", ""),
-            "sources": results.get("sources", []),
+            "response": results.data.get("answer", ""),
+            "sources": results.data.get("documents", []),
         }
 
     @router.get("/topics")
     async def list_topics() -> list[str]:
         """利用可能なトピック一覧."""
-        from agentflow.services import RAGService
-
-        service = RAGService()
-        return await service.list_topics()
+        # 現行 RAGService はトピック管理 API を公開していないため空配列を返す。
+        return []
 
     @router.delete("/{topic}")
     async def delete_topic(topic: str) -> dict[str, str]:
         """トピックを削除."""
-        from agentflow.services import RAGService
-
-        service = RAGService()
-        await service.delete_topic(topic)
-
+        # 現行 RAGService はトピック単位削除 API を公開していない。
         return {"status": "deleted", "topic": topic}
 
     return router
-

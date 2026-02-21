@@ -85,4 +85,3 @@ __all__ = [
     "TextComponent",
     "Timeline",
 ]
-

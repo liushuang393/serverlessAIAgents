@@ -136,7 +136,7 @@ class QdrantDB(VectorDatabase):
             entry = MemoryEntry(
                 id=str(result.id),
                 content=payload["content"],
-                topic=payload["topic"] if payload["topic"] else None,
+                topic=str(payload.get("topic") or "general"),
                 timestamp=datetime.fromisoformat(payload["timestamp"]),
                 memory_type=MemoryType(payload["memory_type"]),
                 importance_score=payload["importance_score"],
@@ -191,4 +191,3 @@ class QdrantDB(VectorDatabase):
             "dimension": self._dimension,
             "connected": self._connected,
         }
-

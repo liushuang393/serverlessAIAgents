@@ -287,8 +287,7 @@ class GlobalStateStore:
         elif action.type == ActionType.RECEIVE_APPROVAL:
             request_id = payload.get("request_id")
             self._state["hitl"]["pending_approvals"] = [
-                r for r in self._state["hitl"]["pending_approvals"]
-                if r.get("request_id") != request_id
+                r for r in self._state["hitl"]["pending_approvals"] if r.get("request_id") != request_id
             ]
 
         elif action.type == ActionType.PUSH_HISTORY:

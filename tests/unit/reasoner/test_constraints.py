@@ -1,10 +1,8 @@
-import pytest
 from agentflow.reasoner.constraints import (
-    StructuredConstraints,
-    StructuredConstraint,
     ConstraintType,
+    StructuredConstraint,
+    StructuredConstraints,
 )
-from agentflow.reasoner.decisions import ActionDecision, ActionType
 
 
 def test_constraint_creation():

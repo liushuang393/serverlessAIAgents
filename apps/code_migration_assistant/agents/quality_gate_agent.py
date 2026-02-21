@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """Quality Gate Agent - 責任工程の裁定."""
 
 from __future__ import annotations
 
 from typing import Any
-
-from agentflow import agent
 
 from apps.code_migration_assistant.agents.prompts import QUALITY_GATE_PROMPT
 from apps.code_migration_assistant.workflow.models import (
@@ -14,6 +11,8 @@ from apps.code_migration_assistant.workflow.models import (
     UnknownItem,
     build_meta,
 )
+
+from agentflow import agent
 
 
 @agent

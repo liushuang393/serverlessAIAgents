@@ -424,9 +424,7 @@ class ExecutionTracker:
                 writer.writeheader()
                 for row in data:
                     # ネストされた辞書を文字列化
-                    flat_row = {
-                        k: str(v) if isinstance(v, (dict, list)) else v for k, v in row.items()
-                    }
+                    flat_row = {k: str(v) if isinstance(v, (dict, list)) else v for k, v in row.items()}
                     writer.writerow(flat_row)
             return output.getvalue()
 

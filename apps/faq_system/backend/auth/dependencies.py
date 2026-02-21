@@ -21,11 +21,11 @@ from fastapi import Cookie, Depends, Header, HTTPException, Request
 
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
-    from collections.abc import Mapping
+    from collections.abc import Callable, Mapping
 
 
 logger = logging.getLogger(__name__)
+
 
 def _trust_proxy_auth_enabled() -> bool:
     return os.getenv("FAQ_TRUST_PROXY_AUTH", "false").lower() in {"1", "true", "yes", "on"}

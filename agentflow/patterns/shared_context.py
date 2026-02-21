@@ -52,19 +52,19 @@ class SharedContext:
         if self._enable_memory:
             from agentflow.memory import MemoryManager
 
-            self._memory_manager = MemoryManager(
-                enable_vector_search=enable_vector_search, embedding_dim=embedding_dim
-            )
+            self._memory_manager = MemoryManager(enable_vector_search=enable_vector_search, embedding_dim=embedding_dim)
 
     def set(self, key: str, value: Any) -> None:
         """値を設定."""
         self._data[key] = value
-        self._history.append({
-            "action": "set",
-            "key": key,
-            "value": value,
-            "timestamp": datetime.now().isoformat(),
-        })
+        self._history.append(
+            {
+                "action": "set",
+                "key": key,
+                "value": value,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
         self._logger.debug(f"SharedContext.set: {key}")
 
     def get(self, key: str, default: Any = None) -> Any:
@@ -83,11 +83,13 @@ class SharedContext:
         """値を削除."""
         if key in self._data:
             del self._data[key]
-            self._history.append({
-                "action": "remove",
-                "key": key,
-                "timestamp": datetime.now().isoformat(),
-            })
+            self._history.append(
+                {
+                    "action": "remove",
+                    "key": key,
+                    "timestamp": datetime.now().isoformat(),
+                }
+            )
             self._logger.debug(f"SharedContext.remove: {key}")
 
     def clear(self) -> None:
@@ -131,9 +133,7 @@ class SharedContext:
         if not self._memory_manager:
             msg = "Memory system is not enabled. Set enable_memory=True in constructor."
             raise RuntimeError(msg)
-        return await self._memory_manager.recall(
-            topic, limit, min_importance, query, min_similarity
-        )
+        return await self._memory_manager.recall(topic, limit, min_importance, query, min_similarity)
 
     def get_memory_status(self) -> dict[str, Any] | None:
         """記憶システムの状態を取得."""
@@ -143,4 +143,3 @@ class SharedContext:
 
 
 __all__ = ["SharedContext"]
-

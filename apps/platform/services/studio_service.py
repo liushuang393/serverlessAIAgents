@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Studio Service.
 
 3 つの製品主線（Migration / FAQ / Assistant）向けの
@@ -8,11 +7,13 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import uuid4
 
-from apps.platform.services.app_discovery import AppDiscoveryService
-from apps.platform.services.app_lifecycle import AppLifecycleManager
+
+if TYPE_CHECKING:
+    from apps.platform.services.app_discovery import AppDiscoveryService
+    from apps.platform.services.app_lifecycle import AppLifecycleManager
 
 
 _STUDIO_DEFINITIONS: dict[str, dict[str, Any]] = {

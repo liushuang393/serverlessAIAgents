@@ -1,17 +1,17 @@
 # @agentflow/ui
 
-> AgentFlow Frontend SDK - React Hooks & Components for AI Agent Applications
+> AgentFlow Frontend SDK: AI Agent アプリ向けの React Hooks / UI コンポーネント集
 
-## 🎯 目标
+## 🎯 目的
 
-让 AI 应用开发者**只关注业务逻辑**，不需要重复实现：
+AI アプリ開発で繰り返し実装しがちな共通部品を SDK として提供し、開発者が業務ロジックに集中できるようにします。
 
-- SSE 连接管理（自动重连、超时、错误处理）
-- 状态持久化（LocalStorage、历史记录）
-- API 客户端（重试、取消、错误分类）
-- 通用 UI 组件（进度、通知、错误边界）
+- SSE ストリーム接続管理（再接続、タイムアウト、エラーハンドリング）
+- 状態の永続化（LocalStorage、履歴）
+- API クライアント（リトライ、キャンセル、エラー分類）
+- 共通 UI（進捗、通知、エラーバウンダリ）
 
-## 📦 安装
+## 📦 インストール
 
 ```bash
 npm install @agentflow/ui
@@ -19,28 +19,26 @@ npm install @agentflow/ui
 pnpm add @agentflow/ui
 ```
 
-## 🚀 快速开始
+## 🚀 クイックスタート
 
-### 1. SSE 流处理
+### 1. SSE ストリーム処理
 
 ```tsx
-import { useAgentStream, AgentProgress } from '@agentflow/ui';
+import { useAgentStream, AgentProgress } from "@agentflow/ui";
 
 function MyApp() {
   const { agents, isConnected, start, isComplete, result } = useAgentStream({
-    endpoint: '/api/my-agent/stream',
+    endpoint: "/api/my-agent/stream",
     agents: [
-      { id: 'analyzer', name: '分析', label: '数据分析' },
-      { id: 'recommender', name: '推荐', label: '生成建议' },
+      { id: "analyzer", name: "分析", label: "データ分析" },
+      { id: "recommender", name: "提案", label: "提案生成" },
     ],
-    onComplete: (result) => console.log('完成:', result),
+    onComplete: (result) => console.log("完了:", result),
   });
 
   return (
     <div>
-      <button onClick={() => start({ question: '...' })}>
-        开始分析
-      </button>
+      <button onClick={() => start({ question: "..." })}>開始</button>
       <AgentProgress agents={agents} />
       {isComplete && <Result data={result} />}
     </div>
@@ -48,31 +46,30 @@ function MyApp() {
 }
 ```
 
-### 2. Store 状态管理
+### 2. Store（状態管理）
 
 ```tsx
-import { createAgentStore } from '@agentflow/ui';
+import { createAgentStore } from "@agentflow/ui";
 
-// 只定义业务状态
+// 業務状態だけを定義（履歴/永続化などは SDK 側が付与）
 interface MyAppState {
   question: string;
   options: string[];
 }
 
 const useMyAppStore = createAgentStore<MyAppState>({
-  name: 'my-app',
+  name: "my-app",
   initialState: {
-    question: '',
+    question: "",
     options: [],
   },
-  // 框架自动提供：history, persistence, reset, setPage, setError
 });
 
 function InputPage() {
-  const { data, setData, history, addToHistory } = useMyAppStore();
-  
+  const { data, setData } = useMyAppStore();
+
   return (
-    <input 
+    <input
       value={data.question}
       onChange={(e) => setData({ question: e.target.value })}
     />
@@ -80,34 +77,34 @@ function InputPage() {
 }
 ```
 
-### 3. API 客户端
+### 3. API クライアント
 
 ```tsx
-import { AgentApiClient, AgentApiError } from '@agentflow/ui';
+import { AgentApiClient, AgentApiError } from "@agentflow/ui";
 
 const api = new AgentApiClient({
-  baseUrl: '/api',
+  baseUrl: "/api",
   retry: { maxRetries: 3 },
 });
 
-// 自动重试、错误分类
 try {
-  const result = await api.post('/process', { question: '...' });
+  const result = await api.post("/process", { question: "..." });
+  console.log(result);
 } catch (err) {
   if (err instanceof AgentApiError) {
     if (err.isRetryable) {
-      // 可重试的错误（网络、服务器错误）
+      // ネットワーク/サーバーなど（リトライ可能）
     } else {
-      // 不可重试的错误（验证、权限）
+      // バリデーション/権限など（リトライ不可）
     }
   }
 }
 ```
 
-### 4. 通知系统
+### 4. 通知システム
 
 ```tsx
-import { NotificationProvider, useNotification } from '@agentflow/ui';
+import { NotificationProvider, useNotification } from "@agentflow/ui";
 
 function App() {
   return (
@@ -122,21 +119,20 @@ function MyContent() {
 
   const handleSave = async () => {
     try {
-      await api.post('/save', data);
-      notify.success('保存成功');
-    } catch (err) {
-      notify.error('保存失败');
+      await api.post("/save", data);
+      notify.success("保存に成功しました");
+    } catch {
+      notify.error("保存に失敗しました");
     }
   };
 }
 ```
 
-### 5. 错误边界
+### 5. エラーバウンダリ
 
 ```tsx
-import { ErrorBoundary, withErrorBoundary } from '@agentflow/ui';
+import { ErrorBoundary, withErrorBoundary } from "@agentflow/ui";
 
-// 方式1：直接使用
 function App() {
   return (
     <ErrorBoundary onError={(error) => logError(error)}>
@@ -145,126 +141,88 @@ function App() {
   );
 }
 
-// 方式2：HOC
 const SafeComponent = withErrorBoundary(MyComponent, {
   onError: (error) => logError(error),
 });
 ```
 
-## 📖 API 参考
+## 📖 API リファレンス
 
 ### Hooks
 
-| Hook | 说明 |
+| Hook | 説明 |
 |------|------|
-| `useAgentStream` | SSE 流处理，自动重连、超时 |
-| `useNotification` | 通知系统 Hook |
+| `useAgentStream` | SSE ストリーム処理（自動再接続/タイムアウト） |
+| `useNotification` | 通知 Hook |
 
 ### Store
 
-| 函数 | 说明 |
+| 関数 | 説明 |
 |------|------|
-| `createAgentStore` | Zustand Store 工厂，自动添加历史、持久化 |
+| `createAgentStore` | Zustand Store 工場（履歴/永続化などを追加） |
 
 ### Components
 
-| 组件 | 说明 |
+| コンポーネント | 説明 |
 |------|------|
-| `AgentProgress` | Agent 进度展示 |
-| `Notification` | 单个通知 |
-| `NotificationProvider` | 通知上下文提供者 |
-| `ErrorBoundary` | 错误边界 |
+| `AgentProgress` | Agent 進捗表示 |
+| `Notification` | 通知 |
+| `NotificationProvider` | 通知コンテキスト |
+| `ErrorBoundary` | エラーバウンダリ |
 
 ### API Client
 
-| 类 | 说明 |
+| クラス | 説明 |
 |------|------|
-| `AgentApiClient` | REST API 客户端，自动重试 |
-| `AgentApiError` | API 错误类 |
+| `AgentApiClient` | REST API クライアント（自動リトライ） |
+| `AgentApiError` | API エラー型 |
 
-## 🎨 自定义样式
-
-所有组件都支持 `className` 属性，兼容 Tailwind CSS：
+## 🎨 スタイル（Tailwind 互換）
 
 ```tsx
-<AgentProgress
-  agents={agents}
-  className="bg-gray-100 rounded-xl p-4"
-/>
-
-<Notification
-  type="success"
-  message="成功"
-  className="shadow-xl"
-/>
+<AgentProgress agents={agents} className="bg-gray-100 rounded-xl p-4" />
 ```
 
-## 📄 类型定义
+## 📄 型定義
 
-```typescript
-// AG-UI 事件类型
+```ts
 import type {
   AGUIEvent,
   FlowStartEvent,
   FlowCompleteEvent,
   NodeStartEvent,
-  // ...
-} from '@agentflow/ui';
-
-// Store 类型
-import type {
-  BaseAgentState,
-  BaseAgentActions,
-  HistoryItem,
-} from '@agentflow/ui';
+} from "@agentflow/ui";
 ```
 
-## 🔧 配置选项
+## 🛠️ 開発（ローカル）
 
-### useAgentStream
-
-```typescript
-interface UseAgentStreamConfig<TResult> {
-  endpoint: string;           // SSE 端点
-  agents: AgentDefinition[];  // Agent 列表
-  baseUrl?: string;           // 基础 URL
-  autoReconnect?: boolean;    // 自动重连 (默认: true)
-  maxReconnectAttempts?: number; // 最大重连次数 (默认: 3)
-  connectionTimeout?: number; // 连接超时 ms (默认: 30000)
-  onComplete?: (result: TResult) => void;
-  onError?: (error: string) => void;
-}
+```bash
+cd agentflow/sdk/frontend
+npm install
+npm run dev
 ```
 
-### createAgentStore
+テスト/静的チェック:
 
-```typescript
-interface CreateAgentStoreConfig<T> {
-  name: string;               // Store 名称
-  initialState: T;            // 初始业务状态
-  actions?: CustomActions;    // 自定义 actions
-  maxHistoryItems?: number;   // 最大历史条数 (默认: 10)
-  persistFields?: string[];   // 持久化字段
-  enableDevtools?: boolean;   // DevTools (默认: true)
-}
+```bash
+cd agentflow/sdk/frontend
+npm run test
+npm run lint
+npm run type-check
 ```
 
-### AgentApiClient
+ビルド:
 
-```typescript
-interface AgentApiClientConfig {
-  baseUrl: string;
-  retry?: {
-    maxRetries: number;    // 默认: 3
-    baseDelay: number;     // 默认: 1000ms
-    maxDelay: number;      // 默认: 10000ms
-  };
-  headers?: Record<string, string>;
-  timeout?: number;        // 默认: 30000ms
-}
+```bash
+cd agentflow/sdk/frontend
+npm run build
 ```
 
-## 📝 License
+## 📦 本番リリース（npm）
 
-MIT
+```bash
+cd agentflow/sdk/frontend
+npm run build
+npm publish
+```
 

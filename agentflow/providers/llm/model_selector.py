@@ -237,8 +237,7 @@ class ModelSelector:
                 m
                 for m in candidates
                 if m in MODELS
-                and (MODELS[m].input_cost_per_1k + MODELS[m].output_cost_per_1k)
-                <= criteria.max_cost_per_1k_tokens * 2
+                and (MODELS[m].input_cost_per_1k + MODELS[m].output_cost_per_1k) <= criteria.max_cost_per_1k_tokens * 2
             ]
             if filtered:
                 return min(
@@ -252,18 +251,14 @@ class ModelSelector:
             speed_order = {ModelTier.ECONOMY: 0, ModelTier.STANDARD: 1, ModelTier.PREMIUM: 2}
             return min(
                 candidates,
-                key=lambda m: speed_order.get(
-                    MODELS[m].tier if m in MODELS else ModelTier.STANDARD, 1
-                ),
+                key=lambda m: speed_order.get(MODELS[m].tier if m in MODELS else ModelTier.STANDARD, 1),
             )
 
         # 品質優先：プレミアム層を優先
         quality_order = {ModelTier.PREMIUM: 0, ModelTier.STANDARD: 1, ModelTier.ECONOMY: 2}
         return min(
             candidates,
-            key=lambda m: quality_order.get(
-                MODELS[m].tier if m in MODELS else ModelTier.STANDARD, 1
-            ),
+            key=lambda m: quality_order.get(MODELS[m].tier if m in MODELS else ModelTier.STANDARD, 1),
         )
 
     def get_recommendations(self, task_type: TaskType) -> dict[str, Any]:

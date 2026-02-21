@@ -96,9 +96,7 @@ class SignalScorerAgent(ResilientAgent[SignalScorerInput, SignalScorerOutput]):
         """入力データを Pydantic モデルに変換."""
         return SignalScorerInput(**input_data)
 
-    async def process(
-        self, input_data: SignalScorerInput
-    ) -> SignalScorerOutput:
+    async def process(self, input_data: SignalScorerInput) -> SignalScorerOutput:
         """信号評価を実行.
 
         Args:
@@ -155,10 +153,7 @@ class SignalScorerAgent(ResilientAgent[SignalScorerInput, SignalScorerOutput]):
 
         dashboard_stats = self._signal_service.get_dashboard_stats()
 
-        self._logger.info(
-            f"Evaluated {len(signals)} signals, "
-            f"{strong_count} strong signals (A/B)"
-        )
+        self._logger.info(f"Evaluated {len(signals)} signals, {strong_count} strong signals (A/B)")
 
         return SignalScorerOutput(
             signals=signals,

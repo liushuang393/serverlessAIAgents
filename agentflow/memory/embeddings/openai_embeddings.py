@@ -38,7 +38,6 @@ class OpenAIEmbeddings(EmbeddingEngine):
         """
         self._api_key = api_key
         self._model = model
-        self._dimension = dimension
         self._logger = logging.getLogger(__name__)
         self._client: Any = None
 
@@ -48,10 +47,7 @@ class OpenAIEmbeddings(EmbeddingEngine):
             "text-embedding-3-large": 3072,
             "text-embedding-ada-002": 1536,
         }
-
-        # 次元数を設定
-        if self._dimension is None:
-            self._dimension = self._default_dimensions.get(model, 1536)
+        self._dimension: int = dimension if dimension is not None else self._default_dimensions.get(model, 1536)
 
         # OpenAIクライアントを初期化
         try:
@@ -75,7 +71,8 @@ class OpenAIEmbeddings(EmbeddingEngine):
                 dimensions=self._dimension,
             )
 
-            embedding = response.data[0].embedding
+            embedding_raw = response.data[0].embedding
+            embedding = [float(x) for x in embedding_raw]
             self._logger.debug(f"Generated embedding for text (length: {len(text)})")
             return embedding
 
@@ -118,4 +115,3 @@ class OpenAIEmbeddings(EmbeddingEngine):
     def get_model_name(self) -> str:
         """モデル名を取得."""
         return self._model
-

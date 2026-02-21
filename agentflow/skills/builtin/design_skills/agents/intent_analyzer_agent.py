@@ -294,9 +294,7 @@ JSON形式のみで出力してください。"""
                 key_features=data.get("key_features", ["メインビュー"])[:5],
                 target_audience=data.get("target_audience", "")[:100],
                 style_direction=data.get("style_direction", "")[:200],
-                image_roles=[ImageRole(r) for r in data.get("image_roles", ["HERO"])][
-                    : input_data.num_images
-                ],
+                image_roles=[ImageRole(r) for r in data.get("image_roles", ["HERO"])][: input_data.num_images],
                 platform_constraints=data.get("platform_constraints", {}),
             )
         except (ValueError, KeyError):

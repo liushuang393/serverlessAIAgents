@@ -248,11 +248,11 @@ class ChatBotSkill:
         # Agent トリガーチェック
         if self._config.enable_agent and self._coordinator:
             if user_input.startswith(self._config.agent_trigger):
-                task = user_input[len(self._config.agent_trigger):].strip()
+                task = user_input[len(self._config.agent_trigger) :].strip()
                 result = await self._coordinator.execute(task, **kwargs)
-                response = f"[Agent結果]\n{result.get('result', result)}"
-                session.add_message("assistant", response)
-                return response
+                agent_response = f"[Agent結果]\n{result.get('result', result)}"
+                session.add_message("assistant", agent_response)
+                return agent_response
 
         # RAG 有効時
         if self._config.enable_rag and self._rag:
@@ -265,8 +265,8 @@ class ChatBotSkill:
             messages = session.to_llm_messages(self._config.max_history)
 
         # LLM 応答生成（松耦合：プロバイダー不明）
-        response = await self._llm.chat(messages)
-        assistant_response = response["content"]
+        llm_response = await self._llm.chat(messages)
+        assistant_response = str(llm_response.get("content", ""))
 
         # 後処理フック
         if self._post_hook:
@@ -305,4 +305,3 @@ class ChatBotSkill:
             }
             for s in self._sessions.values()
         ]
-

@@ -95,9 +95,11 @@ def test_get_model_name(openai_embeddings):
 
 def test_init_without_openai():
     """OpenAIパッケージなしの初期化テスト."""
-    with patch("agentflow.memory.embeddings.openai_embeddings.AsyncOpenAI", side_effect=ImportError):
-        with pytest.raises(ImportError, match="openai package is required"):
-            OpenAIEmbeddings(api_key="test-api-key")
+    with (
+        patch("agentflow.memory.embeddings.openai_embeddings.AsyncOpenAI", side_effect=ImportError),
+        pytest.raises(ImportError, match="openai package is required"),
+    ):
+        OpenAIEmbeddings(api_key="test-api-key")
 
 
 def test_default_dimensions():
@@ -114,4 +116,3 @@ def test_default_dimensions():
         # text-embedding-ada-002
         emb3 = OpenAIEmbeddings(api_key="test", model="text-embedding-ada-002")
         assert emb3.get_dimension() == 1536
-

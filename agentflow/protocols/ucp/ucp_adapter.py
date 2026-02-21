@@ -205,7 +205,6 @@ class UCPAdapter:
                 ai_generated=True,
                 confidence=intent.confidence_score * offer.intent_match_score,
                 headline=f"おすすめ: {offer.description or 'お得なオファー'}",
-                ucp_metadata={"source": "ucp_adapter"},
             )
             recommendations.append(direct_offer)
         return recommendations
@@ -346,9 +345,7 @@ class UCPDealRecommenderAdapter(IDealRecommender):
         limit: int = 3,
     ) -> list[DirectOffer]:
         """取引を推薦."""
-        return await self._adapter.recommend_deals(
-            intent, products=products, offers=offers, limit=limit
-        )
+        return await self._adapter.recommend_deals(intent, products=products, offers=offers, limit=limit)
 
     async def explain_recommendation(self, recommendation: DirectOffer) -> str:
         """推薦理由を説明."""
@@ -368,4 +365,3 @@ class UCPDealRecommenderAdapter(IDealRecommender):
         """代替案を取得."""
         # 代替案の取得はUCP経由では制限あり
         return []
-

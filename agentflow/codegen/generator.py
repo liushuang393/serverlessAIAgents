@@ -62,9 +62,7 @@ class CodeGenerator(ICodeGenerator):
             生成されたコード
         """
         if options is None:
-            options = CodeGenOptions(
-                app_name=workflow.name.lower().replace(" ", "-") or "agentflow-app"
-            )
+            options = CodeGenOptions(app_name=workflow.name.lower().replace(" ", "-") or "agentflow-app")
         elif not options.app_name:
             options.app_name = workflow.name.lower().replace(" ", "-") or "agentflow-app"
 

@@ -142,7 +142,7 @@ class StaticAnalyzer(AgentBlock):
 
     async def analyze(
         self,
-        files: list[str] | list[dict] | None = None,
+        files: list[str] | list[dict[str, Any]] | None = None,
         languages: list[str] | None = None,
     ) -> AnalysisResult:
         """静的分析を実行.
@@ -231,9 +231,7 @@ class StaticAnalyzer(AgentBlock):
             ),
         ]
 
-    def _generate_file_summaries(
-        self, issues: list[CodeIssue]
-    ) -> list[FileSummary]:
+    def _generate_file_summaries(self, issues: list[CodeIssue]) -> list[FileSummary]:
         """ファイル別サマリーを生成."""
         file_issues: dict[str, list[CodeIssue]] = {}
         for issue in issues:
@@ -246,30 +244,16 @@ class StaticAnalyzer(AgentBlock):
             summary = FileSummary(
                 file_path=file_path,
                 issues_count=len(file_issue_list),
-                critical_count=sum(
-                    1 for i in file_issue_list
-                    if i.severity == IssueSeverity.CRITICAL
-                ),
-                high_count=sum(
-                    1 for i in file_issue_list
-                    if i.severity == IssueSeverity.HIGH
-                ),
-                medium_count=sum(
-                    1 for i in file_issue_list
-                    if i.severity == IssueSeverity.MEDIUM
-                ),
-                low_count=sum(
-                    1 for i in file_issue_list
-                    if i.severity == IssueSeverity.LOW
-                ),
+                critical_count=sum(1 for i in file_issue_list if i.severity == IssueSeverity.CRITICAL),
+                high_count=sum(1 for i in file_issue_list if i.severity == IssueSeverity.HIGH),
+                medium_count=sum(1 for i in file_issue_list if i.severity == IssueSeverity.MEDIUM),
+                low_count=sum(1 for i in file_issue_list if i.severity == IssueSeverity.LOW),
             )
             summaries.append(summary)
 
         return summaries
 
-    def _calculate_quality_score(
-        self, issues_by_severity: dict[str, int]
-    ) -> float:
+    def _calculate_quality_score(self, issues_by_severity: dict[str, int]) -> float:
         """品質スコアを計算（0-100）."""
         # 各重要度にペナルティを設定
         penalties = {
@@ -280,10 +264,7 @@ class StaticAnalyzer(AgentBlock):
             "info": 0,
         }
 
-        total_penalty = sum(
-            issues_by_severity.get(sev, 0) * pen
-            for sev, pen in penalties.items()
-        )
+        total_penalty = sum(issues_by_severity.get(sev, 0) * pen for sev, pen in penalties.items())
 
         score = max(0, 100 - total_penalty)
         return round(score, 1)

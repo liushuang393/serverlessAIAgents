@@ -41,14 +41,14 @@ if TYPE_CHECKING:
 class SyncEventType(str, Enum):
     """同期イベント種別."""
 
-    STATE_UPDATE = "state_update"      # 状態更新
-    STATE_DIFF = "state_diff"          # 差分更新
+    STATE_UPDATE = "state_update"  # 状態更新
+    STATE_DIFF = "state_diff"  # 差分更新
     STATE_SNAPSHOT = "state_snapshot"  # スナップショット
-    CLIENT_ACTION = "client_action"    # クライアントアクション
-    HEARTBEAT = "heartbeat"            # ハートビート
-    CONNECTED = "connected"            # 接続完了
-    DISCONNECTED = "disconnected"      # 切断
-    ERROR = "error"                    # エラー
+    CLIENT_ACTION = "client_action"  # クライアントアクション
+    HEARTBEAT = "heartbeat"  # ハートビート
+    CONNECTED = "connected"  # 接続完了
+    DISCONNECTED = "disconnected"  # 切断
+    ERROR = "error"  # エラー
 
 
 @dataclass
@@ -69,12 +69,15 @@ class SyncEvent:
 
     def to_json(self) -> str:
         """JSONに変換."""
-        return json.dumps({
-            "event_type": self.event_type.value,
-            "data": self.data,
-            "client_id": self.client_id,
-            "timestamp": self.timestamp.isoformat(),
-        }, ensure_ascii=False)
+        return json.dumps(
+            {
+                "event_type": self.event_type.value,
+                "data": self.data,
+                "client_id": self.client_id,
+                "timestamp": self.timestamp.isoformat(),
+            },
+            ensure_ascii=False,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         """辞書に変換."""

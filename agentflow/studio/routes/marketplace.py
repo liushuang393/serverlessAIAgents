@@ -53,7 +53,7 @@ def create_marketplace_router(marketplace: MarketplaceClient) -> APIRouter:
     async def install_agent(request: MarketplaceInstallRequest) -> dict[str, Any]:
         """マーケットプレイスからエージェントをインストール."""
         try:
-            await marketplace.install(request.agent_id, force=request.force)
+            marketplace.install(request.agent_id, force=request.force)
             return {
                 "status": "success",
                 "message": f"Agent {request.agent_id} installed successfully",
@@ -64,12 +64,13 @@ def create_marketplace_router(marketplace: MarketplaceClient) -> APIRouter:
     @router.get("/categories")
     async def list_categories() -> list[str]:
         """利用可能なカテゴリ一覧."""
-        return marketplace.list_categories()
+        categories = {agent.category for agent in marketplace.search(limit=100)}
+        return sorted(categories)
 
     @router.get("/featured")
     async def list_featured() -> list[dict[str, Any]]:
         """おすすめエージェント一覧."""
-        results = marketplace.get_featured()
+        results = marketplace.search(limit=5)
         return [
             {
                 "id": agent.id,
@@ -81,4 +82,3 @@ def create_marketplace_router(marketplace: MarketplaceClient) -> APIRouter:
         ]
 
     return router
-

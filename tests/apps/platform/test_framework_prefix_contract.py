@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Framework API prefix 契約テスト.
 
 旧 prefix は 404、新 prefix は 404 以外を返すことを検証する。
@@ -6,8 +5,13 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
-from fastapi.testclient import TestClient
+
+
+if TYPE_CHECKING:
+    from fastapi.testclient import TestClient
 
 
 @pytest.mark.parametrize(

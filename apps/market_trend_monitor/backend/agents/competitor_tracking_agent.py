@@ -12,11 +12,13 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow import get_llm
 
-from apps.market_trend_monitor.backend.models import Article
+
+if TYPE_CHECKING:
+    from apps.market_trend_monitor.backend.models import Article
 
 
 class MarketPosition(str, Enum):
@@ -57,9 +59,19 @@ class CompetitorProfile:
 
 # 追跡対象競合企業
 DEFAULT_COMPETITORS: list[str] = [
-    "IBM", "Accenture", "TCS", "Infosys", "NTT DATA",
-    "Fujitsu", "Wipro", "Capgemini", "DXC Technology", "Micro Focus",
-    "Deloitte", "OptiSol Business Solutions", "Daiwa Institute of Research",
+    "IBM",
+    "Accenture",
+    "TCS",
+    "Infosys",
+    "NTT DATA",
+    "Fujitsu",
+    "Wipro",
+    "Capgemini",
+    "DXC Technology",
+    "Micro Focus",
+    "Deloitte",
+    "OptiSol Business Solutions",
+    "Daiwa Institute of Research",
 ]
 
 # 競合企業別の別名辞書（Entity Normalization 用）
@@ -170,12 +182,8 @@ class CompetitorTrackingAgent:
         Returns:
             競合プロファイルリスト
         """
-        competitor_articles: dict[str, list[Article]] = {
-            c: [] for c in self._competitors
-        }
-        alias_hit_counts: dict[str, dict[str, int]] = {
-            c: {} for c in self._competitors
-        }
+        competitor_articles: dict[str, list[Article]] = {c: [] for c in self._competitors}
+        alias_hit_counts: dict[str, dict[str, int]] = {c: {} for c in self._competitors}
 
         for article in articles:
             mentions = self._extract_competitor_mentions(article)
@@ -289,9 +297,7 @@ class CompetitorTrackingAgent:
                 "focus_areas": profile.focus_areas,
             }
             if profile.threat_level >= 0.7:
-                positioning["threats"].append(
-                    f"{name}: high threat (focus: {', '.join(profile.focus_areas[:3])})"
-                )
+                positioning["threats"].append(f"{name}: high threat (focus: {', '.join(profile.focus_areas[:3])})")
             if profile.opportunity_level >= 0.6:
                 positioning["opportunities"].append(
                     f"{name} gap: potential opportunity (level: {profile.opportunity_level:.1f})"
@@ -317,9 +323,7 @@ class CompetitorTrackingAgent:
         self._competitor_aliases = self._build_default_aliases(self._competitors)
         self._merge_aliases(previous_aliases)
         allowed = set(self._competitors)
-        self._profiles = {
-            name: profile for name, profile in self._profiles.items() if name in allowed
-        }
+        self._profiles = {name: profile for name, profile in self._profiles.items() if name in allowed}
         self._rebuild_alias_index()
         return self.get_competitors()
 
@@ -362,8 +366,7 @@ class CompetitorTrackingAgent:
         """エンティティ名を正規化."""
         lowered = name.strip().casefold()
         lowered = re.sub(r"[^0-9a-z\s]+", " ", lowered)
-        lowered = re.sub(r"\s+", " ", lowered).strip()
-        return lowered
+        return re.sub(r"\s+", " ", lowered).strip()
 
     def _build_default_aliases(self, competitors: list[str]) -> dict[str, list[str]]:
         """デフォルト別名辞書を構築."""
@@ -485,7 +488,7 @@ class CompetitorTrackingAgent:
             start = raw.find("{")
             end = raw.rfind("}")
             if start != -1 and end != -1 and end > start:
-                return json.loads(raw[start:end + 1])
+                return json.loads(raw[start : end + 1])
         except (json.JSONDecodeError, ValueError):
             pass
         return {}

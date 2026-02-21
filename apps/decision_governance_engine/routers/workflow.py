@@ -33,8 +33,10 @@ router = APIRouter(tags=["ワークフロー"])
 # スキーマ定義
 # ========================================
 
+
 class AgentDefinition(BaseModel):
     """Agent定義スキーマ."""
+
     id: str
     name: str
     label: str
@@ -42,6 +44,7 @@ class AgentDefinition(BaseModel):
 
 class HealthResponse(BaseModel):
     """ヘルスチェックレスポンス."""
+
     status: str = "ok"
     version: str = "2.0.0"
 
@@ -49,6 +52,7 @@ class HealthResponse(BaseModel):
 # ========================================
 # エンドポイント
 # ========================================
+
 
 @router.get("/api/health", response_model=HealthResponse)
 async def health_check() -> HealthResponse:
@@ -126,4 +130,3 @@ async def get_workflow_config() -> dict[str, Any]:
         "workflow": config.get("workflow", {}),
         "studio": config.get("studio", {}),
     }
-

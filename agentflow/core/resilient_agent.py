@@ -173,7 +173,8 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
         if self._enable_code_execution:
             try:
                 from agentflow.providers.tool_provider import ToolProvider
-                self._tool_provider = ToolProvider(include_builtin=True)
+
+                self._tool_provider = ToolProvider.discover()
                 self._logger.debug(f"{self.name}: 内蔵ツール登録完了")
             except Exception as e:
                 self._logger.debug(f"{self.name}: 内蔵ツール登録スキップ: {e}")
@@ -212,14 +213,16 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
                     return await self._run_with_timeout(input_data, attempt)
                 except Exception as e:
                     stage, raw_error = self._unwrap_stage_error(e)
-                    advice = self._retry_advisor.advise(RetryContext(
-                        agent_name=self.name,
-                        attempt=attempt,
-                        max_retries=self.max_retries,
-                        stage=stage,
-                        error=raw_error,
-                        has_llm=self._llm is not None,
-                    ))
+                    advice = self._retry_advisor.advise(
+                        RetryContext(
+                            agent_name=self.name,
+                            attempt=attempt,
+                            max_retries=self.max_retries,
+                            stage=stage,
+                            error=raw_error,
+                            has_llm=self._llm is not None,
+                        )
+                    )
                     self._logger.warning(
                         f"{self.name} エラー (attempt {attempt + 1}/{self.max_retries + 1}, "
                         f"stage={stage}, action={advice.action.value}, reason={advice.reason}): {raw_error}"
@@ -267,19 +270,21 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
             遅延秒数
         """
         if self.retry_backoff == "exponential":
-            return self.retry_delay * (2**attempt)
-        return self.retry_delay
+            return float(self.retry_delay) * float(2**attempt)
+        return float(self.retry_delay)
 
     def _is_retryable_error(self, error: Exception) -> bool:
         """後方互換: リトライ可否のみ判定."""
-        advice = self._retry_advisor.advise(RetryContext(
-            agent_name=self.name,
-            attempt=0,
-            max_retries=max(self.max_retries, 1),
-            stage="execution",
-            error=error,
-            has_llm=self._llm is not None,
-        ))
+        advice = self._retry_advisor.advise(
+            RetryContext(
+                agent_name=self.name,
+                attempt=0,
+                max_retries=max(self.max_retries, 1),
+                stage="execution",
+                error=error,
+                has_llm=self._llm is not None,
+            )
+        )
         return advice.action != RetryAction.SKIP
 
     def _unwrap_stage_error(self, error: Exception) -> tuple[str, Exception]:
@@ -300,9 +305,7 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
         self._retry_prompt_hint = None
         self._retry_temperature_override = None
 
-    async def _run_with_timeout(
-        self, input_data: dict[str, Any], attempt: int
-    ) -> dict[str, Any]:
+    async def _run_with_timeout(self, input_data: dict[str, Any], attempt: int) -> dict[str, Any]:
         """タイムアウト付きで実行.
 
         Args:
@@ -317,7 +320,8 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
             try:
                 typed_input = self._parse_input(input_data)
             except Exception as e:
-                raise _RunStageError("input_parse", e) from e
+                msg = "input_parse"
+                raise _RunStageError(msg, e) from e
 
             # メイン処理
             self._logger.info(f"{self.name} 実行開始 (attempt {attempt + 1})")
@@ -325,8 +329,10 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
                 output = await self.process(typed_input)
             except Exception as e:
                 if isinstance(e, (ValidationError, AgentOutputValidationError)):
-                    raise _RunStageError("output_validation", e) from e
-                raise _RunStageError("process", e) from e
+                    msg = "output_validation"
+                    raise _RunStageError(msg, e) from e
+                msg = "process"
+                raise _RunStageError(msg, e) from e
             self._logger.info(f"{self.name} 実行完了")
 
             # 出力検証
@@ -459,9 +465,7 @@ class ResilientAgent[InputT: BaseModel, OutputT: BaseModel](AgentBlock):
             prompt_for_call = f"{prompt}\n\n{self._retry_prompt_hint}"
 
         temperature = (
-            self._retry_temperature_override
-            if self._retry_temperature_override is not None
-            else self.temperature
+            self._retry_temperature_override if self._retry_temperature_override is not None else self.temperature
         )
 
         # LLMProvider.complete() または chat() を使用

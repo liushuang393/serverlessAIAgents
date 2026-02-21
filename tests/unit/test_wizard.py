@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Unit tests for the AgentWizard module.
 
 Tests cover:
@@ -9,7 +8,6 @@ Tests cover:
 """
 
 import pytest
-from datetime import datetime, UTC
 
 from agentflow.wizard.models import (
     AgentSpec,
@@ -182,15 +180,9 @@ class TestGapAnalysis:
     def test_gap_analysis_with_gaps(self) -> None:
         """Test GapAnalysis with gaps."""
         gaps = [
-            CapabilityGap(
-                gap_id="g1", gap_type=GapType.SKILL, description="Gap 1", auto_fixable=True
-            ),
-            CapabilityGap(
-                gap_id="g2", gap_type=GapType.TOOL, description="Gap 2", auto_fixable=False
-            ),
-            CapabilityGap(
-                gap_id="g3", gap_type=GapType.SKILL, description="Gap 3", auto_fixable=True
-            ),
+            CapabilityGap(gap_id="g1", gap_type=GapType.SKILL, description="Gap 1", auto_fixable=True),
+            CapabilityGap(gap_id="g2", gap_type=GapType.TOOL, description="Gap 2", auto_fixable=False),
+            CapabilityGap(gap_id="g3", gap_type=GapType.SKILL, description="Gap 3", auto_fixable=True),
         ]
         analysis = GapAnalysis(
             gaps=gaps,

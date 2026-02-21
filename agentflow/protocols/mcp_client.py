@@ -7,11 +7,11 @@ import asyncio
 import logging
 from typing import Any
 
-from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from agentflow.core.security import AuditLogger, ParameterValidator, ToolWhitelist
 from agentflow.protocols.mcp_config import MCPConfig, MCPServerConfig
+from mcp import ClientSession, StdioServerParameters
 
 
 class ToolNotAllowedError(Exception):
@@ -238,7 +238,7 @@ class MCPClient:
         # 3. パラメータ検証
         if self._enable_security:
             schema = tool_info.get("input_schema", {})
-            is_valid, error_msg = self._validator.validate(schema, arguments)
+            is_valid, validation_error = self._validator.validate(schema, arguments)
             if not is_valid:
                 self._audit_logger.log_tool_call(
                     user_id=user_id,
@@ -246,9 +246,9 @@ class MCPClient:
                     parameters=arguments,
                     result=None,
                     success=False,
-                    error=error_msg,
+                    error=validation_error,
                 )
-                raise ToolValidationError(error_msg or "Parameter validation failed")
+                raise ToolValidationError(validation_error or "Parameter validation failed")
 
         # 4. リトライ付き実行
         return await self._call_tool_with_retry(
@@ -258,7 +258,6 @@ class MCPClient:
             arguments=arguments,
             user_id=user_id,
         )
-
 
     async def _call_tool_with_retry(
         self,
@@ -312,9 +311,7 @@ class MCPClient:
 
             except TimeoutError as e:
                 last_error = e
-                self._logger.warning(
-                    f"Tool call timeout (attempt {attempt + 1}/{self._max_retries}): {tool_uri}"
-                )
+                self._logger.warning(f"Tool call timeout (attempt {attempt + 1}/{self._max_retries}): {tool_uri}")
                 if attempt < self._max_retries - 1:
                     wait_time = 2**attempt  # 指数バックオフ
                     await asyncio.sleep(wait_time)

@@ -17,15 +17,9 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-
 from apps.decision_governance_engine.agents.review_agent import ReviewAgent
 from apps.decision_governance_engine.repositories import DecisionRepository
 from apps.decision_governance_engine.routers.report import _get_report_from_db, cache_report
-from apps.decision_governance_engine.services.human_review_policy import (
-    enrich_review_with_policy,
-)
 from apps.decision_governance_engine.schemas.agent_schemas import (
     FindingCategory,
     FindingSeverity,
@@ -33,6 +27,11 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     ReviewOutput,
 )
 from apps.decision_governance_engine.schemas.output_schemas import HumanReview
+from apps.decision_governance_engine.services.human_review_policy import (
+    enrich_review_with_policy,
+)
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 from agentflow.providers import get_llm
 from agentflow.utils import extract_json
@@ -52,9 +51,7 @@ class ReviewApprovalRequest(BaseModel):
     approved: bool = Field(..., description="承認/却下")
     reviewer_name: str = Field(..., description="確認者名")
     reviewer_email: str | None = Field(default=None, description="確認者メール")
-    review_notes: str | None = Field(
-        default=None, max_length=500, description="確認コメント"
-    )
+    review_notes: str | None = Field(default=None, max_length=500, description="確認コメント")
 
 
 class ReviewApprovalResponse(BaseModel):
@@ -71,9 +68,7 @@ class FindingRecheckRequest(BaseModel):
 
     report_id: str = Field(..., description="レポートID")
     finding_index: int = Field(..., ge=0, description="確認対象の指摘インデックス")
-    confirmation_note: str = Field(
-        ..., min_length=10, max_length=2000, description="人間確認コメント"
-    )
+    confirmation_note: str = Field(..., min_length=10, max_length=2000, description="人間確認コメント")
     acknowledged: bool = Field(..., description="確認チェックボックス")
     request_id: str | None = Field(default=None, description="履歴リクエストID（UUID）")
     reviewer_name: str | None = Field(default=None, description="確認者名")
@@ -187,9 +182,7 @@ async def get_review_status(report_id: str) -> HumanReview:
         HTTPException: レポートが見つからない場合
     """
     if report_id not in _review_storage:
-        raise HTTPException(
-            status_code=404, detail=f"レポート {report_id} が見つかりません"
-        )
+        raise HTTPException(status_code=404, detail=f"レポート {report_id} が見つかりません")
 
     return _review_storage[report_id]
 
@@ -201,12 +194,9 @@ async def get_pending_reviews() -> list[str]:
     Returns:
         list[str]: 未確認レポートIDのリスト
     """
-    pending = [
-        report_id
-        for report_id, review in _review_storage.items()
-        if review.requires_review and review.approved is None
+    return [
+        report_id for report_id, review in _review_storage.items() if review.requires_review and review.approved is None
     ]
-    return pending
 
 
 @router.delete("/reset/{report_id}")
@@ -263,10 +253,7 @@ def _parse_review_output(raw_review: Any) -> ReviewOutput:
         raise ValueError(msg)
 
     enriched_review = enrich_review_with_policy(raw_review)
-    findings = [
-        _build_default_finding(item)
-        for item in enriched_review.get("findings", [])
-    ]
+    findings = [_build_default_finding(item) for item in enriched_review.get("findings", [])]
     raw_confidence = enriched_review.get("confidence_score", 0.0)
     try:
         confidence = float(raw_confidence)
@@ -276,11 +263,7 @@ def _parse_review_output(raw_review: Any) -> ReviewOutput:
         overall_verdict=enriched_review.get("overall_verdict", "REVISE"),
         findings=findings,
         confidence_score=confidence,
-        final_warnings=[
-            str(item)
-            for item in enriched_review.get("final_warnings", [])
-            if isinstance(item, str)
-        ],
+        final_warnings=[str(item) for item in enriched_review.get("final_warnings", []) if isinstance(item, str)],
     )
 
 
@@ -320,7 +303,7 @@ async def _evaluate_resolution_with_ai(
 
     try:
         llm_client = get_llm()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(f"LLM 初期化失敗のためルール判定へフォールバック: {exc}")
         llm_client = None
 
@@ -342,7 +325,7 @@ async def _evaluate_resolution_with_ai(
         return resolved, issues[:3]
     except json.JSONDecodeError:
         return _evaluate_resolution_fallback(finding, confirmation_note)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(f"LLM 再確認判定に失敗したためフォールバック: {exc}")
         return _evaluate_resolution_fallback(finding, confirmation_note)
 
@@ -392,7 +375,7 @@ async def _resolve_request_id_from_report(report_id: str | None) -> UUID | None:
     except TimeoutError:
         logger.warning(f"report_id 逆引きがタイムアウト: report_id={report_id}")
         return None
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(f"report_id 逆引きに失敗: report_id={report_id}, error={exc}")
         return None
 
@@ -425,7 +408,7 @@ async def _persist_human_review_record(
             logger.warning(f"人間確認ログ保存対象が見つかりません: request_id={request_uuid}")
     except TimeoutError:
         logger.warning(f"人間確認ログ保存がタイムアウト: request_id={request_uuid}")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(f"人間確認ログ保存に失敗: {exc}")
 
 
@@ -478,11 +461,7 @@ async def recheck_finding(request: FindingRecheckRequest) -> FindingRecheckRespo
             updated_review=None,
         )
 
-    remaining_findings = [
-        finding
-        for idx, finding in enumerate(review.findings)
-        if idx != request.finding_index
-    ]
+    remaining_findings = [finding for idx, finding in enumerate(review.findings) if idx != request.finding_index]
     verdict, confidence = ReviewAgent.derive_verdict_and_confidence(
         findings=remaining_findings,
     )

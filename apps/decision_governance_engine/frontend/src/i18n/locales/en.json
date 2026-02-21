@@ -1,0 +1,93 @@
+{
+  "login": {
+    "title": "Decision Governance System",
+    "subtitle": "AI-powered decision support for your organization",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Login",
+    "demo_hint": "Use demo account",
+    "username_placeholder": "Enter username",
+    "password_placeholder": "Enter password",
+    "authenticating": "Authenticating...",
+    "error": "Invalid username or password"
+  },
+  "decision": {
+    "title": "Decision Input",
+    "subject": "Subject / Theme",
+    "subject_placeholder": "e.g. Approval of new product launch strategy",
+    "background": "Background / Situation",
+    "background_placeholder": "Describe the background of this decision",
+    "options": "Options",
+    "options_placeholder": "Describe the options under consideration",
+    "constraints": "Constraints / Conditions",
+    "constraints_placeholder": "Describe budget, timeline, regulations, etc.",
+    "submit": "Request Decision",
+    "submitting": "Submitting...",
+    "dept": "Department",
+    "dept_placeholder": "e.g. Corporate Planning",
+    "required": "This field is required"
+  },
+  "processing": {
+    "title": "Processing Decision",
+    "gate": "Pre-screening",
+    "analysis": "Multi-angle Analysis",
+    "risk": "Risk Assessment",
+    "review": "Final Review",
+    "complete": "Complete",
+    "step": "Step {current} of {total}",
+    "please_wait": "AI is analyzing. Please wait..."
+  },
+  "report": {
+    "title": "Decision Report",
+    "summary": "Decision Summary",
+    "recommendation": "Recommendation",
+    "risk": "Risk Analysis",
+    "evidence": "Evidence",
+    "alternatives": "Alternatives",
+    "download_pdf": "Download PDF",
+    "new_decision": "New Decision",
+    "verdict": {
+      "approve": "Recommended: Approve",
+      "reject": "Recommended: Reject",
+      "revise": "Requires Revision"
+    }
+  },
+  "history": {
+    "title": "Decision History",
+    "empty": "No decision history",
+    "date": "Date",
+    "subject": "Subject",
+    "status": "Verdict",
+    "view": "View Details"
+  },
+  "knowledge": {
+    "title": "Knowledge Base",
+    "search_placeholder": "Search knowledge...",
+    "upload": "Add Document",
+    "empty": "No knowledge available"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "api_key": "API Key",
+    "save": "Save",
+    "saved": "Saved"
+  },
+  "nav": {
+    "decision": "Decision",
+    "history": "History",
+    "knowledge": "Knowledge",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "close": "Close",
+    "back": "Back"
+  }
+}
+

@@ -77,7 +77,11 @@ class DockerTarget(BaseDeployTarget):
             )
 
             build_process = await asyncio.create_subprocess_exec(
-                "docker", "build", "-t", full_tag, str(source_path),
+                "docker",
+                "build",
+                "-t",
+                full_tag,
+                str(source_path),
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -113,8 +117,11 @@ class DockerTarget(BaseDeployTarget):
 
                 if username and password:
                     login_process = await asyncio.create_subprocess_exec(
-                        "docker", "login", registry,
-                        "-u", username,
+                        "docker",
+                        "login",
+                        registry,
+                        "-u",
+                        username,
                         "--password-stdin",
                         stdin=asyncio.subprocess.PIPE,
                         stdout=asyncio.subprocess.PIPE,
@@ -124,7 +131,9 @@ class DockerTarget(BaseDeployTarget):
 
                 # プッシュ
                 push_process = await asyncio.create_subprocess_exec(
-                    "docker", "push", full_tag,
+                    "docker",
+                    "push",
+                    full_tag,
                     stdout=asyncio.subprocess.PIPE,
                     stderr=asyncio.subprocess.PIPE,
                 )

@@ -122,7 +122,7 @@ _engine: DesignSkillsEngine | None = None
 
 def _get_engine() -> DesignSkillsEngine:
     """Lazily initialize DesignSkillsEngine."""
-    global _engine  # noqa: PLW0603
+    global _engine
     if _engine is None:
         _engine = DesignSkillsEngine()
     return _engine

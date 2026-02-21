@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """app_config.json Pydantic スキーマ.
 
 全 App 共通マニフェストの型定義とバリデーション。
@@ -282,6 +281,52 @@ class PluginBindingConfig(BaseModel):
     config: dict[str, Any] = Field(default_factory=dict, description="プラグイン設定")
 
 
+class EvolutionValidatorQueueConfig(BaseModel):
+    """Evolution validator queue settings."""
+
+    backend: Literal["redis_stream", "none"] = Field(
+        default="redis_stream",
+        description="バリデーターキュー backend",
+    )
+    redis_url: str | None = Field(default=None, description="Redis 接続URL")
+    stream_key: str = Field(default="evolution:validate:stream", description="Redis stream key")
+    consumer_group: str = Field(
+        default="evolution-validator-v1",
+        description="Redis consumer group",
+    )
+    max_retries: int = Field(default=5, ge=0, le=20, description="再試行上限")
+
+
+class EvolutionRetrievalConfig(BaseModel):
+    """Evolution retrieval decision thresholds."""
+
+    high_confidence_skip_threshold: float = Field(default=0.82, ge=0.0, le=1.0)
+    high_complexity_threshold: float = Field(default=0.70, ge=0.0, le=1.0)
+    low_confidence_threshold: float = Field(default=0.55, ge=0.0, le=1.0)
+
+
+class EvolutionSuspicionConfig(BaseModel):
+    """Evolution suspicion trigger settings."""
+
+    max_age_days: int = Field(default=30, ge=1, le=3650)
+    failure_streak_threshold: int = Field(default=2, ge=1, le=20)
+    performance_drop_ratio: float = Field(default=0.2, ge=0.01, le=1.0)
+
+
+class EvolutionConfig(BaseModel):
+    """Evolution V2 app-level config."""
+
+    enabled: bool = Field(default=True, description="進化ループを有効化")
+    strategy_service_url: str | None = Field(default=None, description="Strategy Service URL")
+    validator_queue: EvolutionValidatorQueueConfig = Field(default_factory=EvolutionValidatorQueueConfig)
+    scope_policy: list[Literal["tenant_app", "tenant_product_line", "global_verified"]] = Field(
+        default_factory=lambda: ["tenant_app", "tenant_product_line", "global_verified"],
+        description="戦略検索スコープ順序",
+    )
+    retrieval: EvolutionRetrievalConfig = Field(default_factory=EvolutionRetrievalConfig)
+    suspicion: EvolutionSuspicionConfig = Field(default_factory=EvolutionSuspicionConfig)
+
+
 class ContractsConfig(BaseModel):
     """プラットフォーム契約セクション."""
 
@@ -312,6 +357,7 @@ class AppConfig(BaseModel):
         product_line: 製品主線（migration / faq / assistant / framework）
         surface_profile: UI/操作面プロファイル（business / developer / operator）
         audit_profile: 監査プロファイル（business / developer）
+        evolution: Evolution V2 設定
         plugin_bindings: バインド済みプラグイン一覧
         security_mode: セキュリティ動作モード（assistant 向け）
         tags: 検索用タグ
@@ -327,14 +373,10 @@ class AppConfig(BaseModel):
     version: str = Field(default="1.0.0", description="バージョン")
     icon: str = Field(default="📦", max_length=10, description="絵文字アイコン")
     ports: PortsConfig = Field(default_factory=PortsConfig, description="ポート設定")
-    entry_points: EntryPointsConfig = Field(
-        default_factory=EntryPointsConfig, description="エントリーポイント"
-    )
+    entry_points: EntryPointsConfig = Field(default_factory=EntryPointsConfig, description="エントリーポイント")
     agents: list[AgentInfo] = Field(default_factory=list, description="Agent 一覧")
     services: dict[str, Any] = Field(default_factory=dict, description="利用サービス情報")
-    dependencies: DependenciesConfig = Field(
-        default_factory=DependenciesConfig, description="依存設定"
-    )
+    dependencies: DependenciesConfig = Field(default_factory=DependenciesConfig, description="依存設定")
     runtime: RuntimeConfig = Field(
         default_factory=RuntimeConfig,
         description="ランタイム設定",
@@ -354,6 +396,10 @@ class AppConfig(BaseModel):
     audit_profile: Literal["business", "developer"] = Field(
         ...,
         description="監査プロファイル",
+    )
+    evolution: EvolutionConfig = Field(
+        default_factory=EvolutionConfig,
+        description="Evolution V2 設定",
     )
     plugin_bindings: list[PluginBindingConfig] = Field(
         ...,

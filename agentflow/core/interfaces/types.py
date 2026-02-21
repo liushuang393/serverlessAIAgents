@@ -20,9 +20,9 @@ from typing import Any, Literal
 class CodeOutputType(str, Enum):
     """コード出力タイプ."""
 
-    FRONTEND = "frontend"      # React/Vue フロントエンド
-    BACKEND = "backend"        # FastAPI バックエンド
-    FULLSTACK = "fullstack"    # 前後端完全アプリ
+    FRONTEND = "frontend"  # React/Vue フロントエンド
+    BACKEND = "backend"  # FastAPI バックエンド
+    FULLSTACK = "fullstack"  # 前後端完全アプリ
 
 
 class DeployTarget(str, Enum):

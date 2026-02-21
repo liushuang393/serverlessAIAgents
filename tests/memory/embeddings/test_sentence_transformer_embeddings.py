@@ -1,12 +1,13 @@
 """SentenceTransformerEmbeddingsのテスト."""
 
-import asyncio
 from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
 
-from agentflow.memory.embeddings.sentence_transformer_embeddings import SentenceTransformerEmbeddings
+from agentflow.memory.embeddings.sentence_transformer_embeddings import (
+    SentenceTransformerEmbeddings,
+)
 
 
 @pytest.fixture
@@ -92,12 +93,14 @@ def test_get_model_name(sentence_transformer_embeddings):
 
 def test_init_without_sentence_transformers():
     """Sentence Transformersパッケージなしの初期化テスト."""
-    with patch(
-        "agentflow.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer",
-        side_effect=ImportError,
+    with (
+        patch(
+            "agentflow.memory.embeddings.sentence_transformer_embeddings.SentenceTransformer",
+            side_effect=ImportError,
+        ),
+        pytest.raises(ImportError, match="sentence-transformers package is required"),
     ):
-        with pytest.raises(ImportError, match="sentence-transformers package is required"):
-            SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
+        SentenceTransformerEmbeddings(model_name="all-MiniLM-L6-v2")
 
 
 def test_init_with_different_models():
@@ -116,4 +119,3 @@ def test_init_with_different_models():
         mock_st.return_value = mock_model2
         emb2 = SentenceTransformerEmbeddings(model_name="all-mpnet-base-v2")
         assert emb2.get_dimension() == 768
-

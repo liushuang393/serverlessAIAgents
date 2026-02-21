@@ -34,15 +34,12 @@ class PathSecurityError(OSSkillError):
     """パスセキュリティ違反."""
 
 
-
 class CommandSecurityError(OSSkillError):
     """コマンドセキュリティ違反."""
 
 
-
 class ExecutionModeError(OSSkillError):
     """実行モード違反."""
-
 
 
 class OSSkillBase(ABC):
@@ -169,4 +166,3 @@ class OSSkillBase(ABC):
             self._config.execution_mode.value,
             details,
         )
-

@@ -5,6 +5,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from agentflow.code_intelligence.ast.unified_ast import (
     ASTNode,
     ASTNodeType,
@@ -16,7 +18,7 @@ def ProgramNode(
     name: str,
     *,
     language: str = "",
-    **kwargs,
+    **kwargs: Any,
 ) -> ASTNode:
     """プログラムノードを作成.
 
@@ -38,10 +40,10 @@ def FunctionNode(
     name: str,
     *,
     return_type: TypeInfo | None = None,
-    parameters: list[dict] | None = None,
+    parameters: list[dict[str, Any]] | None = None,
     is_async: bool = False,
     visibility: str = "public",
-    **kwargs,
+    **kwargs: Any,
 ) -> ASTNode:
     """関数ノードを作成.
 
@@ -72,11 +74,11 @@ def MethodNode(
     name: str,
     *,
     return_type: TypeInfo | None = None,
-    parameters: list[dict] | None = None,
+    parameters: list[dict[str, Any]] | None = None,
     is_async: bool = False,
     is_static: bool = False,
     visibility: str = "public",
-    **kwargs,
+    **kwargs: Any,
 ) -> ASTNode:
     """メソッドノードを作成.
 
@@ -112,7 +114,7 @@ def ClassNode(
     interfaces: list[str] | None = None,
     is_abstract: bool = False,
     visibility: str = "public",
-    **kwargs,
+    **kwargs: Any,
 ) -> ASTNode:
     """クラスノードを作成.
 
@@ -146,7 +148,7 @@ def VariableNode(
     is_mutable: bool = True,
     initial_value: str | None = None,
     visibility: str = "private",
-    **kwargs,
+    **kwargs: Any,
 ) -> ASTNode:
     """変数ノードを作成.
 
@@ -177,7 +179,7 @@ def StatementNode(
     statement_type: str,
     *,
     content: str = "",
-    **kwargs,
+    **kwargs: Any,
 ) -> ASTNode:
     """文ノードを作成.
 
@@ -203,7 +205,7 @@ def ExpressionNode(
     *,
     value: str = "",
     operator: str | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> ASTNode:
     """式ノードを作成.
 
@@ -230,7 +232,7 @@ def IfNode(
     condition: ASTNode,
     then_block: ASTNode,
     else_block: ASTNode | None = None,
-    **kwargs,
+    **kwargs: Any,
 ) -> ASTNode:
     """IF ノードを作成.
 
@@ -259,7 +261,7 @@ def ForNode(
     condition: ASTNode | None,
     update: ASTNode | None,
     body: ASTNode,
-    **kwargs,
+    **kwargs: Any,
 ) -> ASTNode:
     """FOR ノードを作成.
 
@@ -287,7 +289,7 @@ def ForNode(
     return node
 
 
-def BlockNode(statements: list[ASTNode] | None = None, **kwargs) -> ASTNode:
+def BlockNode(statements: list[ASTNode] | None = None, **kwargs: Any) -> ASTNode:
     """ブロックノードを作成.
 
     Args:

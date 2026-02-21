@@ -36,9 +36,7 @@ export function CollapsibleRenderer({
         className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
         aria-expanded={isOpen}
       >
-        <span className="font-medium text-gray-900 dark:text-gray-100">
-          {String(title)}
-        </span>
+        <span className="font-medium text-gray-900 dark:text-gray-100">{String(title)}</span>
         <span
           className={`transform transition-transform ${isOpen ? 'rotate-180' : ''}`}
           aria-hidden="true"
@@ -58,4 +56,3 @@ export function CollapsibleRenderer({
 }
 
 export default CollapsibleRenderer;
-

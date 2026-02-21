@@ -139,7 +139,7 @@ class RecursiveChunker(BaseChunker):
         """テキストを再帰的に分割."""
         chunks = self._split_text(text, self._config.separators)
 
-        result = []
+        result: list[Chunk] = []
         current_pos = 0
         for i, chunk_text in enumerate(chunks):
             if chunk_text.strip():
@@ -172,7 +172,7 @@ class RecursiveChunker(BaseChunker):
         splits = text.split(separator) if separator else list(text)
 
         # 各分割を処理
-        chunks = []
+        chunks: list[str] = []
         current_chunk = ""
 
         for split in splits:
@@ -202,7 +202,7 @@ class RecursiveChunker(BaseChunker):
         """サイズで分割."""
         chunks = []
         for i in range(0, len(text), self._config.chunk_size - self._config.chunk_overlap):
-            chunk = text[i:i + self._config.chunk_size]
+            chunk = text[i : i + self._config.chunk_size]
             if chunk:
                 chunks.append(chunk)
         return chunks
@@ -212,11 +212,11 @@ class RecursiveChunker(BaseChunker):
         if not self._config.chunk_overlap or len(chunks) <= 1:
             return chunks
 
-        result = []
+        result: list[str] = []
         for i, chunk in enumerate(chunks):
             if i > 0:
                 # 前のチャンクの末尾を追加
-                prev_overlap = chunks[i - 1][-self._config.chunk_overlap:]
+                prev_overlap = chunks[i - 1][-self._config.chunk_overlap :]
                 chunk = prev_overlap + chunk
             result.append(chunk)
         return result
@@ -245,15 +245,18 @@ class SemanticChunker(BaseChunker):
         sentences = self._split_into_sentences(text)
 
         if len(sentences) <= 1:
-            return [Chunk.create(
-                content=text.strip(),
-                index=0,
-                metadata={**(metadata or {}), "strategy": "semantic"},
-            )]
+            return [
+                Chunk.create(
+                    content=text.strip(),
+                    index=0,
+                    metadata={**(metadata or {}), "strategy": "semantic"},
+                )
+            ]
 
         try:
             # 埋め込みを取得
             from agentflow.providers import get_embedding
+
             embedding_provider = get_embedding()
             embeddings = await embedding_provider.embed_batch(sentences)
 
@@ -266,7 +269,7 @@ class SemanticChunker(BaseChunker):
             return await fallback.chunk(text, metadata)
 
         # グループをチャンクに変換
-        result = []
+        result: list[Chunk] = []
         for i, group in enumerate(groups):
             content = " ".join(group)
             if len(content) > self._config.chunk_size:
@@ -309,9 +312,7 @@ class SemanticChunker(BaseChunker):
             prev_emb = np.array(embeddings[i - 1])
             curr_emb = np.array(embeddings[i])
 
-            similarity = np.dot(prev_emb, curr_emb) / (
-                np.linalg.norm(prev_emb) * np.linalg.norm(curr_emb)
-            )
+            similarity = np.dot(prev_emb, curr_emb) / (np.linalg.norm(prev_emb) * np.linalg.norm(curr_emb))
 
             # 類似度が閾値以上なら同じグループ
             if similarity >= self._similarity_threshold:
@@ -332,8 +333,8 @@ class SentenceChunker(BaseChunker):
         """文単位で分割."""
         sentences = self._split_into_sentences(text)
 
-        chunks = []
-        current_chunk = []
+        chunks: list[Chunk] = []
+        current_chunk: list[str] = []
         current_size = 0
 
         for sentence in sentences:
@@ -350,7 +351,7 @@ class SentenceChunker(BaseChunker):
                 chunks.append(chunk)
 
                 # オーバーラップ: 最後の数文を保持
-                overlap_sentences = []
+                overlap_sentences: list[str] = []
                 overlap_size = 0
                 for s in reversed(current_chunk):
                     if overlap_size + len(s) <= self._config.chunk_overlap:
@@ -400,12 +401,13 @@ class TokenChunker(BaseChunker):
         """初期化."""
         super().__init__(config)
         self._model = model
-        self._encoder = None
+        self._encoder: Any = None
 
     async def chunk(self, text: str, metadata: dict[str, Any] | None = None) -> list[Chunk]:
         """トークンベースで分割."""
         try:
             import tiktoken
+
             self._encoder = tiktoken.encoding_for_model(self._model)
         except ImportError:
             self._logger.warning("tiktoken not installed, falling back to recursive")
@@ -416,14 +418,14 @@ class TokenChunker(BaseChunker):
 
         tokens = self._encoder.encode(text)
 
-        chunks = []
+        chunks: list[Chunk] = []
         chunk_size = self._config.chunk_size
         overlap = self._config.chunk_overlap
 
         i = 0
         while i < len(tokens):
             # チャンクのトークンを取得
-            chunk_tokens = tokens[i:i + chunk_size]
+            chunk_tokens = tokens[i : i + chunk_size]
             content = self._encoder.decode(chunk_tokens)
 
             chunk = Chunk.create(
@@ -527,7 +529,7 @@ def get_chunker(strategy: ChunkStrategy | str, config: ChunkConfig | None = None
     if isinstance(strategy, str):
         strategy = ChunkStrategy(strategy)
 
-    chunkers = {
+    chunkers: dict[ChunkStrategy, type[BaseChunker]] = {
         ChunkStrategy.FIXED: RecursiveChunker,  # Fixed は Recursive のサブセット
         ChunkStrategy.RECURSIVE: RecursiveChunker,
         ChunkStrategy.SEMANTIC: SemanticChunker,
@@ -536,7 +538,7 @@ def get_chunker(strategy: ChunkStrategy | str, config: ChunkConfig | None = None
         ChunkStrategy.MARKDOWN: MarkdownChunker,
     }
 
-    chunker_cls = chunkers.get(strategy, RecursiveChunker)
+    chunker_cls: type[BaseChunker] = chunkers.get(strategy, RecursiveChunker)
 
     if config:
         config.strategy = strategy

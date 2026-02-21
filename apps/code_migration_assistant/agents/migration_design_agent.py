@@ -1,11 +1,8 @@
-# -*- coding: utf-8 -*-
 """Migration Design Agent - 等価移行設計."""
 
 from __future__ import annotations
 
 from typing import Any
-
-from agentflow import agent
 
 from apps.code_migration_assistant.adapters import get_adapter_factory
 from apps.code_migration_assistant.agents.prompts import MIGRATION_DESIGN_PROMPT
@@ -14,6 +11,8 @@ from apps.code_migration_assistant.workflow.models import (
     UnknownItem,
     build_meta,
 )
+
+from agentflow import agent
 
 
 @agent
@@ -44,9 +43,7 @@ class MigrationDesignAgent:
 
         unknowns: list[UnknownItem] = []
         if not legacy_analysis.get("entry_points"):
-            unknowns.append(
-                UnknownItem(field="entry_points", reason="入口定義が空のため手動確認が必要")
-            )
+            unknowns.append(UnknownItem(field="entry_points", reason="入口定義が空のため手動確認が必要"))
 
         artifact = MigrationDesignArtifact(
             meta=build_meta(
@@ -61,9 +58,7 @@ class MigrationDesignAgent:
             class_mapping={"primary_class": class_name},
             transaction_policy={"mode": "preserve", "rationale": "旧システムの境界を維持"},
             state_model={
-                "variables": [
-                    v.get("name", "UNKNOWN") for v in legacy_analysis.get("data_structures", [])
-                ],
+                "variables": [v.get("name", "UNKNOWN") for v in legacy_analysis.get("data_structures", [])],
                 "mutability": "preserve",
             },
             framework_mapping={

@@ -10,11 +10,13 @@ import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow import get_embedding
 
-from apps.market_trend_monitor.backend.models import Article
+
+if TYPE_CHECKING:
+    from apps.market_trend_monitor.backend.models import Article
 
 
 @dataclass
@@ -96,7 +98,7 @@ class TopicClusteringService:
         clusters: list[TopicCluster] = []
         assigned = [False] * len(articles)
 
-        for i, (article, embedding) in enumerate(zip(articles, embeddings)):
+        for i, (article, embedding) in enumerate(zip(articles, embeddings, strict=False)):
             if assigned[i]:
                 continue
 
@@ -131,7 +133,8 @@ class TopicClusteringService:
 
         self._logger.info(
             "クラスタリング完了: %d記事 → %d クラスタ",
-            len(articles), len(clusters),
+            len(articles),
+            len(clusters),
         )
         return sorted(clusters, key=lambda c: len(c.article_ids), reverse=True)
 
@@ -162,7 +165,8 @@ class TopicClusteringService:
 
         for cluster in self._clusters.values():
             similarity = self._cosine_similarity(
-                article_embedding, cluster.centroid_embedding,
+                article_embedding,
+                cluster.centroid_embedding,
             )
             if similarity >= threshold and similarity > best_similarity:
                 best_similarity = similarity
@@ -172,7 +176,9 @@ class TopicClusteringService:
             best_cluster.article_ids.append(article.id)
             self._logger.debug(
                 "記事 %s をクラスタ %s に割り当て (similarity=%.3f)",
-                article.id, best_cluster.id, best_similarity,
+                article.id,
+                best_cluster.id,
+                best_similarity,
             )
 
         return best_cluster
@@ -193,9 +199,9 @@ class TopicClusteringService:
         """
         cutoff = datetime.now() - timedelta(days=window_days)
         trending = [
-            cluster for cluster in self._clusters.values()
-            if cluster.created_at >= cutoff
-            and len(cluster.article_ids) >= min_articles
+            cluster
+            for cluster in self._clusters.values()
+            if cluster.created_at >= cutoff and len(cluster.article_ids) >= min_articles
         ]
 
         return sorted(trending, key=lambda c: len(c.article_ids), reverse=True)
@@ -217,7 +223,7 @@ class TopicClusteringService:
         """コサイン類似度を計算."""
         if not a or not b or len(a) != len(b):
             return 0.0
-        dot = sum(x * y for x, y in zip(a, b))
+        dot = sum(x * y for x, y in zip(a, b, strict=False))
         norm_a = sum(x * x for x in a) ** 0.5
         norm_b = sum(x * x for x in b) ** 0.5
         if norm_a == 0 or norm_b == 0:
@@ -247,7 +253,7 @@ class TopicClusteringService:
             return 0.0
         similarities = []
         for emb in embeddings:
-            dot = sum(x * y for x, y in zip(emb, centroid))
+            dot = sum(x * y for x, y in zip(emb, centroid, strict=False))
             norm_a = sum(x * x for x in emb) ** 0.5
             norm_b = sum(x * x for x in centroid) ** 0.5
             if norm_a > 0 and norm_b > 0:

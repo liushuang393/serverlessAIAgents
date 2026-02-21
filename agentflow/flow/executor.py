@@ -139,7 +139,7 @@ class FlowExecutor:
                     if tracker:
                         yield tracker.on_node_error(node, error_msg, error_type)
                     else:
-                        event = NodeErrorEvent(
+                        error_event = NodeErrorEvent(
                             timestamp=time.time(),
                             flow_id=ctx.flow_id,
                             node_id=node.id,
@@ -147,7 +147,7 @@ class FlowExecutor:
                             error_message=error_msg,
                             error_type=error_type,
                         )
-                        yield to_legacy_dict(event)
+                        yield to_legacy_dict(error_event)
                     # 失敗でも CONTINUE なら後続ノードを実行するためここでは return しない
                 elif result.action in (NextAction.CONTINUE, NextAction.STOP):
                     # ノード正常完了時のみ完了イベントを発行
@@ -155,14 +155,14 @@ class FlowExecutor:
                     if tracker:
                         yield tracker.on_node_complete(node, result.data, success=True)
                     else:
-                        event = NodeCompleteEvent(
+                        complete_event = NodeCompleteEvent(
                             timestamp=time.time(),
                             flow_id=ctx.flow_id,
                             node_id=node.id,
                             node_name=node.name,
                             data={"success": True},
                         )
-                        yield to_legacy_dict(event)
+                        yield to_legacy_dict(complete_event)
 
                 # 実行結果を処理
                 if result.action == NextAction.CONTINUE:
@@ -183,26 +183,26 @@ class FlowExecutor:
                         if tracker:
                             yield tracker.on_flow_complete(final_result)
                         else:
-                            event = FlowCompleteEvent(
+                            flow_complete_event = FlowCompleteEvent(
                                 timestamp=time.time(),
                                 flow_id=ctx.flow_id,
                                 result=final_result,
                                 include_result=True,
                             )
-                            yield to_legacy_dict(event)
+                            yield to_legacy_dict(flow_complete_event)
                     else:
                         # エラー終了
                         error_msg = result.data.get("error", "Agent execution failed")
                         if tracker:
                             yield tracker.on_flow_error(Exception(error_msg))
                         else:
-                            event = FlowErrorEvent(
+                            flow_error_event = FlowErrorEvent(
                                 timestamp=time.time(),
                                 flow_id=ctx.flow_id,
                                 error_message=error_msg,
                                 error_type="AgentError",
                             )
-                            yield to_legacy_dict(event)
+                            yield to_legacy_dict(flow_error_event)
                     return
 
                 if result.action == NextAction.EARLY_RETURN:

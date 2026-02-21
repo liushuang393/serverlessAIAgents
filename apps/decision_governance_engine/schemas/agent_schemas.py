@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 # 共通列挙型
 # =============================================================================
 
+
 class QuestionCategory(str, Enum):
     """問題カテゴリ分類."""
 
@@ -79,9 +80,9 @@ class FindingCategory(str, Enum):
 class IrreversibilityLevel(str, Enum):
     """不可逆性レベル."""
 
-    HIGH = "HIGH"      # 一度決めたら取り消し困難
+    HIGH = "HIGH"  # 一度決めたら取り消し困難
     MEDIUM = "MEDIUM"  # 取り消し可能だがコスト大
-    LOW = "LOW"        # 容易に取り消し可能
+    LOW = "LOW"  # 容易に取り消し可能
 
 
 class Irreversibility(BaseModel):
@@ -96,36 +97,25 @@ class CognitiveGateInput(BaseModel):
 
     raw_question: str = Field(..., description="ユーザーの質問")
     constraints: list[str] = Field(default_factory=list, description="制約条件")
-    clarification_result: "ClarificationOutput | None" = Field(
-        default=None, description="Clarification結果（あれば）"
-    )
+    clarification_result: "ClarificationOutput | None" = Field(default=None, description="Clarification結果（あれば）")
 
 
 class CognitiveGateOutput(BaseModel):
     """CognitiveGateAgent出力."""
 
-    evaluation_object: str = Field(
-        ..., max_length=50, description="評価対象（何を判断するか）"
-    )
-    intent: str = Field(
-        ..., max_length=100, description="判断目的・動機"
-    )
-    criteria: list[str] = Field(
-        ..., min_length=1, max_length=5, description="評価軸"
-    )
+    evaluation_object: str = Field(..., max_length=50, description="評価対象（何を判断するか）")
+    intent: str = Field(..., max_length=100, description="判断目的・動機")
+    criteria: list[str] = Field(..., min_length=1, max_length=5, description="評価軸")
     irreversibility: Irreversibility = Field(..., description="不可逆性評価")
     proceed: bool = Field(..., description="分析進行可否（True=GO, False=STOP）")
-    missing_info: list[str] = Field(
-        default_factory=list, max_length=3, description="不足情報"
-    )
-    clarification_questions: list[str] = Field(
-        default_factory=list, max_length=3, description="追加質問"
-    )
+    missing_info: list[str] = Field(default_factory=list, max_length=3, description="不足情報")
+    clarification_questions: list[str] = Field(default_factory=list, max_length=3, description="追加質問")
 
 
 # =============================================================================
 # ClarificationAgent スキーマ（問題診断/澄清）
 # =============================================================================
+
 
 class Ambiguity(BaseModel):
     """曖昧な点."""
@@ -159,12 +149,8 @@ class ClarificationInput(BaseModel):
 class ClarificationOutput(BaseModel):
     """ClarificationAgent出力."""
 
-    restated_question: str = Field(
-        ..., max_length=100, description="一文で正確に復唱した質問"
-    )
-    ambiguities: list[Ambiguity] = Field(
-        default_factory=list, max_length=3, description="質問の曖昧な点（最大3つ）"
-    )
+    restated_question: str = Field(..., max_length=100, description="一文で正確に復唱した質問")
+    ambiguities: list[Ambiguity] = Field(default_factory=list, max_length=3, description="質問の曖昧な点（最大3つ）")
     hidden_assumptions: list[HiddenAssumption] = Field(
         default_factory=list, max_length=3, description="暗黙の仮定（最大3つ）"
     )
@@ -172,14 +158,13 @@ class ClarificationOutput(BaseModel):
         default_factory=list, max_length=2, description="認知バイアス（最大2つ）"
     )
     refined_question: str = Field(..., description="診断後の精緻化された質問")
-    diagnosis_confidence: float = Field(
-        ..., ge=0.0, le=1.0, description="診断の確信度"
-    )
+    diagnosis_confidence: float = Field(..., ge=0.0, le=1.0, description="診断の確信度")
 
 
 # =============================================================================
 # GatekeeperAgent スキーマ
 # =============================================================================
+
 
 class GatekeeperInput(BaseModel):
     """GatekeeperAgent入力."""
@@ -210,11 +195,11 @@ class ProblemNatureType(str, Enum):
     """
 
     TECHNICAL_LIMITATION = "TECHNICAL_LIMITATION"  # 技術的に解決可能な問題
-    INVESTMENT_DECISION = "INVESTMENT_DECISION"    # ROI/リソース配分の判断
-    CONSTRAINT_DRIVEN = "CONSTRAINT_DRIVEN"        # 既存解が使えない制約主導型
-    STRATEGIC_CHOICE = "STRATEGIC_CHOICE"          # 方向性・ビジョンの選択
+    INVESTMENT_DECISION = "INVESTMENT_DECISION"  # ROI/リソース配分の判断
+    CONSTRAINT_DRIVEN = "CONSTRAINT_DRIVEN"  # 既存解が使えない制約主導型
+    STRATEGIC_CHOICE = "STRATEGIC_CHOICE"  # 方向性・ビジョンの選択
     REGULATORY_COMPLIANCE = "REGULATORY_COMPLIANCE"  # 規制対応が主因の問題
-    MARKET_TIMING = "MARKET_TIMING"                # タイミングが本質の問題
+    MARKET_TIMING = "MARKET_TIMING"  # タイミングが本質の問題
 
 
 class ExistingAlternative(BaseModel):
@@ -248,8 +233,8 @@ class LeverageLevel(str, Enum):
 class DeathTrapSeverity(str, Enum):
     """死穴の深刻度."""
 
-    FATAL = "FATAL"      # 致命的 - これをやったら終わり
-    SEVERE = "SEVERE"    # 重大 - 大きなダメージ
+    FATAL = "FATAL"  # 致命的 - これをやったら終わり
+    SEVERE = "SEVERE"  # 重大 - 大きなダメージ
     MODERATE = "MODERATE"  # 中程度 - 回復可能だが痛い
 
 
@@ -310,31 +295,37 @@ class AuditEvidenceItem(BaseModel):
 class SelfCheckStatus(str, Enum):
     """セルフチェック総合ステータス（v3.1）."""
 
-    PASS = "PASS"          # 全項目クリア
-    WARNING = "WARNING"    # 軽微な不足あり
-    FATAL = "FATAL"        # 致命的な不足あり（トレードオフ未解決等）
+    PASS = "PASS"  # 全項目クリア
+    WARNING = "WARNING"  # 軽微な不足あり
+    FATAL = "FATAL"  # 致命的な不足あり（トレードオフ未解決等）
 
 
 class SelfCheckResult(BaseModel):
     """セルフチェック結果（v3.1: 分析の自己検証）."""
 
     boundary_undefined: list[str] = Field(
-        default_factory=list, description="境界未定義の制約",
+        default_factory=list,
+        description="境界未定義の制約",
     )
     missing_alternatives: list[str] = Field(
-        default_factory=list, description="漏れた選択肢",
+        default_factory=list,
+        description="漏れた選択肢",
     )
     ambiguous_metrics: list[str] = Field(
-        default_factory=list, description="曖昧な指標",
+        default_factory=list,
+        description="曖昧な指標",
     )
     constraint_conflicts: list[str] = Field(
-        default_factory=list, description="制約衝突",
+        default_factory=list,
+        description="制約衝突",
     )
     evidence_gaps: list[str] = Field(
-        default_factory=list, description="証拠不足",
+        default_factory=list,
+        description="証拠不足",
     )
     overall_status: SelfCheckStatus = Field(
-        default=SelfCheckStatus.WARNING, description="総合ステータス",
+        default=SelfCheckStatus.WARNING,
+        description="総合ステータス",
     )
 
 
@@ -383,9 +374,7 @@ class DaoOutput(BaseModel):
         max_length=5,
         description="因果齿轮（3-5个互相咬合的結構模块）",
     )
-    bottleneck_gear: int | None = Field(
-        default=None, ge=1, le=5, description="关键瓶颈齿轮ID"
-    )
+    bottleneck_gear: int | None = Field(default=None, ge=1, le=5, description="关键瓶颈齿轮ID")
 
     # 死穴分析（核心判断）
     death_traps: list[DeathTrap] = Field(
@@ -433,20 +422,21 @@ class DaoOutput(BaseModel):
 # FaAgent スキーマ（v2.0: 稳健型 vs 激进型対比）
 # =============================================================================
 
+
 class StrategyType(str, Enum):
     """戦略タイプ（稳健型 vs 激进型）."""
 
     CONSERVATIVE = "CONSERVATIVE"  # 稳健型：低リスク、慢回報、可控性高
-    AGGRESSIVE = "AGGRESSIVE"      # 激进型：高リスク、快回報、不确定性大
-    BALANCED = "BALANCED"          # バランス型：中間
+    AGGRESSIVE = "AGGRESSIVE"  # 激进型：高リスク、快回報、不确定性大
+    BALANCED = "BALANCED"  # バランス型：中間
 
 
 class ReversibilityLevel(str, Enum):
     """可逆性レベル."""
 
-    HIGH = "HIGH"      # 高：やり直し可能、ピボットしやすい
+    HIGH = "HIGH"  # 高：やり直し可能、ピボットしやすい
     MEDIUM = "MEDIUM"  # 中：部分的に可逆
-    LOW = "LOW"        # 低：一度決めたら変更困難
+    LOW = "LOW"  # 低：一度決めたら変更困難
 
 
 class ConditionalEvaluation(BaseModel):
@@ -455,14 +445,11 @@ class ConditionalEvaluation(BaseModel):
     success_conditions: list[str] = Field(
         default_factory=list, max_length=3, description="成立条件（満たせば成功確率↑）"
     )
-    risk_factors: list[str] = Field(
-        default_factory=list, max_length=3, description="主要リスク要因（失敗確率↑）"
-    )
-    failure_modes: list[str] = Field(
-        default_factory=list, max_length=3, description="代表的失敗モード（どう壊れるか）"
-    )
+    risk_factors: list[str] = Field(default_factory=list, max_length=3, description="主要リスク要因（失敗確率↑）")
+    failure_modes: list[str] = Field(default_factory=list, max_length=3, description="代表的失敗モード（どう壊れるか）")
     probability_basis: str = Field(
-        default="", max_length=200,
+        default="",
+        max_length=200,
         description="確率算定根拠（算定式/前提/根拠、無ければ空）",
     )
 
@@ -515,11 +502,14 @@ class PathOption(BaseModel):
 
     # v3.1: 条件付き評価（確率%の代替）
     conditional_evaluation: ConditionalEvaluation | None = Field(
-        default=None, description="条件付き評価（v3.1: 成功確率%の代替）",
+        default=None,
+        description="条件付き評価（v3.1: 成功確率%の代替）",
     )
     # v3.1: リスク集中点
     risk_concentration: str = Field(
-        default="", max_length=100, description="リスク集中点（何が一番壊れやすいか）",
+        default="",
+        max_length=100,
+        description="リスク集中点（何が一番壊れやすいか）",
     )
 
 
@@ -552,13 +542,19 @@ class StrategicProhibition(BaseModel):
     violation_consequence: str = Field(..., max_length=50, description="違反した場合の結果")
     # v3.1: 仕組み化フィールド
     prevention_measure: str = Field(
-        default="", max_length=100, description="防止策（レビュー/手順/チェックリスト）",
+        default="",
+        max_length=100,
+        description="防止策（レビュー/手順/チェックリスト）",
     )
     detection_metric: str = Field(
-        default="", max_length=100, description="検知指標（証跡/ログ/監査項目）",
+        default="",
+        max_length=100,
+        description="検知指標（証跡/ログ/監査項目）",
     )
     responsible_role: str = Field(
-        default="", max_length=30, description="責任者（Roleで可）",
+        default="",
+        max_length=30,
+        description="責任者（Roleで可）",
     )
 
 
@@ -578,7 +574,9 @@ class CompetitiveHypothesis(BaseModel):
     substitution_barrier: str = Field(..., max_length=100, description="代替が難しい理由（何が障壁か）")
     winning_metric: str = Field(..., max_length=100, description="勝ち筋指標（何で勝ったと判定するか）")
     minimum_verification: str = Field(
-        ..., max_length=150, description="最小検証（誰に何を当ててどう測るか）",
+        ...,
+        max_length=150,
+        description="最小検証（誰に何を当ててどう測るか）",
     )
 
 
@@ -603,10 +601,12 @@ class JudgmentFramework(BaseModel):
     must_gates: list[MustGate] = Field(default_factory=list, description="Mustゲート（不可変）")
     should_criteria: list[ShouldCriterion] = Field(default_factory=list, description="Should評価基準")
     gate_results: dict[str, list[bool]] = Field(
-        default_factory=dict, description="各案のゲート通過結果（パスID→[True/False...]）",
+        default_factory=dict,
+        description="各案のゲート通過結果（パスID→[True/False...]）",
     )
     should_scores: dict[str, list[int]] = Field(
-        default_factory=dict, description="各案のShould採点（パスID→[1-5...]）",
+        default_factory=dict,
+        description="各案のShould採点（パスID→[1-5...]）",
     )
 
 
@@ -633,7 +633,8 @@ class FaOutput(BaseModel):
 
     # 戦略オプション（v3.1: 最低4案、中間案含む）
     recommended_paths: list[PathOption] = Field(
-        default_factory=list, description="戦略オプション（v3.1: 最低4案）",
+        default_factory=list,
+        description="戦略オプション（v3.1: 最低4案）",
     )
     rejected_paths: list[PathOption] = Field(default_factory=list, description="明示的に不推奨")
 
@@ -642,7 +643,8 @@ class FaOutput(BaseModel):
 
     # v2.0: 比較マトリックス
     path_comparison: PathComparisonMatrix | None = Field(
-        default=None, description="パス比較マトリックス",
+        default=None,
+        description="パス比較マトリックス",
     )
 
     # v3.1: 戦略的禁止事項（仕組み化付き）
@@ -653,27 +655,33 @@ class FaOutput(BaseModel):
 
     # v3.0互換: 差別化軸
     differentiation_axis: DifferentiationAxis | None = Field(
-        default=None, description="差別化軸（v3.0互換）",
+        default=None,
+        description="差別化軸（v3.0互換）",
     )
 
     # v3.1: 競争優位仮説（差別化軸の検証可能版）
     competitive_hypothesis: CompetitiveHypothesis | None = Field(
-        default=None, description="競争優位仮説（v3.1: 検証計画付き）",
+        default=None,
+        description="競争優位仮説（v3.1: 検証計画付き）",
     )
 
     # v3.1: 判断フレームワーク（Must/Should分離）
     judgment_framework: JudgmentFramework | None = Field(
-        default=None, description="判断フレームワーク（v3.1: Must/Should分離）",
+        default=None,
+        description="判断フレームワーク（v3.1: Must/Should分離）",
     )
 
     # v3.1: セルフチェック結果
     fa_self_check: FaSelfCheckResult | None = Field(
-        default=None, description="セルフチェック結果（v3.1）",
+        default=None,
+        description="セルフチェック結果（v3.1）",
     )
 
     # v3.0互換: 既存解が使えない理由
     why_existing_fails: str = Field(
-        default="", max_length=100, description="既存の標準解が使えない理由（一文）",
+        default="",
+        max_length=100,
+        description="既存の標準解が使えない理由（一文）",
     )
 
 
@@ -685,10 +693,10 @@ class FaOutput(BaseModel):
 class RhythmPeriod(str, Enum):
     """節奏周期."""
 
-    WEEK_1 = "WEEK_1"       # 1週間
-    WEEK_2 = "WEEK_2"       # 2週間
-    MONTH_1 = "MONTH_1"     # 1ヶ月（30日）
-    MONTH_3 = "MONTH_3"     # 3ヶ月（90日）
+    WEEK_1 = "WEEK_1"  # 1週間
+    WEEK_2 = "WEEK_2"  # 2週間
+    MONTH_1 = "MONTH_1"  # 1ヶ月（30日）
+    MONTH_3 = "MONTH_3"  # 3ヶ月（90日）
 
 
 class FocusArea(BaseModel):
@@ -802,15 +810,20 @@ class PoCDefinitionOfDone(BaseModel):
     """
 
     experience_conditions: list[str] = Field(
-        ..., min_length=1, max_length=5,
+        ...,
+        min_length=1,
+        max_length=5,
         description="体験条件（例: 字幕リアルタイム表示, 翻訳2言語対応）",
     )
     success_metrics: list[PoCSuccessMetric] = Field(
-        ..., min_length=3, max_length=5,
+        ...,
+        min_length=3,
+        max_length=5,
         description="成功指標（3〜5個: 遅延, 安定性, 運用手間等）",
     )
     fallback_strategy: str = Field(
-        ..., max_length=200,
+        ...,
+        max_length=200,
         description="フォールバック（失敗時に何を落として成立させるか）",
     )
 
@@ -841,7 +854,9 @@ class ProposalPhase(BaseModel):
     measurement: str = Field(default="", max_length=100, description="計測（どう測るか）")
     notes: list[str] = Field(default_factory=list, max_length=3, description="注意点")
     branches: list[PhaseBranch] = Field(
-        default_factory=list, min_length=0, max_length=5,
+        default_factory=list,
+        min_length=0,
+        max_length=5,
         description="分岐（詰まった場合の代替、最低2つ推奨）",
     )
 
@@ -853,7 +868,8 @@ class StagePlan(BaseModel):
     objective: str = Field(..., max_length=150, description="ステージ目標")
     phases: list[ProposalPhase] = Field(..., min_length=1, max_length=5, description="フェーズ群")
     gate_criteria: list[str] = Field(
-        default_factory=list, max_length=3,
+        default_factory=list,
+        max_length=3,
         description="次ステージへのゲート基準",
     )
 
@@ -866,10 +882,12 @@ class TwoStageRocket(BaseModel):
     """
 
     stage1_minimal_pipeline: StagePlan = Field(
-        ..., description="Stage1: 最小パイプライン成立を最短で確認",
+        ...,
+        description="Stage1: 最小パイプライン成立を最短で確認",
     )
     stage2_governance: StagePlan = Field(
-        ..., description="Stage2: 統制を段階的に厚くする",
+        ...,
+        description="Stage2: 統制を段階的に厚くする",
     )
 
 
@@ -999,10 +1017,13 @@ class MinimalLogging(BaseModel):
     """最小ログ/計測設定（v3.1: 相関ID＋タイムスタンプ）."""
 
     correlation_id_strategy: str = Field(
-        ..., max_length=100, description="相関ID戦略（例: リクエスト毎にUUID発行）",
+        ...,
+        max_length=100,
+        description="相関ID戦略（例: リクエスト毎にUUID発行）",
     )
     timestamp_points: list[str] = Field(
-        default_factory=list, max_length=5,
+        default_factory=list,
+        max_length=5,
         description="タイムスタンプ計測ポイント（例: 音声取得時, ASR完了時）",
     )
     storage: str = Field(default="", max_length=80, description="ログ保存先（例: CloudWatch Logs）")
@@ -1016,11 +1037,14 @@ class PoCMinimalArchitecture(BaseModel):
     """
 
     components: list[ArchitectureComponent] = Field(
-        ..., min_length=1, max_length=10,
+        ...,
+        min_length=1,
+        max_length=10,
         description="コンポーネント一覧（箱）",
     )
     data_flow_description: str = Field(
-        ..., max_length=300,
+        ...,
+        max_length=300,
         description="データフロー説明（矢印: コンポーネント間の流れ）",
     )
     minimal_logging: MinimalLogging | None = Field(
@@ -1028,7 +1052,8 @@ class PoCMinimalArchitecture(BaseModel):
         description="最小ログ/計測設定",
     )
     deferred_components: list[str] = Field(
-        default_factory=list, max_length=10,
+        default_factory=list,
+        max_length=10,
         description="後回しにするコンポーネント（例: WebRTC SFU, WORM）",
     )
 
@@ -1038,11 +1063,14 @@ class ExpansionStage(BaseModel):
 
     stage_name: str = Field(..., max_length=50, description="段階名（例: 多人数/多拠点対応）")
     introduction_condition: str = Field(
-        ..., max_length=100,
+        ...,
+        max_length=100,
         description="導入条件/閾値（例: 同時接続10人超, 監査要件ISO27001準拠必須時）",
     )
     added_components: list[str] = Field(
-        ..., min_length=1, max_length=5,
+        ...,
+        min_length=1,
+        max_length=5,
         description="追加コンポーネント（例: SFU, WORM, 話者分離）",
     )
     rationale: str = Field(..., max_length=150, description="追加理由")
@@ -1056,7 +1084,8 @@ class ImplementationStep(BaseModel):
     tasks: list[str] = Field(..., min_length=1, max_length=5, description="作業一覧")
     notes: list[str] = Field(default_factory=list, max_length=3, description="注意点")
     common_pitfalls: list[str] = Field(
-        default_factory=list, max_length=3,
+        default_factory=list,
+        max_length=3,
         description="よくある詰まりポイントと回避策",
     )
 
@@ -1130,13 +1159,14 @@ class QiOutput(BaseModel):
 # ReviewAgent スキーマ
 # =============================================================================
 
+
 # v3.1: 修正アクション分類
 class ActionType(str, Enum):
     """修正アクション分類（v3.1）."""
 
-    PATCH = "PATCH"      # 追記だけでOK（再走不要）
-    RECALC = "RECALC"    # 追記→自動再計算（再走不要）
-    RERUN = "RERUN"      # 全体再走が必要（原則40点未満のみ）
+    PATCH = "PATCH"  # 追記だけでOK（再走不要）
+    RECALC = "RECALC"  # 追記→自動再計算（再走不要）
+    RERUN = "RERUN"  # 全体再走が必要（原則40点未満のみ）
 
 
 class ScoreImprovement(BaseModel):
@@ -1164,17 +1194,15 @@ class ReviewFinding(BaseModel):
     description: str = Field(..., description="説明")
     affected_agent: str = Field(..., description="影響を受けるAgent")
     suggested_revision: str = Field(..., description="修正提案")
-    requires_human_review: bool = Field(
-        default=False, description="人間確認が必須か"
-    )
-    human_review_hint: str | None = Field(
-        default=None, description="人間確認時の補足メッセージ"
-    )
+    requires_human_review: bool = Field(default=False, description="人間確認が必須か")
+    human_review_hint: str | None = Field(default=None, description="人間確認時の補足メッセージ")
     # v3.1 差分パッチ型フィールド
     failure_point: str = Field(default="", max_length=200, description="破綻点：このままだとどこで失敗するか")
     impact_scope: str = Field(default="", max_length=200, description="影響範囲：どのAgent/成果物が無効になるか")
     minimal_patch: MinimalPatch | None = Field(default=None, description="最小パッチ（checkbox＋注釈）")
-    score_improvements: list[ScoreImprovement] = Field(default_factory=list, description="パッチ適用後のスコア改善見込み")
+    score_improvements: list[ScoreImprovement] = Field(
+        default_factory=list, description="パッチ適用後のスコア改善見込み"
+    )
     action_type: ActionType = Field(default=ActionType.RECALC, description="修正アクション分類")
 
 
@@ -1222,7 +1250,9 @@ class ReviewOutput(BaseModel):
     """ReviewAgent出力 v3.1（差分パッチ型）."""
 
     overall_verdict: ReviewVerdict = Field(..., description="総合判定")
-    findings: list[ReviewFinding] = Field(default_factory=list, max_length=3, description="検証所見（最大3件、重複除去済み）")
+    findings: list[ReviewFinding] = Field(
+        default_factory=list, max_length=3, description="検証所見（最大3件、重複除去済み）"
+    )
     confidence_score: float = Field(..., ge=0.0, le=1.0, description="信頼度スコア（総合）")
     final_warnings: list[str] = Field(default_factory=list, description="最終警告")
     # v3.1 差分パッチ型フィールド

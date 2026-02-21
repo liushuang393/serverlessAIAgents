@@ -156,9 +156,7 @@ class TestAutoAdaptDecorator:
         assert hasattr(agent, "get_a2a_card")
         assert hasattr(agent, "create_agui_emitter")
 
-    def test_decorator_preserves_original_init(
-        self, sample_metadata_file: Path, tmp_path: Path
-    ) -> None:
+    def test_decorator_preserves_original_init(self, sample_metadata_file: Path, tmp_path: Path) -> None:
         """デコレーターが元の __init__ を保持することをテスト."""
 
         @auto_adapt(protocols=["mcp"], metadata_path=sample_metadata_file)

@@ -155,14 +155,8 @@ class Span:
             "trace_id": self.trace_id,
             "span_id": self.span_id,
             "parent_span_id": self.context.parent_span_id,
-            "start_time": datetime.fromtimestamp(
-                self.start_time, tz=UTC
-            ).isoformat(),
-            "end_time": (
-                datetime.fromtimestamp(self.end_time, tz=UTC).isoformat()
-                if self.end_time
-                else None
-            ),
+            "start_time": datetime.fromtimestamp(self.start_time, tz=UTC).isoformat(),
+            "end_time": (datetime.fromtimestamp(self.end_time, tz=UTC).isoformat() if self.end_time else None),
             "duration_ms": self.duration_ms,
             "status": self.status,
             "attributes": self.attributes,
@@ -402,4 +396,3 @@ def get_tracer() -> Tracer:
     if _tracer_instance is None:
         _tracer_instance = Tracer()
     return _tracer_instance
-

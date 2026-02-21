@@ -17,7 +17,7 @@ import os
 import unittest
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from agentflow.testing.mock_llm import MockLLMProvider, create_mock_llm
 
@@ -92,15 +92,17 @@ class AgentTestCase(unittest.TestCase):
     def _setup_mock_llm(self) -> None:
         """Mock LLM をセットアップ."""
         # グローバル LLM をモックに置き換え
-        from agentflow.providers import llm_provider
+        from agentflow.providers import llm_provider as llm_provider_module
 
-        self._original_llm_instance = llm_provider._llm_instance
+        llm_provider = cast("Any", llm_provider_module)
+        self._original_llm_instance = getattr(llm_provider, "_llm_instance", None)
         llm_provider._llm_instance = self.mock_llm
 
     def _reset_mock_llm(self) -> None:
         """Mock LLM をリセット."""
-        from agentflow.providers import llm_provider
+        from agentflow.providers import llm_provider as llm_provider_module
 
+        llm_provider = cast("Any", llm_provider_module)
         llm_provider._llm_instance = self._original_llm_instance
 
     def set_env(self, key: str, value: str) -> None:
@@ -174,9 +176,7 @@ class AgentTestCase(unittest.TestCase):
         """
         return self.mock_llm.get_calls()
 
-    def assertResponseContains(
-        self, response: dict[str, Any], key: str, substring: str | None = None
-    ) -> None:
+    def assertResponseContains(self, response: dict[str, Any], key: str, substring: str | None = None) -> None:
         """レスポンスに特定のキーと値が含まれることを検証.
 
         Args:
@@ -285,9 +285,10 @@ async def agent_test_context(
     original_env = os.environ.copy()
 
     # Mock LLM を設定
-    from agentflow.providers import llm_provider
+    from agentflow.providers import llm_provider as llm_provider_module
 
-    original_llm = llm_provider._llm_instance
+    llm_provider = cast("Any", llm_provider_module)
+    original_llm = getattr(llm_provider, "_llm_instance", None)
     llm_provider._llm_instance = context.mock_llm
 
     try:
@@ -305,4 +306,3 @@ async def agent_test_context(
                     await agent.cleanup()
                 except Exception as e:
                     logger.warning(f"Agent cleanup failed: {e}")
-

@@ -137,8 +137,7 @@ class QuotaExceededError(Exception):
         self.period = period
         self.usage = usage
         super().__init__(
-            f"Quota exceeded: {quota_type.value} per {period.value} "
-            f"(used: {usage.used}, limit: {usage.limit})"
+            f"Quota exceeded: {quota_type.value} per {period.value} (used: {usage.used}, limit: {usage.limit})"
         )
 
 
@@ -163,15 +162,13 @@ class TenantQuota:
     def _get_reset_time(self, period: QuotaPeriod) -> float:
         """获取重置时间."""
         now = time.time()
-        if period == QuotaPeriod.MINUTE:
-            return now + 60
-        if period == QuotaPeriod.HOUR:
-            return now + 3600
-        if period == QuotaPeriod.DAY:
-            return now + 86400
-        if period == QuotaPeriod.MONTH:
-            return now + 2592000  # 30天
-        return now + 60
+        offsets = {
+            QuotaPeriod.MINUTE: 60,
+            QuotaPeriod.HOUR: 3600,
+            QuotaPeriod.DAY: 86400,
+            QuotaPeriod.MONTH: 2592000,  # 30天
+        }
+        return now + offsets[period]
 
     def _get_limit(self, quota_type: QuotaType, period: QuotaPeriod) -> int:
         """获取配额限制."""
@@ -406,8 +403,7 @@ class QuotaManager:
                 keys_to_remove = []
                 for key in quota.usage:
                     qt, p = key.split(":")
-                    if (quota_type is None or qt == quota_type.value) and \
-                       (period is None or p == period.value):
+                    if (quota_type is None or qt == quota_type.value) and (period is None or p == period.value):
                         keys_to_remove.append(key)
                 for key in keys_to_remove:
                     del quota.usage[key]

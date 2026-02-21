@@ -32,9 +32,7 @@ def upgrade() -> None:
         sa.Column("analysis_status", sa.String(length=20), nullable=True, server_default="PENDING"),
     )
     # last_completed_stage: 最後に完了したステージ
-    op.add_column(
-        "decision_records", sa.Column("last_completed_stage", sa.String(length=30), nullable=True)
-    )
+    op.add_column("decision_records", sa.Column("last_completed_stage", sa.String(length=30), nullable=True))
     # clarification_result: 明確化ステージの結果
     op.add_column(
         "decision_records",

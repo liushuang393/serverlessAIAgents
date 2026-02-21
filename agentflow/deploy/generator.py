@@ -110,9 +110,7 @@ def generate_all(
             python_version=config.python_version,
             env_vars=config.env_vars,
         )
-        generated["aws_lambda"] = generate_aws_lambda_config(
-            output_path, serverless_config
-        )
+        generated["aws_lambda"] = generate_aws_lambda_config(output_path, serverless_config)
         generated["requirements"] = generate_requirements_txt(output_path)
 
     # GitHub Actions
@@ -239,4 +237,3 @@ REDIS_URL=redis://localhost:6379
 
     logger.info(f"Generated .env.example: {env_path}")
     return env_path
-

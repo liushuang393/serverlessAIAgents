@@ -291,9 +291,7 @@ class PermissionConfig:
         Returns:
             {"allowed": bool, "reason": str, "max_results": int}
         """
-        role_perms = self._config.roles.get(
-            user_role, self._config.roles.get(self._config.default_role)
-        )
+        role_perms = self._config.roles.get(user_role, self._config.roles.get(self._config.default_role))
 
         if not role_perms:
             return {
@@ -425,9 +423,7 @@ class PermissionConfig:
             restriction: フィールド制限
         """
         self._config.restricted_fields.append(restriction)
-        self._logger.info(
-            "Added field restriction: %s", restriction.field_pattern
-        )
+        self._logger.info("Added field restriction: %s", restriction.field_pattern)
 
 
 __all__ = [

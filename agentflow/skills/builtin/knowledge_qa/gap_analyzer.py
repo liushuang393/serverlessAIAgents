@@ -82,10 +82,7 @@ class GapAnalyzer(AgentBlock):
                 "start": report.period_start.isoformat(),
                 "end": report.period_end.isoformat(),
             },
-            "unanswered_questions": [
-                {"question": q.question, "count": q.count}
-                for q in report.unanswered_questions
-            ],
+            "unanswered_questions": [{"question": q.question, "count": q.count} for q in report.unanswered_questions],
             "low_confidence_answers": [
                 {
                     "topic": a.topic,
@@ -95,8 +92,7 @@ class GapAnalyzer(AgentBlock):
                 for a in report.low_confidence_answers
             ],
             "suggested_docs": [
-                {"title": d.title, "reason": d.reason, "priority": d.priority}
-                for d in report.suggested_docs
+                {"title": d.title, "reason": d.reason, "priority": d.priority} for d in report.suggested_docs
             ],
             "total_queries": report.total_queries,
             "success_rate": report.success_rate,

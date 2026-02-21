@@ -35,9 +35,7 @@ class RestAPIConfig(ConnectorConfig):
     """
 
     base_url: str | None = Field(default=None, description="ベースURL")
-    default_headers: dict[str, str] = Field(
-        default_factory=dict, description="デフォルトヘッダー"
-    )
+    default_headers: dict[str, str] = Field(default_factory=dict, description="デフォルトヘッダー")
     auth_header_name: str = Field(default="Authorization", description="認証ヘッダー名")
 
 
@@ -69,14 +67,14 @@ class RestAPIConnector(DataConnector):
         """
         self._config = config or RestAPIConfig()
         self._auth_provider = auth_provider
-        self._session = None
+        self._session: Any = None
 
     @property
     def scheme(self) -> str:
         """URIスキーム."""
         return "rest"
 
-    async def _get_session(self):
+    async def _get_session(self) -> Any:
         """HTTPセッションを取得.
 
         Returns:
@@ -86,13 +84,8 @@ class RestAPIConnector(DataConnector):
             try:
                 import aiohttp
             except ImportError as e:
-                msg = (
-                    "aiohttp is required for REST API support. "
-                    "Install with: pip install aiohttp"
-                )
-                raise ImportError(
-                    msg
-                ) from e
+                msg = "aiohttp is required for REST API support. Install with: pip install aiohttp"
+                raise ImportError(msg) from e
 
             timeout = aiohttp.ClientTimeout(total=self._config.timeout)
             self._session = aiohttp.ClientSession(
@@ -143,9 +136,8 @@ class RestAPIConnector(DataConnector):
                     headers[self._config.auth_header_name] = creds.api_key
                 elif creds.username and creds.password:
                     import base64
-                    auth = base64.b64encode(
-                        f"{creds.username}:{creds.password}".encode()
-                    ).decode()
+
+                    auth = base64.b64encode(f"{creds.username}:{creds.password}".encode()).decode()
                     headers[self._config.auth_header_name] = f"Basic {auth}"
 
             except KeyError:
@@ -212,7 +204,7 @@ class RestAPIConnector(DataConnector):
     async def write(
         self,
         path: str,
-        content: bytes | str | dict | list,
+        content: bytes | str | dict[str, Any] | builtins.list[Any],
         content_type: str | None = None,
         metadata: dict[str, str] | None = None,
     ) -> DataItem:
@@ -272,7 +264,7 @@ class RestAPIConnector(DataConnector):
 
         try:
             async with session.head(url, headers=headers) as response:
-                return response.status < 400
+                return bool(response.status < 400)
         except Exception:
             return False
 
@@ -291,7 +283,7 @@ class RestAPIConnector(DataConnector):
 
         try:
             async with session.delete(url, headers=headers) as response:
-                return response.status < 400
+                return bool(response.status < 400)
         except Exception as e:
             logger.warning(f"DELETE failed for {url}: {e}")
             return False
@@ -321,8 +313,10 @@ class RestAPIConnector(DataConnector):
         # クエリパラメータ処理
         if isinstance(query, str):
             # "key=value&key2=value2" 形式
-            params = dict(parse_qs(query, keep_blank_values=True))
-            params = {k: v[0] if len(v) == 1 else v for k, v in params.items()}
+            raw_params = parse_qs(query, keep_blank_values=True)
+            params: dict[str, Any] = {
+                key: values[0] if len(values) == 1 else values for key, values in raw_params.items()
+            }
         else:
             params = query
 
@@ -340,8 +334,10 @@ class RestAPIConnector(DataConnector):
 
         # リストでない場合はラップ
         if isinstance(data, list):
-            return data
-        return [data]
+            return [item for item in data if isinstance(item, dict)]
+        if isinstance(data, dict):
+            return [data]
+        return [{"value": data}]
 
     async def graphql(
         self,
@@ -364,7 +360,7 @@ class RestAPIConnector(DataConnector):
         headers = await self._get_auth_headers(url)
         headers["Content-Type"] = "application/json"
 
-        payload = {"query": query}
+        payload: dict[str, Any] = {"query": query}
         if variables:
             payload["variables"] = variables
 
@@ -372,14 +368,16 @@ class RestAPIConnector(DataConnector):
             response.raise_for_status()
             result = await response.json()
 
-            if "errors" in result:
+            if isinstance(result, dict) and "errors" in result:
                 logger.warning(f"GraphQL errors: {result['errors']}")
 
-            return result.get("data", {})
+            if isinstance(result, dict):
+                data = result.get("data", {})
+                return data if isinstance(data, dict) else {}
+            return {}
 
     async def close(self) -> None:
         """セッションをクローズ."""
         if self._session:
             await self._session.close()
             self._session = None
-

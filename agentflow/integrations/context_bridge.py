@@ -42,9 +42,7 @@ if TYPE_CHECKING:
 
 
 # コンテキスト変数（スレッドローカル相当）
-_current_context: ContextVar[FlowContext | None] = ContextVar(
-    "current_flow_context", default=None
-)
+_current_context: ContextVar[FlowContext | None] = ContextVar("current_flow_context", default=None)
 
 logger = logging.getLogger(__name__)
 
@@ -52,14 +50,14 @@ logger = logging.getLogger(__name__)
 class SourceSystemType(str, Enum):
     """呼び出し元システムタイプ."""
 
-    WEB_APP = "web_app"          # Webアプリケーション
-    MOBILE_APP = "mobile_app"    # モバイルアプリ
-    API = "api"                  # 外部API
-    INTERNAL = "internal"        # 内部システム
-    BATCH = "batch"              # バッチ処理
-    WORKFLOW = "workflow"        # ワークフローエンジン
-    CHAT = "chat"                # チャットシステム
-    CLI = "cli"                  # コマンドライン
+    WEB_APP = "web_app"  # Webアプリケーション
+    MOBILE_APP = "mobile_app"  # モバイルアプリ
+    API = "api"  # 外部API
+    INTERNAL = "internal"  # 内部システム
+    BATCH = "batch"  # バッチ処理
+    WORKFLOW = "workflow"  # ワークフローエンジン
+    CHAT = "chat"  # チャットシステム
+    CLI = "cli"  # コマンドライン
 
 
 class FlowContext(BaseModel):
@@ -379,4 +377,3 @@ __all__ = [
     "reset_context",
     "set_current_context",
 ]
-

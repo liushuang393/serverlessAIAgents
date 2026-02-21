@@ -57,6 +57,11 @@ from agentflow.context.turn_compressor import (
     TurnBasedCompressor,
     TurnConfig,
 )
+from agentflow.evolution.types import (
+    RetrievalDecisionInput,
+    RetrievalMode,
+    StalenessRisk,
+)
 
 
 if TYPE_CHECKING:
@@ -181,6 +186,7 @@ class ContextEngineer:
             config=self._config.turn_config,
             key_notes_store=self._key_notes,
         )
+        self._last_retrieval_decision: dict[str, Any] | None = None
 
         self._started = False
         self._logger = logging.getLogger(__name__)
@@ -259,9 +265,7 @@ class ContextEngineer:
         # 4. RAG検索判定・実行
         rag_results = None
         if rag_search_func:
-            rag_results = await self._maybe_retrieve(
-                query, rag_search_func, existing_context
-            )
+            rag_results = await self._maybe_retrieve(query, rag_search_func, existing_context)
 
         # 5. RAG結果をシステムプロンプトに追加
         if rag_results:
@@ -363,24 +367,49 @@ class ContextEngineer:
         Returns:
             検索結果、または None
         """
-        # 検索必要性判定
-        decision = await self._retrieval_gate.should_retrieve(
-            query=query,
-            context=existing_context or {},
+        existing = existing_context or {}
+        staleness_raw = str(existing.get("staleness_risk", "medium")).strip().lower()
+        staleness_risk = (
+            StalenessRisk(staleness_raw) if staleness_raw in {"low", "medium", "high"} else StalenessRisk.MEDIUM
         )
+
+        decision_input = RetrievalDecisionInput(
+            query=query,
+            context=existing,
+            complexity=self._safe_float(existing.get("task_complexity"), 0.5),
+            self_confidence=self._safe_float(existing.get("self_confidence"), 0.5),
+            novelty=self._safe_float(existing.get("task_novelty"), 0.5),
+            recent_failures=self._safe_int(existing.get("recent_failures"), 0),
+            explicit_request=bool(existing.get("force_retrieval", False)),
+            staleness_risk=staleness_risk,
+            tenant_id=str(existing.get("tenant_id")) if existing.get("tenant_id") else None,
+            app_id=str(existing.get("app_id")) if existing.get("app_id") else None,
+            product_line=(str(existing.get("product_line")) if existing.get("product_line") else None),
+            task_signature=(str(existing.get("task_signature")) if existing.get("task_signature") else None),
+        )
+
+        decision = await self._retrieval_gate.should_retrieve(decision_input)
+        self._last_retrieval_decision = {
+            "mode": decision.mode.value,
+            "reason": decision.reason.value,
+            "reason_codes": list(decision.reason_codes),
+            "confidence": decision.confidence,
+        }
 
         if not decision.should_retrieve:
             self._logger.debug(
-                "RAG検索スキップ: reason=%s, confidence=%.2f",
+                "RAG検索スキップ: reason=%s, mode=%s, confidence=%.2f",
                 decision.reason.value,
+                decision.mode.value,
                 decision.confidence,
             )
             return None
 
         # 検索実行
         search_query = decision.suggested_query or query
+        top_k = 8 if decision.mode == RetrievalMode.DEEP else 5
         try:
-            results = await search_func(search_query, top_k=5)
+            results = await search_func(search_query, top_k=top_k)
 
             # Top 1-2 のみ使用
             limited_results = results[:2] if results else []
@@ -439,10 +468,23 @@ class ContextEngineer:
             "tool_count": len(tools),
             "rag_used": rag_results is not None,
             "rag_result_count": len(rag_results) if rag_results else 0,
+            "retrieval_decision": self._last_retrieval_decision,
             "turn_count": self._compressor.get_turn_count(),
             "budget_usage": self._budget_manager.get_usage_summary(),
             "key_notes_count": len(self._key_notes.get_all_notes()),
         }
+
+    def _safe_float(self, value: Any, default: float) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _safe_int(self, value: Any, default: int) -> int:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
 
     # =========================================================================
     # 便利メソッド

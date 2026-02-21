@@ -86,9 +86,7 @@ class LocalFirstEnforcer:
         """
         self._policy = policy
 
-    def check_network_access(
-        self, host: str, port: int, purpose: str
-    ) -> NetworkAccessDecision:
+    def check_network_access(self, host: str, port: int, purpose: str) -> NetworkAccessDecision:
         """Check if a network access is allowed.
 
         Args:

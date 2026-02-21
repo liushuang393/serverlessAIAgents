@@ -73,7 +73,7 @@ class MarketStore:
                 # 証拠を取得（間接的に記事情報を復元）
                 evidences = await self._evidence_service.list_evidences()
                 self._evidences = [self._evidence_to_dict(e) for e in evidences]
-                
+
                 # 記事情報を復元
                 self._articles = [
                     {
@@ -125,11 +125,7 @@ class MarketStore:
         if not report_id:
             return existing_reports
 
-        filtered = [
-            item
-            for item in existing_reports
-            if str(item.get("id", "")) != report_id
-        ]
+        filtered = [item for item in existing_reports if str(item.get("id", "")) != report_id]
         return [report, *filtered]
 
     def _attach_report_snapshot(
@@ -153,9 +149,7 @@ class MarketStore:
         if not report_id:
             return
 
-        generated_at_raw = str(
-            report.get("generated_at") or report.get("created_at") or datetime.now().isoformat()
-        )
+        generated_at_raw = str(report.get("generated_at") or report.get("created_at") or datetime.now().isoformat())
         generated_at = self._parse_iso_datetime(generated_at_raw)
 
         await init_db()
@@ -178,11 +172,7 @@ class MarketStore:
         """DBからレポート履歴を取得."""
         await init_db()
         async with self._session_factory() as session:
-            stmt = (
-                select(ReportHistoryModel)
-                .order_by(ReportHistoryModel.generated_at.desc())
-                .limit(limit)
-            )
+            stmt = select(ReportHistoryModel).order_by(ReportHistoryModel.generated_at.desc()).limit(limit)
             rows = await session.execute(stmt)
             return [dict(model.payload) for model in rows.scalars().all() if isinstance(model.payload, dict)]
 

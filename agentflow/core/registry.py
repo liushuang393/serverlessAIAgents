@@ -52,9 +52,6 @@ class Registry[T](ABC):
             ValueError: 名前が空の場合
             TypeError: 名前が文字列でない場合、またはアイテムが None の場合
         """
-        if not isinstance(name, str):
-            msg = f"Name must be a string, got {type(name).__name__}"
-            raise TypeError(msg)
         if not name or not name.strip():
             msg = "Name cannot be empty or whitespace only"
             raise ValueError(msg)
@@ -161,4 +158,3 @@ class ProtocolRegistry(Registry[Any]):
             if cls._instance is None:
                 cls._instance = super().__new__(cls)
             return cls._instance
-

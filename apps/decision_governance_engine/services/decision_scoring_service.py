@@ -12,10 +12,9 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
-from pydantic import BaseModel
-
 from apps.decision_governance_engine.config import get_config
 from apps.decision_governance_engine.services.scoring_engine import ScoringEngine
+from pydantic import BaseModel
 
 
 logger = logging.getLogger(__name__)
@@ -73,8 +72,7 @@ class DecisionScoringService:
         recommended_paths = fa.get("recommended_paths", [])
         first_path = (
             recommended_paths[0]
-            if isinstance(recommended_paths, list) and recommended_paths
-            and isinstance(recommended_paths[0], Mapping)
+            if isinstance(recommended_paths, list) and recommended_paths and isinstance(recommended_paths[0], Mapping)
             else {}
         )
 
@@ -85,54 +83,40 @@ class DecisionScoringService:
 
         phases = shu.get("phases", []) if isinstance(shu.get("phases"), list) else []
         total_months = sum(
-            _parse_duration_to_months(
-                phase.get("duration", "") if isinstance(phase, Mapping) else ""
-            )
+            _parse_duration_to_months(phase.get("duration", "") if isinstance(phase, Mapping) else "")
             for phase in phases
         )
         dependencies = shu.get("dependencies", []) if isinstance(shu.get("dependencies"), list) else []
         first_action = str(shu.get("first_action", "")).strip()
 
         implementations = qi.get("implementations", []) if isinstance(qi.get("implementations"), list) else []
-        integration_points = (
-            qi.get("integration_points", [])
-            if isinstance(qi.get("integration_points"), list) else []
-        )
+        integration_points = qi.get("integration_points", []) if isinstance(qi.get("integration_points"), list) else []
         debt_warnings = (
-            qi.get("technical_debt_warnings", [])
-            if isinstance(qi.get("technical_debt_warnings"), list) else []
+            qi.get("technical_debt_warnings", []) if isinstance(qi.get("technical_debt_warnings"), list) else []
         )
-        domain_tech = (
-            qi.get("domain_technologies", [])
-            if isinstance(qi.get("domain_technologies"), list) else []
-        )
+        domain_tech = qi.get("domain_technologies", []) if isinstance(qi.get("domain_technologies"), list) else []
         regulatory = (
-            qi.get("regulatory_considerations", [])
-            if isinstance(qi.get("regulatory_considerations"), list) else []
+            qi.get("regulatory_considerations", []) if isinstance(qi.get("regulatory_considerations"), list) else []
         )
         geographic = (
-            qi.get("geographic_considerations", [])
-            if isinstance(qi.get("geographic_considerations"), list) else []
+            qi.get("geographic_considerations", []) if isinstance(qi.get("geographic_considerations"), list) else []
         )
 
         findings = review.get("findings", []) if isinstance(review.get("findings"), list) else []
         critical_count = sum(
             1
             for finding in findings
-            if isinstance(finding, Mapping)
-            and str(finding.get("severity", "")).upper() == "CRITICAL"
+            if isinstance(finding, Mapping) and str(finding.get("severity", "")).upper() == "CRITICAL"
         )
         warning_count = sum(
             1
             for finding in findings
-            if isinstance(finding, Mapping)
-            and str(finding.get("severity", "")).upper() == "WARNING"
+            if isinstance(finding, Mapping) and str(finding.get("severity", "")).upper() == "WARNING"
         )
         death_traps = dao.get("death_traps", []) if isinstance(dao.get("death_traps"), list) else []
         causal_gears = dao.get("causal_gears", []) if isinstance(dao.get("causal_gears"), list) else []
         existing_alternatives = (
-            dao.get("existing_alternatives", [])
-            if isinstance(dao.get("existing_alternatives"), list) else []
+            dao.get("existing_alternatives", []) if isinstance(dao.get("existing_alternatives"), list) else []
         )
 
         reversibility_map = {"HIGH": 4.8, "MEDIUM": 3.4, "LOW": 2.0}
@@ -161,21 +145,11 @@ class DecisionScoringService:
 
         channel_reach = _clamp_score(3.0 + (len(pros) - len(cons)) * 0.3)
         cost = _clamp_score(
-            1.8
-            + len(implementations) * 0.25
-            + len(debt_warnings) * 0.6
-            + max(0, total_months - 6) * 0.08
+            1.8 + len(implementations) * 0.25 + len(debt_warnings) * 0.6 + max(0, total_months - 6) * 0.08
         )
-        risk = _clamp_score(
-            1.6
-            + critical_count * 1.8
-            + warning_count * 0.5
-            + len(death_traps) * 0.35
-        )
+        risk = _clamp_score(1.6 + critical_count * 1.8 + warning_count * 0.5 + len(death_traps) * 0.35)
         reversibility = _clamp_score(reversibility_raw - critical_count * 0.3)
-        dependencies_complexity = _clamp_score(
-            1.6 + len(dependencies) * 0.35 + len(integration_points) * 0.3
-        )
+        dependencies_complexity = _clamp_score(1.6 + len(dependencies) * 0.35 + len(integration_points) * 0.3)
 
         dimension_scores = {
             "user_impact": round(user_impact, 2),
@@ -192,11 +166,7 @@ class DecisionScoringService:
         confidence = max(0.0, min(1.0, confidence))
 
         evidence_signals = (
-            len(domain_tech)
-            + len(regulatory)
-            + len(geographic)
-            + len(causal_gears)
-            + len(existing_alternatives)
+            len(domain_tech) + len(regulatory) + len(geographic) + len(causal_gears) + len(existing_alternatives)
         )
         evidence_coverage = max(0.2, min(1.0, evidence_signals / 10.0))
 
@@ -216,7 +186,7 @@ def score_decision_results(results: Mapping[str, Any]) -> dict[str, Any] | None:
     try:
         service = DecisionScoringService()
         return service.score(results)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(f"意思決定スコアリングに失敗: {exc}")
         return None
 

@@ -22,7 +22,12 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* パスエイリアス - Vite vite.config.ts の alias と対応させること */
+    "paths": {
+      "@agentflow/i18n": ["../../../agentflow/i18n/frontend/index"]
+    }
   },
   "include": ["src"]
 }

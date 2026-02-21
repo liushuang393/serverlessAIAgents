@@ -34,4 +34,3 @@ __all__ = [
     "error_handler",
     "sse_event_generator",
 ]
-

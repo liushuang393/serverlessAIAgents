@@ -9,15 +9,19 @@ from __future__ import annotations
 
 import asyncio
 import os
-from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from apps.faq_system.backend.db.models import Base
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import Session
 
 from agentflow.database import DatabaseConfig, DatabaseManager
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncGenerator
+
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.orm import Session
 
 
 # ---------------------------------------------------------------------------
@@ -140,6 +144,22 @@ class SyncSessionAdapter:
     async def get(self, entity: Any, ident: Any, *args: Any, **kwargs: Any) -> Any:
         """主キーでエンティティ取得."""
         return self._session.get(entity, ident, *args, **kwargs)
+
+    async def commit(self) -> None:
+        """トランザクションをコミット."""
+        self._session.commit()
+
+    async def flush(self, objects: Any = None) -> None:
+        """セッションをフラッシュ（コミットなし）."""
+        self._session.flush(objects)
+
+    async def rollback(self) -> None:
+        """トランザクションをロールバック."""
+        self._session.rollback()
+
+    async def delete(self, instance: Any) -> None:
+        """インスタンスを削除対象としてマーク."""
+        self._session.delete(instance)
 
 
 # ---------------------------------------------------------------------------

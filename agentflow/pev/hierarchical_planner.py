@@ -161,11 +161,7 @@ class HierarchicalPlan(BaseModel):
         total = sum(len(level.goals) for level in self.levels)
         if total == 0:
             return 0.0
-        completed = sum(
-            1 for level in self.levels
-            for goal in level.goals
-            if goal.status == GoalStatus.COMPLETED
-        )
+        completed = sum(1 for level in self.levels for goal in level.goals if goal.status == GoalStatus.COMPLETED)
         return completed / total
 
 
@@ -184,9 +180,7 @@ class HierarchicalPlanner:
     llm_client: Any = None
     max_depth: int = 3
     max_goals_per_level: int = 10
-    _logger: logging.Logger = field(
-        default_factory=lambda: logging.getLogger("agentflow.pev.planner")
-    )
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.pev.planner"))
 
     async def create_plan(
         self,
@@ -217,16 +211,9 @@ class HierarchicalPlanner:
             self._create_simple_plan(plan, goal)
 
         # 総工数を計算
-        plan.total_effort = sum(
-            goal.estimated_effort
-            for level in plan.levels
-            for goal in level.goals
-        )
+        plan.total_effort = sum(goal.estimated_effort for level in plan.levels for goal in level.goals)
 
-        self._logger.info(
-            f"計画作成完了: {sum(len(l.goals) for l in plan.levels)}目標, "
-            f"推定工数{plan.total_effort}"
-        )
+        self._logger.info(f"計画作成完了: {sum(len(l.goals) for l in plan.levels)}目標, 推定工数{plan.total_effort}")
 
         return plan
 
@@ -278,6 +265,7 @@ JSON形式で回答:
             content = response.get("content", str(response))
 
             import json
+
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
@@ -399,6 +387,7 @@ JSON形式で代替目標を提案:
             content = response.get("content", str(response))
 
             import json
+
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
@@ -429,4 +418,3 @@ __all__ = [
     "PlanLevel",
     "SubGoal",
 ]
-

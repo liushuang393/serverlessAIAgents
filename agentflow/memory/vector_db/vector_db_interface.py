@@ -109,4 +109,3 @@ class VectorDatabase(ABC):
         Returns:
             状態情報
         """
-

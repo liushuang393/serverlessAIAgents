@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """統合テスト - API層 + Patterns の統合テスト.
 
 5つのパターンを使用して、新しい API 層の使いやすさと健壮性をテストします：
@@ -16,10 +15,8 @@
 """
 
 import asyncio
-import json
 import logging
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
 from typing import Any
 
 import pytest
@@ -41,36 +38,28 @@ from agentflow.api import (
 )
 
 # =============================================================================
-# Patterns
-# =============================================================================
-from agentflow.patterns import (
-    # 1. AgentPipeline
-    AgentPipeline,
-    AgentConfig,
-    PipelineConfig,
-    # 2. ReflectionWorkflow
-    ReflectionWorkflow,
-    ReflectionResult,
-    # 3. AgentComposer
-    AgentComposer,
-    CompositionPattern,
-    CompositionConfig,
-    AgentRole,
-    # 4. TaskDecomposer
-    TaskDecomposer,
-    DecompositionConfig,
-    TaskGranularity,
-    TaskPriority,
-    DecomposedTask,
-    DecompositionPlan,
-    # 5. SharedContext
-    SharedContext,
-)
-
-# =============================================================================
 # Core
 # =============================================================================
 from agentflow.core.agent_block import AgentBlock
+
+# =============================================================================
+# Patterns
+# =============================================================================
+from agentflow.patterns import (
+    # 3. AgentComposer
+    AgentComposer,
+    AgentConfig,
+    # 1. AgentPipeline
+    AgentPipeline,
+    AgentRole,
+    CompositionConfig,
+    CompositionPattern,
+    DecomposedTask,
+    DecompositionPlan,
+    SharedContext,
+    # 4. TaskDecomposer
+    TaskPriority,
+)
 
 
 logging.basicConfig(level=logging.INFO)
@@ -102,9 +91,7 @@ class MockAgent(AgentBlock):
             "status": "success",
         }
 
-    async def run_stream(
-        self, input_data: dict[str, Any]
-    ) -> AsyncIterator[dict[str, Any]]:
+    async def run_stream(self, input_data: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
         """ストリーム実行."""
         yield {"type": "progress", "progress": 0, "message": f"{self.name} 開始"}
         await asyncio.sleep(self.delay / 2)
@@ -156,8 +143,7 @@ class ReporterAgent(MockAgent):
         # RichResponseBuilder を使用
         builder = RichResponseBuilder()
         report = (
-            builder
-            .add_markdown("# 処理レポート")
+            builder.add_markdown("# 処理レポート")
             .add_markdown(f"入力データ: {input_data}")
             .add_table([{"項目": k, "値": str(v)[:50]} for k, v in input_data.items()])
             .add_success("処理が完了しました")
@@ -267,12 +253,7 @@ class TestRichResponseBuilderIntegration:
     def test_basic_builder(self):
         """基本的なビルダーテスト."""
         builder = RichResponseBuilder()
-        response = (
-            builder
-            .add_markdown("# Title")
-            .add_paragraph("This is a test.")
-            .build()
-        )
+        response = builder.add_markdown("# Title").add_paragraph("This is a test.").build()
 
         assert "components" in response
         assert len(response["components"]) == 2
@@ -294,8 +275,7 @@ class TestRichResponseBuilderIntegration:
         """チャートビルダーテスト."""
         builder = RichResponseBuilder()
         response = (
-            builder
-            .add_bar_chart(["A", "B", "C"], [10, 20, 30], title="Test Chart")
+            builder.add_bar_chart(["A", "B", "C"], [10, 20, 30], title="Test Chart")
             .add_pie_chart([{"name": "A", "value": 60}, {"name": "B", "value": 40}])
             .build()
         )
@@ -308,8 +288,7 @@ class TestRichResponseBuilderIntegration:
         """アラートビルダーテスト."""
         builder = RichResponseBuilder()
         response = (
-            builder
-            .add_info("Information message")
+            builder.add_info("Information message")
             .add_success("Success message")
             .add_warning("Warning message")
             .add_error("Error message")
@@ -324,8 +303,7 @@ class TestRichResponseBuilderIntegration:
         """セクションビルダーテスト."""
         builder = RichResponseBuilder()
         response = (
-            builder
-            .section("分析結果")
+            builder.section("分析結果")
             .add_markdown("分析内容...")
             .add_table([{"key": "value"}])
             .end_section()
@@ -393,13 +371,14 @@ class TestAgentPipelineWithAPI:
         # RichResponse でレポート構築
         builder = RichResponseBuilder()
         report = (
-            builder
-            .add_markdown("# Pipeline 実行結果")
-            .add_table([
-                {"Agent": "Analyzer", "Status": "完了"},
-                {"Agent": "Transformer", "Status": "完了"},
-                {"Agent": "Reporter", "Status": "完了"},
-            ])
+            builder.add_markdown("# Pipeline 実行結果")
+            .add_table(
+                [
+                    {"Agent": "Analyzer", "Status": "完了"},
+                    {"Agent": "Transformer", "Status": "完了"},
+                    {"Agent": "Reporter", "Status": "完了"},
+                ]
+            )
             .add_success("Pipeline が正常に完了しました")
             .build()
         )
@@ -501,10 +480,8 @@ class TestTaskDecomposerWithAPI:
 
         # RichResponse でビジュアル化
         builder = RichResponseBuilder()
-        response = (
-            builder
-            .add_heading(f"タスク分解: {task}", level=1)
-            .add_markdown(f"**サブタスク数**: {len(plan.tasks)}")
+        response = builder.add_heading(f"タスク分解: {task}", level=1).add_markdown(
+            f"**サブタスク数**: {len(plan.tasks)}"
         )
 
         # サブタスクテーブル
@@ -619,27 +596,30 @@ class TestComplexScenario:
         execution_results = []
         for task_id, subtask in list(plan.tasks.items())[:2]:
             result = await composer.execute({"task": subtask.description})
-            execution_results.append({
-                "task_id": task_id,
-                "result": result,
-            })
+            execution_results.append(
+                {
+                    "task_id": task_id,
+                    "result": result,
+                }
+            )
 
         # 4. レポート生成
         builder = RichResponseBuilder()
         report = (
-            builder
-            .add_heading("ワークフロー実行レポート", level=1)
+            builder.add_heading("ワークフロー実行レポート", level=1)
             .add_markdown(f"**元タスク**: {task}")
             .add_markdown(f"**分解サブタスク数**: {len(plan.tasks)}")
             .add_markdown(f"**実行済み**: {len(execution_results)}")
             .section("実行結果")
-            .add_table([
-                {
-                    "タスクID": r["task_id"],
-                    "ステータス": "完了",
-                }
-                for r in execution_results
-            ])
+            .add_table(
+                [
+                    {
+                        "タスクID": r["task_id"],
+                        "ステータス": "完了",
+                    }
+                    for r in execution_results
+                ]
+            )
             .end_section()
             .add_success("ワークフローが正常に完了しました")
             .build()
@@ -666,10 +646,7 @@ class TestComplexScenario:
         """SSE ストリーミングシナリオ."""
         emitter = SSEEmitter()
         pipeline = AgentPipeline(
-            agents=[
-                AgentConfig(agent=MockAgent(delay=0.01), id=f"agent-{i}", name=f"Agent-{i}")
-                for i in range(3)
-            ],
+            agents=[AgentConfig(agent=MockAgent(delay=0.01), id=f"agent-{i}", name=f"Agent-{i}") for i in range(3)],
         )
 
         # ストリームイベント収集
@@ -681,10 +658,12 @@ class TestComplexScenario:
         # 進捗シミュレーション
         for i, config in enumerate(pipeline.agents):
             events.append(emitter.agent_start(config.name))
-            events.append(emitter.progress(
-                (i + 1) * 33,
-                f"Agent {i + 1}/3 実行中...",
-            ))
+            events.append(
+                emitter.progress(
+                    (i + 1) * 33,
+                    f"Agent {i + 1}/3 実行中...",
+                )
+            )
 
         # 結果
         result = await pipeline.run({"test": True})
@@ -730,12 +709,11 @@ class TestErrorHandling:
         class FailingAgent(MockAgent):
             async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
                 if input_data.get("fail"):
-                    raise ValueError("Intentional failure")
+                    msg = "Intentional failure"
+                    raise ValueError(msg)
                 return await super().run(input_data)
 
-        pipeline = AgentPipeline(
-            agents=[AgentConfig(agent=FailingAgent(), id="failing", name="FailingAgent")]
-        )
+        pipeline = AgentPipeline(agents=[AgentConfig(agent=FailingAgent(), id="failing", name="FailingAgent")])
 
         try:
             await pipeline.run({"fail": True})
@@ -763,8 +741,7 @@ class TestUsability:
         # メソッドチェーンが自然に動作すること
         builder = RichResponseBuilder()
         result = (
-            builder
-            .add_markdown("# Title")
+            builder.add_markdown("# Title")
             .add_paragraph("Content")
             .add_table([{"a": 1}])
             .add_chart("bar", {"data": []})

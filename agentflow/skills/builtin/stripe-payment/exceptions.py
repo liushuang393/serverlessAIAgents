@@ -15,28 +15,21 @@ class PaymentError(StripeError):
     """支付错误."""
 
 
-
 class WebhookError(StripeError):
     """Webhook 错误."""
-
 
 
 class SubscriptionError(StripeError):
     """订阅错误."""
 
 
-
 class RefundError(StripeError):
     """退款错误."""
-
 
 
 class CustomerError(StripeError):
     """客户错误."""
 
 
-
 class SignatureVerificationError(StripeError):
     """签名验证错误."""
-
-

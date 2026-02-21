@@ -6,11 +6,10 @@ Mock Embedding を使用（外部依存なし）。
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 from apps.market_trend_monitor.backend.models import Article, SourceType
 from apps.market_trend_monitor.backend.services.topic_clustering_service import (
     TopicCluster,
@@ -47,9 +46,7 @@ def _make_mock_embedding():
     mock.embed_text = AsyncMock(return_value=[0.5, 0.5, 0.0, 0.0])
     mock.embed_batch = AsyncMock(
         side_effect=lambda texts: [
-            [1.0, 0.0, 0.0, 0.0] if i == 0
-            else [0.95, 0.05, 0.0, 0.0] if i == 1
-            else [0.0, 1.0, 0.0, 0.0]
+            [1.0, 0.0, 0.0, 0.0] if i == 0 else [0.95, 0.05, 0.0, 0.0] if i == 1 else [0.0, 1.0, 0.0, 0.0]
             for i in range(len(texts))
         ]
     )
@@ -68,7 +65,8 @@ class TestTopicClusterModel:
     def test_cluster_creation(self) -> None:
         """クラスタ生成テスト."""
         cluster = TopicCluster(
-            id="c-1", label="COBOL Migration",
+            id="c-1",
+            label="COBOL Migration",
             keywords=["COBOL", "Java"],
             article_ids=["a-1", "a-2"],
             centroid_embedding=[0.5, 0.5, 0.0, 0.0],
@@ -80,7 +78,8 @@ class TestTopicClusterModel:
     def test_cluster_to_dict(self) -> None:
         """to_dict 変換テスト."""
         cluster = TopicCluster(
-            id="c-1", label="Test",
+            id="c-1",
+            label="Test",
             keywords=["test"],
             article_ids=["a-1"],
             centroid_embedding=[0.5, 0.5],
@@ -93,8 +92,10 @@ class TestTopicClusterModel:
     def test_cluster_default_metadata(self) -> None:
         """デフォルトメタデータテスト."""
         cluster = TopicCluster(
-            id="c-1", label="Test",
-            keywords=[], article_ids=[],
+            id="c-1",
+            label="Test",
+            keywords=[],
+            article_ids=[],
             centroid_embedding=[],
         )
         assert cluster.metadata == {}
@@ -158,10 +159,7 @@ class TestTopicClusteringService:
         emb = AsyncMock()
         # 直交するベクトルを生成
         emb.embed_batch = AsyncMock(
-            side_effect=lambda texts: [
-                [1.0 if j == i else 0.0 for j in range(4)]
-                for i in range(len(texts))
-            ],
+            side_effect=lambda texts: [[1.0 if j == i else 0.0 for j in range(4)] for i in range(len(texts))],
         )
         service = TopicClusteringService(embedding=emb, similarity_threshold=0.5)
 
@@ -235,10 +233,7 @@ class TestTopicClusteringService:
         """最小記事数フィルタテスト."""
         emb = AsyncMock()
         emb.embed_batch = AsyncMock(
-            side_effect=lambda texts: [
-                [1.0 if j == i else 0.0 for j in range(4)]
-                for i in range(len(texts))
-            ],
+            side_effect=lambda texts: [[1.0 if j == i else 0.0 for j in range(4)] for i in range(len(texts))],
         )
         service = TopicClusteringService(embedding=emb, similarity_threshold=0.5)
         articles = [_make_article(f"a-{i}") for i in range(3)]
@@ -252,8 +247,11 @@ class TestTopicClusteringService:
         """クラスタ取得テスト."""
         service = TopicClusteringService(embedding=_make_mock_embedding())
         cluster = TopicCluster(
-            id="c-1", label="Test", keywords=[],
-            article_ids=[], centroid_embedding=[],
+            id="c-1",
+            label="Test",
+            keywords=[],
+            article_ids=[],
+            centroid_embedding=[],
         )
         service._clusters["c-1"] = cluster
         assert service.get_cluster("c-1") is cluster
@@ -263,12 +261,18 @@ class TestTopicClusteringService:
         """クラスタ一覧テスト."""
         service = TopicClusteringService(embedding=_make_mock_embedding())
         service._clusters["c-1"] = TopicCluster(
-            id="c-1", label="A", keywords=[],
-            article_ids=["a-1"], centroid_embedding=[],
+            id="c-1",
+            label="A",
+            keywords=[],
+            article_ids=["a-1"],
+            centroid_embedding=[],
         )
         service._clusters["c-2"] = TopicCluster(
-            id="c-2", label="B", keywords=[],
-            article_ids=["a-2", "a-3"], centroid_embedding=[],
+            id="c-2",
+            label="B",
+            keywords=[],
+            article_ids=["a-2", "a-3"],
+            centroid_embedding=[],
         )
         clusters = service.list_clusters()
         assert len(clusters) == 2
@@ -278,18 +282,22 @@ class TestTopicClusteringService:
     def test_cosine_similarity(self) -> None:
         """コサイン類似度テスト."""
         assert TopicClusteringService._cosine_similarity(
-            [1.0, 0.0], [1.0, 0.0],
+            [1.0, 0.0],
+            [1.0, 0.0],
         ) == pytest.approx(1.0)
         assert TopicClusteringService._cosine_similarity(
-            [1.0, 0.0], [0.0, 1.0],
+            [1.0, 0.0],
+            [0.0, 1.0],
         ) == pytest.approx(0.0)
 
     def test_compute_centroid(self) -> None:
         """重心計算テスト."""
-        centroid = TopicClusteringService._compute_centroid([
-            [1.0, 0.0],
-            [0.0, 1.0],
-        ])
+        centroid = TopicClusteringService._compute_centroid(
+            [
+                [1.0, 0.0],
+                [0.0, 1.0],
+            ]
+        )
         assert centroid == pytest.approx([0.5, 0.5])
 
     def test_compute_centroid_empty(self) -> None:

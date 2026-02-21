@@ -36,4 +36,3 @@ export {
   CitationRenderer,
   TabsRenderer,
 } from './renderers';
-

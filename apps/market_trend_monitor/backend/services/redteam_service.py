@@ -64,10 +64,7 @@ class RedTeamService:
         )
 
         self._challenges[challenge.id] = challenge
-        self._logger.info(
-            f"Challenge created: {challenge.id}, "
-            f"type={challenge_type.value}"
-        )
+        self._logger.info(f"Challenge created: {challenge.id}, type={challenge_type.value}")
         return challenge
 
     def evaluate_challenge(
@@ -105,10 +102,7 @@ class RedTeamService:
         )
 
         self._results[result.id] = result
-        self._logger.info(
-            f"Challenge evaluated: {result.id}, "
-            f"valid={is_valid}, adjustment={confidence_adjustment:.2f}"
-        )
+        self._logger.info(f"Challenge evaluated: {result.id}, valid={is_valid}, adjustment={confidence_adjustment:.2f}")
         return result
 
     def get_challenge(self, challenge_id: str) -> Challenge | None:
@@ -121,10 +115,7 @@ class RedTeamService:
 
     def list_challenges_for_claim(self, claim_id: str) -> list[Challenge]:
         """主張に対するチャレンジ一覧を取得."""
-        return [
-            c for c in self._challenges.values()
-            if c.claim_id == claim_id
-        ]
+        return [c for c in self._challenges.values() if c.claim_id == claim_id]
 
     def get_adjusted_confidence(
         self,
@@ -167,46 +158,54 @@ class RedTeamService:
         prompts = []
 
         # 反証証拠チャレンジ
-        prompts.append({
-            "type": ChallengeType.COUNTER_EVIDENCE.value,
-            "prompt": (
-                f"以下の主張に対する反証を探してください:\n"
-                f"主張: {claim.statement}\n"
-                f"信頼度: {claim.confidence:.2f}\n"
-                f"この主張が誤りである可能性を示す証拠を提示してください。"
-            ),
-        })
+        prompts.append(
+            {
+                "type": ChallengeType.COUNTER_EVIDENCE.value,
+                "prompt": (
+                    f"以下の主張に対する反証を探してください:\n"
+                    f"主張: {claim.statement}\n"
+                    f"信頼度: {claim.confidence:.2f}\n"
+                    f"この主張が誤りである可能性を示す証拠を提示してください。"
+                ),
+            }
+        )
 
         # 代替説明チャレンジ
-        prompts.append({
-            "type": ChallengeType.ALTERNATIVE_EXPLANATION.value,
-            "prompt": (
-                f"以下の主張に対する代替説明を提示してください:\n"
-                f"主張: {claim.statement}\n"
-                f"同じ証拠から導ける別の結論は何ですか？"
-            ),
-        })
+        prompts.append(
+            {
+                "type": ChallengeType.ALTERNATIVE_EXPLANATION.value,
+                "prompt": (
+                    f"以下の主張に対する代替説明を提示してください:\n"
+                    f"主張: {claim.statement}\n"
+                    f"同じ証拠から導ける別の結論は何ですか？"
+                ),
+            }
+        )
 
         # バイアスチェック
-        prompts.append({
-            "type": ChallengeType.BIAS_CHECK.value,
-            "prompt": (
-                f"以下の主張に含まれる可能性のあるバイアスを特定してください:\n"
-                f"主張: {claim.statement}\n"
-                f"確証バイアス、選択バイアス、生存者バイアスなどを検討してください。"
-            ),
-        })
+        prompts.append(
+            {
+                "type": ChallengeType.BIAS_CHECK.value,
+                "prompt": (
+                    f"以下の主張に含まれる可能性のあるバイアスを特定してください:\n"
+                    f"主張: {claim.statement}\n"
+                    f"確証バイアス、選択バイアス、生存者バイアスなどを検討してください。"
+                ),
+            }
+        )
 
         # 前提条件チャレンジ
-        prompts.append({
-            "type": ChallengeType.ASSUMPTION_CHALLENGE.value,
-            "prompt": (
-                f"以下の主張の前提条件を検証してください:\n"
-                f"主張: {claim.statement}\n"
-                f"この主張が成り立つために必要な前提条件は何ですか？"
-                f"それらの前提条件は妥当ですか？"
-            ),
-        })
+        prompts.append(
+            {
+                "type": ChallengeType.ASSUMPTION_CHALLENGE.value,
+                "prompt": (
+                    f"以下の主張の前提条件を検証してください:\n"
+                    f"主張: {claim.statement}\n"
+                    f"この主張が成り立つために必要な前提条件は何ですか？"
+                    f"それらの前提条件は妥当ですか？"
+                ),
+            }
+        )
 
         return prompts
 

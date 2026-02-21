@@ -181,7 +181,8 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
         )
 
     async def _extract_entities_from_articles(
-        self, articles: list[Article],
+        self,
+        articles: list[Article],
     ) -> list[dict[str, Any]]:
         """Phase 7: 記事からエンティティを抽出."""
         if not self._entity_extraction:
@@ -199,7 +200,8 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
             return []
 
     async def _detect_anomalies(
-        self, trends: list[Trend],
+        self,
+        trends: list[Trend],
     ) -> list[dict[str, Any]]:
         """Phase 7: 異常検知."""
         if not self._anomaly_detection:
@@ -366,12 +368,8 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
         current_since = now - timedelta(days=window_days)
         previous_since = current_since - timedelta(days=window_days)
 
-        current_evidences = await self._evidence_service.list_evidences_in_window(
-            current_since, now
-        )
-        previous_evidences = await self._evidence_service.list_evidences_in_window(
-            previous_since, current_since
-        )
+        current_evidences = await self._evidence_service.list_evidences_in_window(current_since, now)
+        previous_evidences = await self._evidence_service.list_evidences_in_window(previous_since, current_since)
 
         weighted_current: dict[str, float] = {}
         weighted_previous: dict[str, float] = {}
@@ -425,22 +423,13 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
     ) -> str:
         """成長率の説明文を生成."""
         if growth_state == "new":
-            return (
-                "前期間に同一トピックの証拠が存在しないため、"
-                "比率ではなく新規検知として扱いました。"
-            )
+            return "前期間に同一トピックの証拠が存在しないため、比率ではなく新規検知として扱いました。"
         if growth_state == "no_signal":
             return "現期間・前期間ともに有効な証拠がないため、変化は判定できません。"
         if growth_state == "flat":
-            return (
-                f"現期間 {current:.2f} / 前期間 {previous:.2f} で差分が小さく、"
-                "概ね横ばいと判定しました。"
-            )
+            return f"現期間 {current:.2f} / 前期間 {previous:.2f} で差分が小さく、概ね横ばいと判定しました。"
         direction = "増加" if growth_state == "up" else "減少"
-        return (
-            f"現期間 {current:.2f} / 前期間 {previous:.2f} の比較で、"
-            f"{direction}率は {growth_rate:.1%} です。"
-        )
+        return f"現期間 {current:.2f} / 前期間 {previous:.2f} の比較で、{direction}率は {growth_rate:.1%} です。"
 
     async def _analyze_sentiment(self, keyword: str, articles: list[Article]) -> SentimentType:
         """LLM を使用してセンチメント分析."""

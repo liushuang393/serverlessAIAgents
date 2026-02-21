@@ -75,10 +75,7 @@ class DiscordAdapter(MessageChannelAdapter):
         try:
             import discord
         except ImportError as e:
-            msg = (
-                "discord.py is required for DiscordAdapter. "
-                "Install it with: pip install discord.py>=2.0"
-            )
+            msg = "discord.py is required for DiscordAdapter. Install it with: pip install discord.py>=2.0"
             raise ImportError(msg) from e
 
         self._token = token
@@ -361,12 +358,12 @@ class DiscordAdapter(MessageChannelAdapter):
         """
         client = self._ensure_client()
 
-        @client.event
+        @client.event  # type: ignore[untyped-decorator]
         async def on_ready() -> None:
             """Bot 启动完成."""
             self._logger.info(f"Discord bot logged in as {client.user}")
 
-        @client.event
+        @client.event  # type: ignore[untyped-decorator]
         async def on_message(message: Any) -> None:
             """收到消息."""
             # 忽略自己的消息

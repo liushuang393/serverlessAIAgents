@@ -5,7 +5,7 @@ Agent の生存確認とステータス更新を行うヘルスチェッカー�
 
 import asyncio
 import contextlib
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 
 if TYPE_CHECKING:
@@ -37,7 +37,7 @@ class HealthChecker:
         """
         self.registry = registry
         self.interval = interval
-        self._task: asyncio.Task | None = None
+        self._task: asyncio.Task[Any] | None = None
         self._running = False
 
     async def start(self) -> None:
@@ -82,4 +82,3 @@ class HealthChecker:
     async def __aexit__(self, *args: object) -> None:
         """コンテキストマネージャーエグジット."""
         await self.stop()
-

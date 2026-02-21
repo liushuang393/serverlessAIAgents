@@ -36,6 +36,7 @@
 
 import logging
 import os
+from collections.abc import Callable
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -43,10 +44,14 @@ from typing import Any
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+
+_load_dotenv: Callable[..., bool] | None
 try:
-    from dotenv import load_dotenv
+    from dotenv import load_dotenv as _dotenv_load
+
+    _load_dotenv = _dotenv_load
 except ImportError:  # pragma: no cover - optional dependency
-    load_dotenv = None
+    _load_dotenv = None
 
 _logger = logging.getLogger(__name__)
 _SUPPORTED_LLM_PROVIDERS = frozenset(
@@ -66,17 +71,13 @@ class AgentFlowSettings(BaseSettings):
     # ========================================
     openai_api_key: str | None = Field(default=None, description="OpenAI APIキー")
     openai_model: str = Field(default="gpt-5.2", description="OpenAI モデル名")
-    openai_embedding_model: str = Field(
-        default="text-embedding-3-small", description="OpenAI Embedding モデル"
-    )
+    openai_embedding_model: str = Field(default="text-embedding-3-small", description="OpenAI Embedding モデル")
 
     # ========================================
     # Anthropic
     # ========================================
     anthropic_api_key: str | None = Field(default=None, description="Anthropic APIキー")
-    anthropic_model: str = Field(
-        default="claude-sonnet-4-20250514", description="Anthropic モデル名"
-    )
+    anthropic_model: str = Field(default="claude-sonnet-4-20250514", description="Anthropic モデル名")
 
     # ========================================
     # Google
@@ -134,18 +135,9 @@ class AgentFlowSettings(BaseSettings):
     # ========================================
     # 知識ストア設定（長期記憶）
     # ========================================
-    knowledge_storage_path: str = Field(
-        default="memory/knowledge",
-        description="知識ストレージのパス"
-    )
-    knowledge_backend: str = Field(
-        default="auto",
-        description="知識ストアバックエンド (auto/memvid/memory)"
-    )
-    knowledge_auto_persist: bool = Field(
-        default=True,
-        description="知識の自動永続化を有効化"
-    )
+    knowledge_storage_path: str = Field(default="memory/knowledge", description="知識ストレージのパス")
+    knowledge_backend: str = Field(default="auto", description="知識ストアバックエンド (auto/memvid/memory)")
+    knowledge_auto_persist: bool = Field(default=True, description="知識の自動永続化を有効化")
 
     # ========================================
     # ログ設定
@@ -262,11 +254,19 @@ class AgentFlowSettings(BaseSettings):
             VectorDB設定辞書
         """
         if self.pinecone_api_key:
-            return {"backend": "pinecone", "api_key": self.pinecone_api_key, "index": self.pinecone_index}
+            return {
+                "backend": "pinecone",
+                "api_key": self.pinecone_api_key,
+                "index": self.pinecone_index,
+            }
         if self.qdrant_url:
             return {"backend": "qdrant", "url": self.qdrant_url}
         if self.chroma_persist_dir:
-            return {"backend": "chroma", "persist_dir": self.chroma_persist_dir, "collection": self.chroma_collection}
+            return {
+                "backend": "chroma",
+                "persist_dir": self.chroma_persist_dir,
+                "collection": self.chroma_collection,
+            }
         return {"backend": "memory"}
 
     def get_knowledge_config(self) -> dict[str, Any]:
@@ -297,9 +297,7 @@ def _iter_override_env_files() -> list[Path]:
     candidates: list[str] = []
     if raw_files:
         candidates.extend(
-            token.strip()
-            for token in raw_files.replace(";", ",").replace(":", ",").split(",")
-            if token.strip()
+            token.strip() for token in raw_files.replace(";", ",").replace(":", ",").split(",") if token.strip()
         )
     if raw_file:
         candidates.append(raw_file)
@@ -318,10 +316,10 @@ def _iter_override_env_files() -> list[Path]:
 
 def _load_override_env_files() -> None:
     """AGENTFLOW_ENV_FILE(S) で指定された env を環境変数へ上書き適用."""
-    if load_dotenv is None:
+    if _load_dotenv is None:
         return
     for path in _iter_override_env_files():
-        load_dotenv(path, override=True)
+        _load_dotenv(path, override=True)
 
 
 @lru_cache

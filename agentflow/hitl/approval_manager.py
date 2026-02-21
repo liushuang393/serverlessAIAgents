@@ -78,10 +78,7 @@ class ApprovalManager:
         self._pending[request.id] = request
         self._waiting[request.id] = asyncio.Event()
 
-        logger.info(
-            f"Approval requested: {request.id} (action={request.action}, "
-            f"priority={request.priority})"
-        )
+        logger.info(f"Approval requested: {request.id} (action={request.action}, priority={request.priority})")
 
         # 通知を送信
         if notify and self._notification_callback:
@@ -131,8 +128,7 @@ class ApprovalManager:
             event.set()
 
         logger.info(
-            f"Approval response submitted: {request_id} "
-            f"(status={response.status.value}, approved={response.approved})"
+            f"Approval response submitted: {request_id} (status={response.status.value}, approved={response.approved})"
         )
         return True
 
@@ -216,4 +212,3 @@ class ApprovalManager:
                 await callback(request)
             except Exception as e:
                 logger.exception(f"Escalation callback failed: {e}")
-

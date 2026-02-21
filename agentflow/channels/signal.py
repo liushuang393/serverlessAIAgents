@@ -268,7 +268,8 @@ class SignalAdapter(MessageChannelAdapter):
         try:
             response = await self._client.get(url)
             response.raise_for_status()
-            return response.json()
+            payload = response.json()
+            return payload if isinstance(payload, list) else []
         except Exception as e:
             self._logger.exception(f"Failed to get groups: {e}")
             return []
@@ -411,4 +412,3 @@ class SignalAdapter(MessageChannelAdapter):
         """リソースをクリーンアップ."""
         await self.stop_polling()
         await self._client.aclose()
-

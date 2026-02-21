@@ -5,7 +5,7 @@ Studio UIのノードパレット用サービスノード定義。
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, HTTPException
 
@@ -40,7 +40,7 @@ def create_service_nodes_router() -> APIRouter:
             Text2SQLNode,
         )
 
-        node_map = {
+        node_map: dict[str, type[Any]] = {
             "rag": RAGNode,
             "text2sql": Text2SQLNode,
             "chart": ChartNode,
@@ -55,7 +55,8 @@ def create_service_nodes_router() -> APIRouter:
                 detail=f"Service node '{node_type}' not found",
             )
 
-        return node_cls.get_definition()
+        definition = node_cls.get_studio_definition()
+        return cast("dict[str, Any]", definition)
 
     @router.get("/{node_type}/config")
     async def get_service_node_config(node_type: str) -> dict[str, Any]:
@@ -68,7 +69,7 @@ def create_service_nodes_router() -> APIRouter:
             Text2SQLNode,
         )
 
-        node_map = {
+        node_map: dict[str, type[Any]] = {
             "rag": RAGNode,
             "text2sql": Text2SQLNode,
             "chart": ChartNode,
@@ -83,7 +84,8 @@ def create_service_nodes_router() -> APIRouter:
                 detail=f"Service node '{node_type}' not found",
             )
 
-        return node_cls.get_config_schema()
+        definition = node_cls.get_studio_definition()
+        config = definition.get("config", {})
+        return cast("dict[str, Any]", config if isinstance(config, dict) else {})
 
     return router
-

@@ -262,20 +262,13 @@ class PolicyEngine:
             mode = AuthMode(mode)
 
         self._logger.debug(f"認可実行: mode={mode}, action={context.action}")
-
-        if mode == AuthMode.RBAC:
-            return await self._authorize_rbac(context)
-        if mode == AuthMode.ABAC:
-            return await self._authorize_abac(context)
-        if mode == AuthMode.PBAC:
-            return await self._authorize_pbac(context)
-        if mode == AuthMode.HYBRID:
-            return await self._authorize_hybrid(context)
-        return AuthResult(
-            decision=AuthDecision.DENY,
-            reason=f"不明な認可モード: {mode}",
-            mode=mode,
-        )
+        handlers = {
+            AuthMode.RBAC: self._authorize_rbac,
+            AuthMode.ABAC: self._authorize_abac,
+            AuthMode.PBAC: self._authorize_pbac,
+            AuthMode.HYBRID: self._authorize_hybrid,
+        }
+        return await handlers[mode](context)
 
     async def _authorize_rbac(self, context: AuthContext) -> AuthResult:
         """RBAC による認可."""
@@ -323,7 +316,12 @@ class PolicyEngine:
         if resource_dept and user_dept and resource_dept != user_dept:
             # 管理者は部門を超えてアクセス可能
             if role not in ["admin"]:
-                checks.append((False, f"部門 '{user_dept}' のユーザーは部門 '{resource_dept}' のリソースにアクセスできません"))
+                checks.append(
+                    (
+                        False,
+                        f"部門 '{user_dept}' のユーザーは部門 '{resource_dept}' のリソースにアクセスできません",
+                    )
+                )
 
         # 環境チェック
         allowed_ips = context.environment.get("allowed_ips", [])

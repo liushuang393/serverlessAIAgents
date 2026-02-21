@@ -6,10 +6,7 @@ AdaptiveScoringService のテスト。
 
 from __future__ import annotations
 
-from datetime import datetime
-
 import pytest
-
 from apps.market_trend_monitor.backend.models import PredictionOutcome, PredictionReview
 from apps.market_trend_monitor.backend.services.adaptive_scoring_service import (
     AdaptiveScoringService,
@@ -214,7 +211,7 @@ class TestAdaptiveScoringService:
         reviews = [_make_review("r-1", PredictionOutcome.CORRECT)]
         gradients = service._calculate_gradient(reviews)
         # CORRECT → reward = 1.0 - 0.5 = 0.5 → 正の勾配
-        for axis, grad in gradients.items():
+        for _axis, grad in gradients.items():
             assert grad > 0
 
     def test_calculate_gradient_incorrect(self) -> None:
@@ -223,7 +220,7 @@ class TestAdaptiveScoringService:
         reviews = [_make_review("r-1", PredictionOutcome.INCORRECT)]
         gradients = service._calculate_gradient(reviews)
         # INCORRECT → reward = 0.0 - 0.5 = -0.5 → 負の勾配
-        for axis, grad in gradients.items():
+        for _axis, grad in gradients.items():
             assert grad < 0
 
     def test_calculate_gradient_partial(self) -> None:
@@ -232,7 +229,7 @@ class TestAdaptiveScoringService:
         reviews = [_make_review("r-1", PredictionOutcome.PARTIAL)]
         gradients = service._calculate_gradient(reviews)
         # PARTIAL → reward = 0.5 - 0.5 = 0.0 → ゼロ勾配
-        for axis, grad in gradients.items():
+        for _axis, grad in gradients.items():
             assert grad == pytest.approx(0.0)
 
     def test_normalize_weights(self) -> None:

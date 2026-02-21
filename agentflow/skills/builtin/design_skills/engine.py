@@ -116,22 +116,31 @@ class DesignSkillsEngine(PipelineEngine):
 
         self._logger.info("DesignSkillsEngine ステージ設定完了")
 
-    async def run(self, input_data: dict[str, Any]) -> Any:
+    async def run(
+        self,
+        inputs: dict[str, Any],
+        *,
+        thread_id: str | None = None,
+    ) -> dict[str, Any]:
         """デザインパイプラインを実行.
 
         Args:
-            input_data: 必須: 'brief'。
+            inputs: 必須: 'brief'。
                 任意: 'num_images', 'style_preferences', 'target_platform',
                       'brand_colors', 'aspect_ratio', 'output_directory'
 
         Returns:
             パイプライン結果(生成画像情報を含む辞書)
         """
-        # output_directory を正規化
-        if "output_directory" in input_data:
-            self._output_directory = input_data.pop("output_directory")
+        payload = dict(inputs)
 
-        return await super().run(input_data)
+        # output_directory を正規化
+        output_directory = payload.pop("output_directory", None)
+        if isinstance(output_directory, str):
+            self._output_directory = output_directory
+
+        result = await super().run(payload, thread_id=thread_id)
+        return result if isinstance(result, dict) else {"result": result}
 
 
 __all__ = ["DesignSkillsEngine"]

@@ -1,0 +1,39 @@
+========================================
+セキュリティチェック中 (bandit)...
+========================================
+
+[Python] bandit SAST チェック中...
+[main]	INFO	profile include tests: None
+[main]	INFO	profile exclude tests: None
+[main]	INFO	cli include tests: None
+[main]	INFO	cli exclude tests: None
+[main]	INFO	running on Python 3.13.11
+[tester]	WARNING	nosec encountered (B701), but no failed test on line 72
+[tester]	WARNING	nosec encountered (B701), but no failed test on line 72
+[tester]	WARNING	nosec encountered (B701), but no failed test on line 60
+[tester]	WARNING	nosec encountered (B701), but no failed test on line 60
+Working... ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100% 0:00:06
+Run started:2026-02-21 12:30:02.066392+00:00
+
+Test results:
+	No issues identified.
+
+Code scanned:
+	Total lines of code: 135051
+	Total lines skipped (#nosec): 0
+	Total potential issues skipped due to specifically being disabled (e.g., #nosec BXXX): 3
+
+Run metrics:
+	Total issues (by severity):
+		Undefined: 0
+		Low: 40
+		Medium: 28
+		High: 0
+	Total issues (by confidence):
+		Undefined: 0
+		Low: 16
+		Medium: 24
+		High: 28
+Files skipped (0):
+
+✅ セキュリティチェックが完了しました

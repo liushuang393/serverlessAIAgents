@@ -14,9 +14,63 @@ import type { RichComponent } from '../types';
 function highlightCode(code: string, language: string): React.ReactNode {
   // 基本的なキーワードハイライト
   const keywords: Record<string, string[]> = {
-    python: ['def', 'class', 'import', 'from', 'return', 'if', 'else', 'for', 'in', 'while', 'try', 'except', 'async', 'await', 'None', 'True', 'False'],
-    typescript: ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'class', 'interface', 'type', 'export', 'import', 'async', 'await', 'null', 'undefined'],
-    javascript: ['const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'while', 'class', 'export', 'import', 'async', 'await', 'null', 'undefined'],
+    python: [
+      'def',
+      'class',
+      'import',
+      'from',
+      'return',
+      'if',
+      'else',
+      'for',
+      'in',
+      'while',
+      'try',
+      'except',
+      'async',
+      'await',
+      'None',
+      'True',
+      'False',
+    ],
+    typescript: [
+      'const',
+      'let',
+      'var',
+      'function',
+      'return',
+      'if',
+      'else',
+      'for',
+      'while',
+      'class',
+      'interface',
+      'type',
+      'export',
+      'import',
+      'async',
+      'await',
+      'null',
+      'undefined',
+    ],
+    javascript: [
+      'const',
+      'let',
+      'var',
+      'function',
+      'return',
+      'if',
+      'else',
+      'for',
+      'while',
+      'class',
+      'export',
+      'import',
+      'async',
+      'await',
+      'null',
+      'undefined',
+    ],
   };
 
   const langKeywords = keywords[language.toLowerCase()] || [];
@@ -32,10 +86,7 @@ function highlightCode(code: string, language: string): React.ReactNode {
       {parts.map((part, idx) => {
         const isKeyword = langKeywords.includes(part);
         return (
-          <span
-            key={idx}
-            className={isKeyword ? 'text-purple-400 font-semibold' : ''}
-          >
+          <span key={idx} className={isKeyword ? 'text-purple-400 font-semibold' : ''}>
             {part}
           </span>
         );
@@ -77,12 +128,8 @@ export function CodeBlockRenderer({ component }: CodeBlockRendererProps): React.
       {/* ヘッダー */}
       <div className="flex items-center justify-between px-4 py-2 bg-gray-800 text-gray-300 text-sm">
         <div className="flex items-center gap-2">
-          {filename && (
-            <span className="font-mono text-gray-400">{String(filename)}</span>
-          )}
-          <span className="px-2 py-0.5 bg-gray-700 rounded text-xs">
-            {langStr}
-          </span>
+          {filename && <span className="font-mono text-gray-400">{String(filename)}</span>}
+          <span className="px-2 py-0.5 bg-gray-700 rounded text-xs">{langStr}</span>
         </div>
         <button
           onClick={handleCopy}
@@ -119,4 +166,3 @@ export function CodeBlockRenderer({ component }: CodeBlockRendererProps): React.
 }
 
 export default CodeBlockRenderer;
-

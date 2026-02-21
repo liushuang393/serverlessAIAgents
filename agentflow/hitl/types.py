@@ -52,14 +52,14 @@ class ApprovalRequest(BaseModel):
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     action: str = Field(..., description="承認対象のアクション名")
-    resource_id: str | None = Field(None, description="対象リソースID")
-    resource_type: str | None = Field(None, description="対象リソースタイプ")
+    resource_id: str | None = Field(default=None, description="対象リソースID")
+    resource_type: str | None = Field(default=None, description="対象リソースタイプ")
     reason: str = Field(..., description="承認が必要な理由")
     context: dict[str, Any] = Field(default_factory=dict, description="追加コンテキスト")
-    requester: str | None = Field(None, description="リクエスター（Agent名等）")
-    priority: str = Field("normal", description="優先度: low/normal/high/critical")
-    timeout_seconds: int | None = Field(None, description="タイムアウト秒数")
-    expires_at: datetime | None = Field(None, description="有効期限")
+    requester: str | None = Field(default=None, description="リクエスター（Agent名等）")
+    priority: str = Field(default="normal", description="優先度: low/normal/high/critical")
+    timeout_seconds: int | None = Field(default=None, description="タイムアウト秒数")
+    expires_at: datetime | None = Field(default=None, description="有効期限")
     metadata: dict[str, Any] = Field(default_factory=dict, description="メタデータ")
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -72,11 +72,11 @@ class ApprovalResponse(BaseModel):
 
     request_id: str = Field(..., description="対象リクエストID")
     status: ApprovalStatus = Field(..., description="承認ステータス")
-    approved: bool = Field(False, description="承認されたか")
-    approver: str | None = Field(None, description="承認者")
-    rejection_reason: str | None = Field(None, description="拒否理由")
+    approved: bool = Field(default=False, description="承認されたか")
+    approver: str | None = Field(default=None, description="承認者")
+    rejection_reason: str | None = Field(default=None, description="拒否理由")
     modifications: dict[str, Any] = Field(default_factory=dict, description="修正内容")
-    comment: str | None = Field(None, description="コメント")
+    comment: str | None = Field(default=None, description="コメント")
     responded_at: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -87,9 +87,9 @@ class Command(BaseModel):
     """
 
     type: CommandType = Field(..., description="コマンドタイプ")
-    value: Any = Field(None, description="コマンド値（承認結果、更新データ等）")
+    value: Any = Field(default=None, description="コマンド値（承認結果、更新データ等）")
     metadata: dict[str, Any] = Field(default_factory=dict, description="メタデータ")
-    issuer: str | None = Field(None, description="コマンド発行者")
+    issuer: str | None = Field(default=None, description="コマンド発行者")
     issued_at: datetime = Field(default_factory=datetime.utcnow)
 
     @classmethod
@@ -116,11 +116,11 @@ class InterruptPayload(BaseModel):
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     interrupt_type: InterruptType = Field(..., description="割り込みタイプ")
-    request: ApprovalRequest | None = Field(None, description="承認リクエスト")
-    prompt: str | None = Field(None, description="ユーザーへのプロンプト")
-    options: list[str] | None = Field(None, description="選択肢（INPUT タイプ用）")
-    node_id: str | None = Field(None, description="中断されたノードID")
-    flow_id: str | None = Field(None, description="フローID")
+    request: ApprovalRequest | None = Field(default=None, description="承認リクエスト")
+    prompt: str | None = Field(default=None, description="ユーザーへのプロンプト")
+    options: list[str] | None = Field(default=None, description="選択肢（INPUT タイプ用）")
+    node_id: str | None = Field(default=None, description="中断されたノードID")
+    flow_id: str | None = Field(default=None, description="フローID")
     state: dict[str, Any] = Field(default_factory=dict, description="中断時の状態")
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
@@ -128,9 +128,9 @@ class InterruptPayload(BaseModel):
 class HITLConfig(BaseModel):
     """HITL 設定."""
 
-    enabled: bool = Field(True, description="HITL を有効にするか")
-    default_timeout_seconds: int = Field(3600, description="デフォルトタイムアウト（1時間）")
-    auto_approve_low_risk: bool = Field(False, description="低リスク操作を自動承認")
+    enabled: bool = Field(default=True, description="HITL を有効にするか")
+    default_timeout_seconds: int = Field(default=3600, description="デフォルトタイムアウト（1時間）")
+    auto_approve_low_risk: bool = Field(default=False, description="低リスク操作を自動承認")
     require_approval_for: list[str] = Field(
         default_factory=lambda: ["delete", "update", "create", "execute"],
         description="承認が必要なアクションパターン",
@@ -139,8 +139,5 @@ class HITLConfig(BaseModel):
         default_factory=list,
         description="通知チャンネル（slack, email, webhook）",
     )
-    escalation_timeout_seconds: int = Field(
-        1800, description="エスカレーションまでの時間（30分）"
-    )
-    max_pending_requests: int = Field(100, description="最大保留リクエスト数")
-
+    escalation_timeout_seconds: int = Field(default=1800, description="エスカレーションまでの時間（30分）")
+    max_pending_requests: int = Field(default=100, description="最大保留リクエスト数")

@@ -30,7 +30,8 @@
     /* Path mapping */
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "@agentflow/i18n": ["../../../agentflow/i18n/frontend/index"]
     }
   },
   "include": ["src"],

@@ -146,10 +146,10 @@ class TemplateManager:
         # テンプレートディレクトリ
         template_dir = self.templates_dir / template_id
 
-        # Jinja2 環境を作成
+        # Jinja2 環境を作成（コードテンプレート生成用途 - HTML出力なし）
         env = Environment(
             loader=FileSystemLoader(template_dir),
-            autoescape=False,
+            autoescape=False,  # nosec B701
         )
 
         # 出力ディレクトリを作成

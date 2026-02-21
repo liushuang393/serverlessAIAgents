@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """AppConfig Pydantic スキーマのユニットテスト.
 
 テスト対象: apps/platform/schemas/app_config_schemas.py
@@ -7,8 +6,6 @@
 from __future__ import annotations
 
 import pytest
-from pydantic import ValidationError
-
 from apps.platform.schemas.app_config_schemas import (
     AgentInfo,
     AppConfig,
@@ -16,6 +13,7 @@ from apps.platform.schemas.app_config_schemas import (
     EntryPointsConfig,
     PortsConfig,
 )
+from pydantic import ValidationError
 
 
 class TestPortsConfig:
@@ -132,6 +130,8 @@ class TestAppConfig:
         assert cfg.product_line == "framework"
         assert cfg.surface_profile == "developer"
         assert cfg.audit_profile == "developer"
+        assert cfg.evolution.enabled is True
+        assert cfg.evolution.scope_policy[0] == "tenant_app"
         assert cfg.plugin_bindings == []
         assert cfg.security_mode is None
 

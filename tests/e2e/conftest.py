@@ -9,6 +9,7 @@ from pathlib import Path
 
 import httpx
 import pytest
+
 from agentflow.skills.builtin.design_skills.tools.comfyui_client import ComfyUIClient
 
 
@@ -30,12 +31,15 @@ async def comfyui_available(comfyui_url: str) -> bool:
 
 
 @pytest.fixture(autouse=True)
-def skip_if_no_comfyui(
-    request: pytest.FixtureRequest,
-    comfyui_available: bool,
-) -> None:
-    """e2eマーカー付きテストをComfyUI未起動時に自動スキップ."""
-    if request.node.get_closest_marker("e2e") and not comfyui_available:
+def skip_if_no_comfyui(request: pytest.FixtureRequest) -> None:
+    """ComfyUI依存のe2eテストのみ、ComfyUI未起動時に自動スキップ."""
+    if not request.node.get_closest_marker("e2e"):
+        return
+    if request.node.get_closest_marker("real_llm"):
+        return
+
+    comfyui_available = request.getfixturevalue("comfyui_available")
+    if not comfyui_available:
         pytest.skip("ComfyUI server unavailable")
 
 

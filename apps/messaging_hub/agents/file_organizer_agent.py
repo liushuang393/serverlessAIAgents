@@ -282,9 +282,7 @@ class FileOrganizerAgent:
         now = time.time()
         threshold_seconds = self._days_old * 24 * 60 * 60
 
-        by_category: dict[str, dict[str, Any]] = defaultdict(
-            lambda: {"count": 0, "size": 0, "files": []}
-        )
+        by_category: dict[str, dict[str, Any]] = defaultdict(lambda: {"count": 0, "size": 0, "files": []})
         by_extension: dict[str, int] = defaultdict(int)
 
         for file_info in files:
@@ -363,14 +361,10 @@ class FileOrganizerAgent:
             )
 
         if analysis.total_files > 100:
-            recommendations.append(
-                "ファイル数が多いです。カテゴリ別にフォルダ分けすることをお勧めします"
-            )
+            recommendations.append("ファイル数が多いです。カテゴリ別にフォルダ分けすることをお勧めします")
 
         if len(analysis.empty_dirs) > 0:
-            recommendations.append(
-                f"空のディレクトリ{len(analysis.empty_dirs)}件の削除を検討してください"
-            )
+            recommendations.append(f"空のディレクトリ{len(analysis.empty_dirs)}件の削除を検討してください")
 
         return recommendations
 
@@ -510,7 +504,6 @@ class FileOrganizerAgent:
         return OrganizationResult(dry_run=True)
 
         # TODO: LLMを使用してファイル名を分析し、統一的なリネームを提案
-
 
     async def find_duplicates(
         self,

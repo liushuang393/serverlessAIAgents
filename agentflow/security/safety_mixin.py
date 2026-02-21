@@ -137,10 +137,12 @@ class SafetyMixin:
         """
         if not self.safety_enabled:
             from agentflow.security.ai_safety_guard import OutputCheckResult
+
             return OutputCheckResult(
-                is_safe=True,
+                is_reliable=True,
                 needs_review=False,
-                safety_level=SafetyLevel.SAFE,
+                confidence_score=1.0,
+                sanitized_output=text,
             )
 
         try:
@@ -148,20 +150,20 @@ class SafetyMixin:
             if result.needs_review:
                 _logger.warning(
                     "出力安全検査: 要確認 [score=%.2f, issues=%d]",
-                    result.hallucination_result.confidence_score
-                    if result.hallucination_result
-                    else 0.0,
-                    len(result.issues) if result.issues else 0,
+                    result.confidence_score,
+                    len(result.issues),
                 )
             return result
         except Exception as e:
             _logger.exception("出力安全検査エラー: %s", e)
             from agentflow.security.ai_safety_guard import OutputCheckResult
+
             return OutputCheckResult(
-                is_safe=True,
+                is_reliable=False,
                 needs_review=True,
-                safety_level=SafetyLevel.WARNING,
-                warnings=[f"安全検査エラー: {e}"],
+                confidence_score=0.0,
+                sanitized_output=text,
+                issues=[{"type": "safety_check_error", "message": str(e)}],
             )
 
     def sanitize_text(self, text: str) -> str:
@@ -188,4 +190,3 @@ class SafetyMixin:
 
 
 __all__ = ["SafetyMixin"]
-

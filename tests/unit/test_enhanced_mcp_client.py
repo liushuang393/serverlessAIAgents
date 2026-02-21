@@ -1,7 +1,7 @@
 """Enhanced MCP Client のテスト."""
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
@@ -121,9 +121,7 @@ class TestEnhancedMCPClient:
         assert result["tool"] == "allowed_tool"
         mock_audit_logger.log_tool_call.assert_called_once()
 
-    async def test_call_tool_whitelist_check_failure(
-        self, mock_config, mock_whitelist, mock_audit_logger
-    ):
+    async def test_call_tool_whitelist_check_failure(self, mock_config, mock_whitelist, mock_audit_logger):
         """ホワイトリストチェックが失敗する."""
         client = MCPClient(
             mock_config,
@@ -292,9 +290,7 @@ class TestEnhancedMCPClient:
         assert "failed after 3 attempts" in result["error"]
         assert mock_session.call_tool.call_count == 3
 
-    async def test_call_tool_with_timeout(
-        self, mock_config, mock_whitelist, mock_audit_logger, mock_validator
-    ):
+    async def test_call_tool_with_timeout(self, mock_config, mock_whitelist, mock_audit_logger, mock_validator):
         """タイムアウトが発生する."""
         client = MCPClient(
             mock_config,

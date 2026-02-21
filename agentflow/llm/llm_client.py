@@ -22,7 +22,7 @@ import json
 import logging
 import os
 from collections.abc import AsyncIterator
-from typing import Any
+from typing import Any, cast
 
 import httpx
 from pydantic import BaseModel, Field
@@ -55,14 +55,16 @@ class ToolCall(BaseModel):
 
     id: str = Field(..., description="ツール呼び出しID")
     name: str = Field(..., description="ツール名")
-    arguments: str | dict = Field(..., description="ツール引数")
+    arguments: str | dict[str, Any] = Field(..., description="ツール引数")
 
-    def get_arguments_dict(self) -> dict:
+    def get_arguments_dict(self) -> dict[str, Any]:
         """引数を辞書として取得."""
-        import json
         if isinstance(self.arguments, dict):
             return self.arguments
-        return json.loads(self.arguments)
+        loaded = json.loads(self.arguments)
+        if isinstance(loaded, dict):
+            return cast("dict[str, Any]", loaded)
+        return {}
 
 
 class LLMResponse(BaseModel):
@@ -163,6 +165,9 @@ class LLMClient:
             self._initialize_ollama()
         elif self._config.provider in ("localai", "local"):
             self._initialize_localai()
+        elif self._config.provider == "mock":
+            self._client = None
+            self._logger.info("Mock LLM client initialized")
         else:
             msg = f"Unsupported provider: {self._config.provider}"
             raise ValueError(msg)
@@ -209,9 +214,7 @@ class LLMClient:
 
     def _initialize_ollama(self) -> None:
         """Ollamaクライアント初期化（OpenAI互換API使用）."""
-        base_url = self._config.base_url or os.environ.get(
-            "OLLAMA_BASE_URL", "http://localhost:11434"
-        )
+        base_url = self._config.base_url or os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
         normalized_base_url = self._normalize_base_url(base_url)
         self._base_url = f"{normalized_base_url}/v1"
         self._ollama_native_base_url = normalized_base_url
@@ -220,9 +223,7 @@ class LLMClient:
 
     def _initialize_localai(self) -> None:
         """LocalAIクライアント初期化（OpenAI互換API使用）."""
-        base_url = self._config.base_url or os.environ.get(
-            "LOCALAI_BASE_URL", "http://localhost:8080"
-        )
+        base_url = self._config.base_url or os.environ.get("LOCALAI_BASE_URL", "http://localhost:8080")
         normalized_base_url = self._normalize_base_url(base_url)
         self._base_url = f"{normalized_base_url}/v1"
         self._client = "localai"
@@ -264,9 +265,7 @@ class LLMClient:
         messages = [LLMMessage(role="user", content=prompt)]
         return await self.chat(messages, **kwargs)
 
-    async def chat(
-        self, messages: list[LLMMessage], **kwargs: Any
-    ) -> LLMResponse:
+    async def chat(self, messages: list[LLMMessage], **kwargs: Any) -> LLMResponse:
         """チャット形式の対話.
 
         Args:
@@ -291,9 +290,7 @@ class LLMClient:
             return await self._chat_openai_compatible(messages, **kwargs)
         return self._mock_response(messages)
 
-    async def _chat_openai(
-        self, messages: list[LLMMessage], **kwargs: Any
-    ) -> LLMResponse:
+    async def _chat_openai(self, messages: list[LLMMessage], **kwargs: Any) -> LLMResponse:
         """OpenAIチャット（tool calling対応）.
 
         Args:
@@ -365,9 +362,10 @@ class LLMClient:
             if message.content is None or message.content == "":
                 refusal = getattr(message, "refusal", None)
                 usage_info = (
-                    f"prompt={response.usage.prompt_tokens}, "
-                    f"completion={response.usage.completion_tokens}"
-                ) if response.usage else "N/A"
+                    (f"prompt={response.usage.prompt_tokens}, completion={response.usage.completion_tokens}")
+                    if response.usage
+                    else "N/A"
+                )
                 self._logger.warning(
                     f"OpenAI: content が空 "
                     f"(finish_reason={finish_reason}, "
@@ -378,11 +376,13 @@ class LLMClient:
 
             if hasattr(message, "tool_calls") and message.tool_calls:
                 for tc in message.tool_calls:
-                    tool_calls_list.append(ToolCall(
-                        id=tc.id,
-                        name=tc.function.name,
-                        arguments=tc.function.arguments,
-                    ))
+                    tool_calls_list.append(
+                        ToolCall(
+                            id=tc.id,
+                            name=tc.function.name,
+                            arguments=tc.function.arguments,
+                        )
+                    )
 
             return LLMResponse(
                 content=message.content,
@@ -402,9 +402,7 @@ class LLMClient:
             self._logger.exception(f"OpenAI API error: {e}")
             raise
 
-    async def _chat_anthropic(
-        self, messages: list[LLMMessage], **kwargs: Any
-    ) -> LLMResponse:
+    async def _chat_anthropic(self, messages: list[LLMMessage], **kwargs: Any) -> LLMResponse:
         """Anthropicチャット（tool calling対応）.
 
         Args:
@@ -421,23 +419,27 @@ class LLMClient:
         """
         try:
             # システムメッセージを分離
-            system_message = None
-            user_messages = []
+            system_message: str | None = None
+            user_messages: list[dict[str, Any]] = []
             for msg in messages:
                 if msg.role == "system":
                     system_message = msg.content
                 elif msg.role == "tool":
                     # ツール結果をAnthropic形式に変換
-                    user_messages.append({
-                        "role": "user",
-                        "content": [{
-                            "type": "tool_result",
-                            "tool_use_id": msg.tool_call_id,
-                            "content": msg.content,
-                        }],
-                    })
+                    user_messages.append(
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "tool_result",
+                                    "tool_use_id": msg.tool_call_id,
+                                    "content": msg.content,
+                                }
+                            ],
+                        }
+                    )
                 else:
-                    user_messages.append({"role": msg.role, "content": msg.content})
+                    user_messages.append({"role": msg.role, "content": msg.content or ""})
 
             # パラメータ構築
             params: dict[str, Any] = {
@@ -456,11 +458,13 @@ class LLMClient:
                 for tool in kwargs["tools"]:
                     if tool.get("type") == "function":
                         func = tool["function"]
-                        anthropic_tools.append({
-                            "name": func["name"],
-                            "description": func.get("description", ""),
-                            "input_schema": func.get("parameters", {"type": "object", "properties": {}}),
-                        })
+                        anthropic_tools.append(
+                            {
+                                "name": func["name"],
+                                "description": func.get("description", ""),
+                                "input_schema": func.get("parameters", {"type": "object", "properties": {}}),
+                            }
+                        )
                 params["tools"] = anthropic_tools
 
             response = await asyncio.wait_for(
@@ -476,11 +480,13 @@ class LLMClient:
                 if hasattr(block, "text"):
                     content_text = block.text
                 elif hasattr(block, "type") and block.type == "tool_use":
-                    tool_calls_list.append(ToolCall(
-                        id=block.id,
-                        name=block.name,
-                        arguments=block.input if isinstance(block.input, str) else block.input,
-                    ))
+                    tool_calls_list.append(
+                        ToolCall(
+                            id=block.id,
+                            name=block.name,
+                            arguments=block.input if isinstance(block.input, str) else block.input,
+                        )
+                    )
 
             return LLMResponse(
                 content=content_text,
@@ -499,9 +505,7 @@ class LLMClient:
             self._logger.exception(f"Anthropic API error: {e}")
             raise
 
-    async def _chat_google(
-        self, messages: list[LLMMessage], **kwargs: Any
-    ) -> LLMResponse:
+    async def _chat_google(self, messages: list[LLMMessage], **kwargs: Any) -> LLMResponse:
         """Google Geminiチャット（tool calling対応、新 google.genai ライブラリ使用）.
 
         Args:
@@ -523,31 +527,37 @@ class LLMClient:
                 if msg.role == "system":
                     system_instruction = msg.content
                 elif msg.role == "user":
-                    contents.append(types.Content(role="user", parts=[types.Part.from_text(text=msg.content)]))
+                    contents.append(types.Content(role="user", parts=[types.Part.from_text(text=msg.content or "")]))
                 elif msg.role == "assistant":
-                    contents.append(types.Content(role="model", parts=[types.Part.from_text(text=msg.content)]))
+                    contents.append(types.Content(role="model", parts=[types.Part.from_text(text=msg.content or "")]))
                 elif msg.role == "tool":
                     # ツール結果
-                    contents.append(types.Content(
-                        role="user",
-                        parts=[types.Part.from_function_response(
-                            name=msg.name or "unknown",
-                            response={"result": msg.content},
-                        )],
-                    ))
+                    contents.append(
+                        types.Content(
+                            role="user",
+                            parts=[
+                                types.Part.from_function_response(
+                                    name=msg.name or "unknown",
+                                    response={"result": msg.content},
+                                )
+                            ],
+                        )
+                    )
 
             # ツール定義の変換（OpenAI形式 → Gemini形式）
-            gemini_tools = None
+            gemini_tools: list[Any] | None = None
             if kwargs.get("tools"):
                 function_declarations = []
                 for tool in kwargs["tools"]:
                     if tool.get("type") == "function":
                         func = tool["function"]
-                        function_declarations.append(types.FunctionDeclaration(
-                            name=func["name"],
-                            description=func.get("description", ""),
-                            parameters=func.get("parameters", {}),
-                        ))
+                        function_declarations.append(
+                            types.FunctionDeclaration(
+                                name=func["name"],
+                                description=func.get("description", ""),
+                                parameters=func.get("parameters", {}),
+                            )
+                        )
                 if function_declarations:
                     gemini_tools = [types.Tool(function_declarations=function_declarations)]
 
@@ -556,7 +566,7 @@ class LLMClient:
                 temperature=kwargs.get("temperature", self._config.temperature),
                 max_output_tokens=kwargs.get("max_tokens", self._config.max_tokens),
                 system_instruction=system_instruction,
-                tools=gemini_tools,
+                tools=cast("Any", gemini_tools),
             )
 
             # 非同期API呼び出し
@@ -580,11 +590,13 @@ class LLMClient:
                         content_text = part.text
                     elif part.function_call:
                         fc = part.function_call
-                        tool_calls_list.append(ToolCall(
-                            id=f"gemini_{fc.name}_{id(fc)}",
-                            name=fc.name,
-                            arguments=dict(fc.args) if fc.args else {},
-                        ))
+                        tool_calls_list.append(
+                            ToolCall(
+                                id=f"gemini_{fc.name}_{id(fc)}",
+                                name=fc.name,
+                                arguments=dict(fc.args) if fc.args else {},
+                            )
+                        )
 
             # 使用量取得
             usage = {}
@@ -609,9 +621,7 @@ class LLMClient:
             self._logger.exception(f"Google API error: {e}")
             raise
 
-    async def _chat_openai_compatible(
-        self, messages: list[LLMMessage], **kwargs: Any
-    ) -> LLMResponse:
+    async def _chat_openai_compatible(self, messages: list[LLMMessage], **kwargs: Any) -> LLMResponse:
         """OpenAI互換APIチャット（Ollama/LocalAI用）.
 
         Args:
@@ -624,9 +634,7 @@ class LLMClient:
         try:
             payload = {
                 "model": self._config.model,
-                "messages": [
-                    {"role": msg.role, "content": msg.content} for msg in messages
-                ],
+                "messages": [{"role": msg.role, "content": msg.content} for msg in messages],
                 "temperature": kwargs.get("temperature", self._config.temperature),
                 "max_tokens": kwargs.get("max_tokens", self._config.max_tokens),
             }
@@ -641,8 +649,7 @@ class LLMClient:
                     and not self._is_ollama_model_not_found(response)
                 ):
                     self._logger.warning(
-                        "Ollama OpenAI-compatible endpoint returned 404. "
-                        "Falling back to native /api/chat endpoint."
+                        "Ollama OpenAI-compatible endpoint returned 404. Falling back to native /api/chat endpoint."
                     )
                     return await self._chat_ollama_native(messages, **kwargs)
                 response.raise_for_status()
@@ -665,8 +672,7 @@ class LLMClient:
                 status_code = e.response.status_code
                 response_body = e.response.text[:500]
             self._logger.exception(
-                "API status error: base_url=%s, provider=%s, model=%s, "
-                "status=%s, detail=%s, body=%s",
+                "API status error: base_url=%s, provider=%s, model=%s, status=%s, detail=%s, body=%s",
                 getattr(self, "_base_url", "unknown"),
                 self._config.provider,
                 self._config.model,
@@ -694,9 +700,7 @@ class LLMClient:
             )
             raise
 
-    async def _chat_ollama_native(
-        self, messages: list[LLMMessage], **kwargs: Any
-    ) -> LLMResponse:
+    async def _chat_ollama_native(self, messages: list[LLMMessage], **kwargs: Any) -> LLMResponse:
         """OllamaネイティブAPIチャット（/api/chat）."""
         options: dict[str, Any] = {
             "temperature": kwargs.get("temperature", self._config.temperature),
@@ -707,9 +711,7 @@ class LLMClient:
 
         payload = {
             "model": self._config.model,
-            "messages": [
-                {"role": msg.role, "content": msg.content} for msg in messages
-            ],
+            "messages": [{"role": msg.role, "content": msg.content} for msg in messages],
             "stream": False,
             "options": options,
         }
@@ -737,9 +739,7 @@ class LLMClient:
             finish_reason=data.get("done_reason"),
         )
 
-    async def stream(
-        self, messages: list[LLMMessage], **kwargs: Any
-    ) -> AsyncIterator[str]:
+    async def stream(self, messages: list[LLMMessage], **kwargs: Any) -> AsyncIterator[str]:
         """ストリーミング生成.
 
         Args:
@@ -752,7 +752,7 @@ class LLMClient:
         # モッククライアントの場合
         if self._client is None:
             response = self._mock_response(messages)
-            yield response.content
+            yield response.content or ""
             return
 
         # プロバイダー別の実装
@@ -769,9 +769,7 @@ class LLMClient:
             async for chunk in self._stream_openai_compatible(messages, **kwargs):
                 yield chunk
 
-    async def _stream_openai(
-        self, messages: list[LLMMessage], **kwargs: Any
-    ) -> AsyncIterator[str]:
+    async def _stream_openai(self, messages: list[LLMMessage], **kwargs: Any) -> AsyncIterator[str]:
         """OpenAIストリーミング.
 
         Args:
@@ -812,9 +810,7 @@ class LLMClient:
             if chunk.choices[0].delta.content:
                 yield chunk.choices[0].delta.content
 
-    async def _stream_anthropic(
-        self, messages: list[LLMMessage], **kwargs: Any
-    ) -> AsyncIterator[str]:
+    async def _stream_anthropic(self, messages: list[LLMMessage], **kwargs: Any) -> AsyncIterator[str]:
         """Anthropicストリーミング.
 
         Args:
@@ -843,9 +839,7 @@ class LLMClient:
             async for text in stream.text_stream:
                 yield text
 
-    async def _stream_google(
-        self, messages: list[LLMMessage], **kwargs: Any
-    ) -> AsyncIterator[str]:
+    async def _stream_google(self, messages: list[LLMMessage], **kwargs: Any) -> AsyncIterator[str]:
         """Google Geminiストリーミング.
 
         Args:
@@ -882,9 +876,7 @@ class LLMClient:
             if chunk.text:
                 yield chunk.text
 
-    async def _stream_openai_compatible(
-        self, messages: list[LLMMessage], **kwargs: Any
-    ) -> AsyncIterator[str]:
+    async def _stream_openai_compatible(self, messages: list[LLMMessage], **kwargs: Any) -> AsyncIterator[str]:
         """OpenAI互換APIストリーミング（Ollama/LocalAI用）.
 
         Args:
@@ -896,24 +888,22 @@ class LLMClient:
         """
         payload = {
             "model": self._config.model,
-            "messages": [
-                {"role": msg.role, "content": msg.content} for msg in messages
-            ],
+            "messages": [{"role": msg.role, "content": msg.content} for msg in messages],
             "temperature": kwargs.get("temperature", self._config.temperature),
             "max_tokens": kwargs.get("max_tokens", self._config.max_tokens),
             "stream": True,
         }
         use_native_fallback = False
 
-        async with httpx.AsyncClient(timeout=self._config.timeout) as client, client.stream(
-            "POST",
-            f"{self._base_url}/chat/completions",
-            json=payload,
-        ) as response:
-            if (
-                self._config.provider == "ollama"
-                and response.status_code == httpx.codes.NOT_FOUND
-            ):
+        async with (
+            httpx.AsyncClient(timeout=self._config.timeout) as client,
+            client.stream(
+                "POST",
+                f"{self._base_url}/chat/completions",
+                json=payload,
+            ) as response,
+        ):
+            if self._config.provider == "ollama" and response.status_code == httpx.codes.NOT_FOUND:
                 use_native_fallback = True
             else:
                 response.raise_for_status()
@@ -937,15 +927,12 @@ class LLMClient:
 
         if use_native_fallback:
             self._logger.warning(
-                "Ollama OpenAI-compatible stream endpoint returned 404. "
-                "Falling back to native /api/chat stream."
+                "Ollama OpenAI-compatible stream endpoint returned 404. Falling back to native /api/chat stream."
             )
             async for chunk in self._stream_ollama_native(messages, **kwargs):
                 yield chunk
 
-    async def _stream_ollama_native(
-        self, messages: list[LLMMessage], **kwargs: Any
-    ) -> AsyncIterator[str]:
+    async def _stream_ollama_native(self, messages: list[LLMMessage], **kwargs: Any) -> AsyncIterator[str]:
         """OllamaネイティブAPIストリーミング（/api/chat）."""
         options: dict[str, Any] = {
             "temperature": kwargs.get("temperature", self._config.temperature),
@@ -956,18 +943,19 @@ class LLMClient:
 
         payload = {
             "model": self._config.model,
-            "messages": [
-                {"role": msg.role, "content": msg.content} for msg in messages
-            ],
+            "messages": [{"role": msg.role, "content": msg.content} for msg in messages],
             "stream": True,
             "options": options,
         }
 
-        async with httpx.AsyncClient(timeout=self._config.timeout) as client, client.stream(
-            "POST",
-            f"{self._ollama_native_base_url}/api/chat",
-            json=payload,
-        ) as response:
+        async with (
+            httpx.AsyncClient(timeout=self._config.timeout) as client,
+            client.stream(
+                "POST",
+                f"{self._ollama_native_base_url}/api/chat",
+                json=payload,
+            ) as response,
+        ):
             response.raise_for_status()
             async for line in response.aiter_lines():
                 if not line:
@@ -996,7 +984,7 @@ class LLMClient:
         Returns:
             モックLLMレスポンス
         """
-        last_message = messages[-1].content if messages else ""
+        last_message = (messages[-1].content or "") if messages else ""
         mock_content = f"[MOCK] Response to: {last_message[:50]}..."
 
         return LLMResponse(

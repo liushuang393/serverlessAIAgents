@@ -303,7 +303,12 @@ jobs:
         secrets_map = {
             "vercel": ["VERCEL_TOKEN", "VERCEL_ORG_ID", "VERCEL_PROJECT_ID"],
             "docker": ["GITHUB_TOKEN (automatic)"],
-            "aws": ["AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_REGION", "LAMBDA_FUNCTION_NAME"],
+            "aws": [
+                "AWS_ACCESS_KEY_ID",
+                "AWS_SECRET_ACCESS_KEY",
+                "AWS_REGION",
+                "LAMBDA_FUNCTION_NAME",
+            ],
         }
         return secrets_map.get(deploy_target, [])
 
@@ -358,9 +363,7 @@ jobs:
         if deploy_target not in ["vercel", "docker", "aws", "generic"]:
             errors["deploy_target"] = f"Invalid deploy target: {deploy_target}"
 
-        warnings.append(
-            "Remember to configure repository secrets for the selected deploy target"
-        )
+        warnings.append("Remember to configure repository secrets for the selected deploy target")
 
         return ValidationResult(
             valid=len(errors) == 0,

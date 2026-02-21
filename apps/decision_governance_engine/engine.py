@@ -45,8 +45,7 @@ PipelineEngine パターンを使用した意思決定支援エンジン。
 import logging
 import os
 from collections.abc import AsyncIterator
-from typing import Any
-from uuid import UUID
+from typing import TYPE_CHECKING, Any
 
 from apps.decision_governance_engine.services.agent_registry import AgentRegistry
 from apps.decision_governance_engine.services.decision_report_builder import (
@@ -60,6 +59,10 @@ from agentflow.engines import EngineConfig, PipelineEngine
 from agentflow.engines.pipeline_engine import StageConfig
 from agentflow.providers import get_llm
 from agentflow.security import SafetyMixin
+
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 
 class DecisionEngine(PipelineEngine, SafetyMixin):
@@ -139,12 +142,16 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         self.init_safety(enabled=enable_safety)
 
         # ステージ単位DB保存設定（v3.2）
-        self._enable_stage_persist = (
-            os.getenv("ENABLE_DECISION_HISTORY", "true").lower() == "true"
-        )
+        self._enable_stage_persist = os.getenv("ENABLE_DECISION_HISTORY", "true").lower() == "true"
         # DB保存対象のステージ名
         self._persist_stages: set[str] = {
-            "cognitive_gate", "gatekeeper", "dao", "fa", "shu", "qi", "review",
+            "cognitive_gate",
+            "gatekeeper",
+            "dao",
+            "fa",
+            "shu",
+            "qi",
+            "review",
         }
         # 実行中の request_id / question（run() 呼出し時にセット）
         self._current_request_id: UUID | None = None
@@ -195,18 +202,12 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         completed_stages_raw = normalized.pop("_resume_completed_stages", [])
         stage_results_raw = normalized.pop("_resume_stage_results", {})
         if isinstance(completed_stages_raw, list):
-            self._resume_completed_stages = {
-                str(item)
-                for item in completed_stages_raw
-                if isinstance(item, str)
-            }
+            self._resume_completed_stages = {str(item) for item in completed_stages_raw if isinstance(item, str)}
         else:
             self._resume_completed_stages = set()
         if isinstance(stage_results_raw, dict):
             self._resume_stage_results = {
-                str(k): v
-                for k, v in stage_results_raw.items()
-                if isinstance(k, str) and isinstance(v, dict)
+                str(k): v for k, v in stage_results_raw.items() if isinstance(k, str) and isinstance(v, dict)
             }
         else:
             self._resume_stage_results = {}
@@ -214,7 +215,9 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         return normalized
 
     async def _run_stage(
-        self, stage: StageConfig, inputs: dict[str, Any],
+        self,
+        stage: StageConfig,
+        inputs: dict[str, Any],
     ) -> dict[str, Any]:
         """ステージ実行 + 完了後のDB自動保存（v3.2）.
 
@@ -225,9 +228,7 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         if stage.name in self._resume_completed_stages:
             cached = self._resume_stage_results.get(stage.name)
             if isinstance(cached, dict):
-                self._logger.info(
-                    f"Stage '{stage.name}' skipped (resume): {self._current_request_id}"
-                )
+                self._logger.info(f"Stage '{stage.name}' skipped (resume): {self._current_request_id}")
                 await self._persist_stage_io(
                     stage_name=stage.name,
                     stage_input=inputs,
@@ -253,11 +254,7 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
             raise
 
         # DB保存対象ステージの場合、非同期でupsert
-        if (
-            self._enable_stage_persist
-            and stage.name in self._persist_stages
-            and self._current_request_id is not None
-        ):
+        if self._enable_stage_persist and stage.name in self._persist_stages and self._current_request_id is not None:
             await self._persist_stage_result(stage.name, result)
 
         # 全ステージの入出力を保存（pfpf用の情报蓄積）
@@ -272,11 +269,14 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         return result
 
     async def _persist_stage_result(
-        self, stage_name: str, stage_result: dict[str, Any],
+        self,
+        stage_name: str,
+        stage_result: dict[str, Any],
     ) -> None:
         """ステージ結果をDBへ即時保存（失敗しても処理は継続）."""
         try:
             from apps.decision_governance_engine.repositories import DecisionRepository
+
             repo = DecisionRepository()
             await repo.upsert_stage(
                 request_id=self._current_request_id,  # type: ignore[arg-type]
@@ -333,47 +333,49 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
 
         # stages を動的構築
         # 注: 道→法→術→器 は依存関係があるため順次実行
-        self._stage_configs = self._parse_stages([
-            {
-                "name": "cognitive_gate",
-                "agent": self._registry.get_agent("cognitive_gate"),
-                # CognitiveGateは分析専用、常に通過（拦截はGatekeeperで行う）
-                "gate": False,
-            },
-            {
-                "name": "gatekeeper",
-                "agent": self._registry.get_agent("gatekeeper"),
-                "gate": True,
-                "gate_check": lambda r: r.get("is_acceptable", False),
-            },
-            {
-                "name": "clarification",
-                "agent": self._registry.get_agent("clarification"),
-            },
-            # 道・法・術・器 は依存チェーンのため順次実行
-            {
-                "name": "dao",
-                "agent": self._registry.get_agent("dao"),
-            },
-            {
-                "name": "fa",
-                "agent": self._registry.get_agent("fa"),
-            },
-            {
-                "name": "shu",
-                "agent": self._registry.get_agent("shu"),
-            },
-            {
-                "name": "qi",
-                "agent": self._registry.get_agent("qi"),
-            },
-            {
-                "name": "review",
-                "agent": self._registry.get_agent("review"),
-                "review": True,
-                "retry_from": "dao",
-            },
-        ])
+        self._stage_configs = self._parse_stages(
+            [
+                {
+                    "name": "cognitive_gate",
+                    "agent": self._registry.get_agent("cognitive_gate"),
+                    # CognitiveGateは分析専用、常に通過（拦截はGatekeeperで行う）
+                    "gate": False,
+                },
+                {
+                    "name": "gatekeeper",
+                    "agent": self._registry.get_agent("gatekeeper"),
+                    "gate": True,
+                    "gate_check": lambda r: r.get("is_acceptable", False),
+                },
+                {
+                    "name": "clarification",
+                    "agent": self._registry.get_agent("clarification"),
+                },
+                # 道・法・術・器 は依存チェーンのため順次実行
+                {
+                    "name": "dao",
+                    "agent": self._registry.get_agent("dao"),
+                },
+                {
+                    "name": "fa",
+                    "agent": self._registry.get_agent("fa"),
+                },
+                {
+                    "name": "shu",
+                    "agent": self._registry.get_agent("shu"),
+                },
+                {
+                    "name": "qi",
+                    "agent": self._registry.get_agent("qi"),
+                },
+                {
+                    "name": "review",
+                    "agent": self._registry.get_agent("review"),
+                    "review": True,
+                    "retry_from": "dao",
+                },
+            ]
+        )
 
         # stage_instances 設定（Agent は既に _registry で初期化済み）
         for stage in self._stage_configs:

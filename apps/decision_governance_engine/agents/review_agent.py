@@ -187,6 +187,7 @@ JSON形式で出力してください。"""
 
         try:
             from agentflow.utils import extract_json
+
             data = extract_json(response)
 
             if data is None:
@@ -339,79 +340,104 @@ JSON形式で出力してください。"""
         return f"""【道】本質: {input_data.dao_result.essence}
 【法】推奨: {input_data.fa_result.recommended_paths[0].name if input_data.fa_result.recommended_paths else "なし"}
 【術】最初の一歩: {input_data.shu_result.first_action}
-【器】技術負債警告: {', '.join(input_data.qi_result.technical_debt_warnings) or "なし"}"""
+【器】技術負債警告: {", ".join(input_data.qi_result.technical_debt_warnings) or "なし"}"""
 
     def _check_all(self, input_data: ReviewInput) -> list[ReviewFinding]:
         """全チェックを実行（v3.1差分パッチ型）."""
         findings: list[ReviewFinding] = []
 
         # チェック1: タイムライン破綻
-        total_months = sum(
-            self._parse_duration(p.duration)
-            for p in input_data.shu_result.phases
-        )
+        total_months = sum(self._parse_duration(p.duration) for p in input_data.shu_result.phases)
         if total_months > 12:
-            findings.append(ReviewFinding(
-                severity=FindingSeverity.WARNING,
-                category=FindingCategory.TIMELINE_UNREALISTIC,
-                description=f"計画期間が{total_months}ヶ月と長期",
-                affected_agent="ShuAgent",
-                suggested_revision="フェーズ期間の短縮またはPoC範囲の限定",
-                failure_point=f"計画が{total_months}ヶ月に及び、環境変化で前提が崩れるリスク",
-                impact_scope="術（実行計画）全フェーズ、器（技術実装）の技術選定",
-                minimal_patch=MinimalPatch(
-                    checkbox_label="PoC期間を3ヶ月以内に限定する",
-                    annotation_hint="対象フェーズ番号",
-                ),
-                score_improvements=[ScoreImprovement(target_score="実装可能性", current_estimate=55.0, improved_estimate=75.0, delta=20.0)],
-                action_type=ActionType.RECALC,
-            ))
+            findings.append(
+                ReviewFinding(
+                    severity=FindingSeverity.WARNING,
+                    category=FindingCategory.TIMELINE_UNREALISTIC,
+                    description=f"計画期間が{total_months}ヶ月と長期",
+                    affected_agent="ShuAgent",
+                    suggested_revision="フェーズ期間の短縮またはPoC範囲の限定",
+                    failure_point=f"計画が{total_months}ヶ月に及び、環境変化で前提が崩れるリスク",
+                    impact_scope="術（実行計画）全フェーズ、器（技術実装）の技術選定",
+                    minimal_patch=MinimalPatch(
+                        checkbox_label="PoC期間を3ヶ月以内に限定する",
+                        annotation_hint="対象フェーズ番号",
+                    ),
+                    score_improvements=[
+                        ScoreImprovement(
+                            target_score="実装可能性",
+                            current_estimate=55.0,
+                            improved_estimate=75.0,
+                            delta=20.0,
+                        )
+                    ],
+                    action_type=ActionType.RECALC,
+                )
+            )
 
         # チェック2: 技術負債集中
         debt_count = len(input_data.qi_result.technical_debt_warnings)
         if debt_count > 2:
-            findings.append(ReviewFinding(
-                severity=FindingSeverity.WARNING,
-                category=FindingCategory.OVER_OPTIMISM,
-                description=f"技術負債警告が{debt_count}件。PoC段階での対応優先度が未定義",
-                affected_agent="QiAgent",
-                suggested_revision="PoC段階で対応すべき負債と後回しにする負債を分類",
-                failure_point=f"技術負債{debt_count}件が未整理のまま実装開始すると手戻りが発生",
-                impact_scope="器（技術実装）のコンポーネント選定、術（実行計画）の工数見積",
-                minimal_patch=MinimalPatch(
-                    checkbox_label="PoC対応必須の負債を特定済み",
-                    annotation_hint="対応する負債名",
-                ),
-                score_improvements=[ScoreImprovement(target_score="リスク網羅", current_estimate=50.0, improved_estimate=70.0, delta=20.0)],
-                action_type=ActionType.PATCH,
-            ))
+            findings.append(
+                ReviewFinding(
+                    severity=FindingSeverity.WARNING,
+                    category=FindingCategory.OVER_OPTIMISM,
+                    description=f"技術負債警告が{debt_count}件。PoC段階での対応優先度が未定義",
+                    affected_agent="QiAgent",
+                    suggested_revision="PoC段階で対応すべき負債と後回しにする負債を分類",
+                    failure_point=f"技術負債{debt_count}件が未整理のまま実装開始すると手戻りが発生",
+                    impact_scope="器（技術実装）のコンポーネント選定、術（実行計画）の工数見積",
+                    minimal_patch=MinimalPatch(
+                        checkbox_label="PoC対応必須の負債を特定済み",
+                        annotation_hint="対応する負債名",
+                    ),
+                    score_improvements=[
+                        ScoreImprovement(
+                            target_score="リスク網羅",
+                            current_estimate=50.0,
+                            improved_estimate=70.0,
+                            delta=20.0,
+                        )
+                    ],
+                    action_type=ActionType.PATCH,
+                )
+            )
 
         # チェック3: 撤退基準未定義
         exit_criteria = input_data.shu_result.exit_criteria
         has_exit = bool(exit_criteria and getattr(exit_criteria, "exit_trigger", ""))
         if not has_exit:
-            findings.append(ReviewFinding(
-                severity=FindingSeverity.CRITICAL,
-                category=FindingCategory.RESPONSIBILITY_GAP,
-                description="撤退基準が未定義。損切りポイントが不明確",
-                affected_agent="ShuAgent",
-                suggested_revision="撤退トリガー条件と撤退時行動を定義",
-                failure_point="損切り判断が遅れ、リソースを浪費する",
-                impact_scope="術（実行計画）全体、法（戦略選定）の推奨戦略",
-                minimal_patch=MinimalPatch(
-                    checkbox_label="撤退基準を定義済み",
-                    annotation_hint="撤退トリガー条件",
-                    default_value="PoC3ヶ月時点でKPI未達なら中止",
-                ),
-                score_improvements=[ScoreImprovement(target_score="リスク網羅", current_estimate=40.0, improved_estimate=65.0, delta=25.0)],
-                action_type=ActionType.RECALC,
-            ))
+            findings.append(
+                ReviewFinding(
+                    severity=FindingSeverity.CRITICAL,
+                    category=FindingCategory.RESPONSIBILITY_GAP,
+                    description="撤退基準が未定義。損切りポイントが不明確",
+                    affected_agent="ShuAgent",
+                    suggested_revision="撤退トリガー条件と撤退時行動を定義",
+                    failure_point="損切り判断が遅れ、リソースを浪費する",
+                    impact_scope="術（実行計画）全体、法（戦略選定）の推奨戦略",
+                    minimal_patch=MinimalPatch(
+                        checkbox_label="撤退基準を定義済み",
+                        annotation_hint="撤退トリガー条件",
+                        default_value="PoC3ヶ月時点でKPI未達なら中止",
+                    ),
+                    score_improvements=[
+                        ScoreImprovement(
+                            target_score="リスク網羅",
+                            current_estimate=40.0,
+                            improved_estimate=65.0,
+                            delta=25.0,
+                        )
+                    ],
+                    action_type=ActionType.RECALC,
+                )
+            )
 
         return findings
 
     def _parse_duration(self, duration: str) -> int:
         """期間文字列を月数に変換."""
         import re
+
         if match := re.search(r"(\d+)\s*(週|week)", duration, re.IGNORECASE):
             return int(match.group(1)) // 4
         if match := re.search(r"(\d+)\s*(ヶ月|月|month)", duration, re.IGNORECASE):
@@ -443,7 +469,6 @@ JSON形式で出力してください。"""
 
         return True
 
-
     # =========================================================================
     # v3.1 差分パッチ型ヘルパーメソッド
     # =========================================================================
@@ -466,10 +491,13 @@ JSON形式で出力してください。"""
             mp_data = f.get("minimal_patch")
             minimal_patch = None
             if isinstance(mp_data, dict):
-                checkbox_label = self._truncate_text(
-                    mp_data.get("checkbox_label", "確認済み"),
-                    self.MAX_CHECKBOX_LABEL_LEN,
-                ) or "確認済み"
+                checkbox_label = (
+                    self._truncate_text(
+                        mp_data.get("checkbox_label", "確認済み"),
+                        self.MAX_CHECKBOX_LABEL_LEN,
+                    )
+                    or "確認済み"
+                )
                 annotation_hint = self._truncate_text(
                     mp_data.get("annotation_hint", ""),
                     self.MAX_ANNOTATION_HINT_LEN,
@@ -489,12 +517,14 @@ JSON形式で出力してください。"""
             score_improvements: list[ScoreImprovement] = []
             for si in si_data:
                 if isinstance(si, dict):
-                    score_improvements.append(ScoreImprovement(
-                        target_score=self._truncate_text(si.get("target_score", ""), self.MAX_TARGET_SCORE_LEN),
-                        current_estimate=safe_float(si.get("current_estimate", 50), 50.0),
-                        improved_estimate=safe_float(si.get("improved_estimate", 70), 70.0),
-                        delta=safe_float(si.get("delta", 20), 20.0),
-                    ))
+                    score_improvements.append(
+                        ScoreImprovement(
+                            target_score=self._truncate_text(si.get("target_score", ""), self.MAX_TARGET_SCORE_LEN),
+                            current_estimate=safe_float(si.get("current_estimate", 50), 50.0),
+                            improved_estimate=safe_float(si.get("improved_estimate", 70), 70.0),
+                            delta=safe_float(si.get("delta", 20), 20.0),
+                        )
+                    )
 
             # action_typeのパース
             action_type = safe_enum(
@@ -515,26 +545,28 @@ JSON形式で出力してください。"""
                 else:
                     suggested_revision = "指摘事項を解消する具体策を追記"
 
-            findings.append(ReviewFinding(
-                severity=safe_enum(
-                    FindingSeverity,
-                    f.get("severity", "WARNING"),
-                    FindingSeverity.WARNING,
-                ),
-                category=safe_enum(
-                    FindingCategory,
-                    f.get("category", "LOGIC_FLAW"),
-                    FindingCategory.LOGIC_FLAW,
-                ),
-                description=desc,
-                affected_agent=self._truncate_text(f.get("affected_agent", ""), 30),
-                suggested_revision=suggested_revision,
-                failure_point=self._truncate_text(f.get("failure_point", ""), self.MAX_FAILURE_POINT_LEN),
-                impact_scope=self._truncate_text(f.get("impact_scope", ""), self.MAX_IMPACT_SCOPE_LEN),
-                minimal_patch=minimal_patch,
-                score_improvements=score_improvements,
-                action_type=action_type,
-            ))
+            findings.append(
+                ReviewFinding(
+                    severity=safe_enum(
+                        FindingSeverity,
+                        f.get("severity", "WARNING"),
+                        FindingSeverity.WARNING,
+                    ),
+                    category=safe_enum(
+                        FindingCategory,
+                        f.get("category", "LOGIC_FLAW"),
+                        FindingCategory.LOGIC_FLAW,
+                    ),
+                    description=desc,
+                    affected_agent=self._truncate_text(f.get("affected_agent", ""), 30),
+                    suggested_revision=suggested_revision,
+                    failure_point=self._truncate_text(f.get("failure_point", ""), self.MAX_FAILURE_POINT_LEN),
+                    impact_scope=self._truncate_text(f.get("impact_scope", ""), self.MAX_IMPACT_SCOPE_LEN),
+                    minimal_patch=minimal_patch,
+                    score_improvements=score_improvements,
+                    action_type=action_type,
+                )
+            )
 
         return findings[:3]
 
@@ -581,10 +613,30 @@ JSON形式で出力してください。"""
         risk_score = 30.0 + (has_exit * 30.0) + (has_debt_warnings * 20.0)
 
         return ConfidenceBreakdown(
-            input_sufficiency=ConfidenceComponent(name="入力充足度", score=input_score, checkbox_boost=10.0, description="全Agent結果の充実度"),
-            logic_consistency=ConfidenceComponent(name="論理整合", score=logic_score, checkbox_boost=5.0, description="道→法→術→器の一貫性"),
-            implementation_feasibility=ConfidenceComponent(name="実装可能性", score=impl_score, checkbox_boost=15.0, description="技術実装の具体性"),
-            risk_coverage=ConfidenceComponent(name="リスク網羅", score=risk_score, checkbox_boost=10.0, description="撤退基準・リスク対策の網羅"),
+            input_sufficiency=ConfidenceComponent(
+                name="入力充足度",
+                score=input_score,
+                checkbox_boost=10.0,
+                description="全Agent結果の充実度",
+            ),
+            logic_consistency=ConfidenceComponent(
+                name="論理整合",
+                score=logic_score,
+                checkbox_boost=5.0,
+                description="道→法→術→器の一貫性",
+            ),
+            implementation_feasibility=ConfidenceComponent(
+                name="実装可能性",
+                score=impl_score,
+                checkbox_boost=15.0,
+                description="技術実装の具体性",
+            ),
+            risk_coverage=ConfidenceComponent(
+                name="リスク網羅",
+                score=risk_score,
+                checkbox_boost=10.0,
+                description="撤退基準・リスク対策の網羅",
+            ),
         )
 
     def _generate_checkpoint_items(
@@ -594,44 +646,54 @@ JSON形式で出力してください。"""
         items: list[CheckpointItem] = []
 
         # 承認者（ロール）確認済み
-        items.append(CheckpointItem(
-            item_id="approver_confirmed",
-            label="承認者（ロール）確認済み",
-            checked=False,
-            score_boost=8.0,
-            target_component="input_sufficiency",
-            default_suggestion="暫定: プロジェクトオーナー（PO）が承認責任者",
-        ))
+        items.append(
+            CheckpointItem(
+                item_id="approver_confirmed",
+                label="承認者（ロール）確認済み",
+                checked=False,
+                score_boost=8.0,
+                target_component="input_sufficiency",
+                default_suggestion="暫定: プロジェクトオーナー（PO）が承認責任者",
+            )
+        )
 
         # Gate0〜Gate3 定義済み
-        items.append(CheckpointItem(
-            item_id="gates_defined",
-            label="Gate0〜Gate3 定義済み",
-            checked=False,
-            score_boost=10.0,
-            target_component="logic_consistency",
-            default_suggestion="Gate0=PoC開始, Gate1=MVP判断, Gate2=スケール判断, Gate3=本番移行",
-        ))
+        items.append(
+            CheckpointItem(
+                item_id="gates_defined",
+                label="Gate0〜Gate3 定義済み",
+                checked=False,
+                score_boost=10.0,
+                target_component="logic_consistency",
+                default_suggestion="Gate0=PoC開始, Gate1=MVP判断, Gate2=スケール判断, Gate3=本番移行",
+            )
+        )
 
         # 撤退基準 定義済み
-        has_exit = bool(input_data.shu_result.exit_criteria and getattr(input_data.shu_result.exit_criteria, "exit_trigger", ""))
-        items.append(CheckpointItem(
-            item_id="exit_criteria_defined",
-            label="撤退基準 定義済み",
-            checked=has_exit,
-            score_boost=12.0,
-            target_component="risk_coverage",
-            default_suggestion="PoC3ヶ月時点でKPI50%未達なら撤退",
-        ))
+        has_exit = bool(
+            input_data.shu_result.exit_criteria and getattr(input_data.shu_result.exit_criteria, "exit_trigger", "")
+        )
+        items.append(
+            CheckpointItem(
+                item_id="exit_criteria_defined",
+                label="撤退基準 定義済み",
+                checked=has_exit,
+                score_boost=12.0,
+                target_component="risk_coverage",
+                default_suggestion="PoC3ヶ月時点でKPI50%未達なら撤退",
+            )
+        )
 
         # 最悪ケース一次対応 定義済み
-        items.append(CheckpointItem(
-            item_id="worst_case_response",
-            label="最悪ケース一次対応 定義済み",
-            checked=False,
-            score_boost=10.0,
-            target_component="risk_coverage",
-            default_suggestion="障害発生時: サービス停止→ログ保全→PO報告→24h以内に原因分析",
-        ))
+        items.append(
+            CheckpointItem(
+                item_id="worst_case_response",
+                label="最悪ケース一次対応 定義済み",
+                checked=False,
+                score_boost=10.0,
+                target_component="risk_coverage",
+                default_suggestion="障害発生時: サービス停止→ログ保全→PO報告→24h以内に原因分析",
+            )
+        )
 
         return items

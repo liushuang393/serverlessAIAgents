@@ -1,5 +1,29 @@
 # AgentFlow Platform
 
+
+<!-- README_REQUIRED_SECTIONS_START -->
+## 機能概要
+- 3 Studio 製品線と Framework 管理 API を単一 Control Plane で提供。
+- App/Agent/Skill/RAG/MCP の発見・管理・実行・監査を統合。
+- Publish/Deploy 導線を標準化し、app ライフサイクル運用を一元化。
+
+## 優位性
+- `/api/studios/*` と `/api/studios/framework/*` の正規導線で契約を統一。
+- business/developer/operator の surface 分離で利用者体験を最適化。
+- framework 監査機能により、manifest と実装の整合性を継続検証。
+
+## 技術アーキテクチャ
+- Backend: FastAPI Routers + Discovery/Lifecycle/Audit Services。
+- Frontend: React + Zustand による運用コンソール。
+- App Manifest と taxonomy（business_base / pattern）で構成情報を標準化。
+
+## アプリケーション階層
+- Studio Surface: 顧客向け実行導線。
+- Framework Control: App/Agent/Skill/RAG/MCP 管理。
+- Governance Layer: 監査・ポリシー・可視性制御。
+- Delivery Layer: 発布、起動、停止、運用検証。
+<!-- README_REQUIRED_SECTIONS_END -->
+
 Platform は 3 Studio 製品線と Framework 管理面を提供します。
 
 ## 1. 役割
@@ -38,11 +62,82 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
 
 ## 4. 開発起動
 
-1. `conda activate agentflow`
-2. `python -m apps.platform.main serve --port 8000`
-3. `cd apps/platform/frontend && npm run dev`
+### 4.1 開発環境セットアップ（統一手順）
 
-## 5. 参照ドキュメント
+Platform 単体ではなく、リポジトリ全体の開発環境をセットアップします。
+
+```bash
+cd <repo-root>
+bash setup_dev.sh
+```
+
+手動で行う場合:
+
+```bash
+conda activate agentflow
+pip install -e ".[dev,apps]"
+```
+
+### 4.2 起動（Backend / Frontend）
+
+Backend（FastAPI）:
+
+```bash
+conda activate agentflow
+python -m apps.platform.main serve
+```
+
+Frontend:
+
+```bash
+cd apps/platform/frontend
+npm install
+npm run dev
+```
+
+ポートは `apps/platform/app_config.json` が単一定義元です（`ports.api` / `ports.frontend`）。
+
+## 5. テスト/静的チェック（統一スクリプト）
+
+```bash
+cd <repo-root>
+./check.sh format
+./check.sh lint
+./check.sh type-check
+./check.sh test
+```
+
+または:
+
+```bash
+cd <repo-root>
+make check-all
+```
+
+## 6. 本番ビルド/発布（Platform に統一）
+
+### 6.1 Publish（推奨）
+
+Platform CLI から publish/deploy を実行します（生成・検証・発布の導線を統一）。
+
+```bash
+conda activate agentflow
+python -m apps.platform.main publish ./apps/<app_dir> --target docker
+```
+
+### 6.2 API 経由（自動化向け）
+
+- `POST /api/studios/framework/publish/deploy`
+
+### 6.3 Frontend ビルド
+
+```bash
+cd apps/platform/frontend
+npm install
+npm run build
+```
+
+## 7. 参照ドキュメント
 
 - 外部向け: `docs/external/README.md`
 - 内部向け: `docs/internal/README.md`

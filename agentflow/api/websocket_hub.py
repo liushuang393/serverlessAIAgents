@@ -68,8 +68,8 @@ class WSMessage(BaseModel):
 
     type: WSMessageType = Field(..., description="メッセージ種別")
     data: dict[str, Any] = Field(default_factory=dict, description="メッセージデータ")
-    room: str | None = Field(None, description="対象ルーム")
-    client_id: str | None = Field(None, description="クライアントID")
+    room: str | None = Field(default=None, description="対象ルーム")
+    client_id: str | None = Field(default=None, description="クライアントID")
     timestamp: str = Field(
         default_factory=lambda: datetime.now().isoformat(),
         description="タイムスタンプ",
@@ -114,7 +114,8 @@ class WSClient(BaseModel):
 
 # 型定義
 WSHandler = Callable[[str, dict[str, Any]], Awaitable[None]]
-WSMiddleware = Callable[[str, WSMessage, Callable], Awaitable[None]]
+WSNext = Callable[[WSMessage], Awaitable[None]]
+WSMiddleware = Callable[[str, WSMessage, WSNext], Awaitable[None]]
 
 
 class WebSocketHub:
@@ -169,6 +170,7 @@ class WebSocketHub:
             WSMessage(
                 type=WSMessageType.CONNECTED,
                 data={"client_id": client_id},
+                client_id=client_id,
             ),
         )
 
@@ -232,6 +234,7 @@ class WebSocketHub:
                 type=WSMessageType.SUBSCRIBED,
                 data={"room": room},
                 room=room,
+                client_id=client_id,
             ),
         )
 
@@ -304,11 +307,7 @@ class WebSocketHub:
             送信成功数
         """
         exclude = exclude or set()
-        tasks = [
-            self.send(client_id, message)
-            for client_id in self._connections
-            if client_id not in exclude
-        ]
+        tasks = [self.send(client_id, message) for client_id in self._connections if client_id not in exclude]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return sum(1 for r in results if r is True)
 
@@ -330,11 +329,7 @@ class WebSocketHub:
         """
         exclude = exclude or set()
         client_ids = self._rooms.get(room, set())
-        tasks = [
-            self.send(client_id, message)
-            for client_id in client_ids
-            if client_id not in exclude
-        ]
+        tasks = [self.send(client_id, message) for client_id in client_ids if client_id not in exclude]
         results = await asyncio.gather(*tasks, return_exceptions=True)
         return sum(1 for r in results if r is True)
 
@@ -351,11 +346,13 @@ class WebSocketHub:
         Returns:
             デコレータ
         """
+
         def decorator(handler: WSHandler) -> WSHandler:
             if event_type not in self._handlers:
                 self._handlers[event_type] = []
             self._handlers[event_type].append(handler)
             return handler
+
         return decorator
 
     def add_handler(self, event_type: str, handler: WSHandler) -> None:
@@ -430,6 +427,7 @@ class WebSocketHub:
                         WSMessage(
                             type=WSMessageType.ERROR,
                             data={"message": "Invalid JSON"},
+                            client_id=client_id,
                         ),
                     )
 

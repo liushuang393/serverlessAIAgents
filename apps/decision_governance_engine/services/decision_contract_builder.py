@@ -129,11 +129,7 @@ class DecisionGovContractBuilder:
 
         report_id = str(data.get("report_id", ""))
         created_at_raw = data.get("created_at")
-        created_at = (
-            created_at_raw
-            if isinstance(created_at_raw, datetime)
-            else datetime.now()
-        )
+        created_at = created_at_raw if isinstance(created_at_raw, datetime) else datetime.now()
 
         decision_role = DecisionGovContractBuilder.infer_decision_role(data)
 

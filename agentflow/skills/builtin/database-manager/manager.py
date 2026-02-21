@@ -212,9 +212,7 @@ class SupabaseProvider(DatabaseProvider):
     ) -> list[dict[str, Any]]:
         """查询 Supabase 表."""
         try:
-            query = self._client.table(table).select(
-                ",".join(columns) if columns else "*"
-            )
+            query = self._client.table(table).select(",".join(columns) if columns else "*")
 
             if filters:
                 for key, value in filters.items():
@@ -334,9 +332,7 @@ class SupabaseProvider(DatabaseProvider):
             "table": table,
         }
         if filters:
-            postgres_changes["filter"] = ",".join(
-                f"{k}.{v}" for k, v in filters.items()
-            )
+            postgres_changes["filter"] = ",".join(f"{k}.{v}" for k, v in filters.items())
 
         channel.on_postgres_changes(
             postgres_changes,
@@ -369,9 +365,7 @@ class TursoProvider(DatabaseProvider):
             import libsql_experimental as libsql
         except ImportError:
             msg = "libsql-experimental 库未安装，请运行: pip install libsql-experimental"
-            raise ConnectionError(
-                msg
-            )
+            raise ConnectionError(msg)
 
         try:
             self._client = libsql.connect(
@@ -584,9 +578,7 @@ class PostgresProvider(DatabaseProvider):
         for record in records:
             columns = ", ".join(record.keys())
             placeholders = ", ".join(f"${i + 1}" for i in range(len(record)))
-            query = (
-                f"INSERT INTO {table} ({columns}) VALUES ({placeholders}) RETURNING *"
-            )
+            query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders}) RETURNING *"
             result = await self.execute(query, list(record.values()))
             if result:
                 results.extend(result)
@@ -782,9 +774,7 @@ class DatabaseManager:
             查询结果列表
         """
         self._ensure_connected()
-        results = await self._provider.select(
-            table, columns, filters, order_by, limit, offset
-        )
+        results = await self._provider.select(table, columns, filters, order_by, limit, offset)
         if model:
             return [model(**row) for row in results]
         return results
@@ -882,9 +872,7 @@ class DatabaseManager:
         self._ensure_connected()
         if self._provider_name not in ("postgres",):
             msg = f"{self._provider_name} 不支持事务，请使用 PostgreSQL"
-            raise TransactionError(
-                msg
-            )
+            raise TransactionError(msg)
 
         # 对于 PostgreSQL，使用真正的事务
         if isinstance(self._provider, PostgresProvider):
@@ -979,9 +967,7 @@ class DatabaseManager:
             if primary_keys:
                 col_defs.append(f"PRIMARY KEY ({', '.join(primary_keys)})")
 
-            create_sql = (
-                f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(col_defs)})"
-            )
+            create_sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({', '.join(col_defs)})"
             await self.execute(create_sql)
             logger.info(f"已创建表: {table_name}")
 
@@ -1105,4 +1091,3 @@ class TransactionContext:
         query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders}) RETURNING *"
         result = await self.execute(query, list(data.values()))
         return result[0] if result else {}
-

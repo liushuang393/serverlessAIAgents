@@ -1,16 +1,11 @@
-# -*- coding: utf-8 -*-
 """Unit tests for RLM events module."""
 
 import json
-import time
-
-import pytest
 
 from agentflow.context.rlm.events import (
     RLMActionEvent,
     RLMCompleteEvent,
     RLMErrorEvent,
-    RLMEvent,
     RLMEventEmitter,
     RLMEventType,
     RLMIterationEvent,

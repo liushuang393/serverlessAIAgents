@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Apps Router — App 管理 API エンドポイント.
 
 GET   /api/studios/framework/apps                        — 全 App 一覧
@@ -25,20 +24,22 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Body, HTTPException, Query
-
-from apps.platform.schemas.provisioning_schemas import AppCreateRequest
-from apps.platform.services.app_scaffolder import AppScaffolderService
-from apps.platform.services.app_discovery import AppDiscoveryService
-from apps.platform.services.framework_audit import FrameworkAuditService
 from apps.platform.services.app_lifecycle import (
     AppLifecycleManager,
     AppStatus,
 )
+from apps.platform.services.app_scaffolder import AppScaffolderService
+from apps.platform.services.framework_audit import FrameworkAuditService
 from apps.platform.services.port_allocator import PortAllocatorService
+from fastapi import APIRouter, Body, HTTPException, Query
+
+
+if TYPE_CHECKING:
+    from apps.platform.schemas.provisioning_schemas import AppCreateRequest
+    from apps.platform.services.app_discovery import AppDiscoveryService
 
 
 router = APIRouter(prefix="/api/studios/framework/apps", tags=["framework-apps"])
@@ -68,7 +69,7 @@ def init_app_services(
         discovery: App 検出サービス
         lifecycle: ライフサイクル管理サービス
     """
-    global _discovery, _lifecycle, _scaffolder, _port_allocator, _framework_audit  # noqa: PLW0603
+    global _discovery, _lifecycle, _scaffolder, _port_allocator, _framework_audit
     _discovery = discovery
     _lifecycle = lifecycle
     _scaffolder = scaffolder or AppScaffolderService(discovery)
@@ -168,7 +169,7 @@ def _runtime_or_local_http_url(
 
     try:
         parsed = urlparse(runtime)
-    except Exception:  # noqa: BLE001
+    except Exception:
         return fallback
 
     host = (parsed.hostname or "").lower()
@@ -229,11 +230,7 @@ def _runtime_database(app_config: Any, urls: dict[str, str | None]) -> dict[str,
 
     return {
         "kind": kind,
-        "url": (
-            _normalize_text(runtime_db.get("url"))
-            or urls.get("database")
-            or _to_database_url(kind, port)
-        ),
+        "url": (_normalize_text(runtime_db.get("url")) or urls.get("database") or _to_database_url(kind, port)),
         "host": host,
         "port": port,
         "name": _normalize_text(runtime_db.get("name")),
@@ -298,7 +295,7 @@ def _schedule_health_prime(
     app_configs: list[Any],
 ) -> None:
     """ヘルスキャッシュの非同期プリフェッチを開始する."""
-    global _health_prime_task  # noqa: PLW0603
+    global _health_prime_task
     if _health_prime_task is not None and not _health_prime_task.done():
         return
 
@@ -306,12 +303,12 @@ def _schedule_health_prime(
     _health_prime_task = task
 
     def _done_callback(done_task: asyncio.Task[None]) -> None:
-        global _health_prime_task  # noqa: PLW0603
+        global _health_prime_task
         if _health_prime_task is done_task:
             _health_prime_task = None
         try:
             done_task.result()
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             _logger.warning("health cache prefetch failed: %s", exc)
 
     task.add_done_callback(_done_callback)
@@ -504,7 +501,7 @@ async def create_app(request: AppCreateRequest) -> dict[str, Any]:
             status_code=400,
             detail={"message": str(exc), "error_code": "APP_CREATE_INVALID"},
         )
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         raise HTTPException(
             status_code=500,
             detail={"message": str(exc), "error_code": "APP_CREATE_FAILED"},
@@ -570,6 +567,7 @@ async def get_app_detail(
         "services": config.services,
         "dependencies": config.dependencies.model_dump(),
         "contracts": config.contracts.model_dump(),
+        "evolution": config.evolution.model_dump(),
         "visibility": config.visibility.model_dump(),
         "blueprint": config.blueprint.model_dump(),
         "runtime": runtime,

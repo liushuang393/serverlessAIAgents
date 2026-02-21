@@ -1,0 +1,104 @@
+{
+  "auth": {
+    "login": "Login",
+    "logout": "Logout",
+    "register": "Register",
+    "username": "Username",
+    "password": "Password",
+    "email": "Email",
+    "submit": "Submit",
+    "mfa_code": "Verification Code",
+    "mfa_placeholder": "Enter 6-digit code",
+    "show_password": "Show password",
+    "hide_password": "Hide password",
+    "brand_badge": "Intelligent Enterprise Assistant",
+    "brand_title": "Enterprise FAQ Studio",
+    "brand_subtitle": "Support, maintenance, and analytics teams stay aligned with one trusted response system.",
+    "welcome": "Welcome Back",
+    "subtitle": "Sign in to access your enterprise FAQ workspace.",
+    "mfa_title": "Security Verification",
+    "mfa_subtitle": "Enter the 6-digit authenticator code to continue.",
+    "mfa_shield": "MFA shield active",
+    "sign_in": "Sign In",
+    "mfa_verify": "Verify & Enter",
+    "password_placeholder": "Enter password",
+    "register_hint": "New to this workspace?",
+    "back_to_login": "Return to sign in",
+    "sso": "Enterprise SSO",
+    "sso_google": "Continue with Google",
+    "sso_microsoft": "Continue with Microsoft",
+    "metrics": {
+      "uptime_label": "Service uptime",
+      "availability_label": "Knowledge availability"
+    },
+    "error": {
+      "invalid_credentials": "Invalid username or password",
+      "mfa_required": "Multi-factor authentication required",
+      "mfa_invalid": "Invalid verification code",
+      "network": "Network error occurred"
+    },
+    "trust": {
+      "knowledge": "Instant Knowledge",
+      "knowledge_desc": "Search internal docs and maintenance insights in one secure workspace.",
+      "security": "Policy-Ready Security",
+      "security_desc": "RBAC, audit logs, and MFA verification are active for every session.",
+      "efficiency": "Faster Operations",
+      "efficiency_desc": "Get grounded answers with citations so teams can execute without delays."
+    }
+  },
+  "chat": {
+    "placeholder": "Type a message...",
+    "send": "Send",
+    "thinking": "Thinking...",
+    "new_chat": "New Chat",
+    "error": "An error occurred. Please try again.",
+    "empty": "No messages yet",
+    "copy": "Copy",
+    "copied": "Copied",
+    "online": "Online",
+    "you": "You",
+    "ai_name": "AI Assistant",
+    "welcome_title": "How can I help?",
+    "welcome_subtitle": "Analyze documents, query databases, and get intelligent answers for your business needs.",
+    "ask_placeholder": "Ask anything...",
+    "shift_enter_hint": "Shift+Enter for new line",
+    "quick": {
+      "analyze_reports": "Analyze Reports",
+      "analyze_reports_sub": "Extract insights from uploaded PDFs",
+      "sql_query": "SQL Query",
+      "sql_query_sub": "Generate database reports naturally",
+      "tech_support": "Technical Support",
+      "tech_support_sub": "Step-by-step product guidance",
+      "sales_strategy": "Sales Strategy",
+      "sales_strategy_sub": "Create tailored marketing assets"
+    }
+  },
+  "register": {
+    "title": "Create Account",
+    "subtitle": "Join the enterprise FAQ intelligence platform.",
+    "full_name": "Full Name",
+    "department": "Department",
+    "position": "Position",
+    "submit": "Create Account",
+    "already_have_account": "Already have an account?",
+    "sign_in": "Sign in",
+    "password_placeholder": "Min 8 characters",
+    "error_fallback": "Registration failed",
+    "error_occurred": "An error occurred during registration"
+  },
+  "sidebar": {
+    "history": "Chat History",
+    "settings": "Settings",
+    "no_history": "No history",
+    "no_conversations": "No conversations yet.",
+    "start_new": "Start a new thread above."
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "retry": "Retry",
+    "close": "Close",
+    "cancel": "Cancel"
+  }
+}
+

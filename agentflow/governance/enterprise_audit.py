@@ -280,7 +280,8 @@ class PostgresAuditStorage(AuditStorage):
                 params.append(event_type.value)
                 param_idx += 1
 
-            return await conn.fetchval(query, *params)
+            count = await conn.fetchval(query, *params)
+            return int(count or 0)
 
     def _row_to_event(self, row: Any) -> EnterpriseAuditEvent:
         """行をイベントに変換."""
@@ -290,13 +291,19 @@ class PostgresAuditStorage(AuditStorage):
             event_type=AuditEventType(row["event_type"]),
             severity=AuditSeverity(row["severity"]),
             tool_name=row["tool_name"],
+            tool_call_id=None,
             decision=row["decision"],
             reason=row["reason"],
+            auth_decision=None,
+            auth_mode=None,
+            auth_reason=None,
             agent_id=row["agent_id"],
             agent_name=row["agent_name"],
             user_id=row["user_id"],
             flow_id=row["flow_id"],
             run_id=row["run_id"],
+            trace_id=None,
+            thread_id=None,
             metadata=json.loads(row["metadata"]) if row["metadata"] else {},
         )
 
@@ -332,11 +339,17 @@ class EnterpriseAuditLogger(AuditLogger):
                 event_id=event.event_id,
                 timestamp=event.timestamp,
                 tool_name=event.tool_name,
+                tool_call_id=event.tool_call_id,
                 decision=event.decision,
                 reason=event.reason,
+                auth_decision=event.auth_decision,
+                auth_mode=event.auth_mode,
+                auth_reason=event.auth_reason,
                 user_id=event.user_id,
                 flow_id=event.flow_id,
                 run_id=event.run_id,
+                trace_id=event.trace_id,
+                thread_id=event.thread_id,
                 metadata=event.metadata,
             )
 

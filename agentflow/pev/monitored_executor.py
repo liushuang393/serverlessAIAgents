@@ -110,9 +110,7 @@ class ExecutionMonitor:
     _start_time: float | None = None
     _last_progress: float = 0.0
     _stall_count: int = 0
-    _logger: logging.Logger = field(
-        default_factory=lambda: logging.getLogger("agentflow.pev.monitor")
-    )
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.pev.monitor"))
 
     def start(self) -> None:
         """監視開始."""
@@ -157,9 +155,7 @@ class MonitoredExecutor:
     max_concurrent: int = 5
     on_anomaly: Callable[[ExecutionEvent], None] | None = None
     _monitor: ExecutionMonitor = field(default_factory=ExecutionMonitor)
-    _logger: logging.Logger = field(
-        default_factory=lambda: logging.getLogger("agentflow.pev.executor")
-    )
+    _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.pev.executor"))
 
     async def execute(
         self,
@@ -215,15 +211,12 @@ class MonitoredExecutor:
                     continue
 
                 # 並列実行（最大同時実行数まで）
-                batch = ready_goals[:self.max_concurrent]
+                batch = ready_goals[: self.max_concurrent]
 
-                tasks = [
-                    self._execute_goal(goal, plan, context, results)
-                    for goal in batch
-                ]
+                tasks = [self._execute_goal(goal, plan, context, results) for goal in batch]
 
                 for task_result in await asyncio.gather(*tasks, return_exceptions=True):
-                    if isinstance(task_result, Exception):
+                    if isinstance(task_result, BaseException):
                         self._logger.error(f"目標実行エラー: {task_result}")
                         continue
 
@@ -276,9 +269,7 @@ class MonitoredExecutor:
                 "goal": goal.name,
                 "description": goal.description,
                 "context": context,
-                "dependencies_results": {
-                    dep_id: results.get(dep_id) for dep_id in goal.dependencies
-                },
+                "dependencies_results": {dep_id: results.get(dep_id) for dep_id in goal.dependencies},
             }
 
             # Agent実行
@@ -328,11 +319,7 @@ class MonitoredExecutor:
     ) -> ExecutionResult:
         """実行結果を取得."""
         total = sum(len(level.goals) for level in plan.levels)
-        completed = sum(
-            1 for level in plan.levels
-            for goal in level.goals
-            if goal.status == GoalStatus.COMPLETED
-        )
+        completed = sum(1 for level in plan.levels for goal in level.goals if goal.status == GoalStatus.COMPLETED)
         errors = [
             f"{goal.name}: {goal.error}"
             for level in plan.levels
@@ -358,4 +345,3 @@ __all__ = [
     "ExecutionResult",
     "MonitoredExecutor",
 ]
-

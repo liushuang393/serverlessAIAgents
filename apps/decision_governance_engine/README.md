@@ -6,24 +6,33 @@
 
 ---
 
+<!-- README_REQUIRED_SECTIONS_START -->
+## 機能概要
+- 企業意思決定を多段 Agent で評価し、提案・リスク・実行計画を統合出力。
+- PASS/COACH モードで改善提案を反復し、却下一辺倒にならない運用を実現。
+- REST / SSE / WebSocket で同一判断フローを提供し、UI と API を整合。
+
+## 優位性
+- PipelineEngine による責務分離で、判断過程の透明性と再現性を担保。
+- COACH ループにより、意思決定品質を実運用で継続改善できる。
+- レポート出力（PDF/API）まで一貫し、現場導入時の説明コストを下げられる。
+
+## 技術アーキテクチャ
+- Backend: FastAPI + AgentFlow PipelineEngine + AgentRegistry。
+- Frontend: React/TypeScript + SSE/WebSocket 進捗表示。
+- Core Flow: CognitiveGate → Gatekeeper → Dao/Fa/Shu/Qi → Review。
+
+## アプリケーション階層
+- Interface Layer: HTTP API / Stream / WebSocket。
+- Orchestration Layer: Pipeline 実行制御。
+- Agent Layer: 認知・分析・計画・レビュー。
+- Output Layer: レポート生成・可視化・エクスポート。
+<!-- README_REQUIRED_SECTIONS_END -->
+
 ## 1. システム概要
 
 Decision Governance Engine は、企業の重要な意思決定を支援するマルチエージェントシステムです。
 **AgentFlow の PipelineEngine パターン** を使用して実装されています。
-
-### Engine Pattern
-
-```python
-from apps.decision_governance_engine import DecisionEngine
-
-# 同期実行
-engine = DecisionEngine()
-result = await engine.run({"question": "新規事業への投資判断をしたい"})
-
-# SSEストリーム
-async for event in engine.run_stream(inputs):
-    print(event)
-```
 
 ### アーキテクチャ概要
 
@@ -250,6 +259,22 @@ alembic -c apps/decision_governance_engine/alembic.ini revision -m "変更内容
 
 ---
 
+## 4. 開発環境（インストール: 統一手順）
+
+この app 単体ではなく、リポジトリ全体の開発環境をセットアップします。
+
+```bash
+cd <repo-root>
+bash setup_dev.sh
+```
+
+手動で行う場合:
+
+```bash
+conda activate agentflow
+pip install -e ".[dev,apps]"
+```
+
 ## 5. 起動手順
 
 ### 5.1 Web UI モード（推奨）
@@ -393,6 +418,17 @@ mypy apps/decision_governance_engine/
 ---
 
 ## 7. 本番デプロイ手順
+
+### 7.0 Platform から発布（推奨）
+
+Platform（Control Plane）に publish/deploy を統一する場合:
+
+```bash
+conda activate agentflow
+python -m apps.platform.main publish ./apps/decision_governance_engine --target docker
+```
+
+（この app は `apps/decision_governance_engine/app_config.json` の `runtime.commands.publish` に docker compose の発布手順を保持しています）
 
 ### 7.1 ビルド
 

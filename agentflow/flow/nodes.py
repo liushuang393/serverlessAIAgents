@@ -29,6 +29,7 @@ from agentflow.flow.types import (
     ReviewVerdict,
 )
 
+
 # 後方互換: LLM が旧 "REJECT" を返した場合 → COACH にマッピング
 _VERDICT_ALIASES: dict[str, str] = {"REJECT": "COACH"}
 
@@ -77,12 +78,16 @@ class AgentNode(FlowNode):
             inputs = self.input_mapper(ctx) if self.input_mapper else ctx.get_inputs()
             self._logger.debug(f"Agentを実行: {self.id}")
 
-            result = await self.agent.run(inputs)
+            agent = self.agent
+            if agent is None:
+                msg = "Agent is not configured"
+                raise RuntimeError(msg)
+            result = await agent.run(inputs)
             ctx.set_result(self.id, result)
 
             return NodeResult(success=True, data=result, action=NextAction.CONTINUE)
         except Exception as e:
-            self._logger.error(f"Agent実行失敗（後続ノードは継続）: {e}")
+            self._logger.exception(f"Agent実行失敗（後続ノードは継続）: {e}")
             # エラー情報を context に保存し、後続ノードが実行できるよう CONTINUE を返す
             error_data: dict[str, Any] = {
                 "error": str(e),
@@ -114,7 +119,11 @@ class GateNode(FlowNode):
         try:
             # input_mapperがあれば使用、なければ元の入力を使用
             inputs = self.input_mapper(ctx) if self.input_mapper else ctx.get_inputs()
-            result = await self.agent.run(inputs)
+            agent = self.agent
+            if agent is None:
+                msg = "Agent is not configured"
+                raise RuntimeError(msg)
+            result = await agent.run(inputs)
             ctx.set_result(self.id, result)
 
             # 条件をチェック
@@ -154,7 +163,8 @@ class ParallelNode(FlowNode):
     async def execute(self, ctx: FlowContext) -> NodeResult:
         """すべてのAgentを並列実行."""
         try:
-            async def run_one(agent_id: str, agent: AgentProtocol) -> tuple[str, dict]:
+
+            async def run_one(agent_id: str, agent: AgentProtocol) -> tuple[str, dict[str, Any]]:
                 mapper = self.input_mappers.get(agent_id)
                 inputs = mapper(ctx) if mapper else ctx.get_inputs()
                 result = await agent.run(inputs)
@@ -166,7 +176,7 @@ class ParallelNode(FlowNode):
 
             combined: dict[str, Any] = {}
             for item in results_list:
-                if isinstance(item, Exception):
+                if isinstance(item, BaseException):
                     self._logger.error(f"並列実行失敗: {item}")
                 else:
                     aid, res = item
@@ -210,12 +220,7 @@ class ReviewNode(FlowNode):
             if not is_critical:
                 continue
 
-            raw_text = (
-                finding.get("description")
-                or finding.get("failure_point")
-                or finding.get("impact_scope")
-                or ""
-            )
+            raw_text = finding.get("description") or finding.get("failure_point") or finding.get("impact_scope") or ""
             text = str(raw_text).strip()
             if text and text not in summaries:
                 summaries.append(text)
@@ -236,15 +241,9 @@ class ReviewNode(FlowNode):
         final_warnings = warnings_raw if isinstance(warnings_raw, list) else []
 
         default_reason = (
-            f"ReviewAgentが{len(findings)}件の重要所見を検出"
-            if findings
-            else "ReviewAgentが実行計画の重大な課題を検出"
+            f"ReviewAgentが{len(findings)}件の重要所見を検出" if findings else "ReviewAgentが実行計画の重大な課題を検出"
         )
-        rejection_reason = str(
-            result.get("rejection_reason")
-            or result.get("reason")
-            or default_reason
-        )
+        rejection_reason = str(result.get("rejection_reason") or result.get("reason") or default_reason)
 
         message_raw = result.get("rejection_message")
         findings_summary = self._extract_finding_summary(findings)
@@ -277,7 +276,11 @@ class ReviewNode(FlowNode):
         """レビューを実行."""
         try:
             inputs = self.input_mapper(ctx) if self.input_mapper else ctx.get_all_results()
-            result = await self.agent.run(inputs)
+            agent = self.agent
+            if agent is None:
+                msg = "Agent is not configured"
+                raise RuntimeError(msg)
+            result = await agent.run(inputs)
             ctx.set_result(self.id, result)
 
             # 判定を取得（防御的パーシング: 未知値はクラッシュせずフォールバック）

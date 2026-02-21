@@ -52,7 +52,7 @@ class IDeployExecutor(Protocol):
         ...     print(f"{event.progress}%: {event.message}")
     """
 
-    async def deploy(
+    def deploy(
         self,
         source: GeneratedCode | Path,
         target: DeployTarget,

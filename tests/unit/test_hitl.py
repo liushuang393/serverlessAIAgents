@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """HITL (Human-in-the-Loop) モジュールのユニットテスト."""
 
 import asyncio
@@ -15,7 +14,6 @@ from agentflow.hitl import (
     Command,
     CommandType,
     HITLConfig,
-    InterruptError,
     InterruptPayload,
     InterruptSignal,
     InterruptType,
@@ -115,12 +113,8 @@ class TestMemoryCheckpointer:
         """最新チェックポイント読み込みのテスト."""
         thread_id = "thread-xyz"
 
-        await checkpointer.save(
-            CheckpointData(checkpoint_id="cp-1", thread_id=thread_id, state={"v": 1})
-        )
-        await checkpointer.save(
-            CheckpointData(checkpoint_id="cp-2", thread_id=thread_id, state={"v": 2})
-        )
+        await checkpointer.save(CheckpointData(checkpoint_id="cp-1", thread_id=thread_id, state={"v": 1}))
+        await checkpointer.save(CheckpointData(checkpoint_id="cp-2", thread_id=thread_id, state={"v": 2}))
 
         latest = await checkpointer.load_latest(thread_id)
         assert latest is not None
@@ -129,9 +123,7 @@ class TestMemoryCheckpointer:
     @pytest.mark.asyncio
     async def test_delete(self, checkpointer: MemoryCheckpointer) -> None:
         """削除のテスト."""
-        await checkpointer.save(
-            CheckpointData(checkpoint_id="cp-del", thread_id="t1", state={})
-        )
+        await checkpointer.save(CheckpointData(checkpoint_id="cp-del", thread_id="t1", state={}))
 
         result = await checkpointer.delete("cp-del")
         assert result is True
@@ -248,7 +240,7 @@ class TestInterruptSignal:
             raise signal
         except InterruptSignal as e:
             caught = True
-            assert e.payload.interrupt_type == InterruptType.CONFIRMATION
+            assert e.payload.interrupt_type == InterruptType.CONFIRMATION  # noqa: PT017
 
         assert caught is True
 
@@ -276,4 +268,3 @@ class TestHITLConfig:
         assert config.enabled is False
         assert config.default_timeout_seconds == 1800
         assert "slack" in config.notification_channels
-

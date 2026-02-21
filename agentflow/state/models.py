@@ -31,13 +31,13 @@ from pydantic import BaseModel, Field
 class ConstraintType(str, Enum):
     """制約タイプ."""
 
-    BUDGET = "budget"       # 予算制約
-    TIME = "time"           # 時間制約
-    RESOURCE = "resource"   # リソース制約
-    QUALITY = "quality"     # 品質制約
-    POLICY = "policy"       # ポリシー制約
-    SECURITY = "security"   # セキュリティ制約
-    CUSTOM = "custom"       # カスタム制約
+    BUDGET = "budget"  # 予算制約
+    TIME = "time"  # 時間制約
+    RESOURCE = "resource"  # リソース制約
+    QUALITY = "quality"  # 品質制約
+    POLICY = "policy"  # ポリシー制約
+    SECURITY = "security"  # セキュリティ制約
+    CUSTOM = "custom"  # カスタム制約
 
 
 class Constraint(BaseModel):
@@ -111,11 +111,11 @@ class Goal(BaseModel):
 class FactSource(str, Enum):
     """事実のソース."""
 
-    TOOL = "tool"           # ツール実行結果
-    RAG = "rag"             # RAG検索結果
-    USER = "user"           # ユーザー入力
-    SYSTEM = "system"       # システム情報
-    EXTERNAL = "external"   # 外部API
+    TOOL = "tool"  # ツール実行結果
+    RAG = "rag"  # RAG検索結果
+    USER = "user"  # ユーザー入力
+    SYSTEM = "system"  # システム情報
+    EXTERNAL = "external"  # 外部API
 
 
 class Fact(BaseModel):
@@ -153,12 +153,12 @@ class Fact(BaseModel):
 class DecisionType(str, Enum):
     """判断タイプ."""
 
-    ACTION = "action"           # アクション選択
-    PARAMETER = "parameter"     # パラメータ決定
-    BRANCH = "branch"           # 分岐判断
-    APPROVAL = "approval"       # 承認判断
-    FALLBACK = "fallback"       # フォールバック判断
-    TERMINATION = "termination" # 終了判断
+    ACTION = "action"  # アクション選択
+    PARAMETER = "parameter"  # パラメータ決定
+    BRANCH = "branch"  # 分岐判断
+    APPROVAL = "approval"  # 承認判断
+    FALLBACK = "fallback"  # フォールバック判断
+    TERMINATION = "termination"  # 終了判断
 
 
 class Decision(BaseModel):
@@ -267,4 +267,3 @@ __all__ = [
     "Goal",
     "StandardState",
 ]
-

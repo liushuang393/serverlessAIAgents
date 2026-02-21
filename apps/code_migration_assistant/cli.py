@@ -50,23 +50,16 @@ async def migrate_cobol_file(file_path: str) -> dict[str, Any]:
         cobol_code = f.read()
 
     # 移行実行
-    return await orchestrator.migrate(
-        cobol_code=cobol_code, file_name=Path(file_path).name
-    )
-
+    return await orchestrator.migrate(cobol_code=cobol_code, file_name=Path(file_path).name)
 
 
 async def main() -> None:
     """メインCLI関数."""
     import argparse
 
-    parser = argparse.ArgumentParser(
-        description="Code Migration Assistant - COBOL→Java移行ツール"
-    )
+    parser = argparse.ArgumentParser(description="Code Migration Assistant - COBOL→Java移行ツール")
     parser.add_argument("input_file", help="入力COBOLファイル")
-    parser.add_argument(
-        "-o", "--output", help="出力Javaファイル（オプション）", default=None
-    )
+    parser.add_argument("-o", "--output", help="出力Javaファイル（オプション）", default=None)
     parser.add_argument(
         "--max-iterations",
         type=int,
@@ -145,4 +138,3 @@ async def main() -> None:
 
 if __name__ == "__main__":
     asyncio.run(main())
-

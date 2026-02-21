@@ -27,6 +27,8 @@ from pydantic import BaseModel, Field
 
 
 if TYPE_CHECKING:
+    from enum import Enum
+
     from fastapi import APIRouter
 
     from agentflow.hitl.approval_manager import ApprovalManager
@@ -98,7 +100,7 @@ def create_hitl_router(
     approval_manager: ApprovalManager,
     *,
     prefix: str = "/hitl",
-    tags: list[str] | None = None,
+    tags: list[str | Enum] | None = None,
 ) -> APIRouter:
     """HITL 用の FastAPI Router を作成.
 
@@ -182,4 +184,3 @@ def create_hitl_router(
         return APIResponse(success=True, message="Request escalated")
 
     return router
-

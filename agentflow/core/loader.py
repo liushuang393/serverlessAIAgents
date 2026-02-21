@@ -90,10 +90,7 @@ class AgentLoader:
             >>> print(module, func)  # flow.py create_flow
         """
         if ":" not in entry_point:
-            msg = (
-                f"Invalid entry point format: {entry_point}. "
-                "Expected format: 'module.py:function'"
-            )
+            msg = f"Invalid entry point format: {entry_point}. Expected format: 'module.py:function'"
             raise AgentBlockValidationError(msg)
 
         parts = entry_point.split(":", 1)
@@ -170,28 +167,22 @@ class AgentLoader:
                 self._flow_creator = flow_creator
                 self._metadata = metadata
 
-            async def run(self, **inputs: Any) -> dict[str, Any]:
+            async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
                 """Agent を実行.
 
                 Args:
-                    **inputs: 入力パラメータ
+                    input_data: 入力パラメータ
 
                 Returns:
                     実行結果
                 """
-                if self._engine is None:
-                    msg = "Engine not initialized. Call initialize() first."
-                    raise RuntimeError(msg)
-
                 # Flow を作成して実行
                 flow = self._flow_creator()
-                workflow_id = f"{self._metadata.meta.id}-workflow"
-
-                # Workflow を登録
-                self._engine.register_workflow(workflow_id, flow)
-
-                # 実行
-                return await self._engine.execute(workflow_id, inputs)
+                if hasattr(flow, "run"):
+                    result = await flow.run(input_data)
+                else:
+                    result = flow
+                return result if isinstance(result, dict) else {"result": result}
 
             @property
             def metadata(self) -> AgentMetadata:

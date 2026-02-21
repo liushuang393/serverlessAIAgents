@@ -9,7 +9,6 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any
 
 from apps.market_trend_monitor.backend.models import PredictionOutcome, PredictionReview
 
@@ -147,7 +146,7 @@ class AdaptiveScoringService:
             各軸の勾配
         """
         axes = ["reliability", "leading", "relevance", "actionability", "convergence"]
-        gradients = {axis: 0.0 for axis in axes}
+        gradients = dict.fromkeys(axes, 0.0)
 
         for review in reviews:
             outcome_score = self.OUTCOME_SCORES.get(review.outcome, 0.25)
@@ -170,15 +169,12 @@ class AdaptiveScoringService:
 
     def _clip_weights(self, weights: dict[str, float]) -> dict[str, float]:
         """重みを上下限制約でクリップ."""
-        return {
-            axis: max(self.MIN_WEIGHT, min(self.MAX_WEIGHT, w))
-            for axis, w in weights.items()
-        }
+        return {axis: max(self.MIN_WEIGHT, min(self.MAX_WEIGHT, w)) for axis, w in weights.items()}
 
     def _normalize_weights(self, weights: dict[str, float]) -> dict[str, float]:
         """重みを正規化して合計1.0にする."""
         total = sum(weights.values())
         if total == 0:
             n = len(weights)
-            return {axis: 1.0 / n for axis in weights}
+            return dict.fromkeys(weights, 1.0 / n)
         return {axis: w / total for axis, w in weights.items()}

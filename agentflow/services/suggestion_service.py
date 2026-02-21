@@ -45,6 +45,7 @@ logger = logging.getLogger(__name__)
 
 class SuggestionType(str, Enum):
     """提案タイプ."""
+
     FOLLOW_UP = "follow_up"  # フォローアップ質問
     RELATED = "related"  # 関連トピック
     ACTION = "action"  # アクション提案
@@ -58,6 +59,7 @@ class SuggestionType(str, Enum):
 
 class SuggestionPriority(str, Enum):
     """提案優先度."""
+
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
@@ -126,6 +128,7 @@ class SuggestionConfig:
 @dataclass
 class Suggestion:
     """提案."""
+
     text: str
     type: SuggestionType
     confidence: float = 1.0
@@ -141,7 +144,7 @@ class Suggestion:
 # =============================================================================
 
 
-class SuggestionService(ServiceBase):
+class SuggestionService(ServiceBase[dict[str, Any]]):
     """Suggestion Service - フレームワーク級サービス.
 
     DSL連携・データ分析機能を増強した提案生成サービス。
@@ -155,7 +158,7 @@ class SuggestionService(ServiceBase):
         """初期化."""
         super().__init__()
         self._config = config or SuggestionConfig()
-        self._llm = None
+        self._llm: Any = None
         self._started = False
         # 増強: クエリパターン辞書（BM25 との連携用）
         self._pattern_templates: dict[str, list[str]] = {
@@ -173,6 +176,7 @@ class SuggestionService(ServiceBase):
 
         if self._config.use_llm:
             from agentflow.providers import get_llm
+
             self._llm = get_llm(temperature=0.7)
 
         self._started = True
@@ -238,22 +242,26 @@ class SuggestionService(ServiceBase):
 
         # 優先度とconfidenceでソート
         suggestions.sort(key=lambda s: (s.priority.value, -s.confidence))
-        suggestions = suggestions[:self._config.max_suggestions]
+        suggestions = suggestions[: self._config.max_suggestions]
 
-        yield self._emit_result(execution_id, {
-            "suggestions": [
-                {
-                    "text": s.text,
-                    "type": s.type.value,
-                    "confidence": s.confidence,
-                    "priority": s.priority.value,
-                    "reason": s.reason,
-                    "suggested_dsl": s.suggested_dsl,
-                }
-                for s in suggestions
-            ],
-            "count": len(suggestions),
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "suggestions": [
+                    {
+                        "text": s.text,
+                        "type": s.type.value,
+                        "confidence": s.confidence,
+                        "priority": s.priority.value,
+                        "reason": s.reason,
+                        "suggested_dsl": s.suggested_dsl,
+                    }
+                    for s in suggestions
+                ],
+                "count": len(suggestions),
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     async def _generate_follow_up(
         self,
@@ -288,11 +296,13 @@ class SuggestionService(ServiceBase):
             for line in lines:
                 text = line.strip().lstrip("・-123456789.） ")
                 if text and len(text) > 5:
-                    suggestions.append(Suggestion(
-                        text=text,
-                        type=SuggestionType.FOLLOW_UP,
-                        confidence=0.9,
-                    ))
+                    suggestions.append(
+                        Suggestion(
+                            text=text,
+                            type=SuggestionType.FOLLOW_UP,
+                            confidence=0.9,
+                        )
+                    )
             return suggestions[:3]
         except Exception as e:
             self._logger.warning(f"LLM提案生成失敗: {e}")
@@ -326,11 +336,13 @@ class SuggestionService(ServiceBase):
             for line in lines:
                 text = line.strip().lstrip("・-123456789.） ")
                 if text and len(text) > 3:
-                    suggestions.append(Suggestion(
-                        text=text,
-                        type=SuggestionType.RELATED,
-                        confidence=0.7,
-                    ))
+                    suggestions.append(
+                        Suggestion(
+                            text=text,
+                            type=SuggestionType.RELATED,
+                            confidence=0.7,
+                        )
+                    )
             return suggestions[:2]
         except Exception:
             return []
@@ -348,24 +360,30 @@ class SuggestionService(ServiceBase):
         has_chart = context.get("has_chart", False)
 
         if query_type == "sql" and data_found:
-            actions.append(Suggestion(
-                text="データをCSVでエクスポート",
-                type=SuggestionType.ACTION,
-                confidence=0.9,
-            ))
-            if not has_chart:
-                actions.append(Suggestion(
-                    text="チャートで可視化",
+            actions.append(
+                Suggestion(
+                    text="データをCSVでエクスポート",
                     type=SuggestionType.ACTION,
-                    confidence=0.85,
-                ))
+                    confidence=0.9,
+                )
+            )
+            if not has_chart:
+                actions.append(
+                    Suggestion(
+                        text="チャートで可視化",
+                        type=SuggestionType.ACTION,
+                        confidence=0.85,
+                    )
+                )
 
         if query_type == "faq":
-            actions.append(Suggestion(
-                text="関連ドキュメントを表示",
-                type=SuggestionType.ACTION,
-                confidence=0.8,
-            ))
+            actions.append(
+                Suggestion(
+                    text="関連ドキュメントを表示",
+                    type=SuggestionType.ACTION,
+                    confidence=0.8,
+                )
+            )
 
         return actions
 
@@ -380,11 +398,13 @@ class SuggestionService(ServiceBase):
         columns = context.get("columns", [])
         if columns:
             for col in columns[:2]:
-                drill_downs.append(Suggestion(
-                    text=f"{col}別に詳細分析",
-                    type=SuggestionType.DRILL_DOWN,
-                    confidence=0.75,
-                ))
+                drill_downs.append(
+                    Suggestion(
+                        text=f"{col}別に詳細分析",
+                        type=SuggestionType.DRILL_DOWN,
+                        confidence=0.75,
+                    )
+                )
 
         return drill_downs
 
@@ -417,14 +437,16 @@ class SuggestionService(ServiceBase):
 
         templates = self._pattern_templates.get(query_pattern, [])
         for i, template in enumerate(templates[:2]):
-            suggestions.append(Suggestion(
-                text=template,
-                type=SuggestionType.FOLLOW_UP,
-                confidence=0.85 - i * 0.1,
-                priority=SuggestionPriority.HIGH,
-                reason=f"クエリパターン「{query_pattern}」に基づく推薦",
-                suggested_dsl=dsl,
-            ))
+            suggestions.append(
+                Suggestion(
+                    text=template,
+                    type=SuggestionType.FOLLOW_UP,
+                    confidence=0.85 - i * 0.1,
+                    priority=SuggestionPriority.HIGH,
+                    reason=f"クエリパターン「{query_pattern}」に基づく推薦",
+                    suggested_dsl=dsl,
+                )
+            )
 
         return suggestions
 
@@ -446,65 +468,71 @@ class SuggestionService(ServiceBase):
                         avg_val = sum(values) / len(values)
                         max_val = max(values)
                         if max_val > avg_val * 2:
-                            suggestions.append(Suggestion(
-                                text=f"{col}の最大値が平均の2倍以上です。詳細を確認しますか？",
-                                type=SuggestionType.INSIGHT,
-                                confidence=0.8,
-                                priority=SuggestionPriority.HIGH,
-                                reason="外れ値検出に基づく提案",
-                            ))
+                            suggestions.append(
+                                Suggestion(
+                                    text=f"{col}の最大値が平均の2倍以上です。詳細を確認しますか？",
+                                    type=SuggestionType.INSIGHT,
+                                    confidence=0.8,
+                                    priority=SuggestionPriority.HIGH,
+                                    reason="外れ値検出に基づく提案",
+                                )
+                            )
 
         return suggestions[:2]
 
-    def _generate_comparison_suggestions(
-        self, question: str, context: dict[str, Any]
-    ) -> list[Suggestion]:
+    def _generate_comparison_suggestions(self, question: str, context: dict[str, Any]) -> list[Suggestion]:
         """比較分析提案を生成."""
         suggestions: list[Suggestion] = []
         dimensions = context.get("dimensions", [])
 
         if dimensions:
-            suggestions.append(Suggestion(
-                text=f"{dimensions[0]}別の比較チャートを表示",
-                type=SuggestionType.COMPARISON,
-                confidence=0.75,
-                priority=SuggestionPriority.MEDIUM,
-                reason="ディメンション分析の推薦",
-            ))
+            suggestions.append(
+                Suggestion(
+                    text=f"{dimensions[0]}別の比較チャートを表示",
+                    type=SuggestionType.COMPARISON,
+                    confidence=0.75,
+                    priority=SuggestionPriority.MEDIUM,
+                    reason="ディメンション分析の推薦",
+                )
+            )
 
         # 期間比較の提案
-        suggestions.append(Suggestion(
-            text="前期との比較分析を実行",
-            type=SuggestionType.COMPARISON,
-            confidence=0.70,
-            priority=SuggestionPriority.MEDIUM,
-            reason="時系列比較の推薦",
-        ))
+        suggestions.append(
+            Suggestion(
+                text="前期との比較分析を実行",
+                type=SuggestionType.COMPARISON,
+                confidence=0.70,
+                priority=SuggestionPriority.MEDIUM,
+                reason="時系列比較の推薦",
+            )
+        )
 
         return suggestions
 
-    def _generate_trend_suggestions(
-        self, question: str, context: dict[str, Any]
-    ) -> list[Suggestion]:
+    def _generate_trend_suggestions(self, question: str, context: dict[str, Any]) -> list[Suggestion]:
         """トレンド分析提案を生成."""
         suggestions: list[Suggestion] = []
 
         has_time_data = context.get("has_time_series", False)
         if has_time_data:
-            suggestions.append(Suggestion(
-                text="過去1年間のトレンドを表示",
-                type=SuggestionType.TREND,
-                confidence=0.80,
-                priority=SuggestionPriority.MEDIUM,
-                reason="時系列データ検出に基づく提案",
-            ))
-            suggestions.append(Suggestion(
-                text="月別の推移グラフを生成",
-                type=SuggestionType.TREND,
-                confidence=0.75,
-                priority=SuggestionPriority.MEDIUM,
-                reason="時系列集計の推薦",
-            ))
+            suggestions.append(
+                Suggestion(
+                    text="過去1年間のトレンドを表示",
+                    type=SuggestionType.TREND,
+                    confidence=0.80,
+                    priority=SuggestionPriority.MEDIUM,
+                    reason="時系列データ検出に基づく提案",
+                )
+            )
+            suggestions.append(
+                Suggestion(
+                    text="月別の推移グラフを生成",
+                    type=SuggestionType.TREND,
+                    confidence=0.75,
+                    priority=SuggestionPriority.MEDIUM,
+                    reason="時系列集計の推薦",
+                )
+            )
 
         return suggestions
 
@@ -532,13 +560,22 @@ class SuggestionService(ServiceBase):
         all_suggestions = insights + comparisons + trends
         all_suggestions.sort(key=lambda s: (s.priority.value, -s.confidence))
 
-        yield self._emit_result(execution_id, {
-            "insights": [
-                {"text": s.text, "type": s.type.value, "confidence": s.confidence, "reason": s.reason}
-                for s in all_suggestions
-            ],
-            "count": len(all_suggestions),
-        }, (time.time() - start_time) * 1000)
+        yield self._emit_result(
+            execution_id,
+            {
+                "insights": [
+                    {
+                        "text": s.text,
+                        "type": s.type.value,
+                        "confidence": s.confidence,
+                        "reason": s.reason,
+                    }
+                    for s in all_suggestions
+                ],
+                "count": len(all_suggestions),
+            },
+            (time.time() - start_time) * 1000,
+        )
 
     # =========================================================================
     # Studio 統合用メソッド

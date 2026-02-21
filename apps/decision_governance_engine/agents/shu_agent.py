@@ -272,8 +272,8 @@ class ShuAgent(ResilientAgent[ShuInput, ShuOutput]):
             path_info = f"""【選択パス】{selected_path.name}
 【戦略タイプ】{strategy_type}
 【説明】{selected_path.description}
-【メリット】{', '.join(selected_path.pros)}
-【デメリット】{', '.join(selected_path.cons)}"""
+【メリット】{", ".join(selected_path.pros)}
+【デメリット】{", ".join(selected_path.cons)}"""
 
         # 戦略的禁止事項を取得
         prohibitions_info = ""
@@ -306,7 +306,7 @@ class ShuAgent(ResilientAgent[ShuInput, ShuOutput]):
 {prohibitions_info}
 {differentiation_info}
 
-【判断基準】{', '.join(fa_result.decision_criteria)}{rag_context}
+【判断基準】{", ".join(fa_result.decision_criteria)}{rag_context}
 
 上記のパスを実行計画に落とし込む。提案口調で書くこと。
 
@@ -327,6 +327,7 @@ JSON形式で出力してください。"""
 
         try:
             from agentflow.utils import extract_json
+
             data = extract_json(response)
 
             if data is None:
@@ -361,11 +362,13 @@ JSON形式で出力してください。"""
             for csa in data.get("context_specific_actions", [])[:5]:
                 if not isinstance(csa, dict):
                     continue
-                context_specific_actions.append(ContextSpecificAction(
-                    action=str(csa.get("action", ""))[:50],
-                    why_this_context=str(csa.get("why_this_context", ""))[:50],
-                    expected_output=str(csa.get("expected_output", ""))[:30],
-                ))
+                context_specific_actions.append(
+                    ContextSpecificAction(
+                        action=str(csa.get("action", ""))[:50],
+                        why_this_context=str(csa.get("why_this_context", ""))[:50],
+                        expected_output=str(csa.get("expected_output", ""))[:30],
+                    )
+                )
 
             # v3.0: 単一検証ポイント
             single_validation_point = None
@@ -447,9 +450,7 @@ JSON形式で出力してください。"""
             # actions の截断（max_length=5）
             actions = phase.get("actions", [])
             if isinstance(actions, list) and len(actions) > 5:
-                self._logger.warning(
-                    f"Phase {i} has {len(actions)} actions (max 5), truncating: {actions}"
-                )
+                self._logger.warning(f"Phase {i} has {len(actions)} actions (max 5), truncating: {actions}")
                 phase["actions"] = actions[:5]
 
             # deliverables の截断
@@ -682,9 +683,7 @@ JSON形式で出力してください。"""
             ),
         ]
 
-    def _parse_action_phase(
-        self, phase_data: Any, default_phase_number: int
-    ) -> ActionPhase | None:
+    def _parse_action_phase(self, phase_data: Any, default_phase_number: int) -> ActionPhase | None:
         """LLM出力の1フェーズを安全にActionPhaseへ変換."""
         if not isinstance(phase_data, dict):
             return None
@@ -695,19 +694,13 @@ JSON形式で出力してください。"""
             phase_number = default_phase_number
 
         actions_raw = phase_data.get("actions", [])
-        actions = (
-            [str(a)[:50] for a in actions_raw if a is not None][:5]
-            if isinstance(actions_raw, list)
-            else []
-        )
+        actions = [str(a)[:50] for a in actions_raw if a is not None][:5] if isinstance(actions_raw, list) else []
         if not actions:
             actions = ["要定義"]
 
         deliverables_raw = phase_data.get("deliverables", [])
         deliverables = (
-            [str(d)[:50] for d in deliverables_raw if d is not None][:5]
-            if isinstance(deliverables_raw, list)
-            else []
+            [str(d)[:50] for d in deliverables_raw if d is not None][:5] if isinstance(deliverables_raw, list) else []
         )
 
         success_criteria_raw = phase_data.get("success_criteria", [])
@@ -730,7 +723,6 @@ JSON形式で出力してください。"""
             self._logger.warning("ActionPhase parse failed, skip phase: %s", e)
             return None
 
-
     # --- v3.1 ヘルパーメソッド ---
 
     def _parse_poc_dod(self, data: dict[str, Any]) -> PoCDefinitionOfDone | None:
@@ -742,11 +734,13 @@ JSON形式で出力してください。"""
             metrics = []
             for m in metrics_raw[:5]:
                 if isinstance(m, dict):
-                    metrics.append(PoCSuccessMetric(
-                        metric_name=str(m.get("metric_name", ""))[:50],
-                        target_value=str(m.get("target_value", ""))[:50],
-                        measurement_method=str(m.get("measurement_method", ""))[:80],
-                    ))
+                    metrics.append(
+                        PoCSuccessMetric(
+                            metric_name=str(m.get("metric_name", ""))[:50],
+                            target_value=str(m.get("target_value", ""))[:50],
+                            measurement_method=str(m.get("measurement_method", ""))[:80],
+                        )
+                    )
             if len(metrics) < 3:
                 # 最低3個を確保するためデフォルトを追加
                 defaults = [
@@ -754,7 +748,7 @@ JSON形式で出力してください。"""
                     PoCSuccessMetric(metric_name="安定性", target_value="要定義", measurement_method="要定義"),
                     PoCSuccessMetric(metric_name="運用負荷", target_value="要定義", measurement_method="要定義"),
                 ]
-                metrics.extend(defaults[:(3 - len(metrics))])
+                metrics.extend(defaults[: (3 - len(metrics))])
             return PoCDefinitionOfDone(
                 experience_conditions=data.get("experience_conditions", ["要定義"])[:5],
                 success_metrics=metrics[:5],
@@ -769,11 +763,13 @@ JSON形式で出力してください。"""
         branches = []
         for b in p.get("branches", [])[:5]:
             if isinstance(b, dict):
-                branches.append(PhaseBranch(
-                    branch_name=str(b.get("branch_name", ""))[:50],
-                    trigger_condition=str(b.get("trigger_condition", ""))[:80],
-                    description=str(b.get("description", ""))[:150],
-                ))
+                branches.append(
+                    PhaseBranch(
+                        branch_name=str(b.get("branch_name", ""))[:50],
+                        trigger_condition=str(b.get("trigger_condition", ""))[:80],
+                        description=str(b.get("description", ""))[:150],
+                    )
+                )
         return ProposalPhase(
             phase_number=int(p.get("phase_number", 1)),
             name=str(p.get("name", ""))[:50],
@@ -821,9 +817,7 @@ JSON形式で出力してください。"""
             self._logger.warning(f"TwoStageRocket parse failed: {e}")
             return None
 
-    def _extract_proposal_phases(
-        self, data: dict[str, Any], two_stage: TwoStageRocket | None
-    ) -> list[ProposalPhase]:
+    def _extract_proposal_phases(self, data: dict[str, Any], two_stage: TwoStageRocket | None) -> list[ProposalPhase]:
         """2段ロケットまたはデータから提案フェーズを集約する."""
         # 2段ロケットから抽出
         if two_stage:
@@ -842,9 +836,21 @@ JSON形式で出力してください。"""
         return PoCDefinitionOfDone(
             experience_conditions=["コア機能が動作すること", "基本的なユーザー体験が成立すること"],
             success_metrics=[
-                PoCSuccessMetric(metric_name="主要機能動作率", target_value="100%", measurement_method="手動テスト"),
-                PoCSuccessMetric(metric_name="応答遅延", target_value="目標値以内", measurement_method="計測ツール"),
-                PoCSuccessMetric(metric_name="安定性", target_value="1時間連続稼働", measurement_method="長時間テスト"),
+                PoCSuccessMetric(
+                    metric_name="主要機能動作率",
+                    target_value="100%",
+                    measurement_method="手動テスト",
+                ),
+                PoCSuccessMetric(
+                    metric_name="応答遅延",
+                    target_value="目標値以内",
+                    measurement_method="計測ツール",
+                ),
+                PoCSuccessMetric(
+                    metric_name="安定性",
+                    target_value="1時間連続稼働",
+                    measurement_method="長時間テスト",
+                ),
             ],
             fallback_strategy="品質改善機能を後回しにし、コア体験のみで成立させる",
         )
@@ -856,27 +862,51 @@ JSON形式で出力してください。"""
             objective="コア機能を最短で動かし、体験成立を確認する",
             phases=[
                 ProposalPhase(
-                    phase_number=1, name="技術選定・環境構築", duration="1週間",
+                    phase_number=1,
+                    name="技術選定・環境構築",
+                    duration="1週間",
                     purpose="最小構成に必要な技術を選定し開発環境を整える",
-                    tasks=["技術候補のPoC比較", "開発環境セットアップ", "CI/CDパイプライン最小構成"],
+                    tasks=[
+                        "技術候補のPoC比較",
+                        "開発環境セットアップ",
+                        "CI/CDパイプライン最小構成",
+                    ],
                     deliverables=["技術選定結果", "動作する開発環境"],
                     measurement="全メンバーがローカルで動作確認できること",
                     notes=["完璧な環境を目指さず最小限で進める"],
                     branches=[
-                        PhaseBranch(branch_name="クラウドサービス利用", trigger_condition="ローカル構築が複雑な場合", description="マネージドサービスで代替する"),
-                        PhaseBranch(branch_name="既存環境流用", trigger_condition="類似プロジェクトの環境がある場合", description="既存環境をフォークして使用する"),
+                        PhaseBranch(
+                            branch_name="クラウドサービス利用",
+                            trigger_condition="ローカル構築が複雑な場合",
+                            description="マネージドサービスで代替する",
+                        ),
+                        PhaseBranch(
+                            branch_name="既存環境流用",
+                            trigger_condition="類似プロジェクトの環境がある場合",
+                            description="既存環境をフォークして使用する",
+                        ),
                     ],
                 ),
                 ProposalPhase(
-                    phase_number=2, name="コア機能実装・検証", duration="2週間",
+                    phase_number=2,
+                    name="コア機能実装・検証",
+                    duration="2週間",
                     purpose="最小パイプラインを実装し体験成立を確認する",
                     tasks=["コア機能の実装", "結合テスト", "体験シナリオの確認"],
                     deliverables=["動作するコア機能", "テスト結果"],
                     measurement="PoC完成定義の成功指標を全て満たすこと",
                     notes=["品質よりも動作を優先する"],
                     branches=[
-                        PhaseBranch(branch_name="機能縮小", trigger_condition="実装が予定より遅れる場合", description="最小限の機能に絞って先にデモ可能にする"),
-                        PhaseBranch(branch_name="外部サービス活用", trigger_condition="自前実装が困難な場合", description="SaaS/APIを使い最短で動くものを作る"),
+                        PhaseBranch(
+                            branch_name="機能縮小",
+                            trigger_condition="実装が予定より遅れる場合",
+                            description="最小限の機能に絞って先にデモ可能にする",
+                        ),
+                        PhaseBranch(
+                            branch_name="外部サービス活用",
+                            trigger_condition="自前実装が困難な場合",
+                            description="SaaS/APIを使い最短で動くものを作る",
+                        ),
                     ],
                 ),
             ],
@@ -887,15 +917,25 @@ JSON形式で出力してください。"""
             objective="監査ログ/保持削除/権限を段階的に厚くする",
             phases=[
                 ProposalPhase(
-                    phase_number=3, name="基本統制導入", duration="2週間",
+                    phase_number=3,
+                    name="基本統制導入",
+                    duration="2週間",
                     purpose="運用に必要な最低限の統制を導入する",
                     tasks=["監査ログ実装", "基本的な権限管理", "データ保持ポリシー適用"],
                     deliverables=["監査ログ出力", "権限設定ドキュメント"],
                     measurement="監査ログが正しく記録されていること",
                     notes=["Stage1の成果を壊さないよう段階的に追加する"],
                     branches=[
-                        PhaseBranch(branch_name="ログ最小化", trigger_condition="ログ実装が重い場合", description="相関IDとタイムスタンプのみの最小ログにする"),
-                        PhaseBranch(branch_name="外部ログ基盤", trigger_condition="自前ログ基盤が困難な場合", description="Datadog/CloudWatch等を利用する"),
+                        PhaseBranch(
+                            branch_name="ログ最小化",
+                            trigger_condition="ログ実装が重い場合",
+                            description="相関IDとタイムスタンプのみの最小ログにする",
+                        ),
+                        PhaseBranch(
+                            branch_name="外部ログ基盤",
+                            trigger_condition="自前ログ基盤が困難な場合",
+                            description="Datadog/CloudWatch等を利用する",
+                        ),
                     ],
                 ),
             ],

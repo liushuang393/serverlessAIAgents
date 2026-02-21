@@ -122,6 +122,7 @@ class APIResponse[T](BaseModel):
         return cls(
             success=True,
             data=data,
+            error=None,
             meta=meta or {},
         )
 
@@ -144,8 +145,9 @@ class APIResponse[T](BaseModel):
         Returns:
             エラーレスポンス
         """
-        return cls(
+        return APIResponse[None](
             success=False,
+            data=None,
             error=APIError(
                 code=code,
                 message=message,
@@ -261,6 +263,7 @@ class StreamEvent(BaseModel):
     def to_sse(self) -> str:
         """SSE形式に変換."""
         import json
+
         return f"data: {json.dumps(self.model_dump(), ensure_ascii=False, default=str)}\n\n"
 
 

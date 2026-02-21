@@ -143,13 +143,9 @@ class SkillGenerator:
             except Exception as e:
                 self._logger.exception(f"Generation error: {e}")
                 if attempt == self._max_retries:
-                    return GenerationResult(
-                        skill=None, success=False, error=str(e), attempts=attempt
-                    )
+                    return GenerationResult(skill=None, success=False, error=str(e), attempts=attempt)
 
-        return GenerationResult(
-            skill=None, success=False, error="Failed to parse response", attempts=self._max_retries
-        )
+        return GenerationResult(skill=None, success=False, error="Failed to parse response", attempts=self._max_retries)
 
     def _parse_response(self, response: str, original_request: str) -> Skill | None:
         """LLM レスポンスから Skill を抽出.
@@ -175,7 +171,7 @@ class SkillGenerator:
         try:
             yaml_content = fm_match.group(1)
             meta_dict = yaml.safe_load(yaml_content) or {}
-            instructions = content[fm_match.end():].strip()
+            instructions = content[fm_match.end() :].strip()
 
             # 自動学習フラグを設定
             meta_dict["learned"] = True
@@ -187,4 +183,3 @@ class SkillGenerator:
         except yaml.YAMLError as e:
             self._logger.warning(f"YAML parse error: {e}")
             return None
-

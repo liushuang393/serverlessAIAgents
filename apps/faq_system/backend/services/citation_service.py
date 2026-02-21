@@ -194,7 +194,7 @@ class CitationService:
 
         # スニペットの長さ調整
         if len(snippet) > self._config.max_snippet_length:
-            snippet = snippet[:self._config.max_snippet_length] + "..."
+            snippet = snippet[: self._config.max_snippet_length] + "..."
 
         # 検証ステータス
         verification_status = "unverified"
@@ -269,9 +269,7 @@ class CitationService:
         lines = []
 
         for c in citations:
-            lines.append(
-                f"^[{c.index}]: {c.source.title}"
-            )
+            lines.append(f"^[{c.index}]: {c.source.title}")
             if c.snippet:
                 lines.append(f"    > {c.snippet}")
 
@@ -292,17 +290,11 @@ class CitationService:
             if c.source.version:
                 lines.append(f"- **バージョン**: {c.source.version}")
             if c.source.updated_at:
-                lines.append(
-                    f"- **更新日**: {c.source.updated_at.strftime('%Y-%m-%d')}"
-                )
+                lines.append(f"- **更新日**: {c.source.updated_at.strftime('%Y-%m-%d')}")
             if c.source.effective_date:
-                lines.append(
-                    f"- **有効開始**: {c.source.effective_date.strftime('%Y-%m-%d')}"
-                )
+                lines.append(f"- **有効開始**: {c.source.effective_date.strftime('%Y-%m-%d')}")
             if c.source.expiry_date:
-                lines.append(
-                    f"- **有効期限**: {c.source.expiry_date.strftime('%Y-%m-%d')}"
-                )
+                lines.append(f"- **有効期限**: {c.source.expiry_date.strftime('%Y-%m-%d')}")
             if c.source.owner_department:
                 lines.append(f"- **管理部門**: {c.source.owner_department}")
             if c.page_number:
@@ -365,9 +357,7 @@ class CitationService:
 
         return result
 
-    def validate_citations(
-        self, citations: list[Citation]
-    ) -> list[dict[str, Any]]:
+    def validate_citations(self, citations: list[Citation]) -> list[dict[str, Any]]:
         """引用を検証.
 
         Args:
@@ -383,39 +373,45 @@ class CitationService:
 
             # 有効期限チェック
             if c.source.expiry_date and c.source.expiry_date < datetime.now():
-                issues.append({
-                    "type": "expired",
-                    "message": "ソースが有効期限切れです",
-                })
+                issues.append(
+                    {
+                        "type": "expired",
+                        "message": "ソースが有効期限切れです",
+                    }
+                )
 
             # バージョンチェック（形式のみ）
             if not c.source.version:
-                issues.append({
-                    "type": "warning",
-                    "message": "バージョン情報がありません",
-                })
+                issues.append(
+                    {
+                        "type": "warning",
+                        "message": "バージョン情報がありません",
+                    }
+                )
 
             # 更新日チェック
             if c.source.updated_at:
                 days_old = (datetime.now() - c.source.updated_at).days
                 if days_old > 365:
-                    issues.append({
-                        "type": "warning",
-                        "message": f"1年以上前の情報です（{days_old}日前）",
-                    })
+                    issues.append(
+                        {
+                            "type": "warning",
+                            "message": f"1年以上前の情報です（{days_old}日前）",
+                        }
+                    )
 
-            results.append({
-                "citation_id": c.citation_id,
-                "source_title": c.source.title,
-                "issues": issues,
-                "valid": len([i for i in issues if i["type"] == "expired"]) == 0,
-            })
+            results.append(
+                {
+                    "citation_id": c.citation_id,
+                    "source_title": c.source.title,
+                    "issues": issues,
+                    "valid": len([i for i in issues if i["type"] == "expired"]) == 0,
+                }
+            )
 
         return results
 
-    def get_citation_summary(
-        self, citations: list[Citation]
-    ) -> dict[str, Any]:
+    def get_citation_summary(self, citations: list[Citation]) -> dict[str, Any]:
         """引用サマリーを取得.
 
         Args:
@@ -427,13 +423,8 @@ class CitationService:
         return {
             "total_citations": len(citations),
             "unique_sources": len({c.source.source_id for c in citations}),
-            "average_relevance": (
-                sum(c.relevance_score for c in citations) / len(citations)
-                if citations else 0
-            ),
-            "expired_count": len([
-                c for c in citations if c.verification_status == "expired"
-            ]),
+            "average_relevance": (sum(c.relevance_score for c in citations) / len(citations) if citations else 0),
+            "expired_count": len([c for c in citations if c.verification_status == "expired"]),
             "sources": [
                 {
                     "title": c.source.title,

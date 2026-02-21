@@ -28,10 +28,18 @@ def _parse_input_data(input_data: str | None) -> dict[str, Any]:
 
     input_path = Path(input_data)
     if input_path.exists() and input_path.is_file():
-        return json.loads(input_path.read_text(encoding="utf-8"))
+        loaded = json.loads(input_path.read_text(encoding="utf-8"))
+        if isinstance(loaded, dict):
+            return loaded
+        msg = "Input JSON file must contain an object"
+        raise ValueError(msg)
 
     try:
-        return json.loads(input_data)
+        loaded = json.loads(input_data)
+        if isinstance(loaded, dict):
+            return loaded
+        msg = "Input JSON must contain an object"
+        raise ValueError(msg)
     except json.JSONDecodeError as e:
         msg = f"Invalid JSON input: {e}"
         raise ValueError(msg) from e

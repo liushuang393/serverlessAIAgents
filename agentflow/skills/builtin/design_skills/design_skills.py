@@ -22,4 +22,5 @@ async def run(input_data: dict[str, Any]) -> dict[str, Any]:
         生成画像とメタデータ
     """
     engine = DesignSkillsEngine()
-    return await engine.run(input_data)
+    result = await engine.run(input_data)
+    return result if isinstance(result, dict) else {"result": result}

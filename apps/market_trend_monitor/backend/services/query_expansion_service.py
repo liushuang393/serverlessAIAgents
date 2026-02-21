@@ -24,27 +24,48 @@ class QueryExpansionService:
         "COBOL": ["mainframe", "legacy system", "レガシー", "メインフレーム", "汎用機"],
         "Java": ["JVM", "Spring", "Jakarta EE", "Java EE", "マイクロサービス"],
         "migration": [
-            "modernization", "transformation", "移行", "刷新",
-            "リプレース", "マイグレーション",
+            "modernization",
+            "transformation",
+            "移行",
+            "刷新",
+            "リプレース",
+            "マイグレーション",
         ],
         "AI": [
-            "artificial intelligence", "machine learning", "deep learning",
-            "人工知能", "機械学習", "LLM", "生成AI",
+            "artificial intelligence",
+            "machine learning",
+            "deep learning",
+            "人工知能",
+            "機械学習",
+            "LLM",
+            "生成AI",
         ],
         "LLM": [
-            "large language model", "GPT", "Claude", "大規模言語モデル",
-            "生成AI", "Generative AI",
+            "large language model",
+            "GPT",
+            "Claude",
+            "大規模言語モデル",
+            "生成AI",
+            "Generative AI",
         ],
         "modernization": [
-            "DX", "digital transformation", "デジタル変革",
-            "レガシーモダナイゼーション", "システム刷新",
+            "DX",
+            "digital transformation",
+            "デジタル変革",
+            "レガシーモダナイゼーション",
+            "システム刷新",
         ],
         "legacy": [
-            "レガシー", "旧システム", "old system", "technical debt",
+            "レガシー",
+            "旧システム",
+            "old system",
+            "technical debt",
             "技術的負債",
         ],
         "refactoring": [
-            "リファクタリング", "code transformation", "コード変換",
+            "リファクタリング",
+            "code transformation",
+            "コード変換",
             "自動変換",
         ],
     }
@@ -103,10 +124,9 @@ class QueryExpansionService:
             response = await llm.chat([{"role": "user", "content": prompt}])
             text = response if isinstance(response, str) else str(response)
 
-            llm_queries = [
-                line.strip() for line in text.strip().split("\n")
-                if line.strip() and len(line.strip()) > 3
-            ][:max_expansions]
+            llm_queries = [line.strip() for line in text.strip().split("\n") if line.strip() and len(line.strip()) > 3][
+                :max_expansions
+            ]
 
             all_queries = synonym_expanded + llm_queries
             return list(dict.fromkeys(all_queries))
@@ -132,26 +152,17 @@ class QueryExpansionService:
         try:
             llm = self._get_llm()
 
-            is_japanese = any(
-                "\u3040" <= ch <= "\u9fff" or "\uff00" <= ch <= "\uffef"
-                for ch in query
-            )
+            is_japanese = any("\u3040" <= ch <= "\u9fff" or "\uff00" <= ch <= "\uffef" for ch in query)
 
             if is_japanese:
                 result["ja"].append(query)
-                prompt = (
-                    f"Translate the following Japanese query to English. "
-                    f"Return only the translation.\n\n{query}"
-                )
+                prompt = f"Translate the following Japanese query to English. Return only the translation.\n\n{query}"
                 response = await llm.chat([{"role": "user", "content": prompt}])
                 en_query = (response if isinstance(response, str) else str(response)).strip()
                 if en_query:
                     result["en"] = [en_query]
             else:
-                prompt = (
-                    f"Translate the following English query to Japanese. "
-                    f"Return only the translation.\n\n{query}"
-                )
+                prompt = f"Translate the following English query to Japanese. Return only the translation.\n\n{query}"
                 response = await llm.chat([{"role": "user", "content": prompt}])
                 ja_query = (response if isinstance(response, str) else str(response)).strip()
                 if ja_query:

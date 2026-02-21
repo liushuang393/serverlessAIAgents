@@ -190,9 +190,7 @@ class CheckpointNode(FlowNode):
 
     async def execute(self, ctx: FlowContext) -> NodeResult:
         """チェックポイントをマーク（実際の保存はRollbackNodeが行う）."""
-        return NodeResult(
-            success=True, data={"checkpoint": self.checkpoint_id}, action=NextAction.CONTINUE
-        )
+        return NodeResult(success=True, data={"checkpoint": self.checkpoint_id}, action=NextAction.CONTINUE)
 
 
 class RollbackFlowBuilder:

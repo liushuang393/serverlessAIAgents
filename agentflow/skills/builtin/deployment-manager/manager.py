@@ -553,9 +553,7 @@ class CloudflareProvider(DeploymentProvider):
         account_id = self._config.account_id
 
         try:
-            return await self._request(
-                "GET", f"/accounts/{account_id}/pages/projects/{name}"
-            )
+            return await self._request("GET", f"/accounts/{account_id}/pages/projects/{name}")
         except ProviderError:
             # 创建新项目
             return await self._request(
@@ -580,18 +578,10 @@ class CloudflareProvider(DeploymentProvider):
         await self._request(
             "PATCH",
             f"/accounts/{account_id}/pages/projects/{project_name}",
-            json={
-                "deployment_configs": {
-                    env_type: {
-                        "env_vars": {k: {"value": v} for k, v in env_vars.items()}
-                    }
-                }
-            },
+            json={"deployment_configs": {env_type: {"env_vars": {k: {"value": v} for k, v in env_vars.items()}}}},
         )
 
-    def _parse_deployment(
-        self, data: dict[str, Any], project_name: str
-    ) -> Deployment:
+    def _parse_deployment(self, data: dict[str, Any], project_name: str) -> Deployment:
         """解析部署数据."""
         return Deployment(
             id=data.get("id", ""),
@@ -602,9 +592,7 @@ class CloudflareProvider(DeploymentProvider):
             ),
             environment=data.get("environment", "production"),
             branch=data.get("deployment_trigger", {}).get("metadata", {}).get("branch"),
-            commit_sha=data.get("deployment_trigger", {})
-            .get("metadata", {})
-            .get("commit_hash"),
+            commit_sha=data.get("deployment_trigger", {}).get("metadata", {}).get("commit_hash"),
         )
 
     async def list_deployments(
@@ -862,9 +850,7 @@ class DeploymentManager:
             预览部署信息
         """
         if isinstance(self._provider, VercelProvider):
-            return await self._provider.create_preview(
-                project_name, source_path, branch, pr_number
-            )
+            return await self._provider.create_preview(project_name, source_path, branch, pr_number)
 
         return await self.deploy(
             project_name=project_name,
@@ -952,9 +938,7 @@ class DeploymentManager:
             encrypted: 是否加密
         """
         if isinstance(self._provider, VercelProvider):
-            await self._provider.set_env_var(
-                project_name, key, value, environment, encrypted
-            )
+            await self._provider.set_env_var(project_name, key, value, environment, encrypted)
         else:
             # 对于 Cloudflare，使用批量设置
             await self._provider._set_env_vars(project_name, {key: value}, environment)
@@ -1087,4 +1071,3 @@ class DeploymentManager:
         deployment = await self.get_deployment_status(project_name, deployment_id)
         yield f"[{deployment.created_at}] 部署状态: {deployment.status}"
         yield f"[{deployment.created_at}] URL: {deployment.url}"
-

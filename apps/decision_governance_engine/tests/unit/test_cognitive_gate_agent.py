@@ -1,8 +1,8 @@
-# -*- coding: utf-8 -*-
 """Unit tests for CognitiveGateAgent."""
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from apps.decision_governance_engine.agents.cognitive_gate_agent import CognitiveGateAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
     CognitiveGateInput,
@@ -32,6 +32,7 @@ class TestCognitiveGateAgentInit:
     def test_agent_inherits_resilient_agent(self, cognitive_gate_agent: CognitiveGateAgent) -> None:
         """Test that CognitiveGateAgent inherits from ResilientAgent."""
         from agentflow import ResilientAgent
+
         assert isinstance(cognitive_gate_agent, ResilientAgent)
 
     def test_agent_has_correct_name(self, cognitive_gate_agent: CognitiveGateAgent) -> None:
@@ -81,9 +82,7 @@ class TestCognitiveGateAgentRuleBasedAnalysis:
         assert result.irreversibility is not None
         assert isinstance(result.proceed, bool)
 
-    def test_rule_based_identifies_evaluation_object(
-        self, cognitive_gate_agent: CognitiveGateAgent
-    ) -> None:
+    def test_rule_based_identifies_evaluation_object(self, cognitive_gate_agent: CognitiveGateAgent) -> None:
         """Test that rule-based analysis identifies evaluation object."""
         input_data = CognitiveGateInput(
             raw_question="新製品Xへの投資を検討したい",
@@ -94,9 +93,7 @@ class TestCognitiveGateAgentRuleBasedAnalysis:
         assert result.evaluation_object is not None
         assert len(result.evaluation_object) <= 50
 
-    def test_rule_based_extracts_criteria(
-        self, cognitive_gate_agent: CognitiveGateAgent
-    ) -> None:
+    def test_rule_based_extracts_criteria(self, cognitive_gate_agent: CognitiveGateAgent) -> None:
         """Test that rule-based analysis extracts evaluation criteria."""
         input_data = CognitiveGateInput(
             raw_question="市場参入のリスクとROIを検討したい",
@@ -123,9 +120,7 @@ class TestCognitiveGateAgentProcess:
         assert result.irreversibility is not None
 
     @pytest.mark.asyncio
-    async def test_process_with_clear_question_proceeds(
-        self, cognitive_gate_agent: CognitiveGateAgent
-    ) -> None:
+    async def test_process_with_clear_question_proceeds(self, cognitive_gate_agent: CognitiveGateAgent) -> None:
         """Test process allows proceeding with clear question."""
         input_data = CognitiveGateInput(
             raw_question="新規事業Aへの投資判断。予算配分と市場参入タイミングを評価したい。",
@@ -144,16 +139,12 @@ class TestCognitiveGateAgentProcess:
         mock_llm = MagicMock()
         agent = CognitiveGateAgent(llm_client=mock_llm)
 
-        with patch.object(
-            agent, "_analyze_with_llm", new_callable=AsyncMock
-        ) as mock_analyze:
+        with patch.object(agent, "_analyze_with_llm", new_callable=AsyncMock) as mock_analyze:
             mock_analyze.return_value = CognitiveGateOutput(
                 evaluation_object="新規事業投資",
                 intent="ROI最大化",
                 criteria=["収益性", "リスク"],
-                irreversibility=Irreversibility(
-                    level=IrreversibilityLevel.HIGH, description="大規模投資"
-                ),
+                irreversibility=Irreversibility(level=IrreversibilityLevel.HIGH, description="大規模投資"),
                 proceed=True,
             )
 

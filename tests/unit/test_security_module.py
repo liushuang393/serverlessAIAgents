@@ -1,14 +1,11 @@
-# -*- coding: utf-8 -*-
 """Security 模块的完整测试.
 
 覆盖 api_key.py, rate_limiter.py, auth_middleware.py, rbac.py
 """
 
 import asyncio
-import time
 import unittest
-from datetime import datetime, timedelta, timezone
-from unittest.mock import MagicMock
+from datetime import UTC, datetime, timedelta
 
 
 class TestGenerateAPIKey(unittest.TestCase):
@@ -96,7 +93,7 @@ class TestAPIKey(unittest.TestCase):
         """全参数创建测试."""
         from agentflow.security.api_key import APIKey
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         key = APIKey(
             id="key-123",
             name="full-key",
@@ -129,7 +126,7 @@ class TestAPIKey(unittest.TestCase):
         """有效性检查 - 过期."""
         from agentflow.security.api_key import APIKey
 
-        past = datetime.now(timezone.utc) - timedelta(days=1)
+        past = datetime.now(UTC) - timedelta(days=1)
         key = APIKey(id="1", name="test", key_hash="h", expires_at=past)
         self.assertFalse(key.is_valid())
 
@@ -191,7 +188,7 @@ class TestAPIKeyManager(unittest.TestCase):
         from agentflow.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
-        raw_key, api_key = manager.create_key(name="scoped-key", scopes=["read", "write"])
+        _raw_key, api_key = manager.create_key(name="scoped-key", scopes=["read", "write"])
 
         self.assertEqual(api_key.scopes, ["read", "write"])
 
@@ -200,8 +197,8 @@ class TestAPIKeyManager(unittest.TestCase):
         from agentflow.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
-        expires = datetime.now(timezone.utc) + timedelta(hours=1)
-        raw_key, api_key = manager.create_key(name="expiring-key", expires_at=expires)
+        expires = datetime.now(UTC) + timedelta(hours=1)
+        _raw_key, api_key = manager.create_key(name="expiring-key", expires_at=expires)
 
         self.assertIsNotNone(api_key.expires_at)
 
@@ -261,7 +258,7 @@ class TestAPIKeyManager(unittest.TestCase):
         from agentflow.security.api_key import APIKeyManager
 
         manager = APIKeyManager()
-        _, api_key1 = manager.create_key(name="active")
+        _, _api_key1 = manager.create_key(name="active")
         _, api_key2 = manager.create_key(name="to-disable")
         manager.revoke(api_key2.id)
 
@@ -351,7 +348,7 @@ class TestRateLimiter(unittest.TestCase):
 
     def test_allow_under_limit(self):
         """限制内允许测试."""
-        from agentflow.security.rate_limiter import RateLimiter, RateLimitConfig
+        from agentflow.security.rate_limiter import RateLimitConfig, RateLimiter
 
         config = RateLimitConfig(
             requests_per_minute=10,
@@ -370,7 +367,7 @@ class TestRateLimiter(unittest.TestCase):
 
     def test_deny_over_limit(self):
         """超限拒绝测试."""
-        from agentflow.security.rate_limiter import RateLimiter, RateLimitConfig
+        from agentflow.security.rate_limiter import RateLimitConfig, RateLimiter
 
         config = RateLimitConfig(
             requests_per_minute=2,
@@ -391,7 +388,7 @@ class TestRateLimiter(unittest.TestCase):
 
     def test_separate_identifiers(self):
         """独立标识符测试."""
-        from agentflow.security.rate_limiter import RateLimiter, RateLimitConfig
+        from agentflow.security.rate_limiter import RateLimitConfig, RateLimiter
 
         config = RateLimitConfig(requests_per_minute=2)
         limiter = RateLimiter(config)
@@ -591,9 +588,7 @@ class TestAuthMiddleware(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            user = loop.run_until_complete(
-                middleware.authenticate(authorization="SSO demo-token")
-            )
+            user = loop.run_until_complete(middleware.authenticate(authorization="SSO demo-token"))
             self.assertIsNotNone(user)
             assert user is not None
             self.assertEqual(user.id, "sso-user")
@@ -628,9 +623,7 @@ class TestCreateAuthMiddleware(unittest.TestCase):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            user = loop.run_until_complete(
-                middleware.authenticate(authorization="External token")
-            )
+            user = loop.run_until_complete(middleware.authenticate(authorization="External token"))
             self.assertIsNotNone(user)
         finally:
             loop.close()
@@ -681,7 +674,7 @@ class TestRole(unittest.TestCase):
 
     def test_creation(self):
         """创建测试."""
-        from agentflow.security.rbac import Role, Permission
+        from agentflow.security.rbac import Role
 
         role = Role(
             name="editor",

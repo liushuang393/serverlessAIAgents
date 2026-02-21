@@ -1,5 +1,29 @@
 # Market Trend Monitor
 
+
+<!-- README_REQUIRED_SECTIONS_START -->
+## 機能概要
+- 複数外部ソースから市場シグナルを収集し、トレンドを継続監視。
+- 分析・スコアリング・レポート生成を自動化し、意思決定を支援。
+- 通知・ダッシュボード連携で、変化点をリアルタイム共有。
+
+## 優位性
+- 収集から検証（Red Team）までを一連フロー化し、誤検知を低減。
+- 9 Agent 協調により、単一分析器より高い網羅性を確保。
+- 定常運用を前提に、日次/週次レポートを標準化できる。
+
+## 技術アーキテクチャ
+- FastAPI + AgentFlow create_flow によるパイプライン編排。
+- Frontend は React/Vite で可視化し、Backend API と疎結合連携。
+- Evidence Ledger と Signal Scorer で信頼性評価を明示。
+
+## アプリケーション階層
+- Ingestion Layer: データ収集・正規化。
+- Analysis Layer: 抽出・分類・センチメント。
+- Governance Layer: スコアリング・反証検証。
+- Delivery Layer: レポート生成・通知・UI 表示。
+<!-- README_REQUIRED_SECTIONS_END -->
+
 **市場動向監視システム** — COBOL→Java移行、AI関連技術の市場動向を自動収集・分析
 
 `product_line`: `framework` / `surface_profile`: `developer`
@@ -51,6 +75,22 @@ Collector → EvidenceLedger → Analyzer → SignalScorer → Reporter → RedT
 - Python 3.13+
 - Node.js 18+（フロントエンド用）
 - AgentFlow フレームワーク
+
+### 開発環境（インストール: 統一手順）
+
+この app 単体ではなく、リポジトリ全体の開発環境をセットアップします。
+
+```bash
+cd <repo-root>
+bash setup_dev.sh
+```
+
+手動で行う場合:
+
+```bash
+conda activate agentflow
+pip install -e ".[dev,apps]"
+```
 
 ### ポート設定（一元管理）
 
@@ -191,6 +231,13 @@ pytest apps/market_trend_monitor/tests/ --cov=apps/market_trend_monitor/backend 
 # フロントエンド テスト
 cd apps/market_trend_monitor/frontend
 npm test
+```
+
+## 📦 本番ビルド/発布（Platform に統一）
+
+```bash
+conda activate agentflow
+python -m apps.platform.main publish ./apps/market_trend_monitor --target docker
 ```
 
 ## ディレクトリ構造

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """App Discovery Service — apps/*/app_config.json のスキャンと登録.
 
 apps ディレクトリを走査し、各 App の app_config.json を検証・登録する。
@@ -12,9 +11,9 @@ Platform の App 管理 API が依存するコアサービス。
 
 from __future__ import annotations
 
-from copy import deepcopy
 import json
 import logging
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +21,7 @@ from apps.platform.schemas.app_config_schemas import (
     AppConfig,
     BlueprintConfig,
     ContractsConfig,
+    EvolutionConfig,
     VisibilityConfig,
 )
 from apps.platform.services.agent_taxonomy import AgentTaxonomyService
@@ -317,7 +317,7 @@ class AppDiscoveryService:
         except json.JSONDecodeError as exc:
             self._errors[dir_name] = f"JSON パースエラー: {exc}"
             _logger.warning("JSON パースエラー (%s): %s", dir_name, exc)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             self._errors[dir_name] = f"検証エラー: {exc}"
             _logger.warning("検証エラー (%s): %s", dir_name, exc)
 
@@ -366,10 +366,7 @@ class AppDiscoveryService:
                 if key not in blueprint:
                     blueprint[key] = deepcopy(default_value)
                     self._mark_updated(updated_fields, f"blueprint.{key}")
-            if (
-                "engine_pattern" not in blueprint
-                or not str(blueprint.get("engine_pattern", "")).strip()
-            ):
+            if "engine_pattern" not in blueprint or not str(blueprint.get("engine_pattern", "")).strip():
                 blueprint["engine_pattern"] = engine_pattern
                 self._mark_updated(updated_fields, "blueprint.engine_pattern")
             if "flow_pattern" not in blueprint and flow_pattern is not None:
@@ -433,20 +430,47 @@ class AppDiscoveryService:
             manifest,
             product_line=str(manifest.get("product_line") or "framework"),
         )
-        if not isinstance(manifest.get("surface_profile"), str) or not str(
-            manifest.get("surface_profile"),
-        ).strip():
+        if (
+            not isinstance(manifest.get("surface_profile"), str)
+            or not str(
+                manifest.get("surface_profile"),
+            ).strip()
+        ):
             manifest["surface_profile"] = inferred_surface_profile
             self._mark_updated(updated_fields, "surface_profile")
 
         inferred_audit_profile = self._infer_audit_profile(
             product_line=str(manifest.get("product_line") or "framework"),
         )
-        if not isinstance(manifest.get("audit_profile"), str) or not str(
-            manifest.get("audit_profile"),
-        ).strip():
+        if (
+            not isinstance(manifest.get("audit_profile"), str)
+            or not str(
+                manifest.get("audit_profile"),
+            ).strip()
+        ):
             manifest["audit_profile"] = inferred_audit_profile
             self._mark_updated(updated_fields, "audit_profile")
+
+        evolution_defaults = EvolutionConfig().model_dump()
+        evolution = manifest.get("evolution")
+        if not isinstance(evolution, dict):
+            manifest["evolution"] = deepcopy(evolution_defaults)
+            self._mark_updated(updated_fields, "evolution")
+        else:
+            for key, default_value in evolution_defaults.items():
+                if key not in evolution:
+                    evolution[key] = deepcopy(default_value)
+                    self._mark_updated(updated_fields, f"evolution.{key}")
+            queue = evolution.get("validator_queue")
+            default_queue = evolution_defaults.get("validator_queue", {})
+            if not isinstance(queue, dict):
+                evolution["validator_queue"] = deepcopy(default_queue)
+                self._mark_updated(updated_fields, "evolution.validator_queue")
+            else:
+                for key, default_value in default_queue.items():
+                    if key not in queue:
+                        queue[key] = deepcopy(default_value)
+                        self._mark_updated(updated_fields, f"evolution.validator_queue.{key}")
 
         plugin_bindings = manifest.get("plugin_bindings")
         if not isinstance(plugin_bindings, list):
@@ -564,9 +588,7 @@ class AppDiscoveryService:
         enabled: bool
         if "enabled" in rag_service:
             enabled = bool(rag_service.get("enabled"))
-        elif rag_service:
-            enabled = True
-        elif "rag" in tags_lower:
+        elif rag_service or "rag" in tags_lower:
             enabled = True
         else:
             enabled = has_rag_agent
@@ -593,9 +615,7 @@ class AppDiscoveryService:
                 "provider": vector_service.get("provider"),
                 "collections": [collection] if collection else [],
                 "data_sources": (
-                    rag_service.get("data_sources")
-                    if isinstance(rag_service.get("data_sources"), list)
-                    else []
+                    rag_service.get("data_sources") if isinstance(rag_service.get("data_sources"), list) else []
                 ),
                 "chunk_strategy": chunking.get("strategy", rag_defaults["chunk_strategy"]),
                 "chunk_size": chunking.get("size", rag_defaults["chunk_size"]),
@@ -649,9 +669,7 @@ class AppDiscoveryService:
                 continue
 
             capabilities = agent.get("capabilities")
-            capabilities_list = (
-                [str(c) for c in capabilities] if isinstance(capabilities, list) else []
-            )
+            capabilities_list = [str(c) for c in capabilities] if isinstance(capabilities, list) else []
 
             inferred_base = self._taxonomy.infer_agent_business_base(
                 raw_business_base=agent.get("business_base"),

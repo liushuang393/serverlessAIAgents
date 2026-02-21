@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from agentflow.core.security import (
     AuditLogger,
     CSRFProtection,
@@ -183,4 +181,3 @@ class TestParameterValidator:
         valid, error = ParameterValidator.validate(schema, parameters)
         assert valid
         assert error is None
-

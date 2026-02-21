@@ -84,25 +84,76 @@ class IntentRouter:
     # タスク実行を示唆するキーワード（多言語）
     _TASK_KEYWORDS = {
         # 日本語
-        "整理", "作成", "生成", "調査", "分析", "最適化", "検索",
-        "削除", "移動", "コピー", "送信", "確認", "報告", "まとめ",
+        "整理",
+        "作成",
+        "生成",
+        "調査",
+        "分析",
+        "最適化",
+        "検索",
+        "削除",
+        "移動",
+        "コピー",
+        "送信",
+        "確認",
+        "報告",
+        "まとめ",
         # 中国語（日本語と重複しないもの）
-        "创建", "调查", "优化", "搜索",
-        "删除", "移动", "复制", "发送", "确认", "汇总",
+        "创建",
+        "调查",
+        "优化",
+        "搜索",
+        "删除",
+        "移动",
+        "复制",
+        "发送",
+        "确认",
+        "汇总",
         # 英語
-        "organize", "create", "generate", "investigate", "analyze",
-        "optimize", "search", "delete", "move", "copy", "send",
-        "check", "report", "summarize", "clean", "sort",
+        "organize",
+        "create",
+        "generate",
+        "investigate",
+        "analyze",
+        "optimize",
+        "search",
+        "delete",
+        "move",
+        "copy",
+        "send",
+        "check",
+        "report",
+        "summarize",
+        "clean",
+        "sort",
     }
 
     # 情報照会を示唆するキーワード
     _QUERY_KEYWORDS = {
         # 日本語
-        "教えて", "どう", "何", "いつ", "どこ", "誰", "なぜ",
+        "教えて",
+        "どう",
+        "何",
+        "いつ",
+        "どこ",
+        "誰",
+        "なぜ",
         # 中国語
-        "告诉", "怎么", "什么", "什么时候", "哪里", "谁", "为什么",
+        "告诉",
+        "怎么",
+        "什么",
+        "什么时候",
+        "哪里",
+        "谁",
+        "为什么",
         # 英語
-        "tell me", "what", "when", "where", "who", "why", "how",
+        "tell me",
+        "what",
+        "when",
+        "where",
+        "who",
+        "why",
+        "how",
     }
 
     def __init__(
@@ -242,4 +293,3 @@ class IntentRouter:
     def get_template(self, name: str) -> TaskTemplate | None:
         """テンプレート取得."""
         return self._templates.get(name)
-

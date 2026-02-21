@@ -195,9 +195,7 @@ class NotifierAgent(AgentBlock):
             notifications: 通知リスト
         """
         for notification in notifications:
-            self._logger.info(
-                f"Sending notification: {notification.priority.value} - {notification.message}"
-            )
+            self._logger.info(f"Sending notification: {notification.priority.value} - {notification.message}")
 
             # 履歴に追加
             self._notification_history.append(notification)
@@ -233,9 +231,7 @@ class NotifierAgent(AgentBlock):
             self._logger.warning(f"Failed to recall past notifications: {e}")
             return []
 
-    async def _save_notifications_to_memory(
-        self, notifications: list[Notification], shared_context: Any
-    ) -> None:
+    async def _save_notifications_to_memory(self, notifications: list[Notification], shared_context: Any) -> None:
         """通知を記憶システムに保存.
 
         Args:
@@ -268,4 +264,3 @@ class NotifierAgent(AgentBlock):
         """クリーンアップ処理."""
         self._logger.info("NotifierAgent cleanup")
         await super().cleanup()
-

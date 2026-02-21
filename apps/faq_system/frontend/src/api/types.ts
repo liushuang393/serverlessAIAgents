@@ -48,14 +48,18 @@ export interface ChatResponse {
     answer: string;
     session_id: string;
     query_type: string;
-    documents?: any[];
-    chart?: any;
-    suggestions?: any[];
-    rich_response?: any;
+    documents?: Array<Record<string, unknown>>;
+    chart?: Record<string, unknown> | null;
+    suggestions?: Array<Record<string, unknown> | string>;
+    rich_response?: Record<string, unknown> | null;
 }
 
 export interface ChatRequest {
     message: string;
     session_id?: string;
-    options?: Record<string, any>;
+    options?: Record<string, unknown>;
+}
+
+export interface ChatHistoryResponse {
+    messages: ChatMessage[];
 }

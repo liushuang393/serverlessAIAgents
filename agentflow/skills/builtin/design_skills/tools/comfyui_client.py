@@ -19,7 +19,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import Any
+from typing import Any, cast
 
 import httpx
 
@@ -49,7 +49,7 @@ class ComfyUIClient:
         timeout: float = 120.0,
     ) -> None:
         """初期化."""
-        self._base_url = base_url or os.getenv("COMFYUI_URL", "http://localhost:8188")
+        self._base_url = base_url or os.getenv("COMFYUI_URL") or "http://localhost:8188"
         self._http_client = httpx.AsyncClient(
             base_url=self._base_url,
             timeout=timeout,
@@ -84,8 +84,7 @@ class ComfyUIClient:
         """
         # ポジティブプロンプトのマージ -- グローバルコンテキスト + 画像固有
         style_context = (
-            f"{', '.join(style.color_palette)} color scheme, "
-            f"{style.lighting}, {style.camera_angle}, {style.mood}"
+            f"{', '.join(style.color_palette)} color scheme, {style.lighting}, {style.camera_angle}, {style.mood}"
         )
         positive_prompt = f"{spec.prompt}, {style_context}"
 
@@ -177,7 +176,7 @@ class ComfyUIClient:
                 error_detail = response.json()
                 self._logger.error(f"ComfyUI エラー応答: {error_detail}")
             except Exception:
-                self._logger.error(f"ComfyUI エラー応答 (raw): {response.text}")
+                self._logger.exception(f"ComfyUI エラー応答 (raw): {response.text}")
 
         response.raise_for_status()
         data = response.json()
@@ -210,7 +209,7 @@ class ComfyUIClient:
             if response.status_code == _HTTP_OK:
                 history = response.json()
                 if prompt_id in history:
-                    return history[prompt_id]
+                    return cast("dict[str, Any]", history[prompt_id])
             await asyncio.sleep(poll_interval)
 
         msg = f"ComfyUIプロンプト {prompt_id} が {max_wait}秒以内に完了しませんでした"

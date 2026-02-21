@@ -181,9 +181,7 @@ class TestA2AClient:
             mock_client_class.return_value = mock_client
 
             async with A2AClient() as client:
-                result = await client.call_remote_agent(
-                    "https://example.com/agent", "greet", {"name": "World"}
-                )
+                result = await client.call_remote_agent("https://example.com/agent", "greet", {"name": "World"})
 
                 assert result["status"] == "success"
                 assert result["result"]["message"] == "Hello, World!"

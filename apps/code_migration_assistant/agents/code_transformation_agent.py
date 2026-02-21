@@ -1,12 +1,9 @@
-# -*- coding: utf-8 -*-
 """Code Transformation Agent - 設計拘束下の機械的変換."""
 
 from __future__ import annotations
 
 import re
 from typing import Any
-
-from agentflow import agent
 
 from apps.code_migration_assistant.adapters import (
     SourceLanguageAdapter,
@@ -20,6 +17,8 @@ from apps.code_migration_assistant.workflow.models import (
     UnknownItem,
     build_meta,
 )
+
+from agentflow import agent
 
 
 @agent
@@ -59,9 +58,7 @@ class CodeTransformationAgent:
         module = str(meta.get("module", "UNKNOWN"))
 
         ast = self._source_adapter.parse(source_code)
-        class_name = str(
-            migration_design.get("class_mapping", {}).get("primary_class", "MigratedProgram")
-        )
+        class_name = str(migration_design.get("class_mapping", {}).get("primary_class", "MigratedProgram"))
         target_code = self._target_adapter.generate_skeleton(ast, class_name)
 
         compile_success = True
@@ -73,9 +70,7 @@ class CodeTransformationAgent:
         unknowns: list[UnknownItem] = []
         if not compile_success and not fast_mode:
             warnings.append("生成スケルトンはコンパイルに失敗した")
-            unknowns.append(
-                UnknownItem(field="compile", reason="自動生成スケルトンの文法/依存を要確認")
-            )
+            unknowns.append(UnknownItem(field="compile", reason="自動生成スケルトンの文法/依存を要確認"))
 
         # マルチファイル対応: // --- [FILE: path] --- 形式があれば分割
         generated_files = []
@@ -85,12 +80,10 @@ class CodeTransformationAgent:
             # blocks[0] は最初のセパレータの前（通常は空）
             for i in range(1, len(blocks), 2):
                 file_path = blocks[i]
-                file_content = blocks[i+1].strip()
+                file_content = blocks[i + 1].strip()
                 generated_files.append(GeneratedFile(path=file_path, content=file_content))
         else:
-            generated_files = [
-                GeneratedFile(path=f"generated/{class_name}.java", content=target_code)
-            ]
+            generated_files = [GeneratedFile(path=f"generated/{class_name}.java", content=target_code)]
 
         artifact = TransformationArtifact(
             meta=build_meta(

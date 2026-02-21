@@ -9,8 +9,6 @@ import hashlib
 from datetime import datetime, timedelta
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
 from apps.market_trend_monitor.backend.db.base import Base
 from apps.market_trend_monitor.backend.models import (
     Article,
@@ -20,6 +18,7 @@ from apps.market_trend_monitor.backend.models import (
     SourceType,
 )
 from apps.market_trend_monitor.backend.services.evidence_service import EvidenceService
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 
 # ============================================================
@@ -179,9 +178,7 @@ async def test_session_factory() -> async_sessionmaker[AsyncSession]:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    factory: async_sessionmaker[AsyncSession] = async_sessionmaker(
-        engine, expire_on_commit=False
-    )
+    factory: async_sessionmaker[AsyncSession] = async_sessionmaker(engine, expire_on_commit=False)
     return factory
 
 
@@ -218,9 +215,7 @@ def _make_article(
 class TestEvidenceService:
     """EvidenceService のテスト."""
 
-    async def test_register_evidence_from_article(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_register_evidence_from_article(self, evidence_service: EvidenceService) -> None:
         """記事からの証拠登録テスト."""
         article = _make_article()
         evidence = await evidence_service.register_evidence_from_article(article)
@@ -230,9 +225,7 @@ class TestEvidenceService:
         assert evidence.source_type == SourceType.NEWS
         assert evidence.title == "テスト記事"
 
-    async def test_duplicate_detection(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_duplicate_detection(self, evidence_service: EvidenceService) -> None:
         """重複検出テスト."""
         article = _make_article()
         ev1 = await evidence_service.register_evidence_from_article(article)
@@ -240,9 +233,7 @@ class TestEvidenceService:
 
         assert ev1.id == ev2.id
 
-    async def test_reliability_by_source_type(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_reliability_by_source_type(self, evidence_service: EvidenceService) -> None:
         """情報源別信頼度テスト."""
         news_article = _make_article(article_id="n-1", source=SourceType.NEWS)
         github_article = _make_article(
@@ -274,9 +265,7 @@ class TestEvidenceService:
         assert ev_arxiv.reliability_score == pytest.approx(0.9)
         assert ev_rss.reliability_score == pytest.approx(0.5)
 
-    async def test_create_claim(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_create_claim(self, evidence_service: EvidenceService) -> None:
         """主張作成テスト."""
         article = _make_article()
         evidence = await evidence_service.register_evidence_from_article(article)
@@ -291,9 +280,7 @@ class TestEvidenceService:
         assert len(claim.evidence_ids) == 1
         assert claim.confidence > 0.0
 
-    async def test_create_claim_with_no_evidence(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_create_claim_with_no_evidence(self, evidence_service: EvidenceService) -> None:
         """証拠なしの主張作成テスト."""
         claim = await evidence_service.create_claim(
             statement="根拠なし主張",
@@ -302,9 +289,7 @@ class TestEvidenceService:
         assert claim.confidence == 0.0
         assert claim.level == ClaimLevel.LEAD
 
-    async def test_add_evidence_to_claim(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_add_evidence_to_claim(self, evidence_service: EvidenceService) -> None:
         """主張に証拠追加テスト."""
         art1 = _make_article(article_id="a1", url="https://example.com/1", content="c1")
         art2 = _make_article(article_id="a2", url="https://example.com/2", content="c2")
@@ -320,9 +305,7 @@ class TestEvidenceService:
         assert updated is not None
         assert len(updated.evidence_ids) == 2
 
-    async def test_get_evidence_chain(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_get_evidence_chain(self, evidence_service: EvidenceService) -> None:
         """証拠チェーン取得テスト."""
         art1 = _make_article(
             article_id="a1",
@@ -349,9 +332,7 @@ class TestEvidenceService:
         # 信頼度の高い順にソートされている
         assert chain[0].reliability_score >= chain[1].reliability_score
 
-    async def test_list_evidences_filter(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_list_evidences_filter(self, evidence_service: EvidenceService) -> None:
         """証拠一覧フィルタテスト."""
         art_news = _make_article(article_id="n1", source=SourceType.NEWS)
         art_arxiv = _make_article(
@@ -374,9 +355,7 @@ class TestEvidenceService:
         assert len(high_reliability) == 1
         assert high_reliability[0].source_type == SourceType.ARXIV
 
-    async def test_list_claims_filter(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_list_claims_filter(self, evidence_service: EvidenceService) -> None:
         """主張一覧フィルタテスト."""
         await evidence_service.create_claim(statement="claim1", evidence_ids=[])
         await evidence_service.create_claim(statement="claim2", evidence_ids=[])
@@ -384,61 +363,38 @@ class TestEvidenceService:
         claims = await evidence_service.list_claims()
         assert len(claims) == 2
 
-    async def test_get_evidence_not_found(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_get_evidence_not_found(self, evidence_service: EvidenceService) -> None:
         """存在しない証拠の取得テスト."""
         result = await evidence_service.get_evidence("nonexistent-id")
         assert result is None
 
-    async def test_get_claim_not_found(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_get_claim_not_found(self, evidence_service: EvidenceService) -> None:
         """存在しない主張の取得テスト."""
         result = await evidence_service.get_claim("nonexistent-id")
         assert result is None
 
-    async def test_content_hash_computation(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_content_hash_computation(self, evidence_service: EvidenceService) -> None:
         """コンテンツハッシュ計算テスト."""
-        h = evidence_service._compute_content_hash(
-            "https://example.com", "content"
-        )
+        h = evidence_service._compute_content_hash("https://example.com", "content")
         expected = hashlib.sha256(b"https://example.com:content").hexdigest()[:16]
         assert h == expected
 
-    async def test_calculate_claim_level(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_calculate_claim_level(self, evidence_service: EvidenceService) -> None:
         """主張レベル計算テスト."""
-        assert (
-            evidence_service._calculate_claim_level(1, 0.3) == ClaimLevel.LEAD
-        )
-        assert (
-            evidence_service._calculate_claim_level(2, 0.5) == ClaimLevel.HYPOTHESIS
-        )
-        assert (
-            evidence_service._calculate_claim_level(3, 0.7) == ClaimLevel.FINDING
-        )
-        assert (
-            evidence_service._calculate_claim_level(5, 0.9) == ClaimLevel.CONCLUSION
-        )
+        assert evidence_service._calculate_claim_level(1, 0.3) == ClaimLevel.LEAD
+        assert evidence_service._calculate_claim_level(2, 0.5) == ClaimLevel.HYPOTHESIS
+        assert evidence_service._calculate_claim_level(3, 0.7) == ClaimLevel.FINDING
+        assert evidence_service._calculate_claim_level(5, 0.9) == ClaimLevel.CONCLUSION
 
-    async def test_register_batch(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_register_batch(self, evidence_service: EvidenceService) -> None:
         """一括登録テスト."""
         articles = [
-            _make_article(article_id=f"batch-{i}", url=f"https://example.com/{i}", content=f"c{i}")
-            for i in range(3)
+            _make_article(article_id=f"batch-{i}", url=f"https://example.com/{i}", content=f"c{i}") for i in range(3)
         ]
         results = await evidence_service.register_evidences_batch(articles)
         assert len(results) == 3
 
-    async def test_get_grounding_guard_ready(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_get_grounding_guard_ready(self, evidence_service: EvidenceService) -> None:
         """Grounding Guard が ready を返すテスト."""
         long_content = "市場分析データ " * 20
         articles = [
@@ -474,9 +430,7 @@ class TestEvidenceService:
         claim_diag = next(item for item in guard["claim_diagnostics"] if item["claim_id"] == claim.id)
         assert claim_diag["status"] == "supported"
 
-    async def test_get_grounding_guard_needs_more_evidence(
-        self, evidence_service: EvidenceService
-    ) -> None:
+    async def test_get_grounding_guard_needs_more_evidence(self, evidence_service: EvidenceService) -> None:
         """Grounding Guard が不足状態を検出するテスト."""
         stale = datetime.now() - timedelta(days=60)
         article = _make_article(

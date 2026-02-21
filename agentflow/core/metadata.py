@@ -50,9 +50,7 @@ class OutputField(BaseModel):
 
     name: str = Field(..., description="フィールド名", min_length=1)
     type: str = Field(..., description="データ型", min_length=1)
-    output_schema: dict[str, Any] | None = Field(
-        None, alias="schema", description="複雑な型の場合の JSON スキーマ"
-    )
+    output_schema: dict[str, Any] | None = Field(None, alias="schema", description="複雑な型の場合の JSON スキーマ")
 
 
 class InterfaceDefinition(BaseModel):
@@ -71,9 +69,7 @@ class MCPConfig(BaseModel):
     Model Context Protocol の設定を定義します。
     """
 
-    tools: list[str] = Field(
-        default_factory=list, description="ツール URI リスト (mcp://server/tool)"
-    )
+    tools: list[str] = Field(default_factory=list, description="ツール URI リスト (mcp://server/tool)")
     resources: list[str] = Field(default_factory=list, description="リソース URI リスト")
 
 
@@ -115,13 +111,9 @@ class DependencySpec(BaseModel):
     エージェントが依存する他のコンポーネントを定義します。
     """
 
-    agents: list[str] = Field(
-        default_factory=list, description="依存する他のエージェント ID リスト"
-    )
+    agents: list[str] = Field(default_factory=list, description="依存する他のエージェント ID リスト")
     tools: list[str] = Field(default_factory=list, description="依存する MCP ツール URI リスト")
-    packages: list[str] = Field(
-        default_factory=list, description="依存する Python パッケージリスト"
-    )
+    packages: list[str] = Field(default_factory=list, description="依存する Python パッケージリスト")
 
 
 class PocketFlowConfig(BaseModel):
@@ -131,9 +123,7 @@ class PocketFlowConfig(BaseModel):
     """
 
     entry: str = Field(..., description="モジュールパス (例: 'flow.py:create_flow')", min_length=1)
-    shared_schema: str = Field(
-        ..., description="スキーマパス (例: 'schemas.py:MySchema')", min_length=1
-    )
+    shared_schema: str = Field(..., description="スキーマパス (例: 'schemas.py:MySchema')", min_length=1)
 
 
 class VisualConfig(BaseModel):
@@ -143,9 +133,7 @@ class VisualConfig(BaseModel):
     """
 
     color: str = Field(..., description="16進数カラーコード", pattern=r"^#[0-9A-Fa-f]{6}$")
-    size: str = Field(
-        "medium", description="サイズ (small/medium/large)", pattern=r"^(small|medium|large)$"
-    )
+    size: str = Field("medium", description="サイズ (small/medium/large)", pattern=r"^(small|medium|large)$")
     ports: dict[str, Any] = Field(default_factory=dict, description="入出力ポート位置設定")
 
 

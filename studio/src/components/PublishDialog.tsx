@@ -145,9 +145,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
           <input
             type="password"
             value={(value as string) || ''}
-            onChange={(e) =>
-              setConfigValues((prev) => ({ ...prev, [field.name]: e.target.value }))
-            }
+            onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
             className="w-full px-3 py-2 border rounded-md text-sm"
             placeholder={field.placeholder || '••••••••'}
           />
@@ -156,9 +154,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
         return (
           <select
             value={String((value as string) || field.default || '')}
-            onChange={(e) =>
-              setConfigValues((prev) => ({ ...prev, [field.name]: e.target.value }))
-            }
+            onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
             className="w-full px-3 py-2 border rounded-md text-sm"
           >
             {field.options?.map((opt) => (
@@ -198,9 +194,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
         return (
           <textarea
             value={(value as string) || ''}
-            onChange={(e) =>
-              setConfigValues((prev) => ({ ...prev, [field.name]: e.target.value }))
-            }
+            onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
             className="w-full px-3 py-2 border rounded-md text-sm min-h-20"
             placeholder={field.placeholder}
           />
@@ -210,9 +204,7 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
           <input
             type="text"
             value={(value as string) || ''}
-            onChange={(e) =>
-              setConfigValues((prev) => ({ ...prev, [field.name]: e.target.value }))
-            }
+            onChange={(e) => setConfigValues((prev) => ({ ...prev, [field.name]: e.target.value }))}
             className="w-full px-3 py-2 border rounded-md text-sm"
             placeholder={field.placeholder}
           />
@@ -221,14 +213,17 @@ export default function PublishDialog({ open, onClose }: PublishDialogProps) {
   };
 
   // Group config fields
-  const groupedFields = configFields.reduce((acc, field) => {
-    const group = field.group || 'general';
-    if (!acc[group]) {
-acc[group] = [];
-}
-    acc[group].push(field);
-    return acc;
-  }, {} as Record<string, ConfigField[]>);
+  const groupedFields = configFields.reduce(
+    (acc, field) => {
+      const group = field.group || 'general';
+      if (!acc[group]) {
+        acc[group] = [];
+      }
+      acc[group].push(field);
+      return acc;
+    },
+    {} as Record<string, ConfigField[]>,
+  );
 
   // Preview code
   const handlePreview = useCallback(async () => {
@@ -339,15 +334,15 @@ acc[group] = [];
 
       const reader = response.body?.getReader();
       if (!reader) {
-return;
-}
+        return;
+      }
 
       const decoder = new TextDecoder();
       while (true) {
         const { done, value } = await reader.read();
         if (done) {
-break;
-}
+          break;
+        }
 
         const chunk = decoder.decode(value);
         const lines = chunk.split('\n');
@@ -385,8 +380,8 @@ break;
   }, [workflow, selectedDeployTarget, appName, configValues]);
 
   if (!open) {
-return null;
-}
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -457,9 +452,7 @@ return null;
                             <span className="text-lg">{type.icon}</span>
                             <span className="font-medium text-sm">{type.name}</span>
                           </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {type.description}
-                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">{type.description}</p>
                         </button>
                       ))}
                     </div>
@@ -467,9 +460,7 @@ return null;
 
                   {/* App Name */}
                   <div>
-                    <label className="text-sm font-medium mb-1 block">
-                      アプリケーション名
-                    </label>
+                    <label className="text-sm font-medium mb-1 block">アプリケーション名</label>
                     <input
                       type="text"
                       value={appName}
@@ -517,9 +508,7 @@ return null;
                 <>
                   {/* Deploy Target Selection */}
                   <div>
-                    <label className="text-sm font-medium mb-2 block">
-                      デプロイ先
-                    </label>
+                    <label className="text-sm font-medium mb-2 block">デプロイ先</label>
                     <div className="grid grid-cols-2 gap-2">
                       {deployTargets
                         .filter((t) => t.supports_direct_deploy)
@@ -555,9 +544,7 @@ return null;
                         <div key={field.name}>
                           <label className="text-sm text-muted-foreground mb-1 block">
                             {field.label}
-                            {field.required && (
-                              <span className="text-destructive ml-1">*</span>
-                            )}
+                            {field.required && <span className="text-destructive ml-1">*</span>}
                           </label>
                           {renderConfigField(field)}
                           {field.description && field.type !== 'boolean' && (
@@ -592,9 +579,7 @@ return null;
                       }`}
                     >
                       <p className="font-medium">
-                        {deployResult.status === 'error'
-                          ? '❌ デプロイ失敗'
-                          : '✅ デプロイ完了'}
+                        {deployResult.status === 'error' ? '❌ デプロイ失敗' : '✅ デプロイ完了'}
                       </p>
                       {deployResult.url && (
                         <a
@@ -606,9 +591,7 @@ return null;
                           {deployResult.url}
                         </a>
                       )}
-                      {deployResult.error && (
-                        <p className="mt-1">{deployResult.error}</p>
-                      )}
+                      {deployResult.error && <p className="mt-1">{deployResult.error}</p>}
                     </div>
                   )}
                 </>
@@ -652,9 +635,7 @@ return null;
                     <div className="p-3 bg-background">
                       <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
                         <span>{previewFiles[activePreviewFile].lines} 行</span>
-                        <span>
-                          {(previewFiles[activePreviewFile].size / 1024).toFixed(1)} KB
-                        </span>
+                        <span>{(previewFiles[activePreviewFile].size / 1024).toFixed(1)} KB</span>
                       </div>
                       <pre className="text-xs font-mono bg-muted p-3 rounded-md overflow-auto max-h-64">
                         {previewFiles[activePreviewFile].content}
@@ -677,10 +658,7 @@ return null;
 
         {/* Footer */}
         <div className="p-4 border-t flex justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 border rounded-md text-sm hover:bg-muted"
-          >
+          <button onClick={onClose} className="px-4 py-2 border rounded-md text-sm hover:bg-muted">
             キャンセル
           </button>
           {activeTab === 'export' ? (

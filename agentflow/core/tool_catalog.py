@@ -445,7 +445,7 @@ async def get_tool_catalog() -> ToolCatalogManager:
     Returns:
         ToolCatalogManager インスタンス
     """
-    global _global_catalog  # noqa: PLW0603
+    global _global_catalog
     if _global_catalog is None:
         with _catalog_lock:
             if _global_catalog is None:
@@ -456,7 +456,7 @@ async def get_tool_catalog() -> ToolCatalogManager:
 
 def reset_tool_catalog() -> None:
     """グローバルツールカタログをリセット(テスト用)."""
-    global _global_catalog  # noqa: PLW0603
+    global _global_catalog
     _global_catalog = None
 
 

@@ -116,17 +116,14 @@ class AgentRegistry:
 
         self._initialized = True
         self._logger.info(
-            f"Registered flow '{self._flow_definition.flow_id}' "
-            f"with {len(self._flow_definition.agents)} agents"
+            f"Registered flow '{self._flow_definition.flow_id}' with {len(self._flow_definition.agents)} agents"
         )
 
     def _ensure_initialized(self) -> None:
         """初期化されていることを確認."""
         if not self._initialized or not self._flow_definition:
             msg = "AgentRegistry not initialized. Call initialize() first."
-            raise RuntimeError(
-                msg
-            )
+            raise RuntimeError(msg)
 
     def _create_agent(self, agent_def: AgentDefinition) -> Any:
         """Agentインスタンスを生成.
@@ -150,6 +147,7 @@ class AgentRegistry:
 
         # 遅延インポート
         import importlib
+
         module = importlib.import_module(module_path)
         agent_class = getattr(module, class_name)
 
@@ -330,9 +328,7 @@ class AgentRegistry:
                     await agent.initialize_rag()
                     self._logger.info(f"Initialized RAG for {agent_def.id}")
                 except Exception as e:
-                    self._logger.warning(
-                        f"Failed to initialize RAG for {agent_def.id}: {e}"
-                    )
+                    self._logger.warning(f"Failed to initialize RAG for {agent_def.id}: {e}")
 
     # ========================================
     # 後方互換用メソッド
@@ -349,9 +345,7 @@ class AgentRegistry:
         """
         self._ensure_initialized()
         return {
-            agent_def.class_name: agent_def.id
-            for agent_def in self._flow_definition.agents
-            if agent_def.class_name
+            agent_def.class_name: agent_def.id for agent_def in self._flow_definition.agents if agent_def.class_name
         }
 
     @staticmethod

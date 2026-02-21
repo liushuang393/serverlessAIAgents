@@ -1,9 +1,9 @@
-# -*- coding: utf-8 -*-
 """AgentBlueprint 単体テスト."""
 
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
 
 from agentflow.core.blueprint import (
     AgentBlueprint,
@@ -13,7 +13,6 @@ from agentflow.core.blueprint import (
     SafetyConfig,
     SkillConfig,
     ToolConfig,
-    ValidationResult,
 )
 
 
@@ -261,9 +260,11 @@ class TestAgentBlueprint:
 
     def test_validate_missing_name(self) -> None:
         """名前がないブループリントの検証が失敗すること."""
-        blueprint = AgentBlueprint.from_dict({
-            "description": "説明のみ",
-        })
+        blueprint = AgentBlueprint.from_dict(
+            {
+                "description": "説明のみ",
+            }
+        )
         result = blueprint.validate()
 
         assert result.valid is False

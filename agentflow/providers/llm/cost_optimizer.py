@@ -34,9 +34,7 @@ class CostBudget(BaseModel):
     daily_limit: float = Field(default=10.0, description="日次コスト上限（USD）")
     monthly_limit: float = Field(default=300.0, description="月次コスト上限（USD）")
     per_request_limit: float = Field(default=1.0, description="リクエストあたりの上限（USD）")
-    warning_threshold: float = Field(
-        default=0.8, ge=0.0, le=1.0, description="警告閾値（予算の何％で警告）"
-    )
+    warning_threshold: float = Field(default=0.8, ge=0.0, le=1.0, description="警告閾値（予算の何％で警告）")
 
 
 @dataclass
@@ -106,8 +104,7 @@ class CostOptimizer:
         self._usage_records: list[UsageRecord] = []
 
         logger.info(
-            f"CostOptimizer初期化: daily_limit=${self._budget.daily_limit}, "
-            f"monthly_limit=${self._budget.monthly_limit}"
+            f"CostOptimizer初期化: daily_limit=${self._budget.daily_limit}, monthly_limit=${self._budget.monthly_limit}"
         )
 
     def select_within_budget(
@@ -199,9 +196,7 @@ class CostOptimizer:
         )
         self._usage_records.append(record)
 
-        logger.info(
-            f"使用量記録: {model}, in={input_tokens}, out={output_tokens}, cost=${cost:.4f}"
-        )
+        logger.info(f"使用量記録: {model}, in={input_tokens}, out={output_tokens}, cost=${cost:.4f}")
 
         # 警告チェック
         summary = self.get_summary()
@@ -230,9 +225,7 @@ class CostOptimizer:
         daily_remaining = max(0, self._budget.daily_limit - daily_cost)
         monthly_remaining = max(0, self._budget.monthly_limit - monthly_cost)
 
-        is_over_budget = (
-            daily_cost >= self._budget.daily_limit or monthly_cost >= self._budget.monthly_limit
-        )
+        is_over_budget = daily_cost >= self._budget.daily_limit or monthly_cost >= self._budget.monthly_limit
         is_warning = (
             daily_cost >= self._budget.daily_limit * self._budget.warning_threshold
             or monthly_cost >= self._budget.monthly_limit * self._budget.warning_threshold
@@ -299,7 +292,4 @@ class CostOptimizer:
         if not model_info:
             return 0.0
 
-        return (
-            model_info.input_cost_per_1k * input_tokens / 1000
-            + model_info.output_cost_per_1k * output_tokens / 1000
-        )
+        return model_info.input_cost_per_1k * input_tokens / 1000 + model_info.output_cost_per_1k * output_tokens / 1000

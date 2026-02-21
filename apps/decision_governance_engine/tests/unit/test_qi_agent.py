@@ -1,15 +1,13 @@
-# -*- coding: utf-8 -*-
 """Unit tests for QiAgent."""
-import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
+import pytest
 from apps.decision_governance_engine.agents.qi_agent import QiAgent
 from apps.decision_governance_engine.schemas.agent_schemas import (
+    ActionPhase,
+    Implementation,
     QiInput,
     QiOutput,
     ShuOutput,
-    ActionPhase,
-    Implementation,
 )
 
 
@@ -62,6 +60,7 @@ class TestQiAgentInit:
     def test_agent_inherits_resilient_agent(self, qi_agent: QiAgent) -> None:
         """Test that QiAgent inherits from ResilientAgent."""
         from agentflow import ResilientAgent
+
         assert isinstance(qi_agent, ResilientAgent)
 
     def test_agent_has_correct_name(self, qi_agent: QiAgent) -> None:
@@ -72,9 +71,7 @@ class TestQiAgentInit:
 class TestQiAgentParseInput:
     """Test cases for QiAgent._parse_input."""
 
-    def test_parse_input_with_valid_dict(
-        self, qi_agent: QiAgent, sample_shu_output: ShuOutput
-    ) -> None:
+    def test_parse_input_with_valid_dict(self, qi_agent: QiAgent, sample_shu_output: ShuOutput) -> None:
         """Test that _parse_input correctly parses a valid dict."""
         raw_input = {
             "shu_result": sample_shu_output.model_dump(),
@@ -89,9 +86,7 @@ class TestQiAgentOutputStructure:
     """Test cases for QiAgent output structure via process()."""
 
     @pytest.mark.asyncio
-    async def test_output_returns_qi_output(
-        self, qi_agent: QiAgent, sample_input: QiInput
-    ) -> None:
+    async def test_output_returns_qi_output(self, qi_agent: QiAgent, sample_input: QiInput) -> None:
         """Test that output is valid QiOutput."""
         result = await qi_agent.process(sample_input)
 
@@ -100,9 +95,7 @@ class TestQiAgentOutputStructure:
         assert isinstance(result.tool_recommendations, list)
 
     @pytest.mark.asyncio
-    async def test_output_generates_implementations(
-        self, qi_agent: QiAgent, sample_input: QiInput
-    ) -> None:
+    async def test_output_generates_implementations(self, qi_agent: QiAgent, sample_input: QiInput) -> None:
         """Test that output generates implementation specs."""
         result = await qi_agent.process(sample_input)
 
@@ -113,9 +106,7 @@ class TestQiAgentOutputStructure:
             assert impl.estimated_effort is not None
 
     @pytest.mark.asyncio
-    async def test_output_includes_tech_debt_warnings(
-        self, qi_agent: QiAgent, sample_input: QiInput
-    ) -> None:
+    async def test_output_includes_tech_debt_warnings(self, qi_agent: QiAgent, sample_input: QiInput) -> None:
         """Test that output includes tech debt warnings as a list."""
         result = await qi_agent.process(sample_input)
 
@@ -127,9 +118,7 @@ class TestQiAgentProcess:
     """Test cases for QiAgent.process."""
 
     @pytest.mark.asyncio
-    async def test_process_without_llm(
-        self, qi_agent: QiAgent, sample_input: QiInput
-    ) -> None:
+    async def test_process_without_llm(self, qi_agent: QiAgent, sample_input: QiInput) -> None:
         """Test process falls back to rule-based when no LLM."""
         result = await qi_agent.process(sample_input)
 
@@ -137,9 +126,7 @@ class TestQiAgentProcess:
         assert len(result.implementations) >= 1
 
     @pytest.mark.asyncio
-    async def test_process_respects_tech_constraints(
-        self, qi_agent: QiAgent
-    ) -> None:
+    async def test_process_respects_tech_constraints(self, qi_agent: QiAgent) -> None:
         """Test that process respects technical constraints."""
         shu_output = ShuOutput(
             phases=[

@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 
 _logger = logging.getLogger(__name__)
@@ -31,8 +31,8 @@ _logger = logging.getLogger(__name__)
 class FilterLevel(str, Enum):
     """フィルタリングレベル."""
 
-    MINIMAL = "minimal"     # 最小限のフィルタリング
-    STANDARD = "standard"   # 標準フィルタリング
+    MINIMAL = "minimal"  # 最小限のフィルタリング
+    STANDARD = "standard"  # 標準フィルタリング
     AGGRESSIVE = "aggressive"  # 積極的フィルタリング
 
 
@@ -52,20 +52,42 @@ class SummarizerConfig:
     max_result_length: int = 1000
     include_status: bool = True
     include_metadata: bool = False
-    excluded_keys: list[str] = field(default_factory=lambda: [
-        # デバッグ・中間状態
-        "debug", "debug_info", "trace", "stack_trace", "logs",
-        "intermediate", "intermediate_steps", "intermediate_results",
-        "internal", "internal_state", "_internal",
-        # 一時データ
-        "temp", "temporary", "cache", "cached",
-        # 低レベル詳細
-        "raw", "raw_response", "raw_output",
-        "tokens", "token_count", "usage",
-        # レンダリング関連
-        "render", "rendered", "html", "markdown_source",
-        "style", "styles", "css",
-    ])
+    excluded_keys: list[str] = field(
+        default_factory=lambda: [
+            # デバッグ・中間状態
+            "debug",
+            "debug_info",
+            "trace",
+            "stack_trace",
+            "logs",
+            "intermediate",
+            "intermediate_steps",
+            "intermediate_results",
+            "internal",
+            "internal_state",
+            "_internal",
+            # 一時データ
+            "temp",
+            "temporary",
+            "cache",
+            "cached",
+            # 低レベル詳細
+            "raw",
+            "raw_response",
+            "raw_output",
+            "tokens",
+            "token_count",
+            "usage",
+            # レンダリング関連
+            "render",
+            "rendered",
+            "html",
+            "markdown_source",
+            "style",
+            "styles",
+            "css",
+        ]
+    )
 
 
 @dataclass
@@ -203,7 +225,7 @@ class ResultSummarizer:
             フィルタリングされた結果
         """
         filtered = self._filter_result(result)
-        return self._truncate_result(filtered)
+        return cast("dict[str, Any]", self._truncate_result(filtered))
 
     async def generate_text_summary(
         self,
@@ -292,8 +314,13 @@ class ResultSummarizer:
 
         # パターンマッチング
         exclude_patterns = [
-            "_debug", "_trace", "_internal", "_temp", "_cache",
-            "_raw", "_intermediate",
+            "_debug",
+            "_trace",
+            "_internal",
+            "_temp",
+            "_cache",
+            "_raw",
+            "_intermediate",
         ]
         for pattern in exclude_patterns:
             if pattern in key_lower:
@@ -313,7 +340,7 @@ class ResultSummarizer:
         """
         if isinstance(result, str):
             if len(result) > self._config.max_result_length:
-                return result[:self._config.max_result_length] + "..."
+                return result[: self._config.max_result_length] + "..."
         elif isinstance(result, dict):
             return {k: self._truncate_result(v) for k, v in result.items()}
         elif isinstance(result, list):

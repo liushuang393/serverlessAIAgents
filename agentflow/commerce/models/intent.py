@@ -13,6 +13,10 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 
+def _default_price_range() -> dict[str, float | None]:
+    return {"min": None, "max": None}
+
+
 class IntentType(str, Enum):
     """意図タイプ."""
 
@@ -85,7 +89,7 @@ class PurchaseIntent(BaseModel):
 
     # 価格・予算
     price_range: dict[str, float | None] = Field(
-        default_factory=lambda: {"min": None, "max": None},
+        default_factory=_default_price_range,
         description="価格帯",
     )
     budget_sensitivity: str = Field(
@@ -152,4 +156,3 @@ class PurchaseIntent(BaseModel):
         if score >= 0.3:
             return IntentConfidence.MEDIUM
         return IntentConfidence.LOW
-

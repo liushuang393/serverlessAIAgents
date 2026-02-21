@@ -190,10 +190,7 @@ class FrameworkAuditService:
                     FrameworkAuditIssue(
                         severity="warning",
                         code="RUNTIME_PORT_MISMATCH",
-                        message=(
-                            f"{field} のポート({actual_port})が "
-                            f"ports 設定({expected_port})と一致しません"
-                        ),
+                        message=(f"{field} のポート({actual_port})が ports 設定({expected_port})と一致しません"),
                         hint="runtime.urls を ports.* と同じ値へ揃えてください",
                     ),
                 )
@@ -240,10 +237,7 @@ class FrameworkAuditService:
                         FrameworkAuditIssue(
                             severity="error",
                             code="API_MODULE_NOT_FOUND",
-                            message=(
-                                "entry_points.api_module が指すモジュールが"
-                                f"見つかりません: {module_name}"
-                            ),
+                            message=(f"entry_points.api_module が指すモジュールが見つかりません: {module_name}"),
                             hint="実在するモジュールへ修正してください",
                         ),
                     )
@@ -255,14 +249,8 @@ class FrameworkAuditService:
                             FrameworkAuditIssue(
                                 severity="warning",
                                 code="API_APP_OBJECT_NOT_FOUND",
-                                message=(
-                                    "entry_points.api_module のオブジェクト "
-                                    f"'{attr_name}' が見つかりません"
-                                ),
-                                hint=(
-                                    f"{target_path} に "
-                                    f"`{attr_name} = FastAPI(...)` を定義してください"
-                                ),
+                                message=(f"entry_points.api_module のオブジェクト '{attr_name}' が見つかりません"),
+                                hint=(f"{target_path} に `{attr_name} = FastAPI(...)` を定義してください"),
                             ),
                         )
 
@@ -289,14 +277,8 @@ class FrameworkAuditService:
                     FrameworkAuditIssue(
                         severity="warning",
                         code="FRONTEND_DECLARED_BUT_NOT_FOUND",
-                        message=(
-                            "ports.frontend が設定されているが frontend 実装/起動"
-                            "コマンドが見つかりません"
-                        ),
-                        hint=(
-                            "frontend ディレクトリまたは "
-                            "runtime.commands.frontend_dev を設定してください"
-                        ),
+                        message=("ports.frontend が設定されているが frontend 実装/起動コマンドが見つかりません"),
+                        hint=("frontend ディレクトリまたは runtime.commands.frontend_dev を設定してください"),
                     ),
                 )
 
@@ -305,10 +287,7 @@ class FrameworkAuditService:
                     FrameworkAuditIssue(
                         severity="warning",
                         code="FRONTEND_URL_MISSING",
-                        message=(
-                            "ports.frontend が設定されているが "
-                            "runtime.urls.frontend が未設定です"
-                        ),
+                        message=("ports.frontend が設定されているが runtime.urls.frontend が未設定です"),
                         hint="runtime.urls.frontend を設定し Frontend 接続先を明示してください",
                     ),
                 )
@@ -352,10 +331,7 @@ class FrameworkAuditService:
                         severity="warning",
                         code="RAG_COLLECTIONS_EMPTY",
                         message="RAG が有効だが collections が未設定です",
-                        hint=(
-                            "contracts.rag.collections または "
-                            "services.rag.collections を設定してください"
-                        ),
+                        hint=("contracts.rag.collections または services.rag.collections を設定してください"),
                     ),
                 )
             elif (
@@ -367,19 +343,14 @@ class FrameworkAuditService:
                     FrameworkAuditIssue(
                         severity="warning",
                         code="RAG_COLLECTION_MISMATCH",
-                        message=(
-                            "contracts.rag.collections と services.rag.collections "
-                            "が一致しません"
-                        ),
+                        message=("contracts.rag.collections と services.rag.collections が一致しません"),
                         hint="RAG の既定コレクション名を 1 つの値へ統一してください",
                     ),
                 )
 
         mcp_service = services.get("mcp")
         mcp_servers = self._normalize_str_list(app_config.blueprint.mcp_servers)
-        has_mcp_tools = isinstance(mcp_service, dict) and bool(
-            self._normalize_str_list(mcp_service.get("tools", []))
-        )
+        has_mcp_tools = isinstance(mcp_service, dict) and bool(self._normalize_str_list(mcp_service.get("tools", [])))
         if has_mcp_tools and not mcp_servers:
             issues.append(
                 FrameworkAuditIssue(
@@ -406,10 +377,7 @@ class FrameworkAuditService:
                 FrameworkAuditIssue(
                     severity="warning",
                     code="SKILLS_CONTRACT_BLUEPRINT_MISMATCH",
-                    message=(
-                        "contracts.skills.default_skills があるが "
-                        "blueprint.default_skills が空です"
-                    ),
+                    message=("contracts.skills.default_skills があるが blueprint.default_skills が空です"),
                     hint="skills の既定値は contracts と blueprint の両方で統一してください",
                 ),
             )
@@ -418,10 +386,7 @@ class FrameworkAuditService:
                 FrameworkAuditIssue(
                     severity="warning",
                     code="SKILLS_DEFAULT_MISMATCH",
-                    message=(
-                        "contracts.skills.default_skills と "
-                        "blueprint.default_skills が一致しません"
-                    ),
+                    message=("contracts.skills.default_skills と blueprint.default_skills が一致しません"),
                     hint="default_skills の重複定義を解消してください",
                 ),
             )
@@ -440,26 +405,20 @@ class FrameworkAuditService:
         if not source_text:
             return issues
 
-        engine_pattern = self._taxonomy.normalize_engine_pattern(
-            app_config.blueprint.engine_pattern
-        )
+        engine_pattern = self._taxonomy.normalize_engine_pattern(app_config.blueprint.engine_pattern)
         agent_count = len(app_config.agents)
         enforce_protocol_surface = audit_profile == "developer"
         has_stream_surface = _STREAM_SURFACE_RE.search(source_text) is not None
         if (
             enforce_protocol_surface
-            and
-            engine_pattern in {"flow", "pipeline", "coordinator", "deep_agent"}
+            and engine_pattern in {"flow", "pipeline", "coordinator", "deep_agent"}
             and not has_stream_surface
         ):
             issues.append(
                 FrameworkAuditIssue(
                     severity="warning",
                     code="ORCHESTRATION_STREAM_SURFACE_MISSING",
-                    message=(
-                        f"engine_pattern='{engine_pattern}' だが "
-                        "進捗ストリーム面(SSE/WebSocket)が検出できません"
-                    ),
+                    message=(f"engine_pattern='{engine_pattern}' だが 進捗ストリーム面(SSE/WebSocket)が検出できません"),
                     hint="run_stream / SSE / WebSocket の少なくとも 1 つを提供してください",
                 ),
             )
@@ -471,8 +430,7 @@ class FrameworkAuditService:
         has_a2a_surface = _A2A_SURFACE_RE.search(source_text) is not None
         if (
             enforce_protocol_surface
-            and
-            agent_count >= _MIN_AGENT_COUNT_FOR_A2A
+            and agent_count >= _MIN_AGENT_COUNT_FOR_A2A
             and coordinator_like
             and not has_a2a_surface
         ):
@@ -481,10 +439,7 @@ class FrameworkAuditService:
                     severity="warning",
                     code="A2A_SURFACE_NOT_FOUND",
                     message="複数 Agent + coordinator/router 構成だが A2A 面が検出できません",
-                    hint=(
-                        "A2A card / A2A routing のいずれかを実装し、"
-                        "Agent 間契約を明示してください"
-                    ),
+                    hint=("A2A card / A2A routing のいずれかを実装し、Agent 間契約を明示してください"),
                 ),
             )
 
@@ -517,9 +472,7 @@ class FrameworkAuditService:
                 ),
             )
 
-        expects_skills = bool(app_config.contracts.skills.default_skills) or bool(
-            app_config.blueprint.default_skills
-        )
+        expects_skills = bool(app_config.contracts.skills.default_skills) or bool(app_config.blueprint.default_skills)
         if expects_skills and _SKILLS_SURFACE_RE.search(source_text) is None:
             issues.append(
                 FrameworkAuditIssue(
@@ -598,13 +551,9 @@ class FrameworkAuditService:
                 FrameworkAuditIssue(
                     severity="warning",
                     code="AUTH_CONTRACT_WITHOUT_RUNTIME_GUARD",
-                    message=(
-                        "contracts.auth で認証必須だが、実装側の認証ガード"
-                        "シグナルが検出できません"
-                    ),
+                    message=("contracts.auth で認証必須だが、実装側の認証ガードシグナルが検出できません"),
                     hint=(
-                        "Depends(require_auth) または API key 検証"
-                        "(_require_api_key) を HTTP/WS 両方に適用してください"
+                        "Depends(require_auth) または API key 検証(_require_api_key) を HTTP/WS 両方に適用してください"
                     ),
                 ),
             )
@@ -630,9 +579,7 @@ class FrameworkAuditService:
             return issues
 
         # deep_agent は coordinator 系と互換扱い
-        compatible = declared == detected or (
-            declared == "deep_agent" and detected == "coordinator"
-        )
+        compatible = declared == detected or (declared == "deep_agent" and detected == "coordinator")
         if not compatible:
             marker_text = ", ".join(markers) if markers else "n/a"
             issues.append(
@@ -749,10 +696,7 @@ class FrameworkAuditService:
         """監査対象の Python ソースを連結."""
         chunks: list[str] = []
         for py_file in app_dir.rglob("*.py"):
-            if any(
-                part in {"frontend", "htmlcov", "node_modules", "__pycache__", "tests"}
-                for part in py_file.parts
-            ):
+            if any(part in {"frontend", "htmlcov", "node_modules", "__pycache__", "tests"} for part in py_file.parts):
                 continue
             chunks.append(py_file.read_text("utf-8", errors="ignore"))
         return "\n".join(chunks)

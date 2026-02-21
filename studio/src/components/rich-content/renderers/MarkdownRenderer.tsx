@@ -34,14 +34,20 @@ function parseMarkdown(text: string): string {
   html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
   // リンク
-  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>');
+  html = html.replace(
+    /\[([^\]]+)\]\(([^)]+)\)/g,
+    '<a href="$2" class="text-blue-500 hover:underline" target="_blank" rel="noopener noreferrer">$1</a>',
+  );
 
   // リスト
   html = html.replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>');
   html = html.replace(/^(\d+)\. (.+)$/gm, '<li class="ml-4 list-decimal">$2</li>');
 
   // 引用
-  html = html.replace(/^> (.+)$/gm, '<blockquote class="border-l-4 border-gray-300 pl-4 italic text-gray-600 dark:text-gray-400">$1</blockquote>');
+  html = html.replace(
+    /^> (.+)$/gm,
+    '<blockquote class="border-l-4 border-gray-300 pl-4 italic text-gray-600 dark:text-gray-400">$1</blockquote>',
+  );
 
   // 水平線
   html = html.replace(/^---$/gm, '<hr class="my-4 border-gray-300 dark:border-gray-600" />');
@@ -94,4 +100,3 @@ export function MarkdownRenderer({ component }: MarkdownRendererProps): React.JS
 }
 
 export default MarkdownRenderer;
-

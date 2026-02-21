@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "contracts/evolution/retrieval-decision.v1.json",
+  "title": "RetrievalDecisionV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["mode", "confidence", "complexity", "novelty", "staleness_risk", "reason_codes"],
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": ["skip", "light_retrieval", "deep_retrieval"]
+    },
+    "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "complexity": { "type": "number", "minimum": 0, "maximum": 1 },
+    "novelty": { "type": "number", "minimum": 0, "maximum": 1 },
+    "staleness_risk": {
+      "type": "string",
+      "enum": ["low", "medium", "high"]
+    },
+    "reason_codes": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

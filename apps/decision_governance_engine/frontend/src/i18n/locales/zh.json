@@ -1,0 +1,93 @@
+{
+  "login": {
+    "title": "决策治理系统",
+    "subtitle": "AI赋能的组织决策支持系统",
+    "username": "用户名",
+    "password": "密码",
+    "submit": "登录",
+    "demo_hint": "使用演示账号",
+    "username_placeholder": "请输入用户名",
+    "password_placeholder": "请输入密码",
+    "authenticating": "认证中...",
+    "error": "用户名或密码不正确"
+  },
+  "decision": {
+    "title": "决策输入",
+    "subject": "主题",
+    "subject_placeholder": "例：新产品上市战略批准",
+    "background": "背景/情况",
+    "background_placeholder": "请描述决策背景",
+    "options": "备选方案",
+    "options_placeholder": "请描述正在考虑的方案",
+    "constraints": "约束条件",
+    "constraints_placeholder": "请描述预算、时间、法规等约束",
+    "submit": "提交决策请求",
+    "submitting": "提交中...",
+    "dept": "部门",
+    "dept_placeholder": "例：战略规划部",
+    "required": "此项为必填"
+  },
+  "processing": {
+    "title": "决策处理中",
+    "gate": "预筛查",
+    "analysis": "多维分析",
+    "risk": "风险评估",
+    "review": "最终审查",
+    "complete": "处理完成",
+    "step": "步骤 {current} / {total}",
+    "please_wait": "AI 正在分析中，请稍候..."
+  },
+  "report": {
+    "title": "决策报告",
+    "summary": "决策摘要",
+    "recommendation": "建议",
+    "risk": "风险分析",
+    "evidence": "依据",
+    "alternatives": "替代方案",
+    "download_pdf": "下载 PDF",
+    "new_decision": "新决策请求",
+    "verdict": {
+      "approve": "建议批准",
+      "reject": "建议否决",
+      "revise": "需要修改"
+    }
+  },
+  "history": {
+    "title": "决策历史",
+    "empty": "暂无决策历史",
+    "date": "日期",
+    "subject": "主题",
+    "status": "结果",
+    "view": "查看详情"
+  },
+  "knowledge": {
+    "title": "知识库",
+    "search_placeholder": "搜索知识库...",
+    "upload": "添加文档",
+    "empty": "暂无知识"
+  },
+  "settings": {
+    "title": "设置",
+    "language": "语言",
+    "theme": "主题",
+    "api_key": "API 密钥",
+    "save": "保存",
+    "saved": "已保存"
+  },
+  "nav": {
+    "decision": "决策",
+    "history": "历史",
+    "knowledge": "知识库",
+    "settings": "设置",
+    "logout": "退出"
+  },
+  "common": {
+    "loading": "加载中...",
+    "error": "发生错误",
+    "retry": "重试",
+    "cancel": "取消",
+    "close": "关闭",
+    "back": "返回"
+  }
+}
+

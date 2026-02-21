@@ -72,8 +72,7 @@ class AgentDefinition(BaseModel):
 
     # 進捗メッセージ
     progress_messages: list[tuple[int, str]] = Field(
-        default_factory=list,
-        description="進捗メッセージ [(progress%, message), ...]"
+        default_factory=list, description="進捗メッセージ [(progress%, message), ...]"
     )
 
     def to_dict(self) -> dict[str, Any]:
@@ -119,13 +118,8 @@ class FlowDefinition(BaseModel):
         try:
             import yaml
         except ImportError as e:
-            msg = (
-                "PyYAML is required for YAML loading. "
-                "Install it with: pip install pyyaml"
-            )
-            raise ImportError(
-                msg
-            ) from e
+            msg = "PyYAML is required for YAML loading. Install it with: pip install pyyaml"
+            raise ImportError(msg) from e
 
         path = Path(yaml_path)
         if not path.exists():
@@ -148,10 +142,7 @@ class FlowDefinition(BaseModel):
             FlowDefinition インスタンス
         """
         # agents リストを AgentDefinition に変換
-        agents = [
-            AgentDefinition(**agent_data)
-            for agent_data in data.get("agents", [])
-        ]
+        agents = [AgentDefinition(**agent_data) for agent_data in data.get("agents", [])]
 
         return cls(
             flow_id=data.get("flow_id", ""),
@@ -206,6 +197,7 @@ class FlowDefinition(BaseModel):
         if not module_path:
             # class_name から推測（CamelCase → snake_case）
             import re
+
             snake_name = re.sub(r"(?<!^)(?=[A-Z])", "_", agent_def.class_name).lower()
             # デフォルトは agentflow.agents.{snake_name}
             module_path = f"agentflow.agents.{snake_name}"
@@ -242,9 +234,7 @@ class FlowDefinition(BaseModel):
         agents = {}
         for agent_def in self.agents:
             if agent_def.class_name:
-                agents[agent_def.id] = self.instantiate_agent(
-                    agent_def, llm_client=llm_client, **kwargs
-                )
+                agents[agent_def.id] = self.instantiate_agent(agent_def, llm_client=llm_client, **kwargs)
         return agents
 
     def to_stage_configs(
@@ -323,13 +313,8 @@ class FlowDefinition(BaseModel):
         try:
             import yaml
         except ImportError:
-            msg = (
-                "PyYAML is required for YAML export. "
-                "Install it with: pip install pyyaml"
-            )
-            raise ImportError(
-                msg
-            )
+            msg = "PyYAML is required for YAML export. Install it with: pip install pyyaml"
+            raise ImportError(msg)
 
         return yaml.dump(
             self.model_dump(),
@@ -373,18 +358,22 @@ class FlowDefinition(BaseModel):
         ]
 
         for agent in self.agents:
-            lines.append(f"  {{ id: '{agent.id}', name: '{agent.name}', label: '{agent.label}', icon: '{agent.icon}' }},")
+            lines.append(
+                f"  {{ id: '{agent.id}', name: '{agent.name}', label: '{agent.label}', icon: '{agent.icon}' }},"
+            )
 
-        lines.extend([
-            "];",
-            "",
-            "/** Flow 情報 */",
-            "export const FLOW_INFO = {",
-            f"  flowId: '{self.flow_id}',",
-            f"  name: '{self.name}',",
-            f"  version: '{self.version}',",
-            "} as const;",
-        ])
+        lines.extend(
+            [
+                "];",
+                "",
+                "/** Flow 情報 */",
+                "export const FLOW_INFO = {",
+                f"  flowId: '{self.flow_id}',",
+                f"  name: '{self.name}',",
+                f"  version: '{self.version}',",
+                "} as const;",
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -562,4 +551,3 @@ class FlowDefinitionRegistry:
             self._logger.info(f"Saved TypeScript definition to {output_path}")
             return True
         return False
-
