@@ -15,12 +15,15 @@ from apps.platform.agents.gallery_agent import GalleryAgent
 
 def _make_agent(tmp_path: Path) -> GalleryAgent:
     """MarketplaceClient のインストールディレクトリをテンポラリに差し替えてエージェントを生成する。"""
-    with patch(
-        "agentflow.marketplace.client.MarketplaceClient.__init__",
-        lambda self, **kw: setattr(self, "_mocked", True) or None,
-    ), patch(
-        "apps.platform.services.gallery_service.MarketplaceClient",
-        return_value=MagicMock(),
+    with (
+        patch(
+            "agentflow.marketplace.client.MarketplaceClient.__init__",
+            lambda self, **kw: setattr(self, "_mocked", True) or None,
+        ),
+        patch(
+            "apps.platform.services.gallery_service.MarketplaceClient",
+            return_value=MagicMock(),
+        ),
     ):
         return GalleryAgent()
 

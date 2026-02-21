@@ -9,10 +9,14 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException
 
+from agentflow.studio.models import (  # noqa: TC001 — FastAPIがランタイムで型評価に必要
+    MarketplaceInstallRequest,
+    MarketplaceSearchRequest,
+)
+
 
 if TYPE_CHECKING:
     from agentflow.marketplace.client import MarketplaceClient
-    from agentflow.studio.models import MarketplaceInstallRequest, MarketplaceSearchRequest
 
 
 def create_marketplace_router(marketplace: MarketplaceClient) -> APIRouter:
@@ -53,7 +57,7 @@ def create_marketplace_router(marketplace: MarketplaceClient) -> APIRouter:
     async def install_agent(body: MarketplaceInstallRequest) -> dict[str, Any]:
         """マーケットプレイスからエージェントをインストール。"""
         try:
-            marketplace.install(request.agent_id, force=request.force)
+            marketplace.install(body.agent_id, force=body.force)
             return {
                 "status": "success",
                 "message": f"Agent {body.agent_id} installed successfully",

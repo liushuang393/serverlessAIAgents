@@ -14,9 +14,9 @@ from agentflow.memory.types import MemoryEntry, MemoryType
 
 # オプション依存: テストでのモック（patch）が効くようにモジュールレベルで import
 try:
-    import redis  # type: ignore[import-untyped]
+    import redis
 except ImportError:
-    redis = None  # type: ignore[assignment]
+    redis = None  # ランタイムフォールバック
 
 
 class RedisBackend(MemoryBackend):

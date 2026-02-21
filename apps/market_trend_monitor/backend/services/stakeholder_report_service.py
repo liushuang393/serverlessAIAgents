@@ -20,7 +20,6 @@ if TYPE_CHECKING:
     from apps.market_trend_monitor.backend.services.signal_service import SignalService
 
 
-
 @dataclass
 class StakeholderReport:
     """ステークホルダーレポートデータモデル."""

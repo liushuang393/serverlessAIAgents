@@ -27,6 +27,7 @@ Agent/サービスは具体的なVector DB実装を知る必要がありませ�
 
 import logging
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 

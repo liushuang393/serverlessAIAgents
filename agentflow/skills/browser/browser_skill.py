@@ -14,7 +14,7 @@ from __future__ import annotations
 import base64
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from agentflow.skills.browser.base import BrowserSkillBase, BrowserSkillError, BrowserStateError
 
@@ -152,7 +152,11 @@ class BrowserSkill(BrowserSkillBase):
         self._page = None
         self._logger.info("ブラウザを停止しました")
 
-    async def navigate(self, url: str, wait_until: str = "load") -> PageInfo:
+    async def navigate(
+        self,
+        url: str,
+        wait_until: Literal["commit", "domcontentloaded", "load", "networkidle"] = "load",
+    ) -> PageInfo:
         """URLに移動.
 
         Args:

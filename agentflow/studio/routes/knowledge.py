@@ -5,13 +5,10 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastapi import APIRouter
-
-
-if TYPE_CHECKING:
-    from agentflow.studio.models import ChatRequest, KnowledgeAddRequest, RAGQueryRequest
+from agentflow.studio.models import ChatRequest, KnowledgeAddRequest, RAGQueryRequest
 
 
 def create_knowledge_router() -> APIRouter:

@@ -13,9 +13,9 @@ from agentflow.memory.vector_db.vector_db_interface import VectorDatabase
 
 # オプション依存: テストでのモック（patch）が効くようにモジュールレベルで import
 try:
-    from pinecone import Pinecone  # type: ignore[import-untyped]
+    from pinecone import Pinecone
 except ImportError:
-    Pinecone = None  # type: ignore[assignment, misc]
+    Pinecone = None  # ランタイムフォールバック
 
 
 class PineconeDB(VectorDatabase):

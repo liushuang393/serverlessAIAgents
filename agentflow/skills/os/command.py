@@ -9,7 +9,8 @@ Example:
 
 from __future__ import annotations
 
-import asyncio
+import subprocess
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Literal
@@ -66,7 +67,6 @@ class CommandSkill(OSSkillBase):
     def __init__(self, config: OSSkillConfig | None = None) -> None:
         """初期化."""
         super().__init__(config)
-        self._running_processes: dict[int, asyncio.subprocess.Process] = {}
 
     async def run_command(
         self,
@@ -129,34 +129,29 @@ class CommandSkill(OSSkillBase):
         )
 
         # コマンド実行
-        start_time = asyncio.get_event_loop().time()
+        start_time = time.perf_counter()
         try:
-            proc = await asyncio.create_subprocess_exec(
-                command,
-                *args,
-                cwd=work_dir,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+            proc = subprocess.run(
+                [command, *args],
+                cwd=str(work_dir),
+                capture_output=True,
                 env=env,
-            )
-
-            stdout, stderr = await asyncio.wait_for(
-                proc.communicate(),
                 timeout=timeout,
+                check=False,
             )
 
-            duration_ms = (asyncio.get_event_loop().time() - start_time) * 1000
+            duration_ms = (time.perf_counter() - start_time) * 1000
 
             return CommandResult(
                 command=command,
                 args=args,
-                stdout=stdout.decode("utf-8", errors="replace"),
-                stderr=stderr.decode("utf-8", errors="replace"),
+                stdout=proc.stdout.decode("utf-8", errors="replace"),
+                stderr=proc.stderr.decode("utf-8", errors="replace"),
                 exit_code=proc.returncode or 0,
                 duration_ms=duration_ms,
             )
 
-        except TimeoutError:
+        except subprocess.TimeoutExpired:
             msg = f"コマンドタイムアウト: {command} ({timeout}秒)"
             raise OSSkillError(msg, skill_name="CommandSkill")
 

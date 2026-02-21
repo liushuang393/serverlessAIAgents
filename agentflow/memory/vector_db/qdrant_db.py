@@ -14,9 +14,9 @@ from agentflow.memory.vector_db.vector_db_interface import VectorDatabase
 
 # オプション依存: テストでのモック（patch）が効くようにモジュールレベルで import
 try:
-    from qdrant_client import QdrantClient  # type: ignore[import-untyped]
+    from qdrant_client import QdrantClient
 except ImportError:
-    QdrantClient = None  # type: ignore[assignment, misc]
+    QdrantClient = None  # ランタイムフォールバック
 
 
 class QdrantDB(VectorDatabase):
@@ -62,7 +62,7 @@ class QdrantDB(VectorDatabase):
             raise ImportError(msg)
         try:
             # qdrant_client.models は QdrantClient がある場合のみ利用可能
-            from qdrant_client.models import Distance, VectorParams  # type: ignore[import-untyped]
+            from qdrant_client.models import Distance, VectorParams
 
             self._client = QdrantClient(host=self._host, port=self._port)
 

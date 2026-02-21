@@ -13,9 +13,9 @@ from agentflow.memory.types import MemoryEntry, MemoryType
 
 # オプション依存: テストでのモック（patch）が効くようにモジュールレベルで import
 try:
-    import asyncpg  # type: ignore[import-untyped]
+    import asyncpg
 except ImportError:
-    asyncpg = None  # type: ignore[assignment]
+    asyncpg = None  # ランタイムフォールバック
 
 
 class PostgresBackend(MemoryBackend):

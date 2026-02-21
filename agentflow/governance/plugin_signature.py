@@ -18,8 +18,8 @@ try:  # pragma: no cover - import error branch is environment dependent
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 except Exception:
-    InvalidSignature = Exception  # type: ignore[assignment]
-    Ed25519PublicKey = None  # type: ignore[assignment]
+    InvalidSignature = Exception  # type: ignore[assignment, misc]  # ランタイムフォールバック
+    Ed25519PublicKey = None  # type: ignore[assignment, misc]  # ランタイムフォールバック
 
 
 SignatureStatus = Literal[
@@ -66,9 +66,7 @@ class PluginSignatureVerifier:
     def __init__(self, *, trust_store_path: Path | None = None) -> None:
         self._trust_store_path = self._resolve_trust_store_path(trust_store_path)
         self._trust_store_error: str | None = None
-        self._trust_store = self._load_trust_store(self._trust_store_path)
-        if self._trust_store is None:
-            self._trust_store = {}
+        self._trust_store: dict[str, dict[str, dict[str, str]]] = self._load_trust_store(self._trust_store_path) or {}
 
     @staticmethod
     def _resolve_trust_store_path(path: Path | None) -> Path:
@@ -128,8 +126,8 @@ class PluginSignatureVerifier:
                 f"未対応アルゴリズムです: {algorithm or '<empty>'}",
             )
 
-        if Ed25519PublicKey is None:
-            return SignatureVerificationResult(
+        if Ed25519PublicKey is None:  # ランタイムガード: cryptography未インストール時
+            return SignatureVerificationResult(  # type: ignore[unreachable]
                 "parse_error",
                 "ed25519 検証に必要な cryptography が利用できません",
             )

@@ -11,9 +11,9 @@ from agentflow.memory.embeddings.embedding_interface import EmbeddingEngine
 
 # オプション依存: テストでのモック（patch）が効くようにモジュールレベルで import
 try:
-    from openai import AsyncOpenAI  # type: ignore[import-untyped]
+    from openai import AsyncOpenAI
 except ImportError:
-    AsyncOpenAI = None  # type: ignore[assignment, misc]
+    AsyncOpenAI = None  # type: ignore[assignment, misc]  # ランタイムフォールバック
 
 
 class OpenAIEmbeddings(EmbeddingEngine):
@@ -57,8 +57,8 @@ class OpenAIEmbeddings(EmbeddingEngine):
         self._dimension: int = dimension if dimension is not None else self._default_dimensions.get(model, 1536)
 
         # OpenAIクライアントを初期化
-        if AsyncOpenAI is None:
-            msg = "openai package is required. Install with: pip install openai"
+        if AsyncOpenAI is None:  # ランタイムガード: openai未インストール時
+            msg = "openai package is required. Install with: pip install openai"  # type: ignore[unreachable]
             raise ImportError(msg)
         try:
             self._client = AsyncOpenAI(api_key=api_key)

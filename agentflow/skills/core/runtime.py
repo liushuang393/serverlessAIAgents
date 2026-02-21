@@ -28,10 +28,10 @@ Example:
 
 from __future__ import annotations
 
-import asyncio
 import importlib.util
 import json
 import logging
+import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
@@ -341,21 +341,17 @@ class SkillRuntime:
         start_time = time.time()
         try:
             input_json = json.dumps(input_data, ensure_ascii=False)
-            proc = await asyncio.create_subprocess_exec(
-                "bash",
-                str(script_path),
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+            proc = subprocess.run(
+                ["bash", str(script_path)],
+                input=input_json.encode("utf-8"),
+                capture_output=True,
                 cwd=str(skill.path),
-            )
-            stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                proc.communicate(input=input_json.encode()),
                 timeout=self._timeout,
+                check=False,
             )
             duration_ms = (time.time() - start_time) * 1000
-            stdout = stdout_bytes.decode("utf-8", errors="replace")
-            stderr = stderr_bytes.decode("utf-8", errors="replace")
+            stdout = proc.stdout.decode("utf-8", errors="replace")
+            stderr = proc.stderr.decode("utf-8", errors="replace")
 
             output: dict[str, Any] = {}
             if stdout.strip():
@@ -371,6 +367,13 @@ class SkillRuntime:
                 stderr=stderr,
                 duration_ms=duration_ms,
                 error=stderr if proc.returncode != 0 else None,
+            )
+        except subprocess.TimeoutExpired:
+            duration_ms = (time.time() - start_time) * 1000
+            return ScriptResult(
+                success=False,
+                error=f"Shell script timeout ({self._timeout}s)",
+                duration_ms=duration_ms,
             )
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000

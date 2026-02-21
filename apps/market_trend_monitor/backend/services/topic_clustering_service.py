@@ -19,7 +19,6 @@ if TYPE_CHECKING:
     from apps.market_trend_monitor.backend.models import Article
 
 
-
 @dataclass
 class TopicCluster:
     """トピッククラスタデータモデル."""

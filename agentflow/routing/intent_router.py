@@ -203,6 +203,7 @@ class IntentRouter:
             parameters=params,
             original_text=text,
             rewritten_query=self._rewrite_query(text),
+            metadata={"used_llm_fallback": False},
         )
 
     def _classify_category(self, text: str) -> IntentCategory:

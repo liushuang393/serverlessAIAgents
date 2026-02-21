@@ -11,7 +11,6 @@ Example:
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
@@ -101,8 +100,8 @@ class FileSystemSkill(OSSkillBase):
 
         self._audit_log("read_file", {"path": str(validated_path)})
 
-        # asyncio.to_thread でブロッキングI/Oを安全にオフロードする
-        return await asyncio.to_thread(validated_path.read_text, encoding=encoding)
+        # 小さなローカルファイルI/Oを同期実行し、イベントループのスレッドプール生成を避ける
+        return validated_path.read_text(encoding=encoding)
 
     async def write_file(self, path: str, content: str, encoding: str = "utf-8") -> FileOperationResult:
         """ファイルに書き込む.
@@ -126,8 +125,8 @@ class FileSystemSkill(OSSkillBase):
 
         self._audit_log("write_file", {"path": str(validated_path), "size_bytes": len(content)})
 
-        # asyncio.to_thread でブロッキングI/Oを安全にオフロードする
-        await asyncio.to_thread(validated_path.write_text, content, encoding=encoding)
+        # 小さなローカルファイルI/Oを同期実行し、イベントループのスレッドプール生成を避ける
+        validated_path.write_text(content, encoding=encoding)
 
         return FileOperationResult(
             success=True,

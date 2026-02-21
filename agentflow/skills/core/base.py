@@ -116,6 +116,10 @@ class SkillMetadata:
         Raises:
             TypeError: data が辞書でない場合
         """
+        if not isinstance(data, dict):
+            msg = "data must be a dict"
+            raise TypeError(msg)
+
         known_fields = {
             "name",
             "description",
