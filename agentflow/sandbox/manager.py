@@ -183,9 +183,7 @@ class SandboxManager:
             should_delete = False
             if sandbox.state == SandboxState.DELETED:
                 should_delete = True
-            elif sandbox.state == SandboxState.ARCHIVED or (
-                sandbox.state == SandboxState.STOPPED and include_stopped
-            ):
+            elif sandbox.state == SandboxState.ARCHIVED or (sandbox.state == SandboxState.STOPPED and include_stopped):
                 should_delete = idle_seconds > max_idle_seconds
 
             if should_delete:

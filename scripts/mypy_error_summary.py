@@ -16,15 +16,36 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+
 ROOT = Path(__file__).resolve().parent.parent
 
 # 既知の mypy エラーコード（集計対象）
 KNOWN_CODES: set[str] = {
-    "call-arg", "no-any-return", "attr-defined", "assignment", "union-attr",
-    "type-arg", "unreachable", "arg-type", "no-untyped-call", "no-untyped-def",
-    "valid-type", "override", "unused-ignore", "redundant-cast", "var-annotated",
-    "return-value", "misc", "operator", "index", "list-item", "dict-item",
-    "has-type", "type-var", "untyped-decorator", "str-bytes-safe",
+    "call-arg",
+    "no-any-return",
+    "attr-defined",
+    "assignment",
+    "union-attr",
+    "type-arg",
+    "unreachable",
+    "arg-type",
+    "no-untyped-call",
+    "no-untyped-def",
+    "valid-type",
+    "override",
+    "unused-ignore",
+    "redundant-cast",
+    "var-annotated",
+    "return-value",
+    "misc",
+    "operator",
+    "index",
+    "list-item",
+    "dict-item",
+    "has-type",
+    "type-var",
+    "untyped-decorator",
+    "str-bytes-safe",
 }
 
 
@@ -32,9 +53,12 @@ def run_mypy() -> str:
     """mypy agentflow を --no-pretty で実行し、1行1エラーの形式で返す。"""
     result = subprocess.run(
         [
-            "mypy", "agentflow",
-            "--strict", "--ignore-missing-imports",
-            "--no-error-summary", "--no-pretty",
+            "mypy",
+            "agentflow",
+            "--strict",
+            "--ignore-missing-imports",
+            "--no-error-summary",
+            "--no-pretty",
         ],
         capture_output=True,
         text=True,
@@ -51,13 +75,9 @@ def parse_errors(output: str) -> tuple[list[tuple[str, str, str]], str]:
     例: agentflow/foo.py:10:5: error: Message text [no-any-return]
     """
     # ファイル:行[:列]: error: メッセージ [コード]
-    error_re = re.compile(
-        r"^(agentflow/[^\s:]+):(\d+)(?::\d+)?:\s*error:\s*(.*?)\s*\[([a-z][a-z0-9-]*)\]\s*$"
-    )
+    error_re = re.compile(r"^(agentflow/[^\s:]+):(\d+)(?::\d+)?:\s*error:\s*(.*?)\s*\[([a-z][a-z0-9-]*)\]\s*$")
     # コードが不明な行（行末に [code] が無い場合）
-    error_nocode_re = re.compile(
-        r"^(agentflow/[^\s:]+):(\d+)(?::\d+)?:\s*error:\s*(.+)$"
-    )
+    error_nocode_re = re.compile(r"^(agentflow/[^\s:]+):(\d+)(?::\d+)?:\s*error:\s*(.+)$")
 
     errors: list[tuple[str, str, str]] = []
     summary_line = ""

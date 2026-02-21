@@ -86,9 +86,7 @@ class DecisionScoringService:
             _parse_duration_to_months(phase.get("duration", "") if isinstance(phase, Mapping) else "")
             for phase in phases
         )
-        dependencies = (
-            shu.get("dependencies", []) if isinstance(shu.get("dependencies"), list) else []
-        )
+        dependencies = shu.get("dependencies", []) if isinstance(shu.get("dependencies"), list) else []
         first_action = str(shu.get("first_action", "")).strip()
 
         implementations = qi.get("implementations", []) if isinstance(qi.get("implementations"), list) else []
@@ -116,9 +114,7 @@ class DecisionScoringService:
             if isinstance(finding, Mapping) and str(finding.get("severity", "")).upper() == "WARNING"
         )
         death_traps = dao.get("death_traps", []) if isinstance(dao.get("death_traps"), list) else []
-        causal_gears = (
-            dao.get("causal_gears", []) if isinstance(dao.get("causal_gears"), list) else []
-        )
+        causal_gears = dao.get("causal_gears", []) if isinstance(dao.get("causal_gears"), list) else []
         existing_alternatives = (
             dao.get("existing_alternatives", []) if isinstance(dao.get("existing_alternatives"), list) else []
         )

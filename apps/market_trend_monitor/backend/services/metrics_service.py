@@ -105,9 +105,7 @@ class MetricsService:
         return {
             "status": "healthy",
             "uptime_seconds": round(uptime, 2),
-            "last_run": self._metrics.last_run_at.isoformat()
-            if self._metrics.last_run_at
-            else None,
+            "last_run": self._metrics.last_run_at.isoformat() if self._metrics.last_run_at else None,
             "total_runs": self._metrics.total_runs,
         }
 

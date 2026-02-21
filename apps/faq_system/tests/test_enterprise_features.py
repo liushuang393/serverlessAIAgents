@@ -108,8 +108,6 @@ class TestEnterpriseFeatures:
             assert "ロックしました" in msg
 
             # ロック中
-            success, msg, _ = await service._authenticate_local_db_with_mfa(
-                "locked_user", "wrong", None
-            )
+            success, msg, _ = await service._authenticate_local_db_with_mfa("locked_user", "wrong", None)
             assert success is False
             assert "ロックされています" in msg

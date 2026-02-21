@@ -122,19 +122,13 @@ async def process_product_launch(req: ProductLaunchRequest) -> ProductLaunchResp
     }
     decision_mode = mode_map.get(req.mode.upper(), DecisionMode.STANDARD)
 
-    logger.info(
-        f"[产品立项] request_id={request_id}, mode={decision_mode}, question={req.question[:50]}..."
-    )
+    logger.info(f"[产品立项] request_id={request_id}, mode={decision_mode}, question={req.question[:50]}...")
 
     # Step 1: 外部情報採集
     intel_config = IntelligenceConfig(mode=req.mode.upper())
     intel_service = IntelligenceService(intel_config)
 
-    search_query = (
-        f"{req.product_name} {req.target_market} market analysis"
-        if req.product_name
-        else req.question
-    )
+    search_query = f"{req.product_name} {req.target_market} market analysis" if req.product_name else req.question
     topics = req.competitors[:3] if req.competitors else None
 
     intel_result = await intel_service.gather(search_query, topics=topics)
@@ -167,9 +161,7 @@ async def process_product_launch(req: ProductLaunchRequest) -> ProductLaunchResp
     processing_time_ms = int((time.time() - start_time) * 1000)
 
     # Step 3: v1 契約生成
-    contract = DecisionGovContractBuilder.build_from_report(
-        result, mode=decision_mode, request_id=request_id
-    )
+    contract = DecisionGovContractBuilder.build_from_report(result, mode=decision_mode, request_id=request_id)
 
     # 外部情報を contract に追加
     contract.evidence.extend(intel_result.evidence)

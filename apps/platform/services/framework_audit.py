@@ -12,10 +12,6 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from apps.platform.services.agent_taxonomy import AgentTaxonomyService
-from apps.platform.services.protocol_surface_inspector import (
-    ProtocolSurfaceReport,
-    inspect_protocol_surface,
-)
 
 from agentflow.governance.plugin_registry import PluginRegistry
 
@@ -23,6 +19,9 @@ from agentflow.governance.plugin_registry import PluginRegistry
 if TYPE_CHECKING:
     from apps.platform.schemas.app_config_schemas import AppConfig
     from apps.platform.services.app_discovery import AppDiscoveryService
+    from apps.platform.services.protocol_surface_inspector import (
+        ProtocolSurfaceReport,
+    )
 
 
 _ENGINE_MARKERS: dict[str, re.Pattern[str]] = {
@@ -109,9 +108,7 @@ class FrameworkAuditService:
             "apps": rows,
         }
 
-    def _audit_one(
-        self, app_config: AppConfig, *, audit_profile: str | None = None
-    ) -> dict[str, Any]:
+    def _audit_one(self, app_config: AppConfig, *, audit_profile: str | None = None) -> dict[str, Any]:
         """単一 App を監査."""
         issues: list[FrameworkAuditIssue] = []
         config_path = self._discovery.get_config_path(app_config.name)
@@ -191,10 +188,7 @@ class FrameworkAuditService:
         if (
             strict_line
             and not bindings
-            and (
-                len(app_config.dependencies.external) > 0
-                or isinstance(app_config.services.get("mcp"), dict)
-            )
+            and (len(app_config.dependencies.external) > 0 or isinstance(app_config.services.get("mcp"), dict))
         ):
             issues.append(
                 FrameworkAuditIssue(
@@ -258,8 +252,7 @@ class FrameworkAuditService:
                         severity=severity,
                         code="PLUGIN_PRODUCT_LINE_MISMATCH",
                         message=(
-                            f"plugin '{binding.id}' は product_line="
-                            f"{manifest.compatibility_product_lines} 専用です"
+                            f"plugin '{binding.id}' は product_line={manifest.compatibility_product_lines} 専用です"
                         ),
                         hint="App の product_line と互換な plugin を選択してください",
                     ),
@@ -591,10 +584,7 @@ class FrameworkAuditService:
                 FrameworkAuditIssue(
                     severity="warning",
                     code="AST_PARSE_WARNING",
-                    message=(
-                        "AST（Python構文木）解析に失敗しました: "
-                        f"{warning.file}:{warning.line} {warning.message}"
-                    ),
+                    message=(f"AST（Python構文木）解析に失敗しました: {warning.file}:{warning.line} {warning.message}"),
                     hint=f"修正提案: {warning.suggestion} / 影響: {warning.impact}",
                 ),
             )
@@ -613,9 +603,7 @@ class FrameworkAuditService:
         for protocol in evidence_protocols:
             locations.extend(report.evidence_locations(protocol))
         has_any_evidence = bool(locations)
-        cannot_prove = report.parse_failed_all or (
-            report.parse_failed_files > 0 and not has_any_evidence
-        )
+        cannot_prove = report.parse_failed_all or (report.parse_failed_files > 0 and not has_any_evidence)
 
         if cannot_prove:
             return FrameworkAuditIssue(

@@ -11,10 +11,7 @@ import pytest
 
 
 # scripts/ パスを動的にインポート
-SCRIPTS_DIR = (
-    Path(__file__).parent.parent.parent.parent
-    / "agentflow/skills/builtin/market-trend-analysis/scripts"
-)
+SCRIPTS_DIR = Path(__file__).parent.parent.parent.parent / "agentflow/skills/builtin/market-trend-analysis/scripts"
 
 
 def _load_script(name: str):

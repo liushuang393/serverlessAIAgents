@@ -178,8 +178,7 @@ class PluginRegistry:
         assessment.plugin_signature_reason = manifest.signature_reason
         if self._signature_enforcement == "warn" and manifest.signature_status != "verified":
             assessment.warnings.append(
-                "plugin 署名検証 warning: "
-                f"status={manifest.signature_status}, reason={manifest.signature_reason}",
+                f"plugin 署名検証 warning: status={manifest.signature_status}, reason={manifest.signature_reason}",
             )
         assessment.manifest_required_permissions = self._normalize_permissions(
             manifest.raw.get("required_permissions"),
@@ -187,17 +186,12 @@ class PluginRegistry:
 
         tool_permissions = self._normalize_permissions(tool.required_permissions)
         missing_permissions = [
-            perm
-            for perm in assessment.manifest_required_permissions
-            if perm not in tool_permissions
+            perm for perm in assessment.manifest_required_permissions if perm not in tool_permissions
         ]
         if missing_permissions:
             self._add_violation(
                 assessment,
-                (
-                    "tool.required_permissions が plugin manifest の必須権限を満たしていません: "
-                    f"{missing_permissions}"
-                ),
+                (f"tool.required_permissions が plugin manifest の必須権限を満たしていません: {missing_permissions}"),
             )
 
         if plugin_version and plugin_version != manifest.version:
@@ -363,9 +357,7 @@ class PluginRegistry:
                     bindings[binding_id] = PluginBindingRecord(
                         id=binding_id,
                         version=binding_version,
-                        config=item.get("config", {})
-                        if isinstance(item.get("config"), dict)
-                        else {},
+                        config=item.get("config", {}) if isinstance(item.get("config"), dict) else {},
                     )
             snapshot = AppPluginSnapshot(
                 app_name=app_name,

@@ -2,6 +2,7 @@
 
 import pytest
 
+
 # redis はオプション依存 - 未インストールの場合はテストをスキップ
 pytest.importorskip("redis")
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 
@@ -18,6 +18,10 @@ from agentflow.governance import (
 from agentflow.governance.plugin_registry import PluginRegistry
 from agentflow.providers.tool_provider import OperationType, RegisteredTool
 from agentflow.security.policy_engine import AuthContext, AuthMode
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @dataclass

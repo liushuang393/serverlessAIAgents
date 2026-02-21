@@ -101,16 +101,10 @@ class FileSystemSkill(OSSkillBase):
 
         self._audit_log("read_file", {"path": str(validated_path)})
 
-        # 非同期でファイル読み込み
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None,
-            lambda: validated_path.read_text(encoding=encoding),
-        )
+        # asyncio.to_thread でブロッキングI/Oを安全にオフロードする
+        return await asyncio.to_thread(validated_path.read_text, encoding=encoding)
 
-    async def write_file(
-        self, path: str, content: str, encoding: str = "utf-8"
-    ) -> FileOperationResult:
+    async def write_file(self, path: str, content: str, encoding: str = "utf-8") -> FileOperationResult:
         """ファイルに書き込む.
 
         Args:
@@ -132,12 +126,8 @@ class FileSystemSkill(OSSkillBase):
 
         self._audit_log("write_file", {"path": str(validated_path), "size_bytes": len(content)})
 
-        # 非同期でファイル書き込み
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
-            None,
-            lambda: validated_path.write_text(content, encoding=encoding),
-        )
+        # asyncio.to_thread でブロッキングI/Oを安全にオフロードする
+        await asyncio.to_thread(validated_path.write_text, content, encoding=encoding)
 
         return FileOperationResult(
             success=True,

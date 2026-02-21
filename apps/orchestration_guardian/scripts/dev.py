@@ -68,9 +68,7 @@ def start_docker_dependencies(app_dir: Path):
             return
 
         print(f"Starting infrastructure services: {', '.join(services_to_start)}")
-        subprocess.run(
-            ["docker", "compose", "up", "-d"] + services_to_start, cwd=str(app_dir), check=True
-        )
+        subprocess.run(["docker", "compose", "up", "-d", *services_to_start], cwd=str(app_dir), check=True)
         print("Infrastructure services started.")
 
     except subprocess.CalledProcessError as e:

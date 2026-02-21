@@ -335,9 +335,7 @@ class BIAnalyzer:
 
                 if abs(corr) > 0.7:
                     direction = "正" if corr > 0 else "負"
-                    insights.append(
-                        f"{col1}と{col2}に強い{direction}の相関があります (r={round(corr, 2)})"
-                    )
+                    insights.append(f"{col1}と{col2}に強い{direction}の相関があります (r={round(corr, 2)})")
 
         return AnalysisResult(
             analysis_type=AnalysisType.CORRELATION,

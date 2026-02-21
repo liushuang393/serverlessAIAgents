@@ -72,10 +72,7 @@ class TestSkillRuntime:
         runtime = SkillRuntime()
 
         # 実際のSkillをロード
-        skill_path = (
-            Path(__file__).parent.parent.parent.parent
-            / "agentflow/skills/builtin/market-trend-analysis"
-        )
+        skill_path = Path(__file__).parent.parent.parent.parent / "agentflow/skills/builtin/market-trend-analysis"
         if not skill_path.exists():
             pytest.skip("market-trend-analysis skill not found")
 

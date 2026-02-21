@@ -346,9 +346,7 @@ class ServiceNowTicketProvider(TicketProviderBase):
 
         # プレースホルダー実装
         ticket.external_id = f"INC{uuid.uuid4().hex[:10].upper()}"
-        ticket.external_url = (
-            f"{self._instance_url}/nav_to.do?uri=incident.do?sys_id={ticket.external_id}"
-        )
+        ticket.external_url = f"{self._instance_url}/nav_to.do?uri=incident.do?sys_id={ticket.external_id}"
 
         return ticket
 

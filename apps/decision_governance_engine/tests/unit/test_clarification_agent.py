@@ -129,9 +129,7 @@ class TestClarificationAgentProcess:
 class TestClarificationAgentValidation:
     """Test cases for output validation."""
 
-    def test_validate_output_with_valid_output(
-        self, clarification_agent: ClarificationAgent
-    ) -> None:
+    def test_validate_output_with_valid_output(self, clarification_agent: ClarificationAgent) -> None:
         """Test validation passes with valid output."""
         output = ClarificationOutput(
             restated_question="新規事業参入の市場選定",

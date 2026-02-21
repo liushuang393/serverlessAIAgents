@@ -39,9 +39,7 @@ class TestCognitiveGateAgentInit:
         """Test that agent has correct name."""
         assert cognitive_gate_agent.name == "CognitiveGateAgent"
 
-    def test_agent_has_appropriate_temperature(
-        self, cognitive_gate_agent: CognitiveGateAgent
-    ) -> None:
+    def test_agent_has_appropriate_temperature(self, cognitive_gate_agent: CognitiveGateAgent) -> None:
         """Test that temperature is set low for strict judgment."""
         assert cognitive_gate_agent.temperature == 0.3
 

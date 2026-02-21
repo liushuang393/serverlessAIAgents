@@ -199,9 +199,7 @@ def test_get_statistics(gateway: MessageGateway, mock_adapter: MockAdapter) -> N
 
 
 @pytest.mark.asyncio
-async def test_typing_indicator_disabled(
-    gateway: MessageGateway, mock_adapter: MockAdapter
-) -> None:
+async def test_typing_indicator_disabled(gateway: MessageGateway, mock_adapter: MockAdapter) -> None:
     """Test routing with typing indicator disabled."""
     gateway.register_channel("mock", mock_adapter)
 

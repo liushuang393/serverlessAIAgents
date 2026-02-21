@@ -47,9 +47,7 @@ def _load_app_config() -> dict[str, object]:
 APP_CONFIG = _load_app_config()
 _runtime = APP_CONFIG.get("runtime", {}) if isinstance(APP_CONFIG.get("runtime"), dict) else {}
 _runtime_urls = _runtime.get("urls", {}) if isinstance(_runtime.get("urls"), dict) else {}
-_runtime_database = (
-    _runtime.get("database", {}) if isinstance(_runtime.get("database"), dict) else {}
-)
+_runtime_database = _runtime.get("database", {}) if isinstance(_runtime.get("database"), dict) else {}
 _ports = APP_CONFIG.get("ports", {}) if isinstance(APP_CONFIG.get("ports"), dict) else {}
 
 _backend_host_from_url = "localhost"

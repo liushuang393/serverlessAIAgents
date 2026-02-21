@@ -365,9 +365,7 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
             {
                 "answer": "\n".join(answer_parts) if answer_parts else "No relevant information.",
                 "query_type": QueryType.HYBRID.value,
-                "sources": faq_result.data.get("documents", [])
-                if not isinstance(faq_result, Exception)
-                else [],
+                "sources": faq_result.data.get("documents", []) if not isinstance(faq_result, Exception) else [],
                 "sql_result": sql_data,
                 "chart": chart.model_dump() if chart else None,
                 "suggestions": suggestions,

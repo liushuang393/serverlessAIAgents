@@ -20,7 +20,6 @@ from agentflow import get_llm
 if TYPE_CHECKING:
     from apps.market_trend_monitor.backend.models import Article
 
-from agentflow import get_llm
 
 
 class MarketPosition(str, Enum):
@@ -333,9 +332,7 @@ class CompetitorTrackingAgent:
         """競合別の別名辞書を取得."""
         return {key: list(values) for key, values in self._competitor_aliases.items()}
 
-    def set_competitor_aliases(
-        self, competitor_aliases: dict[str, list[str]]
-    ) -> dict[str, list[str]]:
+    def set_competitor_aliases(self, competitor_aliases: dict[str, list[str]]) -> dict[str, list[str]]:
         """競合別の別名辞書を更新."""
         self._merge_aliases(competitor_aliases)
         self._rebuild_alias_index()

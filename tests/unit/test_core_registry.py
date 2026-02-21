@@ -107,9 +107,7 @@ class TestRegistry:
         registry.register("item1", "value1")
         assert "item1" in registry
 
-    def test_overwrite_warning(
-        self, registry: ConcreteRegistry, caplog: pytest.LogCaptureFixture
-    ) -> None:
+    def test_overwrite_warning(self, registry: ConcreteRegistry, caplog: pytest.LogCaptureFixture) -> None:
         """上書き時に警告が出ることをテスト."""
         registry.register("item1", "value1")
         registry.register("item1", "value2")

@@ -18,15 +18,14 @@ def _make_agent(tmp_path: Path) -> GalleryAgent:
     with patch(
         "agentflow.marketplace.client.MarketplaceClient.__init__",
         lambda self, **kw: setattr(self, "_mocked", True) or None,
+    ), patch(
+        "apps.platform.services.gallery_service.MarketplaceClient",
+        return_value=MagicMock(),
     ):
-        with patch(
-            "apps.platform.services.gallery_service.MarketplaceClient",
-            return_value=MagicMock(),
-        ):
-            return GalleryAgent()
+        return GalleryAgent()
 
 
-@pytest.fixture()
+@pytest.fixture
 def agent(tmp_path: Path) -> GalleryAgent:
     """ファイルシステム副作用のない GalleryAgent インスタンスを返す fixture。"""
     with patch(

@@ -42,7 +42,6 @@ _FAQ_PUBLIC_HTTP_PATHS = {
 _faq_auth_guard: ContractAuthGuard | None = None
 
 
-
 def _trust_proxy_auth_enabled() -> bool:
     return os.getenv("FAQ_TRUST_PROXY_AUTH", "false").lower() in {"1", "true", "yes", "on"}
 

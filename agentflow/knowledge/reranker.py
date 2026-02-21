@@ -81,9 +81,7 @@ class CohereReranker(BaseReranker):
 
             if self._client is None:
                 self._client = cohere.Client(self._api_key)
-            response = self._client.rerank(
-                query=query, documents=doc_texts, top_n=top_k, model=self._model
-            )
+            response = self._client.rerank(query=query, documents=doc_texts, top_n=top_k, model=self._model)
             results = []
             for result in response.results:
                 metadata = self._get_metadata(documents[result.index])
@@ -120,9 +118,7 @@ class CrossEncoderReranker(BaseReranker):
                 self._model = CrossEncoder(self._model_name)
             pairs = [(query, doc) for doc in doc_texts]
             scores = self._model.predict(pairs)
-            scored_docs = list(
-                zip(range(len(documents)), doc_texts, scores, documents, strict=False)
-            )
+            scored_docs = list(zip(range(len(documents)), doc_texts, scores, documents, strict=False))
             scored_docs.sort(key=lambda x: x[2], reverse=True)
             results = []
             for original_idx, text, score, original_doc in scored_docs[:top_k]:
@@ -163,11 +159,7 @@ class BM25Reranker(BaseReranker):
         results = []
         for original_idx, text, score, original_doc in scored_docs[:top_k]:
             metadata = self._get_metadata(original_doc)
-            results.append(
-                RankedDocument(
-                    content=text, score=score, original_index=original_idx, metadata=metadata
-                )
-            )
+            results.append(RankedDocument(content=text, score=score, original_index=original_idx, metadata=metadata))
         return results
 
 

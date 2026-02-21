@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 """GoogleDriveConnector - Google Drive API コネクタ.
 
 Google Drive へのアクセスを提供。
@@ -20,13 +21,16 @@ import logging
 import mimetypes
 import os
 from datetime import UTC, datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import Field
 
-from agentflow.datalake.auth import AuthProvider
 from agentflow.datalake.connector import ConnectorConfig, DataConnector
 from agentflow.datalake.core import DataItem, ReadResult
+
+
+if TYPE_CHECKING:
+    from agentflow.datalake.auth import AuthProvider
 
 
 logger = logging.getLogger(__name__)
@@ -391,9 +395,7 @@ class GoogleDriveConnector(DataConnector):
 
         headers = {
             "Authorization": f"Bearer {token}",
-            "Content-Type": content_type
-            or mimetypes.guess_type(name)[0]
-            or "application/octet-stream",
+            "Content-Type": content_type or mimetypes.guess_type(name)[0] or "application/octet-stream",
         }
 
         if existing_id:

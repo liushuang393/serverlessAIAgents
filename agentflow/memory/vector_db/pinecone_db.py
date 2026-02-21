@@ -10,6 +10,7 @@ from typing import Any
 from agentflow.memory.types import MemoryEntry, MemoryType
 from agentflow.memory.vector_db.vector_db_interface import VectorDatabase
 
+
 # オプション依存: テストでのモック（patch）が効くようにモジュールレベルで import
 try:
     from pinecone import Pinecone  # type: ignore[import-untyped]

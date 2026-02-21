@@ -5,6 +5,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 def ensure_env_file(app_dir: Path):
     """
     Check if .env exists. If not, try to copy from .env.example or similar.
@@ -26,6 +27,7 @@ def ensure_env_file(app_dir: Path):
     # If no example file found, create an empty one or just skip
     print("Warning: No .env or .env.example found. Application might fail if it requires environment variables.")
 
+
 def start_docker_dependencies(app_dir: Path):
     """
     Check for docker-compose.yml and start infrastructure services (DB, Redis, etc.).
@@ -39,15 +41,11 @@ def start_docker_dependencies(app_dir: Path):
 
     try:
         result = subprocess.run(
-            ["docker", "compose", "config", "--services"],
-            cwd=str(app_dir),
-            capture_output=True,
-            text=True,
-            check=True
+            ["docker", "compose", "config", "--services"], cwd=str(app_dir), capture_output=True, text=True, check=True
         )
-        all_services = result.stdout.strip().split('\n')
+        all_services = result.stdout.strip().split("\n")
 
-        exclusions = {'backend', 'frontend', 'app', 'api', 'web', 'worker', 'celery', app_dir.name}
+        exclusions = {"backend", "frontend", "app", "api", "web", "worker", "celery", app_dir.name}
         services_to_start = [s for s in all_services if s and s not in exclusions]
 
         if not services_to_start:
@@ -55,11 +53,7 @@ def start_docker_dependencies(app_dir: Path):
             return
 
         print(f"Starting infrastructure services: {', '.join(services_to_start)}")
-        subprocess.run(
-            ["docker", "compose", "up", "-d"] + services_to_start,
-            cwd=str(app_dir),
-            check=True
-        )
+        subprocess.run(["docker", "compose", "up", "-d", *services_to_start], cwd=str(app_dir), check=True)
         print("Infrastructure services started.")
 
     except subprocess.CalledProcessError as e:
@@ -67,6 +61,7 @@ def start_docker_dependencies(app_dir: Path):
         print("Continuing with local startup...")
     except FileNotFoundError:
         print("Warning: 'docker' command not found. Skipping docker startup.")
+
 
 def main():
     script_dir = Path(__file__).resolve().parent
@@ -88,10 +83,11 @@ def main():
     print(f"Starting application: {' '.join(cmd)}")
 
     # Replace current process
-    if sys.platform != 'win32':
+    if sys.platform != "win32":
         os.execvp(cmd[0], cmd)
     else:
         subprocess.run(cmd)
+
 
 if __name__ == "__main__":
     main()

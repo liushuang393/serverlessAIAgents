@@ -304,9 +304,7 @@ class AppLifecycleManager:
                         if is_2xx and not payload_marked_good and payload_state is None:
                             attempt["error"] = "2xx response without explicit status field"
                         elif payload_marked_bad:
-                            attempt["error"] = (
-                                f"payload indicates non-healthy state: {payload_state}"
-                            )
+                            attempt["error"] = f"payload indicates non-healthy state: {payload_state}"
                         else:
                             attempt["error"] = f"HTTP {response.status_code}"
                         last_error = attempt["error"]
@@ -880,11 +878,7 @@ class AppLifecycleManager:
         """ヘルスチェック用パス候補を作成."""
         paths: list[str] = []
         if configured_health_path:
-            path = (
-                configured_health_path
-                if configured_health_path.startswith("/")
-                else f"/{configured_health_path}"
-            )
+            path = configured_health_path if configured_health_path.startswith("/") else f"/{configured_health_path}"
             paths.append(path)
         for fallback in _HEALTH_FALLBACK_PATHS:
             if fallback not in paths:
@@ -990,8 +984,7 @@ class AppLifecycleManager:
             return {
                 "detected": True,
                 "available": False,
-                "error": (proc.stderr or proc.stdout).strip()
-                or f"docker compose ps failed ({proc.returncode})",
+                "error": (proc.stderr or proc.stdout).strip() or f"docker compose ps failed ({proc.returncode})",
                 "command": " ".join(command),
                 "backend_running": False,
                 "backend_published_ports": [],
@@ -1017,9 +1010,7 @@ class AppLifecycleManager:
             )
 
         backend_service = self._select_backend_service(services)
-        backend_ports = (
-            [] if backend_service is None else backend_service.get("published_ports", [])
-        )
+        backend_ports = [] if backend_service is None else backend_service.get("published_ports", [])
         return {
             "detected": True,
             "available": True,
@@ -1027,9 +1018,7 @@ class AppLifecycleManager:
             "compose_files": [f.name for f in compose_files],
             "services": services,
             "backend_service": None if backend_service is None else backend_service.get("service"),
-            "backend_running": False
-            if backend_service is None
-            else bool(backend_service.get("running")),
+            "backend_running": False if backend_service is None else bool(backend_service.get("running")),
             "backend_published_ports": backend_ports,
         }
 

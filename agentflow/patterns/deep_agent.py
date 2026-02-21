@@ -1086,9 +1086,7 @@ class ConversationManager:
             "summarized_messages": len(to_summarize),
             "original_tokens": original_tokens,
             "new_tokens": self.current_token_count(),
-            "compression_ratio": self.current_token_count() / original_tokens
-            if original_tokens > 0
-            else 1.0,
+            "compression_ratio": self.current_token_count() / original_tokens if original_tokens > 0 else 1.0,
         }
 
     async def _generate_summary(self, messages: list[AgentMessage]) -> str | None:
@@ -1239,9 +1237,7 @@ class AgentPool:
         self._skill_engine = skill_engine
 
         # Skillsレジストリ（SkillEngine があればその内部レジストリを使用）
-        self._skills = skill_registry or (
-            skill_engine.get_registry() if skill_engine else SkillRegistry()
-        )
+        self._skills = skill_registry or (skill_engine.get_registry() if skill_engine else SkillRegistry())
 
         # MCPクライアント（外部ツール統合用、懒加載対応）
         self._mcp_config = mcp_config
@@ -2894,12 +2890,8 @@ JSON形式で回答:"""
             # デフォルト分解（Skill マッチングあり）
             todos = [
                 TodoItem(task="調査・情報収集", agent_type=AgentType.RESEARCH, priority=3),
-                TodoItem(
-                    task="分析・評価", agent_type=AgentType.ANALYSIS, priority=2, dependencies=[]
-                ),
-                TodoItem(
-                    task="結論・報告作成", agent_type=AgentType.REPORT, priority=1, dependencies=[]
-                ),
+                TodoItem(task="分析・評価", agent_type=AgentType.ANALYSIS, priority=2, dependencies=[]),
+                TodoItem(task="結論・報告作成", agent_type=AgentType.REPORT, priority=1, dependencies=[]),
             ]
             # 各 Todo に Skill をマッチング
             return await self._resolve_skills_for_todos(todos)
@@ -3046,9 +3038,7 @@ JSON形式で回答:
         )
 
         if not agent:
-            self._progress.update_todo(
-                todo.id, status=TaskStatus.FAILED, error="Agent not available"
-            )
+            self._progress.update_todo(todo.id, status=TaskStatus.FAILED, error="Agent not available")
             return None
 
         try:
@@ -3056,13 +3046,9 @@ JSON形式で回答:
             todo.result = result
 
             if result.get("status") == "failed":
-                self._progress.update_todo(
-                    todo.id, status=TaskStatus.FAILED, error=result.get("error")
-                )
+                self._progress.update_todo(todo.id, status=TaskStatus.FAILED, error=result.get("error"))
             else:
-                self._progress.update_todo(
-                    todo.id, status=TaskStatus.COMPLETED, completed_at=datetime.now()
-                )
+                self._progress.update_todo(todo.id, status=TaskStatus.COMPLETED, completed_at=datetime.now())
                 await self._progress.send_message_async(str(todo.agent_type), "coordinator", result)
                 return result
         except Exception as e:
@@ -3232,9 +3218,7 @@ JSON形式で回答:
     def _emit_progress(self, event: str, data: dict[str, Any]) -> None:
         """進捗イベント発火."""
         if self._on_progress:
-            self._on_progress(
-                {"event": event, "data": data, "timestamp": datetime.now().isoformat()}
-            )
+            self._on_progress({"event": event, "data": data, "timestamp": datetime.now().isoformat()})
 
     # =========================================================================
     # 公開API

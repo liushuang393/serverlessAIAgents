@@ -163,9 +163,7 @@ class UserInteractionSkill:
         questions: list[ClarificationQuestion] = []
 
         for info in missing_info:
-            q_type, q_text = self.QUESTION_TYPES.get(
-                info, ("text", f"{info}について教えてください")
-            )
+            q_type, q_text = self.QUESTION_TYPES.get(info, ("text", f"{info}について教えてください"))
             questions.append(
                 ClarificationQuestion(
                     id=info,

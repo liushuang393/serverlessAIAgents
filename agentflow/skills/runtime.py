@@ -149,9 +149,7 @@ class SkillRuntime:
             )
 
         effective_timeout = timeout or self._timeout
-        should_use_sandbox = (
-            use_sandbox if use_sandbox is not None else bool(self._sandbox_provider)
-        )
+        should_use_sandbox = use_sandbox if use_sandbox is not None else bool(self._sandbox_provider)
 
         if should_use_sandbox and self._sandbox_provider:
             return await self._execute_in_sandbox(skill, script_path, input_data, effective_timeout)

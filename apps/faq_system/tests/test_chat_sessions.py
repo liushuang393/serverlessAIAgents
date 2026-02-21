@@ -63,9 +63,7 @@ async def client(mock_auth: None) -> Any:
         yield c
 
 
-async def _seed_chat_messages(
-    session_id: str, count: int, user_id: str = "user-session-test"
-) -> None:
+async def _seed_chat_messages(session_id: str, count: int, user_id: str = "user-session-test") -> None:
     """テスト用メッセージを DB に投入."""
     async with get_db_session() as session:
         for i in range(count):

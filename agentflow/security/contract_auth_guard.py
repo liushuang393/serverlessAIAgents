@@ -6,11 +6,14 @@ import json
 import os
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 from fastapi import HTTPException, Request, WebSocket
 from fastapi.responses import JSONResponse
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 _T = TypeVar("_T")

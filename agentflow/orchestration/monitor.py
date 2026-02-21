@@ -97,6 +97,7 @@ class MonitorEvent:
     def to_json(self) -> str:
         """JSON 文字列に変換."""
         import json
+
         return json.dumps(self.to_dict(), ensure_ascii=False)
 
 

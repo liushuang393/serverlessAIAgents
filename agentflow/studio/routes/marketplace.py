@@ -9,10 +9,10 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException
 
-from agentflow.studio.models import MarketplaceInstallRequest, MarketplaceSearchRequest
 
 if TYPE_CHECKING:
     from agentflow.marketplace.client import MarketplaceClient
+    from agentflow.studio.models import MarketplaceInstallRequest, MarketplaceSearchRequest
 
 
 def create_marketplace_router(marketplace: MarketplaceClient) -> APIRouter:

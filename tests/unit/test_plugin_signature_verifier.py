@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
@@ -13,6 +13,10 @@ from agentflow.governance.plugin_signature import (
     PluginSignatureVerifier,
     canonical_manifest_bytes,
 )
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _manifest_template(*, algorithm: str = "ed25519", key_id: str = "k1") -> dict[str, object]:

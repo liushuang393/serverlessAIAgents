@@ -228,10 +228,7 @@ class KeyNotesStore:
             self._logger.debug("重複Note検出、スキップ: %s", content[:50])
             # 既存のNoteを返す
             for note in self._notes.values():
-                if (
-                    self._calculate_similarity(content, note.content)
-                    >= self._config.dedup_threshold
-                ):
+                if self._calculate_similarity(content, note.content) >= self._config.dedup_threshold:
                     note.touch()
                     return note
 

@@ -425,9 +425,7 @@ def agent[T: type](
                     messages.append({"role": "system", "content": self.system_prompt})
 
                 # ユーザー入力
-                user_content = (
-                    input_data.get("question") or input_data.get("message") or str(input_data)
-                )
+                user_content = input_data.get("question") or input_data.get("message") or str(input_data)
                 messages.append({"role": "user", "content": user_content})
 
                 # LLM呼び出し

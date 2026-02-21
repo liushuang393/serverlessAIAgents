@@ -114,9 +114,7 @@ class AppCreateRequest(BaseModel):
         description="バインド済みプラグイン",
     )
     template: str | None = Field(default=None, description="Business 作成向けテンプレートID")
-    data_sources: list[str] = Field(
-        default_factory=list, description="Business 作成向けデータソース"
-    )
+    data_sources: list[str] = Field(default_factory=list, description="Business 作成向けデータソース")
     permission_scopes: list[str] = Field(
         default_factory=list,
         description="Business 作成向け権限スコープ",

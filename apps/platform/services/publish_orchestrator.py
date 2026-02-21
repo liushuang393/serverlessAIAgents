@@ -612,9 +612,7 @@ class PublishOrchestrator:
         if "entry" in validation_result:
             entry_data = validation_result["entry"]
             workflow_data["name"] = entry_data.get("name", workflow_data["name"])
-            workflow_data["description"] = entry_data.get(
-                "description", workflow_data["description"]
-            )
+            workflow_data["description"] = entry_data.get("description", workflow_data["description"])
 
         # コード生成を実行
         output_type = self._get_output_type(request.target)

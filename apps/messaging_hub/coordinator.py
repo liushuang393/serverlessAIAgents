@@ -219,9 +219,7 @@ class PersonalAssistantCoordinator:
                 description="指定トピックについて調査し、要点をまとめる",
                 required_skills=["web_search", "summarizer"],
                 parameters=[
-                    TaskParameter(
-                        name="topic", pattern=r"「(.+?)」について|(.+?)を調査", required=True
-                    ),
+                    TaskParameter(name="topic", pattern=r"「(.+?)」について|(.+?)を調査", required=True),
                     TaskParameter(name="depth", pattern=r"(簡潔|詳細|徹底)", default="簡潔"),
                 ],
                 tags=["research", "intelligence"],
@@ -273,9 +271,7 @@ class PersonalAssistantCoordinator:
                 required_skills=["summarizer", "report_builder"],
                 parameters=[
                     TaskParameter(name="title", pattern=r"「(.+?)」", required=True),
-                    TaskParameter(
-                        name="format", pattern=r"(markdown|pdf|pptx)", default="markdown"
-                    ),
+                    TaskParameter(name="format", pattern=r"(markdown|pdf|pptx)", default="markdown"),
                 ],
                 tags=["report", "document"],
             )

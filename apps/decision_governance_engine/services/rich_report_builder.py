@@ -361,9 +361,7 @@ class RichReportBuilder:
                 stage = rocket.get(stage_key, {})
                 if not stage:
                     continue
-                response.add_markdown(
-                    f"### {label}: {stage.get('stage_name', '')}\n\n{stage.get('objective', '')}"
-                )
+                response.add_markdown(f"### {label}: {stage.get('stage_name', '')}\n\n{stage.get('objective', '')}")
                 phases_data = stage.get("phases", [])
                 if phases_data:
                     table_data = [
@@ -378,9 +376,7 @@ class RichReportBuilder:
                     response.add_table(table_data, title=f"{stage.get('stage_name', '')} フェーズ")
                 gate = stage.get("gate_criteria", [])
                 if gate:
-                    response.add_alert(
-                        "ゲート基準: " + ", ".join(gate[:3]), AlertType.INFO, title="🚪 ゲート"
-                    )
+                    response.add_alert("ゲート基準: " + ", ".join(gate[:3]), AlertType.INFO, title="🚪 ゲート")
 
         # フェーズテーブル（v3.0互換）
         phases = shu.get("phases", [])
@@ -493,9 +489,7 @@ class RichReportBuilder:
         # v3.1: 将来スケール要件
         future = qi.get("future_scale_requirements", [])
         if future:
-            response.add_alert(
-                "将来要件: " + ", ".join(future[:3]), AlertType.INFO, title="🔮 将来スケール要件"
-            )
+            response.add_alert("将来要件: " + ", ".join(future[:3]), AlertType.INFO, title="🔮 将来スケール要件")
 
         # 技術スタックテーブル（v3.0互換）
         techs = qi.get("domain_technologies", [])

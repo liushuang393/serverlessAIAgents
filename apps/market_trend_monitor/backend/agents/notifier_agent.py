@@ -74,9 +74,7 @@ class NotifierAgent(AgentBlock):
         trends = [self._dict_to_trend(t) for t in trends_data]
 
         # 過去の通知履歴を検索（記憶システムから）
-        past_notifications = (
-            await self._recall_past_notifications(shared_context) if shared_context else []
-        )
+        past_notifications = await self._recall_past_notifications(shared_context) if shared_context else []
 
         # アラート検知（重複チェック）
         notifications = await self._detect_alerts(trends, alert_threshold, past_notifications)

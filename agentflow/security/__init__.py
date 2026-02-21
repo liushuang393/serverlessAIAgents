@@ -122,10 +122,10 @@ __all__ = [
     "APIKeyManager",
     # Auth Middleware
     "AuthMiddleware",
-    "ContractRegistry",
-    "ContractValidator",
     "ContractAuthGuard",
     "ContractAuthGuardConfig",
+    "ContractRegistry",
+    "ContractValidator",
     # AI Safety - Data Sanitizer
     "DataSanitizer",
     "DetectionConfig",

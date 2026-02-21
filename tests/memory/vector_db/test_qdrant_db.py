@@ -2,6 +2,7 @@
 
 import pytest
 
+
 # qdrant_client はオプション依存 - 未インストールの場合はテストをスキップ
 pytest.importorskip("qdrant_client")
 

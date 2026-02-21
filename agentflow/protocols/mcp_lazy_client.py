@@ -211,9 +211,7 @@ class LazyMCPClient(MCPClient):
         ]
 
         for entry in self._tool_index.values():
-            desc = (
-                entry.description[:80] + "..." if len(entry.description) > 80 else entry.description
-            )
+            desc = entry.description[:80] + "..." if len(entry.description) > 80 else entry.description
             lines.append(f"- **{entry.name}** ({entry.server}): {desc}")
 
         lines.extend(

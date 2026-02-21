@@ -234,9 +234,8 @@ class TestWebSocket:
         """WebSocket 接続をテスト（実際の WebSocket エンドポイントは /api/agents/{id}/ws）。"""
         # /ws/test-client は存在しないので 403/404 を期待
         # エージェント WebSocket は /api/agents/{agent_id}/ws
-        with pytest.raises(Exception):
-            with client.websocket_connect("/ws/test-client"):
-                pass
+        with pytest.raises(Exception), client.websocket_connect("/ws/test-client"):
+            pass
 
 
 class TestCORS:

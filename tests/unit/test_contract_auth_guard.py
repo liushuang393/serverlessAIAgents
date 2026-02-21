@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from fastapi import HTTPException
@@ -11,6 +11,10 @@ from starlette.requests import Request
 from starlette.websockets import WebSocket
 
 from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def _write_app_config(path: Path) -> None:
@@ -39,10 +43,7 @@ def _build_guard(config_path: Path) -> ContractAuthGuard:
 
 
 def _build_request(path: str, headers: dict[str, str] | None = None) -> Request:
-    raw_headers = [
-        (key.lower().encode("latin-1"), value.encode("latin-1"))
-        for key, value in (headers or {}).items()
-    ]
+    raw_headers = [(key.lower().encode("latin-1"), value.encode("latin-1")) for key, value in (headers or {}).items()]
     scope = {
         "type": "http",
         "method": "GET",
@@ -72,10 +73,7 @@ def _build_websocket(
     async def _send(message: dict[str, object]) -> None:
         sent.append(message)
 
-    raw_headers = [
-        (key.lower().encode("latin-1"), value.encode("latin-1"))
-        for key, value in (headers or {}).items()
-    ]
+    raw_headers = [(key.lower().encode("latin-1"), value.encode("latin-1")) for key, value in (headers or {}).items()]
     scope = {
         "type": "websocket",
         "path": path,
@@ -90,9 +88,7 @@ def _build_websocket(
     return WebSocket(scope=scope, receive=_receive, send=_send), sent
 
 
-def test_verify_api_key_returns_503_when_env_missing(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_verify_api_key_returns_503_when_env_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     config_path = tmp_path / "app_config.json"
     _write_app_config(config_path)
     monkeypatch.delenv("TEST_API_KEY", raising=False)

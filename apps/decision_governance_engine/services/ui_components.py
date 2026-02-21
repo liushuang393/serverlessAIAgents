@@ -82,21 +82,12 @@ class DecisionUIComponentBuilder:
         children.append(TextComponent(f"🎯 最初の一歩: {summary.first_step}", variant="highlight"))
 
         # v3.0: 戦略的禁止事項サマリー
-        if (
-            hasattr(summary, "strategic_prohibition_summary")
-            and summary.strategic_prohibition_summary
-        ):
-            children.append(
-                TextComponent(
-                    f"⛔ 戦略的禁止: {summary.strategic_prohibition_summary}", variant="warning"
-                )
-            )
+        if hasattr(summary, "strategic_prohibition_summary") and summary.strategic_prohibition_summary:
+            children.append(TextComponent(f"⛔ 戦略的禁止: {summary.strategic_prohibition_summary}", variant="warning"))
 
         # v3.0: 撤退基準サマリー
         if hasattr(summary, "exit_criteria_summary") and summary.exit_criteria_summary:
-            children.append(
-                TextComponent(f"🚪 撤退基準: {summary.exit_criteria_summary}", variant="warning")
-            )
+            children.append(TextComponent(f"🚪 撤退基準: {summary.exit_criteria_summary}", variant="warning"))
 
         # リスク一覧
         if summary.key_risks:
@@ -130,9 +121,7 @@ class DecisionUIComponentBuilder:
                 TextComponent(f"表面的問題: {ed.get('surface_problem', '')}"),
                 TextComponent(f"一段深い理由: {ed.get('underlying_why', '')}"),
                 TextComponent(f"根本制約: {ed.get('root_constraint', '')}"),
-                TextComponent(
-                    f"本質の一文: {ed.get('essence_statement', '')}", variant="highlight"
-                ),
+                TextComponent(f"本質の一文: {ed.get('essence_statement', '')}", variant="highlight"),
             ]
             children.append(CardComponent(title="🔍 本質導出プロセス", children=ed_children))
 
@@ -145,9 +134,7 @@ class DecisionUIComponentBuilder:
                 )
                 for a in alternatives
             ]
-            children.append(
-                ListComponent(items=alt_items, title="🔄 既存代替手段（なぜ使えないか）")
-            )
+            children.append(ListComponent(items=alt_items, title="🔄 既存代替手段（なぜ使えないか）"))
 
         # 不可変制約
         constraints = dao.get("immutable_constraints", [])
@@ -165,15 +152,11 @@ class DecisionUIComponentBuilder:
         gears = dao.get("causal_gears", [])
         if gears:
             gear_items = [
-                TextComponent(
-                    f"⚙️ {g.get('name', '')} (Leverage: {g.get('leverage', '')}): {g.get('description', '')}"
-                )
+                TextComponent(f"⚙️ {g.get('name', '')} (Leverage: {g.get('leverage', '')}): {g.get('description', '')}")
                 for g in gears
             ]
             bottleneck = dao.get("bottleneck_gear", "")
-            gear_items.append(
-                TextComponent(f"🎯 ボトルネック: Gear {bottleneck}", variant="highlight")
-            )
+            gear_items.append(TextComponent(f"🎯 ボトルネック: Gear {bottleneck}", variant="highlight"))
             children.append(ListComponent(items=gear_items, title="⚙️ 因果齿轮"))
 
         # 死穴
@@ -266,9 +249,7 @@ class DecisionUIComponentBuilder:
                 if p.get("responsible_role"):
                     text += f"\n  👤 責任者: {p['responsible_role']}"
                 prohibition_items.append(TextComponent(text, variant="warning"))
-            children.append(
-                ListComponent(items=prohibition_items, title="🚫 戦略的禁止事項（仕組み化）")
-            )
+            children.append(ListComponent(items=prohibition_items, title="🚫 戦略的禁止事項（仕組み化）"))
 
         # v3.1: 競争優位仮説
         comp_hyp = fa.get("competitive_hypothesis", {})
@@ -286,9 +267,7 @@ class DecisionUIComponentBuilder:
             diff_axis = fa.get("differentiation_axis", {})
             if diff_axis:
                 diff_children = [
-                    TextComponent(
-                        f"🎯 勝負する軸: {diff_axis.get('axis_name', '')}", variant="highlight"
-                    ),
+                    TextComponent(f"🎯 勝負する軸: {diff_axis.get('axis_name', '')}", variant="highlight"),
                     TextComponent(f"理由: {diff_axis.get('why_this_axis', '')}"),
                     TextComponent(f"❌ 勝負しない軸: {diff_axis.get('not_this_axis', '')}"),
                 ]
@@ -297,9 +276,7 @@ class DecisionUIComponentBuilder:
         # 既存解が使えない理由
         why_existing = fa.get("why_existing_fails", "")
         if why_existing:
-            children.append(
-                TextComponent(f"⚠️ 既存解が使えない理由: {why_existing}", variant="warning")
-            )
+            children.append(TextComponent(f"⚠️ 既存解が使えない理由: {why_existing}", variant="warning"))
 
         # 推奨パス（v3.1: 条件付き評価）
         for path in fa.get("recommended_paths", []):
@@ -308,33 +285,23 @@ class DecisionUIComponentBuilder:
                 strategy_type = strategy_type.value
             path_children = [
                 TextComponent(path.get("description", "")),
-                TextComponent(
-                    f"価値実現: {path.get('time_to_value', '')} | 可逆性: {path.get('reversibility', '')}"
-                ),
+                TextComponent(f"価値実現: {path.get('time_to_value', '')} | 可逆性: {path.get('reversibility', '')}"),
             ]
             # v3.1: 条件付き評価
             cond_eval = path.get("conditional_evaluation", {})
             if cond_eval:
                 sc = cond_eval.get("success_conditions", [])
                 if sc:
-                    path_children.append(
-                        TextComponent(f"成立条件: {', '.join(sc)}", variant="highlight")
-                    )
+                    path_children.append(TextComponent(f"成立条件: {', '.join(sc)}", variant="highlight"))
                 rf = cond_eval.get("risk_factors", [])
                 if rf:
-                    path_children.append(
-                        TextComponent(f"リスク要因: {', '.join(rf)}", variant="warning")
-                    )
+                    path_children.append(TextComponent(f"リスク要因: {', '.join(rf)}", variant="warning"))
                 fm = cond_eval.get("failure_modes", [])
                 if fm:
-                    path_children.append(
-                        TextComponent(f"失敗モード: {', '.join(fm)}", variant="warning")
-                    )
+                    path_children.append(TextComponent(f"失敗モード: {', '.join(fm)}", variant="warning"))
             risk_conc = path.get("risk_concentration", "")
             if risk_conc:
-                path_children.append(
-                    TextComponent(f"⚡ リスク集中点: {risk_conc}", variant="warning")
-                )
+                path_children.append(TextComponent(f"⚡ リスク集中点: {risk_conc}", variant="warning"))
             pros = path.get("pros", [])
             if pros:
                 pros_items = [TextComponent(f"✅ {p}") for p in pros]
@@ -414,9 +381,7 @@ class DecisionUIComponentBuilder:
                 )
             fallback = poc_dod.get("fallback_strategy", "")
             if fallback:
-                dod_children.append(
-                    TextComponent(f"🔄 フォールバック: {fallback}", variant="warning")
-                )
+                dod_children.append(TextComponent(f"🔄 フォールバック: {fallback}", variant="warning"))
             children.append(CardComponent(title="🎯 PoC完成定義（DoD）", children=dod_children))
 
         # v3.1: 2段ロケット
@@ -449,11 +414,7 @@ class DecisionUIComponentBuilder:
         cut_list = shu.get("cut_list", [])
         if cut_list:
             cut_items = [TextComponent(f"❌ {c}", variant="warning") for c in cut_list]
-            children.append(
-                ListComponent(
-                    items=cut_items, title="✂️ 切り捨てリスト（最初の30日間でやらないこと）"
-                )
-            )
+            children.append(ListComponent(items=cut_items, title="✂️ 切り捨てリスト（最初の30日間でやらないこと）"))
 
         # v3.0: 文脈特化行動
         context_actions = shu.get("context_specific_actions", [])
@@ -464,9 +425,7 @@ class DecisionUIComponentBuilder:
                 )
                 for a in context_actions
             ]
-            children.append(
-                ListComponent(items=context_items, title="🎯 文脈特化行動（この問題固有）")
-            )
+            children.append(ListComponent(items=context_items, title="🎯 文脈特化行動（この問題固有）"))
 
         # v3.0: 単一検証ポイント
         validation = shu.get("single_validation_point", {})
@@ -474,9 +433,7 @@ class DecisionUIComponentBuilder:
             validation_children = [
                 TextComponent(f"検証対象: {validation.get('validation_target', '')}"),
                 TextComponent(f"成功基準: {validation.get('success_criteria', '')}"),
-                TextComponent(
-                    f"失敗時行動: {validation.get('failure_action', '')}", variant="warning"
-                ),
+                TextComponent(f"失敗時行動: {validation.get('failure_action', '')}", variant="warning"),
             ]
             children.append(
                 CardComponent(
@@ -491,13 +448,9 @@ class DecisionUIComponentBuilder:
             exit_children = [
                 TextComponent(f"チェックポイント: {exit_criteria.get('checkpoint', '')}"),
                 TextComponent(f"撤退トリガー: {exit_criteria.get('exit_trigger', '')}"),
-                TextComponent(
-                    f"撤退時行動: {exit_criteria.get('exit_action', '')}", variant="warning"
-                ),
+                TextComponent(f"撤退時行動: {exit_criteria.get('exit_action', '')}", variant="warning"),
             ]
-            children.append(
-                CardComponent(title="🚪 撤退基準（どこで止めるか）", children=exit_children)
-            )
+            children.append(CardComponent(title="🚪 撤退基準（どこで止めるか）", children=exit_children))
 
         # フェーズ
         phases_children = []
@@ -527,15 +480,9 @@ class DecisionUIComponentBuilder:
             avoid_list = focus.get("avoid_list", [])
             if avoid_list:
                 avoid_items = [TextComponent(f"❌ {a}") for a in avoid_list]
-                rhythm_children.append(
-                    ListComponent(items=avoid_items, title="この期間やらないこと")
-                )
-            rhythm_children.append(
-                TextComponent(f"チェックポイント: {rhythm.get('checkpoint_date', '')}")
-            )
-            rhythm_children.append(
-                TextComponent(f"次の判断: {rhythm.get('next_decision_point', '')}")
-            )
+                rhythm_children.append(ListComponent(items=avoid_items, title="この期間やらないこと"))
+            rhythm_children.append(TextComponent(f"チェックポイント: {rhythm.get('checkpoint_date', '')}"))
+            rhythm_children.append(TextComponent(f"次の判断: {rhythm.get('next_decision_point', '')}"))
             children.append(CardComponent(title="⏱️ 30天行動節奏", children=rhythm_children))
 
         return CardComponent(title="📋 術 - 実行計画", children=children)
@@ -558,9 +505,7 @@ class DecisionUIComponentBuilder:
                 arch_children.append(TextComponent(f"📊 データフロー: {flow}"))
             logging_info = poc_arch.get("minimal_logging", {})
             if logging_info:
-                arch_children.append(
-                    TextComponent(f"📝 ID戦略: {logging_info.get('correlation_id_strategy', '')}")
-                )
+                arch_children.append(TextComponent(f"📝 ID戦略: {logging_info.get('correlation_id_strategy', '')}"))
             deferred = poc_arch.get("deferred_components", [])
             if deferred:
                 arch_children.append(TextComponent(f"⏳ 後回し: {', '.join(deferred)}"))
@@ -575,9 +520,7 @@ class DecisionUIComponentBuilder:
                 )
                 for s in expansion
             ]
-            children.append(
-                ListComponent(items=exp_items, title="📈 拡張アーキテクチャ（導入条件付き）")
-            )
+            children.append(ListComponent(items=exp_items, title="📈 拡張アーキテクチャ（導入条件付き）"))
 
         # v3.1: 実装手順
         steps = qi.get("implementation_steps", [])
@@ -585,11 +528,7 @@ class DecisionUIComponentBuilder:
             step_items: list[A2UIComponent] = []
             for s in steps:
                 tasks = ", ".join(s.get("tasks", []))
-                step_items.append(
-                    TextComponent(
-                        f"Step {s.get('step_number', '')}: {s.get('objective', '')} → {tasks}"
-                    )
-                )
+                step_items.append(TextComponent(f"Step {s.get('step_number', '')}: {s.get('objective', '')} → {tasks}"))
                 for p in s.get("common_pitfalls", []):
                     step_items.append(TextComponent(f"  ⚠️ {p}", variant="warning"))
             children.append(ListComponent(items=step_items, title="📝 実装手順"))
@@ -598,9 +537,7 @@ class DecisionUIComponentBuilder:
         future = qi.get("future_scale_requirements", [])
         if future:
             future_items = [TextComponent(f"🔮 {r}") for r in future]
-            children.append(
-                ListComponent(items=future_items, title="🔮 将来スケール要件（PoC範囲外）")
-            )
+            children.append(ListComponent(items=future_items, title="🔮 将来スケール要件（PoC範囲外）"))
 
         # v3.0: ドメイン固有技術
         domain_techs = qi.get("domain_technologies", [])

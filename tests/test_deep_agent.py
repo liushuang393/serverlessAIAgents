@@ -236,9 +236,7 @@ class TestSelfEvolver:
         review = QualityReview(is_acceptable=True, score=90.0)
         await evolver.learn_success_pattern(todos, {}, analysis, review)
         # 類似パターンを検索
-        similar_analysis = CognitiveAnalysis(
-            intent="市場分析", domains=["market"], complexity="medium"
-        )
+        similar_analysis = CognitiveAnalysis(intent="市場分析", domains=["market"], complexity="medium")
         pattern = await evolver.find_similar_pattern(similar_analysis)
         assert pattern is not None
 

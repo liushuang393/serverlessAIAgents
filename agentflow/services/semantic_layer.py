@@ -832,9 +832,7 @@ class SemanticLayerService:
 
         # デフォルト: 過去30日
         return {
-            "start": (now - timedelta(days=self._config.default_time_range_days)).strftime(
-                "%Y-%m-%d"
-            ),
+            "start": (now - timedelta(days=self._config.default_time_range_days)).strftime("%Y-%m-%d"),
             "end": now.strftime("%Y-%m-%d"),
         }
 

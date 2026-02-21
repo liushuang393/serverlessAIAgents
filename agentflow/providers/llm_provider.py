@@ -138,9 +138,7 @@ class LLMProvider:
             timeout=timeout,  # 環境変数から取得したtimeoutを使用
         )
         self._client = LLMClient(llm_config)
-        logger.info(
-            f"LLMProvider initialized: provider={provider}, model={model}, timeout={timeout}s"
-        )
+        logger.info(f"LLMProvider initialized: provider={provider}, model={model}, timeout={timeout}s")
 
     def _require_client(self) -> LLMClient:
         """初期化済みクライアントを取得."""

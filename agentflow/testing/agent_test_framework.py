@@ -186,9 +186,7 @@ class AgentTestCase(unittest.TestCase):
         """
         assert key in response, f"Response should contain '{key}'"
         if substring:
-            assert substring in str(response[key]), (
-                f"Response['{key}'] should contain '{substring}'"
-            )
+            assert substring in str(response[key]), f"Response['{key}'] should contain '{substring}'"
 
     def assertResponseSuccess(self, response: dict[str, Any]) -> None:
         """レスポンスが成功を示すことを検証.

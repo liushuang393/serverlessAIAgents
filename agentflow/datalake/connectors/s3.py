@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 """S3Connector - AWS S3 / MinIO 互換コネクタ.
 
 S3互換ストレージへのアクセスを提供。
@@ -20,7 +21,6 @@ AWS S3、MinIO、その他S3互換ストレージをサポート。
 import logging
 import mimetypes
 import os
-from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
 
@@ -31,6 +31,8 @@ from agentflow.datalake.core import DataItem, ReadResult
 
 
 if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
     from types_aiobotocore_s3 import S3Client
 
 logger = logging.getLogger(__name__)
@@ -99,7 +101,7 @@ class S3Connector(DataConnector):
         key = parts[1] if len(parts) > 1 else ""
         return bucket, key
 
-    async def _get_client(self) -> "S3Client":
+    async def _get_client(self) -> S3Client:
         """S3クライアントを取得.
 
         Returns:

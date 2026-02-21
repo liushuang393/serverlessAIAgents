@@ -1,8 +1,12 @@
 """Pytest configuration and shared fixtures."""
 
 import os
+import pathlib
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
+
 
 # Phase 系は PowerShell 依存のスタンドアロンスクリプトのため収集から除外（Linux/WSL では powershell が無い）
 # Windows では python tests/test_phase1_coverage.py のように直接実行可
@@ -41,6 +45,10 @@ def _redirect_home_to_tmp(tmp_path: Path) -> None:  # type: ignore[misc]
     これにより ~/.agentflow など、ホームディレクトリへの書き込みを
     サンドボックスや CI 環境でも安全に実行できる。
     """
+    if os.getenv("PYTEST_REDIRECT_HOME", "1") != "1":
+        yield
+        return
+
     fake_home = tmp_path / "home"
     fake_home.mkdir(parents=True, exist_ok=True)
     with patch.object(pathlib.Path, "home", staticmethod(lambda: fake_home)):

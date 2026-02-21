@@ -135,7 +135,6 @@ def get_sandbox(
 
 __all__ = [
     "ActionResult",
-    "MockSandbox",
     "ActionTemplate",
     "ActionType",
     # CodeAct執行器
@@ -146,6 +145,7 @@ __all__ = [
     "FileInfo",
     # ライフサイクル管理（Daytonaスタイル）
     "ManagedSandbox",
+    "MockSandbox",
     # テスト・開発用モックプロバイダ
     "MockSandbox",
     "ResourceLimits",
@@ -164,7 +164,7 @@ __all__ = [
     # プロバイダ取得・制御
     "get_sandbox",
     "get_sandbox_manager",
-    "reset_sandbox",
     "get_workspace_manager",
+    "reset_sandbox",
     "reset_sandbox",
 ]

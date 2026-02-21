@@ -350,9 +350,7 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
         # 詳細ログ: LLM生出力を記録（デバッグ用）
-        self._logger.debug(
-            f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}"
-        )
+        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
 
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
@@ -590,9 +588,7 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         # existing_alternatives のリスト長を検証・正規化（max 3）
         existing_alts = data.get("existing_alternatives", [])
         if isinstance(existing_alts, list) and len(existing_alts) > 3:
-            self._logger.warning(
-                f"existing_alternatives has {len(existing_alts)} items (max 3), truncating"
-            )
+            self._logger.warning(f"existing_alternatives has {len(existing_alts)} items (max 3), truncating")
             data["existing_alternatives"] = existing_alts[:3]
 
         # hidden_assumptions のリスト長を検証・正規化（max 3）
@@ -621,9 +617,7 @@ class DaoAgent(ResilientAgent[DaoInput, DaoOutput]):
         # v3.1: audit_evidence_checklist のリスト長を検証・正規化（max 8）
         ae = data.get("audit_evidence_checklist", [])
         if isinstance(ae, list) and len(ae) > 8:
-            self._logger.warning(
-                f"audit_evidence_checklist has {len(ae)} items (max 8), truncating"
-            )
+            self._logger.warning(f"audit_evidence_checklist has {len(ae)} items (max 8), truncating")
             data["audit_evidence_checklist"] = ae[:8]
 
         # v3.1: self_check の検証（必須）

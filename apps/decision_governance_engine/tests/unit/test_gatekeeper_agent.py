@@ -74,9 +74,7 @@ class TestGatekeeperAgentPatterns:
     @pytest.mark.asyncio
     async def test_accept_trade_off_question_via_process(self, gatekeeper_agent: GatekeeperAgent) -> None:
         """Test detection of trade-off questions."""
-        input_data = GatekeeperInput(
-            raw_question="新規事業でAとBのどちらを選ぶべきか？予算制約あり"
-        )
+        input_data = GatekeeperInput(raw_question="新規事業でAとBのどちらを選ぶべきか？予算制約あり")
         result = await gatekeeper_agent.process(input_data)
         assert result.is_acceptable is True
         assert result.category == QuestionCategory.TRADE_OFF_CHOICE
@@ -92,9 +90,7 @@ class TestGatekeeperAgentPatterns:
     @pytest.mark.asyncio
     async def test_accept_timing_question_via_process(self, gatekeeper_agent: GatekeeperAgent) -> None:
         """Test detection of timing questions."""
-        input_data = GatekeeperInput(
-            raw_question="新規事業にいつ着手すべきか？競合の動向を考慮したい"
-        )
+        input_data = GatekeeperInput(raw_question="新規事業にいつ着手すべきか？競合の動向を考慮したい")
         result = await gatekeeper_agent.process(input_data)
         assert result.is_acceptable is True
         assert result.category == QuestionCategory.TIMING_JUDGMENT

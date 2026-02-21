@@ -678,9 +678,7 @@ async def api_export(format: str = "json") -> JSONResponse:
 
         # エクスポート
         exporter = ConversationExportSkill()
-        export_format = (
-            ExportFormat(format) if format in ["json", "csv", "markdown"] else ExportFormat.JSON
-        )
+        export_format = ExportFormat(format) if format in ["json", "csv", "markdown"] else ExportFormat.JSON
         result = await exporter.export(messages, format=export_format)
 
         return JSONResponse({"data": result})

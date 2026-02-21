@@ -8,7 +8,11 @@ from __future__ import annotations
 
 import ast
 from dataclasses import dataclass, field
-from pathlib import Path
+from typing import TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 _PROTOCOLS = ("sse", "ws", "a2a", "mcp")
@@ -98,7 +102,7 @@ class _ProtocolSurfaceVisitor(ast.NodeVisitor):
                 self._record("mcp", node, f"import {mod}")
             if lowered.endswith("a2a_card"):
                 self._record("a2a", node, f"import {mod}")
-            if lowered.endswith("mcp_client") or lowered.endswith("mcp_tool"):
+            if lowered.endswith(("mcp_client", "mcp_tool")):
                 self._record("mcp", node, f"import {mod}")
         self.generic_visit(node)
 
@@ -199,13 +203,9 @@ def inspect_protocol_surface(app_dir: Path) -> ProtocolSurfaceReport:
                     line=exc.lineno or 1,
                     message=exc.msg,
                     suggestion=(
-                        "該当ファイルの構文エラーを修正し、"
-                        "AST（Python構文木）で再監査できる状態にしてください"
+                        "該当ファイルの構文エラーを修正し、AST（Python構文木）で再監査できる状態にしてください"
                     ),
-                    impact=(
-                        "このファイルは SSE/WS/A2A/MCP 実装証拠を抽出できず、"
-                        "契約準拠判定が不確実になります"
-                    ),
+                    impact=("このファイルは SSE/WS/A2A/MCP 実装証拠を抽出できず、契約準拠判定が不確実になります"),
                 ),
             )
             continue

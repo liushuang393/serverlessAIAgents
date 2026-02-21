@@ -144,7 +144,6 @@ async def auth_middleware(request: Request, call_next: Any) -> Any:
     return await _auth_guard.http_middleware(request, call_next)
 
 
-
 @app.post("/api/migration/start")
 async def start_migration(request: MigrationRequest, background_tasks: BackgroundTasks):
     task_id = str(uuid.uuid4())
@@ -196,7 +195,6 @@ async def get_approvals(task_id: str):
     # Check pending approvals
     pending = engine._approval_flow.get_pending_requests()
     return [{"id": r.id, "action": r.action, "reason": r.reason, "context": r.context} for r in pending]
-
 
 
 @app.post("/api/approvals/{task_id}/{request_id}")

@@ -20,6 +20,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -27,9 +28,12 @@ def run_mypy() -> str:
     """mypy を --no-pretty で実行し、1行1エラーの標準出力を返す。"""
     r = subprocess.run(
         [
-            "mypy", "agentflow",
-            "--strict", "--ignore-missing-imports",
-            "--no-error-summary", "--no-pretty",
+            "mypy",
+            "agentflow",
+            "--strict",
+            "--ignore-missing-imports",
+            "--no-error-summary",
+            "--no-pretty",
         ],
         capture_output=True,
         text=True,
@@ -77,13 +81,8 @@ def remove_unused_ignore(file_path: Path, line_no: int) -> bool:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="unused type: ignore コメントを安全に自動削除する。"
-    )
-    parser.add_argument(
-        "--dry-run", action="store_true",
-        help="変更を加えず、削除対象だけ表示する。"
-    )
+    parser = argparse.ArgumentParser(description="unused type: ignore コメントを安全に自動削除する。")
+    parser.add_argument("--dry-run", action="store_true", help="変更を加えず、削除対象だけ表示する。")
     args = parser.parse_args()
 
     print("mypy を実行して unused type: ignore を検出中...")
@@ -104,12 +103,11 @@ def main() -> int:
         if args.dry_run:
             print(f"  [dry-run] {rel_path}:{line_no}")
             changed += 1
+        elif remove_unused_ignore(path, line_no):
+            print(f"  ✓ 削除: {rel_path}:{line_no}")
+            changed += 1
         else:
-            if remove_unused_ignore(path, line_no):
-                print(f"  ✓ 削除: {rel_path}:{line_no}")
-                changed += 1
-            else:
-                print(f"  [SKIP] {rel_path}:{line_no} - コメントが見つかりません")
+            print(f"  [SKIP] {rel_path}:{line_no} - コメントが見つかりません")
 
     if changed:
         if args.dry_run:

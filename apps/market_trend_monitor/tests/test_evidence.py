@@ -427,9 +427,7 @@ class TestEvidenceService:
         assert guard["status"] == "ready"
         assert guard["blockers"] == []
         assert guard["summary"]["citation_ready_ratio"] >= 0.7
-        claim_diag = next(
-            item for item in guard["claim_diagnostics"] if item["claim_id"] == claim.id
-        )
+        claim_diag = next(item for item in guard["claim_diagnostics"] if item["claim_id"] == claim.id)
         assert claim_diag["status"] == "supported"
 
     async def test_get_grounding_guard_needs_more_evidence(self, evidence_service: EvidenceService) -> None:

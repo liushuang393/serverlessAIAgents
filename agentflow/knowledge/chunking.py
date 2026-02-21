@@ -176,11 +176,7 @@ class RecursiveChunker(BaseChunker):
         current_chunk = ""
 
         for split in splits:
-            potential = (
-                current_chunk
-                + (separator if current_chunk and self._config.keep_separator else "")
-                + split
-            )
+            potential = current_chunk + (separator if current_chunk and self._config.keep_separator else "") + split
 
             if len(potential) <= self._config.chunk_size:
                 current_chunk = potential

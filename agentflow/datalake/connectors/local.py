@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 """LocalFileConnector - ローカルファイルシステムコネクタ.
 
 ローカルファイルシステムへのアクセスを提供。
@@ -13,14 +14,18 @@ from __future__ import annotations
 import fnmatch
 import logging
 import mimetypes
-from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from pydantic import Field
 
 from agentflow.datalake.connector import ConnectorConfig, DataConnector
 from agentflow.datalake.core import DataItem, ReadResult
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
 
 
 logger = logging.getLogger(__name__)

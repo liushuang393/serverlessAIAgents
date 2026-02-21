@@ -420,9 +420,7 @@ async def recheck_finding(request: FindingRecheckRequest) -> FindingRecheckRespo
 
     report = await _get_report_from_db(request.report_id)
     if report is None:
-        raise HTTPException(
-            status_code=404, detail=f"レポート {request.report_id} が見つかりません"
-        )
+        raise HTTPException(status_code=404, detail=f"レポート {request.report_id} が見つかりません")
 
     try:
         review = _resolve_report_review(report)
@@ -472,9 +470,7 @@ async def recheck_finding(request: FindingRecheckRequest) -> FindingRecheckRespo
         overall_verdict=verdict,
         findings=remaining_findings,
         confidence_score=confidence,
-        final_warnings=[
-            f.description for f in remaining_findings if f.severity != FindingSeverity.INFO
-        ],
+        final_warnings=[f.description for f in remaining_findings if f.severity != FindingSeverity.INFO],
     )
 
     if hasattr(report, "review"):
@@ -523,9 +519,7 @@ async def log_finding_note(request: FindingNoteRequest) -> FindingNoteResponse:
     """重要指摘に対する任意メモを保存."""
     report = await _get_report_from_db(request.report_id)
     if report is None:
-        raise HTTPException(
-            status_code=404, detail=f"レポート {request.report_id} が見つかりません"
-        )
+        raise HTTPException(status_code=404, detail=f"レポート {request.report_id} が見つかりません")
 
     try:
         review = _resolve_report_review(report)

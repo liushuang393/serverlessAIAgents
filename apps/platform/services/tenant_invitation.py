@@ -263,9 +263,7 @@ class TenantInvitationService:
             )
 
         if supplied_token:
-            is_valid_token = record.token_hash is not None and self._is_hash_match(
-                record.token_hash, supplied_token
-            )
+            is_valid_token = record.token_hash is not None and self._is_hash_match(record.token_hash, supplied_token)
             if not is_valid_token:
                 msg = "ワンタイムリンクが無効です"
                 raise InviteServiceError(
@@ -370,9 +368,7 @@ class TenantInvitationService:
         host = os.getenv("PLATFORM_INVITE_SMTP_HOST", "").strip()
         from_email = os.getenv("PLATFORM_INVITE_FROM_EMAIL", "").strip()
         if not host or not from_email:
-            self._logger.warning(
-                "SMTP 設定が不足しているため in-memory transport へフォールバックします"
-            )
+            self._logger.warning("SMTP 設定が不足しているため in-memory transport へフォールバックします")
             return InMemoryEmailTransport()
 
         port = int(os.getenv("PLATFORM_INVITE_SMTP_PORT", "587"))
@@ -404,9 +400,7 @@ class TenantInvitationService:
         )
 
     def _build_notification_mail_body(self, record: InvitationRecord) -> str:
-        inviter_line = (
-            f"- 招待者: {record.inviter_display_name}\n" if record.inviter_display_name else ""
-        )
+        inviter_line = f"- 招待者: {record.inviter_display_name}\n" if record.inviter_display_name else ""
         return (
             "AgentFlow への招待を受け付けました。\n"
             "このメールにはログイン URL / OTP を含めていません。\n"
@@ -440,9 +434,7 @@ class TenantInvitationService:
         query = dict(parse_qsl(parsed.query, keep_blank_values=True))
         query["token"] = token
         rebuilt_query = urlencode(query, doseq=True)
-        return urlunsplit(
-            (parsed.scheme, parsed.netloc, parsed.path, rebuilt_query, parsed.fragment)
-        )
+        return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, rebuilt_query, parsed.fragment))
 
     def _hash_secret(self, raw_value: str) -> str:
         return hashlib.sha256(f"{self._token_pepper}:{raw_value}".encode()).hexdigest()
@@ -454,9 +446,7 @@ class TenantInvitationService:
         if "@" not in email:
             return "***"
         local, domain = email.split("@", 1)
-        visible_prefix_len = (
-            1 if len(local) <= _MASK_LOCAL_SHORT_THRESHOLD else _MASK_LOCAL_SHORT_THRESHOLD
-        )
+        visible_prefix_len = 1 if len(local) <= _MASK_LOCAL_SHORT_THRESHOLD else _MASK_LOCAL_SHORT_THRESHOLD
         masked_local = f"{local[:visible_prefix_len]}***"
         return f"{masked_local}@{domain}"
 

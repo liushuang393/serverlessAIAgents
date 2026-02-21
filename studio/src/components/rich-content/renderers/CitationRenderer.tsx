@@ -4,8 +4,8 @@
  * @description 引用元情報をレンダリング
  */
 
-import React from "react";
-import type { RichComponent } from "../types";
+import React from 'react';
+import type { RichComponent } from '../types';
 
 interface CitationRendererProps {
   /** RichComponent */
@@ -26,9 +26,7 @@ interface Source {
   date?: string;
 }
 
-export function CitationRenderer({
-  component,
-}: CitationRendererProps): React.JSX.Element {
+export function CitationRenderer({ component }: CitationRendererProps): React.JSX.Element {
   const rawSources = component.props.sources;
   const sources: Source[] = Array.isArray(rawSources) ? rawSources : [];
 

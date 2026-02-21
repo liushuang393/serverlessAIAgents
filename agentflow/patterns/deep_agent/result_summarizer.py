@@ -173,9 +173,7 @@ class ResultSummarizer:
         Returns:
             要約された結果
         """
-        include_meta = (
-            include_metadata if include_metadata is not None else self._config.include_metadata
-        )
+        include_meta = include_metadata if include_metadata is not None else self._config.include_metadata
 
         filtered_results: dict[str, Any] = {}
         success_count = 0

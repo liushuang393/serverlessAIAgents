@@ -8,6 +8,7 @@ from typing import Any
 
 from agentflow.memory.embeddings.embedding_interface import EmbeddingEngine
 
+
 # オプション依存: テストでのモック（patch）が効くようにモジュールレベルで import
 try:
     from openai import AsyncOpenAI  # type: ignore[import-untyped]

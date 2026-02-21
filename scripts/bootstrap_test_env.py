@@ -117,9 +117,7 @@ def bootstrap_env(
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description=(
-            "Bootstrap test env vars into root/app env files without touching committed examples."
-        ),
+        description=("Bootstrap test env vars into root/app env files without touching committed examples."),
     )
     parser.add_argument(
         "--env-file",
@@ -144,10 +142,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
 def _iter_app_env_targets(repo_root: Path) -> list[Path]:
     """Return app-local `.env` targets for apps that expose `.env.example`."""
-    return [
-        example_path.with_name(".env")
-        for example_path in sorted(repo_root.glob("apps/*/.env.example"))
-    ]
+    return [example_path.with_name(".env") for example_path in sorted(repo_root.glob("apps/*/.env.example"))]
 
 
 def _dedupe_paths(paths: list[Path]) -> list[Path]:

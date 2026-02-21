@@ -459,9 +459,7 @@ class DeepAgentCoordinator:
 
         while True:
             # 実行可能なタスクを取得
-            ready_todos = [
-                t for t in todos if t.is_ready(completed_ids) and t.status == TaskStatus.PENDING
-            ]
+            ready_todos = [t for t in todos if t.is_ready(completed_ids) and t.status == TaskStatus.PENDING]
             if not ready_todos:
                 break
 

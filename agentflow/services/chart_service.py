@@ -593,9 +593,7 @@ class ChartService(ServiceBase[dict[str, Any]]):
             return
 
         if not drill_field:
-            yield self._emit_error(
-                execution_id, "no_drill_field", "ドリルダウンフィールドを指定してください"
-            )
+            yield self._emit_error(execution_id, "no_drill_field", "ドリルダウンフィールドを指定してください")
             return
 
         parent_filters = parent_filters or {}
@@ -685,12 +683,8 @@ class ChartService(ServiceBase[dict[str, Any]]):
         has_time_series = characteristics.get("has_time_series", False)
         has_categorical = characteristics.get("has_categorical", False)
 
-        numeric_cols = [
-            c for c, info in characteristics["columns"].items() if info.get("type") == "numeric"
-        ]
-        text_cols = [
-            c for c, info in characteristics["columns"].items() if info.get("type") == "text"
-        ]
+        numeric_cols = [c for c, info in characteristics["columns"].items() if info.get("type") == "numeric"]
+        text_cols = [c for c, info in characteristics["columns"].items() if info.get("type") == "text"]
         [c for c, info in characteristics["columns"].items() if info.get("type") == "date"]
 
         alternatives: list[tuple[ChartType, str, float]] = []

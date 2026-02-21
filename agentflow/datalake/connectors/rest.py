@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 """RestAPIConnector - REST/GraphQL APIコネクタ.
 
 REST APIおよびGraphQL APIへのアクセスを提供。
@@ -10,18 +11,22 @@ REST APIおよびGraphQL APIへのアクセスを提供。
     >>> data = await connector.query("https://api.example.com/users", "name=John")
 """
 
-import builtins
 import contextlib
 import json
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import parse_qs
 
 from pydantic import Field
 
-from agentflow.datalake.auth import AuthProvider
 from agentflow.datalake.connector import ConnectorConfig, DataConnector
 from agentflow.datalake.core import DataItem, ReadResult
+
+
+if TYPE_CHECKING:
+    import builtins
+
+    from agentflow.datalake.auth import AuthProvider
 
 
 logger = logging.getLogger(__name__)

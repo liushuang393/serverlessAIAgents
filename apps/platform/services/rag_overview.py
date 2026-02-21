@@ -336,18 +336,10 @@ class RAGOverviewService:
         rag_contract = app_config.contracts.rag
         services = app_config.services if isinstance(app_config.services, dict) else {}
         rag_service = services.get("rag", {}) if isinstance(services.get("rag"), dict) else {}
-        vector_service = (
-            services.get("vector_db", {}) if isinstance(services.get("vector_db"), dict) else {}
-        )
+        vector_service = services.get("vector_db", {}) if isinstance(services.get("vector_db"), dict) else {}
 
-        chunking = (
-            rag_service.get("chunking", {}) if isinstance(rag_service.get("chunking"), dict) else {}
-        )
-        retrieval = (
-            rag_service.get("retrieval", {})
-            if isinstance(rag_service.get("retrieval"), dict)
-            else {}
-        )
+        chunking = rag_service.get("chunking", {}) if isinstance(rag_service.get("chunking"), dict) else {}
+        retrieval = rag_service.get("retrieval", {}) if isinstance(rag_service.get("retrieval"), dict) else {}
         service_collections = rag_service.get("collections", [])
         collection = (
             rag_contract.collections[0]

@@ -26,7 +26,6 @@ class ExternalIdentity(BaseModel):
     raw_info: dict[str, Any] | None = None
 
 
-
 class OAuth2Provider(ABC):
     """OAuth2 プロバイダー基底クラス."""
 

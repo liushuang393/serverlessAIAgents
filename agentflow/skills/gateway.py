@@ -94,13 +94,9 @@ class SkillResult:
 class GatewayConfig(BaseModel):
     """ゲートウェイ設定."""
 
-    execution_mode: str = Field(
-        default="isolated", description="実行モード (isolated/real_machine)"
-    )
+    execution_mode: str = Field(default="isolated", description="実行モード (isolated/real_machine)")
     workspace_path: Path = Field(default_factory=Path.cwd, description="ワークスペースパス")
-    require_confirmation_for_high_risk: bool = Field(
-        default=True, description="高リスク操作時の確認要求"
-    )
+    require_confirmation_for_high_risk: bool = Field(default=True, description="高リスク操作時の確認要求")
     audit_all_calls: bool = Field(default=True, description="全呼び出しを監査")
     max_calls_per_minute: int = Field(default=60, description="1分あたりの最大呼び出し数")
 
@@ -121,9 +117,7 @@ class SkillNotFoundError(SkillGatewayError):
     """スキルが見つからない."""
 
     def __init__(self, skill_name: str) -> None:
-        super().__init__(
-            f"スキル '{skill_name}' は登録されていません", skill_name, "skill_not_found"
-        )
+        super().__init__(f"スキル '{skill_name}' は登録されていません", skill_name, "skill_not_found")
 
 
 class SkillPermissionError(SkillGatewayError):

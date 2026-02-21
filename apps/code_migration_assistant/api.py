@@ -39,7 +39,6 @@ from agentflow.protocols.a2ui.rich_content import (
 from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 
 
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

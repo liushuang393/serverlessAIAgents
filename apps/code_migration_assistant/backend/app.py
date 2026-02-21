@@ -271,7 +271,6 @@ async def get_approvals(task_id: str):
     return [{"id": r.id, "action": r.action, "reason": r.reason, "context": r.context} for r in pending]
 
 
-
 @app.post("/api/approvals/{task_id}/{request_id}")
 async def submit_approval(task_id: str, request_id: str, approval: ApprovalRequest):
     if task_id not in active_tasks:
@@ -302,9 +301,7 @@ async def get_artifact(task_id: str, stage: str, filename: str):
 
 
 # Serve UI
-app.mount(
-    "/", StaticFiles(directory="apps/code_migration_assistant/frontend", html=True), name="ui"
-)
+app.mount("/", StaticFiles(directory="apps/code_migration_assistant/frontend", html=True), name="ui")
 
 if __name__ == "__main__":
     import json

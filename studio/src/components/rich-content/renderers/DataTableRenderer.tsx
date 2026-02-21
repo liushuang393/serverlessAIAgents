@@ -4,8 +4,8 @@
  * @description テーブルデータをレンダリング（ソート・ページネーション付き）
  */
 
-import React, { useState, useMemo } from "react";
-import type { RichComponent } from "../types";
+import React, { useState, useMemo } from 'react';
+import type { RichComponent } from '../types';
 
 interface DataTableRendererProps {
   /** RichComponent */
@@ -26,20 +26,15 @@ interface TableColumn {
   width?: number;
 }
 
-export function DataTableRenderer({
-  component,
-}: DataTableRendererProps): React.JSX.Element {
+export function DataTableRenderer({ component }: DataTableRendererProps): React.JSX.Element {
   const rawColumns = component.props.columns;
   const rawData = component.props.data;
   const columns: TableColumn[] = Array.isArray(rawColumns) ? rawColumns : [];
   const data: Record<string, unknown>[] = Array.isArray(rawData) ? rawData : [];
-  const pageSize =
-    typeof component.props.pageSize === "number"
-      ? component.props.pageSize
-      : 10;
+  const pageSize = typeof component.props.pageSize === 'number' ? component.props.pageSize : 10;
 
   const [sortKey, setSortKey] = useState<string | null>(null);
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(0);
 
   // ソート処理
@@ -54,10 +49,10 @@ export function DataTableRenderer({
         return 0;
       }
       // 型安全な比較
-      const aStr = String(aVal ?? "");
-      const bStr = String(bVal ?? "");
+      const aStr = String(aVal ?? '');
+      const bStr = String(bVal ?? '');
       const result = aStr < bStr ? -1 : 1;
-      return sortDir === "asc" ? result : -result;
+      return sortDir === 'asc' ? result : -result;
     });
   }, [data, sortKey, sortDir]);
 
@@ -71,10 +66,10 @@ export function DataTableRenderer({
 
   const handleSort = (key: string) => {
     if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortKey(key);
-      setSortDir("asc");
+      setSortDir('asc');
     }
   };
 
@@ -106,16 +101,10 @@ export function DataTableRenderer({
         </thead>
         <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
           {pagedData.map((row, rowIdx) => (
-            <tr
-              key={rowIdx}
-              className="hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
+            <tr key={rowIdx} className="hover:bg-gray-50 dark:hover:bg-gray-800">
               {columns.map((col) => (
-                <td
-                  key={col.key}
-                  className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100"
-                >
-                  {String(row[col.key] ?? "")}
+                <td key={col.key} className="px-4 py-3 text-sm text-gray-900 dark:text-gray-100">
+                  {String(row[col.key] ?? '')}
                 </td>
               ))}
             </tr>

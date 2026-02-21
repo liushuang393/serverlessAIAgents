@@ -376,9 +376,7 @@ class ConfigManager(IConfigManager):
 
                 if field.type == "select" and field.options:
                     if value not in field.options:
-                        errors[field.name] = (
-                            f"{field.label} must be one of: {', '.join(field.options)}"
-                        )
+                        errors[field.name] = f"{field.label} must be one of: {', '.join(field.options)}"
 
         return ValidationResult(
             valid=len(errors) == 0,

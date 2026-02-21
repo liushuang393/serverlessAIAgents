@@ -77,10 +77,7 @@ class TestFlowRun:
         # ノード結果が含まれる（agent_1 等）
         assert isinstance(result, dict)
         node_results = [v for v in result.values() if isinstance(v, dict)]
-        assert any(
-            r.get("processed") is True and r.get("input") == "hello"
-            for r in node_results
-        )
+        assert any(r.get("processed") is True and r.get("input") == "hello" for r in node_results)
 
     @pytest.mark.asyncio
     async def test_run_sequential_agents(self) -> None:
@@ -148,7 +145,8 @@ class TestFlowRunStream:
             events.append(event)
 
         event_types = [e.get("type", "") for e in events]
-        assert "node_start" in event_types and "node_complete" in event_types
+        assert "node_start" in event_types
+        assert "node_complete" in event_types
 
 
 class TestFlowCleanup:

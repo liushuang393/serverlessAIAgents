@@ -617,9 +617,7 @@ class LLMClient:
                 content=content_text,
                 model=self._config.model,
                 usage=usage,
-                finish_reason=str(response.candidates[0].finish_reason)
-                if response.candidates
-                else "unknown",
+                finish_reason=str(response.candidates[0].finish_reason) if response.candidates else "unknown",
                 tool_calls=tool_calls_list,
             )
         except TimeoutError:

@@ -130,11 +130,7 @@ class ReporterAgent(ResilientAgent[ReporterInput, ReporterOutput]):
 
     def _build_empty_report(self, summary: str, period: str) -> Report:
         """トレンド未検出時の軽量レポートを生成."""
-        content = (
-            summary.strip()
-            if summary.strip()
-            else "今回の収集では有効なトレンドを検出できませんでした。"
-        )
+        content = summary.strip() if summary.strip() else "今回の収集では有効なトレンドを検出できませんでした。"
         section = ReportSection(
             title="収集結果サマリー",
             content=content,
@@ -369,9 +365,7 @@ New topics ({len(new_topics)}):
             if top
             else "現時点で主要トレンドは未検出です。"
         )
-        base_summary = (
-            summary.strip() if summary.strip() else "収集データから市場動向を要約しました。"
-        )
+        base_summary = summary.strip() if summary.strip() else "収集データから市場動向を要約しました。"
         return "\n".join(
             [
                 "## 📌 エグゼクティブサマリー",

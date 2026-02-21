@@ -158,12 +158,8 @@ class TestInMemoryKnowledgeStore:
 
         # テストデータを追加
         entries = [
-            KnowledgeEntry(
-                id="1", title="Pythonプログラミング", body="Pythonは人気のプログラミング言語です"
-            ),
-            KnowledgeEntry(
-                id="2", title="Javaプログラミング", body="Javaはエンタープライズ向け言語です"
-            ),
+            KnowledgeEntry(id="1", title="Pythonプログラミング", body="Pythonは人気のプログラミング言語です"),
+            KnowledgeEntry(id="2", title="Javaプログラミング", body="Javaはエンタープライズ向け言語です"),
             KnowledgeEntry(id="3", title="機械学習入門", body="機械学習はAIの重要な分野です"),
         ]
         await store.store_batch(entries)

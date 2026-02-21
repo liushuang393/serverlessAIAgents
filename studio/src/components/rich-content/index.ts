@@ -5,7 +5,7 @@
  */
 
 // メインレンダラー
-export { RichContentRenderer, default } from "./RichContentRenderer";
+export { RichContentRenderer, default } from './RichContentRenderer';
 
 // 型定義
 export type {
@@ -24,7 +24,7 @@ export type {
   CitationProps,
   RichResponse,
   RichContentRendererProps,
-} from "./types";
+} from './types';
 
 // 個別レンダラー（カスタマイズ用）
 export {

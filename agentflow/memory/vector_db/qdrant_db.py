@@ -11,6 +11,7 @@ from typing import Any
 from agentflow.memory.types import MemoryEntry, MemoryType
 from agentflow.memory.vector_db.vector_db_interface import VectorDatabase
 
+
 # オプション依存: テストでのモック（patch）が効くようにモジュールレベルで import
 try:
     from qdrant_client import QdrantClient  # type: ignore[import-untyped]
@@ -173,9 +174,7 @@ class QdrantDB(VectorDatabase):
             # トピックでフィルタして削除
             self._client.delete(
                 collection_name=self._collection_name,
-                points_selector=Filter(
-                    must=[FieldCondition(key="topic", match=MatchValue(value=topic))]
-                ),
+                points_selector=Filter(must=[FieldCondition(key="topic", match=MatchValue(value=topic))]),
             )
         else:
             # 全削除（コレクションを再作成）

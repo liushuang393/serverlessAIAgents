@@ -60,9 +60,7 @@ class SpringBootAdapter(JavaAdapter):
         lines.append("import org.springframework.stereotype.Repository;")
         lines.append("")
         lines.append("@Repository")
-        lines.append(
-            f"public interface {class_name}Repository extends JpaRepository<{class_name}Entity, Long> {{"
-        )
+        lines.append(f"public interface {class_name}Repository extends JpaRepository<{class_name}Entity, Long> {{")
         lines.append("}")
         lines.append("")
 

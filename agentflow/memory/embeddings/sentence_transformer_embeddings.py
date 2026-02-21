@@ -46,9 +46,7 @@ class SentenceTransformerEmbeddings(EmbeddingEngine):
 
             self._model = SentenceTransformer(model_name, device=device)
             self._dimension = self._model.get_sentence_embedding_dimension()
-            self._logger.info(
-                f"Loaded Sentence Transformer model: {model_name} (dim={self._dimension})"
-            )
+            self._logger.info(f"Loaded Sentence Transformer model: {model_name} (dim={self._dimension})")
 
         except ImportError:
             msg = "sentence-transformers package is required. Install with: pip install sentence-transformers"

@@ -148,9 +148,7 @@ class NewsAPIClient:
                             continue
                         return self._generate_mock_articles(query, page_size)
             except TimeoutError:
-                self._logger.exception(
-                    f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})"
-                )
+                self._logger.exception(f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})")
                 if attempt < self._max_retries - 1:
                     await asyncio.sleep(1.0)
                     continue
@@ -222,9 +220,7 @@ class NewsAPIClient:
                             continue
                         return self._generate_mock_articles(f"top headlines {country}", page_size)
             except TimeoutError:
-                self._logger.exception(
-                    f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})"
-                )
+                self._logger.exception(f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})")
                 if attempt < self._max_retries - 1:
                     await asyncio.sleep(1.0)
                     continue

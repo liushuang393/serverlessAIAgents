@@ -216,9 +216,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         self._append_report_phase(execution_report, "load", "ok", {"agent": self.name})
 
         if not question:
-            self._append_report_phase(
-                execution_report, "start", "error", {"reason": "empty_question"}
-            )
+            self._append_report_phase(execution_report, "start", "error", {"reason": "empty_question"})
             return FAQOutput(
                 error="質問が指定されていません",
                 execution_report=self._finish_execution_report(
@@ -241,9 +239,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                 self._append_report_phase(execution_report, "call", "ok", {"service": "text2sql"})
                 response = await self._handle_sql_query(question, query_type)
             elif query_type == "sales_material":
-                self._append_report_phase(
-                    execution_report, "call", "ok", {"service": "design_skills"}
-                )
+                self._append_report_phase(execution_report, "call", "ok", {"service": "design_skills"})
                 response = await self._handle_sales_material_query(question, query_type)
             else:
                 self._append_report_phase(execution_report, "call", "ok", {"service": "rag"})
