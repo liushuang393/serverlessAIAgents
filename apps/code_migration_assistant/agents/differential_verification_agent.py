@@ -122,13 +122,17 @@ class DifferentialVerificationAgent:
             name = str(case.get("name", "default"))
             inputs = case.get("inputs", {})
             expected_outputs = case.get("expected_outputs", {})
-            execution = self._target_adapter.execute(target_code, inputs if isinstance(inputs, dict) else {})
+            execution = self._target_adapter.execute(
+                target_code, inputs if isinstance(inputs, dict) else {}
+            )
             if not execution.success:
                 has_exec_error = True
                 results.append(
                     {
                         "name": name,
-                        "execution_error": execution.error or execution.stderr or "execution failed",
+                        "execution_error": execution.error
+                        or execution.stderr
+                        or "execution failed",
                     }
                 )
                 continue

@@ -66,7 +66,9 @@ async def test_news_api_successful_call() -> None:
     """NewsAPIClientの正常な呼び出しをテスト."""
     client = NewsAPIClient(api_key="test-key")
 
-    with patch("apps.market_trend_monitor.backend.integrations.news_api.aiohttp.ClientSession") as mock_session:
+    with patch(
+        "apps.market_trend_monitor.backend.integrations.news_api.aiohttp.ClientSession"
+    ) as mock_session:
         # 正常なレスポンスをシミュレート
         mock_response = MagicMock()
         mock_response.status = 200
@@ -106,7 +108,9 @@ async def test_news_api_top_headlines() -> None:
     """NewsAPIClientのトップヘッドライン取得をテスト."""
     client = NewsAPIClient(api_key="test-key")
 
-    with patch("apps.market_trend_monitor.backend.integrations.news_api.aiohttp.ClientSession") as mock_session:
+    with patch(
+        "apps.market_trend_monitor.backend.integrations.news_api.aiohttp.ClientSession"
+    ) as mock_session:
         # 正常なレスポンスをシミュレート
         mock_response = MagicMock()
         mock_response.status = 200

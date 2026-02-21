@@ -280,6 +280,25 @@ class PluginBindingConfig(BaseModel):
     version: str = Field(..., min_length=1, max_length=50, description="要求バージョン")
     config: dict[str, Any] = Field(default_factory=dict, description="プラグイン設定")
 
+    @field_validator("id", mode="before")
+    @classmethod
+    def normalize_plugin_id(cls, v: str) -> str:
+        """plugin id を正規化（空白除去・小文字化）."""
+        text = str(v).strip().lower()
+        if not text:
+            msg = "plugin id は空文字を許可しません"
+            raise ValueError(msg)
+        return text
+
+    @field_validator("version")
+    @classmethod
+    def validate_plugin_version(cls, v: str) -> str:
+        """plugin version が SemVer 形式であることを検証."""
+        if not _SEMVER_PATTERN.match(v):
+            msg = f"plugin version は SemVer 形式である必要があります: '{v}'"
+            raise ValueError(msg)
+        return v
+
 
 class EvolutionValidatorQueueConfig(BaseModel):
     """Evolution validator queue settings."""
@@ -479,6 +498,17 @@ class AppConfig(BaseModel):
         if duplicates:
             dup = ", ".join(sorted(duplicates))
             msg = f"agents[].name は App 内で一意である必要があります: {dup}"
+            raise ValueError(msg)
+
+        plugin_seen: set[str] = set()
+        plugin_duplicates: set[str] = set()
+        for binding in self.plugin_bindings:
+            if binding.id in plugin_seen:
+                plugin_duplicates.add(binding.id)
+            plugin_seen.add(binding.id)
+        if plugin_duplicates:
+            dup = ", ".join(sorted(plugin_duplicates))
+            msg = f"plugin_bindings[].id は App 内で一意である必要があります: {dup}"
             raise ValueError(msg)
 
         if self.product_line == "assistant" and self.security_mode is None:

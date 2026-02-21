@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """RestAPIConnector - REST/GraphQL APIコネクタ.
 
 REST APIおよびGraphQL APIへのアクセスを提供。
@@ -241,7 +243,7 @@ class RestAPIConnector(DataConnector):
 
             return DataItem(
                 uri=url,
-                name=path.split("/")[-1],
+                name=path.rsplit("/", maxsplit=1)[-1],
                 size=len(response_content),
                 metadata={
                     "status_code": response.status,

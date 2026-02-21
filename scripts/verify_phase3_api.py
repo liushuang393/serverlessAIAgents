@@ -115,7 +115,9 @@ async def main() -> None:
         )
 
         r = await c.get("/api/rag/strategies")
-        check(f"GET /api/rag/strategies -> 200, total={r.json().get('total')}", r.status_code == 200)
+        check(
+            f"GET /api/rag/strategies -> 200, total={r.json().get('total')}", r.status_code == 200
+        )
 
         r = await c.get("/api/rag/rerankers")
         check(f"GET /api/rag/rerankers -> 200, total={r.json().get('total')}", r.status_code == 200)

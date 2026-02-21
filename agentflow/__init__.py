@@ -251,6 +251,8 @@ from agentflow.flow import (
     ReviewVerdict,
     create_flow,
 )
+# テスト・後方互換用エイリアス
+FlowWrapper = Flow
 
 
 # FlowWrapper は Flow の後方互換エイリアス
@@ -662,6 +664,7 @@ __all__ = [
     "ExecutionPlane",
     "FileEvidence",
     "Flow",
+    "FlowWrapper",
     "FlowBuilder",
     "FlowConfig",
     "FlowContext",

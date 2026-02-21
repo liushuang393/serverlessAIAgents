@@ -229,6 +229,12 @@ class LLMClient:
         self._client = "localai"
         self._logger.info(f"LocalAI client initialized: {normalized_base_url}")
 
+    def _initialize_mock(self) -> None:
+        """モッククライアント初期化（テスト・オフライン用）."""
+        # self._client = None のままにする（既存のモックハンドラが利用される）
+        self._client = None
+        self._logger.info("Mock LLM client initialized (テスト・オフライン用)")
+
     @staticmethod
     def _normalize_base_url(base_url: str) -> str:
         """ベースURLを正規化（末尾スラッシュと重複 /v1 を除去）."""
@@ -611,7 +617,9 @@ class LLMClient:
                 content=content_text,
                 model=self._config.model,
                 usage=usage,
-                finish_reason=str(response.candidates[0].finish_reason) if response.candidates else "unknown",
+                finish_reason=str(response.candidates[0].finish_reason)
+                if response.candidates
+                else "unknown",
                 tool_calls=tool_calls_list,
             )
         except TimeoutError:

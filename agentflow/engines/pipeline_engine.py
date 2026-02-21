@@ -339,7 +339,9 @@ class PipelineEngine(BaseEngine):
         def mapper(ctx: FlowContext) -> dict[str, Any]:
             # 元の結果を取得
             all_results = ctx.get_all_results()
-            self._logger.debug(f"[review_input_mapper] all_results keys: {list(all_results.keys())}")
+            self._logger.debug(
+                f"[review_input_mapper] all_results keys: {list(all_results.keys())}"
+            )
 
             # {stage_name}_result 形式に変換
             formatted_results: dict[str, Any] = {}
@@ -354,7 +356,9 @@ class PipelineEngine(BaseEngine):
             inputs = ctx.get_inputs()
             formatted_results.update(inputs)
 
-            self._logger.debug(f"[review_input_mapper] formatted keys: {list(formatted_results.keys())}")
+            self._logger.debug(
+                f"[review_input_mapper] formatted keys: {list(formatted_results.keys())}"
+            )
             return formatted_results
 
         return mapper
@@ -426,7 +430,9 @@ class PipelineEngine(BaseEngine):
 
                 # Reviewチェック
                 if stage.review:
-                    verdict = stage_result.get("verdict", stage_result.get("overall_verdict", "PASS"))
+                    verdict = stage_result.get(
+                        "verdict", stage_result.get("overall_verdict", "PASS")
+                    )
                     # 後方互換: REJECT → COACH にマッピング
                     if verdict == "REJECT":
                         self._logger.info("REJECT→COACH 後方互換マッピング適用")
@@ -743,7 +749,9 @@ class PipelineEngine(BaseEngine):
                         return
 
                 if stage.review:
-                    verdict = stage_result.get("verdict", stage_result.get("overall_verdict", "PASS"))
+                    verdict = stage_result.get(
+                        "verdict", stage_result.get("overall_verdict", "PASS")
+                    )
                     # 後方互換: REJECT → COACH にマッピング
                     if verdict == "REJECT":
                         self._logger.info("REJECT→COACH 後方互換マッピング適用")
@@ -821,7 +829,9 @@ class PipelineEngine(BaseEngine):
 
         # Agent別の思考過程抽出
         thinking_content = self._extract_thinking_content(stage_name, stage_result)
-        self._logger.debug(f"[_emit_thinking_logs] stage={stage_name}, contents={len(thinking_content)}")
+        self._logger.debug(
+            f"[_emit_thinking_logs] stage={stage_name}, contents={len(thinking_content)}"
+        )
         if not thinking_content:
             # 結果キーをログ出力（デバッグ用）
             self._logger.debug(

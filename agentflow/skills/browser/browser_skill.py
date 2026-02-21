@@ -175,7 +175,7 @@ class BrowserSkill(BrowserSkillBase):
 
         await self._page.goto(
             validated_url,
-            wait_until=wait_until,  # type: ignore
+            wait_until=wait_until,
             timeout=self._config.navigation_timeout_seconds * 1000,
         )
 

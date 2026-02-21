@@ -245,7 +245,9 @@ class RAGService(ServiceBase[dict[str, Any]]):
 
         documents = await self._search_internal(question, filters)
 
-        yield self._emit_progress(execution_id, 50, f"{len(documents)}件のドキュメントを発見", phase="search")
+        yield self._emit_progress(
+            execution_id, 50, f"{len(documents)}件のドキュメントを発見", phase="search"
+        )
 
         if not documents:
             yield self._emit_result(
@@ -320,7 +322,9 @@ class RAGService(ServiceBase[dict[str, Any]]):
 
         chunks = await self._chunker.chunk(content, metadata)
 
-        yield self._emit_progress(execution_id, 50, f"{len(chunks)}チャンクを埋め込み中...", phase="embed")
+        yield self._emit_progress(
+            execution_id, 50, f"{len(chunks)}チャンクを埋め込み中...", phase="embed"
+        )
 
         contents = [c.content for c in chunks]
         ids = [c.id for c in chunks]
@@ -366,7 +370,9 @@ class RAGService(ServiceBase[dict[str, Any]]):
         loader = UniversalLoader()
         doc_chunks = await loader.load(path)
 
-        yield self._emit_progress(execution_id, 30, f"{len(doc_chunks)}チャンクを処理中...", phase="process")
+        yield self._emit_progress(
+            execution_id, 30, f"{len(doc_chunks)}チャンクを処理中...", phase="process"
+        )
 
         all_ids = []
         total = len(doc_chunks)

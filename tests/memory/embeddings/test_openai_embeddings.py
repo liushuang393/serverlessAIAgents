@@ -13,7 +13,9 @@ def openai_embeddings():
     with patch("agentflow.memory.embeddings.openai_embeddings.AsyncOpenAI") as mock_openai:
         mock_client = AsyncMock()
         mock_openai.return_value = mock_client
-        embeddings = OpenAIEmbeddings(api_key="test-api-key", model="text-embedding-3-small", dimension=1536)
+        embeddings = OpenAIEmbeddings(
+            api_key="test-api-key", model="text-embedding-3-small", dimension=1536
+        )
         embeddings._client = mock_client
         return embeddings
 

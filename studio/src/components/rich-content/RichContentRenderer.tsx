@@ -14,12 +14,16 @@ import {
   CollapsibleRenderer,
   CitationRenderer,
   TabsRenderer,
-} from './renderers';
+} from "./renderers";
 
 /**
  * 未対応コンポーネント用フォールバック
  */
-function UnknownRenderer({ component }: { component: RichComponent }): React.JSX.Element {
+function UnknownRenderer({
+  component,
+}: {
+  component: RichComponent;
+}): React.JSX.Element {
   return (
     <div className="p-4 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded-lg">
       <p className="text-sm text-yellow-700 dark:text-yellow-300">
@@ -43,8 +47,8 @@ export function RichContentRenderer({
   response,
   customRenderers = {},
   fallback = null,
-  theme = 'light',
-  className = '',
+  theme = "light",
+  className = "",
 }: RichContentRendererProps): React.JSX.Element {
   /**
    * 単一コンポーネントをレンダリング
@@ -62,22 +66,22 @@ export function RichContentRenderer({
 
       // 標準レンダラー
       switch (type) {
-        case 'markdown':
+        case "markdown":
           return <MarkdownRenderer key={key} component={component} />;
 
-        case 'code_block':
+        case "code_block":
           return <CodeBlockRenderer key={key} component={component} />;
 
-        case 'alert':
+        case "alert":
           return <AlertRenderer key={key} component={component} />;
 
-        case 'data_table':
+        case "data_table":
           return <DataTableRenderer key={key} component={component} />;
 
-        case 'citation':
+        case "citation":
           return <CitationRenderer key={key} component={component} />;
 
-        case 'collapsible':
+        case "collapsible":
           return (
             <CollapsibleRenderer
               key={key}
@@ -108,7 +112,7 @@ export function RichContentRenderer({
 
   return (
     <div
-      className={`rich-content-renderer space-y-4 ${theme === 'dark' ? 'dark' : ''} ${className}`}
+      className={`rich-content-renderer space-y-4 ${theme === "dark" ? "dark" : ""} ${className}`}
       data-theme={theme}
     >
       {response.components.map((component, idx) => renderComponent(component, idx))}

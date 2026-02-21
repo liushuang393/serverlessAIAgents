@@ -452,3 +452,18 @@ Note:
 
 本アプリの実行/改善分離、およびトレース・報酬の設計改善は  
 [Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning) の思想とアーキテクチャを参考にしています。
+
+## 共有テスト env 自動生成
+
+```bash
+conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
+```
+
+- `CODE_MIGRATION_API_KEY_ENV` / `CODE_MIGRATION_API_KEY` / `CODE_MIGRATION_CORS_ORIGINS` を自動補完します。
+- テスト用途では手動で鍵を発行する必要はありません。
+
+## 本番運用と多租户招待メール
+
+- 本番では API キーを Secret Manager 注入に切り替えてください（`.env` 配布禁止）。
+- テナント招待時は、通知メールとログイン URL メールを分離送信してください。
+- 詳細手順: `docs/internal/env-bootstrap-and-tenant-invite-security.md`

@@ -96,7 +96,9 @@ class MemoryManager:
         # 重要度自動調整エンジン（オプション）
         self._enable_importance_adjustment = enable_importance_adjustment
         self._importance_adjuster = (
-            ImportanceAdjuster(decay_constant, access_boost_factor) if enable_importance_adjustment else None
+            ImportanceAdjuster(decay_constant, access_boost_factor)
+            if enable_importance_adjustment
+            else None
         )
 
         # 自動蒸留エンジン（Evo-Memory）

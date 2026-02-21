@@ -276,7 +276,9 @@ class ChartGenerator:
                 "series": [
                     {
                         "type": "pie",
-                        "data": [{"name": l, "value": v} for l, v in zip(labels, values, strict=False)],
+                        "data": [
+                            {"name": l, "value": v} for l, v in zip(labels, values, strict=False)
+                        ],
                     }
                 ],
             },

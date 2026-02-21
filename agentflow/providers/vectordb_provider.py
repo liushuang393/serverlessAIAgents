@@ -440,7 +440,7 @@ class FAISSProvider:
         try:
             import faiss
 
-            if self._index_path and os.path.exists(self._index_path):
+            if self._index_path and Path(self._index_path).exists():
                 self._index = faiss.read_index(self._index_path)
                 logger.info(f"Loaded FAISS index from: {self._index_path}")
             else:

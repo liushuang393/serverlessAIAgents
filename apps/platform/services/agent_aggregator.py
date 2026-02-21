@@ -7,6 +7,7 @@ from collections import Counter
 from typing import TYPE_CHECKING, Any
 
 from apps.platform.services.agent_taxonomy import AgentTaxonomyService
+from apps.platform.services.app_discovery import AppDiscoveryService
 from apps.platform.services.capability_registry import CapabilityRegistry
 
 

@@ -371,7 +371,9 @@ class ReasoningMonitor:
             # 检查禁止词
             if "不要" in constraint or "禁止" in constraint:
                 # 提取被禁止的动作
-                forbidden_keywords = constraint_lower.replace("不要", "").replace("禁止", "").split()
+                forbidden_keywords = (
+                    constraint_lower.replace("不要", "").replace("禁止", "").split()
+                )
                 for kw in forbidden_keywords:
                     if kw in step_text:
                         deviations.append(

@@ -226,7 +226,9 @@ class WebSearchSkill:
             return SearchSummary(answer=combined, sources=results, query=query)
 
         # 4. LLM で要約生成
-        context = "\n\n---\n\n".join(contents) if contents else "\n".join([r.snippet for r in results])
+        context = (
+            "\n\n---\n\n".join(contents) if contents else "\n".join([r.snippet for r in results])
+        )
         prompt = f"""以下の検索結果を基に質問に回答してください。
 
 検索クエリ: {query}

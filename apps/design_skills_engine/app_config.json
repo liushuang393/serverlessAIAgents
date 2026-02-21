@@ -22,31 +22,21 @@
     {
       "name": "IntentAnalyzerAgent",
       "module": "agentflow.skills.builtin.design_skills.agents.intent_analyzer_agent",
-      "capabilities": [
-        "intent_analysis",
-        "design_brief"
-      ],
+      "capabilities": ["intent_analysis", "design_brief"],
       "business_base": "media",
       "pattern": "analyzer"
     },
     {
       "name": "PromptPlannerAgent",
       "module": "agentflow.skills.builtin.design_skills.agents.prompt_planner_agent",
-      "capabilities": [
-        "prompt_planning",
-        "style_generation"
-      ],
+      "capabilities": ["prompt_planning", "style_generation"],
       "business_base": "media",
       "pattern": "pipeline_stage"
     },
     {
       "name": "WorkflowExecutorAgent",
       "module": "agentflow.skills.builtin.design_skills.agents.workflow_executor_agent",
-      "capabilities": [
-        "image_generation",
-        "comfyui",
-        "openai_images"
-      ],
+      "capabilities": ["image_generation", "comfyui", "openai_images"],
       "business_base": "media",
       "pattern": "executor"
     }
@@ -62,9 +52,7 @@
   "dependencies": {
     "database": null,
     "redis": false,
-    "external": [
-      "comfyui"
-    ]
+    "external": ["comfyui"]
   },
   "runtime": {
     "urls": {
@@ -85,30 +73,20 @@
       "note": null
     },
     "commands": {
-      "backend_dev": "python -m apps.design_skills_engine.main",
+      "backend_dev": "python apps/design_skills_engine/scripts/dev.py",
       "frontend_dev": null,
       "publish": "docker compose up -d --build",
       "start": "docker compose up -d",
       "stop": "docker compose down"
     }
   },
-  "tags": [
-    "design",
-    "image-generation",
-    "comfyui",
-    "pipeline",
-    "skill"
-  ],
+  "tags": ["design", "image-generation", "comfyui", "pipeline", "skill"],
   "contracts": {
     "auth": {
       "enabled": true,
-      "providers": [
-        "api_key"
-      ],
+      "providers": ["api_key"],
       "allow_anonymous": false,
-      "required_scopes": [
-        "api"
-      ],
+      "required_scopes": ["api"],
       "session_ttl_minutes": 60
     },
     "rag": {
@@ -136,9 +114,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },

@@ -296,7 +296,9 @@ async def _load_resume_context(
         from apps.decision_governance_engine.repositories import DecisionRepository
 
         repo = DecisionRepository()
-        completed_stages, stage_results, recorded_question = await repo.get_resume_context(request_id)
+        completed_stages, stage_results, recorded_question = await repo.get_resume_context(
+            request_id
+        )
         effective_question = recorded_question or question
         return completed_stages, stage_results, effective_question
     except Exception as e:
@@ -418,7 +420,9 @@ async def process_decision(
 
     report_id = result.get("report_id", "") if isinstance(result, dict) else ""
     if report_id:
-        _cache_report_from_result(result if isinstance(result, dict) else {}, request_id=str(request_id))
+        _cache_report_from_result(
+            result if isinstance(result, dict) else {}, request_id=str(request_id)
+        )
     if format == "v1":
         contract = DecisionGovContractBuilder.build_from_report(result)
         return DecisionAPIResponse(
@@ -427,7 +431,9 @@ async def process_decision(
             report_id=report_id,
             data=contract.model_dump(),
         )
-    return DecisionAPIResponse(status="success", request_id=str(request_id), report_id=report_id, data=result)
+    return DecisionAPIResponse(
+        status="success", request_id=str(request_id), report_id=report_id, data=result
+    )
 
 
 def _cache_report_from_result(result_data: dict[str, Any], request_id: str | None = None) -> None:
@@ -518,7 +524,9 @@ class HistoryDetailResponse(BaseModel):
 @router.get("/api/decision/history", response_model=HistoryListResponse)
 async def get_decision_history(
     limit: int = Query(default=20, ge=1, le=100, description="取得件数"),
-    decision_role: str | None = Query(default=None, description="決策結果フィルタ（GO/NO_GO/DELAY/PILOT）"),
+    decision_role: str | None = Query(
+        default=None, description="決策結果フィルタ（GO/NO_GO/DELAY/PILOT）"
+    ),
     mode: str | None = Query(default=None, description="モードフィルタ（FAST/STANDARD/AUDIT）"),
 ) -> HistoryListResponse:
     """決策履歴一覧を取得.
@@ -550,7 +558,9 @@ async def get_decision_history(
             }
             for item in filtered_fallback[:limit]
         ]
-        return HistoryListResponse(status="fallback", total=len(fallback_items), items=fallback_items)
+        return HistoryListResponse(
+            status="fallback", total=len(fallback_items), items=fallback_items
+        )
 
     try:
         from apps.decision_governance_engine.repositories import DecisionRepository

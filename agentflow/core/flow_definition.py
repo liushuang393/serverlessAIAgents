@@ -57,7 +57,9 @@ class AgentDefinition(BaseModel):
     icon: str = Field(default="○", description="表示アイコン（絵文字）")
     description: str = Field(default="", description="Agent説明")
     class_name: str = Field(default="", description="Agent実装クラス名")
-    module_path: str = Field(default="", description="Agentモジュールパス（省略時はclass_nameから推測）")
+    module_path: str = Field(
+        default="", description="Agentモジュールパス（省略時はclass_nameから推測）"
+    )
 
     # Pipeline 設定
     is_gate: bool = Field(default=False, description="ゲートAgent（拒否時に早期終了）")

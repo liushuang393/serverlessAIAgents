@@ -19,6 +19,8 @@ if TYPE_CHECKING:
     from apps.market_trend_monitor.backend.models import Trend
     from apps.market_trend_monitor.backend.services.signal_service import SignalService
 
+from agentflow import get_llm
+
 
 @dataclass
 class StakeholderReport:

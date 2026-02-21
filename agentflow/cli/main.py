@@ -288,9 +288,13 @@ def run(
                                 if json_output:
                                     console.print(json.dumps(event, ensure_ascii=False))
                                 else:
-                                    console.print(f"[dim]{event.get('type', 'event')}:[/dim] {event.get('node', '')}")
+                                    console.print(
+                                        f"[dim]{event.get('type', 'event')}:[/dim] {event.get('node', '')}"
+                                    )
                             return {}
-                        console.print("[yellow]Warning: Stream mode not supported, using normal mode[/yellow]")
+                        console.print(
+                            "[yellow]Warning: Stream mode not supported, using normal mode[/yellow]"
+                        )
                     # 通常実行
                     if hasattr(flow, "run"):
                         result_data = await flow.run(shared_data)

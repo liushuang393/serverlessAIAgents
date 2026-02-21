@@ -90,11 +90,15 @@ class AnalyticsAgent(AgentBlock):
             if agent_ratio > 70:
                 insights.append("Agent中心の構成です。Flowの活用で効率化できる可能性があります。")
             elif agent_ratio < 30:
-                insights.append("Tool/Skill中心の構成です。複雑なタスクにはAgentの活用を検討してください。")
+                insights.append(
+                    "Tool/Skill中心の構成です。複雑なタスクにはAgentの活用を検討してください。"
+                )
 
         # 使用頻度の分析
         if stats.total_usage == 0:
-            insights.append("まだコンポーネントが使用されていません。テストを実行してみてください。")
+            insights.append(
+                "まだコンポーネントが使用されていません。テストを実行してみてください。"
+            )
         elif stats.total_usage > 1000:
             insights.append("活発に使用されています。パフォーマンス最適化を検討してください。")
 
@@ -124,7 +128,11 @@ class AnalyticsAgent(AgentBlock):
             recent_total = sum(t.api_calls for t in recent_week)
             previous_total = sum(t.api_calls for t in previous_week) if previous_week else 0
 
-            change = ((recent_total - previous_total) / previous_total * 100) if previous_total > 0 else 0
+            change = (
+                ((recent_total - previous_total) / previous_total * 100)
+                if previous_total > 0
+                else 0
+            )
 
             trend_direction = "増加" if change > 0 else "減少" if change < 0 else "横ばい"
         else:
@@ -169,7 +177,9 @@ class AnalyticsAgent(AgentBlock):
 
         insights = []
         if concentration > 50:
-            insights.append("使用が特定のコンポーネントに集中しています。依存リスクを検討してください。")
+            insights.append(
+                "使用が特定のコンポーネントに集中しています。依存リスクを検討してください。"
+            )
         elif concentration < 20 and len(top_components) > 5:
             insights.append("使用が分散しています。共通化の機会があるかもしれません。")
 

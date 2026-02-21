@@ -104,7 +104,9 @@ JSON形式で出力してください。"""
         response = await self._call_llm(f"{system_prompt}\n\n{user_prompt}")
 
         # 詳細ログ: LLM生出力を記録（デバッグ用）
-        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
+        self._logger.debug(
+            f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}"
+        )
 
         try:
             # JSON部分を抽出してパース（堅牢な抽出）
@@ -211,7 +213,9 @@ JSON形式で出力してください。"""
         # criteria: 事前検証済みだが、保守的にデフォルト値を設定
         raw_criteria = data.get("criteria")
         if not raw_criteria or not isinstance(raw_criteria, list) or len(raw_criteria) == 0:
-            self._logger.warning("criteria was empty after validation - using default (should not happen)")
+            self._logger.warning(
+                "criteria was empty after validation - using default (should not happen)"
+            )
             criteria = ["要定義"]
         else:
             criteria = [str(c)[:50] for c in raw_criteria[:5] if c and str(c).strip()]
@@ -221,7 +225,11 @@ JSON形式で出力してください。"""
 
         # evaluation_object: 事前検証済みだが、保守的にデフォルト値を設定
         evaluation_object = data.get("evaluation_object", "")
-        if not evaluation_object or not isinstance(evaluation_object, str) or not str(evaluation_object).strip():
+        if (
+            not evaluation_object
+            or not isinstance(evaluation_object, str)
+            or not str(evaluation_object).strip()
+        ):
             self._logger.warning("evaluation_object was empty after validation - using default")
             evaluation_object = "評価対象未特定"
 

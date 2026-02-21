@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """GoogleDriveConnector - Google Drive API コネクタ.
 
 Google Drive へのアクセスを提供。
@@ -389,7 +391,9 @@ class GoogleDriveConnector(DataConnector):
 
         headers = {
             "Authorization": f"Bearer {token}",
-            "Content-Type": content_type or mimetypes.guess_type(name)[0] or "application/octet-stream",
+            "Content-Type": content_type
+            or mimetypes.guess_type(name)[0]
+            or "application/octet-stream",
         }
 
         if existing_id:

@@ -158,7 +158,9 @@ class OTLPExporter(SpanExporter):
                                     "parentSpanId": span.context.parent_span_id or "",
                                     "name": span.name,
                                     "startTimeUnixNano": int(span.start_time * 1e9),
-                                    "endTimeUnixNano": int((span.end_time or span.start_time) * 1e9),
+                                    "endTimeUnixNano": int(
+                                        (span.end_time or span.start_time) * 1e9
+                                    ),
                                     "status": {"code": 1 if span.status == "ok" else 2},
                                     "attributes": [
                                         {"key": k, "value": {"stringValue": str(v)}} for k, v in span.attributes.items()

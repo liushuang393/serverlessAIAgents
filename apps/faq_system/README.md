@@ -937,3 +937,18 @@ agentflow skills list --project
 ## ライセンス
 
 MIT License
+
+## 共有テスト env 自動生成
+
+```bash
+conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
+```
+
+- `JWT_SECRET_KEY` と `FAQ_PROXY_AUTH_SHARED_SECRET` は上記で自動補完されます。
+- FAQ は `apps/faq_system/.env` がルート `.env` より優先されるため、同スクリプトで両方を同期してください。
+
+## 本番運用と多租户招待メール
+
+- 本番では署名検証 (`FAQ_PROXY_AUTH_REQUIRE_SIGNATURE=true`) を維持し、共有鍵は Secret Manager から注入します。
+- テナント招待メールは最小情報のみ送信し、ログイン URL が必要な場合は別メールで送信します。
+- 詳細手順: `docs/internal/env-bootstrap-and-tenant-invite-security.md`

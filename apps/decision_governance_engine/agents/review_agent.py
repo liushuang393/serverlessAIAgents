@@ -183,7 +183,9 @@ JSON形式で出力してください。"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
-        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
+        self._logger.debug(
+            f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}"
+        )
 
         try:
             from agentflow.utils import extract_json
@@ -220,7 +222,9 @@ JSON形式で出力してください。"""
                 confidence_score=confidence,
                 final_warnings=self._build_final_warnings(
                     findings=findings,
-                    llm_warnings=data.get("final_warnings", []) if isinstance(data.get("final_warnings"), list) else [],
+                    llm_warnings=data.get("final_warnings", [])
+                    if isinstance(data.get("final_warnings"), list)
+                    else [],
                 ),
                 confidence_breakdown=breakdown,
                 checkpoint_items=checkpoint_items,
@@ -446,7 +450,11 @@ JSON形式で出力してください。"""
 
     def _generate_warnings(self, findings: list[ReviewFinding]) -> list[str]:
         """最終警告を生成."""
-        return [f.description for f in findings if f.severity in [FindingSeverity.CRITICAL, FindingSeverity.WARNING]]
+        return [
+            f.description
+            for f in findings
+            if f.severity in [FindingSeverity.CRITICAL, FindingSeverity.WARNING]
+        ]
 
     def validate_output(self, output: ReviewOutput) -> bool:
         """出力検証.
@@ -464,7 +472,9 @@ JSON形式で出力してください。"""
 
         # confidence_score が範囲内か
         if not (0.0 <= output.confidence_score <= 1.0):
-            self._logger.warning(f"Validation failed: confidence_score {output.confidence_score} out of range")
+            self._logger.warning(
+                f"Validation failed: confidence_score {output.confidence_score} out of range"
+            )
             return False
 
         return True
@@ -578,16 +588,22 @@ JSON形式で出力してください。"""
         def _parse_component(comp_data: Any, default_name: str) -> ConfidenceComponent:
             normalized = comp_data if isinstance(comp_data, dict) else {}
             return ConfidenceComponent(
-                name=self._truncate_text(normalized.get("name", default_name), self.MAX_COMPONENT_NAME_LEN),
+                name=self._truncate_text(
+                    normalized.get("name", default_name), self.MAX_COMPONENT_NAME_LEN
+                ),
                 score=safe_float(normalized.get("score", 50), 50.0),
                 checkbox_boost=safe_float(normalized.get("checkbox_boost", 5), 5.0),
-                description=self._truncate_text(normalized.get("description", ""), self.MAX_COMPONENT_DESC_LEN),
+                description=self._truncate_text(
+                    normalized.get("description", ""), self.MAX_COMPONENT_DESC_LEN
+                ),
             )
 
         return ConfidenceBreakdown(
             input_sufficiency=_parse_component(data.get("input_sufficiency", {}), "入力充足度"),
             logic_consistency=_parse_component(data.get("logic_consistency", {}), "論理整合"),
-            implementation_feasibility=_parse_component(data.get("implementation_feasibility", {}), "実装可能性"),
+            implementation_feasibility=_parse_component(
+                data.get("implementation_feasibility", {}), "実装可能性"
+            ),
             risk_coverage=_parse_component(data.get("risk_coverage", {}), "リスク網羅"),
         )
 

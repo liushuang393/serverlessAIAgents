@@ -4,9 +4,7 @@
       "id": "c5894772-5db9-4bdc-b997-444de88cbb33",
       "title": "タイトル1",
       "body": "内容1",
-      "tags": [
-        "tag1"
-      ],
+      "tags": ["tag1"],
       "source": "document",
       "source_id": null,
       "timestamp": "2026-02-20T07:55:32.340722+00:00",
@@ -19,9 +17,7 @@
       "id": "154633c9-5c56-464e-83fa-d7bbc91cac2f",
       "title": "タイトル2",
       "body": "内容2",
-      "tags": [
-        "tag2"
-      ],
+      "tags": ["tag2"],
       "source": "document",
       "source_id": null,
       "timestamp": "2026-02-20T07:55:32.340733+00:00",
@@ -34,9 +30,7 @@
       "id": "99ed8608-c3fc-407f-be93-e7d28a971f0f",
       "title": "FAQ質問1",
       "body": "FAQ回答1",
-      "tags": [
-        "faq"
-      ],
+      "tags": ["faq"],
       "source": "document",
       "source_id": null,
       "timestamp": "2026-02-20T07:55:32.343543+00:00",
@@ -49,9 +43,7 @@
       "id": "3dc70f49-1396-473a-841b-1827f045206c",
       "title": "FAQ質問2",
       "body": "FAQ回答2",
-      "tags": [
-        "faq"
-      ],
+      "tags": ["faq"],
       "source": "document",
       "source_id": null,
       "timestamp": "2026-02-20T07:55:32.343558+00:00",

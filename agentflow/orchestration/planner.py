@@ -234,7 +234,9 @@ class PlannerAgent:
         available_tools: list[str],
     ) -> ExecutionPlan:
         """LLMで計画を作成."""
-        tools_desc = "\n".join(f"- {tool}" for tool in available_tools) if available_tools else "なし"
+        tools_desc = (
+            "\n".join(f"- {tool}" for tool in available_tools) if available_tools else "なし"
+        )
 
         prompt = f"""以下の目標を達成するための実行計画を作成してください。
 
@@ -438,7 +440,9 @@ JSON形式で代替ステップを提案:
                 plan.steps.append(alt_step)
 
             plan.total_steps = len(plan.steps)
-            self._logger.info(f"再計画完了: {len(data.get('alternative_steps', []))}個の代替ステップ追加")
+            self._logger.info(
+                f"再計画完了: {len(data.get('alternative_steps', []))}個の代替ステップ追加"
+            )
 
         except Exception as e:
             self._logger.warning(f"LLM再計画失敗: {e}")

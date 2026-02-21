@@ -10,6 +10,12 @@ from typing import Any
 from agentflow.memory.distributed.backend_interface import MemoryBackend
 from agentflow.memory.types import MemoryEntry, MemoryType
 
+# オプション依存: テストでのモック（patch）が効くようにモジュールレベルで import
+try:
+    import asyncpg  # type: ignore[import-untyped]
+except ImportError:
+    asyncpg = None  # type: ignore[assignment]
+
 
 class PostgresBackend(MemoryBackend):
     """PostgreSQLバックエンド実装.
@@ -58,9 +64,10 @@ class PostgresBackend(MemoryBackend):
 
     async def connect(self) -> None:
         """PostgreSQLに接続."""
+        if asyncpg is None:
+            msg = "asyncpg package is required. Install with: pip install asyncpg"
+            raise ImportError(msg)
         try:
-            import asyncpg
-
             self._pool = await asyncpg.create_pool(
                 host=self._host,
                 port=self._port,
@@ -73,10 +80,9 @@ class PostgresBackend(MemoryBackend):
             await self._create_tables()
 
             self._connected = True
-            self._logger.info(f"Connected to PostgreSQL at {self._host}:{self._port}/{self._database}")
-        except ImportError:
-            msg = "asyncpg package is required. Install with: pip install asyncpg"
-            raise ImportError(msg)
+            self._logger.info(
+                f"Connected to PostgreSQL at {self._host}:{self._port}/{self._database}"
+            )
         except Exception as e:
             msg = f"Failed to connect to PostgreSQL: {e}"
             raise ConnectionError(msg)
@@ -108,7 +114,9 @@ class PostgresBackend(MemoryBackend):
             # インデックスを作成
             await conn.execute("CREATE INDEX IF NOT EXISTS idx_topic ON memories(topic)")
             await conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON memories(timestamp)")
-            await conn.execute("CREATE INDEX IF NOT EXISTS idx_importance ON memories(importance_score)")
+            await conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_importance ON memories(importance_score)"
+            )
 
     async def save(self, entry: MemoryEntry) -> None:
         """記憶を保存."""
@@ -242,7 +250,9 @@ class PostgresBackend(MemoryBackend):
 
         async with self._pool.acquire() as conn:
             if topic:
-                result = await conn.fetchval("SELECT COUNT(*) FROM memories WHERE topic = $1", topic)
+                result = await conn.fetchval(
+                    "SELECT COUNT(*) FROM memories WHERE topic = $1", topic
+                )
             else:
                 result = await conn.fetchval("SELECT COUNT(*) FROM memories")
             return int(result)

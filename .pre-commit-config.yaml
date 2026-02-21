@@ -10,6 +10,21 @@
 
 repos:
   # ========================================
+  # Python: 自動修正スクリプト（Ruff より前に実行）
+  # ========================================
+  - repo: local
+    hooks:
+      # 不要な type: ignore コメントを自動削除
+      - id: fix-mypy-unused-ignore
+        name: "Python: Remove unused type: ignore (mypy)"
+        language: system
+        entry: python scripts/fix_mypy_safe.py
+        pass_filenames: false
+        types: [python]
+        # mypy が使えない環境ではスキップ（CI でも安全に動く）
+        always_run: true
+
+  # ========================================
   # Python: Ruff (Linter + Formatter)
   # ========================================
   - repo: https://github.com/astral-sh/ruff-pre-commit

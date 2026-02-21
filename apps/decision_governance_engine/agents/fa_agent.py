@@ -285,7 +285,9 @@ class FaAgent(ResilientAgent[FaInput, FaOutput]):
         if dao_result.solution_routes:
             routes_info = "\n【成立ルート（道Agentの探索結果）】\n"
             for sr in dao_result.solution_routes:
-                routes_info += f"- [{sr.route_type}] {sr.description} (実現可能性: {sr.viability})\n"
+                routes_info += (
+                    f"- [{sr.route_type}] {sr.description} (実現可能性: {sr.viability})\n"
+                )
 
         user_prompt = f"""【問題タイプ】{dao_result.problem_type.value}
 【問題の本質的性質】{dao_result.problem_nature.value if dao_result.problem_nature else "不明"}
@@ -310,7 +312,9 @@ v3.1必須出力（JSON）:
 JSON形式で出力してください。"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
-        self._logger.debug("LLM raw response (first 500 chars): %s", response[:500] if response else "EMPTY")
+        self._logger.debug(
+            "LLM raw response (first 500 chars): %s", response[:500] if response else "EMPTY"
+        )
 
         try:
             from agentflow.utils import extract_json
@@ -462,7 +466,9 @@ JSON形式で出力してください。"""
         # recommended_paths の検証（v3.1: 最低4案）
         recommended = data.get("recommended_paths")
         if not recommended or not isinstance(recommended, list) or len(recommended) == 0:
-            self._logger.warning("LLM returned empty recommended_paths. Keys: %s", list(data.keys()))
+            self._logger.warning(
+                "LLM returned empty recommended_paths. Keys: %s", list(data.keys())
+            )
             raise AgentOutputValidationError(
                 agent_name=self.name,
                 field_name="recommended_paths",
@@ -484,7 +490,9 @@ JSON形式で出力してください。"""
                 for field in ["pros", "cons", "suitable_conditions", "risks", "costs"]:
                     items = path.get(field, [])
                     if isinstance(items, list) and len(items) > 3:
-                        self._logger.warning("Path %d %s has %d items (max 3), truncating", i, field, len(items))
+                        self._logger.warning(
+                            "Path %d %s has %d items (max 3), truncating", i, field, len(items)
+                        )
                         path[field] = items[:3]
 
         # v3.1: judgment_framework の存在チェック（警告のみ）

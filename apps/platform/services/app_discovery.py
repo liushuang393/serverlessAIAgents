@@ -157,6 +157,11 @@ class AppDiscoveryService:
         """
         return dict(self._errors)
 
+    @property
+    def apps_dir(self) -> Path:
+        """スキャン対象 apps ディレクトリ."""
+        return self._apps_dir
+
     def summary(self) -> dict[str, Any]:
         """全 App の概要統計を返す.
 

@@ -13,6 +13,7 @@ from apps.platform.routers.publish import router as publish_router
 from apps.platform.routers.rag import router as rag_router
 from apps.platform.routers.skills import router as skills_router
 from apps.platform.routers.studios import router as studios_router
+from apps.platform.routers.tenant_invitations import router as tenant_invitations_router
 
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "rag_router",
     "skills_router",
     "studios_router",
+    "tenant_invitations_router",
 ]

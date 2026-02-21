@@ -51,7 +51,9 @@ class OfficialSiteScraper:
             {
                 "title": f"{competitor_name}: クラウドネイティブな基幹系刷新ソリューションを発表",
                 "content": f"{competitor_name}は本日、COBOLからJavaへの移行を加速させる自動変換エンジンの最新版をリリースしました。",
-                "url": urls[0] if urls else f"https://www.{competitor_name.lower().replace(' ', '')}.com/news/1",
+                "url": urls[0]
+                if urls
+                else f"https://www.{competitor_name.lower().replace(' ', '')}.com/news/1",
             }
         ]
 

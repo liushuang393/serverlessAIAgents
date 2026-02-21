@@ -341,7 +341,9 @@ class AgentBlueprint:
 
                     if self._tool_provider:
                         result = await self._tool_provider.call(tool_uri, input_data)
-                        results.append(result.to_dict() if hasattr(result, "to_dict") else {"result": result})
+                        results.append(
+                            result.to_dict() if hasattr(result, "to_dict") else {"result": result}
+                        )
 
                 return {
                     "agent_name": self._blueprint._model.name,

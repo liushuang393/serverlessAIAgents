@@ -187,7 +187,9 @@ class AuthService(ServiceBase[dict[str, Any]]):
         start_time = time.time()
 
         if not email or not password:
-            yield self._emit_error(execution_id, "invalid_credentials", "メールアドレスとパスワードが必要です")
+            yield self._emit_error(
+                execution_id, "invalid_credentials", "メールアドレスとパスワードが必要です"
+            )
             return
 
         # 簡易認証（実際はDBと連携）
@@ -263,7 +265,9 @@ class AuthService(ServiceBase[dict[str, Any]]):
             )
 
         except jwt.ExpiredSignatureError:
-            yield self._emit_error(execution_id, "token_expired", "トークンの有効期限が切れています")
+            yield self._emit_error(
+                execution_id, "token_expired", "トークンの有効期限が切れています"
+            )
         except jwt.InvalidTokenError as e:
             yield self._emit_error(execution_id, "invalid_token", f"無効なトークン: {e}")
 
@@ -290,7 +294,9 @@ class AuthService(ServiceBase[dict[str, Any]]):
             )
 
             if payload.get("type") != "refresh":
-                yield self._emit_error(execution_id, "invalid_token", "リフレッシュトークンではありません")
+                yield self._emit_error(
+                    execution_id, "invalid_token", "リフレッシュトークンではありません"
+                )
                 return
 
             # 新しいトークンを生成
@@ -383,7 +389,9 @@ class AuthService(ServiceBase[dict[str, Any]]):
         # 有効期限チェック
         expires_at = datetime.fromisoformat(key_data["expires_at"])
         if datetime.now(UTC) > expires_at:
-            yield self._emit_error(execution_id, "expired_api_key", "API Keyの有効期限が切れています")
+            yield self._emit_error(
+                execution_id, "expired_api_key", "API Keyの有効期限が切れています"
+            )
             return
 
         yield self._emit_result(
@@ -525,7 +533,9 @@ class AuthService(ServiceBase[dict[str, Any]]):
             "iat": now,
             "exp": expires_at,
         }
-        access_token = jwt.encode(access_payload, self._config.jwt_secret, algorithm=self._config.jwt_algorithm)
+        access_token = jwt.encode(
+            access_payload, self._config.jwt_secret, algorithm=self._config.jwt_algorithm
+        )
 
         # リフレッシュトークン
         refresh_payload = {
@@ -536,7 +546,9 @@ class AuthService(ServiceBase[dict[str, Any]]):
             "iat": now,
             "exp": refresh_expires_at,
         }
-        refresh_token = jwt.encode(refresh_payload, self._config.jwt_secret, algorithm=self._config.jwt_algorithm)
+        refresh_token = jwt.encode(
+            refresh_payload, self._config.jwt_secret, algorithm=self._config.jwt_algorithm
+        )
 
         return AuthToken(
             access_token=access_token,

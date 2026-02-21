@@ -38,6 +38,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "pydantic-settings>=2.0.0",
     "pyyaml>=6.0",
+    "cryptography>=43.0.0",
 
     # Async I/O
     "aiofiles>=23.0.0",
@@ -376,6 +377,9 @@ ignore = [
 "examples/**/*.py" = ["F401", "PLC0415", "ANN", "ARG"]
 "fix_code_issues.py" = [
     "ALL",     # Temporary script - ignore all rules
+]
+"tests/unit/test_deep_agent.py" = [
+    "F821",    # DynamicAgent/Evolver/ConversationManager は deep_agent.py にありパッケージでシャドウされる
 ]
 
 [tool.ruff.lint.isort]

@@ -12,6 +12,12 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from apps.platform.services.agent_taxonomy import AgentTaxonomyService
+from apps.platform.services.protocol_surface_inspector import (
+    ProtocolSurfaceReport,
+    inspect_protocol_surface,
+)
+
+from agentflow.governance.plugin_registry import PluginRegistry
 
 
 if TYPE_CHECKING:
@@ -30,12 +36,6 @@ _ENGINE_MARKERS: dict[str, re.Pattern[str]] = {
 }
 
 _FRAMEWORK_IMPORT_RE = re.compile(r"(^|\n)\s*(from|import)\s+agentflow\b")
-_STREAM_SURFACE_RE = re.compile(
-    r"StreamingResponse|text/event-stream|@router\.websocket|@app\.websocket|run_stream|stream_events",
-    re.IGNORECASE,
-)
-_A2A_SURFACE_RE = re.compile(r"\ba2a\b|AgentCard|/api/a2a/card", re.IGNORECASE)
-_MCP_SURFACE_RE = re.compile(r"\bmcp\b|MCPTool|MCPClient|protocols\.mcp", re.IGNORECASE)
 _RAG_SURFACE_RE = re.compile(r"\brag\b|vector|retriev|knowledge", re.IGNORECASE)
 _SKILLS_SURFACE_RE = re.compile(r"\bskill\b|agentflow\.skills|SKILL\.md", re.IGNORECASE)
 _AUTH_ENFORCEMENT_RE = re.compile(
@@ -68,9 +68,17 @@ class FrameworkAuditIssue:
 class FrameworkAuditService:
     """App フレームワーク準拠監査サービス."""
 
-    def __init__(self, discovery: AppDiscoveryService) -> None:
+    def __init__(
+        self,
+        discovery: AppDiscoveryService,
+        plugin_registry: PluginRegistry | None = None,
+    ) -> None:
         self._discovery = discovery
         self._taxonomy = AgentTaxonomyService()
+        self._plugin_registry = plugin_registry or PluginRegistry(
+            plugins_dir=self._discovery.apps_dir.parent / "plugins",
+            apps_dir=self._discovery.apps_dir,
+        )
 
     def audit_all(self, *, audit_profile: str | None = None) -> dict[str, Any]:
         """全 App を監査."""
@@ -101,7 +109,9 @@ class FrameworkAuditService:
             "apps": rows,
         }
 
-    def _audit_one(self, app_config: AppConfig, *, audit_profile: str | None = None) -> dict[str, Any]:
+    def _audit_one(
+        self, app_config: AppConfig, *, audit_profile: str | None = None
+    ) -> dict[str, Any]:
         """単一 App を監査."""
         issues: list[FrameworkAuditIssue] = []
         config_path = self._discovery.get_config_path(app_config.name)
@@ -115,10 +125,12 @@ class FrameworkAuditService:
         issues.extend(self._check_engine_pattern(app_config, source_text))
         issues.extend(self._check_framework_usage(app_config, source_text))
         issues.extend(self._check_contract_consistency(app_config))
+        issues.extend(self._check_plugin_bindings(app_config))
         issues.extend(
             self._check_orchestration_protocols(
                 app_config,
                 source_text,
+                app_dir=app_dir,
                 audit_profile=resolved_profile,
             ),
         )
@@ -167,6 +179,92 @@ class FrameworkAuditService:
                             hint="module パスを実在ファイルへ修正してください",
                         ),
                     )
+        return issues
+
+    def _check_plugin_bindings(self, app_config: AppConfig) -> list[FrameworkAuditIssue]:
+        """plugin_bindings と plugin_manifest の整合性を検証."""
+        issues: list[FrameworkAuditIssue] = []
+        strict_line = self._plugin_registry.is_strict_product_line(app_config.product_line)
+        severity = "error" if strict_line else "warning"
+        bindings = app_config.plugin_bindings
+
+        if (
+            strict_line
+            and not bindings
+            and (
+                len(app_config.dependencies.external) > 0
+                or isinstance(app_config.services.get("mcp"), dict)
+            )
+        ):
+            issues.append(
+                FrameworkAuditIssue(
+                    severity="warning",
+                    code="PLUGIN_BINDINGS_EMPTY_WITH_EXTERNAL_SURFACE",
+                    message=("外部依存または MCP 面を持つ App だが plugin_bindings が空です"),
+                    hint="副作用を伴う統合機能は plugin_bindings で明示管理してください",
+                ),
+            )
+
+        seen: set[str] = set()
+        duplicates: set[str] = set()
+        for binding in bindings:
+            if binding.id in seen:
+                duplicates.add(binding.id)
+            seen.add(binding.id)
+
+        if duplicates:
+            dup = ", ".join(sorted(duplicates))
+            issues.append(
+                FrameworkAuditIssue(
+                    severity="error",
+                    code="PLUGIN_BINDING_DUPLICATED",
+                    message=f"plugin_bindings に重複 ID があります: {dup}",
+                    hint="同一 plugin は1回だけ宣言してください",
+                ),
+            )
+
+        for binding in bindings:
+            manifest = self._plugin_registry.get_manifest(binding.id)
+            if manifest is None:
+                issues.append(
+                    FrameworkAuditIssue(
+                        severity=severity,
+                        code="PLUGIN_MANIFEST_NOT_FOUND",
+                        message=f"plugin manifest が見つかりません: {binding.id}",
+                        hint="plugins/<id>/plugin_manifest.json を配置してください",
+                    ),
+                )
+                continue
+
+            if binding.version != manifest.version:
+                issues.append(
+                    FrameworkAuditIssue(
+                        severity=severity,
+                        code="PLUGIN_BINDING_VERSION_MISMATCH",
+                        message=(
+                            f"plugin '{binding.id}' の binding version({binding.version}) と "
+                            f"manifest version({manifest.version}) が一致しません"
+                        ),
+                        hint="plugin_bindings[].version を manifest.version に合わせてください",
+                    ),
+                )
+
+            if (
+                manifest.compatibility_product_lines
+                and app_config.product_line not in manifest.compatibility_product_lines
+            ):
+                issues.append(
+                    FrameworkAuditIssue(
+                        severity=severity,
+                        code="PLUGIN_PRODUCT_LINE_MISMATCH",
+                        message=(
+                            f"plugin '{binding.id}' は product_line="
+                            f"{manifest.compatibility_product_lines} 専用です"
+                        ),
+                        hint="App の product_line と互換な plugin を選択してください",
+                    ),
+                )
+
         return issues
 
     def _check_runtime_ports(self, app_config: AppConfig) -> list[FrameworkAuditIssue]:
@@ -398,25 +496,25 @@ class FrameworkAuditService:
         app_config: AppConfig,
         source_text: str,
         *,
+        app_dir: Path | None,
         audit_profile: str,
     ) -> list[FrameworkAuditIssue]:
         """Agent 編成とプロトコル面の最低限を検証."""
         issues: list[FrameworkAuditIssue] = []
-        if not source_text:
+        if app_dir is None:
             return issues
 
         engine_pattern = self._taxonomy.normalize_engine_pattern(app_config.blueprint.engine_pattern)
         agent_count = len(app_config.agents)
         enforce_protocol_surface = audit_profile == "developer"
-        has_stream_surface = _STREAM_SURFACE_RE.search(source_text) is not None
+        has_stream_surface = surface_report.has("sse") or surface_report.has("ws")
         if (
             enforce_protocol_surface
             and engine_pattern in {"flow", "pipeline", "coordinator", "deep_agent"}
             and not has_stream_surface
         ):
             issues.append(
-                FrameworkAuditIssue(
-                    severity="warning",
+                self._build_protocol_missing_issue(
                     code="ORCHESTRATION_STREAM_SURFACE_MISSING",
                     message=(f"engine_pattern='{engine_pattern}' だが 進捗ストリーム面(SSE/WebSocket)が検出できません"),
                     hint="run_stream / SSE / WebSocket の少なくとも 1 つを提供してください",
@@ -427,7 +525,7 @@ class FrameworkAuditService:
             self._taxonomy.normalize_agent_pattern(agent.pattern) in {"coordinator", "router"}
             for agent in app_config.agents
         )
-        has_a2a_surface = _A2A_SURFACE_RE.search(source_text) is not None
+        has_a2a_surface = surface_report.has("a2a")
         if (
             enforce_protocol_surface
             and agent_count >= _MIN_AGENT_COUNT_FOR_A2A
@@ -435,8 +533,7 @@ class FrameworkAuditService:
             and not has_a2a_surface
         ):
             issues.append(
-                FrameworkAuditIssue(
-                    severity="warning",
+                self._build_protocol_missing_issue(
                     code="A2A_SURFACE_NOT_FOUND",
                     message="複数 Agent + coordinator/router 構成だが A2A 面が検出できません",
                     hint=("A2A card / A2A routing のいずれかを実装し、Agent 間契約を明示してください"),
@@ -451,13 +548,14 @@ class FrameworkAuditService:
             or bool(app_config.blueprint.mcp_servers)
             or ("mcp" in dependencies_external)
         )
-        if enforce_protocol_surface and expects_mcp and _MCP_SURFACE_RE.search(source_text) is None:
+        if enforce_protocol_surface and expects_mcp and not surface_report.has("mcp"):
             issues.append(
-                FrameworkAuditIssue(
-                    severity="warning",
+                self._build_protocol_missing_issue(
                     code="MCP_DECLARED_BUT_SURFACE_MISSING",
-                    message="MCP 利用宣言はあるが、MCP 呼び出し面が検出できません",
-                    hint="MCP client/tool の呼び出しコードを追加または宣言を整理してください",
+                    declared="MCP 利用宣言はあるが、MCP 呼び出し面が検出できません",
+                    expected="MCP client/tool の呼び出しコードを追加または宣言を整理してください",
+                    evidence_protocols=("mcp",),
+                    report=surface_report,
                 ),
             )
 
@@ -484,6 +582,56 @@ class FrameworkAuditService:
             )
 
         return issues
+
+    @staticmethod
+    def _build_ast_parse_warnings(report: ProtocolSurfaceReport) -> list[FrameworkAuditIssue]:
+        issues: list[FrameworkAuditIssue] = []
+        for warning in report.parse_warnings:
+            issues.append(
+                FrameworkAuditIssue(
+                    severity="warning",
+                    code="AST_PARSE_WARNING",
+                    message=(
+                        "AST（Python構文木）解析に失敗しました: "
+                        f"{warning.file}:{warning.line} {warning.message}"
+                    ),
+                    hint=f"修正提案: {warning.suggestion} / 影響: {warning.impact}",
+                ),
+            )
+        return issues
+
+    @staticmethod
+    def _build_protocol_missing_issue(
+        *,
+        code: str,
+        declared: str,
+        expected: str,
+        evidence_protocols: tuple[str, ...],
+        report: ProtocolSurfaceReport,
+    ) -> FrameworkAuditIssue:
+        locations: list[str] = []
+        for protocol in evidence_protocols:
+            locations.extend(report.evidence_locations(protocol))
+        has_any_evidence = bool(locations)
+        cannot_prove = report.parse_failed_all or (
+            report.parse_failed_files > 0 and not has_any_evidence
+        )
+
+        if cannot_prove:
+            return FrameworkAuditIssue(
+                severity="error",
+                code=f"{code}_UNVERIFIED",
+                message=(f"{declared}。関連ファイルの AST 解析に失敗し、実装有無を立証できません"),
+                hint=(f"構文エラーを修正して AST 監査を再実行してください。期待要件: {expected}"),
+            )
+
+        evidence_note = ", ".join(sorted(set(locations))[:4]) if locations else "証拠なし"
+        return FrameworkAuditIssue(
+            severity="warning",
+            code=code,
+            message=declared,
+            hint=f"{expected}（検出証拠: {evidence_note}）",
+        )
 
     @staticmethod
     def _resolve_audit_profile(app_config: AppConfig, override: str | None) -> str:

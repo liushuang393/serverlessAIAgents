@@ -377,3 +377,18 @@ MIT License - AgentFlow メイン README を参照
 貢献を歓迎します！AgentFlow のコントリビューションガイドに従ってください。
 
 実装済み機能：
+
+## 共有テスト env 自動生成
+
+```bash
+conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
+```
+
+- `MESSAGING_HUB_API_KEY_ENV` / `MESSAGING_HUB_API_KEY` は上記で自動補完されます。
+- 空値のみ補完し、既存の非空値は保持されます（`--force` 指定時のみ上書き）。
+
+## 本番運用と多租户招待メール
+
+- `contracts.auth` が有効なため、本番では API キーを Secret Manager から注入してください。
+- 招待メールは機密最小化を徹底し、ログイン URL は別メールで送信してください。
+- 詳細手順: `docs/internal/env-bootstrap-and-tenant-invite-security.md`

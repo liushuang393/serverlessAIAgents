@@ -67,7 +67,9 @@ class VersionInfo:
         """从字典创建."""
         return cls(
             version=data["version"],
-            created_at=datetime.fromisoformat(data["created_at"]) if "created_at" in data else datetime.now(UTC),
+            created_at=datetime.fromisoformat(data["created_at"])
+            if "created_at" in data
+            else datetime.now(UTC),
             created_by=data.get("created_by", ""),
             message=data.get("message", ""),
             parent_version=data.get("parent_version"),

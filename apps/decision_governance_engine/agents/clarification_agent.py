@@ -158,7 +158,9 @@ class ClarificationAgent(ResilientAgent[ClarificationInput, ClarificationOutput]
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
         # 詳細ログ: LLM生出力を記録（デバッグ用）
-        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
+        self._logger.debug(
+            f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}"
+        )
 
         try:
             # JSON部分を抽出してパース（堅牢な抽出）

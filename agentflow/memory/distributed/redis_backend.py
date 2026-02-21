@@ -11,6 +11,12 @@ from typing import Any
 from agentflow.memory.distributed.backend_interface import MemoryBackend
 from agentflow.memory.types import MemoryEntry, MemoryType
 
+# オプション依存: テストでのモック（patch）が効くようにモジュールレベルで import
+try:
+    import redis  # type: ignore[import-untyped]
+except ImportError:
+    redis = None  # type: ignore[assignment]
+
 
 class RedisBackend(MemoryBackend):
     """Redisバックエンド実装.
@@ -54,10 +60,11 @@ class RedisBackend(MemoryBackend):
 
     async def connect(self) -> None:
         """Redisに接続."""
+        if redis is None:
+            msg = "redis package is required. Install with: pip install redis"
+            raise ImportError(msg)
         try:
-            import redis.asyncio as redis
-
-            self._client = redis.Redis(
+            self._client = redis.asyncio.Redis(
                 host=self._host,
                 port=self._port,
                 db=self._db,
@@ -68,9 +75,6 @@ class RedisBackend(MemoryBackend):
             await self._client.ping()
             self._connected = True
             self._logger.info(f"Connected to Redis at {self._host}:{self._port}")
-        except ImportError:
-            msg = "redis package is required. Install with: pip install redis"
-            raise ImportError(msg)
         except Exception as e:
             msg = f"Failed to connect to Redis: {e}"
             raise ConnectionError(msg)

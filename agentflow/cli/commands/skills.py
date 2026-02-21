@@ -189,7 +189,9 @@ def show(ctx: click.Context, name: str) -> None:
 @click.argument("name")
 @click.option("--description", "-d", help="Skill の説明")
 @click.option("--triggers", "-t", help="トリガーワード（カンマ区切り）")
-@click.option("--scope", "-s", type=click.Choice(["project", "global"]), default="project", help="保存先")
+@click.option(
+    "--scope", "-s", type=click.Choice(["project", "global"]), default="project", help="保存先"
+)
 @click.option("--interactive", "-i", is_flag=True, help="対話モードで作成")
 @click.pass_context
 def create(
@@ -259,7 +261,9 @@ tags: []
     skill_dir.mkdir(parents=True, exist_ok=True)
 
     skill_file = skill_dir / "SKILL.md"
-    if skill_file.exists() and not Confirm.ask(f"[yellow]Overwrite existing {skill_file}?[/yellow]"):
+    if skill_file.exists() and not Confirm.ask(
+        f"[yellow]Overwrite existing {skill_file}?[/yellow]"
+    ):
         console.print("[dim]Cancelled.[/dim]")
         return
 
@@ -370,7 +374,9 @@ def search(ctx: click.Context, query: str, top: int) -> None:
         return
 
     # テーブル表示
-    table = Table(title=f"Search Results for: '{query}'", show_header=True, header_style="bold cyan")
+    table = Table(
+        title=f"Search Results for: '{query}'", show_header=True, header_style="bold cyan"
+    )
     table.add_column("#", style="dim", width=3)
     table.add_column("Name", style="green")
     table.add_column("Score", style="yellow")
@@ -466,7 +472,11 @@ def mount(
         console.print("[red]--name can only be used when mounting a single skill.[/red]")
         raise click.exceptions.Exit(1)
 
-    target_root = Path(".agentflow") / "skills" if scope == "project" else Path.home() / ".agentflow" / "skills"
+    target_root = (
+        Path(".agentflow") / "skills"
+        if scope == "project"
+        else Path.home() / ".agentflow" / "skills"
+    )
     target_root.mkdir(parents=True, exist_ok=True)
 
     validator = SkillValidator(strict=False)
@@ -491,7 +501,9 @@ def mount(
 
         if destination.exists():
             if not force:
-                console.print(f"[red]Target already exists: {destination} (use --force to overwrite)[/red]")
+                console.print(
+                    f"[red]Target already exists: {destination} (use --force to overwrite)[/red]"
+                )
                 raise click.exceptions.Exit(1)
             shutil.rmtree(destination)
 

@@ -383,7 +383,7 @@ class VercelProvider(DeploymentProvider):
             dns_records=[
                 {
                     "type": "CNAME",
-                    "name": domain.split(".")[0],
+                    "name": domain.split(".", maxsplit=1)[0],
                     "value": "cname.vercel-dns.com",
                 }
             ],

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """OneDriveConnector - Microsoft Graph API コネクタ.
 
 OneDrive / SharePoint へのアクセスを提供。

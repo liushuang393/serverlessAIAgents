@@ -377,7 +377,9 @@ class GalleryService:
             ValueError: インストール失敗
         """
         # マーケットプレイスIDを抽出
-        actual_id = item_id.replace("marketplace:", "") if item_id.startswith("marketplace:") else item_id
+        actual_id = (
+            item_id.replace("marketplace:", "") if item_id.startswith("marketplace:") else item_id
+        )
 
         # インストール
         install_path = self._marketplace.install(actual_id)

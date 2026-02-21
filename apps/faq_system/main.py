@@ -144,6 +144,7 @@ db_manager = DatabaseManager(
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """アプリ起動/終了時の初期化."""
+    get_faq_contract_auth_guard().reset_cache()
     await db_manager.init()
     if db_manager.resolved_url.startswith("sqlite"):
         await db_manager.create_all_tables()

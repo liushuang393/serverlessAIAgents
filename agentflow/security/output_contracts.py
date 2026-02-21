@@ -182,7 +182,9 @@ class ValidationResult(BaseModel):
     is_valid: bool = Field(default=True, description="検証成功か")
     quality_score: float = Field(default=1.0, ge=0.0, le=1.0, description="品質スコア")
     missing_fields: list[str] = Field(default_factory=list, description="欠落フィールド")
-    invalid_fields: list[dict[str, Any]] = Field(default_factory=list, description="無効フィールド詳細")
+    invalid_fields: list[dict[str, Any]] = Field(
+        default_factory=list, description="無効フィールド詳細"
+    )
     missing_evidence: list[str] = Field(default_factory=list, description="欠落根拠")
     insufficient_evidence: list[dict[str, Any]] = Field(
         default_factory=list,

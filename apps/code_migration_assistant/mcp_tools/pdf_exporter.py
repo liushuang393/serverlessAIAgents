@@ -55,6 +55,7 @@ def export_to_pdf(markdown_content: str, output_path: str) -> str:
         raise Exception(msg)
 
 
+
 # Tool Registration
 PDF_EXPORT_TOOL = RegisteredTool(
     name="migration.export_pdf",

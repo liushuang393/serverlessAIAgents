@@ -8,11 +8,17 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from dataclasses import dataclass, field
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+
+from agentflow.governance.plugin_signature import (
+    PluginSignatureVerifier,
+    SignatureStatus,
+)
 
 
 if TYPE_CHECKING:
@@ -23,7 +29,10 @@ if TYPE_CHECKING:
 _SEMVER_PART_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)")
 _KERNEL_CONSTRAINT_RE = re.compile(r"^(>=|<=|==|>|<)?\s*([0-9A-Za-z.+-]+)$")
 _SUPPORTED_PRODUCT_LINES = {"migration", "faq", "assistant", "framework"}
+_STRICT_PRODUCT_LINES = {"migration", "faq", "assistant"}
 _SIDE_EFFECT_OPERATIONS = {"write", "delete", "execute"}
+_PLUGIN_SIGNATURE_ENFORCEMENT_ENV = "AGENTFLOW_PLUGIN_SIGNATURE_ENFORCEMENT"
+_DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT = "warn"
 
 
 _logger = logging.getLogger(__name__)
@@ -38,6 +47,9 @@ class PluginManifestRecord:
     risk_tier: str
     compatibility_kernel: str
     compatibility_product_lines: list[str] = field(default_factory=list)
+    manifest_path: Path | None = None
+    signature_status: SignatureStatus = "parse_error"
+    signature_reason: str = ""
     raw: dict[str, Any] = field(default_factory=dict)
 
 
@@ -70,6 +82,9 @@ class PluginRuntimeAssessment:
     plugin_id: str | None
     plugin_version: str | None
     plugin_risk_tier: str | None = None
+    plugin_signature_status: SignatureStatus | None = None
+    plugin_signature_reason: str | None = None
+    manifest_required_permissions: list[str] = field(default_factory=list)
     manifest: PluginManifestRecord | None = None
     binding: PluginBindingRecord | None = None
     errors: list[str] = field(default_factory=list)
@@ -85,10 +100,18 @@ class PluginRegistry:
         plugins_dir: Path | None = None,
         apps_dir: Path | None = None,
         kernel_version: str | None = None,
+        signature_verifier: PluginSignatureVerifier | None = None,
     ) -> None:
         self._plugins_dir = plugins_dir or (Path.cwd() / "plugins")
         self._apps_dir = apps_dir or (Path.cwd() / "apps")
         self._kernel_version = kernel_version or self._resolve_kernel_version()
+        trust_store_override = os.getenv("AGENTFLOW_PLUGIN_TRUST_STORE")
+        self._signature_verifier = signature_verifier or PluginSignatureVerifier(
+            trust_store_path=Path(trust_store_override)
+            if trust_store_override
+            else self._plugins_dir / "trust_store.json",
+        )
+        self._signature_enforcement = self._resolve_signature_enforcement()
         self._manifests: dict[str, PluginManifestRecord] = {}
         self._app_snapshots: dict[str, AppPluginSnapshot | None] = {}
         self._load_manifests()
@@ -111,7 +134,7 @@ class PluginRegistry:
         app_name = self._normalize_optional_text(context.app_name)
         snapshot = self._load_app_snapshot(app_name) if app_name else None
         product_line = self._resolve_product_line(context, snapshot)
-        strict_mode = product_line in {"migration", "faq", "assistant"}
+        strict_mode = self.is_strict_product_line(product_line)
         operation_name = str(tool.operation_type.value).lower()
         is_side_effect_tool = operation_name in _SIDE_EFFECT_OPERATIONS
         plugin_id = self._normalize_optional_text(tool.plugin_id)
@@ -135,6 +158,11 @@ class PluginRegistry:
                 "副作用ツールに plugin_id が設定されていません",
             )
             return assessment
+        if plugin_version is None:
+            self._add_violation(
+                assessment,
+                "副作用ツールに plugin_version が設定されていません",
+            )
 
         manifest = self._manifests.get(plugin_id)
         assessment.manifest = manifest
@@ -146,6 +174,31 @@ class PluginRegistry:
             return assessment
 
         assessment.plugin_risk_tier = manifest.risk_tier
+        assessment.plugin_signature_status = manifest.signature_status
+        assessment.plugin_signature_reason = manifest.signature_reason
+        if self._signature_enforcement == "warn" and manifest.signature_status != "verified":
+            assessment.warnings.append(
+                "plugin 署名検証 warning: "
+                f"status={manifest.signature_status}, reason={manifest.signature_reason}",
+            )
+        assessment.manifest_required_permissions = self._normalize_permissions(
+            manifest.raw.get("required_permissions"),
+        )
+
+        tool_permissions = self._normalize_permissions(tool.required_permissions)
+        missing_permissions = [
+            perm
+            for perm in assessment.manifest_required_permissions
+            if perm not in tool_permissions
+        ]
+        if missing_permissions:
+            self._add_violation(
+                assessment,
+                (
+                    "tool.required_permissions が plugin manifest の必須権限を満たしていません: "
+                    f"{missing_permissions}"
+                ),
+            )
 
         if plugin_version and plugin_version != manifest.version:
             self._add_violation(
@@ -219,6 +272,25 @@ class PluginRegistry:
         else:
             assessment.warnings.append(message)
 
+    @staticmethod
+    def _resolve_signature_enforcement() -> str:
+        """署名検証ポリシーを解決する（P1 は warn 固定運用）。"""
+        raw = (
+            os.getenv(
+                _PLUGIN_SIGNATURE_ENFORCEMENT_ENV,
+                _DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT,
+            )
+            .strip()
+            .lower()
+        )
+        if raw != _DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT:
+            _logger.warning(
+                "未対応の %s=%s が指定されました。P1 では warn 固定運用です",
+                _PLUGIN_SIGNATURE_ENFORCEMENT_ENV,
+                raw,
+            )
+        return _DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT
+
     def _load_manifests(self) -> None:
         """plugins/*/plugin_manifest.json を読み込む."""
         self._manifests.clear()
@@ -246,12 +318,19 @@ class PluginRegistry:
                 product_lines = self._normalize_product_lines(
                     compatibility.get("product_lines"),
                 )
+                signature_result = self._signature_verifier.verify_manifest(
+                    manifest=raw,
+                    manifest_path=manifest_path,
+                )
                 self._manifests[plugin_id] = PluginManifestRecord(
                     id=plugin_id,
                     version=plugin_version,
                     risk_tier=risk_tier,
                     compatibility_kernel=kernel_constraint,
                     compatibility_product_lines=product_lines,
+                    manifest_path=manifest_path,
+                    signature_status=signature_result.status,
+                    signature_reason=signature_result.reason,
                     raw=raw,
                 )
             except Exception as exc:
@@ -284,7 +363,9 @@ class PluginRegistry:
                     bindings[binding_id] = PluginBindingRecord(
                         id=binding_id,
                         version=binding_version,
-                        config=item.get("config", {}) if isinstance(item.get("config"), dict) else {},
+                        config=item.get("config", {})
+                        if isinstance(item.get("config"), dict)
+                        else {},
                     )
             snapshot = AppPluginSnapshot(
                 app_name=app_name,
@@ -342,6 +423,27 @@ class PluginRegistry:
             seen.add(line)
             lines.append(line)
         return lines
+
+    @staticmethod
+    def _normalize_permissions(raw: object) -> list[str]:
+        if not isinstance(raw, list):
+            return []
+        permissions: list[str] = []
+        seen: set[str] = set()
+        for item in raw:
+            if not isinstance(item, str):
+                continue
+            permission = item.strip()
+            if not permission or permission in seen:
+                continue
+            seen.add(permission)
+            permissions.append(permission)
+        return permissions
+
+    @staticmethod
+    def is_strict_product_line(product_line: str) -> bool:
+        """Studio 厳格モード対象の product_line かどうか."""
+        return product_line in _STRICT_PRODUCT_LINES
 
     @staticmethod
     def _resolve_kernel_version() -> str:

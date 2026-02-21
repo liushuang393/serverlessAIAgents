@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """LocalFileConnector - ローカルファイルシステムコネクタ.
 
 ローカルファイルシステムへのアクセスを提供。

@@ -3,10 +3,34 @@
 ## 1. 追加手順
 
 1. `plugins/<plugin_id>/plugin_manifest.json` を作成
-2. `compatibility.kernel` を `>=2.0.0` で定義
-3. `compatibility.product_lines` を明示
-4. `tests_required` を定義
-5. 対応 App の `app_config.json` に `plugin_bindings` を追加
+2. `plugins/<plugin_id>/plugin_manifest.sig` を作成（sidecar 署名）
+3. `plugins/trust_store.json` に公開鍵を登録
+4. `compatibility.kernel` を `>=2.0.0` で定義
+5. `compatibility.product_lines` を明示
+6. `tests_required` を定義
+7. 対応 App の `app_config.json` に `plugin_bindings` を追加
+
+## 1.1 canonical JSON と sidecar 署名
+
+- 署名対象は `plugin_manifest.json` 全体（sidecar 方式なので自己参照問題なし）
+- canonical 化:
+  - `sort_keys=True`
+  - `separators=(",", ":")`
+  - UTF-8
+- `plugin_manifest.sig` は base64 文字列 1 行
+
+## 1.2 trust store 運用
+
+- 既定: `plugins/trust_store.json`
+- 上書き: `AGENTFLOW_PLUGIN_TRUST_STORE`
+- キー形式: `issuer -> key_id -> {algorithm, public_key_base64}`
+- P1 は `ed25519` のみ対応
+
+## 1.3 実行時ポリシー（P1）
+
+- `AGENTFLOW_PLUGIN_SIGNATURE_ENFORCEMENT` 既定値は `warn`
+- 署名検証失敗（missing_sig/missing_key/bad_signature/parse_error）は warning のみ
+- product_line が strict でも P1 では deny しない
 
 ## 2. バージョン管理
 

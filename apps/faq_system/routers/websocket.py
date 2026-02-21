@@ -8,7 +8,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from apps.faq_system.backend.auth.dependencies import resolve_user
+from apps.faq_system.backend.auth.dependencies import require_ws_auth
 from apps.faq_system.routers.dependencies import (
     extract_assistant_content,
     get_chat_history_service,
@@ -96,7 +96,6 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str) -> None:
         request_path=websocket.url.path,
     )
     if not user:
-        await websocket.close(code=4401, reason="Unauthorized")
         return
 
     await _ws_manager.connect(websocket, client_id)

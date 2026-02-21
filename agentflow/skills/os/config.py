@@ -149,7 +149,7 @@ class OSSkillConfig:
 
     def is_command_allowed(self, command: str) -> bool:
         """コマンドが許可されているか判定."""
-        base_cmd = command.split()[0] if command else ""
+        base_cmd = command.split(maxsplit=1)[0] if command else ""
         if base_cmd in self.command_blacklist:
             return False
         return base_cmd in self.command_whitelist

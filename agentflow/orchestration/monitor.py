@@ -94,6 +94,11 @@ class MonitorEvent:
             "timestamp": self.timestamp.isoformat(),
         }
 
+    def to_json(self) -> str:
+        """JSON 文字列に変換."""
+        import json
+        return json.dumps(self.to_dict(), ensure_ascii=False)
+
 
 class MonitorThresholds(BaseModel):
     """監視閾値.

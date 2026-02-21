@@ -129,9 +129,9 @@ class TestGetSandbox:
         """各テスト後にリセット."""
         reset_sandbox()
 
-    def test_default_is_mock(self) -> None:
-        """デフォルトは MockSandbox."""
-        sandbox = get_sandbox()
+    def test_mock_provider_returns_mock_sandbox(self) -> None:
+        """provider='mock' で MockSandbox が返る."""
+        sandbox = get_sandbox(provider="mock")
         assert isinstance(sandbox, MockSandbox)
 
     def test_explicit_mock(self) -> None:
@@ -140,9 +140,9 @@ class TestGetSandbox:
         assert isinstance(sandbox, MockSandbox)
 
     def test_caching(self) -> None:
-        """同じインスタンスがキャッシュされる."""
-        sandbox1 = get_sandbox()
-        sandbox2 = get_sandbox()
+        """mock プロバイダは同じインスタンスがキャッシュされる."""
+        sandbox1 = get_sandbox(provider="mock")
+        sandbox2 = get_sandbox(provider="mock")
         assert sandbox1 is sandbox2
 
     def test_unknown_provider_raises(self) -> None:

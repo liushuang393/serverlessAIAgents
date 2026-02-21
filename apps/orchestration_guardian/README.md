@@ -1,4 +1,4 @@
-# Orchestration Guardian
+# Orchestration Guardian (オーケストレーション・ガーディアン)
 
 
 <!-- README_REQUIRED_SECTIONS_START -->
@@ -60,6 +60,6 @@ python -m apps.platform.main publish ./apps/orchestration_guardian --target dock
 
 ## Endpoints
 
-- `GET /api/health`
-- `GET /api/checklist`
-- `POST /api/verify`
+- **シークレット**: 本番環境のシークレット（機密情報）は Secret Manager 経由で注入されます。
+- **テナント招待**: セキュリティのため、招待メールは「通知」と「ログインURL」の2通に分けて送信されます。
+- **詳細ドキュメント**: 詳細は `docs/internal/env-bootstrap-and-tenant-invite-security.md` を参照してください。

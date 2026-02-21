@@ -135,7 +135,9 @@ class EvidenceItem(Base):
 
     # リレーション
     decision_record: Mapped["DecisionRecord"] = relationship(back_populates="evidence_items")
-    claims: Mapped[list["Claim"]] = relationship(secondary=claim_evidence_refs, back_populates="evidence_refs")
+    claims: Mapped[list["Claim"]] = relationship(
+        secondary=claim_evidence_refs, back_populates="evidence_refs"
+    )
 
 
 class Claim(Base):
@@ -151,7 +153,9 @@ class Claim(Base):
         PG_UUID(as_uuid=True), ForeignKey("decision_records.id", ondelete="CASCADE"), nullable=False
     )
 
-    claim_type: Mapped[str] = mapped_column(String(20), nullable=False)  # FACT/INFERENCE/ASSUMPTION/RECOMMENDATION
+    claim_type: Mapped[str] = mapped_column(
+        String(20), nullable=False
+    )  # FACT/INFERENCE/ASSUMPTION/RECOMMENDATION
     statement: Mapped[str] = mapped_column(Text, nullable=False)
     source_section: Mapped[str | None] = mapped_column(String(20))
     confidence: Mapped[float | None] = mapped_column(Numeric(5, 4))
@@ -159,4 +163,6 @@ class Claim(Base):
 
     # リレーション
     decision_record: Mapped["DecisionRecord"] = relationship(back_populates="claims")
-    evidence_refs: Mapped[list["EvidenceItem"]] = relationship(secondary=claim_evidence_refs, back_populates="claims")
+    evidence_refs: Mapped[list["EvidenceItem"]] = relationship(
+        secondary=claim_evidence_refs, back_populates="claims"
+    )

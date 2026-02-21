@@ -33,11 +33,7 @@
   ],
   "services": {
     "governance": {
-      "checks": [
-        "orchestration",
-        "protocols",
-        "security_baseline"
-      ]
+      "checks": ["orchestration", "protocols", "security_baseline"]
     }
   },
   "dependencies": {
@@ -64,19 +60,14 @@
       "note": null
     },
     "commands": {
-      "backend_dev": "python -m apps.orchestration_guardian.main",
+      "backend_dev": "python apps/orchestration_guardian/scripts/dev.py",
       "frontend_dev": null,
       "publish": null,
       "start": null,
       "stop": null
     }
   },
-  "tags": [
-    "orchestration",
-    "governance",
-    "protocol",
-    "audit"
-  ],
+  "tags": ["orchestration", "governance", "protocol", "audit"],
   "contracts": {
     "auth": {
       "enabled": false,
@@ -110,9 +101,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },

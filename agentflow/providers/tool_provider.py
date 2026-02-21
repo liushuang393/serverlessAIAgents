@@ -281,7 +281,11 @@ def tool(
                 cache_key = f"{tool_name}:{args}:{kwargs}"
                 if cache_key in _cache:
                     return _cache[cache_key]
-                result = await func(*args, **kwargs) if inspect.iscoroutinefunction(func) else func(*args, **kwargs)
+                result = (
+                    await func(*args, **kwargs)
+                    if inspect.iscoroutinefunction(func)
+                    else func(*args, **kwargs)
+                )
                 _cache[cache_key] = result
                 return result
 

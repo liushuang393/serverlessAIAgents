@@ -1,5 +1,5 @@
-import { X } from 'lucide-react';
-import { useWorkflowStore } from '../stores/workflowStore';
+import { X } from "lucide-react";
+import { useWorkflowStore } from "../stores/workflowStore";
 
 /**
  * プロパティパネルコンポーネント
@@ -86,8 +86,8 @@ export default function PropertiesPanel() {
             <div>
               <label className="block text-xs text-muted-foreground mb-1">入力データ</label>
               <textarea
-                value={node.data.config.input || ''}
-                onChange={(e) => handleConfigChange('input', e.target.value)}
+                value={node.data.config.input || ""}
+                onChange={(e) => handleConfigChange("input", e.target.value)}
                 placeholder='{"key": "value"}'
                 className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background text-foreground font-mono focus:outline-none focus:ring-2 focus:ring-ring"
                 rows={4}

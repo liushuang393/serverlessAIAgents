@@ -137,11 +137,15 @@ class QiAgent(ResilientAgent[QiInput, QiOutput]):
             phases_info = f"【Stage1】{rocket.stage1_minimal_pipeline.stage_name}\n"
             phases_info += f"  目標: {rocket.stage1_minimal_pipeline.objective}\n"
             for p in rocket.stage1_minimal_pipeline.phases:
-                phases_info += f"  Phase {p.phase_number}: {p.name} ({p.duration}) - {', '.join(p.tasks)}\n"
+                phases_info += (
+                    f"  Phase {p.phase_number}: {p.name} ({p.duration}) - {', '.join(p.tasks)}\n"
+                )
             phases_info += f"【Stage2】{rocket.stage2_governance.stage_name}\n"
             phases_info += f"  目標: {rocket.stage2_governance.objective}\n"
             for p in rocket.stage2_governance.phases:
-                phases_info += f"  Phase {p.phase_number}: {p.name} ({p.duration}) - {', '.join(p.tasks)}\n"
+                phases_info += (
+                    f"  Phase {p.phase_number}: {p.name} ({p.duration}) - {', '.join(p.tasks)}\n"
+                )
         else:
             phases_info = "\n".join(
                 f"Phase {p.phase_number}: {p.name} ({p.duration}) - {', '.join(p.actions)}" for p in shu_result.phases
@@ -341,19 +345,25 @@ JSON形式で出力してください。"""
         # domain_technologies (max 5)
         domain_tech = data.get("domain_technologies", [])
         if isinstance(domain_tech, list) and len(domain_tech) > 5:
-            self._logger.warning(f"domain_technologies has {len(domain_tech)} items (max 5), truncating")
+            self._logger.warning(
+                f"domain_technologies has {len(domain_tech)} items (max 5), truncating"
+            )
             data["domain_technologies"] = domain_tech[:5]
 
         # regulatory_considerations (max 5)
         regulatory = data.get("regulatory_considerations", [])
         if isinstance(regulatory, list) and len(regulatory) > 5:
-            self._logger.warning(f"regulatory_considerations has {len(regulatory)} items (max 5), truncating")
+            self._logger.warning(
+                f"regulatory_considerations has {len(regulatory)} items (max 5), truncating"
+            )
             data["regulatory_considerations"] = regulatory[:5]
 
         # geographic_considerations (max 5)
         geographic = data.get("geographic_considerations", [])
         if isinstance(geographic, list) and len(geographic) > 5:
-            self._logger.warning(f"geographic_considerations has {len(geographic)} items (max 5), truncating")
+            self._logger.warning(
+                f"geographic_considerations has {len(geographic)} items (max 5), truncating"
+            )
             data["geographic_considerations"] = geographic[:5]
 
         # domain_technologies内の alternatives (max 3)
@@ -456,7 +466,9 @@ JSON形式で出力してください。"""
             minimal_logging = None
             if ml_data and isinstance(ml_data, dict):
                 minimal_logging = MinimalLogging(
-                    correlation_id_strategy=str(ml_data.get("correlation_id_strategy", "UUID"))[:100],
+                    correlation_id_strategy=str(ml_data.get("correlation_id_strategy", "UUID"))[
+                        :100
+                    ],
                     timestamp_points=ml_data.get("timestamp_points", [])[:5],
                     storage=str(ml_data.get("storage", ""))[:80],
                 )

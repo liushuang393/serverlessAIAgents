@@ -183,13 +183,24 @@ class PDFGeneratorService:
 
         if hasattr(summary, "essence_statement") and summary.essence_statement:
             elements.append(Paragraph(f"<b>本質:</b> {summary.essence_statement}", normal_style))
-        elements.append(Paragraph(f"<b>推奨アクション:</b> {summary.recommended_action}", normal_style))
+        elements.append(
+            Paragraph(f"<b>推奨アクション:</b> {summary.recommended_action}", normal_style)
+        )
         elements.append(Paragraph(f"<b>最初の一歩:</b> {summary.first_step}", normal_style))
 
-        if hasattr(summary, "strategic_prohibition_summary") and summary.strategic_prohibition_summary:
-            elements.append(Paragraph(f"<b>戦略的禁止:</b> {summary.strategic_prohibition_summary}", warning_style))
+        if (
+            hasattr(summary, "strategic_prohibition_summary")
+            and summary.strategic_prohibition_summary
+        ):
+            elements.append(
+                Paragraph(
+                    f"<b>戦略的禁止:</b> {summary.strategic_prohibition_summary}", warning_style
+                )
+            )
         if hasattr(summary, "exit_criteria_summary") and summary.exit_criteria_summary:
-            elements.append(Paragraph(f"<b>撤退基準:</b> {summary.exit_criteria_summary}", warning_style))
+            elements.append(
+                Paragraph(f"<b>撤退基準:</b> {summary.exit_criteria_summary}", warning_style)
+            )
 
         if summary.key_risks:
             elements.append(Paragraph("<b>主要リスク:</b>", normal_style))
@@ -215,9 +226,13 @@ class PDFGeneratorService:
         if ed:
             elements.append(Paragraph("本質導出プロセス", subheading_style))
             elements.append(Paragraph(f"表面的問題: {ed.get('surface_problem', '')}", normal_style))
-            elements.append(Paragraph(f"一段深い理由: {ed.get('underlying_why', '')}", normal_style))
+            elements.append(
+                Paragraph(f"一段深い理由: {ed.get('underlying_why', '')}", normal_style)
+            )
             elements.append(Paragraph(f"根本制約: {ed.get('root_constraint', '')}", normal_style))
-            elements.append(Paragraph(f"<b>本質の一文:</b> {ed.get('essence_statement', '')}", highlight_style))
+            elements.append(
+                Paragraph(f"<b>本質の一文:</b> {ed.get('essence_statement', '')}", highlight_style)
+            )
 
         # 既存代替手段
         alternatives = dao.get("existing_alternatives", [])
@@ -358,41 +373,75 @@ class PDFGeneratorService:
                     )
                 )
                 if p.get("prevention_measure"):
-                    elements.append(Paragraph(f"  🛡️ 防止策: {p['prevention_measure']}", normal_style))
+                    elements.append(
+                        Paragraph(f"  🛡️ 防止策: {p['prevention_measure']}", normal_style)
+                    )
                 if p.get("detection_metric"):
-                    elements.append(Paragraph(f"  📊 検知指標: {p['detection_metric']}", normal_style))
+                    elements.append(
+                        Paragraph(f"  📊 検知指標: {p['detection_metric']}", normal_style)
+                    )
                 if p.get("responsible_role"):
-                    elements.append(Paragraph(f"  👤 責任者: {p['responsible_role']}", normal_style))
+                    elements.append(
+                        Paragraph(f"  👤 責任者: {p['responsible_role']}", normal_style)
+                    )
 
         # v3.1: 競争優位仮説
         comp_hyp = fa.get("competitive_hypothesis", {})
         if comp_hyp:
             elements.append(Paragraph("競争優位仮説", subheading_style))
-            elements.append(Paragraph(f"<b>差別化軸:</b> {comp_hyp.get('axis_name', '')}", highlight_style))
-            elements.append(Paragraph(f"<b>対象顧客:</b> {comp_hyp.get('target_customer', '')}", normal_style))
-            elements.append(Paragraph(f"<b>代替障壁:</b> {comp_hyp.get('substitution_barrier', '')}", normal_style))
-            elements.append(Paragraph(f"<b>勝ち筋指標:</b> {comp_hyp.get('winning_metric', '')}", normal_style))
-            elements.append(Paragraph(f"<b>最小検証:</b> {comp_hyp.get('minimum_verification', '')}", normal_style))
+            elements.append(
+                Paragraph(f"<b>差別化軸:</b> {comp_hyp.get('axis_name', '')}", highlight_style)
+            )
+            elements.append(
+                Paragraph(f"<b>対象顧客:</b> {comp_hyp.get('target_customer', '')}", normal_style)
+            )
+            elements.append(
+                Paragraph(
+                    f"<b>代替障壁:</b> {comp_hyp.get('substitution_barrier', '')}", normal_style
+                )
+            )
+            elements.append(
+                Paragraph(f"<b>勝ち筋指標:</b> {comp_hyp.get('winning_metric', '')}", normal_style)
+            )
+            elements.append(
+                Paragraph(
+                    f"<b>最小検証:</b> {comp_hyp.get('minimum_verification', '')}", normal_style
+                )
+            )
         else:
             # v3.0フォールバック: 差別化軸
             diff_axis = fa.get("differentiation_axis", {})
             if diff_axis:
                 elements.append(Paragraph("差別化軸", subheading_style))
-                elements.append(Paragraph(f"<b>勝負する軸:</b> {diff_axis.get('axis_name', '')}", highlight_style))
-                elements.append(Paragraph(f"理由: {diff_axis.get('why_this_axis', '')}", normal_style))
-                elements.append(Paragraph(f"<b>勝負しない軸:</b> {diff_axis.get('not_this_axis', '')}", normal_style))
+                elements.append(
+                    Paragraph(
+                        f"<b>勝負する軸:</b> {diff_axis.get('axis_name', '')}", highlight_style
+                    )
+                )
+                elements.append(
+                    Paragraph(f"理由: {diff_axis.get('why_this_axis', '')}", normal_style)
+                )
+                elements.append(
+                    Paragraph(
+                        f"<b>勝負しない軸:</b> {diff_axis.get('not_this_axis', '')}", normal_style
+                    )
+                )
 
         # 既存解が使えない理由
         why_existing = fa.get("why_existing_fails", "")
         if why_existing:
-            elements.append(Paragraph(f"<b>既存解が使えない理由:</b> {why_existing}", warning_style))
+            elements.append(
+                Paragraph(f"<b>既存解が使えない理由:</b> {why_existing}", warning_style)
+            )
 
         # 推奨パス（v3.1: 条件付き評価）
         for path in fa.get("recommended_paths", []):
             strategy_type = path.get("strategy_type", "")
             if hasattr(strategy_type, "value"):
                 strategy_type = strategy_type.value
-            elements.append(Paragraph(f"{path.get('name', '')} ({strategy_type})", subheading_style))
+            elements.append(
+                Paragraph(f"{path.get('name', '')} ({strategy_type})", subheading_style)
+            )
             elements.append(Paragraph(path.get("description", ""), normal_style))
             rev = path.get("reversibility", "")
             elements.append(Paragraph(f"価値実現: {path.get('time_to_value', '')} | 可逆性: {rev}", normal_style))
@@ -478,7 +527,9 @@ class PDFGeneratorService:
         # 切り捨てリスト
         cut_list = shu.get("cut_list", [])
         if cut_list:
-            elements.append(Paragraph("切り捨てリスト（最初の30日間でやらないこと）", subheading_style))
+            elements.append(
+                Paragraph("切り捨てリスト（最初の30日間でやらないこと）", subheading_style)
+            )
             for c in cut_list:
                 elements.append(Paragraph(f"  - {c}", warning_style))
 
@@ -848,7 +899,10 @@ th{{background:#1f2937;font-weight:bold}}
             essence_html = f'<p class="essence">📍 本質: {summary.essence_statement}</p>'
 
         prohibition_html = ""
-        if hasattr(summary, "strategic_prohibition_summary") and summary.strategic_prohibition_summary:
+        if (
+            hasattr(summary, "strategic_prohibition_summary")
+            and summary.strategic_prohibition_summary
+        ):
             prohibition_html = f'<div class="prohibition">⛔ 戦略的禁止: {summary.strategic_prohibition_summary}</div>'
 
         exit_html = ""
@@ -925,7 +979,9 @@ th{{background:#1f2937;font-weight:bold}}
                 for g in gears
             )
             bottleneck = dao.get("bottleneck_gear", "")
-            gears_html = f"<h3>⚙️ 因果齿轮</h3><ul>{items}</ul><p>🎯 ボトルネック: Gear {bottleneck}</p>"
+            gears_html = (
+                f"<h3>⚙️ 因果齿轮</h3><ul>{items}</ul><p>🎯 ボトルネック: Gear {bottleneck}</p>"
+            )
 
         # 死穴
         death_traps_html = ""
@@ -1168,7 +1224,9 @@ th{{background:#1f2937;font-weight:bold}}
                 if vals:
                     sc_items += f"<p><strong>{label}:</strong> {', '.join(vals)}</p>"
             sc_class = "pass" if status == "PASS" else "warning"
-            selfcheck_html = f'<div class="{sc_class}"><h3>🔍 セルフチェック: {status}</h3>{sc_items}</div>'
+            selfcheck_html = (
+                f'<div class="{sc_class}"><h3>🔍 セルフチェック: {status}</h3>{sc_items}</div>'
+            )
 
         # 比較マトリックス
         comparison_html = ""
@@ -1443,7 +1501,11 @@ th{{background:#1f2937;font-weight:bold}}
                     f"<p><span class='label'>ID戦略:</span> {logging_info.get('correlation_id_strategy', '')}</p>"
                 )
             deferred = poc_arch.get("deferred_components", [])
-            deferred_html = f"<p><span class='label'>後回し:</span> {', '.join(deferred)}</p>" if deferred else ""
+            deferred_html = (
+                f"<p><span class='label'>後回し:</span> {', '.join(deferred)}</p>"
+                if deferred
+                else ""
+            )
             poc_arch_html = f"""<div class="highlight">
 <h3>🏗️ PoC最小アーキテクチャ</h3>
 <table><tr><th>コンポーネント</th><th>目的</th><th>技術選定</th><th>備考</th></tr>{comp_rows}</table>
@@ -1507,7 +1569,9 @@ th{{background:#1f2937;font-weight:bold}}
             verdict = verdict.value
 
         confidence = review.get("confidence_score", 0)
-        verdict_class = "success" if verdict == "PASS" else "prohibition" if verdict == "REJECT" else "warning"
+        verdict_class = (
+            "success" if verdict == "PASS" else "prohibition" if verdict == "REJECT" else "warning"
+        )
 
         # v3.1 信頼度分解
         breakdown_html = ""
@@ -1563,7 +1627,9 @@ th{{background:#1f2937;font-weight:bold}}
                     + (f"<br/>改善見込み: {si_text}" if si_text else "")
                     + "</li>"
                 )
-            findings_html = f"<h3>🎯 高レバレッジ欠陥（{len(findings)}件）</h3><ul>{''.join(item_rows)}</ul>"
+            findings_html = (
+                f"<h3>🎯 高レバレッジ欠陥（{len(findings)}件）</h3><ul>{''.join(item_rows)}</ul>"
+            )
 
         # v3.1 チェックポイント項目
         checkpoint_html = ""

@@ -18,6 +18,8 @@ from agentflow import get_embedding
 if TYPE_CHECKING:
     from apps.market_trend_monitor.backend.models import Article
 
+from agentflow import get_embedding
+
 
 @dataclass
 class TopicCluster:

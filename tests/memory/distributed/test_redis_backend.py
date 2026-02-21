@@ -1,5 +1,10 @@
 """RedisBackendのテスト."""
 
+import pytest
+
+# redis はオプション依存 - 未インストールの場合はテストをスキップ
+pytest.importorskip("redis")
+
 import json
 from datetime import datetime
 from unittest.mock import AsyncMock, patch

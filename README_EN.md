@@ -1,18 +1,6 @@
 # AgentFlow
 
-<div align="center">
-
-**Lightweight AI Agent Development Framework**
-
-_Unified Protocol Interface Based on PocketFlow_
-
-[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-434%20passed-brightgreen.svg)](tests/)
-[![Coverage](https://img.shields.io/badge/coverage-92.46%25-brightgreen.svg)](htmlcov/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
-
-[Documentation](docs/) | [Examples](examples/) | [Contributing](CONTRIBUTING.md)
+**Platform and base for AI agent development** — a lightweight framework with a unified interface for MCP, A2A, AG-UI, and A2UI.
 
 **Languages**: English | [简体中文](README_ZH.md) | [日本語](README.md)
 
@@ -217,92 +205,68 @@ See [Quick Start](docs/quickstart.md) for details.
 
 ---
 
-## 🎨 Usage Scenarios
+## 1. Overview & Features
 
-AgentFlow provides three ways to operate. Choose the best method for your use case.
+AgentFlow provides a **single API surface** for multiple protocols and agent coordination. For customers it is delivered as **3 Studio product lines** (Migration Studio, Enterprise FAQ Studio, Computer Assistant Studio); for developers it is built as a Kernel (`agentflow`) with plugin-based extension.
 
-### 1. 🖱️ Studio UI (Visual Editor)
-
-**Create workflows with drag & drop in browser, no coding required**
-
-- ✅ **Beginner-friendly**: No programming knowledge needed
-- ✅ **Visual**: Understand and edit workflows visually
-- ✅ **Quick**: Create workflows in minutes
-
-📖 [Studio UI Guide](docs/guide-studio-ui.md)
-
----
-
-### 2. ⚡ CLI (Command Line)
-
-**Quickly run and manage agents from terminal**
-
-- ✅ **Fast**: Operate without GUI
-- ✅ **Automation**: Perfect for scripts and batch processing
-- ✅ **Simple**: Execute with a single command
-
-📖 [CLI Guide](docs/guide-cli.md)
+| Feature                    | Description                                                                               |
+| -------------------------- | ----------------------------------------------------------------------------------------- |
+| **8-layer architecture**   | Clear separation: Application, UI, Flow, Agent, Tools, Provider, Protocol, Infrastructure |
+| **4 protocols unified**    | MCP, A2A, AG-UI, A2UI used from one codebase                                              |
+| **3 Studio product lines** | Customer journey unified as: template → configuration → run → artifacts                   |
+| **Development options**    | `@agent` decorator / `create_flow` / AgentCoordinator for simple to advanced use          |
+| **Engine patterns**        | SimpleEngine, PipelineEngine, GateEngine, RAGEngine, PEVEngine ready to use               |
+| **Type-safe & async**      | Full type annotations and async/await-first I/O                                           |
+| **Skills auto-evolution**  | Plugin system that extends capabilities with use                                          |
 
 ---
 
-### 3. 🐍 Coding (Python)
+## 2. Main Capabilities
 
-**Develop and customize agents with Python code**
-
-- ✅ **Flexibility**: Full customization possible
-- ✅ **Type Safe**: 100% type annotation support
-- ✅ **Extensible**: Protocol integration and coordination patterns available
-
-📖 [Coding Guide](docs/guide-coding.md)
-
----
-
-## 📚 Documentation
-
-| Document | Description |
-|----------|-------------|
-| [Studio UI Guide](docs/guide-studio-ui.md) | Visual editor operation |
-| [CLI Guide](docs/guide-cli.md) | Command line operation |
-| [Coding Guide](docs/guide-coding.md) | Python development |
-| [Docs Index](docs/index.md) | Unified entry for external/internal docs |
-| [External Docs](docs/external/README.md) | Customer-facing 3 Studio narrative |
-| [Internal Docs](docs/internal/README.md) | Platform build/extend/operate handbook |
-| [3 Studio Guide](docs/studios.md) | Product lines, personas, audit policy |
-| [Skills Guide](docs/guide-skills.md) | Auto-evolution system |
-| [Built-in Skills Guide](docs/guide-builtin-skills.md) | DB/Payment/Auth/Deploy (NEW) |
-| [LLM Router](docs/guide-llm-router.md) | Multi-model switching (NEW) |
-| [Architecture](docs/architecture.md) | Design & Structure |
-| [Agent Lightning Alignment](docs/design/AGENT_LIGHTNING_ALIGNMENT_DESIGN.md) | Agent Lightning inspired design updates (NEW) |
-| [Protocols](docs/protocols.md) | MCP/A2A/AG-UI/A2UI |
-| [Quick Start](docs/quickstart.md) | Getting Started |
-| [Standards](docs/DEVELOPMENT_STANDARDS_JA.md) | Coding Standards |
+- **Engine execution**: `SimpleEngine` (single agent), `PipelineEngine` (multi-stage, review loop), `GateEngine` (entry gate), `RAGEngine` (retrieval-augmented), `PEVEngine` (plan–execute–verify)
+- **Agent definition**: `@agent` decorator, `AgentBlock` subclassing, invocation via `AgentClient.get("name").invoke(...)`
+- **Flow construction**: `create_flow(...).gate(...).then(...).parallel(...).review(...).build()`
+- **Loose-coupled providers**: `get_llm()`, `get_vectordb()`, `get_db()`, `get_embedding()` for environment-driven implementations
+- **Channels**: Multi-platform message integration (MessageGateway, MessageChannelAdapter)
+- **HITL**: Approval, interrupt, resume (ApprovalManager, Checkpointer, interrupt)
+- **Context engineering**: Token budget, turn compression, RetrievalGate, KeyNotes, etc.
+- **Built-in skills**: database-manager, stripe-payment, deployment-manager, auth-provider, etc. (optional)
 
 ---
 
-## 🤝 Contributing
+## 3. Technical Architecture
 
-- [Contributing Guide](CONTRIBUTING.md)
-- [Changelog](CHANGELOG.md)
+**8 layers** (top to bottom): Application → UI → Flow → Agent → Tools → Provider → Protocol → Infrastructure. Upper layers depend only on lower layers; contracts are used via the public API in `agentflow/__init__.py`.
 
----
-
-## 🙏 Acknowledgements
-
-Our recent execution/training decoupling and trace/reward design are inspired by  
-[Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning).
+**Stack**: Python 3.13+, FastAPI, Pydantic, Uvicorn (backend); React, Vite, TypeScript (Studio and app frontends); MCP, A2A, AG-UI, A2UI (protocols); PocketFlow and related (workflow base). Quality tooling: Ruff, mypy, pytest.
 
 ---
 
-## 📄 License
+## 4. Kernel, Platform, and Apps
 
-[MIT License](LICENSE)
+| Layer                        | Role                                                                                                                                                           | Examples                                                                                             |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| **Kernel (agentflow)**       | Stable API, engines, providers, protocol abstractions. Extension via plugins. Side-effectful operations go through policy and audit.                           | `agentflow` package, public API                                                                      |
+| **Platform (apps/platform)** | Execution path for 3 Studios (template → config → run → artifacts) and Framework management API. Canonical APIs: `/api/studios/*`, `/api/studios/framework/*`. | Backend `apps.platform.main`, frontend `apps/platform/frontend`                                      |
+| **Apps (apps/\*)**           | Product and sample applications. Apps aligned to Migration / FAQ / Assistant Studios, plus cross-cutting apps (orchestration, messaging, etc.).                | `code_migration_assistant`, `faq_system`, `decision_governance_engine`, `market_trend_monitor`, etc. |
+
+External messaging is aligned to the 3 Studios; protocol names and internal layers are not exposed in business-facing UI.
 
 ---
 
-<div align="center">
+## 5. Quick Start, Docs, License
 
-**Accelerate AI Agent Development with AgentFlow!**
+**Before running**: Default environment is `conda activate agentflow`. Check `code-rules/CLAUDE.md` and the target app’s README before running commands.
 
-Made with ❤️ by the AgentFlow Team
+```bash
+conda activate agentflow
+pip install -e ".[apps,dev]"
+python -m apps.platform.main serve --port 8000
+# In another terminal: cd apps/platform/frontend && npm install && npm run dev
+```
 
-</div>
+- **Documentation**: Index [docs/index.md](docs/index.md), external [docs/external/README.md](docs/external/README.md), internal [docs/internal/README.md](docs/internal/README.md), 3 Studios [docs/studios.md](docs/studios.md)
+- **Repository**: [GitHub](https://github.com/liushuang393/serverlessAIAgents) | [Issues](https://github.com/liushuang393/serverlessAIAgents/issues)
+- **License**: [MIT License](LICENSE)
+
+Parts of the execution/training decoupling and trace design were inspired by [Microsoft Agent Lightning](https://github.com/microsoft/agent-lightning).

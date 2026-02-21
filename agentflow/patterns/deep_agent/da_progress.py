@@ -526,7 +526,9 @@ class ProgressManager:
             "pending": pending,
             "blocked": blocked,
             "progress_percent": (completed / total * 100) if total > 0 else 0,
-            "success_rate": (completed / (completed + failed) * 100) if (completed + failed) > 0 else 0,
+            "success_rate": (completed / (completed + failed) * 100)
+            if (completed + failed) > 0
+            else 0,
             "elapsed_seconds": elapsed,
             "started_at": self._started_at.isoformat() if self._started_at else None,
             "completed_at": self._completed_at.isoformat() if self._completed_at else None,

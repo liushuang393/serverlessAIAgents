@@ -204,7 +204,11 @@ class ShuAgent(ResilientAgent[ShuInput, ShuOutput]):
         # selected_path_id が未指定の場合、推奨パスの最初を自動選択
         if "selected_path_id" not in input_data:
             fa_result = input_data.get("fa_result")
-            if fa_result and hasattr(fa_result, "recommended_paths") and fa_result.recommended_paths:
+            if (
+                fa_result
+                and hasattr(fa_result, "recommended_paths")
+                and fa_result.recommended_paths
+            ):
                 input_data["selected_path_id"] = fa_result.recommended_paths[0].path_id
             else:
                 # フォールバック
@@ -245,7 +249,9 @@ class ShuAgent(ResilientAgent[ShuInput, ShuOutput]):
                 self._logger.warning(f"Phase {phase.phase_number} has no actions")
                 return False
             if len(phase.actions) > 5:
-                self._logger.warning(f"Phase {phase.phase_number} has {len(phase.actions)} actions (max 5)")
+                self._logger.warning(
+                    f"Phase {phase.phase_number} has {len(phase.actions)} actions (max 5)"
+                )
                 return False
 
         # first_action の検証
@@ -263,7 +269,9 @@ class ShuAgent(ResilientAgent[ShuInput, ShuOutput]):
         # 見つからない場合は最初の推奨パス
         return fa_result.recommended_paths[0] if fa_result.recommended_paths else None
 
-    async def _plan_with_llm(self, selected_path: PathOption | None, fa_result: FaOutput) -> ShuOutput:
+    async def _plan_with_llm(
+        self, selected_path: PathOption | None, fa_result: FaOutput
+    ) -> ShuOutput:
         """LLMを使用した計画策定（v3.1: 提案モード）."""
         path_info = ""
         strategy_type = "BALANCED"
@@ -323,7 +331,9 @@ JSON形式で出力してください。"""
 
         response = await self._call_llm(f"{self.SYSTEM_PROMPT}\n\n{user_prompt}")
 
-        self._logger.debug(f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}")
+        self._logger.debug(
+            f"LLM raw response (first 500 chars): {response[:500] if response else 'EMPTY'}"
+        )
 
         try:
             from agentflow.utils import extract_json
@@ -372,7 +382,9 @@ JSON形式で出力してください。"""
 
             # v3.0: 単一検証ポイント
             single_validation_point = None
-            if "single_validation_point" in data and isinstance(data["single_validation_point"], dict):
+            if "single_validation_point" in data and isinstance(
+                data["single_validation_point"], dict
+            ):
                 svp = data["single_validation_point"]
                 single_validation_point = SingleValidationPoint(
                     validation_target=str(svp.get("validation_target", ""))[:50],
@@ -525,7 +537,9 @@ JSON形式で出力してください。"""
 
     def _generate_default_cut_list(self, selected_path: PathOption | None) -> list[str]:
         """デフォルトの切り捨てリストを生成（v3.0）."""
-        strategy_type = getattr(selected_path, "strategy_type", "BALANCED") if selected_path else "BALANCED"
+        strategy_type = (
+            getattr(selected_path, "strategy_type", "BALANCED") if selected_path else "BALANCED"
+        )
 
         if strategy_type == "AGGRESSIVE":
             return [
@@ -595,7 +609,9 @@ JSON形式で出力してください。"""
                 focus=focus,
                 checkpoint_date=data.get("checkpoint_date", "30天後"),
                 checkpoint_criteria=data.get("checkpoint_criteria", [])[:3],
-                next_decision_point=data.get("next_decision_point", "30日後に継続/ピボット/撤退を判断")[:100],
+                next_decision_point=data.get(
+                    "next_decision_point", "30日後に継続/ピボット/撤退を判断"
+                )[:100],
             )
         except Exception as e:
             self._logger.warning(f"RhythmControl parse failed: {e}")
@@ -604,7 +620,9 @@ JSON形式で出力してください。"""
     def _generate_default_rhythm_control(self, selected_path: PathOption | None) -> RhythmControl:
         """デフォルトのRhythmControlを生成."""
         path_name = selected_path.name if selected_path else "プロジェクト"
-        strategy_type = getattr(selected_path, "strategy_type", "BALANCED") if selected_path else "BALANCED"
+        strategy_type = (
+            getattr(selected_path, "strategy_type", "BALANCED") if selected_path else "BALANCED"
+        )
 
         # 戦略タイプに応じたデフォルト設定
         if strategy_type == "AGGRESSIVE":
@@ -744,9 +762,15 @@ JSON形式で出力してください。"""
             if len(metrics) < 3:
                 # 最低3個を確保するためデフォルトを追加
                 defaults = [
-                    PoCSuccessMetric(metric_name="主要KPI", target_value="要定義", measurement_method="要定義"),
-                    PoCSuccessMetric(metric_name="安定性", target_value="要定義", measurement_method="要定義"),
-                    PoCSuccessMetric(metric_name="運用負荷", target_value="要定義", measurement_method="要定義"),
+                    PoCSuccessMetric(
+                        metric_name="主要KPI", target_value="要定義", measurement_method="要定義"
+                    ),
+                    PoCSuccessMetric(
+                        metric_name="安定性", target_value="要定義", measurement_method="要定義"
+                    ),
+                    PoCSuccessMetric(
+                        metric_name="運用負荷", target_value="要定義", measurement_method="要定義"
+                    ),
                 ]
                 metrics.extend(defaults[: (3 - len(metrics))])
             return PoCDefinitionOfDone(

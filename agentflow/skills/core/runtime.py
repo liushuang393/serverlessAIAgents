@@ -156,7 +156,9 @@ class SkillRuntime:
         if script_path.suffix == ".sh":
             return await self._execute_shell_script(skill, script_path, input_data)
 
-        should_use_sandbox = use_sandbox if use_sandbox is not None else bool(self._sandbox_provider)
+        should_use_sandbox = (
+            use_sandbox if use_sandbox is not None else bool(self._sandbox_provider)
+        )
 
         if should_use_sandbox and self._sandbox_provider:
             return await self._execute_in_sandbox(skill, script_path, input_data, effective_timeout)

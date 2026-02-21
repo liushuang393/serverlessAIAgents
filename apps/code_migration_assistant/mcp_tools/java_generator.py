@@ -327,7 +327,9 @@ class JavaGenerator(MCPTool):
             return "String"
         return "Object"
 
-    async def _generate_methods(self, procedure_lines: list[str]) -> tuple[str, list[dict[str, Any]]]:
+    async def _generate_methods(
+        self, procedure_lines: list[str]
+    ) -> tuple[str, list[dict[str, Any]]]:
         """メソッドを生成（LLM使用）.
 
         Args:

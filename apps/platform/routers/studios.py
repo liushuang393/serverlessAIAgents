@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, Literal
 
+from apps.platform.services.studio_service import StudioService
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 

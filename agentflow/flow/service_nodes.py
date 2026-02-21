@@ -378,7 +378,9 @@ class SuggestionNode(ServiceNode):
         from agentflow.services import SuggestionConfig, SuggestionService
 
         try:
-            config = self.config if isinstance(self.config, SuggestionConfig) else SuggestionConfig()
+            config = (
+                self.config if isinstance(self.config, SuggestionConfig) else SuggestionConfig()
+            )
             service = SuggestionService(config)
 
             inputs = ctx.get_inputs()

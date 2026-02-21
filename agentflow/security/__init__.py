@@ -60,6 +60,10 @@ from agentflow.security.auth_middleware import (
     require_auth,
     require_permission,
 )
+from agentflow.security.contract_auth_guard import (
+    ContractAuthGuard,
+    ContractAuthGuardConfig,
+)
 from agentflow.security.data_sanitizer import (
     DataSanitizer,
     PIIType,
@@ -120,6 +124,8 @@ __all__ = [
     "AuthMiddleware",
     "ContractRegistry",
     "ContractValidator",
+    "ContractAuthGuard",
+    "ContractAuthGuardConfig",
     # AI Safety - Data Sanitizer
     "DataSanitizer",
     "DetectionConfig",

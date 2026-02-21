@@ -129,7 +129,9 @@ class SelfEvolver:
         await self._store.save_pattern(pattern_key, pattern_data)
         self._session_patterns[pattern_key] = pattern_data
 
-        _logger.info("パターン学習完了: %s (成功回数: %d)", pattern_key, pattern_data["success_count"])
+        _logger.info(
+            "パターン学習完了: %s (成功回数: %d)", pattern_key, pattern_data["success_count"]
+        )
         return pattern_key
 
     def _generate_pattern_key(
@@ -350,7 +352,9 @@ class SelfEvolver:
             pattern = await self._store.load_pattern(related_pattern_key)
             if pattern:
                 adjustment = 0.1 if feedback_type == "positive" else -0.1
-                pattern["avg_score"] = max(0, min(100, pattern.get("avg_score", 80) + adjustment * 10))
+                pattern["avg_score"] = max(
+                    0, min(100, pattern.get("avg_score", 80) + adjustment * 10)
+                )
                 await self._store.save_pattern(related_pattern_key, pattern)
 
         _logger.info("フィードバック処理完了: %s", feedback_type)

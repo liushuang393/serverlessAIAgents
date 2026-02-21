@@ -436,7 +436,9 @@ git checkout -b fix/issue-number-description
 - [ ] リントエラーなし (`ruff check .` または `./check.sh lint`)
 - [ ] 型エラーなし (`mypy agentflow` または `./check.sh type-check`)
 - [ ] カバレッジ ≥ 80% (`pytest --cov` または `./check.sh test-cov`)
+- [ ] フロントエンド(studio)ビルド成功 (`./check.sh build`)
 - [ ] Pre-commit チェック通過 (`pre-commit run --all-files` または `./check.sh pre-commit`)
+- [ ] （推奨）npm 脆弱性確認 (`./check.sh audit`)
 - [ ] ドキュメント更新済み
 - [ ] CHANGELOG.md 更新済み (該当する場合)
 

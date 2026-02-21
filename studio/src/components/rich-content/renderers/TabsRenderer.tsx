@@ -4,8 +4,8 @@
  * @description タブ付きコンテンツをレンダリング
  */
 
-import React, { useState } from 'react';
-import type { RichComponent } from '../types';
+import React, { useState } from "react";
+import type { RichComponent } from "../types";
 
 interface TabsRendererProps {
   /** RichComponent */
@@ -33,7 +33,7 @@ export function TabsRenderer({ component, renderComponent }: TabsRendererProps):
   const defaultValue = component.props.defaultValue;
 
   const [activeTab, setActiveTab] = useState(
-    (typeof defaultValue === 'string' ? defaultValue : tabs[0]?.value) || '',
+    (typeof defaultValue === "string" ? defaultValue : tabs[0]?.value) || "",
   );
 
   if (tabs.length === 0) {
@@ -59,8 +59,8 @@ export function TabsRenderer({ component, renderComponent }: TabsRendererProps):
               px-4 py-2 text-sm font-medium transition-colors
               ${
                 activeTab === tab.value
-                  ? 'text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 -mb-px bg-white dark:bg-gray-900'
-                  : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                  ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 -mb-px bg-white dark:bg-gray-900"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
               }
             `}
           >

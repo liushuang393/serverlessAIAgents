@@ -90,7 +90,12 @@ def get_knowledge_manager(
     global _default_manager
 
     # カスタムパラメータがある場合は新しいインスタンス
-    if _new_instance or storage_path is not None or use_memvid is not None or auto_persist is not None:
+    if (
+        _new_instance
+        or storage_path is not None
+        or use_memvid is not None
+        or auto_persist is not None
+    ):
         return _create_manager(storage_path, use_memvid, auto_persist)
 
     # シングルトン

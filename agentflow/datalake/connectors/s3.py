@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """S3Connector - AWS S3 / MinIO 互換コネクタ.
 
 S3互換ストレージへのアクセスを提供。

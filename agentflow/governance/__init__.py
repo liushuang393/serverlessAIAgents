@@ -50,4 +50,5 @@ __all__ = [
     "PluginRuntimeAssessment",
     "PostgresAuditStorage",
     "ToolExecutionContext",
+    "canonical_manifest_bytes",
 ]

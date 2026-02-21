@@ -9,10 +9,10 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import APIRouter, HTTPException
 
+from agentflow.studio.models import MarketplaceInstallRequest, MarketplaceSearchRequest
 
 if TYPE_CHECKING:
     from agentflow.marketplace.client import MarketplaceClient
-    from agentflow.studio.models import MarketplaceInstallRequest, MarketplaceSearchRequest
 
 
 def create_marketplace_router(marketplace: MarketplaceClient) -> APIRouter:
@@ -28,13 +28,13 @@ def create_marketplace_router(marketplace: MarketplaceClient) -> APIRouter:
 
     @router.post("/search")
     async def search_marketplace(
-        request: MarketplaceSearchRequest,
+        body: MarketplaceSearchRequest,
     ) -> list[dict[str, Any]]:
-        """マーケットプレイスを検索."""
+        """マーケットプレイスを検索。"""
         results = marketplace.search(
-            query=request.query,
-            category=request.category,
-            protocols=request.protocols,
+            query=body.query,
+            category=body.category,
+            protocols=body.protocols,
         )
         return [
             {
@@ -50,13 +50,13 @@ def create_marketplace_router(marketplace: MarketplaceClient) -> APIRouter:
         ]
 
     @router.post("/install")
-    async def install_agent(request: MarketplaceInstallRequest) -> dict[str, Any]:
-        """マーケットプレイスからエージェントをインストール."""
+    async def install_agent(body: MarketplaceInstallRequest) -> dict[str, Any]:
+        """マーケットプレイスからエージェントをインストール。"""
         try:
             marketplace.install(request.agent_id, force=request.force)
             return {
                 "status": "success",
-                "message": f"Agent {request.agent_id} installed successfully",
+                "message": f"Agent {body.agent_id} installed successfully",
             }
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))

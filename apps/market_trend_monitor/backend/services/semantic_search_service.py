@@ -17,6 +17,8 @@ from agentflow import get_embedding, get_vectordb
 if TYPE_CHECKING:
     from apps.market_trend_monitor.backend.models import Article
 
+from agentflow import get_embedding, get_vectordb
+
 
 class SemanticSearchService:
     """セマンティック検索サービス.

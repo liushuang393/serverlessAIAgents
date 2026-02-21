@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
@@ -226,8 +227,10 @@ def test_client(apps_dir: Path) -> SyncASGIClient:
     from apps.platform.main import create_app
     from apps.platform.routers.apps import init_app_services
     from apps.platform.routers.studios import init_studio_services
+    from apps.platform.routers.tenant_invitations import init_tenant_invitation_services
     from apps.platform.services.studio_service import StudioService
 
+    os.environ["PLATFORM_INVITE_ENABLE_OUTBOX_ENDPOINT"] = "true"
     app = create_app()
 
     # テストでは本番 lifespan を無効化し、明示的に注入したサービスのみを使う
@@ -241,6 +244,7 @@ def test_client(apps_dir: Path) -> SyncASGIClient:
     lc = AppLifecycleManager()
     init_app_services(disc, lc)
     init_studio_services(StudioService(disc, lc))
+    init_tenant_invitation_services(TenantInvitationService())
 
     # scan() を同期的に実行してレジストリにデータを投入
     asyncio.run(disc.scan())
@@ -358,8 +362,10 @@ def phase3_test_client(apps_dir_with_rag: Path, skills_dir: Path) -> SyncASGICli
     from apps.platform.routers.rag import init_rag_services
     from apps.platform.routers.skills import init_skill_services
     from apps.platform.routers.studios import init_studio_services
+    from apps.platform.routers.tenant_invitations import init_tenant_invitation_services
     from apps.platform.services.studio_service import StudioService
 
+    os.environ["PLATFORM_INVITE_ENABLE_OUTBOX_ENDPOINT"] = "true"
     app = create_app()
 
     # テストでは本番 lifespan を無効化し、明示的に注入したサービスのみを利用
@@ -373,6 +379,7 @@ def phase3_test_client(apps_dir_with_rag: Path, skills_dir: Path) -> SyncASGICli
     lc = AppLifecycleManager()
     init_app_services(disc, lc)
     init_studio_services(StudioService(disc, lc))
+    init_tenant_invitation_services(TenantInvitationService())
     asyncio.run(disc.scan())
 
     # Agent サービス

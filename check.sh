@@ -632,6 +632,12 @@ EOF
 }
 
 do_all() {
+    local skip_type_check=0
+    if [ "${1:-}" = "--no-type-check" ]; then
+        skip_type_check=1
+        echo "[オプション] 型チェックをスキップします"
+        echo ""
+    fi
     echo "========================================"
     echo "すべてのチェックを実行中..."
     echo "========================================"

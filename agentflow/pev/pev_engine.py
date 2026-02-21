@@ -201,7 +201,9 @@ class PEVEngine:
                     break
 
                 # 4. Replan - 再計画
-                self._logger.info(f"再計画開始 ({result.replan_count + 1}/{self.config.max_replans})")
+                self._logger.info(
+                    f"再計画開始 ({result.replan_count + 1}/{self.config.max_replans})"
+                )
 
                 if failed_goal:
                     plan = await planner.replan(

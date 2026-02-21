@@ -207,7 +207,9 @@ class ExistingAlternative(BaseModel):
 
     name: str = Field(..., max_length=30, description="既存解の名称（例: Zoom, Teams）")
     why_not_viable: str = Field(..., max_length=100, description="なぜこの企業では使えないか")
-    specific_constraint: str = Field(..., max_length=50, description="具体的な制約（法規制/技術/コスト）")
+    specific_constraint: str = Field(
+        ..., max_length=50, description="具体的な制約（法規制/技術/コスト）"
+    )
 
 
 class EssenceDerivation(BaseModel):
@@ -216,9 +218,15 @@ class EssenceDerivation(BaseModel):
     問題の本質を「一言で表現する」前に、なぜその結論に至ったかを構造化。
     """
 
-    surface_problem: str = Field(..., max_length=50, description="表面的な問題（ユーザーが言ったこと）")
-    underlying_why: str = Field(..., max_length=100, description="なぜそれが問題なのか（一段深い理由）")
-    root_constraint: str = Field(..., max_length=100, description="根本的な制約（これがなければ問題ではない）")
+    surface_problem: str = Field(
+        ..., max_length=50, description="表面的な問題（ユーザーが言ったこと）"
+    )
+    underlying_why: str = Field(
+        ..., max_length=100, description="なぜそれが問題なのか（一段深い理由）"
+    )
+    root_constraint: str = Field(
+        ..., max_length=100, description="根本的な制約（これがなければ問題ではない）"
+    )
     essence_statement: str = Field(..., max_length=50, description="本質の一文（非これ不可）")
 
 
@@ -269,10 +277,14 @@ class ConstraintBoundary(BaseModel):
 class SolutionRoute(BaseModel):
     """成立ルート（v3.1: 解空間の探索、最低3案を比較）."""
 
-    route_type: str = Field(..., max_length=20, description="ルート種別（置換/旁路/アプライアンス等）")
+    route_type: str = Field(
+        ..., max_length=20, description="ルート種別（置換/旁路/アプライアンス等）"
+    )
     description: str = Field(..., max_length=100, description="ルートの説明")
     viability: str = Field(..., max_length=50, description="実現可能性の評価")
-    tradeoffs: list[str] = Field(default_factory=list, max_length=3, description="トレードオフ（max 3）")
+    tradeoffs: list[str] = Field(
+        default_factory=list, max_length=3, description="トレードオフ（max 3）"
+    )
 
 
 class QuantifiedMetric(BaseModel):
@@ -287,7 +299,9 @@ class QuantifiedMetric(BaseModel):
 class AuditEvidenceItem(BaseModel):
     """監査証拠チェックリスト項目（v3.1: 証拠として提出するもの）."""
 
-    category: str = Field(..., max_length=30, description="カテゴリ（データフロー/ログ保持/削除証跡等）")
+    category: str = Field(
+        ..., max_length=30, description="カテゴリ（データフロー/ログ保持/削除証跡等）"
+    )
     required_evidence: str = Field(..., max_length=100, description="必要な証拠")
     verification_method: str = Field(default="", max_length=100, description="確認方法")
 
@@ -336,7 +350,9 @@ class DaoInput(BaseModel):
     constraints: list[str] = Field(default_factory=list, description="現実制約")
     stakeholders: list[str] = Field(default_factory=list, description="関係者")
     gatekeeper_result: GatekeeperOutput | None = Field(default=None, description="入口検証結果")
-    clarification_result: ClarificationOutput | None = Field(default=None, description="問題診断結果")
+    clarification_result: ClarificationOutput | None = Field(
+        default=None, description="問題診断結果"
+    )
 
 
 class DaoOutput(BaseModel):
@@ -498,7 +514,9 @@ class PathOption(BaseModel):
     )
 
     # 成功確率（v3.0互換、v3.1では条件付き評価を推奨）
-    success_probability: float = Field(default=0.0, ge=0.0, le=1.0, description="成功確率（v3.0互換）")
+    success_probability: float = Field(
+        default=0.0, ge=0.0, le=1.0, description="成功確率（v3.0互換）"
+    )
 
     # v3.1: 条件付き評価（確率%の代替）
     conditional_evaluation: ConditionalEvaluation | None = Field(
@@ -571,8 +589,12 @@ class CompetitiveHypothesis(BaseModel):
 
     axis_name: str = Field(..., max_length=30, description="差別化軸名")
     target_customer: str = Field(..., max_length=100, description="具体的な対象顧客/利用シーン")
-    substitution_barrier: str = Field(..., max_length=100, description="代替が難しい理由（何が障壁か）")
-    winning_metric: str = Field(..., max_length=100, description="勝ち筋指標（何で勝ったと判定するか）")
+    substitution_barrier: str = Field(
+        ..., max_length=100, description="代替が難しい理由（何が障壁か）"
+    )
+    winning_metric: str = Field(
+        ..., max_length=100, description="勝ち筋指標（何で勝ったと判定するか）"
+    )
     minimum_verification: str = Field(
         ...,
         max_length=150,
@@ -599,7 +621,9 @@ class JudgmentFramework(BaseModel):
     """判断フレームワーク（v3.1: Must/Should分離）."""
 
     must_gates: list[MustGate] = Field(default_factory=list, description="Mustゲート（不可変）")
-    should_criteria: list[ShouldCriterion] = Field(default_factory=list, description="Should評価基準")
+    should_criteria: list[ShouldCriterion] = Field(
+        default_factory=list, description="Should評価基準"
+    )
     gate_results: dict[str, list[bool]] = Field(
         default_factory=dict,
         description="各案のゲート通過結果（パスID→[True/False...]）",
@@ -800,7 +824,9 @@ class PoCSuccessMetric(BaseModel):
 
     metric_name: str = Field(..., max_length=50, description="指標名（例: p95遅延, 翻訳安定率）")
     target_value: str = Field(..., max_length=50, description="目標値（例: 500ms以下, 95%以上）")
-    measurement_method: str = Field(..., max_length=80, description="計測方法（例: Datadogでp95集計）")
+    measurement_method: str = Field(
+        ..., max_length=80, description="計測方法（例: Datadogでp95集計）"
+    )
 
 
 class PoCDefinitionOfDone(BaseModel):
@@ -834,7 +860,9 @@ class PhaseBranch(BaseModel):
     各フェーズに最低2つの代替パスを用意する。
     """
 
-    branch_name: str = Field(..., max_length=50, description="分岐名（例: 字幕先行, 準リアルタイム化）")
+    branch_name: str = Field(
+        ..., max_length=50, description="分岐名（例: 字幕先行, 準リアルタイム化）"
+    )
     trigger_condition: str = Field(..., max_length=80, description="この分岐に入る条件")
     description: str = Field(..., max_length=150, description="具体的な内容")
 
@@ -966,7 +994,9 @@ class DomainSpecificTechnology(BaseModel):
     technology_name: str = Field(..., max_length=80, description="技術名（例: WebRTC, SFU）")
     category: str = Field(..., max_length=30, description="カテゴリ（例: プロトコル, インフラ）")
     why_required: str = Field(..., max_length=100, description="なぜこの技術が必要か")
-    alternatives: list[str] = Field(default_factory=list, max_length=3, description="代替技術（max 3）")
+    alternatives: list[str] = Field(
+        default_factory=list, max_length=3, description="代替技術（max 3）"
+    )
 
 
 class RegulatoryConsideration(BaseModel):
@@ -976,7 +1006,9 @@ class RegulatoryConsideration(BaseModel):
     """
 
     region: str = Field(..., max_length=20, description="地域（例: EU, 中国, 米国）")
-    regulation: str = Field(..., max_length=30, description="規制名（例: GDPR, 中国サイバーセキュリティ法）")
+    regulation: str = Field(
+        ..., max_length=30, description="規制名（例: GDPR, 中国サイバーセキュリティ法）"
+    )
     requirement: str = Field(..., max_length=50, description="具体的要件（例: データ滞留必須）")
     implementation_impact: str = Field(..., max_length=50, description="実装への影響")
 
@@ -988,8 +1020,12 @@ class GeographicConsideration(BaseModel):
     """
 
     region: str = Field(..., max_length=20, description="地域")
-    latency_requirement: str = Field(..., max_length=30, description="レイテンシ要件（例: 200ms以下）")
-    infrastructure_need: str = Field(..., max_length=50, description="必要なインフラ（例: 東京リージョンPoP）")
+    latency_requirement: str = Field(
+        ..., max_length=30, description="レイテンシ要件（例: 200ms以下）"
+    )
+    infrastructure_need: str = Field(
+        ..., max_length=50, description="必要なインフラ（例: 東京リージョンPoP）"
+    )
 
 
 class Implementation(BaseModel):
@@ -1009,7 +1045,9 @@ class ArchitectureComponent(BaseModel):
 
     name: str = Field(..., max_length=50, description="コンポーネント名（例: ストリーミングASR）")
     purpose: str = Field(..., max_length=80, description="役割（例: 音声→テキスト変換）")
-    technology_choice: str = Field(..., max_length=80, description="PoCで使う技術（例: Google Speech-to-Text）")
+    technology_choice: str = Field(
+        ..., max_length=80, description="PoCで使う技術（例: Google Speech-to-Text）"
+    )
     notes: str = Field(default="", max_length=100, description="注意点")
 
 
@@ -1183,7 +1221,9 @@ class MinimalPatch(BaseModel):
 
     checkbox_label: str = Field(..., max_length=80, description="チェックボックスのラベル")
     annotation_hint: str = Field(default="", max_length=30, description="注釈のヒント（10〜20字）")
-    default_value: str = Field(default="", max_length=50, description="デフォルト案（暫定ロール等）")
+    default_value: str = Field(
+        default="", max_length=50, description="デフォルト案（暫定ロール等）"
+    )
 
 
 class ReviewFinding(BaseModel):
@@ -1233,8 +1273,12 @@ class CheckpointItem(BaseModel):
     checked: bool = Field(default=False, description="チェック済みか")
     annotation: str = Field(default="", max_length=50, description="ユーザー注釈（任意）")
     score_boost: float = Field(default=0.0, ge=0.0, le=20.0, description="チェック時のスコア上昇幅")
-    target_component: str = Field(default="", max_length=30, description="影響する信頼度コンポーネント")
-    default_suggestion: str = Field(default="", max_length=100, description="デフォルト案（暫定責任者ロール等）")
+    target_component: str = Field(
+        default="", max_length=30, description="影響する信頼度コンポーネント"
+    )
+    default_suggestion: str = Field(
+        default="", max_length=100, description="デフォルト案（暫定責任者ロール等）"
+    )
 
 
 class ReviewInput(BaseModel):
@@ -1256,6 +1300,10 @@ class ReviewOutput(BaseModel):
     confidence_score: float = Field(..., ge=0.0, le=1.0, description="信頼度スコア（総合）")
     final_warnings: list[str] = Field(default_factory=list, description="最終警告")
     # v3.1 差分パッチ型フィールド
-    confidence_breakdown: ConfidenceBreakdown | None = Field(default=None, description="信頼度分解（4項目）")
-    checkpoint_items: list[CheckpointItem] = Field(default_factory=list, description="チェックボックス項目")
+    confidence_breakdown: ConfidenceBreakdown | None = Field(
+        default=None, description="信頼度分解（4項目）"
+    )
+    checkpoint_items: list[CheckpointItem] = Field(
+        default_factory=list, description="チェックボックス項目"
+    )
     auto_recalc_enabled: bool = Field(default=True, description="自動再計算が可能か")

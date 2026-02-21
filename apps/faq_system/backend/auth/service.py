@@ -26,6 +26,7 @@ from sqlalchemy.exc import IntegrityError
 
 from agentflow.security.auth_middleware import AuthMiddleware, AuthUser, JWTConfig
 from agentflow.security.mfa import TimeBasedMFA
+from agentflow.security.oauth2_provider import ExternalIdentity as OAuth2Identity
 
 
 if TYPE_CHECKING:
@@ -689,7 +690,9 @@ class AuthService:
         server_uri = os.getenv("FAQ_LDAP_SERVER_URI", "").strip()
         bind_dn_template = os.getenv("FAQ_LDAP_BIND_DN_TEMPLATE", "").strip()
         if not server_uri or not bind_dn_template:
-            logger.warning("LDAP config missing. Set FAQ_LDAP_SERVER_URI and FAQ_LDAP_BIND_DN_TEMPLATE.")
+            logger.warning(
+                "LDAP config missing. Set FAQ_LDAP_SERVER_URI and FAQ_LDAP_BIND_DN_TEMPLATE."
+            )
             return None
 
         return await asyncio.to_thread(
@@ -859,7 +862,9 @@ class AuthService:
     async def verify_mfa_setup(self, username: str, code: str) -> bool:
         """MFA設定完了: コード検証して有効化."""
         async with get_db_session() as session:
-            account = await session.scalar(select(UserAccount).where(UserAccount.username == username))
+            account = await session.scalar(
+                select(UserAccount).where(UserAccount.username == username)
+            )
             if not account or not account.mfa_secret:
                 return False
 
@@ -872,7 +877,9 @@ class AuthService:
     async def disable_mfa(self, username: str) -> bool:
         """MFA無効化."""
         async with get_db_session() as session:
-            account = await session.scalar(select(UserAccount).where(UserAccount.username == username))
+            account = await session.scalar(
+                select(UserAccount).where(UserAccount.username == username)
+            )
             if account:
                 account.mfa_enabled = False
                 account.mfa_secret = None

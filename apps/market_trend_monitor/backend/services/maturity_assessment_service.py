@@ -19,6 +19,8 @@ from agentflow import get_llm
 if TYPE_CHECKING:
     from apps.market_trend_monitor.backend.models import Evidence
 
+from agentflow import get_llm
+
 
 class MaturityPhase(str, Enum):
     """技術成熟度フェーズ (Gartner Hype Cycle)."""

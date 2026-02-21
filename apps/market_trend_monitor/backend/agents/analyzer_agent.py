@@ -377,12 +377,16 @@ class AnalyzerAgent(ResilientAgent[AnalyzerInput, AnalyzerOutput]):
 
         for evidence in current_evidences:
             for keyword in evidence.extracted_data.get("keywords", []):
-                weighted_current[keyword] = weighted_current.get(keyword, 0.0) + evidence.reliability_score
+                weighted_current[keyword] = (
+                    weighted_current.get(keyword, 0.0) + evidence.reliability_score
+                )
                 count_current[keyword] = count_current.get(keyword, 0) + 1
 
         for evidence in previous_evidences:
             for keyword in evidence.extracted_data.get("keywords", []):
-                weighted_previous[keyword] = weighted_previous.get(keyword, 0.0) + evidence.reliability_score
+                weighted_previous[keyword] = (
+                    weighted_previous.get(keyword, 0.0) + evidence.reliability_score
+                )
 
         return {
             "weighted_current": weighted_current,

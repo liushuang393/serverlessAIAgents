@@ -23,7 +23,9 @@ from agentflow.skills.os.config import ExecutionMode, OSSkillConfig
 class OSSkillError(Exception):
     """OS スキルエラー基底クラス."""
 
-    def __init__(self, message: str, skill_name: str = "", details: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self, message: str, skill_name: str = "", details: dict[str, Any] | None = None
+    ) -> None:
         """初期化."""
         super().__init__(message)
         self.skill_name = skill_name
@@ -112,7 +114,7 @@ class OSSkillBase(ABC):
             CommandSecurityError: コマンドが許可されていない場合
         """
         if not self._config.is_command_allowed(command):
-            base_cmd = command.split()[0] if command else ""
+            base_cmd = command.split(maxsplit=1)[0] if command else ""
             msg = f"コマンド拒否: '{base_cmd}' は許可されていません"
             self._logger.warning(msg)
             raise CommandSecurityError(

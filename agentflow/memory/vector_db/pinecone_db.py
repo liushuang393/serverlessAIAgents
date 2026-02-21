@@ -10,6 +10,12 @@ from typing import Any
 from agentflow.memory.types import MemoryEntry, MemoryType
 from agentflow.memory.vector_db.vector_db_interface import VectorDatabase
 
+# オプション依存: テストでのモック（patch）が効くようにモジュールレベルで import
+try:
+    from pinecone import Pinecone  # type: ignore[import-untyped]
+except ImportError:
+    Pinecone = None  # type: ignore[assignment, misc]
+
 
 class PineconeDB(VectorDatabase):
     """Pinecone Vector Database実装.
@@ -46,14 +52,16 @@ class PineconeDB(VectorDatabase):
 
     async def connect(self) -> None:
         """Pineconeに接続."""
+        if Pinecone is None:
+            msg = "pinecone-client package is required. Install with: pip install pinecone-client"
+            raise ImportError(msg)
         try:
-            from pinecone import Pinecone
-
             pc = Pinecone(api_key=self._api_key)
             self._index = pc.Index(self._index_name)
             self._connected = True
             self._logger.info(f"Connected to Pinecone index: {self._index_name}")
         except ImportError:
+            # テスト時に side_effect=ImportError でパッチされた場合も正しいメッセージを返す
             msg = "pinecone-client package is required. Install with: pip install pinecone-client"
             raise ImportError(msg)
         except Exception as e:

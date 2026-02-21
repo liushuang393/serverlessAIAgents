@@ -174,7 +174,11 @@ class MarketStore:
         async with self._session_factory() as session:
             stmt = select(ReportHistoryModel).order_by(ReportHistoryModel.generated_at.desc()).limit(limit)
             rows = await session.execute(stmt)
-            return [dict(model.payload) for model in rows.scalars().all() if isinstance(model.payload, dict)]
+            return [
+                dict(model.payload)
+                for model in rows.scalars().all()
+                if isinstance(model.payload, dict)
+            ]
 
     def _parse_iso_datetime(self, value: str) -> datetime:
         """ISO文字列を安全にdatetimeへ変換."""
