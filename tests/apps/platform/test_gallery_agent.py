@@ -7,7 +7,8 @@ MarketplaceClient はホームディレクトリへのアクセスが必要な�
 全テストクラスで patch を使用してファイルシステムへの副作用を防ぐ。
 """
 
-from unittest.mock import AsyncMock, MagicMock
+from pathlib import Path
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from apps.platform.agents.gallery_agent import GalleryAgent

@@ -2,13 +2,59 @@
 
 from __future__ import annotations
 
+import asyncio
 import tempfile
 from pathlib import Path
+from typing import Any
 
+import httpx
 import pytest
-from fastapi.testclient import TestClient
 
 from agentflow.studio.api import create_app
+
+
+class SyncASGITestClient:
+    """同期テスト向けの軽量 ASGI クライアント."""
+
+    def __init__(self, app: Any, base_url: str = "http://testserver") -> None:
+        self._app = app
+        self._base_url = base_url
+
+    async def _request_async(
+        self,
+        method: str,
+        path: str,
+        **kwargs: Any,
+    ) -> httpx.Response:
+        transport = httpx.ASGITransport(app=self._app)
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url=self._base_url,
+        ) as client:
+            return await client.request(method, path, **kwargs)
+
+    def request(self, method: str, path: str, **kwargs: Any) -> httpx.Response:
+        return asyncio.run(self._request_async(method, path, **kwargs))
+
+    def get(self, path: str, **kwargs: Any) -> httpx.Response:
+        return self.request("GET", path, **kwargs)
+
+    def post(self, path: str, **kwargs: Any) -> httpx.Response:
+        return self.request("POST", path, **kwargs)
+
+    def put(self, path: str, **kwargs: Any) -> httpx.Response:
+        return self.request("PUT", path, **kwargs)
+
+    def websocket_connect(self, _path: str) -> Any:
+        class _UnsupportedWebSocket:
+            def __enter__(self) -> None:
+                msg = "websocket_connect is not supported in SyncASGITestClient"
+                raise RuntimeError(msg)
+
+            def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> bool:
+                return False
+
+        return _UnsupportedWebSocket()
 
 
 @pytest.fixture
@@ -26,7 +72,7 @@ def client(temp_dirs):
     """テストクライアントを作成."""
     agents_dir, workflows_dir = temp_dirs
     app = create_app(agents_dir=agents_dir, workflows_dir=workflows_dir)
-    return TestClient(app)
+    return SyncASGITestClient(app)
 
 
 class TestAgentsAPI:
@@ -234,7 +280,7 @@ class TestWebSocket:
         """WebSocket 接続をテスト（実際の WebSocket エンドポイントは /api/agents/{id}/ws）。"""
         # /ws/test-client は存在しないので 403/404 を期待
         # エージェント WebSocket は /api/agents/{agent_id}/ws
-        with pytest.raises(Exception), client.websocket_connect("/ws/test-client"):
+        with pytest.raises(RuntimeError), client.websocket_connect("/ws/test-client"):
             pass
 
 
@@ -284,7 +330,7 @@ class TestDefaultDirectories:
         """デフォルトディレクトリで API を作成."""
         # agents_dir と workflows_dir を None にして作成
         app = create_app(agents_dir=None, workflows_dir=None)
-        client = TestClient(app)
+        client = SyncASGITestClient(app)
 
         # API が正常に動作することを確認
         response = client.get("/api/agents")
@@ -319,7 +365,7 @@ class TestAgentDetails:
             mock_registry_class.return_value = mock_registry
 
             app = create_app(agents_dir=agents_dir, workflows_dir=workflows_dir)
-            client = TestClient(app)
+            client = SyncASGITestClient(app)
 
             response = client.get("/api/agents/test-agent")
             assert response.status_code == 200
@@ -341,7 +387,7 @@ class TestAgentDetails:
             mock_registry_class.return_value = mock_registry
 
             app = create_app(agents_dir=agents_dir, workflows_dir=workflows_dir)
-            client = TestClient(app)
+            client = SyncASGITestClient(app)
 
             response = client.get("/api/agents/nonexistent-agent")
             # レジストリにないエージェントは 404
@@ -352,28 +398,27 @@ class TestAgentExecution:
     """エージェント実行のテスト."""
 
     def test_run_agent_success(self, temp_dirs):
-        """エージェントを正常に実行（AgentFlowEngine をモック）。"""
+        """エージェントを正常に実行."""
         from unittest.mock import AsyncMock, MagicMock, patch
 
         agents_dir, workflows_dir = temp_dirs
 
-        # レジストリとエンジンをモック
+        # レジストリと AgentClient をモック
         with (
             patch("agentflow.studio.api.LocalRegistry") as mock_registry_class,
-            patch("agentflow.studio.routes.agents.AgentFlowEngine") as mock_engine_class,
+            patch("agentflow.agent_decorator.AgentClient.get") as mock_get_agent_client,
         ):
             mock_registry = MagicMock()
             mock_agent_info = MagicMock()
             mock_registry.get_agent.return_value = mock_agent_info
             mock_registry_class.return_value = mock_registry
 
-            # AgentFlowEngine.run を成功レスポンスを返す AsyncMock に設定
-            mock_engine = MagicMock()
-            mock_engine.run = AsyncMock(return_value={"output": "test result"})
-            mock_engine_class.return_value = mock_engine
+            mock_agent_client = MagicMock()
+            mock_agent_client.invoke = AsyncMock(return_value={"output": "test result"})
+            mock_get_agent_client.return_value = mock_agent_client
 
             app = create_app(agents_dir=agents_dir, workflows_dir=workflows_dir)
-            client = TestClient(app)
+            client = SyncASGITestClient(app)
 
             response = client.post(
                 "/api/agents/test-agent/run",
@@ -390,24 +435,21 @@ class TestAgentExecution:
 
         agents_dir, workflows_dir = temp_dirs
 
-        # テスト用エージェントディレクトリを作成 (不正な agent.yaml)
-        agent_dir = agents_dir / "test-agent"
-        agent_dir.mkdir(parents=True)
-
-        # 不正な agent.yaml を作成
-        agent_yaml = agent_dir / "agent.yaml"
-        agent_yaml.write_text("invalid: yaml: content: [", encoding="utf-8")
-
-        # レジストリをモック
-        with patch("agentflow.studio.api.LocalRegistry") as mock_registry_class:
+        # レジストリと AgentClient をモック
+        with (
+            patch("agentflow.studio.api.LocalRegistry") as mock_registry_class,
+            patch(
+                "agentflow.agent_decorator.AgentClient.get",
+                side_effect=RuntimeError("invoke failed"),
+            ),
+        ):
             mock_registry = MagicMock()
             mock_agent_info = MagicMock()
-            mock_agent_info.install_path = str(agent_dir)
             mock_registry.get_agent.return_value = mock_agent_info
             mock_registry_class.return_value = mock_registry
 
             app = create_app(agents_dir=agents_dir, workflows_dir=workflows_dir)
-            client = TestClient(app)
+            client = SyncASGITestClient(app)
 
             response = client.post(
                 "/api/agents/test-agent/run",
@@ -424,18 +466,18 @@ class TestMarketplaceInstall:
 
     def test_install_agent_success(self, temp_dirs):
         """エージェントを正常にインストール."""
-        from unittest.mock import AsyncMock, MagicMock, patch
+        from unittest.mock import MagicMock, patch
 
         agents_dir, workflows_dir = temp_dirs
 
         # MarketplaceClient をモック
         with patch("agentflow.studio.api.MarketplaceClient") as mock_client_class:
             mock_client = MagicMock()
-            mock_client.install = AsyncMock()
+            mock_client.install = MagicMock()
             mock_client_class.return_value = mock_client
 
             app = create_app(agents_dir=agents_dir, workflows_dir=workflows_dir)
-            client = TestClient(app)
+            client = SyncASGITestClient(app)
 
             response = client.post(
                 "/api/marketplace/install",
@@ -467,7 +509,7 @@ edges: []
         )
 
         app = create_app(agents_dir=agents_dir, workflows_dir=workflows_dir)
-        client = TestClient(app)
+        client = SyncASGITestClient(app)
 
         response = client.get("/api/workflows")
         assert response.status_code == 200
@@ -497,7 +539,7 @@ class TestWorkflowUpdate:
             yaml.dump(initial_data, f, allow_unicode=True)
 
         app = create_app(agents_dir=agents_dir, workflows_dir=workflows_dir)
-        client = TestClient(app)
+        client = SyncASGITestClient(app)
 
         # 全フィールドを更新
         response = client.put(
@@ -539,7 +581,7 @@ class TestWorkflowUpdate:
             yaml.dump(initial_data, f, allow_unicode=True)
 
         app = create_app(agents_dir=agents_dir, workflows_dir=workflows_dir)
-        client = TestClient(app)
+        client = SyncASGITestClient(app)
 
         # name のみ更新
         response = client.put(
@@ -575,7 +617,7 @@ edges: []
         )
 
         app = create_app(agents_dir=agents_dir, workflows_dir=workflows_dir)
-        client = TestClient(app)
+        client = SyncASGITestClient(app)
 
         response = client.post(
             "/api/workflows/test-workflow/run",

@@ -162,16 +162,8 @@ async def _require_http_api_key(request: Request) -> None:
 
 async def _require_ws_api_key(websocket: WebSocket) -> bool:
     """Enforce API key for websocket handshake."""
-    if not _is_auth_required():
-        return True
-    incoming_key = websocket.headers.get(_AUTH_HEADER) or websocket.query_params.get(_WS_AUTH_QUERY_KEY)
-    try:
-        _verify_api_key(incoming_key)
-    except HTTPException as exc:
-        close_code = 4401 if exc.status_code == 401 else 1011
-        await websocket.close(code=close_code, reason=str(exc.detail))
-        return False
-    return True
+    ok, _ = await _auth_guard.require_ws(websocket)
+    return ok
 
 
 # Personal Assistant Coordinator（新機能）

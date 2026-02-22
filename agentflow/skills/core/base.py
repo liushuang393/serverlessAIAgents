@@ -104,7 +104,7 @@ class SkillMetadata:
             self.created_at = datetime.now().isoformat()
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "SkillMetadata":
+    def from_dict(cls, data: object) -> "SkillMetadata":
         """辞書から SkillMetadata を作成.
 
         Args:
@@ -119,6 +119,8 @@ class SkillMetadata:
         if not isinstance(data, dict):
             msg = "data must be a dict"
             raise TypeError(msg)
+
+        payload = data
 
         known_fields = {
             "name",
@@ -151,7 +153,7 @@ class SkillMetadata:
             "argument_hint",
             "hooks",
         }
-        extra = {k: v for k, v in data.items() if k not in known_fields}
+        extra = {k: v for k, v in payload.items() if k not in known_fields}
 
         def _ensure_list(value: Any) -> list[str]:
             """値をリストに変換."""
@@ -161,39 +163,39 @@ class SkillMetadata:
                 return [str(v) for v in value]
             return [str(value)]
 
-        hooks_raw = data.get("hooks")
+        hooks_raw = payload.get("hooks")
 
         return cls(
-            name=str(data.get("name", "unknown")),
-            description=str(data.get("description", "")),
-            version=str(data.get("version", "1.0.0")),
-            author=str(data.get("author", "")),
-            tags=_ensure_list(data.get("tags")),
-            triggers=_ensure_list(data.get("triggers")),
-            requirements=_ensure_list(data.get("requirements")),
-            dependencies=_ensure_list(data.get("dependencies")),
-            depends_on=_ensure_list(data.get("depends_on", data.get("depends-on"))),
-            provides=_ensure_list(data.get("provides")),
-            phase=str(data.get("phase", "")),
-            examples=_ensure_list(data.get("examples")),
+            name=str(payload.get("name", "unknown")),
+            description=str(payload.get("description", "")),
+            version=str(payload.get("version", "1.0.0")),
+            author=str(payload.get("author", "")),
+            tags=_ensure_list(payload.get("tags")),
+            triggers=_ensure_list(payload.get("triggers")),
+            requirements=_ensure_list(payload.get("requirements")),
+            dependencies=_ensure_list(payload.get("dependencies")),
+            depends_on=_ensure_list(payload.get("depends_on", payload.get("depends-on"))),
+            provides=_ensure_list(payload.get("provides")),
+            phase=str(payload.get("phase", "")),
+            examples=_ensure_list(payload.get("examples")),
             # Claude Code CLI fields (kebab-case → snake_case)
-            allowed_tools=_ensure_list(data.get("allowed-tools", data.get("allowed_tools"))),
-            context=str(data.get("context", "")),
-            agent=bool(data.get("agent", False)),
-            user_invocable=bool(data.get("user-invocable", data.get("user_invocable", False))),
+            allowed_tools=_ensure_list(payload.get("allowed-tools", payload.get("allowed_tools"))),
+            context=str(payload.get("context", "")),
+            agent=bool(payload.get("agent", False)),
+            user_invocable=bool(payload.get("user-invocable", payload.get("user_invocable", False))),
             disable_model_invocation=bool(
-                data.get(
+                payload.get(
                     "disable-model-invocation",
-                    data.get("disable_model_invocation", False),
+                    payload.get("disable_model_invocation", False),
                 )
             ),
-            argument_hint=str(data.get("argument-hint", data.get("argument_hint", ""))),
+            argument_hint=str(payload.get("argument-hint", payload.get("argument_hint", ""))),
             hooks=hooks_raw if isinstance(hooks_raw, dict) else {},
             # Auto-evolution fields
-            created_at=str(data.get("created_at", "")),
-            learned=bool(data.get("learned", False)),
-            confidence=float(data.get("confidence", 1.0)),
-            usage_count=int(data.get("usage_count", 0)),
+            created_at=str(payload.get("created_at", "")),
+            learned=bool(payload.get("learned", False)),
+            confidence=float(payload.get("confidence", 1.0)),
+            usage_count=int(payload.get("usage_count", 0)),
             extra=extra,
         )
 

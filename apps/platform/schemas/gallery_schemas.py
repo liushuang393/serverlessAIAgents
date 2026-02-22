@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime  # noqa: TC003 — Pydanticがランタイムで型評価に必要
 from enum import Enum
 from typing import Any
 

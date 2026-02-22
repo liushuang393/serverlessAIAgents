@@ -13,7 +13,10 @@ from typing import override
 
 from pydantic import BaseModel, Field
 
-from agentflow.security.policy_engine import AuthDecision, AuthMode
+from agentflow.security.policy_engine import (  # noqa: TC001 — Pydanticがランタイムで型評価に必要
+    AuthDecision,
+    AuthMode,
+)
 
 
 class AuditEvent(BaseModel):

@@ -9,6 +9,12 @@ from typing import Any, cast
 from agentflow.memory.embeddings.embedding_interface import EmbeddingEngine
 
 
+try:
+    from sentence_transformers import SentenceTransformer
+except ImportError:
+    SentenceTransformer = None
+
+
 class SentenceTransformerEmbeddings(EmbeddingEngine):
     """Sentence Transformers Embeddings実装.
 
@@ -41,16 +47,12 @@ class SentenceTransformerEmbeddings(EmbeddingEngine):
         self._dimension: int = 0
 
         # モデルを初期化
-        try:
-            from sentence_transformers import SentenceTransformer
-
-            self._model = SentenceTransformer(model_name, device=device)
-            self._dimension = self._model.get_sentence_embedding_dimension()
-            self._logger.info(f"Loaded Sentence Transformer model: {model_name} (dim={self._dimension})")
-
-        except ImportError:
+        if SentenceTransformer is None:
             msg = "sentence-transformers package is required. Install with: pip install sentence-transformers"
             raise ImportError(msg)
+        self._model = SentenceTransformer(model_name, device=device)
+        self._dimension = self._model.get_sentence_embedding_dimension()
+        self._logger.info(f"Loaded Sentence Transformer model: {model_name} (dim={self._dimension})")
 
     async def embed_text(self, text: str) -> list[float]:
         """テキストをベクトル埋め込みに変換."""

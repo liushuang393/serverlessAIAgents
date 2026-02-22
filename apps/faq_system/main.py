@@ -56,7 +56,10 @@ _load_faq_app_env()
 # --- 循環参照回避のため、FastAPI 起動前にパッケージパス等を微調整する場合に備え ---
 
 from apps.faq_system.backend.auth import oauth2_router, saml_router
-from apps.faq_system.backend.auth.dependencies import get_auth_service
+from apps.faq_system.backend.auth.dependencies import (
+    get_auth_service,
+    get_faq_contract_auth_guard,
+)
 from apps.faq_system.backend.auth.router import router as auth_router
 from apps.faq_system.backend.config import kb_registry
 from apps.faq_system.backend.db.models import Base

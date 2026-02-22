@@ -14,6 +14,7 @@ from apps.faq_system.routers.dependencies import (
     get_faq_agent,
     register_artifacts,
     resolve_session_id,
+    resolve_user,
 )
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 

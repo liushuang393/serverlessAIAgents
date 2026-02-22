@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 from urllib.parse import urlparse
 
 from apps.platform.services.agent_taxonomy import AgentTaxonomyService
+from apps.platform.services.protocol_surface_inspector import inspect_protocol_surface
 
 from agentflow.governance.plugin_registry import PluginRegistry
 
@@ -500,6 +501,8 @@ class FrameworkAuditService:
         engine_pattern = self._taxonomy.normalize_engine_pattern(app_config.blueprint.engine_pattern)
         agent_count = len(app_config.agents)
         enforce_protocol_surface = audit_profile == "developer"
+        surface_report = inspect_protocol_surface(app_dir)
+        issues.extend(self._build_ast_parse_warnings(surface_report))
         has_stream_surface = surface_report.has("sse") or surface_report.has("ws")
         if (
             enforce_protocol_surface
@@ -509,8 +512,12 @@ class FrameworkAuditService:
             issues.append(
                 self._build_protocol_missing_issue(
                     code="ORCHESTRATION_STREAM_SURFACE_MISSING",
-                    message=(f"engine_pattern='{engine_pattern}' だが 進捗ストリーム面(SSE/WebSocket)が検出できません"),
-                    hint="run_stream / SSE / WebSocket の少なくとも 1 つを提供してください",
+                    declared=(
+                        f"engine_pattern='{engine_pattern}' だが 進捗ストリーム面(SSE/WebSocket)が検出できません"
+                    ),
+                    expected="run_stream / SSE / WebSocket の少なくとも 1 つを提供してください",
+                    evidence_protocols=("sse", "ws"),
+                    report=surface_report,
                 ),
             )
 
@@ -528,8 +535,10 @@ class FrameworkAuditService:
             issues.append(
                 self._build_protocol_missing_issue(
                     code="A2A_SURFACE_NOT_FOUND",
-                    message="複数 Agent + coordinator/router 構成だが A2A 面が検出できません",
-                    hint=("A2A card / A2A routing のいずれかを実装し、Agent 間契約を明示してください"),
+                    declared="複数 Agent + coordinator/router 構成だが A2A 面が検出できません",
+                    expected="A2A card / A2A routing のいずれかを実装し、Agent 間契約を明示してください",
+                    evidence_protocols=("a2a",),
+                    report=surface_report,
                 ),
             )
 

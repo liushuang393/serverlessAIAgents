@@ -46,6 +46,7 @@ from apps.platform.routers.mcp import init_mcp_services
 from apps.platform.routers.rag import init_rag_services
 from apps.platform.routers.skills import init_skill_services
 from apps.platform.routers.studios import init_studio_services
+from apps.platform.routers.tenant_invitations import init_tenant_invitation_services
 from apps.platform.schemas.publish_schemas import PublishRequest, PublishTarget
 from apps.platform.services.agent_aggregator import AgentAggregatorService
 from apps.platform.services.app_discovery import AppDiscoveryService

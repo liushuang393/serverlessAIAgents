@@ -20,6 +20,7 @@ from apps.platform.services.app_discovery import AppDiscoveryService
 from apps.platform.services.app_lifecycle import AppLifecycleManager
 from apps.platform.services.rag_overview import RAGOverviewService
 from apps.platform.services.skill_catalog import SkillCatalogService
+from apps.platform.services.tenant_invitation import TenantInvitationService
 from httpx import Response
 
 

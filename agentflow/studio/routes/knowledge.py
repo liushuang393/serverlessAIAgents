@@ -8,7 +8,12 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter
-from agentflow.studio.models import ChatRequest, KnowledgeAddRequest, RAGQueryRequest
+
+from agentflow.studio.models import (  # noqa: TC001 — FastAPIがランタイムで型評価に必要
+    ChatRequest,
+    KnowledgeAddRequest,
+    RAGQueryRequest,
+)
 
 
 def create_knowledge_router() -> APIRouter:
