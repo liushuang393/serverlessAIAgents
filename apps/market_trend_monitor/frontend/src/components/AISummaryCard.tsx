@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent, Typography, Box, Chip } from '@mui/material';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
+import { useI18n } from '../i18n';
 
 interface AISummaryCardProps {
     summary: string;
@@ -9,6 +10,7 @@ interface AISummaryCardProps {
 }
 
 const AISummaryCard: React.FC<AISummaryCardProps> = ({ summary, actionRequired, status }) => {
+    const { t } = useI18n();
     const getStatusColor = () => {
         switch (status) {
             case 'positive': return '#4caf50';
@@ -45,7 +47,7 @@ const AISummaryCard: React.FC<AISummaryCardProps> = ({ summary, actionRequired, 
             >
                 <AutoAwesomeIcon sx={{ fontSize: 16, color: 'white' }} />
                 <Typography variant="caption" sx={{ color: 'white', fontWeight: 'bold' }}>
-                    AI インサイト
+                    {t('ai_summary.badge')}
                 </Typography>
             </Box>
             <CardContent sx={{ pt: 3 }}>
@@ -55,12 +57,12 @@ const AISummaryCard: React.FC<AISummaryCardProps> = ({ summary, actionRequired, 
                 {actionRequired && (
                     <Box sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Chip
-                            label="推奨アクション"
+                            label={t('ai_summary.action_badge')}
                             size="small"
                             sx={{ bgcolor: 'rgba(99, 102, 241, 0.2)', color: '#a5b4fc', fontWeight: 'bold' }}
                         />
                         <Typography variant="body2" color="text.secondary">
-                            関連するシグナルの詳細を確認し、チームでの共有を検討してください。
+                            {t('ai_summary.action_desc')}
                         </Typography>
                     </Box>
                 )}

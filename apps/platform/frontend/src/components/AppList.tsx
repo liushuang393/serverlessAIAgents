@@ -11,8 +11,10 @@ import { useAppStore } from '@/store/useAppStore';
 import type { AppStatus, PortConflictReport } from '@/types';
 import { AppHealthBadge } from './AppHealthBadge';
 import { AppCreateModal } from './AppCreateModal';
+import { useI18n } from '../i18n';
 
 export function AppList() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const { apps, totalApps, loading, error, loadApps, refresh, clearError } =
     useAppStore();
@@ -108,9 +110,9 @@ export function AppList() {
       {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Apps</h1>
+          <h1 className="text-2xl font-bold text-slate-100">{t('app_list.title')}</h1>
           <p className="text-sm text-slate-500 mt-1">
-            {totalApps} apps registered
+            {t('app_list.registered_count').replaceAll('{count}', String(totalApps))}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -118,7 +120,7 @@ export function AppList() {
             onClick={() => setCreateOpen(true)}
             className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors"
           >
-            APPを追加
+            {t('app_list.add_app')}
           </button>
           <button
             onClick={handleRefresh}
@@ -130,7 +132,7 @@ export function AppList() {
             ) : (
               <span>🔄</span>
             )}
-            Refresh
+            {t('app_list.refresh')}
           </button>
         </div>
       </div>
@@ -140,7 +142,7 @@ export function AppList() {
           <input
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
-            placeholder="名称 / tag / URL で検索..."
+            placeholder={t('app_list.search_placeholder')}
             className="input"
           />
           <select
@@ -148,29 +150,29 @@ export function AppList() {
             onChange={(e) => setStatusFilter(e.target.value as 'all' | AppStatus)}
             className="input"
           >
-            <option value="all">All Status</option>
-            <option value="healthy">Healthy</option>
-            <option value="unhealthy">Unhealthy</option>
-            <option value="unknown">Unknown</option>
-            <option value="stopped">Stopped</option>
+            <option value="all">{t('app_list.all_status')}</option>
+            <option value="healthy">{t('app_list.healthy')}</option>
+            <option value="unhealthy">{t('app_list.unhealthy')}</option>
+            <option value="unknown">{t('app_list.unknown')}</option>
+            <option value="stopped">{t('app_list.stopped')}</option>
           </select>
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value as 'name' | 'api' | 'frontend')}
             className="input"
           >
-            <option value="name">Sort: Name</option>
-            <option value="api">Sort: API Port</option>
-            <option value="frontend">Sort: Frontend Port</option>
+            <option value="name">{t('app_list.sort_name')}</option>
+            <option value="api">{t('app_list.sort_api')}</option>
+            <option value="frontend">{t('app_list.sort_fe')}</option>
           </select>
         </div>
         <div className="flex flex-wrap gap-2 text-xs text-slate-400">
-          <span className="px-2 py-1 rounded-md bg-slate-800/70">healthy: {statusCounts.healthy}</span>
-          <span className="px-2 py-1 rounded-md bg-slate-800/70">unhealthy: {statusCounts.unhealthy}</span>
-          <span className="px-2 py-1 rounded-md bg-slate-800/70">unknown: {statusCounts.unknown}</span>
-          <span className="px-2 py-1 rounded-md bg-slate-800/70">stopped: {statusCounts.stopped}</span>
+          <span className="px-2 py-1 rounded-md bg-slate-800/70">{t('app_list.healthy_count').replaceAll('{count}', String(statusCounts.healthy))}</span>
+          <span className="px-2 py-1 rounded-md bg-slate-800/70">{t('app_list.unhealthy_count').replaceAll('{count}', String(statusCounts.unhealthy))}</span>
+          <span className="px-2 py-1 rounded-md bg-slate-800/70">{t('app_list.unknown_count').replaceAll('{count}', String(statusCounts.unknown))}</span>
+          <span className="px-2 py-1 rounded-md bg-slate-800/70">{t('app_list.stopped_count').replaceAll('{count}', String(statusCounts.stopped))}</span>
           <span className="px-2 py-1 rounded-md bg-indigo-500/10 text-indigo-300">
-            filtered: {filteredApps.length}
+            {t('app_list.filtered_count').replaceAll('{count}', String(filteredApps.length))}
           </span>
         </div>
       </div>
@@ -193,14 +195,14 @@ export function AppList() {
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
           <div className="flex items-center justify-between gap-3 mb-2">
             <p className="text-amber-300 text-sm font-medium">
-              ポート重複を検出しました（{conflicts.conflicts.length}件）
+              {t('app_list.port_conflict')}（{conflicts.conflicts.length}）
             </p>
             <button
               onClick={handleRebalance}
               disabled={rebalancing}
               className="px-3 py-1 rounded-md bg-amber-500/20 hover:bg-amber-500/30 disabled:opacity-50 text-amber-200 text-xs"
             >
-              {rebalancing ? '整理中...' : '自動整理を適用'}
+              {rebalancing ? t('app_list.resolving') : t('app_list.auto_resolve')}
             </button>
           </div>
           <div className="space-y-1">
@@ -288,13 +290,13 @@ export function AppList() {
         <div className="text-center py-16">
           <p className="text-4xl mb-4">📭</p>
           <p className="text-slate-400">
-            {apps.length === 0 ? 'No apps registered yet' : 'No apps matched your filter'}
+            {apps.length === 0 ? t('app_list.no_apps') : t('app_list.no_match')}
           </p>
           <button
             onClick={handleRefresh}
             className="mt-4 text-sm text-indigo-400 hover:text-indigo-300"
           >
-            Scan for apps →
+            {t('app_list.scan_apps')}
           </button>
         </div>
       )}

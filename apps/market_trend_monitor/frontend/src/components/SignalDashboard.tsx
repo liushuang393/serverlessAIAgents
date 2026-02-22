@@ -23,6 +23,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { apiClient } from '../api/client';
+import { useI18n } from '../i18n';
 
 interface SignalScore {
   reliability: number;
@@ -58,14 +59,6 @@ const gradeColors: Record<string, string> = {
   B: '#2196f3',
   C: '#ff9800',
   D: '#9e9e9e',
-};
-
-const axisLabels: Record<string, string> = {
-  reliability: 'Reliability',
-  leading: 'Leading',
-  relevance: 'Relevance',
-  actionability: 'Actionability',
-  convergence: 'Convergence',
 };
 
 function RadarChart({ score }: { score: SignalScore }) {
@@ -126,10 +119,19 @@ function RadarChart({ score }: { score: SignalScore }) {
 }
 
 export default function SignalDashboard() {
+  const { t } = useI18n();
   const [signals, setSignals] = useState<SignalItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<Record<string, unknown>>({});
+
+  const axisLabels: Record<string, string> = {
+    reliability: 'Reliability',
+    leading: 'Leading',
+    relevance: 'Relevance',
+    actionability: 'Actionability',
+    convergence: 'Convergence',
+  };
 
   const fetchSignals = useCallback(async () => {
     setLoading(true);
@@ -143,7 +145,7 @@ export default function SignalDashboard() {
         setError(null);
       } else {
         setSignals([]);
-        setError('シグナルデータの取得に失敗しました');
+        setError(t('signal.fetch_error'));
       }
       if (dashResp.status === 'fulfilled') {
         setStats(dashResp.value.data || {});
@@ -153,7 +155,7 @@ export default function SignalDashboard() {
     } catch {
       setSignals([]);
       setStats({});
-      setError('シグナルデータの取得に失敗しました');
+      setError(t('signal.fetch_error'));
     } finally {
       setLoading(false);
     }
@@ -168,10 +170,10 @@ export default function SignalDashboard() {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        シグナル分析
+        {t('signal.title')}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        AIが収集した兆候を5つの指標で多角的に評価し、重要度を判定します。
+        {t('signal.subtitle')}
       </Typography>
 
       {loading && <LinearProgress sx={{ mb: 2 }} />}
@@ -183,16 +185,16 @@ export default function SignalDashboard() {
             <Tooltip
               arrow
               title={
-                grade === 'A' ? '最高重要度：即時アクションが推奨される強いシグナル' :
-                  grade === 'B' ? '高重要度：継続的な監視と詳細分析が必要な兆候' :
-                    grade === 'C' ? '中重要度：注意深く見守る必要がある変化' :
-                      '低重要度：現時点ではノイズの可能性が高い情報'
+                grade === 'A' ? t('signal.grade_a_tip') :
+                  grade === 'B' ? t('signal.grade_b_tip') :
+                    grade === 'C' ? t('signal.grade_c_tip') :
+                      t('signal.grade_d_tip')
               }
             >
               <Card sx={{ cursor: 'help' }}>
                 <CardContent sx={{ textAlign: 'center', py: 1 }}>
                   <Chip
-                    label={`グレード ${grade}`}
+                    label={`${t('signal.grade_prefix')} ${grade}`}
                     sx={{ bgcolor: gradeColors[grade], color: 'white', fontWeight: 'bold', mb: 1 }}
                   />
                   <Typography variant="h4">{(gradeDist[grade] as number) || 0}</Typography>
@@ -207,11 +209,11 @@ export default function SignalDashboard() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>トレンド</TableCell>
-              <TableCell>グレード</TableCell>
-              <TableCell>スコア</TableCell>
-              <TableCell>分析マップ</TableCell>
-              <TableCell>評価詳細</TableCell>
+              <TableCell>{t('signal.table_trend')}</TableCell>
+              <TableCell>{t('signal.table_grade')}</TableCell>
+              <TableCell>{t('signal.table_score')}</TableCell>
+              <TableCell>{t('signal.table_radar')}</TableCell>
+              <TableCell>{t('signal.table_detail')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -226,10 +228,10 @@ export default function SignalDashboard() {
                   <Tooltip
                     arrow
                     title={
-                      signal.grade === 'A' ? '最高重要度：即時の対応を推奨' :
-                        signal.grade === 'B' ? '高重要度：詳細分析を推奨' :
-                          signal.grade === 'C' ? '中重要度：継続監視を推奨' :
-                            '低重要度：ノイズの可能性'
+                      signal.grade === 'A' ? t('signal.grade_a_row_tip') :
+                        signal.grade === 'B' ? t('signal.grade_b_row_tip') :
+                          signal.grade === 'C' ? t('signal.grade_c_row_tip') :
+                            t('signal.grade_d_row_tip')
                     }
                   >
                     <Chip
@@ -251,11 +253,11 @@ export default function SignalDashboard() {
                   <Box>
                     {Object.entries(axisLabels).map(([key, label]) => {
                       const tips: Record<string, string> = {
-                        reliability: '情報の信頼性。事実に基づいているか。',
-                        leading: '先行指標性。未来のトレンドを先取りしているか。',
-                        relevance: '関連性。自社のビジネスにどれだけ関係があるか。',
-                        actionability: '実行可能性。具体的なアクションに繋げやすいか。',
-                        convergence: '収束性。複数の情報源が同じ方向を指しているか。',
+                        reliability: t('signal.axis_reliability_tip'),
+                        leading: t('signal.axis_leading_tip'),
+                        relevance: t('signal.axis_relevance_tip'),
+                        actionability: t('signal.axis_actionability_tip'),
+                        convergence: t('signal.axis_convergence_tip'),
                       };
                       return (
                         <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>

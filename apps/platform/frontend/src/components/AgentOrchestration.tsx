@@ -12,44 +12,33 @@ import type {
   AgentStatsResponse,
   AggregatedAgent,
 } from '@/types';
+import { useI18n } from '../i18n';
 
-/** エンジンパターンの表示定義 */
-const ENGINE_PATTERN_META: Record<string, { label: string; icon: string; color: string; description: string }> = {
+/** エンジンパターンのスタイル定義（ラベル・説明は i18n で解決） */
+const ENGINE_PATTERN_STYLE: Record<string, { icon: string; color: string }> = {
   simple: {
-    label: 'Simple',
     icon: '⚡',
     color: 'from-emerald-500/20 to-emerald-600/5 border-emerald-500/30',
-    description: '単一Agent直接実行。入力→処理→出力の最短パス。',
   },
   flow: {
-    label: 'Flow',
     icon: '🔀',
     color: 'from-blue-500/20 to-blue-600/5 border-blue-500/30',
-    description: '条件分岐・並列実行を含む柔軟なフロー制御。',
   },
   pipeline: {
-    label: 'Pipeline',
     icon: '🔗',
     color: 'from-amber-500/20 to-amber-600/5 border-amber-500/30',
-    description: '直列ステージ構成。前段の出力が次段の入力になる。',
   },
   coordinator: {
-    label: 'Coordinator',
     icon: '🎯',
     color: 'from-purple-500/20 to-purple-600/5 border-purple-500/30',
-    description: '中央Agentが判断し、子Agentに動的にタスクを委譲。',
   },
   deep_agent: {
-    label: 'Deep Agent',
     icon: '🧠',
     color: 'from-rose-500/20 to-rose-600/5 border-rose-500/30',
-    description: '自律推論型。計画→実行→振り返りを再帰的に繰り返す。',
   },
   custom: {
-    label: 'Custom',
     icon: '🛠️',
     color: 'from-slate-500/20 to-slate-600/5 border-slate-500/30',
-    description: 'カスタム構成のオーケストレーション。',
   },
 };
 
@@ -68,6 +57,7 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 export function AgentOrchestration() {
+  const { t } = useI18n();
   const [groups, setGroups] = useState<AgentGroup[]>([]);
   const [stats, setStats] = useState<AgentStatsResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -87,7 +77,7 @@ export function AgentOrchestration() {
         setGroups(byApp.groups);
         setStats(agentStats);
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Agent 編排情報の取得に失敗';
+        const message = err instanceof Error ? err.message : t('orch.error_load');
         setError(message);
       } finally {
         setLoading(false);
@@ -118,9 +108,9 @@ export function AgentOrchestration() {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* ヘッダー */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-100">Agent Orchestration</h1>
+        <h1 className="text-2xl font-bold text-slate-100">{t('orch.title')}</h1>
         <p className="text-sm text-slate-500 mt-1">
-          App 別の Agent 編排構成・エンジンパターン・接続フロー
+          {t('orch.subtitle')}
         </p>
       </div>
 
@@ -135,10 +125,10 @@ export function AgentOrchestration() {
       {/* サマリーカード */}
       {stats && !loading && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <SummaryCard label="Total Apps" value={stats.total_apps_with_agents} icon="📦" />
-          <SummaryCard label="Total Agents" value={stats.total_agents} icon="🤖" />
-          <SummaryCard label="Capabilities" value={stats.total_capabilities} icon="🎯" />
-          <SummaryCard label="Engine Types" value={Object.keys(engineStats).length} icon="⚙️" />
+          <SummaryCard label={t('orch.total_apps')} value={stats.total_apps_with_agents} icon="📦" />
+          <SummaryCard label={t('orch.total_agents')} value={stats.total_agents} icon="🤖" />
+          <SummaryCard label={t('orch.capabilities')} value={stats.total_capabilities} icon="🎯" />
+          <SummaryCard label={t('orch.engine_patterns')} value={Object.keys(engineStats).length} icon="⚙️" />
         </div>
       )}
 
@@ -162,20 +152,20 @@ export function AgentOrchestration() {
       {!loading && filteredGroups.length === 0 && !error && (
         <div className="text-center py-16 text-slate-500 text-sm">
           <p className="text-4xl mb-3">🔍</p>
-          Agent 編排情報がありません
+          {t('orch.no_agents')}
         </div>
       )}
 
       <div className="space-y-4">
         {filteredGroups.map((group) => {
           const pattern = getEnginePattern(group);
-          const meta = ENGINE_PATTERN_META[pattern] ?? ENGINE_PATTERN_META.custom;
+          const style = ENGINE_PATTERN_STYLE[pattern] ?? ENGINE_PATTERN_STYLE.custom;
           const isExpanded = expandedApp === group.app_name;
 
           return (
             <div
               key={group.app_name}
-              className={`border rounded-xl bg-gradient-to-br ${meta.color} transition-all`}
+              className={`border rounded-xl bg-gradient-to-br ${style.color} transition-all`}
             >
               {/* App ヘッダー */}
               <button
@@ -189,10 +179,10 @@ export function AgentOrchestration() {
                       {group.display_name}
                     </h3>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800/60 text-slate-400">
-                      {meta.icon} {meta.label}
+                      {style.icon} {t(`orch.engine_${pattern}`) || pattern}
                     </span>
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">{meta.description}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{t(`orch.engine_${pattern}_desc`) || ''}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-slate-400">
@@ -277,9 +267,10 @@ function EngineFilter({
   selected: string;
   onSelect: (v: string) => void;
 }) {
+  const { t } = useI18n();
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-      <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Engine Pattern</p>
+      <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">{t('orch.engine_patterns')}</p>
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => onSelect('')}
@@ -289,10 +280,10 @@ function EngineFilter({
               : 'border-slate-700 text-slate-400 hover:border-slate-600'
           }`}
         >
-          All
+          {t('orch.all')}
         </button>
         {Object.entries(engineStats).map(([pattern, count]) => {
-          const meta = ENGINE_PATTERN_META[pattern] ?? ENGINE_PATTERN_META.custom;
+          const style = ENGINE_PATTERN_STYLE[pattern] ?? ENGINE_PATTERN_STYLE.custom;
           return (
             <button
               key={pattern}
@@ -303,7 +294,7 @@ function EngineFilter({
                   : 'border-slate-700 text-slate-400 hover:border-slate-600'
               }`}
             >
-              {meta.icon} {meta.label} ({count})
+              {style.icon} {t(`orch.engine_${pattern}`) || pattern} ({count})
             </button>
           );
         })}

@@ -23,8 +23,10 @@ import { useAppStore } from '@/store/useAppStore';
 import TrendChart from './TrendChart';
 import TrendList from './TrendList';
 import AISummaryCard from './AISummaryCard';
+import { useI18n } from '../i18n';
 
 const Dashboard: React.FC = () => {
+  const { t } = useI18n();
   const { trends, loading, error, fetchTrends } = useAppStore();
 
   useEffect(() => {
@@ -101,14 +103,14 @@ const Dashboard: React.FC = () => {
           }}
         />
         <Stack spacing={1} sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography variant="h4">市場動向ダッシュボード</Typography>
+          <Typography variant="h4">{t('dash.hero_title')}</Typography>
           <Typography variant="body1" sx={{ opacity: 0.8 }}>
-            マーケットの兆候を一望し、意思決定の速度を上げるためのリアルタイム監視。
+            {t('dash.hero_subtitle')}
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" mt={1}>
             {topTopics.length === 0 ? (
               <Chip
-                label="新しいデータを収集中"
+                label={t('dash.collecting_data')}
                 size="small"
                 sx={{
                   color: '#fff',
@@ -153,11 +155,11 @@ const Dashboard: React.FC = () => {
             }}
           >
             <Typography variant="overline" color="text.secondary">
-              トレンド数
+              {t('dash.trend_count')}
             </Typography>
             <Typography variant="h3">{trends.length}</Typography>
             <Typography variant="body2" color="text.secondary">
-              直近の重要シグナルを集計
+              {t('dash.trend_count_desc')}
             </Typography>
           </Paper>
         </Grid>
@@ -171,11 +173,11 @@ const Dashboard: React.FC = () => {
             }}
           >
             <Typography variant="overline" color="text.secondary">
-              記事総数
+              {t('dash.article_count')}
             </Typography>
             <Typography variant="h3">{totalArticles}</Typography>
             <Typography variant="body2" color="text.secondary">
-              複数ソースを統合した証拠母数
+              {t('dash.article_count_desc')}
             </Typography>
           </Paper>
         </Grid>
@@ -188,14 +190,14 @@ const Dashboard: React.FC = () => {
                 'linear-gradient(135deg, rgba(14,165,233,0.12), rgba(18,18,26,0.9))',
             }}
           >
-            <Tooltip title="収集された情報の全体的な信頼度。数値が高いほど、根拠がしっかりしていることを示します。" arrow>
+            <Tooltip title={t('dash.avg_score_tooltip')} arrow>
               <Typography variant="overline" color="text.secondary" sx={{ cursor: 'help' }}>
-                平均スコア (信頼度)
+                {t('dash.avg_score')}
               </Typography>
             </Tooltip>
             <Typography variant="h3">{averageScore.toFixed(2)}</Typography>
             <Typography variant="body2" color="text.secondary">
-              信号強度のベースライン
+              {t('dash.avg_score_desc')}
             </Typography>
           </Paper>
         </Grid>
@@ -212,7 +214,7 @@ const Dashboard: React.FC = () => {
             }}
           >
             <Typography variant="h6" gutterBottom>
-              トレンド推移
+              {t('dash.trend_chart')}
             </Typography>
             <TrendChart trends={trends} />
           </Paper>
@@ -230,31 +232,31 @@ const Dashboard: React.FC = () => {
             }}
           >
             <Typography variant="h6" gutterBottom>
-              インサイト要約
+              {t('dash.insight_summary')}
             </Typography>
             <Stack spacing={2} mt={2}>
               <Box>
                 <Typography variant="body2" color="text.secondary">
-                  注目テーマ
+                  {t('dash.top_theme')}
                 </Typography>
                 <Typography variant="h6">
-                  {topTopics[0] || 'データ待機中'}
+                  {topTopics[0] || t('dash.awaiting_data')}
                 </Typography>
               </Box>
               <Box>
                 <Typography variant="body2" color="text.secondary">
-                  主要ソース
+                  {t('dash.main_sources')}
                 </Typography>
                 <Typography variant="h6">
-                  {trends.length > 0 ? 'News / GitHub / arXiv' : '未集計'}
+                  {trends.length > 0 ? 'News / GitHub / arXiv' : t('dash.not_aggregated')}
                 </Typography>
               </Box>
               <Box>
                 <Typography variant="body2" color="text.secondary">
-                  シグナルステータス
+                  {t('dash.signal_status')}
                 </Typography>
                 <Typography variant="h6">
-                  {averageScore > 0.65 ? '強い兆候あり' : '通常監視'}
+                  {averageScore > 0.65 ? t('dash.strong_signal') : t('dash.normal_monitoring')}
                 </Typography>
               </Box>
             </Stack>
@@ -272,7 +274,7 @@ const Dashboard: React.FC = () => {
             }}
           >
             <Typography variant="h6" gutterBottom>
-              最新トレンド
+              {t('dash.latest_trends')}
             </Typography>
             <TrendList trends={trends.slice(0, 10)} />
           </Paper>

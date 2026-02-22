@@ -158,7 +158,8 @@ class TestMarketplaceClient:
         )
 
         assert client.install_dir == install_dir
-        assert install_dir.exists()
+        # v0.2: インストールディレクトリは遅延作成
+        assert not install_dir.exists()
         assert client.registry == registry
 
         client.close()

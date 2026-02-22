@@ -68,12 +68,31 @@ flowchart TB
 
 ## 🗂️ Repository Structure
 
-- `agentflow/`: Kernel (flow/agent/tool/protocol)
-- `apps/`: Product apps (Studios, Platform, etc.)
-- `plugins/`: Extension blocks (tools/providers/blocks)
+### Core Components
+- `agentflow/`: Kernel (Engine, Agent patterns, Protocols)
+- `apps/`: Product applications (Platform, Studios, specific apps)
+- `plugins/`: Extensions (Blocks, Tools, Providers)
 - `contracts/`: Versioned JSON contracts (compatibility boundary)
-- `docs/`: External/internal documentation
-- `tests/`: Test suite
+- `docs/`: External/internal documentation and design docs
+- `tests/`: Automated test suite (Unit, Integration, E2E)
+- `examples/`: Usage samples and demonstration code
+
+### Tooling & Governance
+- `.agent/`, `.agentflow/`: Agent workflows and internal execution data
+- `.github/`: CI/CD workflows and GitHub templates
+- `code-rules/`: Unified coding standards and linting rules
+- `scripts/`: Development and maintenance utility scripts
+- `Makefile`: Task automation commands
+
+### Config & Environment
+- `pyproject.toml`: Main project configuration and dependencies
+- `requirements.txt`: Python package list (supplementary)
+- `.env.example`: Template for environment variables
+
+### Incubating & Internal
+- `.kiro/`, `.sisyphus/`: Internal specs and agent notepads
+- `mcp_client/`, `mcp_servers/`: MCP protocol specific implementations
+- `studio/`: Standalone frontend studio (transitioning to `apps/platform`)
 
 ## 🧬 Evolution V2 (2026-02)
 

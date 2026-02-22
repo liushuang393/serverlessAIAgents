@@ -6,8 +6,10 @@
 
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { useI18n } from '../i18n';
 
 export function AgentBrowser() {
+  const { t } = useI18n();
   const {
     agents,
     capabilities,
@@ -38,9 +40,9 @@ export function AgentBrowser() {
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       {/* ヘッダー */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-100">Agent Browser</h1>
+        <h1 className="text-2xl font-bold text-slate-100">{t('agent_browser.title')}</h1>
         <p className="text-sm text-slate-500 mt-1">
-          全 App 横断の Agent 一覧（{agents.length} agents）
+          {t('agent_browser.subtitle')}（{agents.length}）
         </p>
       </div>
 
@@ -56,7 +58,7 @@ export function AgentBrowser() {
       {capabilities.length > 0 && (
         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
           <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">
-            Filter by Capability
+            {t('agent_browser.filter_cap')}
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -67,7 +69,7 @@ export function AgentBrowser() {
                   : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
               }`}
             >
-              All
+              {t('agent_browser.all')}
             </button>
             {capabilities.map((cap) => (
               <button
@@ -98,7 +100,7 @@ export function AgentBrowser() {
       {!loading && agents.length > 0 && (
         <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
           <div className="px-5 py-3.5 border-b border-slate-800">
-            <h2 className="text-sm font-semibold text-slate-200">Agents</h2>
+            <h2 className="text-sm font-semibold text-slate-200">{t('agent_browser.agents_count')}</h2>
           </div>
           <div className="divide-y divide-slate-800/50">
             {agents.map((agent, idx) => (
@@ -126,7 +128,7 @@ export function AgentBrowser() {
                 </div>
                 {agent.capabilities_legacy.length > 0 && (
                   <p className="text-[10px] text-slate-600 mt-2">
-                    legacy: {agent.capabilities_legacy.join(', ')}
+                    {t('agent_browser.legacy_prefix')} {agent.capabilities_legacy.join(', ')}
                   </p>
                 )}
               </div>
@@ -139,7 +141,7 @@ export function AgentBrowser() {
       {!loading && agents.length === 0 && (
         <div className="text-center py-16">
           <p className="text-4xl mb-4">🤖</p>
-          <p className="text-slate-400">No agents found</p>
+          <p className="text-slate-400">{t('agent_browser.no_agents')}</p>
         </div>
       )}
     </div>

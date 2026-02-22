@@ -4,6 +4,7 @@
 """
 
 import asyncio
+import inspect
 import json
 import sys
 import traceback
@@ -292,12 +293,15 @@ def run(
                             return {}
                         console.print("[yellow]Warning: Stream mode not supported, using normal mode[/yellow]")
                     # 通常実行
-                    if hasattr(flow, "run"):
-                        result_data = await flow.run(shared_data)
-                        return result_data if isinstance(result_data, dict) else {"result": result_data}
+                    # AsyncFlow は run() が RuntimeError を送出するため run_async を優先する。
                     if hasattr(flow, "run_async"):
                         await flow.run_async(shared_data)
                         return shared_data
+                    if hasattr(flow, "run"):
+                        result_data = flow.run(shared_data)
+                        if inspect.isawaitable(result_data):
+                            result_data = await result_data
+                        return result_data if isinstance(result_data, dict) else {"result": result_data}
                     msg = f"Flow '{flow_name}' has no run/run_async method"
                     raise ValueError(msg)
 

@@ -80,12 +80,31 @@ flowchart TB
 
 ## 🗂️ 仓库结构
 
-- `agentflow/`: Kernel（flow/agent/tool/protocol）
-- `apps/`: 产品应用（Studios、Platform 等）
-- `plugins/`: 扩展能力（tools/providers/blocks）
-- `contracts/`: 版本化 JSON 契约（兼容性边界）
-- `docs/`: 对外/对内文档
-- `tests/`: 测试集
+### 核心组件
+- `agentflow/`: Kernel（引擎/Agent模式/协议抽象）
+- `apps/`: 产品应用（Studio / Platform / 业务应用）
+- `plugins/`: 扩展能力（Blocks / Tools / Providers）
+- `contracts/`: 版本化 JSON 契约（定义兼容性边界）
+- `docs/`: 对外文档、内部设计文档及 API 指南
+- `tests/`: 自动化测试集（单元/集成/E2E）
+- `examples/`: 使用示例与 Demo 代码
+
+### 工具与治理
+- `.agent/`, `.agentflow/`: Agent 工作流日志与内部执行数据
+- `.github/`: CI/CD 流程及 GitHub 模板
+- `code-rules/`: 统一代码规范与 Lint 规则
+- `scripts/`: 开发与维护辅助脚本
+- `Makefile`: 自动化任务命令行工具
+
+### 配置与环境
+- `pyproject.toml`: 项目整体配置及依赖管理
+- `requirements.txt`: Python 依赖列表（辅助）
+- `.env.example`: 环境变量模板文件
+
+### 孵化中与内部工具
+- `.kiro/`, `.sisyphus/`: 内部技术规格（Specs）与 Agent 笔记本
+- `mcp_client/`, `mcp_servers/`: MCP 协议相关具体实现
+- `studio/`: 独立前端 Studio（正逐步迁移至 `apps/platform`）
 
 ## 🧬 Evolution V2（2026-02）
 

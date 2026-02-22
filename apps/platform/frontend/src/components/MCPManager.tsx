@@ -6,6 +6,8 @@ import {
   upsertMCPServer,
 } from '@/api/client';
 import type { MCPLazyLoadingConfig, MCPServerConfig } from '@/types';
+import { useI18n } from '../i18n';
+import { useI18n } from '../i18n';
 
 const EMPTY_SERVER: MCPServerConfig = {
   name: '',
@@ -17,6 +19,7 @@ const EMPTY_SERVER: MCPServerConfig = {
 };
 
 export function MCPManager() {
+  const { t } = useI18n();
   const [configPath, setConfigPath] = useState('');
   const [servers, setServers] = useState<MCPServerConfig[]>([]);
   const [lazyLoading, setLazyLoading] = useState<MCPLazyLoadingConfig>({
@@ -43,7 +46,7 @@ export function MCPManager() {
       setServers(res.config.servers);
       setLazyLoading(res.config.lazy_loading);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'MCP 設定の取得に失敗しました';
+      const msg = err instanceof Error ? err.message : t('mcp_mgr.load_error');
       setError(msg);
     } finally {
       setLoading(false);
@@ -92,7 +95,7 @@ export function MCPManager() {
       setEnvInput('');
       await load();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'MCP サーバー保存に失敗しました';
+      const msg = err instanceof Error ? err.message : t('mcp_mgr.save_server_error');
       setError(msg);
     } finally {
       setSaving(false);
@@ -106,7 +109,7 @@ export function MCPManager() {
       await deleteMCPServer(name);
       await load();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'MCP サーバー削除に失敗しました';
+      const msg = err instanceof Error ? err.message : t('mcp_mgr.delete_error');
       setError(msg);
     } finally {
       setSaving(false);
@@ -120,7 +123,7 @@ export function MCPManager() {
       await patchMCPLazyLoading(lazyLoading);
       await load();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Lazy Loading 設定更新に失敗しました';
+      const msg = err instanceof Error ? err.message : t('mcp_mgr.lazy_error');
       setError(msg);
     } finally {
       setSaving(false);
@@ -130,8 +133,8 @@ export function MCPManager() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-100">MCP Manager</h1>
-        <p className="text-sm text-slate-500 mt-1">MCP サーバー設定を Platform から管理</p>
+        <h1 className="text-2xl font-bold text-slate-100">{t('mcp_mgr.title')}</h1>
+        <p className="text-sm text-slate-500 mt-1">{t('mcp_mgr.subtitle')}</p>
       </div>
 
       {error && (
@@ -141,11 +144,11 @@ export function MCPManager() {
       )}
 
       <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 text-xs text-slate-400">
-        設定ファイル: <span className="font-mono text-slate-300">{configPath || '読み込み中...'}</span>
+        {t('mcp_mgr.config_file')} <span className="font-mono text-slate-300">{configPath || t('mcp_mgr.config_loading')}</span>
       </div>
 
       <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-slate-200">Lazy Loading</h2>
+        <h2 className="text-sm font-semibold text-slate-200">{t('mcp_mgr.lazy_loading')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <Toggle
             label="enabled"
@@ -185,7 +188,7 @@ export function MCPManager() {
           disabled={loading || saving}
           className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-sm"
         >
-          保存
+          {t('mcp_mgr.save')}
         </button>
       </div>
 

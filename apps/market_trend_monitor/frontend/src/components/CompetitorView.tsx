@@ -26,6 +26,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { apiClient } from '../api/client';
+import { useI18n } from '../i18n';
 
 interface CompetitorProfile {
   name: string;
@@ -76,14 +77,8 @@ const positionColors: Record<string, string> = {
   niche: '#9e9e9e',
 };
 
-const positionLabels: Record<string, string> = {
-  leader: 'Leader',
-  challenger: 'Challenger',
-  follower: 'Follower',
-  niche: 'Niche',
-};
-
-function ThreatOpportunityChart({ competitors }: { competitors: CompetitorProfile[] }) {
+function ThreatOpportunityChart({ competitors }: { readonly competitors: CompetitorProfile[] }) {
+  const { t } = useI18n();
   const size = 280;
   const padding = 40;
   const plotSize = size - padding * 2;
@@ -113,7 +108,7 @@ function ThreatOpportunityChart({ competitors }: { competitors: CompetitorProfil
       ))}
       {/* Axis labels */}
       <text x={size / 2} y={size - 4} textAnchor="middle" fontSize="10" fill="rgba(255,255,255,0.6)">
-        脅威レベル (Threat) →
+        {t('comp.axis_threat')}
       </text>
       <text
         x={8}
@@ -123,7 +118,7 @@ function ThreatOpportunityChart({ competitors }: { competitors: CompetitorProfil
         fill="rgba(255,255,255,0.6)"
         transform={`rotate(-90, 8, ${size / 2})`}
       >
-        機会レベル (Opportunity) →
+        {t('comp.axis_opportunity')}
       </text>
       {/* Data points */}
       {competitors.map((c) => {
@@ -147,22 +142,31 @@ function ThreatOpportunityChart({ competitors }: { competitors: CompetitorProfil
       })}
       {/* Quadrant labels */}
       <text x={padding + 8} y={padding + 14} fontSize="8" fill="rgba(255,255,255,0.3)">
-        低リスク / 高機会
+        {t('comp.quad_low_high')}
       </text>
       <text x={padding + plotSize - 8} y={padding + 14} textAnchor="end" fontSize="8" fill="rgba(255,255,255,0.3)">
-        高リスク / 高機会
+        {t('comp.quad_high_high')}
       </text>
       <text x={padding + 8} y={padding + plotSize - 4} fontSize="8" fill="rgba(255,255,255,0.3)">
-        低リスク / 低機会
+        {t('comp.quad_low_low')}
       </text>
       <text x={padding + plotSize - 8} y={padding + plotSize - 4} textAnchor="end" fontSize="8" fill="rgba(255,255,255,0.3)">
-        高リスク / 低機会
+        {t('comp.quad_high_low')}
       </text>
     </svg>
   );
 }
 
 export default function CompetitorView() {
+  const { t } = useI18n();
+
+  const positionLabels: Record<string, string> = {
+    leader: 'Leader',
+    challenger: 'Challenger',
+    follower: 'Follower',
+    niche: 'Niche',
+  };
+
   const [competitors, setCompetitors] = useState<CompetitorProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -182,10 +186,10 @@ export default function CompetitorView() {
       const persisted = resp.data.competitors || [];
       setWatchlist(persisted);
       setWatchlistCount(resp.data.watchlist_count || persisted.length);
-      setNotice('競合ウォッチリストを保存しました');
+      setNotice(t('comp.watchlist_saved'));
       setError(null);
     } catch {
-      setError('競合ウォッチリストの保存に失敗しました');
+      setError(t('comp.watchlist_save_error'));
     }
   };
 
@@ -222,7 +226,7 @@ export default function CompetitorView() {
 
       setError(null);
     } catch {
-      setError('競合データの取得に失敗しました');
+      setError(t('comp.fetch_error'));
     } finally {
       setLoading(false);
     }
@@ -297,7 +301,7 @@ export default function CompetitorView() {
       setError(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'unknown error';
-      setError(`最新記事からの競合自動発見に失敗しました: ${message}`);
+      setError(`${t('comp.discover_error')}: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -306,10 +310,10 @@ export default function CompetitorView() {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
-        競合分析マップ
+        {t('comp.title')}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        市場におけるプレイヤーの立ち位置、脅威レベル、および成長の機会を可視化します。
+        {t('comp.subtitle')}
       </Typography>
 
       {loading && <LinearProgress sx={{ mb: 2 }} />}
@@ -323,7 +327,7 @@ export default function CompetitorView() {
       <Card sx={{ mb: 2 }}>
         <CardContent>
           <Typography variant="subtitle1" gutterBottom>
-            発見コントロール
+            {t('comp.discover_control')}
           </Typography>
           <Stack
             direction={{ xs: 'column', md: 'row' }}
@@ -336,7 +340,7 @@ export default function CompetitorView() {
               disabled={loading}
               sx={{ whiteSpace: 'nowrap' }}
             >
-              最新記事から自動発見
+              {t('comp.auto_discover')}
             </Button>
             <Button
               variant="outlined"
@@ -344,7 +348,7 @@ export default function CompetitorView() {
               disabled={loading}
               sx={{ whiteSpace: 'nowrap' }}
             >
-              更新
+              {t('comp.refresh')}
             </Button>
             <Button
               variant="outlined"
@@ -352,14 +356,14 @@ export default function CompetitorView() {
               disabled={loading}
               sx={{ whiteSpace: 'nowrap' }}
             >
-              ウォッチリスト保存
+              {t('comp.save_watchlist')}
             </Button>
           </Stack>
           <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
             <TextField
               size="small"
               fullWidth
-              label="競合企業を追加"
+              label={t('comp.add_competitor_label')}
               value={watchlistInput}
               onChange={(e) => setWatchlistInput(e.target.value)}
               onKeyDown={(e) => {
@@ -373,7 +377,7 @@ export default function CompetitorView() {
               onClick={() => void addWatchlistCompetitor()}
               sx={{ whiteSpace: 'nowrap', flexShrink: 0, minWidth: 80 }}
             >
-              追加
+              {t('comp.add_btn')}
             </Button>
           </Box>
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
@@ -397,11 +401,11 @@ export default function CompetitorView() {
             ))}
           </Box>
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-            {sourceArticles} 件の記事から {watchlistCount || watchlist.length} 社中 {detectedCount} 社の競合を検出しました。
+            {t('comp.detection_summary').replaceAll('{articles}', String(sourceArticles)).replaceAll('{total}', String(watchlistCount || watchlist.length)).replaceAll('{detected}', String(detectedCount))}
           </Typography>
           {undetectedWatchlist.length > 0 && (
             <Typography variant="caption" color="warning.main" sx={{ display: 'block', mt: 0.5 }}>
-              未検出: {undetectedWatchlist.slice(0, 8).join(', ')}
+              {t('comp.undetected_label')} {undetectedWatchlist.slice(0, 8).join(', ')}
               {undetectedWatchlist.length > 8 ? ' ...' : ''}
             </Typography>
           )}
@@ -410,8 +414,7 @@ export default function CompetitorView() {
 
       {!loading && detectedCompetitors.length === 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          No competitor mentions detected yet. Run data collection first, then click
-          {' '}Auto Discover.
+          {t('comp.no_detection_alert')}
         </Alert>
       )}
 
@@ -420,7 +423,7 @@ export default function CompetitorView() {
           <Card>
             <CardContent sx={{ textAlign: 'center', py: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                追跡・検出済み
+                {t('comp.stat_tracked')}
               </Typography>
               <Typography variant="h3">{detectedCompetitors.length}</Typography>
             </CardContent>
@@ -430,7 +433,7 @@ export default function CompetitorView() {
           <Card>
             <CardContent sx={{ textAlign: 'center', py: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                高脅威ターゲット
+                {t('comp.stat_high_threat')}
               </Typography>
               <Typography variant="h3" color="error.main">
                 {highThreats.length}
@@ -442,7 +445,7 @@ export default function CompetitorView() {
           <Card>
             <CardContent sx={{ textAlign: 'center', py: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                成長機会あり
+                {t('comp.stat_high_opportunity')}
               </Typography>
               <Typography variant="h3" color="success.main">
                 {highOpportunities.length}
@@ -454,7 +457,7 @@ export default function CompetitorView() {
           <Card>
             <CardContent sx={{ textAlign: 'center', py: 1 }}>
               <Typography variant="subtitle2" color="text.secondary">
-                リーダー企業数
+                {t('comp.stat_leaders')}
               </Typography>
               <Typography variant="h3" color="warning.main">
                 {positionDist.leader || 0}
@@ -469,7 +472,7 @@ export default function CompetitorView() {
           <Card>
             <CardContent>
               <Typography variant="subtitle1" gutterBottom>
-                脅威 / 機会マトリクス
+                {t('comp.threat_opportunity_matrix')}
               </Typography>
               <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                 <ThreatOpportunityChart competitors={detectedCompetitors} />
@@ -481,7 +484,7 @@ export default function CompetitorView() {
           <Card>
             <CardContent>
               <Typography variant="subtitle1" gutterBottom>
-                ポジション分布
+                {t('comp.position_distribution')}
               </Typography>
               {['leader', 'challenger', 'follower', 'niche'].map((pos) => (
                 <Box key={pos} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -518,12 +521,12 @@ export default function CompetitorView() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>競合企業</TableCell>
-              <TableCell>ポジション</TableCell>
-              <TableCell>脅威</TableCell>
-              <TableCell>機会</TableCell>
-              <TableCell>注力分野</TableCell>
-              <TableCell>最近の動向</TableCell>
+              <TableCell>{t('comp.table_company')}</TableCell>
+              <TableCell>{t('comp.table_position')}</TableCell>
+              <TableCell>{t('comp.table_threat')}</TableCell>
+              <TableCell>{t('comp.table_opportunity')}</TableCell>
+              <TableCell>{t('comp.table_focus')}</TableCell>
+              <TableCell>{t('comp.table_recent')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -531,7 +534,7 @@ export default function CompetitorView() {
               <TableRow>
                 <TableCell colSpan={6}>
                   <Typography variant="body2" color="text.secondary">
-                    競合プロファイルがまだありません
+                    {t('comp.no_competitors')}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -548,10 +551,12 @@ export default function CompetitorView() {
                     arrow
                     placement="right"
                     title={
-                      c.market_position === 'leader' ? '市場を牽引するトップ企業。広範な影響力を持つ。' :
-                        c.market_position === 'challenger' ? 'リーダーを追随する有力企業。革新的な動きを重視。' :
-                          c.market_position === 'follower' ? '既存市場で安定した地位を持つ企業。トレンドに追随。' :
-                            '特定分野に特化した強みを持つ企業。独自の市場を形成。'
+                      ({
+                        leader: t('comp.position_leader_tip'),
+                        challenger: t('comp.position_challenger_tip'),
+                        follower: t('comp.position_follower_tip'),
+                        niche: t('comp.position_niche_tip'),
+                      } as Record<string, string>)[c.market_position] || t('comp.position_niche_tip')
                     }
                   >
                     <Chip
@@ -602,10 +607,10 @@ export default function CompetitorView() {
                 <TableCell>
                   <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 200 }}>
                     {Number(c.metadata?.article_count || 0) <= 0
-                      ? '最近のデータに言及なし'
+                      ? t('comp.no_mention')
                       : c.recent_activities.length > 0
                         ? c.recent_activities[0].slice(0, 60) + '...'
-                        : '最近の活動なし'}
+                        : t('comp.no_recent_activity')}
                   </Typography>
                 </TableCell>
               </TableRow>

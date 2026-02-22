@@ -8,8 +8,10 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAppStore } from '@/store/useAppStore';
 import { AppHealthBadge } from './AppHealthBadge';
+import { useI18n } from '../i18n';
 
 export function Dashboard() {
+  const { t } = useI18n();
   const { apps, totalApps, summary, loading, error, loadApps, loadSummary } =
     useAppStore();
 
@@ -22,9 +24,9 @@ export function Dashboard() {
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       {/* ヘッダー */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-100">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-slate-100">{t('dash.title')}</h1>
         <p className="text-sm text-slate-500 mt-1">
-          AgentFlow 全 App の概要
+          {t('dash.subtitle')}
         </p>
       </div>
 
@@ -48,19 +50,19 @@ export function Dashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard
               icon="📦"
-              label="Total Apps"
+              label={t('dash.total_apps')}
               value={totalApps}
               color="indigo"
             />
             <StatCard
               icon="🤖"
-              label="Total Agents"
+              label={t('dash.total_agents')}
               value={summary?.total_agents ?? 0}
               color="emerald"
             />
             <StatCard
               icon="🔌"
-              label="With API"
+              label={t('dash.with_api')}
               value={apps.filter((a) => a.ports.api !== null).length}
               color="amber"
             />
@@ -70,13 +72,13 @@ export function Dashboard() {
           <div className="bg-slate-900/50 border border-slate-800 rounded-xl overflow-hidden">
             <div className="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-slate-200">
-                Registered Apps
+                {t('dash.registered_apps')}
               </h2>
               <Link
                 to="/apps"
                 className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
               >
-                View All →
+                {t('dash.view_all')}
               </Link>
             </div>
             <div className="divide-y divide-slate-800/50">
@@ -114,7 +116,7 @@ export function Dashboard() {
                     </div>
                   </div>
                   <span className="text-xs text-slate-500">
-                    {app.agent_count} agents
+                    {t('dash.agents_count').replaceAll('{count}', String(app.agent_count))}
                   </span>
                   <AppHealthBadge status={app.status} />
                   </Link>
@@ -122,7 +124,7 @@ export function Dashboard() {
               })}
               {apps.length === 0 && (
                 <p className="px-5 py-8 text-center text-sm text-slate-500">
-                  No apps registered
+                  {t('dash.no_apps')}
                 </p>
               )}
             </div>

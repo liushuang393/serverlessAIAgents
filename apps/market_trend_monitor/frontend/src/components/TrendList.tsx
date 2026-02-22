@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import type { Trend, SentimentType } from '@/types';
 import { format } from 'date-fns';
+import { useI18n } from '../i18n';
 
 interface TrendListProps {
   trends: Trend[];
@@ -58,20 +59,22 @@ const formatGrowthLabel = (trend: Trend): string => {
   return `${(trend.growth_rate * 100).toFixed(1)}%`;
 };
 
-const resolveGrowthHint = (trend: Trend): string => {
-  const explanation =
-    typeof trend.metadata?.growth_explanation === 'string'
-      ? trend.metadata.growth_explanation
-      : '';
-  return explanation || '成長率は現期間と前期間の比較で算出されます。';
-};
-
 const TrendList: React.FC<TrendListProps> = ({ trends }) => {
+  const { t } = useI18n();
+
+  const resolveGrowthHint = (trend: Trend): string => {
+    const explanation =
+      typeof trend.metadata?.growth_explanation === 'string'
+        ? trend.metadata.growth_explanation
+        : '';
+    return explanation || t('trend_list.growth_hint_default');
+  };
+
   if (trends.length === 0) {
     return (
       <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
-        <Typography variant="body1">トレンドデータがまだありません。</Typography>
-        <Typography variant="body2">「設定」画面で「データ収集を実行」を押してください。</Typography>
+        <Typography variant="body1">{t('trend_list.no_data')}</Typography>
+        <Typography variant="body2">{t('trend_list.no_data_hint')}</Typography>
       </Box>
     );
   }
@@ -98,18 +101,18 @@ const TrendList: React.FC<TrendListProps> = ({ trends }) => {
       >
         <TableHead>
           <TableRow>
-            <TableCell sx={{ fontWeight: 600 }}>トピック</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>{t('trend_list.topic')}</TableCell>
             <TableCell align="right" sx={{ fontWeight: 600 }}>
-              スコア
+              {t('trend_list.score')}
             </TableCell>
             <TableCell align="right" sx={{ fontWeight: 600 }}>
-              記事数
+              {t('trend_list.articles')}
             </TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>センチメント</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>{t('trend_list.sentiment')}</TableCell>
             <TableCell align="right" sx={{ fontWeight: 600 }}>
-              成長率
+              {t('trend_list.growth_rate')}
             </TableCell>
-            <TableCell sx={{ fontWeight: 600 }}>作成日時</TableCell>
+            <TableCell sx={{ fontWeight: 600 }}>{t('trend_list.created_at')}</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>

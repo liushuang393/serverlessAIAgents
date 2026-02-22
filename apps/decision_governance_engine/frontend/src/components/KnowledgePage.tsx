@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useDecisionStore } from '../store/useDecisionStore';
+import { useI18n } from '../i18n';
 
 /** ドキュメント型 */
 interface KnowledgeDoc {
@@ -21,6 +22,7 @@ interface KnowledgePageProps {
 }
 
 export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
+  const { t } = useI18n();
   const { setPage } = useDecisionStore();
   const [documents, setDocuments] = useState<KnowledgeDoc[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -32,25 +34,25 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const agentInfo = agentType === 'shu'
-    ? { name: '術', label: '実行計画', icon: '📋', color: 'indigo' }
-    : { name: '器', label: '技術実装', icon: '🔧', color: 'violet' };
+    ? { name: t('knowledge.agent_shu_name'), label: t('knowledge.agent_shu_label'), icon: '📋', color: 'indigo' }
+    : { name: t('knowledge.agent_qi_name'), label: t('knowledge.agent_qi_label'), icon: '🔧', color: 'violet' };
 
   /** 一覧取得 */
   const fetchDocuments = useCallback(async () => {
     setIsLoading(true);
     try {
       const res = await fetch(`/api/knowledge/${agentType}`);
-      if (!res.ok) throw new Error('取得失敗');
+      if (!res.ok) throw new Error(t('knowledge.fetch_failed'));
       const data = await res.json();
       setDocuments(data.documents || []);
     } catch (err) {
       // エラー詳細をUIに表示（型安全）
-      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
+      const errorMessage = err instanceof Error ? err.message : t('knowledge.unknown_error');
       setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
-  }, [agentType]);
+  }, [agentType, t]);
 
   useEffect(() => {
     fetchDocuments();
@@ -59,7 +61,7 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
   /** 追加 */
   const handleAdd = async () => {
     if (!newContent.trim() || newContent.length < 10) {
-      setError('内容は10文字以上入力してください');
+      setError(t('knowledge.min_chars_error'));
       return;
     }
     setIsSubmitting(true);
@@ -70,12 +72,12 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: newContent, topic: newTopic }),
       });
-      if (!res.ok) throw new Error('追加失敗');
+      if (!res.ok) throw new Error(t('knowledge.add_failed'));
       setNewContent('');
       await fetchDocuments();
     } catch (err) {
       // エラー詳細をUIに表示（型安全）
-      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
+      const errorMessage = err instanceof Error ? err.message : t('knowledge.unknown_error');
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
@@ -84,14 +86,14 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
 
   /** 削除 */
   const handleDelete = async (docId: string) => {
-    if (!confirm('このドキュメントを削除しますか？')) return;
+    if (!confirm(t('knowledge.delete_confirm'))) return;
     try {
       const res = await fetch(`/api/knowledge/${agentType}/${docId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('削除失敗');
+      if (!res.ok) throw new Error(t('knowledge.delete_failed'));
       await fetchDocuments();
     } catch (err) {
       // エラー詳細をUIに表示（型安全）
-      const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
+      const errorMessage = err instanceof Error ? err.message : t('knowledge.unknown_error');
       setError(errorMessage);
     }
   };
@@ -104,15 +106,15 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
           <div className="flex items-center gap-3">
             <span className="text-2xl">{agentInfo.icon}</span>
             <div>
-              <h1 className="font-semibold text-lg">{agentInfo.name}・知識ベース設定</h1>
-              <p className="text-xs text-slate-500">{agentInfo.label}Agent の RAG 知識を管理</p>
+              <h1 className="font-semibold text-lg">{agentInfo.name}・{t('knowledge.page_title')}</h1>
+              <p className="text-xs text-slate-500">{agentInfo.label} {t('knowledge.page_subtitle')}</p>
             </div>
           </div>
           <button
             onClick={() => setPage('input')}
             className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors"
           >
-            ← 戻る
+            {t('knowledge.back')}
           </button>
         </div>
       </header>
@@ -128,10 +130,10 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
 
         {/* 追加フォーム */}
         <div className="bg-[#12121a] rounded-xl border border-white/5 p-6 mb-8">
-          <h2 className="text-sm font-medium text-slate-300 mb-4">📚 新しい知識を追加</h2>
+          <h2 className="text-sm font-medium text-slate-300 mb-4"><span aria-hidden="true">📚</span> {t('knowledge.add_new')}</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-xs text-slate-500 mb-2">トピック</label>
+              <label className="block text-xs text-slate-500 mb-2">{t('knowledge.topic')}</label>
               <select
                 value={newTopic}
                 onChange={(e) => setNewTopic(e.target.value)}
@@ -139,28 +141,28 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
               >
                 {agentType === 'shu' ? (
                   <>
-                    <option value="industry_practices">業界プラクティス</option>
-                    <option value="case_studies">事例データ</option>
-                    <option value="methodology">手法・方法論</option>
+                    <option value="industry_practices">{t('knowledge.topic_industry')}</option>
+                    <option value="case_studies">{t('knowledge.topic_case_studies')}</option>
+                    <option value="methodology">{t('knowledge.topic_methodology')}</option>
                   </>
                 ) : (
                   <>
-                    <option value="technical_docs">技術ドキュメント</option>
-                    <option value="compliance">コンプライアンス</option>
-                    <option value="architecture">アーキテクチャ</option>
+                    <option value="technical_docs">{t('knowledge.topic_technical_docs')}</option>
+                    <option value="compliance">{t('knowledge.topic_compliance')}</option>
+                    <option value="architecture">{t('knowledge.topic_architecture')}</option>
                   </>
                 )}
               </select>
             </div>
             <div>
-              <label className="block text-xs text-slate-500 mb-2">内容（10文字以上）</label>
+              <label className="block text-xs text-slate-500 mb-2">{t('knowledge.content_label')}</label>
               <textarea
                 value={newContent}
                 onChange={(e) => setNewContent(e.target.value)}
-                placeholder="例: アジャイル開発では2週間のスプリントが推奨される..."
+                placeholder={t('knowledge.content_placeholder')}
                 className="w-full h-32 px-4 py-3 bg-[#0a0a0f] border border-white/10 rounded-lg text-white resize-none focus:outline-none focus:border-indigo-500"
               />
-              <div className="text-xs text-slate-600 mt-1">{newContent.length} 文字</div>
+              <div className="text-xs text-slate-600 mt-1">{t('knowledge.chars_count').replaceAll('{count}', String(newContent.length))}</div>
             </div>
             <button
               onClick={handleAdd}
@@ -171,7 +173,7 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
                   : 'bg-slate-800 text-slate-500 cursor-not-allowed'
               }`}
             >
-              {isSubmitting ? '追加中...' : '＋ 知識を追加'}
+              {isSubmitting ? t('knowledge.adding') : t('knowledge.add_btn')}
             </button>
           </div>
         </div>
@@ -179,14 +181,14 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
         {/* 一覧 */}
         <div className="bg-[#12121a] rounded-xl border border-white/5 p-6">
           <h2 className="text-sm font-medium text-slate-300 mb-4">
-            📖 登録済みの知識 ({documents.length}件)
+            <span aria-hidden="true">📖</span> {t('knowledge.registered').replaceAll('{count}', String(documents.length))}
           </h2>
           {isLoading ? (
-            <div className="text-center py-8 text-slate-500">読み込み中...</div>
+            <div className="text-center py-8 text-slate-500">{t('knowledge.loading')}</div>
           ) : documents.length === 0 ? (
             <div className="text-center py-8 text-slate-500">
-              まだ知識が登録されていません。<br />
-              上のフォームから追加してください。
+              {t('knowledge.empty_hint')}<br />
+              {t('knowledge.add_hint')}
             </div>
           ) : (
             <div className="space-y-3">

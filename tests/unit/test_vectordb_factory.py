@@ -181,13 +181,22 @@ class TestChromaDBProvider:
         except ImportError:
             pytest.skip("chromadb package not installed")
 
+        # オフライン環境でも動くよう、埋め込みを明示指定して
+        # ChromaDB のデフォルト埋め込みモデルのダウンロードを回避する。
         await provider.add(
             documents=["Python is great", "JavaScript is popular"],
+            ids=["doc_py", "doc_js"],
+            embeddings=[[0.9, 0.1, 0.0], [0.1, 0.9, 0.0]],
             metadatas=[{"lang": "python"}, {"lang": "js"}],
         )
 
-        results = await provider.search("Python programming", top_k=1)
+        results = await provider.search(
+            "Python programming",
+            query_embedding=[0.95, 0.05, 0.0],
+            top_k=1,
+        )
         assert len(results) >= 1
+        assert results[0]["id"] == "doc_py"
 
         # 清理
         await provider.disconnect()

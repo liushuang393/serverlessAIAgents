@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createApp, fetchAppCreateOptions } from '@/api/client';
+import { useI18n } from '../i18n';
 import type {
   AppCreateOptionsResponse,
   AppCreateRequest,
@@ -26,6 +27,7 @@ function splitCSV(value: string): string[] {
 }
 
 export function AppCreateModal({ open, onClose, onCreated }: Props) {
+  const { t } = useI18n();
   const [options, setOptions] = useState<AppCreateOptionsResponse | null>(null);
   const [loadingOptions, setLoadingOptions] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -83,7 +85,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
         setOptions(res);
       })
       .catch((err) => {
-        const msg = err instanceof Error ? err.message : '作成オプションの取得に失敗しました';
+        const msg = err instanceof Error ? err.message : t('app_create.error_options');
         setError(msg);
       })
       .finally(() => {
@@ -175,7 +177,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
       onCreated(created);
       onClose();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'App 作成に失敗しました';
+      const msg = err instanceof Error ? err.message : t('app_create.error_create');
       setError(msg);
     } finally {
       setSubmitting(false);
@@ -187,9 +189,9 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
       <div className="w-full max-w-4xl max-h-[90vh] -translate-y-[10px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl">
         <div className="flex items-start justify-between mb-4">
           <div>
-            <h2 className="text-xl font-bold text-slate-100">APPを追加</h2>
+            <h2 className="text-xl font-bold text-slate-100">{t('app_create.title')}</h2>
             <p className="text-xs text-slate-500 mt-1">
-              AgentFlow パターン・MCP・DB 設定をまとめて初期化します
+              {t('app_create.subtitle')}
             </p>
           </div>
           <button
@@ -197,7 +199,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
             onClick={onClose}
             className="text-slate-400 hover:text-slate-200 text-sm"
           >
-            閉じる
+            {t('app_create.close')}
           </button>
         </div>
 
@@ -209,7 +211,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="App 名 (snake_case)">
+            <Field label={t('app_create.field_name')}>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -217,7 +219,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder="sales_assistant"
               />
             </Field>
-            <Field label="表示名">
+            <Field label={t('app_create.field_display_name')}>
               <input
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
@@ -225,10 +227,10 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder="営業アシスタント"
               />
             </Field>
-            <Field label="アイコン">
+            <Field label={t('app_create.field_icon')}>
               <input value={icon} onChange={(e) => setIcon(e.target.value)} className="input" />
             </Field>
-            <Field label="Engine Pattern">
+            <Field label={t('app_create.field_engine_pattern')}>
               <select
                 value={enginePattern}
                 onChange={(e) => setEnginePattern(e.target.value as EnginePattern)}
@@ -243,7 +245,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
             </Field>
           </div>
 
-          <Field label="説明">
+          <Field label={t('app_create.field_description')}>
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -253,7 +255,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
           </Field>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Field label="Flow Pattern (任意)">
+            <Field label={t('app_create.field_flow_pattern')}>
               <input
                 value={flowPattern}
                 onChange={(e) => setFlowPattern(e.target.value)}
@@ -261,7 +263,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder="customer-support-flow"
               />
             </Field>
-            <Field label="RDB">
+            <Field label={t('app_create.field_rdb')}>
               <select
                 value={database}
                 onChange={(e) => setDatabase(e.target.value as DatabaseKind)}
@@ -274,7 +276,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 ))}
               </select>
             </Field>
-            <Field label="Vector DB">
+            <Field label={t('app_create.field_vector_db')}>
               <select
                 value={vectorDatabase}
                 onChange={(e) => setVectorDatabase(e.target.value as VectorDatabaseKind)}
@@ -287,7 +289,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 ))}
               </select>
             </Field>
-            <Field label="LLM Provider">
+            <Field label={t('app_create.field_llm_provider')}>
               <select
                 value={llmProvider}
                 onChange={(e) => setLlmProvider(e.target.value as LLMProviderKind)}
@@ -300,7 +302,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 ))}
               </select>
             </Field>
-            <Field label="Visibility">
+            <Field label={t('app_create.field_visibility')}>
               <select
                 value={visibilityMode}
                 onChange={(e) => setVisibilityMode(e.target.value as 'private' | 'public' | 'tenant_allowlist')}
@@ -316,14 +318,14 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Toggle label="Frontend" checked={frontendEnabled} onChange={setFrontendEnabled} />
-            <Toggle label="Redis" checked={redisEnabled} onChange={setRedisEnabled} />
-            <Toggle label="RAG" checked={ragEnabled} onChange={setRagEnabled} />
+            <Toggle label={t('app_create.toggle_frontend')} checked={frontendEnabled} onChange={setFrontendEnabled} />
+            <Toggle label={t('app_create.toggle_redis')} checked={redisEnabled} onChange={setRedisEnabled} />
+            <Toggle label={t('app_create.toggle_rag')} checked={ragEnabled} onChange={setRagEnabled} />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Toggle label="Evolution" checked={evolutionEnabled} onChange={setEvolutionEnabled} />
-            <Field label="Validator Backend">
+            <Toggle label={t('app_create.toggle_evolution')} checked={evolutionEnabled} onChange={setEvolutionEnabled} />
+            <Field label={t('app_create.field_validator_backend')}>
               <select
                 value={validatorBackend}
                 onChange={(e) => setValidatorBackend(e.target.value as EvolutionValidatorBackend)}
@@ -341,7 +343,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 ))}
               </select>
             </Field>
-            <Field label="Strategy Service URL">
+            <Field label={t('app_create.field_strategy_url')}>
               <input
                 value={strategyServiceUrl}
                 onChange={(e) => setStrategyServiceUrl(e.target.value)}
@@ -349,7 +351,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder="http://localhost:8089"
               />
             </Field>
-            <Field label="Validator Redis URL">
+            <Field label={t('app_create.field_validator_redis')}>
               <input
                 value={validatorRedisUrl}
                 onChange={(e) => setValidatorRedisUrl(e.target.value)}
@@ -357,7 +359,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder="redis://localhost:6379/0"
               />
             </Field>
-            <Field label="Scope Policy (CSV)">
+            <Field label={t('app_create.field_scope_policy')}>
               <input
                 value={scopePolicyInput}
                 onChange={(e) => setScopePolicyInput(e.target.value)}
@@ -368,7 +370,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Default Model">
+            <Field label={t('app_create.field_default_model')}>
               <input
                 value={defaultModel}
                 onChange={(e) => setDefaultModel(e.target.value)}
@@ -376,7 +378,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder="gpt-4.1-mini"
               />
             </Field>
-            <Field label="LLM Base URL (任意)">
+            <Field label={t('app_create.field_llm_base_url')}>
               <input
                 value={llmBaseUrl}
                 onChange={(e) => setLlmBaseUrl(e.target.value)}
@@ -384,7 +386,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder="https://api.openai.com/v1"
               />
             </Field>
-            <Field label="LLM API Key (任意)">
+            <Field label={t('app_create.field_llm_api_key')}>
               <input
                 type="password"
                 value={llmApiKey}
@@ -393,7 +395,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder="sk-..."
               />
             </Field>
-            <Field label="LLM API Key ENV 名 (任意)">
+            <Field label={t('app_create.field_llm_api_key_env')}>
               <input
                 value={llmApiKeyEnv}
                 onChange={(e) => setLlmApiKeyEnv(e.target.value.toUpperCase())}
@@ -401,7 +403,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder="OPENAI_API_KEY"
               />
             </Field>
-            <Field label="Vector DB URL (任意)">
+            <Field label={t('app_create.field_vector_db_url')}>
               <input
                 value={vectorDbUrl}
                 onChange={(e) => setVectorDbUrl(e.target.value)}
@@ -409,7 +411,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder="http://localhost:6333"
               />
             </Field>
-            <Field label="Vector Collection (任意)">
+            <Field label={t('app_create.field_vector_collection')}>
               <input
                 value={vectorDbCollection}
                 onChange={(e) => setVectorDbCollection(e.target.value)}
@@ -417,7 +419,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder={`${name || 'app'}_knowledge`}
               />
             </Field>
-            <Field label="Vector DB API Key (任意)">
+            <Field label={t('app_create.field_vector_db_api_key')}>
               <input
                 type="password"
                 value={vectorDbApiKey}
@@ -426,7 +428,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder="vector-key"
               />
             </Field>
-            <Field label="Vector DB API Key ENV 名 (任意)">
+            <Field label={t('app_create.field_vector_db_api_key_env')}>
               <input
                 value={vectorDbApiKeyEnv}
                 onChange={(e) => setVectorDbApiKeyEnv(e.target.value.toUpperCase())}
@@ -437,7 +439,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Default Skills (CSV)">
+            <Field label={t('app_create.field_skills')}>
               <input
                 value={skillsInput}
                 onChange={(e) => setSkillsInput(e.target.value)}
@@ -445,7 +447,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder="rag,conversation_export"
               />
             </Field>
-            <Field label="MCP Servers (CSV)">
+            <Field label={t('app_create.field_mcp_servers')}>
               <input
                 value={mcpServersInput}
                 onChange={(e) => setMcpServersInput(e.target.value)}
@@ -453,7 +455,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 placeholder="filesystem,git"
               />
             </Field>
-            <Field label="Tenant IDs (CSV)">
+            <Field label={t('app_create.field_tenant_ids')}>
               <input
                 value={tenantIdsInput}
                 onChange={(e) => setTenantIdsInput(e.target.value)}
@@ -465,11 +467,11 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Toggle
-              label="Framework .env に反映"
+              label={t('app_create.toggle_framework_env')}
               checked={writeFrameworkEnv}
               onChange={setWriteFrameworkEnv}
             />
-            <Field label="Framework env ファイル">
+            <Field label={t('app_create.field_framework_env_file')}>
               <input
                 value={frameworkEnvFile}
                 onChange={(e) => setFrameworkEnvFile(e.target.value)}
@@ -480,21 +482,21 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Field label="Primary Agent 名">
+            <Field label={t('app_create.field_agent_name')}>
               <input
                 value={agentName}
                 onChange={(e) => setAgentName(e.target.value)}
                 className="input"
               />
             </Field>
-            <Field label="Primary Agent ロール">
+            <Field label={t('app_create.field_agent_role')}>
               <input
                 value={agentRole}
                 onChange={(e) => setAgentRole(e.target.value)}
                 className="input"
               />
             </Field>
-            <Field label="Primary Agent Capability (CSV)">
+            <Field label={t('app_create.field_agent_cap')}>
               <input
                 value={agentCapabilitiesInput}
                 onChange={(e) => setAgentCapabilitiesInput(e.target.value)}
@@ -503,7 +505,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
             </Field>
           </div>
 
-          <Field label="System Prompt">
+          <Field label={t('app_create.field_system_prompt')}>
             <textarea
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
@@ -511,7 +513,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
             />
           </Field>
 
-          <Field label="Primary Agent Prompt">
+          <Field label={t('app_create.field_agent_prompt')}>
             <textarea
               value={agentPrompt}
               onChange={(e) => setAgentPrompt(e.target.value)}
@@ -525,14 +527,14 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
               onClick={onClose}
               className="px-4 py-2 rounded-lg border border-slate-700 text-slate-300 hover:bg-slate-800"
             >
-              キャンセル
+              {t('app_create.cancel')}
             </button>
             <button
               type="submit"
               disabled={disabledSubmit || loadingOptions}
               className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white"
             >
-              {submitting ? '作成中...' : '作成する'}
+              {submitting ? t('app_create.creating') : t('app_create.create')}
             </button>
           </div>
         </form>

@@ -32,6 +32,7 @@ import { ExpandMore, ChevronRight } from '@mui/icons-material';
 import { apiClient } from '@/api/client';
 import { useAppStore } from '@/store/useAppStore';
 import { SourceType } from '@/types';
+import { useI18n } from '../i18n';
 
 type CompetitorConfigResponse = {
   competitors: string[];
@@ -71,6 +72,7 @@ function parseAliasInput(raw: string): string[] {
 }
 
 const Settings: React.FC = () => {
+  const { t } = useI18n();
   const {
     keywords,
     sources,
@@ -87,7 +89,7 @@ const Settings: React.FC = () => {
   const [localSources, setLocalSources] = useState<SourceType[]>(sources);
   const [localCollectionWindowDays, setLocalCollectionWindowDays] = useState<number>(collectionWindowDays);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [noticeMessage, setNoticeMessage] = useState('設定を保存しました');
+  const [noticeMessage, setNoticeMessage] = useState('');
   const [noticeSeverity, setNoticeSeverity] = useState<'success' | 'warning' | 'error'>('success');
   const [localCompetitors, setLocalCompetitors] = useState<string[]>([]);
   const [competitorInput, setCompetitorInput] = useState('');
@@ -135,7 +137,7 @@ const Settings: React.FC = () => {
     updateSources(localSources);
     updateCollectionWindowDays(localCollectionWindowDays as 7 | 30 | 90);
     setNoticeSeverity('success');
-    setNoticeMessage('設定を保存しました');
+    setNoticeMessage(t('stg.saved_msg'));
     setShowSuccess(true);
   };
 
@@ -181,10 +183,10 @@ const Settings: React.FC = () => {
     try {
       await persistCompetitorConfig(nextCompetitors, nextAliasInputMap);
       setNoticeSeverity('success');
-      setNoticeMessage('競合ウォッチリストを保存しました');
+      setNoticeMessage(t('stg.watchlist_saved'));
     } catch {
       setNoticeSeverity('error');
-      setNoticeMessage('競合ウォッチリスト保存に失敗しました');
+      setNoticeMessage(t('stg.watchlist_save_error'));
     }
     setShowSuccess(true);
   };
@@ -198,10 +200,10 @@ const Settings: React.FC = () => {
     try {
       await persistCompetitorConfig(nextCompetitors, nextAliasInputMap);
       setNoticeSeverity('success');
-      setNoticeMessage('競合ウォッチリストを保存しました');
+      setNoticeMessage(t('stg.watchlist_saved'));
     } catch {
       setNoticeSeverity('error');
-      setNoticeMessage('競合ウォッチリスト保存に失敗しました');
+      setNoticeMessage(t('stg.watchlist_save_error'));
     }
     setShowSuccess(true);
   };
@@ -217,11 +219,11 @@ const Settings: React.FC = () => {
     try {
       await persistCompetitorConfig(localCompetitors, localCompetitorAliases);
       setNoticeSeverity('success');
-      setNoticeMessage('競合ウォッチリストを保存しました');
+      setNoticeMessage(t('stg.watchlist_saved'));
       setShowSuccess(true);
     } catch {
       setNoticeSeverity('error');
-      setNoticeMessage('競合ウォッチリスト保存に失敗しました');
+      setNoticeMessage(t('stg.watchlist_save_error'));
       setShowSuccess(true);
     }
   };
@@ -234,21 +236,24 @@ const Settings: React.FC = () => {
     );
     if (!response) {
       setNoticeSeverity('error');
-      setNoticeMessage('データ収集に失敗しました。APIログを確認してください');
+      setNoticeMessage(t('stg.collect_error'));
       setShowSuccess(true);
       return;
     }
 
     if (response.status === 'empty') {
       setNoticeSeverity('warning');
-      setNoticeMessage('データ収集は完了しましたが、該当データがありませんでした');
+      setNoticeMessage(t('stg.collect_empty'));
       setShowSuccess(true);
       return;
     }
 
     setNoticeSeverity('success');
     setNoticeMessage(
-      `データ収集完了（直近${localCollectionWindowDays}日）: 記事 ${response.articles_count} 件 / トレンド ${response.trends_count} 件`
+      t('stg.collect_success')
+        .replaceAll('{days}', String(localCollectionWindowDays))
+        .replaceAll('{articles}', String(response.articles_count))
+        .replaceAll('{trends}', String(response.trends_count))
     );
     setShowSuccess(true);
   };
@@ -264,10 +269,10 @@ const Settings: React.FC = () => {
         }}
       >
         <Typography variant="h4" gutterBottom>
-          設定
+          {t('stg.title')}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          監視対象と収集頻度を調整して、重要シグナルの感度を最適化します。
+          {t('stg.subtitle')}
         </Typography>
       </Paper>
 
@@ -282,12 +287,12 @@ const Settings: React.FC = () => {
           }}
         >
           <Typography variant="h6" gutterBottom>
-            監視キーワード
+            {t('stg.keywords_title')}
           </Typography>
           <Box display="flex" gap={2} mb={2}>
             <TextField
               fullWidth
-              label="キーワードを追加"
+              label={t('stg.add_keyword_label')}
               value={keywordInput}
               onChange={(e) => setKeywordInput(e.target.value)}
               onKeyPress={(e) => {
@@ -306,7 +311,7 @@ const Settings: React.FC = () => {
               onClick={handleAddKeyword}
               sx={{ whiteSpace: 'nowrap', flexShrink: 0, minWidth: '80px' }}
             >
-              追加
+              {t('stg.add_btn')}
             </Button>
           </Box>
           <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
@@ -331,7 +336,7 @@ const Settings: React.FC = () => {
           }}
         >
           <Typography variant="h6" gutterBottom>
-            データソース
+            {t('stg.sources_title')}
           </Typography>
           <FormGroup>
             {Object.values(SourceType).map((source) => (
@@ -349,16 +354,16 @@ const Settings: React.FC = () => {
           </FormGroup>
           <Box mt={2}>
             <FormControl sx={{ minWidth: 220 }}>
-              <InputLabel id="collection-window-label">収集期間</InputLabel>
+              <InputLabel id="collection-window-label">{t('stg.collection_period')}</InputLabel>
               <Select
                 labelId="collection-window-label"
                 value={localCollectionWindowDays}
-                label="収集期間"
+                label={t('stg.collection_period')}
                 onChange={(e) => setLocalCollectionWindowDays(Number(e.target.value))}
               >
-                <MenuItem value={7}>直近7日</MenuItem>
-                <MenuItem value={30}>直近30日</MenuItem>
-                <MenuItem value={90}>直近90日</MenuItem>
+                <MenuItem value={7}>{t('stg.period_7d')}</MenuItem>
+                <MenuItem value={30}>{t('stg.period_30d')}</MenuItem>
+                <MenuItem value={90}>{t('stg.period_90d')}</MenuItem>
               </Select>
             </FormControl>
           </Box>
@@ -374,12 +379,12 @@ const Settings: React.FC = () => {
           }}
         >
           <Typography variant="h6" gutterBottom>
-            競合ウォッチリスト
+            {t('stg.competitor_title')}
           </Typography>
           <Box display="flex" gap={2} mb={2}>
             <TextField
               fullWidth
-              label="競合企業を追加"
+              label={t('stg.add_competitor_label')}
               value={competitorInput}
               onChange={(e) => setCompetitorInput(e.target.value)}
               onKeyDown={(e) => {
@@ -398,14 +403,14 @@ const Settings: React.FC = () => {
               onClick={() => void handleAddCompetitor()}
               sx={{ whiteSpace: 'nowrap', flexShrink: 0, minWidth: '80px' }}
             >
-              追加
+              {t('stg.add_btn')}
             </Button>
             <Button
               variant="contained"
               onClick={handleSaveCompetitors}
               sx={{ whiteSpace: 'nowrap', flexShrink: 0, minWidth: '100px' }}
             >
-              保存
+              {t('stg.save_btn')}
             </Button>
           </Box>
           <Box display="flex" flexWrap="wrap" gap={1}>
@@ -434,12 +439,12 @@ const Settings: React.FC = () => {
             <Box mt={3}>
               <Box display="flex" alignItems="center" justifyContent="space-between">
                 <Typography variant="subtitle2" color="text.secondary">
-                  別名辞書（カンマ区切り）
+                  {t('stg.alias_title')}
                 </Typography>
                 <IconButton
                   size="small"
                   onClick={() => setAliasEditorOpen((prev) => !prev)}
-                  aria-label="別名辞書の折りたたみ切り替え"
+                  aria-label={t('stg.alias_toggle_label')}
                 >
                   {aliasEditorOpen ? <ExpandMore fontSize="small" /> : <ChevronRight fontSize="small" />}
                 </IconButton>
@@ -450,8 +455,8 @@ const Settings: React.FC = () => {
                     <TextField
                       key={`${name}-aliases`}
                       fullWidth
-                      label={`${name} の別名`}
-                      placeholder="例: International Business Machines, IBM Corp"
+                      label={`${name} ${t('stg.alias_suffix')}`}
+                      placeholder={t('stg.alias_placeholder')}
                       value={localCompetitorAliases[name] || ''}
                       onChange={(e) => handleAliasInputChange(name, e.target.value)}
                       sx={{
@@ -474,7 +479,7 @@ const Settings: React.FC = () => {
             onClick={handleSave}
             sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
           >
-            設定を保存
+            {t('stg.save_settings')}
           </Button>
           <Button
             variant="outlined"
@@ -482,7 +487,7 @@ const Settings: React.FC = () => {
             disabled={loading || localKeywords.length === 0}
             sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}
           >
-            {loading ? 'データ収集中...' : 'データ収集を実行'}
+            {loading ? t('stg.collecting') : t('stg.collect_btn')}
           </Button>
         </Box>
       </Stack>

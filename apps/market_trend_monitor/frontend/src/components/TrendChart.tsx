@@ -20,12 +20,14 @@ import {
 } from 'recharts';
 import type { Trend } from '@/types';
 import { format } from 'date-fns';
+import { useI18n } from '../i18n';
 
 interface TrendChartProps {
   trends: Trend[];
 }
 
 const TrendChart: React.FC<TrendChartProps> = ({ trends }) => {
+  const { t } = useI18n();
   // トレンドデータを日付ごとに集約
   const aggregatedData = trends.reduce((acc: Record<string, { score: number; growth: number; count: number }>, trend) => {
     const dateStr = format(new Date(trend.created_at), 'MM/dd');
@@ -58,7 +60,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ trends }) => {
           fontSize: '0.9rem',
         }}
       >
-        データがありません
+        {t('chart.no_data')}
       </div>
     );
   }
@@ -83,7 +85,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ trends }) => {
           type="monotone"
           dataKey="score"
           stroke="#818cf8"
-          name="スコア"
+          name={t('chart.score_label')}
           strokeWidth={2}
           dot={{ r: 2 }}
         />
@@ -91,7 +93,7 @@ const TrendChart: React.FC<TrendChartProps> = ({ trends }) => {
           type="monotone"
           dataKey="growth"
           stroke="#a855f7"
-          name="成長率(%)"
+          name={t('chart.growth_label')}
           strokeWidth={2}
           dot={{ r: 2 }}
         />

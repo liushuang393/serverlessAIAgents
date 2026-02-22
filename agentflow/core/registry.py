@@ -52,7 +52,14 @@ class Registry[T](ABC):
             ValueError: 名前が空の場合
             TypeError: 名前が文字列でない場合、またはアイテムが None の場合
         """
-        if not name or not name.strip():
+        # Keep runtime validation for dynamically-typed callers while avoiding
+        # mypy's unreachable check on a statically typed parameter.
+        name_obj: object = name
+        if not isinstance(name_obj, str):
+            msg = "Name must be a string"
+            raise TypeError(msg)
+        normalized_name = name_obj
+        if not normalized_name or not normalized_name.strip():
             msg = "Name cannot be empty or whitespace only"
             raise ValueError(msg)
         if item is None:
@@ -60,10 +67,10 @@ class Registry[T](ABC):
             raise TypeError(msg)
 
         with self._lock:
-            if name in self._items:
-                self._logger.warning(f"Overwriting existing item: {name}")
-            self._items[name] = item
-            self._logger.debug(f"Registered: {name}")
+            if normalized_name in self._items:
+                self._logger.warning(f"Overwriting existing item: {normalized_name}")
+            self._items[normalized_name] = item
+            self._logger.debug(f"Registered: {normalized_name}")
 
     def get(self, name: str) -> T | None:
         """アイテムを取得.

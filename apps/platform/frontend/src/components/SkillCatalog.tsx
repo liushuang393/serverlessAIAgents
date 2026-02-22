@@ -6,8 +6,12 @@
 
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import { useI18n } from '../i18n';
+import { useI18n } from '../i18n';
 
 export function SkillCatalog() {
+  const { t } = useI18n();
+  const { t } = useI18n();
   const {
     skills,
     skillTags,
@@ -39,9 +43,9 @@ export function SkillCatalog() {
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       {/* ヘッダー */}
       <div>
-        <h1 className="text-2xl font-bold text-slate-100">Skill Catalog</h1>
+        <h1 className="text-2xl font-bold text-slate-100">{t('skill.title')}</h1>
         <p className="text-sm text-slate-500 mt-1">
-          ビルトインスキル一覧（{skills.length} skills）
+          {t('skill.subtitle')}（{skills.length} skills）
         </p>
       </div>
 
@@ -56,7 +60,7 @@ export function SkillCatalog() {
       {/* タグフィルタ */}
       {skillTags.length > 0 && (
         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">Filter by Tag</p>
+          <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">{t('skill.filter_tag')}</p>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => handleFilter('')}
@@ -64,17 +68,17 @@ export function SkillCatalog() {
                 selectedTag === '' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
               }`}
             >
-              All
+              {t('skill.all')}
             </button>
-            {skillTags.map((t) => (
+            {skillTags.map((tag) => (
               <button
-                key={t.tag}
-                onClick={() => handleFilter(t.tag)}
+                key={tag.tag}
+                onClick={() => handleFilter(tag.tag)}
                 className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                  selectedTag === t.tag ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  selectedTag === tag.tag ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
                 }`}
               >
-                {t.tag} <span className="ml-1 opacity-60">({t.count})</span>
+                {tag.tag} <span className="ml-1 opacity-60">({tag.count})</span>
               </button>
             ))}
           </div>
@@ -116,7 +120,7 @@ export function SkillCatalog() {
               {/* トリガー（展開時） */}
               {expanded === skill.name && skill.triggers.length > 0 && (
                 <div className="mt-3 pt-3 border-t border-slate-800">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Trigger Words</p>
+                  <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">{t('skill.trigger_words')}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {skill.triggers.map((trigger) => (
                       <span key={trigger} className="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-[10px] rounded-full">
@@ -135,7 +139,7 @@ export function SkillCatalog() {
       {!loading && skills.length === 0 && (
         <div className="text-center py-16">
           <p className="text-4xl mb-4">🧩</p>
-          <p className="text-slate-400">No skills found</p>
+          <p className="text-slate-400">{t('skill.no_skills')}</p>
         </div>
       )}
     </div>

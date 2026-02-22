@@ -31,6 +31,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { apiClient } from '@/api/client';
 import type { Report, Trend } from '@/types';
 import { format } from 'date-fns';
+import { useI18n } from '../i18n';
 
 const safeFormatDate = (value: string, pattern: string = 'yyyy/MM/dd HH:mm'): string => {
   const date = new Date(value);
@@ -61,27 +62,27 @@ const getGrowthLabel = (trend: Trend): string => {
   return `${(trend.growth_rate * 100).toFixed(1)}%`;
 };
 
-const getGrowthHint = (trend: Trend): string => {
+const getGrowthHint = (trend: Trend, tFunc: (key: string) => string): string => {
   const growthExplanation =
     typeof trend.metadata?.growth_explanation === 'string'
       ? trend.metadata.growth_explanation
       : '';
-  return growthExplanation || '成長率は現期間と前期間の比較値です。';
+  return growthExplanation || tFunc('rpt.growth_hint_default');
 };
 
-const buildReportMarkdown = (report: Report): string => {
+const buildReportMarkdown = (report: Report, tFunc: (key: string) => string): string => {
   const lines: string[] = [];
   lines.push(`# ${report.title}`);
   lines.push('');
-  lines.push(`- 生成日時: ${safeFormatDate(report.created_at)}`);
-  lines.push(`- 対象期間: ${safeFormatDate(report.period_start, 'yyyy/MM/dd')} - ${safeFormatDate(report.period_end, 'yyyy/MM/dd')}`);
+  lines.push(`- ${tFunc('rpt.md_generated_at')} ${safeFormatDate(report.created_at)}`);
+  lines.push(`- ${tFunc('rpt.md_period')} ${safeFormatDate(report.period_start, 'yyyy/MM/dd')} - ${safeFormatDate(report.period_end, 'yyyy/MM/dd')}`);
   lines.push('');
-  lines.push('## エグゼクティブサマリー');
-  lines.push(report.summary || 'サマリーなし');
+  lines.push(`## ${tFunc('rpt.md_exec_summary')}`);
+  lines.push(report.summary || tFunc('rpt.no_summary'));
   lines.push('');
 
   if (report.trends.length > 0) {
-    lines.push('## トレンド指標');
+    lines.push(`## ${tFunc('rpt.md_trend_metrics')}`);
     lines.push('| トピック | スコア | 記事数 | 成長 |');
     lines.push('|---|---:|---:|---|');
     report.trends.forEach((trend) => {
@@ -92,7 +93,7 @@ const buildReportMarkdown = (report: Report): string => {
 
   report.sections.forEach((section) => {
     lines.push(`## ${section.title}`);
-    lines.push(section.content || '(本文なし)');
+    lines.push(section.content || tFunc('rpt.md_no_content'));
     lines.push('');
   });
 
@@ -289,6 +290,7 @@ const MarkdownContent: React.FC<{ content: string }> = ({ content }) => {
 };
 
 const Reports: React.FC = () => {
+  const { t } = useI18n();
   const { reports, loading, error, fetchReports } = useAppStore();
 
   useEffect(() => {
@@ -316,7 +318,7 @@ const Reports: React.FC = () => {
   };
 
   const handleDownloadMarkdown = (report: Report): void => {
-    downloadText(buildExportFilename(report, 'md'), buildReportMarkdown(report));
+    downloadText(buildExportFilename(report, 'md'), buildReportMarkdown(report, t));
   };
 
   const handleExportPdf = async (report: Report): Promise<void> => {
@@ -328,7 +330,7 @@ const Reports: React.FC = () => {
       // API が未対応環境の場合は既存フォールバック（ブラウザ印刷）を維持
     }
 
-    const markdown = buildReportMarkdown(report);
+    const markdown = buildReportMarkdown(report, t);
     const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1000,height=800');
     if (!printWindow) {
       return;
@@ -386,28 +388,28 @@ const Reports: React.FC = () => {
         }}
       >
         <Typography variant="h4" gutterBottom>
-          レポートセンター
+          {t('rpt.hero_title')}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          指標の根拠を明示しながら、配布用の Markdown / PDF を出力できます。
+          {t('rpt.hero_subtitle')}
         </Typography>
 
         <Grid container spacing={2} sx={{ mt: 1 }}>
           <Grid item xs={12} md={4}>
             <Paper sx={{ p: 2.2, backgroundColor: 'rgba(15,23,42,0.8)' }}>
-              <Typography variant="overline" color="text.secondary">レポート件数</Typography>
+              <Typography variant="overline" color="text.secondary">{t('rpt.report_count')}</Typography>
               <Typography variant="h5">{reportMetrics.totalReports}</Typography>
             </Paper>
           </Grid>
           <Grid item xs={12} md={4}>
             <Paper sx={{ p: 2.2, backgroundColor: 'rgba(15,23,42,0.8)' }}>
-              <Typography variant="overline" color="text.secondary">直近更新</Typography>
+              <Typography variant="overline" color="text.secondary">{t('rpt.latest_update')}</Typography>
               <Typography variant="h6">{reportMetrics.latestAt}</Typography>
             </Paper>
           </Grid>
           <Grid item xs={12} md={4}>
             <Paper sx={{ p: 2.2, backgroundColor: 'rgba(15,23,42,0.8)' }}>
-              <Typography variant="overline" color="text.secondary">平均トレンド数</Typography>
+              <Typography variant="overline" color="text.secondary">{t('rpt.avg_trends')}</Typography>
               <Typography variant="h5">{reportMetrics.averageTrends}</Typography>
             </Paper>
           </Grid>
@@ -422,7 +424,7 @@ const Reports: React.FC = () => {
             backgroundColor: '#0f1117',
           }}
         >
-          <Typography color="text.secondary">レポートがありません</Typography>
+          <Typography color="text.secondary">{t('rpt.no_reports')}</Typography>
         </Paper>
       ) : (
         <Box>
@@ -482,9 +484,9 @@ const Reports: React.FC = () => {
 
                 <Paper sx={{ p: 2.5, mb: 2, backgroundColor: 'rgba(15,23,42,0.72)' }}>
                   <Typography variant="subtitle2" gutterBottom color="text.secondary">
-                    サマリー
+                    {t('rpt.summary_label')}
                   </Typography>
-                  <MarkdownContent content={report.summary || 'サマリー情報なし'} />
+                  <MarkdownContent content={report.summary || t('rpt.no_summary')} />
                 </Paper>
 
                 {report.sections.map((section, index) => (
@@ -502,11 +504,11 @@ const Reports: React.FC = () => {
 
                 <Box mt={2}>
                   <Typography variant="subtitle2" gutterBottom>
-                    関連トレンド
+                    {t('rpt.related_trends')}
                   </Typography>
                   <Stack direction="row" gap={1} flexWrap="wrap">
                     {report.trends.map((trend) => (
-                      <Tooltip key={trend.id} title={getGrowthHint(trend)}>
+                      <Tooltip key={trend.id} title={getGrowthHint(trend, t)}>
                         <Chip
                           label={`${trend.topic} | score ${trend.score.toFixed(2)} | ${getGrowthLabel(trend)}`}
                           size="small"

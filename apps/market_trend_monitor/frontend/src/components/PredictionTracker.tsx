@@ -33,6 +33,7 @@ import {
   Tooltip,
 } from '@mui/material';
 import { apiClient } from '../api/client';
+import { useI18n } from '../i18n';
 
 interface PredictionItem {
   id: string;
@@ -67,6 +68,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function PredictionTracker() {
+  const { t } = useI18n();
   const [predictions, setPredictions] = useState<PredictionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +92,7 @@ export default function PredictionTracker() {
         setError(null);
       } else {
         setPredictions([]);
-        setError('予測データの取得に失敗しました');
+        setError(t('pred.fetch_error'));
       }
       if (calResp.status === 'fulfilled') {
         setBrierScore(calResp.value.data.brier_score ?? null);
@@ -103,7 +105,7 @@ export default function PredictionTracker() {
       setPredictions([]);
       setBrierScore(null);
       setCalibrationBins([]);
-      setError('予測データの取得に失敗しました');
+      setError(t('pred.fetch_error'));
     } finally {
       setLoading(false);
     }
@@ -126,7 +128,7 @@ export default function PredictionTracker() {
       setReviewNotes('');
       fetchPredictions();
     } catch {
-      setError('Failed to submit review');
+      setError(t('pred.review_submit_error'));
     }
   };
 
@@ -140,11 +142,11 @@ export default function PredictionTracker() {
           limit: 8,
         },
       );
-      setNotice(resp.data.message || '予測を自動生成しました');
+      setNotice(resp.data.message || t('pred.auto_generated'));
       setError(null);
       await fetchPredictions();
     } catch {
-      setError('予測の自動生成に失敗しました');
+      setError(t('pred.auto_generate_error'));
     } finally {
       setLoading(false);
     }
@@ -164,10 +166,10 @@ export default function PredictionTracker() {
       >
         <Box>
           <Typography variant="h4" gutterBottom>
-            予測追跡
+            {t('pred.title')}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            AIによる未来予測の正解率と確信度を管理し、継続的な精度改善を行います。
+            {t('pred.subtitle')}
           </Typography>
         </Box>
         <Button
@@ -175,7 +177,7 @@ export default function PredictionTracker() {
           onClick={handleBootstrapPredictions}
           disabled={loading}
         >
-          予測を生成
+          {t('pred.generate_btn')}
         </Button>
       </Box>
 
@@ -192,13 +194,13 @@ export default function PredictionTracker() {
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="subtitle2" color="text.secondary">
-                予測精度指標 (Brier Score)
+                {t('pred.brier_title')}
               </Typography>
               <Typography variant="h3" color={brierScore !== null && brierScore < 0.25 ? 'success.main' : 'warning.main'}>
                 {brierScore !== null ? brierScore.toFixed(4) : 'N/A'}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                低いほど高精度 (0 = 完璧)
+                {t('pred.brier_desc')}
               </Typography>
             </CardContent>
           </Card>
@@ -207,7 +209,7 @@ export default function PredictionTracker() {
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="subtitle2" color="text.secondary">
-                累計予測数
+                {t('pred.total_predictions')}
               </Typography>
               <Typography variant="h3">{predictions.length}</Typography>
             </CardContent>
@@ -217,7 +219,7 @@ export default function PredictionTracker() {
           <Card>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="subtitle2" color="text.secondary">
-                未レビュー件数
+                {t('pred.pending_count')}
               </Typography>
               <Typography variant="h3" color="warning.main">
                 {predictions.filter((p) => p.status === 'pending').length}
@@ -231,7 +233,7 @@ export default function PredictionTracker() {
         <Card sx={{ mb: 3 }}>
           <CardContent>
             <Typography variant="subtitle1" gutterBottom>
-              検証チャート (Calibration)
+              {t('pred.calibration_chart')}
             </Typography>
             <Box sx={{ display: 'flex', alignItems: 'end', gap: 1, height: 100 }}>
               {calibrationBins.map((bin) => (
@@ -257,7 +259,7 @@ export default function PredictionTracker() {
 
       {!loading && predictions.length === 0 && (
         <Alert severity="warning" sx={{ mb: 2 }}>
-          予測データがありません。最新トレンドから自動生成してください。
+          {t('pred.no_predictions')}
         </Alert>
       )}
 
@@ -265,11 +267,11 @@ export default function PredictionTracker() {
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>予測文</TableCell>
-              <TableCell>確信度</TableCell>
-              <TableCell>目標日</TableCell>
-              <TableCell>ステータス</TableCell>
-              <TableCell>アクション</TableCell>
+              <TableCell>{t('pred.table_statement')}</TableCell>
+              <TableCell>{t('pred.table_confidence')}</TableCell>
+              <TableCell>{t('pred.table_target_date')}</TableCell>
+              <TableCell>{t('pred.table_status')}</TableCell>
+              <TableCell>{t('pred.table_action')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -277,7 +279,7 @@ export default function PredictionTracker() {
               <TableRow>
                 <TableCell colSpan={5}>
                   <Typography variant="body2" color="text.secondary">
-                    No prediction data
+                    {t('pred.no_data')}
                   </Typography>
                 </TableCell>
               </TableRow>
@@ -308,14 +310,21 @@ export default function PredictionTracker() {
                   <Tooltip
                     arrow
                     title={
-                      pred.status === 'pending' ? '検証待ちの状態。ターゲット日に結果を確認。' :
-                        pred.status === 'partial' ? '一部の証拠が見つかりましたが、完全な的中ではありません。' :
-                          pred.status === 'correct' ? '予測が的中し、事象が確認されました。' :
-                            '予測が外れたか、現時点で証拠が確認できません。'
+                      {
+                        pending: t('pred.status_pending_tip'),
+                        partial: t('pred.status_partial_tip'),
+                        correct: t('pred.status_correct_tip'),
+                      }[pred.status] || t('pred.status_incorrect_tip')
                     }
                   >
                     <Chip
-                      label={pred.status === 'pending' ? '検証待ち' : pred.status === 'partial' ? '一部的中' : pred.status === 'correct' ? '的中' : '不的中'}
+                      label={
+                        {
+                          pending: t('pred.status_pending'),
+                          partial: t('pred.status_partial'),
+                          correct: t('pred.status_correct'),
+                        }[pred.status] || t('pred.status_incorrect')
+                      }
                       size="small"
                       sx={{ bgcolor: statusColors[pred.status] || '#666', color: 'white', cursor: 'help' }}
                     />
@@ -328,7 +337,7 @@ export default function PredictionTracker() {
                       variant="outlined"
                       onClick={() => setReviewDialog(pred.id)}
                     >
-                      詳細レビュー
+                      {t('pred.review_btn')}
                     </Button>
                   )}
                 </TableCell>
@@ -339,31 +348,31 @@ export default function PredictionTracker() {
       </TableContainer>
 
       <Dialog open={!!reviewDialog} onClose={() => setReviewDialog(null)} maxWidth="sm" fullWidth>
-        <DialogTitle>予測結果のレビュー</DialogTitle>
+        <DialogTitle>{t('pred.review_dialog_title')}</DialogTitle>
         <DialogContent>
           <TextField
             fullWidth
-            label="実際の結果"
+            label={t('pred.review_actual')}
             value={actualOutcome}
             onChange={(e) => setActualOutcome(e.target.value)}
             sx={{ mt: 1, mb: 2 }}
           />
           <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>判定</InputLabel>
+            <InputLabel>{t('pred.review_judgment')}</InputLabel>
             <Select
               value={reviewOutcome}
-              label="判定"
+              label={t('pred.review_judgment')}
               onChange={(e) => setReviewOutcome(e.target.value)}
             >
-              <MenuItem value="correct">的中 (Correct)</MenuItem>
-              <MenuItem value="partial">一部的中 (Partial)</MenuItem>
-              <MenuItem value="incorrect">不的中 (Incorrect)</MenuItem>
-              <MenuItem value="unknown">不明 (Unknown)</MenuItem>
+              <MenuItem value="correct">{t('pred.review_correct')}</MenuItem>
+              <MenuItem value="partial">{t('pred.review_partial')}</MenuItem>
+              <MenuItem value="incorrect">{t('pred.review_incorrect')}</MenuItem>
+              <MenuItem value="unknown">{t('pred.review_unknown')}</MenuItem>
             </Select>
           </FormControl>
           <TextField
             fullWidth
-            label="メモ・備考"
+            label={t('pred.review_notes')}
             value={reviewNotes}
             onChange={(e) => setReviewNotes(e.target.value)}
             multiline
@@ -371,9 +380,9 @@ export default function PredictionTracker() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setReviewDialog(null)}>キャンセル</Button>
+          <Button onClick={() => setReviewDialog(null)}>{t('pred.review_cancel')}</Button>
           <Button onClick={handleReview} variant="contained" disabled={!actualOutcome}>
-            レビューを保存
+            {t('pred.review_save')}
           </Button>
         </DialogActions>
       </Dialog>

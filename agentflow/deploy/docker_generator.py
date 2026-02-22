@@ -178,9 +178,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=${POSTGRES_USER:-agentflow}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB:-agentflow}
+      - POSTGRES_USER=${{POSTGRES_USER:-agentflow}}
+      - POSTGRES_PASSWORD=${{POSTGRES_PASSWORD}}
+      - POSTGRES_DB=${{POSTGRES_DB:-agentflow}}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:

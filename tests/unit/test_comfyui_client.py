@@ -42,11 +42,11 @@ class TestComfyUIClient:
         payload = client.build_workflow_payload(style, spec)
 
         assert isinstance(payload, dict)
-        assert "prompt" in payload
+        assert "1" in payload
 
         # KSampler ノードの検証
         ksampler = None
-        for node in payload["prompt"].values():
+        for node in payload.values():
             if node.get("class_type") == "KSampler":
                 ksampler = node
                 break
@@ -80,7 +80,7 @@ class TestComfyUIClient:
         payload = client.build_workflow_payload(style, spec)
 
         # ポジティブプロンプトにスタイル情報が含まれること
-        positive_node = payload["prompt"]["2"]
+        positive_node = payload["2"]
         assert "Speaker hero shot" in positive_node["inputs"]["text"]
         assert "dramatic" in positive_node["inputs"]["text"]
 
@@ -94,7 +94,9 @@ class TestComfyUIClient:
 
         with patch.object(client, "_http_client") as mock_http:
             mock_http.post = AsyncMock(return_value=mock_response)
-            prompt_id = await client.queue_prompt({"prompt": {}})
+            prompt_id = await client.queue_prompt({})
+
+        mock_http.post.assert_awaited_once_with("/prompt", json={"prompt": {}})
 
         assert prompt_id == "abc-123"
 
@@ -162,6 +164,6 @@ class TestComfyUIClient:
         )
         payload = client.build_workflow_payload(style, spec)
 
-        negative_node = payload["prompt"]["3"]
+        negative_node = payload["3"]
         assert "blurry" in negative_node["inputs"]["text"]
         assert "text overlay" in negative_node["inputs"]["text"]

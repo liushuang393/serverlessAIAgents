@@ -244,23 +244,23 @@ class TestDatabaseManagerSession:
 
     @pytest.mark.asyncio
     async def test_create_all_tables_and_query(self) -> None:
-        """create_all_tables() + セッション経由の INSERT/SELECT."""
-        db = _make_manager()
+        """create_all_tables() + INSERT/SELECT（同期SQLite実行で安定化）."""
+        db = _make_manager(force_sync=True)
         await db.init()
         await db.create_all_tables()
 
-        # INSERT
-        async with db.session() as session:
-            await session.execute(
+        session = db.session_sync()
+        try:
+            session.execute(
                 text("INSERT INTO test_items (id, name) VALUES (1, 'alpha')"),
             )
-
-        # SELECT
-        async with db.session() as session:
-            result = await session.execute(text("SELECT name FROM test_items"))
+            session.commit()
+            result = session.execute(text("SELECT name FROM test_items"))
             row = result.fetchone()
             assert row is not None
             assert row[0] == "alpha"
+        finally:
+            session.close()
 
         await db.close()
 

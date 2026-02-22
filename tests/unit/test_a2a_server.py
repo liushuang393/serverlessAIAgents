@@ -161,7 +161,9 @@ class TestA2AServer:
         assert result["status"] == "error"
         assert result["error"] == "Task timeout"
 
-    async def test_handle_task_with_sync_handler(self, sample_agent_card: AgentCard) -> None:
+    async def test_handle_task_with_sync_handler(
+        self, sample_agent_card: AgentCard, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """同期ハンドラーでのタスク処理をテスト."""
 
         def sync_handler(inputs: dict) -> dict:
@@ -169,6 +171,15 @@ class TestA2AServer:
             return {"message": f"Hello, {name}!"}
 
         handlers = {"greet": sync_handler}
+
+        class _LoopStub:
+            async def run_in_executor(self, _executor: object, func: callable, inputs: dict) -> dict:
+                return func(inputs)
+
+        monkeypatch.setattr(
+            "agentflow.protocols.a2a_server.asyncio.get_event_loop",
+            lambda: _LoopStub(),
+        )
 
         server = A2AServer()
         server.register_agent(sample_agent_card, handlers)

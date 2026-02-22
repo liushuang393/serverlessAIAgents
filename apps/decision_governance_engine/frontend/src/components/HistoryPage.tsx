@@ -10,6 +10,7 @@ import { useDecisionStore } from '../store/useDecisionStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { decisionApi } from '../api/client';
 import type { ServerHistoryItem } from '../types';
+import { useI18n } from '../i18n';
 
 /** 決策結果のバッジ色 */
 const DECISION_ROLE_COLORS: Record<string, string> = {
@@ -19,17 +20,18 @@ const DECISION_ROLE_COLORS: Record<string, string> = {
   PILOT: 'bg-blue-500/10 text-blue-400 border-blue-500/30',
 };
 
-/** 決策結果の日本語ラベル */
-const DECISION_ROLE_LABELS: Record<string, string> = {
-  GO: '立項',
-  NO_GO: '不立項',
-  DELAY: '延後',
-  PILOT: 'パイロット',
-};
-
 export const HistoryPage: React.FC = () => {
+  const { t } = useI18n();
   const { setPage, reset } = useDecisionStore();
   const { user, performLogout } = useAuthStore();
+
+  /** 決策結果のローカライズラベル */
+  const ROLE_LABELS: Record<string, string> = {
+    GO: t('history.role_label.go'),
+    NO_GO: t('history.role_label.no_go'),
+    DELAY: t('history.role_label.delay'),
+    PILOT: t('history.role_label.pilot'),
+  };
 
   const [items, setItems] = useState<ServerHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -58,17 +60,17 @@ export const HistoryPage: React.FC = () => {
       if (response.status === 'success' || response.status === 'fallback') {
         setItems(response.items);
         if (response.status === 'fallback') {
-          setInfo('一部履歴をフォールバックデータで表示しています');
+          setInfo(t('history.fallback_info'));
         }
       } else if (response.status === 'disabled') {
-        setError('履歴機能が無効になっています');
+        setError(t('history.disabled'));
         setItems([]);
       } else {
-        setError('履歴の取得に失敗しました');
+        setError(t('history.fetch_failed'));
         setItems([]);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : '履歴の取得に失敗しました';
+      const message = err instanceof Error ? err.message : t('history.fetch_failed');
       setError(message);
       setItems([]);
     } finally {
@@ -93,7 +95,7 @@ export const HistoryPage: React.FC = () => {
       a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'PDFのダウンロードに失敗しました';
+      const message = err instanceof Error ? err.message : t('history.pdf_failed');
       setError(message);
     } finally {
       setExportingId(null);
@@ -132,8 +134,8 @@ export const HistoryPage: React.FC = () => {
               <span className="text-xl">⚡</span>
             </button>
             <div>
-              <h1 className="font-semibold text-lg">決策履歴</h1>
-              <p className="text-xs text-slate-500">過去の意思決定レポート一覧</p>
+              <h1 className="font-semibold text-lg">{t('history.title')}</h1>
+              <p className="text-xs text-slate-500">{t('history.subtitle')}</p>
             </div>
           </div>
 
@@ -143,7 +145,7 @@ export const HistoryPage: React.FC = () => {
               onClick={() => setPage('input')}
               className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm flex items-center gap-2 transition-all"
             >
-              ⚡ 新規分析
+              <span aria-hidden="true">⚡</span> {t('history.new_analysis')}
             </button>
 
             {/* ユーザーメニュー */}
@@ -172,29 +174,29 @@ export const HistoryPage: React.FC = () => {
           <div className="flex items-center gap-4 flex-wrap">
             {/* 決策結果フィルター */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">結果:</span>
+              <span className="text-xs text-slate-500">{t('history.result_filter')}</span>
               <select
                 value={filterRole}
                 onChange={(e) => setFilterRole(e.target.value)}
                 className="bg-[#0a0a0f] border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500/50"
               >
-                <option value="">すべて</option>
-                <option value="GO">立項 (GO)</option>
-                <option value="NO_GO">不立項 (NO_GO)</option>
-                <option value="DELAY">延後 (DELAY)</option>
-                <option value="PILOT">パイロット (PILOT)</option>
+                <option value="">{t('history.all')}</option>
+                <option value="GO">{t('history.role_label.go')} (GO)</option>
+                <option value="NO_GO">{t('history.role_label.no_go')} (NO_GO)</option>
+                <option value="DELAY">{t('history.role_label.delay')} (DELAY)</option>
+                <option value="PILOT">{t('history.role_label.pilot')} (PILOT)</option>
               </select>
             </div>
 
             {/* モードフィルター */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">モード:</span>
+              <span className="text-xs text-slate-500">{t('history.mode_filter')}</span>
               <select
                 value={filterMode}
                 onChange={(e) => setFilterMode(e.target.value)}
                 className="bg-[#0a0a0f] border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500/50"
               >
-                <option value="">すべて</option>
+                <option value="">{t('history.all')}</option>
                 <option value="FAST">FAST</option>
                 <option value="STANDARD">STANDARD</option>
                 <option value="AUDIT">AUDIT</option>
@@ -203,16 +205,16 @@ export const HistoryPage: React.FC = () => {
 
             {/* 表示件数 */}
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500">表示:</span>
+              <span className="text-xs text-slate-500">{t('history.limit_label')}</span>
               <select
                 value={limit}
                 onChange={(e) => setLimit(Number(e.target.value))}
                 className="bg-[#0a0a0f] border border-white/10 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-500/50"
               >
-                <option value={10}>10件</option>
-                <option value={20}>20件</option>
-                <option value={50}>50件</option>
-                <option value={100}>100件</option>
+                <option value={10}>10 {t('history.items_suffix')}</option>
+                <option value={20}>20 {t('history.items_suffix')}</option>
+                <option value={50}>50 {t('history.items_suffix')}</option>
+                <option value={100}>100 {t('history.items_suffix')}</option>
               </select>
             </div>
 
@@ -227,7 +229,7 @@ export const HistoryPage: React.FC = () => {
               ) : (
                 <span>&#x21BB;</span>
               )}
-              更新
+              {t('history.refresh')}
             </button>
           </div>
         </div>
@@ -252,12 +254,12 @@ export const HistoryPage: React.FC = () => {
         ) : items.length === 0 ? (
           <div className="text-center py-12 text-slate-500">
             <div className="text-4xl mb-4">&#128196;</div>
-            <p>履歴がありません</p>
+            <p>{t('history.empty')}</p>
             <button
               onClick={() => setPage('input')}
               className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm transition-colors"
             >
-              新規分析を開始
+              {t('history.start_new')}
             </button>
           </div>
         ) : (
@@ -276,11 +278,11 @@ export const HistoryPage: React.FC = () => {
                           DECISION_ROLE_COLORS[item.decision_role] || 'bg-slate-500/10 text-slate-400'
                         }`}
                       >
-                        {DECISION_ROLE_LABELS[item.decision_role] || item.decision_role}
+                        {ROLE_LABELS[item.decision_role] || item.decision_role}
                       </span>
                       {item.confidence !== null && (
                         <span className="text-xs text-slate-500">
-                          信頼度: {Math.round(item.confidence * 100)}%
+                          {t('history.confidence')} {Math.round(item.confidence * 100)}%
                         </span>
                       )}
                       <span className="text-xs text-slate-600 px-2 py-0.5 bg-slate-800 rounded">
@@ -320,7 +322,7 @@ export const HistoryPage: React.FC = () => {
         {/* ページネーション情報 */}
         {!isLoading && items.length > 0 && (
           <div className="mt-6 text-center text-xs text-slate-500">
-            {items.length} 件表示中
+            {t('history.showing_count').replaceAll('{count}', String(items.length))}
           </div>
         )}
       </main>

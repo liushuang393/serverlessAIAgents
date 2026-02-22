@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import datetime as datetime_module
 from enum import Enum
 from typing import TYPE_CHECKING, Any
 
@@ -127,6 +128,11 @@ class DecisionGovResponseV1(BaseModel):
     evidence: list[EvidenceItem] = Field(default_factory=list, description="証拠プール")
     claims: list[Claim] = Field(default_factory=list, description="主張一覧")
     warnings: list[str] = Field(default_factory=list, description="警告")
+
+
+_types_namespace = {"datetime": datetime_module.datetime}
+EvidenceItem.model_rebuild(_types_namespace=_types_namespace)
+DecisionGovResponseV1.model_rebuild(_types_namespace=_types_namespace)
 
 
 __all__ = [

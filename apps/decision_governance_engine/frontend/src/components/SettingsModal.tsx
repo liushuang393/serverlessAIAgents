@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '../api/client';
+import { useI18n } from '../i18n';
 
 /** RAGソース設定 */
 interface RAGSourceConfig {
@@ -32,6 +33,7 @@ interface SettingsModalProps {
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useI18n();
   const [configs, setConfigs] = useState<AgentRAGConfig[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,8 +49,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       setConfigs(response.data as AgentRAGConfig[]);
     } catch (err) {
       // エラー詳細をUIに表示
-      const errorDetail = err instanceof Error ? err.message : '不明なエラー';
-      setError(`設定の取得に失敗しました: ${errorDetail}`);
+      const errorDetail = err instanceof Error ? err.message : t('settings.unknown_error');
+      setError(`${t('settings.fetch_error')} ${errorDetail}`);
     } finally {
       setIsLoading(false);
     }
@@ -62,8 +64,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
       await fetchConfigs();
     } catch (err) {
       // エラー詳細をUIに表示
-      const errorDetail = err instanceof Error ? err.message : '不明なエラー';
-      setError(`設定の保存に失敗しました: ${errorDetail}`);
+      const errorDetail = err instanceof Error ? err.message : t('settings.unknown_error');
+      setError(`${t('settings.save_error')} ${errorDetail}`);
     } finally {
       setIsSaving(false);
     }
@@ -98,7 +100,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
           <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            ⚙️ RAG設定
+            <span aria-hidden="true">⚙️</span> {t('settings.rag_settings')}
           </h2>
           <button
             onClick={onClose}
@@ -113,7 +115,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
           {isLoading ? (
             <div className="text-center py-8">
               <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-slate-400 text-sm">読み込み中...</p>
+              <p className="text-slate-400 text-sm">{t('settings.loading')}</p>
             </div>
           ) : error ? (
             <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-400">
@@ -144,8 +146,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                   {/* RAG有効/無効 */}
                   <div className="flex items-center justify-between p-4 bg-[#0a0a0f] rounded-xl">
                     <div>
-                      <div className="text-white font-medium">RAGを使用</div>
-                      <div className="text-sm text-slate-400">知識ベースからの情報検索を有効化</div>
+                      <div className="text-white font-medium">{t('settings.use_rag')}</div>
+                      <div className="text-sm text-slate-400">{t('settings.rag_desc')}</div>
                     </div>
                     <button
                       onClick={() => toggleRAG(currentConfig.agent_id)}
@@ -166,7 +168,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       {/* Top K */}
                       <div className="p-4 bg-[#0a0a0f] rounded-xl">
                         <div className="flex justify-between mb-2">
-                          <span className="text-white font-medium">検索件数 (Top K)</span>
+                          <span className="text-white font-medium">{t('settings.top_k_label')}</span>
                           <span className="text-indigo-400">{currentConfig.top_k}</span>
                         </div>
                         <input
@@ -186,7 +188,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                       {/* Min Similarity */}
                       <div className="p-4 bg-[#0a0a0f] rounded-xl">
                         <div className="flex justify-between mb-2">
-                          <span className="text-white font-medium">最小類似度</span>
+                          <span className="text-white font-medium">{t('settings.min_similarity_label')}</span>
                           <span className="text-indigo-400">{(currentConfig.min_similarity * 100).toFixed(0)}%</span>
                         </div>
                         <input
@@ -205,7 +207,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
                       {/* RAGソース一覧 */}
                       <div className="p-4 bg-[#0a0a0f] rounded-xl">
-                        <div className="text-white font-medium mb-3">RAGソース</div>
+                        <div className="text-white font-medium mb-3">{t('settings.rag_sources')}</div>
                         <div className="space-y-2">
                           {currentConfig.rag_sources.map((source, idx) => (
                             <div key={idx} className="flex items-center gap-3 p-3 bg-slate-800/50 rounded-lg">
@@ -219,13 +221,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
                               <span className={`text-xs px-2 py-1 rounded ${
                                 source.enabled ? 'bg-green-500/10 text-green-400' : 'bg-slate-700 text-slate-400'
                               }`}>
-                                {source.enabled ? '有効' : '無効'}
+                                {source.enabled ? t('settings.enabled') : t('settings.disabled')}
                               </span>
                             </div>
                           ))}
                           {currentConfig.rag_sources.length === 0 && (
                             <div className="text-center py-4 text-slate-500 text-sm">
-                              RAGソースが設定されていません
+                              {t('settings.no_rag_sources')}
                             </div>
                           )}
                         </div>
@@ -244,7 +246,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             onClick={onClose}
             className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
           >
-            閉じる
+            {t('common.close')}
           </button>
         </div>
       </div>

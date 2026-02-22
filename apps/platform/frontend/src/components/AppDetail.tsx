@@ -11,8 +11,10 @@ import { localStartApp, publishApp, startApp, stopApp } from '@/api/client';
 import { useAppStore } from '@/store/useAppStore';
 import type { AppActionResponse, HealthCheckAttempt, RuntimeCommands } from '@/types';
 import { AppHealthBadge } from './AppHealthBadge';
+import { useI18n } from '../i18n';
 
 export function AppDetail() {
+  const { t } = useI18n();
   const { name } = useParams<{ name: string }>();
   const {
     selectedApp,
@@ -100,7 +102,7 @@ export function AppDetail() {
     return (
       <div className="p-6 max-w-4xl mx-auto">
         <Link to="/apps" className="text-sm text-indigo-400 hover:text-indigo-300 mb-4 inline-block">
-          ← Back to Apps
+          {t('app_detail.back')}
         </Link>
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6 text-center">
           <p className="text-red-400">{error}</p>
@@ -112,7 +114,7 @@ export function AppDetail() {
   if (!selectedApp) {
     return (
       <div className="p-6 max-w-4xl mx-auto text-center py-24">
-        <p className="text-slate-500">App not found</p>
+        <p className="text-slate-500">{t('app_detail.not_found')}</p>
       </div>
     );
   }
@@ -142,7 +144,7 @@ export function AppDetail() {
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       {/* 戻るリンク */}
       <Link to="/apps" className="text-sm text-indigo-400 hover:text-indigo-300">
-        ← Back to Apps
+        {t('app_detail.back')}
       </Link>
 
       {/* ヘッダー */}
@@ -165,28 +167,28 @@ export function AppDetail() {
               disabled={actionLoading !== null}
               className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs rounded-lg transition-colors"
             >
-              {actionLoading === 'publish' ? 'Publishing...' : '🚀 Publish'}
+              {actionLoading === 'publish' ? t('app_detail.publishing') : t('app_detail.publish')}
             </button>
             <button
               onClick={() => runAction('start')}
               disabled={actionLoading !== null}
               className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs rounded-lg transition-colors"
             >
-              {actionLoading === 'start' ? 'Starting...' : '▶ Start'}
+              {actionLoading === 'start' ? t('app_detail.starting') : t('app_detail.start')}
             </button>
             <button
               onClick={() => runAction('stop')}
               disabled={actionLoading !== null}
               className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs rounded-lg transition-colors"
             >
-              {actionLoading === 'stop' ? 'Stopping...' : '■ Stop'}
+              {actionLoading === 'stop' ? t('app_detail.stopping') : t('app_detail.stop')}
             </button>
             <button
               onClick={() => runAction('local-start')}
               disabled={actionLoading !== null}
               className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs rounded-lg transition-colors"
             >
-              {actionLoading === 'local-start' ? 'Starting...' : '🖥️ Local'}
+              {actionLoading === 'local-start' ? t('app_detail.starting') : t('app_detail.local')}
             </button>
             <button
               onClick={async () => {
@@ -196,7 +198,7 @@ export function AppDetail() {
               }}
               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors"
             >
-              🔍 Health Check
+              {t('app_detail.health_check_btn')}
             </button>
           </div>
         </div>
@@ -208,7 +210,7 @@ export function AppDetail() {
           {actionResult && (
             <div className="space-y-1">
               <p className={`text-sm ${actionResult.success ? 'text-emerald-300' : 'text-red-300'}`}>
-                {actionResult.action.toUpperCase()} {actionResult.success ? 'completed' : 'failed'}
+                {actionResult.action.toUpperCase()} {actionResult.success ? t('app_detail.health_check_completed') : t('app_detail.health_check_failed')}
               </p>
               <p className="text-xs text-slate-300 font-mono break-all">{actionResult.command}</p>
               {actionResult.error && (
@@ -222,28 +224,28 @@ export function AppDetail() {
       {/* ヘルスチェック結果 */}
       {health && (
         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-slate-200 mb-3">Health Check</h2>
+          <h2 className="text-sm font-semibold text-slate-200 mb-3">{t('app_detail.health_check_title')}</h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-            <InfoItem label="Status" value={health.status} />
-            <InfoItem label="Response" value={health.response_time_ms > 0 ? `${health.response_time_ms.toFixed(1)}ms` : '—'} />
-            <InfoItem label="Checked" value={new Date(health.checked_at).toLocaleTimeString('ja-JP')} />
-            {health.error && <InfoItem label="Error" value={health.error} isError />}
+            <InfoItem label={t('app_detail.hc_status')} value={health.status} />
+            <InfoItem label={t('app_detail.hc_response')} value={health.response_time_ms > 0 ? `${health.response_time_ms.toFixed(1)}ms` : '—'} />
+            <InfoItem label={t('app_detail.hc_checked')} value={new Date(health.checked_at).toLocaleTimeString('ja-JP')} />
+            {health.error && <InfoItem label={t('app_detail.hc_error')} value={health.error} isError />}
             {typeof healthDetails?.checked_url === 'string' && (
-              <InfoItem label="Checked URL" value={healthDetails.checked_url} />
+              <InfoItem label={t('app_detail.hc_url')} value={healthDetails.checked_url} />
             )}
             {typeof healthDetails?.http_status === 'number' && (
-              <InfoItem label="HTTP" value={String(healthDetails.http_status)} />
+              <InfoItem label={t('app_detail.hc_http').replaceAll('{code}', String(healthDetails.http_status))} value={String(healthDetails.http_status)} />
             )}
             {healthDetails?.docker && (
               <InfoItem
-                label="Docker Backend"
-                value={healthDetails.docker.backend_running ? 'running' : 'not running'}
+                label={t('app_detail.docker_backend')}
+                value={healthDetails.docker.backend_running ? t('app_detail.docker_running') : t('app_detail.docker_not_running')}
               />
             )}
           </div>
           {attempts.length > 0 && (
             <div className="mt-4 pt-4 border-t border-slate-800">
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">Attempts</p>
+              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">{t('app_detail.docker_attempts')}</p>
               <div className="space-y-1.5">
                 {attempts.slice(0, 8).map((a, index) => (
                   <p key={`${a.url}-${index}`} className="text-xs text-slate-400 font-mono break-all">
@@ -257,7 +259,7 @@ export function AppDetail() {
           )}
           {healthDetails?.docker?.services && healthDetails.docker.services.length > 0 && (
             <div className="mt-4 pt-4 border-t border-slate-800">
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">Docker Services</p>
+              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">{t('app_detail.docker_services')}</p>
               <div className="space-y-1">
                 {healthDetails.docker.services.map((service) => (
                   <p key={service.service} className="text-xs text-slate-400 font-mono">
@@ -271,12 +273,12 @@ export function AppDetail() {
         </div>
       )}
 
-      <Section title="Runtime URLs">
+      <Section title={t('app_detail.runtime_urls')}>
         <div className="space-y-2">
-          <RuntimeUrlRow label="Backend" url={backendUrl} />
-          <RuntimeUrlRow label="Frontend" url={frontendUrl} />
-          <RuntimeUrlRow label="Health URL" url={healthUrl} />
-          <RuntimeUrlRow label="Database URL" url={databaseUrl} />
+          <RuntimeUrlRow label={t('app_detail.backend')} url={backendUrl} />
+          <RuntimeUrlRow label={t('app_detail.frontend')} url={frontendUrl} />
+          <RuntimeUrlRow label={t('app_detail.hc_url')} url={healthUrl} />
+          <RuntimeUrlRow label={t('app_detail.db_connections')} url={databaseUrl} />
           {healthCurlTarget && (
             <InfoItem
               label="Framework Call"
@@ -290,10 +292,10 @@ export function AppDetail() {
         {/* ポート */}
         <Section title="Ports">
           <div className="grid grid-cols-2 gap-3">
-            <InfoItem label="API" value={app.ports.api ? `:${app.ports.api}` : 'N/A'} />
-            <InfoItem label="Frontend" value={app.ports.frontend ? `:${app.ports.frontend}` : 'N/A'} />
-            <InfoItem label="Database" value={app.ports.db ? `:${app.ports.db}` : 'N/A'} />
-            <InfoItem label="Redis" value={app.ports.redis ? `:${app.ports.redis}` : 'N/A'} />
+            <InfoItem label="API" value={app.ports.api ? `:${app.ports.api}` : t('app_detail.na')} />
+            <InfoItem label={t('app_detail.frontend')} value={app.ports.frontend ? `:${app.ports.frontend}` : t('app_detail.na')} />
+            <InfoItem label={t('app_detail.primary_db')} value={app.ports.db ? `:${app.ports.db}` : t('app_detail.na')} />
+            <InfoItem label={t('app_detail.redis')} value={app.ports.redis ? `:${app.ports.redis}` : t('app_detail.na')} />
           </div>
         </Section>
 
@@ -309,27 +311,27 @@ export function AppDetail() {
         </Section>
       </div>
 
-      <Section title="Database Connection">
+      <Section title={t('app_detail.db_connections')}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <InfoItem label="Kind" value={db?.kind ?? app.dependencies.database ?? 'N/A'} />
-          <InfoItem label="URL" value={db?.url ?? databaseUrl ?? 'N/A'} />
-          <InfoItem label="Host" value={db?.host ?? 'N/A'} />
-          <InfoItem label="Port" value={db?.port ? String(db.port) : 'N/A'} />
-          <InfoItem label="Name" value={db?.name ?? 'N/A'} />
-          <InfoItem label="User" value={db?.user ?? 'N/A'} />
-          <InfoItem label="Password" value={db?.password ?? 'N/A'} />
-          <InfoItem label="Password ENV" value={db?.password_env ?? 'N/A'} />
+          <InfoItem label="Kind" value={db?.kind ?? app.dependencies.database ?? t('app_detail.na')} />
+          <InfoItem label="URL" value={db?.url ?? databaseUrl ?? t('app_detail.na')} />
+          <InfoItem label="Host" value={db?.host ?? t('app_detail.na')} />
+          <InfoItem label="Port" value={db?.port ? String(db.port) : t('app_detail.na')} />
+          <InfoItem label="Name" value={db?.name ?? t('app_detail.na')} />
+          <InfoItem label="User" value={db?.user ?? t('app_detail.na')} />
+          <InfoItem label="Password" value={db?.password ?? t('app_detail.na')} />
+          <InfoItem label="Password ENV" value={db?.password_env ?? t('app_detail.na')} />
           {db?.note && <InfoItem label="Note" value={db.note} />}
         </div>
       </Section>
 
-      <Section title="Startup Commands">
+      <Section title={t('app_detail.startup_commands')}>
         <div className="space-y-2">
-          <CommandRow label="Backend Dev" command={commands?.backend_dev ?? null} />
-          <CommandRow label="Frontend Dev" command={commands?.frontend_dev ?? null} />
-          <CommandRow label="Publish" command={commands?.publish ?? null} />
-          <CommandRow label="Start" command={commands?.start ?? null} />
-          <CommandRow label="Stop" command={commands?.stop ?? null} />
+          <CommandRow label={t('app_detail.backend_cmd')} command={commands?.backend_dev ?? null} />
+          <CommandRow label={t('app_detail.frontend_cmd')} command={commands?.frontend_dev ?? null} />
+          <CommandRow label={t('app_detail.publish')} command={commands?.publish ?? null} />
+          <CommandRow label={t('app_detail.start')} command={commands?.start ?? null} />
+          <CommandRow label={t('app_detail.stop')} command={commands?.stop ?? null} />
           {!hasAnyCommand(commands) && (
             <p className="text-xs text-slate-500">
               <code>app_config.json</code> -&gt; <code>runtime.commands</code> に
@@ -340,14 +342,14 @@ export function AppDetail() {
       </Section>
 
       {app.blueprint && (
-        <Section title="Runtime Blueprint">
+        <Section title={t('app_detail.runtime_config')}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <InfoItem label="Engine Pattern" value={app.blueprint.engine_pattern} />
-            <InfoItem label="Flow Pattern" value={app.blueprint.flow_pattern ?? 'N/A'} />
-            <InfoItem label="LLM Provider" value={app.blueprint.llm_provider ?? 'auto'} />
-            <InfoItem label="Default Model" value={app.blueprint.default_model ?? 'N/A'} />
-            <InfoItem label="Vector DB" value={app.blueprint.vector_db_provider ?? 'N/A'} />
-            <InfoItem label="Vector Collection" value={app.blueprint.vector_db_collection ?? 'N/A'} />
+            <InfoItem label={t('app_detail.engine_pattern')} value={app.blueprint.engine_pattern} />
+            <InfoItem label={t('app_detail.flow_pattern')} value={app.blueprint.flow_pattern ?? t('app_detail.na')} />
+            <InfoItem label={t('app_detail.llm_provider')} value={app.blueprint.llm_provider ?? 'auto'} />
+            <InfoItem label={t('app_detail.default_model')} value={app.blueprint.default_model ?? t('app_detail.na')} />
+            <InfoItem label={t('app_detail.vector_db')} value={app.blueprint.vector_db_provider ?? t('app_detail.na')} />
+            <InfoItem label="Vector Collection" value={app.blueprint.vector_db_collection ?? t('app_detail.na')} />
             {app.blueprint.llm_api_key_env && (
               <InfoItem label="LLM API Key ENV" value={app.blueprint.llm_api_key_env} />
             )}
@@ -360,7 +362,7 @@ export function AppDetail() {
 
       {/* Agents */}
       {app.agents.length > 0 && (
-        <Section title={`Agents (${app.agents.length})`}>
+        <Section title={`${t('app_detail.agent_name')} (${app.agents.length})`}>
           <div className="divide-y divide-slate-800/50">
             {app.agents.map((agent) => (
               <div key={agent.name} className="py-3 first:pt-0 last:pb-0">

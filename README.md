@@ -48,12 +48,31 @@ flowchart TB
 
 ## リポジトリ構造
 
-- `agentflow/`: Kernel（フロー/Agent/Tool/Protocol）
-- `apps/`: 製品アプリ（Studio / Platform など）
-- `plugins/`: 拡張（Blocks / Tools / Providers）
-- `contracts/`: 互換性を固定する JSON 契約（versioned）
-- `docs/`: 外部/内部ドキュメント
-- `tests/`: テスト
+### コアコンポーネント
+- `agentflow/`: Kernel（エンジン/Agentパターン/プロトコル）
+- `apps/`: 製品アプリ（Studio / Platform / 業務アプリ）
+- `plugins/`: 拡張機能（Blocks / Tools / Providers）
+- `contracts/`: 互換性を保証する JSON 契約定義（Versioned）
+- `docs/`: 外部/内部ドキュメント、設計資料
+- `tests/`: 自動テストスイート（Unit/Integration/E2E）
+- `examples/`: 実装サンプルとデモコード
+
+### ツール & ガバナンス
+- `.agent/`, `.agentflow/`: エージェントの動作ログと内部データ
+- `.github/`: CI/CD ワークフローとテンプレート
+- `code-rules/`: 統一コーディング規約と Lint ルール
+- `scripts/`: 開発・保守用ユーティリティスクリプト
+- `Makefile`: タスク自動化コマンド集
+
+### 設定 & 環境
+- `pyproject.toml`: プロジェクト全体の依存関係と設定
+- `requirements.txt`: Python パッケージリスト（補足用）
+- `.env.example`: 環境変数のテンプレート
+
+### 開発・検証用
+- `.kiro/`, `.sisyphus/`: 内部仕様案（Specs）とエージェント用メモ
+- `mcp_client/`, `mcp_servers/`: MCP プロトコル固有の実装
+- `studio/`: 旧 Studio フロントエンド（`apps/platform` へ移行中）
 
 ## アーキテクチャ
 
