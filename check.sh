@@ -32,6 +32,22 @@ run_py_tool() {
 
     # デフォルトでは conda env を優先利用。未利用にしたい場合は CHECK_USE_CONDA=0
     if [ "${CHECK_USE_CONDA:-1}" = "1" ] && can_use_conda_env; then
+        # すでに対象 env 上なら PATH 優先で直接実行（conda run ハング回避）
+        if [ "${CONDA_DEFAULT_ENV:-}" = "$CONDA_ENV_NAME" ] && command_exists "$tool"; then
+            "$tool" "$@"
+            return $?
+        fi
+
+        # env バイナリを直接実行（conda run より安定・高速）
+        local conda_base conda_tool
+        conda_base="$(conda info --base 2>/dev/null)"
+        conda_tool="${conda_base}/envs/${CONDA_ENV_NAME}/bin/${tool}"
+        if [ -x "$conda_tool" ]; then
+            "$conda_tool" "$@"
+            return $?
+        fi
+
+        # 最後のフォールバック
         conda run -n "$CONDA_ENV_NAME" "$tool" "$@"
         return $?
     fi

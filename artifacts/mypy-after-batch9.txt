@@ -1,4 +1,0 @@
-ERROR conda.cli.main_run:execute(142): `conda run mypy agentflow --ignore-missing-imports --show-error-codes --hide-error-context --no-color-output --no-pretty` failed. (See above for error)
-agentflow/knowledge/doc_health_checker.py:453:9: error: Need type annotation for "issues" (hint: "issues: list[<type>] = ...")  [var-annotated]
-agentflow/security/hallucination_detector.py:415:9: error: Need type annotation for "issues" (hint: "issues: list[<type>] = ...")  [var-annotated]
-Found 2 errors in 2 files (checked 603 source files)

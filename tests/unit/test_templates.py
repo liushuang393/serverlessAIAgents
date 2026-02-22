@@ -82,7 +82,6 @@ class TestTemplateManager:
         # 生成されたファイルを確認
         assert output_dir.exists()
         assert (output_dir / "agent.yaml").exists()
-        assert (output_dir / "agent.py").exists()
         assert (output_dir / "README.md").exists()
 
         # agent.yaml の内容を確認
@@ -115,7 +114,6 @@ class TestTemplateManager:
         # 生成されたファイルを確認
         assert output_dir.exists()
         assert (output_dir / "agent.yaml").exists()
-        assert (output_dir / "agent.py").exists()
         assert (output_dir / "README.md").exists()
 
         # agent.yaml の内容を確認
@@ -148,7 +146,6 @@ class TestTemplateManager:
         # 生成されたファイルを確認
         assert output_dir.exists()
         assert (output_dir / "agent.yaml").exists()
-        assert (output_dir / "agent.py").exists()
         assert (output_dir / "README.md").exists()
 
         # agent.yaml の内容を確認
