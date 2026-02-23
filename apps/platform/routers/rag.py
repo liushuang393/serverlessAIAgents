@@ -19,9 +19,8 @@ from typing import TYPE_CHECKING, Any
 from fastapi import APIRouter, HTTPException
 
 
-if TYPE_CHECKING:
-    from apps.platform.schemas.rag_schemas import RAGConfigPatchRequest
-    from apps.platform.services.rag_overview import RAGOverviewService
+from apps.platform.schemas.rag_schemas import RAGConfigPatchRequest
+from apps.platform.services.rag_overview import RAGOverviewService
 
 
 router = APIRouter(prefix="/api/studios/framework/rag", tags=["rag"])

@@ -50,7 +50,14 @@
     "scan_apps": "Scan for apps →",
     "api_port": "API :",
     "fe_port": "FE :",
-    "no_fe": "no FE"
+    "no_fe": "no FE",
+    "cat_all": "All Apps",
+    "cat_core": "Business Core",
+    "cat_studio": "Pro Studio",
+    "cat_governance": "Governance",
+    "cat_ops": "Ops & Infra",
+    "cat_daily": "Daily Tasks",
+    "cat_other": "Other"
   },
   "app_detail": {
     "back": "← Back to Apps",
@@ -352,6 +359,7 @@
     "field_display_name": "Display Name",
     "field_icon": "Icon",
     "field_engine_pattern": "Engine Pattern",
+    "field_category": "Category",
     "field_description": "Description",
     "field_flow_pattern": "Flow Pattern (optional)",
     "field_rdb": "RDB",

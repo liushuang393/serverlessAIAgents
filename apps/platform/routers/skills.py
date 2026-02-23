@@ -14,8 +14,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import APIRouter, HTTPException, Query
 
 
-if TYPE_CHECKING:
-    from apps.platform.services.skill_catalog import SkillCatalogService
+from apps.platform.services.skill_catalog import SkillCatalogService
 
 
 router = APIRouter(prefix="/api/studios/framework/skills", tags=["skills"])

@@ -16,8 +16,7 @@ from typing import TYPE_CHECKING, Any
 from fastapi import APIRouter, Query
 
 
-if TYPE_CHECKING:
-    from apps.platform.services.agent_aggregator import AgentAggregatorService
+from apps.platform.services.agent_aggregator import AgentAggregatorService
 
 
 router = APIRouter(prefix="/api/studios/framework/agents", tags=["agents"])

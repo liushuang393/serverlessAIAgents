@@ -152,6 +152,7 @@ class TestAppActions:
         assert data["app_name"] == "test_app"
         assert data["action"] == "start"
         assert "success" in data
+        assert "command_source" in data
 
     def test_stop_returns_action_result(self, test_client: TestClient) -> None:
         """stop 実行結果を返す."""
@@ -181,6 +182,26 @@ class TestRefreshApps:
         assert "new" in data
         assert "removed" in data
         assert "unchanged" in data
+
+
+class TestCLIEndpoints:
+    """CLI status/setup エンドポイント."""
+
+    def test_cli_status_endpoint(self, test_client: TestClient) -> None:
+        resp = test_client.get("/api/studios/framework/apps/test_app/cli/status")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["app_name"] == "test_app"
+        assert "status" in data
+        assert "tools" in data["status"]
+
+    def test_cli_setup_endpoint(self, test_client: TestClient) -> None:
+        resp = test_client.post("/api/studios/framework/apps/test_app/cli/setup")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["app_name"] == "test_app"
+        assert "setup" in data
+        assert "ready" in data["setup"]
 
 
 class TestMigrateManifests:

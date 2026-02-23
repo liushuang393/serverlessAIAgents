@@ -41,6 +41,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
   const [flowPattern, setFlowPattern] = useState('');
   const [database, setDatabase] = useState<DatabaseKind>('postgresql');
   const [vectorDatabase, setVectorDatabase] = useState<VectorDatabaseKind>('none');
+  const [selectedCategory, setSelectedCategory] = useState<CategoryId>('daily');
   const [frontendEnabled, setFrontendEnabled] = useState(true);
   const [redisEnabled, setRedisEnabled] = useState(false);
   const [ragEnabled, setRagEnabled] = useState(false);
@@ -107,7 +108,18 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
       display_name: displayName.trim(),
       description: description.trim(),
       icon: icon.trim() || '📦',
-      business_base: 'custom',
+      business_base: ((): any => {
+        const mapping: Record<CategoryId, string> = {
+          core: 'knowledge',
+          studio: 'media',
+          governance: 'governance',
+          ops: 'platform',
+          daily: 'custom',
+          all: 'custom', // should not happen
+          other: 'custom', // for robustness
+        };
+        return mapping[selectedCategory] || 'custom';
+      })(),
       product_line: 'framework',
       surface_profile: 'developer',
       audit_profile: 'developer',
@@ -241,6 +253,19 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                     {item.label}
                   </option>
                 ))}
+              </select>
+            </Field>
+            <Field label={t('app_create.field_category')}>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value as CategoryId)}
+                className="input"
+              >
+                <option value="core">{t('app_list.cat_core')}</option>
+                <option value="studio">{t('app_list.cat_studio')}</option>
+                <option value="governance">{t('app_list.cat_governance')}</option>
+                <option value="ops">{t('app_list.cat_ops')}</option>
+                <option value="daily">{t('app_list.cat_daily')}</option>
               </select>
             </Field>
           </div>

@@ -43,6 +43,7 @@ from typing import Any
 from apps.messaging_hub.coordinator import AssistantConfig, PersonalAssistantCoordinator
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
 
 from agentflow import WebSocketHub, get_llm
 from agentflow.channels import (
@@ -56,6 +57,7 @@ from agentflow.channels import (
 )
 from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 from agentflow.skills import ChatBotSkill, ConversationExportSkill, ExportFormat
+from agentflow.tools.cli.runtime_manager import CLIRuntimeManager
 
 
 # 配置日志
@@ -84,6 +86,8 @@ gateway = MessageGateway(hub, chatbot)
 
 # 后台任务列表
 background_tasks: list[asyncio.Task[None]] = []
+_cli_runtime = CLIRuntimeManager()
+_assistant_cli_proposals: dict[str, dict[str, Any]] = {}
 
 _APP_CONFIG_PATH = Path(__file__).resolve().parent / "app_config.json"
 _PUBLIC_PATHS = {
@@ -685,10 +689,23 @@ async def api_export(format: str = "json") -> JSONResponse:
 # =========================================================================
 
 
+class AssistantProcessRequest(BaseModel):
+    """Assistant 処理リクエスト."""
+
+    message: str = Field(..., min_length=1)
+    user_id: str = Field(default="default", min_length=1)
+
+
+class AssistantCLIExecuteRequest(BaseModel):
+    """CLI 提案実行リクエスト."""
+
+    proposal_id: str = Field(..., min_length=1)
+    confirm: bool = Field(default=False)
+
+
 @app.post("/assistant/process")
 async def process_assistant_request(
-    message: str,
-    user_id: str = "default",
+    request: AssistantProcessRequest,
 ) -> dict[str, Any]:
     """Personal Assistant にリクエストを処理させる.
 
@@ -708,8 +725,8 @@ async def process_assistant_request(
         処理結果（summary, key_points, actions, risks を含む）
     """
     try:
-        result = await assistant.process(message, user_id=user_id)
-        return {
+        result = await assistant.process(request.message, user_id=request.user_id)
+        response: dict[str, Any] = {
             "ok": True,
             "summary": result.get("summary", ""),
             "headline": result.get("headline", ""),
@@ -718,6 +735,15 @@ async def process_assistant_request(
             "risks": result.get("risks", []),
             "intent": result.get("intent", {}),
         }
+        if result.get("needs_cli_confirmation") is True:
+            proposal = result.get("cli_proposal")
+            if isinstance(proposal, dict):
+                proposal_id = str(proposal.get("proposal_id", "")).strip()
+                if proposal_id:
+                    _assistant_cli_proposals[proposal_id] = proposal
+                response["needs_cli_confirmation"] = True
+                response["cli_proposal"] = proposal
+        return response
     except Exception as e:
         logger.error("Assistant processing error: %s", e, exc_info=True)
         return {
@@ -725,6 +751,53 @@ async def process_assistant_request(
             "error": str(e),
             "summary": f"❌ 処理エラー: {e}",
         }
+
+
+@app.post("/assistant/cli/execute")
+async def execute_assistant_cli_proposal(request: AssistantCLIExecuteRequest) -> dict[str, Any]:
+    """承認済み CLI 提案を実行する."""
+    proposal = _assistant_cli_proposals.get(request.proposal_id)
+    if proposal is None:
+        return {
+            "ok": False,
+            "error": "proposal_not_found",
+            "summary": "指定された提案が見つかりません",
+        }
+    if request.confirm is not True:
+        return {
+            "ok": False,
+            "error": "confirmation_required",
+            "summary": "CLI 実行には confirm=true が必要です",
+        }
+
+    prompt = str(proposal.get("prompt", "")).strip()
+    if not prompt:
+        return {
+            "ok": False,
+            "error": "proposal_prompt_missing",
+            "summary": "提案に実行可能なプロンプトがありません",
+        }
+
+    diagnostic = await _cli_runtime.run_diagnostic_prompt(
+        prompt=prompt,
+        mode_override="read_only",
+    )
+    output = "\n".join(
+        text
+        for text in (diagnostic.get("stdout", ""), diagnostic.get("stderr", ""))
+        if isinstance(text, str) and text.strip()
+    ).strip()
+
+    return {
+        "ok": bool(diagnostic.get("success")),
+        "proposal_id": request.proposal_id,
+        "tool": diagnostic.get("tool"),
+        "command": diagnostic.get("command"),
+        "summary": output.splitlines()[0] if output else "CLI diagnostics executed",
+        "recommendation": "Review diagnostic output and apply fixes manually.",
+        "raw_output": output[-5000:] if output else "",
+        "error": diagnostic.get("error"),
+    }
 
 
 @app.get("/assistant/templates")

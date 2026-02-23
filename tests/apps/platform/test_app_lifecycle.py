@@ -211,7 +211,11 @@ class TestAppLifecycleManager:
         with patch(
             "apps.platform.services.app_lifecycle.asyncio.create_subprocess_exec",
             new=AsyncMock(return_value=_Proc()),
-        ) as mocked:
+        ) as mocked, patch.object(
+            lifecycle,
+            "_run_cli_preflight",
+            new=AsyncMock(return_value={"ready": True, "final": {"available_tools": [], "authenticated_tools": []}}),
+        ):
             result = await lifecycle.start_app(cfg, config_path=config_path)
 
         assert result.success is True
@@ -272,10 +276,117 @@ class TestAppLifecycleManager:
         with patch(
             "apps.platform.services.app_lifecycle.asyncio.create_subprocess_shell",
             new=AsyncMock(return_value=_Proc()),
-        ) as mocked:
+        ) as mocked, patch.object(
+            lifecycle,
+            "_run_cli_preflight",
+            new=AsyncMock(return_value={"ready": True, "final": {"available_tools": [], "authenticated_tools": []}}),
+        ):
             result = await lifecycle.start_local_dev(cfg, config_path=config_path)
 
         assert result.success is True
         assert result.error is None
         assert "backend: python -m apps.local_backend_only.main" in result.stdout
         mocked.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_start_prefers_readme_command_over_runtime(
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
+    ) -> None:
+        """README の start コマンドを runtime.commands より優先する."""
+        cfg = AppConfig(
+            name="readme_app",
+            display_name="README App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            ports={"api": None},
+            entry_points={"health": None},
+            runtime={"commands": {"start": "echo runtime-start"}},
+        )
+        app_dir = tmp_path / "readme_app"
+        app_dir.mkdir(parents=True)
+        (app_dir / "README.md").write_text(
+            "```bash\npython -m apps.readme_app.main --reload\n```",
+            encoding="utf-8",
+        )
+        config_path = app_dir / "app_config.json"
+        config_path.write_text("{}", encoding="utf-8")
+
+        class _Proc:
+            returncode = 0
+
+            async def communicate(self):
+                return b"ok", b""
+
+        with patch(
+            "apps.platform.services.app_lifecycle.asyncio.create_subprocess_exec",
+            new=AsyncMock(return_value=_Proc()),
+        ), patch.object(
+            lifecycle,
+            "_run_cli_preflight",
+            new=AsyncMock(return_value={"ready": True, "final": {"available_tools": [], "authenticated_tools": []}}),
+        ):
+            result = await lifecycle.start_app(cfg, config_path=config_path)
+
+        assert result.success is True
+        assert result.command[:2] == ["bash", "-lc"]
+        assert "apps.readme_app.main --reload" in result.command[2]
+        assert result.command_source == "readme"
+
+    @pytest.mark.asyncio
+    async def test_start_failure_includes_diagnostic_payload(
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
+    ) -> None:
+        """起動失敗時に diagnostic が付与される."""
+        cfg = AppConfig(
+            name="diag_app",
+            display_name="Diag App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            ports={"api": None},
+            entry_points={"health": None},
+            runtime={"commands": {"start": "echo fail"}},
+        )
+        app_dir = tmp_path / "diag_app"
+        app_dir.mkdir(parents=True)
+        (app_dir / "app_config.json").write_text("{}", encoding="utf-8")
+
+        class _Proc:
+            returncode = 1
+
+            async def communicate(self):
+                return b"", b"boom"
+
+        with patch(
+            "apps.platform.services.app_lifecycle.asyncio.create_subprocess_exec",
+            new=AsyncMock(return_value=_Proc()),
+        ), patch.object(
+            lifecycle,
+            "_run_cli_preflight",
+            new=AsyncMock(return_value={"ready": False, "final": {"available_tools": [], "authenticated_tools": []}}),
+        ), patch.object(
+            lifecycle._diagnostic_service,
+            "diagnose_action_failure",
+            new=AsyncMock(
+                return_value={
+                    "tool": "codex",
+                    "summary": "boom",
+                    "recommendations": ["check env"],
+                    "raw_output": "x",
+                    "setup": {"ready": False, "available_tools": [], "authenticated_tools": []},
+                    "command_source": "runtime.commands",
+                }
+            ),
+        ):
+            result = await lifecycle.start_app(cfg, config_path=app_dir / "app_config.json")
+
+        assert result.success is False
+        assert result.diagnostic is not None
+        assert result.diagnostic.get("summary") == "boom"

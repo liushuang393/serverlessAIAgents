@@ -1,5 +1,8 @@
-@import "tailwindcss";
+/* Google Fonts は @import "tailwindcss" より前に置く必要がある。
+   Tailwind v4 の @import "tailwindcss" はインライン展開されるため、
+   PostCSS から見ると @import url(...) がルールの後に来てしまいエラーになる。 */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
 
 :root {
   /* Premium Dark Palette (HSL for better control) */

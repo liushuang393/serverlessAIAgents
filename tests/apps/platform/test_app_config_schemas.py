@@ -218,6 +218,43 @@ class TestAppConfig:
         assert len(cfg.plugin_bindings) == 1
         assert cfg.plugin_bindings[0].id == "lang-cobol"
 
+    def test_runtime_cli_defaults(self) -> None:
+        """runtime.cli がデフォルトで初期化される."""
+        cfg = AppConfig(
+            name="cli_app",
+            display_name="CLI App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+        )
+        assert cfg.runtime.cli.preferred == ["codex", "claude"]
+        assert cfg.runtime.cli.codex.diagnostic_mode == "read_only"
+        assert cfg.runtime.cli.claude.diagnostic_mode == "read_only"
+
+    def test_runtime_cli_override(self) -> None:
+        """runtime.cli の上書き設定を受け付ける."""
+        cfg = AppConfig(
+            name="cli_override_app",
+            display_name="CLI Override App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            runtime={
+                "cli": {
+                    "preferred": ["claude", "codex"],
+                    "codex": {
+                        "executable": "codex-custom",
+                        "diagnostic_mode": "plan",
+                    },
+                }
+            },
+        )
+        assert cfg.runtime.cli.preferred == ["claude", "codex"]
+        assert cfg.runtime.cli.codex.executable == "codex-custom"
+        assert cfg.runtime.cli.codex.diagnostic_mode == "plan"
+
     def test_assistant_requires_security_mode(self) -> None:
         """assistant は security_mode 未指定を拒否する."""
         with pytest.raises(ValidationError, match="security_mode"):

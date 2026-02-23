@@ -24,6 +24,12 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any
 
 import httpx
+from agentflow.tools.cli.runtime_manager import CLIRuntimeManager
+from apps.platform.services.cli_diagnostic_service import CLIDiagnosticService
+from apps.platform.services.runtime_command_resolver import (
+    ResolvedRuntimeCommands,
+    RuntimeCommandResolver,
+)
 
 
 if TYPE_CHECKING:
@@ -36,7 +42,7 @@ _logger = logging.getLogger(__name__)
 
 # ヘルスチェックのタイムアウト（秒）
 _HEALTH_TIMEOUT = 2.0
-_ACTION_TIMEOUT = 300.0
+_ACTION_TIMEOUT = 900.0
 _HEALTH_FALLBACK_PATHS = ("/api/health", "/health", "/healthz")
 _HEALTHY_PAYLOAD_STATES = {"ok", "healthy", "up", "ready", "pass"}
 _NON_HEALTHY_PAYLOAD_STATES = {
@@ -128,7 +134,9 @@ class AppActionResult:
         "app_name",
         "checked_health",
         "command",
+        "command_source",
         "cwd",
+        "diagnostic",
         "error",
         "return_code",
         "stderr",
@@ -144,22 +152,26 @@ class AppActionResult:
         success: bool,
         command: list[str],
         cwd: str,
+        command_source: str = "fallback",
         return_code: int | None = None,
         stdout: str = "",
         stderr: str = "",
         error: str | None = None,
         checked_health: HealthCheckResult | None = None,
+        diagnostic: dict[str, Any] | None = None,
     ) -> None:
         self.app_name = app_name
         self.action = action
         self.success = success
         self.command = command
         self.cwd = cwd
+        self.command_source = command_source
         self.return_code = return_code
         self.stdout = stdout
         self.stderr = stderr
         self.error = error
         self.checked_health = checked_health
+        self.diagnostic = diagnostic
 
     def to_dict(self) -> dict[str, Any]:
         """辞書へ変換."""
@@ -168,6 +180,7 @@ class AppActionResult:
             "action": self.action,
             "success": self.success,
             "command": " ".join(shlex.quote(part) for part in self.command),
+            "command_source": self.command_source,
             "cwd": self.cwd,
             "return_code": self.return_code,
         }
@@ -179,6 +192,8 @@ class AppActionResult:
             data["error"] = self.error
         if self.checked_health is not None:
             data["health"] = self.checked_health.to_dict()
+        if self.diagnostic is not None:
+            data["diagnostic"] = self.diagnostic
         return data
 
 
@@ -192,6 +207,9 @@ class AppLifecycleManager:
         """初期化."""
         self._health_cache: dict[str, HealthCheckResult] = {}
         self._health_tasks: dict[str, asyncio.Task[HealthCheckResult]] = {}
+        self._command_resolver = RuntimeCommandResolver()
+        self._cli_runtime = CLIRuntimeManager()
+        self._diagnostic_service = CLIDiagnosticService(self._cli_runtime)
 
     async def check_health(
         self,
@@ -359,12 +377,14 @@ class AppLifecycleManager:
         config_path: Path | None = None,
     ) -> AppActionResult:
         """App を publish（docker compose up -d --build）する."""
+        preflight = await self._run_cli_preflight(config, enabled=True)
         return await self._run_compose_action(
             config,
             config_path=config_path,
             action="publish",
             compose_subcommand=["up", "-d", "--build"],
             run_health_check=True,
+            cli_preflight=preflight,
         )
 
     async def start_app(
@@ -374,12 +394,14 @@ class AppLifecycleManager:
         config_path: Path | None = None,
     ) -> AppActionResult:
         """App を起動（docker compose up -d）する."""
+        preflight = await self._run_cli_preflight(config, enabled=True)
         return await self._run_compose_action(
             config,
             config_path=config_path,
             action="start",
             compose_subcommand=["up", "-d"],
             run_health_check=True,
+            cli_preflight=preflight,
         )
 
     async def stop_app(
@@ -395,7 +417,18 @@ class AppLifecycleManager:
             action="stop",
             compose_subcommand=["down"],
             run_health_check=False,
+            cli_preflight=None,
         )
+
+    async def cli_status(self, config: AppConfig) -> dict[str, Any]:
+        """CLI 現在状態を取得する."""
+        runtime_cli = config.runtime.cli.model_dump()
+        return await self._cli_runtime.detect(runtime_cli)
+
+    async def cli_setup(self, config: AppConfig) -> dict[str, Any]:
+        """CLI の検出・インストール・認証を一括実行する."""
+        runtime_cli = config.runtime.cli.model_dump()
+        return await self._cli_runtime.preflight(runtime_cli)
 
     async def start_local_dev(
         self,
@@ -417,6 +450,8 @@ class AppLifecycleManager:
         """
         _logger.info("[%s] local_start 開始", config.name)
 
+        cli_preflight = await self._run_cli_preflight(config, enabled=True)
+
         if config_path is None:
             _logger.warning("[%s] config_path が None — 中断", config.name)
             return AppActionResult(
@@ -426,16 +461,29 @@ class AppLifecycleManager:
                 command=[],
                 cwd="",
                 error="app_config.json のパスが取得できません",
+                command_source="fallback",
             )
 
         # プロジェクトルートを取得（app_config.json の2階層上）
         project_root = config_path.parent.parent.parent
+        resolved_commands = self._resolve_runtime_commands(config, config_path)
 
-        # runtime.commands から開発コマンドを取得
-        backend_cmd = self._resolve_action_command(config, "backend_dev")
-        frontend_cmd = self._resolve_action_command(config, "frontend_dev")
+        backend_cmd = resolved_commands.get("backend_dev")
+        frontend_cmd = resolved_commands.get("frontend_dev")
 
         if backend_cmd is None and frontend_cmd is None:
+            diagnostic = await self._diagnostic_service.diagnose_action_failure(
+                app_config=config,
+                action="local_start",
+                config_path=config_path,
+                command=[],
+                cwd=str(project_root),
+                error="backend/frontend command is missing",
+                stdout="",
+                stderr="No backend_dev/frontend_dev command resolved from README/runtime",
+                preflight=cli_preflight,
+                command_source="fallback",
+            )
             return AppActionResult(
                 app_name=config.name,
                 action="local_start",
@@ -443,6 +491,8 @@ class AppLifecycleManager:
                 command=[],
                 cwd=str(project_root),
                 error="runtime.commands に backend_dev/frontend_dev が設定されていません",
+                command_source="fallback",
+                diagnostic=diagnostic,
             )
 
         results: list[str] = []
@@ -454,6 +504,21 @@ class AppLifecycleManager:
         )
         results.extend(preflight_notes)
         if preflight_error is not None:
+            diagnostic = await self._diagnostic_service.diagnose_action_failure(
+                app_config=config,
+                action="local_start",
+                config_path=config_path,
+                command=["bash", "-lc", backend_cmd or "", frontend_cmd or ""],
+                cwd=str(project_root),
+                error=preflight_error,
+                stdout="\n".join(results),
+                stderr="",
+                preflight=cli_preflight,
+                command_source=self._merge_command_source(
+                    resolved_commands.source.get("backend_dev", "fallback"),
+                    resolved_commands.source.get("frontend_dev", "fallback"),
+                ),
+            )
             return AppActionResult(
                 app_name=config.name,
                 action="local_start",
@@ -463,6 +528,11 @@ class AppLifecycleManager:
                 stdout="\n".join(results),
                 stderr="",
                 error=preflight_error,
+                command_source=self._merge_command_source(
+                    resolved_commands.source.get("backend_dev", "fallback"),
+                    resolved_commands.source.get("frontend_dev", "fallback"),
+                ),
+                diagnostic=diagnostic,
             )
 
         # バックエンド起動（バックグラウンド）
@@ -502,6 +572,24 @@ class AppLifecycleManager:
         success = len(errors) == 0 and len(results) > 0
         stdout_msg = "\n".join(results) if results else ""
         error_msg = "\n".join(errors) if errors else None
+        command_source = self._merge_command_source(
+            resolved_commands.source.get("backend_dev", "fallback"),
+            resolved_commands.source.get("frontend_dev", "fallback"),
+        )
+        diagnostic: dict[str, Any] | None = None
+        if not success:
+            diagnostic = await self._diagnostic_service.diagnose_action_failure(
+                app_config=config,
+                action="local_start",
+                config_path=config_path,
+                command=["bash", "-lc", backend_cmd or "", frontend_cmd or ""],
+                cwd=str(project_root),
+                error=error_msg,
+                stdout=stdout_msg,
+                stderr="",
+                preflight=cli_preflight,
+                command_source=command_source,
+            )
 
         return AppActionResult(
             app_name=config.name,
@@ -512,6 +600,8 @@ class AppLifecycleManager:
             stdout=stdout_msg,
             stderr="",
             error=error_msg,
+            command_source=command_source,
+            diagnostic=diagnostic,
         )
 
     async def _preflight_local_dependencies(
@@ -621,6 +711,7 @@ class AppLifecycleManager:
         action: str,
         compose_subcommand: list[str],
         run_health_check: bool,
+        cli_preflight: dict[str, Any] | None,
     ) -> AppActionResult:
         """docker compose を実行して App 操作を行う."""
         _logger.info(
@@ -644,10 +735,13 @@ class AppLifecycleManager:
                 command=[],
                 cwd="",
                 error=result.error,
+                command_source="fallback",
             )
 
         app_dir = config_path.parent
-        command_override = self._resolve_action_command(config, action)
+        resolved_commands = self._resolve_runtime_commands(config, config_path)
+        action_key = action if action in {"publish", "start", "stop"} else "start"
+        command_override = resolved_commands.get(action_key)  # type: ignore[arg-type]
         if command_override is not None:
             return await self._run_shell_action(
                 config,
@@ -656,6 +750,8 @@ class AppLifecycleManager:
                 action=action,
                 shell_command=command_override,
                 run_health_check=run_health_check,
+                cli_preflight=cli_preflight,
+                command_source=resolved_commands.source.get(action_key, "runtime.commands"),
             )
 
         compose_files = self._resolve_compose_files(app_dir, include_dev=True)
@@ -672,6 +768,7 @@ class AppLifecycleManager:
                 command=[],
                 cwd=str(app_dir),
                 error=(f"実行コマンド未設定かつ docker-compose.yml が見つかりません (dir={app_dir})"),
+                command_source="fallback",
             )
 
         command = ["docker", "compose"]
@@ -737,18 +834,34 @@ class AppLifecycleManager:
                 details={"message": "停止コマンドを実行しました"},
             )
             self._health_cache[config.name] = checked_health
+        diagnostic: dict[str, Any] | None = None
+        if not success:
+            diagnostic = await self._diagnostic_service.diagnose_action_failure(
+                app_config=config,
+                action=action,
+                config_path=config_path,
+                command=command,
+                cwd=str(app_dir),
+                error=error,
+                stdout=stdout,
+                stderr=stderr,
+                preflight=cli_preflight,
+                command_source="fallback",
+            )
 
         return AppActionResult(
             app_name=config.name,
             action=action,
             success=success,
             command=command,
+            command_source="fallback",
             cwd=str(app_dir),
             return_code=None if proc is None else proc.returncode,
             stdout=self._trim_output(stdout),
             stderr=self._trim_output(stderr),
             error=error,
             checked_health=checked_health,
+            diagnostic=diagnostic,
         )
 
     async def _run_shell_action(
@@ -760,6 +873,8 @@ class AppLifecycleManager:
         action: str,
         shell_command: str,
         run_health_check: bool,
+        cli_preflight: dict[str, Any] | None,
+        command_source: str,
     ) -> AppActionResult:
         """runtime.commands の shell コマンドを実行."""
         command = ["bash", "-lc", shell_command]
@@ -822,18 +937,34 @@ class AppLifecycleManager:
                 details={"message": "停止コマンドを実行しました"},
             )
             self._health_cache[config.name] = checked_health
+        diagnostic: dict[str, Any] | None = None
+        if not success:
+            diagnostic = await self._diagnostic_service.diagnose_action_failure(
+                app_config=config,
+                action=action,
+                config_path=config_path,
+                command=command,
+                cwd=str(app_dir),
+                error=error,
+                stdout=stdout,
+                stderr=stderr,
+                preflight=cli_preflight,
+                command_source=command_source,
+            )
 
         return AppActionResult(
             app_name=config.name,
             action=action,
             success=success,
             command=command,
+            command_source=command_source,
             cwd=str(app_dir),
             return_code=None if proc is None else proc.returncode,
             stdout=self._trim_output(stdout),
             stderr=self._trim_output(stderr),
             error=error,
             checked_health=checked_health,
+            diagnostic=diagnostic,
         )
 
     def get_cached_health(self, app_name: str) -> HealthCheckResult | None:
@@ -1122,6 +1253,53 @@ class AppLifecycleManager:
             return None
         stripped = value.strip()
         return stripped if stripped else None
+
+    async def _run_cli_preflight(self, config: AppConfig, *, enabled: bool) -> dict[str, Any] | None:
+        """CLI preflight を実行する（失敗時も例外を投げない）."""
+        if not enabled:
+            return None
+        try:
+            runtime_cli = config.runtime.cli.model_dump()
+            return await self._cli_runtime.preflight(runtime_cli)
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            return {
+                "ready": False,
+                "error": str(exc),
+                "final": {"available_tools": [], "authenticated_tools": []},
+            }
+
+    def _resolve_runtime_commands(
+        self,
+        config: AppConfig,
+        config_path: Path | None,
+    ) -> ResolvedRuntimeCommands:
+        """README 優先で runtime command を解決."""
+        if config_path is None:
+            return ResolvedRuntimeCommands(
+                backend_dev=self._resolve_action_command(config, "backend_dev"),
+                frontend_dev=self._resolve_action_command(config, "frontend_dev"),
+                publish=self._resolve_action_command(config, "publish"),
+                start=self._resolve_action_command(config, "start"),
+                stop=self._resolve_action_command(config, "stop"),
+                source={
+                    "backend_dev": "runtime.commands",
+                    "frontend_dev": "runtime.commands",
+                    "publish": "runtime.commands",
+                    "start": "runtime.commands",
+                    "stop": "runtime.commands",
+                },
+            )
+        return self._command_resolver.resolve(
+            app_name=config.name,
+            app_dir=config_path.parent,
+            runtime_commands=config.runtime.commands,
+        )
+
+    @staticmethod
+    def _merge_command_source(primary: str, secondary: str) -> str:
+        if primary == secondary:
+            return primary
+        return f"{primary}+{secondary}"
 
     @staticmethod
     def _is_tcp_port_open(host: str, port: int, timeout: float) -> bool:

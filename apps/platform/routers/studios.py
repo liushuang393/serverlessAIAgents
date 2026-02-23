@@ -15,8 +15,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 
-if TYPE_CHECKING:
-    from apps.platform.services.studio_service import StudioService
+# TYPE_CHECKING removed as StudioService is already imported
 
 
 router = APIRouter(prefix="/api/studios", tags=["studios"])

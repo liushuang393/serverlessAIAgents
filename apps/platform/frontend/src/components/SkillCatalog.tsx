@@ -7,10 +7,8 @@
 import { useEffect, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '../i18n';
-import { useI18n } from '../i18n';
 
 export function SkillCatalog() {
-  const { t } = useI18n();
   const { t } = useI18n();
   const {
     skills,
@@ -64,9 +62,8 @@ export function SkillCatalog() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => handleFilter('')}
-              className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                selectedTag === '' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-              }`}
+              className={`px-3 py-1.5 text-xs rounded-full transition-colors ${selectedTag === '' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                }`}
             >
               {t('skill.all')}
             </button>
@@ -74,9 +71,8 @@ export function SkillCatalog() {
               <button
                 key={tag.tag}
                 onClick={() => handleFilter(tag.tag)}
-                className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                  selectedTag === tag.tag ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                }`}
+                className={`px-3 py-1.5 text-xs rounded-full transition-colors ${selectedTag === tag.tag ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
               >
                 {tag.tag} <span className="ml-1 opacity-60">({tag.count})</span>
               </button>

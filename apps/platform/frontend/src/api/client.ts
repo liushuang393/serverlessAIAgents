@@ -148,6 +148,26 @@ export async function localStartApp(appName: string): Promise<AppActionResponse>
   return data;
 }
 
+/** App CLI ステータス */
+export async function fetchAppCLIStatus(
+  appName: string,
+): Promise<{ app_name: string; status: Record<string, unknown> }> {
+  const { data } = await api.get<{ app_name: string; status: Record<string, unknown> }>(
+    `${FRAMEWORK_APPS_BASE}/${appName}/cli/status`,
+  );
+  return data;
+}
+
+/** App CLI セットアップ */
+export async function setupAppCLI(
+  appName: string,
+): Promise<{ app_name: string; setup: Record<string, unknown> }> {
+  const { data } = await longRunningApi.post<{ app_name: string; setup: Record<string, unknown> }>(
+    `${FRAMEWORK_APPS_BASE}/${appName}/cli/setup`,
+  );
+  return data;
+}
+
 /** App 一覧を再スキャン */
 export async function refreshApps(): Promise<RefreshResponse> {
   const { data } = await api.post<RefreshResponse>(`${FRAMEWORK_APPS_BASE}/refresh`);

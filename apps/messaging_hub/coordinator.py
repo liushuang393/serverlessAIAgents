@@ -18,6 +18,7 @@ messaging_hub固有の主管向けパーソナルアシスタント。
 from __future__ import annotations
 
 import logging
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -117,6 +118,53 @@ class PersonalAssistantCoordinator:
                 "管理者に承認を依頼してください",
                 "必要であれば autonomous モードを明示的に有効化してください",
             ],
+        }
+
+    @staticmethod
+    def _is_troubleshooting_message(message: str) -> bool:
+        """CLI 提案対象のトラブルシュート要求か判定."""
+        lowered = message.strip().lower()
+        keywords = [
+            "error",
+            "failed",
+            "fail",
+            "cannot start",
+            "can't start",
+            "debug",
+            "diagnose",
+            "investigate",
+            "排查",
+            "报错",
+            "启动失败",
+            "修复",
+            "不工作",
+        ]
+        return any(keyword in lowered for keyword in keywords)
+
+    def _should_propose_cli(self, *, message: str, intent: Intent) -> bool:
+        """低信頼/未知意図でトラブルシュート要求なら CLI 提案へ誘導."""
+        if not self._is_troubleshooting_message(message):
+            return False
+        if intent.category == IntentCategory.UNKNOWN:
+            return True
+        return intent.confidence < 0.45
+
+    @staticmethod
+    def _build_cli_proposal(message: str, intent: Intent) -> dict[str, Any]:
+        """CLI 実行前の提案ペイロード."""
+        prompt = (
+            "Investigate this issue in read-only mode, identify likely root causes, "
+            "and provide safe remediation steps.\n\n"
+            f"User message: {message}\n"
+            f"Intent category: {intent.category.value}\n"
+            f"Intent confidence: {intent.confidence:.2f}\n"
+        )
+        return {
+            "proposal_id": str(uuid.uuid4()),
+            "tool_candidates": ["codex", "claude"],
+            "mode": "read_only",
+            "prompt": prompt,
+            "rationale": "intent confidence is low/unknown and troubleshooting intent is detected",
         }
 
     def _register_templates(self) -> None:
@@ -305,6 +353,33 @@ class PersonalAssistantCoordinator:
                 intent.template_name,
                 intent.confidence,
             )
+
+            if self._should_propose_cli(message=message, intent=intent):
+                proposal = self._build_cli_proposal(message, intent)
+                return {
+                    "summary": "🧭 この問題は CLI 調査が有効です。提案内容を確認後、実行可否を選択してください。",
+                    "headline": "CLI 調査提案",
+                    "key_points": [
+                        "低信頼度の意図解析結果を検出",
+                        "トラブルシュート要求キーワードを検出",
+                    ],
+                    "actions": [
+                        "提案された CLI 調査を確認する",
+                        "必要であれば実行を承認する",
+                    ],
+                    "risks": [
+                        "調査中に環境情報へアクセスする可能性があります",
+                    ],
+                    "needs_cli_confirmation": True,
+                    "cli_proposal": proposal,
+                    "raw_results": {"proposal": proposal},
+                    "intent": {
+                        "category": intent.category.value,
+                        "template": intent.template_name,
+                        "confidence": intent.confidence,
+                        "parameters": intent.parameters,
+                    },
+                }
 
             # 2. カテゴリ別処理
             if intent.category == IntentCategory.TASK_EXECUTION:

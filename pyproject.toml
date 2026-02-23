@@ -51,6 +51,11 @@ dependencies = [
 
     # Logging
     "structlog>=24.0.0",
+
+    # Observability
+    # Keep OTel minor version aligned with google-adk (via adk-agui-middleware)
+    # to prevent mixed 1.37.x/1.39.x dependency trees in shared Conda envs.
+    "opentelemetry-exporter-otlp-proto-grpc>=1.37.0,<1.38.0",
 ]
 
 [project.urls]

@@ -37,11 +37,33 @@ export interface RuntimeCommands {
   stop: string | null;
 }
 
+export interface RuntimeCLIAuth {
+  status: string[] | null;
+  api_key_env: string | null;
+  api_key_login: string[] | null;
+  interactive_login: string[] | null;
+}
+
+export interface RuntimeCLITool {
+  executable: string | null;
+  install_commands: string[][];
+  auth: RuntimeCLIAuth;
+  diagnostic_mode: 'read_only' | 'plan';
+  diagnostic_command: string[] | null;
+}
+
+export interface RuntimeCLIConfig {
+  preferred: Array<'codex' | 'claude'>;
+  codex: RuntimeCLITool;
+  claude: RuntimeCLITool;
+}
+
 /** ランタイム設定 */
 export interface RuntimeConfig {
   urls: RuntimeUrls;
   database: RuntimeDatabase;
   commands: RuntimeCommands;
+  cli: RuntimeCLIConfig;
 }
 
 /** ポート設定 */
@@ -89,6 +111,7 @@ export interface AppListItem {
     mode: 'private' | 'public' | 'tenant_allowlist';
     tenants: string[];
   };
+  business_base: BusinessBaseKind;
 }
 
 /** App 詳細（GET /api/studios/framework/apps/{name} 用） */
@@ -184,12 +207,30 @@ export interface AppActionResponse {
   action: 'publish' | 'start' | 'stop' | string;
   success: boolean;
   command: string;
+  command_source: string;
   cwd: string;
   return_code: number | null;
   stdout?: string;
   stderr?: string;
   error?: string;
   health?: HealthCheckResult;
+  diagnostic?: ActionDiagnostic;
+}
+
+export interface ActionDiagnostic {
+  tool?: string | null;
+  setup?: {
+    ready: boolean;
+    available_tools: string[];
+    authenticated_tools: string[];
+  };
+  summary?: string;
+  recommendations?: string[];
+  raw_output?: string;
+  command_source?: string;
+  diagnostic_success?: boolean;
+  diagnostic_command?: string | null;
+  diagnostic_error?: string | null;
 }
 
 /** App 一覧レスポンス */

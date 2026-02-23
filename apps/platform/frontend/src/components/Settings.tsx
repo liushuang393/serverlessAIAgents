@@ -7,7 +7,6 @@
 import { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useI18n } from '../i18n';
-import { useI18n } from '../i18n';
 
 export function Settings() {
   const { t } = useI18n();

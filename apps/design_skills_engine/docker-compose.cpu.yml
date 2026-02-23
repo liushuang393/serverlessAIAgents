@@ -13,8 +13,11 @@ services:
   comfyui:
     # CPU 実行向けイメージを明示（GPU/CUDA イメージを避ける）
     image: ${COMFYUI_IMAGE_CPU:-yanwk/comfyui-boot:cpu}
-    # GPU 予約を削除 (deploy セクション全体をオーバーライド)
-    deploy: {}
+    # GPU 予約を削除
+    deploy:
+      resources:
+        reservations:
+          devices: []
     environment:
       - COMFYUI_EXTRA_ARGS=--cpu
     healthcheck:

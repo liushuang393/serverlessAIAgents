@@ -87,6 +87,81 @@
       "publish": null,
       "start": null,
       "stop": null
+    },
+    "cli": {
+      "preferred": [
+        "codex",
+        "claude"
+      ],
+      "codex": {
+        "executable": "codex",
+        "install_commands": [
+          [
+            "npm",
+            "install",
+            "-g",
+            "@openai/codex"
+          ]
+        ],
+        "auth": {
+          "status": [
+            "codex",
+            "login",
+            "status"
+          ],
+          "api_key_env": "OPENAI_API_KEY",
+          "api_key_login": [
+            "codex",
+            "login",
+            "--with-api-key"
+          ],
+          "interactive_login": [
+            "codex",
+            "login"
+          ]
+        },
+        "diagnostic_mode": "read_only",
+        "diagnostic_command": [
+          "codex",
+          "exec",
+          "--skip-git-repo-check",
+          "--sandbox",
+          "read-only"
+        ]
+      },
+      "claude": {
+        "executable": "claude",
+        "install_commands": [
+          [
+            "npm",
+            "install",
+            "-g",
+            "@anthropic-ai/claude-code"
+          ]
+        ],
+        "auth": {
+          "status": [
+            "claude",
+            "auth",
+            "status",
+            "--json"
+          ],
+          "api_key_env": "ANTHROPIC_API_KEY",
+          "api_key_login": null,
+          "interactive_login": [
+            "claude",
+            "auth",
+            "login"
+          ]
+        },
+        "diagnostic_mode": "plan",
+        "diagnostic_command": [
+          "claude",
+          "-p",
+          "--permission-mode",
+          "plan"
+        ]
+      }
     }
   },
   "tags": ["platform", "management", "gallery", "publish", "dashboard"],

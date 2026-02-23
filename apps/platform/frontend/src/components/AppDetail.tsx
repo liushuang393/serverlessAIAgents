@@ -213,8 +213,45 @@ export function AppDetail() {
                 {actionResult.action.toUpperCase()} {actionResult.success ? t('app_detail.health_check_completed') : t('app_detail.health_check_failed')}
               </p>
               <p className="text-xs text-slate-300 font-mono break-all">{actionResult.command}</p>
+              <p className="text-[11px] text-slate-400">
+                source: {actionResult.command_source}
+              </p>
               {actionResult.error && (
                 <p className="text-xs text-red-300">{actionResult.error}</p>
+              )}
+              {actionResult.diagnostic && (
+                <div className="mt-3 p-3 rounded-lg border border-slate-700/60 bg-slate-950/40 space-y-2">
+                  <p className="text-xs text-slate-300">
+                    CLI: {actionResult.diagnostic.tool ?? 'N/A'} / setup:
+                    {' '}
+                    {actionResult.diagnostic.setup?.ready ? 'ready' : 'not ready'}
+                  </p>
+                  {actionResult.diagnostic.summary && (
+                    <p className="text-xs text-amber-200">{actionResult.diagnostic.summary}</p>
+                  )}
+                  {actionResult.diagnostic.recommendations && actionResult.diagnostic.recommendations.length > 0 && (
+                    <ul className="text-xs text-slate-300 list-disc pl-5 space-y-1">
+                      {actionResult.diagnostic.recommendations.slice(0, 5).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {actionResult.diagnostic.diagnostic_command && (
+                    <p className="text-[11px] text-slate-400 font-mono break-all">
+                      diagnostic: {actionResult.diagnostic.diagnostic_command}
+                    </p>
+                  )}
+                  {actionResult.diagnostic.raw_output && (
+                    <details>
+                      <summary className="text-xs text-slate-400 cursor-pointer">
+                        diagnostic output
+                      </summary>
+                      <pre className="mt-2 max-h-48 overflow-auto rounded-md bg-black/30 p-2 text-[11px] text-slate-300 whitespace-pre-wrap">
+                        {actionResult.diagnostic.raw_output}
+                      </pre>
+                    </details>
+                  )}
+                </div>
               )}
             </div>
           )}

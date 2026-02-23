@@ -11,7 +11,43 @@ import { useAppStore } from '@/store/useAppStore';
 import type { AppStatus, PortConflictReport } from '@/types';
 import { AppHealthBadge } from './AppHealthBadge';
 import { AppCreateModal } from './AppCreateModal';
+import { CategoryNav, type CategoryId } from './CategoryNav';
 import { useI18n } from '../i18n';
+
+const getAppCategory = (app: any): CategoryId => {
+  // 1. Explicit override by name for known apps
+  const MANUAL_MAP: Record<string, CategoryId> = {
+    faq_system: 'core',
+    market_trend_monitor: 'core',
+    code_migration_assistant: 'studio',
+    design_skills_engine: 'studio',
+    decision_governance_engine: 'governance',
+    auth_service: 'ops',
+    messaging_hub: 'ops',
+    orchestration_guardian: 'ops',
+    platform: 'ops',
+  };
+  if (MANUAL_MAP[app.name]) return MANUAL_MAP[app.name];
+
+  // 2. Map by business_base from backend
+  const BASE_MAP: Record<string, CategoryId> = {
+    knowledge: 'core',
+    reasoning: 'core',
+    interaction: 'core',
+    media: 'studio',
+    governance: 'governance',
+    platform: 'ops',
+    operations: 'ops',
+    integration: 'ops',
+    custom: 'daily',
+  };
+  if (app.business_base && BASE_MAP[app.business_base]) {
+    return BASE_MAP[app.business_base];
+  }
+
+  // 3. Fallback to daily (日常作業) as requested by user
+  return 'daily';
+};
 
 export function AppList() {
   const { t } = useI18n();
@@ -25,6 +61,11 @@ export function AppList() {
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | AppStatus>('all');
   const [sortKey, setSortKey] = useState<'name' | 'api' | 'frontend'>('name');
+  const [activeCategory, setActiveCategory] = useState<CategoryId>('all');
+  const [pinnedApps, setPinnedApps] = useState<string[]>(() => {
+    const saved = localStorage.getItem('agentflow_pinned_apps');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   useEffect(() => {
     loadApps();
@@ -59,6 +100,16 @@ export function AppList() {
     }
   };
 
+  const togglePin = (name: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const next = pinnedApps.includes(name)
+      ? pinnedApps.filter((n) => n !== name)
+      : [...pinnedApps, name];
+    setPinnedApps(next);
+    localStorage.setItem('agentflow_pinned_apps', JSON.stringify(next));
+  };
+
   const statusCounts = useMemo(() => {
     const counts: Record<'healthy' | 'unhealthy' | 'unknown' | 'stopped', number> = {
       healthy: 0,
@@ -78,6 +129,10 @@ export function AppList() {
       if (statusFilter !== 'all' && app.status !== statusFilter) {
         return false;
       }
+      if (activeCategory !== 'all') {
+        const cat = getAppCategory(app);
+        if (cat !== activeCategory) return false;
+      }
       if (!lowerKeyword) {
         return true;
       }
@@ -95,6 +150,12 @@ export function AppList() {
     });
 
     return [...matches].sort((a, b) => {
+      // Pinned apps come first
+      const aPinned = pinnedApps.includes(a.name);
+      const bPinned = pinnedApps.includes(b.name);
+      if (aPinned && !bPinned) return -1;
+      if (!aPinned && bPinned) return 1;
+
       if (sortKey === 'api') {
         return (a.ports.api ?? Number.MAX_SAFE_INTEGER) - (b.ports.api ?? Number.MAX_SAFE_INTEGER);
       }
@@ -103,7 +164,7 @@ export function AppList() {
       }
       return a.display_name.localeCompare(b.display_name, 'ja');
     });
-  }, [apps, keyword, statusFilter, sortKey]);
+  }, [apps, keyword, statusFilter, sortKey, activeCategory, pinnedApps]);
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
@@ -112,7 +173,7 @@ export function AppList() {
         <div>
           <h1 className="text-2xl font-bold text-slate-100">{t('app_list.title')}</h1>
           <p className="text-sm text-slate-500 mt-1">
-            {t('app_list.registered_count').replaceAll('{count}', String(totalApps))}
+            {t('app_list.registered_count').replace(/{count}/g, String(totalApps))}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -137,14 +198,19 @@ export function AppList() {
         </div>
       </div>
 
+      <CategoryNav activeCategory={activeCategory} onSelect={setActiveCategory} />
+
       <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <input
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder={t('app_list.search_placeholder')}
-            className="input"
-          />
+          <div className="relative">
+            <input
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder={t('app_list.search_placeholder')}
+              className="input pl-9"
+            />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">🔍</span>
+          </div>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as 'all' | AppStatus)}
@@ -167,12 +233,23 @@ export function AppList() {
           </select>
         </div>
         <div className="flex flex-wrap gap-2 text-xs text-slate-400">
-          <span className="px-2 py-1 rounded-md bg-slate-800/70">{t('app_list.healthy_count').replaceAll('{count}', String(statusCounts.healthy))}</span>
-          <span className="px-2 py-1 rounded-md bg-slate-800/70">{t('app_list.unhealthy_count').replaceAll('{count}', String(statusCounts.unhealthy))}</span>
-          <span className="px-2 py-1 rounded-md bg-slate-800/70">{t('app_list.unknown_count').replaceAll('{count}', String(statusCounts.unknown))}</span>
-          <span className="px-2 py-1 rounded-md bg-slate-800/70">{t('app_list.stopped_count').replaceAll('{count}', String(statusCounts.stopped))}</span>
-          <span className="px-2 py-1 rounded-md bg-indigo-500/10 text-indigo-300">
-            {t('app_list.filtered_count').replaceAll('{count}', String(filteredApps.length))}
+          <span className="px-2 py-1 rounded-md bg-slate-800/70 border border-slate-700/50">
+            🟢 {t('app_list.healthy_count').replace(/{count}/g, String(statusCounts.healthy))}
+          </span>
+          <span className="px-2 py-1 rounded-md bg-slate-800/70 border border-slate-700/50">
+            🔴 {t('app_list.unhealthy_count').replace(/{count}/g, String(statusCounts.unhealthy))}
+          </span>
+          <span className="px-2 py-1 rounded-md bg-slate-800/70 border border-slate-700/50">
+            ⚪ {t('app_list.unknown_count').replace(/{count}/g, String(statusCounts.unknown))}
+          </span>
+          <span className="px-2 py-1 rounded-md bg-slate-800/70 border border-slate-700/50">
+            ⏹️ {t('app_list.stopped_count').replace(/{count}/g, String(statusCounts.stopped))}
+          </span>
+          <span className="px-2 py-1 rounded-md bg-slate-800/70 border border-slate-700/50">
+            📒 {t('app_list.cat_daily')}
+          </span>
+          <span className="px-2 py-1 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+            ✨ {t('app_list.filtered_count').replace(/{count}/g, String(filteredApps.length))}
           </span>
         </div>
       </div>
@@ -228,57 +305,82 @@ export function AppList() {
           {filteredApps.map((app) => {
             const backendUrl = app.ports.api ? `http://localhost:${app.ports.api}` : (app.urls?.backend ?? null);
             const frontendUrl = app.ports.frontend ? `http://localhost:${app.ports.frontend}` : (app.urls?.frontend ?? null);
+            const isPinned = pinnedApps.includes(app.name);
+
             return (
               <Link
                 key={app.name}
                 to={`/apps/${app.name}`}
-                className="bg-slate-900/50 border border-slate-800 rounded-xl p-5 hover:border-indigo-500/40 hover:bg-slate-900/80 transition-all group"
+                className="group relative bg-slate-900/40 border border-slate-800 rounded-2xl p-5 hover:border-indigo-500/50 hover:bg-slate-900/80 transition-all duration-300 overflow-hidden"
               >
-              <div className="flex items-start justify-between mb-2">
-                <span className="text-3xl">{app.icon}</span>
-                <AppHealthBadge status={app.status} />
-              </div>
-              <h3 className="text-base font-semibold text-slate-200 group-hover:text-indigo-400 transition-colors">
-                {app.display_name}
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">{app.name}</p>
-              {app.description && (
-                <p className="text-xs text-slate-400 mt-2 line-clamp-2">{app.description}</p>
-              )}
+                {/* Decoration background */}
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors" />
 
-              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mt-3">
-                <span>v{app.version}</span>
-                <span className="px-2 py-0.5 bg-slate-800/80 rounded-md">API:{app.ports.api ?? '-'}</span>
-                <span className="px-2 py-0.5 bg-slate-800/80 rounded-md">FE:{app.ports.frontend ?? '-'}</span>
-                <span className="px-2 py-0.5 bg-slate-800/80 rounded-md">DB:{app.ports.db ?? '-'}</span>
-                <span className="px-2 py-0.5 bg-slate-800/80 rounded-md">🤖 {app.agent_count}</span>
-              </div>
-
-                <div className="mt-3 space-y-1">
-                  {backendUrl && (
-                    <p className="text-[11px] text-slate-500 font-mono truncate">BE: {backendUrl}</p>
-                  )}
-                  {frontendUrl && (
-                    <p className="text-[11px] text-slate-500 font-mono truncate">FE: {frontendUrl}</p>
-                  )}
-                </div>
-              {app.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-3">
-                  {app.tags.slice(0, 4).map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2 py-0.5 bg-slate-800/80 text-slate-400 text-[10px] rounded-full"
+                <div className="flex items-start justify-between relative z-10">
+                  <div className="flex items-center gap-3">
+                    <span className="text-4xl filter drop-shadow-md group-hover:scale-110 transition-transform duration-300">
+                      {app.icon}
+                    </span>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-100 group-hover:text-indigo-400 transition-colors leading-tight">
+                        {app.display_name}
+                      </h3>
+                      <p className="text-[10px] text-slate-500 font-mono mt-0.5 uppercase tracking-wider">
+                        {app.name}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <AppHealthBadge status={app.status} />
+                    <button
+                      onClick={(e) => togglePin(app.name, e)}
+                      className={`text-lg transition-all duration-300 hover:scale-125 ${isPinned ? 'grayscale-0 opacity-100' : 'grayscale opacity-30 hover:opacity-100 hover:grayscale-0'
+                        }`}
+                      title={isPinned ? 'Unpin' : 'Pin to top'}
                     >
-                      {tag}
-                    </span>
-                  ))}
-                  {app.tags.length > 4 && (
-                    <span className="px-2 py-0.5 text-slate-500 text-[10px]">
-                      +{app.tags.length - 4}
+                      📌
+                    </button>
+                  </div>
+                </div>
+
+                {app.description && (
+                  <p className="text-xs text-slate-400 mt-4 line-clamp-2 leading-relaxed min-h-[2.5rem]">
+                    {app.description}
+                  </p>
+                )}
+
+                <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 mt-4">
+                  <span className="px-2 py-0.5 bg-slate-800/80 rounded-full border border-slate-700/50">v{app.version}</span>
+                  {app.ports.api && (
+                    <span className="px-2 py-0.5 bg-indigo-500/10 text-indigo-300/80 rounded-full border border-indigo-500/20">
+                      API:{app.ports.api}
                     </span>
                   )}
+                  {app.ports.frontend && (
+                    <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-300/80 rounded-full border border-emerald-500/20">
+                      FE:{app.ports.frontend}
+                    </span>
+                  )}
+                  <span className="px-2 py-0.5 bg-slate-800/80 rounded-full border border-slate-700/50">🤖 {app.agent_count}</span>
                 </div>
-              )}
+
+                <div className="mt-4 pt-4 border-t border-slate-800/60 flex flex-wrap gap-1.5">
+                  {app.tags.length > 0 ? (
+                    app.tags.slice(0, 3).map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-2 py-0.5 bg-slate-800/40 text-slate-500 text-[9px] rounded-md border border-slate-800/50"
+                      >
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-[9px] text-slate-600 italic">no tags</span>
+                  )}
+                  {app.tags.length > 3 && (
+                    <span className="text-[9px] text-slate-600">+{app.tags.length - 3}</span>
+                  )}
+                </div>
               </Link>
             );
           })}
@@ -306,7 +408,7 @@ export function AppList() {
         onClose={() => setCreateOpen(false)}
         onCreated={(created) => {
           refresh();
-          fetchPortConflicts().then((report) => setConflicts(report)).catch(() => {});
+          fetchPortConflicts().then((report) => setConflicts(report)).catch(() => { });
           navigate(`/apps/${created.app_name}`);
         }}
       />

@@ -40,8 +40,26 @@ def start_docker_dependencies(app_dir: Path):
     print(f"Checking for infrastructure services in {compose_file}...")
 
     try:
+        # Check if CPU override is needed (e.g. on WSL without NVIDIA or explicitly requested)
+        cpu_override = app_dir / "docker-compose.cpu.yml"
+        compose_cmd = ["docker", "compose"]
+        if compose_file.exists():
+            compose_cmd.extend(["-f", compose_file.name])
+        if cpu_override.exists():
+            # Check for NVIDIA GPU
+            has_gpu = False
+            try:
+                subprocess.run(["nvidia-smi"], capture_output=True, check=True)
+                has_gpu = True
+            except (subprocess.CalledProcessError, FileNotFoundError):
+                has_gpu = False
+            
+            if not has_gpu:
+                print("No GPU detected, using CPU override...")
+                compose_cmd.extend(["-f", cpu_override.name])
+
         result = subprocess.run(
-            ["docker", "compose", "config", "--services"], cwd=str(app_dir), capture_output=True, text=True, check=True
+            compose_cmd + ["config", "--services"], cwd=str(app_dir), capture_output=True, text=True, check=True
         )
         all_services = result.stdout.strip().split("\n")
 
@@ -53,7 +71,7 @@ def start_docker_dependencies(app_dir: Path):
             return
 
         print(f"Starting infrastructure services: {', '.join(services_to_start)}")
-        subprocess.run(["docker", "compose", "up", "-d", *services_to_start], cwd=str(app_dir), check=True)
+        subprocess.run(compose_cmd + ["up", "-d", *services_to_start], cwd=str(app_dir), check=True)
         print("Infrastructure services started.")
 
     except subprocess.CalledProcessError as e:

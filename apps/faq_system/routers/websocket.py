@@ -8,13 +8,13 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from apps.faq_system.backend.auth.dependencies import resolve_user
 from apps.faq_system.routers.dependencies import (
     extract_assistant_content,
     get_chat_history_service,
     get_faq_agent,
     register_artifacts,
     resolve_session_id,
-    resolve_user,
 )
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 

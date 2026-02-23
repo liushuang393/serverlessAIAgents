@@ -50,7 +50,14 @@
     "scan_apps": "Scan for apps →",
     "api_port": "API :",
     "fe_port": "FE :",
-    "no_fe": "no FE"
+    "no_fe": "no FE",
+    "cat_all": "All Apps",
+    "cat_core": "Business Core",
+    "cat_studio": "Pro Studio",
+    "cat_governance": "Governance",
+    "cat_ops": "Ops & Infra",
+    "cat_daily": "日々の仕事",
+    "cat_other": "その他"
   },
   "app_detail": {
     "back": "← Back to Apps",
@@ -351,7 +358,8 @@
     "field_name": "App 名 (snake_case)",
     "field_display_name": "表示名",
     "field_icon": "アイコン",
-    "field_engine_pattern": "Engine Pattern",
+    "field_engine_pattern": "実行エンジン",
+    "field_category": "カテゴリー",
     "field_description": "説明",
     "field_flow_pattern": "Flow Pattern (任意)",
     "field_rdb": "RDB",

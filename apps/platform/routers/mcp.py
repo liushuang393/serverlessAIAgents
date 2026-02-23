@@ -7,12 +7,11 @@ from typing import TYPE_CHECKING, Any
 from fastapi import APIRouter, HTTPException
 
 
-if TYPE_CHECKING:
-    from apps.platform.schemas.provisioning_schemas import (
-        MCPLazyLoadingPatchRequest,
-        MCPServerUpsertRequest,
-    )
-    from apps.platform.services.mcp_registry import MCPRegistryService
+from apps.platform.schemas.provisioning_schemas import (
+    MCPLazyLoadingPatchRequest,
+    MCPServerUpsertRequest,
+)
+from apps.platform.services.mcp_registry import MCPRegistryService
 
 
 router = APIRouter(prefix="/api/studios/framework/mcp", tags=["mcp"])

@@ -7,7 +7,6 @@ import {
 } from '@/api/client';
 import type { MCPLazyLoadingConfig, MCPServerConfig } from '@/types';
 import { useI18n } from '../i18n';
-import { useI18n } from '../i18n';
 
 const EMPTY_SERVER: MCPServerConfig = {
   name: '',
@@ -217,11 +216,10 @@ export function MCPManager() {
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] ${
-                    server.enabled
+                  className={`px-2 py-0.5 rounded-full text-[10px] ${server.enabled
                       ? 'bg-emerald-500/10 text-emerald-300'
                       : 'bg-slate-700/80 text-slate-300'
-                  }`}
+                    }`}
                 >
                   {server.enabled ? 'enabled' : 'disabled'}
                 </span>

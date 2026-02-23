@@ -157,6 +157,36 @@ class RuntimeCommandsConfig(BaseModel):
     stop: str | None = Field(default=None, description="stop コマンド")
 
 
+class RuntimeCLIAuthConfig(BaseModel):
+    """CLI 認証設定."""
+
+    status: list[str] | None = Field(default=None, description="認証状態確認コマンド")
+    api_key_env: str | None = Field(default=None, description="API キー環境変数名")
+    api_key_login: list[str] | None = Field(default=None, description="API キーでログインするコマンド")
+    interactive_login: list[str] | None = Field(default=None, description="手動ログインコマンド")
+
+
+class RuntimeCLIToolConfig(BaseModel):
+    """CLI ツール設定."""
+
+    executable: str | None = Field(default=None, description="CLI 実行ファイル名")
+    install_commands: list[list[str]] = Field(default_factory=list, description="インストールコマンド配列")
+    auth: RuntimeCLIAuthConfig = Field(default_factory=RuntimeCLIAuthConfig, description="認証設定")
+    diagnostic_mode: Literal["read_only", "plan"] = Field(default="read_only", description="診断実行モード")
+    diagnostic_command: list[str] | None = Field(default=None, description="診断実行コマンドテンプレート")
+
+
+class RuntimeCLIConfig(BaseModel):
+    """Runtime CLI 設定."""
+
+    preferred: list[Literal["codex", "claude"]] = Field(
+        default_factory=lambda: ["codex", "claude"],
+        description="診断時に優先する CLI 順序",
+    )
+    codex: RuntimeCLIToolConfig = Field(default_factory=RuntimeCLIToolConfig, description="Codex CLI 設定")
+    claude: RuntimeCLIToolConfig = Field(default_factory=RuntimeCLIToolConfig, description="Claude Code CLI 設定")
+
+
 class RuntimeConfig(BaseModel):
     """ランタイム設定."""
 
@@ -168,6 +198,10 @@ class RuntimeConfig(BaseModel):
     commands: RuntimeCommandsConfig = Field(
         default_factory=RuntimeCommandsConfig,
         description="起動/停止コマンド設定",
+    )
+    cli: RuntimeCLIConfig = Field(
+        default_factory=RuntimeCLIConfig,
+        description="CLI 自動セットアップ/診断設定",
     )
 
 

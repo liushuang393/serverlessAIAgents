@@ -18,6 +18,8 @@ GET   /api/studios/framework/apps/{app_name}/health      — ヘルスチェッ�
 POST  /api/studios/framework/apps/{app_name}/publish     — App 発布（docker compose up --build）
 POST  /api/studios/framework/apps/{app_name}/start       — App 起動（docker compose up）
 POST  /api/studios/framework/apps/{app_name}/stop        — App 停止（docker compose down）
+GET   /api/studios/framework/apps/{app_name}/cli/status  — CLI 状態確認
+POST  /api/studios/framework/apps/{app_name}/cli/setup   — CLI セットアップ実行
 """
 
 from __future__ import annotations
@@ -34,12 +36,11 @@ from apps.platform.services.app_lifecycle import (
 from apps.platform.services.app_scaffolder import AppScaffolderService
 from apps.platform.services.framework_audit import FrameworkAuditService
 from apps.platform.services.port_allocator import PortAllocatorService
+from apps.platform.schemas.provisioning_schemas import AppCreateRequest
 from fastapi import APIRouter, Body, HTTPException, Query
 
 
-if TYPE_CHECKING:
-    from apps.platform.schemas.provisioning_schemas import AppCreateRequest
-    from apps.platform.services.app_discovery import AppDiscoveryService
+from apps.platform.services.app_discovery import AppDiscoveryService
 
 
 router = APIRouter(prefix="/api/studios/framework/apps", tags=["framework-apps"])
@@ -253,6 +254,12 @@ def _runtime_commands(app_config: Any) -> dict[str, str | None]:
     }
 
 
+def _runtime_cli(app_config: Any) -> dict[str, Any]:
+    """App 表示用 CLI 設定を作成."""
+    cli = app_config.runtime.cli.model_dump()
+    return cli
+
+
 def _runtime_payload(app_config: Any) -> dict[str, Any]:
     """App 表示用 runtime payload を作成."""
     urls = _runtime_urls(app_config)
@@ -260,6 +267,7 @@ def _runtime_payload(app_config: Any) -> dict[str, Any]:
         "urls": urls,
         "database": _runtime_database(app_config, urls),
         "commands": _runtime_commands(app_config),
+        "cli": _runtime_cli(app_config),
     }
 
 
@@ -819,3 +827,23 @@ async def local_start_app(app_name: str) -> dict[str, Any]:
         config_path=discovery.get_config_path(app_name),
     )
     return result.to_dict()
+
+
+@router.get("/{app_name}/cli/status")
+async def get_app_cli_status(app_name: str) -> dict[str, Any]:
+    """App の CLI セットアップ状態を取得."""
+    discovery = _get_discovery()
+    lifecycle = _get_lifecycle()
+    config = _get_app_or_404(discovery, app_name)
+    status = await lifecycle.cli_status(config)
+    return {"app_name": app_name, "status": status}
+
+
+@router.post("/{app_name}/cli/setup")
+async def setup_app_cli(app_name: str) -> dict[str, Any]:
+    """App の CLI 検出・インストール・認証を実行."""
+    discovery = _get_discovery()
+    lifecycle = _get_lifecycle()
+    config = _get_app_or_404(discovery, app_name)
+    result = await lifecycle.cli_setup(config)
+    return {"app_name": app_name, "setup": result}
