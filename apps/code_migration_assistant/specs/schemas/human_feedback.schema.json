@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "HumanFeedbackArtifact",
+  "type": "object",
+  "required": [
+    "meta",
+    "command",
+    "actor",
+    "payload",
+    "unknowns",
+    "extensions"
+  ],
+  "properties": {
+    "meta": {"type": "object"},
+    "command": {"type": "string"},
+    "actor": {"type": "string"},
+    "payload": {"type": "object"},
+    "unknowns": {"type": "array"},
+    "extensions": {"type": "object"}
+  },
+  "additionalProperties": true
+}

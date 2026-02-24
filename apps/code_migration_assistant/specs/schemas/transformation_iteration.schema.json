@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TransformationIterationArtifact",
+  "type": "object",
+  "required": [
+    "meta",
+    "iterations",
+    "accepted",
+    "unknowns",
+    "extensions"
+  ],
+  "properties": {
+    "meta": {"type": "object"},
+    "iterations": {"type": "array"},
+    "accepted": {"type": "boolean"},
+    "final_score": {"type": ["number", "null"]},
+    "unknowns": {"type": "array"},
+    "extensions": {"type": "object"}
+  },
+  "additionalProperties": true
+}

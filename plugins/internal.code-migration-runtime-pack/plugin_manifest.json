@@ -1,0 +1,36 @@
+{
+  "id": "internal.code-migration-runtime-pack",
+  "version": "1.0.0",
+  "type": "skillpack",
+  "capabilities": [
+    "migration.java.transform",
+    "test.unit.generate",
+    "migration.fix.apply"
+  ],
+  "risk_tier": "medium",
+  "side_effects": [
+    "filesystem.read",
+    "filesystem.write",
+    "subprocess.exec"
+  ],
+  "required_permissions": [
+    "repo.read",
+    "repo.write",
+    "os.exec"
+  ],
+  "signature": {
+    "algorithm": "ed25519",
+    "issuer": "agentflow-local",
+    "key_id": "af-local-dev"
+  },
+  "compatibility": {
+    "kernel": ">=1.0.0",
+    "product_lines": [
+      "migration"
+    ]
+  },
+  "tests_required": [
+    "unit",
+    "integration"
+  ]
+}

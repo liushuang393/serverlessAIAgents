@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BusinessSemanticsArtifact",
+  "type": "object",
+  "required": [
+    "meta",
+    "business_processes",
+    "business_events",
+    "state_model",
+    "business_rules",
+    "unknowns",
+    "extensions"
+  ],
+  "properties": {
+    "meta": {"type": "object"},
+    "business_processes": {"type": "array"},
+    "business_events": {"type": "array"},
+    "state_model": {"type": "object"},
+    "business_rules": {"type": "array"},
+    "unknowns": {"type": "array"},
+    "extensions": {"type": "object"}
+  },
+  "additionalProperties": true
+}
