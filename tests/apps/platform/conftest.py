@@ -17,7 +17,12 @@ import pytest
 from apps.platform.schemas.app_config_schemas import AppConfig
 from apps.platform.services.agent_aggregator import AgentAggregatorService
 from apps.platform.services.app_discovery import AppDiscoveryService
-from apps.platform.services.app_lifecycle import AppLifecycleManager
+from apps.platform.services.app_lifecycle import (
+    AppActionResult,
+    AppLifecycleManager,
+    AppStatus,
+    HealthCheckResult,
+)
 from apps.platform.services.rag_overview import RAGOverviewService
 from apps.platform.services.skill_catalog import SkillCatalogService
 from apps.platform.services.tenant_invitation import TenantInvitationService
@@ -243,6 +248,80 @@ def test_client(apps_dir: Path) -> SyncASGIClient:
 
     disc = AppDiscoveryService(apps_dir=apps_dir)
     lc = AppLifecycleManager()
+
+    async def _mock_publish(config: AppConfig, *, config_path: Path | None = None) -> AppActionResult:
+        del config_path
+        return AppActionResult(
+            app_name=config.name,
+            action="publish",
+            success=True,
+            command=["echo", "mock-publish"],
+            cwd=str(apps_dir / config.name),
+            command_source="runtime",
+            return_code=0,
+            stdout="mock publish ok",
+        )
+
+    async def _mock_start(config: AppConfig, *, config_path: Path | None = None) -> AppActionResult:
+        del config_path
+        return AppActionResult(
+            app_name=config.name,
+            action="start",
+            success=True,
+            command=["echo", "mock-start"],
+            cwd=str(apps_dir / config.name),
+            command_source="readme",
+            return_code=0,
+            stdout="mock start ok",
+        )
+
+    async def _mock_stop(config: AppConfig, *, config_path: Path | None = None) -> AppActionResult:
+        del config_path
+        return AppActionResult(
+            app_name=config.name,
+            action="stop",
+            success=True,
+            command=["echo", "mock-stop"],
+            cwd=str(apps_dir / config.name),
+            command_source="runtime",
+            return_code=0,
+            stdout="mock stop ok",
+        )
+
+    async def _mock_check_health(config: AppConfig, *, config_path: Path | None = None) -> HealthCheckResult:
+        del config_path
+        status = AppStatus.UNKNOWN if config.name == "library_app" else AppStatus.HEALTHY
+        return HealthCheckResult(
+            app_name=config.name,
+            status=status,
+            response_time_ms=1.0,
+            details={"mock": True},
+        )
+
+    async def _mock_cli_status(config: AppConfig) -> dict[str, Any]:
+        return {
+            "preferred": ["codex", "claude"],
+            "tools": {
+                "codex": {"detected": True, "authenticated": True},
+                "claude": {"detected": False, "authenticated": False},
+            },
+            "app_name": config.name,
+        }
+
+    async def _mock_cli_setup(config: AppConfig) -> dict[str, Any]:
+        return {
+            "ready": True,
+            "status": await _mock_cli_status(config),
+            "preflight": {"ready": True},
+        }
+
+    lc.publish_app = _mock_publish  # type: ignore[method-assign]
+    lc.start_app = _mock_start  # type: ignore[method-assign]
+    lc.stop_app = _mock_stop  # type: ignore[method-assign]
+    lc.check_health = _mock_check_health  # type: ignore[method-assign]
+    lc.cli_status = _mock_cli_status  # type: ignore[method-assign]
+    lc.cli_setup = _mock_cli_setup  # type: ignore[method-assign]
+
     init_app_services(disc, lc)
     init_studio_services(StudioService(disc, lc))
     init_tenant_invitation_services(TenantInvitationService())

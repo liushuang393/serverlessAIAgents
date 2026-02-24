@@ -63,14 +63,14 @@
     "ask_placeholder": "Ask anything...",
     "shift_enter_hint": "Shift+Enter for new line",
     "quick": {
-      "analyze_reports": "Analyze Reports",
-      "analyze_reports_sub": "Extract insights from uploaded PDFs",
-      "sql_query": "SQL Query",
-      "sql_query_sub": "Generate database reports naturally",
-      "tech_support": "Technical Support",
-      "tech_support_sub": "Step-by-step product guidance",
-      "sales_strategy": "Sales Strategy",
-      "sales_strategy_sub": "Create tailored marketing assets"
+      "analyze_reports": "Summarize last month's sales results by team and compare year-over-year performance with target achievement rates",
+      "analyze_reports_sub": "Departmental KPI dashboard generation",
+      "sql_query": "Identify regions with the highest customer churn over the past 3 months and list the top cancellation reasons",
+      "sql_query_sub": "Customer retention analysis & recommendations",
+      "tech_support": "Create a feature and pricing comparison between Product A and Product B for an upcoming client proposal",
+      "tech_support_sub": "Sales proposal & competitive analysis support",
+      "sales_strategy": "List all deals with 80%+ close probability this quarter and calculate the projected revenue landing",
+      "sales_strategy_sub": "Pipeline forecast report"
     }
   },
   "register": {
@@ -89,9 +89,26 @@
   "sidebar": {
     "history": "Chat History",
     "settings": "Settings",
+    "collapse": "Collapse sidebar",
+    "expand": "Expand sidebar",
     "no_history": "No history",
     "no_conversations": "No conversations yet.",
     "start_new": "Start a new thread above."
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "language_desc": "Choose your preferred display language. Changes take effect immediately.",
+    "profile": "Profile",
+    "username": "Username",
+    "display_name": "Display Name",
+    "department": "Department",
+    "role": "Role",
+    "system": "System Information",
+    "version": "Version",
+    "app_name": "Application Name",
+    "security": "Security",
+    "security_desc": "MFA authentication and RBAC access control are enabled. Contact your administrator for security policy changes."
   },
   "common": {
     "loading": "Loading...",

@@ -438,17 +438,19 @@ async def test_protected_endpoint_requires_auth(client: httpx.AsyncClient) -> No
 
 
 @pytest.mark.asyncio
-async def test_logout_with_token_keeps_jwt_valid_until_expiry(client: httpx.AsyncClient) -> None:
+async def test_logout_blacklists_jwt(client: httpx.AsyncClient) -> None:
+    """ログアウト後、JWTはブラックリストに追加され、再利用が拒否される."""
     login_data = await _login(client)
     token = login_data["access_token"]
 
     logout = await client.post("/api/auth/logout", headers=_auth_headers(token))
     assert logout.status_code == 200
 
-    # JWT はステートレスのため、セッション失効後でも期限内は有効。
+    # ブラックリスト実装により、ログアウト済みトークンは拒否される
     me = await client.get("/api/auth/me", headers=_auth_headers(token))
     assert me.status_code == 200
-    assert me.json()["success"] is True
+    payload = me.json()
+    assert payload["success"] is False
 
 
 @pytest.mark.asyncio
@@ -608,3 +610,237 @@ async def test_auth_service_singleton_reset() -> None:
     service_2 = get_auth_service()
     assert service_1 is not service_2
     assert isinstance(service_2, type(service_1))
+
+
+
+# ---------------------------------------------------------------------------
+# ヘルスチェック・設定系テスト（品質改善で追加）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_health_endpoint_structure(client: httpx.AsyncClient) -> None:
+    """ヘルスエンドポイントのレスポンス構造を検証."""
+    response = await client.get("/api/health")
+    assert response.status_code == 200
+
+    payload = response.json()
+    # 必須フィールドの存在確認
+    assert payload["status"] in ("healthy", "degraded")
+    assert payload["service"] == "faq-system"
+    assert payload["version"] == "2.0.0"
+    assert "timestamp" in payload
+
+    # DB サブフィールドの存在確認
+    db_info = payload["db"]
+    assert db_info["status"] in ("healthy", "error")
+    assert "url" in db_info
+
+
+@pytest.mark.asyncio
+async def test_health_endpoint_db_healthy(client: httpx.AsyncClient) -> None:
+    """ヘルスチェックでDB正常時は healthy を返す."""
+    response = await client.get("/api/health")
+    payload = response.json()
+    assert payload["status"] == "healthy"
+    assert payload["db"]["status"] == "healthy"
+    # 正常時は error キーが存在しない
+    assert "error" not in payload["db"]
+
+
+def test_settings_ollama_model_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AgentFlowSettings の ollama_model デフォルト値が llama3.2 であること."""
+    from agentflow.config.settings import AgentFlowSettings
+
+    # 環境変数と .env ファイル読み込みの両方を無効化してデフォルト値を検証
+    monkeypatch.delenv("OLLAMA_MODEL", raising=False)
+    settings = AgentFlowSettings(_env_file=None)  # type: ignore[call-arg]
+    assert settings.ollama_model == "llama3.2"
+
+
+def test_settings_ollama_model_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """環境変数 OLLAMA_MODEL で ollama_model を上書きできること."""
+    from agentflow.config.settings import AgentFlowSettings
+
+    monkeypatch.setenv("OLLAMA_MODEL", "qwen3:4b")
+    settings = AgentFlowSettings()
+    assert settings.ollama_model == "qwen3:4b"
+
+
+# ---------------------------------------------------------------------------
+# E2E フローテスト（品質改善で追加）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_e2e_register_login_chat_flow(client: httpx.AsyncClient) -> None:
+    """E2E: 新規登録 → ログイン → チャット送信 → 履歴取得の一連フロー."""
+
+    class DummyFAQAgent:
+        async def run(self, _: dict[str, Any]) -> dict[str, Any]:
+            return {"answer": "E2Eテスト回答", "query_type": "chat"}
+
+    _services["faq_agent"] = DummyFAQAgent()
+
+    # 1. 新規ユーザー登録
+    reg = await client.post(
+        "/api/auth/register",
+        json={
+            "username": "e2euser",
+            "password": "e2epass123",
+            "display_name": "E2E Tester",
+            "department": "QA",
+        },
+    )
+    assert reg.status_code == 201
+    reg_data = reg.json()
+    assert reg_data["success"] is True
+    token = reg_data["access_token"]
+
+    # 2. 登録したユーザーで /me 確認
+    me = await client.get("/api/auth/me", headers=_auth_headers(token))
+    assert me.status_code == 200
+    assert me.json()["user"]["username"] == "e2euser"
+
+    # 3. チャット送信
+    chat = await client.post(
+        "/api/chat",
+        headers=_auth_headers(token),
+        json={"message": "今月の売上は？", "session_id": "e2e-sess-1"},
+    )
+    assert chat.status_code == 200
+    assert chat.json()["session_id"] == "e2e-sess-1"
+
+    # 4. 履歴取得
+    history = await client.get(
+        "/api/chat/history",
+        headers=_auth_headers(token),
+        params={"session_id": "e2e-sess-1"},
+    )
+    assert history.status_code == 200
+    hist_data = history.json()
+    assert hist_data["count"] == 2
+    assert hist_data["messages"][0]["role"] == "user"
+    assert hist_data["messages"][1]["role"] == "assistant"
+    assert hist_data["messages"][1]["content"] == "E2Eテスト回答"
+
+
+@pytest.mark.asyncio
+async def test_e2e_login_chat_logout_relogin(client: httpx.AsyncClient) -> None:
+    """E2E: ログイン → チャット → ログアウト → 再ログインのフロー."""
+
+    class DummyFAQAgent:
+        async def run(self, _: dict[str, Any]) -> dict[str, Any]:
+            return {"answer": "再ログインテスト回答", "query_type": "chat"}
+
+    _services["faq_agent"] = DummyFAQAgent()
+
+    # 1. ログイン
+    login = await _login(client)
+    token = login["access_token"]
+    assert login["success"] is True
+
+    # 2. チャット
+    chat = await client.post(
+        "/api/chat",
+        headers=_auth_headers(token),
+        json={"message": "テスト質問"},
+    )
+    assert chat.status_code == 200
+
+    # 3. ログアウト
+    logout = await client.post("/api/auth/logout", headers=_auth_headers(token))
+    assert logout.status_code == 200
+    assert logout.json()["success"] is True
+
+    # 4. ログアウト後のトークンは拒否される
+    me_after = await client.get("/api/auth/me", headers=_auth_headers(token))
+    assert me_after.json()["success"] is False
+
+    # 5. 再ログイン
+    relogin = await _login(client)
+    new_token = relogin["access_token"]
+    assert relogin["success"] is True
+
+    # 6. 新しいトークンで /me 成功
+    me_new = await client.get("/api/auth/me", headers=_auth_headers(new_token))
+    assert me_new.status_code == 200
+    assert me_new.json()["success"] is True
+    assert me_new.json()["user"]["username"] == "admin"
+
+
+@pytest.mark.asyncio
+async def test_e2e_health_check_no_auth_required(client: httpx.AsyncClient) -> None:
+    """E2E: ヘルスチェックは認証なしでアクセス可能."""
+    response = await client.get("/api/health")
+    assert response.status_code == 200
+    assert response.json()["status"] == "healthy"
+
+
+# ---------------------------------------------------------------------------
+# パフォーマンステスト（品質改善で追加）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_perf_health_response_time(client: httpx.AsyncClient) -> None:
+    """パフォーマンス: ヘルスエンドポイントは 500ms 以内に応答する."""
+    start = time.monotonic()
+    response = await client.get("/api/health")
+    elapsed_ms = (time.monotonic() - start) * 1000
+
+    assert response.status_code == 200
+    assert elapsed_ms < 500, f"ヘルスチェック応答が遅い: {elapsed_ms:.0f}ms"
+
+
+@pytest.mark.asyncio
+async def test_perf_login_response_time(client: httpx.AsyncClient) -> None:
+    """パフォーマンス: ログインは 1000ms 以内に応答する."""
+    start = time.monotonic()
+    response = await client.post(
+        "/api/auth/login",
+        json={"username": "admin", "password": "admin123"},
+    )
+    elapsed_ms = (time.monotonic() - start) * 1000
+
+    assert response.status_code == 200
+    assert response.json()["success"] is True
+    assert elapsed_ms < 1000, f"ログイン応答が遅い: {elapsed_ms:.0f}ms"
+
+
+@pytest.mark.asyncio
+async def test_perf_chat_response_time(client: httpx.AsyncClient) -> None:
+    """パフォーマンス: チャット応答（モックLLM）は 1000ms 以内."""
+
+    class DummyFAQAgent:
+        async def run(self, _: dict[str, Any]) -> dict[str, Any]:
+            return {"answer": "パフォーマンステスト回答", "query_type": "chat"}
+
+    _services["faq_agent"] = DummyFAQAgent()
+
+    token = (await _login(client))["access_token"]
+    start = time.monotonic()
+    response = await client.post(
+        "/api/chat",
+        headers=_auth_headers(token),
+        json={"message": "テスト"},
+    )
+    elapsed_ms = (time.monotonic() - start) * 1000
+
+    assert response.status_code == 200
+    assert elapsed_ms < 1000, f"チャット応答が遅い: {elapsed_ms:.0f}ms"
+
+
+@pytest.mark.asyncio
+async def test_perf_concurrent_health_checks(client: httpx.AsyncClient) -> None:
+    """パフォーマンス: 並行ヘルスチェック10件が 2000ms 以内に完了する."""
+    import asyncio
+
+    start = time.monotonic()
+    tasks = [client.get("/api/health") for _ in range(10)]
+    responses = await asyncio.gather(*tasks)
+    elapsed_ms = (time.monotonic() - start) * 1000
+
+    for resp in responses:
+        assert resp.status_code == 200
+    assert elapsed_ms < 2000, f"並行ヘルスチェックが遅い: {elapsed_ms:.0f}ms"

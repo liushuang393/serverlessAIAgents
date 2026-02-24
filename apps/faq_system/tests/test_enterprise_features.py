@@ -2,7 +2,15 @@ import io
 import os
 from unittest.mock import MagicMock, patch
 
+import pytest
 from apps.faq_system.backend.rag.parsers import FileParser
+
+# ldap3 はオプション依存。未インストール時はテストをスキップ
+_has_ldap3 = True
+try:
+    import ldap3  # noqa: F401
+except ModuleNotFoundError:
+    _has_ldap3 = False
 
 
 class TestEnterpriseFeatures:
@@ -46,6 +54,7 @@ class TestEnterpriseFeatures:
         assert "---" in text
         assert "header1: val3" in text
 
+    @pytest.mark.skipif(not _has_ldap3, reason="ldap3 がインストールされていません")
     @patch("ldap3.Connection")
     @patch("ldap3.Server")
     def test_ldap_auth_logic(self, mock_server, mock_conn):

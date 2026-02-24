@@ -1,11 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useChatStore } from '../../stores/chatStore';
-import { Plus, Trash2, LogOut, Settings, Hash, MessageCircle } from 'lucide-react';
+import { Plus, Trash2, LogOut, Settings, Hash, MessageCircle, PanelLeftClose } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useNavigate } from 'react-router-dom';
-import { LocaleSwitcher, useI18n } from '../../i18n';
+import { useI18n } from '../../i18n';
 
-export const Sidebar = () => {
+/** サイドバーの props 型定義 */
+interface SidebarProps {
+    /** サイドバーが展開中か */
+    isOpen: boolean;
+    /** サイドバーの開閉をトグルするコールバック */
+    onToggle: () => void;
+}
+
+export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     const { t } = useI18n();
     const { sessions, currentSessionId, selectSession, createSession, deleteSession, fetchSessions } = useChatStore();
     const { logout, user } = useAuthStore();
@@ -23,7 +31,13 @@ export const Sidebar = () => {
     };
 
     return (
-        <div className="w-[var(--sidebar-width)] h-full glass border-r border-white/5 flex flex-col text-white z-20 overflow-hidden relative">
+        <div
+            className={`h-full glass border-r border-white/5 flex flex-col text-white z-20 overflow-hidden relative transition-all duration-300 ease-in-out ${
+                isOpen ? 'w-[var(--sidebar-width)] min-w-[var(--sidebar-width)]' : 'w-0 min-w-0 border-r-0'
+            }`}
+        >
+            {/* サイドバー内コンテンツ（折り畳み時は非表示にしつつ幅ゼロにする） */}
+            <div className={`flex flex-col h-full w-[var(--sidebar-width)] transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
             {/* Background Blur Accent */}
             <div className="absolute -top-20 -left-20 w-40 h-40 bg-[var(--primary)]/10 blur-[80px] rounded-full pointer-events-none" />
 
@@ -35,9 +49,22 @@ export const Sidebar = () => {
                     </div>
                     <span className="font-bold text-sm tracking-tight">FAQ Intelligence</span>
                 </div>
-                <button className="text-[var(--text-muted)] hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5">
-                    <Settings size={15} />
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => navigate('/settings')}
+                        className="text-[var(--text-muted)] hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5"
+                        title={t('sidebar.settings')}
+                    >
+                        <Settings size={15} />
+                    </button>
+                    <button
+                        onClick={onToggle}
+                        className="text-[var(--text-muted)] hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5"
+                        title={t('sidebar.collapse') ?? 'サイドバーを閉じる'}
+                    >
+                        <PanelLeftClose size={15} />
+                    </button>
+                </div>
             </div>
 
             {/* Action Area */}
@@ -68,22 +95,27 @@ export const Sidebar = () => {
                 {sessions.map((session) => (
                     <div
                         key={session.session_id}
-                        className={`group relative flex items-center gap-3 p-3.5 rounded-2xl cursor-pointer text-sm transition-all border ${currentSessionId === session.session_id
+                        className={`group relative flex items-center gap-3 rounded-2xl text-sm transition-all border ${currentSessionId === session.session_id
                                 ? 'bg-white/5 border-white/10 text-white shadow-lg shadow-black/20'
                                 : 'hover:bg-white/[0.03] border-transparent text-[var(--text-dim)] hover:text-white'
                             }`}
-                        onClick={() => selectSession(session.session_id)}
                     >
-                        <Hash size={16} className={`flex-shrink-0 ${currentSessionId === session.session_id ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`} />
-                        <div className="flex-1 truncate pr-6 font-medium" title={session.title}>
-                            {session.title || t('chat.new_chat')}
-                        </div>
+                        <button
+                            type="button"
+                            className="flex-1 flex items-center gap-3 p-3.5 bg-transparent border-none text-left text-inherit cursor-pointer"
+                            onClick={() => selectSession(session.session_id)}
+                        >
+                            <Hash size={16} className={`flex-shrink-0 ${currentSessionId === session.session_id ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`} />
+                            <span className="flex-1 truncate pr-6 font-medium" title={session.title}>
+                                {session.title || t('chat.new_chat')}
+                            </span>
+                        </button>
 
                         <button
-                            className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-400 absolute right-2 transition-all ${currentSessionId === session.session_id ? 'text-red-400/50' : 'text-[var(--text-muted)]'
+                            type="button"
+                            className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-400 absolute right-2 transition-all bg-transparent border-none cursor-pointer ${currentSessionId === session.session_id ? 'text-red-400/50' : 'text-[var(--text-muted)]'
                                 }`}
-                            onClick={(e) => {
-                                e.stopPropagation();
+                            onClick={() => {
                                 if (confirm('Delete this session?')) deleteSession(session.session_id);
                             }}
                         >
@@ -95,8 +127,6 @@ export const Sidebar = () => {
 
             {/* User Profile Area */}
             <div className="p-4 mt-auto">
-                {/* 言語切り替え */}
-                <LocaleSwitcher className="w-full bg-transparent border border-white/10 rounded-xl px-2 py-1.5 text-xs text-[var(--text-muted)] cursor-pointer mb-2 focus:outline-none" />
                 <div className="glass rounded-2xl p-3.5 flex items-center gap-3 border border-white/5 shadow-2xl">
                     <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[var(--primary)]/40 to-[var(--primary)]/10 flex items-center justify-center text-xs font-bold border border-[var(--primary)]/20">
                         {user?.username?.substring(0, 2).toUpperCase() || '??'}
@@ -119,6 +149,7 @@ export const Sidebar = () => {
                     </button>
                 </div>
             </div>
+            </div>{/* 内部コンテンツラッパー閉じ */}
         </div>
     );
 };

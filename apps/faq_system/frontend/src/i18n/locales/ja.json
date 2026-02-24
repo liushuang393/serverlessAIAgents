@@ -63,14 +63,14 @@
     "ask_placeholder": "何でも聞いてください...",
     "shift_enter_hint": "Shift+Enter で改行",
     "quick": {
-      "analyze_reports": "レポート分析",
-      "analyze_reports_sub": "アップロードされた PDF からインサイトを抽出",
-      "sql_query": "SQL クエリ",
-      "sql_query_sub": "自然言語でデータベースレポートを生成",
-      "tech_support": "テクニカルサポート",
-      "tech_support_sub": "ステップ別製品ガイダンス",
-      "sales_strategy": "営業戦略",
-      "sales_strategy_sub": "マーケティング資料を作成"
+      "analyze_reports": "先月の営業チーム別売上実績を集計し、前年同月比と達成率を分析してください",
+      "analyze_reports_sub": "部門別KPIダッシュボード生成",
+      "sql_query": "直近3ヶ月の顧客離脱率が高い地域と主な解約理由を調べてください",
+      "sql_query_sub": "顧客リテンション分析・改善提案",
+      "tech_support": "新規取引先への提案用にA製品とB製品の機能・価格比較資料を作成してください",
+      "tech_support_sub": "営業提案書・競合比較サポート",
+      "sales_strategy": "今期の受注確度80%以上の案件を一覧にし、着地見込み額を算出してください",
+      "sales_strategy_sub": "パイプライン予測レポート"
     }
   },
   "register": {
@@ -89,9 +89,26 @@
   "sidebar": {
     "history": "会話履歴",
     "settings": "設定",
+    "collapse": "サイドバーを閉じる",
+    "expand": "サイドバーを開く",
     "no_history": "履歴がありません",
     "no_conversations": "まだ会話がありません。",
     "start_new": "上のボタンから新しいスレッドを作成してください。"
+  },
+  "settings": {
+    "title": "設定",
+    "language": "言語",
+    "language_desc": "表示言語を選択してください。変更は即座に反映されます。",
+    "profile": "プロフィール",
+    "username": "ユーザー名",
+    "display_name": "表示名",
+    "department": "部署",
+    "role": "ロール",
+    "system": "システム情報",
+    "version": "バージョン",
+    "app_name": "アプリケーション名",
+    "security": "セキュリティ",
+    "security_desc": "MFA 認証・RBAC アクセス制御が有効です。セキュリティポリシーの変更は管理者にお問い合わせください。"
   },
   "common": {
     "loading": "読み込み中...",

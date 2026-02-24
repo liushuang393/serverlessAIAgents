@@ -571,17 +571,13 @@ def create_router_from_env() -> ModelRouter:
             api_key=os.environ["DEEPSEEK_API_KEY"],
         )
 
-    # Ollama（ローカルモデル）
+    # Ollama（ローカルモデル）— 環境変数 OLLAMA_MODEL を尊重
     ollama_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+    ollama_model = os.environ.get("OLLAMA_MODEL", "llama3.2")
     if _check_service_available(ollama_url):
-        models["ollama-llama3.3"] = LLMConfig(
+        models["ollama-default"] = LLMConfig(
             provider="ollama",
-            model="llama3.3:70b",
-            base_url=ollama_url,
-        )
-        models["ollama-qwen2.5"] = LLMConfig(
-            provider="ollama",
-            model="qwen2.5:72b",
+            model=ollama_model,
             base_url=ollama_url,
         )
 

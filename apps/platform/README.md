@@ -6,6 +6,7 @@
 - 3 Studio 製品線と Framework 管理 API を単一 Control Plane で提供。
 - App/Agent/Skill/RAG/MCP の発見・管理・実行・監査を統合。
 - Publish/Deploy 導線を標準化し、app ライフサイクル運用を一元化。
+- `auth_service` / `design_skills_engine` は**エンドユーザー向け画面ではなく、プラグイン・他 app が利用する共通サービス**として管理する。
 
 ## 優位性
 - `/api/studios/*` と `/api/studios/framework/*` の正規導線で契約を統一。
@@ -39,6 +40,19 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
 
 旧 `/api/agents` などの経路は廃止済みです。
 
+## 共通サービス app（重要）
+
+以下 2 つは「ユーザーが直接操作する app」ではなく、Platform から起動して他 app / plugin で使う共通基盤です。
+
+- `auth_service`
+  - 用途: 認証・認可（JWT/OAuth2/SAML/MFA）を共通提供
+  - 利用先: FAQ System / contracts.auth / plugin runtime guard
+  - 運用: Platform の Apps 画面から起動し、個別 app 詳細への導線は不要
+- `design_skills_engine`
+  - 用途: デザイン/画像生成の共通実行エンジン（ComfyUI 連携）
+  - 利用先: design 系 plugin / 生成パイプライン app
+  - 運用: Platform の Apps 画面から起動し、個別 app 詳細への導線は不要
+
 ## 3. 主要エンドポイント
 
 ### Studio
@@ -63,6 +77,8 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
 - `POST /api/studios/framework/tenants/invitations/{invitation_id}/challenge`
 - `POST /api/studios/framework/tenants/invitations/consume`
 - `GET /api/studios/framework/tenants/invitations/outbox`（開発時のみ）
+- `GET /api/studios/framework/apps/{app_name}/cli/status`
+- `POST /api/studios/framework/apps/{app_name}/cli/setup`
 
 ## 4. 開発起動
 
@@ -100,6 +116,23 @@ npm run dev
 ```
 
 ポートは `apps/platform/app_config.json` が単一定義元です（`ports.api` / `ports.frontend`）。
+
+### 4.3 CLI 自動セットアップと自癒診断
+
+Platform の `Start / Publish / Local Start` は実行前に CLI preflight を行います。
+
+- 対象 CLI: `codex`, `claude`
+- preflight: 検出 → （必要時）インストール → 認証確認
+- 認証: 既存ログイン状態確認 → API Key ログイン → 交互ログイン案内
+- 起動失敗時: CLI 診断を自動実行し、`diagnostic` を action response に返却
+
+`runtime.cli` で app 単位に以下を上書きできます。
+
+- `executable`
+- `install_commands`
+- `auth.status / auth.api_key_env / auth.api_key_login / auth.interactive_login`
+- `diagnostic_mode`
+- `diagnostic_command`
 
 ## 5. テスト/静的チェック（統一スクリプト）
 

@@ -118,8 +118,11 @@ async def auth_middleware(request: Request, call_next: Any) -> Any:
 
 @app.get("/api/health")
 async def health_check() -> dict[str, str]:
-    """ヘルスチェック."""
-    return {"status": "ok", "service": "code_migration_assistant"}
+    """ヘルスチェック.
+
+    platform のヘルスチェック判定基準と統一した応答フォーマット。
+    """
+    return {"status": "healthy", "service": "code_migration_assistant"}
 
 
 async def run_migration_task(task_id: str, engine: CodeMigrationEngine, inputs: dict):

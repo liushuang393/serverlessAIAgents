@@ -1,0 +1,1636 @@
+{
+  "summary": {
+    "baseUrl": "http://localhost:3001",
+    "generatedAt": "2026-02-23T06:33:33.809Z",
+    "totalRoutes": 10,
+    "routesVisited": 6,
+    "totalButtonsClicked": 100,
+    "totalButtonClickFailures": 38,
+    "totalIssues": 0
+  },
+  "results": [
+    {
+      "route": "/",
+      "visited": true,
+      "actions": [],
+      "errorsDuringRoute": [],
+      "screenshot": "/home/liush/workspase/serverlessAIAgents/output/playwright/platform-audit/screenshots/dashboard.png"
+    },
+    {
+      "route": "/apps",
+      "visited": true,
+      "actions": [
+        {
+          "id": "pwbtn-1",
+          "text": "Add App",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-2",
+          "text": "🔄Refresh",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-3",
+          "text": "🚀All Apps",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-4",
+          "text": "🏢Business Core",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-5",
+          "text": "🛠️Pro Studio",
+          "aria": "",
+          "ok": false,
+          "err": "TimeoutError: locator.click: Timeout 3500ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-pw-audit-id=\"pwbtn-5\"]').first()\u001b[22m\n\u001b[2m    - locator resolved to <button data-pw-audit-id=\"pwbtn-5\" class=\"px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border bg-slate-900/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"w-full max-w-4xl max-h-[90vh] -translate-y-[10px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl\">…</div> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"w-full max-w-4xl max-h-[90vh] -translate-y-[10px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl\">…</div> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    6 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"w-full max-w-4xl max-h-[90vh] -translate-y-[10px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl\">…</div> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-6",
+          "text": "⚖️Governance",
+          "aria": "",
+          "ok": false,
+          "err": "TimeoutError: locator.click: Timeout 3500ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-pw-audit-id=\"pwbtn-6\"]').first()\u001b[22m\n\u001b[2m    - locator resolved to <button data-pw-audit-id=\"pwbtn-6\" class=\"px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border bg-slate-900/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"w-full max-w-4xl max-h-[90vh] -translate-y-[10px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl\">…</div> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"w-full max-w-4xl max-h-[90vh] -translate-y-[10px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl\">…</div> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    7 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"w-full max-w-4xl max-h-[90vh] -translate-y-[10px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl\">…</div> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-7",
+          "text": "🛡️Ops & Infra",
+          "aria": "",
+          "ok": false,
+          "err": "TimeoutError: locator.click: Timeout 3500ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-pw-audit-id=\"pwbtn-7\"]').first()\u001b[22m\n\u001b[2m    - locator resolved to <button data-pw-audit-id=\"pwbtn-7\" class=\"px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border bg-slate-900/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"w-full max-w-4xl max-h-[90vh] -translate-y-[10px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl\">…</div> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"w-full max-w-4xl max-h-[90vh] -translate-y-[10px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl\">…</div> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    7 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"w-full max-w-4xl max-h-[90vh] -translate-y-[10px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl\">…</div> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-8",
+          "text": "📒Daily Tasks",
+          "aria": "",
+          "ok": false,
+          "err": "TimeoutError: locator.click: Timeout 3500ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-pw-audit-id=\"pwbtn-8\"]').first()\u001b[22m\n\u001b[2m    - locator resolved to <button data-pw-audit-id=\"pwbtn-8\" class=\"px-4 py-2 rounded-xl text-sm font-medium transition-all flex items-center gap-2 border bg-slate-900/50 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"w-full max-w-4xl max-h-[90vh] -translate-y-[10px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl\">…</div> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"w-full max-w-4xl max-h-[90vh] -translate-y-[10px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl\">…</div> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    7 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"w-full max-w-4xl max-h-[90vh] -translate-y-[10px] overflow-y-auto bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl\">…</div> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-9",
+          "text": "📌",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-10",
+          "text": "📌",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-11",
+          "text": "📌",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-12",
+          "text": "📌",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-13",
+          "text": "📌",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-14",
+          "text": "📌",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-15",
+          "text": "📌",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-16",
+          "text": "📌",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-17",
+          "text": "📌",
+          "aria": "",
+          "ok": false,
+          "err": "TimeoutError: locator.click: Timeout 3500ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-pw-audit-id=\"pwbtn-17\"]').first()\u001b[22m\n\u001b[2m    - locator resolved to <button title=\"Pin to top\" data-pw-audit-id=\"pwbtn-17\" class=\"text-lg transition-all duration-300 hover:scale-125 grayscale opacity-30 hover:opacity-100 hover:grayscale-0\">📌</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <form class=\"space-y-4\">…</form> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <form class=\"space-y-4\">…</form> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    6 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <form class=\"space-y-4\">…</form> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n\u001b[2m    - waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m    - element is visible, enabled and stable\u001b[22m\n\u001b[2m    - scrolling into view if needed\u001b[22m\n\u001b[2m    - done scrolling\u001b[22m\n",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-18",
+          "text": "📌",
+          "aria": "",
+          "ok": false,
+          "err": "TimeoutError: locator.click: Timeout 3500ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('[data-pw-audit-id=\"pwbtn-18\"]').first()\u001b[22m\n\u001b[2m    - locator resolved to <button title=\"Pin to top\" data-pw-audit-id=\"pwbtn-18\" class=\"text-lg transition-all duration-300 hover:scale-125 grayscale opacity-30 hover:opacity-100 hover:grayscale-0\">📌</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <form class=\"space-y-4\">…</form> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <form class=\"space-y-4\">…</form> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    7 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <form class=\"space-y-4\">…</form> from <div class=\"fixed inset-0 bg-slate-950 z-50 flex items-center justify-center p-4\">…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 500ms\u001b[22m\n",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-19",
+          "text": "Close",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-20",
+          "text": "",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-21",
+          "text": "",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-22",
+          "text": "",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-23",
+          "text": "",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-24",
+          "text": "",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-25",
+          "text": "Cancel",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/apps",
+          "afterUrl": "http://localhost:3001/apps",
+          "urlChanged": false,
+          "newIssues": 0
+        }
+      ],
+      "errorsDuringRoute": [],
+      "screenshot": "/home/liush/workspase/serverlessAIAgents/output/playwright/platform-audit/screenshots/apps.png"
+    },
+    {
+      "route": "/agents",
+      "visited": true,
+      "actions": [
+        {
+          "id": "pwbtn-1",
+          "text": "All",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-2",
+          "text": "Analysis General(7)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-3",
+          "text": "Review General(3)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-4",
+          "text": "Validation General(3)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-5",
+          "text": "Migration Code(3)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-6",
+          "text": "Audit General(2)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-7",
+          "text": "Gate General(2)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-8",
+          "text": "Reporting(2)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-9",
+          "text": "Generation Image(2)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-10",
+          "text": "Adversarial(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-11",
+          "text": "Architecture(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-12",
+          "text": "Clarification(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-13",
+          "text": "Cobol(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-14",
+          "text": "Comfyui(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-15",
+          "text": "Component Discovery(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-16",
+          "text": "Dao(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-17",
+          "text": "Dashboard(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-18",
+          "text": "Fa(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-19",
+          "text": "Java(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-20",
+          "text": "Parsing(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-21",
+          "text": "Philosophy(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-22",
+          "text": "Pipeline(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-23",
+          "text": "Prompt Planning(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-24",
+          "text": "Protocol Contract Check(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-25",
+          "text": "Publish(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-26",
+          "text": "Qi(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-27",
+          "text": "Readiness Scoring(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-28",
+          "text": "Recommendation(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-29",
+          "text": "Recommendations(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-30",
+          "text": "Release(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-31",
+          "text": "Shu(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-32",
+          "text": "Strategy(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-33",
+          "text": "Style Generation(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-34",
+          "text": "Suggestion(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-35",
+          "text": "Synthesis(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-36",
+          "text": "Tools(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-37",
+          "text": "Verification(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-38",
+          "text": "Audit Evidence Tracking(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-39",
+          "text": "Compliance(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-40",
+          "text": "Gate Cognitive Check(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-41",
+          "text": "Quality Gate(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-42",
+          "text": "Rules(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-43",
+          "text": "Calendar Management(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-44",
+          "text": "Data Sql(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-45",
+          "text": "Ingest Collection(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-46",
+          "text": "Ingest Web Scraping(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-47",
+          "text": "Routing Intent(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-48",
+          "text": "Collaboration Meeting(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-49",
+          "text": "Collaboration Notes(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-50",
+          "text": "Notification Alerting(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-51",
+          "text": "Notification Dispatch(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-52",
+          "text": "Reporting Summarization(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-53",
+          "text": "Reporting Summary(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-54",
+          "text": "Sales(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-55",
+          "text": "Faq Answering(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-56",
+          "text": "Retrieval Rag(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-57",
+          "text": "Retrieval Search(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-58",
+          "text": "Design Brief(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-59",
+          "text": "Design Skills(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-60",
+          "text": "Openai Images(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-61",
+          "text": "Visualization Chart(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-62",
+          "text": "Deployment(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-63",
+          "text": "Management File Organization(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-64",
+          "text": "Migration Design(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-65",
+          "text": "Orchestration Coordination(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-66",
+          "text": "Orchestration General(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-67",
+          "text": "Orchestration Validation(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-68",
+          "text": "Quality Auto Fix(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-69",
+          "text": "Quality Test Generation(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-70",
+          "text": "Transform(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-71",
+          "text": "Transformation Code(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-72",
+          "text": "Analysis Benchmarking(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-73",
+          "text": "Analysis Trend Detection(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-74",
+          "text": "Classification Categorization(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-75",
+          "text": "Competitor Analysis(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-76",
+          "text": "Diagnosis(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-77",
+          "text": "Forecast Prediction(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-78",
+          "text": "Intent Analysis(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-79",
+          "text": "Scoring Ranking(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-80",
+          "text": "Scoring Signal(1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agents",
+          "afterUrl": "http://localhost:3001/agents",
+          "urlChanged": false,
+          "newIssues": 0
+        }
+      ],
+      "errorsDuringRoute": [],
+      "screenshot": "/home/liush/workspase/serverlessAIAgents/output/playwright/platform-audit/screenshots/agents.png"
+    },
+    {
+      "route": "/agent-orchestration",
+      "visited": true,
+      "actions": [
+        {
+          "id": "pwbtn-1",
+          "text": "All",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-orchestration",
+          "afterUrl": "http://localhost:3001/agent-orchestration",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-2",
+          "text": "🔗 Pipeline (4)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-orchestration",
+          "afterUrl": "http://localhost:3001/agent-orchestration",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-3",
+          "text": "⚡ Simple (3)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-orchestration",
+          "afterUrl": "http://localhost:3001/agent-orchestration",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-4",
+          "text": "🎯 Coordinator (1)",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-orchestration",
+          "afterUrl": "http://localhost:3001/agent-orchestration",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-5",
+          "text": "🔄コード移行アシスタント🔗 PipelineSequential stage composition. Output of one stage feeds the next.10 agents▾",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-orchestration",
+          "afterUrl": "http://localhost:3001/agent-orchestration",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-6",
+          "text": "⚖️意思決定ガバナンスエンジン🔗 PipelineSequential stage composition. Output of one stage feeds the next.8 agents▾",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-orchestration",
+          "afterUrl": "http://localhost:3001/agent-orchestration",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-7",
+          "text": "🎨デザインスキルエンジン🔗 PipelineSequential stage composition. Output of one stage feeds the next.3 agents▾",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-orchestration",
+          "afterUrl": "http://localhost:3001/agent-orchestration",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-8",
+          "text": "💬FAQ システム⚡ SimpleSingle agent direct execution. Shortest path from input to output.2 agents▾",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-orchestration",
+          "afterUrl": "http://localhost:3001/agent-orchestration",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-9",
+          "text": "📈市場動向モニター🔗 PipelineSequential stage composition. Output of one stage feeds the next.9 agents▾",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-orchestration",
+          "afterUrl": "http://localhost:3001/agent-orchestration",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-10",
+          "text": "📨メッセージングハブ🎯 CoordinatorCentral agent delegates tasks dynamically to child agents.3 agents▾",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-orchestration",
+          "afterUrl": "http://localhost:3001/agent-orchestration",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-11",
+          "text": "🛡️Orchestration Guardian⚡ SimpleSingle agent direct execution. Shortest path from input to output.1 agent▾",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-orchestration",
+          "afterUrl": "http://localhost:3001/agent-orchestration",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-12",
+          "text": "🏗️AgentFlow Platform⚡ SimpleSingle agent direct execution. Shortest path from input to output.3 agents▾",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-orchestration",
+          "afterUrl": "http://localhost:3001/agent-orchestration",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-13",
+          "text": "📨メッセージングハブ🎯 CoordinatorCentral agent delegates tasks dynamically to child agents.3 agents▾",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-orchestration",
+          "afterUrl": "http://localhost:3001/agent-orchestration",
+          "urlChanged": false,
+          "newIssues": 0
+        }
+      ],
+      "errorsDuringRoute": [],
+      "screenshot": "/home/liush/workspase/serverlessAIAgents/output/playwright/platform-audit/screenshots/agent-orchestration.png"
+    },
+    {
+      "route": "/agent-patterns",
+      "visited": true,
+      "actions": [
+        {
+          "id": "pwbtn-1",
+          "text": "🧩 Design Patterns",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-2",
+          "text": "🏢 Business Base",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-3",
+          "text": "🎯Specialist4 agentsDomain-specific. Single responsibility with high-accuracy processing.Single ResponsibilityDomain ExpertHigh Accuracy",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-4",
+          "text": "🧠Coordinator / Planning4 agentsAnalyzes and decomposes tasks, dynamically delegates to child agents. Plan → Execute → Reflect loop.PlanningDelegationRecursive Reasoning",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-5",
+          "text": "🔗Pipeline Stage2 agentsOne stage in a sequential pipeline. Previous output → transform → next input.SequentialTransformChain",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-6",
+          "text": "🛡️Gatekeeper / HITL3 agentsPolicy compliance check and human intervention gate. Approval flow control.Human-in-the-LoopPolicy CheckApproval Gate",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-7",
+          "text": "🔄Reviewer / Loop6 agentsQuality verification and feedback loop. Re-executes if criteria not met.Quality LoopFeedbackIterative Refinement",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-8",
+          "text": "🔬Analyzer / ReAct11 agentsObserve → Reason → Act ReAct cycle. Specialized in data analysis and diagnostics.ReAct PatternObserve-Think-ActDiagnostic",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-9",
+          "text": "⚡Executor / Tool-Use6 agentsExecution via external tools and API calls. Transform, synthesize, and modify operations.Tool InvocationSide EffectsAction Execution",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-10",
+          "text": "🔀Router / Dispatch1 agentIntent classification and routing to the appropriate agent.Intent ClassificationDynamic RoutingDispatch",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-11",
+          "text": "📊Reporter / Summary2 agentsResult aggregation and report generation. Organizes execution results into final output.AggregationReport GenerationFinal Output",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-12",
+          "text": "🛠️Custom0 agentsCustom pattern with project-specific logic.Custom LogicProject Specific",
+          "aria": "",
+          "ok": false,
+          "err": "stale_button",
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-13",
+          "text": "🏛️governance10 agents▾",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-14",
+          "text": "📦integration1 agents▾",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-15",
+          "text": "📦interaction5 agents▾",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-16",
+          "text": "📦knowledge1 agents▾",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-17",
+          "text": "📦media3 agents▾",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-18",
+          "text": "📦operations8 agents▾",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-19",
+          "text": "📦platform3 agents▾",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        },
+        {
+          "id": "pwbtn-20",
+          "text": "📦reasoning8 agents▾",
+          "aria": "",
+          "ok": true,
+          "err": null,
+          "beforeUrl": "http://localhost:3001/agent-patterns",
+          "afterUrl": "http://localhost:3001/agent-patterns",
+          "urlChanged": false,
+          "newIssues": 0
+        }
+      ],
+      "errorsDuringRoute": [],
+      "screenshot": "/home/liush/workspase/serverlessAIAgents/output/playwright/platform-audit/screenshots/agent-patterns.png"
+    },
+    {
+      "route": "/skills",
+      "visited": true,
+      "actions": [],
+      "errorsDuringRoute": [
+        {
+          "kind": "route_failure",
+          "message": "Error: page.evaluate: Target page, context or browser has been closed",
+          "url": "http://localhost:3001/skills"
+        }
+      ],
+      "screenshot": "/home/liush/workspase/serverlessAIAgents/output/playwright/platform-audit/screenshots/skills.png"
+    },
+    {
+      "route": "/rag",
+      "visited": false,
+      "actions": [],
+      "errorsDuringRoute": [
+        {
+          "kind": "route_failure",
+          "message": "Error: page.goto: Target page, context or browser has been closed",
+          "url": "http://localhost:3001/skills"
+        }
+      ],
+      "screenshot": ""
+    },
+    {
+      "route": "/mcp",
+      "visited": false,
+      "actions": [],
+      "errorsDuringRoute": [
+        {
+          "kind": "route_failure",
+          "message": "Error: page.goto: Target page, context or browser has been closed",
+          "url": "http://localhost:3001/skills"
+        }
+      ],
+      "screenshot": ""
+    },
+    {
+      "route": "/cli",
+      "visited": false,
+      "actions": [],
+      "errorsDuringRoute": [
+        {
+          "kind": "route_failure",
+          "message": "Error: page.goto: Target page, context or browser has been closed",
+          "url": "http://localhost:3001/skills"
+        }
+      ],
+      "screenshot": ""
+    },
+    {
+      "route": "/settings",
+      "visited": false,
+      "actions": [],
+      "errorsDuringRoute": [
+        {
+          "kind": "route_failure",
+          "message": "Error: page.goto: Target page, context or browser has been closed",
+          "url": "http://localhost:3001/skills"
+        }
+      ],
+      "screenshot": ""
+    }
+  ],
+  "issues": []
+}

@@ -1,7 +1,7 @@
 {
   "name": "design_skills_engine",
   "display_name": "デザインスキルエンジン",
-  "description": "自然言語ブリーフからComfyUI経由で統一スタイルのマルチ画像セットを生成",
+  "description": "プラグイン/他Appから再利用される共通デザイン生成サービス。自然言語ブリーフからComfyUI経由で統一スタイルの画像セットを生成",
   "business_base": "media",
   "product_line": "framework",
   "surface_profile": "developer",
@@ -97,7 +97,9 @@
     "image-generation",
     "comfyui",
     "pipeline",
-    "skill"
+    "skill",
+    "shared-service",
+    "plugin-runtime"
   ],
   "contracts": {
     "auth": {

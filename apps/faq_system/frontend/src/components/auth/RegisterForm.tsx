@@ -13,6 +13,17 @@ const getErrorMessage = (error: unknown, fallback: string): string => {
     return fallback;
 };
 
+/** API の message がオブジェクトの場合に表示用文字列に変換する（[object Object] 防止） */
+const toDisplayMessage = (message: unknown, fallback: string): string => {
+    if (message == null) return fallback;
+    if (typeof message === 'string') return message;
+    if (typeof message === 'object' && message !== null && 'msg' in message && typeof (message as { msg: unknown }).msg === 'string') {
+        return (message as { msg: string }).msg;
+    }
+    if (typeof message === 'object') return fallback;
+    return String(message);
+};
+
 export const RegisterForm = () => {
     const { t } = useI18n();
     const [formData, setFormData] = useState<RegisterRequest>({
@@ -46,7 +57,7 @@ export const RegisterForm = () => {
                 setAuth(response.access_token, response.user);
                 navigate('/');
             } else {
-                setError(response.message || t('register.error_fallback'));
+                setError(toDisplayMessage(response.message, t('register.error_fallback')));
             }
         } catch (err: unknown) {
             setError(getErrorMessage(err, t('register.error_occurred')));

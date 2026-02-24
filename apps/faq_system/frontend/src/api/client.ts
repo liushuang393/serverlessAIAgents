@@ -18,6 +18,20 @@ const getBaseUrl = () => {
 
 const BASE_URL = getBaseUrl();
 
+/** API エラー body の detail（FastAPI は文字列 or バリデーション配列）を表示用文字列に変換する */
+function normalizeErrorDetail(detail: unknown): string {
+    if (detail == null) return '';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+        const messages = detail
+            .map((item: { msg?: string; loc?: unknown[] }) => (item && typeof item.msg === 'string' ? item.msg : null))
+            .filter(Boolean);
+        return messages.length > 0 ? messages.join(' ') : JSON.stringify(detail);
+    }
+    if (typeof detail === 'object') return JSON.stringify(detail);
+    return String(detail);
+}
+
 class ApiClient {
     private getToken(): string | null {
         return localStorage.getItem('access_token');
@@ -48,7 +62,8 @@ class ApiClient {
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-            throw new Error(errorData.detail || `Error ${response.status}`);
+            const message = normalizeErrorDetail(errorData.detail) || `Error ${response.status}`;
+            throw new Error(message);
         }
 
         return response.json();
@@ -82,7 +97,8 @@ class ApiClient {
 
         if (!response.ok || !response.body) {
             const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-            throw new Error(errorData.detail || `Error ${response.status}`);
+            const message = normalizeErrorDetail(errorData.detail) || `Error ${response.status}`;
+            throw new Error(message);
         }
 
         const reader = response.body.getReader();

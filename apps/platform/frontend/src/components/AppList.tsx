@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { fetchPortConflicts, rebalancePorts } from '@/api/client';
+import { fetchPortConflicts, localStartApp, rebalancePorts } from '@/api/client';
 import { useAppStore } from '@/store/useAppStore';
 import type { AppStatus, PortConflictReport } from '@/types';
 import { AppHealthBadge } from './AppHealthBadge';
@@ -49,6 +49,22 @@ const getAppCategory = (app: any): CategoryId => {
   return 'daily';
 };
 
+type SharedServiceAction = 'start';
+
+const SHARED_SERVICE_META: Record<string, { usage: string; usedBy: string }> = {
+  auth_service: {
+    usage: 'Shared auth core for plugins and platform contracts (JWT/OAuth/MFA).',
+    usedBy: 'FAQ System, platform contracts.auth, plugin runtime guards',
+  },
+  design_skills_engine: {
+    usage: 'Shared generation engine used by design/image plugins and workflows.',
+    usedBy: 'Design-related plugins, app-level generation pipelines',
+  },
+};
+
+const isSharedServiceApp = (appName: string): boolean =>
+  Object.prototype.hasOwnProperty.call(SHARED_SERVICE_META, appName);
+
 export function AppList() {
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -58,6 +74,9 @@ export function AppList() {
   const [rebalancing, setRebalancing] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [conflicts, setConflicts] = useState<PortConflictReport | null>(null);
+  const [serviceActionLoading, setServiceActionLoading] = useState<Record<string, SharedServiceAction | null>>({});
+  const [serviceActionMessage, setServiceActionMessage] = useState<string | null>(null);
+  const [serviceActionError, setServiceActionError] = useState<string | null>(null);
   const [keyword, setKeyword] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | AppStatus>('all');
   const [sortKey, setSortKey] = useState<'name' | 'api' | 'frontend'>('name');
@@ -97,6 +116,31 @@ export function AppList() {
       setConflicts(report);
     } finally {
       setRebalancing(false);
+    }
+  };
+
+  const handleSharedServiceAction = async (
+    appName: string,
+    action: SharedServiceAction,
+    e: React.MouseEvent,
+  ) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setServiceActionMessage(null);
+    setServiceActionError(null);
+    setServiceActionLoading((prev) => ({ ...prev, [appName]: action }));
+    try {
+      const result = await localStartApp(appName);
+      if (!result.success) {
+        throw new Error(result.error || result.stderr || 'start failed');
+      }
+      setServiceActionMessage(`${appName} service started`);
+      await refresh();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setServiceActionError(`${appName} start failed: ${message}`);
+    } finally {
+      setServiceActionLoading((prev) => ({ ...prev, [appName]: null }));
     }
   };
 
@@ -267,6 +311,30 @@ export function AppList() {
         </div>
       )}
 
+      {serviceActionError && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 flex items-center justify-between">
+          <span className="text-red-300 text-sm">{serviceActionError}</span>
+          <button
+            onClick={() => setServiceActionError(null)}
+            className="text-red-400 hover:text-red-300 text-xs"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
+      {serviceActionMessage && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-4 flex items-center justify-between">
+          <span className="text-emerald-300 text-sm">{serviceActionMessage}</span>
+          <button
+            onClick={() => setServiceActionMessage(null)}
+            className="text-emerald-400 hover:text-emerald-300 text-xs"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* ポート重複警告 */}
       {conflicts?.has_conflicts && (
         <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
@@ -306,13 +374,12 @@ export function AppList() {
             const backendUrl = app.ports.api ? `http://localhost:${app.ports.api}` : (app.urls?.backend ?? null);
             const frontendUrl = app.ports.frontend ? `http://localhost:${app.ports.frontend}` : (app.urls?.frontend ?? null);
             const isPinned = pinnedApps.includes(app.name);
+            const sharedMeta = SHARED_SERVICE_META[app.name];
+            const isSharedService = isSharedServiceApp(app.name);
+            const actionLoading = serviceActionLoading[app.name];
 
-            return (
-              <Link
-                key={app.name}
-                to={`/apps/${app.name}`}
-                className="group relative bg-slate-900/40 border border-slate-800 rounded-2xl p-5 hover:border-indigo-500/50 hover:bg-slate-900/80 transition-all duration-300 overflow-hidden"
-              >
+            const cardBody = (
+              <>
                 {/* Decoration background */}
                 <div className="absolute -right-4 -top-4 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl group-hover:bg-indigo-500/10 transition-colors" />
 
@@ -349,6 +416,16 @@ export function AppList() {
                   </p>
                 )}
 
+                {sharedMeta && (
+                  <div className="mt-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 space-y-1.5">
+                    <p className="text-[10px] uppercase tracking-wider text-cyan-300 font-semibold">
+                      Shared Service (No End-User Detail View)
+                    </p>
+                    <p className="text-[11px] text-slate-200">{sharedMeta.usage}</p>
+                    <p className="text-[11px] text-slate-400">Used by: {sharedMeta.usedBy}</p>
+                  </div>
+                )}
+
                 <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 mt-4">
                   <span className="px-2 py-0.5 bg-slate-800/80 rounded-full border border-slate-700/50">v{app.version}</span>
                   {app.ports.api && (
@@ -381,6 +458,41 @@ export function AppList() {
                     <span className="text-[9px] text-slate-600">+{app.tags.length - 3}</span>
                   )}
                 </div>
+
+                {isSharedService && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        void handleSharedServiceAction(app.name, 'start', e);
+                      }}
+                      disabled={actionLoading !== null}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs rounded-lg transition-colors"
+                    >
+                      {actionLoading === 'start' ? 'Starting...' : 'Start Service'}
+                    </button>
+                  </div>
+                )}
+              </>
+            );
+
+            if (isSharedService) {
+              return (
+                <div
+                  key={app.name}
+                  className="group relative bg-slate-900/40 border border-cyan-700/40 rounded-2xl p-5 hover:border-cyan-500/50 hover:bg-slate-900/80 transition-all duration-300 overflow-hidden"
+                >
+                  {cardBody}
+                </div>
+              );
+            }
+
+            return (
+              <Link
+                key={app.name}
+                to={`/apps/${app.name}`}
+                className="group relative bg-slate-900/40 border border-slate-800 rounded-2xl p-5 hover:border-indigo-500/50 hover:bg-slate-900/80 transition-all duration-300 overflow-hidden"
+              >
+                {cardBody}
               </Link>
             );
           })}

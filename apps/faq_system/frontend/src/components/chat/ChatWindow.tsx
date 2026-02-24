@@ -51,7 +51,7 @@ export const ChatWindow = () => {
             style={{ background: 'radial-gradient(ellipse at 50% 0%, hsl(220, 20%, 11%), var(--bg-main))' }}>
 
             {/* Top Bar / Header Info */}
-            <div className="absolute top-0 left-0 w-full h-14 glass flex items-center justify-between px-8 z-10 border-b border-white/5">
+            <div className="w-full h-14 shrink-0 glass flex items-center justify-between px-8 z-10 border-b border-white/5">
                 <div className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/20">
                         <Sparkles className="text-[var(--primary)]" size={14} />
@@ -67,7 +67,7 @@ export const ChatWindow = () => {
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto w-full pt-16 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
                 <div className="max-w-4xl mx-auto px-6 w-full flex flex-col gap-8 pb-40">
                     {messages.length === 0 ? (
                         <div className="mt-16 flex flex-col items-center justify-center animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -143,11 +143,11 @@ export const ChatWindow = () => {
                     <div className="flex items-center justify-between px-2">
                         <div className="flex items-center gap-4">
                             <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5 font-medium uppercase tracking-wider">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60" />{' '}
+                                <span className="w-1.5 h-1.5 rounded-full bg-white/20" />{' '}
                                 RAG
                             </span>
                             <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5 font-medium uppercase tracking-wider">
-                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60" />{' '}
+                                <span className="w-1.5 h-1.5 rounded-full bg-white/20" />{' '}
                                 SQL
                             </span>
                         </div>

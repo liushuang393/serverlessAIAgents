@@ -1,0 +1,144 @@
+{
+  "name": "auth_service",
+  "display_name": "Auth Service",
+  "description": "Plugin と Platform 契約向けの共通認証サービス（JWT / OAuth2 / SAML / MFA）",
+  "business_base": "integration",
+  "product_line": "framework",
+  "surface_profile": "developer",
+  "audit_profile": "developer",
+  "version": "1.0.0",
+  "icon": "🔐",
+  "ports": {
+    "api": 8010,
+    "frontend": null,
+    "db": null,
+    "redis": null
+  },
+  "entry_points": {
+    "api_module": "apps.auth_service.main:app",
+    "health": "/health"
+  },
+  "agents": [],
+  "services": {
+    "auth_core": {
+      "jwt": true,
+      "mfa": true,
+      "rbac": true
+    },
+    "identity_providers": {
+      "local": true,
+      "google": true,
+      "microsoft": true,
+      "saml": true,
+      "ldap": true
+    }
+  },
+  "dependencies": {
+    "database": "sqlite",
+    "redis": false,
+    "external": [
+      "google_oauth",
+      "microsoft_oauth",
+      "saml_idp",
+      "ldap_server"
+    ]
+  },
+  "runtime": {
+    "urls": {
+      "backend": "http://localhost:8010",
+      "frontend": null,
+      "health": "http://localhost:8010/health",
+      "database": null
+    },
+    "database": {
+      "kind": "sqlite",
+      "url": null,
+      "host": null,
+      "port": null,
+      "name": null,
+      "user": null,
+      "password": null,
+      "password_env": null,
+      "note": null
+    },
+    "commands": {
+      "backend_dev": "python -m apps.auth_service.main",
+      "frontend_dev": null,
+      "publish": null,
+      "start": "nohup python -m apps.auth_service.main >/tmp/auth_service.log 2>&1 &",
+      "stop": "pkill -f \"apps.auth_service.main\" || true"
+    }
+  },
+  "tags": [
+    "auth",
+    "security",
+    "shared-service",
+    "plugin-runtime",
+    "platform-contract"
+  ],
+  "contracts": {
+    "auth": {
+      "enabled": true,
+      "providers": [
+        "jwt",
+        "oauth2",
+        "saml",
+        "ldap"
+      ],
+      "allow_anonymous": false,
+      "required_scopes": [],
+      "session_ttl_minutes": 60
+    },
+    "rag": {
+      "enabled": false,
+      "pattern": null,
+      "provider": null,
+      "collections": [],
+      "data_sources": [],
+      "chunk_strategy": "recursive",
+      "chunk_size": 800,
+      "chunk_overlap": 120,
+      "retrieval_method": "hybrid",
+      "embedding_model": null,
+      "rerank_model": null,
+      "default_top_k": 5,
+      "score_threshold": null,
+      "indexing_schedule": null
+    },
+    "skills": {
+      "auto_install": false,
+      "hot_reload": true,
+      "allowed_sources": [],
+      "default_skills": []
+    },
+    "release": {
+      "strategy": "manual",
+      "targets": [],
+      "environments": [
+        "dev"
+      ],
+      "require_approval": true
+    }
+  },
+  "plugin_bindings": [],
+  "blueprint": {
+    "engine_pattern": "simple",
+    "flow_pattern": null,
+    "system_prompt": "",
+    "llm_provider": null,
+    "llm_base_url": null,
+    "llm_api_key_env": null,
+    "default_model": null,
+    "default_skills": [],
+    "vector_db_provider": null,
+    "vector_db_url": null,
+    "vector_db_collection": null,
+    "vector_db_api_key_env": null,
+    "mcp_servers": [],
+    "agents": []
+  },
+  "visibility": {
+    "mode": "private",
+    "tenants": []
+  }
+}

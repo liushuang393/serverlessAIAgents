@@ -52,8 +52,12 @@ async def test_register_user_duplicate(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_register_weak_password(client: AsyncClient):
-    """弱いパスワードでの登録失敗."""
+    """弱いパスワードでの登録失敗.
+
+    RegisterRequest の Pydantic バリデーション (min_length=8) により
+    422 Unprocessable Entity が返される。
+    """
     payload = {"username": "weakpwuser", "password": "123", "display_name": "Weak Pw"}
     response = await client.post("/api/auth/register", json=payload)
-    data = response.json()
-    assert data["success"] is False
+    # Pydantic の min_length=8 バリデーションにより 422 が返る
+    assert response.status_code == 422

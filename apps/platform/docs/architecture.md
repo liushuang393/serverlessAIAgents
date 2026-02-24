@@ -1,6 +1,6 @@
 # Platform アーキテクチャ設計書
 
-> **最終更新**: 2026-02-14
+> **最終更新**: 2026-02-23
 > **対象**: `apps/platform` — AgentFlow 統合管理プラットフォーム
 
 ---
@@ -168,3 +168,59 @@ sequenceDiagram
 | 保存 | ファイルシステム (`app_config.json`) | DB 不要。軽量設計 |
 | 監視 | HTTP ヘルスチェック | 各 App の `/health` を定期ポーリング |
 
+---
+
+## 6. CLI 駆動自癒アーキテクチャ（2026-02）
+
+Platform は起動系アクションに対して「事前準備 + 失敗時調査」を標準化する。
+
+```mermaid
+sequenceDiagram
+    participant FE as AppDetail (Frontend)
+    participant API as apps router
+    participant LC as AppLifecycleManager
+    participant RM as CLIRuntimeManager
+    participant CR as RuntimeCommandResolver
+    participant DS as CLIDiagnosticService
+
+    FE->>API: POST /apps/{app}/local-start|start|publish
+    API->>LC: action 実行
+    LC->>RM: preflight(detect/install/auth)
+    LC->>CR: resolve commands (README > runtime.commands > fallback)
+    LC->>LC: コマンド実行
+    alt 失敗時
+        LC->>DS: diagnose_action_failure(...)
+        DS->>RM: run_diagnostic_prompt(read_only/plan)
+        RM-->>DS: 構造化結果
+        DS-->>LC: diagnostic payload
+    end
+    LC-->>API: AppActionResult + diagnostic?
+    API-->>FE: 同一レスポンス
+```
+
+### 設計意図
+
+- **安全第一**: CLI 診断は既定で `read_only/plan`。自動改変を行わない。
+- **契約優先**: app 固有差分は `runtime.cli` と `runtime.commands` で明示上書き。
+- **説明可能性**: `command_source` と `diagnostic` を同時返却し、UI 側で同位置表示する。
+
+### 主要コンポーネント
+
+- `agentflow/tools/cli/runtime_manager.py`
+  - CLI 検出、インストール、認証、診断実行を統一
+- `apps/platform/services/runtime_command_resolver.py`
+  - README から起動コマンド抽出、fallback 決定
+- `apps/platform/services/cli_diagnostic_service.py`
+  - 起動失敗文脈の整形、診断結果の構造化
+
+---
+
+## 7. Platform API 追加契約
+
+- `GET /api/studios/framework/apps/{app_name}/cli/status`
+- `POST /api/studios/framework/apps/{app_name}/cli/setup`
+
+既存 action（`publish/start/stop/local-start`）レスポンス拡張:
+
+- `command_source`: 解決元（`readme` / `runtime` / `fallback`）
+- `diagnostic?`: 失敗時 CLI 診断情報（非永続・当該レスポンスのみ）

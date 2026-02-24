@@ -1,8 +1,8 @@
 # 📌 AgentFlow Code Rules インデックス
 
 > **プロジェクト**: AgentFlow - MCP/A2A/AG-UI/A2UI 統一インターフェース AI エージェントフレームワーク
-> **バージョン**: 1.1.0
-> **最終更新**: 2026-02-21
+> **バージョン**: 1.2.0
+> **最終更新**: 2026-02-23
 > **適用範囲**: AgentFlow 全 Python コードベース
 
 ---
@@ -349,7 +349,7 @@ npm run dev
 
 # AgentFlow プロジェクト開発規約・設計ガイド（外部公開インターフェース版）
 
-最終更新: 2026-02-11  
+最終更新: 2026-02-11
 対象: `agentflow/` を利用して Agent / Workflow / Frontend 連携を設計・実装する開発者
 
 ---
@@ -673,3 +673,61 @@ verdict = safe_enum(
 4. HITL必要箇所に承認経路とタイムアウト方針がある。
 5. ユニットテスト（正常/拒否/例外/再試行）が揃っている。
 6. 公開対象は `agentflow/__init__.py` 経由で参照可能。
+
+
+---
+
+## 14. Apps 品質改善の教訓（FAQ Studio 2026-02）
+
+> FAQ Studio 品質向上プロジェクトで発見された頻出バグパターン。
+> AI が同じ過ちを繰り返さないよう、以下を必ず参照すること。
+
+### 14.1 非同期 DB コミット（最重要）
+
+| ❌ バグ | ✅ 正解 | 理由 |
+|---|---|---|
+| `session.add(obj)` のみで `commit()` を忘れる | `session.add(obj); await session.commit()` | 非同期モード（aiosqlite/asyncpg）は自動コミットしない |
+| `session.commit()` を `await` なしで呼ぶ | `await session.commit()` | 非同期セッションは coroutine を返す |
+
+- SQLite 同期モードは自動コミットするが、**非同期モード・PostgreSQL では必ず明示 commit が必要**。
+- `IntegrityError` のハンドリングも忘れないこと（ユニーク制約違反等）。
+
+### 14.2 SSE イベントハンドリング（フロントエンド）
+
+バックエンドが送信する SSE イベントタイプ: `progress`, `result`, `error`
+
+| ❌ バグ | ✅ 正解 | 理由 |
+|---|---|---|
+| `result` イベントを無視する | `result` イベントから回答本文を取得し表示する | チャットの回答が画面に表示されない致命的バグ |
+| SSE パースを `try/catch` なしで行う | 各行を個別に `try/catch` で囲む | 1行の不正データで全ストリームが停止 |
+| イベント型を `any` で扱う | 型安全な union 型で定義する | TypeScript の型チェックが無効化される |
+
+### 14.3 Pydantic バリデーション vs サービス層バリデーション
+
+- Pydantic の `min_length`, `max_length`, `ge`, `le` 等はリクエスト解析段階（422 エラー）で適用される。
+- サービス層のバリデーション（例: パスワード強度チェック）は 200 + `success: false` で返る。
+- **テストではどちらの層で拒否されるか正確に区別すること。**
+
+### 14.4 Pydantic BaseSettings と環境変数
+
+- `AgentFlowSettings` は `.env` ファイルと環境変数の両方から値を読み込む。
+- **テストでデフォルト値を検証する場合**: `monkeypatch.delenv()` だけでは不十分。`.env` からも読まれるため `AgentFlowSettings(_env_file=None)` を使う。
+- FAQ アプリの `.env`（`override=True`）はルート `.env` より優先される。
+
+### 14.5 JWT ブラックリスト
+
+- 本プロジェクトの JWT 実装はログアウト時にトークンをブラックリスト化する。
+- **ログアウト後のトークンは拒否される**（ステートレス JWT の一般的な想定と異なる）。
+- テストでは `success is False` で検証すること。
+
+### 14.6 フロントエンド禁止事項（再確認）
+
+- `console.log` / `console.error` はプロダクションコードで**絶対禁止**。
+- 代替: エラーはユーザー向け UI 表示（トースト等）に変換する。
+- `logout` 等の非同期関数は `Promise<void>` を正しく型宣言する。
+
+### 14.7 Ollama / ローカル LLM 設定
+
+- `settings.py` のデフォルトモデルと `.env` の `OLLAMA_MODEL` を一致させること。
+- `router.py` でモデル名をハードコードせず、`os.environ.get("OLLAMA_MODEL", default)` を使う。
+- Ollama は OpenAI 互換 API（`/v1/chat/completions`）をサポートする。ネイティブ API は fallback として使用。

@@ -68,16 +68,19 @@ python -m apps.faq_system.main
 
 ### フロントエンド開発 (React/TypeScript)
 
+**注意:** ログインや `/api/*` を使う場合は、**先にバックエンドを起動**してください。  
+フロントは `localhost:3004` で動作し、API は `localhost:8005` にプロキシされます。バックエンドが動いていないと「socket hang up」「ECONNRESET」などのプロキシエラーになります。
+
 ```bash
+# ターミナル1: バックエンド（必須）
+python -m apps.faq_system.main --reload
+
+# ターミナル2: フロントエンド
 cd apps/faq_system/frontend
-
-# 1. 依存関係のインストール
 npm install
-
-# 2. 開発サーバー起動 (HMR 有効)
 npm run dev
 
-# 3. 本番ビルド (ビルド後、バックエンドが自動でサーブします)
+# 本番ビルド (ビルド後、バックエンドが自動でサーブします)
 npm run build
 ```
 

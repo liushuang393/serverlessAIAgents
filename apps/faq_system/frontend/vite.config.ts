@@ -56,6 +56,20 @@ export default defineConfig({
         target: `http://${apiHost}:${apiPort}`,
         changeOrigin: true,
         secure: false,
+        timeout: 30000,
+        configure: (proxy) => {
+          proxy.on('error', (err, req, res) => {
+            const url = req.url ?? ''
+            if (url.includes('/api/auth')) {
+              console.error(
+                '[vite proxy] API 接続エラー（ログイン等）: バックエンドが起動しているか確認してください。',
+              )
+              console.error(
+                `  起動例: python -m apps.faq_system.main --reload  (port ${apiPort})`,
+              )
+            }
+          })
+        },
       },
       '/ws': {
         target: `ws://${apiHost}:${apiPort}`,

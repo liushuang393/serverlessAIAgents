@@ -1,6 +1,6 @@
 # 新規 App 開発ワークフロー設計
 
-> **最終更新**: 2026-02-14
+> **最終更新**: 2026-02-23
 > **対象**: Platform から新規 App を追加する際の統一手順
 
 ---
@@ -188,3 +188,25 @@ Platform UI に「New App」ウィザードを実装し、①〜④ を GUI 操�
 4. `app_config.json` 自動生成
 5. Platform に即座に反映
 
+---
+
+## 5. 運用起動/自癒フロー（Platform 実装）
+
+新規 App 追加後の運用起動は、以下の固定順序で処理される。
+
+1. `CLI preflight`（`codex` / `claude` の検出・必要時インストール・認証確認）
+2. 起動コマンド解決（`README > runtime.commands > fallback`）
+3. `local-start/start/publish` の実行
+4. 失敗時に CLI 診断（`read_only/plan`）を実行
+5. `diagnostic` を action レスポンスに同梱し、UI の同一エラー位置に表示
+
+### local-start の標準意味
+
+- backend + frontend を同時起動する（frontend が無い App は backend のみ）
+- DB は App 依存契約（`dependencies.database`）に従い、ローカルまたは Docker を前提に起動確認する
+
+### 実装時チェックポイント
+
+- README に標準起動コマンドを明示する
+- `runtime.commands` は README で不足する場合の補完として使う
+- `runtime.cli` で CLI インストール/認証/診断コマンドを app 単位に上書きする

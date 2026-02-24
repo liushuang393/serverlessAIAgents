@@ -7,7 +7,7 @@ interface AuthState {
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (token: string, user: UserInfo) => void;
-    logout: () => void;
+    logout: () => Promise<void>;
     checkAuth: () => Promise<void>;
 }
 
@@ -45,8 +45,8 @@ export const useAuthStore = create<AuthState>((set) => ({
             } else {
                 throw new Error('Invalid session');
             }
-        } catch (error) {
-            console.error('Auth check failed:', error);
+        } catch {
+            /* 認証チェック失敗時はトークンをクリアしてログアウト状態にする */
             localStorage.removeItem('access_token');
             set({ user: null, isAuthenticated: false });
         } finally {

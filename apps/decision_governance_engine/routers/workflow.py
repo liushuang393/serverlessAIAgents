@@ -43,9 +43,12 @@ class AgentDefinition(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    """ヘルスチェックレスポンス."""
+    """ヘルスチェックレスポンス.
 
-    status: str = "ok"
+    platform のヘルスチェック判定基準と統一した応答フォーマット。
+    """
+
+    status: str = "healthy"
     version: str = "2.0.0"
 
 

@@ -172,12 +172,18 @@ async def list_service_nodes() -> dict[str, Any]:
 
 @router.get("/api/health")
 async def health_check() -> dict[str, Any]:
-    """ヘルスチェック."""
-    status = "ok"
-    db_status = "ok"
+    """ヘルスチェック.
+
+    正常時は ``{"status": "healthy"}``、DB 異常時は ``{"status": "degraded"}`` を返す。
+    platform のヘルスチェック判定基準と統一した応答フォーマット。
+    """
+    status = "healthy"
+    db_status = "healthy"
     db_error: str | None = None
     resolved_db_url = get_database_url()
-    masked_db_url = f"***@{resolved_db_url.split('@', 1)[1]}" if "@" in resolved_db_url else resolved_db_url
+    masked_db_url = (
+        f"***@{resolved_db_url.split('@', 1)[1]}" if "@" in resolved_db_url else resolved_db_url
+    )
 
     try:
         await ensure_database_ready()
@@ -190,7 +196,7 @@ async def health_check() -> dict[str, Any]:
         logger.exception("Health check DB error: %s", exc)
 
     payload: dict[str, Any] = {
-        "status": "ok",
+        "status": status,
         "service": "faq-system",
         "version": "2.0.0",
         "timestamp": datetime.now(tz=UTC).isoformat(),
@@ -199,7 +205,6 @@ async def health_check() -> dict[str, Any]:
             "url": masked_db_url,
         },
     }
-    payload["status"] = status
     if db_error:
         payload["db"]["error"] = db_error
     return payload

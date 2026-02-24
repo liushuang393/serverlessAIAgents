@@ -261,6 +261,11 @@ class AuthService:
                 last_login_at=None,
             )
             session.add(new_user)
+            try:
+                await session.commit()
+            except IntegrityError:
+                await session.rollback()
+                return False, "このユーザー名は既に使用されています", None
             user_info = self._to_user_info(new_user)
 
         return True, "ユーザー登録が完了しました", user_info

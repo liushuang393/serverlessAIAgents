@@ -1,6 +1,6 @@
 # app_config.json スキーマ仕様（P0 統一契約）
 
-> 最終更新: 2026-02-15  
+> 最終更新: 2026-02-23  
 > 対象: 全 `apps/*/app_config.json`  
 > 実装: `apps/platform/schemas/app_config_schemas.py`
 
@@ -147,3 +147,72 @@ RAG 概要サービスの抽出優先度は以下。
 2. `POST /api/studios/framework/apps/migrate-manifests` を `dry_run=true` で確認。
 3. 問題なければ `dry_run=false` で適用。
 4. `GET /api/studios/framework/apps/summary` で `agent_count` / `has_api` / `contracts` を確認。
+
+---
+
+## 8. `runtime.cli` 契約（CLI 自動準備/診断）
+
+`runtime` 配下に `cli` を追加し、App ごとに CLI 実行契約を上書きできる。
+
+```json
+{
+  "runtime": {
+    "commands": {
+      "backend_dev": "python -m apps.example.main",
+      "frontend_dev": "npm run dev",
+      "publish": "docker compose up -d --build",
+      "start": "docker compose up -d",
+      "stop": "docker compose down"
+    },
+    "cli": {
+      "preferred": ["codex", "claude"],
+      "codex": {
+        "executable": "codex",
+        "install_commands": [["npm", "install", "-g", "@openai/codex"]],
+        "auth": {
+          "status": ["codex", "login", "status"],
+          "api_key_env": "OPENAI_API_KEY",
+          "api_key_login": ["codex", "login", "--with-api-key"],
+          "interactive_login": ["codex", "login"]
+        },
+        "diagnostic_mode": "read_only",
+        "diagnostic_command": ["codex", "exec", "--skip-git-repo-check", "--sandbox", "read-only"]
+      },
+      "claude": {
+        "executable": "claude",
+        "install_commands": [["npm", "install", "-g", "@anthropic-ai/claude-code"]],
+        "auth": {
+          "status": ["claude", "auth", "status", "--json"],
+          "api_key_env": "ANTHROPIC_API_KEY",
+          "api_key_login": null,
+          "interactive_login": ["claude", "auth", "login"]
+        },
+        "diagnostic_mode": "plan",
+        "diagnostic_command": ["claude", "-p", "--permission-mode", "plan"]
+      }
+    }
+  }
+}
+```
+
+### 認証順序（既定）
+
+1. 既存ログイン状態 (`auth.status`) を確認
+2. API Key で認証（`api_key_env` + `api_key_login`）
+3. 対話ログイン手順（`interactive_login`）を提示
+
+### 安全制約
+
+- 診断モードは `read_only` / `plan` のみ
+- 危険フラグ（`--dangerously-*`）は実行拒否
+- 診断失敗は構造化エラーとして返し、主処理の応答に同梱
+
+---
+
+## 9. 起動コマンド解決優先度
+
+起動系 action（`local-start/start/publish`）のコマンド解決順は固定:
+
+1. App の `README.md`
+2. `runtime.commands`
+3. Platform fallback コマンド

@@ -63,14 +63,14 @@
     "ask_placeholder": "随便问...",
     "shift_enter_hint": "Shift+Enter 换行",
     "quick": {
-      "analyze_reports": "分析报告",
-      "analyze_reports_sub": "从上传的 PDF 提取洞察",
-      "sql_query": "SQL 查询",
-      "sql_query_sub": "自然语言生成数据库报告",
-      "tech_support": "技术支持",
-      "tech_support_sub": "逐步产品指导",
-      "sales_strategy": "销售策略",
-      "sales_strategy_sub": "创建定制营销素材"
+      "analyze_reports": "汇总上月各销售团队的业绩，按部门对比同比增长率和目标达成率",
+      "analyze_reports_sub": "部门KPI看板生成",
+      "sql_query": "分析最近三个月客户流失率最高的区域，并列出主要退订原因",
+      "sql_query_sub": "客户留存分析与改进建议",
+      "tech_support": "为即将到来的客户提案制作A产品与B产品的功能及价格对比资料",
+      "tech_support_sub": "销售提案与竞品对比支持",
+      "sales_strategy": "列出本季度成交概率80%以上的全部商机，并计算预计落地金额",
+      "sales_strategy_sub": "销售管道预测报告"
     }
   },
   "register": {
@@ -89,9 +89,26 @@
   "sidebar": {
     "history": "对话历史",
     "settings": "设置",
+    "collapse": "收起侧边栏",
+    "expand": "展开侧边栏",
     "no_history": "暂无历史",
     "no_conversations": "暂无对话。",
     "start_new": "请点击上方按钮创建新对话。"
+  },
+  "settings": {
+    "title": "设置",
+    "language": "语言",
+    "language_desc": "选择显示语言。更改将立即生效。",
+    "profile": "个人资料",
+    "username": "用户名",
+    "display_name": "显示名称",
+    "department": "部门",
+    "role": "角色",
+    "system": "系统信息",
+    "version": "版本",
+    "app_name": "应用名称",
+    "security": "安全",
+    "security_desc": "MFA 认证和 RBAC 访问控制已启用。安全策略变更请联系管理员。"
   },
   "common": {
     "loading": "加载中...",

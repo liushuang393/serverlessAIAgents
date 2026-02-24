@@ -63,6 +63,11 @@ _LOCAL_LOG_TAIL_LINES = 40
 _LOCAL_DEPENDENCY_TIMEOUT = 0.4
 _LOCAL_EXTERNAL_DB_KINDS = {"postgresql", "postgres", "mysql", "mariadb", "redis"}
 
+# WSL / Linux 環境で conda agentflow を活性化するシェルプレフィックス
+_CONDA_ACTIVATE_PREFIX = (
+    'eval "$(conda shell.bash hook)" && conda activate agentflow && '
+)
+
 
 class AppStatus(str, Enum):
     """App の稼働状態."""
@@ -664,10 +669,18 @@ class AppLifecycleManager:
         role: str,
         cwd: Path,
     ) -> tuple[bool, str | None, str | None]:
-        """Local 開発コマンドをバックグラウンド起動し、生存確認する."""
+        """Local 開発コマンドをバックグラウンド起動し、生存確認する.
+
+        WSL / Linux 環境で conda agentflow を活性化してから実行する。
+        """
         log_path = f"/tmp/{app_name}_{role}.log"
-        launch_cmd = f"nohup bash -lc {shlex.quote(command)} > {shlex.quote(log_path)} 2>&1 & echo $!"
-        _logger.info("[%s] %s 起動: %s", app_name, role, command)
+        # conda agentflow 環境を活性化してからコマンドを実行する
+        activated_command = f"{_CONDA_ACTIVATE_PREFIX}{command}"
+        launch_cmd = (
+            f"nohup bash -lc {shlex.quote(activated_command)}"
+            f" > {shlex.quote(log_path)} 2>&1 & echo $!"
+        )
+        _logger.info("[%s] %s 起動 (conda agentflow): %s", app_name, role, command)
         proc = await asyncio.create_subprocess_shell(
             launch_cmd,
             cwd=str(cwd),

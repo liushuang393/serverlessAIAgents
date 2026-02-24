@@ -95,7 +95,7 @@ class AgentFlowSettings(BaseSettings):
     # Ollama（ローカル）
     # ========================================
     ollama_base_url: str | None = Field(default=None, description="Ollama URL")
-    ollama_model: str = Field(default="llama3.3:70b", description="Ollama モデル名")
+    ollama_model: str = Field(default="llama3.2", description="Ollama モデル名")
 
     # ========================================
     # データベース

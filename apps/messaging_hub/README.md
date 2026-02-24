@@ -195,6 +195,8 @@ python -m apps.platform.main publish ./apps/messaging_hub --target docker
 | `/send` | POST | 直接メッセージ送信（管理用） |
 | `/webhook/telegram` | POST | Telegram webhook |
 | `/webhook/slack` | POST | Slack webhook |
+| `/assistant/process` | POST | 主管アシスタント処理（低信頼トラブル時は CLI 提案を返す） |
+| `/assistant/cli/execute` | POST | 提案済み CLI 調査の承認実行（`confirm=true` 必須） |
 
 ### WebSocket
 
@@ -209,6 +211,52 @@ ws.onmessage = (event) => {
   // { type: 'assistant_message', session_id: '...', data: {...} }
 };
 ```
+
+## 🧭 CLI 提案ルーティング（最小接続）
+
+Messaging Hub は「わからないトラブルシュート要求」を直接断定せず、CLI 調査提案へルーティングする。
+
+### 1) 提案生成
+
+`POST /assistant/process`
+
+- 条件: `unknown` または低信頼意図（< 0.45）かつトラブルシュート系キーワード検出
+- 応答: `needs_cli_confirmation=true` と `cli_proposal` を返却
+
+例:
+
+```json
+{
+  "ok": true,
+  "summary": "CLI 調査提案",
+  "needs_cli_confirmation": true,
+  "cli_proposal": {
+    "proposal_id": "uuid",
+    "tool_candidates": ["codex", "claude"],
+    "mode": "read_only",
+    "prompt": "Investigate this issue in read-only mode ...",
+    "rationale": "intent confidence is low/unknown and troubleshooting intent is detected"
+  }
+}
+```
+
+### 2) 承認実行
+
+`POST /assistant/cli/execute`
+
+```json
+{
+  "proposal_id": "uuid",
+  "confirm": true
+}
+```
+
+実行仕様:
+
+- `confirm=true` がない場合は拒否（`confirmation_required`）
+- 実行は `read_only` 診断モード固定
+- 戻り値は `tool/command/summary/raw_output/error` を含む
+- 自動コード改変は行わない（提案と調査結果のみ返す）
 
 ## 🧪 テスト
 
@@ -329,6 +377,9 @@ curl http://localhost:8004/health
 
 3. **レート制限**:
    - レート制限の追加を検討（FastAPI middleware で実装可能）
+4. **CLI 実行境界**:
+   - `assistant/cli/execute` は提案ID + 明示確認の二段階を必須化
+   - 既定モードは `read_only` で、環境調査と修復提案のみに限定
 
 ## 🚢 デプロイ
 

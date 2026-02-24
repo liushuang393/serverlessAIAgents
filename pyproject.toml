@@ -103,6 +103,9 @@ apps = [
     "python-telegram-bot>=20.0",  # For messaging_hub
     "slack-sdk>=3.0",              # For messaging_hub
     "discord.py>=2.0",             # For messaging_hub
+
+    # Security / MFA
+    "pyotp>=2.9.0",  # TOTP MFA（agentflow/security/mfa.py）
 ]
 
 # Memvid長期知識記憶（高性能RAG）

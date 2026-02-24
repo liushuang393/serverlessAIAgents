@@ -271,7 +271,7 @@ export function AppDetail() {
               <InfoItem label={t('app_detail.hc_url')} value={healthDetails.checked_url} />
             )}
             {typeof healthDetails?.http_status === 'number' && (
-              <InfoItem label={t('app_detail.hc_http').replaceAll('{code}', String(healthDetails.http_status))} value={String(healthDetails.http_status)} />
+              <InfoItem label={t('app_detail.hc_http').replace(/\{code\}/g, String(healthDetails.http_status))} value={String(healthDetails.http_status)} />
             )}
             {healthDetails?.docker && (
               <InfoItem

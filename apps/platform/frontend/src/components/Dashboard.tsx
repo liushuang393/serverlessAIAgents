@@ -116,7 +116,7 @@ export function Dashboard() {
                     </div>
                   </div>
                   <span className="text-xs text-slate-500">
-                    {t('dash.agents_count').replaceAll('{count}', String(app.agent_count))}
+                    {t('dash.agents_count').replace(/\{count\}/g, String(app.agent_count))}
                   </span>
                   <AppHealthBadge status={app.status} />
                   </Link>
