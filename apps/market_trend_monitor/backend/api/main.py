@@ -11,6 +11,7 @@ from apps.market_trend_monitor.backend.api.routes import (
     collect_router,
     competitors_router,
     evidence_router,
+    jobs_router,
     metrics_router,
     predictions_router,
     settings_router,
@@ -58,6 +59,25 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
     await store.initialize()
     await workflow.initialize()
+
+    # サーバー再起動時に中断された "running" ジョブを "failed" にリセット
+    from apps.market_trend_monitor.backend.db import async_session as _session_factory
+    from apps.market_trend_monitor.backend.db.models import CollectJobModel
+    from datetime import datetime
+    from sqlalchemy import update as _update
+    async with _session_factory() as _sess:
+        async with _sess.begin():
+            await _sess.execute(
+                _update(CollectJobModel)
+                .where(CollectJobModel.status == "running")
+                .values(
+                    status="failed",
+                    current_step="中断（サーバー再起動）",
+                    completed_at=datetime.now(),
+                    error="サーバーが再起動されたため処理が中断されました",
+                )
+            )
+    logger.info("中断ジョブのリセット完了")
 
     yield
 
@@ -109,6 +129,7 @@ async def health() -> dict[str, str]:
 
 
 app.include_router(collect_router)
+app.include_router(jobs_router)
 app.include_router(trends_router)
 app.include_router(evidence_router)
 app.include_router(signals_router)

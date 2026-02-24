@@ -1,5 +1,6 @@
 """競合追跡・成熟度・レポートAPI."""
 
+import asyncio
 import logging
 from datetime import datetime
 from typing import Any
@@ -350,9 +351,12 @@ async def discover_competitors(request: CompetitorDiscoverRequest) -> dict:
         if "official_site" not in focus_sources:
             focus_sources.append("official_site")
         try:
-            focused_collected_articles = await _collect_articles_for_watchlist_focus(
-                keywords=focus_keywords,
-                sources=focus_sources,
+            focused_collected_articles = await asyncio.wait_for(
+                _collect_articles_for_watchlist_focus(
+                    keywords=focus_keywords,
+                    sources=focus_sources,
+                ),
+                timeout=60.0,
             )
         except Exception as exc:
             focus_collection_error = str(exc)

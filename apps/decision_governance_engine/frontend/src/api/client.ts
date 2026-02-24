@@ -20,6 +20,8 @@ import type {
   FindingRecheckResponse,
   FindingNoteRequest,
   FindingNoteResponse,
+  CheckpointApplyRequest,
+  CheckpointApplyResponse,
   SignatureResponse,
   HistoryListResponse,
   HistoryDetailResponse,
@@ -501,7 +503,7 @@ export class DecisionApiClient {
    */
   async recheckFinding(request: FindingRecheckRequest): Promise<FindingRecheckResponse> {
     const response = await this.fetchWithRetry(
-      `${this.baseUrl}/human-review/recheck-finding`,
+      `${this.baseUrl}/api/human-review/recheck-finding`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -517,7 +519,23 @@ export class DecisionApiClient {
    */
   async logFindingNote(request: FindingNoteRequest): Promise<FindingNoteResponse> {
     const response = await this.fetchWithRetry(
-      `${this.baseUrl}/human-review/log-finding-note`,
+      `${this.baseUrl}/api/human-review/log-finding-note`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      }
+    );
+
+    return response.json();
+  }
+
+  /**
+   * チェックポイントを反映し、review スコア/判定を再計算.
+   */
+  async applyCheckpoints(request: CheckpointApplyRequest): Promise<CheckpointApplyResponse> {
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/api/human-review/apply-checkpoints`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -659,6 +659,32 @@ export interface FindingNoteResponse {
   message: string;
 }
 
+/** チェックポイント反映項目 */
+export interface CheckpointApplyItem {
+  item_id: string;
+  checked: boolean;
+  annotation?: string;
+}
+
+/** チェックポイント反映リクエスト */
+export interface CheckpointApplyRequest {
+  report_id: string;
+  request_id?: string;
+  items: CheckpointApplyItem[];
+  reviewer_name?: string;
+}
+
+/** チェックポイント反映レスポンス */
+export interface CheckpointApplyResponse {
+  success: boolean;
+  message: string;
+  base_confidence_pct: number;
+  recalculated_confidence_pct: number;
+  threshold_pct: number;
+  signature_eligible: boolean;
+  updated_review: ReviewOutput;
+}
+
 /** エグゼクティブサマリー v3.0 */
 export interface ExecutiveSummary {
   one_line_decision: string;

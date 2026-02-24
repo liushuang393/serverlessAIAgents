@@ -16,7 +16,6 @@ import { useAuthStore } from '../store/useAuthStore';
 import { decisionApi } from '../api/client';
 import { SignatureArea } from './HankoSeal';
 import type { RecommendedPath, Phase, Implementation, SignatureData } from '../types';
-import { useI18n } from '../i18n';
 
 /** 通知タイプ */
 type NotificationType = 'success' | 'error' | 'info';
@@ -53,95 +52,121 @@ const Notification: React.FC<{
   );
 };
 
-/** タブID型定義 */
-type TabId = 'summary' | 'dao' | 'fa' | 'shu' | 'qi' | 'review';
+/** 問題タイプ → 日本語ラベル */
+const PROBLEM_TYPE_LABELS: Record<string, string> = {
+  RESOURCE_ALLOCATION: 'リソース配分',
+  TIMING_DECISION:     'タイミング判断',
+  TRADE_OFF:           'トレードオフ',
+  RISK_ASSESSMENT:     'リスク評価',
+  STRATEGY_DIRECTION:  '戦略方向性',
+};
+
+/** 問題の本質的性質 → 日本語ラベル */
+const PROBLEM_NATURE_LABELS: Record<string, string> = {
+  TECHNICAL_LIMITATION: '技術的限界',
+  INVESTMENT_DECISION:  '投資判断',
+  CONSTRAINT_DRIVEN:    '制約主導型',
+  STRATEGIC_CHOICE:     '戦略的選択',
+  REGULATORY_COMPLIANCE:'規制対応',
+  MARKET_TIMING:        '市場タイミング',
+};
+
+/** タブ定義 */
+const TABS = [
+  { id: 'summary', name: 'サマリー', icon: '📊' },
+  { id: 'dao', name: '道', icon: '🎯' },
+  { id: 'fa', name: '法', icon: '🛤️' },
+  { id: 'shu', name: '術', icon: '📋' },
+  { id: 'qi', name: '器', icon: '🔧' },
+  { id: 'review', name: '検証', icon: '🔍' },
+] as const;
+
+type TabId = typeof TABS[number]['id'];
+const SIGNABLE_CONFIDENCE_THRESHOLD = 39;
 
 /** パスカード（v3.1: 条件付き評価対応） */
 const PathCard: React.FC<{ path: RecommendedPath; isRecommended?: boolean }> = ({
   path,
   isRecommended,
-}) => {
-  const { t } = useI18n();
-  return (
-    <div className={`rounded-xl p-5 border ${isRecommended ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/5 bg-[#0a0a0f] opacity-60'}`}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span>{isRecommended ? '✓' : '✕'}</span>
-          <span className="font-semibold">{path.path_id}: {path.name}</span>
-          {!isRecommended && <span className="text-xs text-red-400 px-2 py-0.5 bg-red-500/10 rounded">{t('report.path_not_recommended')}</span>}
-        </div>
-        {path.reversibility && (
-          <span className="text-xs px-2 py-0.5 bg-slate-700 text-slate-300 rounded">{t('report.path_reversibility')} {path.reversibility}</span>
-        )}
+}) => (
+  <div className={`rounded-xl p-5 border ${isRecommended ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/5 bg-[#0a0a0f] opacity-60'}`}>
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-2">
+        <span>{isRecommended ? '✓' : '✕'}</span>
+        <span className="font-semibold">{path.path_id}: {path.name}</span>
+        {!isRecommended && <span className="text-xs text-red-400 px-2 py-0.5 bg-red-500/10 rounded">不推奨</span>}
       </div>
-      <p className="text-sm text-slate-400 mb-4">{path.description}</p>
-
-      {/* v3.1: 条件付き評価 */}
-      {path.conditional_evaluation && (
-        <div className="bg-slate-800/50 rounded-lg p-3 mb-4 space-y-2">
-          <div className="text-xs font-medium text-cyan-400 mb-2"><span aria-hidden="true">📋</span> {t('report.path_conditional_eval')}</div>
-          {path.conditional_evaluation.success_conditions?.length > 0 && (
-            <div>
-              <span className="text-xs text-emerald-400">{t('report.path_success_conditions')}</span>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {path.conditional_evaluation.success_conditions.map((c: string, ci: number) => (
-                  <span key={`sc-${ci}`} className="text-xs px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded">{c}</span>
-                ))}
-              </div>
-            </div>
-          )}
-          {path.conditional_evaluation.risk_factors?.length > 0 && (
-            <div>
-              <span className="text-xs text-amber-400">{t('report.path_risk_factors')}</span>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {path.conditional_evaluation.risk_factors.map((r: string, ri: number) => (
-                  <span key={`rf-${ri}`} className="text-xs px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded">{r}</span>
-                ))}
-              </div>
-            </div>
-          )}
-          {path.conditional_evaluation.failure_modes?.length > 0 && (
-            <div>
-              <span className="text-xs text-red-400">{t('report.path_failure_modes')}</span>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {path.conditional_evaluation.failure_modes.map((f: string, fi: number) => (
-                  <span key={`fm-${fi}`} className="text-xs px-2 py-0.5 bg-red-500/10 text-red-400 rounded">{f}</span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* リスク集中点 */}
-      {path.risk_concentration && (
-        <div className="text-xs text-amber-400 mb-3"><span aria-hidden="true">⚡</span> {t('report.path_risk_concentration')} <span className="text-slate-400">{path.risk_concentration}</span></div>
-      )}
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <div className="text-xs text-emerald-400 mb-2">{t('report.path_pros')}</div>
-          {path.pros.map((p, i) => (
-            <div key={`pro-${i}`} className="text-sm text-slate-400 flex items-center gap-2 mb-1">
-              <span className="text-emerald-400">+</span> {p}
-            </div>
-          ))}
-        </div>
-        <div>
-          <div className="text-xs text-amber-400 mb-2">{t('report.path_cons')}</div>
-          {path.cons.map((c, i) => (
-            <div key={`con-${i}`} className="text-sm text-slate-400 flex items-center gap-2 mb-1">
-              <span className="text-amber-400">-</span> {c}
-            </div>
-          ))}
-        </div>
-      </div>
-      {path.time_to_value && (
-        <div className="mt-3 text-xs text-slate-500"><span aria-hidden="true">⏱️</span> {t('report.path_time_to_value')} {path.time_to_value}</div>
+      {path.reversibility && (
+        <span className="text-xs px-2 py-0.5 bg-slate-700 text-slate-300 rounded">可逆性: {path.reversibility}</span>
       )}
     </div>
-  );
-};
+    <p className="text-sm text-slate-400 mb-4">{path.description}</p>
+
+    {/* v3.1: 条件付き評価 */}
+    {path.conditional_evaluation && (
+      <div className="bg-slate-800/50 rounded-lg p-3 mb-4 space-y-2">
+        <div className="text-xs font-medium text-cyan-400 mb-2">📋 条件付き評価</div>
+        {path.conditional_evaluation.success_conditions?.length > 0 && (
+          <div>
+            <span className="text-xs text-emerald-400">成立条件:</span>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {path.conditional_evaluation.success_conditions.map((c: string, ci: number) => (
+                <span key={`sc-${ci}`} className="text-xs px-2 py-0.5 bg-emerald-500/10 text-emerald-400 rounded">{c}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {path.conditional_evaluation.risk_factors?.length > 0 && (
+          <div>
+            <span className="text-xs text-amber-400">リスク要因:</span>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {path.conditional_evaluation.risk_factors.map((r: string, ri: number) => (
+                <span key={`rf-${ri}`} className="text-xs px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded">{r}</span>
+              ))}
+            </div>
+          </div>
+        )}
+        {path.conditional_evaluation.failure_modes?.length > 0 && (
+          <div>
+            <span className="text-xs text-red-400">失敗モード:</span>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {path.conditional_evaluation.failure_modes.map((f: string, fi: number) => (
+                <span key={`fm-${fi}`} className="text-xs px-2 py-0.5 bg-red-500/10 text-red-400 rounded">{f}</span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* リスク集中点 */}
+    {path.risk_concentration && (
+      <div className="text-xs text-amber-400 mb-3">⚡ リスク集中点: <span className="text-slate-400">{path.risk_concentration}</span></div>
+    )}
+
+    <div className="grid grid-cols-2 gap-4">
+      <div>
+        <div className="text-xs text-emerald-400 mb-2">メリット</div>
+        {path.pros.map((p, i) => (
+          <div key={`pro-${i}`} className="text-sm text-slate-400 flex items-center gap-2 mb-1">
+            <span className="text-emerald-400">+</span> {p}
+          </div>
+        ))}
+      </div>
+      <div>
+        <div className="text-xs text-amber-400 mb-2">デメリット</div>
+        {path.cons.map((c, i) => (
+          <div key={`con-${i}`} className="text-sm text-slate-400 flex items-center gap-2 mb-1">
+            <span className="text-amber-400">-</span> {c}
+          </div>
+        ))}
+      </div>
+    </div>
+    {path.time_to_value && (
+      <div className="mt-3 text-xs text-slate-500">⏱️ 価値実現: {path.time_to_value}</div>
+    )}
+  </div>
+);
 
 /** フェーズカード（タイムライン表示） */
 const PhaseTimeline: React.FC<{ phases: Phase[] }> = ({ phases }) => (
@@ -175,20 +200,17 @@ const PhaseTimeline: React.FC<{ phases: Phase[] }> = ({ phases }) => (
 );
 
 export const ReportPage: React.FC = () => {
-  const { report, reportId, requestId, question, setPage, reset } = useDecisionStore();
+  const {
+    report,
+    reportId,
+    requestId,
+    question,
+    setPage,
+    reset,
+    setReport: setReportInStore,
+  } = useDecisionStore();
   const { user, performLogout } = useAuthStore();
-  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<TabId>('summary');
-
-  /** タブ定義（ロケール対応） */
-  const TABS: readonly { id: TabId; name: string; icon: string }[] = [
-    { id: 'summary', name: t('report.tab_summary'), icon: '📊' },
-    { id: 'dao', name: t('report.tab_dao'), icon: '🎯' },
-    { id: 'fa', name: t('report.tab_fa'), icon: '🛤️' },
-    { id: 'shu', name: t('report.tab_shu'), icon: '📋' },
-    { id: 'qi', name: t('report.tab_qi'), icon: '🔧' },
-    { id: 'review', name: t('report.tab_review'), icon: '🔍' },
-  ];
   const [exportingType, setExportingType] = useState<"pdf" | "html" | null>(null);
   const [isSigning, setIsSigning] = useState(false);
   const [notification, setNotification] = useState<{type: NotificationType; message: string} | null>(null);
@@ -202,6 +224,8 @@ export const ReportPage: React.FC = () => {
   const [signatureStatus, setSignatureStatus] = useState<'unsigned' | 'signed'>('unsigned');
   const [signatureData, setSignatureData] = useState<SignatureData | null>(null);
   const [showSignedAnimation, setShowSignedAnimation] = useState(false);
+  // v3.2: チェックポイント適用後の分析信頼度（null = バックエンド値をそのまま使用）
+  const [recalculatedConfidence, setRecalculatedConfidence] = useState<number | null>(null);
 
   // レポートがない場合は入力画面へ
   useEffect(() => {
@@ -224,9 +248,9 @@ export const ReportPage: React.FC = () => {
       a.download = exported.filename;
       a.click();
       URL.revokeObjectURL(url);
-      setNotification({ type: 'success', message: t('report.pdf_downloaded') });
+      setNotification({ type: 'success', message: 'PDFをダウンロードしました' });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('report.pdf_failed');
+      const message = err instanceof Error ? err.message : 'PDF生成に失敗しました';
       setNotification({ type: 'error', message });
     } finally {
       setExportingType(null);
@@ -247,9 +271,9 @@ export const ReportPage: React.FC = () => {
       a.download = exported.filename;
       a.click();
       URL.revokeObjectURL(url);
-      setNotification({ type: 'success', message: t('report.html_downloaded') });
+      setNotification({ type: 'success', message: 'HTMLをダウンロードしました' });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('report.html_failed');
+      const message = err instanceof Error ? err.message : 'HTML生成に失敗しました';
       setNotification({ type: 'error', message });
     } finally {
       setExportingType(null);
@@ -264,7 +288,7 @@ export const ReportPage: React.FC = () => {
     try {
       // 署名確認ダイアログ
       const confirmed = window.confirm(
-        t('report.sign_confirm').replaceAll('{name}', user.display_name)
+        `${user.display_name} として署名します。\nこのレポートに基づいて意思決定を行います。\n署名すると記録が残ります。\n\n続行しますか？`
       );
       
       if (!confirmed) {
@@ -279,9 +303,9 @@ export const ReportPage: React.FC = () => {
         setSignatureStatus('signed');
         setSignatureData(response.signature);
         setShowSignedAnimation(true);
-        setNotification({
-          type: 'success',
-          message: t('report.signed_by').replaceAll('{name}', user.display_name)
+        setNotification({ 
+          type: 'success', 
+          message: `${user.display_name} により署名されました` 
         });
         
         // アニメーション後にリセット
@@ -290,7 +314,7 @@ export const ReportPage: React.FC = () => {
         setNotification({ type: 'error', message: response.message });
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('report.sign_failed');
+      const message = err instanceof Error ? err.message : '署名に失敗しました';
       setNotification({ type: 'error', message });
     } finally {
       setIsSigning(false);
@@ -326,9 +350,9 @@ export const ReportPage: React.FC = () => {
         memo,
         reviewer_name: user?.display_name || undefined,
       });
-      setNotification({ type: 'success', message: t('report.finding_memo_saved').replaceAll('{index}', String(findingIndex + 1)) });
+      setNotification({ type: 'success', message: `所見 #${findingIndex + 1} のメモを保存しました` });
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('report.finding_memo_failed');
+      const message = err instanceof Error ? err.message : '所見メモの保存に失敗しました';
       setNotification({ type: 'error', message });
     } finally {
       setSavingFindingNotes((prev) => ({ ...prev, [findingIndex]: false }));
@@ -438,9 +462,63 @@ export const ReportPage: React.FC = () => {
     (finding) => !(finding.suggested_revision || '').trim()
   ).length;
 
+  // v3.2: 有効な分析信頼度スコア（チェックポイント再計算後があればそれを使用）
+  const rawConfidencePct = Math.round((safeReview?.confidence_score ?? 0) * 100);
+  const effectiveConfidencePct = recalculatedConfidence !== null ? recalculatedConfidence : rawConfidencePct;
+
+  // v3.2: 戦略可行度（FaAgentの推奨パス成功確率の最高値）
+  const feasibilityPct: number | null = safeFa.recommended_paths.length > 0
+    ? Math.round(Math.max(...safeFa.recommended_paths.map((p) => p.success_probability ?? 0)) * 100)
+    : null;
+
+  // v3.2: 署名可能条件 — 分析信頼度39%以上
+  const canSign = effectiveConfidencePct >= SIGNABLE_CONFIDENCE_THRESHOLD;
+
+  /** チェックポイント項目を反映してスコア自動再計算 */
+  const handleApplyCheckpoints = useCallback(async () => {
+    const items = safeReview.checkpoint_items;
+    if (!reportId || !items || items.length === 0) return;
+
+    try {
+      const response = await decisionApi.applyCheckpoints({
+        report_id: reportId,
+        request_id: requestId || undefined,
+        reviewer_name: user?.display_name || undefined,
+        items: items.map((item) => ({
+          item_id: item.item_id,
+          checked: checkpointChecks[item.item_id] ?? item.checked,
+          annotation:
+            (checkpointAnnotations[item.item_id] ?? item.annotation ?? '').trim() || undefined,
+        })),
+      });
+
+      setRecalculatedConfidence(response.recalculated_confidence_pct);
+      setReportInStore({
+        ...report,
+        review: response.updated_review,
+      });
+      setNotification({
+        type: 'success',
+        message: `${response.message} 分析信頼度: ${response.recalculated_confidence_pct}%${response.signature_eligible ? ' ✓ 署名可能' : ''}`,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'チェック項目の反映に失敗しました';
+      setNotification({ type: 'error', message });
+    }
+  }, [
+    checkpointAnnotations,
+    checkpointChecks,
+    report,
+    reportId,
+    requestId,
+    safeReview.checkpoint_items,
+    setReportInStore,
+    user?.display_name,
+  ]);
+
   // レビューが未生成の古いデータでは「未検証」を表示
   const reviewVerdict = review?.overall_verdict;
-  const reviewStatusLabel = !reviewVerdict ? t('report.verdict_unverified') : reviewVerdict === "PASS" ? t('report.verdict_pass') : reviewVerdict === "REVISE" ? t('report.verdict_revise') : t('report.verdict_coach');
+  const reviewStatusLabel = reviewVerdict || "未検証";
   const reviewStatusClass = !reviewVerdict
     ? "bg-slate-500/10 text-slate-400 border border-slate-500/30"
     : reviewVerdict === "PASS"
@@ -458,7 +536,7 @@ export const ReportPage: React.FC = () => {
   const reviewStatusIcon = !reviewVerdict ? "🕒" : reviewVerdict === "PASS" ? "✅" : reviewVerdict === "REVISE" ? "⚠️" : "📋";
   const analysisQuestion = toDisplayText(
     report.original_question ?? (report as unknown as { question?: unknown }).question ?? question,
-    t('report.question_not_set')
+    "（質問が設定されていません）"
   );
 
   // 提案書タイトル（デフォルト値）
@@ -491,7 +569,7 @@ export const ReportPage: React.FC = () => {
               <span className="text-xl">📋</span>
             </div>
             <div>
-              <h1 className="font-semibold text-lg">{t('report.proposal_header')}</h1>
+              <h1 className="font-semibold text-lg">提案書</h1>
               <p className="text-xs text-slate-500 font-mono">{caseId}</p>
             </div>
           </div>
@@ -503,26 +581,26 @@ export const ReportPage: React.FC = () => {
                 disabled={exportingType !== null}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm flex items-center gap-2 transition-all"
               >
-                <span aria-hidden="true">📄</span> {exportingType === 'pdf' ? t('report.generating') : t('report.pdf_export')}
+                📄 {exportingType === 'pdf' ? '生成中...' : 'PDF出力'}
               </button>
               <button
                 onClick={handleExportHtml}
                 disabled={exportingType !== null}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm flex items-center gap-2 transition-all"
               >
-                <span aria-hidden="true">🧾</span> {exportingType === 'html' ? t('report.generating') : t('report.html_export')}
+                🧾 {exportingType === 'html' ? '生成中...' : 'HTML出力'}
               </button>
               <button
                 onClick={() => setPage('history')}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm flex items-center gap-2 transition-all"
               >
-                <span aria-hidden="true">📜</span> {t('report.history_btn')}
+                📜 履歴
               </button>
               <button
                 onClick={handleNewQuestion}
                 className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm flex items-center gap-2 transition-all"
               >
-                <span aria-hidden="true">🔄</span> {t('report.reanalyze_btn')}
+                🔄 再分析
               </button>
             </div>
 
@@ -536,7 +614,7 @@ export const ReportPage: React.FC = () => {
                 <button
                   onClick={handleLogout}
                   className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
-                  title={t('report.logout_btn')}
+                  title="ログアウト"
                 >
                   🚪
                 </button>
@@ -553,11 +631,11 @@ export const ReportPage: React.FC = () => {
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
           
           <div className="relative">
-            <p className="text-slate-400 mb-6">{t('report.dear')}</p>
+            <p className="text-slate-400 mb-6">御中</p>
             <h1 className="text-3xl font-bold mb-2 tracking-wider">{titleJa}</h1>
             <p className="text-sm text-slate-500 font-mono mb-4">{titleEn}</p>
             {subtitle && <p className="text-slate-400 text-sm mb-4">{subtitle}</p>}
-            <p className="text-xs text-slate-600 font-mono mb-8">{t('report.case_id_prefix')} {caseId}</p>
+            <p className="text-xs text-slate-600 font-mono mb-8">案件ID: {caseId}</p>
             
             <div className="border-t border-white/10 pt-6 mt-6">
               <p className="text-sm text-slate-400">{createdDate}</p>
@@ -575,41 +653,65 @@ export const ReportPage: React.FC = () => {
             <div className="flex items-start justify-between mb-6">
               <div>
                 <h2 className="text-xs text-slate-500 uppercase tracking-wider mb-1">1. EXECUTIVE SUMMARY</h2>
-                <div className="text-2xl font-bold">{t('report.executive_summary')}</div>
+                <div className="text-2xl font-bold">エグゼクティブサマリー</div>
               </div>
-              {/* 信頼度スコア（判定結果と連動） */}
-              <div className="text-right">
-                <div className="flex items-center gap-2 justify-end mb-1">
-                  <span className={`text-xs px-2 py-0.5 rounded ${reviewStatusClass}`}>
-                    {reviewStatusLabel}
-                  </span>
-                </div>
-                <div className="text-xs text-slate-500 mb-1">
-                  {t('report.confidence_score')}
-                  <span
-                    className="ml-1 text-slate-600 cursor-help"
-                    title={t('report.confidence_tooltip')}
-                  >ⓘ</span>
-                </div>
-                <div className={`text-3xl font-bold ${
-                  (safeReview?.confidence_score ?? 0) >= 0.7 ? 'text-emerald-400' :
-                  (safeReview?.confidence_score ?? 0) >= 0.4 ? 'text-amber-400' : 'text-red-400'
-                }`}>
-                  {Math.round((safeReview?.confidence_score ?? 0) * 100)}%
-                </div>
-                {/* スコアが低い場合の警告 */}
-                {(safeReview?.confidence_score ?? 0) < 0.4 && (
-                  <div className="text-xs text-red-400 mt-1">
-                    ⚠ {t('report.recommend_reanalysis')}
+              {/* v3.2: 2指標表示（分析信頼度 + 戦略可行度） */}
+              <div className="flex items-start gap-4">
+                {/* 分析信頼度（AI完成度） */}
+                <div className="text-right">
+                  <div className="flex items-center gap-2 justify-end mb-1">
+                    <span className={`text-xs px-2 py-0.5 rounded ${reviewStatusClass}`}>
+                      {!reviewVerdict ? "未検証" : reviewVerdict === "PASS" ? "検証通過" : reviewVerdict === "REVISE" ? "要修正" : "改善指導"}
+                    </span>
                   </div>
-                )}
+                  <div className="text-xs text-slate-500 mb-1">
+                    分析信頼度（AI完成度）
+                    <span
+                      className="ml-1 text-slate-600 cursor-help"
+                      title={`AIが分析を論理的・網羅的に完成させた度合い。ReviewAgentが判定。70%以上で高信頼、${SIGNABLE_CONFIDENCE_THRESHOLD}%以上で署名可能。`}
+                    >ⓘ</span>
+                  </div>
+                  <div className={`text-3xl font-bold ${
+                    effectiveConfidencePct >= 70 ? 'text-emerald-400' :
+                    effectiveConfidencePct >= SIGNABLE_CONFIDENCE_THRESHOLD ? 'text-amber-400' : 'text-red-400'
+                  }`}>
+                    {effectiveConfidencePct}%
+                  </div>
+                  {effectiveConfidencePct < SIGNABLE_CONFIDENCE_THRESHOLD && (
+                    <div className="text-xs text-red-400 mt-1">⚠ {SIGNABLE_CONFIDENCE_THRESHOLD}%未満 署名不可</div>
+                  )}
+                  {effectiveConfidencePct >= SIGNABLE_CONFIDENCE_THRESHOLD && safeReview.overall_verdict !== 'PASS' && (
+                    <div className="text-xs text-amber-400 mt-1">✓ 署名可能</div>
+                  )}
+                </div>
+                {/* 戦略可行度（成功確率） */}
+                <div className="text-right border-l border-white/10 pl-4">
+                  <div className="h-6 mb-1" />
+                  <div className="text-xs text-slate-500 mb-1">
+                    戦略可行度（成功確率）
+                    <span
+                      className="ml-1 text-slate-600 cursor-help"
+                      title="FaAgentが戦略パス別に算出した事業成功確率の最高値。市場・財務・リスク等の多軸評価に基づく。"
+                    >ⓘ</span>
+                  </div>
+                  <div className={`text-3xl font-bold ${
+                    feasibilityPct === null ? 'text-slate-500' :
+                    feasibilityPct >= 70 ? 'text-emerald-400' :
+                    feasibilityPct >= 50 ? 'text-amber-400' : 'text-red-400'
+                  }`}>
+                    {feasibilityPct !== null ? `${feasibilityPct}%` : '—'}
+                  </div>
+                  {feasibilityPct === null && (
+                    <div className="text-xs text-slate-600 mt-1">パス未生成</div>
+                  )}
+                </div>
               </div>
             </div>
 
             {/* 結論 */}
             <div className="bg-[#0a0a0f] rounded-xl p-6 mb-6 border border-indigo-500/20">
               <div className="flex items-center gap-2 text-indigo-400 text-sm mb-2">
-                <span aria-hidden="true">💡</span> {t('report.conclusion_label')}
+                <span>💡</span> 結論
               </div>
               <p className="text-lg font-medium">{safeExecutiveSummary.one_line_decision}</p>
             </div>
@@ -618,7 +720,7 @@ export const ReportPage: React.FC = () => {
             {(safeExecutiveSummary as any).essence_statement && (
               <div className="bg-purple-500/5 rounded-xl p-5 mb-6 border border-purple-500/20">
                 <div className="flex items-center gap-2 text-purple-400 text-sm mb-2">
-                  <span aria-hidden="true">📍</span> {t('report.essence_label')}
+                  <span>📍</span> 本質
                 </div>
                 <p className="font-medium">{(safeExecutiveSummary as any).essence_statement}</p>
               </div>
@@ -627,7 +729,7 @@ export const ReportPage: React.FC = () => {
             {/* 最初の一歩 */}
             <div className="bg-emerald-500/5 rounded-xl p-5 mb-6 border border-emerald-500/20">
               <div className="flex items-center gap-2 text-emerald-400 text-sm mb-2">
-                <span aria-hidden="true">🎯</span> {t('report.first_step_label')}
+                <span>🎯</span> 最初の一歩（明日実行可能）
               </div>
               <p className="font-medium">{safeExecutiveSummary.first_step}</p>
             </div>
@@ -636,7 +738,7 @@ export const ReportPage: React.FC = () => {
             {(safeExecutiveSummary as any).strategic_prohibition_summary && (
               <div className="bg-red-500/5 rounded-xl p-5 mb-6 border border-red-500/20">
                 <div className="flex items-center gap-2 text-red-400 text-sm mb-2">
-                  <span aria-hidden="true">⛔</span> {t('report.strategic_prohibition_label')}
+                  <span>⛔</span> 戦略的禁止
                 </div>
                 <p className="text-sm text-slate-400">{(safeExecutiveSummary as any).strategic_prohibition_summary}</p>
               </div>
@@ -646,7 +748,7 @@ export const ReportPage: React.FC = () => {
             {(safeExecutiveSummary as any).exit_criteria_summary && (
               <div className="bg-amber-500/5 rounded-xl p-5 mb-6 border border-amber-500/20">
                 <div className="flex items-center gap-2 text-amber-400 text-sm mb-2">
-                  <span aria-hidden="true">🚪</span> {t('report.exit_criteria_label')}
+                  <span>🚪</span> 撤退基準
                 </div>
                 <p className="text-sm text-slate-400">{(safeExecutiveSummary as any).exit_criteria_summary}</p>
               </div>
@@ -655,7 +757,7 @@ export const ReportPage: React.FC = () => {
             {/* 主要リスク */}
             <div>
               <div className="flex items-center gap-2 text-amber-400 text-sm mb-3">
-                <span aria-hidden="true">⚠️</span> {t('report.key_risks_label')}
+                <span>⚠️</span> 主要リスク
               </div>
               <div className="grid grid-cols-1 gap-2">
                 {safeExecutiveSummary.key_risks.map((risk, i) => (
@@ -717,24 +819,24 @@ export const ReportPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <span className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">📊</span>
-                  {t('report.section_overview')}
+                  分析結果概要
                 </h3>
                 {/* 検証ステータスバッジ */}
                 <div className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 ${reviewStatusClassWithBorder}`}>
                   <span>{reviewStatusIcon}</span>
-                  {t('report.verification_label')} {reviewStatusLabel}
+                  検証: {reviewStatusLabel}
                 </div>
               </div>
 
               {/* 質問の再掲示 */}
               <div className="bg-[#0a0a0f] rounded-lg p-4 border border-white/10">
-                <div className="text-xs text-slate-500 mb-2"><span aria-hidden="true">📝</span> {t('report.analysis_question')}</div>
+                <div className="text-xs text-slate-500 mb-2">📝 分析対象の質問</div>
                 <p className="text-slate-300">{analysisQuestion}</p>
               </div>
 
               {/* 分析セクションナビゲーション */}
               <div className="space-y-4">
-                <div className="text-sm text-slate-400 mb-3">{t('report.section_nav_hint')}</div>
+                <div className="text-sm text-slate-400 mb-3">各セクションの詳細を確認できます：</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {/* 道 */}
                   <button
@@ -743,10 +845,10 @@ export const ReportPage: React.FC = () => {
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <span className="text-xl">🎯</span>
-                      <span className="font-medium group-hover:text-indigo-400 transition-colors">{t('report.dao_title')}</span>
+                      <span className="font-medium group-hover:text-indigo-400 transition-colors">道（本質分析）</span>
                     </div>
                     <p className="text-xs text-slate-500 line-clamp-2">
-                      {safeDao.essence || t('report.dao_section_desc')}
+                      {safeDao.essence || '問題の本質を分析します'}
                     </p>
                   </button>
 
@@ -757,12 +859,12 @@ export const ReportPage: React.FC = () => {
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <span className="text-xl">🛤️</span>
-                      <span className="font-medium group-hover:text-violet-400 transition-colors">{t('report.fa_title')}</span>
+                      <span className="font-medium group-hover:text-violet-400 transition-colors">法（戦略選定）</span>
                     </div>
                     <p className="text-xs text-slate-500 line-clamp-2">
                       {safeFa.recommended_paths?.length
-                        ? t('report.fa_section_desc_with_count').replaceAll('{count}', String(safeFa.recommended_paths.length))
-                        : t('report.fa_section_desc')}
+                        ? `${safeFa.recommended_paths.length}つの推奨戦略を提案`
+                        : '戦略オプションを評価します'}
                     </p>
                   </button>
 
@@ -773,12 +875,12 @@ export const ReportPage: React.FC = () => {
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <span className="text-xl">📋</span>
-                      <span className="font-medium group-hover:text-blue-400 transition-colors">{t('report.shu_title')}</span>
+                      <span className="font-medium group-hover:text-blue-400 transition-colors">術（実行計画）</span>
                     </div>
                     <p className="text-xs text-slate-500 line-clamp-2">
                       {safeShu.phases?.length
-                        ? t('report.shu_section_desc_with_count').replaceAll('{count}', String(safeShu.phases.length))
-                        : t('report.shu_section_desc')}
+                        ? `${safeShu.phases.length}フェーズの実行計画`
+                        : '実行計画を策定します'}
                     </p>
                   </button>
 
@@ -789,12 +891,12 @@ export const ReportPage: React.FC = () => {
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <span className="text-xl">🔧</span>
-                      <span className="font-medium group-hover:text-emerald-400 transition-colors">{t('report.qi_title')}</span>
+                      <span className="font-medium group-hover:text-emerald-400 transition-colors">器（技術実装）</span>
                     </div>
                     <p className="text-xs text-slate-500 line-clamp-2">
                       {safeQi.implementations?.length
-                        ? t('report.qi_section_desc_with_count').replaceAll('{count}', String(safeQi.implementations.length))
-                        : t('report.qi_section_desc')}
+                        ? `${safeQi.implementations.length}件の実装要素を特定`
+                        : '技術要件を定義します'}
                     </p>
                   </button>
                 </div>
@@ -816,11 +918,13 @@ export const ReportPage: React.FC = () => {
                     <div className="flex items-center gap-3">
                       <span className="text-xl">🔍</span>
                       <div>
-                        <span className="font-medium">{t('report.review_title')}</span>
+                        <span className="font-medium">検証（ReviewAgent）</span>
                         <p className="text-xs text-slate-500 mt-1">
                           {safeReview.findings?.length
-                            ? t('report.review_findings_count').replaceAll('{count}', String(safeReview.findings.length))
-                            : t('report.review_section_desc')}
+                            ? safeReview.overall_verdict === 'PASS'
+                              ? `${safeReview.findings.length}件の改善提案あり`
+                              : `${safeReview.findings.length}件の指摘事項あり`
+                            : '分析結果の検証結果を確認'}
                         </p>
                       </div>
                     </div>
@@ -835,15 +939,15 @@ export const ReportPage: React.FC = () => {
                 </button>
               </div>
 
-              {/* 修正が必要な場合のガイダンス */}
-              {Boolean(reviewVerdict) && safeReview.overall_verdict !== 'PASS' && (
+              {/* 修正が必要な場合のガイダンス（分析信頼度が閾値未満のとき表示） */}
+              {Boolean(reviewVerdict) && !canSign && (
                 <div className="mt-4 p-4 bg-amber-500/5 rounded-lg border border-amber-500/20">
                   <div className="flex items-start gap-3">
                     <span className="text-amber-400 mt-0.5">💡</span>
                     <div>
-                      <div className="text-sm font-medium text-amber-400 mb-1">{t('report.revision_needed')}</div>
+                      <div className="text-sm font-medium text-amber-400 mb-1">修正が必要です</div>
                       <div className="text-sm text-slate-400">
-                        {t('report.revision_guidance')}
+                        検証タブで詳細な指摘事項を確認し、画面右上の「再分析」ボタンから入力内容を修正してください。
                       </div>
                     </div>
                   </div>
@@ -856,27 +960,27 @@ export const ReportPage: React.FC = () => {
             <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <span className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center">🎯</span>
-                {t('report.dao_title')}
+                道 / 本質分析 v3.1
               </h3>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
-                  <div className="text-xs text-slate-500 mb-1">{t('report.dao_problem_type')}</div>
+                  <div className="text-xs text-slate-500 mb-1">問題タイプ</div>
                   <div className="px-3 py-1 bg-indigo-500/10 text-indigo-400 rounded inline-block text-sm">
-                    {safeDao.problem_type}
+                    {PROBLEM_TYPE_LABELS[safeDao.problem_type] ?? safeDao.problem_type}
                   </div>
                 </div>
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
-                  <div className="text-xs text-slate-500 mb-1">{t('report.dao_problem_nature')}</div>
+                  <div className="text-xs text-slate-500 mb-1">問題の本質的性質</div>
                   <div className="px-3 py-1 bg-purple-500/10 text-purple-400 rounded inline-block text-sm">
-                    {safeDao.problem_nature || 'N/A'}
+                    {safeDao.problem_nature ? (PROBLEM_NATURE_LABELS[safeDao.problem_nature] ?? safeDao.problem_nature) : 'N/A'}
                   </div>
                 </div>
               </div>
 
               {/* 本質（一文） */}
               <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-lg p-5 border border-indigo-500/20">
-                <div className="text-xs text-indigo-400 mb-2"><span aria-hidden="true">📍</span> {t('report.dao_essence_one_line')}</div>
+                <div className="text-xs text-indigo-400 mb-2">📍 本質（一文）</div>
                 <div className="text-lg font-medium">{safeDao.essence}</div>
               </div>
 
@@ -884,26 +988,26 @@ export const ReportPage: React.FC = () => {
               {safeDao.essence_derivation && (
                 <div className="bg-[#0a0a0f] rounded-lg p-5 border border-blue-500/20">
                   <div className="text-sm font-medium text-blue-400 mb-4 flex items-center gap-2">
-                    <span aria-hidden="true">🔍</span> {t('report.dao_essence_derivation')}
+                    <span>🔍</span> 本質導出プロセス
                   </div>
                   <div className="space-y-3">
                     <div>
-                      <div className="text-xs text-slate-500">{t('report.dao_surface_problem')}</div>
+                      <div className="text-xs text-slate-500">表面的問題</div>
                       <div className="text-sm mt-1">{safeDao.essence_derivation.surface_problem}</div>
                     </div>
                     <div className="w-full h-px bg-slate-800" />
                     <div>
-                      <div className="text-xs text-slate-500">{t('report.dao_underlying_why')}</div>
+                      <div className="text-xs text-slate-500">一段深い理由</div>
                       <div className="text-sm mt-1">{safeDao.essence_derivation.underlying_why}</div>
                     </div>
                     <div className="w-full h-px bg-slate-800" />
                     <div>
-                      <div className="text-xs text-slate-500">{t('report.dao_root_constraint')}</div>
+                      <div className="text-xs text-slate-500">根本制約</div>
                       <div className="text-sm mt-1">{safeDao.essence_derivation.root_constraint}</div>
                     </div>
                     <div className="w-full h-px bg-slate-800" />
                     <div className="bg-blue-500/5 rounded p-3">
-                      <div className="text-xs text-blue-400">{t('report.dao_essence_statement')}</div>
+                      <div className="text-xs text-blue-400">本質の一文</div>
                       <div className="text-sm mt-1 font-medium">{safeDao.essence_derivation.essence_statement}</div>
                     </div>
                   </div>
@@ -914,14 +1018,14 @@ export const ReportPage: React.FC = () => {
               {safeDao.existing_alternatives && safeDao.existing_alternatives.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-sm font-medium text-amber-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">🔄</span> {t('report.dao_existing_alternatives')}
+                    <span>🔄</span> 既存代替手段（なぜ使えないか）
                   </div>
                   <div className="space-y-3">
                     {safeDao.existing_alternatives.map((alt: any, i: number) => (
                       <div key={i} className="bg-amber-500/5 rounded p-3 border border-amber-500/10">
                         <div className="font-medium text-amber-400 text-sm">{alt.name}</div>
                         <div className="text-sm text-slate-400 mt-1">{alt.why_not_viable}</div>
-                        <div className="text-xs text-slate-500 mt-1">{t('report.dao_constraint_label')} {alt.specific_constraint}</div>
+                        <div className="text-xs text-slate-500 mt-1">制約: {alt.specific_constraint}</div>
                       </div>
                     ))}
                   </div>
@@ -930,7 +1034,7 @@ export const ReportPage: React.FC = () => {
 
               {safeDao.immutable_constraints && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
-                  <div className="text-xs text-slate-500 mb-3"><span aria-hidden="true">🔒</span> {t('report.dao_immutable_constraints')}</div>
+                  <div className="text-xs text-slate-500 mb-3">🔒 不可変制約</div>
                   <div className="space-y-2">
                     {safeDao.immutable_constraints.map((c: string, i: number) => (
                       <div key={i} className="flex items-center gap-2 text-sm">
@@ -943,7 +1047,7 @@ export const ReportPage: React.FC = () => {
 
               {safeDao.hidden_assumptions && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
-                  <div className="text-xs text-slate-500 mb-3"><span aria-hidden="true">💭</span> {t('report.dao_hidden_assumptions')}</div>
+                  <div className="text-xs text-slate-500 mb-3">💭 隠れた前提</div>
                   <div className="space-y-2">
                     {safeDao.hidden_assumptions.map((a: string, i: number) => (
                       <div key={i} className="flex items-center gap-2 text-sm text-slate-400">
@@ -958,7 +1062,7 @@ export const ReportPage: React.FC = () => {
               {safeDao.causal_gears && safeDao.causal_gears.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-sm font-medium text-cyan-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">⚙️</span> {t('report.dao_causal_gears')}
+                    <span>⚙️</span> 因果齿轮
                   </div>
                   <div className="space-y-2">
                     {safeDao.causal_gears.map((gear: any, i: number) => (
@@ -971,7 +1075,7 @@ export const ReportPage: React.FC = () => {
                             <span className="font-medium text-sm">{gear.name}</span>
                             <span className="text-xs px-2 py-0.5 bg-slate-700 rounded">Leverage: {gear.leverage}</span>
                             {gear.name === safeDao.bottleneck_gear && (
-                              <span className="text-xs px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded">{t('report.dao_bottleneck')}</span>
+                              <span className="text-xs px-2 py-0.5 bg-cyan-500/20 text-cyan-400 rounded">ボトルネック</span>
                             )}
                           </div>
                           <div className="text-xs text-slate-400 mt-1">{gear.description}</div>
@@ -986,7 +1090,7 @@ export const ReportPage: React.FC = () => {
               {safeDao.death_traps && safeDao.death_traps.length > 0 && (
                 <div className="bg-red-500/5 rounded-lg p-4 border border-red-500/20">
                   <div className="text-sm font-medium text-red-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">💀</span> {t('report.dao_death_traps')}
+                    <span>💀</span> 死穴（禁忌）
                   </div>
                   <div className="space-y-3">
                     {safeDao.death_traps.map((trap: any, i: number) => (
@@ -1009,16 +1113,16 @@ export const ReportPage: React.FC = () => {
               {safeDao.constraint_boundaries && safeDao.constraint_boundaries.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-sm font-medium text-orange-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">🚧</span> {t('report.dao_constraint_boundaries')}
+                    <span>🚧</span> 制約境界条件
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-slate-700">
-                          <th className="text-left py-2 px-3 text-slate-400 font-medium">{t('report.dao_constraint_name')}</th>
-                          <th className="text-left py-2 px-3 text-slate-400 font-medium">{t('report.dao_judgment_condition')}</th>
-                          <th className="text-left py-2 px-3 text-slate-400 font-medium">{t('report.dao_violation_example')}</th>
-                          <th className="text-left py-2 px-3 text-slate-400 font-medium">{t('report.dao_exception')}</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">制約名</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">判定条件</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">違反例</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">例外</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1040,14 +1144,14 @@ export const ReportPage: React.FC = () => {
               {safeDao.solution_routes && safeDao.solution_routes.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-sm font-medium text-teal-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">🛤️</span> {t('report.dao_solution_routes')}
+                    <span>🛤️</span> 成立ルート比較（解空間探索）
                   </div>
                   <div className="grid gap-3">
                     {safeDao.solution_routes.map((sr: any, i: number) => (
                       <div key={i} className="bg-teal-500/5 rounded p-3 border border-teal-500/10">
                         <div className="flex items-center gap-2 mb-2">
                           <span className="px-2 py-0.5 bg-teal-500/20 text-teal-400 rounded text-xs font-medium">{sr.route_type}</span>
-                          <span className="text-xs text-slate-500">{t('report.dao_viability')} {sr.viability}</span>
+                          <span className="text-xs text-slate-500">実現可能性: {sr.viability}</span>
                         </div>
                         <div className="text-sm text-slate-300">{sr.description}</div>
                         {sr.tradeoffs && sr.tradeoffs.length > 0 && (
@@ -1067,16 +1171,16 @@ export const ReportPage: React.FC = () => {
               {safeDao.quantified_metrics && safeDao.quantified_metrics.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-sm font-medium text-sky-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">📊</span> {t('report.dao_quantified_metrics')}
+                    <span>📊</span> 定量指標
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-slate-700">
-                          <th className="text-left py-2 px-3 text-slate-400 font-medium">{t('report.dao_priority')}</th>
-                          <th className="text-left py-2 px-3 text-slate-400 font-medium">{t('report.dao_metric_name')}</th>
-                          <th className="text-left py-2 px-3 text-slate-400 font-medium">{t('report.dao_target_value')}</th>
-                          <th className="text-left py-2 px-3 text-slate-400 font-medium">{t('report.dao_tradeoff')}</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">優先</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">指標名</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">目標値</th>
+                          <th className="text-left py-2 px-3 text-slate-400 font-medium">トレードオフ</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1102,7 +1206,7 @@ export const ReportPage: React.FC = () => {
               {safeDao.audit_evidence_checklist && safeDao.audit_evidence_checklist.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
                   <div className="text-sm font-medium text-emerald-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">📋</span> {t('report.dao_audit_checklist')}
+                    <span>📋</span> 監査証拠チェックリスト
                   </div>
                   <div className="space-y-2">
                     {safeDao.audit_evidence_checklist.map((ae: any, i: number) => (
@@ -1111,7 +1215,7 @@ export const ReportPage: React.FC = () => {
                           <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded text-xs font-medium">{ae.category}</span>
                         </div>
                         <div className="text-sm text-slate-300">{ae.required_evidence}</div>
-                        <div className="text-xs text-slate-500 mt-1">{t('report.dao_verification_method')} {ae.verification_method}</div>
+                        <div className="text-xs text-slate-500 mt-1">確認方法: {ae.verification_method}</div>
                       </div>
                     ))}
                   </div>
@@ -1127,7 +1231,7 @@ export const ReportPage: React.FC = () => {
                 }`}>
                   <div className="flex items-center justify-between mb-3">
                     <div className="text-sm font-medium flex items-center gap-2">
-                      <span aria-hidden="true">🔬</span> {t('report.dao_self_check')}
+                      <span>🔬</span> セルフチェック
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-bold ${
                       safeDao.self_check.overall_status === 'PASS' ? 'bg-emerald-500/20 text-emerald-400' :
@@ -1137,19 +1241,19 @@ export const ReportPage: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {safeDao.self_check.boundary_undefined?.length > 0 && (
-                      <div className="text-slate-400"><span className="text-amber-400">⚠</span> {t('report.dao_boundary_undefined')} {safeDao.self_check.boundary_undefined.join(', ')}</div>
+                      <div className="text-slate-400"><span className="text-amber-400">⚠</span> 境界未定義: {safeDao.self_check.boundary_undefined.join(', ')}</div>
                     )}
                     {safeDao.self_check.missing_alternatives?.length > 0 && (
-                      <div className="text-slate-400"><span className="text-amber-400">⚠</span> {t('report.dao_missing_alternatives')} {safeDao.self_check.missing_alternatives.join(', ')}</div>
+                      <div className="text-slate-400"><span className="text-amber-400">⚠</span> 選択肢漏れ: {safeDao.self_check.missing_alternatives.join(', ')}</div>
                     )}
                     {safeDao.self_check.ambiguous_metrics?.length > 0 && (
-                      <div className="text-slate-400"><span className="text-amber-400">⚠</span> {t('report.dao_ambiguous_metrics')} {safeDao.self_check.ambiguous_metrics.join(', ')}</div>
+                      <div className="text-slate-400"><span className="text-amber-400">⚠</span> 曖昧な指標: {safeDao.self_check.ambiguous_metrics.join(', ')}</div>
                     )}
                     {safeDao.self_check.constraint_conflicts?.length > 0 && (
-                      <div className="text-slate-400"><span className="text-red-400">❌</span> {t('report.dao_constraint_conflicts')} {safeDao.self_check.constraint_conflicts.join(', ')}</div>
+                      <div className="text-slate-400"><span className="text-red-400">❌</span> 制約衝突: {safeDao.self_check.constraint_conflicts.join(', ')}</div>
                     )}
                     {safeDao.self_check.evidence_gaps?.length > 0 && (
-                      <div className="text-slate-400"><span className="text-amber-400">⚠</span> {t('report.dao_evidence_gaps')} {safeDao.self_check.evidence_gaps.join(', ')}</div>
+                      <div className="text-slate-400"><span className="text-amber-400">⚠</span> 証拠不足: {safeDao.self_check.evidence_gaps.join(', ')}</div>
                     )}
                   </div>
                 </div>
@@ -1161,14 +1265,14 @@ export const ReportPage: React.FC = () => {
             <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <span className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">🛤️</span>
-                {t('report.fa_title')}
+                法 / 戦略選定 v3.1
               </h3>
 
               {/* v3.1: 戦略的禁止事項（仕組み化） */}
               {safeFa.strategic_prohibitions && safeFa.strategic_prohibitions.length > 0 && (
                 <div className="bg-red-500/5 rounded-lg p-5 border border-red-500/20">
                   <div className="text-sm font-medium text-red-400 mb-4 flex items-center gap-2">
-                    <span aria-hidden="true">🚫</span> {t('report.fa_strategic_prohibitions')}
+                    <span>🚫</span> 戦略的禁止事項（仕組み化）
                   </div>
                   <div className="space-y-3">
                     {safeFa.strategic_prohibitions.map((p: any, i: number) => (
@@ -1177,19 +1281,19 @@ export const ReportPage: React.FC = () => {
                           <span className="text-red-400 mt-0.5">⛔</span>
                           <div className="flex-1">
                             <div className="font-medium text-sm">{p.prohibition}</div>
-                            <div className="text-sm text-slate-400 mt-2">{t('report.fa_rationale')} {p.rationale}</div>
-                            <div className="text-sm text-red-400 mt-1">{t('report.fa_violation_consequence')} {p.violation_consequence}</div>
+                            <div className="text-sm text-slate-400 mt-2">理由: {p.rationale}</div>
+                            <div className="text-sm text-red-400 mt-1">違反結果: {p.violation_consequence}</div>
                             {/* v3.1: 仕組み化フィールド */}
                             {(p.prevention_measure || p.detection_metric || p.responsible_role) && (
                               <div className="mt-3 pt-3 border-t border-red-500/10 space-y-1">
                                 {p.prevention_measure && (
-                                  <div className="text-xs text-cyan-400"><span aria-hidden="true">🛡️</span> {t('report.fa_prevention_measure')} <span className="text-slate-400">{p.prevention_measure}</span></div>
+                                  <div className="text-xs text-cyan-400">🛡️ 防止策: <span className="text-slate-400">{p.prevention_measure}</span></div>
                                 )}
                                 {p.detection_metric && (
-                                  <div className="text-xs text-cyan-400"><span aria-hidden="true">📊</span> {t('report.fa_detection_metric')} <span className="text-slate-400">{p.detection_metric}</span></div>
+                                  <div className="text-xs text-cyan-400">📊 検知指標: <span className="text-slate-400">{p.detection_metric}</span></div>
                                 )}
                                 {p.responsible_role && (
-                                  <div className="text-xs text-cyan-400"><span aria-hidden="true">👤</span> {t('report.fa_responsible_role')} <span className="text-slate-400">{p.responsible_role}</span></div>
+                                  <div className="text-xs text-cyan-400">👤 責任者: <span className="text-slate-400">{p.responsible_role}</span></div>
                                 )}
                               </div>
                             )}
@@ -1205,28 +1309,28 @@ export const ReportPage: React.FC = () => {
               {safeFa.competitive_hypothesis && (
                 <div className="bg-gradient-to-r from-violet-500/10 to-purple-500/10 rounded-lg p-5 border border-violet-500/20">
                   <div className="text-sm font-medium text-violet-400 mb-4 flex items-center gap-2">
-                    <span aria-hidden="true">🎯</span> {t('report.fa_competitive_hypothesis')}
+                    <span>🎯</span> 競争優位仮説（v3.1）
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-violet-500/10 rounded p-4">
-                      <div className="text-xs text-slate-500 mb-1">{t('report.fa_axis_name')}</div>
+                      <div className="text-xs text-slate-500 mb-1">差別化軸</div>
                       <div className="text-lg font-medium text-violet-400">{safeFa.competitive_hypothesis.axis_name}</div>
                     </div>
                     <div className="bg-violet-500/10 rounded p-4">
-                      <div className="text-xs text-slate-500 mb-1">{t('report.fa_target_customer')}</div>
+                      <div className="text-xs text-slate-500 mb-1">対象顧客・利用シーン</div>
                       <div className="text-sm text-slate-400">{safeFa.competitive_hypothesis.target_customer}</div>
                     </div>
                     <div className="bg-violet-500/10 rounded p-4">
-                      <div className="text-xs text-slate-500 mb-1">{t('report.fa_substitution_barrier')}</div>
+                      <div className="text-xs text-slate-500 mb-1">代替が難しい理由</div>
                       <div className="text-sm text-slate-400">{safeFa.competitive_hypothesis.substitution_barrier}</div>
                     </div>
                     <div className="bg-violet-500/10 rounded p-4">
-                      <div className="text-xs text-slate-500 mb-1">{t('report.fa_winning_metric')}</div>
+                      <div className="text-xs text-slate-500 mb-1">勝ち筋指標</div>
                       <div className="text-sm text-slate-400">{safeFa.competitive_hypothesis.winning_metric}</div>
                     </div>
                   </div>
                   <div className="mt-4 bg-slate-800/50 rounded p-4">
-                    <div className="text-xs text-slate-500 mb-1">{t('report.fa_minimum_verification')}</div>
+                    <div className="text-xs text-slate-500 mb-1">最小検証計画</div>
                     <div className="text-sm text-slate-400">{safeFa.competitive_hypothesis.minimum_verification}</div>
                   </div>
                 </div>
@@ -1236,16 +1340,16 @@ export const ReportPage: React.FC = () => {
               {!safeFa.competitive_hypothesis && safeFa.differentiation_axis && (
                 <div className="bg-gradient-to-r from-violet-500/10 to-purple-500/10 rounded-lg p-5 border border-violet-500/20">
                   <div className="text-sm font-medium text-violet-400 mb-4 flex items-center gap-2">
-                    <span aria-hidden="true">🎯</span> {t('report.fa_differentiation_axis')}
+                    <span>🎯</span> 差別化軸
                   </div>
                   <div className="space-y-4">
                     <div className="bg-violet-500/10 rounded p-4">
-                      <div className="text-xs text-slate-500 mb-1">{t('report.fa_why_this_axis')}</div>
+                      <div className="text-xs text-slate-500 mb-1">勝負する軸</div>
                       <div className="text-lg font-medium text-violet-400">{safeFa.differentiation_axis.axis_name}</div>
                       <div className="text-sm text-slate-400 mt-2">{safeFa.differentiation_axis.why_this_axis}</div>
                     </div>
                     <div className="bg-slate-800/50 rounded p-4">
-                      <div className="text-xs text-slate-500 mb-1">{t('report.fa_not_this_axis')}</div>
+                      <div className="text-xs text-slate-500 mb-1">勝負しない軸</div>
                       <div className="text-sm text-slate-400">{safeFa.differentiation_axis.not_this_axis}</div>
                     </div>
                   </div>
@@ -1256,7 +1360,7 @@ export const ReportPage: React.FC = () => {
               {safeFa.why_existing_fails && (
                 <div className="bg-amber-500/5 rounded-lg p-4 border border-amber-500/20">
                   <div className="text-xs text-amber-400 mb-2 flex items-center gap-2">
-                    <span aria-hidden="true">⚠️</span> {t('report.fa_why_existing_fails')}
+                    <span>⚠️</span> 既存解が使えない理由
                   </div>
                   <div className="text-sm text-slate-400">{safeFa.why_existing_fails}</div>
                 </div>
@@ -1276,19 +1380,19 @@ export const ReportPage: React.FC = () => {
               {safeFa.judgment_framework && (
                 <div className="bg-slate-800/50 rounded-lg p-5 border border-slate-700">
                   <div className="text-sm font-medium text-cyan-400 mb-4 flex items-center gap-2">
-                    <span aria-hidden="true">⚖️</span> {t('report.fa_judgment_framework')}
+                    <span>⚖️</span> 判断フレームワーク（Must/Should分離）
                   </div>
                   {/* Must Gates */}
                   {safeFa.judgment_framework.must_gates?.length > 0 && (
                     <div className="mb-4">
-                      <div className="text-xs text-red-400 font-medium mb-2">{t('report.fa_must_gates')}</div>
+                      <div className="text-xs text-red-400 font-medium mb-2">Must（不可変ゲート）— 不合格=即却下</div>
                       <div className="space-y-2">
                         {safeFa.judgment_framework.must_gates.map((gate: any, gi: number) => (
                           <div key={`must-${gi}`} className="bg-red-500/10 rounded p-3 flex items-start gap-3">
                             <span className="text-red-400 text-xs mt-0.5">🚪</span>
                             <div className="flex-1">
                               <div className="text-sm font-medium text-red-300">{gate.criterion}</div>
-                              <div className="text-xs text-slate-400 mt-1">{t('report.fa_threshold')} {gate.threshold}</div>
+                              <div className="text-xs text-slate-400 mt-1">閾値: {gate.threshold}</div>
                             </div>
                           </div>
                         ))}
@@ -1298,7 +1402,7 @@ export const ReportPage: React.FC = () => {
                   {/* Should Criteria */}
                   {safeFa.judgment_framework.should_criteria?.length > 0 && (
                     <div>
-                      <div className="text-xs text-emerald-400 font-medium mb-2">{t('report.fa_should_criteria')}</div>
+                      <div className="text-xs text-emerald-400 font-medium mb-2">Should（比較評価）— 重み付きスコア</div>
                       <div className="space-y-2">
                         {safeFa.judgment_framework.should_criteria.map((crit: any, si: number) => (
                           <div key={`should-${si}`} className="bg-emerald-500/10 rounded p-3">
@@ -1310,7 +1414,7 @@ export const ReportPage: React.FC = () => {
                                 'bg-slate-700 text-slate-400'
                               }`}>{crit.weight}</span>
                             </div>
-                            <div className="text-xs text-slate-400 mt-1">{t('report.fa_scoring_method')} {crit.scoring_method}</div>
+                            <div className="text-xs text-slate-400 mt-1">採点: {crit.scoring_method}</div>
                           </div>
                         ))}
                       </div>
@@ -1322,7 +1426,7 @@ export const ReportPage: React.FC = () => {
               {/* 判断基準（v3.0互換フォールバック） */}
               {!safeFa.judgment_framework && safeFa.decision_criteria && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
-                  <div className="text-xs text-slate-500 mb-2">{t('report.fa_decision_criteria')}</div>
+                  <div className="text-xs text-slate-500 mb-2">判断基準</div>
                   <div className="flex flex-wrap gap-2">
                     {safeFa.decision_criteria.map((c: string, ci: number) => (
                       <span key={`dc-${ci}`} className="px-2 py-1 bg-slate-800 text-slate-400 rounded text-xs">{c}</span>
@@ -1339,7 +1443,7 @@ export const ReportPage: React.FC = () => {
                   'bg-red-500/5 border-red-500/20'
                 }`}>
                   <div className="text-sm font-medium mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">🔍</span> {t('report.fa_self_check')}
+                    <span>🔍</span> セルフチェック結果
                     <span className={`text-xs px-2 py-0.5 rounded ${
                       safeFa.fa_self_check.overall_status === 'PASS' ? 'bg-emerald-500/20 text-emerald-400' :
                       safeFa.fa_self_check.overall_status === 'WARNING' ? 'bg-amber-500/20 text-amber-400' :
@@ -1349,7 +1453,7 @@ export const ReportPage: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     {safeFa.fa_self_check.baseless_numbers?.length > 0 && (
                       <div className="bg-red-500/10 rounded p-2">
-                        <div className="text-red-400 font-medium mb-1">{t('report.fa_baseless_numbers')}</div>
+                        <div className="text-red-400 font-medium mb-1">根拠なき数値</div>
                         {safeFa.fa_self_check.baseless_numbers.map((item: string, bi: number) => (
                           <div key={`bn-${bi}`} className="text-slate-400">• {item}</div>
                         ))}
@@ -1357,7 +1461,7 @@ export const ReportPage: React.FC = () => {
                     )}
                     {safeFa.fa_self_check.missing_intermediate?.length > 0 && (
                       <div className="bg-amber-500/10 rounded p-2">
-                        <div className="text-amber-400 font-medium mb-1">{t('report.fa_missing_intermediate')}</div>
+                        <div className="text-amber-400 font-medium mb-1">中間案漏れ</div>
                         {safeFa.fa_self_check.missing_intermediate.map((item: string, mi: number) => (
                           <div key={`mi-${mi}`} className="text-slate-400">• {item}</div>
                         ))}
@@ -1365,7 +1469,7 @@ export const ReportPage: React.FC = () => {
                     )}
                     {safeFa.fa_self_check.missing_gates?.length > 0 && (
                       <div className="bg-amber-500/10 rounded p-2">
-                        <div className="text-amber-400 font-medium mb-1">{t('report.fa_missing_gates')}</div>
+                        <div className="text-amber-400 font-medium mb-1">ゲート不在</div>
                         {safeFa.fa_self_check.missing_gates.map((item: string, mgi: number) => (
                           <div key={`mg-${mgi}`} className="text-slate-400">• {item}</div>
                         ))}
@@ -1373,7 +1477,7 @@ export const ReportPage: React.FC = () => {
                     )}
                     {safeFa.fa_self_check.appearance_precision?.length > 0 && (
                       <div className="bg-red-500/10 rounded p-2">
-                        <div className="text-red-400 font-medium mb-1">{t('report.fa_appearance_precision')}</div>
+                        <div className="text-red-400 font-medium mb-1">見せかけ精度</div>
                         {safeFa.fa_self_check.appearance_precision.map((item: string, api: number) => (
                           <div key={`ap-${api}`} className="text-slate-400">• {item}</div>
                         ))}
@@ -1389,32 +1493,32 @@ export const ReportPage: React.FC = () => {
             <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <span className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">📋</span>
-                {t('report.shu_title')}
+                術 / 実行計画 v3.1
               </h3>
 
               {/* v3.1: PoC完成定義 (DoD) */}
               {safeShu.poc_definition_of_done && (
                 <div className="bg-emerald-500/5 rounded-lg p-5 border border-emerald-500/20">
                   <div className="text-sm font-medium text-emerald-400 mb-4 flex items-center gap-2">
-                    <span aria-hidden="true">🎯</span> {t('report.shu_poc_dod')}
+                    <span>🎯</span> PoC完成定義（Definition of Done）
                   </div>
                   <div className="space-y-4">
                     {safeShu.poc_definition_of_done.experience_conditions?.length > 0 && (
                       <div>
-                        <div className="text-xs text-slate-500 mb-2">{t('report.shu_experience_conditions')}</div>
+                        <div className="text-xs text-slate-500 mb-2">体験条件</div>
                         {safeShu.poc_definition_of_done.experience_conditions.map((c: string, i: number) => (
                           <div key={i} className="text-sm flex items-center gap-2 mb-1"><span className="text-emerald-400">✓</span> {c}</div>
                         ))}
                       </div>
                     )}
                     <div>
-                      <div className="text-xs text-slate-500 mb-2">{t('report.shu_success_metrics')}</div>
+                      <div className="text-xs text-slate-500 mb-2">成功指標</div>
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead><tr className="border-b border-slate-700">
-                            <th className="text-left py-1 text-slate-500">{t('report.shu_metric')}</th>
-                            <th className="text-left py-1 text-slate-500">{t('report.shu_target_value')}</th>
-                            <th className="text-left py-1 text-slate-500">{t('report.shu_measurement_method')}</th>
+                            <th className="text-left py-1 text-slate-500">指標</th>
+                            <th className="text-left py-1 text-slate-500">目標値</th>
+                            <th className="text-left py-1 text-slate-500">計測方法</th>
                           </tr></thead>
                           <tbody>
                             {safeShu.poc_definition_of_done.success_metrics?.map((m: any, i: number) => (
@@ -1429,7 +1533,7 @@ export const ReportPage: React.FC = () => {
                       </div>
                     </div>
                     <div className="bg-amber-500/10 rounded p-3">
-                      <div className="text-xs text-amber-400">{t('report.shu_fallback')}</div>
+                      <div className="text-xs text-amber-400">フォールバック</div>
                       <div className="text-sm mt-1">{safeShu.poc_definition_of_done.fallback_strategy}</div>
                     </div>
                   </div>
@@ -1448,7 +1552,7 @@ export const ReportPage: React.FC = () => {
                       {stage.gate_criteria?.length > 0 && (
                         <div className="mb-3 flex flex-wrap gap-2">
                           {stage.gate_criteria.map((g: string, gi: number) => (
-                            <span key={gi} className="text-xs px-2 py-1 bg-slate-700 rounded">{t('report.shu_gate_criteria')} {g}</span>
+                            <span key={gi} className="text-xs px-2 py-1 bg-slate-700 rounded">ゲート: {g}</span>
                           ))}
                         </div>
                       )}
@@ -1459,14 +1563,14 @@ export const ReportPage: React.FC = () => {
                               <span className="font-medium text-sm">Phase {p.phase_number}: {p.name}</span>
                               <span className="text-xs text-slate-500">{p.duration}</span>
                             </div>
-                            <div className="text-xs text-slate-500 mb-2">{t('report.shu_purpose')} {p.purpose}</div>
-                            <div className="text-xs text-slate-400 mb-1">{t('report.shu_tasks')} {p.tasks?.join(', ')}</div>
-                            {p.deliverables?.length > 0 && <div className="text-xs text-slate-500">{t('report.shu_deliverables')} {p.deliverables.join(', ')}</div>}
-                            {p.measurement && <div className="text-xs text-emerald-400 mt-1">{t('report.shu_measurement')} {p.measurement}</div>}
-                            {p.notes?.length > 0 && <div className="text-xs text-amber-400 mt-1">{t('report.shu_notes')} {p.notes.join(', ')}</div>}
+                            <div className="text-xs text-slate-500 mb-2">目的: {p.purpose}</div>
+                            <div className="text-xs text-slate-400 mb-1">作業: {p.tasks?.join(', ')}</div>
+                            {p.deliverables?.length > 0 && <div className="text-xs text-slate-500">成果物: {p.deliverables.join(', ')}</div>}
+                            {p.measurement && <div className="text-xs text-emerald-400 mt-1">計測: {p.measurement}</div>}
+                            {p.notes?.length > 0 && <div className="text-xs text-amber-400 mt-1">注意: {p.notes.join(', ')}</div>}
                             {p.branches?.length > 0 && (
                               <div className="mt-2 space-y-1">
-                                <div className="text-xs text-slate-500">{t('report.shu_branches')}</div>
+                                <div className="text-xs text-slate-500">分岐（代替案）:</div>
                                 {p.branches.map((b: any, bi: number) => (
                                   <div key={bi} className="text-xs bg-blue-500/10 rounded p-2">
                                     <span className="text-blue-400">{b.branch_name}</span>
@@ -1487,7 +1591,7 @@ export const ReportPage: React.FC = () => {
 
               {safeShu.first_action && (
                 <div className="bg-emerald-500/5 rounded-lg p-4 border border-emerald-500/20">
-                  <div className="text-xs text-emerald-400 mb-2"><span aria-hidden="true">🎯</span> {t('report.shu_first_action')}</div>
+                  <div className="text-xs text-emerald-400 mb-2">🎯 最初の一歩</div>
                   <div className="text-sm font-medium">{safeShu.first_action}</div>
                 </div>
               )}
@@ -1496,7 +1600,7 @@ export const ReportPage: React.FC = () => {
               {safeShu.cut_list && safeShu.cut_list.length > 0 && (
                 <div className="bg-red-500/5 rounded-lg p-4 border border-red-500/20">
                   <div className="text-sm font-medium text-red-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">✂️</span> {t('report.shu_cut_list')}
+                    <span>✂️</span> 切り捨てリスト（最初の30日間でやらないこと）
                   </div>
                   <div className="space-y-2">
                     {safeShu.cut_list.map((item: string, i: number) => (
@@ -1512,14 +1616,14 @@ export const ReportPage: React.FC = () => {
               {safeShu.context_specific_actions && safeShu.context_specific_actions.length > 0 && (
                 <div className="bg-blue-500/5 rounded-lg p-4 border border-blue-500/20">
                   <div className="text-sm font-medium text-blue-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">🎯</span> {t('report.shu_context_actions')}
+                    <span>🎯</span> 文脈特化行動（この問題固有）
                   </div>
                   <div className="space-y-3">
                     {safeShu.context_specific_actions.map((action: any, i: number) => (
                       <div key={i} className="bg-blue-500/10 rounded p-3">
                         <div className="font-medium text-sm">{action.action}</div>
-                        <div className="text-xs text-slate-500 mt-1">{t('report.shu_why_context')} {action.why_this_context}</div>
-                        <div className="text-xs text-blue-400 mt-1">{t('report.shu_expected_output')} {action.expected_output}</div>
+                        <div className="text-xs text-slate-500 mt-1">理由: {action.why_this_context}</div>
+                        <div className="text-xs text-blue-400 mt-1">期待出力: {action.expected_output}</div>
                       </div>
                     ))}
                   </div>
@@ -1530,19 +1634,19 @@ export const ReportPage: React.FC = () => {
               {safeShu.single_validation_point && (
                 <div className="bg-amber-500/5 rounded-lg p-4 border border-amber-500/20">
                   <div className="text-sm font-medium text-amber-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">🔬</span> {t('report.shu_single_validation')}
+                    <span>🔬</span> 単一検証ポイント（PoCで絶対に検証すべき1点）
                   </div>
                   <div className="space-y-3">
                     <div>
-                      <div className="text-xs text-slate-500">{t('report.shu_validation_target')}</div>
+                      <div className="text-xs text-slate-500">検証対象</div>
                       <div className="text-sm mt-1 font-medium">{safeShu.single_validation_point.validation_target}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-slate-500">{t('report.shu_success_criteria')}</div>
+                      <div className="text-xs text-slate-500">成功基準</div>
                       <div className="text-sm mt-1">{safeShu.single_validation_point.success_criteria}</div>
                     </div>
                     <div className="bg-amber-500/10 rounded p-2">
-                      <div className="text-xs text-amber-400">{t('report.shu_failure_action')}</div>
+                      <div className="text-xs text-amber-400">失敗時行動</div>
                       <div className="text-sm mt-1">{safeShu.single_validation_point.failure_action}</div>
                     </div>
                   </div>
@@ -1553,19 +1657,19 @@ export const ReportPage: React.FC = () => {
               {safeShu.exit_criteria && (
                 <div className="bg-red-500/5 rounded-lg p-4 border border-red-500/20">
                   <div className="text-sm font-medium text-red-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">🚪</span> {t('report.shu_exit_criteria')}
+                    <span>🚪</span> 撤退基準（どこで止めるか）
                   </div>
                   <div className="space-y-3">
                     <div>
-                      <div className="text-xs text-slate-500">{t('report.shu_checkpoint')}</div>
+                      <div className="text-xs text-slate-500">チェックポイント</div>
                       <div className="text-sm mt-1">{safeShu.exit_criteria.checkpoint}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-slate-500">{t('report.shu_exit_trigger')}</div>
+                      <div className="text-xs text-slate-500">撤退トリガー</div>
                       <div className="text-sm mt-1 text-red-400">{safeShu.exit_criteria.exit_trigger}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-slate-500">{t('report.shu_exit_action')}</div>
+                      <div className="text-xs text-slate-500">撤退時行動</div>
                       <div className="text-sm mt-1">{safeShu.exit_criteria.exit_action}</div>
                     </div>
                   </div>
@@ -1576,7 +1680,7 @@ export const ReportPage: React.FC = () => {
               {safeShu.phases && safeShu.phases.length > 0 && (
                 <div>
                   <div className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">📅</span> {t('report.shu_phases')}
+                    <span>📅</span> フェーズ
                   </div>
                   <PhaseTimeline phases={safeShu.phases} />
                 </div>
@@ -1584,7 +1688,7 @@ export const ReportPage: React.FC = () => {
 
               {safeShu.dependencies && safeShu.dependencies.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
-                  <div className="text-xs text-slate-500 mb-2">{t('report.shu_dependencies')}</div>
+                  <div className="text-xs text-slate-500 mb-2">前提条件</div>
                   <ul className="text-sm text-slate-400 space-y-1">
                     {safeShu.dependencies.map((d: string, i: number) => (
                       <li key={i}>• {d}</li>
@@ -1597,19 +1701,19 @@ export const ReportPage: React.FC = () => {
               {safeShu.rhythm_control && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4 border border-blue-500/20">
                   <div className="text-sm font-medium text-blue-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">⏱️</span> {t('report.shu_rhythm_control')}
+                    <span>⏱️</span> 30天行動節奏
                   </div>
                   {safeShu.rhythm_control.focus && (
                     <div className="space-y-3">
                       <div className="bg-blue-500/10 rounded p-3">
-                        <div className="text-xs text-blue-400">{t('report.shu_focus')}</div>
+                        <div className="text-xs text-blue-400">聚焦</div>
                         <div className="text-lg font-medium mt-1">{safeShu.rhythm_control.focus.name}</div>
                         <div className="text-sm text-slate-400 mt-1">{safeShu.rhythm_control.focus.description}</div>
-                        <div className="text-xs text-emerald-400 mt-2">{t('report.shu_success_metric')} {safeShu.rhythm_control.focus.success_metric}</div>
+                        <div className="text-xs text-emerald-400 mt-2">成功指標: {safeShu.rhythm_control.focus.success_metric}</div>
                       </div>
                       {safeShu.rhythm_control.focus.avoid_list && safeShu.rhythm_control.focus.avoid_list.length > 0 && (
                         <div>
-                          <div className="text-xs text-slate-500 mb-2">{t('report.shu_avoid_list')}</div>
+                          <div className="text-xs text-slate-500 mb-2">この期間やらないこと</div>
                           {safeShu.rhythm_control.focus.avoid_list.map((avoid: string, i: number) => (
                             <div key={i} className="text-sm text-red-400 flex items-center gap-2">
                               <span>❌</span> {avoid}
@@ -1619,11 +1723,11 @@ export const ReportPage: React.FC = () => {
                       )}
                       <div className="grid grid-cols-2 gap-4 mt-3">
                         <div>
-                          <div className="text-xs text-slate-500">{t('report.shu_checkpoint_date')}</div>
+                          <div className="text-xs text-slate-500">チェックポイント</div>
                           <div className="text-sm mt-1">{safeShu.rhythm_control.checkpoint_date}</div>
                         </div>
                         <div>
-                          <div className="text-xs text-slate-500">{t('report.shu_next_decision')}</div>
+                          <div className="text-xs text-slate-500">次の判断</div>
                           <div className="text-sm mt-1">{safeShu.rhythm_control.next_decision_point}</div>
                         </div>
                       </div>
@@ -1638,23 +1742,23 @@ export const ReportPage: React.FC = () => {
             <div className="space-y-6">
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <span className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">🔧</span>
-                {t('report.qi_title')}
+                器 / 技術実装 v3.1
               </h3>
 
               {/* v3.1: PoC最小アーキテクチャ */}
               {safeQi.poc_minimal_architecture && (
                 <div className="bg-emerald-500/5 rounded-lg p-5 border border-emerald-500/20">
                   <div className="text-sm font-medium text-emerald-400 mb-4 flex items-center gap-2">
-                    <span aria-hidden="true">🏗️</span> {t('report.qi_poc_architecture')}
+                    <span>🏗️</span> PoC最小アーキテクチャ
                   </div>
                   <div className="space-y-4">
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
                         <thead><tr className="border-b border-slate-700">
-                          <th className="text-left py-2 text-slate-500">{t('report.qi_component')}</th>
-                          <th className="text-left py-2 text-slate-500">{t('report.qi_purpose')}</th>
-                          <th className="text-left py-2 text-slate-500">{t('report.qi_tech_choice')}</th>
-                          <th className="text-left py-2 text-slate-500">{t('report.qi_remarks')}</th>
+                          <th className="text-left py-2 text-slate-500">コンポーネント</th>
+                          <th className="text-left py-2 text-slate-500">目的</th>
+                          <th className="text-left py-2 text-slate-500">技術選定</th>
+                          <th className="text-left py-2 text-slate-500">備考</th>
                         </tr></thead>
                         <tbody>
                           {safeQi.poc_minimal_architecture.components?.map((c: any, i: number) => (
@@ -1670,25 +1774,25 @@ export const ReportPage: React.FC = () => {
                     </div>
                     {safeQi.poc_minimal_architecture.data_flow_description && (
                       <div className="bg-[#0a0a0f] rounded p-3">
-                        <div className="text-xs text-slate-500 mb-1">{t('report.qi_data_flow')}</div>
+                        <div className="text-xs text-slate-500 mb-1">データフロー</div>
                         <div className="text-sm text-slate-300 font-mono">{safeQi.poc_minimal_architecture.data_flow_description}</div>
                       </div>
                     )}
                     {safeQi.poc_minimal_architecture.minimal_logging && (
                       <div className="bg-blue-500/5 rounded p-3 border border-blue-500/10">
-                        <div className="text-xs text-blue-400 mb-2">{t('report.qi_minimal_logging')}</div>
-                        <div className="text-sm text-slate-400">{t('report.qi_correlation_id')} {safeQi.poc_minimal_architecture.minimal_logging.correlation_id_strategy}</div>
+                        <div className="text-xs text-blue-400 mb-2">最小ログ設定</div>
+                        <div className="text-sm text-slate-400">ID戦略: {safeQi.poc_minimal_architecture.minimal_logging.correlation_id_strategy}</div>
                         {(safeQi.poc_minimal_architecture.minimal_logging.timestamp_points?.length ?? 0) > 0 && (
-                          <div className="text-sm text-slate-500 mt-1">{t('report.qi_timestamp_points')} {(safeQi.poc_minimal_architecture.minimal_logging.timestamp_points ?? []).join(' → ')}</div>
+                          <div className="text-sm text-slate-500 mt-1">計測点: {(safeQi.poc_minimal_architecture.minimal_logging.timestamp_points ?? []).join(' → ')}</div>
                         )}
                         {safeQi.poc_minimal_architecture.minimal_logging.storage && (
-                          <div className="text-sm text-slate-500 mt-1">{t('report.qi_storage')} {safeQi.poc_minimal_architecture.minimal_logging.storage}</div>
+                          <div className="text-sm text-slate-500 mt-1">保存先: {safeQi.poc_minimal_architecture.minimal_logging.storage}</div>
                         )}
                       </div>
                     )}
                     {(safeQi.poc_minimal_architecture.deferred_components?.length ?? 0) > 0 && (
                       <div>
-                        <div className="text-xs text-slate-500 mb-2">{t('report.qi_deferred_components')}</div>
+                        <div className="text-xs text-slate-500 mb-2">後回しにするコンポーネント</div>
                         <div className="flex flex-wrap gap-2">
                           {(safeQi.poc_minimal_architecture.deferred_components ?? []).map((d: string, i: number) => (
                             <span key={i} className="text-xs px-2 py-1 bg-slate-700/50 text-slate-400 rounded">⏳ {d}</span>
@@ -1704,15 +1808,15 @@ export const ReportPage: React.FC = () => {
               {safeQi.expansion_stages && safeQi.expansion_stages.length > 0 && (
                 <div className="bg-purple-500/5 rounded-lg p-5 border border-purple-500/20">
                   <div className="text-sm font-medium text-purple-400 mb-4 flex items-center gap-2">
-                    <span aria-hidden="true">📈</span> {t('report.qi_expansion_stages')}
+                    <span>📈</span> 拡張アーキテクチャ（導入条件付き）
                   </div>
                   <div className="space-y-3">
                     {safeQi.expansion_stages.map((s: any, i: number) => (
                       <div key={i} className="bg-purple-500/10 rounded p-4">
                         <div className="font-medium text-purple-400 mb-1">{s.stage_name}</div>
-                        <div className="text-xs text-amber-400 mb-1">{t('report.qi_introduction_condition')} {s.introduction_condition}</div>
-                        <div className="text-xs text-slate-400 mb-1">{t('report.qi_added_components')} {s.added_components?.join(', ')}</div>
-                        <div className="text-xs text-slate-500">{t('report.qi_rationale')} {s.rationale}</div>
+                        <div className="text-xs text-amber-400 mb-1">導入条件: {s.introduction_condition}</div>
+                        <div className="text-xs text-slate-400 mb-1">追加: {s.added_components?.join(', ')}</div>
+                        <div className="text-xs text-slate-500">理由: {s.rationale}</div>
                       </div>
                     ))}
                   </div>
@@ -1723,7 +1827,7 @@ export const ReportPage: React.FC = () => {
               {safeQi.implementation_steps && safeQi.implementation_steps.length > 0 && (
                 <div className="bg-blue-500/5 rounded-lg p-5 border border-blue-500/20">
                   <div className="text-sm font-medium text-blue-400 mb-4 flex items-center gap-2">
-                    <span aria-hidden="true">📝</span> {t('report.qi_implementation_steps')}
+                    <span>📝</span> 実装手順（Step1〜StepN）
                   </div>
                   <div className="space-y-3">
                     {safeQi.implementation_steps.map((step: any, i: number) => (
@@ -1732,7 +1836,7 @@ export const ReportPage: React.FC = () => {
                           <span className="text-blue-400 font-bold">Step {step.step_number}</span>
                           <span className="font-medium text-sm">{step.objective}</span>
                         </div>
-                        <div className="text-xs text-slate-400 mb-1">{t('report.shu_tasks')} {step.tasks?.join(', ')}</div>
+                        <div className="text-xs text-slate-400 mb-1">作業: {step.tasks?.join(', ')}</div>
                         {step.notes?.length > 0 && <div className="text-xs text-emerald-400 mt-1">📌 {step.notes.join(', ')}</div>}
                         {step.common_pitfalls?.length > 0 && (
                           <div className="mt-1 space-y-1">
@@ -1750,7 +1854,7 @@ export const ReportPage: React.FC = () => {
               {/* v3.1: 将来スケール要件 */}
               {safeQi.future_scale_requirements && safeQi.future_scale_requirements.length > 0 && (
                 <div className="bg-slate-500/5 rounded-lg p-4 border border-slate-500/20">
-                  <div className="text-xs text-slate-500 mb-2"><span aria-hidden="true">🔮</span> {t('report.qi_future_scale')}</div>
+                  <div className="text-xs text-slate-500 mb-2">🔮 将来スケール要件（PoC範囲外）</div>
                   <div className="flex flex-wrap gap-2">
                     {safeQi.future_scale_requirements.map((r: string, i: number) => (
                       <span key={i} className="text-xs px-2 py-1 bg-slate-700/50 text-slate-400 rounded">{r}</span>
@@ -1763,7 +1867,7 @@ export const ReportPage: React.FC = () => {
               {safeQi.domain_technologies && safeQi.domain_technologies.length > 0 && (
                 <div className="bg-emerald-500/5 rounded-lg p-5 border border-emerald-500/20">
                   <div className="text-sm font-medium text-emerald-400 mb-4 flex items-center gap-2">
-                    <span aria-hidden="true">🛠️</span> {t('report.qi_domain_technologies')}
+                    <span>🛠️</span> ドメイン固有技術（具体名詞）
                   </div>
                   <div className="space-y-3">
                     {safeQi.domain_technologies.map((tech: any, i: number) => (
@@ -1775,7 +1879,7 @@ export const ReportPage: React.FC = () => {
                         <div className="text-sm text-slate-400">{tech.why_required}</div>
                         {tech.alternatives && tech.alternatives.length > 0 && (
                           <div className="text-xs text-slate-500 mt-2">
-                            {t('report.qi_alternatives')} {tech.alternatives.join(', ')}
+                            代替: {tech.alternatives.join(', ')}
                           </div>
                         )}
                       </div>
@@ -1788,16 +1892,16 @@ export const ReportPage: React.FC = () => {
               {safeQi.regulatory_considerations && safeQi.regulatory_considerations.length > 0 && (
                 <div className="bg-amber-500/5 rounded-lg p-5 border border-amber-500/20">
                   <div className="text-sm font-medium text-amber-400 mb-4 flex items-center gap-2">
-                    <span aria-hidden="true">📜</span> {t('report.qi_regulatory')}
+                    <span>📜</span> 規制対応事項
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-slate-700">
-                          <th className="text-left py-2 text-slate-500">{t('report.qi_region')}</th>
-                          <th className="text-left py-2 text-slate-500">{t('report.qi_regulation')}</th>
-                          <th className="text-left py-2 text-slate-500">{t('report.qi_requirement')}</th>
-                          <th className="text-left py-2 text-slate-500">{t('report.qi_impl_impact')}</th>
+                          <th className="text-left py-2 text-slate-500">地域</th>
+                          <th className="text-left py-2 text-slate-500">規制</th>
+                          <th className="text-left py-2 text-slate-500">要件</th>
+                          <th className="text-left py-2 text-slate-500">実装影響</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1819,15 +1923,15 @@ export const ReportPage: React.FC = () => {
               {safeQi.geographic_considerations && safeQi.geographic_considerations.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4 border border-blue-500/20">
                   <div className="text-sm font-medium text-blue-400 mb-4 flex items-center gap-2">
-                    <span aria-hidden="true">🌍</span> {t('report.qi_geographic')}
+                    <span>🌍</span> 地理的考慮事項
                   </div>
                   <div className="space-y-3">
                     {safeQi.geographic_considerations.map((geo: any, i: number) => (
                       <div key={i} className="flex items-start gap-4 p-3 bg-blue-500/5 rounded">
                         <div className="text-blue-400 font-medium">{geo.region}</div>
                         <div className="flex-1">
-                          <div className="text-sm text-slate-400">{t('report.qi_latency')} {geo.latency_requirement}</div>
-                          <div className="text-sm text-slate-500">{t('report.qi_infrastructure')} {geo.infrastructure_need}</div>
+                          <div className="text-sm text-slate-400">レイテンシ: {geo.latency_requirement}</div>
+                          <div className="text-sm text-slate-500">インフラ: {geo.infrastructure_need}</div>
                         </div>
                       </div>
                     ))}
@@ -1839,7 +1943,7 @@ export const ReportPage: React.FC = () => {
               {safeQi.implementations && safeQi.implementations.length > 0 && (
                 <div>
                   <div className="text-sm font-medium text-slate-400 mb-3 flex items-center gap-2">
-                    <span aria-hidden="true">🔧</span> {t('report.qi_implementations')}
+                    <span>🔧</span> 実装要素
                   </div>
                   {safeQi.implementations.map((impl: Implementation, i: number) => (
                     <div key={i} className="bg-[#0a0a0f] rounded-lg p-4 mb-3">
@@ -1860,7 +1964,7 @@ export const ReportPage: React.FC = () => {
 
               {safeQi.tool_recommendations && safeQi.tool_recommendations.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
-                  <div className="text-xs text-slate-500 mb-2"><span aria-hidden="true">🧰</span> {t('report.qi_tool_recommendations')}</div>
+                  <div className="text-xs text-slate-500 mb-2">🧰 ツール推奨</div>
                   <div className="flex flex-wrap gap-2">
                     {safeQi.tool_recommendations.map((t: string, i: number) => (
                       <span key={i} className="px-2 py-1 bg-indigo-500/10 text-indigo-400 rounded text-xs">{t}</span>
@@ -1871,7 +1975,7 @@ export const ReportPage: React.FC = () => {
 
               {safeQi.integration_points && safeQi.integration_points.length > 0 && (
                 <div className="bg-[#0a0a0f] rounded-lg p-4">
-                  <div className="text-xs text-slate-500 mb-2"><span aria-hidden="true">🔗</span> {t('report.qi_integration_points')}</div>
+                  <div className="text-xs text-slate-500 mb-2">🔗 統合ポイント</div>
                   <ul className="text-sm text-slate-400 space-y-1">
                     {safeQi.integration_points.map((p: string, i: number) => (
                       <li key={i}>• {p}</li>
@@ -1882,7 +1986,7 @@ export const ReportPage: React.FC = () => {
 
               {safeQi.technical_debt_warnings && safeQi.technical_debt_warnings.length > 0 && (
                 <div className="bg-amber-500/5 rounded-lg p-4 border border-amber-500/20">
-                  <div className="text-xs text-amber-400 mb-2"><span aria-hidden="true">⚠️</span> {t('report.qi_tech_debt_warnings')}</div>
+                  <div className="text-xs text-amber-400 mb-2">⚠️ 技術負債警告</div>
                   <ul className="text-sm text-slate-400 space-y-1">
                     {safeQi.technical_debt_warnings.map((w: string, i: number) => (
                       <li key={i}>• {w}</li>
@@ -1917,7 +2021,7 @@ export const ReportPage: React.FC = () => {
                            safeReview.overall_verdict === 'REVISE' ? '⚠️' : '❌'}
                         </span>
                         <div>
-                          <div className="text-sm text-slate-400 mb-1">{t('report.review_overall_verdict')}</div>
+                          <div className="text-sm text-slate-400 mb-1">総合判定</div>
                           <span className={`text-xl font-bold ${
                             safeReview.overall_verdict === 'PASS'
                               ? 'text-emerald-400'
@@ -1925,17 +2029,36 @@ export const ReportPage: React.FC = () => {
                               ? 'text-amber-400'
                               : 'text-red-400'
                           }`}>
-                            {safeReview.overall_verdict || t('report.review_processing')}
+                            {safeReview.overall_verdict || '処理中...'}
                           </span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="text-sm text-slate-400 mb-1">{t('report.review_confidence')}</div>
-                        <div className={`text-xl font-bold ${
-                          (safeReview?.confidence_score ?? 0) >= 0.7 ? 'text-emerald-400' :
-                          (safeReview?.confidence_score ?? 0) >= 0.4 ? 'text-amber-400' : 'text-red-400'
-                        }`}>
-                          {Math.round((safeReview?.confidence_score ?? 0) * 100)}%
+                      {/* v3.2: 2指標表示 */}
+                      <div className="flex items-start gap-4">
+                        <div className="text-right">
+                          <div className="text-xs text-slate-400 mb-1">分析信頼度（AI完成度）</div>
+                          <div className={`text-xl font-bold ${
+                            effectiveConfidencePct >= 70 ? 'text-emerald-400' :
+                            effectiveConfidencePct >= SIGNABLE_CONFIDENCE_THRESHOLD ? 'text-amber-400' : 'text-red-400'
+                          }`}>
+                            {effectiveConfidencePct}%
+                          </div>
+                          {recalculatedConfidence !== null && (
+                            <div className="text-xs text-slate-500 mt-0.5">チェック反映済</div>
+                          )}
+                        </div>
+                        <div className="text-right border-l border-white/10 pl-4">
+                          <div className="text-xs text-slate-400 mb-1">戦略可行度（成功確率）</div>
+                          <div className={`text-xl font-bold ${
+                            feasibilityPct === null ? 'text-slate-500' :
+                            feasibilityPct >= 70 ? 'text-emerald-400' :
+                            feasibilityPct >= 50 ? 'text-amber-400' : 'text-red-400'
+                          }`}>
+                            {feasibilityPct !== null ? `${feasibilityPct}%` : '—'}
+                          </div>
+                          {feasibilityPct === null && (
+                            <div className="text-xs text-slate-600 mt-0.5">パス未生成</div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1945,20 +2068,20 @@ export const ReportPage: React.FC = () => {
                       <div className="text-sm text-slate-400">
                         {safeReview.overall_verdict === 'PASS' && (
                           <>
-                            <span className="text-emerald-400">✓ {t('report.review_pass_label')}</span>
-                            {t('report.review_pass_desc')}
+                            <span className="text-emerald-400">✓ 承認可能：</span>
+                            この提案書は署名可能です。以下の改善提案を確認しつつ、意思決定を進めることができます。
                           </>
                         )}
                         {safeReview.overall_verdict === 'REVISE' && (
                           <>
-                            <span className="text-amber-400">⚠ {t('report.review_revise_label')}</span>
-                            {t('report.review_revise_desc')}
+                            <span className="text-amber-400">⚠ 差分パッチで補完可能：</span>
+                            以下のチェックボックスで不足項目を補完すると、スコアが自動再計算されます。
                           </>
                         )}
                         {safeReview.overall_verdict === 'COACH' && (
                           <>
-                            <span className="text-blue-400"><span aria-hidden="true">📋</span> {t('report.review_coach_label')}</span>
-                            {t('report.review_coach_desc')}
+                            <span className="text-blue-400">📋 改善指導：</span>
+                            重大な指摘がありますが、レポートに改善提案を記載しています。指摘事項を確認し、改善を進めてください。
                           </>
                         )}
                       </div>
@@ -1969,11 +2092,14 @@ export const ReportPage: React.FC = () => {
                   {safeReview.findings && safeReview.findings.length > 0 && (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
-                        <span aria-hidden="true">🎯</span> {t('report.review_high_leverage')} ({safeReview.findings.length}{t('report.review_max_items')})
+                        <span>{safeReview.overall_verdict === 'PASS' ? '💡' : '🎯'}</span>
+                        {safeReview.overall_verdict === 'PASS'
+                          ? `改善提案 (${safeReview.findings.length}件)`
+                          : `高レバレッジ欠陥 (${safeReview.findings.length}件、最大3件)`}
                       </div>
                       {missingCountermeasureCount > 0 && (
                         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-                          <span aria-hidden="true">⚠️</span> {t('report.review_missing_countermeasure').replaceAll('{count}', String(missingCountermeasureCount))}
+                          ⚠️ 対策案が未生成の指摘が {missingCountermeasureCount} 件あります。メモ欄に補足を残してください。
                         </div>
                       )}
                       <div className="space-y-4">
@@ -1988,7 +2114,7 @@ export const ReportPage: React.FC = () => {
                               <span className={`text-xs px-2 py-0.5 rounded font-medium ${
                                 finding.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'
                               }`}>
-                                {finding.severity === 'CRITICAL' ? t('report.review_severity_critical') : t('report.review_severity_warning')}
+                                {finding.severity === 'CRITICAL' ? '重大' : '警告'}
                               </span>
                               {finding.action_type && (
                                 <span className={`text-xs px-2 py-0.5 rounded font-medium ${
@@ -2010,7 +2136,7 @@ export const ReportPage: React.FC = () => {
                             {/* 破綻点 */}
                             {finding.failure_point && (
                               <div className="mb-2">
-                                <span className="text-xs text-red-400 font-medium">{t('report.review_failure_point')} </span>
+                                <span className="text-xs text-red-400 font-medium">破綻点: </span>
                                 <span className="text-sm text-slate-300">{finding.failure_point}</span>
                               </div>
                             )}
@@ -2018,22 +2144,22 @@ export const ReportPage: React.FC = () => {
                             {/* 影響範囲 */}
                             {finding.impact_scope && (
                               <div className="mb-3">
-                                <span className="text-xs text-amber-400 font-medium">{t('report.review_impact_scope')} </span>
+                                <span className="text-xs text-amber-400 font-medium">影響範囲: </span>
                                 <span className="text-sm text-slate-400">{finding.impact_scope}</span>
                               </div>
                             )}
 
                             {/* 対策案 */}
                             <div className="mb-3 p-3 bg-emerald-500/5 rounded-lg border border-emerald-500/20">
-                              <div className="text-xs text-emerald-400 font-medium mb-1">{t('report.review_countermeasure')}</div>
+                              <div className="text-xs text-emerald-400 font-medium mb-1">対策案</div>
                               <div className="text-sm text-slate-300">
-                                {(finding.suggested_revision || '').trim() || t('report.review_no_countermeasure')}
+                                {(finding.suggested_revision || '').trim() || '（対策案が未生成です。必要に応じて再分析してください）'}
                               </div>
                             </div>
 
                             {/* 任意チェック＋メモ（最小パッチ有無に関係なく表示） */}
                             <div className="mt-3 p-3 bg-slate-800/50 rounded-lg border border-indigo-500/20">
-                              <div className="text-xs text-indigo-400 mb-2 font-medium">{t('report.review_user_memo')}</div>
+                              <div className="text-xs text-indigo-400 mb-2 font-medium">ユーザー確認メモ（任意）</div>
                               <label className="flex items-center gap-2 text-sm text-slate-300">
                                 <input
                                   type="checkbox"
@@ -2041,12 +2167,12 @@ export const ReportPage: React.FC = () => {
                                   onChange={(e) => setHumanReviewChecks((prev) => ({ ...prev, [i]: e.target.checked }))}
                                   className="rounded border-slate-500 bg-transparent"
                                 />
-                                {finding.minimal_patch?.checkbox_label || t('report.review_default_checkbox')}
+                                {finding.minimal_patch?.checkbox_label || 'この対策案を確認した'}
                               </label>
                               <textarea
                                 value={humanReviewNotes[i] ?? finding.minimal_patch?.default_value ?? ''}
                                 onChange={(e) => setHumanReviewNotes((prev) => ({ ...prev, [i]: e.target.value }))}
-                                placeholder={finding.minimal_patch?.annotation_hint || t('report.review_memo_placeholder')}
+                                placeholder={finding.minimal_patch?.annotation_hint || 'メモ（任意）'}
                                 rows={2}
                                 className="mt-2 w-full px-3 py-2 rounded bg-[#0a0a0f] border border-white/10 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500/50 resize-y"
                               />
@@ -2057,7 +2183,7 @@ export const ReportPage: React.FC = () => {
                                   disabled={Boolean(savingFindingNotes[i])}
                                   className="px-3 py-1.5 text-xs rounded bg-indigo-500/15 hover:bg-indigo-500/25 text-indigo-300 border border-indigo-500/30 disabled:opacity-60"
                                 >
-                                  {savingFindingNotes[i] ? t('report.review_saving') : t('report.review_save_memo')}
+                                  {savingFindingNotes[i] ? '保存中...' : 'メモ保存'}
                                 </button>
                               </div>
                             </div>
@@ -2065,7 +2191,7 @@ export const ReportPage: React.FC = () => {
                             {/* スコア改善見込み */}
                             {finding.score_improvements && finding.score_improvements.length > 0 && (
                               <div className="mt-3">
-                                <div className="text-xs text-slate-500 mb-1">{t('report.review_score_improvement')}</div>
+                                <div className="text-xs text-slate-500 mb-1">パッチ適用後のスコア改善見込み:</div>
                                 {finding.score_improvements.map((si, si_idx) => (
                                   <div key={si_idx} className="flex items-center gap-2 text-xs text-slate-400">
                                     <span>{si.target_score}:</span>
@@ -2087,13 +2213,15 @@ export const ReportPage: React.FC = () => {
                   {safeReview.confidence_breakdown && (
                     <div className="bg-slate-800/30 rounded-lg p-4 border border-white/5">
                       <div className="text-sm font-medium text-slate-300 mb-3 flex items-center gap-2">
-                        <span aria-hidden="true">📊</span> {t('report.review_confidence_breakdown')}
+                        <span>📊</span> 信頼度分解
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         {(['input_sufficiency', 'logic_consistency', 'implementation_feasibility', 'risk_coverage'] as const).map((key) => {
                           const comp = safeReview.confidence_breakdown?.[key];
                           if (!comp) return null;
-                          const hasChecks = Object.values(checkpointChecks).some(Boolean);
+                          const hasChecks = safeReview.checkpoint_items?.some(
+                            (ci) => checkpointChecks[ci.item_id] ?? ci.checked
+                          ) ?? false;
                           const displayScore = hasChecks ? Math.min(100, comp.score + comp.checkbox_boost) : comp.score;
                           return (
                             <div key={key} className="bg-[#0a0a0f] rounded-lg p-3 border border-white/5">
@@ -2118,7 +2246,7 @@ export const ReportPage: React.FC = () => {
                   {safeReview.checkpoint_items && safeReview.checkpoint_items.length > 0 && (
                     <div className="bg-indigo-500/5 rounded-lg p-4 border border-indigo-500/20">
                       <div className="text-sm font-medium text-indigo-400 mb-3 flex items-center gap-2">
-                        <span aria-hidden="true">☑️</span> {t('report.review_checkpoint_items')}
+                        <span>☑️</span> 確認チェックポイント
                       </div>
                       <div className="space-y-3">
                         {safeReview.checkpoint_items.map((item) => (
@@ -2135,13 +2263,13 @@ export const ReportPage: React.FC = () => {
                                 <span className="text-xs text-emerald-400/70">+{item.score_boost}点</span>
                               </div>
                               {item.default_suggestion && (
-                                <div className="text-xs text-slate-500 mt-1">{t('report.review_default_suggestion')} {item.default_suggestion}</div>
+                                <div className="text-xs text-slate-500 mt-1">暫定案: {item.default_suggestion}</div>
                               )}
                               <input
                                 type="text"
-                                value={checkpointAnnotations[item.item_id] ?? ''}
+                                value={checkpointAnnotations[item.item_id] ?? item.annotation ?? ''}
                                 onChange={(e) => setCheckpointAnnotations((prev) => ({ ...prev, [item.item_id]: e.target.value }))}
-                                placeholder={t('report.review_annotation_placeholder')}
+                                placeholder="注釈（任意）"
                                 className="mt-2 w-full px-2 py-1 rounded bg-slate-800/50 border border-white/5 text-xs text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/30"
                               />
                             </div>
@@ -2152,14 +2280,20 @@ export const ReportPage: React.FC = () => {
                       {/* 自動再計算ボタン */}
                       {safeReview.auto_recalc_enabled !== false && (
                         <button
-                          disabled={!Object.values(checkpointChecks).some(Boolean)}
+                          type="button"
+                          onClick={handleApplyCheckpoints}
+                          disabled={!safeReview.checkpoint_items.some(
+                            (item) => checkpointChecks[item.item_id] ?? item.checked
+                          )}
                           className={`mt-4 w-full px-4 py-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                            Object.values(checkpointChecks).some(Boolean)
+                            safeReview.checkpoint_items.some(
+                              (item) => checkpointChecks[item.item_id] ?? item.checked
+                            )
                               ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20'
                               : 'bg-slate-800/50 text-slate-500 cursor-not-allowed border border-white/5'
                           }`}
                         >
-                          <span aria-hidden="true">⚡</span> {t('report.review_auto_recalc')}
+                          ⚡ チェック項目を反映してスコア自動再計算
                         </button>
                       )}
                     </div>
@@ -2169,14 +2303,14 @@ export const ReportPage: React.FC = () => {
                   {(!safeReview.findings || safeReview.findings.length === 0) && (
                     <div className="text-center py-6 text-slate-500 bg-[#0a0a0f] rounded-lg">
                       <span className="text-3xl mb-2 block">✨</span>
-                      <p>{t('report.review_no_findings')}</p>
+                      <p>高レバレッジ欠陥は検出されませんでした</p>
                     </div>
                   )}
                 </>
               ) : (
                 <div className="text-center py-8 text-slate-500">
                   <div className="w-8 h-8 border-2 border-slate-600 border-t-slate-400 rounded-full animate-spin mx-auto mb-3" />
-                  {t('report.review_loading')}
+                  検証結果を取得中...
                 </div>
               )}
             </div>
@@ -2187,7 +2321,7 @@ export const ReportPage: React.FC = () => {
         <div className="mt-8 bg-[#12121a] rounded-xl border border-white/5 p-6">
           <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
             <span className="text-slate-500">7.</span>
-            <span aria-hidden="true">✍️</span> {t('report.sign_section_title')}
+            ✍️ 署名欄
           </h2>
 
           {/* 署名テーブル（日本式） */}
@@ -2196,36 +2330,36 @@ export const ReportPage: React.FC = () => {
               <tbody>
                 {/* 作成欄 */}
                 <tr className="border border-slate-700">
-                  <th rowSpan={2} className="bg-slate-800/50 px-3 py-2 text-left w-20 border-r border-slate-700">{t('report.sign_author')}</th>
-                  <th className="bg-slate-800/30 px-3 py-2 text-left w-16 border-r border-slate-700">{t('report.sign_department')}</th>
+                  <th rowSpan={2} className="bg-slate-800/50 px-3 py-2 text-left w-20 border-r border-slate-700">作成</th>
+                  <th className="bg-slate-800/30 px-3 py-2 text-left w-16 border-r border-slate-700">部署</th>
                   <td className="px-3 py-2 border-r border-slate-700">{authorDept}</td>
-                  <th className="bg-slate-800/30 px-3 py-2 text-left w-16 border-r border-slate-700">{t('report.sign_position')}</th>
+                  <th className="bg-slate-800/30 px-3 py-2 text-left w-16 border-r border-slate-700">役職</th>
                   <td className="px-3 py-2">{authorPos}</td>
                 </tr>
                 <tr className="border border-slate-700 border-t-0">
-                  <th className="bg-slate-800/30 px-3 py-2 text-left border-r border-slate-700">{t('report.sign_name')}</th>
+                  <th className="bg-slate-800/30 px-3 py-2 text-left border-r border-slate-700">氏名</th>
                   <td className="px-3 py-2 border-r border-slate-700">{authorName}</td>
-                  <th className="bg-slate-800/30 px-3 py-2 text-left border-r border-slate-700">{t('report.sign_date')}</th>
+                  <th className="bg-slate-800/30 px-3 py-2 text-left border-r border-slate-700">日付</th>
                   <td className="px-3 py-2">{createdDate}</td>
                 </tr>
                 {/* 承認欄 */}
                 <tr className="border border-slate-700 border-t-0">
-                  <th rowSpan={2} className="bg-slate-800/50 px-3 py-2 text-left border-r border-slate-700">{t('report.sign_approver')}</th>
-                  <th className="bg-slate-800/30 px-3 py-2 text-left border-r border-slate-700">{t('report.sign_department')}</th>
+                  <th rowSpan={2} className="bg-slate-800/50 px-3 py-2 text-left border-r border-slate-700">承認</th>
+                  <th className="bg-slate-800/30 px-3 py-2 text-left border-r border-slate-700">部署</th>
                   <td className="px-3 py-2 border-r border-slate-700 text-slate-500">
-                    {signatureStatus === 'signed' && signatureData ? signatureData.department : t('report.sign_unsigned')}
+                    {signatureStatus === 'signed' && signatureData ? signatureData.department : '（未承認）'}
                   </td>
-                  <th className="bg-slate-800/30 px-3 py-2 text-left border-r border-slate-700">{t('report.sign_position')}</th>
+                  <th className="bg-slate-800/30 px-3 py-2 text-left border-r border-slate-700">役職</th>
                   <td className="px-3 py-2 text-slate-500">
                     {signatureStatus === 'signed' && signatureData ? signatureData.position : ''}
                   </td>
                 </tr>
                 <tr className="border border-slate-700 border-t-0">
-                  <th className="bg-slate-800/30 px-3 py-2 text-left border-r border-slate-700">{t('report.sign_name')}</th>
+                  <th className="bg-slate-800/30 px-3 py-2 text-left border-r border-slate-700">氏名</th>
                   <td className="px-3 py-2 border-r border-slate-700 text-slate-500">
                     {signatureStatus === 'signed' && signatureData ? signatureData.signed_by : ''}
                   </td>
-                  <th className="bg-slate-800/30 px-3 py-2 text-left border-r border-slate-700">{t('report.sign_date')}</th>
+                  <th className="bg-slate-800/30 px-3 py-2 text-left border-r border-slate-700">日付</th>
                   <td className="px-3 py-2 text-slate-500">
                     {signatureStatus === 'signed' && signatureData ? signatureData.signed_at_display : ''}
                   </td>
@@ -2241,7 +2375,7 @@ export const ReportPage: React.FC = () => {
               <div className="space-y-4 text-center">
                 <div className="flex items-center justify-center gap-2 text-emerald-400 text-sm mb-4">
                   <span>✅</span>
-                  <span className="font-medium">{t('report.sign_approved')}</span>
+                  <span className="font-medium">提案書が承認されました</span>
                 </div>
 
                 <SignatureArea
@@ -2252,17 +2386,17 @@ export const ReportPage: React.FC = () => {
                   animated={showSignedAnimation}
                 />
               </div>
-            ) : safeReview.overall_verdict === 'PASS' ? (
-              /* 検証通過 - 署名ボタン表示 */
+            ) : canSign ? (
+              /* 署名可能（分析信頼度39%以上） */
               <div className="flex flex-col items-center gap-4">
                 <div className="w-24 h-24 rounded-full border-2 border-dashed border-slate-600 flex items-center justify-center text-slate-500 text-xs">
-                  {t('report.sign_stamp')}
+                  承認印
                 </div>
                 <div className="text-center">
-                  <div className="text-sm text-slate-500 mb-2">{t('report.sign_instruction')}</div>
+                  <div className="text-sm text-slate-500 mb-2">この提案書に基づいて意思決定を行う場合</div>
                   {user && (
                     <div className="text-xs text-slate-400 mb-3">
-                      {t('report.sign_signer_label')} {user.display_name} ({user.department})
+                      署名者: {user.display_name} ({user.department})
                     </div>
                   )}
                   <button
@@ -2279,12 +2413,12 @@ export const ReportPage: React.FC = () => {
                     {isSigning ? (
                       <>
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        {t('report.sign_processing')}
+                        署名処理中...
                       </>
                     ) : (
                       <>
-                        <span className="text-xl">{t('report.sign_stamp_char')}</span>
-                        {t('report.sign_button')}
+                        <span className="text-xl">印</span>
+                        電子署名
                       </>
                     )}
                   </button>
@@ -2303,7 +2437,7 @@ export const ReportPage: React.FC = () => {
                       {safeReview.overall_verdict === 'REVISE' ? '⚠️' : '📋'}
                     </div>
                     <div className="text-xs">
-                      {safeReview.overall_verdict === 'REVISE' ? t('report.sign_revise_label') : t('report.sign_coach_label')}
+                      {safeReview.overall_verdict === 'REVISE' ? '要修正' : '改善指導'}
                     </div>
                   </div>
                 </div>
@@ -2312,24 +2446,24 @@ export const ReportPage: React.FC = () => {
                     safeReview.overall_verdict === 'REVISE' ? 'text-amber-400' : 'text-blue-400'
                   }`}>
                     {safeReview.overall_verdict === 'REVISE'
-                      ? t('report.sign_revise_msg')
-                      : t('report.sign_coach_msg')}
+                      ? '⚠️ 検証で修正が必要と判定されました'
+                      : '📋 改善指導あり — 指摘事項を確認してください'}
                   </div>
                   <div className="text-sm text-slate-400 mb-4">
-                    {t('report.sign_check_review')}
+                    「検証」タブで指摘事項と改善提案を確認してください。
                   </div>
                   <div className="flex gap-3 justify-center">
                     <button
                       onClick={() => setActiveTab('review')}
                       className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-all flex items-center gap-2"
                     >
-                      <span aria-hidden="true">🔍</span> {t('report.sign_view_review')}
+                      🔍 検証結果を確認
                     </button>
                     <button
                       onClick={handleNewQuestion}
                       className="px-4 py-2 bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-400 rounded-lg text-sm transition-all flex items-center gap-2"
                     >
-                      <span aria-hidden="true">🔄</span> {t('report.reanalyze_btn')}
+                      🔄 再分析
                     </button>
                   </div>
                 </div>
@@ -2340,8 +2474,8 @@ export const ReportPage: React.FC = () => {
 
         {/* フッター */}
         <div className="mt-8 text-center text-xs text-slate-600 border-t border-slate-800 pt-4">
-          <p>{t('report.footer_auto_generated')}</p>
-          <p className="mt-1 font-mono">{t('report.footer_case_id')} {caseId} | Version: {report.version || '3.1'}</p>
+          <p>本提案書は AI Decision Support により自動生成されました</p>
+          <p className="mt-1 font-mono">案件ID: {caseId} | Version: {report.version || '3.1'}</p>
         </div>
       </main>
     </div>

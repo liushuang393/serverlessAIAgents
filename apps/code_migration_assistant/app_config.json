@@ -191,6 +191,13 @@
   },
   "plugin_bindings": [
     {
+      "id": "internal.code-migration-runtime-pack",
+      "version": "1.0.0",
+      "config": {
+        "execution_mode": "runtime"
+      }
+    },
+    {
       "id": "official.cobol-migration-pack",
       "version": "1.0.0",
       "config": {

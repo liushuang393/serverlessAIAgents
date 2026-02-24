@@ -133,12 +133,13 @@ class QualityGateAgent:
                 "MEDIUM",
             )
 
-        if classification in {"logic", "format"}:
+        if classification in {"logic", "format", "data", "timing"}:
+            severity = "HIGH" if classification in {"logic", "data"} else "MEDIUM"
             return (
                 QualityDecision.TRANSFORM_ISSUE,
                 "LimitedFixerAgent",
                 "変換成果物に差分を検出",
-                "HIGH" if classification == "logic" else "MEDIUM",
+                severity,
             )
 
         return (

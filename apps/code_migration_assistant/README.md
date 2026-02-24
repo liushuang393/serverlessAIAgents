@@ -169,7 +169,7 @@ python -m apps.platform.main publish ./apps/code_migration_assistant --target do
 │                                                         │
 │  ┌─────────────────────────────────────────────────────┐│
 │  │ Backend API Layer (FastAPI)                         ││
-│  │ ├─ REST Endpoints: /api/migration/start             ││
+│  │ ├─ REST Endpoints: /api/migration/execute           ││
 │  │ ├─ WebSocket: /api/ws/{task_id}                     ││
 │  │ └─ Static Files Server: /                           ││
 │  │ [サーバーで実行される]                                ││
@@ -196,7 +196,7 @@ python -m apps.platform.main publish ./apps/code_migration_assistant --target do
    ↓
 4. ユーザーが「Start Migration」をクリック
    ↓
-5. app.js が POST /api/migration/start を呼び出し
+5. app.js が POST /api/migration/execute を呼び出し
    ↓
 6. backend/app.py が CodeMigrationEngine を初期化
    ↓
@@ -297,15 +297,17 @@ result = await orchestrator.platform_mode({
 | `modernization-generator` | M4 | Spring Boot/REST/JPA 生成 | business-semantics, cobol-migration |
 | `compliance-reporter` | M5 | 設計書・監査報告書 | business-semantics |
 
-### Skill 依存自動解決
+### Skill-First Capability Contract
 
 ```
-SkillEngine.resolve("modernization-generator")
-  → depends_on: [business-semantics, cobol-migration]
-  → business-semantics が未登録？
-    → 自動で resolve("business-semantics")
-      → depends_on: [legacy-ingestion]
-      → 再帰解決...
+analysis            -> legacy-ingestion
+business_semantics  -> business-semantics
+transform           -> modernization-generator
+report              -> compliance-reporter
+
+実行モード:
+- skill_mode=skill_first: Skill 実行を優先し、失敗時は native fallback
+- skill_mode=native_only: 既存 Agent 実装のみを使用
 ```
 
 ---
@@ -338,11 +340,10 @@ compliance-reporter Skill で日本語の監査報告書を生成。
 
 | ソース言語 | ターゲット言語 | ステータス |
 |-----------|-------------|----------|
-| COBOL | Java | ✅ 対応済み |
-| RPG (AS/400) | Java | ✅ 対応済み |
-| PL/I | Java | ✅ 対応済み |
-| Fortran | Java | ✅ 対応済み |
-| COBOL | Spring Boot | 🔧 開発中 |
+| COBOL | Java/Spring | ✅ 第一波本実装 |
+| RPG (AS/400) | Java | 🔌 拡張インターフェースのみ |
+| PL/I | Java | 🔌 拡張インターフェースのみ |
+| Fortran | Java | 🔌 拡張インターフェースのみ |
 
 ---
 
@@ -351,7 +352,7 @@ compliance-reporter Skill で日本語の監査報告書を生成。
 - [x] 7工程固定パイプライン
 - [x] 4言語ソースアダプター
 - [x] MCP ツール体系
-- [x] Skill 依存自動解決
+- [x] Skill-first capability + native fallback
 - [x] HITL 承認ポイント
 - [x] Kill Switch
 - [x] GovernanceEngine 統合

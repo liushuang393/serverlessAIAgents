@@ -63,6 +63,15 @@ class MigrationDesignArtifact(ArtifactBase):
     rationale: dict[str, str] = Field(default_factory=dict)
 
 
+class BusinessSemanticsArtifact(ArtifactBase):
+    """業務語義工程の成果物."""
+
+    business_processes: list[dict[str, Any]] = Field(default_factory=list)
+    business_events: list[dict[str, Any]] = Field(default_factory=list)
+    state_model: dict[str, Any] = Field(default_factory=dict)
+    business_rules: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class GeneratedFile(BaseModel):
     """生成ファイル情報."""
 
@@ -125,6 +134,32 @@ class LimitedFixArtifact(ArtifactBase):
     target_code: str
     patch_summary: list[str] = Field(default_factory=list)
     retest_required: bool = False
+
+
+class HumanFeedbackArtifact(ArtifactBase):
+    """人間コマンド成果物."""
+
+    command: str
+    actor: str
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class TransformationIterationRecord(BaseModel):
+    """変換反復の1回分記録."""
+
+    iteration: int
+    score: float | None = None
+    accepted: bool = False
+    feedback: list[str] = Field(default_factory=list)
+    suggestions: list[str] = Field(default_factory=list)
+
+
+class TransformationIterationArtifact(ArtifactBase):
+    """変換反復工程の成果物."""
+
+    iterations: list[TransformationIterationRecord] = Field(default_factory=list)
+    accepted: bool = False
+    final_score: float | None = None
 
 
 class TaskSpec(BaseModel):

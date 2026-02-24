@@ -60,8 +60,19 @@ async def test_migration_design_agent_basic() -> None:
         "data_structures": [{"name": "WS-NAME"}],
         "entry_points": [{"name": "MAIN", "type": "paragraph"}],
     }
+    semantics = {
+        "meta": {
+            "task_id": "task-design",
+            "trace_id": "trace-design",
+            "module": "M1",
+        },
+        "business_processes": [{"name": "社員管理", "entry_point": "MAIN", "steps": ["入力", "更新"]}],
+        "business_events": [{"name": "社員更新", "trigger": "MAIN", "type": "business"}],
+        "state_model": {"states": ["初期", "更新"]},
+        "business_rules": [{"name": "rule_1", "condition": "IF A", "action": "更新"}],
+    }
 
-    result = agent.process({"legacy_analysis": analysis})
+    result = agent.process({"legacy_analysis": analysis, "business_semantics": semantics})
 
     assert result["meta"]["stage"] == "design"
     assert result["class_mapping"]["primary_class"] == "EmpManager"

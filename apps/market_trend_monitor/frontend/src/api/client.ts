@@ -10,6 +10,7 @@
 
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import type {
+  CollectJob,
   CollectRequest,
   CollectResponse,
   TrendsResponse,
@@ -158,6 +159,29 @@ class ApiClient {
       blob: response.data,
       filename,
     };
+  }
+
+  /**
+   * 指定ジョブIDの状態を取得.
+   */
+  async getJob(jobId: string): Promise<CollectJob> {
+    const response = await this.client.get<CollectJob>(`/jobs/${jobId}`);
+    return response.data;
+  }
+
+  /**
+   * 最新ジョブの状態を取得（存在しない場合は null）.
+   */
+  async getLatestJob(): Promise<CollectJob | null> {
+    try {
+      const response = await this.client.get<CollectJob>('/jobs/latest');
+      return response.data;
+    } catch (error) {
+      if (error instanceof ApiError && error.statusCode === 404) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   /**

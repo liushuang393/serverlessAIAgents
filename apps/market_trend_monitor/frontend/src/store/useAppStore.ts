@@ -7,11 +7,12 @@
  */
 
 import { create } from 'zustand';
-import type { CollectResponse, Trend, Report, Notification } from '@/types';
+import type { CollectJob, CollectResponse, Trend, Report, Notification } from '@/types';
 import { SourceType } from '@/types';
 import { apiClient } from '@/api/client';
 
 const SETTINGS_STORAGE_KEY = 'market-trend-monitor:settings:v1';
+const JOB_STORAGE_KEY = 'market-trend-monitor:current-job:v1';
 const DEFAULT_KEYWORDS = ['COBOL', 'Java migration', 'AI'];
 const DEFAULT_COLLECTION_WINDOW_DAYS = 7;
 const SOURCE_VALUES: SourceType[] = [
@@ -22,6 +23,10 @@ const SOURCE_VALUES: SourceType[] = [
 ];
 const COLLECTION_WINDOWS = [7, 30, 90] as const;
 type CollectionWindowDays = (typeof COLLECTION_WINDOWS)[number];
+
+// ============================================================
+// 永続化ヘルパー
+// ============================================================
 
 interface PersistedSettings {
   keywords: string[];
@@ -62,25 +67,49 @@ const loadPersistedSettings = (): PersistedSettings | null => {
       ? (parsed.collectionWindowDays as CollectionWindowDays)
       : DEFAULT_COLLECTION_WINDOW_DAYS;
 
-    return {
-      keywords,
-      sources,
-      collectionWindowDays,
-    };
+    return { keywords, sources, collectionWindowDays };
   } catch {
     return null;
   }
 };
 
 const savePersistedSettings = (settings: PersistedSettings): void => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
+  if (typeof window === 'undefined') return;
   window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
 };
 
+const loadPersistedJobId = (): string | null => {
+  if (globalThis.localStorage === undefined) return null;
+  return globalThis.localStorage.getItem(JOB_STORAGE_KEY);
+};
+
+const savePersistedJobId = (jobId: string | null): void => {
+  if (globalThis.localStorage === undefined) return;
+  if (jobId) {
+    globalThis.localStorage.setItem(JOB_STORAGE_KEY, jobId);
+  } else {
+    globalThis.localStorage.removeItem(JOB_STORAGE_KEY);
+  }
+};
+
 const persistedSettings = loadPersistedSettings();
+
+// ============================================================
+// ポーリングタイマー（モジュールスコープで管理）
+// ============================================================
+
+let _pollTimer: ReturnType<typeof setInterval> | null = null;
+
+const stopPolling = (): void => {
+  if (_pollTimer !== null) {
+    clearInterval(_pollTimer);
+    _pollTimer = null;
+  }
+};
+
+// ============================================================
+// ストア型定義
+// ============================================================
 
 interface AppState {
   // データ
@@ -97,6 +126,10 @@ interface AppState {
   sources: SourceType[];
   collectionWindowDays: CollectionWindowDays;
 
+  // バックグラウンドジョブ
+  currentJobId: string | null;
+  jobStatus: CollectJob | null;
+
   // アクション
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
@@ -105,12 +138,17 @@ interface AppState {
   fetchTrends: () => Promise<void>;
   fetchReports: () => Promise<void>;
 
-  // データ収集
+  // データ収集（即時返却 → ジョブ開始）
   collectData: (
     keywords: string[],
     sources: SourceType[],
     collectionWindowDays: CollectionWindowDays
   ) => Promise<CollectResponse | null>;
+
+  // ジョブ管理
+  setJobStatus: (job: CollectJob | null) => void;
+  startJobPolling: (jobId: string) => void;
+  resumeJobPolling: () => void;
 
   // 設定
   updateKeywords: (keywords: string[]) => void;
@@ -123,7 +161,11 @@ interface AppState {
   clearNotifications: () => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
+// ============================================================
+// ストア実装
+// ============================================================
+
+export const useAppStore = create<AppState>((set, get) => ({
   // 初期状態
   trends: [],
   reports: [],
@@ -133,10 +175,13 @@ export const useAppStore = create<AppState>((set) => ({
   keywords: persistedSettings?.keywords.length ? persistedSettings.keywords : DEFAULT_KEYWORDS,
   sources: persistedSettings?.sources ?? [],
   collectionWindowDays: persistedSettings?.collectionWindowDays ?? DEFAULT_COLLECTION_WINDOW_DAYS,
+  currentJobId: loadPersistedJobId(),
+  jobStatus: null,
 
   // UI状態管理
   setLoading: (loading) => set({ loading }),
   setError: (error) => set({ error }),
+  setJobStatus: (job) => set({ jobStatus: job }),
 
   // トレンド取得
   fetchTrends: async () => {
@@ -162,7 +207,7 @@ export const useAppStore = create<AppState>((set) => ({
     }
   },
 
-  // データ収集
+  // データ収集開始（即時返却 → バックグラウンドジョブ）
   collectData: async (keywords, sources, collectionWindowDays) => {
     set({ loading: true, error: null });
     try {
@@ -177,23 +222,66 @@ export const useAppStore = create<AppState>((set) => ({
           end: now.toISOString(),
         },
       });
-      const [trendsResponse, reportsResponse] = await Promise.all([
-        apiClient.getTrends(50),
-        apiClient.getReports(20),
-      ]);
 
-      set({
-        trends: trendsResponse.trends,
-        reports: reportsResponse.reports,
-        loading: false,
-      });
-
+      // ジョブIDを保存してポーリング開始
+      get().startJobPolling(response.job_id);
+      set({ loading: false });
       return response;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       set({ error: message, loading: false });
       return null;
     }
+  },
+
+  // ポーリング開始（新規ジョブ）
+  startJobPolling: (jobId: string) => {
+    savePersistedJobId(jobId);
+    set({ currentJobId: jobId, jobStatus: null });
+    stopPolling();
+
+    _pollTimer = setInterval(() => {
+      apiClient.getJob(jobId).then((job) => {
+        set({ jobStatus: job });
+
+        if (job.status !== 'running') {
+          stopPolling();
+          savePersistedJobId(null);
+          set({ currentJobId: null });
+
+          if (job.status === 'completed') {
+            // 完了時にデータを自動更新
+            const state = get();
+            void Promise.all([state.fetchTrends(), state.fetchReports()]);
+          }
+        }
+      }).catch(() => {
+        // ポーリングエラーは無視（一時的なネットワーク障害等）
+      });
+    }, 3000);
+  },
+
+  // アプリ起動時に中断ジョブのポーリングを再開
+  resumeJobPolling: () => {
+    const jobId = get().currentJobId;
+    if (!jobId) return;
+
+    apiClient.getJob(jobId).then((job) => {
+      set({ jobStatus: job });
+      if (job.status === 'running') {
+        get().startJobPolling(jobId);
+      } else {
+        savePersistedJobId(null);
+        set({ currentJobId: null });
+        if (job.status === 'completed') {
+          const state = get();
+          void Promise.all([state.fetchTrends(), state.fetchReports()]);
+        }
+      }
+    }).catch(() => {
+      savePersistedJobId(null);
+      set({ currentJobId: null });
+    });
   },
 
   // 設定更新

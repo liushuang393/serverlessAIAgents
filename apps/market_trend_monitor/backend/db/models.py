@@ -207,3 +207,24 @@ class ClaimEvidenceModel(Base):
     evidence_id: Mapped[str] = mapped_column(String(36), index=True)
     is_supporting: Mapped[bool] = mapped_column(Boolean, default=True)
     added_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)
+
+
+class CollectJobModel(Base):
+    """データ収集ジョブテーブル.
+
+    バックグラウンド収集ジョブの状態を永続化し、
+    画面遷移後もジョブ状態をポーリングで確認できるようにする。
+    """
+
+    __tablename__ = "collect_jobs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    # running / completed / failed
+    status: Mapped[str] = mapped_column(String(16), default="running", index=True)
+    progress: Mapped[int] = mapped_column(Integer, default=0)
+    current_step: Mapped[str] = mapped_column(String(64), default="")
+    started_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.now, index=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    articles_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    trends_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)

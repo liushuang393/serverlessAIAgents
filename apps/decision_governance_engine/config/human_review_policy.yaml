@@ -1,5 +1,8 @@
 version: "1.0.0"
 
+# 署名可能とみなす分析信頼度の閾値（%）
+signable_confidence_threshold_pct: 39
+
 # 重要指摘の判定ルール
 important_severities:
   - "CRITICAL"

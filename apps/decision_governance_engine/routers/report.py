@@ -17,6 +17,7 @@ from typing import Any
 from apps.decision_governance_engine.routers.auth import UserInfo, require_auth
 from apps.decision_governance_engine.services.human_review_policy import (
     enrich_review_with_policy,
+    load_human_review_policy,
 )
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -72,6 +73,32 @@ def cache_report(report_id: str, report: Any) -> None:
         del _report_cache[oldest_key]
     _report_cache[report_id] = report
     logger.info(f"レポートをキャッシュに保存: {report_id} (cache_size={len(_report_cache)})")
+
+
+def _extract_review_confidence_pct(report: Any) -> int:
+    """レポートから分析信頼度（%）を取得."""
+    if report is None:
+        return 0
+
+    review_data: Any = None
+    if hasattr(report, "review"):
+        review_data = report.review
+    elif isinstance(report, dict):
+        review_data = report.get("review")
+
+    raw_confidence: Any = 0.0
+    if isinstance(review_data, dict):
+        raw_confidence = review_data.get("confidence_score", 0.0)
+    elif hasattr(review_data, "confidence_score"):
+        raw_confidence = getattr(review_data, "confidence_score", 0.0)
+
+    try:
+        confidence = float(raw_confidence)
+    except (TypeError, ValueError):
+        confidence = 0.0
+
+    confidence = max(0.0, min(1.0, confidence))
+    return round(confidence * 100)
 
 
 # ========================================
@@ -333,6 +360,24 @@ async def sign_report(
         return SignatureResponse(
             success=False,
             message=f"このレポートは既に {existing['signed_by']} により署名済みです",
+        )
+
+    report = await _get_report_from_db(report_id)
+    if report is None:
+        return SignatureResponse(
+            success=False,
+            message="レポートが見つからないため署名できません。",
+        )
+
+    threshold_pct = load_human_review_policy().signable_confidence_threshold_pct
+    confidence_pct = _extract_review_confidence_pct(report)
+    if confidence_pct < threshold_pct:
+        return SignatureResponse(
+            success=False,
+            message=(
+                f"分析信頼度が{threshold_pct}%未満のため署名できません。"
+                f"現在: {confidence_pct}%。検証タブで補強項目を反映してください。"
+            ),
         )
 
     signed_at = datetime.now()

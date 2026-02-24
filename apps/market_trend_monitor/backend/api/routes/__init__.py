@@ -3,6 +3,7 @@
 from apps.market_trend_monitor.backend.api.routes.collect import router as collect_router
 from apps.market_trend_monitor.backend.api.routes.competitors import router as competitors_router
 from apps.market_trend_monitor.backend.api.routes.evidence import router as evidence_router
+from apps.market_trend_monitor.backend.api.routes.jobs import router as jobs_router
 from apps.market_trend_monitor.backend.api.routes.metrics import router as metrics_router
 from apps.market_trend_monitor.backend.api.routes.predictions import router as predictions_router
 from apps.market_trend_monitor.backend.api.routes.settings import router as settings_router
@@ -15,6 +16,7 @@ __all__ = [
     "collect_router",
     "competitors_router",
     "evidence_router",
+    "jobs_router",
     "metrics_router",
     "predictions_router",
     "settings_router",

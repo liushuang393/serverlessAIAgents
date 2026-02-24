@@ -150,6 +150,50 @@ describe('DecisionApiClient', () => {
     });
   });
 
+  describe('applyCheckpoints', () => {
+    it('チェックポイント反映APIのレスポンスを返す', async () => {
+      const mockResponse = {
+        success: true,
+        message: 'チェック項目を反映して信頼度を再計算しました。',
+        base_confidence_pct: 28,
+        recalculated_confidence_pct: 40,
+        threshold_pct: 39,
+        signature_eligible: true,
+        updated_review: {
+          overall_verdict: 'PASS',
+          confidence_score: 0.4,
+          findings: [],
+          final_warnings: [],
+          checkpoint_items: [],
+          auto_recalc_enabled: true,
+        },
+      };
+
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      const result = await client.applyCheckpoints({
+        report_id: 'PROP-TEST-001',
+        request_id: '00000000-0000-0000-0000-000000000001',
+        reviewer_name: 'tester',
+        items: [
+          { item_id: 'approver_confirmed', checked: true, annotation: 'PO 承認' },
+        ],
+      });
+
+      expect(result).toEqual(mockResponse);
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        'http://localhost:8000/api/human-review/apply-checkpoints',
+        expect.objectContaining({
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+    });
+  });
+
   describe('DecisionApiError', () => {
     it('fromResponse で適切なエラーを生成する', () => {
       const mockResponse = {

@@ -184,6 +184,8 @@ class DifferentialVerificationAgent:
                 message = str(test_result.get("execution_error", "")).lower()
                 if "not found" in message or "javac" in message or "java" in message:
                     return "environment"
+                if "timeout" in message or "timed out" in message:
+                    return "timing"
                 return "logic"
 
         diff_types = {str(diff.get("type", "value")) for diff in diffs}
@@ -198,6 +200,12 @@ class DifferentialVerificationAgent:
             return "logic"
         if diff_types <= {"whitespace", "format"}:
             return "format"
+        if "missing" in diff_types:
+            return "data"
+        for diff in diffs:
+            location = str(diff.get("location", "")).lower()
+            if any(token in location for token in ("time", "date", "timestamp")):
+                return "timing"
 
         return "logic"
 

@@ -491,7 +491,15 @@ class DecisionRepository:
 
             if updated_review:
                 normalized_review = self._to_jsonable(updated_review)
-                for key in ["overall_verdict", "confidence_score", "findings", "final_warnings"]:
+                for key in [
+                    "overall_verdict",
+                    "confidence_score",
+                    "findings",
+                    "final_warnings",
+                    "checkpoint_items",
+                    "confidence_breakdown",
+                    "auto_recalc_enabled",
+                ]:
                     if key in normalized_review:
                         current_review[key] = normalized_review[key]
 

@@ -88,11 +88,27 @@ export interface CollectRequest {
   };
 }
 
+/** POST /api/collect の即時返却レスポンス（バックグラウンドジョブ開始） */
 export interface CollectResponse {
+  job_id: string;
   status: string;
-  articles_count: number;
-  trends_count: number;
   message: string;
+}
+
+/** ジョブ状態 */
+export type JobStatus = 'running' | 'completed' | 'failed';
+
+/** GET /api/jobs/{job_id} のレスポンス */
+export interface CollectJob {
+  job_id: string;
+  status: JobStatus;
+  progress: number;
+  current_step: string;
+  started_at: string;
+  completed_at?: string;
+  articles_count?: number;
+  trends_count?: number;
+  error?: string;
 }
 
 export interface TrendsResponse {

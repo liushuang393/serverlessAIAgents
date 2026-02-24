@@ -8,8 +8,19 @@ class MigrationUI {
         this.socket = null;
         this.isRunning = false;
 
-        this.apiBase = "http://localhost:8003";
-        this.steps = ['analysis', 'design', 'transform', 'testing', 'diff', 'quality', 'fix'];
+        this.apiBase = window.location.origin;
+        this.steps = ['analysis', 'business_semantics', 'design', 'transform', 'testing', 'diff', 'quality', 'fix', 'report'];
+        this.stageIndexMap = {
+            "migration.analyze_code": 0,
+            "migration.extract_business_semantics": 1,
+            "migration.design_architecture": 2,
+            "migration.transform_code": 3,
+            "migration.synthesize_tests": 4,
+            "migration.verify_diff": 5,
+            "migration.evaluate_quality": 6,
+            "migration.apply_fix": 7,
+            "migration.generate_report": 8
+        };
 
         this.initElements();
         this.attachListeners();
@@ -39,7 +50,8 @@ class MigrationUI {
             params.set("api_key", apiKey);
         }
         const suffix = params.toString() ? `?${params.toString()}` : "";
-        return `ws://localhost:8003/api/ws/${taskId}${suffix}`;
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        return `${protocol}://${window.location.host}/api/ws/${taskId}${suffix}`;
     }
 
     parseSocketPayload(rawPayload) {
@@ -93,12 +105,17 @@ class MigrationUI {
 
         try {
             // 1. Start Task via API
-            const response = await fetch(`${this.apiBase}/api/migration/start`, {
+            const response = await fetch(`${this.apiBase}/api/migration/execute`, {
                 method: "POST",
                 headers: this.buildHeaders({ "Content-Type": "application/json" }),
                 body: JSON.stringify({
                     source_code: sourceCode,
-                    migration_type: "cobol-to-springboot"
+                    migration_type: "cobol-to-springboot",
+                    options: {
+                        human_policy: "risk_based",
+                        acceptance_threshold: 85.0,
+                        max_auto_iterations: 3
+                    }
                 })
             });
 
@@ -164,6 +181,12 @@ class MigrationUI {
             case "node.complete":
                 this.addLog(`Completed Node: ${data.node_name}`, "success");
                 this.updateStepUI(data.node_name, "completed");
+                if (data.node_name === "migration_pipeline") {
+                    const reportUrl = this.extractReportUrl(data.data || {});
+                    if (reportUrl) {
+                        this.addReportLink(reportUrl);
+                    }
+                }
                 break;
             case "log":
                 const levelClass = data.level === "ERROR" ? "danger" : "";
@@ -173,11 +196,22 @@ class MigrationUI {
             case "approval_required":
                 this.showApprovalModal(data);
                 break;
+            case "approval_submitted":
+                this.addLog(
+                    data.approved ? "Approval accepted, pipeline resumed." : "Approval rejected.",
+                    data.approved ? "success" : "warning"
+                );
+                this.approvalModal.classList.add('hidden');
+                break;
+            case "command_result":
+                this.handleCommandResultEvent(data);
+                break;
+            case "approval_timeout":
+                this.addLog("Approval timed out.", "danger");
+                this.approvalModal.classList.add('hidden');
+                break;
             case "flow.complete":
                 this.addLog("Flow Completed Successfully.", "success");
-                if (data.result && data.result.report_url) {
-                    this.addReportLink(data.result.report_url);
-                }
                 break;
             case "flow.error":
                 this.addLog(`Flow Error: ${data.error_message}`, "danger");
@@ -187,23 +221,20 @@ class MigrationUI {
         }
     }
 
-    updateStepUI(nodeName, state) {
-        // Map node names to UI steps (simple heuristic)
-        // Adjust these mappings based on actual node names from engine
-        const map = {
-            "migration.analyze_code": 0,
-            "migration.design_architecture": 1,
-            "migration.transform_code": 2,
-            "migration.synthesize_tests": 3,
-            "migration.verify_diff": 4,
-            "migration.evaluate_quality": 5,
-            "migration.apply_fix": 6,
-            "migration.generate_report": 7
-        };
+    handleCommandResultEvent(data) {
+        const command = data.command || "unknown";
+        const status = data.status || "accepted";
+        const applied = data.applied === true;
+        const message = `Command Result: ${command} -> ${status} (applied=${applied})`;
+        const levelClass = applied ? "success" : "warning";
+        this.addLog(message, levelClass);
+    }
 
-        const index = map[nodeName];
+    updateStepUI(nodeName, state) {
+        const index = this.stageIndexMap[nodeName];
         if (index !== undefined) {
             const el = this.stepsEls[index];
+            if (!el) return;
             if (state === "active") {
                 this.stepsEls.forEach(s => s.classList.remove('active'));
                 el.classList.add('active');
@@ -242,13 +273,24 @@ class MigrationUI {
         const entry = document.createElement('div');
         entry.className = `log-entry success`;
         const link = document.createElement('a');
-        link.href = `${this.apiBase}${url}`;
+        link.href = url.startsWith("http") ? url : `${this.apiBase}${url}`;
         link.target = "_blank";
         link.className = "report-link";
         link.textContent = "📄 View Professional Migration Report (Markdown)";
         entry.appendChild(link);
         this.logContent.appendChild(entry);
         this.logContent.scrollTop = this.logContent.scrollHeight;
+    }
+
+    extractReportUrl(result) {
+        const artifactPaths = result.artifact_paths || {};
+        const reportPath = artifactPaths.report;
+        if (!reportPath || !this.currentTaskId) return null;
+
+        const segments = String(reportPath).split("/");
+        const filename = segments[segments.length - 1];
+        if (!filename) return null;
+        return `${this.apiBase}/api/migration/${this.currentTaskId}/artifacts/report/${filename}`;
     }
 }
 

@@ -51,6 +51,37 @@ migration_design_card = AgentCard(
     ],
 )
 
+# 2.5 Business Semantics Agent
+business_semantics_card = AgentCard(
+    name="business-semantics-agent",
+    description="Extracts business processes, events, state model, and rules from legacy analysis.",
+    version="1.0.0",
+    skills=[
+        AgentSkill(
+            name="derive_business_semantics",
+            description="Transform technical analysis into business semantics artifacts.",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "legacy_analysis": {"type": "object"},
+                    "business_context": {"type": "object"},
+                    "human_facts": {"type": "array"}
+                },
+                "required": ["legacy_analysis"]
+            },
+            output_schema={
+                "type": "object",
+                "properties": {
+                    "business_processes": {"type": "array"},
+                    "business_events": {"type": "array"},
+                    "state_model": {"type": "object"},
+                    "business_rules": {"type": "array"}
+                }
+            }
+        )
+    ]
+)
+
 # 3. Code Transformation Agent
 code_transformation_card = AgentCard(
     name="code-transformation-agent",

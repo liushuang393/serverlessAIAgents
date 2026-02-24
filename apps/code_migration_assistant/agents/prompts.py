@@ -45,6 +45,11 @@ MIGRATION_DESIGN_PROMPT = build_system_prompt(
     "すべての設計決定に理由（rationale）を明記すること。"
 )
 
+BUSINESS_SEMANTICS_PROMPT = build_system_prompt(
+    "業務語義工程では legacy_analysis を業務プロセス/イベント/状態/ルールへ変換する。\n"
+    "業務意味が確定できない項目は unknowns に明示すること。"
+)
+
 CODE_TRANSFORMATION_PROMPT = build_system_prompt(
     "変換工程では設計成果物に記載された規則のみを適用し、自己判断で拡張しない。\n"
     "適用した規則を rule_hits に記録すること。"

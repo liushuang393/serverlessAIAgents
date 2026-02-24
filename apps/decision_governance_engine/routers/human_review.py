@@ -17,21 +17,25 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
+
 from apps.decision_governance_engine.agents.review_agent import ReviewAgent
 from apps.decision_governance_engine.repositories import DecisionRepository
 from apps.decision_governance_engine.routers.report import _get_report_from_db, cache_report
+from apps.decision_governance_engine.services.human_review_policy import (
+    enrich_review_with_policy,
+    load_human_review_policy,
+)
 from apps.decision_governance_engine.schemas.agent_schemas import (
+    CheckpointItem,
     FindingCategory,
     FindingSeverity,
     ReviewFinding,
     ReviewOutput,
+    ReviewVerdict,
 )
 from apps.decision_governance_engine.schemas.output_schemas import HumanReview
-from apps.decision_governance_engine.services.human_review_policy import (
-    enrich_review_with_policy,
-)
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
 
 from agentflow.providers import get_llm
 from agentflow.utils import extract_json
@@ -40,7 +44,7 @@ from agentflow.utils import extract_json
 logger = logging.getLogger(__name__)
 DB_IO_TIMEOUT_SECONDS = 2.0
 
-router = APIRouter(prefix="/human-review", tags=["human-review"])
+router = APIRouter(prefix="/api/human-review", tags=["human-review"])
 
 
 class ReviewApprovalRequest(BaseModel):
@@ -51,7 +55,9 @@ class ReviewApprovalRequest(BaseModel):
     approved: bool = Field(..., description="承認/却下")
     reviewer_name: str = Field(..., description="確認者名")
     reviewer_email: str | None = Field(default=None, description="確認者メール")
-    review_notes: str | None = Field(default=None, max_length=500, description="確認コメント")
+    review_notes: str | None = Field(
+        default=None, max_length=500, description="確認コメント"
+    )
 
 
 class ReviewApprovalResponse(BaseModel):
@@ -68,7 +74,9 @@ class FindingRecheckRequest(BaseModel):
 
     report_id: str = Field(..., description="レポートID")
     finding_index: int = Field(..., ge=0, description="確認対象の指摘インデックス")
-    confirmation_note: str = Field(..., min_length=10, max_length=2000, description="人間確認コメント")
+    confirmation_note: str = Field(
+        ..., min_length=10, max_length=2000, description="人間確認コメント"
+    )
     acknowledged: bool = Field(..., description="確認チェックボックス")
     request_id: str | None = Field(default=None, description="履歴リクエストID（UUID）")
     reviewer_name: str | None = Field(default=None, description="確認者名")
@@ -107,6 +115,38 @@ class FindingNoteResponse(BaseModel):
 
     success: bool = Field(..., description="保存成功可否")
     message: str = Field(..., description="結果メッセージ")
+
+
+class CheckpointApplyItem(BaseModel):
+    """チェックポイント反映項目."""
+
+    item_id: str = Field(..., description="チェックポイントID")
+    checked: bool = Field(default=False, description="チェック状態")
+    annotation: str | None = Field(default=None, max_length=50, description="注釈（任意）")
+
+
+class CheckpointApplyRequest(BaseModel):
+    """チェックポイント反映リクエスト."""
+
+    report_id: str = Field(..., description="レポートID")
+    request_id: str | None = Field(default=None, description="履歴リクエストID（UUID）")
+    items: list[CheckpointApplyItem] = Field(
+        default_factory=list,
+        description="反映するチェックポイント項目",
+    )
+    reviewer_name: str | None = Field(default=None, description="操作実行者（任意）")
+
+
+class CheckpointApplyResponse(BaseModel):
+    """チェックポイント反映レスポンス."""
+
+    success: bool = Field(..., description="成功可否")
+    message: str = Field(..., description="結果メッセージ")
+    base_confidence_pct: int = Field(..., description="反映前の信頼度（%）")
+    recalculated_confidence_pct: int = Field(..., description="反映後の信頼度（%）")
+    threshold_pct: int = Field(..., description="署名可能閾値（%）")
+    signature_eligible: bool = Field(..., description="署名可能か")
+    updated_review: dict[str, Any] = Field(..., description="更新後 review")
 
 
 # インメモリストレージ（本番環境では DB を使用）
@@ -182,7 +222,9 @@ async def get_review_status(report_id: str) -> HumanReview:
         HTTPException: レポートが見つからない場合
     """
     if report_id not in _review_storage:
-        raise HTTPException(status_code=404, detail=f"レポート {report_id} が見つかりません")
+        raise HTTPException(
+            status_code=404, detail=f"レポート {report_id} が見つかりません"
+        )
 
     return _review_storage[report_id]
 
@@ -194,9 +236,12 @@ async def get_pending_reviews() -> list[str]:
     Returns:
         list[str]: 未確認レポートIDのリスト
     """
-    return [
-        report_id for report_id, review in _review_storage.items() if review.requires_review and review.approved is None
+    pending = [
+        report_id
+        for report_id, review in _review_storage.items()
+        if review.requires_review and review.approved is None
     ]
+    return pending
 
 
 @router.delete("/reset/{report_id}")
@@ -253,17 +298,40 @@ def _parse_review_output(raw_review: Any) -> ReviewOutput:
         raise ValueError(msg)
 
     enriched_review = enrich_review_with_policy(raw_review)
-    findings = [_build_default_finding(item) for item in enriched_review.get("findings", [])]
+    findings = [
+        _build_default_finding(item)
+        for item in enriched_review.get("findings", [])
+    ]
     raw_confidence = enriched_review.get("confidence_score", 0.0)
     try:
         confidence = float(raw_confidence)
     except (TypeError, ValueError):
         confidence = 0.0
+    raw_checkpoint_items = enriched_review.get("checkpoint_items", [])
+    checkpoint_items = (
+        [item for item in raw_checkpoint_items if isinstance(item, dict)]
+        if isinstance(raw_checkpoint_items, list)
+        else []
+    )
+    raw_confidence_breakdown = enriched_review.get("confidence_breakdown")
+    confidence_breakdown = (
+        raw_confidence_breakdown
+        if isinstance(raw_confidence_breakdown, dict)
+        else None
+    )
+
     return ReviewOutput(
         overall_verdict=enriched_review.get("overall_verdict", "REVISE"),
         findings=findings,
         confidence_score=confidence,
-        final_warnings=[str(item) for item in enriched_review.get("final_warnings", []) if isinstance(item, str)],
+        final_warnings=[
+            str(item)
+            for item in enriched_review.get("final_warnings", [])
+            if isinstance(item, str)
+        ],
+        confidence_breakdown=confidence_breakdown,
+        checkpoint_items=checkpoint_items,
+        auto_recalc_enabled=bool(enriched_review.get("auto_recalc_enabled", True)),
     )
 
 
@@ -303,7 +371,7 @@ async def _evaluate_resolution_with_ai(
 
     try:
         llm_client = get_llm()
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning(f"LLM 初期化失敗のためルール判定へフォールバック: {exc}")
         llm_client = None
 
@@ -325,7 +393,7 @@ async def _evaluate_resolution_with_ai(
         return resolved, issues[:3]
     except json.JSONDecodeError:
         return _evaluate_resolution_fallback(finding, confirmation_note)
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning(f"LLM 再確認判定に失敗したためフォールバック: {exc}")
         return _evaluate_resolution_fallback(finding, confirmation_note)
 
@@ -375,7 +443,7 @@ async def _resolve_request_id_from_report(report_id: str | None) -> UUID | None:
     except TimeoutError:
         logger.warning(f"report_id 逆引きがタイムアウト: report_id={report_id}")
         return None
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning(f"report_id 逆引きに失敗: report_id={report_id}, error={exc}")
         return None
 
@@ -408,7 +476,7 @@ async def _persist_human_review_record(
             logger.warning(f"人間確認ログ保存対象が見つかりません: request_id={request_uuid}")
     except TimeoutError:
         logger.warning(f"人間確認ログ保存がタイムアウト: request_id={request_uuid}")
-    except Exception as exc:
+    except Exception as exc:  # noqa: BLE001
         logger.warning(f"人間確認ログ保存に失敗: {exc}")
 
 
@@ -461,7 +529,11 @@ async def recheck_finding(request: FindingRecheckRequest) -> FindingRecheckRespo
             updated_review=None,
         )
 
-    remaining_findings = [finding for idx, finding in enumerate(review.findings) if idx != request.finding_index]
+    remaining_findings = [
+        finding
+        for idx, finding in enumerate(review.findings)
+        if idx != request.finding_index
+    ]
     verdict, confidence = ReviewAgent.derive_verdict_and_confidence(
         findings=remaining_findings,
     )
@@ -549,6 +621,112 @@ async def log_finding_note(request: FindingNoteRequest) -> FindingNoteResponse:
     return FindingNoteResponse(
         success=True,
         message="メモを保存しました",
+    )
+
+
+@router.post("/apply-checkpoints", response_model=CheckpointApplyResponse)
+async def apply_checkpoints(
+    request: CheckpointApplyRequest,
+) -> CheckpointApplyResponse:
+    """チェックポイントを反映して信頼度・判定を再計算し、結果を永続化."""
+    if not request.items:
+        raise HTTPException(status_code=400, detail="反映対象のチェック項目がありません")
+
+    report = await _get_report_from_db(request.report_id)
+    if report is None:
+        raise HTTPException(status_code=404, detail=f"レポート {request.report_id} が見つかりません")
+
+    try:
+        review = _resolve_report_review(report)
+    except ValueError as exc:
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if not review.checkpoint_items:
+        raise HTTPException(status_code=400, detail="このレポートにはチェックポイント項目がありません")
+
+    item_map = {item.item_id: item for item in request.items}
+    updated_checkpoint_items: list[CheckpointItem] = []
+    for item in review.checkpoint_items:
+        incoming = item_map.get(item.item_id)
+        updated_checkpoint_items.append(
+            item.model_copy(
+                update={
+                    "checked": incoming.checked if incoming is not None else item.checked,
+                    "annotation": (incoming.annotation or "").strip() if incoming is not None else item.annotation,
+                }
+            )
+        )
+
+    policy = load_human_review_policy()
+    threshold_pct = int(policy.signable_confidence_threshold_pct)
+
+    base_confidence_pct = max(0, min(100, round(review.confidence_score * 100)))
+    total_boost = sum(
+        item.score_boost
+        for item in updated_checkpoint_items
+        if item.checked
+    )
+    recalculated_confidence_pct = min(100, round(base_confidence_pct + total_boost))
+    recalculated_confidence_score = round(recalculated_confidence_pct / 100.0, 2)
+    signature_eligible = recalculated_confidence_pct >= threshold_pct
+
+    if signature_eligible:
+        next_verdict = ReviewVerdict.PASS
+    elif review.overall_verdict == ReviewVerdict.PASS:
+        next_verdict = ReviewVerdict.REVISE
+    else:
+        next_verdict = review.overall_verdict
+
+    updated_review = ReviewOutput(
+        overall_verdict=next_verdict,
+        findings=review.findings,
+        confidence_score=recalculated_confidence_score,
+        final_warnings=review.final_warnings,
+        confidence_breakdown=review.confidence_breakdown,
+        checkpoint_items=updated_checkpoint_items,
+        auto_recalc_enabled=review.auto_recalc_enabled,
+    )
+
+    if hasattr(report, "review"):
+        report.review = updated_review
+        cache_report(request.report_id, report)
+        if request.request_id:
+            cache_report(request.request_id, report)
+    elif isinstance(report, dict):
+        report["review"] = updated_review.model_dump()
+        cache_report(request.report_id, report)
+        if request.request_id:
+            cache_report(request.request_id, report)
+
+    await _persist_human_review_record(
+        request_id_text=request.request_id,
+        report_id_text=request.report_id,
+        review_record={
+            "event_type": "apply_checkpoints",
+            "report_id": request.report_id,
+            "reviewer_name": request.reviewer_name,
+            "base_confidence_pct": base_confidence_pct,
+            "recalculated_confidence_pct": recalculated_confidence_pct,
+            "threshold_pct": threshold_pct,
+            "signature_eligible": signature_eligible,
+            "applied_items": [item.model_dump() for item in updated_checkpoint_items],
+            "reviewed_at": datetime.now(UTC).isoformat(),
+        },
+        updated_review=updated_review.model_dump(),
+    )
+
+    return CheckpointApplyResponse(
+        success=True,
+        message=(
+            "チェック項目を反映して信頼度を再計算しました。"
+            if signature_eligible
+            else "チェック項目を反映しましたが、まだ署名閾値に達していません。"
+        ),
+        base_confidence_pct=base_confidence_pct,
+        recalculated_confidence_pct=recalculated_confidence_pct,
+        threshold_pct=threshold_pct,
+        signature_eligible=signature_eligible,
+        updated_review=updated_review.model_dump(),
     )
 
 

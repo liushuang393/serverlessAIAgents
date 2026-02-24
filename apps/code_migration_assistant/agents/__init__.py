@@ -1,4 +1,5 @@
 from .cards import (
+    business_semantics_card,
     code_transformation_card,
     compliance_reporter_card,
     differential_verification_card,
@@ -8,6 +9,7 @@ from .cards import (
     quality_gate_card,
     test_synthesis_card,
 )
+from .business_semantics_agent import BusinessSemanticsAgent
 from .code_transformation_agent import CodeTransformationAgent
 from .compliance_reporter_agent import ComplianceReporterAgent
 from .differential_verification_agent import DifferentialVerificationAgent
@@ -23,12 +25,14 @@ __all__ = [
     "CodeTransformationAgent",
     "ComplianceReporterAgent",
     "DifferentialVerificationAgent",
+    "BusinessSemanticsAgent",
     "LegacyAnalysisAgent",
     "LimitedFixerAgent",
     "MigrationDesignAgent",
     "QualityGateAgent",
     "TestSynthesisAgent",
     # Cards
+    "business_semantics_card",
     "code_transformation_card",
     "compliance_reporter_card",
     "differential_verification_card",

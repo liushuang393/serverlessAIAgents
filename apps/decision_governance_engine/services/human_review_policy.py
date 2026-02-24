@@ -21,6 +21,12 @@ class HumanReviewPolicy(BaseModel):
     """人間確認ポリシー設定."""
 
     version: str = "1.0.0"
+    signable_confidence_threshold_pct: int = Field(
+        default=39,
+        ge=0,
+        le=100,
+        description="署名可能と判断する分析信頼度の閾値（%）",
+    )
     important_severities: list[str] = Field(default_factory=lambda: ["CRITICAL", "WARNING"])
     mandatory_categories: list[str] = Field(default_factory=lambda: ["RESPONSIBILITY_GAP"])
     important_hint: str = "重要指摘です。人間確認コメントを入力して妥当性を再判定してください。"
