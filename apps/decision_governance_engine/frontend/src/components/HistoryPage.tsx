@@ -158,9 +158,9 @@ export const HistoryPage: React.FC = () => {
                 <button
                   onClick={handleLogout}
                   className="p-2 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-white"
-                  title="ログアウト"
+                  title={t('common.logout')}
                 >
-                  <span role="img" aria-label="logout">&#128682;</span>
+                  <span role="img" aria-label={t('common.logout')}>&#128682;</span>
                 </button>
               </div>
             )}

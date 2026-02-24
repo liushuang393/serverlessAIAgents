@@ -209,7 +209,7 @@ export const KnowledgePage: React.FC<KnowledgePageProps> = ({ agentType }) => {
                     <button
                       onClick={() => handleDelete(doc.id)}
                       className="text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
-                      title="削除"
+                      title={t('knowledge.delete')}
                     >
                       🗑️
                     </button>

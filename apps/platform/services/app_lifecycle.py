@@ -16,6 +16,7 @@ import logging
 import os
 import re
 import shlex
+import signal
 import socket
 import subprocess
 import time
@@ -381,16 +382,92 @@ class AppLifecycleManager:
         *,
         config_path: Path | None = None,
     ) -> AppActionResult:
-        """App を publish（docker compose up -d --build）する."""
+        """App を publish（Stop → Build Frontend → Start/Rebuild）する."""
+        if config_path is None:
+            return AppActionResult(
+                app_name=config.name,
+                action="publish",
+                success=False,
+                command=[],
+                cwd="",
+                error="app_config.json のパスが取得できません",
+                command_source="fallback",
+            )
         preflight = await self._run_cli_preflight(config, enabled=True)
-        return await self._run_compose_action(
+        return await self._publish_with_build_flow(
+            config, config_path=config_path, cli_preflight=preflight
+        )
+
+    async def _publish_with_build_flow(
+        self,
+        config: AppConfig,
+        *,
+        config_path: Path,
+        cli_preflight: dict[str, Any] | None,
+    ) -> AppActionResult:
+        """Publish 3-step: Stop → Build Frontend → Start with rebuild."""
+        app_dir = config_path.parent
+
+        # Step 1: Stop（失敗しても継続）
+        stop_result = await self.stop_app(config, config_path=config_path)
+        _logger.info("[%s] publish step1 stop: success=%s", config.name, stop_result.success)
+
+        # Step 2: Build frontend
+        build_info = ""
+        frontend_dir = self._detect_frontend_dir(config_path)
+        if frontend_dir is not None:
+            try:
+                proc = await asyncio.create_subprocess_shell(
+                    "npm run build",
+                    cwd=str(frontend_dir),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE,
+                )
+                _, b_err = await asyncio.wait_for(proc.communicate(), timeout=300.0)
+                build_ok = proc.returncode == 0
+                b_err_tail = self._trim_output(b_err.decode("utf-8", errors="ignore"))
+                build_info = f"[build_frontend] {'ok' if build_ok else 'failed'}: {b_err_tail}"
+                _logger.info("[%s] publish step2 build_frontend: success=%s", config.name, build_ok)
+            except Exception as exc:
+                build_info = f"[build_frontend] error: {exc}"
+                _logger.warning("[%s] publish step2 build_frontend error: %s", config.name, exc)
+
+        # Step 3: Start with rebuild
+        start_result = await self._run_compose_action(
             config,
             config_path=config_path,
             action="publish",
             compose_subcommand=["up", "-d", "--build"],
             run_health_check=True,
-            cli_preflight=preflight,
+            cli_preflight=cli_preflight,
         )
+        _logger.info("[%s] publish step3 start: success=%s", config.name, start_result.success)
+
+        combined_stdout = "\n".join(filter(None, [build_info, start_result.stdout]))
+        return AppActionResult(
+            app_name=config.name,
+            action="publish",
+            success=start_result.success,
+            command=start_result.command,
+            command_source=start_result.command_source,
+            cwd=str(app_dir),
+            stdout=combined_stdout,
+            stderr=start_result.stderr,
+            error=start_result.error,
+            return_code=start_result.return_code,
+            checked_health=start_result.checked_health,
+            diagnostic=start_result.diagnostic,
+        )
+
+    @staticmethod
+    def _detect_frontend_dir(config_path: Path) -> Path | None:
+        """App の frontend ディレクトリを検出（package.json 存在確認）."""
+        app_dir = config_path.parent
+        for candidate in ("frontend", "client", "web"):
+            frontend_dir = app_dir / candidate
+            if (frontend_dir / "package.json").is_file():
+                return frontend_dir
+        return None
 
     async def start_app(
         self,
@@ -674,11 +751,13 @@ class AppLifecycleManager:
         WSL / Linux 環境で conda agentflow を活性化してから実行する。
         """
         log_path = f"/tmp/{app_name}_{role}.log"
+        pid_file = f"/tmp/{app_name}_{role}.pid"
         # conda agentflow 環境を活性化してからコマンドを実行する
         activated_command = f"{_CONDA_ACTIVATE_PREFIX}{command}"
         launch_cmd = (
             f"nohup bash -lc {shlex.quote(activated_command)}"
-            f" > {shlex.quote(log_path)} 2>&1 & echo $!"
+            f" > {shlex.quote(log_path)} 2>&1"
+            f" & PID=$!; echo $PID; echo $PID > {shlex.quote(pid_file)}"
         )
         _logger.info("[%s] %s 起動 (conda agentflow): %s", app_name, role, command)
         proc = await asyncio.create_subprocess_shell(
@@ -715,6 +794,187 @@ class AppLifecycleManager:
         if log_tail:
             error = f"{error}\n--- {role} log tail ---\n{self._trim_output(log_tail)}"
         return False, None, error
+
+    async def _stop_local_processes(self, app_name: str) -> dict[str, Any]:
+        """PID ファイルを参照してローカルプロセスを停止する."""
+        killed: list[str] = []
+        errors: list[str] = []
+        not_running: list[str] = []
+
+        for role in ("backend", "frontend"):
+            pid_file = f"/tmp/{app_name}_{role}.pid"
+            try:
+                with open(pid_file) as f:
+                    pid = int(f.read().strip())
+            except FileNotFoundError:
+                not_running.append(f"{role}: PID ファイルなし（起動していない可能性）")
+                continue
+            except (ValueError, OSError) as exc:
+                errors.append(f"{role}: PID ファイル読み取りエラー ({exc})")
+                continue
+
+            try:
+                os.kill(pid, signal.SIGTERM)
+                for _ in range(50):
+                    await asyncio.sleep(0.1)
+                    try:
+                        os.kill(pid, 0)
+                    except ProcessLookupError:
+                        break
+                else:
+                    os.kill(pid, signal.SIGKILL)
+                killed.append(f"{role}(pid={pid})")
+            except ProcessLookupError:
+                killed.append(f"{role}(pid={pid}, already stopped)")
+            except OSError as exc:
+                errors.append(f"{role}: kill 失敗 ({exc})")
+            finally:
+                try:
+                    os.unlink(pid_file)
+                except OSError:
+                    pass
+
+        if not killed and not errors:
+            return {"success": True, "killed": not_running, "errors": []}
+        return {"success": len(errors) == 0, "killed": killed + not_running, "errors": errors}
+
+    async def _run_process_action(
+        self,
+        config: AppConfig,
+        *,
+        app_dir: Path,
+        config_path: Path | None,
+        action: str,
+        run_health_check: bool,
+        cli_preflight: dict[str, Any] | None,
+    ) -> AppActionResult:
+        """Tier 3: docker compose なし時にプロセスモードでアクションを実行する."""
+        project_root = config_path.parent.parent.parent if config_path else app_dir
+
+        if action == "stop":
+            stop_result = await self._stop_local_processes(config.name)
+            success = stop_result["success"]
+            stdout = "\n".join(stop_result.get("killed", []))
+            error_msg: str | None = "; ".join(stop_result.get("errors", [])) or None
+
+            checked_health: HealthCheckResult | None = None
+            if success:
+                checked_health = HealthCheckResult(
+                    config.name,
+                    AppStatus.STOPPED,
+                    details={"message": "プロセスを停止しました"},
+                )
+                self._health_cache[config.name] = checked_health
+
+            diagnostic: dict[str, Any] | None = None
+            if not success and error_msg:
+                diagnostic = await self._diagnostic_service.diagnose_action_failure(
+                    app_config=config,
+                    action=action,
+                    config_path=config_path,
+                    command=["process_mode", "stop"],
+                    cwd=str(app_dir),
+                    error=error_msg,
+                    stdout=stdout,
+                    stderr="",
+                    preflight=cli_preflight,
+                    command_source="process_mode",
+                )
+
+            return AppActionResult(
+                app_name=config.name,
+                action=action,
+                success=success,
+                command=["process_mode", "stop", config.name],
+                command_source="process_mode",
+                cwd=str(app_dir),
+                stdout=stdout,
+                error=error_msg,
+                checked_health=checked_health,
+                diagnostic=diagnostic,
+            )
+
+        # start / publish: backend_dev + frontend_dev を起動
+        resolved_commands = self._resolve_runtime_commands(config, config_path)
+        backend_cmd = resolved_commands.get("backend_dev")
+        frontend_cmd = resolved_commands.get("frontend_dev")
+
+        if backend_cmd is None and frontend_cmd is None:
+            diagnostic = await self._diagnostic_service.diagnose_action_failure(
+                app_config=config,
+                action=action,
+                config_path=config_path,
+                command=[],
+                cwd=str(project_root),
+                error="backend/frontend command is missing",
+                stdout="",
+                stderr="No backend_dev/frontend_dev command resolved",
+                preflight=cli_preflight,
+                command_source="process_mode",
+            )
+            return AppActionResult(
+                app_name=config.name,
+                action=action,
+                success=False,
+                command=[],
+                cwd=str(project_root),
+                error="runtime.commands に backend_dev/frontend_dev が設定されていません",
+                command_source="process_mode",
+                diagnostic=diagnostic,
+            )
+
+        results: list[str] = []
+        errors_list: list[str] = []
+
+        for cmd, role in [(backend_cmd, "backend"), (frontend_cmd, "frontend")]:
+            if not cmd:
+                continue
+            started, msg, err = await self._start_local_process(
+                app_name=config.name,
+                command=cmd,
+                role=role,
+                cwd=project_root,
+            )
+            if started and msg:
+                results.append(msg)
+            if not started and err:
+                errors_list.append(err)
+
+        success = len(errors_list) == 0 and len(results) > 0
+        stdout_msg = "\n".join(results)
+        error_msg = "\n".join(errors_list) if errors_list else None
+
+        process_checked_health: HealthCheckResult | None = None
+        if success and run_health_check:
+            process_checked_health = await self.check_health(config, config_path=config_path)
+
+        process_diagnostic: dict[str, Any] | None = None
+        if not success:
+            process_diagnostic = await self._diagnostic_service.diagnose_action_failure(
+                app_config=config,
+                action=action,
+                config_path=config_path,
+                command=["process_mode", backend_cmd or "", frontend_cmd or ""],
+                cwd=str(project_root),
+                error=error_msg,
+                stdout=stdout_msg,
+                stderr="",
+                preflight=cli_preflight,
+                command_source="process_mode",
+            )
+
+        return AppActionResult(
+            app_name=config.name,
+            action=action,
+            success=success,
+            command=["process_mode", config.name],
+            command_source="process_mode",
+            cwd=str(project_root),
+            stdout=stdout_msg,
+            error=error_msg,
+            checked_health=process_checked_health,
+            diagnostic=process_diagnostic,
+        )
 
     async def _run_compose_action(
         self,
@@ -769,19 +1029,19 @@ class AppLifecycleManager:
 
         compose_files = self._resolve_compose_files(app_dir, include_dev=True)
         if not compose_files:
-            _logger.warning(
-                "[%s] docker-compose ファイルが見つかりません: dir=%s",
+            # Tier 3: docker compose なし → プロセスモードにフォールバック
+            _logger.info(
+                "[%s] %s: docker-compose なし → Tier 3 プロセスモードで実行",
                 config.name,
-                app_dir,
+                action,
             )
-            return AppActionResult(
-                app_name=config.name,
+            return await self._run_process_action(
+                config,
+                app_dir=app_dir,
+                config_path=config_path,
                 action=action,
-                success=False,
-                command=[],
-                cwd=str(app_dir),
-                error=(f"実行コマンド未設定かつ docker-compose.yml が見つかりません (dir={app_dir})"),
-                command_source="fallback",
+                run_health_check=run_health_check,
+                cli_preflight=cli_preflight,
             )
 
         command = ["docker", "compose"]
