@@ -24,6 +24,8 @@ class TestGetOverview:
         assert "description" in overview
         assert "chunk_strategies" in overview
         assert "rerankers" in overview
+        assert "database_types" in overview
+        assert "vector_providers" in overview
         assert "apps_using_rag" in overview
         assert "stats" in overview
 
@@ -52,6 +54,22 @@ class TestGetOverview:
         overview = rag_overview.get_overview()
         assert "patterns" in overview
         assert len(overview["patterns"]) >= 3
+
+    def test_overview_has_database_type_options(self, rag_overview: RAGOverviewService) -> None:
+        """概要に DB 種別一覧が含まれる."""
+        overview = rag_overview.get_overview()
+        db_names = {item["name"] for item in overview["database_types"]}
+        assert "postgresql" in db_names
+        assert "mysql" in db_names
+        assert "sqlite" in db_names
+        assert "mssql" in db_names
+
+    def test_overview_has_vector_provider_options(self, rag_overview: RAGOverviewService) -> None:
+        """概要に vector provider 一覧が含まれる."""
+        overview = rag_overview.get_overview()
+        provider_names = {item["name"] for item in overview["vector_providers"]}
+        assert "qdrant" in provider_names
+        assert "pinecone" in provider_names
 
 
 class TestListStrategies:
@@ -136,6 +154,18 @@ class TestPatternsAndConfigs:
         apps = rag_overview.list_app_configs()
         assert len(apps) >= 2
         assert all("rag" in item for item in apps)
+        assert all("db_hint" in item for item in apps)
+
+    def test_extracts_db_hint(self, rag_overview: RAGOverviewService) -> None:
+        """DB ヒントを app_config から抽出する."""
+        apps = rag_overview.list_app_configs()
+        rag_app = next(item for item in apps if item["app_name"] == "rag_app")
+        db_hint = rag_app["db_hint"]
+        assert db_hint["available"] is True
+        assert db_hint["kind"] == "postgresql"
+        assert db_hint["uri"] == "postgresql+asyncpg://rag:password@localhost:5434/rag_app"
+        assert db_hint["database"] == "rag_app"
+        assert db_hint["source"] == "runtime.database"
 
     def test_update_app_config(self, rag_overview: RAGOverviewService) -> None:
         """RAG 設定更新が反映される."""

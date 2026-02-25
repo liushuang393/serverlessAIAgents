@@ -1,0 +1,39 @@
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: apps/market_trend_monitor/Dockerfile
+    container_name: market-trend-monitor-backend
+    ports:
+      - "${API_PORT:-8002}:8002"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:////app/apps/market_trend_monitor/data/market_trend.db}
+    volumes:
+      - market-trend-data:/app/apps/market_trend_monitor/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8002/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: apps/market_trend_monitor/frontend/Dockerfile
+      args:
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-http://localhost:8002/api}
+    container_name: market-trend-monitor-frontend
+    ports:
+      - "${FRONTEND_PORT:-3002}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  market-trend-data:

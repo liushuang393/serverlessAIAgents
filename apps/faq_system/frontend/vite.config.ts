@@ -29,6 +29,7 @@ try {
 const apiPort = process.env.VITE_API_PORT || appConfig.ports?.api || 8005
 const frontendPort = process.env.VITE_FRONTEND_PORT || appConfig.ports?.frontend || 3004
 const apiHost = process.env.VITE_API_HOST || 'localhost'
+const apiProxyTimeoutMs = Number(process.env.VITE_API_PROXY_TIMEOUT_MS || 10 * 60 * 1000)
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -56,9 +57,12 @@ export default defineConfig({
         target: `http://${apiHost}:${apiPort}`,
         changeOrigin: true,
         secure: false,
-        timeout: 30000,
+        // /api/chat/stream は長時間 SSE 接続になるため、短い timeout だと
+        // フロント側だけ "network error" になりやすい。
+        timeout: apiProxyTimeoutMs,
+        proxyTimeout: apiProxyTimeoutMs,
         configure: (proxy) => {
-          proxy.on('error', (err, req, res) => {
+          proxy.on('error', (_err, req, _res) => {
             const url = req.url ?? ''
             if (url.includes('/api/auth')) {
               console.error(

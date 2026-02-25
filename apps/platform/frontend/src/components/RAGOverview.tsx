@@ -8,8 +8,34 @@ import {
   fetchRAGPatterns,
   patchAppRAGConfig,
 } from '@/api/client';
-import type { AppRAGConfig, RAGDataSource, RAGPattern } from '@/types';
+import type {
+  AppRAGConfig,
+  RAGDataSource,
+  RAGDatabaseTypeOption,
+  RAGDatabaseHint,
+  RAGPattern,
+  RAGVectorProviderOption,
+} from '@/types';
 import { useAppStore } from '@/store/useAppStore';
+
+type DataSourceType = 'web' | 'file' | 'database' | 'api' | 's3';
+
+interface DataSourceTypeOption {
+  value: DataSourceType;
+  label: string;
+  description: string;
+  placeholder: string;
+}
+
+interface DataSourceDraft {
+  id: string;
+  type: DataSourceType;
+  uri: string;
+  label: string;
+  enabled: boolean;
+  schedule: string;
+  options: Record<string, unknown>;
+}
 
 interface RAGFormState {
   enabled: boolean;
@@ -26,31 +52,259 @@ interface RAGFormState {
   top_k: number;
   score_threshold: string;
   indexing_schedule: string;
-  data_sources_text: string;
+  data_sources: DataSourceDraft[];
 }
 
-function sourcesToText(sources: RAGDataSource[]): string {
-  return sources.map((s) => `${s.type}|${s.uri}|${s.label ?? ''}`).join('\n');
+const DEFAULT_DATABASE_TYPE_OPTIONS: RAGDatabaseTypeOption[] = [
+  {
+    name: 'postgresql',
+    label: 'PostgreSQL',
+    dialect: 'postgresql',
+    connection_kind: 'network',
+    default_port: 5432,
+    sample_uri: 'postgresql+asyncpg://user:password@localhost:5432/app_db',
+  },
+  {
+    name: 'mysql',
+    label: 'MySQL',
+    dialect: 'mysql',
+    connection_kind: 'network',
+    default_port: 3306,
+    sample_uri: 'mysql+aiomysql://user:password@localhost:3306/app_db',
+  },
+  {
+    name: 'sqlite',
+    label: 'SQLite',
+    dialect: 'sqlite',
+    connection_kind: 'file',
+    default_port: null,
+    sample_uri: 'sqlite+aiosqlite:///./app.db',
+  },
+  {
+    name: 'mssql',
+    label: 'SQL Server',
+    dialect: 'mssql',
+    connection_kind: 'network',
+    default_port: 1433,
+    sample_uri: 'mssql+pyodbc://user:password@localhost:1433/app_db?driver=ODBC+Driver+18+for+SQL+Server',
+  },
+];
+
+const DEFAULT_VECTOR_PROVIDER_OPTIONS: RAGVectorProviderOption[] = [
+  { name: 'qdrant', label: 'Qdrant' },
+  { name: 'pinecone', label: 'Pinecone' },
+  { name: 'weaviate', label: 'Weaviate' },
+  { name: 'pgvector', label: 'PostgreSQL (pgvector)' },
+  { name: 'milvus', label: 'Milvus' },
+];
+
+const DATA_SOURCE_TYPE_OPTIONS: DataSourceTypeOption[] = [
+  {
+    value: 'web',
+    label: 'Web',
+    description: 'クロール対象のページ URL を登録',
+    placeholder: 'https://example.com/docs',
+  },
+  {
+    value: 'file',
+    label: 'File',
+    description: 'ローカルファイルや共有パスを登録',
+    placeholder: '/data/knowledge/faq.md',
+  },
+  {
+    value: 'database',
+    label: 'Database',
+    description: 'SQL DB 接続情報と対象テーブル/クエリを登録',
+    placeholder: 'postgresql+asyncpg://user:password@localhost:5432/app_db',
+  },
+  {
+    value: 'api',
+    label: 'API',
+    description: '外部 API の取得先を登録',
+    placeholder: 'https://api.example.com/v1/faq',
+  },
+  {
+    value: 's3',
+    label: 'S3',
+    description: 'オブジェクトストレージを登録',
+    placeholder: 's3://bucket/path',
+  },
+];
+
+function createSourceId(): string {
+  return `source-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function textToSources(value: string): RAGDataSource[] {
-  return value
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      const [type = '', uri = '', label = ''] = line.split('|').map((part) => part.trim());
-      return {
-        type: type || 'web',
-        uri,
-        label,
-        enabled: true,
-      };
-    })
-    .filter((item) => item.uri.length > 0);
+function normalizeDatabaseKind(value: string | null | undefined): string {
+  const kind = String(value ?? '').trim().toLowerCase();
+  if (!kind) {
+    return '';
+  }
+  if (kind.includes('postgres')) {
+    return 'postgresql';
+  }
+  if (kind.includes('sqlite')) {
+    return 'sqlite';
+  }
+  if (kind.includes('mysql')) {
+    return 'mysql';
+  }
+  if (kind.includes('mssql') || kind.includes('sqlserver') || kind.includes('sql_server')) {
+    return 'mssql';
+  }
+  return kind;
+}
+
+function normalizeSourceType(value: string | null | undefined): DataSourceType {
+  const type = String(value ?? '').trim().toLowerCase();
+  if (type === 'file') return 'file';
+  if (type === 'database' || type === 'db' || type === 'sql') return 'database';
+  if (type === 'api') return 'api';
+  if (type === 's3') return 's3';
+  return 'web';
+}
+
+function cleanText(value: unknown): string {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(value);
+  }
+  return '';
+}
+
+function readOption(options: Record<string, unknown>, key: string): string {
+  return cleanText(options[key]);
+}
+
+function compactOptions(options: Record<string, unknown>): Record<string, unknown> {
+  const entries = Object.entries(options)
+    .map(([key, value]) => [key, cleanText(value)] as const)
+    .filter(([, value]) => value.length > 0);
+  return Object.fromEntries(entries);
+}
+
+function createEmptySource(type: DataSourceType = 'web'): DataSourceDraft {
+  return {
+    id: createSourceId(),
+    type,
+    uri: '',
+    label: '',
+    enabled: true,
+    schedule: '',
+    options: {},
+  };
+}
+
+function buildDatabaseSourceFromHint(
+  appName: string,
+  dbHint: RAGDatabaseHint | undefined,
+): DataSourceDraft {
+  const kind = normalizeDatabaseKind(dbHint?.kind) || 'postgresql';
+  const uri = cleanText(dbHint?.uri) || cleanText(dbHint?.sample_uri);
+  const label = cleanText(dbHint?.sample_label) || `${appName} SQL source`;
+  const options: Record<string, unknown> = {
+    dialect: kind,
+    database_type: kind,
+  };
+  const databaseName = cleanText(dbHint?.database);
+  const host = cleanText(dbHint?.host);
+  const user = cleanText(dbHint?.user);
+  if (databaseName) options.database = databaseName;
+  if (host) options.host = host;
+  if (user) options.user = user;
+  if (typeof dbHint?.port === 'number') options.port = String(dbHint.port);
+  return {
+    id: createSourceId(),
+    type: 'database',
+    uri,
+    label,
+    enabled: true,
+    schedule: '',
+    options,
+  };
+}
+
+function draftFromSource(source: RAGDataSource): DataSourceDraft {
+  return {
+    id: createSourceId(),
+    type: normalizeSourceType(source.type),
+    uri: cleanText(source.uri),
+    label: cleanText(source.label ?? ''),
+    enabled: source.enabled ?? true,
+    schedule: cleanText(source.schedule ?? ''),
+    options: typeof source.options === 'object' && source.options !== null ? source.options : {},
+  };
+}
+
+function sourceToPayload(source: DataSourceDraft): RAGDataSource | null {
+  const uri = cleanText(source.uri);
+  if (!uri) {
+    return null;
+  }
+  const label = cleanText(source.label);
+  const schedule = cleanText(source.schedule);
+  return {
+    type: normalizeSourceType(source.type),
+    uri,
+    label,
+    enabled: source.enabled,
+    schedule: schedule || null,
+    options: compactOptions(source.options),
+  };
+}
+
+function sourcePlaceholder(type: DataSourceType, dbHint?: RAGDatabaseHint): string {
+  if (type === 'database' && dbHint) {
+    return cleanText(dbHint.uri) || cleanText(dbHint.sample_uri);
+  }
+  const option = DATA_SOURCE_TYPE_OPTIONS.find((item) => item.value === type);
+  return option?.placeholder ?? '';
+}
+
+function findDatabaseTypeOption(
+  options: RAGDatabaseTypeOption[],
+  value: string,
+  dbHint?: RAGDatabaseHint,
+): RAGDatabaseTypeOption {
+  const normalized = normalizeDatabaseKind(value);
+  if (normalized) {
+    const found = options.find((item) => item.name === normalized || item.dialect === normalized);
+    if (found) {
+      return found;
+    }
+  }
+  const fallback = options[0] ?? DEFAULT_DATABASE_TYPE_OPTIONS[0];
+  const hintKind = normalizeDatabaseKind(dbHint?.kind);
+  if (hintKind) {
+    const hinted = options.find((item) => item.name === hintKind || item.dialect === hintKind);
+    if (hinted) {
+      return hinted;
+    }
+  }
+  if (fallback) {
+    return fallback;
+  }
+  return {
+    name: 'postgresql',
+    label: 'PostgreSQL',
+    dialect: 'postgresql',
+    connection_kind: 'network',
+    default_port: 5432,
+    sample_uri: cleanText(dbHint?.sample_uri) || 'postgresql+asyncpg://user:password@localhost:5432/app_db',
+  };
 }
 
 function toForm(config: AppRAGConfig): RAGFormState {
+  const baseSources = config.rag.data_sources.map(draftFromSource);
+  const dbHint = config.db_hint;
+  const hasDatabaseSource = baseSources.some((source) => source.type === 'database');
+  const dataSources =
+    dbHint?.available && !hasDatabaseSource
+      ? [buildDatabaseSourceFromHint(config.app_name, dbHint), ...baseSources]
+      : baseSources;
+
   return {
     enabled: config.rag.enabled,
     pattern: config.rag.pattern ?? '',
@@ -69,7 +323,7 @@ function toForm(config: AppRAGConfig): RAGFormState {
         ? ''
         : String(config.rag.score_threshold),
     indexing_schedule: config.rag.indexing_schedule ?? '',
-    data_sources_text: sourcesToText(config.rag.data_sources),
+    data_sources: dataSources,
   };
 }
 
@@ -88,6 +342,43 @@ export function RAGOverview() {
     () => ragConfigs.find((item) => item.app_name === selectedApp) ?? null,
     [ragConfigs, selectedApp],
   );
+  const databaseTypeOptions = useMemo(() => {
+    const apiOptions = ragOverview?.database_types ?? [];
+    const base = apiOptions.length > 0 ? apiOptions : DEFAULT_DATABASE_TYPE_OPTIONS;
+    const normalizedBase = base.map((option) => ({
+      ...option,
+      name: normalizeDatabaseKind(option.name) || option.name,
+      dialect: normalizeDatabaseKind(option.dialect) || option.dialect,
+    }));
+    const hintKind = normalizeDatabaseKind(selectedConfig?.db_hint?.kind);
+    if (!hintKind) {
+      return normalizedBase;
+    }
+    if (normalizedBase.some((option) => option.name === hintKind || option.dialect === hintKind)) {
+      return normalizedBase;
+    }
+    const inferredConnectionKind: 'network' | 'file' = hintKind === 'sqlite' ? 'file' : 'network';
+    return [
+      ...normalizedBase,
+      {
+        name: hintKind,
+        label: hintKind.toUpperCase(),
+        dialect: hintKind,
+        connection_kind: inferredConnectionKind,
+        default_port: null,
+        sample_uri:
+          cleanText(selectedConfig?.db_hint?.sample_uri) ||
+          'postgresql+asyncpg://user:password@localhost:5432/app_db',
+      },
+    ];
+  }, [ragOverview?.database_types, selectedConfig?.db_hint]);
+  const vectorProviderOptions = useMemo(() => {
+    const apiOptions = ragOverview?.vector_providers ?? [];
+    if (apiOptions.length > 0) {
+      return apiOptions;
+    }
+    return DEFAULT_VECTOR_PROVIDER_OPTIONS;
+  }, [ragOverview?.vector_providers]);
 
   useEffect(() => {
     loadRAGOverview();
@@ -150,6 +441,161 @@ export function RAGOverview() {
     });
   };
 
+  const updateSource = (sourceId: string, patch: Partial<DataSourceDraft>) => {
+    setForm((current) => {
+      if (!current) {
+        return current;
+      }
+      return {
+        ...current,
+        data_sources: current.data_sources.map((source) =>
+          source.id === sourceId ? { ...source, ...patch } : source,
+        ),
+      };
+    });
+  };
+
+  const updateSourceOption = (sourceId: string, key: string, value: string) => {
+    setForm((current) => {
+      if (!current) {
+        return current;
+      }
+      return {
+        ...current,
+        data_sources: current.data_sources.map((source) =>
+          source.id === sourceId
+            ? {
+              ...source,
+              options: {
+                ...source.options,
+                [key]: value,
+              },
+            }
+            : source,
+        ),
+      };
+    });
+  };
+
+  const addSource = () => {
+    setForm((current) => {
+      if (!current) {
+        return current;
+      }
+      return {
+        ...current,
+        data_sources: [...current.data_sources, createEmptySource()],
+      };
+    });
+  };
+
+  const removeSource = (sourceId: string) => {
+    setForm((current) => {
+      if (!current) {
+        return current;
+      }
+      return {
+        ...current,
+        data_sources: current.data_sources.filter((source) => source.id !== sourceId),
+      };
+    });
+  };
+
+  const applyDetectedDatabaseSource = () => {
+    const seeded = buildDatabaseSourceFromHint(
+      selectedConfig?.app_name ?? 'app',
+      selectedConfig?.db_hint,
+    );
+    const seededKind = normalizeDatabaseKind(readOption(seeded.options, 'database_type'));
+    const seededType = findDatabaseTypeOption(databaseTypeOptions, seededKind, selectedConfig?.db_hint);
+    const seededOptions: Record<string, unknown> = {
+      ...seeded.options,
+      database_type: seededType.name,
+      dialect: seededType.dialect,
+    };
+    const seededUri = cleanText(seeded.uri) || seededType.sample_uri;
+    setForm((current) => {
+      if (!current) {
+        return current;
+      }
+      const currentDbIndex = current.data_sources.findIndex((source) => source.type === 'database');
+      if (currentDbIndex >= 0) {
+        const nextSources = [...current.data_sources];
+        const existing = nextSources[currentDbIndex];
+        nextSources[currentDbIndex] = {
+          ...existing,
+          uri: cleanText(existing.uri) || seededUri,
+          label: cleanText(existing.label) || seeded.label,
+          options: {
+            ...seededOptions,
+            ...existing.options,
+          },
+        };
+        return {
+          ...current,
+          data_sources: nextSources,
+        };
+      }
+      return {
+        ...current,
+        data_sources: [
+          {
+            ...seeded,
+            uri: seededUri,
+            options: seededOptions,
+          },
+          ...current.data_sources,
+        ],
+      };
+    });
+  };
+
+  const handleDatabaseTypeChange = (source: DataSourceDraft, nextType: string) => {
+    const nextOption = findDatabaseTypeOption(databaseTypeOptions, nextType, selectedConfig?.db_hint);
+    const currentTypeName = readOption(source.options, 'database_type') || readOption(source.options, 'dialect');
+    const currentOption = findDatabaseTypeOption(databaseTypeOptions, currentTypeName, selectedConfig?.db_hint);
+    const uriText = cleanText(source.uri);
+    const shouldUpdateUri = !uriText || uriText === currentOption.sample_uri;
+    updateSource(source.id, {
+      uri: shouldUpdateUri ? nextOption.sample_uri : source.uri,
+      options: {
+        ...source.options,
+        database_type: nextOption.name,
+        dialect: nextOption.dialect,
+      },
+    });
+  };
+
+  const handleSourceTypeChange = (source: DataSourceDraft, nextType: DataSourceType) => {
+    const patch: Partial<DataSourceDraft> = {
+      type: nextType,
+      options: { ...source.options },
+    };
+    if (nextType === 'database') {
+      const seeded = buildDatabaseSourceFromHint(selectedConfig?.app_name ?? 'app', selectedConfig?.db_hint);
+      const seededTypeName =
+        readOption(source.options, 'database_type') ||
+        readOption(source.options, 'dialect') ||
+        readOption(seeded.options, 'database_type');
+      const seededType = findDatabaseTypeOption(databaseTypeOptions, seededTypeName, selectedConfig?.db_hint);
+      if (!cleanText(source.uri)) {
+        patch.uri = cleanText(seeded.uri) || seededType.sample_uri;
+      }
+      if (!cleanText(source.label)) {
+        patch.label = seeded.label;
+      }
+      patch.options = {
+        ...seeded.options,
+        ...source.options,
+        database_type: seededType.name,
+        dialect: seededType.dialect,
+      };
+    } else if (!cleanText(source.uri)) {
+      patch.uri = sourcePlaceholder(nextType, selectedConfig?.db_hint);
+    }
+    updateSource(source.id, patch);
+  };
+
   const saveConfig = async () => {
     if (!selectedConfig || !form) {
       return;
@@ -173,7 +619,9 @@ export function RAGOverview() {
         top_k: form.top_k,
         score_threshold: form.score_threshold === '' ? null : Number(form.score_threshold),
         indexing_schedule: form.indexing_schedule || null,
-        data_sources: textToSources(form.data_sources_text),
+        data_sources: form.data_sources
+          .map(sourceToPayload)
+          .filter((source): source is RAGDataSource => source !== null),
       });
       await Promise.all([loadManager(), loadRAGOverview()]);
       setManagerMessage('RAG 設定を保存しました。');
@@ -280,7 +728,7 @@ export function RAGOverview() {
                     編集対象の App を選択してください。
                   </div>
                 ) : (
-                  <div className="rounded-lg border border-slate-700 bg-slate-950/40 p-4 space-y-3">
+                  <div className="rounded-lg border border-slate-700 bg-slate-950/40 p-4 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <Toggle
                         label="RAG 有効化"
@@ -302,12 +750,18 @@ export function RAGOverview() {
                         </select>
                       </Field>
                       <Field label="Vector Provider">
-                        <input
+                        <select
                           value={form.vector_provider}
                           onChange={(e) => setForm({ ...form, vector_provider: e.target.value })}
                           className="input"
-                          placeholder="qdrant"
-                        />
+                        >
+                          <option value="">(auto)</option>
+                          {vectorProviderOptions.map((provider) => (
+                            <option key={provider.name} value={provider.name}>
+                              {provider.label}
+                            </option>
+                          ))}
+                        </select>
                       </Field>
                       <Field label="Vector URL">
                         <input
@@ -417,14 +871,326 @@ export function RAGOverview() {
                       </Field>
                     </div>
 
-                    <Field label="Data Sources (1行=type|uri|label)">
-                      <textarea
-                        value={form.data_sources_text}
-                        onChange={(e) => setForm({ ...form, data_sources_text: e.target.value })}
-                        className="input min-h-24"
-                        placeholder="web|https://example.com/docs|公式ドキュメント"
-                      />
-                    </Field>
+                    <div className="space-y-3 rounded-lg border border-slate-700/80 bg-slate-950/30 p-3.5">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-medium text-slate-300">Data Sources</p>
+                          <p className="text-[11px] text-slate-500 mt-1">
+                            タイプを選択すると必要項目を展開します。FAQ など DB 情報がある App は自動補完できます。
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={addSource}
+                            className="px-2.5 py-1.5 rounded-md border border-slate-700 text-slate-300 hover:bg-slate-800 text-[11px]"
+                          >
+                            Add Source
+                          </button>
+                          {selectedConfig.db_hint && (
+                            <button
+                              type="button"
+                              onClick={applyDetectedDatabaseSource}
+                              className="px-2.5 py-1.5 rounded-md border border-cyan-700/60 text-cyan-300 hover:bg-cyan-500/10 text-[11px]"
+                            >
+                              {selectedConfig.db_hint.available ? 'Auto Set DB' : 'Insert DB Sample'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <DBHintBanner dbHint={selectedConfig.db_hint} />
+
+                      {form.data_sources.length === 0 && (
+                        <div className="rounded-md border border-dashed border-slate-700 p-3 text-xs text-slate-500">
+                          Data Source が未設定です。`Add Source` で追加してください。
+                        </div>
+                      )}
+
+                      {form.data_sources.map((source) => (
+                        <div key={source.id} className="rounded-md border border-slate-700 bg-slate-950/60 p-3 space-y-3">
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+                            <Field label="Type">
+                              <select
+                                value={source.type}
+                                onChange={(e) => handleSourceTypeChange(source, normalizeSourceType(e.target.value))}
+                                className="input"
+                              >
+                                {DATA_SOURCE_TYPE_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                            </Field>
+                            <Field label="URI / Path">
+                              <input
+                                value={source.uri}
+                                onChange={(e) => updateSource(source.id, { uri: e.target.value })}
+                                className="input"
+                                placeholder={
+                                  source.type === 'database'
+                                    ? findDatabaseTypeOption(
+                                      databaseTypeOptions,
+                                      readOption(source.options, 'database_type') ||
+                                      readOption(source.options, 'dialect') ||
+                                      cleanText(selectedConfig.db_hint?.kind),
+                                      selectedConfig.db_hint,
+                                    ).sample_uri
+                                    : sourcePlaceholder(source.type, selectedConfig.db_hint)
+                                }
+                              />
+                            </Field>
+                            <Field label="Label">
+                              <input
+                                value={source.label}
+                                onChange={(e) => updateSource(source.id, { label: e.target.value })}
+                                className="input"
+                                placeholder={`${source.type} source`}
+                              />
+                            </Field>
+                            <Field label="Schedule (optional)">
+                              <input
+                                value={source.schedule}
+                                onChange={(e) => updateSource(source.id, { schedule: e.target.value })}
+                                className="input"
+                                placeholder="0 */6 * * *"
+                              />
+                            </Field>
+                          </div>
+
+                          <p className="text-[11px] text-slate-500">
+                            {DATA_SOURCE_TYPE_OPTIONS.find((option) => option.value === source.type)?.description}
+                          </p>
+
+                          {source.type === 'database' && (() => {
+                            const dbTypeName =
+                              readOption(source.options, 'database_type') ||
+                              readOption(source.options, 'dialect') ||
+                              cleanText(selectedConfig.db_hint?.kind);
+                            const activeDbType = findDatabaseTypeOption(
+                              databaseTypeOptions,
+                              dbTypeName,
+                              selectedConfig.db_hint,
+                            );
+                            return (
+                              <div className="space-y-2.5">
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+                                  <Field label="Database Type">
+                                    <select
+                                      value={activeDbType.name}
+                                      onChange={(e) => handleDatabaseTypeChange(source, e.target.value)}
+                                      className="input"
+                                    >
+                                      {databaseTypeOptions.map((option) => (
+                                        <option key={option.name} value={option.name}>
+                                          {option.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </Field>
+                                  <Field label="Dialect">
+                                    <select
+                                      value={readOption(source.options, 'dialect') || activeDbType.dialect}
+                                      onChange={(e) => handleDatabaseTypeChange(source, e.target.value)}
+                                      className="input"
+                                    >
+                                      {databaseTypeOptions.map((option) => (
+                                        <option key={option.name} value={option.dialect}>
+                                          {option.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </Field>
+                                  <Field label="Schema">
+                                    <input
+                                      value={readOption(source.options, 'schema')}
+                                      onChange={(e) => updateSourceOption(source.id, 'schema', e.target.value)}
+                                      className="input"
+                                      placeholder="public"
+                                    />
+                                  </Field>
+                                  <Field label="Read Mode">
+                                    <select
+                                      value={readOption(source.options, 'read_mode') || 'table'}
+                                      onChange={(e) => updateSourceOption(source.id, 'read_mode', e.target.value)}
+                                      className="input"
+                                    >
+                                      <option value="table">table</option>
+                                      <option value="query">query</option>
+                                    </select>
+                                  </Field>
+                                </div>
+
+                                {activeDbType.connection_kind === 'network' && (
+                                  <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+                                    <Field label="Host (optional)">
+                                      <input
+                                        value={readOption(source.options, 'host')}
+                                        onChange={(e) => updateSourceOption(source.id, 'host', e.target.value)}
+                                        className="input"
+                                        placeholder={cleanText(selectedConfig.db_hint?.host) || 'localhost'}
+                                      />
+                                    </Field>
+                                    <Field label="Port (optional)">
+                                      <input
+                                        value={readOption(source.options, 'port')}
+                                        onChange={(e) => updateSourceOption(source.id, 'port', e.target.value)}
+                                        className="input"
+                                        placeholder={String(activeDbType.default_port ?? '')}
+                                      />
+                                    </Field>
+                                    <Field label="Database (optional)">
+                                      <input
+                                        value={readOption(source.options, 'database')}
+                                        onChange={(e) => updateSourceOption(source.id, 'database', e.target.value)}
+                                        className="input"
+                                        placeholder={cleanText(selectedConfig.db_hint?.database) || 'app_db'}
+                                      />
+                                    </Field>
+                                    <Field label="User (optional)">
+                                      <input
+                                        value={readOption(source.options, 'user')}
+                                        onChange={(e) => updateSourceOption(source.id, 'user', e.target.value)}
+                                        className="input"
+                                        placeholder={cleanText(selectedConfig.db_hint?.user) || 'app_user'}
+                                      />
+                                    </Field>
+                                  </div>
+                                )}
+
+                                {activeDbType.connection_kind === 'file' && (
+                                  <p className="text-[11px] text-slate-500">
+                                    File DB は URI にファイルパスを指定してください。例: `{activeDbType.sample_uri}`
+                                  </p>
+                                )}
+
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5">
+                                  <Field label="Table">
+                                    <input
+                                      value={readOption(source.options, 'table')}
+                                      onChange={(e) => updateSourceOption(source.id, 'table', e.target.value)}
+                                      className="input"
+                                      placeholder="faq_entries"
+                                    />
+                                  </Field>
+                                  <div className="md:col-span-3">
+                                    <Field label="Query (optional)">
+                                      <textarea
+                                        value={readOption(source.options, 'query')}
+                                        onChange={(e) => updateSourceOption(source.id, 'query', e.target.value)}
+                                        className="input min-h-20"
+                                        placeholder="SELECT id, question, answer, updated_at FROM faq_entries"
+                                      />
+                                    </Field>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })()}
+
+                          {source.type === 'api' && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                              <Field label="Method">
+                                <select
+                                  value={readOption(source.options, 'method') || 'GET'}
+                                  onChange={(e) => updateSourceOption(source.id, 'method', e.target.value)}
+                                  className="input"
+                                >
+                                  <option value="GET">GET</option>
+                                  <option value="POST">POST</option>
+                                </select>
+                              </Field>
+                              <Field label="Auth Header (optional)">
+                                <input
+                                  value={readOption(source.options, 'auth_header')}
+                                  onChange={(e) => updateSourceOption(source.id, 'auth_header', e.target.value)}
+                                  className="input"
+                                  placeholder="Bearer ${API_TOKEN}"
+                                />
+                              </Field>
+                              <Field label="JSON Path (optional)">
+                                <input
+                                  value={readOption(source.options, 'json_path')}
+                                  onChange={(e) => updateSourceOption(source.id, 'json_path', e.target.value)}
+                                  className="input"
+                                  placeholder="data.items"
+                                />
+                              </Field>
+                            </div>
+                          )}
+
+                          {source.type === 'file' && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                              <Field label="Glob Pattern (optional)">
+                                <input
+                                  value={readOption(source.options, 'glob')}
+                                  onChange={(e) => updateSourceOption(source.id, 'glob', e.target.value)}
+                                  className="input"
+                                  placeholder="**/*.md"
+                                />
+                              </Field>
+                              <Field label="Encoding (optional)">
+                                <input
+                                  value={readOption(source.options, 'encoding')}
+                                  onChange={(e) => updateSourceOption(source.id, 'encoding', e.target.value)}
+                                  className="input"
+                                  placeholder="utf-8"
+                                />
+                              </Field>
+                            </div>
+                          )}
+
+                          {source.type === 's3' && (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                              <Field label="Region">
+                                <input
+                                  value={readOption(source.options, 'region')}
+                                  onChange={(e) => updateSourceOption(source.id, 'region', e.target.value)}
+                                  className="input"
+                                  placeholder="ap-northeast-1"
+                                />
+                              </Field>
+                              <Field label="Prefix (optional)">
+                                <input
+                                  value={readOption(source.options, 'prefix')}
+                                  onChange={(e) => updateSourceOption(source.id, 'prefix', e.target.value)}
+                                  className="input"
+                                  placeholder="faq/"
+                                />
+                              </Field>
+                              <Field label="File Filter (optional)">
+                                <input
+                                  value={readOption(source.options, 'filter')}
+                                  onChange={(e) => updateSourceOption(source.id, 'filter', e.target.value)}
+                                  className="input"
+                                  placeholder="*.json"
+                                />
+                              </Field>
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between">
+                            <label className="inline-flex items-center gap-2 text-xs text-slate-300">
+                              <input
+                                type="checkbox"
+                                checked={source.enabled}
+                                onChange={(e) => updateSource(source.id, { enabled: e.target.checked })}
+                                className="rounded border-slate-600 bg-slate-900"
+                              />
+                              Enabled
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => removeSource(source.id)}
+                              className="text-[11px] px-2 py-1 rounded border border-red-500/40 text-red-300 hover:bg-red-500/10"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
 
                     <div className="flex items-center justify-end gap-2 pt-1">
                       <button
@@ -475,6 +1241,28 @@ export function RAGOverview() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+function DBHintBanner({ dbHint }: { dbHint: RAGDatabaseHint | undefined }) {
+  if (!dbHint) {
+    return null;
+  }
+  if (dbHint.available) {
+    const hostPort = cleanText(dbHint.host)
+      ? `${cleanText(dbHint.host)}${typeof dbHint.port === 'number' ? `:${dbHint.port}` : ''}`
+      : '';
+    const dbName = cleanText(dbHint.database);
+    return (
+      <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-[11px] text-emerald-200">
+        Detected DB: `{dbHint.kind ?? 'unknown'}` {dbName ? `(${dbName})` : ''}{hostPort ? ` @ ${hostPort}` : ''} · source: {dbHint.source}
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2.5 text-[11px] text-amber-100">
+      DB 情報が app_config から見つかりません。サンプル URI: `{dbHint.sample_uri}`
     </div>
   );
 }

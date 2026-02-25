@@ -24,6 +24,8 @@ class TestGetRagOverview:
         assert "description" in data
         assert "chunk_strategies" in data
         assert "rerankers" in data
+        assert "database_types" in data
+        assert "vector_providers" in data
         assert "apps_using_rag" in data
         assert "stats" in data
 
@@ -155,7 +157,9 @@ class TestRagAppConfigs:
         data = resp.json()
         assert data["app_name"] == "rag_app"
         assert "rag" in data
+        assert "db_hint" in data
         assert "chunk_strategy" in data["rag"]
+        assert data["db_hint"]["available"] is True
 
     def test_patch_config(self, phase3_test_client: TestClient) -> None:
         """RAG 設定を更新できる."""

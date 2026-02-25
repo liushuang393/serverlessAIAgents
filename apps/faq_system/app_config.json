@@ -22,33 +22,81 @@
     {
       "name": "FAQAgent",
       "module": "agentflow.agents.faq_agent",
-      "capabilities": ["faq", "rag", "sql", "chart", "suggestion"],
+      "capabilities": [
+        "faq",
+        "rag",
+        "sql",
+        "chart",
+        "suggestion"
+      ],
       "business_base": "knowledge",
       "pattern": "specialist"
     },
     {
       "name": "SalesAgent",
       "module": "agentflow.agents.sales_agent",
-      "capabilities": ["sales", "design_skills", "image_generation"],
+      "capabilities": [
+        "sales",
+        "design_skills",
+        "image_generation"
+      ],
       "business_base": "interaction",
       "pattern": "specialist"
     }
   ],
   "services": {
     "rag": {
-      "collections": ["faq_knowledge"]
+      "collections": [
+        "faq_knowledge"
+      ],
+      "enabled": true,
+      "pattern": "faq_precision",
+      "chunking": {
+        "strategy": "sentence",
+        "size": 500,
+        "overlap": 80
+      },
+      "retrieval": {
+        "method": "hybrid",
+        "reranker": "cohere",
+        "top_k": 8,
+        "score_threshold": 0.25
+      },
+      "data_sources": [
+        {
+          "type": "database",
+          "uri": "sqlite+aiosqlite:///./app.db",
+          "label": "faq_system SQL source",
+          "enabled": true,
+          "options": {
+            "dialect": "sqlite",
+            "database_type": "sqlite",
+            "read_mode": "table"
+          }
+        }
+      ],
+      "indexing_schedule": null
     },
     "sql": {
       "dialect": "postgresql"
     },
     "suggestion": {
       "enabled": true
+    },
+    "vector_db": {
+      "provider": "qdrant",
+      "url": null,
+      "collection": "faq_knowledge"
     }
   },
   "dependencies": {
     "database": "postgresql",
     "redis": false,
-    "external": ["comfyui"]
+    "external": [
+      "comfyui",
+      "qdrant",
+      "vector_store"
+    ]
   },
   "runtime": {
     "urls": {
@@ -76,29 +124,53 @@
       "stop": "docker compose -f docker-compose.yml -f docker-compose.dev.yml down"
     }
   },
-  "tags": ["faq", "rag", "text2sql", "sales", "chat"],
+  "tags": [
+    "chat",
+    "faq",
+    "rag",
+    "sales",
+    "text2sql"
+  ],
   "contracts": {
     "auth": {
       "enabled": true,
-      "providers": ["api_key"],
+      "providers": [
+        "api_key"
+      ],
       "allow_anonymous": false,
-      "required_scopes": ["api"],
+      "required_scopes": [
+        "api"
+      ],
       "session_ttl_minutes": 60
     },
     "rag": {
       "enabled": true,
-      "pattern": null,
-      "provider": null,
-      "collections": ["faq_knowledge"],
-      "data_sources": [],
-      "chunk_strategy": "recursive",
-      "chunk_size": 800,
-      "chunk_overlap": 120,
+      "pattern": "faq_precision",
+      "provider": "qdrant",
+      "collections": [
+        "faq_knowledge"
+      ],
+      "data_sources": [
+        {
+          "type": "database",
+          "uri": "sqlite+aiosqlite:///./app.db",
+          "label": "faq_system SQL source",
+          "enabled": true,
+          "options": {
+            "dialect": "sqlite",
+            "database_type": "sqlite",
+            "read_mode": "table"
+          }
+        }
+      ],
+      "chunk_strategy": "sentence",
+      "chunk_size": 500,
+      "chunk_overlap": 80,
       "retrieval_method": "hybrid",
       "embedding_model": null,
-      "rerank_model": null,
-      "default_top_k": 5,
-      "score_threshold": null,
+      "rerank_model": "cohere",
+      "default_top_k": 8,
+      "score_threshold": 0.25,
       "indexing_schedule": null
     },
     "skills": {
@@ -110,7 +182,9 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": ["dev"],
+      "environments": [
+        "dev"
+      ],
       "require_approval": true
     }
   },
@@ -119,7 +193,10 @@
       "id": "official.enterprise-connector-pack",
       "version": "1.0.0",
       "config": {
-        "connectors": ["confluence", "sharepoint"]
+        "connectors": [
+          "confluence",
+          "sharepoint"
+        ]
       }
     },
     {

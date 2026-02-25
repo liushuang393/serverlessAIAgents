@@ -31,6 +31,28 @@
       "microsoft": true,
       "saml": true,
       "ldap": true
+    },
+    "rag": {
+      "enabled": false,
+      "pattern": null,
+      "chunking": {
+        "strategy": "recursive",
+        "size": 800,
+        "overlap": 60
+      },
+      "retrieval": {
+        "method": "hybrid",
+        "reranker": "cohere",
+        "top_k": 5,
+        "score_threshold": null
+      },
+      "data_sources": [],
+      "indexing_schedule": null
+    },
+    "vector_db": {
+      "provider": null,
+      "url": null,
+      "collection": null
     }
   },
   "dependencies": {
@@ -38,9 +60,9 @@
     "redis": false,
     "external": [
       "google_oauth",
+      "ldap_server",
       "microsoft_oauth",
-      "saml_idp",
-      "ldap_server"
+      "saml_idp"
     ]
   },
   "runtime": {
@@ -71,10 +93,10 @@
   },
   "tags": [
     "auth",
-    "security",
-    "shared-service",
+    "platform-contract",
     "plugin-runtime",
-    "platform-contract"
+    "security",
+    "shared-service"
   ],
   "contracts": {
     "auth": {
@@ -97,10 +119,10 @@
       "data_sources": [],
       "chunk_strategy": "recursive",
       "chunk_size": 800,
-      "chunk_overlap": 120,
+      "chunk_overlap": 60,
       "retrieval_method": "hybrid",
       "embedding_model": null,
-      "rerank_model": null,
+      "rerank_model": "cohere",
       "default_top_k": 5,
       "score_threshold": null,
       "indexing_schedule": null

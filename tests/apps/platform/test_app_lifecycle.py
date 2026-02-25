@@ -11,9 +11,11 @@ import httpx
 import pytest
 from apps.platform.schemas.app_config_schemas import AppConfig
 from apps.platform.services.app_lifecycle import (
+    AppActionResult,
     AppLifecycleManager,
     AppStatus,
     HealthCheckResult,
+    LocalProcessLaunchResult,
 )
 
 
@@ -180,12 +182,12 @@ class TestAppLifecycleManager:
             assert result.status == AppStatus.STOPPED
 
     @pytest.mark.asyncio
-    async def test_start_uses_runtime_command_override(
+    async def test_start_uses_docker_mode_when_compose_exists_and_stopped(
         self,
         lifecycle: AppLifecycleManager,
         tmp_path,
     ) -> None:
-        """runtime.commands.start がある場合は compose より優先する."""
+        """start は compose-first 規約で docker モードを選択する."""
         cfg = AppConfig(
             name="cmd_app",
             display_name="Command App",
@@ -195,34 +197,100 @@ class TestAppLifecycleManager:
             plugin_bindings=[],
             ports={"api": None},
             entry_points={"health": None},
-            runtime={"commands": {"start": "echo start-from-config"}},
+            runtime={"commands": {"backend_dev": "python -m apps.cmd_app.main"}},
         )
         app_dir = tmp_path / "cmd_app"
         app_dir.mkdir()
+        (app_dir / "docker-compose.yml").write_text("services: {}\n", encoding="utf-8")
         config_path = app_dir / "app_config.json"
         config_path.write_text("{}", encoding="utf-8")
 
-        class _Proc:
-            returncode = 0
-
-            async def communicate(self):
-                return b"started", b""
-
-        with patch(
-            "apps.platform.services.app_lifecycle.asyncio.create_subprocess_exec",
-            new=AsyncMock(return_value=_Proc()),
-        ) as mocked, patch.object(
+        compose_result = AppActionResult(
+            app_name="cmd_app",
+            action="start",
+            success=True,
+            command=["docker", "compose", "up", "-d"],
+            cwd=str(app_dir),
+            command_source="fallback",
+            execution_mode="docker",
+        )
+        with patch.object(
             lifecycle,
             "_run_cli_preflight",
             new=AsyncMock(return_value={"ready": True, "final": {"available_tools": [], "authenticated_tools": []}}),
+        ), patch.object(
+            lifecycle,
+            "_detect_execution_mode",
+            new=AsyncMock(return_value=("docker", {"reason": "compose_first_default"})),
+        ), patch.object(
+            lifecycle,
+            "_run_compose_action",
+            new=AsyncMock(return_value=compose_result),
+        ) as mocked_compose, patch.object(
+            lifecycle,
+            "_run_process_action",
+            new=AsyncMock(),
+        ) as mocked_process:
+            result = await lifecycle.start_app(cfg, config_path=config_path)
+
+        assert result.success is True
+        assert result.execution_mode == "docker"
+        mocked_compose.assert_called_once()
+        mocked_process.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_start_skips_restart_when_local_already_running(
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
+    ) -> None:
+        """local 起動中なら start は再起動せず成功応答を返す."""
+        cfg = AppConfig(
+            name="local_running_app",
+            display_name="Local Running App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            ports={"api": None},
+            entry_points={"health": None},
+            runtime={"commands": {"backend_dev": "python -m apps.local_running_app.main"}},
+        )
+        config_path = tmp_path / "local_running_app" / "app_config.json"
+        config_path.parent.mkdir(parents=True)
+        config_path.write_text("{}", encoding="utf-8")
+
+        with patch.object(
+            lifecycle,
+            "_detect_execution_mode",
+            new=AsyncMock(
+                return_value=(
+                    "local",
+                    {
+                        "reason": "local_running",
+                        "local": {"running": True, "running_roles": ["backend"]},
+                    },
+                )
+            ),
+        ), patch.object(
+            lifecycle,
+            "check_health",
+            new=AsyncMock(return_value=HealthCheckResult("local_running_app", AppStatus.HEALTHY)),
+        ), patch.object(
+            lifecycle,
+            "_run_process_action",
+            new=AsyncMock(),
+        ) as mocked_process, patch.object(
+            lifecycle,
+            "_run_cli_preflight",
+            new=AsyncMock(return_value={"ready": False, "final": {"available_tools": [], "authenticated_tools": []}}),
         ):
             result = await lifecycle.start_app(cfg, config_path=config_path)
 
         assert result.success is True
-        assert result.return_code == 0
-        assert result.command[:2] == ["bash", "-lc"]
-        assert result.cwd == str(app_dir)
-        mocked.assert_called_once()
+        assert result.execution_mode == "local"
+        assert "already running" in result.stdout
+        mocked_process.assert_not_called()
 
     def test_resolve_action_command_supports_local_dev_commands(self) -> None:
         """backend_dev / frontend_dev を解決できる."""
@@ -289,12 +357,79 @@ class TestAppLifecycleManager:
         mocked.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_start_prefers_readme_command_over_runtime(
+    async def test_local_start_fails_when_frontend_dies_early(
         self,
         lifecycle: AppLifecycleManager,
         tmp_path,
     ) -> None:
-        """README の start コマンドを runtime.commands より優先する."""
+        """local_start は frontend 異常終了時に失敗を返す."""
+        cfg = AppConfig(
+            name="local_crash_app",
+            display_name="Local Crash App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            ports={"api": 8999, "frontend": 3009},
+            entry_points={"health": "/health"},
+            runtime={
+                "commands": {
+                    "backend_dev": "python -m apps.local_crash_app.main",
+                    "frontend_dev": "cd apps/local_crash_app/frontend && npm run dev",
+                }
+            },
+        )
+        config_path = tmp_path / "apps" / "local_crash_app" / "app_config.json"
+        config_path.parent.mkdir(parents=True)
+        config_path.write_text("{}", encoding="utf-8")
+
+        backend_launch = LocalProcessLaunchResult(
+            role="backend",
+            command="python -m apps.local_crash_app.main",
+            success=True,
+            pid=12345,
+            log_path="/tmp/local_crash_app_backend.log",
+            message="backend started",
+        )
+        frontend_launch = LocalProcessLaunchResult(
+            role="frontend",
+            command="cd apps/local_crash_app/frontend && npm run dev",
+            success=False,
+            pid=23456,
+            log_path="/tmp/local_crash_app_frontend.log",
+            error="frontend プロセスが直後に終了しました",
+        )
+
+        with patch.object(
+            lifecycle,
+            "_start_local_process",
+            new=AsyncMock(side_effect=[backend_launch, frontend_launch]),
+        ), patch.object(
+            lifecycle,
+            "_run_cli_preflight",
+            new=AsyncMock(return_value={"ready": True, "final": {"available_tools": [], "authenticated_tools": []}}),
+        ), patch.object(
+            lifecycle,
+            "_preflight_local_dependencies",
+            new=AsyncMock(return_value=([], None)),
+        ), patch.object(
+            lifecycle._diagnostic_service,
+            "diagnose_action_failure",
+            new=AsyncMock(return_value={"summary": "frontend crash"}),
+        ):
+            result = await lifecycle.start_local_dev(cfg, config_path=config_path)
+
+        assert result.success is False
+        assert result.execution_mode == "local"
+        assert "frontend プロセスが直後に終了しました" in (result.error or "")
+
+    @pytest.mark.asyncio
+    async def test_start_ignores_readme_foreground_command(
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
+    ) -> None:
+        """README の前景 backend コマンドは start 判定に使わない."""
         cfg = AppConfig(
             name="readme_app",
             display_name="README App",
@@ -304,7 +439,12 @@ class TestAppLifecycleManager:
             plugin_bindings=[],
             ports={"api": None},
             entry_points={"health": None},
-            runtime={"commands": {"start": "echo runtime-start"}},
+            runtime={
+                "commands": {
+                    "backend_dev": "python -m apps.readme_app.main --reload",
+                    "start": "docker compose -f docker-compose.yml up -d",
+                }
+            },
         )
         app_dir = tmp_path / "readme_app"
         app_dir.mkdir(parents=True)
@@ -312,29 +452,160 @@ class TestAppLifecycleManager:
             "```bash\npython -m apps.readme_app.main --reload\n```",
             encoding="utf-8",
         )
+        (app_dir / "docker-compose.yml").write_text("services: {}\n", encoding="utf-8")
         config_path = app_dir / "app_config.json"
         config_path.write_text("{}", encoding="utf-8")
 
-        class _Proc:
-            returncode = 0
+        compose_result = AppActionResult(
+            app_name="readme_app",
+            action="start",
+            success=True,
+            command=["docker", "compose", "up", "-d"],
+            cwd=str(app_dir),
+            command_source="fallback",
+            execution_mode="docker",
+        )
 
-            async def communicate(self):
-                return b"ok", b""
-
-        with patch(
-            "apps.platform.services.app_lifecycle.asyncio.create_subprocess_exec",
-            new=AsyncMock(return_value=_Proc()),
+        with patch.object(
+            lifecycle,
+            "_run_compose_action",
+            new=AsyncMock(return_value=compose_result),
+        ) as mocked_compose, patch.object(
+            lifecycle,
+            "_detect_execution_mode",
+            new=AsyncMock(return_value=("docker", {"reason": "compose_first_default"})),
         ), patch.object(
             lifecycle,
             "_run_cli_preflight",
-            new=AsyncMock(return_value={"ready": True, "final": {"available_tools": [], "authenticated_tools": []}}),
+            new=AsyncMock(return_value={"ready": False, "final": {"available_tools": [], "authenticated_tools": []}}),
         ):
             result = await lifecycle.start_app(cfg, config_path=config_path)
 
         assert result.success is True
-        assert result.command[:2] == ["bash", "-lc"]
-        assert "apps.readme_app.main --reload" in result.command[2]
-        assert result.command_source == "readme"
+        assert result.execution_mode == "docker"
+        mocked_compose.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_start_retry_stops_after_success(
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
+    ) -> None:
+        """AI 修復ループは成功時点で停止する."""
+        cfg = AppConfig(
+            name="retry_success_app",
+            display_name="Retry Success App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            ports={"api": None},
+            entry_points={"health": None},
+        )
+        config_path = tmp_path / "retry_success_app" / "app_config.json"
+        config_path.parent.mkdir(parents=True)
+        config_path.write_text("{}", encoding="utf-8")
+
+        failed = AppActionResult(
+            app_name=cfg.name,
+            action="start",
+            success=False,
+            command=["docker", "compose", "up", "-d"],
+            cwd=str(config_path.parent),
+            error="boom",
+            diagnostic={"summary": "boom"},
+            execution_mode="docker",
+        )
+        recovered = AppActionResult(
+            app_name=cfg.name,
+            action="start",
+            success=True,
+            command=["docker", "compose", "up", "-d"],
+            cwd=str(config_path.parent),
+            execution_mode="docker",
+        )
+
+        with patch.object(
+            lifecycle,
+            "_run_cli_preflight",
+            new=AsyncMock(return_value={"ready": True, "final": {"available_tools": ["codex"], "authenticated_tools": ["codex"]}}),
+        ), patch.object(
+            lifecycle._diagnostic_service,
+            "attach_retry_trace",
+            new=lambda diagnostic, _: diagnostic,
+        ), patch.object(
+            lifecycle,
+            "_start_app_once",
+            new=AsyncMock(side_effect=[failed, recovered]),
+        ), patch.object(
+            lifecycle._repair_service,
+            "attempt_action_repair",
+            new=AsyncMock(return_value={"tool": "codex", "attempt": 1, "success": True}),
+        ) as mocked_repair:
+            result = await lifecycle.start_app(cfg, config_path=config_path)
+
+        assert result.success is True
+        assert result.repair is not None
+        assert result.repair.get("total_attempts") == 1
+        assert result.repair.get("outcome") == "success_after_repair"
+        mocked_repair.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_start_retry_stops_at_max_attempts(
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
+    ) -> None:
+        """AI 修復ループは最大 4 回で停止する."""
+        cfg = AppConfig(
+            name="retry_fail_app",
+            display_name="Retry Fail App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            ports={"api": None},
+            entry_points={"health": None},
+        )
+        config_path = tmp_path / "retry_fail_app" / "app_config.json"
+        config_path.parent.mkdir(parents=True)
+        config_path.write_text("{}", encoding="utf-8")
+
+        failed = AppActionResult(
+            app_name=cfg.name,
+            action="start",
+            success=False,
+            command=["docker", "compose", "up", "-d"],
+            cwd=str(config_path.parent),
+            error="boom",
+            diagnostic={"summary": "boom"},
+            execution_mode="docker",
+        )
+
+        with patch.object(
+            lifecycle,
+            "_run_cli_preflight",
+            new=AsyncMock(return_value={"ready": True, "final": {"available_tools": ["codex", "claude"], "authenticated_tools": ["codex", "claude"]}}),
+        ), patch.object(
+            lifecycle._diagnostic_service,
+            "attach_retry_trace",
+            new=lambda diagnostic, _: diagnostic,
+        ), patch.object(
+            lifecycle,
+            "_start_app_once",
+            new=AsyncMock(side_effect=[failed, failed, failed, failed, failed]),
+        ), patch.object(
+            lifecycle._repair_service,
+            "attempt_action_repair",
+            new=AsyncMock(return_value={"tool": "codex", "attempt": 1, "success": False}),
+        ) as mocked_repair:
+            result = await lifecycle.start_app(cfg, config_path=config_path)
+
+        assert result.success is False
+        assert result.repair is not None
+        assert result.repair.get("total_attempts") == 4
+        assert result.repair.get("outcome") == "failed"
+        assert mocked_repair.await_count == 4
 
     @pytest.mark.asyncio
     async def test_start_failure_includes_diagnostic_payload(
@@ -342,7 +613,7 @@ class TestAppLifecycleManager:
         lifecycle: AppLifecycleManager,
         tmp_path,
     ) -> None:
-        """起動失敗時に diagnostic が付与される."""
+        """起動失敗時に diagnostic が保持される."""
         cfg = AppConfig(
             name="diag_app",
             display_name="Diag App",
@@ -352,40 +623,32 @@ class TestAppLifecycleManager:
             plugin_bindings=[],
             ports={"api": None},
             entry_points={"health": None},
-            runtime={"commands": {"start": "echo fail"}},
         )
-        app_dir = tmp_path / "diag_app"
-        app_dir.mkdir(parents=True)
-        (app_dir / "app_config.json").write_text("{}", encoding="utf-8")
+        config_path = tmp_path / "diag_app" / "app_config.json"
+        config_path.parent.mkdir(parents=True)
+        config_path.write_text("{}", encoding="utf-8")
 
-        class _Proc:
-            returncode = 1
+        failed = AppActionResult(
+            app_name="diag_app",
+            action="start",
+            success=False,
+            command=["docker", "compose", "up", "-d"],
+            cwd=str(config_path.parent),
+            error="boom",
+            diagnostic={"summary": "boom"},
+            execution_mode="docker",
+        )
 
-            async def communicate(self):
-                return b"", b"boom"
-
-        with patch(
-            "apps.platform.services.app_lifecycle.asyncio.create_subprocess_exec",
-            new=AsyncMock(return_value=_Proc()),
-        ), patch.object(
+        with patch.object(
             lifecycle,
             "_run_cli_preflight",
             new=AsyncMock(return_value={"ready": False, "final": {"available_tools": [], "authenticated_tools": []}}),
         ), patch.object(
-            lifecycle._diagnostic_service,
-            "diagnose_action_failure",
-            new=AsyncMock(
-                return_value={
-                    "tool": "codex",
-                    "summary": "boom",
-                    "recommendations": ["check env"],
-                    "raw_output": "x",
-                    "setup": {"ready": False, "available_tools": [], "authenticated_tools": []},
-                    "command_source": "runtime.commands",
-                }
-            ),
+            lifecycle,
+            "_start_app_once",
+            new=AsyncMock(return_value=failed),
         ):
-            result = await lifecycle.start_app(cfg, config_path=app_dir / "app_config.json")
+            result = await lifecycle.start_app(cfg, config_path=config_path)
 
         assert result.success is False
         assert result.diagnostic is not None

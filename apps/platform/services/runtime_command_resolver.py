@@ -1,7 +1,7 @@
 """Resolve app runtime commands with README-first priority.
 
 Priority policy:
-1) README default commands
+1) README default commands（backend_dev / frontend_dev を優先）
 2) runtime.commands from app_config.json
 3) lifecycle fallback behavior (compose defaults etc.)
 """
@@ -10,10 +10,13 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
-from apps.platform.schemas.app_config_schemas import RuntimeCommandsConfig
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from apps.platform.schemas.app_config_schemas import RuntimeCommandsConfig
 
 
 CommandAction = Literal["backend_dev", "frontend_dev", "publish", "start", "stop"]
@@ -148,14 +151,7 @@ class RuntimeCommandResolver:
         if action == "frontend_dev":
             return "npm run dev" in lower and (app_path_hint in lower or "admin_ui" in lower or "frontend" in lower)
         if action == "publish":
-            return ("python -m apps.platform.main publish" in lower and app_path_hint in lower) or (
-                "docker compose up -d --build" in lower
-            )
+            return "docker compose up -d --build" in lower
         if action == "start":
-            return (
-                ("python -m " in lower and app_module_hint in lower)
-                or "docker compose up -d" in lower
-                or "python " + app_path_hint + "/scripts/dev.py" in lower
-            )
+            return "docker compose up -d" in lower and "--build" not in lower
         return "docker compose down" in lower
-

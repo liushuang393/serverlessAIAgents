@@ -86,9 +86,9 @@
     "commands": {
       "backend_dev": "python apps/messaging_hub/scripts/dev.py",
       "frontend_dev": "cd apps/messaging_hub/admin_ui && npm run dev",
-      "publish": null,
-      "start": null,
-      "stop": null
+      "publish": "docker compose -f docker-compose.yml up -d --build",
+      "start": "docker compose -f docker-compose.yml up -d",
+      "stop": "docker compose -f docker-compose.yml down"
     },
     "cli": {
       "preferred": [

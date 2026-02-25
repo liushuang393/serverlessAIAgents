@@ -62,9 +62,9 @@
     "commands": {
       "backend_dev": "python apps/orchestration_guardian/scripts/dev.py",
       "frontend_dev": null,
-      "publish": null,
-      "start": null,
-      "stop": null
+      "publish": "docker compose -f docker-compose.yml up -d --build",
+      "start": "docker compose -f docker-compose.yml up -d",
+      "stop": "docker compose -f docker-compose.yml down"
     }
   },
   "tags": ["orchestration", "governance", "protocol", "audit"],

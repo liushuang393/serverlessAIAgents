@@ -104,6 +104,63 @@ def _load_app_config() -> dict[str, Any]:
     return {}
 
 
+def _as_dict(value: Any) -> dict[str, Any]:
+    """dict であればそのまま返す."""
+    return value if isinstance(value, dict) else {}
+
+
+def _as_non_empty_str(value: Any) -> str | None:
+    """空でない文字列を返す."""
+    if isinstance(value, str):
+        text = value.strip()
+        return text or None
+    return None
+
+
+def _first_collection_name(values: Any) -> str | None:
+    """コレクション配列の先頭名を返す."""
+    if not isinstance(values, list):
+        return None
+    for item in values:
+        candidate = _as_non_empty_str(item)
+        if candidate:
+            return candidate
+    return None
+
+
+def _sync_runtime_env_from_app_config() -> None:
+    """app_config の設定を環境変数へ反映（未設定時のみ）."""
+    cfg = _load_app_config()
+    services = _as_dict(cfg.get("services"))
+    contracts = _as_dict(cfg.get("contracts"))
+
+    rag_contract = _as_dict(contracts.get("rag"))
+    rag_service = _as_dict(services.get("rag"))
+    rag_collection = (
+        _first_collection_name(rag_contract.get("collections"))
+        or _first_collection_name(rag_service.get("collections"))
+    )
+    if rag_collection:
+        os.environ.setdefault("RAG_COLLECTION", rag_collection)
+
+    runtime = _as_dict(cfg.get("runtime"))
+    runtime_urls = _as_dict(runtime.get("urls"))
+    runtime_database = _as_dict(runtime.get("database"))
+    database_url = _as_non_empty_str(runtime_database.get("url")) or _as_non_empty_str(
+        runtime_urls.get("database")
+    )
+    if database_url:
+        os.environ.setdefault("FAQ_DATABASE_URL", database_url)
+
+    sql_service = _as_dict(services.get("sql"))
+    sql_schema = sql_service.get("schema")
+    if isinstance(sql_schema, dict) and sql_schema and "DB_SCHEMA" not in os.environ:
+        os.environ["DB_SCHEMA"] = json.dumps(sql_schema, ensure_ascii=False)
+
+
+_sync_runtime_env_from_app_config()
+
+
 def _log_faq_startup(host: str, port: int) -> None:
     """FAQ System 固有の起動バナーをログ出力.
 

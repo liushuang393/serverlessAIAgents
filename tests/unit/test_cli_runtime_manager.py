@@ -96,3 +96,33 @@ async def test_run_diagnostic_prompt_uses_plan_mode_for_claude(monkeypatch: pyte
     assert result["tool"] == "claude"
     assert "--permission-mode" in result["command"]
     assert "plan" in result["command"]
+
+
+@pytest.mark.asyncio
+async def test_run_repair_prompt_uses_workspace_write_for_codex(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Codex repair execution should request workspace-write sandbox."""
+    manager = CLIRuntimeManager()
+
+    def _which(cmd: str) -> str | None:
+        return "/usr/bin/codex" if cmd == "codex" else None
+
+    async def _run_command(self, cmd: list[str], **_kwargs):
+        if cmd[:2] == ["codex", "--version"]:
+            return runtime_mod._CommandResult(command=cmd, return_code=0, stdout="codex-cli 0.1.0", stderr="")
+        if cmd[:3] == ["codex", "login", "status"]:
+            return runtime_mod._CommandResult(command=cmd, return_code=0, stdout="Logged in using ChatGPT", stderr="")
+        if cmd[:2] == ["codex", "exec"]:
+            return runtime_mod._CommandResult(command=cmd, return_code=0, stdout="applied", stderr="")
+        return runtime_mod._CommandResult(command=cmd, return_code=1, stdout="", stderr="unexpected")
+
+    monkeypatch.setattr("agentflow.tools.cli.runtime_manager.shutil.which", _which)
+    monkeypatch.setattr(CLIRuntimeManager, "_run_command", _run_command)
+
+    result = await manager.run_repair_prompt(
+        prompt="fix startup",
+        runtime_cli={"preferred": ["codex"]},
+    )
+    assert result["success"] is True
+    assert result["tool"] == "codex"
+    assert "--sandbox" in result["command"]
+    assert "workspace-write" in result["command"]
