@@ -249,7 +249,7 @@ class TestDeepAgentCoordinator:
         """シンプルタスク実行テスト."""
         coordinator = DeepAgentCoordinator()
         result = await coordinator.execute("テストタスク")
-        assert result["status"] in ("completed", "partial")
+        assert result["status"] in ("success", "partial")
         assert "report" in result
         assert "stats" in result
 
@@ -258,7 +258,7 @@ class TestDeepAgentCoordinator:
         """コンテキスト付き実行テスト."""
         coordinator = DeepAgentCoordinator()
         result = await coordinator.execute("データ分析", context={"data_source": "test.csv"})
-        assert result["status"] in ("completed", "partial")
+        assert result["status"] in ("success", "partial")
 
     @pytest.mark.asyncio
     async def test_compress_context(self) -> None:

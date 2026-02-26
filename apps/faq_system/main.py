@@ -63,6 +63,10 @@ from apps.faq_system.backend.auth.dependencies import (
 from apps.faq_system.backend.auth.router import router as auth_router
 from apps.faq_system.backend.config import kb_registry
 from apps.faq_system.backend.db.models import Base
+from apps.faq_system.backend.services.rag_runtime_config import (
+    load_rag_runtime_config,
+    sync_runtime_env,
+)
 from apps.faq_system.routers import (
     agents_router,
     chat_router,
@@ -71,6 +75,10 @@ from apps.faq_system.routers import (
     rag_router,
     sql_router,
     ws_router,
+)
+from apps.faq_system.routers.dependencies import (
+    start_rag_ingestion_scheduler,
+    stop_rag_ingestion_scheduler,
 )
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -104,58 +112,10 @@ def _load_app_config() -> dict[str, Any]:
     return {}
 
 
-def _as_dict(value: Any) -> dict[str, Any]:
-    """dict であればそのまま返す."""
-    return value if isinstance(value, dict) else {}
-
-
-def _as_non_empty_str(value: Any) -> str | None:
-    """空でない文字列を返す."""
-    if isinstance(value, str):
-        text = value.strip()
-        return text or None
-    return None
-
-
-def _first_collection_name(values: Any) -> str | None:
-    """コレクション配列の先頭名を返す."""
-    if not isinstance(values, list):
-        return None
-    for item in values:
-        candidate = _as_non_empty_str(item)
-        if candidate:
-            return candidate
-    return None
-
-
 def _sync_runtime_env_from_app_config() -> None:
     """app_config の設定を環境変数へ反映（未設定時のみ）."""
-    cfg = _load_app_config()
-    services = _as_dict(cfg.get("services"))
-    contracts = _as_dict(cfg.get("contracts"))
-
-    rag_contract = _as_dict(contracts.get("rag"))
-    rag_service = _as_dict(services.get("rag"))
-    rag_collection = (
-        _first_collection_name(rag_contract.get("collections"))
-        or _first_collection_name(rag_service.get("collections"))
-    )
-    if rag_collection:
-        os.environ.setdefault("RAG_COLLECTION", rag_collection)
-
-    runtime = _as_dict(cfg.get("runtime"))
-    runtime_urls = _as_dict(runtime.get("urls"))
-    runtime_database = _as_dict(runtime.get("database"))
-    database_url = _as_non_empty_str(runtime_database.get("url")) or _as_non_empty_str(
-        runtime_urls.get("database")
-    )
-    if database_url:
-        os.environ.setdefault("FAQ_DATABASE_URL", database_url)
-
-    sql_service = _as_dict(services.get("sql"))
-    sql_schema = sql_service.get("schema")
-    if isinstance(sql_schema, dict) and sql_schema and "DB_SCHEMA" not in os.environ:
-        os.environ["DB_SCHEMA"] = json.dumps(sql_schema, ensure_ascii=False)
+    cfg = load_rag_runtime_config(_APP_CONFIG_PATH)
+    sync_runtime_env(cfg)
 
 
 _sync_runtime_env_from_app_config()
@@ -204,6 +164,8 @@ db_manager = DatabaseManager(
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """アプリ起動/終了時の初期化."""
+    from agentflow.bootstrap import AppCapabilityBootstrapper
+
     get_faq_contract_auth_guard().reset_cache()
     await db_manager.init()
     if db_manager.resolved_url.startswith("sqlite"):
@@ -211,6 +173,18 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     await kb_registry.ensure_initialized()
     await get_auth_service().ensure_bootstrap_data()
+    await start_rag_ingestion_scheduler()
+
+    # --- AppCapabilityBootstrapper: contracts.* から RAG/Skills を自動接続 ---
+    bundle, bootstrapper = await AppCapabilityBootstrapper.build(
+        app_name="faq_system",
+        platform_url=os.environ.get("PLATFORM_URL"),
+    )
+    _app.state.capability_bundle = bundle
+    logger.info(
+        "CapabilityBundle 構築完了: rag=%s",
+        "有効" if bundle.has_rag() else "無効",
+    )
 
     # 起動バナー出力
     cfg = _load_app_config()
@@ -219,6 +193,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     _log_faq_startup(host, port)
 
     yield
+
+    # --- シャットダウン: ConfigWatcher 停止 ---
+    await bootstrapper.shutdown()
+    await stop_rag_ingestion_scheduler()
     await db_manager.close()
 
 

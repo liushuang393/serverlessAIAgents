@@ -25,16 +25,18 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, Field
 
+from agentflow.agents.mixins import RAGCapableMixin
 from agentflow.core.agent_block import AgentBlock
 from agentflow.protocols.a2ui.rich_content import (
     ChartType,
-    ChartView,
     RichResponse,
 )
 
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
+
+    from agentflow.bootstrap.capability_bundle import CapabilityBundle
 
 
 logger = logging.getLogger(__name__)
@@ -107,7 +109,7 @@ class FAQResponse(BaseModel):
 # =============================================================================
 
 
-class EnhancedFAQAgent(AgentBlock):
+class EnhancedFAQAgent(RAGCapableMixin, AgentBlock):
     """強化版 FAQ Agent.
 
     特徴：
@@ -115,6 +117,7 @@ class EnhancedFAQAgent(AgentBlock):
     - 富文本レスポンス
     - リアルタイム進捗
     - 引用表示
+    - RAGCapableMixin: CapabilityBundle 経由の動的 RAG 接続
     """
 
     name = "EnhancedFAQAgent"
@@ -123,22 +126,29 @@ class EnhancedFAQAgent(AgentBlock):
         self,
         config: EnhancedFAQConfig | None = None,
         llm_client: Any | None = None,
+        bundle: "CapabilityBundle | None" = None,
     ) -> None:
         """初期化.
 
         Args:
             config: 設定
             llm_client: LLMクライアント
+            bundle: AppCapabilityBootstrapper が構築した CapabilityBundle
         """
         super().__init__()
         self._config = config or EnhancedFAQConfig()
         self._llm_client = llm_client
         self._logger = logging.getLogger(self.name)
 
+        # CapabilityBundle を設定（RAGCapableMixin 経由）
+        if bundle is not None:
+            self.set_capability_bundle(bundle)
+
         # Skills（遅延初期化）
         self._retriever = None
         self._answer_generator = None
         self._gap_analyzer = None
+        self._text2sql_service = None
         self._initialized = False
 
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
@@ -322,33 +332,35 @@ class EnhancedFAQAgent(AgentBlock):
 
     async def _handle_sql_query(self, question: str, agent_trace: list[str]) -> FAQResponse:
         """SQL クエリを処理."""
-        agent_trace.append("Generating SQL query")
+        if self._text2sql_service is None:
+            return FAQResponse(
+                question=question,
+                query_type="sql",
+                answer="SQL サービスが利用できません。",
+                confidence=0.0,
+                error="sql_service_not_initialized",
+                agent_trace=agent_trace,
+            )
 
-        # SQL 生成（プレースホルダー - 実際は Text2SQL サービスを使用）
-        sql = f"SELECT * FROM sales WHERE description LIKE '%{question[:20]}%' LIMIT 10"
-        agent_trace.append(f"Generated SQL: {sql[:50]}...")
+        agent_trace.append("Executing Text2SQL service")
+        sql_result = await self._text2sql_service.execute(action="query", question=question)
+        if not sql_result.success:
+            message = sql_result.error_message or "SQL 実行に失敗しました。"
+            return FAQResponse(
+                question=question,
+                query_type="sql",
+                answer=message,
+                confidence=0.0,
+                error=message,
+                agent_trace=agent_trace,
+            )
 
-        # デモデータ
-        data = [
-            {"id": 1, "product": "商品A", "amount": 15000, "date": "2026-01-10"},
-            {"id": 2, "product": "商品B", "amount": 23000, "date": "2026-01-11"},
-            {"id": 3, "product": "商品C", "amount": 18500, "date": "2026-01-12"},
-        ]
-        columns = ["id", "product", "amount", "date"]
-
-        # 回答生成
-        answer = f"クエリ「{question}」の結果: {len(data)}件のデータが見つかりました。"
-
-        # チャート生成
-        chart = None
-        if self._config.enable_charts and data:
-            chart = ChartView.from_table_data(
-                data=data,
-                x_key="product",
-                y_key="amount",
-                chart_type=ChartType.BAR,
-                title="売上データ",
-            ).to_dict()
+        sql = str(sql_result.data.get("sql", ""))
+        data = sql_result.data.get("data", [])
+        columns = sql_result.data.get("columns", [])
+        answer = str(sql_result.data.get("answer", ""))
+        chart = sql_result.data.get("chart")
+        agent_trace.append(f"Text2SQL succeeded: rows={len(data) if isinstance(data, list) else 0}")
 
         # 富文本レスポンス生成
         rich_response = None
@@ -356,8 +368,8 @@ class EnhancedFAQAgent(AgentBlock):
             rich_response = self._build_rich_response(
                 answer=answer,
                 sql=sql,
-                data=data,
-                columns=columns,
+                data=data if isinstance(data, list) else [],
+                columns=columns if isinstance(columns, list) else [],
                 query_type="sql",
             )
 
@@ -370,9 +382,9 @@ class EnhancedFAQAgent(AgentBlock):
             confidence=0.9,
             rich_response=rich_response.to_dict() if rich_response else None,
             sql=sql,
-            data=data,
-            columns=columns,
-            chart=chart,
+            data=data if isinstance(data, list) else [],
+            columns=columns if isinstance(columns, list) else [],
+            chart=chart if isinstance(chart, dict) else None,
             suggestions=suggestions,
             agent_trace=agent_trace,
         )
@@ -500,6 +512,7 @@ class EnhancedFAQAgent(AgentBlock):
         if self._initialized:
             return
 
+        from agentflow.services import SQLDialect, Text2SQLConfig, Text2SQLService
         from agentflow.skills.builtin.knowledge_qa import (
             AnswerGenerator,
             GapAnalyzer,
@@ -509,6 +522,17 @@ class EnhancedFAQAgent(AgentBlock):
         self._retriever = Retriever()
         self._answer_generator = AnswerGenerator(llm_client=self._llm_client)
         self._gap_analyzer = GapAnalyzer() if self._config.enable_gap_analysis else None
+        try:
+            dialect = SQLDialect(self._config.sql_dialect)
+        except ValueError:
+            dialect = SQLDialect.POSTGRESQL
+        self._text2sql_service = Text2SQLService(
+            Text2SQLConfig(
+                schema=self._config.sql_schema,
+                dialect=dialect,
+                auto_chart=self._config.enable_charts,
+            )
+        )
 
         self._initialized = True
         self._logger.info("EnhancedFAQAgent initialized")

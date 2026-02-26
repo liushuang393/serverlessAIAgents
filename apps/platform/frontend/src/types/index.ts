@@ -434,7 +434,7 @@ export interface RAGPattern {
 /** RAG データソース */
 export interface RAGDataSource {
   type: string;
-  uri: string;
+  uri?: string | null;
   label?: string;
   enabled?: boolean;
   schedule?: string | null;

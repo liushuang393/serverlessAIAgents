@@ -11,8 +11,12 @@ from typing import TYPE_CHECKING, Any
 from apps.faq_system.backend.auth.dependencies import require_auth
 from apps.faq_system.backend.config import KnowledgeBaseType, kb_registry
 from apps.faq_system.backend.rag.parsers import FileParser
-from apps.faq_system.routers.dependencies import get_rag_service
-from fastapi import APIRouter, Depends, File, Query, UploadFile
+from apps.faq_system.routers.dependencies import (
+    get_rag_ingestion_orchestrator,
+    get_rag_service,
+    is_rag_enabled,
+)
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
 from agentflow.services import RAGConfig, RAGService
@@ -56,6 +60,28 @@ class AddDocumentRequest(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict, description="メタデータ")
 
 
+class IngestRequest(BaseModel):
+    """手動 ingest リクエスト."""
+
+    source_ids: list[str] = Field(default_factory=list, description="対象 source_id 一覧")
+    dry_run: bool = Field(default=False, description="実処理を行わず計画のみ返す")
+
+
+def _raise_service_error(
+    *,
+    message: str,
+    error_code: str | None,
+) -> None:
+    status_code = 400 if error_code and error_code.startswith("invalid_") else 500
+    raise HTTPException(
+        status_code=status_code,
+        detail={
+            "message": message,
+            "error_code": error_code or "service_error",
+        },
+    )
+
+
 # ---------------------------------------------------------------------------
 # エンドポイント
 # ---------------------------------------------------------------------------
@@ -67,6 +93,12 @@ async def rag_query(
     _user: UserInfo = Depends(require_auth),
 ) -> dict[str, Any]:
     """RAG クエリ API (認証必須)."""
+    if not is_rag_enabled():
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "RAG is disabled by app config", "error_code": "rag_disabled"},
+        )
+
     collection = kb_registry.resolve_collection(
         kb_type=request.kb_type,
         explicit_collection=request.collection,
@@ -78,6 +110,11 @@ async def rag_query(
         )
     )
     result = await service.execute(action="query", question=request.question)
+    if not result.success:
+        _raise_service_error(
+            message=result.error_message or "RAG query failed",
+            error_code=result.error_code,
+        )
     return result.data
 
 
@@ -87,6 +124,12 @@ async def rag_add_document(
     _user: UserInfo = Depends(require_auth),
 ) -> dict[str, Any]:
     """ドキュメント追加 API (認証必須)."""
+    if not is_rag_enabled():
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "RAG is disabled by app config", "error_code": "rag_disabled"},
+        )
+
     collection = kb_registry.resolve_collection(
         kb_type=request.kb_type,
         explicit_collection=request.collection,
@@ -97,6 +140,11 @@ async def rag_add_document(
         content=request.content,
         metadata=request.metadata,
     )
+    if not result.success:
+        _raise_service_error(
+            message=result.error_message or "RAG add document failed",
+            error_code=result.error_code,
+        )
     return result.data
 
 
@@ -108,6 +156,12 @@ async def rag_upload_file(
     _user: UserInfo = Depends(require_auth),
 ) -> dict[str, Any]:
     """ファイルアップロードによるドキュメント追加 API (認証必須)."""
+    if not is_rag_enabled():
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "RAG is disabled by app config", "error_code": "rag_disabled"},
+        )
+
     filename = file.filename or "uploaded_file"
     ext = filename.split(".")[-1].lower() if "." in filename else ""
 
@@ -125,10 +179,19 @@ async def rag_upload_file(
             # Default to text
             content = file_bytes.decode("utf-8")
     except Exception as exc:
-        return {"success": False, "message": f"ファイルの解析に失敗しました: {exc!s}"}
+        raise HTTPException(
+            status_code=400,
+            detail={"message": f"ファイルの解析に失敗しました: {exc!s}", "error_code": "invalid_file"},
+        ) from exc
 
     if not content.strip():
-        return {"success": False, "message": "ファイルからテキストを抽出できませんでした。"}
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": "ファイルからテキストを抽出できませんでした。",
+                "error_code": "empty_file_content",
+            },
+        )
 
     target_collection = kb_registry.resolve_collection(
         kb_type=kb_type,
@@ -140,4 +203,33 @@ async def rag_upload_file(
         content=content,
         metadata={"source": filename, "type": ext},
     )
+    if not result.success:
+        _raise_service_error(
+            message=result.error_message or "RAG upload failed",
+            error_code=result.error_code,
+        )
     return result.data
+
+
+@router.post("/api/rag/ingest")
+async def rag_ingest(
+    request: IngestRequest,
+    _user: UserInfo = Depends(require_auth),
+) -> dict[str, Any]:
+    """RAG data source ingest を手動実行."""
+    orchestrator = get_rag_ingestion_orchestrator()
+    return await orchestrator.ingest(
+        source_ids=request.source_ids or None,
+        dry_run=request.dry_run,
+    )
+
+
+@router.get("/api/rag/ingest/runs")
+async def rag_ingest_runs(
+    limit: int = Query(20, ge=1, le=100),
+    _user: UserInfo = Depends(require_auth),
+) -> dict[str, Any]:
+    """直近 ingest 実行履歴を返す."""
+    orchestrator = get_rag_ingestion_orchestrator()
+    runs = orchestrator.list_runs(limit=limit)
+    return {"total": len(runs), "runs": runs}

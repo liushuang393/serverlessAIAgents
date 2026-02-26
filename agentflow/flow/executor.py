@@ -208,9 +208,10 @@ class FlowExecutor:
                 if result.action == NextAction.EARLY_RETURN:
                     # Review の場合は review_verdict イベントを発行
                     if node.node_type == NodeType.REVIEW:
+                        er_data = result.early_return_data or {}
                         yield {
                             "type": "review_verdict",
-                            "data": {"verdict": "COACH"},
+                            "data": {"verdict": er_data.get("verdict", "COACH")},
                         }
 
                     # 早期リターン（Gateインターセプト）

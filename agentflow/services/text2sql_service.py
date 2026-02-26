@@ -244,7 +244,23 @@ class Text2SQLService(ServiceBase[dict[str, Any]]):
         if not self._db:
             msg = "データベース未接続"
             raise RuntimeError(msg)
-        rows = await self._db.execute_raw(sql)
+        return await self._execute_rows(sql)
+
+    async def _execute_rows(self, sql: str) -> list[dict[str, Any]]:
+        """DB provider 差異を吸収して SQL 実行結果を辞書配列へ正規化."""
+        if not self._db:
+            msg = "データベース未接続"
+            raise RuntimeError(msg)
+
+        rows: Any = None
+        if hasattr(self._db, "execute_raw"):
+            rows = await self._db.execute_raw(sql)
+        elif hasattr(self._db, "execute"):
+            rows = await self._db.execute(sql)
+        else:
+            msg = "DB provider does not support SQL execution"
+            raise RuntimeError(msg)
+
         if not isinstance(rows, list):
             return []
         return [row if isinstance(row, dict) else {"value": row} for row in rows]
@@ -508,7 +524,7 @@ SQLクエリのみを出力してください（説明不要）:
         start_time = time.time()
 
         try:
-            rows = await self._db.execute_raw(sql)
+            rows = await self._execute_rows(sql)
             exec_time = (time.time() - start_time) * 1000
 
             if rows:

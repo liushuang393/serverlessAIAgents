@@ -200,6 +200,74 @@ class TestRagAppConfigs:
         assert resp.status_code == 404
         assert resp.json()["detail"]["error_code"] == "APP_NOT_FOUND"
 
+    def test_patch_database_source_without_uri_is_accepted(self, phase3_test_client: TestClient) -> None:
+        """database source は uri 未指定でも保存できる（runtime DB fallback）."""
+        resp = phase3_test_client.patch(
+            "/api/studios/framework/rag/apps/rag_app/config",
+            json={
+                "data_sources": [
+                    {
+                        "type": "database",
+                        "options": {
+                            "database_type": "postgresql",
+                            "dialect": "postgresql",
+                            "read_mode": "query",
+                            "query": "SELECT 1 AS sample_value",
+                        },
+                    }
+                ]
+            },
+        )
+        assert resp.status_code == 200
+        payload = resp.json()
+        assert payload["rag"]["data_sources"][0]["type"] == "database"
+        assert payload["rag"]["data_sources"][0].get("uri", "") in {"", None}
+
+    def test_patch_database_source_without_uri_and_without_runtime_db_returns_400(
+        self,
+        phase3_test_client: TestClient,
+    ) -> None:
+        """runtime DB URL が無い app では database source の uri 必須."""
+        resp = phase3_test_client.patch(
+            "/api/studios/framework/rag/apps/test_app/config",
+            json={
+                "enabled": True,
+                "data_sources": [
+                    {
+                        "type": "database",
+                        "options": {
+                            "database_type": "postgresql",
+                            "dialect": "postgresql",
+                            "read_mode": "query",
+                            "query": "SELECT 1 AS sample_value",
+                        },
+                    }
+                ],
+            },
+        )
+        assert resp.status_code == 400
+        detail = resp.json()["detail"]
+        assert detail["error_code"] == "RAG_CONFIG_INVALID"
+        assert "runtime.database.url" in detail["message"]
+
+    def test_patch_invalid_non_database_source_without_uri_returns_422(
+        self,
+        phase3_test_client: TestClient,
+    ) -> None:
+        """database 以外の source は uri 必須."""
+        resp = phase3_test_client.patch(
+            "/api/studios/framework/rag/apps/rag_app/config",
+            json={
+                "data_sources": [
+                    {
+                        "type": "web",
+                        "label": "docs",
+                    }
+                ]
+            },
+        )
+        assert resp.status_code == 422
+
 
 class TestGetRagStats:
     """GET /api/studios/framework/rag/stats テスト."""

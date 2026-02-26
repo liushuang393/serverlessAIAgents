@@ -7,6 +7,7 @@ import {
   fetchAppRAGConfigs,
   fetchRAGPatterns,
   patchAppRAGConfig,
+  restartApp,
 } from '@/api/client';
 import type {
   AppRAGConfig,
@@ -207,6 +208,9 @@ function buildDatabaseSourceFromHint(
   const options: Record<string, unknown> = {
     dialect: kind,
     database_type: kind,
+    read_mode: 'query',
+    query: 'SELECT 1 AS sample_value',
+    row_limit: '200',
   };
   const databaseName = cleanText(dbHint?.database);
   const host = cleanText(dbHint?.host);
@@ -240,18 +244,60 @@ function draftFromSource(source: RAGDataSource): DataSourceDraft {
 
 function sourceToPayload(source: DataSourceDraft): RAGDataSource | null {
   const uri = cleanText(source.uri);
-  if (!uri) {
+  if (!uri && source.type !== 'database') {
     return null;
   }
   const label = cleanText(source.label);
   const schedule = cleanText(source.schedule);
+  const options = compactOptions(source.options);
+  if (source.type === 'database') {
+    const normalizedDbType = normalizeDatabaseKind(cleanText(options.database_type) || cleanText(options.dialect));
+    const normalizedDialect = normalizeDatabaseKind(cleanText(options.dialect) || normalizedDbType);
+    const nextOptions: Record<string, unknown> = {
+      ...options,
+      database_type: normalizedDbType || 'postgresql',
+      dialect: normalizedDialect || normalizedDbType || 'postgresql',
+    };
+
+    const readModeRaw = cleanText(nextOptions.read_mode).toLowerCase();
+    const hasTablesList =
+      Array.isArray(nextOptions.tables) &&
+      nextOptions.tables.some((item) => cleanText(item).length > 0);
+    const hasTable =
+      cleanText(nextOptions.table).length > 0 ||
+      cleanText(nextOptions.tables).length > 0 ||
+      hasTablesList;
+    const hasQuery = cleanText(nextOptions.query).length > 0;
+    let readMode: 'table' | 'query' = readModeRaw === 'table' ? 'table' : 'query';
+
+    if (readMode === 'table' && !hasTable) {
+      readMode = hasQuery ? 'query' : 'query';
+    }
+    if (readMode === 'query' && !hasQuery) {
+      nextOptions.query = 'SELECT 1 AS sample_value';
+    }
+    nextOptions.read_mode = readMode;
+    if (!cleanText(nextOptions.row_limit)) {
+      nextOptions.row_limit = '200';
+    }
+
+    return {
+      type: normalizeSourceType(source.type),
+      uri,
+      label,
+      enabled: source.enabled,
+      schedule: schedule || null,
+      options: nextOptions,
+    };
+  }
+
   return {
     type: normalizeSourceType(source.type),
     uri,
     label,
     enabled: source.enabled,
     schedule: schedule || null,
-    options: compactOptions(source.options),
+    options,
   };
 }
 
@@ -600,6 +646,16 @@ export function RAGOverview() {
     if (!selectedConfig || !form) {
       return;
     }
+    const runtimeDbUri = cleanText(selectedConfig.db_hint?.uri);
+    const hasInvalidDatabaseSource = form.data_sources.some(
+      (source) => source.type === 'database' && !cleanText(source.uri) && !runtimeDbUri,
+    );
+    if (hasInvalidDatabaseSource) {
+      setManagerError(
+        'Database source の URI が未設定です。URI を入力するか、app_config の runtime.database.url / runtime.urls.database を設定してください。',
+      );
+      return;
+    }
     setSaving(true);
     setManagerError(null);
     setManagerMessage(null);
@@ -623,8 +679,23 @@ export function RAGOverview() {
           .map(sourceToPayload)
           .filter((source): source is RAGDataSource => source !== null),
       });
+      let restartError: string | null = null;
+      try {
+        const restart = await restartApp(selectedConfig.app_name);
+        if (!restart.success) {
+          restartError =
+            (typeof restart.error === 'string' && restart.error) ||
+            'restart API returned success=false';
+        }
+      } catch (err) {
+        restartError = err instanceof Error ? err.message : 'restart request failed';
+      }
       await Promise.all([loadManager(), loadRAGOverview()]);
-      setManagerMessage('RAG 設定を保存しました。');
+      if (restartError) {
+        setManagerError(`RAG 設定は保存しましたが、再起動に失敗しました: ${restartError}`);
+      } else {
+        setManagerMessage(`RAG 設定を保存し、${selectedConfig.app_name} を再起動しました。`);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'RAG 設定の保存に失敗しました';
       setManagerError(message);
@@ -868,6 +939,9 @@ export function RAGOverview() {
                           className="input"
                           placeholder="0 */6 * * *"
                         />
+                        <p className="text-[11px] text-slate-500 mt-1">
+                          cron 5 段形式（分 時 日 月 曜日）。例: `0 */6 * * *` は 6 時間ごと。
+                        </p>
                       </Field>
                     </div>
 
@@ -949,7 +1023,7 @@ export function RAGOverview() {
                                 placeholder={`${source.type} source`}
                               />
                             </Field>
-                            <Field label="Schedule (optional)">
+                            <Field label="Schedule (optional, cron)">
                               <input
                                 value={source.schedule}
                                 onChange={(e) => updateSource(source.id, { schedule: e.target.value })}
@@ -1012,7 +1086,7 @@ export function RAGOverview() {
                                   </Field>
                                   <Field label="Read Mode">
                                     <select
-                                      value={readOption(source.options, 'read_mode') || 'table'}
+                                      value={readOption(source.options, 'read_mode') || 'query'}
                                       onChange={(e) => updateSourceOption(source.id, 'read_mode', e.target.value)}
                                       className="input"
                                     >

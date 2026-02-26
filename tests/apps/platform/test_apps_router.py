@@ -163,6 +163,17 @@ class TestAppActions:
         assert data["action"] == "stop"
         assert "success" in data
 
+    def test_restart_returns_action_result(self, test_client: TestClient) -> None:
+        """restart 実行結果を返す."""
+        resp = test_client.post("/api/studios/framework/apps/test_app/restart")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["app_name"] == "test_app"
+        assert data["action"] == "restart"
+        assert data["success"] is True
+        assert "stop" in data
+        assert "start" in data
+
     def test_action_nonexistent_app_returns_404(self, test_client: TestClient) -> None:
         """存在しない App は 404."""
         resp = test_client.post("/api/studios/framework/apps/nonexistent/start")

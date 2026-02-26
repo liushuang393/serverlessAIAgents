@@ -8,8 +8,12 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from apps.faq_system.backend.auth.dependencies import require_auth
-from apps.faq_system.routers.dependencies import get_sales_agent, get_sql_service
-from fastapi import APIRouter, Depends
+from apps.faq_system.routers.dependencies import (
+    get_sales_agent,
+    get_sql_service,
+    is_sql_enabled,
+)
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 
@@ -44,8 +48,23 @@ async def sql_query(
     _user: UserInfo = Depends(require_auth),
 ) -> dict[str, Any]:
     """SQL クエリ API (認証必須)."""
+    if not is_sql_enabled():
+        raise HTTPException(
+            status_code=400,
+            detail={"message": "SQL is disabled by app config", "error_code": "sql_disabled"},
+        )
+
     service = get_sql_service()
     result = await service.execute(action="query", question=request.question)
+    if not result.success:
+        status_code = 400 if result.error_code and result.error_code.startswith("invalid_") else 500
+        raise HTTPException(
+            status_code=status_code,
+            detail={
+                "message": result.error_message or "SQL query failed",
+                "error_code": result.error_code or "sql_error",
+            },
+        )
     return result.data
 
 

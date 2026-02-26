@@ -226,9 +226,9 @@ class TestClassifyQueryHeuristic:
         """Two or more SQL indicators required."""
         assert agent._classify_query_heuristic("show ranking and trend") == "sql"
 
-    def test_single_sql_keyword_defaults_faq(self, agent: FAQAgent) -> None:
-        """Single SQL keyword not enough -> faq."""
-        assert agent._classify_query_heuristic("show the ranking") == "faq"
+    def test_single_sql_keyword_returns_unclear(self, agent: FAQAgent) -> None:
+        """Single SQL keyword -> unclear (route policy decides fallback)."""
+        assert agent._classify_query_heuristic("show the ranking") == "unclear"
 
     def test_default_to_faq(self, agent: FAQAgent) -> None:
         """Unknown input defaults to faq."""

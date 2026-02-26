@@ -71,7 +71,9 @@
           "options": {
             "dialect": "sqlite",
             "database_type": "sqlite",
-            "read_mode": "table"
+            "read_mode": "query",
+            "query": "SELECT 1 AS sample_value",
+            "row_limit": 200
           }
         }
       ],
@@ -159,7 +161,9 @@
           "options": {
             "dialect": "sqlite",
             "database_type": "sqlite",
-            "read_mode": "table"
+            "read_mode": "query",
+            "query": "SELECT 1 AS sample_value",
+            "row_limit": 200
           }
         }
       ],

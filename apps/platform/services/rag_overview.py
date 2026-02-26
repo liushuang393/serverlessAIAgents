@@ -235,6 +235,7 @@ class RAGOverviewService:
         if config is None:
             msg = f"App not found: {app_name}"
             raise KeyError(msg)
+        raw_config = self._discovery.get_raw_config(app_name) or {}
 
         current = self._extract_app_rag(config)["rag"]
         pattern_name = patch.get("pattern")
@@ -247,6 +248,14 @@ class RAGOverviewService:
             **pattern_config,
             **patch,
         }
+        runtime_database_url = self._resolve_runtime_database_url(
+            app_config=config,
+            raw_config=raw_config,
+        )
+        merged["data_sources"] = self._normalize_data_sources_for_save(
+            merged.get("data_sources"),
+            runtime_database_url=runtime_database_url,
+        )
         rag_enabled = bool(merged.get("enabled", False))
         vector_provider = merged.get("vector_provider")
         if rag_enabled and not vector_provider:
@@ -326,6 +335,67 @@ class RAGOverviewService:
             },
         )
         return self._extract_app_rag(updated)
+
+    def _resolve_runtime_database_url(
+        self,
+        *,
+        app_config: Any,
+        raw_config: dict[str, Any],
+    ) -> str | None:
+        runtime_raw = raw_config.get("runtime")
+        runtime_data = runtime_raw if isinstance(runtime_raw, dict) else {}
+        runtime_urls = runtime_data.get("urls") if isinstance(runtime_data.get("urls"), dict) else {}
+        runtime_db = runtime_data.get("database") if isinstance(runtime_data.get("database"), dict) else {}
+
+        return (
+            self._clean_text(runtime_db.get("url"))
+            or self._clean_text(app_config.runtime.database.url)
+            or self._clean_text(runtime_urls.get("database"))
+            or self._clean_text(app_config.runtime.urls.database)
+        )
+
+    def _normalize_data_sources_for_save(
+        self,
+        value: Any,
+        *,
+        runtime_database_url: str | None,
+    ) -> list[dict[str, Any]]:
+        if not isinstance(value, list):
+            return []
+
+        result: list[dict[str, Any]] = []
+        for source in value:
+            if not isinstance(source, dict):
+                continue
+            normalized_source = dict(source)
+            source_type = self._normalize_source_type(self._clean_text(source.get("type")) or "web")
+            uri = self._clean_text(source.get("uri"))
+            normalized_source["type"] = source_type
+
+            if source_type == "database":
+                if uri:
+                    normalized_source["uri"] = uri
+                elif not runtime_database_url:
+                    msg = (
+                        "Database source URI is empty. "
+                        "Set source.uri or configure runtime.database.url/runtime.urls.database."
+                    )
+                    raise ValueError(msg)
+            else:
+                if not uri:
+                    msg = f"Data source uri is required for type={source_type}."
+                    raise ValueError(msg)
+                normalized_source["uri"] = uri
+
+            result.append(normalized_source)
+        return result
+
+    @staticmethod
+    def _normalize_source_type(value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized in {"db", "sql"}:
+            return "database"
+        return normalized or "web"
 
     def apps_using_rag(self) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = []

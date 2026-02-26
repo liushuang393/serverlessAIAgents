@@ -316,6 +316,7 @@ ORDER BY total_sales DESC""",
         self._postprocessor: SQLPostProcessor | None = None
         self._db_schema = db_schema or self._get_default_schema()
         self._nl2sql_initialized = False
+        self._db: Any = None
 
     def _get_default_schema(self) -> dict[str, list[str]]:
         """デフォルトスキーマを取得."""
@@ -730,20 +731,28 @@ SQLクエリのみを出力してください（説明不要）:
         return {"valid": True}
 
     async def _execute_sql(self, sql: str) -> tuple[list[dict[str, Any]], list[str]]:
-        """SQL実行（プレースホルダー）."""
-        # 実際の実装では DB プロバイダーを使用
-        # ここではサンプルデータを返す
-        sample_data = [
-            {"product_name": "商品A", "revenue": 15000000, "order_count": 1200},
-            {"product_name": "商品B", "revenue": 12300000, "order_count": 980},
-            {"product_name": "商品C", "revenue": 9800000, "order_count": 850},
-            {"product_name": "商品D", "revenue": 8500000, "order_count": 720},
-            {"product_name": "商品E", "revenue": 7200000, "order_count": 650},
-        ]
+        """SQL実行（実DB連携）."""
+        if self._db is None:
+            from agentflow.providers import get_db
 
-        columns = ["product_name", "revenue", "order_count"]
+            self._db = get_db()
+            await self._db.connect()
 
-        return sample_data, columns
+        rows: Any
+        if hasattr(self._db, "execute_raw"):
+            rows = await self._db.execute_raw(sql)
+        elif hasattr(self._db, "execute"):
+            rows = await self._db.execute(sql)
+        else:
+            msg = "DB provider does not support SQL execution"
+            raise RuntimeError(msg)
+
+        if not isinstance(rows, list):
+            return [], []
+
+        normalized_rows = [row if isinstance(row, dict) else {"value": row} for row in rows]
+        columns = list(normalized_rows[0].keys()) if normalized_rows else []
+        return normalized_rows, columns
 
     async def _generate_answer(
         self,
