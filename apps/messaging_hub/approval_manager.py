@@ -91,6 +91,27 @@ class ApprovalRequest:
             "metadata": self.metadata,
         }
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ApprovalRequest:
+        """辞書から復元する."""
+        created_at_raw = data.get("created_at")
+        expires_at_raw = data.get("expires_at")
+        decided_at_raw = data.get("decided_at")
+        return cls(
+            id=str(data.get("id", "")),
+            skill_name=str(data.get("skill_name", "")),
+            risk_level=RiskLevel(str(data.get("risk_level", "low"))),
+            params=data.get("params", {}) if isinstance(data.get("params"), dict) else {},
+            user_id=str(data.get("user_id", "system")),
+            status=ApprovalStatus(str(data.get("status", "pending"))),
+            created_at=datetime.fromisoformat(created_at_raw) if isinstance(created_at_raw, str) else datetime.now(),
+            expires_at=datetime.fromisoformat(expires_at_raw) if isinstance(expires_at_raw, str) else None,
+            decided_at=datetime.fromisoformat(decided_at_raw) if isinstance(decided_at_raw, str) else None,
+            decided_by=str(data.get("decided_by")) if data.get("decided_by") is not None else None,
+            rejection_reason=(str(data.get("rejection_reason")) if data.get("rejection_reason") is not None else None),
+            metadata=data.get("metadata", {}) if isinstance(data.get("metadata"), dict) else {},
+        )
+
     def is_expired(self) -> bool:
         """有効期限切れか確認."""
         if self.expires_at is None:
@@ -164,6 +185,7 @@ class ApprovalManager:
         self._hub = websocket_hub
         self._logger = logging.getLogger(__name__)
         self._callbacks: list[Callable[[ApprovalRequest], Awaitable[None]]] = []
+        self._decision_callbacks: list[Callable[[ApprovalRequest], Awaitable[None]]] = []
 
         # デフォルトの自動承認ルール
         self._setup_default_rules()
@@ -202,6 +224,18 @@ class ApprovalManager:
     def on_request(self, callback: Callable[[ApprovalRequest], Awaitable[None]]) -> None:
         """承認リクエスト通知コールバックを登録."""
         self._callbacks.append(callback)
+
+    def on_decision(self, callback: Callable[[ApprovalRequest], Awaitable[None]]) -> None:
+        """承認決裁通知コールバックを登録."""
+        self._decision_callbacks.append(callback)
+
+    async def _notify_decision_callbacks(self, request: ApprovalRequest) -> None:
+        """決裁コールバックを通知."""
+        for callback in self._decision_callbacks:
+            try:
+                await callback(request)
+            except Exception as e:
+                self._logger.exception("決裁コールバックエラー: %s", e)
 
     async def request_approval(
         self,
@@ -250,6 +284,14 @@ class ApprovalManager:
                     metadata=metadata or {},
                 )
                 self._history.append(request)
+                await self._notify_decision_callbacks(request)
+                if self._hub:
+                    await self._hub.broadcast(
+                        {
+                            "type": "approval_decided",
+                            "data": request.to_dict(),
+                        }
+                    )
                 return request_id, True
 
         # 承認リクエストを作成
@@ -335,6 +377,7 @@ class ApprovalManager:
                     "data": request.to_dict(),
                 }
             )
+        await self._notify_decision_callbacks(request)
 
         return True
 
@@ -379,6 +422,7 @@ class ApprovalManager:
                     "data": request.to_dict(),
                 }
             )
+        await self._notify_decision_callbacks(request)
 
         return True
 
@@ -391,6 +435,16 @@ class ApprovalManager:
     def get_request(self, request_id: str) -> ApprovalRequest | None:
         """リクエストを取得."""
         return self._requests.get(request_id)
+
+    def find_request(self, request_id: str) -> ApprovalRequest | None:
+        """保留/履歴を横断してリクエストを取得."""
+        pending = self._requests.get(request_id)
+        if pending is not None:
+            return pending
+        for request in self._history:
+            if request.id == request_id:
+                return request
+        return None
 
     def list_pending(self) -> list[ApprovalRequest]:
         """保留中のリクエスト一覧."""
@@ -429,6 +483,16 @@ class ApprovalManager:
         # 新しい順にソート
         filtered = sorted(filtered, key=lambda r: r.created_at, reverse=True)
         return filtered[offset : offset + limit]
+
+    def restore_requests(
+        self,
+        *,
+        pending: list[ApprovalRequest],
+        history: list[ApprovalRequest],
+    ) -> None:
+        """永続化済みリクエストを復元する."""
+        self._requests = {request.id: request for request in pending}
+        self._history = history.copy()
 
     def get_statistics(self) -> dict[str, Any]:
         """統計情報を取得."""

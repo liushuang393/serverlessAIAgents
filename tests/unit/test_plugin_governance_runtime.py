@@ -279,6 +279,33 @@ async def test_audit_event_contains_plugin_metadata() -> None:
 
 
 @pytest.mark.asyncio
+async def test_audit_event_enforces_default_metadata_when_context_is_missing() -> None:
+    """app_name/product_line と署名結果メタデータは常に記録される."""
+    audit = _InMemoryAuditLogger()
+    engine = GovernanceEngine(audit_logger=audit, auth_mode=AuthMode.RBAC)
+    tool = _write_tool(plugin_id=None, plugin_version=None)
+    context = ToolExecutionContext(
+        auth_context=_auth_context(),
+        app_name=None,
+        product_line=None,
+    )
+
+    _ = await engine.evaluate_tool(
+        tool,
+        tool_call_id="call-4b",
+        arguments={"path": "src/platform.py"},
+        context=context,
+    )
+
+    assert len(audit.events) == 1
+    metadata = audit.events[0].metadata
+    assert metadata.get("app_name") == "unknown_app"
+    assert metadata.get("product_line") == "unknown_product_line"
+    assert metadata.get("plugin_signature_status") == "not_evaluated"
+    assert metadata.get("plugin_signature_reason") == ""
+
+
+@pytest.mark.asyncio
 async def test_studio_side_effect_tool_requires_plugin_version() -> None:
     """strict product_line では plugin_version 未指定を拒否する."""
     audit = _InMemoryAuditLogger()
@@ -363,3 +390,54 @@ async def test_signature_mismatch_is_warning_only_for_strict_product_line(
 
     assert result.decision == GovernanceDecision.ALLOW
     assert any("plugin 署名検証 warning" in warning for warning in result.warnings)
+
+
+@pytest.mark.asyncio
+async def test_signature_mismatch_is_denied_when_enforcement_is_deny(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """署名強制 deny の場合は未検証署名を拒否する."""
+    monkeypatch.setenv("AGENTFLOW_PLUGIN_SIGNATURE_ENFORCEMENT", "deny")
+    plugins_dir, apps_dir = _write_plugin_fixture(tmp_path, include_sig=True)
+    registry = PluginRegistry(plugins_dir=plugins_dir, apps_dir=apps_dir)
+    engine = GovernanceEngine(
+        audit_logger=_InMemoryAuditLogger(),
+        auth_mode=AuthMode.RBAC,
+        plugin_registry=registry,
+    )
+    tool = _write_tool(
+        plugin_id="official.test-signature-pack",
+        plugin_version="1.0.0",
+        required_permissions=["repo.write"],
+    )
+    context = ToolExecutionContext(
+        auth_context=_auth_context(),
+        app_name="migration_app",
+        product_line="migration",
+    )
+
+    result = await engine.evaluate_tool(
+        tool,
+        tool_call_id="call-signature-deny",
+        arguments={"path": "src/main.cobol"},
+        context=context,
+    )
+
+    assert result.decision == GovernanceDecision.DENY
+    assert "plugin 署名検証 warning" in result.reason
+
+
+def test_signature_enforcement_defaults_to_deny_on_staging(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """APP_ENV=staging では deny が既定になる."""
+    monkeypatch.delenv("AGENTFLOW_PLUGIN_SIGNATURE_ENFORCEMENT", raising=False)
+    monkeypatch.setenv("APP_ENV", "staging")
+    plugins_dir = tmp_path / "plugins"
+    apps_dir = tmp_path / "apps"
+    plugins_dir.mkdir(parents=True)
+    apps_dir.mkdir(parents=True)
+    registry = PluginRegistry(plugins_dir=plugins_dir, apps_dir=apps_dir)
+    assert registry._signature_enforcement == "deny"  # type: ignore[attr-defined]

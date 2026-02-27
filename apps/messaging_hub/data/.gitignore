@@ -1,0 +1,5 @@
+# SQLite runtime artifacts
+*.db
+*.db-shm
+*.db-wal
+!.gitignore

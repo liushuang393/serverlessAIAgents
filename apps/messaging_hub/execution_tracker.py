@@ -87,6 +87,26 @@ class ExecutionEvent:
             "metadata": self.metadata,
         }
 
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ExecutionEvent:
+        """辞書から復元."""
+        started_at_raw = data.get("started_at")
+        completed_at_raw = data.get("completed_at")
+        return cls(
+            skill_name=str(data.get("skill_name", "")),
+            params=data.get("params", {}) if isinstance(data.get("params"), dict) else {},
+            status=ExecutionStatus(str(data.get("status", "pending"))),
+            id=str(data.get("id", str(uuid.uuid4()))),
+            started_at=datetime.fromisoformat(started_at_raw) if isinstance(started_at_raw, str) else datetime.now(),
+            completed_at=(datetime.fromisoformat(completed_at_raw) if isinstance(completed_at_raw, str) else None),
+            result=data.get("result"),
+            error=str(data.get("error")) if data.get("error") is not None else None,
+            duration_ms=float(data.get("duration_ms", 0.0)),
+            user_id=str(data.get("user_id", "system")),
+            approval_id=str(data.get("approval_id")) if data.get("approval_id") is not None else None,
+            metadata=data.get("metadata", {}) if isinstance(data.get("metadata"), dict) else {},
+        )
+
     def complete(
         self,
         status: ExecutionStatus,
@@ -388,6 +408,11 @@ class ExecutionTracker:
     def get_running(self) -> list[ExecutionEvent]:
         """実行中のイベント一覧."""
         return list(self._running.values())
+
+    def restore_events(self, events: list[ExecutionEvent]) -> None:
+        """永続化済みイベントを復元する."""
+        self._events = sorted(events, key=lambda event: event.started_at)
+        self._running = {event.id: event for event in events if event.status == ExecutionStatus.RUNNING}
 
     def get_recent(self, count: int = 10) -> list[ExecutionEvent]:
         """最近のイベント."""

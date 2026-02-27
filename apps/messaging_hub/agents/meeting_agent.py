@@ -10,16 +10,20 @@
 
 from __future__ import annotations
 
+import json
 import logging
+import re
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from agentflow.providers import get_llm
+from agentflow.skills.calendar import CalendarEvent
 
 
 if TYPE_CHECKING:
-    from agentflow.skills import CalendarEvent, CalendarSkill
+    from agentflow.skills import CalendarSkill
 
 
 @dataclass
@@ -169,6 +173,71 @@ class MeetingAgent:
         self._calendar = calendar_skill
         self._logger = logging.getLogger(__name__)
 
+    @staticmethod
+    def _strip_code_fence(content: str) -> str:
+        """```json ... ``` 形式を除去する."""
+        if "```json" in content:
+            return content.split("```json", 1)[1].split("```", 1)[0].strip()
+        if "```" in content:
+            return content.split("```", 1)[1].split("```", 1)[0].strip()
+        return content.strip()
+
+    @classmethod
+    def _parse_json_object(cls, content: str, default: dict[str, Any]) -> dict[str, Any]:
+        """JSON オブジェクトを安全に復元する."""
+        try:
+            parsed = json.loads(cls._strip_code_fence(content))
+            return parsed if isinstance(parsed, dict) else default
+        except json.JSONDecodeError:
+            return default
+
+    @classmethod
+    def _parse_json_array(cls, content: str) -> list[dict[str, Any]]:
+        """JSON 配列を安全に復元する."""
+        try:
+            parsed = json.loads(cls._strip_code_fence(content))
+            if not isinstance(parsed, list):
+                return []
+            return [item for item in parsed if isinstance(item, dict)]
+        except json.JSONDecodeError:
+            return []
+
+    async def _resolve_event_by_id(self, event_id: str) -> CalendarEvent | None:
+        """CalendarSkill から event_id を解決する."""
+        if not self._calendar or not event_id:
+            return None
+
+        adapter = getattr(self._calendar, "_adapter", None)
+        if adapter and hasattr(adapter, "get_event"):
+            try:
+                candidate = await adapter.get_event(event_id)
+                if isinstance(candidate, dict):
+                    return CalendarEvent.from_dict(candidate)
+                if isinstance(candidate, CalendarEvent):
+                    return candidate
+            except Exception as exc:
+                self._logger.warning("adapter.get_event failed for %s: %s", event_id, exc)
+
+        internal_events = getattr(self._calendar, "_events", {})
+        if isinstance(internal_events, dict):
+            candidate = internal_events.get(event_id)
+            if isinstance(candidate, CalendarEvent):
+                return candidate
+
+        now = datetime.now()
+        search_start = now - timedelta(days=365)
+        search_end = now + timedelta(days=365)
+        try:
+            events = await self._calendar.list_events(start=search_start, end=search_end)
+        except Exception as exc:
+            self._logger.warning("calendar.list_events failed while resolving event: %s", exc)
+            return None
+
+        for candidate in events:
+            if candidate.id == event_id:
+                return candidate
+        return None
+
     async def prepare_meeting_brief(
         self,
         event_id: str | None = None,
@@ -186,13 +255,10 @@ class MeetingAgent:
             会議ブリーフ
         """
         # イベント情報取得
-        if event is None and self._calendar and event_id:
-            # カレンダーからイベントを取得
-            # TODO: get_event_by_id の実装が必要
-            pass
+        if event is None and event_id:
+            event = await self._resolve_event_by_id(event_id)
 
         if event is None:
-            # ダミーイベントを作成
             event_data = {
                 "id": event_id or "unknown",
                 "title": "会議",
@@ -239,15 +305,7 @@ JSON形式で出力してください：
 
         content = response.get("content", "")
 
-        # JSONをパース
-        import json
-
-        try:
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
-            data = json.loads(content.strip())
-        except json.JSONDecodeError:
-            data = {}
+        data = self._parse_json_object(content, default={})
 
         brief = MeetingBrief(
             event_id=event_data.get("id", "unknown"),
@@ -329,21 +387,16 @@ JSON形式で出力してください：
 
         content = response.get("content", "")
 
-        # JSONをパース
-        import json
-
-        try:
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
-            data = json.loads(content.strip())
-        except json.JSONDecodeError:
-            data = {
+        data = self._parse_json_object(
+            content,
+            default={
                 "summary": content,
                 "key_discussions": [],
                 "decisions": [],
                 "action_items": [],
                 "next_steps": [],
-            }
+            },
+        )
 
         notes = MeetingNotes(
             event_id=event_id,
@@ -459,17 +512,7 @@ JSON配列で出力してください：
             ]
         )
 
-        content = response.get("content", "")
-
-        import json
-
-        try:
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
-            items = json.loads(content.strip())
-            return items if isinstance(items, list) else []
-        except json.JSONDecodeError:
-            return []
+        return self._parse_json_array(str(response.get("content", "")))
 
     async def summarize_meeting_history(
         self,
@@ -485,11 +528,79 @@ JSON配列で出力してください：
         Returns:
             要約結果
         """
-        # TODO: 過去の会議を取得して傾向を分析
+        if not self._calendar:
+            return {
+                "period_days": days,
+                "total_meetings": 0,
+                "total_hours": 0.0,
+                "average_duration_minutes": 0.0,
+                "top_topics": [],
+                "pending_action_items": [],
+                "meetings": [],
+            }
+
+        end_at = datetime.now()
+        start_at = end_at - timedelta(days=days)
+        events = await self._calendar.list_events(start=start_at, end=end_at)
+
+        selected = events
+        if event_ids:
+            id_filter = set(event_ids)
+            selected = [event for event in events if event.id in id_filter]
+
+        total_hours = 0.0
+        topics_counter: Counter[str] = Counter()
+        pending_action_items: list[dict[str, Any]] = []
+        meetings: list[dict[str, Any]] = []
+
+        for event in selected:
+            duration_minutes = max((event.end - event.start).total_seconds() / 60.0, 0.0)
+            total_hours += duration_minutes / 60.0
+
+            content = f"{event.title} {event.description}".strip()
+            tokens = re.findall(r"[A-Za-z0-9一-龥ぁ-んァ-ヶ]{2,}", content)
+            topics_counter.update(token.lower() for token in tokens)
+
+            metadata = event.metadata if isinstance(event.metadata, dict) else {}
+            action_items = metadata.get("action_items")
+            if isinstance(action_items, list):
+                for item in action_items:
+                    if not isinstance(item, dict):
+                        continue
+                    status = str(item.get("status", "pending")).lower()
+                    if status in {"done", "completed", "closed"}:
+                        continue
+                    pending_action_items.append(
+                        {
+                            "event_id": event.id,
+                            "event_title": event.title,
+                            "task": str(item.get("task", "")).strip(),
+                            "assignee": str(item.get("assignee", "未定")).strip() or "未定",
+                            "due_date": item.get("due_date", "未定"),
+                            "status": status,
+                        }
+                    )
+
+            meetings.append(
+                {
+                    "event_id": event.id,
+                    "title": event.title,
+                    "start": event.start.isoformat(),
+                    "end": event.end.isoformat(),
+                    "duration_minutes": round(duration_minutes, 1),
+                    "attendee_count": len(event.attendees),
+                }
+            )
+
+        total_meetings = len(selected)
+        avg_duration = round((total_hours * 60) / total_meetings, 1) if total_meetings > 0 else 0.0
+
         return {
             "period_days": days,
-            "total_meetings": 0,
-            "total_hours": 0,
-            "top_topics": [],
-            "pending_action_items": [],
+            "total_meetings": total_meetings,
+            "total_hours": round(total_hours, 2),
+            "average_duration_minutes": avg_duration,
+            "top_topics": [{"topic": topic, "count": count} for topic, count in topics_counter.most_common(8)],
+            "pending_action_items": pending_action_items[:50],
+            "meetings": meetings,
         }

@@ -58,12 +58,7 @@
   "dependencies": {
     "database": "sqlite",
     "redis": false,
-    "external": [
-      "google_oauth",
-      "ldap_server",
-      "microsoft_oauth",
-      "saml_idp"
-    ]
+    "external": ["google_oauth", "ldap_server", "microsoft_oauth", "saml_idp"]
   },
   "runtime": {
     "urls": {
@@ -86,7 +81,7 @@
     "commands": {
       "backend_dev": "python -m apps.auth_service.main",
       "frontend_dev": null,
-      "publish": null,
+      "publish": "cd apps/auth_service && docker compose up --build -d",
       "start": "nohup python -m apps.auth_service.main >/tmp/auth_service.log 2>&1 &",
       "stop": "pkill -f \"apps.auth_service.main\" || true"
     }
@@ -101,12 +96,7 @@
   "contracts": {
     "auth": {
       "enabled": true,
-      "providers": [
-        "jwt",
-        "oauth2",
-        "saml",
-        "ldap"
-      ],
+      "providers": ["jwt", "oauth2", "saml", "ldap"],
       "allow_anonymous": false,
       "required_scopes": [],
       "session_ttl_minutes": 60
@@ -136,9 +126,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },

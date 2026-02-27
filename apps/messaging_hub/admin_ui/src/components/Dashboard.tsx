@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   LineChart,
   Line,
@@ -7,9 +8,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-} from 'recharts';
-import { MessageSquare, Users, Radio, Activity } from 'lucide-react';
-import { getStatistics, getHealth } from '../api/client';
+} from "recharts";
+import { MessageSquare, Users, Radio, Activity } from "lucide-react";
+import { getStatistics, getHealth } from "../api/client";
 
 /**
  * 統計カード
@@ -26,16 +27,14 @@ function StatCard({
   change?: string;
 }) {
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="glass-panel elevated p-6">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-sm text-gray-500">{title}</p>
+          <p className="text-sm text-muted">{title}</p>
           <p className="text-2xl font-bold mt-1">{value}</p>
-          {change && (
-            <p className="text-sm text-green-600 mt-1">{change}</p>
-          )}
+          {change && <p className="text-sm text-green-600 mt-1">{change}</p>}
         </div>
-        <div className="p-3 bg-primary-100 rounded-full">
+        <div className="p-3 bg-white/90 rounded-full shadow">
           <Icon className="text-primary-600" size={24} />
         </div>
       </div>
@@ -50,31 +49,28 @@ function StatCard({
  */
 export default function Dashboard() {
   const { data: stats } = useQuery({
-    queryKey: ['statistics'],
+    queryKey: ["statistics"],
     queryFn: getStatistics,
     refetchInterval: 5000,
   });
 
   const { data: health } = useQuery({
-    queryKey: ['health'],
+    queryKey: ["health"],
     queryFn: getHealth,
     refetchInterval: 10000,
   });
 
-  // モックチャートデータ
-  const chartData = [
-    { time: '00:00', messages: 12 },
-    { time: '04:00', messages: 5 },
-    { time: '08:00', messages: 45 },
-    { time: '12:00', messages: 78 },
-    { time: '16:00', messages: 89 },
-    { time: '20:00', messages: 56 },
-    { time: '24:00', messages: 34 },
-  ];
+  const chartData = useMemo(
+    () =>
+      Object.entries(stats?.platformStats ?? {}).map(
+        ([platform, messages]) => ({ platform, messages }),
+      ),
+    [stats?.platformStats],
+  );
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">ダッシュボード</h2>
+      <h2 className="text-2xl font-bold mb-6 text-slate-900">ダッシュボード</h2>
 
       {/* 統計カード */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -96,17 +92,19 @@ export default function Dashboard() {
         <StatCard
           icon={Activity}
           title="システム状態"
-          value={health?.status ?? 'unknown'}
+          value={health?.status ?? "unknown"}
         />
       </div>
 
-      {/* メッセージ推移チャート */}
-      <div className="bg-white rounded-lg shadow p-6 mb-8">
-        <h3 className="text-lg font-semibold mb-4">メッセージ推移</h3>
+      {/* プラットフォーム別メッセージ分布 */}
+      <div className="glass-panel p-6 mb-8">
+        <h3 className="text-lg font-semibold mb-4">
+          プラットフォーム別メッセージ分布
+        </h3>
         <ResponsiveContainer width="100%" height={300}>
           <LineChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="time" />
+            <XAxis dataKey="platform" />
             <YAxis />
             <Tooltip />
             <Line
@@ -120,18 +118,19 @@ export default function Dashboard() {
       </div>
 
       {/* プラットフォーム別統計 */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="glass-panel p-6">
         <h3 className="text-lg font-semibold mb-4">プラットフォーム別</h3>
         <div className="space-y-3">
-          {Object.entries(stats?.platformStats ?? {}).map(([platform, count]) => (
-            <div key={platform} className="flex items-center justify-between">
-              <span className="capitalize">{platform}</span>
-              <span className="font-semibold">{count} メッセージ</span>
-            </div>
-          ))}
+          {Object.entries(stats?.platformStats ?? {}).map(
+            ([platform, count]) => (
+              <div key={platform} className="flex items-center justify-between">
+                <span className="capitalize">{platform}</span>
+                <span className="font-semibold">{count} メッセージ</span>
+              </div>
+            ),
+          )}
         </div>
       </div>
     </div>
   );
 }
-

@@ -267,6 +267,12 @@ class TestSkillGateway:
         result = await gateway.call("test_skill", {"param": "value"})
         assert result.success is True
         assert result.result == "success"
+        assert isinstance(result.evidence, list)
+        assert isinstance(result.artifacts, list)
+        assert result.rollback_handle is None
+        assert isinstance(result.cost, dict)
+        assert "duration_ms" in result.cost
+        assert isinstance(result.risk_flags, list)
         mock_handler.assert_called_once_with(param="value")
 
     @pytest.mark.asyncio
@@ -325,6 +331,8 @@ class TestSkillGateway:
         result = await gateway.call("test_skill", {"param": "value"}, dry_run=True)
         assert result.success is True
         assert result.dry_run is True
+        assert isinstance(result.cost, dict)
+        assert result.cost.get("token_estimate") == 0
         mock_handler.assert_not_called()
 
 
