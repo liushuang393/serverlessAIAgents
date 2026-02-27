@@ -20,6 +20,7 @@
 from agentflow.skills.browser.base import BrowserSkillBase, BrowserSkillError
 from agentflow.skills.browser.browser_skill import BrowserSkill
 from agentflow.skills.browser.config import BrowserSkillConfig
+from agentflow.skills.browser.playwright_skill import create_browser_skill_definitions
 
 
 __all__ = [
@@ -30,4 +31,6 @@ __all__ = [
     # 設定
     "BrowserSkillConfig",
     "BrowserSkillError",
+    # SkillGateway 統合
+    "create_browser_skill_definitions",
 ]

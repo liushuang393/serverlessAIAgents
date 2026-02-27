@@ -21,7 +21,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
 
-class SkillCategory(str, Enum):
+class SkillCategory(StrEnum):
     """スキルカテゴリ."""
 
     OS_READ = "os_read"  # OS読み取り（安全）
@@ -42,7 +42,7 @@ class SkillCategory(str, Enum):
     NETWORK = "network"  # ネットワーク
 
 
-class RiskLevel(str, Enum):
+class RiskLevel(StrEnum):
     """リスクレベル."""
 
     LOW = "low"  # 低リスク（自動承認可）
@@ -77,6 +77,11 @@ class SkillResult:
     duration_ms: float = 0.0
     executed_at: datetime = field(default_factory=datetime.now)
     dry_run: bool = False
+    evidence: list[dict[str, Any]] = field(default_factory=list)
+    artifacts: list[dict[str, Any]] = field(default_factory=list)
+    rollback_handle: dict[str, Any] | None = None
+    cost: dict[str, Any] = field(default_factory=dict)
+    risk_flags: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """辞書に変換."""
@@ -88,6 +93,11 @@ class SkillResult:
             "duration_ms": self.duration_ms,
             "executed_at": self.executed_at.isoformat(),
             "dry_run": self.dry_run,
+            "evidence": self.evidence,
+            "artifacts": self.artifacts,
+            "rollback_handle": self.rollback_handle,
+            "cost": self.cost,
+            "risk_flags": self.risk_flags,
         }
 
 
@@ -135,6 +145,24 @@ class HumanConfirmationRequired(SkillGatewayError):
         self.reason = reason
 
 
+class RateLimitError(SkillGatewayError):
+    """速率制限超過エラー."""
+
+    def __init__(self, caller_id: str, retry_after: int = 60) -> None:
+        """初期化.
+
+        Args:
+            caller_id: 呼び出し元識別子
+            retry_after: 再試行可能秒数
+        """
+        super().__init__(
+            f"速率制限超過: caller={caller_id}, retry_after={retry_after}s",
+            code="rate_limit_exceeded",
+        )
+        self.caller_id = caller_id
+        self.retry_after = retry_after
+
+
 class SkillGateway:
     """スキルゲートウェイ.
 
@@ -150,6 +178,7 @@ class SkillGateway:
         self._call_count = 0
         self._confirmation_handler: Callable[[str, str, dict[str, Any]], Awaitable[bool]] | None = None
         self._mode_switcher: Any = None  # ModeSwitcher（遅延初期化）
+        self._auth_service: Any = None  # AuthService（遅延初期化）
 
     @property
     def execution_mode(self) -> str:
@@ -168,6 +197,21 @@ class SkillGateway:
 
             self._mode_switcher = ModeSwitcher(self)
         return self._mode_switcher
+
+    def _get_auth_service(self) -> Any:
+        """AuthService を取得（遅延初期化）.
+
+        GatewayConfig.max_calls_per_minute を AuthService のレート制限設定として使用。
+        """
+        if self._auth_service is None:
+            from agentflow.services.auth_service import AuthConfig, AuthService
+
+            auth_config = AuthConfig(
+                rate_limit_requests=self._config.max_calls_per_minute,
+                rate_limit_window_seconds=60,
+            )
+            self._auth_service = AuthService(config=auth_config)
+        return self._auth_service
 
     def register_skill(self, skill: SkillDefinition) -> None:
         """スキルを登録."""
@@ -201,6 +245,7 @@ class SkillGateway:
         *,
         dry_run: bool = False,
         skip_confirmation: bool = False,
+        caller_id: str = "default",
     ) -> SkillResult:
         """スキルを呼び出し.
 
@@ -209,6 +254,7 @@ class SkillGateway:
             params: パラメータ
             dry_run: True の場合は検証のみ
             skip_confirmation: 確認をスキップ（危険）
+            caller_id: 呼び出し元識別子（速率制限の単位）
 
         Returns:
             実行結果
@@ -217,6 +263,7 @@ class SkillGateway:
             SkillNotFoundError: スキルが見つからない
             SkillPermissionError: 実行権限がない
             HumanConfirmationRequired: 人工確認が必要
+            RateLimitError: 速率制限超過
         """
         import asyncio
 
@@ -225,7 +272,18 @@ class SkillGateway:
         if skill is None:
             raise SkillNotFoundError(skill_name)
 
-        # 2. 実行モードチェック
+        # 2. 速率制限チェック（AuthService に委譲）
+        if not dry_run:
+            auth_service = self._get_auth_service()
+            rate_result = await auth_service.execute(
+                action="check_rate_limit",
+                identifier=f"{caller_id}:{skill_name}",
+            )
+            if rate_result.success and not rate_result.data.get("allowed", True):
+                retry_after = int(rate_result.data.get("retry_after", 60))
+                raise RateLimitError(caller_id=caller_id, retry_after=retry_after)
+
+        # 3. 実行モードチェック
         is_isolated = self._config.execution_mode == "isolated"
         if is_isolated and not skill.allowed_in_isolated:
             msg = f"スキル '{skill_name}' は isolated モードでは使用できません"
@@ -234,7 +292,7 @@ class SkillGateway:
                 skill_name,
             )
 
-        # 3. 人工確認チェック
+        # 4. 人工確認チェック
         needs_confirmation = skill.requires_confirmation or (
             skill.risk_level in (RiskLevel.HIGH, RiskLevel.CRITICAL) and self._config.require_confirmation_for_high_risk
         )
@@ -254,26 +312,28 @@ class SkillGateway:
                     f"高リスク操作 ({skill.risk_level.value}) には人工確認が必要です",
                 )
 
-        # 4. 監査ログ
+        # 5. 監査ログ
         if self._config.audit_all_calls:
             self._logger.info(
-                "GATEWAY: skill=%s, params=%s, dry_run=%s, mode=%s",
+                "GATEWAY: skill=%s, params=%s, dry_run=%s, mode=%s, caller=%s",
                 skill_name,
                 params,
                 dry_run,
                 self._config.execution_mode,
+                caller_id,
             )
 
-        # 5. dry_run の場合は検証のみ
+        # 7. dry_run の場合は検証のみ
         if dry_run:
             return SkillResult(
                 success=True,
                 skill_name=skill_name,
                 result={"validated": True, "params": params},
                 dry_run=True,
+                cost={"duration_ms": 0.0, "token_estimate": 0},
             )
 
-        # 6. 実行
+        # 8. 実行
         start_time = asyncio.get_event_loop().time()
         try:
             result = await skill.handler(**params)
@@ -284,6 +344,17 @@ class SkillGateway:
                 skill_name=skill_name,
                 result=result,
                 duration_ms=duration_ms,
+                evidence=[
+                    {
+                        "type": "skill_execution",
+                        "skill_name": skill_name,
+                        "timestamp": datetime.now().isoformat(),
+                    }
+                ],
+                cost={
+                    "duration_ms": duration_ms,
+                    "token_estimate": 0,
+                },
             )
 
         except Exception as e:
@@ -295,4 +366,17 @@ class SkillGateway:
                 skill_name=skill_name,
                 error=str(e),
                 duration_ms=duration_ms,
+                evidence=[
+                    {
+                        "type": "skill_execution_error",
+                        "skill_name": skill_name,
+                        "timestamp": datetime.now().isoformat(),
+                        "error": str(e),
+                    }
+                ],
+                cost={
+                    "duration_ms": duration_ms,
+                    "token_estimate": 0,
+                },
+                risk_flags=["execution_failed"],
             )

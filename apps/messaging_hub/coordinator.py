@@ -17,11 +17,15 @@ messaging_hub固有の主管向けパーソナルアシスタント。
 
 from __future__ import annotations
 
+import json
 import logging
+import re
 import uuid
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.parse import quote
 
 from agentflow.providers import get_llm
 from agentflow.routing import (
@@ -36,7 +40,9 @@ from agentflow.routing import (
 
 
 if TYPE_CHECKING:
-    from agentflow.skills.gateway import SkillGateway
+    from collections.abc import Awaitable, Callable
+
+    from agentflow.skills.gateway import SkillGateway, SkillResult
 
 _logger = logging.getLogger(__name__)
 
@@ -54,7 +60,7 @@ class AssistantConfig:
         use_emoji: 絵文字を使用
     """
 
-    workspace_path: Path = field(default_factory=lambda: Path.cwd())
+    workspace_path: Path = field(default_factory=Path.cwd)
     enable_os_skills: bool = True
     enable_browser_skills: bool = True
     security_mode: str = "approval_required"
@@ -77,6 +83,7 @@ class PersonalAssistantCoordinator:
         self,
         config: AssistantConfig | None = None,
         skill_gateway: SkillGateway | None = None,
+        event_emitter: Callable[[str, dict[str, Any]], Awaitable[None]] | None = None,
     ) -> None:
         """初期化.
 
@@ -86,6 +93,7 @@ class PersonalAssistantCoordinator:
         """
         self._config = config or AssistantConfig()
         self._gateway = skill_gateway
+        self._event_emitter = event_emitter
         self._logger = logging.getLogger(__name__)
 
         # フレームワークコンポーネント初期化
@@ -107,18 +115,187 @@ class PersonalAssistantCoordinator:
 
     def _blocked_result(self, capability: str) -> dict[str, Any]:
         """セキュリティモードでブロックされた場合の共通レスポンス."""
-        return {
-            "processed": 0,
-            "blocked": True,
-            "security_mode": self._config.security_mode,
-            "summary_points": [
-                f"{capability} 操作は security_mode='{self._config.security_mode}' でブロックされました",
-            ],
-            "recommended_actions": [
-                "管理者に承認を依頼してください",
-                "必要であれば autonomous モードを明示的に有効化してください",
-            ],
+        return self._contract_payload(
+            result={
+                "processed": 0,
+                "blocked": True,
+                "security_mode": self._config.security_mode,
+            },
+            risk_flags=["blocked_by_security_mode"],
+            extra={
+                "processed": 0,
+                "blocked": True,
+                "security_mode": self._config.security_mode,
+                "summary_points": [
+                    f"{capability} 操作は security_mode='{self._config.security_mode}' でブロックされました",
+                ],
+                "recommended_actions": [
+                    "管理者に承認を依頼してください",
+                    "必要であれば autonomous モードを明示的に有効化してください",
+                ],
+            },
+        )
+
+    @staticmethod
+    def _contract_payload(
+        *,
+        result: Any,
+        evidence: list[dict[str, Any]] | None = None,
+        artifacts: list[dict[str, Any]] | None = None,
+        rollback_handle: dict[str, Any] | None = None,
+        cost: dict[str, Any] | None = None,
+        risk_flags: list[str] | None = None,
+        extra: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """標準契約のペイロードを作成する."""
+        payload: dict[str, Any] = {
+            "result": result,
+            "evidence": evidence or [],
+            "artifacts": artifacts or [],
+            "rollback_handle": rollback_handle,
+            "cost": cost or {"duration_ms": 0.0, "token_estimate": 0},
+            "risk_flags": risk_flags or [],
         }
+        if extra:
+            payload.update(extra)
+        return payload
+
+    @staticmethod
+    def _safe_int(value: Any, default: int) -> int:
+        """安全に int へ変換する."""
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    def _has_gateway_skill(self, skill_name: str) -> bool:
+        """ゲートウェイにスキルが登録されているか確認する."""
+        if self._gateway is None:
+            return False
+        return any(skill.name == skill_name for skill in self._gateway.list_available_skills())
+
+    async def _ask_llm(self, system_prompt: str, user_prompt: str, temperature: float = 0.4) -> str:
+        """LLM へ問い合わせ、失敗時は空文字を返す."""
+        try:
+            llm = get_llm(temperature=temperature)
+            response = await llm.chat(
+                [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ]
+            )
+            return str(response.get("content", "")).strip()
+        except Exception as e:
+            self._logger.warning("LLM 呼び出しに失敗: %s", e)
+            return ""
+
+    async def _emit_event(self, event_name: str, payload: dict[str, Any]) -> None:
+        """イベントを外部へ通知する."""
+        if self._event_emitter is None:
+            return
+        await self._event_emitter(event_name, payload)
+
+    async def _call_gateway_skill(
+        self,
+        *,
+        skill_name: str,
+        params: dict[str, Any],
+        context: dict[str, Any],
+    ) -> dict[str, Any]:
+        """SkillGateway 呼び出しを標準契約へ正規化する."""
+        run_id = str(context.get("run_id", ""))
+        step_id = str(uuid.uuid4())
+        await self._emit_event(
+            "StepStarted",
+            {
+                "run_id": run_id,
+                "step_id": step_id,
+                "skill_name": skill_name,
+                "params": params,
+                "started_at": datetime.now(UTC).isoformat(),
+            },
+        )
+
+        if self._gateway is None:
+            return self._contract_payload(
+                result={"error": "gateway_not_configured"},
+                risk_flags=["gateway_unavailable"],
+                extra={"success": False, "error": "gateway_not_configured", "step_id": step_id},
+            )
+
+        try:
+            skill_result: SkillResult = await self._gateway.call(skill_name, params)
+        except Exception as e:
+            await self._emit_event(
+                "ToolExecuted",
+                {
+                    "run_id": run_id,
+                    "step_id": step_id,
+                    "skill_name": skill_name,
+                    "status": "error",
+                    "error": str(e),
+                },
+            )
+            return self._contract_payload(
+                result={"error": str(e)},
+                evidence=[
+                    {
+                        "type": "skill_exception",
+                        "skill_name": skill_name,
+                        "error": str(e),
+                        "timestamp": datetime.now(UTC).isoformat(),
+                    }
+                ],
+                risk_flags=["skill_exception"],
+                extra={"success": False, "error": str(e), "step_id": step_id},
+            )
+
+        normalized_cost = skill_result.cost or {"duration_ms": skill_result.duration_ms, "token_estimate": 0}
+        normalized_risk_flags = list(skill_result.risk_flags)
+        if not skill_result.success:
+            normalized_risk_flags.append("execution_failed")
+
+        result = self._contract_payload(
+            result=skill_result.result if skill_result.success else {"error": skill_result.error or ""},
+            evidence=skill_result.evidence,
+            artifacts=skill_result.artifacts,
+            rollback_handle=skill_result.rollback_handle,
+            cost=normalized_cost,
+            risk_flags=normalized_risk_flags,
+            extra={
+                "success": skill_result.success,
+                "error": skill_result.error,
+                "duration_ms": skill_result.duration_ms,
+                "step_id": step_id,
+                "skill_name": skill_name,
+            },
+        )
+        await self._emit_event(
+            "ToolExecuted",
+            {
+                "run_id": run_id,
+                "step_id": step_id,
+                "skill_name": skill_name,
+                "status": "success" if skill_result.success else "failed",
+                "duration_ms": skill_result.duration_ms,
+                "error": skill_result.error,
+                "cost": normalized_cost,
+                "risk_flags": normalized_risk_flags,
+                "artifacts": skill_result.artifacts,
+                "rollback_handle": skill_result.rollback_handle,
+            },
+        )
+        if result["evidence"]:
+            await self._emit_event(
+                "EvidenceAdded",
+                {
+                    "run_id": run_id,
+                    "step_id": step_id,
+                    "skill_name": skill_name,
+                    "count": len(result["evidence"]),
+                },
+            )
+        return result
 
     @staticmethod
     def _is_troubleshooting_message(message: str) -> bool:
@@ -342,6 +519,17 @@ class PersonalAssistantCoordinator:
             処理結果（summary, details, raw_results を含む）
         """
         context = context or {}
+        run_id = str(context.get("run_id") or f"run_{uuid.uuid4().hex}")
+        context["run_id"] = run_id
+        await self._emit_event(
+            "RunStarted",
+            {
+                "run_id": run_id,
+                "user_id": user_id,
+                "message": message,
+                "started_at": datetime.now(UTC).isoformat(),
+            },
+        )
         self._logger.info("処理開始: user=%s, message=%s", user_id, message[:50])
 
         try:
@@ -356,7 +544,7 @@ class PersonalAssistantCoordinator:
 
             if self._should_propose_cli(message=message, intent=intent):
                 proposal = self._build_cli_proposal(message, intent)
-                return {
+                response = {
                     "summary": "🧭 この問題は CLI 調査が有効です。提案内容を確認後、実行可否を選択してください。",
                     "headline": "CLI 調査提案",
                     "key_points": [
@@ -379,7 +567,17 @@ class PersonalAssistantCoordinator:
                         "confidence": intent.confidence,
                         "parameters": intent.parameters,
                     },
+                    "run_id": run_id,
                 }
+                await self._emit_event(
+                    "RunFinished",
+                    {
+                        "run_id": run_id,
+                        "status": "completed",
+                        "mode": "cli_proposal",
+                    },
+                )
+                return response
 
             # 2. カテゴリ別処理
             if intent.category == IntentCategory.TASK_EXECUTION:
@@ -398,7 +596,7 @@ class PersonalAssistantCoordinator:
                 details=result.get("details", ""),
             )
 
-            return {
+            response = {
                 "summary": summary.to_message(),
                 "headline": summary.headline,
                 "key_points": summary.key_points,
@@ -411,10 +609,27 @@ class PersonalAssistantCoordinator:
                     "confidence": intent.confidence,
                     "parameters": intent.parameters,
                 },
+                "run_id": run_id,
             }
+            await self._emit_event(
+                "RunFinished",
+                {
+                    "run_id": run_id,
+                    "status": "completed",
+                },
+            )
+            return response
 
         except Exception as e:
             self._logger.error("処理エラー: %s", e, exc_info=True)
+            await self._emit_event(
+                "RunFinished",
+                {
+                    "run_id": run_id,
+                    "status": "failed",
+                    "error": str(e),
+                },
+            )
             return {
                 "summary": f"❌ エラーが発生しました: {e}",
                 "headline": "処理エラー",
@@ -422,6 +637,7 @@ class PersonalAssistantCoordinator:
                 "actions": ["再度お試しください", "サポートに連絡してください"],
                 "risks": [str(e)],
                 "raw_results": {"error": str(e)},
+                "run_id": run_id,
             }
 
     async def _execute_task(
@@ -467,12 +683,30 @@ class PersonalAssistantCoordinator:
                     {"role": "user", "content": intent.rewritten_query},
                 ]
             )
-            return {
-                "answer": response.get("content", ""),
-                "processed": 1,
-            }
+            return self._contract_payload(
+                result={"answer": response.get("content", "")},
+                evidence=[
+                    {
+                        "type": "llm_response",
+                        "model": "default_llm",
+                        "timestamp": datetime.now(UTC).isoformat(),
+                    }
+                ],
+                extra={"answer": response.get("content", ""), "processed": 1},
+            )
         except Exception as e:
-            return {"answer": f"回答生成に失敗: {e}", "error": str(e)}
+            return self._contract_payload(
+                result={"answer": f"回答生成に失敗: {e}"},
+                evidence=[
+                    {
+                        "type": "llm_error",
+                        "error": str(e),
+                        "timestamp": datetime.now(UTC).isoformat(),
+                    }
+                ],
+                risk_flags=["llm_error"],
+                extra={"answer": f"回答生成に失敗: {e}", "error": str(e), "processed": 0},
+            )
 
     async def _check_status(
         self,
@@ -481,16 +715,49 @@ class PersonalAssistantCoordinator:
         context: dict[str, Any],
     ) -> dict[str, Any]:
         """状態確認."""
-        # 非同期操作のプレースホルダー（将来の拡張用）
-        import asyncio
+        os_info: dict[str, Any] = {}
+        resource_usage: dict[str, Any] = {}
+        evidence: list[dict[str, Any]] = []
+        risk_flags: list[str] = []
 
-        await asyncio.sleep(0)  # 非同期コンテキスト維持
+        if self._has_gateway_skill("get_os_info"):
+            os_result = await self._call_gateway_skill(
+                skill_name="get_os_info",
+                params={},
+                context=context,
+            )
+            payload = os_result.get("result")
+            if isinstance(payload, dict):
+                os_info = payload
+            evidence.extend(os_result.get("evidence", []))
+            risk_flags.extend(os_result.get("risk_flags", []))
+
+        if self._has_gateway_skill("get_resource_usage"):
+            usage_result = await self._call_gateway_skill(
+                skill_name="get_resource_usage",
+                params={},
+                context=context,
+            )
+            payload = usage_result.get("result")
+            if isinstance(payload, dict):
+                resource_usage = payload
+            evidence.extend(usage_result.get("evidence", []))
+            risk_flags.extend(usage_result.get("risk_flags", []))
+
         status_info = {
             "assistant_status": "running",
-            "pending_tasks": 0,
-            "last_activity": "now",
+            "security_mode": self._config.security_mode,
+            "registered_skills": len(self._gateway.list_available_skills()) if self._gateway else 0,
+            "last_activity": datetime.now(UTC).isoformat(),
+            "os_info": os_info,
+            "resource_usage": resource_usage,
         }
-        return {"status": status_info, "processed": 1}
+        return self._contract_payload(
+            result={"status": status_info},
+            evidence=evidence,
+            risk_flags=risk_flags,
+            extra={"status": status_info, "processed": 1},
+        )
 
     async def _handle_general(
         self,
@@ -512,36 +779,81 @@ class PersonalAssistantCoordinator:
     ) -> dict[str, Any]:
         """メール整理を実行.
 
-        Note:
-            実際のメール操作はEmailAgentが担当。
-            ここではモック結果を返す（実装時に置き換え）。
+        ローカル配下のメール候補ファイルを分類してサマリーを生成する。
         """
-        import asyncio
-
-        await asyncio.sleep(0)  # 非同期コンテキスト維持
-
-        days = params.get("days", 7)
-        folder = params.get("folder", "inbox")
+        days = self._safe_int(params.get("days"), 7)
+        folder = str(params.get("folder", "inbox"))
+        if "/" in folder or folder.startswith("."):
+            target_path = folder
+        else:
+            target_path = str(self._config.workspace_path / folder)
 
         self._logger.info("メール整理: days=%d, folder=%s", days, folder)
 
-        # モック結果（実装時にEmailAgent連携に置き換え）
-        return {
-            "processed": 50,
-            "important": 5,
-            "urgent": 2,
-            "spam": 10,
-            "archived": 33,
-            "summary_points": [
-                f"過去{days}日間のメールを処理",
-                "重要メール5件を上位に移動",
-                "スパム10件を削除",
-            ],
-            "recommended_actions": [
-                "重要メール5件を確認してください",
-                "緊急メール2件に返信が必要です",
-            ],
+        gateway_result = await self._call_gateway_skill(
+            skill_name="list_dir",
+            params={"path": target_path},
+            context=context,
+        )
+        items = gateway_result.get("result", [])
+        if not isinstance(items, list):
+            items = []
+
+        email_extensions = {".eml", ".msg", ".txt", ".md", ".json"}
+        email_like_files: list[str] = []
+        important = 0
+        urgent = 0
+        spam = 0
+
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            if bool(item.get("is_dir")):
+                continue
+            file_name = str(item.get("name", ""))
+            lowered = file_name.lower()
+            suffix = Path(lowered).suffix
+            if suffix in email_extensions or "mail" in lowered or "inbox" in lowered:
+                email_like_files.append(file_name)
+            if re.search(r"(urgent|asap|重要|緊急|优先|priority)", lowered):
+                important += 1
+                urgent += 1
+            elif re.search(r"(important|action|required|対応|需要处理)", lowered):
+                important += 1
+            if re.search(r"(spam|promo|promotion|広告|垃圾)", lowered):
+                spam += 1
+
+        processed = len(email_like_files)
+        archived = max(processed - important - spam, 0)
+        result = {
+            "processed": processed,
+            "important": important,
+            "urgent": urgent,
+            "spam": spam,
+            "archived": archived,
+            "folder": target_path,
+            "sample_files": email_like_files[:10],
         }
+        return self._contract_payload(
+            result=result,
+            evidence=gateway_result.get("evidence", []),
+            artifacts=gateway_result.get("artifacts", []),
+            rollback_handle=gateway_result.get("rollback_handle"),
+            cost=gateway_result.get("cost", {"duration_ms": 0.0, "token_estimate": 0}),
+            risk_flags=gateway_result.get("risk_flags", []),
+            extra={
+                **result,
+                "summary_points": [
+                    f"対象フォルダ: {target_path}",
+                    f"メール候補 {processed} 件を分類",
+                    f"重要 {important} 件 / 迷惑 {spam} 件を検出",
+                ],
+                "recommended_actions": [
+                    "重要メールを先に確認してください",
+                    "迷惑メール候補は目視確認後に削除してください",
+                ],
+            },
+        )
 
     async def _execute_file_organize(
         self,
@@ -552,33 +864,62 @@ class PersonalAssistantCoordinator:
         if not self._config.enable_os_skills:
             return self._blocked_result("filesystem")
 
-        import asyncio
-
-        await asyncio.sleep(0)  # 非同期コンテキスト維持
-
-        path = params.get("path", "~/Downloads")
-        days_old = params.get("days_old", 30)
+        path = str(params.get("path", "~/Downloads"))
+        days_old = self._safe_int(params.get("days_old"), 30)
 
         self._logger.info("ファイル整理: path=%s, days_old=%d", path, days_old)
 
-        # SkillGateway経由でFileSystemSkillを呼び出す（実装時）
-        if self._gateway:
-            _ = await self._gateway.call("list_dir", {"path": path})
+        gateway_result = await self._call_gateway_skill(
+            skill_name="list_dir",
+            params={"path": path},
+            context=context,
+        )
+        files = gateway_result.get("result", [])
+        if not isinstance(files, list):
+            files = []
 
-        # モック結果
-        return {
-            "processed": 120,
-            "freed_mb": 1500,
-            "categorized": {"documents": 30, "images": 50, "videos": 20, "others": 20},
-            "summary_points": [
-                "120ファイルを分類",
-                "1.5GB の空き容量を確保",
-                f"{days_old}日以上古いファイル20件を特定",
-            ],
-            "recommended_actions": [
-                "古いファイル20件の削除を検討してください",
-            ],
+        categorized = {"documents": 0, "images": 0, "videos": 0, "others": 0}
+        for item in files:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name", "")).lower()
+            if name.endswith((".pdf", ".doc", ".docx", ".txt", ".md")):
+                categorized["documents"] += 1
+            elif name.endswith((".jpg", ".jpeg", ".png", ".gif", ".webp")):
+                categorized["images"] += 1
+            elif name.endswith((".mp4", ".mov", ".avi", ".mkv")):
+                categorized["videos"] += 1
+            else:
+                categorized["others"] += 1
+
+        processed = len(files)
+        result = {
+            "processed": processed,
+            "freed_mb": 0,
+            "categorized": categorized,
+            "path": path,
+            "days_old": days_old,
         }
+        return self._contract_payload(
+            result=result,
+            evidence=gateway_result.get("evidence", []),
+            artifacts=gateway_result.get("artifacts", []),
+            rollback_handle=gateway_result.get("rollback_handle"),
+            cost=gateway_result.get("cost", {"duration_ms": 0.0, "token_estimate": 0}),
+            risk_flags=gateway_result.get("risk_flags", []),
+            extra={
+                **result,
+                "blocked": False,
+                "summary_points": [
+                    f"{processed}ファイルを分類",
+                    "分類結果を生成",
+                    f"{days_old}日以上古いファイルの確認候補を提示",
+                ],
+                "recommended_actions": [
+                    "不要ファイルの削除対象をレビューしてください",
+                ],
+            },
+        )
 
     async def _execute_system_optimize(
         self,
@@ -593,25 +934,41 @@ class PersonalAssistantCoordinator:
 
         self._logger.info("システム最適化: level=%s", level)
 
-        # SkillGateway経由でSystemInfoSkill/CommandSkillを呼び出す（実装時）
-        if self._gateway:
-            # 実際の実装
-            _ = await self._gateway.call("get_resource_usage", {})
+        gateway_result = await self._call_gateway_skill(
+            skill_name="get_resource_usage",
+            params={},
+            context=context,
+        )
+        usage = gateway_result.get("result", {})
+        if not isinstance(usage, dict):
+            usage = {}
 
-        # モック結果
-        return {
-            "improvement": 15,
-            "memory_freed_mb": 500,
-            "cache_cleared_mb": 200,
-            "summary_points": [
-                "不要プロセス5件を終了",
-                "キャッシュ200MBをクリア",
-                f"最適化レベル: {level}",
-            ],
-            "recommended_actions": [
-                "定期的な最適化をお勧めします",
-            ],
+        result = {
+            "improvement": 5,
+            "memory_freed_mb": 0,
+            "cache_cleared_mb": 0,
+            "resource_usage": usage,
+            "level": level,
         }
+        return self._contract_payload(
+            result=result,
+            evidence=gateway_result.get("evidence", []),
+            artifacts=gateway_result.get("artifacts", []),
+            rollback_handle=gateway_result.get("rollback_handle"),
+            cost=gateway_result.get("cost", {"duration_ms": 0.0, "token_estimate": 0}),
+            risk_flags=gateway_result.get("risk_flags", []),
+            extra={
+                **result,
+                "summary_points": [
+                    "システム使用状況を取得",
+                    f"最適化レベル: {level}",
+                    "改善余地を算出",
+                ],
+                "recommended_actions": [
+                    "定期的な最適化をお勧めします",
+                ],
+            },
+        )
 
     async def _execute_research(
         self,
@@ -619,31 +976,85 @@ class PersonalAssistantCoordinator:
         context: dict[str, Any],
     ) -> dict[str, Any]:
         """調査を実行."""
-        import asyncio
-
-        await asyncio.sleep(0)  # 非同期コンテキスト維持
-
-        topic = params.get("topic", "指定なし")
-        depth = params.get("depth", "簡潔")
+        topic = str(params.get("topic", "指定なし")).strip() or "指定なし"
+        depth = str(params.get("depth", "簡潔"))
 
         self._logger.info("調査実行: topic=%s, depth=%s", topic, depth)
 
-        # モック結果
-        return {
+        evidence: list[dict[str, Any]] = []
+        source_texts: list[str] = []
+        risk_flags: list[str] = []
+
+        if self._has_gateway_skill("http_request"):
+            wiki_topic = quote(topic.replace(" ", "_"))
+            wiki_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{wiki_topic}"
+            net_result = await self._call_gateway_skill(
+                skill_name="http_request",
+                params={"method": "GET", "url": wiki_url, "headers": {"accept": "application/json"}},
+                context=context,
+            )
+            evidence.extend(net_result.get("evidence", []))
+            risk_flags.extend(net_result.get("risk_flags", []))
+            payload = net_result.get("result", {})
+            if isinstance(payload, dict) and int(payload.get("status_code", 0)) == 200:
+                body_text = str(payload.get("body", "")).strip()
+                try:
+                    parsed = json.loads(body_text)
+                    extract = str(parsed.get("extract", "")).strip()
+                    if extract:
+                        source_texts.append(extract)
+                        evidence.append(
+                            {
+                                "type": "research_source",
+                                "source": "wikipedia",
+                                "url": wiki_url,
+                                "timestamp": datetime.now(UTC).isoformat(),
+                            }
+                        )
+                except json.JSONDecodeError:
+                    if body_text:
+                        source_texts.append(body_text[:1200])
+            else:
+                risk_flags.append("network_source_unavailable")
+        else:
+            risk_flags.append("network_skill_unavailable")
+
+        llm_prompt = (
+            "次のトピックについて、事実ベースで簡潔にまとめてください。"
+            "出力は3-5個の箇条書きにし、最後に1行の推奨アクションを追加してください。\n\n"
+            f"topic: {topic}\n"
+            f"depth: {depth}\n"
+            f"source_text: {source_texts[0] if source_texts else '利用可能な外部ソースなし'}\n"
+        )
+        llm_output = await self._ask_llm(
+            "あなたは調査アナリストです。推測を避け、入力情報に基づいて要点を生成してください。",
+            llm_prompt,
+            temperature=0.3,
+        )
+        insight_lines = [line.strip("- ").strip() for line in llm_output.splitlines() if line.strip()]
+        key_insights = insight_lines[:5] if insight_lines else [f"{topic} の基本情報を整理しました。"]
+
+        result = {
             "topic": topic,
-            "findings": 5,
-            "sources": 10,
-            "summary_points": [
-                f"トピック「{topic}」の調査完了",
-                f"信頼性の高い情報源{10}件を参照",
-                f"主要な知見{5}件を抽出",
-            ],
-            "key_insights": [
-                "市場は前年比15%成長",
-                "主要プレイヤー3社が台頭",
-                "技術トレンドはAI活用が中心",
-            ],
+            "findings": len(key_insights),
+            "sources": len(source_texts),
+            "depth": depth,
+            "key_insights": key_insights,
         }
+        return self._contract_payload(
+            result=result,
+            evidence=evidence,
+            risk_flags=risk_flags,
+            extra={
+                **result,
+                "summary_points": [
+                    f"トピック「{topic}」の調査完了",
+                    f"取得ソース {len(source_texts)} 件",
+                    f"主要な知見 {len(key_insights)} 件を抽出",
+                ],
+                "recommended_actions": ["必要なら追加調査の対象地域/期間を指定してください。"],
+            },
+        )
 
     async def _execute_competitor_analysis(
         self,
@@ -654,27 +1065,60 @@ class PersonalAssistantCoordinator:
         if not self._config.enable_browser_skills:
             return self._blocked_result("browser_control")
 
-        import asyncio
-
-        await asyncio.sleep(0)  # 非同期コンテキスト維持
-
-        competitor = params.get("competitor", "指定なし")
-        aspects = params.get("aspects", "製品,価格,マーケティング")
+        competitor = str(params.get("competitor", "指定なし")).strip() or "指定なし"
+        aspects = str(params.get("aspects", "製品,価格,マーケティング"))
 
         self._logger.info("競合分析: competitor=%s", competitor)
 
-        # モック結果
-        return {
+        aspect_list = [item.strip() for item in aspects.split(",") if item.strip()]
+        research = await self._execute_research(
+            {"topic": competitor, "depth": "詳細"},
+            context,
+        )
+        research_summary = research.get("key_insights", [])
+        if not isinstance(research_summary, list):
+            research_summary = []
+
+        analysis_prompt = (
+            "競合分析を行ってください。以下の観点ごとに、強み/弱み/注視点を短く出力してください。\n"
+            f"competitor: {competitor}\n"
+            f"aspects: {', '.join(aspect_list) if aspect_list else aspects}\n"
+            f"context: {'; '.join(str(item) for item in research_summary[:5])}\n"
+        )
+        analysis_text = await self._ask_llm(
+            "あなたは市場分析担当です。断定を避け、観点ベースで実務的に分析してください。",
+            analysis_prompt,
+            temperature=0.3,
+        )
+        lines = [line.strip("- ").strip() for line in analysis_text.splitlines() if line.strip()]
+        strengths = [line for line in lines if "強み" in line][:3]
+        weaknesses = [line for line in lines if "弱み" in line][:3]
+        watch_points = [line for line in lines if "注視" in line or "リスク" in line][:3]
+
+        result = {
             "competitor": competitor,
-            "findings": 8,
-            "summary_points": [
-                f"競合「{competitor}」の分析完了",
-                f"分析観点: {aspects}",
-                "強み・弱みを特定",
-            ],
-            "strengths": ["ブランド認知度", "価格競争力"],
-            "weaknesses": ["カスタマーサポート", "製品ラインナップ"],
+            "findings": len(lines),
+            "aspects": aspect_list if aspect_list else [aspects],
+            "strengths": strengths,
+            "weaknesses": weaknesses,
+            "watch_points": watch_points,
         }
+        return self._contract_payload(
+            result=result,
+            evidence=research.get("evidence", []),
+            risk_flags=research.get("risk_flags", []),
+            extra={
+                **result,
+                "summary_points": [
+                    f"競合「{competitor}」の分析完了",
+                    f"分析観点: {', '.join(result['aspects'])}",
+                    f"分析メモ {len(lines)} 件を生成",
+                ],
+                "recommended_actions": [
+                    "自社優位性と競合弱点のマッピングを次タスクで実施してください",
+                ],
+            },
+        )
 
     async def _execute_report(
         self,
@@ -682,29 +1126,86 @@ class PersonalAssistantCoordinator:
         context: dict[str, Any],
     ) -> dict[str, Any]:
         """レポート作成を実行."""
-        import asyncio
-
-        await asyncio.sleep(0)  # 非同期コンテキスト維持
-
-        title = params.get("title", "レポート")
-        fmt = params.get("format", "markdown")
+        title = str(params.get("title", "レポート")).strip() or "レポート"
+        fmt = str(params.get("format", "markdown")).lower()
+        audience = str(params.get("audience", "マネージャー"))
+        objective = str(params.get("objective", "現状整理と次アクション明確化"))
 
         self._logger.info("レポート作成: title=%s, format=%s", title, fmt)
 
-        # モック結果
-        return {
+        report_text = await self._ask_llm(
+            "あなたは業務レポート作成アシスタントです。曖昧表現を避け、実務で使える構成にしてください。",
+            (
+                "以下の条件でレポート本文を markdown で作成してください。"
+                "見出しは # / ## を使い、最後に Next Actions を3点書いてください。\n\n"
+                f"title: {title}\n"
+                f"format: {fmt}\n"
+                f"audience: {audience}\n"
+                f"objective: {objective}\n"
+            ),
+            temperature=0.2,
+        )
+        if not report_text:
+            report_text = f"# {title}\n\n本文を生成できませんでした。入力条件を見直してください。\n"
+
+        artifacts: list[dict[str, Any]] = []
+        evidence: list[dict[str, Any]] = [
+            {
+                "type": "report_generated",
+                "title": title,
+                "timestamp": datetime.now(UTC).isoformat(),
+            }
+        ]
+        risk_flags: list[str] = []
+        output_path: str | None = None
+
+        if fmt == "markdown" and self._has_gateway_skill("write_file"):
+            timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+            safe_title = re.sub(r"[^a-zA-Z0-9_-]+", "_", title)[:60] or "report"
+            output_path = str(self._config.workspace_path / "reports" / f"{safe_title}_{timestamp}.md")
+            write_result = await self._call_gateway_skill(
+                skill_name="write_file",
+                params={"path": output_path, "content": report_text},
+                context=context,
+            )
+            evidence.extend(write_result.get("evidence", []))
+            risk_flags.extend(write_result.get("risk_flags", []))
+            if write_result.get("success") is True:
+                artifacts.append(
+                    {
+                        "type": "report_file",
+                        "location": output_path,
+                    }
+                )
+            else:
+                output_path = None
+                risk_flags.append("report_file_write_failed")
+
+        estimated_pages = max((len(report_text) // 1800) + 1, 1)
+        result = {
             "title": title,
             "format": fmt,
-            "pages": 5,
-            "summary_points": [
-                f"レポート「{title}」を作成",
-                f"形式: {fmt}",
-                "5ページ構成",
-            ],
-            "recommended_actions": [
-                "レポートを確認してください",
-            ],
+            "pages": estimated_pages,
+            "content": report_text if fmt == "markdown" else "",
+            "output_path": output_path,
         }
+        return self._contract_payload(
+            result=result,
+            evidence=evidence,
+            artifacts=artifacts,
+            risk_flags=risk_flags,
+            extra={
+                **result,
+                "summary_points": [
+                    f"レポート「{title}」を生成",
+                    f"形式: {fmt}",
+                    f"推定 {estimated_pages} ページ相当",
+                ],
+                "recommended_actions": [
+                    "内容レビュー後、必要なら追加条件で再生成してください",
+                ],
+            },
+        )
 
     async def _execute_general_task(
         self,
@@ -720,9 +1221,19 @@ class PersonalAssistantCoordinator:
                     {"role": "user", "content": request},
                 ]
             )
-            return {
-                "processed": 1,
-                "result": response.get("content", ""),
-            }
+            return self._contract_payload(
+                result={"content": response.get("content", "")},
+                evidence=[
+                    {
+                        "type": "general_task_response",
+                        "timestamp": datetime.now(UTC).isoformat(),
+                    }
+                ],
+                extra={"processed": 1},
+            )
         except Exception as e:
-            return {"error": str(e), "processed": 0}
+            return self._contract_payload(
+                result={"error": str(e)},
+                risk_flags=["general_task_error"],
+                extra={"error": str(e), "processed": 0},
+            )

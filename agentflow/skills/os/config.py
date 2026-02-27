@@ -12,12 +12,12 @@ Example:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 
-class ExecutionMode(str, Enum):
+class ExecutionMode(StrEnum):
     """実行モード.
 
     Attributes:
@@ -125,6 +125,7 @@ class OSSkillConfig:
         command_whitelist: 許可コマンドリスト
         command_blacklist: 禁止コマンドリスト
         domain_whitelist: 許可ドメイン（HTTP リクエスト用）
+        allowed_paths: 追加許可パスのホワイトリスト（workspace_path に加えてアクセス可能）
         max_file_size_mb: 最大ファイルサイズ（MB）
         max_timeout_seconds: 最大タイムアウト（秒）
         allow_write: 書き込み許可（デフォルト禁止）
@@ -132,11 +133,12 @@ class OSSkillConfig:
         require_human_confirmation: 危険操作時に人工確認必須
     """
 
-    workspace_path: Path = field(default_factory=lambda: Path.cwd())
+    workspace_path: Path = field(default_factory=Path.cwd)
     execution_mode: ExecutionMode = ExecutionMode.ISOLATED
     command_whitelist: list[str] = field(default_factory=lambda: list(DEFAULT_COMMAND_WHITELIST))
     command_blacklist: list[str] = field(default_factory=lambda: list(DEFAULT_COMMAND_BLACKLIST))
     domain_whitelist: list[str] = field(default_factory=list)
+    allowed_paths: list[str] = field(default_factory=list)
     max_file_size_mb: int = 10
     max_timeout_seconds: int = 60
     allow_write: bool = False
@@ -161,10 +163,18 @@ class OSSkillConfig:
         return any(domain == allowed or domain.endswith(f".{allowed}") for allowed in self.domain_whitelist)
 
     def is_path_in_workspace(self, path: Path) -> bool:
-        """パスがワークスペース内か判定."""
+        """パスがワークスペース内か、または allowed_paths のいずれかのサブパスか判定."""
         try:
             resolved = path.resolve()
-            return resolved.is_relative_to(self.workspace_path)
+            # workspace_path チェック
+            if resolved.is_relative_to(self.workspace_path):
+                return True
+            # allowed_paths ホワイトリストチェック
+            for allowed_str in self.allowed_paths:
+                allowed = Path(allowed_str).resolve()
+                if resolved.is_relative_to(allowed):
+                    return True
+            return False
         except (ValueError, RuntimeError):
             return False
 
@@ -176,6 +186,7 @@ class OSSkillConfig:
             "command_whitelist": self.command_whitelist,
             "command_blacklist": self.command_blacklist,
             "domain_whitelist": self.domain_whitelist,
+            "allowed_paths": self.allowed_paths,
             "max_file_size_mb": self.max_file_size_mb,
             "max_timeout_seconds": self.max_timeout_seconds,
             "allow_write": self.allow_write,
