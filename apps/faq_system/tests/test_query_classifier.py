@@ -1,5 +1,4 @@
 # apps/faq_system/tests/test_query_classifier.py
-import pytest
 from apps.faq_system.backend.services.query_classifier import QueryClassifier, QueryType, classify_query
 
 
