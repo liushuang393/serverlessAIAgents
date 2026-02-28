@@ -467,6 +467,18 @@ except PackageNotFoundError:
     __version__ = "2.0.0"
 
 # =============================================================================
+# 公開API: Bootstrap（積木/プラグインモード + 動的能力自動接続）
+# =============================================================================
+from agentflow.agents.mixins import RAGCapableMixin
+from agentflow.bootstrap import (
+    AppCapabilityBootstrapper,
+    CapabilityBundle,
+    ConfigWatcher,
+    build_rag_engine,
+    build_skill_gateway,
+)
+
+# =============================================================================
 # 公開API: Runtime Context（プラットフォーム向け）
 # =============================================================================
 # =============================================================================
@@ -545,6 +557,15 @@ __all__ = [
     # =========================================================================
     # レスポンス
     "APIResponse",
+    # =========================================================================
+    # Bootstrap（積木/プラグインモード + 動的能力自動接続）
+    # =========================================================================
+    "AppCapabilityBootstrapper",
+    "CapabilityBundle",
+    "ConfigWatcher",
+    "RAGCapableMixin",
+    "build_rag_engine",
+    "build_skill_gateway",
     "ASTNode",
     "ASTNodeType",
     # Reasoner

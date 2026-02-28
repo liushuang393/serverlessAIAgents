@@ -104,3 +104,4 @@ apps/code_migration_assistant/artifacts/
 apps/code_migration_assistant/current_tasks/
 apps/code_migration_assistant/DECISIONS.md
 apps/code_migration_assistant/FAILURES.md
+.worktrees/

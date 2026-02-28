@@ -28,7 +28,7 @@ repos:
   # Python: Ruff (Linter + Formatter)
   # ========================================
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
+    rev: v0.15.4
     hooks:
       # Ruff Linter - 自動修正可能な問題を修正
       - id: ruff

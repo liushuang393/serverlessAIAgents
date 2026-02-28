@@ -18,6 +18,7 @@ GET   /api/studios/framework/apps/{app_name}/health      — ヘルスチェッ�
 POST  /api/studios/framework/apps/{app_name}/publish     — App 発布（docker compose up --build）
 POST  /api/studios/framework/apps/{app_name}/start       — App 起動（docker compose up）
 POST  /api/studios/framework/apps/{app_name}/stop        — App 停止（docker compose down）
+POST  /api/studios/framework/apps/{app_name}/restart     — App 再起動（stop → start）
 GET   /api/studios/framework/apps/{app_name}/cli/status  — CLI 状態確認
 POST  /api/studios/framework/apps/{app_name}/cli/setup   — CLI セットアップ実行
 """
@@ -814,6 +815,46 @@ async def stop_app(app_name: str) -> dict[str, Any]:
         config_path=discovery.get_config_path(app_name),
     )
     return result.to_dict()
+
+
+@router.post("/{app_name}/restart")
+async def restart_app(app_name: str) -> dict[str, Any]:
+    """App を再起動（stop -> start）."""
+    discovery = _get_discovery()
+    lifecycle = _get_lifecycle()
+    config = _get_app_or_404(discovery, app_name)
+    config_path = discovery.get_config_path(app_name)
+
+    stop_result = await lifecycle.stop_app(
+        config,
+        config_path=config_path,
+    )
+    start_result = await lifecycle.start_app(
+        config,
+        config_path=config_path,
+    )
+
+    success = bool(start_result.success)
+    response: dict[str, Any] = {
+        "app_name": app_name,
+        "action": "restart",
+        "success": success,
+        "command": "restart",
+        "command_source": start_result.command_source,
+        "cwd": start_result.cwd,
+        "return_code": start_result.return_code,
+        "stop": stop_result.to_dict(),
+        "start": start_result.to_dict(),
+    }
+    if start_result.stdout:
+        response["stdout"] = start_result.stdout
+    if start_result.stderr:
+        response["stderr"] = start_result.stderr
+    if start_result.checked_health is not None:
+        response["health"] = start_result.checked_health.to_dict()
+    if not success:
+        response["error"] = start_result.error or stop_result.error or "restart_failed"
+    return response
 
 
 @router.post("/{app_name}/local-start")

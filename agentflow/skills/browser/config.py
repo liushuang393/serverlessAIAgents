@@ -53,6 +53,7 @@ class BrowserSkillConfig:
     viewport_height: int = 720
     user_agent: str | None = None
     require_human_confirmation: bool = True
+    user_data_dir: str | None = None  # per-user 独立プロファイルディレクトリ（None=非永続コンテキスト）
 
     def is_domain_allowed(self, url: str) -> bool:
         """URLのドメインが許可されているか判定.
@@ -90,4 +91,5 @@ class BrowserSkillConfig:
             "navigation_timeout_seconds": self.navigation_timeout_seconds,
             "viewport_width": self.viewport_width,
             "viewport_height": self.viewport_height,
+            "user_data_dir": self.user_data_dir,
         }

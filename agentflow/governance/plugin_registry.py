@@ -32,7 +32,9 @@ _SUPPORTED_PRODUCT_LINES = {"migration", "faq", "assistant", "framework"}
 _STRICT_PRODUCT_LINES = {"migration", "faq", "assistant"}
 _SIDE_EFFECT_OPERATIONS = {"write", "delete", "execute"}
 _PLUGIN_SIGNATURE_ENFORCEMENT_ENV = "AGENTFLOW_PLUGIN_SIGNATURE_ENFORCEMENT"
+_APP_ENV_ENV = "APP_ENV"
 _DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT = "warn"
+_VALID_SIGNATURE_ENFORCEMENTS = {"warn", "deny"}
 
 
 _logger = logging.getLogger(__name__)
@@ -176,10 +178,14 @@ class PluginRegistry:
         assessment.plugin_risk_tier = manifest.risk_tier
         assessment.plugin_signature_status = manifest.signature_status
         assessment.plugin_signature_reason = manifest.signature_reason
-        if self._signature_enforcement == "warn" and manifest.signature_status != "verified":
-            assessment.warnings.append(
-                f"plugin 署名検証 warning: status={manifest.signature_status}, reason={manifest.signature_reason}",
+        if manifest.signature_status != "verified":
+            signature_message = (
+                f"plugin 署名検証 warning: status={manifest.signature_status}, reason={manifest.signature_reason}"
             )
+            if self._signature_enforcement == "deny":
+                assessment.errors.append(signature_message)
+            else:
+                assessment.warnings.append(signature_message)
         assessment.manifest_required_permissions = self._normalize_permissions(
             manifest.raw.get("required_permissions"),
         )
@@ -268,21 +274,22 @@ class PluginRegistry:
 
     @staticmethod
     def _resolve_signature_enforcement() -> str:
-        """署名検証ポリシーを解決する（P1 は warn 固定運用）。"""
-        raw = (
-            os.getenv(
+        """署名検証ポリシーを解決する."""
+        explicit = os.getenv(_PLUGIN_SIGNATURE_ENFORCEMENT_ENV, "").strip().lower()
+        if explicit:
+            if explicit in _VALID_SIGNATURE_ENFORCEMENTS:
+                return explicit
+            _logger.warning(
+                "未対応の %s=%s が指定されました。%s を使用します",
                 _PLUGIN_SIGNATURE_ENFORCEMENT_ENV,
+                explicit,
                 _DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT,
             )
-            .strip()
-            .lower()
-        )
-        if raw != _DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT:
-            _logger.warning(
-                "未対応の %s=%s が指定されました。P1 では warn 固定運用です",
-                _PLUGIN_SIGNATURE_ENFORCEMENT_ENV,
-                raw,
-            )
+            return _DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT
+
+        app_env = os.getenv(_APP_ENV_ENV, "dev").strip().lower()
+        if app_env in {"staging", "stage", "production", "prod"}:
+            return "deny"
         return _DEFAULT_PLUGIN_SIGNATURE_ENFORCEMENT
 
     def _load_manifests(self) -> None:

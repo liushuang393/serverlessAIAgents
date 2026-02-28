@@ -142,6 +142,12 @@ export async function stopApp(appName: string): Promise<AppActionResponse> {
   return data;
 }
 
+/** App restart（stop -> start） — 長時間操作 */
+export async function restartApp(appName: string): Promise<AppActionResponse> {
+  const { data } = await longRunningApi.post<AppActionResponse>(`${FRAMEWORK_APPS_BASE}/${appName}/restart`);
+  return data;
+}
+
 /** App ローカル開発起動（バックエンド・フロントエンドをローカルで起動） */
 export async function localStartApp(appName: string): Promise<AppActionResponse> {
   const { data } = await longRunningApi.post<AppActionResponse>(`${FRAMEWORK_APPS_BASE}/${appName}/local-start`);

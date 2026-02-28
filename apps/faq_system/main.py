@@ -63,6 +63,10 @@ from apps.faq_system.backend.auth.dependencies import (
 from apps.faq_system.backend.auth.router import router as auth_router
 from apps.faq_system.backend.config import kb_registry
 from apps.faq_system.backend.db.models import Base
+from apps.faq_system.backend.services.rag_runtime_config import (
+    load_rag_runtime_config,
+    sync_runtime_env,
+)
 from apps.faq_system.routers import (
     agents_router,
     chat_router,
@@ -71,6 +75,10 @@ from apps.faq_system.routers import (
     rag_router,
     sql_router,
     ws_router,
+)
+from apps.faq_system.routers.dependencies import (
+    start_rag_ingestion_scheduler,
+    stop_rag_ingestion_scheduler,
 )
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -102,6 +110,15 @@ def _load_app_config() -> dict[str, Any]:
         except (json.JSONDecodeError, OSError):
             return {}
     return {}
+
+
+def _sync_runtime_env_from_app_config() -> None:
+    """app_config の設定を環境変数へ反映（未設定時のみ）."""
+    cfg = load_rag_runtime_config(_APP_CONFIG_PATH)
+    sync_runtime_env(cfg)
+
+
+_sync_runtime_env_from_app_config()
 
 
 def _log_faq_startup(host: str, port: int) -> None:
@@ -147,6 +164,8 @@ db_manager = DatabaseManager(
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     """アプリ起動/終了時の初期化."""
+    from agentflow.bootstrap import AppCapabilityBootstrapper
+
     get_faq_contract_auth_guard().reset_cache()
     await db_manager.init()
     if db_manager.resolved_url.startswith("sqlite"):
@@ -154,6 +173,18 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     await kb_registry.ensure_initialized()
     await get_auth_service().ensure_bootstrap_data()
+    await start_rag_ingestion_scheduler()
+
+    # --- AppCapabilityBootstrapper: contracts.* から RAG/Skills を自動接続 ---
+    bundle, bootstrapper = await AppCapabilityBootstrapper.build(
+        app_name="faq_system",
+        platform_url=os.environ.get("PLATFORM_URL"),
+    )
+    _app.state.capability_bundle = bundle
+    logger.info(
+        "CapabilityBundle 構築完了: rag=%s",
+        "有効" if bundle.has_rag() else "無効",
+    )
 
     # 起動バナー出力
     cfg = _load_app_config()
@@ -162,6 +193,10 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     _log_faq_startup(host, port)
 
     yield
+
+    # --- シャットダウン: ConfigWatcher 停止 ---
+    await bootstrapper.shutdown()
+    await stop_rag_ingestion_scheduler()
     await db_manager.close()
 
 

@@ -37,6 +37,33 @@ class LoginRequest(BaseModel):
     username: str = Field(..., min_length=1, max_length=100, description="ユーザー名")
     password: str = Field(..., min_length=1, max_length=100, description="パスワード")
     totp_code: str | None = Field(None, description="TOTP MFA コード（6桁）")
+    redirect_uri: str | None = Field(
+        None,
+        description="SSO: 認証成功後のリダイレクト先 URL（クライアントアプリのウェルカムページ等）",
+    )
+
+
+class SSOLoginRequest(BaseModel):
+    """SSO ログインリクエスト.
+
+    クライアントアプリから auth_service へ認証を委譲する際に使用する。
+    認証成功後、redirect_uri へトークンを付与してリダイレクトする。
+    """
+
+    username: str = Field(..., min_length=1, max_length=100, description="ユーザー名")
+    password: str = Field(..., min_length=1, max_length=100, description="パスワード")
+    totp_code: str | None = Field(None, description="TOTP MFA コード（6桁）")
+    redirect_uri: str = Field(
+        ...,
+        min_length=1,
+        max_length=2048,
+        description="認証成功後のリダイレクト先 URL（必須）",
+    )
+    client_app: str | None = Field(
+        None,
+        max_length=100,
+        description="クライアントアプリ識別子（ログ・監査用）",
+    )
 
 
 class RegisterRequest(BaseModel):

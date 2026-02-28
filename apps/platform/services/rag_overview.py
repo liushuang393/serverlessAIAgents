@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal, get_args, get_origin
+
+from apps.platform.schemas.provisioning_schemas import AppCreateRequest
+
+from agentflow.services.text2sql_service import SQLDialect, Text2SQLConfig
 
 
 if TYPE_CHECKING:
@@ -139,6 +143,17 @@ _RAG_PATTERNS: list[dict[str, Any]] = [
 ]
 
 _VECTOR_PROVIDERS = {"qdrant", "pinecone", "weaviate", "pgvector", "milvus"}
+_DB_URI_SAMPLES: dict[str, str] = {
+    "postgresql": "postgresql+asyncpg://user:password@localhost:5432/app_db",
+    "sqlite": "sqlite+aiosqlite:///./app.db",
+    "mysql": "mysql+aiomysql://user:password@localhost:3306/app_db",
+    "mssql": "mssql+pyodbc://user:password@localhost:1433/app_db?driver=ODBC+Driver+18+for+SQL+Server",
+}
+_DB_DEFAULT_PORTS: dict[str, int] = {
+    "postgresql": 5432,
+    "mysql": 3306,
+    "mssql": 1433,
+}
 
 
 class RAGOverviewService:
@@ -157,6 +172,8 @@ class RAGOverviewService:
             "rerankers": _RERANKERS,
             "retrieval_methods": _RETRIEVAL_METHODS,
             "patterns": self.list_patterns(),
+            "database_types": self.list_database_types(),
+            "vector_providers": self.list_vector_providers(),
             "apps_using_rag": apps,
             "stats": {
                 "total_strategies": len(_CHUNK_STRATEGIES),
@@ -177,6 +194,32 @@ class RAGOverviewService:
     def list_patterns(self) -> list[dict[str, Any]]:
         return list(_RAG_PATTERNS)
 
+    def list_database_types(self) -> list[dict[str, Any]]:
+        result: list[dict[str, Any]] = []
+        for dialect in self._resolve_sql_dialects():
+            normalized = self._normalize_db_kind(dialect) or dialect
+            result.append(
+                {
+                    "name": normalized,
+                    "label": self._format_option_label(normalized),
+                    "dialect": normalized,
+                    "connection_kind": "file" if normalized == "sqlite" else "network",
+                    "default_port": _DB_DEFAULT_PORTS.get(normalized),
+                    "sample_uri": self._sample_db_uri(normalized),
+                }
+            )
+        return result
+
+    def list_vector_providers(self) -> list[dict[str, str]]:
+        providers = self._resolve_vector_provider_names()
+        return [
+            {
+                "name": provider,
+                "label": self._format_option_label(provider),
+            }
+            for provider in providers
+        ]
+
     def list_app_configs(self) -> list[dict[str, Any]]:
         return [self._extract_app_rag(config) for config in self._discovery.list_apps()]
 
@@ -192,6 +235,7 @@ class RAGOverviewService:
         if config is None:
             msg = f"App not found: {app_name}"
             raise KeyError(msg)
+        raw_config = self._discovery.get_raw_config(app_name) or {}
 
         current = self._extract_app_rag(config)["rag"]
         pattern_name = patch.get("pattern")
@@ -204,6 +248,14 @@ class RAGOverviewService:
             **pattern_config,
             **patch,
         }
+        runtime_database_url = self._resolve_runtime_database_url(
+            app_config=config,
+            raw_config=raw_config,
+        )
+        merged["data_sources"] = self._normalize_data_sources_for_save(
+            merged.get("data_sources"),
+            runtime_database_url=runtime_database_url,
+        )
         rag_enabled = bool(merged.get("enabled", False))
         vector_provider = merged.get("vector_provider")
         if rag_enabled and not vector_provider:
@@ -283,6 +335,67 @@ class RAGOverviewService:
             },
         )
         return self._extract_app_rag(updated)
+
+    def _resolve_runtime_database_url(
+        self,
+        *,
+        app_config: Any,
+        raw_config: dict[str, Any],
+    ) -> str | None:
+        runtime_raw = raw_config.get("runtime")
+        runtime_data = runtime_raw if isinstance(runtime_raw, dict) else {}
+        runtime_urls = runtime_data.get("urls") if isinstance(runtime_data.get("urls"), dict) else {}
+        runtime_db = runtime_data.get("database") if isinstance(runtime_data.get("database"), dict) else {}
+
+        return (
+            self._clean_text(runtime_db.get("url"))
+            or self._clean_text(app_config.runtime.database.url)
+            or self._clean_text(runtime_urls.get("database"))
+            or self._clean_text(app_config.runtime.urls.database)
+        )
+
+    def _normalize_data_sources_for_save(
+        self,
+        value: Any,
+        *,
+        runtime_database_url: str | None,
+    ) -> list[dict[str, Any]]:
+        if not isinstance(value, list):
+            return []
+
+        result: list[dict[str, Any]] = []
+        for source in value:
+            if not isinstance(source, dict):
+                continue
+            normalized_source = dict(source)
+            source_type = self._normalize_source_type(self._clean_text(source.get("type")) or "web")
+            uri = self._clean_text(source.get("uri"))
+            normalized_source["type"] = source_type
+
+            if source_type == "database":
+                if uri:
+                    normalized_source["uri"] = uri
+                elif not runtime_database_url:
+                    msg = (
+                        "Database source URI is empty. "
+                        "Set source.uri or configure runtime.database.url/runtime.urls.database."
+                    )
+                    raise ValueError(msg)
+            else:
+                if not uri:
+                    msg = f"Data source uri is required for type={source_type}."
+                    raise ValueError(msg)
+                normalized_source["uri"] = uri
+
+            result.append(normalized_source)
+        return result
+
+    @staticmethod
+    def _normalize_source_type(value: str) -> str:
+        normalized = value.strip().lower()
+        if normalized in {"db", "sql"}:
+            return "database"
+        return normalized or "web"
 
     def apps_using_rag(self) -> list[dict[str, Any]]:
         result: list[dict[str, Any]] = []
@@ -367,12 +480,14 @@ class RAGOverviewService:
             rag_service.get("data_sources"),
             [],
         )
+        db_hint = self._build_db_hint(app_config=app_config, raw_config=raw_config)
 
         return {
             "app_name": app_config.name,
             "display_name": app_config.display_name,
             "icon": app_config.icon,
             "config_path": str(self._discovery.get_config_path(app_config.name) or ""),
+            "db_hint": db_hint,
             "rag": {
                 "enabled": enabled,
                 "pattern": self._select(
@@ -504,3 +619,190 @@ class RAGOverviewService:
         if "collections" in raw_contract_rag and contract_collections:
             return contract_collections[0]
         return fallback_collection
+
+    def _build_db_hint(
+        self,
+        *,
+        app_config: Any,
+        raw_config: dict[str, Any],
+    ) -> dict[str, Any]:
+        runtime_raw = raw_config.get("runtime")
+        runtime_data = runtime_raw if isinstance(runtime_raw, dict) else {}
+        runtime_urls = runtime_data.get("urls") if isinstance(runtime_data.get("urls"), dict) else {}
+        runtime_db = runtime_data.get("database") if isinstance(runtime_data.get("database"), dict) else {}
+
+        services_raw = raw_config.get("services")
+        services = services_raw if isinstance(services_raw, dict) else {}
+        sql_raw = services.get("sql") if isinstance(services.get("sql"), dict) else {}
+
+        deps_raw = raw_config.get("dependencies")
+        dependencies = deps_raw if isinstance(deps_raw, dict) else {}
+
+        runtime_db_model = app_config.runtime.database
+        runtime_urls_model = app_config.runtime.urls
+        sql_service = app_config.services.get("sql") if isinstance(app_config.services, dict) else {}
+
+        kind = self._normalize_db_kind(
+            self._clean_text(runtime_db.get("kind"))
+            or self._clean_text(runtime_db_model.kind)
+            or self._clean_text(dependencies.get("database"))
+            or self._clean_text(sql_raw.get("dialect"))
+            or self._clean_text(sql_service.get("dialect") if isinstance(sql_service, dict) else None)
+        )
+        uri = (
+            self._clean_text(runtime_db.get("url"))
+            or self._clean_text(runtime_db_model.url)
+            or self._clean_text(runtime_urls.get("database"))
+            or self._clean_text(runtime_urls_model.database)
+        )
+        host = self._clean_text(runtime_db.get("host")) or self._clean_text(runtime_db_model.host)
+        port = (
+            self._coerce_port(runtime_db.get("port"))
+            or self._coerce_port(runtime_db_model.port)
+            or self._coerce_port(app_config.ports.db)
+        )
+        database_name = self._clean_text(runtime_db.get("name")) or self._clean_text(runtime_db_model.name)
+        user = self._clean_text(runtime_db.get("user")) or self._clean_text(runtime_db_model.user)
+
+        source = "sample"
+        if self._clean_text(runtime_db.get("url")) or self._clean_text(runtime_db_model.url):
+            source = "runtime.database"
+        elif self._clean_text(runtime_urls.get("database")) or self._clean_text(runtime_urls_model.database):
+            source = "runtime.urls.database"
+        elif self._clean_text(dependencies.get("database")):
+            source = "dependencies.database"
+        elif self._clean_text(sql_raw.get("dialect")):
+            source = "services.sql.dialect"
+
+        available = bool(kind or uri or host or port or database_name or user)
+        resolved_kind = kind or "postgresql"
+        sample_uri = self._sample_db_uri(resolved_kind)
+        sample_label = f"{app_config.name} SQL database"
+        message = (
+            "Detected DB settings from app_config."
+            if available
+            else "No DB settings found in app_config. Use sample URI to configure a database source."
+        )
+
+        return {
+            "available": available,
+            "kind": kind,
+            "uri": uri,
+            "host": host,
+            "port": port,
+            "database": database_name,
+            "user": user,
+            "source": source,
+            "sample_uri": sample_uri,
+            "sample_label": sample_label,
+            "message": message,
+        }
+
+    @staticmethod
+    def _normalize_db_kind(value: str | None) -> str | None:
+        text = RAGOverviewService._clean_text(value)
+        if text is None:
+            return None
+        text = text.lower()
+        if "postgres" in text:
+            return "postgresql"
+        if "sqlite" in text:
+            return "sqlite"
+        if "mysql" in text:
+            return "mysql"
+        if "mssql" in text or "sqlserver" in text or "sql_server" in text:
+            return "mssql"
+        return text
+
+    @staticmethod
+    def _sample_db_uri(kind: str) -> str:
+        normalized = RAGOverviewService._normalize_db_kind(kind) or "postgresql"
+        if normalized in _DB_URI_SAMPLES:
+            return _DB_URI_SAMPLES[normalized]
+        if normalized == "sqlite":
+            return "sqlite+aiosqlite:///./app.db"
+        port = _DB_DEFAULT_PORTS.get(normalized)
+        port_segment = f":{port}" if port is not None else ""
+        return f"{normalized}://user:password@localhost{port_segment}/app_db"
+
+    @staticmethod
+    def _clean_text(value: Any) -> str | None:
+        if value is None:
+            return None
+        text = str(value).strip()
+        return text or None
+
+    @staticmethod
+    def _coerce_port(value: Any) -> int | None:
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str) and value.strip().isdigit():
+            return int(value.strip())
+        return None
+
+    @staticmethod
+    def _resolve_sql_dialects() -> list[str]:
+        for field in Text2SQLConfig.get_config_fields():
+            if field.get("name") != "dialect":
+                continue
+            options = field.get("options")
+            if not isinstance(options, list):
+                continue
+            values = [
+                str(option).strip().lower()
+                for option in options
+                if str(option).strip()
+            ]
+            if values:
+                return values
+        return [dialect.value for dialect in SQLDialect]
+
+    @staticmethod
+    def _resolve_vector_provider_names() -> list[str]:
+        field = AppCreateRequest.model_fields.get("vector_database")
+        if field is None:
+            return sorted(_VECTOR_PROVIDERS)
+
+        values = RAGOverviewService._collect_literal_values(field.annotation)
+        providers = [value for value in values if value != "none"]
+        if providers:
+            return providers
+        return sorted(_VECTOR_PROVIDERS)
+
+    @staticmethod
+    def _collect_literal_values(annotation: Any) -> list[str]:
+        origin = get_origin(annotation)
+        if origin is Literal:
+            return [
+                str(arg).strip().lower()
+                for arg in get_args(annotation)
+                if isinstance(arg, str) and str(arg).strip()
+            ]
+        if origin is None:
+            return []
+        values: list[str] = []
+        for arg in get_args(annotation):
+            values.extend(RAGOverviewService._collect_literal_values(arg))
+        deduped: list[str] = []
+        for value in values:
+            if value not in deduped:
+                deduped.append(value)
+        return deduped
+
+    @staticmethod
+    def _format_option_label(name: str) -> str:
+        key = name.strip().lower()
+        labels = {
+            "postgresql": "PostgreSQL",
+            "mysql": "MySQL",
+            "sqlite": "SQLite",
+            "mssql": "SQL Server",
+            "qdrant": "Qdrant",
+            "pinecone": "Pinecone",
+            "weaviate": "Weaviate",
+            "pgvector": "PostgreSQL (pgvector)",
+            "milvus": "Milvus",
+        }
+        if key in labels:
+            return labels[key]
+        return key.replace("_", " ").title()

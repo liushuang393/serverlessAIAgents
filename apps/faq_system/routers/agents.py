@@ -162,11 +162,12 @@ async def internal_kb_query(
     user: UserInfo = Depends(require_auth),
 ) -> dict[str, Any]:
     """社内KB検索 (認証必須)."""
+    user_context = {**request.context, **_build_user_context(user)}
     return await _run_agent(
         AgentType.INTERNAL_KB,
         {
             "question": request.question,
-            "context": {**request.context, "user": _build_user_context(user)},
+            "user_context": user_context,
         },
     )
 
@@ -207,11 +208,12 @@ async def analytics_query(
     user: UserInfo = Depends(require_auth),
 ) -> dict[str, Any]:
     """データ分析 (認証必須)."""
+    user_context = {**request.context, **_build_user_context(user)}
     return await _run_agent(
         AgentType.ANALYTICS,
         {
             "question": request.question,
-            "context": {**request.context, "user": _build_user_context(user)},
+            "user_context": user_context,
         },
     )
 

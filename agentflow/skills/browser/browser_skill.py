@@ -93,7 +93,11 @@ class BrowserSkill(BrowserSkillBase):
         self._pages: list[Page] = []
 
     async def start(self) -> None:
-        """ブラウザを起動."""
+        """ブラウザを起動.
+
+        user_data_dir が設定されている場合は永続コンテキストを使用し、
+        ユーザーごとに独立したブラウザプロファイル（Cookie/セッション）を保持する。
+        """
         if self._browser is not None:
             return
 
@@ -103,18 +107,14 @@ class BrowserSkill(BrowserSkillBase):
             msg = "playwright がインストールされていません: pip install playwright && playwright install"
             raise BrowserSkillError(msg, skill_name="BrowserSkill")
 
-        self._audit_log("start_browser", {"browser_type": self._config.browser_type})
-
-        self._playwright = await async_playwright().start()
-
-        # ブラウザタイプ選択
-        browser_type = getattr(self._playwright, self._config.browser_type)
-
-        self._browser = await browser_type.launch(
-            headless=self._config.headless,
+        self._audit_log(
+            "start_browser",
+            {"browser_type": self._config.browser_type, "persistent": self._config.user_data_dir is not None},
         )
 
-        # コンテキスト作成（セキュリティ設定付き）
+        self._playwright = await async_playwright().start()
+        browser_type = getattr(self._playwright, self._config.browser_type)
+
         context_options: dict[str, Any] = {
             "viewport": {
                 "width": self._config.viewport_width,
@@ -122,16 +122,28 @@ class BrowserSkill(BrowserSkillBase):
             },
             "java_script_enabled": not self._config.disable_javascript,
         }
-
         if self._config.user_agent:
             context_options["user_agent"] = self._config.user_agent
 
-        self._context = await self._browser.new_context(**context_options)
+        if self._config.user_data_dir:
+            # per-user 永続コンテキスト（Cookie/セッションを保持）
+            import asyncio
+            from pathlib import Path
 
-        # ダウンロード/アップロード制御
-        if self._config.disable_downloads:
-            self._context.set_default_timeout(self._config.page_timeout_seconds * 1000)
+            profile_path = Path(self._config.user_data_dir)
+            await asyncio.to_thread(profile_path.mkdir, parents=True, exist_ok=True)
+            self._context = await browser_type.launch_persistent_context(
+                self._config.user_data_dir,
+                headless=self._config.headless,
+                **context_options,
+            )
+            self._browser = self._context.browser
+        else:
+            # 非永続コンテキスト（セッションを共有しない）
+            self._browser = await browser_type.launch(headless=self._config.headless)
+            self._context = await self._browser.new_context(**context_options)
 
+        self._context.set_default_timeout(self._config.page_timeout_seconds * 1000)
         self._logger.info("ブラウザを起動しました")
 
     async def stop(self) -> None:
@@ -228,6 +240,55 @@ class BrowserSkill(BrowserSkillBase):
             width=self._config.viewport_width,
             height=self._config.viewport_height,
         )
+
+    async def execute_js(self, script: str) -> Any:
+        """JavaScript を実行.
+
+        Args:
+            script: 実行する JavaScript コード
+
+        Returns:
+            スクリプトの戻り値
+
+        Raises:
+            BrowserStateError: ページが開かれていない場合
+        """
+        await self._ensure_page()
+        self._audit_log("execute_js", {"script_length": len(script)})
+        return await self._page.evaluate(script)  # type: ignore[union-attr]
+
+    async def generate_pdf(self) -> str:
+        """現在のページを PDF に変換して base64 文字列を返す.
+
+        Returns:
+            PDF データの base64 エンコード文字列
+
+        Raises:
+            BrowserStateError: ページが開かれていない場合
+            BrowserSkillError: Chromium 以外のブラウザでは PDF 生成不可
+        """
+        await self._ensure_page()
+        if self._config.browser_type != "chromium":
+            msg = "PDF 生成は Chromium のみサポートしています"
+            raise BrowserSkillError(msg, skill_name="BrowserSkill")
+        self._audit_log("generate_pdf", {"url": self._page.url if self._page else ""})
+        pdf_bytes = await self._page.pdf()  # type: ignore[union-attr]
+        return base64.b64encode(pdf_bytes).decode("utf-8")
+
+    async def fill_form(self, fields: dict[str, str]) -> bool:
+        """フォームフィールドを一括入力.
+
+        Args:
+            fields: {セレクタ: 入力値} の辞書
+
+        Returns:
+            全フィールドへの入力成功で True
+        """
+        await self._ensure_page()
+        self._audit_log("fill_form", {"field_count": len(fields)})
+        for selector, value in fields.items():
+            await self._page.fill(selector, value)  # type: ignore[union-attr]
+        return True
 
     async def _ensure_browser(self) -> None:
         """ブラウザが起動していることを確認."""

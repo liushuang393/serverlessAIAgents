@@ -116,7 +116,24 @@ SAMPLE_APP_CONFIG_RAG: dict[str, Any] = {
         {"name": "RAGAgent", "capabilities": ["rag", "search"]},
         {"name": "IndexAgent", "capabilities": ["indexing"]},
     ],
-    "services": {"rag": {"collections": ["docs_kb", "faq_kb"]}},
+    "services": {
+        "rag": {"collections": ["docs_kb", "faq_kb"]},
+        "sql": {"dialect": "postgresql"},
+    },
+    "dependencies": {"database": "postgresql", "redis": False, "external": []},
+    "runtime": {
+        "urls": {
+            "database": "postgresql+asyncpg://rag:password@localhost:5434/rag_app",
+        },
+        "database": {
+            "kind": "postgresql",
+            "url": "postgresql+asyncpg://rag:password@localhost:5434/rag_app",
+            "host": "localhost",
+            "port": 5434,
+            "name": "rag_app",
+            "user": "rag",
+        },
+    },
     "tags": ["rag", "search"],
 }
 

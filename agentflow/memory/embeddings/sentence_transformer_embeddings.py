@@ -50,7 +50,11 @@ class SentenceTransformerEmbeddings(EmbeddingEngine):
         if SentenceTransformer is None:
             msg = "sentence-transformers package is required. Install with: pip install sentence-transformers"
             raise ImportError(msg)
-        self._model = SentenceTransformer(model_name, device=device)
+        try:
+            self._model = SentenceTransformer(model_name, device=device)
+        except ImportError:
+            msg = "sentence-transformers package is required. Install with: pip install sentence-transformers"
+            raise ImportError(msg) from None
         self._dimension = self._model.get_sentence_embedding_dimension()
         self._logger.info(f"Loaded Sentence Transformer model: {model_name} (dim={self._dimension})")
 

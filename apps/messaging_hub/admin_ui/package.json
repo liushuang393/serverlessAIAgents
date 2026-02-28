@@ -32,6 +32,10 @@
     "@typescript-eslint/eslint-plugin": "^6.11.0",
     "@typescript-eslint/parser": "^6.11.0",
     "eslint-plugin-react-hooks": "^4.6.0"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^10.2.1"
+    }
   }
 }
-

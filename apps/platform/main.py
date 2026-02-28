@@ -44,6 +44,7 @@ from apps.platform.routers.agents import init_agent_services
 from apps.platform.routers.apps import init_app_services
 from apps.platform.routers.mcp import init_mcp_services
 from apps.platform.routers.rag import init_rag_services
+from apps.platform.services.rag_config_store import init_rag_config_store
 from apps.platform.routers.skills import init_skill_services
 from apps.platform.routers.studios import init_studio_services
 from apps.platform.routers.tenant_invitations import init_tenant_invitation_services
@@ -102,6 +103,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     rag_overview = RAGOverviewService(discovery)
     init_rag_services(rag_overview)
+    init_rag_config_store()  # SSE イベントバス初期化
 
     mcp_registry = MCPRegistryService()
     init_mcp_services(mcp_registry)

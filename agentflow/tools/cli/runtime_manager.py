@@ -14,7 +14,6 @@ import json
 import os
 import shlex
 import shutil
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -22,6 +21,7 @@ from typing import Any, Literal
 
 ToolName = Literal["codex", "claude"]
 DiagnosticMode = Literal["read_only", "plan"]
+RepairMode = Literal["workspace_write", "accept_edits"]
 
 _SUPPORTED_TOOLS: tuple[ToolName, ...] = ("codex", "claude")
 _DANGEROUS_TOKENS = {
@@ -81,6 +81,14 @@ def _default_cli_config() -> dict[str, Any]:
                 "--sandbox",
                 "read-only",
             ],
+            "repair_mode": "workspace_write",
+            "repair_command": [
+                "codex",
+                "exec",
+                "--skip-git-repo-check",
+                "--sandbox",
+                "workspace-write",
+            ],
         },
         "claude": {
             "executable": "claude",
@@ -97,6 +105,13 @@ def _default_cli_config() -> dict[str, Any]:
                 "-p",
                 "--permission-mode",
                 "plan",
+            ],
+            "repair_mode": "accept_edits",
+            "repair_command": [
+                "claude",
+                "-p",
+                "--permission-mode",
+                "acceptEdits",
             ],
         },
     }
@@ -137,6 +152,14 @@ def _merge_runtime_cli_config(override: dict[str, Any] | None) -> dict[str, Any]
             diag_cmd = [str(part) for part in raw_tool["diagnostic_command"] if str(part).strip()]
             if diag_cmd:
                 target["diagnostic_command"] = diag_cmd
+        if isinstance(raw_tool.get("repair_mode"), str):
+            repair_mode = raw_tool["repair_mode"].strip().lower()
+            if repair_mode in {"workspace_write", "accept_edits"}:
+                target["repair_mode"] = repair_mode
+        if isinstance(raw_tool.get("repair_command"), list):
+            repair_cmd = [str(part) for part in raw_tool["repair_command"] if str(part).strip()]
+            if repair_cmd:
+                target["repair_command"] = repair_cmd
 
         raw_auth = raw_tool.get("auth")
         if isinstance(raw_auth, dict):
@@ -309,6 +332,75 @@ class CLIRuntimeManager:
             }
 
         executed = await self._run_command(command, timeout_seconds=max(self._timeout_seconds, 120.0))
+        return {
+            "success": executed.ok,
+            "tool": selected,
+            "mode": mode,
+            "command": " ".join(shlex.quote(x) for x in command),
+            "return_code": executed.return_code,
+            "stdout": executed.stdout,
+            "stderr": executed.stderr,
+            "error": executed.error,
+            "timed_out": executed.timed_out,
+        }
+
+    async def run_repair_prompt(
+        self,
+        *,
+        prompt: str,
+        runtime_cli: dict[str, Any] | None = None,
+        preferred_tool: ToolName | None = None,
+        mode_override: RepairMode | None = None,
+    ) -> dict[str, Any]:
+        """Run a write-enabled repair prompt with an available CLI tool."""
+        config = _merge_runtime_cli_config(runtime_cli)
+        status = await self.detect(config)
+
+        order: list[str] = []
+        if preferred_tool is not None:
+            order.append(preferred_tool)
+        order.extend([tool for tool in config["preferred"] if tool not in order])
+
+        selected: ToolName | None = None
+        for tool in order:
+            tool_state = status["tools"].get(tool, {})
+            if tool_state.get("detected") and tool_state.get("authenticated"):
+                selected = tool  # type: ignore[assignment]
+                break
+        if selected is None:
+            for tool in order:
+                tool_state = status["tools"].get(tool, {})
+                if tool_state.get("detected"):
+                    selected = tool  # type: ignore[assignment]
+                    break
+
+        if selected is None:
+            return {
+                "success": False,
+                "error": "no_cli_available",
+                "status": status,
+            }
+
+        tool_cfg = config[selected]
+        mode = (mode_override or tool_cfg.get("repair_mode") or "workspace_write").strip().lower()
+        if mode not in {"workspace_write", "accept_edits"}:
+            mode = "workspace_write"
+
+        command = self._build_repair_command(
+            tool=selected,
+            tool_cfg=tool_cfg,
+            prompt=prompt,
+            mode=mode,  # type: ignore[arg-type]
+        )
+        if not self._is_command_safe(command):
+            return {
+                "success": False,
+                "tool": selected,
+                "command": " ".join(shlex.quote(x) for x in command),
+                "error": "blocked_by_safety_policy",
+            }
+
+        executed = await self._run_command(command, timeout_seconds=max(self._timeout_seconds, 240.0))
         return {
             "success": executed.ok,
             "tool": selected,
@@ -506,13 +598,49 @@ class CLIRuntimeManager:
                     command[index + 1] = "read-only"
             elif mode in {"read_only", "plan"}:
                 command.extend(["--sandbox", "read-only"])
+        elif "--permission-mode" in command:
+            index = command.index("--permission-mode")
+            if index + 1 < len(command):
+                command[index + 1] = "plan"
         else:
+            command.extend(["--permission-mode", "plan"])
+
+        command.append(prompt)
+        return command
+
+    def _build_repair_command(
+        self,
+        *,
+        tool: ToolName,
+        tool_cfg: dict[str, Any],
+        prompt: str,
+        mode: RepairMode,
+    ) -> list[str]:
+        default_command = tool_cfg.get("repair_command")
+        command: list[str]
+        if isinstance(default_command, list) and default_command:
+            command = [str(x) for x in default_command]
+        elif tool == "codex":
+            command = ["codex", "exec", "--skip-git-repo-check", "--sandbox", "workspace-write"]
+        else:
+            command = ["claude", "-p", "--permission-mode", "acceptEdits"]
+
+        if tool == "codex":
+            sandbox_value = "workspace-write" if mode == "workspace_write" else "read-only"
+            if "--sandbox" in command:
+                index = command.index("--sandbox")
+                if index + 1 < len(command):
+                    command[index + 1] = sandbox_value
+            else:
+                command.extend(["--sandbox", sandbox_value])
+        else:
+            permission_mode = "acceptEdits" if mode == "accept_edits" else "plan"
             if "--permission-mode" in command:
                 index = command.index("--permission-mode")
                 if index + 1 < len(command):
-                    command[index + 1] = "plan"
+                    command[index + 1] = permission_mode
             else:
-                command.extend(["--permission-mode", "plan"])
+                command.extend(["--permission-mode", permission_mode])
 
         command.append(prompt)
         return command
@@ -530,49 +658,52 @@ class CLIRuntimeManager:
         timeout_seconds: float | None = None,
     ) -> _CommandResult:
         timeout = self._timeout_seconds if timeout_seconds is None else timeout_seconds
+        stdin = asyncio.subprocess.PIPE if input_text is not None else None
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *command,
+                cwd=str(self._cwd),
+                stdin=stdin,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+        except FileNotFoundError:
+            return _CommandResult(
+                command=command,
+                return_code=None,
+                stdout="",
+                stderr="",
+                error="command_not_found",
+            )
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            return _CommandResult(
+                command=command,
+                return_code=None,
+                stdout="",
+                stderr="",
+                error=str(exc),
+            )
 
-        def _execute() -> _CommandResult:
-            try:
-                completed = subprocess.run(
-                    command,
-                    cwd=str(self._cwd),
-                    capture_output=True,
-                    text=True,
-                    input=input_text,
-                    timeout=timeout,
-                    check=False,
-                )
-                return _CommandResult(
-                    command=command,
-                    return_code=completed.returncode,
-                    stdout=completed.stdout.strip(),
-                    stderr=completed.stderr.strip(),
-                )
-            except subprocess.TimeoutExpired as exc:
-                return _CommandResult(
-                    command=command,
-                    return_code=None,
-                    stdout=(exc.stdout or "").strip(),
-                    stderr=(exc.stderr or "").strip(),
-                    timed_out=True,
-                    error=f"timeout ({timeout:.1f}s)",
-                )
-            except FileNotFoundError:
-                return _CommandResult(
-                    command=command,
-                    return_code=None,
-                    stdout="",
-                    stderr="",
-                    error="command_not_found",
-                )
-            except Exception as exc:  # pragma: no cover - defensive fallback
-                return _CommandResult(
-                    command=command,
-                    return_code=None,
-                    stdout="",
-                    stderr="",
-                    error=str(exc),
-                )
-
-        return await asyncio.to_thread(_execute)
-
+        input_bytes = None if input_text is None else input_text.encode("utf-8")
+        try:
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(
+                proc.communicate(input=input_bytes),
+                timeout=timeout,
+            )
+            return _CommandResult(
+                command=command,
+                return_code=proc.returncode,
+                stdout=stdout_bytes.decode("utf-8", errors="ignore").strip(),
+                stderr=stderr_bytes.decode("utf-8", errors="ignore").strip(),
+            )
+        except TimeoutError:
+            proc.kill()
+            stdout_bytes, stderr_bytes = await proc.communicate()
+            return _CommandResult(
+                command=command,
+                return_code=None,
+                stdout=stdout_bytes.decode("utf-8", errors="ignore").strip(),
+                stderr=stderr_bytes.decode("utf-8", errors="ignore").strip(),
+                timed_out=True,
+                error=f"timeout ({timeout:.1f}s)",
+            )

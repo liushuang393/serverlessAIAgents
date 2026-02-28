@@ -1,12 +1,15 @@
 """Unit tests for MeetingAgent."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
+import pytest
 from apps.messaging_hub.agents.meeting_agent import (
     MeetingAgent,
     MeetingBrief,
     MeetingNotes,
 )
+
+from agentflow.skills.calendar import CalendarSkill
 
 
 class TestMeetingBrief:
@@ -109,3 +112,54 @@ class TestMeetingAgentInit:
         mock_calendar = MockCalendarSkill()
         agent = MeetingAgent(calendar_skill=mock_calendar)
         assert agent._calendar is mock_calendar
+
+
+@pytest.mark.asyncio
+async def test_meeting_agent_resolve_event_by_id_from_calendar_store() -> None:
+    """CalendarSkill 内イベントから event_id を解決できること."""
+    calendar = CalendarSkill()
+    created = await calendar.create_event(
+        title="Quarterly Planning",
+        start=datetime(2026, 2, 1, 10, 0),
+        end=datetime(2026, 2, 1, 11, 0),
+        description="Q2 roadmap budget planning",
+        attendees=["alice@example.com", "bob@example.com"],
+    )
+    agent = MeetingAgent(calendar_skill=calendar)
+
+    resolved = await agent._resolve_event_by_id(created.id)
+    assert resolved is not None
+    assert resolved.id == created.id
+    assert resolved.title == "Quarterly Planning"
+
+
+@pytest.mark.asyncio
+async def test_summarize_meeting_history_returns_metrics_and_pending_items() -> None:
+    """会議履歴サマリーが件数・時間・保留タスクを返すこと."""
+    calendar = CalendarSkill()
+    now = datetime.now().replace(microsecond=0)
+    first = await calendar.create_event(
+        title="Roadmap Review",
+        start=now - timedelta(days=1),
+        end=now - timedelta(days=1) + timedelta(minutes=45),
+        description="product roadmap and launch plan",
+        attendees=["alice@example.com"],
+    )
+    second = await calendar.create_event(
+        title="Budget Meeting",
+        start=now - timedelta(days=2),
+        end=now - timedelta(days=2) + timedelta(minutes=30),
+        description="budget execution and hiring plan",
+        attendees=["alice@example.com", "bob@example.com"],
+    )
+    second.metadata["action_items"] = [
+        {"task": "Prepare budget draft", "assignee": "bob", "due_date": "2026-03-01", "status": "pending"},
+        {"task": "Finalize headcount", "assignee": "alice", "status": "completed"},
+    ]
+    agent = MeetingAgent(calendar_skill=calendar)
+
+    summary = await agent.summarize_meeting_history(event_ids=[first.id, second.id], days=30)
+    assert summary["total_meetings"] == 2
+    assert "total_hours" in summary
+    assert isinstance(summary["top_topics"], list)
+    assert len(summary["pending_action_items"]) == 1

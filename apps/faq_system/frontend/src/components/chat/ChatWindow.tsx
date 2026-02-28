@@ -1,13 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Sparkles, FileText, Database, Wrench, TrendingUp, MessageCircle } from 'lucide-react';
+import { Send, Loader2, Sparkles, FileText, Database, Wrench, TrendingUp, MessageCircle, Settings } from 'lucide-react';
 import { useChatStore } from '../../stores/chatStore';
 import { MessageBubble } from './MessageBubble';
 import { useI18n } from '../../i18n';
+import { SettingsModal } from '../settings/SettingsPage';
+import { useOutletContext } from 'react-router-dom';
+
+interface LayoutContext {
+    sidebarOpen: boolean;
+}
 
 export const ChatWindow = () => {
     const { t } = useI18n();
+    const { sidebarOpen } = useOutletContext<LayoutContext>();
     const { messages, sendMessage, isStreaming } = useChatStore();
     const [input, setInput] = useState('');
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -45,13 +53,22 @@ export const ChatWindow = () => {
         { label: t('chat.quick.tech_support'), sub: t('chat.quick.tech_support_sub'), icon: Wrench },
         { label: t('chat.quick.sales_strategy'), sub: t('chat.quick.sales_strategy_sub'), icon: TrendingUp },
     ];
+    const canSend = input.trim().length > 0 && !isStreaming;
+    const chatLaneStyle: React.CSSProperties = {
+        width: '100%',
+        maxWidth: '960px',
+        marginInline: 'auto',
+    };
+    const sendIconClass = canSend
+        ? 'text-sky-50 drop-shadow-[0_1px_6px_rgba(186,230,253,0.4)]'
+        : 'text-[var(--text-muted)]';
 
     return (
         <div className="flex-1 flex flex-col relative h-full overflow-hidden"
             style={{ background: 'radial-gradient(ellipse at 50% 0%, hsl(220, 20%, 11%), var(--bg-main))' }}>
 
             {/* Top Bar / Header Info */}
-            <div className="w-full h-14 shrink-0 glass flex items-center justify-between px-8 z-10 border-b border-white/5">
+            <div className={`w-full h-14 shrink-0 glass flex items-center justify-between pr-8 z-10 border-b border-white/5 ${sidebarOpen ? 'pl-8' : 'pl-20'}`}>
                 <div className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/20">
                         <Sparkles className="text-[var(--primary)]" size={14} />
@@ -64,96 +81,122 @@ export const ChatWindow = () => {
                         </div>
                     </div>
                 </div>
+                {/* 設定ボタン（右上） */}
+                <button
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="p-2 rounded-xl hover:bg-white/5 text-[var(--text-muted)] hover:text-white transition-all border border-transparent hover:border-white/10"
+                    title={t('sidebar.settings')}
+                >
+                    <Settings size={16} />
+                </button>
             </div>
 
-            {/* Messages Area */}
+            {/* 設定モーダル */}
+            <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+
+            {/* Messages Area - 3列レイアウト（15px / 中央 / 15px） */}
             <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
-                <div className="max-w-4xl mx-auto px-6 w-full flex flex-col gap-8 pb-40">
-                    {messages.length === 0 ? (
-                        <div className="mt-16 flex flex-col items-center justify-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            <div className="w-16 h-16 rounded-2xl glass flex items-center justify-center border border-white/10 shadow-2xl mb-6 relative">
-                                <MessageCircle className="text-[var(--primary)]" size={32} />
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-[var(--primary)] rounded-full blur-sm opacity-50" />
-                            </div>
+                <div className="grid w-full grid-cols-[15px_minmax(0,1fr)_15px]">
+                    <div className="col-start-2">
+                        <div style={chatLaneStyle} className="flex flex-col gap-8 pb-40">
+                            {messages.length === 0 ? (
+                                <div className="mt-16 flex flex-col items-center justify-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                    <div className="w-16 h-16 rounded-2xl glass flex items-center justify-center border border-white/10 shadow-2xl mb-6 relative">
+                                        <MessageCircle className="text-[var(--primary)]" size={32} />
+                                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-[var(--primary)] rounded-full blur-sm opacity-50" />
+                                    </div>
 
-                            <h1 className="text-3xl font-bold text-white mb-3 tracking-tight">{t('chat.welcome_title')}</h1>
-                            <p className="text-[var(--text-dim)] text-center max-w-sm mb-10 text-sm">
-                                {t('chat.welcome_subtitle')}
-                            </p>
+                                    <h1 className="text-3xl font-bold text-white mb-3 tracking-tight">{t('chat.welcome_title')}</h1>
+                                    <p className="text-[var(--text-dim)] text-center max-w-sm mb-10 text-sm">
+                                        {t('chat.welcome_subtitle')}
+                                    </p>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
-                                {quickActions.map((item) => (
-                                    <button
-                                        key={item.label}
-                                        onClick={() => setInput(item.label)}
-                                        className="glass p-4 rounded-2xl flex items-start gap-3.5 hover:bg-white/5 text-left transition-all group border border-white/5 hover:border-white/10"
-                                    >
-                                        <div className="w-9 h-9 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/15 flex-shrink-0 group-hover:bg-[var(--primary)]/20 transition-colors">
-                                            <item.icon size={16} className="text-[var(--primary)]" />
-                                        </div>
-                                        <div>
-                                            <div className="text-sm font-semibold text-white group-hover:text-[var(--primary)] transition-colors">{item.label}</div>
-                                            <div className="text-xs text-[var(--text-muted)] mt-0.5">{item.sub}</div>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-2xl">
+                                        {quickActions.map((item) => (
+                                            <button
+                                                key={item.label}
+                                                onClick={() => setInput(item.label)}
+                                                className="glass p-4 rounded-2xl flex items-start gap-3.5 hover:bg-white/5 text-left transition-all group border border-white/5 hover:border-white/10"
+                                            >
+                                                <div className="w-9 h-9 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/15 flex-shrink-0 group-hover:bg-[var(--primary)]/20 transition-colors">
+                                                    <item.icon size={16} className="text-[var(--primary)]" />
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm font-semibold text-white group-hover:text-[var(--primary)] transition-colors">{item.label}</div>
+                                                    <div className="text-xs text-[var(--text-muted)] mt-0.5">{item.sub}</div>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-8">
+                                    {messages.map((msg, idx) => (
+                                        <MessageBubble key={msg.id ?? String(idx)} message={msg} />
+                                    ))}
+                                    <div ref={messagesEndRef} />
+                                </div>
+                            )}
                         </div>
-                    ) : (
-                        <div className="flex flex-col gap-8">
-                            {messages.map((msg, idx) => (
-                                <MessageBubble key={msg.id ?? String(idx)} message={msg} />
-                            ))}
-                            <div ref={messagesEndRef} />
-                        </div>
-                    )}
+                    </div>
                 </div>
             </div>
 
-            {/* Input Area */}
-            <div className="absolute bottom-0 left-0 w-full pt-10 pb-6 px-6" style={{ background: 'linear-gradient(to top, var(--bg-main) 60%, transparent)' }}>
-                <div className="max-w-3xl mx-auto flex flex-col gap-3">
-                    <div className="glass rounded-[20px] border border-white/10 p-2 pl-4 flex items-end gap-2 shadow-2xl focus-within:border-[var(--primary)]/40 transition-colors">
-                        <textarea
-                            ref={textareaRef}
-                            rows={1}
-                            value={input}
-                            onChange={(e) => {
-                                setInput(e.target.value);
-                                e.target.style.height = 'auto';
-                                e.target.style.height = `${Math.min(e.target.scrollHeight, 240)}px`;
-                            }}
-                            onKeyDown={handleKeyDown}
-                            placeholder={t('chat.ask_placeholder')}
-                            className="flex-1 bg-transparent border-none py-3 pr-2 text-white placeholder:text-[var(--text-muted)] focus:ring-0 resize-none max-h-[240px] custom-scrollbar text-[15px] leading-relaxed"
-                            style={{ height: '48px' }}
-                        />
-                        <button
-                            onClick={() => handleSubmit()}
-                            disabled={!input.trim() || isStreaming}
-                            className={`p-3 rounded-2xl transition-all mb-1 ${input.trim() && !isStreaming
-                                ? 'bg-[var(--primary)] text-black shadow-[0_0_20px_var(--primary-glow)] hover:scale-105'
-                                : 'text-[var(--text-muted)] bg-white/5 opacity-50 cursor-not-allowed'
-                                }`}
-                        >
-                            {isStreaming ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
-                        </button>
-                    </div>
+            {/* Input Area - 3列レイアウト（15px / 中央 / 15px） */}
+            <div className="absolute bottom-0 inset-x-0 w-full pt-10 pb-6" style={{ background: 'linear-gradient(to top, var(--bg-main) 60%, transparent)' }}>
+                <div className="grid w-full grid-cols-[15px_minmax(0,1fr)_15px]">
+                    <div className="col-start-2">
+                        <div style={chatLaneStyle} className="flex flex-col gap-3">
+                            <div className="flex items-end gap-2 sm:gap-3">
+                                <div className="flex-1 glass rounded-[20px] border border-white/10 px-4 py-2 shadow-2xl focus-within:border-[var(--primary)]/45 focus-within:shadow-[0_0_0_1px_rgba(94,234,212,0.25),0_10px_34px_rgba(0,0,0,0.45)] transition-all">
+                                    <textarea
+                                        ref={textareaRef}
+                                        rows={1}
+                                        value={input}
+                                        onChange={(e) => {
+                                            setInput(e.target.value);
+                                            e.target.style.height = 'auto';
+                                            e.target.style.height = `${Math.min(e.target.scrollHeight, 240)}px`;
+                                        }}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder={t('chat.ask_placeholder')}
+                                        className="w-full bg-transparent border-none py-3 pr-2 text-white placeholder:text-[var(--text-muted)] focus:ring-0 resize-none max-h-[240px] custom-scrollbar text-[15px] leading-relaxed"
+                                        style={{ height: '48px' }}
+                                    />
+                                </div>
 
-                    <div className="flex items-center justify-between px-2">
-                        <div className="flex items-center gap-4">
-                            <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5 font-medium uppercase tracking-wider">
-                                <span className="w-1.5 h-1.5 rounded-full bg-white/20" />{' '}
-                                RAG
-                            </span>
-                            <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5 font-medium uppercase tracking-wider">
-                                <span className="w-1.5 h-1.5 rounded-full bg-white/20" />{' '}
-                                SQL
-                            </span>
+                                <button
+                                    onClick={() => handleSubmit()}
+                                    disabled={!canSend}
+                                    className={`h-12 w-12 sm:h-[52px] sm:w-[52px] rounded-2xl border mb-0.5 shrink-0 transition-all duration-200 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300/70 ${canSend
+                                        ? 'bg-gradient-to-br from-[#6ee7dc] via-[#3fd9d0] to-[#2cbec0] text-sky-50 border-white/40 shadow-[0_10px_28px_rgba(56,189,248,0.35)] hover:brightness-110 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.97]'
+                                        : 'bg-white/[0.04] text-[var(--text-muted)] border-white/10 opacity-60 cursor-not-allowed'
+                                        }`}
+                                >
+                                    {isStreaming ? (
+                                        <Loader2 size={20} className="animate-spin text-sky-50" />
+                                    ) : (
+                                        <Send size={20} className={sendIconClass} />
+                                    )}
+                                </button>
+                            </div>
+
+                            <div className="flex items-center justify-between px-2">
+                                <div className="flex items-center gap-4">
+                                    <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5 font-medium uppercase tracking-wider">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-white/20" />{' '}
+                                        RAG
+                                    </span>
+                                    <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5 font-medium uppercase tracking-wider">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-white/20" />{' '}
+                                        SQL
+                                    </span>
+                                </div>
+                                <p className="text-[10px] text-[var(--text-muted)] font-medium tracking-wide">
+                                    {t('chat.shift_enter_hint')}
+                                </p>
+                            </div>
                         </div>
-                        <p className="text-[10px] text-[var(--text-muted)] font-medium tracking-wide">
-                            {t('chat.shift_enter_hint')}
-                        </p>
                     </div>
                 </div>
             </div>

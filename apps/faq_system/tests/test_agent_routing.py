@@ -101,7 +101,7 @@ async def test_internal_kb_routing(client: httpx.AsyncClient, mock_agents: dict[
     mock_agents["internal"].run.assert_called_once()
     call_args = mock_agents["internal"].run.call_args[0][0]
     assert call_args["question"] == "社内規定について"
-    assert call_args["context"]["user"]["username"] == "testuser"
+    assert call_args["user_context"]["username"] == "testuser"
 
 
 @pytest.mark.asyncio
@@ -143,6 +143,8 @@ async def test_analytics_routing(client: httpx.AsyncClient, mock_agents: dict[st
     assert data["sql"] == "SELECT *"
 
     mock_agents["analytics"].run.assert_called_once()
+    call_args = mock_agents["analytics"].run.call_args[0][0]
+    assert call_args["user_context"]["role"] == "admin"
 
 
 @pytest.mark.asyncio

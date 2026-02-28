@@ -176,7 +176,9 @@ RAG 概要サービスの抽出優先度は以下。
           "interactive_login": ["codex", "login"]
         },
         "diagnostic_mode": "read_only",
-        "diagnostic_command": ["codex", "exec", "--skip-git-repo-check", "--sandbox", "read-only"]
+        "diagnostic_command": ["codex", "exec", "--skip-git-repo-check", "--sandbox", "read-only"],
+        "repair_mode": "workspace_write",
+        "repair_command": ["codex", "exec", "--skip-git-repo-check", "--sandbox", "workspace-write"]
       },
       "claude": {
         "executable": "claude",
@@ -188,7 +190,9 @@ RAG 概要サービスの抽出優先度は以下。
           "interactive_login": ["claude", "auth", "login"]
         },
         "diagnostic_mode": "plan",
-        "diagnostic_command": ["claude", "-p", "--permission-mode", "plan"]
+        "diagnostic_command": ["claude", "-p", "--permission-mode", "plan"],
+        "repair_mode": "accept_edits",
+        "repair_command": ["claude", "-p", "--permission-mode", "acceptEdits"]
       }
     }
   }
@@ -211,8 +215,13 @@ RAG 概要サービスの抽出優先度は以下。
 
 ## 9. 起動コマンド解決優先度
 
-起動系 action（`local-start/start/publish`）のコマンド解決順は固定:
+`README.md` 優先は **開発起動コマンドのみ**（`backend_dev` / `frontend_dev`）に適用される。
 
-1. App の `README.md`
-2. `runtime.commands`
-3. Platform fallback コマンド
+1. `backend_dev` / `frontend_dev`: `README.md` → `runtime.commands` → fallback
+2. `start` / `publish` / `stop`: `runtime.commands` → compose/process fallback
+3. `start` / `stop` は実行前に `execution_mode`（`docker` / `local`）を判定し、選択モードのみ実行する
+
+補足:
+
+- `README.md` の前景 Python コマンドは `start` / `publish` の override に使わない
+- API action response には `execution_mode` と `repair`（CLI 修復試行履歴）が同梱される

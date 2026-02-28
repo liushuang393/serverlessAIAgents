@@ -8,19 +8,21 @@ GET  /api/studios/framework/rag/patterns — 推奨 RAG パターン一覧
 GET  /api/studios/framework/rag/apps       — RAG 使用 App 一覧
 GET  /api/studios/framework/rag/apps/configs — 全 App の RAG 設定一覧
 GET  /api/studios/framework/rag/apps/{app_name}/config — App 単位 RAG 設定
-PATCH /api/studios/framework/rag/apps/{app_name}/config — App 単位 RAG 設定更新
+PATCH /api/studios/framework/rag/apps/{app_name}/config — App 単位 RAG 設定更新（イベント発火付き）
+GET  /api/studios/framework/rag/events     — SSE: RAG 設定変更イベント（?app=APP_NAME）
 GET  /api/studios/framework/rag/stats      — RAG 統計
 """
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import json
+from typing import Any
 
-from fastapi import APIRouter, HTTPException
-
-
-from apps.platform.schemas.rag_schemas import RAGConfigPatchRequest
-from apps.platform.services.rag_overview import RAGOverviewService
+from apps.platform.schemas.rag_schemas import RAGConfigPatchRequest  # noqa: TC002
+from apps.platform.services.rag_config_store import RagConfigStore, get_rag_config_store
+from apps.platform.services.rag_overview import RAGOverviewService  # noqa: TC002
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import StreamingResponse
 
 
 router = APIRouter(prefix="/api/studios/framework/rag", tags=["rag"])
@@ -45,6 +47,14 @@ def _get_overview() -> RAGOverviewService:
         msg = "RAGOverviewService が未初期化です"
         raise RuntimeError(msg)
     return _overview
+
+
+def _try_get_store() -> RagConfigStore | None:
+    """RagConfigStore を取得（未初期化でも None を返す）."""
+    try:
+        return get_rag_config_store()
+    except RuntimeError:
+        return None
 
 
 # ------------------------------------------------------------------
@@ -127,10 +137,10 @@ async def patch_rag_app_config(
     app_name: str,
     patch: RAGConfigPatchRequest,
 ) -> dict[str, Any]:
-    """App 単位 RAG 設定を更新."""
+    """App 単位 RAG 設定を更新し、実行中の App にイベントを発火."""
     overview = _get_overview()
     try:
-        return overview.update_app_config(
+        result = overview.update_app_config(
             app_name,
             patch.model_dump(exclude_none=True),
         )
@@ -150,6 +160,65 @@ async def patch_rag_app_config(
                 "error_code": "RAG_CONFIG_INVALID",
             },
         )
+
+    # RagConfigStore にイベントを発火（ConfigWatcher 経由でホットリロード）
+    store = _try_get_store()
+    if store is not None:
+        new_rag_config: dict[str, Any] = result.get("rag", {})
+        await store.fire_config_change(app_name, new_rag_config)
+
+    return result
+
+
+@router.get("/events")
+async def rag_config_events(
+    app: str = Query(..., description="購読対象のアプリ名"),
+) -> StreamingResponse:
+    """RAG 設定変更 SSE イベントストリーム.
+
+    実行中の App（ConfigWatcher）が設定変更を受け取るための SSE エンドポイント。
+    接続を維持し、PATCH /apps/{app}/config が呼ばれるたびにイベントを送信する。
+
+    Args:
+        app: 購読対象アプリ名（例: faq_system）
+
+    Returns:
+        Server-Sent Events ストリーム（text/event-stream）
+    """
+    store = _try_get_store()
+    if store is None:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "message": "RagConfigStore が未初期化です",
+                "error_code": "STORE_NOT_INITIALIZED",
+            },
+        )
+
+    async def event_generator() -> Any:
+        """SSE イベントを生成するジェネレーター."""
+        # 接続確立イベントを送信
+        connected_event = {
+            "event_type": "connected",
+            "app_name": app,
+        }
+        yield f"event: connected\ndata: {json.dumps(connected_event)}\n\n"
+
+        # 設定変更イベントを購読してストリーム送信
+        async for event in store.subscribe(app):
+            event_type = event.get("event_type", "message")
+            data = json.dumps(event)
+            yield f"event: {event_type}\ndata: {data}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @router.get("/stats")

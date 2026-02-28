@@ -24,7 +24,7 @@
     "key_id": "af-local-dev"
   },
   "compatibility": {
-    "kernel": ">=1.0.0",
+    "kernel": ">=2.0.0",
     "product_lines": [
       "migration"
     ]

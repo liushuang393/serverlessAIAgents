@@ -1,23 +1,27 @@
 # Messaging Hub - マルチプラットフォーム AI チャットボット
 
-
 <!-- README_REQUIRED_SECTIONS_START -->
+
 ## 機能概要
+
 - Telegram / Slack / Discord を統合し、単一ボット基盤で運用可能。
 - セッション管理とチャネル変換を標準化し、チャット処理を共通化。
 - WebSocket 連携でリアルタイム配信とオペレーション監視を実現。
 
 ## 優位性
+
 - マルチチャネル拡張時も中核ロジックを再利用でき、実装コストが低い。
 - LLM/Agent 層を疎結合化し、プロバイダー切替に強い。
 - 監査・セキュリティ運用を前提にした business 向け設計。
 
 ## 技術アーキテクチャ
+
 - Channel Adapter → Message Gateway → ChatBot Skill → Agent 層の直列構成。
 - FastAPI API と WebSocket Hub を同居させ、運用統制を単純化。
 - AgentFlow マルチエージェント機能を応答生成・制御に適用。
 
 ## アプリケーション階層
+
 - Channel Layer: 各メッセージプラットフォーム接続。
 - Routing Layer: 受信正規化・意図分配・セッション統合。
 - Agent Layer: 応答生成・ツール実行・調停。
@@ -96,6 +100,7 @@ vim apps/messaging_hub/.env
 ```
 
 必須設定：
+
 - **LLM Provider**: `OPENAI_API_KEY` または `ANTHROPIC_API_KEY`
 - **最低1つのプラットフォーム**: `TELEGRAM_BOT_TOKEN` または `SLACK_BOT_TOKEN` または `DISCORD_BOT_TOKEN`
 
@@ -111,9 +116,30 @@ python -m apps.messaging_hub.main
 ```
 
 起動後のアクセス先：
+
 - **API ドキュメント**: http://localhost:8004/docs
 - **ヘルスチェック**: http://localhost:8004/health
 - **WebSocket**: ws://localhost:8004/ws
+
+### 4. 管理UI（独自チャット画面）
+
+```bash
+cd apps/messaging_hub/admin_ui
+npm install
+npm run dev
+```
+
+- 画面: `http://localhost:3001/conversations`
+- 内容: `sr_chat` API 連携の会話一覧・履歴表示・送信（assistant応答取得）
+- 主要API: `/api/sr_chat/conversations.list` `/api/sr_chat/conversations.history` `/api/sr_chat/chat.postMessage`
+- デザイン: ガラス調 + 奥行き（3D感）を持つ独自 UI テーマを適用
+- スキル運用: `/api/skills*` `/api/workflows*` と連携する Skills/Workflow 管理画面を提供
+
+依存関係ポリシー（admin_ui）:
+
+- 依存の組み合わせは `package.json` を正本にし、`npm install` 後に `npm run build` で整合性を検証する。
+- `@typescript-eslint/typescript-estree` 配下の `minimatch` は `overrides` で `^10.2.1` に固定して脆弱性影響を回避する。
+- `npm install` で `EAI_AGAIN` が出る場合は DNS/ネットワーク要因なので、接続復旧後に再実行する。
 
 ## 📦 本番ビルド/発布（Platform に統一）
 
@@ -129,9 +155,10 @@ python -m apps.platform.main publish ./apps/messaging_hub --target docker
 1. **Bot の作成**:
    - [@BotFather](https://t.me/BotFather) にアクセス
    - `/newbot` を送信して新しい bot を作成
-	   - Token を取得（BotFather が表示する文字列）
+     - Token を取得（BotFather が表示する文字列）
 
 2. **Webhook の設定**（オプション、本番環境推奨）:
+
    ```bash
    curl -X POST https://api.telegram.org/bot<TOKEN>/setWebhook \
      -d url=https://your-domain.com/webhook/telegram
@@ -153,7 +180,7 @@ python -m apps.platform.main publish ./apps/messaging_hub --target docker
      - `im:read`
      - `users:read`
    - App を workspace にインストール
-	   - Bot User OAuth Token をコピー（prefix: xoxb）
+     - Bot User OAuth Token をコピー（prefix: xoxb）
 
 3. **Event Subscriptions の設定**:
    - Events を有効化
@@ -186,28 +213,40 @@ python -m apps.platform.main publish ./apps/messaging_hub --target docker
 
 ### HTTP APIs
 
-| エンドポイント | メソッド | 説明 |
-|---------------|---------|------|
-| `/` | GET | サービス情報 |
-| `/health` | GET | ヘルスチェック + 統計 |
-| `/platforms` | GET | 登録済みプラットフォーム一覧 |
-| `/sessions` | GET | アクティブセッション一覧 |
-| `/send` | POST | 直接メッセージ送信（管理用） |
-| `/webhook/telegram` | POST | Telegram webhook |
-| `/webhook/slack` | POST | Slack webhook |
-| `/assistant/process` | POST | 主管アシスタント処理（低信頼トラブル時は CLI 提案を返す） |
-| `/assistant/cli/execute` | POST | 提案済み CLI 調査の承認実行（`confirm=true` 必須） |
+| エンドポイント           | メソッド | 説明                                                      |
+| ------------------------ | -------- | --------------------------------------------------------- |
+| `/`                      | GET      | サービス情報                                              |
+| `/health`                | GET      | ヘルスチェック + 統計                                     |
+| `/platforms`             | GET      | 登録済みプラットフォーム一覧                              |
+| `/sessions`              | GET      | アクティブセッション一覧                                  |
+| `/send`                  | POST     | 直接メッセージ送信（管理用）                              |
+| `/webhook/telegram`      | POST     | Telegram webhook                                          |
+| `/webhook/slack`         | POST     | Slack webhook                                             |
+| `/assistant/process`     | POST     | 主管アシスタント処理（低信頼トラブル時は CLI 提案を返す） |
+| `/assistant/cli/execute` | POST     | 提案済み CLI 調査の承認実行（`confirm=true` 必須）        |
+
+### sr_chat APIs（独自チャット画面で利用）
+
+| エンドポイント                       | メソッド | 説明                               |
+| ------------------------------------ | -------- | ---------------------------------- |
+| `/api/sr_chat/auth.test`             | POST     | 認証状態確認                       |
+| `/api/sr_chat/conversations.list`    | GET      | 会話一覧                           |
+| `/api/sr_chat/conversations.history` | GET      | 会話履歴                           |
+| `/api/sr_chat/chat.postMessage`      | POST     | メッセージ送信 + assistant応答生成 |
+| `/api/sr_chat/chat.update`           | POST     | メッセージ更新                     |
+| `/api/sr_chat/files.upload`          | POST     | ファイルアップロード記録           |
+| `/api/sr_chat/events.subscribe`      | POST     | イベント購読登録                   |
 
 ### WebSocket
 
 ```javascript
 // WebSocket に接続
-const ws = new WebSocket('ws://localhost:8004/ws?client_id=user123');
+const ws = new WebSocket("ws://localhost:8004/ws?client_id=user123");
 
 // リアルタイムメッセージを受信
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
-  console.log('Received:', data);
+  console.log("Received:", data);
   // { type: 'assistant_message', session_id: '...', data: {...} }
 };
 ```
@@ -263,12 +302,14 @@ Messaging Hub は「わからないトラブルシュート要求」を直接断
 ### 手動テスト
 
 1. **Telegram**: bot にメッセージを送信
+
    ```
    /start
    Hello, bot!
    ```
 
 2. **Slack**: チャンネルまたは DM で bot を @メンション
+
    ```
    @YourBot hello
    ```
@@ -353,6 +394,7 @@ curl http://localhost:8004/health
 ```
 
 レスポンス：
+
 ```json
 {
   "status": "healthy",
@@ -407,17 +449,17 @@ CMD ["python", "-m", "apps.messaging_hub.main"]
 
 ## 🆚 Moltbot との比較
 
-| 機能 | Moltbot | Messaging Hub |
-|------|---------|---------------|
-| プラットフォーム | 12+ (WhatsApp, iMessage 等) | 3 (拡張可能) |
-| アーキテクチャ | Gateway 中心 | 8層クリーンアーキテクチャ |
-| マルチエージェント | 基本ルーティング | 4パターン + 5エンジン |
-| メモリ | 不明 | 3層システム |
-| UI | Live Canvas | A2UI + React Studio |
-| プロトコル | A2UI | MCP/A2A/AG-UI/A2UI/UCP |
-| 音声 | ✅ (ElevenLabs) | 🔜 (計画中) |
-| デバイスツール | ✅ (カメラ, 位置情報) | 🔜 (計画中) |
-| ブラウザ制御 | ✅ (Playwright) | 🔜 (計画中) |
+| 機能               | Moltbot                     | Messaging Hub             |
+| ------------------ | --------------------------- | ------------------------- |
+| プラットフォーム   | 12+ (WhatsApp, iMessage 等) | 3 (拡張可能)              |
+| アーキテクチャ     | Gateway 中心                | 8層クリーンアーキテクチャ |
+| マルチエージェント | 基本ルーティング            | 4パターン + 5エンジン     |
+| メモリ             | 不明                        | 3層システム               |
+| UI                 | Live Canvas                 | A2UI + React Studio       |
+| プロトコル         | A2UI                        | MCP/A2A/AG-UI/A2UI/UCP    |
+| 音声               | ✅ (ElevenLabs)             | 🔜 (計画中)               |
+| デバイスツール     | ✅ (カメラ, 位置情報)       | 🔜 (計画中)               |
+| ブラウザ制御       | ✅ (Playwright)             | 🔜 (計画中)               |
 
 ## 📝 ライセンス
 

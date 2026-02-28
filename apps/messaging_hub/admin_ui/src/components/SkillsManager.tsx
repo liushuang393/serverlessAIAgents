@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 import {
   Wrench,
   Play,
@@ -11,8 +11,8 @@ import {
   RefreshCw,
   ChevronRight,
   AlertCircle,
-} from 'lucide-react';
-import clsx from 'clsx';
+} from "lucide-react";
+import clsx from "clsx";
 
 interface Skill {
   name: string;
@@ -27,24 +27,24 @@ interface WorkflowDef {
   id: string;
   name: string;
   description: string;
-  status: 'draft' | 'active' | 'paused' | 'archived';
+  status: "draft" | "active" | "paused" | "archived";
   steps: { id: string; skill_name: string }[];
   updated_at: string;
 }
 
 const categoryEmoji: Record<string, string> = {
-  os_read: '📂',
-  os_write: '✏️',
-  os_execute: '⚙️',
-  browser: '🌐',
-  network: '🔗',
+  os_read: "📂",
+  os_write: "✏️",
+  os_execute: "⚙️",
+  browser: "🌐",
+  network: "🔗",
 };
 
 const riskColors: Record<string, string> = {
-  low: 'bg-green-100 text-green-700',
-  medium: 'bg-yellow-100 text-yellow-700',
-  high: 'bg-orange-100 text-orange-700',
-  critical: 'bg-red-100 text-red-700',
+  low: "bg-green-100 text-green-700",
+  medium: "bg-yellow-100 text-yellow-700",
+  high: "bg-orange-100 text-orange-700",
+  critical: "bg-red-100 text-red-700",
 };
 
 /**
@@ -56,13 +56,20 @@ export default function SkillsManager() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowDef[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'skills' | 'workflows' | 'generate'>('skills');
-  const [generatePrompt, setGeneratePrompt] = useState('');
-  const [generatedSkill, setGeneratedSkill] = useState<Record<string, unknown> | null>(null);
+  const [activeTab, setActiveTab] = useState<
+    "skills" | "workflows" | "generate"
+  >("skills");
+  const [generatePrompt, setGeneratePrompt] = useState("");
+  const [generatedSkill, setGeneratedSkill] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
   const [generating, setGenerating] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
-  const [testParams, setTestParams] = useState('{}');
-  const [testResult, setTestResult] = useState<Record<string, unknown> | null>(null);
+  const [testParams, setTestParams] = useState("{}");
+  const [testResult, setTestResult] = useState<Record<string, unknown> | null>(
+    null,
+  );
   const [testing, setTesting] = useState(false);
 
   useEffect(() => {
@@ -73,8 +80,8 @@ export default function SkillsManager() {
     setLoading(true);
     try {
       const [skillsRes, workflowsRes] = await Promise.all([
-        fetch('/api/skills'),
-        fetch('/api/workflows'),
+        fetch("/api/skills"),
+        fetch("/api/workflows"),
       ]);
 
       if (skillsRes.ok) {
@@ -86,7 +93,7 @@ export default function SkillsManager() {
         setWorkflows(data.workflows || []);
       }
     } catch (error) {
-      console.error('Fetch error:', error);
+      console.error("Fetch error:", error);
     } finally {
       setLoading(false);
     }
@@ -94,12 +101,15 @@ export default function SkillsManager() {
 
   const handleToggleSkill = async (skillName: string, enabled: boolean) => {
     try {
-      await fetch(`/api/skills/${skillName}/${enabled ? 'enable' : 'disable'}`, {
-        method: 'POST',
-      });
+      await fetch(
+        `/api/skills/${skillName}/${enabled ? "enable" : "disable"}`,
+        {
+          method: "POST",
+        },
+      );
       fetchData();
     } catch (error) {
-      console.error('Toggle error:', error);
+      console.error("Toggle error:", error);
     }
   };
 
@@ -110,9 +120,9 @@ export default function SkillsManager() {
     setGeneratedSkill(null);
 
     try {
-      const response = await fetch('/api/skills/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/skills/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: generatePrompt }),
       });
 
@@ -121,7 +131,7 @@ export default function SkillsManager() {
         setGeneratedSkill(data);
       }
     } catch (error) {
-      console.error('Generate error:', error);
+      console.error("Generate error:", error);
     } finally {
       setGenerating(false);
     }
@@ -136,8 +146,8 @@ export default function SkillsManager() {
     try {
       const params = JSON.parse(testParams);
       const response = await fetch(`/api/skills/${selectedSkill.name}/call`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ params, dry_run: true }),
       });
 
@@ -156,21 +166,30 @@ export default function SkillsManager() {
     <div
       key={skill.name}
       className={clsx(
-        'bg-white rounded-lg shadow p-4 border-l-4 cursor-pointer transition-shadow hover:shadow-md',
-        skill.enabled ? 'border-green-500' : 'border-gray-300'
+        "bg-white rounded-lg shadow p-4 border-l-4 cursor-pointer transition-shadow hover:shadow-md",
+        skill.enabled ? "border-green-500" : "border-gray-300",
       )}
       onClick={() => setSelectedSkill(skill)}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <span className="text-lg">{categoryEmoji[skill.category] || '🔧'}</span>
+            <span className="text-lg">
+              {categoryEmoji[skill.category] || "🔧"}
+            </span>
             <span className="font-medium">{skill.name}</span>
-            <span className={clsx('text-xs px-2 py-0.5 rounded-full', riskColors[skill.risk_level])}>
+            <span
+              className={clsx(
+                "text-xs px-2 py-0.5 rounded-full",
+                riskColors[skill.risk_level],
+              )}
+            >
               {skill.risk_level}
             </span>
             {skill.requires_confirmation && (
-              <AlertCircle size={14} className="text-orange-500" title="承認が必要" />
+              <span title="承認が必要">
+                <AlertCircle size={14} className="text-orange-500" />
+              </span>
             )}
           </div>
           <p className="text-sm text-gray-600 mt-1">{skill.description}</p>
@@ -182,8 +201,10 @@ export default function SkillsManager() {
             handleToggleSkill(skill.name, !skill.enabled);
           }}
           className={clsx(
-            'p-2 rounded-lg transition-colors',
-            skill.enabled ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+            "p-2 rounded-lg transition-colors",
+            skill.enabled
+              ? "bg-green-100 text-green-600"
+              : "bg-gray-100 text-gray-400",
           )}
         >
           {skill.enabled ? <Play size={18} /> : <Pause size={18} />}
@@ -201,8 +222,10 @@ export default function SkillsManager() {
             <span className="font-medium">{workflow.name}</span>
             <span
               className={clsx(
-                'text-xs px-2 py-0.5 rounded-full',
-                workflow.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                "text-xs px-2 py-0.5 rounded-full",
+                workflow.status === "active"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-gray-100 text-gray-600",
               )}
             >
               {workflow.status}
@@ -210,7 +233,8 @@ export default function SkillsManager() {
           </div>
           <p className="text-sm text-gray-600 mt-1">{workflow.description}</p>
           <p className="text-xs text-gray-400 mt-1">
-            {workflow.steps.length} ステップ • 更新: {new Date(workflow.updated_at).toLocaleDateString('ja-JP')}
+            {workflow.steps.length} ステップ • 更新:{" "}
+            {new Date(workflow.updated_at).toLocaleDateString("ja-JP")}
           </p>
         </div>
 
@@ -242,42 +266,46 @@ export default function SkillsManager() {
       <div className="border-b border-gray-200">
         <div className="flex gap-4">
           <button
-            onClick={() => setActiveTab('skills')}
+            onClick={() => setActiveTab("skills")}
             className={clsx(
-              'px-4 py-2 font-medium border-b-2 transition-colors',
-              activeTab === 'skills'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+              "px-4 py-2 font-medium border-b-2 transition-colors",
+              activeTab === "skills"
+                ? "border-primary-500 text-primary-600"
+                : "border-transparent text-gray-500 hover:text-gray-700",
             )}
           >
             <div className="flex items-center gap-2">
               <Wrench size={18} />
               インストール済み
-              <span className="text-xs bg-gray-200 px-2 rounded-full">{skills.length}</span>
+              <span className="text-xs bg-gray-200 px-2 rounded-full">
+                {skills.length}
+              </span>
             </div>
           </button>
           <button
-            onClick={() => setActiveTab('workflows')}
+            onClick={() => setActiveTab("workflows")}
             className={clsx(
-              'px-4 py-2 font-medium border-b-2 transition-colors',
-              activeTab === 'workflows'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+              "px-4 py-2 font-medium border-b-2 transition-colors",
+              activeTab === "workflows"
+                ? "border-primary-500 text-primary-600"
+                : "border-transparent text-gray-500 hover:text-gray-700",
             )}
           >
             <div className="flex items-center gap-2">
               <Workflow size={18} />
               ワークフロー
-              <span className="text-xs bg-gray-200 px-2 rounded-full">{workflows.length}</span>
+              <span className="text-xs bg-gray-200 px-2 rounded-full">
+                {workflows.length}
+              </span>
             </div>
           </button>
           <button
-            onClick={() => setActiveTab('generate')}
+            onClick={() => setActiveTab("generate")}
             className={clsx(
-              'px-4 py-2 font-medium border-b-2 transition-colors',
-              activeTab === 'generate'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+              "px-4 py-2 font-medium border-b-2 transition-colors",
+              activeTab === "generate"
+                ? "border-primary-500 text-primary-600"
+                : "border-transparent text-gray-500 hover:text-gray-700",
             )}
           >
             <div className="flex items-center gap-2">
@@ -293,7 +321,7 @@ export default function SkillsManager() {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="animate-spin text-primary-500" size={32} />
         </div>
-      ) : activeTab === 'skills' ? (
+      ) : activeTab === "skills" ? (
         <div className="grid grid-cols-2 gap-4">
           {/* スキル一覧 */}
           <div className="space-y-4">
@@ -312,17 +340,26 @@ export default function SkillsManager() {
             {selectedSkill ? (
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-2xl">{categoryEmoji[selectedSkill.category] || '🔧'}</span>
+                  <span className="text-2xl">
+                    {categoryEmoji[selectedSkill.category] || "🔧"}
+                  </span>
                   <div>
                     <h3 className="text-lg font-bold">{selectedSkill.name}</h3>
-                    <p className="text-sm text-gray-500">{selectedSkill.category}</p>
+                    <p className="text-sm text-gray-500">
+                      {selectedSkill.category}
+                    </p>
                   </div>
                 </div>
 
                 <p className="text-gray-600">{selectedSkill.description}</p>
 
                 <div className="flex gap-2">
-                  <span className={clsx('text-xs px-2 py-1 rounded', riskColors[selectedSkill.risk_level])}>
+                  <span
+                    className={clsx(
+                      "text-xs px-2 py-1 rounded",
+                      riskColors[selectedSkill.risk_level],
+                    )}
+                  >
                     リスク: {selectedSkill.risk_level}
                   </span>
                   {selectedSkill.requires_confirmation && (
@@ -348,13 +385,22 @@ export default function SkillsManager() {
                     disabled={testing}
                     className="mt-2 flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
                   >
-                    {testing ? <Loader2 className="animate-spin" size={16} /> : <Play size={16} />}
+                    {testing ? (
+                      <Loader2 className="animate-spin" size={16} />
+                    ) : (
+                      <Play size={16} />
+                    )}
                     テスト
                   </button>
                 </div>
 
                 {testResult && (
-                  <div className={clsx('p-3 rounded-lg', testResult.ok ? 'bg-green-50' : 'bg-red-50')}>
+                  <div
+                    className={clsx(
+                      "p-3 rounded-lg",
+                      testResult.ok ? "bg-green-50" : "bg-red-50",
+                    )}
+                  >
                     <pre className="text-xs overflow-auto">
                       {JSON.stringify(testResult, null, 2)}
                     </pre>
@@ -369,7 +415,7 @@ export default function SkillsManager() {
             )}
           </div>
         </div>
-      ) : activeTab === 'workflows' ? (
+      ) : activeTab === "workflows" ? (
         <div className="space-y-4">
           <button className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600">
             <Plus size={18} />

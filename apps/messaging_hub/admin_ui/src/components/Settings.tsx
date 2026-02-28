@@ -1,5 +1,14 @@
-import { useState } from 'react';
-import { Save, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { Save, RefreshCw } from "lucide-react";
+
+const SETTINGS_STORAGE_KEY = "messaging_hub_admin_settings_v1";
+
+interface AdminSettings {
+  sessionTimeout: number;
+  maxMessageLength: number;
+  enableLogging: boolean;
+  logLevel: string;
+}
 
 /**
  * 設定ページ
@@ -7,16 +16,41 @@ import { Save, RefreshCw } from 'lucide-react';
  * システム設定の管理
  */
 export default function Settings() {
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<AdminSettings>({
     sessionTimeout: 30,
     maxMessageLength: 4096,
     enableLogging: true,
-    logLevel: 'info',
+    logLevel: "info",
   });
+  const [saveMessage, setSaveMessage] = useState("");
+
+  useEffect(() => {
+    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+    try {
+      const parsed = JSON.parse(raw) as Partial<AdminSettings>;
+      setSettings((current) => ({ ...current, ...parsed }));
+    } catch {
+      // 保存値が壊れている場合は既定値を使用する
+    }
+  }, []);
 
   const handleSave = () => {
-    // TODO: API call to save settings
-    console.log('Saving settings:', settings);
+    window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+    setSaveMessage(`保存しました (${new Date().toLocaleTimeString("ja-JP")})`);
+  };
+
+  const handleReset = () => {
+    window.localStorage.removeItem(SETTINGS_STORAGE_KEY);
+    setSettings({
+      sessionTimeout: 30,
+      maxMessageLength: 4096,
+      enableLogging: true,
+      logLevel: "info",
+    });
+    setSaveMessage("設定を初期化しました");
   };
 
   return (
@@ -36,7 +70,10 @@ export default function Settings() {
               type="number"
               value={settings.sessionTimeout}
               onChange={(e) =>
-                setSettings({ ...settings, sessionTimeout: parseInt(e.target.value) })
+                setSettings({
+                  ...settings,
+                  sessionTimeout: parseInt(e.target.value),
+                })
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
@@ -51,7 +88,10 @@ export default function Settings() {
               type="number"
               value={settings.maxMessageLength}
               onChange={(e) =>
-                setSettings({ ...settings, maxMessageLength: parseInt(e.target.value) })
+                setSettings({
+                  ...settings,
+                  maxMessageLength: parseInt(e.target.value),
+                })
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
@@ -68,7 +108,10 @@ export default function Settings() {
               }
               className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
             />
-            <label htmlFor="enableLogging" className="ml-2 text-sm text-gray-700">
+            <label
+              htmlFor="enableLogging"
+              className="ml-2 text-sm text-gray-700"
+            >
               ロギングを有効化
             </label>
           </div>
@@ -93,6 +136,10 @@ export default function Settings() {
           </div>
         </div>
 
+        {saveMessage && (
+          <p className="text-sm text-green-700 mt-4">{saveMessage}</p>
+        )}
+
         {/* アクションボタン */}
         <div className="flex gap-4 mt-8">
           <button
@@ -103,7 +150,7 @@ export default function Settings() {
             保存
           </button>
           <button
-            onClick={() => window.location.reload()}
+            onClick={handleReset}
             className="flex items-center gap-2 px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             <RefreshCw size={20} />
@@ -114,4 +161,3 @@ export default function Settings() {
     </div>
   );
 }
-

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useChatStore } from '../../stores/chatStore';
-import { Plus, Trash2, LogOut, Settings, Hash, MessageCircle, PanelLeftClose } from 'lucide-react';
+import { Plus, Trash2, LogOut, Hash, MessageCircle, PanelLeftClose } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../i18n';
@@ -12,6 +12,12 @@ interface SidebarProps {
     /** サイドバーの開閉をトグルするコールバック */
     onToggle: () => void;
 }
+
+/** タイトルを最大文字数で切り詰め、省略記号を付与する */
+const truncateTitle = (title: string, maxLen: number): string => {
+    if (title.length <= maxLen) return title;
+    return `${title.slice(0, maxLen)}…`;
+};
 
 export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     const { t } = useI18n();
@@ -51,18 +57,11 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                 </div>
                 <div className="flex items-center gap-1">
                     <button
-                        onClick={() => navigate('/settings')}
-                        className="text-[var(--text-muted)] hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5"
-                        title={t('sidebar.settings')}
-                    >
-                        <Settings size={15} />
-                    </button>
-                    <button
                         onClick={onToggle}
-                        className="text-[var(--text-muted)] hover:text-white transition-colors p-1.5 rounded-lg hover:bg-white/5"
+                        className="text-[var(--text-muted)] hover:text-white transition-colors p-2 rounded-xl hover:bg-white/5"
                         title={t('sidebar.collapse') ?? 'サイドバーを閉じる'}
                     >
-                        <PanelLeftClose size={15} />
+                        <PanelLeftClose size={24} />
                     </button>
                 </div>
             </div>
@@ -107,7 +106,7 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                         >
                             <Hash size={16} className={`flex-shrink-0 ${currentSessionId === session.session_id ? 'text-[var(--primary)]' : 'text-[var(--text-muted)]'}`} />
                             <span className="flex-1 truncate pr-6 font-medium" title={session.title}>
-                                {session.title || t('chat.new_chat')}
+                                {truncateTitle(session.title || t('chat.new_chat'), 17)}
                             </span>
                         </button>
 

@@ -134,6 +134,23 @@ Platform の `Start / Publish / Local Start` は実行前に CLI preflight を�
 - `diagnostic_mode`
 - `diagnostic_command`
 
+### 4.4 ライフサイクル実行ルール（WSL + conda agentflow）
+
+- `local-start`
+  - `conda activate agentflow` を前提に backend/frontend を起動
+  - PID 生存だけでなく backend health / frontend 待受を確認
+  - 片系が直後に停止した場合は失敗としてログ末尾を返す
+- `start` / `stop`
+  - 先に `execution_mode`（`docker` / `local`）を判定してから実行
+  - 判定優先度: docker 稼働中 > local PID 稼働中 > compose-first default
+- `publish`
+  - docker-first
+  - 既存コンテナ/イメージ有り: `docker compose up -d`
+  - 既存資産無し: `docker compose up -d --build`
+- 失敗時の自動修復
+  - `codex` 2 回 → `claude` 2 回
+  - action response に `execution_mode` と `repair`（試行履歴）を返す
+
 ## 5. テスト/静的チェック（統一スクリプト）
 
 ```bash

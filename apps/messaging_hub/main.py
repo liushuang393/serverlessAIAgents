@@ -36,11 +36,19 @@ import asyncio
 import json
 import logging
 import os
+import time
+import uuid
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlencode
 
+from apps.messaging_hub.approval_manager import ApprovalManager, ApprovalRequest, ApprovalStatus
 from apps.messaging_hub.coordinator import AssistantConfig, PersonalAssistantCoordinator
+from apps.messaging_hub.execution_tracker import ExecutionEvent, ExecutionStatus, ExecutionTracker
+from apps.messaging_hub.skills_manager import SkillsManager, Workflow, WorkflowStatus
+from apps.messaging_hub.storage import SQLiteMessagingHubStore
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -56,7 +64,13 @@ from agentflow.channels import (
     WhatsAppAdapter,
 )
 from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
-from agentflow.skills import ChatBotSkill, ConversationExportSkill, ExportFormat
+from agentflow.skills import (
+    ChatBotSkill,
+    ConversationExportSkill,
+    ExportFormat,
+    RiskLevel,
+    create_skill_gateway,
+)
 from agentflow.tools.cli.runtime_manager import CLIRuntimeManager
 
 
@@ -170,9 +184,329 @@ async def _require_ws_api_key(websocket: WebSocket) -> bool:
     return ok
 
 
+def _domain_whitelist_from_env() -> list[str]:
+    """環境変数からドメインホワイトリストを読み込む."""
+    raw = os.getenv("MESSAGING_HUB_DOMAIN_WHITELIST", "")
+    return [value.strip() for value in raw.split(",") if value.strip()]
+
+
+def _build_skill_gateway() -> Any:
+    """セキュリティモードに応じた SkillGateway を作成する."""
+    mode = _get_security_mode()
+    return create_skill_gateway(
+        workspace_path=Path.cwd(),
+        execution_mode="isolated",
+        domain_whitelist=_domain_whitelist_from_env(),
+        allow_write=mode == "autonomous",
+        allow_delete=False,
+        require_confirmation=True,
+    )
+
+
+_STANDARD_EVENT_ALIASES: dict[str, list[str]] = {
+    "RunStarted": ["execution_started"],
+    "StepStarted": ["execution_started"],
+    "ToolApprovalRequested": ["approval_request"],
+    "ToolExecuted": ["execution_completed"],
+    "EvidenceAdded": ["execution_completed"],
+    "RunFinished": ["execution_completed"],
+}
+
+
+async def _broadcast_execution_event(event_name: str, payload: dict[str, Any]) -> None:
+    """標準イベントと互換イベントを併送する."""
+    await hub.broadcast({"type": event_name, "data": payload})
+    for legacy_event in _STANDARD_EVENT_ALIASES.get(event_name, []):
+        await hub.broadcast({"type": legacy_event, "data": payload})
+
+
+def _risk_level_from_reason(reason: str) -> RiskLevel:
+    """確認理由文字列からリスクレベルを推定する."""
+    lowered = reason.lower()
+    if "critical" in lowered:
+        return RiskLevel.CRITICAL
+    if "high" in lowered:
+        return RiskLevel.HIGH
+    if "medium" in lowered:
+        return RiskLevel.MEDIUM
+    return RiskLevel.LOW
+
+
+_store = SQLiteMessagingHubStore.from_default_path()
+_skill_gateway = _build_skill_gateway()
+_approval_manager = ApprovalManager(websocket_hub=hub)
+_execution_tracker = ExecutionTracker(websocket_hub=hub)
+_skills_manager = SkillsManager(gateway=_skill_gateway, websocket_hub=hub)
+_active_step_events: dict[str, str] = {}
+_run_started_at: dict[str, float] = {}
+_process_started_at = time.time()
+
+
+async def _on_approval_request(request: ApprovalRequest) -> None:
+    """承認要求を永続化し、標準イベントを通知する."""
+    await _store.upsert_approval(request.to_dict())
+    await _broadcast_execution_event(
+        "ToolApprovalRequested",
+        {
+            "request_id": request.id,
+            "skill_name": request.skill_name,
+            "risk_level": request.risk_level.value,
+            "status": request.status.value,
+            "user_id": request.user_id,
+            "params": request.params,
+            "created_at": request.created_at.isoformat(),
+        },
+    )
+
+
+async def _on_approval_decision(request: ApprovalRequest) -> None:
+    """承認決裁を永続化する."""
+    await _store.upsert_approval(request.to_dict())
+
+
+async def _confirmation_handler(
+    skill_name: str,
+    reason: str,
+    params: dict[str, Any],
+) -> bool:
+    """SkillGateway の承認要求ハンドラ."""
+    request_id, auto_approved = await _approval_manager.request_approval(
+        skill_name=skill_name,
+        params=params,
+        risk_level=_risk_level_from_reason(reason),
+        user_id="assistant",
+        metadata={"reason": reason},
+    )
+    stored = _approval_manager.find_request(request_id)
+    if stored is not None:
+        await _store.upsert_approval(stored.to_dict())
+    if auto_approved:
+        return True
+    status = await _approval_manager.wait_for_approval(request_id, timeout_seconds=300)
+    decided = _approval_manager.find_request(request_id)
+    if decided is not None:
+        await _store.upsert_approval(decided.to_dict())
+    return status in {ApprovalStatus.APPROVED, ApprovalStatus.AUTO_APPROVED}
+
+
+async def _assistant_event_emitter(event_name: str, payload: dict[str, Any]) -> None:
+    """Coordinator からの実行イベントを追跡・永続化する."""
+    await _broadcast_execution_event(event_name, payload)
+    run_id = str(payload.get("run_id", ""))
+    step_id = str(payload.get("step_id", ""))
+
+    if event_name == "RunStarted":
+        started_at = datetime.now(UTC).timestamp()
+        _run_started_at[run_id] = started_at
+        await _store.upsert_run_record(
+            {
+                "run_id": run_id,
+                "flow_id": "assistant",
+                "thread_id": str(payload.get("user_id", "default")),
+                "trace_id": run_id,
+                "tenant_id": None,
+                "status": "running",
+                "started_at": started_at,
+                "completed_at": None,
+                "metrics": {},
+            }
+        )
+        return
+
+    if event_name == "StepStarted":
+        started_event = await _execution_tracker.start_execution(
+            skill_name=str(payload.get("skill_name", "unknown")),
+            params=payload.get("params", {}) if isinstance(payload.get("params"), dict) else {},
+            user_id=str(payload.get("user_id", "assistant")),
+            metadata={"run_id": run_id, "step_id": step_id},
+        )
+        _active_step_events[step_id] = started_event.id
+        event_row = started_event.to_dict()
+        event_row["run_id"] = run_id
+        await _store.upsert_execution_event(event_row)
+        return
+
+    if event_name == "ToolExecuted":
+        status_text = str(payload.get("status", "failed"))
+        status = ExecutionStatus.SUCCESS if status_text == "success" else ExecutionStatus.FAILED
+        event_id = _active_step_events.pop(step_id, None)
+        artifacts = payload.get("artifacts", [])
+        if isinstance(artifacts, list):
+            for artifact in artifacts:
+                artifact_payload = artifact if isinstance(artifact, dict) else {"value": artifact}
+                await _store.add_artifact(
+                    run_id=run_id,
+                    step_id=step_id if step_id else None,
+                    artifact_type=str(artifact_payload.get("type", "tool_artifact")),
+                    location=str(artifact_payload.get("location")) if artifact_payload.get("location") else None,
+                    payload=artifact_payload,
+                )
+        rollback_handle = payload.get("rollback_handle")
+        if rollback_handle is not None:
+            rollback_payload = rollback_handle if isinstance(rollback_handle, dict) else {"value": rollback_handle}
+            await _store.add_artifact(
+                run_id=run_id,
+                step_id=step_id if step_id else None,
+                artifact_type="rollback_handle",
+                location=None,
+                payload=rollback_payload,
+            )
+        if event_id is not None:
+            completed_event = await _execution_tracker.complete_execution(
+                event_id=event_id,
+                status=status,
+                result=payload,
+                error=str(payload.get("error", "")) if payload.get("error") else None,
+            )
+            if completed_event is not None:
+                completed_row = completed_event.to_dict()
+                completed_row["run_id"] = run_id
+                await _store.upsert_execution_event(completed_row)
+        return
+
+    if event_name == "EvidenceAdded":
+        await _store.add_evidence(
+            run_id=run_id,
+            step_id=step_id if step_id else None,
+            payload=payload,
+        )
+        return
+
+    if event_name == "RunFinished":
+        started_at = _run_started_at.pop(run_id, datetime.now(UTC).timestamp())
+        completed_at = datetime.now(UTC).timestamp()
+        metrics = {"duration_ms": max(completed_at - started_at, 0.0) * 1000}
+        await _store.upsert_run_record(
+            {
+                "run_id": run_id,
+                "flow_id": "assistant",
+                "thread_id": str(payload.get("user_id", "default")),
+                "trace_id": run_id,
+                "tenant_id": None,
+                "status": str(payload.get("status", "completed")),
+                "started_at": started_at,
+                "completed_at": completed_at,
+                "metrics": metrics,
+            }
+        )
+
+
+_skill_gateway.set_confirmation_handler(_confirmation_handler)
+_approval_manager.on_request(_on_approval_request)
+_approval_manager.on_decision(_on_approval_decision)
+
 # Personal Assistant Coordinator（新機能）
 assistant_config = _build_assistant_config()
-assistant = PersonalAssistantCoordinator(config=assistant_config)
+assistant = PersonalAssistantCoordinator(
+    config=assistant_config,
+    skill_gateway=_skill_gateway,
+    event_emitter=_assistant_event_emitter,
+)
+
+
+def _standard_event_names() -> list[str]:
+    """標準イベント一覧を返す."""
+    return [
+        "RunStarted",
+        "StepStarted",
+        "ToolApprovalRequested",
+        "ToolExecuted",
+        "EvidenceAdded",
+        "RunFinished",
+    ]
+
+
+async def _execute_skill_with_tracking(
+    *,
+    skill_name: str,
+    params: dict[str, Any],
+    user_id: str,
+    dry_run: bool,
+) -> dict[str, Any]:
+    """管理 API からのスキル実行をトラッキング付きで実行する."""
+    run_id = f"run_{uuid.uuid4().hex}"
+    step_id = f"step_{uuid.uuid4().hex}"
+    await _assistant_event_emitter(
+        "RunStarted",
+        {
+            "run_id": run_id,
+            "user_id": user_id,
+            "message": f"skill:{skill_name}",
+        },
+    )
+    await _assistant_event_emitter(
+        "StepStarted",
+        {
+            "run_id": run_id,
+            "step_id": step_id,
+            "skill_name": skill_name,
+            "params": params,
+            "user_id": user_id,
+        },
+    )
+    try:
+        result = await _skill_gateway.call(skill_name, params, dry_run=dry_run)
+        normalized_cost = result.cost or {"duration_ms": result.duration_ms, "token_estimate": 0}
+        await _assistant_event_emitter(
+            "ToolExecuted",
+            {
+                "run_id": run_id,
+                "step_id": step_id,
+                "skill_name": skill_name,
+                "status": "success" if result.success else "failed",
+                "duration_ms": result.duration_ms,
+                "error": result.error,
+                "cost": normalized_cost,
+                "risk_flags": result.risk_flags,
+                "artifacts": result.artifacts,
+                "rollback_handle": result.rollback_handle,
+            },
+        )
+        if result.evidence:
+            await _assistant_event_emitter(
+                "EvidenceAdded",
+                {
+                    "run_id": run_id,
+                    "step_id": step_id,
+                    "skill_name": skill_name,
+                    "count": len(result.evidence),
+                },
+            )
+        await _assistant_event_emitter(
+            "RunFinished",
+            {
+                "run_id": run_id,
+                "user_id": user_id,
+                "status": "completed" if result.success else "failed",
+            },
+        )
+        payload = result.to_dict()
+        payload["run_id"] = run_id
+        payload["step_id"] = step_id
+        return payload
+    except Exception as e:
+        await _assistant_event_emitter(
+            "ToolExecuted",
+            {
+                "run_id": run_id,
+                "step_id": step_id,
+                "skill_name": skill_name,
+                "status": "error",
+                "error": str(e),
+                "cost": {"duration_ms": 0.0, "token_estimate": 0},
+                "risk_flags": ["execution_error"],
+            },
+        )
+        await _assistant_event_emitter(
+            "RunFinished",
+            {
+                "run_id": run_id,
+                "user_id": user_id,
+                "status": "failed",
+                "error": str(e),
+            },
+        )
+        raise
 
 
 # =========================================================================
@@ -185,10 +519,27 @@ async def lifespan(app: FastAPI) -> Any:
     """应用生命周期管理."""
     logger.info("Starting Messaging Hub...")
 
-    # 1. 注册平台适配器
+    # 1. 永続化層の初期化と復元
+    await _store.initialize()
+    approval_rows = await _store.list_approvals(limit=5000)
+    pending_requests: list[ApprovalRequest] = []
+    history_requests: list[ApprovalRequest] = []
+    for row in approval_rows:
+        request = ApprovalRequest.from_dict(row)
+        if request.status == ApprovalStatus.PENDING:
+            pending_requests.append(request)
+        else:
+            history_requests.append(request)
+    _approval_manager.restore_requests(pending=pending_requests, history=history_requests)
+
+    execution_rows = await _store.list_execution_events(limit=5000)
+    restored_events = [ExecutionEvent.from_dict(row) for row in execution_rows]
+    _execution_tracker.restore_events(restored_events)
+
+    # 2. 注册平台适配器
     await setup_platforms()
 
-    # 2. 启动后台任务（Discord bot）
+    # 3. 启动后台任务（Discord bot）
     await start_background_tasks()
 
     logger.info("Messaging Hub started successfully")
@@ -583,13 +934,11 @@ async def list_sessions() -> dict[str, Any]:
 @app.get("/api/health")
 async def api_health() -> dict[str, Any]:
     """管理画面用ヘルスチェック."""
-    import time
-
     stats = gateway.get_statistics()
     return {
         "status": "healthy",
         "security_mode": _get_security_mode(),
-        "uptime": time.time(),  # TODO: 実際の uptime を計算
+        "uptime": max(time.time() - _process_started_at, 0.0),
         "statistics": stats,
     }
 
@@ -685,6 +1034,373 @@ async def api_export(format: str = "json") -> JSONResponse:
 
 
 # =========================================================================
+# 承認・実行・スキル管理 API
+# =========================================================================
+
+
+class ApprovalDecisionRequest(BaseModel):
+    """承認実行リクエスト."""
+
+    approver_id: str = Field(default="admin", min_length=1)
+
+
+class ApprovalRejectRequest(BaseModel):
+    """拒否実行リクエスト."""
+
+    rejecter_id: str = Field(default="admin", min_length=1)
+    reason: str = Field(default="")
+
+
+class SkillGenerateRequest(BaseModel):
+    """スキル生成リクエスト."""
+
+    description: str = Field(..., min_length=1)
+    examples: list[str] = Field(default_factory=list)
+
+
+class SkillCallRequest(BaseModel):
+    """スキル呼び出しリクエスト."""
+
+    params: dict[str, Any] = Field(default_factory=dict)
+    dry_run: bool = Field(default=False)
+    user_id: str = Field(default="admin")
+
+
+@app.get("/api/approvals/pending")
+async def api_pending_approvals() -> dict[str, Any]:
+    """保留中の承認一覧."""
+    pending = _approval_manager.list_pending()
+    return {
+        "requests": [request.to_dict() for request in pending],
+        "total": len(pending),
+    }
+
+
+@app.get("/api/approvals/history")
+async def api_approval_history(
+    limit: int = 100,
+    offset: int = 0,
+    status: str | None = None,
+) -> dict[str, Any]:
+    """承認履歴."""
+    status_filter: ApprovalStatus | None = None
+    if status:
+        try:
+            status_filter = ApprovalStatus(status)
+        except ValueError:
+            status_filter = None
+    history = _approval_manager.list_history(limit=limit, offset=offset, status_filter=status_filter)
+    return {
+        "requests": [request.to_dict() for request in history],
+        "total": len(history),
+    }
+
+
+@app.get("/api/approvals/stats")
+async def api_approval_stats() -> dict[str, Any]:
+    """承認統計."""
+    return _approval_manager.get_statistics()
+
+
+@app.post("/api/approvals/{request_id}/approve")
+async def api_approve_request(request_id: str, payload: ApprovalDecisionRequest) -> dict[str, Any]:
+    """承認を実行."""
+    success = await _approval_manager.approve(request_id=request_id, approver_id=payload.approver_id)
+    request = _approval_manager.find_request(request_id)
+    if request is not None:
+        await _store.upsert_approval(request.to_dict())
+    return {"ok": success}
+
+
+@app.post("/api/approvals/{request_id}/reject")
+async def api_reject_request(request_id: str, payload: ApprovalRejectRequest) -> dict[str, Any]:
+    """拒否を実行."""
+    success = await _approval_manager.reject(
+        request_id=request_id,
+        rejecter_id=payload.rejecter_id,
+        reason=payload.reason,
+    )
+    request = _approval_manager.find_request(request_id)
+    if request is not None:
+        await _store.upsert_approval(request.to_dict())
+    return {"ok": success}
+
+
+@app.get("/api/executions")
+async def api_executions(
+    status: str | None = None,
+    skill: str | None = None,
+    date: str | None = None,
+    limit: int = 200,
+) -> dict[str, Any]:
+    """実行イベント一覧."""
+    events = await _store.list_execution_events(
+        status=status,
+        skill_name=skill,
+        started_date=date,
+        limit=limit,
+    )
+    return {"events": events, "total": len(events)}
+
+
+@app.get("/api/executions/stats")
+async def api_execution_stats() -> dict[str, Any]:
+    """実行統計."""
+    stats = await _execution_tracker.get_statistics()
+    return stats.to_dict()
+
+
+@app.get("/api/skills")
+async def api_skills() -> dict[str, Any]:
+    """スキル一覧."""
+    skills = await _skills_manager.list_available_skills()
+    return {"skills": [skill.to_dict() for skill in skills], "total": len(skills)}
+
+
+@app.post("/api/skills/{skill_name}/enable")
+async def api_enable_skill(skill_name: str) -> dict[str, Any]:
+    """スキル有効化."""
+    return {"ok": _skills_manager.enable_skill(skill_name)}
+
+
+@app.post("/api/skills/{skill_name}/disable")
+async def api_disable_skill(skill_name: str) -> dict[str, Any]:
+    """スキル無効化."""
+    return {"ok": _skills_manager.disable_skill(skill_name)}
+
+
+@app.post("/api/skills/generate")
+async def api_generate_skill(request: SkillGenerateRequest) -> dict[str, Any]:
+    """自然言語からスキルを生成."""
+    return await _skills_manager.generate_skill_from_description(
+        description=request.description,
+        examples=request.examples,
+    )
+
+
+@app.post("/api/skills/{skill_name}/call")
+async def api_call_skill(skill_name: str, request: SkillCallRequest) -> dict[str, Any]:
+    """スキルを呼び出す."""
+    return await _execute_skill_with_tracking(
+        skill_name=skill_name,
+        params=request.params,
+        user_id=request.user_id,
+        dry_run=request.dry_run,
+    )
+
+
+@app.get("/api/workflows")
+async def api_workflows(
+    status: str | None = None,
+) -> dict[str, Any]:
+    """ワークフロー一覧."""
+    status_filter: WorkflowStatus | None = None
+    if status:
+        try:
+            status_filter = WorkflowStatus(status)
+        except ValueError:
+            status_filter = None
+    workflows: list[Workflow] = _skills_manager.list_workflows(status_filter=status_filter)
+    return {"workflows": [workflow.to_dict() for workflow in workflows], "total": len(workflows)}
+
+
+# =========================================================================
+# sr_chat API
+# =========================================================================
+
+
+class SRChatPostRequest(BaseModel):
+    """sr_chat 投稿リクエスト."""
+
+    text: str = Field(..., min_length=1)
+    user_id: str = Field(default="default", min_length=1)
+    conversation_id: str = Field(default="chat:default", min_length=1)
+    platform: str | None = None
+    channel_id: str | None = None
+
+
+class SRChatUpdateRequest(BaseModel):
+    """sr_chat 更新リクエスト."""
+
+    message_id: str = Field(..., min_length=1)
+    conversation_id: str = Field(default="chat:default", min_length=1)
+    text: str = Field(..., min_length=1)
+
+
+class SRFileUploadRequest(BaseModel):
+    """sr_chat ファイルアップロードリクエスト."""
+
+    conversation_id: str = Field(default="chat:default", min_length=1)
+    file_name: str = Field(..., min_length=1)
+    content_base64: str = Field(..., min_length=1)
+    mime_type: str = Field(default="application/octet-stream")
+    user_id: str = Field(default="default", min_length=1)
+
+
+class SREventSubscribeRequest(BaseModel):
+    """sr_chat イベント購読リクエスト."""
+
+    client_id: str = Field(..., min_length=1)
+    conversation_id: str | None = None
+    event_types: list[str] = Field(default_factory=_standard_event_names)
+
+
+@app.post("/api/sr_chat/auth.test")
+async def sr_chat_auth_test() -> dict[str, Any]:
+    """認証状態の確認."""
+    return {
+        "ok": True,
+        "service": "messaging_hub",
+        "requires_auth": _is_auth_required(),
+        "user": "authenticated" if _is_auth_required() else "anonymous",
+    }
+
+
+@app.get("/api/sr_chat/conversations.list")
+async def sr_chat_conversations_list(limit: int = 100) -> dict[str, Any]:
+    """会話一覧."""
+    items = await _store.list_sr_conversations(limit=limit)
+    return {"ok": True, "conversations": items, "total": len(items)}
+
+
+@app.get("/api/sr_chat/conversations.history")
+async def sr_chat_conversations_history(
+    conversation_id: str = "chat:default",
+    limit: int = 100,
+) -> dict[str, Any]:
+    """会話履歴."""
+    items = await _store.list_sr_messages(conversation_id=conversation_id, limit=limit)
+    return {"ok": True, "conversation_id": conversation_id, "messages": items, "total": len(items)}
+
+
+@app.post("/api/sr_chat/chat.postMessage")
+async def sr_chat_post_message(request: SRChatPostRequest) -> dict[str, Any]:
+    """メッセージを投稿してアシスタント応答を生成."""
+    run_id = f"run_{uuid.uuid4().hex}"
+    user_message_id = f"msg_{uuid.uuid4().hex}"
+    assistant_message_id = f"msg_{uuid.uuid4().hex}"
+    now_iso = datetime.now(UTC).isoformat()
+
+    await _store.upsert_sr_message(
+        {
+            "message_id": user_message_id,
+            "conversation_id": request.conversation_id,
+            "role": "user",
+            "content": request.text,
+            "created_at": now_iso,
+            "updated_at": now_iso,
+            "metadata": {"user_id": request.user_id},
+        }
+    )
+    result = await assistant.process(
+        request.text,
+        user_id=request.user_id,
+        context={"run_id": run_id, "conversation_id": request.conversation_id},
+    )
+    assistant_text = str(result.get("summary", ""))
+    response_time = datetime.now(UTC).isoformat()
+    await _store.upsert_sr_message(
+        {
+            "message_id": assistant_message_id,
+            "conversation_id": request.conversation_id,
+            "role": "assistant",
+            "content": assistant_text,
+            "created_at": response_time,
+            "updated_at": response_time,
+            "metadata": {"run_id": run_id, "intent": result.get("intent", {})},
+        }
+    )
+
+    delivery_error: str | None = None
+    if request.platform and request.channel_id:
+        try:
+            await gateway.send_message_to_platform(
+                platform=request.platform,
+                channel_id=request.channel_id,
+                text=assistant_text,
+            )
+        except Exception as exc:
+            delivery_error = str(exc)
+
+    return {
+        "ok": True,
+        "conversation_id": request.conversation_id,
+        "run_id": run_id,
+        "message": {
+            "id": assistant_message_id,
+            "role": "assistant",
+            "text": assistant_text,
+        },
+        "intent": result.get("intent", {}),
+        "delivery_error": delivery_error,
+    }
+
+
+@app.post("/api/sr_chat/chat.update")
+async def sr_chat_update_message(request: SRChatUpdateRequest) -> dict[str, Any]:
+    """既存メッセージを更新."""
+    now_iso = datetime.now(UTC).isoformat()
+    await _store.upsert_sr_message(
+        {
+            "message_id": request.message_id,
+            "conversation_id": request.conversation_id,
+            "role": "assistant",
+            "content": request.text,
+            "created_at": now_iso,
+            "updated_at": now_iso,
+            "metadata": {"updated": True},
+        }
+    )
+    return {"ok": True, "message_id": request.message_id, "updated_at": now_iso}
+
+
+@app.post("/api/sr_chat/files.upload")
+async def sr_chat_files_upload(request: SRFileUploadRequest) -> dict[str, Any]:
+    """ファイルアップロード情報を記録."""
+    run_id = f"file_{uuid.uuid4().hex}"
+    await _store.add_artifact(
+        run_id=run_id,
+        step_id=None,
+        artifact_type="file_upload",
+        location=request.file_name,
+        payload={
+            "conversation_id": request.conversation_id,
+            "mime_type": request.mime_type,
+            "content_base64": request.content_base64,
+            "user_id": request.user_id,
+        },
+    )
+    return {"ok": True, "run_id": run_id, "file_name": request.file_name}
+
+
+@app.post("/api/sr_chat/events.subscribe")
+async def sr_chat_events_subscribe(
+    payload: SREventSubscribeRequest,
+    request: Request,
+) -> dict[str, Any]:
+    """イベント購読情報を登録."""
+    subscription_id = str(uuid.uuid4())
+    await _store.upsert_subscription(
+        {
+            "subscription_id": subscription_id,
+            "client_id": payload.client_id,
+            "conversation_id": payload.conversation_id,
+            "event_types": payload.event_types,
+            "created_at": datetime.now(UTC).isoformat(),
+        }
+    )
+    ws_scheme = "wss" if request.url.scheme == "https" else "ws"
+    port = f":{request.url.port}" if request.url.port else ""
+    ws_url = f"{ws_scheme}://{request.url.hostname}{port}/ws?{urlencode({'client_id': payload.client_id})}"
+    return {
+        "ok": True,
+        "subscription_id": subscription_id,
+        "events": payload.event_types,
+        "ws_url": ws_url,
+    }
+
+
+# =========================================================================
 # Personal Assistant エンドポイント（新機能）
 # =========================================================================
 
@@ -725,7 +1441,12 @@ async def process_assistant_request(
         処理結果（summary, key_points, actions, risks を含む）
     """
     try:
-        result = await assistant.process(request.message, user_id=request.user_id)
+        run_id = f"run_{uuid.uuid4().hex}"
+        result = await assistant.process(
+            request.message,
+            user_id=request.user_id,
+            context={"run_id": run_id},
+        )
         response: dict[str, Any] = {
             "ok": True,
             "summary": result.get("summary", ""),
@@ -734,6 +1455,7 @@ async def process_assistant_request(
             "actions": result.get("actions", []),
             "risks": result.get("risks", []),
             "intent": result.get("intent", {}),
+            "run_id": result.get("run_id", run_id),
         }
         if result.get("needs_cli_confirmation") is True:
             proposal = result.get("cli_proposal")

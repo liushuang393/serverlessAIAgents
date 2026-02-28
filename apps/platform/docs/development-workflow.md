@@ -195,18 +195,24 @@ Platform UI に「New App」ウィザードを実装し、①〜④ を GUI 操�
 新規 App 追加後の運用起動は、以下の固定順序で処理される。
 
 1. `CLI preflight`（`codex` / `claude` の検出・必要時インストール・認証確認）
-2. 起動コマンド解決（`README > runtime.commands > fallback`）
-3. `local-start/start/publish` の実行
-4. 失敗時に CLI 診断（`read_only/plan`）を実行
-5. `diagnostic` を action レスポンスに同梱し、UI の同一エラー位置に表示
+2. コマンド解決
+   - `backend_dev/frontend_dev`: `README > runtime.commands > fallback`
+   - `start/publish/stop`: `runtime.commands > fallback`（README 前景コマンドは使わない）
+3. `start/stop` は `execution_mode` を先に判定
+   - 優先順位: docker 稼働中 > local PID 稼働中 > compose-first default
+4. `local-start/start/stop/publish` 失敗時は AI 修復ループを自動実行
+   - 順序: `codex` 2 回 → `claude` 2 回
+   - scope: 対象 app + platform ライフサイクル関連ファイル
+5. action response に `execution_mode` と `repair`（試行履歴）を同梱
 
 ### local-start の標準意味
 
 - backend + frontend を同時起動する（frontend が無い App は backend のみ）
-- DB は App 依存契約（`dependencies.database`）に従い、ローカルまたは Docker を前提に起動確認する
+- PID 存在だけでなく backend health / frontend 待受を確認する
+- 起動直後に片系が停止した場合は失敗としてログ末尾を返す
 
 ### 実装時チェックポイント
 
 - README に標準起動コマンドを明示する
-- `runtime.commands` は README で不足する場合の補完として使う
+- `runtime.commands.start/publish/stop` は compose コマンドを明示する
 - `runtime.cli` で CLI インストール/認証/診断コマンドを app 単位に上書きする

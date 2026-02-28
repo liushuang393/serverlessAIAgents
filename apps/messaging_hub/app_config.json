@@ -11,7 +11,7 @@
   "icon": "📨",
   "ports": {
     "api": 8004,
-    "frontend": null,
+    "frontend": 3001,
     "db": null,
     "redis": null
   },
@@ -68,7 +68,7 @@
   "runtime": {
     "urls": {
       "backend": "http://localhost:8004",
-      "frontend": null,
+      "frontend": "http://localhost:3001",
       "health": "http://localhost:8004/health",
       "database": null
     },
@@ -86,41 +86,20 @@
     "commands": {
       "backend_dev": "python apps/messaging_hub/scripts/dev.py",
       "frontend_dev": "cd apps/messaging_hub/admin_ui && npm run dev",
-      "publish": null,
-      "start": null,
-      "stop": null
+      "publish": "docker compose -f docker-compose.yml up -d --build",
+      "start": "docker compose -f docker-compose.yml up -d",
+      "stop": "docker compose -f docker-compose.yml down"
     },
     "cli": {
-      "preferred": [
-        "codex",
-        "claude"
-      ],
+      "preferred": ["codex", "claude"],
       "codex": {
         "executable": "codex",
-        "install_commands": [
-          [
-            "npm",
-            "install",
-            "-g",
-            "@openai/codex"
-          ]
-        ],
+        "install_commands": [["npm", "install", "-g", "@openai/codex"]],
         "auth": {
-          "status": [
-            "codex",
-            "login",
-            "status"
-          ],
+          "status": ["codex", "login", "status"],
           "api_key_env": "OPENAI_API_KEY",
-          "api_key_login": [
-            "codex",
-            "login",
-            "--with-api-key"
-          ],
-          "interactive_login": [
-            "codex",
-            "login"
-          ]
+          "api_key_login": ["codex", "login", "--with-api-key"],
+          "interactive_login": ["codex", "login"]
         },
         "diagnostic_mode": "read_only",
         "diagnostic_command": [
@@ -134,35 +113,16 @@
       "claude": {
         "executable": "claude",
         "install_commands": [
-          [
-            "npm",
-            "install",
-            "-g",
-            "@anthropic-ai/claude-code"
-          ]
+          ["npm", "install", "-g", "@anthropic-ai/claude-code"]
         ],
         "auth": {
-          "status": [
-            "claude",
-            "auth",
-            "status",
-            "--json"
-          ],
+          "status": ["claude", "auth", "status", "--json"],
           "api_key_env": "ANTHROPIC_API_KEY",
           "api_key_login": null,
-          "interactive_login": [
-            "claude",
-            "auth",
-            "login"
-          ]
+          "interactive_login": ["claude", "auth", "login"]
         },
         "diagnostic_mode": "plan",
-        "diagnostic_command": [
-          "claude",
-          "-p",
-          "--permission-mode",
-          "plan"
-        ]
+        "diagnostic_command": ["claude", "-p", "--permission-mode", "plan"]
       }
     }
   },

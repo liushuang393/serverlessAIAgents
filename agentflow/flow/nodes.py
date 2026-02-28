@@ -287,6 +287,7 @@ class ReviewNode(FlowNode):
             verdict_raw = result.get(self.verdict_key, "PASS")
             if isinstance(verdict_raw, ReviewVerdict):
                 verdict = verdict_raw
+                verdict_str = verdict.value
             else:
                 # LLMが "REVIEWVERDICT.REVISE" のような形式で返す場合に対応
                 verdict_str = str(verdict_raw).strip().upper()
@@ -306,12 +307,34 @@ class ReviewNode(FlowNode):
                 return NodeResult(success=True, data=final_data, action=NextAction.STOP)
 
             if verdict == ReviewVerdict.COACH:
-                # コーチング型改善指導: 即終了せず、レポート生成を継続
+                # COACH（REJECT の後方互換含む）: 構造化 early_return を返す
+                findings: list[dict] = result.get("findings", [])
+                critical = [f for f in findings if f.get("severity") == "CRITICAL"]
+                if critical:
+                    descs = ", ".join(f.get("description", "") for f in critical)
+                    rejection_message = f"重大課題: {descs}"
+                elif findings:
+                    descs = ", ".join(f.get("description", "") for f in findings[:3])
+                    rejection_message = f"課題が検出されました: {descs}"
+                else:
+                    rejection_message = "重大課題が検出されました"
+                rejection_reason = (
+                    "; ".join(f.get("description", "") for f in findings)
+                    or "品質基準未達"
+                )
+                early_data = {
+                    "source": self.id,
+                    "stage": self.id,
+                    "verdict": verdict_str,
+                    "rejection_message": rejection_message,
+                    "rejection_reason": rejection_reason,
+                }
                 coach_data = self.on_coach(ctx) if self.on_coach else result
                 return NodeResult(
                     success=True,
                     data=coach_data,
-                    action=NextAction.STOP,
+                    action=NextAction.EARLY_RETURN,
+                    early_return_data=early_data,
                 )
 
             # REVISE

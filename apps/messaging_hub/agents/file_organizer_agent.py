@@ -7,11 +7,14 @@
     >>> analysis = await agent.analyze_directory("~/Downloads")
     >>> result = await agent.organize("~/Downloads", dry_run=True)
 """
+# ruff: noqa: ASYNC240
 
 from __future__ import annotations
 
 import hashlib
 import logging
+import shutil
+import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -228,6 +231,147 @@ class FileOrganizerAgent:
                 return category
         return "others"
 
+    @staticmethod
+    def _normalize_mtime(modified: Any, fallback: float) -> float:
+        """modified 値を epoch 秒へ正規化."""
+        if isinstance(modified, (int, float)):
+            return float(modified)
+        if isinstance(modified, datetime):
+            return modified.timestamp()
+        if isinstance(modified, str):
+            try:
+                return datetime.fromisoformat(modified.replace("Z", "+00:00")).timestamp()
+            except ValueError:
+                return fallback
+        return fallback
+
+    def _normalize_file_record(self, base: Path, raw: dict[str, Any], now: float) -> dict[str, Any]:
+        """Gateway/ローカルのファイル情報を統一."""
+        name_value = str(raw.get("name", "")).strip()
+        path_raw = str(raw.get("path", name_value)).strip()
+        rel_path = Path(path_raw) if path_raw else Path(name_value)
+        if rel_path.is_absolute():
+            full_path = rel_path
+            rel_path = Path(name_value) if name_value else rel_path.name
+        else:
+            full_path = base / rel_path
+        name = name_value or full_path.name
+
+        is_dir = bool(raw.get("is_dir", False))
+        is_file = bool(raw.get("is_file", not is_dir))
+        if is_dir:
+            is_file = False
+        size = int(raw.get("size", raw.get("size_bytes", 0)) or 0)
+        modified = self._normalize_mtime(raw.get("modified", raw.get("modified_at")), now)
+        return {
+            "name": name,
+            "path": str(rel_path),
+            "full_path": full_path,
+            "size": size,
+            "modified": modified,
+            "is_dir": is_dir,
+            "is_file": is_file,
+        }
+
+    async def _list_directory_records(self, base_path: str, recursive: bool) -> list[dict[str, Any]]:
+        """ディレクトリを走査して統一フォーマットへ変換."""
+        root = Path(base_path).expanduser().resolve()
+        now = time.time()
+
+        if self._gateway:
+            try:
+                result = await self._gateway.call("list_dir", {"path": str(root)})
+                if not result.success:
+                    self._logger.error("ディレクトリ一覧取得失敗: %s", result.error)
+                    return []
+                raw_items = result.result if isinstance(result.result, list) else []
+                normalized = [
+                    self._normalize_file_record(root, item, now) for item in raw_items if isinstance(item, dict)
+                ]
+            except Exception as exc:
+                self._logger.exception("Gateway呼び出しエラー: %s", exc)
+                return []
+        else:
+            if not root.exists() or not root.is_dir():
+                return []
+            normalized = []
+            for item in root.iterdir():
+                stat = item.stat()
+                normalized.append(
+                    {
+                        "name": item.name,
+                        "path": item.name,
+                        "full_path": item,
+                        "size": int(stat.st_size),
+                        "modified": float(stat.st_mtime),
+                        "is_dir": item.is_dir(),
+                        "is_file": item.is_file(),
+                    }
+                )
+
+        if not recursive:
+            return normalized
+
+        recursive_rows = list(normalized)
+        for row in normalized:
+            if not row["is_dir"]:
+                continue
+            try:
+                for child in Path(row["full_path"]).rglob("*"):
+                    stat = child.stat()
+                    recursive_rows.append(
+                        {
+                            "name": child.name,
+                            "path": str(child.relative_to(root)),
+                            "full_path": child,
+                            "size": int(stat.st_size),
+                            "modified": float(stat.st_mtime),
+                            "is_dir": child.is_dir(),
+                            "is_file": child.is_file(),
+                        }
+                    )
+            except OSError as exc:
+                self._logger.warning("再帰走査失敗: %s (%s)", row["full_path"], exc)
+        return recursive_rows
+
+    @staticmethod
+    def _is_subpath(child: Path, parent: Path) -> bool:
+        """child が parent 配下かを判定."""
+        try:
+            child.resolve().relative_to(parent.resolve())
+            return True
+        except ValueError:
+            return False
+
+    def _safe_target_name(self, raw_name: str) -> str:
+        """危険なファイル名を排除した安全名へ変換."""
+        cleaned = raw_name.strip().replace("/", "_").replace("\\", "_")
+        return cleaned or "untitled"
+
+    async def _delete_file(self, file_path: Path) -> None:
+        """ファイル削除."""
+        if self._gateway:
+            # delete skill が標準提供されないため、ローカル安全パスで削除する。
+            file_path.unlink(missing_ok=True)
+            return
+        file_path.unlink(missing_ok=True)
+
+    async def _rename_file(self, source: Path, target: Path) -> None:
+        """ファイル名変更."""
+        if self._gateway:
+            source.rename(target)
+            return
+        source.rename(target)
+
+    async def _move_file(self, source: Path, target: Path) -> None:
+        """ファイル移動."""
+        if self._gateway:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(source), str(target))
+            return
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(source), str(target))
+
     async def analyze_directory(
         self,
         path: str,
@@ -244,41 +388,10 @@ class FileOrganizerAgent:
         """
         expanded_path = str(Path(path).expanduser())
         analysis = DirectoryAnalysis(path=expanded_path)
-
-        # Gateway経由でファイル一覧を取得
-        if self._gateway:
-            try:
-                result = await self._gateway.call("list_dir", {"path": expanded_path})
-                if not result.success:
-                    self._logger.error("ディレクトリ一覧取得失敗: %s", result.error)
-                    return analysis
-
-                files = result.result or []
-            except Exception as e:
-                self._logger.exception("Gateway呼び出しエラー: %s", e)
-                return analysis
-        else:
-            # ローカルファイルシステムを直接使用（フォールバック）
-            try:
-                p = Path(expanded_path)
-                if not p.exists():
-                    return analysis
-                files = [
-                    {
-                        "name": f.name,
-                        "size": f.stat().st_size if f.is_file() else 0,
-                        "modified": f.stat().st_mtime,
-                        "is_dir": f.is_dir(),
-                    }
-                    for f in p.iterdir()
-                ]
-            except Exception as e:
-                self._logger.exception("ローカルファイル取得エラー: %s", e)
-                return analysis
-
-        # 分析
-        import time
-
+        files = await self._list_directory_records(expanded_path, recursive=recursive)
+        if not files:
+            return analysis
+        root = Path(expanded_path).expanduser().resolve()
         now = time.time()
         threshold_seconds = self._days_old * 24 * 60 * 60
 
@@ -290,10 +403,15 @@ class FileOrganizerAgent:
             size = file_info.get("size", 0)
             modified = file_info.get("modified", now)
             is_dir = file_info.get("is_dir", False)
+            full_path = Path(file_info.get("full_path", Path(expanded_path)))
 
             if is_dir:
                 analysis.total_dirs += 1
-                # 空ディレクトリチェック（簡易版）
+                try:
+                    if full_path.exists() and full_path.is_dir() and not any(full_path.iterdir()):
+                        analysis.empty_dirs.append(str(full_path.relative_to(root)))
+                except OSError:
+                    pass
                 continue
 
             analysis.total_files += 1
@@ -316,6 +434,7 @@ class FileOrganizerAgent:
                     analysis.old_files.append(
                         {
                             "name": name,
+                            "path": str(file_info.get("path", name)),
                             "size_mb": round(size / (1024 * 1024), 2),
                             "age_days": int(age_seconds / (24 * 60 * 60)),
                         }
@@ -326,6 +445,7 @@ class FileOrganizerAgent:
                 analysis.large_files.append(
                     {
                         "name": name,
+                        "path": str(file_info.get("path", name)),
                         "size_mb": round(size / (1024 * 1024), 2),
                     }
                 )
@@ -413,23 +533,17 @@ class FileOrganizerAgent:
         plan = await self._generate_organization_plan(analysis, rules)
 
         # アクションを実行/記録
+        root = Path(expanded_path).resolve()
         for action in plan:
             action_type = action.get("type")
-            action.get("source")
+            source = action.get("source")
             target = action.get("target")
 
             if action_type == "create_dir":
                 result.actions.append(action)
-                if not dry_run and self._gateway:
-                    # Gateway経由でディレクトリ作成
+                if not dry_run:
                     try:
-                        await self._gateway.call(
-                            "write_file",
-                            {
-                                "path": f"{target}/.keep",
-                                "content": "",
-                            },
-                        )
+                        Path(str(target)).mkdir(parents=True, exist_ok=True)
                         result.dirs_created += 1
                     except Exception as e:
                         result.errors.append(f"ディレクトリ作成失敗: {target} - {e}")
@@ -438,19 +552,45 @@ class FileOrganizerAgent:
 
             elif action_type == "move":
                 result.actions.append(action)
-                if not dry_run and self._gateway:
-                    # Gateway経由でファイル移動（読み取り→書き込み→削除）
-                    # 注: 実際の実装ではmoveコマンドを使用
-                    result.errors.append("move操作は未実装（dry_runモードで使用してください）")
-                else:
+                if dry_run:
                     result.files_moved += 1
+                    continue
+                source_path = Path(str(source)).resolve()
+                target_path = Path(str(target)).resolve()
+                if not self._is_subpath(source_path, root) or not self._is_subpath(target_path, root):
+                    result.errors.append(f"move拒否（workspace外）: {source_path} -> {target_path}")
+                    continue
+                if not source_path.exists() or not source_path.is_file():
+                    result.errors.append(f"move失敗（source不存在）: {source_path}")
+                    continue
+                if source_path == target_path:
+                    continue
+                try:
+                    await self._move_file(source_path, target_path)
+                    result.files_moved += 1
+                except Exception as e:
+                    result.errors.append(f"move失敗: {source_path} -> {target_path} ({e})")
 
             elif action_type == "rename":
                 result.actions.append(action)
-                if not dry_run:
-                    result.errors.append("rename操作は未実装（dry_runモードで使用してください）")
-                else:
+                if dry_run:
                     result.files_renamed += 1
+                    continue
+                source_path = Path(str(source)).resolve()
+                target_path = Path(str(target)).resolve()
+                if not self._is_subpath(source_path, root) or not self._is_subpath(target_path, root):
+                    result.errors.append(f"rename拒否（workspace外）: {source_path} -> {target_path}")
+                    continue
+                if not source_path.exists() or not source_path.is_file():
+                    result.errors.append(f"rename失敗（source不存在）: {source_path}")
+                    continue
+                if source_path == target_path:
+                    continue
+                try:
+                    await self._rename_file(source_path, target_path)
+                    result.files_renamed += 1
+                except Exception as e:
+                    result.errors.append(f"rename失敗: {source_path} -> {target_path} ({e})")
 
         self._logger.info(
             "ファイル整理完了: path=%s, moved=%d, renamed=%d, dry_run=%s",
@@ -470,6 +610,7 @@ class FileOrganizerAgent:
         """整理計画を生成."""
         actions: list[dict[str, Any]] = []
         category_names = rules.get("category_names", {})
+        source_files = await self._list_directory_records(analysis.path, recursive=False)
 
         # カテゴリフォルダの作成
         if rules.get("create_category_folders"):
@@ -483,7 +624,29 @@ class FileOrganizerAgent:
                     }
                 )
 
-        # TODO: 実際のファイル移動計画（Gateway経由でファイル一覧を再取得して計画）
+        root = Path(analysis.path).resolve()
+        for file_info in source_files:
+            if file_info.get("is_dir", False):
+                continue
+            source = Path(str(file_info["full_path"]))
+            category = self._get_category(file_info.get("name", ""))
+            folder_name = str(category_names.get(category, category.capitalize()))
+            target_dir = root / folder_name
+            target_file = target_dir / source.name
+            if source.parent == target_dir:
+                continue
+            suffix_idx = 1
+            while target_file.exists():
+                target_file = target_dir / f"{source.stem}_{suffix_idx}{source.suffix}"
+                suffix_idx += 1
+            actions.append(
+                {
+                    "type": "move",
+                    "source": str(source),
+                    "target": str(target_file),
+                    "category": category,
+                }
+            )
 
         return actions
 
@@ -501,9 +664,47 @@ class FileOrganizerAgent:
         Returns:
             リネーム結果
         """
-        return OrganizationResult(dry_run=True)
+        expanded = Path(path).expanduser().resolve()
+        result = OrganizationResult(dry_run=False)
+        files = await self._list_directory_records(str(expanded), recursive=False)
+        if not files:
+            return result
 
-        # TODO: LLMを使用してファイル名を分析し、統一的なリネームを提案
+        rename_pattern = pattern or "{index:03d}_{stem}{ext}"
+        used_names: set[str] = set()
+        for index, file_info in enumerate(sorted(files, key=lambda row: row.get("name", "")), start=1):
+            if file_info.get("is_dir", False):
+                continue
+            source = Path(str(file_info["full_path"]))
+            ext = source.suffix.lower()
+            stem = self._safe_target_name(source.stem.lower().replace(" ", "_"))
+            target_name = rename_pattern.format(index=index, stem=stem, ext=ext)
+            target_name = self._safe_target_name(target_name)
+
+            base = Path(target_name).stem
+            suffix = Path(target_name).suffix
+            candidate = target_name
+            incr = 1
+            while candidate in used_names or (expanded / candidate).exists():
+                candidate = f"{base}_{incr}{suffix}"
+                incr += 1
+            used_names.add(candidate)
+            target = expanded / candidate
+            if source == target:
+                continue
+            result.actions.append(
+                {
+                    "type": "rename",
+                    "source": str(source),
+                    "target": str(target),
+                }
+            )
+            try:
+                await self._rename_file(source, target)
+                result.files_renamed += 1
+            except Exception as exc:
+                result.errors.append(f"rename失敗: {source} -> {target} ({exc})")
+        return result
 
     async def find_duplicates(
         self,
@@ -521,21 +722,15 @@ class FileOrganizerAgent:
         """
         expanded_path = str(Path(path).expanduser())
         duplicates: list[DuplicateGroup] = []
-
-        # Gateway経由でファイル一覧を取得
-        if self._gateway:
-            result = await self._gateway.call("list_dir", {"path": expanded_path})
-            if not result.success:
-                return duplicates
-            files = result.result or []
-        else:
+        files = await self._list_directory_records(expanded_path, recursive=True)
+        if not files:
             return duplicates
 
         # サイズでグループ化
         size_groups: dict[int, list[dict[str, Any]]] = defaultdict(list)
         for f in files:
-            if not f.get("is_dir", False):
-                size_groups[f.get("size", 0)].append(f)
+            if f.get("is_file", False):
+                size_groups[int(f.get("size", 0))].append(f)
 
         # 同サイズファイルを詳細比較
         for size, file_list in size_groups.items():
@@ -543,13 +738,23 @@ class FileOrganizerAgent:
                 continue
 
             if by_content:
-                # 内容ハッシュで比較（簡易版：ファイル名+サイズ）
-                # 実際にはファイル内容のハッシュを計算
                 hash_groups: dict[str, list[str]] = defaultdict(list)
                 for f in file_list:
-                    # 簡易ハッシュ（実際にはファイル内容をハッシュ）
-                    simple_hash = hashlib.md5(f"{f.get('name', '')}_{size}".encode()).hexdigest()
-                    hash_groups[simple_hash].append(str(Path(expanded_path) / f.get("name", "")))
+                    file_path = Path(str(f.get("full_path", "")))
+                    if not file_path.exists() or not file_path.is_file():
+                        continue
+                    digest = hashlib.sha256()
+                    try:
+                        with file_path.open("rb") as fp:
+                            while True:
+                                chunk = fp.read(1024 * 1024)
+                                if not chunk:
+                                    break
+                                digest.update(chunk)
+                    except OSError as exc:
+                        self._logger.warning("hash計算失敗: %s (%s)", file_path, exc)
+                        continue
+                    hash_groups[digest.hexdigest()].append(str(file_path))
 
                 for file_hash, paths in hash_groups.items():
                     if len(paths) > 1:
@@ -566,7 +771,7 @@ class FileOrganizerAgent:
                     DuplicateGroup(
                         hash="size_match",
                         size=size,
-                        files=[str(Path(expanded_path) / f.get("name", "")) for f in file_list],
+                        files=[str(Path(str(f.get("full_path", "")))) for f in file_list],
                     )
                 )
 
@@ -599,15 +804,20 @@ class FileOrganizerAgent:
         self._days_old = old_threshold
 
         for old_file in analysis.old_files:
+            relative_target = str(old_file.get("path") or old_file.get("name", ""))
+            target_file = Path(path).expanduser() / relative_target
             action = {
                 "type": "delete",
-                "target": str(Path(path).expanduser() / old_file["name"]),
+                "target": str(target_file),
                 "reason": f"{old_file.get('age_days', 0)}日以上古い",
             }
             result.actions.append(action)
 
             if not dry_run:
-                result.errors.append("delete操作は未実装（dry_runモードで使用してください）")
+                try:
+                    await self._delete_file(target_file)
+                except Exception as exc:
+                    result.errors.append(f"delete失敗: {target_file} ({exc})")
 
         self._logger.info(
             "クリーンアップ完了: path=%s, old_files=%d, dry_run=%s",

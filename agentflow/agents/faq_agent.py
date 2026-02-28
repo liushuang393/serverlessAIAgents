@@ -23,6 +23,7 @@ FAQ システム専門のAgent。
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -89,7 +90,7 @@ class FAQOutput(BaseModel):
 
     question: str = ""
     answer: str = ""
-    query_type: str = "faq"  # "chat" | "faq" | "sql" | "sales_material"
+    query_type: str = "faq"  # "chat" | "faq" | "sql" | "hybrid" | "sales_material"
     documents: list[DocumentSchema] = Field(default_factory=list)
     sql: str = ""
     data: list[dict[str, Any]] = Field(default_factory=list)
@@ -130,6 +131,9 @@ class FAQAgentConfig:
     sql_dialect: str = "postgresql"
     auto_chart: bool = True
     max_suggestions: int = 5
+    enable_rag: bool = True
+    enable_sql: bool = True
+    enable_hybrid: bool = True
     sales_material_output_root: str = field(
         default_factory=lambda: os.getenv("FAQ_SALES_MATERIAL_DIR", "/tmp/faq_sales_material")
     )
@@ -227,14 +231,17 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                 a2a=self._build_a2a_metadata("faq"),
             )
 
-        # クエリタイプを判定(LLM意図分類)
-        query_type = await self._classify_query(question)
+        # 意図ルーターでクエリタイプを判定
+        query_type = await self._route_query(question)
         self._append_report_phase(execution_report, "start", "ok", {"query_type": query_type})
 
         try:
             if query_type == "chat":
                 self._append_report_phase(execution_report, "call", "ok", {"service": "llm_direct"})
                 response = await self._handle_chat_query(question, query_type)
+            elif query_type == "hybrid":
+                self._append_report_phase(execution_report, "call", "ok", {"service": "rag+text2sql"})
+                response = await self._handle_hybrid_query(question, query_type)
             elif query_type == "sql":
                 self._append_report_phase(execution_report, "call", "ok", {"service": "text2sql"})
                 response = await self._handle_sql_query(question, query_type)
@@ -308,10 +315,24 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
 
     async def _handle_faq_query(self, question: str, query_type: str) -> FAQOutput:
         """FAQ クエリを処理."""
+        if self.__rag_service is None:
+            return await self._handle_chat_query(question, "chat")
         rag_result = await self.__rag_service.execute(
             action="query",
             question=question,
         )
+        if not rag_result.success:
+            return FAQOutput(
+                question=question,
+                query_type=query_type,
+                answer=rag_result.error_message or "RAG 検索に失敗しました。",
+                documents=[],
+                rich_response=self._build_chat_rich_response(
+                    rag_result.error_message or "RAG 検索に失敗しました。"
+                ).to_dict(),
+                suggestions=await self._generate_suggestions(question, query_type, False),
+                error=rag_result.error_message or "rag_error",
+            )
 
         documents = [
             DocumentSchema(
@@ -339,10 +360,23 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
 
     async def _handle_sql_query(self, question: str, query_type: str) -> FAQOutput:
         """SQL クエリを処理."""
+        if self.__sql_service is None:
+            return await self._handle_faq_query(question, "faq")
         sql_result = await self.__sql_service.execute(
             action="query",
             question=question,
         )
+        if not sql_result.success:
+            return FAQOutput(
+                question=question,
+                query_type=query_type,
+                answer=sql_result.error_message or "データ分析に失敗しました。",
+                rich_response=self._build_chat_rich_response(
+                    sql_result.error_message or "データ分析に失敗しました。"
+                ).to_dict(),
+                suggestions=await self._generate_suggestions(question, query_type, False),
+                error=sql_result.error_message or "sql_error",
+            )
 
         chart_data = sql_result.data.get("chart")
         chart = None
@@ -368,6 +402,85 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                 sql=sql_result.data.get("sql", ""),
                 data=sql_result.data.get("data", []),
             ).to_dict(),
+            suggestions=suggestions,
+        )
+
+    async def _handle_hybrid_query(self, question: str, query_type: str) -> FAQOutput:
+        """RAG + SQL の双通道協調処理."""
+        import asyncio
+
+        rag_available = self.__rag_service is not None
+        sql_available = self.__sql_service is not None
+
+        if not rag_available and not sql_available:
+            return await self._handle_chat_query(question, "chat")
+        if not rag_available:
+            return await self._handle_sql_query(question, "sql")
+        if not sql_available:
+            return await self._handle_faq_query(question, "faq")
+
+        rag_task = self.__rag_service.execute(action="query", question=question)
+        sql_task = self.__sql_service.execute(action="query", question=question)
+        rag_result, sql_result = await asyncio.gather(rag_task, sql_task, return_exceptions=True)
+
+        rag_error = isinstance(rag_result, Exception) or (hasattr(rag_result, "success") and not rag_result.success)
+        sql_error = isinstance(sql_result, Exception) or (hasattr(sql_result, "success") and not sql_result.success)
+
+        if rag_error and sql_error:
+            return await self._handle_chat_query(question, "chat")
+        if rag_error and not sql_error:
+            return await self._handle_sql_query(question, "sql")
+        if sql_error and not rag_error:
+            return await self._handle_faq_query(question, "faq")
+
+        rag_service_result = rag_result
+        sql_service_result = sql_result
+
+        documents = [
+            DocumentSchema(
+                id=d.get("id", ""),
+                content=d.get("content", ""),
+                source=d.get("source", ""),
+                score=d.get("score", 0.0),
+            )
+            for d in rag_service_result.data.get("documents", [])
+            if isinstance(d, dict)
+        ]
+
+        sql_data = sql_service_result.data.get("data", [])
+        sql_columns = sql_service_result.data.get("columns", [])
+        sql_text = sql_service_result.data.get("sql", "")
+        sql_answer = str(sql_service_result.data.get("answer", "")).strip()
+        rag_answer = str(rag_service_result.data.get("answer", "")).strip()
+        combined_answer_parts = [part for part in [rag_answer, sql_answer] if part]
+        combined_answer = "\n\n".join(combined_answer_parts) if combined_answer_parts else "回答を生成できませんでした。"
+
+        chart_data = sql_service_result.data.get("chart")
+        chart = None
+        if isinstance(chart_data, dict):
+            chart = ChartSchema(
+                chart_type=str(chart_data.get("type", "bar")),
+                title=str(chart_data.get("title", "")),
+                data=chart_data.get("data", {}) if isinstance(chart_data.get("data"), dict) else {},
+            )
+
+        rich_response = self._build_sql_rich_response(
+            answer=combined_answer,
+            sql=sql_text if isinstance(sql_text, str) else "",
+            data=sql_data if isinstance(sql_data, list) else [],
+        ).to_dict()
+        suggestions = await self._generate_suggestions(question, query_type, bool(documents or sql_data))
+
+        return FAQOutput(
+            question=question,
+            query_type=query_type,
+            answer=combined_answer,
+            documents=documents,
+            sql=sql_text if isinstance(sql_text, str) else "",
+            data=sql_data if isinstance(sql_data, list) else [],
+            columns=sql_columns if isinstance(sql_columns, list) else [],
+            chart=chart,
+            rich_response=rich_response,
             suggestions=suggestions,
         )
 
@@ -605,14 +718,27 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         )
 
         # RAGサービス
-        self.__rag_service = RAGService(
-            RAGConfig(
-                collection=self._config.rag_collection,
-                chunk_strategy=ChunkStrategy(self._config.rag_chunk_strategy),
-                reranker=RerankerType(self._config.rag_reranker),
-                top_k=self._config.rag_top_k,
+        if self._config.enable_rag:
+            try:
+                chunk_strategy = ChunkStrategy(self._config.rag_chunk_strategy)
+            except ValueError:
+                chunk_strategy = ChunkStrategy.RECURSIVE
+
+            try:
+                reranker = RerankerType(self._config.rag_reranker)
+            except ValueError:
+                reranker = RerankerType.BM25
+
+            self.__rag_service = RAGService(
+                RAGConfig(
+                    collection=self._config.rag_collection,
+                    chunk_strategy=chunk_strategy,
+                    reranker=reranker,
+                    top_k=self._config.rag_top_k,
+                )
             )
-        )
+        else:
+            self.__rag_service = None
 
         try:
             dialect = SQLDialect(self._config.sql_dialect)
@@ -620,13 +746,16 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             dialect = SQLDialect.POSTGRESQL
 
         # Text2SQLサービス
-        self.__sql_service = Text2SQLService(
-            Text2SQLConfig(
-                schema=self._config.sql_schema,
-                dialect=dialect,
-                auto_chart=self._config.auto_chart,
+        if self._config.enable_sql:
+            self.__sql_service = Text2SQLService(
+                Text2SQLConfig(
+                    schema=self._config.sql_schema,
+                    dialect=dialect,
+                    auto_chart=self._config.auto_chart,
+                )
             )
-        )
+        else:
+            self.__sql_service = None
 
         # Chartサービス
         self.__chart_service = ChartService(ChartConfig())
@@ -641,45 +770,48 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
 
     # LLM意図分類プロンプト
     _INTENT_PROMPT = (
-        "You are an intent classifier for an enterprise FAQ system.\n"
-        "Classify the following user message into exactly ONE category.\n\n"
-        "Categories:\n"
-        "- chat: greetings, self-introduction questions, small talk, thank you, "
-        "capability questions, or any message that does NOT require a knowledge base "
-        "search or data analysis. Any language is possible.\n"
-        "- sales_material: requests to create/generate sales materials, posters, "
-        "banners, pitch decks, flyers, promotional images.\n"
-        "- sql: questions about sales figures, revenue, statistics, rankings, "
-        "trends, comparisons, counts, totals, averages, or any data analytics query.\n"
-        "- faq: questions about company policies, procedures, rules, regulations, "
-        "technical how-to, or anything that should be answered from a knowledge base.\n\n"
-        "Reply with ONLY the category name (chat, sales_material, sql, or faq). "
-        "No explanation.\n\n"
+        "You are the intent routing agent for an enterprise FAQ system.\n"
+        "Route the user message into exactly one route.\n\n"
+        "Routes:\n"
+        "- chat: general chat, unrelated topics, greetings, pure LLM answer only.\n"
+        "- faq: knowledge-base lookup only.\n"
+        "- sql: database analytics only.\n"
+        "- hybrid: both KB context and DB analytics are needed.\n"
+        "- sales_material: generate sales materials/images.\n"
+        "- unclear: cannot confidently decide faq/sql/chat.\n\n"
+        "Rules:\n"
+        "- If unrelated to FAQ/enterprise knowledge, choose chat.\n"
+        "- If unclear between faq/sql/hybrid, choose unclear.\n"
+        '- Return JSON only: {{"route":"<one_of_routes>","confidence":0.0-1.0,"reason":"short"}}.\n\n'
         "User message: {question}"
     )
 
-    _VALID_QUERY_TYPES = frozenset({"chat", "sales_material", "sql", "faq"})
+    _VALID_QUERY_TYPES = frozenset({"chat", "sales_material", "sql", "faq", "hybrid", "unclear"})
 
     async def _classify_query(self, question: str) -> str:
-        """LLMで意図を分類し、クエリタイプを判定.
+        """互換API: 意図分類を実行してルートを返す.
 
-        LLMが利用可能なら意図分類プロンプトで判定する。
-        LLMが使えない場合のみキーワードヒューリスティックにフォールバック。
+        既存テスト/呼び出し互換のため残し、内部は _route_query を利用する。
+        """
+        return await self._route_query(question)
+
+    async def _route_query(self, question: str) -> str:
+        """意図ルーターでクエリルートを決定.
 
         Args:
             question: 質問文
 
         Returns:
-            "chat" | "sales_material" | "sql" | "faq"
+            "chat" | "sales_material" | "sql" | "faq" | "hybrid"
         """
-        # LLM意図分類を試行
+        route = ""
         if self._llm is not None:
             try:
                 prompt = self._INTENT_PROMPT.format(question=question)
                 raw = await self._call_llm(prompt)
-                category = raw.strip().lower().split()[0] if raw.strip() else ""
-                if category in self._VALID_QUERY_TYPES:
-                    return category
+                route = self._extract_route_from_intent_response(raw)
+                if route in self._VALID_QUERY_TYPES:
+                    return self._apply_route_policy(route)
                 self._logger.warning(
                     "LLM intent classification returned unexpected value: %r, falling back to heuristic",
                     raw,
@@ -687,8 +819,37 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             except Exception as e:
                 self._logger.warning("LLM intent classification failed: %s", e)
 
-        # フォールバック: 軽量キーワードヒューリスティック(LLM不可時のみ)
-        return self._classify_query_heuristic(question)
+        route = self._classify_query_heuristic(question)
+        return self._apply_route_policy(route)
+
+    def _extract_route_from_intent_response(self, response: str) -> str:
+        """意図ルーター応答から route を抽出."""
+        text = response.strip()
+        if not text:
+            return ""
+
+        try:
+            payload = json.loads(text)
+            if isinstance(payload, dict):
+                route = str(payload.get("route", "")).strip().lower()
+                if route:
+                    return route
+        except json.JSONDecodeError:
+            pass
+
+        json_match = re.search(r"\{.*\}", text, re.DOTALL)
+        if json_match:
+            try:
+                payload = json.loads(json_match.group(0))
+                if isinstance(payload, dict):
+                    route = str(payload.get("route", "")).strip().lower()
+                    if route:
+                        return route
+            except json.JSONDecodeError:
+                pass
+
+        first_token = text.lower().split()[0]
+        return re.sub(r"[^a-z_]", "", first_token)
 
     def _classify_query_heuristic(self, question: str) -> str:
         """キーワードベースのフォールバック分類(LLM不可時のみ使用)."""
@@ -704,6 +865,19 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         if any(k in question_lower for k in sales_material_keywords):
             return "sales_material"
 
+        chat_keywords = [
+            "hello",
+            "hi",
+            "こんにちは",
+            "你好",
+            "thanks",
+            "ありがとう",
+            "你是谁",
+            "who are you",
+        ]
+        if any(k in question_lower for k in chat_keywords):
+            return "chat"
+
         sql_indicators = [
             "top",
             "ranking",
@@ -715,9 +889,58 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         sql_score = sum(1 for k in sql_indicators if k in question_lower)
         if sql_score >= 2:
             return "sql"
+        if sql_score == 1:
+            return "unclear"
 
         # LLMが無い環境ではFAQにルーティング
         return "faq"
+
+    def _apply_route_policy(self, route: str) -> str:
+        """機能有効状態を考慮して最終ルートを決定."""
+        rag_available = self._config.enable_rag
+        sql_available = self._config.enable_sql
+        hybrid_available = self._config.enable_hybrid and rag_available and sql_available
+
+        normalized = route.strip().lower()
+        if normalized == "sales_material":
+            return "sales_material" if self._config.enable_sales_material else "chat"
+
+        if normalized == "chat":
+            return "chat"
+
+        if normalized in {"unclear", ""}:
+            if hybrid_available:
+                return "hybrid"
+            if rag_available and sql_available:
+                return "hybrid"
+            if rag_available:
+                return "faq"
+            if sql_available:
+                return "sql"
+            return "chat"
+
+        if normalized == "hybrid":
+            if hybrid_available:
+                return "hybrid"
+            if rag_available and sql_available:
+                return "hybrid"
+            if rag_available:
+                return "faq"
+            if sql_available:
+                return "sql"
+            return "chat"
+
+        if normalized == "faq":
+            if rag_available:
+                return "faq"
+            return "sql" if sql_available else "chat"
+
+        if normalized == "sql":
+            if sql_available:
+                return "sql"
+            return "faq" if rag_available else "chat"
+
+        return "faq" if rag_available else ("sql" if sql_available else "chat")
 
     def _parse_sales_material_request(self, question: str) -> dict[str, Any]:
         """営業資料画像生成の入力を抽出."""
@@ -844,6 +1067,8 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         skill_map = {
             "faq": "knowledge_search",
             "sql": "sql_analytics",
+            "hybrid": "knowledge_data_fusion",
+            "chat": "general_assistant",
             "sales_material": "design_skills",
         }
         selected_skill = skill_map.get(query_type, "knowledge_search")
@@ -861,6 +1086,18 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                 AgentSkill(
                     name="sql_analytics",
                     description="自然言語からSQL生成し、表とチャートを返却",
+                    input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
+                    output_schema={"type": "object"},
+                ),
+                AgentSkill(
+                    name="knowledge_data_fusion",
+                    description="ナレッジ検索とデータ分析を協調実行して回答",
+                    input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
+                    output_schema={"type": "object"},
+                ),
+                AgentSkill(
+                    name="general_assistant",
+                    description="FAQ外の一般質問へ直接回答",
                     input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
                     output_schema={"type": "object"},
                 ),
@@ -883,6 +1120,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         "chat": "LLM で回答を生成中...",
         "faq": "ナレッジベースを検索中...",
         "sql": "SQL クエリを生成中...",
+        "hybrid": "RAG と SQL を協調処理中...",
         "sales_material": "営業資料を作成中...",
     }
 
@@ -910,7 +1148,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         }
 
         # クエリタイプ判定
-        query_type = await self._classify_query(question)
+        query_type = await self._route_query(question)
         yield {
             "type": "progress",
             "execution_id": execution_id,

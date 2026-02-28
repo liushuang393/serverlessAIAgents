@@ -23,6 +23,7 @@ from __future__ import annotations
 import logging
 import secrets
 from typing import Any
+from urllib.parse import urlencode, urlparse
 
 from apps.auth_service.api.schemas import (
     AuthResponse,
@@ -35,6 +36,7 @@ from apps.auth_service.api.schemas import (
     ProfileUpdateRequest,
     RegisterRequest,
     ResetPasswordRequest,
+    SSOLoginRequest,
     TokenRefreshRequest,
     TokenResponse,
     UserInfo,
@@ -42,6 +44,7 @@ from apps.auth_service.api.schemas import (
 from apps.auth_service.config import get_settings
 from apps.auth_service.service import AuthService, get_auth_service
 from fastapi import APIRouter, Cookie, Depends, Header, HTTPException, Response, status
+from fastapi.responses import RedirectResponse
 
 
 logger = logging.getLogger(__name__)
@@ -168,6 +171,97 @@ async def login(req: LoginRequest, response: Response) -> AuthResponse:
         token_type=token_pair.token_type,
         expires_in=token_pair.expires_in,
     )
+
+
+# ---------------------------------------------------------------------------
+# SSO（単点認証）
+# ---------------------------------------------------------------------------
+
+
+@router.post("/sso/login")
+async def sso_login(req: SSOLoginRequest, response: Response) -> Response:
+    """SSO ログインエンドポイント.
+
+    クライアントアプリから認証を委譲される。
+    認証成功後、redirect_uri にアクセストークン等を付与してリダイレクトする。
+    認証失敗時はエラー情報を redirect_uri に付与してリダイレクトする。
+    """
+    # redirect_uri の安全性検証
+    if not _validate_redirect_uri(req.redirect_uri):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="無効なリダイレクト URI です",
+        )
+
+    svc = _service()
+    success, message, user, token_pair = await svc.login(
+        username=req.username,
+        password=req.password,
+        totp_code=req.totp_code,
+    )
+
+    if not success or user is None or token_pair is None:
+        # 認証失敗 → エラーパラメータ付きでリダイレクト
+        error_params = urlencode({"error": "auth_failed", "message": message})
+        redirect_url = f"{req.redirect_uri}?{error_params}"
+        logger.warning(
+            "SSO ログイン失敗: username=%s, app=%s, reason=%s",
+            req.username,
+            req.client_app or "unknown",
+            message,
+        )
+        return RedirectResponse(url=redirect_url, status_code=302)
+
+    session_token = await svc.create_session(user)
+    _set_session_cookie(response, session_token)
+
+    # 認証成功 → トークンパラメータ付きでリダイレクト
+    success_params = urlencode(
+        {
+            "access_token": token_pair.access_token,
+            "refresh_token": token_pair.refresh_token,
+            "token_type": token_pair.token_type,
+            "expires_in": str(token_pair.expires_in),
+        }
+    )
+    redirect_url = f"{req.redirect_uri}?{success_params}"
+
+    logger.info(
+        "SSO ログイン成功: username=%s, app=%s, redirect=%s",
+        req.username,
+        req.client_app or "unknown",
+        req.redirect_uri,
+    )
+
+    redirect_response = RedirectResponse(url=redirect_url, status_code=302)
+    # セッション Cookie をリダイレクトレスポンスにも設定
+    _set_session_cookie(redirect_response, session_token)
+    return redirect_response
+
+
+@router.get("/sso/login")
+async def sso_login_page(
+    redirect_uri: str | None = None,
+    client_app: str | None = None,
+) -> dict[str, Any]:
+    """SSO ログインページ情報を返す.
+
+    クライアントアプリがユーザーを auth_service のログインページへ
+    誘導する際に使用する。フロントエンドがこの情報を元にログインフォームを表示する。
+    """
+    settings = get_settings()
+    return {
+        "service": "auth_service",
+        "version": "1.0.0",
+        "login_url": "/auth/sso/login",
+        "redirect_uri": redirect_uri,
+        "client_app": client_app,
+        "providers": {
+            "local_db": True,
+            "google": bool(settings.GOOGLE_CLIENT_ID),
+            "azure_ad": bool(settings.AZURE_CLIENT_ID),
+        },
+    }
 
 
 @router.post("/refresh", response_model=TokenResponse)
@@ -367,14 +461,19 @@ async def oauth2_authorize(provider: str) -> dict[str, str]:
     return {"authorization_url": url, "state": state}
 
 
-@router.get("/oauth2/{provider}/callback")
+@router.get("/oauth2/{provider}/callback", response_model=None)
 async def oauth2_callback(
     provider: str,
     code: str,
     state: str | None = None,
+    redirect_uri: str | None = None,
     response: Response = Response(),  # type: ignore[assignment]
-) -> AuthResponse:
-    """OAuth2 コールバック処理."""
+) -> AuthResponse | Response:
+    """OAuth2 コールバック処理.
+
+    redirect_uri が指定されている場合、認証成功後にそのURLへ
+    トークンを付与してリダイレクトする（SSO フロー）。
+    """
     settings = get_settings()
     identity = None
 
@@ -387,8 +486,8 @@ async def oauth2_callback(
         from apps.auth_service.providers.azure_ad import AzureADProvider
 
         p = AzureADProvider(settings=settings)
-        redirect_uri = f"http://localhost:{settings.AUTH_SERVICE_PORT}/auth/oauth2/{provider}/callback"
-        identity = await p.exchange_code(code, redirect_uri)
+        callback_uri = f"http://localhost:{settings.AUTH_SERVICE_PORT}/auth/oauth2/{provider}/callback"
+        identity = await p.exchange_code(code, callback_uri)
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -396,6 +495,9 @@ async def oauth2_callback(
         )
 
     if identity is None:
+        if redirect_uri and _validate_redirect_uri(redirect_uri):
+            error_params = urlencode({"error": "oauth_failed", "message": "OAuth2 認証に失敗しました"})
+            return RedirectResponse(url=f"{redirect_uri}?{error_params}", status_code=302)
         return AuthResponse(success=False, message="OAuth2 認証に失敗しました")
 
     svc = _service()
@@ -403,6 +505,25 @@ async def oauth2_callback(
 
     session_token = await svc.create_session(user)
     _set_session_cookie(response, session_token)
+
+    # SSO フロー: redirect_uri が指定されていればリダイレクト
+    if redirect_uri and _validate_redirect_uri(redirect_uri):
+        success_params = urlencode(
+            {
+                "access_token": token_pair.access_token,
+                "refresh_token": token_pair.refresh_token,
+                "token_type": token_pair.token_type,
+                "expires_in": str(token_pair.expires_in),
+            }
+        )
+        redirect_resp = RedirectResponse(url=f"{redirect_uri}?{success_params}", status_code=302)
+        _set_session_cookie(redirect_resp, session_token)
+        logger.info(
+            "OAuth2 SSO ログイン成功: provider=%s, redirect=%s",
+            provider,
+            redirect_uri,
+        )
+        return redirect_resp
 
     return AuthResponse(
         success=True,
@@ -455,3 +576,28 @@ def _set_session_cookie(response: Response, session_token: str) -> None:
         samesite="lax",
         max_age=ttl,
     )
+
+
+def _validate_redirect_uri(uri: str) -> bool:
+    """リダイレクト URI の安全性を検証.
+
+    オープンリダイレクト攻撃を防止するため、
+    http/https スキームのみ許可する。
+
+    Args:
+        uri: リダイレクト先 URI
+
+    Returns:
+        安全な URI の場合 True
+    """
+    try:
+        parsed = urlparse(uri)
+        # http / https のみ許可（javascript: 等を排除）
+        if parsed.scheme not in {"http", "https"}:
+            return False
+        # ホスト名が存在すること
+        if not parsed.netloc:
+            return False
+        return True
+    except Exception:
+        return False

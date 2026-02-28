@@ -434,11 +434,42 @@ export interface RAGPattern {
 /** RAG データソース */
 export interface RAGDataSource {
   type: string;
-  uri: string;
+  uri?: string | null;
   label?: string;
   enabled?: boolean;
   schedule?: string | null;
   options?: Record<string, unknown>;
+}
+
+/** App の DB 自動検出ヒント */
+export interface RAGDatabaseHint {
+  available: boolean;
+  kind: string | null;
+  uri: string | null;
+  host: string | null;
+  port: number | null;
+  database: string | null;
+  user: string | null;
+  source: string;
+  sample_uri: string;
+  sample_label: string;
+  message: string;
+}
+
+/** RAG Data Source 向け DB 種別 */
+export interface RAGDatabaseTypeOption {
+  name: string;
+  label: string;
+  dialect: string;
+  connection_kind: 'network' | 'file';
+  default_port: number | null;
+  sample_uri: string;
+}
+
+/** RAG Vector Provider 選択肢 */
+export interface RAGVectorProviderOption {
+  name: string;
+  label: string;
 }
 
 /** App 単位 RAG 設定 */
@@ -447,6 +478,7 @@ export interface AppRAGConfig {
   display_name: string;
   icon: string;
   config_path: string;
+  db_hint?: RAGDatabaseHint;
   rag: {
     enabled: boolean;
     pattern: string | null;
@@ -500,6 +532,8 @@ export interface RAGOverviewResponse {
   rerankers: Reranker[];
   retrieval_methods?: RetrievalMethod[];
   patterns?: RAGPattern[];
+  database_types?: RAGDatabaseTypeOption[];
+  vector_providers?: RAGVectorProviderOption[];
   apps_using_rag: RAGAppInfo[];
   stats: RAGStatsResponse;
 }

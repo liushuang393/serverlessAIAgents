@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import re
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from agentflow.tools.cli.runtime_manager import CLIRuntimeManager
 
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     from apps.platform.schemas.app_config_schemas import AppConfig
 
 
@@ -32,6 +33,7 @@ class CLIDiagnosticService:
         stderr: str,
         preflight: dict[str, Any] | None,
         command_source: str,
+        repair_trace: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Diagnose startup failure and return response-friendly structure."""
         prompt = self._build_prompt(
@@ -57,7 +59,7 @@ class CLIDiagnosticService:
         summary = self._build_summary(error=error, stderr=stderr, cli_output=merged_output)
         recommendations = self._build_recommendations(error=error, stderr=stderr, cli_output=merged_output)
 
-        return {
+        diagnostic: dict[str, Any] = {
             "tool": diagnostic.get("tool"),
             "setup": self._setup_snapshot(preflight),
             "summary": summary,
@@ -68,6 +70,19 @@ class CLIDiagnosticService:
             "diagnostic_command": diagnostic.get("command"),
             "diagnostic_error": diagnostic.get("error"),
         }
+        if repair_trace is not None:
+            diagnostic["retry_trace"] = repair_trace
+        return diagnostic
+
+    @staticmethod
+    def attach_retry_trace(
+        diagnostic: dict[str, Any] | None,
+        repair_trace: dict[str, Any],
+    ) -> dict[str, Any]:
+        """既存診断情報に retry trace を付与する."""
+        merged = dict(diagnostic or {})
+        merged["retry_trace"] = repair_trace
+        return merged
 
     @staticmethod
     def _build_prompt(
@@ -141,7 +156,7 @@ class CLIDiagnosticService:
         if "npm" in merged and "not found" in merged:
             recs.append("Install Node.js/npm, then re-run frontend startup commands.")
         if "module not found" in merged or "no module named" in merged:
-            recs.append("Activate the project Python environment and install dependencies (e.g. `pip install -e \".[dev,apps]\"`).")
+            recs.append('Activate the project Python environment and install dependencies (e.g. `pip install -e ".[dev,apps]"`).')
         if "eaddrinuse" in merged or "address already in use" in merged:
             recs.append("Port conflict detected. Stop conflicting process or adjust `ports.*` in app_config.")
         if "permission denied" in merged:
@@ -160,4 +175,3 @@ class CLIDiagnosticService:
         if not recs:
             recs.append("Review app README startup section and verify backend/frontend/db commands manually.")
         return recs[:8]
-

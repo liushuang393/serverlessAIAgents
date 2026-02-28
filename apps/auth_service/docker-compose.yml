@@ -1,0 +1,92 @@
+# ==============================================================================
+# Auth Service - Docker Compose
+# ==============================================================================
+# スタンドアロン認証サービス（JWT / OAuth2 / LDAP / SAML / MFA）
+#
+# ポート設定:
+#   API: 8010（デフォルト）
+#
+# 使用方法:
+#   本番（イメージビルド）:
+#     docker compose up --build -d
+#
+#   停止:
+#     docker compose down
+#
+#   ログ確認:
+#     docker compose logs -f auth-service
+# ==============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # 認証サービス: FastAPI + Uvicorn
+  # ---------------------------------------------------------------------------
+  auth-service:
+    build:
+      context: ../..
+      dockerfile: apps/auth_service/Dockerfile
+    container_name: auth-service
+    ports:
+      - "${AUTH_SERVICE_PORT:-8010}:8010"
+    environment:
+      # コア設定
+      - AUTH_SERVICE_PORT=8010
+      - AUTH_SERVICE_HOST=0.0.0.0
+      - AUTH_DATABASE_URL=${AUTH_DATABASE_URL:-sqlite+aiosqlite:///./data/auth_service.db}
+      - AUTH_DB_AUTO_CREATE=${AUTH_DB_AUTO_CREATE:-true}
+      # JWT 設定
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-}
+      - JWT_ALGORITHM=${JWT_ALGORITHM:-HS256}
+      - JWT_ACCESS_EXPIRE_MINUTES=${JWT_ACCESS_EXPIRE_MINUTES:-30}
+      - JWT_REFRESH_EXPIRE_DAYS=${JWT_REFRESH_EXPIRE_DAYS:-7}
+      - JWT_ISSUER=${JWT_ISSUER:-auth-service}
+      - JWT_AUDIENCE=${JWT_AUDIENCE:-auth-service}
+      # 認証プロバイダー
+      - AUTH_PROVIDER=${AUTH_PROVIDER:-local_db}
+      # セキュリティ
+      - MAX_LOGIN_ATTEMPTS=${MAX_LOGIN_ATTEMPTS:-5}
+      - LOCKOUT_DURATION_MINUTES=${LOCKOUT_DURATION_MINUTES:-15}
+      # CORS
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-["*"]}
+      # 開発モード
+      - DEV_MODE=${DEV_MODE:-false}
+      # OAuth2（省略可能）
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - AZURE_CLIENT_ID=${AZURE_CLIENT_ID:-}
+      - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET:-}
+      - AZURE_TENANT_ID=${AZURE_TENANT_ID:-}
+    volumes:
+      # 開発時: ソースコードをマウント（ホットリロード用）
+      - ../../agentflow:/app/agentflow:ro
+      - .:/app/apps/auth_service:ro
+      # SQLite データ永続化
+      - auth-data:/app/data
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8010/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - auth-network
+
+# ---------------------------------------------------------------------------
+# ネットワーク
+# ---------------------------------------------------------------------------
+networks:
+  auth-network:
+    driver: bridge
+
+# ---------------------------------------------------------------------------
+# ボリューム
+# ---------------------------------------------------------------------------
+volumes:
+  auth-data:
