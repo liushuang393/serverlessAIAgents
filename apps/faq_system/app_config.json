@@ -42,6 +42,41 @@
       ],
       "business_base": "interaction",
       "pattern": "specialist"
+    },
+    {
+      "name": "EnhancedFAQAgent",
+      "module": "apps.faq_system.backend.agents.enhanced_faq_agent",
+      "capabilities": ["faq", "rag", "sql", "rich_response", "citation"],
+      "business_base": "knowledge",
+      "pattern": "specialist"
+    },
+    {
+      "name": "InternalKBAgent",
+      "module": "apps.faq_system.backend.agents.internal_kb_agent",
+      "capabilities": ["faq", "rag", "rbac", "conservative_mode", "ticket"],
+      "business_base": "knowledge",
+      "pattern": "specialist"
+    },
+    {
+      "name": "ExternalKBAgent",
+      "module": "apps.faq_system.backend.agents.external_kb_agent",
+      "capabilities": ["faq", "rag", "external_kb"],
+      "business_base": "knowledge",
+      "pattern": "specialist"
+    },
+    {
+      "name": "MaintenanceAgent",
+      "module": "apps.faq_system.backend.agents.maintenance_agent",
+      "capabilities": ["maintenance", "impact_analysis", "documentation"],
+      "business_base": "operations",
+      "pattern": "specialist"
+    },
+    {
+      "name": "AnalyticsAgent",
+      "module": "apps.faq_system.backend.agents.analytics_agent",
+      "capabilities": ["sql", "chart", "analysis", "trend"],
+      "business_base": "reasoning",
+      "pattern": "analyzer"
     }
   ],
   "services": {
