@@ -68,11 +68,14 @@ _LOCAL_BOOT_WAIT_SECONDS = 2.0
 _LOCAL_LOG_TAIL_LINES = 40
 _LOCAL_DEPENDENCY_TIMEOUT = 0.4
 _LOCAL_EXTERNAL_DB_KINDS = {"postgresql", "postgres", "mysql", "mariadb", "redis"}
+_LOCAL_DEPENDENCY_START_TIMEOUT_SECONDS = 90.0
+_LOCAL_DEPENDENCY_SERVICE_LIST_TIMEOUT_SECONDS = 20.0
 _LOCAL_READINESS_TIMEOUT_SECONDS = 45.0
 _LOCAL_READINESS_POLL_SECONDS = 1.0
 _LOCAL_READINESS_STABLE_STREAK = 2
 _REPAIR_TOOL_ORDER: tuple[Literal["codex", "claude"], ...] = ("codex", "claude")
 _REPAIR_MAX_ATTEMPTS_PER_TOOL = 2
+_LOCAL_SERVICE_EXCLUDE_KEYWORDS = ("backend", "frontend", "web", "ui", "worker", "celery")
 
 # WSL / Linux 環境で conda agentflow を活性化するシェルプレフィックス
 _CONDA_ACTIVATE_PREFIX = (
@@ -288,126 +291,250 @@ class AppLifecycleManager:
         *,
         config_path: Path | None = None,
     ) -> HealthCheckResult:
-        """App のヘルスチェック本体."""
+        """App のヘルスチェック本体.
+
+        画面上の「健康」は frontend -> backend -> database の順で確認し、
+        必須コンポーネントがすべて healthy の場合のみ healthy とする。
+        """
         docker_info = await self._inspect_docker_runtime(config_path)
         health_paths = self._resolve_health_paths(config.entry_points.health)
         candidate_urls = self._build_candidate_urls(config, health_paths, docker_info)
 
-        # URL 候補が生成できない場合は UNKNOWN
-        if not candidate_urls:
-            result = HealthCheckResult(
-                config.name,
-                AppStatus.UNKNOWN,
-                error="ヘルスチェックURLを構築できませんでした",
-                details={
-                    "health_paths": health_paths,
-                    "docker": docker_info,
-                },
-            )
-            self._health_cache[config.name] = result
-            return result
+        # 1) frontend health (優先)
+        frontend_component: dict[str, Any] = {
+            "required": isinstance(config.ports.frontend, int),
+            "healthy": True,
+            "status": "skipped",
+            "port": config.ports.frontend,
+        }
+        if isinstance(config.ports.frontend, int):
+            frontend_reachable = self._is_tcp_port_open("127.0.0.1", config.ports.frontend, _LOCAL_DEPENDENCY_TIMEOUT)
+            if frontend_reachable:
+                frontend_component.update(
+                    {
+                        "healthy": True,
+                        "status": "healthy",
+                        "message": f"frontend localhost:{config.ports.frontend} reachable",
+                    }
+                )
+            else:
+                frontend_component.update(
+                    {
+                        "healthy": False,
+                        "status": "stopped",
+                        "message": f"frontend localhost:{config.ports.frontend} not reachable",
+                    }
+                )
 
+        # 2) backend health
+        backend_component: dict[str, Any] = {
+            "required": len(candidate_urls) > 0,
+            "healthy": False,
+            "status": "unknown" if candidate_urls else "skipped",
+            "message": "backend health URL unavailable" if not candidate_urls else None,
+        }
         attempts: list[dict[str, Any]] = []
         any_http_response = False
         any_timeout = False
         any_connect_error = False
         last_error: str | None = None
         unreachable_ports: set[int] = set()
+        backend_checked_url: str | None = None
+        backend_http_status: int | None = None
+        backend_payload_state: str | None = None
+        backend_payload: dict[str, Any] | list[Any] | None = None
+        backend_elapsed_ms: float = 0.0
 
-        try:
-            async with httpx.AsyncClient(timeout=_HEALTH_TIMEOUT, trust_env=False) as client:
-                for url in candidate_urls:
-                    port = httpx.URL(url).port
-                    if port is not None and port in unreachable_ports:
-                        continue
+        if candidate_urls:
+            try:
+                async with httpx.AsyncClient(timeout=_HEALTH_TIMEOUT, trust_env=False) as client:
+                    for url in candidate_urls:
+                        port = httpx.URL(url).port
+                        if port is not None and port in unreachable_ports:
+                            continue
 
-                    start = time.monotonic()
-                    attempt: dict[str, Any] = {"url": url}
-                    try:
-                        response = await client.get(url)
-                        elapsed_ms = (time.monotonic() - start) * 1000
-                        payload = self._extract_json_payload(response)
-                        payload_state = self._extract_payload_state(payload)
+                        start = time.monotonic()
+                        attempt: dict[str, Any] = {"url": url}
+                        try:
+                            response = await client.get(url)
+                            elapsed_ms = (time.monotonic() - start) * 1000
+                            payload = self._extract_json_payload(response)
+                            payload_state = self._extract_payload_state(payload)
 
-                        attempt["response_time_ms"] = round(elapsed_ms, 2)
-                        attempt["http_status"] = response.status_code
-                        if payload_state is not None:
-                            attempt["payload_state"] = payload_state
-                        if payload is not None:
-                            attempt["payload"] = payload
+                            attempt["response_time_ms"] = round(elapsed_ms, 2)
+                            attempt["http_status"] = response.status_code
+                            if payload_state is not None:
+                                attempt["payload_state"] = payload_state
+                            if payload is not None:
+                                attempt["payload"] = payload
 
-                        attempts.append(attempt)
-                        any_http_response = True
+                            attempts.append(attempt)
+                            any_http_response = True
 
-                        is_2xx = 200 <= response.status_code < 300
-                        payload_marked_bad = payload_state is not None and payload_state in _NON_HEALTHY_PAYLOAD_STATES
-                        payload_marked_good = payload_state is not None and payload_state in _HEALTHY_PAYLOAD_STATES
+                            is_2xx = 200 <= response.status_code < 300
+                            payload_marked_bad = payload_state is not None and payload_state in _NON_HEALTHY_PAYLOAD_STATES
+                            payload_marked_good = payload_state is not None and payload_state in _HEALTHY_PAYLOAD_STATES
 
-                        # 2xx かつ payload が明示的に bad でない場合のみ healthy
-                        if is_2xx and not payload_marked_bad:
-                            result = HealthCheckResult(
-                                config.name,
-                                AppStatus.HEALTHY,
-                                response_time_ms=elapsed_ms,
-                                details={
-                                    "checked_url": url,
-                                    "http_status": response.status_code,
-                                    "payload_state": payload_state,
-                                    "payload": payload,
-                                    "attempts": attempts,
-                                    "docker": docker_info,
-                                },
-                            )
-                            self._health_cache[config.name] = result
-                            return result
+                            if is_2xx and not payload_marked_bad:
+                                backend_component.update(
+                                    {
+                                        "healthy": True,
+                                        "status": "healthy",
+                                        "message": f"backend healthy via {url}",
+                                    }
+                                )
+                                backend_checked_url = url
+                                backend_http_status = response.status_code
+                                backend_payload_state = payload_state
+                                backend_payload = payload
+                                backend_elapsed_ms = elapsed_ms
+                                break
 
-                        if is_2xx and not payload_marked_good and payload_state is None:
-                            attempt["error"] = "2xx response without explicit status field"
-                        elif payload_marked_bad:
-                            attempt["error"] = f"payload indicates non-healthy state: {payload_state}"
-                        else:
-                            attempt["error"] = f"HTTP {response.status_code}"
-                        last_error = attempt["error"]
-                    except httpx.ConnectError as exc:
-                        any_connect_error = True
-                        last_error = str(exc)
-                        if port is not None:
-                            unreachable_ports.add(port)
-                        attempts.append({"url": url, "error": "connect_error", "message": str(exc)})
-                    except httpx.TimeoutException as exc:
-                        any_timeout = True
-                        last_error = str(exc)
-                        if port is not None:
-                            unreachable_ports.add(port)
-                        attempts.append({"url": url, "error": "timeout", "message": str(exc)})
-                    except Exception as exc:
-                        last_error = str(exc)
-                        attempts.append({"url": url, "error": "exception", "message": str(exc)})
-        except Exception as exc:
-            last_error = str(exc)
-            attempts.append({"url": "client_setup", "error": "exception", "message": str(exc)})
+                            if is_2xx and not payload_marked_good and payload_state is None:
+                                attempt["error"] = "2xx response without explicit status field"
+                            elif payload_marked_bad:
+                                attempt["error"] = f"payload indicates non-healthy state: {payload_state}"
+                            else:
+                                attempt["error"] = f"HTTP {response.status_code}"
+                            last_error = str(attempt["error"])
+                        except httpx.ConnectError as exc:
+                            any_connect_error = True
+                            last_error = str(exc)
+                            if port is not None:
+                                unreachable_ports.add(port)
+                            attempts.append({"url": url, "error": "connect_error", "message": str(exc)})
+                        except httpx.TimeoutException as exc:
+                            any_timeout = True
+                            last_error = str(exc)
+                            if port is not None:
+                                unreachable_ports.add(port)
+                            attempts.append({"url": url, "error": "timeout", "message": str(exc)})
+                        except Exception as exc:
+                            last_error = str(exc)
+                            attempts.append({"url": url, "error": "exception", "message": str(exc)})
+            except Exception as exc:
+                last_error = str(exc)
+                attempts.append({"url": "client_setup", "error": "exception", "message": str(exc)})
 
-        backend_running = bool(docker_info.get("backend_running"))
-        if any_http_response or any_timeout or backend_running:
-            status = AppStatus.UNHEALTHY
-            error_message = last_error or "ヘルスチェック結果が不正です"
-        elif any_connect_error:
-            status = AppStatus.STOPPED
-            error_message = last_error or "接続拒否"
-        else:
+            if backend_component.get("healthy") is not True:
+                backend_running = bool(docker_info.get("backend_running"))
+                if any_http_response or any_timeout or backend_running:
+                    backend_component.update(
+                        {
+                            "healthy": False,
+                            "status": "unhealthy",
+                            "message": last_error or "backend returned non-healthy response",
+                        }
+                    )
+                elif any_connect_error:
+                    backend_component.update(
+                        {
+                            "healthy": False,
+                            "status": "stopped",
+                            "message": last_error or "backend connection refused",
+                        }
+                    )
+                else:
+                    backend_component.update(
+                        {
+                            "healthy": False,
+                            "status": "unknown",
+                            "message": last_error or "backend health check unavailable",
+                        }
+                    )
+
+        # 3) database health
+        db_kind = (config.dependencies.database or config.runtime.database.kind or "").strip().lower()
+        db_port = config.runtime.database.port
+        if not isinstance(db_port, int):
+            db_port = config.ports.db
+        db_required = db_kind in _LOCAL_EXTERNAL_DB_KINDS and isinstance(db_port, int)
+        database_component: dict[str, Any] = {
+            "required": db_required,
+            "healthy": True,
+            "status": "skipped",
+            "kind": db_kind if db_kind else None,
+            "port": db_port,
+        }
+        if db_required and isinstance(db_port, int):
+            db_reachable = self._is_tcp_port_open("127.0.0.1", db_port, _LOCAL_DEPENDENCY_TIMEOUT)
+            if db_reachable:
+                database_component.update(
+                    {
+                        "healthy": True,
+                        "status": "healthy",
+                        "message": f"database ({db_kind}) localhost:{db_port} reachable",
+                    }
+                )
+            else:
+                database_component.update(
+                    {
+                        "healthy": False,
+                        "status": "stopped",
+                        "message": f"database ({db_kind}) localhost:{db_port} not reachable",
+                    }
+                )
+
+        components = {
+            "frontend": frontend_component,
+            "backend": backend_component,
+            "database": database_component,
+        }
+        required_components = [
+            (name, component)
+            for name, component in components.items()
+            if bool(component.get("required"))
+        ]
+        failed_components = [
+            (name, component)
+            for name, component in required_components
+            if not bool(component.get("healthy"))
+        ]
+
+        status: AppStatus
+        error_message: str | None
+        if not required_components:
             status = AppStatus.UNKNOWN
-            error_message = last_error or "ヘルスチェック実行不可"
+            error_message = "ヘルスチェック対象コンポーネントが設定されていません"
+        elif not failed_components:
+            status = AppStatus.HEALTHY
+            error_message = None
+        else:
+            failed_statuses = {str(component.get("status")) for _, component in failed_components}
+            if failed_statuses.issubset({"stopped"}):
+                status = AppStatus.STOPPED
+            elif failed_statuses.issubset({"unknown"}):
+                status = AppStatus.UNKNOWN
+            else:
+                status = AppStatus.UNHEALTHY
+            failure_messages: list[str] = []
+            for name, component in failed_components:
+                component_message = str(component.get("message") or component.get("status") or "failed")
+                failure_messages.append(f"{name}: {component_message}")
+            error_message = "; ".join(failure_messages)
+
+        details: dict[str, Any] = {
+            "attempts": attempts,
+            "candidate_urls": candidate_urls,
+            "health_paths": health_paths,
+            "docker": docker_info,
+            "components": components,
+        }
+        if backend_checked_url is not None:
+            details["checked_url"] = backend_checked_url
+        if backend_http_status is not None:
+            details["http_status"] = backend_http_status
+        if backend_payload_state is not None:
+            details["payload_state"] = backend_payload_state
+        if backend_payload is not None:
+            details["payload"] = backend_payload
 
         result = HealthCheckResult(
             config.name,
             status,
+            response_time_ms=backend_elapsed_ms,
             error=error_message,
-            details={
-                "attempts": attempts,
-                "candidate_urls": candidate_urls,
-                "health_paths": health_paths,
-                "docker": docker_info,
-            },
+            details=details,
         )
         self._health_cache[config.name] = result
         return result
@@ -689,26 +816,40 @@ class AppLifecycleManager:
         Returns:
             実行結果
         """
-        cli_preflight = await self._run_cli_preflight(config, enabled=True)
-        initial = await self._start_local_dev_once(
-            config,
-            config_path=config_path,
-            cli_preflight=cli_preflight,
-        )
-        if not _repair_enabled:
-            return self._attach_repair_result(initial, attempts=[], outcome="disabled")
-        return await self._run_action_with_repair(
-            config=config,
-            action="local_start",
-            config_path=config_path,
-            cli_preflight=cli_preflight,
-            initial_result=initial,
-            retry_callback=lambda: self.start_local_dev(
+        try:
+            cli_preflight = await self._run_cli_preflight(config, enabled=True)
+            initial = await self._start_local_dev_once(
                 config,
                 config_path=config_path,
-                _repair_enabled=False,
-            ),
-        )
+                cli_preflight=cli_preflight,
+            )
+            if not _repair_enabled:
+                return self._attach_repair_result(initial, attempts=[], outcome="disabled")
+            return await self._run_action_with_repair(
+                config=config,
+                action="local_start",
+                config_path=config_path,
+                cli_preflight=cli_preflight,
+                initial_result=initial,
+                retry_callback=lambda: self.start_local_dev(
+                    config,
+                    config_path=config_path,
+                    _repair_enabled=False,
+                ),
+            )
+        except asyncio.CancelledError:
+            _logger.info("[%s] local_start cancelled (likely shutdown)", config.name)
+            with suppress(Exception):
+                await self._stop_local_processes(config.name)
+            cancelled_result = self._build_local_start_cancelled_result(
+                config=config,
+                config_path=config_path,
+            )
+            return self._attach_repair_result(
+                cancelled_result,
+                attempts=[],
+                outcome="cancelled",
+            )
 
     async def _start_local_dev_once(
         self,
@@ -902,6 +1043,51 @@ class AppLifecycleManager:
     ) -> tuple[list[str], str | None]:
         """Local 起動前に依存サービスの待受を確認."""
         notes: list[str] = []
+        targets = self._collect_local_dependency_targets(config)
+        if not targets:
+            return notes, None
+
+        reachable_targets, missing_targets = self._split_dependency_targets(targets)
+        for label, kind, port in reachable_targets:
+            notes.append(f"dependency check: {label} ({kind}) localhost:{port} reachable")
+
+        if not missing_targets:
+            return notes, None
+
+        auto_start_notes, auto_start_error = await self._auto_start_local_dependencies(
+            config=config,
+            config_path=config_path,
+            missing_targets=missing_targets,
+        )
+        notes.extend(auto_start_notes)
+        if auto_start_error is not None:
+            return notes, auto_start_error
+
+        reachable_after, missing_after = self._split_dependency_targets(targets)
+        for label, kind, port in reachable_after:
+            note = f"dependency re-check: {label} ({kind}) localhost:{port} reachable"
+            if note not in notes:
+                notes.append(note)
+
+        if not missing_after:
+            return notes, None
+
+        first_failure = missing_after[0]
+        label, kind, port = first_failure
+        compose_detected = config_path is not None and bool(
+            self._resolve_compose_files(config_path.parent, include_dev=True)
+        )
+        message = f"local_start 前提チェック失敗: {label} ({kind}) が localhost:{port} で待受していません。"
+        if compose_detected:
+            notes.append("docker compose file detected for this app")
+            message += " 依存サービス自動起動を試行しましたが利用可能になりませんでした。"
+        else:
+            notes.append("docker compose file not detected for this app")
+            message += " docker compose ファイルは未検出です。DB/依存サービスを手動起動してください。"
+        return notes, message
+
+    def _collect_local_dependency_targets(self, config: AppConfig) -> list[tuple[str, str, int]]:
+        """local_start で事前に待受確認すべき依存先を列挙する."""
         targets: list[tuple[str, str, int]] = []
         db_kind = (config.dependencies.database or config.runtime.database.kind or "").strip().lower()
         db_port = config.runtime.database.port
@@ -912,39 +1098,168 @@ class AppLifecycleManager:
 
         if config.dependencies.redis and isinstance(config.ports.redis, int):
             targets.append(("redis", "redis", config.ports.redis))
+        return targets
 
-        if not targets:
-            return notes, None
-
-        first_failure: tuple[str, str, int] | None = None
+    def _split_dependency_targets(
+        self,
+        targets: list[tuple[str, str, int]],
+    ) -> tuple[list[tuple[str, str, int]], list[tuple[str, str, int]]]:
+        """依存先を reachable / missing に分類する."""
+        reachable: list[tuple[str, str, int]] = []
+        missing: list[tuple[str, str, int]] = []
         for label, kind, port in targets:
-            reachable = self._is_tcp_port_open(
-                "127.0.0.1",
-                port,
-                _LOCAL_DEPENDENCY_TIMEOUT,
-            )
-            if reachable:
-                notes.append(f"dependency check: {label} ({kind}) localhost:{port} reachable")
-                continue
-            first_failure = (label, kind, port)
-            break
+            is_open = self._is_tcp_port_open("127.0.0.1", port, _LOCAL_DEPENDENCY_TIMEOUT)
+            if is_open:
+                reachable.append((label, kind, port))
+            else:
+                missing.append((label, kind, port))
+        return reachable, missing
 
-        if first_failure is None:
+    async def _auto_start_local_dependencies(
+        self,
+        *,
+        config: AppConfig,
+        config_path: Path | None,
+        missing_targets: list[tuple[str, str, int]],
+    ) -> tuple[list[str], str | None]:
+        """不足依存（DB/Redis）がある場合、docker compose で自動起動を試みる."""
+        notes: list[str] = []
+        if not missing_targets:
+            return notes, None
+        if config_path is None:
+            notes.append("dependency auto-start skipped: config path unavailable")
             return notes, None
 
-        label, kind, port = first_failure
-        compose_detected = False
-        if config_path is not None:
-            compose_detected = bool(self._resolve_compose_files(config_path.parent, include_dev=True))
-        message = f"local_start 前提チェック失敗: {label} ({kind}) が localhost:{port} で待受していません。"
-        if compose_detected:
-            notes.append("docker compose file detected for this app")
-            message += " docker compose ファイルを検出しました。先に Start/Publish を実行してください。"
-        else:
-            notes.append("docker compose file not detected for this app")
-            message += " docker compose ファイルは未検出です。DB/依存サービスを手動起動してください。"
-        message += " 先に Start/Publish で依存コンテナを起動するか、DB を手動起動してください。"
-        return notes, message
+        app_dir = config_path.parent
+        compose_files = self._resolve_compose_files(app_dir, include_dev=True)
+        if not compose_files:
+            notes.append("dependency auto-start skipped: docker compose file not found")
+            return notes, None
+
+        service_names, service_error = await self._list_compose_services(app_dir, compose_files)
+        if service_error is not None:
+            return notes, service_error
+
+        target_services = self._select_dependency_services(
+            service_names=service_names,
+            app_name=config.name,
+            missing_targets=missing_targets,
+        )
+        if not target_services:
+            notes.append("dependency auto-start skipped: no dependency services matched")
+            return notes, None
+
+        command = ["docker", "compose"]
+        for compose_file in compose_files:
+            command.extend(["-f", compose_file.name])
+        command.extend(["up", "-d", *target_services])
+
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *command,
+                cwd=str(app_dir),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(
+                proc.communicate(),
+                timeout=_LOCAL_DEPENDENCY_START_TIMEOUT_SECONDS,
+            )
+        except FileNotFoundError:
+            return notes, "dependency auto-start failed: docker command not found"
+        except TimeoutError:
+            return notes, "dependency auto-start failed: docker compose timeout"
+        except Exception as exc:  # pragma: no cover - defensive
+            return notes, f"dependency auto-start failed: {exc}"
+
+        stdout = self._trim_output(stdout_bytes.decode("utf-8", errors="ignore").strip())
+        stderr = self._trim_output(stderr_bytes.decode("utf-8", errors="ignore").strip())
+        if proc.returncode != 0:
+            error_text = stderr or stdout or f"docker compose exited with {proc.returncode}"
+            return notes, f"dependency auto-start failed: {error_text}"
+
+        service_text = ", ".join(target_services)
+        notes.append(f"dependency auto-start: docker compose up -d {service_text}")
+        if stdout:
+            notes.append(f"dependency auto-start output: {stdout}")
+        return notes, None
+
+    async def _list_compose_services(
+        self,
+        app_dir: Path,
+        compose_files: list[Path],
+    ) -> tuple[list[str], str | None]:
+        """docker compose config --services でサービス一覧を取得."""
+        command = ["docker", "compose"]
+        for compose_file in compose_files:
+            command.extend(["-f", compose_file.name])
+        command.extend(["config", "--services"])
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *command,
+                cwd=str(app_dir),
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout_bytes, stderr_bytes = await asyncio.wait_for(
+                proc.communicate(),
+                timeout=_LOCAL_DEPENDENCY_SERVICE_LIST_TIMEOUT_SECONDS,
+            )
+        except FileNotFoundError:
+            return [], "dependency auto-start failed: docker command not found"
+        except TimeoutError:
+            return [], "dependency auto-start failed: docker compose service listing timeout"
+        except Exception as exc:  # pragma: no cover - defensive
+            return [], f"dependency auto-start failed: {exc}"
+
+        if proc.returncode != 0:
+            stderr = stderr_bytes.decode("utf-8", errors="ignore").strip()
+            stdout = stdout_bytes.decode("utf-8", errors="ignore").strip()
+            return [], f"dependency auto-start failed: {stderr or stdout}"
+
+        services = [line.strip() for line in stdout_bytes.decode("utf-8", errors="ignore").splitlines() if line.strip()]
+        return services, None
+
+    def _select_dependency_services(
+        self,
+        *,
+        service_names: list[str],
+        app_name: str,
+        missing_targets: list[tuple[str, str, int]],
+    ) -> list[str]:
+        """不足している依存種別に基づいて compose サービスを選択する."""
+        if not service_names:
+            return []
+
+        excluded_exact = {app_name.lower()}
+        infra_candidates: list[str] = []
+        for name in service_names:
+            normalized = name.strip().lower()
+            if not normalized:
+                continue
+            if normalized in excluded_exact:
+                continue
+            if any(keyword in normalized for keyword in _LOCAL_SERVICE_EXCLUDE_KEYWORDS):
+                continue
+            infra_candidates.append(name)
+
+        if not infra_candidates:
+            return []
+
+        expected_hints: set[str] = set()
+        for _, kind, _ in missing_targets:
+            normalized_kind = kind.lower()
+            if normalized_kind.startswith("postgres"):
+                expected_hints.update({"postgres", "pg", "db"})
+            elif normalized_kind in {"mysql", "mariadb"}:
+                expected_hints.update({"mysql", "mariadb", "db"})
+            elif normalized_kind == "redis":
+                expected_hints.update({"redis", "cache"})
+            else:
+                expected_hints.update({"db", "database"})
+
+        matched = [name for name in infra_candidates if any(hint in name.lower() for hint in expected_hints)]
+        return matched if matched else infra_candidates
 
     async def _start_local_process(
         self,
@@ -973,6 +1288,7 @@ class AppLifecycleManager:
             cwd=str(cwd),
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env=self._sanitize_local_process_env(),
         )
         stdout_bytes, stderr_bytes = await proc.communicate()
         stdout = stdout_bytes.decode("utf-8", errors="ignore").strip()
@@ -1006,7 +1322,21 @@ class AppLifecycleManager:
                 message=f"{role}: {command} (log={log_path})",
             )
 
-        await asyncio.sleep(_LOCAL_BOOT_WAIT_SECONDS)
+        try:
+            await asyncio.sleep(_LOCAL_BOOT_WAIT_SECONDS)
+        except asyncio.CancelledError:
+            with suppress(OSError):
+                os.kill(pid, signal.SIGTERM)
+            with suppress(OSError):
+                Path(pid_file).unlink()
+            return LocalProcessLaunchResult(
+                role=role,
+                command=command,
+                success=False,
+                pid=pid,
+                log_path=log_path,
+                error=f"{role} 起動待機中にキャンセルされました (pid={pid})",
+            )
         is_running = self._is_process_running(pid)
         if is_running:
             return LocalProcessLaunchResult(
@@ -1057,47 +1387,71 @@ class AppLifecycleManager:
         if not backend_started and not frontend_started and frontend_port is None:
             return True, notes, None
 
-        while time.monotonic() < deadline:
-            for launch in launches:
-                if launch.pid is None:
-                    continue
-                if self._is_process_running(launch.pid):
-                    continue
-                log_tail = self._read_log_tail(launch.log_path, _LOCAL_LOG_TAIL_LINES)
-                message = (
-                    f"{launch.role} プロセスが起動後に停止しました "
-                    f"(pid={launch.pid}, log={launch.log_path})"
-                )
-                if log_tail:
-                    message = f"{message}\n--- {launch.role} log tail ---\n{self._trim_output(log_tail)}"
-                return False, notes, message
+        try:
+            while time.monotonic() < deadline:
+                for launch in launches:
+                    if launch.pid is None:
+                        continue
+                    if self._is_process_running(launch.pid):
+                        continue
+                    log_tail = self._read_log_tail(launch.log_path, _LOCAL_LOG_TAIL_LINES)
+                    message = (
+                        f"{launch.role} プロセスが起動後に停止しました "
+                        f"(pid={launch.pid}, log={launch.log_path})"
+                    )
+                    if log_tail:
+                        message = f"{message}\n--- {launch.role} log tail ---\n{self._trim_output(log_tail)}"
+                    return False, notes, message
 
-            backend_ready = True
-            if backend_started:
-                health = await self.check_health(config, config_path=config_path)
-                backend_ready = health.status == AppStatus.HEALTHY
-                last_backend_status = health.status.value
+                backend_ready = True
+                if backend_started:
+                    health = await self.check_health(config, config_path=config_path)
+                    backend_ready = health.status == AppStatus.HEALTHY
+                    last_backend_status = health.status.value
 
-            frontend_ready = True
-            if frontend_port is not None and (frontend_started or frontend_declared):
-                frontend_ready = self._is_tcp_port_open("127.0.0.1", frontend_port, _LOCAL_DEPENDENCY_TIMEOUT)
-                last_frontend_status = "ready" if frontend_ready else "not_ready"
+                frontend_ready = True
+                if frontend_port is not None and (frontend_started or frontend_declared):
+                    frontend_ready = self._is_tcp_port_open("127.0.0.1", frontend_port, _LOCAL_DEPENDENCY_TIMEOUT)
+                    last_frontend_status = "ready" if frontend_ready else "not_ready"
 
-            if backend_ready and frontend_ready:
-                ready_streak += 1
-                if ready_streak >= _LOCAL_READINESS_STABLE_STREAK:
-                    notes.append("local readiness check: backend/frontend ready")
-                    return True, notes, None
-            else:
-                ready_streak = 0
+                if backend_ready and frontend_ready:
+                    ready_streak += 1
+                    if ready_streak >= _LOCAL_READINESS_STABLE_STREAK:
+                        notes.append("local readiness check: backend/frontend ready")
+                        return True, notes, None
+                else:
+                    ready_streak = 0
 
-            await asyncio.sleep(_LOCAL_READINESS_POLL_SECONDS)
+                await asyncio.sleep(_LOCAL_READINESS_POLL_SECONDS)
+        except asyncio.CancelledError:
+            return False, notes, "local_start readiness check cancelled"
 
         timeout_message = (
             "local_start readiness timeout: "
             f"backend={last_backend_status}, frontend={last_frontend_status}"
         )
         return False, notes, timeout_message
+
+    def _build_local_start_cancelled_result(
+        self,
+        *,
+        config: AppConfig,
+        config_path: Path | None,
+    ) -> AppActionResult:
+        """local_start のキャンセル時レスポンスを生成する."""
+        cwd = ""
+        if config_path is not None:
+            cwd = str(config_path.parent.parent.parent)
+        return AppActionResult(
+            app_name=config.name,
+            action="local_start",
+            success=False,
+            command=[],
+            cwd=cwd,
+            command_source="fallback",
+            error="local_start request was cancelled during shutdown",
+            execution_mode="local",
+        )
 
     async def _stop_local_processes(self, app_name: str) -> dict[str, Any]:
         """PID ファイルを参照してローカルプロセスを停止する."""
@@ -2129,6 +2483,18 @@ class AppLifecycleManager:
             return True
         except OSError:
             return False
+
+    @staticmethod
+    def _sanitize_local_process_env() -> dict[str, str]:
+        """local 起動サブプロセス向けに既知の不正環境変数を補正する."""
+        env = dict(os.environ)
+        debug_value = env.get("DEBUG")
+        if debug_value is not None:
+            normalized = debug_value.strip().lower()
+            valid_values = {"1", "0", "true", "false", "yes", "no", "on", "off"}
+            if normalized not in valid_values:
+                env["DEBUG"] = "false"
+        return env
 
     @staticmethod
     def _read_log_tail(path: str, max_lines: int) -> str:

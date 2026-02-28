@@ -120,7 +120,7 @@
     },
     "commands": {
       "backend_dev": "python apps/faq_system/scripts/dev.py",
-      "frontend_dev": null,
+      "frontend_dev": "cd apps/faq_system/frontend && npm run dev",
       "publish": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build",
       "start": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d",
       "stop": "docker compose -f docker-compose.yml -f docker-compose.dev.yml down"

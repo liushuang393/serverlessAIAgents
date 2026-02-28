@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from apps.faq_system.backend.auth.dependencies import require_auth
 from apps.faq_system.routers.dependencies import (
+    build_agent_conversation_history,
     extract_assistant_content,
     get_chat_history_service,
     get_faq_agent,
@@ -65,6 +66,14 @@ async def chat(
     """
     session_id = resolve_session_id(request.session_id)
     history_svc = get_chat_history_service()
+    conversation_history = build_agent_conversation_history(
+        await history_svc.list_messages(
+            session_id=session_id,
+            limit=12,
+            user=user,
+        ),
+        limit=8,
+    )
     await history_svc.save_message(
         session_id=session_id,
         role="user",
@@ -87,6 +96,7 @@ async def chat(
                 },
                 "session_id": session_id,
                 "options": request.options,
+                "conversation_history": conversation_history,
             },
         }
     )
@@ -130,6 +140,14 @@ async def chat_stream(
     """
     session_id = resolve_session_id(request.session_id)
     history_svc = get_chat_history_service()
+    conversation_history = build_agent_conversation_history(
+        await history_svc.list_messages(
+            session_id=session_id,
+            limit=12,
+            user=user,
+        ),
+        limit=8,
+    )
     await history_svc.save_message(
         session_id=session_id,
         role="user",
@@ -154,6 +172,7 @@ async def chat_stream(
                         },
                         "session_id": session_id,
                         "options": request.options,
+                        "conversation_history": conversation_history,
                     },
                 }
             ):

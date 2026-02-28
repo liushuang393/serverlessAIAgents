@@ -10,6 +10,7 @@ from typing import Any
 
 from apps.faq_system.backend.auth.dependencies import resolve_user
 from apps.faq_system.routers.dependencies import (
+    build_agent_conversation_history,
     extract_assistant_content,
     get_chat_history_service,
     get_faq_agent,
@@ -108,6 +109,14 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str) -> None:
             if data.get("type") == "chat":
                 message = data.get("message", "")
                 session_id = resolve_session_id(data.get("sessionId", client_id))
+                conversation_history = build_agent_conversation_history(
+                    await history_svc.list_messages(
+                        session_id=session_id,
+                        limit=12,
+                        user=user,
+                    ),
+                    limit=8,
+                )
                 await history_svc.save_message(
                     session_id=session_id,
                     role="user",
@@ -131,6 +140,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str) -> None:
                             },
                             "session_id": session_id,
                             "options": data.get("options", {}),
+                            "conversation_history": conversation_history,
                         },
                     }
                 ):

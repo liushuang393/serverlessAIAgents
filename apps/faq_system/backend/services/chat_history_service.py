@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import secrets
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -17,6 +18,8 @@ if TYPE_CHECKING:
 
 class ChatHistoryService:
     """チャット履歴を DB に保存・取得する."""
+
+    _SESSION_TITLE_MAX_CHARS = 17
 
     async def save_message(
         self,
@@ -172,11 +175,12 @@ class ChatHistoryService:
     def _auto_title_from_text(text: str) -> str:
         """テキストからセッションタイトルを自動生成.
 
-        最初のユーザーメッセージの先頭30文字を使用。
+        最初のユーザーメッセージを 17 文字以内に正規化して使用する。
         """
         if not text:
             return "新しいチャット"
-        title = text.strip().replace("\n", " ")[:30]
-        if len(text.strip()) > 30:
-            title += "…"
-        return title
+        normalized = re.sub(r"\s+", " ", text.strip())
+        max_chars = ChatHistoryService._SESSION_TITLE_MAX_CHARS
+        if len(normalized) <= max_chars:
+            return normalized
+        return f"{normalized[:max_chars]}…"

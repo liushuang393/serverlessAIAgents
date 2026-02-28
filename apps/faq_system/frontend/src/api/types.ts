@@ -42,6 +42,8 @@ export interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
     content: string;
     created_at?: string;
+    query_type?: string;
+    verification?: Record<string, unknown>;
 }
 
 export interface ChatResponse {
@@ -52,6 +54,14 @@ export interface ChatResponse {
     chart?: Record<string, unknown> | null;
     suggestions?: Array<Record<string, unknown> | string>;
     rich_response?: Record<string, unknown> | null;
+    // FAQOutput 整合用フィールド
+    question?: string;
+    sql?: string;
+    data?: Array<Record<string, unknown>>;
+    columns?: string[];
+    artifacts?: Array<Record<string, unknown>>;
+    verification?: Record<string, unknown>;
+    error?: string;
 }
 
 export interface ChatRequest {
@@ -62,4 +72,17 @@ export interface ChatRequest {
 
 export interface ChatHistoryResponse {
     messages: ChatMessage[];
+}
+
+/** /api/health レスポンス型 */
+export interface HealthStatus {
+    status: 'healthy' | 'degraded';
+    service: string;
+    version: string;
+    timestamp: string;
+    db: { status: string; url?: string; error?: string };
+    /** RAG 機能の有効状態 */
+    rag: { enabled: boolean };
+    /** SQL 機能の有効状態 */
+    sql: { enabled: boolean };
 }

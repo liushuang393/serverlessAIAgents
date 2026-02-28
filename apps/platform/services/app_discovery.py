@@ -11,6 +11,7 @@ Platform の App 管理 API が依存するコアサービス。
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import logging
 from copy import deepcopy
@@ -24,7 +25,34 @@ from apps.platform.schemas.app_config_schemas import (
     EvolutionConfig,
     VisibilityConfig,
 )
+from apps.platform.schemas.capability_schemas import CapabilitySpec
 from apps.platform.services.agent_taxonomy import AgentTaxonomyService
+
+
+def _flatten_capability_item(item: Any) -> list[str]:
+    """単一の capability アイテムを canonical ID 文字列リストに展開する.
+
+    - str → そのまま 1 要素リスト
+    - CapabilitySpec（Pydantic モデル） → to_canonical_ids() で展開
+    - dict（JSON 由来の未パース CapabilitySpec） → CapabilitySpec にパースして展開
+    - それ以外 → str() で文字列化して 1 要素リスト
+
+    Args:
+        item: app_config.json の capabilities エントリ（任意型）
+
+    Returns:
+        canonical ID 文字列のリスト
+    """
+    if isinstance(item, str):
+        return [item]
+    if isinstance(item, CapabilitySpec):
+        return item.to_canonical_ids()
+    if isinstance(item, dict):
+        try:
+            return CapabilitySpec.model_validate(item).to_canonical_ids()
+        except Exception:  # noqa: BLE001
+            return [str(item)]
+    return [str(item)]
 
 
 _logger = logging.getLogger(__name__)
@@ -57,6 +85,8 @@ class AppDiscoveryService:
         self._registry: dict[str, AppConfig] = {}
         self._config_paths: dict[str, Path] = {}
         self._errors: dict[str, str] = {}
+        # Agent module フィールドの import 可否チェック結果（非致命的警告）
+        self._module_warnings: dict[str, list[str]] = {}
         self._taxonomy = AgentTaxonomyService()
 
     # ------------------------------------------------------------------
@@ -72,6 +102,7 @@ class AppDiscoveryService:
         self._registry.clear()
         self._config_paths.clear()
         self._errors.clear()
+        self._module_warnings.clear()
 
         if not self._apps_dir.is_dir():
             _logger.warning("Apps ディレクトリが存在しません: %s", self._apps_dir)
@@ -157,6 +188,17 @@ class AppDiscoveryService:
         """
         return dict(self._errors)
 
+    def list_module_warnings(self) -> dict[str, list[str]]:
+        """スキャン時の Agent モジュール警告を取得（非致命的）.
+
+        agents[].module に指定されたパスが importlib で見つからない場合に記録される。
+        App 自体の登録は成功するが、診断・監査機能が低下する。
+
+        Returns:
+            App ディレクトリ名 → 警告メッセージのリスト
+        """
+        return dict(self._module_warnings)
+
     @property
     def apps_dir(self) -> Path:
         """スキャン対象 apps ディレクトリ."""
@@ -202,6 +244,8 @@ class AppDiscoveryService:
                 for a in apps
             ],
             "errors": self._errors,
+            # Agent module フィールドの import 可否チェック結果
+            "module_warnings": dict(self._module_warnings),
         }
 
     def migrate_manifests(self, *, dry_run: bool = True) -> dict[str, Any]:
@@ -319,12 +363,56 @@ class AppDiscoveryService:
             config = AppConfig.model_validate(raw)
             self._registry[config.name] = config
             self._config_paths[config.name] = config_path
+            # Agent module フィールドの import 可否を確認（非致命的）
+            self._check_agent_modules(config, dir_name)
         except json.JSONDecodeError as exc:
             self._errors[dir_name] = f"JSON パースエラー: {exc}"
             _logger.warning("JSON パースエラー (%s): %s", dir_name, exc)
         except Exception as exc:
             self._errors[dir_name] = f"検証エラー: {exc}"
             _logger.warning("検証エラー (%s): %s", dir_name, exc)
+
+    def _check_agent_modules(self, config: AppConfig, dir_name: str) -> None:
+        """各 Agent の module フィールドが import 可能か検証（非致命的）.
+
+        app_config.json の agents[].module に指定されたパスが Python 環境に存在するか
+        importlib.util.find_spec() で確認する。存在しない場合は WARNING ログを出力し
+        _module_warnings に記録するが、App の登録はスキップしない。
+
+        Args:
+            config: 検証対象の AppConfig
+            dir_name: App ディレクトリ名（ログ・警告 key 用）
+        """
+        warnings: list[str] = []
+        for agent in config.agents:
+            if agent.module is None:
+                continue
+            try:
+                spec = importlib.util.find_spec(agent.module)
+                if spec is None:
+                    msg = f"Agent '{agent.name}': module '{agent.module}' が見つかりません"
+                    warnings.append(msg)
+                    _logger.warning(
+                        "Agent モジュール未検出 [%s / %s]: %s",
+                        dir_name,
+                        agent.name,
+                        agent.module,
+                    )
+            except (ModuleNotFoundError, ValueError) as exc:
+                msg = f"Agent '{agent.name}': module '{agent.module}' 検証エラー: {exc}"
+                warnings.append(msg)
+                _logger.warning(
+                    "Agent モジュール検証エラー [%s / %s]: %s — %s",
+                    dir_name,
+                    agent.name,
+                    agent.module,
+                    exc,
+                )
+
+        if warnings:
+            self._module_warnings[dir_name] = warnings
+        else:
+            self._module_warnings.pop(dir_name, None)
 
     def _migrate_one(self, raw: dict[str, Any]) -> tuple[dict[str, Any], list[str]]:
         """単一 manifest を標準契約へ移行."""
@@ -643,7 +731,11 @@ class AppDiscoveryService:
 
     @staticmethod
     def _iter_agent_capabilities(agents_raw: Any) -> list[list[str]]:
-        """agents セクションから capabilities 一覧を抽出."""
+        """agents セクションから capabilities 一覧を抽出.
+
+        各 capability アイテムはフラット文字列または CapabilitySpec（dict 形式）
+        どちらでも受け付け、canonical ID 文字列群に展開して返す。
+        """
         if not isinstance(agents_raw, list):
             return []
         rows: list[list[str]] = []
@@ -653,7 +745,10 @@ class AppDiscoveryService:
             capabilities = agent.get("capabilities")
             if not isinstance(capabilities, list):
                 continue
-            rows.append([str(cap) for cap in capabilities])
+            flat: list[str] = []
+            for cap in capabilities:
+                flat.extend(_flatten_capability_item(cap))
+            rows.append(flat)
         return rows
 
     def _migrate_agent_taxonomy(
@@ -674,7 +769,10 @@ class AppDiscoveryService:
                 continue
 
             capabilities = agent.get("capabilities")
-            capabilities_list = [str(c) for c in capabilities] if isinstance(capabilities, list) else []
+            capabilities_list: list[str] = []
+            if isinstance(capabilities, list):
+                for cap in capabilities:
+                    capabilities_list.extend(_flatten_capability_item(cap))
 
             inferred_base = self._taxonomy.infer_agent_business_base(
                 raw_business_base=agent.get("business_base"),
@@ -733,5 +831,9 @@ class AppDiscoveryService:
             app_name=app_config.name,
             tags=app_config.tags,
             contracts_rag_enabled=app_config.contracts.rag.enabled,
-            agent_capabilities=[agent.capabilities for agent in app_config.agents],
+            # capabilities は str | CapabilitySpec の混在リストなので canonical ID に展開する
+            agent_capabilities=[
+                [id_ for cap in agent.capabilities for id_ in _flatten_capability_item(cap)]
+                for agent in app_config.agents
+            ],
         )

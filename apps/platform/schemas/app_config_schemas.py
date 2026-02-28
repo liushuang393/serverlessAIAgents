@@ -12,9 +12,14 @@ apps/*/app_config.json を検証する。
 from __future__ import annotations
 
 import re
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+from apps.platform.schemas.capability_schemas import CapabilitySpec
+
+# CapabilitySpec または レガシーフラット文字列の Union 型
+CapabilityItem = Annotated[CapabilitySpec | str, Field(union_mode="left_to_right")]
 
 
 # 正規表現: snake_case の App 名（先頭は英小文字）
@@ -44,7 +49,13 @@ class AgentInfo(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=100, description="Agent 名")
     module: str | None = Field(default=None, description="Python モジュールパス")
-    capabilities: list[str] = Field(default_factory=list, description="能力タグ")
+    capabilities: list[CapabilityItem] = Field(
+        default_factory=list,
+        description=(
+            "能力タグ。レガシーフラット文字列（\"rag\"）または "
+            "3層構造 CapabilitySpec オブジェクトを混在可能。"
+        ),
+    )
     business_base: str | None = Field(
         default=None,
         description="業務基盤分類（knowledge / governance など）",

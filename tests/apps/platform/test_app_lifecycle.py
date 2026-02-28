@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -180,6 +181,86 @@ class TestAppLifecycleManager:
 
             result = await lifecycle.check_health(cfg)
             assert result.status == AppStatus.STOPPED
+
+    @pytest.mark.asyncio
+    async def test_health_requires_frontend_backend_and_database(
+        self,
+        lifecycle: AppLifecycleManager,
+    ) -> None:
+        """frontend/backend/database がすべて OK の時のみ HEALTHY."""
+        cfg = AppConfig(
+            name="full_stack_app",
+            display_name="Full Stack App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            ports={"api": 8099, "frontend": 3004, "db": 5433},
+            entry_points={"health": "/health"},
+            dependencies={"database": "postgresql"},
+        )
+        mock_resp = httpx.Response(
+            200,
+            json={"status": "ok"},
+            request=httpx.Request("GET", "http://localhost:8099/health"),
+        )
+        with patch("apps.platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls, patch.object(
+            lifecycle,
+            "_is_tcp_port_open",
+            side_effect=lambda _host, port, _timeout: port in {3004, 5433},
+        ):
+            mock_client = AsyncMock()
+            mock_client.get.return_value = mock_resp
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_cls.return_value = mock_client
+
+            result = await lifecycle.check_health(cfg)
+
+        assert result.status == AppStatus.HEALTHY
+        assert result.details is not None
+        components = result.details.get("components", {})
+        assert components.get("frontend", {}).get("healthy") is True
+        assert components.get("backend", {}).get("healthy") is True
+        assert components.get("database", {}).get("healthy") is True
+
+    @pytest.mark.asyncio
+    async def test_health_reports_frontend_failure_even_when_backend_is_ok(
+        self,
+        lifecycle: AppLifecycleManager,
+    ) -> None:
+        """backend が OK でも frontend が不健康なら healthy にしない."""
+        cfg = AppConfig(
+            name="frontend_fail_app",
+            display_name="Frontend Fail App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            ports={"api": 8099, "frontend": 3004, "db": 5433},
+            entry_points={"health": "/health"},
+            dependencies={"database": "postgresql"},
+        )
+        mock_resp = httpx.Response(
+            200,
+            json={"status": "ok"},
+            request=httpx.Request("GET", "http://localhost:8099/health"),
+        )
+        with patch("apps.platform.services.app_lifecycle.httpx.AsyncClient") as mock_cls, patch.object(
+            lifecycle,
+            "_is_tcp_port_open",
+            side_effect=lambda _host, port, _timeout: port == 5433,
+        ):
+            mock_client = AsyncMock()
+            mock_client.get.return_value = mock_resp
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_cls.return_value = mock_client
+
+            result = await lifecycle.check_health(cfg)
+
+        assert result.status == AppStatus.STOPPED
+        assert "frontend" in (result.error or "")
 
     @pytest.mark.asyncio
     async def test_start_uses_docker_mode_when_compose_exists_and_stopped(
@@ -424,6 +505,79 @@ class TestAppLifecycleManager:
         assert "frontend プロセスが直後に終了しました" in (result.error or "")
 
     @pytest.mark.asyncio
+    async def test_preflight_auto_starts_missing_dependency(
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
+    ) -> None:
+        """local_start 前提チェックは不足依存の自動起動を試みる."""
+        cfg = AppConfig(
+            name="dep_autostart_app",
+            display_name="Dependency Autostart App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            ports={"db": 5433},
+            dependencies={"database": "postgresql"},
+        )
+        config_path = tmp_path / "apps" / "dep_autostart_app" / "app_config.json"
+        config_path.parent.mkdir(parents=True)
+        config_path.write_text("{}", encoding="utf-8")
+        (config_path.parent / "docker-compose.yml").write_text("services: {}\n", encoding="utf-8")
+
+        with patch.object(
+            lifecycle,
+            "_is_tcp_port_open",
+            side_effect=[False, True],
+        ), patch.object(
+            lifecycle,
+            "_auto_start_local_dependencies",
+            new=AsyncMock(return_value=(["dependency auto-start: docker compose up -d faq-db"], None)),
+        ):
+            notes, error = await lifecycle._preflight_local_dependencies(cfg, config_path=config_path)
+
+        assert error is None
+        assert any("dependency auto-start" in note for note in notes)
+
+    @pytest.mark.asyncio
+    async def test_preflight_fails_when_dependency_stays_unreachable(
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
+    ) -> None:
+        """自動起動後も依存が待受しない場合は失敗を返す."""
+        cfg = AppConfig(
+            name="dep_fail_app",
+            display_name="Dependency Fail App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            ports={"db": 5433},
+            dependencies={"database": "postgresql"},
+        )
+        config_path = tmp_path / "apps" / "dep_fail_app" / "app_config.json"
+        config_path.parent.mkdir(parents=True)
+        config_path.write_text("{}", encoding="utf-8")
+        (config_path.parent / "docker-compose.yml").write_text("services: {}\n", encoding="utf-8")
+
+        with patch.object(
+            lifecycle,
+            "_is_tcp_port_open",
+            side_effect=[False, False],
+        ), patch.object(
+            lifecycle,
+            "_auto_start_local_dependencies",
+            new=AsyncMock(return_value=(["dependency auto-start: docker compose up -d faq-db"], None)),
+        ):
+            notes, error = await lifecycle._preflight_local_dependencies(cfg, config_path=config_path)
+
+        assert error is not None
+        assert "localhost:5433" in error
+        assert any("dependency auto-start" in note for note in notes)
+
+    @pytest.mark.asyncio
     async def test_start_ignores_readme_foreground_command(
         self,
         lifecycle: AppLifecycleManager,
@@ -653,3 +807,86 @@ class TestAppLifecycleManager:
         assert result.success is False
         assert result.diagnostic is not None
         assert result.diagnostic.get("summary") == "boom"
+
+    def test_sanitize_local_process_env_rewrites_invalid_debug(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """無効な DEBUG 値は local 起動時に false へ補正する."""
+        monkeypatch.setenv("DEBUG", "release")
+        env = AppLifecycleManager._sanitize_local_process_env()
+        assert env["DEBUG"] == "false"
+
+    @pytest.mark.asyncio
+    async def test_start_local_dev_returns_cancelled_result(
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
+    ) -> None:
+        """local_start 中断時は CancelledError を外へ漏らさない."""
+        cfg = AppConfig(
+            name="cancel_local_start_app",
+            display_name="Cancel Local Start App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            ports={"api": None},
+            entry_points={"health": None},
+        )
+        config_path = tmp_path / "cancel_local_start_app" / "app_config.json"
+        config_path.parent.mkdir(parents=True)
+        config_path.write_text("{}", encoding="utf-8")
+
+        with patch.object(
+            lifecycle,
+            "_run_cli_preflight",
+            new=AsyncMock(return_value={"ready": False, "final": {"available_tools": [], "authenticated_tools": []}}),
+        ), patch.object(
+            lifecycle,
+            "_start_local_dev_once",
+            new=AsyncMock(side_effect=asyncio.CancelledError),
+        ), patch.object(
+            lifecycle,
+            "_stop_local_processes",
+            new=AsyncMock(return_value={"success": True, "killed": [], "errors": []}),
+        ) as mocked_stop:
+            result = await lifecycle.start_local_dev(cfg, config_path=config_path)
+
+        assert result.success is False
+        assert "cancelled" in (result.error or "")
+        assert result.repair is not None
+        assert result.repair.get("outcome") == "cancelled"
+        mocked_stop.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_start_local_process_handles_cancelled_boot_wait(
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
+    ) -> None:
+        """起動待機中にキャンセルされても失敗結果で返す."""
+
+        class _Proc:
+            returncode = 0
+
+            async def communicate(self):
+                return b"12345\n", b""
+
+        with patch(
+            "apps.platform.services.app_lifecycle.asyncio.create_subprocess_shell",
+            new=AsyncMock(return_value=_Proc()),
+        ), patch(
+            "apps.platform.services.app_lifecycle.asyncio.sleep",
+            new=AsyncMock(side_effect=asyncio.CancelledError),
+        ):
+            launch = await lifecycle._start_local_process(
+                app_name="cancel_wait_app",
+                command="python -m apps.cancel_wait_app.main",
+                role="backend",
+                cwd=tmp_path,
+            )
+
+        assert launch.success is False
+        assert launch.error is not None
+        assert "キャンセル" in launch.error

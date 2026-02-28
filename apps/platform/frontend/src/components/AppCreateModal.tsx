@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createApp, fetchAppCreateOptions } from '@/api/client';
 import { useI18n } from '../i18n';
+import type { CategoryId } from './CategoryNav';
 import type {
   AppCreateOptionsResponse,
   AppCreateRequest,
@@ -116,7 +117,6 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
           ops: 'platform',
           daily: 'custom',
           all: 'custom', // should not happen
-          other: 'custom', // for robustness
         };
         return mapping[selectedCategory] || 'custom';
       })(),

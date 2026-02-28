@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Sparkles, FileText, Database, Wrench, TrendingUp, MessageCircle, Settings } from 'lucide-react';
-import { useChatStore } from '../../stores/chatStore';
+import { useChatStore, useServiceStatus } from '../../stores/chatStore';
 import { MessageBubble } from './MessageBubble';
 import { useI18n } from '../../i18n';
 import { SettingsModal } from '../settings/SettingsPage';
@@ -13,7 +13,8 @@ interface LayoutContext {
 export const ChatWindow = () => {
     const { t } = useI18n();
     const { sidebarOpen } = useOutletContext<LayoutContext>();
-    const { messages, sendMessage, isStreaming } = useChatStore();
+    const { messages, sendMessage, isStreaming, lastQueryType, runtimeStatus } = useChatStore();
+    const { ragEnabled, sqlEnabled, startPolling, stopPolling } = useServiceStatus();
     const [input, setInput] = useState('');
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -26,6 +27,12 @@ export const ChatWindow = () => {
     useEffect(() => {
         scrollToBottom();
     }, [messages, isStreaming]);
+
+    /** マウント時にバックエンド状態のポーリングを開始し、アンマウント時に停止する */
+    useEffect(() => {
+        startPolling();
+        return () => { stopPolling(); };
+    }, [startPolling, stopPolling]);
 
     const handleSubmit = async (e?: React.SyntheticEvent) => {
         e?.preventDefault();
@@ -62,13 +69,39 @@ export const ChatWindow = () => {
     const sendIconClass = canSend
         ? 'text-sky-50 drop-shadow-[0_1px_6px_rgba(186,230,253,0.4)]'
         : 'text-[var(--text-muted)]';
+    const hasMessages = messages.length > 0;
+    const routeLabels: Record<string, string> = {
+        faq: 'FAQ / RAG',
+        sql: 'SQL 分析',
+        hybrid: 'RAG + SQL',
+        chat: '一般チャット',
+        weather: '天気 API',
+        external: '外部調査',
+        sales_material: '営業資料',
+        blocked: '安全拒否',
+    };
+    const latestRouteLabel = routeLabels[lastQueryType ?? ''] ?? '未判定';
+    const runtimeText = isStreaming
+        ? `実行中: ${runtimeStatus?.agent || 'agent'} / ${runtimeStatus?.message || '処理中...'}`
+        : hasMessages
+            ? `直近ルート: ${latestRouteLabel}`
+            : 'システム準備完了';
+    const knowledgeState = !ragEnabled ? 'OFF' : (['faq', 'hybrid'].includes(lastQueryType ?? '') ? '実行' : '待機');
+    const dataState = !sqlEnabled ? 'OFF' : (['sql', 'hybrid'].includes(lastQueryType ?? '') ? '実行' : '待機');
+    const safetyState = (lastQueryType ?? '') === 'blocked' ? '検知' : '正常';
+    const stateColorClass = (state: string): string => {
+        if (state === 'OFF') return 'text-[var(--text-muted)]';
+        if (state === '実行' || state === '検知') return 'text-amber-300';
+        if (state === '正常') return 'text-emerald-300';
+        return 'text-cyan-300';
+    };
 
     return (
         <div className="flex-1 flex flex-col relative h-full overflow-hidden"
             style={{ background: 'radial-gradient(ellipse at 50% 0%, hsl(220, 20%, 11%), var(--bg-main))' }}>
 
             {/* Top Bar / Header Info */}
-            <div className={`w-full h-14 shrink-0 glass flex items-center justify-between pr-8 z-10 border-b border-white/5 ${sidebarOpen ? 'pl-8' : 'pl-20'}`}>
+            <div className={`w-full h-14 shrink-0 glass flex items-center justify-between pr-8 z-10 border-b border-white/5 ${sidebarOpen ? 'pl-[62px]' : 'pl-10'}`}>
                 <div className="flex items-center gap-3">
                     <div className="w-7 h-7 rounded-lg bg-[var(--primary)]/10 flex items-center justify-center border border-[var(--primary)]/20">
                         <Sparkles className="text-[var(--primary)]" size={14} />
@@ -95,10 +128,10 @@ export const ChatWindow = () => {
             <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
 
             {/* Messages Area - 3列レイアウト（15px / 中央 / 15px） */}
-            <div className="flex-1 overflow-y-auto w-full custom-scrollbar">
+            <div className="flex-1 min-h-0 overflow-y-auto w-full custom-scrollbar">
                 <div className="grid w-full grid-cols-[15px_minmax(0,1fr)_15px]">
                     <div className="col-start-2">
-                        <div style={chatLaneStyle} className="flex flex-col gap-8 pb-40">
+                        <div style={chatLaneStyle} className="flex flex-col gap-8 pb-8">
                             {messages.length === 0 ? (
                                 <div className="mt-16 flex flex-col items-center justify-center animate-in fade-in slide-in-from-bottom-4 duration-700">
                                     <div className="w-16 h-16 rounded-2xl glass flex items-center justify-center border border-white/10 shadow-2xl mb-6 relative">
@@ -143,7 +176,8 @@ export const ChatWindow = () => {
             </div>
 
             {/* Input Area - 3列レイアウト（15px / 中央 / 15px） */}
-            <div className="absolute bottom-0 inset-x-0 w-full pt-10 pb-6" style={{ background: 'linear-gradient(to top, var(--bg-main) 60%, transparent)' }}>
+            <div className="shrink-0 w-full pt-6 pb-6 border-t border-white/5"
+                style={{ background: 'linear-gradient(to top, var(--bg-main) 85%, rgba(0,0,0,0.0))' }}>
                 <div className="grid w-full grid-cols-[15px_minmax(0,1fr)_15px]">
                     <div className="col-start-2">
                         <div style={chatLaneStyle} className="flex flex-col gap-3">
@@ -183,17 +217,21 @@ export const ChatWindow = () => {
 
                             <div className="flex items-center justify-between px-2">
                                 <div className="flex items-center gap-4">
-                                    <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5 font-medium uppercase tracking-wider">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-white/20" />{' '}
-                                        RAG
+                                    <span className="text-[11px] flex items-center gap-1.5 font-medium tracking-wide text-[var(--text-dim)]">
+                                        知識
+                                        <span className={stateColorClass(knowledgeState)}>{knowledgeState}</span>
                                     </span>
-                                    <span className="text-[11px] text-[var(--text-muted)] flex items-center gap-1.5 font-medium uppercase tracking-wider">
-                                        <span className="w-1.5 h-1.5 rounded-full bg-white/20" />{' '}
-                                        SQL
+                                    <span className="text-[11px] flex items-center gap-1.5 font-medium tracking-wide text-[var(--text-dim)]">
+                                        データ
+                                        <span className={stateColorClass(dataState)}>{dataState}</span>
+                                    </span>
+                                    <span className="text-[11px] flex items-center gap-1.5 font-medium tracking-wide text-[var(--text-dim)]">
+                                        安全
+                                        <span className={stateColorClass(safetyState)}>{safetyState}</span>
                                     </span>
                                 </div>
-                                <p className="text-[10px] text-[var(--text-muted)] font-medium tracking-wide">
-                                    {t('chat.shift_enter_hint')}
+                                <p className="text-[10px] text-[var(--text-muted)] font-medium tracking-wide truncate max-w-[62%] text-right">
+                                    {runtimeText}
                                 </p>
                             </div>
                         </div>

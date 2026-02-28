@@ -52,6 +52,7 @@ from apps.platform.schemas.publish_schemas import PublishRequest, PublishTarget
 from apps.platform.services.agent_aggregator import AgentAggregatorService
 from apps.platform.services.app_discovery import AppDiscoveryService
 from apps.platform.services.app_lifecycle import AppLifecycleManager
+from apps.platform.services.config_watcher import ConfigWatcherService
 from apps.platform.services.app_scaffolder import AppScaffolderService
 from apps.platform.services.mcp_registry import MCPRegistryService
 from apps.platform.services.port_allocator import PortAllocatorService
@@ -92,6 +93,12 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     count = await discovery.scan()
     _logger.info("Platform 起動完了: %d 件の App を検出", count)
 
+    # --- Priority 2: ConfigWatcher（設定ホットリロード）起動 ---
+    watcher = ConfigWatcherService(discovery)
+    _watcher_task: asyncio.Task[None] = asyncio.create_task(
+        watcher.watch(), name="config-watcher"
+    )
+
     # --- Phase 3: Agent / Skill / RAG サービス初期化 ---
     aggregator = AgentAggregatorService(discovery)
     init_agent_services(aggregator)
@@ -115,6 +122,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # --- 終了時: クリーンアップ ---
     _logger.info("Platform シャットダウン")
+    _watcher_task.cancel()
+    await asyncio.gather(_watcher_task, return_exceptions=True)
 
 
 def create_app() -> FastAPI:

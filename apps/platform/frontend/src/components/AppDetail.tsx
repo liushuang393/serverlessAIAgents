@@ -41,6 +41,7 @@ export function AppDetail() {
   const health = name ? healthCache[name] : undefined;
   const healthDetails = health?.details;
   const attempts = (healthDetails?.attempts ?? []) as HealthCheckAttempt[];
+  const healthComponents = healthDetails?.components;
 
   const runAction = async (action: 'publish' | 'start' | 'stop' | 'local-start') => {
     if (!name) return;
@@ -280,6 +281,25 @@ export function AppDetail() {
               />
             )}
           </div>
+          {healthComponents && (
+            <div className="mt-4 pt-4 border-t border-slate-800">
+              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">Components</p>
+              <div className="space-y-1">
+                {(Object.entries(healthComponents) as Array<[string, {
+                  required: boolean;
+                  healthy: boolean;
+                  status: string;
+                  message?: string;
+                }]>).map(([componentName, component]) => (
+                  <p key={componentName} className={`text-xs font-mono ${component.healthy ? 'text-emerald-300' : 'text-rose-300'}`}>
+                    {componentName}: {component.status}
+                    {component.required ? ' (required)' : ' (optional)'}
+                    {component.message ? ` -> ${component.message}` : ''}
+                  </p>
+                ))}
+              </div>
+            </div>
+          )}
           {attempts.length > 0 && (
             <div className="mt-4 pt-4 border-t border-slate-800">
               <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">{t('app_detail.docker_attempts')}</p>

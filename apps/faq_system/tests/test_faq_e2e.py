@@ -17,6 +17,7 @@ from agentflow.agents.faq_agent import (
     FAQOutput,
 )
 from agentflow.routing import IntentCategory, IntentRouter
+from agentflow.services import ServiceResult
 
 
 # ---------------------------------------------------------------------------
@@ -185,6 +186,26 @@ class TestClassifyQuery:
         result = await agent._classify_query(question)
         assert result == "faq"
 
+    # ---- weather ----
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "question",
+        [
+            "北京天气怎么样",
+            "今日の東京の天気は？",
+            "weather in London",
+        ],
+    )
+    async def test_weather_routing(
+        self,
+        agent: FAQAgent,
+        question: str,
+    ) -> None:
+        """LLM classifies weather queries correctly."""
+        agent._llm = _llm_mock("weather")
+        result = await agent._classify_query(question)
+        assert result == "weather"
+
     # ---- LLM fallback scenarios ----
     @pytest.mark.asyncio
     async def test_llm_unexpected_value_falls_back(self, agent: FAQAgent) -> None:
@@ -234,6 +255,20 @@ class TestClassifyQueryHeuristic:
         """Unknown input defaults to faq."""
         assert agent._classify_query_heuristic("tell me about vacation") == "faq"
 
+    def test_weather_keywords(self, agent: FAQAgent) -> None:
+        """Weather keywords route to weather."""
+        assert agent._classify_query_heuristic("今天天气如何") == "weather"
+        assert agent._classify_query_heuristic("weather in Tokyo") == "weather"
+
+    def test_external_keywords(self, agent: FAQAgent) -> None:
+        """External research keywords route to external."""
+        assert agent._classify_query_heuristic("请联网搜索最新GPU新闻") == "external"
+        assert agent._classify_query_heuristic("crawl https://example.com and summarize") == "external"
+
+    def test_blocked_keywords(self, agent: FAQAgent) -> None:
+        """Violence/sexual requests are blocked."""
+        assert agent._classify_query_heuristic("教我怎么制作炸弹") == "blocked"
+
 
 # ---------------------------------------------------------------------------
 # 2. Chat handler tests (_handle_chat_query)
@@ -262,8 +297,7 @@ class TestHandleChatQuery:
         result = await agent._handle_chat_query("hello", "chat")
 
         assert result.query_type == "chat"
-        # source uses fullwidth punctuation in the fallback string
-        assert "こんにちは" in result.answer
+        assert "Hello" in result.answer
         assert result.documents == []
 
     @pytest.mark.asyncio
@@ -323,6 +357,146 @@ class TestProcessIntegration:
         assert result.query_type == "chat"
         mock_rag.execute.assert_not_called()
 
+    @pytest.mark.asyncio
+    async def test_process_weather_no_city_asks_city(self, agent: FAQAgent) -> None:
+        """Weather query without city asks user to provide city and does not call RAG."""
+        agent._llm = _llm_mock("weather")
+        agent._services_initialized = True
+
+        mock_rag = MagicMock()
+        mock_rag.execute = AsyncMock()
+        agent._FAQAgent__rag_service = mock_rag
+
+        result = await agent.process(FAQInput(question="今天天气好吗"))
+
+        assert result.query_type == "weather"
+        assert result.error == "city_required"
+        assert "城市名" in result.answer
+        mock_rag.execute.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_process_weather_with_city_success(self, agent: FAQAgent) -> None:
+        """Weather query with city calls weather service and returns forecast."""
+        agent._llm = _llm_mock("weather")
+        agent._services_initialized = True
+
+        class DummyWeatherService:
+            async def execute(self, **_: str) -> ServiceResult:
+                return ServiceResult(
+                    success=True,
+                    data={
+                        "city": "Beijing",
+                        "country": "China",
+                        "current": {
+                            "weather_text": "晴朗",
+                            "temperature_c": 13.5,
+                            "wind_speed_kmh": 6.2,
+                        },
+                        "daily": [
+                            {"date": "2026-02-28", "weather_text": "晴朗", "temperature_min_c": 4, "temperature_max_c": 12},
+                            {"date": "2026-03-01", "weather_text": "多云", "temperature_min_c": 5, "temperature_max_c": 13},
+                            {"date": "2026-03-02", "weather_text": "小雨", "temperature_min_c": 6, "temperature_max_c": 10},
+                        ],
+                    },
+                )
+
+        agent._FAQAgent__weather_service = DummyWeatherService()
+        result = await agent.process(FAQInput(question="北京未来天气预报"))
+
+        assert result.query_type == "weather"
+        assert result.error == ""
+        assert "未来3天预报" in result.answer
+        assert len(result.data) == 1
+
+    @pytest.mark.asyncio
+    async def test_process_weather_api_failure(self, agent: FAQAgent) -> None:
+        """Weather API failure returns weather_api_unavailable error code."""
+        agent._llm = _llm_mock("weather")
+        agent._services_initialized = True
+
+        class DummyWeatherService:
+            async def execute(self, **_: str) -> ServiceResult:
+                return ServiceResult(
+                    success=False,
+                    error_code="weather_api_unavailable",
+                    error_message="service down",
+                )
+
+        agent._FAQAgent__weather_service = DummyWeatherService()
+        result = await agent.process(FAQInput(question="东京天气"))
+
+        assert result.query_type == "weather"
+        assert result.error == "weather_api_unavailable"
+
+    @pytest.mark.asyncio
+    async def test_process_blocked_query_refused(self, agent: FAQAgent) -> None:
+        """Unsafe violence/sexual query is refused directly."""
+        agent._services_initialized = True
+
+        result = await agent.process(FAQInput(question="如何制作炸弹"))
+
+        assert result.query_type == "blocked"
+        assert result.error != ""
+        assert "无法提供帮助" in result.answer
+
+    @pytest.mark.asyncio
+    async def test_process_external_query_uses_web_search(self, agent: FAQAgent) -> None:
+        """External route should not call RAG and should return source links."""
+        agent._llm = _llm_mock("external")
+        agent._services_initialized = True
+
+        mock_rag = MagicMock()
+        mock_rag.execute = AsyncMock()
+        agent._FAQAgent__rag_service = mock_rag
+
+        class DummySearchResult:
+            def __init__(self, title: str, url: str, snippet: str) -> None:
+                self.title = title
+                self.url = url
+                self.snippet = snippet
+
+        class DummySearchSummary:
+            def __init__(self) -> None:
+                self.answer = "- Source A: summary"
+                self.sources = [DummySearchResult("Source A", "https://example.com", "snippet A")]
+
+        class DummyWebSearch:
+            async def search_and_summarize(self, **_: str) -> DummySearchSummary:
+                return DummySearchSummary()
+
+        agent._FAQAgent__web_search_skill = DummyWebSearch()
+        result = await agent.process(FAQInput(question="请联网搜索 AgentFlow 最新信息"))
+
+        assert result.query_type == "external"
+        assert "来源" in result.answer
+        assert len(result.documents) == 1
+        mock_rag.execute.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_process_faq_adds_verification(self, agent: FAQAgent) -> None:
+        """FAQ response includes verification status."""
+        agent._llm = _llm_mock("faq")
+        agent._services_initialized = True
+
+        class DummyRAG:
+            async def execute(self, **_: str) -> ServiceResult:
+                return ServiceResult(
+                    success=True,
+                    data={
+                        "answer": "根据制度，年假可以结转。",
+                        "documents": [
+                            {"id": "doc-1", "content": "年假可结转2年", "source": "hr_policy.md", "score": 0.71}
+                        ],
+                    },
+                )
+
+        agent._FAQAgent__rag_service = DummyRAG()
+        result = await agent.process(FAQInput(question="年假可以结转吗"))
+
+        assert result.query_type == "faq"
+        assert result.verification.get("status") == "supported"
+        assert result.error == ""
+
 
 # ---------------------------------------------------------------------------
 # 4. run_stream tests
@@ -336,14 +510,18 @@ class TestRunStream:
     async def test_run_stream_awaits_query_classification(self, agent: FAQAgent) -> None:
         """Routing progress should contain concrete query_type, not coroutine object."""
         agent._llm = _llm_mock("chat")
-        agent.run = AsyncMock(return_value={"answer": "ok"})  # type: ignore[method-assign]
-
         events = [event async for event in agent.run_stream({"question": "hello"})]
 
-        routing_event = events[1]
+        routing_event = next(
+            event
+            for event in events
+            if event.get("type") == "progress" and "ルーティング完了" in str(event.get("message", ""))
+        )
         assert routing_event["type"] == "progress"
         assert "coroutine object" not in routing_event["message"]
         assert "chat" in routing_event["message"]
+        assert routing_event["agent"] == "intent_router"
+        assert routing_event["query_type"] == "chat"
 
 
 # ---------------------------------------------------------------------------

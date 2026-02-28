@@ -157,6 +157,10 @@ from agentflow.services.text2sql_service import (
     Text2SQLConfig,
     Text2SQLService,
 )
+from agentflow.services.weather_service import (
+    WeatherConfig,
+    WeatherService,
+)
 from agentflow.services.workflow_service import WorkflowService
 
 
@@ -243,5 +247,7 @@ __all__ = [
     "TimeRangeDSL",
     "ValidationLevel",
     "ValidationResult",
+    "WeatherConfig",
+    "WeatherService",
     "WorkflowService",
 ]

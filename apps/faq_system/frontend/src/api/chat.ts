@@ -1,5 +1,5 @@
 import { apiClient } from './client';
-import type { ChatHistoryResponse, ChatRequest, ChatResponse, SessionListResponse } from './types';
+import type { ChatHistoryResponse, ChatRequest, ChatResponse, HealthStatus, SessionListResponse } from './types';
 
 export const chatApi = {
     sendMessage: (data: ChatRequest) => apiClient.post<ChatResponse>('/chat', data),
@@ -14,4 +14,7 @@ export const chatApi = {
 
     getHistory: (sessionId: string) =>
         apiClient.get<ChatHistoryResponse>(`/chat/history?session_id=${sessionId}`),
+
+    /** バックエンドのシステム状態（DB / RAG / SQL）を取得. */
+    getHealth: () => apiClient.get<HealthStatus>('/health'),
 };

@@ -86,3 +86,25 @@ class TestRuntimeCommandResolver:
         assert resolved.source["publish"] == "readme"
         assert resolved.source["start"] == "readme"
         assert resolved.source["stop"] == "readme"
+
+    def test_readme_two_line_frontend_command_is_combined(self, tmp_path) -> None:
+        app_dir = tmp_path / "faq_system"
+        app_dir.mkdir(parents=True)
+        (app_dir / "README.md").write_text(
+            (
+                "```bash\n"
+                "cd apps/faq_system/frontend\n"
+                "npm install\n"
+                "npm run dev\n"
+                "```\n"
+            ),
+            encoding="utf-8",
+        )
+        runtime = RuntimeCommandsConfig(frontend_dev=None)
+        resolved = RuntimeCommandResolver().resolve(
+            app_name="faq_system",
+            app_dir=app_dir,
+            runtime_commands=runtime,
+        )
+        assert resolved.frontend_dev == "cd apps/faq_system/frontend && npm run dev"
+        assert resolved.source["frontend_dev"] == "readme"
