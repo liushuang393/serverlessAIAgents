@@ -207,9 +207,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_raw_origins = os.getenv("FAQ_CORS_ORIGINS", "*")
+_cors_origins: list[str] = (
+    ["*"] if _raw_origins.strip() == "*"
+    else [o.strip() for o in _raw_origins.split(",") if o.strip()]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
