@@ -39,6 +39,7 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     const { logout, user } = useAuthStore();
     const navigate = useNavigate();
     const [loggingOut, setLoggingOut] = useState(false);
+    const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchSessions();
@@ -138,16 +139,33 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                             </span>
                         </button>
 
-                        <button
-                            type="button"
-                            className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-400 absolute right-2 transition-all bg-transparent border-none cursor-pointer ${currentSessionId === session.session_id ? 'text-red-400/50' : 'text-[var(--text-muted)]'
-                                }`}
-                            onClick={() => {
-                                if (confirm('Delete this session?')) deleteSession(session.session_id);
-                            }}
-                        >
-                            <Trash2 size={14} />
-                        </button>
+                        {pendingDeleteId === session.session_id ? (
+                            <div className="absolute right-1 flex gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => { void deleteSession(session.session_id); setPendingDeleteId(null); }}
+                                    className="px-2 py-1 text-[10px] rounded-lg bg-red-500/20 text-red-400 border border-red-500/30"
+                                >
+                                    {t('sidebar.confirm_delete')}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPendingDeleteId(null)}
+                                    className="px-2 py-1 text-[10px] rounded-lg bg-white/5 text-[var(--text-muted)]"
+                                >
+                                    {t('common.cancel')}
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-400 absolute right-2 transition-all bg-transparent border-none cursor-pointer ${currentSessionId === session.session_id ? 'text-red-400/50' : 'text-[var(--text-muted)]'
+                                    }`}
+                                onClick={() => setPendingDeleteId(session.session_id)}
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        )}
                     </div>
                 ))}
             </div>

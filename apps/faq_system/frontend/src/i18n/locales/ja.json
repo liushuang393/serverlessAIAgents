@@ -93,7 +93,8 @@
     "expand": "サイドバーを開く",
     "no_history": "履歴がありません",
     "no_conversations": "まだ会話がありません。",
-    "start_new": "上のボタンから新しいスレッドを作成してください。"
+    "start_new": "上のボタンから新しいスレッドを作成してください。",
+    "confirm_delete": "削除確認"
   },
   "settings": {
     "title": "設定",
