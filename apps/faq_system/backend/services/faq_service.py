@@ -228,31 +228,10 @@ class FAQService(ServiceBase[dict[str, Any]], SafetyMixin):
     # =========================================================================
 
     def _classify_query(self, question: str) -> QueryType:
-        """クエリタイプを分類."""
-        sql_keywords = [
-            "销售",
-            "收入",
-            "数量",
-            "统计",
-            "报表",
-            "top",
-            "排名",
-            "趋势",
-            "对比",
-            "同比",
-            "环比",
-            "金额",
-            "订单",
-            "客户数",
-        ]
-        question_lower = question.lower()
-        sql_score = sum(1 for k in sql_keywords if k in question_lower)
+        """クエリタイプを分類（統一分類器に委譲）."""
+        from apps.faq_system.backend.services.query_classifier import classify_query as _classify
 
-        if sql_score >= 2:
-            return QueryType.SQL
-        if sql_score >= 1:
-            return QueryType.HYBRID
-        return QueryType.FAQ
+        return QueryType(_classify(question).value)
 
     async def _do_faq_query(
         self,

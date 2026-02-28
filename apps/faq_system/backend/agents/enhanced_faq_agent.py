@@ -126,7 +126,7 @@ class EnhancedFAQAgent(RAGCapableMixin, AgentBlock):
         self,
         config: EnhancedFAQConfig | None = None,
         llm_client: Any | None = None,
-        bundle: "CapabilityBundle | None" = None,
+        bundle: CapabilityBundle | None = None,
     ) -> None:
         """初期化.
 
@@ -480,32 +480,10 @@ class EnhancedFAQAgent(RAGCapableMixin, AgentBlock):
             return {}
 
     def _classify_query(self, question: str) -> str:
-        """クエリタイプを判定."""
-        sql_keywords = [
-            "売上",
-            "収入",
-            "数量",
-            "統計",
-            "レポート",
-            "top",
-            "ランキング",
-            "トレンド",
-            "比較",
-            "金額",
-            "注文",
-            "顧客数",
-            "件数",
-            "合計",
-            "平均",
-            "月別",
-            "年別",
-            "日別",
-        ]
+        """クエリタイプを判定（統一分類器に委譲）."""
+        from apps.faq_system.backend.services.query_classifier import classify_query as _classify
 
-        question_lower = question.lower()
-        sql_score = sum(1 for k in sql_keywords if k in question_lower)
-
-        return "sql" if sql_score >= 2 else "faq"
+        return _classify(question).value
 
     async def _ensure_initialized(self) -> None:
         """Skills の遅延初期化."""
