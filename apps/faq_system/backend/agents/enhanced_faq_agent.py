@@ -149,6 +149,7 @@ class EnhancedFAQAgent(RAGCapableMixin, AgentBlock):
         self._answer_generator = None
         self._gap_analyzer = None
         self._text2sql_service = None
+        self._suggestion_service = None
         self._initialized = False
 
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
@@ -444,8 +445,20 @@ class EnhancedFAQAgent(RAGCapableMixin, AgentBlock):
         return response
 
     async def _generate_suggestions(self, question: str, query_type: str) -> list[dict[str, Any]]:
-        """フォローアップ提案を生成."""
-        # 簡易実装
+        """SuggestionService 経由でフォローアップ提案を生成."""
+        if self._suggestion_service is not None:
+            try:
+                result = await self._suggestion_service.execute(
+                    action="suggest",
+                    question=question,
+                    query_type=query_type,
+                )
+                if result.success:
+                    return result.data.get("suggestions", [])
+            except Exception:
+                self._logger.warning("提案生成失敗、フォールバックを使用")
+
+        # フォールバック（SuggestionService 不可時）
         if query_type == "sql":
             return [
                 {"text": "前月との比較を見せて", "type": "followup"},
@@ -509,6 +522,15 @@ class EnhancedFAQAgent(RAGCapableMixin, AgentBlock):
                 schema=self._config.sql_schema,
                 dialect=dialect,
                 auto_chart=self._config.enable_charts,
+            )
+        )
+
+        from agentflow.services import SuggestionConfig, SuggestionService
+
+        self._suggestion_service = SuggestionService(
+            SuggestionConfig(
+                max_suggestions=5,
+                language="ja",
             )
         )
 
