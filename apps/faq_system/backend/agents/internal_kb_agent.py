@@ -597,7 +597,7 @@ class InternalKBAgent(ResilientAgent):
 
         if self._llm is None:
             from agentflow.providers import get_llm
-            self._llm = get_llm()
+            self._llm = get_llm(temperature=self._config.temperature)
 
         self._initialized = True
 

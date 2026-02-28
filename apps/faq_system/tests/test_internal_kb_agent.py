@@ -19,6 +19,9 @@ from agentflow.security.policy_engine import PolicyEngine
 class _ConcreteInternalKBAgent(InternalKBAgent):
     """Concrete subclass that satisfies ResilientAgent abstract requirements for testing."""
 
+    # Abstract methods required by ResilientAgent. Signatures differ intentionally:
+    # this stub is only used for direct unit-testing of private methods (_generate_answer etc.)
+    # and never goes through the base class run() path that calls output.model_dump().
     def _parse_input(self, input_data: dict[str, Any]) -> Any:  # type: ignore[override]
         return input_data
 
