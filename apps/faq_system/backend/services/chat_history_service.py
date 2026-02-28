@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import secrets
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
@@ -9,6 +10,7 @@ from typing import TYPE_CHECKING, Any
 from apps.faq_system.backend.db.models import ChatMessage
 from apps.faq_system.backend.db.session import ensure_database_ready, get_db_session
 from sqlalchemy import Select, delete, func, select
+from sqlalchemy.engine import CursorResult
 
 
 if TYPE_CHECKING:
@@ -17,6 +19,8 @@ if TYPE_CHECKING:
 
 class ChatHistoryService:
     """チャット履歴を DB に保存・取得する."""
+
+    _SESSION_TITLE_MAX_CHARS = 17
 
     async def save_message(
         self,
@@ -105,7 +109,7 @@ class ChatHistoryService:
         await ensure_database_ready()
 
         # session_id 毎の集計
-        stmt = (
+        agg_stmt = (
             select(
                 ChatMessage.session_id,
                 func.count(ChatMessage.id).label("message_count"),
@@ -118,32 +122,46 @@ class ChatHistoryService:
             .offset(offset)
         )
 
+        # 先頭メッセージ一括取得（N 回を 1 回に削減）
+        session_ids_subq = agg_stmt.with_only_columns(ChatMessage.session_id).subquery()
+
+        first_msg_subq = (
+            select(
+                ChatMessage.session_id,
+                func.min(ChatMessage.created_at).label("first_at"),
+            )
+            .where(
+                ChatMessage.session_id.in_(select(session_ids_subq)),
+                ChatMessage.user_id == user.user_id,
+                ChatMessage.role == "user",
+            )
+            .group_by(ChatMessage.session_id)
+            .subquery()
+        )
+
+        preview_stmt = (
+            select(ChatMessage.session_id, ChatMessage.content)
+            .join(
+                first_msg_subq,
+                (ChatMessage.session_id == first_msg_subq.c.session_id)
+                & (ChatMessage.created_at == first_msg_subq.c.first_at),
+            )
+        )
+
         async with get_db_session() as session:
-            rows = (await session.execute(stmt)).all()
+            rows = (await session.execute(agg_stmt)).all()
+            previews: dict[str, str] = dict((await session.execute(preview_stmt)).all())
 
         results: list[dict[str, Any]] = []
         for row in rows:
-            # プレビュー用の最後のメッセージを取得
-            preview_stmt = (
-                select(ChatMessage.content)
-                .where(
-                    ChatMessage.session_id == row.session_id,
-                    ChatMessage.user_id == user.user_id,
-                    ChatMessage.role == "user",
-                )
-                .order_by(ChatMessage.created_at.asc())
-                .limit(1)
-            )
-            async with get_db_session() as session2:
-                preview_row = (await session2.execute(preview_stmt)).scalar_one_or_none()
-
+            preview_text = previews.get(row.session_id)
             results.append(
                 {
                     "session_id": row.session_id,
-                    "title": self._auto_title_from_text(preview_row) if preview_row else row.session_id,
+                    "title": self._auto_title_from_text(preview_text) if preview_text else row.session_id,
                     "message_count": row.message_count,
                     "last_message_at": row.last_message_at.isoformat() if row.last_message_at else None,
-                    "preview": (preview_row or "")[:80],
+                    "preview": (preview_text or "")[:80],
                 }
             )
 
@@ -166,17 +184,20 @@ class ChatHistoryService:
         )
         async with get_db_session() as session:
             result = await session.execute(stmt)
-            return result.rowcount > 0  # type: ignore[union-attr]
+            if isinstance(result, CursorResult):
+                return (result.rowcount or 0) > 0
+            return False
 
     @staticmethod
     def _auto_title_from_text(text: str) -> str:
         """テキストからセッションタイトルを自動生成.
 
-        最初のユーザーメッセージの先頭30文字を使用。
+        最初のユーザーメッセージを 17 文字以内に正規化して使用する。
         """
         if not text:
             return "新しいチャット"
-        title = text.strip().replace("\n", " ")[:30]
-        if len(text.strip()) > 30:
-            title += "…"
-        return title
+        normalized = re.sub(r"\s+", " ", text.strip())
+        max_chars = ChatHistoryService._SESSION_TITLE_MAX_CHARS
+        if len(normalized) <= max_chars:
+            return normalized
+        return f"{normalized[:max_chars]}…"

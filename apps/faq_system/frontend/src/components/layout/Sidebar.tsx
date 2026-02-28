@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useChatStore } from '../../stores/chatStore';
-import { Plus, Trash2, LogOut, Hash, MessageCircle, PanelLeftClose } from 'lucide-react';
+import { Plus, Trash2, LogOut, Hash, MessageCircle, PanelLeft, PanelLeftClose } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../../i18n';
@@ -15,8 +15,22 @@ interface SidebarProps {
 
 /** タイトルを最大文字数で切り詰め、省略記号を付与する */
 const truncateTitle = (title: string, maxLen: number): string => {
-    if (title.length <= maxLen) return title;
-    return `${title.slice(0, maxLen)}…`;
+    const normalized = title.trim().replace(/\s+/g, ' ');
+    if (!normalized) return '';
+
+    // Intl.Segmenter が利用可能な環境では、結合文字を壊さずに 1 文字単位で切る
+    type SegmentPart = { segment: string };
+    type SegmenterCtor = new (
+        locales?: string,
+        options?: { granularity?: 'grapheme' | 'word' | 'sentence' },
+    ) => { segment(input: string): Iterable<SegmentPart> };
+    const segmenterCtor = (Intl as unknown as { Segmenter?: SegmenterCtor }).Segmenter;
+    const segments = segmenterCtor
+        ? Array.from(new segmenterCtor('ja', { granularity: 'grapheme' }).segment(normalized), (part) => part.segment)
+        : Array.from(normalized);
+
+    if (segments.length <= maxLen) return normalized;
+    return `${segments.slice(0, maxLen).join('')}…`;
 };
 
 export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
@@ -25,6 +39,7 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     const { logout, user } = useAuthStore();
     const navigate = useNavigate();
     const [loggingOut, setLoggingOut] = useState(false);
+    const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchSessions();
@@ -39,11 +54,25 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     return (
         <div
             className={`h-full glass border-r border-white/5 flex flex-col text-white z-20 overflow-hidden relative transition-all duration-300 ease-in-out ${
-                isOpen ? 'w-[var(--sidebar-width)] min-w-[var(--sidebar-width)]' : 'w-0 min-w-0 border-r-0'
+                isOpen
+                    ? 'w-[var(--sidebar-width)] min-w-[var(--sidebar-width)]'
+                    : 'w-[var(--sidebar-collapsed-width)] min-w-[var(--sidebar-collapsed-width)]'
             }`}
         >
-            {/* サイドバー内コンテンツ（折り畳み時は非表示にしつつ幅ゼロにする） */}
-            <div className={`flex flex-col h-full w-[var(--sidebar-width)] transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            {!isOpen && (
+                <div className="absolute top-4 left-[3px] z-30">
+                    <button
+                        onClick={onToggle}
+                        className="p-1.5 rounded-lg bg-white/5 border border-white/10 text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-all"
+                        title={t('sidebar.expand') ?? 'サイドバーを開く'}
+                    >
+                        <PanelLeft size={18} />
+                    </button>
+                </div>
+            )}
+
+            {/* サイドバー内コンテンツ（折り畳み時は非表示） */}
+            <div className={`flex flex-col h-full w-[var(--sidebar-width)] transition-opacity duration-200 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none select-none'}`}>
             {/* Background Blur Accent */}
             <div className="absolute -top-20 -left-20 w-40 h-40 bg-[var(--primary)]/10 blur-[80px] rounded-full pointer-events-none" />
 
@@ -110,16 +139,33 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                             </span>
                         </button>
 
-                        <button
-                            type="button"
-                            className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-400 absolute right-2 transition-all bg-transparent border-none cursor-pointer ${currentSessionId === session.session_id ? 'text-red-400/50' : 'text-[var(--text-muted)]'
-                                }`}
-                            onClick={() => {
-                                if (confirm('Delete this session?')) deleteSession(session.session_id);
-                            }}
-                        >
-                            <Trash2 size={14} />
-                        </button>
+                        {pendingDeleteId === session.session_id ? (
+                            <div className="absolute right-1 flex gap-1">
+                                <button
+                                    type="button"
+                                    onClick={() => { void deleteSession(session.session_id); setPendingDeleteId(null); }}
+                                    className="px-2 py-1 text-[10px] rounded-lg bg-red-500/20 text-red-400 border border-red-500/30"
+                                >
+                                    {t('sidebar.confirm_delete')}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setPendingDeleteId(null)}
+                                    className="px-2 py-1 text-[10px] rounded-lg bg-white/5 text-[var(--text-muted)]"
+                                >
+                                    {t('common.cancel')}
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                type="button"
+                                className={`opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-red-500/20 hover:text-red-400 absolute right-2 transition-all bg-transparent border-none cursor-pointer ${currentSessionId === session.session_id ? 'text-red-400/50' : 'text-[var(--text-muted)]'
+                                    }`}
+                                onClick={() => setPendingDeleteId(session.session_id)}
+                            >
+                                <Trash2 size={14} />
+                            </button>
+                        )}
                     </div>
                 ))}
             </div>

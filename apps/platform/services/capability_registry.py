@@ -11,6 +11,7 @@ from apps.platform.schemas.capability_schemas import (
     CAPABILITY_DOMAINS,
     CanonicalCapability,
     CapabilityAggregate,
+    CapabilitySpec,
 )
 
 
@@ -188,11 +189,26 @@ class CapabilityRegistry:
             aliases=[raw],
         )
 
-    def canonicalize_many(self, raw_values: Iterable[str]) -> list[CanonicalCapability]:
-        """Canonicalize and deduplicate capabilities preserving order."""
+    def canonicalize_many(
+        self,
+        raw_values: Iterable[str | CapabilitySpec],
+    ) -> list[CanonicalCapability]:
+        """Canonicalize and deduplicate capabilities preserving order.
+
+        レガシーのフラット文字列（``"rag"``）と 3 層構造 :class:`CapabilitySpec`
+        オブジェクトを混在して受け付ける。``CapabilitySpec`` は
+        :meth:`CapabilitySpec.to_canonical_ids` で canonical ID 文字列群に展開してから
+        通常の正規化処理を適用する。
+
+        Args:
+            raw_values: フラット文字列または CapabilitySpec の iterable。
+
+        Returns:
+            重複排除済みの :class:`CanonicalCapability` リスト（入力順を保持）。
+        """
         dedup: OrderedDict[str, CanonicalCapability] = OrderedDict()
-        for raw in raw_values:
-            cap = self.canonicalize(raw)
+
+        def _register(cap: CanonicalCapability) -> None:
             existed = dedup.get(cap.id)
             if existed is None:
                 dedup[cap.id] = cap
@@ -200,6 +216,26 @@ class CapabilityRegistry:
                 aliases = set(existed.aliases)
                 aliases.update(cap.aliases)
                 existed.aliases = sorted(aliases)
+
+        for raw in raw_values:
+            if isinstance(raw, CapabilitySpec):
+                # CapabilitySpec → canonical ID を直接パースして登録。
+                # canonicalize() を経由すると「.」が「_」に変換されてドメインが二重になるため、
+                # _parse_id() を直接使って CanonicalCapability を構築する。
+                for canonical_id in raw.to_canonical_ids():
+                    parsed = self._parse_id(canonical_id)
+                    cap = CanonicalCapability(
+                        id=parsed.id,
+                        domain=parsed.domain,
+                        task=parsed.task,
+                        qualifier=parsed.qualifier,
+                        label=self._build_label(parsed),
+                        aliases=[],
+                    )
+                    _register(cap)
+            else:
+                _register(self.canonicalize(raw))
+
         return list(dedup.values())
 
     def aggregate(

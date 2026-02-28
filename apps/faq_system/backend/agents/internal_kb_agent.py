@@ -269,12 +269,12 @@ class InternalKBAgent(ResilientAgent):
         Yields:
             進捗イベント
         """
-        input_data.get("question", "")
+        question = input_data.get("question", "")
 
         yield {
             "type": "progress",
             "progress": 0,
-            "message": "処理を開始しています...",
+            "message": f"「{question[:20]}」を検索中...",
         }
 
         await self._ensure_initialized()
@@ -431,12 +431,18 @@ class InternalKBAgent(ResilientAgent):
                 )
             )
 
-        "\n\n".join(context_parts)
+        context = "\n\n".join(context_parts)
 
         # LLM で回答生成
-
-        # TODO: 実際のLLM呼び出し
-        answer = f"参考情報 [1] に基づくと、{search_results[0]['content'][:100]}..."
+        if self._llm is not None:
+            prompt_messages = [
+                {"role": "system", "content": self.SYSTEM_PROMPT},
+                {"role": "user", "content": f"以下のコンテキストを参照して質問に回答してください。\n\nコンテキスト:\n{context}\n\n質問: {question}"},
+            ]
+            llm_response = await self._llm.chat(prompt_messages)
+            answer = llm_response.get("content") or "回答を生成できませんでした。"
+        else:
+            answer = f"参考情報 [1] に基づくと、{search_results[0]['content'][:100]}..."
 
         return InternalKBResponse(
             answer=answer,
@@ -485,8 +491,17 @@ class InternalKBAgent(ResilientAgent):
             )
         ]
 
-        # 直接摘録
-        answer = f"規則・制度に基づく回答:\n\n「{content}」\n\n[1] より引用"
+        # LLM で回答生成（CONSERVATIVE_SYSTEM_PROMPT 使用）
+        if self._llm is not None:
+            prompt_messages = [
+                {"role": "system", "content": self.CONSERVATIVE_SYSTEM_PROMPT},
+                {"role": "user", "content": f"以下の規則・制度情報を参照して質問に回答してください。\n\nコンテキスト:\n[1] {content}\n\n質問: {question}"},
+            ]
+            llm_response = await self._llm.chat(prompt_messages)
+            answer = llm_response.get("content") or f"規則・制度に基づく回答:\n\n「{content}」\n\n[1] より引用"
+        else:
+            # 直接摘録フォールバック（LLM 不可時）
+            answer = f"規則・制度に基づく回答:\n\n「{content}」\n\n[1] より引用"
 
         confidence = top_result.get("score", 0.5)
 
@@ -579,6 +594,10 @@ class InternalKBAgent(ResilientAgent):
         if not self._kb_manager:
             self._kb_manager = IsolatedKBManager()
             await self._kb_manager.start()
+
+        if self._llm is None:
+            from agentflow.providers import get_llm
+            self._llm = get_llm(temperature=self._config.temperature)
 
         self._initialized = True
 

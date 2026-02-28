@@ -93,7 +93,8 @@
     "expand": "Expand sidebar",
     "no_history": "No history",
     "no_conversations": "No conversations yet.",
-    "start_new": "Start a new thread above."
+    "start_new": "Start a new thread above.",
+    "confirm_delete": "Confirm Delete"
   },
   "settings": {
     "title": "Settings",

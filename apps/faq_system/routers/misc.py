@@ -18,6 +18,8 @@ from apps.faq_system.routers.dependencies import (
     get_artifact_path,
     get_faq_agent,
     get_feedback_service,
+    is_rag_enabled,
+    is_sql_enabled,
 )
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
@@ -176,6 +178,7 @@ async def health_check() -> dict[str, Any]:
 
     正常時は ``{"status": "healthy"}``、DB 異常時は ``{"status": "degraded"}`` を返す。
     platform のヘルスチェック判定基準と統一した応答フォーマット。
+    レスポンスには ``rag`` / ``sql`` の有効状態も含む（フロントエンドのステータス表示用）。
     """
     status = "healthy"
     db_status = "healthy"
@@ -195,6 +198,15 @@ async def health_check() -> dict[str, Any]:
         db_error = str(exc)
         logger.exception("Health check DB error: %s", exc)
 
+    # RAG / SQL の設定有効フラグを取得（初期化失敗は degraded に含めず warning 扱い）
+    rag_enabled: bool = False
+    sql_enabled: bool = False
+    try:
+        rag_enabled = is_rag_enabled()
+        sql_enabled = is_sql_enabled()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("RAG/SQL 有効フラグ取得エラー（health check）: %s", exc)
+
     payload: dict[str, Any] = {
         "status": status,
         "service": "faq-system",
@@ -204,6 +216,9 @@ async def health_check() -> dict[str, Any]:
             "status": db_status,
             "url": masked_db_url,
         },
+        # フロントエンドのステータスドット表示に使用
+        "rag": {"enabled": rag_enabled},
+        "sql": {"enabled": sql_enabled},
     }
     if db_error:
         payload["db"]["error"] = db_error

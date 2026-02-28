@@ -6,7 +6,6 @@ import { RegisterForm } from './components/auth/RegisterForm';
 import { AuthCallback } from './components/auth/AuthCallback';
 import { Sidebar } from './components/layout/Sidebar';
 import { ChatWindow } from './components/chat/ChatWindow';
-import { PanelLeft } from 'lucide-react';
 
 /**
  * 認証済みページのレイアウトラッパー。
@@ -20,16 +19,6 @@ const AppLayout = () => {
     <div className="flex h-screen w-full overflow-hidden bg-[var(--bg-main)]">
       <Sidebar isOpen={sidebarOpen} onToggle={toggleSidebar} />
       <div className="flex-1 min-w-0 flex flex-col h-full relative transition-all duration-300">
-        {/* サイドバー折り畳み時の開くボタン */}
-        {!sidebarOpen && (
-          <button
-            onClick={toggleSidebar}
-            className="absolute top-4 left-[11px] z-30 p-2 rounded-xl bg-white/5 border border-white/10 text-[var(--text-muted)] hover:text-white hover:bg-white/10 transition-all"
-            title="サイドバーを開く"
-          >
-            <PanelLeft size={24} />
-          </button>
-        )}
         <Outlet context={{ sidebarOpen }} />
       </div>
     </div>

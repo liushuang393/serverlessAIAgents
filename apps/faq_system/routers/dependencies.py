@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+
 try:
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     from apscheduler.triggers.cron import CronTrigger
@@ -98,6 +99,38 @@ def resolve_session_id(session_id: str | None) -> str:
     if session_id and session_id.strip():
         return session_id.strip()
     return f"session-{uuid4().hex}"
+
+
+def build_agent_conversation_history(
+    messages: list[dict[str, Any]],
+    *,
+    limit: int = 8,
+) -> list[dict[str, str]]:
+    """Agent に渡す会話履歴を正規化する.
+
+    user / assistant のみを対象に、空文字を除外して最新 `limit` 件を返す。
+    """
+    if limit <= 0:
+        return []
+
+    normalized: list[dict[str, str]] = []
+    for item in messages:
+        role_raw = item.get("role")
+        content_raw = item.get("content")
+        if role_raw not in {"user", "assistant"}:
+            continue
+        if not isinstance(content_raw, str):
+            continue
+        content = content_raw.strip()
+        if not content:
+            continue
+        normalized.append(
+            {
+                "role": str(role_raw),
+                "content": content,
+            }
+        )
+    return normalized[-limit:]
 
 
 def extract_assistant_content(payload: dict[str, Any]) -> str:

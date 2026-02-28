@@ -432,6 +432,67 @@ async def test_chat_history_persisted(client: httpx.AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_chat_passes_conversation_history_to_agent(client: httpx.AsyncClient) -> None:
+    class CaptureFAQAgent:
+        def __init__(self) -> None:
+            self.calls: list[dict[str, Any]] = []
+
+        async def run(self, payload: dict[str, Any]) -> dict[str, Any]:
+            self.calls.append(payload)
+            return {"answer": "ok", "query_type": "chat"}
+
+    capture_agent = CaptureFAQAgent()
+    _services["faq_agent"] = capture_agent
+
+    token = (await _login(client))["access_token"]
+    session_id = "sess-history-context-1"
+
+    first = await client.post(
+        "/api/chat",
+        headers=_auth_headers(token),
+        json={"message": "今日の天気は？", "session_id": session_id},
+    )
+    assert first.status_code == 200
+
+    second = await client.post(
+        "/api/chat",
+        headers=_auth_headers(token),
+        json={"message": "東京", "session_id": session_id},
+    )
+    assert second.status_code == 200
+    assert len(capture_agent.calls) >= 2
+
+    second_call = capture_agent.calls[-1]
+    context = second_call.get("context", {})
+    assert isinstance(context, dict)
+    history = context.get("conversation_history", [])
+    assert isinstance(history, list)
+    assert history
+    assert any(item.get("role") == "user" and item.get("content") == "今日の天気は？" for item in history)
+    assert any(item.get("role") == "assistant" and item.get("content") == "ok" for item in history)
+
+
+@pytest.mark.asyncio
+async def test_chat_weather_query_type_response(client: httpx.AsyncClient) -> None:
+    class DummyWeatherAgent:
+        async def run(self, _: dict[str, Any]) -> dict[str, Any]:
+            return {"answer": "北京当前天气：晴朗", "query_type": "weather"}
+
+    _services["faq_agent"] = DummyWeatherAgent()
+    token = (await _login(client))["access_token"]
+
+    chat = await client.post(
+        "/api/chat",
+        headers=_auth_headers(token),
+        json={"message": "北京天气", "session_id": "sess-weather-api-1"},
+    )
+    assert chat.status_code == 200
+    payload = chat.json()
+    assert payload["query_type"] == "weather"
+    assert payload["session_id"] == "sess-weather-api-1"
+
+
+@pytest.mark.asyncio
 async def test_protected_endpoint_requires_auth(client: httpx.AsyncClient) -> None:
     response = await client.get("/api/chat/history", params={"session_id": "s1"})
     assert response.status_code == 401
@@ -482,6 +543,29 @@ async def test_chat_stream_persists_result(client: httpx.AsyncClient) -> None:
     payload = history.json()
     assert payload["count"] == 2
     assert payload["messages"][1]["content"] == "stream answer"
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_weather_query_type_response(client: httpx.AsyncClient) -> None:
+    class DummyWeatherStreamAgent:
+        async def run_stream(self, _: dict[str, Any]) -> Any:
+            yield {"type": "progress", "progress": 10, "message": "start"}
+            yield {
+                "type": "result",
+                "data": {"answer": "东京当前天气：多云", "query_type": "weather"},
+            }
+
+    _services["faq_agent"] = DummyWeatherStreamAgent()
+    token = (await _login(client))["access_token"]
+
+    response = await client.post(
+        "/api/chat/stream",
+        headers=_auth_headers(token),
+        json={"message": "东京天气", "session_id": "sess-weather-stream-1"},
+    )
+    assert response.status_code == 200
+    assert "query_type" in response.text
+    assert '"weather"' in response.text
 
 
 @pytest.mark.asyncio

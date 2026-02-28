@@ -190,6 +190,29 @@ export interface HealthCheckDetails {
   candidate_urls?: string[];
   health_paths?: string[];
   docker?: DockerRuntimeDetails;
+  components?: {
+    frontend?: {
+      required: boolean;
+      healthy: boolean;
+      status: AppStatus | 'skipped';
+      message?: string;
+      port?: number | null;
+    };
+    backend?: {
+      required: boolean;
+      healthy: boolean;
+      status: AppStatus | 'skipped';
+      message?: string;
+    };
+    database?: {
+      required: boolean;
+      healthy: boolean;
+      status: AppStatus | 'skipped';
+      message?: string;
+      kind?: string | null;
+      port?: number | null;
+    };
+  };
 }
 
 export interface HealthCheckResult {

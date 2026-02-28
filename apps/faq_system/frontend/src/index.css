@@ -24,6 +24,7 @@
 
   /* Layout */
   --sidebar-width: 272px;
+  --sidebar-collapsed-width: 32px;
   --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

@@ -101,10 +101,24 @@ class RuntimeCommandResolver:
         candidates: dict[CommandAction, list[str]] = {action: [] for action in _COMMAND_ACTIONS}
 
         for block in blocks:
+            last_cd: str | None = None
             for raw_line in block.splitlines():
                 normalized = self._normalize_shell_line(raw_line)
                 if normalized is None:
                     continue
+
+                lower = normalized.lower()
+                if lower.startswith("cd "):
+                    last_cd = normalized
+                elif "npm run dev" in lower and last_cd is not None:
+                    # README でよくある 2 行構成:
+                    #   cd apps/<app>/frontend
+                    #   npm run dev
+                    # を 1 コマンドに合成して frontend_dev として扱う。
+                    combined = f"{last_cd} && {normalized}"
+                    if self._matches_action(action="frontend_dev", command=combined, app_name=app_name):
+                        candidates["frontend_dev"].append(combined)
+
                 for action in _COMMAND_ACTIONS:
                     if self._matches_action(action=action, command=normalized, app_name=app_name):
                         candidates[action].append(normalized)

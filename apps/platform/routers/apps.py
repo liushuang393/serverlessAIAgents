@@ -30,6 +30,7 @@ import logging
 from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 
+from apps.platform.schemas.provisioning_schemas import AppCreateRequest  # noqa: TC002
 from apps.platform.services.app_lifecycle import (
     AppLifecycleManager,
     AppStatus,
@@ -37,11 +38,11 @@ from apps.platform.services.app_lifecycle import (
 from apps.platform.services.app_scaffolder import AppScaffolderService
 from apps.platform.services.framework_audit import FrameworkAuditService
 from apps.platform.services.port_allocator import PortAllocatorService
-from apps.platform.schemas.provisioning_schemas import AppCreateRequest
 from fastapi import APIRouter, Body, HTTPException, Query
 
 
-from apps.platform.services.app_discovery import AppDiscoveryService
+if TYPE_CHECKING:
+    from apps.platform.services.app_discovery import AppDiscoveryService
 
 
 router = APIRouter(prefix="/api/studios/framework/apps", tags=["framework-apps"])
@@ -257,8 +258,7 @@ def _runtime_commands(app_config: Any) -> dict[str, str | None]:
 
 def _runtime_cli(app_config: Any) -> dict[str, Any]:
     """App 表示用 CLI 設定を作成."""
-    cli = app_config.runtime.cli.model_dump()
-    return cli
+    return app_config.runtime.cli.model_dump()
 
 
 def _runtime_payload(app_config: Any) -> dict[str, Any]:
@@ -863,11 +863,25 @@ async def local_start_app(app_name: str) -> dict[str, Any]:
     discovery = _get_discovery()
     lifecycle = _get_lifecycle()
     config = _get_app_or_404(discovery, app_name)
-    result = await lifecycle.start_local_dev(
-        config,
-        config_path=discovery.get_config_path(app_name),
-    )
-    return result.to_dict()
+    try:
+        result = await lifecycle.start_local_dev(
+            config,
+            config_path=discovery.get_config_path(app_name),
+        )
+        return result.to_dict()
+    except asyncio.CancelledError:
+        # サーバー停止中の Ctrl+C で local-start が中断されるケースを明示化する
+        return {
+            "app_name": app_name,
+            "action": "local_start",
+            "success": False,
+            "command": "",
+            "command_source": "fallback",
+            "cwd": "",
+            "return_code": None,
+            "error": "local_start request was cancelled during shutdown",
+            "execution_mode": "local",
+        }
 
 
 @router.get("/{app_name}/cli/status")

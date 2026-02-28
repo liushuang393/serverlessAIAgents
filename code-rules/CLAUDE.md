@@ -1,8 +1,8 @@
 # 📌 AgentFlow Code Rules インデックス
 
 > **プロジェクト**: AgentFlow - MCP/A2A/AG-UI/A2UI 統一インターフェース AI エージェントフレームワーク
-> **バージョン**: 1.2.0
-> **最終更新**: 2026-02-23
+> **バージョン**: 1.3.0
+> **最終更新**: 2026-02-28
 > **適用範囲**: AgentFlow 全 Python コードベース
 
 ---
@@ -84,6 +84,7 @@
 ## 🧠 AgentFlow固有指針
 
 - [AgentFlow Python](company-specific/agentflow-python.md)
+- **Agent 登録標準（app_config.json agents[]）** → 本ファイル セクション 15（Agent 追加時は必読）
 
 ## 🧠 使用ツール
 
@@ -673,7 +674,117 @@ verdict = safe_enum(
 4. HITL必要箇所に承認経路とタイムアウト方針がある。
 5. ユニットテスト（正常/拒否/例外/再試行）が揃っている。
 6. 公開対象は `agentflow/__init__.py` 経由で参照可能。
+7. **`app_config.json` の `agents[]` に該当 Agent を登録済み**（→ 15章参照）。
 
+---
+
+## 15. Agent 登録標準（app_config.json）— AI 必読
+
+> Platform が全 Agent を漏れなく表示できるのは、`apps/*/app_config.json` の `agents[]` を
+> 起動時にグローバルスキャンするためです。**Python 実装を書いても manifest に登録しなければ
+> Platform には表示されません。**
+
+### 15.1 検出メカニズム
+
+```
+apps/*/app_config.json
+  ↓ (glob scan on startup)
+AppDiscoveryService.scan()   ← apps/**/app_config.json を全件捕捉
+  ↓
+AgentAggregatorService.list_all()  ← 全 App の agents[] を展開・正規化
+  ↓
+GET /api/studios/framework/agents  ← Platform UI へ配信
+```
+
+サーバー起動後に App を追加した場合は `POST /api/studios/framework/apps/rescan` で再スキャンが必要。
+
+### 15.2 agents[] エントリ必須フォーマット
+
+```json
+{
+  "agents": [
+    {
+      "name": "MyAgent",
+      "module": "apps.my_app.agents.my_agent",
+      "capabilities": ["analysis", "trend_detection"],
+      "business_base": "reasoning",
+      "pattern": "analyzer"
+    }
+  ]
+}
+```
+
+| フィールド | 必須 | 説明 | 省略時の動作 |
+|---|---|---|---|
+| `name` | ✅ 必須 | Agent 名（App 内一意、snake_case 推奨） | バリデーションエラー |
+| `module` | 推奨 | Python モジュールパス（例: `apps.faq_system.agents.qa_agent`） | 省略可だが診断・監査機能が低下 |
+| `capabilities` | 推奨 | 能力タグ一覧（下表参照） | 空リスト→検索にヒットしなくなる |
+| `business_base` | 推奨 | 業務基盤分類（下表参照） | capabilities・App名から自動推論 |
+| `pattern` | 推奨 | Agent パターン（下表参照） | name・module・engine_pattern から自動推論 |
+
+### 15.3 business_base 有効値一覧
+
+| 値 | 意味 | 典型的な用途 |
+|---|---|---|
+| `platform` | プラットフォーム管理 | Gallery, Publish, Analytics 等の Platform 自身のAgent |
+| `knowledge` | 知識・RAG | FAQ, 検索, ドキュメント回答 |
+| `reasoning` | 推論・分析 | 分析, スコアリング, トレンド検出, 予測 |
+| `interaction` | 対話・通知 | チャット, 会議, メッセージング, 通知 |
+| `integration` | 外部統合 | SQL接続, Webhook, MCP, API連携 |
+| `operations` | 運用・移行 | マイグレーション, デプロイ, ワークフロー |
+| `governance` | ガバナンス・監査 | Gate判定, コンプライアンス, レビュー, 監査 |
+| `media` | メディア生成 | 画像生成, デザイン, ComfyUI |
+| `custom` | その他 | 上記に該当しない場合（最後の手段） |
+
+### 15.4 pattern（Agent パターン）有効値一覧
+
+| 値 | 意味 | 典型的な Agent 名キーワード |
+|---|---|---|
+| `specialist` | 単一責務の専門 Agent | FaqAgent, FileOrganizerAgent |
+| `coordinator` | 複数 Agent の調整・ルーティング | Coordinator, Orchestrator, Hub |
+| `pipeline_stage` | Pipeline の中間ステージ | PromptPlanner, Transformer |
+| `gatekeeper` | 入口判定・ポリシーガード | GateAgent, PolicyAgent, GuardAgent |
+| `reviewer` | 品質検証・レビュー | ReviewAgent, Checker, Validator |
+| `analyzer` | 分析・診断・スコアリング | AnalyzerAgent, DiagnosAgent, Scorer |
+| `executor` | 実行・収集・変換 | CollectorAgent, WorkflowExecutor |
+| `router` | 意図分類・ディスパッチ | RouterAgent, IntentClassifier |
+| `reporter` | 集計・レポート・要約 | ReporterAgent, SummaryAgent |
+| `custom` | その他 | 上記に該当しない場合（最後の手段） |
+
+### 15.5 engine_pattern（App レベル）有効値
+
+App の `blueprint.engine_pattern` に設定する値。
+
+| 値 | 対応 Engine | 使用目的 |
+|---|---|---|
+| `simple` | `SimpleEngine` | 単一 Agent の直接応答 |
+| `flow` | Flow DSL | 宣言的チェーン（gate/then/parallel/review） |
+| `pipeline` | `PipelineEngine` | 多段処理＋Reviewループ |
+| `coordinator` | `AgentCoordinator` | 動的ルーティング、複数 Agent 協調 |
+| `deep_agent` | `PEVEngine` 等 | 計画/実行/検証の深い自律ループ |
+| `custom` | 独自実装 | 上記に該当しない場合 |
+
+### 15.6 新規 Agent 追加の DoD チェックリスト
+
+```
+□ Python 実装（@agent / AgentBlock / ResilientAgent）を作成済みか？
+□ app_config.json の agents[] に name / module / capabilities / business_base / pattern を記載したか？
+□ business_base は 15.3 の有効値から選択したか？（省略時は自動推論、精度は低い）
+□ pattern は 15.4 の有効値から選択したか？（省略時は自動推論、精度は低い）
+□ capabilities は具体的なタグ（例: "analysis", "rag", "notification"）を列挙したか？
+□ App 内で Agent 名が重複していないか？（重複するとバリデーションエラーで App 全体が登録失敗）
+□ 追加後に Platform を再起動 or /api/studios/framework/apps/rescan を実行したか？
+□ GET /api/studios/framework/agents で新 Agent が表示されることを確認したか？
+```
+
+### 15.7 自動推論の限界と明示記載の重要性
+
+`business_base` と `pattern` は省略時にコードで自動推論されますが、推論精度には限界があります。
+
+- `business_base` 推論: capabilities の domain → tags → App名の順で推論
+- `pattern` 推論: Agent名・moduleパスのキーワードマッチ → engine_pattern フォールバック → `specialist`
+
+**AI へ**: 推論に頼ると意図と異なる分類になる場合があります。必ず明示的に記載してください。
 
 ---
 

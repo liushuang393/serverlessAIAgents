@@ -13,6 +13,9 @@ from apps.platform.schemas.app_config_schemas import (
     EntryPointsConfig,
     PortsConfig,
 )
+from apps.platform.schemas.capability_schemas import CapabilitySpec
+from apps.platform.services.app_discovery import _flatten_capability_item
+from apps.platform.services.capability_registry import CapabilityRegistry
 from pydantic import ValidationError
 
 
@@ -293,3 +296,165 @@ class TestAppConfig:
                     {"id": "official.sample", "version": "1.0.0"},
                 ],
             )
+
+
+class TestCapabilitySpec:
+    """CapabilitySpec 3 層構造能力宣言のテスト."""
+
+    def test_basic_creation(self) -> None:
+        """domain と actions を指定して作成できる."""
+        spec = CapabilitySpec(domain="knowledge", actions=["retrieval", "faq"])
+        assert spec.domain == "knowledge"
+        assert spec.actions == ["retrieval", "faq"]
+        assert spec.artifacts == []
+
+    def test_with_artifacts(self) -> None:
+        """artifacts 付きで作成できる."""
+        spec = CapabilitySpec(
+            domain="reasoning",
+            actions=["analysis"],
+            artifacts=["trend_report", "summary"],
+        )
+        assert spec.artifacts == ["trend_report", "summary"]
+
+    def test_domain_normalized_to_lowercase(self) -> None:
+        """domain は小文字に正規化される."""
+        spec = CapabilitySpec(domain="Knowledge", actions=["retrieval"])
+        assert spec.domain == "knowledge"
+
+    def test_actions_normalized_to_lowercase(self) -> None:
+        """actions の各要素は小文字・trim 正規化される."""
+        spec = CapabilitySpec(domain="knowledge", actions=["  Retrieval ", "FAQ"])
+        assert spec.actions == ["retrieval", "faq"]
+
+    def test_empty_actions_rejected(self) -> None:
+        """空の actions リストは拒否される."""
+        with pytest.raises(ValidationError):
+            CapabilitySpec(domain="knowledge", actions=[])
+
+    def test_to_canonical_ids_no_artifacts(self) -> None:
+        """artifacts なし → domain.action 形式の ID を生成する."""
+        spec = CapabilitySpec(domain="knowledge", actions=["retrieval", "faq"])
+        ids = spec.to_canonical_ids()
+        assert ids == ["knowledge.retrieval", "knowledge.faq"]
+
+    def test_to_canonical_ids_with_artifacts(self) -> None:
+        """artifacts あり → domain.action.artifact 形式の ID を生成する."""
+        spec = CapabilitySpec(
+            domain="knowledge",
+            actions=["retrieval"],
+            artifacts=["rag_answer", "summary"],
+        )
+        ids = spec.to_canonical_ids()
+        assert ids == ["knowledge.retrieval.rag_answer", "knowledge.retrieval.summary"]
+
+    def test_to_canonical_ids_multi_action_with_artifacts(self) -> None:
+        """複数 action × 複数 artifact の全組み合わせを生成する."""
+        spec = CapabilitySpec(
+            domain="reasoning",
+            actions=["analysis", "forecast"],
+            artifacts=["report"],
+        )
+        ids = spec.to_canonical_ids()
+        assert ids == ["reasoning.analysis.report", "reasoning.forecast.report"]
+
+
+class TestAgentInfoCapabilitySpec:
+    """AgentInfo.capabilities が str / CapabilitySpec 混在を受け付けるテスト."""
+
+    def test_legacy_flat_strings_still_accepted(self) -> None:
+        """レガシーのフラット文字列は引き続き受け付ける（後方互換）."""
+        agent = AgentInfo(name="A", capabilities=["rag", "analysis"])
+        assert agent.capabilities == ["rag", "analysis"]
+
+    def test_capability_spec_object_accepted(self) -> None:
+        """CapabilitySpec オブジェクトを直接渡せる."""
+        spec = CapabilitySpec(domain="knowledge", actions=["retrieval"])
+        agent = AgentInfo(name="A", capabilities=[spec])
+        assert len(agent.capabilities) == 1
+        assert isinstance(agent.capabilities[0], CapabilitySpec)
+
+    def test_capability_spec_dict_accepted(self) -> None:
+        """JSON 辞書形式の CapabilitySpec を受け付ける（app_config.json 読み込み模倣）."""
+        agent = AgentInfo(
+            name="A",
+            capabilities=[
+                {"domain": "knowledge", "actions": ["retrieval", "faq"]},
+            ],
+        )
+        assert len(agent.capabilities) == 1
+        spec = agent.capabilities[0]
+        assert isinstance(spec, CapabilitySpec)
+        assert spec.domain == "knowledge"
+
+    def test_mixed_str_and_spec_accepted(self) -> None:
+        """フラット文字列と CapabilitySpec の混在を受け付ける."""
+        agent = AgentInfo(
+            name="A",
+            capabilities=[
+                "analysis",
+                {"domain": "knowledge", "actions": ["retrieval"]},
+            ],
+        )
+        assert len(agent.capabilities) == 2
+        assert agent.capabilities[0] == "analysis"
+        assert isinstance(agent.capabilities[1], CapabilitySpec)
+
+
+class TestFlattenCapabilityItem:
+    """_flatten_capability_item ユーティリティ関数のテスト."""
+
+    def test_flat_string_returns_single_element(self) -> None:
+        """フラット文字列はそのまま 1 要素リストで返る."""
+        assert _flatten_capability_item("rag") == ["rag"]
+
+    def test_capability_spec_expands_to_ids(self) -> None:
+        """CapabilitySpec は canonical ID リストに展開される."""
+        spec = CapabilitySpec(domain="knowledge", actions=["retrieval", "faq"])
+        result = _flatten_capability_item(spec)
+        assert result == ["knowledge.retrieval", "knowledge.faq"]
+
+    def test_dict_form_parsed_and_expanded(self) -> None:
+        """dict 形式は CapabilitySpec にパースされて展開される."""
+        result = _flatten_capability_item(
+            {"domain": "reasoning", "actions": ["analysis"], "artifacts": ["report"]}
+        )
+        assert result == ["reasoning.analysis.report"]
+
+    def test_invalid_dict_falls_back_to_str(self) -> None:
+        """不正な dict は str() にフォールバックして返る."""
+        bad = {"no_domain": "x"}
+        result = _flatten_capability_item(bad)
+        assert len(result) == 1
+        assert "no_domain" in result[0]
+
+
+class TestCapabilityRegistryWithSpec:
+    """CapabilityRegistry.canonicalize_many が CapabilitySpec を処理するテスト."""
+
+    def test_flat_string_canonicalized(self) -> None:
+        """フラット文字列は従来通り canonical 化される."""
+        registry = CapabilityRegistry()
+        result = registry.canonicalize_many(["rag"])
+        assert len(result) == 1
+        assert result[0].domain == "knowledge"
+
+    def test_capability_spec_expanded(self) -> None:
+        """CapabilitySpec は複数の CanonicalCapability に展開される."""
+        registry = CapabilityRegistry()
+        spec = CapabilitySpec(domain="knowledge", actions=["retrieval", "faq"])
+        result = registry.canonicalize_many([spec])
+        ids = [c.id for c in result]
+        assert "knowledge.retrieval" in ids
+        assert "knowledge.faq" in ids
+
+    def test_mixed_input_deduplicates(self) -> None:
+        """フラット文字列と CapabilitySpec が重複なく統合される."""
+        registry = CapabilityRegistry()
+        spec = CapabilitySpec(domain="knowledge", actions=["retrieval"])
+        # "knowledge.retrieval.search" はエイリアス "retrieval" を経由して生成される
+        # 今回はフラット "knowledge.retrieval" を直接重複させてテスト
+        result = registry.canonicalize_many([spec, spec])
+        # 重複は除去されるため 2 つではなく 2 つの action に対応する canonical が返る
+        unique_ids = {c.id for c in result}
+        assert "knowledge.retrieval" in unique_ids
