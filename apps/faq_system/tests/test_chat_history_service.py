@@ -1,5 +1,6 @@
 # apps/faq_system/tests/test_chat_history_service.py
 """chat_history_service の単体テスト."""
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -46,12 +47,15 @@ class TestListSessions:
 
         mock_session.execute = AsyncMock(side_effect=[agg_result, preview_result])
 
-        with patch(
-            "apps.faq_system.backend.services.chat_history_service.get_db_session",
-            return_value=mock_context,
-        ), patch(
-            "apps.faq_system.backend.services.chat_history_service.ensure_database_ready",
-            new_callable=AsyncMock,
+        with (
+            patch(
+                "apps.faq_system.backend.services.chat_history_service.get_db_session",
+                return_value=mock_context,
+            ),
+            patch(
+                "apps.faq_system.backend.services.chat_history_service.ensure_database_ready",
+                new_callable=AsyncMock,
+            ),
         ):
             svc = ChatHistoryService()
             result = await svc.list_sessions(_make_user())
@@ -75,12 +79,15 @@ class TestListSessions:
 
         mock_session.execute = AsyncMock(side_effect=[agg_result, preview_result])
 
-        with patch(
-            "apps.faq_system.backend.services.chat_history_service.get_db_session",
-            return_value=mock_context,
-        ), patch(
-            "apps.faq_system.backend.services.chat_history_service.ensure_database_ready",
-            new_callable=AsyncMock,
+        with (
+            patch(
+                "apps.faq_system.backend.services.chat_history_service.get_db_session",
+                return_value=mock_context,
+            ),
+            patch(
+                "apps.faq_system.backend.services.chat_history_service.ensure_database_ready",
+                new_callable=AsyncMock,
+            ),
         ):
             svc = ChatHistoryService()
             result = await svc.list_sessions(_make_user())
@@ -98,12 +105,15 @@ class TestDeleteSession:
         cursor_result.rowcount = 1
         mock_session.execute = AsyncMock(return_value=cursor_result)
 
-        with patch(
-            "apps.faq_system.backend.services.chat_history_service.get_db_session",
-            return_value=mock_context,
-        ), patch(
-            "apps.faq_system.backend.services.chat_history_service.ensure_database_ready",
-            new_callable=AsyncMock,
+        with (
+            patch(
+                "apps.faq_system.backend.services.chat_history_service.get_db_session",
+                return_value=mock_context,
+            ),
+            patch(
+                "apps.faq_system.backend.services.chat_history_service.ensure_database_ready",
+                new_callable=AsyncMock,
+            ),
         ):
             svc = ChatHistoryService()
             returned = await svc.delete_session("sess-xyz", _make_user())
@@ -119,12 +129,15 @@ class TestDeleteSession:
         cursor_result.rowcount = 0
         mock_session.execute = AsyncMock(return_value=cursor_result)
 
-        with patch(
-            "apps.faq_system.backend.services.chat_history_service.get_db_session",
-            return_value=mock_context,
-        ), patch(
-            "apps.faq_system.backend.services.chat_history_service.ensure_database_ready",
-            new_callable=AsyncMock,
+        with (
+            patch(
+                "apps.faq_system.backend.services.chat_history_service.get_db_session",
+                return_value=mock_context,
+            ),
+            patch(
+                "apps.faq_system.backend.services.chat_history_service.ensure_database_ready",
+                new_callable=AsyncMock,
+            ),
         ):
             svc = ChatHistoryService()
             returned = await svc.delete_session("sess-xyz", _make_user())

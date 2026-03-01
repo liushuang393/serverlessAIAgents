@@ -182,6 +182,26 @@ class TestPatternsAndConfigs:
         assert updated["rag"]["pattern"] == "faq_precision"
         assert updated["rag"]["top_k"] == 7
 
+    def test_data_sources_have_stable_id(self, rag_overview: RAGOverviewService) -> None:
+        """data source は id を持つ（未設定時は補完）。"""
+        updated = rag_overview.update_app_config(
+            "rag_app",
+            {
+                "data_sources": [
+                    {
+                        "type": "web",
+                        "uri": "https://example.com/docs",
+                        "label": "docs",
+                    }
+                ]
+            },
+        )
+        sources = updated["rag"]["data_sources"]
+        assert len(sources) == 1
+        source_id = sources[0].get("id")
+        assert isinstance(source_id, str)
+        assert source_id.startswith("source-")
+
     def test_update_invalid_pattern(self, rag_overview: RAGOverviewService) -> None:
         """未知パターンは ValueError."""
         import pytest

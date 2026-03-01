@@ -139,18 +139,15 @@ class ChatHistoryService:
             .subquery()
         )
 
-        preview_stmt = (
-            select(ChatMessage.session_id, ChatMessage.content)
-            .join(
-                first_msg_subq,
-                (ChatMessage.session_id == first_msg_subq.c.session_id)
-                & (ChatMessage.created_at == first_msg_subq.c.first_at),
-            )
+        preview_stmt = select(ChatMessage.session_id, ChatMessage.content).join(
+            first_msg_subq,
+            (ChatMessage.session_id == first_msg_subq.c.session_id)
+            & (ChatMessage.created_at == first_msg_subq.c.first_at),
         )
 
         async with get_db_session() as session:
             rows = (await session.execute(agg_stmt)).all()
-            previews: dict[str, str] = dict((await session.execute(preview_stmt)).all())
+            previews: dict[str, str] = {str(r[0]): str(r[1]) for r in (await session.execute(preview_stmt)).all()}
 
         results: list[dict[str, Any]] = []
         for row in rows:

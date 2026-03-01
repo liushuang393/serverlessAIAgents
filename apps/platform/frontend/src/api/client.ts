@@ -14,6 +14,7 @@ import type {
   AgentsByPatternResponse,
   AppRAGConfig,
   AppRAGConfigPatchRequest,
+  AppRAGConfigUpdateResponse,
   AppActionResponse,
   AppCreateOptionsResponse,
   AppCreateRequest,
@@ -29,6 +30,7 @@ import type {
   ManifestMigrationReport,
   PortConflictReport,
   RAGOverviewResponse,
+  RAGIngestRunsResponse,
   RAGPattern,
   RAGStatsResponse,
   RetrievalMethod,
@@ -351,10 +353,19 @@ export async function fetchAppRAGConfig(appName: string): Promise<AppRAGConfig> 
 export async function patchAppRAGConfig(
   appName: string,
   patch: AppRAGConfigPatchRequest,
-): Promise<AppRAGConfig> {
-  const { data } = await api.patch<AppRAGConfig>(
+): Promise<AppRAGConfigUpdateResponse> {
+  const { data } = await api.patch<AppRAGConfigUpdateResponse>(
     `/studios/framework/rag/apps/${appName}/config`,
     patch,
+  );
+  return data;
+}
+
+/** App 単位 ingest run 一覧（Platform proxy） */
+export async function fetchAppRAGIngestRuns(appName: string, limit = 20): Promise<RAGIngestRunsResponse> {
+  const { data } = await api.get<RAGIngestRunsResponse>(
+    `/studios/framework/rag/apps/${appName}/ingest/runs`,
+    { params: { limit } },
   );
   return data;
 }

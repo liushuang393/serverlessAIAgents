@@ -437,7 +437,10 @@ class InternalKBAgent(ResilientAgent):
         if self._llm is not None:
             prompt_messages = [
                 {"role": "system", "content": self.SYSTEM_PROMPT},
-                {"role": "user", "content": f"以下のコンテキストを参照して質問に回答してください。\n\nコンテキスト:\n{context}\n\n質問: {question}"},
+                {
+                    "role": "user",
+                    "content": f"以下のコンテキストを参照して質問に回答してください。\n\nコンテキスト:\n{context}\n\n質問: {question}",
+                },
             ]
             llm_response = await self._llm.chat(prompt_messages)
             answer = llm_response.get("content") or "回答を生成できませんでした。"
@@ -495,7 +498,10 @@ class InternalKBAgent(ResilientAgent):
         if self._llm is not None:
             prompt_messages = [
                 {"role": "system", "content": self.CONSERVATIVE_SYSTEM_PROMPT},
-                {"role": "user", "content": f"以下の規則・制度情報を参照して質問に回答してください。\n\nコンテキスト:\n[1] {content}\n\n質問: {question}"},
+                {
+                    "role": "user",
+                    "content": f"以下の規則・制度情報を参照して質問に回答してください。\n\nコンテキスト:\n[1] {content}\n\n質問: {question}",
+                },
             ]
             llm_response = await self._llm.chat(prompt_messages)
             answer = llm_response.get("content") or f"規則・制度に基づく回答:\n\n「{content}」\n\n[1] より引用"
@@ -597,6 +603,7 @@ class InternalKBAgent(ResilientAgent):
 
         if self._llm is None:
             from agentflow.providers import get_llm
+
             self._llm = get_llm(temperature=self._config.temperature)
 
         self._initialized = True

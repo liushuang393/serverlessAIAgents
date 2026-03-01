@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 from typing import TYPE_CHECKING, Any, Literal, get_args, get_origin
 
 from apps.platform.schemas.provisioning_schemas import AppCreateRequest
@@ -364,7 +365,7 @@ class RAGOverviewService:
             return []
 
         result: list[dict[str, Any]] = []
-        for source in value:
+        for index, source in enumerate(value):
             if not isinstance(source, dict):
                 continue
             normalized_source = dict(source)
@@ -386,6 +387,23 @@ class RAGOverviewService:
                     msg = f"Data source uri is required for type={source_type}."
                     raise ValueError(msg)
                 normalized_source["uri"] = uri
+
+            source_id = (
+                self._clean_text(normalized_source.get("id"))
+                or self._clean_text(normalized_source.get("source_id"))
+                or self._clean_text(
+                    normalized_source.get("options", {}).get("source_id")
+                    if isinstance(normalized_source.get("options"), dict)
+                    else None
+                )
+                or self._stable_source_id(normalized_source, fallback_index=index)
+            )
+            normalized_source["id"] = source_id
+            options = normalized_source.get("options")
+            if isinstance(options, dict):
+                next_options = dict(options)
+                next_options["source_id"] = source_id
+                normalized_source["options"] = next_options
 
             result.append(normalized_source)
         return result
@@ -473,12 +491,14 @@ class RAGOverviewService:
             has_rag_agent=has_rag_agent,
         )
 
-        data_sources = self._select(
+        data_sources = self._normalize_data_sources_for_view(
+            self._select(
             raw_contract_rag,
             "data_sources",
             rag_contract.data_sources,
             rag_service.get("data_sources"),
             [],
+            )
         )
         db_hint = self._build_db_hint(app_config=app_config, raw_config=raw_config)
 
@@ -806,3 +826,34 @@ class RAGOverviewService:
         if key in labels:
             return labels[key]
         return key.replace("_", " ").title()
+
+    def _normalize_data_sources_for_view(self, value: Any) -> list[dict[str, Any]]:
+        if not isinstance(value, list):
+            return []
+        result: list[dict[str, Any]] = []
+        for index, source in enumerate(value):
+            if not isinstance(source, dict):
+                continue
+            normalized = dict(source)
+            source_id = (
+                self._clean_text(normalized.get("id"))
+                or self._clean_text(normalized.get("source_id"))
+                or self._clean_text(
+                    normalized.get("options", {}).get("source_id")
+                    if isinstance(normalized.get("options"), dict)
+                    else None
+                )
+                or self._stable_source_id(normalized, fallback_index=index)
+            )
+            normalized["id"] = source_id
+            result.append(normalized)
+        return result
+
+    def _stable_source_id(self, source: dict[str, Any], *, fallback_index: int) -> str:
+        source_type = self._normalize_source_type(self._clean_text(source.get("type")) or "web")
+        uri = self._clean_text(source.get("uri")) or ""
+        label = self._clean_text(source.get("label")) or ""
+        schedule = self._clean_text(source.get("schedule")) or ""
+        raw = f"{source_type}|{uri}|{label}|{schedule}|{fallback_index}"
+        digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:12]
+        return f"source-{digest}"

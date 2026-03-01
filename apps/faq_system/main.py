@@ -209,8 +209,7 @@ app = FastAPI(
 
 _raw_origins = os.getenv("FAQ_CORS_ORIGINS", "*")
 _cors_origins: list[str] = (
-    ["*"] if _raw_origins.strip() == "*"
-    else [o.strip() for o in _raw_origins.split(",") if o.strip()]
+    ["*"] if _raw_origins.strip() == "*" else [o.strip() for o in _raw_origins.split(",") if o.strip()]
 )
 
 app.add_middleware(

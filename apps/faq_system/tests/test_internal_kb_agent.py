@@ -1,5 +1,6 @@
 # apps/faq_system/tests/test_internal_kb_agent.py
 """Tests for InternalKBAgent LLM integration and bug fixes."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -15,6 +16,7 @@ from agentflow.security.policy_engine import PolicyEngine
 # ---------------------------------------------------------------------------
 # Concrete subclass to satisfy abstract methods
 # ---------------------------------------------------------------------------
+
 
 class _ConcreteInternalKBAgent(InternalKBAgent):
     """Concrete subclass that satisfies ResilientAgent abstract requirements for testing."""
@@ -138,9 +140,7 @@ class TestGenerateConservativeAnswerCallsLLM:
         agent = _make_agent()
 
         mock_llm = MagicMock()
-        mock_llm.chat = AsyncMock(
-            return_value={"content": "保守モードLLM回答", "model": "test", "usage": {}}
-        )
+        mock_llm.chat = AsyncMock(return_value={"content": "保守モードLLM回答", "model": "test", "usage": {}})
         agent._llm = mock_llm
 
         search_results = _make_search_results(1)

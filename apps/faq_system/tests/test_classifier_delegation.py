@@ -1,5 +1,6 @@
 # apps/faq_system/tests/test_classifier_delegation.py
 """_classify_query が統一 QueryClassifier に委譲することを確認するテスト."""
+
 from apps.faq_system.backend.agents.enhanced_faq_agent import EnhancedFAQAgent
 from apps.faq_system.backend.services.faq_service import FAQService, QueryType
 

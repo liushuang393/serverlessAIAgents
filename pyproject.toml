@@ -98,6 +98,9 @@ apps = [
     # Utilities
     "python-dotenv>=1.0.0",
     "reportlab>=4.0.0",  # For PDF generation in decision_governance_engine
+    "sqlglot>=25.20.2",  # SQL AST-based guard/normalization for ingestion
+    "trafilatura>=1.12.2",  # Web extraction preview for staged web source
+    "tenacity>=8.5.0",  # Retry for ingestion I/O operations
 
     # Platform-specific
     "python-telegram-bot>=20.0",  # For messaging_hub

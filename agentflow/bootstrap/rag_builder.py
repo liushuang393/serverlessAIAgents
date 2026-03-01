@@ -64,12 +64,14 @@ async def build_rag_engine(rag_config: dict[str, Any] | None) -> Any | None:
         - enabled=false → None を返す
         - RAGPipeline 初期化エラー → ログ警告して None を返す
     """
+    normalized = _normalize_rag_payload(rag_config)
+
     # 設定なし → スキップ
-    if rag_config is None:
+    if normalized is None:
         logger.debug("RAG設定なし: RAGEngine をスキップ")
         return None
 
-    config = RagBootstrapConfig.model_validate(rag_config)
+    config = RagBootstrapConfig.model_validate(normalized)
 
     # 明示的に無効 → スキップ
     if not config.enabled:
@@ -105,5 +107,36 @@ async def build_rag_engine(rag_config: dict[str, Any] | None) -> Any | None:
         )
         return None
 
+
+def _normalize_rag_payload(rag_config: dict[str, Any] | None) -> dict[str, Any] | None:
+    """contracts.rag / legacy rag_config の互換正規化."""
+    if rag_config is None:
+        return None
+
+    if "collections" in rag_config or "default_top_k" in rag_config:
+        return rag_config
+
+    enabled = bool(rag_config.get("enabled", False))
+    collection = rag_config.get("vector_collection")
+    collections: list[str] = []
+    if isinstance(collection, str) and collection.strip():
+        collections = [collection.strip()]
+
+    return {
+        "enabled": enabled,
+        "pattern": rag_config.get("pattern"),
+        "provider": rag_config.get("vector_provider") if enabled else None,
+        "collections": collections if enabled else [],
+        "data_sources": rag_config.get("data_sources", []),
+        "chunk_strategy": rag_config.get("chunk_strategy", "recursive"),
+        "chunk_size": rag_config.get("chunk_size", 800),
+        "chunk_overlap": rag_config.get("chunk_overlap", 120),
+        "retrieval_method": rag_config.get("retrieval_method", "hybrid"),
+        "embedding_model": rag_config.get("embedding_model"),
+        "rerank_model": rag_config.get("reranker"),
+        "default_top_k": rag_config.get("top_k", 5),
+        "score_threshold": rag_config.get("score_threshold"),
+        "indexing_schedule": rag_config.get("indexing_schedule"),
+    }
 
 __all__ = ["RagBootstrapConfig", "build_rag_engine"]

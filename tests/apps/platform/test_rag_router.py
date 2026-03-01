@@ -181,6 +181,36 @@ class TestRagAppConfigs:
         assert data["rag"]["pattern"] == "faq_precision"
         assert data["rag"]["top_k"] == 9
         assert len(data["rag"]["data_sources"]) == 1
+        assert "contracts_rag" in data
+        assert "config_version" in data
+        assert "updated_at" in data
+        assert "hot_apply" in data
+
+    def test_patch_source_id_is_stable(self, phase3_test_client: TestClient) -> None:
+        """source.id が保存後も不変."""
+        source_id = "source-docs-main"
+        patch_resp = phase3_test_client.patch(
+            "/api/studios/framework/rag/apps/rag_app/config",
+            json={
+                "enabled": True,
+                "data_sources": [
+                    {
+                        "id": source_id,
+                        "type": "file",
+                        "uri": "/tmp/docs/faq.md",
+                        "label": "faq docs",
+                    }
+                ],
+            },
+        )
+        assert patch_resp.status_code == 200
+        payload = patch_resp.json()
+        assert payload["rag"]["data_sources"][0]["id"] == source_id
+
+        get_resp = phase3_test_client.get("/api/studios/framework/rag/apps/rag_app/config")
+        assert get_resp.status_code == 200
+        stored = get_resp.json()
+        assert stored["rag"]["data_sources"][0]["id"] == source_id
 
     def test_patch_invalid_pattern_returns_400(self, phase3_test_client: TestClient) -> None:
         """不正パターンは 400."""

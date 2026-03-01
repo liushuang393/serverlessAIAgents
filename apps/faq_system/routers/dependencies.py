@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -57,7 +58,9 @@ _services: dict[str, Any] = {}
 _artifact_registry: dict[str, Path] = {}
 _chat_history_service = ChatHistoryService()
 _runtime_config: RAGRuntimeConfig | None = None
+_runtime_config_signature: tuple[int, int] | None = None
 _ingestion_scheduler: AsyncIOScheduler | None = None
+_scheduler_reload_task: asyncio.Task[None] | None = None
 
 
 def get_chat_history_service() -> ChatHistoryService:
@@ -67,9 +70,22 @@ def get_chat_history_service() -> ChatHistoryService:
 
 def get_runtime_rag_config(*, refresh: bool = False) -> RAGRuntimeConfig:
     """RAG/SQL runtime 設定を取得."""
-    global _runtime_config
-    if _runtime_config is None or refresh:
+    global _runtime_config, _runtime_config_signature
+    if _runtime_config is None:
         _runtime_config = load_rag_runtime_config()
+        _runtime_config_signature = _compute_config_signature(_runtime_config.config_path)
+        return _runtime_config
+
+    current_signature = _compute_config_signature(_runtime_config.config_path)
+    should_reload = refresh or current_signature != _runtime_config_signature
+    if should_reload:
+        _runtime_config = load_rag_runtime_config()
+        next_signature = _compute_config_signature(_runtime_config.config_path)
+        has_changed = next_signature != _runtime_config_signature
+        _runtime_config_signature = next_signature
+        _invalidate_runtime_dependent_services()
+        if has_changed:
+            _request_scheduler_reload()
     return _runtime_config
 
 
@@ -360,9 +376,47 @@ def get_artifact_path(artifact_id: str) -> Path | None:
 
 def invalidate_service_cache(*prefixes: str) -> None:
     """指定プレフィックスにマッチするサービスキャッシュを破棄."""
-    global _runtime_config
+    global _runtime_config, _runtime_config_signature
     stale_keys = [key for key in _services if any(key.startswith(p) or key == p for p in prefixes)]
     for key in stale_keys:
         _services.pop(key, None)
     if any(prefix in {"runtime", "rag", "sql", "faq_agent"} for prefix in prefixes):
         _runtime_config = None
+        _runtime_config_signature = None
+
+
+def _compute_config_signature(path: Path) -> tuple[int, int] | None:
+    try:
+        stat = path.stat()
+    except OSError:
+        return None
+    return (stat.st_mtime_ns, stat.st_size)
+
+
+def _invalidate_runtime_dependent_services() -> None:
+    stale_keys = [
+        key
+        for key in _services
+        if key.startswith("rag:") or key in {"sql", "faq_agent", "sales_agent", "rag_ingestion_orchestrator"}
+    ]
+    for key in stale_keys:
+        _services.pop(key, None)
+
+
+def _request_scheduler_reload() -> None:
+    global _scheduler_reload_task
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return
+    if _scheduler_reload_task is not None and not _scheduler_reload_task.done():
+        return
+    _scheduler_reload_task = loop.create_task(_reload_scheduler(), name="faq_rag_ingestion_scheduler_reload")
+
+
+async def _reload_scheduler() -> None:
+    try:
+        await stop_rag_ingestion_scheduler()
+        await start_rag_ingestion_scheduler()
+    except Exception:  # pragma: no cover - defensive
+        logger.exception("RAG ingestion scheduler reload failed")

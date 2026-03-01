@@ -456,6 +456,7 @@ export interface RAGPattern {
 
 /** RAG データソース */
 export interface RAGDataSource {
+  id: string;
   type: string;
   uri?: string | null;
   label?: string;
@@ -538,6 +539,35 @@ export interface AppRAGConfigPatchRequest {
   score_threshold?: number | null;
   indexing_schedule?: string | null;
   data_sources?: RAGDataSource[];
+}
+
+export interface AppRAGHotApplyResult {
+  mode: 'hot';
+  applied: boolean;
+  subscriber_count: number;
+}
+
+export interface AppRAGConfigUpdateResponse extends AppRAGConfig {
+  contracts_rag?: Record<string, unknown>;
+  config_version?: string;
+  updated_at?: string;
+  hot_apply?: AppRAGHotApplyResult;
+}
+
+export interface RAGIngestRunSummary {
+  run_id: string;
+  status: string;
+  trigger_mode?: string;
+  dry_run: boolean;
+  started_at: string | null;
+  finished_at: string | null;
+  duration_ms: number;
+  summary?: Record<string, unknown>;
+}
+
+export interface RAGIngestRunsResponse {
+  total: number;
+  runs: RAGIngestRunSummary[];
 }
 
 /** RAG 使用 App */

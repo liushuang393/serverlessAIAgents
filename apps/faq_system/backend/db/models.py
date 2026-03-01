@@ -157,5 +157,81 @@ class TokenBlacklist(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
+class IngestionRun(Base):
+    """RAG ingestion 実行履歴."""
+
+    __tablename__ = "ingestion_runs"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    app_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    trigger_mode: Mapped[str] = mapped_column(String(32), nullable=False, default="sync")
+    dry_run: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    source_ids_json: Mapped[list[str]] = mapped_column(JSON, nullable=False, default=list)
+    summary_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+
+    items: Mapped[list[IngestionRunItem]] = relationship(
+        "IngestionRunItem",
+        back_populates="run",
+        cascade="all, delete-orphan",
+    )
+
+
+class IngestionRunItem(Base):
+    """RAG ingestion run 内の source 単位結果."""
+
+    __tablename__ = "ingestion_run_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    run_id: Mapped[str] = mapped_column(
+        String(64),
+        ForeignKey("ingestion_runs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False, index=True)
+    source_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, index=True)
+    message: Mapped[str | None] = mapped_column(Text, nullable=True)
+    stats_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    payload_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+    run: Mapped[IngestionRun] = relationship("IngestionRun", back_populates="items")
+
+
+class IngestionCheckpoint(Base):
+    """RAG ingestion 増分カーソル."""
+
+    __tablename__ = "ingestion_checkpoints"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    source_id: Mapped[str] = mapped_column(String(128), nullable=False, unique=True, index=True)
+    cursor_text: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    cursor_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    metadata_json: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        default=utcnow,
+        onupdate=utcnow,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, default=utcnow)
+
+
 Index("ix_chat_messages_session_created", ChatMessage.session_id, ChatMessage.created_at)
 Index("ix_auth_sessions_user_active", AuthSession.user_id, AuthSession.revoked_at)
+Index("ix_ingestion_runs_app_started", IngestionRun.app_name, IngestionRun.started_at)
+Index("ix_ingestion_run_items_run_source", IngestionRunItem.run_id, IngestionRunItem.source_id)

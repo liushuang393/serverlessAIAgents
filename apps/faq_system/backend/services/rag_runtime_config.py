@@ -6,6 +6,7 @@ app_config.json の RAG/SQL 関連設定を統一的に解決する。
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -106,18 +107,10 @@ def load_rag_runtime_config(config_path: Path | None = None) -> RAGRuntimeConfig
 
     sql_schema = _normalize_schema(sql_service.get("schema"))
     sql_dialect = (
-        _as_non_empty_str(sql_service.get("dialect"))
-        or _as_non_empty_str(runtime_database.get("kind"))
-        or "postgresql"
+        _as_non_empty_str(sql_service.get("dialect")) or _as_non_empty_str(runtime_database.get("kind")) or "postgresql"
     )
-    database_url = (
-        _as_non_empty_str(runtime_database.get("url"))
-        or _as_non_empty_str(runtime_urls.get("database"))
-    )
-    database_kind = (
-        _as_non_empty_str(runtime_database.get("kind"))
-        or _infer_database_kind(database_url)
-    )
+    database_url = _as_non_empty_str(runtime_database.get("url")) or _as_non_empty_str(runtime_urls.get("database"))
+    database_kind = _as_non_empty_str(runtime_database.get("kind")) or _infer_database_kind(database_url)
 
     sql_enabled = _resolve_sql_enabled(
         sql_service=sql_service,
@@ -126,24 +119,30 @@ def load_rag_runtime_config(config_path: Path | None = None) -> RAGRuntimeConfig
         sql_schema=sql_schema,
     )
 
-    chunk_strategy = _as_non_empty_str(
-        _pick_with_contract_priority(
-            contract=rag_contract,
-            key="chunk_strategy",
-            service=_as_dict(rag_service.get("chunking")),
-            service_key="strategy",
-            default="recursive",
+    chunk_strategy = (
+        _as_non_empty_str(
+            _pick_with_contract_priority(
+                contract=rag_contract,
+                key="chunk_strategy",
+                service=_as_dict(rag_service.get("chunking")),
+                service_key="strategy",
+                default="recursive",
+            )
         )
-    ) or "recursive"
-    reranker = _as_non_empty_str(
-        _pick_with_contract_priority(
-            contract=rag_contract,
-            key="rerank_model",
-            service=_as_dict(rag_service.get("retrieval")),
-            service_key="reranker",
-            default="bm25",
+        or "recursive"
+    )
+    reranker = (
+        _as_non_empty_str(
+            _pick_with_contract_priority(
+                contract=rag_contract,
+                key="rerank_model",
+                service=_as_dict(rag_service.get("retrieval")),
+                service_key="reranker",
+                default="bm25",
+            )
         )
-    ) or "bm25"
+        or "bm25"
+    )
     top_k = _coerce_int(
         _pick_with_contract_priority(
             contract=rag_contract,
@@ -297,7 +296,13 @@ def _normalize_data_sources(value: Any) -> list[RAGDataSourceConfig]:
         source_id = (
             _as_non_empty_str(source.get("id"))
             or _as_non_empty_str(source_options.get("source_id"))
-            or f"source-{index + 1}"
+            or _stable_source_id(
+                source_type=source_type,
+                uri=uri,
+                label=label,
+                schedule=schedule,
+                fallback_index=index,
+            )
         )
 
         result.append(
@@ -333,9 +338,7 @@ def _resolve_sql_enabled(
         return True
     if database_kind:
         return True
-    if sql_schema:
-        return True
-    return False
+    return bool(sql_schema)
 
 
 def _infer_database_kind(database_url: str | None) -> str | None:
@@ -349,7 +352,7 @@ def _infer_database_kind(database_url: str | None) -> str | None:
         return "mysql"
     if lowered.startswith("sqlite"):
         return "sqlite"
-    if lowered.startswith("mssql") or lowered.startswith("sqlserver"):
+    if lowered.startswith(("mssql", "sqlserver")):
         return "mssql"
     scheme = lowered.split("://", 1)[0]
     if "+" in scheme:
@@ -363,3 +366,16 @@ def _coerce_int(value: Any, *, default: int, min_value: int, max_value: int) -> 
     except (TypeError, ValueError):
         return default
     return max(min_value, min(max_value, parsed))
+
+
+def _stable_source_id(
+    *,
+    source_type: str,
+    uri: str,
+    label: str,
+    schedule: str | None,
+    fallback_index: int,
+) -> str:
+    raw = f"{source_type}|{uri}|{label}|{schedule or ''}|{fallback_index}"
+    digest = hashlib.sha1(raw.encode("utf-8")).hexdigest()[:12]
+    return f"source-{digest}"

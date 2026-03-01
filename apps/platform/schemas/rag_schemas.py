@@ -14,6 +14,7 @@ _ALLOWED_DATABASE_READ_MODES = {"table", "query"}
 class RAGDataSourceInput(BaseModel):
     """RAG データソース入力."""
 
+    id: str | None = Field(default=None, min_length=1, description="安定データソースID")
     type: str = Field(..., min_length=1, description="データソース種別")
     uri: str | None = Field(default=None, description="接続先 URI / パス")
     label: str = Field(default="", description="表示ラベル")
@@ -33,6 +34,11 @@ class RAGDataSourceInput(BaseModel):
             raise ValueError(msg)
         return normalized
 
+    @field_validator("id", mode="before")
+    @classmethod
+    def normalize_id(cls, value: Any) -> str | None:
+        return _clean_text(value)
+
     @field_validator("uri", mode="before")
     @classmethod
     def normalize_uri(cls, value: Any) -> str | None:
@@ -49,7 +55,7 @@ class RAGDataSourceInput(BaseModel):
         return value if isinstance(value, dict) else {}
 
     @model_validator(mode="after")
-    def validate_database_options(self) -> "RAGDataSourceInput":
+    def validate_database_options(self) -> RAGDataSourceInput:
         if self.type != "database":
             if not self.uri:
                 msg = "uri is required"

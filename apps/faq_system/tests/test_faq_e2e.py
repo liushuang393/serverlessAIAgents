@@ -209,26 +209,33 @@ class TestClassifyQuery:
     # ---- LLM fallback scenarios ----
     @pytest.mark.asyncio
     async def test_llm_unexpected_value_falls_back(self, agent: FAQAgent) -> None:
-        """LLM returns garbage -> heuristic fallback -> faq."""
+        """LLM returns garbage -> fallback marks query as unclear."""
         agent._llm = _llm_mock("unknown_category")
         result = await agent._classify_query("some question")
-        assert result == "faq"
+        assert result == "unclear"
 
     @pytest.mark.asyncio
     async def test_llm_exception_falls_back(self, agent: FAQAgent) -> None:
-        """LLM exception -> heuristic fallback -> faq."""
+        """LLM exception -> fallback marks query as unclear."""
         mock = MagicMock()
         mock.complete = AsyncMock(side_effect=RuntimeError("LLM down"))
         agent._llm = mock
         result = await agent._classify_query("some question")
-        assert result == "faq"
+        assert result == "unclear"
 
     @pytest.mark.asyncio
     async def test_no_llm_falls_back_to_heuristic(self, agent: FAQAgent) -> None:
-        """No LLM at all -> heuristic fallback -> faq."""
+        """No LLM at all -> fallback marks query as unclear."""
         agent._llm = None
         result = await agent._classify_query("any question here")
-        assert result == "faq"
+        assert result == "unclear"
+
+    @pytest.mark.asyncio
+    async def test_low_confidence_weather_still_routes_weather(self, agent: FAQAgent) -> None:
+        """Ambiguous intent with explicit weather keyword should keep weather route."""
+        agent._llm = _llm_mock('{"route":"unclear","confidence":0.2,"reason":"unsure"}')
+        result = await agent._classify_query("今天天气怎么样")
+        assert result == "weather"
 
 
 # ---------------------------------------------------------------------------
@@ -393,9 +400,24 @@ class TestProcessIntegration:
                             "wind_speed_kmh": 6.2,
                         },
                         "daily": [
-                            {"date": "2026-02-28", "weather_text": "晴朗", "temperature_min_c": 4, "temperature_max_c": 12},
-                            {"date": "2026-03-01", "weather_text": "多云", "temperature_min_c": 5, "temperature_max_c": 13},
-                            {"date": "2026-03-02", "weather_text": "小雨", "temperature_min_c": 6, "temperature_max_c": 10},
+                            {
+                                "date": "2026-02-28",
+                                "weather_text": "晴朗",
+                                "temperature_min_c": 4,
+                                "temperature_max_c": 12,
+                            },
+                            {
+                                "date": "2026-03-01",
+                                "weather_text": "多云",
+                                "temperature_min_c": 5,
+                                "temperature_max_c": 13,
+                            },
+                            {
+                                "date": "2026-03-02",
+                                "weather_text": "小雨",
+                                "temperature_min_c": 6,
+                                "temperature_max_c": 10,
+                            },
                         ],
                     },
                 )
@@ -496,6 +518,42 @@ class TestProcessIntegration:
         assert result.query_type == "faq"
         assert result.verification.get("status") == "supported"
         assert result.error == ""
+
+    @pytest.mark.asyncio
+    async def test_process_non_enterprise_faq_weak_evidence_falls_back_chat(self, agent: FAQAgent) -> None:
+        """General question routed to FAQ with weak evidence should fallback to chat answer."""
+        agent._llm = _llm_mock('{"route":"faq","confidence":0.95,"reason":"test"}', "我是一个通用助手。")
+        agent._services_initialized = True
+
+        class DummyRAG:
+            async def execute(self, **_: str) -> ServiceResult:
+                return ServiceResult(
+                    success=True,
+                    data={
+                        "answer": "",
+                        "documents": [],
+                    },
+                )
+
+        agent._FAQAgent__rag_service = DummyRAG()
+        result = await agent.process(FAQInput(question="你是谁"))
+
+        assert result.query_type == "chat"
+        assert "助手" in result.answer
+        assert result.error == "faq_evidence_weak_fallback_to_chat"
+        assert result.verification.get("status") == "fallback_chat"
+
+    @pytest.mark.asyncio
+    async def test_process_out_of_scope_query_returns_unclear(self, agent: FAQAgent) -> None:
+        """High-confidence unclear route should return out_of_scope response."""
+        agent._llm = _llm_mock('{"route":"unclear","confidence":0.92,"reason":"out_of_scope"}')
+        agent._services_initialized = True
+
+        result = await agent.process(FAQInput(question="请帮我远程执行系统运维命令"))
+
+        assert result.query_type == "unclear"
+        assert result.error == "out_of_scope"
+        assert result.verification.get("status") == "out_of_scope"
 
 
 # ---------------------------------------------------------------------------

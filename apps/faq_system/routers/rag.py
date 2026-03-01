@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import io
+import json
 from typing import TYPE_CHECKING, Any
 
 from apps.faq_system.backend.auth.dependencies import require_auth
@@ -17,6 +18,7 @@ from apps.faq_system.routers.dependencies import (
     is_rag_enabled,
 )
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from agentflow.services import RAGConfig, RAGService
@@ -65,6 +67,7 @@ class IngestRequest(BaseModel):
 
     source_ids: list[str] = Field(default_factory=list, description="対象 source_id 一覧")
     dry_run: bool = Field(default=False, description="実処理を行わず計画のみ返す")
+    async_mode: bool = Field(default=False, description="非同期実行（queued -> running）")
 
 
 def _raise_service_error(
@@ -218,10 +221,16 @@ async def rag_ingest(
 ) -> dict[str, Any]:
     """RAG data source ingest を手動実行."""
     orchestrator = get_rag_ingestion_orchestrator()
-    return await orchestrator.ingest(
-        source_ids=request.source_ids or None,
-        dry_run=request.dry_run,
-    )
+    if request.async_mode:
+        queued = await orchestrator.enqueue_ingest(
+            source_ids=request.source_ids or None,
+            dry_run=request.dry_run,
+        )
+        return {
+            "accepted": True,
+            "run": queued,
+        }
+    return await orchestrator.ingest(source_ids=request.source_ids or None, dry_run=request.dry_run)
 
 
 @router.get("/api/rag/ingest/runs")
@@ -231,5 +240,56 @@ async def rag_ingest_runs(
 ) -> dict[str, Any]:
     """直近 ingest 実行履歴を返す."""
     orchestrator = get_rag_ingestion_orchestrator()
-    runs = orchestrator.list_runs(limit=limit)
+    runs = await orchestrator.list_runs(limit=limit)
     return {"total": len(runs), "runs": runs}
+
+
+@router.get("/api/rag/ingest/runs/{run_id}")
+async def rag_ingest_run_detail(
+    run_id: str,
+    _user: UserInfo = Depends(require_auth),
+) -> dict[str, Any]:
+    """ingest run 詳細を返す."""
+    orchestrator = get_rag_ingestion_orchestrator()
+    run = await orchestrator.get_run(run_id)
+    if run is None:
+        raise HTTPException(
+            status_code=404,
+            detail={"message": f"ingest run not found: {run_id}", "error_code": "ingest_run_not_found"},
+        )
+    return run
+
+
+@router.get("/api/rag/ingest/runs/{run_id}/events", response_model=None)
+async def rag_ingest_run_events(
+    run_id: str,
+    stream: bool = Query(False, description="true: SSE stream / false: snapshot"),
+    limit: int = Query(200, ge=1, le=1000),
+    _user: UserInfo = Depends(require_auth),
+) -> Any:
+    """ingest run イベントを返す（snapshot or SSE）。"""
+    orchestrator = get_rag_ingestion_orchestrator()
+    if not stream:
+        events = await orchestrator.list_run_events(run_id, limit=limit)
+        return {"run_id": run_id, "total": len(events), "events": events}
+
+    async def event_generator() -> Any:
+        connected = {"event_type": "connected", "run_id": run_id}
+        yield f"event: connected\\ndata: {json.dumps(connected)}\\n\\n"
+        backlog = await orchestrator.list_run_events(run_id, limit=min(limit, 200))
+        for event in backlog:
+            payload = json.dumps(event, ensure_ascii=False)
+            yield f"event: {event.get('event_type', 'message')}\\ndata: {payload}\\n\\n"
+        async for event in orchestrator.subscribe_run_events(run_id):
+            payload = json.dumps(event, ensure_ascii=False)
+            yield f"event: {event.get('event_type', 'message')}\\ndata: {payload}\\n\\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

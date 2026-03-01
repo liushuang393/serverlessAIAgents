@@ -150,15 +150,15 @@ class ConfigWatcher:
             logger.debug("SSE データのJSONパース失敗: %s", data[:200])
             return
 
-        new_rag_config: dict[str, Any] | None = payload.get("rag_config")
-        if new_rag_config is None:
+        contracts_rag = _extract_contracts_rag(payload)
+        if contracts_rag is None:
             return
 
         logger.info("RAG設定変更を検出: %s → RAGEngine を再初期化", self._app_name)
 
         from agentflow.bootstrap.rag_builder import build_rag_engine
 
-        new_engine = await build_rag_engine(new_rag_config)
+        new_engine = await build_rag_engine(contracts_rag)
         bundle.rag_engine = new_engine  # アトミック置換
 
         logger.info(
@@ -174,3 +174,49 @@ class ConfigWatcher:
 
 
 __all__ = ["ConfigWatcher"]
+
+
+def _extract_contracts_rag(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """SSE payload から contracts.rag 形式を抽出.
+
+    優先度:
+    1. contracts_rag（canonical）
+    2. rag_config（legacy）
+    """
+    canonical = payload.get("contracts_rag")
+    if isinstance(canonical, dict):
+        return canonical
+
+    legacy = payload.get("rag_config")
+    if isinstance(legacy, dict):
+        return _legacy_to_contracts_rag(legacy)
+
+    if isinstance(payload.get("enabled"), bool):
+        return _legacy_to_contracts_rag(payload)
+    return None
+
+
+def _legacy_to_contracts_rag(legacy: dict[str, Any]) -> dict[str, Any]:
+    """legacy rag_config 形式を contracts.rag に変換."""
+    enabled = bool(legacy.get("enabled", False))
+    collection = legacy.get("vector_collection")
+    collections: list[str] = []
+    if isinstance(collection, str) and collection.strip():
+        collections = [collection.strip()]
+
+    return {
+        "enabled": enabled,
+        "pattern": legacy.get("pattern"),
+        "provider": legacy.get("vector_provider") if enabled else None,
+        "collections": collections if enabled else [],
+        "data_sources": legacy.get("data_sources", []),
+        "chunk_strategy": legacy.get("chunk_strategy", "recursive"),
+        "chunk_size": legacy.get("chunk_size", 800),
+        "chunk_overlap": legacy.get("chunk_overlap", 120),
+        "retrieval_method": legacy.get("retrieval_method", "hybrid"),
+        "embedding_model": legacy.get("embedding_model"),
+        "rerank_model": legacy.get("reranker"),
+        "default_top_k": legacy.get("top_k", 5),
+        "score_threshold": legacy.get("score_threshold"),
+        "indexing_schedule": legacy.get("indexing_schedule"),
+    }

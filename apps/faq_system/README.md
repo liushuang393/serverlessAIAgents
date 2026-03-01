@@ -143,6 +143,109 @@ curl -X POST http://localhost:8005/api/chat \
 curl http://localhost:8005/api/health
 ```
 
+## RAG Ingestion 運用ガイド（source_id / 増分 / dry_run）
+
+### どこでデータ/ファイルを追加するか（最短手順）
+
+1. Platform で `faq_system` の RAG 設定に `data_sources` を追加する。  
+   `PATCH /api/studios/framework/rag/apps/faq_system/config`
+2. source の `id` を固定し、`type=file` または `type=database` を設定する。
+3. FAQ 側の ingest API を実行する。  
+   `POST /api/rag/ingest`（`dry_run -> 本実行`）
+
+```bash
+# 例1: ファイル source を追加（uri は FAQ backend から読める絶対パス）
+curl -X PATCH http://localhost:8001/api/studios/framework/rag/apps/faq_system/config \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enabled": true,
+    "data_sources": [
+      {
+        "id": "file-policy-docs",
+        "type": "file",
+        "uri": "/home/liush/data/faq/**/*.md",
+        "enabled": true,
+        "options": {"chunk_size": 800, "chunk_overlap": 120}
+      }
+    ]
+  }'
+
+# 例2: DB source を追加
+curl -X PATCH http://localhost:8001/api/studios/framework/rag/apps/faq_system/config \
+  -H "Content-Type: application/json" \
+  -d '{
+    "enabled": true,
+    "data_sources": [
+      {
+        "id": "db-main",
+        "type": "database",
+        "uri": "postgresql://user:pass@localhost:5432/appdb",
+        "enabled": true,
+        "options": {
+          "read_mode": "query",
+          "query": "SELECT id, title, body, updated_at FROM faq_docs",
+          "row_limit": 1000,
+          "time_column": "updated_at",
+          "cursor_column": "id"
+        }
+      }
+    ]
+  }'
+
+# ingest（先に dry_run）
+curl -X POST http://localhost:8005/api/rag/ingest \
+  -H "Content-Type: application/json" \
+  -d '{"dry_run": true, "source_ids": ["file-policy-docs", "db-main"]}'
+```
+
+### source_id の扱い
+
+- `contracts.rag.data_sources[].id` を **安定 ID** として利用します。
+- 既存設定で `id` が無い source は、起動時に deterministic な `source-<hash>` が補完されます。
+- 次回 Platform から保存すると、補完 ID が `app_config.json` に永続化されます。
+
+### DB 増分取り込み設定
+
+`database` source の `options` で以下を指定できます。
+
+- `read_mode`: `query` / `table`
+- `row_limit`: 1-5000
+- `time_column`: 更新日時列（ISO8601 比較）
+- `cursor_column`: 単調増加キー（例: `id`）
+
+checkpoint は `ingestion_checkpoints` テーブルに保持され、2 回目以降は新規分のみ取得します。
+
+### dry_run → 本実行
+
+```bash
+# 1) 実行計画だけ確認（DB/VDB 副作用なし）
+curl -X POST http://localhost:8005/api/rag/ingest \\
+  -H "Content-Type: application/json" \\
+  -d '{"dry_run": true, "source_ids": ["db-main"]}'
+
+# 2) 同期実行
+curl -X POST http://localhost:8005/api/rag/ingest \\
+  -H "Content-Type: application/json" \\
+  -d '{"dry_run": false, "source_ids": ["db-main"]}'
+
+# 3) 非同期実行（queued -> running -> success/failed）
+curl -X POST http://localhost:8005/api/rag/ingest \\
+  -H "Content-Type: application/json" \\
+  -d '{"async_mode": true, "dry_run": false, "source_ids": ["db-main"]}'
+```
+
+### 進捗確認 API
+
+- `GET /api/rag/ingest/runs`
+- `GET /api/rag/ingest/runs/{run_id}`
+- `GET /api/rag/ingest/runs/{run_id}/events`（snapshot）
+- `GET /api/rag/ingest/runs/{run_id}/events?stream=true`（SSE）
+
+### Source type 実装状況
+
+- `file`, `database`: 本実装
+- `web`, `api`, `s3`: 入口バリデーション + `not_implemented` ステータス返却（段階実装）
+
 ---
 
 ## 認証テスト手順

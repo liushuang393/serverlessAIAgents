@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   fetchAppRAGConfigs,
+  fetchAppRAGIngestRuns,
   fetchRAGPatterns,
   patchAppRAGConfig,
   restartApp,
@@ -14,6 +15,7 @@ import type {
   RAGDataSource,
   RAGDatabaseTypeOption,
   RAGDatabaseHint,
+  RAGIngestRunSummary,
   RAGPattern,
   RAGVectorProviderOption,
 } from '@/types';
@@ -232,7 +234,7 @@ function buildDatabaseSourceFromHint(
 
 function draftFromSource(source: RAGDataSource): DataSourceDraft {
   return {
-    id: createSourceId(),
+    id: cleanText(source.id) || createSourceId(),
     type: normalizeSourceType(source.type),
     uri: cleanText(source.uri),
     label: cleanText(source.label ?? ''),
@@ -282,6 +284,7 @@ function sourceToPayload(source: DataSourceDraft): RAGDataSource | null {
     }
 
     return {
+      id: source.id,
       type: normalizeSourceType(source.type),
       uri,
       label,
@@ -292,6 +295,7 @@ function sourceToPayload(source: DataSourceDraft): RAGDataSource | null {
   }
 
   return {
+    id: source.id,
     type: normalizeSourceType(source.type),
     uri,
     label,
@@ -383,6 +387,8 @@ export function RAGOverview() {
   const [managerLoading, setManagerLoading] = useState(false);
   const [managerError, setManagerError] = useState<string | null>(null);
   const [managerMessage, setManagerMessage] = useState<string | null>(null);
+  const [ingestRuns, setIngestRuns] = useState<RAGIngestRunSummary[]>([]);
+  const [ingestLoading, setIngestLoading] = useState(false);
 
   const selectedConfig = useMemo(
     () => ragConfigs.find((item) => item.app_name === selectedApp) ?? null,
@@ -437,6 +443,26 @@ export function RAGOverview() {
     }
     setForm(toForm(selectedConfig));
   }, [selectedConfig]);
+
+  useEffect(() => {
+    const appName = selectedConfig?.app_name;
+    if (!appName || !selectedConfig?.rag.enabled) {
+      setIngestRuns([]);
+      return;
+    }
+    const loadRuns = async () => {
+      setIngestLoading(true);
+      try {
+        const response = await fetchAppRAGIngestRuns(appName, 20);
+        setIngestRuns(response.runs);
+      } catch {
+        setIngestRuns([]);
+      } finally {
+        setIngestLoading(false);
+      }
+    };
+    void loadRuns();
+  }, [selectedConfig?.app_name, selectedConfig?.rag.enabled]);
 
   const loadManager = async () => {
     setManagerLoading(true);
@@ -660,7 +686,7 @@ export function RAGOverview() {
     setManagerError(null);
     setManagerMessage(null);
     try {
-      await patchAppRAGConfig(selectedConfig.app_name, {
+      const updated = await patchAppRAGConfig(selectedConfig.app_name, {
         enabled: form.enabled,
         pattern: form.pattern || null,
         vector_provider: form.vector_provider || null,
@@ -679,22 +705,38 @@ export function RAGOverview() {
           .map(sourceToPayload)
           .filter((source): source is RAGDataSource => source !== null),
       });
+
+      const hotApplied = updated.hot_apply?.applied ?? false;
       let restartError: string | null = null;
-      try {
-        const restart = await restartApp(selectedConfig.app_name);
-        if (!restart.success) {
-          restartError =
-            (typeof restart.error === 'string' && restart.error) ||
-            'restart API returned success=false';
+      if (!hotApplied) {
+        try {
+          const restart = await restartApp(selectedConfig.app_name);
+          if (!restart.success) {
+            restartError =
+              (typeof restart.error === 'string' && restart.error) ||
+              'restart API returned success=false';
+          }
+        } catch (err) {
+          restartError = err instanceof Error ? err.message : 'restart request failed';
         }
-      } catch (err) {
-        restartError = err instanceof Error ? err.message : 'restart request failed';
       }
       await Promise.all([loadManager(), loadRAGOverview()]);
+      try {
+        const runsResponse = await fetchAppRAGIngestRuns(selectedConfig.app_name, 20);
+        setIngestRuns(runsResponse.runs);
+      } catch {
+        setIngestRuns([]);
+      }
       if (restartError) {
         setManagerError(`RAG 設定は保存しましたが、再起動に失敗しました: ${restartError}`);
       } else {
-        setManagerMessage(`RAG 設定を保存し、${selectedConfig.app_name} を再起動しました。`);
+        setManagerMessage(
+          hotApplied
+            ? `RAG 設定を保存し、hot apply で反映しました（subscriber: ${
+              updated.hot_apply?.subscriber_count ?? 0
+            }）。`
+            : `RAG 設定を保存し、${selectedConfig.app_name} を再起動しました（hot apply fallback）。`,
+        );
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'RAG 設定の保存に失敗しました';
@@ -1264,6 +1306,64 @@ export function RAGOverview() {
                           </div>
                         </div>
                       ))}
+                    </div>
+
+                    <div className="space-y-2 rounded-lg border border-slate-700/80 bg-slate-950/30 p-3.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-medium text-slate-300">Ingestion Runs</p>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!selectedConfig?.app_name || !selectedConfig.rag.enabled) {
+                              return;
+                            }
+                            setIngestLoading(true);
+                            try {
+                              const response = await fetchAppRAGIngestRuns(selectedConfig.app_name, 20);
+                              setIngestRuns(response.runs);
+                            } catch {
+                              setIngestRuns([]);
+                            } finally {
+                              setIngestLoading(false);
+                            }
+                          }}
+                          className="px-2 py-1 rounded-md border border-slate-700 text-[11px] text-slate-300 hover:bg-slate-800"
+                          disabled={!selectedConfig.rag.enabled}
+                        >
+                          Reload Runs
+                        </button>
+                      </div>
+                      {!selectedConfig.rag.enabled && (
+                        <p className="text-[11px] text-slate-500">RAG が無効なため実行履歴はありません。</p>
+                      )}
+                      {selectedConfig.rag.enabled && (
+                        <>
+                      {ingestLoading && (
+                        <p className="text-[11px] text-slate-500">読み込み中...</p>
+                      )}
+                      {!ingestLoading && ingestRuns.length === 0 && (
+                        <p className="text-[11px] text-slate-500">実行履歴はまだありません。</p>
+                      )}
+                      {!ingestLoading && ingestRuns.length > 0 && (
+                        <div className="space-y-2">
+                          {ingestRuns.map((run) => (
+                            <div
+                              key={run.run_id}
+                              className="rounded-md border border-slate-700 bg-slate-900/40 px-3 py-2"
+                            >
+                              <p className="text-xs text-slate-200 font-medium">{run.run_id}</p>
+                              <p className="text-[11px] text-slate-400 mt-1">
+                                status={run.status} / dry_run={String(run.dry_run)} / duration={run.duration_ms}ms
+                              </p>
+                              <p className="text-[11px] text-slate-500 mt-1">
+                                started={run.started_at ?? '-'} / finished={run.finished_at ?? '-'}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                        </>
+                      )}
                     </div>
 
                     <div className="flex items-center justify-end gap-2 pt-1">

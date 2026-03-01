@@ -23,6 +23,7 @@ import asyncio
 import contextlib
 import logging
 from collections.abc import AsyncGenerator  # noqa: TC003
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -49,21 +50,41 @@ class RagConfigStore:
     async def fire_config_change(
         self,
         app_name: str,
-        rag_config: dict[str, Any],
+        contracts_rag: dict[str, Any] | None = None,
+        *,
+        rag_config: dict[str, Any] | None = None,
+        config_version: str | None = None,
+        updated_at: str | None = None,
     ) -> int:
         """設定変更イベントを全購読者にブロードキャスト.
 
         Args:
             app_name: 対象アプリ名
-            rag_config: 新しい RAG 設定辞書（contracts.rag の内容）
+            contracts_rag: 新しい contracts.rag 設定辞書
+            rag_config: 旧来互換の rag 設定辞書
+            config_version: 設定バージョン（未指定時は UTC epoch ミリ秒）
+            updated_at: 更新時刻 ISO8601（未指定時は現在時刻）
 
         Returns:
             イベントを送信した購読者数
         """
+        now = datetime.now(tz=UTC)
+        resolved_updated_at = updated_at or now.isoformat()
+        resolved_version = config_version or str(int(now.timestamp() * 1000))
+        canonical = contracts_rag if isinstance(contracts_rag, dict) else {}
+        legacy = rag_config if isinstance(rag_config, dict) else {}
+        if not canonical and legacy:
+            canonical = legacy
+        if not legacy and canonical:
+            legacy = canonical
+
         event: dict[str, Any] = {
             "event_type": "rag_config_changed",
             "app_name": app_name,
-            "rag_config": rag_config,
+            "contracts_rag": canonical,
+            "rag_config": legacy,
+            "config_version": resolved_version,
+            "updated_at": resolved_updated_at,
         }
 
         async with self._lock:

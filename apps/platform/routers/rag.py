@@ -16,8 +16,11 @@ GET  /api/studios/framework/rag/stats      — RAG 統計
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
+import httpx
 from apps.platform.schemas.rag_schemas import RAGConfigPatchRequest  # noqa: TC002
 from apps.platform.services.rag_config_store import RagConfigStore, get_rag_config_store
 from apps.platform.services.rag_overview import RAGOverviewService  # noqa: TC002
@@ -55,6 +58,54 @@ def _try_get_store() -> RagConfigStore | None:
         return get_rag_config_store()
     except RuntimeError:
         return None
+
+
+def _build_contracts_rag_payload(rag: dict[str, Any]) -> dict[str, Any]:
+    """App RAG 表示形式から contracts.rag 形式へ正規化."""
+    enabled = bool(rag.get("enabled", False))
+    collection = rag.get("vector_collection")
+    collections = [collection] if isinstance(collection, str) and collection.strip() else []
+    return {
+        "enabled": enabled,
+        "pattern": rag.get("pattern"),
+        "provider": rag.get("vector_provider") if enabled else None,
+        "collections": collections if enabled else [],
+        "data_sources": rag.get("data_sources", []),
+        "chunk_strategy": rag.get("chunk_strategy", "recursive"),
+        "chunk_size": rag.get("chunk_size", 800),
+        "chunk_overlap": rag.get("chunk_overlap", 120),
+        "retrieval_method": rag.get("retrieval_method", "hybrid"),
+        "embedding_model": rag.get("embedding_model"),
+        "rerank_model": rag.get("reranker"),
+        "default_top_k": rag.get("top_k", 5),
+        "score_threshold": rag.get("score_threshold"),
+        "indexing_schedule": rag.get("indexing_schedule"),
+    }
+
+
+def _resolve_backend_url(config_path: str) -> str | None:
+    path = Path(config_path)
+    if not path.is_file():
+        return None
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    runtime = payload.get("runtime")
+    runtime_data = runtime if isinstance(runtime, dict) else {}
+    urls = runtime_data.get("urls")
+    runtime_urls = urls if isinstance(urls, dict) else {}
+    backend_url = runtime_urls.get("backend")
+    if isinstance(backend_url, str) and backend_url.strip():
+        return backend_url.strip()
+
+    ports = payload.get("ports")
+    ports_data = ports if isinstance(ports, dict) else {}
+    api_port = ports_data.get("api")
+    if isinstance(api_port, int) and api_port > 0:
+        return f"http://127.0.0.1:{api_port}"
+    return None
 
 
 # ------------------------------------------------------------------
@@ -163,9 +214,26 @@ async def patch_rag_app_config(
 
     # RagConfigStore にイベントを発火（ConfigWatcher 経由でホットリロード）
     store = _try_get_store()
+    contracts_rag = _build_contracts_rag_payload(result.get("rag", {}))
+    now = datetime.now(tz=UTC)
+    updated_at = now.isoformat()
+    config_version = str(int(now.timestamp() * 1000))
+    hot_apply = {"mode": "hot", "applied": False, "subscriber_count": 0}
     if store is not None:
         new_rag_config: dict[str, Any] = result.get("rag", {})
-        await store.fire_config_change(app_name, new_rag_config)
+        subscriber_count = await store.fire_config_change(
+            app_name,
+            contracts_rag=contracts_rag,
+            rag_config=new_rag_config,
+            config_version=config_version,
+            updated_at=updated_at,
+        )
+        hot_apply = {"mode": "hot", "applied": subscriber_count > 0, "subscriber_count": subscriber_count}
+
+    result["contracts_rag"] = contracts_rag
+    result["config_version"] = config_version
+    result["updated_at"] = updated_at
+    result["hot_apply"] = hot_apply
 
     return result
 
@@ -225,3 +293,51 @@ async def rag_config_events(
 async def get_rag_stats() -> dict[str, Any]:
     """RAG 統計情報."""
     return _get_overview().stats()
+
+
+@router.get("/apps/{app_name}/ingest/runs")
+async def list_app_ingest_runs(
+    app_name: str,
+    limit: int = Query(20, ge=1, le=100),
+) -> dict[str, Any]:
+    """指定 App の ingest run 一覧を取得（FAQ API proxy）."""
+    overview = _get_overview()
+    try:
+        app_config = overview.get_app_config(app_name)
+    except KeyError:
+        raise HTTPException(
+            status_code=404,
+            detail={"message": f"App not found: {app_name}", "error_code": "APP_NOT_FOUND"},
+        )
+
+    backend_url = _resolve_backend_url(str(app_config.get("config_path", "")))
+    if backend_url is None:
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "message": f"runtime.urls.backend or ports.api is not configured for app: {app_name}",
+                "error_code": "RUNTIME_BACKEND_URL_NOT_FOUND",
+            },
+        )
+
+    endpoint = f"{backend_url.rstrip('/')}/api/rag/ingest/runs"
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(endpoint, params={"limit": limit})
+    except httpx.HTTPError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail={"message": f"Failed to proxy ingest runs: {exc}", "error_code": "INGEST_PROXY_FAILED"},
+        ) from exc
+
+    if response.status_code >= 400:
+        raise HTTPException(
+            status_code=502,
+            detail={
+                "message": f"FAQ ingest API returned {response.status_code}",
+                "error_code": "INGEST_PROXY_BAD_STATUS",
+            },
+        )
+
+    payload = response.json()
+    return payload if isinstance(payload, dict) else {"total": 0, "runs": []}

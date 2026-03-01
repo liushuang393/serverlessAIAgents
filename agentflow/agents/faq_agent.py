@@ -99,7 +99,7 @@ class FAQOutput(BaseModel):
 
     question: str = ""
     answer: str = ""
-    query_type: str = "faq"  # "chat" | "faq" | "sql" | "hybrid" | "sales_material" | "weather" | "external" | "blocked"
+    query_type: str = "faq"  # "chat" | "faq" | "sql" | "hybrid" | "sales_material" | "weather" | "external" | "blocked" | "unclear"
     documents: list[DocumentSchema] = Field(default_factory=list)
     sql: str = ""
     data: list[dict[str, Any]] = Field(default_factory=list)
@@ -286,6 +286,9 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             if query_type == "chat":
                 self._append_report_phase(execution_report, "call", "ok", {"service": "llm_direct"})
                 response = await self._handle_chat_query(effective_question, query_type)
+            elif query_type == "unclear":
+                self._append_report_phase(execution_report, "call", "ok", {"service": "scope_guard"})
+                response = await self._handle_unclear_query(effective_question, query_type)
             elif query_type == "weather":
                 self._append_report_phase(execution_report, "call", "ok", {"service": "weather_api"})
                 response = await self._handle_weather_query(effective_question, query_type)
@@ -375,16 +378,52 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             suggestions=suggestions,
         )
 
+    async def _handle_unclear_query(self, question: str, query_type: str) -> FAQOutput:
+        """対象外クエリを処理（回答拒否ではなく scope 明示）."""
+        message = self._localized_message(
+            question,
+            ja=(
+                "わかりません。"
+                "この質問は現在の対応範囲外のため回答できません。"
+                "企業ナレッジ/制度/DB分析、または一般知識の質問として具体化してください。"
+            ),
+            zh=(
+                "我不知道。这个问题暂不在当前回答范围内。"
+                "请改成企业知识/制度/数据库分析，或一般知识问答。"
+            ),
+            en=(
+                "I don't know. This question is out of scope for the current assistant. "
+                "Please rephrase it as enterprise knowledge/DB analytics or general knowledge Q&A."
+            ),
+        )
+        return FAQOutput(
+            question=question,
+            query_type=query_type,
+            answer=message,
+            documents=[],
+            rich_response=self._build_chat_rich_response(message).to_dict(),
+            suggestions=[],
+            error="out_of_scope",
+            verification={"status": "out_of_scope"},
+        )
+
     async def _handle_faq_query(self, question: str, query_type: str) -> FAQOutput:
         """FAQ クエリを処理."""
         if self.__rag_service is None:
             return await self._handle_chat_query(question, "chat")
+        enterprise_knowledge_query = self._looks_like_enterprise_faq_question(question)
         expanded_question = self._expand_faq_query_multilingual(question)
         rag_result = await self.__rag_service.execute(
             action="query",
             question=expanded_question,
         )
         if not rag_result.success:
+            if not enterprise_knowledge_query:
+                return await self._build_faq_to_chat_fallback(
+                    question,
+                    fallback_code="faq_rag_error_fallback_to_chat",
+                    fallback_reason=rag_result.error_message or "rag_error",
+                )
             fallback_error = rag_result.error_message or self._localized_message(
                 question,
                 ja="RAG 検索に失敗しました。",
@@ -401,6 +440,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                 error=rag_result.error_message or "rag_error",
             )
 
+        rag_payload = rag_result.data if isinstance(rag_result.data, dict) else {}
         documents = [
             DocumentSchema(
                 id=d.get("id", ""),
@@ -408,14 +448,22 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                 source=d.get("source", ""),
                 score=d.get("score", 0.0),
             )
-            for d in rag_result.data.get("documents", [])
+            for d in rag_payload.get("documents", [])
+            if isinstance(d, dict)
         ]
         verification = self._verify_faq_answer(
-            answer=str(rag_result.data.get("answer", "")),
+            answer=str(rag_payload.get("answer", "")),
             documents=documents,
         )
-        answer_text = str(rag_result.data.get("answer", "")).strip()
+        answer_text = str(rag_payload.get("answer", "")).strip()
         if verification.get("status") != "supported":
+            if not enterprise_knowledge_query:
+                return await self._build_faq_to_chat_fallback(
+                    question,
+                    fallback_code="faq_evidence_weak_fallback_to_chat",
+                    fallback_reason=str(verification.get("reason", "faq_evidence_weak")),
+                    verification=verification,
+                )
             warning_text = self._localized_message(
                 question,
                 ja="注意: 回答の根拠が弱いため、質問を具体化するか DB 分析ルートの利用を推奨します。",
@@ -442,6 +490,27 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             verification=verification,
             error="" if verification.get("status") == "supported" else "faq_evidence_weak",
         )
+
+    async def _build_faq_to_chat_fallback(
+        self,
+        question: str,
+        *,
+        fallback_code: str,
+        fallback_reason: str,
+        verification: dict[str, Any] | None = None,
+    ) -> FAQOutput:
+        """FAQ 経路で根拠不足時に chat 応答へフォールバックする."""
+        chat_response = await self._handle_chat_query(question, "chat")
+        merged_verification: dict[str, Any] = {
+            "status": "fallback_chat",
+            "fallback_from": "faq",
+            "fallback_reason": fallback_reason,
+        }
+        if isinstance(verification, dict):
+            merged_verification["faq_verification"] = verification
+        chat_response.verification = merged_verification
+        chat_response.error = fallback_code
+        return chat_response
 
     async def _handle_weather_query(self, question: str, query_type: str) -> FAQOutput:
         """天気クエリを処理（Open-Meteo API 経由）."""
@@ -1239,6 +1308,10 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         "You are IntentRouterAgent for an enterprise assistant.\n"
         "Select exactly one route for downstream sub-agent execution based on user intent and required data source.\n"
         "Do not classify by shallow keyword matching; infer the real task objective.\n\n"
+        "Policy:\n"
+        "1) Enterprise knowledge, internal policy/process, MCP integration, or business DB analysis => use faq/sql/hybrid/external.\n"
+        "2) General world knowledge (math, history, physics, common-sense Q&A) => use chat.\n"
+        "3) If the request is outside both categories or not answerable as Q&A => use unclear.\n\n"
         "Route definitions:\n"
         "- chat: general conversation, no enterprise KB/DB lookup needed\n"
         "- faq: enterprise policy/procedure knowledge lookup via RAG knowledge base\n"
@@ -1248,7 +1321,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         "- weather: weather/forecast query for a city\n"
         "- external: web search/external API/url browsing outside internal data\n"
         "- blocked: harmful/illegal request that should be refused\n"
-        "- unclear: intent is ambiguous or insufficient for confident routing\n\n"
+        "- unclear: out-of-scope request or not answerable within enterprise/general Q&A scope\n\n"
         "Capability availability:\n"
         "- rag_enabled: {rag_enabled}\n"
         "- sql_enabled: {sql_enabled}\n"
@@ -1411,10 +1484,15 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         normalized_context = context if isinstance(context, dict) else {}
         llm_decision = await self._route_query_with_intent_llm(question, normalized_context)
         if llm_decision is not None:
+            if llm_decision.route in {"unclear", ""}:
+                if llm_decision.confidence >= self._INTENT_CONFIDENCE_THRESHOLD:
+                    return self._apply_route_policy("unclear")
+                ambiguous_route = self._default_route_without_keyword_rules(question, normalized_context)
+                return self._apply_route_policy(ambiguous_route)
             return self._apply_route_policy(llm_decision.route)
 
         # LLM が使えない場合のみ非キーワード型の保守的デフォルトへフォールバック
-        fallback_route = self._default_route_without_keyword_rules(normalized_context)
+        fallback_route = self._default_route_without_keyword_rules(question, normalized_context)
         return self._apply_route_policy(fallback_route)
 
     async def _route_query_with_intent_llm(
@@ -1511,7 +1589,8 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
 
         # 非JSONレスポンス対策
         route = self._extract_route_from_intent_response(text)
-        return IntentRouteDecision(route=route or "unclear", confidence=0.0, reason="unstructured_response")
+        confidence = 0.65 if route in self._VALID_QUERY_TYPES and route not in {"", "unclear"} else 0.0
+        return IntentRouteDecision(route=route or "unclear", confidence=confidence, reason="unstructured_response")
 
     @staticmethod
     def _extract_route_hint(context: dict[str, Any]) -> str:
@@ -1524,18 +1603,32 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             return ""
         return hint.strip()
 
-    def _default_route_without_keyword_rules(self, context: dict[str, Any]) -> str:
-        """非キーワード型フォールバックルートを返す."""
+    def _default_route_without_keyword_rules(self, question: str, context: dict[str, Any]) -> str:
+        """意図不明時のフォールバックルートを返す."""
         hinted = self._extract_route_hint(context).lower()
         if hinted in self._VALID_QUERY_TYPES:
             return hinted
 
-        # 既定は FAQ 優先（LLM 不可時の安全側）
-        if self._config.enable_rag:
+        strong_route = self._infer_strong_fallback_route(question)
+        if strong_route:
+            return strong_route
+
+        if self._looks_like_enterprise_faq_question(question) and self._config.enable_rag:
             return "faq"
-        if self._config.enable_sql:
-            return "sql"
-        return "chat"
+
+        if self._looks_like_information_request(question):
+            return "chat"
+
+        return "unclear"
+
+    def _infer_strong_fallback_route(self, question: str) -> str:
+        """曖昧時でも強く推定できるルートを返す."""
+        heuristic_route = self._classify_query_heuristic(question)
+        if heuristic_route in {"blocked", "weather", "external", "sales_material", "chat", "sql"}:
+            return heuristic_route
+        if heuristic_route == "faq" and self._looks_like_enterprise_faq_question(question):
+            return "faq"
+        return ""
 
     def _extract_route_from_intent_response(self, response: str) -> str:
         """意図ルーター応答から route を抽出."""
@@ -1676,15 +1769,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             return "chat"
 
         if normalized in {"unclear", ""}:
-            if hybrid_available:
-                return "hybrid"
-            if rag_available and sql_available:
-                return "hybrid"
-            if rag_available:
-                return "faq"
-            if sql_available:
-                return "sql"
-            return "chat"
+            return "unclear"
 
         if normalized == "hybrid":
             if hybrid_available:
@@ -1874,6 +1959,74 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                             seen.add(value)
 
         return " ".join(expanded_terms)
+
+    def _looks_like_enterprise_faq_question(self, question: str) -> bool:
+        """業務ナレッジ参照が必要な質問かを判定する."""
+        normalized = self._expand_faq_query_multilingual(question).lower()
+        enterprise_markers = (
+            "policy",
+            "procedure",
+            "workflow",
+            "guideline",
+            "employee",
+            "hr",
+            "it support",
+            "company",
+            "internal",
+            "社内",
+            "制度",
+            "規定",
+            "手順",
+            "申請",
+            "勤怠",
+            "経費",
+            "精算",
+            "休暇",
+            "有給",
+            "パスワード",
+            "vpn",
+            "公司",
+            "内部",
+            "流程",
+            "报销",
+            "年假",
+            "员工",
+            "密码",
+        )
+        return any(marker in normalized for marker in enterprise_markers)
+
+    def _looks_like_information_request(self, question: str) -> bool:
+        """一般知識として回答可能な質問形式かを判定する."""
+        normalized = re.sub(r"\s+", " ", question).strip().lower()
+        if not normalized:
+            return False
+        if normalized.endswith(("?", "？")):
+            return True
+        interrogative_markers = (
+            "what",
+            "who",
+            "when",
+            "where",
+            "why",
+            "how",
+            "which",
+            "explain",
+            "介绍",
+            "解释",
+            "是什么",
+            "怎么",
+            "如何",
+            "多少",
+            "为什么",
+            "誰",
+            "なぜ",
+            "どう",
+            "何",
+            "とは",
+            "教えて",
+            "知りたい",
+        )
+        return any(marker in normalized for marker in interrogative_markers)
 
     async def _check_safety_violation(self, question: str) -> str:
         """安全ポリシー違反を判定."""
@@ -2276,6 +2429,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             "weather": "weather_info",
             "external": "external_research",
             "blocked": "safety_guard",
+            "unclear": "scope_guard",
         }
         selected_skill = skill_map.get(query_type, "knowledge_search")
         card = AgentCard(
@@ -2331,6 +2485,12 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
                     input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
                     output_schema={"type": "object"},
                 ),
+                AgentSkill(
+                    name="scope_guard",
+                    description="対応範囲外の問い合わせを判定し再質問を促す",
+                    input_schema={"type": "object", "properties": {"question": {"type": "string"}}},
+                    output_schema={"type": "object"},
+                ),
             ],
             metadata={"selected_skill": selected_skill, "query_type": query_type},
         )
@@ -2349,6 +2509,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         "weather": "Weather Info が天気 API を照会中...",
         "external": "External Research が外部 API / Web を調査中...",
         "blocked": "Safety Guard が安全ポリシーを適用中...",
+        "unclear": "Scope Guard が問い合わせ範囲を判定中...",
     }
 
     _QUERY_TYPE_AGENT_LABELS: dict[str, str] = {
@@ -2360,6 +2521,7 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
         "weather": "weather_info",
         "external": "external_research",
         "blocked": "safety_guard",
+        "unclear": "scope_guard",
     }
 
     def _estimate_stream_total_steps(self, query_type: str) -> int:
@@ -2533,6 +2695,8 @@ class FAQAgent(ResilientAgent[FAQInput, FAQOutput]):
             response: FAQOutput
             if query_type == "chat":
                 response = await self._handle_chat_query(effective_question, query_type)
+            elif query_type == "unclear":
+                response = await self._handle_unclear_query(effective_question, query_type)
             elif query_type == "weather":
                 response = await self._handle_weather_query(effective_question, query_type)
             elif query_type == "external":

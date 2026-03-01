@@ -184,9 +184,7 @@ async def health_check() -> dict[str, Any]:
     db_status = "healthy"
     db_error: str | None = None
     resolved_db_url = get_database_url()
-    masked_db_url = (
-        f"***@{resolved_db_url.split('@', 1)[1]}" if "@" in resolved_db_url else resolved_db_url
-    )
+    masked_db_url = f"***@{resolved_db_url.split('@', 1)[1]}" if "@" in resolved_db_url else resolved_db_url
 
     try:
         await ensure_database_ready()

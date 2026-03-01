@@ -80,6 +80,63 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
 - `GET /api/studios/framework/apps/{app_name}/cli/status`
 - `POST /api/studios/framework/apps/{app_name}/cli/setup`
 
+## RAG 設定適用モード（hot / restart fallback）
+
+Platform の RAG 設定更新は以下の順で適用されます。
+
+1. `PATCH /api/studios/framework/rag/apps/{app}/config` 保存
+2. SSE `rag_config_changed` を発火（`contracts_rag` + legacy `rag_config` 同梱）
+3. subscriber が設定されている場合は hot apply
+4. hot apply 不成立時のみ app restart を fallback 実行
+
+### 反映確認手順
+
+```bash
+# 1) 設定更新
+curl -X PATCH http://localhost:8001/api/studios/framework/rag/apps/faq_system/config \\
+  -H "Content-Type: application/json" \\
+  -d '{"enabled": true, "data_sources": [{"id": "source-docs", "type": "file", "uri": "/data/faq.md"}]}'
+# 2) hot_apply / config_version を確認
+curl http://localhost:8001/api/studios/framework/rag/apps/faq_system/config
+```
+
+レスポンスの `hot_apply.applied` が `false` の場合、UI は restart fallback を実行します。
+
+## FAQ ルーティング 3段戦略（運用標準）
+
+`faq_system` の RAG/Router 運用は、以下 3 段戦略を **標準契約** とします。
+
+1. 企業領域（企業知識・制度・業務 DB・MCP/外部調査）  
+   ルート: `faq` / `sql` / `hybrid` / `external`  
+   回答: 根拠付き（RAG 文書 / SQL 結果 / 外部ソース）
+2. 通用知識（数学・物理・歴史・常識・一般情報 Q&A）  
+   ルート: `chat`  
+   回答: LLM 直接回答（企業 KB 依存なし）
+3. 上記以外（両スコープ外 / 問いとして成立しない要求）  
+   ルート: `unclear`  
+   回答: 「わかりません（out_of_scope）」＋再質問ガイド
+
+### チーム運用ガードレール
+
+- 例示キーワードのハードコードで分類を固定しない（意図判定優先）。
+- `route_hint=faq` の全体固定を禁止（特定ユースケースのみ局所的に付与）。
+- RAG は「企業領域の根拠補強」に使い、一般知識質問へ無条件適用しない。
+- `unclear` は失敗ではなく仕様上の有効ルートとして扱う。
+
+### 設定レビュー・チェックリスト
+
+1. Platform 保存前に、対象質問群を 3 区分（企業 / 通用 / 範囲外）で分類していること。
+2. `faq_system` の `data_sources` は企業データのみを対象にし、一般知識データを混在させないこと。
+3. hot apply 後に `query_type` 分布を確認し、`faq` 偏重・`unclear` 欠落・`chat` 欠落がないこと。
+4. 反映失敗時は restart fallback 後に同じ質問セットで再検証すること。
+
+### 最低限の回帰確認（運用時）
+
+- 企業制度質問: `faq` または `hybrid` で根拠付き回答になる。
+- DB 集計質問: `sql` または `hybrid` で表/集計結果を返す。
+- 通用知識質問: `chat` で回答する。
+- 範囲外要求: `unclear` + `out_of_scope` で「わかりません」を返す。
+
 ## 4. 開発起動
 
 ### 4.1 開発環境セットアップ（統一手順）
