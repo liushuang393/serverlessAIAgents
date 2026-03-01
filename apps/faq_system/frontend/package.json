@@ -16,7 +16,7 @@
     "katex": "^0.16.28",
     "lucide-react": "^0.564.0",
     "marked": "^17.0.2",
-    "mermaid": "^10.9.5",
+    "mermaid": "^11.12.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
