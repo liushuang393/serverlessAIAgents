@@ -1,24 +1,28 @@
 # AgentFlow Platform
 
-
 <!-- README_REQUIRED_SECTIONS_START -->
+
 ## 機能概要
+
 - 3 Studio 製品線と Framework 管理 API を単一 Control Plane で提供。
 - App/Agent/Skill/RAG/MCP の発見・管理・実行・監査を統合。
 - Publish/Deploy 導線を標準化し、app ライフサイクル運用を一元化。
 - `auth_service` / `design_skills_engine` は**エンドユーザー向け画面ではなく、プラグイン・他 app が利用する共通サービス**として管理する。
 
 ## 優位性
+
 - `/api/studios/*` と `/api/studios/framework/*` の正規導線で契約を統一。
 - business/developer/operator の surface 分離で利用者体験を最適化。
 - framework 監査機能により、manifest と実装の整合性を継続検証。
 
 ## 技術アーキテクチャ
+
 - Backend: FastAPI Routers + Discovery/Lifecycle/Audit Services。
 - Frontend: React + Zustand による運用コンソール。
 - App Manifest と taxonomy（business_base / pattern）で構成情報を標準化。
 
 ## アプリケーション階層
+
 - Studio Surface: 顧客向け実行導線。
 - Framework Control: App/Agent/Skill/RAG/MCP 管理。
 - Governance Layer: 監査・ポリシー・可視性制御。
@@ -255,7 +259,7 @@ npm run build
 - アーキテクチャ: `docs/architecture.md`
 - app_config 契約: `apps/platform/docs/app-config-schema.md`
 
-## 6. 共有テスト env 自動生成
+## 8. 共有テスト env 自動生成
 
 ```bash
 conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
@@ -264,31 +268,32 @@ conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
 - 手動でテスト用シークレットを作成しない（空値のみ自動補完）。
 - Platform 単体では API キー必須契約はないが、共通 JWT/DB シークレットは同コマンドで補完される。
 
-## 7. 本番 / テナント運用
+## 9. 本番 / テナント運用
 
 - 本番は `.env` ではなく Secret Manager 注入を使用する。
 - 多租户招待メールは「通知メール」と「ログイン URL メール」を分離送信する。
 - 詳細手順: `docs/internal/env-bootstrap-and-tenant-invite-security.md`
 
-## 8. 招待メール API
+## 10. 招待メール API
 
 - `POST /api/studios/framework/tenants/invitations`
 - `POST /api/studios/framework/tenants/invitations/{invitation_id}/challenge`
 - `POST /api/studios/framework/tenants/invitations/consume`
 
 運用ポイント:
+
 - 1通目は通知のみ（URL/OTP なし）
 - 2通目で URL または OTP を別送
 - URL はワンタイムトークンのみを含む
 
-## 9. Framework 監査（AST モード）
+## 11. Framework 監査（AST モード）
 
 - プロトコル面（SSE/WS/A2A/MCP）は AST（Python 構文木）解析で判定する。
 - 正規表現フォールバックは廃止。
 - 構文エラー時は `AST_PARSE_WARNING` を返し、修正提案と影響を併記する。
 - 必須プロトコルが AST 解析不能で立証不可の場合は `*_UNVERIFIED` を `error` 扱いにする。
 
-## 10. 認証共通モジュール
+## 12. 認証共通モジュール
 
 - 共通ガード: `agentflow/security/contract_auth_guard.py`
 - `app_config.json` の `contracts.auth` を基準に HTTP/WS 認証を統一する。
@@ -296,7 +301,7 @@ conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
   - HTTP: `401`（認証失敗）, `503`（鍵未設定）
   - WS: close code `4401`（認証失敗）, `1011`（サーバー設定不備）
 
-## 11. Plugin 署名運用（P1）
+## 13. Plugin 署名運用（P1）
 
 - sidecar 署名: `plugins/<plugin_id>/plugin_manifest.sig`
 - trust store: `plugins/trust_store.json`

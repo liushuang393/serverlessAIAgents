@@ -10,22 +10,27 @@
 ---
 
 <!-- README_REQUIRED_SECTIONS_START -->
+
 ## 機能概要
+
 - レガシー資産の解析、依存関係の可視化、移行候補の抽出を一体で実行。
 - 段階移行（Strangler）前提で、変換コードと検証レポートをパッケージ化。
 - HITL 承認フローと監査ログを通し、業務判断と技術判断を接続。
 
 ## 優位性
+
 - 単純変換ではなく「業務語義 + コード変換」を同時に扱える。
 - 移行後も Agent が運用継続を支援し、改善サイクルを維持できる。
 - 証跡付き報告書を標準出力し、監査・説明責任にそのまま利用できる。
 
 ## 技術アーキテクチャ
+
 - FastAPI 統合サーバー上で AgentFlow のオーケストレーションを実行。
 - M1〜M5（摂取/語義/編排/生成/ガバナンス）の多層構成で責務分離。
 - AG-UI / A2A / Skills 準拠で外部連携と拡張を標準化。
 
 ## アプリケーション階層
+
 - Presentation: API / CLI / Dashboard。
 - Orchestration: Migration Coordinator / HITL / Kill Switch。
 - Domain Services: 解析・変換・成果物生成。
@@ -43,13 +48,13 @@
 従来のマイグレーションツールは「コードの変換」に留まります。
 Legacy-to-Agent™ は AI Agent が**業務を理解**し、人間と協力して移行を実行します。
 
-| 従来のアプローチ | Legacy-to-Agent™ |
-|----------------|-------------------|
+| 従来のアプローチ         | Legacy-to-Agent™               |
+| ------------------------ | ------------------------------ |
 | ルールベースの機械的変換 | AI Agent による業務理解 + 変換 |
-| 一括変換のみ | 段階的移行（Strangler 対応） |
-| ブラックボックス | HITL 承認 + 監査ログ + 報告書 |
-| 変換後は終了 | Agent が継続運用をサポート |
-| 独自プロトコル | AgentFlow 標準 (AG-UI/A2A) |
+| 一括変換のみ             | 段階的移行（Strangler 対応）   |
+| ブラックボックス         | HITL 承認 + 監査ログ + 報告書  |
+| 変換後は終了             | Agent が継続運用をサポート     |
+| 独自プロトコル           | AgentFlow 標準 (AG-UI/A2A)     |
 
 ---
 
@@ -223,6 +228,7 @@ python -m apps.platform.main publish ./apps/code_migration_assistant --target do
 前台はこの後台から静的ファイルとして提供されます。
 
 つまり：
+
 - ❌ 「後台が前台を起動する」ではなく
 - ✅ 「後台が前台のファイルを提供し、前台が後台の API を呼び出す」
 
@@ -230,7 +236,7 @@ python -m apps.platform.main publish ./apps/code_migration_assistant --target do
 
 ## 📁 ディレクトリ構造
 
-AgentFlow の 8層アーキテクチャに基づき、Frontend/Backend を分離しています。
+5層アーキテクチャ（P/M1〜M5）に基づき、Frontend/Backend を分離しています。
 
 ```
 apps/code_migration_assistant/
@@ -288,14 +294,14 @@ result = await orchestrator.platform_mode({
 
 ## 🔧 Skill 体系
 
-| Skill | レイヤー | 役割 | depends_on |
-|-------|---------|------|-----------|
-| `code-analysis` | M1 | 静的解析・複雑度・依存 | ─ |
-| `legacy-ingestion` | M1 | 旧システム摂取・AST | code-analysis |
-| `business-semantics` | M2 | 業務フロー・ルール抽出 | legacy-ingestion |
-| `cobol-migration` | M4 | COBOL→Java 変換 | ─ |
-| `modernization-generator` | M4 | Spring Boot/REST/JPA 生成 | business-semantics, cobol-migration |
-| `compliance-reporter` | M5 | 設計書・監査報告書 | business-semantics |
+| Skill                     | レイヤー | 役割                      | depends_on                          |
+| ------------------------- | -------- | ------------------------- | ----------------------------------- |
+| `code-analysis`           | M1       | 静的解析・複雑度・依存    | ─                                   |
+| `legacy-ingestion`        | M1       | 旧システム摂取・AST       | code-analysis                       |
+| `business-semantics`      | M2       | 業務フロー・ルール抽出    | legacy-ingestion                    |
+| `cobol-migration`         | M4       | COBOL→Java 変換           | ─                                   |
+| `modernization-generator` | M4       | Spring Boot/REST/JPA 生成 | business-semantics, cobol-migration |
+| `compliance-reporter`     | M5       | 設計書・監査報告書        | business-semantics                  |
 
 ### Skill-First Capability Contract
 
@@ -336,14 +342,14 @@ compliance-reporter Skill で日本語の監査報告書を生成。
 
 ---
 
-##  対応言語
+## 対応言語
 
-| ソース言語 | ターゲット言語 | ステータス |
-|-----------|-------------|----------|
-| COBOL | Java/Spring | ✅ 第一波本実装 |
-| RPG (AS/400) | Java | 🔌 拡張インターフェースのみ |
-| PL/I | Java | 🔌 拡張インターフェースのみ |
-| Fortran | Java | 🔌 拡張インターフェースのみ |
+| ソース言語   | ターゲット言語 | ステータス                  |
+| ------------ | -------------- | --------------------------- |
+| COBOL        | Java/Spring    | ✅ 第一波本実装             |
+| RPG (AS/400) | Java           | 🔌 拡張インターフェースのみ |
+| PL/I         | Java           | 🔌 拡張インターフェースのみ |
+| Fortran      | Java           | 🔌 拡張インターフェースのみ |
 
 ---
 
@@ -372,21 +378,28 @@ compliance-reporter Skill で日本語の監査報告書を生成。
 ## 🛠️ 設計の妥当性と拡張性
 
 ### 1. 変換の確実性 (Process Validation)
+
 本プラットフォームは、単なる LLM による一括変換ではなく、**「7工程パイプライン」**によって各ステップでの品質を担保しています。
+
 - **事実抽出 (LegacyAnalysis)**: LLM ではなく、専用のパーサー（PLV / AST）により100%正確な変数・ロジック構造を抽出します。
 - **等価性検証 (Differential)**: 移行前後のコードを実際に実行（差分テスト）し、その挙動が一致するかを機械的に判定します。
 - **HITL (Human-In-The-Loop)**: 設計段階で人間が介在し、AI の提案を修正・承認するため、最終成果物のコントロールが可能です。
 
 ### 2. 新規パターンの追加手順 (Extension Guide)
+
 新しい言語ペア（例: RPG to C# や Struts to Spring Boot）を追加する場合、コアコード（Engine）を修正することなく、以下の配置のみで対応可能です。
 
 #### ステップ 1: アダプターの実装
+
 `adapters/source/` または `adapters/target/` に新しいアダプタークラスを作成します。
+
 - **SourceAdapter**: 解析（AST生成）を担当。
 - **TargetAdapter**: スケルトン生成とコンパイル・実行を担当。
 
 #### ステップ 2: 設定の追加
+
 `config/migration_types.yaml` に新しい移行タイプを登録します。
+
 ```yaml
 - name: new-pattern
   source: { language: SOURCE, adapter: ... }
@@ -395,6 +408,7 @@ compliance-reporter Skill で日本語の監査報告書を生成。
 ```
 
 #### ステップ 3: プロンプトと型の定義
+
 `config/prompts/` および `config/type_mappings/` に言語固有のルールを配置します。
 
 ---
@@ -443,6 +457,7 @@ profile = engine.get_optimized_llm_profile()
 ```
 
 Note:
+
 - `backend="microsoft"` 指定時、ライブラリ未導入なら `strict_backend=False` で builtin fallback
 - 外部I/F（Engine 入出力）は変更しません
 - 実行フローから自動訓練を起動しないでください（運用分離）

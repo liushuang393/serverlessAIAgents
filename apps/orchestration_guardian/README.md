@@ -1,23 +1,27 @@
 # Orchestration Guardian (オーケストレーション・ガーディアン)
 
-
 <!-- README_REQUIRED_SECTIONS_START -->
+
 ## 機能概要
+
 - オーケストレーション準備状況をチェックし、運用前の欠落を検出。
 - プロトコル契約カバレッジを検証し、実装と宣言のずれを可視化。
 - API でヘルス、チェックリスト、検証実行を提供。
 
 ## 優位性
+
 - 軽量構成のため導入が早く、CI への組み込みが容易。
 - 本番前のゲートとして利用でき、リリース品質を底上げできる。
 - 検証観点を共通化し、app 間の監査基準をそろえられる。
 
 ## 技術アーキテクチャ
+
 - FastAPI ベースの検証 API。
 - ルール化したチェックリスト評価ロジック。
 - Platform 発布フローに接続可能な最小構成。
 
 ## アプリケーション階層
+
 - API Layer: `/api/health` `/api/checklist` `/api/verify`。
 - Validation Layer: 契約チェック・準備状況評価。
 - Reporting Layer: 判定結果の構造化出力。
@@ -59,6 +63,29 @@ python -m apps.platform.main publish ./apps/orchestration_guardian --target dock
 ```
 
 ## Endpoints
+
+| エンドポイント   | メソッド | 説明                                                                   |
+| ---------------- | -------- | ---------------------------------------------------------------------- |
+| `/`              | GET      | サービス情報（docs/health URL を返却）                                 |
+| `/api/health`    | GET      | ヘルスチェック（agentflow_version を含む）                             |
+| `/api/checklist` | GET      | オーケストレーション準備チェックリスト（6項目）                        |
+| `/api/verify`    | POST     | 準備状況スコア評価（streaming/a2a/rag_contract/auth_baseline の4観点） |
+
+### `/api/verify` リクエスト例
+
+```json
+{
+  "app_name": "my_app",
+  "has_streaming": true,
+  "has_a2a": false,
+  "has_rag_contract": true,
+  "has_auth_baseline": true
+}
+```
+
+スコアが 75.0 以上で `"status": "ready"`、未満で `"status": "needs_improvement"` を返却。
+
+## 本番運用
 
 - **シークレット**: 本番環境のシークレット（機密情報）は Secret Manager 経由で注入されます。
 - **テナント招待**: セキュリティのため、招待メールは「通知」と「ログインURL」の2通に分けて送信されます。

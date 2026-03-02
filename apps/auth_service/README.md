@@ -22,7 +22,7 @@ JWT・OAuth2（Google/Azure AD）・LDAP・SAML・プロキシ認証・MFA（TOT
          ┌─────────────────┼──────────────────┐
          ▼                 ▼                  ▼
    faq_system        platform app       your app
-  (port 8005)        (port 8001)       (any port)
+  (port 8005)        (port 8000)       (any port)
 
   from agentflow.security.auth_client import require_auth
   @router.get("/protected")

@@ -449,17 +449,17 @@ CMD ["python", "-m", "apps.messaging_hub.main"]
 
 ## 🆚 Moltbot との比較
 
-| 機能               | Moltbot                     | Messaging Hub             |
-| ------------------ | --------------------------- | ------------------------- |
-| プラットフォーム   | 12+ (WhatsApp, iMessage 等) | 3 (拡張可能)              |
-| アーキテクチャ     | Gateway 中心                | 8層クリーンアーキテクチャ |
-| マルチエージェント | 基本ルーティング            | 4パターン + 5エンジン     |
-| メモリ             | 不明                        | 3層システム               |
-| UI                 | Live Canvas                 | A2UI + React Studio       |
-| プロトコル         | A2UI                        | MCP/A2A/AG-UI/A2UI/UCP    |
-| 音声               | ✅ (ElevenLabs)             | 🔜 (計画中)               |
-| デバイスツール     | ✅ (カメラ, 位置情報)       | 🔜 (計画中)               |
-| ブラウザ制御       | ✅ (Playwright)             | 🔜 (計画中)               |
+| 機能               | Moltbot                     | Messaging Hub                          |
+| ------------------ | --------------------------- | -------------------------------------- |
+| プラットフォーム   | 12+ (WhatsApp, iMessage 等) | 3 (Telegram/Slack/Discord, 拡張可能)   |
+| アーキテクチャ     | Gateway 中心                | Gateway + Agent 層の直列構成           |
+| マルチエージェント | 基本ルーティング            | AgentFlow Coordinator 統合             |
+| メモリ             | 不明                        | セッション管理（インメモリ）           |
+| UI                 | Live Canvas                 | admin_ui (React) + WebSocket Hub       |
+| プロトコル         | A2UI                        | HTTP/WebSocket（MCP/A2A は 🔜 計画中） |
+| 音声               | ✅ (ElevenLabs)             | 🔜 (計画中)                            |
+| デバイスツール     | ✅ (カメラ, 位置情報)       | 🔜 (計画中)                            |
+| ブラウザ制御       | ✅ (Playwright)             | 🔜 (計画中)                            |
 
 ## 📝 ライセンス
 
