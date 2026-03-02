@@ -463,8 +463,15 @@ class RAGOverviewService:
             and isinstance(raw_config.get("contracts", {}).get("rag"), dict)
             else {}
         )
+        raw_contract_auth = (
+            raw_config.get("contracts", {}).get("auth", {})
+            if isinstance(raw_config.get("contracts"), dict)
+            and isinstance(raw_config.get("contracts", {}).get("auth"), dict)
+            else {}
+        )
 
         rag_contract = app_config.contracts.rag
+        auth_contract = app_config.contracts.auth
         services = app_config.services if isinstance(app_config.services, dict) else {}
         rag_service = services.get("rag", {}) if isinstance(services.get("rag"), dict) else {}
         vector_service = services.get("vector_db", {}) if isinstance(services.get("vector_db"), dict) else {}
@@ -493,11 +500,11 @@ class RAGOverviewService:
 
         data_sources = self._normalize_data_sources_for_view(
             self._select(
-            raw_contract_rag,
-            "data_sources",
-            rag_contract.data_sources,
-            rag_service.get("data_sources"),
-            [],
+                raw_contract_rag,
+                "data_sources",
+                rag_contract.data_sources,
+                rag_service.get("data_sources"),
+                [],
             )
         )
         db_hint = self._build_db_hint(app_config=app_config, raw_config=raw_config)
@@ -507,6 +514,33 @@ class RAGOverviewService:
             "display_name": app_config.display_name,
             "icon": app_config.icon,
             "config_path": str(self._discovery.get_config_path(app_config.name) or ""),
+            "auth": {
+                "enabled": bool(auth_contract.enabled),
+                "mode": self._select(
+                    raw_contract_auth,
+                    "mode",
+                    auth_contract.mode,
+                    None,
+                    "legacy",
+                ),
+                "tenant_claim_key": self._select(
+                    raw_contract_auth,
+                    "tenant_claim_key",
+                    auth_contract.tenant_claim_key,
+                    None,
+                    "tenant_id",
+                ),
+                "required_scopes": list(auth_contract.required_scopes),
+                "allow_same_tenant_sso": bool(
+                    self._select(
+                        raw_contract_auth,
+                        "allow_same_tenant_sso",
+                        auth_contract.allow_same_tenant_sso,
+                        None,
+                        False,
+                    )
+                ),
+            },
             "db_hint": db_hint,
             "rag": {
                 "enabled": enabled,
@@ -768,11 +802,7 @@ class RAGOverviewService:
             options = field.get("options")
             if not isinstance(options, list):
                 continue
-            values = [
-                str(option).strip().lower()
-                for option in options
-                if str(option).strip()
-            ]
+            values = [str(option).strip().lower() for option in options if str(option).strip()]
             if values:
                 return values
         return [dialect.value for dialect in SQLDialect]
@@ -794,9 +824,7 @@ class RAGOverviewService:
         origin = get_origin(annotation)
         if origin is Literal:
             return [
-                str(arg).strip().lower()
-                for arg in get_args(annotation)
-                if isinstance(arg, str) and str(arg).strip()
+                str(arg).strip().lower() for arg in get_args(annotation) if isinstance(arg, str) and str(arg).strip()
             ]
         if origin is None:
             return []

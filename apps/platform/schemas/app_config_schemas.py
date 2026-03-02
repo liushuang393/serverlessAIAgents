@@ -14,9 +14,9 @@ from __future__ import annotations
 import re
 from typing import Annotated, Any, Literal
 
+from apps.platform.schemas.capability_schemas import CapabilitySpec
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-from apps.platform.schemas.capability_schemas import CapabilitySpec
 
 # CapabilitySpec または レガシーフラット文字列の Union 型
 CapabilityItem = Annotated[CapabilitySpec | str, Field(union_mode="left_to_right")]
@@ -51,10 +51,7 @@ class AgentInfo(BaseModel):
     module: str | None = Field(default=None, description="Python モジュールパス")
     capabilities: list[CapabilityItem] = Field(
         default_factory=list,
-        description=(
-            "能力タグ。レガシーフラット文字列（\"rag\"）または "
-            "3層構造 CapabilitySpec オブジェクトを混在可能。"
-        ),
+        description=('能力タグ。レガシーフラット文字列（"rag"）または 3層構造 CapabilitySpec オブジェクトを混在可能。'),
     )
     business_base: str | None = Field(
         default=None,
@@ -223,6 +220,10 @@ class AuthContractConfig(BaseModel):
     providers: list[str] = Field(default_factory=list, description="認証プロバイダ")
     allow_anonymous: bool = Field(default=True, description="匿名アクセス許可")
     required_scopes: list[str] = Field(default_factory=list, description="必須スコープ")
+    mode: str = Field(default="tenant_sso", description="認証モード（tenant_sso / enterprise_isolated）")
+    tenant_claim_key: str = Field(default="tenant_id", description="JWT テナント claim キー")
+    allow_same_tenant_sso: bool = Field(default=False, description="同一テナント内の跨 app SSO を許可")
+    token_policy: dict[str, Any] = Field(default_factory=dict, description="トークンポリシー詳細")
     session_ttl_minutes: int = Field(
         default=60,
         ge=5,

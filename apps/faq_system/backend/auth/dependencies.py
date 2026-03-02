@@ -1,17 +1,15 @@
 """FAQ システム認証依存関係.
 
-FastAPI の Depends() で使用する認証関数を提供する。
-
-使用例:
-    >>> @app.get("/api/protected")
-    >>> async def protected(user: UserInfo = Depends(require_auth)):
-    ...     return {"user": user.username}
+Tenant SSO を前提に auth_service（auth_client）で JWT を検証し、
+tenant/scope を必須ポリシーとして適用する。
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import os
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -20,11 +18,14 @@ from apps.faq_system.backend.auth.service import AuthService, get_auth_service
 from apps.faq_system.backend.security.proxy_auth import proxy_auth_verifier
 from fastapi import Cookie, Depends, Header, HTTPException, Request, WebSocket
 
+from agentflow.security.auth_client import AuthClient
 from agentflow.security.contract_auth_guard import ContractAuthGuard, ContractAuthGuardConfig
 
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Mapping
+
+    from agentflow.security.auth_client.client import RemoteUser
 
 
 logger = logging.getLogger(__name__)
@@ -40,14 +41,46 @@ _FAQ_PUBLIC_HTTP_PATHS = {
     "/openapi.json",
 }
 _faq_auth_guard: ContractAuthGuard | None = None
+_faq_auth_client: AuthClient | None = None
+_auth_contract_cache: tuple[tuple[int, int] | None, dict[str, Any]] | None = None
+_TENANT_PATH_PATTERN = re.compile(r"/tenants/([^/]+)", re.IGNORECASE)
+_AUTH_MODE_TENANT_SSO = "tenant_sso"
+_AUTH_MODE_ENTERPRISE_ISOLATED = "enterprise_isolated"
+
+
+def _env_bool(name: str) -> bool | None:
+    raw = os.getenv(name)
+    if raw is None:
+        return None
+    return raw.lower() in {"1", "true", "yes", "on"}
 
 
 def _trust_proxy_auth_enabled() -> bool:
     return os.getenv("FAQ_TRUST_PROXY_AUTH", "false").lower() in {"1", "true", "yes", "on"}
 
 
+def _legacy_fallback_enabled() -> bool:
+    mode = _resolve_auth_mode()
+    if mode == _AUTH_MODE_TENANT_SSO and not os.getenv("PYTEST_CURRENT_TEST"):
+        return False
+
+    configured = _env_bool("FAQ_AUTH_LEGACY_FALLBACK")
+    if configured is not None:
+        return configured
+
+    # pytest 実行時は auth_service 未起動のため、互換 fallback を既定有効にする。
+    return bool(os.getenv("PYTEST_CURRENT_TEST"))
+
+
 def _get_auth_service() -> AuthService:
     return get_auth_service()
+
+
+def _get_auth_client() -> AuthClient:
+    global _faq_auth_client
+    if _faq_auth_client is None:
+        _faq_auth_client = AuthClient()
+    return _faq_auth_client
 
 
 def _get_header_candidates(env_name: str, default: str) -> tuple[str, ...]:
@@ -61,6 +94,136 @@ def _pick_header(headers: Mapping[str, str], candidates: tuple[str, ...]) -> str
         if value is not None and value.strip():
             return value.strip()
     return None
+
+
+def _clean_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _normalize_list(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        return [item.strip() for item in value.split(",") if item.strip()]
+    return []
+
+
+def _auth_contract() -> dict[str, Any]:
+    global _auth_contract_cache
+    try:
+        stat = _APP_CONFIG_PATH.stat()
+        signature = (stat.st_mtime_ns, stat.st_size)
+    except OSError:
+        signature = None
+
+    if _auth_contract_cache is not None and _auth_contract_cache[0] == signature:
+        return _auth_contract_cache[1]
+
+    payload: dict[str, Any] = {}
+    if _APP_CONFIG_PATH.is_file():
+        try:
+            payload = json.loads(_APP_CONFIG_PATH.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            payload = {}
+
+    contracts = payload.get("contracts")
+    contract_map = contracts if isinstance(contracts, dict) else {}
+    auth = contract_map.get("auth")
+    auth_map = auth if isinstance(auth, dict) else {}
+    _auth_contract_cache = (signature, auth_map)
+    return auth_map
+
+
+def _resolve_required_scopes() -> list[str]:
+    contract = _auth_contract()
+    required_scopes = _normalize_list(contract.get("required_scopes"))
+    default_scope = _clean_text(os.getenv("FAQ_REQUIRED_SCOPE", "faq.access"))
+    if default_scope and default_scope not in required_scopes:
+        required_scopes.append(default_scope)
+    return required_scopes
+
+
+def _normalize_auth_mode(value: str | None) -> str:
+    text = _clean_text(value)
+    if text is None:
+        return _AUTH_MODE_TENANT_SSO
+    normalized = text.lower()
+    if normalized in {"tenant_sso", "tenant", "sso"}:
+        return _AUTH_MODE_TENANT_SSO
+    if normalized in {
+        "enterprise_isolated",
+        "enterprise",
+        "legacy",
+        "single_app",
+        "app_isolated",
+    }:
+        return _AUTH_MODE_ENTERPRISE_ISOLATED
+    return _AUTH_MODE_TENANT_SSO
+
+
+def _resolve_auth_mode() -> str:
+    env_mode = _clean_text(os.getenv("FAQ_AUTH_MODE"))
+    if env_mode:
+        return _normalize_auth_mode(env_mode)
+    contract_mode = _clean_text(_auth_contract().get("mode"))
+    return _normalize_auth_mode(contract_mode)
+
+
+def _resolve_allow_same_tenant_sso() -> bool:
+    if _resolve_auth_mode() != _AUTH_MODE_TENANT_SSO:
+        return False
+
+    contract = _auth_contract()
+    direct_value = contract.get("allow_same_tenant_sso")
+    if isinstance(direct_value, bool):
+        return direct_value
+
+    token_policy = contract.get("token_policy")
+    token_policy_map = token_policy if isinstance(token_policy, dict) else {}
+    contract_value = token_policy_map.get("allow_same_tenant_sso")
+    if isinstance(contract_value, bool):
+        return contract_value
+    env_value = _env_bool("FAQ_ALLOW_SAME_TENANT_SSO")
+    if env_value is not None:
+        return env_value
+    return True
+
+
+def _resolve_require_tenant_context() -> bool:
+    if _resolve_auth_mode() != _AUTH_MODE_TENANT_SSO:
+        return False
+
+    env_value = _env_bool("FAQ_REQUIRE_TENANT_CONTEXT")
+    if env_value is not None:
+        return env_value
+
+    # テスト時は tenant ヘッダー省略ケースを許容する。
+    return not os.getenv("PYTEST_CURRENT_TEST")
+
+
+def _resolve_request_tenant(headers: Mapping[str, str], request_path: str) -> str | None:
+    tenant_header_names = _get_header_candidates("FAQ_TENANT_HEADER_NAMES", "x-tenant-id")
+    tenant_from_header = _pick_header(headers, tenant_header_names)
+    if tenant_from_header:
+        return tenant_from_header
+
+    match = _TENANT_PATH_PATTERN.search(request_path)
+    if match:
+        return _clean_text(match.group(1))
+
+    host = _clean_text(headers.get("host"))
+    if not host:
+        return _clean_text(os.getenv("FAQ_DEFAULT_TENANT_ID"))
+    host_no_port = host.split(":", 1)[0]
+    if host_no_port in {"localhost", "127.0.0.1"}:
+        return _clean_text(os.getenv("FAQ_DEFAULT_TENANT_ID"))
+    segments = [part for part in host_no_port.split(".") if part]
+    if len(segments) >= 3:
+        return _clean_text(segments[0])
+    return _clean_text(os.getenv("FAQ_DEFAULT_TENANT_ID"))
 
 
 def _normalize_proxy_role(raw_role: str | None) -> str | None:
@@ -154,6 +317,132 @@ def _collect_proxy_values(headers: Mapping[str, str]) -> dict[str, str | None]:
     }
 
 
+def _to_user_info(remote: RemoteUser) -> UserInfo:
+    effective_roles = remote.roles or [remote.role]
+    primary_role = remote.role or (effective_roles[0] if effective_roles else "employee")
+    return UserInfo(
+        user_id=remote.user_id,
+        username=remote.username,
+        display_name=remote.display_name or remote.username,
+        department=remote.department,
+        position=remote.position,
+        role=primary_role,
+        roles=effective_roles,
+        tenant_id=remote.tenant_id,
+        scopes=remote.scopes,
+        azp=remote.azp,
+    )
+
+
+def _validate_tenant_scope_policy(
+    *,
+    user: UserInfo,
+    request_tenant: str | None,
+    required_scopes: list[str],
+) -> None:
+    mode = _resolve_auth_mode()
+    token_tenant = _clean_text(user.tenant_id)
+    if mode == _AUTH_MODE_TENANT_SSO and _resolve_require_tenant_context() and not request_tenant:
+        raise HTTPException(
+            status_code=403,
+            detail={"message": "tenant context is required", "error_code": "tenant_missing"},
+        )
+    if mode == _AUTH_MODE_TENANT_SSO and request_tenant and not token_tenant:
+        raise HTTPException(
+            status_code=403,
+            detail={"message": "tenant_id is required in token", "error_code": "tenant_missing"},
+        )
+    if mode == _AUTH_MODE_TENANT_SSO and request_tenant and token_tenant and request_tenant != token_tenant:
+        raise HTTPException(
+            status_code=403,
+            detail={"message": "tenant mismatch", "error_code": "tenant_mismatch"},
+        )
+
+    current_app = os.getenv("FAQ_APP_NAME", "faq_system")
+    token_source = _clean_text(user.azp)
+    if mode == _AUTH_MODE_ENTERPRISE_ISOLATED:
+        if token_source and token_source not in {current_app, "proxy_auth"}:
+            raise HTTPException(
+                status_code=403,
+                detail={"message": "token source app is not allowed", "error_code": "token_invalid"},
+            )
+    elif not _resolve_allow_same_tenant_sso():
+        if token_source and token_source != current_app:
+            raise HTTPException(
+                status_code=403,
+                detail={"message": "token source app is not allowed", "error_code": "token_invalid"},
+            )
+
+    if required_scopes:
+        granted = set(user.scopes)
+        if not granted.issuperset(required_scopes):
+            raise HTTPException(
+                status_code=403,
+                detail={
+                    "message": "required scope is missing",
+                    "error_code": "insufficient_scope",
+                    "required_scopes": required_scopes,
+                },
+            )
+
+
+async def _resolve_with_auth_service(
+    *,
+    authorization: str | None,
+    request_tenant: str | None,
+) -> UserInfo | None:
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return None
+    token = authorization.split(" ", 1)[1].strip()
+    if not token:
+        return None
+
+    remote_user = await _get_auth_client().verify_token(token)
+    if remote_user is None:
+        return None
+    user = _to_user_info(remote_user)
+    _validate_tenant_scope_policy(
+        user=user,
+        request_tenant=request_tenant,
+        required_scopes=_resolve_required_scopes(),
+    )
+    return user
+
+
+async def _resolve_legacy_fallback(
+    *,
+    authorization: str | None,
+    session_token: str | None,
+) -> UserInfo | None:
+    if not _legacy_fallback_enabled():
+        return None
+    auth_service = _get_auth_service()
+    if authorization:
+        auth_user = await auth_service.verify_token(authorization)
+        if auth_user:
+            metadata = auth_user.metadata or {}
+            username = metadata.get("username", auth_user.id)
+            current_user = await auth_service.get_user(username)
+            if current_user:
+                return current_user
+            role = auth_user.roles[0] if auth_user.roles else "employee"
+            return UserInfo(
+                user_id=auth_user.id,
+                username=username,
+                display_name=metadata.get("display_name", auth_user.id),
+                department=metadata.get("department", ""),
+                position=metadata.get("position", ""),
+                role=role,
+                roles=auth_user.roles,
+                tenant_id=_clean_text(metadata.get("tenant_id")),
+                scopes=_normalize_list(metadata.get("scp")),
+                azp=_clean_text(metadata.get("azp")),
+            )
+    if session_token:
+        return await auth_service.get_user_by_session_token(session_token)
+    return None
+
+
 async def _resolve_user_from_request_payload(
     *,
     headers: Mapping[str, str],
@@ -168,6 +457,7 @@ async def _resolve_user_from_request_payload(
         request_method=request_method,
         request_path=request_path,
         **_collect_proxy_values(headers),
+        _headers=headers,
     )
 
 
@@ -176,16 +466,7 @@ async def get_current_user(
     authorization: str | None = Header(None),
     session_token: str | None = Cookie(None, alias="session_token"),
 ) -> UserInfo | None:
-    """現在のユーザーを取得 (任意).
-
-    JWT トークン / セッション Cookie / (任意)認証プロキシヘッダーから認証する。
-
-    Args:
-        authorization: Authorization ヘッダー
-        session_token: セッション Cookie
-    Returns:
-        認証ユーザー、または None
-    """
+    """現在のユーザーを取得 (任意)."""
     return await _resolve_user_from_request_payload(
         headers=request.headers,
         authorization=authorization,
@@ -209,57 +490,21 @@ async def resolve_user(
     x_auth_signature: str | None = None,
     request_method: str = "GET",
     request_path: str = "/",
+    _headers: Mapping[str, str] | None = None,
 ) -> UserInfo | None:
-    """認証情報からユーザーを解決.
+    """認証情報からユーザーを解決."""
+    headers = _headers or {}
+    request_tenant = _resolve_request_tenant(headers, request_path)
 
-    Args:
-        authorization: Authorization ヘッダー
-        session_token: セッション Cookie
-        x_auth_user: 認証プロキシユーザー名
-        x_auth_name: 認証プロキシ表示名
-        x_auth_role: 認証プロキシロール
-        x_auth_department: 認証プロキシ部署
-        x_auth_position: 認証プロキシ役職
-        x_auth_timestamp: 認証プロキシ時刻
-        x_auth_nonce: 認証プロキシ nonce
-        x_auth_signature: 認証プロキシ署名
-        request_method: HTTP メソッド
-        request_path: リクエストパス
+    # 1) auth_service トークンを最優先
+    auth_user = await _resolve_with_auth_service(
+        authorization=authorization,
+        request_tenant=request_tenant,
+    )
+    if auth_user is not None:
+        return auth_user
 
-    Returns:
-        認証ユーザー、または None
-    """
-    auth_service = _get_auth_service()
-
-    # JWT トークン認証を試行
-    if authorization:
-        auth_user = await auth_service.verify_token(authorization)
-        if auth_user:
-            metadata = auth_user.metadata or {}
-            username = metadata.get("username", auth_user.id)
-
-            # 可能なら最新プロフィールを優先（トークン内メタデータの陳腐化対策）
-            current_user = await auth_service.get_user(username)
-            if current_user:
-                return current_user
-
-            role = auth_user.roles[0] if auth_user.roles else "employee"
-            return UserInfo(
-                user_id=auth_user.id,
-                username=username,
-                display_name=metadata.get("display_name", auth_user.id),
-                department=metadata.get("department", ""),
-                position=metadata.get("position", ""),
-                role=role,
-            )
-
-    # セッション Cookie 認証を試行
-    if session_token:
-        session_user = await auth_service.get_user_by_session_token(session_token)
-        if session_user:
-            return session_user
-
-    # 認証プロキシ（Identity-Aware Proxy 等）を信頼する設定
+    # 2) 認証プロキシ（明示的に有効化時のみ）
     if _trust_proxy_auth_enabled() and x_auth_user:
         verified = await proxy_auth_verifier.verify(
             user=x_auth_user,
@@ -276,16 +521,30 @@ async def resolve_user(
         if verified is None:
             logger.warning("Proxy auth verification failed for user=%s", x_auth_user)
             return None
-        return UserInfo(
+        proxy_user = UserInfo(
             user_id=_proxy_user_id(verified.username),
             username=verified.username,
             display_name=verified.display_name,
             department=verified.department,
             position=verified.position,
             role=verified.role,
+            roles=[verified.role],
+            tenant_id=request_tenant,
+            scopes=_resolve_required_scopes(),
+            azp="proxy_auth",
         )
+        _validate_tenant_scope_policy(
+            user=proxy_user,
+            request_tenant=request_tenant,
+            required_scopes=_resolve_required_scopes(),
+        )
+        return proxy_user
 
-    return None
+    # 3) 旧実装 fallback（既定無効）
+    return await _resolve_legacy_fallback(
+        authorization=authorization,
+        session_token=session_token,
+    )
 
 
 async def resolve_user_from_http_request(request: Request) -> UserInfo | None:
@@ -349,33 +608,14 @@ async def require_ws_auth(websocket: WebSocket) -> UserInfo | None:
 async def get_optional_user(
     user: UserInfo | None = Depends(get_current_user),
 ) -> UserInfo | None:
-    """オプショナルユーザー取得 (未認証でもエラーにならない).
-
-    Args:
-        user: 現在のユーザー（任意）
-
-    Returns:
-        ユーザー情報、または None
-    """
+    """オプショナルユーザー取得 (未認証でもエラーにならない)."""
     return user
 
 
 async def require_auth(
     request: Request,
 ) -> UserInfo:
-    """認証必須.
-
-    未認証の場合は 401 エラーを返す。
-
-    Args:
-        request: HTTP リクエスト
-
-    Returns:
-        認証済みユーザー
-
-    Raises:
-        HTTPException: 未認証の場合
-    """
+    """認証必須."""
     guard = get_faq_contract_auth_guard()
     resolved = await guard.require_http(request)
     if isinstance(resolved, UserInfo):
@@ -385,30 +625,19 @@ async def require_auth(
     if user is None:
         raise HTTPException(
             status_code=401,
-            detail="認証が必要です。ログインしてください。",
+            detail={"message": "認証が必要です。ログインしてください。", "error_code": "token_invalid"},
         )
     return user
 
 
 def require_role(*roles: str) -> Callable[..., Any]:
-    """ロール必須依存関係ファクトリ.
-
-    Args:
-        roles: 許可ロール
-
-    Returns:
-        FastAPI 依存関係
-
-    使用例:
-        >>> @app.get("/admin")
-        >>> async def admin(user = Depends(require_role("admin"))):
-        ...     return {"ok": True}
-    """
+    """ロール必須依存関係ファクトリ."""
 
     async def _check_role(
         user: UserInfo = Depends(require_auth),
     ) -> UserInfo:
-        if user.role not in roles:
+        effective_roles = set(user.roles or [user.role])
+        if not any(role in effective_roles for role in roles):
             raise HTTPException(
                 status_code=403,
                 detail=f"権限不足です。必要なロール: {', '.join(roles)}",

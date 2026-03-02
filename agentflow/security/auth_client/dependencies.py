@@ -115,7 +115,8 @@ def require_role(*roles: str) -> Callable[..., Any]:
     """
 
     async def _check(user: RemoteUser = Depends(require_auth)) -> RemoteUser:
-        if user.role not in roles:
+        effective_roles = set(user.roles or [user.role])
+        if not any(role in effective_roles for role in roles):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"権限が不足しています。必要なロール: {', '.join(roles)}",

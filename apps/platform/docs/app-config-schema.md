@@ -34,7 +34,17 @@ P0 では `contracts`、`blueprint`、`visibility` を全 App に補完する。
     "commands": { "backend_dev": null, "frontend_dev": null, "publish": null, "start": null, "stop": null }
   },
   "contracts": {
-    "auth": { "enabled": false, "providers": [], "allow_anonymous": true, "required_scopes": [], "session_ttl_minutes": 60 },
+    "auth": {
+      "enabled": false,
+      "providers": [],
+      "allow_anonymous": true,
+      "required_scopes": [],
+      "mode": "tenant_sso",
+      "tenant_claim_key": "tenant_id",
+      "allow_same_tenant_sso": false,
+      "token_policy": {},
+      "session_ttl_minutes": 60
+    },
     "rag": { "enabled": true, "pattern": null, "provider": null, "collections": ["faq_system_knowledge"], "data_sources": [], "chunk_strategy": "recursive", "chunk_size": 800, "chunk_overlap": 120, "retrieval_method": "hybrid", "embedding_model": null, "rerank_model": null, "default_top_k": 5, "score_threshold": null, "indexing_schedule": null },
     "skills": { "auto_install": false, "hot_reload": true, "allowed_sources": [], "default_skills": [] },
     "release": { "strategy": "manual", "targets": [], "environments": ["dev"], "require_approval": true }
@@ -131,6 +141,7 @@ RAG 概要サービスの抽出優先度は以下。
 9. `security_mode`: `read_only | approval_required | autonomous`（assistant 向け）
 10. `evolution.scope_policy`: `tenant_app -> tenant_product_line -> global_verified`
 11. `evolution.validator_queue.backend`: `redis_stream | none`
+12. `contracts.auth.mode`: `tenant_sso | enterprise_isolated`（既定は `tenant_sso`。tenant SSO 運用時は `tenant_claim_key` / `required_scopes` を併用）
 
 ---
 

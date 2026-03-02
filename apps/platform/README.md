@@ -106,6 +106,53 @@ curl http://localhost:8001/api/studios/framework/rag/apps/faq_system/config
 
 レスポンスの `hot_apply.applied` が `false` の場合、UI は restart fallback を実行します。
 
+## Tenant SSO 統一契約（FAQ / auth_service 運用）
+
+`faq_system` は `auth_service` を認証の単一点とし、境界は `tenant + scope + role` で管理します。
+
+1. `contracts.auth.mode` は `tenant_sso` または `enterprise_isolated` を明示する。
+2. `tenant_claim_key` は既定 `tenant_id`。
+3. `allow_same_tenant_sso=true` の場合、同一 tenant の他 app 発行 token も利用可（`azp` は監査用途）。
+4. `required_scopes`（例: `faq.access`）を満たさない token は FAQ API で拒否。
+5. 企業データの RAG 検索範囲は role/scope マッピングで制御し、ログイン可否と分離する。
+
+### 排他モードフラグ（重要）
+
+`FAQ_AUTH_MODE` で認証モードを **排他的** に切り替える。
+
+- 既定値は `tenant_sso`（企業個別設定を未導入の初期運用向け）
+- `tenant_sso`: 同一 tenant の app 間 SSO を許可（tenant 境界を強制）
+- `enterprise_isolated`: app 個別運用（他 app 発行 token は拒否）
+
+このフラグでモードを固定した場合、両モードの判定ロジックは同時に有効化されない。
+
+推奨運用設定:
+
+- Tenant SSO運用: `FAQ_AUTH_MODE=tenant_sso`, `FAQ_AUTH_PROXY_LOCAL_FALLBACK=false`
+- 企業個別運用: `FAQ_AUTH_MODE=enterprise_isolated`, `FAQ_AUTH_PROXY_LOCAL_FALLBACK=false`
+
+### contracts.auth 例
+
+```json
+{
+  "contracts": {
+    "auth": {
+      "enabled": true,
+      "providers": ["jwt", "oauth2", "saml", "ldap"],
+      "allow_anonymous": false,
+      "mode": "tenant_sso",
+      "tenant_claim_key": "tenant_id",
+      "required_scopes": ["faq.access"],
+      "allow_same_tenant_sso": true,
+      "token_policy": {
+        "allow_same_tenant_sso": true
+      },
+      "session_ttl_minutes": 60
+    }
+  }
+}
+```
+
 ## FAQ ルーティング 3段戦略（運用標準）
 
 `faq_system` の RAG/Router 運用は、以下 3 段戦略を **標準契約** とします。

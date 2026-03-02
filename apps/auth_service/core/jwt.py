@@ -35,6 +35,10 @@ class TokenClaims:
     department: str
     position: str
     role: str
+    roles: list[str]
+    tenant_id: str | None
+    scopes: list[str]
+    azp: str | None
     email: str | None
     jti: str
     iat: datetime
@@ -117,6 +121,7 @@ class JWTManager:
             "department": department,
             "position": position,
             "role": role,
+            "roles": [role],
         }
         if email:
             payload["email"] = email
@@ -129,6 +134,7 @@ class JWTManager:
         self,
         user_id: str,
         family: str | None = None,
+        extra_claims: dict[str, Any] | None = None,
     ) -> tuple[str, str]:
         """リフレッシュトークンを発行.
 
@@ -153,6 +159,8 @@ class JWTManager:
             "type": "refresh",
             "family": family_id,
         }
+        if extra_claims:
+            payload.update(extra_claims)
 
         return self._encode(payload), family_id
 
@@ -180,6 +188,10 @@ class JWTManager:
                 department=str(payload.get("department", "")),
                 position=str(payload.get("position", "")),
                 role=str(payload.get("role", "employee")),
+                roles=_normalize_str_list(payload.get("roles"), fallback=[str(payload.get("role", "employee"))]),
+                tenant_id=_clean_text(payload.get("tenant_id")),
+                scopes=_normalize_str_list(payload.get("scp"), fallback=[]),
+                azp=_clean_text(payload.get("azp")),
                 email=payload.get("email"),
                 jti=str(payload.get("jti", "")),
                 iat=datetime.fromtimestamp(int(payload["iat"]), tz=UTC),
@@ -264,3 +276,22 @@ class JWTManager:
     def access_expire_seconds(self) -> int:
         """アクセストークン有効期限（秒）."""
         return self._access_expire_minutes * 60
+
+
+def _clean_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _normalize_str_list(value: Any, *, fallback: list[str]) -> list[str]:
+    if isinstance(value, list):
+        cleaned = [str(item).strip() for item in value if str(item).strip()]
+        if cleaned:
+            return cleaned
+    if isinstance(value, str):
+        cleaned = [item.strip() for item in value.split(",") if item.strip()]
+        if cleaned:
+            return cleaned
+    return list(fallback)

@@ -119,6 +119,9 @@ async def register(req: RegisterRequest, response: Response) -> AuthResponse:
         department=req.department or "",
         position=req.position or "",
         email=req.email,
+        tenant_id=None,
+        client_app=None,
+        requested_scopes=None,
     )
 
     if not success or user is None or token_pair is None:
@@ -148,6 +151,9 @@ async def login(req: LoginRequest, response: Response) -> AuthResponse:
         username=req.username,
         password=req.password,
         totp_code=req.totp_code,
+        tenant_id=req.tenant_id,
+        client_app=req.client_app,
+        requested_scopes=req.requested_scopes,
     )
 
     if not success or user is None or token_pair is None:
@@ -198,6 +204,9 @@ async def sso_login(req: SSOLoginRequest, response: Response) -> Response:
         username=req.username,
         password=req.password,
         totp_code=req.totp_code,
+        tenant_id=req.tenant_id,
+        client_app=req.client_app,
+        requested_scopes=req.requested_scopes,
     )
 
     if not success or user is None or token_pair is None:
@@ -461,6 +470,19 @@ async def oauth2_authorize(provider: str) -> dict[str, str]:
     return {"authorization_url": url, "state": state}
 
 
+@router.get("/oauth2/{provider}/authorize", response_model=None)
+async def oauth2_authorize_compat(provider: str) -> RedirectResponse:
+    """互換経路: /authorize 付き URL でも認可開始できるようにする."""
+    payload = await oauth2_authorize(provider)
+    authorization_url = payload.get("authorization_url")
+    if not authorization_url:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="authorization_url の生成に失敗しました",
+        )
+    return RedirectResponse(url=authorization_url, status_code=302)
+
+
 @router.get("/oauth2/{provider}/callback", response_model=None)
 async def oauth2_callback(
     provider: str,
@@ -501,7 +523,13 @@ async def oauth2_callback(
         return AuthResponse(success=False, message="OAuth2 認証に失敗しました")
 
     svc = _service()
-    user, token_pair = await svc.login_with_external_identity(identity, provider)
+    user, token_pair = await svc.login_with_external_identity(
+        identity,
+        provider,
+        tenant_id=None,
+        client_app=provider,
+        requested_scopes=None,
+    )
 
     session_token = await svc.create_session(user)
     _set_session_cookie(response, session_token)
@@ -596,8 +624,6 @@ def _validate_redirect_uri(uri: str) -> bool:
         if parsed.scheme not in {"http", "https"}:
             return False
         # ホスト名が存在すること
-        if not parsed.netloc:
-            return False
-        return True
+        return bool(parsed.netloc)
     except Exception:
         return False

@@ -22,6 +22,10 @@ class UserInfo(BaseModel):
     department: str = Field("", description="部署")
     position: str = Field("", description="役職")
     role: str = Field("employee", description="ロール")
+    roles: list[str] = Field(default_factory=list, description="ロール一覧")
+    tenant_id: str | None = Field(None, description="テナントID")
+    scopes: list[str] = Field(default_factory=list, description="許可スコープ一覧")
+    azp: str | None = Field(None, description="認証を要求したクライアントアプリ")
     email: str | None = Field(None, description="メールアドレス")
     mfa_enabled: bool = Field(False, description="MFA 有効フラグ")
 
@@ -40,6 +44,20 @@ class LoginRequest(BaseModel):
     redirect_uri: str | None = Field(
         None,
         description="SSO: 認証成功後のリダイレクト先 URL（クライアントアプリのウェルカムページ等）",
+    )
+    tenant_id: str | None = Field(
+        None,
+        max_length=120,
+        description="要求テナントID（未指定時は既定テナント）",
+    )
+    client_app: str | None = Field(
+        None,
+        max_length=120,
+        description="クライアントアプリ識別子（azp）",
+    )
+    requested_scopes: list[str] = Field(
+        default_factory=list,
+        description="要求スコープ一覧",
     )
 
 
@@ -63,6 +81,15 @@ class SSOLoginRequest(BaseModel):
         None,
         max_length=100,
         description="クライアントアプリ識別子（ログ・監査用）",
+    )
+    tenant_id: str | None = Field(
+        None,
+        max_length=120,
+        description="要求テナントID（未指定時は既定テナント）",
+    )
+    requested_scopes: list[str] = Field(
+        default_factory=list,
+        description="要求スコープ一覧",
     )
 
 

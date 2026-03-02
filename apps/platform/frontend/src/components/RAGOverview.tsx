@@ -842,6 +842,35 @@ export function RAGOverview() {
                   </div>
                 ) : (
                   <div className="rounded-lg border border-slate-700 bg-slate-950/40 p-4 space-y-4">
+                    {selectedConfig.auth && (
+                      <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-3">
+                        <p className="text-xs font-semibold text-cyan-200">Tenant SSO / Auth Contract</p>
+                        <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 text-[11px]">
+                          <p className="text-slate-300">
+                            mode: <span className="text-cyan-200">{selectedConfig.auth.mode || 'legacy'}</span>
+                          </p>
+                          <p className="text-slate-300">
+                            tenant_claim_key:{' '}
+                            <span className="text-cyan-200">{selectedConfig.auth.tenant_claim_key || 'tenant_id'}</span>
+                          </p>
+                          <p className="text-slate-300">
+                            allow_same_tenant_sso:{' '}
+                            <span className="text-cyan-200">
+                              {selectedConfig.auth.allow_same_tenant_sso ? 'true' : 'false'}
+                            </span>
+                          </p>
+                          <p className="text-slate-300">
+                            required_scopes:{' '}
+                            <span className="text-cyan-200">
+                              {selectedConfig.auth.required_scopes.length > 0
+                                ? selectedConfig.auth.required_scopes.join(', ')
+                                : '(none)'}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <Toggle
                         label="RAG 有効化"

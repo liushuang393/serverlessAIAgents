@@ -55,9 +55,7 @@ _load_faq_app_env()
 
 # --- 循環参照回避のため、FastAPI 起動前にパッケージパス等を微調整する場合に備え ---
 
-from apps.faq_system.backend.auth import oauth2_router, saml_router
 from apps.faq_system.backend.auth.dependencies import (
-    get_auth_service,
     get_faq_contract_auth_guard,
 )
 from apps.faq_system.backend.auth.router import router as auth_router
@@ -172,7 +170,6 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         await db_manager.create_all_tables()
 
     await kb_registry.ensure_initialized()
-    await get_auth_service().ensure_bootstrap_data()
     await start_rag_ingestion_scheduler()
 
     # --- AppCapabilityBootstrapper: contracts.* から RAG/Skills を自動接続 ---
@@ -226,8 +223,6 @@ app.add_middleware(
 # =============================================================================
 
 app.include_router(auth_router)
-app.include_router(oauth2_router.router)
-app.include_router(saml_router.router)
 app.include_router(chat_router)
 app.include_router(rag_router)
 app.include_router(sql_router)

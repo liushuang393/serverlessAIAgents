@@ -171,6 +171,10 @@
       "providers": [],
       "allow_anonymous": true,
       "required_scopes": [],
+      "mode": "tenant_sso",
+      "tenant_claim_key": "tenant_id",
+      "allow_same_tenant_sso": false,
+      "token_policy": {},
       "session_ttl_minutes": 60
     },
     "rag": {

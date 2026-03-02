@@ -24,6 +24,9 @@ class LoginRequest(BaseModel):
         description="パスワード",
     )
     totp_code: str | None = Field(None, description="MFAコード (6桁)")
+    tenant_id: str | None = Field(None, description="テナントID（tenant SSO 用）")
+    client_app: str | None = Field(None, description="クライアントアプリ識別子（azp）")
+    requested_scopes: list[str] = Field(default_factory=list, description="要求スコープ一覧")
 
 
 class RegisterRequest(BaseModel):
@@ -107,6 +110,10 @@ class UserInfo(BaseModel):
     department: str = Field("", description="部署")
     position: str = Field("", description="役職")
     role: str = Field("employee", description="ロール")
+    roles: list[str] = Field(default_factory=list, description="ロール一覧")
+    tenant_id: str | None = Field(None, description="テナントID")
+    scopes: list[str] = Field(default_factory=list, description="許可スコープ一覧")
+    azp: str | None = Field(None, description="認証要求元アプリ")
 
 
 class AuthResponse(BaseModel):
@@ -116,7 +123,9 @@ class AuthResponse(BaseModel):
     message: str = Field(..., description="メッセージ")
     user: UserInfo | None = Field(None, description="ユーザー情報")
     access_token: str | None = Field(None, description="アクセストークン")
+    refresh_token: str | None = Field(None, description="リフレッシュトークン")
     token_type: str = Field("bearer", description="トークンタイプ")
+    expires_in: int | None = Field(None, description="アクセストークン有効期限（秒）")
 
 
 class TokenResponse(BaseModel):

@@ -296,6 +296,8 @@ npm run dev
 - ローカル開発・テスト・本番は環境別ファイル（`.env` / `.env.test` / `.env.production`）で分離する
 - 本番環境はテスト環境と可能な限り同一構成にする
 - `.env.example` を変更したら必ず `.env` も同期する
+- 新規設定キーを追加する場合、未設定時の既定値をコード側で必ず定義する（`os.getenv(..., default)` / Pydantic `Field(default=...)`）
+- 既定値フォールバック経路はテストで担保する（「設定欠落時でも安全に起動・動作する」こと）
 - LLM プロバイダーは `LLM_PROVIDER` で明示指定する（`auto` 常用を避ける）
 - `app_config.json` を持つ App のポートは `app_config.json` を単一定義元とし、`<APP>_HOST/PORT` は一時上書き用途に限定する
 - 詳細: [開発原則 - 環境設定管理](global/principles.md#環境設定管理environment-configuration)

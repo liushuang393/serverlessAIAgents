@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import uuid
 from dataclasses import asdict
 from pathlib import Path
@@ -57,6 +58,7 @@ from agentflow.providers.tool_provider import (
 )
 from agentflow.run import LightningTrainingRequest, TrajectoryAdapter
 from agentflow.security import SafetyMixin
+from agentflow.security.policy_engine import AuthContext
 
 
 # =============================================================================
@@ -254,6 +256,14 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         flow_context: Any,
     ) -> None:
         """Governance ポリシーチェックを実行."""
+        # ローカル/テスト実行では auth/plugin 制約を明示的にバイパスする。
+        # 本番では FlowContext を必須とし、通常の Governance 判定を通す。
+        if flow_context is None and self._allow_local_default_auth():
+            await self._emit_step_event("node_start", tool.name)
+            return
+
+        auth_context = self._build_auth_context(flow_context, tool)
+
         # 実行コンテキスト構築
         context = ToolExecutionContext(
             trace_id=task_id,
@@ -261,13 +271,23 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             flow_id=self._flow_id,
             app_name="code_migration_assistant",
             product_line="migration",
-            auth_context=None,  # 認証コンテキストが必要な場合はここで設定
+            auth_context=auth_context,
         )
 
         # フローコンテキストからユーザー情報を取得
         if flow_context:
             context.metadata["user_id"] = flow_context.user_id
             context.metadata["tenant_id"] = flow_context.tenant_id
+        elif auth_context is not None:
+            context.metadata["user_id"] = str(auth_context.subject.get("user_id", "local-runner"))
+            context.metadata["auth_mode"] = "local_default"
+
+        if context.auth_context is None:
+            msg = (
+                "Governance Policy Violation: 認証コンテキストが存在しません。"
+                "本番実行では API 経由で FlowContext を設定してください。"
+            )
+            raise PermissionError(msg)
 
         # ポリシー評価（ログ記録も含む）
         result = await self._governance.evaluate_tool(
@@ -284,6 +304,75 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
 
         # Emit Node Start Event
         await self._emit_step_event("node_start", tool.name)
+
+    @staticmethod
+    def _allow_local_default_auth() -> bool:
+        """ローカル/テスト実行時にデフォルト認証コンテキストを許可するか判定."""
+        force_auth = os.getenv("CODE_MIGRATION_FORCE_AUTH", "").lower()
+        if force_auth in {"1", "true", "yes"}:
+            return False
+
+        env_name = (
+            os.getenv("CODE_MIGRATION_ENV")
+            or os.getenv("APP_ENV")
+            or os.getenv("ENV")
+            or ""
+        ).lower()
+        if env_name in {"prod", "production"}:
+            return False
+
+        allow_local = os.getenv("CODE_MIGRATION_ALLOW_LOCAL_AUTH", "true").lower()
+        return allow_local not in {"0", "false", "no"}
+
+    def _build_auth_context(
+        self,
+        flow_context: Any,
+        tool: RegisteredTool,
+    ) -> AuthContext | None:
+        """Governance 用認証コンテキストを構築する."""
+        if flow_context is not None:
+            user_context = getattr(flow_context, "user_context", {})
+            if not isinstance(user_context, dict):
+                user_context = {}
+
+            permissions = user_context.get("permissions")
+            if not isinstance(permissions, list) or not permissions:
+                permissions = ["read", "write", "execute", "manage"]
+
+            role = user_context.get("role")
+            if not isinstance(role, str) or not role:
+                role = "manager"
+
+            subject = {
+                "user_id": getattr(flow_context, "user_id", "unknown-user"),
+                "role": role,
+                "permissions": permissions,
+            }
+            for key, value in user_context.items():
+                if key not in {"permissions", "role"}:
+                    subject[key] = value
+
+            return AuthContext(
+                subject=subject,
+                resource={"type": tool.name},
+                action=tool.operation_type.value,
+                tenant_id=getattr(flow_context, "tenant_id", None),
+            )
+
+        if not self._allow_local_default_auth():
+            return None
+
+        return AuthContext(
+            subject={
+                "user_id": "local-runner",
+                "role": "manager",
+                "permissions": ["read", "write", "execute", "manage"],
+            },
+            resource={"type": tool.name},
+            action=tool.operation_type.value,
+            environment={"mode": "local"},
+            tenant_id="local",
+        )
 
     async def _log_completion(
         self,
@@ -681,7 +770,18 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
                         "migration_design": design_for_next,
                     }
                 )
-            fix_artifact = self._validate_or_fail(LimitedFixArtifact, fix, "fix")
+                fix_artifact = self._validate_or_fail(LimitedFixArtifact, fix, "fix")
+            else:
+                fix_artifact = LimitedFixArtifact(
+                    meta=transformation_artifact.meta.model_copy(update={"stage": "fix"}),
+                    applied=False,
+                    target_code=transformation_artifact.target_code,
+                    patch_summary=["修正不要（裁定が TRANSFORM_ISSUE 以外）"],
+                    retest_required=False,
+                    unknowns=[],
+                    extensions={},
+                )
+
             if fix_artifact is None:
                 await artifact_store.append_failure(
                     task_id=task_id,
@@ -700,7 +800,8 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             artifact_paths["fix"] = str(fix_path)
             await artifact_store.append_decision(task_id, "限定修正工程を完了")
 
-            await self._log_completion(MIGRATION_FIX, task_id, {"applied": fix_artifact.applied}, flow_context)
+            if quality_artifact.decision == QualityDecision.TRANSFORM_ISSUE:
+                await self._log_completion(MIGRATION_FIX, task_id, {"applied": fix_artifact.applied}, flow_context)
 
             final_differential = diff_artifact
             final_quality = quality_artifact

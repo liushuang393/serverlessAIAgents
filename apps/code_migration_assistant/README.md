@@ -129,6 +129,46 @@ exec uvicorn apps.code_migration_assistant.backend.app:app --host 0.0.0.0 --port
 
 ---
 
+## 🤖 非対話実行契約（run）
+
+Migration Studio / CI 連携向けに、CLI の契約実行モードを提供します。
+
+```bash
+python -m apps.code_migration_assistant.cli run \
+  --input /tmp/cma_input.json \
+  --output /tmp/cma_output.json \
+  --events /tmp/cma_events.ndjson
+```
+
+入力 JSON（例）:
+
+```json
+{
+  "task_id": "task-123",
+  "source_path": "/tmp/sample.cbl",
+  "output_root": "/tmp/migration_output",
+  "fast_mode": true,
+  "model": "claude-opus-4-6",
+  "options": {}
+}
+```
+
+イベント NDJSON（例）:
+
+```json
+{"type":"stage_start","stage":"analyzer","program_name":"SAMPLE"}
+{"type":"stage_complete","stage":"quality_gate","decision":"PASSED","program_name":"SAMPLE"}
+{"type":"complete","stage":"pipeline","decision":"PASSED","output_dir":"/tmp/migration_output/task-123"}
+```
+
+終了コード:
+
+- `0`: 成功（`PASSED` / `KNOWN_LEGACY`）
+- `1`: 実行完了だが業務判定NG
+- `2`: 環境/入力エラー
+
+---
+
 ## 🧪 テスト
 
 ```bash

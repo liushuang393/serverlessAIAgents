@@ -99,6 +99,12 @@
       "providers": ["jwt", "oauth2", "saml", "ldap"],
       "allow_anonymous": false,
       "required_scopes": [],
+      "mode": "tenant_sso",
+      "tenant_claim_key": "tenant_id",
+      "allow_same_tenant_sso": true,
+      "token_policy": {
+        "allow_same_tenant_sso": true
+      },
       "session_ttl_minutes": 60
     },
     "rag": {

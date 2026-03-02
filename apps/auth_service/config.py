@@ -74,6 +74,12 @@ class Settings(BaseSettings):
     PASSWORD_RESET_TTL_MINUTES: int = 15
     SESSION_TTL_SECONDS: int = 604800  # 7日
 
+    # --- Tenant SSO ポリシー ---
+    DEFAULT_TENANT_ID: str = "default"
+    DEFAULT_CLIENT_APP: str = "unknown_app"
+    DEFAULT_REQUESTED_SCOPES: str = "api,faq.access"
+    ALLOW_SAME_TENANT_SSO: bool = True
+
     # --- CORS 設定 ---
     ALLOWED_ORIGINS: list[str] = ["*"]
 

@@ -41,7 +41,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -152,6 +152,20 @@ class AgentFlowSettings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    @field_validator("debug", mode="before")
+    @classmethod
+    def normalize_debug_flag(cls, value: Any) -> bool:
+        """`debug` に bool 以外が入っても安全に解釈する."""
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"1", "true", "yes", "on", "debug", "development", "dev"}:
+                return True
+            if normalized in {"0", "false", "no", "off", "release", "prod", "production"}:
+                return False
+        return False
 
     def _detect_provider_from_credentials(self) -> str:
         """資格情報の有無から LLM プロバイダーを自動判定する."""

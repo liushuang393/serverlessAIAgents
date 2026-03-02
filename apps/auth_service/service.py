@@ -65,6 +65,9 @@ class AuthService:
         username: str,
         password: str,
         totp_code: str | None = None,
+        tenant_id: str | None = None,
+        client_app: str | None = None,
+        requested_scopes: list[str] | None = None,
     ) -> tuple[bool, str, UserInfo | None, TokenPair | None]:
         """ユーザーログイン.
 
@@ -101,13 +104,21 @@ class AuthService:
             if user_info is None:
                 return False, "ユーザー情報の取得に失敗しました", None, None
 
-        token_pair = await self._issue_token_pair(user_info)
+        token_pair = await self._issue_token_pair(
+            user_info,
+            tenant_id=tenant_id,
+            client_app=client_app,
+            requested_scopes=requested_scopes,
+        )
         return True, "ログイン成功", user_info, token_pair
 
     async def login_with_external_identity(
         self,
         identity: Any,
         provider_name: str,
+        tenant_id: str | None = None,
+        client_app: str | None = None,
+        requested_scopes: list[str] | None = None,
     ) -> tuple[UserInfo, TokenPair]:
         """外部認証アイデンティティでログイン（OAuth2 コールバック用）.
 
@@ -120,7 +131,12 @@ class AuthService:
         """
         await self.ensure_ready()
         user_info = await self._upsert_external_user(identity, provider_name)
-        token_pair = await self._issue_token_pair(user_info)
+        token_pair = await self._issue_token_pair(
+            user_info,
+            tenant_id=tenant_id,
+            client_app=client_app,
+            requested_scopes=requested_scopes,
+        )
         return user_info, token_pair
 
     async def register(
@@ -131,6 +147,9 @@ class AuthService:
         department: str = "",
         position: str = "",
         email: str | None = None,
+        tenant_id: str | None = None,
+        client_app: str | None = None,
+        requested_scopes: list[str] | None = None,
     ) -> tuple[bool, str, UserInfo | None, TokenPair | None]:
         """ユーザー登録（local_db のみ）.
 
@@ -161,7 +180,12 @@ class AuthService:
         if user_info is None:
             return False, "ユーザー情報の取得に失敗しました", None, None
 
-        token_pair = await self._issue_token_pair(user_info)
+        token_pair = await self._issue_token_pair(
+            user_info,
+            tenant_id=tenant_id,
+            client_app=client_app,
+            requested_scopes=requested_scopes,
+        )
         return True, result.message, user_info, token_pair
 
     # ------------------------------------------------------------------
@@ -218,7 +242,13 @@ class AuthService:
             return False, "ユーザーが存在しません", None
 
         # 新しいトークンペアを同一ファミリーで発行
-        token_pair = await self._issue_token_pair(user_info, family=family)
+        token_pair = await self._issue_token_pair(
+            user_info,
+            family=family,
+            tenant_id=_clean_text(claims.get("tenant_id")),
+            client_app=_clean_text(claims.get("azp")),
+            requested_scopes=_normalize_scopes(claims.get("scp")),
+        )
         return True, "トークンを更新しました", token_pair
 
     async def verify_access_token(self, authorization: str | None) -> UserInfo | None:
@@ -258,6 +288,10 @@ class AuthService:
             department=claims.department,
             position=claims.position,
             role=claims.role,
+            roles=claims.roles or [claims.role],
+            tenant_id=claims.tenant_id,
+            scopes=claims.scopes,
+            azp=claims.azp,
             email=claims.email,
         )
 
@@ -552,8 +586,25 @@ class AuthService:
     # プライベートヘルパー
     # ------------------------------------------------------------------
 
-    async def _issue_token_pair(self, user: UserInfo, family: str | None = None) -> TokenPair:
+    async def _issue_token_pair(
+        self,
+        user: UserInfo,
+        family: str | None = None,
+        tenant_id: str | None = None,
+        client_app: str | None = None,
+        requested_scopes: list[str] | None = None,
+    ) -> TokenPair:
         """トークンペアを発行して DB に保存."""
+        resolved_tenant_id = tenant_id or user.tenant_id or self._settings.DEFAULT_TENANT_ID
+        resolved_client_app = client_app or user.azp or self._settings.DEFAULT_CLIENT_APP
+        resolved_scopes = self._resolve_requested_scopes(requested_scopes or user.scopes)
+        resolved_roles = user.roles or [user.role]
+        extra_claims = {
+            "tenant_id": resolved_tenant_id,
+            "azp": resolved_client_app,
+            "scp": resolved_scopes,
+            "roles": resolved_roles,
+        }
         access_token = self._jwt.create_access_token(
             user_id=user.user_id,
             username=user.username,
@@ -562,8 +613,13 @@ class AuthService:
             position=user.position,
             role=user.role,
             email=user.email,
+            extra_claims=extra_claims,
         )
-        refresh_token_str, family_id = self._jwt.create_refresh_token(user_id=user.user_id, family=family)
+        refresh_token_str, family_id = self._jwt.create_refresh_token(
+            user_id=user.user_id,
+            family=family,
+            extra_claims=extra_claims,
+        )
         now = datetime.now(tz=UTC)
         token_hash = self._pwd.hash_token(refresh_token_str)
 
@@ -660,9 +716,9 @@ class AuthService:
             )
             await session.commit()
 
-    @staticmethod
-    def _account_to_user_info(account: UserAccount) -> UserInfo:
+    def _account_to_user_info(self, account: UserAccount) -> UserInfo:
         """UserAccount を UserInfo に変換."""
+        scopes = self._resolve_requested_scopes(None)
         return UserInfo(
             user_id=account.id,
             username=account.username,
@@ -670,9 +726,20 @@ class AuthService:
             department=account.department,
             position=account.position,
             role=account.role,
+            roles=[account.role],
+            tenant_id=self._settings.DEFAULT_TENANT_ID,
+            scopes=scopes,
+            azp=self._settings.DEFAULT_CLIENT_APP,
             email=account.email,
             mfa_enabled=account.mfa_enabled,
         )
+
+    def _resolve_requested_scopes(self, requested_scopes: list[str] | None) -> list[str]:
+        parsed_default = _normalize_scopes(self._settings.DEFAULT_REQUESTED_SCOPES)
+        if not requested_scopes:
+            return parsed_default
+        scopes = _normalize_scopes(requested_scopes)
+        return scopes or parsed_default
 
 
 # ---------------------------------------------------------------------------
@@ -694,3 +761,18 @@ def reset_auth_service() -> None:
     """テスト用にシングルトンをリセット."""
     global _service_singleton
     _service_singleton = None
+
+
+def _clean_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _normalize_scopes(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        return [item.strip() for item in value.split(",") if item.strip()]
+    return []

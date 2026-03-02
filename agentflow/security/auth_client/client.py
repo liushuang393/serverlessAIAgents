@@ -31,6 +31,10 @@ class RemoteUser:
     department: str = ""
     position: str = ""
     role: str = "employee"
+    roles: list[str] = field(default_factory=list)
+    tenant_id: str | None = None
+    scopes: list[str] = field(default_factory=list)
+    azp: str | None = None
     email: str | None = None
     mfa_enabled: bool = False
     extra: dict[str, Any] = field(default_factory=dict)
@@ -125,6 +129,10 @@ class AuthClient:
                 department=str(payload.get("department", "")),
                 position=str(payload.get("position", "")),
                 role=str(payload.get("role", "employee")),
+                roles=_normalize_string_list(payload.get("roles"), fallback=[str(payload.get("role", "employee"))]),
+                tenant_id=_clean_text(payload.get("tenant_id")),
+                scopes=_normalize_string_list(payload.get("scp"), fallback=[]),
+                azp=_clean_text(payload.get("azp")),
                 email=payload.get("email"),
             )
         except ImportError:
@@ -168,6 +176,10 @@ class AuthClient:
                     department=str(user_data.get("department", "")),
                     position=str(user_data.get("position", "")),
                     role=str(user_data.get("role", "employee")),
+                    roles=_normalize_string_list(user_data.get("roles"), fallback=[str(user_data.get("role", "employee"))]),
+                    tenant_id=_clean_text(user_data.get("tenant_id")),
+                    scopes=_normalize_string_list(user_data.get("scopes"), fallback=[]),
+                    azp=_clean_text(user_data.get("azp")),
                     email=user_data.get("email"),
                     mfa_enabled=bool(user_data.get("mfa_enabled", False)),
                 )
@@ -212,3 +224,22 @@ class AuthClient:
             raise NotImplementedError(msg)
 
         return proxy_router
+
+
+def _clean_text(value: Any) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _normalize_string_list(value: Any, *, fallback: list[str]) -> list[str]:
+    if isinstance(value, list):
+        cleaned = [str(item).strip() for item in value if str(item).strip()]
+        if cleaned:
+            return cleaned
+    if isinstance(value, str):
+        cleaned = [item.strip() for item in value.split(",") if item.strip()]
+        if cleaned:
+            return cleaned
+    return list(fallback)

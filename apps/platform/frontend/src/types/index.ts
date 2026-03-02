@@ -502,6 +502,13 @@ export interface AppRAGConfig {
   display_name: string;
   icon: string;
   config_path: string;
+  auth?: {
+    enabled: boolean;
+    mode: string;
+    tenant_claim_key: string;
+    required_scopes: string[];
+    allow_same_tenant_sso: boolean;
+  };
   db_hint?: RAGDatabaseHint;
   rag: {
     enabled: boolean;

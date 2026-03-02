@@ -302,6 +302,66 @@ curl -X POST http://localhost:8005/api/rag/ingest \\
 - `file`, `database`: 本実装
 - `web`, `api`, `s3`: 入口バリデーション + `not_implemented` ステータス返却（段階実装）
 
+## Tenant SSO + 権限連動運用（FAQ DB 保持）
+
+### 1) FAQ DB は維持する（削除しない）
+
+FAQ 側は auth を `auth_service` に委譲しても、業務 DB はそのまま利用します。  
+主な保持対象:
+
+- `chat_messages`
+- `knowledge_base_settings`
+- `ingestion_runs`
+- `ingestion_run_items`
+- `ingestion_checkpoints`
+
+### 2) どこで DB 接続 / ファイル追加するか
+
+1. Platform で `faq_system` の `contracts.rag.data_sources` を更新する
+2. `type=database` は `uri` と `options.query/table` を設定
+3. `type=file` は FAQ backend から読める絶対パス / glob を設定
+4. `POST /api/rag/ingest` で `dry_run -> 本実行`
+
+### 3) role/scope で検索対象コレクションを分離
+
+テンプレート既定例:
+
+- `manager`: `faq_internal_manager`, `faq_shared_common`
+- `sales`: `faq_sales_playbook`, `faq_shared_common`
+- `employee`: `faq_employee_handbook`, `faq_shared_common`
+
+運用ルール:
+
+1. role は token の `roles` claim で判定
+2. scope は token の `scp` claim を必須チェック（例: `faq.access`）
+3. role/scope で許可される collection のみ検索対象にする
+
+### 4) 認証は auth_service を利用（FAQ は呼び出し側）
+
+- FAQ `/api/auth/*` は auth_service を優先利用
+- 同一 tenant 内は SSO token を再利用可能（`allow_same_tenant_sso=true`）
+- tenant 不一致 / scope 不足は FAQ 側で拒否
+- auth_service 到達不可時のみローカル互換 fallback（既定は pytest 時のみ）
+
+### 5) モード排他フラグ（推奨）
+
+`FAQ_AUTH_MODE` で運用モードを固定できます（同時運用を禁止）。
+
+- 既定値は `tenant_sso`（本テンプレートの初期運用）
+- `tenant_sso`: tenant 境界 + 同 tenant SSO
+- `enterprise_isolated`: 企業個別（app 隔離、他 app token 拒否）
+
+推奨運用設定:
+
+- Tenant SSO運用: `FAQ_AUTH_MODE=tenant_sso`, `FAQ_AUTH_PROXY_LOCAL_FALLBACK=false`
+- 企業個別運用: `FAQ_AUTH_MODE=enterprise_isolated`, `FAQ_AUTH_PROXY_LOCAL_FALLBACK=false`
+
+補助フラグ:
+
+- `FAQ_AUTH_PROXY_LOCAL_FALLBACK=true|false`（auth_service 到達不可時のローカル互換）
+- `FAQ_REQUIRE_TENANT_CONTEXT=true|false`（tenant_sso 時の tenant コンテキスト必須化）
+- `FAQ_DEFAULT_TENANT_ID=<tenant>`（tenant header/path が無いローカル運用時の既定 tenant）
+
 ---
 
 ## 認証テスト手順
