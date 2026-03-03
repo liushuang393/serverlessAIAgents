@@ -10,6 +10,8 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - ../../migration_output:/app/migration_output
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8003/api/health')"]
       interval: 30s

@@ -88,7 +88,7 @@ export interface FetchAppsOptions {
 export async function fetchApps(
   options: FetchAppsOptions = {},
 ): Promise<AppListResponse> {
-  const waitForHealth = options.waitForHealth ?? false;
+  const waitForHealth = options.waitForHealth ?? true;
   const includeRuntime = options.includeRuntime ?? false;
   const key = `${FRAMEWORK_APPS_BASE}?wait_for_health=${waitForHealth}&include_runtime=${includeRuntime}`;
   return withInflightDedup(key, async () => {

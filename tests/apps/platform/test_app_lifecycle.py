@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import asyncio
+import signal
 from unittest.mock import AsyncMock, patch
 
 import httpx
@@ -372,6 +373,112 @@ class TestAppLifecycleManager:
         assert result.execution_mode == "local"
         assert "already running" in result.stdout
         mocked_process.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_stop_docker_mode_also_cleans_local_processes(
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
+    ) -> None:
+        """docker stop 後に local PID も停止して stdout に反映する."""
+        cfg = AppConfig(
+            name="stop_hybrid_app",
+            display_name="Stop Hybrid App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            ports={"api": None},
+            entry_points={"health": None},
+        )
+        app_dir = tmp_path / "stop_hybrid_app"
+        app_dir.mkdir()
+        (app_dir / "docker-compose.yml").write_text("services: {}\n", encoding="utf-8")
+        config_path = app_dir / "app_config.json"
+        config_path.write_text("{}", encoding="utf-8")
+
+        compose_result = AppActionResult(
+            app_name=cfg.name,
+            action="stop",
+            success=True,
+            command=["docker", "compose", "down"],
+            cwd=str(app_dir),
+            command_source="fallback",
+            execution_mode="docker",
+        )
+
+        with patch.object(
+            lifecycle,
+            "_detect_execution_mode",
+            new=AsyncMock(return_value=("docker", {"reason": "docker_running"})),
+        ), patch.object(
+            lifecycle,
+            "_run_compose_action",
+            new=AsyncMock(return_value=compose_result),
+        ) as mocked_compose, patch.object(
+            lifecycle,
+            "_stop_local_processes",
+            new=AsyncMock(return_value={"success": True, "killed": ["backend(pid=12345)"], "errors": []}),
+        ) as mocked_local_stop:
+            result = await lifecycle._stop_app_once(cfg, config_path=config_path)
+
+        assert result.success is True
+        assert result.execution_mode == "docker"
+        assert "local: backend(pid=12345)" in result.stdout
+        mocked_compose.assert_awaited_once()
+        mocked_local_stop.assert_awaited_once_with(cfg.name)
+
+    @pytest.mark.asyncio
+    async def test_stop_docker_mode_fails_when_local_cleanup_errors(
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
+    ) -> None:
+        """docker stop 成功でも local 停止失敗があれば失敗として返す."""
+        cfg = AppConfig(
+            name="stop_local_error_app",
+            display_name="Stop Local Error App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            ports={"api": None},
+            entry_points={"health": None},
+        )
+        app_dir = tmp_path / "stop_local_error_app"
+        app_dir.mkdir()
+        (app_dir / "docker-compose.yml").write_text("services: {}\n", encoding="utf-8")
+        config_path = app_dir / "app_config.json"
+        config_path.write_text("{}", encoding="utf-8")
+
+        compose_result = AppActionResult(
+            app_name=cfg.name,
+            action="stop",
+            success=True,
+            command=["docker", "compose", "down"],
+            cwd=str(app_dir),
+            command_source="fallback",
+            execution_mode="docker",
+        )
+
+        with patch.object(
+            lifecycle,
+            "_detect_execution_mode",
+            new=AsyncMock(return_value=("docker", {"reason": "docker_running"})),
+        ), patch.object(
+            lifecycle,
+            "_run_compose_action",
+            new=AsyncMock(return_value=compose_result),
+        ), patch.object(
+            lifecycle,
+            "_stop_local_processes",
+            new=AsyncMock(return_value={"success": False, "killed": [], "errors": ["backend: kill 失敗"]}),
+        ):
+            result = await lifecycle._stop_app_once(cfg, config_path=config_path)
+
+        assert result.success is False
+        assert "backend: kill 失敗" in (result.error or "")
+        assert "local stop errors: backend: kill 失敗" in result.stderr
 
     def test_resolve_action_command_supports_local_dev_commands(self) -> None:
         """backend_dev / frontend_dev を解決できる."""
@@ -890,3 +997,122 @@ class TestAppLifecycleManager:
         assert launch.success is False
         assert launch.error is not None
         assert "キャンセル" in launch.error
+
+    @pytest.mark.asyncio
+    async def test_start_local_process_launches_with_setsid(
+        self,
+        lifecycle: AppLifecycleManager,
+        tmp_path,
+    ) -> None:
+        """local 起動コマンドは setsid 経由で起動して子プロセス残留を防ぐ."""
+
+        class _Proc:
+            returncode = 0
+
+            async def communicate(self):
+                return b"12345\n", b""
+
+        captured_command: dict[str, str] = {}
+
+        async def _fake_subprocess(
+            command: str,
+            *,
+            cwd: str,
+            stdout: int | None = None,
+            stderr: int | None = None,
+            env: dict[str, str] | None = None,
+        ):
+            captured_command["value"] = command
+            return _Proc()
+
+        with patch(
+            "apps.platform.services.app_lifecycle.asyncio.create_subprocess_shell",
+            new=AsyncMock(side_effect=_fake_subprocess),
+        ), patch.object(
+            lifecycle,
+            "_is_process_running",
+            return_value=True,
+        ), patch(
+            "apps.platform.services.app_lifecycle.asyncio.sleep",
+            new=AsyncMock(return_value=None),
+        ):
+            launch = await lifecycle._start_local_process(
+                app_name="setsid_launch_app",
+                command="python -m apps.setsid_launch_app.main",
+                role="backend",
+                cwd=tmp_path,
+            )
+
+        assert launch.success is True
+        assert "nohup setsid bash -lc" in captured_command["value"]
+
+    def test_signal_process_group_or_pid_prefers_killpg(
+        self,
+    ) -> None:
+        """signal 送信は killpg を優先する."""
+        with patch("apps.platform.services.app_lifecycle.os.killpg") as mocked_killpg, patch(
+            "apps.platform.services.app_lifecycle.os.kill"
+        ) as mocked_kill:
+            AppLifecycleManager._signal_process_group_or_pid(12345, signal.SIGTERM)
+
+        mocked_killpg.assert_called_once_with(12345, signal.SIGTERM)
+        mocked_kill.assert_not_called()
+
+    def test_signal_process_group_or_pid_falls_back_to_kill(
+        self,
+    ) -> None:
+        """killpg 失敗時は pid への kill にフォールバックする."""
+        with patch(
+            "apps.platform.services.app_lifecycle.os.killpg",
+            side_effect=OSError("group not found"),
+        ) as mocked_killpg, patch("apps.platform.services.app_lifecycle.os.kill") as mocked_kill:
+            AppLifecycleManager._signal_process_group_or_pid(12345, signal.SIGTERM)
+
+        mocked_killpg.assert_called_once_with(12345, signal.SIGTERM)
+        mocked_kill.assert_called_once_with(12345, signal.SIGTERM)
+
+    def test_select_backend_service_prefers_app_name_hint(
+        self,
+    ) -> None:
+        """docker 複合構成で app 名に一致する backend サービスを優先する."""
+        services = [
+            {"service": "auth-admin", "published_ports": [3010], "running": True},
+            {"service": "auth-db", "published_ports": [5438], "running": True},
+            {"service": "auth-service", "published_ports": [8010], "running": True},
+        ]
+
+        selected = AppLifecycleManager._select_backend_service(
+            services,
+            app_name_hint="auth_service",
+        )
+
+        assert selected is not None
+        assert selected.get("service") == "auth-service"
+
+    def test_select_backend_service_fallback_ignores_admin_and_db_ports(
+        self,
+    ) -> None:
+        """app 名ヒントがない場合でも admin/db より backend 候補を優先する."""
+        services = [
+            {"service": "sample-admin", "published_ports": [3010], "running": True},
+            {"service": "sample-db", "published_ports": [5433], "running": True},
+            {"service": "sample-api", "published_ports": [8011], "running": True},
+        ]
+
+        selected = AppLifecycleManager._select_backend_service(services)
+
+        assert selected is not None
+        assert selected.get("service") == "sample-api"
+
+    def test_select_backend_service_returns_none_when_only_infra_services_exist(
+        self,
+    ) -> None:
+        """db/admin しか無い場合は backend サービス未検出として扱う."""
+        services = [
+            {"service": "sample-admin", "published_ports": [3010], "running": True},
+            {"service": "sample-db", "published_ports": [5433], "running": True},
+        ]
+
+        selected = AppLifecycleManager._select_backend_service(services)
+
+        assert selected is None

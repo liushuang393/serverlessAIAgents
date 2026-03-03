@@ -27,6 +27,8 @@ async def reset_state(monkeypatch: pytest.MonkeyPatch) -> AsyncGenerator[None]:
     monkeypatch.setenv("FAQ_PROXY_AUTH_SHARED_SECRET", TEST_PROXY_SECRET)
     monkeypatch.setenv("JWT_SECRET_KEY", TEST_JWT_SECRET)
     monkeypatch.setenv("JWT_EXPIRE_MINUTES", "60")
+    # Make tests deterministic: force FAQ auth routes to use local fallback path.
+    monkeypatch.setenv("AUTH_SERVICE_URL", "http://127.0.0.1:9")
 
     if TEST_DB_PATH.exists():
         TEST_DB_PATH.unlink()

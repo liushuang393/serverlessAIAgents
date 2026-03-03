@@ -23,14 +23,15 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import sys
 import tempfile
 import uuid
 from pathlib import Path
 from typing import Any
 
+from apps.code_migration_assistant.cobol_project import COBOLProject
 from apps.code_migration_assistant.engine import CodeMigrationEngine
-from apps.migration_studio.pipeline.project import COBOLProject
 
 
 _PASS_DECISIONS = {"PASSED", "KNOWN_LEGACY"}
@@ -427,6 +428,271 @@ async def _run_migrate_command(args: argparse.Namespace) -> int:
     return exit_code
 
 
+def cmd_migrate(args: argparse.Namespace) -> int:
+    """Legacy-compatible migrate command (sync)."""
+    from apps.code_migration_assistant.pipeline.engine import run_migration_sync
+
+    source_path = Path(args.source).resolve()
+    output_root = Path(args.output).resolve()
+    model = args.model or os.environ.get("MIGRATION_MODEL", "claude-opus-4-6")
+
+    print("\n🚀 Code Migration Assistant")
+    print(f"  ソース: {source_path}")
+    print(f"  出力:   {output_root}")
+    print(f"  モード: {'高速（実行比較スキップ）' if args.fast else '通常'}")
+    print(f"  モデル: {model}")
+    print()
+
+    with tempfile.TemporaryDirectory(prefix="migration_") as work_dir_str:
+        work_dir = Path(work_dir_str)
+        project = COBOLProject(source=source_path, work_dir=work_dir)
+        try:
+            project.setup()
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"エラー: {exc}", file=sys.stderr)
+            return 1
+
+        cobol_files = project.get_cobol_files()
+        if not cobol_files:
+            print("エラー: 変換対象のCOBOLファイルが見つかりませんでした。", file=sys.stderr)
+            return 1
+
+        print(f"変換対象: {len(cobol_files)} ファイル")
+        for cobol_file in cobol_files:
+            print(f"  - {cobol_file.program_name} ({cobol_file.relative_path})")
+        print()
+
+        exit_code = 0
+        for cobol_file in cobol_files:
+            print(f"⚙  {cobol_file.program_name} を変換中...")
+            result = run_migration_sync(
+                cobol_file=cobol_file,
+                output_root=output_root,
+                fast_mode=bool(args.fast),
+                model=model,
+            )
+            if result.success:
+                print(f"  ✅ {cobol_file.program_name}: {result.decision}")
+                print(f"     出力: {result.output_dir}")
+            else:
+                print(f"  ⚠  {cobol_file.program_name}: {result.decision}")
+                if result.error_message:
+                    print(f"     エラー: {result.error_message}")
+                if result.decision == "ENV_ISSUE":
+                    print("     ヒント: --fast フラグを使うと実行比較をスキップできます。")
+                exit_code = max(exit_code, 1)
+            print()
+
+        return exit_code
+
+
+def _print_progress_cli(event: Any) -> None:
+    """CLIにイベント進捗を表示する."""
+    icon_map = {
+        "stage_start": "▶",
+        "stage_complete": "✓",
+        "evolution": "↺",
+        "complete": "✅",
+        "error": "✗",
+    }
+    event_type = str(getattr(event, "event_type", ""))
+    icon = icon_map.get(event_type, "·")
+    stage = str(getattr(event, "stage", "") or "")
+    data = getattr(event, "data", {})
+    msg = ""
+    if isinstance(data, dict):
+        msg = str(data.get("message", "") or data.get("decision", ""))
+    print(f"  {icon} [{stage}] {msg}")
+
+
+def _run_retry_sync(engine: Any, cobol_file: Any, start_stage: str) -> str:
+    """retry の1ファイル分の同期ラッパー."""
+    import anyio
+
+    result_decision = "UNKNOWN"
+
+    async def _run() -> None:
+        nonlocal result_decision
+        async for event in engine.run_file_from_stage(
+            cobol_file=cobol_file,
+            start_stage=start_stage,
+        ):
+            _print_progress_cli(event)
+            if getattr(event, "event_type", "") == "complete":
+                data = getattr(event, "data", {})
+                if isinstance(data, dict):
+                    result_decision = str(data.get("decision", "UNKNOWN"))
+
+    anyio.run(_run)
+    return result_decision
+
+
+def cmd_show(args: argparse.Namespace) -> int:
+    """show コマンドを実行する（プログラムの成果物詳細表示）."""
+    from apps.code_migration_assistant.output.organizer import OutputOrganizer
+
+    output_root = Path(args.output).resolve()
+    program_name = str(args.program).upper()
+
+    organizer = OutputOrganizer(output_root)
+    program_dir = organizer.get_program_dir(program_name)
+
+    if not program_dir.exists():
+        print(f"エラー: プログラムが見つかりません: {program_name}", file=sys.stderr)
+        print(f"  検索パス: {program_dir}", file=sys.stderr)
+        return 1
+
+    version_count = organizer.get_version_count(program_name)
+    print(f"\n📦 {program_name}  ({version_count} バージョン)")
+    print(f"   ディレクトリ: {program_dir}")
+
+    stage_dirs = {
+        "analyzer": "01_analysis/analyzer.json",
+        "designer": "02_design/designer.json",
+        "transformer": "03_transform/transformer.json",
+        "test_generator": "03_transform/test_generator.json",
+        "verifier": "04_verification/verifier.json",
+        "quality_gate": "04_verification/quality_gate.json",
+    }
+    for version in range(1, version_count + 1):
+        version_dir = organizer.get_version_dir(program_name, version)
+        print(f"\n  ── v{version} ──────────────────────")
+        for stage, rel_path in stage_dirs.items():
+            artifact = version_dir / rel_path
+            if artifact.exists():
+                try:
+                    data = json.loads(artifact.read_text(encoding="utf-8"))
+                except Exception:
+                    data = {}
+                decision = data.get("decision") if isinstance(data, dict) else None
+                summary = f" → {decision}" if isinstance(decision, str) and decision else ""
+                print(f"    ✓ {stage}{summary}")
+            else:
+                print(f"    · {stage}  (未実行)")
+
+        report = version_dir / "05_report" / "report.md"
+        if report.exists():
+            print(f"    ✓ report  ({report})")
+
+        java_dir = version_dir / "03_transform" / "src"
+        if java_dir.exists():
+            java_files = list(java_dir.rglob("*.java"))
+            print(f"    📝 Java ファイル: {len(java_files)} 個")
+            if bool(args.verbose):
+                for file_path in sorted(java_files):
+                    print(f"       {file_path.relative_to(version_dir)}")
+
+    evolution_file = program_dir / "evolution.json"
+    if evolution_file.exists():
+        try:
+            evolution = json.loads(evolution_file.read_text(encoding="utf-8"))
+            total = int(evolution.get("total_iterations", 0))
+            print(f"\n  🔄 Evolution 履歴: {total} 回")
+        except Exception:
+            print("\n  🔄 Evolution 履歴: 読み込み失敗")
+
+    print()
+    return 0
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    """list コマンドを実行する（移行成果物一覧表示）."""
+    output_root = Path(args.output).resolve()
+    if not output_root.exists():
+        print(f"エラー: 出力ディレクトリが存在しません: {output_root}", file=sys.stderr)
+        return 1
+
+    candidate_dirs = [item for item in output_root.iterdir() if item.is_dir() and not item.name.startswith("_")]
+    programs: list[Path] = []
+    for program_dir in candidate_dirs:
+        has_version = any(
+            child.is_dir() and child.name.startswith("v") and child.name[1:].isdigit()
+            for child in program_dir.iterdir()
+        )
+        if has_version:
+            programs.append(program_dir)
+    programs.sort()
+    if not programs:
+        print("移行済みプログラムはありません。")
+        return 0
+
+    print("\n📚 移行済みプログラム一覧")
+    for program_dir in programs:
+        versions = [item for item in program_dir.iterdir() if item.is_dir() and item.name.startswith("v")]
+        version_count = len(versions)
+        latest = max((item.name for item in versions), default="-")
+        report_marker = "·"
+        if version_count > 0:
+            latest_dir = program_dir / latest
+            report_path = latest_dir / "05_report" / "report.md"
+            report_marker = "✓" if report_path.exists() else "·"
+        print(f"  - {program_dir.name}: {version_count} バージョン (latest={latest}) report={report_marker}")
+    print()
+    return 0
+
+
+def cmd_retry(args: argparse.Namespace) -> int:
+    """retry コマンドを実行する（特定ステージから再実行）."""
+    from apps.code_migration_assistant.output.organizer import OutputOrganizer
+    from apps.code_migration_assistant.pipeline.engine import MigrationEngine
+
+    source_path = Path(args.source).resolve()
+    output_root = Path(args.output).resolve()
+    model = args.model or os.environ.get("MIGRATION_MODEL", "claude-opus-4-6")
+    start_stage = str(args.stage)
+
+    valid_stages = ["analyzer", "designer", "transformer", "test_generator", "verifier", "quality_gate"]
+    if start_stage not in valid_stages:
+        print(f"エラー: 無効なステージ名: {start_stage}", file=sys.stderr)
+        print(f"  有効なステージ: {', '.join(valid_stages)}", file=sys.stderr)
+        return 1
+
+    print("\n🔄 Code Migration Assistant — ステージ再実行")
+    print(f"  ソース: {source_path}")
+    print(f"  出力:   {output_root}")
+    print(f"  再実行ステージ: {start_stage} 以降")
+    print(f"  モデル: {model}")
+    print()
+
+    with tempfile.TemporaryDirectory(prefix="migration_retry_") as work_dir_str:
+        work_dir = Path(work_dir_str)
+        project = COBOLProject(source=source_path, work_dir=work_dir)
+        try:
+            project.setup()
+        except (FileNotFoundError, ValueError) as exc:
+            print(f"エラー: {exc}", file=sys.stderr)
+            return 1
+
+        cobol_files = project.get_cobol_files()
+        if not cobol_files:
+            print("エラー: 変換対象のCOBOLファイルが見つかりませんでした。", file=sys.stderr)
+            return 1
+
+        engine = MigrationEngine(output_root=output_root, fast_mode=bool(args.fast), model=model)
+        exit_code = 0
+        for cobol_file in cobol_files:
+            organizer = OutputOrganizer(output_root)
+            version = organizer.get_version_count(cobol_file.program_name)
+            if version == 0:
+                print(
+                    f"  ⚠  {cobol_file.program_name}: 既存バージョンがありません。migrate を先に実行してください。",
+                    file=sys.stderr,
+                )
+                exit_code = 1
+                continue
+
+            print(f"⚙  {cobol_file.program_name} (v{version}) を {start_stage} から再実行中...")
+            result_decision = _run_retry_sync(engine, cobol_file, start_stage)
+            if result_decision in {"PASSED", "KNOWN_LEGACY"}:
+                print(f"  ✅ {cobol_file.program_name}: {result_decision}")
+            else:
+                print(f"  ⚠  {cobol_file.program_name}: {result_decision}")
+                exit_code = max(exit_code, 1)
+            print()
+
+    return exit_code
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="code_migration_assistant",
@@ -464,6 +730,61 @@ def _build_parser() -> argparse.ArgumentParser:
         help="使用モデル識別子（オプション情報として保存）",
     )
 
+    show_parser = subparsers.add_parser(
+        "show",
+        help="プログラム成果物の詳細を表示する",
+    )
+    show_parser.add_argument("program", help="プログラム名（大小文字不問）")
+    show_parser.add_argument(
+        "--output",
+        "-o",
+        default="migration_output",
+        help="成果物出力ディレクトリ",
+    )
+    show_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Javaファイル一覧まで表示する",
+    )
+
+    list_parser = subparsers.add_parser(
+        "list",
+        help="移行済みプログラム一覧を表示する",
+    )
+    list_parser.add_argument(
+        "--output",
+        "-o",
+        default="migration_output",
+        help="成果物出力ディレクトリ",
+    )
+
+    retry_parser = subparsers.add_parser(
+        "retry",
+        help="既存成果物を使って特定ステージから再実行する",
+    )
+    retry_parser.add_argument("source", help="COBOLファイル/zip/ディレクトリ")
+    retry_parser.add_argument(
+        "--stage",
+        required=True,
+        help="再開ステージ: analyzer/designer/transformer/test_generator/verifier/quality_gate",
+    )
+    retry_parser.add_argument(
+        "--output",
+        "-o",
+        default="migration_output",
+        help="成果物出力ディレクトリ",
+    )
+    retry_parser.add_argument(
+        "--fast",
+        action="store_true",
+        help="高速モード（実行比較をスキップ）",
+    )
+    retry_parser.add_argument(
+        "--model",
+        default="claude-opus-4-6",
+        help="使用モデル識別子",
+    )
+
     return parser
 
 
@@ -475,6 +796,12 @@ async def _async_main(argv: list[str] | None = None) -> int:
         return await _run_contract_command(args)
     if args.command == "migrate":
         return await _run_migrate_command(args)
+    if args.command == "show":
+        return await asyncio.to_thread(cmd_show, args)
+    if args.command == "list":
+        return await asyncio.to_thread(cmd_list, args)
+    if args.command == "retry":
+        return await asyncio.to_thread(cmd_retry, args)
 
     parser.print_help()
     return 2

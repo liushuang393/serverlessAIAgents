@@ -21,7 +21,12 @@
 
 from agentflow.security.auth_client.client import AuthClient, AuthServiceError
 from agentflow.security.auth_client.config import AuthClientConfig
-from agentflow.security.auth_client.dependencies import get_current_user, require_auth, require_role
+from agentflow.security.auth_client.dependencies import (
+    get_current_user,
+    require_auth,
+    require_permission,
+    require_role,
+)
 
 
 __all__ = [
@@ -30,5 +35,6 @@ __all__ = [
     "AuthServiceError",
     "get_current_user",
     "require_auth",
+    "require_permission",
     "require_role",
 ]

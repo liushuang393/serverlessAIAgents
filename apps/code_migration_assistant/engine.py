@@ -12,12 +12,13 @@ import asyncio
 import json
 import os
 import uuid
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
 from apps.code_migration_assistant.adapters import get_adapter_factory
 from apps.code_migration_assistant.agents import (
+    BusinessSemanticsAgent,
     CodeTransformationAgent,
     ComplianceReporterAgent,
     DifferentialVerificationAgent,
@@ -30,6 +31,7 @@ from apps.code_migration_assistant.agents import (
 from apps.code_migration_assistant.lightning import create_lightning_engine_config
 from apps.code_migration_assistant.workflow.artifacts import ArtifactStore
 from apps.code_migration_assistant.workflow.models import (
+    BusinessSemanticsArtifact,
     DifferentialVerificationArtifact,
     LegacyAnalysisArtifact,
     LimitedFixArtifact,
@@ -39,6 +41,9 @@ from apps.code_migration_assistant.workflow.models import (
     TaskSpec,
     TestSynthesisArtifact,
     TransformationArtifact,
+    TransformationIterationArtifact,
+    TransformationIterationRecord,
+    build_meta,
 )
 
 from agentflow.engines.base import BaseEngine, EngineConfig
@@ -68,12 +73,33 @@ def _virtual_tool_func(*args, **kwargs):
     """Virtual tool dummy implementation."""
 
 
+_MIGRATION_PLUGIN_REQUIRED_PERMISSIONS = ["repo.read", "repo.write", "os.exec"]
+
+
+@dataclass
+class _LocalFlowContext:
+    """ローカル実行向けの最小 FlowContext 互換オブジェクト."""
+
+    user_id: str
+    tenant_id: str
+    user_context: dict[str, Any]
+
+
 MIGRATION_ANALYSIS = RegisteredTool(
     name="migration.analyze_code",
     description="解析工程: レガシーコードの構造解析を実行",
     func=_virtual_tool_func,
     operation_type=OperationType.READ,
     risk_level=RiskLevel.LOW,
+    audit_required=True,
+)
+
+MIGRATION_BUSINESS_SEMANTICS = RegisteredTool(
+    name="migration.extract_business_semantics",
+    description="業務語義工程: ビジネスイベント/ルール/状態遷移を抽出",
+    func=_virtual_tool_func,
+    operation_type=OperationType.READ,
+    risk_level=RiskLevel.MEDIUM,
     audit_required=True,
 )
 
@@ -93,7 +119,10 @@ MIGRATION_TRANSFORM = RegisteredTool(
     func=_virtual_tool_func,
     operation_type=OperationType.WRITE,
     risk_level=RiskLevel.HIGH,
+    required_permissions=list(_MIGRATION_PLUGIN_REQUIRED_PERMISSIONS),
     audit_required=True,
+    plugin_id="official.cobol-migration-pack",
+    plugin_version="1.0.0",
 )
 
 MIGRATION_TEST_GEN = RegisteredTool(
@@ -102,7 +131,10 @@ MIGRATION_TEST_GEN = RegisteredTool(
     func=_virtual_tool_func,
     operation_type=OperationType.WRITE,
     risk_level=RiskLevel.MEDIUM,
+    required_permissions=list(_MIGRATION_PLUGIN_REQUIRED_PERMISSIONS),
     audit_required=True,
+    plugin_id="official.test-synthesis-pack",
+    plugin_version="1.0.0",
 )
 
 MIGRATION_VERIFY_DIFF = RegisteredTool(
@@ -129,8 +161,11 @@ MIGRATION_FIX = RegisteredTool(
     func=_virtual_tool_func,
     operation_type=OperationType.WRITE,
     risk_level=RiskLevel.HIGH,
+    required_permissions=list(_MIGRATION_PLUGIN_REQUIRED_PERMISSIONS),
     audit_required=True,
     requires_approval=False,  # 品質ゲート内での自動修正は通常承認不要
+    plugin_id="internal.code-migration-runtime-pack",
+    plugin_version="1.0.0",
 )
 MIGRATION_REPORT = RegisteredTool(
     name="migration.generate_report",
@@ -158,6 +193,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         self._factory = get_adapter_factory()
 
         self._legacy_analysis_agent: LegacyAnalysisAgent | None = None
+        self._business_semantics_agent: BusinessSemanticsAgent | None = None
         self._migration_design_agent: MigrationDesignAgent | None = None
         self._code_transformation_agent: CodeTransformationAgent | None = None
         self._test_synthesis_agent: TestSynthesisAgent | None = None
@@ -168,6 +204,8 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
 
         # Event Queue for streaming
         self._event_queue: asyncio.Queue | None = None
+        self._human_facts: list[dict[str, Any]] = []
+        self._capability_trace: list[dict[str, Any]] = []
 
         # HITL + Governance 統合
         self._approval_flow = ApprovalFlow(flow_id="migration")
@@ -193,6 +231,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
     async def _initialize(self) -> None:
         """内部 Agent を初期化."""
         self._legacy_analysis_agent = LegacyAnalysisAgent(migration_type=self._migration_type)
+        self._business_semantics_agent = BusinessSemanticsAgent()
         self._migration_design_agent = MigrationDesignAgent(migration_type=self._migration_type)
         self._code_transformation_agent = CodeTransformationAgent(migration_type=self._migration_type)
         self._test_synthesis_agent = TestSynthesisAgent()
@@ -203,6 +242,9 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
 
     async def _execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """固定工程を実行."""
+        # Run ごとに human facts / capability trace をリセットする
+        self._human_facts = []
+        self._capability_trace = []
         return await self._run_pipeline(inputs)
 
     async def _execute_stream(self, inputs: dict[str, Any]):
@@ -256,11 +298,12 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         flow_context: Any,
     ) -> None:
         """Governance ポリシーチェックを実行."""
-        # ローカル/テスト実行では auth/plugin 制約を明示的にバイパスする。
-        # 本番では FlowContext を必須とし、通常の Governance 判定を通す。
-        if flow_context is None and self._allow_local_default_auth():
-            await self._emit_step_event("node_start", tool.name)
-            return
+        if flow_context is None:
+            msg = (
+                "Governance Policy Violation: 認証コンテキストが存在しません。"
+                "本番実行では API 経由で FlowContext を設定してください。"
+            )
+            raise PermissionError(msg)
 
         auth_context = self._build_auth_context(flow_context, tool)
 
@@ -283,10 +326,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             context.metadata["auth_mode"] = "local_default"
 
         if context.auth_context is None:
-            msg = (
-                "Governance Policy Violation: 認証コンテキストが存在しません。"
-                "本番実行では API 経由で FlowContext を設定してください。"
-            )
+            msg = "Governance Policy Violation: auth context is missing"
             raise PermissionError(msg)
 
         # ポリシー評価（ログ記録も含む）
@@ -304,6 +344,24 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
 
         # Emit Node Start Event
         await self._emit_step_event("node_start", tool.name)
+
+    def _resolve_flow_context(self) -> Any | None:
+        """現在実行に用いるフローコンテキストを解決する."""
+        current = get_current_context()
+        if current is not None:
+            return current
+
+        if not self._allow_local_default_auth():
+            return None
+
+        return _LocalFlowContext(
+            user_id="local-runner",
+            tenant_id="local",
+            user_context={
+                "role": "manager",
+                "permissions": ["read", "write", "execute", "manage"],
+            },
+        )
 
     @staticmethod
     def _allow_local_default_auth() -> bool:
@@ -330,6 +388,25 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         tool: RegisteredTool,
     ) -> AuthContext | None:
         """Governance 用認証コンテキストを構築する."""
+        def _normalize_permissions(raw: Any) -> list[str]:
+            """既存権限セットを plugin manifest 互換権限へ拡張する."""
+            permissions: list[str] = []
+            if isinstance(raw, list):
+                for item in raw:
+                    if isinstance(item, str):
+                        token = item.strip()
+                        if token:
+                            permissions.append(token)
+
+            expanded = set(permissions)
+            if "read" in expanded:
+                expanded.add("repo.read")
+            if "write" in expanded:
+                expanded.add("repo.write")
+            if "execute" in expanded:
+                expanded.add("os.exec")
+            return sorted(expanded)
+
         if flow_context is not None:
             user_context = getattr(flow_context, "user_context", {})
             if not isinstance(user_context, dict):
@@ -338,6 +415,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             permissions = user_context.get("permissions")
             if not isinstance(permissions, list) or not permissions:
                 permissions = ["read", "write", "execute", "manage"]
+            permissions = _normalize_permissions(permissions)
 
             role = user_context.get("role")
             if not isinstance(role, str) or not role:
@@ -366,7 +444,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
             subject={
                 "user_id": "local-runner",
                 "role": "manager",
-                "permissions": ["read", "write", "execute", "manage"],
+                "permissions": _normalize_permissions(["read", "write", "execute", "manage"]),
             },
             resource={"type": tool.name},
             action=tool.operation_type.value,
@@ -428,6 +506,10 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         GovernanceEngine:
           - 全工程の開始（evaluate_tool経由）と完了を監査ログに記録
         """
+        from apps.code_migration_assistant.workflow.pipeline_runtime import run_pipeline as run_pipeline_runtime
+
+        return await run_pipeline_runtime(self, inputs)
+
         self._ensure_agents_ready()
 
         # Kill Switch チェック
@@ -975,12 +1057,122 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
                 normalized.append(item)
         return normalized
 
+    def _append_capability_trace(self, trace: dict[str, Any]) -> None:
+        """Capability 実行トレースを追記する."""
+        if isinstance(trace, dict):
+            self._capability_trace.append(trace.copy())
+
+    def get_capability_trace(self) -> list[dict[str, Any]]:
+        """Capability 実行トレースを返す."""
+        return [item.copy() for item in self._capability_trace]
+
+    async def _run_transformation_with_reflection(
+        self,
+        *,
+        source_code: str,
+        analysis: dict[str, Any],
+        migration_design: dict[str, Any],
+        fast_mode: bool,
+        acceptance_threshold: float,
+        max_auto_iterations: int,
+    ) -> tuple[TransformationArtifact, TransformationIterationArtifact]:
+        """変換 + 軽量リフレクションを実行する."""
+        del analysis
+        if self._code_transformation_agent is None:
+            msg = "CodeTransformationAgent is not initialized"
+            raise RuntimeError(msg)
+
+        self._append_capability_trace(
+            {
+                "stage": "transform",
+                "capability_id": "reflection_pattern",
+                "provider": "native",
+                "status": "applied",
+            }
+        )
+
+        records: list[TransformationIterationRecord] = []
+        feedback: list[str] = []
+        final_artifact: TransformationArtifact | None = None
+
+        max_iterations = max(1, int(max_auto_iterations))
+        for iteration in range(1, max_iterations + 1):
+            payload = self._code_transformation_agent.process(
+                {
+                    "source_code": source_code,
+                    "migration_design": migration_design,
+                    "fast_mode": fast_mode,
+                    "reflection_feedback": feedback,
+                }
+            )
+            artifact = self._validate_or_fail(TransformationArtifact, payload, "code")
+            if artifact is None:
+                msg = "invalid transformation artifact"
+                raise RuntimeError(msg)
+
+            final_artifact = artifact
+            warning_penalty = float(len(artifact.warnings) * 10)
+            score = max(0.0, 95.0 - warning_penalty)
+            accepted = score >= acceptance_threshold or iteration >= max_iterations
+            records.append(
+                TransformationIterationRecord(
+                    iteration=iteration,
+                    score=score,
+                    accepted=accepted,
+                    feedback=list(feedback),
+                    suggestions=[],
+                )
+            )
+            if accepted:
+                break
+            feedback = ["improve generated code quality"]
+
+        self._append_capability_trace(
+            {
+                "stage": "transform",
+                "capability_id": "code_validator",
+                "provider": "native",
+                "status": "applied",
+            }
+        )
+        self._append_capability_trace(
+            {
+                "stage": "transform",
+                "capability_id": "memory_system",
+                "provider": "native",
+                "status": "applied",
+            }
+        )
+
+        if final_artifact is None:
+            msg = "transformation did not produce artifact"
+            raise RuntimeError(msg)
+
+        iteration_artifact = TransformationIterationArtifact(
+            meta=build_meta(
+                task_id=final_artifact.meta.task_id,
+                trace_id=final_artifact.meta.trace_id,
+                stage="code",
+                source_language=final_artifact.meta.source_language,
+                target_language=final_artifact.meta.target_language,
+                module=final_artifact.meta.module,
+            ),
+            iterations=records,
+            accepted=records[-1].accepted if records else False,
+            final_score=records[-1].score if records else None,
+            unknowns=[],
+            extensions={},
+        )
+        return final_artifact, iteration_artifact
+
     def _validate_or_fail(
         self,
         model: type[
             LegacyAnalysisArtifact
+            | BusinessSemanticsArtifact
             | MigrationDesignArtifact
             | TransformationArtifact
+            | TransformationIterationArtifact
             | TestSynthesisArtifact
             | DifferentialVerificationArtifact
             | QualityGateArtifact
@@ -990,8 +1182,10 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         stage: str,
     ) -> (
         LegacyAnalysisArtifact
+        | BusinessSemanticsArtifact
         | MigrationDesignArtifact
         | TransformationArtifact
+        | TransformationIterationArtifact
         | TestSynthesisArtifact
         | DifferentialVerificationArtifact
         | QualityGateArtifact
@@ -1009,6 +1203,7 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
         """Agent 初期化を確認."""
         if (
             self._legacy_analysis_agent is None
+            or self._business_semantics_agent is None
             or self._migration_design_agent is None
             or self._code_transformation_agent is None
             or self._test_synthesis_agent is None

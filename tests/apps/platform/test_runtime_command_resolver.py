@@ -108,3 +108,28 @@ class TestRuntimeCommandResolver:
         )
         assert resolved.frontend_dev == "cd apps/faq_system/frontend && npm run dev"
         assert resolved.source["frontend_dev"] == "readme"
+
+    def test_runtime_backend_with_env_prefix_overrides_readme(self, tmp_path) -> None:
+        app_dir = tmp_path / "auth_service"
+        app_dir.mkdir(parents=True)
+        (app_dir / "README.md").write_text(
+            (
+                "```bash\n"
+                "python -m apps.auth_service.main\n"
+                "```\n"
+            ),
+            encoding="utf-8",
+        )
+        runtime = RuntimeCommandsConfig(
+            backend_dev=(
+                "AUTH_DATABASE_URL=${AUTH_DATABASE_URL:-postgresql+asyncpg://postgres:postgres@localhost:5438/auth_service} "
+                "python -m apps.auth_service.main"
+            )
+        )
+        resolved = RuntimeCommandResolver().resolve(
+            app_name="auth_service",
+            app_dir=app_dir,
+            runtime_commands=runtime,
+        )
+        assert resolved.backend_dev == runtime.backend_dev
+        assert resolved.source["backend_dev"] == "runtime.commands"

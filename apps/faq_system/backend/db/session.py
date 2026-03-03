@@ -91,8 +91,55 @@ async def create_all_tables() -> None:
     await _db.create_all_tables()
 
 
+async def _is_fresh_database() -> bool:
+    """DB が完全新規（テーブルが1つも存在しない）か判定.
+
+    既存DB に FAQ_DB_AUTO_CREATE=true を適用すると Alembic バージョン履歴と
+    乖離して upgrade 時に "table already exists" エラーになるため、
+    テーブルが0件の場合のみ create_all() を許可する。
+    """
+    from sqlalchemy import inspect as sa_inspect
+
+    url = _db.resolved_url
+    if "sqlite" in url:
+        # 同期エンジンで確認（SQLite は同期モードで動作）
+        from sqlalchemy import create_engine, pool
+
+        from agentflow.database.url_utils import to_sync_url
+
+        engine = create_engine(to_sync_url(url), poolclass=pool.NullPool)
+        try:
+            with engine.connect() as conn:
+                inspector = sa_inspect(conn)
+                tables = inspector.get_table_names()
+                return len(tables) == 0
+        finally:
+            engine.dispose()
+    else:
+        # 非同期エンジン（PostgreSQL 等）
+        from sqlalchemy import pool as sa_pool
+        from sqlalchemy.ext.asyncio import create_async_engine
+
+        async_engine = create_async_engine(url, poolclass=sa_pool.NullPool)
+        try:
+            async with async_engine.connect() as conn:
+
+                def _get_tables(sync_conn: Any) -> list[str]:
+                    return sa_inspect(sync_conn).get_table_names()
+
+                tables = await conn.run_sync(_get_tables)
+                return len(tables) == 0
+        finally:
+            await async_engine.dispose()
+
+
 async def ensure_database_ready() -> None:
-    """DB 利用可能状態を保証（二重初期化防止付き）."""
+    """DB 利用可能状態を保証（二重初期化防止付き）.
+
+    注意: FAQ_DB_AUTO_CREATE=true は完全新規DB（テーブル0件）の場合のみ有効。
+    既存DBへの適用は Alembic バージョン履歴と乖離するため禁止。
+    スキーマ変更は必ず `alembic upgrade head` で行うこと。
+    """
     global _is_ready
 
     if _is_ready:
@@ -102,7 +149,7 @@ async def ensure_database_ready() -> None:
         if _is_ready:
             return
         await init_db()
-        if _db_auto_create_enabled():
+        if _db_auto_create_enabled() and await _is_fresh_database():
             await create_all_tables()
         _is_ready = True
 

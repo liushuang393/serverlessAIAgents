@@ -33,6 +33,9 @@ class MigrationDesignAgent:
         legacy_analysis = input_data.get("legacy_analysis")
         if not isinstance(legacy_analysis, dict):
             return {"success": False, "error": "legacy_analysis is required"}
+        business_semantics = input_data.get("business_semantics")
+        if not isinstance(business_semantics, dict):
+            return {"success": False, "error": "business_semantics is required"}
 
         meta = legacy_analysis.get("meta", {})
         task_id = str(meta.get("task_id", "unknown-task"))
@@ -40,6 +43,9 @@ class MigrationDesignAgent:
         module = str(meta.get("module", "UNKNOWN"))
 
         class_name = self._derive_class_name(legacy_analysis)
+        business_events = business_semantics.get("business_events", [])
+        event_count = len(business_events) if isinstance(business_events, list) else 0
+        framework_style = "event-driven" if event_count > 0 else "layered"
 
         unknowns: list[UnknownItem] = []
         if not legacy_analysis.get("entry_points"):
@@ -57,11 +63,16 @@ class MigrationDesignAgent:
             package_mapping={"default": "com.migration.generated"},
             class_mapping={"primary_class": class_name},
             transaction_policy={"mode": "preserve", "rationale": "旧システムの境界を維持"},
-            state_model={
-                "variables": [v.get("name", "UNKNOWN") for v in legacy_analysis.get("data_structures", [])],
-                "mutability": "preserve",
-            },
+            state_model=business_semantics.get(
+                "state_model",
+                {
+                    "variables": [v.get("name", "UNKNOWN") for v in legacy_analysis.get("data_structures", [])],
+                    "mutability": "preserve",
+                },
+            ),
             framework_mapping={
+                "style": framework_style,
+                "event_count": event_count,
                 "migration_type": self._migration_type,
                 "target_runtime": self._target_adapter.language_name,
             },

@@ -22,6 +22,7 @@ if TYPE_CHECKING:
 CommandAction = Literal["backend_dev", "frontend_dev", "publish", "start", "stop"]
 _COMMAND_ACTIONS: tuple[CommandAction, ...] = ("backend_dev", "frontend_dev", "publish", "start", "stop")
 _CODE_FENCE_PATTERN = re.compile(r"```(?:bash|sh|zsh|shell)?\s*(?P<body>.*?)```", re.DOTALL | re.IGNORECASE)
+_SHELL_ENV_PREFIX_PATTERN = re.compile(r"^(?:\w+=[^\s]+\s+)+")
 
 
 @dataclass(slots=True)
@@ -70,11 +71,22 @@ class RuntimeCommandResolver:
         sources: dict[CommandAction, str] = {}
         for action in _COMMAND_ACTIONS:
             readme_value = readme_commands.get(action)
+            runtime_value = runtime_map[action]
+
             if readme_value is not None:
+                # runtime.commands が環境変数プレフィックス付きの場合は
+                # README で落とさず runtime 側を優先する（例: DB URL 既定値補完）。
+                if (
+                    action in {"backend_dev", "frontend_dev"}
+                    and runtime_value is not None
+                    and self._has_env_prefix(runtime_value)
+                ):
+                    resolved_values[action] = runtime_value
+                    sources[action] = "runtime.commands"
+                    continue
                 resolved_values[action] = readme_value
                 sources[action] = "readme"
                 continue
-            runtime_value = runtime_map[action]
             if runtime_value is not None:
                 resolved_values[action] = runtime_value
                 sources[action] = "runtime.commands"
@@ -152,6 +164,10 @@ class RuntimeCommandResolver:
             return None
         trimmed = value.strip()
         return trimmed or None
+
+    @staticmethod
+    def _has_env_prefix(command: str) -> bool:
+        return bool(_SHELL_ENV_PREFIX_PATTERN.match(command.strip()))
 
     @staticmethod
     def _matches_action(*, action: CommandAction, command: str, app_name: str) -> bool:

@@ -1,197 +1,273 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Legacy-to-Agent™ | Enterprise Migration Platform</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;500&display=swap"
-        rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Migration Studio — COBOL → Java Spring Boot</title>
+  <style>
+    :root {
+      --primary: #1e40af;
+      --primary-light: #3b82f6;
+      --success: #16a34a;
+      --warning: #d97706;
+      --error: #dc2626;
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #1e293b;
+      --muted: #64748b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    header h1 { font-size: 1.4rem; font-weight: 600; }
+    header span { font-size: 0.85rem; opacity: 0.8; }
+    main { max-width: 960px; margin: 32px auto; padding: 0 24px; }
+
+    /* Upload Card */
+    .upload-card {
+      background: var(--card);
+      border: 2px dashed var(--border);
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      transition: border-color 0.2s;
+      cursor: pointer;
+    }
+    .upload-card.dragover { border-color: var(--primary-light); background: #eff6ff; }
+    .upload-card h2 { font-size: 1.1rem; margin-bottom: 8px; }
+    .upload-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+    .upload-card input[type=file] { display: none; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 22px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: opacity 0.15s;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-light); }
+    .btn-success { background: var(--success); color: white; }
+    .options {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .options label { font-size: 0.85rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+    #selected-file {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: var(--primary);
+      font-weight: 500;
+    }
+
+    /* Pipeline Progress */
+    #progress-section { display: none; margin-top: 32px; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+
+    /* Stage list */
+    .stage-list { display: flex; flex-direction: column; gap: 8px; }
+    .stage-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: var(--bg);
+      font-size: 0.9rem;
+    }
+    .stage-icon {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
+    }
+    .stage-item.pending .stage-icon { background: #e2e8f0; color: var(--muted); }
+    .stage-item.running .stage-icon { background: #dbeafe; color: var(--primary); animation: pulse 1.2s infinite; }
+    .stage-item.complete .stage-icon { background: #dcfce7; color: var(--success); }
+    .stage-item.error .stage-icon { background: #fee2e2; color: var(--error); }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    /* Log */
+    #log {
+      background: #0f172a;
+      color: #94a3b8;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: "Consolas", "Monaco", monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    .log-info { color: #7dd3fc; }
+    .log-success { color: #86efac; }
+    .log-warn { color: #fcd34d; }
+    .log-error { color: #f87171; }
+
+    /* Result */
+    #result-section { display: none; margin-top: 16px; }
+    .result-banner {
+      padding: 20px 24px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .result-banner.success { background: #f0fdf4; border: 1px solid #86efac; }
+    .result-banner.error { background: #fef2f2; border: 1px solid #fca5a5; }
+    .result-banner h3 { font-size: 1rem; }
+    .result-banner p { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+
+    /* HITL dialog */
+    #hitl-dialog {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45);
+      z-index: 100;
+      align-items: center; justify-content: center;
+    }
+    #hitl-dialog.open { display: flex; }
+    .dialog-box {
+      background: white;
+      border-radius: 12px;
+      padding: 28px;
+      max-width: 560px;
+      width: 90%;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    }
+    .dialog-box h3 { margin-bottom: 8px; }
+    .dialog-box p { font-size: 0.9rem; color: var(--muted); margin-bottom: 16px; }
+    .dialog-box textarea {
+      width: 100%; padding: 10px; border: 1px solid var(--border);
+      border-radius: 6px; font-size: 0.9rem; resize: vertical; min-height: 80px;
+    }
+    .dialog-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px; }
+    .btn-reject { background: #f1f5f9; color: var(--text); }
+    .btn-reject:hover { background: #e2e8f0; }
+    .unknowns-list { background: #fef3c7; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 0.85rem; }
+    .unknowns-list ul { padding-left: 20px; }
+    .unknowns-list li { margin-top: 4px; }
+  </style>
 </head>
+<body>
 
-<body class="dark-theme">
-    <div class="app-container">
-        <!-- Navigation -->
-        <nav class="glass-nav">
-            <div class="logo">
-                <span class="gradient-text">LEGACY-TO-AGENT</span>
-                <span class="version-tag">v2.0.0</span>
-            </div>
-            <ul class="nav-links">
-                <li class="active">Dashboard</li>
-                <li>Audit Logs</li>
-                <li>Governance</li>
-                <li>Settings</li>
-            </ul>
-            <div class="user-profile">
-                <div class="status-indicator online"></div>
-                <span>Admin User</span>
-            </div>
-        </nav>
+<header>
+  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+    <rect width="28" height="28" rx="6" fill="white" fill-opacity="0.2"/>
+    <path d="M7 10h14M7 14h10M7 18h6" stroke="white" stroke-width="2" stroke-linecap="round"/>
+  </svg>
+  <div>
+    <h1>Migration Studio</h1>
+    <span>COBOL → Java Spring Boot 自動移行</span>
+  </div>
+</header>
 
-        <main class="dashboard-grid">
-            <!-- Sidebar / Controls -->
-            <aside class="controls-panel card glass">
-                <h3><span class="icon">🚀</span> Ingestion</h3>
-                <div class="drop-zone" id="dropZone">
-                    <p>Drag COBOL files here or <span>Browse</span></p>
-                    <input type="file" id="fileInput" hidden>
-                </div>
-
-                <div class="config-options">
-                    <div class="option">
-                        <label>Migration Type</label>
-                        <select id="migrationType">
-                            <option value="cobol-to-java">COBOL to Java (Microservices)</option>
-                            <option value="cobol-to-node">COBOL to Node.js / TS</option>
-                        </select>
-                    </div>
-                    <div class="option">
-                        <label>Target Architecture</label>
-                        <div class="toggle-group">
-                            <button class="active">Spring Boot</button>
-                            <button>Quarkus</button>
-                        </div>
-                    </div>
-                </div>
-
-                <button class="cta-button primary" id="startBtn">
-                    Start Migration Pipeline
-                </button>
-
-                <div class="governance-status card glass-inner">
-                    <h4>Governance Guard</h4>
-                    <div class="status-item">
-                        <span>Risk Level:</span>
-                        <span class="badge medium">MEDIUM</span>
-                    </div>
-                    <div class="status-item">
-                        <span>Audit:</span>
-                        <span class="text-success">ACTIVE</span>
-                    </div>
-                    <div class="status-item">
-                        <span>Approval:</span>
-                        <span class="text-warning">REQUIRED (Design)</span>
-                    </div>
-                </div>
-            </aside>
-
-            <!-- Main Content Area -->
-            <section class="main-display">
-                <!-- Pipeline Progress Visualization -->
-                <div class="pipeline-container card glass">
-                    <div class="pipeline-header">
-                        <h3>Migration Pipeline Status</h3>
-                        <div class="task-info" id="taskInfo">Task: --</div>
-                    </div>
-                    <div class="pipeline-steps">
-                        <div class="step" data-step="analysis">
-                            <div class="step-icon">1</div>
-                            <span class="step-label">Analysis</span>
-                            <div class="step-line"></div>
-                        </div>
-                        <div class="step" data-step="business_semantics">
-                            <div class="step-icon">2</div>
-                            <span class="step-label">Semantics</span>
-                            <div class="step-line"></div>
-                        </div>
-                        <div class="step" data-step="design">
-                            <div class="step-icon">3</div>
-                            <span class="step-label">Design</span>
-                            <div class="step-line"></div>
-                        </div>
-                        <div class="step" data-step="transform">
-                            <div class="step-icon">4</div>
-                            <span class="step-label">Transform</span>
-                            <div class="step-line"></div>
-                        </div>
-                        <div class="step" data-step="testing">
-                            <div class="step-icon">5</div>
-                            <span class="step-label">Tests</span>
-                            <div class="step-line"></div>
-                        </div>
-                        <div class="step" data-step="diff">
-                            <div class="step-icon">6</div>
-                            <span class="step-label">Diff</span>
-                            <div class="step-line"></div>
-                        </div>
-                        <div class="step" data-step="quality">
-                            <div class="step-icon">7</div>
-                            <span class="step-label">Quality</span>
-                            <div class="step-line"></div>
-                        </div>
-                        <div class="step" data-step="fix">
-                            <div class="step-icon">8</div>
-                            <span class="step-label">Fix</span>
-                            <div class="step-line"></div>
-                        </div>
-                        <div class="step" data-step="report">
-                            <div class="step-icon">9</div>
-                            <span class="step-label">Report</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Side-by-Side Editor -->
-                <div class="editor-container">
-                    <div class="editor-pane card glass">
-                        <div class="pane-header">
-                            <span class="lang-tag">COBOL (Legacy)</span>
-                            <span class="file-name" id="sourceFileName">--</span>
-                        </div>
-                        <pre class="code-block" id="sourceCode">// Upload a file to see contents</pre>
-                    </div>
-                    <div class="editor-pane card glass">
-                        <div class="pane-header">
-                            <span class="lang-tag target">Java (Modern)</span>
-                            <span class="file-name" id="targetFileName">--</span>
-                            <div class="diff-stats">
-                                <span class="added">+0</span>
-                                <span class="removed">-0</span>
-                            </div>
-                        </div>
-                        <pre class="code-block" id="targetCode">// Modernized code will appear here</pre>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Bottom: Real-time logs and AI reasoning -->
-            <section class="log-panel card glass">
-                <div class="panel-tabs">
-                    <button class="active">AI Reasoning</button>
-                    <button>Audit Logs</button>
-                    <button>Console</button>
-                </div>
-                <div class="log-content" id="logContent">
-                    <div class="log-entry system">System initialized. Waiting for input...</div>
-                </div>
-            </section>
-        </main>
+<main>
+  <!-- Upload Section -->
+  <div class="upload-card" id="drop-zone">
+    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style="margin:0 auto 16px">
+      <circle cx="24" cy="24" r="20" fill="#eff6ff"/>
+      <path d="M24 32V20M20 24l4-4 4 4" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <h2>COBOLファイルをアップロード</h2>
+    <p>.cbl / .cob / .cobol ファイル、またはプロジェクトを含む .zip</p>
+    <input type="file" id="file-input" accept=".cbl,.cob,.cobol,.zip">
+    <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+      ファイルを選択
+    </button>
+    <div id="selected-file"></div>
+    <div class="options">
+      <label>
+        <input type="checkbox" id="fast-mode" checked>
+        Fast mode（実行比較スキップ）
+      </label>
+      <label>
+        Model:
+        <select id="model-select" style="margin-left:6px;padding:3px 8px;border-radius:4px;border:1px solid var(--border)">
+          <option value="claude-opus-4-6">claude-opus-4-6</option>
+          <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
+        </select>
+      </label>
     </div>
-
-    <!-- Modals for HITL -->
-    <div id="approvalModal" class="modal-overlay hidden">
-        <div class="modal-content glass card">
-            <h2>Design Approval Required</h2>
-            <p>The MigrationDesignAgent has completed the architecture plan. Please review before proceeding to code
-                generation.</p>
-            <div class="design-preview card glass-inner">
-                <div class="preview-item"><strong>Mapping Rules:</strong> 42</div>
-                <div class="preview-item"><strong>Complexity:</strong> High</div>
-                <div class="preview-item"><strong>Target Pattern:</strong> Repository/Service</div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn secondary" id="rejectBtn">Reject</button>
-                <button class="btn primary" id="approveBtn">Approve & Continue</button>
-            </div>
-        </div>
+    <div style="margin-top:24px">
+      <button class="btn btn-primary" id="start-btn" disabled onclick="startMigration()">
+        移行開始
+      </button>
     </div>
+  </div>
 
-    <script src="app.js"></script>
+  <!-- Progress Section -->
+  <div id="progress-section">
+    <div class="card">
+      <h3>パイプライン進捗</h3>
+      <div class="stage-list" id="stage-list"></div>
+    </div>
+    <div class="card">
+      <h3>ログ</h3>
+      <div id="log"></div>
+    </div>
+  </div>
+
+  <!-- Result Section -->
+  <div id="result-section">
+    <div class="result-banner success" id="result-banner">
+      <div>
+        <h3 id="result-title">移行完了</h3>
+        <p id="result-desc"></p>
+      </div>
+      <button class="btn btn-success" id="download-btn" onclick="downloadResult()" style="display:none">
+        成果物をダウンロード (.zip)
+      </button>
+    </div>
+  </div>
+</main>
+
+<!-- HITL Dialog -->
+<div id="hitl-dialog">
+  <div class="dialog-box">
+    <h3>確認が必要です</h3>
+    <p id="hitl-question"></p>
+    <div class="unknowns-list" id="hitl-unknowns"></div>
+    <textarea id="hitl-comment" placeholder="コメント・修正指示（任意）"></textarea>
+    <div class="dialog-actions">
+      <button class="btn btn-reject" onclick="submitHITL(false)">拒否・修正指示</button>
+      <button class="btn btn-primary" onclick="submitHITL(true)">承認して続行</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
 </body>
-
 </html>

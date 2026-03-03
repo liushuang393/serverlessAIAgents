@@ -75,7 +75,7 @@ _LOCAL_READINESS_POLL_SECONDS = 1.0
 _LOCAL_READINESS_STABLE_STREAK = 2
 _REPAIR_TOOL_ORDER: tuple[Literal["codex", "claude"], ...] = ("codex", "claude")
 _REPAIR_MAX_ATTEMPTS_PER_TOOL = 2
-_LOCAL_SERVICE_EXCLUDE_KEYWORDS = ("backend", "frontend", "web", "ui", "worker", "celery")
+_LOCAL_SERVICE_EXCLUDE_KEYWORDS = ("backend", "frontend", "web", "ui", "worker", "celery", "admin")
 
 # WSL / Linux 環境で conda agentflow を活性化するシェルプレフィックス
 _CONDA_ACTIVATE_PREFIX = (
@@ -547,14 +547,14 @@ class AppLifecycleManager:
         _repair_enabled: bool = True,
     ) -> AppActionResult:
         """App を publish（docker 優先）する."""
-        preflight = await self._run_cli_preflight(config, enabled=True)
         initial = await self._publish_app_once(
             config,
             config_path=config_path,
-            cli_preflight=preflight,
+            cli_preflight=None,
         )
         if not _repair_enabled:
             return self._attach_repair_result(initial, attempts=[], outcome="disabled")
+        preflight = None if initial.success else await self._run_cli_preflight(config, enabled=True)
         return await self._run_action_with_repair(
             config=config,
             action="publish",
@@ -630,14 +630,14 @@ class AppLifecycleManager:
         _repair_enabled: bool = True,
     ) -> AppActionResult:
         """App を起動（実行モード判定後、docker/local いずれかのみ実行）."""
-        preflight = await self._run_cli_preflight(config, enabled=True)
         initial = await self._start_app_once(
             config,
             config_path=config_path,
-            cli_preflight=preflight,
+            cli_preflight=None,
         )
         if not _repair_enabled:
             return self._attach_repair_result(initial, attempts=[], outcome="disabled")
+        preflight = None if initial.success else await self._run_cli_preflight(config, enabled=True)
         return await self._run_action_with_repair(
             config=config,
             action="start",
@@ -723,13 +723,13 @@ class AppLifecycleManager:
         _repair_enabled: bool = True,
     ) -> AppActionResult:
         """App を停止（実行モード判定後、docker/local いずれかのみ実行）."""
-        preflight = await self._run_cli_preflight(config, enabled=True)
         initial = await self._stop_app_once(
             config,
             config_path=config_path,
         )
         if not _repair_enabled:
             return self._attach_repair_result(initial, attempts=[], outcome="disabled")
+        preflight = None if initial.success else await self._run_cli_preflight(config, enabled=True)
         return await self._run_action_with_repair(
             config=config,
             action="stop",
@@ -775,6 +775,8 @@ class AppLifecycleManager:
                 allow_process_fallback=False,
                 allow_command_override=False,
             )
+            local_stop_result = await self._stop_local_processes(config.name)
+            result = self._merge_local_stop_result(result, local_stop_result)
         else:
             result = await self._run_process_action(
                 config,
@@ -785,6 +787,45 @@ class AppLifecycleManager:
                 cli_preflight=None,
             )
         result.execution_mode = mode
+        return result
+
+    @staticmethod
+    def _merge_local_stop_result(
+        result: AppActionResult,
+        local_stop_result: dict[str, Any],
+    ) -> AppActionResult:
+        """docker stop 実行時に local PID 停止結果をマージする."""
+        killed = local_stop_result.get("killed")
+        errors = local_stop_result.get("errors")
+
+        notes: list[str] = []
+        if isinstance(killed, list):
+            for item in killed:
+                if isinstance(item, str) and item:
+                    notes.append(f"local: {item}")
+
+        if notes:
+            local_stdout = "\n".join(notes)
+            if result.stdout:
+                result.stdout = f"{result.stdout}\n{local_stdout}"
+            else:
+                result.stdout = local_stdout
+
+        local_errors: list[str] = []
+        if isinstance(errors, list):
+            for item in errors:
+                if isinstance(item, str) and item:
+                    local_errors.append(item)
+
+        if local_errors:
+            local_error_text = "; ".join(local_errors)
+            if result.stderr:
+                result.stderr = f"{result.stderr}\nlocal stop errors: {local_error_text}"
+            else:
+                result.stderr = f"local stop errors: {local_error_text}"
+            result.error = f"{result.error}; {local_error_text}" if result.error else local_error_text
+            result.success = False
+
         return result
 
     async def cli_status(self, config: AppConfig) -> dict[str, Any]:
@@ -817,14 +858,14 @@ class AppLifecycleManager:
             実行結果
         """
         try:
-            cli_preflight = await self._run_cli_preflight(config, enabled=True)
             initial = await self._start_local_dev_once(
                 config,
                 config_path=config_path,
-                cli_preflight=cli_preflight,
+                cli_preflight=None,
             )
             if not _repair_enabled:
                 return self._attach_repair_result(initial, attempts=[], outcome="disabled")
+            cli_preflight = None if initial.success else await self._run_cli_preflight(config, enabled=True)
             return await self._run_action_with_repair(
                 config=config,
                 action="local_start",
@@ -1278,7 +1319,7 @@ class AppLifecycleManager:
         # conda agentflow 環境を活性化してからコマンドを実行する
         activated_command = f"{_CONDA_ACTIVATE_PREFIX}{command}"
         launch_cmd = (
-            f"nohup bash -lc {shlex.quote(activated_command)}"
+            f"nohup setsid bash -lc {shlex.quote(activated_command)}"
             f" > {shlex.quote(log_path)} 2>&1"
             f" & PID=$!; echo $PID; echo $PID > {shlex.quote(pid_file)}"
         )
@@ -1472,15 +1513,15 @@ class AppLifecycleManager:
                 continue
 
             try:
-                os.kill(pid, signal.SIGTERM)
+                self._signal_process_group_or_pid(pid, signal.SIGTERM)
                 for _ in range(50):
                     await asyncio.sleep(0.1)
                     try:
-                        os.kill(pid, 0)
+                        self._signal_process_group_or_pid(pid, 0)
                     except ProcessLookupError:
                         break
                 else:
-                    os.kill(pid, signal.SIGKILL)
+                    self._signal_process_group_or_pid(pid, signal.SIGKILL)
                 killed.append(f"{role}(pid={pid})")
             except ProcessLookupError:
                 killed.append(f"{role}(pid={pid}, already stopped)")
@@ -1493,6 +1534,20 @@ class AppLifecycleManager:
         if not killed and not errors:
             return {"success": True, "killed": not_running, "errors": []}
         return {"success": len(errors) == 0, "killed": killed + not_running, "errors": errors}
+
+    @staticmethod
+    def _signal_process_group_or_pid(pid: int, sig: int) -> None:
+        """可能ならプロセスグループへ signal を送る（子プロセス残留を防止）。"""
+        if hasattr(os, "killpg"):
+            try:
+                os.killpg(pid, sig)
+                return
+            except ProcessLookupError:
+                raise
+            except OSError:
+                # プロセスグループで送信できない場合は単体 PID にフォールバック
+                pass
+        os.kill(pid, sig)
 
     async def _run_process_action(
         self,
@@ -2303,7 +2358,11 @@ class AppLifecycleManager:
                 },
             )
 
-        backend_service = self._select_backend_service(services)
+        app_name_hint = app_dir.name
+        backend_service = self._select_backend_service(
+            services,
+            app_name_hint=app_name_hint,
+        )
         backend_ports = [] if backend_service is None else backend_service.get("published_ports", [])
         running_services = [service.get("service") for service in services if service.get("running") is True]
         return {
@@ -2368,8 +2427,22 @@ class AppLifecycleManager:
         return ports
 
     @staticmethod
-    def _select_backend_service(services: list[dict[str, Any]]) -> dict[str, Any] | None:
+    def _select_backend_service(
+        services: list[dict[str, Any]],
+        *,
+        app_name_hint: str | None = None,
+    ) -> dict[str, Any] | None:
         """backend 相当のサービスを選択."""
+        if app_name_hint:
+            app_tokens = {
+                app_name_hint.lower(),
+                app_name_hint.lower().replace("_", "-"),
+            }
+            for service in services:
+                name = str(service.get("service", "")).lower()
+                if name in app_tokens:
+                    return service
+
         for hint in _BACKEND_SERVICE_HINTS:
             for service in services:
                 name = str(service.get("service", "")).lower()
@@ -2381,10 +2454,18 @@ class AppLifecycleManager:
             if any(hint in name for hint in _BACKEND_SERVICE_HINTS):
                 return service
 
+        infra_keywords = ("db", "postgres", "mysql", "mariadb", "redis", "cache")
+        frontend_keywords = ("frontend", "web", "ui", "admin")
         for service in services:
-            if service.get("published_ports"):
-                return service
-        return services[0] if services else None
+            if not service.get("published_ports"):
+                continue
+            name = str(service.get("service", "")).lower()
+            if any(keyword in name for keyword in infra_keywords):
+                continue
+            if any(keyword in name for keyword in frontend_keywords):
+                continue
+            return service
+        return None
 
     @staticmethod
     def _resolve_compose_files(app_dir: Path, *, include_dev: bool) -> list[Path]:

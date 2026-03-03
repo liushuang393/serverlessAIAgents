@@ -6,15 +6,20 @@ pydantic-settings を利用した設定管理。
 
 from __future__ import annotations
 
+from pathlib import Path
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+_AUTH_ENV_FILE = Path(__file__).resolve().parent / ".env"
 
 
 class Settings(BaseSettings):
     """auth_service 全設定."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(_AUTH_ENV_FILE),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -25,6 +30,7 @@ class Settings(BaseSettings):
     AUTH_DATABASE_URL: str = "sqlite+aiosqlite:///./auth_service.db"
     AUTH_DB_AUTO_CREATE: bool = True
     AUTH_DB_ECHO: bool = False
+    AUTH_DB_SEED_DEFAULTS: bool = True  # デフォルトユーザーを自動作成
 
     # --- JWT 設定 ---
     JWT_SECRET_KEY: str = ""
@@ -79,6 +85,12 @@ class Settings(BaseSettings):
     DEFAULT_CLIENT_APP: str = "unknown_app"
     DEFAULT_REQUESTED_SCOPES: str = "api,faq.access"
     ALLOW_SAME_TENANT_SSO: bool = True
+
+    # --- 認可（Authorization）設定 ---
+    AUTHZ_CACHE_TTL_SECONDS: int = 300  # パーミッションキャッシュ TTL（秒）
+    AUTHZ_EMBED_PERMISSIONS_IN_JWT: bool = True  # JWT にパーミッションを埋め込む
+    AUTHZ_MAX_JWT_PERMISSIONS: int = 50  # JWT に埋め込むパーミッション最大数
+    AUTHZ_DEFAULT_OPEN: bool = True  # リソースマッピング未設定時フルアクセス許可
 
     # --- CORS 設定 ---
     ALLOWED_ORIGINS: list[str] = ["*"]

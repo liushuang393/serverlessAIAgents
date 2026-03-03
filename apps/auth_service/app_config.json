@@ -10,8 +10,8 @@
   "icon": "🔐",
   "ports": {
     "api": 8010,
-    "frontend": null,
-    "db": null,
+    "frontend": 3010,
+    "db": 5438,
     "redis": null
   },
   "entry_points": {
@@ -56,34 +56,34 @@
     }
   },
   "dependencies": {
-    "database": "sqlite",
+    "database": "postgresql",
     "redis": false,
     "external": ["google_oauth", "ldap_server", "microsoft_oauth", "saml_idp"]
   },
   "runtime": {
     "urls": {
       "backend": "http://localhost:8010",
-      "frontend": null,
+      "frontend": "http://localhost:3010",
       "health": "http://localhost:8010/health",
-      "database": null
+      "database": "postgresql://localhost:5438/auth_service"
     },
     "database": {
-      "kind": "sqlite",
-      "url": null,
-      "host": null,
-      "port": null,
-      "name": null,
-      "user": null,
-      "password": null,
+      "kind": "postgresql",
+      "url": "postgresql+asyncpg://postgres:postgres@localhost:5438/auth_service",
+      "host": "localhost",
+      "port": 5438,
+      "name": "auth_service",
+      "user": "postgres",
+      "password": "postgres",
       "password_env": null,
-      "note": null
+      "note": "Local/Docker とも PostgreSQL(auth-db) を利用"
     },
     "commands": {
-      "backend_dev": "python -m apps.auth_service.main",
-      "frontend_dev": null,
+      "backend_dev": "AUTH_DATABASE_URL=${AUTH_DATABASE_URL:-postgresql+asyncpg://postgres:postgres@localhost:5438/auth_service} AUTH_DB_AUTO_CREATE=${AUTH_DB_AUTO_CREATE:-true} python -m apps.auth_service.main",
+      "frontend_dev": "cd apps/auth_service/frontend && npm run dev -- --host 0.0.0.0 --port 3010",
       "publish": "cd apps/auth_service && docker compose up --build -d",
-      "start": "nohup python -m apps.auth_service.main >/tmp/auth_service.log 2>&1 &",
-      "stop": "pkill -f \"apps.auth_service.main\" || true"
+      "start": "cd apps/auth_service && docker compose up -d",
+      "stop": "cd apps/auth_service && docker compose down"
     }
   },
   "tags": [

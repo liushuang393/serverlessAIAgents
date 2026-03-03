@@ -193,14 +193,13 @@ def _resolve_allow_same_tenant_sso() -> bool:
 
 
 def _resolve_require_tenant_context() -> bool:
+    """tenant コンテキスト必須判定.
+
+    tenant_sso モードでは常に必須（テスト時のみ省略可）。
+    enterprise_isolated モードでは不要。
+    """
     if _resolve_auth_mode() != _AUTH_MODE_TENANT_SSO:
         return False
-
-    env_value = _env_bool("FAQ_REQUIRE_TENANT_CONTEXT")
-    if env_value is not None:
-        return env_value
-
-    # テスト時は tenant ヘッダー省略ケースを許容する。
     return not os.getenv("PYTEST_CURRENT_TEST")
 
 

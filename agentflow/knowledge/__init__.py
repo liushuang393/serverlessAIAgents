@@ -57,15 +57,24 @@ from agentflow.knowledge.isolated_kb import (
     KBVisibility,
     SearchResult,
 )
+from agentflow.knowledge.rag_access_control import RAGAccessControl
 from agentflow.knowledge.rag_pipeline import (
     RAGConfig,
     RAGPipeline,
     RAGResult,
 )
+from agentflow.knowledge.resource_manager import (
+    ResourceDefinition as ResourceDefinitionDTO,
+)
+from agentflow.knowledge.resource_manager import (
+    ResourceManager,
+)
+from agentflow.knowledge.scope_resolver import CollectionTarget, ScopeResolver
 
 
 __all__ = [
     "CSVLoader",
+    "CollectionTarget",
     # ドキュメント健康度
     "DocHealthChecker",
     "DocHealthConfig",
@@ -89,11 +98,15 @@ __all__ = [
     "KBVisibility",
     "MarkdownLoader",
     "PDFLoader",
+    "RAGAccessControl",
     "RAGConfig",
     "RAGHook",
     # RAG Pipeline
     "RAGPipeline",
     "RAGResult",
+    "ResourceDefinitionDTO",
+    "ResourceManager",
+    "ScopeResolver",
     "SearchResult",
     "TextLoader",
     "VectorSearchHook",

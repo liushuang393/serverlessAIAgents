@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import re
+import tomllib
 from dataclasses import dataclass, field
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -446,6 +447,23 @@ class PluginRegistry:
 
     @staticmethod
     def _resolve_kernel_version() -> str:
+        explicit = os.getenv("AGENTFLOW_KERNEL_VERSION", "").strip()
+        if explicit:
+            return explicit
+
+        pyproject_path = Path.cwd() / "pyproject.toml"
+        if pyproject_path.is_file():
+            try:
+                with pyproject_path.open("rb") as handle:
+                    pyproject = tomllib.load(handle)
+                project = pyproject.get("project")
+                if isinstance(project, dict):
+                    pyproject_version = project.get("version")
+                    if isinstance(pyproject_version, str) and pyproject_version.strip():
+                        return pyproject_version.strip()
+            except Exception:
+                _logger.debug("pyproject.toml から kernel version を解決できませんでした", exc_info=True)
+
         try:
             return version("agentflow")
         except PackageNotFoundError:

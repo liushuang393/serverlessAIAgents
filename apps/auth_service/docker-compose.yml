@@ -5,6 +5,8 @@
 #
 # ポート設定:
 #   API: 8010（デフォルト）
+#   Admin UI: 3010（デフォルト）
+#   DB: 5438 -> 5432（PostgreSQL）
 #
 # 使用方法:
 #   本番（イメージビルド）:
@@ -19,6 +21,30 @@
 
 services:
   # ---------------------------------------------------------------------------
+  # DB: PostgreSQL
+  # ---------------------------------------------------------------------------
+  auth-db:
+    image: postgres:16-alpine
+    container_name: auth-db
+    environment:
+      - POSTGRES_DB=${AUTH_DB_NAME:-auth_service}
+      - POSTGRES_USER=${AUTH_DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${AUTH_DB_PASSWORD:-postgres}
+    ports:
+      - "${AUTH_DB_PORT:-5438}:5432"
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-postgres} -d ${AUTH_DB_NAME:-auth_service}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - auth-network
+
+  # ---------------------------------------------------------------------------
   # 認証サービス: FastAPI + Uvicorn
   # ---------------------------------------------------------------------------
   auth-service:
@@ -32,7 +58,7 @@ services:
       # コア設定
       - AUTH_SERVICE_PORT=8010
       - AUTH_SERVICE_HOST=0.0.0.0
-      - AUTH_DATABASE_URL=${AUTH_DATABASE_URL:-sqlite+aiosqlite:///./data/auth_service.db}
+      - AUTH_DATABASE_URL=${AUTH_DATABASE_URL_DOCKER:-postgresql+asyncpg://${AUTH_DB_USER:-postgres}:${AUTH_DB_PASSWORD:-postgres}@auth-db:5432/${AUTH_DB_NAME:-auth_service}}
       - AUTH_DB_AUTO_CREATE=${AUTH_DB_AUTO_CREATE:-true}
       # JWT 設定
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-}
@@ -48,6 +74,10 @@ services:
       - LOCKOUT_DURATION_MINUTES=${LOCKOUT_DURATION_MINUTES:-15}
       # CORS
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-["*"]}
+      # 認可（Authorization）
+      - AUTHZ_EMBED_PERMISSIONS_IN_JWT=${AUTHZ_EMBED_PERMISSIONS_IN_JWT:-true}
+      - AUTHZ_DEFAULT_OPEN=${AUTHZ_DEFAULT_OPEN:-true}
+      - AUTHZ_CACHE_TTL_SECONDS=${AUTHZ_CACHE_TTL_SECONDS:-300}
       # 開発モード
       - DEV_MODE=${DEV_MODE:-false}
       # OAuth2（省略可能）
@@ -60,8 +90,9 @@ services:
       # 開発時: ソースコードをマウント（ホットリロード用）
       - ../../agentflow:/app/agentflow:ro
       - .:/app/apps/auth_service:ro
-      # SQLite データ永続化
-      - auth-data:/app/data
+    depends_on:
+      auth-db:
+        condition: service_healthy
     healthcheck:
       test:
         [
@@ -78,6 +109,29 @@ services:
     networks:
       - auth-network
 
+  # ---------------------------------------------------------------------------
+  # 管理画面（Auth Admin UI）
+  # ---------------------------------------------------------------------------
+  auth-admin:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: auth-admin
+    ports:
+      - "${AUTH_ADMIN_PORT:-3010}:80"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://localhost"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - auth-network
+
 # ---------------------------------------------------------------------------
 # ネットワーク
 # ---------------------------------------------------------------------------
@@ -89,4 +143,4 @@ networks:
 # ボリューム
 # ---------------------------------------------------------------------------
 volumes:
-  auth-data:
+  auth-db-data:

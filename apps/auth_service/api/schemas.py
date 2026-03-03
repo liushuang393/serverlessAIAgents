@@ -28,6 +28,7 @@ class UserInfo(BaseModel):
     azp: str | None = Field(None, description="認証を要求したクライアントアプリ")
     email: str | None = Field(None, description="メールアドレス")
     mfa_enabled: bool = Field(False, description="MFA 有効フラグ")
+    permissions: list[str] = Field(default_factory=list, description="有効パーミッション一覧")
 
 
 # ---------------------------------------------------------------------------

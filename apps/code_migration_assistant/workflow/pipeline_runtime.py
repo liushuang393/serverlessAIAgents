@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """Code migration pipeline runtime helpers."""
 
 from __future__ import annotations
@@ -6,8 +5,6 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 from typing import Any
-
-from agentflow.integrations.context_bridge import get_current_context
 
 from apps.code_migration_assistant.workflow.capabilities import StageCapabilityRunner
 from apps.code_migration_assistant.workflow.control_plane import (
@@ -27,6 +24,8 @@ from apps.code_migration_assistant.workflow.models import (
     TransformationIterationRecord,
     build_meta,
 )
+
+from agentflow.integrations.context_bridge import get_current_context
 
 
 async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
@@ -65,6 +64,8 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
     )
 
     flow_context = get_current_context()
+    if flow_context is None and hasattr(engine, "_resolve_flow_context"):
+        flow_context = engine._resolve_flow_context()
     incoming_human_facts = inputs.get("human_facts", [])
     if isinstance(incoming_human_facts, list):
         for fact in incoming_human_facts:
@@ -321,7 +322,8 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
                 "code",
             )
             if transformation_artifact is None:
-                raise ValueError("invalid transformation artifact")
+                msg = "invalid transformation artifact"
+                raise ValueError(msg)
 
             if isinstance(reflection_payload, dict):
                 iteration_artifact = engine._validate_or_fail(
@@ -354,7 +356,8 @@ async def run_pipeline(engine: Any, inputs: dict[str, Any]) -> dict[str, Any]:
                     extensions={},
                 )
             if iteration_artifact is None:
-                raise ValueError("invalid transformation iteration artifact")
+                msg = "invalid transformation iteration artifact"
+                raise ValueError(msg)
         except ValueError:
             await artifact_store.append_failure(
                 task_id=task_id,

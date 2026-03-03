@@ -72,7 +72,23 @@ async def ensure_database_ready() -> None:
         settings = get_settings()
         if settings.AUTH_DB_AUTO_CREATE:
             await create_all_tables()
+        # NOTE:
+        # seed_default_users / seed_authorization は内部で get_db_session() を使うため、
+        # _is_ready=False のままだと ensure_database_ready() を再入して lock 待ちでデッドロックする。
+        # 先に ready フラグを立てて再入を回避し、シード失敗時のみフラグを戻す。
         _is_ready = True
+        try:
+            if settings.AUTH_DB_SEED_DEFAULTS:
+                from apps.auth_service.db.seed import seed_default_users
+
+                await seed_default_users()
+
+                from apps.auth_service.db.seed_authorization import seed_authorization
+
+                await seed_authorization()
+        except Exception:
+            _is_ready = False
+            raise
 
 
 def _get_ready_lock() -> asyncio.Lock:

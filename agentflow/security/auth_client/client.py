@@ -37,6 +37,7 @@ class RemoteUser:
     azp: str | None = None
     email: str | None = None
     mfa_enabled: bool = False
+    permissions: list[str] = field(default_factory=list)
     extra: dict[str, Any] = field(default_factory=dict)
 
 
@@ -134,6 +135,7 @@ class AuthClient:
                 scopes=_normalize_string_list(payload.get("scp"), fallback=[]),
                 azp=_clean_text(payload.get("azp")),
                 email=payload.get("email"),
+                permissions=_normalize_string_list(payload.get("permissions"), fallback=[]),
             )
         except ImportError:
             logger.exception("PyJWT がインストールされていません: pip install pyjwt")
@@ -182,6 +184,7 @@ class AuthClient:
                     azp=_clean_text(user_data.get("azp")),
                     email=user_data.get("email"),
                     mfa_enabled=bool(user_data.get("mfa_enabled", False)),
+                    permissions=_normalize_string_list(user_data.get("permissions"), fallback=[]),
                 )
         except Exception as e:
             logger.warning("auth_service リモート検証失敗: %s", e)

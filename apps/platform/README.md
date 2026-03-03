@@ -57,6 +57,13 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
   - 利用先: design 系 plugin / 生成パイプライン app
   - 運用: Platform の Apps 画面から起動し、個別 app 詳細への導線は不要
 
+### auth_service 起動ルール（Frontend / Backend / DB）
+
+- local-start と docker publish/start の両方で、DB は PostgreSQL（`localhost:5438` / `auth-db:5432`）を同一契約で運用する。
+- local-start は backend (`8010`) + frontend (`3010`) をローカルプロセスで起動し、DB (`5438`) は compose 依存サービスを自動起動する。
+- stop は docker 停止時にも local PID を同時に掃除し、`8010/3010` の残留を防止する。
+- health 判定は backend + frontend + database の 3 コンポーネントを必須で確認する。
+
 ## 3. 主要エンドポイント
 
 ### Studio
@@ -126,10 +133,11 @@ curl http://localhost:8001/api/studios/framework/rag/apps/faq_system/config
 
 このフラグでモードを固定した場合、両モードの判定ロジックは同時に有効化されない。
 
-推奨運用設定:
+設定例（`.env` に 2 変数のみ）:
 
-- Tenant SSO運用: `FAQ_AUTH_MODE=tenant_sso`, `FAQ_AUTH_PROXY_LOCAL_FALLBACK=false`
-- 企業個別運用: `FAQ_AUTH_MODE=enterprise_isolated`, `FAQ_AUTH_PROXY_LOCAL_FALLBACK=false`
+- Tenant SSO運用: `FAQ_AUTH_MODE=tenant_sso`
+- 企業個別運用: `FAQ_AUTH_MODE=enterprise_isolated`
+- ローカル開発: `FAQ_DEFAULT_TENANT_ID=default`（テナントヘッダー省略時の既定値）
 
 ### contracts.auth 例
 
