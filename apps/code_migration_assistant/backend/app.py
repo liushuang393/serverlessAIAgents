@@ -710,78 +710,52 @@ _auth_guard = ContractAuthGuard(
     ),
 )
 
-# Optional distributed runtime store
-_redis_store: RedisTaskStore[dict[str, Any]] | Any | None = _create_distributed_store()
-_redis_event_listener_task: asyncio.Task[Any] | None = None
-_redis_command_listener_task: asyncio.Task[Any] | None = None
+
+def _load_app_config() -> dict[str, Any]:
+    """Load app_config.json or return an empty dict."""
+    return _auth_guard.load_app_config()
 
 
-@app.on_event("startup")
-async def _on_startup() -> None:
-    """起動時に分散ストア接続と listener 起動を行う."""
-    global _redis_event_listener_task, _redis_command_listener_task
-
-    store = _redis_store
-    if store is None or not hasattr(store, "connect"):
-        return
-
-    try:
-        connected = await store.connect()
-    except Exception:
-        logger.warning("distributed store connect failed", exc_info=True)
-        return
-
-    if not connected:
-        return
-
-    if hasattr(store, "subscribe_events"):
-        _redis_event_listener_task = asyncio.create_task(_redis_event_listener())
-    if hasattr(store, "subscribe_commands"):
-        _redis_command_listener_task = asyncio.create_task(_redis_command_listener())
+def _is_auth_required() -> bool:
+    """Evaluate whether API key auth must be enforced."""
+    return _auth_guard.is_auth_required()
 
 
-@app.on_event("shutdown")
-async def _on_shutdown() -> None:
-    """終了時に listener を停止し、分散ストアを切断する."""
-    global _redis_event_listener_task, _redis_command_listener_task
+def _verify_api_key(incoming_key: str | None) -> None:
+    """Validate API key when auth is required."""
+    _auth_guard.verify_api_key(incoming_key)
 
-    for task in (_redis_event_listener_task, _redis_command_listener_task):
-        if task is None:
-            continue
-        task.cancel()
-        with contextlib.suppress(asyncio.CancelledError):
-            await task
 
-    _redis_event_listener_task = None
-    _redis_command_listener_task = None
+def _should_protect_http_path(path: str) -> bool:
+    """Return whether HTTP path should be protected by API key."""
+    return _auth_guard.should_protect_http_path(path)
 
-    store = _redis_store
-    if store is not None and hasattr(store, "close"):
-        try:
-            await store.close()
-        except Exception:
-            logger.debug("distributed store close failed", exc_info=True)
+
+async def _require_http_api_key(request: Request) -> None:
+    """Enforce API key for protected HTTP routes."""
+    await _auth_guard.require_http(request)
+
+
+async def _require_ws_api_key(websocket: WebSocket) -> bool:
+    """Enforce API key for websocket handshake."""
+    ok, _ = await _auth_guard.require_ws(websocket)
+    return ok
+
+
+class MigrationRequest(BaseModel):
+    source_code: str
+    migration_type: str = "cobol-to-java"
+
+
+class ApprovalRequest(BaseModel):
+    approved: bool
+    comment: str | None = None
 
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next: Any) -> Any:
-    """HTTP リクエストに app 契約認証を適用する.
-
-    SSE(EventSource) はカスタムヘッダーを送れないため、
-    `x-api-key` と query の `api_key` の両方を許可する。
-    """
-    if not _should_protect_http_path(request.url.path):
-        return await call_next(request)
-    if not _is_auth_required():
-        return await call_next(request)
-
-    incoming_key = request.headers.get(_AUTH_HEADER_NAME) or request.query_params.get("api_key")
-    try:
-        _verify_api_key(incoming_key)
-    except HTTPException as exc:
-        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
-
-    return await call_next(request)
+    """Apply app-level auth contract to HTTP requests."""
+    return await _auth_guard.http_middleware(request, call_next)
 
 
 @app.get("/api/health")
@@ -878,6 +852,16 @@ async def post_migration_command(task_id: str, command: TaskCommandRequest) -> d
     raise HTTPException(status_code=409, detail="task is owned by another process")
 
 
+@app.post("/api/migration/execute")
+async def execute_migration(request: MigrationRequest, background_tasks: BackgroundTasks):
+    """Backward-compatible execute endpoint."""
+    response = await start_migration(request, background_tasks)
+    task_id = str(response.get("task_id", ""))
+    if task_id:
+        response["ws_url"] = f"/api/ws/{task_id}"
+    return response
+
+
 @app.websocket("/api/ws/{task_id}")
 async def websocket_endpoint(websocket: WebSocket, task_id: str) -> None:
     """イベントストリーム WebSocket エンドポイント."""
@@ -945,12 +929,8 @@ async def get_artifact(task_id: str, stage: str, filename: str) -> FileResponse:
     return FileResponse(path)
 
 
-_FRONTEND_DIR = _resolve_frontend_directory()
-if _FRONTEND_DIR.is_dir():
-    app.mount("/", StaticFiles(directory=str(_FRONTEND_DIR), html=True), name="ui")
-else:
-    logger.warning("Frontend directory not found: %s", _FRONTEND_DIR)
-
+# Serve UI
+app.mount("/", StaticFiles(directory="apps/code_migration_assistant/frontend", html=True), name="ui")
 
 if __name__ == "__main__":
     import uvicorn

@@ -108,7 +108,7 @@ cd apps/code_migration_assistant
 
 ダッシュボードは `http://localhost:8003` でアクセス可能です。
 
-> 2026-03 統合更新: `migration_studio` の UI/移行APIを `code_migration_assistant` に統合し、同一サーバーで配信します。  
+> 2026-03 統合更新: `migration_studio` の UI/移行APIを `code_migration_assistant` に統合し、同一サーバーで配信します。
 > 主要フロント API は `/api/migrate/*`（upload / stream / status / download）です。
 
 ### 起動スクリプト詳細

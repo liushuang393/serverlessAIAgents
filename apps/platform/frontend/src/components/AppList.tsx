@@ -20,6 +20,7 @@ const getAppCategory = (app: AppListItem): CategoryId => {
     faq_system: 'core',
     market_trend_monitor: 'core',
     code_migration_assistant: 'studio',
+    migration_studio: 'studio',
     design_skills_engine: 'studio',
     decision_governance_engine: 'governance',
     auth_service: 'ops',
