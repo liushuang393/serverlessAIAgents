@@ -14,8 +14,8 @@ WORKDIR /app
 # パッケージファイルをコピー
 COPY package.json package-lock.json ./
 
-# 依存関係インストール
-RUN npm ci
+# 依存関係インストール（eslint@10 と eslint-plugin-react-hooks の peer dep 競合を許容）
+RUN npm ci --legacy-peer-deps
 
 # 設定ファイルをコピー（ビルドに必要）
 COPY vite.config.ts tsconfig.json tsconfig.node.json ./

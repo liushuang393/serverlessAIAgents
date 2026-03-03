@@ -24,8 +24,8 @@ WORKDIR /app
 # パッケージファイルをコピー
 COPY package.json package-lock.json ./
 
-# 依存関係インストール（CI 環境用に clean install）
-RUN npm ci --silent
+# 依存関係インストール（eslint@10 と eslint-plugin-react-hooks の peer dep 競合を許容）
+RUN npm ci --silent --legacy-peer-deps
 
 # ソースコードをコピー
 COPY . .

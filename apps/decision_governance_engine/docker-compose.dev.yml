@@ -64,6 +64,9 @@ services:
       - ./frontend/tailwind.config.js:/app/tailwind.config.js
       - ./frontend/postcss.config.js:/app/postcss.config.js
       - ./frontend/tsconfig.json:/app/tsconfig.json
+      # agentflow i18n 基底実装をマウント（vite.config.ts の @agentflow/i18n エイリアス解決用）
+      # vite.config.ts: path.resolve(__dirname='app', '../../../agentflow/i18n/frontend') → /agentflow/i18n/frontend
+      - ../../agentflow/i18n/frontend:/agentflow/i18n/frontend:ro
     environment:
       - VITE_DEBUG_MODE=true
       # Vite dev server の proxy target（容器内部ネットワーク経由）
