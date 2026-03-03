@@ -124,12 +124,29 @@ class TestFlowExecution:
         gate = MockGateAgent(should_pass=False)
         agent = MockAgent("agent")
 
-        flow = create_flow("test").gate(gate, on_fail=lambda ctx: {"status": "blocked"}).then(agent).build()
+        flow = (
+            create_flow("test")
+            .gate(gate, on_fail=lambda ctx: {"status": "blocked"})
+            .then(agent)
+            .with_config(honor_termination=True)
+            .build()
+        )
         result = await flow.run({"input": "test"})
 
         # Agent は呼び出されない
         assert agent.call_count == 0
         assert result.get("status") == "blocked"
+
+    @pytest.mark.asyncio
+    async def test_gate_block_is_ignored_by_default(self):
+        """デフォルトではゲート遮断を無視して後続を継続する."""
+        gate = MockGateAgent(should_pass=False)
+        agent = MockAgent("agent")
+
+        flow = create_flow("test").gate(gate, on_fail=lambda ctx: {"status": "blocked"}).then(agent).build()
+        await flow.run({"input": "test"})
+
+        assert agent.call_count == 1
 
     @pytest.mark.asyncio
     async def test_review_pass(self):
@@ -184,7 +201,13 @@ class TestFlowStream:
         agent = MockAgent("agent")
         review = MockReviewAgent(verdicts=["REJECT"])
 
-        flow = create_flow("test").then(agent, ids=["agent"]).review(review, id="review", retry_from="agent").build()
+        flow = (
+            create_flow("test")
+            .then(agent, ids=["agent"])
+            .review(review, id="review", retry_from="agent")
+            .with_config(honor_termination=True)
+            .build()
+        )
 
         events = []
         async for event in flow.run_stream({"input": "test"}):
@@ -224,7 +247,13 @@ class TestFlowStream:
         agent = MockAgent("agent")
         review = MockCriticalReviewAgent()
 
-        flow = create_flow("test").then(agent, ids=["agent"]).review(review, id="review", retry_from="agent").build()
+        flow = (
+            create_flow("test")
+            .then(agent, ids=["agent"])
+            .review(review, id="review", retry_from="agent")
+            .with_config(honor_termination=True)
+            .build()
+        )
 
         events = []
         async for event in flow.run_stream({"input": "test"}):
@@ -235,6 +264,31 @@ class TestFlowStream:
         message = str(payload.get("rejection_message", ""))
         assert message.startswith("重大課題:")
         assert "責任者が未確定で最終承認が不能" in message
+
+    @pytest.mark.asyncio
+    async def test_review_coach_as_stop_completes_flow(self):
+        """COACHをSTOP扱いにした場合、early_returnせずflow_completeで終了する."""
+        agent = MockAgent("agent")
+        review = MockReviewAgent(verdicts=["COACH"])
+
+        flow = (
+            create_flow("test")
+            .then(agent, ids=["agent"])
+            .review(review, id="review", retry_from="agent", coach_as_stop=True)
+            .build()
+        )
+
+        events: list[dict[str, Any]] = []
+        async for event in flow.run_stream({"input": "test"}):
+            events.append(event)
+
+        event_types = [e.get("type") for e in events]
+        assert "review_verdict" in event_types
+        assert "flow_complete" in event_types
+        assert "early_return" not in event_types
+
+        verdict_event = next(e for e in events if e.get("type") == "review_verdict")
+        assert verdict_event.get("data", {}).get("verdict") == "COACH"
 
 
 if __name__ == "__main__":

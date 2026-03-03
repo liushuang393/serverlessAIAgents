@@ -82,7 +82,7 @@ const TABS = [
 ] as const;
 
 type TabId = typeof TABS[number]['id'];
-const SIGNABLE_CONFIDENCE_THRESHOLD = 39;
+const SIGNABLE_CONFIDENCE_THRESHOLD = 40;
 
 /** パスカード（v3.1: 条件付き評価対応） */
 const PathCard: React.FC<{ path: RecommendedPath; isRecommended?: boolean }> = ({
@@ -226,6 +226,16 @@ export const ReportPage: React.FC = () => {
   const [showSignedAnimation, setShowSignedAnimation] = useState(false);
   // v3.2: チェックポイント適用後の分析信頼度（null = バックエンド値をそのまま使用）
   const [recalculatedConfidence, setRecalculatedConfidence] = useState<number | null>(null);
+  const [signThresholdPct, setSignThresholdPct] = useState<number>(SIGNABLE_CONFIDENCE_THRESHOLD);
+  const [scoreBreakdown, setScoreBreakdown] = useState<{
+    base: number;
+    checkpoint: number;
+    finding: number;
+    llm: number;
+    final: number;
+    signatureEligible: boolean;
+    bonusReasons: string[];
+  } | null>(null);
 
   // レポートがない場合は入力画面へ
   useEffect(() => {
@@ -471,28 +481,50 @@ export const ReportPage: React.FC = () => {
     ? Math.round(Math.max(...safeFa.recommended_paths.map((p) => p.success_probability ?? 0)) * 100)
     : null;
 
-  // v3.2: 署名可能条件 — 分析信頼度39%以上
-  const canSign = effectiveConfidencePct >= SIGNABLE_CONFIDENCE_THRESHOLD;
+  const hasCheckedCheckpoint = safeReview.checkpoint_items?.some(
+    (item) => checkpointChecks[item.item_id] ?? item.checked
+  ) ?? false;
+  const hasCheckedFinding = (safeReview.findings ?? []).some((_, idx) => Boolean(humanReviewChecks[idx]));
+  const hasAnyRecalcSelection = hasCheckedCheckpoint || hasCheckedFinding;
+
+  // 署名可能条件（policy値。未再計算時は40%）
+  const canSign = effectiveConfidencePct >= signThresholdPct;
 
   /** チェックポイント項目を反映してスコア自動再計算 */
   const handleApplyCheckpoints = useCallback(async () => {
-    const items = safeReview.checkpoint_items;
-    if (!reportId || !items || items.length === 0) return;
+    if (!reportId) return;
+    const checkpointItems = safeReview.checkpoint_items ?? [];
+    const findingItems = safeReview.findings ?? [];
 
     try {
       const response = await decisionApi.applyCheckpoints({
         report_id: reportId,
         request_id: requestId || undefined,
         reviewer_name: user?.display_name || undefined,
-        items: items.map((item) => ({
+        items: checkpointItems.map((item) => ({
           item_id: item.item_id,
           checked: checkpointChecks[item.item_id] ?? item.checked,
           annotation:
             (checkpointAnnotations[item.item_id] ?? item.annotation ?? '').trim() || undefined,
         })),
+        finding_confirmations: findingItems.map((finding, index) => ({
+          finding_index: index,
+          checked: Boolean(humanReviewChecks[index]),
+          note: (humanReviewNotes[index] ?? finding.minimal_patch?.default_value ?? '').trim() || undefined,
+        })),
       });
 
       setRecalculatedConfidence(response.recalculated_confidence_pct);
+      setSignThresholdPct(response.threshold_pct);
+      setScoreBreakdown({
+        base: response.base_confidence_pct,
+        checkpoint: response.checkpoint_boost_pct,
+        finding: response.finding_boost_pct,
+        llm: response.llm_bonus_pct,
+        final: response.recalculated_confidence_pct,
+        signatureEligible: response.signature_eligible,
+        bonusReasons: response.bonus_reasons ?? [],
+      });
       setReportInStore({
         ...report,
         review: response.updated_review,
@@ -508,10 +540,13 @@ export const ReportPage: React.FC = () => {
   }, [
     checkpointAnnotations,
     checkpointChecks,
+    humanReviewChecks,
+    humanReviewNotes,
     report,
     reportId,
     requestId,
     safeReview.checkpoint_items,
+    safeReview.findings,
     setReportInStore,
     user?.display_name,
   ]);
@@ -668,19 +703,19 @@ export const ReportPage: React.FC = () => {
                     分析信頼度（AI完成度）
                     <span
                       className="ml-1 text-slate-600 cursor-help"
-                      title={`AIが分析を論理的・網羅的に完成させた度合い。ReviewAgentが判定。70%以上で高信頼、${SIGNABLE_CONFIDENCE_THRESHOLD}%以上で署名可能。`}
+                      title={`AIが分析を論理的・網羅的に完成させた度合い。ReviewAgentが判定。70%以上で高信頼、${signThresholdPct}%以上で署名可能。`}
                     >ⓘ</span>
                   </div>
                   <div className={`text-3xl font-bold ${
                     effectiveConfidencePct >= 70 ? 'text-emerald-400' :
-                    effectiveConfidencePct >= SIGNABLE_CONFIDENCE_THRESHOLD ? 'text-amber-400' : 'text-red-400'
+                    effectiveConfidencePct >= signThresholdPct ? 'text-amber-400' : 'text-red-400'
                   }`}>
                     {effectiveConfidencePct}%
                   </div>
-                  {effectiveConfidencePct < SIGNABLE_CONFIDENCE_THRESHOLD && (
-                    <div className="text-xs text-red-400 mt-1">⚠ {SIGNABLE_CONFIDENCE_THRESHOLD}%未満 署名不可</div>
+                  {effectiveConfidencePct < signThresholdPct && (
+                    <div className="text-xs text-red-400 mt-1">⚠ {signThresholdPct}%未満 署名不可</div>
                   )}
-                  {effectiveConfidencePct >= SIGNABLE_CONFIDENCE_THRESHOLD && safeReview.overall_verdict !== 'PASS' && (
+                  {effectiveConfidencePct >= signThresholdPct && safeReview.overall_verdict !== 'PASS' && (
                     <div className="text-xs text-amber-400 mt-1">✓ 署名可能</div>
                   )}
                 </div>
@@ -923,7 +958,7 @@ export const ReportPage: React.FC = () => {
                           {safeReview.findings?.length
                             ? safeReview.overall_verdict === 'PASS'
                               ? `${safeReview.findings.length}件の改善提案あり`
-                              : `${safeReview.findings.length}件の指摘事項あり`
+                              : `${safeReview.findings.length}件の優先改善点あり`
                             : '分析結果の検証結果を確認'}
                         </p>
                       </div>
@@ -945,9 +980,9 @@ export const ReportPage: React.FC = () => {
                   <div className="flex items-start gap-3">
                     <span className="text-amber-400 mt-0.5">💡</span>
                     <div>
-                      <div className="text-sm font-medium text-amber-400 mb-1">修正が必要です</div>
+                      <div className="text-sm font-medium text-amber-400 mb-1">補強後に再計算してください</div>
                       <div className="text-sm text-slate-400">
-                        検証タブで詳細な指摘事項を確認し、画面右上の「再分析」ボタンから入力内容を修正してください。
+                        検証タブで改善提案を確認し、checkboxと補足メモを入力して「重新算分」を実行してください。
                       </div>
                     </div>
                   </div>
@@ -2039,7 +2074,7 @@ export const ReportPage: React.FC = () => {
                           <div className="text-xs text-slate-400 mb-1">分析信頼度（AI完成度）</div>
                           <div className={`text-xl font-bold ${
                             effectiveConfidencePct >= 70 ? 'text-emerald-400' :
-                            effectiveConfidencePct >= SIGNABLE_CONFIDENCE_THRESHOLD ? 'text-amber-400' : 'text-red-400'
+                            effectiveConfidencePct >= signThresholdPct ? 'text-amber-400' : 'text-red-400'
                           }`}>
                             {effectiveConfidencePct}%
                           </div>
@@ -2081,7 +2116,7 @@ export const ReportPage: React.FC = () => {
                         {safeReview.overall_verdict === 'COACH' && (
                           <>
                             <span className="text-blue-400">📋 改善指導：</span>
-                            重大な指摘がありますが、レポートに改善提案を記載しています。指摘事項を確認し、改善を進めてください。
+                            優先改善点があります。提案を確認し、補強内容を反映して再計算してください。
                           </>
                         )}
                       </div>
@@ -2095,11 +2130,11 @@ export const ReportPage: React.FC = () => {
                         <span>{safeReview.overall_verdict === 'PASS' ? '💡' : '🎯'}</span>
                         {safeReview.overall_verdict === 'PASS'
                           ? `改善提案 (${safeReview.findings.length}件)`
-                          : `高レバレッジ欠陥 (${safeReview.findings.length}件、最大3件)`}
+                          : `優先改善点 (${safeReview.findings.length}件、最大3件)`}
                       </div>
                       {missingCountermeasureCount > 0 && (
                         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-                          ⚠️ 対策案が未生成の指摘が {missingCountermeasureCount} 件あります。メモ欄に補足を残してください。
+                          ⚠️ 提案文が不足している改善点が {missingCountermeasureCount} 件あります。メモ欄で補足してください。
                         </div>
                       )}
                       <div className="space-y-4">
@@ -2109,12 +2144,12 @@ export const ReportPage: React.FC = () => {
                               ? 'bg-red-500/5 border-red-500/20'
                               : 'bg-amber-500/5 border-amber-500/20'
                           }`}>
-                            {/* ヘッダー: 重大度 + カテゴリ + アクションタイプ */}
+                            {/* ヘッダー: 優先度 + カテゴリ + アクションタイプ */}
                             <div className="flex items-center gap-2 mb-3">
                               <span className={`text-xs px-2 py-0.5 rounded font-medium ${
                                 finding.severity === 'CRITICAL' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'
                               }`}>
-                                {finding.severity === 'CRITICAL' ? '重大' : '警告'}
+                                {finding.severity === 'CRITICAL' ? '優先改善' : '改善提案'}
                               </span>
                               {finding.action_type && (
                                 <span className={`text-xs px-2 py-0.5 rounded font-medium ${
@@ -2133,10 +2168,10 @@ export const ReportPage: React.FC = () => {
                             {/* 所見本文 */}
                             <div className="mb-3 text-sm text-slate-300">{finding.description}</div>
 
-                            {/* 破綻点 */}
+                            {/* 注意点 */}
                             {finding.failure_point && (
                               <div className="mb-2">
-                                <span className="text-xs text-red-400 font-medium">破綻点: </span>
+                                <span className="text-xs text-red-400 font-medium">注意点: </span>
                                 <span className="text-sm text-slate-300">{finding.failure_point}</span>
                               </div>
                             )}
@@ -2282,19 +2317,60 @@ export const ReportPage: React.FC = () => {
                         <button
                           type="button"
                           onClick={handleApplyCheckpoints}
-                          disabled={!safeReview.checkpoint_items.some(
-                            (item) => checkpointChecks[item.item_id] ?? item.checked
-                          )}
+                          disabled={!hasAnyRecalcSelection}
                           className={`mt-4 w-full px-4 py-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
-                            safeReview.checkpoint_items.some(
-                              (item) => checkpointChecks[item.item_id] ?? item.checked
-                            )
+                            hasAnyRecalcSelection
                               ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20'
                               : 'bg-slate-800/50 text-slate-500 cursor-not-allowed border border-white/5'
                           }`}
                         >
-                          ⚡ チェック項目を反映してスコア自動再計算
+                          ⚡ 重新算分（checkbox固定加点 + 補足メモ加点）
                         </button>
+                      )}
+
+                    </div>
+                  )}
+
+                  {safeReview.auto_recalc_enabled !== false &&
+                    (!safeReview.checkpoint_items || safeReview.checkpoint_items.length === 0) && (
+                      <div className="bg-indigo-500/5 rounded-lg p-4 border border-indigo-500/20">
+                        <div className="text-sm font-medium text-indigo-400 mb-3 flex items-center gap-2">
+                          <span>⚡</span> 改善反映スコア再計算
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleApplyCheckpoints}
+                          disabled={!hasAnyRecalcSelection}
+                          className={`w-full px-4 py-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+                            hasAnyRecalcSelection
+                              ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20'
+                              : 'bg-slate-800/50 text-slate-500 cursor-not-allowed border border-white/5'
+                          }`}
+                        >
+                          重新算分（checkbox固定加点 + 補足メモ加点）
+                        </button>
+                      </div>
+                    )}
+
+                  {scoreBreakdown && (
+                    <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
+                      <div className="text-sm font-medium text-emerald-300 mb-3">再計算内訳</div>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
+                        <div>基礎点: {scoreBreakdown.base}%</div>
+                        <div>checkpoint加点: +{scoreBreakdown.checkpoint}%</div>
+                        <div>finding加点: +{scoreBreakdown.finding}%</div>
+                        <div>LLM加点: +{scoreBreakdown.llm}%</div>
+                        <div className="font-semibold text-white">最終点: {scoreBreakdown.final}%</div>
+                        <div className={scoreBreakdown.signatureEligible ? 'text-emerald-300' : 'text-amber-300'}>
+                          署名可否: {scoreBreakdown.signatureEligible ? `可（${signThresholdPct}%以上）` : `不可（${signThresholdPct}%未満）`}
+                        </div>
+                      </div>
+                      {scoreBreakdown.bonusReasons.length > 0 && (
+                        <div className="mt-3 text-xs text-slate-400 space-y-1">
+                          {scoreBreakdown.bonusReasons.map((reason, idx) => (
+                            <div key={`bonus-reason-${idx}`}>• {reason}</div>
+                          ))}
+                        </div>
                       )}
                     </div>
                   )}
@@ -2303,7 +2379,7 @@ export const ReportPage: React.FC = () => {
                   {(!safeReview.findings || safeReview.findings.length === 0) && (
                     <div className="text-center py-6 text-slate-500 bg-[#0a0a0f] rounded-lg">
                       <span className="text-3xl mb-2 block">✨</span>
-                      <p>高レバレッジ欠陥は検出されませんでした</p>
+                      <p>優先改善点は検出されませんでした</p>
                     </div>
                   )}
                 </>
@@ -2387,7 +2463,7 @@ export const ReportPage: React.FC = () => {
                 />
               </div>
             ) : canSign ? (
-              /* 署名可能（分析信頼度39%以上） */
+              /* 署名可能（分析信頼度が閾値以上） */
               <div className="flex flex-col items-center gap-4">
                 <div className="w-24 h-24 rounded-full border-2 border-dashed border-slate-600 flex items-center justify-center text-slate-500 text-xs">
                   承認印
@@ -2446,11 +2522,11 @@ export const ReportPage: React.FC = () => {
                     safeReview.overall_verdict === 'REVISE' ? 'text-amber-400' : 'text-blue-400'
                   }`}>
                     {safeReview.overall_verdict === 'REVISE'
-                      ? '⚠️ 検証で修正が必要と判定されました'
-                      : '📋 改善指導あり — 指摘事項を確認してください'}
+                      ? '⚠️ 署名前に改善項目の反映が必要です'
+                      : '📋 改善提案あり — 内容を確認してください'}
                   </div>
                   <div className="text-sm text-slate-400 mb-4">
-                    「検証」タブで指摘事項と改善提案を確認してください。
+                    「検証」タブで改善提案を確認し、checkboxと補足内容を反映してください。
                   </div>
                   <div className="flex gap-3 justify-center">
                     <button

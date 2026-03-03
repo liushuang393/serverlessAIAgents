@@ -43,6 +43,8 @@ from agentflow.utils import extract_json
 
 logger = logging.getLogger(__name__)
 DB_IO_TIMEOUT_SECONDS = 2.0
+DEFAULT_FINDING_CHECK_BOOST = 5.0
+MAX_LLM_BONUS_PCT = 15.0
 
 router = APIRouter(prefix="/api/human-review", tags=["human-review"])
 
@@ -125,6 +127,14 @@ class CheckpointApplyItem(BaseModel):
     annotation: str | None = Field(default=None, max_length=50, description="注釈（任意）")
 
 
+class FindingConfirmationItem(BaseModel):
+    """指摘事項の確認反映項目."""
+
+    finding_index: int = Field(..., ge=0, description="対象 finding のインデックス")
+    checked: bool = Field(default=False, description="確認チェック状態")
+    note: str | None = Field(default=None, max_length=2000, description="補足メモ（任意）")
+
+
 class CheckpointApplyRequest(BaseModel):
     """チェックポイント反映リクエスト."""
 
@@ -133,6 +143,10 @@ class CheckpointApplyRequest(BaseModel):
     items: list[CheckpointApplyItem] = Field(
         default_factory=list,
         description="反映するチェックポイント項目",
+    )
+    finding_confirmations: list[FindingConfirmationItem] = Field(
+        default_factory=list,
+        description="指摘事項ごとの確認チェックと補足メモ",
     )
     reviewer_name: str | None = Field(default=None, description="操作実行者（任意）")
 
@@ -143,6 +157,10 @@ class CheckpointApplyResponse(BaseModel):
     success: bool = Field(..., description="成功可否")
     message: str = Field(..., description="結果メッセージ")
     base_confidence_pct: int = Field(..., description="反映前の信頼度（%）")
+    checkpoint_boost_pct: int = Field(..., description="チェックポイント固定加点（%）")
+    finding_boost_pct: int = Field(..., description="指摘確認固定加点（%）")
+    llm_bonus_pct: int = Field(..., description="補足メモのLLM加点（%）")
+    bonus_reasons: list[str] = Field(default_factory=list, description="LLM加点の理由")
     recalculated_confidence_pct: int = Field(..., description="反映後の信頼度（%）")
     threshold_pct: int = Field(..., description="署名可能閾値（%）")
     signature_eligible: bool = Field(..., description="署名可能か")
@@ -624,12 +642,140 @@ async def log_finding_note(request: FindingNoteRequest) -> FindingNoteResponse:
     )
 
 
+def _extract_finding_boost_delta(finding: ReviewFinding) -> float:
+    """所見チェック時の固定加点を算出."""
+    positive_deltas = [
+        float(item.delta)
+        for item in finding.score_improvements
+        if float(item.delta) > 0
+    ]
+    if not positive_deltas:
+        return DEFAULT_FINDING_CHECK_BOOST
+    return max(positive_deltas)
+
+
+def _clamp_bonus_pct(value: float) -> float:
+    """LLM加点を許容範囲へ丸める."""
+    return max(0.0, min(MAX_LLM_BONUS_PCT, value))
+
+
+def _has_any_keyword(text: str, keywords: tuple[str, ...]) -> bool:
+    lowered = text.lower()
+    return any(keyword.lower() in lowered for keyword in keywords)
+
+
+def _evaluate_finding_bonus_fallback(
+    checked_items: list[dict[str, Any]],
+) -> tuple[float, list[str]]:
+    """LLM利用不可時のルール加点."""
+    if not checked_items:
+        return 0.0, []
+
+    reasons: list[str] = []
+    total_bonus = 0.0
+
+    owner_keywords = ("責任", "担当", "owner", "raci", "负责人", "責任者")
+    deadline_keywords = ("期限", "deadline", "期日", "截至", "by ", "までに")
+    verification_keywords = ("検証", "指標", "kpi", "metric", "evidence", "验收", "確認")
+    risk_keywords = ("risk", "リスク", "风险", "mitigation", "回避", "監視", "フォロー")
+
+    for item in checked_items:
+        finding_index = int(item.get("finding_index", -1))
+        note = str(item.get("note", "")).strip()
+        if not note:
+            reasons.append(f"所見#{finding_index + 1}: 補足メモが空のためLLM加点は0点")
+            continue
+
+        criteria_count = 0
+        criteria_count += 1 if _has_any_keyword(note, owner_keywords) else 0
+        criteria_count += 1 if _has_any_keyword(note, deadline_keywords) else 0
+        criteria_count += 1 if _has_any_keyword(note, verification_keywords) else 0
+        criteria_count += 1 if _has_any_keyword(note, risk_keywords) else 0
+
+        per_bonus = min(4.0, criteria_count * 1.0)
+        total_bonus += per_bonus
+        reasons.append(
+            f"所見#{finding_index + 1}: 責任者/期限/検証基準/リスク閉ループの {criteria_count}/4 を満たし +{round(per_bonus)}点"
+        )
+
+    return _clamp_bonus_pct(total_bonus), reasons[:5]
+
+
+async def _evaluate_finding_bonus_with_ai(
+    checked_items: list[dict[str, Any]],
+) -> tuple[float, list[str]]:
+    """補足メモに対するLLM加点を算出."""
+    if not checked_items:
+        return 0.0, []
+
+    try:
+        llm_client = get_llm()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"LLM 初期化失敗のため補足加点をルール評価へフォールバック: {exc}")
+        llm_client = None
+
+    if llm_client is None:
+        return _evaluate_finding_bonus_fallback(checked_items)
+
+    prompt = f"""あなたは意思決定提案の品質レビュー担当です。
+以下の「確認済み所見メモ」を評価し、補足加点を計算してください。
+
+評価ルーブリック（各所見 0-4点）:
+1. 責任者・担当ロールが具体化されているか
+2. 期限・マイルストーンが明確か
+3. 検証可能な完了条件（KPI/証跡/判定基準）があるか
+4. リスク閉ループ（再発防止/監視/フォロー）があるか
+
+出力JSONのみ:
+{{
+  "bonus_pct": 0-15の数値,
+  "reasons": ["短い理由1", "短い理由2"],
+  "item_scores": [
+    {{
+      "finding_index": 0,
+      "score": 0-4,
+      "bonus_pct": 0-5,
+      "reason": "所見ごとの根拠"
+    }}
+  ]
+}}
+
+確認済み所見メモ:
+{json.dumps(checked_items, ensure_ascii=False)}
+"""
+
+    reviewer = ReviewAgent(llm_client=llm_client)
+    try:
+        response = await reviewer._call_llm(prompt)
+        parsed = extract_json(response)
+        if not isinstance(parsed, dict):
+            return _evaluate_finding_bonus_fallback(checked_items)
+
+        raw_bonus = parsed.get("bonus_pct", 0.0)
+        try:
+            bonus_pct = _clamp_bonus_pct(float(raw_bonus))
+        except (TypeError, ValueError):
+            bonus_pct = 0.0
+
+        reasons_raw = parsed.get("reasons", [])
+        reasons = [str(item) for item in reasons_raw if isinstance(item, str) and item.strip()]
+        if not reasons:
+            reasons = ["補足メモの具体性に応じて加点を適用しました。"]
+
+        return bonus_pct, reasons[:5]
+    except json.JSONDecodeError:
+        return _evaluate_finding_bonus_fallback(checked_items)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"LLM 補足加点評価に失敗したためフォールバック: {exc}")
+        return _evaluate_finding_bonus_fallback(checked_items)
+
+
 @router.post("/apply-checkpoints", response_model=CheckpointApplyResponse)
 async def apply_checkpoints(
     request: CheckpointApplyRequest,
 ) -> CheckpointApplyResponse:
     """チェックポイントを反映して信頼度・判定を再計算し、結果を永続化."""
-    if not request.items:
+    if not request.items and not request.finding_confirmations:
         raise HTTPException(status_code=400, detail="反映対象のチェック項目がありません")
 
     report = await _get_report_from_db(request.report_id)
@@ -640,9 +786,6 @@ async def apply_checkpoints(
         review = _resolve_report_review(report)
     except ValueError as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
-
-    if not review.checkpoint_items:
-        raise HTTPException(status_code=400, detail="このレポートにはチェックポイント項目がありません")
 
     item_map = {item.item_id: item for item in request.items}
     updated_checkpoint_items: list[CheckpointItem] = []
@@ -661,12 +804,38 @@ async def apply_checkpoints(
     threshold_pct = int(policy.signable_confidence_threshold_pct)
 
     base_confidence_pct = max(0, min(100, round(review.confidence_score * 100)))
-    total_boost = sum(
+    checkpoint_boost = sum(
         item.score_boost
         for item in updated_checkpoint_items
         if item.checked
     )
-    recalculated_confidence_pct = min(100, round(base_confidence_pct + total_boost))
+
+    finding_map = {int(item.finding_index): item for item in request.finding_confirmations}
+    checked_finding_payloads: list[dict[str, Any]] = []
+    finding_boost = 0.0
+    for finding_index, finding in enumerate(review.findings):
+        incoming_finding = finding_map.get(finding_index)
+        checked = bool(incoming_finding.checked) if incoming_finding is not None else False
+        note_text = (incoming_finding.note or "").strip() if incoming_finding is not None else ""
+        if not checked:
+            continue
+
+        finding_boost += _extract_finding_boost_delta(finding)
+        if note_text:
+            checked_finding_payloads.append(
+                {
+                    "finding_index": finding_index,
+                    "severity": finding.severity.value,
+                    "category": finding.category.value,
+                    "description": finding.description,
+                    "suggested_revision": finding.suggested_revision,
+                    "note": note_text,
+                }
+            )
+
+    llm_bonus, bonus_reasons = await _evaluate_finding_bonus_with_ai(checked_finding_payloads)
+    total_score = base_confidence_pct + checkpoint_boost + finding_boost + llm_bonus
+    recalculated_confidence_pct = min(100, round(total_score))
     recalculated_confidence_score = round(recalculated_confidence_pct / 100.0, 2)
     signature_eligible = recalculated_confidence_pct >= threshold_pct
 
@@ -706,10 +875,15 @@ async def apply_checkpoints(
             "report_id": request.report_id,
             "reviewer_name": request.reviewer_name,
             "base_confidence_pct": base_confidence_pct,
+            "checkpoint_boost_pct": round(checkpoint_boost),
+            "finding_boost_pct": round(finding_boost),
+            "llm_bonus_pct": round(llm_bonus),
+            "bonus_reasons": bonus_reasons,
             "recalculated_confidence_pct": recalculated_confidence_pct,
             "threshold_pct": threshold_pct,
             "signature_eligible": signature_eligible,
             "applied_items": [item.model_dump() for item in updated_checkpoint_items],
+            "finding_confirmations": [item.model_dump() for item in request.finding_confirmations],
             "reviewed_at": datetime.now(UTC).isoformat(),
         },
         updated_review=updated_review.model_dump(),
@@ -723,6 +897,10 @@ async def apply_checkpoints(
             else "チェック項目を反映しましたが、まだ署名閾値に達していません。"
         ),
         base_confidence_pct=base_confidence_pct,
+        checkpoint_boost_pct=round(checkpoint_boost),
+        finding_boost_pct=round(finding_boost),
+        llm_bonus_pct=round(llm_bonus),
+        bonus_reasons=bonus_reasons,
         recalculated_confidence_pct=recalculated_confidence_pct,
         threshold_pct=threshold_pct,
         signature_eligible=signature_eligible,

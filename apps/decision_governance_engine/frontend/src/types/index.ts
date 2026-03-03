@@ -666,11 +666,19 @@ export interface CheckpointApplyItem {
   annotation?: string;
 }
 
+/** 指摘事項の確認反映項目 */
+export interface FindingConfirmationItem {
+  finding_index: number;
+  checked: boolean;
+  note?: string;
+}
+
 /** チェックポイント反映リクエスト */
 export interface CheckpointApplyRequest {
   report_id: string;
   request_id?: string;
   items: CheckpointApplyItem[];
+  finding_confirmations?: FindingConfirmationItem[];
   reviewer_name?: string;
 }
 
@@ -679,6 +687,10 @@ export interface CheckpointApplyResponse {
   success: boolean;
   message: string;
   base_confidence_pct: number;
+  checkpoint_boost_pct: number;
+  finding_boost_pct: number;
+  llm_bonus_pct: number;
+  bonus_reasons: string[];
   recalculated_confidence_pct: number;
   threshold_pct: number;
   signature_eligible: boolean;

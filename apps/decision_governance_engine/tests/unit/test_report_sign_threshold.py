@@ -60,9 +60,9 @@ def _build_user() -> UserInfo:
 async def test_sign_report_rejects_when_confidence_below_threshold(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """信頼度39%未満では署名できないこと."""
+    """信頼度40%未満では署名できないこと."""
     report_router._signed_reports.clear()
-    report = _build_report(0.38)
+    report = _build_report(0.39)
 
     async def _mock_get_report(_report_id: str) -> DecisionReport:
         return report
@@ -76,16 +76,16 @@ async def test_sign_report_rejects_when_confidence_below_threshold(
     )
 
     assert response.success is False
-    assert "39%未満" in response.message
+    assert "40%未満" in response.message
 
 
 @pytest.mark.asyncio
 async def test_sign_report_accepts_when_confidence_reaches_threshold(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """信頼度39%以上なら署名できること."""
+    """信頼度40%以上なら署名できること."""
     report_router._signed_reports.clear()
-    report = _build_report(0.39)
+    report = _build_report(0.40)
 
     async def _mock_get_report(_report_id: str) -> DecisionReport:
         return report

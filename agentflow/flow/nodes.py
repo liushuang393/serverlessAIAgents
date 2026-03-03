@@ -199,6 +199,7 @@ class ReviewNode(FlowNode):
     retry_from: str | None = None  # REVISE時にロールバックするノード
     max_revisions: int = 2
     verdict_key: str = "overall_verdict"  # 判定結果フィールド名
+    coach_as_stop: bool = False  # COACH時にSTOPで正常収束させる
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -307,34 +308,26 @@ class ReviewNode(FlowNode):
                 return NodeResult(success=True, data=final_data, action=NextAction.STOP)
 
             if verdict == ReviewVerdict.COACH:
-                # COACH（REJECT の後方互換含む）: 構造化 early_return を返す
-                findings: list[dict] = result.get("findings", [])
-                critical = [f for f in findings if f.get("severity") == "CRITICAL"]
-                if critical:
-                    descs = ", ".join(f.get("description", "") for f in critical)
-                    rejection_message = f"重大課題: {descs}"
-                elif findings:
-                    descs = ", ".join(f.get("description", "") for f in findings[:3])
-                    rejection_message = f"課題が検出されました: {descs}"
-                else:
-                    rejection_message = "重大課題が検出されました"
-                rejection_reason = (
-                    "; ".join(f.get("description", "") for f in findings)
-                    or "品質基準未達"
-                )
-                early_data = {
-                    "source": self.id,
-                    "stage": self.id,
-                    "verdict": verdict_str,
-                    "rejection_message": rejection_message,
-                    "rejection_reason": rejection_reason,
-                }
+                # COACH（REJECT の後方互換含む）: 設定に応じて STOP or EARLY_RETURN
+                coach_payload = self._build_coach_payload(result)
+                coach_payload["verdict"] = verdict_str
                 coach_data = self.on_coach(ctx) if self.on_coach else result
+                merged_data = {
+                    **coach_payload,
+                    **coach_data,
+                    self.verdict_key: coach_data.get(self.verdict_key, verdict.value),
+                }
+                if self.coach_as_stop:
+                    return NodeResult(
+                        success=True,
+                        data=merged_data,
+                        action=NextAction.STOP,
+                    )
                 return NodeResult(
                     success=True,
-                    data=coach_data,
+                    data=merged_data,
                     action=NextAction.EARLY_RETURN,
-                    early_return_data=early_data,
+                    early_return_data=coach_payload,
                 )
 
             # REVISE

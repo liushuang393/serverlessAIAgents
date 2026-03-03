@@ -210,6 +210,7 @@ class FlowBuilder:
         on_pass: Callable[[FlowContext], dict[str, Any]] | None = None,
         on_coach: Callable[[FlowContext], dict[str, Any]] | None = None,
         verdict_key: str = "overall_verdict",
+        coach_as_stop: bool = False,
     ) -> FlowBuilder:
         """レビューノードを追加.
 
@@ -228,6 +229,7 @@ class FlowBuilder:
             on_pass: PASS時の処理関数
             on_coach: COACH時の処理関数
             verdict_key: 判定結果フィールド名
+            coach_as_stop: COACH時に early_return せず STOP で正常収束するか
 
         Returns:
             self
@@ -255,6 +257,7 @@ class FlowBuilder:
             retry_from=retry_from,
             max_revisions=max_revisions,
             verdict_key=verdict_key,
+            coach_as_stop=coach_as_stop,
         )
         self._graph.add_node(node)
         self._logger.debug(f"レビューノードを追加: {node_id}, ロールバック先: {retry_from}")
@@ -267,6 +270,7 @@ class FlowBuilder:
         enable_memory: bool | None = None,
         max_revisions: int | None = None,
         auto_initialize: bool | None = None,
+        honor_termination: bool | None = None,
     ) -> FlowBuilder:
         """Flowを設定.
 
@@ -275,6 +279,7 @@ class FlowBuilder:
             enable_memory: メモリシステムを有効化
             max_revisions: 最大リビジョン回数
             auto_initialize: Agentを自動初期化
+            honor_termination: 終了判定を尊重して中断するか
 
         Returns:
             self
@@ -284,6 +289,11 @@ class FlowBuilder:
             enable_memory=enable_memory if enable_memory is not None else self._config.enable_memory,
             max_revisions=max_revisions if max_revisions is not None else self._config.max_revisions,
             auto_initialize=auto_initialize if auto_initialize is not None else self._config.auto_initialize,
+            honor_termination=(
+                honor_termination
+                if honor_termination is not None
+                else self._config.honor_termination
+            ),
         )
         return self
 

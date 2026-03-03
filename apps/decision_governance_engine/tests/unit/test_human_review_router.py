@@ -1,6 +1,7 @@
 """human_review ルーターの単体テスト."""
 
 import pytest
+
 from apps.decision_governance_engine.routers import human_review as human_review_router
 from apps.decision_governance_engine.schemas.output_schemas import (
     DecisionReport,
@@ -37,6 +38,14 @@ def _build_report() -> DecisionReport:
                     "description": "RACI が未定義",
                     "affected_agent": "DaoAgent",
                     "suggested_revision": "責任分担を明記する",
+                    "score_improvements": [
+                        {
+                            "target_score": "input_sufficiency",
+                            "current_estimate": 30,
+                            "improved_estimate": 37,
+                            "delta": 7,
+                        }
+                    ],
                 }
             ],
             "final_warnings": ["RACI を定義すること"],
@@ -158,22 +167,30 @@ async def test_recheck_finding_unresolved_returns_issues(
 
 
 @pytest.mark.asyncio
-async def test_apply_checkpoints_reaches_threshold_sets_pass(
+async def test_apply_checkpoints_with_fixed_boost_only(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """チェック反映後に39%以上へ到達した場合は PASS へ更新されること."""
+    """checkbox固定加点のみで 40% に到達できること."""
     report = _build_report()
-    report.review["confidence_score"] = 0.26
+    report.review["confidence_score"] = 0.20
 
     persisted: dict[str, object] = {}
 
     async def _mock_get_report(_report_id: str) -> DecisionReport:
         return report
 
+    async def _mock_bonus(_checked_items: list[dict[str, object]]) -> tuple[float, list[str]]:
+        return 0.0, []
+
     async def _mock_persist(**kwargs: object) -> None:
         persisted.update(kwargs)
 
     monkeypatch.setattr(human_review_router, "_get_report_from_db", _mock_get_report)
+    monkeypatch.setattr(
+        human_review_router,
+        "_evaluate_finding_bonus_with_ai",
+        _mock_bonus,
+    )
     monkeypatch.setattr(
         human_review_router,
         "_persist_human_review_record",
@@ -192,33 +209,49 @@ async def test_apply_checkpoints_reaches_threshold_sets_pass(
                     annotation="PO 承認",
                 )
             ],
+            finding_confirmations=[
+                human_review_router.FindingConfirmationItem(
+                    finding_index=0,
+                    checked=True,
+                )
+            ],
         )
     )
 
     assert response.success is True
-    assert response.base_confidence_pct == 26
-    assert response.recalculated_confidence_pct == 39
+    assert response.base_confidence_pct == 20
+    assert response.checkpoint_boost_pct == 13
+    assert response.finding_boost_pct == 7
+    assert response.llm_bonus_pct == 0
+    assert response.recalculated_confidence_pct == 40
     assert response.signature_eligible is True
     assert response.updated_review["overall_verdict"] == "PASS"
     assert persisted.get("updated_review") is not None
 
 
 @pytest.mark.asyncio
-async def test_apply_checkpoints_below_threshold_keeps_non_pass(
+async def test_apply_checkpoints_with_llm_bonus(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """チェック反映後も39%未満なら PASS にならないこと."""
+    """checkbox加点に加えて LLM 補足加点が反映されること."""
     report = _build_report()
-    report.review["overall_verdict"] = "COACH"
-    report.review["confidence_score"] = 0.20
+    report.review["confidence_score"] = 0.25
 
     async def _mock_get_report(_report_id: str) -> DecisionReport:
         return report
+
+    async def _mock_bonus(_checked_items: list[dict[str, object]]) -> tuple[float, list[str]]:
+        return 5.0, ["責任者・期限・検証基準が明確です。"]
 
     async def _mock_persist(**_: object) -> None:
         return None
 
     monkeypatch.setattr(human_review_router, "_get_report_from_db", _mock_get_report)
+    monkeypatch.setattr(
+        human_review_router,
+        "_evaluate_finding_bonus_with_ai",
+        _mock_bonus,
+    )
     monkeypatch.setattr(
         human_review_router,
         "_persist_human_review_record",
@@ -228,38 +261,110 @@ async def test_apply_checkpoints_below_threshold_keeps_non_pass(
     response = await human_review_router.apply_checkpoints(
         human_review_router.CheckpointApplyRequest(
             report_id=report.report_id,
+            reviewer_name="山田 太郎",
             items=[
                 human_review_router.CheckpointApplyItem(
                     item_id="approver_confirmed",
-                    checked=False,
+                    checked=True,
+                )
+            ],
+            finding_confirmations=[
+                human_review_router.FindingConfirmationItem(
+                    finding_index=0,
+                    checked=True,
+                    note="POを責任者に指定。3/31までにRACIを確定し、承認ログで検証する。",
                 )
             ],
         )
     )
 
     assert response.success is True
-    assert response.recalculated_confidence_pct == 20
-    assert response.signature_eligible is False
-    assert response.updated_review["overall_verdict"] == "COACH"
+    assert response.base_confidence_pct == 25
+    assert response.checkpoint_boost_pct == 13
+    assert response.finding_boost_pct == 7
+    assert response.llm_bonus_pct == 5
+    assert response.recalculated_confidence_pct == 50
+    assert response.bonus_reasons == ["責任者・期限・検証基準が明確です。"]
+    assert response.signature_eligible is True
 
 
 @pytest.mark.asyncio
-async def test_apply_checkpoints_persists_annotation(
+async def test_apply_checkpoints_low_score_stays_unsigned(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """annotation が review_result.checkpoint_items へ保存されること."""
+    """再計算後も 40% 未満なら署名不可のままであること."""
     report = _build_report()
+    report.review["overall_verdict"] = "COACH"
     report.review["confidence_score"] = 0.30
+
+    async def _mock_get_report(_report_id: str) -> DecisionReport:
+        return report
+
+    async def _mock_bonus(_checked_items: list[dict[str, object]]) -> tuple[float, list[str]]:
+        return 0.0, ["補足内容が抽象的なため追加加点なし。"]
+
+    async def _mock_persist(**_: object) -> None:
+        return None
+
+    monkeypatch.setattr(human_review_router, "_get_report_from_db", _mock_get_report)
+    monkeypatch.setattr(
+        human_review_router,
+        "_evaluate_finding_bonus_with_ai",
+        _mock_bonus,
+    )
+    monkeypatch.setattr(
+        human_review_router,
+        "_persist_human_review_record",
+        _mock_persist,
+    )
+
+    response = await human_review_router.apply_checkpoints(
+        human_review_router.CheckpointApplyRequest(
+            report_id=report.report_id,
+            items=[],
+            finding_confirmations=[
+                human_review_router.FindingConfirmationItem(
+                    finding_index=0,
+                    checked=True,
+                    note="対応予定です。",
+                )
+            ],
+        )
+    )
+
+    assert response.success is True
+    assert response.base_confidence_pct == 30
+    assert response.recalculated_confidence_pct == 37
+    assert response.signature_eligible is False
+    assert response.updated_review["overall_verdict"] == "COACH"
+    assert response.llm_bonus_pct == 0
+
+
+@pytest.mark.asyncio
+async def test_apply_checkpoints_persists_bonus_reasons(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """監査ログに bonus 理由が保存されること."""
+    report = _build_report()
+    report.review["confidence_score"] = 0.28
 
     persisted: dict[str, object] = {}
 
     async def _mock_get_report(_report_id: str) -> DecisionReport:
         return report
 
+    async def _mock_bonus(_checked_items: list[dict[str, object]]) -> tuple[float, list[str]]:
+        return 4.0, ["責任者と期限が具体化されています。"]
+
     async def _mock_persist(**kwargs: object) -> None:
         persisted.update(kwargs)
 
     monkeypatch.setattr(human_review_router, "_get_report_from_db", _mock_get_report)
+    monkeypatch.setattr(
+        human_review_router,
+        "_evaluate_finding_bonus_with_ai",
+        _mock_bonus,
+    )
     monkeypatch.setattr(
         human_review_router,
         "_persist_human_review_record",
@@ -269,6 +374,8 @@ async def test_apply_checkpoints_persists_annotation(
     await human_review_router.apply_checkpoints(
         human_review_router.CheckpointApplyRequest(
             report_id=report.report_id,
+            request_id="00000000-0000-0000-0000-000000000002",
+            reviewer_name="山田 太郎",
             items=[
                 human_review_router.CheckpointApplyItem(
                     item_id="approver_confirmed",
@@ -276,11 +383,18 @@ async def test_apply_checkpoints_persists_annotation(
                     annotation="承認責任者: PO",
                 )
             ],
+            finding_confirmations=[
+                human_review_router.FindingConfirmationItem(
+                    finding_index=0,
+                    checked=True,
+                    note="POが責任者。3月末までにRACIを確定し、承認ログで検証。",
+                )
+            ],
         )
     )
 
-    updated_review = persisted.get("updated_review")
-    assert isinstance(updated_review, dict)
-    checkpoint_items = updated_review.get("checkpoint_items")
-    assert isinstance(checkpoint_items, list)
-    assert checkpoint_items[0]["annotation"] == "承認責任者: PO"
+    review_record = persisted.get("review_record")
+    assert isinstance(review_record, dict)
+    assert review_record.get("llm_bonus_pct") == 4
+    assert review_record.get("bonus_reasons") == ["責任者と期限が具体化されています。"]
+

@@ -23,6 +23,8 @@ export interface HistoryItem {
   question: string;
   createdAt: string;
   reportId: string | null;
+  /** resume用のリクエストID */
+  requestId: string | null;
   status: 'completed' | 'failed' | 'signed';
 }
 
@@ -176,6 +178,7 @@ export const useDecisionStore = create<DecisionState>()(
         if (item) {
           set({
             question: item.question,
+            requestId: item.requestId ?? null,
             currentPage: 'input',
           });
         }

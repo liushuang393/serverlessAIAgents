@@ -87,12 +87,14 @@ class FlowConfig:
         enable_memory: メモリシステムを有効化
         max_revisions: 最大リビジョン回数
         auto_initialize: Agentを自動初期化
+        honor_termination: 終了判定（EARLY_RETURN）を尊重して中断するか
     """
 
     enable_progress: bool = True
     enable_memory: bool = True
     max_revisions: int = 2
     auto_initialize: bool = True
+    honor_termination: bool = False
 
 
 # ============================================================

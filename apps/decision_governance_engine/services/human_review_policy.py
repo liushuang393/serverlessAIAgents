@@ -22,7 +22,7 @@ class HumanReviewPolicy(BaseModel):
 
     version: str = "1.0.0"
     signable_confidence_threshold_pct: int = Field(
-        default=39,
+        default=40,
         ge=0,
         le=100,
         description="署名可能と判断する分析信頼度の閾値（%）",

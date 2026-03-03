@@ -93,6 +93,7 @@ class Flow:
             graph,
             enable_progress=config.enable_progress,
             max_revisions=config.max_revisions,
+            honor_termination=config.honor_termination,
         )
         self._initialized = False
 

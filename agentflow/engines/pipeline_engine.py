@@ -102,6 +102,7 @@ class StageConfig:
         review: Reviewステージかどうか
         gate_check: Gate通過条件（lambda result: bool）
         retry_from: Review REVISE時のロールバック先ステージ名
+        coach_as_stop: Review COACH時に STOP で正常収束するか（デフォルト: False）
         parallel: agentsを並列実行するか（デフォルト: False）
         interrupt_before: このステージ実行前に人間の承認を要求
         interrupt_after: このステージ実行後に人間の承認を要求
@@ -114,6 +115,7 @@ class StageConfig:
     review: bool = False
     gate_check: Callable[[dict[str, Any]], bool] | None = None
     retry_from: str | None = None
+    coach_as_stop: bool = False
     parallel: bool = False
     interrupt_before: bool = False
     interrupt_after: bool = False
@@ -136,6 +138,7 @@ class PipelineEngine(BaseEngine):
         stages: list[dict[str, Any] | StageConfig],
         *,
         max_revisions: int = 2,
+        honor_termination: bool = False,
         report_generator: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
         report_builder: ReportBuilder | None = None,
         config: EngineConfig | None = None,
@@ -145,6 +148,7 @@ class PipelineEngine(BaseEngine):
         Args:
             stages: ステージ設定リスト
             max_revisions: 最大リビジョン回数
+            honor_termination: 終了判定（Gate/ReviewのEARLY_RETURN）を尊重するか
             report_generator: レポートジェネレーター（コールバック、後方互換用）
             report_builder: ReportBuilder インスタンス（推奨）
             config: Engine設定
@@ -156,6 +160,7 @@ class PipelineEngine(BaseEngine):
         super().__init__(config)
         self._stage_configs = self._parse_stages(stages)
         self._max_revisions = max_revisions
+        self._honor_termination = honor_termination
         self._report_generator = report_generator
         self._report_builder = report_builder
         self._flow: Flow | None = None
@@ -273,6 +278,7 @@ class PipelineEngine(BaseEngine):
                     retry_from=stage.retry_from,
                     max_revisions=self._max_revisions,
                     input_mapper=self._create_review_input_mapper(),
+                    coach_as_stop=stage.coach_as_stop,
                 )
                 completed_stages.append(stage.name)
             elif stage.parallel and len(instances) > 1:
@@ -295,7 +301,10 @@ class PipelineEngine(BaseEngine):
                         builder.then(inst, ids=[node_ids[i]], input_mappers=input_mappers)
                 completed_stages.append(stage.name)
 
-        return builder.with_config(max_revisions=self._max_revisions).build()
+        return builder.with_config(
+            max_revisions=self._max_revisions,
+            honor_termination=self._honor_termination,
+        ).build()
 
     def _create_stage_input_mapper(self, completed_stages: list[str]) -> Callable[[FlowContext], dict[str, Any]]:
         """ステージ用の入力マッパーを生成.
@@ -411,18 +420,22 @@ class PipelineEngine(BaseEngine):
                     check = stage.gate_check or (lambda r: r.get("passed", True))
                     if not check(stage_result):
                         self._logger.info(f"Gate {stage.name} rejected")
-                        # 拒否理由を詳細に抽出（GatekeeperAgentの出力形式に対応）
-                        return {
-                            "status": "rejected",
-                            "stage": stage.name,
-                            "rejection_message": stage_result.get("rejection_message", ""),
-                            "rejection_reason": stage_result.get("rejection_reason", ""),
-                            "suggested_rephrase": stage_result.get("suggested_rephrase", ""),
-                            "category": stage_result.get("category", ""),
-                            "reason": stage_result.get("rejection_reason")
-                            or stage_result.get("reason", "Gate rejected"),
-                            "results": self._results,
-                        }
+                        if self._honor_termination:
+                            # 拒否理由を詳細に抽出（GatekeeperAgentの出力形式に対応）
+                            return {
+                                "status": "rejected",
+                                "stage": stage.name,
+                                "rejection_message": stage_result.get("rejection_message", ""),
+                                "rejection_reason": stage_result.get("rejection_reason", ""),
+                                "suggested_rephrase": stage_result.get("suggested_rephrase", ""),
+                                "category": stage_result.get("category", ""),
+                                "reason": stage_result.get("rejection_reason")
+                                or stage_result.get("reason", "Gate rejected"),
+                                "results": self._results,
+                            }
+                        self._logger.info(
+                            f"Gate {stage.name} interception ignored (honor_termination=False), continue flow"
+                        )
 
                 # Reviewチェック
                 if stage.review:
@@ -728,19 +741,25 @@ class PipelineEngine(BaseEngine):
                             "suggested_rephrase": stage_result.get("suggested_rephrase", ""),
                             "category": stage_result.get("category", ""),
                         }
-                        # early_return イベントを発行（フロントエンドとの互換性）
-                        yield {"type": "early_return", "data": rejection_data}
-                        yield {"type": "gate_rejected", "data": rejection_data}
+                        if self._honor_termination:
+                            # early_return イベントを発行（フロントエンドとの互換性）
+                            yield {"type": "early_return", "data": rejection_data}
+                            yield {"type": "gate_rejected", "data": rejection_data}
+                            yield {
+                                "type": "result",
+                                "data": {
+                                    "status": "rejected",
+                                    "stage": stage.name,
+                                    **rejection_data,
+                                    "results": self._results,
+                                },
+                            }
+                            return
+
                         yield {
-                            "type": "result",
-                            "data": {
-                                "status": "rejected",
-                                "stage": stage.name,
-                                **rejection_data,
-                                "results": self._results,
-                            },
+                            "type": "gate_rejected",
+                            "data": {**rejection_data, "non_blocking": True},
                         }
-                        return
 
                 if stage.review:
                     verdict = stage_result.get("verdict", stage_result.get("overall_verdict", "PASS"))

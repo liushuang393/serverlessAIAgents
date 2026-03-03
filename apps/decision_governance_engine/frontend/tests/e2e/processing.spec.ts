@@ -151,4 +151,89 @@ test.describe("進捗画面SSE", () => {
 
     await expect(page.getByRole("heading", { name: "提案書", exact: true })).toBeVisible();
   });
+
+  test("COACH/REVISE判定でもフローが中断せずレポート表示まで到達する", async ({ page }) => {
+    if (!eventSource) {
+      throw new Error("EventSourceモックが初期化されていません");
+    }
+
+    await page.goto("/");
+    await page.getByPlaceholder("ユーザー名を入力").fill("admin");
+    await page.getByPlaceholder("パスワードを入力").fill("admin123");
+    await page.getByRole("button", { name: /ログイン/ }).click();
+
+    await page
+      .getByText("解決したい問題・意思決定事項")
+      .locator("..")
+      .locator("textarea")
+      .fill("中長期方針の意思決定で不足点を補いながら進めたいです。");
+
+    await page.getByRole("button", { name: "決策分析を開始する" }).click();
+    await expect
+      .poll(async () => (await eventSource.getUrls()).some((url) => url.includes("/api/decision/stream")))
+      .toBeTruthy();
+
+    const timestamp = Date.now();
+    await eventSource.emitMessage({
+      event_type: "flow.start",
+      timestamp,
+      flow_id: "flow-003",
+    });
+
+    await eventSource.emitMessage({
+      type: "review_verdict",
+      data: { verdict: "REVISE" },
+    });
+    await eventSource.emitMessage({
+      type: "revise",
+      data: { retry_from: 3, retry_node_id: "dao" },
+    });
+    await eventSource.emitMessage({
+      type: "review_verdict",
+      data: { verdict: "COACH" },
+    });
+
+    const reportPayload = {
+      report_id: "report-003",
+      created_at: "2026-02-03T00:00:00Z",
+      version: "v3.1",
+      dao: { problem_type: "投資判断", essence: "責任分担の明確化", immutable_constraints: [], hidden_assumptions: [] },
+      fa: { recommended_paths: [], rejected_paths: [], decision_criteria: [] },
+      shu: { phases: [], first_action: "責任者を確定", dependencies: [] },
+      qi: { implementations: [], tool_recommendations: [], integration_points: [], technical_debt_warnings: [] },
+      review: {
+        overall_verdict: "COACH",
+        confidence_score: 0.36,
+        findings: [
+          {
+            severity: "CRITICAL",
+            category: "RESPONSIBILITY_GAP",
+            description: "承認責任者が未定義",
+            affected_agent: "DaoAgent",
+            suggested_revision: "承認責任者を明記",
+          },
+        ],
+        final_warnings: [],
+      },
+      executive_summary: {
+        one_line_decision: "補強しながら前進可能",
+        recommended_action: "責任者の明確化",
+        key_risks: [],
+        first_step: "RACI定義",
+        estimated_impact: "中",
+      },
+    } as const;
+
+    await eventSource.emitMessage({
+      event_type: "flow.complete",
+      timestamp: timestamp + 1,
+      flow_id: "flow-003",
+      result: reportPayload as unknown as Record<string, unknown>,
+    });
+
+    await expect(page.getByRole("button", { name: "📄 決策レポートを表示" })).toBeVisible();
+    await expect(page.getByText("エラーが発生しました")).toHaveCount(0);
+    await page.getByRole("button", { name: "📄 決策レポートを表示" }).click();
+    await expect(page.getByRole("heading", { name: "提案書", exact: true })).toBeVisible();
+  });
 });

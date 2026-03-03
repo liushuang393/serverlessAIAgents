@@ -44,7 +44,7 @@ export const DecisionInputPage: React.FC = () => {
     { regex: /(コード.*書いて|プログラム.*作)/i, message: t('input.reject_code'), category: t('input.reject_cat_code') },
   ];
 
-  /** 即時拒否チェック */
+  /** 入力補足提案チェック（非阻断） */
   const checkInstantReject = (text: string) => {
     for (const p of rejectPatterns) {
       if (p.regex.test(text)) {
@@ -84,14 +84,9 @@ export const DecisionInputPage: React.FC = () => {
       return;
     }
 
-    // 拒否チェック
+    // 補足提案を表示（送信は継続）
     const rejectResult = checkInstantReject(question);
-    if (rejectResult) {
-      setRejection(rejectResult);
-      return;
-    }
-
-    setRejection(null);
+    setRejection(rejectResult);
     setApiError(null);
     setIsSubmitting(true);
 
@@ -173,15 +168,15 @@ export const DecisionInputPage: React.FC = () => {
           )}
 
           {rejection && (
-            <div className="mb-6 bg-red-500/5 border border-red-500/20 rounded-xl p-5">
+            <div className="mb-6 bg-amber-500/5 border border-amber-500/20 rounded-xl p-5">
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center flex-shrink-0">
-                  <span className="text-red-400">⚠️</span>
+                <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-amber-400">💡</span>
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-red-400 font-medium">{t('input.reject_title')}</span>
-                    <span className="text-xs px-2 py-0.5 bg-red-500/10 text-red-400 rounded">{rejection.category}</span>
+                    <span className="text-amber-300 font-medium">{t('input.reject_title')}</span>
+                    <span className="text-xs px-2 py-0.5 bg-amber-500/10 text-amber-300 rounded">{rejection.category}</span>
                   </div>
                   <p className="text-sm text-slate-400 mb-3">{rejection.message}</p>
                   <div className="bg-[#0a0a0f] rounded-lg p-3">

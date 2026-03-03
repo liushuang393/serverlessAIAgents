@@ -128,6 +128,7 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         super().__init__(
             stages=[],  # _initialize で動的設定
             max_revisions=self.MAX_REVISIONS,
+            honor_termination=False,  # DGE既定: 終了判定を無視して最後まで到達
             report_builder=DecisionReportBuilder(),  # 新 API を使用
             config=EngineConfig(
                 name="decision-governance-engine",
@@ -147,6 +148,7 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
         self._persist_stages: set[str] = {
             "cognitive_gate",
             "gatekeeper",
+            "clarification",
             "dao",
             "fa",
             "shu",
@@ -344,8 +346,8 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
                 {
                     "name": "gatekeeper",
                     "agent": self._registry.get_agent("gatekeeper"),
-                    "gate": True,
-                    "gate_check": lambda r: r.get("is_acceptable", False),
+                    # DGE は非阻断: 受理可否は示すがフローは止めない
+                    "gate": False,
                 },
                 {
                     "name": "clarification",
@@ -373,6 +375,8 @@ class DecisionEngine(PipelineEngine, SafetyMixin):
                     "agent": self._registry.get_agent("review"),
                     "review": True,
                     "retry_from": "dao",
+                    # COACH でも early_return せず、最終レポートまで収束させる
+                    "coach_as_stop": True,
                 },
             ]
         )

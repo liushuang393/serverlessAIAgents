@@ -53,6 +53,7 @@ class FlowExecutor:
         *,
         enable_progress: bool = True,
         max_revisions: int = 2,
+        honor_termination: bool = False,
     ) -> None:
         """初期化.
 
@@ -60,11 +61,13 @@ class FlowExecutor:
             graph: フローグラフ
             enable_progress: 進捗追跡を有効化するか
             max_revisions: 最大リビジョン回数
+            honor_termination: 終了判定を尊重して中断するか
         """
         self._logger = logging.getLogger("agentflow.flow.executor")
         self._graph = graph
         self._enable_progress = enable_progress
         self._max_revisions = max_revisions
+        self._honor_termination = honor_termination
 
     async def execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """フローを同期実行.
@@ -149,7 +152,9 @@ class FlowExecutor:
                         )
                         yield to_legacy_dict(error_event)
                     # 失敗でも CONTINUE なら後続ノードを実行するためここでは return しない
-                elif result.action in (NextAction.CONTINUE, NextAction.STOP):
+                elif result.action in (NextAction.CONTINUE, NextAction.STOP) or (
+                    result.action == NextAction.EARLY_RETURN and not self._honor_termination
+                ):
                     # ノード正常完了時のみ完了イベントを発行
                     # EARLY_RETURN（Gate失敗）や RETRY_FROM（REVISE）では発行しない
                     if tracker:
@@ -169,12 +174,38 @@ class FlowExecutor:
                     idx += 1
                     continue
 
+                if result.action == NextAction.EARLY_RETURN and not self._honor_termination:
+                    if node.node_type == NodeType.GATE:
+                        yield {
+                            "type": "gate_rejected",
+                            "data": {
+                                **(result.early_return_data or result.data or {}),
+                                "non_blocking": True,
+                            },
+                        }
+                    if node.node_type == NodeType.REVIEW:
+                        er_data = result.early_return_data or result.data or {}
+                        yield {
+                            "type": "review_verdict",
+                            "data": {"verdict": er_data.get("verdict", "COACH")},
+                        }
+                    idx += 1
+                    continue
+
                 if result.action == NextAction.STOP:
                     # Review PASS の場合は review_verdict イベントを発行
                     if node.node_type == NodeType.REVIEW and result.success:
+                        review_data = result.data if isinstance(result.data, dict) else {}
+                        verdict = str(
+                            review_data.get("overall_verdict")
+                            or review_data.get("verdict")
+                            or "PASS"
+                        ).upper()
+                        if verdict == "REJECT":
+                            verdict = "COACH"
                         yield {
                             "type": "review_verdict",
-                            "data": {"verdict": "PASS"},
+                            "data": {"verdict": verdict},
                         }
 
                     if result.success:

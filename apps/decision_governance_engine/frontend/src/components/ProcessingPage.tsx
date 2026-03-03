@@ -11,7 +11,7 @@ import { useDecisionStore } from '../store/useDecisionStore';
 import { useDecisionStream, AgentProgress, ThinkingLog } from '../hooks/useDecisionStream';
 
 /** 開発時ログ（lint no-console 対応） */
-const debugLog = (..._args: unknown[]): void => {};
+const debugLog = (..._args: unknown[]): void => { };
 
 /** Agent アイコン設定（8 Agent対応） - Decision Governance Engine v1.1 */
 const AGENT_ICONS: Record<string, string> = {
@@ -58,10 +58,9 @@ const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({ age
     <div className={`bg-[#12121a] rounded-xl ${isReview ? 'border-2 border-dashed' : 'border'} ${statusColor[agent.status]} p-5 transition-all duration-500`}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${
-            agent.status === 'completed' ? 'bg-emerald-500/10' :
-            agent.status === 'running' ? 'bg-indigo-500/10' : 'bg-slate-800'
-          }`}>
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xl ${agent.status === 'completed' ? 'bg-emerald-500/10' :
+              agent.status === 'running' ? 'bg-indigo-500/10' : 'bg-slate-800'
+            }`}>
             {agent.status === 'completed' ? '✓' : icon}
           </div>
           <div>
@@ -71,22 +70,20 @@ const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({ age
             </div>
           </div>
         </div>
-        <span className={`text-sm ${
-          agent.status === 'completed' ? 'text-emerald-400' :
-          agent.status === 'running' ? 'text-indigo-400' : 'text-slate-600'
-        }`}>
-          {agent.status === 'completed' ? '完了' : 
-           agent.status === 'running' ? `${agent.progress}%` : ''}
+        <span className={`text-sm ${agent.status === 'completed' ? 'text-emerald-400' :
+            agent.status === 'running' ? 'text-indigo-400' : 'text-slate-600'
+          }`}>
+          {agent.status === 'completed' ? '完了' :
+            agent.status === 'running' ? `${agent.progress}%` : ''}
         </span>
       </div>
 
       {/* プログレスバー */}
       <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
         <div
-          className={`h-full transition-all duration-500 rounded-full ${
-            agent.status === 'completed' ? 'bg-emerald-500' :
-            agent.status === 'running' ? (isReview ? 'bg-amber-500' : 'bg-indigo-500') : 'bg-slate-700'
-          }`}
+          className={`h-full transition-all duration-500 rounded-full ${agent.status === 'completed' ? 'bg-emerald-500' :
+              agent.status === 'running' ? (isReview ? 'bg-amber-500' : 'bg-indigo-500') : 'bg-slate-700'
+            }`}
           style={{ width: `${agent.progress}%` }}
         />
       </div>
@@ -139,9 +136,8 @@ const AgentCard: React.FC<{ agent: AgentProgress; isReview?: boolean }> = ({ age
             </div>
           ) : null}
           {agent.id === 'review' && agent.result.verdict ? (
-            <div className={`text-sm ${
-              agent.result.verdict === 'PASS' ? 'text-emerald-400' : 'text-amber-400'
-            }`}>
+            <div className={`text-sm ${agent.result.verdict === 'PASS' ? 'text-emerald-400' : 'text-amber-400'
+              }`}>
               判定: {String(agent.result.verdict)}
             </div>
           ) : null}
@@ -301,6 +297,7 @@ export const ProcessingPage: React.FC = () => {
       addToHistory({
         question,
         reportId: report.report_id,
+        requestId: streamRequestId || requestId || null,
         status: 'completed',
       });
       // 自動遷移を削除 - ユーザーがボタンをクリックして遷移
@@ -320,6 +317,7 @@ export const ProcessingPage: React.FC = () => {
       addToHistory({
         question,
         reportId: null,
+        requestId: streamRequestId || requestId || null,
         status: 'failed',
       });
       // エラー時も自動遷移しない - 画面に留まってエラーを表示
@@ -328,10 +326,10 @@ export const ProcessingPage: React.FC = () => {
 
   const completedCount = agents.filter((a) => a.status === 'completed').length;
   const overallProgress = Math.round((completedCount / agents.length) * 100);
-  // Gate拒否以外のエラー（後方互換: 旧REJECT由来のメッセージ検出）
+  // 後方互換: 旧REJECT由来の文面も「改善提案」扱いで表示
   const isReviewIssue =
     Boolean(error) &&
-    (String(error).startsWith('重大課題') || String(error).startsWith('検証で重大課題') || String(error).startsWith('検証で'));
+    (String(error).startsWith('重大課題') || String(error).startsWith('検証で重大課題') || String(error).startsWith('検証で') || String(error).includes('改善'));
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white">
@@ -359,17 +357,16 @@ export const ProcessingPage: React.FC = () => {
             {overallProgress}%
           </div>
           <div className="text-slate-400 mt-2">
-            {error ? (isReviewIssue ? '📋 検証で指摘事項あり' : '⚠️ エラーが発生しました') : isComplete ? '✅ 分析完了' : '⏳ 分析処理中...'}
+            {error ? (isReviewIssue ? '🧩 改善提案があります' : '⚠️ エラーが発生しました') : isComplete ? '✅ 分析完了' : '⏳ 分析処理中...'}
           </div>
         </div>
 
         {/* エラー表示 */}
         {error && (
-          <div className={`mb-8 rounded-xl p-4 ${
-            isReviewIssue
+          <div className={`mb-8 rounded-xl p-4 ${isReviewIssue
               ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300'
               : 'bg-red-500/10 border border-red-500/30 text-red-400'
-          }`}>
+            }`}>
             {isReviewIssue ? '⚠️ ' : '🚨 '}{error}
           </div>
         )}
@@ -389,7 +386,7 @@ export const ProcessingPage: React.FC = () => {
         {/* アクションボタン */}
         <div className="flex justify-center gap-4 mt-8">
           {isComplete && report ? (
-            <button 
+            <button
               onClick={handleViewReport}
               className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 rounded-xl font-medium transition-all shadow-lg shadow-indigo-500/25 flex items-center gap-2"
             >
@@ -397,13 +394,13 @@ export const ProcessingPage: React.FC = () => {
             </button>
           ) : error ? (
             <>
-              <button 
+              <button
                 onClick={handleRetry}
                 className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-xl font-medium transition-all flex items-center gap-2"
               >
-                {isReviewIssue ? '📋 指摘を確認して再分析' : '🔄 リトライ'}
+                {isReviewIssue ? '📋 改善提案を反映して再分析' : '🔄 リトライ'}
               </button>
-              <button 
+              <button
                 onClick={handleCancel}
                 disabled={isCancelling}
                 className="px-6 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-400 transition-all"
@@ -412,7 +409,7 @@ export const ProcessingPage: React.FC = () => {
               </button>
             </>
           ) : (
-            <button 
+            <button
               onClick={handleCancel}
               disabled={isCancelling}
               className="px-6 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl text-slate-400 transition-all flex items-center gap-2"
@@ -454,4 +451,3 @@ export const ProcessingPage: React.FC = () => {
     </div>
   );
 };
-

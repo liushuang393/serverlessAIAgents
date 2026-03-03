@@ -5,6 +5,8 @@
   "version": "1.0.0",
   "business_base": "operations",
   "product_line": "migration",
+  "surface_profile": "business",
+  "audit_profile": "business",
   "port": 8010,
   "agents": [
     {
@@ -78,5 +80,6 @@
   "blueprint": {
     "engine_pattern": "pipeline",
     "mcp_servers": []
-  }
+  },
+  "plugin_bindings": []
 }

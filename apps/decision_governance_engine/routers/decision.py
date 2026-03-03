@@ -974,6 +974,13 @@ async def websocket_decision(websocket: WebSocket) -> None:
             inputs = build_input_dict(question, constraints, ws_stakeholders)
             engine = get_engine()
 
+            # ステージ単位DB保存用に request_id を入力に渡す（v3.2修正）
+            ws_request_id = uuid4()
+            inputs["_request_id"] = ws_request_id
+
+            ws_start_time = time.time()
+            final_result: dict[str, Any] = {}
+
             async for event in engine.run_stream(inputs):
                 event_data = {
                     "type": "agent_event",
@@ -993,12 +1000,53 @@ async def websocket_decision(websocket: WebSocket) -> None:
                 if hasattr(event, "error_message"):
                     event_data["error"] = event.error_message
 
+                # 完了結果を取得
+                event_type = event.get("event_type") or event.get("type", "")
+                if hasattr(event_type, "value"):
+                    event_type = event_type.value
+                if event_type == "flow.complete" and event.get("result"):
+                    final_result = event.get("result", {})
+
                 await websocket.send_json(event_data)
+
+            # 完了時にメタ情報を確定（ステージ結果は Engine 側で保存済み）
+            if ENABLE_HISTORY and final_result:
+                ws_processing_time_ms = int((time.time() - ws_start_time) * 1000)
+                ws_decision_role = _infer_decision_role(final_result)
+                ws_confidence = _extract_confidence_for_history(final_result)
+                ws_report_case_id = str(final_result.get("report_id", "")) or None
+                try:
+                    from apps.decision_governance_engine.repositories import DecisionRepository
+
+                    repo = DecisionRepository()
+                    finalized = await repo.finalize(
+                        request_id=ws_request_id,
+                        decision_role=ws_decision_role,
+                        confidence=ws_confidence,
+                        report_case_id=ws_report_case_id,
+                        processing_time_ms=ws_processing_time_ms,
+                    )
+                    if not finalized:
+                        results_dict = _extract_results_for_history(final_result)
+                        await repo.save(
+                            request_id=ws_request_id,
+                            question=question,
+                            decision_role=ws_decision_role,
+                            mode="STANDARD",
+                            confidence=ws_confidence,
+                            report_case_id=ws_report_case_id,
+                            results=results_dict,
+                            processing_time_ms=ws_processing_time_ms,
+                        )
+                    logger.info(f"[WS] 決策履歴保存完了: {ws_request_id}")
+                except Exception as e:
+                    logger.warning(f"[WS] 決策履歴保存失敗（処理は継続）: {e}")
 
             await websocket.send_json(
                 {
                     "type": "complete",
                     "message": "意思決定プロセスが完了しました",
+                    "request_id": str(ws_request_id),
                 }
             )
 
@@ -1007,3 +1055,4 @@ async def websocket_decision(websocket: WebSocket) -> None:
     except Exception as e:
         await websocket.send_json({"type": "error", "message": str(e)})
         ws_manager.disconnect(websocket)
+

@@ -22,7 +22,7 @@ const DECISION_ROLE_COLORS: Record<string, string> = {
 
 export const HistoryPage: React.FC = () => {
   const { t } = useI18n();
-  const { setPage, reset } = useDecisionStore();
+  const { setPage, setQuestion, setRequestId, reset, loadFromHistory } = useDecisionStore();
   const { user, performLogout } = useAuthStore();
 
   /** 決策結果のローカライズラベル */
@@ -274,9 +274,8 @@ export const HistoryPage: React.FC = () => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-2">
                       <span
-                        className={`px-2 py-0.5 rounded border text-xs font-medium ${
-                          DECISION_ROLE_COLORS[item.decision_role] || 'bg-slate-500/10 text-slate-400'
-                        }`}
+                        className={`px-2 py-0.5 rounded border text-xs font-medium ${DECISION_ROLE_COLORS[item.decision_role] || 'bg-slate-500/10 text-slate-400'
+                          }`}
                       >
                         {ROLE_LABELS[item.decision_role] || item.decision_role}
                       </span>
@@ -301,6 +300,18 @@ export const HistoryPage: React.FC = () => {
                   {/* 右側: アクションボタン */}
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
+                      onClick={() => {
+                        setQuestion(item.question);
+                        setRequestId(item.request_id);
+                        setPage('processing');
+                      }}
+                      className="px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-lg text-sm flex items-center gap-2 transition-all"
+                      title={t('history.resume') || '再開'}
+                    >
+                      <span>🔄</span>
+                      {t('history.resume') || '再開'}
+                    </button>
+                    <button
                       onClick={() => handleDownloadPdf(item.request_id)}
                       disabled={exportingId === item.request_id}
                       className="px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm flex items-center gap-2 transition-all disabled:opacity-50"
@@ -322,7 +333,7 @@ export const HistoryPage: React.FC = () => {
         {/* ページネーション情報 */}
         {!isLoading && items.length > 0 && (
           <div className="mt-6 text-center text-xs text-slate-500">
-            {t('history.showing_count').replaceAll('{count}', String(items.length))}
+            {t('history.showing_count').replace('{count}', String(items.length))}
           </div>
         )}
       </main>
