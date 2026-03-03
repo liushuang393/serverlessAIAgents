@@ -128,7 +128,7 @@
   "runtime": {
     "urls": {
       "backend": "http://localhost:8003",
-      "frontend": null,
+      "frontend": "http://localhost:8003",
       "health": "http://localhost:8003/api/health",
       "database": null
     },

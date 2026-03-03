@@ -293,6 +293,7 @@ class AuthService:
             scopes=claims.scopes,
             azp=claims.azp,
             email=claims.email,
+            permissions=claims.permissions,
         )
 
     async def logout(
@@ -599,11 +600,32 @@ class AuthService:
         resolved_client_app = client_app or user.azp or self._settings.DEFAULT_CLIENT_APP
         resolved_scopes = self._resolve_requested_scopes(requested_scopes or user.scopes)
         resolved_roles = user.roles or [user.role]
-        extra_claims = {
+
+        # 認可パーミッションを取得して JWT に埋め込む
+        permissions: list[str] = []
+        if self._settings.AUTHZ_EMBED_PERMISSIONS_IN_JWT:
+            # NOTE: この import は遅延必須。モジュールレベルに昇格すると循環インポートが発生する:
+            #   dependencies.py -> service.py -> core/authorization.py -> models/user.py
+            from apps.auth_service.core.authorization import get_authorization_service
+
+            authz = get_authorization_service()
+            permissions = await authz.get_user_permissions(user.user_id)
+            # JWT サイズ制限のためパーミッション数を制限
+            if len(permissions) > self._settings.AUTHZ_MAX_JWT_PERMISSIONS:
+                logger.warning(
+                    "ユーザー %s のパーミッション数 (%d) が上限 (%d) を超過。JWT 埋め込みを打ち切り。",
+                    user.user_id, len(permissions), self._settings.AUTHZ_MAX_JWT_PERMISSIONS,
+                )
+                permissions = permissions[: self._settings.AUTHZ_MAX_JWT_PERMISSIONS]
+            # ユーザー情報オブジェクトにもパーミッションを反映（レスポンス用）
+            user.permissions = permissions
+
+        extra_claims: dict[str, Any] = {
             "tenant_id": resolved_tenant_id,
             "azp": resolved_client_app,
             "scp": resolved_scopes,
             "roles": resolved_roles,
+            "permissions": permissions,
         }
         access_token = self._jwt.create_access_token(
             user_id=user.user_id,
@@ -716,7 +738,9 @@ class AuthService:
             )
             await session.commit()
 
-    def _account_to_user_info(self, account: UserAccount) -> UserInfo:
+    def _account_to_user_info(
+        self, account: UserAccount, permissions: list[str] | None = None
+    ) -> UserInfo:
         """UserAccount を UserInfo に変換."""
         scopes = self._resolve_requested_scopes(None)
         return UserInfo(
@@ -732,6 +756,7 @@ class AuthService:
             azp=self._settings.DEFAULT_CLIENT_APP,
             email=account.email,
             mfa_enabled=account.mfa_enabled,
+            permissions=permissions or [],
         )
 
     def _resolve_requested_scopes(self, requested_scopes: list[str] | None) -> list[str]:

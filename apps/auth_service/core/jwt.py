@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import logging
 import secrets
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -45,6 +45,7 @@ class TokenClaims:
     exp: datetime
     iss: str
     aud: str
+    permissions: list[str] = field(default_factory=list)
 
 
 class JWTManager:
@@ -198,6 +199,7 @@ class JWTManager:
                 exp=datetime.fromtimestamp(int(payload["exp"]), tz=UTC),
                 iss=str(payload.get("iss", "")),
                 aud=str(payload.get("aud", "")),
+                permissions=_normalize_str_list(payload.get("permissions"), fallback=[]),
             )
         except (KeyError, TypeError, ValueError) as e:
             logger.debug("TokenClaims 変換エラー: %s", e)

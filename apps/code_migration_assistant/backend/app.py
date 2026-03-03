@@ -7,9 +7,10 @@ from pathlib import Path
 from typing import Any
 
 from apps.code_migration_assistant.engine import CodeMigrationEngine
+from apps.migration_studio.backend.router import router as migration_studio_router
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -57,11 +58,12 @@ active_tasks: dict[str, CodeMigrationEngine] = {}
 task_websockets: dict[str, WebSocket] = {}
 _APP_CONFIG_PATH = Path(__file__).resolve().parents[1] / "app_config.json"
 _PUBLIC_HTTP_PATHS = {"/api/health", "/docs", "/redoc", "/openapi.json"}
+_AUTH_HEADER_NAME = "x-api-key"
 _auth_guard = ContractAuthGuard(
     ContractAuthGuardConfig(
         app_config_path=_APP_CONFIG_PATH,
         public_http_paths=_PUBLIC_HTTP_PATHS,
-        auth_header_name="x-api-key",
+        auth_header_name=_AUTH_HEADER_NAME,
         ws_query_key="api_key",
         api_key_env_selector_var="CODE_MIGRATION_API_KEY_ENV",
         default_api_key_env_var="CODE_MIGRATION_API_KEY",
@@ -89,6 +91,19 @@ def _should_protect_http_path(path: str) -> bool:
     return _auth_guard.should_protect_http_path(path)
 
 
+def _resolve_frontend_directory() -> Path:
+    """Resolve static frontend path with Migration Studio UI priority."""
+    candidates = [
+        Path(__file__).resolve().parents[2] / "migration_studio" / "frontend",
+        Path(__file__).resolve().parents[1] / "frontend",
+    ]
+    for candidate in candidates:
+        if candidate.is_dir():
+            logger.info("Serving frontend from %s", candidate)
+            return candidate
+    return candidates[0]
+
+
 async def _require_http_api_key(request: Request) -> None:
     """Enforce API key for protected HTTP routes."""
     await _auth_guard.require_http(request)
@@ -112,8 +127,22 @@ class ApprovalRequest(BaseModel):
 
 @app.middleware("http")
 async def auth_middleware(request: Request, call_next: Any) -> Any:
-    """Apply app-level auth contract to HTTP requests."""
-    return await _auth_guard.http_middleware(request, call_next)
+    """Apply app-level auth contract to HTTP requests.
+
+    SSE(EventSource) はカスタムヘッダーを送れないため、
+    HTTP は `x-api-key` に加えて query の `api_key` も許可する。
+    """
+    if not _should_protect_http_path(request.url.path):
+        return await call_next(request)
+    if not _is_auth_required():
+        return await call_next(request)
+
+    incoming_key = request.headers.get(_AUTH_HEADER_NAME) or request.query_params.get("api_key")
+    try:
+        _verify_api_key(incoming_key)
+    except HTTPException as exc:
+        return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
+    return await call_next(request)
 
 
 @app.get("/api/health")
@@ -123,6 +152,9 @@ async def health_check() -> dict[str, str]:
     platform のヘルスチェック判定基準と統一した応答フォーマット。
     """
     return {"status": "healthy", "service": "code_migration_assistant"}
+
+
+app.include_router(migration_studio_router)
 
 
 async def run_migration_task(task_id: str, engine: CodeMigrationEngine, inputs: dict):
@@ -240,6 +272,16 @@ async def start_migration(request: MigrationRequest, background_tasks: Backgroun
     return {"task_id": task_id, "status": "started"}
 
 
+@app.post("/api/migration/execute")
+async def execute_migration(request: MigrationRequest, background_tasks: BackgroundTasks):
+    """Backward-compatible execute endpoint."""
+    response = await start_migration(request, background_tasks)
+    task_id = str(response.get("task_id", ""))
+    if task_id:
+        response["ws_url"] = f"/api/ws/{task_id}"
+    return response
+
+
 @app.websocket("/api/ws/{task_id}")
 async def websocket_endpoint(websocket: WebSocket, task_id: str):
     if not await _require_ws_api_key(websocket):
@@ -297,7 +339,11 @@ async def get_artifact(task_id: str, stage: str, filename: str):
 
 
 # Serve UI
-app.mount("/", StaticFiles(directory="apps/code_migration_assistant/frontend", html=True), name="ui")
+_FRONTEND_DIR = _resolve_frontend_directory()
+if _FRONTEND_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=str(_FRONTEND_DIR), html=True), name="ui")
+else:
+    logger.warning("Frontend directory not found: %s", _FRONTEND_DIR)
 
 if __name__ == "__main__":
     import json

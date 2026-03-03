@@ -890,3 +890,49 @@ class TestAppLifecycleManager:
         assert launch.success is False
         assert launch.error is not None
         assert "キャンセル" in launch.error
+
+    def test_select_backend_service_prefers_app_name_hint(
+        self,
+    ) -> None:
+        """docker 複合構成で app 名に一致する backend サービスを優先する."""
+        services = [
+            {"service": "auth-admin", "published_ports": [3010], "running": True},
+            {"service": "auth-db", "published_ports": [5438], "running": True},
+            {"service": "auth-service", "published_ports": [8010], "running": True},
+        ]
+
+        selected = AppLifecycleManager._select_backend_service(
+            services,
+            app_name_hint="auth_service",
+        )
+
+        assert selected is not None
+        assert selected.get("service") == "auth-service"
+
+    def test_select_backend_service_fallback_ignores_admin_and_db_ports(
+        self,
+    ) -> None:
+        """app 名ヒントがない場合でも admin/db より backend 候補を優先する."""
+        services = [
+            {"service": "sample-admin", "published_ports": [3010], "running": True},
+            {"service": "sample-db", "published_ports": [5433], "running": True},
+            {"service": "sample-api", "published_ports": [8011], "running": True},
+        ]
+
+        selected = AppLifecycleManager._select_backend_service(services)
+
+        assert selected is not None
+        assert selected.get("service") == "sample-api"
+
+    def test_select_backend_service_returns_none_when_only_infra_services_exist(
+        self,
+    ) -> None:
+        """db/admin しか無い場合は backend サービス未検出として扱う."""
+        services = [
+            {"service": "sample-admin", "published_ports": [3010], "running": True},
+            {"service": "sample-db", "published_ports": [5433], "running": True},
+        ]
+
+        selected = AppLifecycleManager._select_backend_service(services)
+
+        assert selected is None

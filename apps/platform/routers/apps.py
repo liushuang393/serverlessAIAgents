@@ -277,14 +277,13 @@ async def _prime_health_cache(
     discovery: AppDiscoveryService,
     app_configs: list[Any],
 ) -> None:
-    """未キャッシュの App ヘルスを一括取得してキャッシュする.
+    """App ヘルスを一括取得してキャッシュを更新する.
 
     Args:
         lifecycle: ライフサイクルサービス
         app_configs: AppConfig リスト
     """
-    targets = [config for config in app_configs if lifecycle.get_cached_health(config.name) is None]
-    if not targets:
+    if not app_configs:
         return
 
     await asyncio.gather(
@@ -293,7 +292,7 @@ async def _prime_health_cache(
                 config,
                 config_path=discovery.get_config_path(config.name),
             )
-            for config in targets
+            for config in app_configs
         ),
     )
 
@@ -535,11 +534,10 @@ async def get_app_detail(
     discovery = _get_discovery()
     lifecycle = _get_lifecycle()
     config = _get_app_or_404(discovery, app_name)
-    if lifecycle.get_cached_health(app_name) is None:
-        await lifecycle.check_health(
-            config,
-            config_path=discovery.get_config_path(app_name),
-        )
+    await lifecycle.check_health(
+        config,
+        config_path=discovery.get_config_path(app_name),
+    )
 
     cached = lifecycle.get_cached_health(app_name)
     status = cached.status.value if cached else AppStatus.UNKNOWN.value
@@ -630,53 +628,38 @@ async def get_app_config(
 @router.patch("/{app_name}/config")
 async def patch_app_config(
     app_name: str,
-    patch: dict[str, Any] = Body(..., description="app_config 更新パッチ"),
+    patch: dict[str, Any] = Body(..., description="app_config 更新パッチ（読み取り専用のため使用不可）"),
     surface_profile: Literal["business", "developer", "operator"] = Query(
         default="developer",
-        description="表示面プロファイル（business はアクセス不可）",
+        description="表示面プロファイル",
     ),
 ) -> dict[str, Any]:
-    """app_config.json を部分更新.
+    """[読み取り専用] Platform は app_config の表示専用です。
+
+    各 App は自己完結型として自身の設定を管理します。
+    app_config.json を変更する場合は各 App の設定 API、
+    または app_config.json を直接編集してください。
 
     Args:
         app_name: App 識別子（snake_case）
-        patch: deep merge パッチ
+        patch: 未使用（読み取り専用のため）
+        surface_profile: 未使用（読み取り専用のため）
+
+    Raises:
+        HTTPException: 405 Method Not Allowed（常に）
     """
-    if surface_profile == "business":
-        raise HTTPException(
-            status_code=403,
-            detail={
-                "message": "business profile では app_config の更新はできません",
-                "error_code": "SURFACE_ACCESS_DENIED",
-            },
-        )
-
-    discovery = _get_discovery()
-    _get_app_or_404(discovery, app_name)
-
-    try:
-        updated = discovery.update_app_config(app_name, patch)
-    except KeyError:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "message": f"app_config.json not found: {app_name}",
-                "error_code": "APP_CONFIG_NOT_FOUND",
-            },
-        )
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail={"message": str(exc), "error_code": "APP_CONFIG_INVALID"},
-        )
-
-    config_path = discovery.get_config_path(app_name)
-    return {
-        "success": True,
-        "app_name": app_name,
-        "config_path": str(config_path) if config_path else None,
-        "config": updated.model_dump(),
-    }
+    raise HTTPException(
+        status_code=405,
+        detail={
+            "message": (
+                f"Platform は '{app_name}' の app_config 変更をサポートしません。"
+                " 各 App は自己完結型として自身の設定を管理します。"
+                " 変更は各 App の設定 API または app_config.json を直接編集してください。"
+            ),
+            "error_code": "PLATFORM_READ_ONLY",
+            "app_name": app_name,
+        },
+    )
 
 
 @router.get("/{app_name}/contracts")
@@ -713,51 +696,38 @@ async def get_app_contracts(
 @router.patch("/{app_name}/contracts")
 async def patch_app_contracts(
     app_name: str,
-    contracts_patch: dict[str, Any] = Body(..., description="contracts 更新パッチ"),
+    contracts_patch: dict[str, Any] = Body(..., description="contracts 更新パッチ（読み取り専用のため使用不可）"),
     surface_profile: Literal["business", "developer", "operator"] = Query(
         default="developer",
-        description="表示面プロファイル（business はアクセス不可）",
+        description="表示面プロファイル",
     ),
 ) -> dict[str, Any]:
-    """App 契約設定を部分更新.
+    """[読み取り専用] Platform は contracts 設定の表示専用です。
+
+    各 App は自己完結型として自身の contracts を管理します。
+    contracts を変更する場合は各 App の設定 API、
+    または app_config.json を直接編集してください。
 
     Args:
         app_name: App 識別子（snake_case）
-        contracts_patch: contracts セクションの deep merge パッチ
+        contracts_patch: 未使用（読み取り専用のため）
+        surface_profile: 未使用（読み取り専用のため）
+
+    Raises:
+        HTTPException: 405 Method Not Allowed（常に）
     """
-    if surface_profile == "business":
-        raise HTTPException(
-            status_code=403,
-            detail={
-                "message": "business profile では contracts の更新はできません",
-                "error_code": "SURFACE_ACCESS_DENIED",
-            },
-        )
-
-    discovery = _get_discovery()
-    _get_app_or_404(discovery, app_name)
-
-    try:
-        updated = discovery.update_app_config(app_name, {"contracts": contracts_patch})
-    except KeyError:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "message": f"app_config.json not found: {app_name}",
-                "error_code": "APP_CONFIG_NOT_FOUND",
-            },
-        )
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail={"message": str(exc), "error_code": "APP_CONFIG_INVALID"},
-        )
-
-    return {
-        "success": True,
-        "app_name": app_name,
-        "contracts": updated.contracts.model_dump(),
-    }
+    raise HTTPException(
+        status_code=405,
+        detail={
+            "message": (
+                f"Platform は '{app_name}' の contracts 変更をサポートしません。"
+                " 各 App は自己完結型として自身の設定を管理します。"
+                " 変更は各 App の設定 API または app_config.json を直接編集してください。"
+            ),
+            "error_code": "PLATFORM_READ_ONLY",
+            "app_name": app_name,
+        },
+    )
 
 
 @router.get("/{app_name}/health")

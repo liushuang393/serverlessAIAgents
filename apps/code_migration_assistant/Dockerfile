@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY pyproject.toml README.md /app/
 COPY agentflow /app/agentflow
 COPY apps/code_migration_assistant /app/apps/code_migration_assistant
+COPY apps/migration_studio /app/apps/migration_studio
 
 RUN pip install --no-cache-dir -e ".[apps]"
 

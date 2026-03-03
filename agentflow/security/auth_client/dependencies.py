@@ -124,3 +124,53 @@ def require_role(*roles: str) -> Callable[..., Any]:
         return user
 
     return _check
+
+
+def require_permission(*permissions: str) -> Callable[..., Any]:
+    """パーミッション必須依存関係ファクトリ.
+
+    JWT の permissions クレームでローカルチェックを行い、
+    マッチしない場合は 403 を返す。
+
+    Args:
+        permissions: 必要なパーミッション名（複数可、いずれか1つを持っていれば OK）
+
+    Returns:
+        FastAPI 依存関係関数
+
+    使用例:
+        @router.get("/protected")
+        async def protected(user=Depends(require_permission("faq:read"))):
+            return {"ok": True}
+    """
+    if not permissions:
+        msg = "require_permission() には少なくとも1つのパーミッション名が必要です"
+        raise ValueError(msg)
+
+    async def _check(user: RemoteUser = Depends(require_auth)) -> RemoteUser:
+        user_permissions = user.permissions or []
+        for required in permissions:
+            if any(_match_permission(held, required) for held in user_permissions):
+                return user
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"権限が不足しています。必要なパーミッション: {', '.join(permissions)}",
+        )
+
+    return _check
+
+
+def _match_permission(held: str, required: str) -> bool:
+    """パーミッションマッチ判定.
+
+    "*" は全マッチ、"faq:*" はプレフィックスマッチ、完全一致。
+    """
+    if held == "*":
+        return True
+    if held == required:
+        return True
+    if held.endswith(":*"):
+        prefix = held[:-1]
+        if required.startswith(prefix):
+            return True
+    return False

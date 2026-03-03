@@ -126,10 +126,11 @@ curl http://localhost:8001/api/studios/framework/rag/apps/faq_system/config
 
 このフラグでモードを固定した場合、両モードの判定ロジックは同時に有効化されない。
 
-推奨運用設定:
+設定例（`.env` に 2 変数のみ）:
 
-- Tenant SSO運用: `FAQ_AUTH_MODE=tenant_sso`, `FAQ_AUTH_PROXY_LOCAL_FALLBACK=false`
-- 企業個別運用: `FAQ_AUTH_MODE=enterprise_isolated`, `FAQ_AUTH_PROXY_LOCAL_FALLBACK=false`
+- Tenant SSO運用: `FAQ_AUTH_MODE=tenant_sso`
+- 企業個別運用: `FAQ_AUTH_MODE=enterprise_isolated`
+- ローカル開発: `FAQ_DEFAULT_TENANT_ID=default`（テナントヘッダー省略時の既定値）
 
 ### contracts.auth 例
 

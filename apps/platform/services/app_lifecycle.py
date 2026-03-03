@@ -75,7 +75,7 @@ _LOCAL_READINESS_POLL_SECONDS = 1.0
 _LOCAL_READINESS_STABLE_STREAK = 2
 _REPAIR_TOOL_ORDER: tuple[Literal["codex", "claude"], ...] = ("codex", "claude")
 _REPAIR_MAX_ATTEMPTS_PER_TOOL = 2
-_LOCAL_SERVICE_EXCLUDE_KEYWORDS = ("backend", "frontend", "web", "ui", "worker", "celery")
+_LOCAL_SERVICE_EXCLUDE_KEYWORDS = ("backend", "frontend", "web", "ui", "worker", "celery", "admin")
 
 # WSL / Linux 環境で conda agentflow を活性化するシェルプレフィックス
 _CONDA_ACTIVATE_PREFIX = (
@@ -547,14 +547,14 @@ class AppLifecycleManager:
         _repair_enabled: bool = True,
     ) -> AppActionResult:
         """App を publish（docker 優先）する."""
-        preflight = await self._run_cli_preflight(config, enabled=True)
         initial = await self._publish_app_once(
             config,
             config_path=config_path,
-            cli_preflight=preflight,
+            cli_preflight=None,
         )
         if not _repair_enabled:
             return self._attach_repair_result(initial, attempts=[], outcome="disabled")
+        preflight = None if initial.success else await self._run_cli_preflight(config, enabled=True)
         return await self._run_action_with_repair(
             config=config,
             action="publish",
@@ -630,14 +630,14 @@ class AppLifecycleManager:
         _repair_enabled: bool = True,
     ) -> AppActionResult:
         """App を起動（実行モード判定後、docker/local いずれかのみ実行）."""
-        preflight = await self._run_cli_preflight(config, enabled=True)
         initial = await self._start_app_once(
             config,
             config_path=config_path,
-            cli_preflight=preflight,
+            cli_preflight=None,
         )
         if not _repair_enabled:
             return self._attach_repair_result(initial, attempts=[], outcome="disabled")
+        preflight = None if initial.success else await self._run_cli_preflight(config, enabled=True)
         return await self._run_action_with_repair(
             config=config,
             action="start",
@@ -723,13 +723,13 @@ class AppLifecycleManager:
         _repair_enabled: bool = True,
     ) -> AppActionResult:
         """App を停止（実行モード判定後、docker/local いずれかのみ実行）."""
-        preflight = await self._run_cli_preflight(config, enabled=True)
         initial = await self._stop_app_once(
             config,
             config_path=config_path,
         )
         if not _repair_enabled:
             return self._attach_repair_result(initial, attempts=[], outcome="disabled")
+        preflight = None if initial.success else await self._run_cli_preflight(config, enabled=True)
         return await self._run_action_with_repair(
             config=config,
             action="stop",
@@ -817,14 +817,14 @@ class AppLifecycleManager:
             実行結果
         """
         try:
-            cli_preflight = await self._run_cli_preflight(config, enabled=True)
             initial = await self._start_local_dev_once(
                 config,
                 config_path=config_path,
-                cli_preflight=cli_preflight,
+                cli_preflight=None,
             )
             if not _repair_enabled:
                 return self._attach_repair_result(initial, attempts=[], outcome="disabled")
+            cli_preflight = None if initial.success else await self._run_cli_preflight(config, enabled=True)
             return await self._run_action_with_repair(
                 config=config,
                 action="local_start",
@@ -2303,7 +2303,11 @@ class AppLifecycleManager:
                 },
             )
 
-        backend_service = self._select_backend_service(services)
+        app_name_hint = app_dir.name
+        backend_service = self._select_backend_service(
+            services,
+            app_name_hint=app_name_hint,
+        )
         backend_ports = [] if backend_service is None else backend_service.get("published_ports", [])
         running_services = [service.get("service") for service in services if service.get("running") is True]
         return {
@@ -2368,8 +2372,22 @@ class AppLifecycleManager:
         return ports
 
     @staticmethod
-    def _select_backend_service(services: list[dict[str, Any]]) -> dict[str, Any] | None:
+    def _select_backend_service(
+        services: list[dict[str, Any]],
+        *,
+        app_name_hint: str | None = None,
+    ) -> dict[str, Any] | None:
         """backend 相当のサービスを選択."""
+        if app_name_hint:
+            app_tokens = {
+                app_name_hint.lower(),
+                app_name_hint.lower().replace("_", "-"),
+            }
+            for service in services:
+                name = str(service.get("service", "")).lower()
+                if name in app_tokens:
+                    return service
+
         for hint in _BACKEND_SERVICE_HINTS:
             for service in services:
                 name = str(service.get("service", "")).lower()
@@ -2381,10 +2399,18 @@ class AppLifecycleManager:
             if any(hint in name for hint in _BACKEND_SERVICE_HINTS):
                 return service
 
+        infra_keywords = ("db", "postgres", "mysql", "mariadb", "redis", "cache")
+        frontend_keywords = ("frontend", "web", "ui", "admin")
         for service in services:
-            if service.get("published_ports"):
-                return service
-        return services[0] if services else None
+            if not service.get("published_ports"):
+                continue
+            name = str(service.get("service", "")).lower()
+            if any(keyword in name for keyword in infra_keywords):
+                continue
+            if any(keyword in name for keyword in frontend_keywords):
+                continue
+            return service
+        return None
 
     @staticmethod
     def _resolve_compose_files(app_dir: Path, *, include_dev: bool) -> list[Path]:

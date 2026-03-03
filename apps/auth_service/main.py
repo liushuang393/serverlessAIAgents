@@ -14,6 +14,8 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from apps.auth_service.api.router import router
+from apps.auth_service.api.router_admin import router as admin_router
+from apps.auth_service.api.router_authorization import router as authorization_router
 from apps.auth_service.config import get_settings
 from apps.auth_service.db.session import close_db, ensure_database_ready
 from fastapi import FastAPI
@@ -32,6 +34,16 @@ async def lifespan(app: FastAPI):  # type: ignore[type-arg]
     # DB 初期化
     await ensure_database_ready()
     logger.info("データベース準備完了")
+
+    # 認可シード + FAQ リソース定義
+    from apps.auth_service.db.seed_authorization import (
+        seed_authorization,
+        seed_faq_resource_definitions,
+    )
+
+    await seed_authorization()
+    await seed_faq_resource_definitions()
+    logger.info("シードデータ準備完了")
 
     yield
 
@@ -64,6 +76,12 @@ def create_app() -> FastAPI:
 
     # 認証ルーター
     app.include_router(router)
+
+    # 認可ルーター
+    app.include_router(authorization_router)
+
+    # 管理ルーター
+    app.include_router(admin_router)
 
     # グローバルヘルスチェック
     @app.get("/health", tags=["ヘルス"])

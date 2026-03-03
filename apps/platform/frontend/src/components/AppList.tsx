@@ -20,6 +20,7 @@ const getAppCategory = (app: any): CategoryId => {
     faq_system: 'core',
     market_trend_monitor: 'core',
     code_migration_assistant: 'studio',
+    migration_studio: 'studio',
     design_skills_engine: 'studio',
     decision_governance_engine: 'governance',
     auth_service: 'ops',
@@ -289,9 +290,6 @@ export function AppList() {
           <span className="px-2 py-1 rounded-md bg-slate-800/70 border border-slate-700/50">
             ⏹️ {t('app_list.stopped_count').replace(/{count}/g, String(statusCounts.stopped))}
           </span>
-          <span className="px-2 py-1 rounded-md bg-slate-800/70 border border-slate-700/50">
-            📒 {t('app_list.cat_daily')}
-          </span>
           <span className="px-2 py-1 rounded-md bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
             ✨ {t('app_list.filtered_count').replace(/{count}/g, String(filteredApps.length))}
           </span>
@@ -419,7 +417,7 @@ export function AppList() {
                 {sharedMeta && (
                   <div className="mt-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-3 py-2.5 space-y-1.5">
                     <p className="text-[10px] uppercase tracking-wider text-cyan-300 font-semibold">
-                      Shared Service (No End-User Detail View)
+                      Shared Service (Managed by Platform)
                     </p>
                     <p className="text-[11px] text-slate-200">{sharedMeta.usage}</p>
                     <p className="text-[11px] text-slate-400">Used by: {sharedMeta.usedBy}</p>
@@ -469,6 +467,16 @@ export function AppList() {
                       className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs rounded-lg transition-colors"
                     >
                       {actionLoading === 'start' ? 'Starting...' : 'Start Service'}
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        navigate(`/apps/${app.name}`);
+                      }}
+                      className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs rounded-lg transition-colors"
+                    >
+                      Manage
                     </button>
                   </div>
                 )}

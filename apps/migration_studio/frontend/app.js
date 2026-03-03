@@ -26,6 +26,31 @@ let currentEventSource = null;
 let pendingHITLRequestId = null;
 let stageStates = {};    // stage => "pending" | "running" | "complete" | "error"
 
+// ---------- 認証ヘルパー ----------
+function getApiKey() {
+  return (
+    localStorage.getItem("CODE_MIGRATION_API_KEY")
+    || new URLSearchParams(window.location.search).get("api_key")
+    || ""
+  );
+}
+
+function buildAuthHeaders(extra = {}) {
+  const headers = { ...extra };
+  const apiKey = getApiKey();
+  if (apiKey) {
+    headers["x-api-key"] = apiKey;
+  }
+  return headers;
+}
+
+function withApiKey(url) {
+  const apiKey = getApiKey();
+  if (!apiKey) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}api_key=${encodeURIComponent(apiKey)}`;
+}
+
 // ---------- ファイル選択 ----------
 const fileInput = document.getElementById("file-input");
 const selectedFileEl = document.getElementById("selected-file");
@@ -82,7 +107,11 @@ async function startMigration() {
   try {
     const res = await fetch(
       `${API_BASE}/api/migrate/upload?fast=${fastMode}&model=${encodeURIComponent(model)}`,
-      { method: "POST", body: formData }
+      {
+        method: "POST",
+        headers: buildAuthHeaders(),
+        body: formData,
+      }
     );
     if (!res.ok) {
       const err = await res.json().catch(() => ({ detail: res.statusText }));
@@ -110,7 +139,7 @@ function connectSSE(streamUrl) {
     currentEventSource.close();
   }
 
-  const es = new EventSource(`${API_BASE}${streamUrl}`);
+  const es = new EventSource(withApiKey(`${API_BASE}${streamUrl}`));
   currentEventSource = es;
 
   es.onmessage = (e) => {
@@ -131,7 +160,10 @@ function connectSSE(streamUrl) {
 async function checkStatusAndClose(taskId) {
   if (taskId !== currentTaskId) return;
   try {
-    const res = await fetch(`${API_BASE}/api/migrate/${taskId}/status`);
+    const res = await fetch(
+      withApiKey(`${API_BASE}/api/migrate/${taskId}/status`),
+      { headers: buildAuthHeaders() }
+    );
     const data = await res.json();
     if (data.status === "complete" || data.status === "error") {
       if (currentEventSource) {
@@ -266,7 +298,7 @@ function showResult(success, title, desc) {
 // ---------- ダウンロード ----------
 async function downloadResult() {
   if (!currentTaskId) return;
-  const url = `${API_BASE}/api/migrate/${currentTaskId}/download`;
+  const url = withApiKey(`${API_BASE}/api/migrate/${currentTaskId}/download`);
   const a = document.createElement("a");
   a.href = url;
   a.download = "";
@@ -303,7 +335,7 @@ async function submitHITL(approved) {
   try {
     const res = await fetch(`${API_BASE}/api/migrate/${currentTaskId}/hitl`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: buildAuthHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({
         request_id: pendingHITLRequestId,
         approved,

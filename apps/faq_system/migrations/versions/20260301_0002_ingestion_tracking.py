@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy as sa
 from alembic import op
+from sqlalchemy import inspect as sa_inspect
 
 
 if TYPE_CHECKING:
@@ -24,80 +25,95 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    """Upgrade schema."""
-    op.create_table(
-        "ingestion_runs",
-        sa.Column("id", sa.String(length=64), nullable=False),
-        sa.Column("app_name", sa.String(length=100), nullable=False),
-        sa.Column("status", sa.String(length=32), nullable=False),
-        sa.Column("trigger_mode", sa.String(length=32), nullable=False, server_default="sync"),
-        sa.Column("dry_run", sa.Boolean(), nullable=False, server_default=sa.false()),
-        sa.Column("source_ids_json", sa.JSON(), nullable=False),
-        sa.Column("summary_json", sa.JSON(), nullable=False),
-        sa.Column("error_message", sa.Text(), nullable=True),
-        sa.Column("started_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index("ix_ingestion_runs_app_name", "ingestion_runs", ["app_name"], unique=False)
-    op.create_index("ix_ingestion_runs_status", "ingestion_runs", ["status"], unique=False)
+    """Upgrade schema.
+
+    注意: 各 create_table は既存テーブルを事前チェックして冪等化済み。
+    FAQ_DB_AUTO_CREATE=true によるテーブル先行作成（alembic_version 未記録）との
+    競合が発生しても安全にスキップされる。
+    """
+    bind = op.get_bind()
+    existing_tables = set(sa_inspect(bind).get_table_names())
+
+    if "ingestion_runs" not in existing_tables:
+        op.create_table(
+            "ingestion_runs",
+            sa.Column("id", sa.String(length=64), nullable=False),
+            sa.Column("app_name", sa.String(length=100), nullable=False),
+            sa.Column("status", sa.String(length=32), nullable=False),
+            sa.Column("trigger_mode", sa.String(length=32), nullable=False, server_default="sync"),
+            sa.Column("dry_run", sa.Boolean(), nullable=False, server_default=sa.false()),
+            sa.Column("source_ids_json", sa.JSON(), nullable=False),
+            sa.Column("summary_json", sa.JSON(), nullable=False),
+            sa.Column("error_message", sa.Text(), nullable=True),
+            sa.Column("started_at", sa.DateTime(timezone=True), nullable=False),
+            sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
+            sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+            sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+            sa.PrimaryKeyConstraint("id"),
+        )
+    op.create_index("ix_ingestion_runs_app_name", "ingestion_runs", ["app_name"], unique=False, if_not_exists=True)
+    op.create_index("ix_ingestion_runs_status", "ingestion_runs", ["status"], unique=False, if_not_exists=True)
     op.create_index(
         "ix_ingestion_runs_app_started",
         "ingestion_runs",
         ["app_name", "started_at"],
         unique=False,
+        if_not_exists=True,
     )
 
-    op.create_table(
-        "ingestion_run_items",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("run_id", sa.String(length=64), nullable=False),
-        sa.Column("source_id", sa.String(length=128), nullable=False),
-        sa.Column("source_type", sa.String(length=32), nullable=False),
-        sa.Column("status", sa.String(length=32), nullable=False),
-        sa.Column("message", sa.Text(), nullable=True),
-        sa.Column("stats_json", sa.JSON(), nullable=False),
-        sa.Column("payload_json", sa.JSON(), nullable=False),
-        sa.Column("started_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["run_id"], ["ingestion_runs.id"], ondelete="CASCADE"),
-        sa.PrimaryKeyConstraint("id"),
-    )
-    op.create_index("ix_ingestion_run_items_run_id", "ingestion_run_items", ["run_id"], unique=False)
+    if "ingestion_run_items" not in existing_tables:
+        op.create_table(
+            "ingestion_run_items",
+            sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+            sa.Column("run_id", sa.String(length=64), nullable=False),
+            sa.Column("source_id", sa.String(length=128), nullable=False),
+            sa.Column("source_type", sa.String(length=32), nullable=False),
+            sa.Column("status", sa.String(length=32), nullable=False),
+            sa.Column("message", sa.Text(), nullable=True),
+            sa.Column("stats_json", sa.JSON(), nullable=False),
+            sa.Column("payload_json", sa.JSON(), nullable=False),
+            sa.Column("started_at", sa.DateTime(timezone=True), nullable=False),
+            sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
+            sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+            sa.ForeignKeyConstraint(["run_id"], ["ingestion_runs.id"], ondelete="CASCADE"),
+            sa.PrimaryKeyConstraint("id"),
+        )
+    op.create_index("ix_ingestion_run_items_run_id", "ingestion_run_items", ["run_id"], unique=False, if_not_exists=True)
     op.create_index(
         "ix_ingestion_run_items_source_id",
         "ingestion_run_items",
         ["source_id"],
         unique=False,
+        if_not_exists=True,
     )
-    op.create_index("ix_ingestion_run_items_status", "ingestion_run_items", ["status"], unique=False)
+    op.create_index("ix_ingestion_run_items_status", "ingestion_run_items", ["status"], unique=False, if_not_exists=True)
     op.create_index(
         "ix_ingestion_run_items_run_source",
         "ingestion_run_items",
         ["run_id", "source_id"],
         unique=False,
+        if_not_exists=True,
     )
 
-    op.create_table(
-        "ingestion_checkpoints",
-        sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
-        sa.Column("source_id", sa.String(length=128), nullable=False),
-        sa.Column("cursor_text", sa.String(length=512), nullable=True),
-        sa.Column("cursor_time", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("metadata_json", sa.JSON(), nullable=False),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("source_id"),
-    )
+    if "ingestion_checkpoints" not in existing_tables:
+        op.create_table(
+            "ingestion_checkpoints",
+            sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),
+            sa.Column("source_id", sa.String(length=128), nullable=False),
+            sa.Column("cursor_text", sa.String(length=512), nullable=True),
+            sa.Column("cursor_time", sa.DateTime(timezone=True), nullable=True),
+            sa.Column("metadata_json", sa.JSON(), nullable=False),
+            sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+            sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+            sa.PrimaryKeyConstraint("id"),
+            sa.UniqueConstraint("source_id"),
+        )
     op.create_index(
         "ix_ingestion_checkpoints_source_id",
         "ingestion_checkpoints",
         ["source_id"],
         unique=True,
+        if_not_exists=True,
     )
 
 

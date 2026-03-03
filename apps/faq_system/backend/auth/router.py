@@ -62,12 +62,15 @@ def _env_bool(name: str) -> bool | None:
 
 
 def _local_fallback_enabled() -> bool:
-    if _resolve_auth_mode() == _AUTH_MODE_TENANT_SSO and not os.getenv("PYTEST_CURRENT_TEST"):
-        return False
-    configured = _env_bool("FAQ_AUTH_PROXY_LOCAL_FALLBACK")
-    if configured is not None:
-        return configured
-    return bool(os.getenv("PYTEST_CURRENT_TEST"))
+    """ローカル認証フォールバックの有効判定.
+
+    FAQ_AUTH_PROVIDER=local_db の場合、FAQ 側にローカル認証 DB があるため
+    auth_service 到達不可時にフォールバック可能。
+    テスト時は常に有効。
+    """
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return True
+    return os.getenv("FAQ_AUTH_PROVIDER", "local_db") == "local_db"
 
 
 def _normalize_auth_mode(value: str | None) -> str:

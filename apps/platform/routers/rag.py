@@ -1,4 +1,7 @@
-"""RAG Router — RAG 概要 API エンドポイント.
+"""RAG Router — RAG 概要 API エンドポイント（読み取り専用）.
+
+Platform は各 App の RAG 設定を「表示・参照」するだけです。
+各 App（faq_system 等）は自己完結型として自身の RAG 設定を管理します。
 
 GET  /api/studios/framework/rag/overview   — RAG 機能概要
 GET  /api/studios/framework/rag/strategies — チャンキング戦略一覧
@@ -8,7 +11,7 @@ GET  /api/studios/framework/rag/patterns — 推奨 RAG パターン一覧
 GET  /api/studios/framework/rag/apps       — RAG 使用 App 一覧
 GET  /api/studios/framework/rag/apps/configs — 全 App の RAG 設定一覧
 GET  /api/studios/framework/rag/apps/{app_name}/config — App 単位 RAG 設定
-PATCH /api/studios/framework/rag/apps/{app_name}/config — App 単位 RAG 設定更新（イベント発火付き）
+PATCH /api/studios/framework/rag/apps/{app_name}/config — 405（読み取り専用）
 GET  /api/studios/framework/rag/events     — SSE: RAG 設定変更イベント（?app=APP_NAME）
 GET  /api/studios/framework/rag/stats      — RAG 統計
 """
@@ -16,7 +19,6 @@ GET  /api/studios/framework/rag/stats      — RAG 統計
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -188,54 +190,26 @@ async def patch_rag_app_config(
     app_name: str,
     patch: RAGConfigPatchRequest,
 ) -> dict[str, Any]:
-    """App 単位 RAG 設定を更新し、実行中の App にイベントを発火."""
-    overview = _get_overview()
-    try:
-        result = overview.update_app_config(
-            app_name,
-            patch.model_dump(exclude_none=True),
-        )
-    except KeyError:
-        raise HTTPException(
-            status_code=404,
-            detail={
-                "message": f"App not found: {app_name}",
-                "error_code": "APP_NOT_FOUND",
-            },
-        )
-    except ValueError as exc:
-        raise HTTPException(
-            status_code=400,
-            detail={
-                "message": str(exc),
-                "error_code": "RAG_CONFIG_INVALID",
-            },
-        )
+    """[読み取り専用] Platform は RAG 設定の表示専用です。
 
-    # RagConfigStore にイベントを発火（ConfigWatcher 経由でホットリロード）
-    store = _try_get_store()
-    contracts_rag = _build_contracts_rag_payload(result.get("rag", {}))
-    now = datetime.now(tz=UTC)
-    updated_at = now.isoformat()
-    config_version = str(int(now.timestamp() * 1000))
-    hot_apply = {"mode": "hot", "applied": False, "subscriber_count": 0}
-    if store is not None:
-        new_rag_config: dict[str, Any] = result.get("rag", {})
-        subscriber_count = await store.fire_config_change(
-            app_name,
-            contracts_rag=contracts_rag,
-            rag_config=new_rag_config,
-            config_version=config_version,
-            updated_at=updated_at,
-        )
-        hot_apply = {"mode": "hot", "applied": subscriber_count > 0, "subscriber_count": subscriber_count}
+    各 App（faq_system 等）は自己完結型として自身の RAG 設定を管理します。
+    Platform はここに表示するだけであり、設定の変更は各 App 側で行ってください。
 
-    result["contracts_rag"] = contracts_rag
-    result["config_version"] = config_version
-    result["updated_at"] = updated_at
-    result["hot_apply"] = hot_apply
-
-    return result
+    Raises:
+        HTTPException: 405 Method Not Allowed（常に）
+    """
+    raise HTTPException(
+        status_code=405,
+        detail={
+            "message": (
+                f"Platform は '{app_name}' の RAG 設定変更をサポートしません。"
+                " 各 App は自己完結型として自身の設定を管理します。"
+                " 変更は各 App の設定 API または app_config.json を直接編集してください。"
+            ),
+            "error_code": "PLATFORM_READ_ONLY",
+            "app_name": app_name,
+        },
+    )
 
 
 @router.get("/events")

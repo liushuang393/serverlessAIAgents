@@ -108,6 +108,9 @@ cd apps/code_migration_assistant
 
 ダッシュボードは `http://localhost:8003` でアクセス可能です。
 
+> 2026-03 統合更新: フロント画面は `migration_studio` UI を同一サーバーで配信します。  
+> 主要フロント API は `/api/migrate/*`（upload / stream / status / download）です。
+
 ### 起動スクリプト詳細
 
 `run_server.sh` は以下の処理を実行します：
@@ -214,7 +217,7 @@ python -m apps.platform.main publish ./apps/code_migration_assistant --target do
 │                                                         │
 │  ┌─────────────────────────────────────────────────────┐│
 │  │ Backend API Layer (FastAPI)                         ││
-│  │ ├─ REST Endpoints: /api/migration/execute           ││
+│  │ ├─ REST Endpoints: /api/migrate/*, /api/migration/* ││
 │  │ ├─ WebSocket: /api/ws/{task_id}                     ││
 │  │ └─ Static Files Server: /                           ││
 │  │ [サーバーで実行される]                                ││
@@ -241,7 +244,7 @@ python -m apps.platform.main publish ./apps/code_migration_assistant --target do
    ↓
 4. ユーザーが「Start Migration」をクリック
    ↓
-5. app.js が POST /api/migration/execute を呼び出し
+5. app.js が POST /api/migrate/upload を呼び出し
    ↓
 6. backend/app.py が CodeMigrationEngine を初期化
    ↓

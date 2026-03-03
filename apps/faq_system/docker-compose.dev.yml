@@ -47,3 +47,5 @@ services:
       - FAQ_DATABASE_URL=${FAQ_DATABASE_URL:-postgresql+asyncpg://faq:faq_password@faq-db:5432/faq_system}
       - FAQ_DB_AUTO_CREATE=${FAQ_DB_AUTO_CREATE:-false}
       - FAQ_AUTH_PROVIDER=${FAQ_AUTH_PROVIDER:-local_db}
+      # ベクトルDB（Qdrant）
+      - QDRANT_URL=${QDRANT_URL:-http://qdrant:6333}
