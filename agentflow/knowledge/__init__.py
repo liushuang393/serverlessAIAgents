@@ -20,6 +20,8 @@ RAG（検索増強生成）パターンの完全な実装を提供します：
     >>> results = await search("類似検索クエリ", top_k=5)
 """
 
+# コレクション・ドキュメント管理
+from agentflow.knowledge.collection_manager import CollectionManager
 from agentflow.knowledge.doc_health_checker import (
     DocHealthChecker,
     DocHealthConfig,
@@ -30,6 +32,7 @@ from agentflow.knowledge.doc_health_checker import (
     IssueSeverity,
     IssueType,
 )
+from agentflow.knowledge.document_manager import DocumentManager
 from agentflow.knowledge.document_loader import (
     CSVLoader,
     DocumentChunk,
@@ -57,6 +60,11 @@ from agentflow.knowledge.isolated_kb import (
     KBVisibility,
     SearchResult,
 )
+from agentflow.knowledge.models import (
+    CollectionConfigModel,
+    DocumentRecordModel,
+    DocumentStatus,
+)
 from agentflow.knowledge.rag_access_control import RAGAccessControl
 from agentflow.knowledge.rag_pipeline import (
     RAGConfig,
@@ -74,6 +82,9 @@ from agentflow.knowledge.scope_resolver import CollectionTarget, ScopeResolver
 
 __all__ = [
     "CSVLoader",
+    # コレクション・ドキュメント管理
+    "CollectionConfigModel",
+    "CollectionManager",
     "CollectionTarget",
     # ドキュメント健康度
     "DocHealthChecker",
@@ -82,6 +93,9 @@ __all__ = [
     "DocumentChunk",
     # Document Loaders
     "DocumentLoader",
+    "DocumentManager",
+    "DocumentRecordModel",
+    "DocumentStatus",
     "HTMLLoader",
     "HealthIssue",
     "HealthReport",

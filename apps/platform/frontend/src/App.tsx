@@ -14,7 +14,7 @@ import { AgentBrowser } from '@/components/AgentBrowser';
 import { AgentOrchestration } from '@/components/AgentOrchestration';
 import { AgentPatterns } from '@/components/AgentPatterns';
 import { SkillCatalog } from '@/components/SkillCatalog';
-import { RAGOverview } from '@/components/RAGOverview';
+import { RAGDashboard } from '@/components/rag/RAGDashboard';
 import { MCPManager } from '@/components/MCPManager';
 import { CLIReference } from '@/components/CLIReference';
 import { Settings } from '@/components/Settings';
@@ -53,7 +53,7 @@ export default function App() {
         <Route path="agent-orchestration" element={<AgentOrchestration />} />
         <Route path="agent-patterns" element={<AgentPatterns />} />
         <Route path="skills" element={<SkillCatalog />} />
-        <Route path="rag" element={<RAGOverview />} />
+        <Route path="rag" element={<RAGDashboard />} />
         <Route path="mcp" element={<MCPManager />} />
         <Route path="cli" element={<CLIReference />} />
         <Route path="settings" element={<Settings />} />

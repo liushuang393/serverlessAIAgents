@@ -114,6 +114,15 @@ export const DecisionInputPage: React.FC = () => {
           {/* ユーザーメニュー */}
           {user && (
             <div className="flex items-center gap-3">
+              {/* 知識管理ボタン */}
+              <button
+                onClick={() => setPage('knowledge')}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm flex items-center gap-2 transition-all text-slate-300 hover:text-white"
+                title={t('nav.knowledge_mgmt')}
+              >
+                <span aria-hidden="true">&#128218;</span>
+                {t('nav.knowledge_mgmt')}
+              </button>
               {/* 履歴ボタン */}
               <button
                 onClick={() => setPage('history')}

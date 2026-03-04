@@ -39,6 +39,7 @@ from apps.decision_governance_engine.routers.config import router as config_rout
 from apps.decision_governance_engine.routers.decision import router as decision_router
 from apps.decision_governance_engine.routers.human_review import router as human_review_router
 from apps.decision_governance_engine.routers.knowledge import router as knowledge_router
+from apps.decision_governance_engine.routers.knowledge_collections import router as knowledge_collections_router
 from apps.decision_governance_engine.routers.product_launch import router as product_launch_router
 from apps.decision_governance_engine.routers.report import router as report_router
 from apps.decision_governance_engine.routers.workflow import router as workflow_router
@@ -68,6 +69,33 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     try:
         await init_db()
         logger.info("Database connection established")
+
+        # RAG 管理テーブルの初期化
+        try:
+            from agentflow.knowledge.models import Base as RAGBase
+            from apps.decision_governance_engine.repositories.database import _db
+
+            async with _db.engine.begin() as conn:
+                await conn.run_sync(RAGBase.metadata.create_all)
+            logger.info("RAG management tables initialized")
+        except Exception as rag_err:
+            logger.warning(f"RAG table init failed (non-critical): {rag_err}")
+
+        # CollectionManager / DocumentManager の初期化
+        try:
+            from agentflow.knowledge.collection_manager import CollectionManager
+            from agentflow.knowledge.document_manager import DocumentManager
+            from apps.decision_governance_engine.repositories.database import get_db_session
+            from apps.decision_governance_engine.routers.knowledge_collections import (
+                init_managers as init_collection_managers,
+            )
+
+            col_mgr = CollectionManager(session_factory=get_db_session)
+            doc_mgr = DocumentManager(collection_manager=col_mgr, session_factory=get_db_session)
+            init_collection_managers(col_mgr, doc_mgr)
+            logger.info("Knowledge CollectionManager / DocumentManager initialized")
+        except Exception as mgr_err:
+            logger.warning(f"CollectionManager init failed (non-critical): {mgr_err}")
     except Exception as e:
         logger.warning(f"Database initialization failed (history will use fallback): {e}")
 
@@ -113,6 +141,7 @@ app.include_router(config_router)
 app.include_router(decision_router)
 app.include_router(human_review_router)
 app.include_router(knowledge_router)
+app.include_router(knowledge_collections_router)
 app.include_router(product_launch_router)
 app.include_router(report_router)
 app.include_router(workflow_router)

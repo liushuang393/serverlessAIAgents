@@ -1,12 +1,21 @@
 """RAG 関連ルーター.
 
 /api/rag/query, /api/rag/add
+
+ロールベースアクセス制御:
+    KB タイプ (internal / external / confidential) へのアクセスを
+    ユーザーのロールに基づいてフィルタリングする。
+    - admin: internal, external, confidential
+    - manager: internal, external
+    - employee: internal, external
+    - guest: external のみ
 """
 
 from __future__ import annotations
 
 import io
 import json
+import logging
 from typing import TYPE_CHECKING, Any
 
 from apps.faq_system.backend.auth.dependencies import require_auth
@@ -21,6 +30,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from agentflow.knowledge.rag_access_control import RAGAccessControl
 from agentflow.services import RAGConfig, RAGService
 
 
@@ -28,6 +38,8 @@ if TYPE_CHECKING:
     from apps.faq_system.backend.auth.models import UserInfo
 else:
     UserInfo = Any
+
+logger = logging.getLogger("faq.rag")
 
 
 router = APIRouter(tags=["RAG"])
@@ -85,6 +97,28 @@ def _raise_service_error(
     )
 
 
+def _check_kb_access(user: Any, kb_type: KnowledgeBaseType) -> None:
+    """ユーザーのロールが KB タイプへのアクセスを許可されているか検証.
+
+    権限不足の場合は HTTP 403 を発生させる。
+    """
+    role = getattr(user, "role", "employee")
+    if not RAGAccessControl.check_kb_type_access(role, kb_type.value):
+        logger.warning(
+            "KB access denied: user=%s role=%s kb_type=%s",
+            getattr(user, "username", "unknown"),
+            role,
+            kb_type.value,
+        )
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "message": f"ロール '{role}' は '{kb_type.value}' KB へのアクセス権限がありません。",
+                "error_code": "kb_access_denied",
+            },
+        )
+
+
 # ---------------------------------------------------------------------------
 # エンドポイント
 # ---------------------------------------------------------------------------
@@ -95,12 +129,14 @@ async def rag_query(
     request: RAGQueryRequest,
     _user: UserInfo = Depends(require_auth),
 ) -> dict[str, Any]:
-    """RAG クエリ API (認証必須)."""
+    """RAG クエリ API (認証必須・ロールベースアクセス制御)."""
     if not is_rag_enabled():
         raise HTTPException(
             status_code=400,
             detail={"message": "RAG is disabled by app config", "error_code": "rag_disabled"},
         )
+
+    _check_kb_access(_user, request.kb_type)
 
     collection = kb_registry.resolve_collection(
         kb_type=request.kb_type,
@@ -126,12 +162,14 @@ async def rag_add_document(
     request: AddDocumentRequest,
     _user: UserInfo = Depends(require_auth),
 ) -> dict[str, Any]:
-    """ドキュメント追加 API (認証必須)."""
+    """ドキュメント追加 API (認証必須・ロールベースアクセス制御)."""
     if not is_rag_enabled():
         raise HTTPException(
             status_code=400,
             detail={"message": "RAG is disabled by app config", "error_code": "rag_disabled"},
         )
+
+    _check_kb_access(_user, request.kb_type)
 
     collection = kb_registry.resolve_collection(
         kb_type=request.kb_type,
@@ -158,12 +196,14 @@ async def rag_upload_file(
     collection: str | None = Query(None),
     _user: UserInfo = Depends(require_auth),
 ) -> dict[str, Any]:
-    """ファイルアップロードによるドキュメント追加 API (認証必須)."""
+    """ファイルアップロードによるドキュメント追加 API (認証必須・ロールベースアクセス制御)."""
     if not is_rag_enabled():
         raise HTTPException(
             status_code=400,
             detail={"message": "RAG is disabled by app config", "error_code": "rag_disabled"},
         )
+
+    _check_kb_access(_user, kb_type)
 
     filename = file.filename or "uploaded_file"
     ext = filename.split(".")[-1].lower() if "." in filename else ""

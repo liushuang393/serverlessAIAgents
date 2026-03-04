@@ -16,6 +16,7 @@ import { ReportPage } from './components/ReportPage';
 import { HistoryPage } from './components/HistoryPage';
 import { LoginPage } from './components/LoginPage';
 import { KnowledgePage } from './components/KnowledgePage';
+import { KnowledgeLayout } from './components/knowledge/KnowledgeLayout';
 
 // ========================================
 // エラーフォールバック UI
@@ -134,6 +135,8 @@ const AppContent: React.FC = () => {
       return <KnowledgePage agentType="shu" />;
     case 'knowledge-qi':
       return <KnowledgePage agentType="qi" />;
+    case 'knowledge':
+      return <KnowledgeLayout />;
     default:
       return <DecisionInputPage />;
   }

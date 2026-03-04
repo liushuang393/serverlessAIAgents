@@ -208,6 +208,10 @@ class SyncSessionAdapter:
         """インスタンスを削除対象としてマーク."""
         self._session.delete(instance)
 
+    async def refresh(self, instance: Any, *args: Any, **kwargs: Any) -> None:
+        """インスタンスを DB から再読み込み."""
+        self._session.refresh(instance, *args, **kwargs)
+
 
 # ---------------------------------------------------------------------------
 # セッション提供
@@ -243,3 +247,44 @@ async def close_db() -> None:
     _is_ready = False
     _ready_lock = None
     _ready_lock_loop_id = None
+
+
+# ---------------------------------------------------------------------------
+# RAG 管理テーブル初期化
+# ---------------------------------------------------------------------------
+
+
+async def init_rag_tables() -> None:
+    """フレームワーク RAG 管理テーブルをアプリ DB に作成.
+
+    既存テーブルがある場合は何もしない（checkfirst=True）。
+    """
+    from agentflow.knowledge.models import Base as RAGBase
+
+    await _db.init()
+
+    if _db.is_sync_mode:
+        from sqlalchemy import pool as sa_pool
+
+        from agentflow.database.url_utils import to_sync_url
+
+        from sqlalchemy import create_engine
+
+        engine = create_engine(to_sync_url(_db.resolved_url), poolclass=sa_pool.NullPool)
+        try:
+            RAGBase.metadata.create_all(engine, checkfirst=True)
+        finally:
+            engine.dispose()
+    else:
+        async_engine = _db.engine
+        async with async_engine.begin() as conn:
+            await conn.run_sync(RAGBase.metadata.create_all, checkfirst=True)
+
+
+def get_rag_session_factory() -> Any:
+    """CollectionManager / DocumentManager 用セッションファクトリを返す.
+
+    get_db_session と互換性のある callable を返し、
+    ``async with factory() as session:`` パターンで利用可能。
+    """
+    return get_db_session

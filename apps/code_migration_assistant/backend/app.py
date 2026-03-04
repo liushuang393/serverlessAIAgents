@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from apps.code_migration_assistant.backend.knowledge_router import router as knowledge_router
 from apps.code_migration_assistant.backend.migration_router import router as migration_ui_router
 from apps.code_migration_assistant.backend.task_store import RedisTaskStore
 from apps.code_migration_assistant.engine import CodeMigrationEngine
@@ -765,6 +766,45 @@ async def health_check() -> dict[str, str]:
 
 
 app.include_router(migration_ui_router)
+app.include_router(knowledge_router)
+
+
+# ---------------------------------------------------------------------------
+# 知識ベース DB / マネージャー初期化（起動時）
+# ---------------------------------------------------------------------------
+
+_knowledge_initialized = False
+
+
+async def _init_knowledge_managers() -> None:
+    """RAG 管理テーブルとマネージャーを初期化."""
+    global _knowledge_initialized
+    if _knowledge_initialized:
+        return
+    try:
+        from apps.code_migration_assistant.backend.knowledge_db import (
+            get_knowledge_session,
+            init_knowledge_db,
+        )
+        from apps.code_migration_assistant.backend.knowledge_router import init_managers
+
+        from agentflow.knowledge.collection_manager import CollectionManager
+        from agentflow.knowledge.document_manager import DocumentManager
+
+        await init_knowledge_db()
+
+        col_mgr = CollectionManager(session_factory=get_knowledge_session)
+        doc_mgr = DocumentManager(collection_manager=col_mgr, session_factory=get_knowledge_session)
+        init_managers(col_mgr, doc_mgr)
+        _knowledge_initialized = True
+        logger.info("Knowledge managers initialized")
+    except Exception as e:
+        logger.warning("Knowledge manager init failed (non-critical): %s", e)
+
+
+@app.on_event("startup")
+async def _startup_knowledge() -> None:
+    await _init_knowledge_managers()
 
 
 async def _start_task(body: MigrationRequest, background_tasks: BackgroundTasks) -> dict[str, Any]:

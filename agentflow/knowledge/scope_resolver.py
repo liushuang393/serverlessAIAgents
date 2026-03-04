@@ -3,6 +3,10 @@
 auth_service の resolve-scopes API を呼び出し、
 ユーザーの role + tenant から検索対象の collection 一覧を返す。
 他 App からも再利用可能。
+
+auth_service が利用不可の場合は、フォールバック RBAC マッピングにより
+ロールに応じた KB タイプ（internal / external / confidential）で
+アクセス制御を行う。
 """
 from __future__ import annotations
 
@@ -14,6 +18,14 @@ import httpx
 
 
 logger = logging.getLogger(__name__)
+
+# auth_service 未接続時のフォールバック RBAC マッピング
+FALLBACK_ROLE_KB_MAP: dict[str, list[str]] = {
+    "admin": ["internal", "external", "confidential"],
+    "manager": ["internal", "external"],
+    "employee": ["internal", "external"],
+    "guest": ["external"],
+}
 
 
 @dataclass
@@ -131,3 +143,31 @@ class ScopeResolver:
             tenant=tenant_id or "default",
             scope=scope,
         )
+
+    @staticmethod
+    def check_kb_type_access(role: str, kb_type: str) -> bool:
+        """ロールが指定された KB タイプにアクセス可能か判定.
+
+        auth_service 未接続時のフォールバック判定として使用。
+
+        Args:
+            role: ユーザーのロール名
+            kb_type: KB 種別 (internal / external / confidential)
+
+        Returns:
+            アクセス可能なら True
+        """
+        allowed = FALLBACK_ROLE_KB_MAP.get(role, ["external"])
+        return kb_type in allowed
+
+    @staticmethod
+    def get_allowed_kb_types(role: str) -> list[str]:
+        """ロールに応じた許可 KB タイプ一覧を返す.
+
+        Args:
+            role: ユーザーのロール名
+
+        Returns:
+            許可された KB タイプのリスト
+        """
+        return FALLBACK_ROLE_KB_MAP.get(role, ["external"])

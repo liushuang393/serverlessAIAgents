@@ -466,11 +466,20 @@ def get_embedding(
             _embedding_instance = provider
         return provider
 
-    # ── 4. fallback: SentenceTransformer デフォルト ──────────────────────
-    # API キー不要・外部接続不要。sentence-transformers が未インストールの場合は
-    # ImportError が発生するので、その場合は pip install sentence-transformers を実行。
-    logger.info("No embedding config found. Falling back to SentenceTransformer all-MiniLM-L6-v2.")
-    provider = SentenceTransformerProvider("all-MiniLM-L6-v2")
+    # ── 4. fallback: SentenceTransformer → Mock ──────────────────────
+    # sentence-transformers が利用可能ならそちらを使用、
+    # 未インストールの場合は MockEmbeddingProvider にフォールバック。
+    try:
+        import sentence_transformers  # noqa: F401
+
+        logger.info("No embedding config found. Falling back to SentenceTransformer all-MiniLM-L6-v2.")
+        provider = SentenceTransformerProvider("all-MiniLM-L6-v2")
+    except ImportError:
+        logger.warning(
+            "No embedding provider configured and sentence-transformers not installed. "
+            "Using MockEmbeddingProvider (development/test only)."
+        )
+        provider = MockEmbeddingProvider()
     if context is None and not _new_instance:
         _embedding_instance = provider
     return provider

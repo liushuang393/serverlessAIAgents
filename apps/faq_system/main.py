@@ -74,6 +74,7 @@ from apps.faq_system.routers import (
     sql_router,
     ws_router,
 )
+from apps.faq_system.routers.collections import router as collections_router
 from apps.faq_system.routers.dependencies import (
     start_rag_ingestion_scheduler,
     stop_rag_ingestion_scheduler,
@@ -169,6 +170,22 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     if db_manager.resolved_url.startswith("sqlite"):
         await db_manager.create_all_tables()
 
+    # RAG 管理テーブル初期化
+    from apps.faq_system.backend.db.session import get_rag_session_factory, init_rag_tables
+
+    await init_rag_tables()
+
+    # CollectionManager / DocumentManager 初期化
+    from apps.faq_system.routers.collections import init_managers as init_collection_managers
+
+    from agentflow.knowledge.collection_manager import CollectionManager
+    from agentflow.knowledge.document_manager import DocumentManager
+
+    session_factory = get_rag_session_factory()
+    col_mgr = CollectionManager(session_factory=session_factory)
+    doc_mgr = DocumentManager(collection_manager=col_mgr, session_factory=session_factory)
+    init_collection_managers(col_mgr, doc_mgr)
+
     await kb_registry.ensure_initialized()
     await start_rag_ingestion_scheduler()
 
@@ -225,6 +242,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(chat_router)
 app.include_router(rag_router)
+app.include_router(collections_router)
 app.include_router(sql_router)
 app.include_router(kb_settings_router)
 app.include_router(agents_router)

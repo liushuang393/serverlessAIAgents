@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useChatStore } from '../../stores/chatStore';
-import { Plus, Trash2, LogOut, Hash, MessageCircle, PanelLeft, PanelLeftClose } from 'lucide-react';
+import { Plus, Trash2, LogOut, Hash, MessageCircle, PanelLeft, PanelLeftClose, Database } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useI18n } from '../../i18n';
 
 /** サイドバーの props 型定義 */
@@ -38,6 +38,7 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
     const { sessions, currentSessionId, selectSession, createSession, deleteSession, fetchSessions } = useChatStore();
     const { logout, user } = useAuthStore();
     const navigate = useNavigate();
+    const location = useLocation();
     const [loggingOut, setLoggingOut] = useState(false);
     const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -103,6 +104,34 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                 >
                     <Plus size={18} className="group-hover:rotate-90 transition-transform duration-300" />
                     {t('chat.new_chat')}
+                </button>
+            </div>
+
+            {/* ナビゲーション */}
+            <div className="px-4 space-y-1">
+                <button
+                    type="button"
+                    onClick={() => navigate('/')}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${
+                        location.pathname === '/'
+                            ? 'bg-white/5 text-white border border-white/10'
+                            : 'text-[var(--text-muted)] hover:text-white hover:bg-white/[0.03] border border-transparent'
+                    }`}
+                >
+                    <MessageCircle size={15} />
+                    {t('sidebar.chat')}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => navigate('/rag')}
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${
+                        location.pathname === '/rag'
+                            ? 'bg-white/5 text-white border border-white/10'
+                            : 'text-[var(--text-muted)] hover:text-white hover:bg-white/[0.03] border border-transparent'
+                    }`}
+                >
+                    <Database size={15} />
+                    {t('sidebar.knowledge_base')}
                 </button>
             </div>
 

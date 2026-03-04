@@ -14,7 +14,8 @@
 import logging
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from apps.decision_governance_engine.routers.auth import UserInfo, require_auth
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 
@@ -113,8 +114,10 @@ def create_knowledge_router(
     )
 
     @router.get("", response_model=KnowledgeListResponse)
-    async def list_documents() -> KnowledgeListResponse:
-        """知識ドキュメント一覧を取得."""
+    async def list_documents(
+        _user: UserInfo = Depends(require_auth),
+    ) -> KnowledgeListResponse:
+        """知識ドキュメント一覧を取得（認証必須）."""
         agent = await _get_agent(agent_type)
 
         if not hasattr(agent, "_rag") or agent._rag is None:
@@ -136,8 +139,11 @@ def create_knowledge_router(
         )
 
     @router.post("", response_model=KnowledgeAddResponse)
-    async def add_document(doc: KnowledgeDocument) -> KnowledgeAddResponse:
-        """知識ドキュメントを追加."""
+    async def add_document(
+        doc: KnowledgeDocument,
+        _user: UserInfo = Depends(require_auth),
+    ) -> KnowledgeAddResponse:
+        """知識ドキュメントを追加（認証必須）."""
         agent = await _get_agent(agent_type)
 
         if not hasattr(agent, "_rag") or agent._rag is None:
@@ -158,8 +164,11 @@ def create_knowledge_router(
         )
 
     @router.delete("/{doc_id}", response_model=KnowledgeDeleteResponse)
-    async def delete_document(doc_id: str) -> KnowledgeDeleteResponse:
-        """知識ドキュメントを削除."""
+    async def delete_document(
+        doc_id: str,
+        _user: UserInfo = Depends(require_auth),
+    ) -> KnowledgeDeleteResponse:
+        """知識ドキュメントを削除（認証必須）."""
         agent = await _get_agent(agent_type)
 
         if not hasattr(agent, "_rag") or agent._rag is None:
