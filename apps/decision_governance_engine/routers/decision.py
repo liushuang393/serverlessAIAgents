@@ -10,7 +10,9 @@ PipelineEngine パターンを使用した決策処理 API。
     - WebSocket /ws/decision: リアルタイム通知
 """
 
+import contextlib
 import logging
+import os
 import time
 from typing import Any
 from uuid import UUID, uuid4
@@ -38,10 +40,6 @@ from pydantic import BaseModel, Field
 logger = logging.getLogger("decision_api.decision")
 
 # 履歴保存フラグ（環境変数で制御可能）
-import contextlib
-import os
-
-
 ENABLE_HISTORY = os.getenv("ENABLE_DECISION_HISTORY", "true").lower() == "true"
 
 router = APIRouter(tags=["決策処理"])
@@ -171,6 +169,7 @@ def _save_fallback_history(
     mode: str,
     results: dict[str, Any],
     processing_time_ms: int | None,
+    report_case_id: str | None = None,
 ) -> None:
     """DB 保存失敗時のメモリ退避."""
     record = {
@@ -180,7 +179,9 @@ def _save_fallback_history(
         "decision_role": decision_role,
         "confidence": confidence,
         "mode": mode,
+        "report_case_id": report_case_id,
         "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "dao_result": results.get("dao"),
         "fa_result": results.get("fa"),
         "shu_result": results.get("shu"),
         "qi_result": results.get("qi"),
@@ -395,6 +396,7 @@ async def process_decision(
                 mode="STANDARD",
                 results=results_dict,
                 processing_time_ms=processing_time_ms,
+                report_case_id=report_case_id,
             )
 
     # レスポンス生成 + キャッシュ保存
@@ -642,6 +644,8 @@ async def get_decision_detail(request_id: str) -> HistoryDetailResponse:
             "decision_role": record.decision_role,
             "confidence": float(record.confidence) if record.confidence else None,
             "mode": record.mode,
+            "report_case_id": record.report_case_id,
+            "dao_result": record.dao_result,
             "fa_result": record.fa_result,
             "shu_result": record.shu_result,
             "qi_result": record.qi_result,
@@ -808,6 +812,7 @@ async def process_decision_stream(
                 mode="STANDARD",
                 results=results_dict,
                 processing_time_ms=processing_time_ms,
+                report_case_id=report_case_id,
             )
 
     async def generate_events():
@@ -850,6 +855,7 @@ async def process_decision_stream(
             )
 
         final_result: dict[str, Any] = {}
+        history_saved = False
         is_rejected = False
 
         try:
@@ -864,6 +870,11 @@ async def process_decision_stream(
                     if final_result and not is_rejected:
                         # PDF出力の即時性を優先し、DB保存前にキャッシュへ格納
                         _cache_report_from_result(final_result, request_id=str(request_uuid))
+                        # SSE クライアントが flow.complete 直後に切断しても
+                        # 履歴が失われないよう、完了イベント受信時点で即時保存する。
+                        if not history_saved:
+                            await save_history(final_result)
+                            history_saved = True
                 elif event_type == "result" and event.get("data"):
                     data = event.get("data", {})
                     if data.get("status") == "rejected":
@@ -879,13 +890,20 @@ async def process_decision_stream(
                     yield f"data: {event}\n\n"
 
             # 成功完了時のみ履歴を保存（拒否時は保存しない）
-            if final_result and not is_rejected:
+            if final_result and not is_rejected and not history_saved:
                 await save_history(final_result)
+                history_saved = True
 
                 # レポートキャッシュに保存（PDF出力用）
                 _cache_report_from_result(final_result, request_id=str(request_uuid))
 
         except asyncio.CancelledError:
+            if final_result and not is_rejected and not history_saved:
+                try:
+                    await asyncio.shield(save_history(final_result))
+                    history_saved = True
+                except Exception as save_err:
+                    logger.warning(f"[SSE] 切断時の履歴保存に失敗: {save_err}")
             # クライアント切断時
             logger.info("[SSE] クライアント切断を検出 - 処理を中止")
             raise
@@ -1055,4 +1073,3 @@ async def websocket_decision(websocket: WebSocket) -> None:
     except Exception as e:
         await websocket.send_json({"type": "error", "message": str(e)})
         ws_manager.disconnect(websocket)
-

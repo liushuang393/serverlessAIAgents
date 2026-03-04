@@ -75,14 +75,24 @@ export interface HistoryDetailResponse {
     decision_role: string;
     confidence: number | null;
     mode: string;
+    report_case_id?: string | null;
+    dao_result: Record<string, unknown> | null;
     fa_result: Record<string, unknown> | null;
     shu_result: Record<string, unknown> | null;
     qi_result: Record<string, unknown> | null;
+    review_result: Record<string, unknown> | null;
+    stage_io_logs?: Record<string, unknown> | null;
     summary_bullets: string[] | null;
     warnings: string[] | null;
     processing_time_ms: number | null;
     created_at: string;
   };
+}
+
+/** レポート取得レスポンス */
+export interface ReportResponse {
+  status: string;
+  data: DecisionReport;
 }
 
 // ========================================
@@ -692,8 +702,22 @@ export interface CheckpointApplyResponse {
   llm_bonus_pct: number;
   bonus_reasons: string[];
   recalculated_confidence_pct: number;
+  base_feasibility_pct: number;
+  checkpoint_feasibility_boost_pct: number;
+  finding_feasibility_boost_pct: number;
+  llm_feasibility_bonus_pct: number;
+  recalculated_feasibility_pct: number;
   threshold_pct: number;
   signature_eligible: boolean;
+  applied_contributions: {
+    source: 'checkpoint' | 'finding' | 'llm_bonus';
+    item_key: string;
+    label: string;
+    target_metric: 'confidence' | 'feasibility' | 'both';
+    confidence_boost_pct: number;
+    feasibility_boost_pct: number;
+    note?: string | null;
+  }[];
   updated_review: ReviewOutput;
 }
 
