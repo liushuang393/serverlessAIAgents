@@ -12,7 +12,8 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type { DecisionRequest, DecisionReport, StakeholderInfo } from '../types';
+import type { DecisionRequest, DecisionReport, StakeholderInfo, DaoOutput, FaOutput, ShuOutput, QiOutput, ReviewOutput } from '../types';
+import { decisionApi } from '../api/client';
 
 /** 画面状態 */
 export type PageState = 'input' | 'processing' | 'report' | 'history' | 'knowledge-shu' | 'knowledge-qi' | 'knowledge';
@@ -35,6 +36,7 @@ const MAX_HISTORY_ITEMS = 10;
 interface DecisionState {
   // 現在の画面
   currentPage: PageState;
+  previousPage: PageState | null;
 
   // 入力データ
   question: string;
@@ -66,6 +68,7 @@ interface DecisionState {
   setConstraints: (c: Partial<DecisionState['constraints']>) => void;
   setStakeholders: (s: Partial<StakeholderInfo>) => void;
   setPage: (p: PageState) => void;
+  loadHistoryReport: (requestId: string) => Promise<void>;
   setRequestId: (id: string | null) => void;
   setReportId: (id: string) => void;
   setReport: (r: DecisionReport) => void;
@@ -107,6 +110,7 @@ export const useDecisionStore = create<DecisionState>()(
     (set, get) => ({
       // 初期状態
       currentPage: 'input',
+      previousPage: null,
       question: '',
       constraints: { ...initialConstraints },
       stakeholders: { ...initialStakeholders },
@@ -129,7 +133,7 @@ export const useDecisionStore = create<DecisionState>()(
           stakeholders: { ...state.stakeholders, ...s },
         })),
 
-      setPage: (p) => set({ currentPage: p }),
+      setPage: (p) => set((state) => ({ previousPage: state.currentPage, currentPage: p })),
 
       setRequestId: (id) => set({ requestId: id }),
 
@@ -184,6 +188,54 @@ export const useDecisionStore = create<DecisionState>()(
         }
       },
 
+      // 履歴レポート復元
+      loadHistoryReport: async (requestId: string) => {
+        try {
+          const response = await decisionApi.getHistoryDetail(requestId);
+          if (response.status !== 'success' && response.status !== 'fallback') return;
+          const d = response.data;
+
+          const dao = (d.dao_result ?? { problem_type: 'UNKNOWN', essence: '', immutable_constraints: [], hidden_assumptions: [] }) as unknown as DaoOutput;
+          const fa = (d.fa_result ?? { recommended_paths: [], rejected_paths: [], decision_criteria: [] }) as unknown as FaOutput;
+          const shu = (d.shu_result ?? { phases: [], first_action: '', dependencies: [] }) as unknown as ShuOutput;
+          const qi = (d.qi_result ?? { implementations: [], tool_recommendations: [], integration_points: [], technical_debt_warnings: [] }) as unknown as QiOutput;
+          const review = (d.review_result ?? { overall_verdict: 'PASS' as const, confidence_score: d.confidence ?? 0, findings: [], final_warnings: [] }) as unknown as ReviewOutput;
+
+          const topPath = (fa as { recommended_paths?: { name?: string; description?: string; time_to_value?: string }[] }).recommended_paths?.[0];
+          const executive_summary = {
+            one_line_decision: topPath?.name ?? (dao as { essence?: string }).essence ?? '',
+            recommended_action: topPath?.description ?? '',
+            key_risks: (review as { findings?: { severity?: string; description?: string }[] }).findings?.filter((f) => f.severity === 'CRITICAL').map((f) => f.description ?? '') ?? [],
+            first_step: (shu as { first_action?: string }).first_action ?? '',
+            estimated_impact: topPath?.time_to_value ?? '',
+          };
+
+          const report: DecisionReport = {
+            report_id: d.report_case_id ?? d.request_id,
+            created_at: d.created_at,
+            version: '3.1',
+            dao,
+            fa,
+            shu,
+            qi,
+            review,
+            executive_summary,
+            original_question: d.question,
+          };
+
+          set({
+            report,
+            reportId: d.report_case_id ?? null,
+            requestId: d.request_id,
+            question: d.question,
+            previousPage: 'history',
+            currentPage: 'report',
+          });
+        } catch (err) {
+          console.error('Failed to load history report:', err);
+        }
+      },
+
       // リクエスト構築
       buildRequest: () => {
         const state = get();
@@ -228,6 +280,7 @@ export const useDecisionStore = create<DecisionState>()(
         requestId: state.requestId,
         reportId: state.reportId,
         report: state.report,
+        // previousPage は永続化しない（セッション内のみ有効）
       }),
     }
   )
