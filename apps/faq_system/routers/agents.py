@@ -28,7 +28,10 @@ from apps.faq_system.backend.agents import (
     MaintenanceConfig,
 )
 from apps.faq_system.backend.auth.dependencies import require_auth
-from apps.faq_system.routers.dependencies import resolve_default_collection
+from apps.faq_system.routers.dependencies import (
+    create_faq_app_agent,
+    resolve_default_collection,
+)
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
@@ -66,25 +69,45 @@ def _create_agent(agent_type: AgentType) -> Any:
     """Agent インスタンスを生成."""
     match agent_type:
         case AgentType.INTERNAL_KB:
-            return InternalKBAgent(
-                InternalKBConfig(
-                    collection=resolve_default_collection(),
-                )
+            return create_faq_app_agent(
+                InternalKBAgent,
+                agent_type="specialist",
+                init_kwargs={
+                    "config": InternalKBConfig(
+                        collection=resolve_default_collection(),
+                    )
+                },
             )
         case AgentType.EXTERNAL_KB:
-            return ExternalKBAgent(ExternalKBConfig())
+            return create_faq_app_agent(
+                ExternalKBAgent,
+                agent_type="specialist",
+                init_kwargs={"config": ExternalKBConfig()},
+            )
         case AgentType.MAINTENANCE:
-            return MaintenanceAgent(MaintenanceConfig())
+            return create_faq_app_agent(
+                MaintenanceAgent,
+                agent_type="executor",
+                init_kwargs={"config": MaintenanceConfig()},
+            )
         case AgentType.ANALYTICS:
             schema = json.loads(os.getenv("DB_SCHEMA", "{}"))
-            return AnalyticsAgent(AnalyticsConfig(), db_schema=schema)
+            return create_faq_app_agent(
+                AnalyticsAgent,
+                agent_type="reactor",
+                init_kwargs={"config": AnalyticsConfig(), "db_schema": schema},
+            )
         case AgentType.ENHANCED_FAQ:
             schema = json.loads(os.getenv("DB_SCHEMA", "{}"))
-            return EnhancedFAQAgent(
-                EnhancedFAQConfig(
-                    rag_collection=resolve_default_collection(),
-                    sql_schema=schema,
-                )
+            return create_faq_app_agent(
+                EnhancedFAQAgent,
+                agent_type="planner",
+                init_kwargs={
+                    "config": EnhancedFAQConfig(
+                        rag_collection=resolve_default_collection(),
+                        sql_schema=schema,
+                    )
+                },
             )
 
 

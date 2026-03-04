@@ -26,6 +26,8 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from agentflow.core.agent_factory import AgentFactorySpec
+from agentflow.core.agent_factory import create as create_agent
 from agentflow.core.flow_definition import (
     AgentDefinition,
     FlowDefinition,
@@ -145,14 +147,14 @@ class AgentRegistry:
             msg = f"Unknown agent class: {class_name}"
             raise ValueError(msg)
 
-        # 遅延インポート
-        import importlib
-
-        module = importlib.import_module(module_path)
-        agent_class = getattr(module, class_name)
-
-        # インスタンス生成
-        agent = agent_class(llm_client=self._llm_client)
+        agent = create_agent(
+            AgentFactorySpec(
+                class_name=class_name,
+                module_path=module_path,
+                init_kwargs={"llm_client": self._llm_client},
+                agent_type=agent_def.agent_type,
+            )
+        )
         self._logger.debug(f"Created agent: {agent_def.id} ({class_name})")
         return agent
 

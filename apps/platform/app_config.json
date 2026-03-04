@@ -22,23 +22,38 @@
     {
       "name": "GalleryAgent",
       "module": "apps.platform.agents.gallery_agent",
-      "capabilities": ["component_discovery", "search", "recommendation"],
+      "capabilities": [
+        "component_discovery",
+        "search",
+        "recommendation"
+      ],
       "business_base": "platform",
-      "pattern": "router"
+      "pattern": "router",
+      "agent_type": "router"
     },
     {
       "name": "PublishAgent",
       "module": "apps.platform.agents.publish_agent",
-      "capabilities": ["publish", "deployment", "release"],
+      "capabilities": [
+        "publish",
+        "deployment",
+        "release"
+      ],
       "business_base": "platform",
-      "pattern": "coordinator"
+      "pattern": "coordinator",
+      "agent_type": "planner"
     },
     {
       "name": "AnalyticsAgent",
       "module": "apps.platform.agents.analytics_agent",
-      "capabilities": ["analysis", "dashboard", "recommendations"],
+      "capabilities": [
+        "analysis",
+        "dashboard",
+        "recommendations"
+      ],
       "business_base": "platform",
-      "pattern": "analyzer"
+      "pattern": "analyzer",
+      "agent_type": "reactor"
     }
   ],
   "services": {
@@ -164,7 +179,13 @@
       }
     }
   },
-  "tags": ["platform", "management", "gallery", "publish", "dashboard"],
+  "tags": [
+    "platform",
+    "management",
+    "gallery",
+    "publish",
+    "dashboard"
+  ],
   "contracts": {
     "auth": {
       "enabled": false,
@@ -202,7 +223,9 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": ["dev"],
+      "environments": [
+        "dev"
+      ],
       "require_approval": true
     }
   },
@@ -221,10 +244,37 @@
     "vector_db_collection": null,
     "vector_db_api_key_env": null,
     "mcp_servers": [],
-    "agents": []
+    "agents": [],
+    "app_template": "workflow_orchestrator"
   },
   "visibility": {
     "mode": "private",
     "tenants": []
+  },
+  "evolution": {
+    "enabled": true,
+    "strategy_service_url": null,
+    "validator_queue": {
+      "backend": "redis_stream",
+      "redis_url": null,
+      "stream_key": "evolution:validate:stream",
+      "consumer_group": "evolution-validator-v1",
+      "max_retries": 5
+    },
+    "scope_policy": [
+      "tenant_app",
+      "tenant_product_line",
+      "global_verified"
+    ],
+    "retrieval": {
+      "high_confidence_skip_threshold": 0.82,
+      "high_complexity_threshold": 0.7,
+      "low_confidence_threshold": 0.55
+    },
+    "suspicion": {
+      "max_age_days": 30,
+      "failure_streak_threshold": 2,
+      "performance_drop_ratio": 0.2
+    }
   }
 }

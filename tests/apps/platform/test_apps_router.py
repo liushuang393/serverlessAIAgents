@@ -283,6 +283,8 @@ class TestCreateOptions:
         assert resp.status_code == 200
         data = resp.json()
         assert "engine_patterns" in data
+        assert "agent_type_options" in data
+        assert "app_template_options" in data
         assert data["surface_profile"] == "developer"
 
     def test_business_profile_returns_simplified_options(self, test_client: TestClient) -> None:
@@ -291,8 +293,32 @@ class TestCreateOptions:
         data = resp.json()
         assert data["surface_profile"] == "business"
         assert "templates" in data
+        assert "app_template_options" in data
         assert "risk_levels" in data
         assert "engine_patterns" not in data
+
+
+class TestAppTemplates:
+    """GET /api/studios/framework/apps/templates テスト."""
+
+    def test_returns_template_catalog(self, test_client: TestClient) -> None:
+        resp = test_client.get("/api/studios/framework/apps/templates")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "templates" in data
+        assert "apps" in data
+        assert "total_templates" in data
+        assert "total_apps" in data
+        assert data["total_templates"] == 6
+        assert data["total_apps"] == 3
+
+    def test_template_item_shape(self, test_client: TestClient) -> None:
+        resp = test_client.get("/api/studios/framework/apps/templates")
+        templates = resp.json()["templates"]
+        assert len(templates) == 6
+        first = templates[0]
+        assert {"app_template", "label", "description", "count", "apps"} <= set(first.keys())
+        assert isinstance(first["apps"], list)
 
 
 class TestBusinessSurfaceAccessControl:

@@ -29,13 +29,15 @@ class AggregatedAgent:
         module: Python モジュールパス
         capabilities: 能力タグ一覧
         business_base: Agent 業務基盤分類
-        agent_pattern: Agent パターン分類
+        agent_type: Agent タイプ分類
+        agent_pattern: Agent パターン分類（互換）
         app_business_base: App 業務基盤分類
         app_engine_pattern: App エンジンパターン
     """
 
     __slots__ = (
         "agent_pattern",
+        "agent_type",
         "app_business_base",
         "app_display_name",
         "app_engine_pattern",
@@ -58,6 +60,7 @@ class AggregatedAgent:
         capabilities: list[dict[str, Any]],
         capabilities_legacy: list[str],
         business_base: str,
+        agent_type: str,
         agent_pattern: str,
         app_business_base: str,
         app_engine_pattern: str | None,
@@ -71,6 +74,7 @@ class AggregatedAgent:
         self.capabilities = capabilities
         self.capabilities_legacy = capabilities_legacy
         self.business_base = business_base
+        self.agent_type = agent_type
         self.agent_pattern = agent_pattern
         self.app_business_base = app_business_base
         self.app_engine_pattern = app_engine_pattern
@@ -86,6 +90,7 @@ class AggregatedAgent:
             "capabilities": self.capabilities,
             "capabilities_legacy": self.capabilities_legacy,
             "business_base": self.business_base,
+            "agent_type": self.agent_type,
             "agent_pattern": self.agent_pattern,
             "app_business_base": self.app_business_base,
             "app_engine_pattern": self.app_engine_pattern,
@@ -130,6 +135,14 @@ class AgentAggregatorService:
                 )
                 agent_pattern = self._taxonomy.infer_agent_pattern(
                     raw_pattern=agent_info.pattern,
+                    raw_agent_type=agent_info.agent_type,
+                    name=agent_info.name,
+                    module=agent_info.module,
+                    engine_pattern=app_engine_pattern,
+                )
+                agent_type = self._taxonomy.infer_agent_type(
+                    raw_agent_type=agent_info.agent_type,
+                    raw_pattern=agent_info.pattern,
                     name=agent_info.name,
                     module=agent_info.module,
                     engine_pattern=app_engine_pattern,
@@ -144,6 +157,7 @@ class AgentAggregatorService:
                         capabilities=[item.model_dump() for item in canonical],
                         capabilities_legacy=list(agent_info.capabilities),
                         business_base=agent_business_base,
+                        agent_type=agent_type,
                         agent_pattern=agent_pattern,
                         app_business_base=app_business_base,
                         app_engine_pattern=app_engine_pattern,
@@ -223,6 +237,7 @@ class AgentAggregatorService:
             "total_apps_with_agents": len(apps_with_agents),
             "total_capabilities": len({c["id"] for a in agents for c in a.capabilities}),
             "by_business_base": self._aggregate_counter([a.business_base for a in agents]),
+            "by_agent_type": self._aggregate_counter([a.agent_type for a in agents]),
             "by_agent_pattern": self._aggregate_counter([a.agent_pattern for a in agents]),
         }
 
@@ -241,6 +256,19 @@ class AgentAggregatorService:
         for agent in self.list_all():
             grouped.setdefault(agent.agent_pattern, []).append(agent.to_dict())
         return [{"pattern": key, "count": len(grouped[key]), "agents": grouped[key]} for key in sorted(grouped.keys())]
+
+    def grouped_types(self) -> list[dict[str, Any]]:
+        """Agent type 別に Agent を集約."""
+        grouped: dict[str, list[dict[str, Any]]] = {}
+        for agent in self.list_all():
+            grouped.setdefault(agent.agent_type, []).append(agent.to_dict())
+        return [
+            {"agent_type": key, "count": len(grouped[key]), "agents": grouped[key]} for key in sorted(grouped.keys())
+        ]
+
+    def type_definitions(self) -> list[dict[str, Any]]:
+        """Agent type 定義一覧を返す."""
+        return self._taxonomy.list_agent_types()
 
     def _resolve_app_business_base(self, app_config: Any) -> str:
         """App の business base を解決."""

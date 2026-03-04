@@ -50,7 +50,7 @@ def _flatten_capability_item(item: Any) -> list[str]:
     if isinstance(item, dict):
         try:
             return CapabilitySpec.model_validate(item).to_canonical_ids()
-        except Exception:  # noqa: BLE001
+        except Exception:
             return [str(item)]
     return [str(item)]
 
@@ -519,6 +519,22 @@ class AppDiscoveryService:
                 manifest["product_line"] = normalized
                 self._mark_updated(updated_fields, "product_line")
 
+        blueprint_template = blueprint.get("app_template")
+        normalized_template = self._taxonomy.normalize_app_template(
+            blueprint_template if isinstance(blueprint_template, str) else None,
+        )
+        inferred_template = self._taxonomy.infer_app_template(
+            product_line=str(manifest.get("product_line") or inferred_product_line),
+            engine_pattern=engine_pattern,
+            tags=manifest.get("tags", []) if isinstance(manifest.get("tags"), list) else [],
+        )
+        if normalized_template is None:
+            blueprint["app_template"] = inferred_template
+            self._mark_updated(updated_fields, "blueprint.app_template")
+        elif normalized_template != blueprint_template:
+            blueprint["app_template"] = normalized_template
+            self._mark_updated(updated_fields, "blueprint.app_template")
+
         inferred_surface_profile = self._infer_surface_profile(
             manifest,
             product_line=str(manifest.get("product_line") or "framework"),
@@ -759,7 +775,7 @@ class AppDiscoveryService:
         app_business_base: str,
         engine_pattern: str,
     ) -> None:
-        """agents[].business_base / pattern を補完・正規化する."""
+        """agents[].business_base / agent_type / pattern を補完・正規化する."""
         agents_raw = manifest.get("agents")
         if not isinstance(agents_raw, list):
             return
@@ -787,13 +803,33 @@ class AppDiscoveryService:
                 agent["business_base"] = normalized_base
                 self._mark_updated(updated_fields, f"agents[{index}].business_base")
 
-            inferred_pattern = self._taxonomy.infer_agent_pattern(
-                raw_pattern=agent.get("pattern"),
+            inferred_agent_type = self._taxonomy.infer_agent_type(
+                raw_agent_type=agent.get("agent_type") if isinstance(agent.get("agent_type"), str) else None,
+                raw_pattern=agent.get("pattern") if isinstance(agent.get("pattern"), str) else None,
                 name=str(agent.get("name", "")),
                 module=str(agent.get("module")) if isinstance(agent.get("module"), str) else None,
                 engine_pattern=engine_pattern,
             )
-            normalized_pattern = self._taxonomy.normalize_agent_pattern(agent.get("pattern"))
+            normalized_agent_type = self._taxonomy.normalize_agent_type(
+                agent.get("agent_type") if isinstance(agent.get("agent_type"), str) else None,
+            )
+            if normalized_agent_type is None:
+                agent["agent_type"] = inferred_agent_type
+                self._mark_updated(updated_fields, f"agents[{index}].agent_type")
+            elif normalized_agent_type != agent.get("agent_type"):
+                agent["agent_type"] = normalized_agent_type
+                self._mark_updated(updated_fields, f"agents[{index}].agent_type")
+
+            inferred_pattern = self._taxonomy.infer_agent_pattern(
+                raw_pattern=agent.get("pattern") if isinstance(agent.get("pattern"), str) else None,
+                raw_agent_type=agent.get("agent_type") if isinstance(agent.get("agent_type"), str) else None,
+                name=str(agent.get("name", "")),
+                module=str(agent.get("module")) if isinstance(agent.get("module"), str) else None,
+                engine_pattern=engine_pattern,
+            )
+            normalized_pattern = self._taxonomy.normalize_agent_pattern(
+                agent.get("pattern") if isinstance(agent.get("pattern"), str) else None,
+            )
             if normalized_pattern is None:
                 agent["pattern"] = inferred_pattern
                 self._mark_updated(updated_fields, f"agents[{index}].pattern")

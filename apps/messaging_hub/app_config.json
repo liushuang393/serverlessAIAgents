@@ -23,23 +23,37 @@
     {
       "name": "PersonalAssistantCoordinator",
       "module": "apps.messaging_hub.coordinator",
-      "capabilities": ["coordination", "intent_routing", "summary"],
+      "capabilities": [
+        "coordination",
+        "intent_routing",
+        "summary"
+      ],
       "business_base": "interaction",
-      "pattern": "coordinator"
+      "pattern": "coordinator",
+      "agent_type": "planner"
     },
     {
       "name": "FileOrganizerAgent",
       "module": "apps.messaging_hub.agents.file_organizer_agent",
-      "capabilities": ["file_organization", "categorization"],
+      "capabilities": [
+        "file_organization",
+        "categorization"
+      ],
       "business_base": "operations",
-      "pattern": "specialist"
+      "pattern": "specialist",
+      "agent_type": "specialist"
     },
     {
       "name": "MeetingAgent",
       "module": "apps.messaging_hub.agents.meeting_agent",
-      "capabilities": ["meeting", "calendar", "notes"],
+      "capabilities": [
+        "meeting",
+        "calendar",
+        "notes"
+      ],
       "business_base": "interaction",
-      "pattern": "specialist"
+      "pattern": "specialist",
+      "agent_type": "specialist"
     }
   ],
   "services": {
@@ -63,7 +77,11 @@
   "dependencies": {
     "database": null,
     "redis": false,
-    "external": ["telegram_api", "slack_api", "discord_api"]
+    "external": [
+      "telegram_api",
+      "slack_api",
+      "discord_api"
+    ]
   },
   "runtime": {
     "urls": {
@@ -91,15 +109,36 @@
       "stop": "docker compose -f docker-compose.yml down"
     },
     "cli": {
-      "preferred": ["codex", "claude"],
+      "preferred": [
+        "codex",
+        "claude"
+      ],
       "codex": {
         "executable": "codex",
-        "install_commands": [["npm", "install", "-g", "@openai/codex"]],
+        "install_commands": [
+          [
+            "npm",
+            "install",
+            "-g",
+            "@openai/codex"
+          ]
+        ],
         "auth": {
-          "status": ["codex", "login", "status"],
+          "status": [
+            "codex",
+            "login",
+            "status"
+          ],
           "api_key_env": "OPENAI_API_KEY",
-          "api_key_login": ["codex", "login", "--with-api-key"],
-          "interactive_login": ["codex", "login"]
+          "api_key_login": [
+            "codex",
+            "login",
+            "--with-api-key"
+          ],
+          "interactive_login": [
+            "codex",
+            "login"
+          ]
         },
         "diagnostic_mode": "read_only",
         "diagnostic_command": [
@@ -113,16 +152,35 @@
       "claude": {
         "executable": "claude",
         "install_commands": [
-          ["npm", "install", "-g", "@anthropic-ai/claude-code"]
+          [
+            "npm",
+            "install",
+            "-g",
+            "@anthropic-ai/claude-code"
+          ]
         ],
         "auth": {
-          "status": ["claude", "auth", "status", "--json"],
+          "status": [
+            "claude",
+            "auth",
+            "status",
+            "--json"
+          ],
           "api_key_env": "ANTHROPIC_API_KEY",
           "api_key_login": null,
-          "interactive_login": ["claude", "auth", "login"]
+          "interactive_login": [
+            "claude",
+            "auth",
+            "login"
+          ]
         },
         "diagnostic_mode": "plan",
-        "diagnostic_command": ["claude", "-p", "--permission-mode", "plan"]
+        "diagnostic_command": [
+          "claude",
+          "-p",
+          "--permission-mode",
+          "plan"
+        ]
       }
     }
   },
@@ -137,9 +195,13 @@
   "contracts": {
     "auth": {
       "enabled": true,
-      "providers": ["api_key"],
+      "providers": [
+        "api_key"
+      ],
       "allow_anonymous": false,
-      "required_scopes": ["api"],
+      "required_scopes": [
+        "api"
+      ],
       "session_ttl_minutes": 60
     },
     "rag": {
@@ -167,7 +229,9 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": ["dev"],
+      "environments": [
+        "dev"
+      ],
       "require_approval": true
     }
   },
@@ -208,10 +272,37 @@
     "vector_db_collection": null,
     "vector_db_api_key_env": null,
     "mcp_servers": [],
-    "agents": []
+    "agents": [],
+    "app_template": "multichannel_assistant"
   },
   "visibility": {
     "mode": "private",
     "tenants": []
+  },
+  "evolution": {
+    "enabled": true,
+    "strategy_service_url": null,
+    "validator_queue": {
+      "backend": "redis_stream",
+      "redis_url": null,
+      "stream_key": "evolution:validate:stream",
+      "consumer_group": "evolution-validator-v1",
+      "max_retries": 5
+    },
+    "scope_policy": [
+      "tenant_app",
+      "tenant_product_line",
+      "global_verified"
+    ],
+    "retrieval": {
+      "high_confidence_skip_threshold": 0.82,
+      "high_complexity_threshold": 0.7,
+      "low_confidence_threshold": 0.55
+    },
+    "suspicion": {
+      "max_age_days": 30,
+      "failure_streak_threshold": 2,
+      "performance_drop_ratio": 0.2
+    }
   }
 }

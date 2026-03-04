@@ -22,6 +22,9 @@ from apps.market_trend_monitor.backend.workflow import run as run_workflow
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from agentflow.core.agent_factory import AgentFactorySpec
+from agentflow.core.agent_factory import create as create_agent
+
 
 router = APIRouter(prefix="/api", tags=["データ収集"])
 logger = logging.getLogger(__name__)
@@ -63,9 +66,15 @@ async def _run_fallback_collection(
     date_range: dict[str, str] | None,
 ) -> dict[str, Any]:
     """フォールバック収集を実行（collector + analyzer + reporter）."""
-    collector_agent = CollectorAgent()
-    analyzer_agent = AnalyzerAgent(evidence_service=evidence_service)
-    reporter_agent = ReporterAgent()
+    collector_agent = create_agent(AgentFactorySpec(agent_class=CollectorAgent, agent_type="executor"))
+    analyzer_agent = create_agent(
+        AgentFactorySpec(
+            agent_class=AnalyzerAgent,
+            init_kwargs={"evidence_service": evidence_service},
+            agent_type="reactor",
+        )
+    )
+    reporter_agent = create_agent(AgentFactorySpec(agent_class=ReporterAgent, agent_type="reporter"))
 
     await collector_agent.initialize()
     await analyzer_agent.initialize()
@@ -110,7 +119,7 @@ async def _ensure_reporter_result(result: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(analyzer, dict):
         return result
 
-    reporter_agent = ReporterAgent()
+    reporter_agent = create_agent(AgentFactorySpec(agent_class=ReporterAgent, agent_type="reporter"))
     try:
         await reporter_agent.initialize()
         reporter_result = await reporter_agent.run(

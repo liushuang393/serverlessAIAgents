@@ -37,6 +37,8 @@ from agentflow.agents import (
     SalesAgent,
     SalesAgentConfig,
 )
+from agentflow.core.agent_factory import AgentFactorySpec
+from agentflow.core.agent_factory import create as create_agent
 from agentflow.services import (
     ChunkStrategy,
     RAGConfig,
@@ -66,6 +68,22 @@ _scheduler_reload_task: asyncio.Task[None] | None = None
 def get_chat_history_service() -> ChatHistoryService:
     """チャット履歴サービスを取得."""
     return _chat_history_service
+
+
+def create_faq_app_agent(
+    agent_class: type[Any],
+    *,
+    agent_type: str,
+    init_kwargs: dict[str, Any] | None = None,
+) -> Any:
+    """FAQ app 共通の Agent factory provider."""
+    return create_agent(
+        AgentFactorySpec(
+            agent_class=agent_class,
+            init_kwargs=init_kwargs or {},
+            agent_type=agent_type,
+        )
+    )
 
 
 def get_runtime_rag_config(*, refresh: bool = False) -> RAGRuntimeConfig:
@@ -228,18 +246,22 @@ def get_faq_agent() -> FAQAgent:
     """FAQAgent取得（遅延初期化）."""
     if "faq_agent" not in _services:
         runtime_cfg = get_runtime_rag_config()
-        _services["faq_agent"] = FAQAgent(
-            FAQAgentConfig(
-                rag_collection=resolve_default_collection(),
-                rag_chunk_strategy=runtime_cfg.rag_chunk_strategy,
-                rag_reranker=runtime_cfg.rag_reranker,
-                rag_top_k=runtime_cfg.rag_top_k,
-                sql_schema=runtime_cfg.sql_schema or json.loads(os.getenv("DB_SCHEMA", "{}")),
-                sql_dialect=runtime_cfg.sql_dialect,
-                enable_rag=runtime_cfg.rag_enabled,
-                enable_sql=runtime_cfg.sql_enabled,
-                enable_hybrid=runtime_cfg.hybrid_enabled,
-            )
+        _services["faq_agent"] = create_faq_app_agent(
+            FAQAgent,
+            agent_type="specialist",
+            init_kwargs={
+                "config": FAQAgentConfig(
+                    rag_collection=resolve_default_collection(),
+                    rag_chunk_strategy=runtime_cfg.rag_chunk_strategy,
+                    rag_reranker=runtime_cfg.rag_reranker,
+                    rag_top_k=runtime_cfg.rag_top_k,
+                    sql_schema=runtime_cfg.sql_schema or json.loads(os.getenv("DB_SCHEMA", "{}")),
+                    sql_dialect=runtime_cfg.sql_dialect,
+                    enable_rag=runtime_cfg.rag_enabled,
+                    enable_sql=runtime_cfg.sql_enabled,
+                    enable_hybrid=runtime_cfg.hybrid_enabled,
+                )
+            },
         )
     return _services["faq_agent"]
 
@@ -248,10 +270,14 @@ def get_sales_agent() -> SalesAgent:
     """SalesAgent取得（遅延初期化）."""
     if "sales_agent" not in _services:
         runtime_cfg = get_runtime_rag_config()
-        _services["sales_agent"] = SalesAgent(
-            SalesAgentConfig(
-                sql_schema=runtime_cfg.sql_schema or json.loads(os.getenv("DB_SCHEMA", "{}")),
-            )
+        _services["sales_agent"] = create_faq_app_agent(
+            SalesAgent,
+            agent_type="specialist",
+            init_kwargs={
+                "config": SalesAgentConfig(
+                    sql_schema=runtime_cfg.sql_schema or json.loads(os.getenv("DB_SCHEMA", "{}")),
+                )
+            },
         )
     return _services["sales_agent"]
 

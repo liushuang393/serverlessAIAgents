@@ -22,65 +22,101 @@
     {
       "name": "CollectorAgent",
       "module": "apps.market_trend_monitor.backend.agents.collector_agent",
-      "capabilities": ["data_collection", "web_scraping"],
+      "capabilities": [
+        "data_collection",
+        "web_scraping"
+      ],
       "business_base": "integration",
-      "pattern": "executor"
+      "pattern": "executor",
+      "agent_type": "executor"
     },
     {
       "name": "AnalyzerAgent",
       "module": "apps.market_trend_monitor.backend.agents.analyzer_agent",
-      "capabilities": ["analysis", "trend_detection"],
+      "capabilities": [
+        "analysis",
+        "trend_detection"
+      ],
       "business_base": "reasoning",
-      "pattern": "analyzer"
+      "pattern": "analyzer",
+      "agent_type": "reactor"
     },
     {
       "name": "SignalScorerAgent",
       "module": "apps.market_trend_monitor.backend.agents.signal_scorer_agent",
-      "capabilities": ["signal_scoring", "ranking"],
+      "capabilities": [
+        "signal_scoring",
+        "ranking"
+      ],
       "business_base": "reasoning",
-      "pattern": "analyzer"
+      "pattern": "analyzer",
+      "agent_type": "reactor"
     },
     {
       "name": "EvidenceLedgerAgent",
       "module": "apps.market_trend_monitor.backend.agents.evidence_ledger_agent",
-      "capabilities": ["evidence_tracking", "audit"],
+      "capabilities": [
+        "evidence_tracking",
+        "audit"
+      ],
       "business_base": "governance",
-      "pattern": "reviewer"
+      "pattern": "reviewer",
+      "agent_type": "reviewer"
     },
     {
       "name": "CompetitorTrackingAgent",
       "module": "apps.market_trend_monitor.backend.agents.competitor_tracking_agent",
-      "capabilities": ["competitor_analysis", "benchmarking"],
+      "capabilities": [
+        "competitor_analysis",
+        "benchmarking"
+      ],
       "business_base": "reasoning",
-      "pattern": "analyzer"
+      "pattern": "analyzer",
+      "agent_type": "reactor"
     },
     {
       "name": "PredictionReviewAgent",
       "module": "apps.market_trend_monitor.backend.agents.prediction_review_agent",
-      "capabilities": ["prediction", "review"],
+      "capabilities": [
+        "prediction",
+        "review"
+      ],
       "business_base": "governance",
-      "pattern": "reviewer"
+      "pattern": "reviewer",
+      "agent_type": "reviewer"
     },
     {
       "name": "RedteamAgent",
       "module": "apps.market_trend_monitor.backend.agents.redteam_agent",
-      "capabilities": ["adversarial", "validation"],
+      "capabilities": [
+        "adversarial",
+        "validation"
+      ],
       "business_base": "governance",
-      "pattern": "reviewer"
+      "pattern": "reviewer",
+      "agent_type": "reviewer"
     },
     {
       "name": "ReporterAgent",
       "module": "apps.market_trend_monitor.backend.agents.reporter_agent",
-      "capabilities": ["reporting", "summarization"],
+      "capabilities": [
+        "reporting",
+        "summarization"
+      ],
       "business_base": "interaction",
-      "pattern": "reporter"
+      "pattern": "reporter",
+      "agent_type": "reporter"
     },
     {
       "name": "NotifierAgent",
       "module": "apps.market_trend_monitor.backend.agents.notifier_agent",
-      "capabilities": ["notification", "alerting"],
+      "capabilities": [
+        "notification",
+        "alerting"
+      ],
       "business_base": "interaction",
-      "pattern": "executor"
+      "pattern": "executor",
+      "agent_type": "executor"
     }
   ],
   "services": {
@@ -119,7 +155,13 @@
       "stop": "docker compose -f docker-compose.yml down"
     }
   },
-  "tags": ["market", "trend", "monitoring", "analysis", "prediction"],
+  "tags": [
+    "market",
+    "trend",
+    "monitoring",
+    "analysis",
+    "prediction"
+  ],
   "contracts": {
     "auth": {
       "enabled": false,
@@ -153,7 +195,9 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": ["dev"],
+      "environments": [
+        "dev"
+      ],
       "require_approval": true
     }
   },
@@ -172,10 +216,37 @@
     "vector_db_collection": null,
     "vector_db_api_key_env": null,
     "mcp_servers": [],
-    "agents": []
+    "agents": [],
+    "app_template": "intelligence_monitoring"
   },
   "visibility": {
     "mode": "private",
     "tenants": []
+  },
+  "evolution": {
+    "enabled": true,
+    "strategy_service_url": null,
+    "validator_queue": {
+      "backend": "redis_stream",
+      "redis_url": null,
+      "stream_key": "evolution:validate:stream",
+      "consumer_group": "evolution-validator-v1",
+      "max_retries": 5
+    },
+    "scope_policy": [
+      "tenant_app",
+      "tenant_product_line",
+      "global_verified"
+    ],
+    "retrieval": {
+      "high_confidence_skip_threshold": 0.82,
+      "high_complexity_threshold": 0.7,
+      "low_confidence_threshold": 0.55
+    },
+    "suspicion": {
+      "max_age_days": 30,
+      "failure_streak_threshold": 2,
+      "performance_drop_ratio": 0.2
+    }
   }
 }

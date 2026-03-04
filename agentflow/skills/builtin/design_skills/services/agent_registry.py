@@ -15,11 +15,12 @@ YAML定義からAgentインスタンスを生成・管理する。
     >>> all_agents = registry.get_ordered_agents()
 """
 
-import importlib
 import logging
 from pathlib import Path
 from typing import Any, ClassVar
 
+from agentflow.core.agent_factory import AgentFactorySpec
+from agentflow.core.agent_factory import create as create_agent
 from agentflow.core.flow_definition import (
     AgentDefinition,
     FlowDefinition,
@@ -123,10 +124,14 @@ class DesignAgentRegistry:
             msg = f"不明なAgentクラス: {class_name}"
             raise ValueError(msg)
 
-        # 遅延インポート
-        module = importlib.import_module(module_path)
-        agent_class = getattr(module, class_name)
-        agent = agent_class(llm_client=self._llm_client)
+        agent = create_agent(
+            AgentFactorySpec(
+                class_name=class_name,
+                module_path=module_path,
+                init_kwargs={"llm_client": self._llm_client},
+                agent_type=agent_def.agent_type,
+            )
+        )
         self._logger.debug(f"Agent生成: {agent_def.id} ({class_name})")
         return agent
 

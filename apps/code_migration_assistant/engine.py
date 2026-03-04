@@ -46,6 +46,8 @@ from apps.code_migration_assistant.workflow.models import (
     build_meta,
 )
 
+from agentflow.core.agent_factory import AgentFactorySpec
+from agentflow.core.agent_factory import create as create_agent
 from agentflow.engines.base import BaseEngine, EngineConfig
 from agentflow.governance.engine import GovernanceEngine, ToolExecutionContext
 from agentflow.governance.enterprise_audit import (
@@ -230,15 +232,49 @@ class CodeMigrationEngine(BaseEngine, SafetyMixin):
 
     async def _initialize(self) -> None:
         """内部 Agent を初期化."""
-        self._legacy_analysis_agent = LegacyAnalysisAgent(migration_type=self._migration_type)
-        self._business_semantics_agent = BusinessSemanticsAgent()
-        self._migration_design_agent = MigrationDesignAgent(migration_type=self._migration_type)
-        self._code_transformation_agent = CodeTransformationAgent(migration_type=self._migration_type)
-        self._test_synthesis_agent = TestSynthesisAgent()
-        self._differential_agent = DifferentialVerificationAgent(migration_type=self._migration_type)
-        self._quality_gate_agent = QualityGateAgent()
-        self._limited_fixer_agent = LimitedFixerAgent()
-        self._compliance_reporter_agent = ComplianceReporterAgent()
+        self._legacy_analysis_agent = create_agent(
+            AgentFactorySpec(
+                agent_class=LegacyAnalysisAgent,
+                init_kwargs={"migration_type": self._migration_type},
+                agent_type="reactor",
+            )
+        )
+        self._business_semantics_agent = create_agent(
+            AgentFactorySpec(agent_class=BusinessSemanticsAgent, agent_type="reactor")
+        )
+        self._migration_design_agent = create_agent(
+            AgentFactorySpec(
+                agent_class=MigrationDesignAgent,
+                init_kwargs={"migration_type": self._migration_type},
+                agent_type="planner",
+            )
+        )
+        self._code_transformation_agent = create_agent(
+            AgentFactorySpec(
+                agent_class=CodeTransformationAgent,
+                init_kwargs={"migration_type": self._migration_type},
+                agent_type="executor",
+            )
+        )
+        self._test_synthesis_agent = create_agent(
+            AgentFactorySpec(agent_class=TestSynthesisAgent, agent_type="executor")
+        )
+        self._differential_agent = create_agent(
+            AgentFactorySpec(
+                agent_class=DifferentialVerificationAgent,
+                init_kwargs={"migration_type": self._migration_type},
+                agent_type="reviewer",
+            )
+        )
+        self._quality_gate_agent = create_agent(
+            AgentFactorySpec(agent_class=QualityGateAgent, agent_type="gatekeeper")
+        )
+        self._limited_fixer_agent = create_agent(
+            AgentFactorySpec(agent_class=LimitedFixerAgent, agent_type="executor")
+        )
+        self._compliance_reporter_agent = create_agent(
+            AgentFactorySpec(agent_class=ComplianceReporterAgent, agent_type="reporter")
+        )
 
     async def _execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
         """固定工程を実行."""

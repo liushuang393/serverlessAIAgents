@@ -15,6 +15,7 @@ from apps.platform.schemas.provisioning_schemas import (
     AppCreateRequest,
     AppCreateResponse,
 )
+from apps.platform.services.agent_taxonomy import AgentTaxonomyService
 from apps.platform.services.framework_env import FrameworkEnvService
 from apps.platform.services.port_allocator import PortAllocatorService
 
@@ -93,6 +94,49 @@ class AppScaffolderService:
         {"value": "router", "label": "Router"},
         {"value": "reporter", "label": "Reporter"},
     )
+    _AGENT_TYPE_OPTIONS: tuple[dict[str, str], ...] = (
+        {"value": "specialist", "label": "Specialist"},
+        {"value": "planner", "label": "Planner"},
+        {"value": "reactor", "label": "Reactor"},
+        {"value": "executor", "label": "Executor"},
+        {"value": "reviewer", "label": "Reviewer"},
+        {"value": "gatekeeper", "label": "Gatekeeper"},
+        {"value": "router", "label": "Router"},
+        {"value": "reporter", "label": "Reporter"},
+        {"value": "custom", "label": "Custom"},
+    )
+    _APP_TEMPLATE_OPTIONS: tuple[dict[str, str], ...] = (
+        {
+            "value": "faq_knowledge_service",
+            "label": "FAQ Knowledge Service",
+            "description": "FAQ/RAG 中心の知識提供アプリ",
+        },
+        {
+            "value": "intelligence_monitoring",
+            "label": "Intelligence Monitoring",
+            "description": "継続観測・分析・シグナル監視",
+        },
+        {
+            "value": "decision_governance",
+            "label": "Decision Governance",
+            "description": "意思決定・監査・承認統制",
+        },
+        {
+            "value": "workflow_orchestrator",
+            "label": "Workflow Orchestrator",
+            "description": "ワークフロー分解と連携実行",
+        },
+        {
+            "value": "multichannel_assistant",
+            "label": "Multichannel Assistant",
+            "description": "複数チャネル対応アシスタント",
+        },
+        {
+            "value": "ops_automation_runner",
+            "label": "Ops Automation Runner",
+            "description": "運用自動化・定期ジョブ実行",
+        },
+    )
     _BUSINESS_TEMPLATES: tuple[dict[str, str], ...] = (
         {
             "id": "migration_safe_assessment",
@@ -128,6 +172,7 @@ class AppScaffolderService:
         self._discovery = discovery
         self._apps_dir = apps_dir or (Path.cwd() / "apps")
         self._port_allocator = PortAllocatorService(discovery)
+        self._taxonomy = AgentTaxonomyService()
 
     @classmethod
     def create_options(
@@ -139,6 +184,7 @@ class AppScaffolderService:
             return {
                 "surface_profile": "business",
                 "templates": list(cls._BUSINESS_TEMPLATES),
+                "app_template_options": list(cls._APP_TEMPLATE_OPTIONS),
                 "data_source_options": [
                     {"value": "git_repository", "label": "Git Repository"},
                     {"value": "knowledge_base", "label": "Knowledge Base"},
@@ -177,6 +223,8 @@ class AppScaffolderService:
             "llm_provider_options": list(cls._LLM_PROVIDER_OPTIONS),
             "business_base_options": list(cls._BUSINESS_BASE_OPTIONS),
             "agent_pattern_options": list(cls._AGENT_PATTERN_OPTIONS),
+            "agent_type_options": list(cls._AGENT_TYPE_OPTIONS),
+            "app_template_options": list(cls._APP_TEMPLATE_OPTIONS),
             "visibility_modes": [
                 {"value": "private", "label": "Private"},
                 {"value": "public", "label": "Public"},
@@ -192,6 +240,11 @@ class AppScaffolderService:
                 {"value": "none", "label": "No Queue"},
             ],
         }
+
+    @classmethod
+    def app_template_options(cls) -> list[dict[str, str]]:
+        """App template 選択肢を返す."""
+        return [dict(item) for item in cls._APP_TEMPLATE_OPTIONS]
 
     async def create_app(self, request: AppCreateRequest) -> AppCreateResponse:
         """新規 App を作成.
@@ -222,12 +275,14 @@ class AppScaffolderService:
         )
 
         agents = self._normalize_agents(request.agents, request.name)
+        app_template = self._resolve_app_template(request)
         llm_api_key_env = self._resolve_llm_api_key_env(request)
         vector_db_api_key_env = self._resolve_vector_db_api_key_env(request)
         app_config = self._build_app_config(
             request=request,
             ports=ports,
             agents=agents,
+            app_template=app_template,
             llm_api_key_env=llm_api_key_env,
             vector_db_api_key_env=vector_db_api_key_env,
         )
@@ -270,6 +325,7 @@ class AppScaffolderService:
         request: AppCreateRequest,
         ports: dict[str, int | None],
         agents: list[dict[str, Any]],
+        app_template: str,
         llm_api_key_env: str | None,
         vector_db_api_key_env: str | None,
     ) -> dict[str, Any]:
@@ -371,6 +427,7 @@ class AppScaffolderService:
                     "module": f"apps.{request.name}.agents.{agent['module_name']}",
                     "capabilities": agent["capabilities"],
                     "business_base": agent["business_base"] or request.business_base,
+                    "agent_type": agent["agent_type"],
                     "pattern": agent["pattern"],
                 }
                 for agent in agents
@@ -491,6 +548,7 @@ class AppScaffolderService:
             "blueprint": {
                 "engine_pattern": request.engine_pattern,
                 "flow_pattern": request.flow_pattern,
+                "app_template": app_template,
                 "system_prompt": request.system_prompt,
                 "llm_provider": request.llm_provider,
                 "llm_base_url": request.llm_base_url,
@@ -506,6 +564,7 @@ class AppScaffolderService:
                     {
                         "name": agent["name"],
                         "role": agent["role"],
+                        "agent_type": agent["agent_type"],
                         "prompt": agent["prompt"],
                         "capabilities": agent["capabilities"],
                     }
@@ -527,6 +586,7 @@ class AppScaffolderService:
                 *(["risk-medium"] if request.risk_level == "medium" else []),
                 *(["risk-high"] if request.risk_level == "high" else []),
                 *(["template"] if request.template else []),
+                app_template,
                 *(["rag"] if request.rag_enabled else []),
                 "app-builder",
             ],
@@ -610,6 +670,28 @@ class AppScaffolderService:
         }
         return defaults.get(request.llm_provider, f"{prefix}_LLM_API_KEY")
 
+    def _resolve_app_template(self, request: AppCreateRequest) -> str:
+        """App template を解決（未指定時は推定）。"""
+        normalized = self._taxonomy.normalize_app_template(request.app_template)
+        if normalized is not None:
+            return normalized
+
+        hints = [
+            request.name,
+            request.display_name,
+            request.description,
+            request.template or "",
+            *request.data_sources,
+            *request.permission_scopes,
+            *request.default_skills,
+            *request.mcp_servers,
+        ]
+        return self._taxonomy.infer_app_template(
+            product_line=request.product_line,
+            engine_pattern=request.engine_pattern,
+            tags=hints,
+        )
+
     def _resolve_vector_db_api_key_env(self, request: AppCreateRequest) -> str | None:
         """VectorDB API キー env 名を解決."""
         if request.vector_database in {"none", "pgvector"}:
@@ -677,8 +759,8 @@ class AppScaffolderService:
         path.write_text(content.rstrip() + "\n", encoding="utf-8")
         created.append(str(path.relative_to(Path.cwd())))
 
-    @staticmethod
     def _normalize_agents(
+        self,
         agents: list[AgentBlueprintInput],
         app_name: str,
     ) -> list[dict[str, Any]]:
@@ -691,6 +773,7 @@ class AppScaffolderService:
                 AgentBlueprintInput(
                     name=f"{app_name.replace('_', ' ').title().replace(' ', '')}Agent",
                     role="specialist",
+                    agent_type="specialist",
                     prompt="ユーザー要求に対し、正確で実用的な応答を返してください。",
                     capabilities=["assistant"],
                 )
@@ -706,6 +789,10 @@ class AppScaffolderService:
             seen_names.add(clean_name)
 
             module_name = AppScaffolderService._to_snake(clean_name)
+            normalized_agent_type = self._taxonomy.normalize_agent_type(item.agent_type) or self._taxonomy.normalize_agent_type(
+                item.role,
+            )
+            resolved_agent_type = normalized_agent_type or "specialist"
             normalized.append(
                 {
                     "name": clean_name,
@@ -719,11 +806,10 @@ class AppScaffolderService:
                         if isinstance(item.business_base, str) and item.business_base.strip()
                         else None
                     ),
-                    "pattern": (
-                        item.pattern.strip().lower()
-                        if isinstance(item.pattern, str) and item.pattern.strip()
-                        else "specialist"
-                    ),
+                    "agent_type": resolved_agent_type,
+                    "pattern": self._taxonomy.normalize_agent_pattern(item.pattern)
+                    or self._taxonomy.agent_type_to_pattern(resolved_agent_type)
+                    or "specialist",
                 }
             )
 

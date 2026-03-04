@@ -41,6 +41,7 @@ class TestListAgents:
             "capabilities",
             "capabilities_legacy",
             "business_base",
+            "agent_type",
             "agent_pattern",
             "app_business_base",
             "app_engine_pattern",
@@ -61,6 +62,7 @@ class TestGetAgentStats:
         assert "total_agents" in data
         assert "total_apps_with_agents" in data
         assert "total_capabilities" in data
+        assert "by_agent_type" in data
         assert data["total_agents"] == 4
 
 
@@ -137,6 +139,46 @@ class TestAgentsByPattern:
         assert "groups" in data
         assert "total_groups" in data
         assert data["total_groups"] >= 1
+
+
+class TestAgentsByType:
+    """GET /api/studios/framework/agents/by-type テスト."""
+
+    def test_returns_groups(self, phase3_test_client: TestClient) -> None:
+        resp = phase3_test_client.get("/api/studios/framework/agents/by-type")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "groups" in data
+        assert "total_groups" in data
+        assert data["total_groups"] >= 1
+
+    def test_group_item_shape(self, phase3_test_client: TestClient) -> None:
+        resp = phase3_test_client.get("/api/studios/framework/agents/by-type")
+        groups = resp.json()["groups"]
+        assert len(groups) > 0
+        first = groups[0]
+        assert {"agent_type", "count", "agents"} <= set(first.keys())
+
+
+class TestAgentTypes:
+    """GET /api/studios/framework/agents/types テスト."""
+
+    def test_returns_type_catalog(self, phase3_test_client: TestClient) -> None:
+        resp = phase3_test_client.get("/api/studios/framework/agents/types")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "types" in data
+        assert "total" in data
+        assert data["total"] >= 1
+
+    def test_type_catalog_shape(self, phase3_test_client: TestClient) -> None:
+        resp = phase3_test_client.get("/api/studios/framework/agents/types")
+        items = resp.json()["types"]
+        first = items[0]
+        assert {"agent_type", "label", "summary", "behaviors"} <= set(first.keys())
+        assert {"observe", "reflect", "experiment", "intent_recognition", "decompose", "delegate"} <= set(
+            first["behaviors"].keys(),
+        )
 
 
 class TestSearchAgents:

@@ -79,6 +79,9 @@ export interface AgentInfo {
   name: string;
   module: string | null;
   capabilities: string[];
+  business_base?: string | null;
+  agent_type?: string | null;
+  pattern?: string | null;
 }
 
 /** エントリーポイント設定 */
@@ -134,6 +137,7 @@ export interface AppDetail {
   blueprint?: {
     engine_pattern: string;
     flow_pattern: string | null;
+    app_template?: string | null;
     system_prompt: string;
     llm_provider?: string | null;
     llm_base_url?: string | null;
@@ -305,6 +309,11 @@ export interface AggregatedAgent {
   module: string | null;
   capabilities: CanonicalCapability[];
   capabilities_legacy: string[];
+  business_base: string;
+  agent_type: string;
+  agent_pattern: string;
+  app_business_base: string;
+  app_engine_pattern: string | null;
 }
 
 /** Agent 一覧レスポンス */
@@ -318,6 +327,9 @@ export interface AgentStatsResponse {
   total_agents: number;
   total_apps_with_agents: number;
   total_capabilities: number;
+  by_business_base: Array<{ name: string; count: number }>;
+  by_agent_type: Array<{ name: string; count: number }>;
+  by_agent_pattern: Array<{ name: string; count: number }>;
 }
 
 /** Capability タグ情報 */
@@ -363,6 +375,38 @@ export interface AgentPatternGroup {
 export interface AgentsByPatternResponse {
   groups: AgentPatternGroup[];
   total_groups: number;
+}
+
+/** Agent by-type グループ */
+export interface AgentTypeGroup {
+  agent_type: string;
+  count: number;
+  agents: AggregatedAgent[];
+}
+
+/** Agent by-type レスポンス */
+export interface AgentsByTypeResponse {
+  groups: AgentTypeGroup[];
+  total_groups: number;
+}
+
+export interface AgentTypeDefinition {
+  agent_type: string;
+  label: string;
+  summary: string;
+  behaviors: {
+    observe: boolean;
+    reflect: boolean;
+    experiment: boolean;
+    intent_recognition: boolean;
+    decompose: boolean;
+    delegate: boolean;
+  };
+}
+
+export interface AgentTypesResponse {
+  types: AgentTypeDefinition[];
+  total: number;
 }
 
 /** Agent by-business-base グループ */
@@ -650,12 +694,22 @@ export type BusinessBaseKind =
   | 'governance'
   | 'media'
   | 'custom';
+export type AppTemplateKind =
+  | 'faq_knowledge_service'
+  | 'intelligence_monitoring'
+  | 'decision_governance'
+  | 'workflow_orchestrator'
+  | 'multichannel_assistant'
+  | 'ops_automation_runner';
 
 export interface AgentBlueprintInput {
   name: string;
   role: string;
   prompt: string;
   capabilities: string[];
+  business_base?: string | null;
+  agent_type?: string | null;
+  pattern?: string | null;
 }
 
 export interface PluginBindingInput {
@@ -706,6 +760,7 @@ export interface AppCreateRequest {
   evolution: EvolutionConfigInput | null;
   plugin_bindings: PluginBindingInput[];
   template: string | null;
+  app_template: AppTemplateKind | null;
   data_sources: string[];
   permission_scopes: string[];
   risk_level: RiskLevelKind | null;
@@ -776,6 +831,15 @@ export interface AppCreateOptionsResponse {
     label: string;
     description: string;
   }>;
+  agent_type_options?: Array<{
+    value: string;
+    label: string;
+  }>;
+  app_template_options?: Array<{
+    value: AppTemplateKind;
+    label: string;
+    description: string;
+  }>;
   database_options?: Array<{
     value: DatabaseKind;
     label: string;
@@ -800,6 +864,35 @@ export interface AppCreateOptionsResponse {
     value: EvolutionValidatorBackend;
     label: string;
   }>;
+}
+
+export interface AppTemplateInfo {
+  app_template: AppTemplateKind;
+  label: string;
+  description: string;
+  count: number;
+  apps: Array<{
+    name: string;
+    display_name: string;
+    icon: string;
+    product_line: ProductLineKind;
+    engine_pattern: EnginePattern;
+    app_template: AppTemplateKind;
+  }>;
+}
+
+export interface AppTemplatesResponse {
+  templates: AppTemplateInfo[];
+  apps: Array<{
+    name: string;
+    display_name: string;
+    icon: string;
+    product_line: ProductLineKind;
+    engine_pattern: EnginePattern;
+    app_template: AppTemplateKind;
+  }>;
+  total_templates: number;
+  total_apps: number;
 }
 
 export interface PortConflictItem {

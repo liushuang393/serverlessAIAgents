@@ -15,6 +15,9 @@ from apps.market_trend_monitor.backend.models import Article, SourceType
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
+from agentflow.core.agent_factory import AgentFactorySpec
+from agentflow.core.agent_factory import create as create_agent
+
 
 router = APIRouter(prefix="/api", tags=["戦略機能"])
 logger = logging.getLogger(__name__)
@@ -33,7 +36,9 @@ def _get_competitor_agent():
             CompetitorTrackingAgent,
         )
 
-        _competitor_agent = CompetitorTrackingAgent()
+        _competitor_agent = create_agent(
+            AgentFactorySpec(agent_class=CompetitorTrackingAgent, agent_type="reactor")
+        )
     return _competitor_agent
 
 
@@ -195,7 +200,7 @@ async def _collect_articles_for_watchlist_focus(
     if not keywords:
         return 0
 
-    collector_agent = CollectorAgent()
+    collector_agent = create_agent(AgentFactorySpec(agent_class=CollectorAgent, agent_type="executor"))
     await collector_agent.initialize()
     try:
         collector_result = await collector_agent.run({"keywords": keywords, "sources": sources})

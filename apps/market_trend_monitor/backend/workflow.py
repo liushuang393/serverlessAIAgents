@@ -36,6 +36,8 @@ from apps.market_trend_monitor.backend.services.registry import (
 )
 
 from agentflow import Flow, create_flow
+from agentflow.core.agent_factory import AgentFactorySpec
+from agentflow.core.agent_factory import create as create_agent
 from agentflow.security import SafetyMixin
 
 
@@ -146,13 +148,37 @@ def _map_notifier_input(ctx: Any) -> dict[str, Any]:
 flow: Flow = (
     create_flow("market-trend-monitor", name="Market Trend Monitor")
     .then(
-        CollectorAgent(source_reliability_tracker=source_reliability_tracker),
-        EvidenceLedgerAgent(evidence_service=evidence_service),
-        AnalyzerAgent(evidence_service=evidence_service),
-        SignalScorerAgent(signal_service=signal_service),
-        ReporterAgent(),
-        RedTeamAgent(),
-        NotifierAgent(),
+        create_agent(
+            AgentFactorySpec(
+                agent_class=CollectorAgent,
+                init_kwargs={"source_reliability_tracker": source_reliability_tracker},
+                agent_type="executor",
+            )
+        ),
+        create_agent(
+            AgentFactorySpec(
+                agent_class=EvidenceLedgerAgent,
+                init_kwargs={"evidence_service": evidence_service},
+                agent_type="executor",
+            )
+        ),
+        create_agent(
+            AgentFactorySpec(
+                agent_class=AnalyzerAgent,
+                init_kwargs={"evidence_service": evidence_service},
+                agent_type="reactor",
+            )
+        ),
+        create_agent(
+            AgentFactorySpec(
+                agent_class=SignalScorerAgent,
+                init_kwargs={"signal_service": signal_service},
+                agent_type="reviewer",
+            )
+        ),
+        create_agent(AgentFactorySpec(agent_class=ReporterAgent, agent_type="reporter")),
+        create_agent(AgentFactorySpec(agent_class=RedTeamAgent, agent_type="reviewer")),
+        create_agent(AgentFactorySpec(agent_class=NotifierAgent, agent_type="executor")),
         ids=[
             "collector",
             "evidence_ledger",

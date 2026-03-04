@@ -780,15 +780,43 @@ class FrameworkAuditService:
             )
 
         for agent in app_config.agents:
-            if self._taxonomy.normalize_agent_pattern(agent.pattern) is None:
+            normalized_type = self._taxonomy.normalize_agent_type(agent.agent_type)
+            normalized_pattern = self._taxonomy.normalize_agent_pattern(agent.pattern)
+
+            if normalized_type is None:
                 issues.append(
                     FrameworkAuditIssue(
                         severity="warning",
-                        code="AGENT_PATTERN_MISSING",
-                        message=f"agent '{agent.name}' の pattern が未設定です",
-                        hint="agents[].pattern を設定してください",
+                        code="AGENT_TYPE_MISSING",
+                        message=f"agent '{agent.name}' の agent_type が未設定です",
+                        hint="agents[].agent_type を設定してください",
                     ),
                 )
+
+            if normalized_pattern is None:
+                issues.append(
+                    FrameworkAuditIssue(
+                        severity="warning",
+                        code="AGENT_PATTERN_COMPAT_MISSING",
+                        message=f"agent '{agent.name}' の pattern が未設定です（互換フィールド）",
+                        hint="legacy 互換のため agents[].pattern も併記してください",
+                    ),
+                )
+
+            if normalized_type is not None and normalized_pattern is not None:
+                mapped = self._taxonomy.pattern_to_agent_type(normalized_pattern)
+                if mapped is not None and mapped != normalized_type and normalized_pattern != "custom":
+                    issues.append(
+                        FrameworkAuditIssue(
+                            severity="warning",
+                            code="AGENT_TYPE_PATTERN_MISMATCH",
+                            message=(
+                                f"agent '{agent.name}' の agent_type('{normalized_type}') と "
+                                f"pattern('{normalized_pattern}') が一致していません"
+                            ),
+                            hint="agent_type を主とし、pattern は互換マッピングで併記してください",
+                        ),
+                    )
         return issues
 
     def _detect_engine_pattern(self, source_text: str) -> tuple[str | None, list[str]]:

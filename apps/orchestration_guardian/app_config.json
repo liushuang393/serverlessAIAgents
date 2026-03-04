@@ -28,12 +28,17 @@
         "readiness_scoring"
       ],
       "business_base": "governance",
-      "pattern": "reviewer"
+      "pattern": "reviewer",
+      "agent_type": "reviewer"
     }
   ],
   "services": {
     "governance": {
-      "checks": ["orchestration", "protocols", "security_baseline"]
+      "checks": [
+        "orchestration",
+        "protocols",
+        "security_baseline"
+      ]
     }
   },
   "dependencies": {
@@ -67,7 +72,12 @@
       "stop": "docker compose -f docker-compose.yml down"
     }
   },
-  "tags": ["orchestration", "governance", "protocol", "audit"],
+  "tags": [
+    "orchestration",
+    "governance",
+    "protocol",
+    "audit"
+  ],
   "contracts": {
     "auth": {
       "enabled": false,
@@ -101,7 +111,9 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": ["dev"],
+      "environments": [
+        "dev"
+      ],
       "require_approval": true
     }
   },
@@ -120,10 +132,37 @@
     "vector_db_collection": null,
     "vector_db_api_key_env": null,
     "mcp_servers": [],
-    "agents": []
+    "agents": [],
+    "app_template": "decision_governance"
   },
   "visibility": {
     "mode": "private",
     "tenants": []
+  },
+  "evolution": {
+    "enabled": true,
+    "strategy_service_url": null,
+    "validator_queue": {
+      "backend": "redis_stream",
+      "redis_url": null,
+      "stream_key": "evolution:validate:stream",
+      "consumer_group": "evolution-validator-v1",
+      "max_retries": 5
+    },
+    "scope_policy": [
+      "tenant_app",
+      "tenant_product_line",
+      "global_verified"
+    ],
+    "retrieval": {
+      "high_confidence_skip_threshold": 0.82,
+      "high_complexity_threshold": 0.7,
+      "low_confidence_threshold": 0.55
+    },
+    "suspicion": {
+      "max_age_days": 30,
+      "failure_streak_threshold": 2,
+      "performance_drop_ratio": 0.2
+    }
   }
 }

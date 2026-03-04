@@ -44,7 +44,8 @@ class AgentInfo(BaseModel):
         module: Python モジュールパス（省略可）
         capabilities: 能力タグ一覧
         business_base: Agent の業務基盤分類（省略時は推論）
-        pattern: Agent パターン分類（省略時は推論）
+        agent_type: Agent タイプ分類（省略時は推論）
+        pattern: Agent パターン分類（互換フィールド、省略時は推論）
     """
 
     name: str = Field(..., min_length=1, max_length=100, description="Agent 名")
@@ -57,12 +58,16 @@ class AgentInfo(BaseModel):
         default=None,
         description="業務基盤分類（knowledge / governance など）",
     )
+    agent_type: str | None = Field(
+        default=None,
+        description="Agent タイプ分類（specialist / planner など）",
+    )
     pattern: str | None = Field(
         default=None,
-        description="Agent パターン分類（specialist / coordinator など）",
+        description="Agent パターン分類（互換）",
     )
 
-    @field_validator("business_base", "pattern", mode="before")
+    @field_validator("business_base", "agent_type", "pattern", mode="before")
     @classmethod
     def normalize_optional_label(cls, v: str | None) -> str | None:
         """任意分類文字列を正規化（空文字は None）."""
@@ -265,8 +270,27 @@ class AgentBlueprintConfig(BaseModel):
 
     name: str = Field(..., min_length=1, max_length=100, description="Agent 名")
     role: str = Field(default="specialist", description="Agent ロール")
+    agent_type: str | None = Field(default=None, description="Agent タイプ分類")
     prompt: str = Field(default="", description="Agent 個別プロンプト")
     capabilities: list[str] = Field(default_factory=list, description="能力タグ")
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def normalize_role_field(cls, v: str | None) -> str:
+        """role を正規化."""
+        if v is None:
+            return "specialist"
+        text = str(v).strip().lower()
+        return text or "specialist"
+
+    @field_validator("agent_type", mode="before")
+    @classmethod
+    def normalize_agent_type_field(cls, v: str | None) -> str | None:
+        """agent_type を正規化."""
+        if v is None:
+            return None
+        text = str(v).strip().lower()
+        return text or None
 
 
 class BlueprintConfig(BaseModel):
@@ -291,10 +315,20 @@ class BlueprintConfig(BaseModel):
     vector_db_collection: str | None = Field(default=None, description="VectorDB 既定コレクション")
     vector_db_api_key_env: str | None = Field(default=None, description="VectorDB API キー env 名")
     mcp_servers: list[str] = Field(default_factory=list, description="利用するMCPサーバー名")
+    app_template: str | None = Field(default=None, description="アプリテンプレート ID")
     agents: list[AgentBlueprintConfig] = Field(
         default_factory=list,
         description="Agent 設計メモ",
     )
+
+    @field_validator("flow_pattern", "llm_provider", "app_template", mode="before")
+    @classmethod
+    def normalize_blueprint_labels(cls, v: str | None) -> str | None:
+        """Blueprint ラベル系フィールドを正規化."""
+        if v is None:
+            return None
+        text = str(v).strip().lower()
+        return text or None
 
 
 class VisibilityConfig(BaseModel):

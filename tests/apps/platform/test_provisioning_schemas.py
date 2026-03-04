@@ -29,6 +29,19 @@ class TestAppCreateRequest:
         assert req.surface_profile == "business"
         assert req.audit_profile == "developer"
 
+    def test_app_template_is_normalized(self) -> None:
+        """app_template は小文字へ正規化される."""
+        req = AppCreateRequest(
+            name="template_app",
+            display_name="Template App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            app_template="Workflow_Orchestrator",
+        )
+        assert req.app_template == "workflow_orchestrator"
+
     def test_plugin_bindings_is_required(self) -> None:
         """plugin_bindings は明示必須."""
         with pytest.raises(ValidationError, match="plugin_bindings"):
@@ -100,3 +113,25 @@ class TestAppCreateRequest:
         )
         assert req.evolution is not None
         assert req.evolution.validator_queue.backend == "redis_stream"
+
+    def test_agent_type_is_normalized(self) -> None:
+        """agents[].agent_type は小文字へ正規化される."""
+        req = AppCreateRequest(
+            name="agent_type_app",
+            display_name="Agent Type App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            agents=[
+                {
+                    "name": "PrimaryAgent",
+                    "role": "Specialist",
+                    "agent_type": "Planner",
+                    "prompt": "plan",
+                    "capabilities": ["assistant"],
+                }
+            ],
+        )
+        assert req.agents[0].role == "specialist"
+        assert req.agents[0].agent_type == "planner"

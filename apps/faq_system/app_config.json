@@ -30,7 +30,8 @@
         "suggestion"
       ],
       "business_base": "knowledge",
-      "pattern": "specialist"
+      "pattern": "specialist",
+      "agent_type": "specialist"
     },
     {
       "name": "SalesAgent",
@@ -41,7 +42,8 @@
         "image_generation"
       ],
       "business_base": "interaction",
-      "pattern": "specialist"
+      "pattern": "specialist",
+      "agent_type": "specialist"
     },
     {
       "name": "EnhancedFAQAgent",
@@ -54,7 +56,8 @@
         "citation"
       ],
       "business_base": "knowledge",
-      "pattern": "specialist"
+      "pattern": "specialist",
+      "agent_type": "specialist"
     },
     {
       "name": "InternalKBAgent",
@@ -67,7 +70,8 @@
         "ticket"
       ],
       "business_base": "knowledge",
-      "pattern": "specialist"
+      "pattern": "specialist",
+      "agent_type": "specialist"
     },
     {
       "name": "ExternalKBAgent",
@@ -78,7 +82,8 @@
         "external_kb"
       ],
       "business_base": "knowledge",
-      "pattern": "specialist"
+      "pattern": "specialist",
+      "agent_type": "specialist"
     },
     {
       "name": "MaintenanceAgent",
@@ -89,7 +94,8 @@
         "documentation"
       ],
       "business_base": "operations",
-      "pattern": "specialist"
+      "pattern": "specialist",
+      "agent_type": "specialist"
     },
     {
       "name": "AnalyticsAgent",
@@ -101,7 +107,8 @@
         "trend"
       ],
       "business_base": "reasoning",
-      "pattern": "analyzer"
+      "pattern": "analyzer",
+      "agent_type": "reactor"
     }
   ],
   "services": {
@@ -294,10 +301,37 @@
     "vector_db_collection": null,
     "vector_db_api_key_env": null,
     "mcp_servers": [],
-    "agents": []
+    "agents": [],
+    "app_template": "faq_knowledge_service"
   },
   "visibility": {
     "mode": "private",
     "tenants": []
+  },
+  "evolution": {
+    "enabled": true,
+    "strategy_service_url": null,
+    "validator_queue": {
+      "backend": "redis_stream",
+      "redis_url": null,
+      "stream_key": "evolution:validate:stream",
+      "consumer_group": "evolution-validator-v1",
+      "max_retries": 5
+    },
+    "scope_policy": [
+      "tenant_app",
+      "tenant_product_line",
+      "global_verified"
+    ],
+    "retrieval": {
+      "high_confidence_skip_threshold": 0.82,
+      "high_complexity_threshold": 0.7,
+      "low_confidence_threshold": 0.55
+    },
+    "suspicion": {
+      "max_age_days": 30,
+      "failure_streak_threshold": 2,
+      "performance_drop_ratio": 0.2
+    }
   }
 }

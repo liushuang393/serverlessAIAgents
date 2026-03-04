@@ -9,9 +9,11 @@ import axios from 'axios';
 import type {
   AgentListResponse,
   AgentStatsResponse,
+  AgentsByTypeResponse,
   AgentsByAppResponse,
   AgentsByBusinessBaseResponse,
   AgentsByPatternResponse,
+  AgentTypesResponse,
   AppRAGConfig,
   AppRAGConfigPatchRequest,
   AppRAGConfigUpdateResponse,
@@ -19,6 +21,7 @@ import type {
   AppCreateOptionsResponse,
   AppCreateRequest,
   AppCreateResponse,
+  AppTemplatesResponse,
   AppDetail,
   AppListResponse,
   AppSummaryResponse,
@@ -265,9 +268,27 @@ export async function fetchAgentsByPattern(): Promise<AgentsByPatternResponse> {
   return data;
 }
 
+/** Agent type 別グルーピング */
+export async function fetchAgentsByType(): Promise<AgentsByTypeResponse> {
+  const { data } = await api.get<AgentsByTypeResponse>('/studios/framework/agents/by-type');
+  return data;
+}
+
+/** Agent type 定義 */
+export async function fetchAgentTypes(): Promise<AgentTypesResponse> {
+  const { data } = await api.get<AgentTypesResponse>('/studios/framework/agents/types');
+  return data;
+}
+
 /** 業務基盤別 Agent グルーピング */
 export async function fetchAgentsByBusinessBase(): Promise<AgentsByBusinessBaseResponse> {
   const { data } = await api.get<AgentsByBusinessBaseResponse>('/studios/framework/agents/by-business-base');
+  return data;
+}
+
+/** App テンプレート一覧 */
+export async function fetchAppTemplates(): Promise<AppTemplatesResponse> {
+  const { data } = await api.get<AppTemplatesResponse>(`${FRAMEWORK_APPS_BASE}/templates`);
   return data;
 }
 

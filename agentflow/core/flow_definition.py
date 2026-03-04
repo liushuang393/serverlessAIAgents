@@ -33,6 +33,9 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from agentflow.core.agent_factory import AgentFactorySpec
+from agentflow.core.agent_factory import create as create_agent
+
 
 class AgentStatus(str, Enum):
     """Agent状態（前後端共通）."""
@@ -56,6 +59,7 @@ class AgentDefinition(BaseModel):
     label: str = Field(..., description="Agent機能ラベル")
     icon: str = Field(default="○", description="表示アイコン（絵文字）")
     description: str = Field(default="", description="Agent説明")
+    agent_type: str | None = Field(default=None, description="Agentタイプ分類")
     class_name: str = Field(default="", description="Agent実装クラス名")
     module_path: str = Field(default="", description="Agentモジュールパス（省略時はclass_nameから推測）")
 
@@ -183,39 +187,38 @@ class FlowDefinition(BaseModel):
             ImportError: モジュールが見つからない場合
             AttributeError: クラスが見つからない場合
         """
-        import importlib
-        import logging
-
         logger = logging.getLogger(__name__)
 
         if not agent_def.class_name:
             msg = f"Agent {agent_def.id} has no class_name defined"
             raise ValueError(msg)
 
-        # モジュールパスを決定
         module_path = agent_def.module_path
         if not module_path:
-            # class_name から推測（CamelCase → snake_case）
             import re
 
             snake_name = re.sub(r"(?<!^)(?=[A-Z])", "_", agent_def.class_name).lower()
-            # デフォルトは agentflow.agents.{snake_name}
             module_path = f"agentflow.agents.{snake_name}"
 
-        try:
-            module = importlib.import_module(module_path)
-            agent_class = getattr(module, agent_def.class_name)
-        except (ImportError, AttributeError) as e:
-            logger.exception(f"Failed to import {agent_def.class_name} from {module_path}: {e}")
-            raise
-
-        # インスタンス化
         init_kwargs = {**kwargs}
         if llm_client is not None:
             init_kwargs["llm_client"] = llm_client
 
-        logger.debug(f"Created agent: {agent_def.id} ({agent_def.class_name})")
-        return agent_class(**init_kwargs)
+        try:
+            agent = create_agent(
+                AgentFactorySpec(
+                    class_name=agent_def.class_name,
+                    module_path=module_path,
+                    init_kwargs=init_kwargs,
+                    agent_type=agent_def.agent_type,
+                )
+            )
+        except Exception as e:
+            logger.exception(f"Failed to create {agent_def.class_name} via factory: {e}")
+            raise
+
+        logger.debug(f"Created agent via factory: {agent_def.id} ({agent_def.class_name})")
+        return agent
 
     def instantiate_all_agents(
         self,

@@ -65,12 +65,19 @@ class TestAgentInfo:
         assert agent.module is None
         assert agent.capabilities == []
         assert agent.business_base is None
+        assert agent.agent_type is None
         assert agent.pattern is None
 
     def test_normalize_taxonomy_fields(self) -> None:
         """分類フィールドを小文字で正規化する."""
-        agent = AgentInfo(name="A", business_base="Knowledge", pattern="Coordinator")
+        agent = AgentInfo(
+            name="A",
+            business_base="Knowledge",
+            agent_type="Planner",
+            pattern="Coordinator",
+        )
         assert agent.business_base == "knowledge"
+        assert agent.agent_type == "planner"
         assert agent.pattern == "coordinator"
 
 
@@ -257,6 +264,31 @@ class TestAppConfig:
         assert cfg.runtime.cli.preferred == ["claude", "codex"]
         assert cfg.runtime.cli.codex.executable == "codex-custom"
         assert cfg.runtime.cli.codex.diagnostic_mode == "plan"
+
+    def test_blueprint_normalize_app_template_and_agent_type(self) -> None:
+        """blueprint.app_template / agents[].agent_type を正規化する."""
+        cfg = AppConfig(
+            name="template_app",
+            display_name="Template App",
+            product_line="framework",
+            surface_profile="developer",
+            audit_profile="developer",
+            plugin_bindings=[],
+            blueprint={
+                "app_template": "Workflow_Orchestrator",
+                "agents": [
+                    {
+                        "name": "PlannerAgent",
+                        "role": "specialist",
+                        "agent_type": "Planner",
+                        "prompt": "plan",
+                        "capabilities": ["analysis"],
+                    }
+                ],
+            },
+        )
+        assert cfg.blueprint.app_template == "workflow_orchestrator"
+        assert cfg.blueprint.agents[0].agent_type == "planner"
 
     def test_assistant_requires_security_mode(self) -> None:
         """assistant は security_mode 未指定を拒否する."""

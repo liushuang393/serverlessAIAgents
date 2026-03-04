@@ -31,6 +31,7 @@ class TestAggregatedAgent:
             ],
             capabilities_legacy=["rag"],
             business_base="knowledge",
+            agent_type="specialist",
             agent_pattern="specialist",
             app_business_base="knowledge",
             app_engine_pattern="simple",
@@ -40,6 +41,7 @@ class TestAggregatedAgent:
         assert payload["capabilities"][0]["id"] == "knowledge.retrieval.rag"
         assert payload["capabilities_legacy"] == ["rag"]
         assert payload["business_base"] == "knowledge"
+        assert payload["agent_type"] == "specialist"
         assert payload["agent_pattern"] == "specialist"
 
 
@@ -101,6 +103,7 @@ class TestGroupByApp:
         assert isinstance(first["agents"], list)
         if first["agents"]:
             assert "business_base" in first["agents"][0]
+            assert "agent_type" in first["agents"][0]
             assert "agent_pattern" in first["agents"][0]
 
 
@@ -130,6 +133,7 @@ class TestStats:
         stats = aggregator.stats()
         assert {"total_agents", "total_apps_with_agents", "total_capabilities"} <= set(stats.keys())
         assert "by_business_base" in stats
+        assert "by_agent_type" in stats
         assert "by_agent_pattern" in stats
 
     def test_with_rag(self, aggregator_with_rag: AgentAggregatorService) -> None:
@@ -137,3 +141,16 @@ class TestStats:
         assert stats["total_agents"] == 4
         assert stats["total_apps_with_agents"] == 2
         assert stats["total_capabilities"] >= 3
+        assert any(item["name"] == "specialist" for item in stats["by_agent_type"])
+
+
+class TestGroupedTypes:
+    """grouped_types() のテスト."""
+
+    def test_returns_agent_type_groups(self, aggregator_with_rag: AgentAggregatorService) -> None:
+        groups = aggregator_with_rag.grouped_types()
+        assert isinstance(groups, list)
+        assert len(groups) >= 1
+        first = groups[0]
+        assert {"agent_type", "count", "agents"} <= set(first.keys())
+        assert isinstance(first["agents"], list)

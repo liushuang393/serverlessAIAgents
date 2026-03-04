@@ -6,6 +6,8 @@ import type {
   AppCreateOptionsResponse,
   AppCreateRequest,
   AppCreateResponse,
+  AppTemplateKind,
+  BusinessBaseKind,
   DatabaseKind,
   EnginePattern,
   EvolutionScopeLevel,
@@ -39,6 +41,8 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
   const [description, setDescription] = useState('');
   const [icon, setIcon] = useState('📦');
   const [enginePattern, setEnginePattern] = useState<EnginePattern>('flow');
+  const [appTemplate, setAppTemplate] = useState<AppTemplateKind>('workflow_orchestrator');
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [flowPattern, setFlowPattern] = useState('');
   const [database, setDatabase] = useState<DatabaseKind>('postgresql');
   const [vectorDatabase, setVectorDatabase] = useState<VectorDatabaseKind>('none');
@@ -67,7 +71,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
   const [validatorRedisUrl, setValidatorRedisUrl] = useState('redis://localhost:6379/0');
   const [scopePolicyInput, setScopePolicyInput] = useState('tenant_app,tenant_product_line,global_verified');
   const [agentName, setAgentName] = useState('PrimaryAgent');
-  const [agentRole, setAgentRole] = useState('specialist');
+  const [agentType, setAgentType] = useState('specialist');
   const [agentCapabilitiesInput, setAgentCapabilitiesInput] = useState('assistant');
   const [agentPrompt, setAgentPrompt] = useState('ユーザーの要求を理解し、実行可能な回答を返してください。');
   const [systemPrompt, setSystemPrompt] = useState('あなたは業務特化の AI アシスタントです。');
@@ -85,6 +89,10 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
     fetchAppCreateOptions()
       .then((res) => {
         setOptions(res);
+        const firstTemplate = res.app_template_options?.[0]?.value;
+        if (firstTemplate) {
+          setAppTemplate(firstTemplate);
+        }
       })
       .catch((err) => {
         const msg = err instanceof Error ? err.message : t('app_create.error_options');
@@ -109,16 +117,16 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
       display_name: displayName.trim(),
       description: description.trim(),
       icon: icon.trim() || '📦',
-      business_base: ((): any => {
-        const mapping: Record<CategoryId, string> = {
+      business_base: (() => {
+        const mapping: Record<CategoryId, BusinessBaseKind> = {
           core: 'knowledge',
           studio: 'media',
           governance: 'governance',
           ops: 'platform',
           daily: 'custom',
-          all: 'custom', // should not happen
+          all: 'custom',
         };
-        return mapping[selectedCategory] || 'custom';
+        return mapping[selectedCategory] ?? 'custom';
       })(),
       product_line: 'framework',
       surface_profile: 'developer',
@@ -148,6 +156,7 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
       },
       plugin_bindings: [],
       template: null,
+      app_template: appTemplate,
       data_sources: [],
       permission_scopes: [],
       risk_level: null,
@@ -177,7 +186,8 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
       agents: [
         {
           name: agentName.trim() || 'PrimaryAgent',
-          role: agentRole.trim() || 'specialist',
+          role: agentType.trim() || 'specialist',
+          agent_type: agentType.trim() || 'specialist',
           prompt: agentPrompt.trim(),
           capabilities: splitCSV(agentCapabilitiesInput),
         },
@@ -255,6 +265,19 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
                 ))}
               </select>
             </Field>
+            <Field label={t('app_create.field_app_template')}>
+              <select
+                value={appTemplate}
+                onChange={(e) => setAppTemplate(e.target.value as AppTemplateKind)}
+                className="input"
+              >
+                {(options?.app_template_options ?? []).map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </Field>
             <Field label={t('app_create.field_category')}>
               <select
                 value={selectedCategory}
@@ -279,6 +302,19 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
             />
           </Field>
 
+          <div className="flex items-center justify-between rounded-lg border border-slate-700 bg-slate-950/40 px-3 py-2">
+            <span className="text-sm text-slate-300">{t('app_create.advanced')}</span>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((prev) => !prev)}
+              className="text-xs px-2 py-1 rounded-md border border-slate-600 text-slate-300 hover:bg-slate-800"
+            >
+              {showAdvanced ? t('app_create.hide_advanced') : t('app_create.show_advanced')}
+            </button>
+          </div>
+
+          {showAdvanced && (
+            <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Field label={t('app_create.field_flow_pattern')}>
               <input
@@ -515,11 +551,19 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
               />
             </Field>
             <Field label={t('app_create.field_agent_role')}>
-              <input
-                value={agentRole}
-                onChange={(e) => setAgentRole(e.target.value)}
+              <select
+                value={agentType}
+                onChange={(e) => setAgentType(e.target.value)}
                 className="input"
-              />
+              >
+                {(
+                  options?.agent_type_options ?? [{ value: 'specialist', label: 'Specialist' }]
+                ).map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
             </Field>
             <Field label={t('app_create.field_agent_cap')}>
               <input
@@ -545,6 +589,8 @@ export function AppCreateModal({ open, onClose, onCreated }: Props) {
               className="input min-h-24"
             />
           </Field>
+            </>
+          )}
 
           <div className="pt-2 flex items-center justify-end gap-3">
             <button

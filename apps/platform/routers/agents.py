@@ -5,6 +5,8 @@ GET  /api/studios/framework/agents/stats        — Agent 統計
 GET  /api/studios/framework/agents/capabilities — 全能力タグ一覧
 GET  /api/studios/framework/agents/by-app       — App 別グルーピング
 GET  /api/studios/framework/agents/by-business-base — 業務基盤別グルーピング
+GET  /api/studios/framework/agents/by-type      — Agent type 別グルーピング
+GET  /api/studios/framework/agents/types        — Agent type 定義
 GET  /api/studios/framework/agents/by-pattern   — Agent pattern 別グルーピング
 GET  /api/studios/framework/agents/search       — 能力ベース検索
 """
@@ -16,7 +18,8 @@ from typing import TYPE_CHECKING, Any
 from fastapi import APIRouter, Query
 
 
-from apps.platform.services.agent_aggregator import AgentAggregatorService
+if TYPE_CHECKING:
+    from apps.platform.services.agent_aggregator import AgentAggregatorService
 
 
 router = APIRouter(prefix="/api/studios/framework/agents", tags=["agents"])
@@ -103,6 +106,28 @@ async def agents_by_pattern() -> dict[str, Any]:
     return {
         "groups": groups,
         "total_groups": len(groups),
+    }
+
+
+@router.get("/by-type")
+async def agents_by_type() -> dict[str, Any]:
+    """Agent type 別にグルーピングした Agent 一覧."""
+    aggregator = _get_aggregator()
+    groups = aggregator.grouped_types()
+    return {
+        "groups": groups,
+        "total_groups": len(groups),
+    }
+
+
+@router.get("/types")
+async def agent_type_definitions() -> dict[str, Any]:
+    """Agent type 定義と行動説明を返す."""
+    aggregator = _get_aggregator()
+    items = aggregator.type_definitions()
+    return {
+        "types": items,
+        "total": len(items),
     }
 
 

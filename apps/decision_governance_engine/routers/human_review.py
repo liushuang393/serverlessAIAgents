@@ -17,16 +17,9 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-
 from apps.decision_governance_engine.agents.review_agent import ReviewAgent
 from apps.decision_governance_engine.repositories import DecisionRepository
 from apps.decision_governance_engine.routers.report import _get_report_from_db, cache_report
-from apps.decision_governance_engine.services.human_review_policy import (
-    enrich_review_with_policy,
-    load_human_review_policy,
-)
 from apps.decision_governance_engine.schemas.agent_schemas import (
     CheckpointItem,
     FindingCategory,
@@ -36,7 +29,15 @@ from apps.decision_governance_engine.schemas.agent_schemas import (
     ReviewVerdict,
 )
 from apps.decision_governance_engine.schemas.output_schemas import HumanReview
+from apps.decision_governance_engine.services.human_review_policy import (
+    enrich_review_with_policy,
+    load_human_review_policy,
+)
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
+from agentflow.core.agent_factory import AgentFactorySpec
+from agentflow.core.agent_factory import create as create_agent
 from agentflow.providers import get_llm
 from agentflow.utils import extract_json
 
@@ -254,12 +255,11 @@ async def get_pending_reviews() -> list[str]:
     Returns:
         list[str]: 未確認レポートIDのリスト
     """
-    pending = [
+    return [
         report_id
         for report_id, review in _review_storage.items()
         if review.requires_review and review.approved is None
     ]
-    return pending
 
 
 @router.delete("/reset/{report_id}")
@@ -389,14 +389,21 @@ async def _evaluate_resolution_with_ai(
 
     try:
         llm_client = get_llm()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(f"LLM 初期化失敗のためルール判定へフォールバック: {exc}")
         llm_client = None
 
     if llm_client is None:
         return _evaluate_resolution_fallback(finding, confirmation_note)
 
-    reviewer = ReviewAgent(llm_client=llm_client)
+    reviewer = create_agent(
+        AgentFactorySpec(
+            class_name="ReviewAgent",
+            module_path="apps.decision_governance_engine.agents.review_agent",
+            init_kwargs={"llm_client": llm_client},
+            agent_type="reviewer",
+        )
+    )
     try:
         response = await reviewer._call_llm(prompt)
         parsed = extract_json(response)
@@ -411,7 +418,7 @@ async def _evaluate_resolution_with_ai(
         return resolved, issues[:3]
     except json.JSONDecodeError:
         return _evaluate_resolution_fallback(finding, confirmation_note)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(f"LLM 再確認判定に失敗したためフォールバック: {exc}")
         return _evaluate_resolution_fallback(finding, confirmation_note)
 
@@ -461,7 +468,7 @@ async def _resolve_request_id_from_report(report_id: str | None) -> UUID | None:
     except TimeoutError:
         logger.warning(f"report_id 逆引きがタイムアウト: report_id={report_id}")
         return None
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(f"report_id 逆引きに失敗: report_id={report_id}, error={exc}")
         return None
 
@@ -494,7 +501,7 @@ async def _persist_human_review_record(
             logger.warning(f"人間確認ログ保存対象が見つかりません: request_id={request_uuid}")
     except TimeoutError:
         logger.warning(f"人間確認ログ保存がタイムアウト: request_id={request_uuid}")
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(f"人間確認ログ保存に失敗: {exc}")
 
 
@@ -710,7 +717,7 @@ async def _evaluate_finding_bonus_with_ai(
 
     try:
         llm_client = get_llm()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(f"LLM 初期化失敗のため補足加点をルール評価へフォールバック: {exc}")
         llm_client = None
 
@@ -744,7 +751,14 @@ async def _evaluate_finding_bonus_with_ai(
 {json.dumps(checked_items, ensure_ascii=False)}
 """
 
-    reviewer = ReviewAgent(llm_client=llm_client)
+    reviewer = create_agent(
+        AgentFactorySpec(
+            class_name="ReviewAgent",
+            module_path="apps.decision_governance_engine.agents.review_agent",
+            init_kwargs={"llm_client": llm_client},
+            agent_type="reviewer",
+        )
+    )
     try:
         response = await reviewer._call_llm(prompt)
         parsed = extract_json(response)
@@ -765,7 +779,7 @@ async def _evaluate_finding_bonus_with_ai(
         return bonus_pct, reasons[:5]
     except json.JSONDecodeError:
         return _evaluate_finding_bonus_fallback(checked_items)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.warning(f"LLM 補足加点評価に失敗したためフォールバック: {exc}")
         return _evaluate_finding_bonus_fallback(checked_items)
 

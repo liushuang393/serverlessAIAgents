@@ -1,5 +1,14 @@
 """Core components of AgentFlow framework."""
 
+from agentflow.core.agent_factory import (
+    AgentFactorySpec,
+    AgentSharedContext,
+    TieredMemory,
+    get_default_shared_context,
+)
+from agentflow.core.agent_factory import (
+    create as create_agent,
+)
 from agentflow.core.agent_registry import (
     AgentEntry,
     AgentRegistry,
@@ -205,7 +214,7 @@ from agentflow.core.types import AgentMetadata, ExecutionContext, WorkflowConfig
 from agentflow.core.validator import AgentValidator, ValidationResult
 
 
-__all__ = [
+__all__ = [  # noqa: RUF022
     "A2AConfig",
     "AGUIConfig",
     "APITimeoutError",
@@ -223,6 +232,7 @@ __all__ = [
     "AgentFlowAPIError",
     "AgentFlowEngine",
     "AgentFlowError",
+    "AgentFactorySpec",
     "AgentInfo",
     "AgentLoader",
     "AgentMetadata",
@@ -230,6 +240,7 @@ __all__ = [
     "AgentOutputValidationError",
     "AgentRegistry",
     "AgentRetryExhaustedError",
+    "AgentSharedContext",
     "AgentStatus",
     "AgentTimeoutError",
     "AgentValidator",
@@ -237,6 +248,7 @@ __all__ = [
     "BlueprintValidationResult",
     "BoundTools",
     "CapabilityRequirement",
+    "TieredMemory",
     # ==========================================================================
     # 統一ツールカタログ（全ツールソース統合）
     # ==========================================================================
@@ -357,7 +369,9 @@ __all__ = [
     "WorkflowError",
     "WorkflowNotFoundError",
     "create_error_response",
+    "create_agent",
     "create_exception_handlers",
+    "get_default_shared_context",
     "exception_to_response",
     "get_circuit_breaker",
     "get_global_agent_registry",

@@ -21,7 +21,26 @@ class AgentBlueprintInput(BaseModel):
     prompt: str = Field(default="", description="Agent 個別プロンプト")
     capabilities: list[str] = Field(default_factory=list, description="能力タグ")
     business_base: str | None = Field(default=None, description="業務基盤分類")
+    agent_type: str | None = Field(default=None, description="Agent タイプ分類")
     pattern: str | None = Field(default=None, description="Agent pattern")
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def normalize_agent_role(cls, value: str | None) -> str:
+        """Agent role を正規化する."""
+        if value is None:
+            return "specialist"
+        text = str(value).strip().lower()
+        return text or "specialist"
+
+    @field_validator("business_base", "agent_type", "pattern", mode="before")
+    @classmethod
+    def normalize_agent_labels(cls, value: str | None) -> str | None:
+        """Agent 分類フィールドを正規化する."""
+        if value is None:
+            return None
+        text = str(value).strip().lower()
+        return text or None
 
 
 class PluginBindingInput(BaseModel):
@@ -114,6 +133,14 @@ class AppCreateRequest(BaseModel):
         description="バインド済みプラグイン",
     )
     template: str | None = Field(default=None, description="Business 作成向けテンプレートID")
+    app_template: Literal[
+        "faq_knowledge_service",
+        "intelligence_monitoring",
+        "decision_governance",
+        "workflow_orchestrator",
+        "multichannel_assistant",
+        "ops_automation_runner",
+    ] | None = Field(default=None, description="App テンプレート")
     data_sources: list[str] = Field(default_factory=list, description="Business 作成向けデータソース")
     permission_scopes: list[str] = Field(
         default_factory=list,
@@ -205,6 +232,15 @@ class AppCreateRequest(BaseModel):
     def normalize_profile_fields(cls, value: str) -> str:
         """分類フィールドを小文字へ正規化する."""
         return str(value).strip().lower()
+
+    @field_validator("app_template", mode="before")
+    @classmethod
+    def normalize_app_template(cls, value: str | None) -> str | None:
+        """app_template を小文字へ正規化する."""
+        if value is None:
+            return None
+        text = str(value).strip().lower()
+        return text or None
 
     @field_validator("llm_api_key_env", "vector_db_api_key_env")
     @classmethod

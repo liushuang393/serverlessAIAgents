@@ -7,11 +7,7 @@
 
 import { useEffect, useState } from 'react';
 import { fetchAgentsByApp, fetchAgentStats } from '@/api/client';
-import type {
-  AgentGroup,
-  AgentStatsResponse,
-  AggregatedAgent,
-} from '@/types';
+import type { AgentGroup, AgentStatsResponse } from '@/types';
 import { useI18n } from '../i18n';
 
 /** エンジンパターンのスタイル定義（ラベル・説明は i18n で解決） */
@@ -44,12 +40,11 @@ const ENGINE_PATTERN_STYLE: Record<string, { icon: string; color: string }> = {
 
 /** Agent 役割バッジの色 */
 const ROLE_COLORS: Record<string, string> = {
-  coordinator: 'bg-purple-500/15 text-purple-400 ring-purple-500/20',
+  planner: 'bg-purple-500/15 text-purple-400 ring-purple-500/20',
   specialist: 'bg-emerald-500/15 text-emerald-400 ring-emerald-500/20',
-  pipeline_stage: 'bg-amber-500/15 text-amber-400 ring-amber-500/20',
+  reactor: 'bg-blue-500/15 text-blue-400 ring-blue-500/20',
   gatekeeper: 'bg-red-500/15 text-red-400 ring-red-500/20',
   reviewer: 'bg-cyan-500/15 text-cyan-400 ring-cyan-500/20',
-  analyzer: 'bg-blue-500/15 text-blue-400 ring-blue-500/20',
   executor: 'bg-orange-500/15 text-orange-400 ring-orange-500/20',
   router: 'bg-indigo-500/15 text-indigo-400 ring-indigo-500/20',
   reporter: 'bg-teal-500/15 text-teal-400 ring-teal-500/20',
@@ -89,7 +84,7 @@ export function AgentOrchestration() {
   /** エンジンパターンの推定（Appグループ内の最初のAgentから取得） */
   const getEnginePattern = (group: AgentGroup): string => {
     const first = group.agents[0];
-    return (first as AggregatedAgent & { app_engine_pattern?: string })?.app_engine_pattern ?? 'custom';
+    return first?.app_engine_pattern ?? 'custom';
   };
 
   /** フィルタ適用後のグループ */
@@ -198,7 +193,7 @@ export function AgentOrchestration() {
               {isExpanded && (
                 <div className="border-t border-slate-800/50 p-4 space-y-2">
                   {group.agents.map((agent) => {
-                    const role = (agent as AggregatedAgent & { agent_pattern?: string }).agent_pattern ?? 'specialist';
+                    const role = agent.agent_type ?? 'specialist';
                     const roleColor = ROLE_COLORS[role] ?? ROLE_COLORS.custom;
                     return (
                       <div
