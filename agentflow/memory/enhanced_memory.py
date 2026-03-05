@@ -423,25 +423,28 @@ class EnhancedMemoryManager:
         )
 
     async def forget_low_importance(self) -> int:
-        """遗忘低重要性记忆.
+        """低重要度記憶を忘却する（tracker・長期記憶を真正削除）.
 
         Returns:
-            遗忘的记忆数量
+            忘却した記憶数
         """
         low_importance = self._tracker.get_low_importance_memories(threshold=self._config.min_importance)
 
         forgotten = 0
         for memory_id in low_importance:
-            # 从追踪器中移除
-            if memory_id in self._tracker._importance:
-                del self._tracker._importance[memory_id]
-                forgotten += 1
+            # 底層の長期記憶からも真正削除
+            await self._base.delete(memory_id)
+            # trackerの全エントリも削除
+            self._tracker._importance.pop(memory_id, None)
+            self._tracker._access_count.pop(memory_id, None)
+            self._tracker._last_access.pop(memory_id, None)
+            forgotten += 1
 
         self._stats.forgotten_count += forgotten
         self._stats.last_forgetting = datetime.now()
 
         if forgotten > 0:
-            self._logger.info(f"遗忘了 {forgotten} 条低重要性记忆")
+            self._logger.info(f"{forgotten}件の低重要度記憶を削除")
 
         return forgotten
 
