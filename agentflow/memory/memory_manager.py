@@ -404,12 +404,13 @@ class MemoryManager:
         memories = list(self._long_term._memories.values())
         forgettable_ids = self._importance_adjuster.identify_forgettable(memories)
 
-        # 忘却実行
+        # 公開インターフェース経由で削除（プライベートアクセスを排除）
+        deleted_count = 0
         for entry_id in forgettable_ids:
-            if entry_id in self._long_term._memories:
-                del self._long_term._memories[entry_id]
+            if await self._long_term.delete(entry_id):
+                deleted_count += 1
 
-        if forgettable_ids:
-            self._logger.info(f"忘却完了: {len(forgettable_ids)}件の記憶を削除")
+        if deleted_count > 0:
+            self._logger.info(f"忘却完了: {deleted_count}件の記憶を削除")
 
-        return len(forgettable_ids)
+        return deleted_count
