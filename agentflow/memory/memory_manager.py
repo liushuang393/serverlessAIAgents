@@ -255,7 +255,7 @@ class MemoryManager:
             self._vector_search._embedding_cache.pop(entry_id, None)
         if deleted and self._importance_adjuster:
             # 重要度追跡からも削除
-            self._importance_adjuster._access_count.pop(entry_id, None)
+            self._importance_adjuster._access_counts.pop(entry_id, None)
             self._importance_adjuster._last_access.pop(entry_id, None)
         return deleted
 
