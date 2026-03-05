@@ -123,6 +123,13 @@ class MemoryEntry:
     last_accessed: datetime | None = None
     parent_id: str | None = None
     reinforcement_score: float = 0.0
+    # SimpleMem: 出典追跡（provenance）フィールド
+    source_id: str | None = None  # 元発話のメッセージID（audit用）
+    source_excerpt: str | None = None  # 元テキストの抜粋（25語以内）
+    atomic_subject: str | None = None  # SPO: 主語
+    atomic_predicate: str | None = None  # SPO: 述語
+    atomic_object: str | None = None  # SPO: 目的語
+    needs_coreference: bool = False  # 未解決指代フラグ（follow-upが必要）
 
     def to_dict(self) -> dict[str, Any]:
         """辞書形式に変換.
@@ -144,6 +151,12 @@ class MemoryEntry:
             "last_accessed": self.last_accessed.isoformat() if self.last_accessed else None,
             "parent_id": self.parent_id,
             "reinforcement_score": self.reinforcement_score,
+            "source_id": self.source_id,
+            "source_excerpt": self.source_excerpt,
+            "atomic_subject": self.atomic_subject,
+            "atomic_predicate": self.atomic_predicate,
+            "atomic_object": self.atomic_object,
+            "needs_coreference": self.needs_coreference,
         }
 
     def record_access(self) -> None:

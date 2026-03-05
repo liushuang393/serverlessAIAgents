@@ -14,9 +14,13 @@ import logging
 import re
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from agentflow.memory.types import CompressionConfig, MemoryEntry, MemoryType
+
+
+if TYPE_CHECKING:
+    from agentflow.memory.fact_atomizer import FactAtomizer
 
 
 class SensoryMemory:
@@ -27,6 +31,7 @@ class SensoryMemory:
     - トピック分割
     - 重要度スコアリング
     - 冗長Token削減（20-80%）
+    - SimpleMem: FactAtomizer による原子化・エントロピーゲート（オプション）
 
     Example:
         >>> config = CompressionConfig(compression_ratio=0.6)
@@ -34,13 +39,19 @@ class SensoryMemory:
         >>> entry = await sensory.process("長いテキスト...", topic="AI")
     """
 
-    def __init__(self, config: CompressionConfig | None = None) -> None:
+    def __init__(
+        self,
+        config: CompressionConfig | None = None,
+        fact_atomizer: FactAtomizer | None = None,
+    ) -> None:
         """初期化.
 
         Args:
             config: 圧縮設定
+            fact_atomizer: 原子化パイプライン（SimpleMem思想、省略可）
         """
         self._config = config or CompressionConfig()
+        self._fact_atomizer = fact_atomizer
         self._logger = logging.getLogger(__name__)
 
     async def process(
@@ -48,19 +59,62 @@ class SensoryMemory:
         text: str,
         topic: str | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> MemoryEntry:
+        source_id: str | None = None,
+    ) -> MemoryEntry | None:
         """テキストを処理して感覚記憶エントリを作成.
+
+        FactAtomizer が設定されている場合:
+          1. atomizer.process(text) でエントロピー判定
+          2. decision=="discard" の場合 None を返す（保存しない）
+          3. decision=="keep" の場合 AtomicFact を MemoryEntry に変換
+          4. source_excerpt・SPOフィールドを MemoryEntry に格納
+
+        FactAtomizer なしの場合: 従来の圧縮処理を実行する。
 
         Args:
             text: 入力テキスト
             topic: トピック名（自動検出も可能）
             metadata: 追加メタデータ
+            source_id: 元発話のメッセージID（audit用）
 
         Returns:
-            圧縮済み記憶エントリ
+            圧縮済み記憶エントリ、discard判定の場合 None
         """
         self._logger.debug(f"Processing text: {len(text)} chars")
 
+        # SimpleMem: FactAtomizer が設定されている場合
+        if self._fact_atomizer is not None:
+            result = await self._fact_atomizer.process(text)
+
+            # エントロピーゲートで破棄判定
+            if result.decision == "discard":
+                self._logger.debug(f"Discarded by atomizer: {result.reasons}")
+                return None
+
+            # 原子事実を MemoryEntry に変換
+            first_fact = result.atomic_facts[0] if result.atomic_facts else None
+            if topic is None:
+                topic = self._detect_topic(text)
+
+            entry = MemoryEntry(
+                id=str(uuid.uuid4()),
+                content=first_fact.fact_text if first_fact else text,
+                topic=topic,
+                timestamp=datetime.now(),
+                memory_type=MemoryType.SENSORY,
+                importance_score=result.h_score,
+                metadata=metadata or {},
+                source_id=source_id,
+                source_excerpt=first_fact.source_excerpt if first_fact else text[:100],
+                atomic_subject=first_fact.subject if first_fact else None,
+                atomic_predicate=first_fact.predicate if first_fact else None,
+                atomic_object=first_fact.object if first_fact else None,
+                needs_coreference=first_fact.needs_coreference if first_fact else False,
+            )
+            self._logger.info(f"Atomized: {len(text)} chars -> h_score={result.h_score:.2f}")
+            return entry
+
+        # 従来の圧縮処理
         # トピック検出
         if topic is None:
             topic = self._detect_topic(text)
@@ -80,6 +134,7 @@ class SensoryMemory:
             memory_type=MemoryType.SENSORY,
             importance_score=sum(importance_scores) / len(importance_scores),
             metadata=metadata or {},
+            source_id=source_id,
         )
 
         self._logger.info(

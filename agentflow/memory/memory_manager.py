@@ -29,6 +29,7 @@ from agentflow.memory.vector_search import VectorSearch
 
 
 if TYPE_CHECKING:
+    from agentflow.memory.fact_atomizer import FactAtomizer
     from agentflow.memory.types import CompressionConfig, MemoryEntry
 
 
@@ -65,6 +66,8 @@ class MemoryManager:
         enable_auto_forget: bool = True,
         distill_interval: int = 3600,  # 1時間ごと
         forget_interval: int = 86400,  # 1日ごと
+        # SimpleMem: 原子化パイプライン（オプション）
+        fact_atomizer: FactAtomizer | None = None,
     ) -> None:
         """初期化.
 
@@ -82,8 +85,9 @@ class MemoryManager:
             enable_auto_forget: 自動忘却を有効化
             distill_interval: 蒸留間隔（秒）
             forget_interval: 忘却チェック間隔（秒）
+            fact_atomizer: 原子化パイプライン（SimpleMem思想、省略可）
         """
-        self._sensory = SensoryMemory(compression_config)
+        self._sensory = SensoryMemory(compression_config, fact_atomizer)
         self._short_term = ShortTermMemory(token_threshold, llm_client)
         self._long_term = LongTermMemory(consolidation_interval)
         self._logger = logging.getLogger(__name__)
@@ -151,11 +155,12 @@ class MemoryManager:
         text: str,
         topic: str | None = None,
         metadata: dict[str, Any] | None = None,
-    ) -> MemoryEntry:
+        source_id: str | None = None,
+    ) -> MemoryEntry | None:
         """情報を記憶.
 
         自動的に3段階の記憶フローを実行:
-        1. 感覚記憶: 予圧縮
+        1. 感覚記憶: 予圧縮（FactAtomizer が設定されている場合はエントロピーゲートを通過）
         2. 短期記憶: トピックバッファに追加
         3. 長期記憶: 必要に応じて要約して保存
 
@@ -163,12 +168,17 @@ class MemoryManager:
             text: 記憶する情報
             topic: トピック名
             metadata: 追加メタデータ
+            source_id: 元発話のメッセージID（audit用）
 
         Returns:
-            感覚記憶エントリ
+            感覚記憶エントリ、エントロピーゲートで破棄の場合 None
         """
         # Light1: 感覚記憶（予圧縮）
-        sensory_entry = await self._sensory.process(text, topic, metadata)
+        sensory_entry = await self._sensory.process(text, topic, metadata, source_id)
+
+        # SimpleMem: discard判定の場合は保存しない
+        if sensory_entry is None:
+            return None
 
         # Light2: 短期記憶（トピックバッファに追加）
         await self._short_term.add_entry(sensory_entry)
