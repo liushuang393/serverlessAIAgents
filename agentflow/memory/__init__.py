@@ -23,6 +23,7 @@ LightMemの思想に基づいた3段階記憶システム。
     >>> await manager.stop()
 """
 
+# NEW: FactAtomizer（SimpleMem思想: エントロピーゲート・原子化パイプライン）
 # NEW: ContextBuilder（MemOSアダプター: Gating/Budget/Scoring）
 from agentflow.memory.context_builder import (
     ContextBlock,
@@ -41,6 +42,7 @@ from agentflow.memory.enhanced_memory import (
     MemoryImportanceTracker,
     MemoryStats,
 )
+from agentflow.memory.fact_atomizer import AtomicFact, FactAtomizer, IngestionResult
 from agentflow.memory.importance_adjuster import ImportanceAdjuster
 
 # NEW: Knowledge Store（Memvid長期知識記憶）
@@ -98,6 +100,7 @@ from agentflow.memory.vector_store import (
 
 
 __all__ = [
+    "AtomicFact",
     "CompressionConfig",
     "ContextBlock",
     "ContextBuilder",
@@ -106,10 +109,12 @@ __all__ = [
     "Document",
     "EmbeddingModel",
     "EnhancedMemoryManager",
+    "FactAtomizer",
     "ForgettingStrategy",
     "ImportanceAdjuster",
     "InMemoryKnowledgeStore",
     "InMemoryVectorStore",
+    "IngestionResult",
     "KnowledgeEntry",
     "KnowledgeManager",
     "KnowledgeSource",
