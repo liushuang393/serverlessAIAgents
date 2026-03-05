@@ -62,6 +62,31 @@ class MemoryStability(str, Enum):
     CRYSTALLIZED = "crystallized"
 
 
+class MemoryScope(str, Enum):
+    """記憶スコープ（MemOS風マルチテナント対応）.
+
+    metadata["scope"] に格納する。
+
+    TENANT: テナント共有記憶
+    USER: ユーザー固有記憶
+    AGENT: Agent固有記憶
+    SESSION: セッション記憶（ログアウトで削除候補）
+    FLOW: フロー内一時記憶（run毎クリア候補）
+
+    格納規約:
+        metadata["scope"]      = MemoryScope.USER
+        metadata["user_id"]    = "user-123"
+        metadata["agent_id"]   = "agent-abc"
+        metadata["session_id"] = "sess-xyz"
+    """
+
+    TENANT = "tenant"
+    USER = "user"
+    AGENT = "agent"
+    SESSION = "session"
+    FLOW = "flow"
+
+
 @dataclass
 class MemoryEntry:
     """記憶エントリの基本構造.

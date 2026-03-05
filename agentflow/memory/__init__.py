@@ -62,6 +62,7 @@ from agentflow.memory.short_term_memory import ShortTermMemory
 from agentflow.memory.types import (
     CompressionConfig,
     MemoryEntry,
+    MemoryScope,
     MemorySemanticLevel,
     MemoryStability,
     MemoryType,
@@ -123,6 +124,7 @@ __all__ = [
     "MemoryImportanceTracker",
     # Main Manager（ユーザー向け主要API）
     "MemoryManager",
+    "MemoryScope",
     "MemorySemanticLevel",
     "MemoryStability",
     "MemoryStats",
