@@ -194,6 +194,21 @@ class TestRagAppConfigs:
         assert resp.json()["detail"]["error_code"] == "APP_NOT_FOUND"
 
 
+class TestSetupQdrant:
+    """POST /api/studios/framework/rag/setup/qdrant テスト."""
+
+    def test_setup_qdrant_returns_result_structure(self, phase3_test_client: TestClient) -> None:
+        """セットアップ結果に必要なフィールドが含まれること（Docker 未起動でも 500 にならない）."""
+        resp = phase3_test_client.post("/api/studios/framework/rag/setup/qdrant")
+        # Docker 不在でも 200 か 404（スクリプト不在）のいずれか - 500 は不可
+        assert resp.status_code in (200, 404)
+        data = resp.json()
+        if resp.status_code == 200:
+            assert "success" in data
+            assert "message" in data
+            assert "output" in data
+
+
 class TestGetRagStats:
     """GET /api/studios/framework/rag/stats テスト."""
 

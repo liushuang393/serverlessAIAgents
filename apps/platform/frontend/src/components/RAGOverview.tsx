@@ -9,6 +9,7 @@ import {
   fetchRAGPatterns,
   patchAppRAGConfig,
   restartApp,
+  setupQdrantLocal,
 } from '@/api/client';
 import type {
   AppRAGConfig,
@@ -385,6 +386,7 @@ export function RAGOverview() {
   const [form, setForm] = useState<RAGFormState | null>(null);
   const [saving, setSaving] = useState(false);
   const [patternModified, setPatternModified] = useState(false);
+  const [setupLoading, setSetupLoading] = useState(false);
   const [managerLoading, setManagerLoading] = useState(false);
   const [managerError, setManagerError] = useState<string | null>(null);
   const [managerMessage, setManagerMessage] = useState<string | null>(null);
@@ -465,6 +467,25 @@ export function RAGOverview() {
     };
     void loadRuns();
   }, [selectedConfig?.app_name, selectedConfig?.rag.enabled]);
+
+  const handleSetupQdrant = async () => {
+    setSetupLoading(true);
+    setManagerError(null);
+    setManagerMessage(null);
+    try {
+      const result = await setupQdrantLocal();
+      if (result.success) {
+        setManagerMessage(`Qdrant セットアップ完了: ${result.qdrant_url ?? 'http://localhost:6333'}`);
+        await loadManager();
+      } else {
+        setManagerError(`セットアップ失敗: ${result.message}`);
+      }
+    } catch (err) {
+      setManagerError(err instanceof Error ? err.message : 'セットアップエラー');
+    } finally {
+      setSetupLoading(false);
+    }
+  };
 
   const loadManager = async () => {
     setManagerLoading(true);
@@ -804,12 +825,22 @@ export function RAGOverview() {
                   App ごとにデータソース・分割方式・検索方式・再ランク設定を管理します
                 </p>
               </div>
-              <button
-                onClick={() => void loadManager()}
-                className="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs"
-              >
-                Reload
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  data-testid="setup-qdrant-button"
+                  onClick={() => void handleSetupQdrant()}
+                  disabled={setupLoading}
+                  className="px-3 py-1.5 rounded-md bg-cyan-800/50 hover:bg-cyan-700/50 disabled:opacity-50 text-cyan-300 text-xs border border-cyan-700/30"
+                >
+                  {setupLoading ? 'Qdrant 起動中...' : '🐾 Qdrant セットアップ'}
+                </button>
+                <button
+                  onClick={() => void loadManager()}
+                  className="px-3 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs"
+                >
+                  Reload
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">

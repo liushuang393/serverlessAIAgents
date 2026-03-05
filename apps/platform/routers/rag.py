@@ -294,6 +294,48 @@ async def rag_config_events(
     )
 
 
+@router.post("/setup/qdrant")
+async def setup_qdrant_local() -> dict[str, Any]:
+    """Qdrant ローカルセットアップを実行.
+
+    scripts/setup_qdrant.sh を実行してローカル Qdrant を起動する。
+    ユーザーが「Qdrant セットアップ」ボタンをクリックした際に呼ばれる。
+
+    Returns:
+        セットアップ結果（success/message/qdrant_url/output）
+    """
+    import asyncio
+
+    script_path = Path(__file__).parents[3] / "scripts" / "setup_qdrant.sh"
+    if not script_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail={"message": "setup_qdrant.sh not found", "error_code": "SCRIPT_NOT_FOUND"},
+        )
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "bash",
+            str(script_path),
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60.0)
+        output = stdout.decode() + stderr.decode()
+        success = proc.returncode == 0
+    except asyncio.TimeoutError:
+        return {"success": False, "message": "セットアップタイムアウト（60秒）", "output": ""}
+    except Exception as exc:
+        return {"success": False, "message": str(exc), "output": ""}
+
+    return {
+        "success": success,
+        "message": "Qdrant セットアップ完了" if success else "セットアップ失敗",
+        "qdrant_url": "http://localhost:6333" if success else None,
+        "output": output[-2000:],
+    }
+
+
 @router.get("/stats")
 async def get_rag_stats() -> dict[str, Any]:
     """RAG 統計情報."""

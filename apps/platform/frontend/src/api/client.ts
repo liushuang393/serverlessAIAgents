@@ -27,12 +27,20 @@ import type {
   AppSummaryResponse,
   HealthCheckResult,
   LLMEngineRuntimeStatus,
+  LLMSetupAndSwitchRequest,
+  LLMSetupAndSwitchResponse,
+  LLMCatalogResponse,
+  LLMDiagnosticsResponse,
   LLMInferenceEngineConfigItem,
   LLMManagementOverviewResponse,
   LLMModelConfigItem,
+  LLMPreflightReport,
+  LLMPreflightRequest,
   LLMProviderConfigItem,
   LLMProviderRuntimeStatus,
   LLMRoutingPolicyConfig,
+  LLMSwitchRequest,
+  LLMSwitchResponse,
   MCPConfigResponse,
   MCPLazyLoadingConfig,
   MCPServerConfig,
@@ -44,6 +52,7 @@ import type {
   RAGStatsResponse,
   RetrievalMethod,
   RefreshResponse,
+  SkillGroupedResponse,
   SkillInfo,
   SkillListResponse,
   SkillStatsResponse,
@@ -65,6 +74,12 @@ const api = axios.create({
 const longRunningApi = axios.create({
   baseURL: '/api',
   timeout: 300_000,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+/** OpenAPI 等 /api 以外のルート参照用 */
+const rootApi = axios.create({
+  timeout: 10_000,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -97,7 +112,7 @@ export interface FetchAppsOptions {
 export async function fetchApps(
   options: FetchAppsOptions = {},
 ): Promise<AppListResponse> {
-  const waitForHealth = options.waitForHealth ?? true;
+  const waitForHealth = options.waitForHealth ?? false;
   const includeRuntime = options.includeRuntime ?? false;
   const key = `${FRAMEWORK_APPS_BASE}?wait_for_health=${waitForHealth}&include_runtime=${includeRuntime}`;
   return withInflightDedup(key, async () => {
@@ -119,20 +134,36 @@ export async function fetchSummary(): Promise<AppSummaryResponse> {
   });
 }
 
+/** App 詳細取得オプション */
+export interface FetchAppDetailOptions {
+  waitForHealth?: boolean;
+}
+
 /** App 詳細を取得 */
-export async function fetchAppDetail(appName: string): Promise<AppDetail> {
-  const { data } = await api.get<AppDetail>(`${FRAMEWORK_APPS_BASE}/${appName}`);
-  return data;
+export async function fetchAppDetail(
+  appName: string,
+  options: FetchAppDetailOptions = {},
+): Promise<AppDetail> {
+  const waitForHealth = options.waitForHealth ?? false;
+  const key = `${FRAMEWORK_APPS_BASE}/${appName}?wait_for_health=${waitForHealth}`;
+  return withInflightDedup(key, async () => {
+    const { data } = await api.get<AppDetail>(`${FRAMEWORK_APPS_BASE}/${appName}`, {
+      params: { wait_for_health: waitForHealth },
+    });
+    return data;
+  });
 }
 
 /** App ヘルスチェック */
 export async function fetchAppHealth(
   appName: string,
 ): Promise<HealthCheckResult> {
-  const { data } = await api.get<HealthCheckResult>(
-    `${FRAMEWORK_APPS_BASE}/${appName}/health`,
-  );
-  return data;
+  return withInflightDedup(`${FRAMEWORK_APPS_BASE}/${appName}/health`, async () => {
+    const { data } = await api.get<HealthCheckResult>(
+      `${FRAMEWORK_APPS_BASE}/${appName}/health`,
+    );
+    return data;
+  });
 }
 
 /** App publish（docker compose up -d --build） — 長時間操作 */
@@ -314,6 +345,12 @@ export async function searchSkills(tag: string): Promise<SkillListResponse> {
   return data;
 }
 
+/** カテゴリ別グループ一覧 */
+export async function fetchSkillsGrouped(): Promise<SkillGroupedResponse> {
+  const { data } = await api.get<SkillGroupedResponse>('/studios/framework/skills/grouped');
+  return data;
+}
+
 /** Skill 詳細 */
 export async function fetchSkillDetail(name: string): Promise<SkillInfo> {
   const { data } = await api.get<SkillInfo>(`/studios/framework/skills/${name}`);
@@ -371,6 +408,17 @@ export async function patchAppRAGConfig(
     `/studios/framework/rag/apps/${appName}/config`,
     patch,
   );
+  return data;
+}
+
+/** Qdrant ローカルセットアップ */
+export async function setupQdrantLocal(): Promise<{
+  success: boolean;
+  message: string;
+  qdrant_url: string | null;
+  output: string;
+}> {
+  const { data } = await api.post('/studios/framework/rag/setup/qdrant');
   return data;
 }
 
@@ -528,4 +576,50 @@ export async function updateLLMRoutingPolicy(
     { routing_policy: routingPolicy },
   );
   return data;
+}
+
+export async function fetchLLMCatalog(): Promise<LLMCatalogResponse> {
+  const { data } = await api.get<LLMCatalogResponse>('/studios/framework/llm/catalog');
+  return data;
+}
+
+export async function runLLMPreflight(
+  payload: LLMPreflightRequest,
+): Promise<LLMPreflightReport> {
+  const { data } = await api.post<LLMPreflightReport>(
+    '/studios/framework/llm/preflight',
+    payload,
+  );
+  return data;
+}
+
+export async function switchLLM(
+  payload: LLMSwitchRequest,
+): Promise<LLMSwitchResponse> {
+  const { data } = await api.post<LLMSwitchResponse>(
+    '/studios/framework/llm/switch',
+    payload,
+  );
+  return data;
+}
+
+export async function setupAndSwitchLLM(
+  payload: LLMSetupAndSwitchRequest,
+): Promise<LLMSetupAndSwitchResponse> {
+  const { data } = await api.post<LLMSetupAndSwitchResponse>(
+    '/studios/framework/llm/setup-and-switch',
+    payload,
+  );
+  return data;
+}
+
+export async function fetchLLMDiagnostics(): Promise<LLMDiagnosticsResponse> {
+  const { data } = await api.get<LLMDiagnosticsResponse>('/studios/framework/llm/diagnostics');
+  return data;
+}
+
+export async function fetchOpenAPIPaths(): Promise<string[]> {
+  const { data } = await rootApi.get<{ paths?: Record<string, unknown> }>('/openapi.json');
+  const keys = Object.keys(data.paths ?? {});
+  return keys;
 }
