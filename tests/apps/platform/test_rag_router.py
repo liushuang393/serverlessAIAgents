@@ -161,26 +161,37 @@ class TestRagAppConfigs:
         assert "chunk_strategy" in data["rag"]
         assert data["db_hint"]["available"] is True
 
-    def test_patch_config_returns_405_read_only(self, phase3_test_client: TestClient) -> None:
-        """Platform は読み取り専用のため PATCH は 405 を返す."""
+    def test_patch_config_updates_rag_setting(self, phase3_test_client: TestClient) -> None:
+        """PATCH で RAG 設定が更新されること."""
         resp = phase3_test_client.patch(
             "/api/studios/framework/rag/apps/rag_app/config",
-            json={"enabled": True, "pattern": "faq_precision"},
+            json={"enabled": True, "vector_provider": "qdrant"},
         )
-        assert resp.status_code == 405
-        detail = resp.json()["detail"]
-        assert detail["error_code"] == "PLATFORM_READ_ONLY"
-        assert "rag_app" in detail["app_name"]
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "rag" in data
+        assert data["rag"]["vector_provider"] == "qdrant"
 
-    def test_patch_any_app_returns_405_read_only(self, phase3_test_client: TestClient) -> None:
-        """App 名に関わらず PATCH は常に 405 を返す（読み取り専用ポリシー）."""
-        for app_name in ("rag_app", "does_not_exist", "faq_system"):
-            resp = phase3_test_client.patch(
-                f"/api/studios/framework/rag/apps/{app_name}/config",
-                json={"enabled": True},
-            )
-            assert resp.status_code == 405, f"{app_name} should return 405"
-            assert resp.json()["detail"]["error_code"] == "PLATFORM_READ_ONLY"
+    def test_patch_pattern_autosets_params(self, phase3_test_client: TestClient) -> None:
+        """PATCH でパターン選択時に関連パラメータが自動セットされること."""
+        resp = phase3_test_client.patch(
+            "/api/studios/framework/rag/apps/rag_app/config",
+            json={"pattern": "faq_precision"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["rag"]["chunk_strategy"] == "sentence"
+        assert data["rag"]["chunk_size"] == 500
+        assert data["rag"]["top_k"] == 8
+
+    def test_patch_nonexistent_app_returns_404(self, phase3_test_client: TestClient) -> None:
+        """存在しない App への PATCH は 404 を返すこと."""
+        resp = phase3_test_client.patch(
+            "/api/studios/framework/rag/apps/does_not_exist/config",
+            json={"enabled": True},
+        )
+        assert resp.status_code == 404
+        assert resp.json()["detail"]["error_code"] == "APP_NOT_FOUND"
 
 
 class TestGetRagStats:

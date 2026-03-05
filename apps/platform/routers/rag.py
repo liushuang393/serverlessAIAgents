@@ -190,26 +190,57 @@ async def patch_rag_app_config(
     app_name: str,
     patch: RAGConfigPatchRequest,
 ) -> dict[str, Any]:
-    """[読み取り専用] Platform は RAG 設定の表示専用です。
+    """App の RAG 設定を更新し app_config.json に保存する.
 
-    各 App（faq_system 等）は自己完結型として自身の RAG 設定を管理します。
-    Platform はここに表示するだけであり、設定の変更は各 App 側で行ってください。
+    パターン選択時は関連パラメータ（chunk_strategy, top_k 等）を自動セットする。
+    設定変更後、実行中の App には SSE イベントでホットリロード通知を送る。
+
+    Args:
+        app_name: 更新対象の App 名
+        patch: 更新内容（部分更新、全フィールド省略可）
+
+    Returns:
+        更新後の RAG 設定
 
     Raises:
-        HTTPException: 405 Method Not Allowed（常に）
+        HTTPException: 404 App が見つからない場合
+        HTTPException: 422 バリデーションエラー
     """
-    raise HTTPException(
-        status_code=405,
-        detail={
-            "message": (
-                f"Platform は '{app_name}' の RAG 設定変更をサポートしません。"
-                " 各 App は自己完結型として自身の設定を管理します。"
-                " 変更は各 App の設定 API または app_config.json を直接編集してください。"
-            ),
-            "error_code": "PLATFORM_READ_ONLY",
-            "app_name": app_name,
-        },
-    )
+    overview = _get_overview()
+
+    # RAGConfigPatchRequest → dict（None は除外、data_sources は dict 変換）
+    patch_dict: dict[str, Any] = {}
+    for field_name, value in patch.model_dump(exclude_none=True).items():
+        if field_name == "data_sources" and isinstance(value, list):
+            # RAGDataSourceInput objects → plain dicts
+            patch_dict[field_name] = [
+                src if isinstance(src, dict) else dict(src) for src in value
+            ]
+        else:
+            patch_dict[field_name] = value
+
+    try:
+        updated = overview.update_app_config(app_name, patch_dict)
+    except KeyError:
+        raise HTTPException(
+            status_code=404,
+            detail={"message": f"App not found: {app_name}", "error_code": "APP_NOT_FOUND"},
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail={"message": str(exc), "error_code": "VALIDATION_ERROR"},
+        )
+
+    # 実行中の App に設定変更を SSE 通知（未初期化でも無視）
+    store = _try_get_store()
+    if store is not None:
+        await store.fire_config_change(
+            app_name,
+            contracts_rag=updated.get("rag"),
+        )
+
+    return updated
 
 
 @router.get("/events")
