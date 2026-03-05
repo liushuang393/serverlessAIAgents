@@ -23,6 +23,14 @@ LightMemの思想に基づいた3段階記憶システム。
     >>> await manager.stop()
 """
 
+# NEW: ContextBuilder（MemOSアダプター: Gating/Budget/Scoring）
+from agentflow.memory.context_builder import (
+    ContextBlock,
+    ContextBuilder,
+    MemoryBudget,
+    MemoryNeedLevel,
+)
+
 # NEW: Enhanced Memory（記憶蒸留 + 主動忘却 + 強化学習）
 from agentflow.memory.enhanced_memory import (
     DistillationStrategy,
@@ -91,64 +99,46 @@ from agentflow.memory.vector_store import (
 
 __all__ = [
     "CompressionConfig",
+    "ContextBlock",
+    "ContextBuilder",
     "DistillationStrategy",
     "DistilledKnowledge",
-    # ==========================================================================
-    # NEW: Vector Store（LlamaIndex/LangChain 互換）
-    # ==========================================================================
-    # データモデル
     "Document",
-    # 埋め込み
     "EmbeddingModel",
-    # ==========================================================================
-    # NEW: Enhanced Memory（記憶蒸留 + 主動忘却 + 強化学習）
-    # ==========================================================================
     "EnhancedMemoryManager",
     "ForgettingStrategy",
     "ImportanceAdjuster",
     "InMemoryKnowledgeStore",
     "InMemoryVectorStore",
-    # 型定義
     "KnowledgeEntry",
-    # マネージャー
     "KnowledgeManager",
     "KnowledgeSource",
-    # ストアインターフェース
     "KnowledgeStore",
     "LongTermMemory",
+    "MemoryBudget",
     "MemoryConfig",
-    # 自動最適化エンジン（内部使用）
     "MemoryDistiller",
-    # Types
     "MemoryEntry",
     "MemoryImportanceTracker",
-    # Main Manager（ユーザー向け主要API）
     "MemoryManager",
+    "MemoryNeedLevel",
     "MemoryScope",
     "MemorySemanticLevel",
     "MemoryStability",
     "MemoryStats",
     "MemoryType",
-    # ストア実装
     "MemvidKnowledgeStore",
     "Node",
     "SearchResult",
     "SearchType",
-    # Memory Layers（内部使用、通常は直接使わない）
     "SensoryMemory",
     "ShortTermMemory",
     "SimpleEmbedding",
     "TopicBuffer",
     "UpdateQueue",
-    # ベクトルストア
     "VectorStore",
     "create_embedding_model",
-    # ファクトリー
     "create_vector_store",
-    # ==========================================================================
-    # NEW: Knowledge Store（Memvid長期知識記憶）
-    # ==========================================================================
-    # 主要API
     "get_knowledge_manager",
     "get_knowledge_store",
     "is_memvid_available",
