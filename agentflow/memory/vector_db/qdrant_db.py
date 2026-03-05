@@ -81,6 +81,55 @@ class QdrantDB(VectorDatabase):
             msg = f"Failed to connect to Qdrant: {e}"
             raise ConnectionError(msg)
 
+    async def connect_or_warn(self) -> bool:
+        """Qdrant への接続を試みる。失敗時は警告ログを出して False を返す（起動継続）.
+
+        Returns:
+            接続成功なら True、失敗なら False
+        """
+        try:
+            await self.connect()
+            return True
+        except Exception as exc:
+            self._logger.warning(
+                "Qdrant 接続失敗（RAG/メモリ機能は無効化されます）: %s  "
+                "Qdrant を起動するか QDRANT_URL を設定してください。",
+                exc,
+            )
+            return False
+
+    def is_available(self) -> bool:
+        """Qdrant が接続済みで使用可能かどうかを返す."""
+        return self._connected
+
+    async def search_safe(
+        self,
+        query_embedding: list[float],
+        limit: int = 10,
+        min_similarity: float = 0.0,
+        topic: str | None = None,
+    ) -> list[tuple[Any, float]]:
+        """接続済みの場合のみ search を実行。未接続なら空リストを返す.
+
+        Args:
+            query_embedding: クエリの埋め込みベクトル
+            limit: 最大取得件数
+            min_similarity: 最小類似度
+            topic: トピックフィルター
+
+        Returns:
+            検索結果リスト。未接続時は空リスト。
+        """
+        if not self._connected:
+            self._logger.debug("Qdrant 未接続のため search_safe をスキップ")
+            return []
+        return await self.search(
+            query_embedding=query_embedding,
+            limit=limit,
+            min_similarity=min_similarity,
+            topic=topic,
+        )
+
     async def disconnect(self) -> None:
         """Qdrantから切断."""
         self._connected = False

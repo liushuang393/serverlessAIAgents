@@ -314,6 +314,27 @@ class QdrantProvider:
             msg = "qdrant-client package required: pip install qdrant-client"
             raise ImportError(msg)
 
+    async def connect_or_warn(self) -> bool:
+        """Qdrant への接続を試みる。失敗時は警告ログを出して False を返す（起動継続）.
+
+        Returns:
+            接続成功なら True、失敗なら False
+        """
+        try:
+            await self.connect()
+            return True
+        except Exception as exc:
+            logger.warning(
+                "Qdrant 接続失敗（RAG 機能は無効化されます）: %s  "
+                "Qdrant を起動するか QDRANT_URL を設定してください。",
+                exc,
+            )
+            return False
+
+    def is_available(self) -> bool:
+        """Qdrant が使用可能かどうかを返す（connect 済みか）."""
+        return self._client is not None
+
     async def disconnect(self) -> None:
         """切断."""
         self._client = None

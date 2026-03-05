@@ -186,7 +186,18 @@ class RAGService(ServiceBase[dict[str, Any]]):
         self._llm = get_llm(temperature=0.1)
         self._embedding = get_embedding()
         self._vectordb = get_vectordb(collection=self._config.collection)
-        await self._vectordb.connect()
+
+        # connect_or_warn が使えるなら使う（グレースフルデグラデーション）
+        connect_fn = getattr(self._vectordb, "connect_or_warn", None)
+        if callable(connect_fn):
+            vectordb_available = await connect_fn()
+            if not vectordb_available:
+                self._logger.warning(
+                    "VectorDB 未接続のため RAGService は検索機能なしで起動します: collection=%s",
+                    self._config.collection,
+                )
+        else:
+            await self._vectordb.connect()
 
         self._chunker = get_chunker(
             self._config.chunk_strategy.value,
