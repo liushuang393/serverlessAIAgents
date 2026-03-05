@@ -235,6 +235,60 @@ class MemoryManager:
         # 通常検索
         return memories[:limit]
 
+    # =========================================================================
+    # SimpleMem: 衝突検出・両立保存（MemoryManager レイヤー）
+    # =========================================================================
+
+    # 衝突検出の類似度閾値（SimpleMem τ_cluster推奨値）
+    _CONFLICT_SIMILARITY_THRESHOLD: float = 0.85
+
+    async def _store_with_conflict_check(self, entry: MemoryEntry) -> None:
+        """衝突検出付きで長期記憶に保存.
+
+        保存前に同トピック内の既存エントリと類似度チェックを行う。
+        類似度 >= 閾値 の場合:
+          - 両エントリを保存（両立保存）
+          - 新エントリの metadata["conflicts"] に既存エントリIDを記録
+          - 既存エントリの metadata["conflicts"] に新エントリIDを記録
+          - 新しい方（後から保存された方）に metadata["priority"] = "primary" を付与
+
+        Args:
+            entry: 保存する記憶エントリ
+        """
+        # ベクトル検索が有効な場合のみ衝突検出を実行
+        if self._enable_vector_search and self._vector_search:
+            # 同トピックの既存エントリを取得
+            existing = self._long_term.retrieve(entry.topic, limit=50)
+
+            if existing:
+                # 類似エントリを検索
+                similar_results = await self._vector_search.search_similar(
+                    entry.content,
+                    existing,
+                    top_k=3,
+                    min_similarity=self._CONFLICT_SIMILARITY_THRESHOLD,
+                )
+
+                if similar_results:
+                    # 衝突検出: 両立保存 + メタデータ記録
+                    conflicting_ids: list[str] = []
+                    for conflict_entry, _ in similar_results:
+                        conflicting_ids.append(conflict_entry.id)
+                        # 既存エントリの conflicts リストに新エントリIDを追加
+                        existing_conflicts: list[str] = conflict_entry.metadata.get("conflicts", [])
+                        existing_conflicts.append(entry.id)
+                        await self._long_term.update(
+                            conflict_entry.id,
+                            {"metadata": {"conflicts": existing_conflicts}},
+                        )
+
+                    # 新エントリに衝突情報と優先度を付与
+                    entry.metadata["conflicts"] = conflicting_ids
+                    entry.metadata["priority"] = "primary"
+
+        # 長期記憶に保存（衝突の有無にかかわらず）
+        await self._long_term.store(entry)
+
     async def update_memory(
         self,
         entry_id: str,
