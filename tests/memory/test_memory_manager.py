@@ -155,6 +155,44 @@ class TestMemoryManager:
         await manager.stop()
 
 
+async def test_memory_manager_delete() -> None:
+    """MemoryManager.delete() が長期記憶からエントリを削除することを確認."""
+    import datetime
+
+    from agentflow.memory.types import MemoryEntry, MemoryType
+
+    manager = MemoryManager(token_threshold=1000)
+    await manager.start()
+
+    # 長期記憶に直接書き込む
+    entry = MemoryEntry(
+        id="mgr-del-001",
+        content="ManagerDeleteテスト記憶",
+        topic="del_manager",
+        timestamp=datetime.datetime.now(),
+        memory_type=MemoryType.LONG_TERM,
+    )
+    await manager._long_term.store(entry)
+
+    # 削除前は検索結果に含まれる
+    memories_before = await manager.recall(topic="del_manager")
+    assert any(m.id == "mgr-del-001" for m in memories_before)
+
+    # delete()を呼ぶ
+    result = await manager.delete("mgr-del-001")
+    assert result is True
+
+    # 削除後は検索結果に含まれない
+    memories_after = await manager.recall(topic="del_manager")
+    assert all(m.id != "mgr-del-001" for m in memories_after)
+
+    # 存在しないIDはFalseを返す
+    result2 = await manager.delete("not-exist-xxx")
+    assert result2 is False
+
+    await manager.stop()
+
+
 async def test_long_term_memory_delete() -> None:
     """LongTermMemory.delete() が記憶と更新キューを両方削除することを確認."""
     import datetime

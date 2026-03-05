@@ -238,6 +238,27 @@ class MemoryManager:
         """
         await self._long_term.update(entry_id, update_data)
 
+    async def delete(self, entry_id: str) -> bool:
+        """長期記憶からエントリを削除.
+
+        ベクトルインデックス・重要度追跡・更新キューも同時に削除する。
+
+        Args:
+            entry_id: 記憶エントリID
+
+        Returns:
+            削除成功の場合True
+        """
+        deleted = await self._long_term.delete(entry_id)
+        if deleted and self._vector_search:
+            # ベクトルキャッシュからも削除
+            self._vector_search._embedding_cache.pop(entry_id, None)
+        if deleted and self._importance_adjuster:
+            # 重要度追跡からも削除
+            self._importance_adjuster._access_count.pop(entry_id, None)
+            self._importance_adjuster._last_access.pop(entry_id, None)
+        return deleted
+
     async def consolidate(self) -> int:
         """手動で統合を実行.
 
