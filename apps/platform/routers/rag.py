@@ -323,7 +323,7 @@ async def setup_qdrant_local() -> dict[str, Any]:
         stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=60.0)
         output = stdout.decode() + stderr.decode()
         success = proc.returncode == 0
-    except asyncio.TimeoutError:
+    except TimeoutError:
         return {"success": False, "message": "セットアップタイムアウト（60秒）", "output": ""}
     except Exception as exc:
         return {"success": False, "message": str(exc), "output": ""}
