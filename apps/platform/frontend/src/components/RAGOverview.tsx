@@ -384,6 +384,7 @@ export function RAGOverview() {
   const [selectedApp, setSelectedApp] = useState('');
   const [form, setForm] = useState<RAGFormState | null>(null);
   const [saving, setSaving] = useState(false);
+  const [patternModified, setPatternModified] = useState(false);
   const [managerLoading, setManagerLoading] = useState(false);
   const [managerError, setManagerError] = useState<string | null>(null);
   const [managerMessage, setManagerMessage] = useState<string | null>(null);
@@ -442,6 +443,7 @@ export function RAGOverview() {
       return;
     }
     setForm(toForm(selectedConfig));
+    setPatternModified(false);
   }, [selectedConfig]);
 
   useEffect(() => {
@@ -511,6 +513,7 @@ export function RAGOverview() {
           ? ''
           : String(pattern.config.score_threshold),
     });
+    setPatternModified(false);
   };
 
   const updateSource = (sourceId: string, patch: Partial<DataSourceDraft>) => {
@@ -764,6 +767,7 @@ export function RAGOverview() {
 
       {(managerError || managerMessage) && (
         <div
+          data-testid={managerMessage && !managerError ? 'rag-save-success-toast' : undefined}
           className={`rounded-lg p-4 text-sm ${
             managerError
               ? 'bg-red-500/10 border border-red-500/20 text-red-300'
@@ -816,6 +820,7 @@ export function RAGOverview() {
                 {!managerLoading && ragConfigs.map((item) => (
                   <button
                     key={item.app_name}
+                    data-testid={`rag-app-card-${item.app_name}`}
                     onClick={() => setSelectedApp(item.app_name)}
                     className={`w-full text-left rounded-lg border px-3 py-2 transition-colors ${
                       selectedApp === item.app_name
@@ -841,7 +846,7 @@ export function RAGOverview() {
                     編集対象の App を選択してください。
                   </div>
                 ) : (
-                  <div className="rounded-lg border border-slate-700 bg-slate-950/40 p-4 space-y-4">
+                  <div data-testid="rag-settings-form" className="rounded-lg border border-slate-700 bg-slate-950/40 p-4 space-y-4">
                     {selectedConfig.auth && (
                       <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-3">
                         <p className="text-xs font-semibold text-cyan-200">Tenant SSO / Auth Contract</p>
@@ -879,6 +884,7 @@ export function RAGOverview() {
                       />
                       <Field label="パターン">
                         <select
+                          data-testid="rag-pattern-select"
                           value={form.pattern}
                           onChange={(e) => applyPattern(e.target.value)}
                           className="input"
@@ -890,6 +896,14 @@ export function RAGOverview() {
                             </option>
                           ))}
                         </select>
+                        {patternModified && form.pattern && (
+                          <span
+                            data-testid="rag-pattern-modified-badge"
+                            className="ml-2 px-1.5 py-0.5 text-[10px] rounded bg-amber-500/20 text-amber-300"
+                          >
+                            modified
+                          </span>
+                        )}
                       </Field>
                       <Field label="Vector Provider">
                         <select
@@ -931,8 +945,9 @@ export function RAGOverview() {
                       </Field>
                       <Field label="Chunk Strategy">
                         <select
+                          data-testid="chunk-strategy-select"
                           value={form.chunk_strategy}
-                          onChange={(e) => setForm({ ...form, chunk_strategy: e.target.value })}
+                          onChange={(e) => { setForm({ ...form, chunk_strategy: e.target.value }); setPatternModified(true); }}
                           className="input"
                         >
                           {ragOverview.chunk_strategies.map((strategy) => (
@@ -944,8 +959,9 @@ export function RAGOverview() {
                       </Field>
                       <Field label="Retrieval Method">
                         <select
+                          data-testid="retrieval-method-select"
                           value={form.retrieval_method}
-                          onChange={(e) => setForm({ ...form, retrieval_method: e.target.value })}
+                          onChange={(e) => { setForm({ ...form, retrieval_method: e.target.value }); setPatternModified(true); }}
                           className="input"
                         >
                           {(ragOverview.retrieval_methods ?? []).map((method) => (
@@ -957,24 +973,26 @@ export function RAGOverview() {
                       </Field>
                       <Field label="Chunk Size">
                         <input
+                          data-testid="chunk-size-input"
                           type="number"
                           value={form.chunk_size}
-                          onChange={(e) => setForm({ ...form, chunk_size: Number(e.target.value) || 800 })}
+                          onChange={(e) => { setForm({ ...form, chunk_size: Number(e.target.value) || 800 }); setPatternModified(true); }}
                           className="input"
                         />
                       </Field>
                       <Field label="Chunk Overlap">
                         <input
+                          data-testid="chunk-overlap-input"
                           type="number"
                           value={form.chunk_overlap}
-                          onChange={(e) => setForm({ ...form, chunk_overlap: Number(e.target.value) || 120 })}
+                          onChange={(e) => { setForm({ ...form, chunk_overlap: Number(e.target.value) || 120 }); setPatternModified(true); }}
                           className="input"
                         />
                       </Field>
                       <Field label="Reranker">
                         <select
                           value={form.reranker}
-                          onChange={(e) => setForm({ ...form, reranker: e.target.value })}
+                          onChange={(e) => { setForm({ ...form, reranker: e.target.value }); setPatternModified(true); }}
                           className="input"
                         >
                           <option value="">none</option>
@@ -987,9 +1005,10 @@ export function RAGOverview() {
                       </Field>
                       <Field label="Top K">
                         <input
+                          data-testid="top-k-input"
                           type="number"
                           value={form.top_k}
-                          onChange={(e) => setForm({ ...form, top_k: Number(e.target.value) || 5 })}
+                          onChange={(e) => { setForm({ ...form, top_k: Number(e.target.value) || 5 }); setPatternModified(true); }}
                           className="input"
                         />
                       </Field>
@@ -1403,6 +1422,7 @@ export function RAGOverview() {
                         Reset
                       </button>
                       <button
+                        data-testid="rag-save-button"
                         onClick={() => void saveConfig()}
                         disabled={saving}
                         className="px-3 py-1.5 rounded-md bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs"
