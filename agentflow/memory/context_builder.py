@@ -239,6 +239,65 @@ class ContextBuilder:
         ts = entry.timestamp.strftime("%Y-%m-%d")
         return f"topic:{entry.topic}/{ts}"
 
+    async def _multi_view_recall(
+        self,
+        query: str,
+        memory_manager: MemoryManager,
+        topic: str | None,
+        limit: int,
+        min_importance: float,
+    ) -> list[MemoryEntry]:
+        """多視点検索: 象徴・意味・語彙の3視点を RRF で統合.
+
+        1. 象徴検索: topic/importance フィルタ（既存 recall() 活用）
+        2. 意味検索: VectorSearch.search_similar()
+        3. 語彙検索: VectorSearch.search_lexical()
+        4. RRF融合: reciprocal_rank_score = Σ 1/(k + rank_i), k=60
+
+        Args:
+            query: 検索クエリ
+            memory_manager: 記憶マネージャー
+            topic: トピックフィルタ
+            limit: 最大取得数
+            min_importance: 最小重要度
+
+        Returns:
+            RRF融合後の記憶エントリリスト
+        """
+        # 視点1: 象徴検索（topic/importance ベース）
+        symbolic_memories = await memory_manager.recall(topic=topic, limit=limit * 2, min_importance=min_importance)
+
+        # ベクトル検索が利用不可の場合は象徴検索のみ返す
+        if not memory_manager._enable_vector_search or not memory_manager._vector_search:
+            return symbolic_memories[:limit]
+
+        # 視点2: 意味検索
+        semantic_results = await memory_manager._vector_search.search_similar(query, symbolic_memories, top_k=limit)
+        semantic_ranked = [m for m, _ in semantic_results]
+
+        # 視点3: 語彙検索
+        lexical_results = await memory_manager._vector_search.search_lexical(query, symbolic_memories, top_k=limit)
+        lexical_ranked = [m for m, _ in lexical_results]
+
+        # RRF融合: Reciprocal Rank Fusion (k=60)
+        rrf_k = 60
+        scores: dict[str, float] = {}
+        entry_map: dict[str, MemoryEntry] = {}
+
+        def _add_ranked_list(ranked: list[MemoryEntry]) -> None:
+            for rank, mem in enumerate(ranked):
+                scores[mem.id] = scores.get(mem.id, 0.0) + 1.0 / (rrf_k + rank + 1)
+                entry_map[mem.id] = mem
+
+        # 3つのランクリストを統合
+        _add_ranked_list(symbolic_memories)
+        _add_ranked_list(semantic_ranked)
+        _add_ranked_list(lexical_ranked)
+
+        # RRFスコア降順でソート
+        sorted_ids = sorted(scores, key=lambda eid: scores[eid], reverse=True)
+        return [entry_map[eid] for eid in sorted_ids[:limit]]
+
     async def build(
         self,
         user_request: str,
@@ -267,8 +326,10 @@ class ContextBuilder:
         if budget.max_items == 0:
             return []
 
-        # recall（絞り込み前に多めに取得）
-        memories = await memory_manager.recall(
+        # 多視点検索（意味+語彙+象徴）で recall
+        memories = await self._multi_view_recall(
+            query=user_request,
+            memory_manager=memory_manager,
             topic=topic,
             limit=budget.max_items * 3,
             min_importance=min_importance,

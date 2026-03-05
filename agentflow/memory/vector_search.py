@@ -147,6 +147,57 @@ class VectorSearch:
 
         return similarities[:top_k]
 
+    async def search_lexical(
+        self,
+        query: str,
+        memories: list[MemoryEntry],
+        top_k: int = 5,
+    ) -> list[tuple[MemoryEntry, float]]:
+        """キーワードマッチングによる語彙検索.
+
+        スコア計算: クエリ語の記憶テキストへの出現頻度（TF）に基づく。
+        固有名詞・数値・IDなどの厳密一致に強い。
+
+        Args:
+            query: 検索クエリ
+            memories: 検索対象の記憶リスト
+            top_k: 返却する上位K件
+
+        Returns:
+            (記憶, スコア) のリスト（スコア降順）
+        """
+        if not memories:
+            return []
+
+        # クエリをトークン化
+        query_tokens = set(query.lower().split())
+        if not query_tokens:
+            return []
+
+        scored: list[tuple[MemoryEntry, float]] = []
+        for memory in memories:
+            # 記憶内容をトークン化
+            content_tokens = memory.content.lower().split()
+            if not content_tokens:
+                continue
+
+            # TF: クエリ語が記憶内容に出現する割合
+            match_count = sum(1 for token in content_tokens if token in query_tokens)
+            if match_count == 0:
+                continue
+
+            # 正規化スコア: マッチ数 / コンテンツトークン数
+            tf_score = match_count / len(content_tokens)
+            # クエリカバレッジ: マッチしたクエリ語の割合
+            query_coverage = sum(1 for qt in query_tokens if qt in set(content_tokens)) / len(query_tokens)
+            # 総合スコア: TF × クエリカバレッジの幾何平均
+            score = (tf_score * query_coverage) ** 0.5
+            scored.append((memory, min(score, 1.0)))
+
+        # スコア降順でソート
+        scored.sort(key=lambda x: x[1], reverse=True)
+        return scored[:top_k]
+
     def clear_cache(self) -> None:
         """キャッシュをクリア."""
         self._embedding_cache.clear()
