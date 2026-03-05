@@ -39,31 +39,95 @@ See `docs/studios.md` for details.
 - Treat `apps/` as deployable product units (UI/config/audit/ops included), not just examples
 - Use `apps/platform` as the control plane to create/configure/run/observe apps consistently
 
-## 🏗️ Architecture & App Layering
+## 🏗️ LLM Inference Architecture (Gateway-First)
 
-AgentFlow separates responsibilities into a clear layering model (8 layers), plus cross-cutting governance and evolution:
-
-- Apps / UI (Studio UI / CLI / SDK)
-- Flow (Task/Plan/Route/Execute)
-- Agent (Patterns / Coordinator)
-- Tool (tool bindings / MCP tools)
-- Provider (LLM / Storage / 3rd party)
-- Protocol (MCP / A2A / AG-UI / A2UI)
-- Infra (DB / Redis / Queue / Observability)
-- Kernel (stable boundary holding the layers above)
-
-Cross-cutting: Governance (policy/audit), Evolution (Self-Evolution V2)
+AgentFlow forbids direct provider SDK calls from apps/agents. All LLM requests go through `LLM Orchestrator -> LLM Gateway`.
 
 ```mermaid
 flowchart TB
-    A["Apps / Studio UI"] --> F["Flow (Orchestration)"]
-    F --> AG["Agent Patterns"]
-    AG --> T["Tools"]
-    T --> PR["Providers"]
-    PR --> PT["Protocols (MCP/A2A/AG-UI/A2UI)"]
-    PT --> INF["Infra (DB/Redis/Storage/Obs)"]
-    F -.-> GOV["Governance (Policy/Audit)"]
-    F -.-> EVO["Evolution V2 (Record/Validate/Score)"]
+
+subgraph APP["Application Layer"]
+UI[Chat UI / API / Workflow]
+end
+
+subgraph AGENT["Agent Layer"]
+AgentFlow[AgentFlow Runtime]
+Tools[Tool Execution]
+end
+
+subgraph ORCH["LLM Orchestrator"]
+Prompt[Prompt Builder]
+Context[Context Manager]
+end
+
+subgraph RAG["RAG Pipeline (Optional)"]
+Retriever[Retriever]
+Rerank[Reranker]
+VectorDB[Vector DB]
+end
+
+subgraph GATEWAY["LLM Gateway"]
+Router[LiteLLM Router]
+Registry[Model Registry]
+Policy[Routing Policy]
+end
+
+subgraph PROVIDER["Model Providers"]
+OpenAI[OpenAI]
+Claude[Claude]
+Gemini[Gemini]
+end
+
+subgraph LOCAL["Local Inference"]
+vLLM[vLLM Cluster]
+SGLang[SGLang Runtime]
+TGI[TGI Server]
+end
+
+APP --> AGENT
+AGENT --> ORCH
+ORCH --> GATEWAY
+
+ORCH -. optional .-> RAG
+RAG -.-> ORCH
+
+GATEWAY --> PROVIDER
+GATEWAY --> LOCAL
+```
+
+### Call Flow (without RAG)
+
+```mermaid
+sequenceDiagram
+
+User->>Application: request
+Application->>AgentFlow: task
+AgentFlow->>LLM Gateway: generate()
+LLM Gateway->>Provider/Local Model: route
+Provider/Local Model-->>Gateway: response
+Gateway-->>AgentFlow: result
+AgentFlow-->>Application: output
+```
+
+### Call Flow (with RAG)
+
+```mermaid
+sequenceDiagram
+
+User->>Application: request
+Application->>AgentFlow: task
+
+AgentFlow->>Retriever: search
+Retriever->>VectorDB: query
+VectorDB-->>Retriever: documents
+
+Retriever-->>AgentFlow: context
+
+AgentFlow->>LLM Gateway: generate(context)
+Gateway->>Provider/Local Model: route
+Provider/Local Model-->>Gateway: answer
+Gateway-->>AgentFlow: result
+AgentFlow-->>Application: output
 ```
 
 ## 🗂️ Repository Structure
@@ -97,19 +161,6 @@ flowchart TB
 ## 🧬 Evolution V2 (2026-02)
 
 `Task -> Plan -> Strategy Router -> Execute -> Record -> Extract -> Validate -> Register -> Score -> Return`
-
-```mermaid
-flowchart TB
-    T["Task"] --> PL["Plan"]
-    PL --> SR["Strategy Router"]
-    SR --> EX["Execute"]
-    EX --> RC["Execution Recorder"]
-    RC --> XT["Strategy Extractor"]
-    XT --> VL["Validator Worker (Redis Streams)"]
-    VL --> RG["Strategy Registry Service"]
-    RG --> SC["Success-First Scoring"]
-    SC --> RT["Return"]
-```
 
 ### ✨ Key Features
 
@@ -255,7 +306,7 @@ AgentFlow provides a **single API surface** for multiple protocols and agent coo
 
 ## 3. Technical Architecture
 
-**8 layers** (top to bottom): Application → UI → Flow → Agent → Tools → Provider → Protocol → Infrastructure. Upper layers depend only on lower layers; contracts are used via the public API in `agentflow/__init__.py`.
+For LLM operations, upper layers must not call provider APIs directly. The contract is unified as `generate` / `stream` / `tool_call`, and requests are always routed through the embedded LiteLLM Gateway. RAG remains optional with the same API contract.
 
 **Stack**: Python 3.13+, FastAPI, Pydantic, Uvicorn (backend); React, Vite, TypeScript (Studio and app frontends); MCP, A2A, AG-UI, A2UI (protocols); PocketFlow and related (workflow base). Quality tooling: Ruff, mypy, pytest.
 

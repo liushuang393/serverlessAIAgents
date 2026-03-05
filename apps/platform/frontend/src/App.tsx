@@ -17,6 +17,7 @@ import { SkillCatalog } from '@/components/SkillCatalog';
 import { RAGDashboard } from '@/components/rag/RAGDashboard';
 import { MCPManager } from '@/components/MCPManager';
 import { CLIReference } from '@/components/CLIReference';
+import { LLMManagement } from '@/components/LLMManagement';
 import { Settings } from '@/components/Settings';
 
 /** 404 フォールバック */
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="rag" element={<RAGDashboard />} />
         <Route path="mcp" element={<MCPManager />} />
         <Route path="cli" element={<CLIReference />} />
+        <Route path="llm-management" element={<LLMManagement />} />
         <Route path="settings" element={<Settings />} />
         <Route path="*" element={<NotFound />} />
       </Route>

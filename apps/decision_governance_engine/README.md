@@ -209,7 +209,8 @@ CognitiveGate → Gatekeeper → Clarification → Dao → Fa → Shu → Qi →
 | Python | 3.13以上 |
 | Node.js | 18以上 |
 | パッケージマネージャ | pip, npm |
-| API Key | OpenAI / Anthropic / Gemini（いずれか1つ以上） |
+| LLM Gateway | `.agentflow/llm_gateway.yaml`（自動生成可） |
+| API Key | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`（いずれか1つ以上） |
 
 ### 4.2 クイックセットアップ
 
@@ -221,10 +222,19 @@ pip install -e .
 cd apps/decision_governance_engine/frontend
 npm install
 
-# 3. 環境変数を設定（.env ファイルを作成）
+# 3. 環境変数を設定（ENV 優先、未設定時のみ .env）
 cd ../../..
-echo "OPENAI_API_KEY=" > .env
+cat <<'EOF' > .env
+OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+EOF
+
+# 4. Gateway 設定を初期化（未作成時）
+python -c "from agentflow.llm.gateway import load_gateway_config; load_gateway_config()"
 ```
+
+> 注意: アプリ層は Provider 名を直接扱わず、`role`（`reasoning/coding/cheap/local`）で LLM を呼び出します。
 ### DB マイグレーション（必須）
 
 ```bash

@@ -121,8 +121,8 @@ class QueryExpansionService:
                 "Focus on COBOL to Java migration domain.\n"
                 "Return one query per line, no numbering.\n"
             )
-            response = await llm.chat([{"role": "user", "content": prompt}])
-            text = response if isinstance(response, str) else str(response)
+            response = await llm.generate(role="cheap", messages=[{"role": "user", "content": prompt}])
+            text = str(response.get("content", "")).strip()
 
             llm_queries = [line.strip() for line in text.strip().split("\n") if line.strip() and len(line.strip()) > 3][
                 :max_expansions
@@ -157,14 +157,14 @@ class QueryExpansionService:
             if is_japanese:
                 result["ja"].append(query)
                 prompt = f"Translate the following Japanese query to English. Return only the translation.\n\n{query}"
-                response = await llm.chat([{"role": "user", "content": prompt}])
-                en_query = (response if isinstance(response, str) else str(response)).strip()
+                response = await llm.generate(role="cheap", messages=[{"role": "user", "content": prompt}])
+                en_query = str(response.get("content", "")).strip()
                 if en_query:
                     result["en"] = [en_query]
             else:
                 prompt = f"Translate the following English query to Japanese. Return only the translation.\n\n{query}"
-                response = await llm.chat([{"role": "user", "content": prompt}])
-                ja_query = (response if isinstance(response, str) else str(response)).strip()
+                response = await llm.generate(role="cheap", messages=[{"role": "user", "content": prompt}])
+                ja_query = str(response.get("content", "")).strip()
                 if ja_query:
                     result["ja"].append(ja_query)
 

@@ -32,6 +32,17 @@ from typing import Any
 
 from apps.code_migration_assistant.cobol_project import COBOLProject
 from apps.code_migration_assistant.engine import CodeMigrationEngine
+from apps.code_migration_assistant.workflow.backlog_models import (
+    BacklogTaskStatus,
+    ImmutableTaskFields,
+    SessionStatus,
+    now_iso,
+)
+from apps.code_migration_assistant.workflow.backlog_store import BacklogStore
+from apps.code_migration_assistant.workflow.dispatcher import BacklogDispatcher
+from apps.code_migration_assistant.workflow.evidence_gate import EvidenceGate
+from apps.code_migration_assistant.workflow.pipeline_runtime import execute_stage_task
+from apps.code_migration_assistant.workflow.preflight import PreflightRunner
 
 
 _PASS_DECISIONS = {"PASSED", "KNOWN_LEGACY"}
@@ -202,28 +213,75 @@ def _resolve_final_decision(program_results: list[dict[str, Any]]) -> str:
     return "PASSED"
 
 
+def _session_exit_code(status: SessionStatus) -> int:
+    if status in {SessionStatus.DONE, SessionStatus.BACKLOG_COMPLETED}:
+        return 0
+    if status in {SessionStatus.BLOCKED, SessionStatus.NEEDS_FIX}:
+        return 1
+    return 2
+
+
+def _load_cobol_modules(source_path: Path) -> tuple[dict[str, str], list[str]]:
+    with tempfile.TemporaryDirectory(prefix="cma_cli_") as work_dir_str:
+        project = COBOLProject(source=source_path, work_dir=Path(work_dir_str))
+        project.setup()
+        cobol_files = project.get_cobol_files()
+        modules = {entry.program_name: entry.content for entry in cobol_files}
+    return modules, sorted(modules.keys())
+
+
+def _is_backlog_completed(state: Any) -> bool:
+    return all(
+        task.status in {BacklogTaskStatus.DONE, BacklogTaskStatus.SKIPPED}
+        for task in state.tasks
+    )
+
+
+def _remaining_tasks(state: Any) -> int:
+    return sum(
+        1
+        for task in state.tasks
+        if task.status not in {BacklogTaskStatus.DONE, BacklogTaskStatus.SKIPPED}
+    )
+
+
 async def run_contract_payload(
     payload: dict[str, Any],
     *,
     on_event: Any,
 ) -> tuple[dict[str, Any], int]:
-    """JSON 入力を受け取り契約実行する."""
+    """Run one backlog task per session."""
     source_path_raw = payload.get("source_path")
     if not isinstance(source_path_raw, str) or not source_path_raw:
-        return {"success": False, "error": "source_path is required"}, 2
+        summary = {
+            "success": False,
+            "session_status": SessionStatus.INPUT_ERROR.value,
+            "error": "source_path is required",
+        }
+        return summary, 2
 
     source_path = Path(source_path_raw).resolve()
     if not source_path.exists():
-        return {"success": False, "error": f"source_path not found: {source_path}"}, 2
+        summary = {
+            "success": False,
+            "session_status": SessionStatus.INPUT_ERROR.value,
+            "error": f"source_path not found: {source_path}",
+        }
+        return summary, 2
 
     output_root_raw = payload.get("output_root", "migration_output")
     if not isinstance(output_root_raw, str) or not output_root_raw:
-        return {"success": False, "error": "output_root must be a non-empty string"}, 2
+        summary = {
+            "success": False,
+            "session_status": SessionStatus.INPUT_ERROR.value,
+            "error": "output_root must be a non-empty string",
+        }
+        return summary, 2
     output_root = Path(output_root_raw).resolve()
     output_root.mkdir(parents=True, exist_ok=True)
 
-    task_id_raw = payload.get("task_id")
-    task_id = str(task_id_raw) if isinstance(task_id_raw, str) and task_id_raw else f"task-{uuid.uuid4().hex[:12]}"
+    run_id_raw = payload.get("task_id")
+    run_id = str(run_id_raw) if isinstance(run_id_raw, str) and run_id_raw else f"task-{uuid.uuid4().hex[:12]}"
     fast_mode = bool(payload.get("fast_mode", True))
 
     migration_type_raw = payload.get("migration_type", "cobol-to-java")
@@ -235,103 +293,392 @@ async def run_contract_payload(
     if isinstance(model, str) and model:
         options.setdefault("model", model)
 
-    run_output_dir = output_root / task_id
+    run_output_dir = output_root / run_id
     run_output_dir.mkdir(parents=True, exist_ok=True)
-
-    program_results: list[dict[str, Any]] = []
     try:
-        with tempfile.TemporaryDirectory(prefix="cma_cli_") as work_dir_str:
-            project = COBOLProject(source=source_path, work_dir=Path(work_dir_str))
-            project.setup()
-            cobol_files = project.get_cobol_files()
-            if not cobol_files:
-                return {"success": False, "error": "COBOL files not found in source_path"}, 2
-
-            for cobol_file in cobol_files:
-                program_name = cobol_file.program_name
-                program_task_id = f"{task_id}-{program_name.lower()}"
-                program_artifacts_dir = run_output_dir / program_name
-                program_artifacts_dir.mkdir(parents=True, exist_ok=True)
-
-                await on_event(
-                    {
-                        "type": "stage_start",
-                        "stage": "pipeline",
-                        "program_name": program_name,
-                        "message": f"移行パイプライン開始: {program_name}",
-                    }
-                )
-
-                result = await _run_engine_for_program(
-                    source_code=cobol_file.content,
-                    task_id=program_task_id,
-                    program_name=program_name,
-                    artifacts_dir=program_artifacts_dir,
-                    fast_mode=fast_mode,
-                    migration_type=migration_type,
-                    options=options,
-                    on_event=on_event,
-                )
-                normalized_result = _extract_program_result(program_name=program_name, result=result)
-                program_results.append(normalized_result)
-
-                await on_event(
-                    {
-                        "type": "stage_complete",
-                        "stage": "pipeline",
-                        "program_name": program_name,
-                        "decision": normalized_result["decision"],
-                    }
-                )
-
+        modules_by_name, module_names = _load_cobol_modules(source_path)
     except Exception as exc:
         await on_event({"type": "error", "stage": None, "message": str(exc)})
-        return {"success": False, "error": str(exc)}, 2
-
-    success = all(
-        bool(item.get("success")) and str(item.get("decision")) in _PASS_DECISIONS
-        for item in program_results
-    )
-    final_decision = _resolve_final_decision(program_results)
-    artifact_paths = {
-        str(item["program_name"]): dict(item.get("artifact_paths", {}))
-        for item in program_results
-    }
-    report_path = ""
-    for item in program_results:
-        paths = item.get("artifact_paths", {})
-        if isinstance(paths, dict):
-            candidate = paths.get("report")
-            if isinstance(candidate, str) and candidate:
-                report_path = candidate
-                break
-
-    summary = {
-        "success": success,
-        "task_id": task_id,
-        "decision": final_decision,
-        "output_dir": str(run_output_dir),
-        "program_results": program_results,
-        "artifact_paths": artifact_paths,
-        "report_path": report_path,
-        "error": None,
-    }
-
-    await on_event(
-        {
-            "type": "complete",
-            "stage": "pipeline",
-            "program_name": program_results[0]["program_name"] if len(program_results) == 1 else "MULTI",
-            "program_names": [str(item["program_name"]) for item in program_results],
-            "decision": final_decision,
+        summary = {
+            "success": False,
+            "run_id": run_id,
+            "task_id": run_id,
+            "session_status": SessionStatus.INPUT_ERROR.value,
+            "error": str(exc),
             "output_dir": str(run_output_dir),
-            "version": 1,
+        }
+        return summary, 2
+
+    if not module_names:
+        summary = {
+            "success": False,
+            "run_id": run_id,
+            "task_id": run_id,
+            "session_status": SessionStatus.INPUT_ERROR.value,
+            "error": "COBOL files not found in source_path",
+            "output_dir": str(run_output_dir),
+        }
+        return summary, 2
+
+    backlog_store = BacklogStore(run_output_dir)
+    state = backlog_store.initialize_if_missing(
+        run_id=run_id,
+        source_path=str(source_path),
+        output_root=str(output_root),
+        migration_type=migration_type,
+        fast_mode=fast_mode,
+        modules=module_names,
+    )
+    corrections = backlog_store.enforce_immutability(state)
+
+    dispatcher = BacklogDispatcher()
+    dispatched = dispatcher.select_next_task(state)
+    if dispatched is None and _is_backlog_completed(state):
+        summary = {
+            "success": True,
+            "run_id": run_id,
+            "task_id": run_id,
+            "session_id": None,
+            "session_status": SessionStatus.BACKLOG_COMPLETED.value,
+            "dispatched_task": None,
+            "remaining_tasks": 0,
+            "next_task_id": None,
+            "backlog_path": str(backlog_store.backlog_path),
+            "evidence_root": str(backlog_store.evidence_root),
+            "output_dir": str(run_output_dir),
+            "backlog_completed": True,
+            "decision": "PASSED",
+            "corrections": corrections,
+            "error": None,
+        }
+        await on_event(
+            {
+                "type": "complete",
+                "stage": "pipeline",
+                "program_name": "MULTI",
+                "program_names": module_names,
+                "decision": "PASSED",
+                "output_dir": str(run_output_dir),
+                "version": 1,
+                "run_id": run_id,
+                "session_status": SessionStatus.BACKLOG_COMPLETED.value,
+            }
+        )
+        return summary, 0
+
+    if dispatched is None:
+        summary = {
+            "success": False,
+            "run_id": run_id,
+            "task_id": run_id,
+            "session_id": None,
+            "session_status": SessionStatus.BLOCKED.value,
+            "dispatched_task": None,
+            "remaining_tasks": _remaining_tasks(state),
+            "next_task_id": None,
+            "backlog_path": str(backlog_store.backlog_path),
+            "evidence_root": str(backlog_store.evidence_root),
+            "output_dir": str(run_output_dir),
+            "backlog_completed": False,
+            "decision": "BLOCKED",
+            "corrections": corrections,
+            "error": "no dispatchable task",
+        }
+        return summary, 1
+
+    session_id = f"session-{uuid.uuid4().hex[:10]}"
+    backlog_store.update_task_mutable(
+        state,
+        dispatched.task_id,
+        dispatcher.to_running(dispatched, session_id),
+    )
+    backlog_store.append_dispatch_log(
+        {
+            "timestamp": now_iso(),
+            "run_id": run_id,
+            "session_id": session_id,
+            "task_id": dispatched.task_id,
+            "module": dispatched.module,
+            "stage": dispatched.stage,
+            "dependencies": dispatched.dependencies,
         }
     )
 
-    if success:
-        return summary, 0
-    return summary, 1
+    source_code = modules_by_name.get(dispatched.module, "")
+    program_task_id = f"{run_id}-{dispatched.module.lower()}"
+    module_root = run_output_dir / dispatched.module
+    module_root.mkdir(parents=True, exist_ok=True)
+
+    await on_event(
+        {
+            "type": "session_start",
+            "stage": dispatched.stage,
+            "run_id": run_id,
+            "session_id": session_id,
+            "backlog_task_id": dispatched.task_id,
+            "program_name": dispatched.module,
+            "message": f"{dispatched.task_id} started",
+        }
+    )
+    await on_event(
+        {
+            "type": "stage_start",
+            "stage": dispatched.stage,
+            "program_name": dispatched.module,
+            "message": f"{dispatched.stage} 実行中...",
+        }
+    )
+
+    preflight_runner = PreflightRunner()
+    preflight = preflight_runner.run(
+        stage=dispatched.stage,
+        module=dispatched.module,
+        source_code=source_code,
+        run_root=run_output_dir,
+        health_url=str(options.get("health_url") or ""),
+    )
+    if not preflight.ok:
+        notes = [f"preflight failed: {item.name}={item.detail}" for item in preflight.checks if not item.ok]
+        unknowns = [{"field": "preflight", "reason": note} for note in notes]
+        backlog_store.update_task_mutable(
+            state,
+            dispatched.task_id,
+            dispatcher.to_blocked(
+                notes=notes,
+                unknowns=unknowns,
+                session_id=session_id,
+            ),
+        )
+        backlog_store.append_failure_log(
+            {
+                "timestamp": now_iso(),
+                "run_id": run_id,
+                "session_id": session_id,
+                "task_id": dispatched.task_id,
+                "reason": "preflight_failed",
+                "checks": preflight.to_dict(),
+            }
+        )
+        await on_event(
+            {
+                "type": "error",
+                "stage": dispatched.stage,
+                "program_name": dispatched.module,
+                "message": "preflight failed",
+                "checks": preflight.to_dict(),
+            }
+        )
+        session_status = SessionStatus.BLOCKED
+        stage_result: dict[str, Any] = {
+            "success": False,
+            "stage": dispatched.stage,
+            "module": dispatched.module,
+            "artifact_paths": {},
+            "decision": "BLOCKED",
+            "unknowns": unknowns,
+            "evidence": {"preflight": preflight.to_dict()},
+            "error": "preflight failed",
+        }
+        manifest_paths: list[str] = []
+    else:
+        engine = CodeMigrationEngine(migration_type=migration_type)
+        await engine._initialize()
+        stage_result = await execute_stage_task(
+            engine,
+            {
+                "stage": dispatched.stage,
+                "source_code": source_code,
+                "task_id": run_id,
+                "trace_id": f"{run_id}:{session_id}",
+                "module": dispatched.module,
+                "program_task_id": program_task_id,
+                "module_root": str(module_root),
+                "fast_mode": fast_mode,
+                "expected_outputs": payload.get("expected_outputs", {}),
+                "options": options,
+            },
+        )
+
+        evidence_gate = EvidenceGate()
+        evidence_ok, manifest = evidence_gate.evaluate(
+            stage=dispatched.stage,
+            backlog_task_id=dispatched.task_id,
+            stage_result=stage_result,
+            evidence_root=backlog_store.evidence_root,
+        )
+        manifest_paths = [str(manifest.get("manifest_path", ""))] if manifest.get("manifest_path") else []
+        stage_artifact_paths_raw = stage_result.get("artifact_paths", {})
+        if isinstance(stage_artifact_paths_raw, dict):
+            manifest_paths.extend(
+                [path for path in stage_artifact_paths_raw.values() if isinstance(path, str) and path]
+            )
+
+        unknowns_raw = stage_result.get("unknowns", [])
+        unknowns = unknowns_raw if isinstance(unknowns_raw, list) else []
+        notes = []
+        if not evidence_ok:
+            notes = list(manifest.get("missing", []))
+        elif not bool(stage_result.get("success", False)):
+            notes = [str(stage_result.get("error", "stage execution failed"))]
+
+        if not evidence_ok or not bool(stage_result.get("success", False)):
+            backlog_store.update_task_mutable(
+                state,
+                dispatched.task_id,
+                dispatcher.to_blocked(
+                    notes=notes,
+                    unknowns=[item for item in unknowns if isinstance(item, dict)],
+                    session_id=session_id,
+                ),
+            )
+            backlog_store.append_failure_log(
+                {
+                    "timestamp": now_iso(),
+                    "run_id": run_id,
+                    "session_id": session_id,
+                    "task_id": dispatched.task_id,
+                    "reason": "evidence_or_stage_failure",
+                    "result": stage_result,
+                    "missing_evidence": manifest.get("missing", []),
+                }
+            )
+            session_status = SessionStatus.BLOCKED
+        else:
+            backlog_store.update_task_mutable(
+                state,
+                dispatched.task_id,
+                dispatcher.to_done(
+                    evidence_paths=manifest_paths,
+                    notes=notes,
+                    unknowns=[item for item in unknowns if isinstance(item, dict)],
+                    session_id=session_id,
+                ),
+            )
+            decision = str(stage_result.get("decision") or "")
+            session_status = SessionStatus.DONE
+            if dispatched.stage == "quality" and decision and decision not in _PASS_DECISIONS:
+                session_status = SessionStatus.NEEDS_FIX
+            if dispatched.stage == "diff" and fast_mode and len(unknowns) > 0:
+                session_status = SessionStatus.NEEDS_FIX
+                strict_task = backlog_store.add_task(
+                    state,
+                    ImmutableTaskFields(
+                        module=dispatched.module,
+                        stage="strict_verification",
+                        description=f"{dispatched.module} / strict_verification",
+                        acceptance_criteria=["strict differential artifact exists"],
+                        dependencies=[dispatched.task_id],
+                    ),
+                )
+                quality_task_id = f"{dispatched.module}:quality"
+                quality_task = state.get_task(quality_task_id)
+                if quality_task is not None:
+                    deps = [dep for dep in quality_task.dependencies if dep != dispatched.task_id]
+                    if strict_task.task_id not in deps:
+                        deps.append(strict_task.task_id)
+                    backlog_store.replace_dependencies(state, quality_task_id, deps)
+                backlog_store.append_decision_log(
+                    {
+                        "timestamp": now_iso(),
+                        "run_id": run_id,
+                        "session_id": session_id,
+                        "task_id": dispatched.task_id,
+                        "decision": "strict_verification_added",
+                        "module": dispatched.module,
+                    }
+                )
+            backlog_store.append_decision_log(
+                {
+                    "timestamp": now_iso(),
+                    "run_id": run_id,
+                    "session_id": session_id,
+                    "task_id": dispatched.task_id,
+                    "stage": dispatched.stage,
+                    "decision": stage_result.get("decision"),
+                    "artifact_paths": stage_result.get("artifact_paths", {}),
+                }
+            )
+
+    state = backlog_store.load()
+    next_task = dispatcher.select_next_task(state)
+    remaining_tasks = _remaining_tasks(state)
+    backlog_completed = _is_backlog_completed(state)
+    next_task_id = next_task.task_id if next_task is not None else None
+
+    backlog_store.append_progress(
+        f"- {now_iso()} run={run_id} session={session_id} task={dispatched.task_id} "
+        f"status={session_status.value} next={next_task_id or '-'} remaining={remaining_tasks}"
+    )
+
+    stage_decision = str(stage_result.get("decision") or "")
+    await on_event(
+        {
+            "type": "stage_complete",
+            "stage": dispatched.stage,
+            "program_name": dispatched.module,
+            "decision": stage_decision or session_status.value.upper(),
+            "run_id": run_id,
+            "session_id": session_id,
+            "backlog_task_id": dispatched.task_id,
+        }
+    )
+    await on_event(
+        {
+            "type": "session_complete",
+            "stage": dispatched.stage,
+            "run_id": run_id,
+            "session_id": session_id,
+            "backlog_task_id": dispatched.task_id,
+            "session_status": session_status.value,
+            "remaining_tasks": remaining_tasks,
+            "next_task_id": next_task_id,
+        }
+    )
+
+    if backlog_completed:
+        await on_event(
+            {
+                "type": "complete",
+                "stage": "pipeline",
+                "program_name": dispatched.module if len(module_names) == 1 else "MULTI",
+                "program_names": module_names,
+                "decision": "PASSED",
+                "output_dir": str(run_output_dir),
+                "version": 1,
+                "run_id": run_id,
+                "session_status": SessionStatus.BACKLOG_COMPLETED.value,
+            }
+        )
+
+    summary = {
+        "success": session_status in {SessionStatus.DONE, SessionStatus.BACKLOG_COMPLETED},
+        "run_id": run_id,
+        "task_id": run_id,
+        "session_id": session_id,
+        "session_status": (
+            SessionStatus.BACKLOG_COMPLETED.value if backlog_completed else session_status.value
+        ),
+        "dispatched_task": {
+            "task_id": dispatched.task_id,
+            "module": dispatched.module,
+            "stage": dispatched.stage,
+        },
+        "remaining_tasks": remaining_tasks,
+        "next_task_id": next_task_id,
+        "backlog_path": str(backlog_store.backlog_path),
+        "evidence_root": str(backlog_store.evidence_root),
+        "output_dir": str(run_output_dir),
+        "backlog_completed": backlog_completed,
+        "decision": stage_decision or (
+            "PASSED" if backlog_completed else session_status.value.upper()
+        ),
+        "artifact_paths": stage_result.get("artifact_paths", {}),
+        "corrections": corrections,
+        "error": stage_result.get("error"),
+    }
+
+    effective_status = SessionStatus.BACKLOG_COMPLETED if backlog_completed else session_status
+    return summary, _session_exit_code(effective_status)
 
 
 async def migrate_cobol_file(file_path: str) -> dict[str, Any]:
@@ -348,20 +695,38 @@ async def migrate_cobol_file(file_path: str) -> dict[str, Any]:
     async def _ignore_event(_event: dict[str, Any]) -> None:
         return None
 
-    summary, _ = await run_contract_payload(payload, on_event=_ignore_event)
-    program_results = summary.get("program_results", [])
-    first = program_results[0] if isinstance(program_results, list) and program_results else {}
+    last_summary: dict[str, Any] = {}
+    for _ in range(200):
+        summary, _ = await run_contract_payload(payload, on_event=_ignore_event)
+        last_summary = summary
+        if bool(summary.get("backlog_completed", False)):
+            break
+        status = str(summary.get("session_status", ""))
+        if status in {SessionStatus.BLOCKED.value, SessionStatus.INPUT_ERROR.value, SessionStatus.ENV_ERROR.value}:
+            break
 
-    java_code = str(first.get("target_code", ""))
+    output_dir_raw = last_summary.get("output_dir")
+    output_dir = Path(output_dir_raw) if isinstance(output_dir_raw, str) else Path()
+    dispatched_task_raw = last_summary.get("dispatched_task", {})
+    module = "UNKNOWN"
+    if isinstance(dispatched_task_raw, dict):
+        module_raw = dispatched_task_raw.get("module")
+        if isinstance(module_raw, str) and module_raw:
+            module = module_raw
+    run_id = str(payload["task_id"])
+    program_task_id = f"{run_id}-{module.lower()}"
+    java_path = output_dir / module / "code" / f"{program_task_id}_target_code.java"
+    java_code = java_path.read_text(encoding="utf-8") if java_path.exists() else ""
+
     return {
-        "success": bool(summary.get("success", False)),
-        "class_name": str(first.get("class_name", "MigratedProgram")),
-        "score": float(first.get("quality_score", 0.0)),
-        "iterations": int(first.get("iterations", 1)),
-        "is_acceptable": bool(summary.get("success", False)),
+        "success": bool(last_summary.get("backlog_completed", False)),
+        "class_name": "MigratedProgram",
+        "score": 0.0,
+        "iterations": 1,
+        "is_acceptable": bool(last_summary.get("backlog_completed", False)),
         "java_code": java_code,
         "feedback": [],
-        "errors": [] if summary.get("success", False) else [str(summary.get("error", "migration failed"))],
+        "errors": [] if last_summary.get("backlog_completed", False) else [str(last_summary.get("error", "migration failed"))],
     }
 
 
@@ -420,11 +785,24 @@ async def _run_migrate_command(args: argparse.Namespace) -> int:
         elif event_type == "error":
             print(f"[error] {event.get('message')}", file=sys.stderr)
 
-    summary, exit_code = await run_contract_payload(payload, on_event=_print_event)
-    if summary.get("success"):
+    summary: dict[str, Any] = {}
+    exit_code = 1
+    for _ in range(5000):
+        summary, exit_code = await run_contract_payload(payload, on_event=_print_event)
+        if bool(summary.get("backlog_completed", False)):
+            break
+        status = str(summary.get("session_status", ""))
+        if status in {
+            SessionStatus.BLOCKED.value,
+            SessionStatus.INPUT_ERROR.value,
+            SessionStatus.ENV_ERROR.value,
+        }:
+            break
+
+    if summary.get("backlog_completed"):
         print(json.dumps(summary, ensure_ascii=False, indent=2))
-    else:
-        print(json.dumps(summary, ensure_ascii=False, indent=2), file=sys.stderr)
+        return 0
+    print(json.dumps(summary, ensure_ascii=False, indent=2), file=sys.stderr)
     return exit_code
 
 

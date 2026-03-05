@@ -369,8 +369,8 @@ Schema: {schema_info}
 Question: {question}
 Rules: SELECT only, add LIMIT {self._config.sql_max_rows}
 SQL:"""
-        response = await self._llm.chat([{"role": "user", "content": prompt}])
-        return self._extract_sql(response.get("content", ""))
+        response = await self._llm.generate(role="reasoning", messages=[{"role": "user", "content": prompt}])
+        return self._extract_sql(str(response.get("content", "")))
 
     async def _execute_sql(self, sql: str) -> SQLResult:
         """SQL を実行."""
@@ -411,8 +411,8 @@ SQL:"""
 
         sample = result.data[:10]
         prompt = f"Summarize this data for question '{question}':\nData: {sample}\nTotal: {result.row_count}"
-        response = await self._llm.chat([{"role": "user", "content": prompt}])
-        return response.get("content", "")
+        response = await self._llm.generate(role="reasoning", messages=[{"role": "user", "content": prompt}])
+        return str(response.get("content", ""))
 
     def _generate_chart(self, question: str, result: SQLResult) -> ChartData | None:
         """チャートを生成."""
@@ -438,8 +438,8 @@ SQL:"""
     async def _generate_suggestions(self, question: str) -> list[str]:
         """フォローアップ質問を生成."""
         prompt = f"Based on '{question}', suggest 3 follow-up questions (one per line):"
-        response = await self._llm.chat([{"role": "user", "content": prompt}])
-        content = response.get("content", "")
+        response = await self._llm.generate(role="cheap", messages=[{"role": "user", "content": prompt}])
+        content = str(response.get("content", ""))
         return [line.strip().lstrip("123.-) ") for line in content.split("\n") if line.strip()][:3]
 
     def _format_schema(self) -> str:

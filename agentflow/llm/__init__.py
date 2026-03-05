@@ -13,6 +13,12 @@
 - マルチモデル管理、自動切り替え、コスト最適化、負荷分散
 """
 
+from agentflow.llm.gateway import (
+    GatewayResponse,
+    LiteLLMGateway,
+    LLMGatewayConfig,
+    load_gateway_config,
+)
 from agentflow.llm.llm_client import LLMClient, LLMConfig, LLMMessage, LLMResponse, ToolCall
 from agentflow.llm.model_router import (
     MODELS,
@@ -29,14 +35,15 @@ from agentflow.llm.model_router import (
 
 __all__ = [
     "MODELS",
-    # 基本クライアント（内部使用・通常はget_llm()を使用）
+    "GatewayResponse",
     "LLMClient",
     "LLMConfig",
+    "LLMGatewayConfig",
     "LLMMessage",
     "LLMResponse",
+    "LiteLLMGateway",
     "ModelCapability",
     "ModelInfo",
-    # モデルルーティング（高度な機能）
     "ModelRouter",
     "ModelStats",
     "ModelTier",
@@ -44,4 +51,5 @@ __all__ = [
     "RoutingStrategy",
     "ToolCall",
     "create_router_from_env",
+    "load_gateway_config",
 ]

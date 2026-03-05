@@ -17,12 +17,11 @@ ComfyUI が利用不可の場合のフォールバックとして使用:
 
 from __future__ import annotations
 
-import base64
 import logging
 import os
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-import httpx
+from agentflow.llm.gateway import LiteLLMGateway
 
 
 if TYPE_CHECKING:
@@ -88,20 +87,14 @@ class OpenAIImageClient:
         """初期化."""
         self._api_key = api_key or os.getenv("OPENAI_API_KEY", "")
         self._model = model or os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
-        self._base_url = "https://api.openai.com/v1"
-        self._http_client = httpx.AsyncClient(
-            base_url=self._base_url,
-            timeout=timeout,
-            headers={
-                "Authorization": f"Bearer {self._api_key}",
-                "Content-Type": "application/json",
-            },
-        )
+        self._gateway = LiteLLMGateway()
+        self._role = os.getenv("IMAGE_ROLE", "cheap")
+        self._model_alias = os.getenv("OPENAI_IMAGE_MODEL_ALIAS")
+        self._timeout = timeout
         self._logger = logging.getLogger("design_skills.openai_image_client")
 
     async def close(self) -> None:
-        """HTTPクライアントを閉じる."""
-        await self._http_client.aclose()
+        """互換API（no-op）."""
 
     async def health_check(self) -> bool:
         """OpenAI APIの利用可能性を確認.
@@ -111,14 +104,7 @@ class OpenAIImageClient:
         Returns:
             APIが利用可能ならTrue、そうでなければFalse
         """
-        if not self._api_key:
-            return False
-        try:
-            resp = await self._http_client.get("/models")
-        except httpx.HTTPError:
-            return False
-        else:
-            return resp.status_code == _HTTP_OK
+        return bool(self._api_key or os.getenv("OPENAI_API_KEY"))
 
     async def generate_image(
         self,
@@ -146,23 +132,26 @@ class OpenAIImageClient:
         """
         size = map_size_to_openai(width, height)
 
-        payload: dict[str, Any] = {
-            "model": self._model,
-            "prompt": prompt,
-            "n": 1,
-            "size": size,
-            "quality": quality,
-            "output_format": output_format,
-        }
-
         self._logger.info(f"OpenAI画像生成: model={self._model}, size={size}, quality={quality}")
+        current = os.getenv("OPENAI_API_KEY")
+        inserted = False
+        if not current and self._api_key:
+            os.environ["OPENAI_API_KEY"] = self._api_key
+            inserted = True
 
-        resp = await self._http_client.post("/images/generations", json=payload)
-        resp.raise_for_status()
-
-        data = resp.json()
-        b64_data: str = data["data"][0]["b64_json"]
-        return base64.b64decode(b64_data)
+        try:
+            return await self._gateway.generate_image(
+                role=self._role,
+                prompt=prompt,
+                size=size,
+                quality=quality,
+                output_format=output_format,
+                model_alias=self._model_alias,
+                model=self._model,
+            )
+        finally:
+            if inserted:
+                os.environ.pop("OPENAI_API_KEY", None)
 
     async def generate_and_save(
         self,

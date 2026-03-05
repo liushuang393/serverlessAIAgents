@@ -1,16 +1,16 @@
-"""CMA CLI 契約実行テスト."""
+"""CMA CLI session contract tests."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any
 
 import pytest
+from apps.code_migration_assistant.workflow.backlog_models import BacklogTaskStatus
+from apps.code_migration_assistant.workflow.backlog_store import BacklogStore
+from apps.code_migration_assistant.workflow.preflight import PreflightCheck, PreflightReport
 
 from apps.code_migration_assistant import cli
-
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def _write_sample_cobol(path: Path) -> None:
@@ -28,27 +28,45 @@ def _write_sample_cobol(path: Path) -> None:
     )
 
 
+def _ok_preflight(*_args: Any, **_kwargs: Any) -> PreflightReport:
+    return PreflightReport(
+        ok=True,
+        checks=[PreflightCheck(name="smoke", ok=True, detail="ok")],
+    )
+
+
 @pytest.mark.asyncio
-async def test_run_contract_payload_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """契約実行が成功時に exit_code=0 を返す."""
+async def test_run_contract_payload_executes_single_backlog_task(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     sample = tmp_path / "sample.cbl"
     _write_sample_cobol(sample)
 
-    async def _stub_run_engine_for_program(**kwargs: Any) -> dict[str, Any]:
-        on_event = kwargs["on_event"]
-        await on_event({"type": "stage_start", "stage": "analyzer", "program_name": "SAMPLE"})
-        await on_event({"type": "stage_complete", "stage": "quality_gate", "decision": "PASSED", "program_name": "SAMPLE"})
+    modules = {"SAMPLE": sample.read_text(encoding="utf-8")}
+    monkeypatch.setattr(cli, "_load_cobol_modules", lambda _path: (modules, ["SAMPLE"]))
+    monkeypatch.setattr(cli.PreflightRunner, "run", _ok_preflight)
+
+    async def _noop_init(self: Any) -> None:
+        return None
+
+    monkeypatch.setattr(cli.CodeMigrationEngine, "_initialize", _noop_init)
+
+    artifact_path = tmp_path / "analysis.json"
+    artifact_path.write_text("{}", encoding="utf-8")
+
+    async def _stage_stub(_engine: Any, _inputs: dict[str, Any]) -> dict[str, Any]:
         return {
             "success": True,
-            "class_name": "SampleService",
-            "target_code": "public class SampleService {}",
-            "iterations": 1,
-            "check_result": {"confidence": 0.98},
-            "quality_gate": {"decision": "PASSED"},
-            "artifact_paths": {"report": str(tmp_path / "report.md")},
+            "stage": "analysis",
+            "module": "SAMPLE",
+            "artifact_paths": {"analysis": str(artifact_path)},
+            "unknowns": [],
+            "decision": "PASSED",
+            "evidence": {"records": 1},
         }
 
-    monkeypatch.setattr(cli, "_run_engine_for_program", _stub_run_engine_for_program)
+    monkeypatch.setattr(cli, "execute_stage_task", _stage_stub)
 
     events: list[dict[str, Any]] = []
 
@@ -67,14 +85,18 @@ async def test_run_contract_payload_success(monkeypatch: pytest.MonkeyPatch, tmp
     )
 
     assert exit_code == 0
-    assert summary["success"] is True
-    assert summary["decision"] == "PASSED"
-    assert any(event.get("type") == "complete" for event in events)
+    assert summary["session_status"] == "done"
+    assert summary["run_id"] == "task-success"
+    assert summary["dispatched_task"]["task_id"] == "SAMPLE:analysis"
+    assert summary["remaining_tasks"] > 0
+    assert Path(summary["backlog_path"]).exists()
+    assert Path(summary["evidence_root"]).exists()
+    assert any(event.get("type") == "session_start" for event in events)
+    assert any(event.get("type") == "stage_complete" for event in events)
 
 
 @pytest.mark.asyncio
 async def test_run_contract_payload_input_error(tmp_path: Path) -> None:
-    """入力不正時に exit_code=2 を返す."""
     events: list[dict[str, Any]] = []
 
     async def _collect_event(event: dict[str, Any]) -> None:
@@ -90,38 +112,65 @@ async def test_run_contract_payload_input_error(tmp_path: Path) -> None:
 
     assert exit_code == 2
     assert summary["success"] is False
+    assert summary["session_status"] == "input_error"
     assert "source_path" in str(summary["error"])
     assert events == []
 
 
 @pytest.mark.asyncio
-async def test_run_contract_payload_business_failure(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """業務判定NG時に exit_code=1 を返す."""
+async def test_run_contract_payload_quality_issue_returns_needs_fix(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     sample = tmp_path / "sample.cbl"
     _write_sample_cobol(sample)
 
-    async def _stub_run_engine_for_program(**kwargs: Any) -> dict[str, Any]:
-        on_event = kwargs["on_event"]
-        await on_event({"type": "stage_start", "stage": "quality_gate", "program_name": "SAMPLE"})
-        await on_event(
-            {
-                "type": "stage_complete",
-                "stage": "quality_gate",
-                "decision": "TRANSFORM_ISSUE",
-                "program_name": "SAMPLE",
-            }
+    modules = {"SAMPLE": sample.read_text(encoding="utf-8")}
+    monkeypatch.setattr(cli, "_load_cobol_modules", lambda _path: (modules, ["SAMPLE"]))
+    monkeypatch.setattr(cli.PreflightRunner, "run", _ok_preflight)
+
+    async def _noop_init(self: Any) -> None:
+        return None
+
+    monkeypatch.setattr(cli.CodeMigrationEngine, "_initialize", _noop_init)
+
+    run_root = (tmp_path / "output" / "task-business-failure").resolve()
+    backlog_store = BacklogStore(run_root)
+    state = backlog_store.initialize_if_missing(
+        run_id="task-business-failure",
+        source_path=str(sample),
+        output_root=str(tmp_path / "output"),
+        migration_type="cobol-to-java",
+        fast_mode=True,
+        modules=["SAMPLE"],
+    )
+    for stage in ("analysis", "business_semantics", "design", "transform", "tests", "diff"):
+        backlog_store.update_task_mutable(
+            state,
+            f"SAMPLE:{stage}",
+            {"status": BacklogTaskStatus.DONE},
         )
+    backlog_store.update_task_mutable(
+        state,
+        "SAMPLE:quality",
+        {"status": BacklogTaskStatus.PENDING},
+    )
+
+    quality_artifact = tmp_path / "quality.json"
+    quality_artifact.write_text("{}", encoding="utf-8")
+
+    async def _quality_stub(_engine: Any, _inputs: dict[str, Any]) -> dict[str, Any]:
         return {
             "success": True,
-            "class_name": "SampleService",
-            "target_code": "public class SampleService {}",
-            "iterations": 1,
-            "check_result": {"confidence": 0.42},
-            "quality_gate": {"decision": "TRANSFORM_ISSUE"},
-            "artifact_paths": {},
+            "stage": "quality",
+            "module": "SAMPLE",
+            "artifact_paths": {"quality": str(quality_artifact)},
+            "unknowns": [],
+            "decision": "TRANSFORM_ISSUE",
+            "evidence": {"classification": "logic"},
         }
 
-    monkeypatch.setattr(cli, "_run_engine_for_program", _stub_run_engine_for_program)
+    monkeypatch.setattr(cli, "execute_stage_task", _quality_stub)
 
     async def _ignore_event(_event: dict[str, Any]) -> None:
         return None
@@ -138,5 +187,7 @@ async def test_run_contract_payload_business_failure(monkeypatch: pytest.MonkeyP
     )
 
     assert exit_code == 1
-    assert summary["success"] is False
-    assert summary["decision"] == "TRANSFORM_ISSUE"
+    assert summary["session_status"] == "needs_fix"
+    assert summary["dispatched_task"]["task_id"] == "SAMPLE:quality"
+    assert summary["backlog_completed"] is False
+

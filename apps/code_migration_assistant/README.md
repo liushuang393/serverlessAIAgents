@@ -108,12 +108,21 @@ cd apps/code_migration_assistant
 
 ダッシュボードは `http://localhost:8003` でアクセス可能です。
 
+## LLM 設定（Gateway 前提）
+
+- Provider SDK 直呼びは使用せず、AgentFlow 内蔵 LiteLLM Gateway を経由します。
+- 正本設定: `.agentflow/llm_gateway.yaml`
+- 秘密情報: `ENV > .env`（例: `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`）
+- 呼び出し契約: `generate(role=...) / stream(role=...) / tool_call(role=...)`
+- 推奨 role: `coding`（コード生成）、`reasoning`（分析）
+
 > 2026-03 統合更新: `migration_studio` の UI/移行APIを `code_migration_assistant` に統合し、同一サーバーで配信します。
 > 主要フロント API は `/api/migrate/*`（upload / stream / status / download）です。
 
 ## 🤖 非対話実行契約（run）
 
 Migration Studio / CI 連携向けに、CLI の契約実行モードを提供します。
+`run` は **1回の呼び出しで Backlog の 1タスクだけ** 実行します。
 
 ```bash
 python -m apps.code_migration_assistant.cli run \
@@ -135,19 +144,34 @@ python -m apps.code_migration_assistant.cli run \
 }
 ```
 
+出力 JSON（主要フィールド）:
+
+- `run_id`
+- `session_id`
+- `session_status` (`done` / `needs_fix` / `blocked` / `backlog_completed` / `input_error` / `env_error`)
+- `dispatched_task`
+- `remaining_tasks`
+- `next_task_id`
+- `backlog_path`
+- `evidence_root`
+
 イベント NDJSON（例）:
 
 ```json
-{"type":"stage_start","stage":"analyzer","program_name":"SAMPLE"}
-{"type":"stage_complete","stage":"quality_gate","decision":"PASSED","program_name":"SAMPLE"}
-{"type":"complete","stage":"pipeline","decision":"PASSED","output_dir":"/tmp/migration_output/task-123"}
+{"type":"session_start","stage":"analysis","run_id":"task-123","session_id":"session-001","backlog_task_id":"SAMPLE:analysis","program_name":"SAMPLE"}
+{"type":"stage_start","stage":"analysis","program_name":"SAMPLE","message":"analysis 実行中..."}
+{"type":"stage_complete","stage":"analysis","program_name":"SAMPLE","decision":"PASSED","run_id":"task-123","session_id":"session-001","backlog_task_id":"SAMPLE:analysis"}
+{"type":"session_complete","stage":"analysis","run_id":"task-123","session_id":"session-001","backlog_task_id":"SAMPLE:analysis","session_status":"done","remaining_tasks":8,"next_task_id":"SAMPLE:business_semantics"}
 ```
 
 終了コード:
 
-- `0`: 成功（`PASSED` / `KNOWN_LEGACY`）
-- `1`: 実行完了だが業務判定NG
-- `2`: 環境/入力エラー
+- `0`: セッション `done` または backlog 完了
+- `1`: `blocked` / `needs_fix`
+- `2`: 入力エラー / 環境エラー
+
+長期実行モデル（Backlog / Dispatcher / Evidence / Quality Gate）の詳細は
+`docs/long_running_patterns.md` を参照してください。
 
 ---
 

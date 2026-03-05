@@ -33,6 +33,7 @@ from apps.platform.routers import (
     components_router,
     dashboard_router,
     gallery_router,
+    llm_management_router,
     mcp_router,
     publish_router,
     rag_router,
@@ -42,9 +43,9 @@ from apps.platform.routers import (
 )
 from apps.platform.routers.agents import init_agent_services
 from apps.platform.routers.apps import init_app_services
+from apps.platform.routers.llm_management import init_llm_management_service
 from apps.platform.routers.mcp import init_mcp_services
 from apps.platform.routers.rag import init_rag_services
-from apps.platform.services.rag_config_store import init_rag_config_store
 from apps.platform.routers.skills import init_skill_services
 from apps.platform.routers.studios import init_studio_services
 from apps.platform.routers.tenant_invitations import init_tenant_invitation_services
@@ -52,10 +53,12 @@ from apps.platform.schemas.publish_schemas import PublishRequest, PublishTarget
 from apps.platform.services.agent_aggregator import AgentAggregatorService
 from apps.platform.services.app_discovery import AppDiscoveryService
 from apps.platform.services.app_lifecycle import AppLifecycleManager
-from apps.platform.services.config_watcher import ConfigWatcherService
 from apps.platform.services.app_scaffolder import AppScaffolderService
+from apps.platform.services.config_watcher import ConfigWatcherService
+from apps.platform.services.llm_management import get_default_llm_management_service
 from apps.platform.services.mcp_registry import MCPRegistryService
 from apps.platform.services.port_allocator import PortAllocatorService
+from apps.platform.services.rag_config_store import init_rag_config_store
 from apps.platform.services.rag_overview import RAGOverviewService
 from apps.platform.services.skill_catalog import SkillCatalogService
 from apps.platform.services.studio_service import StudioService
@@ -115,6 +118,9 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     mcp_registry = MCPRegistryService()
     init_mcp_services(mcp_registry)
 
+    llm_management = get_default_llm_management_service()
+    init_llm_management_service(llm_management)
+
     tenant_invitation = TenantInvitationService()
     init_tenant_invitation_services(tenant_invitation)
 
@@ -160,6 +166,7 @@ def create_app() -> FastAPI:
     app.include_router(skills_router)
     app.include_router(rag_router)
     app.include_router(mcp_router)
+    app.include_router(llm_management_router)
     app.include_router(studios_router)
     app.include_router(tenant_invitations_router)
 

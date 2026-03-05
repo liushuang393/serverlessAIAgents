@@ -235,8 +235,8 @@ class EntityExtractionService:
                 '[{"name": "...", "type": "...", "confidence": 0.0-1.0}]\n\n'
                 f"Text: {text[:2000]}\n\nJSON:"
             )
-            response = await llm.chat([{"role": "user", "content": prompt}])
-            raw = response if isinstance(response, str) else str(response)
+            response = await llm.generate(role="reasoning", messages=[{"role": "user", "content": prompt}])
+            raw = str(response.get("content", "")).strip()
 
             entities = self._parse_entities_response(raw)
             return self.merge_entities(entities)
@@ -275,8 +275,8 @@ class EntityExtractionService:
                 "develops, migrates_from, migrates_to\n\n"
                 f"Context: {text[:1500]}\n\nJSON:"
             )
-            response = await llm.chat([{"role": "user", "content": prompt}])
-            raw = response if isinstance(response, str) else str(response)
+            response = await llm.generate(role="reasoning", messages=[{"role": "user", "content": prompt}])
+            raw = str(response.get("content", "")).strip()
 
             return self._parse_relations_response(raw)
 

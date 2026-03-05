@@ -47,7 +47,10 @@ Agent/サービスは具体的な埋め込みモデルを知る必要があり�
 """
 
 import logging
+import os
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
+
+from agentflow.llm.gateway import LiteLLMGateway
 
 
 if TYPE_CHECKING:
@@ -117,44 +120,61 @@ class MockEmbeddingProvider:
 
 
 class OpenAIEmbeddingProvider:
-    """OpenAI Embedding Provider."""
+    """Gateway-backed embedding provider (OpenAI-compatible role path)."""
 
     def __init__(self, api_key: str, model: str = "text-embedding-3-small") -> None:
         """初期化."""
         self._api_key = api_key
         self._model = model
-        self._client: Any = None
+        self._gateway = LiteLLMGateway()
+        self._role = os.getenv("EMBEDDING_ROLE", "cheap")
+        self._model_alias = os.getenv("OPENAI_EMBEDDING_MODEL_ALIAS")
         # text-embedding-3-large: 3072, 3-small: 1536, ada-002: 1536
         self._dimension = 3072 if "3-large" in model else 1536
 
-    def _ensure_client(self) -> None:
-        """クライアント初期化."""
-        if self._client is None:
-            try:
-                from openai import AsyncOpenAI
+    def _with_env_api_key(self) -> tuple[str | None, bool]:
+        current = os.getenv("OPENAI_API_KEY")
+        if current:
+            return current, False
+        if self._api_key:
+            os.environ["OPENAI_API_KEY"] = self._api_key
+            return None, True
+        return None, False
 
-                self._client = AsyncOpenAI(api_key=self._api_key)
-            except ImportError:
-                msg = "openai package required: pip install openai"
-                raise ImportError(msg)
+    @staticmethod
+    def _restore_env_api_key(previous: str | None, inserted: bool) -> None:
+        if inserted:
+            os.environ.pop("OPENAI_API_KEY", None)
+            return
+        if previous is not None:
+            os.environ["OPENAI_API_KEY"] = previous
 
     async def embed_text(self, text: str) -> list[float]:
         """OpenAI 埋め込み."""
-        self._ensure_client()
-        response = await self._client.embeddings.create(
-            model=self._model,
-            input=text,
-        )
-        return [float(v) for v in response.data[0].embedding]
+        previous, inserted = self._with_env_api_key()
+        try:
+            vectors = await self._gateway.embedding(
+                role=self._role,
+                input_texts=[text],
+                model_alias=self._model_alias,
+                model=self._model,
+            )
+        finally:
+            self._restore_env_api_key(previous, inserted)
+        return vectors[0] if vectors else []
 
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """バッチ埋め込み."""
-        self._ensure_client()
-        response = await self._client.embeddings.create(
-            model=self._model,
-            input=texts,
-        )
-        return [[float(v) for v in item.embedding] for item in response.data]
+        previous, inserted = self._with_env_api_key()
+        try:
+            return await self._gateway.embedding(
+                role=self._role,
+                input_texts=texts,
+                model_alias=self._model_alias,
+                model=self._model,
+            )
+        finally:
+            self._restore_env_api_key(previous, inserted)
 
     def get_dimension(self) -> int:
         """次元数."""

@@ -332,17 +332,18 @@ class SkillsManager:
 
 JSON のみを出力してください。"""
 
-        response = await llm.chat(
-            [
+        response = await llm.generate(
+            role="reasoning",
+            messages=[
                 {
                     "role": "system",
                     "content": "スキル定義を生成するアシスタントです。JSON形式で出力します。",
                 },
                 {"role": "user", "content": prompt},
-            ]
+            ],
         )
 
-        content = response.get("content", "")
+        content = str(response.get("content", ""))
 
         # JSON を抽出
         try:

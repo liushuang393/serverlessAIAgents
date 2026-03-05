@@ -117,8 +117,8 @@ class StakeholderReportService:
                 '"risks": ["..."]'
                 "}\n\nJSON:"
             )
-            response = await llm.chat([{"role": "user", "content": prompt}])
-            raw = response if isinstance(response, str) else str(response)
+            response = await llm.generate(role="reasoning", messages=[{"role": "user", "content": prompt}])
+            raw = str(response.get("content", "")).strip()
             analysis = self._parse_report_response(raw)
 
             report = StakeholderReport(
@@ -192,8 +192,8 @@ class StakeholderReportService:
                 '"risks": ["..."]'
                 "}\n\nJSON:"
             )
-            response = await llm.chat([{"role": "user", "content": prompt}])
-            raw = response if isinstance(response, str) else str(response)
+            response = await llm.generate(role="reasoning", messages=[{"role": "user", "content": prompt}])
+            raw = str(response.get("content", "")).strip()
             analysis = self._parse_report_response(raw)
 
             report = StakeholderReport(

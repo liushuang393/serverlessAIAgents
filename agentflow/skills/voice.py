@@ -22,13 +22,12 @@ from __future__ import annotations
 
 import base64
 import logging
-import os
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import httpx
+from agentflow.llm.gateway import LiteLLMGateway
 
 
 logger = logging.getLogger(__name__)
@@ -95,12 +94,7 @@ class VoiceSkill:
         """
         self._config = config or VoiceConfig()
         self._logger = logging.getLogger("voice_skill")
-        self._http_client = httpx.AsyncClient(timeout=self._config.timeout)
-
-        # API キーを取得
-        self._api_key = os.getenv("OPENAI_API_KEY", "")
-        if not self._api_key:
-            self._logger.warning("OPENAI_API_KEY not set, voice features may not work")
+        self._gateway = LiteLLMGateway()
 
     async def transcribe(
         self,
@@ -131,33 +125,16 @@ class VoiceSkill:
         # 音声データを準備
         audio_bytes = await self._prepare_audio(audio_path, audio_data, audio_base64)
 
-        # OpenAI Whisper API を呼び出し
-        url = "https://api.openai.com/v1/audio/transcriptions"
-        headers = {"Authorization": f"Bearer {self._api_key}"}
-
-        # multipart/form-data で送信
-        files = {"file": ("audio.mp3", audio_bytes, "audio/mpeg")}
-        data: dict[str, Any] = {
-            "model": self._config.stt_model,
-            "response_format": response_format,
-        }
-
-        if language or self._config.language:
-            data["language"] = language or self._config.language
-        if prompt:
-            data["prompt"] = prompt
-
         try:
-            response = await self._http_client.post(url, headers=headers, files=files, data=data)
-            response.raise_for_status()
-
-            if response_format == "text":
-                return response.text
-            return self._extract_response_text(response)
-
-        except httpx.HTTPStatusError as e:
-            self._logger.exception(f"Whisper API error: {e.response.text}")
-            raise
+            role = "local" if self._config.provider == VoiceProvider.AUTO else self._config.provider.value
+            return await self._gateway.transcribe(
+                role=role,
+                audio_bytes=audio_bytes,
+                language=language or self._config.language,
+                prompt=prompt,
+                response_format=response_format,
+                model=self._config.stt_model,
+            )
         except Exception as e:
             self._logger.error(f"Transcription failed: {e}", exc_info=True)
             raise
@@ -181,30 +158,18 @@ class VoiceSkill:
         Returns:
             音声バイナリデータ
         """
-        url = "https://api.openai.com/v1/audio/speech"
-        headers = {
-            "Authorization": f"Bearer {self._api_key}",
-            "Content-Type": "application/json",
-        }
-
         voice_name = voice if isinstance(voice, str) else (voice or self._config.tts_voice).value
 
-        payload = {
-            "model": self._config.tts_model,
-            "input": text,
-            "voice": voice_name,
-            "speed": max(0.25, min(4.0, speed)),
-            "response_format": output_format,
-        }
-
         try:
-            response = await self._http_client.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            return response.content
-
-        except httpx.HTTPStatusError as e:
-            self._logger.exception(f"TTS API error: {e.response.text}")
-            raise
+            role = "local" if self._config.provider == VoiceProvider.AUTO else self._config.provider.value
+            return await self._gateway.synthesize(
+                role=role,
+                text=text,
+                voice=voice_name,
+                speed=max(0.25, min(4.0, speed)),
+                output_format=output_format,
+                model=self._config.tts_model,
+            )
         except Exception as e:
             self._logger.error(f"Speech synthesis failed: {e}", exc_info=True)
             raise
@@ -230,20 +195,14 @@ class VoiceSkill:
         """
         audio_bytes = await self._prepare_audio(audio_path, audio_data, audio_base64)
 
-        url = "https://api.openai.com/v1/audio/translations"
-        headers = {"Authorization": f"Bearer {self._api_key}"}
-
-        files = {"file": ("audio.mp3", audio_bytes, "audio/mpeg")}
-        data: dict[str, Any] = {"model": self._config.stt_model}
-
-        if prompt:
-            data["prompt"] = prompt
-
         try:
-            response = await self._http_client.post(url, headers=headers, files=files, data=data)
-            response.raise_for_status()
-            return self._extract_response_text(response)
-
+            role = "local" if self._config.provider == VoiceProvider.AUTO else self._config.provider.value
+            return await self._gateway.translate_audio(
+                role=role,
+                audio_bytes=audio_bytes,
+                prompt=prompt,
+                model=self._config.stt_model,
+            )
         except Exception as e:
             self._logger.error(f"Translation failed: {e}", exc_info=True)
             raise
@@ -355,15 +314,6 @@ class VoiceSkill:
         msg = "No audio source provided. Specify audio_path, audio_data, or audio_base64."
         raise ValueError(msg)
 
-    def _extract_response_text(self, response: httpx.Response) -> str:
-        """OpenAI 音声APIレスポンスから text を抽出."""
-        payload = response.json()
-        if isinstance(payload, dict):
-            text = payload.get("text")
-            if isinstance(text, str):
-                return text
-        return ""
-
     async def get_supported_formats(self) -> dict[str, list[str]]:
         """サポートされる音声形式を取得.
 
@@ -376,5 +326,4 @@ class VoiceSkill:
         }
 
     async def close(self) -> None:
-        """HTTP クライアントをクローズ."""
-        await self._http_client.aclose()
+        """互換API（no-op）."""

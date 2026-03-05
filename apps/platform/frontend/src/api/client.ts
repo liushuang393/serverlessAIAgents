@@ -26,6 +26,13 @@ import type {
   AppListResponse,
   AppSummaryResponse,
   HealthCheckResult,
+  LLMEngineRuntimeStatus,
+  LLMInferenceEngineConfigItem,
+  LLMManagementOverviewResponse,
+  LLMModelConfigItem,
+  LLMProviderConfigItem,
+  LLMProviderRuntimeStatus,
+  LLMRoutingPolicyConfig,
   MCPConfigResponse,
   MCPLazyLoadingConfig,
   MCPServerConfig,
@@ -412,6 +419,113 @@ export async function patchMCPLazyLoading(
   const { data } = await api.patch<{ success: boolean; lazy_loading: MCPLazyLoadingConfig }>(
     '/studios/framework/mcp/lazy-loading',
     patch,
+  );
+  return data;
+}
+
+/* ============================================================
+ * LLM Management API
+ * ============================================================ */
+
+export async function fetchLLMManagementOverview(): Promise<LLMManagementOverviewResponse> {
+  const { data } = await api.get<LLMManagementOverviewResponse>('/studios/framework/llm/overview');
+  return data;
+}
+
+export async function reloadLLMManagementConfig(): Promise<{ reloaded: boolean; gateway: Record<string, unknown> }> {
+  const { data } = await api.post<{ reloaded: boolean; gateway: Record<string, unknown> }>(
+    '/studios/framework/llm/reload',
+  );
+  return data;
+}
+
+export async function fetchLLMProviders(): Promise<{ providers: LLMProviderConfigItem[] }> {
+  const { data } = await api.get<{ providers: LLMProviderConfigItem[] }>('/studios/framework/llm/providers');
+  return data;
+}
+
+export async function updateLLMProviders(
+  providers: LLMProviderConfigItem[],
+): Promise<{ providers: LLMProviderConfigItem[] }> {
+  const { data } = await api.put<{ providers: LLMProviderConfigItem[] }>(
+    '/studios/framework/llm/providers',
+    { providers },
+  );
+  return data;
+}
+
+export async function fetchLLMProviderRuntime(): Promise<{ providers_runtime: LLMProviderRuntimeStatus[] }> {
+  const { data } = await api.get<{ providers_runtime: LLMProviderRuntimeStatus[] }>(
+    '/studios/framework/llm/providers/runtime',
+  );
+  return data;
+}
+
+export async function fetchLLMInferenceEngines(): Promise<{ inference_engines: LLMInferenceEngineConfigItem[] }> {
+  const { data } = await api.get<{ inference_engines: LLMInferenceEngineConfigItem[] }>(
+    '/studios/framework/llm/engines',
+  );
+  return data;
+}
+
+export async function updateLLMInferenceEngines(
+  inferenceEngines: LLMInferenceEngineConfigItem[],
+): Promise<{ inference_engines: LLMInferenceEngineConfigItem[] }> {
+  const { data } = await api.put<{ inference_engines: LLMInferenceEngineConfigItem[] }>(
+    '/studios/framework/llm/engines',
+    { inference_engines: inferenceEngines },
+  );
+  return data;
+}
+
+export async function fetchLLMEngineStatus(): Promise<{ engine_status: LLMEngineRuntimeStatus[] }> {
+  const { data } = await api.get<{ engine_status: LLMEngineRuntimeStatus[] }>(
+    '/studios/framework/llm/engines/status',
+  );
+  return data;
+}
+
+export async function fetchLLMModels(): Promise<{ models: LLMModelConfigItem[] }> {
+  const { data } = await api.get<{ models: LLMModelConfigItem[] }>('/studios/framework/llm/models');
+  return data;
+}
+
+export async function updateLLMModels(models: LLMModelConfigItem[]): Promise<{ models: LLMModelConfigItem[] }> {
+  const { data } = await api.put<{ models: LLMModelConfigItem[] }>(
+    '/studios/framework/llm/models',
+    { models },
+  );
+  return data;
+}
+
+export async function fetchLLMRegistry(): Promise<{ registry: Record<string, string> }> {
+  const { data } = await api.get<{ registry: Record<string, string> }>('/studios/framework/llm/registry');
+  return data;
+}
+
+export async function updateLLMRegistry(
+  registry: Record<string, string>,
+): Promise<{ registry: Record<string, string> }> {
+  const { data } = await api.put<{ registry: Record<string, string> }>(
+    '/studios/framework/llm/registry',
+    { registry },
+  );
+  return data;
+}
+
+export async function fetchLLMRoutingPolicy(): Promise<{ routing_policy: LLMRoutingPolicyConfig }> {
+  const { data } = await api.get<{ routing_policy: LLMRoutingPolicyConfig }>(
+    '/studios/framework/llm/routing-policy',
+  );
+  return data;
+}
+
+export async function updateLLMRoutingPolicy(
+  routingPolicy: LLMRoutingPolicyConfig,
+): Promise<{ routing_policy: LLMRoutingPolicyConfig }> {
+  const { data } = await api.put<{ routing_policy: LLMRoutingPolicyConfig }>(
+    '/studios/framework/llm/routing-policy',
+    { routing_policy: routingPolicy },
   );
   return data;
 }

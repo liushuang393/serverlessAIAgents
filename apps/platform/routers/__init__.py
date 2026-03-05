@@ -8,6 +8,7 @@ from apps.platform.routers.apps import router as apps_router
 from apps.platform.routers.components import router as components_router
 from apps.platform.routers.dashboard import router as dashboard_router
 from apps.platform.routers.gallery import router as gallery_router
+from apps.platform.routers.llm_management import router as llm_management_router
 from apps.platform.routers.mcp import router as mcp_router
 from apps.platform.routers.publish import router as publish_router
 from apps.platform.routers.rag import router as rag_router
@@ -22,6 +23,7 @@ __all__ = [
     "components_router",
     "dashboard_router",
     "gallery_router",
+    "llm_management_router",
     "mcp_router",
     "publish_router",
     "rag_router",

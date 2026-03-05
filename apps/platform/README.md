@@ -90,6 +90,24 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
 - `GET /api/studios/framework/tenants/invitations/outbox`（開発時のみ）
 - `GET /api/studios/framework/apps/{app_name}/cli/status`
 - `POST /api/studios/framework/apps/{app_name}/cli/setup`
+- `GET /api/studios/framework/llm/overview`
+- `GET /api/studios/framework/llm/providers/runtime`
+- `GET /api/studios/framework/llm/engines/status`
+- `PUT /api/studios/framework/llm/providers`
+- `PUT /api/studios/framework/llm/engines`
+- `PUT /api/studios/framework/llm/models`
+- `PUT /api/studios/framework/llm/registry`
+- `PUT /api/studios/framework/llm/routing-policy`
+
+## LLM Gateway 運用（LiteLLM 内蔵）
+
+- LLM 呼び出しは Provider API 直呼びを禁止し、AgentFlow 内蔵 Gateway に統一する。
+- 正本設定: `.agentflow/llm_gateway.yaml`
+- 秘密情報解決順: `ENV > .env > unavailable`
+- 標準 role: `reasoning / coding / cheap / local`
+- UI は `LLM Management` から Provider / Engine / Registry / Routing Policy を編集する。
+
+詳細手順: [docs/internal/llm-gateway-setup-ja.md](../../docs/internal/llm-gateway-setup-ja.md)
 
 ## RAG 設定適用モード（hot / restart fallback）
 

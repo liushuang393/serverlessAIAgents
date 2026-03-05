@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Standalone image generation script with ComfyUI/OpenAI fallback.
+"""Standalone image generation script with ComfyUI/Gateway fallback.
 
 Reads JSON config from stdin, generates an image via ComfyUI (local) or
-OpenAI gpt-image-1 (cloud fallback), and writes result JSON to stdout.
+Gateway image endpoint (openai-compatible) fallback, and writes result JSON to stdout.
 
 Fallback priority:
   1. ComfyUI (local GPU) - if server is running
-  2. OpenAI gpt-image-1 (cloud) - if OPENAI_API_KEY is set
+  2. Gateway image endpoint - if LLM_GATEWAY_IMAGE_API_URL is set
 
 This script does NOT import from agentflow -- it is fully self-contained
 so it works when the skill folder is copied to .claude/skills/.
@@ -32,9 +32,9 @@ import httpx
 
 
 COMFYUI_URL = os.getenv("COMFYUI_URL", "http://localhost:8188")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+OPENAI_API_KEY = os.getenv("LLM_GATEWAY_API_KEY", os.getenv("OPENAI_API_KEY", ""))
 OPENAI_IMAGE_MODEL = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
-OPENAI_API_URL = "https://api.openai.com/v1"
+OPENAI_API_URL = os.getenv("LLM_GATEWAY_IMAGE_API_URL", "http://127.0.0.1:4000/v1")
 
 DEFAULT_MODEL = "sd_xl_base_1.0.safetensors"
 DEFAULT_NEGATIVE = (
@@ -175,7 +175,7 @@ def download_image(
 
 
 # =========================================================================
-# OpenAI backend
+# Gateway image backend
 # =========================================================================
 
 
@@ -190,12 +190,12 @@ def _map_size_to_openai(width: int, height: int) -> str:
     return "1024x1024"
 
 
-def generate_via_openai(
+def generate_via_gateway(
     client: httpx.Client,
     config: dict[str, Any],
     output_dir: Path,
 ) -> dict[str, Any]:
-    """Generate image via OpenAI Images API."""
+    """Generate image via gateway image endpoint."""
     prompt = config["prompt"]
     width = config.get("width", DEFAULT_WIDTH)
     height = config.get("height", DEFAULT_HEIGHT)
@@ -227,7 +227,7 @@ def generate_via_openai(
     return {
         "success": True,
         "image_path": str(output_path),
-        "backend": "openai",
+        "backend": "gateway",
         "model": OPENAI_IMAGE_MODEL,
         "seed": seed,
     }
@@ -279,8 +279,8 @@ def _check_comfyui_health(client: httpx.Client) -> bool:
 
 
 def _check_openai_available() -> bool:
-    """Check if OpenAI API key is configured."""
-    return bool(OPENAI_API_KEY)
+    """Check if gateway endpoint is configured."""
+    return bool(OPENAI_API_URL)
 
 
 def _extract_images(
@@ -307,7 +307,7 @@ def _extract_images(
 def main() -> None:
     """Entry point: read JSON from stdin, generate image, write result JSON.
 
-    Tries ComfyUI (local) first. Falls back to OpenAI if unavailable.
+    Tries ComfyUI (local) first. Falls back to gateway endpoint if unavailable.
     """
     config = _read_config()
 
@@ -341,21 +341,21 @@ def main() -> None:
                 json.dump(result, sys.stdout, ensure_ascii=False)
                 return
     except (httpx.HTTPError, TimeoutError) as e:
-        # ComfyUI failed, try OpenAI fallback
+        # ComfyUI failed, try gateway fallback
         _comfyui_error = str(e)
     else:
         # health check returned False, proceed to fallback
         _comfyui_error = "ComfyUI not running"
 
-    # --- Fallback to OpenAI ---
+    # --- Fallback to Gateway ---
     if not _check_openai_available():
         json.dump(
             {
                 "success": False,
                 "error": (
                     f"ComfyUI unavailable ({_comfyui_error}). "
-                    "OpenAI fallback also unavailable: OPENAI_API_KEY not set. "
-                    "Please start ComfyUI or set OPENAI_API_KEY."
+                    "Gateway fallback also unavailable: LLM_GATEWAY_IMAGE_API_URL not set. "
+                    "Please start ComfyUI or set LLM_GATEWAY_IMAGE_API_URL."
                 ),
             },
             sys.stdout,
@@ -372,14 +372,14 @@ def main() -> None:
                 "Content-Type": "application/json",
             },
         ) as openai_client:
-            result = generate_via_openai(openai_client, config, output_dir)
+            result = generate_via_gateway(openai_client, config, output_dir)
     except httpx.HTTPStatusError as e:
         result = {
             "success": False,
-            "error": f"OpenAI API error: {e.response.status_code} - {e.response.text}",
+            "error": f"Gateway image API error: {e.response.status_code} - {e.response.text}",
         }
     except httpx.HTTPError as e:
-        result = {"success": False, "error": f"OpenAI HTTP error: {e}"}
+        result = {"success": False, "error": f"Gateway image HTTP error: {e}"}
 
     json.dump(result, sys.stdout, ensure_ascii=False)
 

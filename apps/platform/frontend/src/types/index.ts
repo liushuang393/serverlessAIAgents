@@ -924,3 +924,93 @@ export interface MCPConfigResponse {
     lazy_loading: MCPLazyLoadingConfig;
   };
 }
+
+export interface LLMProviderConfigItem {
+  name: string;
+  api_base: string | null;
+  api_key_env: string | null;
+  models: string[];
+  enabled: boolean;
+}
+
+export interface LLMProviderRuntimeStatus {
+  name: string;
+  status: 'available' | 'unavailable';
+  api_key_env: string | null;
+  source: string | null;
+  last_error: string | null;
+}
+
+export type InferenceEngineType = 'vllm' | 'sglang' | 'tgi';
+
+export interface LLMInferenceEngineConfigItem {
+  name: string;
+  engine_type: InferenceEngineType;
+  base_url: string;
+  health_path: string;
+  metrics_path: string;
+  model_list_path: string;
+  enabled: boolean;
+}
+
+export interface LLMEngineRuntimeStatus {
+  name: string;
+  engine_type: InferenceEngineType;
+  status: 'available' | 'unavailable';
+  latency_ms: number | null;
+  gpu_usage: number | null;
+  loaded_models: string[];
+  last_error: string | null;
+}
+
+export interface LLMModelCostConfig {
+  input_per_1k: number;
+  output_per_1k: number;
+}
+
+export interface LLMModelConfigItem {
+  alias: string;
+  provider: string;
+  model: string;
+  api_base: string | null;
+  api_key_env: string | null;
+  engine: string | null;
+  enabled: boolean;
+  modalities: string[];
+  quality_score: number;
+  avg_latency_ms: number;
+  cost: LLMModelCostConfig;
+}
+
+export interface LLMRoutingPolicyConfig {
+  priority: 'latency' | 'cost' | 'quality';
+  fallback_chain: Record<string, string[]>;
+  load_balance_strategy: 'round_robin' | 'least_latency' | 'random';
+  cost_budget: number | null;
+}
+
+export interface LLMManagementOverviewResponse {
+  gateway: {
+    default_role: string;
+    request_timeout_seconds: number;
+    max_retries: number;
+  };
+  providers: LLMProviderConfigItem[];
+  providers_runtime: LLMProviderRuntimeStatus[];
+  inference_engines: LLMInferenceEngineConfigItem[];
+  models: LLMModelConfigItem[];
+  registry: Record<string, string>;
+  routing_policy: LLMRoutingPolicyConfig;
+  cost_summary: {
+    total_cost_usd: number;
+    details: Array<{
+      alias: string;
+      requests: number;
+      failures: number;
+      avg_latency_ms: number;
+      cost_usd: number;
+    }>;
+    cost_budget: number | null;
+    budget_exceeded: boolean;
+  };
+}

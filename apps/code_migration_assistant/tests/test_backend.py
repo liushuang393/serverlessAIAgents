@@ -386,6 +386,79 @@ class TestRouterEndpoints:
         assert body["task_id"] == task_id
         assert body["status"] in ("pending", "running", "complete", "error")
 
+    def test_backlog_not_found(self, test_client: TestClient) -> None:
+        """backlog 未生成時は 404."""
+        response = test_client.get("/api/migrate/nonexistent-id/backlog")
+        assert response.status_code == 404
+
+    def test_backlog_endpoints_return_state_and_single_task(self, test_client: TestClient) -> None:
+        """backlog API が状態と単一タスクを返す."""
+        import json
+
+        from apps.code_migration_assistant.backend import migration_router as router_module
+
+        cobol_content = self.SAMPLE_CBL.read_bytes()
+        upload = test_client.post(
+            "/api/migrate/upload",
+            files={"file": ("sample.cbl", cobol_content, "text/plain")},
+        )
+        assert upload.status_code == 200
+        task_id = upload.json()["task_id"]
+
+        backlog_path = router_module._get_output_root() / task_id / "backlog" / "backlog.json"
+        backlog_path.parent.mkdir(parents=True, exist_ok=True)
+        backlog_payload = {
+            "run_id": task_id,
+            "source_path": "/tmp/sample.cbl",
+            "output_root": str(router_module._get_output_root()),
+            "migration_type": "cobol-to-java",
+            "fast_mode": True,
+            "created_at": "2026-03-05T00:00:00+00:00",
+            "updated_at": "2026-03-05T00:00:00+00:00",
+            "tasks": [
+                {
+                    "task_id": "SAMPLE:analysis",
+                    "immutable": {
+                        "module": "SAMPLE",
+                        "stage": "analysis",
+                        "description": "SAMPLE / analysis",
+                        "acceptance_criteria": ["legacy_analysis artifact exists"],
+                        "dependencies": [],
+                    },
+                    "immutable_snapshot": {
+                        "module": "SAMPLE",
+                        "stage": "analysis",
+                        "description": "SAMPLE / analysis",
+                        "acceptance_criteria": ["legacy_analysis artifact exists"],
+                        "dependencies": [],
+                    },
+                    "immutable_hash": "hash",
+                    "status": "done",
+                    "evidence_paths": ["evidence/SAMPLE:analysis/manifest.json"],
+                    "notes": [],
+                    "unknowns": [],
+                    "attempts": 1,
+                    "last_session_id": "session-1",
+                    "updated_at": "2026-03-05T00:00:00+00:00",
+                }
+            ],
+            "metadata": {},
+        }
+        backlog_path.write_text(json.dumps(backlog_payload, ensure_ascii=False), encoding="utf-8")
+
+        backlog_resp = test_client.get(f"/api/migrate/{task_id}/backlog")
+        assert backlog_resp.status_code == 200
+        backlog = backlog_resp.json()
+        assert backlog["run_id"] == task_id
+        assert isinstance(backlog["tasks"], list)
+        assert backlog["tasks"][0]["task_id"] == "SAMPLE:analysis"
+
+        task_resp = test_client.get(f"/api/migrate/{task_id}/backlog/tasks/SAMPLE:analysis")
+        assert task_resp.status_code == 200
+        task = task_resp.json()
+        assert task["task_id"] == "SAMPLE:analysis"
+        assert task["status"] == "done"
+
     def test_download_unknown_task(self, test_client: TestClient) -> None:
         """存在しない task_id のダウンロードは 404."""
         response = test_client.get("/api/migrate/nonexistent-id/download")

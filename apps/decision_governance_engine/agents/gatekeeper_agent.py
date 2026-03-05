@@ -265,14 +265,19 @@ class GatekeeperAgent(ResilientAgent[GatekeeperInput, GatekeeperOutput]):
                 {"role": "user", "content": f"質問: {question}"},
             ]
 
-            response = await self._llm.chat(
+            response = await self._llm.generate(
+                role="reasoning",
                 messages=messages,
                 max_tokens=200,
                 temperature=0.1,
             )
 
             # JSON パース（堅牢な抽出）
-            content = response.content if hasattr(response, "content") else str(response)
+            content = (
+                str(response.get("content", "")).strip()
+                if isinstance(response, dict)
+                else str(getattr(response, "content", "")).strip()
+            )
             from agentflow.utils import extract_json
 
             data = extract_json(content)

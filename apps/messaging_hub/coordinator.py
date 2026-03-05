@@ -178,11 +178,12 @@ class PersonalAssistantCoordinator:
         """LLM へ問い合わせ、失敗時は空文字を返す."""
         try:
             llm = get_llm(temperature=temperature)
-            response = await llm.chat(
-                [
+            response = await llm.generate(
+                role="cheap",
+                messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
-                ]
+                ],
             )
             return str(response.get("content", "")).strip()
         except Exception as e:
@@ -677,14 +678,16 @@ class PersonalAssistantCoordinator:
         # LLMで回答生成
         try:
             llm = get_llm(temperature=0.7)
-            response = await llm.chat(
-                [
+            response = await llm.generate(
+                role="reasoning",
+                messages=[
                     {"role": "system", "content": "簡潔に回答してください。"},
                     {"role": "user", "content": intent.rewritten_query},
-                ]
+                ],
             )
+            answer_text = str(response.get("content", ""))
             return self._contract_payload(
-                result={"answer": response.get("content", "")},
+                result={"answer": answer_text},
                 evidence=[
                     {
                         "type": "llm_response",
@@ -692,7 +695,7 @@ class PersonalAssistantCoordinator:
                         "timestamp": datetime.now(UTC).isoformat(),
                     }
                 ],
-                extra={"answer": response.get("content", ""), "processed": 1},
+                extra={"answer": answer_text, "processed": 1},
             )
         except Exception as e:
             return self._contract_payload(
@@ -1215,14 +1218,15 @@ class PersonalAssistantCoordinator:
         """汎用タスク実行（LLM使用）."""
         try:
             llm = get_llm(temperature=0.5)
-            response = await llm.chat(
-                [
+            response = await llm.generate(
+                role="reasoning",
+                messages=[
                     {"role": "system", "content": "タスクを実行し、結果を報告してください。"},
                     {"role": "user", "content": request},
-                ]
+                ],
             )
             return self._contract_payload(
-                result={"content": response.get("content", "")},
+                result={"content": str(response.get("content", ""))},
                 evidence=[
                     {
                         "type": "general_task_response",

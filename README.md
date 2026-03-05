@@ -21,29 +21,95 @@ AgentFlow は、複数プロトコルとエージェント協調を**一つの A
 - apps は「実行可能な製品単位」（設定・監査・UI・運用を含む）として独立に開発・配布できる
 - `apps/platform` は Control Plane として apps の作成/設定/実行/観測を集約する
 
-## 技術アーキテクチャ（8層 + 横断）
+## LLM 推論基盤アーキテクチャ（Gateway 統一）
 
-- Apps / UI（Studio UI / CLI / SDK）
-- Flow（Task/Plan/Route/Execute）
-- Agent（Patterns / Coordinator）
-- Tool（Tool bindings / MCP tools）
-- Provider（LLM / Storage / 3rd party）
-- Protocol（MCP / A2A / AG-UI / A2UI）
-- Infra（DB / Redis / Queue / Observability）
-- Kernel（上記を安定境界として保持）
-
-横断: Governance（Policy/Audit）、Evolution（Self-Evolution V2）
+AgentFlow の LLM 呼び出しは Provider 直呼びを禁止し、`LLM Orchestrator -> LLM Gateway` に統一します。
 
 ```mermaid
 flowchart TB
-    A["Apps / Studio UI"] --> F["Flow (Orchestration)"]
-    F --> AG["Agent Patterns"]
-    AG --> T["Tools"]
-    T --> PR["Providers"]
-    PR --> PT["Protocols (MCP/A2A/AG-UI/A2UI)"]
-    PT --> INF["Infra (DB/Redis/Storage/Obs)"]
-    F -.-> GOV["Governance (Policy/Audit)"]
-    F -.-> EVO["Evolution V2 (Record/Validate/Score)"]
+
+subgraph APP["Application Layer"]
+UI[Chat UI / API / Workflow]
+end
+
+subgraph AGENT["Agent Layer"]
+AgentFlow[AgentFlow Runtime]
+Tools[Tool Execution]
+end
+
+subgraph ORCH["LLM Orchestrator"]
+Prompt[Prompt Builder]
+Context[Context Manager]
+end
+
+subgraph RAG["RAG Pipeline (Optional)"]
+Retriever[Retriever]
+Rerank[Reranker]
+VectorDB[Vector DB]
+end
+
+subgraph GATEWAY["LLM Gateway"]
+Router[LiteLLM Router]
+Registry[Model Registry]
+Policy[Routing Policy]
+end
+
+subgraph PROVIDER["Model Providers"]
+OpenAI[OpenAI]
+Claude[Claude]
+Gemini[Gemini]
+end
+
+subgraph LOCAL["Local Inference"]
+vLLM[vLLM Cluster]
+SGLang[SGLang Runtime]
+TGI[TGI Server]
+end
+
+APP --> AGENT
+AGENT --> ORCH
+ORCH --> GATEWAY
+
+ORCH -. optional .-> RAG
+RAG -.-> ORCH
+
+GATEWAY --> PROVIDER
+GATEWAY --> LOCAL
+```
+
+### 呼び出し関係図（RAG なし）
+
+```mermaid
+sequenceDiagram
+
+User->>Application: request
+Application->>AgentFlow: task
+AgentFlow->>LLM Gateway: generate()
+LLM Gateway->>Provider/Local Model: route
+Provider/Local Model-->>Gateway: response
+Gateway-->>AgentFlow: result
+AgentFlow-->>Application: output
+```
+
+### 呼び出し関係図（RAG あり）
+
+```mermaid
+sequenceDiagram
+
+User->>Application: request
+Application->>AgentFlow: task
+
+AgentFlow->>Retriever: search
+Retriever->>VectorDB: query
+VectorDB-->>Retriever: documents
+
+Retriever-->>AgentFlow: context
+
+AgentFlow->>LLM Gateway: generate(context)
+Gateway->>Provider/Local Model: route
+Provider/Local Model-->>Gateway: answer
+Gateway-->>AgentFlow: result
+AgentFlow-->>Application: output
 ```
 
 ## リポジトリ構造
@@ -93,24 +159,7 @@ flowchart TB
 
 ## 3. 技術アーキテクチャ
 
-**8層構成**（上から下）: アプリケーション → UI → フロー → Agent → ツール → Provider → プロトコル → インフラ。上位は下位のみに依存し、契約は `agentflow/__init__.py` の公開 API を経由します。
-
-## Evolution V2（2026-02）
-
-`Task -> Plan -> Strategy Router -> Execute -> Record -> Extract -> Validate -> Register -> Score -> Return`
-
-```mermaid
-flowchart TB
-    T["Task"] --> PL["Plan"]
-    PL --> SR["Strategy Router"]
-    SR --> EX["Execute"]
-    EX --> RC["Execution Recorder"]
-    RC --> XT["Strategy Extractor"]
-    XT --> VL["Validator Worker (Redis Streams)"]
-    VL --> RG["Strategy Registry Service"]
-    RG --> SC["Success-First Scoring"]
-    SC --> RT["Return"]
-```
+LLM 系の呼び出しは Application/Agent 層から直接 Provider API を使用せず、必ず LiteLLM Gateway を経由します。RAG は optional ですが、有効時も無効時も同じ LLM API 契約（`generate` / `stream` / `tool_call`）を維持します。
 
 ## API
 

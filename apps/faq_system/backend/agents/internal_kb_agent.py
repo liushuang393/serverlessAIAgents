@@ -442,8 +442,8 @@ class InternalKBAgent(ResilientAgent):
                     "content": f"以下のコンテキストを参照して質問に回答してください。\n\nコンテキスト:\n{context}\n\n質問: {question}",
                 },
             ]
-            llm_response = await self._llm.chat(prompt_messages)
-            answer = llm_response.get("content") or "回答を生成できませんでした。"
+            llm_response = await self._llm.generate(role="reasoning", messages=prompt_messages)
+            answer = str(llm_response.get("content", "")).strip() or "回答を生成できませんでした。"
         else:
             answer = f"参考情報 [1] に基づくと、{search_results[0]['content'][:100]}..."
 
@@ -503,8 +503,8 @@ class InternalKBAgent(ResilientAgent):
                     "content": f"以下の規則・制度情報を参照して質問に回答してください。\n\nコンテキスト:\n[1] {content}\n\n質問: {question}",
                 },
             ]
-            llm_response = await self._llm.chat(prompt_messages)
-            answer = llm_response.get("content") or f"規則・制度に基づく回答:\n\n「{content}」\n\n[1] より引用"
+            llm_response = await self._llm.generate(role="reasoning", messages=prompt_messages)
+            answer = str(llm_response.get("content", "")).strip() or f"規則・制度に基づく回答:\n\n「{content}」\n\n[1] より引用"
         else:
             # 直接摘録フォールバック（LLM 不可時）
             answer = f"規則・制度に基づく回答:\n\n「{content}」\n\n[1] より引用"

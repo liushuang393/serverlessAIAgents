@@ -296,14 +296,15 @@ JSON形式で出力してください：
 
 上記の会議に向けたブリーフを作成してください。"""
 
-        response = await llm.chat(
-            [
+        response = await llm.generate(
+            role="reasoning",
+            messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
-            ]
+            ],
         )
 
-        content = response.get("content", "")
+        content = str(response.get("content", ""))
 
         data = self._parse_json_object(content, default={})
 
@@ -378,14 +379,15 @@ JSON形式で出力してください：
 
 上記から議事録を作成してください。"""
 
-        response = await llm.chat(
-            [
+        response = await llm.generate(
+            role="reasoning",
+            messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
-            ]
+            ],
         )
 
-        content = response.get("content", "")
+        content = str(response.get("content", ""))
 
         data = self._parse_json_object(
             content,
@@ -505,11 +507,12 @@ JSON配列で出力してください：
 
 担当者や期限が不明な場合は「未定」としてください。"""
 
-        response = await llm.chat(
-            [
+        response = await llm.generate(
+            role="reasoning",
+            messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": text},
-            ]
+            ],
         )
 
         return self._parse_json_array(str(response.get("content", "")))

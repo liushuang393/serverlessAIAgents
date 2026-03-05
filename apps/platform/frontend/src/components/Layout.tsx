@@ -21,6 +21,7 @@ export function Layout() {
     { to: '/rag',                 icon: '📚', label: t('nav.rag') },
     { to: '/mcp',                 icon: '🔌', label: t('nav.mcp') },
     { to: '/cli',                 icon: '📖', label: t('nav.cli') },
+    { to: '/llm-management',      icon: '🧠', label: t('nav.llm_management') },
     { to: '/settings',            icon: '⚙️', label: t('nav.settings') },
   ];
 

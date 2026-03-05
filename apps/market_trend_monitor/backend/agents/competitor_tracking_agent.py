@@ -248,8 +248,8 @@ class CompetitorTrackingAgent:
                 '"opportunity_level": 0.0-1.0'
                 "}\n\nJSON:"
             )
-            response = await llm.chat([{"role": "user", "content": prompt}])
-            raw = response if isinstance(response, str) else str(response)
+            response = await llm.generate(role="reasoning", messages=[{"role": "user", "content": prompt}])
+            raw = str(response.get("content", "")).strip()
             analysis = self._parse_analysis(raw)
 
             return CompetitorProfile(

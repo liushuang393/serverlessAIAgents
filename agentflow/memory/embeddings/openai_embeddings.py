@@ -1,19 +1,10 @@
-"""OpenAI Embeddings実装.
-
-OpenAI APIを使用してテキストをベクトル埋め込みに変換します。
-"""
+"""Gateway-backed embeddings implementation."""
 
 import logging
-from typing import Any
+import os
 
+from agentflow.llm.gateway import LiteLLMGateway
 from agentflow.memory.embeddings.embedding_interface import EmbeddingEngine
-
-
-# オプション依存: テストでのモック（patch）が効くようにモジュールレベルで import
-try:
-    from openai import AsyncOpenAI
-except ImportError:
-    AsyncOpenAI = None  # type: ignore[assignment, misc]  # ランタイムフォールバック
 
 
 class OpenAIEmbeddings(EmbeddingEngine):
@@ -46,7 +37,9 @@ class OpenAIEmbeddings(EmbeddingEngine):
         self._api_key = api_key
         self._model = model
         self._logger = logging.getLogger(__name__)
-        self._client: Any = None
+        self._gateway = LiteLLMGateway()
+        self._role = os.getenv("EMBEDDING_ROLE", "cheap")
+        self._model_alias = os.getenv("OPENAI_EMBEDDING_MODEL_ALIAS")
 
         # モデルごとのデフォルト次元数
         self._default_dimensions = {
@@ -56,16 +49,22 @@ class OpenAIEmbeddings(EmbeddingEngine):
         }
         self._dimension: int = dimension if dimension is not None else self._default_dimensions.get(model, 1536)
 
-        # OpenAIクライアントを初期化
-        if AsyncOpenAI is None:  # ランタイムガード: openai未インストール時
-            msg = "openai package is required. Install with: pip install openai"  # type: ignore[unreachable]
-            raise ImportError(msg)
-        try:
-            self._client = AsyncOpenAI(api_key=api_key)
-        except ImportError:
-            # テスト時に side_effect=ImportError でパッチされた場合も正しいメッセージを返す
-            msg = "openai package is required. Install with: pip install openai"
-            raise ImportError(msg)
+    def _with_env_api_key(self) -> tuple[str | None, bool]:
+        current = os.getenv("OPENAI_API_KEY")
+        if current:
+            return current, False
+        if self._api_key:
+            os.environ["OPENAI_API_KEY"] = self._api_key
+            return None, True
+        return None, False
+
+    @staticmethod
+    def _restore_env_api_key(previous: str | None, inserted: bool) -> None:
+        if inserted:
+            os.environ.pop("OPENAI_API_KEY", None)
+            return
+        if previous is not None:
+            os.environ["OPENAI_API_KEY"] = previous
 
     async def embed_text(self, text: str) -> list[float]:
         """テキストをベクトル埋め込みに変換."""
@@ -74,14 +73,20 @@ class OpenAIEmbeddings(EmbeddingEngine):
             raise ValueError(msg)
 
         try:
-            response = await self._client.embeddings.create(
-                model=self._model,
-                input=text,
-                dimensions=self._dimension,
-            )
-
-            embedding_raw = response.data[0].embedding
-            embedding = [float(x) for x in embedding_raw]
+            previous, inserted = self._with_env_api_key()
+            try:
+                vectors = await self._gateway.embedding(
+                    role=self._role,
+                    input_texts=[text],
+                    model_alias=self._model_alias,
+                    model=self._model,
+                )
+            finally:
+                self._restore_env_api_key(previous, inserted)
+            if not vectors:
+                msg = "Gateway returned no embeddings"
+                raise RuntimeError(msg)
+            embedding = vectors[0]
             self._logger.debug(f"Generated embedding for text (length: {len(text)})")
             return embedding
 
@@ -102,13 +107,16 @@ class OpenAIEmbeddings(EmbeddingEngine):
             raise ValueError(msg)
 
         try:
-            response = await self._client.embeddings.create(
-                model=self._model,
-                input=valid_texts,
-                dimensions=self._dimension,
-            )
-
-            embeddings = [data.embedding for data in response.data]
+            previous, inserted = self._with_env_api_key()
+            try:
+                embeddings = await self._gateway.embedding(
+                    role=self._role,
+                    input_texts=valid_texts,
+                    model_alias=self._model_alias,
+                    model=self._model,
+                )
+            finally:
+                self._restore_env_api_key(previous, inserted)
             self._logger.debug(f"Generated {len(embeddings)} embeddings")
             return embeddings
 

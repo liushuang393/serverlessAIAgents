@@ -5,6 +5,8 @@
   GET  /api/migrate/{task_id}/stream    - SSE進捗ストリーム
   POST /api/migrate/{task_id}/hitl      - HITL応答送信
   GET  /api/migrate/{task_id}/status    - タスクステータス取得
+  GET  /api/migrate/{task_id}/backlog   - Backlog 全体取得
+  GET  /api/migrate/{task_id}/backlog/tasks/{backlog_task_id} - Backlog単体取得
   GET  /api/migrate/{task_id}/download  - 成果物zipダウンロード
 """
 
@@ -40,6 +42,7 @@ from pydantic import BaseModel
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/migrate", tags=["migration"])
+_PASS_DECISIONS = {"PASSED", "KNOWN_LEGACY"}
 
 # 出力ルートディレクトリ（リポジトリルートからの絶対パス）
 _DEFAULT_OUTPUT_ROOT = Path(__file__).parent.parent.parent.parent / "migration_output"
@@ -159,41 +162,73 @@ async def _run_cma_cli_pipeline(
     model: str,
     store: TaskStore,
 ) -> None:
-    """CMA CLI 契約実行を行い、イベントを中継する."""
+    """Run repeated one-task sessions until backlog completion."""
 
     adapter = CmaCliExecutionAdapter(output_root / "_runtime")
-    await adapter.start(
+    max_sessions = 5000
+    last_output_dir: Path | None = None
+
+    for session_index in range(1, max_sessions + 1):
+        await adapter.start(
+            task_id,
+            ExecutionConfig(
+                source_path=source_path,
+                output_root=output_root,
+                fast_mode=fast_mode,
+                model=model,
+                options={"session_index": session_index},
+            ),
+        )
+
+        async for event in adapter.stream_events(task_id):
+            await store.push_event(task_id, event)
+            stage = event.get("stage")
+            if isinstance(stage, str):
+                await store.update_status(
+                    task_id,
+                    TaskStatus.RUNNING,
+                    current_stage=stage,
+                )
+
+        result = await adapter.await_result(task_id)
+        if result.output_dir is not None and result.output_dir.exists():
+            last_output_dir = result.output_dir
+
+        summary = result.summary if isinstance(result.summary, dict) else {}
+        session_status_raw = summary.get("session_status", "")
+        session_status = str(session_status_raw).strip().lower()
+        backlog_completed = bool(summary.get("backlog_completed", False))
+        if not backlog_completed and not session_status:
+            decision_raw = summary.get("decision")
+            decision = str(decision_raw) if isinstance(decision_raw, str) else ""
+            if bool(summary.get("success", False)) and decision in _PASS_DECISIONS:
+                backlog_completed = True
+
+        if backlog_completed:
+            if last_output_dir is not None and last_output_dir.exists():
+                zip_path = CmaCliExecutionAdapter.create_download_package(last_output_dir, task_id)
+                await store.set_download_path(task_id, zip_path)
+            await store.update_status(task_id, TaskStatus.COMPLETE)
+            return
+
+        if session_status in {"blocked", "input_error", "env_error"}:
+            detail = result.error or str(summary.get("error") or "session blocked")
+            await store.update_status(task_id, TaskStatus.ERROR, error_message=detail)
+            await store.push_event(task_id, {"type": "error", "stage": None, "message": detail})
+            return
+
+        if session_status in {"done", "needs_fix"}:
+            continue
+
+    await store.update_status(task_id, TaskStatus.ERROR, error_message="session loop exceeded max_sessions")
+    await store.push_event(
         task_id,
-        ExecutionConfig(
-            source_path=source_path,
-            output_root=output_root,
-            fast_mode=fast_mode,
-            model=model,
-            options={},
-        ),
+        {
+            "type": "error",
+            "stage": None,
+            "message": "session loop exceeded max_sessions",
+        },
     )
-
-    async for event in adapter.stream_events(task_id):
-        await store.push_event(task_id, event)
-        stage = event.get("stage")
-        if isinstance(stage, str):
-            await store.update_status(
-                task_id,
-                TaskStatus.RUNNING,
-                current_stage=stage,
-            )
-
-    result = await adapter.await_result(task_id)
-    if result.output_dir is not None and result.output_dir.exists():
-        zip_path = CmaCliExecutionAdapter.create_download_package(result.output_dir, task_id)
-        await store.set_download_path(task_id, zip_path)
-
-    if result.error and result.decision == "ENV_ISSUE":
-        await store.update_status(task_id, TaskStatus.ERROR, error_message=result.error)
-        await store.push_event(task_id, {"type": "error", "stage": None, "message": result.error})
-        return
-
-    await store.update_status(task_id, TaskStatus.COMPLETE)
 
 
 async def _run_pipeline_background(
@@ -416,6 +451,36 @@ async def get_status(
     if task is None:
         raise HTTPException(status_code=404, detail=f"タスクが存在しません: {task_id}")
     return TaskStatusResponse(**task.to_status_dict())
+
+
+@router.get("/{task_id}/backlog")
+async def get_backlog(task_id: str) -> dict[str, Any]:
+    """Backlog state を返す."""
+    backlog_path = _get_output_root() / task_id / "backlog" / "backlog.json"
+    if not backlog_path.exists():
+        raise HTTPException(status_code=404, detail="Backlog not found")
+    try:
+        payload = json.loads(backlog_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=500, detail=f"Invalid backlog json: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise HTTPException(status_code=500, detail="Invalid backlog payload")
+    return payload
+
+
+@router.get("/{task_id}/backlog/tasks/{backlog_task_id}")
+async def get_backlog_task(task_id: str, backlog_task_id: str) -> dict[str, Any]:
+    """Backlog 内の単一 task を返す."""
+    backlog = await get_backlog(task_id)
+    tasks = backlog.get("tasks", [])
+    if not isinstance(tasks, list):
+        raise HTTPException(status_code=500, detail="Invalid backlog tasks")
+    for task in tasks:
+        if not isinstance(task, dict):
+            continue
+        if str(task.get("task_id", "")) == backlog_task_id:
+            return task
+    raise HTTPException(status_code=404, detail="Backlog task not found")
 
 
 @router.get("/{task_id}/download")

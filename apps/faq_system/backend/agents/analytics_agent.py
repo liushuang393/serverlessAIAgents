@@ -677,8 +677,8 @@ SQLクエリのみを出力してください（説明不要）:
 ```sql
 """
 
-        response = await llm.chat([{"role": "user", "content": prompt}])
-        return self._extract_sql(response["content"])
+        response = await llm.generate(role="reasoning", messages=[{"role": "user", "content": prompt}])
+        return self._extract_sql(str(response.get("content", "")))
 
     def _extract_sql(self, content: str) -> str:
         """レスポンスからSQLを抽出."""

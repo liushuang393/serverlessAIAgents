@@ -1277,9 +1277,9 @@ GET /api/nodes/service
    - 必ず `ResilientAgent[Input, Output]` を継承
    - 型パラメータで入出力を明示
 
-3. **`self._llm.chat()` を直接呼び出さない**
-   - `self._call_llm(prompt)` を使用（ResilientAgent が提供）
-   - 自動リトライ・タイムアウトが適用される
+3. **Provider API や `chat()/complete()` を直接呼び出さない**
+   - `generate()/stream()/tool_call()` の role ベース API を使用
+   - 呼び出しは必ず LiteLLM Gateway を経由する
 
 ### ✅ やるべきこと
 

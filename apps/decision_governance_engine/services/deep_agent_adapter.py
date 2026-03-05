@@ -78,6 +78,13 @@ class DeepAgentAdapter:
             self._evolver = None
             self._evolution_store = None
 
+    @staticmethod
+    def _response_content(response: Any) -> str:
+        """LLMレスポンスから content を安全に抽出."""
+        if isinstance(response, dict):
+            return str(response.get("content", "")).strip()
+        return str(getattr(response, "content", "")).strip()
+
     async def analyze_cognitive(self, question: str) -> CognitiveAnalysis:
         """認知分析を実行.
 
@@ -112,17 +119,17 @@ class DeepAgentAdapter:
 JSON形式で回答:"""
 
         try:
-            response = await self._llm.chat(
-                [
+            response = await self._llm.generate(
+                role="reasoning",
+                messages=[
                     {"role": "system", "content": "あなたは意思決定分析の専門家です。"},
                     {"role": "user", "content": prompt},
                 ],
-                response_format={"type": "json_object"},
             )
 
             import json
 
-            data = json.loads(response.content if hasattr(response, "content") else str(response))
+            data = json.loads(self._response_content(response))
 
             return CognitiveAnalysis(
                 intent=data.get("intent", question),
@@ -308,17 +315,17 @@ JSON形式で回答:
 }}"""
 
         try:
-            response = await self._llm.chat(
-                [
+            response = await self._llm.generate(
+                role="reasoning",
+                messages=[
                     {"role": "system", "content": "あなたは意思決定品質評価の専門家です。"},
                     {"role": "user", "content": prompt},
                 ],
-                response_format={"type": "json_object"},
             )
 
             import json
 
-            data = json.loads(response.content if hasattr(response, "content") else str(response))
+            data = json.loads(self._response_content(response))
 
             return QualityReview(
                 is_acceptable=data.get("is_acceptable", False),

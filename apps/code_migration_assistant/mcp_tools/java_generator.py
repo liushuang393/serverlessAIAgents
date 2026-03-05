@@ -387,7 +387,7 @@ COBOL Code:
 Java Code:
 ```java"""
 
-        response = await self._llm_client.complete(prompt)
+        response = await self._llm_client.generate(role="coding", prompt=prompt)
         java_code = response.content
 
         # コードブロックから抽出
