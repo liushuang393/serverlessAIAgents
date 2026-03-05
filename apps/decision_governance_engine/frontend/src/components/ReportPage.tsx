@@ -15,7 +15,7 @@ import { useDecisionStore } from '../store/useDecisionStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { decisionApi } from '../api/client';
 import { SignatureArea } from './HankoSeal';
-import type { RecommendedPath, Phase, Implementation, SignatureData } from '../types';
+import type { RecommendedPath, Phase, Implementation, SignatureData, CheckpointItem, ReviewFinding } from '../types';
 
 /** 通知タイプ */
 type NotificationType = 'success' | 'error' | 'info';
@@ -83,6 +83,84 @@ const TABS = [
 
 type TabId = typeof TABS[number]['id'];
 const SIGNABLE_CONFIDENCE_THRESHOLD = 40;
+
+type MetricTarget = 'confidence' | 'feasibility' | 'both';
+
+const inferCheckpointMetricTarget = (item: CheckpointItem): MetricTarget => {
+  const component = (item.target_component || '').toLowerCase();
+  if (component === 'risk_coverage' || component === 'implementation_feasibility' || component === 'logic_consistency') {
+    return 'both';
+  }
+  if (item.label.includes('撤退') || item.label.includes('最悪ケース') || item.label.includes('Gate')) {
+    return 'both';
+  }
+  return 'confidence';
+};
+
+const inferFindingMetricTarget = (finding: ReviewFinding): MetricTarget => {
+  const category = (finding.category || '').toUpperCase();
+  if (category === 'TIMELINE_UNREALISTIC') return 'feasibility';
+  if (category === 'OVER_OPTIMISM' || category === 'RESPONSIBILITY_GAP') return 'both';
+  if ((finding.score_improvements || []).some((si) =>
+    /feasib|可行|実装|timeline|期間|risk|リスク|依存|cost|コスト/i.test(si.target_score || '')
+  )) {
+    return 'both';
+  }
+  return 'confidence';
+};
+
+const metricTargetBadge = (target: MetricTarget): { label: string; className: string } => {
+  if (target === 'feasibility') {
+    return { label: '可行度', className: 'text-cyan-300 border-cyan-500/40 bg-cyan-500/10' };
+  }
+  if (target === 'both') {
+    return { label: '両方', className: 'text-violet-300 border-violet-500/40 bg-violet-500/10' };
+  }
+  return { label: '信頼度', className: 'text-emerald-300 border-emerald-500/40 bg-emerald-500/10' };
+};
+
+const parsePathFeasibility = (path: RecommendedPath, judgmentFramework: unknown): number => {
+  const framework = (judgmentFramework && typeof judgmentFramework === 'object')
+    ? (judgmentFramework as { gate_results?: Record<string, boolean[] | undefined>; should_scores?: Record<string, number[] | undefined> })
+    : {};
+  const legacyProbability = Number(path.success_probability ?? 0);
+  if (legacyProbability > 0) {
+    return Math.max(0, Math.min(100, Math.round(legacyProbability * 100)));
+  }
+
+  const conditional = path.conditional_evaluation;
+  const successCount = Math.min(3, conditional?.success_conditions?.length ?? 0);
+  const riskCount = Math.min(3, conditional?.risk_factors?.length ?? 0);
+  const failureCount = Math.min(3, conditional?.failure_modes?.length ?? 0);
+  const hasBasis = Boolean((conditional?.probability_basis || '').trim());
+
+  const reversibilityRatio = path.reversibility === 'HIGH' ? 0.85 : path.reversibility === 'LOW' ? 0.45 : 0.65;
+
+  const gateResults = framework.gate_results ?? {};
+  const pathGates = gateResults[path.path_id] ?? [];
+  const gatePassRatio = pathGates.length > 0 ? pathGates.filter(Boolean).length / pathGates.length : 0.6;
+
+  const shouldScores = framework.should_scores ?? {};
+  const pathScores = shouldScores[path.path_id] ?? [];
+  const shouldRatio = pathScores.length > 0
+    ? pathScores.map((score) => Math.max(1, Math.min(5, Number(score || 3)))).reduce((a, b) => a + b, 0) / pathScores.length / 5
+    : 0.6;
+
+  const successRatio = successCount / 3;
+  const riskRatio = riskCount / 3;
+  const failureRatio = failureCount / 3;
+  const downsideRatio = (riskRatio + failureRatio) / 2;
+  const basisBonus = hasBasis ? 0.05 : 0;
+  const ratio = (
+    0.30 * successRatio +
+    0.20 * gatePassRatio +
+    0.15 * shouldRatio +
+    0.20 * reversibilityRatio +
+    0.15 * Math.max(0, 1 - downsideRatio) +
+    basisBonus
+  );
+  return Math.max(0, Math.min(100, Math.round(ratio * 100)));
+};
 
 /** パスカード（v3.1: 条件付き評価対応） */
 const PathCard: React.FC<{ path: RecommendedPath; isRecommended?: boolean }> = ({
@@ -226,15 +304,34 @@ export const ReportPage: React.FC = () => {
   const [showSignedAnimation, setShowSignedAnimation] = useState(false);
   // v3.2: チェックポイント適用後の分析信頼度（null = バックエンド値をそのまま使用）
   const [recalculatedConfidence, setRecalculatedConfidence] = useState<number | null>(null);
+  const [recalculatedFeasibility, setRecalculatedFeasibility] = useState<number | null>(null);
   const [signThresholdPct, setSignThresholdPct] = useState<number>(SIGNABLE_CONFIDENCE_THRESHOLD);
   const [scoreBreakdown, setScoreBreakdown] = useState<{
-    base: number;
-    checkpoint: number;
-    finding: number;
-    llm: number;
-    final: number;
-    signatureEligible: boolean;
+    confidence: {
+      base: number;
+      checkpoint: number;
+      finding: number;
+      llm: number;
+      final: number;
+      signatureEligible: boolean;
+    };
+    feasibility: {
+      base: number;
+      checkpoint: number;
+      finding: number;
+      llm: number;
+      final: number;
+    };
     bonusReasons: string[];
+    contributions: {
+      source: 'checkpoint' | 'finding' | 'llm_bonus';
+      item_key: string;
+      label: string;
+      target_metric: MetricTarget;
+      confidence_boost_pct: number;
+      feasibility_boost_pct: number;
+      note?: string | null;
+    }[];
   } | null>(null);
 
   // レポートがない場合は入力画面へ
@@ -243,6 +340,18 @@ export const ReportPage: React.FC = () => {
       setPage('input');
     }
   }, [report, setPage]);
+
+  // マウント時に署名状態を復元
+  useEffect(() => {
+    const checkId = reportId || requestId;
+    if (!checkId || signatureStatus === 'signed') return;
+    decisionApi.getSignature(checkId).then((sigInfo) => {
+      if (sigInfo.signed && sigInfo.signature) {
+        setSignatureStatus('signed');
+        setSignatureData(sigInfo.signature as Parameters<typeof setSignatureData>[0]);
+      }
+    }).catch(() => {/* silent fail */});
+  }, [reportId, requestId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** PDF エクスポート */
   const handleExportPdf = useCallback(async () => {
@@ -476,10 +585,11 @@ export const ReportPage: React.FC = () => {
   const rawConfidencePct = Math.round((safeReview?.confidence_score ?? 0) * 100);
   const effectiveConfidencePct = recalculatedConfidence !== null ? recalculatedConfidence : rawConfidencePct;
 
-  // v3.2: 戦略可行度（FaAgentの推奨パス成功確率の最高値）
-  const feasibilityPct: number | null = safeFa.recommended_paths.length > 0
-    ? Math.round(Math.max(...safeFa.recommended_paths.map((p) => p.success_probability ?? 0)) * 100)
+  // v3.2: 戦略可行度（legacy success_probability または conditional_evaluation から算出）
+  const rawFeasibilityPct: number | null = safeFa.recommended_paths.length > 0
+    ? Math.max(...safeFa.recommended_paths.map((p) => parsePathFeasibility(p, safeFa.judgment_framework)))
     : null;
+  const effectiveFeasibilityPct = recalculatedFeasibility !== null ? recalculatedFeasibility : rawFeasibilityPct;
 
   const hasCheckedCheckpoint = safeReview.checkpoint_items?.some(
     (item) => checkpointChecks[item.item_id] ?? item.checked
@@ -515,15 +625,26 @@ export const ReportPage: React.FC = () => {
       });
 
       setRecalculatedConfidence(response.recalculated_confidence_pct);
+      setRecalculatedFeasibility(response.recalculated_feasibility_pct);
       setSignThresholdPct(response.threshold_pct);
       setScoreBreakdown({
-        base: response.base_confidence_pct,
-        checkpoint: response.checkpoint_boost_pct,
-        finding: response.finding_boost_pct,
-        llm: response.llm_bonus_pct,
-        final: response.recalculated_confidence_pct,
-        signatureEligible: response.signature_eligible,
+        confidence: {
+          base: response.base_confidence_pct,
+          checkpoint: response.checkpoint_boost_pct,
+          finding: response.finding_boost_pct,
+          llm: response.llm_bonus_pct,
+          final: response.recalculated_confidence_pct,
+          signatureEligible: response.signature_eligible,
+        },
+        feasibility: {
+          base: response.base_feasibility_pct,
+          checkpoint: response.checkpoint_feasibility_boost_pct,
+          finding: response.finding_feasibility_boost_pct,
+          llm: response.llm_feasibility_bonus_pct,
+          final: response.recalculated_feasibility_pct,
+        },
         bonusReasons: response.bonus_reasons ?? [],
+        contributions: response.applied_contributions ?? [],
       });
       setReportInStore({
         ...report,
@@ -531,7 +652,7 @@ export const ReportPage: React.FC = () => {
       });
       setNotification({
         type: 'success',
-        message: `${response.message} 分析信頼度: ${response.recalculated_confidence_pct}%${response.signature_eligible ? ' ✓ 署名可能' : ''}`,
+        message: `${response.message} 分析信頼度: ${response.recalculated_confidence_pct}% / 戦略可行度: ${response.recalculated_feasibility_pct}%${response.signature_eligible ? ' ✓ 署名可能' : ''}`,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'チェック項目の反映に失敗しました';
@@ -726,18 +847,21 @@ export const ReportPage: React.FC = () => {
                     戦略可行度（成功確率）
                     <span
                       className="ml-1 text-slate-600 cursor-help"
-                      title="FaAgentが戦略パス別に算出した事業成功確率の最高値。市場・財務・リスク等の多軸評価に基づく。"
+                      title="FaAgentの条件付き評価・ゲート通過率・可逆性・リスク情報から算出した実行可能性スコア。チェック反映で再計算されます。"
                     >ⓘ</span>
                   </div>
                   <div className={`text-3xl font-bold ${
-                    feasibilityPct === null ? 'text-slate-500' :
-                    feasibilityPct >= 70 ? 'text-emerald-400' :
-                    feasibilityPct >= 50 ? 'text-amber-400' : 'text-red-400'
+                    effectiveFeasibilityPct === null ? 'text-slate-500' :
+                    effectiveFeasibilityPct >= 70 ? 'text-emerald-400' :
+                    effectiveFeasibilityPct >= 50 ? 'text-amber-400' : 'text-red-400'
                   }`}>
-                    {feasibilityPct !== null ? `${feasibilityPct}%` : '—'}
+                    {effectiveFeasibilityPct !== null ? `${effectiveFeasibilityPct}%` : '—'}
                   </div>
-                  {feasibilityPct === null && (
+                  {effectiveFeasibilityPct === null && (
                     <div className="text-xs text-slate-600 mt-1">パス未生成</div>
+                  )}
+                  {recalculatedFeasibility !== null && (
+                    <div className="text-xs text-slate-500 mt-1">チェック反映済</div>
                   )}
                 </div>
               </div>
@@ -2085,14 +2209,17 @@ export const ReportPage: React.FC = () => {
                         <div className="text-right border-l border-white/10 pl-4">
                           <div className="text-xs text-slate-400 mb-1">戦略可行度（成功確率）</div>
                           <div className={`text-xl font-bold ${
-                            feasibilityPct === null ? 'text-slate-500' :
-                            feasibilityPct >= 70 ? 'text-emerald-400' :
-                            feasibilityPct >= 50 ? 'text-amber-400' : 'text-red-400'
+                            effectiveFeasibilityPct === null ? 'text-slate-500' :
+                            effectiveFeasibilityPct >= 70 ? 'text-emerald-400' :
+                            effectiveFeasibilityPct >= 50 ? 'text-amber-400' : 'text-red-400'
                           }`}>
-                            {feasibilityPct !== null ? `${feasibilityPct}%` : '—'}
+                            {effectiveFeasibilityPct !== null ? `${effectiveFeasibilityPct}%` : '—'}
                           </div>
-                          {feasibilityPct === null && (
+                          {effectiveFeasibilityPct === null && (
                             <div className="text-xs text-slate-600 mt-0.5">パス未生成</div>
+                          )}
+                          {recalculatedFeasibility !== null && (
+                            <div className="text-xs text-slate-500 mt-0.5">チェック反映済</div>
                           )}
                         </div>
                       </div>
@@ -2203,6 +2330,14 @@ export const ReportPage: React.FC = () => {
                                   className="rounded border-slate-500 bg-transparent"
                                 />
                                 {finding.minimal_patch?.checkbox_label || 'この対策案を確認した'}
+                                {(() => {
+                                  const badge = metricTargetBadge(inferFindingMetricTarget(finding));
+                                  return (
+                                    <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] ${badge.className}`}>
+                                      {badge.label}
+                                    </span>
+                                  );
+                                })()}
                               </label>
                               <textarea
                                 value={humanReviewNotes[i] ?? finding.minimal_patch?.default_value ?? ''}
@@ -2296,6 +2431,14 @@ export const ReportPage: React.FC = () => {
                               <div className="flex items-center gap-2">
                                 <span className="text-sm text-slate-300">{item.label}</span>
                                 <span className="text-xs text-emerald-400/70">+{item.score_boost}点</span>
+                                {(() => {
+                                  const badge = metricTargetBadge(inferCheckpointMetricTarget(item));
+                                  return (
+                                    <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] ${badge.className}`}>
+                                      {badge.label}
+                                    </span>
+                                  );
+                                })()}
                               </div>
                               {item.default_suggestion && (
                                 <div className="text-xs text-slate-500 mt-1">暫定案: {item.default_suggestion}</div>
@@ -2324,7 +2467,7 @@ export const ReportPage: React.FC = () => {
                               : 'bg-slate-800/50 text-slate-500 cursor-not-allowed border border-white/5'
                           }`}
                         >
-                          ⚡ 重新算分（checkbox固定加点 + 補足メモ加点）
+                          ⚡ 重新算分（信頼度 + 戦略可行度）
                         </button>
                       )}
 
@@ -2347,7 +2490,7 @@ export const ReportPage: React.FC = () => {
                               : 'bg-slate-800/50 text-slate-500 cursor-not-allowed border border-white/5'
                           }`}
                         >
-                          重新算分（checkbox固定加点 + 補足メモ加点）
+                          重新算分（信頼度 + 戦略可行度）
                         </button>
                       </div>
                     )}
@@ -2355,14 +2498,25 @@ export const ReportPage: React.FC = () => {
                   {scoreBreakdown && (
                     <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
                       <div className="text-sm font-medium text-emerald-300 mb-3">再計算内訳</div>
-                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-300">
-                        <div>基礎点: {scoreBreakdown.base}%</div>
-                        <div>checkpoint加点: +{scoreBreakdown.checkpoint}%</div>
-                        <div>finding加点: +{scoreBreakdown.finding}%</div>
-                        <div>LLM加点: +{scoreBreakdown.llm}%</div>
-                        <div className="font-semibold text-white">最終点: {scoreBreakdown.final}%</div>
-                        <div className={scoreBreakdown.signatureEligible ? 'text-emerald-300' : 'text-amber-300'}>
-                          署名可否: {scoreBreakdown.signatureEligible ? `可（${signThresholdPct}%以上）` : `不可（${signThresholdPct}%未満）`}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-slate-300">
+                        <div className="rounded border border-emerald-500/20 bg-black/20 p-3 space-y-1">
+                          <div className="font-medium text-emerald-300">分析信頼度</div>
+                          <div>基礎点: {scoreBreakdown.confidence.base}%</div>
+                          <div>checkpoint加点: +{scoreBreakdown.confidence.checkpoint}%</div>
+                          <div>finding加点: +{scoreBreakdown.confidence.finding}%</div>
+                          <div>LLM加点: +{scoreBreakdown.confidence.llm}%</div>
+                          <div className="font-semibold text-white">最終点: {scoreBreakdown.confidence.final}%</div>
+                          <div className={scoreBreakdown.confidence.signatureEligible ? 'text-emerald-300' : 'text-amber-300'}>
+                            署名可否: {scoreBreakdown.confidence.signatureEligible ? `可（${signThresholdPct}%以上）` : `不可（${signThresholdPct}%未満）`}
+                          </div>
+                        </div>
+                        <div className="rounded border border-cyan-500/20 bg-black/20 p-3 space-y-1">
+                          <div className="font-medium text-cyan-300">戦略可行度</div>
+                          <div>基礎点: {scoreBreakdown.feasibility.base}%</div>
+                          <div>checkpoint加点: +{scoreBreakdown.feasibility.checkpoint}%</div>
+                          <div>finding加点: +{scoreBreakdown.feasibility.finding}%</div>
+                          <div>LLM加点: +{scoreBreakdown.feasibility.llm}%</div>
+                          <div className="font-semibold text-white">最終点: {scoreBreakdown.feasibility.final}%</div>
                         </div>
                       </div>
                       {scoreBreakdown.bonusReasons.length > 0 && (
@@ -2370,6 +2524,27 @@ export const ReportPage: React.FC = () => {
                           {scoreBreakdown.bonusReasons.map((reason, idx) => (
                             <div key={`bonus-reason-${idx}`}>• {reason}</div>
                           ))}
+                        </div>
+                      )}
+                      {scoreBreakdown.contributions.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          <div className="text-xs text-slate-400">適用項目（影響範囲付き）</div>
+                          {scoreBreakdown.contributions.map((item) => {
+                            const badge = metricTargetBadge(item.target_metric);
+                            return (
+                              <div key={`${item.source}-${item.item_key}`} className="rounded border border-white/10 bg-black/20 p-2 text-xs text-slate-300">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-medium text-white">{item.label}</span>
+                                  <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] ${badge.className}`}>
+                                    {badge.label}
+                                  </span>
+                                  <span className="text-emerald-300">信頼度 +{item.confidence_boost_pct}%</span>
+                                  <span className="text-cyan-300">可行度 +{item.feasibility_boost_pct}%</span>
+                                </div>
+                                {item.note && <div className="text-slate-500 mt-1">メモ: {item.note}</div>}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
