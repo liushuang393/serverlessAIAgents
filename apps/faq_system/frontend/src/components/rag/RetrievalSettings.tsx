@@ -99,6 +99,7 @@ export function RetrievalSettings() {
 
             <div className="flex gap-2 mb-3">
               <input
+                data-testid="test-query-input"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && void handleTestQuery()}
@@ -114,6 +115,7 @@ export function RetrievalSettings() {
                 className="w-16 px-2 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white text-center"
               />
               <button
+                data-testid="run-test-query-button"
                 onClick={() => void handleTestQuery()}
                 disabled={testing || !query.trim()}
                 className="px-4 py-2 rounded-lg bg-[var(--primary)] text-black text-xs font-semibold hover:opacity-90 transition disabled:opacity-50 flex items-center gap-1.5"
@@ -123,11 +125,13 @@ export function RetrievalSettings() {
               </button>
             </div>
 
-            {results && (
-              <pre className="p-3 rounded-lg bg-black/30 text-xs text-white font-mono overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap">
-                {JSON.stringify(results, null, 2)}
-              </pre>
-            )}
+            <div data-testid="query-result-area">
+              {results && (
+                <pre className="p-3 rounded-lg bg-black/30 text-xs text-white font-mono overflow-x-auto max-h-64 overflow-y-auto whitespace-pre-wrap">
+                  {JSON.stringify(results, null, 2)}
+                </pre>
+              )}
+            </div>
           </div>
         </>
       )}

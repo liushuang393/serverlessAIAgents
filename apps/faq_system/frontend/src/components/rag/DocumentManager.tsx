@@ -100,6 +100,7 @@ export function DocumentManager() {
         <>
           {/* アップロードエリア */}
           <div
+            data-testid="upload-area"
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
             className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center hover:border-[var(--primary)]/30 hover:bg-white/[0.02] transition"

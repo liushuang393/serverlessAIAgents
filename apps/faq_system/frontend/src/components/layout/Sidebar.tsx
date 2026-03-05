@@ -123,6 +123,7 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                 </button>
                 <button
                     type="button"
+                    data-testid="nav-rag"
                     onClick={() => navigate('/rag')}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm transition-all ${
                         location.pathname === '/rag'

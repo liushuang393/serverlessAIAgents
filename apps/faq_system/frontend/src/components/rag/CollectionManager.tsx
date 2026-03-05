@@ -32,11 +32,44 @@ function CollectionForm({
 
   const isEdit = !!initial?.collection_name;
 
+  const PATTERNS: Record<string, { chunk_strategy: string; chunk_size: number; chunk_overlap: number; top_k: number }> = {
+    faq_precision: { chunk_strategy: 'sentence', chunk_size: 500, chunk_overlap: 80, top_k: 8 },
+    balanced_knowledge: { chunk_strategy: 'recursive', chunk_size: 800, chunk_overlap: 120, top_k: 6 },
+    long_doc_reasoning: { chunk_strategy: 'markdown', chunk_size: 1200, chunk_overlap: 180, top_k: 10 },
+  };
+
+  const applyPattern = (pattern: string) => {
+    const p = PATTERNS[pattern];
+    if (p) {
+      setChunkStrategy(p.chunk_strategy);
+      setChunkSize(p.chunk_size);
+      setChunkOverlap(p.chunk_overlap);
+      setTopK(p.top_k);
+    }
+  };
+
   return (
-    <div className="rounded-xl bg-white/[0.03] border border-white/10 p-5 space-y-4">
+    <div data-testid="collection-form-modal" className="rounded-xl bg-white/[0.03] border border-white/10 p-5 space-y-4">
       <h3 className="text-sm font-semibold text-white">
         {isEdit ? t('rag.edit_collection') : t('rag.create_collection')}
       </h3>
+
+      {!isEdit && (
+        <label className="block">
+          <span className="text-xs text-[var(--text-muted)]">パターンプリセット</span>
+          <select
+            data-testid="pattern-select"
+            defaultValue=""
+            onChange={(e) => applyPattern(e.target.value)}
+            className="mt-1 w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white"
+          >
+            <option value="">(手動設定)</option>
+            <option value="faq_precision">FAQ Precision</option>
+            <option value="balanced_knowledge">Balanced Knowledge</option>
+            <option value="long_doc_reasoning">Long Doc Reasoning</option>
+          </select>
+        </label>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <label className="block">
@@ -73,6 +106,7 @@ function CollectionForm({
         <label className="block">
           <span className="text-xs text-[var(--text-muted)]">{t('rag.chunk_strategy')}</span>
           <select
+            data-testid="chunk-strategy"
             value={chunkStrategy}
             onChange={(e) => setChunkStrategy(e.target.value)}
             className="mt-1 w-full px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white"
@@ -88,6 +122,7 @@ function CollectionForm({
         <label className="block">
           <span className="text-xs text-[var(--text-muted)]">{t('rag.chunk_size')}</span>
           <input
+            data-testid="chunk-size"
             type="number"
             value={chunkSize}
             onChange={(e) => setChunkSize(Number(e.target.value))}
@@ -218,6 +253,7 @@ export function CollectionManager() {
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-white">{t('rag.collections')}</h2>
         <button
+          data-testid="create-collection-button"
           onClick={() => { setShowForm(true); setEditing(null); }}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--primary)]/10 text-[var(--primary)] text-xs font-medium hover:bg-[var(--primary)]/20 transition border border-[var(--primary)]/20"
         >
@@ -248,7 +284,7 @@ export function CollectionManager() {
         </div>
       )}
 
-      <div className="space-y-2">
+      <div data-testid="collection-list" className="space-y-2">
         {collections.map((col) => (
           <div
             key={col.collection_name}

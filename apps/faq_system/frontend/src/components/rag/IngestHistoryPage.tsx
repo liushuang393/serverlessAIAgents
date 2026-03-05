@@ -55,7 +55,7 @@ export function IngestHistoryPage() {
         </div>
       )}
 
-      <div className="space-y-1.5">
+      <div data-testid="ingest-history-list" className="space-y-1.5">
         {ingestRuns.map((run) => {
           const s = STATUS_MAP[run.status] ?? STATUS_MAP.queued;
           const StatusIcon = s.icon;
