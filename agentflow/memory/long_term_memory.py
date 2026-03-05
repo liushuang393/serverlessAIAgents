@@ -173,6 +173,23 @@ class LongTermMemory:
             except Exception as e:
                 self._logger.exception(f"Consolidation error: {e}")
 
+    async def delete(self, entry_id: str) -> bool:
+        """記憶エントリを削除（更新キューも含む）.
+
+        Args:
+            entry_id: 記憶エントリID
+
+        Returns:
+            削除成功の場合True、エントリが存在しない場合False
+        """
+        if entry_id not in self._memories:
+            return False
+        del self._memories[entry_id]
+        # 対応する更新キューも削除
+        self._update_queues.pop(entry_id, None)
+        self._logger.debug(f"Deleted entry: {entry_id}")
+        return True
+
     def retrieve(
         self,
         topic: str | None = None,

@@ -153,3 +153,42 @@ class TestMemoryManager:
         assert len(high_importance) <= len(all_memories)
 
         await manager.stop()
+
+
+async def test_long_term_memory_delete() -> None:
+    """LongTermMemory.delete() が記憶と更新キューを両方削除することを確認."""
+    import datetime
+
+    from agentflow.memory.long_term_memory import LongTermMemory
+    from agentflow.memory.types import MemoryEntry, MemoryType
+
+    ltm = LongTermMemory(enable_auto_consolidation=False)
+    await ltm.start()
+
+    entry = MemoryEntry(
+        id="del-test-001",
+        content="削除テスト記憶",
+        topic="delete",
+        timestamp=datetime.datetime.now(),
+        memory_type=MemoryType.LONG_TERM,
+    )
+    await ltm.store(entry)
+    await ltm.update("del-test-001", {"importance_score": 0.9})
+
+    # 削除前は存在する
+    assert "del-test-001" in ltm._memories
+    assert "del-test-001" in ltm._update_queues
+
+    # 削除
+    result = await ltm.delete("del-test-001")
+    assert result is True
+
+    # 削除後は存在しない（メモリも更新キューも）
+    assert "del-test-001" not in ltm._memories
+    assert "del-test-001" not in ltm._update_queues
+
+    # 存在しないIDを削除してもFalseを返す
+    result2 = await ltm.delete("not-exist")
+    assert result2 is False
+
+    await ltm.stop()
