@@ -1,6 +1,7 @@
 """レポート関連APIルーター.
 
 エンドポイント:
+    - GET /api/report/{report_id}: レポートJSON取得
     - GET /api/report/{report_id}/pdf: PDF出力
     - GET /api/report/{report_id}/html: HTML出力
     - GET /api/report/{report_id}/components: A2UIコンポーネント
@@ -213,6 +214,27 @@ async def _get_report_from_db(report_id: str) -> Any:
         return None
 
 
+@router.get("/{report_id}")
+async def get_report(report_id: str) -> dict[str, Any]:
+    """レポート本体をJSONで取得."""
+    report = await _get_report_from_db(report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail=f"Report not found: {report_id}")
+
+    if hasattr(report, "model_dump"):
+        payload: dict[str, Any] = report.model_dump(mode="json")
+    elif isinstance(report, dict):
+        payload = dict(report)
+    else:
+        raise HTTPException(status_code=500, detail="Report serialization failed")
+
+    review = payload.get("review")
+    if isinstance(review, dict):
+        payload["review"] = enrich_review_with_policy(review)
+
+    return {"status": "success", "data": payload}
+
+
 @router.get("/{report_id}/pdf")
 async def export_report_pdf(report_id: str) -> StreamingResponse:
     """レポートをPDF形式でエクスポート.
@@ -242,7 +264,8 @@ async def export_report_pdf(report_id: str) -> StreamingResponse:
 
     try:
         generator = PDFGeneratorService()
-        pdf_bytes = generator.generate_pdf(report)
+        signed_data = _signed_reports.get(report_id)
+        pdf_bytes = generator.generate_pdf(report, signed_data=signed_data)
 
         content_type = "application/pdf"
         filename = f"decision_report_{report_id}.pdf"
@@ -278,7 +301,8 @@ async def export_report_html(report_id: str) -> StreamingResponse:
 
     try:
         generator = PDFGeneratorService()
-        html_bytes = generator.generate_html(report)
+        signed_data = _signed_reports.get(report_id)
+        html_bytes = generator.generate_html(report, signed_data=signed_data)
         filename = f"decision_report_{report_id}.html"
         return StreamingResponse(
             io.BytesIO(html_bytes),

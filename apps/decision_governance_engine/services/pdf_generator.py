@@ -34,11 +34,12 @@ class PDFGeneratorService:
             self._logger.warning("ReportLab not installed. PDF export is unavailable.")
             return False
 
-    def generate_pdf(self, report: DecisionReport) -> bytes:
+    def generate_pdf(self, report: DecisionReport, signed_data: dict | None = None) -> bytes:
         """PDFを生成.
 
         Args:
             report: 決策レポート
+            signed_data: 電子署名データ（オプション）
 
         Returns:
             PDFバイナリデータ
@@ -59,7 +60,7 @@ class PDFGeneratorService:
             raise RuntimeError(msg)
 
         try:
-            return self._generate_with_reportlab(report)
+            return self._generate_with_reportlab(report, signed_data=signed_data)
         except Exception as e:
             self._logger.error(
                 f"PDF generation failed: {type(e).__name__}: {e}",
@@ -68,12 +69,12 @@ class PDFGeneratorService:
             msg = f"PDF生成に失敗しました: {e}"
             raise RuntimeError(msg) from e
 
-    def generate_html(self, report: DecisionReport) -> bytes:
+    def generate_html(self, report: DecisionReport, signed_data: dict | None = None) -> bytes:
         """HTMLを生成."""
         if report is None:
             msg = "report cannot be None"
             raise ValueError(msg)
-        return self._generate_html_fallback(report)
+        return self._generate_html_fallback(report, signed_data=signed_data)
 
     def _to_dict(self, obj: Any) -> dict:
         """Pydanticオブジェクトまたはdictをdictに変換.
@@ -101,7 +102,7 @@ class PDFGeneratorService:
         self._logger.warning(f"Unexpected type in _to_dict: {type(obj).__name__}")
         return {}
 
-    def _generate_with_reportlab(self, report: DecisionReport) -> bytes:
+    def _generate_with_reportlab(self, report: DecisionReport, signed_data: dict | None = None) -> bytes:
         """ReportLabでPDF生成 v3.0（CJK対応・全フィールド出力）."""
         from reportlab.lib import colors
         from reportlab.lib.pagesizes import A4
@@ -149,13 +150,42 @@ class PDFGeneratorService:
 
         # CJK対応スタイル
         title_style = ParagraphStyle("CJKTitle", parent=styles["Title"], fontSize=18, fontName=cjk_font)
-        heading_style = ParagraphStyle("CJKHeading", parent=styles["Heading2"], fontName=cjk_font, spaceAfter=10)
+        heading_style = ParagraphStyle(
+            "CJKHeading", parent=styles["Heading2"], fontName=cjk_font, spaceAfter=6,
+            textColor=colors.white, backColor=colors.Color(0.24, 0.25, 0.48),
+            leftIndent=8, rightIndent=8, spaceBefore=12,
+        )
         subheading_style = ParagraphStyle("CJKSubHeading", parent=styles["Heading3"], fontName=cjk_font, fontSize=11)
         normal_style = ParagraphStyle(
             "CJKNormal", parent=styles["Normal"], fontName=cjk_font, spaceBefore=3, spaceAfter=3
         )
-        highlight_style = ParagraphStyle("CJKHighlight", parent=normal_style, backColor=colors.Color(0.9, 0.95, 1))
-        warning_style = ParagraphStyle("CJKWarning", parent=normal_style, backColor=colors.Color(1, 0.95, 0.9))
+        highlight_style = ParagraphStyle(
+            "CJKHighlight", parent=normal_style,
+            backColor=colors.Color(0.90, 0.93, 1.0), textColor=colors.black,
+        )
+        warning_style = ParagraphStyle(
+            "CJKWarning", parent=normal_style,
+            backColor=colors.Color(1.0, 0.95, 0.85), textColor=colors.black,
+        )
+        prohibition_style = ParagraphStyle(
+            "CJKProhibition", parent=normal_style,
+            backColor=colors.Color(1.0, 0.90, 0.90), textColor=colors.Color(0.6, 0.0, 0.0),
+        )
+
+        # セクションヘッダーを背景色付きTableとして生成するヘルパー
+        def section_header(text: str, bg: Any) -> Any:
+            t = Table([[text]], colWidths=[17 * cm])
+            t.setStyle(TableStyle([
+                ("BACKGROUND", (0, 0), (-1, -1), bg),
+                ("FONTNAME", (0, 0), (-1, -1), cjk_font),
+                ("FONTSIZE", (0, 0), (-1, -1), 13),
+                ("TEXTCOLOR", (0, 0), (-1, -1), colors.white),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("LEFTPADDING", (0, 0), (-1, -1), 12),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+            ]))
+            return t
 
         # ========== タイトル ==========
         elements.append(Paragraph(title_ja, title_style))
@@ -177,7 +207,8 @@ class PDFGeneratorService:
         elements.append(Spacer(1, 0.5 * cm))
 
         # ========== エグゼクティブサマリー ==========
-        elements.append(Paragraph("エグゼクティブサマリー", heading_style))
+        elements.append(section_header("エグゼクティブサマリー", colors.Color(0.24, 0.25, 0.48)))
+        elements.append(Spacer(1, 0.2 * cm))
         summary = report.executive_summary
         elements.append(Paragraph(f"<b>結論:</b> {summary.one_line_decision}", highlight_style))
 
@@ -198,7 +229,8 @@ class PDFGeneratorService:
         elements.append(Spacer(1, 0.5 * cm))
 
         # ========== 道セクション ==========
-        elements.append(Paragraph("道 - 本質分析", heading_style))
+        elements.append(section_header("道 - 本質分析", colors.Color(0.14, 0.36, 0.55)))
+        elements.append(Spacer(1, 0.2 * cm))
         problem_type = dao.get("problem_type", "N/A")
         if hasattr(problem_type, "value"):
             problem_type = problem_type.value
@@ -344,7 +376,8 @@ class PDFGeneratorService:
 
         # ========== 法セクション v3.1 ==========
         elements.append(PageBreak())
-        elements.append(Paragraph("法 - 戦略選定 v3.1", heading_style))
+        elements.append(section_header("法 - 戦略選定 v3.1", colors.Color(0.21, 0.42, 0.32)))
+        elements.append(Spacer(1, 0.2 * cm))
 
         # 戦略的禁止事項（仕組み化）
         prohibitions = fa.get("strategic_prohibitions", [])
@@ -468,7 +501,8 @@ class PDFGeneratorService:
         elements.append(Spacer(1, 0.3 * cm))
 
         # ========== 術セクション ==========
-        elements.append(Paragraph("術 - 実行計画", heading_style))
+        elements.append(section_header("術 - 実行計画", colors.Color(0.45, 0.30, 0.12)))
+        elements.append(Spacer(1, 0.2 * cm))
 
         # 最初の一歩
         first_action = shu.get("first_action", "")
@@ -543,7 +577,8 @@ class PDFGeneratorService:
 
         # ========== 器セクション ==========
         elements.append(PageBreak())
-        elements.append(Paragraph("器 - 技術実装", heading_style))
+        elements.append(section_header("器 - 技術実装", colors.Color(0.30, 0.20, 0.45)))
+        elements.append(Spacer(1, 0.2 * cm))
 
         # ドメイン固有技術
         domain_techs = qi.get("domain_technologies", [])
@@ -629,7 +664,8 @@ class PDFGeneratorService:
         elements.append(Spacer(1, 0.3 * cm))
 
         # ========== 検証セクション ==========
-        elements.append(Paragraph("検証 - 最終判定", heading_style))
+        elements.append(section_header("検証 - 最終判定", colors.Color(0.18, 0.35, 0.18)))
+        elements.append(Spacer(1, 0.2 * cm))
         verdict = review.get("overall_verdict", "N/A")
         if hasattr(verdict, "value"):
             verdict = verdict.value
@@ -649,29 +685,59 @@ class PDFGeneratorService:
         elements.append(Spacer(1, 0.5 * cm))
 
         # ========== 署名欄 ==========
-        elements.append(Paragraph("署名欄", heading_style))
-        sig_data = [
+        elements.append(section_header("署名欄", colors.Color(0.20, 0.20, 0.30)))
+        elements.append(Spacer(1, 0.2 * cm))
+
+        # 電子署名データまたは signature_block から承認者情報を取得
+        approver_name = ""
+        approver_dept = ""
+        approver_pos = ""
+        signed_at_display = ""
+        is_signed = False
+
+        if signed_data:
+            approver_name = signed_data.get("signed_by", "")
+            approver_dept = signed_data.get("department", "")
+            approver_pos = signed_data.get("position", "")
+            signed_at_display = signed_data.get("signed_at_display", "")
+            is_signed = True
+        elif sig_block.get("approver_name"):
+            approver_name = sig_block.get("approver_name", "")
+            approver_dept = sig_block.get("approver_department", "")
+            approver_pos = sig_block.get("approver_position", "")
+            signed_at_display = sig_block.get("approved_date", "")
+            is_signed = sig_block.get("is_signed", False)
+
+        sig_rows = [
             ["作成", "部署", author_dept, "役職", author_pos],
             ["", "氏名", author_name, "日付", created_date],
-            ["承認", "部署", "", "役職", ""],
-            ["", "氏名", "", "日付", ""],
+            ["承認", "部署", approver_dept, "役職", approver_pos],
+            ["", "氏名", approver_name, "日付", signed_at_display],
         ]
-        sig_table = Table(sig_data, colWidths=[1.6 * cm, 2.2 * cm, 6.0 * cm, 1.6 * cm, 4.6 * cm])
+        approval_bg = colors.Color(0.85, 0.95, 0.85) if is_signed else colors.Color(0.95, 0.95, 0.95)
+        sig_table = Table(sig_rows, colWidths=[1.6 * cm, 2.2 * cm, 6.0 * cm, 1.6 * cm, 4.6 * cm])
         sig_table.setStyle(
             TableStyle(
                 [
                     ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
                     ("FONTNAME", (0, 0), (-1, -1), cjk_font),
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.Color(0.95, 0.95, 0.95)),
+                    ("BACKGROUND", (0, 0), (-1, 1), colors.Color(0.95, 0.95, 0.95)),
+                    ("BACKGROUND", (0, 2), (-1, 3), approval_bg),
                 ]
             )
         )
         elements.append(sig_table)
 
+        if is_signed:
+            elements.append(Spacer(1, 0.2 * cm))
+            elements.append(Paragraph(
+                f"✓ 電子署名済み: {approver_name} ({signed_at_display})", highlight_style
+            ))
+
         doc.build(elements)
         return buffer.getvalue()
 
-    def _generate_html_fallback(self, report: DecisionReport) -> bytes:
+    def _generate_html_fallback(self, report: DecisionReport, signed_data: dict | None = None) -> bytes:
         """HTML形式での提案書出力 v3.1."""
         # Pydanticオブジェクトをdictに変換
         dao = self._to_dict(report.dao)
@@ -694,6 +760,32 @@ class PDFGeneratorService:
         author_dept = sig_block.get("author_department", "AI Decision Support")
         author_pos = sig_block.get("author_position", "AI Assistant")
         created_date = sig_block.get("created_date", report.created_at.strftime("%Y年%m月%d日"))
+
+        # 電子署名データまたは signature_block から承認者情報を取得
+        approver_name = ""
+        approver_dept = ""
+        approver_pos = ""
+        approver_date = ""
+        signed_badge = ""
+
+        if signed_data:
+            approver_name = signed_data.get("signed_by", "")
+            approver_dept = signed_data.get("department", "")
+            approver_pos = signed_data.get("position", "")
+            approver_date = signed_data.get("signed_at_display", "")
+            seal_text = approver_name[:2] if approver_name else "印"
+            signed_badge = (
+                f'<div class="success" style="text-align:center;margin-top:15px">'
+                f'✓ 電子署名済み: {approver_name} &nbsp; {approver_date}'
+                f'<div style="display:inline-block;width:80px;height:80px;border:3px solid #c53030;'
+                f'border-radius:50%;line-height:80px;text-align:center;color:#c53030;font-weight:bold;'
+                f'font-size:14px;margin-top:10px;margin-left:20px">{seal_text}</div></div>'
+            )
+        elif sig_block.get("approver_name"):
+            approver_name = sig_block.get("approver_name", "")
+            approver_dept = sig_block.get("approver_department", "")
+            approver_pos = sig_block.get("approver_position", "")
+            approver_date = sig_block.get("approved_date", "")
 
         # 各セクションの構築
         dao_html = self._build_dao_html(dao)
@@ -810,12 +902,12 @@ th{{background:#1f2937;font-weight:bold}}
 </tr>
 <tr>
 <th rowspan="2">承認</th>
-<th>部署</th><td></td>
-<th>役職</th><td></td>
+<th>部署</th><td>{approver_dept}</td>
+<th>役職</th><td>{approver_pos}</td>
 </tr>
 <tr>
-<th>氏名</th><td></td>
-<th>日付</th><td></td>
+<th>氏名</th><td>{approver_name}</td>
+<th>日付</th><td>{approver_date}</td>
 </tr>
 <tr>
 <th colspan="5" style="text-align:center;background:#fafafa">承認印</th>
@@ -826,6 +918,7 @@ th{{background:#1f2937;font-weight:bold}}
 </td>
 </tr>
 </table>
+{signed_badge}
 </div>
 
 <div class="footer">
