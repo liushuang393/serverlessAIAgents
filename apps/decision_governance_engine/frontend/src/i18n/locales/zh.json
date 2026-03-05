@@ -446,7 +446,12 @@
       "no_go": "不立项",
       "delay": "延后",
       "pilot": "试点"
-    }
+    },
+    "resume": "继续分析",
+    "detail": "详情",
+    "view_detail": "查看详情",
+    "detail_failed": "加载详情失败",
+    "back_to_report": "返回分析结果"
   },
   "knowledge": {
     "title": "知识库",

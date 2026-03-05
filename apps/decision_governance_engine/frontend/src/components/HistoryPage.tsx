@@ -22,7 +22,7 @@ const DECISION_ROLE_COLORS: Record<string, string> = {
 
 export const HistoryPage: React.FC = () => {
   const { t } = useI18n();
-  const { setPage, setQuestion, setRequestId, reset, loadFromHistory } = useDecisionStore();
+  const { setPage, setQuestion, setRequestId, reset, loadHistoryReport, previousPage } = useDecisionStore();
   const { user, performLogout } = useAuthStore();
 
   /** 決策結果のローカライズラベル */
@@ -38,6 +38,7 @@ export const HistoryPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
+  const [loadingDetailId, setLoadingDetailId] = useState<string | null>(null);
 
   // フィルター状態
   const [filterRole, setFilterRole] = useState<string>('');
@@ -76,7 +77,7 @@ export const HistoryPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [limit, filterRole, filterMode]);
+  }, [limit, filterRole, filterMode, t]);
 
   // 初回読み込み & フィルター変更時
   useEffect(() => {
@@ -100,7 +101,22 @@ export const HistoryPage: React.FC = () => {
     } finally {
       setExportingId(null);
     }
-  }, []);
+  }, [t]);
+
+  /** 詳細表示 (loadHistoryReport でレポートを復元) */
+  const handleViewDetail = useCallback(async (requestId: string) => {
+    setLoadingDetailId(requestId);
+    setError(null);
+    try {
+      await loadHistoryReport(requestId);
+      // loadHistoryReport already navigates to 'report'
+    } catch (err) {
+      const message = err instanceof Error ? err.message : (t('history.detail_failed') || '詳細の読み込みに失敗しました');
+      setError(message);
+    } finally {
+      setLoadingDetailId(null);
+    }
+  }, [loadHistoryReport, t]);
 
   /** ログアウト */
   const handleLogout = useCallback(async () => {
@@ -141,6 +157,15 @@ export const HistoryPage: React.FC = () => {
 
           {/* ナビゲーション */}
           <div className="flex items-center gap-4">
+            {previousPage === 'report' && (
+              <button
+                onClick={() => setPage('report')}
+                className="px-4 py-2 bg-indigo-700/30 hover:bg-indigo-700/50 text-indigo-300 rounded-lg text-sm flex items-center gap-2 transition-all"
+              >
+                <span aria-hidden="true">←</span>
+                {t('history.back_to_report') || '分析結果に戻る'}
+              </button>
+            )}
             <button
               onClick={() => setPage('input')}
               className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm flex items-center gap-2 transition-all"
@@ -300,16 +325,29 @@ export const HistoryPage: React.FC = () => {
                   {/* 右側: アクションボタン */}
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
+                      onClick={() => handleViewDetail(item.request_id)}
+                      disabled={loadingDetailId === item.request_id}
+                      className="px-3 py-2 bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 rounded-lg text-sm flex items-center gap-2 transition-all disabled:opacity-50"
+                      title={t('history.view_detail') || '詳細を表示'}
+                    >
+                      {loadingDetailId === item.request_id ? (
+                        <div className="w-4 h-4 border-2 border-violet-300/30 border-t-violet-300 rounded-full animate-spin" />
+                      ) : (
+                        <span>&#128269;</span>
+                      )}
+                      {t('history.detail') || '詳細'}
+                    </button>
+                    <button
                       onClick={() => {
                         setQuestion(item.question);
                         setRequestId(item.request_id);
                         setPage('processing');
                       }}
                       className="px-3 py-2 bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 rounded-lg text-sm flex items-center gap-2 transition-all"
-                      title={t('history.resume') || '再開'}
+                      title={t('history.resume')}
                     >
                       <span>🔄</span>
-                      {t('history.resume') || '再開'}
+                      {t('history.resume')}
                     </button>
                     <button
                       onClick={() => handleDownloadPdf(item.request_id)}

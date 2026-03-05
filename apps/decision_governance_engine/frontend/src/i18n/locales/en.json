@@ -446,7 +446,12 @@
       "no_go": "NO GO",
       "delay": "Delay",
       "pilot": "Pilot"
-    }
+    },
+    "resume": "Resume",
+    "detail": "Detail",
+    "view_detail": "View Detail",
+    "detail_failed": "Failed to load detail",
+    "back_to_report": "Back to Report"
   },
   "knowledge": {
     "title": "Knowledge Base",

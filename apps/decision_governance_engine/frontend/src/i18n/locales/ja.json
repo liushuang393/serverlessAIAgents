@@ -446,7 +446,12 @@
       "no_go": "不立項",
       "delay": "延後",
       "pilot": "パイロット"
-    }
+    },
+    "resume": "再開",
+    "detail": "詳細",
+    "view_detail": "詳細を表示",
+    "detail_failed": "詳細の読み込みに失敗しました",
+    "back_to_report": "分析結果に戻る"
   },
   "knowledge": {
     "title": "ナレッジベース",
