@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from agentflow.flow.graph import FlowGraph
+    from agentflow.memory.memory_manager import MemoryManager
 
 
 class MemoryAccessor:
@@ -97,8 +98,11 @@ class Flow:
         )
         self._initialized = False
 
-        # メモリアクセサー
+        # メモリアクセサー（Scratchpad: run毎にクリアされる）
         self.memory = MemoryAccessor(self._context)
+
+        # 長期記憶（オプション接続）。Scratchpadとは独立して管理される。
+        self._long_term_memory: MemoryManager | None = None
 
     async def _ensure_initialized(self) -> None:
         """すべてのAgentが初期化されていることを確認."""
@@ -147,6 +151,22 @@ class Flow:
         self._context.clear()
         async for event in self._executor.execute_stream(inputs):
             yield event
+
+    def attach_long_term_memory(self, manager: MemoryManager) -> None:
+        """長期記憶マネージャーを接続.
+
+        Scratchpad（flow.memory）とは独立して管理される。
+        flow.run()/run_stream()を呼んでもこの記憶はクリアされない。
+
+        Args:
+            manager: 接続するMemoryManagerインスタンス
+        """
+        self._long_term_memory = manager
+
+    @property
+    def long_term_memory(self) -> MemoryManager | None:
+        """長期記憶マネージャー（Noneの場合は未接続）."""
+        return self._long_term_memory
 
     async def cleanup(self) -> None:
         """すべてのAgentリソースをクリーンアップ."""
