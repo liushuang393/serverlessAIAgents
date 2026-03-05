@@ -1,4 +1,5 @@
 ---
+category: ai_assistant
 name: chatbot
 description: |
   マルチターン対話管理 Skill。会話履歴管理、コンテキスト維持、Agent 連携、RAG 統合をサポート。

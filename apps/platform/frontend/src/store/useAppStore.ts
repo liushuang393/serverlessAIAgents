@@ -12,6 +12,7 @@ import type {
   AppSummaryResponse,
   HealthCheckResult,
   RAGOverviewResponse,
+  SkillCategoryGroup,
   SkillInfo,
   TagInfo,
 } from '@/types';
@@ -22,11 +23,21 @@ import {
   fetchApps,
   fetchRAGOverview,
   fetchSkills,
+  fetchSkillsGrouped,
   fetchSkillTags,
   fetchSummary,
   refreshApps,
   searchSkills,
 } from '@/api/client';
+
+interface LoadAppsOptions {
+  waitForHealth?: boolean;
+  silent?: boolean;
+}
+
+interface LoadAppDetailOptions {
+  waitForHealth?: boolean;
+}
 
 interface AppState {
   /** App 一覧 */
@@ -46,6 +57,7 @@ interface AppState {
   /* --- Phase 3: Skill --- */
   skills: SkillInfo[];
   skillTags: TagInfo[];
+  skillGroups: SkillCategoryGroup[];
 
   /* --- Phase 3: RAG --- */
   ragOverview: RAGOverviewResponse | null;
@@ -56,11 +68,11 @@ interface AppState {
   error: string | null;
 
   /** App 一覧をロード */
-  loadApps: () => Promise<void>;
+  loadApps: (options?: LoadAppsOptions) => Promise<void>;
   /** サマリーをロード */
   loadSummary: () => Promise<void>;
   /** App 詳細をロード */
-  loadAppDetail: (name: string) => Promise<void>;
+  loadAppDetail: (name: string, options?: LoadAppDetailOptions) => Promise<void>;
   /** ヘルスチェック実行 */
   checkHealth: (name: string) => Promise<void>;
   /** App 一覧を再スキャン */
@@ -69,6 +81,7 @@ interface AppState {
   /* --- Phase 3 アクション --- */
   loadAgents: () => Promise<void>;
   loadSkills: () => Promise<void>;
+  loadSkillsGrouped: () => Promise<void>;
   searchSkillsByTag: (tag: string) => Promise<void>;
   loadRAGOverview: () => Promise<void>;
 
@@ -85,18 +98,33 @@ export const useAppStore = create<AppState>((set) => ({
   agents: [],
   skills: [],
   skillTags: [],
+  skillGroups: [],
   ragOverview: null,
   loading: false,
   error: null,
 
-  loadApps: async () => {
-    set({ loading: true, error: null });
+  loadApps: async (options) => {
+    const waitForHealth = options?.waitForHealth ?? false;
+    const silent = options?.silent ?? false;
+    if (silent) {
+      set({ error: null });
+    } else {
+      set({ loading: true, error: null });
+    }
     try {
-      const res = await fetchApps();
-      set({ apps: res.apps, totalApps: res.total, loading: false });
+      const res = await fetchApps({ waitForHealth });
+      if (silent) {
+        set((state) => ({ apps: res.apps, totalApps: res.total, loading: state.loading }));
+      } else {
+        set({ apps: res.apps, totalApps: res.total, loading: false });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'App 一覧の取得に失敗';
-      set({ error: message, loading: false });
+      if (silent) {
+        set({ error: message });
+      } else {
+        set({ error: message, loading: false });
+      }
     }
   },
 
@@ -110,10 +138,12 @@ export const useAppStore = create<AppState>((set) => ({
     }
   },
 
-  loadAppDetail: async (name: string) => {
+  loadAppDetail: async (name: string, options) => {
     set({ loading: true, error: null, selectedApp: null });
     try {
-      const detail = await fetchAppDetail(name);
+      const detail = await fetchAppDetail(name, {
+        waitForHealth: options?.waitForHealth ?? false,
+      });
       set({ selectedApp: detail, loading: false });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'App 詳細の取得に失敗';
@@ -136,7 +166,7 @@ export const useAppStore = create<AppState>((set) => ({
     set({ loading: true, error: null });
     try {
       await refreshApps();
-      const res = await fetchApps();
+      const res = await fetchApps({ waitForHealth: true });
       const summary = await fetchSummary();
       set({
         apps: res.apps,
@@ -180,6 +210,17 @@ export const useAppStore = create<AppState>((set) => ({
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Skill 一覧の取得に失敗';
+      set({ error: message, loading: false });
+    }
+  },
+
+  loadSkillsGrouped: async () => {
+    set({ loading: true, error: null });
+    try {
+      const res = await fetchSkillsGrouped();
+      set({ skillGroups: res.groups, loading: false });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'カテゴリ別 Skill 一覧の取得に失敗';
       set({ error: message, loading: false });
     }
   },

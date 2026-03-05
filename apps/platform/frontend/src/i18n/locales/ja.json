@@ -200,7 +200,15 @@
     "filter_tag": "Filter by Tag",
     "all": "All",
     "trigger_words": "Trigger Words",
-    "no_skills": "No skills found"
+    "no_skills": "No skills found",
+    "cat_common": "共通・基盤",
+    "cat_code_development": "コード開発・DevOps",
+    "cat_web_search": "Web 検索・情報収集",
+    "cat_enterprise_office": "企業オフィス",
+    "cat_ad_marketing": "広告・マーケティング",
+    "cat_enterprise_workflow": "企業ワークフロー",
+    "cat_ai_assistant": "AI アシスタント",
+    "cat_media_creative": "メディア・クリエイティブ"
   },
   "rag_overview": {
     "title": "RAG Overview",

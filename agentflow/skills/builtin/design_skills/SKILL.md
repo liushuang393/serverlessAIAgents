@@ -1,4 +1,5 @@
 ---
+category: media_creative
 name: design-skills
 description: >
   自然言語ブリーフから、プロ品質の複数デザイン画像セットを生成。

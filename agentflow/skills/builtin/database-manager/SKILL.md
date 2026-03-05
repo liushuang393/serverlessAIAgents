@@ -1,4 +1,5 @@
 ---
+category: code_development
 name: database-manager
 description: |
   データベース管理を統一的に扱うインターフェース。

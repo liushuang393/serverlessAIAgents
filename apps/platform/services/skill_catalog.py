@@ -28,6 +28,143 @@ _FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n", re.DOTALL)
 # デフォルトのビルトインスキルディレクトリ
 _DEFAULT_SKILLS_DIR = "agentflow/skills/builtin"
 
+# ------------------------------------------------------------------
+# 利用シナリオベースのカテゴリ定義
+# ------------------------------------------------------------------
+
+# カテゴリ ID → 表示順序（UI のセクション並び順に使用）
+SKILL_CATEGORIES: dict[str, dict[str, Any]] = {
+    "common": {
+        "order": 0,
+        "icon": "🔧",
+    },
+    "code_development": {
+        "order": 1,
+        "icon": "💻",
+    },
+    "web_search": {
+        "order": 2,
+        "icon": "🔍",
+    },
+    "enterprise_office": {
+        "order": 3,
+        "icon": "🏢",
+    },
+    "ad_marketing": {
+        "order": 4,
+        "icon": "📢",
+    },
+    "enterprise_workflow": {
+        "order": 5,
+        "icon": "⚙️",
+    },
+    "ai_assistant": {
+        "order": 6,
+        "icon": "🤖",
+    },
+    "media_creative": {
+        "order": 7,
+        "icon": "🎨",
+    },
+}
+
+# タグ・名前キーワードからカテゴリを推論するマッピング
+_CATEGORY_INFERENCE_MAP: dict[str, str] = {
+    # common（共通基盤）
+    "retrieval": "common",
+    "knowledge": "common",
+    "search": "common",
+    "core-skill": "common",
+    "authentication": "common",
+    "security": "common",
+    "identity": "common",
+    "export": "common",
+    "backup": "common",
+    # code_development（コード開発・DevOps）
+    "code-analysis": "code_development",
+    "migration": "code_development",
+    "scaffolding": "code_development",
+    "fullstack": "code_development",
+    "docker": "code_development",
+    "database": "code_development",
+    "alembic": "code_development",
+    "workflow": "code_development",
+    "development": "code_development",
+    "agile": "code_development",
+    "deployment": "code_development",
+    "infrastructure": "code_development",
+    "serverless": "code_development",
+    "backend": "code_development",
+    # web_search（Web検索・情報収集）
+    "trend-analysis": "web_search",
+    "market-intelligence": "web_search",
+    "news-analysis": "web_search",
+    "sentiment": "web_search",
+    "web-search": "web_search",
+    # enterprise_office（企業オフィス）
+    "calendar": "enterprise_office",
+    "schedule": "enterprise_office",
+    "meeting": "enterprise_office",
+    "productivity": "enterprise_office",
+    "analytics": "enterprise_office",
+    "business-intelligence": "enterprise_office",
+    # ad_marketing（広告・マーケティング）
+    "ecommerce": "ad_marketing",
+    "cross-border": "ad_marketing",
+    # enterprise_workflow（企業ワークフロー）
+    "payment": "enterprise_workflow",
+    "billing": "enterprise_workflow",
+    "subscription": "enterprise_workflow",
+    # ai_assistant（AIアシスタント）
+    "conversation": "ai_assistant",
+    "dialogue": "ai_assistant",
+    "assistant": "ai_assistant",
+    "voice": "ai_assistant",
+    "speech": "ai_assistant",
+    "audio": "ai_assistant",
+    "tts": "ai_assistant",
+    "stt": "ai_assistant",
+    # media_creative（メディア・クリエイティブ）
+    "design": "media_creative",
+    "image-generation": "media_creative",
+    "comfyui": "media_creative",
+    "creative": "media_creative",
+    "vision": "media_creative",
+    "image": "media_creative",
+    "ocr": "media_creative",
+    "multimodal": "media_creative",
+}
+
+
+def infer_category(tags: list[str], name: str) -> str:
+    """タグとスキル名からカテゴリを推論する.
+
+    Args:
+        tags: スキルのタグ一覧
+        name: スキル名
+
+    Returns:
+        推論されたカテゴリ ID
+    """
+    # タグからの推論（出現頻度が高いカテゴリを採用）
+    category_votes: dict[str, int] = {}
+    for tag in tags:
+        tag_lower = tag.lower().strip()
+        cat = _CATEGORY_INFERENCE_MAP.get(tag_lower)
+        if cat:
+            category_votes[cat] = category_votes.get(cat, 0) + 1
+
+    if category_votes:
+        return max(category_votes, key=lambda k: category_votes[k])
+
+    # 名前ベースのフォールバック
+    name_lower = name.lower()
+    for keyword, cat in _CATEGORY_INFERENCE_MAP.items():
+        if keyword in name_lower:
+            return cat
+
+    return "common"
+
 
 class SkillInfo:
     """スキルメタデータ.
@@ -46,6 +183,7 @@ class SkillInfo:
 
     __slots__ = (
         "author",
+        "category",
         "description",
         "examples",
         "label",
@@ -71,6 +209,7 @@ class SkillInfo:
         requirements: list[str] | None = None,
         examples: list[str] | None = None,
         path: str = "",
+        category: str = "",
     ) -> None:
         """初期化."""
         self.name = name
@@ -84,6 +223,7 @@ class SkillInfo:
         self.requirements = requirements or []
         self.examples = examples or []
         self.path = path
+        self.category = category
 
     def to_dict(self) -> dict[str, Any]:
         """辞書に変換."""
@@ -99,6 +239,7 @@ class SkillInfo:
             "requirements": self.requirements,
             "examples": self.examples,
             "path": self.path,
+            "category": self.category,
         }
 
 
@@ -208,6 +349,68 @@ class SkillCatalogService:
         }
 
     # ------------------------------------------------------------------
+    # カテゴリ関連メソッド
+    # ------------------------------------------------------------------
+
+    def get_categories(self) -> list[dict[str, Any]]:
+        """利用可能なカテゴリ一覧を取得.
+
+        Returns:
+            カテゴリ情報のリスト（表示順ソート済み）
+        """
+        # 各カテゴリに属するスキル数をカウント
+        cat_counts: dict[str, int] = {}
+        for skill in self._skills.values():
+            cat_counts[skill.category] = cat_counts.get(skill.category, 0) + 1
+
+        result = []
+        for cat_id, meta in SKILL_CATEGORIES.items():
+            result.append({
+                "id": cat_id,
+                "icon": meta["icon"],
+                "order": meta["order"],
+                "skill_count": cat_counts.get(cat_id, 0),
+            })
+        return sorted(result, key=lambda x: x["order"])
+
+    def get_skills_by_category(self, category: str) -> list[SkillInfo]:
+        """指定カテゴリのスキルを取得.
+
+        Args:
+            category: カテゴリ ID
+
+        Returns:
+            マッチした SkillInfo のリスト（名前順）
+        """
+        return sorted(
+            [s for s in self._skills.values() if s.category == category],
+            key=lambda s: s.name,
+        )
+
+    def get_skills_grouped_by_category(self) -> list[dict[str, Any]]:
+        """全スキルをカテゴリ別にグループ化して取得.
+
+        Returns:
+            カテゴリ情報とスキルリストを含む辞書のリスト（表示順ソート済み）
+        """
+        grouped: dict[str, list[SkillInfo]] = {}
+        for skill in self._skills.values():
+            grouped.setdefault(skill.category, []).append(skill)
+
+        result = []
+        for cat_id, meta in sorted(SKILL_CATEGORIES.items(), key=lambda x: x[1]["order"]):
+            skills = sorted(grouped.get(cat_id, []), key=lambda s: s.name)
+            if not skills:
+                continue
+            result.append({
+                "id": cat_id,
+                "icon": meta["icon"],
+                "order": meta["order"],
+                "skills": [s.to_dict() for s in skills],
+            })
+        return result
+
+    # ------------------------------------------------------------------
     # 内部メソッド
     # ------------------------------------------------------------------
 
@@ -228,6 +431,13 @@ class SkillCatalogService:
             name = str(data.get("name", skill_md_path.parent.name))
             raw_tags = self._ensure_list(data.get("tags"))
             canonical_tags = self._capability_registry.canonicalize_many(raw_tags)
+            # カテゴリ: frontmatter に明示指定があればそれを使い、なければ推論
+            raw_category = str(data.get("category", "")).strip()
+            if raw_category and raw_category in SKILL_CATEGORIES:
+                category = raw_category
+            else:
+                category = infer_category(raw_tags, name)
+
             skill = SkillInfo(
                 name=name,
                 label=str(data.get("label", name)),
@@ -242,6 +452,7 @@ class SkillCatalogService:
                 path=str(
                     skill_md_path.relative_to(Path.cwd()) if skill_md_path.is_relative_to(Path.cwd()) else skill_md_path
                 ),
+                category=category,
             )
             self._skills[name] = skill
         except Exception as exc:

@@ -1,4 +1,5 @@
 ---
+category: web_search
 name: market-trend-analysis
 description: |
   市場動向分析Skill。ニュース・技術記事からトレンド抽出、キーワード分析、センチメント評価を実行。

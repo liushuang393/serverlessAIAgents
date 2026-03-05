@@ -6,7 +6,11 @@ FastAPI TestClient を使用してエンドポイントを検証する。
 
 from __future__ import annotations
 
+import asyncio
+import time
 from typing import TYPE_CHECKING
+
+from apps.platform.services.app_lifecycle import AppStatus, HealthCheckResult
 
 
 if TYPE_CHECKING:
@@ -18,7 +22,7 @@ class TestListApps:
 
     def test_returns_app_list(self, test_client: TestClient) -> None:
         """App 一覧を返す."""
-        resp = test_client.get("/api/studios/framework/apps")
+        resp = test_client.get("/api/studios/framework/apps?wait_for_health=true")
         assert resp.status_code == 200
         data = resp.json()
         assert "apps" in data
@@ -27,7 +31,7 @@ class TestListApps:
 
     def test_app_item_structure(self, test_client: TestClient) -> None:
         """各 App アイテムに必要なフィールドがある."""
-        resp = test_client.get("/api/studios/framework/apps")
+        resp = test_client.get("/api/studios/framework/apps?wait_for_health=true")
         items = resp.json()["apps"]
         assert len(items) > 0
         item = items[0]
@@ -50,7 +54,7 @@ class TestListApps:
 
     def test_business_surface_hides_internal_fields(self, test_client: TestClient) -> None:
         """business surface では内部設定を返さない."""
-        resp = test_client.get("/api/studios/framework/apps?surface_profile=business")
+        resp = test_client.get("/api/studios/framework/apps?surface_profile=business&wait_for_health=true")
         assert resp.status_code == 200
         item = resp.json()["apps"][0]
         assert "contracts" not in item
@@ -59,6 +63,39 @@ class TestListApps:
         assert "config_path" not in item
         assert "runtime" in item
         assert set(item["runtime"].keys()) == {"urls"}
+
+    def test_default_non_blocking_starts_unknown(self, test_client: TestClient) -> None:
+        """デフォルトは non-blocking のため初回は unknown を返せる."""
+        resp = test_client.get("/api/studios/framework/apps")
+        assert resp.status_code == 200
+        statuses = {item["status"] for item in resp.json()["apps"]}
+        assert statuses == {"unknown"}
+        # 背景タスクの取りこぼしを防ぐため、同一 client で drain する
+        drain = test_client.get("/api/studios/framework/apps?wait_for_health=true")
+        assert drain.status_code == 200
+
+    def test_wait_for_health_true_blocks(self, test_client: TestClient) -> None:
+        """wait_for_health=true はヘルス完了待機を維持する."""
+        from apps.platform.routers import apps as apps_router
+
+        lifecycle = apps_router._get_lifecycle()
+        original_check_health = lifecycle.check_health
+
+        async def _slow_check_health(*args, **kwargs):
+            await asyncio.sleep(0.2)
+            config = args[0]
+            return HealthCheckResult(app_name=config.name, status=AppStatus.HEALTHY)
+
+        lifecycle.check_health = _slow_check_health  # type: ignore[method-assign]
+        try:
+            started = time.perf_counter()
+            resp = test_client.get("/api/studios/framework/apps?wait_for_health=true")
+            elapsed = time.perf_counter() - started
+        finally:
+            lifecycle.check_health = original_check_health  # type: ignore[method-assign]
+
+        assert resp.status_code == 200
+        assert elapsed >= 0.18
 
 
 class TestGetSummary:
@@ -78,7 +115,7 @@ class TestGetAppDetail:
 
     def test_existing_app(self, test_client: TestClient) -> None:
         """存在する App の詳細を返す."""
-        resp = test_client.get("/api/studios/framework/apps/test_app")
+        resp = test_client.get("/api/studios/framework/apps/test_app?wait_for_health=true")
         assert resp.status_code == 200
         data = resp.json()
         assert data["name"] == "test_app"
@@ -97,7 +134,7 @@ class TestGetAppDetail:
 
     def test_business_surface_hides_internal_fields(self, test_client: TestClient) -> None:
         """business surface では底層フィールドを返さない."""
-        resp = test_client.get("/api/studios/framework/apps/test_app?surface_profile=business")
+        resp = test_client.get("/api/studios/framework/apps/test_app?surface_profile=business&wait_for_health=true")
         assert resp.status_code == 200
         data = resp.json()
         assert "entry_points" not in data
@@ -106,6 +143,40 @@ class TestGetAppDetail:
         assert "visibility" not in data
         assert "config_path" not in data
         assert data["run_flow"] == ["template", "data_permissions", "run", "artifacts"]
+
+    def test_default_non_blocking_returns_immediately(self, test_client: TestClient) -> None:
+        """詳細 API はデフォルトで non-blocking."""
+        started = time.perf_counter()
+        resp = test_client.get("/api/studios/framework/apps/test_app")
+        elapsed = time.perf_counter() - started
+        assert resp.status_code == 200
+        assert elapsed < 0.15
+        # 背景タスクの取りこぼしを防ぐため、同一 client で drain する
+        drain = test_client.get("/api/studios/framework/apps/test_app?wait_for_health=true")
+        assert drain.status_code == 200
+
+    def test_wait_for_health_true_blocks(self, test_client: TestClient) -> None:
+        """詳細 API でも wait_for_health=true は待機する."""
+        from apps.platform.routers import apps as apps_router
+
+        lifecycle = apps_router._get_lifecycle()
+        original_check_health = lifecycle.check_health
+
+        async def _slow_check_health(*args, **kwargs):
+            await asyncio.sleep(0.2)
+            config = args[0]
+            return HealthCheckResult(app_name=config.name, status=AppStatus.HEALTHY)
+
+        lifecycle.check_health = _slow_check_health  # type: ignore[method-assign]
+        try:
+            started = time.perf_counter()
+            resp = test_client.get("/api/studios/framework/apps/test_app?wait_for_health=true")
+            elapsed = time.perf_counter() - started
+        finally:
+            lifecycle.check_health = original_check_health  # type: ignore[method-assign]
+
+        assert resp.status_code == 200
+        assert elapsed >= 0.18
 
 
 class TestCheckAppHealth:

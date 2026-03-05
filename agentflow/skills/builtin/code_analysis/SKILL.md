@@ -1,4 +1,5 @@
 ---
+category: code_development
 name: code-analysis
 description: コード分析・移行のための包括的なスキルセット。静的分析、複雑度評価、依存関係マッピング、セキュリティスキャン、移行計画を提供。
 version: "1.0.0"

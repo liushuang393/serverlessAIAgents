@@ -1,4 +1,5 @@
 ---
+category: ai_assistant
 name: voice
 description: 音声認識・合成機能。OpenAI Whisper / TTS を使用した音声処理スキル。
 version: 1.0.0

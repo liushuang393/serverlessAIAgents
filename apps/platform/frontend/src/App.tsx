@@ -5,20 +5,24 @@
  * Layout コンポーネントでサイドバー + コンテンツ構成。
  */
 
+import { Suspense, lazy, type ReactNode } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Layout } from '@/components/Layout';
 import { Dashboard } from '@/components/Dashboard';
-import { AppList } from '@/components/AppList';
-import { AppDetail } from '@/components/AppDetail';
-import { AgentBrowser } from '@/components/AgentBrowser';
-import { AgentOrchestration } from '@/components/AgentOrchestration';
-import { AgentPatterns } from '@/components/AgentPatterns';
-import { SkillCatalog } from '@/components/SkillCatalog';
-import { RAGDashboard } from '@/components/rag/RAGDashboard';
-import { MCPManager } from '@/components/MCPManager';
-import { CLIReference } from '@/components/CLIReference';
-import { LLMManagement } from '@/components/LLMManagement';
-import { Settings } from '@/components/Settings';
+
+const AppList = lazy(async () => ({ default: (await import('@/components/AppList')).AppList }));
+const AppDetail = lazy(async () => ({ default: (await import('@/components/AppDetail')).AppDetail }));
+const AgentBrowser = lazy(async () => ({ default: (await import('@/components/AgentBrowser')).AgentBrowser }));
+const AgentOrchestration = lazy(
+  async () => ({ default: (await import('@/components/AgentOrchestration')).AgentOrchestration }),
+);
+const AgentPatterns = lazy(async () => ({ default: (await import('@/components/AgentPatterns')).AgentPatterns }));
+const SkillCatalog = lazy(async () => ({ default: (await import('@/components/SkillCatalog')).SkillCatalog }));
+const RAGDashboard = lazy(async () => ({ default: (await import('@/components/rag/RAGDashboard')).RAGDashboard }));
+const MCPManager = lazy(async () => ({ default: (await import('@/components/MCPManager')).MCPManager }));
+const CLIReference = lazy(async () => ({ default: (await import('@/components/CLIReference')).CLIReference }));
+const LLMManagement = lazy(async () => ({ default: (await import('@/components/LLMManagement')).LLMManagement }));
+const Settings = lazy(async () => ({ default: (await import('@/components/Settings')).Settings }));
 
 /** 404 フォールバック */
 function NotFound() {
@@ -43,22 +47,34 @@ function NotFound() {
   );
 }
 
+function RouteFallback() {
+  return (
+    <div className="flex justify-center items-center h-full py-24">
+      <div className="w-10 h-10 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin" />
+    </div>
+  );
+}
+
+function withSuspense(node: ReactNode) {
+  return <Suspense fallback={<RouteFallback />}>{node}</Suspense>;
+}
+
 export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
         <Route index element={<Dashboard />} />
-        <Route path="apps" element={<AppList />} />
-        <Route path="apps/:name" element={<AppDetail />} />
-        <Route path="agents" element={<AgentBrowser />} />
-        <Route path="agent-orchestration" element={<AgentOrchestration />} />
-        <Route path="agent-patterns" element={<AgentPatterns />} />
-        <Route path="skills" element={<SkillCatalog />} />
-        <Route path="rag" element={<RAGDashboard />} />
-        <Route path="mcp" element={<MCPManager />} />
-        <Route path="cli" element={<CLIReference />} />
-        <Route path="llm-management" element={<LLMManagement />} />
-        <Route path="settings" element={<Settings />} />
+        <Route path="apps" element={withSuspense(<AppList />)} />
+        <Route path="apps/:name" element={withSuspense(<AppDetail />)} />
+        <Route path="agents" element={withSuspense(<AgentBrowser />)} />
+        <Route path="agent-orchestration" element={withSuspense(<AgentOrchestration />)} />
+        <Route path="agent-patterns" element={withSuspense(<AgentPatterns />)} />
+        <Route path="skills" element={withSuspense(<SkillCatalog />)} />
+        <Route path="rag" element={withSuspense(<RAGDashboard />)} />
+        <Route path="mcp" element={withSuspense(<MCPManager />)} />
+        <Route path="cli" element={withSuspense(<CLIReference />)} />
+        <Route path="llm-management" element={withSuspense(<LLMManagement />)} />
+        <Route path="settings" element={withSuspense(<Settings />)} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>

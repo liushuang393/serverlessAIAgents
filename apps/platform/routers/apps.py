@@ -350,6 +350,9 @@ def _schedule_health_prime(
             _health_prime_task = None
         try:
             done_task.result()
+        except asyncio.CancelledError:
+            # サーバー終了時などのキャンセルはノイズにしない
+            pass
         except Exception as exc:
             _logger.warning("health cache prefetch failed: %s", exc)
 
@@ -364,7 +367,7 @@ def _schedule_health_prime(
 @router.get("")
 async def list_apps(
     wait_for_health: bool = Query(
-        default=True,
+        default=False,
         description="true の場合はヘルスチェック完了を待ってから返す",
     ),
     include_runtime: bool = Query(
@@ -608,6 +611,10 @@ async def create_app(request: AppCreateRequest) -> dict[str, Any]:
 @router.get("/{app_name}")
 async def get_app_detail(
     app_name: str,
+    wait_for_health: bool = Query(
+        default=False,
+        description="true の場合はヘルスチェック完了を待ってから返す",
+    ),
     surface_profile: Literal["business", "developer", "operator"] = Query(
         default="developer",
         description="表示面プロファイル（business は底層設定を非表示）",
@@ -621,15 +628,18 @@ async def get_app_detail(
     discovery = _get_discovery()
     lifecycle = _get_lifecycle()
     config = _get_app_or_404(discovery, app_name)
-    await lifecycle.check_health(
-        config,
-        config_path=discovery.get_config_path(app_name),
-    )
+    config_path = discovery.get_config_path(app_name)
+    if wait_for_health:
+        await lifecycle.check_health(
+            config,
+            config_path=config_path,
+        )
+    elif lifecycle.get_cached_health(app_name) is None:
+        _schedule_health_prime(lifecycle, discovery, [config])
 
     cached = lifecycle.get_cached_health(app_name)
     status = cached.status.value if cached else AppStatus.UNKNOWN.value
 
-    config_path = discovery.get_config_path(app_name)
     runtime = _runtime_payload(config)
     base_payload: dict[str, Any] = {
         "name": config.name,

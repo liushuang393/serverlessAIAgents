@@ -1,4 +1,5 @@
 ---
+category: enterprise_workflow
 name: stripe-payment
 description: |
   Stripe 決済連携を統一的に扱うインターフェース。

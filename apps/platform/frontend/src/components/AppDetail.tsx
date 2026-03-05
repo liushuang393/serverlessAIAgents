@@ -30,11 +30,8 @@ export function AppDetail() {
 
   useEffect(() => {
     if (name) {
-      const load = async () => {
-        await checkHealth(name);
-        await loadAppDetail(name);
-      };
-      void load();
+      void loadAppDetail(name, { waitForHealth: false });
+      void checkHealth(name);
     }
   }, [name, loadAppDetail, checkHealth]);
 
@@ -67,7 +64,7 @@ export function AppDetail() {
       const result = await handler(name);
       setActionResult(result);
       await checkHealth(name);
-      await loadAppDetail(name);
+      await loadAppDetail(name, { waitForHealth: false });
     } catch (err: unknown) {
       let message: string;
       if (axios.isAxiosError(err)) {
@@ -155,7 +152,7 @@ export function AppDetail() {
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-xl font-bold text-slate-100">{app.display_name}</h1>
-              <AppHealthBadge status={app.status} />
+              <AppHealthBadge status={health?.status ?? app.status} />
             </div>
             <p className="text-xs text-slate-500 mb-2">{app.name} · v{app.version}</p>
             {app.description && (
@@ -195,7 +192,7 @@ export function AppDetail() {
               onClick={async () => {
                 if (!name) return;
                 await checkHealth(name);
-                await loadAppDetail(name);
+                await loadAppDetail(name, { waitForHealth: false });
               }}
               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors"
             >

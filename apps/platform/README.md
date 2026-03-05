@@ -91,6 +91,8 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
 - `GET /api/studios/framework/apps/{app_name}/cli/status`
 - `POST /api/studios/framework/apps/{app_name}/cli/setup`
 - `GET /api/studios/framework/llm/overview`
+- `GET /api/studios/framework/llm/catalog`
+- `GET /api/studios/framework/llm/diagnostics`
 - `GET /api/studios/framework/llm/providers/runtime`
 - `GET /api/studios/framework/llm/engines/status`
 - `PUT /api/studios/framework/llm/providers`
@@ -98,6 +100,16 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
 - `PUT /api/studios/framework/llm/models`
 - `PUT /api/studios/framework/llm/registry`
 - `PUT /api/studios/framework/llm/routing-policy`
+- `POST /api/studios/framework/llm/preflight`
+- `POST /api/studios/framework/llm/switch`
+- `POST /api/studios/framework/llm/setup-and-switch`
+
+### App 一覧/詳細 API の `wait_for_health` 挙動
+
+- `GET /api/studios/framework/apps` は既定で `wait_for_health=false`（non-blocking）。
+- `GET /api/studios/framework/apps/{app_name}` も既定で `wait_for_health=false`。
+- non-blocking 応答では一時的に `status=unknown` を返すことがあります。
+- 旧来の「ヘルスチェック完了待ち」を使う場合は `?wait_for_health=true` を指定してください。
 
 ## LLM Gateway 運用（LiteLLM 内蔵）
 
@@ -105,7 +117,10 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
 - 正本設定: `.agentflow/llm_gateway.yaml`
 - 秘密情報解決順: `ENV > .env > unavailable`
 - 標準 role: `reasoning / coding / cheap / local`
-- UI は `LLM Management` から Provider / Engine / Registry / Routing Policy を編集する。
+- UI は `LLM Management` で `Quick Setup & Switch`（provider/model/backend + auto setup）を実行できる。
+- Advanced Mode では従来の JSON 編集（Provider / Engine / Registry / Routing Policy）も継続利用できる。
+- `setup-and-switch` は preflight が `failed` または `dry_run` の場合、設定を変更しない。
+- `/llm-management` で 404 が出る場合は backend の旧プロセスが残っている可能性が高い。backend を再起動し、`/openapi.json` に `/api/studios/framework/llm/*` が含まれることを確認する。
 
 詳細手順: [docs/internal/llm-gateway-setup-ja.md](../../docs/internal/llm-gateway-setup-ja.md)
 

@@ -88,12 +88,18 @@ export function AppList() {
   });
 
   useEffect(() => {
-    loadApps();
+    void loadApps({ waitForHealth: false });
     fetchPortConflicts()
       .then((report) => setConflicts(report))
       .catch(() => {
         setConflicts(null);
       });
+    const timer = window.setTimeout(() => {
+      void loadApps({ waitForHealth: false, silent: true });
+    }, 3000);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [loadApps]);
 
   /** 再スキャン */

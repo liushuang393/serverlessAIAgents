@@ -126,3 +126,116 @@ class TestGetSkillDetail:
         assert resp.status_code == 404
         detail = resp.json()["detail"]
         assert detail["error_code"] == "SKILL_NOT_FOUND"
+
+
+# ------------------------------------------------------------------
+# カテゴリ関連 API エンドポイント E2E テスト
+# ------------------------------------------------------------------
+
+
+class TestGetCategories:
+    """GET /api/studios/framework/skills/categories テスト."""
+
+    def test_returns_categories(self, phase3_test_client: TestClient) -> None:
+        """カテゴリ一覧を返す."""
+        resp = phase3_test_client.get("/api/studios/framework/skills/categories")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "categories" in data
+        assert "total" in data
+        assert data["total"] == 8
+
+    def test_category_structure(self, phase3_test_client: TestClient) -> None:
+        """各カテゴリに必要なフィールドがある."""
+        resp = phase3_test_client.get("/api/studios/framework/skills/categories")
+        categories = resp.json()["categories"]
+        for cat in categories:
+            assert "id" in cat
+            assert "icon" in cat
+            assert "order" in cat
+            assert "skill_count" in cat
+
+    def test_sorted_by_order(self, phase3_test_client: TestClient) -> None:
+        """order 順でソートされている."""
+        resp = phase3_test_client.get("/api/studios/framework/skills/categories")
+        categories = resp.json()["categories"]
+        orders = [c["order"] for c in categories]
+        assert orders == sorted(orders)
+
+
+class TestGetSkillsGrouped:
+    """GET /api/studios/framework/skills/grouped テスト."""
+
+    def test_returns_grouped(self, phase3_test_client: TestClient) -> None:
+        """グループ化されたスキル一覧を返す."""
+        resp = phase3_test_client.get("/api/studios/framework/skills/grouped")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "groups" in data
+        assert len(data["groups"]) > 0
+
+    def test_group_structure(self, phase3_test_client: TestClient) -> None:
+        """各グループに id, icon, order, skills がある."""
+        resp = phase3_test_client.get("/api/studios/framework/skills/grouped")
+        groups = resp.json()["groups"]
+        for group in groups:
+            assert "id" in group
+            assert "icon" in group
+            assert "order" in group
+            assert "skills" in group
+            assert isinstance(group["skills"], list)
+            assert len(group["skills"]) > 0
+
+    def test_sorted_by_order(self, phase3_test_client: TestClient) -> None:
+        """order 順でソートされている."""
+        resp = phase3_test_client.get("/api/studios/framework/skills/grouped")
+        groups = resp.json()["groups"]
+        orders = [g["order"] for g in groups]
+        assert orders == sorted(orders)
+
+    def test_skills_have_category_field(self, phase3_test_client: TestClient) -> None:
+        """各スキルに category フィールドがある."""
+        resp = phase3_test_client.get("/api/studios/framework/skills/grouped")
+        groups = resp.json()["groups"]
+        for group in groups:
+            for skill in group["skills"]:
+                assert "category" in skill
+                assert skill["category"] == group["id"]
+
+    def test_total_skills_match(self, phase3_test_client: TestClient) -> None:
+        """グループ内スキル数合計が /skills の total と一致."""
+        grouped_resp = phase3_test_client.get("/api/studios/framework/skills/grouped")
+        list_resp = phase3_test_client.get("/api/studios/framework/skills")
+        grouped_total = sum(
+            len(g["skills"]) for g in grouped_resp.json()["groups"]
+        )
+        assert grouped_total == list_resp.json()["total"]
+
+
+class TestGetSkillsByCategory:
+    """GET /api/studios/framework/skills/category/{category_id} テスト."""
+
+    def test_valid_category(self, phase3_test_client: TestClient) -> None:
+        """有効なカテゴリ ID でスキル一覧を返す."""
+        resp = phase3_test_client.get("/api/studios/framework/skills/category/ai_assistant")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "skills" in data
+        assert "category" in data
+        assert data["category"] == "ai_assistant"
+        assert "total" in data
+
+    def test_empty_category(self, phase3_test_client: TestClient) -> None:
+        """スキルが存在しないカテゴリは空リストを返す."""
+        resp = phase3_test_client.get("/api/studios/framework/skills/category/ad_marketing")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total"] == 0
+        assert data["skills"] == []
+
+    def test_unknown_category_returns_empty(self, phase3_test_client: TestClient) -> None:
+        """未知のカテゴリ ID は空リストを返す（404 ではない）."""
+        resp = phase3_test_client.get("/api/studios/framework/skills/category/nonexistent")
+        assert resp.status_code == 200
+        assert resp.json()["total"] == 0
+        assert resp.json()["skills"] == []

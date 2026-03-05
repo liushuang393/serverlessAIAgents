@@ -1,4 +1,5 @@
 ---
+category: web_search
 name: knowledge-discovery
 description: >
   社内 FAQ、SQL データ分析、保守支援を統合するスキル。

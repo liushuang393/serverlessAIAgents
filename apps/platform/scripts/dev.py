@@ -86,6 +86,11 @@ def main():
         # Override default args if provided
         cmd = [sys.executable, "-m", target_module, *sys.argv[1:]]
 
+    user_args = sys.argv[1:]
+    if (not user_args or user_args[0] == "serve") and "--reload" not in user_args:
+        print("Hint: backend hot reload is disabled for this run.")
+        print("      Use: python apps/platform/scripts/dev.py serve --reload")
+
     print(f"Starting application: {' '.join(cmd)}")
 
     # Replace current process

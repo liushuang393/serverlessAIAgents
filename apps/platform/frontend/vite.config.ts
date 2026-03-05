@@ -39,6 +39,10 @@ export default defineConfig({
         target: `http://localhost:${API_PORT}`,
         changeOrigin: true,
       },
+      '/openapi.json': {
+        target: `http://localhost:${API_PORT}`,
+        changeOrigin: true,
+      },
     },
   },
   test: {

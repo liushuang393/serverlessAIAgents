@@ -1,4 +1,5 @@
 ---
+category: ad_marketing
 name: ecommerce-operations
 description: 越境 EC 運営向けの包括的スキルセット。競合調査、価格分析、Listing 生成、在庫調整、広告監視、日報生成を提供。
 version: "1.0.0"

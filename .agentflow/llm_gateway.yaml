@@ -1,0 +1,134 @@
+gateway:
+  default_role: reasoning
+  request_timeout_seconds: 120
+  max_retries: 2
+providers:
+- name: openai
+  api_base: https://api.openai.com/v1
+  api_key_env: OPENAI_API_KEY
+  models: []
+  enabled: true
+- name: anthropic
+  api_base: https://api.anthropic.com
+  api_key_env: ANTHROPIC_API_KEY
+  models: []
+  enabled: true
+- name: google
+  api_base: https://generativelanguage.googleapis.com
+  api_key_env: GEMINI_API_KEY
+  models: []
+  enabled: true
+- name: local
+  api_base: http://127.0.0.1:4000
+  api_key_env: null
+  models: []
+  enabled: true
+inference_engines:
+- name: vllm
+  engine_type: vllm
+  base_url: http://127.0.0.1:8001
+  health_path: /health
+  metrics_path: /metrics
+  model_list_path: /v1/models
+  enabled: false
+- name: sglang
+  engine_type: sglang
+  base_url: http://127.0.0.1:30000
+  health_path: /health
+  metrics_path: /metrics
+  model_list_path: /v1/models
+  enabled: false
+- name: tgi
+  engine_type: tgi
+  base_url: http://127.0.0.1:8080
+  health_path: /health
+  metrics_path: /metrics
+  model_list_path: /v1/models
+  enabled: false
+models:
+- alias: reasoning_claude
+  provider: anthropic
+  model: claude-sonnet-4-20250514
+  api_base: null
+  api_key_env: null
+  engine: null
+  enabled: true
+  modalities:
+  - text
+  - tool_call
+  quality_score: 0.95
+  avg_latency_ms: 1200.0
+  cost:
+    input_per_1k: 0.003
+    output_per_1k: 0.015
+- alias: coding_openai
+  provider: openai
+  model: gpt-4o
+  api_base: null
+  api_key_env: null
+  engine: null
+  enabled: true
+  modalities:
+  - text
+  - tool_call
+  quality_score: 0.9
+  avg_latency_ms: 900.0
+  cost:
+    input_per_1k: 0.005
+    output_per_1k: 0.015
+- alias: cheap_gemini
+  provider: google
+  model: gemini-2.0-flash
+  api_base: null
+  api_key_env: null
+  engine: null
+  enabled: true
+  modalities:
+  - text
+  - tool_call
+  quality_score: 0.75
+  avg_latency_ms: 600.0
+  cost:
+    input_per_1k: 0.0002
+    output_per_1k: 0.0008
+- alias: local_qwen2
+  provider: local
+  model: qwen2
+  api_base: http://127.0.0.1:8001/v1
+  api_key_env: null
+  engine: null
+  enabled: true
+  modalities:
+  - text
+  - tool_call
+  - embedding
+  - audio
+  - image
+  quality_score: 0.65
+  avg_latency_ms: 500.0
+  cost:
+    input_per_1k: 0.0
+    output_per_1k: 0.0
+registry:
+  reasoning: reasoning_claude
+  coding: coding_openai
+  cheap: cheap_gemini
+  local: local_qwen2
+routing_policy:
+  priority: latency
+  fallback_chain:
+    reasoning:
+    - coding_openai
+    - cheap_gemini
+    - local_qwen2
+    coding:
+    - reasoning_claude
+    - cheap_gemini
+    - local_qwen2
+    cheap:
+    - coding_openai
+    - local_qwen2
+    local:
+    - cheap_gemini
+  load_balance_strategy: round_robin
+  cost_budget: null

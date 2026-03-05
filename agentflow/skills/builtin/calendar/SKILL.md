@@ -1,4 +1,5 @@
 ---
+category: enterprise_office
 name: calendar
 description: カレンダースキル。イベント管理、空き時間検索、会議スケジューリング。
 version: 1.0.0

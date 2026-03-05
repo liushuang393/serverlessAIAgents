@@ -1,4 +1,5 @@
 ---
+category: code_development
 name: db-migration
 description: |
   Alembic を使用した DB マイグレーション管理スキル。

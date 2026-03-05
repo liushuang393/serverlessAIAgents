@@ -1,4 +1,5 @@
 ---
+category: common
 name: auth-provider
 description: |
   認証プロバイダを統一的に扱うインターフェース。

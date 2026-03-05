@@ -1,4 +1,5 @@
 ---
+category: common
 name: rag
 description: |
   検索増強生成（RAG）Skill。知識ベースへのドキュメント追加、意味検索、LLM 回答生成をサポート。

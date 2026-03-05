@@ -404,6 +404,17 @@ export interface AgentsByBusinessBaseResponse {
   total_groups: number;
 }
 
+/** スキルカテゴリ ID */
+export type SkillCategoryId =
+  | 'common'
+  | 'code_development'
+  | 'web_search'
+  | 'enterprise_office'
+  | 'ad_marketing'
+  | 'enterprise_workflow'
+  | 'ai_assistant'
+  | 'media_creative';
+
 /** Skill 情報 */
 export interface SkillInfo {
   name: string;
@@ -415,13 +426,43 @@ export interface SkillInfo {
   tags_legacy?: string[];
   triggers: string[];
   requirements?: string[];
+  examples?: string[];
   path: string;
+  category: SkillCategoryId;
 }
 
 /** Skill 一覧レスポンス */
 export interface SkillListResponse {
   skills: SkillInfo[];
   total: number;
+}
+
+/** カテゴリ情報 */
+export interface SkillCategoryInfo {
+  id: SkillCategoryId;
+  icon: string;
+  order: number;
+  skill_count: number;
+}
+
+/** カテゴリ一覧レスポンス */
+export interface SkillCategoriesResponse {
+  categories: SkillCategoryInfo[];
+  total: number;
+}
+
+/** カテゴリ別グループ */
+export interface SkillCategoryGroup {
+  id: SkillCategoryId;
+  icon: string;
+  order: number;
+  skills: SkillInfo[];
+}
+
+/** カテゴリ別グループレスポンス */
+export interface SkillGroupedResponse {
+  groups: SkillCategoryGroup[];
+  total_categories: number;
 }
 
 /** Skill 統計レスポンス */
@@ -1013,4 +1054,150 @@ export interface LLMManagementOverviewResponse {
     cost_budget: number | null;
     budget_exceeded: boolean;
   };
+  config_version?: string | null;
+}
+
+export type LLMManagementProviderKind =
+  | 'openai'
+  | 'anthropic'
+  | 'google'
+  | 'ollama'
+  | 'azure_openai'
+  | 'openrouter'
+  | 'deepseek'
+  | 'custom'
+  | 'local';
+
+export type LLMBackendKind = 'none' | 'vllm' | 'sglang' | 'tgi';
+
+export interface LLMCatalogProvider {
+  name: LLMManagementProviderKind;
+  canonical_name: string;
+  aliases: string[];
+  requires_api_key: boolean;
+  default_api_key_env: string | null;
+  default_api_base: string | null;
+  recommended_models: string[];
+  install_recipes: string[][];
+}
+
+export interface LLMCatalogModel {
+  alias: string;
+  provider: string;
+  model: string;
+  capabilities: string[];
+  context_window: number;
+  recommended_for: string[];
+}
+
+export interface LLMCatalogBackend {
+  name: LLMBackendKind;
+  display_name: string;
+  default_base_url: string;
+  default_health_path: string;
+  install_recipes: string[][];
+  start_recipes: string[][];
+}
+
+export interface LLMCatalogResponse {
+  providers: LLMCatalogProvider[];
+  backends: LLMCatalogBackend[];
+  models: LLMCatalogModel[];
+  generated_at: string;
+}
+
+export interface LLMPreflightRequest {
+  providers: LLMManagementProviderKind[];
+  backends: LLMBackendKind[];
+  auto_install: boolean;
+  auto_start: boolean;
+  health_check: boolean;
+  dry_run: boolean;
+}
+
+export interface LLMSetupCommandResult {
+  command: string[];
+  cwd: string | null;
+  return_code: number | null;
+  stdout: string;
+  stderr: string;
+  timed_out: boolean;
+  allowed: boolean;
+  error: string | null;
+}
+
+export interface LLMPreflightStep {
+  category: 'provider' | 'backend';
+  target: string;
+  phase: 'detect' | 'install' | 'start' | 'health' | 'validate';
+  status: 'success' | 'failed' | 'skipped' | 'dry_run';
+  message: string;
+  command: LLMSetupCommandResult | null;
+  remediation: string[];
+}
+
+export interface LLMPreflightReport {
+  status: 'success' | 'failed' | 'partial' | 'dry_run';
+  started_at: string;
+  completed_at: string;
+  request: LLMPreflightRequest;
+  steps: LLMPreflightStep[];
+  summary: string;
+}
+
+export interface LLMSwitchRequest {
+  provider: LLMManagementProviderKind;
+  model: string;
+  backend: LLMBackendKind;
+  roles: string[];
+  model_alias: string | null;
+  auto_enable_provider: boolean;
+  update_fallback_chain: boolean;
+  validate_runtime: boolean;
+}
+
+export interface LLMSwitchDiffItem {
+  field: string;
+  before: string | null;
+  after: string | null;
+}
+
+export interface LLMSwitchRuntimeCheck {
+  provider_status: string | null;
+  backend_status: string | null;
+  errors: string[];
+}
+
+export interface LLMSwitchResponse {
+  success: boolean;
+  rolled_back: boolean;
+  config_version: string | null;
+  applied_alias: string | null;
+  registry: Record<string, string>;
+  diffs: LLMSwitchDiffItem[];
+  runtime_check: LLMSwitchRuntimeCheck;
+  message: string;
+}
+
+export interface LLMSetupAndSwitchRequest {
+  preflight: LLMPreflightRequest;
+  switch: LLMSwitchRequest;
+}
+
+export interface LLMSetupAndSwitchResponse {
+  preflight: LLMPreflightReport;
+  switch: LLMSwitchResponse | null;
+  success: boolean;
+  message: string;
+}
+
+export interface LLMDiagnosticsResponse {
+  has_llm_routes: boolean;
+  route_count: number;
+  config_path: string;
+  config_exists: boolean;
+  config_version: string | null;
+  last_preflight: LLMPreflightReport | null;
+  hints: string[];
+  server_time: string;
 }

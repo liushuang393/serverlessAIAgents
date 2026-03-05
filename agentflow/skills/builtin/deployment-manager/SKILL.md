@@ -1,4 +1,5 @@
 ---
+category: code_development
 name: deployment-manager
 description: |
   デプロイ管理を統一的に扱うインターフェース。

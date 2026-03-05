@@ -16,8 +16,14 @@ export function Dashboard() {
     useAppStore();
 
   useEffect(() => {
-    loadApps();
-    loadSummary();
+    void loadApps({ waitForHealth: false });
+    void loadSummary();
+    const timer = window.setTimeout(() => {
+      void loadApps({ waitForHealth: false, silent: true });
+    }, 3000);
+    return () => {
+      window.clearTimeout(timer);
+    };
   }, [loadApps, loadSummary]);
 
   return (

@@ -125,11 +125,16 @@ Platform API で App が正しく認識されることを確認:
 curl -X POST http://localhost:8000/api/studios/framework/apps/refresh
 
 # 新規 App が表示されることを確認
-curl http://localhost:8000/api/studios/framework/apps/inventory_manager
+curl "http://localhost:8000/api/studios/framework/apps/inventory_manager?wait_for_health=true"
 
 # ヘルスチェック
 curl http://localhost:8000/api/studios/framework/apps/inventory_manager/health
 ```
+
+補足:
+
+- `GET /api/studios/framework/apps` と `GET /api/studios/framework/apps/{app}` は既定で `wait_for_health=false`（non-blocking）。
+- 安定検証（待機）をしたい場合は `?wait_for_health=true` を付与する。
 
 ### ⑦ デプロイ
 

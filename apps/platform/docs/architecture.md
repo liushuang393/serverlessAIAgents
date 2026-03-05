@@ -156,6 +156,13 @@ sequenceDiagram
     FE-->>U: ステータス更新 🟢
 ```
 
+### 4.1 App 一覧/詳細 API の応答方針（2026-03）
+
+- `GET /api/studios/framework/apps` は既定で `wait_for_health=false`（non-blocking）。
+- `GET /api/studios/framework/apps/{app_name}` も既定で `wait_for_health=false`。
+- 初回応答は `status=unknown` を許容し、ヘルスはバックグラウンドで更新する。
+- ヘルス完了待機が必要な呼び出しは `?wait_for_health=true` を指定する。
+
 ---
 
 ## 5. 技術スタック

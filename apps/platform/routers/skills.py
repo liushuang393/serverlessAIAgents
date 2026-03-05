@@ -3,7 +3,10 @@
 GET  /api/studios/framework/skills              — 全スキル一覧
 GET  /api/studios/framework/skills/stats        — スキル統計
 GET  /api/studios/framework/skills/tags         — 全タグ一覧
+GET  /api/studios/framework/skills/categories   — カテゴリ一覧
+GET  /api/studios/framework/skills/grouped      — カテゴリ別グループ一覧
 GET  /api/studios/framework/skills/search       — タグベース検索
+GET  /api/studios/framework/skills/category/{category_id} — カテゴリ別スキル一覧
 GET  /api/studios/framework/skills/{skill_name} — スキル詳細
 """
 
@@ -69,6 +72,38 @@ async def list_tags() -> dict[str, Any]:
     catalog = _get_catalog()
     tags = catalog.all_tags()
     return {"tags": tags, "total": len(tags)}
+
+
+@router.get("/categories")
+async def list_categories() -> dict[str, Any]:
+    """利用可能なカテゴリ一覧."""
+    catalog = _get_catalog()
+    categories = catalog.get_categories()
+    return {"categories": categories, "total": len(categories)}
+
+
+@router.get("/grouped")
+async def list_skills_grouped() -> dict[str, Any]:
+    """カテゴリ別にグループ化されたスキル一覧."""
+    catalog = _get_catalog()
+    groups = catalog.get_skills_grouped_by_category()
+    return {"groups": groups, "total_categories": len(groups)}
+
+
+@router.get("/category/{category_id}")
+async def get_skills_by_category(category_id: str) -> dict[str, Any]:
+    """指定カテゴリのスキル一覧.
+
+    Args:
+        category_id: カテゴリ ID
+    """
+    catalog = _get_catalog()
+    skills = catalog.get_skills_by_category(category_id)
+    return {
+        "skills": [s.to_dict() for s in skills],
+        "total": len(skills),
+        "category": category_id,
+    }
 
 
 @router.get("/search")

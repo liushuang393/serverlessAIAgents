@@ -401,17 +401,23 @@ def main() -> None:
 
     if args.command == "serve":
         print(f"[Platform] Starting on {args.host}:{args.port} (reload={args.reload})")
-        if args.reload:
-            uvicorn.run(
-                "apps.platform.main:app",
-                host=args.host,
-                port=args.port,
-                reload=True,
-                reload_dirs=["apps/platform", "agentflow"],
-            )
-        else:
-            app = create_app()
-            uvicorn.run(app, host=args.host, port=args.port)
+        try:
+            if args.reload:
+                uvicorn.run(
+                    "apps.platform.main:app",
+                    host=args.host,
+                    port=args.port,
+                    reload=True,
+                    reload_dirs=["apps/platform", "agentflow"],
+                )
+            else:
+                app = create_app()
+                uvicorn.run(app, host=args.host, port=args.port)
+        except KeyboardInterrupt:
+            # uvicorn は graceful shutdown 後にシグナルを再送するため
+            # KeyboardInterrupt が発生する。lifespan のクリーンアップは
+            # 既に完了しているので、ここでは静かに終了する。
+            pass
 
     elif args.command == "search":
         asyncio.run(cli_search(args.query, args.limit))

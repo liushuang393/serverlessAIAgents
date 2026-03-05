@@ -28,6 +28,18 @@ P0 では `rag / skill / agent` の分類・契約・出力形を統一し、前
 
 ### 3.1 Apps
 
+`GET /api/studios/framework/apps`
+
+- 既定: `wait_for_health=false`（non-blocking）
+- 互換: `?wait_for_health=true` でヘルス完了待機
+- non-blocking 応答では `status=unknown` が一時的に返る場合がある
+
+`GET /api/studios/framework/apps/{app_name}`
+
+- 既定: `wait_for_health=false`（non-blocking）
+- 互換: `?wait_for_health=true` でヘルス完了待機
+- non-blocking はキャッシュ済みヘルスを返し、未取得時はバックグラウンド更新する
+
 `GET /api/studios/framework/apps/summary`
 
 ```json

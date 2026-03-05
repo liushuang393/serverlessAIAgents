@@ -1,4 +1,5 @@
 ---
+category: enterprise_office
 name: bi-analytics
 description: >
   AI Agent向けビジネスインテリジェンス分析スキル。
