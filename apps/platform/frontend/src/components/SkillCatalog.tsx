@@ -90,7 +90,7 @@ export function SkillCatalog() {
 
       {/* Skill カードグリッド */}
       {!loading && skills.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
           {skills.map((skill) => (
             <div
               key={skill.name}

@@ -1,5 +1,6 @@
 """AgentFlow engine - PocketFlowラッパーとライフサイクルフック実装."""
 
+import asyncio
 import logging
 import time
 import uuid
@@ -126,6 +127,9 @@ class AgentFlowEngine:
         self._logger = logger or logging.getLogger(__name__)
         self._hooks = LifecycleHooks()
         self._workflows: dict[str, WorkflowConfig] = {}
+        self._execution_tokens: dict[str, dict[str, bool]] = {}
+        self._execution_contexts: dict[str, ExecutionContext] = {}
+        self._running_tasks: dict[str, asyncio.Task[Any]] = {}
         self._logger.info("AgentFlowEngine initialized")
 
     @property
@@ -246,6 +250,9 @@ class AgentFlowEngine:
                 coordinator = node_config["coordinator"]
 
                 async def coordinator_func(data: dict[str, Any]) -> dict[str, Any]:
+                    if self._is_cancelled(context.execution_id):
+                        raise asyncio.CancelledError(f"execution cancelled: {context.execution_id}")
+
                     # inputsからtaskを取得、なければ全体を渡す
                     task_input = data.get("inputs", data)
                     # coordinatorがdict入力を期待する場合は直接渡す
@@ -260,12 +267,16 @@ class AgentFlowEngine:
                     if "outputs" in data:
                         data["outputs"]["coordinator_result"] = result
 
+                    if self._is_cancelled(context.execution_id):
+                        raise asyncio.CancelledError(f"execution cancelled: {context.execution_id}")
                     return cast("dict[str, Any]", result)
 
                 return coordinator_func
 
             # 通常のノードはパススルー
             async def node_func(data: dict[str, Any]) -> dict[str, Any]:
+                if self._is_cancelled(context.execution_id):
+                    raise asyncio.CancelledError(f"execution cancelled: {context.execution_id}")
                 return data
 
             return node_func
@@ -339,6 +350,11 @@ class AgentFlowEngine:
 
         start_time = time.time()
         self._logger.info(f"Starting execution: workflow={workflow_id}, execution={execution_id}")
+        self._execution_tokens[execution_id] = {"cancelled": False}
+        self._execution_contexts[execution_id] = context
+        current_task = asyncio.current_task()
+        if current_task is not None:
+            self._running_tasks[execution_id] = current_task
 
         try:
             # ON_START フックをトリガー
@@ -379,6 +395,16 @@ class AgentFlowEngine:
                 context=context,
             )
 
+        except asyncio.CancelledError:
+            await self._hooks.trigger(HookType.ON_CANCEL, context)
+            duration = time.time() - start_time
+            return ExecutionResult(
+                status="cancelled",
+                output={},
+                error="execution_cancelled",
+                duration=duration,
+                context=context,
+            )
         except Exception as e:
             # Trigger ON_ERROR hooks
             await self._hooks.trigger(HookType.ON_ERROR, context, e)
@@ -393,6 +419,10 @@ class AgentFlowEngine:
                 duration=duration,
                 context=context,
             )
+        finally:
+            self._running_tasks.pop(execution_id, None)
+            self._execution_tokens.pop(execution_id, None)
+            self._execution_contexts.pop(execution_id, None)
 
     async def cancel(self, execution_id: str) -> None:
         """Cancel a running execution.
@@ -404,15 +434,25 @@ class AgentFlowEngine:
             >>> engine = AgentFlowEngine()
             >>> await engine.cancel("execution-123")
         """
-        # TODO: Implement cancellation logic
         self._logger.info(f"Cancelling execution: {execution_id}")
-        # Trigger ON_CANCEL hooks
-        context = ExecutionContext(
+        token = self._execution_tokens.get(execution_id)
+        if token is not None:
+            token["cancelled"] = True
+
+        task = self._running_tasks.get(execution_id)
+        if task is not None and not task.done():
+            task.cancel()
+
+        context = self._execution_contexts.get(execution_id) or ExecutionContext(
             workflow_id="unknown",
             execution_id=execution_id,
             inputs={},
         )
         await self._hooks.trigger(HookType.ON_CANCEL, context)
+
+    def _is_cancelled(self, execution_id: str) -> bool:
+        token = self._execution_tokens.get(execution_id)
+        return bool(token and token.get("cancelled"))
 
     def list_workflows(self) -> list[str]:
         """List all registered workflow IDs.

@@ -62,6 +62,8 @@ class RerankerType(str, Enum):
 
     COHERE = "cohere"
     CROSS_ENCODER = "cross_encoder"
+    CROSS_ENCODER_RURI = "cross_encoder_ruri"
+    LLM_LISTWISE = "llm_listwise"
     BM25 = "bm25"
     NONE = "none"
 
@@ -75,6 +77,7 @@ class RAGConfig:
     chunk_size: int = 1000
     chunk_overlap: int = 200
     reranker: RerankerType = RerankerType.BM25
+    reranker_options: dict[str, Any] = field(default_factory=dict)
     top_k: int = 5
     min_similarity: float = 0.3
 
@@ -194,7 +197,10 @@ class RAGService(ServiceBase[dict[str, Any]]):
         )
 
         if self._config.reranker != RerankerType.NONE:
-            self._reranker = get_reranker(self._config.reranker.value)
+            self._reranker = get_reranker(
+                self._config.reranker.value,
+                options=self._config.reranker_options,
+            )
 
         self._started = True
         self._logger.info(f"RAGService started: {self._config.collection}")
@@ -405,7 +411,14 @@ class RAGService(ServiceBase[dict[str, Any]]):
     ) -> list[RAGDocument]:
         """内部検索ロジック."""
         top_k = top_k or self._config.top_k
-        search_k = top_k * 3 if self._reranker else top_k
+        search_k = top_k
+        if self._reranker:
+            try:
+                recommended_k = int(self._reranker.recommended_search_k(top_k))
+                search_k = max(top_k, recommended_k)
+            except Exception as exc:
+                self._logger.warning("Failed to get recommended search_k from reranker: %s", exc)
+                search_k = top_k * 3
 
         query_embedding = await self._embedding.embed_text(query)
 
@@ -431,10 +444,24 @@ class RAGService(ServiceBase[dict[str, Any]]):
                 )
 
         if self._reranker and len(documents) > top_k:
-            ranked = await self._reranker.rerank(query, [d.content for d in documents], top_k)
-            documents = [documents[r.original_index] for r in ranked]
-            for i, r in enumerate(ranked):
-                documents[i].score = r.score
+            try:
+                rerank_inputs = [
+                    {
+                        **d.metadata,
+                        "id": d.id,
+                        "content": d.content,
+                        "source": d.source,
+                    }
+                    for d in documents
+                ]
+                ranked = await self._reranker.rerank(query, rerank_inputs, top_k)
+                documents = [documents[r.original_index] for r in ranked if r.original_index < len(documents)]
+                for i, ranked_doc in enumerate(ranked):
+                    if i >= len(documents):
+                        break
+                    documents[i].score = ranked_doc.score
+            except Exception as exc:
+                self._logger.warning("Rerank failed, fallback to vector order: %s", exc)
 
         return documents[:top_k]
 

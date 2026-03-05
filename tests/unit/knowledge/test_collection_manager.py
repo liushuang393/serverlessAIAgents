@@ -6,10 +6,7 @@
 
 from __future__ import annotations
 
-import uuid
-from datetime import UTC, datetime
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from sqlalchemy import StaticPool, event
@@ -19,10 +16,9 @@ from agentflow.knowledge.collection_manager import CollectionManager
 from agentflow.knowledge.document_manager import DocumentManager
 from agentflow.knowledge.models import (
     Base,
-    CollectionConfigModel,
-    DocumentRecordModel,
     DocumentStatus,
 )
+from agentflow.services.rag_service import RerankerType
 
 
 # ---------------------------------------------------------------------------
@@ -262,6 +258,30 @@ class TestCollectionManagerRAGService:
         """存在しないコレクションの RAGConfig 構築で ValueError を送出."""
         with pytest.raises(ValueError, match="not found"):
             await collection_mgr.build_rag_config("nonexistent")
+
+    @pytest.mark.parametrize(
+        ("reranker_name", "expected_type"),
+        [
+            ("cross_encoder_ruri", RerankerType.CROSS_ENCODER_RURI),
+            ("llm_listwise", RerankerType.LLM_LISTWISE),
+        ],
+    )
+    async def test_build_rag_config_supports_new_reranker_types(
+        self,
+        collection_mgr: CollectionManager,
+        reranker_name: str,
+        expected_type: RerankerType,
+    ) -> None:
+        """新規リランカー種別を RAGConfig へ正しくマッピングする."""
+        collection_name = f"reranker_{reranker_name}"
+        await collection_mgr.create_collection(
+            collection_name=collection_name,
+            app_name="faq_system",
+            reranker=reranker_name,
+        )
+
+        rag_config = await collection_mgr.build_rag_config(collection_name)
+        assert rag_config.reranker == expected_type
 
 
 class TestCollectionManagerAccessControl:

@@ -2,20 +2,18 @@
 
 GET  /api/studios/framework/agents              — 全 App 横断の Agent 一覧
 GET  /api/studios/framework/agents/stats        — Agent 統計
-GET  /api/studios/framework/agents/capabilities — 全能力タグ一覧
 GET  /api/studios/framework/agents/by-app       — App 別グルーピング
 GET  /api/studios/framework/agents/by-business-base — 業務基盤別グルーピング
 GET  /api/studios/framework/agents/by-type      — Agent type 別グルーピング
 GET  /api/studios/framework/agents/types        — Agent type 定義
 GET  /api/studios/framework/agents/by-pattern   — Agent pattern 別グルーピング
-GET  /api/studios/framework/agents/search       — 能力ベース検索
 """
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter
 
 
 if TYPE_CHECKING:
@@ -66,14 +64,6 @@ async def list_agents() -> dict[str, Any]:
 async def get_agent_stats() -> dict[str, Any]:
     """Agent 統計情報."""
     return _get_aggregator().stats()
-
-
-@router.get("/capabilities")
-async def list_capabilities() -> dict[str, Any]:
-    """全能力タグとその出現回数."""
-    aggregator = _get_aggregator()
-    caps = aggregator.all_capabilities()
-    return {"capabilities": caps, "total": len(caps)}
 
 
 @router.get("/by-app")
@@ -131,19 +121,4 @@ async def agent_type_definitions() -> dict[str, Any]:
     }
 
 
-@router.get("/search")
-async def search_agents(
-    capability: str = Query(..., min_length=1, description="検索する能力タグ"),
-) -> dict[str, Any]:
-    """能力タグで Agent を検索.
 
-    Args:
-        capability: 検索する能力タグ
-    """
-    aggregator = _get_aggregator()
-    agents = aggregator.search_by_capability(capability)
-    return {
-        "agents": [a.to_dict() for a in agents],
-        "total": len(agents),
-        "query": capability,
-    }

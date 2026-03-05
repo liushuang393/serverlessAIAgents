@@ -3,14 +3,92 @@
 重要な変化を検知して通知します。
 """
 
+import asyncio
 import logging
+import os
+import smtplib
 import uuid
 from datetime import datetime
+from email.message import EmailMessage
 from typing import Any
 
 from apps.market_trend_monitor.backend.models import Notification, NotificationPriority, Trend
 
 from agentflow.core.agent_block import AgentBlock
+
+try:
+    import httpx
+except ImportError:  # pragma: no cover - optional dependency
+    httpx = None
+
+
+class _NotificationChannel:
+    """通知チャネル基底."""
+
+    def __init__(self, channel_name: str) -> None:
+        self.channel_name = channel_name
+
+    async def send(self, notification: Notification) -> bool:
+        raise NotImplementedError
+
+
+class _WebhookNotificationChannel(_NotificationChannel):
+    """Webhook 通知チャネル."""
+
+    def __init__(self, webhook_url: str, timeout_seconds: float = 10.0) -> None:
+        super().__init__("webhook")
+        self._webhook_url = webhook_url
+        self._timeout_seconds = timeout_seconds
+
+    async def send(self, notification: Notification) -> bool:
+        if httpx is None:
+            return False
+        payload = notification.to_dict()
+        async with httpx.AsyncClient(timeout=self._timeout_seconds) as client:
+            response = await client.post(self._webhook_url, json=payload)
+            return response.status_code < 400
+
+
+class _EmailNotificationChannel(_NotificationChannel):
+    """メール通知チャネル."""
+
+    def __init__(
+        self,
+        *,
+        smtp_host: str,
+        smtp_port: int,
+        from_email: str,
+        to_email: str,
+        username: str | None = None,
+        password: str | None = None,
+        use_tls: bool = True,
+    ) -> None:
+        super().__init__("email")
+        self._smtp_host = smtp_host
+        self._smtp_port = smtp_port
+        self._from_email = from_email
+        self._to_email = to_email
+        self._username = username
+        self._password = password
+        self._use_tls = use_tls
+
+    async def send(self, notification: Notification) -> bool:
+        return await asyncio.to_thread(self._send_sync, notification)
+
+    def _send_sync(self, notification: Notification) -> bool:
+        message = EmailMessage()
+        message["Subject"] = f"[MarketTrend][{notification.priority.value.upper()}] {notification.type}"
+        message["From"] = self._from_email
+        message["To"] = self._to_email
+        message.set_content(notification.message)
+
+        with smtplib.SMTP(self._smtp_host, self._smtp_port, timeout=10) as smtp:
+            if self._use_tls:
+                smtp.starttls()
+            if self._username and self._password:
+                smtp.login(self._username, self._password)
+            smtp.send_message(message)
+        return True
 
 
 class NotifierAgent(AgentBlock):
@@ -39,16 +117,15 @@ class NotifierAgent(AgentBlock):
         super().__init__()
         self._logger = logging.getLogger(__name__)
         self._notification_history: list[Notification] = []
+        self._runtime_mode = os.getenv("APP_RUNTIME_MODE", "dev").strip().lower()
+        self._channels: list[_NotificationChannel] = []
 
     async def initialize(self) -> None:
         """エージェント初期化."""
         await super().initialize()
         self._logger.info("NotifierAgent initialized")
-
-        # TODO: 通知チャネル初期化
-        # self.websocket_manager = WebSocketManager()
-        # self.email_client = EmailClient()
-        # self.slack_client = SlackClient()
+        self._channels = self._build_channels()
+        self._logger.info("Notifier channels initialized: %d", len(self._channels))
 
     async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
         """通知処理を実行.
@@ -80,7 +157,7 @@ class NotifierAgent(AgentBlock):
         notifications = await self._detect_alerts(trends, alert_threshold, past_notifications)
 
         # 通知送信
-        await self._send_notifications(notifications)
+        delivery_results = await self._send_notifications(notifications)
 
         # 通知を記憶システムに保存
         if shared_context:
@@ -91,6 +168,8 @@ class NotifierAgent(AgentBlock):
         return {
             "notifications": [n.to_dict() for n in notifications],
             "alerts_count": len(notifications),
+            "delivery_status": delivery_results,
+            "fallback_used": any(bool(item.get("fallback_used")) for item in delivery_results),
         }
 
     def _dict_to_trend(self, data: dict[str, Any]) -> Trend:
@@ -188,23 +267,105 @@ class NotifierAgent(AgentBlock):
             return NotificationPriority.MEDIUM
         return NotificationPriority.LOW
 
-    async def _send_notifications(self, notifications: list[Notification]) -> None:
+    async def _send_notifications(self, notifications: list[Notification]) -> list[dict[str, Any]]:
         """通知送信.
 
         Args:
             notifications: 通知リスト
         """
+        delivery_results: list[dict[str, Any]] = []
         for notification in notifications:
             self._logger.info(f"Sending notification: {notification.priority.value} - {notification.message}")
 
-            # 履歴に追加
+            if not self._channels:
+                fallback_used = self._runtime_mode == "dev"
+                delivery_status = "sent" if fallback_used else "failed"
+                result = {
+                    "notification_id": notification.id,
+                    "delivery_status": delivery_status,
+                    "fallback_used": fallback_used,
+                    "channels": [],
+                }
+                notification.metadata["delivery_status"] = delivery_status
+                notification.metadata["fallback_used"] = fallback_used
+                self._notification_history.append(notification)
+                delivery_results.append(result)
+                if not fallback_used:
+                    self._logger.warning("通知チャネル未設定のため送信失敗: %s", notification.id)
+                continue
+
+            channel_results: list[dict[str, Any]] = []
+            any_success = False
+            for channel in self._channels:
+                success = await self._send_with_retry(channel, notification)
+                channel_results.append({"channel": channel.channel_name, "success": success})
+                if success:
+                    any_success = True
+
+            delivery_status = "sent" if any_success else "failed"
+            notification.metadata["delivery_status"] = delivery_status
+            notification.metadata["fallback_used"] = False
+            notification.metadata["channels"] = channel_results
             self._notification_history.append(notification)
 
-            # TODO: 実際の通知送信
-            # await self.websocket_manager.broadcast(notification.to_dict())
-            # if notification.priority in [NotificationPriority.HIGH, NotificationPriority.CRITICAL]:
-            #     await self.email_client.send(notification)
-            #     await self.slack_client.send(notification)
+            delivery_results.append(
+                {
+                    "notification_id": notification.id,
+                    "delivery_status": delivery_status,
+                    "fallback_used": False,
+                    "channels": channel_results,
+                }
+            )
+        return delivery_results
+
+    def _build_channels(self) -> list[_NotificationChannel]:
+        """環境変数から通知チャネルを構築する."""
+        channels: list[_NotificationChannel] = []
+
+        webhook_url = os.getenv("MARKET_NOTIFICATION_WEBHOOK_URL", "").strip()
+        if webhook_url:
+            channels.append(_WebhookNotificationChannel(webhook_url=webhook_url))
+
+        smtp_host = os.getenv("MARKET_NOTIFICATION_SMTP_HOST", "").strip()
+        to_email = os.getenv("MARKET_NOTIFICATION_EMAIL_TO", "").strip()
+        from_email = os.getenv("MARKET_NOTIFICATION_EMAIL_FROM", "").strip() or to_email
+        if smtp_host and to_email and from_email:
+            smtp_port_raw = os.getenv("MARKET_NOTIFICATION_SMTP_PORT", "587").strip()
+            smtp_port = int(smtp_port_raw) if smtp_port_raw.isdigit() else 587
+            username = os.getenv("MARKET_NOTIFICATION_SMTP_USER", "").strip() or None
+            password = os.getenv("MARKET_NOTIFICATION_SMTP_PASS", "").strip() or None
+            use_tls = os.getenv("MARKET_NOTIFICATION_SMTP_TLS", "true").strip().lower() != "false"
+            channels.append(
+                _EmailNotificationChannel(
+                    smtp_host=smtp_host,
+                    smtp_port=smtp_port,
+                    from_email=from_email,
+                    to_email=to_email,
+                    username=username,
+                    password=password,
+                    use_tls=use_tls,
+                )
+            )
+
+        return channels
+
+    async def _send_with_retry(self, channel: _NotificationChannel, notification: Notification) -> bool:
+        """通知送信を軽量リトライする."""
+        for attempt in range(3):
+            try:
+                ok = await channel.send(notification)
+                if ok:
+                    return True
+            except Exception as exc:
+                self._logger.warning(
+                    "通知送信失敗: channel=%s attempt=%d error=%s",
+                    channel.channel_name,
+                    attempt + 1,
+                    exc,
+                )
+            if attempt < 2:
+                await asyncio.sleep(0.2 * (2**attempt))
+        return False
 
     async def _recall_past_notifications(self, shared_context: Any) -> list[dict[str, Any]]:
         """過去の通知履歴を記憶システムから検索.
@@ -253,6 +414,8 @@ class NotifierAgent(AgentBlock):
                         "topic": notification.metadata.get("topic", ""),
                         "message": notification.message,
                         "timestamp": notification.timestamp.isoformat(),
+                        "delivery_status": notification.metadata.get("delivery_status", ""),
+                        "fallback_used": bool(notification.metadata.get("fallback_used", False)),
                     },
                 )
 

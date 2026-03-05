@@ -398,3 +398,61 @@ async def test_apply_checkpoints_persists_bonus_reasons(
     assert review_record.get("llm_bonus_pct") == 4
     assert review_record.get("bonus_reasons") == ["責任者と期限が具体化されています。"]
 
+
+@pytest.mark.asyncio
+async def test_persist_human_review_record_self_heals_when_record_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """対象レコードが未作成でも骨組み作成後に人間確認ログを保存できること."""
+
+    class _FakeRepo:
+        append_calls: int = 0
+        upsert_calls: list[dict[str, object]] = []
+
+        async def append_human_review_record(  # type: ignore[no-untyped-def]
+            self,
+            *,
+            request_id,
+            review_record,
+            updated_review=None,
+        ) -> bool:
+            _ = request_id
+            _ = review_record
+            _ = updated_review
+            self.append_calls += 1
+            # 初回は未作成を返し、2回目で成功させる
+            return self.append_calls >= 2
+
+        async def upsert_stage(  # type: ignore[no-untyped-def]
+            self,
+            *,
+            request_id,
+            question,
+            stage_name,
+            stage_result,
+        ):
+            self.upsert_calls.append(
+                {
+                    "request_id": request_id,
+                    "question": question,
+                    "stage_name": stage_name,
+                    "stage_result": stage_result,
+                }
+            )
+            return object()
+
+    fake_repo = _FakeRepo()
+    monkeypatch.setattr(human_review_router, "DecisionRepository", lambda: fake_repo)
+
+    await human_review_router._persist_human_review_record(
+        request_id_text="34fe4cac-81cd-4d77-96cf-290493734779",
+        report_id_text="PROP-202603-9345D6",
+        review_record={"event_type": "finding_note", "memo": "test"},
+        updated_review={"overall_verdict": "PASS"},
+    )
+
+    assert fake_repo.append_calls == 2
+    assert len(fake_repo.upsert_calls) == 1
+    upsert_payload = fake_repo.upsert_calls[0]
+    assert upsert_payload["stage_name"] == "review"
+    assert upsert_payload["question"] == "[human-review] report_id=PROP-202603-9345D6"

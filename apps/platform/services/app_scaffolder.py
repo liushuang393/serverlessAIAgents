@@ -855,32 +855,48 @@ class AppScaffolderService:
     def _render_engine_py(request: AppCreateRequest) -> str:
         """engine.py を生成."""
         flow_pattern = request.flow_pattern or "default"
+        primary_agent_name = (
+            request.agents[0].name
+            if request.agents
+            else f"{request.name.replace('_', ' ').title().replace(' ', '')}Agent"
+        )
+        primary_agent_class = AppScaffolderService._to_class_name(primary_agent_name)
         return f'''"""{request.display_name} - App Engine."""
 
 from __future__ import annotations
 
 from typing import Any
 
+from agentflow.flow import create_flow
+from apps.{request.name}.agents import {primary_agent_class}
+
 
 class AppEngine:
-    """{request.engine_pattern} パターン用の最小エンジン."""
+    """{request.engine_pattern} パターン用の最小実行エンジン."""
 
     def __init__(self) -> None:
         self.engine_pattern = "{request.engine_pattern}"
         self.flow_pattern = "{flow_pattern}"
+        self._primary_agent = {primary_agent_class}()
+        self._flow = (
+            create_flow("{request.name}_default_flow")
+            .then(self._primary_agent, names=["primary_agent"])
+            .build()
+        )
 
     async def run(self, payload: dict[str, Any]) -> dict[str, Any]:
-        """入力を受け、最小レスポンスを返す.
-
-        TODO:
-            - AgentFlow の実エンジンに差し替え
-            - blueprint.system_prompt / skills / mcp 連携を追加
-        """
+        """入力を受け、AgentFlow フローを実行して結果を返す."""
+        flow_inputs = {{
+            "payload": payload,
+            "message": payload.get("message", ""),
+            "context": payload.get("context", {{}}),
+        }}
+        flow_result = await self._flow.run(flow_inputs)
         return {{
             "status": "ok",
             "engine_pattern": self.engine_pattern,
             "flow_pattern": self.flow_pattern,
-            "payload": payload,
+            "result": flow_result,
         }}
 '''
 

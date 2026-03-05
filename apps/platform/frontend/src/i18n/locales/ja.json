@@ -117,10 +117,8 @@
     "title": "Agent Browser",
     "subtitle": "全 App 横断の Agent 一覧",
     "filter_type": "Agent Type で絞り込み",
-    "filter_cap": "Filter by Capability",
     "all": "All",
     "agents_count": "Agents",
-    "legacy_prefix": "legacy:",
     "no_agents": "No agents found"
   },
   "orch": {

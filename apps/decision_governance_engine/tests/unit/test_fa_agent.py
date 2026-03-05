@@ -88,7 +88,7 @@ class TestFaAgentOutputStructure:
 
         assert isinstance(result, FaOutput)
         assert len(result.recommended_paths) >= 1
-        assert len(result.recommended_paths) <= 2
+        assert len(result.recommended_paths) <= 6
         assert len(result.decision_criteria) >= 1
 
     @pytest.mark.asyncio

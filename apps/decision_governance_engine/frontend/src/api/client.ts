@@ -25,6 +25,7 @@ import type {
   SignatureResponse,
   HistoryListResponse,
   HistoryDetailResponse,
+  ReportResponse,
 } from '../types';
 
 /** API ベースURL
@@ -387,6 +388,20 @@ export class DecisionApiClient {
       );
     }
 
+    return response.json();
+  }
+
+  /**
+   * レポート本体を取得.
+   *
+   * @param reportId レポートID（PROP-* または request_id UUID）
+   * @returns レポートデータ
+   */
+  async getReport(reportId: string): Promise<ReportResponse> {
+    const response = await this.fetchWithRetry(
+      `${this.baseUrl}/api/report/${reportId}`,
+      { method: 'GET' }
+    );
     return response.json();
   }
 

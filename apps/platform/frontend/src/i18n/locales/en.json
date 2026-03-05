@@ -117,10 +117,8 @@
     "title": "Agent Browser",
     "subtitle": "Cross-app agent list",
     "filter_type": "Filter by Agent Type",
-    "filter_cap": "Filter by Capability",
     "all": "All",
     "agents_count": "Agents",
-    "legacy_prefix": "legacy:",
     "no_agents": "No agents found"
   },
   "orch": {

@@ -134,7 +134,7 @@ export function AgentPatterns() {
       )}
 
       {!loading && activeTab === 'types' && (
-        <div className="space-y-3">
+        <div className="space-y-3 max-h-[70vh] overflow-y-auto">
           {typeDefinitions.map((definition) => {
             const group = typeGroupMap.get(definition.agent_type);
             const count = group?.count ?? 0;
@@ -189,7 +189,7 @@ export function AgentPatterns() {
       )}
 
       {!loading && activeTab === 'templates' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[70vh] overflow-y-auto">
           {templateCatalog.map((template) => (
             <div key={template.app_template} className="border border-slate-800 rounded-xl bg-slate-900/30 p-4 space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -219,7 +219,7 @@ export function AgentPatterns() {
       )}
 
       {!loading && activeTab === 'business' && (
-        <div className="space-y-3">
+        <div className="space-y-3 max-h-[70vh] overflow-y-auto">
           {businessGroups.map((group) => {
             const isOpen = expanded === group.business_base;
             return (

@@ -4,8 +4,13 @@
 """
 
 import shutil
+import tarfile
+import tempfile
+import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from pydantic import BaseModel, Field
@@ -79,35 +84,12 @@ class MarketplaceClient:
         Returns:
             マーケットプレイスエージェントのリスト
         """
-        # TODO: 実際の API 実装
-        # 現在はモックデータを返す
-        mock_agents = [
-            MarketplaceAgent(
-                id="pdf-processor",
-                name="PDF Processor",
-                version="1.0.0",
-                author="AgentFlow Team",
-                category="document",
-                description="Process PDF documents",
-                protocols=["mcp", "a2a"],
-                download_url="https://example.com/pdf-processor.zip",
-                dependencies=[],
-            ),
-            MarketplaceAgent(
-                id="text-analyzer",
-                name="Text Analyzer",
-                version="1.2.0",
-                author="Community",
-                category="text",
-                description="Analyze text content",
-                protocols=["mcp", "agui"],
-                download_url="https://example.com/text-analyzer.zip",
-                dependencies=[],
-            ),
-        ]
-
-        # フィルタリング
-        results = mock_agents
+        results = self._request_marketplace_agents(
+            query=query,
+            category=category,
+            protocols=protocols,
+            limit=limit,
+        )
 
         if query:
             query_lower = query.lower()
@@ -126,6 +108,72 @@ class MarketplaceClient:
             results = [agent for agent in results if any(p in agent.protocols for p in protocols)]
 
         return results[:limit]
+
+    def _request_marketplace_agents(
+        self,
+        *,
+        query: str | None,
+        category: str | None,
+        protocols: list[str] | None,
+        limit: int,
+    ) -> list[MarketplaceAgent]:
+        """マーケットプレイスAPIへ問い合わせる."""
+        params: dict[str, Any] = {"limit": max(1, min(limit, 100))}
+        if query:
+            params["q"] = query
+        if category:
+            params["category"] = category
+        if protocols:
+            params["protocols"] = ",".join(protocols)
+
+        endpoints = [f"{self.marketplace_url.rstrip('/')}/api/v1/agents", f"{self.marketplace_url.rstrip('/')}/agents"]
+        for endpoint in endpoints:
+            try:
+                response = self.client.get(endpoint, params=params)
+                response.raise_for_status()
+            except Exception:
+                continue
+
+            payload = response.json()
+            agents = self._parse_agents_payload(payload)
+            if agents:
+                return agents
+        return []
+
+    def _parse_agents_payload(self, payload: Any) -> list[MarketplaceAgent]:
+        """APIレスポンスを MarketplaceAgent に変換する."""
+        rows: list[dict[str, Any]] = []
+        if isinstance(payload, list):
+            rows = [item for item in payload if isinstance(item, dict)]
+        elif isinstance(payload, dict):
+            if isinstance(payload.get("agents"), list):
+                rows = [item for item in payload["agents"] if isinstance(item, dict)]
+            elif isinstance(payload.get("items"), list):
+                rows = [item for item in payload["items"] if isinstance(item, dict)]
+
+        agents: list[MarketplaceAgent] = []
+        for row in rows:
+            agent_id = str(row.get("id") or row.get("agent_id") or "").strip()
+            download_url = str(row.get("download_url") or row.get("artifact_url") or "").strip()
+            if not agent_id or not download_url:
+                continue
+            try:
+                agents.append(
+                    MarketplaceAgent(
+                        id=agent_id,
+                        name=str(row.get("name") or agent_id),
+                        version=str(row.get("version") or "latest"),
+                        author=str(row.get("author") or "unknown"),
+                        category=str(row.get("category") or "general"),
+                        description=str(row.get("description") or ""),
+                        protocols=[str(item) for item in row.get("protocols", []) if str(item).strip()],
+                        download_url=download_url,
+                        dependencies=[str(item) for item in row.get("dependencies", []) if str(item).strip()],
+                    )
+                )
+            except Exception:
+                continue
+        return agents
 
     def install(
         self,
@@ -160,49 +208,25 @@ class MarketplaceClient:
             raise ValueError(msg)
 
         # インストールディレクトリを作成
+        self._ensure_install_dir()
         install_path = self.install_dir / agent_id
+        if install_path.exists() and force:
+            shutil.rmtree(install_path)
         install_path.mkdir(parents=True, exist_ok=True)
 
-        # TODO: 実際のダウンロードとインストール
-        # 現在はモックとして agent.yaml を作成
-        agent_yaml = install_path / "agent.yaml"
-        agent_yaml.write_text(
-            f"""meta:
-  id: {agent.id}
-  name: {agent.name}
-  version: {agent.version}
-  author: {agent.author}
-  icon: 📦
-  category: {agent.category}
-  description: {agent.description}
+        with tempfile.TemporaryDirectory() as tmpdir:
+            parsed = urlparse(agent.download_url)
+            suffixes = "".join(Path(parsed.path).suffixes)
+            artifact_name = f"artifact{suffixes}" if suffixes else "artifact.bin"
+            artifact_path = Path(tmpdir) / artifact_name
+            response = self.client.get(agent.download_url, follow_redirects=True)
+            response.raise_for_status()
+            artifact_path.write_bytes(response.content)
+            self._extract_artifact(artifact_path, install_path)
 
-interfaces:
-  inputs: []
-  outputs: []
-
-protocols:
-  mcp:
-    enabled: {"true" if "mcp" in agent.protocols else "false"}
-  a2a:
-    enabled: {"true" if "a2a" in agent.protocols else "false"}
-  agui:
-    enabled: {"true" if "agui" in agent.protocols else "false"}
-
-dependencies:
-  agents: {agent.dependencies}
-  tools: []
-  packages: []
-
-pocketflow:
-  entry_point: main.py
-  flow_name: MainFlow
-
-visual:
-  color: "#3B82F6"
-  ports: {{}}
-""",
-            encoding="utf-8",
-        )
+        if not self._has_manifest(install_path):
+            msg = f"Invalid package (agent.yaml missing): {agent.download_url}"
+            raise ValueError(msg)
 
         # レジストリに追加
         entry = AgentRegistryEntry(
@@ -218,6 +242,46 @@ visual:
         self.registry.add_agent(entry)
 
         return install_path
+
+    def _extract_artifact(self, artifact_path: Path, install_path: Path) -> None:
+        """アーティファクトを解凍・配置する."""
+        suffixes = "".join(artifact_path.suffixes).lower()
+        if suffixes.endswith(".zip"):
+            with zipfile.ZipFile(artifact_path, "r") as archive:
+                for member in archive.infolist():
+                    target = (install_path / member.filename).resolve()
+                    if not str(target).startswith(str(install_path.resolve())):
+                        msg = f"Unsafe zip member path: {member.filename}"
+                        raise ValueError(msg)
+                archive.extractall(install_path)
+            return
+
+        if suffixes.endswith(".tar.gz") or suffixes.endswith(".tgz") or suffixes.endswith(".tar"):
+            with tarfile.open(artifact_path, "r:*") as archive:
+                for member in archive.getmembers():
+                    target = (install_path / member.name).resolve()
+                    if not str(target).startswith(str(install_path.resolve())):
+                        msg = f"Unsafe tar member path: {member.name}"
+                        raise ValueError(msg)
+                archive.extractall(install_path)
+            return
+
+        # 単一ファイルをそのまま配置
+        output = install_path / "agent.yaml"
+        try:
+            text = artifact_path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text = artifact_path.read_bytes().decode("utf-8", errors="replace")
+        output.write_text(text, encoding="utf-8")
+
+    @staticmethod
+    def _has_manifest(install_path: Path) -> bool:
+        """インストール済みディレクトリに manifest があるか確認."""
+        candidates = ["agent.yaml", "agent.yml", "app_config.json"]
+        for name in candidates:
+            if (install_path / name).is_file():
+                return True
+        return False
 
     def uninstall(self, agent_id: str) -> bool:
         """エージェントをアンインストール.

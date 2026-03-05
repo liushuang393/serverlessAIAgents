@@ -1,537 +1,862 @@
+/* ================================================================
+   TEMPORAL FORGE — Design System
+   COBOL → Java Spring Boot Migration Studio
+   テーマ: 旧大型機時代(Amber) → Java宇宙(Cyan)、変換(Purple)
+   ================================================================ */
+
+/* ---------- Design Tokens ---------- */
 :root {
-    --bg-dark: #0a0b12;
-    --card-bg: rgba(255, 255, 255, 0.03);
-    --border: rgba(255, 255, 255, 0.08);
-    --accent: #6366f1;
-    --accent-glow: rgba(99, 102, 241, 0.3);
-    --success: #14b8a6;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --text-primary: #f8fafc;
-    --text-secondary: #94a3b8;
-    --glass-blur: blur(12px);
-    --font-main: 'Outfit', sans-serif;
-    --font-mono: 'JetBrains Mono', monospace;
+  --void:           #070a12;
+  --void-2:         #0d1117;
+  --void-3:         #131a24;
+  --legacy:         #f59e0b;
+  --legacy-dim:     rgba(245, 158, 11, 0.12);
+  --legacy-glow:    rgba(245, 158, 11, 0.28);
+  --modern:         #06b6d4;
+  --modern-dim:     rgba(6, 182, 212, 0.12);
+  --modern-glow:    rgba(6, 182, 212, 0.28);
+  --transform:      #8b5cf6;
+  --transform-dim:  rgba(139, 92, 246, 0.12);
+  --transform-glow: rgba(139, 92, 246, 0.28);
+  --error:          #ef4444;
+  --success:        #22c55e;
+  --muted:          #7a8898;
+  --text:           #e2e8f0;
+  --text-dim:       #94a3b8;
+  --surface:        rgba(255, 255, 255, 0.03);
+  --surface-2:      rgba(255, 255, 255, 0.06);
+  --border:         rgba(255, 255, 255, 0.07);
+  --border-2:       rgba(255, 255, 255, 0.13);
 }
 
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+/* ---------- Reset ---------- */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
-    background-color: var(--bg-dark);
-    color: var(--text-primary);
-    font-family: var(--font-main);
-    overflow: hidden;
-    height: 100vh;
+  font-family: 'Syne', sans-serif;
+  background: var(--void);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
-.app-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    padding: 1rem;
-    gap: 1rem;
+/* ---------- 背景レイヤー ---------- */
+/* グリッドパターン（大: amber / 小: cyan） */
+.bg-hex {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(245, 158, 11, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 158, 11, 0.045) 1px, transparent 1px),
+    linear-gradient(rgba(6, 182, 212, 0.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(6, 182, 212, 0.022) 1px, transparent 1px);
+  background-size: 80px 80px, 80px 80px, 16px 16px, 16px 16px;
+  z-index: -3;
+  pointer-events: none;
 }
 
-/* Glassmorphism utils */
-.glass {
-    background: var(--card-bg);
-    backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--border);
-    border-radius: 1.2rem;
+/* 大気 Orb */
+.bg-orb {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(110px);
+  pointer-events: none;
+  z-index: -2;
+}
+.bg-orb--legacy {
+  width: 620px; height: 620px;
+  background: var(--legacy);
+  opacity: 0.055;
+  top: -200px; left: -200px;
+  animation: drift-a 18s ease-in-out infinite alternate;
+}
+.bg-orb--modern {
+  width: 700px; height: 700px;
+  background: var(--modern);
+  opacity: 0.045;
+  bottom: -260px; right: -260px;
+  animation: drift-b 22s ease-in-out infinite alternate;
+}
+@keyframes drift-a { to { transform: translate(40px, 30px); } }
+@keyframes drift-b { to { transform: translate(-40px, -30px); } }
+
+/* ノイズテクスチャ */
+.bg-noise {
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 256px 256px;
+  opacity: 0.032;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 0;
 }
 
-.card {
-    padding: 1.5rem;
+/* ---------- ヘッダー ---------- */
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  height: 62px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(7, 10, 18, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
-.glass-inner {
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--border);
-    border-radius: 0.8rem;
-    padding: 1rem;
+.header-logo {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.header-icon { flex-shrink: 0; }
+
+.logo-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  background: linear-gradient(90deg, var(--legacy) 0%, var(--modern) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1;
+}
+.logo-sub {
+  display: block;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--muted);
+  letter-spacing: 0.07em;
+  margin-top: 2px;
 }
 
-/* Navigation */
-.glass-nav {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0.8rem 2rem;
-    background: rgba(15, 17, 26, 0.8);
-    backdrop-filter: var(--glass-blur);
-    border: 1px solid var(--border);
-    border-radius: 1rem;
+.header-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--success);
+  letter-spacing: 0.12em;
+}
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: blink 2.2s ease-in-out infinite;
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+/* ---------- ワークスペースレイアウト ---------- */
+.workspace {
+  display: grid;
+  grid-template-columns: 370px 1fr;
+  min-height: calc(100vh - 62px);
+  position: relative;
+  z-index: 1;
 }
 
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 0.8rem;
-    font-weight: 800;
-    font-size: 1.2rem;
-    letter-spacing: 1px;
+/* ---------- 左パネル ---------- */
+.control-panel {
+  border-right: 1px solid var(--border);
+  padding: 26px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  background: rgba(7, 10, 18, 0.38);
+  animation: fade-up 0.5s ease both;
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-.gradient-text {
-    background: linear-gradient(135deg, #818cf8, #2dd4bf);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+/* ドロップゾーン */
+.drop-zone-wrapper {
+  position: relative;
+  border: 1px solid var(--border-2);
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  background: var(--surface);
+  transition: border-color 0.3s, background 0.3s, transform 0.35s cubic-bezier(.22,.68,0,1.2), box-shadow 0.35s;
+  transform-style: preserve-3d;
+  perspective: 700px;
+}
+.drop-zone-wrapper:hover {
+  border-color: var(--legacy);
+  background: var(--legacy-dim);
+  transform: perspective(700px) rotateX(2deg) rotateY(-1.5deg) translateY(-3px);
+  box-shadow: 0 14px 42px var(--legacy-glow), 0 0 0 1px var(--legacy-dim);
+}
+.drop-zone-wrapper.dragover {
+  border-color: var(--modern);
+  background: var(--modern-dim);
+  box-shadow: 0 0 36px var(--modern-glow);
+  transform: none;
+}
+.drop-zone-wrapper input[type=file] { display: none; }
+
+/* 四隅装飾 */
+.corner-dec {
+  position: absolute;
+  width: 13px; height: 13px;
+  pointer-events: none;
+}
+.corner-dec::before, .corner-dec::after {
+  content: '';
+  position: absolute;
+  background: var(--legacy);
+  opacity: 0.75;
+}
+.corner-dec::before { width: 100%; height: 1.5px; top: 0; left: 0; }
+.corner-dec::after  { width: 1.5px; height: 100%; top: 0; left: 0; }
+.corner-dec.tl { top: 8px; left: 8px; }
+.corner-dec.tr { top: 8px; right: 8px; transform: scaleX(-1); }
+.corner-dec.bl { bottom: 8px; left: 8px; transform: scaleY(-1); }
+.corner-dec.br { bottom: 8px; right: 8px; transform: scale(-1); }
+
+.drop-zone-inner { display: flex; flex-direction: column; align-items: center; }
+
+.drop-icon {
+  margin-bottom: 13px;
+  transition: transform 0.3s ease;
+}
+.drop-zone-wrapper:hover .drop-icon { transform: translateY(-5px); }
+
+.drop-title {
+  font-weight: 600;
+  font-size: 0.93rem;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.drop-sub {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-bottom: 16px;
+  letter-spacing: 0.06em;
+}
+.btn-file {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  background: transparent;
+  border: 1px solid var(--legacy);
+  border-radius: 6px;
+  color: var(--legacy);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.83rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  letter-spacing: 0.04em;
+}
+.btn-file:hover {
+  background: var(--legacy-dim);
+  box-shadow: 0 0 14px var(--legacy-glow);
+}
+.selected-file {
+  margin-top: 11px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--modern);
+  min-height: 16px;
+  word-break: break-all;
 }
 
-.version-tag {
-    font-size: 0.7rem;
-    background: var(--accent);
-    padding: 0.2rem 0.5rem;
-    border-radius: 20px;
-    font-weight: 600;
+/* 設定パネル */
+.settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  user-select: none;
+}
+.toggle-input { display: none; }
+.toggle-track {
+  width: 32px; height: 17px;
+  background: var(--void-3);
+  border: 1px solid var(--border-2);
+  border-radius: 9px;
+  position: relative;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  width: 11px; height: 11px;
+  background: var(--muted);
+  border-radius: 50%;
+  top: 2px; left: 2px;
+  transition: transform 0.2s, background 0.2s;
+}
+.toggle-input:checked + .toggle-track { background: var(--legacy-dim); border-color: var(--legacy); }
+.toggle-input:checked + .toggle-track::after { background: var(--legacy); transform: translateX(15px); }
+.toggle-text { color: var(--text-dim); font-size: 0.83rem; }
+.toggle-hint {
+  color: var(--muted);
+  font-size: 0.71rem;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.model-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.model-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.68rem;
+  color: var(--muted);
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+.model-select {
+  flex: 1;
+  padding: 7px 10px;
+  background: var(--void-2);
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  transition: border-color 0.2s;
+}
+.model-select:focus { border-color: var(--modern); }
+
+/* Launch ボタン */
+.launch-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  padding: 13px 20px;
+  background: linear-gradient(90deg, var(--legacy) 0%, var(--modern) 100%);
+  border: none;
+  border-radius: 10px;
+  color: var(--void);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.77rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.2s;
+  margin-top: auto;
+}
+.launch-btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(245,158,11,0.38), 0 8px 32px rgba(6,182,212,0.18);
+}
+.launch-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.launch-glow {
+  position: absolute;
+  inset: -40%;
+  background: radial-gradient(circle, rgba(255,255,255,0.22) 0%, transparent 65%);
+  animation: spin-slow 3s linear infinite;
+  opacity: 0;
+}
+.launch-btn:not(:disabled):hover .launch-glow { opacity: 1; }
+@keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* ---------- 右エリア ---------- */
+.main-area {
+  display: flex;
+  flex-direction: column;
+  animation: fade-up 0.5s 0.1s ease both;
+  overflow: hidden;
 }
 
-.nav-links {
-    display: flex;
-    list-style: none;
-    gap: 2rem;
+/* ---------- Welcome 状態 ---------- */
+.welcome-state {
+  padding: 44px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 36px;
+  flex: 1;
+}
+.welcome-header { text-align: center; }
+.welcome-badge {
+  display: inline-block;
+  padding: 4px 14px;
+  background: var(--transform-dim);
+  border: 1px solid rgba(139,92,246,0.4);
+  border-radius: 100px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  color: var(--transform);
+  margin-bottom: 18px;
+}
+.welcome-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.85rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--legacy) 0%, var(--transform) 50%, var(--modern) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 10px;
+}
+.welcome-desc {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-family: 'IBM Plex Mono', monospace;
 }
 
-.nav-links li {
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.3s;
+/* コードカード */
+.code-cards {
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  max-width: 820px;
+}
+.code-card {
+  flex: 1;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.code-card:hover { transform: translateY(-3px); }
+.code-card--legacy { border-color: rgba(245,158,11,0.18); }
+.code-card--legacy:hover { box-shadow: 0 8px 32px rgba(245,158,11,0.1); }
+.code-card--modern { border-color: rgba(6,182,212,0.18); }
+.code-card--modern:hover { box-shadow: 0 8px 32px rgba(6,182,212,0.1); }
+
+.code-card-header {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.code-lang-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.13em;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.legacy-badge {
+  color: var(--legacy);
+  background: var(--legacy-dim);
+  border: 1px solid rgba(245,158,11,0.28);
+}
+.modern-badge {
+  color: var(--modern);
+  background: var(--modern-dim);
+  border: 1px solid rgba(6,182,212,0.28);
+}
+.code-content {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.71rem;
+  line-height: 1.75;
+  padding: 14px 16px;
+  color: var(--text-dim);
+  overflow: hidden;
+}
+.c-key { color: var(--modern); }
+.c-dim  { color: var(--muted); }
+
+/* 変換ブリッジ */
+.transform-bridge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 14px;
+  gap: 6px;
+}
+.bridge-line {
+  width: 1px;
+  flex: 1;
+  background: linear-gradient(180deg, transparent, var(--transform-dim), transparent);
+}
+.bridge-arrow { animation: pulse-bridge 2s ease-in-out infinite; }
+@keyframes pulse-bridge {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--transform)); opacity: 1; }
+  50%       { filter: drop-shadow(0 0 14px var(--transform)); opacity: 0.65; }
 }
 
-.nav-links li:hover,
-.nav-links li.active {
-    color: var(--text-primary);
+/* ---------- パイプライン進捗セクション ---------- */
+#progress-section {
+  display: none; /* JS が display:block に変更 */
+  border-top: 1px solid var(--border);
 }
 
-/* Dashboard Grid */
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    grid-template-rows: 1fr 200px;
-    gap: 1rem;
-    flex-grow: 1;
-    overflow: hidden;
+.pipeline-panel {
+  padding: 18px 26px;
+  border-bottom: 1px solid var(--border);
+}
+.panel-hd {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+.panel-hex   { color: var(--transform); font-size: 1rem; }
+.panel-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  color: var(--muted);
+}
+.stage-list { display: flex; flex-direction: column; gap: 6px; }
+
+/* ---------- ステージアイテム ---------- */
+.stage-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 13px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  border-left: 3px solid transparent;
+  background: var(--surface);
+  font-size: 0.87rem;
+  transition: all 0.35s ease;
+}
+.stage-item.pending {
+  border-left-color: var(--border-2);
+  opacity: 0.55;
+}
+.stage-item.running {
+  border-left-color: var(--transform);
+  background: var(--transform-dim);
+  border-color: rgba(139,92,246,0.18);
+  box-shadow: 0 0 18px rgba(139,92,246,0.13);
+  opacity: 1;
+}
+.stage-item.complete {
+  border-left-color: var(--modern);
+  background: var(--modern-dim);
+  border-color: rgba(6,182,212,0.15);
+  opacity: 1;
+}
+.stage-item.error {
+  border-left-color: var(--error);
+  background: rgba(239,68,68,0.07);
+  border-color: rgba(239,68,68,0.18);
+  opacity: 1;
 }
 
-/* Controls Panel */
-.controls-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
+/* ステージアイコン */
+.stage-icon {
+  width: 26px; height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  font-family: 'Orbitron', sans-serif;
+  flex-shrink: 0;
+  transition: all 0.35s ease;
+}
+.stage-item.pending  .stage-icon { background: var(--surface-2); color: var(--muted); }
+.stage-item.running  .stage-icon { background: var(--transform-dim); color: var(--transform); animation: glow-pulse 1.4s ease-in-out infinite; }
+.stage-item.complete .stage-icon { background: var(--modern-dim); color: var(--modern); }
+.stage-item.error    .stage-icon { background: rgba(239,68,68,0.1); color: var(--error); }
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 rgba(139,92,246,0); }
+  50%       { box-shadow: 0 0 12px rgba(139,92,246,0.55); }
 }
 
-.drop-zone {
-    height: 120px;
-    border: 2px dashed var(--border);
-    border-radius: 1rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    color: var(--text-secondary);
-    transition: all 0.3s;
-    cursor: pointer;
+.stage-status {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  /* color は app.js が var(--muted) をインラインで指定 */
 }
 
-.drop-zone:hover {
-    border-color: var(--accent);
-    background: rgba(99, 102, 241, 0.05);
+/* ---------- CRT ターミナル ---------- */
+.terminal-panel {
+  display: flex;
+  flex-direction: column;
+  background: #050810;
+  border-top: 1px solid rgba(245,158,11,0.1);
+  position: relative;
+}
+.terminal-hd {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 14px;
+  background: rgba(0,0,0,0.3);
+  border-bottom: 1px solid rgba(245,158,11,0.12);
+  flex-shrink: 0;
+}
+.term-dots { display: flex; gap: 5px; }
+.term-dots span {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+}
+.term-dots span:nth-child(1) { background: #ef4444; opacity: 0.7; }
+.term-dots span:nth-child(2) { background: #f59e0b; opacity: 0.7; }
+.term-dots span:nth-child(3) { background: #22c55e; opacity: 0.7; }
+.term-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.62rem;
+  letter-spacing: 0.28em;
+  color: rgba(245,158,11,0.55);
+  flex: 1;
+}
+.term-blink {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--legacy);
+  animation: blink 1s ease-in-out infinite;
+}
+.terminal-body {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+/* CRT スキャンラインオーバーレイ */
+.terminal-scanline {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.14) 2px,
+    rgba(0, 0, 0, 0.14) 4px
+  );
+  pointer-events: none;
+  z-index: 2;
+}
+#log {
+  position: relative;
+  z-index: 1;
+  padding: 13px 15px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.76rem;
+  line-height: 1.72;
+  max-height: 300px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: rgba(245,158,11,0.65);
+}
+#log::-webkit-scrollbar { width: 3px; }
+#log::-webkit-scrollbar-track { background: transparent; }
+#log::-webkit-scrollbar-thumb { background: rgba(245,158,11,0.25); border-radius: 2px; }
+
+/* ログレベル色 */
+.log-info    { color: rgba(245, 158, 11, 0.7); }
+.log-success { color: #4ade80; }
+.log-warn    { color: #fbbf24; }
+.log-error   { color: #f87171; }
+
+/* ---------- 結果セクション ---------- */
+#result-section {
+  display: none; /* JS が display:block に変更 */
+  padding: 18px 26px;
+  border-top: 1px solid var(--border);
+}
+.result-banner {
+  padding: 18px 22px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border: 1px solid var(--border);
+}
+.result-banner.success {
+  background: rgba(34,197,94,0.07);
+  border-color: rgba(34,197,94,0.28);
+}
+.result-banner.error {
+  background: rgba(239,68,68,0.07);
+  border-color: rgba(239,68,68,0.28);
+}
+.result-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+.result-banner.success .result-title { color: var(--success); }
+.result-banner.error   .result-title { color: var(--error); }
+.result-desc {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.btn-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  background: transparent;
+  border: 1px solid var(--modern);
+  border-radius: 7px;
+  color: var(--modern);
+  font-family: 'Syne', sans-serif;
+  font-size: 0.83rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+}
+.btn-download:hover {
+  background: var(--modern-dim);
+  box-shadow: 0 0 14px var(--modern-glow);
+  transform: translateY(-1px);
 }
 
-.drop-zone span {
-    color: var(--accent);
-    text-decoration: underline;
+/* ---------- HITL ダイアログ ---------- */
+#hitl-dialog {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 10, 18, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 200;
+  align-items: center;
+  justify-content: center;
 }
+#hitl-dialog.open { display: flex; }
 
-.config-options {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+.dialog-box {
+  background: var(--void-2);
+  border: 1px solid rgba(139,92,246,0.28);
+  border-radius: 14px;
+  padding: 26px 28px;
+  max-width: 560px;
+  width: 90%;
+  box-shadow: 0 0 60px rgba(139,92,246,0.14), 0 20px 60px rgba(0,0,0,0.5);
+  animation: dialog-in 0.3s cubic-bezier(.22,.68,0,1.2) both;
 }
-
-.option label {
-    display: block;
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-    margin-bottom: 0.5rem;
+@keyframes dialog-in {
+  from { opacity: 0; transform: scale(0.94) translateY(12px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
 }
-
-select {
-    width: 100%;
-    padding: 0.8rem;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid var(--border);
-    border-radius: 0.5rem;
-    color: white;
-    font-family: inherit;
+.dialog-hd {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 14px;
 }
-
-.toggle-group {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    background: rgba(0, 0, 0, 0.3);
-    border-radius: 0.5rem;
-    padding: 0.3rem;
+.dialog-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--transform);
+  animation: blink 0.9s ease-in-out infinite;
 }
-
-.toggle-group button {
-    padding: 0.5rem;
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    border-radius: 0.3rem;
-    cursor: pointer;
-    transition: all 0.3s;
+.dialog-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--transform);
 }
-
-.toggle-group button.active {
-    background: var(--accent);
-    color: white;
+.dialog-q {
+  font-size: 0.88rem;
+  color: var(--text-dim);
+  line-height: 1.65;
+  margin-bottom: 14px;
 }
-
-.cta-button {
-    padding: 1rem;
-    border: none;
-    border-radius: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s;
-    font-size: 1rem;
+.unknowns-list {
+  background: rgba(245,158,11,0.05);
+  border: 1px solid rgba(245,158,11,0.18);
+  border-radius: 8px;
+  padding: 11px 14px;
+  margin-bottom: 14px;
+  font-size: 0.83rem;
+  font-family: 'IBM Plex Mono', monospace;
+  color: var(--text-dim);
 }
-
-.cta-button.primary {
-    background: linear-gradient(135deg, #6366f1, #4f46e5);
-    color: white;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+.unknowns-list ul { padding-left: 17px; }
+.unknowns-list li { margin-top: 4px; color: var(--legacy); }
+.unknowns-list strong { color: var(--legacy); display: block; margin-bottom: 5px; }
+.dialog-textarea {
+  width: 100%;
+  padding: 11px 13px;
+  background: var(--void);
+  border: 1px solid var(--border-2);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.82rem;
+  resize: vertical;
+  min-height: 78px;
+  outline: none;
+  transition: border-color 0.2s;
 }
-
-.cta-button.primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 15px 25px var(--accent-glow);
+.dialog-textarea:focus { border-color: var(--transform); }
+.dialog-actions {
+  display: flex;
+  gap: 11px;
+  justify-content: flex-end;
+  margin-top: 14px;
 }
-
-/* Main Display */
-.main-display {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    min-height: 0;
-}
-
-/* Pipeline */
-.pipeline-container {
-    padding: 1.5rem;
-}
-
-.pipeline-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 2rem;
-}
-
-.task-info {
-    font-family: var(--font-mono);
-    color: var(--accent);
-    font-size: 0.9rem;
-}
-
-.pipeline-steps {
-    display: flex;
-    justify-content: space-between;
-    position: relative;
-    padding: 0 2rem;
-}
-
-.step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.8rem;
-    position: relative;
-    z-index: 2;
-}
-
-.step-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.05);
-    border: 2px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    transition: all 0.5s;
-}
-
-.step.active .step-icon {
-    background: var(--accent);
-    border-color: var(--accent);
-    box-shadow: 0 0 20px var(--accent-glow);
-}
-
-.step.completed .step-icon {
-    background: var(--success);
-    border-color: var(--success);
-}
-
-.step-label {
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    font-weight: 600;
-}
-
-.step-line {
-    position: absolute;
-    top: 20px;
-    left: calc(40px + 10px);
-    width: calc(100% + 20px);
-    height: 2px;
-    background: var(--border);
-    z-index: 1;
-}
-
-.step.completed .step-line {
-    background: var(--success);
-}
-
-/* Editor Section */
-.editor-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
-    flex-grow: 1;
-    min-height: 0;
-}
-
-.editor-pane {
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-.pane-header {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 1rem;
-}
-
-.lang-tag {
-    font-size: 0.7rem;
-    padding: 0.2rem 0.6rem;
-    background: #475569;
-    border-radius: 4px;
-    font-weight: 700;
-}
-
-.lang-tag.target {
-    background: #b45309;
-}
-
-.file-name {
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    color: var(--text-secondary);
-}
-
-.code-block {
-    flex-grow: 1;
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
-    line-height: 1.6;
-    overflow-y: auto;
-    color: #e2e8f0;
-    padding-right: 1rem;
-    white-space: pre-wrap;
-}
-
-/* Log Panel */
-.log-panel {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-direction: column;
-}
-
-.panel-tabs {
-    display: flex;
-    gap: 2rem;
-    margin-bottom: 1rem;
-    border-bottom: 1px solid var(--border);
-}
-
-.panel-tabs button {
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    padding: 0.5rem 0;
-    cursor: pointer;
-    font-family: inherit;
-    font-weight: 600;
-    position: relative;
-}
-
-.panel-tabs button.active {
-    color: var(--accent);
-}
-
-.panel-tabs button.active::after {
-    content: '';
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: var(--accent);
-}
-
-.log-content {
-    flex-grow: 1;
-    overflow-y: auto;
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.log-entry {
-    color: #cbd5e1;
-    padding-left: 1rem;
-    position: relative;
-}
-
-.log-entry::before {
-    content: '→';
-    position: absolute;
-    left: 0;
-    color: var(--accent);
-}
-
-.log-entry.system {
-    color: var(--accent);
-    font-weight: 600;
-}
-
-.log-entry.success {
-    color: var(--success);
-}
-
-/* Badges */
-.badge {
-    font-size: 0.7rem;
-    font-weight: 700;
-    padding: 0.1rem 0.4rem;
-    border-radius: 4px;
-}
-
-.badge.medium {
-    background: var(--warning);
-    color: black;
-}
-
-/* Modal */
-.modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    backdrop-filter: blur(5px);
-}
-
-.modal-content {
-    max-width: 500px;
-    width: 90%;
-    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideUp {
-    from {
-        transform: translateY(30px);
-        opacity: 0;
-    }
-
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-.hidden {
-    display: none;
-}
-
-.design-preview {
-    margin: 1.5rem 0;
-}
-
-.modal-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-}
-
 .btn {
-    padding: 0.8rem 1.5rem;
-    border-radius: 0.6rem;
-    border: none;
-    font-weight: 600;
-    cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 20px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.83rem;
+  font-weight: 500;
+  font-family: 'Syne', sans-serif;
+  transition: all 0.2s ease;
+  letter-spacing: 0.05em;
+}
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-reject {
+  background: var(--surface-2);
+  color: var(--text-dim);
+  border: 1px solid var(--border-2);
+}
+.btn-reject:hover {
+  background: rgba(239,68,68,0.1);
+  border-color: var(--error);
+  color: var(--error);
+}
+.btn-approve {
+  background: linear-gradient(90deg, var(--transform), var(--modern));
+  color: white;
+  font-weight: 600;
+}
+.btn-approve:hover {
+  box-shadow: 0 0 22px rgba(139,92,246,0.42);
+  transform: translateY(-1px);
 }
 
-.btn.primary {
-    background: var(--accent);
-    color: white;
-}
-
-.btn.secondary {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-    width: 6px;
-}
-
-::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: var(--text-secondary);
-}
-
-.report-link {
-    color: var(--success);
-    text-decoration: none;
-    font-weight: 600;
-    display: inline-block;
-    padding: 0.5rem 1rem;
-    background: rgba(20, 184, 166, 0.1);
-    border-radius: 0.5rem;
-    border: 1px solid rgba(20, 184, 166, 0.3);
-    margin-top: 0.5rem;
-    transition: all 0.3s;
-}
-
-.report-link:hover {
-    background: rgba(20, 184, 166, 0.2);
-    box-shadow: 0 0 15px rgba(20, 184, 166, 0.2);
-    transform: translateX(5px);
+/* ---------- レスポンシブ ---------- */
+@media (max-width: 800px) {
+  .workspace { grid-template-columns: 1fr; }
+  .control-panel { border-right: none; border-bottom: 1px solid var(--border); }
+  .code-cards { flex-direction: column; }
+  .transform-bridge { flex-direction: row; padding: 10px 0; }
+  .bridge-line { height: 1px; width: auto; flex: 1; }
 }

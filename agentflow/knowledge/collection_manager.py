@@ -312,6 +312,8 @@ class CollectionManager:
         reranker_map: dict[str, RerankerType] = {
             "cohere": RerankerType.COHERE,
             "cross_encoder": RerankerType.CROSS_ENCODER,
+            "cross_encoder_ruri": RerankerType.CROSS_ENCODER_RURI,
+            "llm_listwise": RerankerType.LLM_LISTWISE,
             "bm25": RerankerType.BM25,
             "none": RerankerType.NONE,
         }

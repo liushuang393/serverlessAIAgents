@@ -154,11 +154,31 @@ describe('DecisionApiClient', () => {
     it('チェックポイント反映APIのレスポンスを返す', async () => {
       const mockResponse = {
         success: true,
-        message: 'チェック項目を反映して信頼度を再計算しました。',
+        message: 'チェック項目を反映して信頼度と戦略可行度を再計算しました。',
         base_confidence_pct: 28,
+        checkpoint_boost_pct: 3,
+        finding_boost_pct: 2,
+        llm_bonus_pct: 1,
+        bonus_reasons: ['補足メモの具体性により加点しました。'],
         recalculated_confidence_pct: 40,
+        base_feasibility_pct: 52,
+        checkpoint_feasibility_boost_pct: 2,
+        finding_feasibility_boost_pct: 2,
+        llm_feasibility_bonus_pct: 1,
+        recalculated_feasibility_pct: 57,
         threshold_pct: 39,
         signature_eligible: true,
+        applied_contributions: [
+          {
+            source: 'checkpoint',
+            item_key: 'approver_confirmed',
+            label: '承認者（ロール）確認済み',
+            target_metric: 'confidence',
+            confidence_boost_pct: 3,
+            feasibility_boost_pct: 0,
+            note: 'PO 承認',
+          },
+        ],
         updated_review: {
           overall_verdict: 'PASS',
           confidence_score: 0.4,

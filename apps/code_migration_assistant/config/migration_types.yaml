@@ -98,8 +98,7 @@ migration_types:
 
 # デフォルト設定
 defaults:
-  migration_type: cobol-to-springboot
+  migration_type: cobol-to-java
   log_level: INFO
   output_dir: ./output
   encoding: utf-8
-

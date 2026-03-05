@@ -1,7 +1,7 @@
 /**
  * AgentBrowser - 全 App 横断 Agent 一覧.
  *
- * Capability フィルタ付きで Agent を表示。
+ * Agent Type フィルタ付きで Agent を表示。
  */
 
 import { useEffect, useState } from 'react';
@@ -12,30 +12,17 @@ export function AgentBrowser() {
   const { t } = useI18n();
   const {
     agents,
-    capabilities,
     loading,
     error,
     loadAgents,
-    searchAgentsByCapability,
     clearError,
   } = useAppStore();
 
-  const [selectedCap, setSelectedCap] = useState<string>('');
   const [selectedType, setSelectedType] = useState<string>('');
 
   useEffect(() => {
     loadAgents();
   }, [loadAgents]);
-
-  /** Capability フィルタ適用 */
-  const handleFilter = (cap: string) => {
-    setSelectedCap(cap);
-    if (cap === '') {
-      loadAgents();
-    } else {
-      searchAgentsByCapability(cap);
-    }
-  };
 
   const typeCounts = agents.reduce<Record<string, number>>((acc, agent) => {
     const key = agent.agent_type || 'specialist';
@@ -102,41 +89,6 @@ export function AgentBrowser() {
         </div>
       )}
 
-      {/* Capability フィルタ */}
-      {capabilities.length > 0 && (
-        <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
-          <p className="text-xs text-slate-500 uppercase tracking-wider mb-3">
-            {t('agent_browser.filter_cap')}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => handleFilter('')}
-              className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                selectedCap === ''
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-              }`}
-            >
-              {t('agent_browser.all')}
-            </button>
-            {capabilities.map((cap) => (
-              <button
-                key={cap.id}
-                onClick={() => handleFilter(cap.id)}
-                className={`px-3 py-1.5 text-xs rounded-full transition-colors ${
-                  selectedCap === cap.id
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
-                }`}
-              >
-                {cap.label}
-                <span className="ml-1.5 opacity-60">({cap.count})</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* ローディング */}
       {loading && (
         <div className="flex justify-center py-12">
@@ -150,7 +102,7 @@ export function AgentBrowser() {
           <div className="px-5 py-3.5 border-b border-slate-800">
             <h2 className="text-sm font-semibold text-slate-200">{t('agent_browser.agents_count')}</h2>
           </div>
-          <div className="divide-y divide-slate-800/50">
+          <div className="divide-y divide-slate-800/50 max-h-[70vh] overflow-y-auto">
             {visibleAgents.map((agent, idx) => (
               <div key={`${agent.app_name}-${agent.name}-${idx}`} className="px-5 py-3.5 hover:bg-slate-800/30 transition-colors">
                 <div className="flex items-center gap-4">
@@ -167,23 +119,7 @@ export function AgentBrowser() {
                       <p className="text-[10px] text-slate-600 font-mono mt-0.5">{agent.module}</p>
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-1.5 max-w-xs">
-                    {agent.capabilities.map((cap) => (
-                      <span
-                        key={cap.id}
-                        onClick={() => handleFilter(cap.id)}
-                        className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 text-[10px] rounded-full cursor-pointer hover:bg-indigo-500/20 transition-colors"
-                      >
-                        {cap.label}
-                      </span>
-                    ))}
-                  </div>
                 </div>
-                {agent.capabilities_legacy.length > 0 && (
-                  <p className="text-[10px] text-slate-600 mt-2">
-                    {t('agent_browser.legacy_prefix')} {agent.capabilities_legacy.join(', ')}
-                  </p>
-                )}
               </div>
             ))}
           </div>

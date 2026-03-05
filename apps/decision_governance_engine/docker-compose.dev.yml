@@ -73,4 +73,10 @@ services:
       # ※ VITE_ プレフィックスだとブラウザ側に注入されてしまうため、
       #    PROXY_TARGET を使用（vite.config.ts の process.env.PROXY_TARGET で参照）
       - PROXY_TARGET=http://backend:8000
-
+    healthcheck:
+      # 開発モードは Vite dev server（5174）に対してヘルスチェックする
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:5174/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

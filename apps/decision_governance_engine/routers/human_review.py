@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
@@ -46,6 +47,9 @@ logger = logging.getLogger(__name__)
 DB_IO_TIMEOUT_SECONDS = 2.0
 DEFAULT_FINDING_CHECK_BOOST = 5.0
 MAX_LLM_BONUS_PCT = 15.0
+METRIC_TARGET_CONFIDENCE = "confidence"
+METRIC_TARGET_FEASIBILITY = "feasibility"
+METRIC_TARGET_BOTH = "both"
 
 router = APIRouter(prefix="/api/human-review", tags=["human-review"])
 
@@ -163,8 +167,17 @@ class CheckpointApplyResponse(BaseModel):
     llm_bonus_pct: int = Field(..., description="補足メモのLLM加点（%）")
     bonus_reasons: list[str] = Field(default_factory=list, description="LLM加点の理由")
     recalculated_confidence_pct: int = Field(..., description="反映後の信頼度（%）")
+    base_feasibility_pct: int = Field(..., description="反映前の戦略可行度（%）")
+    checkpoint_feasibility_boost_pct: int = Field(..., description="戦略可行度へのチェックポイント加点（%）")
+    finding_feasibility_boost_pct: int = Field(..., description="戦略可行度への指摘確認加点（%）")
+    llm_feasibility_bonus_pct: int = Field(..., description="戦略可行度へのLLM加点（%）")
+    recalculated_feasibility_pct: int = Field(..., description="反映後の戦略可行度（%）")
     threshold_pct: int = Field(..., description="署名可能閾値（%）")
     signature_eligible: bool = Field(..., description="署名可能か")
+    applied_contributions: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="適用した加点内訳（confidence/feasibility/both）",
+    )
     updated_review: dict[str, Any] = Field(..., description="更新後 review")
 
 
@@ -304,6 +317,11 @@ def _build_default_finding(raw: Any) -> ReviewFinding:
         suggested_revision=str(data.get("suggested_revision", "")),
         requires_human_review=bool(data.get("requires_human_review", False)),
         human_review_hint=str(data.get("human_review_hint", "")) or None,
+        failure_point=str(data.get("failure_point", "")),
+        impact_scope=str(data.get("impact_scope", "")),
+        minimal_patch=data.get("minimal_patch") if isinstance(data.get("minimal_patch"), dict) else None,
+        score_improvements=data.get("score_improvements", []) if isinstance(data.get("score_improvements"), list) else [],
+        action_type=data.get("action_type", "RECALC"),
     )
 
 
@@ -498,7 +516,36 @@ async def _persist_human_review_record(
             timeout=DB_IO_TIMEOUT_SECONDS,
         )
         if not stored:
-            logger.warning(f"人間確認ログ保存対象が見つかりません: request_id={request_uuid}")
+            logger.warning(f"人間確認ログ保存対象が見つかりません: request_id={request_uuid}。骨組み履歴を作成します。")
+
+            seed_review: dict[str, Any] = {}
+            if isinstance(updated_review, dict):
+                seed_review = {**updated_review}
+            seed_review.setdefault("human_review_records", [])
+            fallback_question = f"[human-review] report_id={report_id_text or 'unknown'}"
+
+            await asyncio.wait_for(
+                repo.upsert_stage(
+                    request_id=request_uuid,
+                    question=fallback_question,
+                    stage_name="review",
+                    stage_result=seed_review,
+                ),
+                timeout=DB_IO_TIMEOUT_SECONDS,
+            )
+
+            stored = await asyncio.wait_for(
+                repo.append_human_review_record(
+                    request_id=request_uuid,
+                    review_record=review_record,
+                    updated_review=updated_review,
+                ),
+                timeout=DB_IO_TIMEOUT_SECONDS,
+            )
+            if stored:
+                logger.info(f"人間確認ログ保存の自己修復に成功: request_id={request_uuid}")
+            else:
+                logger.warning(f"人間確認ログ保存の自己修復に失敗: request_id={request_uuid}")
     except TimeoutError:
         logger.warning(f"人間確認ログ保存がタイムアウト: request_id={request_uuid}")
     except Exception as exc:
@@ -666,6 +713,148 @@ def _clamp_bonus_pct(value: float) -> float:
     return max(0.0, min(MAX_LLM_BONUS_PCT, value))
 
 
+def _clamp_pct(value: float) -> int:
+    """百分率を 0-100 の整数へ丸める."""
+    return max(0, min(100, round(value)))
+
+
+def _safe_float(value: Any, default: float) -> float:
+    """安全に float へ変換."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _to_mapping(data: Any) -> Mapping[str, Any]:
+    """Pydantic/辞書を Mapping に正規化."""
+    if hasattr(data, "model_dump"):
+        dumped = data.model_dump()
+        return dumped if isinstance(dumped, Mapping) else {}
+    if isinstance(data, Mapping):
+        return data
+    return {}
+
+
+def _normalize_str_list(value: Any) -> list[str]:
+    """入力を文字列配列へ正規化."""
+    if not isinstance(value, list):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _infer_checkpoint_target_metric(item: CheckpointItem) -> str:
+    """Checkpoint が影響する指標（confidence/feasibility/both）を推定."""
+    component = (item.target_component or "").strip().lower()
+    label = item.label.strip()
+
+    if component in {"risk_coverage", "implementation_feasibility", "logic_consistency"}:
+        return METRIC_TARGET_BOTH
+
+    if "撤退" in label or "最悪ケース" in label or "ゲート" in label:
+        return METRIC_TARGET_BOTH
+
+    if component == "input_sufficiency":
+        return METRIC_TARGET_CONFIDENCE
+
+    return METRIC_TARGET_CONFIDENCE
+
+
+def _infer_finding_target_metric(finding: ReviewFinding) -> str:
+    """Finding が影響する指標（confidence/feasibility/both）を推定."""
+    if finding.category == FindingCategory.TIMELINE_UNREALISTIC:
+        return METRIC_TARGET_FEASIBILITY
+
+    if finding.category in {
+        FindingCategory.OVER_OPTIMISM,
+        FindingCategory.RESPONSIBILITY_GAP,
+    }:
+        return METRIC_TARGET_BOTH
+
+    keywords = ("feasib", "可行", "実装", "timeline", "期間", "risk", "リスク", "依存", "cost", "コスト")
+    for improvement in finding.score_improvements:
+        target_score = improvement.target_score.lower()
+        if any(keyword in target_score for keyword in keywords):
+            return METRIC_TARGET_BOTH
+
+    return METRIC_TARGET_CONFIDENCE
+
+
+def _derive_path_feasibility_pct(
+    path: Mapping[str, Any],
+    judgment_framework: Mapping[str, Any],
+) -> float:
+    """単一パスの戦略可行度（%）を算出."""
+    legacy_probability = _safe_float(path.get("success_probability"), -1.0)
+    if legacy_probability > 0:
+        return max(0.0, min(100.0, legacy_probability * 100.0))
+
+    conditional_eval = _to_mapping(path.get("conditional_evaluation", {}))
+    success_conditions = _normalize_str_list(conditional_eval.get("success_conditions", []))
+    risk_factors = _normalize_str_list(conditional_eval.get("risk_factors", []))
+    failure_modes = _normalize_str_list(conditional_eval.get("failure_modes", []))
+    has_probability_basis = bool(str(conditional_eval.get("probability_basis", "")).strip())
+
+    success_ratio = min(1.0, len(success_conditions) / 3.0)
+    risk_ratio = min(1.0, len(risk_factors) / 3.0)
+    failure_ratio = min(1.0, len(failure_modes) / 3.0)
+    downside_ratio = (risk_ratio + failure_ratio) / 2.0
+
+    reversibility = str(path.get("reversibility", "MEDIUM")).upper()
+    reversibility_ratio = {
+        "HIGH": 0.85,
+        "MEDIUM": 0.65,
+        "LOW": 0.45,
+    }.get(reversibility, 0.6)
+
+    path_id = str(path.get("path_id", "")).strip()
+    gate_results = judgment_framework.get("gate_results", {})
+    gate_pass_ratio = 0.6
+    if isinstance(gate_results, Mapping) and path_id:
+        path_gates = gate_results.get(path_id, [])
+        if isinstance(path_gates, list) and path_gates:
+            pass_count = sum(1 for gate in path_gates if bool(gate))
+            gate_pass_ratio = pass_count / len(path_gates)
+
+    should_scores = judgment_framework.get("should_scores", {})
+    should_ratio = 0.6
+    if isinstance(should_scores, Mapping) and path_id:
+        path_scores = should_scores.get(path_id, [])
+        if isinstance(path_scores, list):
+            normalized_scores = [max(1.0, min(5.0, _safe_float(score, 3.0))) for score in path_scores]
+            if normalized_scores:
+                should_ratio = (sum(normalized_scores) / len(normalized_scores)) / 5.0
+
+    basis_bonus = 0.05 if has_probability_basis else 0.0
+    score_ratio = (
+        0.30 * success_ratio
+        + 0.20 * gate_pass_ratio
+        + 0.15 * should_ratio
+        + 0.20 * reversibility_ratio
+        + 0.15 * max(0.0, 1.0 - downside_ratio)
+        + basis_bonus
+    )
+    return max(0.0, min(100.0, score_ratio * 100.0))
+
+
+def _calculate_base_feasibility_pct(report: Any) -> int:
+    """レポートから戦略可行度（%）の基礎点を算出."""
+    report_map = _to_mapping(report)
+    fa = _to_mapping(report_map.get("fa", {}))
+    recommended_paths = fa.get("recommended_paths", [])
+    if not isinstance(recommended_paths, list) or not recommended_paths:
+        return 0
+
+    judgment_framework = _to_mapping(fa.get("judgment_framework", {}))
+    path_scores = [
+        _derive_path_feasibility_pct(_to_mapping(path), judgment_framework)
+        for path in recommended_paths
+    ]
+    if not path_scores:
+        return 0
+    return _clamp_pct(max(path_scores))
+
+
 def _has_any_keyword(text: str, keywords: tuple[str, ...]) -> bool:
     lowered = text.lower()
     return any(keyword.lower() in lowered for keyword in keywords)
@@ -817,16 +1006,40 @@ async def apply_checkpoints(
     policy = load_human_review_policy()
     threshold_pct = int(policy.signable_confidence_threshold_pct)
 
-    base_confidence_pct = max(0, min(100, round(review.confidence_score * 100)))
-    checkpoint_boost = sum(
-        item.score_boost
-        for item in updated_checkpoint_items
-        if item.checked
-    )
+    base_confidence_pct = _clamp_pct(review.confidence_score * 100)
+    base_feasibility_pct = _calculate_base_feasibility_pct(report)
+
+    checkpoint_confidence_boost = 0.0
+    checkpoint_feasibility_boost = 0.0
+    applied_contributions: list[dict[str, Any]] = []
+    for item in updated_checkpoint_items:
+        if not item.checked:
+            continue
+        target_metric = _infer_checkpoint_target_metric(item)
+        confidence_delta = float(item.score_boost)
+        feasibility_delta = float(item.score_boost) if target_metric in {
+            METRIC_TARGET_FEASIBILITY,
+            METRIC_TARGET_BOTH,
+        } else 0.0
+        checkpoint_confidence_boost += confidence_delta
+        checkpoint_feasibility_boost += feasibility_delta
+        applied_contributions.append(
+            {
+                "source": "checkpoint",
+                "item_key": item.item_id,
+                "label": item.label,
+                "target_metric": target_metric,
+                "confidence_boost_pct": _clamp_pct(confidence_delta),
+                "feasibility_boost_pct": _clamp_pct(feasibility_delta),
+                "note": (item.annotation or "").strip() or None,
+            }
+        )
 
     finding_map = {int(item.finding_index): item for item in request.finding_confirmations}
     checked_finding_payloads: list[dict[str, Any]] = []
-    finding_boost = 0.0
+    finding_confidence_boost = 0.0
+    finding_feasibility_boost = 0.0
+    feasibility_note_count = 0
     for finding_index, finding in enumerate(review.findings):
         incoming_finding = finding_map.get(finding_index)
         checked = bool(incoming_finding.checked) if incoming_finding is not None else False
@@ -834,7 +1047,27 @@ async def apply_checkpoints(
         if not checked:
             continue
 
-        finding_boost += _extract_finding_boost_delta(finding)
+        target_metric = _infer_finding_target_metric(finding)
+        confidence_delta = _extract_finding_boost_delta(finding)
+        feasibility_delta = confidence_delta if target_metric in {
+            METRIC_TARGET_FEASIBILITY,
+            METRIC_TARGET_BOTH,
+        } else 0.0
+        finding_confidence_boost += confidence_delta
+        finding_feasibility_boost += feasibility_delta
+        if note_text and target_metric in {METRIC_TARGET_FEASIBILITY, METRIC_TARGET_BOTH}:
+            feasibility_note_count += 1
+        applied_contributions.append(
+            {
+                "source": "finding",
+                "item_key": f"finding_{finding_index}",
+                "label": finding.description,
+                "target_metric": target_metric,
+                "confidence_boost_pct": _clamp_pct(confidence_delta),
+                "feasibility_boost_pct": _clamp_pct(feasibility_delta),
+                "note": note_text or None,
+            }
+        )
         if note_text:
             checked_finding_payloads.append(
                 {
@@ -844,14 +1077,46 @@ async def apply_checkpoints(
                     "description": finding.description,
                     "suggested_revision": finding.suggested_revision,
                     "note": note_text,
+                    "target_metric": target_metric,
                 }
             )
 
     llm_bonus, bonus_reasons = await _evaluate_finding_bonus_with_ai(checked_finding_payloads)
-    total_score = base_confidence_pct + checkpoint_boost + finding_boost + llm_bonus
-    recalculated_confidence_pct = min(100, round(total_score))
+    llm_feasibility_bonus = (
+        llm_bonus * (feasibility_note_count / len(checked_finding_payloads))
+        if checked_finding_payloads
+        else 0.0
+    )
+    total_confidence_score = (
+        base_confidence_pct
+        + checkpoint_confidence_boost
+        + finding_confidence_boost
+        + llm_bonus
+    )
+    total_feasibility_score = (
+        base_feasibility_pct
+        + checkpoint_feasibility_boost
+        + finding_feasibility_boost
+        + llm_feasibility_bonus
+    )
+    recalculated_confidence_pct = _clamp_pct(total_confidence_score)
+    recalculated_feasibility_pct = _clamp_pct(total_feasibility_score)
     recalculated_confidence_score = round(recalculated_confidence_pct / 100.0, 2)
     signature_eligible = recalculated_confidence_pct >= threshold_pct
+
+    if checked_finding_payloads:
+        llm_target_metric = METRIC_TARGET_BOTH if feasibility_note_count > 0 else METRIC_TARGET_CONFIDENCE
+        applied_contributions.append(
+            {
+                "source": "llm_bonus",
+                "item_key": "llm_bonus",
+                "label": "補足メモ評価による追加加点",
+                "target_metric": llm_target_metric,
+                "confidence_boost_pct": _clamp_pct(llm_bonus),
+                "feasibility_boost_pct": _clamp_pct(llm_feasibility_bonus),
+                "note": " / ".join(bonus_reasons) if bonus_reasons else None,
+            }
+        )
 
     if signature_eligible:
         next_verdict = ReviewVerdict.PASS
@@ -889,13 +1154,19 @@ async def apply_checkpoints(
             "report_id": request.report_id,
             "reviewer_name": request.reviewer_name,
             "base_confidence_pct": base_confidence_pct,
-            "checkpoint_boost_pct": round(checkpoint_boost),
-            "finding_boost_pct": round(finding_boost),
+            "checkpoint_boost_pct": round(checkpoint_confidence_boost),
+            "finding_boost_pct": round(finding_confidence_boost),
             "llm_bonus_pct": round(llm_bonus),
+            "base_feasibility_pct": base_feasibility_pct,
+            "checkpoint_feasibility_boost_pct": round(checkpoint_feasibility_boost),
+            "finding_feasibility_boost_pct": round(finding_feasibility_boost),
+            "llm_feasibility_bonus_pct": round(llm_feasibility_bonus),
             "bonus_reasons": bonus_reasons,
             "recalculated_confidence_pct": recalculated_confidence_pct,
+            "recalculated_feasibility_pct": recalculated_feasibility_pct,
             "threshold_pct": threshold_pct,
             "signature_eligible": signature_eligible,
+            "applied_contributions": applied_contributions,
             "applied_items": [item.model_dump() for item in updated_checkpoint_items],
             "finding_confirmations": [item.model_dump() for item in request.finding_confirmations],
             "reviewed_at": datetime.now(UTC).isoformat(),
@@ -906,18 +1177,24 @@ async def apply_checkpoints(
     return CheckpointApplyResponse(
         success=True,
         message=(
-            "チェック項目を反映して信頼度を再計算しました。"
+            "チェック項目を反映して信頼度と戦略可行度を再計算しました。"
             if signature_eligible
             else "チェック項目を反映しましたが、まだ署名閾値に達していません。"
         ),
         base_confidence_pct=base_confidence_pct,
-        checkpoint_boost_pct=round(checkpoint_boost),
-        finding_boost_pct=round(finding_boost),
+        checkpoint_boost_pct=round(checkpoint_confidence_boost),
+        finding_boost_pct=round(finding_confidence_boost),
         llm_bonus_pct=round(llm_bonus),
         bonus_reasons=bonus_reasons,
         recalculated_confidence_pct=recalculated_confidence_pct,
+        base_feasibility_pct=base_feasibility_pct,
+        checkpoint_feasibility_boost_pct=round(checkpoint_feasibility_boost),
+        finding_feasibility_boost_pct=round(finding_feasibility_boost),
+        llm_feasibility_bonus_pct=round(llm_feasibility_bonus),
+        recalculated_feasibility_pct=recalculated_feasibility_pct,
         threshold_pct=threshold_pct,
         signature_eligible=signature_eligible,
+        applied_contributions=applied_contributions,
         updated_review=updated_review.model_dump(),
     )
 

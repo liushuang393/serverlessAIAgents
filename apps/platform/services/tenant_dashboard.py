@@ -165,23 +165,37 @@ class TenantDashboard:
         Returns:
             使用傾向リスト
         """
-        # TODO: 実際のメトリクス収集を実装
-        # 現在はダミーデータを返す
-        trends = []
+        normalized_days = max(1, min(days, 365))
         now = datetime.now(UTC)
+        start_date = (now - timedelta(days=normalized_days - 1)).date()
+        daily: dict[str, UsageTrend] = {}
 
-        for i in range(days):
-            date = now - timedelta(days=days - 1 - i)
-            trends.append(
-                UsageTrend(
-                    date=date,
-                    api_calls=0,  # 実際のデータに置き換え
-                    agent_executions=0,
-                    errors=0,
-                )
+        for offset in range(normalized_days):
+            date = start_date + timedelta(days=offset)
+            key = date.isoformat()
+            daily[key] = UsageTrend(
+                date=datetime.combine(date, datetime.min.time(), tzinfo=UTC),
+                api_calls=0,
+                agent_executions=0,
+                errors=0,
             )
 
-        return trends
+        activities = self._activities.get(tenant_id, [])
+        for activity in activities:
+            activity_key = activity.timestamp.astimezone(UTC).date().isoformat()
+            trend = daily.get(activity_key)
+            if trend is None:
+                continue
+
+            activity_type = activity.activity_type.lower()
+            if activity_type in {"create", "publish", "start", "restart", "run", "invoke"}:
+                trend.api_calls += 1
+            if activity_type in {"start", "restart", "run", "invoke"}:
+                trend.agent_executions += 1
+            if "error" in activity_type or "fail" in activity_type:
+                trend.errors += 1
+
+        return [daily[key] for key in sorted(daily.keys())]
 
     async def get_top_components(
         self,
@@ -310,4 +324,15 @@ class TenantDashboard:
         }
 
 
-__all__ = ["RecentActivity", "TenantDashboard", "TenantStats", "TopComponent", "UsageTrend"]
+__all__ = ["RecentActivity", "TenantDashboard", "TenantStats", "TopComponent", "UsageTrend", "get_tenant_dashboard"]
+
+
+_dashboard_singleton: TenantDashboard | None = None
+
+
+def get_tenant_dashboard() -> TenantDashboard:
+    """TenantDashboard のシングルトンを返す."""
+    global _dashboard_singleton
+    if _dashboard_singleton is None:
+        _dashboard_singleton = TenantDashboard()
+    return _dashboard_singleton

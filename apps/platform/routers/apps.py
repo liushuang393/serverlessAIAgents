@@ -40,6 +40,7 @@ from apps.platform.services.app_lifecycle import (
 from apps.platform.services.app_scaffolder import AppScaffolderService
 from apps.platform.services.framework_audit import FrameworkAuditService
 from apps.platform.services.port_allocator import PortAllocatorService
+from apps.platform.services.tenant_dashboard import get_tenant_dashboard
 from fastapi import APIRouter, Body, HTTPException, Query
 
 
@@ -272,6 +273,37 @@ def _runtime_payload(app_config: Any) -> dict[str, Any]:
         "commands": _runtime_commands(app_config),
         "cli": _runtime_cli(app_config),
     }
+
+
+def _resolve_primary_tenant(app_config: Any) -> str:
+    """App 設定から代表テナントIDを解決する."""
+    visibility = getattr(app_config, "visibility", None)
+    tenants = getattr(visibility, "tenants", None)
+    if isinstance(tenants, list):
+        for tenant in tenants:
+            if isinstance(tenant, str) and tenant.strip():
+                return tenant.strip()
+    return "global"
+
+
+def _record_activity_safe(
+    *,
+    tenant_id: str,
+    activity_type: str,
+    description: str,
+    component_id: str | None = None,
+) -> None:
+    """活動記録を安全に保存する."""
+    try:
+        dashboard = get_tenant_dashboard()
+        dashboard.record_activity(
+            tenant_id=tenant_id,
+            activity_type=activity_type,
+            description=description,
+            component_id=component_id,
+        )
+    except Exception as exc:
+        _logger.warning("failed to record tenant activity: %s", exc)
 
 
 async def _prime_health_cache(
@@ -562,7 +594,15 @@ async def create_app(request: AppCreateRequest) -> dict[str, Any]:
             detail={"message": str(exc), "error_code": "APP_CREATE_FAILED"},
         )
 
-    return created.model_dump()
+    payload = created.model_dump()
+    tenant_id = request.tenant_ids[0] if request.tenant_ids else "global"
+    _record_activity_safe(
+        tenant_id=tenant_id,
+        activity_type="create",
+        description=f"app created: {request.name}",
+        component_id=request.name,
+    )
+    return payload
 
 
 @router.get("/{app_name}")
@@ -805,6 +845,13 @@ async def publish_app(app_name: str) -> dict[str, Any]:
         config,
         config_path=discovery.get_config_path(app_name),
     )
+    if result.success:
+        _record_activity_safe(
+            tenant_id=_resolve_primary_tenant(config),
+            activity_type="publish",
+            description=f"app published: {app_name}",
+            component_id=app_name,
+        )
     return result.to_dict()
 
 
@@ -818,6 +865,13 @@ async def start_app(app_name: str) -> dict[str, Any]:
         config,
         config_path=discovery.get_config_path(app_name),
     )
+    if result.success:
+        _record_activity_safe(
+            tenant_id=_resolve_primary_tenant(config),
+            activity_type="start",
+            description=f"app started: {app_name}",
+            component_id=app_name,
+        )
     return result.to_dict()
 
 
@@ -831,6 +885,13 @@ async def stop_app(app_name: str) -> dict[str, Any]:
         config,
         config_path=discovery.get_config_path(app_name),
     )
+    if result.success:
+        _record_activity_safe(
+            tenant_id=_resolve_primary_tenant(config),
+            activity_type="stop",
+            description=f"app stopped: {app_name}",
+            component_id=app_name,
+        )
     return result.to_dict()
 
 
@@ -871,6 +932,13 @@ async def restart_app(app_name: str) -> dict[str, Any]:
         response["health"] = start_result.checked_health.to_dict()
     if not success:
         response["error"] = start_result.error or stop_result.error or "restart_failed"
+    else:
+        _record_activity_safe(
+            tenant_id=_resolve_primary_tenant(config),
+            activity_type="restart",
+            description=f"app restarted: {app_name}",
+            component_id=app_name,
+        )
     return response
 
 

@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlparse
 
 from apps.faq_system.backend.db.models import IngestionCheckpoint, IngestionRun, IngestionRunItem
 from apps.faq_system.backend.db.session import ensure_database_ready, get_db_session
@@ -37,6 +38,16 @@ try:
     import trafilatura
 except ImportError:  # pragma: no cover - optional dependency
     trafilatura = None
+
+try:
+    import httpx
+except ImportError:  # pragma: no cover - optional dependency
+    httpx = None
+
+try:
+    import boto3
+except ImportError:  # pragma: no cover - optional dependency
+    boto3 = None
 
 try:
     from tenacity import AsyncRetrying, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -71,12 +82,6 @@ _SQL_DIALECT_MAP: dict[str, str] = {
     "sqlite": "sqlite",
     "mssql": "tsql",
     "sqlserver": "tsql",
-}
-
-_UNSUPPORTED_SOURCE_MESSAGE = {
-    "web": "web source extraction is staged and not implemented yet",
-    "api": "api source extraction is staged and not implemented yet",
-    "s3": "s3 source extraction is staged and not implemented yet",
 }
 
 
@@ -159,6 +164,9 @@ class FileSourceAdapter(SourceAdapter):
                 "path": str(path),
                 "glob": glob_pattern,
                 "recursive": recursive,
+                "reason_code": "dry_run_preview",
+                "fallback_used": False,
+                "provider": "universal_loader",
             }
 
         if path.is_dir():
@@ -225,6 +233,9 @@ class FileSourceAdapter(SourceAdapter):
             "masked_chunks": masked,
             "skipped_empty_chunks": skipped_empty,
             "path": str(path),
+            "reason_code": "ok",
+            "fallback_used": False,
+            "provider": "universal_loader",
         }
 
 
@@ -321,6 +332,9 @@ class DatabaseSourceAdapter(SourceAdapter):
                     "cursor_text": checkpoint.cursor_text if checkpoint else None,
                     "cursor_time": checkpoint.cursor_time.isoformat() if checkpoint and checkpoint.cursor_time else None,
                 },
+                "reason_code": "dry_run_preview",
+                "fallback_used": False,
+                "provider": "sqlalchemy",
             }
 
         provider = SQLAlchemyDBProvider(db_url)
@@ -414,6 +428,9 @@ class DatabaseSourceAdapter(SourceAdapter):
                     "cursor_text": next_cursor_text,
                     "cursor_time": next_cursor_time.isoformat() if next_cursor_time else None,
                 },
+                "reason_code": "ok",
+                "fallback_used": False,
+                "provider": "sqlalchemy",
             }
         except Exception as exc:  # pragma: no cover - defensive
             logger.exception("Database ingestion failed: %s", exc)
@@ -423,11 +440,11 @@ class DatabaseSourceAdapter(SourceAdapter):
                 await provider.disconnect()
 
 
-class StagedSourceAdapter(SourceAdapter):
-    """Not implemented source adapter."""
+class WebSourceAdapter(SourceAdapter):
+    """Web source ingestion adapter."""
 
-    def __init__(self, source_type: str) -> None:
-        self._source_type = source_type
+    def __init__(self, orchestrator: RAGIngestionOrchestrator) -> None:
+        self._orchestrator = orchestrator
 
     async def ingest(
         self,
@@ -436,29 +453,533 @@ class StagedSourceAdapter(SourceAdapter):
         source: RAGDataSourceConfig,
     ) -> dict[str, Any]:
         uri = _clean_text(source.uri)
-        if not uri:
-            return _failed_source_result(source=source, message="uri is required")
+        urls = _resolve_http_urls(uri=uri, options_value=source.options.get("urls"))
+        if not urls:
+            return _failed_source_result(
+                source=source,
+                message="web source requires http/https uri",
+                reason_code="invalid_source_uri",
+                provider="httpx",
+            )
 
-        preview: dict[str, Any] = {}
-        if self._source_type == "web" and trafilatura is not None and context.dry_run:
-            try:
-                fetched = trafilatura.fetch_url(uri)
-                extracted = trafilatura.extract(fetched) if fetched else None
-                preview = {
-                    "preview_available": bool(extracted),
-                    "preview_length": len(extracted or ""),
+        max_pages = _coerce_positive_int(source.options.get("max_pages"), default=5, minimum=1, maximum=50)
+        urls = urls[:max_pages]
+
+        if context.dry_run:
+            return {
+                "source_id": source.source_id,
+                "type": "web",
+                "status": "success",
+                "planned_action": "fetch_web_pages",
+                "uri": uri,
+                "urls": urls,
+                "reason_code": "dry_run_preview",
+                "fallback_used": False,
+                "provider": "httpx",
+            }
+
+        if httpx is None:
+            return _failed_source_result(
+                source=source,
+                message="httpx is required for web ingestion",
+                reason_code="dependency_missing",
+                provider="httpx",
+            )
+
+        timeout_seconds = _coerce_positive_int(source.options.get("timeout_seconds"), default=20, minimum=3, maximum=120)
+        user_agent = _clean_text(source.options.get("user_agent")) or "AgentFlow-FAQ-RAG/1.0"
+
+        added_chunks = 0
+        deduped_chunks = 0
+        masked_chunks = 0
+        skipped_empty_chunks = 0
+        failed_urls = 0
+        fallback_used = False
+        fallback_count = 0
+
+        checkpoint = await self._orchestrator._load_checkpoint(source.source_id)
+        next_cursor_time = checkpoint.cursor_time if checkpoint else None
+
+        async with httpx.AsyncClient(
+            timeout=timeout_seconds,
+            follow_redirects=True,
+            headers={"User-Agent": user_agent},
+        ) as client:
+            for target_url in urls:
+                try:
+                    response = await _retry_async(client.get, target_url)
+                    response.raise_for_status()
+                except Exception as exc:
+                    logger.warning("Web source fetch failed: source=%s url=%s error=%s", source.source_id, target_url, exc)
+                    failed_urls += 1
+                    continue
+
+                extracted = _extract_web_text(response.text)
+                normalized = _normalize_text(extracted["text"])
+                if not normalized:
+                    skipped_empty_chunks += 1
+                    continue
+
+                if extracted["fallback_used"]:
+                    fallback_used = True
+                    fallback_count += 1
+
+                sanitized = self._orchestrator._sanitizer.sanitize(normalized)
+                sanitized_text = _normalize_text(sanitized.sanitized_text)
+                if not sanitized_text:
+                    skipped_empty_chunks += 1
+                    continue
+
+                content_hash = _content_hash(sanitized_text)
+                if content_hash in context.seen_hashes:
+                    deduped_chunks += 1
+                    continue
+                context.seen_hashes.add(content_hash)
+
+                if sanitized.detections:
+                    masked_chunks += 1
+
+                metadata = {
+                    "source_id": source.source_id,
+                    "source_type": "web",
+                    "source_label": source.label,
+                    "source_uri": uri,
+                    "page_url": target_url,
+                    "status_code": response.status_code,
+                    "content_hash": content_hash,
+                    "detections": len(sanitized.detections),
+                    "provider": extracted["provider"],
+                    "fallback_used": extracted["fallback_used"],
                 }
-            except Exception:
-                preview = {"preview_available": False}
+
+                add_result = await self._orchestrator._add_document_with_retry(
+                    rag_service=context.rag_service,
+                    content=sanitized_text,
+                    source=target_url,
+                    metadata=metadata,
+                )
+                added_chunks += int(add_result.get("count", 0))
+                next_cursor_time = datetime.now(tz=UTC)
+
+        await self._orchestrator._save_checkpoint(
+            source_id=source.source_id,
+            cursor_text=urls[-1] if urls else None,
+            cursor_time=next_cursor_time,
+            metadata={
+                "source_type": "web",
+                "total_urls": len(urls),
+                "failed_urls": failed_urls,
+            },
+        )
+
+        if added_chunks == 0 and failed_urls == len(urls):
+            return _failed_source_result(
+                source=source,
+                message="all web pages failed to ingest",
+                reason_code="upstream_fetch_failed",
+                provider="httpx",
+            )
 
         return {
             "source_id": source.source_id,
-            "type": self._source_type,
-            "status": "skipped",
-            "reason": "not_implemented",
-            "message": _UNSUPPORTED_SOURCE_MESSAGE[self._source_type],
+            "type": "web",
+            "status": "success",
             "uri": uri,
-            **preview,
+            "url_count": len(urls),
+            "failed_urls": failed_urls,
+            "added_chunks": added_chunks,
+            "deduped_chunks": deduped_chunks,
+            "masked_chunks": masked_chunks,
+            "skipped_empty_chunks": skipped_empty_chunks,
+            "fallback_count": fallback_count,
+            "reason_code": "ok" if failed_urls == 0 else "partial_fetch_failure",
+            "fallback_used": fallback_used,
+            "provider": "httpx",
+        }
+
+
+class ApiSourceAdapter(SourceAdapter):
+    """HTTP API source ingestion adapter."""
+
+    def __init__(self, orchestrator: RAGIngestionOrchestrator) -> None:
+        self._orchestrator = orchestrator
+
+    async def ingest(
+        self,
+        *,
+        context: IngestionContext,
+        source: RAGDataSourceConfig,
+    ) -> dict[str, Any]:
+        endpoint = _clean_text(source.uri)
+        if not endpoint or not _is_http_url(endpoint):
+            return _failed_source_result(
+                source=source,
+                message="api source requires http/https uri",
+                reason_code="invalid_source_uri",
+                provider="httpx",
+            )
+
+        if httpx is None:
+            return _failed_source_result(
+                source=source,
+                message="httpx is required for api ingestion",
+                reason_code="dependency_missing",
+                provider="httpx",
+            )
+
+        method = (_clean_text(source.options.get("method")) or "GET").upper()
+        if method not in {"GET", "POST"}:
+            return _failed_source_result(
+                source=source,
+                message=f"unsupported api method: {method}",
+                reason_code="invalid_request_method",
+                provider="httpx",
+            )
+
+        timeout_seconds = _coerce_positive_int(source.options.get("timeout_seconds"), default=20, minimum=3, maximum=120)
+        data_path = _clean_text(source.options.get("data_path"))
+        content_field = _clean_text(source.options.get("content_field"))
+        params = _coerce_string_dict(source.options.get("params"))
+        headers = _coerce_string_dict(source.options.get("headers"))
+        payload = source.options.get("payload")
+        if not isinstance(payload, dict):
+            payload = source.options.get("body") if isinstance(source.options.get("body"), dict) else None
+
+        if context.dry_run:
+            return {
+                "source_id": source.source_id,
+                "type": "api",
+                "status": "success",
+                "planned_action": "request_api",
+                "endpoint": endpoint,
+                "method": method,
+                "data_path": data_path,
+                "content_field": content_field,
+                "reason_code": "dry_run_preview",
+                "fallback_used": False,
+                "provider": "httpx",
+            }
+
+        response_data: Any = None
+        fallback_used = False
+        provider = "httpx"
+
+        async with httpx.AsyncClient(timeout=timeout_seconds, follow_redirects=True, headers=headers) as client:
+            try:
+                if method == "POST":
+                    response = await _retry_async(
+                        client.post,
+                        endpoint,
+                        params=params or None,
+                        json=payload,
+                    )
+                else:
+                    response = await _retry_async(client.get, endpoint, params=params or None)
+                response.raise_for_status()
+            except Exception as exc:
+                return _failed_source_result(
+                    source=source,
+                    message=f"api request failed: {exc}",
+                    reason_code="upstream_fetch_failed",
+                    provider=provider,
+                )
+
+            try:
+                response_data = response.json()
+            except ValueError:
+                response_data = response.text
+                fallback_used = True
+                provider = "httpx_text"
+
+        items = _extract_api_items(payload=response_data, data_path=data_path)
+        if not items:
+            return _failed_source_result(
+                source=source,
+                message="api response contains no ingestible items",
+                reason_code="no_ingestable_content",
+                fallback_used=fallback_used,
+                provider=provider,
+            )
+
+        added_chunks = 0
+        deduped_chunks = 0
+        masked_chunks = 0
+        skipped_empty_chunks = 0
+        fallback_items = 0
+
+        checkpoint = await self._orchestrator._load_checkpoint(source.source_id)
+        next_cursor_time = checkpoint.cursor_time if checkpoint else None
+
+        for index, item in enumerate(items):
+            content_text, used_item_fallback = _api_item_to_text(item=item, content_field=content_field)
+            normalized = _normalize_text(content_text)
+            if not normalized:
+                skipped_empty_chunks += 1
+                continue
+
+            if used_item_fallback:
+                fallback_items += 1
+                fallback_used = True
+
+            sanitized = self._orchestrator._sanitizer.sanitize(normalized)
+            sanitized_text = _normalize_text(sanitized.sanitized_text)
+            if not sanitized_text:
+                skipped_empty_chunks += 1
+                continue
+
+            content_hash = _content_hash(sanitized_text)
+            if content_hash in context.seen_hashes:
+                deduped_chunks += 1
+                continue
+            context.seen_hashes.add(content_hash)
+
+            if sanitized.detections:
+                masked_chunks += 1
+
+            metadata = {
+                "source_id": source.source_id,
+                "source_type": "api",
+                "source_label": source.label,
+                "source_uri": endpoint,
+                "method": method,
+                "item_index": index,
+                "content_hash": content_hash,
+                "detections": len(sanitized.detections),
+                "provider": provider,
+                "fallback_used": used_item_fallback,
+            }
+            add_result = await self._orchestrator._add_document_with_retry(
+                rag_service=context.rag_service,
+                content=sanitized_text,
+                source=endpoint,
+                metadata=metadata,
+            )
+            added_chunks += int(add_result.get("count", 0))
+            next_cursor_time = datetime.now(tz=UTC)
+
+        await self._orchestrator._save_checkpoint(
+            source_id=source.source_id,
+            cursor_text=endpoint,
+            cursor_time=next_cursor_time,
+            metadata={
+                "source_type": "api",
+                "item_count": len(items),
+                "data_path": data_path,
+            },
+        )
+
+        if added_chunks == 0 and skipped_empty_chunks > 0:
+            return _failed_source_result(
+                source=source,
+                message="api response did not produce valid content",
+                reason_code="no_ingestable_content",
+                fallback_used=fallback_used,
+                provider=provider,
+            )
+
+        return {
+            "source_id": source.source_id,
+            "type": "api",
+            "status": "success",
+            "endpoint": endpoint,
+            "method": method,
+            "item_count": len(items),
+            "added_chunks": added_chunks,
+            "deduped_chunks": deduped_chunks,
+            "masked_chunks": masked_chunks,
+            "skipped_empty_chunks": skipped_empty_chunks,
+            "fallback_count": fallback_items,
+            "reason_code": "ok",
+            "fallback_used": fallback_used,
+            "provider": provider,
+        }
+
+
+class S3SourceAdapter(SourceAdapter):
+    """S3 source ingestion adapter."""
+
+    def __init__(self, orchestrator: RAGIngestionOrchestrator) -> None:
+        self._orchestrator = orchestrator
+
+    async def ingest(
+        self,
+        *,
+        context: IngestionContext,
+        source: RAGDataSourceConfig,
+    ) -> dict[str, Any]:
+        bucket, prefix = _parse_s3_location(source.uri, source.options)
+        if not bucket:
+            return _failed_source_result(
+                source=source,
+                message="s3 source requires bucket (s3://bucket/prefix or options.bucket)",
+                reason_code="invalid_source_uri",
+                provider="boto3",
+            )
+
+        if boto3 is None:
+            return _failed_source_result(
+                source=source,
+                message="boto3 is required for s3 ingestion",
+                reason_code="dependency_missing",
+                provider="boto3",
+            )
+
+        max_objects = _coerce_positive_int(source.options.get("max_objects"), default=200, minimum=1, maximum=5000)
+        encoding = _clean_text(source.options.get("encoding")) or "utf-8"
+        key_override = _clean_text(source.options.get("key"))
+        region_name = _clean_text(source.options.get("region"))
+
+        if context.dry_run:
+            return {
+                "source_id": source.source_id,
+                "type": "s3",
+                "status": "success",
+                "planned_action": "load_s3_objects",
+                "bucket": bucket,
+                "prefix": prefix,
+                "key": key_override,
+                "max_objects": max_objects,
+                "reason_code": "dry_run_preview",
+                "fallback_used": False,
+                "provider": "boto3",
+            }
+
+        session = boto3.session.Session(region_name=region_name)
+        client = session.client("s3")
+        checkpoint = await self._orchestrator._load_checkpoint(source.source_id)
+        checkpoint_time = checkpoint.cursor_time if checkpoint else None
+        next_cursor_time = checkpoint_time
+        next_cursor_text = checkpoint.cursor_text if checkpoint else None
+
+        try:
+            if key_override:
+                objects = [{"Key": key_override}]
+            else:
+                objects = await asyncio.to_thread(
+                    _list_s3_objects,
+                    client,
+                    bucket,
+                    prefix,
+                    max_objects,
+                )
+        except Exception as exc:
+            return _failed_source_result(
+                source=source,
+                message=f"s3 list failed: {exc}",
+                reason_code="upstream_fetch_failed",
+                provider="boto3",
+            )
+
+        added_chunks = 0
+        deduped_chunks = 0
+        masked_chunks = 0
+        skipped_empty_chunks = 0
+        skipped_by_checkpoint = 0
+        failed_objects = 0
+        decode_fallback_count = 0
+
+        for obj in objects:
+            key = _clean_text(obj.get("Key"))
+            if not key or key.endswith("/"):
+                continue
+
+            last_modified = _extract_datetime(obj.get("LastModified"))
+            if checkpoint_time is not None and last_modified is not None and last_modified <= checkpoint_time:
+                skipped_by_checkpoint += 1
+                continue
+
+            try:
+                raw = await asyncio.to_thread(_get_s3_object_bytes, client, bucket, key)
+            except Exception as exc:
+                logger.warning("S3 read failed: source=%s bucket=%s key=%s error=%s", source.source_id, bucket, key, exc)
+                failed_objects += 1
+                continue
+
+            text, used_decode_fallback = _decode_bytes(raw, encoding=encoding)
+            if used_decode_fallback:
+                decode_fallback_count += 1
+
+            normalized = _normalize_text(text)
+            if not normalized:
+                skipped_empty_chunks += 1
+                continue
+
+            sanitized = self._orchestrator._sanitizer.sanitize(normalized)
+            sanitized_text = _normalize_text(sanitized.sanitized_text)
+            if not sanitized_text:
+                skipped_empty_chunks += 1
+                continue
+
+            content_hash = _content_hash(sanitized_text)
+            if content_hash in context.seen_hashes:
+                deduped_chunks += 1
+                continue
+            context.seen_hashes.add(content_hash)
+
+            if sanitized.detections:
+                masked_chunks += 1
+
+            metadata = {
+                "source_id": source.source_id,
+                "source_type": "s3",
+                "source_label": source.label,
+                "source_uri": source.uri,
+                "bucket": bucket,
+                "key": key,
+                "content_hash": content_hash,
+                "detections": len(sanitized.detections),
+                "provider": "boto3",
+                "fallback_used": used_decode_fallback,
+            }
+            add_result = await self._orchestrator._add_document_with_retry(
+                rag_service=context.rag_service,
+                content=sanitized_text,
+                source=f"s3://{bucket}/{key}",
+                metadata=metadata,
+            )
+            added_chunks += int(add_result.get("count", 0))
+
+            if last_modified is not None and (next_cursor_time is None or last_modified > next_cursor_time):
+                next_cursor_time = last_modified
+            next_cursor_text = key
+
+        await self._orchestrator._save_checkpoint(
+            source_id=source.source_id,
+            cursor_text=next_cursor_text,
+            cursor_time=next_cursor_time,
+            metadata={
+                "source_type": "s3",
+                "bucket": bucket,
+                "prefix": prefix,
+                "failed_objects": failed_objects,
+            },
+        )
+
+        if added_chunks == 0 and failed_objects == len(objects):
+            return _failed_source_result(
+                source=source,
+                message="all s3 objects failed to ingest",
+                reason_code="upstream_fetch_failed",
+                provider="boto3",
+            )
+
+        return {
+            "source_id": source.source_id,
+            "type": "s3",
+            "status": "success",
+            "bucket": bucket,
+            "prefix": prefix,
+            "object_count": len(objects),
+            "failed_objects": failed_objects,
+            "skipped_by_checkpoint": skipped_by_checkpoint,
+            "added_chunks": added_chunks,
+            "deduped_chunks": deduped_chunks,
+            "masked_chunks": masked_chunks,
+            "skipped_empty_chunks": skipped_empty_chunks,
+            "fallback_count": decode_fallback_count,
+            "reason_code": "ok" if failed_objects == 0 else "partial_fetch_failure",
+            "fallback_used": decode_fallback_count > 0,
+            "provider": "boto3",
         }
 
 
@@ -485,9 +1006,48 @@ class RAGIngestionOrchestrator:
         self._adapters: dict[str, SourceAdapter] = {
             "file": FileSourceAdapter(self),
             "database": DatabaseSourceAdapter(self),
-            "web": StagedSourceAdapter("web"),
-            "api": StagedSourceAdapter("api"),
-            "s3": StagedSourceAdapter("s3"),
+            "web": WebSourceAdapter(self),
+            "api": ApiSourceAdapter(self),
+            "s3": S3SourceAdapter(self),
+        }
+
+    def list_source_capabilities(self) -> dict[str, Any]:
+        """利用可能な ingest source capability を返す."""
+        capability_map: dict[str, dict[str, Any]] = {
+            "file": {
+                "status": "enabled",
+                "reason_code": "ok",
+                "provider": "universal_loader",
+                "notes": [],
+            },
+            "database": {
+                "status": "enabled",
+                "reason_code": "ok",
+                "provider": "sqlalchemy",
+                "notes": [],
+            },
+            "web": {
+                "status": "enabled" if httpx is not None else "limited",
+                "reason_code": "ok" if httpx is not None else "dependency_missing",
+                "provider": "httpx",
+                "notes": ([] if trafilatura is not None else ["trafilatura is missing, html text fallback is used"]),
+            },
+            "api": {
+                "status": "enabled" if httpx is not None else "limited",
+                "reason_code": "ok" if httpx is not None else "dependency_missing",
+                "provider": "httpx",
+                "notes": [],
+            },
+            "s3": {
+                "status": "enabled" if boto3 is not None else "limited",
+                "reason_code": "ok" if boto3 is not None else "dependency_missing",
+                "provider": "boto3",
+                "notes": [],
+            },
+        }
+        return {
+            "source_types": capability_map,
+            "generated_at": datetime.now(tz=UTC).isoformat(),
         }
 
     async def list_runs(self, limit: int = 20) -> list[dict[str, Any]]:
@@ -904,6 +1464,9 @@ class RAGIngestionOrchestrator:
             "chunk_count",
             "query_count",
             "skipped_empty_chunks",
+            "failed_urls",
+            "failed_objects",
+            "fallback_count",
         }
         stats = {key: item[key] for key in stats_keys if key in item}
 
@@ -1239,12 +1802,184 @@ def _duration_ms(started_at: datetime | None, finished_at: datetime | None) -> i
     return int(max((finished_at - started_at).total_seconds() * 1000, 0))
 
 
-def _failed_source_result(*, source: RAGDataSourceConfig, message: str) -> dict[str, Any]:
+def _is_http_url(value: str) -> bool:
+    parsed = urlparse(value)
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def _resolve_http_urls(*, uri: str | None, options_value: Any) -> list[str]:
+    values: list[str] = []
+    if uri:
+        values.append(uri)
+
+    if isinstance(options_value, list):
+        for item in options_value:
+            text = _clean_text(item)
+            if text:
+                values.append(text)
+    elif isinstance(options_value, str):
+        for part in options_value.split(","):
+            text = _clean_text(part)
+            if text:
+                values.append(text)
+
+    urls: list[str] = []
+    for item in values:
+        if _is_http_url(item) and item not in urls:
+            urls.append(item)
+    return urls
+
+
+def _extract_web_text(html: str) -> dict[str, Any]:
+    if trafilatura is not None:
+        with contextlib.suppress(Exception):
+            extracted = trafilatura.extract(html, include_comments=False, include_tables=True)
+            if extracted:
+                return {
+                    "text": extracted,
+                    "provider": "trafilatura",
+                    "fallback_used": False,
+                }
+
+    stripped = _strip_html_tags(html)
+    return {
+        "text": stripped,
+        "provider": "html_strip",
+        "fallback_used": True,
+    }
+
+
+def _strip_html_tags(value: str) -> str:
+    without_script = re.sub(r"<script[\s\S]*?</script>", " ", value, flags=re.IGNORECASE)
+    without_style = re.sub(r"<style[\s\S]*?</style>", " ", without_script, flags=re.IGNORECASE)
+    without_tags = re.sub(r"<[^>]+>", " ", without_style)
+    return re.sub(r"\s+", " ", without_tags).strip()
+
+
+def _coerce_string_dict(value: Any) -> dict[str, str]:
+    if not isinstance(value, dict):
+        return {}
+    result: dict[str, str] = {}
+    for key, item in value.items():
+        clean_key = _clean_text(key)
+        clean_value = _clean_text(item)
+        if clean_key and clean_value is not None:
+            result[clean_key] = clean_value
+    return result
+
+
+def _read_json_path(payload: Any, path: str) -> Any:
+    current: Any = payload
+    for token in [part for part in path.split(".") if part]:
+        if isinstance(current, dict):
+            current = current.get(token)
+            continue
+        if isinstance(current, list):
+            with contextlib.suppress(ValueError):
+                index = int(token)
+                if 0 <= index < len(current):
+                    current = current[index]
+                    continue
+            return None
+        return None
+    return current
+
+
+def _extract_api_items(*, payload: Any, data_path: str | None) -> list[Any]:
+    candidate = _read_json_path(payload, data_path) if data_path else payload
+    if isinstance(candidate, list):
+        return candidate
+    if isinstance(candidate, dict):
+        for key in ("items", "data", "results", "records"):
+            nested = candidate.get(key)
+            if isinstance(nested, list):
+                return nested
+        return [candidate]
+    if candidate is None:
+        return []
+    return [candidate]
+
+
+def _api_item_to_text(*, item: Any, content_field: str | None) -> tuple[str, bool]:
+    if isinstance(item, str):
+        return item, False
+    if isinstance(item, dict):
+        if content_field:
+            value = _clean_text(item.get(content_field))
+            if value:
+                return value, False
+
+        for key in ("content", "text", "body", "description", "summary", "message"):
+            value = _clean_text(item.get(key))
+            if value:
+                return value, False
+
+        return json.dumps(item, ensure_ascii=False, default=str), True
+    if isinstance(item, list):
+        return json.dumps(item, ensure_ascii=False, default=str), True
+    return str(item), True
+
+
+def _parse_s3_location(uri: str | None, options: dict[str, Any]) -> tuple[str | None, str | None]:
+    if uri:
+        parsed = urlparse(uri)
+        if parsed.scheme == "s3" and parsed.netloc:
+            bucket = parsed.netloc
+            prefix = parsed.path.lstrip("/") or None
+            return bucket, prefix
+
+    bucket = _clean_text(options.get("bucket"))
+    prefix = _clean_text(options.get("prefix"))
+    return bucket, prefix
+
+
+def _list_s3_objects(client: Any, bucket: str, prefix: str | None, max_objects: int) -> list[dict[str, Any]]:
+    paginator = client.get_paginator("list_objects_v2")
+    kwargs: dict[str, Any] = {"Bucket": bucket}
+    if prefix:
+        kwargs["Prefix"] = prefix
+
+    objects: list[dict[str, Any]] = []
+    for page in paginator.paginate(**kwargs):
+        for item in page.get("Contents", []):
+            objects.append(item)
+            if len(objects) >= max_objects:
+                return objects
+    return objects
+
+
+def _get_s3_object_bytes(client: Any, bucket: str, key: str) -> bytes:
+    response = client.get_object(Bucket=bucket, Key=key)
+    body = response.get("Body")
+    if body is None:
+        return b""
+    return body.read()
+
+
+def _decode_bytes(raw: bytes, *, encoding: str) -> tuple[str, bool]:
+    with contextlib.suppress(UnicodeDecodeError):
+        return raw.decode(encoding), False
+    with contextlib.suppress(UnicodeDecodeError):
+        return raw.decode("utf-8"), True
+    return raw.decode("utf-8", errors="replace"), True
+
+
+def _failed_source_result(
+    *,
+    source: RAGDataSourceConfig,
+    message: str,
+    reason_code: str = "ingest_failed",
+    fallback_used: bool = False,
+    provider: str | None = None,
+) -> dict[str, Any]:
     return {
         "source_id": source.source_id,
         "type": source.source_type,
         "status": "failed",
         "message": message,
+        "reason_code": reason_code,
+        "fallback_used": fallback_used,
+        "provider": provider,
     }
 
 

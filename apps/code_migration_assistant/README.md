@@ -111,27 +111,6 @@ cd apps/code_migration_assistant
 > 2026-03 統合更新: `migration_studio` の UI/移行APIを `code_migration_assistant` に統合し、同一サーバーで配信します。
 > 主要フロント API は `/api/migrate/*`（upload / stream / status / download）です。
 
-### 起動スクリプト詳細
-
-`run_server.sh` は以下の処理を実行します：
-
-```bash
-#!/bin/bash
-# プロジェクトルートを自動検出
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
-
-export PYTHONPATH=$PYTHONPATH:$PROJECT_ROOT
-
-# FastAPI サーバーを起動（ポート 8003）
-cd "$PROJECT_ROOT"
-exec uvicorn apps.code_migration_assistant.backend.app:app --host 0.0.0.0 --port 8003 --reload
-```
-
-**重要**: このスクリプトは **1つの統合サーバー** を起動します。前台と後台は分離していません。
-
----
-
 ## 🤖 非対話実行契約（run）
 
 Migration Studio / CI 連携向けに、CLI の契約実行モードを提供します。

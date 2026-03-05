@@ -10,7 +10,6 @@ import type {
   AppDetail,
   AppListItem,
   AppSummaryResponse,
-  CapabilityTag,
   HealthCheckResult,
   RAGOverviewResponse,
   SkillInfo,
@@ -21,13 +20,11 @@ import {
   fetchAppDetail,
   fetchAppHealth,
   fetchApps,
-  fetchCapabilities,
   fetchRAGOverview,
   fetchSkills,
   fetchSkillTags,
   fetchSummary,
   refreshApps,
-  searchAgents,
   searchSkills,
 } from '@/api/client';
 
@@ -45,7 +42,6 @@ interface AppState {
 
   /* --- Phase 3: Agent --- */
   agents: AggregatedAgent[];
-  capabilities: CapabilityTag[];
 
   /* --- Phase 3: Skill --- */
   skills: SkillInfo[];
@@ -72,7 +68,6 @@ interface AppState {
 
   /* --- Phase 3 アクション --- */
   loadAgents: () => Promise<void>;
-  searchAgentsByCapability: (cap: string) => Promise<void>;
   loadSkills: () => Promise<void>;
   searchSkillsByTag: (tag: string) => Promise<void>;
   loadRAGOverview: () => Promise<void>;
@@ -88,7 +83,6 @@ export const useAppStore = create<AppState>((set) => ({
   selectedApp: null,
   healthCache: {},
   agents: [],
-  capabilities: [],
   skills: [],
   skillTags: [],
   ragOverview: null,
@@ -160,28 +154,13 @@ export const useAppStore = create<AppState>((set) => ({
   loadAgents: async () => {
     set({ loading: true, error: null });
     try {
-      const [agentsRes, capsRes] = await Promise.all([
-        fetchAgents(),
-        fetchCapabilities(),
-      ]);
+      const agentsRes = await fetchAgents();
       set({
         agents: agentsRes.agents,
-        capabilities: capsRes.capabilities,
         loading: false,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Agent 一覧の取得に失敗';
-      set({ error: message, loading: false });
-    }
-  },
-
-  searchAgentsByCapability: async (cap: string) => {
-    set({ loading: true, error: null });
-    try {
-      const res = await searchAgents(cap);
-      set({ agents: res.agents, loading: false });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Agent 検索に失敗';
       set({ error: message, loading: false });
     }
   },

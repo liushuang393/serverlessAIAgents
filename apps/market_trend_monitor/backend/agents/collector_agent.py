@@ -278,6 +278,14 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                     page_size=10,
                     from_date=from_date,
                 )
+                last_error_meta = self._news_api_client.pop_last_error_metadata()
+                if last_error_meta is not None and not news_articles:
+                    self._logger.warning(
+                        "NewsAPI収集で空結果: query=%s reason=%s fallback=%s",
+                        keyword,
+                        last_error_meta.get("reason"),
+                        last_error_meta.get("fallback_used"),
+                    )
 
                 for news_article in news_articles:
                     url = news_article.get("url", "")
@@ -316,6 +324,11 @@ class CollectorAgent(ResilientAgent[CollectorInput, CollectorOutput]):
                             "author": news_article.get("author", "Unknown"),
                             "is_breakthrough": is_breakthrough,
                             "language": news_article.get("language", "en"),
+                            **(
+                                news_article.get("metadata")
+                                if isinstance(news_article.get("metadata"), dict)
+                                else {}
+                            ),
                         },
                     )
                     articles.append(article)

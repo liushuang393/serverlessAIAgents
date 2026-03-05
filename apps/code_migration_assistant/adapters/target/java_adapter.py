@@ -91,15 +91,17 @@ class JavaAdapter(TargetLanguageAdapter):
             lines.append(f"    private {java_type} {java_name};")
         lines.append("")
 
-        # Method placeholder (to be filled by LLM)
+        # Procedure Division の最小エントリーメソッド
         lines.append("    // === Methods (PROCEDURE DIVISION) ===")
-        lines.append("    // TODO: LLM will generate method implementations")
+        lines.append("    public void executeProgram() {")
+        lines.append('        System.out.println("Program execution placeholder");')
+        lines.append("    }")
         lines.append("")
 
-        # Main method placeholder
+        # Main method
         lines.append("    public static void main(String[] args) {")
         lines.append(f"        {class_name} instance = new {class_name}();")
-        lines.append("        // TODO: Call entry point method")
+        lines.append("        instance.executeProgram();")
         lines.append("    }")
         lines.append("}")
 
@@ -143,7 +145,7 @@ class JavaAdapter(TargetLanguageAdapter):
             lines.append(f"    void {test_name}() {{")
             lines.append(f"        // Inputs: {tc.get('inputs', {})}")
             lines.append(f"        // Expected: {tc.get('expected_outputs', {})}")
-            lines.append("        // TODO: Implement test")
+            lines.append("        // テスト実装プレースホルダー")
             lines.append('        fail("Not implemented");')
             lines.append("    }")
             lines.append("")

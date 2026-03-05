@@ -133,6 +133,10 @@ async def process_product_launch(req: ProductLaunchRequest) -> ProductLaunchResp
 
     intel_result = await intel_service.gather(search_query, topics=topics)
     warnings.extend(intel_result.warnings)
+    warnings.append(f"intelligence_provider={intel_result.provider}")
+    if intel_result.fallback_used:
+        warnings.append("intelligence_fallback_used=true")
+    warnings.append(f"intelligence_source_count_real={intel_result.source_count_real}")
 
     # Step 2: エンジン実行
     engine = get_engine()
@@ -170,6 +174,8 @@ async def process_product_launch(req: ProductLaunchRequest) -> ProductLaunchResp
     # 情報カバレッジに基づく confidence 調整
     base_confidence = 0.6
     confidence = min(0.95, base_confidence + intel_result.coverage_score * 0.3)
+    if intel_result.fallback_used:
+        confidence = max(0.2, confidence - 0.15)
 
     return ProductLaunchResponse(
         status="success",

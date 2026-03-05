@@ -151,7 +151,7 @@ export function AgentOrchestration() {
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto">
         {filteredGroups.map((group) => {
           const pattern = getEnginePattern(group);
           const style = ENGINE_PATTERN_STYLE[pattern] ?? ENGINE_PATTERN_STYLE.custom;

@@ -15,6 +15,8 @@ API / CLI / Studio 全てが使用する Workflow 実行サービス。
 from __future__ import annotations
 
 import asyncio
+import importlib
+import inspect
 import time
 from enum import Enum
 from typing import TYPE_CHECKING, Any
@@ -64,6 +66,7 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
         """
         super().__init__()
         self._workflows_dir = workflows_dir
+        self._status_store: dict[str, dict[str, Any]] = {}
 
     async def _execute_internal(
         self,
@@ -97,10 +100,28 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
             f"Starting workflow: {workflow_type}",
             LogLevel.INFO,
         )
+        self._status_store[execution_id] = {
+            "execution_id": execution_id,
+            "workflow_type": workflow_type,
+            "status": "running",
+            "task": task,
+            "progress": 0.0,
+            "current_step": 0,
+            "total_steps": 0,
+            "error": None,
+            "result": None,
+            "started_at": time.time(),
+            "updated_at": time.time(),
+        }
 
         try:
             wf_type = WorkflowType(workflow_type)
         except ValueError:
+            self._update_status(
+                execution_id,
+                status="error",
+                error=f"Unknown workflow type: {workflow_type}",
+            )
             yield self._emit_error(
                 execution_id,
                 "invalid_workflow_type",
@@ -119,6 +140,11 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
             async for event in self._execute_reflection(execution_id, task, input_data, config, start_time):
                 yield event
         else:
+            self._update_status(
+                execution_id,
+                status="error",
+                error=f"Workflow type not implemented: {workflow_type}",
+            )
             yield self._emit_error(
                 execution_id,
                 "not_implemented",
@@ -161,6 +187,13 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
 
             # フェーズごとに進捗を報告
             for progress, phase, message in phases:
+                self._update_status(
+                    execution_id,
+                    status="running",
+                    progress=progress,
+                    current_step=phases.index((progress, phase, message)) + 1,
+                    total_steps=len(phases),
+                )
                 yield self._emit_progress(execution_id, progress, message, phase=phase)
                 await asyncio.sleep(0.1)  # UI更新のため
 
@@ -168,29 +201,54 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
             result = await coordinator.execute(task, **input_data)
 
             duration_ms = (time.time() - start_time) * 1000
+            self._update_status(
+                execution_id,
+                status="completed",
+                progress=100.0,
+                current_step=len(phases),
+                total_steps=len(phases),
+                result=result,
+            )
             yield self._emit_progress(execution_id, 100.0, "完了", phase="complete")
             yield self._emit_result(execution_id, result, duration_ms)
 
         except ImportError:
             # DeepAgentCoordinator がない場合はシミュレーション
             for progress, phase, message in phases:
+                self._update_status(
+                    execution_id,
+                    status="running",
+                    progress=progress,
+                    current_step=phases.index((progress, phase, message)) + 1,
+                    total_steps=len(phases),
+                )
                 yield self._emit_progress(execution_id, progress, message, phase=phase)
                 await asyncio.sleep(0.5)
 
             duration_ms = (time.time() - start_time) * 1000
+            simulated_result = {
+                "task": task,
+                "status": "simulated",
+                "message": "DeepAgentCoordinator not available",
+            }
+            self._update_status(
+                execution_id,
+                status="completed",
+                progress=100.0,
+                current_step=len(phases),
+                total_steps=len(phases),
+                result=simulated_result,
+            )
             yield self._emit_progress(execution_id, 100.0, "完了（シミュレーション）", phase="complete")
             yield self._emit_result(
                 execution_id,
-                {
-                    "task": task,
-                    "status": "simulated",
-                    "message": "DeepAgentCoordinator not available",
-                },
+                simulated_result,
                 duration_ms,
             )
 
         except Exception as e:
             self._logger.exception("DeepAgent execution error")
+            self._update_status(execution_id, status="error", error=f"DeepAgent failed: {e}")
             yield self._emit_error(execution_id, "execution_error", f"DeepAgent failed: {e}")
 
     async def _execute_pipeline(
@@ -203,6 +261,7 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
         """Pipeline ワークフロー実行."""
         agents = config.get("agents", [])
         if not agents:
+            self._update_status(execution_id, status="error", error="Pipeline requires 'agents' in config")
             yield self._emit_error(
                 execution_id,
                 "invalid_config",
@@ -212,11 +271,34 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
 
         total = len(agents)
         current_data = input_data
+        self._update_status(execution_id, total_steps=total, current_step=0)
 
         for i, agent_config in enumerate(agents):
+            if not isinstance(agent_config, dict):
+                self._update_status(
+                    execution_id,
+                    status="error",
+                    error=f"agent config must be dict at step {i + 1}",
+                    current_step=i + 1,
+                    total_steps=total,
+                )
+                yield self._emit_error(
+                    execution_id,
+                    "invalid_agent_config",
+                    f"agent config must be dict at step {i + 1}",
+                )
+                return
+
             progress = ((i + 1) / total) * 90.0
             agent_name = agent_config.get("name", f"Agent_{i}")
 
+            self._update_status(
+                execution_id,
+                status="running",
+                progress=progress,
+                current_step=i + 1,
+                total_steps=total,
+            )
             yield self._emit_progress(
                 execution_id,
                 progress,
@@ -233,17 +315,44 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
                 data={"agent": agent_name, "step": i + 1},
             )
 
-            # TODO: 実際のAgent実行
-            await asyncio.sleep(0.5)
+            try:
+                current_data = await self._execute_pipeline_agent(
+                    agent_config=agent_config,
+                    current_data=current_data,
+                    step=i + 1,
+                )
+            except Exception as exc:
+                self._update_status(
+                    execution_id,
+                    status="error",
+                    progress=progress,
+                    current_step=i + 1,
+                    total_steps=total,
+                    error=f"Agent execution failed at step {i + 1}: {exc}",
+                )
+                yield self._emit_error(
+                    execution_id,
+                    "agent_execution_failed",
+                    f"{agent_name} failed: {exc}",
+                )
+                return
 
             yield ServiceEvent(
                 type=ServiceEventType.AGENT_COMPLETE,
                 execution_id=execution_id,
                 message=f"Completed {agent_name}",
-                data={"agent": agent_name, "step": i + 1},
+                data={"agent": agent_name, "step": i + 1, "result": current_data},
             )
 
         duration_ms = (time.time() - start_time) * 1000
+        self._update_status(
+            execution_id,
+            status="completed",
+            progress=100.0,
+            current_step=total,
+            total_steps=total,
+            result=current_data,
+        )
         yield self._emit_progress(execution_id, 100.0, "Pipeline completed", phase="complete")
         yield self._emit_result(execution_id, current_data, duration_ms)
 
@@ -260,6 +369,13 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
 
         for i in range(max_iterations):
             progress = ((i + 1) / max_iterations) * 90.0
+            self._update_status(
+                execution_id,
+                status="running",
+                progress=progress,
+                current_step=i + 1,
+                total_steps=max_iterations,
+            )
 
             # Generate
             yield self._emit_progress(
@@ -289,10 +405,19 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
             await asyncio.sleep(0.3)
 
         duration_ms = (time.time() - start_time) * 1000
+        result_payload = {"task": task, "iterations": max_iterations}
+        self._update_status(
+            execution_id,
+            status="completed",
+            progress=100.0,
+            current_step=max_iterations,
+            total_steps=max_iterations,
+            result=result_payload,
+        )
         yield self._emit_progress(execution_id, 100.0, "Reflection completed", phase="complete")
         yield self._emit_result(
             execution_id,
-            {"task": task, "iterations": max_iterations},
+            result_payload,
             duration_ms,
         )
 
@@ -334,8 +459,105 @@ class WorkflowService(ServiceBase[dict[str, Any]]):
         Returns:
             状態情報
         """
-        # TODO: 状態ストアから取得
+        return self._status_store.get(execution_id)
+
+    async def _execute_pipeline_agent(
+        self,
+        *,
+        agent_config: dict[str, Any],
+        current_data: dict[str, Any],
+        step: int,
+    ) -> dict[str, Any]:
+        """Pipeline の1ステップを実行する."""
+        agent_obj = self._resolve_agent(agent_config)
+        if agent_obj is None:
+            msg = f"agent is not resolvable at step {step}"
+            raise ValueError(msg)
+
+        input_data = current_data
+        input_mapper = agent_config.get("input_mapper")
+        if callable(input_mapper):
+            mapped = input_mapper(current_data)
+            if isinstance(mapped, dict):
+                input_data = mapped
+
+        if hasattr(agent_obj, "run"):
+            result = agent_obj.run(input_data)
+        elif hasattr(agent_obj, "process"):
+            result = agent_obj.process(input_data)
+        else:
+            msg = f"resolved agent has no run/process method: {agent_obj}"
+            raise TypeError(msg)
+
+        if inspect.isawaitable(result):
+            resolved = await result
+        else:
+            resolved = result
+
+        if isinstance(resolved, dict):
+            return resolved
+        return {"result": resolved}
+
+    def _resolve_agent(self, agent_config: dict[str, Any]) -> Any | None:
+        """設定から実行可能なAgentを解決する."""
+        direct_agent = agent_config.get("agent")
+        if direct_agent is not None:
+            return direct_agent
+
+        instance = agent_config.get("instance")
+        if instance is not None:
+            return instance
+
+        class_path = agent_config.get("class_path")
+        if isinstance(class_path, str) and "." in class_path:
+            try:
+                module_name, class_name = class_path.rsplit(".", 1)
+                module = importlib.import_module(module_name)
+                klass = getattr(module, class_name)
+                return klass() if inspect.isclass(klass) else klass
+            except Exception as exc:
+                self._logger.warning("failed to load class_path=%s: %s", class_path, exc)
+
+        module_name = agent_config.get("module")
+        class_name = agent_config.get("class_name")
+        if isinstance(module_name, str) and isinstance(class_name, str):
+            try:
+                module = importlib.import_module(module_name)
+                klass = getattr(module, class_name)
+                return klass() if inspect.isclass(klass) else klass
+            except Exception as exc:
+                self._logger.warning("failed to load module/class=%s.%s: %s", module_name, class_name, exc)
+
         return None
+
+    def _update_status(
+        self,
+        execution_id: str,
+        *,
+        status: str | None = None,
+        progress: float | None = None,
+        current_step: int | None = None,
+        total_steps: int | None = None,
+        error: str | None = None,
+        result: dict[str, Any] | None = None,
+    ) -> None:
+        """状態ストアを更新する."""
+        state = self._status_store.get(execution_id)
+        if state is None:
+            return
+        if status is not None:
+            state["status"] = status
+        if progress is not None:
+            state["progress"] = progress
+        if current_step is not None:
+            state["current_step"] = current_step
+        if total_steps is not None:
+            state["total_steps"] = total_steps
+        if error is not None:
+            state["error"] = error
+        if result is not None:
+            state["result"] = result
+        state["updated_at"] = time.time()
 
 
 # =============================================================================

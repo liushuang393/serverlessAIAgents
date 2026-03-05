@@ -3,271 +3,233 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Migration Studio — COBOL → Java Spring Boot</title>
-  <style>
-    :root {
-      --primary: #1e40af;
-      --primary-light: #3b82f6;
-      --success: #16a34a;
-      --warning: #d97706;
-      --error: #dc2626;
-      --bg: #f8fafc;
-      --card: #ffffff;
-      --border: #e2e8f0;
-      --text: #1e293b;
-      --muted: #64748b;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
-    header {
-      background: var(--primary);
-      color: white;
-      padding: 16px 32px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    header h1 { font-size: 1.4rem; font-weight: 600; }
-    header span { font-size: 0.85rem; opacity: 0.8; }
-    main { max-width: 960px; margin: 32px auto; padding: 0 24px; }
-
-    /* Upload Card */
-    .upload-card {
-      background: var(--card);
-      border: 2px dashed var(--border);
-      border-radius: 12px;
-      padding: 40px;
-      text-align: center;
-      transition: border-color 0.2s;
-      cursor: pointer;
-    }
-    .upload-card.dragover { border-color: var(--primary-light); background: #eff6ff; }
-    .upload-card h2 { font-size: 1.1rem; margin-bottom: 8px; }
-    .upload-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
-    .upload-card input[type=file] { display: none; }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 22px;
-      border-radius: 8px;
-      border: none;
-      cursor: pointer;
-      font-size: 0.95rem;
-      font-weight: 500;
-      transition: opacity 0.15s;
-    }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover:not(:disabled) { background: var(--primary-light); }
-    .btn-success { background: var(--success); color: white; }
-    .options {
-      display: flex;
-      gap: 24px;
-      justify-content: center;
-      margin-top: 20px;
-      flex-wrap: wrap;
-    }
-    .options label { font-size: 0.85rem; color: var(--muted); display: flex; align-items: center; gap: 6px; }
-    #selected-file {
-      margin-top: 12px;
-      font-size: 0.9rem;
-      color: var(--primary);
-      font-weight: 500;
-    }
-
-    /* Pipeline Progress */
-    #progress-section { display: none; margin-top: 32px; }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      margin-bottom: 16px;
-    }
-    .card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: var(--text); }
-
-    /* Stage list */
-    .stage-list { display: flex; flex-direction: column; gap: 8px; }
-    .stage-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 14px;
-      border-radius: 8px;
-      background: var(--bg);
-      font-size: 0.9rem;
-    }
-    .stage-icon {
-      width: 24px; height: 24px;
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
-    }
-    .stage-item.pending .stage-icon { background: #e2e8f0; color: var(--muted); }
-    .stage-item.running .stage-icon { background: #dbeafe; color: var(--primary); animation: pulse 1.2s infinite; }
-    .stage-item.complete .stage-icon { background: #dcfce7; color: var(--success); }
-    .stage-item.error .stage-icon { background: #fee2e2; color: var(--error); }
-    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-    /* Log */
-    #log {
-      background: #0f172a;
-      color: #94a3b8;
-      border-radius: 8px;
-      padding: 16px;
-      font-family: "Consolas", "Monaco", monospace;
-      font-size: 0.82rem;
-      line-height: 1.6;
-      max-height: 300px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      word-break: break-all;
-    }
-    .log-info { color: #7dd3fc; }
-    .log-success { color: #86efac; }
-    .log-warn { color: #fcd34d; }
-    .log-error { color: #f87171; }
-
-    /* Result */
-    #result-section { display: none; margin-top: 16px; }
-    .result-banner {
-      padding: 20px 24px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      flex-wrap: wrap;
-    }
-    .result-banner.success { background: #f0fdf4; border: 1px solid #86efac; }
-    .result-banner.error { background: #fef2f2; border: 1px solid #fca5a5; }
-    .result-banner h3 { font-size: 1rem; }
-    .result-banner p { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
-
-    /* HITL dialog */
-    #hitl-dialog {
-      display: none;
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.45);
-      z-index: 100;
-      align-items: center; justify-content: center;
-    }
-    #hitl-dialog.open { display: flex; }
-    .dialog-box {
-      background: white;
-      border-radius: 12px;
-      padding: 28px;
-      max-width: 560px;
-      width: 90%;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-    }
-    .dialog-box h3 { margin-bottom: 8px; }
-    .dialog-box p { font-size: 0.9rem; color: var(--muted); margin-bottom: 16px; }
-    .dialog-box textarea {
-      width: 100%; padding: 10px; border: 1px solid var(--border);
-      border-radius: 6px; font-size: 0.9rem; resize: vertical; min-height: 80px;
-    }
-    .dialog-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 16px; }
-    .btn-reject { background: #f1f5f9; color: var(--text); }
-    .btn-reject:hover { background: #e2e8f0; }
-    .unknowns-list { background: #fef3c7; border-radius: 6px; padding: 12px; margin-bottom: 16px; font-size: 0.85rem; }
-    .unknowns-list ul { padding-left: 20px; }
-    .unknowns-list li { margin-top: 4px; }
-  </style>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <title>TEMPORAL FORGE — Migration Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<header>
-  <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-    <rect width="28" height="28" rx="6" fill="white" fill-opacity="0.2"/>
-    <path d="M7 10h14M7 14h10M7 18h6" stroke="white" stroke-width="2" stroke-linecap="round"/>
-  </svg>
-  <div>
-    <h1>Migration Studio</h1>
-    <span>COBOL → Java Spring Boot 自動移行</span>
+<!-- 背景レイヤー -->
+<div class="bg-hex" aria-hidden="true"></div>
+<div class="bg-orb bg-orb--legacy" aria-hidden="true"></div>
+<div class="bg-orb bg-orb--modern" aria-hidden="true"></div>
+<div class="bg-noise" aria-hidden="true"></div>
+
+<!-- ヘッダー -->
+<header class="site-header">
+  <div class="header-logo">
+    <svg class="header-icon" width="34" height="34" viewBox="0 0 34 34" fill="none">
+      <rect width="34" height="34" rx="7" fill="url(#hg)"/>
+      <path d="M8 11h6M8 17h4M8 23h2" stroke="#f59e0b" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M26 11h-6M26 17h-4M26 23h-2" stroke="#06b6d4" stroke-width="1.6" stroke-linecap="round"/>
+      <path d="M14 17h6" stroke="#8b5cf6" stroke-width="2.2" stroke-linecap="round"/>
+      <defs>
+        <linearGradient id="hg" x1="0" y1="0" x2="34" y2="34">
+          <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.18"/>
+          <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.18"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <div>
+      <h1 class="logo-title">TEMPORAL FORGE</h1>
+      <span class="logo-sub">COBOL → Java Spring Boot Migration Studio</span>
+    </div>
+  </div>
+  <div class="header-status">
+    <span class="status-dot"></span>
+    <span class="status-text">SYSTEM ONLINE</span>
   </div>
 </header>
 
-<main>
-  <!-- Upload Section -->
-  <div class="upload-card" id="drop-zone">
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style="margin:0 auto 16px">
-      <circle cx="24" cy="24" r="20" fill="#eff6ff"/>
-      <path d="M24 32V20M20 24l4-4 4 4" stroke="#3b82f6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <h2>COBOLファイルをアップロード</h2>
-    <p>.cbl / .cob / .cobol ファイル、またはプロジェクトを含む .zip</p>
-    <input type="file" id="file-input" accept=".cbl,.cob,.cobol,.zip">
-    <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
-      ファイルを選択
-    </button>
-    <div id="selected-file"></div>
-    <div class="options">
-      <label>
-        <input type="checkbox" id="fast-mode" checked>
-        Fast mode（実行比較スキップ）
+<!-- メインワークスペース -->
+<main class="workspace">
+
+  <!-- 左パネル（コントロール） -->
+  <aside class="control-panel">
+
+    <!-- ドロップゾーン -->
+    <div class="drop-zone-wrapper" id="drop-zone">
+      <div class="corner-dec tl"></div>
+      <div class="corner-dec tr"></div>
+      <div class="corner-dec bl"></div>
+      <div class="corner-dec br"></div>
+      <input type="file" id="file-input" accept=".cbl,.cob,.cobol,.zip">
+      <div class="drop-zone-inner">
+        <div class="drop-icon">
+          <svg width="46" height="46" viewBox="0 0 46 46" fill="none">
+            <circle cx="23" cy="23" r="19" fill="rgba(245,158,11,0.08)" stroke="#f59e0b" stroke-width="1"/>
+            <path d="M23 31V19M19 23l4-4 4 4" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <p class="drop-title">COBOLファイルをロード</p>
+        <p class="drop-sub">.cbl / .cob / .cobol / .zip</p>
+        <button class="btn-file" onclick="document.getElementById('file-input').click()">
+          ファイルを選択
+        </button>
+        <div id="selected-file" class="selected-file"></div>
+      </div>
+    </div>
+
+    <!-- 設定パネル -->
+    <div class="settings-panel">
+      <label class="toggle-label">
+        <input type="checkbox" id="fast-mode" checked class="toggle-input">
+        <span class="toggle-track"></span>
+        <span class="toggle-text">Fast mode</span>
+        <span class="toggle-hint">（実行比較スキップ）</span>
       </label>
-      <label>
-        Model:
-        <select id="model-select" style="margin-left:6px;padding:3px 8px;border-radius:4px;border:1px solid var(--border)">
+      <div class="model-row">
+        <span class="model-label">MODEL</span>
+        <select id="model-select" class="model-select">
           <option value="claude-opus-4-6">claude-opus-4-6</option>
           <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
         </select>
-      </label>
-    </div>
-    <div style="margin-top:24px">
-      <button class="btn btn-primary" id="start-btn" disabled onclick="startMigration()">
-        移行開始
-      </button>
-    </div>
-  </div>
-
-  <!-- Progress Section -->
-  <div id="progress-section">
-    <div class="card">
-      <h3>パイプライン進捗</h3>
-      <div class="stage-list" id="stage-list"></div>
-    </div>
-    <div class="card">
-      <h3>ログ</h3>
-      <div id="log"></div>
-    </div>
-  </div>
-
-  <!-- Result Section -->
-  <div id="result-section">
-    <div class="result-banner success" id="result-banner">
-      <div>
-        <h3 id="result-title">移行完了</h3>
-        <p id="result-desc"></p>
       </div>
-      <button class="btn btn-success" id="download-btn" onclick="downloadResult()" style="display:none">
-        成果物をダウンロード (.zip)
-      </button>
     </div>
-  </div>
+
+    <!-- Launchボタン -->
+    <button class="launch-btn" id="start-btn" disabled onclick="startMigration()">
+      <span class="launch-glow" aria-hidden="true"></span>
+      <span class="launch-text">LAUNCH MIGRATION</span>
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+        <path d="M3 9h12M10 5l4 4-4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </button>
+
+  </aside><!-- /control-panel -->
+
+  <!-- 右エリア -->
+  <div class="main-area">
+
+    <!-- Welcome 状態（移行開始前） -->
+    <div class="welcome-state" id="welcome-state">
+      <div class="welcome-header">
+        <div class="welcome-badge">READY TO FORGE</div>
+        <h2 class="welcome-title">旧システムを次世代へ</h2>
+        <p class="welcome-desc">COBOLコードをJava Spring Bootに完全移行</p>
+      </div>
+      <div class="code-cards">
+        <div class="code-card code-card--legacy">
+          <div class="code-card-header">
+            <span class="code-lang-badge legacy-badge">COBOL · LEGACY</span>
+          </div>
+          <pre class="code-content"><span class="c-dim">IDENTIFICATION DIVISION.</span>
+<span class="c-key">PROGRAM-ID.</span> CALC-TAX.
+<span class="c-dim">DATA DIVISION.</span>
+<span class="c-dim">WORKING-STORAGE SECTION.</span>
+<span class="c-key">01</span> WS-INCOME   PIC 9(7)V99.
+<span class="c-key">01</span> WS-TAX-RATE PIC V9(3).
+<span class="c-key">01</span> WS-TAX-AMT  PIC 9(7)V99.
+<span class="c-dim">PROCEDURE DIVISION.</span>
+    COMPUTE WS-TAX-AMT =
+        WS-INCOME * WS-TAX-RATE
+    STOP RUN.</pre>
+        </div>
+        <div class="transform-bridge">
+          <div class="bridge-line"></div>
+          <div class="bridge-arrow">
+            <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
+              <circle cx="19" cy="19" r="17" fill="rgba(139,92,246,0.1)" stroke="#8b5cf6" stroke-width="1"/>
+              <path d="M11 19h16M21 13l6 6-6 6" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="bridge-line"></div>
+        </div>
+        <div class="code-card code-card--modern">
+          <div class="code-card-header">
+            <span class="code-lang-badge modern-badge">JAVA · MODERN</span>
+          </div>
+          <pre class="code-content"><span class="c-dim">@Service</span>
+<span class="c-key">public class</span> TaxService {
+  <span class="c-dim">@Value("${tax.rate}")</span>
+  <span class="c-key">private</span> BigDecimal rate;
+
+  <span class="c-key">public</span> BigDecimal calc(
+      BigDecimal income) {
+    <span class="c-key">return</span> income
+      .multiply(rate)
+      .setScale(2, HALF_UP);
+  }
+}</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- パイプライン進捗セクション（JSが表示） -->
+    <div id="progress-section">
+      <div class="pipeline-panel">
+        <div class="panel-hd">
+          <span class="panel-hex">⬡</span>
+          <span class="panel-title">PIPELINE PROGRESS</span>
+        </div>
+        <div class="stage-list" id="stage-list"></div>
+      </div>
+      <div class="terminal-panel">
+        <div class="terminal-hd">
+          <div class="term-dots"><span></span><span></span><span></span></div>
+          <span class="term-title">SYSTEM LOG</span>
+          <span class="term-blink" aria-hidden="true"></span>
+        </div>
+        <div class="terminal-body">
+          <div class="terminal-scanline" aria-hidden="true"></div>
+          <div id="log" class="terminal-log"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 結果セクション（JSが表示） -->
+    <div id="result-section">
+      <div class="result-banner success" id="result-banner">
+        <div class="result-info">
+          <h3 id="result-title" class="result-title"></h3>
+          <p id="result-desc" class="result-desc"></p>
+        </div>
+        <button class="btn-download" id="download-btn" onclick="downloadResult()" style="display:none">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 2v8M5 7l3 3 3-3M2 13h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          成果物をダウンロード (.zip)
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /main-area -->
+
 </main>
 
-<!-- HITL Dialog -->
+<!-- HITL ダイアログ -->
 <div id="hitl-dialog">
   <div class="dialog-box">
-    <h3>確認が必要です</h3>
-    <p id="hitl-question"></p>
+    <div class="dialog-hd">
+      <span class="dialog-dot" aria-hidden="true"></span>
+      <h3 class="dialog-title">HUMAN REVIEW REQUIRED</h3>
+    </div>
+    <p id="hitl-question" class="dialog-q"></p>
     <div class="unknowns-list" id="hitl-unknowns"></div>
-    <textarea id="hitl-comment" placeholder="コメント・修正指示（任意）"></textarea>
+    <textarea id="hitl-comment" class="dialog-textarea" placeholder="コメント・修正指示（任意）"></textarea>
     <div class="dialog-actions">
       <button class="btn btn-reject" onclick="submitHITL(false)">拒否・修正指示</button>
-      <button class="btn btn-primary" onclick="submitHITL(true)">承認して続行</button>
+      <button class="btn btn-approve" onclick="submitHITL(true)">承認して続行</button>
     </div>
   </div>
 </div>
 
 <script src="app.js"></script>
+<script>
+/* Welcome state: 移行開始時に非表示 */
+(function () {
+  var orig = window.startMigration;
+  if (typeof orig === 'function') {
+    window.startMigration = function () {
+      var ws = document.getElementById('welcome-state');
+      if (ws) ws.style.display = 'none';
+      return orig.apply(this, arguments);
+    };
+  }
+}());
+</script>
 </body>
 </html>

@@ -273,6 +273,15 @@ async def rag_ingest(
     return await orchestrator.ingest(source_ids=request.source_ids or None, dry_run=request.dry_run)
 
 
+@router.get("/api/rag/ingest/capabilities")
+async def rag_ingest_capabilities(
+    _user: UserInfo = Depends(require_auth),
+) -> dict[str, Any]:
+    """ingest source type の capability 一覧を返す."""
+    orchestrator = get_rag_ingestion_orchestrator()
+    return orchestrator.list_source_capabilities()
+
+
 @router.get("/api/rag/ingest/runs")
 async def rag_ingest_runs(
     limit: int = Query(20, ge=1, le=100),

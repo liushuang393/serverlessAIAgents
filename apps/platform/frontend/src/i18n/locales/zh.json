@@ -110,10 +110,8 @@
     "title": "代理浏览器",
     "subtitle": "跨应用代理列表",
     "filter_type": "按代理类型筛选",
-    "filter_cap": "按能力筛选",
     "all": "全部",
     "agents_count": "代理",
-    "legacy_prefix": "旧版：",
     "no_agents": "未找到代理"
   },
   "orch": {

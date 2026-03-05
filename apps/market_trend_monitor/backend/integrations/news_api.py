@@ -11,6 +11,7 @@
 
 import asyncio
 import logging
+import os
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -46,10 +47,47 @@ class NewsAPIClient:
         self._api_key = api_key
         self._base_url = "https://newsapi.org/v2"
         self._logger = logging.getLogger(__name__)
-        self._mock_mode = api_key is None
+        self._runtime_mode = os.getenv("APP_RUNTIME_MODE", "dev").strip().lower()
+        self._allow_mock_fallback = self._runtime_mode != "prod"
+        self._mock_mode = api_key is None and self._allow_mock_fallback
         self._rate_limit_delay = rate_limit_delay
         self._max_retries = max_retries
         self._last_request_time: float = 0.0
+        self._last_error_metadata: dict[str, Any] | None = None
+
+    def pop_last_error_metadata(self) -> dict[str, Any] | None:
+        """直近エラー情報を取得してクリアする."""
+        metadata = self._last_error_metadata
+        self._last_error_metadata = None
+        return metadata
+
+    def _record_error_metadata(self, reason: str, *, query: str) -> None:
+        self._last_error_metadata = {
+            "provider": "news_api",
+            "runtime_mode": self._runtime_mode,
+            "reason": reason,
+            "query": query,
+            "fallback_used": self._allow_mock_fallback,
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    def _fallback_or_empty(self, query: str, count: int, reason: str) -> list[dict[str, Any]]:
+        self._record_error_metadata(reason, query=query)
+        if self._allow_mock_fallback:
+            articles = self._generate_mock_articles(query, count)
+            for item in articles:
+                metadata = item.setdefault("metadata", {})
+                metadata.update(
+                    {
+                        "provider": "news_api",
+                        "fallback_used": True,
+                        "reason": reason,
+                        "runtime_mode": self._runtime_mode,
+                    }
+                )
+            return articles
+        self._logger.warning("NewsAPI fallback disabled in prod mode: reason=%s query=%s", reason, query)
+        return []
 
     async def _wait_for_rate_limit(self) -> None:
         """レート制限のための待機.
@@ -103,7 +141,10 @@ class NewsAPIClient:
         from_date: datetime | None = None,
     ) -> list[dict[str, Any]]:
         if self._mock_mode:
-            return self._generate_mock_articles(query, page_size)
+            return self._fallback_or_empty(query, page_size, "api_key_missing")
+
+        if self._api_key is None and not self._allow_mock_fallback:
+            return self._fallback_or_empty(query, 0, "api_key_missing")
 
         if from_date is None:
             from_date = datetime.now() - timedelta(days=7)
@@ -146,7 +187,7 @@ class NewsAPIClient:
                         if attempt < self._max_retries - 1:
                             await asyncio.sleep(1.0)
                             continue
-                        return self._generate_mock_articles(query, page_size)
+                        return self._fallback_or_empty(query, page_size, f"http_{response.status}")
             except TimeoutError:
                 self._logger.exception(f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})")
                 if attempt < self._max_retries - 1:
@@ -159,7 +200,7 @@ class NewsAPIClient:
                     continue
 
         # 全てのリトライが失敗した場合はモック記事を返す
-        return self._generate_mock_articles(query, page_size)
+        return self._fallback_or_empty(query, page_size, "retry_exhausted")
 
     async def get_top_headlines(
         self,
@@ -178,7 +219,10 @@ class NewsAPIClient:
             ニュース記事リスト
         """
         if self._mock_mode:
-            return self._generate_mock_articles(f"top headlines {country}", page_size)
+            return self._fallback_or_empty(f"top headlines {country}", page_size, "api_key_missing")
+
+        if self._api_key is None and not self._allow_mock_fallback:
+            return self._fallback_or_empty(f"top headlines {country}", 0, "api_key_missing")
 
         params = {
             "country": country,
@@ -218,7 +262,7 @@ class NewsAPIClient:
                         if attempt < self._max_retries - 1:
                             await asyncio.sleep(1.0)
                             continue
-                        return self._generate_mock_articles(f"top headlines {country}", page_size)
+                        return self._fallback_or_empty(f"top headlines {country}", page_size, f"http_{response.status}")
             except TimeoutError:
                 self._logger.exception(f"NewsAPI timeout (attempt {attempt + 1}/{self._max_retries})")
                 if attempt < self._max_retries - 1:
@@ -231,7 +275,7 @@ class NewsAPIClient:
                     continue
 
         # 全てのリトライが失敗した場合はモック記事を返す
-        return self._generate_mock_articles(f"top headlines {country}", page_size)
+        return self._fallback_or_empty(f"top headlines {country}", page_size, "retry_exhausted")
 
     def _generate_mock_articles(self, query: str, count: int) -> list[dict[str, Any]]:
         """モック記事を生成.

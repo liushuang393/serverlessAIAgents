@@ -165,30 +165,6 @@ class AgentAggregatorService:
                 )
         return agents
 
-    def search_by_capability(self, capability: str) -> list[AggregatedAgent]:
-        """能力タグで Agent を検索.
-
-        Args:
-            capability: 検索する能力タグ
-
-        Returns:
-            マッチした AggregatedAgent のリスト
-        """
-        cap_lower = capability.lower()
-        matches: list[AggregatedAgent] = []
-        for agent in self.list_all():
-            if any(cap_lower in item.lower() for item in agent.capabilities_legacy):
-                matches.append(agent)
-                continue
-
-            canonical_values = [
-                f"{cap.get('id', '')} {cap.get('label', '')} {' '.join(cap.get('aliases', []))}".lower()
-                for cap in agent.capabilities
-            ]
-            if any(cap_lower in item for item in canonical_values):
-                matches.append(agent)
-        return matches
-
     def group_by_app(self) -> list[dict[str, Any]]:
         """App 別にグルーピング.
 
@@ -207,22 +183,6 @@ class AgentAggregatorService:
             grouped[agent.app_name]["agents"].append(agent.to_dict())
 
         return [grouped[key] for key in sorted(grouped.keys())]
-
-    def all_capabilities(self) -> list[dict[str, Any]]:
-        """全能力タグとその出現回数を取得.
-
-        Returns:
-            [{"id": str, "domain": str, "label": str, "count": int, "apps": list[str], "aliases": list[str]}]
-        """
-        return self._capability_registry.aggregate(
-            [
-                (
-                    agent.app_name,
-                    self._capability_registry.canonicalize_many(agent.capabilities_legacy),
-                )
-                for agent in self.list_all()
-            ],
-        )
 
     def stats(self) -> dict[str, Any]:
         """Agent 統計情報.

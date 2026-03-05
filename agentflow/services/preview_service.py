@@ -7,6 +7,8 @@ Studio / CLI / API 全てが使用します。
 from __future__ import annotations
 
 import asyncio
+import importlib
+import inspect
 import logging
 import time
 from typing import TYPE_CHECKING, Any
@@ -106,67 +108,33 @@ class PreviewService(IWorkflowRunner):
         }
 
         try:
-            # 実際の FlowExecutor を使用して実行
-            try:
-                from agentflow.flow import FlowBuilder
+            total_nodes = max(len(workflow.nodes), 1)
+            for i, node in enumerate(workflow.nodes):
+                progress_start = (i / total_nodes) * 90
+                progress_end = ((i + 1) / total_nodes) * 90
 
-                # ワークフローからフローを構築
-                FlowBuilder(workflow.id)
+                yield ExecutionEvent(
+                    type="node_start",
+                    node_id=node.id,
+                    message=f"Executing node: {node.agent_type}",
+                    progress=progress_start,
+                )
 
-                # ノードを追加（実際のエージェントクラスが必要）
-                # ここでは簡易実装として各ノードを順次実行
+                node_input = self._build_node_input(
+                    execution_id=execution_id,
+                    node_id=node.id,
+                    inputs=inputs,
+                )
+                node_result = await self._execute_node(node.agent_type, node_input, node.config)
+                self._executions[execution_id]["results"][node.id] = node_result
 
-                for i, node in enumerate(workflow.nodes):
-                    progress = ((i + 1) / len(workflow.nodes)) * 90
-
-                    yield ExecutionEvent(
-                        type="node_start",
-                        node_id=node.id,
-                        message=f"Executing node: {node.agent_type}",
-                        progress=progress - 10,
-                    )
-
-                    # ノード実行をシミュレート
-                    # TODO: 実際のエージェント実行
-                    await asyncio.sleep(0.1)
-
-                    node_result = {
-                        "node_id": node.id,
-                        "agent_type": node.agent_type,
-                        "output": f"Result from {node.agent_type}",
-                    }
-
-                    self._executions[execution_id]["results"][node.id] = node_result
-
-                    yield ExecutionEvent(
-                        type="node_complete",
-                        node_id=node.id,
-                        message=f"Completed: {node.agent_type}",
-                        progress=progress,
-                        data=node_result,
-                    )
-
-            except ImportError:
-                # FlowExecutor がない場合は簡易実行
-                for i, node in enumerate(workflow.nodes):
-                    progress = ((i + 1) / len(workflow.nodes)) * 90
-
-                    yield ExecutionEvent(
-                        type="node_start",
-                        node_id=node.id,
-                        message=f"Executing: {node.agent_type}",
-                        progress=progress - 10,
-                    )
-
-                    await asyncio.sleep(0.2)
-
-                    yield ExecutionEvent(
-                        type="node_complete",
-                        node_id=node.id,
-                        message=f"Completed: {node.agent_type}",
-                        progress=progress,
-                        data={"node_id": node.id, "status": "simulated"},
-                    )
+                yield ExecutionEvent(
+                    type="node_complete",
+                    node_id=node.id,
+                    message=f"Completed: {node.agent_type}",
+                    progress=progress_end,
+                    data=node_result,
+                )
 
             # 完了
             duration_ms = (time.time() - start_time) * 1000
@@ -192,6 +160,84 @@ class PreviewService(IWorkflowRunner):
                 message=f"Workflow failed: {e}",
                 data={"error": str(e)},
             )
+
+    def _build_node_input(
+        self,
+        *,
+        execution_id: str,
+        node_id: str,
+        inputs: dict[str, Any],
+    ) -> dict[str, Any]:
+        """ノード実行入力を構築する."""
+        payload = dict(inputs)
+        payload["_execution_id"] = execution_id
+        payload["_node_id"] = node_id
+        payload["_previous_results"] = dict(self._executions.get(execution_id, {}).get("results", {}))
+        return payload
+
+    async def _execute_node(
+        self,
+        agent_type: str,
+        payload: dict[str, Any],
+        node_config: dict[str, Any],
+    ) -> dict[str, Any]:
+        """ノードを実行する（登録Agent優先、設定解決をフォールバック）。"""
+        from agentflow import AgentClient
+
+        if agent_type:
+            try:
+                client = AgentClient.get(agent_type)
+                result = await client.invoke(payload)
+                return result if isinstance(result, dict) else {"result": result}
+            except Exception:
+                logger.debug("AgentClient execution failed for %s, fallback to config resolver", agent_type)
+
+        instance = self._resolve_configured_agent(node_config)
+        if instance is None:
+            msg = f"No executable agent found: agent_type={agent_type}"
+            raise ValueError(msg)
+
+        if hasattr(instance, "run"):
+            result = instance.run(payload)
+        elif hasattr(instance, "process"):
+            result = instance.process(payload)
+        else:
+            msg = f"Configured agent has no run/process method: {instance}"
+            raise TypeError(msg)
+
+        if inspect.isawaitable(result):
+            resolved = await result
+        else:
+            resolved = result
+        return resolved if isinstance(resolved, dict) else {"result": resolved}
+
+    def _resolve_configured_agent(self, node_config: dict[str, Any]) -> Any | None:
+        """ノード設定から実行可能なAgentインスタンスを解決する."""
+        instance = node_config.get("instance")
+        if instance is not None:
+            return instance
+
+        class_path = node_config.get("class_path")
+        if isinstance(class_path, str) and "." in class_path:
+            try:
+                module_name, class_name = class_path.rsplit(".", 1)
+                module = importlib.import_module(module_name)
+                klass = getattr(module, class_name)
+                return klass() if inspect.isclass(klass) else klass
+            except Exception:
+                return None
+
+        module_name = node_config.get("module")
+        class_name = node_config.get("class_name")
+        if isinstance(module_name, str) and isinstance(class_name, str):
+            try:
+                module = importlib.import_module(module_name)
+                klass = getattr(module, class_name)
+                return klass() if inspect.isclass(klass) else klass
+            except Exception:
+                return None
+
+        return None
 
     async def run_debug(
         self,

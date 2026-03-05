@@ -332,24 +332,6 @@ export interface AgentStatsResponse {
   by_agent_pattern: Array<{ name: string; count: number }>;
 }
 
-/** Capability タグ情報 */
-export interface CapabilityTag {
-  id: string;
-  domain: string;
-  task: string;
-  qualifier: string | null;
-  label: string;
-  aliases: string[];
-  count: number;
-  apps: string[];
-}
-
-/** Capabilities レスポンス */
-export interface CapabilitiesResponse {
-  capabilities: CapabilityTag[];
-  total: number;
-}
-
 /** Agent by-app グループ */
 export interface AgentGroup {
   app_name: string;

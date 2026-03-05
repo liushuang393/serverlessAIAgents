@@ -25,7 +25,6 @@ import type {
   AppDetail,
   AppListResponse,
   AppSummaryResponse,
-  CapabilitiesResponse,
   HealthCheckResult,
   MCPConfigResponse,
   MCPLazyLoadingConfig,
@@ -242,23 +241,9 @@ export async function fetchAgentStats(): Promise<AgentStatsResponse> {
   return data;
 }
 
-/** Capability タグ一覧 */
-export async function fetchCapabilities(): Promise<CapabilitiesResponse> {
-  const { data } = await api.get<CapabilitiesResponse>('/studios/framework/agents/capabilities');
-  return data;
-}
-
 /** App 別 Agent グルーピング */
 export async function fetchAgentsByApp(): Promise<AgentsByAppResponse> {
   const { data } = await api.get<AgentsByAppResponse>('/studios/framework/agents/by-app');
-  return data;
-}
-
-/** Capability 検索 */
-export async function searchAgents(capability: string): Promise<AgentListResponse> {
-  const { data } = await api.get<AgentListResponse>('/studios/framework/agents/search', {
-    params: { capability },
-  });
   return data;
 }
 
