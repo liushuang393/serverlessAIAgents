@@ -7,10 +7,10 @@
  */
 
 /// <reference types="vitest" />
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
-import fs from 'fs';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
+import fs from "fs";
 
 /**
  * app_config.json からバックエンド API ポートを読み取る.
@@ -19,27 +19,32 @@ import fs from 'fs';
  * 環境変数 VITE_API_PORT で上書きも可能。
  */
 const appConfig = JSON.parse(
-  fs.readFileSync(path.resolve(__dirname, '../app_config.json'), 'utf-8'),
+  fs.readFileSync(path.resolve(__dirname, "../app_config.json"), "utf-8"),
 );
-const API_PORT = process.env.VITE_API_PORT ?? String(appConfig.ports?.api ?? 8000);
+const API_PORT =
+  process.env.VITE_API_PORT ?? String(appConfig.ports?.api ?? 8000);
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      "@": path.resolve(__dirname, "./src"),
       // agentflow フレームワーク i18n 基底実装へのエイリアス
-      '@agentflow/i18n': path.resolve(__dirname, '../../../agentflow/i18n/frontend'),
+      "@agentflow/i18n": path.resolve(
+        __dirname,
+        "../../../agentflow/i18n/frontend",
+      ),
     },
   },
   server: {
     port: appConfig.ports?.frontend ?? 3000,
+    host: true,
     proxy: {
-      '/api': {
+      "/api": {
         target: `http://localhost:${API_PORT}`,
         changeOrigin: true,
       },
-      '/openapi.json': {
+      "/openapi.json": {
         target: `http://localhost:${API_PORT}`,
         changeOrigin: true,
       },
@@ -47,17 +52,11 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    environment: 'jsdom',
+    environment: "jsdom",
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
-      exclude: [
-        'node_modules/',
-        '**/*.d.ts',
-        '**/*.config.*',
-        'dist/',
-      ],
+      provider: "v8",
+      reporter: ["text", "json", "html"],
+      exclude: ["node_modules/", "**/*.d.ts", "**/*.config.*", "dist/"],
     },
   },
 });
-

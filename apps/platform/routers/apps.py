@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 
@@ -41,7 +42,7 @@ from apps.platform.services.app_scaffolder import AppScaffolderService
 from apps.platform.services.framework_audit import FrameworkAuditService
 from apps.platform.services.port_allocator import PortAllocatorService
 from apps.platform.services.tenant_dashboard import get_tenant_dashboard
-from fastapi import APIRouter, Body, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query, Request
 
 
 if TYPE_CHECKING:
@@ -150,6 +151,12 @@ def _to_database_url(db_kind: str | None, db_port: int | None) -> str | None:
     return f"db://localhost:{db_port}"
 
 
+def _is_loopback_host(host: str | None) -> bool:
+    """loopback 系ホストかどうかを返す."""
+    normalized = (host or "").strip().lower()
+    return normalized in {"localhost", "127.0.0.1", "0.0.0.0"}
+
+
 def _normalize_text(value: Any) -> str | None:
     """文字列を正規化（空文字は None）."""
     if not isinstance(value, str):
@@ -158,18 +165,74 @@ def _normalize_text(value: Any) -> str | None:
     return text if text else None
 
 
+def _request_access_host(request: Request | None) -> str | None:
+    """現在のアクセス元ホストを解決する."""
+    configured_public_host = _normalize_text(os.environ.get("AGENTFLOW_PUBLIC_HOST"))
+    if request is None:
+        return configured_public_host
+
+    forwarded_host = _normalize_text(request.headers.get("x-forwarded-host"))
+    if forwarded_host:
+        return forwarded_host.split(",")[0].strip().split(":")[0].strip("[]") or None
+
+    host = request.url.hostname
+    if isinstance(host, str) and host.strip():
+        return host.strip()
+
+    host_header = _normalize_text(request.headers.get("host"))
+    if host_header:
+        return host_header.split(",")[0].strip().split(":")[0].strip("[]") or None
+
+    return configured_public_host
+
+
+def _format_url_host(host: str) -> str:
+    """URL 用のホスト文字列を返す."""
+    return f"[{host}]" if ":" in host and not host.startswith("[") else host
+
+
+def _replace_loopback_host(raw_url: str | None, *, host: str | None) -> str | None:
+    """localhost / 127.0.0.1 / 0.0.0.0 をアクセス元ホストへ置換する."""
+    runtime = _normalize_text(raw_url)
+    if runtime is None or host is None:
+        return runtime
+
+    try:
+        parsed = urlparse(runtime)
+    except Exception:
+        return runtime
+
+    if not _is_loopback_host(parsed.hostname):
+        return runtime
+
+    formatted_host = _format_url_host(host)
+    target_host = f"{formatted_host}:{parsed.port}" if parsed.port is not None else formatted_host
+    if parsed.username is None:
+        netloc = target_host
+    else:
+        credentials = parsed.username
+        if parsed.password is not None:
+            credentials = f"{credentials}:{parsed.password}"
+        netloc = f"{credentials}@{target_host}"
+    return parsed._replace(netloc=netloc).geturl()
+
+
 def _runtime_or_local_http_url(
     runtime_url: str | None,
     *,
     port: int | None,
     default_path: str = "",
+    request: Request | None = None,
 ) -> str | None:
     """localhost 系の runtime URL は ports.* に合わせて補正する."""
     runtime = _normalize_text(runtime_url)
     if port is None:
         return runtime
 
-    fallback = f"http://localhost:{port}{default_path}"
+    fallback = _replace_loopback_host(
+        f"http://localhost:{port}{default_path}",
+        host=_request_access_host(request),
+    )
     if runtime is None:
         return fallback
 
@@ -179,18 +242,18 @@ def _runtime_or_local_http_url(
         return fallback
 
     host = (parsed.hostname or "").lower()
-    if host not in {"localhost", "127.0.0.1"}:
+    if not _is_loopback_host(host):
         return runtime
 
     scheme = parsed.scheme or "http"
     path = parsed.path or default_path
-    rebuilt = f"{scheme}://{host}:{port}{path}"
+    rebuilt = f"{scheme}://localhost:{port}{path}"
     if parsed.query:
         rebuilt = f"{rebuilt}?{parsed.query}"
-    return rebuilt
+    return _replace_loopback_host(rebuilt, host=_request_access_host(request))
 
 
-def _runtime_urls(app_config: Any) -> dict[str, str | None]:
+def _runtime_urls(app_config: Any, *, request: Request | None = None) -> dict[str, str | None]:
     """App 表示用 URL セットを作成（runtime 優先）."""
     configured = app_config.runtime.urls
     health_path = app_config.entry_points.health or "/health"
@@ -200,20 +263,24 @@ def _runtime_urls(app_config: Any) -> dict[str, str | None]:
     backend = _runtime_or_local_http_url(
         _normalize_text(configured.backend),
         port=app_config.ports.api,
+        request=request,
     )
     frontend = _runtime_or_local_http_url(
         _normalize_text(configured.frontend),
         port=app_config.ports.frontend,
+        request=request,
     )
     health = _runtime_or_local_http_url(
         _normalize_text(configured.health),
         port=app_config.ports.api,
         default_path=health_path,
+        request=request,
     )
     database = _normalize_text(configured.database) or _to_database_url(
         app_config.dependencies.database,
         app_config.ports.db,
     )
+    database = _replace_loopback_host(database, host=_request_access_host(request))
     return {
         "backend": backend,
         "frontend": frontend,
@@ -222,7 +289,12 @@ def _runtime_urls(app_config: Any) -> dict[str, str | None]:
     }
 
 
-def _runtime_database(app_config: Any, urls: dict[str, str | None]) -> dict[str, Any]:
+def _runtime_database(
+    app_config: Any,
+    urls: dict[str, str | None],
+    *,
+    request: Request | None = None,
+) -> dict[str, Any]:
     """App 表示用 DB 設定を作成（runtime 優先）."""
     runtime_db = app_config.runtime.database.model_dump()
     kind = _normalize_text(runtime_db.get("kind")) or app_config.dependencies.database
@@ -231,8 +303,11 @@ def _runtime_database(app_config: Any, urls: dict[str, str | None]) -> dict[str,
         port = app_config.ports.db
 
     host = _normalize_text(runtime_db.get("host"))
+    access_host = _request_access_host(request)
     if host is None and port is not None:
-        host = "localhost"
+        host = access_host or "localhost"
+    elif _is_loopback_host(host) and access_host is not None:
+        host = access_host
 
     return {
         "kind": kind,
@@ -264,12 +339,12 @@ def _runtime_cli(app_config: Any) -> dict[str, Any]:
     return app_config.runtime.cli.model_dump()
 
 
-def _runtime_payload(app_config: Any) -> dict[str, Any]:
+def _runtime_payload(app_config: Any, *, request: Request | None = None) -> dict[str, Any]:
     """App 表示用 runtime payload を作成."""
-    urls = _runtime_urls(app_config)
+    urls = _runtime_urls(app_config, request=request)
     return {
         "urls": urls,
-        "database": _runtime_database(app_config, urls),
+        "database": _runtime_database(app_config, urls, request=request),
         "commands": _runtime_commands(app_config),
         "cli": _runtime_cli(app_config),
     }
@@ -366,6 +441,7 @@ def _schedule_health_prime(
 
 @router.get("")
 async def list_apps(
+    request: Request,
     wait_for_health: bool = Query(
         default=False,
         description="true の場合はヘルスチェック完了を待ってから返す",
@@ -407,12 +483,12 @@ async def list_apps(
             "ports": app_config.ports.model_dump(),
             "agent_count": len(app_config.agents),
             "tags": app_config.tags,
-            "urls": _runtime_urls(app_config),
+            "urls": _runtime_urls(app_config, request=request),
         }
 
         if include_runtime and surface_profile != "business":
             config_path = discovery.get_config_path(app_config.name)
-            runtime = _runtime_payload(app_config)
+            runtime = _runtime_payload(app_config, request=request)
             item.update(
                 {
                     "config_path": str(config_path) if config_path else None,
@@ -423,7 +499,7 @@ async def list_apps(
                 },
             )
         elif include_runtime:
-            item["runtime"] = {"urls": _runtime_urls(app_config)}
+            item["runtime"] = {"urls": _runtime_urls(app_config, request=request)}
 
         items.append(item)
 
@@ -610,6 +686,7 @@ async def create_app(request: AppCreateRequest) -> dict[str, Any]:
 
 @router.get("/{app_name}")
 async def get_app_detail(
+    request: Request,
     app_name: str,
     wait_for_health: bool = Query(
         default=False,
@@ -640,7 +717,7 @@ async def get_app_detail(
     cached = lifecycle.get_cached_health(app_name)
     status = cached.status.value if cached else AppStatus.UNKNOWN.value
 
-    runtime = _runtime_payload(config)
+    runtime = _runtime_payload(config, request=request)
     base_payload: dict[str, Any] = {
         "name": config.name,
         "display_name": config.display_name,

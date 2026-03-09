@@ -47,8 +47,12 @@ if TYPE_CHECKING:
 _logger = logging.getLogger(__name__)
 
 # ヘルスチェックのタイムアウト（秒）
-_HEALTH_TIMEOUT = 2.0
+_HEALTH_TIMEOUT = 5.0
 _ACTION_TIMEOUT = 900.0
+# Docker 起動後のヘルスチェックリトライ設定
+# コンテナ内アプリの初期化（DB 準備等）完了を待つ
+_DOCKER_HEALTH_RETRY_MAX = 6
+_DOCKER_HEALTH_RETRY_INTERVAL = 3.0
 _HEALTH_FALLBACK_PATHS = ("/api/health", "/health", "/healthz")
 _HEALTHY_PAYLOAD_STATES = {"ok", "healthy", "up", "ready", "pass"}
 _NON_HEALTHY_PAYLOAD_STATES = {
@@ -78,9 +82,7 @@ _REPAIR_MAX_ATTEMPTS_PER_TOOL = 2
 _LOCAL_SERVICE_EXCLUDE_KEYWORDS = ("backend", "frontend", "web", "ui", "worker", "celery", "admin")
 
 # WSL / Linux 環境で conda agentflow を活性化するシェルプレフィックス
-_CONDA_ACTIVATE_PREFIX = (
-    'eval "$(conda shell.bash hook)" && conda activate agentflow && '
-)
+_CONDA_ACTIVATE_PREFIX = 'eval "$(conda shell.bash hook)" && conda activate agentflow && '
 
 ExecutionMode = Literal["local", "docker"]
 
@@ -285,6 +287,59 @@ class AppLifecycleManager:
             if self._health_tasks.get(config.name) is task:
                 self._health_tasks.pop(config.name, None)
 
+    async def _check_health_with_retry(
+        self,
+        config: AppConfig,
+        *,
+        config_path: Path | None = None,
+        max_retries: int = _DOCKER_HEALTH_RETRY_MAX,
+        interval: float = _DOCKER_HEALTH_RETRY_INTERVAL,
+    ) -> HealthCheckResult:
+        """起動直後のヘルスチェックをリトライ付きで実行する.
+
+        コンテナ/プロセス起動後、アプリケーション内部の初期化
+        （DB 準備・モジュールロード等）が完了するまで待機しながら
+        ヘルスチェックを繰り返す。healthy になった時点で即座に返す。
+
+        Args:
+            config: アプリ設定
+            config_path: app_config.json のパス
+            max_retries: 最大リトライ回数
+            interval: リトライ間隔（秒）
+
+        Returns:
+            最終的なヘルスチェック結果
+        """
+        for attempt_idx in range(max_retries):
+            result = await self.check_health(config, config_path=config_path)
+            if result.status == AppStatus.HEALTHY:
+                if attempt_idx > 0:
+                    _logger.info(
+                        "[%s] ヘルスチェック成功（リトライ %d/%d）",
+                        config.name,
+                        attempt_idx + 1,
+                        max_retries,
+                    )
+                return result
+            # 最終試行でなければ待機してリトライ
+            if attempt_idx < max_retries - 1:
+                _logger.info(
+                    "[%s] ヘルスチェック未通過（試行 %d/%d, status=%s）— %.1f 秒後にリトライ",
+                    config.name,
+                    attempt_idx + 1,
+                    max_retries,
+                    result.status,
+                    interval,
+                )
+                await asyncio.sleep(interval)
+        _logger.warning(
+            "[%s] ヘルスチェック: %d 回リトライ後も unhealthy（最終 status=%s）",
+            config.name,
+            max_retries,
+            result.status,
+        )
+        return result
+
     async def _check_health_once(
         self,
         config: AppConfig,
@@ -372,7 +427,9 @@ class AppLifecycleManager:
                             any_http_response = True
 
                             is_2xx = 200 <= response.status_code < 300
-                            payload_marked_bad = payload_state is not None and payload_state in _NON_HEALTHY_PAYLOAD_STATES
+                            payload_marked_bad = (
+                                payload_state is not None and payload_state in _NON_HEALTHY_PAYLOAD_STATES
+                            )
                             payload_marked_good = payload_state is not None and payload_state in _HEALTHY_PAYLOAD_STATES
 
                             if is_2xx and not payload_marked_bad:
@@ -481,14 +538,10 @@ class AppLifecycleManager:
             "database": database_component,
         }
         required_components = [
-            (name, component)
-            for name, component in components.items()
-            if bool(component.get("required"))
+            (name, component) for name, component in components.items() if bool(component.get("required"))
         ]
         failed_components = [
-            (name, component)
-            for name, component in required_components
-            if not bool(component.get("healthy"))
+            (name, component) for name, component in required_components if not bool(component.get("healthy"))
         ]
 
         status: AppStatus
@@ -711,7 +764,9 @@ class AppLifecycleManager:
         result.execution_mode = mode
         if not result.success:
             result.stderr = "\n".join(
-                part for part in (result.stderr, self._trim_output(json.dumps(mode_details, ensure_ascii=False))) if part
+                part
+                for part in (result.stderr, self._trim_output(json.dumps(mode_details, ensure_ascii=False)))
+                if part
             )
         return result
 
@@ -1436,10 +1491,7 @@ class AppLifecycleManager:
                     if self._is_process_running(launch.pid):
                         continue
                     log_tail = self._read_log_tail(launch.log_path, _LOCAL_LOG_TAIL_LINES)
-                    message = (
-                        f"{launch.role} プロセスが起動後に停止しました "
-                        f"(pid={launch.pid}, log={launch.log_path})"
-                    )
+                    message = f"{launch.role} プロセスが起動後に停止しました (pid={launch.pid}, log={launch.log_path})"
                     if log_tail:
                         message = f"{message}\n--- {launch.role} log tail ---\n{self._trim_output(log_tail)}"
                     return False, notes, message
@@ -1468,8 +1520,7 @@ class AppLifecycleManager:
             return False, notes, "local_start readiness check cancelled"
 
         timeout_message = (
-            "local_start readiness timeout: "
-            f"backend={last_backend_status}, frontend={last_frontend_status}"
+            f"local_start readiness timeout: backend={last_backend_status}, frontend={last_frontend_status}"
         )
         return False, notes, timeout_message
 
@@ -1832,7 +1883,10 @@ class AppLifecycleManager:
 
         checked_health: HealthCheckResult | None = None
         if success and run_health_check:
-            checked_health = await self.check_health(config, config_path=config_path)
+            checked_health = await self._check_health_with_retry(
+                config,
+                config_path=config_path,
+            )
         elif success and action == "stop":
             checked_health = HealthCheckResult(
                 config.name,
@@ -1936,7 +1990,10 @@ class AppLifecycleManager:
 
         checked_health: HealthCheckResult | None = None
         if success and run_health_check:
-            checked_health = await self.check_health(config, config_path=config_path)
+            checked_health = await self._check_health_with_retry(
+                config,
+                config_path=config_path,
+            )
         elif success and action == "stop":
             checked_health = HealthCheckResult(
                 config.name,

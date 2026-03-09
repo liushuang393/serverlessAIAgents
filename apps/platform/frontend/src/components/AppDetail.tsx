@@ -4,14 +4,19 @@
  * 選択した App のポート、Agent、依存情報、ヘルスチェックを表示。
  */
 
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import axios from 'axios';
-import { localStartApp, publishApp, startApp, stopApp } from '@/api/client';
-import { useAppStore } from '@/store/useAppStore';
-import type { AppActionResponse, HealthCheckAttempt, RuntimeCommands } from '@/types';
-import { AppHealthBadge } from './AppHealthBadge';
-import { useI18n } from '../i18n';
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+import axios from "axios";
+import { localStartApp, publishApp, startApp, stopApp } from "@/api/client";
+import { useAppStore } from "@/store/useAppStore";
+import type {
+  AppActionResponse,
+  HealthCheckAttempt,
+  RuntimeCommands,
+} from "@/types";
+import { resolveRuntimeUrl } from "@/utils/runtimeUrl";
+import { AppHealthBadge } from "./AppHealthBadge";
+import { useI18n } from "../i18n";
 
 export function AppDetail() {
   const { t } = useI18n();
@@ -24,8 +29,12 @@ export function AppDetail() {
     loadAppDetail,
     checkHealth,
   } = useAppStore();
-  const [actionLoading, setActionLoading] = useState<'publish' | 'start' | 'stop' | 'local-start' | null>(null);
-  const [actionResult, setActionResult] = useState<AppActionResponse | null>(null);
+  const [actionLoading, setActionLoading] = useState<
+    "publish" | "start" | "stop" | "local-start" | null
+  >(null);
+  const [actionResult, setActionResult] = useState<AppActionResponse | null>(
+    null,
+  );
   const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -40,7 +49,9 @@ export function AppDetail() {
   const attempts = (healthDetails?.attempts ?? []) as HealthCheckAttempt[];
   const healthComponents = healthDetails?.components;
 
-  const runAction = async (action: 'publish' | 'start' | 'stop' | 'local-start') => {
+  const runAction = async (
+    action: "publish" | "start" | "stop" | "local-start",
+  ) => {
     if (!name) return;
     setActionLoading(action);
     setActionError(null);
@@ -48,16 +59,16 @@ export function AppDetail() {
       // アクションに応じたハンドラを選択
       let handler: (appName: string) => Promise<AppActionResponse>;
       switch (action) {
-        case 'publish':
+        case "publish":
           handler = publishApp;
           break;
-        case 'start':
+        case "start":
           handler = startApp;
           break;
-        case 'stop':
+        case "stop":
           handler = stopApp;
           break;
-        case 'local-start':
+        case "local-start":
           handler = localStartApp;
           break;
       }
@@ -68,7 +79,7 @@ export function AppDetail() {
     } catch (err: unknown) {
       let message: string;
       if (axios.isAxiosError(err)) {
-        if (err.code === 'ECONNABORTED') {
+        if (err.code === "ECONNABORTED") {
           message = `${action} がタイムアウトしました。バックエンドで処理が継続中の可能性があります。`;
         } else if (err.response?.data?.detail) {
           message = String(err.response.data.detail);
@@ -99,8 +110,11 @@ export function AppDetail() {
   if (error) {
     return (
       <div className="p-6 max-w-4xl mx-auto">
-        <Link to="/apps" className="text-sm text-indigo-400 hover:text-indigo-300 mb-4 inline-block">
-          {t('app_detail.back')}
+        <Link
+          to="/apps"
+          className="text-sm text-indigo-400 hover:text-indigo-300 mb-4 inline-block"
+        >
+          {t("app_detail.back")}
         </Link>
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6 text-center">
           <p className="text-red-400">{error}</p>
@@ -112,7 +126,7 @@ export function AppDetail() {
   if (!selectedApp) {
     return (
       <div className="p-6 max-w-4xl mx-auto text-center py-24">
-        <p className="text-slate-500">{t('app_detail.not_found')}</p>
+        <p className="text-slate-500">{t("app_detail.not_found")}</p>
       </div>
     );
   }
@@ -121,28 +135,34 @@ export function AppDetail() {
   const runtime = app.runtime;
   const db = runtime?.database;
   const commands = runtime?.commands;
-  const healthPath = app.entry_points.health?.startsWith('/')
+  const healthPath = app.entry_points.health?.startsWith("/")
     ? app.entry_points.health
-    : `/${app.entry_points.health ?? 'health'}`;
-  const backendUrl = app.ports.api
-    ? `http://localhost:${app.ports.api}`
-    : (runtime?.urls.backend ?? app.urls?.backend ?? null);
-  const frontendUrl = app.ports.frontend
-    ? `http://localhost:${app.ports.frontend}`
-    : (runtime?.urls.frontend ?? app.urls?.frontend ?? null);
-  const healthUrl = app.ports.api
-    ? `http://localhost:${app.ports.api}${healthPath}`
-    : (runtime?.urls.health ?? app.urls?.health ?? null);
-  const databaseUrl = runtime?.urls.database ?? app.urls?.database ?? db?.url ?? null;
+    : `/${app.entry_points.health ?? "health"}`;
+  const runtimeUrls = runtime?.urls ?? app.urls;
+  const backendUrl = resolveRuntimeUrl(runtimeUrls?.backend, app.ports.api);
+  const frontendUrl = resolveRuntimeUrl(
+    runtimeUrls?.frontend,
+    app.ports.frontend,
+  );
+  const healthUrl = resolveRuntimeUrl(
+    runtimeUrls?.health,
+    app.ports.api,
+    healthPath,
+  );
+  const databaseUrl = resolveRuntimeUrl(
+    runtimeUrls?.database ?? db?.url ?? null,
+  );
   const healthCurlTarget =
-    healthUrl ??
-    (backendUrl ? `${backendUrl}/health` : null);
+    healthUrl ?? (backendUrl ? `${backendUrl}/health` : null);
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       {/* 戻るリンク */}
-      <Link to="/apps" className="text-sm text-indigo-400 hover:text-indigo-300">
-        {t('app_detail.back')}
+      <Link
+        to="/apps"
+        className="text-sm text-indigo-400 hover:text-indigo-300"
+      >
+        {t("app_detail.back")}
       </Link>
 
       {/* ヘッダー */}
@@ -151,42 +171,54 @@ export function AppDetail() {
           <span className="text-4xl">{app.icon}</span>
           <div className="flex-1">
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-xl font-bold text-slate-100">{app.display_name}</h1>
+              <h1 className="text-xl font-bold text-slate-100">
+                {app.display_name}
+              </h1>
               <AppHealthBadge status={health?.status ?? app.status} />
             </div>
-            <p className="text-xs text-slate-500 mb-2">{app.name} · v{app.version}</p>
+            <p className="text-xs text-slate-500 mb-2">
+              {app.name} · v{app.version}
+            </p>
             {app.description && (
               <p className="text-sm text-slate-400">{app.description}</p>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => runAction('publish')}
+              onClick={() => runAction("publish")}
               disabled={actionLoading !== null}
               className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs rounded-lg transition-colors"
             >
-              {actionLoading === 'publish' ? t('app_detail.publishing') : t('app_detail.publish')}
+              {actionLoading === "publish"
+                ? t("app_detail.publishing")
+                : t("app_detail.publish")}
             </button>
             <button
-              onClick={() => runAction('start')}
+              onClick={() => runAction("start")}
               disabled={actionLoading !== null}
               className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs rounded-lg transition-colors"
             >
-              {actionLoading === 'start' ? t('app_detail.starting') : t('app_detail.start')}
+              {actionLoading === "start"
+                ? t("app_detail.starting")
+                : t("app_detail.start")}
             </button>
             <button
-              onClick={() => runAction('stop')}
+              onClick={() => runAction("stop")}
               disabled={actionLoading !== null}
               className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white text-xs rounded-lg transition-colors"
             >
-              {actionLoading === 'stop' ? t('app_detail.stopping') : t('app_detail.stop')}
+              {actionLoading === "stop"
+                ? t("app_detail.stopping")
+                : t("app_detail.stop")}
             </button>
             <button
-              onClick={() => runAction('local-start')}
+              onClick={() => runAction("local-start")}
               disabled={actionLoading !== null}
               className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-xs rounded-lg transition-colors"
             >
-              {actionLoading === 'local-start' ? t('app_detail.starting') : t('app_detail.local')}
+              {actionLoading === "local-start"
+                ? t("app_detail.starting")
+                : t("app_detail.local")}
             </button>
             <button
               onClick={async () => {
@@ -196,21 +228,30 @@ export function AppDetail() {
               }}
               className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-lg transition-colors"
             >
-              {t('app_detail.health_check_btn')}
+              {t("app_detail.health_check_btn")}
             </button>
           </div>
         </div>
       </div>
 
       {(actionResult || actionError) && (
-        <div className={`border rounded-xl p-4 ${actionError || actionResult?.success === false ? 'bg-red-500/10 border-red-500/30' : 'bg-emerald-500/10 border-emerald-500/30'}`}>
+        <div
+          className={`border rounded-xl p-4 ${actionError || actionResult?.success === false ? "bg-red-500/10 border-red-500/30" : "bg-emerald-500/10 border-emerald-500/30"}`}
+        >
           {actionError && <p className="text-sm text-red-300">{actionError}</p>}
           {actionResult && (
             <div className="space-y-1">
-              <p className={`text-sm ${actionResult.success ? 'text-emerald-300' : 'text-red-300'}`}>
-                {actionResult.action.toUpperCase()} {actionResult.success ? t('app_detail.health_check_completed') : t('app_detail.health_check_failed')}
+              <p
+                className={`text-sm ${actionResult.success ? "text-emerald-300" : "text-red-300"}`}
+              >
+                {actionResult.action.toUpperCase()}{" "}
+                {actionResult.success
+                  ? t("app_detail.health_check_completed")
+                  : t("app_detail.health_check_failed")}
               </p>
-              <p className="text-xs text-slate-300 font-mono break-all">{actionResult.command}</p>
+              <p className="text-xs text-slate-300 font-mono break-all">
+                {actionResult.command}
+              </p>
               <p className="text-[11px] text-slate-400">
                 source: {actionResult.command_source}
               </p>
@@ -220,20 +261,26 @@ export function AppDetail() {
               {actionResult.diagnostic && (
                 <div className="mt-3 p-3 rounded-lg border border-slate-700/60 bg-slate-950/40 space-y-2">
                   <p className="text-xs text-slate-300">
-                    CLI: {actionResult.diagnostic.tool ?? 'N/A'} / setup:
-                    {' '}
-                    {actionResult.diagnostic.setup?.ready ? 'ready' : 'not ready'}
+                    CLI: {actionResult.diagnostic.tool ?? "N/A"} / setup:{" "}
+                    {actionResult.diagnostic.setup?.ready
+                      ? "ready"
+                      : "not ready"}
                   </p>
                   {actionResult.diagnostic.summary && (
-                    <p className="text-xs text-amber-200">{actionResult.diagnostic.summary}</p>
+                    <p className="text-xs text-amber-200">
+                      {actionResult.diagnostic.summary}
+                    </p>
                   )}
-                  {actionResult.diagnostic.recommendations && actionResult.diagnostic.recommendations.length > 0 && (
-                    <ul className="text-xs text-slate-300 list-disc pl-5 space-y-1">
-                      {actionResult.diagnostic.recommendations.slice(0, 5).map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  )}
+                  {actionResult.diagnostic.recommendations &&
+                    actionResult.diagnostic.recommendations.length > 0 && (
+                      <ul className="text-xs text-slate-300 list-disc pl-5 space-y-1">
+                        {actionResult.diagnostic.recommendations
+                          .slice(0, 5)
+                          .map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                      </ul>
+                    )}
                   {actionResult.diagnostic.diagnostic_command && (
                     <p className="text-[11px] text-slate-400 font-mono break-all">
                       diagnostic: {actionResult.diagnostic.diagnostic_command}
@@ -259,39 +306,82 @@ export function AppDetail() {
       {/* ヘルスチェック結果 */}
       {health && (
         <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
-          <h2 className="text-sm font-semibold text-slate-200 mb-3">{t('app_detail.health_check_title')}</h2>
+          <h2 className="text-sm font-semibold text-slate-200 mb-3">
+            {t("app_detail.health_check_title")}
+          </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
-            <InfoItem label={t('app_detail.hc_status')} value={health.status} />
-            <InfoItem label={t('app_detail.hc_response')} value={health.response_time_ms > 0 ? `${health.response_time_ms.toFixed(1)}ms` : '—'} />
-            <InfoItem label={t('app_detail.hc_checked')} value={new Date(health.checked_at).toLocaleTimeString('ja-JP')} />
-            {health.error && <InfoItem label={t('app_detail.hc_error')} value={health.error} isError />}
-            {typeof healthDetails?.checked_url === 'string' && (
-              <InfoItem label={t('app_detail.hc_url')} value={healthDetails.checked_url} />
+            <InfoItem label={t("app_detail.hc_status")} value={health.status} />
+            <InfoItem
+              label={t("app_detail.hc_response")}
+              value={
+                health.response_time_ms > 0
+                  ? `${health.response_time_ms.toFixed(1)}ms`
+                  : "—"
+              }
+            />
+            <InfoItem
+              label={t("app_detail.hc_checked")}
+              value={new Date(health.checked_at).toLocaleTimeString("ja-JP")}
+            />
+            {health.error && (
+              <InfoItem
+                label={t("app_detail.hc_error")}
+                value={health.error}
+                isError
+              />
             )}
-            {typeof healthDetails?.http_status === 'number' && (
-              <InfoItem label={t('app_detail.hc_http').replace(/\{code\}/g, String(healthDetails.http_status))} value={String(healthDetails.http_status)} />
+            {typeof healthDetails?.checked_url === "string" && (
+              <InfoItem
+                label={t("app_detail.hc_url")}
+                value={healthDetails.checked_url}
+              />
+            )}
+            {typeof healthDetails?.http_status === "number" && (
+              <InfoItem
+                label={t("app_detail.hc_http").replace(
+                  /\{code\}/g,
+                  String(healthDetails.http_status),
+                )}
+                value={String(healthDetails.http_status)}
+              />
             )}
             {healthDetails?.docker && (
               <InfoItem
-                label={t('app_detail.docker_backend')}
-                value={healthDetails.docker.backend_running ? t('app_detail.docker_running') : t('app_detail.docker_not_running')}
+                label={t("app_detail.docker_backend")}
+                value={
+                  healthDetails.docker.backend_running
+                    ? t("app_detail.docker_running")
+                    : t("app_detail.docker_not_running")
+                }
               />
             )}
           </div>
           {healthComponents && (
             <div className="mt-4 pt-4 border-t border-slate-800">
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">Components</p>
+              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">
+                Components
+              </p>
               <div className="space-y-1">
-                {(Object.entries(healthComponents) as Array<[string, {
-                  required: boolean;
-                  healthy: boolean;
-                  status: string;
-                  message?: string;
-                }]>).map(([componentName, component]) => (
-                  <p key={componentName} className={`text-xs font-mono ${component.healthy ? 'text-emerald-300' : 'text-rose-300'}`}>
+                {(
+                  Object.entries(healthComponents) as Array<
+                    [
+                      string,
+                      {
+                        required: boolean;
+                        healthy: boolean;
+                        status: string;
+                        message?: string;
+                      },
+                    ]
+                  >
+                ).map(([componentName, component]) => (
+                  <p
+                    key={componentName}
+                    className={`text-xs font-mono ${component.healthy ? "text-emerald-300" : "text-rose-300"}`}
+                  >
                     {componentName}: {component.status}
-                    {component.required ? ' (required)' : ' (optional)'}
-                    {component.message ? ` -> ${component.message}` : ''}
+                    {component.required ? " (required)" : " (optional)"}
+                    {component.message ? ` -> ${component.message}` : ""}
                   </p>
                 ))}
               </div>
@@ -299,40 +389,59 @@ export function AppDetail() {
           )}
           {attempts.length > 0 && (
             <div className="mt-4 pt-4 border-t border-slate-800">
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">{t('app_detail.docker_attempts')}</p>
+              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">
+                {t("app_detail.docker_attempts")}
+              </p>
               <div className="space-y-1.5">
                 {attempts.slice(0, 8).map((a, index) => (
-                  <p key={`${a.url}-${index}`} className="text-xs text-slate-400 font-mono break-all">
+                  <p
+                    key={`${a.url}-${index}`}
+                    className="text-xs text-slate-400 font-mono break-all"
+                  >
                     {a.url}
-                    {typeof a.http_status === 'number' ? ` -> HTTP ${a.http_status}` : ''}
-                    {a.error ? ` -> ${a.error}` : ''}
+                    {typeof a.http_status === "number"
+                      ? ` -> HTTP ${a.http_status}`
+                      : ""}
+                    {a.error ? ` -> ${a.error}` : ""}
                   </p>
                 ))}
               </div>
             </div>
           )}
-          {healthDetails?.docker?.services && healthDetails.docker.services.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-slate-800">
-              <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">{t('app_detail.docker_services')}</p>
-              <div className="space-y-1">
-                {healthDetails.docker.services.map((service) => (
-                  <p key={service.service} className="text-xs text-slate-400 font-mono">
-                    {service.service}: {service.running ? 'running' : service.state}
-                    {service.published_ports.length > 0 ? ` (ports: ${service.published_ports.join(',')})` : ''}
-                  </p>
-                ))}
+          {healthDetails?.docker?.services &&
+            healthDetails.docker.services.length > 0 && (
+              <div className="mt-4 pt-4 border-t border-slate-800">
+                <p className="text-[11px] text-slate-500 uppercase tracking-wider mb-2">
+                  {t("app_detail.docker_services")}
+                </p>
+                <div className="space-y-1">
+                  {healthDetails.docker.services.map((service) => (
+                    <p
+                      key={service.service}
+                      className="text-xs text-slate-400 font-mono"
+                    >
+                      {service.service}:{" "}
+                      {service.running ? "running" : service.state}
+                      {service.published_ports.length > 0
+                        ? ` (ports: ${service.published_ports.join(",")})`
+                        : ""}
+                    </p>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       )}
 
-      <Section title={t('app_detail.runtime_urls')}>
+      <Section title={t("app_detail.runtime_urls")}>
         <div className="space-y-2">
-          <RuntimeUrlRow label={t('app_detail.backend')} url={backendUrl} />
-          <RuntimeUrlRow label={t('app_detail.frontend')} url={frontendUrl} />
-          <RuntimeUrlRow label={t('app_detail.hc_url')} url={healthUrl} />
-          <RuntimeUrlRow label={t('app_detail.db_connections')} url={databaseUrl} />
+          <RuntimeUrlRow label={t("app_detail.backend")} url={backendUrl} />
+          <RuntimeUrlRow label={t("app_detail.frontend")} url={frontendUrl} />
+          <RuntimeUrlRow label={t("app_detail.hc_url")} url={healthUrl} />
+          <RuntimeUrlRow
+            label={t("app_detail.db_connections")}
+            url={databaseUrl}
+          />
           {healthCurlTarget && (
             <InfoItem
               label="Framework Call"
@@ -346,69 +455,150 @@ export function AppDetail() {
         {/* ポート */}
         <Section title="Ports">
           <div className="grid grid-cols-2 gap-3">
-            <InfoItem label="API" value={app.ports.api ? `:${app.ports.api}` : t('app_detail.na')} />
-            <InfoItem label={t('app_detail.frontend')} value={app.ports.frontend ? `:${app.ports.frontend}` : t('app_detail.na')} />
-            <InfoItem label={t('app_detail.primary_db')} value={app.ports.db ? `:${app.ports.db}` : t('app_detail.na')} />
-            <InfoItem label={t('app_detail.redis')} value={app.ports.redis ? `:${app.ports.redis}` : t('app_detail.na')} />
+            <InfoItem
+              label="API"
+              value={app.ports.api ? `:${app.ports.api}` : t("app_detail.na")}
+            />
+            <InfoItem
+              label={t("app_detail.frontend")}
+              value={
+                app.ports.frontend
+                  ? `:${app.ports.frontend}`
+                  : t("app_detail.na")
+              }
+            />
+            <InfoItem
+              label={t("app_detail.primary_db")}
+              value={app.ports.db ? `:${app.ports.db}` : t("app_detail.na")}
+            />
+            <InfoItem
+              label={t("app_detail.redis")}
+              value={
+                app.ports.redis ? `:${app.ports.redis}` : t("app_detail.na")
+              }
+            />
           </div>
         </Section>
 
         {/* 依存 */}
         <Section title="Dependencies">
           <div className="space-y-2">
-            <InfoItem label="Database" value={app.dependencies.database ?? 'None'} />
-            <InfoItem label="Redis" value={app.dependencies.redis ? 'Yes' : 'No'} />
+            <InfoItem
+              label="Database"
+              value={app.dependencies.database ?? "None"}
+            />
+            <InfoItem
+              label="Redis"
+              value={app.dependencies.redis ? "Yes" : "No"}
+            />
             {app.dependencies.external.length > 0 && (
-              <InfoItem label="External" value={app.dependencies.external.join(', ')} />
+              <InfoItem
+                label="External"
+                value={app.dependencies.external.join(", ")}
+              />
             )}
           </div>
         </Section>
       </div>
 
-      <Section title={t('app_detail.db_connections')}>
+      <Section title={t("app_detail.db_connections")}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <InfoItem label="Kind" value={db?.kind ?? app.dependencies.database ?? t('app_detail.na')} />
-          <InfoItem label="URL" value={db?.url ?? databaseUrl ?? t('app_detail.na')} />
-          <InfoItem label="Host" value={db?.host ?? t('app_detail.na')} />
-          <InfoItem label="Port" value={db?.port ? String(db.port) : t('app_detail.na')} />
-          <InfoItem label="Name" value={db?.name ?? t('app_detail.na')} />
-          <InfoItem label="User" value={db?.user ?? t('app_detail.na')} />
-          <InfoItem label="Password" value={db?.password ?? t('app_detail.na')} />
-          <InfoItem label="Password ENV" value={db?.password_env ?? t('app_detail.na')} />
+          <InfoItem
+            label="Kind"
+            value={db?.kind ?? app.dependencies.database ?? t("app_detail.na")}
+          />
+          <InfoItem
+            label="URL"
+            value={db?.url ?? databaseUrl ?? t("app_detail.na")}
+          />
+          <InfoItem label="Host" value={db?.host ?? t("app_detail.na")} />
+          <InfoItem
+            label="Port"
+            value={db?.port ? String(db.port) : t("app_detail.na")}
+          />
+          <InfoItem label="Name" value={db?.name ?? t("app_detail.na")} />
+          <InfoItem label="User" value={db?.user ?? t("app_detail.na")} />
+          <InfoItem
+            label="Password"
+            value={db?.password ?? t("app_detail.na")}
+          />
+          <InfoItem
+            label="Password ENV"
+            value={db?.password_env ?? t("app_detail.na")}
+          />
           {db?.note && <InfoItem label="Note" value={db.note} />}
         </div>
       </Section>
 
-      <Section title={t('app_detail.startup_commands')}>
+      <Section title={t("app_detail.startup_commands")}>
         <div className="space-y-2">
-          <CommandRow label={t('app_detail.backend_cmd')} command={commands?.backend_dev ?? null} />
-          <CommandRow label={t('app_detail.frontend_cmd')} command={commands?.frontend_dev ?? null} />
-          <CommandRow label={t('app_detail.publish')} command={commands?.publish ?? null} />
-          <CommandRow label={t('app_detail.start')} command={commands?.start ?? null} />
-          <CommandRow label={t('app_detail.stop')} command={commands?.stop ?? null} />
+          <CommandRow
+            label={t("app_detail.backend_cmd")}
+            command={commands?.backend_dev ?? null}
+          />
+          <CommandRow
+            label={t("app_detail.frontend_cmd")}
+            command={commands?.frontend_dev ?? null}
+          />
+          <CommandRow
+            label={t("app_detail.publish")}
+            command={commands?.publish ?? null}
+          />
+          <CommandRow
+            label={t("app_detail.start")}
+            command={commands?.start ?? null}
+          />
+          <CommandRow
+            label={t("app_detail.stop")}
+            command={commands?.stop ?? null}
+          />
           {!hasAnyCommand(commands) && (
             <p className="text-xs text-slate-500">
-              <code>app_config.json</code> -&gt; <code>runtime.commands</code> に
-              コマンドを設定すると、Platform から一元表示・実行できます。
+              <code>app_config.json</code> -&gt; <code>runtime.commands</code>{" "}
+              に コマンドを設定すると、Platform から一元表示・実行できます。
             </p>
           )}
         </div>
       </Section>
 
       {app.blueprint && (
-        <Section title={t('app_detail.runtime_config')}>
+        <Section title={t("app_detail.runtime_config")}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <InfoItem label={t('app_detail.engine_pattern')} value={app.blueprint.engine_pattern} />
-            <InfoItem label={t('app_detail.flow_pattern')} value={app.blueprint.flow_pattern ?? t('app_detail.na')} />
-            <InfoItem label={t('app_detail.llm_provider')} value={app.blueprint.llm_provider ?? 'auto'} />
-            <InfoItem label={t('app_detail.default_model')} value={app.blueprint.default_model ?? t('app_detail.na')} />
-            <InfoItem label={t('app_detail.vector_db')} value={app.blueprint.vector_db_provider ?? t('app_detail.na')} />
-            <InfoItem label="Vector Collection" value={app.blueprint.vector_db_collection ?? t('app_detail.na')} />
+            <InfoItem
+              label={t("app_detail.engine_pattern")}
+              value={app.blueprint.engine_pattern}
+            />
+            <InfoItem
+              label={t("app_detail.flow_pattern")}
+              value={app.blueprint.flow_pattern ?? t("app_detail.na")}
+            />
+            <InfoItem
+              label={t("app_detail.llm_provider")}
+              value={app.blueprint.llm_provider ?? "auto"}
+            />
+            <InfoItem
+              label={t("app_detail.default_model")}
+              value={app.blueprint.default_model ?? t("app_detail.na")}
+            />
+            <InfoItem
+              label={t("app_detail.vector_db")}
+              value={app.blueprint.vector_db_provider ?? t("app_detail.na")}
+            />
+            <InfoItem
+              label="Vector Collection"
+              value={app.blueprint.vector_db_collection ?? t("app_detail.na")}
+            />
             {app.blueprint.llm_api_key_env && (
-              <InfoItem label="LLM API Key ENV" value={app.blueprint.llm_api_key_env} />
+              <InfoItem
+                label="LLM API Key ENV"
+                value={app.blueprint.llm_api_key_env}
+              />
             )}
             {app.blueprint.vector_db_api_key_env && (
-              <InfoItem label="Vector API Key ENV" value={app.blueprint.vector_db_api_key_env} />
+              <InfoItem
+                label="Vector API Key ENV"
+                value={app.blueprint.vector_db_api_key_env}
+              />
             )}
           </div>
         </Section>
@@ -416,18 +606,25 @@ export function AppDetail() {
 
       {/* Agents */}
       {app.agents.length > 0 && (
-        <Section title={`${t('app_detail.agent_name')} (${app.agents.length})`}>
+        <Section title={`${t("app_detail.agent_name")} (${app.agents.length})`}>
           <div className="divide-y divide-slate-800/50">
             {app.agents.map((agent) => (
               <div key={agent.name} className="py-3 first:pt-0 last:pb-0">
-                <p className="text-sm font-medium text-slate-200">🤖 {agent.name}</p>
+                <p className="text-sm font-medium text-slate-200">
+                  🤖 {agent.name}
+                </p>
                 {agent.module && (
-                  <p className="text-xs text-slate-500 mt-0.5 font-mono">{agent.module}</p>
+                  <p className="text-xs text-slate-500 mt-0.5 font-mono">
+                    {agent.module}
+                  </p>
                 )}
                 {agent.capabilities.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-1.5">
                     {agent.capabilities.map((cap) => (
-                      <span key={cap} className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 text-[10px] rounded-full border border-indigo-500/20">
+                      <span
+                        key={cap}
+                        className="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 text-[10px] rounded-full border border-indigo-500/20"
+                      >
                         {cap}
                       </span>
                     ))}
@@ -443,7 +640,10 @@ export function AppDetail() {
       {app.tags.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {app.tags.map((tag) => (
-            <span key={tag} className="px-3 py-1 bg-slate-800/80 text-slate-400 text-xs rounded-full">
+            <span
+              key={tag}
+              className="px-3 py-1 bg-slate-800/80 text-slate-400 text-xs rounded-full"
+            >
               {tag}
             </span>
           ))}
@@ -456,7 +656,7 @@ export function AppDetail() {
 function RuntimeUrlRow({ label, url }: { label: string; url: string | null }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <InfoItem label={label} value={url ?? 'N/A'} />
+      <InfoItem label={label} value={url ?? "N/A"} />
       {url && (
         <a
           href={url}
@@ -475,14 +675,25 @@ function hasAnyCommand(commands: RuntimeCommands | undefined): boolean {
   if (!commands) {
     return false;
   }
-  return [commands.backend_dev, commands.frontend_dev, commands.publish, commands.start, commands.stop]
-    .some((value) => typeof value === 'string' && value.trim().length > 0);
+  return [
+    commands.backend_dev,
+    commands.frontend_dev,
+    commands.publish,
+    commands.start,
+    commands.stop,
+  ].some((value) => typeof value === "string" && value.trim().length > 0);
 }
 
-function CommandRow({ label, command }: { label: string; command: string | null }) {
+function CommandRow({
+  label,
+  command,
+}: {
+  label: string;
+  command: string | null;
+}) {
   return (
     <div className="flex items-start justify-between gap-3">
-      <InfoItem label={label} value={command ?? 'N/A'} />
+      <InfoItem label={label} value={command ?? "N/A"} />
       {command && (
         <button
           onClick={() => navigator.clipboard.writeText(command).catch(() => {})}
@@ -496,7 +707,13 @@ function CommandRow({ label, command }: { label: string; command: string | null 
 }
 
 /** セクションラッパー */
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="bg-slate-900/50 border border-slate-800 rounded-xl p-5">
       <h2 className="text-sm font-semibold text-slate-200 mb-3">{title}</h2>
@@ -520,7 +737,7 @@ function InfoItem({
       <p className="text-[10px] text-slate-500 uppercase tracking-wider mb-0.5">
         {label}
       </p>
-      <p className={`text-sm ${isError ? 'text-red-400' : 'text-slate-300'}`}>
+      <p className={`text-sm ${isError ? "text-red-400" : "text-slate-300"}`}>
         {value}
       </p>
     </div>

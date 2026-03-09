@@ -8,12 +8,16 @@ RUN npm ci --legacy-peer-deps
 COPY apps/market_trend_monitor/frontend/ ./
 COPY agentflow/i18n/frontend/ /agentflow/i18n/frontend/
 
-ARG VITE_API_BASE_URL=http://localhost:8002/api
+ARG VITE_API_BASE_URL=
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 RUN npm run build
 
 FROM nginx:1.27-alpine
+
+RUN rm /etc/nginx/conf.d/default.conf
+
+COPY apps/market_trend_monitor/frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 COPY --from=build /app/dist /usr/share/nginx/html
 

@@ -1,0 +1,69 @@
+# Docker ビルドコンテキスト除外設定
+# Dockerfile が必要なファイルのみを含め、ビルド時間を短縮する
+
+# バージョン管理・IDE 設定
+.git
+.gitignore
+.vscode
+.idea
+.augment
+
+# キャッシュ・中間生成物
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache
+.mypy_cache
+.ruff_cache
+htmlcov
+coverage.xml
+*.egg-info
+
+# Node.js 関連（Python イメージでは不要）
+node_modules
+package-lock.json
+package.json
+playwright.config.ts
+studio/node_modules
+studio/dist
+
+# ドキュメント・テスト（ランタイム不要）
+docs
+tests
+examples
+htmlcov
+output
+memory
+data
+
+# DB ファイル（ランタイムで再生成される）
+*.db
+
+# 各 app 内の node_modules・ビルド生成物
+apps/*/admin_ui/node_modules
+apps/*/admin_ui/dist
+apps/*/frontend/node_modules
+apps/*/frontend/dist
+apps/*/frontend/.next
+
+# Docker 関連
+docker-compose*.yml
+Dockerfile
+.dockerignore
+
+# スクリプト・設定ファイル
+scripts
+*.bat
+*.ps1
+*.sh
+Makefile
+CONTRIBUTING.md
+INSTALLATION_GUIDE_JA.md
+LICENSE
+SECURITY.md
+CLAUDE.md
+AGENTS.md
+code-rules
+contracts
+plugins
+migration_output

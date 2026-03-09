@@ -42,7 +42,11 @@ services:
       - postgres_main_data:/var/lib/postgresql/data
       - ./db/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dge} -d ${POSTGRES_DB:-decision_governance}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-dge} -d ${POSTGRES_DB:-decision_governance}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -84,7 +88,15 @@ services:
       context: ../..
       dockerfile: apps/decision_governance_engine/Dockerfile
     container_name: dge-backend
-    command: ["uvicorn", "apps.decision_governance_engine.api:app", "--host", "0.0.0.0", "--port", "8000"]
+    command:
+      [
+        "uvicorn",
+        "apps.decision_governance_engine.api:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+      ]
     ports:
       - "${API_PORT:-8001}:8000"
     environment:
@@ -111,7 +123,13 @@ services:
         condition: service_healthy
     healthcheck:
       # コンテナ内部ポートは常に 8000（uvicorn --port 8000）
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -128,7 +146,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=${VITE_API_URL:-http://localhost:${API_PORT:-8000}}
+        - VITE_API_URL=${VITE_API_URL:-}
         - VITE_DEBUG_MODE=${VITE_DEBUG_MODE:-false}
     container_name: dge-frontend
     # ポートは各環境オーバーライドファイルで定義する:
@@ -138,7 +156,15 @@ services:
       backend:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://localhost/health",
+        ]
       interval: 30s
       timeout: 3s
       retries: 3

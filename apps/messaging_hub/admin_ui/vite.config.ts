@@ -1,13 +1,15 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import fs from 'node:fs';
-import path from 'node:path';
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import fs from "node:fs";
+import path from "node:path";
 
-const appConfigPath = path.resolve(__dirname, '../app_config.json');
+const appConfigPath = path.resolve(__dirname, "../app_config.json");
 let appConfig: { ports?: { api?: number; frontend?: number } } = {};
 if (fs.existsSync(appConfigPath)) {
   try {
-    appConfig = JSON.parse(fs.readFileSync(appConfigPath, 'utf-8')) as { ports?: { api?: number; frontend?: number } };
+    appConfig = JSON.parse(fs.readFileSync(appConfigPath, "utf-8")) as {
+      ports?: { api?: number; frontend?: number };
+    };
   } catch {
     appConfig = {};
   }
@@ -21,19 +23,20 @@ export default defineConfig({
   plugins: [react()],
   server: {
     port: frontendPort,
+    host: true,
     proxy: {
-      '/api': {
+      "/api": {
         target: targetOrigin,
         changeOrigin: true,
       },
-      '/ws': {
-        target: targetOrigin.replace('http://', 'ws://'),
+      "/ws": {
+        target: targetOrigin.replace("http://", "ws://"),
         ws: true,
       },
     },
   },
   build: {
-    outDir: 'dist',
+    outDir: "dist",
     sourcemap: true,
   },
 });
