@@ -93,8 +93,14 @@ export default defineConfig(({ mode }) => {
       backendFromRuntime ||
       `http://${apiProxyHost}:${apiPort}`,
   );
+
+  // 本番ビルド時はデフォルトで相対URL "/api" を使用。
+  // nginx や他のリバースプロキシがバックエンドへルーティングする前提。
+  // 開発時（mode === "development"）は Vite devサーバーのプロキシ経由で解決。
+  // 明示的に VITE_API_BASE_URL が指定されている場合はそちらを優先。
   const apiBaseURL = normalizeBaseURL(
-    env.VITE_API_BASE_URL || `${backendOrigin}/api`,
+    env.VITE_API_BASE_URL ||
+      (mode === "development" ? `${backendOrigin}/api` : "/api"),
   );
 
   return {

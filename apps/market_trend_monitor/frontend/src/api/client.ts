@@ -1,6 +1,6 @@
 /**
  * API クライアント.
- * 
+ *
  * 目的: バックエンドAPIとの通信を一元管理
  * I/O:
  *   - Input: API リクエストパラメータ
@@ -8,27 +8,27 @@
  * 注意: エラーハンドリングを適切に行うこと
  */
 
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosInstance, AxiosError } from "axios";
 import type {
   CollectJob,
   CollectRequest,
   CollectResponse,
   TrendsResponse,
   ReportsResponse,
-} from '@/types';
+} from "@/types";
 
 function normalizeBaseURL(baseURL: string): string {
-  return baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
+  return baseURL.endsWith("/") ? baseURL.slice(0, -1) : baseURL;
 }
 
 function extractErrorMessage(data: unknown): string | null {
-  if (typeof data === 'string') {
+  if (typeof data === "string") {
     return data;
   }
 
-  if (data && typeof data === 'object') {
+  if (data && typeof data === "object") {
     const detail = (data as { detail?: unknown }).detail;
-    if (typeof detail === 'string') {
+    if (typeof detail === "string") {
       return detail;
     }
 
@@ -42,20 +42,52 @@ function extractErrorMessage(data: unknown): string | null {
   return null;
 }
 
+/**
+ * API ベースURLを解決する.
+ *
+ * 優先順位:
+ *   1. 環境変数 VITE_API_BASE_URL（ビルド時に注入）
+ *   2. define マクロ __MARKET_TREND_MONITOR_API_BASE_URL__（vite.config.ts）
+ *   3. 相対パス "/api"（nginx リバースプロキシ経由を想定）
+ *
+ * 注意: 値が "localhost" を含む絶対URLの場合、ブラウザの実際の
+ *       ホスト名と一致しなければ相対パスにフォールバックする。
+ *       これにより Docker 環境でも LAN 環境でも安定して動作する。
+ */
+function isLocalhostURL(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
+function shouldUseRelativePath(candidate: string): boolean {
+  if (!isLocalhostURL(candidate)) return false;
+  if (typeof window === "undefined") return false;
+  const browserHost = window.location.hostname;
+  return browserHost !== "localhost" && browserHost !== "127.0.0.1";
+}
+
 function resolveApiBaseURL(): string {
   const envBaseURL = import.meta.env.VITE_API_BASE_URL as string | undefined;
-  if (typeof envBaseURL === 'string' && envBaseURL.trim().length > 0) {
-    return normalizeBaseURL(envBaseURL.trim());
+  if (typeof envBaseURL === "string" && envBaseURL.trim().length > 0) {
+    const trimmed = normalizeBaseURL(envBaseURL.trim());
+    if (shouldUseRelativePath(trimmed)) return "/api";
+    return trimmed;
   }
 
   if (
-    typeof __MARKET_TREND_MONITOR_API_BASE_URL__ === 'string' &&
+    typeof __MARKET_TREND_MONITOR_API_BASE_URL__ === "string" &&
     __MARKET_TREND_MONITOR_API_BASE_URL__.trim().length > 0
   ) {
-    return normalizeBaseURL(__MARKET_TREND_MONITOR_API_BASE_URL__);
+    const defined = normalizeBaseURL(__MARKET_TREND_MONITOR_API_BASE_URL__);
+    if (shouldUseRelativePath(defined)) return "/api";
+    return defined;
   }
 
-  return '/api';
+  return "/api";
 }
 
 /**
@@ -65,10 +97,10 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public statusCode?: number,
-    public details?: unknown
+    public details?: unknown,
   ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 }
 
@@ -83,7 +115,7 @@ class ApiClient {
       baseURL: normalizeBaseURL(baseURL),
       timeout: 30000,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
@@ -93,12 +125,8 @@ class ApiClient {
       (error: AxiosError) => {
         const details = error.response?.data;
         const message = extractErrorMessage(details) ?? error.message;
-        throw new ApiError(
-          message,
-          error.response?.status,
-          details
-        );
-      }
+        throw new ApiError(message, error.response?.status, details);
+      },
     );
   }
 
@@ -107,12 +135,12 @@ class ApiClient {
    */
   async collect(request: CollectRequest): Promise<CollectResponse> {
     const response = await this.client.post<CollectResponse>(
-      '/collect',
+      "/collect",
       request,
       {
         // 収集処理は外部API呼び出しを含むため、通常APIより長いタイムアウトを設定
         timeout: 120000,
-      }
+      },
     );
     return response.data;
   }
@@ -121,7 +149,7 @@ class ApiClient {
    * トレンド一覧を取得.
    */
   async getTrends(limit?: number): Promise<TrendsResponse> {
-    const response = await this.client.get<TrendsResponse>('/trends', {
+    const response = await this.client.get<TrendsResponse>("/trends", {
       params: { limit },
     });
     return response.data;
@@ -131,7 +159,7 @@ class ApiClient {
    * レポート一覧を取得.
    */
   async getReports(limit?: number): Promise<ReportsResponse> {
-    const response = await this.client.get<ReportsResponse>('/reports', {
+    const response = await this.client.get<ReportsResponse>("/reports", {
       params: { limit },
     });
     return response.data;
@@ -142,16 +170,18 @@ class ApiClient {
    */
   async exportReport(
     reportId: string,
-    format: 'pdf'
+    format: "pdf",
   ): Promise<{ blob: Blob; filename: string }> {
     const response = await this.client.get<Blob>(
       `/reports/${reportId}/export/${format}`,
       {
-        responseType: 'blob',
-      }
+        responseType: "blob",
+      },
     );
 
-    const disposition = response.headers['content-disposition'] as string | undefined;
+    const disposition = response.headers["content-disposition"] as
+      | string
+      | undefined;
     const matched = disposition?.match(/filename=\"?([^\";]+)\"?/i);
     const filename = matched?.[1] ?? `market_trend_report_${reportId}.pdf`;
 
@@ -174,7 +204,7 @@ class ApiClient {
    */
   async getLatestJob(): Promise<CollectJob | null> {
     try {
-      const response = await this.client.get<CollectJob>('/jobs/latest');
+      const response = await this.client.get<CollectJob>("/jobs/latest");
       return response.data;
     } catch (error) {
       if (error instanceof ApiError && error.statusCode === 404) {
@@ -188,7 +218,7 @@ class ApiClient {
    * ヘルスチェック.
    */
   async healthCheck(): Promise<{ status: string }> {
-    const response = await this.client.get<{ status: string }>('/health');
+    const response = await this.client.get<{ status: string }>("/health");
     return response.data;
   }
 
@@ -199,7 +229,7 @@ class ApiClient {
    */
   async get<T = Record<string, unknown>>(
     path: string,
-    config?: { params?: Record<string, unknown> }
+    config?: { params?: Record<string, unknown> },
   ): Promise<{ data: T }> {
     const response = await this.client.get<T>(path, config);
     return { data: response.data };
@@ -213,7 +243,7 @@ class ApiClient {
   async post<T = Record<string, unknown>>(
     path: string,
     data?: unknown,
-    config?: { params?: Record<string, unknown>; timeout?: number }
+    config?: { params?: Record<string, unknown>; timeout?: number },
   ): Promise<{ data: T }> {
     const response = await this.client.post<T>(path, data, config);
     return { data: response.data };
@@ -227,7 +257,7 @@ class ApiClient {
   async put<T = Record<string, unknown>>(
     path: string,
     data?: unknown,
-    config?: { params?: Record<string, unknown> }
+    config?: { params?: Record<string, unknown> },
   ): Promise<{ data: T }> {
     const response = await this.client.put<T>(path, data, config);
     return { data: response.data };

@@ -8,7 +8,10 @@ RUN npm ci --legacy-peer-deps
 COPY apps/market_trend_monitor/frontend/ ./
 COPY agentflow/i18n/frontend/ /agentflow/i18n/frontend/
 
-ARG VITE_API_BASE_URL=
+# Docker環境ではnginxリバースプロキシ経由のため、相対URL "/api" をデフォルト。
+# 前後台を別マシンに分離する場合は build-arg で絶対URLを指定:
+#   --build-arg VITE_API_BASE_URL=http://192.168.166.41:8002/api
+ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 
 RUN npm run build

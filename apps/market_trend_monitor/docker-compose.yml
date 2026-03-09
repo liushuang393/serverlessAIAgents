@@ -33,7 +33,7 @@ services:
       context: ../..
       dockerfile: apps/market_trend_monitor/frontend/Dockerfile
       args:
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-}
+        - VITE_API_BASE_URL=${VITE_API_BASE_URL:-/api}
     container_name: market-trend-monitor-frontend
     ports:
       - "${FRONTEND_PORT:-3002}:80"
