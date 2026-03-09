@@ -3,6 +3,7 @@ category: media_creative
 name: vision
 description: 画像認識・分析機能。GPT-4V / Claude Vision / Gemini Vision を使用した画像認識スキル。
 version: 1.0.0
+author: AgentFlow Team
 triggers:
   - 画像分析
   - image analysis
@@ -60,4 +61,3 @@ text = await vision.extract_text(image_url="https://example.com/doc.png")
 - OpenAI (GPT-4V)
 - Anthropic (Claude Vision)
 - Google (Gemini Vision)
-

@@ -1,30 +1,30 @@
 /**
  * フロントエンド型定義.
- * 
+ *
  * 目的: バックエンドAPIとの型安全な通信を保証
  * 注意: バックエンドのスキーマと同期を保つこと
  */
 
 export enum SourceType {
-  NEWS = 'news',
-  GITHUB = 'github',
-  ARXIV = 'arxiv',
-  RSS = 'rss',
-  STACKOVERFLOW = 'stackoverflow',
-  DEVTO = 'devto',
+  NEWS = "news",
+  GITHUB = "github",
+  ARXIV = "arxiv",
+  RSS = "rss",
+  STACKOVERFLOW = "stackoverflow",
+  DEVTO = "devto",
 }
 
 export enum SentimentType {
-  POSITIVE = 'positive',
-  NEUTRAL = 'neutral',
-  NEGATIVE = 'negative',
+  POSITIVE = "positive",
+  NEUTRAL = "neutral",
+  NEGATIVE = "negative",
 }
 
 export enum NotificationPriority {
-  LOW = 'low',
-  MEDIUM = 'medium',
-  HIGH = 'high',
-  CRITICAL = 'critical',
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+  CRITICAL = "critical",
 }
 
 export interface Article {
@@ -88,15 +88,17 @@ export interface CollectRequest {
   };
 }
 
-/** POST /api/collect の即時返却レスポンス（バックグラウンドジョブ開始） */
+/** POST /api/collect のレスポンス（同期完了 / バックグラウンドジョブ開始の両対応） */
 export interface CollectResponse {
-  job_id: string;
   status: string;
   message: string;
+  job_id?: string;
+  articles_count?: number;
+  trends_count?: number;
 }
 
 /** ジョブ状態 */
-export type JobStatus = 'running' | 'completed' | 'failed';
+export type JobStatus = "running" | "completed" | "failed";
 
 /** GET /api/jobs/{job_id} のレスポンス */
 export interface CollectJob {

@@ -328,6 +328,8 @@ conda activate agentflow
 python -m apps.platform.main publish ./apps/<app_dir> --target docker
 ```
 
+- PWA 対応 frontend（例: `apps/messaging_hub/admin_ui`）の `manifest.webmanifest` / `sw.js` / `icons` も同コマンドで同梱・発布される。
+
 ### 6.2 API 経由（自動化向け）
 
 - `POST /api/studios/framework/publish/deploy`

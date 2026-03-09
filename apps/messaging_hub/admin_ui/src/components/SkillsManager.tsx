@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Wrench,
   Play,
@@ -13,6 +13,15 @@ import {
   AlertCircle,
 } from "lucide-react";
 import clsx from "clsx";
+import {
+  McpManagementPanel,
+  type LazyLoadingConfig,
+  type MCPInstallRequestPayload,
+  type MCPServer,
+  type ToolIndexEntry,
+  type ToolLoaderStats,
+  type ToolSearchResponse,
+} from "./skills/McpManagementPanel";
 
 interface Skill {
   name: string;
@@ -32,6 +41,10 @@ interface WorkflowDef {
   updated_at: string;
 }
 
+interface SkillTestResult extends Record<string, unknown> {
+  ok?: boolean;
+}
+
 const categoryEmoji: Record<string, string> = {
   os_read: "📂",
   os_write: "✏️",
@@ -48,6 +61,50 @@ const riskColors: Record<string, string> = {
 };
 
 /**
+ * エラーメッセージを安全に文字列化する。
+ *
+ * 想定外の例外でも UI に意味のある文言を表示する。
+ */
+function toErrorMessage(error: unknown, fallbackMessage: string): string {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  return fallbackMessage;
+}
+
+/**
+ * レスポンス本文からユーザー向けメッセージを抽出する。
+ *
+ * API がテキスト・JSON どちらを返しても、空文字列なら既定文言へフォールバックする。
+ */
+async function readResponseMessage(
+  response: Response,
+  fallbackMessage: string,
+): Promise<string> {
+  const responseText = (await response.text()).trim();
+  return responseText || fallbackMessage;
+}
+
+/**
+ * JSON 入力をドライラン用パラメータとして正規化する。
+ *
+ * 配列や null を拒否し、オブジェクト形式のみ受け付ける。
+ */
+function parseJsonObject(text: string): Record<string, unknown> {
+  const parsedValue: unknown = JSON.parse(text);
+  if (
+    typeof parsedValue !== "object" ||
+    parsedValue === null ||
+    Array.isArray(parsedValue)
+  ) {
+    throw new Error(
+      "テストパラメータは JSON オブジェクト形式で入力してください。",
+    );
+  }
+  return parsedValue as Record<string, unknown>;
+}
+
+/**
  * スキル管理ページ
  *
  * スキル一覧、ワークフロー管理、自然言語スキル生成
@@ -55,9 +112,17 @@ const riskColors: Record<string, string> = {
 export default function SkillsManager() {
   const [skills, setSkills] = useState<Skill[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowDef[]>([]);
+  const [mcpServers, setMcpServers] = useState<MCPServer[]>([]);
+  const [lazyLoading, setLazyLoading] = useState<LazyLoadingConfig | null>(
+    null,
+  );
+  const [toolIndex, setToolIndex] = useState<ToolIndexEntry[]>([]);
+  const [toolStats, setToolStats] = useState<ToolLoaderStats | null>(null);
+  const [toolSearchResult, setToolSearchResult] =
+    useState<ToolSearchResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    "skills" | "workflows" | "generate"
+    "skills" | "mcp" | "workflows" | "generate"
   >("skills");
   const [generatePrompt, setGeneratePrompt] = useState("");
   const [generatedSkill, setGeneratedSkill] = useState<Record<
@@ -67,57 +132,162 @@ export default function SkillsManager() {
   const [generating, setGenerating] = useState(false);
   const [selectedSkill, setSelectedSkill] = useState<Skill | null>(null);
   const [testParams, setTestParams] = useState("{}");
-  const [testResult, setTestResult] = useState<Record<string, unknown> | null>(
-    null,
-  );
+  const [testResult, setTestResult] = useState<SkillTestResult | null>(null);
   const [testing, setTesting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async (): Promise<void> => {
     setLoading(true);
+    setErrorMessage(null);
     try {
-      const [skillsRes, workflowsRes] = await Promise.all([
+      const [
+        skillsRes,
+        workflowsRes,
+        mcpServersRes,
+        lazyLoadingRes,
+        toolIndexRes,
+        toolStatsRes,
+      ] = await Promise.all([
         fetch("/api/skills"),
         fetch("/api/workflows"),
+        fetch("/api/mcp/servers"),
+        fetch("/api/mcp/lazy-loading"),
+        fetch("/api/tools/index"),
+        fetch("/api/tools/stats"),
       ]);
+
+      const nextErrors: string[] = [];
 
       if (skillsRes.ok) {
         const data = await skillsRes.json();
         setSkills(data.skills || []);
+      } else {
+        nextErrors.push(
+          await readResponseMessage(
+            skillsRes,
+            "スキル一覧の取得に失敗しました。",
+          ),
+        );
       }
       if (workflowsRes.ok) {
         const data = await workflowsRes.json();
         setWorkflows(data.workflows || []);
+      } else {
+        nextErrors.push(
+          await readResponseMessage(
+            workflowsRes,
+            "ワークフロー一覧の取得に失敗しました。",
+          ),
+        );
       }
-    } catch (error) {
-      console.error("Fetch error:", error);
+
+      if (mcpServersRes.ok) {
+        const data = await mcpServersRes.json();
+        setMcpServers(data.servers || []);
+      } else {
+        nextErrors.push(
+          await readResponseMessage(
+            mcpServersRes,
+            "MCP サーバー一覧の取得に失敗しました。",
+          ),
+        );
+      }
+
+      if (lazyLoadingRes.ok) {
+        const data = await lazyLoadingRes.json();
+        setLazyLoading(data.lazy_loading || null);
+      } else {
+        nextErrors.push(
+          await readResponseMessage(
+            lazyLoadingRes,
+            "懒加载設定の取得に失敗しました。",
+          ),
+        );
+      }
+
+      if (toolIndexRes.ok) {
+        const data = await toolIndexRes.json();
+        setToolIndex(data.tools || []);
+      } else {
+        nextErrors.push(
+          await readResponseMessage(
+            toolIndexRes,
+            "ツールインデックスの取得に失敗しました。",
+          ),
+        );
+      }
+
+      if (toolStatsRes.ok) {
+        const data = await toolStatsRes.json();
+        setToolStats(data || null);
+      } else {
+        nextErrors.push(
+          await readResponseMessage(
+            toolStatsRes,
+            "ツール統計の取得に失敗しました。",
+          ),
+        );
+      }
+
+      if (nextErrors.length > 0) {
+        setErrorMessage(nextErrors.join(" / "));
+      }
+    } catch (error: unknown) {
+      setErrorMessage(
+        toErrorMessage(error, "管理データの取得に失敗しました。"),
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleToggleSkill = async (skillName: string, enabled: boolean) => {
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
+
+  const handleToggleSkill = async (
+    skillName: string,
+    enabled: boolean,
+  ): Promise<void> => {
     try {
-      await fetch(
+      setErrorMessage(null);
+      const response = await fetch(
         `/api/skills/${skillName}/${enabled ? "enable" : "disable"}`,
         {
           method: "POST",
         },
       );
-      fetchData();
-    } catch (error) {
-      console.error("Toggle error:", error);
+
+      if (!response.ok) {
+        setErrorMessage(
+          await readResponseMessage(
+            response,
+            "スキル状態の更新に失敗しました。",
+          ),
+        );
+        return;
+      }
+
+      setStatusMessage(
+        enabled
+          ? `スキル「${skillName}」を有効化しました。`
+          : `スキル「${skillName}」を無効化しました。`,
+      );
+      await fetchData();
+    } catch (error: unknown) {
+      setErrorMessage(
+        toErrorMessage(error, "スキル状態の更新に失敗しました。"),
+      );
     }
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (): Promise<void> => {
     if (!generatePrompt.trim()) return;
 
     setGenerating(true);
     setGeneratedSkill(null);
+    setErrorMessage(null);
 
     try {
       const response = await fetch("/api/skills/generate", {
@@ -129,22 +299,28 @@ export default function SkillsManager() {
       if (response.ok) {
         const data = await response.json();
         setGeneratedSkill(data);
+        setStatusMessage("スキル定義を生成しました。内容を確認してください。");
+      } else {
+        setErrorMessage(
+          await readResponseMessage(response, "スキル生成に失敗しました。"),
+        );
       }
-    } catch (error) {
-      console.error("Generate error:", error);
+    } catch (error: unknown) {
+      setErrorMessage(toErrorMessage(error, "スキル生成に失敗しました。"));
     } finally {
       setGenerating(false);
     }
   };
 
-  const handleTestSkill = async () => {
+  const handleTestSkill = async (): Promise<void> => {
     if (!selectedSkill) return;
 
     setTesting(true);
     setTestResult(null);
+    setErrorMessage(null);
 
     try {
-      const params = JSON.parse(testParams);
+      const params = parseJsonObject(testParams);
       const response = await fetch(`/api/skills/${selectedSkill.name}/call`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -154,13 +330,216 @@ export default function SkillsManager() {
       if (response.ok) {
         const data = await response.json();
         setTestResult(data);
+      } else {
+        setTestResult({
+          ok: false,
+          error: await readResponseMessage(
+            response,
+            "スキルのドライランに失敗しました。",
+          ),
+        });
       }
-    } catch (error) {
-      setTestResult({ error: String(error) });
+    } catch (error: unknown) {
+      setTestResult({
+        ok: false,
+        error: toErrorMessage(error, "スキルのドライランに失敗しました。"),
+      });
     } finally {
       setTesting(false);
     }
   };
+
+  const handleInstallMcpServer = useCallback(
+    async (payload: MCPInstallRequestPayload): Promise<boolean> => {
+      try {
+        setErrorMessage(null);
+        const response = await fetch("/api/mcp/servers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          setErrorMessage(
+            await readResponseMessage(
+              response,
+              "MCP サーバーの追加に失敗しました。",
+            ),
+          );
+          return false;
+        }
+
+        setStatusMessage(`MCP サーバー「${payload.name}」を追加しました。`);
+        await fetchData();
+        return true;
+      } catch (error: unknown) {
+        setErrorMessage(
+          toErrorMessage(error, "MCP サーバーの追加に失敗しました。"),
+        );
+        return false;
+      }
+    },
+    [fetchData],
+  );
+
+  const handleToggleMcpServer = useCallback(
+    async (serverName: string, enabled: boolean): Promise<boolean> => {
+      try {
+        setErrorMessage(null);
+        const response = await fetch(
+          `/api/mcp/servers/${serverName}/${enabled ? "enable" : "disable"}`,
+          { method: "POST" },
+        );
+
+        if (!response.ok) {
+          setErrorMessage(
+            await readResponseMessage(
+              response,
+              "MCP サーバー状態の更新に失敗しました。",
+            ),
+          );
+          return false;
+        }
+
+        setStatusMessage(
+          enabled
+            ? `MCP サーバー「${serverName}」を有効化しました。`
+            : `MCP サーバー「${serverName}」を無効化しました。`,
+        );
+        await fetchData();
+        return true;
+      } catch (error: unknown) {
+        setErrorMessage(
+          toErrorMessage(error, "MCP サーバー状態の更新に失敗しました。"),
+        );
+        return false;
+      }
+    },
+    [fetchData],
+  );
+
+  const handleDeleteMcpServer = useCallback(
+    async (serverName: string): Promise<boolean> => {
+      try {
+        setErrorMessage(null);
+        const response = await fetch(`/api/mcp/servers/${serverName}`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          setErrorMessage(
+            await readResponseMessage(
+              response,
+              "MCP サーバーの削除に失敗しました。",
+            ),
+          );
+          return false;
+        }
+
+        setStatusMessage(`MCP サーバー「${serverName}」を削除しました。`);
+        await fetchData();
+        return true;
+      } catch (error: unknown) {
+        setErrorMessage(
+          toErrorMessage(error, "MCP サーバーの削除に失敗しました。"),
+        );
+        return false;
+      }
+    },
+    [fetchData],
+  );
+
+  const handleUpdateLazyLoading = useCallback(
+    async (payload: LazyLoadingConfig): Promise<boolean> => {
+      try {
+        setErrorMessage(null);
+        const response = await fetch("/api/mcp/lazy-loading", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          setErrorMessage(
+            await readResponseMessage(
+              response,
+              "懒加载設定の更新に失敗しました。",
+            ),
+          );
+          return false;
+        }
+
+        const data = await response.json();
+        setLazyLoading(data.lazy_loading || payload);
+        setStatusMessage("懒加载設定を更新しました。");
+        await fetchData();
+        return true;
+      } catch (error: unknown) {
+        setErrorMessage(
+          toErrorMessage(error, "懒加载設定の更新に失敗しました。"),
+        );
+        return false;
+      }
+    },
+    [fetchData],
+  );
+
+  const handleSearchTools = useCallback(
+    async (query: string): Promise<boolean> => {
+      try {
+        setErrorMessage(null);
+        const response = await fetch("/api/tools/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query }),
+        });
+
+        if (!response.ok) {
+          setErrorMessage(
+            await readResponseMessage(response, "ツール検索に失敗しました。"),
+          );
+          return false;
+        }
+
+        const data = await response.json();
+        setToolSearchResult(data);
+        setStatusMessage(`ツール検索「${query}」を実行しました。`);
+        await fetchData();
+        return true;
+      } catch (error: unknown) {
+        setErrorMessage(toErrorMessage(error, "ツール検索に失敗しました。"));
+        return false;
+      }
+    },
+    [fetchData],
+  );
+
+  const handleResetTools = useCallback(async (): Promise<boolean> => {
+    try {
+      setErrorMessage(null);
+      const response = await fetch("/api/tools/reset", { method: "POST" });
+
+      if (!response.ok) {
+        setErrorMessage(
+          await readResponseMessage(
+            response,
+            "ツールセッションのリセットに失敗しました。",
+          ),
+        );
+        return false;
+      }
+
+      setToolSearchResult(null);
+      setStatusMessage("ツールセッションをリセットしました。");
+      await fetchData();
+      return true;
+    } catch (error: unknown) {
+      setErrorMessage(
+        toErrorMessage(error, "ツールセッションのリセットに失敗しました。"),
+      );
+      return false;
+    }
+  }, [fetchData]);
 
   const renderSkillCard = (skill: Skill) => (
     <div
@@ -198,7 +577,7 @@ export default function SkillsManager() {
         <button
           onClick={(e) => {
             e.stopPropagation();
-            handleToggleSkill(skill.name, !skill.enabled);
+            void handleToggleSkill(skill.name, !skill.enabled);
           }}
           className={clsx(
             "p-2 rounded-lg transition-colors",
@@ -254,7 +633,7 @@ export default function SkillsManager() {
           <p className="text-gray-600 mt-1">スキルとワークフローを管理</p>
         </div>
         <button
-          onClick={fetchData}
+          onClick={() => void fetchData()}
           className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50"
         >
           <RefreshCw size={16} />
@@ -279,6 +658,23 @@ export default function SkillsManager() {
               インストール済み
               <span className="text-xs bg-gray-200 px-2 rounded-full">
                 {skills.length}
+              </span>
+            </div>
+          </button>
+          <button
+            onClick={() => setActiveTab("mcp")}
+            className={clsx(
+              "px-4 py-2 font-medium border-b-2 transition-colors",
+              activeTab === "mcp"
+                ? "border-primary-500 text-primary-600"
+                : "border-transparent text-gray-500 hover:text-gray-700",
+            )}
+          >
+            <div className="flex items-center gap-2">
+              <Code size={18} />
+              MCP 管理
+              <span className="text-xs bg-gray-200 px-2 rounded-full">
+                {mcpServers.length}
               </span>
             </div>
           </button>
@@ -315,6 +711,18 @@ export default function SkillsManager() {
           </button>
         </div>
       </div>
+
+      {errorMessage && (
+        <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {errorMessage}
+        </div>
+      )}
+
+      {statusMessage && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {statusMessage}
+        </div>
+      )}
 
       {/* コンテンツ */}
       {loading ? (
@@ -381,7 +789,7 @@ export default function SkillsManager() {
                     placeholder='{"path": "/tmp"}'
                   />
                   <button
-                    onClick={handleTestSkill}
+                    onClick={() => void handleTestSkill()}
                     disabled={testing}
                     className="mt-2 flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
                   >
@@ -415,6 +823,20 @@ export default function SkillsManager() {
             )}
           </div>
         </div>
+      ) : activeTab === "mcp" ? (
+        <McpManagementPanel
+          servers={mcpServers}
+          lazyLoading={lazyLoading}
+          toolIndex={toolIndex}
+          toolStats={toolStats}
+          searchResult={toolSearchResult}
+          onInstallServer={handleInstallMcpServer}
+          onToggleServer={handleToggleMcpServer}
+          onDeleteServer={handleDeleteMcpServer}
+          onUpdateLazyLoading={handleUpdateLazyLoading}
+          onSearchTools={handleSearchTools}
+          onResetTools={handleResetTools}
+        />
       ) : activeTab === "workflows" ? (
         <div className="space-y-4">
           <button className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600">
@@ -456,7 +878,7 @@ export default function SkillsManager() {
             </div>
 
             <button
-              onClick={handleGenerate}
+              onClick={() => void handleGenerate()}
               disabled={generating || !generatePrompt.trim()}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg hover:from-primary-600 hover:to-primary-700 disabled:opacity-50"
             >

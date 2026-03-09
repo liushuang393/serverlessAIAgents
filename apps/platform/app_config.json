@@ -10,7 +10,7 @@
   "icon": "🏗️",
   "ports": {
     "api": 8000,
-    "frontend": 3000,
+    "frontend": 3100,
     "db": null,
     "redis": null
   },
@@ -22,11 +22,7 @@
     {
       "name": "GalleryAgent",
       "module": "apps.platform.agents.gallery_agent",
-      "capabilities": [
-        "component_discovery",
-        "search",
-        "recommendation"
-      ],
+      "capabilities": ["component_discovery", "search", "recommendation"],
       "business_base": "platform",
       "pattern": "router",
       "agent_type": "router"
@@ -34,11 +30,7 @@
     {
       "name": "PublishAgent",
       "module": "apps.platform.agents.publish_agent",
-      "capabilities": [
-        "publish",
-        "deployment",
-        "release"
-      ],
+      "capabilities": ["publish", "deployment", "release"],
       "business_base": "platform",
       "pattern": "coordinator",
       "agent_type": "planner"
@@ -46,11 +38,7 @@
     {
       "name": "AnalyticsAgent",
       "module": "apps.platform.agents.analytics_agent",
-      "capabilities": [
-        "analysis",
-        "dashboard",
-        "recommendations"
-      ],
+      "capabilities": ["analysis", "dashboard", "recommendations"],
       "business_base": "platform",
       "pattern": "analyzer",
       "agent_type": "reactor"
@@ -104,36 +92,15 @@
       "stop": null
     },
     "cli": {
-      "preferred": [
-        "codex",
-        "claude"
-      ],
+      "preferred": ["codex", "claude"],
       "codex": {
         "executable": "codex",
-        "install_commands": [
-          [
-            "npm",
-            "install",
-            "-g",
-            "@openai/codex"
-          ]
-        ],
+        "install_commands": [["npm", "install", "-g", "@openai/codex"]],
         "auth": {
-          "status": [
-            "codex",
-            "login",
-            "status"
-          ],
+          "status": ["codex", "login", "status"],
           "api_key_env": "OPENAI_API_KEY",
-          "api_key_login": [
-            "codex",
-            "login",
-            "--with-api-key"
-          ],
-          "interactive_login": [
-            "codex",
-            "login"
-          ]
+          "api_key_login": ["codex", "login", "--with-api-key"],
+          "interactive_login": ["codex", "login"]
         },
         "diagnostic_mode": "read_only",
         "diagnostic_command": [
@@ -147,45 +114,20 @@
       "claude": {
         "executable": "claude",
         "install_commands": [
-          [
-            "npm",
-            "install",
-            "-g",
-            "@anthropic-ai/claude-code"
-          ]
+          ["npm", "install", "-g", "@anthropic-ai/claude-code"]
         ],
         "auth": {
-          "status": [
-            "claude",
-            "auth",
-            "status",
-            "--json"
-          ],
+          "status": ["claude", "auth", "status", "--json"],
           "api_key_env": "ANTHROPIC_API_KEY",
           "api_key_login": null,
-          "interactive_login": [
-            "claude",
-            "auth",
-            "login"
-          ]
+          "interactive_login": ["claude", "auth", "login"]
         },
         "diagnostic_mode": "plan",
-        "diagnostic_command": [
-          "claude",
-          "-p",
-          "--permission-mode",
-          "plan"
-        ]
+        "diagnostic_command": ["claude", "-p", "--permission-mode", "plan"]
       }
     }
   },
-  "tags": [
-    "platform",
-    "management",
-    "gallery",
-    "publish",
-    "dashboard"
-  ],
+  "tags": ["platform", "management", "gallery", "publish", "dashboard"],
   "contracts": {
     "auth": {
       "enabled": false,
@@ -223,9 +165,7 @@
     "release": {
       "strategy": "manual",
       "targets": [],
-      "environments": [
-        "dev"
-      ],
+      "environments": ["dev"],
       "require_approval": true
     }
   },
@@ -261,11 +201,7 @@
       "consumer_group": "evolution-validator-v1",
       "max_retries": 5
     },
-    "scope_policy": [
-      "tenant_app",
-      "tenant_product_line",
-      "global_verified"
-    ],
+    "scope_policy": ["tenant_app", "tenant_product_line", "global_verified"],
     "retrieval": {
       "high_confidence_skip_threshold": 0.82,
       "high_complexity_threshold": 0.7,

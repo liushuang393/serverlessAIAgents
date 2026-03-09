@@ -5,6 +5,7 @@ description: >
   AI Agent向けビジネスインテリジェンス分析スキル。
   データ分析、可視化、レポート生成を提供。
 version: 1.0.0
+author: AgentFlow Team
 triggers:
   - BI
   - analytics

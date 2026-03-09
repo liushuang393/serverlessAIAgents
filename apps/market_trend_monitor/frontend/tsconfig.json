@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
+    "target": "ES2021",
     "useDefineForClassFields": true,
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
 
@@ -31,10 +31,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
-      "@agentflow/i18n": ["../../../agentflow/i18n/frontend/index"]
+      "@agentflow/i18n": ["src/i18n/base"]
     }
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
-

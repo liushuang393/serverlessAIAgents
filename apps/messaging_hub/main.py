@@ -36,19 +36,24 @@ import asyncio
 import json
 import logging
 import os
+import re
 import time
 import uuid
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode
 
+from apps.messaging_hub.agents.file_organizer_agent import FileOrganizerAgent
 from apps.messaging_hub.approval_manager import ApprovalManager, ApprovalRequest, ApprovalStatus
 from apps.messaging_hub.coordinator import AssistantConfig, PersonalAssistantCoordinator
 from apps.messaging_hub.execution_tracker import ExecutionEvent, ExecutionStatus, ExecutionTracker
+from apps.messaging_hub.lazy_tool_loader import LazyToolLoader
+from apps.messaging_hub.mcp_manager import MCPInstallRequest, MCPManager
 from apps.messaging_hub.skills_manager import SkillsManager, Workflow, WorkflowStatus
 from apps.messaging_hub.storage import SQLiteMessagingHubStore
+from dotenv import load_dotenv
 from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -104,10 +109,12 @@ _cli_runtime = CLIRuntimeManager()
 _assistant_cli_proposals: dict[str, dict[str, Any]] = {}
 
 _APP_CONFIG_PATH = Path(__file__).resolve().parent / "app_config.json"
+_LOCAL_ENV_PATH = Path(__file__).resolve().parent / ".env"
 _PUBLIC_PATHS = {
     "/",
     "/health",
     "/api/health",
+    "/api/admin-key",
     "/docs",
     "/redoc",
     "/openapi.json",
@@ -129,6 +136,34 @@ _auth_guard = ContractAuthGuard(
         default_api_key_env_var="MESSAGING_HUB_API_KEY",
     ),
 )
+
+
+def _load_local_env_file() -> bool:
+    """Load local .env file without overriding existing environment variables."""
+    if not _LOCAL_ENV_PATH.exists():
+        return False
+    loaded = load_dotenv(dotenv_path=_LOCAL_ENV_PATH, override=False)
+    if loaded:
+        logger.info("Loaded local env file: %s", _LOCAL_ENV_PATH)
+    return loaded
+
+
+def _auth_api_key_env_name() -> str:
+    """Resolve the API key env var name from selector/default configuration."""
+    selected = os.getenv("MESSAGING_HUB_API_KEY_ENV", "").strip()
+    if selected:
+        return selected
+    return "MESSAGING_HUB_API_KEY"
+
+
+def _is_auth_key_configured() -> bool:
+    """Return whether required API key env variable is configured."""
+    if not _is_auth_required():
+        return True
+    return bool(os.getenv(_auth_api_key_env_name(), "").strip())
+
+
+_load_local_env_file()
 
 
 def _load_app_config() -> dict[str, Any]:
@@ -237,9 +272,383 @@ _skill_gateway = _build_skill_gateway()
 _approval_manager = ApprovalManager(websocket_hub=hub)
 _execution_tracker = ExecutionTracker(websocket_hub=hub)
 _skills_manager = SkillsManager(gateway=_skill_gateway, websocket_hub=hub)
+_mcp_manager = MCPManager()
+_lazy_tool_loader = LazyToolLoader(
+    mcp_manager=_mcp_manager,
+    skills_manager=_skills_manager,
+)
+_file_organizer_agent = FileOrganizerAgent(gateway=_skill_gateway)
 _active_step_events: dict[str, str] = {}
 _run_started_at: dict[str, float] = {}
 _process_started_at = time.time()
+_platform_runtime_tasks: dict[str, asyncio.Task[None]] = {}
+_LOCAL_PLATFORM_ID = "agentflow_nexus"
+_EXTERNAL_PLATFORM_NAMES: tuple[str, ...] = (
+    "telegram",
+    "slack",
+    "discord",
+    "teams",
+    "whatsapp",
+    "signal",
+)
+_PLATFORM_ORDER: tuple[str, ...] = (_LOCAL_PLATFORM_ID, *_EXTERNAL_PLATFORM_NAMES)
+_MAX_SECRET_LENGTH = 512
+_MAX_CHAT_INPUT_CHARS = 4000
+_DANGEROUS_INPUT_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
+    (re.compile(r"\brm\s+-rf\b", re.IGNORECASE), "危険な削除コマンドが検出されました"),
+    (re.compile(r"\b(?:sudo\s+)?(shutdown|reboot|halt)\b", re.IGNORECASE), "システム停止コマンドは許可されません"),
+    (re.compile(r"\bcurl\b[^\\n]*\|\s*(bash|sh)\b", re.IGNORECASE), "パイプ実行コマンドは許可されません"),
+    (re.compile(r"\bwget\b[^\\n]*\|\s*(bash|sh)\b", re.IGNORECASE), "パイプ実行コマンドは許可されません"),
+    (
+        re.compile(r"\b(powershell|pwsh)\b[^\\n]*(encodedcommand|-enc)\b", re.IGNORECASE),
+        "エンコード済み PowerShell 実行は許可されません",
+    ),
+    (re.compile(r"\bdd\s+if=", re.IGNORECASE), "ディスク破壊につながるコマンドは許可されません"),
+    (re.compile(r"\bmkfs(\.|\\s)", re.IGNORECASE), "ファイルシステム初期化コマンドは許可されません"),
+)
+_PLATFORM_CATALOG: dict[str, dict[str, Any]] = {
+    _LOCAL_PLATFORM_ID: {
+        "display_name": "AgentFlow Sovereign Nexus",
+        "icon": "🛡️",
+        "description": "Messaging Hub 内蔵の統合チャネル。監査と承認フローを標準装備。",
+        "auth_mode": "managed",
+        "auth_url": None,
+        "docs_url": None,
+        "credential_fields": [],
+    },
+    "telegram": {
+        "display_name": "Telegram Command Cloud",
+        "icon": "📱",
+        "description": "BotFather で Bot を発行し、Webhook で接続します。",
+        "auth_mode": "oauth_and_api_key",
+        "auth_url": "https://t.me/BotFather",
+        "docs_url": "https://core.telegram.org/bots",
+        "credential_fields": [
+            {
+                "key": "bot_token",
+                "label": "Bot Token",
+                "env_var": "TELEGRAM_BOT_TOKEN",
+                "required": True,
+                "placeholder": "123456789:AA...",
+            }
+        ],
+    },
+    "slack": {
+        "display_name": "Slack Enterprise Bridge",
+        "icon": "💼",
+        "description": "Slack App を作成して Bot Token と Signing Secret を設定します。",
+        "auth_mode": "oauth_and_api_key",
+        "auth_url": "https://api.slack.com/apps",
+        "docs_url": "https://api.slack.com/authentication",
+        "credential_fields": [
+            {
+                "key": "bot_token",
+                "label": "Bot Token",
+                "env_var": "SLACK_BOT_TOKEN",
+                "required": True,
+                "placeholder": "xoxb-...",
+            },
+            {
+                "key": "signing_secret",
+                "label": "Signing Secret",
+                "env_var": "SLACK_SIGNING_SECRET",
+                "required": False,
+                "placeholder": "Slack Signing Secret",
+            },
+        ],
+    },
+    "discord": {
+        "display_name": "Discord Ops Relay",
+        "icon": "🎮",
+        "description": "Discord Developer Portal で Bot Token を発行して接続します。",
+        "auth_mode": "api_key",
+        "auth_url": "https://discord.com/developers/applications",
+        "docs_url": "https://discord.com/developers/docs/quick-start/getting-started",
+        "credential_fields": [
+            {
+                "key": "bot_token",
+                "label": "Bot Token",
+                "env_var": "DISCORD_BOT_TOKEN",
+                "required": True,
+                "placeholder": "Discord Bot Token",
+            }
+        ],
+    },
+    "teams": {
+        "display_name": "Microsoft Teams Secure Link",
+        "icon": "🏢",
+        "description": "Azure Bot の App ID / Password を設定して接続します。",
+        "auth_mode": "oauth_and_api_key",
+        "auth_url": "https://portal.azure.com/",
+        "docs_url": "https://learn.microsoft.com/azure/bot-service/bot-service-overview",
+        "credential_fields": [
+            {
+                "key": "app_id",
+                "label": "App ID",
+                "env_var": "TEAMS_APP_ID",
+                "required": True,
+                "placeholder": "Azure Bot App ID",
+            },
+            {
+                "key": "app_password",
+                "label": "App Password",
+                "env_var": "TEAMS_APP_PASSWORD",
+                "required": True,
+                "placeholder": "Azure Bot App Password",
+            },
+        ],
+    },
+    "whatsapp": {
+        "display_name": "WhatsApp Business Gateway",
+        "icon": "💬",
+        "description": "Meta Developer Console で Phone Number ID / Access Token を設定します。",
+        "auth_mode": "oauth_and_api_key",
+        "auth_url": "https://developers.facebook.com/apps/",
+        "docs_url": "https://developers.facebook.com/docs/whatsapp/cloud-api",
+        "credential_fields": [
+            {
+                "key": "phone_number_id",
+                "label": "Phone Number ID",
+                "env_var": "WHATSAPP_PHONE_NUMBER_ID",
+                "required": True,
+                "placeholder": "WhatsApp Phone Number ID",
+            },
+            {
+                "key": "access_token",
+                "label": "Access Token",
+                "env_var": "WHATSAPP_ACCESS_TOKEN",
+                "required": True,
+                "placeholder": "Meta Access Token",
+            },
+            {
+                "key": "verify_token",
+                "label": "Verify Token",
+                "env_var": "WHATSAPP_VERIFY_TOKEN",
+                "required": False,
+                "placeholder": "Webhook Verify Token",
+            },
+        ],
+    },
+    "signal": {
+        "display_name": "Signal Private Channel",
+        "icon": "🔒",
+        "description": "signal-cli REST API と接続用番号を設定します。",
+        "auth_mode": "api_key",
+        "auth_url": "https://github.com/bbernhard/signal-cli-rest-api",
+        "docs_url": "https://github.com/AsamK/signal-cli",
+        "credential_fields": [
+            {
+                "key": "api_url",
+                "label": "Signal API URL",
+                "env_var": "SIGNAL_API_URL",
+                "required": True,
+                "placeholder": "http://localhost:8080",
+            },
+            {
+                "key": "phone_number",
+                "label": "Phone Number",
+                "env_var": "SIGNAL_PHONE_NUMBER",
+                "required": True,
+                "placeholder": "+8190...",
+            },
+        ],
+    },
+}
+
+
+def _mask_secret(secret: str) -> str:
+    """Return masked secret for UI display."""
+    value = secret.strip()
+    if not value:
+        return ""
+    if len(value) <= 4:
+        return "*" * len(value)
+    return f"{'*' * (len(value) - 4)}{value[-4:]}"
+
+
+def _platform_config(platform_name: str) -> dict[str, Any] | None:
+    """Return platform catalog config."""
+    return _PLATFORM_CATALOG.get(platform_name)
+
+
+def _credential_specs(platform_name: str) -> list[dict[str, Any]]:
+    """Return credential specs for platform."""
+    cfg = _platform_config(platform_name)
+    if cfg is None:
+        return []
+    raw_fields = cfg.get("credential_fields", [])
+    if not isinstance(raw_fields, list):
+        return []
+    return [field for field in raw_fields if isinstance(field, dict)]
+
+
+def _credential_env_name(platform_name: str, field_key: str) -> str | None:
+    """Resolve env var from platform credential key."""
+    for spec in _credential_specs(platform_name):
+        if str(spec.get("key", "")).strip() == field_key:
+            env_var = str(spec.get("env_var", "")).strip()
+            return env_var or None
+    return None
+
+
+def _credential_status(platform_name: str) -> list[dict[str, Any]]:
+    """Build credential status payload for UI."""
+    result: list[dict[str, Any]] = []
+    for spec in _credential_specs(platform_name):
+        env_var = str(spec.get("env_var", "")).strip()
+        key = str(spec.get("key", "")).strip()
+        if not env_var or not key:
+            continue
+        raw_value = os.getenv(env_var, "").strip()
+        result.append(
+            {
+                "key": key,
+                "label": str(spec.get("label", key)),
+                "required": bool(spec.get("required", True)),
+                "placeholder": str(spec.get("placeholder", "")),
+                "configured": bool(raw_value),
+                "maskedValue": _mask_secret(raw_value) if raw_value else None,
+            }
+        )
+    return result
+
+
+def _validate_credential_value(platform_name: str, field_key: str, value: str) -> str | None:
+    """Validate credential value before saving."""
+    normalized = value.strip()
+    if not normalized:
+        return "空の値は保存できません"
+    if len(normalized) > _MAX_SECRET_LENGTH:
+        return "値が長すぎます"
+    if any(ord(ch) < 32 for ch in normalized):
+        return "制御文字を含む値は許可されません"
+
+    if platform_name == "telegram" and field_key == "bot_token" and ":" not in normalized:
+        return "Telegram Bot Token の形式が不正です"
+    if platform_name == "slack" and field_key == "bot_token" and not normalized.startswith("xoxb-"):
+        return "Slack Bot Token は xoxb- で始まる必要があります"
+    if platform_name == "signal" and field_key == "api_url" and not normalized.startswith(("http://", "https://")):
+        return "Signal API URL は http(s):// で始めてください"
+    if platform_name == "teams" and field_key == "app_id" and len(normalized) < 8:
+        return "Teams App ID が短すぎます"
+    return None
+
+
+def _missing_required_credentials(platform_name: str) -> list[str]:
+    """Return missing required credential labels."""
+    missing: list[str] = []
+    for spec in _credential_specs(platform_name):
+        if not bool(spec.get("required", True)):
+            continue
+        env_var = str(spec.get("env_var", "")).strip()
+        if not env_var:
+            continue
+        if not os.getenv(env_var, "").strip():
+            missing.append(str(spec.get("label", env_var)))
+    return missing
+
+
+def _is_platform_connected(platform_name: str, registered_channels: set[str]) -> bool:
+    """Determine runtime platform connection status."""
+    if platform_name == _LOCAL_PLATFORM_ID:
+        return True
+    return platform_name in registered_channels and gateway.get_channel(platform_name) is not None
+
+
+def _build_platform_info(
+    platform_name: str,
+    *,
+    stats: dict[str, Any],
+    registered_channels: set[str],
+) -> dict[str, Any]:
+    """Build unified platform status payload for admin UI."""
+    cfg = _platform_config(platform_name) or {}
+    return {
+        "name": platform_name,
+        "displayName": str(cfg.get("display_name", platform_name)),
+        "icon": str(cfg.get("icon", "📡")),
+        "description": str(cfg.get("description", "")),
+        "authMode": str(cfg.get("auth_mode", "api_key")),
+        "authUrl": cfg.get("auth_url"),
+        "docsUrl": cfg.get("docs_url"),
+        "managed": platform_name == _LOCAL_PLATFORM_ID,
+        "connected": _is_platform_connected(platform_name, registered_channels),
+        "lastActivity": stats.get(f"{platform_name}_last_activity"),
+        "messageCount": int(stats.get(f"{platform_name}_messages", 0)),
+        "credentialFields": _credential_status(platform_name),
+    }
+
+
+def _detect_unsafe_input_reason(text: str) -> str | None:
+    """Detect dangerous command-like input via deterministic rules."""
+    normalized = text.strip()
+    if not normalized:
+        return "空の入力は処理できません"
+    if len(normalized) > _MAX_CHAT_INPUT_CHARS:
+        return f"入力が長すぎます（最大 {_MAX_CHAT_INPUT_CHARS} 文字）"
+    for pattern, reason in _DANGEROUS_INPUT_PATTERNS:
+        if pattern.search(normalized):
+            return reason
+    return None
+
+
+def _non_empty_text(value: Any) -> str | None:
+    """Return stripped text when value is a non-empty string."""
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+def _extract_text_fields(payload: dict[str, Any]) -> str | None:
+    """Extract user-facing text from heterogeneous assistant payloads."""
+    for key in ("answer", "content", "text", "message"):
+        text = _non_empty_text(payload.get(key))
+        if text is not None:
+            return text
+    return None
+
+
+def _resolve_assistant_message_text(result: dict[str, Any]) -> str:
+    """Resolve best assistant message for chat UI.
+
+    `assistant.process()` returns a manager-oriented summary by default.
+    For chat UX, prefer direct answer/content when available.
+    """
+    raw_results = result.get("raw_results")
+    if isinstance(raw_results, dict):
+        direct = _extract_text_fields(raw_results)
+        if direct is not None:
+            return direct
+        nested_result = raw_results.get("result")
+        if isinstance(nested_result, dict):
+            nested = _extract_text_fields(nested_result)
+            if nested is not None:
+                return nested
+        nested_error = _non_empty_text(raw_results.get("error"))
+        if nested_error is not None:
+            return f"⚠️ 応答生成に失敗しました: {nested_error[:240]}"
+
+    top_level = _extract_text_fields(result)
+    if top_level is not None:
+        return top_level
+
+    summary = _non_empty_text(result.get("summary"))
+    if summary is not None:
+        return summary
+
+    generic_error = _non_empty_text(result.get("error"))
+    if generic_error is not None:
+        return f"⚠️ 応答生成に失敗しました: {generic_error[:240]}"
+    return "⚠️ 応答を生成できませんでした。設定を確認して再試行してください。"
+
+
+gateway.set_input_policy(
+    _detect_unsafe_input_reason,
+    blocked_response_text=(
+        "⚠️ セキュリティポリシーにより、この入力は実行できません。安全な依頼に書き換えて再送してください。"
+    ),
+)
 
 
 async def _on_approval_request(request: ApprovalRequest) -> None:
@@ -401,6 +810,7 @@ assistant = PersonalAssistantCoordinator(
     config=assistant_config,
     skill_gateway=_skill_gateway,
     event_emitter=_assistant_event_emitter,
+    lazy_tool_loader=_lazy_tool_loader,
 )
 
 
@@ -539,7 +949,10 @@ async def lifespan(app: FastAPI) -> Any:
     # 2. 注册平台适配器
     await setup_platforms()
 
-    # 3. 启动后台任务（Discord bot）
+    # 3. ツールインデックスの構築（懒加載）
+    await _lazy_tool_loader.build_index()
+
+    # 4. 启动后台任务（Discord bot）
     await start_background_tasks()
 
     logger.info("Messaging Hub started successfully")
@@ -562,90 +975,114 @@ async def lifespan(app: FastAPI) -> Any:
 
 
 async def setup_platforms() -> None:
-    """设置消息平台适配器."""
-    # Telegram
-    telegram_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    if telegram_token:
-        telegram = TelegramAdapter(token=telegram_token)
-        gateway.register_channel("telegram", telegram)
-        logger.info("✓ Telegram adapter registered")
-
-        # 获取 bot 信息
-        try:
-            bot_info = await telegram.get_bot_info()
-            logger.info(f"  Telegram Bot: @{bot_info.get('username')}")
-        except Exception as e:
-            logger.warning(f"  Failed to get Telegram bot info: {e}")
-    else:
-        logger.warning("✗ TELEGRAM_BOT_TOKEN not set, skipping Telegram")
-
-    # Slack
-    slack_token = os.getenv("SLACK_BOT_TOKEN")
-    slack_secret = os.getenv("SLACK_SIGNING_SECRET")
-    if slack_token:
-        slack = SlackAdapter(token=slack_token, signing_secret=slack_secret)
-        gateway.register_channel("slack", slack)
-        logger.info("✓ Slack adapter registered")
-
-        # 获取 bot 信息
-        try:
-            bot_info = await slack.get_bot_info()
-            logger.info(f"  Slack Bot: {bot_info.get('user')}")
-        except Exception as e:
-            logger.warning(f"  Failed to get Slack bot info: {e}")
-    else:
-        logger.warning("✗ SLACK_BOT_TOKEN not set, skipping Slack")
-
-    # Discord
-    discord_token = os.getenv("DISCORD_BOT_TOKEN")
-    if discord_token:
-        discord = DiscordAdapter(token=discord_token)
-        gateway.register_channel("discord", discord)
-        logger.info("✓ Discord adapter registered")
-    else:
-        logger.warning("✗ DISCORD_BOT_TOKEN not set, skipping Discord")
-
-    # Microsoft Teams
-    teams_app_id = os.getenv("TEAMS_APP_ID")
-    teams_app_password = os.getenv("TEAMS_APP_PASSWORD")
-    if teams_app_id and teams_app_password and TeamsAdapter:
-        teams = TeamsAdapter(app_id=teams_app_id, app_password=teams_app_password)
-        gateway.register_channel("teams", teams)
-        logger.info("✓ Teams adapter registered")
-    else:
-        logger.warning("✗ TEAMS_APP_ID/PASSWORD not set, skipping Teams")
-
-    # WhatsApp
-    whatsapp_phone_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID")
-    whatsapp_token = os.getenv("WHATSAPP_ACCESS_TOKEN")
-    if whatsapp_phone_id and whatsapp_token and WhatsAppAdapter:
-        whatsapp = WhatsAppAdapter(phone_number_id=whatsapp_phone_id, access_token=whatsapp_token)
-        gateway.register_channel("whatsapp", whatsapp)
-        logger.info("✓ WhatsApp adapter registered")
-    else:
-        logger.warning("✗ WHATSAPP credentials not set, skipping WhatsApp")
-
-    # Signal
-    signal_api_url = os.getenv("SIGNAL_API_URL")
-    signal_phone = os.getenv("SIGNAL_PHONE_NUMBER")
-    if signal_api_url and signal_phone and SignalAdapter:
-        signal = SignalAdapter(api_url=signal_api_url, phone_number=signal_phone)
-        gateway.register_channel("signal", signal)
-        logger.info("✓ Signal adapter registered")
-    else:
-        logger.warning("✗ SIGNAL_API_URL/PHONE not set, skipping Signal")
+    """登録可能な外部プラットフォームを環境変数から接続する."""
+    for platform_name in _EXTERNAL_PLATFORM_NAMES:
+        connected, message = await _connect_platform_from_env(platform_name)
+        if connected:
+            logger.info("✓ %s connected (%s)", platform_name, message)
+        else:
+            logger.warning("✗ %s not connected (%s)", platform_name, message)
 
 
 async def start_background_tasks() -> None:
     """启动后台任务."""
-    # Discord bot（长连接模式）
-    discord_adapter = gateway.get_channel("discord")
-    if discord_adapter:
-        task = asyncio.create_task(discord_adapter.start_bot(gateway))
-        background_tasks.append(task)
-        logger.info("Started Discord bot task")
+    await _ensure_discord_runtime_task()
 
     # 可以添加其他后台任务（如定期清理会话）
+
+
+async def _ensure_discord_runtime_task() -> None:
+    """Ensure discord runtime task is running when adapter is connected."""
+    current_task = _platform_runtime_tasks.get("discord")
+    discord_adapter = gateway.get_channel("discord")
+    if discord_adapter is None:
+        if current_task and not current_task.done():
+            current_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await current_task
+        _platform_runtime_tasks.pop("discord", None)
+        return
+
+    if current_task and not current_task.done():
+        return
+
+    task = asyncio.create_task(discord_adapter.start_bot(gateway))
+    _platform_runtime_tasks["discord"] = task
+    background_tasks.append(task)
+    logger.info("Started Discord bot task")
+
+
+async def _connect_platform_from_env(platform_name: str) -> tuple[bool, str]:
+    """Create adapter from env and register platform."""
+    missing = _missing_required_credentials(platform_name)
+    if missing:
+        gateway.unregister_channel(platform_name)
+        if platform_name == "discord":
+            await _ensure_discord_runtime_task()
+        return False, f"missing required credentials: {', '.join(missing)}"
+
+    try:
+        if platform_name == "telegram":
+            token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
+            adapter = TelegramAdapter(token=token)
+            gateway.register_channel(platform_name, adapter)
+            try:
+                bot_info = await adapter.get_bot_info()
+                logger.info("Telegram bot: @%s", bot_info.get("username"))
+            except Exception as exc:
+                logger.warning("Telegram get_bot_info failed: %s", exc)
+            return True, "token configured"
+
+        if platform_name == "slack":
+            token = os.getenv("SLACK_BOT_TOKEN", "").strip()
+            signing_secret = os.getenv("SLACK_SIGNING_SECRET", "").strip() or None
+            adapter = SlackAdapter(token=token, signing_secret=signing_secret)
+            gateway.register_channel(platform_name, adapter)
+            try:
+                bot_info = await adapter.get_bot_info()
+                logger.info("Slack bot: %s", bot_info.get("user"))
+            except Exception as exc:
+                logger.warning("Slack get_bot_info failed: %s", exc)
+            return True, "token configured"
+
+        if platform_name == "discord":
+            token = os.getenv("DISCORD_BOT_TOKEN", "").strip()
+            adapter = DiscordAdapter(token=token)
+            gateway.register_channel(platform_name, adapter)
+            return True, "token configured"
+
+        if platform_name == "teams":
+            app_id = os.getenv("TEAMS_APP_ID", "").strip()
+            app_password = os.getenv("TEAMS_APP_PASSWORD", "").strip()
+            adapter = TeamsAdapter(app_id=app_id, app_password=app_password)
+            gateway.register_channel(platform_name, adapter)
+            return True, "app credentials configured"
+
+        if platform_name == "whatsapp":
+            phone_number_id = os.getenv("WHATSAPP_PHONE_NUMBER_ID", "").strip()
+            access_token = os.getenv("WHATSAPP_ACCESS_TOKEN", "").strip()
+            verify_token = os.getenv("WHATSAPP_VERIFY_TOKEN", "").strip() or None
+            adapter = WhatsAppAdapter(
+                phone_number_id=phone_number_id,
+                access_token=access_token,
+                verify_token=verify_token,
+            )
+            gateway.register_channel(platform_name, adapter)
+            return True, "business credentials configured"
+
+        if platform_name == "signal":
+            api_url = os.getenv("SIGNAL_API_URL", "").strip()
+            phone_number = os.getenv("SIGNAL_PHONE_NUMBER", "").strip()
+            adapter = SignalAdapter(api_url=api_url, phone_number=phone_number)
+            gateway.register_channel(platform_name, adapter)
+            return True, "signal-cli credentials configured"
+    except Exception as exc:
+        gateway.unregister_channel(platform_name)
+        if platform_name == "discord":
+            await _ensure_discord_runtime_task()
+        return False, str(exc)
+
+    return False, "unsupported platform"
 
 
 # =========================================================================
@@ -935,12 +1372,36 @@ async def list_sessions() -> dict[str, Any]:
 async def api_health() -> dict[str, Any]:
     """管理画面用ヘルスチェック."""
     stats = gateway.get_statistics()
+    auth_required = _is_auth_required()
+    auth_env_var = _auth_api_key_env_name()
+    auth_key_configured = _is_auth_key_configured()
+    status = "healthy"
+    if auth_required and not auth_key_configured:
+        status = "degraded"
     return {
-        "status": "healthy",
+        "status": status,
         "security_mode": _get_security_mode(),
+        "auth_required": auth_required,
+        "auth_env_var": auth_env_var,
+        "auth_key_configured": auth_key_configured,
         "uptime": max(time.time() - _process_started_at, 0.0),
         "statistics": stats,
     }
+
+
+@app.get("/api/admin-key")
+async def api_admin_key() -> dict[str, Any]:
+    """管理画面ブートストラップ用：設定済み API キーを返す（認証不要・ローカル管理用途）.
+
+    フロントエンドが localStorage にキーを持っていない場合に自動取得するために使用する。
+    キーが未設定の場合は api_key=null を返す（フロントエンドは手動入力にフォールバック）。
+    """
+    if not _is_auth_required():
+        return {"api_key": None, "auth_required": False, "configured": True}
+    key = os.getenv(_auth_api_key_env_name(), "").strip()
+    if not key:
+        return {"api_key": None, "auth_required": True, "configured": False}
+    return {"api_key": key, "auth_required": True, "configured": True}
 
 
 @app.get("/api/stats")
@@ -950,7 +1411,7 @@ async def api_statistics() -> dict[str, Any]:
     sessions = chatbot.list_sessions()
 
     platform_stats = {}
-    for platform_name in gateway.list_channels():
+    for platform_name in _PLATFORM_ORDER:
         platform_stats[platform_name] = stats.get(f"{platform_name}_messages", 0)
 
     return {
@@ -964,21 +1425,132 @@ async def api_statistics() -> dict[str, Any]:
 @app.get("/api/platforms")
 async def api_platforms() -> list[dict[str, Any]]:
     """管理画面用プラットフォーム一覧."""
-    platforms = []
+    stats = gateway.get_statistics()
+    registered_channels = set(gateway.list_channels())
+    return [
+        _build_platform_info(
+            platform_name,
+            stats=stats,
+            registered_channels=registered_channels,
+        )
+        for platform_name in _PLATFORM_ORDER
+    ]
 
-    for platform_name in gateway.list_channels():
-        adapter = gateway.get_channel(platform_name)
-        stats = gateway.get_statistics()
 
-        platform_info = {
-            "name": platform_name,
-            "connected": adapter is not None,
-            "lastActivity": stats.get(f"{platform_name}_last_activity"),
-            "messageCount": stats.get(f"{platform_name}_messages", 0),
+class PlatformCredentialSaveRequest(BaseModel):
+    """Platform credentials update payload."""
+
+    values: dict[str, str] = Field(default_factory=dict)
+    auto_connect: bool = Field(default=True)
+
+
+@app.post("/api/platforms/{platform_name}/credentials")
+async def api_save_platform_credentials(
+    platform_name: str,
+    payload: PlatformCredentialSaveRequest,
+) -> JSONResponse:
+    """Save platform credentials securely and optionally connect immediately."""
+    if platform_name not in _PLATFORM_CATALOG:
+        return JSONResponse(
+            {"ok": False, "error": "unknown_platform"},
+            status_code=404,
+        )
+    if platform_name == _LOCAL_PLATFORM_ID:
+        return JSONResponse(
+            {"ok": False, "error": "managed_platform_not_editable"},
+            status_code=400,
+        )
+
+    validation_errors: list[str] = []
+    updated_fields: list[str] = []
+    for field_key, raw_value in payload.values.items():
+        env_name = _credential_env_name(platform_name, field_key)
+        if env_name is None:
+            validation_errors.append(f"未対応フィールド: {field_key}")
+            continue
+        issue = _validate_credential_value(platform_name, field_key, raw_value)
+        if issue:
+            validation_errors.append(f"{field_key}: {issue}")
+            continue
+        os.environ[env_name] = raw_value.strip()
+        updated_fields.append(field_key)
+
+    if validation_errors:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": "validation_error",
+                "messages": validation_errors,
+            },
+            status_code=400,
+        )
+
+    missing = _missing_required_credentials(platform_name)
+    if missing:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": "missing_required_credentials",
+                "messages": missing,
+            },
+            status_code=400,
+        )
+
+    connected = False
+    connect_message = "credentials_saved"
+    if payload.auto_connect:
+        connected, connect_message = await _connect_platform_from_env(platform_name)
+        if platform_name == "discord" and connected:
+            await _ensure_discord_runtime_task()
+
+    stats = gateway.get_statistics()
+    registered_channels = set(gateway.list_channels())
+    return JSONResponse(
+        {
+            "ok": True,
+            "platform": platform_name,
+            "updatedFields": updated_fields,
+            "connected": connected
+            if payload.auto_connect
+            else _is_platform_connected(platform_name, registered_channels),
+            "message": connect_message,
+            "platformInfo": _build_platform_info(
+                platform_name,
+                stats=stats,
+                registered_channels=registered_channels,
+            ),
         }
-        platforms.append(platform_info)
+    )
 
-    return platforms
+
+@app.post("/api/platforms/{platform_name}/connect")
+async def api_connect_platform(platform_name: str) -> JSONResponse:
+    """Connect platform from current environment credentials."""
+    if platform_name not in _PLATFORM_CATALOG:
+        return JSONResponse({"ok": False, "error": "unknown_platform"}, status_code=404)
+    if platform_name == _LOCAL_PLATFORM_ID:
+        return JSONResponse({"ok": True, "platform": platform_name, "connected": True, "message": "managed"})
+
+    connected, message = await _connect_platform_from_env(platform_name)
+    if platform_name == "discord" and connected:
+        await _ensure_discord_runtime_task()
+    stats = gateway.get_statistics()
+    registered_channels = set(gateway.list_channels())
+    status_code = 200 if connected else 400
+    return JSONResponse(
+        {
+            "ok": connected,
+            "platform": platform_name,
+            "connected": connected,
+            "message": message,
+            "platformInfo": _build_platform_info(
+                platform_name,
+                stats=stats,
+                registered_channels=registered_channels,
+            ),
+        },
+        status_code=status_code,
+    )
 
 
 @app.get("/api/sessions")
@@ -1033,6 +1605,66 @@ async def api_export(format: str = "json") -> JSONResponse:
         return JSONResponse({"error": str(e)}, status_code=500)
 
 
+def _resolve_export_format(raw_format: str) -> ExportFormat:
+    """Normalize export format parameter."""
+    normalized = raw_format.strip().lower()
+    if normalized in {"json", "csv", "markdown"}:
+        return ExportFormat(normalized)
+    return ExportFormat.JSON
+
+
+def _export_extension(export_format: ExportFormat) -> str:
+    """Resolve file extension from export format."""
+    if export_format is ExportFormat.MARKDOWN:
+        return "md"
+    return export_format.value
+
+
+def _safe_filename_part(value: str) -> str:
+    """Convert arbitrary identifier to filesystem-safe part."""
+    return "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in value)
+
+
+def _build_sr_export_filename(conversation_id: str | None, export_format: ExportFormat) -> str:
+    """Build filename for sr_chat export response."""
+    extension = _export_extension(export_format)
+    if conversation_id:
+        return f"sr_chat_{_safe_filename_part(conversation_id)}.{extension}"
+    return f"sr_chat_all.{extension}"
+
+
+async def _collect_sr_export_messages(conversation_id: str | None) -> list[dict[str, Any]]:
+    """Collect sr_chat messages for export."""
+    conversation_ids: list[str] = []
+    if conversation_id:
+        conversation_ids.append(conversation_id)
+    else:
+        rows = await _store.list_sr_conversations(limit=300)
+        conversation_ids.extend(
+            str(row.get("conversation_id", "")).strip() for row in rows if str(row.get("conversation_id", "")).strip()
+        )
+
+    messages: list[dict[str, Any]] = []
+    for cid in conversation_ids:
+        rows = await _store.list_sr_messages(conversation_id=cid, limit=1000)
+        for row in reversed(rows):
+            metadata = row.get("metadata", {})
+            meta = metadata if isinstance(metadata, dict) else {}
+            user_id = str(meta.get("user_id", ""))
+            messages.append(
+                {
+                    "timestamp": row.get("created_at", ""),
+                    "platform": str(meta.get("platform", "sr_chat")),
+                    "user_id": user_id,
+                    "user_name": user_id or "sr_chat_user",
+                    "role": row.get("role", "user"),
+                    "content": row.get("content", ""),
+                    "conversation_id": cid,
+                }
+            )
+    return messages
+
+
 # =========================================================================
 # 承認・実行・スキル管理 API
 # =========================================================================
@@ -1064,6 +1696,140 @@ class SkillCallRequest(BaseModel):
     params: dict[str, Any] = Field(default_factory=dict)
     dry_run: bool = Field(default=False)
     user_id: str = Field(default="admin")
+
+
+class FileOrganizerAnalyzeRequest(BaseModel):
+    """File Organizer 分析リクエスト."""
+
+    path: str = Field(..., min_length=1)
+    days_old: int = Field(default=30, ge=1, le=3650)
+    recursive: bool = Field(default=True)
+
+
+class FileOrganizerDuplicatesRequest(BaseModel):
+    """File Organizer 重複検出リクエスト."""
+
+    path: str = Field(..., min_length=1)
+    by_content: bool = Field(default=True)
+
+
+class FileOrganizerOrganizeRequest(BaseModel):
+    """File Organizer 整理リクエスト."""
+
+    path: str = Field(..., min_length=1)
+    dry_run: bool = Field(default=True)
+    rules: dict[str, Any] | None = None
+    user_id: str = Field(default="admin", min_length=1)
+    approval_request_id: str | None = None
+
+
+async def _prepare_file_organizer_execution(
+    payload: FileOrganizerOrganizeRequest,
+) -> tuple[bool, dict[str, Any]]:
+    """Resolve approval requirements for file organizer execution."""
+    if payload.dry_run:
+        return True, {}
+
+    if payload.approval_request_id:
+        request = _approval_manager.find_request(payload.approval_request_id)
+        if request is None:
+            return False, {
+                "ok": False,
+                "error": "approval_request_not_found",
+                "requires_approval": True,
+            }
+        if request.skill_name != "file_organizer.organize":
+            return False, {
+                "ok": False,
+                "error": "approval_request_mismatch",
+                "requires_approval": True,
+                "request_id": request.id,
+            }
+        requested_path = str(request.params.get("path", "")).strip()
+        if requested_path != payload.path:
+            return False, {
+                "ok": False,
+                "error": "approval_request_path_mismatch",
+                "requires_approval": True,
+                "request_id": request.id,
+            }
+        if request.status in {ApprovalStatus.APPROVED, ApprovalStatus.AUTO_APPROVED}:
+            return True, {}
+        if request.status == ApprovalStatus.PENDING:
+            return False, {
+                "ok": False,
+                "requires_approval": True,
+                "request_id": request.id,
+                "status": request.status.value,
+                "message": "承認待ちです。承認後に再実行してください。",
+            }
+        return False, {
+            "ok": False,
+            "requires_approval": True,
+            "request_id": request.id,
+            "status": request.status.value,
+            "message": "この承認リクエストは利用できません。",
+        }
+
+    request_id, auto_approved = await _approval_manager.request_approval(
+        skill_name="file_organizer.organize",
+        params={"path": payload.path, "dry_run": payload.dry_run},
+        risk_level=RiskLevel.HIGH,
+        user_id=payload.user_id,
+        metadata={"source": "admin_ui"},
+    )
+    request = _approval_manager.find_request(request_id)
+    if request is not None:
+        await _store.upsert_approval(request.to_dict())
+
+    if auto_approved:
+        return True, {}
+
+    return False, {
+        "ok": False,
+        "requires_approval": True,
+        "request_id": request_id,
+        "status": "pending",
+        "message": "実行には承認が必要です。承認後に再実行してください。",
+    }
+
+
+@app.post("/api/file-organizer/analyze")
+async def api_file_organizer_analyze(payload: FileOrganizerAnalyzeRequest) -> dict[str, Any]:
+    """ディレクトリ分析."""
+    agent = FileOrganizerAgent(gateway=_skill_gateway, days_old_threshold=payload.days_old)
+    analysis = await agent.analyze_directory(payload.path, recursive=payload.recursive)
+    data = analysis.to_dict()
+    data["ok"] = True
+    return data
+
+
+@app.post("/api/file-organizer/duplicates")
+async def api_file_organizer_duplicates(payload: FileOrganizerDuplicatesRequest) -> dict[str, Any]:
+    """重複ファイル検出."""
+    groups = await _file_organizer_agent.find_duplicates(payload.path, by_content=payload.by_content)
+    return {
+        "ok": True,
+        "duplicates": [group.to_dict() for group in groups],
+        "total": len(groups),
+    }
+
+
+@app.post("/api/file-organizer/organize")
+async def api_file_organizer_organize(payload: FileOrganizerOrganizeRequest) -> dict[str, Any]:
+    """ファイル整理（dry_run=false は承認必須）."""
+    allowed, approval_payload = await _prepare_file_organizer_execution(payload)
+    if not allowed:
+        return approval_payload
+
+    result = await _file_organizer_agent.organize(
+        payload.path,
+        rules=payload.rules,
+        dry_run=payload.dry_run,
+    )
+    data = result.to_dict()
+    data["ok"] = True
+    return data
 
 
 @app.get("/api/approvals/pending")
@@ -1205,6 +1971,148 @@ async def api_workflows(
 
 
 # =========================================================================
+# MCP 管理 API
+# =========================================================================
+
+
+class MCPInstallAPIRequest(BaseModel):
+    """MCP サーバーインストールリクエスト."""
+
+    name: str = Field(..., min_length=1, max_length=100)
+    command: str = Field(..., min_length=1)
+    args: list[str] = Field(default_factory=list)
+    env: dict[str, str] = Field(default_factory=dict)
+    description: str = Field(default="")
+    install_method: str = Field(default="config")
+
+
+class MCPLazyLoadingPatchRequest(BaseModel):
+    """MCP 懒加載設定更新リクエスト."""
+
+    enabled: bool | None = None
+    threshold: int | None = Field(default=None, ge=1)
+    auto_load_on_call: bool | None = None
+    cache_session: bool | None = None
+    default_load_count: int | None = Field(default=None, ge=1)
+
+
+class ToolSearchRequest(BaseModel):
+    """ツール検索リクエスト."""
+
+    query: str = Field(..., min_length=1)
+
+
+@app.get("/api/mcp/servers")
+async def api_mcp_list_servers() -> dict[str, Any]:
+    """MCP サーバー一覧."""
+    servers = _mcp_manager.list_servers()
+    return {"servers": servers, "total": len(servers)}
+
+
+@app.get("/api/mcp/servers/{server_name}")
+async def api_mcp_get_server(server_name: str) -> dict[str, Any]:
+    """MCP サーバー詳細."""
+    server = _mcp_manager.get_server(server_name)
+    if server is None:
+        return JSONResponse(  # type: ignore[return-value]
+            status_code=404,
+            content={"error": f"サーバー '{server_name}' が見つかりません"},
+        )
+    return {"server": server}
+
+
+@app.post("/api/mcp/servers")
+async def api_mcp_install_server(request: MCPInstallAPIRequest) -> dict[str, Any]:
+    """MCP サーバーインストール."""
+    install_req = MCPInstallRequest(
+        name=request.name,
+        command=request.command,
+        args=request.args,
+        env=request.env,
+        description=request.description,
+        install_method=request.install_method,
+    )
+    server = _mcp_manager.install_server(install_req)
+    # インデックスを再構築
+    await _lazy_tool_loader.build_index()
+    return {"server": server, "ok": True}
+
+
+@app.post("/api/mcp/servers/{server_name}/enable")
+async def api_mcp_enable_server(server_name: str) -> dict[str, Any]:
+    """MCP サーバー有効化."""
+    ok = _mcp_manager.enable_server(server_name)
+    if ok:
+        await _lazy_tool_loader.build_index()
+    return {"ok": ok}
+
+
+@app.post("/api/mcp/servers/{server_name}/disable")
+async def api_mcp_disable_server(server_name: str) -> dict[str, Any]:
+    """MCP サーバー無効化."""
+    ok = _mcp_manager.disable_server(server_name)
+    if ok:
+        await _lazy_tool_loader.build_index()
+    return {"ok": ok}
+
+
+@app.delete("/api/mcp/servers/{server_name}")
+async def api_mcp_delete_server(server_name: str) -> dict[str, Any]:
+    """MCP サーバー削除."""
+    ok = _mcp_manager.delete_server(server_name)
+    if ok:
+        await _lazy_tool_loader.build_index()
+    return {"ok": ok}
+
+
+@app.get("/api/mcp/lazy-loading")
+async def api_mcp_get_lazy_loading() -> dict[str, Any]:
+    """懒加載設定取得."""
+    return {"lazy_loading": _mcp_manager.get_lazy_loading_config()}
+
+
+@app.patch("/api/mcp/lazy-loading")
+async def api_mcp_patch_lazy_loading(
+    request: MCPLazyLoadingPatchRequest,
+) -> dict[str, Any]:
+    """懒加載設定更新."""
+    patch_data = request.model_dump(exclude_none=True)
+    updated = _mcp_manager.update_lazy_loading_config(patch_data)
+    return {"lazy_loading": updated}
+
+
+@app.get("/api/tools/index")
+async def api_tool_index() -> dict[str, Any]:
+    """ツールインデックス取得（全ツールの軽量メタデータ）."""
+    index = _lazy_tool_loader.get_tool_index()
+    return {"tools": index, "total": len(index)}
+
+
+@app.post("/api/tools/search")
+async def api_tool_search(request: ToolSearchRequest) -> dict[str, Any]:
+    """ツール検索・ロード."""
+    result = _lazy_tool_loader.search_and_load(request.query)
+    return {
+        "query": result.query,
+        "matches": [e.to_dict() for e in result.entries],
+        "loaded_count": result.loaded_count,
+    }
+
+
+@app.get("/api/tools/stats")
+async def api_tool_stats() -> dict[str, Any]:
+    """ツールローダー統計."""
+    return _lazy_tool_loader.get_stats()
+
+
+@app.post("/api/tools/reset")
+async def api_tool_reset() -> dict[str, Any]:
+    """ツールセッションリセット."""
+    _lazy_tool_loader.reset_session()
+    return {"ok": True}
+
+
+# =========================================================================
 # sr_chat API
 # =========================================================================
 
@@ -1273,9 +2181,40 @@ async def sr_chat_conversations_history(
     return {"ok": True, "conversation_id": conversation_id, "messages": items, "total": len(items)}
 
 
-@app.post("/api/sr_chat/chat.postMessage")
-async def sr_chat_post_message(request: SRChatPostRequest) -> dict[str, Any]:
+@app.get("/api/sr_chat/export")
+async def sr_chat_export(
+    format: str = "json",
+    conversation_id: str | None = None,
+) -> dict[str, Any]:
+    """sr_chat メッセージ履歴をエクスポート."""
+    export_format = _resolve_export_format(format)
+    messages = await _collect_sr_export_messages(conversation_id)
+    exporter = ConversationExportSkill()
+    data = await exporter.export(messages, format=export_format)
+    return {
+        "ok": True,
+        "format": export_format.value,
+        "conversation_id": conversation_id,
+        "total_messages": len(messages),
+        "filename": _build_sr_export_filename(conversation_id, export_format),
+        "data": data,
+    }
+
+
+@app.post("/api/sr_chat/chat.postMessage", response_model=None)
+async def sr_chat_post_message(request: SRChatPostRequest) -> JSONResponse | dict[str, Any]:
     """メッセージを投稿してアシスタント応答を生成."""
+    unsafe_reason = _detect_unsafe_input_reason(request.text)
+    if unsafe_reason:
+        return JSONResponse(
+            {
+                "ok": False,
+                "blocked": True,
+                "detail": f"安全ポリシーにより拒否: {unsafe_reason}",
+            },
+            status_code=400,
+        )
+
     run_id = f"run_{uuid.uuid4().hex}"
     user_message_id = f"msg_{uuid.uuid4().hex}"
     assistant_message_id = f"msg_{uuid.uuid4().hex}"
@@ -1297,7 +2236,7 @@ async def sr_chat_post_message(request: SRChatPostRequest) -> dict[str, Any]:
         user_id=request.user_id,
         context={"run_id": run_id, "conversation_id": request.conversation_id},
     )
-    assistant_text = str(result.get("summary", ""))
+    assistant_text = _resolve_assistant_message_text(result)
     response_time = datetime.now(UTC).isoformat()
     await _store.upsert_sr_message(
         {
@@ -1419,10 +2358,10 @@ class AssistantCLIExecuteRequest(BaseModel):
     confirm: bool = Field(default=False)
 
 
-@app.post("/assistant/process")
+@app.post("/assistant/process", response_model=None)
 async def process_assistant_request(
     request: AssistantProcessRequest,
-) -> dict[str, Any]:
+) -> JSONResponse | dict[str, Any]:
     """Personal Assistant にリクエストを処理させる.
 
     自然言語でタスクを指示し、主管向けのサマリーを受け取る。
@@ -1440,6 +2379,18 @@ async def process_assistant_request(
     Returns:
         処理結果（summary, key_points, actions, risks を含む）
     """
+    unsafe_reason = _detect_unsafe_input_reason(request.message)
+    if unsafe_reason:
+        return JSONResponse(
+            {
+                "ok": False,
+                "blocked": True,
+                "error": "blocked_by_safety_policy",
+                "summary": f"⚠️ 安全ポリシーにより拒否: {unsafe_reason}",
+            },
+            status_code=400,
+        )
+
     try:
         run_id = f"run_{uuid.uuid4().hex}"
         result = await assistant.process(

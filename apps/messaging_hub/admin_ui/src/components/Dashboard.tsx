@@ -1,16 +1,12 @@
-import { useMemo } from "react";
+import { lazy, Suspense, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import { MessageSquare, Users, Radio, Activity } from "lucide-react";
 import { getStatistics, getHealth } from "../api/client";
+import { usePageVisibility } from "../hooks/usePageVisibility";
+
+const PlatformMessageChart = lazy(
+  () => import("./dashboard/PlatformMessageChart"),
+);
 
 /**
  * 統計カード
@@ -48,16 +44,19 @@ function StatCard({
  * 全体統計、リアルタイムチャート、システム状態を表示
  */
 export default function Dashboard() {
+  const isVisible = usePageVisibility();
   const { data: stats } = useQuery({
     queryKey: ["statistics"],
     queryFn: getStatistics,
-    refetchInterval: 5000,
+    refetchInterval: isVisible ? 5000 : false,
+    refetchIntervalInBackground: false,
   });
 
   const { data: health } = useQuery({
     queryKey: ["health"],
     queryFn: getHealth,
-    refetchInterval: 10000,
+    refetchInterval: isVisible ? 10000 : false,
+    refetchIntervalInBackground: false,
   });
 
   const chartData = useMemo(
@@ -101,20 +100,15 @@ export default function Dashboard() {
         <h3 className="text-lg font-semibold mb-4">
           プラットフォーム別メッセージ分布
         </h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="platform" />
-            <YAxis />
-            <Tooltip />
-            <Line
-              type="monotone"
-              dataKey="messages"
-              stroke="#0ea5e9"
-              strokeWidth={2}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <Suspense
+          fallback={
+            <div className="h-[300px] flex items-center justify-center text-sm text-muted">
+              チャートを読み込み中...
+            </div>
+          }
+        >
+          <PlatformMessageChart data={chartData} />
+        </Suspense>
       </div>
 
       {/* プラットフォーム別統計 */}

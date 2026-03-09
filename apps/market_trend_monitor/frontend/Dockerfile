@@ -3,9 +3,10 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 COPY apps/market_trend_monitor/frontend/package*.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 COPY apps/market_trend_monitor/frontend/ ./
+COPY agentflow/i18n/frontend/ /agentflow/i18n/frontend/
 
 ARG VITE_API_BASE_URL=http://localhost:8002/api
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}

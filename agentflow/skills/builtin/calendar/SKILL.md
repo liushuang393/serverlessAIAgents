@@ -3,6 +3,7 @@ category: enterprise_office
 name: calendar
 description: カレンダースキル。イベント管理、空き時間検索、会議スケジューリング。
 version: 1.0.0
+author: AgentFlow Team
 triggers:
   - calendar
   - meeting
@@ -52,7 +53,7 @@ free_slots = await skill.find_free_slots(duration_minutes=60)
 ## 外部連携
 
 実際のカレンダー連携には以下のサービスを想定:
+
 - Google Calendar
 - Microsoft Outlook
 - Apple Calendar
-

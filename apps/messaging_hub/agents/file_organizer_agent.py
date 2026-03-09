@@ -254,7 +254,12 @@ class FileOrganizerAgent:
             full_path = rel_path
             rel_path = Path(name_value) if name_value else rel_path.name
         else:
-            full_path = base / rel_path
+            workspace_path = (Path.cwd() / rel_path).resolve()
+            if workspace_path.exists() and self._is_subpath(workspace_path, base):
+                full_path = workspace_path
+                rel_path = workspace_path.relative_to(base)
+            else:
+                full_path = base / rel_path
         name = name_value or full_path.name
 
         is_dir = bool(raw.get("is_dir", False))
@@ -273,6 +278,21 @@ class FileOrganizerAgent:
             "is_file": is_file,
         }
 
+    @staticmethod
+    def _coerce_record(raw: Any) -> dict[str, Any] | None:
+        """Gateway 返却値を dict へ正規化する."""
+        if isinstance(raw, dict):
+            return raw
+        if hasattr(raw, "model_dump"):
+            dumped = raw.model_dump()  # type: ignore[no-any-return]
+            if isinstance(dumped, dict):
+                return dumped
+        if hasattr(raw, "__dict__"):
+            raw_dict = {key: value for key, value in vars(raw).items() if not key.startswith("_")}
+            if raw_dict:
+                return raw_dict
+        return None
+
     async def _list_directory_records(self, base_path: str, recursive: bool) -> list[dict[str, Any]]:
         """ディレクトリを走査して統一フォーマットへ変換."""
         root = Path(base_path).expanduser().resolve()
@@ -285,9 +305,12 @@ class FileOrganizerAgent:
                     self._logger.error("ディレクトリ一覧取得失敗: %s", result.error)
                     return []
                 raw_items = result.result if isinstance(result.result, list) else []
-                normalized = [
-                    self._normalize_file_record(root, item, now) for item in raw_items if isinstance(item, dict)
-                ]
+                normalized: list[dict[str, Any]] = []
+                for raw_item in raw_items:
+                    item = self._coerce_record(raw_item)
+                    if item is None:
+                        continue
+                    normalized.append(self._normalize_file_record(root, item, now))
             except Exception as exc:
                 self._logger.exception("Gateway呼び出しエラー: %s", exc)
                 return []

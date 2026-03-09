@@ -3,6 +3,7 @@ category: common
 name: conversation-export
 description: 会話エクスポート機能。会話履歴を JSON / CSV / Markdown 形式でエクスポート。
 version: 1.0.0
+author: AgentFlow Team
 triggers:
   - export conversation
   - 会話エクスポート
@@ -57,4 +58,3 @@ md_data = await exporter.export_markdown(messages)
 - JSON
 - CSV
 - Markdown
-

@@ -3,6 +3,7 @@ category: ad_marketing
 name: ecommerce-operations
 description: 越境 EC 運営向けの包括的スキルセット。競合調査、価格分析、Listing 生成、在庫調整、広告監視、日報生成を提供。
 version: "1.0.0"
+author: AgentFlow Team
 triggers:
   - 競合調査
   - 価格分析
@@ -34,6 +35,7 @@ user-invocable: true
 ## 含まれるスキル
 
 ### 1. CompetitorScraper（競合収集）
+
 ECプラットフォームから競合商品の情報を収集します。
 
 ```python
@@ -48,6 +50,7 @@ products = await scraper.scrape_competitors(
 ```
 
 **対応プラットフォーム**:
+
 - Amazon
 - eBay
 - AliExpress
@@ -55,6 +58,7 @@ products = await scraper.scrape_competitors(
 - 楽天
 
 ### 2. PriceAnalyzer（価格分析）
+
 競合商品の価格を分析し、最適な価格戦略を提案します。
 
 ```python
@@ -65,12 +69,14 @@ analysis = await analyzer.analyze(price_points=products)
 ```
 
 **出力**:
+
 - 平均/中央値/最小/最大価格
 - 推奨価格
 - 価格戦略（浸透、競争、プレミアム等）
 - 市場ポジション分析
 
 ### 3. ListingGenerator（Listing生成）
+
 SEO最適化された商品リスティングを生成します。
 
 ```python
@@ -85,6 +91,7 @@ listing = await generator.generate(
 ```
 
 **出力**:
+
 - 最適化されたタイトル
 - 箇条書きポイント
 - 商品説明
@@ -92,6 +99,7 @@ listing = await generator.generate(
 - SEOスコア
 
 ### 4. InventoryAdjuster（在庫・価格調整）
+
 市場分析に基づいて在庫と価格を調整します。
 
 ```python
@@ -106,12 +114,14 @@ plan = await adjuster.create_adjustment_plan(
 ```
 
 **出力**:
+
 - 調整アイテムリスト
 - 緊急度レベル
 - 推奨アクション
 - 収益/コスト影響予測
 
 ### 5. AdMonitor（広告監視）
+
 広告キャンペーンのパフォーマンスを監視します。
 
 ```python
@@ -125,12 +135,14 @@ analysis = await monitor.analyze_campaigns(
 ```
 
 **出力**:
+
 - キャンペーン別パフォーマンス
 - CTR/CVR/CPA/ROAS
 - アラート
 - 最適化提案
 
 ### 6. DailyReportGenerator（日報生成）
+
 毎日の運営データを集約してレポートを生成します。
 
 ```python
@@ -145,6 +157,7 @@ report = await generator.generate(
 ```
 
 **出力**:
+
 - エグゼクティブサマリー
 - 売上/広告/在庫セクション
 - アクションアイテム

@@ -1,0 +1,144 @@
+{
+  "baseURL": "http://127.0.0.1:3001",
+  "apiKeyConfiguredForBrowser": true,
+  "checkedAt": "2026-03-06T04:17:46.121Z",
+  "pages": [
+    {
+      "page": "/",
+      "label": "ダッシュボード",
+      "expectedText": "ダッシュボード",
+      "expectedVisible": true,
+      "interaction": "skipped",
+      "issueCount": 1,
+      "screenshot": null
+    },
+    {
+      "page": "/platforms",
+      "label": "プラットフォーム",
+      "expectedText": "プラットフォーム",
+      "expectedVisible": true,
+      "interaction": "skipped",
+      "issueCount": 1,
+      "screenshot": null
+    },
+    {
+      "page": "/sessions",
+      "label": "セッション",
+      "expectedText": "セッション",
+      "expectedVisible": true,
+      "interaction": "skipped",
+      "issueCount": 1,
+      "screenshot": null
+    },
+    {
+      "page": "/conversations",
+      "label": "チャット",
+      "expectedText": "会話ワークスペース",
+      "expectedVisible": true,
+      "interaction": "send-clicked",
+      "issueCount": 1,
+      "screenshot": null
+    },
+    {
+      "page": "/approvals",
+      "label": "承認管理",
+      "expectedText": "承認管理",
+      "expectedVisible": true,
+      "interaction": "skipped",
+      "issueCount": 1,
+      "screenshot": null
+    },
+    {
+      "page": "/timeline",
+      "label": "実行履歴",
+      "expectedText": "実行タイムライン",
+      "expectedVisible": true,
+      "interaction": "skipped",
+      "issueCount": 1,
+      "screenshot": null
+    },
+    {
+      "page": "/skills",
+      "label": "スキル",
+      "expectedText": "スキル管理",
+      "expectedVisible": true,
+      "interaction": "skipped",
+      "issueCount": 1,
+      "screenshot": null
+    },
+    {
+      "page": "/file-organizer",
+      "label": "File Organizer",
+      "expectedText": "File Organizer",
+      "expectedVisible": true,
+      "interaction": "skipped",
+      "issueCount": 1,
+      "screenshot": null
+    },
+    {
+      "page": "/settings",
+      "label": "設定",
+      "expectedText": "設定",
+      "expectedVisible": true,
+      "interaction": "skipped",
+      "issueCount": 1,
+      "screenshot": null
+    }
+  ],
+  "issues": [
+    {
+      "type": "screenshot",
+      "url": "http://127.0.0.1:3001/",
+      "message": "page.screenshot: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n",
+      "path": "/home/liush/workspace/serverlessAIAgents/apps/messaging_hub/admin_ui/output/playwright/messaging-hub-real-smoke/dashboard.png"
+    },
+    {
+      "type": "screenshot",
+      "url": "http://127.0.0.1:3001/platforms",
+      "message": "page.screenshot: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n",
+      "path": "/home/liush/workspace/serverlessAIAgents/apps/messaging_hub/admin_ui/output/playwright/messaging-hub-real-smoke/platforms.png"
+    },
+    {
+      "type": "screenshot",
+      "url": "http://127.0.0.1:3001/sessions",
+      "message": "page.screenshot: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n",
+      "path": "/home/liush/workspace/serverlessAIAgents/apps/messaging_hub/admin_ui/output/playwright/messaging-hub-real-smoke/sessions.png"
+    },
+    {
+      "type": "screenshot",
+      "url": "http://127.0.0.1:3001/conversations",
+      "message": "page.screenshot: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n",
+      "path": "/home/liush/workspace/serverlessAIAgents/apps/messaging_hub/admin_ui/output/playwright/messaging-hub-real-smoke/conversations.png"
+    },
+    {
+      "type": "screenshot",
+      "url": "http://127.0.0.1:3001/approvals",
+      "message": "page.screenshot: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n",
+      "path": "/home/liush/workspace/serverlessAIAgents/apps/messaging_hub/admin_ui/output/playwright/messaging-hub-real-smoke/approvals.png"
+    },
+    {
+      "type": "screenshot",
+      "url": "http://127.0.0.1:3001/timeline",
+      "message": "page.screenshot: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n",
+      "path": "/home/liush/workspace/serverlessAIAgents/apps/messaging_hub/admin_ui/output/playwright/messaging-hub-real-smoke/timeline.png"
+    },
+    {
+      "type": "screenshot",
+      "url": "http://127.0.0.1:3001/skills",
+      "message": "page.screenshot: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n",
+      "path": "/home/liush/workspace/serverlessAIAgents/apps/messaging_hub/admin_ui/output/playwright/messaging-hub-real-smoke/skills.png"
+    },
+    {
+      "type": "screenshot",
+      "url": "http://127.0.0.1:3001/file-organizer",
+      "message": "page.screenshot: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n",
+      "path": "/home/liush/workspace/serverlessAIAgents/apps/messaging_hub/admin_ui/output/playwright/messaging-hub-real-smoke/file-organizer.png"
+    },
+    {
+      "type": "screenshot",
+      "url": "http://127.0.0.1:3001/settings",
+      "message": "page.screenshot: Timeout 5000ms exceeded.\nCall log:\n\u001b[2m  - taking page screenshot\u001b[22m\n\u001b[2m  - waiting for fonts to load...\u001b[22m\n",
+      "path": "/home/liush/workspace/serverlessAIAgents/apps/messaging_hub/admin_ui/output/playwright/messaging-hub-real-smoke/settings.png"
+    }
+  ]
+}

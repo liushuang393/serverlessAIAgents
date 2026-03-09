@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import shutil
 import uuid
-from typing import TYPE_CHECKING, Any
+from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -15,10 +17,6 @@ from apps.messaging_hub.skills_manager import SkillsManager
 from apps.messaging_hub.storage.sqlite_store import SQLiteMessagingHubStore
 
 from agentflow.skills import RiskLevel
-
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 @pytest_asyncio.fixture()
@@ -65,6 +63,23 @@ def _fake_assistant_result() -> dict[str, Any]:
     }
 
 
+def _fake_assistant_result_for_chat() -> dict[str, Any]:
+    """chat.postMessage 用の応答（summary が汎用でも answer を優先させる）."""
+    return {
+        "summary": "✅ タスク完了: general\n\n📌 処理済み: 0",
+        "headline": "タスク完了",
+        "key_points": ["処理済み: 0"],
+        "actions": [],
+        "risks": [],
+        "intent": {"category": "general", "template": "general"},
+        "run_id": f"run_{uuid.uuid4().hex}",
+        "raw_results": {
+            "answer": "私は Messaging Hub のアシスタントです。質問に回答できます。",
+            "processed": 0,
+        },
+    }
+
+
 @pytest.mark.asyncio
 async def test_sr_chat_api_and_backward_routes(
     client_with_state: tuple[httpx.AsyncClient, dict[str, str]],
@@ -80,6 +95,13 @@ async def test_sr_chat_api_and_backward_routes(
 
     health = await client.get("/health")
     assert health.status_code == 200
+
+    api_health = await client.get("/api/health")
+    assert api_health.status_code == 200
+    api_health_json = api_health.json()
+    assert api_health_json["auth_required"] is True
+    assert api_health_json["auth_env_var"] == "MESSAGING_HUB_API_KEY"
+    assert api_health_json["auth_key_configured"] is True
 
     platforms = await client.get("/platforms", headers=headers)
     assert platforms.status_code == 200
@@ -116,6 +138,42 @@ async def test_sr_chat_api_and_backward_routes(
     history = await client.get("/api/sr_chat/conversations.history?conversation_id=chat:test", headers=headers)
     assert history.status_code == 200
     assert history.json()["total"] >= 2
+
+    export = await client.get(
+        "/api/sr_chat/export?conversation_id=chat:test&format=json",
+        headers=headers,
+    )
+    assert export.status_code == 200
+    export_json = export.json()
+    assert export_json["ok"] is True
+    assert export_json["format"] == "json"
+    assert export_json["total_messages"] >= 2
+    assert export_json["filename"].endswith(".json")
+    assert isinstance(export_json["data"], str)
+
+
+@pytest.mark.asyncio
+async def test_sr_chat_post_message_prefers_direct_answer_text(
+    client_with_state: tuple[httpx.AsyncClient, dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """汎用 summary より raw_results.answer を優先して返すことを確認."""
+    client, headers = client_with_state
+
+    async def _fake_process(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        return _fake_assistant_result_for_chat()
+
+    monkeypatch.setattr(main.assistant, "process", _fake_process)
+
+    posted = await client.post(
+        "/api/sr_chat/chat.postMessage",
+        headers=headers,
+        json={"text": "你是谁", "user_id": "u1", "conversation_id": "chat:test-reply"},
+    )
+    assert posted.status_code == 200
+    payload = posted.json()
+    assert payload["ok"] is True
+    assert payload["message"]["text"] == "私は Messaging Hub のアシスタントです。質問に回答できます。"
 
 
 @pytest.mark.asyncio
@@ -211,3 +269,99 @@ async def test_execution_and_rollback_persistence(
     restored_runs = await reopened.list_run_records(limit=20)
     run_ids = {item["run_id"] for item in restored_runs}
     assert run_id in run_ids
+
+
+@pytest.mark.asyncio
+async def test_api_health_reports_missing_auth_key(
+    client_with_state: tuple[httpx.AsyncClient, dict[str, str]],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """api/health が認証キー未設定状態を返すこと."""
+    client, _ = client_with_state
+    monkeypatch.delenv("MESSAGING_HUB_API_KEY", raising=False)
+
+    response = await client.get("/api/health")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["auth_required"] is True
+    assert payload["auth_key_configured"] is False
+    assert payload["status"] == "degraded"
+
+
+@pytest.mark.asyncio
+async def test_file_organizer_api_with_approval_flow(
+    client_with_state: tuple[httpx.AsyncClient, dict[str, str]],
+) -> None:
+    """file-organizer API が dry_run と承認付き実行の両方を処理できること."""
+    client, headers = client_with_state
+    workspace_dir = Path.cwd() / "apps" / "messaging_hub" / "data" / f"test_file_organizer_{uuid.uuid4().hex}"
+    workspace_dir.mkdir(parents=True, exist_ok=True)
+    (workspace_dir / "doc.txt").write_text("hello", encoding="utf-8")
+    (workspace_dir / "photo.jpg").write_bytes(b"\x00\x01")
+
+    try:
+        analyzed = await client.post(
+            "/api/file-organizer/analyze",
+            headers=headers,
+            json={"path": str(workspace_dir), "recursive": True, "days_old": 30},
+        )
+        assert analyzed.status_code == 200
+        analyzed_json = analyzed.json()
+        assert analyzed_json["ok"] is True
+        assert analyzed_json["total_files"] >= 2
+
+        duplicates = await client.post(
+            "/api/file-organizer/duplicates",
+            headers=headers,
+            json={"path": str(workspace_dir), "by_content": True},
+        )
+        assert duplicates.status_code == 200
+        assert duplicates.json()["ok"] is True
+
+        dry_run = await client.post(
+            "/api/file-organizer/organize",
+            headers=headers,
+            json={"path": str(workspace_dir), "dry_run": True, "user_id": "u1"},
+        )
+        assert dry_run.status_code == 200
+        dry_json = dry_run.json()
+        assert dry_json["ok"] is True
+        assert dry_json["dry_run"] is True
+        assert dry_json["total_actions"] > 0
+
+        requires = await client.post(
+            "/api/file-organizer/organize",
+            headers=headers,
+            json={"path": str(workspace_dir), "dry_run": False, "user_id": "u1"},
+        )
+        assert requires.status_code == 200
+        requires_json = requires.json()
+        assert requires_json["requires_approval"] is True
+        request_id = str(requires_json["request_id"])
+
+        approved = await client.post(
+            f"/api/approvals/{request_id}/approve",
+            headers=headers,
+            json={"approver_id": "admin"},
+        )
+        assert approved.status_code == 200
+        assert approved.json()["ok"] is True
+
+        executed = await client.post(
+            "/api/file-organizer/organize",
+            headers=headers,
+            json={
+                "path": str(workspace_dir),
+                "dry_run": False,
+                "user_id": "u1",
+                "approval_request_id": request_id,
+            },
+        )
+        assert executed.status_code == 200
+        executed_json = executed.json()
+        assert executed_json["ok"] is True
+        assert executed_json["dry_run"] is False
+        assert (workspace_dir / "Documents" / "doc.txt").exists()
+        assert (workspace_dir / "Images" / "photo.jpg").exists()
+    finally:
+        shutil.rmtree(workspace_dir, ignore_errors=True)

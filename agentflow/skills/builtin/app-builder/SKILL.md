@@ -6,7 +6,7 @@ description: |
   FastAPI + PostgreSQL + Redis + Alembic + React の完全な App 骨組みを自動生成。
   ユーザーの要件に基づいてカスタマイズ可能。
 version: 1.0.0
-author: agentflow-team
+author: AgentFlow Team
 triggers:
   - 新規アプリ作成
   - App 構築
@@ -48,6 +48,7 @@ user-invocable: true
    - 履歴 DB 必要可否
 
 2. **テンプレート適用**
+
    ```bash
    # agentflow CLI でテンプレート生成
    python -m agentflow.cli new-app \
@@ -58,6 +59,7 @@ user-invocable: true
    ```
 
 3. **ポート自動設定（重要）**
+
    ```bash
    # ポート衝突を自動回避
    python -m agentflow.tools.port_manager my_app apps/my_app
@@ -109,6 +111,7 @@ user-invocable: true
 ### フェーズ 3: 実装・テスト（Implementation）
 
 1. **DB マイグレーション**
+
    ```bash
    cd apps/my_app
    docker-compose up -d postgres-main redis
@@ -120,6 +123,7 @@ user-invocable: true
    - `services/` にビジネスロジック追加
 
 3. **テスト作成・実行**
+
    ```bash
    pytest tests/ -v
    ```
@@ -181,11 +185,11 @@ docker-compose down -v
 
 ### ホスト設定（開発/本番統一）
 
-| 環境 | HOST 設定 | 備考 |
-|------|-----------|------|
-| 開発（ローカル） | `localhost` | 127.0.0.1 も可 |
-| Docker 内から | `host.docker.internal` | ホスト側サービスへ |
-| 本番 | 実際の IP/ドメイン | 外部公開 |
+| 環境             | HOST 設定              | 備考               |
+| ---------------- | ---------------------- | ------------------ |
+| 開発（ローカル） | `localhost`            | 127.0.0.1 も可     |
+| Docker 内から    | `host.docker.internal` | ホスト側サービスへ |
+| 本番             | 実際の IP/ドメイン     | 外部公開           |
 
 ## チェックリスト
 

@@ -32,6 +32,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
 
@@ -85,6 +86,10 @@ class MessageGateway:
         # 消息处理队列（避免并发问题）
         self._message_queues: dict[str, asyncio.Queue[dict[str, Any]]] = {}
         self._queue_tasks: dict[str, asyncio.Task[None]] = {}
+        self._input_policy: Callable[[str], str | None] | None = None
+        self._blocked_response_text = (
+            "⚠️ セキュリティポリシーにより、この入力は実行できません。安全な依頼に書き換えて再送してください。"
+        )
 
         self._logger = logging.getLogger("message_gateway")
 
@@ -142,6 +147,17 @@ class MessageGateway:
             平台名称列表
         """
         return list(self._channels.keys())
+
+    def set_input_policy(
+        self,
+        policy: Callable[[str], str | None] | None,
+        *,
+        blocked_response_text: str | None = None,
+    ) -> None:
+        """Set deterministic input safety policy."""
+        self._input_policy = policy
+        if blocked_response_text:
+            self._blocked_response_text = blocked_response_text
 
     # =========================================================================
     # 会话管理
@@ -293,6 +309,33 @@ class MessageGateway:
                 user_id=user_id,
                 metadata=metadata,
             )
+
+            # 2.5 受信メッセージのルールベース安全検査
+            blocked_reason: str | None = None
+            if self._input_policy is not None:
+                blocked_reason = self._input_policy(text)
+            if blocked_reason:
+                self._logger.warning(
+                    "Blocked unsafe input from %s:%s (%s)",
+                    platform,
+                    user_id,
+                    blocked_reason,
+                )
+                try:
+                    await adapter.send_message(channel_id=channel_id, text=self._blocked_response_text)
+                except Exception as send_error:
+                    self._logger.warning("Failed to send blocked response: %s", send_error)
+                await self._broadcast_to_websocket(
+                    session_id=session.id,
+                    event_type="message_blocked",
+                    data={
+                        "platform": platform,
+                        "user_id": user_id,
+                        "channel_id": channel_id,
+                        "reason": blocked_reason,
+                    },
+                )
+                return self._blocked_response_text
 
             # 3. 发送输入指示器
             should_send_typing = send_typing if send_typing is not None else self._enable_typing

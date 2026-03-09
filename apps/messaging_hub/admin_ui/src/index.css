@@ -1,10 +1,11 @@
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap");
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
+  --font-ui:
+    "Avenir Next", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI",
+    "Yu Gothic", "BIZ UDPGothic", "Meiryo", sans-serif;
   --surface-bg: radial-gradient(
     1200px 720px at 10% -10%,
     #d7f5ff 0%,
@@ -22,7 +23,7 @@
 }
 
 body {
-  font-family: "Space Grotesk", "Noto Sans JP", sans-serif;
+  font-family: var(--font-ui);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   color: var(--text-main);

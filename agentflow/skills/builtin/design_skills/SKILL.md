@@ -6,6 +6,7 @@ description: >
   ComfyUI（ローカルGPU）から OpenAI gpt-image-1（クラウド）へ自動フォールバック。
   商品画像、ブランドビジュアル、SNS 用アセット生成に使用。
 version: 1.0.1
+author: AgentFlow Team
 triggers:
   - design
   - image generation
@@ -42,6 +43,7 @@ You are a design skills agent that generates professional image sets from natura
 ## Quick Start
 
 1. **Check available backend** (auto-detects):
+
    ```bash
    # ComfyUI (local) → OpenAI (cloud) の順で自動フォールバック
    curl -sf ${COMFYUI_URL:-http://localhost:8188}/system_stats > /dev/null \
@@ -66,6 +68,7 @@ At least one of the following backends must be available:
 ### Method 1: Python API - Full 4-Step Pipeline ✅ (Recommended)
 
 **Executes the complete design workflow:**
+
 1. **Intent Analysis** - Analyzes natural language brief
 2. **Prompt Planning** - Generates structured prompts for each image
 3. **ComfyUI Execution** - Generates images via ComfyUI
@@ -104,6 +107,7 @@ result = await engine.run({
 ```
 
 **Use this method when:**
+
 - You want AI to analyze and plan the design
 - You need multiple images with consistent style
 - You prefer natural language input over technical prompts
@@ -113,12 +117,14 @@ result = await engine.run({
 ### Method 2: Standalone Script - Direct Generation Only ⚠️ (Quick Testing)
 
 **Executes only Step 3 (ComfyUI generation):**
+
 - ❌ No intent analysis
 - ❌ No prompt planning
 - ✅ Direct image generation
 - ❌ No result aggregation
 
 **You must provide:**
+
 - Complete prompt text
 - Image dimensions
 - All generation parameters
@@ -147,12 +153,14 @@ echo '{
 ```
 
 **Use this method when:**
+
 - You already know the exact prompt to use
 - You need to generate a single image quickly
 - You want to test ComfyUI connectivity
 - You don't need AI analysis or planning
 
 **Script Parameters:**
+
 - `prompt` (required): Positive prompt text
 - `negative_prompt`: Negative prompt (default: standard negative)
 - `width`: Image width (default: 1024)
@@ -164,6 +172,7 @@ echo '{
 - `output_dir`: Output directory (default: `/tmp/design_output`)
 
 **Error Handling:**
+
 - If ComfyUI is unavailable: Returns `{"success": false, "error": "ComfyUI connection failed"}`
 - If model not found: Returns `{"success": false, "error": "Model not found: ..."}`
 - Script exits with code 1 on error
@@ -177,6 +186,7 @@ When generating multiple images from a natural language brief, the system follow
 ### Step 1: Analyze Design Brief
 
 Parse the user's brief to extract:
+
 - **Category**: PRODUCT_PHOTOGRAPHY, BRAND_IDENTITY, SOCIAL_MEDIA, ADVERTISING, PACKAGING, UI_MOCKUP
 - **Subject**: Main subject (max 100 chars)
 - **Key features**: What to emphasize (max 5)
@@ -185,13 +195,13 @@ Parse the user's brief to extract:
 
 Default role distribution by image count:
 
-| Count | Roles |
-|-------|-------|
-| 1 | HERO |
-| 2 | HERO, FEATURE |
-| 3 | HERO, FEATURE, DETAIL |
-| 4 | HERO, FEATURE, FEATURE, LIFESTYLE |
-| 5+ | 1 HERO + features + details + lifestyles |
+| Count | Roles                                    |
+| ----- | ---------------------------------------- |
+| 1     | HERO                                     |
+| 2     | HERO, FEATURE                            |
+| 3     | HERO, FEATURE, DETAIL                    |
+| 4     | HERO, FEATURE, FEATURE, LIFESTYLE        |
+| 5+    | 1 HERO + features + details + lifestyles |
 
 ### Step 2: Build Prompt Plan
 
@@ -205,6 +215,7 @@ For each image, build a Stable Diffusion prompt using role templates:
 - **INFOGRAPHIC**: `{subject}, clean background, space for text overlay, minimal composition`
 
 Global style settings:
+
 - **Color palette**: From brand colors or neutral tones
 - **Lighting**: Based on style (dark/tech = dramatic, warm = golden hour, minimal = flat)
 - **Camera angle**: Based on category
@@ -215,13 +226,13 @@ Use a shared seed across all images for consistency.
 **SDXL Aspect Ratio Resolutions:**
 
 | Ratio | Resolution |
-|-------|-----------|
-| 1:1 | 1024x1024 |
-| 16:9 | 1344x768 |
-| 9:16 | 768x1344 |
-| 4:3 | 1152x896 |
-| 3:4 | 896x1152 |
-| 4:5 | 896x1120 |
+| ----- | ---------- |
+| 1:1   | 1024x1024  |
+| 16:9  | 1344x768   |
+| 9:16  | 768x1344   |
+| 4:3   | 1152x896   |
+| 3:4   | 896x1152   |
+| 4:5   | 896x1120   |
 
 ### Step 3: Execute (Auto-Fallback)
 
@@ -269,11 +280,13 @@ After generating all images, provide a summary:
    - Seed: 42, Size: 1344x768
 
 ## Generation Parameters
+
 - Model: sd_xl_base_1.0.safetensors
 - Steps: 20, CFG Scale: 7.0
 - Shared Seed: 42 (for consistency)
 
 ## Next Steps
+
 - Review images in output directory
 - Adjust prompts if needed and regenerate
 - Use different seeds for variations
@@ -282,6 +295,7 @@ After generating all images, provide a summary:
 ## Troubleshooting
 
 ### No Backend Available
+
 ```bash
 # Check ComfyUI
 curl -sf http://localhost:8188/system_stats
@@ -291,17 +305,20 @@ echo $OPENAI_API_KEY | head -c 8
 ```
 
 ### ComfyUI Model Not Found
+
 ```bash
 # List available models
 curl -sf http://localhost:8188/object_info | grep -o '"[^"]*\.safetensors"'
 ```
 
 ### Generation Timeout (ComfyUI)
+
 - Increase timeout in script (default: 300s)
 - Check ComfyUI queue status: `curl http://localhost:8188/queue`
 - Reduce image size or steps for faster generation
 
 ### OpenAI API Error
+
 - Verify API key: `curl -H "Authorization: Bearer $OPENAI_API_KEY" https://api.openai.com/v1/models | head -c 100`
 - Check rate limits and billing at platform.openai.com
 

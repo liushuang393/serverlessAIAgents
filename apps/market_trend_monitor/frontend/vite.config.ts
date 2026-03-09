@@ -1,7 +1,7 @@
-import fs from 'node:fs';
-import react from '@vitejs/plugin-react';
-import { defineConfig, loadEnv } from 'vite';
-import path from 'path';
+import fs from "node:fs";
+import react from "@vitejs/plugin-react";
+import { defineConfig, loadEnv } from "vite";
+import path from "path";
 
 type AppConfig = {
   api_host?: string;
@@ -19,12 +19,15 @@ type AppConfig = {
   };
 };
 
-function parsePort(value: string | number | undefined, fallback: number): number {
-  if (typeof value === 'number' && Number.isInteger(value) && value > 0) {
+function parsePort(
+  value: string | number | undefined,
+  fallback: number,
+): number {
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
     return value;
   }
 
-  if (typeof value === 'string' && value.trim().length > 0) {
+  if (typeof value === "string" && value.trim().length > 0) {
     const parsed = Number.parseInt(value, 10);
     if (Number.isInteger(parsed) && parsed > 0) {
       return parsed;
@@ -35,14 +38,14 @@ function parsePort(value: string | number | undefined, fallback: number): number
 }
 
 function normalizeBaseURL(baseURL: string): string {
-  return baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
+  return baseURL.endsWith("/") ? baseURL.slice(0, -1) : baseURL;
 }
 
 function readAppConfig(): AppConfig {
-  const configPath = path.resolve(__dirname, '../app_config.json');
+  const configPath = path.resolve(__dirname, "../app_config.json");
 
   try {
-    const raw = fs.readFileSync(configPath, 'utf-8');
+    const raw = fs.readFileSync(configPath, "utf-8");
     const parsed = JSON.parse(raw) as AppConfig;
     return parsed;
   } catch {
@@ -53,54 +56,64 @@ function readAppConfig(): AppConfig {
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
   const appConfig = readAppConfig();
-  const env = loadEnv(mode, path.resolve(__dirname, '..'), '');
+  const env = loadEnv(mode, path.resolve(__dirname, ".."), "");
 
   const runtimeBackend = appConfig.runtime?.urls?.backend;
-  const backendFromRuntime = typeof runtimeBackend === 'string' ? normalizeBaseURL(runtimeBackend) : '';
+  const backendFromRuntime =
+    typeof runtimeBackend === "string" ? normalizeBaseURL(runtimeBackend) : "";
   const runtimeBackendHost = (() => {
-    if (!backendFromRuntime) return '';
+    if (!backendFromRuntime) return "";
     try {
       return new URL(backendFromRuntime).hostname;
     } catch {
-      return '';
+      return "";
     }
   })();
 
-  const apiHost = env.MARKET_TREND_MONITOR_API_HOST || appConfig.api_host || runtimeBackendHost || 'localhost';
+  const apiHost =
+    env.MARKET_TREND_MONITOR_API_HOST ||
+    appConfig.api_host ||
+    runtimeBackendHost ||
+    "localhost";
   const apiPort = parsePort(
     env.MARKET_TREND_MONITOR_API_PORT,
-    parsePort(appConfig.ports?.api, parsePort(appConfig.api_port, 8002))
+    parsePort(appConfig.ports?.api, parsePort(appConfig.api_port, 8002)),
   );
   const frontendPort = parsePort(
     env.MARKET_TREND_MONITOR_FRONTEND_PORT,
-    parsePort(appConfig.ports?.frontend, parsePort(appConfig.frontend_port, 3002))
+    parsePort(
+      appConfig.ports?.frontend,
+      parsePort(appConfig.frontend_port, 3002),
+    ),
   );
 
-  const apiProxyHost = apiHost === '0.0.0.0' ? 'localhost' : apiHost;
+  const apiProxyHost = apiHost === "0.0.0.0" ? "localhost" : apiHost;
   const backendOrigin = normalizeBaseURL(
-    env.MARKET_TREND_MONITOR_API_ORIGIN || backendFromRuntime || `http://${apiProxyHost}:${apiPort}`
+    env.MARKET_TREND_MONITOR_API_ORIGIN ||
+      backendFromRuntime ||
+      `http://${apiProxyHost}:${apiPort}`,
   );
   const apiBaseURL = normalizeBaseURL(
-    env.VITE_API_BASE_URL || `${backendOrigin}/api`
+    env.VITE_API_BASE_URL || `${backendOrigin}/api`,
   );
 
   return {
-    envDir: path.resolve(__dirname, '..'),
+    envDir: path.resolve(__dirname, ".."),
     define: {
       __MARKET_TREND_MONITOR_API_BASE_URL__: JSON.stringify(apiBaseURL),
     },
     plugins: [react()],
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, './src'),
-        // agentflow フレームワーク i18n 基底実装へのエイリアス
-        '@agentflow/i18n': path.resolve(__dirname, '../../../agentflow/i18n/frontend'),
+        "@": path.resolve(__dirname, "./src"),
+        // Docker build でも安定して解決できるよう、アプリ内 i18n 基底実装を参照する。
+        "@agentflow/i18n": path.resolve(__dirname, "./src/i18n/base"),
       },
     },
     server: {
       port: frontendPort,
       proxy: {
-        '/api': {
+        "/api": {
           target: backendOrigin,
           changeOrigin: true,
         },
@@ -108,18 +121,18 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       globals: true,
-      environment: 'jsdom',
-      setupFiles: './src/test/setup.ts',
+      environment: "jsdom",
+      setupFiles: "./src/test/setup.ts",
       coverage: {
-        provider: 'v8',
-        reporter: ['text', 'json', 'html'],
+        provider: "v8",
+        reporter: ["text", "json", "html"],
         exclude: [
-          'node_modules/',
-          'src/test/',
-          '**/*.d.ts',
-          '**/*.config.*',
-          '**/mockData',
-          'dist/',
+          "node_modules/",
+          "src/test/",
+          "**/*.d.ts",
+          "**/*.config.*",
+          "**/mockData",
+          "dist/",
         ],
       },
     },

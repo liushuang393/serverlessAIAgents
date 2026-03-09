@@ -6,7 +6,7 @@ description: |
   1.基盤作成 → 2.仕様読取 → 3.設計 → 4.実装 → 5.テスト → 不足分析 → 循環
   の反復開発プロセスを定義。
 version: 1.0.0
-author: agentflow-team
+author: AgentFlow Team
 triggers:
   - 開発フロー
   - 開発手順
@@ -74,14 +74,17 @@ user-invocable: true
 **目的**: App の骨架を生成
 
 **入力**:
+
 - アプリ名、タイトル、説明
 - DB 設定（名前、ユーザー、パスワード）
 - オプション（Redis、履歴 DB、フロントエンド）
 
 **出力**:
+
 - `apps/{app_name}/` ディレクトリ一式
 
 **手順**:
+
 ```bash
 # 1. テンプレート生成
 python -m agentflow.templates.template_manager generate \
@@ -100,6 +103,7 @@ curl http://localhost:8000/health
 **目的**: ユーザー要件を構造化
 
 **チェックリスト**:
+
 - [ ] ユーザーストーリー一覧
 - [ ] 主要エンティティ特定
 - [ ] エンティティ間関係
@@ -111,11 +115,13 @@ curl http://localhost:8000/health
 **目的**: 技術設計
 
 **成果物**:
+
 1. **DB スキーマ** (`repositories/models.py`)
 2. **API スキーマ** (`schemas/`)
 3. **API エンドポイント設計** (`routers/`)
 
 **設計パターン**:
+
 ```python
 # Repository パターン
 class EntityRepository:
@@ -135,6 +141,7 @@ class EntityService:
 ### 4. 実装（Implementation）
 
 **順序**:
+
 1. `models.py` - エンティティ定義
 2. `migrations/` - Alembic マイグレーション
 3. `repositories/` - データアクセス層
@@ -145,11 +152,13 @@ class EntityService:
 ### 5. テスト（Testing）
 
 **テスト種類**:
+
 - 単体テスト: `tests/unit/`
 - 統合テスト: `tests/integration/`
 - E2E テスト: `tests/e2e/`
 
 **実行**:
+
 ```bash
 # 単体テスト
 pytest tests/unit/ -v
@@ -161,11 +170,13 @@ pytest --cov=. --cov-report=html
 ### 不足分析・ループ
 
 **トリガー**:
+
 - テスト失敗
 - 新規要件追加
 - バグ発見
 
 **対応**:
+
 1. 原因分析
 2. 影響範囲特定
 3. 設計見直し（必要な場合）

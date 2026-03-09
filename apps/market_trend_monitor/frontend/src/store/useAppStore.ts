@@ -6,14 +6,20 @@
  * 注意: 状態の更新は必ずアクションを通して行うこと
  */
 
-import { create } from 'zustand';
-import type { CollectJob, CollectResponse, Trend, Report, Notification } from '@/types';
-import { SourceType } from '@/types';
-import { apiClient } from '@/api/client';
+import { create } from "zustand";
+import type {
+  CollectJob,
+  CollectResponse,
+  Trend,
+  Report,
+  Notification,
+} from "@/types";
+import { SourceType } from "@/types";
+import { apiClient } from "@/api/client";
 
-const SETTINGS_STORAGE_KEY = 'market-trend-monitor:settings:v1';
-const JOB_STORAGE_KEY = 'market-trend-monitor:current-job:v1';
-const DEFAULT_KEYWORDS = ['COBOL', 'Java migration', 'AI'];
+const SETTINGS_STORAGE_KEY = "market-trend-monitor:settings:v1";
+const JOB_STORAGE_KEY = "market-trend-monitor:current-job:v1";
+const DEFAULT_KEYWORDS = ["COBOL", "Java migration", "AI"];
 const DEFAULT_COLLECTION_WINDOW_DAYS = 7;
 const SOURCE_VALUES: SourceType[] = [
   SourceType.NEWS,
@@ -35,7 +41,7 @@ interface PersistedSettings {
 }
 
 const loadPersistedSettings = (): PersistedSettings | null => {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return null;
   }
 
@@ -52,17 +58,20 @@ const loadPersistedSettings = (): PersistedSettings | null => {
     };
 
     const keywords = Array.isArray(parsed.keywords)
-      ? parsed.keywords.filter((item): item is string => typeof item === 'string')
+      ? parsed.keywords.filter(
+          (item): item is string => typeof item === "string",
+        )
       : [];
 
     const sources = Array.isArray(parsed.sources)
       ? parsed.sources.filter(
           (item): item is SourceType =>
-            typeof item === 'string' && SOURCE_VALUES.includes(item as SourceType)
+            typeof item === "string" &&
+            SOURCE_VALUES.includes(item as SourceType),
         )
       : [];
     const collectionWindowDays = COLLECTION_WINDOWS.includes(
-      parsed.collectionWindowDays as CollectionWindowDays
+      parsed.collectionWindowDays as CollectionWindowDays,
     )
       ? (parsed.collectionWindowDays as CollectionWindowDays)
       : DEFAULT_COLLECTION_WINDOW_DAYS;
@@ -74,7 +83,7 @@ const loadPersistedSettings = (): PersistedSettings | null => {
 };
 
 const savePersistedSettings = (settings: PersistedSettings): void => {
-  if (typeof window === 'undefined') return;
+  if (typeof window === "undefined") return;
   window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
 };
 
@@ -142,7 +151,7 @@ interface AppState {
   collectData: (
     keywords: string[],
     sources: SourceType[],
-    collectionWindowDays: CollectionWindowDays
+    collectionWindowDays: CollectionWindowDays,
   ) => Promise<CollectResponse | null>;
 
   // ジョブ管理
@@ -172,9 +181,12 @@ export const useAppStore = create<AppState>((set, get) => ({
   notifications: [],
   loading: false,
   error: null,
-  keywords: persistedSettings?.keywords.length ? persistedSettings.keywords : DEFAULT_KEYWORDS,
+  keywords: persistedSettings?.keywords.length
+    ? persistedSettings.keywords
+    : DEFAULT_KEYWORDS,
   sources: persistedSettings?.sources ?? [],
-  collectionWindowDays: persistedSettings?.collectionWindowDays ?? DEFAULT_COLLECTION_WINDOW_DAYS,
+  collectionWindowDays:
+    persistedSettings?.collectionWindowDays ?? DEFAULT_COLLECTION_WINDOW_DAYS,
   currentJobId: loadPersistedJobId(),
   jobStatus: null,
 
@@ -190,7 +202,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const response = await apiClient.getTrends(50);
       set({ trends: response.trends, loading: false });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = error instanceof Error ? error.message : "Unknown error";
       set({ error: message, loading: false });
     }
   },
@@ -202,7 +214,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       const response = await apiClient.getReports(20);
       set({ reports: response.reports, loading: false });
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = error instanceof Error ? error.message : "Unknown error";
       set({ error: message, loading: false });
     }
   },
@@ -223,12 +235,17 @@ export const useAppStore = create<AppState>((set, get) => ({
         },
       });
 
-      // ジョブIDを保存してポーリング開始
-      get().startJobPolling(response.job_id);
+      // ジョブIDが返る実装ではポーリング、即時完了レスポンスでは一覧を更新
+      if (typeof response.job_id === "string" && response.job_id.length > 0) {
+        get().startJobPolling(response.job_id);
+      } else {
+        const state = get();
+        void Promise.all([state.fetchTrends(), state.fetchReports()]);
+      }
       set({ loading: false });
       return response;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
+      const message = error instanceof Error ? error.message : "Unknown error";
       set({ error: message, loading: false });
       return null;
     }
@@ -241,23 +258,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     stopPolling();
 
     _pollTimer = setInterval(() => {
-      apiClient.getJob(jobId).then((job) => {
-        set({ jobStatus: job });
+      apiClient
+        .getJob(jobId)
+        .then((job) => {
+          set({ jobStatus: job });
 
-        if (job.status !== 'running') {
-          stopPolling();
-          savePersistedJobId(null);
-          set({ currentJobId: null });
+          if (job.status !== "running") {
+            stopPolling();
+            savePersistedJobId(null);
+            set({ currentJobId: null });
 
-          if (job.status === 'completed') {
-            // 完了時にデータを自動更新
-            const state = get();
-            void Promise.all([state.fetchTrends(), state.fetchReports()]);
+            if (job.status === "completed") {
+              // 完了時にデータを自動更新
+              const state = get();
+              void Promise.all([state.fetchTrends(), state.fetchReports()]);
+            }
           }
-        }
-      }).catch(() => {
-        // ポーリングエラーは無視（一時的なネットワーク障害等）
-      });
+        })
+        .catch(() => {
+          // ポーリングエラーは無視（一時的なネットワーク障害等）
+        });
     }, 3000);
   },
 
@@ -266,22 +286,25 @@ export const useAppStore = create<AppState>((set, get) => ({
     const jobId = get().currentJobId;
     if (!jobId) return;
 
-    apiClient.getJob(jobId).then((job) => {
-      set({ jobStatus: job });
-      if (job.status === 'running') {
-        get().startJobPolling(jobId);
-      } else {
+    apiClient
+      .getJob(jobId)
+      .then((job) => {
+        set({ jobStatus: job });
+        if (job.status === "running") {
+          get().startJobPolling(jobId);
+        } else {
+          savePersistedJobId(null);
+          set({ currentJobId: null });
+          if (job.status === "completed") {
+            const state = get();
+            void Promise.all([state.fetchTrends(), state.fetchReports()]);
+          }
+        }
+      })
+      .catch(() => {
         savePersistedJobId(null);
         set({ currentJobId: null });
-        if (job.status === 'completed') {
-          const state = get();
-          void Promise.all([state.fetchTrends(), state.fetchReports()]);
-        }
-      }
-    }).catch(() => {
-      savePersistedJobId(null);
-      set({ currentJobId: null });
-    });
+      });
   },
 
   // 設定更新
@@ -324,7 +347,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   markNotificationAsRead: (id) =>
     set((state) => ({
       notifications: state.notifications.map((n) =>
-        n.id === id ? { ...n, read: true } : n
+        n.id === id ? { ...n, read: true } : n,
       ),
     })),
 

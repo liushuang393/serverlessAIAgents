@@ -4,28 +4,47 @@
 
 ## 機能概要
 
-- Telegram / Slack / Discord を統合し、単一ボット基盤で運用可能。
-- セッション管理とチャネル変換を標準化し、チャット処理を共通化。
-- WebSocket 連携でリアルタイム配信とオペレーション監視を実現。
+Messaging Hub は、複数のメッセージプラットフォームを単一のゲートウェイで統合し、AI エージェントと人間オペレーターが連携して動作する **ビジネス向けマルチプラットフォーム AI チャットボット基盤**です。
+
+主要な機能ブロック：
+
+- **6 プラットフォーム統合**: Telegram・Slack・Discord・Microsoft Teams・WhatsApp・Signal に対応。共通のアダプターパターンで実装されており、環境変数にトークンを設定するだけで有効化できる。
+- **統一セッション管理**: プラットフォームを横断してユーザーセッションを追跡。各会話の開始時刻・最終メッセージ・メッセージ数を一元管理する。
+- **AI パーソナルアシスタント（`PersonalAssistantCoordinator`）**: 自然言語のタスク指示（例:「メールを整理して」「競合分析レポートを作成して」）を受け取り、意図を分類したうえで適切なスキルへ振り分け、summary・key_points・actions・risks を返す。
+- **スキルシステム**: スキルの一覧・有効化・無効化・自然言語からの動的生成・実行が可能。実行はすべてトラッキングされ、成功/失敗・所要時間・コストが記録される。
+- **承認ワークフロー（Human-in-the-Loop）**: ファイル整理などリスクの高い操作は、管理画面からの承認なしに実行されない。保留中・承認済み・却下の全履歴を永続化する。
+- **実行トラッキング**: `RunStarted → StepStarted → ToolExecuted → EvidenceAdded → RunFinished` の標準イベントチェーンで、各スキル実行のライフサイクルを追跡・記録する。アーティファクト（生成物）とロールバックハンドルも保持する。
+- **リアルタイム WebSocket ハブ**: 管理ダッシュボードとのリアルタイム同期。クライアントはチャンネル別にイベント購読し、メッセージ到着・実行状況の即時反映を受け取れる。
+- **File Organizer**: ディレクトリ分析・重複ファイル検出・ルールベースのファイル整理を提供。`dry_run=false` の実際の整理実行には承認が必須。
+- **sr_chat API**: 独自チャット UI 専用の会話管理 API。会話一覧・履歴・メッセージ投稿・更新・ファイルアップロード・エクスポートをサポートする。
+- **会話エクスポート**: JSON・CSV・Markdown の 3 形式で会話履歴をエクスポート可能。
 
 ## 優位性
 
-- マルチチャネル拡張時も中核ロジックを再利用でき、実装コストが低い。
-- LLM/Agent 層を疎結合化し、プロバイダー切替に強い。
-- 監査・セキュリティ運用を前提にした business 向け設計。
+- **プラットフォーム無依存**: 6 プラットフォームへの対応を共通アダプター層で実現。新プラットフォーム追加時も中核ロジックの変更は不要。
+- **承認ゲートによる安全運用**: 高リスク操作は必ず人間の承認を経る設計。`autonomous` / `approval_required` のセキュリティモードを `.env` で切り替え可能。
+- **LLM プロバイダー疎結合**: OpenAI・Anthropic 等を `get_llm()` で抽象化し、プロバイダー切替時もアプリコードの変更が不要。
+- **API キー自動ブートストラップ**: `.env` に API キーが設定されていれば、UI が `/api/admin-key` を通じて自動取得するため、初回セットアップでの手動入力が不要。
+- **永続化と復元**: 承認リクエスト・実行イベントを起動時にストアから復元し、再起動後も運用状態を維持する。
 
 ## 技術アーキテクチャ
 
-- Channel Adapter → Message Gateway → ChatBot Skill → Agent 層の直列構成。
-- FastAPI API と WebSocket Hub を同居させ、運用統制を単純化。
-- AgentFlow マルチエージェント機能を応答生成・制御に適用。
+- **Channel Adapter**: 各プラットフォームの差異（Webhook 形式・Bot API 仕様）を吸収し、内部統一メッセージ形式に変換する。
+- **Message Gateway**: 登録済みアダプターを管理し、受信メッセージのルーティングと送信を担う。プラットフォーム別のメッセージ数・最終活動時刻などの統計も保持する。
+- **ChatBot Skill + PersonalAssistantCoordinator**: セッション管理と AI 応答生成の中核。意図ルーターが自然言語を分類し、テンプレートベースのタスクプランを構築する。
+- **Skill Gateway + Approval Manager**: スキル呼び出しをインターセプトし、リスクレベルに応じて自動承認または人間承認へルーティングする。
+- **Execution Tracker**: 実行イベントの開始・完了・エラーを追跡し、統計（成功率・平均所要時間・コスト）を提供する。
+- **WebSocket Hub**: 管理ダッシュボードへのリアルタイムイベント配信を担う Pub/Sub ハブ。
+- **FastAPI + Lifespan 管理**: アプリ起動時にストア初期化・承認状態復元・プラットフォーム登録・Discord バックグラウンドタスク起動を行う。シャットダウン時はすべてのリソースをクリーンアップする。
 
 ## アプリケーション階層
 
-- Channel Layer: 各メッセージプラットフォーム接続。
-- Routing Layer: 受信正規化・意図分配・セッション統合。
-- Agent Layer: 応答生成・ツール実行・調停。
-- Delivery Layer: 返信送信・モニタリング・監査。
+- **Channel Layer**: 各メッセージプラットフォームとの接続（Webhook / Bot API / 長時間接続）。
+- **Gateway Layer**: メッセージの受信正規化・プラットフォーム間ルーティング・統計収集。
+- **Session Layer**: ユーザーセッションの作成・追跡・会話履歴管理（sr_chat ストア）。
+- **Intent Layer**: 自然言語の意図分類・テンプレートマッチング・タスクプラン構築。
+- **Skill Layer**: スキル呼び出し・承認ゲート・実行トラッキング・アーティファクト記録。
+- **Delivery Layer**: 返信送信・WebSocket ブロードキャスト・運用監視。
 <!-- README_REQUIRED_SECTIONS_END -->
 
 統一メッセージプラットフォームゲートウェイ。[moltbot](https://github.com/moltbot/moltbot) に類似した実装で、Telegram、Slack、Discord などのマルチプラットフォーム統合をサポート。
@@ -38,25 +57,86 @@
 
 ## 🚀 機能
 
-- ✅ **マルチプラットフォーム対応**: Telegram, Slack, Discord
-- ✅ **統一セッション管理**: クロスプラットフォームユーザーセッション追跡
-- ✅ **リアルタイム同期**: WebSocket 双方向通信
-- ✅ **AI Agent 統合**: AgentFlow マルチエージェント機能を活用
-- ✅ **リッチテキスト対応**: Markdown, Embeds, Block Kit
-- ✅ **松結合設計**: LLM プロバイダー自動検出
+### メッセージプラットフォーム統合
+
+- ✅ **Telegram**: Webhook + Bot API。`/webhook/telegram` でメッセージ受信・応答送信
+- ✅ **Slack**: イベント購読 + 署名検証。`/webhook/slack` で Bot Events を処理
+- ✅ **Discord**: 長時間接続の Bot モード（バックグラウンドタスクで常時稼働）
+- ✅ **Microsoft Teams**: Bot Framework Activity を処理（`TEAMS_APP_ID` / `TEAMS_APP_PASSWORD` で有効化）
+- ✅ **WhatsApp**: Meta Business API 連携（Webhook 検証 + メッセージ処理）
+- ✅ **Signal**: signal-cli-rest-api コールバックモードでの受信
+
+### セッション・会話管理
+
+- ✅ **統一セッション管理**: プラットフォーム横断でユーザーセッションを追跡。開始時刻・最終メッセージ・メッセージ数を一元管理
+- ✅ **sr_chat 会話 API**: 独自チャット UI 専用の会話ストア。複数会話（`conversation_id`）を並行管理し、メッセージ投稿・更新・ファイルアップロードをサポート
+- ✅ **会話エクスポート**: JSON・CSV・Markdown の 3 形式でエクスポート可能
+
+### AI エージェント・スキル
+
+- ✅ **PersonalAssistantCoordinator**: 自然言語タスク（メール整理・ファイル整理・調査・レポート作成など）を受け取り、意図分類 → スキル実行 → summary/key_points/actions/risks を返す
+- ✅ **スキル管理 API**: スキルの一覧・有効化・無効化・自然言語からの動的生成・手動呼び出しが可能
+- ✅ **ワークフロー管理**: 複数スキルを組み合わせたワークフローの一覧・状態管理
+- ✅ **意図ルーター + テンプレート**: `email_organize` / `file_organize` / `system_optimize` / `research` / `competitor_analysis` / `report` など事前定義テンプレートによる高速タスクプラン構築
+
+### 承認・安全運用（Human-in-the-Loop）
+
+- ✅ **承認ワークフロー**: 高リスク操作（ファイル整理の実行など）は管理画面からの承認なしに実行されない。PENDING / APPROVED / REJECTED / AUTO_APPROVED の状態を永続化
+- ✅ **承認 API**: 保留中の承認一覧取得・承認実行・拒否・承認履歴・統計の各エンドポイントを提供
+- ✅ **セキュリティモード**: `approval_required`（既定）/ `autonomous` を `.env` の `SECURITY_MODE` で切り替え可能
+
+### 実行トラッキング・監査
+
+- ✅ **イベントライフサイクル記録**: `RunStarted → StepStarted → ToolExecuted → EvidenceAdded → RunFinished` の標準イベントチェーンで各スキル実行を追跡
+- ✅ **アーティファクト管理**: スキル実行結果の生成物とロールバックハンドルをストアに保持
+- ✅ **実行統計**: 成功率・平均所要時間・失敗理由・コスト推定値をリアルタイム集計
+
+### File Organizer
+
+- ✅ **ディレクトリ分析**: 指定パスの古いファイル・サイズ分布・種別統計を分析
+- ✅ **重複ファイル検出**: コンテンツハッシュまたは名前ベースで重複を検出
+- ✅ **ファイル整理実行**: ルールベースの整理を実行（`dry_run=true` でプレビュー可能。実際の実行は承認必須）
+
+### 管理ダッシュボード（Admin UI）
+
+- ✅ **リアルタイム同期**: WebSocket（`/ws`）経由で管理ダッシュボードへイベントをリアルタイム配信
+- ✅ **API キー自動ブートストラップ**: `.env` に API キーが設定済みであれば UI が自動取得し、手動入力が不要
+- ✅ **統合ダッシュボード**: 会話一覧・承認管理・実行タイムライン・File Organizer・スキル管理を統一 UI で提供
+
+### その他
+
+- ✅ **A2A AgentCard**: `/api/a2a/card` で Agent の能力・スキル情報を公開（他エージェントとの連携用）
+- ✅ **CLI 診断提案**: 低信頼度のトラブルシュート要求に対し、読み取り専用の CLI 調査を提案し、確認後に実行
+- ✅ **LLM プロバイダー疎結合**: `get_llm()` で OpenAI・Anthropic 等を自動検出・切り替え可能
 
 ## 📋 アーキテクチャ
 
 ```
-Message Platforms (Telegram/Slack/Discord)
+Message Platforms
+  Telegram / Slack / Discord / Teams / WhatsApp / Signal
+           ↓  (Webhook / Bot API / 長時間接続)
+    Channel Adapters  ─────────────────────────────
+           ↓                                       |
+    Message Gateway                          Admin REST API
+    (ルーティング・統計収集)               /api/platforms, /api/sessions
+           ↓                               /api/skills, /api/approvals
+    ChatBot Skill                          /api/executions, /api/workflows
+    (セッション管理・sr_chat ストア)       /api/file-organizer, etc.
+           ↓                                       |
+    PersonalAssistantCoordinator ─ Intent Router   |
+    (意図分類 → タスクプラン構築)     ↓             |
+           ↓                   Skill Templates     |
+    Skill Gateway                                  |
+    (スキル呼び出し・リスク評価)                   |
+           ↓                                       |
+    Approval Manager ─── ← 承認 API ──────────────┘
+    (PENDING/APPROVED/REJECTED)
            ↓
-    Message Gateway (コアルーティング)
+    Execution Tracker
+    (RunStarted→ToolExecuted→RunFinished)
            ↓
-    ChatBot Skill (セッション管理)
-           ↓
-    Agent/Coordinator (AI 処理)
-           ↓
-    WebSocket Hub → Frontend (Live Canvas)
+    WebSocket Hub ──→ Admin Dashboard (React UI)
+    (リアルタイムイベント配信)    リアルタイム同期
 ```
 
 ## 🛠️ 開発環境（インストール: 統一手順）
@@ -109,6 +189,7 @@ vim apps/messaging_hub/.env
 ```bash
 # ローカル開発（ホットリロード有効）
 # ポートは app_config.json から自動読み込み（8004）
+conda activate agentflow
 python -m apps.messaging_hub.main --reload
 
 # 本番起動（リロードなし）
@@ -132,8 +213,24 @@ npm run dev
 - 画面: `http://localhost:3001/conversations`
 - 内容: `sr_chat` API 連携の会話一覧・履歴表示・送信（assistant応答取得）
 - 主要API: `/api/sr_chat/conversations.list` `/api/sr_chat/conversations.history` `/api/sr_chat/chat.postMessage`
+- 拡張API: `/api/sr_chat/chat.update` `/api/sr_chat/files.upload` `/api/sr_chat/events.subscribe` `/api/sr_chat/export`
 - デザイン: ガラス調 + 奥行き（3D感）を持つ独自 UI テーマを適用
 - スキル運用: `/api/skills*` `/api/workflows*` と連携する Skills/Workflow 管理画面を提供
+- 運用導線: 承認管理 `/approvals`、実行履歴 `/timeline`、File Organizer `/file-organizer` を含む統合ダッシュボード
+- PWA インストール: ブラウザの「インストール」操作でローカルアプリ化可能（デスクトップ/Android/iOS）
+
+PWA（インストール）手順:
+
+- **Windows / macOS (Chrome/Edge)**:
+  - `http://localhost:3001/` を開き、アドレスバー右側のインストールアイコンをクリック
+  - または画面右上の「インストール」ボタンから実行
+- **Android (Chrome)**:
+  - ブラウザメニュー → `アプリをインストール` / `ホーム画面に追加`
+- **iOS (Safari)**:
+  - 共有メニュー → `ホーム画面に追加`
+- 要件:
+  - `localhost` または `https` 配信であること（開発時は `localhost` で可）
+  - 初回アクセス後に manifest / service worker が読み込まれていること
 
 依存関係ポリシー（admin_ui）:
 
@@ -147,6 +244,11 @@ npm run dev
 conda activate agentflow
 python -m apps.platform.main publish ./apps/messaging_hub --target docker
 ```
+
+発布時の補足（PWA）:
+
+- `admin_ui` のビルド成果物に `manifest.webmanifest` / `sw.js` / `public/icons/*` が含まれる。
+- 追加の publish 手順は不要（既存の `apps.platform.main publish` で同梱される）。
 
 ## 🤖 プラットフォーム設定
 
@@ -236,6 +338,15 @@ python -m apps.platform.main publish ./apps/messaging_hub --target docker
 | `/api/sr_chat/chat.update`           | POST     | メッセージ更新                     |
 | `/api/sr_chat/files.upload`          | POST     | ファイルアップロード記録           |
 | `/api/sr_chat/events.subscribe`      | POST     | イベント購読登録                   |
+| `/api/sr_chat/export`                | GET      | sr_chat 履歴エクスポート           |
+
+### File Organizer APIs（管理画面 `/file-organizer` で利用）
+
+| エンドポイント                   | メソッド | 説明                                                     |
+| -------------------------------- | -------- | -------------------------------------------------------- |
+| `/api/file-organizer/analyze`    | POST     | ディレクトリ分析                                         |
+| `/api/file-organizer/duplicates` | POST     | 重複ファイル検出                                         |
+| `/api/file-organizer/organize`   | POST     | ファイル整理（`dry_run=false` は承認要求を返す場合あり） |
 
 ### WebSocket
 
@@ -449,17 +560,22 @@ CMD ["python", "-m", "apps.messaging_hub.main"]
 
 ## 🆚 Moltbot との比較
 
-| 機能               | Moltbot                     | Messaging Hub                          |
-| ------------------ | --------------------------- | -------------------------------------- |
-| プラットフォーム   | 12+ (WhatsApp, iMessage 等) | 3 (Telegram/Slack/Discord, 拡張可能)   |
-| アーキテクチャ     | Gateway 中心                | Gateway + Agent 層の直列構成           |
-| マルチエージェント | 基本ルーティング            | AgentFlow Coordinator 統合             |
-| メモリ             | 不明                        | セッション管理（インメモリ）           |
-| UI                 | Live Canvas                 | admin_ui (React) + WebSocket Hub       |
-| プロトコル         | A2UI                        | HTTP/WebSocket（MCP/A2A は 🔜 計画中） |
-| 音声               | ✅ (ElevenLabs)             | 🔜 (計画中)                            |
-| デバイスツール     | ✅ (カメラ, 位置情報)       | 🔜 (計画中)                            |
-| ブラウザ制御       | ✅ (Playwright)             | 🔜 (計画中)                            |
+| 機能             | Moltbot                     | Messaging Hub                                                                |
+| ---------------- | --------------------------- | ---------------------------------------------------------------------------- |
+| プラットフォーム | 12+ (WhatsApp, iMessage 等) | 6 (Telegram/Slack/Discord/Teams/WhatsApp/Signal, アダプター追加可能)         |
+| アーキテクチャ   | Gateway 中心                | Channel Adapter → Gateway → Skill → Approval → Tracking の多層構成           |
+| AI エージェント  | 基本ルーティング            | PersonalAssistantCoordinator + Intent Router + Skill Gateway                 |
+| 承認フロー       | 不明                        | ✅ Human-in-the-Loop 承認システム（PENDING/APPROVED/REJECTED を永続化）      |
+| 実行トラッキング | 不明                        | ✅ イベントライフサイクル記録（RunStarted → RunFinished + アーティファクト） |
+| スキル管理       | 不明                        | ✅ 一覧・有効化・無効化・自然言語生成・ワークフロー管理                      |
+| ファイル操作     | 不明                        | ✅ File Organizer（分析・重複検出・整理、承認必須）                          |
+| 会話ストア       | 不明                        | ✅ sr_chat API（複数会話並行管理・エクスポート対応）                         |
+| セキュリティ     | 不明                        | ✅ `approval_required` / `autonomous` モード切替、API キー認証               |
+| UI               | Live Canvas                 | Admin UI (React + Vite) + WebSocket リアルタイム同期                         |
+| A2A 連携         | 不明                        | ✅ `/api/a2a/card` で AgentCard 公開（MCP/A2A 拡張 🔜）                      |
+| 音声             | ✅ (ElevenLabs)             | 🔜 (計画中)                                                                  |
+| デバイスツール   | ✅ (カメラ, 位置情報)       | 🔜 (計画中)                                                                  |
+| ブラウザ制御     | ✅ (Playwright)             | 🔜 (計画中)                                                                  |
 
 ## 📝 ライセンス
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Clock,
   CheckCircle,
@@ -8,14 +8,21 @@ import {
   Filter,
   Calendar,
   RefreshCw,
-} from 'lucide-react';
-import clsx from 'clsx';
+} from "lucide-react";
+import clsx from "clsx";
+import { usePageVisibility } from "../hooks/usePageVisibility";
 
 interface ExecutionEvent {
   id: string;
   skill_name: string;
   params: Record<string, unknown>;
-  status: 'pending' | 'running' | 'success' | 'failed' | 'cancelled' | 'timeout';
+  status:
+    | "pending"
+    | "running"
+    | "success"
+    | "failed"
+    | "cancelled"
+    | "timeout";
   started_at: string;
   completed_at: string | null;
   result: unknown;
@@ -35,12 +42,16 @@ interface ExecutionStats {
 }
 
 const statusConfig = {
-  pending: { icon: Clock, color: 'text-gray-500', bg: 'bg-gray-100' },
-  running: { icon: Loader2, color: 'text-blue-500', bg: 'bg-blue-100' },
-  success: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-100' },
-  failed: { icon: XCircle, color: 'text-red-500', bg: 'bg-red-100' },
-  cancelled: { icon: AlertCircle, color: 'text-yellow-500', bg: 'bg-yellow-100' },
-  timeout: { icon: Clock, color: 'text-orange-500', bg: 'bg-orange-100' },
+  pending: { icon: Clock, color: "text-gray-500", bg: "bg-gray-100" },
+  running: { icon: Loader2, color: "text-blue-500", bg: "bg-blue-100" },
+  success: { icon: CheckCircle, color: "text-green-500", bg: "bg-green-100" },
+  failed: { icon: XCircle, color: "text-red-500", bg: "bg-red-100" },
+  cancelled: {
+    icon: AlertCircle,
+    color: "text-yellow-500",
+    bg: "bg-yellow-100",
+  },
+  timeout: { icon: Clock, color: "text-orange-500", bg: "bg-orange-100" },
 };
 
 /**
@@ -53,48 +64,64 @@ export default function Timeline() {
   const [stats, setStats] = useState<ExecutionStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({
-    status: '',
-    skill: '',
-    date: '',
+    status: "",
+    skill: "",
+    date: "",
   });
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const isVisible = usePageVisibility();
 
-  useEffect(() => {
-    fetchTimeline();
-    fetchStats();
-    const interval = setInterval(fetchTimeline, 5000);
-    return () => clearInterval(interval);
-  }, [filter]);
-
-  const fetchTimeline = async () => {
+  const fetchTimeline = useCallback(async () => {
     try {
       const params = new URLSearchParams();
-      if (filter.status) params.append('status', filter.status);
-      if (filter.skill) params.append('skill', filter.skill);
-      if (filter.date) params.append('date', filter.date);
+      if (filter.status) params.append("status", filter.status);
+      if (filter.skill) params.append("skill", filter.skill);
+      if (filter.date) params.append("date", filter.date);
 
       const response = await fetch(`/api/executions?${params}`);
       if (response.ok) {
         const data = await response.json();
         setEvents(data.events || []);
+        setErrorMessage(null);
       }
     } catch (error) {
-      console.error('Timeline fetch error:', error);
+      console.error("Timeline fetch error:", error);
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "タイムライン取得に失敗しました",
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter.date, filter.skill, filter.status]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
-      const response = await fetch('/api/executions/stats');
+      const response = await fetch("/api/executions/stats");
       if (response.ok) {
         const data = await response.json();
         setStats(data);
       }
     } catch (error) {
-      console.error('Stats fetch error:', error);
+      console.error("Stats fetch error:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchTimeline();
+    void fetchStats();
+  }, [fetchStats, fetchTimeline]);
+
+  useEffect(() => {
+    if (!isVisible) {
+      return;
+    }
+    const interval = setInterval(() => {
+      void fetchTimeline();
+    }, 7000);
+    return () => clearInterval(interval);
+  }, [fetchTimeline, isVisible]);
 
   const formatDuration = (ms: number) => {
     if (ms < 1000) return `${Math.round(ms)}ms`;
@@ -104,21 +131,31 @@ export default function Timeline() {
 
   const formatTime = (isoString: string) => {
     const date = new Date(isoString);
-    return date.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString("ja-JP", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const formatDate = (isoString: string) => {
     const date = new Date(isoString);
-    return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
+    return date.toLocaleDateString("ja-JP", { month: "short", day: "numeric" });
   };
 
   // イベントを日付でグループ化
-  const groupedEvents = events.reduce((acc, event) => {
-    const date = formatDate(event.started_at);
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(event);
-    return acc;
-  }, {} as Record<string, ExecutionEvent[]>);
+  const groupedEvents = useMemo(
+    () =>
+      events.reduce(
+        (acc, event) => {
+          const date = formatDate(event.started_at);
+          if (!acc[date]) acc[date] = [];
+          acc[date].push(event);
+          return acc;
+        },
+        {} as Record<string, ExecutionEvent[]>,
+      ),
+    [events],
+  );
 
   return (
     <div className="space-y-6">
@@ -129,13 +166,22 @@ export default function Timeline() {
           <p className="text-gray-600 mt-1">スキル実行履歴を時系列で表示</p>
         </div>
         <button
-          onClick={() => { fetchTimeline(); fetchStats(); }}
+          onClick={() => {
+            fetchTimeline();
+            fetchStats();
+          }}
           className="flex items-center gap-2 px-4 py-2 bg-white border rounded-lg hover:bg-gray-50"
         >
           <RefreshCw size={16} />
           更新
         </button>
       </div>
+
+      {errorMessage && (
+        <div className="glass-panel border border-rose-300/70 bg-rose-50/80 p-3 text-sm text-rose-800">
+          {errorMessage}
+        </div>
+      )}
 
       {/* 統計カード */}
       {stats && (
@@ -146,15 +192,21 @@ export default function Timeline() {
           </div>
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-sm text-gray-500">成功率</p>
-            <p className="text-2xl font-bold text-green-600">{stats.success_rate}%</p>
+            <p className="text-2xl font-bold text-green-600">
+              {stats.success_rate}%
+            </p>
           </div>
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-sm text-gray-500">平均実行時間</p>
-            <p className="text-2xl font-bold">{formatDuration(stats.avg_duration_ms)}</p>
+            <p className="text-2xl font-bold">
+              {formatDuration(stats.avg_duration_ms)}
+            </p>
           </div>
           <div className="bg-white rounded-lg shadow p-4">
             <p className="text-sm text-gray-500">失敗数</p>
-            <p className="text-2xl font-bold text-red-600">{stats.failed_count}</p>
+            <p className="text-2xl font-bold text-red-600">
+              {stats.failed_count}
+            </p>
           </div>
         </div>
       )}
@@ -205,7 +257,9 @@ export default function Timeline() {
                 {/* 日付ヘッダー */}
                 <div className="px-6 py-3 bg-gray-50 flex items-center gap-2">
                   <Calendar size={16} className="text-gray-400" />
-                  <span className="text-sm font-medium text-gray-600">{date}</span>
+                  <span className="text-sm font-medium text-gray-600">
+                    {date}
+                  </span>
                 </div>
 
                 {/* イベント */}
@@ -222,16 +276,16 @@ export default function Timeline() {
                         {/* ドット */}
                         <div
                           className={clsx(
-                            'absolute left-4 w-4 h-4 rounded-full flex items-center justify-center',
-                            config.bg
+                            "absolute left-4 w-4 h-4 rounded-full flex items-center justify-center",
+                            config.bg,
                           )}
-                          style={{ transform: 'translateX(-50%)' }}
+                          style={{ transform: "translateX(-50%)" }}
                         >
                           <Icon
                             size={10}
                             className={clsx(
                               config.color,
-                              event.status === 'running' && 'animate-spin'
+                              event.status === "running" && "animate-spin",
                             )}
                           />
                         </div>
@@ -240,12 +294,14 @@ export default function Timeline() {
                         <div className="ml-6">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <span className="font-medium">{event.skill_name}</span>
+                              <span className="font-medium">
+                                {event.skill_name}
+                              </span>
                               <span
                                 className={clsx(
-                                  'text-xs px-2 py-0.5 rounded-full',
+                                  "text-xs px-2 py-0.5 rounded-full",
                                   config.bg,
-                                  config.color
+                                  config.color,
                                 )}
                               >
                                 {event.status}
@@ -271,16 +327,17 @@ export default function Timeline() {
                             </div>
                           )}
 
-                          {event.params && Object.keys(event.params).length > 0 && (
-                            <details className="mt-2">
-                              <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700">
-                                パラメータを表示
-                              </summary>
-                              <pre className="mt-1 p-2 bg-gray-50 rounded text-xs overflow-auto">
-                                {JSON.stringify(event.params, null, 2)}
-                              </pre>
-                            </details>
-                          )}
+                          {event.params &&
+                            Object.keys(event.params).length > 0 && (
+                              <details className="mt-2">
+                                <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700">
+                                  パラメータを表示
+                                </summary>
+                                <pre className="mt-1 p-2 bg-gray-50 rounded text-xs overflow-auto">
+                                  {JSON.stringify(event.params, null, 2)}
+                                </pre>
+                              </details>
+                            )}
                         </div>
                       </div>
                     );

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 import {
   ShieldCheck,
   ShieldAlert,
@@ -8,16 +8,17 @@ import {
   AlertTriangle,
   Loader2,
   RefreshCw,
-} from 'lucide-react';
-import clsx from 'clsx';
+} from "lucide-react";
+import clsx from "clsx";
+import { usePageVisibility } from "../hooks/usePageVisibility";
 
 interface ApprovalRequest {
   id: string;
   skill_name: string;
-  risk_level: 'low' | 'medium' | 'high' | 'critical';
+  risk_level: "low" | "medium" | "high" | "critical";
   params: Record<string, unknown>;
   user_id: string;
-  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'auto_approved';
+  status: "pending" | "approved" | "rejected" | "expired" | "auto_approved";
   created_at: string;
   expires_at: string | null;
   decided_at: string | null;
@@ -35,18 +36,43 @@ interface ApprovalStats {
 }
 
 const riskConfig = {
-  low: { color: 'text-green-600', bg: 'bg-green-100', label: '低' },
-  medium: { color: 'text-yellow-600', bg: 'bg-yellow-100', label: '中' },
-  high: { color: 'text-orange-600', bg: 'bg-orange-100', label: '高' },
-  critical: { color: 'text-red-600', bg: 'bg-red-100', label: '危険' },
+  low: { color: "text-green-600", bg: "bg-green-100", label: "低" },
+  medium: { color: "text-yellow-600", bg: "bg-yellow-100", label: "中" },
+  high: { color: "text-orange-600", bg: "bg-orange-100", label: "高" },
+  critical: { color: "text-red-600", bg: "bg-red-100", label: "危険" },
 };
 
 const statusConfig = {
-  pending: { icon: Clock, color: 'text-blue-500', bg: 'bg-blue-100', label: '保留中' },
-  approved: { icon: CheckCircle, color: 'text-green-500', bg: 'bg-green-100', label: '承認済み' },
-  rejected: { icon: XCircle, color: 'text-red-500', bg: 'bg-red-100', label: '拒否' },
-  expired: { icon: Clock, color: 'text-gray-500', bg: 'bg-gray-100', label: '期限切れ' },
-  auto_approved: { icon: ShieldCheck, color: 'text-green-500', bg: 'bg-green-100', label: '自動承認' },
+  pending: {
+    icon: Clock,
+    color: "text-blue-500",
+    bg: "bg-blue-100",
+    label: "保留中",
+  },
+  approved: {
+    icon: CheckCircle,
+    color: "text-green-500",
+    bg: "bg-green-100",
+    label: "承認済み",
+  },
+  rejected: {
+    icon: XCircle,
+    color: "text-red-500",
+    bg: "bg-red-100",
+    label: "拒否",
+  },
+  expired: {
+    icon: Clock,
+    color: "text-gray-500",
+    bg: "bg-gray-100",
+    label: "期限切れ",
+  },
+  auto_approved: {
+    icon: ShieldCheck,
+    color: "text-green-500",
+    bg: "bg-green-100",
+    label: "自動承認",
+  },
 };
 
 /**
@@ -59,22 +85,18 @@ export default function Approvals() {
   const [history, setHistory] = useState<ApprovalRequest[]>([]);
   const [stats, setStats] = useState<ApprovalStats | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
-  const [rejectReason, setRejectReason] = useState('');
+  const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
+  const [rejectReason, setRejectReason] = useState("");
   const [selectedRequest, setSelectedRequest] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const isVisible = usePageVisibility();
 
-  useEffect(() => {
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [pendingRes, historyRes, statsRes] = await Promise.all([
-        fetch('/api/approvals/pending'),
-        fetch('/api/approvals/history?limit=50'),
-        fetch('/api/approvals/stats'),
+        fetch("/api/approvals/pending"),
+        fetch("/api/approvals/history?limit=50"),
+        fetch("/api/approvals/stats"),
       ]);
 
       if (pendingRes.ok) {
@@ -89,62 +111,82 @@ export default function Approvals() {
         const data = await statsRes.json();
         setStats(data);
       }
+      setErrorMessage(null);
     } catch (error) {
-      console.error('Approvals fetch error:', error);
+      console.error("Approvals fetch error:", error);
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "承認データの取得に失敗しました",
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
+
+  useEffect(() => {
+    if (!isVisible) {
+      return;
+    }
+    const interval = setInterval(() => {
+      void fetchData();
+    }, 7000);
+    return () => clearInterval(interval);
+  }, [fetchData, isVisible]);
 
   const handleApprove = async (id: string) => {
     try {
       const response = await fetch(`/api/approvals/${id}/approve`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ approver_id: 'admin' }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ approver_id: "admin" }),
       });
       if (response.ok) {
         fetchData();
       }
     } catch (error) {
-      console.error('Approve error:', error);
+      console.error("Approve error:", error);
     }
   };
 
   const handleReject = async (id: string) => {
     try {
       const response = await fetch(`/api/approvals/${id}/reject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          rejecter_id: 'admin',
-          reason: rejectReason || '管理者により拒否',
+          rejecter_id: "admin",
+          reason: rejectReason || "管理者により拒否",
         }),
       });
       if (response.ok) {
         setSelectedRequest(null);
-        setRejectReason('');
+        setRejectReason("");
         fetchData();
       }
     } catch (error) {
-      console.error('Reject error:', error);
+      console.error("Reject error:", error);
     }
   };
 
   const formatTime = (isoString: string) => {
     const date = new Date(isoString);
-    return date.toLocaleString('ja-JP', {
-      month: 'numeric',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return date.toLocaleString("ja-JP", {
+      month: "numeric",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const getTimeRemaining = (expiresAt: string | null) => {
     if (!expiresAt) return null;
     const remaining = new Date(expiresAt).getTime() - Date.now();
-    if (remaining <= 0) return '期限切れ';
+    if (remaining <= 0) return "期限切れ";
     const minutes = Math.floor(remaining / 60000);
     if (minutes < 60) return `${minutes}分`;
     return `${Math.floor(minutes / 60)}時間${minutes % 60}分`;
@@ -159,19 +201,31 @@ export default function Approvals() {
       <div
         key={request.id}
         className={clsx(
-          'bg-white rounded-lg shadow p-4 border-l-4',
-          isPending ? 'border-blue-500' : 'border-gray-300'
+          "bg-white rounded-lg shadow p-4 border-l-4",
+          isPending ? "border-blue-500" : "border-gray-300",
         )}
       >
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <div className="flex items-center gap-3">
               <span className="font-medium text-lg">{request.skill_name}</span>
-              <span className={clsx('text-xs px-2 py-0.5 rounded-full', risk.bg, risk.color)}>
+              <span
+                className={clsx(
+                  "text-xs px-2 py-0.5 rounded-full",
+                  risk.bg,
+                  risk.color,
+                )}
+              >
                 リスク: {risk.label}
               </span>
               {!isPending && (
-                <span className={clsx('text-xs px-2 py-0.5 rounded-full flex items-center gap-1', status.bg, status.color)}>
+                <span
+                  className={clsx(
+                    "text-xs px-2 py-0.5 rounded-full flex items-center gap-1",
+                    status.bg,
+                    status.color,
+                  )}
+                >
                   <StatusIcon size={12} />
                   {status.label}
                 </span>
@@ -246,7 +300,10 @@ export default function Approvals() {
             />
             <div className="flex justify-end gap-2 mt-2">
               <button
-                onClick={() => { setSelectedRequest(null); setRejectReason(''); }}
+                onClick={() => {
+                  setSelectedRequest(null);
+                  setRejectReason("");
+                }}
                 className="px-3 py-1 text-gray-600 hover:bg-gray-200 rounded"
               >
                 キャンセル
@@ -281,6 +338,12 @@ export default function Approvals() {
         </button>
       </div>
 
+      {errorMessage && (
+        <div className="glass-panel border border-rose-300/70 bg-rose-50/80 p-3 text-sm text-rose-800">
+          {errorMessage}
+        </div>
+      )}
+
       {/* 統計カード */}
       {stats && (
         <div className="grid grid-cols-5 gap-4">
@@ -290,7 +353,9 @@ export default function Approvals() {
           </div>
           <div className="bg-green-50 rounded-lg p-4 border border-green-200">
             <p className="text-sm text-green-600">承認済み</p>
-            <p className="text-2xl font-bold text-green-700">{stats.approved}</p>
+            <p className="text-2xl font-bold text-green-700">
+              {stats.approved}
+            </p>
           </div>
           <div className="bg-red-50 rounded-lg p-4 border border-red-200">
             <p className="text-sm text-red-600">拒否</p>
@@ -302,7 +367,9 @@ export default function Approvals() {
           </div>
           <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
             <p className="text-sm text-purple-600">自動承認</p>
-            <p className="text-2xl font-bold text-purple-700">{stats.auto_approved}</p>
+            <p className="text-2xl font-bold text-purple-700">
+              {stats.auto_approved}
+            </p>
           </div>
         </div>
       )}
@@ -311,12 +378,12 @@ export default function Approvals() {
       <div className="border-b border-gray-200">
         <div className="flex gap-4">
           <button
-            onClick={() => setActiveTab('pending')}
+            onClick={() => setActiveTab("pending")}
             className={clsx(
-              'px-4 py-2 font-medium border-b-2 transition-colors',
-              activeTab === 'pending'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+              "px-4 py-2 font-medium border-b-2 transition-colors",
+              activeTab === "pending"
+                ? "border-primary-500 text-primary-600"
+                : "border-transparent text-gray-500 hover:text-gray-700",
             )}
           >
             <div className="flex items-center gap-2">
@@ -330,12 +397,12 @@ export default function Approvals() {
             </div>
           </button>
           <button
-            onClick={() => setActiveTab('history')}
+            onClick={() => setActiveTab("history")}
             className={clsx(
-              'px-4 py-2 font-medium border-b-2 transition-colors',
-              activeTab === 'history'
-                ? 'border-primary-500 text-primary-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
+              "px-4 py-2 font-medium border-b-2 transition-colors",
+              activeTab === "history"
+                ? "border-primary-500 text-primary-600"
+                : "border-transparent text-gray-500 hover:text-gray-700",
             )}
           >
             <div className="flex items-center gap-2">
@@ -351,7 +418,7 @@ export default function Approvals() {
         <div className="flex items-center justify-center py-12">
           <Loader2 className="animate-spin text-primary-500" size={32} />
         </div>
-      ) : activeTab === 'pending' ? (
+      ) : activeTab === "pending" ? (
         <div className="space-y-4">
           {pendingRequests.length === 0 ? (
             <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow">

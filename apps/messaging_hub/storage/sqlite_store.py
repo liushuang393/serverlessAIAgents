@@ -458,13 +458,21 @@ class SQLiteMessagingHubStore:
         )
 
     async def list_sr_conversations(self, limit: int = 100) -> list[dict[str, Any]]:
-        """sr_chat 会話一覧を返す."""
+        """sr_chat 会話一覧を返す。first_message_preview にユーザー最初発言の先頭50文字を含む。"""
         return await self._execute(
             """
             SELECT
                 conversation_id,
                 COUNT(*) AS message_count,
-                MAX(updated_at) AS last_message_at
+                MAX(updated_at) AS last_message_at,
+                (
+                    SELECT SUBSTR(sm2.content, 1, 50)
+                    FROM sr_messages sm2
+                    WHERE sm2.conversation_id = sr_messages.conversation_id
+                      AND sm2.role = 'user'
+                    ORDER BY sm2.created_at ASC
+                    LIMIT 1
+                ) AS first_message_preview
             FROM sr_messages
             GROUP BY conversation_id
             ORDER BY last_message_at DESC

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   FolderOpen,
   Search,
@@ -15,8 +15,9 @@ import {
   AlertTriangle,
   CheckCircle,
   Play,
-} from 'lucide-react';
-import clsx from 'clsx';
+} from "lucide-react";
+import clsx from "clsx";
+import { Link } from "react-router-dom";
 
 interface DirectoryAnalysis {
   path: string;
@@ -31,6 +32,11 @@ interface DirectoryAnalysis {
 }
 
 interface OrganizationResult {
+  ok?: boolean;
+  requires_approval?: boolean;
+  request_id?: string;
+  status?: string;
+  message?: string;
   files_moved: number;
   files_renamed: number;
   dirs_created: number;
@@ -59,39 +65,51 @@ const categoryIcons: Record<string, typeof FileText> = {
 };
 
 const categoryColors: Record<string, string> = {
-  documents: 'bg-blue-100 text-blue-700',
-  images: 'bg-green-100 text-green-700',
-  videos: 'bg-purple-100 text-purple-700',
-  audio: 'bg-pink-100 text-pink-700',
-  archives: 'bg-yellow-100 text-yellow-700',
-  code: 'bg-indigo-100 text-indigo-700',
-  folders: 'bg-gray-100 text-gray-700',
-  others: 'bg-gray-100 text-gray-600',
+  documents: "bg-blue-100 text-blue-700",
+  images: "bg-green-100 text-green-700",
+  videos: "bg-purple-100 text-purple-700",
+  audio: "bg-pink-100 text-pink-700",
+  archives: "bg-yellow-100 text-yellow-700",
+  code: "bg-indigo-100 text-indigo-700",
+  folders: "bg-gray-100 text-gray-700",
+  others: "bg-gray-100 text-gray-600",
 };
 
 export default function FileOrganizer() {
-  const [path, setPath] = useState('~/Downloads');
+  const [path, setPath] = useState("~/Downloads");
   const [analysis, setAnalysis] = useState<DirectoryAnalysis | null>(null);
   const [duplicates, setDuplicates] = useState<DuplicateGroup[]>([]);
-  const [organizeResult, setOrganizeResult] = useState<OrganizationResult | null>(null);
+  const [organizeResult, setOrganizeResult] =
+    useState<OrganizationResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'analyze' | 'duplicates' | 'organize'>('analyze');
+  const [activeTab, setActiveTab] = useState<
+    "analyze" | "duplicates" | "organize"
+  >("analyze");
   const [daysOld, setDaysOld] = useState(30);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [approvalRequestId, setApprovalRequestId] = useState<string | null>(
+    null,
+  );
 
   const handleAnalyze = async () => {
     setLoading(true);
     setAnalysis(null);
+    setErrorMessage("");
     try {
-      const response = await fetch('/api/file-organizer/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/file-organizer/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path, days_old: daysOld }),
       });
       if (response.ok) {
         setAnalysis(await response.json());
+        setStatusMessage("分析が完了しました。");
+      } else {
+        setErrorMessage(await response.text());
       }
     } catch (error) {
-      console.error('Analyze error:', error);
+      setErrorMessage(String(error));
     } finally {
       setLoading(false);
     }
@@ -100,18 +118,22 @@ export default function FileOrganizer() {
   const handleFindDuplicates = async () => {
     setLoading(true);
     setDuplicates([]);
+    setErrorMessage("");
     try {
-      const response = await fetch('/api/file-organizer/duplicates', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/file-organizer/duplicates", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path }),
       });
       if (response.ok) {
         const data = await response.json();
         setDuplicates(data.duplicates || []);
+        setStatusMessage("重複検出が完了しました。");
+      } else {
+        setErrorMessage(await response.text());
       }
     } catch (error) {
-      console.error('Duplicates error:', error);
+      setErrorMessage(String(error));
     } finally {
       setLoading(false);
     }
@@ -120,27 +142,49 @@ export default function FileOrganizer() {
   const handleOrganize = async (dryRun: boolean) => {
     setLoading(true);
     setOrganizeResult(null);
+    setErrorMessage("");
     try {
-      const response = await fetch('/api/file-organizer/organize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path, dry_run: dryRun }),
+      const response = await fetch("/api/file-organizer/organize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          path,
+          dry_run: dryRun,
+          approval_request_id: approvalRequestId,
+        }),
       });
-      if (response.ok) {
-        setOrganizeResult(await response.json());
+      const data = await response.json();
+      if (!response.ok) {
+        setErrorMessage(JSON.stringify(data));
+        return;
       }
+      if (data.requires_approval && data.request_id) {
+        setApprovalRequestId(String(data.request_id));
+        setStatusMessage(
+          "承認リクエストを作成しました。承認後に再実行してください。",
+        );
+        return;
+      }
+      setOrganizeResult(data);
+      setApprovalRequestId(null);
+      setStatusMessage(
+        dryRun ? "ドライランが完了しました。" : "整理を実行しました。",
+      );
     } catch (error) {
-      console.error('Organize error:', error);
+      setErrorMessage(String(error));
     } finally {
       setLoading(false);
     }
   };
 
-  const renderCategoryCard = (category: string, data: { count: number; size: number }) => {
+  const renderCategoryCard = (
+    category: string,
+    data: { count: number; size: number },
+  ) => {
     const Icon = categoryIcons[category] || File;
     const colorClass = categoryColors[category] || categoryColors.others;
     return (
-      <div key={category} className={clsx('rounded-lg p-4', colorClass)}>
+      <div key={category} className={clsx("rounded-lg p-4", colorClass)}>
         <div className="flex items-center gap-3">
           <Icon size={24} />
           <div>
@@ -160,6 +204,17 @@ export default function FileOrganizer() {
         <h1 className="text-2xl font-bold text-gray-900">File Organizer</h1>
         <p className="text-gray-600 mt-1">Analyze and organize directories</p>
       </div>
+
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      )}
+      {statusMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-700">
+          {statusMessage}
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow p-4">
         <div className="flex items-center gap-4">
@@ -187,7 +242,11 @@ export default function FileOrganizer() {
             disabled={loading || !path}
             className="flex items-center gap-2 px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50"
           >
-            {loading ? <Loader2 className="animate-spin" size={18} /> : <Search size={18} />}
+            {loading ? (
+              <Loader2 className="animate-spin" size={18} />
+            ) : (
+              <Search size={18} />
+            )}
             Analyze
           </button>
         </div>
@@ -195,30 +254,36 @@ export default function FileOrganizer() {
 
       <div className="border-b border-gray-200">
         <div className="flex gap-4">
-          {['analyze', 'duplicates', 'organize'].map((tab) => (
+          {["analyze", "duplicates", "organize"].map((tab) => (
             <button
               key={tab}
               onClick={() => {
                 setActiveTab(tab as typeof activeTab);
-                if (tab === 'duplicates') handleFindDuplicates();
+                if (tab === "duplicates") handleFindDuplicates();
               }}
               className={clsx(
-                'px-4 py-2 font-medium border-b-2 transition-colors capitalize',
+                "px-4 py-2 font-medium border-b-2 transition-colors capitalize",
                 activeTab === tab
-                  ? 'border-primary-500 text-primary-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
+                  ? "border-primary-500 text-primary-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700",
               )}
             >
-              {tab === 'analyze' && <Search size={18} className="inline mr-2" />}
-              {tab === 'duplicates' && <Copy size={18} className="inline mr-2" />}
-              {tab === 'organize' && <FolderOpen size={18} className="inline mr-2" />}
+              {tab === "analyze" && (
+                <Search size={18} className="inline mr-2" />
+              )}
+              {tab === "duplicates" && (
+                <Copy size={18} className="inline mr-2" />
+              )}
+              {tab === "organize" && (
+                <FolderOpen size={18} className="inline mr-2" />
+              )}
               {tab}
             </button>
           ))}
         </div>
       </div>
 
-      {activeTab === 'analyze' && analysis && (
+      {activeTab === "analyze" && analysis && (
         <div className="space-y-6">
           <div className="grid grid-cols-4 gap-4">
             <div className="bg-white rounded-lg shadow p-4">
@@ -227,15 +292,21 @@ export default function FileOrganizer() {
             </div>
             <div className="bg-white rounded-lg shadow p-4">
               <p className="text-sm text-gray-500">Total Size</p>
-              <p className="text-2xl font-bold">{analysis.total_size_mb.toFixed(1)} MB</p>
+              <p className="text-2xl font-bold">
+                {analysis.total_size_mb.toFixed(1)} MB
+              </p>
             </div>
             <div className="bg-white rounded-lg shadow p-4">
               <p className="text-sm text-gray-500">Old Files</p>
-              <p className="text-2xl font-bold text-orange-600">{analysis.old_files_count}</p>
+              <p className="text-2xl font-bold text-orange-600">
+                {analysis.old_files_count}
+              </p>
             </div>
             <div className="bg-white rounded-lg shadow p-4">
               <p className="text-sm text-gray-500">Large Files</p>
-              <p className="text-2xl font-bold text-purple-600">{analysis.large_files_count}</p>
+              <p className="text-2xl font-bold text-purple-600">
+                {analysis.large_files_count}
+              </p>
             </div>
           </div>
 
@@ -243,7 +314,7 @@ export default function FileOrganizer() {
             <h3 className="font-medium mb-4">By Category</h3>
             <div className="grid grid-cols-4 gap-4">
               {Object.entries(analysis.by_category).map(([cat, data]) =>
-                renderCategoryCard(cat, data)
+                renderCategoryCard(cat, data),
               )}
             </div>
           </div>
@@ -256,7 +327,9 @@ export default function FileOrganizer() {
               </h3>
               <ul className="space-y-2">
                 {analysis.recommendations.map((rec, i) => (
-                  <li key={i} className="text-yellow-700 text-sm">- {rec}</li>
+                  <li key={i} className="text-yellow-700 text-sm">
+                    - {rec}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -264,7 +337,7 @@ export default function FileOrganizer() {
         </div>
       )}
 
-      {activeTab === 'duplicates' && (
+      {activeTab === "duplicates" && (
         <div className="space-y-4">
           {loading ? (
             <div className="flex items-center justify-center py-12 bg-white rounded-lg shadow">
@@ -280,7 +353,8 @@ export default function FileOrganizer() {
               <div key={i} className="bg-white rounded-lg shadow p-4">
                 <div className="flex items-center justify-between mb-3">
                   <span className="font-medium">
-                    {group.duplicate_count + 1} identical files ({group.size_mb.toFixed(1)} MB each)
+                    {group.duplicate_count + 1} identical files (
+                    {group.size_mb.toFixed(1)} MB each)
                   </span>
                   <span className="text-sm text-green-600 font-medium">
                     Can save {group.potential_savings_mb.toFixed(1)} MB
@@ -288,8 +362,16 @@ export default function FileOrganizer() {
                 </div>
                 <div className="space-y-1">
                   {group.files.map((file, j) => (
-                    <div key={j} className={clsx('text-sm px-3 py-1 rounded', j === 0 ? 'bg-blue-50' : 'bg-gray-50')}>
-                      {j === 0 && <span className="mr-2 text-blue-600">Keep</span>}
+                    <div
+                      key={j}
+                      className={clsx(
+                        "text-sm px-3 py-1 rounded",
+                        j === 0 ? "bg-blue-50" : "bg-gray-50",
+                      )}
+                    >
+                      {j === 0 && (
+                        <span className="mr-2 text-blue-600">Keep</span>
+                      )}
                       {file}
                     </div>
                   ))}
@@ -300,8 +382,23 @@ export default function FileOrganizer() {
         </div>
       )}
 
-      {activeTab === 'organize' && (
+      {activeTab === "organize" && (
         <div className="space-y-6">
+          {approvalRequestId && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-amber-800">
+              <p>
+                承認待ちリクエスト:{" "}
+                <span className="font-mono">{approvalRequestId}</span>
+              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <Link to="/approvals" className="underline">
+                  承認管理ページを開く
+                </Link>
+                <span>承認後に「Execute」を再押下してください。</span>
+              </div>
+            </div>
+          )}
+
           <div className="bg-white rounded-lg shadow p-6">
             <h3 className="font-medium text-lg mb-4">Organize Files</h3>
             <p className="text-gray-600 mb-6">
@@ -313,38 +410,67 @@ export default function FileOrganizer() {
                 disabled={loading || !path}
                 className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50"
               >
-                {loading ? <Loader2 className="animate-spin" size={18} /> : <Search size={18} />}
+                {loading ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <Search size={18} />
+                )}
                 Dry Run (Preview)
               </button>
               <button
                 onClick={() => handleOrganize(false)}
-                disabled={loading || !path || !organizeResult?.dry_run}
+                disabled={
+                  loading ||
+                  !path ||
+                  (!organizeResult?.dry_run && !approvalRequestId)
+                }
                 className="flex items-center gap-2 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
               >
-                {loading ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} />}
+                {loading ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : (
+                  <Play size={18} />
+                )}
                 Execute
               </button>
             </div>
           </div>
 
           {organizeResult && (
-            <div className={clsx('rounded-lg shadow p-6', organizeResult.dry_run ? 'bg-blue-50' : 'bg-green-50')}>
+            <div
+              className={clsx(
+                "rounded-lg shadow p-6",
+                organizeResult.dry_run ? "bg-blue-50" : "bg-green-50",
+              )}
+            >
               <div className="flex items-center gap-2 mb-4">
-                {organizeResult.dry_run ? <Search className="text-blue-600" size={24} /> : <CheckCircle className="text-green-600" size={24} />}
-                <h3 className="font-medium text-lg">{organizeResult.dry_run ? 'Preview Result' : 'Completed'}</h3>
+                {organizeResult.dry_run ? (
+                  <Search className="text-blue-600" size={24} />
+                ) : (
+                  <CheckCircle className="text-green-600" size={24} />
+                )}
+                <h3 className="font-medium text-lg">
+                  {organizeResult.dry_run ? "Preview Result" : "Completed"}
+                </h3>
               </div>
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-white rounded-lg p-3">
                   <p className="text-sm text-gray-500">Files to Move</p>
-                  <p className="text-xl font-bold">{organizeResult.files_moved}</p>
+                  <p className="text-xl font-bold">
+                    {organizeResult.files_moved}
+                  </p>
                 </div>
                 <div className="bg-white rounded-lg p-3">
                   <p className="text-sm text-gray-500">Folders to Create</p>
-                  <p className="text-xl font-bold">{organizeResult.dirs_created}</p>
+                  <p className="text-xl font-bold">
+                    {organizeResult.dirs_created}
+                  </p>
                 </div>
                 <div className="bg-white rounded-lg p-3">
                   <p className="text-sm text-gray-500">Total Actions</p>
-                  <p className="text-xl font-bold">{organizeResult.total_actions}</p>
+                  <p className="text-xl font-bold">
+                    {organizeResult.total_actions}
+                  </p>
                 </div>
               </div>
               {organizeResult.errors.length > 0 && (
@@ -362,7 +488,7 @@ export default function FileOrganizer() {
         </div>
       )}
 
-      {activeTab === 'analyze' && !analysis && !loading && (
+      {activeTab === "analyze" && !analysis && !loading && (
         <div className="text-center py-12 text-gray-500 bg-white rounded-lg shadow">
           <FolderOpen size={48} className="mx-auto mb-4 text-gray-300" />
           <p>Enter a path and click Analyze</p>

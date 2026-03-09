@@ -5,7 +5,7 @@ description: |
   Alembic を使用した DB マイグレーション管理スキル。
   スキーマ変更、履歴管理、ロールバックの標準手順を提供。
 version: 1.0.0
-author: agentflow-team
+author: AgentFlow Team
 triggers:
   - マイグレーション
   - DB スキーマ変更
@@ -33,24 +33,26 @@ user-invocable: true
 
 ## なぜ Alembic か
 
-| ツール | 言語 | 特徴 |
-|--------|------|------|
+| ツール      | 言語   | 特徴                                  |
+| ----------- | ------ | ------------------------------------- |
 | **Alembic** | Python | SQLAlchemy 公式、autogenerate 対応 ✅ |
-| Flyway | Java | SQL ベース、多言語対応 |
-| Liquibase | Java | XML/YAML/SQL、エンタープライズ向け |
-| Atlas | Go | 宣言型、クラウドネイティブ |
+| Flyway      | Java   | SQL ベース、多言語対応                |
+| Liquibase   | Java   | XML/YAML/SQL、エンタープライズ向け    |
+| Atlas       | Go     | 宣言型、クラウドネイティブ            |
 
 **選定理由**: Python + SQLAlchemy プロジェクトでは Alembic が最適。
 
 ## セットアップ
 
 ### 初期化
+
 ```bash
 cd apps/my_app
 alembic init migrations
 ```
 
 ### alembic.ini 設定
+
 ```ini
 # 接続 URL（psycopg2 使用 - Alembic は同期ドライバのみ）
 sqlalchemy.url = postgresql+psycopg2://user:pass@localhost:5432/dbname
@@ -60,6 +62,7 @@ file_template = %%(year)d%%(month).2d%%(day).2d_%%(rev)s_%%(slug)s
 ```
 
 ### env.py 設定
+
 ```python
 # モデルのインポート
 from repositories.models import Base
@@ -157,21 +160,25 @@ def downgrade() -> None:
 ## よくある操作
 
 ### カラム追加
+
 ```python
 op.add_column('users', sa.Column('phone', sa.String(20), nullable=True))
 ```
 
 ### カラム削除
+
 ```python
 op.drop_column('users', 'phone')
 ```
 
 ### インデックス追加
+
 ```python
 op.create_index('idx_users_name', 'users', ['name'])
 ```
 
 ### 外部キー追加
+
 ```python
 op.create_foreign_key(
     'fk_orders_user_id',
@@ -184,15 +191,19 @@ op.create_foreign_key(
 ## トラブルシューティング
 
 ### 接続エラー
+
 ```
 OperationalError: unable to open database file
 ```
+
 → DB コンテナが起動していない。`docker-compose up -d postgres-main`
 
 ### autogenerate が空
+
 → `env.py` で `target_metadata = Base.metadata` を設定
 
 ### マイグレーション競合
+
 ```bash
 alembic merge -m "merge_heads" head1 head2
 ```
@@ -204,4 +215,3 @@ alembic merge -m "merge_heads" head1 head2
 3. **レビュー**: autogenerate 結果を必ず確認
 4. **テスト**: CI でマイグレーション実行テスト
 5. **バックアップ**: 本番適用前に DB バックアップ
-

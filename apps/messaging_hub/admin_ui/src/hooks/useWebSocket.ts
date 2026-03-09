@@ -1,76 +1,86 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getMessagingHubApiKey } from "../shared/auth";
 
-/**
- * WebSocket メッセージ
- */
 interface WSMessage {
   type: string;
   data: unknown;
 }
 
 /**
- * WebSocket フック
- *
- * リアルタイム更新用 WebSocket 接続を管理
+ * リアルタイム更新用 WebSocket 接続を管理する。
  */
 export function useWebSocket(url: string) {
   const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const reconnectEnabledRef = useRef(true);
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<WSMessage | null>(null);
 
-  const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) return;
+  const closeSocket = useCallback(() => {
+    if (reconnectTimerRef.current !== null) {
+      window.clearTimeout(reconnectTimerRef.current);
+      reconnectTimerRef.current = null;
+    }
+    wsRef.current?.close();
+    wsRef.current = null;
+  }, []);
 
-    const apiKey =
-      window.localStorage.getItem('MESSAGING_HUB_API_KEY')
-      ?? new URLSearchParams(window.location.search).get('api_key')
-      ?? '';
+  const connect = useCallback(() => {
+    if (!url) {
+      closeSocket();
+      setIsConnected(false);
+      return;
+    }
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      return;
+    }
+
+    const apiKey = getMessagingHubApiKey();
     const wsUrl = new URL(url, window.location.href);
-    if (wsUrl.protocol === 'http:') {
-      wsUrl.protocol = 'ws:';
-    } else if (wsUrl.protocol === 'https:') {
-      wsUrl.protocol = 'wss:';
+    if (wsUrl.protocol === "http:") {
+      wsUrl.protocol = "ws:";
+    } else if (wsUrl.protocol === "https:") {
+      wsUrl.protocol = "wss:";
     }
     if (apiKey) {
-      wsUrl.searchParams.set('api_key', apiKey);
+      wsUrl.searchParams.set("api_key", apiKey);
     }
-    const ws = new WebSocket(wsUrl.toString());
 
+    const ws = new WebSocket(wsUrl.toString());
     ws.onopen = () => {
       setIsConnected(true);
-      console.log('WebSocket connected');
     };
-
     ws.onclose = () => {
       setIsConnected(false);
-      console.log('WebSocket disconnected');
-      // 3秒後に再接続
-      setTimeout(connect, 3000);
+      wsRef.current = null;
+      if (!url || !reconnectEnabledRef.current) {
+        return;
+      }
+      reconnectTimerRef.current = window.setTimeout(connect, 3000);
     };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+    ws.onerror = () => {
+      setIsConnected(false);
     };
-
     ws.onmessage = (event) => {
       try {
         const message = JSON.parse(event.data) as WSMessage;
         setLastMessage(message);
       } catch {
-        console.error('Failed to parse WebSocket message');
+        // ignore parse errors from non-json payloads
       }
     };
-
     wsRef.current = ws;
-  }, [url]);
+  }, [closeSocket, url]);
 
   useEffect(() => {
+    reconnectEnabledRef.current = true;
     connect();
-
     return () => {
-      wsRef.current?.close();
+      reconnectEnabledRef.current = false;
+      closeSocket();
+      setIsConnected(false);
     };
-  }, [connect]);
+  }, [closeSocket, connect]);
 
   const sendMessage = useCallback((message: WSMessage) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {

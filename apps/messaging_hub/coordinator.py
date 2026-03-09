@@ -42,6 +42,8 @@ from agentflow.routing import (
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
 
+    from apps.messaging_hub.lazy_tool_loader import LazyToolLoader
+
     from agentflow.skills.gateway import SkillGateway, SkillResult
 
 _logger = logging.getLogger(__name__)
@@ -84,16 +86,20 @@ class PersonalAssistantCoordinator:
         config: AssistantConfig | None = None,
         skill_gateway: SkillGateway | None = None,
         event_emitter: Callable[[str, dict[str, Any]], Awaitable[None]] | None = None,
+        lazy_tool_loader: LazyToolLoader | None = None,
     ) -> None:
         """初期化.
 
         Args:
             config: アシスタント設定
             skill_gateway: スキルゲートウェイ（OS/Browser操作用）
+            event_emitter: イベント送信コールバック
+            lazy_tool_loader: 懒加載ツールローダー（コンテキスト最適化用）
         """
         self._config = config or AssistantConfig()
         self._gateway = skill_gateway
         self._event_emitter = event_emitter
+        self._lazy_tool_loader = lazy_tool_loader
         self._logger = logging.getLogger(__name__)
 
         # フレームワークコンポーネント初期化
@@ -169,10 +175,37 @@ class PersonalAssistantCoordinator:
             return default
 
     def _has_gateway_skill(self, skill_name: str) -> bool:
-        """ゲートウェイにスキルが登録されているか確認する."""
-        if self._gateway is None:
-            return False
-        return any(skill.name == skill_name for skill in self._gateway.list_available_skills())
+        """ゲートウェイにスキルが登録されているか確認する.
+
+        懒加載ローダーが設定されている場合、未ロードのスキルを
+        オンデマンドで検索・ロードする。
+        """
+        # ゲートウェイに直接ある場合
+        if self._gateway is not None:
+            if any(skill.name == skill_name for skill in self._gateway.list_available_skills()):
+                return True
+
+        # 懒加載ローダーのインデックスを確認
+        if self._lazy_tool_loader is not None:
+            loaded = self._lazy_tool_loader.get_loaded_tool_names()
+            if skill_name in loaded:
+                return self._gateway is not None
+            # インデックスに存在する場合、ロードを試行
+            result = self._lazy_tool_loader.search_and_load(skill_name)
+            if result.entries:
+                self._logger.info(
+                    "懒加載: スキル '%s' をオンデマンドロード",
+                    skill_name,
+                )
+                return self._gateway is not None
+
+        return False
+
+    def _get_tool_index_prompt(self) -> str:
+        """懒加載インデックスからプロンプト補足情報を取得."""
+        if self._lazy_tool_loader is None:
+            return ""
+        return self._lazy_tool_loader.get_index_for_prompt()
 
     async def _ask_llm(self, system_prompt: str, user_prompt: str, temperature: float = 0.4) -> str:
         """LLM へ問い合わせ、失敗時は空文字を返す."""
@@ -533,6 +566,11 @@ class PersonalAssistantCoordinator:
         )
         self._logger.info("処理開始: user=%s, message=%s", user_id, message[:50])
 
+        # 懒加載: 会話コンテキストに基づいてツールを事前検索
+        if self._lazy_tool_loader is not None:
+            self._lazy_tool_loader.search_and_load(message)
+            context["tool_index_prompt"] = self._get_tool_index_prompt()
+
         try:
             # 1. 意図解析
             intent = await self._intent_router.route(message, context)
@@ -747,6 +785,11 @@ class PersonalAssistantCoordinator:
             evidence.extend(usage_result.get("evidence", []))
             risk_flags.extend(usage_result.get("risk_flags", []))
 
+        # 懒加載統計を追加
+        lazy_stats: dict[str, Any] = {}
+        if self._lazy_tool_loader is not None:
+            lazy_stats = self._lazy_tool_loader.get_stats()
+
         status_info = {
             "assistant_status": "running",
             "security_mode": self._config.security_mode,
@@ -754,6 +797,7 @@ class PersonalAssistantCoordinator:
             "last_activity": datetime.now(UTC).isoformat(),
             "os_info": os_info,
             "resource_usage": resource_usage,
+            "lazy_loading": lazy_stats,
         }
         return self._contract_payload(
             result={"status": status_info},

@@ -3,6 +3,7 @@ category: code_development
 name: code-analysis
 description: コード分析・移行のための包括的なスキルセット。静的分析、複雑度評価、依存関係マッピング、セキュリティスキャン、移行計画を提供。
 version: "1.0.0"
+author: AgentFlow Team
 triggers:
   - コード分析
   - 静的分析
@@ -35,6 +36,7 @@ user-invocable: true
 ## 含まれるスキル
 
 ### 1. RepoConnector（リポジトリ接続）
+
 Git/SVNリポジトリに接続し、コードベース情報を取得します。
 
 ```python
@@ -48,6 +50,7 @@ repo = await connector.connect(
 ```
 
 ### 2. StaticAnalyzer（静的分析）
+
 コードの品質問題、バグ、セキュリティ問題を検出します。
 
 ```python
@@ -58,6 +61,7 @@ result = await analyzer.analyze(files=repo.files)
 ```
 
 **検出カテゴリ**:
+
 - バグ
 - コードスメル
 - 脆弱性
@@ -65,6 +69,7 @@ result = await analyzer.analyze(files=repo.files)
 - スタイル違反
 
 ### 3. ComplexityScorer（複雑度評価）
+
 コードの複雑度を評価し、リファクタリング優先度を提案します。
 
 ```python
@@ -75,6 +80,7 @@ report = await scorer.score(files=repo.files)
 ```
 
 **メトリクス**:
+
 - 循環的複雑度（CCN）
 - 認知的複雑度
 - コード行数（LOC）
@@ -82,6 +88,7 @@ report = await scorer.score(files=repo.files)
 - 保守性指数
 
 ### 4. DependencyMapper（依存関係マッピング）
+
 依存関係を分析し、依存グラフを構築します。
 
 ```python
@@ -92,11 +99,13 @@ graph = await mapper.map_dependencies(include_external=True)
 ```
 
 **出力**:
+
 - 直接/間接依存
 - 循環依存の検出
 - 古い/脆弱な依存の特定
 
 ### 5. SecurityScanner（セキュリティスキャン）
+
 セキュリティ脆弱性を検出します。
 
 ```python
@@ -107,11 +116,13 @@ report = await scanner.scan(scan_types=["sast", "dependency"])
 ```
 
 **スキャンタイプ**:
+
 - SAST（静的アプリケーションセキュリティテスト）
 - 依存関係の脆弱性チェック
 - 設定監査
 
 ### 6. MigrationPlanner（移行計画策定）
+
 レガシーコードの移行計画を策定します。
 
 ```python
@@ -125,6 +136,7 @@ plan = await planner.create_plan(
 ```
 
 **出力**:
+
 - 移行戦略（段階的/一括/Strangler）
 - フェーズ別計画
 - リスク評価
