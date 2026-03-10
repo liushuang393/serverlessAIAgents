@@ -112,7 +112,16 @@ class PEVEngine:
     _logger: logging.Logger = field(default_factory=lambda: logging.getLogger("agentflow.pev.engine"))
 
     def __post_init__(self) -> None:
-        """初期化後処理."""
+        """初期化後処理.
+
+        Note:
+            PlanToFlowAdapter を使用すれば、計画を Flow に変換して
+            FlowExecutor 経由で実行することも可能:
+                from agentflow.pev.plan_to_flow_adapter import PlanToFlowAdapter
+                adapter = PlanToFlowAdapter(agent_registry=self.agents)
+                flow = adapter.convert(plan)
+                result = await flow.run(context)
+        """
         self._planner = HierarchicalPlanner(llm_client=self.llm_client)
         self._executor = MonitoredExecutor(
             agents=self.agents,

@@ -40,6 +40,7 @@ from agentflow.pev.monitored_executor import (
     MonitoredExecutor,
 )
 from agentflow.pev.pev_engine import PEVEngine, PEVEngineConfig
+from agentflow.pev.plan_to_flow_adapter import PlanToFlowAdapter, PlanToFlowError
 from agentflow.pev.result_verifier import (
     ResultVerifier,
     VerificationResult,
@@ -59,6 +60,9 @@ __all__ = [
     "PEVEngine",
     "PEVEngineConfig",
     "PlanLevel",
+    # Plan to Flow Adapter
+    "PlanToFlowAdapter",
+    "PlanToFlowError",
     # Result Verifier
     "ResultVerifier",
     "SubGoal",
