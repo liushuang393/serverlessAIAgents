@@ -122,15 +122,26 @@ class StageConfig:
 
 
 class PipelineEngine(BaseEngine):
-    """複数Agent順次実行 + Reviewエンジン.
+    """[高レベルAPI] PipelineEngine は FlowBuilder のプリセット.
 
-    内部でflow モジュールを活用してフロー構築・実行を行う。
+    多段処理パイプラインを簡易に構築するための Engine。
+    内部で FlowBuilder の機能を利用してフロー実行を行う。
 
-    特徴：
-    - マルチステージ順次実行
-    - Gateインターセプトをサポート
-    - Review + REVISEループをサポート
-    - 並列実行ステージをサポート
+    カスタマイズが必要な場合は FlowBuilder を直接使用してください。
+
+    Architecture:
+        Engine層 = Flow層のプリセット（高レベルAPI）
+        Flow層 = 低レベルプリミティブ（FlowBuilder, FlowExecutor）
+
+        PipelineEngine
+            └── 内部で FlowBuilder/FlowExecutor を活用
+                └── ステージ定義 → FlowNode に変換 → 実行
+
+    特徴:
+        - マルチステージ順次実行
+        - Gateインターセプトをサポート
+        - Review + REVISEループをサポート
+        - 並列実行ステージをサポート
     """
 
     def __init__(
@@ -390,7 +401,11 @@ class PipelineEngine(BaseEngine):
         return await self._execute_fallback(inputs)
 
     async def _execute_fallback(self, inputs: dict[str, Any]) -> dict[str, Any]:
-        """従来の実行ロジック（Flowが使用できない場合のフォールバック）."""
+        """従来の実行ロジック（Flowが使用できない場合のフォールバック）.
+
+        TODO: 将来的にFlowExecutorへ委譲 — このメソッドは FlowExecutor の
+        実行ロジック（ノード順次実行・Gate判定・REVISEループ）を重複実装している。
+        """
         self._results = {"inputs": inputs}
         current_inputs = inputs.copy()
 
@@ -682,7 +697,12 @@ class PipelineEngine(BaseEngine):
             yield event
 
     async def _execute_stream_fallback(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
-        """従来のストリーム実行ロジック（フォールバック）."""
+        """従来のストリーム実行ロジック（フォールバック）.
+
+        TODO: 将来的にFlowExecutorへ委譲 — このメソッドは FlowExecutor の
+        ストリーム実行ロジック（ノード順次実行・イベント発行・REVISEループ）を
+        重複実装している。
+        """
         self._inputs = inputs.copy()
         self._results = {"inputs": inputs}
         current_inputs = inputs.copy()

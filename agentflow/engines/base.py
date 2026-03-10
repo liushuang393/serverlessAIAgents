@@ -106,16 +106,29 @@ OutputT = TypeVar("OutputT", bound=BaseModel)
 
 
 class BaseEngine(ABC):
-    """Engine抽象基底クラス.
+    """Engine抽象基底クラス — Flow層の高レベルプリセット.
 
-    すべてのEngine Patternはこのクラスを継承し、以下を実装する必要がある：
-    - _build_flow(): 内部フローを構築
-    - _execute(): コアロジックを実行
+    Architecture（責任境界）:
+        Engine層 = Flow層のプリセット（高レベルAPI）
+            ユースケース固有の設定・Agent構成・レポート生成などを束ね、
+            FlowBuilder/FlowExecutor の組み合わせをワンショットで提供する。
+        Flow層 = 低レベルプリミティブ（FlowBuilder, FlowExecutor, Flow）
+            ノードグラフ構築・実行・状態管理・イベント発行の基盤。
+
+    使い分け:
+        - 典型的なパイプライン → PipelineEngine 等の Engine サブクラスを使用
+        - 細かいフロー制御が必要 → FlowBuilder を直接使用
+        - Engine はあくまで「便利なデフォルト」であり、
+          FlowBuilder で同等以上の柔軟性が得られる
+
+    すべての Engine サブクラスは以下を実装する:
+        - _initialize(): 内部コンポーネント（Agent、Flow等）を初期化
+        - _execute(): コアロジックを実行
 
     Example:
         >>> class MyEngine(BaseEngine):
-        ...     def _build_flow(self):
-        ...         return create_flow([self._agent])
+        ...     async def _initialize(self):
+        ...         self._flow = create_flow("my").then(agent).build()
         ...
         ...     async def _execute(self, inputs):
         ...         return await self._flow.run(inputs)
