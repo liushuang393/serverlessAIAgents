@@ -10,13 +10,20 @@ auto_install=false で default_skills が空の場合は None を返す。
 
 from __future__ import annotations
 
+import asyncio
 import logging
-from typing import Any
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
 
+if TYPE_CHECKING:
+    from agentflow.skills.gateway import SkillGateway
+
+
 logger = logging.getLogger(__name__)
+
+SkillsPayload = dict[str, object]
 
 
 class SkillsBootstrapConfig(BaseModel):
@@ -35,7 +42,7 @@ class SkillsBootstrapConfig(BaseModel):
     default_skills: list[str] = Field(default_factory=list)
 
 
-async def build_skill_gateway(skills_config: dict[str, Any] | None) -> Any | None:
+async def build_skill_gateway(skills_config: SkillsPayload | None) -> SkillGateway | None:
     """SkillsContractConfig 辞書から SkillGateway を構築.
 
     Args:
@@ -63,7 +70,9 @@ async def build_skill_gateway(skills_config: dict[str, Any] | None) -> Any | Non
     try:
         from agentflow.skills.factory import create_skill_gateway
 
-        gateway = create_skill_gateway()
+        # 同期ファクトリ初期化をイベントループ外へ退避し、
+        # 非同期ブートストラップ境界を維持する。
+        gateway = await asyncio.to_thread(create_skill_gateway)
 
         logger.info(
             "SkillGateway 構築完了: default_skills=%s",

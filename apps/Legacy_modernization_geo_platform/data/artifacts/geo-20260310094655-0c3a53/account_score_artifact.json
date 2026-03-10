@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "task_id": "geo-20260310094655-0c3a53",
+    "trace_id": "geo-20260310094655-0c3a53:icp_scoring",
+    "stage": "icp_scoring",
+    "generated_at": "2026-03-10T09:46:56.020570Z"
+  },
+  "evidence": [
+    {
+      "company": "construction prospects",
+      "fit_score": 87,
+      "urgency_score": 76,
+      "priority": "high",
+      "rationale": [
+        "保守要員不足と技術負債圧縮の同時要請が強い",
+        "Primary stacks: COBOL, RPG"
+      ]
+    }
+  ],
+  "unknowns": [],
+  "extensions": {},
+  "account_scores": [
+    {
+      "company": "construction prospects",
+      "fit_score": 87,
+      "urgency_score": 76,
+      "priority": "high",
+      "rationale": [
+        "保守要員不足と技術負債圧縮の同時要請が強い",
+        "Primary stacks: COBOL, RPG"
+      ]
+    }
+  ],
+  "recommended_focus": [
+    "COBOL",
+    "RPG"
+  ]
+}

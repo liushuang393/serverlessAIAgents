@@ -72,12 +72,14 @@ class LLMProvider:
         temperature: float | None = None,
         max_tokens: int | None = None,
         settings: AgentFlowSettings | None = None,
+        context: RuntimeContext | None = None,
     ) -> None:
         self._config = config or LLMProviderConfig()
         self._role_override = role
         self._temperature_override = temperature
         self._max_tokens_override = max_tokens
         self._settings = settings
+        self._context = context
         self._provider_info: tuple[str, str, str | None, str | None] | None = None
         self._client: LLMClient | None = None
         self._initialize_client()
@@ -115,6 +117,19 @@ class LLMProvider:
             raise RuntimeError(msg)
         return client
 
+    def _merge_metadata(self, metadata: dict[str, Any] | None) -> dict[str, Any] | None:
+        payload: dict[str, Any] = {}
+        if metadata:
+            payload.update(metadata)
+        if self._context is not None:
+            app_name = self._context.metadata.get("app_name")
+            if isinstance(app_name, str) and app_name.strip():
+                payload.setdefault("app_name", app_name.strip())
+            agent_name = self._context.metadata.get("agent_name")
+            if isinstance(agent_name, str) and agent_name.strip():
+                payload.setdefault("agent_name", agent_name.strip())
+        return payload or None
+
     async def generate(
         self,
         role: str,
@@ -138,7 +153,7 @@ class LLMProvider:
             tools=tools,
             temperature=temperature,
             max_tokens=max_tokens,
-            metadata=metadata,
+            metadata=self._merge_metadata(metadata),
             model_alias=model_alias,
         )
         return response.model_dump()
@@ -172,7 +187,7 @@ class LLMProvider:
                 tools=tools,
                 temperature=temperature,
                 max_tokens=max_tokens,
-                metadata=metadata,
+                metadata=self._merge_metadata(metadata),
                 model_alias=model_alias,
             ):
                 yield chunk
@@ -186,7 +201,7 @@ class LLMProvider:
             tools=tools,
             temperature=temperature,
             max_tokens=max_tokens,
-            metadata=metadata,
+            metadata=self._merge_metadata(metadata),
             model_alias=model_alias,
         ):
             yield chunk
@@ -210,7 +225,7 @@ class LLMProvider:
             messages=llm_messages,
             tools=tools,
             tool_choice=tool_choice,
-            metadata=metadata,
+            metadata=self._merge_metadata(metadata),
             model_alias=model_alias,
         )
         return response.model_dump()
@@ -278,6 +293,7 @@ def get_llm(
             temperature=temperature,
             max_tokens=max_tokens,
             settings=resolve_settings(context),
+            context=context,
         )
 
     if _default_llm is None:

@@ -1,0 +1,23 @@
+{
+  "meta": {
+    "task_id": "geo-20260310094701-764826",
+    "trace_id": "geo-20260310094701-764826:brand_memory",
+    "stage": "brand_memory",
+    "generated_at": "2026-03-10T09:47:01.734404Z"
+  },
+  "evidence": [],
+  "unknowns": [],
+  "extensions": {},
+  "positioning": "AI検索時代に旧システム刷新の検討需要を捕捉し、診断から段階移行まで導く。",
+  "differentiators": [
+    "COBOL/RPG/旧Java を横断した刷新提案",
+    "Business semantics を前提にした段階移行",
+    "AI検索向けの根拠付き情報資産を継続生成"
+  ],
+  "supported_stacks": [
+    "COBOL"
+  ],
+  "target_regions": [
+    "Japan"
+  ]
+}

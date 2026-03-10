@@ -50,6 +50,11 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
+from agentflow.llm.contracts import (
+    LLMContractResolutionError,
+    resolve_contract_model_alias,
+    resolve_contract_model_ref,
+)
 from agentflow.llm.gateway import LiteLLMGateway
 
 
@@ -66,16 +71,17 @@ _embedding_instance: "EmbeddingProvider | None" = None
 class EmbeddingProvider(Protocol):
     """埋め込みプロバイダーの統一インターフェース."""
 
-    async def embed_text(self, text: str) -> list[float]:
-        """テキストをベクトルに変換."""
+    async def embed_query(self, text: str) -> list[float]:
+        """クエリテキストを埋め込み."""
         ...
 
-    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        """複数テキストを一括変換."""
+    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """複数ドキュメントを埋め込み."""
         ...
 
-    def get_dimension(self) -> int:
-        """ベクトル次元数を取得."""
+    @property
+    def dimension(self) -> int:
+        """埋め込み次元数."""
         ...
 
     def get_model_name(self) -> str:
@@ -94,6 +100,14 @@ class MockEmbeddingProvider:
         self._dimension = dimension
 
     async def embed_text(self, text: str) -> list[float]:
+        """テキストをベクトルに変換."""
+        return await self.embed_query(text)
+
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """複数テキストを一括変換."""
+        return await self.embed_documents(texts)
+
+    async def embed_query(self, text: str) -> list[float]:
         """簡易埋め込み（文字コードベース）."""
         # テキストのハッシュから擬似ベクトル生成
         import hashlib
@@ -106,12 +120,17 @@ class MockEmbeddingProvider:
             vector.append((h[idx] - 128) / 128.0)
         return vector
 
-    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
         """バッチ埋め込み."""
-        return [await self.embed_text(t) for t in texts]
+        return [await self.embed_query(t) for t in texts]
+
+    @property
+    def dimension(self) -> int:
+        """次元数."""
+        return self._dimension
 
     def get_dimension(self) -> int:
-        """次元数."""
+        """次元数（互換性用）."""
         return self._dimension
 
     def get_model_name(self) -> str:
@@ -151,6 +170,14 @@ class OpenAIEmbeddingProvider:
 
     async def embed_text(self, text: str) -> list[float]:
         """OpenAI 埋め込み."""
+        return await self.embed_query(text)
+
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """バッチ埋め込み."""
+        return await self.embed_documents(texts)
+
+    async def embed_query(self, text: str) -> list[float]:
+        """クエリテキストを埋め込み."""
         previous, inserted = self._with_env_api_key()
         try:
             vectors = await self._gateway.embedding(
@@ -163,8 +190,8 @@ class OpenAIEmbeddingProvider:
             self._restore_env_api_key(previous, inserted)
         return vectors[0] if vectors else []
 
-    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        """バッチ埋め込み."""
+    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """複数ドキュメントを埋め込み."""
         previous, inserted = self._with_env_api_key()
         try:
             return await self._gateway.embedding(
@@ -176,13 +203,90 @@ class OpenAIEmbeddingProvider:
         finally:
             self._restore_env_api_key(previous, inserted)
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """次元数."""
+        return self._dimension
+
+    def get_dimension(self) -> int:
+        """次元数（互換性用）."""
         return self._dimension
 
     def get_model_name(self) -> str:
         """モデル名."""
         return self._model
+
+
+class GatewayContractEmbeddingProvider:
+    """contracts.llm で解決した埋め込みモデルを使う provider."""
+
+    def __init__(
+        self,
+        *,
+        model_alias: str,
+        model_name: str,
+        app_name: str | None,
+        agent_name: str | None,
+    ) -> None:
+        self._gateway = LiteLLMGateway()
+        self._role = os.getenv("EMBEDDING_ROLE", "cheap")
+        self._model_alias = model_alias
+        self._model_name = model_name
+        self._app_name = app_name
+        self._agent_name = agent_name
+        lowered = model_name.lower()
+        if "3-large" in lowered:
+            self._dimension = 3072
+        elif "3-small" in lowered or "ada-002" in lowered:
+            self._dimension = 1536
+        elif "nomic" in lowered:
+            self._dimension = 768
+        else:
+            self._dimension = 1024
+
+    def _metadata(self) -> dict[str, str]:
+        payload: dict[str, str] = {}
+        if self._app_name:
+            payload["app_name"] = self._app_name
+        if self._agent_name:
+            payload["agent_name"] = self._agent_name
+        return payload
+
+    async def embed_text(self, text: str) -> list[float]:
+        """1 テキストを埋め込む."""
+        return await self.embed_query(text)
+
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """バッチ埋め込み."""
+        return await self.embed_documents(texts)
+
+    async def embed_query(self, text: str) -> list[float]:
+        """クエリテキストを埋め込み."""
+        results = await self.embed_documents([text])
+        return results[0] if results else []
+
+    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """複数ドキュメントを埋め込み."""
+        return await self._gateway.embedding(
+            role=self._role,
+            input_texts=texts,
+            model_alias=self._model_alias,
+            model=self._model_name,
+            metadata=self._metadata(),
+        )
+
+    @property
+    def dimension(self) -> int:
+        """次元数."""
+        return self._dimension
+
+    def get_dimension(self) -> int:
+        """次元数（互換性用）."""
+        return self._dimension
+
+    def get_model_name(self) -> str:
+        """モデル名."""
+        return self._model_name
 
 
 class SentenceTransformerProvider:
@@ -209,18 +313,31 @@ class SentenceTransformerProvider:
 
     async def embed_text(self, text: str) -> list[float]:
         """ローカル埋め込み."""
+        return await self.embed_query(text)
+
+    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """バッチ埋め込み."""
+        return await self.embed_documents(texts)
+
+    async def embed_query(self, text: str) -> list[float]:
+        """クエリテキストを埋め込み."""
         self._ensure_model()
         embedding = self._model.encode(text)
         return [float(v) for v in embedding.tolist()]
 
-    async def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        """バッチ埋め込み."""
+    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """複数ドキュメントを埋め込み."""
         self._ensure_model()
         embeddings = self._model.encode(texts)
         return [[float(v) for v in e.tolist()] for e in embeddings]
 
-    def get_dimension(self) -> int:
+    @property
+    def dimension(self) -> int:
         """次元数."""
+        return self._dimension
+
+    def get_dimension(self) -> int:
+        """次元数（互換性用）."""
         return self._dimension
 
     def get_model_name(self) -> str:
@@ -345,22 +462,19 @@ class OllamaEmbeddingProvider:
 
     async def embed_text(self, text: str) -> list[float]:
         """1テキストを埋め込みベクトルに変換."""
-        results = await self.embed_batch([text])
-        return results[0]
+        return await self.embed_query(text)
 
     async def embed_batch(self, texts: list[str]) -> list[list[float]]:
-        """複数テキストを一括変換.
+        """複数テキストを一括変換."""
+        return await self.embed_documents(texts)
 
-        Args:
-            texts: 埋め込み対象テキストリスト
+    async def embed_query(self, text: str) -> list[float]:
+        """クエリテキストを埋め込み."""
+        results = await self.embed_documents([text])
+        return results[0]
 
-        Returns:
-            各テキストの埋め込みベクトルリスト
-
-        Raises:
-            ImportError: httpx 未インストール時
-            httpx.HTTPStatusError: Ollama サーバーエラー時
-        """
+    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """複数ドキュメントを埋め込み."""
         try:
             import httpx
         except ImportError:
@@ -381,10 +495,7 @@ class OllamaEmbeddingProvider:
                     data = response.json()
                     embeddings = self._normalize_embeddings(data)
                     if len(embeddings) != len(texts):
-                        msg = (
-                            f"Ollama /api/embed returned {len(embeddings)} embeddings "
-                            f"for {len(texts)} inputs"
-                        )
+                        msg = f"Ollama /api/embed returned {len(embeddings)} embeddings for {len(texts)} inputs"
                         raise ValueError(msg)
                     self._supports_modern_endpoint = True
                     return embeddings
@@ -397,16 +508,19 @@ class OllamaEmbeddingProvider:
                     )
                     raise httpx.HTTPStatusError(msg, request=response.request, response=response)
 
-                logger.warning(
-                    "Ollama /api/embed returned 404. Falling back to legacy /api/embeddings."
-                )
+                logger.warning("Ollama /api/embed returned 404. Falling back to legacy /api/embeddings.")
 
             embeddings = await self._embed_batch_legacy(client, texts)
             self._supports_modern_endpoint = False
             return embeddings
 
+    @property
+    def dimension(self) -> int:
+        """次元数."""
+        return self._dimension
+
     def get_dimension(self) -> int:
-        """ベクトル次元数."""
+        """次元数（互換性用）."""
         return self._dimension
 
     def get_model_name(self) -> str:
@@ -449,6 +563,52 @@ def get_embedding(
     settings = resolve_settings(context) if context is not None else None
 
     provider: EmbeddingProvider
+
+    app_name: str | None = None
+    agent_name: str | None = None
+    if context is not None:
+        raw_app_name = context.metadata.get("app_name")
+        if isinstance(raw_app_name, str) and raw_app_name.strip():
+            app_name = raw_app_name.strip()
+        raw_agent_name = context.metadata.get("agent_name")
+        if isinstance(raw_agent_name, str) and raw_agent_name.strip():
+            agent_name = raw_agent_name.strip()
+
+    try:
+        resolved = resolve_contract_model_ref(
+            modality="embedding",
+            app_name=app_name,
+            agent_name=agent_name,
+        )
+    except LLMContractResolutionError as exc:
+        msg = str(exc)
+        raise RuntimeError(msg) from exc
+
+    if resolved is not None:
+        resolved_app_name, model_ref = resolved
+        resolved_alias = resolve_contract_model_alias(
+            modality="embedding",
+            app_name=resolved_app_name,
+            agent_name=agent_name,
+        )
+        if resolved_alias is not None:
+            gateway = LiteLLMGateway()
+            model_cfg = next(
+                (item for item in gateway.config.models if item.alias == resolved_alias),
+                None,
+            )
+            model_name = (
+                model if model is not None else (model_cfg.model if model_cfg is not None else model_ref.model_id)
+            )
+            provider = GatewayContractEmbeddingProvider(
+                model_alias=resolved_alias,
+                model_name=model_name,
+                app_name=resolved_app_name,
+                agent_name=agent_name,
+            )
+            if context is None and not _new_instance:
+                _embedding_instance = provider
+            return provider
 
     # ── 1. Ollama（OLLAMA_EMBEDDING_MODEL が設定されていれば優先）──────────
     ollama_emb_model = model or get_env("OLLAMA_EMBEDDING_MODEL", context=context)

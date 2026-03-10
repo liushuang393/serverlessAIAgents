@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "task_id": "geo-20260310094655-0c3a53",
+    "trace_id": "geo-20260310094655-0c3a53:strategy",
+    "stage": "strategy",
+    "generated_at": "2026-03-10T09:46:56.223011Z"
+  },
+  "evidence": [],
+  "unknowns": [],
+  "extensions": {},
+  "pages": [
+    {
+      "slug": "construction-cobol-modernization-guide",
+      "title": "construction 向け COBOL モダナイゼーションガイド",
+      "persona": "it_manager",
+      "primary_question": "construction での COBOL 段階移行事例はあるか",
+      "page_type": "industry_lp",
+      "cta": "無料診断を依頼する"
+    }
+  ],
+  "target_language": "ja"
+}

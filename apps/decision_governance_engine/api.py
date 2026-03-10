@@ -90,12 +90,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
                 init_managers as init_collection_managers,
             )
 
-            col_mgr = CollectionManager(session_factory=get_db_session)
-            doc_mgr = DocumentManager(collection_manager=col_mgr, session_factory=get_db_session)
+            async def session_factory():
+                async with get_db_session() as session:
+                    return session
+
+            col_mgr = CollectionManager(session_factory=session_factory)
+            doc_mgr = DocumentManager(collection_manager=col_mgr, session_factory=session_factory)
             init_collection_managers(col_mgr, doc_mgr)
             logger.info("Knowledge CollectionManager / DocumentManager initialized")
         except Exception as mgr_err:
-            logger.warning(f"CollectionManager init failed (non-critical): {mgr_err}")
+            logger.error(f"CollectionManager init failed: {mgr_err}", exc_info=True)
     except Exception as e:
         logger.warning(f"Database initialization failed (history will use fallback): {e}")
 
@@ -145,6 +149,26 @@ app.include_router(knowledge_collections_router)
 app.include_router(product_launch_router)
 app.include_router(report_router)
 app.include_router(workflow_router)
+ 
+ 
+# ========================================
+# グローバル例外ハンドラ
+# ========================================
+from fastapi import Request
+from fastapi.responses import JSONResponse
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global error caught: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "Internal Server Error",
+            "message": str(exc),
+            "type": type(exc).__name__,
+            "path": request.url.path
+        }
+    )
 
 
 # ========================================

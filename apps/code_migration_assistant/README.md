@@ -11,7 +11,7 @@
 
 <!-- README_REQUIRED_SECTIONS_START -->
 
-## 機能概要
+## 機能概要-Legacy Growth Assessment
 
 - レガシー資産の解析、依存関係の可視化、移行候補の抽出を一体で実行。
 - 段階移行（Strangler）前提で、変換コードと検証レポートをパッケージ化。
@@ -110,11 +110,11 @@ cd apps/code_migration_assistant
 
 ## LLM 設定（Gateway 前提）
 
-- Provider SDK 直呼びは使用せず、AgentFlow 内蔵 LiteLLM Gateway を経由します。
-- 正本設定: `.agentflow/llm_gateway.yaml`
-- 秘密情報: `ENV > .env`（例: `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`）
-- 呼び出し契約: `generate(role=...) / stream(role=...) / tool_call(role=...)`
-- 推奨 role: `coding`（コード生成）、`reasoning`（分析）
+- Provider SDK 直呼びは使用せず、Platform 管理の LiteLLM Gateway を経由します。
+- app の正本は `apps/code_migration_assistant/app_config.json` の `contracts.llm` です。
+- 既定は `platform_text_default` / `platform_embedding_default`、コード変換系 agent は `coding_openai` を override 参照します。
+- Provider / model / API Key の正本は `apps/platform` の `LLM Management` です。
+- `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` は Platform 未設定時の fallback としてのみ使います。
 
 > 2026-03 統合更新: `migration_studio` の UI/移行APIを `code_migration_assistant` に統合し、同一サーバーで配信します。
 > 主要フロント API は `/api/migrate/*`（upload / stream / status / download）です。

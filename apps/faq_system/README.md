@@ -132,6 +132,13 @@ python -m apps.platform.main publish ./apps/faq_system --target docker
 
 起動後、ブラウザで `http://localhost:8005` を開くと WebSocket 対応の富文本チャット UI が表示されます。
 
+## Platform 主導 LLM 契約
+
+- この app の正本は `app_config.json` の `contracts.llm` です。
+- FAQ は `text` と `embedding` を使用し、Platform catalog の `platform_text_default` / `platform_embedding_default` を参照します。
+- Provider / model / API Key の正本は `apps/platform` の `LLM Management` です。
+- `OPENAI_API_KEY` などの env は Platform 未設定時の fallback としてのみ利用します。
+
 **統合済み機能:**
 
 - WebSocket リアルタイム双方向通信（自動再接続付き）
@@ -153,7 +160,8 @@ curl http://localhost:11434/api/tags
   - `apps/faq_system/.env` に `OLLAMA_BASE_URL=http://host.docker.internal:11434` を設定
   - つながらない場合は Windows Firewall と Ollama の bind 設定を確認
 - OpenAI に切り替える場合:
-  - `apps/faq_system/.env` で `LLM_PROVIDER=openai` と `OPENAI_API_KEY` を設定
+  - まず Platform の `LLM Management` で `platform_text_default` を OpenAI 系 model に向ける
+  - Platform 未設定時の fallback としてのみ `OPENAI_API_KEY` を使う
 - `404 model 'xxx' not found` が出る場合:
   - `curl http://localhost:11434/api/tags` で利用可能モデルを確認
   - FAQ 側の `OLLAMA_MODEL` と一致するモデルを pull（例: `ollama pull llama3.2`）
@@ -844,7 +852,7 @@ cd apps/faq_system
 
 # .env を準備
 cp ../../.env.example .env
-# OPENAI_API_KEY=sk-... 等を編集
+# Platform 未設定時のみ fallback の Provider key を編集
 
 # Docker 開発モードで起動（2ファイル重ね）
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up
@@ -869,7 +877,7 @@ cd apps/faq_system
 
 # .env を準備
 cp ../../.env.example .env
-# OPENAI_API_KEY=sk-... 等を編集
+# Platform 未設定時のみ fallback の Provider key を編集
 
 # 本番ビルド & バックグラウンド起動
 docker compose up --build -d
@@ -921,9 +929,14 @@ docker compose -f docker-compose.auth-faq.yml up --build -d
 
 ### 環境変数一覧
 
+注記:
+
+- 以下の Provider API キーは Platform 未設定時の fallback としてのみ利用します。
+- 正本は `apps/platform` の `LLM Management` と `contracts.llm` です。
+
 | 変数名                             | 説明                                                  | デフォルト                                                     | 必須   |
 | ---------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------- | ------ |
-| `OPENAI_API_KEY`                   | OpenAI API キー                                       | —                                                              | ✅     |
+| `OPENAI_API_KEY`                   | OpenAI API キー fallback                              | —                                                              | —      |
 | `ANTHROPIC_API_KEY`                | Anthropic API キー                                    | —                                                              | —      |
 | `AZURE_OPENAI_API_KEY`             | Azure OpenAI API キー                                 | —                                                              | —      |
 | `AZURE_OPENAI_ENDPOINT`            | Azure OpenAI エンドポイント                           | —                                                              | —      |

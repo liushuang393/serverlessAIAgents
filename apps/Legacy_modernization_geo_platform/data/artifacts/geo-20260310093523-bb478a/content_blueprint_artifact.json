@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "task_id": "geo-20260310093523-bb478a",
+    "trace_id": "geo-20260310093523-bb478a:strategy",
+    "stage": "strategy",
+    "generated_at": "2026-03-10T09:35:23.554161"
+  },
+  "evidence": [],
+  "unknowns": [],
+  "extensions": {},
+  "pages": [
+    {
+      "slug": "manufacturing-cobol-modernization-guide",
+      "title": "manufacturing 向け COBOL モダナイゼーションガイド",
+      "persona": "it_manager",
+      "primary_question": "manufacturing での COBOL 段階移行事例はあるか",
+      "page_type": "industry_lp",
+      "cta": "無料診断を依頼する"
+    }
+  ],
+  "target_language": "ja"
+}

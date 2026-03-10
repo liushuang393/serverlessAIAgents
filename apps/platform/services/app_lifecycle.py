@@ -2183,10 +2183,6 @@ class AppLifecycleManager:
         compose_files: list[Path],
     ) -> tuple[list[str], str]:
         """publish 用 compose サブコマンドを決定する."""
-        state = await asyncio.to_thread(self._inspect_compose_asset_state_sync, app_dir, compose_files)
-        has_existing_assets = bool(state.get("containers_exist")) or bool(state.get("images_exist"))
-        if has_existing_assets:
-            return ["up", "-d"], "lightweight_start"
         return ["up", "-d", "--build"], "build_start"
 
     def _inspect_compose_asset_state_sync(

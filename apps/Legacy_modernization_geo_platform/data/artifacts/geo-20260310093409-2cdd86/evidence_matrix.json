@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "task_id": "geo-20260310093409-2cdd86",
+    "trace_id": "geo-20260310093409-2cdd86:evidence",
+    "stage": "evidence_collection",
+    "generated_at": "2026-03-10T09:34:09.410064"
+  },
+  "evidence": [],
+  "unknowns": [
+    "duckduckgo_search missing",
+    "live_sources_unavailable: no evidence from external providers"
+  ],
+  "extensions": {},
+  "entries": [],
+  "provider_status": {
+    "primary_provider": "none",
+    "warnings": [
+      "duckduckgo_search missing",
+      "duckduckgo_search missing",
+      "duckduckgo_search missing",
+      "duckduckgo_search missing",
+      "duckduckgo_search missing",
+      "live_sources_unavailable: no evidence from external providers"
+    ],
+    "source_count": 0
+  }
+}

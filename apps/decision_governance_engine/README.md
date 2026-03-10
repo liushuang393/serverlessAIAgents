@@ -210,7 +210,7 @@ CognitiveGate → Gatekeeper → Clarification → Dao → Fa → Shu → Qi →
 | Node.js | 18以上 |
 | パッケージマネージャ | pip, npm |
 | LLM Gateway | `.agentflow/llm_gateway.yaml`（自動生成可） |
-| API Key | `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY`（いずれか1つ以上） |
+| API Key | Platform 未設定時のみ fallback として利用 |
 
 ### 4.2 クイックセットアップ
 
@@ -222,19 +222,20 @@ pip install -e .
 cd apps/decision_governance_engine/frontend
 npm install
 
-# 3. 環境変数を設定（ENV 優先、未設定時のみ .env）
+# 3. 環境変数を設定
 cd ../../..
 cat <<'EOF' > .env
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY=
-GEMINI_API_KEY=
+PLATFORM_SECRET_MASTER_KEY=
 EOF
 
 # 4. Gateway 設定を初期化（未作成時）
 python -c "from agentflow.llm.gateway import load_gateway_config; load_gateway_config()"
 ```
 
-> 注意: アプリ層は Provider 名を直接扱わず、`role`（`reasoning/coding/cheap/local`）で LLM を呼び出します。
+> 注意:
+> - この app の正本は `app_config.json` の `contracts.llm` です。
+> - Provider / model / API Key は `apps/platform` の `LLM Management` で管理してください。
+> - app 層は Provider 名を直接扱わず、契約から解決された model を利用します。
 ### DB マイグレーション（必須）
 
 ```bash
@@ -473,6 +474,7 @@ uvicorn apps.decision_governance_engine.api:app \
 docker build -t decision-engine:latest -f Dockerfile.decision .
 
 # コンテナ起動
+# Platform 未設定時のみ Provider fallback key を渡す
 docker run -d \
   -p 8000:8000 \
   -e OPENAI_API_KEY=${OPENAI_API_KEY} \
@@ -541,7 +543,7 @@ export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
 **Q: APIキーエラー**
 ```bash
-# 環境変数を確認
+# Platform 未設定時の fallback key を確認
 echo $OPENAI_API_KEY
 # .envファイルを確認
 cat .env

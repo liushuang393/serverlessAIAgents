@@ -28,9 +28,25 @@ from pathlib import Path
 from typing import Any
 
 from agentflow.llm.gateway import LiteLLMGateway
+from agentflow.runtime import get_runtime_context
 
 
 logger = logging.getLogger(__name__)
+
+
+def _gateway_metadata() -> dict[str, str]:
+    """現在の RuntimeContext から metadata を抽出する."""
+    context = get_runtime_context()
+    if context is None:
+        return {}
+    payload: dict[str, str] = {}
+    app_name = context.metadata.get("app_name")
+    if isinstance(app_name, str) and app_name.strip():
+        payload["app_name"] = app_name.strip()
+    agent_name = context.metadata.get("agent_name")
+    if isinstance(agent_name, str) and agent_name.strip():
+        payload["agent_name"] = agent_name.strip()
+    return payload
 
 
 class VoiceProvider(str, Enum):
@@ -134,6 +150,7 @@ class VoiceSkill:
                 prompt=prompt,
                 response_format=response_format,
                 model=self._config.stt_model,
+                metadata=_gateway_metadata(),
             )
         except Exception as e:
             self._logger.error(f"Transcription failed: {e}", exc_info=True)
@@ -169,6 +186,7 @@ class VoiceSkill:
                 speed=max(0.25, min(4.0, speed)),
                 output_format=output_format,
                 model=self._config.tts_model,
+                metadata=_gateway_metadata(),
             )
         except Exception as e:
             self._logger.error(f"Speech synthesis failed: {e}", exc_info=True)
@@ -202,6 +220,7 @@ class VoiceSkill:
                 audio_bytes=audio_bytes,
                 prompt=prompt,
                 model=self._config.stt_model,
+                metadata=_gateway_metadata(),
             )
         except Exception as e:
             self._logger.error(f"Translation failed: {e}", exc_info=True)

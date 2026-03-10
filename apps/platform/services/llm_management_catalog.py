@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, get_args
 
+from agentflow.llm.gateway import load_gateway_config
 from agentflow.llm.models import MODELS
 from apps.platform.schemas.llm_management_schemas import (
     LLMBackendKind,
@@ -15,7 +16,6 @@ from apps.platform.schemas.llm_management_schemas import (
     LLMProviderKind,
 )
 from apps.platform.schemas.provisioning_schemas import AppCreateRequest
-
 from apps.platform.services.llm_management_validator import (
     provider_default_api_base,
     provider_default_api_key_env,
@@ -38,26 +38,34 @@ _PROVIDER_INSTALL_RECIPES: dict[str, list[list[str]]] = {
     "local": [],
 }
 
+_PROVIDER_PRIORITY_MODELS: dict[str, list[str]] = {
+    "openai": ["gpt-5.2", "gpt-5-mini", "gpt-5-nano"],
+    "anthropic": ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"],
+    "google": ["gemini-3.1-pro-preview", "gemini-3-flash-preview", "gemini-3.1-flash-lite-preview"],
+    "ollama": ["llama3.3:70b", "qwen2.5:72b", "qwen2.5-coder:32b"],
+    "local": ["Qwen/Qwen2.5-0.5B-Instruct"],
+}
+
 _BACKEND_METADATA: dict[LLMBackendKind, dict[str, Any]] = {
     LLMBackendKind.VLLM: {
         "display_name": "vLLM",
-        "base_url": "http://127.0.0.1:8001",
+        "base_url": "http://127.0.0.1:18001",
         "health_path": "/health",
         "install": [["python", "-m", "pip", "install", "vllm"]],
         "start": [["docker", "compose", "up", "-d"]],
     },
     LLMBackendKind.SGLANG: {
         "display_name": "SGLang",
-        "base_url": "http://127.0.0.1:30000",
+        "base_url": "http://127.0.0.1:18002",
         "health_path": "/health",
         "install": [["python", "-m", "pip", "install", "sglang"]],
         "start": [["docker", "compose", "up", "-d"]],
     },
     LLMBackendKind.TGI: {
         "display_name": "TGI",
-        "base_url": "http://127.0.0.1:8080",
+        "base_url": "http://127.0.0.1:18003",
         "health_path": "/health",
-        "install": [["docker", "pull", "ghcr.io/huggingface/text-generation-inference:latest"]],
+        "install": [["docker", "pull", "ghcr.io/huggingface/text-generation-inference:3.3.7"]],
         "start": [["docker", "compose", "up", "-d"]],
     },
 }
@@ -74,18 +82,23 @@ class LLMCatalogService:
             providers=providers,
             models=models,
             backends=backends,
-            generated_at=datetime.now(timezone.utc).isoformat(),
+            generated_at=datetime.now(UTC).isoformat(),
         )
 
     def _provider_catalog(self) -> list[LLMCatalogProvider]:
         provider_values = self._provider_values_from_provisioning()
+        provider_values.extend(self._provider_values_from_gateway())
         result: list[LLMCatalogProvider] = []
-        for raw in provider_values:
+        seen_provider_names: set[str] = set()
+        for raw in sorted(set(provider_values)):
             if raw == "auto":
                 continue
             provider_name = "google" if raw == "gemini" else raw
             if provider_name not in {item.value for item in LLMProviderKind}:
                 continue
+            if provider_name in seen_provider_names:
+                continue
+            seen_provider_names.add(provider_name)
             kind = LLMProviderKind(provider_name)
             result.append(
                 LLMCatalogProvider(
@@ -103,6 +116,7 @@ class LLMCatalogService:
 
     def _model_catalog(self) -> list[LLMCatalogModel]:
         models: list[LLMCatalogModel] = []
+        seen_ids: set[str] = set()
         for alias, info in MODELS.items():
             recommended_for: list[str] = []
             capability_values = [cap.value for cap in info.capabilities]
@@ -117,14 +131,48 @@ class LLMCatalogService:
             models.append(
                 LLMCatalogModel(
                     alias=alias,
+                    model_id=alias,
                     provider=info.provider,
                     model=info.name,
+                    model_type=self._infer_model_type(capability_values),
                     capabilities=capability_values,
                     context_window=info.context_window,
                     recommended_for=sorted(set(recommended_for)),
                 )
             )
+            seen_ids.add(alias)
+
+        gateway_config = load_gateway_config()
+        for model in gateway_config.models:
+            model_id = model.model_id or model.alias
+            if model_id in seen_ids:
+                continue
+            models.append(
+                LLMCatalogModel(
+                    alias=model.alias,
+                    model_id=model_id,
+                    provider=model.provider,
+                    model=model.model,
+                    model_type=model.model_type,
+                    capabilities=list(model.modalities),
+                    context_window=0,
+                    recommended_for=[],
+                )
+            )
+            seen_ids.add(model_id)
         return sorted(models, key=lambda item: (item.provider, item.model))
+
+    @staticmethod
+    def _infer_model_type(capabilities: list[str]) -> str:
+        if "embedding" in capabilities:
+            return "embedding"
+        if "image" in capabilities:
+            return "image"
+        if "speech_to_text" in capabilities:
+            return "speech_to_text"
+        if "text_to_speech" in capabilities:
+            return "text_to_speech"
+        return "text"
 
     def _backend_catalog(self) -> list[LLMCatalogBackend]:
         backends: list[LLMCatalogBackend] = []
@@ -143,6 +191,17 @@ class LLMCatalogService:
 
     def _recommended_models(self, provider_name: str) -> list[str]:
         recommended: list[str] = []
+        for model_name in _PROVIDER_PRIORITY_MODELS.get(provider_name, []):
+            if model_name not in recommended:
+                recommended.append(model_name)
+
+        gateway_config = load_gateway_config()
+        for model in gateway_config.models:
+            if model.provider != provider_name:
+                continue
+            if model.model not in recommended:
+                recommended.append(model.model)
+
         for info in MODELS.values():
             if info.provider != provider_name:
                 continue
@@ -159,5 +218,9 @@ class LLMCatalogService:
             return []
         annotation = field.annotation
         literals = get_args(annotation)
-        values = [str(item) for item in literals if isinstance(item, str)]
-        return values
+        return [str(item) for item in literals if isinstance(item, str)]
+
+    @staticmethod
+    def _provider_values_from_gateway() -> list[str]:
+        config = load_gateway_config()
+        return [provider.name for provider in config.providers]

@@ -24,7 +24,9 @@ import logging
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+
 if TYPE_CHECKING:
+    from apps.platform.services.app_config_event_store import AppConfigEventStore
     from apps.platform.services.app_discovery import AppDiscoveryService
 
 _logger = logging.getLogger(__name__)
@@ -39,13 +41,18 @@ class ConfigWatcherService:
         _running: 監視稼働中フラグ（外部から確認可能）
     """
 
-    def __init__(self, discovery: AppDiscoveryService) -> None:
+    def __init__(
+        self,
+        discovery: AppDiscoveryService,
+        event_store: AppConfigEventStore | None = None,
+    ) -> None:
         """初期化.
 
         Args:
             discovery: 変更検知時に _load_one() を呼ぶ AppDiscoveryService
         """
         self._discovery = discovery
+        self._event_store = event_store
         self._running = False
 
     @property
@@ -67,7 +74,7 @@ class ConfigWatcherService:
             asyncio.CancelledError: タスクがキャンセルされた場合（正常停止）
         """
         try:
-            from watchfiles import Change, awatch  # noqa: PLC0415 — 任意依存のため遅延インポート
+            from watchfiles import Change, awatch
         except ImportError:
             _logger.warning(
                 "watchfiles が未インストールのためホットリロードが無効です。"
@@ -104,6 +111,7 @@ class ConfigWatcherService:
                         self._handle_deleted(config_path)
                     else:
                         self._discovery._load_one(config_path)
+                        await self._emit_contract_event(config_path)
 
         except asyncio.CancelledError:
             _logger.info("ConfigWatcher 停止（キャンセル受信）")
@@ -136,3 +144,22 @@ class ConfigWatcherService:
         else:
             _logger.debug("削除検知: 対応する App が registry に存在しません (%s)", dir_name)
 
+    async def _emit_contract_event(self, config_path: Path) -> None:
+        """変更後 manifest から契約イベントを発火する."""
+        if self._event_store is None:
+            return
+
+        app_name = config_path.parent.name
+        raw = self._discovery.get_raw_config(app_name)
+        if raw is None:
+            return
+        contracts = raw.get("contracts")
+        if not isinstance(contracts, dict):
+            return
+        contracts_rag = contracts.get("rag")
+        contracts_llm = contracts.get("llm")
+        await self._event_store.fire_config_change(
+            app_name,
+            contracts_rag=contracts_rag if isinstance(contracts_rag, dict) else {},
+            contracts_llm=contracts_llm if isinstance(contracts_llm, dict) else {},
+        )

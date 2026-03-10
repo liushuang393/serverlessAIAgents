@@ -113,14 +113,33 @@ Platform は 3 Studio 製品線と Framework 管理面を提供します。
 
 ## LLM Gateway 運用（LiteLLM 内蔵）
 
-- LLM 呼び出しは Provider API 直呼びを禁止し、AgentFlow 内蔵 Gateway に統一する。
-- 正本設定: `.agentflow/llm_gateway.yaml`
-- 秘密情報解決順: `ENV > .env > unavailable`
-- 標準 role: `reasoning / coding / cheap / local`
-- UI は `LLM Management` で `Quick Setup & Switch`（provider/model/backend + auto setup）を実行できる。
-- Advanced Mode では従来の JSON 編集（Provider / Engine / Registry / Routing Policy）も継続利用できる。
-- `setup-and-switch` は preflight が `failed` または `dry_run` の場合、設定を変更しない。
-- `/llm-management` で 404 が出る場合は backend の旧プロセスが残っている可能性が高い。backend を再起動し、`/openapi.json` に `/api/studios/framework/llm/*` が含まれることを確認する。
+- LLM 呼び出しは Provider API 直呼びを禁止し、Platform 管理の Gateway に統一する。
+- 正本設定ファイルは `.agentflow/llm_gateway.yaml`、永続状態は `apps/platform/data/platform.db`（既定 SQLite）です。
+- secret 解決順は `Platform 暗号化保存 > ENV > .env > unavailable` です。
+- Provider secret は画面から保存し、`PLATFORM_SECRET_MASTER_KEY` で暗号化します。API 応答では平文を返しません。
+- model は `model_id` と `model_type` を持ち、app は `contracts.llm` からこの catalog を参照します。
+- Engine は `deployment_mode / docker_image / served_model_name / host_port / public_base_url / gpu_*` を保持し、`配備 / 停止` で Docker Compose を生成・実行します。
+- compose は `.agentflow/llm_backends/<engine-id>/docker-compose.yml` に生成され、公開 URL と状態は DB に保存されます。
+- `setup-and-switch` は preflight が `failed` または `dry_run` の場合、設定を変更しません。
+- `/llm-management` で 404 が出る場合は backend の旧プロセスが残っている可能性が高いです。backend を再起動し、`/openapi.json` に `/api/studios/framework/llm/*` が含まれることを確認してください。
+
+### 主要 API
+
+- `GET /api/studios/framework/llm/overview`
+- `GET /api/studios/framework/llm/catalog`
+- `PUT /api/studios/framework/llm/providers/{provider_name}/secret`
+- `DELETE /api/studios/framework/llm/providers/{provider_name}/secret`
+- `POST /api/studios/framework/llm/engines/{engine_name}/deploy`
+- `POST /api/studios/framework/llm/engines/{engine_name}/stop`
+- `POST /api/studios/framework/llm/preflight`
+- `POST /api/studios/framework/llm/switch`
+- `POST /api/studios/framework/llm/setup-and-switch`
+
+### app 契約
+
+- 各 app は `app_config.json` の `contracts.llm` で `defaults / agent_overrides / allowed_modalities / extra_model_refs` を宣言します。
+- runtime は `RuntimeContext.metadata["app_name"]` / `["agent_name"]` を使って契約を解決します。
+- Platform catalog に存在しない `provider` / `model_id` を参照した app は scan / audit で validation error になります。
 
 詳細手順: [docs/internal/llm-gateway-setup-ja.md](../../docs/internal/llm-gateway-setup-ja.md)
 

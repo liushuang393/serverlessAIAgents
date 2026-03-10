@@ -1,0 +1,20 @@
+{
+  "meta": {
+    "task_id": "geo-20260310093409-2cdd86",
+    "trace_id": "geo-20260310093409-2cdd86:demand_signal",
+    "stage": "demand_signal",
+    "generated_at": "2026-03-10T09:34:09.283528"
+  },
+  "evidence": [],
+  "unknowns": [
+    "duckduckgo_search missing",
+    "live_sources_unavailable: no evidence from external providers"
+  ],
+  "extensions": {
+    "primary_provider": "none"
+  },
+  "company": "manufacturing prospects",
+  "signals": [],
+  "urgency_hypothesis": "保守要員不足と技術負債圧縮の同時要請が強い",
+  "modernization_fit_score": 66
+}

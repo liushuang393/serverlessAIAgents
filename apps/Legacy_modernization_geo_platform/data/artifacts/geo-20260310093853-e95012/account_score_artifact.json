@@ -1,0 +1,38 @@
+{
+  "meta": {
+    "task_id": "geo-20260310093853-e95012",
+    "trace_id": "geo-20260310093853-e95012:icp_scoring",
+    "stage": "icp_scoring",
+    "generated_at": "2026-03-10T09:38:54.131463Z"
+  },
+  "evidence": [
+    {
+      "company": "manufacturing prospects",
+      "fit_score": 87,
+      "urgency_score": 76,
+      "priority": "high",
+      "rationale": [
+        "保守要員不足と技術負債圧縮の同時要請が強い",
+        "Primary stacks: COBOL, Struts"
+      ]
+    }
+  ],
+  "unknowns": [],
+  "extensions": {},
+  "account_scores": [
+    {
+      "company": "manufacturing prospects",
+      "fit_score": 87,
+      "urgency_score": 76,
+      "priority": "high",
+      "rationale": [
+        "保守要員不足と技術負債圧縮の同時要請が強い",
+        "Primary stacks: COBOL, Struts"
+      ]
+    }
+  ],
+  "recommended_focus": [
+    "COBOL",
+    "Struts"
+  ]
+}

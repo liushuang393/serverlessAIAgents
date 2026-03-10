@@ -111,9 +111,16 @@ pip install -e ".[dev,apps]"
 | `MARKET_TREND_MONITOR_API_HOST` | API ホスト | `app_config.json` の値 |
 | `MARKET_TREND_MONITOR_API_PORT` | API ポート | `8002` |
 | `MARKET_TREND_MONITOR_FRONTEND_PORT` | フロントエンドポート | `3002` |
-| `OPENAI_API_KEY` | OpenAI API キー | — |
+| `OPENAI_API_KEY` | Provider API キー fallback | Platform 未設定時のみ |
 | `DATABASE_URL` | DB 接続先 | `sqlite:///./market_trend.db` |
 | `LOG_LEVEL` | ログレベル | `INFO` |
+
+## Platform 主導 LLM 契約
+
+- この app の正本は `app_config.json` の `contracts.llm` です。
+- 既定 modality は `text` と `embedding` で、Platform catalog の `platform_text_default` / `platform_embedding_default` を参照します。
+- Provider / model / API Key の正本は `apps/platform` の `LLM Management` です。
+- `OPENAI_API_KEY` などの env は Platform 未設定時の fallback としてのみ使用します。
 
 ## 起動方法
 
@@ -287,7 +294,7 @@ conda run -n agentflow python scripts/bootstrap_test_env.py --env-file .env
 ```
 
 - 共通テストの env 値は手動作成せず、スクリプトで空値補完します。
-- 既存の `DATABASE_URL` / `OPENAI_API_KEY` など非空値は保持されます。
+- 既存の `DATABASE_URL` / Provider fallback key など非空値は保持されます。
 
 ## 本番運用と多租户招待メール
 

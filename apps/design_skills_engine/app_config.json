@@ -116,6 +116,27 @@
       ],
       "session_ttl_minutes": 60
     },
+    "llm": {
+      "enabled": true,
+      "defaults": {
+        "text": {
+          "provider": "openai",
+          "model_id": "platform_text_default",
+          "model_type": "text"
+        },
+        "image": {
+          "provider": "openai",
+          "model_id": "platform_image_default",
+          "model_type": "image"
+        }
+      },
+      "agent_overrides": {},
+      "allowed_modalities": [
+        "image",
+        "text"
+      ],
+      "extra_model_refs": []
+    },
     "rag": {
       "enabled": false,
       "pattern": null,

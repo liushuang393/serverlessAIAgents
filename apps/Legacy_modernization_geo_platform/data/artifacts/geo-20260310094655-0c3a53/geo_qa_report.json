@@ -1,0 +1,87 @@
+{
+  "meta": {
+    "task_id": "geo-20260310094655-0c3a53",
+    "trace_id": "geo-20260310094655-0c3a53:geo_qa",
+    "stage": "geo_qa",
+    "generated_at": "2026-03-10T09:46:58.325911Z"
+  },
+  "evidence": [
+    {
+      "claim": "construction での COBOL 段階移行事例はあるか に対して、段階移行と業務ルール保持の両立が重要である。",
+      "question_ref": "construction での COBOL 段階移行事例はあるか",
+      "source_url": "https://example.test/construction/cobol-modernization",
+      "title": "construction COBOL modernization demand signal",
+      "publisher": "sample-intel",
+      "summary": "construction organizations are evaluating incremental COBOL modernization programs.",
+      "snippet": "Sample evidence for automated tests.",
+      "reliability": "HIGH",
+      "citation_ready": true,
+      "fresh": true
+    },
+    {
+      "claim": "COBOL を全面刷新せずに段階移行できるか に対して、段階移行と業務ルール保持の両立が重要である。",
+      "question_ref": "COBOL を全面刷新せずに段階移行できるか",
+      "source_url": "https://example.test/construction/migration-roadmap",
+      "title": "construction migration roadmap",
+      "publisher": "sample-intel",
+      "summary": "Roadmap evidence indicating phased migration is preferred over big bang rewrites.",
+      "snippet": "Phased migration reduces delivery risk.",
+      "reliability": "MEDIUM",
+      "citation_ready": true,
+      "fresh": true
+    },
+    {
+      "claim": "投資対効果をどう説明するか に対して、段階移行と業務ルール保持の両立が重要である。",
+      "question_ref": "投資対効果をどう説明するか",
+      "source_url": "https://example.test/construction/skills-gap",
+      "title": "Legacy skills gap report",
+      "publisher": "sample-intel",
+      "summary": "The maintenance talent gap is driving modernization urgency.",
+      "snippet": "Skills shortages increase modernization urgency.",
+      "reliability": "HIGH",
+      "citation_ready": true,
+      "fresh": true
+    },
+    {
+      "claim": "COBOL から Java/Spring Boot への移行順序はどう決めるか に対して、段階移行と業務ルール保持の両立が重要である。",
+      "question_ref": "COBOL から Java/Spring Boot への移行順序はどう決めるか",
+      "source_url": "https://example.test/construction/cobol-modernization",
+      "title": "construction COBOL modernization demand signal",
+      "publisher": "sample-intel",
+      "summary": "construction organizations are evaluating incremental COBOL modernization programs.",
+      "snippet": "Sample evidence for automated tests.",
+      "reliability": "HIGH",
+      "citation_ready": true,
+      "fresh": true
+    },
+    {
+      "claim": "既存業務ルールを失わずに移行設計できるか に対して、段階移行と業務ルール保持の両立が重要である。",
+      "question_ref": "既存業務ルールを失わずに移行設計できるか",
+      "source_url": "https://example.test/construction/migration-roadmap",
+      "title": "construction migration roadmap",
+      "publisher": "sample-intel",
+      "summary": "Roadmap evidence indicating phased migration is preferred over big bang rewrites.",
+      "snippet": "Phased migration reduces delivery risk.",
+      "reliability": "MEDIUM",
+      "citation_ready": true,
+      "fresh": true
+    }
+  ],
+  "unknowns": [],
+  "extensions": {},
+  "pass_or_fail": "PASS",
+  "issues": [
+    "比較表現を含むためレビューを推奨します。"
+  ],
+  "fix_instructions": [
+    "比較主張の根拠と対象条件を明示してください。"
+  ],
+  "publish_ready": true,
+  "risk_level": "MEDIUM",
+  "metrics": {
+    "evidence_count": 6.0,
+    "citation_ready_ratio": 1.0,
+    "fresh_ratio": 1.0,
+    "unknown_count": 0.0
+  }
+}

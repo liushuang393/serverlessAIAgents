@@ -12,9 +12,8 @@ import os
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
-from apps.faq_system.backend.db.models import Base
-
 from agentflow.database import DatabaseConfig, DatabaseManager
+from apps.faq_system.backend.db.models import Base
 
 
 if TYPE_CHECKING:
@@ -264,11 +263,10 @@ async def init_rag_tables() -> None:
     await _db.init()
 
     if _db.is_sync_mode:
+        from sqlalchemy import create_engine
         from sqlalchemy import pool as sa_pool
 
         from agentflow.database.url_utils import to_sync_url
-
-        from sqlalchemy import create_engine
 
         engine = create_engine(to_sync_url(_db.resolved_url), poolclass=sa_pool.NullPool)
         try:
@@ -276,7 +274,7 @@ async def init_rag_tables() -> None:
         finally:
             engine.dispose()
     else:
-        async_engine = _db.engine
+        async_engine = _db.get_async_engine()
         async with async_engine.begin() as conn:
             await conn.run_sync(RAGBase.metadata.create_all, checkfirst=True)
 

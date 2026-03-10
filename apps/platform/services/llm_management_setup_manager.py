@@ -1,14 +1,16 @@
-"""Setup manager for provider/backend preflight in LLM management."""
+"""LLM Management の preflight / 配備セットアップ管理."""
 
 from __future__ import annotations
 
 import asyncio
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Protocol
 
 import httpx
-from agentflow.llm.gateway import LLMGatewayConfig, resolve_secret
+import yaml
+
+from agentflow.llm.gateway import InferenceEngineConfig, LLMGatewayConfig, resolve_secret
 from apps.platform.schemas.llm_management_schemas import (
     LLMBackendKind,
     LLMPreflightReport,
@@ -113,13 +115,42 @@ class LLMSetupManager:
         self._runner = command_runner or DefaultLLMCommandRunner()
         self._validator = LLMConfigValidator()
 
+    async def deploy_engine(
+        self,
+        engine: InferenceEngineConfig,
+    ) -> tuple[LLMSetupCommandResult, Path, str]:
+        """Engine 設定から compose を生成して起動する."""
+        compose_path, compose_yaml = self._ensure_engine_compose(engine)
+        command = ["docker", "compose", "-f", str(compose_path), "up", "-d"]
+        result = await self._run_command(command, dry_run=False, cwd=str(compose_path.parent), timeout_seconds=900.0)
+        if result.error is not None or result.return_code != 0:
+            return result, compose_path, compose_yaml
+
+        health_result = await self._wait_for_engine_health(engine)
+        if health_result is not None:
+            return health_result, compose_path, compose_yaml
+        return result, compose_path, compose_yaml
+
+    async def stop_engine(self, engine_name: str) -> LLMSetupCommandResult:
+        """既存 compose から engine を停止する."""
+        compose_path = self._config_path.parent / "llm_backends" / engine_name / "docker-compose.yml"
+        if not compose_path.is_file():
+            return LLMSetupCommandResult(
+                command=["docker", "compose", "down"],
+                cwd=str(compose_path.parent),
+                allowed=True,
+                error="compose_file_missing",
+            )
+        command = ["docker", "compose", "-f", str(compose_path), "down"]
+        return await self._run_command(command, dry_run=False, cwd=str(compose_path.parent), timeout_seconds=900.0)
+
     async def preflight(
         self,
         request: LLMPreflightRequest,
         config: LLMGatewayConfig,
     ) -> LLMPreflightReport:
         """Run preflight and return detailed report."""
-        started_at = datetime.now(timezone.utc).isoformat()
+        started_at = datetime.now(UTC).isoformat()
         steps: list[LLMPreflightStep] = []
 
         provider_targets = request.providers or []
@@ -143,9 +174,7 @@ class LLMSetupManager:
                     (
                         step
                         for step in steps
-                        if step.category == "backend"
-                        and step.target == failed_step.target
-                        and step.phase == "install"
+                        if step.category == "backend" and step.target == failed_step.target and step.phase == "install"
                     ),
                     None,
                 )
@@ -167,7 +196,7 @@ class LLMSetupManager:
         return LLMPreflightReport(
             status=status,
             started_at=started_at,
-            completed_at=datetime.now(timezone.utc).isoformat(),
+            completed_at=datetime.now(UTC).isoformat(),
             request=request,
             steps=steps,
             summary=summary,
@@ -180,10 +209,7 @@ class LLMSetupManager:
         provider_targets: list[LLMProviderKind],
         dry_run: bool,
     ) -> list[LLMPreflightStep]:
-        by_name = {
-            self._validator.canonical_provider_name(provider.name): provider
-            for provider in config.providers
-        }
+        by_name = {self._validator.canonical_provider_name(provider.name): provider for provider in config.providers}
         steps: list[LLMPreflightStep] = []
         for provider_kind in provider_targets:
             name = self._validator.canonical_provider_name(provider_kind.value)
@@ -197,12 +223,16 @@ class LLMSetupManager:
                         target=name,
                         phase="detect",
                         status="success" if not dry_run else "dry_run",
-                        message=f"provider {name} does not require api key",
+                        message=f"provider {name} は API Key 不要です。",
                     )
                 )
                 continue
 
-            value, source = resolve_secret(env_name, config_path=self._config_path)
+            value, source = resolve_secret(
+                env_name,
+                provider_name=name,
+                config_path=self._config_path,
+            )
             if value:
                 steps.append(
                     LLMPreflightStep(
@@ -210,20 +240,20 @@ class LLMSetupManager:
                         target=name,
                         phase="detect",
                         status="success",
-                        message=f"api key resolved from {source}",
+                        message=f"API Key を {source} から解決しました。",
                     )
                 )
             else:
-                remediation = [f"Set {env_name} in environment or .env before switching to {name}."]
+                remediation = [f"{name} へ切り替える前に、{env_name} を環境変数または .env に設定してください。"]
                 if name == "google":
-                    remediation.append("GEMINI_API_KEY is the canonical variable for google/gemini.")
+                    remediation.append("google / gemini では GEMINI_API_KEY を正規の変数名として使用します。")
                 steps.append(
                     LLMPreflightStep(
                         category="provider",
                         target=name,
                         phase="detect",
                         status="failed",
-                        message="api key not configured",
+                        message="API Key が未設定です。",
                         remediation=remediation,
                     )
                 )
@@ -248,15 +278,15 @@ class LLMSetupManager:
                 target=backend_name,
                 phase="detect",
                 status="dry_run" if request.dry_run else ("success" if detect_success else "failed"),
-                message="backend dependency detected" if detect_success else "backend dependency is missing",
+                message="backend 依存関係を検出しました。" if detect_success else "backend 依存関係が不足しています。",
                 command=detect_result,
-                remediation=[] if detect_success else [f"Install runtime dependency for {backend_name}."],
+                remediation=[] if detect_success else [f"{backend_name} の実行依存関係をインストールしてください。"],
             )
         )
 
         if not detect_success:
             install_status = "skipped"
-            install_message = "auto_install disabled"
+            install_message = "自動インストールは無効です。"
             install_command_result: LLMSetupCommandResult | None = None
             if request.auto_install:
                 install_command = self._backend_install_command(backend)
@@ -266,14 +296,12 @@ class LLMSetupManager:
                     cwd=None,
                     timeout_seconds=900.0,
                 )
-                install_ok = bool(
-                    install_command_result.error is None and install_command_result.return_code == 0
-                )
+                install_ok = bool(install_command_result.error is None and install_command_result.return_code == 0)
                 install_status = "dry_run" if request.dry_run else ("success" if install_ok else "failed")
                 install_message = (
-                    "backend dependency install succeeded"
+                    "backend 依存関係のインストールに成功しました。"
                     if install_ok
-                    else "backend dependency install failed"
+                    else "backend 依存関係のインストールに失敗しました。"
                 )
             steps.append(
                 LLMPreflightStep(
@@ -284,8 +312,8 @@ class LLMSetupManager:
                     message=install_message,
                     command=install_command_result,
                     remediation=[
-                        "Verify internet and package mirrors for install command.",
-                        f"Run install command manually for {backend_name} and retry preflight.",
+                        "インターネット接続とパッケージミラー設定を確認してください。",
+                        f"{backend_name} のインストールコマンドを手動実行してから preflight を再試行してください。",
                     ]
                     if install_status == "failed"
                     else [],
@@ -293,7 +321,11 @@ class LLMSetupManager:
             )
 
         if request.auto_start:
-            compose_path = self._ensure_backend_compose(backend)
+            engine_config = self._resolve_backend_engine_config(config, backend)
+            if engine_config is not None:
+                compose_path, _compose_yaml = self._ensure_engine_compose(engine_config)
+            else:
+                compose_path = self._ensure_backend_compose(backend)
             start_command = ["docker", "compose", "-f", str(compose_path), "up", "-d"]
             start_result = await self._run_command(start_command, dry_run=request.dry_run, cwd=str(compose_path.parent))
             start_ok = bool(start_result.error is None and start_result.return_code == 0)
@@ -303,11 +335,13 @@ class LLMSetupManager:
                     target=backend_name,
                     phase="start",
                     status="dry_run" if request.dry_run else ("success" if start_ok else "failed"),
-                    message="backend start command executed" if start_ok else "backend start command failed",
+                    message="backend 起動コマンドを実行しました。"
+                    if start_ok
+                    else "backend 起動コマンドに失敗しました。",
                     command=start_result,
                     remediation=[
-                        "Ensure docker engine is running and accessible.",
-                        f"Inspect compose logs under {compose_path.parent}.",
+                        "Docker Engine が起動しており、アクセス可能か確認してください。",
+                        f"{compose_path.parent} 配下の compose ログを確認してください。",
                     ]
                     if not start_ok and not request.dry_run
                     else [],
@@ -320,7 +354,7 @@ class LLMSetupManager:
                     target=backend_name,
                     phase="start",
                     status="skipped",
-                    message="auto_start disabled",
+                    message="自動起動は無効です。",
                 )
             )
 
@@ -335,7 +369,7 @@ class LLMSetupManager:
                     target=backend_name,
                     phase="health",
                     status="skipped",
-                    message="health_check disabled",
+                    message="ヘルスチェックは無効です。",
                 )
             )
         return steps
@@ -353,8 +387,45 @@ class LLMSetupManager:
                 target=backend_name,
                 phase="health",
                 status="dry_run",
-                message=f"health check planned: GET {url}",
+                message=f"ヘルスチェックを予定しています: GET {url}",
             )
+
+    async def _wait_for_engine_health(
+        self,
+        engine: InferenceEngineConfig,
+        *,
+        timeout_seconds: float = 600.0,
+        interval_seconds: float = 5.0,
+    ) -> LLMSetupCommandResult | None:
+        """配備後に engine の health が通るまで待機する."""
+        url = f"{engine.base_url.rstrip('/')}/{engine.health_path.lstrip('/')}"
+        deadline = asyncio.get_running_loop().time() + timeout_seconds
+        attempts = 0
+        last_error: str | None = None
+
+        while asyncio.get_running_loop().time() < deadline:
+            attempts += 1
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    response = await client.get(url)
+                if response.status_code < 400:
+                    return None
+                last_error = f"health status={response.status_code}"
+            except Exception as exc:
+                last_error = str(exc)
+            await asyncio.sleep(interval_seconds)
+
+        return LLMSetupCommandResult(
+            command=["GET", url],
+            cwd=None,
+            return_code=1,
+            allowed=True,
+            timed_out=True,
+            error=(
+                f"health_check_timeout after {attempts} attempts: "
+                f"{last_error or 'engine is not ready'}"
+            ),
+        )
 
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
@@ -365,15 +436,15 @@ class LLMSetupManager:
                     target=backend_name,
                     phase="health",
                     status="success",
-                    message=f"health check passed: {url}",
+                    message=f"ヘルスチェックに成功しました: {url}",
                 )
             return LLMPreflightStep(
                 category="backend",
                 target=backend_name,
                 phase="health",
                 status="failed",
-                message=f"health check failed: status={response.status_code}",
-                remediation=[f"Verify backend endpoint and health_path: {url}"],
+                message=f"ヘルスチェックに失敗しました: status={response.status_code}",
+                remediation=[f"backend endpoint と health_path を確認してください: {url}"],
             )
         except Exception as exc:
             return LLMPreflightStep(
@@ -381,8 +452,8 @@ class LLMSetupManager:
                 target=backend_name,
                 phase="health",
                 status="failed",
-                message=f"health check failed: {exc}",
-                remediation=[f"Verify backend endpoint is reachable: {url}"],
+                message=f"ヘルスチェックに失敗しました: {exc}",
+                remediation=[f"backend endpoint に到達できるか確認してください: {url}"],
             )
 
     async def _run_command(
@@ -424,13 +495,13 @@ class LLMSetupManager:
             return ["python", "-m", "pip", "install", "vllm"]
         if backend == LLMBackendKind.SGLANG:
             return ["python", "-m", "pip", "install", "sglang"]
-        return ["docker", "pull", "ghcr.io/huggingface/text-generation-inference:latest"]
+        return ["docker", "pull", "ghcr.io/huggingface/text-generation-inference:3.3.7"]
 
     def _backend_health_url(self, config: LLMGatewayConfig, backend: LLMBackendKind) -> str:
         defaults = {
-            LLMBackendKind.VLLM: ("http://127.0.0.1:8001", "/health"),
-            LLMBackendKind.SGLANG: ("http://127.0.0.1:30000", "/health"),
-            LLMBackendKind.TGI: ("http://127.0.0.1:8080", "/health"),
+            LLMBackendKind.VLLM: ("http://127.0.0.1:18001", "/health"),
+            LLMBackendKind.SGLANG: ("http://127.0.0.1:18002", "/health"),
+            LLMBackendKind.TGI: ("http://127.0.0.1:18003", "/health"),
         }
         base_url, health_path = defaults[backend]
         for engine in config.inference_engines:
@@ -440,6 +511,16 @@ class LLMSetupManager:
                 health_path = engine.health_path
                 break
         return f"{base_url.rstrip('/')}/{health_path.lstrip('/')}"
+
+    @staticmethod
+    def _resolve_backend_engine_config(
+        config: LLMGatewayConfig,
+        backend: LLMBackendKind,
+    ) -> InferenceEngineConfig | None:
+        for engine in config.inference_engines:
+            if engine.name.strip().lower() == backend.value:
+                return engine
+        return None
 
     def _ensure_backend_compose(self, backend: LLMBackendKind) -> Path:
         target_dir = self._config_path.parent / "llm_backends"
@@ -452,31 +533,164 @@ class LLMSetupManager:
         target.write_text(compose, encoding="utf-8")
         return target
 
+    def _ensure_engine_compose(self, engine: InferenceEngineConfig) -> tuple[Path, str]:
+        target_dir = self._config_path.parent / "llm_backends" / engine.name
+        target_dir.mkdir(parents=True, exist_ok=True)
+        target = target_dir / "docker-compose.yml"
+        compose_payload = self._compose_payload_for_engine(engine)
+        compose_yaml = yaml.safe_dump(
+            compose_payload,
+            sort_keys=False,
+            allow_unicode=True,
+        )
+        target.write_text(compose_yaml, encoding="utf-8")
+        return target, compose_yaml
+
+    def _compose_payload_for_engine(self, engine: InferenceEngineConfig) -> dict[str, object]:
+        container_port = self._container_port_for_engine(engine.engine_type)
+        host_port = engine.host_port or self._host_port_from_base_url(engine.base_url) or container_port
+        service_name = f"llm-{engine.name}"
+        served_model_name = engine.served_model_name or "Qwen/Qwen2.5-0.5B-Instruct"
+        cache_host_dir = self._huggingface_cache_dir()
+
+        service: dict[str, object] = {
+            "image": engine.docker_image or self._default_docker_image(engine.engine_type),
+            "container_name": engine.container_name or service_name,
+            "ports": [f"{host_port}:{container_port}"],
+            "restart": "unless-stopped",
+        }
+
+        environment = dict(engine.extra_env)
+        volumes: list[str] = []
+        if engine.gpu_enabled:
+            service["gpus"] = "all"
+            if engine.gpu_devices:
+                environment["CUDA_VISIBLE_DEVICES"] = ",".join(engine.gpu_devices)
+
+        if engine.engine_type in {"vllm", "sglang"}:
+            cache_target = "/root/.cache/huggingface"
+            environment.setdefault("HF_HOME", cache_target)
+            volumes.append(f"{cache_host_dir}:{cache_target}")
+            service["ipc"] = "host"
+        else:
+            cache_target = "/data"
+            environment.setdefault("HF_HOME", cache_target)
+            volumes.append(f"{cache_host_dir}:{cache_target}")
+            service["shm_size"] = "1g"
+
+        if engine.engine_type == "sglang":
+            service["shm_size"] = "16g"
+
+        if environment:
+            service["environment"] = environment
+        if volumes:
+            service["volumes"] = volumes
+
+        if engine.engine_type == "vllm":
+            command: list[str] = [
+                "--model",
+                served_model_name,
+                "--host",
+                "0.0.0.0",
+                "--port",
+                str(container_port),
+            ]
+            if engine.gpu_count is not None and engine.gpu_count > 0:
+                command.extend(["--tensor-parallel-size", str(engine.gpu_count)])
+            service["command"] = command
+        elif engine.engine_type == "sglang":
+            service["command"] = [
+                "python3",
+                "-m",
+                "sglang.launch_server",
+                "--model-path",
+                served_model_name,
+                "--host",
+                "0.0.0.0",
+                "--port",
+                str(container_port),
+            ]
+        else:
+            service["command"] = [
+                "--model-id",
+                served_model_name,
+                "--port",
+                str(container_port),
+            ]
+
+        return {"services": {service_name: service}}
+
+    @staticmethod
+    def _default_docker_image(engine_type: str) -> str:
+        if engine_type == "vllm":
+            return "vllm/vllm-openai:v0.8.5"
+        if engine_type == "sglang":
+            return "lmsysorg/sglang:v0.4.9.post4-cu126"
+        return "ghcr.io/huggingface/text-generation-inference:3.3.7"
+
+    @staticmethod
+    def _huggingface_cache_dir() -> str:
+        cache_dir = Path.home() / ".cache" / "huggingface"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        return str(cache_dir)
+
+    @staticmethod
+    def _container_port_for_engine(engine_type: str) -> int:
+        if engine_type == "vllm":
+            return 8000
+        if engine_type == "sglang":
+            return 30000
+        return 80
+
+    @staticmethod
+    def _host_port_from_base_url(base_url: str) -> int | None:
+        try:
+            port = int(base_url.rsplit(":", 1)[1].strip())
+        except (IndexError, ValueError):
+            return None
+        return port
+
     @staticmethod
     def _compose_template(backend: LLMBackendKind) -> str:
         if backend == LLMBackendKind.VLLM:
             return """services:
   llm-vllm:
-    image: vllm/vllm-openai:latest
+    image: vllm/vllm-openai:v0.8.5
     container_name: llm-vllm
     ports:
-      - "8001:8000"
+      - "18001:8000"
+    ipc: host
+    environment:
+      HF_HOME: /root/.cache/huggingface
+    volumes:
+      - "~/.cache/huggingface:/root/.cache/huggingface"
     command: ["--model", "Qwen/Qwen2.5-0.5B-Instruct"]
 """
         if backend == LLMBackendKind.SGLANG:
             return """services:
   llm-sglang:
-    image: lmsysorg/sglang:latest
+    image: lmsysorg/sglang:v0.4.9.post4-cu126
     container_name: llm-sglang
     ports:
-      - "30000:30000"
+      - "18002:30000"
+    ipc: host
+    shm_size: "16g"
+    environment:
+      HF_HOME: /root/.cache/huggingface
+    volumes:
+      - "~/.cache/huggingface:/root/.cache/huggingface"
 """
         return """services:
   llm-tgi:
-    image: ghcr.io/huggingface/text-generation-inference:latest
+    image: ghcr.io/huggingface/text-generation-inference:3.3.7
     container_name: llm-tgi
     ports:
-      - "8080:80"
+      - "18003:80"
+    shm_size: "1g"
+    environment:
+      HF_HOME: /data
+    volumes:
+      - "~/.cache/huggingface:/data"
 """
 
     @staticmethod
@@ -506,10 +720,7 @@ class LLMSetupManager:
         if binary == "ollama":
             return len(command) >= 2 and command[1] in {"--version", "list", "pull", "serve"}
 
-        if binary == "curl":
-            return True
-
-        return False
+        return binary == "curl"
 
     @staticmethod
     def _summary_from_steps(steps: list[LLMPreflightStep], status: str) -> str:
@@ -517,7 +728,4 @@ class LLMSetupManager:
         succeeded = sum(1 for step in steps if step.status == "success")
         skipped = sum(1 for step in steps if step.status == "skipped")
         dry_run = sum(1 for step in steps if step.status == "dry_run")
-        return (
-            f"status={status}, success={succeeded}, failed={failed}, "
-            f"skipped={skipped}, dry_run={dry_run}"
-        )
+        return f"状態={status}, 成功={succeeded}, 失敗={failed}, skip={skipped}, dry_run={dry_run}"

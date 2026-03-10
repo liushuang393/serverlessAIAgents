@@ -2,15 +2,19 @@
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
 import os
-from pathlib import Path
+from contextlib import asynccontextmanager
+from typing import TYPE_CHECKING
 
 import httpx
 import pytest
 from apps.platform.main import create_app
 from apps.platform.routers.llm_management import init_llm_management_service
 from apps.platform.services.llm_management import LLMManagementService
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @pytest.fixture
@@ -113,4 +117,53 @@ async def test_service_diagnostics_route_missing_case(tmp_path: Path) -> None:
     diagnostics = service.get_diagnostics(has_llm_routes=False, route_count=0)
 
     assert diagnostics.has_llm_routes is False
-    assert any("Restart platform backend" in hint for hint in diagnostics.hints)
+    assert any("Platform backend" in hint for hint in diagnostics.hints)
+
+
+async def test_deploy_unknown_engine_returns_400(llm_client) -> None:
+    client, _service = llm_client
+
+    response = await client.post(
+        "/api/studios/framework/llm/engines/unknown/deploy",
+        json={},
+    )
+
+    assert response.status_code == 400
+    assert "設定されていません" in response.json()["detail"]
+
+
+async def test_put_engines_port_conflict_returns_400(llm_client) -> None:
+    client, _service = llm_client
+
+    response = await client.put(
+        "/api/studios/framework/llm/engines",
+        json={
+            "inference_engines": [
+                {
+                    "name": "vllm",
+                    "engine_type": "vllm",
+                    "base_url": "http://127.0.0.1:8001",
+                    "health_path": "/health",
+                    "metrics_path": "/metrics",
+                    "model_list_path": "/v1/models",
+                    "enabled": True,
+                    "deployment_mode": "docker",
+                    "docker_image": "vllm/vllm-openai:v0.8.5",
+                    "served_model_name": "Qwen/Qwen2.5-0.5B-Instruct",
+                    "container_name": "llm-vllm",
+                    "host_port": 8001,
+                    "public_base_url": None,
+                    "gpu_enabled": False,
+                    "gpu_devices": [],
+                    "gpu_count": None,
+                    "extra_env": {},
+                    "deployment_status": None,
+                    "deployment_error": None,
+                    "compose_path": None,
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 400
+    assert "decision_governance_engine.api" in response.json()["detail"]

@@ -15,14 +15,15 @@ import logging
 from datetime import datetime
 from typing import Any
 
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel, Field
+
 from apps.decision_governance_engine.routers.auth import UserInfo, require_auth
 from apps.decision_governance_engine.services.human_review_policy import (
     enrich_review_with_policy,
     load_human_review_policy,
 )
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
 
 
 logger = logging.getLogger("decision_api.report")
@@ -251,8 +252,9 @@ async def export_report_pdf(report_id: str) -> StreamingResponse:
     注意:
         - システム理念「変数・返回値強化」に基づき、全エラーを適切に処理
     """
-    from apps.decision_governance_engine.services.pdf_generator import PDFGeneratorService
     from fastapi import HTTPException
+
+    from apps.decision_governance_engine.skills.pdf_generator.skill import PDFGenerationSkill
 
     report = await _get_report_from_db(report_id)
     if not report:
@@ -263,9 +265,29 @@ async def export_report_pdf(report_id: str) -> StreamingResponse:
         )
 
     try:
-        generator = PDFGeneratorService()
+        skill = PDFGenerationSkill()
         signed_data = _signed_reports.get(report_id)
-        pdf_bytes = generator.generate_pdf(report, signed_data=signed_data)
+
+        # 署名済みデータをSignatureBlock互換形式に変換
+        mapped_signed_data = None
+        if signed_data:
+            # report.py の _signed_reports 形式から skill.py の期待する形式へマップ
+            mapped_signed_data = {
+                "author_name": report.signature_block.author_name,
+                "author_department": report.signature_block.author_department,
+                "author_position": report.signature_block.author_position,
+                "created_date": report.signature_block.created_date,
+                "approver_name": signed_data.get("signed_by"),
+                "approver_department": signed_data.get("department"),
+                "approver_position": signed_data.get("position"),
+                "approved_date": signed_data.get("signed_at_display"),
+                "is_signed": True,
+                "signature_timestamp": datetime.fromisoformat(signed_data["signed_at"])
+                if "signed_at" in signed_data
+                else None,
+            }
+
+        pdf_bytes = await skill.export_report(report, format="pdf", signed_data=mapped_signed_data)
 
         content_type = "application/pdf"
         filename = f"decision_report_{report_id}.pdf"
@@ -289,7 +311,7 @@ async def export_report_pdf(report_id: str) -> StreamingResponse:
 @router.get("/{report_id}/html")
 async def export_report_html(report_id: str) -> StreamingResponse:
     """レポートをHTML形式でエクスポート."""
-    from apps.decision_governance_engine.services.pdf_generator import PDFGeneratorService
+    from apps.decision_governance_engine.skills.pdf_generator.skill import PDFGenerationSkill
 
     report = await _get_report_from_db(report_id)
     if not report:
@@ -300,9 +322,28 @@ async def export_report_html(report_id: str) -> StreamingResponse:
         )
 
     try:
-        generator = PDFGeneratorService()
+        skill = PDFGenerationSkill()
         signed_data = _signed_reports.get(report_id)
-        html_bytes = generator.generate_html(report, signed_data=signed_data)
+
+        # 署名済みデータをSignatureBlock互換形式に変換
+        mapped_signed_data = None
+        if signed_data:
+            mapped_signed_data = {
+                "author_name": report.signature_block.author_name,
+                "author_department": report.signature_block.author_department,
+                "author_position": report.signature_block.author_position,
+                "created_date": report.signature_block.created_date,
+                "approver_name": signed_data.get("signed_by"),
+                "approver_department": signed_data.get("department"),
+                "approver_position": signed_data.get("position"),
+                "approved_date": signed_data.get("signed_at_display"),
+                "is_signed": True,
+                "signature_timestamp": datetime.fromisoformat(signed_data["signed_at"])
+                if "signed_at" in signed_data
+                else None,
+            }
+
+        html_bytes = await skill.export_report(report, format="html", signed_data=mapped_signed_data)
         filename = f"decision_report_{report_id}.html"
         return StreamingResponse(
             io.BytesIO(html_bytes),

@@ -9,7 +9,7 @@
     "rag": "RAG",
     "mcp": "MCP",
     "cli": "CLI リファレンス",
-    "llm_management": "LLM Management",
+    "llm_management": "LLM 管理",
     "settings": "設定",
     "logout": "ログアウト"
   },
@@ -361,7 +361,7 @@
     "refresh_success": "App 一覧を再スキャンしました"
   },
   "llm_mgmt": {
-    "title": "LLM Management",
+    "title": "LLM 管理",
     "subtitle": "Gateway の Provider / Engine / Model Registry / Routing Policy を管理します。",
     "runtime": "ランタイム概要",
     "providers_available": "利用可能 Provider",

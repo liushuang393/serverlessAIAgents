@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "task_id": "geo-20260310093853-e95012",
+    "trace_id": "geo-20260310093853-e95012:report",
+    "stage": "report",
+    "generated_at": "2026-03-10T09:38:56.029707Z"
+  },
+  "evidence": [
+    {
+      "url": "http://127.0.0.1:18010/geo/pages/manufacturing-cobol-modernization-guide"
+    }
+  ],
+  "unknowns": [],
+  "extensions": {},
+  "summary": "Legacy modernization demand capture run complete.",
+  "highlights": [
+    "対象業界: manufacturing",
+    "対象技術: COBOL, Struts",
+    "一次プロバイダ: sample",
+    "公開ページ数: 1",
+    "リスクレベル: MEDIUM"
+  ],
+  "warnings": [
+    "比較表現を含むためレビューを推奨します。"
+  ],
+  "published_urls": [
+    "http://127.0.0.1:18010/geo/pages/manufacturing-cobol-modernization-guide"
+  ]
+}

@@ -13,6 +13,7 @@ from agentflow.llm.gateway.config import (
     build_provider_runtime_statuses,
     load_gateway_config,
     resolve_secret,
+    resolve_secret_status,
     save_gateway_config,
 )
 from agentflow.llm.gateway.router import GatewayResponse, GatewayToolCall, LiteLLMGateway
@@ -34,5 +35,6 @@ __all__ = [
     "build_provider_runtime_statuses",
     "load_gateway_config",
     "resolve_secret",
+    "resolve_secret_status",
     "save_gateway_config",
 ]

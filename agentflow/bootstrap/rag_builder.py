@@ -12,12 +12,18 @@ enabled=false や設定なしの場合は None を返す（Graceful Degradation�
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
 
+if TYPE_CHECKING:
+    from agentflow.knowledge.rag_pipeline import RAGPipeline
+
+
 logger = logging.getLogger(__name__)
+
+RagPayload = dict[str, object]
 
 
 class RagBootstrapConfig(BaseModel):
@@ -50,7 +56,7 @@ class RagBootstrapConfig(BaseModel):
     score_threshold: float | None = Field(default=None)
 
 
-async def build_rag_engine(rag_config: dict[str, Any] | None) -> Any | None:
+async def build_rag_engine(rag_config: RagPayload | None) -> RAGPipeline | None:
     """RAGContractConfig 辞書から RAGPipeline を構築.
 
     Args:
@@ -108,7 +114,7 @@ async def build_rag_engine(rag_config: dict[str, Any] | None) -> Any | None:
         return None
 
 
-def _normalize_rag_payload(rag_config: dict[str, Any] | None) -> dict[str, Any] | None:
+def _normalize_rag_payload(rag_config: RagPayload | None) -> RagPayload | None:
     """contracts.rag / legacy rag_config の互換正規化."""
     if rag_config is None:
         return None
@@ -138,5 +144,6 @@ def _normalize_rag_payload(rag_config: dict[str, Any] | None) -> dict[str, Any] 
         "score_threshold": rag_config.get("score_threshold"),
         "indexing_schedule": rag_config.get("indexing_schedule"),
     }
+
 
 __all__ = ["RagBootstrapConfig", "build_rag_engine"]

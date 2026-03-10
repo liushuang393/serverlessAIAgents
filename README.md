@@ -112,6 +112,22 @@ Gateway-->>AgentFlow: result
 AgentFlow-->>Application: output
 ```
 
+## Platform 主導 LLM 管理
+
+- Provider / Model / secret / local engine 配備の正本は `apps/platform` の `LLM Management` です。
+- secret 解決順は `Platform 暗号化保存 > ENV > .env > unavailable` です。app 側で provider API Key を直参照する前提にはしません。
+- app は `app_config.json` の `contracts.llm` で `provider` と `model_id` を宣言し、runtime は Platform catalog に存在する model だけを解決します。
+- modality は `text` / `embedding` / `image` / `speech_to_text` / `text_to_speech` を統一契約にしています。
+- `vLLM / SGLang / TGI` の Docker 配備は Platform から実行し、compose は `.agentflow/llm_backends/<engine-id>/` に生成されます。
+- `LLM_PROVIDER` / `OPENAI_MODEL` / `OPENAI_EMBEDDING_MODEL` などの env は互換 fallback として残しますが、Platform 管理 app の正本ではありません。
+
+### app 実装ルール
+
+- `get_llm()` / `get_embedding()` / 画像 / 音声呼び出しは `contracts.llm` を経由して model alias を解決します。
+- app ごとの共通既定は `contracts.llm.defaults`、agent 個別上書きは `contracts.llm.agent_overrides` を使います。
+- Platform catalog に存在しない `provider` / `model_id` を app が参照した場合、その app は未設定として扱われます。
+- FAQ など埋め込みを使う app は `embedding` を、音声 app は `speech_to_text` / `text_to_speech` を manifest に明示します。
+
 ## リポジトリ構造
 
 ### コアコンポーネント

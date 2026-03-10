@@ -40,8 +40,8 @@ def test_validate_reports_registry_and_fallback_errors() -> None:
     config.routing_policy.fallback_chain["reasoning"] = ["coding_main"]
 
     errors = validator.validate(config)
-    assert any("missing alias" in item for item in errors)
-    assert any("disabled alias" in item for item in errors)
+    assert any("存在しない alias 'missing_alias'" in item for item in errors)
+    assert any("無効な alias 'coding_main'" in item for item in errors)
 
 
 def test_validate_or_raise_rejects_unknown_provider() -> None:
@@ -52,6 +52,6 @@ def test_validate_or_raise_rejects_unknown_provider() -> None:
     try:
         validator.validate_or_raise(config)
     except LLMConfigValidationError as exc:
-        assert "unknown provider" in str(exc)
+        assert "未定義 provider 'unknown_provider'" in str(exc)
     else:
         raise AssertionError("expected LLMConfigValidationError")

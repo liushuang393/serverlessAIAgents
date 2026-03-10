@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "task_id": "geo-20260310093409-2cdd86",
+    "trace_id": "geo-20260310093409-2cdd86:geo_qa",
+    "stage": "geo_qa",
+    "generated_at": "2026-03-10T09:34:09.530711"
+  },
+  "evidence": [],
+  "unknowns": [
+    "duckduckgo_search missing",
+    "live_sources_unavailable: no evidence from external providers"
+  ],
+  "extensions": {},
+  "pass_or_fail": "REVIEW",
+  "issues": [
+    "公開判定に必要な根拠数が不足しています。",
+    "引用準備完了率が基準未満です。",
+    "新鮮な根拠の比率が低すぎます。",
+    "未解決の unknowns が残っています。",
+    "比較表現を含むためレビューを推奨します。"
+  ],
+  "fix_instructions": [
+    "追加の外部根拠を最低3件以上収集してください。",
+    "URL・要約・抜粋が揃った証拠を補強してください。",
+    "直近30日以内の情報源を追加してください。",
+    "不明点を解消するか、仮説として明示してください。",
+    "比較主張の根拠と対象条件を明示してください。"
+  ],
+  "publish_ready": false,
+  "risk_level": "HIGH",
+  "metrics": {
+    "evidence_count": 0.0,
+    "citation_ready_ratio": 0.0,
+    "fresh_ratio": 0.0,
+    "unknown_count": 4.0
+  }
+}

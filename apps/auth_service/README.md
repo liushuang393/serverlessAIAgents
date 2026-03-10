@@ -113,6 +113,12 @@ async def public(user=Depends(get_current_user)):
     return {"logged_in": user is not None}
 ```
 
+## Platform 主導 LLM 契約
+
+- `auth_service` 自体は認証サービスですが、manifest 上は `contracts.llm` で Platform catalog の既定 text model を参照できます。
+- Provider / model / API Key の正本は `apps/platform` の `LLM Management` です。
+- app ごとに provider env を持たせず、必要な場合も root `.env` の fallback のみに留めてください。
+
 ### 3. SSO（単一ポイント認証）リダイレクト
 
 クライアントアプリが認証を `auth_service` に委譲し、認証成功後に自動的に元のアプリに戻るフローです。

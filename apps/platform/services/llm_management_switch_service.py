@@ -1,13 +1,13 @@
-"""Atomic switch service for provider/model/backend selection."""
+"""Provider / model / backend の原子的切替サービス."""
 
 from __future__ import annotations
 
 import re
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 from agentflow.llm.gateway import (
-    LLMGatewayConfig,
     LiteLLMGateway,
+    LLMGatewayConfig,
     ModelConfig,
     ProviderConfig,
     build_provider_runtime_statuses,
@@ -16,15 +16,20 @@ from apps.platform.schemas.llm_management_schemas import (
     LLMBackendKind,
     LLMSwitchDiffItem,
     LLMSwitchRequest,
-    LLMSwitchRuntimeCheck,
     LLMSwitchResponse,
+    LLMSwitchRuntimeCheck,
 )
-from apps.platform.services.llm_management_config_store import LLMConfigStore
 from apps.platform.services.llm_management_validator import (
     LLMConfigValidator,
     provider_default_api_base,
     provider_default_api_key_env,
 )
+
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    from apps.platform.services.llm_management_config_store import LLMConfigStore
 
 
 class LLMSwitchService:
@@ -54,7 +59,7 @@ class LLMSwitchService:
             return LLMSwitchResponse(
                 success=False,
                 rolled_back=False,
-                message=f"validation failed: {exc}",
+                message=f"検証に失敗しました: {exc}",
                 registry=dict(original.registry),
                 diffs=diffs,
             )
@@ -73,7 +78,7 @@ class LLMSwitchService:
                 registry=dict(original.registry),
                 diffs=diffs,
                 runtime_check=runtime_check,
-                message="runtime check failed; rolled back to previous config",
+                message="実行時チェックに失敗したため、直前の設定へロールバックしました。",
             )
 
         return LLMSwitchResponse(
@@ -84,7 +89,7 @@ class LLMSwitchService:
             registry=dict(validated.registry),
             diffs=diffs,
             runtime_check=runtime_check,
-            message="switch applied successfully",
+            message="切替を反映しました。",
         )
 
     def _apply_switch(
@@ -102,7 +107,7 @@ class LLMSwitchService:
         provider_before = {item.name: item for item in updated.providers}
         if provider_name not in provider_before:
             if not request.auto_enable_provider:
-                msg = f"provider '{provider_name}' is not configured"
+                msg = f"provider '{provider_name}' は設定されていません。"
                 raise ValueError(msg)
             updated.providers.append(
                 ProviderConfig(
@@ -121,7 +126,9 @@ class LLMSwitchService:
                     item.model_copy(update={"enabled": True}) if item.name == provider_name else item
                     for item in updated.providers
                 ]
-                diffs.append(LLMSwitchDiffItem(field=f"providers.{provider_name}.enabled", before="false", after="true"))
+                diffs.append(
+                    LLMSwitchDiffItem(field=f"providers.{provider_name}.enabled", before="false", after="true")
+                )
 
         existing_model = None
         for item in updated.models:
@@ -130,24 +137,32 @@ class LLMSwitchService:
                 break
 
         if existing_model is None:
+            api_base = self._resolve_backend_api_base(updated, backend_name)
             updated.models.append(
                 ModelConfig(
                     alias=target_alias,
+                    model_id=target_alias,
                     provider=provider_name,
                     model=request.model.strip(),
+                    api_base=api_base,
                     engine=backend_name,
+                    model_type="text",
                     enabled=True,
                 )
             )
             diffs.append(LLMSwitchDiffItem(field=f"models.{target_alias}", before=None, after=request.model.strip()))
         else:
             before = f"{existing_model.provider}/{existing_model.model}"
+            api_base = self._resolve_backend_api_base(updated, backend_name) or existing_model.api_base
             updated.models = [
                 item.model_copy(
                     update={
+                        "model_id": item.model_id or item.alias,
                         "provider": provider_name,
                         "model": request.model.strip(),
+                        "api_base": api_base,
                         "engine": backend_name,
+                        "model_type": "text",
                         "enabled": True,
                     }
                 )
@@ -188,39 +203,83 @@ class LLMSwitchService:
             model_fragment = "model"
         return f"{role}_{provider_name}_{model_fragment}"[:96]
 
+    @staticmethod
+    def _resolve_backend_api_base(
+        config: LLMGatewayConfig,
+        backend_name: str | None,
+    ) -> str | None:
+        if backend_name is None:
+            return None
+        for engine in config.inference_engines:
+            if engine.name != backend_name:
+                continue
+            base = engine.public_base_url or engine.base_url
+            if base.endswith("/v1"):
+                return base
+            return f"{base.rstrip('/')}/v1"
+        return None
+
     async def _runtime_check(
         self,
         config: LLMGatewayConfig,
         request: LLMSwitchRequest,
     ) -> LLMSwitchRuntimeCheck:
         runtime = LLMSwitchRuntimeCheck()
+        gateway = LiteLLMGateway(config=config, config_path=self._config_path)
+        engine_statuses = await gateway.get_engine_statuses()
+        by_engine = {item.name: item for item in engine_statuses}
 
         provider_name = self._validator.canonical_provider_name(request.provider.value)
         provider_statuses = build_provider_runtime_statuses(config, config_path=self._config_path)
         by_provider = {item.name: item for item in provider_statuses}
         provider_status = by_provider.get(provider_name)
         if provider_status is not None:
-            runtime.provider_status = provider_status.status
-            if request.validate_runtime and provider_status.status != "available":
+            provider_runtime_status = provider_status.status
+            provider_last_error = provider_status.last_error
+            if provider_name == "local":
+                linked_engines = sorted(
+                    {
+                        model.engine.strip().lower()
+                        for model in config.models
+                        if model.enabled
+                        and model.provider.strip().lower() == provider_name
+                        and isinstance(model.engine, str)
+                        and model.engine.strip()
+                    }
+                )
+                if linked_engines:
+                    unhealthy: list[str] = []
+                    for engine_name in linked_engines:
+                        engine_status = by_engine.get(engine_name)
+                        if engine_status is not None and engine_status.status == "available":
+                            continue
+                        reason = engine_status.last_error if engine_status is not None else "status_missing"
+                        unhealthy.append(f"{engine_name}:{reason or 'unavailable'}")
+                    if unhealthy:
+                        provider_runtime_status = "unavailable"
+                        provider_last_error = f"linked_engine_unhealthy:{' / '.join(unhealthy)}"
+                    else:
+                        provider_runtime_status = "available"
+                        provider_last_error = None
+
+            runtime.provider_status = provider_runtime_status
+            if request.validate_runtime and provider_runtime_status != "available":
                 runtime.errors.append(
-                    f"provider '{provider_name}' unavailable: {provider_status.last_error or 'unknown'}",
+                    f"provider '{provider_name}' は利用不可です: {provider_last_error or 'unknown'}",
                 )
         else:
-            runtime.errors.append(f"provider '{provider_name}' not found in runtime status")
+            runtime.errors.append(f"provider '{provider_name}' の実行時状態が見つかりません。")
 
         if request.backend != LLMBackendKind.NONE:
-            gateway = LiteLLMGateway(config=config, config_path=self._config_path)
-            engine_statuses = await gateway.get_engine_statuses()
-            by_engine = {item.name: item for item in engine_statuses}
             backend_name = request.backend.value
             engine_status = by_engine.get(backend_name)
             if engine_status is None:
-                runtime.errors.append(f"backend '{backend_name}' not found in engine status")
+                runtime.errors.append(f"backend '{backend_name}' の実行時状態が見つかりません。")
             else:
                 runtime.backend_status = engine_status.status
                 if request.validate_runtime and engine_status.status != "available":
                     runtime.errors.append(
-                        f"backend '{backend_name}' unavailable: {engine_status.last_error or 'unknown'}",
+                        f"backend '{backend_name}' は利用不可です: {engine_status.last_error or 'unknown'}",
                     )
 
         return runtime

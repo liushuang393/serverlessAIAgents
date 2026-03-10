@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Literal
 
@@ -40,6 +40,7 @@ class LLMProviderConfigPayload(BaseModel):
     api_key_env: str | None = None
     models: list[str] = Field(default_factory=list)
     enabled: bool = True
+    secret_status: LLMProviderSecretStatusPayload = Field(default_factory=lambda: LLMProviderSecretStatusPayload())
 
     @field_validator("name")
     @classmethod
@@ -54,6 +55,17 @@ class LLMProviderRuntimeStatusPayload(BaseModel):
     status: Literal["available", "unavailable"]
     api_key_env: str | None = None
     source: str | None = None
+    masked: str | None = None
+    last_error: str | None = None
+
+
+class LLMProviderSecretStatusPayload(BaseModel):
+    """Provider secret の表示状態."""
+
+    configured: bool = False
+    masked: str | None = None
+    source: str = "unavailable"
+    available: bool = False
     last_error: str | None = None
 
 
@@ -67,6 +79,19 @@ class LLMInferenceEngineConfigPayload(BaseModel):
     metrics_path: str = "/metrics"
     model_list_path: str = "/v1/models"
     enabled: bool = True
+    deployment_mode: Literal["manual", "docker"] = "manual"
+    docker_image: str | None = None
+    served_model_name: str | None = None
+    container_name: str | None = None
+    host_port: int | None = Field(default=None, ge=1, le=65535)
+    public_base_url: str | None = None
+    gpu_enabled: bool = False
+    gpu_devices: list[str] = Field(default_factory=list)
+    gpu_count: int | None = Field(default=None, ge=1)
+    extra_env: dict[str, str] = Field(default_factory=dict)
+    deployment_status: str | None = None
+    deployment_error: str | None = None
+    compose_path: str | None = None
 
     @field_validator("name")
     @classmethod
@@ -97,8 +122,10 @@ class LLMModelConfigPayload(BaseModel):
     """Typed model payload used by PUT /models."""
 
     alias: str = Field(..., min_length=1)
+    model_id: str | None = None
     provider: str = Field(..., min_length=1)
     model: str = Field(..., min_length=1)
+    model_type: Literal["text", "embedding", "image", "speech_to_text", "text_to_speech"] = "text"
     api_base: str | None = None
     api_key_env: str | None = None
     engine: str | None = None
@@ -212,10 +239,39 @@ class LLMEnginesResponse(BaseModel):
     inference_engines: list[LLMInferenceEngineConfigPayload] = Field(default_factory=list)
 
 
+class LLMProviderSecretUpdateRequest(BaseModel):
+    """Provider secret 保存リクエスト."""
+
+    api_key_env: str | None = None
+    secret_value: str = Field(..., min_length=1)
+
+
+class LLMProviderSecretResponse(BaseModel):
+    """Provider secret 保存/削除応答."""
+
+    provider: str
+    secret_status: LLMProviderSecretStatusPayload
+
+
 class LLMEngineStatusResponse(BaseModel):
     """Response payload for inference engine status endpoint."""
 
     engine_status: list[LLMEngineRuntimeStatusPayload] = Field(default_factory=list)
+
+
+class LLMEngineDeployRequest(BaseModel):
+    """Engine deploy リクエスト."""
+
+    public_base_url: str | None = None
+
+
+class LLMEngineDeployResponse(BaseModel):
+    """Engine deploy/stop 応答."""
+
+    success: bool
+    engine: LLMInferenceEngineConfigPayload
+    message: str
+    command: LLMSetupCommandResult | None = None
 
 
 class LLMModelsResponse(BaseModel):
@@ -260,8 +316,10 @@ class LLMCatalogModel(BaseModel):
     """Model metadata for management catalog."""
 
     alias: str
+    model_id: str | None = None
     provider: str
     model: str
+    model_type: Literal["text", "embedding", "image", "speech_to_text", "text_to_speech"] = "text"
     capabilities: list[str] = Field(default_factory=list)
     context_window: int
     recommended_for: list[str] = Field(default_factory=list)
@@ -284,7 +342,7 @@ class LLMCatalogResponse(BaseModel):
     providers: list[LLMCatalogProvider] = Field(default_factory=list)
     backends: list[LLMCatalogBackend] = Field(default_factory=list)
     models: list[LLMCatalogModel] = Field(default_factory=list)
-    generated_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    generated_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
 
 
 class LLMPreflightRequest(BaseModel):
@@ -327,8 +385,8 @@ class LLMPreflightReport(BaseModel):
     """Structured preflight report."""
 
     status: Literal["success", "failed", "partial", "dry_run"]
-    started_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
-    completed_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    started_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
+    completed_at: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())
     request: LLMPreflightRequest
     steps: list[LLMPreflightStep] = Field(default_factory=list)
     summary: str = ""
@@ -412,4 +470,4 @@ class LLMDiagnosticsResponse(BaseModel):
     config_version: str | None = None
     last_preflight: LLMPreflightReport | None = None
     hints: list[str] = Field(default_factory=list)
-    server_time: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    server_time: str = Field(default_factory=lambda: datetime.now(UTC).isoformat())

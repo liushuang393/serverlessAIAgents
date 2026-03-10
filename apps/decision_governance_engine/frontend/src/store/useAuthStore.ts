@@ -22,7 +22,7 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   logout: () => void;
-  
+
   // API連携
   checkAuth: () => Promise<boolean>;
   login: (username: string, password: string) => Promise<AuthResponse>;

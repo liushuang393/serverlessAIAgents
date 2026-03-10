@@ -972,6 +972,15 @@ export interface LLMProviderConfigItem {
   api_key_env: string | null;
   models: string[];
   enabled: boolean;
+  secret_status: LLMProviderSecretStatus;
+}
+
+export interface LLMProviderSecretStatus {
+  configured: boolean;
+  masked: string | null;
+  source: string;
+  available: boolean;
+  last_error: string | null;
 }
 
 export interface LLMProviderRuntimeStatus {
@@ -979,6 +988,7 @@ export interface LLMProviderRuntimeStatus {
   status: 'available' | 'unavailable';
   api_key_env: string | null;
   source: string | null;
+  masked: string | null;
   last_error: string | null;
 }
 
@@ -992,6 +1002,19 @@ export interface LLMInferenceEngineConfigItem {
   metrics_path: string;
   model_list_path: string;
   enabled: boolean;
+  deployment_mode: 'manual' | 'docker';
+  docker_image: string | null;
+  served_model_name: string | null;
+  container_name: string | null;
+  host_port: number | null;
+  public_base_url: string | null;
+  gpu_enabled: boolean;
+  gpu_devices: string[];
+  gpu_count: number | null;
+  extra_env: Record<string, string>;
+  deployment_status: string | null;
+  deployment_error: string | null;
+  compose_path: string | null;
 }
 
 export interface LLMEngineRuntimeStatus {
@@ -1011,8 +1034,10 @@ export interface LLMModelCostConfig {
 
 export interface LLMModelConfigItem {
   alias: string;
+  model_id: string | null;
   provider: string;
   model: string;
+  model_type: 'text' | 'embedding' | 'image' | 'speech_to_text' | 'text_to_speech';
   api_base: string | null;
   api_key_env: string | null;
   engine: string | null;
@@ -1083,8 +1108,10 @@ export interface LLMCatalogProvider {
 
 export interface LLMCatalogModel {
   alias: string;
+  model_id: string | null;
   provider: string;
   model: string;
+  model_type: 'text' | 'embedding' | 'image' | 'speech_to_text' | 'text_to_speech';
   capabilities: string[];
   context_window: number;
   recommended_for: string[];
@@ -1200,4 +1227,25 @@ export interface LLMDiagnosticsResponse {
   last_preflight: LLMPreflightReport | null;
   hints: string[];
   server_time: string;
+}
+
+export interface LLMProviderSecretUpdateRequest {
+  api_key_env: string | null;
+  secret_value: string;
+}
+
+export interface LLMProviderSecretResponse {
+  provider: string;
+  secret_status: LLMProviderSecretStatus;
+}
+
+export interface LLMEngineDeployRequest {
+  public_base_url: string | null;
+}
+
+export interface LLMEngineDeployResponse {
+  success: boolean;
+  engine: LLMInferenceEngineConfigItem;
+  message: string;
+  command: LLMSetupCommandResult | null;
 }

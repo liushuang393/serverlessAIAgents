@@ -101,10 +101,10 @@ services:
           "-c",
           "import urllib.request; urllib.request.urlopen('http://localhost:8010/health')",
         ]
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 3
-      start_period: 10s
+      retries: 5
+      start_period: 60s
     restart: unless-stopped
     networks:
       - auth-network

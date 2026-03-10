@@ -11,8 +11,14 @@ rag_engine / skill_gateway / mcp_client を保持する。
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
+
+
+if TYPE_CHECKING:
+    from agentflow.knowledge.rag_pipeline import RAGPipeline
+    from agentflow.protocols.mcp_client import MCPClient
+    from agentflow.skills.gateway import SkillGateway
 
 
 @dataclass
@@ -24,12 +30,14 @@ class CapabilityBundle:
         rag_engine: RAGPipeline インスタンス（enabled=false → None）
         skill_gateway: SkillGateway インスタンス（未設定 → None）
         mcp_client: MCPClient インスタンス（未設定 → None）
+        llm_contracts: contracts.llm の生設定
     """
 
     app_name: str
-    rag_engine: Any | None = field(default=None)
-    skill_gateway: Any | None = field(default=None)
-    mcp_client: Any | None = field(default=None)
+    rag_engine: RAGPipeline | None = None
+    skill_gateway: SkillGateway | None = None
+    mcp_client: MCPClient | None = None
+    llm_contracts: dict[str, Any] | None = None
 
     def has_rag(self) -> bool:
         """RAG が有効かどうか."""

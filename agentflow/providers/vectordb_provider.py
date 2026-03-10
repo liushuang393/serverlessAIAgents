@@ -52,28 +52,22 @@ class VectorDBProvider(Protocol):
         """切断."""
         ...
 
-    async def add(
-        self,
-        documents: list[str],
-        ids: list[str] | None = None,
-        embeddings: list[list[float]] | None = None,
-        metadatas: list[dict[str, Any]] | None = None,
-    ) -> None:
+    async def add_documents(self, documents: list[Any], **kwargs: Any) -> list[str]:
         """ドキュメントを追加."""
         ...
 
-    async def search(
+    async def similarity_search(
         self,
         query: str,
-        query_embedding: list[float] | None = None,
-        top_k: int = 5,
-        filter_metadata: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+        k: int = 4,
+        filter: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> list[Any]:
         """類似検索."""
         ...
 
-    async def delete(self, ids: list[str]) -> int:
-        """ドキュメントを削除."""
+    def get_provider_name(self) -> str:
+        """プロバイダー名."""
         ...
 
     async def clear(self) -> None:
@@ -102,45 +96,49 @@ class MockVectorDBProvider:
     async def disconnect(self) -> None:
         """切断（no-op）."""
 
-    async def add(
-        self,
-        documents: list[str],
-        ids: list[str] | None = None,
-        embeddings: list[list[float]] | None = None,
-        metadatas: list[dict[str, Any]] | None = None,
-    ) -> None:
+    async def add_documents(self, documents: list[Any], **kwargs: Any) -> list[str]:
         """ドキュメントを追加."""
-        if ids is None:
-            ids = [f"doc_{i}" for i in range(len(documents))]
+        ids = kwargs.get("ids") or [f"doc_{len(self._data) + i}" for i in range(len(documents))]
+        embeddings = kwargs.get("embeddings")
+        metadatas = kwargs.get("metadatas")
+
+        added_ids = []
         for i, (doc_id, doc) in enumerate(zip(ids, documents, strict=False)):
             self._data[doc_id] = {
                 "id": doc_id,
-                "document": doc,
+                "document": doc if isinstance(doc, str) else getattr(doc, "page_content", str(doc)),
                 "embedding": embeddings[i] if embeddings else None,
                 "metadata": metadatas[i] if metadatas else {},
             }
+            added_ids.append(doc_id)
+        return added_ids
 
-    async def search(
+    async def similarity_search(
         self,
         query: str,
-        query_embedding: list[float] | None = None,
-        top_k: int = 5,
-        filter_metadata: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+        k: int = 4,
+        filter: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> list[Any]:
         """類似検索（Mock: 単純なテキストマッチ）."""
         results = []
         for item in self._data.values():
-            # 簡易マッチ：クエリがドキュメントに含まれるか
-            if query.lower() in item["document"].lower():
+            if filter and not all(item["metadata"].get(k) == v for k, v in filter.items()):
+                continue
+            query_lower = query.lower()
+            doc_lower = item["document"].lower()
+            # 単純な含む検索 + 単語ごとの検索
+            query_words = query_lower.split()
+            if query_lower in doc_lower or any(word in doc_lower for word in query_words if len(word) > 3):
                 results.append(
                     {
                         "id": item["id"],
                         "document": item["document"],
-                        "distance": 0.1,
+                        "score": 0.9,
                         "metadata": item.get("metadata", {}),
                     }
                 )
-        return results[:top_k]
+        return results[:k]
 
     async def delete(self, ids: list[str]) -> int:
         """削除."""
@@ -190,40 +188,40 @@ class ChromaDBProvider:
         self._client = None
         self._collection = None
 
-    async def add(
-        self,
-        documents: list[str],
-        ids: list[str] | None = None,
-        embeddings: list[list[float]] | None = None,
-        metadatas: list[dict[str, Any]] | None = None,
-    ) -> None:
+    async def add_documents(self, documents: list[Any], **kwargs: Any) -> list[str]:
         """ドキュメントを追加."""
-        if ids is None:
-            ids = [f"doc_{i}" for i in range(len(documents))]
-        kwargs: dict[str, Any] = {"documents": documents, "ids": ids}
-        if embeddings:
-            kwargs["embeddings"] = embeddings
-        if metadatas:
-            kwargs["metadatas"] = metadatas
-        self._collection.add(**kwargs)
+        ids = kwargs.get("ids") or [f"doc_{i}" for i in range(len(documents))]
+        embeddings = kwargs.get("embeddings")
+        metadatas = kwargs.get("metadatas")
 
-    async def search(
+        doc_texts = [d if isinstance(d, str) else d.page_content for d in documents]
+
+        chroma_kwargs: dict[str, Any] = {"documents": doc_texts, "ids": ids}
+        if embeddings:
+            chroma_kwargs["embeddings"] = embeddings
+        if metadatas:
+            chroma_kwargs["metadatas"] = metadatas
+        self._collection.add(**chroma_kwargs)
+        return ids
+
+    async def similarity_search(
         self,
         query: str,
-        query_embedding: list[float] | None = None,
-        top_k: int = 5,
-        filter_metadata: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+        k: int = 4,
+        filter: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> list[Any]:
         """類似検索."""
-        kwargs: dict[str, Any] = {"n_results": top_k}
+        query_embedding = kwargs.get("query_embedding")
+        chroma_kwargs: dict[str, Any] = {"n_results": k}
         if query_embedding:
-            kwargs["query_embeddings"] = [query_embedding]
+            chroma_kwargs["query_embeddings"] = [query_embedding]
         else:
-            kwargs["query_texts"] = [query]
-        if filter_metadata:
-            kwargs["where"] = filter_metadata
+            chroma_kwargs["query_texts"] = [query]
+        if filter:
+            chroma_kwargs["where"] = filter
 
-        results = self._collection.query(**kwargs)
+        results = self._collection.query(**chroma_kwargs)
         output = []
         if results and "documents" in results:
             for i, doc in enumerate(results["documents"][0]):
@@ -231,7 +229,7 @@ class ChromaDBProvider:
                     {
                         "id": results["ids"][0][i] if "ids" in results else f"doc_{i}",
                         "document": doc,
-                        "distance": results["distances"][0][i] if "distances" in results else 0,
+                        "score": 1.0 - (results["distances"][0][i] if "distances" in results else 0),
                         "metadata": results["metadatas"][0][i] if "metadatas" in results else {},
                     }
                 )
@@ -339,15 +337,13 @@ class QdrantProvider:
         """切断."""
         self._client = None
 
-    async def add(
-        self,
-        documents: list[str],
-        ids: list[str] | None = None,
-        embeddings: list[list[float]] | None = None,
-        metadatas: list[dict[str, Any]] | None = None,
-    ) -> None:
+    async def add_documents(self, documents: list[Any], **kwargs: Any) -> list[str]:
         """ドキュメントを追加."""
         from qdrant_client.models import PointStruct
+
+        ids = kwargs.get("ids")
+        embeddings = kwargs.get("embeddings")
+        metadatas = kwargs.get("metadatas")
 
         if embeddings is None:
             msg = "Qdrant requires embeddings. Use get_embedding() to generate."
@@ -355,26 +351,27 @@ class QdrantProvider:
 
         if ids is None:
             import uuid
-
             ids = [str(uuid.uuid4()) for _ in documents]
 
         points = []
         for i, (doc_id, doc, emb) in enumerate(zip(ids, documents, embeddings, strict=False)):
-            payload = {"document": doc}
+            payload = {"document": doc if isinstance(doc, str) else getattr(doc, "page_content", str(doc))}
             if metadatas and i < len(metadatas):
                 payload.update(metadatas[i])
             points.append(PointStruct(id=doc_id, vector=emb, payload=payload))
 
         self._client.upsert(collection_name=self._collection_name, points=points)
+        return ids
 
-    async def search(
+    async def similarity_search(
         self,
         query: str,
-        query_embedding: list[float] | None = None,
-        top_k: int = 5,
-        filter_metadata: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+        k: int = 4,
+        filter: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> list[Any]:
         """類似検索."""
+        query_embedding = kwargs.get("query_embedding")
         if query_embedding is None:
             msg = "Qdrant requires query_embedding for search."
             raise ValueError(msg)
@@ -382,13 +379,12 @@ class QdrantProvider:
         search_params = {
             "collection_name": self._collection_name,
             "query_vector": query_embedding,
-            "limit": top_k,
+            "limit": k,
         }
 
-        if filter_metadata:
+        if filter:
             from qdrant_client.models import FieldCondition, Filter, MatchValue
-
-            conditions = [FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filter_metadata.items()]
+            conditions = [FieldCondition(key=k, match=MatchValue(value=v)) for k, v in filter.items()]
             search_params["query_filter"] = Filter(must=conditions)
 
         results = self._client.search(**search_params)
@@ -397,7 +393,7 @@ class QdrantProvider:
             {
                 "id": str(r.id),
                 "document": r.payload.get("document", ""),
-                "distance": 1 - r.score,  # Qdrant returns similarity, convert to distance
+                "score": r.score,
                 "metadata": {k: v for k, v in r.payload.items() if k != "document"},
             }
             for r in results
@@ -482,15 +478,13 @@ class FAISSProvider:
             logger.info(f"Saved FAISS index to: {self._index_path}")
         self._index = None
 
-    async def add(
-        self,
-        documents: list[str],
-        ids: list[str] | None = None,
-        embeddings: list[list[float]] | None = None,
-        metadatas: list[dict[str, Any]] | None = None,
-    ) -> None:
+    async def add_documents(self, documents: list[Any], **kwargs: Any) -> list[str]:
         """ドキュメントを追加."""
         import numpy as np
+
+        ids = kwargs.get("ids")
+        embeddings = kwargs.get("embeddings")
+        metadatas = kwargs.get("metadatas")
 
         if embeddings is None:
             msg = "FAISS requires embeddings. Use get_embedding() to generate."
@@ -500,45 +494,49 @@ class FAISSProvider:
         self._index.add(vectors)
 
         # ドキュメントとメタデータを保存
+        added_ids = []
         for i, doc in enumerate(documents):
             doc_id = ids[i] if ids else str(self._next_id)
             self._documents[self._next_id] = {
                 "id": doc_id,
-                "document": doc,
+                "document": doc if isinstance(doc, str) else getattr(doc, "page_content", str(doc)),
                 "metadata": metadatas[i] if metadatas and i < len(metadatas) else {},
             }
+            added_ids.append(doc_id)
             self._next_id += 1
+        return added_ids
 
-    async def search(
+    async def similarity_search(
         self,
         query: str,
-        query_embedding: list[float] | None = None,
-        top_k: int = 5,
-        filter_metadata: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+        k: int = 4,
+        filter: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> list[Any]:
         """類似検索."""
         import numpy as np
 
+        query_embedding = kwargs.get("query_embedding")
         if query_embedding is None:
             msg = "FAISS requires query_embedding for search."
             raise ValueError(msg)
 
         query_vector = np.array([query_embedding], dtype=np.float32)
-        distances, indices = self._index.search(query_vector, top_k)
+        distances, indices = self._index.search(query_vector, k)
 
         results = []
         for i, idx in enumerate(indices[0]):
             if idx >= 0 and idx in self._documents:
                 doc = self._documents[idx]
                 # メタデータフィルタリング
-                if filter_metadata:
-                    if not all(doc["metadata"].get(k) == v for k, v in filter_metadata.items()):
+                if filter:
+                    if not all(doc["metadata"].get(k) == v for k, v in filter.items()):
                         continue
                 results.append(
                     {
                         "id": doc["id"],
                         "document": doc["document"],
-                        "distance": float(distances[0][i]),
+                        "score": 1.0 / (1.0 + float(distances[0][i])),
                         "metadata": doc["metadata"],
                     }
                 )
@@ -631,27 +629,24 @@ class WeaviateProvider:
         """切断."""
         self._client = None
 
-    async def add(
-        self,
-        documents: list[str],
-        ids: list[str] | None = None,
-        embeddings: list[list[float]] | None = None,
-        metadatas: list[dict[str, Any]] | None = None,
-    ) -> None:
+    async def add_documents(self, documents: list[Any], **kwargs: Any) -> list[str]:
         """ドキュメントを追加."""
+        ids = kwargs.get("ids")
+        embeddings = kwargs.get("embeddings")
+        metadatas = kwargs.get("metadatas")
+
         if embeddings is None:
             msg = "Weaviate requires embeddings when vectorizer is 'none'."
             raise ValueError(msg)
 
         if ids is None:
             import uuid
-
             ids = [str(uuid.uuid4()) for _ in documents]
 
         with self._client.batch as batch:
             for i, (doc_id, doc, emb) in enumerate(zip(ids, documents, embeddings, strict=False)):
                 properties = {
-                    "content": doc,
+                    "content": doc if isinstance(doc, str) else getattr(doc, "page_content", str(doc)),
                     "doc_id": doc_id,
                 }
                 if metadatas and i < len(metadatas):
@@ -661,15 +656,17 @@ class WeaviateProvider:
                     class_name=self._class_name,
                     vector=emb,
                 )
+        return ids
 
-    async def search(
+    async def similarity_search(
         self,
         query: str,
-        query_embedding: list[float] | None = None,
-        top_k: int = 5,
-        filter_metadata: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+        k: int = 4,
+        filter: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> list[Any]:
         """類似検索."""
+        query_embedding = kwargs.get("query_embedding")
         if query_embedding is None:
             msg = "Weaviate requires query_embedding for vector search."
             raise ValueError(msg)
@@ -678,19 +675,19 @@ class WeaviateProvider:
         query_builder = (
             self._client.query.get(self._class_name, ["content", "doc_id"])
             .with_near_vector(near_vector)
-            .with_limit(top_k)
-            .with_additional(["distance"])
+            .with_limit(k)
+            .with_additional(["distance", "certainty"])
         )
 
-        if filter_metadata:
+        if filter:
             # Weaviate フィルター構築
             where_filter: dict[str, Any] = {"operator": "And", "operands": []}
-            for k, v in filter_metadata.items():
+            for key, val in filter.items():
                 where_filter["operands"].append(
                     {
-                        "path": [k],
+                        "path": [key],
                         "operator": "Equal",
-                        "valueString": str(v),
+                        "valueString": str(val),
                     }
                 )
             query_builder = query_builder.with_where(where_filter)
@@ -704,8 +701,8 @@ class WeaviateProvider:
                     {
                         "id": item.get("doc_id", ""),
                         "document": item.get("content", ""),
-                        "distance": item.get("_additional", {}).get("distance", 0),
-                        "metadata": {k: v for k, v in item.items() if k not in ["content", "doc_id", "_additional"]},
+                        "score": item.get("_additional", {}).get("certainty", 0),
+                        "metadata": {key: val for key, val in item.items() if key not in ["content", "doc_id", "_additional"]},
                     }
                 )
         return results
@@ -793,28 +790,25 @@ class SupabaseVectorProvider:
         """切断."""
         self._client = None
 
-    async def add(
-        self,
-        documents: list[str],
-        ids: list[str] | None = None,
-        embeddings: list[list[float]] | None = None,
-        metadatas: list[dict[str, Any]] | None = None,
-    ) -> None:
+    async def add_documents(self, documents: list[Any], **kwargs: Any) -> list[str]:
         """ドキュメントを追加."""
-        if embeddings is None:
+        if kwargs.get("embeddings") is None:
             msg = "Supabase Vector requires embeddings."
             raise ValueError(msg)
 
+        ids = kwargs.get("ids")
         if ids is None:
             import uuid
-
             ids = [str(uuid.uuid4()) for _ in documents]
+
+        embeddings = kwargs.get("embeddings")
+        metadatas = kwargs.get("metadatas")
 
         rows = []
         for i, (doc_id, doc, emb) in enumerate(zip(ids, documents, embeddings, strict=False)):
             row: dict[str, Any] = {
                 "id": doc_id,
-                "content": doc,
+                "content": doc if isinstance(doc, str) else getattr(doc, "page_content", str(doc)),
                 "embedding": emb,
             }
             if metadatas and i < len(metadatas):
@@ -822,15 +816,17 @@ class SupabaseVectorProvider:
             rows.append(row)
 
         self._client.table(self._table).upsert(rows).execute()
+        return ids
 
-    async def search(
+    async def similarity_search(
         self,
         query: str,
-        query_embedding: list[float] | None = None,
-        top_k: int = 5,
-        filter_metadata: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+        k: int = 4,
+        filter: dict[str, Any] | None = None,
+        **kwargs: Any,
+    ) -> list[Any]:
         """類似検索（RPC関数使用）."""
+        query_embedding = kwargs.get("query_embedding")
         if query_embedding is None:
             msg = "Supabase Vector requires query_embedding for search."
             raise ValueError(msg)
@@ -841,8 +837,8 @@ class SupabaseVectorProvider:
             "match_documents",
             {
                 "query_embedding": query_embedding,
-                "match_count": top_k,
-                "filter": filter_metadata or {},
+                "match_count": k,
+                "filter": filter or {},
             },
         ).execute()
 
@@ -853,7 +849,7 @@ class SupabaseVectorProvider:
                     {
                         "id": item.get("id", ""),
                         "document": item.get("content", ""),
-                        "distance": 1 - item.get("similarity", 0),
+                        "score": item.get("similarity", 0),
                         "metadata": item.get("metadata", {}),
                     }
                 )

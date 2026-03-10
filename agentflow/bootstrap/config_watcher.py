@@ -1,7 +1,7 @@
-"""ConfigWatcher - Platform SSE を購読し RAGEngine をホットリロードするクラス.
+"""ConfigWatcher - Platform SSE を購読し app 契約をホットリロードするクラス.
 
 Platform から SSE イベントを受信し、config変更時に CapabilityBundle の
-rag_engine をアトミックに入れ替える。
+rag_engine / llm_contracts を更新する。
 
 接続失敗時は指数バックオフで自動再接続する。
 platform_url=None の場合は起動しない（シンプルな環境向け）。
@@ -32,7 +32,7 @@ _MAX_BACKOFF = 60.0
 _BACKOFF_FACTOR = 2.0
 
 # SSE イベントパス
-_SSE_PATH = "/api/studios/framework/rag/events"
+_SSE_PATH = "/api/studios/framework/apps/events"
 
 
 class ConfigWatcher:
@@ -117,9 +117,7 @@ class ConfigWatcher:
         import httpx
         from httpx_sse import aconnect_sse
 
-        async with httpx.AsyncClient(timeout=None) as client, aconnect_sse(
-            client, "GET", sse_url
-        ) as event_source:
+        async with httpx.AsyncClient(timeout=None) as client, aconnect_sse(client, "GET", sse_url) as event_source:
             logger.info("ConfigWatcher SSE 接続中: %s", sse_url)
             async for sse in event_source.aiter_sse():
                 if self._stop_event.is_set():
@@ -132,14 +130,14 @@ class ConfigWatcher:
         data: str,
         bundle: CapabilityBundle,
     ) -> None:
-        """SSE イベントを処理して rag_engine を更新.
+        """SSE イベントを処理して app 契約を更新.
 
         Args:
             event_type: イベントタイプ
             data: JSON データ文字列
             bundle: 更新対象の CapabilityBundle
         """
-        if event_type not in ("rag_config_changed", "message"):
+        if event_type not in ("app_contracts_changed", "rag_config_changed", "message"):
             return
 
         try:
@@ -151,6 +149,12 @@ class ConfigWatcher:
             return
 
         contracts_rag = _extract_contracts_rag(payload)
+        contracts_llm = _extract_contracts_llm(payload)
+
+        if contracts_llm is not None:
+            bundle.llm_contracts = contracts_llm
+            logger.info("LLM 契約変更を反映: %s", self._app_name)
+
         if contracts_rag is None:
             return
 
@@ -193,6 +197,14 @@ def _extract_contracts_rag(payload: dict[str, Any]) -> dict[str, Any] | None:
 
     if isinstance(payload.get("enabled"), bool):
         return _legacy_to_contracts_rag(payload)
+    return None
+
+
+def _extract_contracts_llm(payload: dict[str, Any]) -> dict[str, Any] | None:
+    """SSE payload から contracts.llm を抽出."""
+    canonical = payload.get("contracts_llm")
+    if isinstance(canonical, dict):
+        return canonical
     return None
 
 

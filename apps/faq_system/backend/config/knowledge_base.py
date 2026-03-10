@@ -8,15 +8,15 @@ from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
+from pydantic import BaseModel, Field
+from sqlalchemy.exc import OperationalError, ProgrammingError
+
 from apps.faq_system.backend.db.models import KnowledgeBaseSetting
 from apps.faq_system.backend.db.session import (
     create_all_tables,
     ensure_database_ready,
-    get_database_url,
     get_db_session,
 )
-from pydantic import BaseModel, Field
-from sqlalchemy.exc import OperationalError
 
 
 class KnowledgeBaseType(str, Enum):
@@ -181,7 +181,7 @@ class KnowledgeBaseRegistry:
         try:
             async with get_db_session() as session:
                 return await session.get(KnowledgeBaseSetting, "default")
-        except OperationalError as exc:
+        except (OperationalError, ProgrammingError) as exc:
             if not self._is_missing_settings_table_error(exc):
                 raise
 
@@ -194,16 +194,26 @@ class KnowledgeBaseRegistry:
             raise RuntimeError(msg) from exc
 
     @staticmethod
-    def _is_missing_settings_table_error(exc: OperationalError) -> bool:
+    def _is_missing_settings_table_error(exc: OperationalError | ProgrammingError) -> bool:
+        """テーブル未存在エラーか判定（SQLite / PostgreSQL 両対応）."""
         detail = str(exc).lower()
-        return "no such table" in detail and "knowledge_base_settings" in detail
+        # SQLite: "no such table: knowledge_base_settings"
+        sqlite_missing = "no such table" in detail and "knowledge_base_settings" in detail
+        # PostgreSQL: 'relation "knowledge_base_settings" does not exist'
+        pg_missing = "knowledge_base_settings" in detail and "does not exist" in detail
+        return sqlite_missing or pg_missing
 
     @staticmethod
     def _allow_auto_table_repair() -> bool:
+        """テーブル自動修復を許可するか判定.
+
+        FAQ_DB_AUTO_CREATE_ON_MISSING_TABLE 環境変数で明示制御可能。
+        デフォルトは許可（DB 種別による分岐なし）。
+        """
         override = os.getenv("FAQ_DB_AUTO_CREATE_ON_MISSING_TABLE", "")
         if override:
             return override.lower() in {"1", "true", "yes", "on"}
-        return get_database_url().startswith("sqlite")
+        return True
 
 
 kb_registry = KnowledgeBaseRegistry()

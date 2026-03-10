@@ -1,49 +1,21 @@
-"""RAGEngine - RAG拡張Agentパターン.
+"""RAGEngine - RAG拡張Agentパターン (UnifiedRAGService版).
 
-ナレッジベース検索拡張付きのEngine Pattern、以下に適用：
-- 企業ナレッジベース質問応答
-- ドキュメント検索 + AI回答
-- コンテキスト拡張インテリジェントアシスタント
-
-フロー: Query → RAG検索 → Agent（コンテキスト付き）→ Response
-
-使用例:
-    >>> from agentflow.engines import RAGEngine
-    >>>
-    >>> engine = RAGEngine(
-    ...     agent=KnowledgeAgent,
-    ...     vector_store="company_docs",
-    ...     top_k=5,
-    ... )
-    >>> result = await engine.run({"question": "会社の休暇ポリシーは何ですか？"})
+ナレッジベース検索拡張付きのEngine Pattern。
+UnifiedRAGService を利用して検索とコンテキスト構築を行います。
 """
 
 from __future__ import annotations
-
 import logging
 from typing import TYPE_CHECKING, Any, cast
 
 from agentflow.engines.base import BaseEngine, EngineConfig
-
+from agentflow.services.unified_rag import UnifiedRAGService
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
 
-
 class RAGEngine(BaseEngine):
-    """RAG拡張Agentエンジン.
-
-    特徴：
-    - 自動RAG検索
-    - 検索結果をAgentコンテキストに注入
-    - 複数のベクトルデータベースをサポート
-
-    Attributes:
-        agent: メインAgent（拡張後のクエリを処理）
-        vector_store: ベクトルストア名またはインスタンス
-        top_k: 検索Top-K結果
-        retriever: カスタムリトリーバー
-    """
+    """RAG拡張Agentエンジン."""
 
     def __init__(
         self,
@@ -51,46 +23,19 @@ class RAGEngine(BaseEngine):
         *,
         vector_store: str | Any | None = None,
         top_k: int = 5,
-        chunk_size: int = 500,
-        retriever: Callable[[str], Any] | None = None,
-        context_template: str | None = None,
         config: EngineConfig | None = None,
     ) -> None:
-        """RAGEngineを初期化.
-
-        Args:
-            agent: Agentクラスまたはインスタンス
-            vector_store: ベクトルストア名またはインスタンス
-            top_k: 検索数
-            chunk_size: チャンクサイズ
-            retriever: カスタム検索関数
-            context_template: コンテキストテンプレート
-            config: Engine設定
-        """
+        """初期化."""
         super().__init__(config)
         self._agent_cls = agent
         self._agent_instance: Any = None
-        self._vector_store = vector_store
+        self._collection_name = vector_store if isinstance(vector_store, str) else "default"
         self._top_k = top_k
-        self._chunk_size = chunk_size
-        self._retriever = retriever
-        self._context_template = context_template or self._default_template()
-        self._rag_pipeline: Any = None
+        self.rag_service = UnifiedRAGService(collection_name=self._collection_name)
         self._logger = logging.getLogger("agentflow.engines.rag")
 
-    def _default_template(self) -> str:
-        """デフォルトコンテキストテンプレート."""
-        return """以下の参考資料に基づいて質問に回答してください：
-
-参考資料：
-{context}
-
-質問：{question}
-
-参考資料に基づいて正確な回答を提供してください。参考資料に関連情報がない場合は、その旨を説明してください。"""
-
     async def _initialize(self) -> None:
-        """AgentとRAGコンポーネントを初期化."""
+        """初期化."""
         # Agentを初期化
         if isinstance(self._agent_cls, type):
             self._agent_instance = self._agent_cls()
@@ -99,58 +44,21 @@ class RAGEngine(BaseEngine):
 
         if hasattr(self._agent_instance, "initialize"):
             await self._agent_instance.initialize()
-
-        # RAG Pipelineを初期化（カスタムretrieverがない場合）
-        if not self._retriever and self._vector_store:
-            try:
-                from agentflow.knowledge.rag_pipeline import RAGConfig, RAGPipeline
-
-                collection_name = self._vector_store if isinstance(self._vector_store, str) else "agentflow_rag"
-                rag_config = RAGConfig(collection_name=collection_name, top_k=self._top_k)
-
-                self._rag_pipeline = RAGPipeline(
-                    config=rag_config,
-                )
-                await self._rag_pipeline.start()
-            except ImportError:
-                self._logger.warning("RAGPipeline not available, using mock retriever")
-                self._retriever = self._mock_retriever
-
+            
+        await self.rag_service._ensure_connected()
         self._logger.info("RAGEngine initialized")
 
-    def _mock_retriever(self, query: str) -> list[dict[str, Any]]:
-        """Mockリトリーバー（テスト用）."""
-        return [{"content": f"Mock result for: {query}", "score": 0.9}]
-
-    async def _retrieve(self, query: str) -> list[dict[str, Any]]:
-        """検索を実行."""
-        if self._retriever:
-            result = self._retriever(query)
-            # 同期と非同期retrieverをサポート
-            if hasattr(result, "__await__"):
-                awaited = await result
-                result = awaited
-            if isinstance(result, list):
-                return [item if isinstance(item, dict) else {"result": item} for item in result]
-            return [result if isinstance(result, dict) else {"result": result}]
-        if self._rag_pipeline:
-            results = await self._rag_pipeline.search(query, top_k=self._top_k)
-            if isinstance(results, list):
-                return [item if isinstance(item, dict) else {"result": item} for item in results]
-            return []
-        return self._mock_retriever(query)
-
     def _format_context(self, documents: list[dict[str, Any]]) -> str:
-        """検索結果をコンテキストとしてフォーマット."""
+        """コンテキストフォーマット."""
         context_parts = []
         for i, doc in enumerate(documents, 1):
-            content = doc.get("content", doc.get("text", str(doc)))
+            content = doc.get("document", str(doc))
             score = doc.get("score", "N/A")
-            context_parts.append(f"[{i}] (関連度: {score})\n{content}")
+            context_parts.append(f"[{i}] (Score: {score})\n{content}")
         return "\n\n".join(context_parts)
 
     async def _run_agent(self, agent: Any, inputs: dict[str, Any]) -> dict[str, Any]:
-        """Agentを実行."""
+        """Agent実行."""
         if hasattr(agent, "run"):
             result = await agent.run(inputs)
         elif hasattr(agent, "invoke"):
@@ -158,88 +66,48 @@ class RAGEngine(BaseEngine):
         elif hasattr(agent, "process"):
             result = await agent.process(inputs)
         else:
-            msg = f"Agent {agent} has no run/invoke/process method"
-            raise AttributeError(msg)
+            raise AttributeError(f"Agent {agent} has no run/invoke/process method")
 
         if isinstance(result, dict):
             return result
-        if hasattr(result, "model_dump"):
-            return cast("dict[str, Any]", result.model_dump())
         return {"result": result}
 
     async def _execute(self, inputs: dict[str, Any]) -> dict[str, Any]:
-        """RAG + Agentフローを実行."""
-        # クエリを取得
+        """RAG実行."""
         query = inputs.get("question") or inputs.get("query") or str(inputs)
-
-        # Step 1: RAG検索
-        self._logger.info(f"Retrieving for query: {query[:50]}...")
-        documents = await self._retrieve(query)
-        self._logger.info(f"Retrieved {len(documents)} documents")
-
-        # Step 2: コンテキストをフォーマット
-        context = self._format_context(documents)
-
-        # Step 3: 拡張入力を構築
+        
+        # 1. 検索
+        docs = await self.rag_service.retrieve(query, top_k=self._top_k)
+        
+        # 2. フォーマット
+        context = self._format_context(docs)
+        
+        # 3. Agent実行
         augmented_input = {
             **inputs,
             "context": context,
-            "documents": documents,
-            "augmented_prompt": self._context_template.format(context=context, question=query),
+            "documents": docs,
         }
-
-        # Step 4: Agentを実行
+        
         result = await self._run_agent(self._agent_instance, augmented_input)
-
+        
         return {
             "answer": result.get("answer", result.get("result", result)),
-            "sources": documents,
+            "sources": docs,
             "query": query,
         }
 
     async def _execute_stream(self, inputs: dict[str, Any]) -> AsyncIterator[dict[str, Any]]:
-        """RAG + Agentをストリーム実行."""
+        """ストリーム実行."""
         query = inputs.get("question") or inputs.get("query") or str(inputs)
-
-        # 検索開始
-        if event := self._emit_node_start("rag_retrieval"):
-            yield event
-
-        documents = await self._retrieve(query)
-
-        # 検索完了
-        if event := self._emit_node_complete("rag_retrieval", {"count": len(documents)}):
-            yield event
-
-        yield {
-            "type": "retrieval_complete",
-            "data": {"document_count": len(documents)},
-        }
-
-        # コンテキストをフォーマット
-        context = self._format_context(documents)
-        augmented_input = {
-            **inputs,
-            "context": context,
-            "documents": documents,
-            "augmented_prompt": self._context_template.format(context=context, question=query),
-        }
-
+        
+        # 検索
+        docs = await self.rag_service.retrieve(query, top_k=self._top_k)
+        yield {"type": "retrieval_complete", "data": {"count": len(docs)}}
+        
+        context = self._format_context(docs)
+        augmented_input = {**inputs, "context": context, "documents": docs}
+        
         # Agent実行
-        agent_name = getattr(self._agent_instance, "name", self._agent_instance.__class__.__name__)
-        if event := self._emit_node_start(agent_name):
-            yield event
-
         result = await self._run_agent(self._agent_instance, augmented_input)
-
-        if event := self._emit_node_complete(agent_name, result):
-            yield event
-
-        yield {
-            "type": "result",
-            "data": {
-                "answer": result.get("answer", result.get("result", result)),
-                "sources": documents,
-                "query": query,
-            },
-        }
+        yield {"type": "result", "data": result}

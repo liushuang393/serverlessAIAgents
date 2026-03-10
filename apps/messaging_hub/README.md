@@ -181,8 +181,13 @@ vim apps/messaging_hub/.env
 
 必須設定：
 
-- **LLM Provider**: `OPENAI_API_KEY` または `ANTHROPIC_API_KEY`
+- **Platform LLM 管理**: text / speech 系 model は `contracts.llm` で Platform catalog を参照
 - **最低1つのプラットフォーム**: `TELEGRAM_BOT_TOKEN` または `SLACK_BOT_TOKEN` または `DISCORD_BOT_TOKEN`
+
+補足:
+
+- Provider / model / API Key の正本は `apps/platform` の `LLM Management` です。
+- `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` は Platform 未設定時の fallback としてのみ利用します。
 
 ### 3. サービスの起動
 

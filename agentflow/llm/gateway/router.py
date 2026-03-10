@@ -6,18 +6,19 @@ All upper layers must call this gateway instead of provider SDKs.
 from __future__ import annotations
 
 import base64
+import asyncio
+import contextlib
 import json
 import logging
 import random
 import time
 from collections import defaultdict
-from collections.abc import AsyncIterator
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import httpx
 from pydantic import BaseModel, Field
 
+from agentflow.llm.contracts import resolve_contract_model_alias
 from agentflow.llm.gateway.config import (
     EngineRuntimeStatus,
     LLMGatewayConfig,
@@ -25,6 +26,11 @@ from agentflow.llm.gateway.config import (
     load_gateway_config,
     resolve_secret,
 )
+
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from pathlib import Path
 
 
 logger = logging.getLogger(__name__)
@@ -83,10 +89,43 @@ class LiteLLMGateway:
     def _model_map(self) -> dict[str, ModelConfig]:
         return {m.alias: m for m in self._config.models}
 
-    def _resolve_role_alias(self, role: str | None, model_alias: str | None) -> str:
+    def _resolve_contract_alias(
+        self,
+        *,
+        modality: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> str | None:
+        app_name = None
+        agent_name = None
+        if metadata is not None:
+            raw_app_name = metadata.get("app_name")
+            if isinstance(raw_app_name, str) and raw_app_name.strip():
+                app_name = raw_app_name.strip()
+            raw_agent_name = metadata.get("agent_name")
+            if isinstance(raw_agent_name, str) and raw_agent_name.strip():
+                agent_name = raw_agent_name.strip()
+        return resolve_contract_model_alias(
+            modality=modality,  # type: ignore[arg-type]
+            app_name=app_name,
+            agent_name=agent_name,
+            gateway_config_path=self._config_path,
+        )
+
+    def _resolve_role_alias(
+        self,
+        role: str | None,
+        model_alias: str | None,
+        *,
+        modality: str = "text",
+        metadata: dict[str, Any] | None = None,
+    ) -> str:
         alias = model_alias
         if alias:
             return alias.strip().lower()
+
+        contract_alias = self._resolve_contract_alias(modality=modality, metadata=metadata)
+        if contract_alias:
+            return contract_alias.strip().lower()
 
         normalized_role = (role or self._config.gateway.default_role).strip().lower()
         resolved = self._config.registry.get(normalized_role)
@@ -102,8 +141,15 @@ class LiteLLMGateway:
         msg = "No models are configured in LLM gateway"
         raise RuntimeError(msg)
 
-    def _candidate_aliases(self, role: str | None, model_alias: str | None) -> list[str]:
-        primary = self._resolve_role_alias(role, model_alias)
+    def _candidate_aliases(
+        self,
+        role: str | None,
+        model_alias: str | None,
+        *,
+        modality: str = "text",
+        metadata: dict[str, Any] | None = None,
+    ) -> list[str]:
+        primary = self._resolve_role_alias(role, model_alias, modality=modality, metadata=metadata)
         normalized_role = (role or self._config.gateway.default_role).strip().lower()
         fallback = self._config.routing_policy.fallback_chain.get(normalized_role, [])
         candidates: list[str] = []
@@ -166,7 +212,11 @@ class LiteLLMGateway:
                 if provider.name == model_cfg.provider:
                     key_env = provider.api_key_env
                     break
-        secret, _source = resolve_secret(key_env, config_path=self._config_path)
+        secret, _source = resolve_secret(
+            key_env,
+            provider_name=model_cfg.provider,
+            config_path=self._config_path,
+        )
         return secret
 
     def _to_litellm_model(self, model_cfg: ModelConfig) -> str:
@@ -183,9 +233,7 @@ class LiteLLMGateway:
         if api_base is None:
             if model_cfg.provider == "openai":
                 return "https://api.openai.com/v1"
-            msg = (
-                f"model alias '{model_cfg.alias}' requires openai-compatible api_base for passthrough endpoint"
-            )
+            msg = f"model alias '{model_cfg.alias}' requires openai-compatible api_base for passthrough endpoint"
             raise RuntimeError(msg)
         if api_base.endswith("/v1"):
             return api_base
@@ -380,7 +428,12 @@ class LiteLLMGateway:
     ) -> GatewayResponse:
         """Generate text via role-driven routing."""
         request_messages = self._build_messages(prompt, messages)
-        candidates = self._candidate_aliases(role, model_alias)
+        candidates = self._candidate_aliases(
+            role,
+            model_alias,
+            modality="text",
+            metadata=metadata,
+        )
         last_error: Exception | None = None
 
         for alias in candidates:
@@ -429,7 +482,12 @@ class LiteLLMGateway:
         model_alias: str | None = None,
     ) -> GatewayResponse:
         """Generate tool call response via role-driven routing."""
-        candidates = self._candidate_aliases(role, model_alias)
+        candidates = self._candidate_aliases(
+            role,
+            model_alias,
+            modality="text",
+            metadata=metadata,
+        )
         last_error: Exception | None = None
 
         for alias in candidates:
@@ -565,7 +623,12 @@ class LiteLLMGateway:
     ) -> AsyncIterator[str]:
         """Stream text via role-driven routing."""
         request_messages = self._build_messages(prompt, messages)
-        candidates = self._candidate_aliases(role, model_alias)
+        candidates = self._candidate_aliases(
+            role,
+            model_alias,
+            modality="text",
+            metadata=metadata,
+        )
         last_error: Exception | None = None
 
         for alias in candidates:
@@ -600,18 +663,21 @@ class LiteLLMGateway:
         input_texts: list[str],
         model_alias: str | None = None,
         model: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> list[list[float]]:
         """Generate embeddings via gateway."""
         if not input_texts:
             return []
 
-        alias = self._resolve_role_alias(role, model_alias)
+        alias = self._resolve_role_alias(role, model_alias, modality="embedding", metadata=metadata)
         model_cfg = self._model_map()[alias]
         target_model = model or model_cfg.model
 
         if litellm is not None:
             kwargs: dict[str, Any] = {
-                "model": self._to_litellm_model(model_cfg if model is None else model_cfg.model_copy(update={"model": model})),
+                "model": self._to_litellm_model(
+                    model_cfg if model is None else model_cfg.model_copy(update={"model": model})
+                ),
                 "input": input_texts,
                 "timeout": self._config.gateway.request_timeout_seconds,
             }
@@ -673,9 +739,15 @@ class LiteLLMGateway:
         response_format: str = "text",
         model: str | None = None,
         model_alias: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Transcribe audio via gateway passthrough endpoint."""
-        alias = self._resolve_role_alias(role, model_alias)
+        alias = self._resolve_role_alias(
+            role,
+            model_alias,
+            modality="speech_to_text",
+            metadata=metadata,
+        )
         model_cfg = self._model_map()[alias]
         data: dict[str, Any] = {
             "model": model or model_cfg.model,
@@ -706,9 +778,15 @@ class LiteLLMGateway:
         prompt: str | None = None,
         model: str | None = None,
         model_alias: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Translate audio to text via gateway passthrough endpoint."""
-        alias = self._resolve_role_alias(role, model_alias)
+        alias = self._resolve_role_alias(
+            role,
+            model_alias,
+            modality="speech_to_text",
+            metadata=metadata,
+        )
         model_cfg = self._model_map()[alias]
         data: dict[str, Any] = {"model": model or model_cfg.model}
         if prompt:
@@ -733,9 +811,15 @@ class LiteLLMGateway:
         output_format: str = "mp3",
         model: str | None = None,
         model_alias: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> bytes:
         """Synthesize text to speech via gateway passthrough endpoint."""
-        alias = self._resolve_role_alias(role, model_alias)
+        alias = self._resolve_role_alias(
+            role,
+            model_alias,
+            modality="text_to_speech",
+            metadata=metadata,
+        )
         model_cfg = self._model_map()[alias]
         base_url = self._ensure_openai_compatible_api_base(model_cfg)
         headers: dict[str, str] = {"Content-Type": "application/json"}
@@ -765,9 +849,15 @@ class LiteLLMGateway:
         output_format: str = "png",
         model_alias: str | None = None,
         model: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> bytes:
         """Generate image via gateway passthrough endpoint."""
-        alias = self._resolve_role_alias(role, model_alias)
+        alias = self._resolve_role_alias(
+            role,
+            model_alias,
+            modality="image",
+            metadata=metadata,
+        )
         model_cfg = self._model_map()[alias]
         base_url = self._ensure_openai_compatible_api_base(model_cfg)
         headers: dict[str, str] = {"Content-Type": "application/json"}
@@ -806,84 +896,73 @@ class LiteLLMGateway:
 
     async def get_engine_statuses(self) -> list[EngineRuntimeStatus]:
         """Collect local inference engine statuses for platform management UI."""
-        statuses: list[EngineRuntimeStatus] = []
+        return list(await asyncio.gather(*(self._probe_engine_status(engine) for engine in self._config.inference_engines)))
 
-        for engine in self._config.inference_engines:
-            if not engine.enabled:
-                statuses.append(
-                    EngineRuntimeStatus(
+    async def _probe_engine_status(self, engine: InferenceEngineConfig) -> EngineRuntimeStatus:
+        if not engine.enabled:
+            return EngineRuntimeStatus(
+                name=engine.name,
+                engine_type=engine.engine_type,
+                status="unavailable",
+                last_error="disabled",
+            )
+
+        health_url = f"{engine.base_url.rstrip('/')}/{engine.health_path.lstrip('/')}"
+        model_url = f"{engine.base_url.rstrip('/')}/{engine.model_list_path.lstrip('/')}"
+        metrics_url = f"{engine.base_url.rstrip('/')}/{engine.metrics_path.lstrip('/')}"
+        timeout = httpx.Timeout(2.0, connect=1.0)
+
+        start = time.perf_counter()
+        try:
+            async with httpx.AsyncClient(timeout=timeout) as client:
+                health_response = await client.get(health_url)
+                latency_ms = (time.perf_counter() - start) * 1000.0
+                if health_response.status_code >= 400:
+                    return EngineRuntimeStatus(
                         name=engine.name,
                         engine_type=engine.engine_type,
                         status="unavailable",
-                        last_error="disabled",
-                    )
-                )
-                continue
-
-            health_url = f"{engine.base_url.rstrip('/')}/{engine.health_path.lstrip('/')}"
-            model_url = f"{engine.base_url.rstrip('/')}/{engine.model_list_path.lstrip('/')}"
-            metrics_url = f"{engine.base_url.rstrip('/')}/{engine.metrics_path.lstrip('/')}"
-
-            start = time.perf_counter()
-            try:
-                async with httpx.AsyncClient(timeout=5.0) as client:
-                    health_response = await client.get(health_url)
-                    latency_ms = (time.perf_counter() - start) * 1000.0
-                    if health_response.status_code >= 400:
-                        statuses.append(
-                            EngineRuntimeStatus(
-                                name=engine.name,
-                                engine_type=engine.engine_type,
-                                status="unavailable",
-                                latency_ms=latency_ms,
-                                last_error=f"health status={health_response.status_code}",
-                            )
-                        )
-                        continue
-
-                    loaded_models: list[str] = []
-                    try:
-                        model_response = await client.get(model_url)
-                        if model_response.status_code < 400:
-                            body = model_response.json()
-                            raw_models = body.get("data", []) if isinstance(body, dict) else []
-                            for item in raw_models:
-                                if isinstance(item, dict):
-                                    model_id = item.get("id")
-                                    if isinstance(model_id, str):
-                                        loaded_models.append(model_id)
-                    except Exception:
-                        loaded_models = []
-
-                    gpu_usage: float | None = None
-                    try:
-                        metrics_response = await client.get(metrics_url)
-                        if metrics_response.status_code < 400:
-                            gpu_usage = self._parse_gpu_usage(metrics_response.text)
-                    except Exception:
-                        gpu_usage = None
-
-                statuses.append(
-                    EngineRuntimeStatus(
-                        name=engine.name,
-                        engine_type=engine.engine_type,
-                        status="available",
                         latency_ms=latency_ms,
-                        gpu_usage=gpu_usage,
-                        loaded_models=loaded_models,
+                        last_error=f"health status={health_response.status_code}",
                     )
-                )
-            except Exception as exc:  # pragma: no cover - runtime/network variability
-                statuses.append(
-                    EngineRuntimeStatus(
-                        name=engine.name,
-                        engine_type=engine.engine_type,
-                        status="unavailable",
-                        last_error=str(exc),
-                    )
-                )
 
-        return statuses
+                loaded_models: list[str] = []
+                try:
+                    model_response = await client.get(model_url)
+                    if model_response.status_code < 400:
+                        body = model_response.json()
+                        raw_models = body.get("data", []) if isinstance(body, dict) else []
+                        for item in raw_models:
+                            if isinstance(item, dict):
+                                model_id = item.get("id")
+                                if isinstance(model_id, str):
+                                    loaded_models.append(model_id)
+                except Exception:
+                    loaded_models = []
+
+                gpu_usage: float | None = None
+                try:
+                    metrics_response = await client.get(metrics_url)
+                    if metrics_response.status_code < 400:
+                        gpu_usage = self._parse_gpu_usage(metrics_response.text)
+                except Exception:
+                    gpu_usage = None
+
+            return EngineRuntimeStatus(
+                name=engine.name,
+                engine_type=engine.engine_type,
+                status="available",
+                latency_ms=latency_ms,
+                gpu_usage=gpu_usage,
+                loaded_models=loaded_models,
+            )
+        except Exception as exc:  # pragma: no cover - runtime/network variability
+            return EngineRuntimeStatus(
+                name=engine.name,
+                engine_type=engine.engine_type,
+                status="unavailable",
+                last_error=str(exc),
+            )
 
     @staticmethod
     def _parse_gpu_usage(metrics_text: str) -> float | None:
@@ -898,16 +977,12 @@ class LiteLLMGateway:
                     token += ch
                     continue
                 if token:
-                    try:
+                    with contextlib.suppress(ValueError):
                         numbers.append(float(token))
-                    except ValueError:
-                        pass
                     token = ""
             if token:
-                try:
+                with contextlib.suppress(ValueError):
                     numbers.append(float(token))
-                except ValueError:
-                    pass
             if numbers:
                 return max(0.0, min(numbers[0], 100.0))
         return None
@@ -935,7 +1010,8 @@ class LiteLLMGateway:
             "details": details,
             "cost_budget": self._config.routing_policy.cost_budget,
             "budget_exceeded": bool(
-                self._config.routing_policy.cost_budget is not None and total_cost > self._config.routing_policy.cost_budget
+                self._config.routing_policy.cost_budget is not None
+                and total_cost > self._config.routing_policy.cost_budget
             ),
         }
 

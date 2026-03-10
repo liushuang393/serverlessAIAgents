@@ -238,6 +238,55 @@
       ],
       "session_ttl_minutes": 60
     },
+    "llm": {
+      "enabled": true,
+      "defaults": {
+        "text": {
+          "provider": "openai",
+          "model_id": "platform_text_default",
+          "model_type": "text"
+        },
+        "embedding": {
+          "provider": "openai",
+          "model_id": "platform_embedding_default",
+          "model_type": "embedding"
+        }
+      },
+      "agent_overrides": {
+        "CodeTransformationAgent": {
+          "text": {
+            "provider": "openai",
+            "model_id": "coding_openai",
+            "model_type": "text"
+          }
+        },
+        "TestSynthesisAgent": {
+          "text": {
+            "provider": "openai",
+            "model_id": "coding_openai",
+            "model_type": "text"
+          }
+        },
+        "CodeMigrationAgent": {
+          "text": {
+            "provider": "openai",
+            "model_id": "coding_openai",
+            "model_type": "text"
+          }
+        }
+      },
+      "allowed_modalities": [
+        "embedding",
+        "text"
+      ],
+      "extra_model_refs": [
+        {
+          "provider": "openai",
+          "model_id": "coding_openai",
+          "model_type": "text"
+        }
+      ]
+    },
     "skills": {
       "auto_install": false,
       "hot_reload": true,

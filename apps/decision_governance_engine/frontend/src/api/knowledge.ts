@@ -54,7 +54,11 @@ export interface ChunkPreview {
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE}${path}`, { credentials: 'include' });
-  if (!res.ok) throw new Error(`GET ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const detail = errorData.detail || errorData.message || res.statusText;
+    throw new Error(`GET ${path} failed (${res.status}): ${detail}`);
+  }
   return res.json();
 }
 
@@ -65,7 +69,11 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
     credentials: 'include',
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error(`POST ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const detail = errorData.detail || errorData.message || res.statusText;
+    throw new Error(`POST ${path} failed (${res.status}): ${detail}`);
+  }
   return res.json();
 }
 
@@ -76,7 +84,11 @@ async function patch<T>(path: string, body: unknown): Promise<T> {
     credentials: 'include',
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`PATCH ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const detail = errorData.detail || errorData.message || res.statusText;
+    throw new Error(`PATCH ${path} failed (${res.status}): ${detail}`);
+  }
   return res.json();
 }
 
@@ -85,7 +97,11 @@ async function del<T>(path: string): Promise<T> {
     method: 'DELETE',
     credentials: 'include',
   });
-  if (!res.ok) throw new Error(`DELETE ${path} failed: ${res.status}`);
+  if (!res.ok) {
+    const errorData = await res.json().catch(() => ({}));
+    const detail = errorData.detail || errorData.message || res.statusText;
+    throw new Error(`DELETE ${path} failed (${res.status}): ${detail}`);
+  }
   return res.json();
 }
 

@@ -145,6 +145,33 @@
       "required_scopes": ["api"],
       "session_ttl_minutes": 60
     },
+    "llm": {
+      "enabled": true,
+      "defaults": {
+        "text": {
+          "provider": "openai",
+          "model_id": "platform_text_default",
+          "model_type": "text"
+        },
+        "speech_to_text": {
+          "provider": "openai",
+          "model_id": "platform_speech_to_text_default",
+          "model_type": "speech_to_text"
+        },
+        "text_to_speech": {
+          "provider": "openai",
+          "model_id": "platform_text_to_speech_default",
+          "model_type": "text_to_speech"
+        }
+      },
+      "agent_overrides": {},
+      "allowed_modalities": [
+        "speech_to_text",
+        "text",
+        "text_to_speech"
+      ],
+      "extra_model_refs": []
+    },
     "rag": {
       "enabled": false,
       "pattern": null,

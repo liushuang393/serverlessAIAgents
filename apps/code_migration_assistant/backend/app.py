@@ -793,8 +793,12 @@ async def _init_knowledge_managers() -> None:
 
         await init_knowledge_db()
 
-        col_mgr = CollectionManager(session_factory=get_knowledge_session)
-        doc_mgr = DocumentManager(collection_manager=col_mgr, session_factory=get_knowledge_session)
+        async def session_factory():
+            async with get_knowledge_session() as session:
+                return session
+
+        col_mgr = CollectionManager(session_factory=session_factory)
+        doc_mgr = DocumentManager(collection_manager=col_mgr, session_factory=session_factory)
         init_managers(col_mgr, doc_mgr)
         _knowledge_initialized = True
         logger.info("Knowledge managers initialized")

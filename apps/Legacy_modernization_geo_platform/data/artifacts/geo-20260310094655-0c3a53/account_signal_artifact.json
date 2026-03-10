@@ -1,0 +1,70 @@
+{
+  "meta": {
+    "task_id": "geo-20260310094655-0c3a53",
+    "trace_id": "geo-20260310094655-0c3a53:demand_signal",
+    "stage": "demand_signal",
+    "generated_at": "2026-03-10T09:46:55.978620Z"
+  },
+  "evidence": [
+    {
+      "url": "https://example.test/construction/cobol-modernization",
+      "title": "construction COBOL modernization demand signal",
+      "publisher": "sample-intel",
+      "summary": "construction organizations are evaluating incremental COBOL modernization programs.",
+      "snippet": "Sample evidence for automated tests.",
+      "reliability": "HIGH",
+      "citation_ready": true,
+      "fresh": true,
+      "provider": "sample"
+    },
+    {
+      "url": "https://example.test/construction/migration-roadmap",
+      "title": "construction migration roadmap",
+      "publisher": "sample-intel",
+      "summary": "Roadmap evidence indicating phased migration is preferred over big bang rewrites.",
+      "snippet": "Phased migration reduces delivery risk.",
+      "reliability": "MEDIUM",
+      "citation_ready": true,
+      "fresh": true,
+      "provider": "sample"
+    },
+    {
+      "url": "https://example.test/construction/skills-gap",
+      "title": "Legacy skills gap report",
+      "publisher": "sample-intel",
+      "summary": "The maintenance talent gap is driving modernization urgency.",
+      "snippet": "Skills shortages increase modernization urgency.",
+      "reliability": "HIGH",
+      "citation_ready": true,
+      "fresh": true,
+      "provider": "sample"
+    }
+  ],
+  "unknowns": [],
+  "extensions": {
+    "primary_provider": "sample"
+  },
+  "company": "construction prospects",
+  "signals": [
+    {
+      "type": "tech_stack",
+      "description": "construction organizations are evaluating incremental COBOL modernization programs.",
+      "source": "construction COBOL modernization demand signal (sample-intel)",
+      "confidence": 0.78
+    },
+    {
+      "type": "tech_stack",
+      "description": "Roadmap evidence indicating phased migration is preferred over big bang rewrites.",
+      "source": "construction migration roadmap (sample-intel)",
+      "confidence": 0.62
+    },
+    {
+      "type": "tech_stack",
+      "description": "The maintenance talent gap is driving modernization urgency.",
+      "source": "Legacy skills gap report (sample-intel)",
+      "confidence": 0.78
+    }
+  ],
+  "urgency_hypothesis": "保守要員不足と技術負債圧縮の同時要請が強い",
+  "modernization_fit_score": 87
+}

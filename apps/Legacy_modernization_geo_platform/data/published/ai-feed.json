@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-03-10T09:46:59.109343+00:00",
+  "items": [
+    {
+      "slug": "construction-cobol-modernization-guide",
+      "title": "construction 向け COBOL モダナイゼーションガイド",
+      "url": "http://127.0.0.1:18010/geo/pages/construction-cobol-modernization-guide",
+      "summary": "COBOL の刷新を、診断・業務ルール抽出・段階移行で進めるための実務ガイド。",
+      "language": "ja",
+      "faq": [
+        {
+          "question": "construction での COBOL 段階移行事例はあるか",
+          "answer": "段階移行は現行業務の安定運用と並行して実施できます。"
+        },
+        {
+          "question": "一括刷新との違いは何ですか",
+          "answer": "投資とリスクを工程ごとに分割できる点です。"
+        },
+        {
+          "question": "どこから調査を始めるべきですか",
+          "answer": "高頻度バッチ、帳票、外部連携を優先して可視化します。"
+        }
+      ]
+    }
+  ]
+}

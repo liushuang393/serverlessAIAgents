@@ -27,12 +27,16 @@ POST  /api/studios/framework/apps/{app_name}/cli/setup   — CLI セットアッ
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
 from typing import TYPE_CHECKING, Any, Literal
 from urllib.parse import urlparse
 
-from apps.platform.schemas.provisioning_schemas import AppCreateRequest  # noqa: TC002
+from fastapi import APIRouter, Body, HTTPException, Query, Request
+from fastapi.responses import StreamingResponse
+
+from apps.platform.schemas.provisioning_schemas import AppCreateRequest
 from apps.platform.services.agent_taxonomy import AgentTaxonomyService
 from apps.platform.services.app_lifecycle import (
     AppLifecycleManager,
@@ -42,10 +46,10 @@ from apps.platform.services.app_scaffolder import AppScaffolderService
 from apps.platform.services.framework_audit import FrameworkAuditService
 from apps.platform.services.port_allocator import PortAllocatorService
 from apps.platform.services.tenant_dashboard import get_tenant_dashboard
-from fastapi import APIRouter, Body, HTTPException, Query, Request
 
 
 if TYPE_CHECKING:
+    from apps.platform.services.app_config_event_store import AppConfigEventStore
     from apps.platform.services.app_discovery import AppDiscoveryService
 
 
@@ -58,6 +62,7 @@ _lifecycle: AppLifecycleManager | None = None
 _scaffolder: AppScaffolderService | None = None
 _port_allocator: PortAllocatorService | None = None
 _framework_audit: FrameworkAuditService | None = None
+_app_config_events: AppConfigEventStore | None = None
 _health_prime_task: asyncio.Task[None] | None = None
 
 
@@ -67,6 +72,7 @@ def init_app_services(
     scaffolder: AppScaffolderService | None = None,
     port_allocator: PortAllocatorService | None = None,
     framework_audit: FrameworkAuditService | None = None,
+    event_store: AppConfigEventStore | None = None,
 ) -> None:
     """サービスインスタンスを設定.
 
@@ -76,12 +82,13 @@ def init_app_services(
         discovery: App 検出サービス
         lifecycle: ライフサイクル管理サービス
     """
-    global _discovery, _lifecycle, _scaffolder, _port_allocator, _framework_audit
+    global _discovery, _lifecycle, _scaffolder, _port_allocator, _framework_audit, _app_config_events
     _discovery = discovery
     _lifecycle = lifecycle
     _scaffolder = scaffolder or AppScaffolderService(discovery)
     _port_allocator = port_allocator or PortAllocatorService(discovery)
     _framework_audit = framework_audit or FrameworkAuditService(discovery)
+    _app_config_events = event_store
 
 
 def _get_discovery() -> AppDiscoveryService:
@@ -124,6 +131,14 @@ def _get_framework_audit() -> FrameworkAuditService:
     return _framework_audit
 
 
+def _get_app_config_event_store() -> AppConfigEventStore:
+    """AppConfigEventStore を取得する."""
+    if _app_config_events is None:
+        msg = "AppConfigEventStore が未初期化です"
+        raise RuntimeError(msg)
+    return _app_config_events
+
+
 def _get_app_or_404(discovery: AppDiscoveryService, app_name: str):
     """App を取得し、存在しない場合は 404 を返す."""
     config = discovery.get_app(app_name)
@@ -133,6 +148,37 @@ def _get_app_or_404(discovery: AppDiscoveryService, app_name: str):
             detail={"message": f"App not found: {app_name}", "error_code": "APP_NOT_FOUND"},
         )
     return config
+
+
+@router.get("/events")
+async def app_contract_events(
+    app: str = Query(..., description="購読対象アプリ名"),
+) -> StreamingResponse:
+    """app 契約変更の SSE ストリーム."""
+    try:
+        store = _get_app_config_event_store()
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={"message": str(exc), "error_code": "STORE_NOT_INITIALIZED"},
+        ) from exc
+
+    async def event_generator() -> Any:
+        connected_event = {"event_type": "connected", "app_name": app}
+        yield f"event: connected\ndata: {json.dumps(connected_event)}\n\n"
+        async for event in store.subscribe(app):
+            event_type = str(event.get("event_type", "message"))
+            yield f"event: {event_type}\ndata: {json.dumps(event)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 def _to_database_url(db_kind: str | None, db_port: int | None) -> str | None:

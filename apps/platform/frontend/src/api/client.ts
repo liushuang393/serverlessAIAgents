@@ -27,6 +27,8 @@ import type {
   AppSummaryResponse,
   HealthCheckResult,
   LLMEngineRuntimeStatus,
+  LLMEngineDeployRequest,
+  LLMEngineDeployResponse,
   LLMSetupAndSwitchRequest,
   LLMSetupAndSwitchResponse,
   LLMCatalogResponse,
@@ -37,6 +39,8 @@ import type {
   LLMPreflightReport,
   LLMPreflightRequest,
   LLMProviderConfigItem,
+  LLMProviderSecretResponse,
+  LLMProviderSecretUpdateRequest,
   LLMProviderRuntimeStatus,
   LLMRoutingPolicyConfig,
   LLMSwitchRequest,
@@ -69,11 +73,12 @@ const api = axios.create({
 /**
  * 長時間操作用 axios インスタンス.
  *
- * docker compose build 等は数分かかるため、タイムアウトを 5 分に設定。
+ * docker compose pull / 初回 model download まで含めると 5 分を超えるため、
+ * タイムアウトを 15 分に設定。
  */
 const longRunningApi = axios.create({
   baseURL: '/api',
-  timeout: 300_000,
+  timeout: 900_000,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -509,6 +514,26 @@ export async function fetchLLMProviderRuntime(): Promise<{ providers_runtime: LL
   return data;
 }
 
+export async function updateLLMProviderSecret(
+  providerName: string,
+  payload: LLMProviderSecretUpdateRequest,
+): Promise<LLMProviderSecretResponse> {
+  const { data } = await api.put<LLMProviderSecretResponse>(
+    `/studios/framework/llm/providers/${providerName}/secret`,
+    payload,
+  );
+  return data;
+}
+
+export async function deleteLLMProviderSecret(
+  providerName: string,
+): Promise<LLMProviderSecretResponse> {
+  const { data } = await api.delete<LLMProviderSecretResponse>(
+    `/studios/framework/llm/providers/${providerName}/secret`,
+  );
+  return data;
+}
+
 export async function fetchLLMInferenceEngines(): Promise<{ inference_engines: LLMInferenceEngineConfigItem[] }> {
   const { data } = await api.get<{ inference_engines: LLMInferenceEngineConfigItem[] }>(
     '/studios/framework/llm/engines',
@@ -529,6 +554,26 @@ export async function updateLLMInferenceEngines(
 export async function fetchLLMEngineStatus(): Promise<{ engine_status: LLMEngineRuntimeStatus[] }> {
   const { data } = await api.get<{ engine_status: LLMEngineRuntimeStatus[] }>(
     '/studios/framework/llm/engines/status',
+  );
+  return data;
+}
+
+export async function deployLLMEngine(
+  engineName: string,
+  payload: LLMEngineDeployRequest,
+): Promise<LLMEngineDeployResponse> {
+  const { data } = await longRunningApi.post<LLMEngineDeployResponse>(
+    `/studios/framework/llm/engines/${engineName}/deploy`,
+    payload,
+  );
+  return data;
+}
+
+export async function stopLLMEngine(
+  engineName: string,
+): Promise<LLMEngineDeployResponse> {
+  const { data } = await api.post<LLMEngineDeployResponse>(
+    `/studios/framework/llm/engines/${engineName}/stop`,
   );
   return data;
 }

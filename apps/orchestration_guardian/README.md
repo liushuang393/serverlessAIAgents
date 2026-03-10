@@ -46,6 +46,12 @@ conda activate agentflow
 python -m apps.orchestration_guardian.main
 ```
 
+## Platform 主導 LLM 契約
+
+- この app の正本は `app_config.json` の `contracts.llm` です。
+- text modality は Platform catalog の `platform_text_default` を参照します。
+- Provider / model / API Key の正本は `apps/platform` の `LLM Management` です。
+
 ## テスト/静的チェック（統一スクリプト）
 
 ```bash

@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "task_id": "geo-20260310094655-0c3a53",
+    "trace_id": "geo-20260310094655-0c3a53:publish",
+    "stage": "publish",
+    "generated_at": "2026-03-10T09:46:59.109566Z"
+  },
+  "evidence": [
+    {
+      "page_url": "http://127.0.0.1:18010/geo/pages/construction-cobol-modernization-guide",
+      "title": "construction 向け COBOL モダナイゼーションガイド"
+    }
+  ],
+  "unknowns": [],
+  "extensions": {},
+  "pages": [
+    {
+      "slug": "construction-cobol-modernization-guide",
+      "title": "construction 向け COBOL モダナイゼーションガイド",
+      "page_url": "http://127.0.0.1:18010/geo/pages/construction-cobol-modernization-guide",
+      "html_path": "/home/liush/projects/serverlessAIAgents/apps/Legacy_modernization_geo_platform/data/published/geo-20260310094655-0c3a53/pages/construction-cobol-modernization-guide.html"
+    }
+  ],
+  "sitemap_url": "http://127.0.0.1:18010/geo/sitemap.xml",
+  "ai_feed_url": "http://127.0.0.1:18010/geo/ai-feed.json",
+  "published_at": "2026-03-10T09:46:59.109586Z"
+}

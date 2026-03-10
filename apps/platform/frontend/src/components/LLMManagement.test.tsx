@@ -5,6 +5,8 @@ import { I18nProvider } from '@/i18n';
 import { LLMManagement } from '@/components/LLMManagement';
 
 const apiMocks = vi.hoisted(() => ({
+  deleteLLMProviderSecret: vi.fn(),
+  deployLLMEngine: vi.fn(),
   fetchLLMCatalog: vi.fn(),
   fetchLLMDiagnostics: vi.fn(),
   fetchLLMEngineStatus: vi.fn(),
@@ -15,9 +17,11 @@ const apiMocks = vi.hoisted(() => ({
   switchLLM: vi.fn(),
   updateLLMInferenceEngines: vi.fn(),
   updateLLMModels: vi.fn(),
+  updateLLMProviderSecret: vi.fn(),
   updateLLMProviders: vi.fn(),
   updateLLMRegistry: vi.fn(),
   updateLLMRoutingPolicy: vi.fn(),
+  stopLLMEngine: vi.fn(),
 }));
 
 vi.mock('@/api/client', () => apiMocks);
@@ -40,7 +44,20 @@ describe('LLMManagement component', () => {
 
     apiMocks.fetchLLMManagementOverview.mockResolvedValue({
       gateway: { default_role: 'reasoning', request_timeout_seconds: 120, max_retries: 2 },
-      providers: [{ name: 'openai', api_base: 'https://api.openai.com/v1', api_key_env: 'OPENAI_API_KEY', models: [], enabled: true }],
+      providers: [{
+        name: 'openai',
+        api_base: 'https://api.openai.com/v1',
+        api_key_env: 'OPENAI_API_KEY',
+        models: [],
+        enabled: true,
+        secret_status: {
+          configured: false,
+          masked: null,
+          source: 'unavailable',
+          available: false,
+          last_error: null,
+        },
+      }],
       providers_runtime: [],
       inference_engines: [],
       models: [],
@@ -61,9 +78,18 @@ describe('LLMManagement component', () => {
     });
     apiMocks.fetchLLMEngineStatus.mockResolvedValue({ engine_status: [] });
     apiMocks.fetchLLMCatalog.mockResolvedValue({
-      providers: [{ name: 'openai', canonical_name: 'openai', aliases: [], requires_api_key: true, default_api_key_env: 'OPENAI_API_KEY', default_api_base: 'https://api.openai.com/v1', recommended_models: ['gpt-4o-mini'], install_recipes: [] }],
+      providers: [{ name: 'openai', canonical_name: 'openai', aliases: [], requires_api_key: true, default_api_key_env: 'OPENAI_API_KEY', default_api_base: 'https://api.openai.com/v1', recommended_models: ['gpt-5-mini'], install_recipes: [] }],
       backends: [],
-      models: [{ alias: 'gpt_4o_mini', provider: 'openai', model: 'gpt-4o-mini', capabilities: ['reasoning'], context_window: 128000, recommended_for: ['reasoning'] }],
+      models: [{
+        alias: 'platform_text_default',
+        model_id: 'platform_text_default',
+        provider: 'openai',
+        model: 'gpt-5-mini',
+        model_type: 'text',
+        capabilities: ['reasoning'],
+        context_window: 128000,
+        recommended_for: ['reasoning'],
+      }],
       generated_at: '2026-03-05T00:00:00',
     });
     apiMocks.fetchOpenAPIPaths.mockResolvedValue(['/api/studios/framework/llm/overview']);
@@ -110,6 +136,36 @@ describe('LLMManagement component', () => {
     expect(container.querySelectorAll('textarea').length).toBeGreaterThan(0);
   });
 
+  it('loads an engine example into the advanced editor', async () => {
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <LLMManagement />
+        </I18nProvider>,
+      );
+      await flush();
+    });
+
+    const toggle = container.querySelector('[data-testid="llm-advanced-toggle"]');
+    expect(toggle).not.toBeNull();
+    await act(async () => {
+      toggle?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flush();
+    });
+
+    const exampleButton = container.querySelector('[data-testid="llm-example-engines-vllm-docker"]');
+    expect(exampleButton).not.toBeNull();
+    await act(async () => {
+      exampleButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await flush();
+    });
+
+    const editor = container.querySelector<HTMLTextAreaElement>('[data-testid="engines-editor"]');
+    expect(editor).not.toBeNull();
+    expect(editor?.value).toContain('"name": "vllm"');
+    expect(editor?.value).toContain('vllm/vllm-openai:v0.8.5');
+  });
+
   it('shows route-missing diagnostics on overview 404', async () => {
     apiMocks.fetchLLMManagementOverview.mockRejectedValueOnce({
       isAxiosError: true,
@@ -125,7 +181,7 @@ describe('LLMManagement component', () => {
       config_exists: true,
       config_version: 'version-a',
       last_preflight: null,
-      hints: ['LLM routes are missing. Restart platform backend with latest code.'],
+      hints: ['LLM 管理ルートが見つかりません。Platform backend を最新コードで再起動してください。'],
       server_time: '2026-03-05T00:00:00',
     });
 
@@ -141,5 +197,21 @@ describe('LLMManagement component', () => {
     const diagnostic = container.querySelector('[data-testid="llm-route-missing-diagnostic"]');
     expect(diagnostic).not.toBeNull();
     expect(diagnostic?.textContent).toContain('OpenAPI');
+  });
+
+  it('renders the voice contract example with official provider notes', async () => {
+    await act(async () => {
+      root.render(
+        <I18nProvider>
+          <LLMManagement />
+        </I18nProvider>,
+      );
+      await flush();
+    });
+
+    expect(container.textContent).toContain('音声窓口 / コールセンターアプリ例');
+    expect(container.textContent).toContain('gpt-4o-transcribe');
+    expect(container.textContent).toContain('gemini-2.5-flash-preview-tts');
+    expect(container.textContent).toContain('claude-opus-4-6');
   });
 });

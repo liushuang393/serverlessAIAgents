@@ -18,6 +18,11 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from agentflow.llm.contracts import (
+    LLMContractsConfig,
+    resolve_known_model_ids,
+    resolve_known_providers,
+)
 from apps.platform.schemas.app_config_schemas import (
     AppConfig,
     BlueprintConfig,
@@ -236,6 +241,7 @@ class AppDiscoveryService:
                     "config_path": self._to_relative(self._config_paths.get(a.name)),
                     "contracts": {
                         "auth": a.contracts.auth.enabled,
+                        "llm": a.contracts.llm.enabled,
                         "rag": a.contracts.rag.enabled,
                         "skills": bool(a.contracts.skills.default_skills),
                         "release_targets": len(a.contracts.release.targets),
@@ -361,6 +367,7 @@ class AppDiscoveryService:
         try:
             raw = json.loads(config_path.read_text("utf-8"))
             config = AppConfig.model_validate(raw)
+            self._validate_llm_contracts(config)
             self._registry[config.name] = config
             self._config_paths[config.name] = config_path
             # Agent module フィールドの import 可否を確認（非致命的）
@@ -421,10 +428,12 @@ class AppDiscoveryService:
 
         contracts_defaults = ContractsConfig().model_dump()
         inferred_rag = self._infer_contract_rag(manifest)
+        inferred_llm = self._infer_contract_llm(manifest, inferred_rag=inferred_rag)
         contracts = manifest.get("contracts")
         if not isinstance(contracts, dict):
             contracts = deepcopy(contracts_defaults)
             contracts["rag"] = inferred_rag
+            contracts["llm"] = inferred_llm
             manifest["contracts"] = contracts
             self._mark_updated(updated_fields, "contracts")
         else:
@@ -442,6 +451,16 @@ class AppDiscoveryService:
                     if key not in rag_contract:
                         rag_contract[key] = deepcopy(value)
                         self._mark_updated(updated_fields, f"contracts.rag.{key}")
+
+            llm_contract = contracts.get("llm", {})
+            if not isinstance(llm_contract, dict):
+                contracts["llm"] = inferred_llm
+                self._mark_updated(updated_fields, "contracts.llm")
+            else:
+                for key, value in inferred_llm.items():
+                    if key not in llm_contract:
+                        llm_contract[key] = deepcopy(value)
+                        self._mark_updated(updated_fields, f"contracts.llm.{key}")
 
         blueprint_defaults = BlueprintConfig().model_dump()
         engine_pattern = self._infer_engine_pattern(manifest)
@@ -740,10 +759,138 @@ class AppDiscoveryService:
         return inferred
 
     @staticmethod
+    def _infer_contract_llm(
+        manifest: dict[str, Any],
+        *,
+        inferred_rag: dict[str, Any],
+    ) -> dict[str, Any]:
+        """app から contracts.llm を推論する."""
+        llm_defaults = ContractsConfig().llm.model_dump()
+        app_name = str(manifest.get("name", "")).strip().lower()
+        tags = manifest.get("tags", [])
+        tags_lower = {str(tag).strip().lower() for tag in tags} if isinstance(tags, list) else set()
+
+        inferred = deepcopy(llm_defaults)
+        defaults = {
+            "text": {
+                "provider": "openai",
+                "model_id": "platform_text_default",
+                "model_type": "text",
+            }
+        }
+        allowed_modalities = ["text"]
+        extra_model_refs: list[dict[str, str]] = []
+        agent_overrides: dict[str, dict[str, dict[str, str]]] = {}
+
+        if bool(inferred_rag.get("enabled")) or app_name == "market_trend_monitor":
+            defaults["embedding"] = {
+                "provider": "openai",
+                "model_id": "platform_embedding_default",
+                "model_type": "embedding",
+            }
+            allowed_modalities.append("embedding")
+
+        if app_name == "design_skills_engine" or "image" in tags_lower or "design" in tags_lower:
+            defaults["image"] = {
+                "provider": "openai",
+                "model_id": "platform_image_default",
+                "model_type": "image",
+            }
+            allowed_modalities.append("image")
+
+        if app_name == "messaging_hub" or "voice" in tags_lower or "audio" in tags_lower:
+            defaults["speech_to_text"] = {
+                "provider": "openai",
+                "model_id": "platform_speech_to_text_default",
+                "model_type": "speech_to_text",
+            }
+            defaults["text_to_speech"] = {
+                "provider": "openai",
+                "model_id": "platform_text_to_speech_default",
+                "model_type": "text_to_speech",
+            }
+            allowed_modalities.extend(["speech_to_text", "text_to_speech"])
+
+        if app_name == "code_migration_assistant":
+            agent_overrides = {
+                "CodeTransformationAgent": {
+                    "text": {
+                        "provider": "openai",
+                        "model_id": "coding_openai",
+                        "model_type": "text",
+                    }
+                },
+                "TestSynthesisAgent": {
+                    "text": {
+                        "provider": "openai",
+                        "model_id": "coding_openai",
+                        "model_type": "text",
+                    }
+                },
+                "CodeMigrationAgent": {
+                    "text": {
+                        "provider": "openai",
+                        "model_id": "coding_openai",
+                        "model_type": "text",
+                    }
+                },
+            }
+            extra_model_refs.append(
+                {
+                    "provider": "openai",
+                    "model_id": "coding_openai",
+                    "model_type": "text",
+                }
+            )
+
+        inferred["enabled"] = True
+        inferred["defaults"] = defaults
+        inferred["allowed_modalities"] = sorted(set(allowed_modalities))
+        inferred["extra_model_refs"] = extra_model_refs
+        inferred["agent_overrides"] = agent_overrides
+        return inferred
+
+    @staticmethod
     def _mark_updated(updated_fields: list[str], field: str) -> None:
         """更新項目を重複なしで登録."""
         if field not in updated_fields:
             updated_fields.append(field)
+
+    @staticmethod
+    def _iter_llm_refs(config: LLMContractsConfig) -> list[tuple[str, str, str]]:
+        """contracts.llm 内の provider/model_id/model_type 参照を列挙する."""
+        refs: list[tuple[str, str, str]] = []
+        for modality in config.defaults.defined_modalities():
+            model_ref = config.defaults.get(modality)
+            if model_ref is not None:
+                refs.append((model_ref.provider, model_ref.model_id, model_ref.model_type))
+        for binding in config.agent_overrides.values():
+            for modality in binding.defined_modalities():
+                model_ref = binding.get(modality)
+                if model_ref is not None:
+                    refs.append((model_ref.provider, model_ref.model_id, model_ref.model_type))
+        for model_ref in config.extra_model_refs:
+            refs.append((model_ref.provider, model_ref.model_id, model_ref.model_type))
+        return refs
+
+    def _validate_llm_contracts(self, config: AppConfig) -> None:
+        """contracts.llm が Platform catalog を参照しているか検証する."""
+        llm_contracts = config.contracts.llm
+        if not llm_contracts.enabled:
+            return
+
+        known_model_ids = resolve_known_model_ids()
+        known_providers = resolve_known_providers()
+        errors: list[str] = []
+        for provider, model_id, _model_type in self._iter_llm_refs(llm_contracts):
+            if provider not in known_providers:
+                errors.append(f"provider '{provider}' は Platform LLM catalog に存在しません")
+            if model_id not in known_model_ids:
+                errors.append(f"model_id '{model_id}' は Platform LLM catalog に存在しません")
+
+        if errors:
+            msg = " / ".join(dict.fromkeys(errors))
+            raise ValueError(msg)
 
     @staticmethod
     def _iter_agent_capabilities(agents_raw: Any) -> list[list[str]]:

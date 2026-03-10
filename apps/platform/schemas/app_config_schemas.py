@@ -14,8 +14,10 @@ from __future__ import annotations
 import re
 from typing import Annotated, Any, Literal
 
-from apps.platform.schemas.capability_schemas import CapabilitySpec
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+from agentflow.llm.contracts import LLMContractsConfig
+from apps.platform.schemas.capability_schemas import CapabilitySpec
 
 
 # CapabilitySpec または レガシーフラット文字列の Union 型
@@ -430,6 +432,7 @@ class ContractsConfig(BaseModel):
     """プラットフォーム契約セクション."""
 
     auth: AuthContractConfig = Field(default_factory=AuthContractConfig)
+    llm: LLMContractsConfig = Field(default_factory=LLMContractsConfig)
     rag: RAGContractConfig = Field(default_factory=RAGContractConfig)
     skills: SkillsContractConfig = Field(default_factory=SkillsContractConfig)
     release: ReleaseContractConfig = Field(default_factory=ReleaseContractConfig)

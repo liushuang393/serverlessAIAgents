@@ -1,0 +1,188 @@
+{
+  "name": "legacy_modernization_geo_platform",
+  "display_name": "Legacy Modernization GEO Platform",
+  "description": "旧システム刷新向けの需要診断・GEOコンテンツ生成・承認・公開を統合するMVPプラットフォーム",
+  "business_base": "growth",
+  "product_line": "geo",
+  "surface_profile": "operator",
+  "audit_profile": "business",
+  "version": "0.1.0",
+  "icon": "🧭",
+  "ports": {
+    "api": 8010,
+    "frontend": 3010,
+    "db": null,
+    "redis": null
+  },
+  "entry_points": {
+    "api_module": "apps.Legacy_modernization_geo_platform.main:app",
+    "health": "/api/health"
+  },
+  "agents": [
+    {
+      "name": "Supervisor",
+      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "capabilities": ["routing", "task_control", "approval"],
+      "business_base": "growth",
+      "pattern": "coordinator",
+      "agent_type": "planner"
+    },
+    {
+      "name": "BrandMemory",
+      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "capabilities": ["positioning", "brand_memory"],
+      "business_base": "growth",
+      "pattern": "specialist",
+      "agent_type": "specialist"
+    },
+    {
+      "name": "DemandSignal",
+      "module": "apps.Legacy_modernization_geo_platform.backend.intelligence",
+      "capabilities": ["live_search", "signal_detection"],
+      "business_base": "growth",
+      "pattern": "analyzer",
+      "agent_type": "reactor"
+    },
+    {
+      "name": "ICPScoring",
+      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "capabilities": ["scoring", "prioritization"],
+      "business_base": "growth",
+      "pattern": "analyzer",
+      "agent_type": "reactor"
+    },
+    {
+      "name": "BuyerQuestionMap",
+      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "capabilities": ["question_mapping", "persona_planning"],
+      "business_base": "growth",
+      "pattern": "planner",
+      "agent_type": "planner"
+    },
+    {
+      "name": "EvidenceCollector",
+      "module": "apps.Legacy_modernization_geo_platform.backend.intelligence",
+      "capabilities": ["evidence_collection", "citation"],
+      "business_base": "governance",
+      "pattern": "collector",
+      "agent_type": "executor"
+    },
+    {
+      "name": "LegacySemantics",
+      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "capabilities": ["business_semantics", "modernization_strategy"],
+      "business_base": "operations",
+      "pattern": "specialist",
+      "agent_type": "specialist"
+    },
+    {
+      "name": "Strategy",
+      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "capabilities": ["content_strategy", "page_blueprint"],
+      "business_base": "growth",
+      "pattern": "planner",
+      "agent_type": "planner"
+    },
+    {
+      "name": "ContentComposition",
+      "module": "apps.Legacy_modernization_geo_platform.backend.orchestrator",
+      "capabilities": ["content_generation", "json_ld"],
+      "business_base": "growth",
+      "pattern": "executor",
+      "agent_type": "executor"
+    },
+    {
+      "name": "GeoQA",
+      "module": "apps.Legacy_modernization_geo_platform.backend.qa",
+      "capabilities": ["quality_gate", "citation_checks", "risk_scoring"],
+      "business_base": "governance",
+      "pattern": "gatekeeper",
+      "agent_type": "gatekeeper"
+    },
+    {
+      "name": "Publishing",
+      "module": "apps.Legacy_modernization_geo_platform.backend.publisher",
+      "capabilities": ["static_publish", "sitemap", "ai_feed"],
+      "business_base": "growth",
+      "pattern": "executor",
+      "agent_type": "executor"
+    },
+    {
+      "name": "ReportAssembler",
+      "module": "apps.Legacy_modernization_geo_platform.backend.reporting",
+      "capabilities": ["reporting", "summaries"],
+      "business_base": "governance",
+      "pattern": "reporter",
+      "agent_type": "reporter"
+    }
+  ],
+  "services": {
+    "intelligence": {
+      "providers": ["serpapi", "bing", "duckduckgo_search"],
+      "enabled": true
+    },
+    "publish": {
+      "enabled": true,
+      "target": "docker"
+    },
+    "artifacts": {
+      "enabled": true,
+      "storage": "file+sqlite"
+    }
+  },
+  "dependencies": {
+    "database": "sqlite",
+    "redis": false,
+    "external": ["serpapi", "bing_search"]
+  },
+  "runtime": {
+    "urls": {
+      "backend": "http://localhost:8010",
+      "frontend": "http://localhost:3010",
+      "health": "http://localhost:8010/api/health",
+      "database": "sqlite:///apps/Legacy_modernization_geo_platform/data/geo_platform.db"
+    },
+    "database": {
+      "kind": "sqlite",
+      "url": "sqlite:///apps/Legacy_modernization_geo_platform/data/geo_platform.db",
+      "host": null,
+      "port": null,
+      "name": "geo_platform.db",
+      "user": null,
+      "password": null,
+      "password_env": null,
+      "note": "ローカル SQLite 保存"
+    },
+    "commands": {
+      "backend_dev": "python apps/Legacy_modernization_geo_platform/scripts/dev.py",
+      "frontend_dev": "cd apps/Legacy_modernization_geo_platform/frontend && npm run dev",
+      "publish": "docker compose -f apps/Legacy_modernization_geo_platform/docker-compose.yml up -d --build",
+      "start": "docker compose -f apps/Legacy_modernization_geo_platform/docker-compose.yml up -d",
+      "stop": "docker compose -f apps/Legacy_modernization_geo_platform/docker-compose.yml down"
+    }
+  },
+  "tags": ["geo", "legacy-modernization", "growth", "publishing", "approval"],
+  "contracts": {
+    "auth": {
+      "enabled": true,
+      "providers": ["api_key"],
+      "allow_anonymous": false,
+      "required_scopes": ["geo.operator"],
+      "session_ttl_minutes": 60
+    },
+    "llm": {
+      "enabled": false,
+      "defaults": {},
+      "agent_overrides": {},
+      "allowed_modalities": [],
+      "extra_model_refs": []
+    },
+    "release": {
+      "strategy": "manual",
+      "targets": ["docker"],
+      "environments": ["dev"],
+      "require_approval": true
+    }
+  }
+}
+

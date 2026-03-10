@@ -112,7 +112,9 @@ curl -sf http://localhost:8188/prompt && echo "✓ ComfyUI 起動成功"
 # ComfyUI URL（デフォルト: http://localhost:8188）
 export COMFYUI_URL=http://localhost:8188
 
-# LLM強化モード使用時（IntentAnalyzer, PromptPlanner で使用）
+# LLM 強化モードは Platform 主導 LLM 管理を前提にします
+# 正本は apps/platform の LLM Management と app_config.json の contracts.llm です
+# 下記 key は Platform 未設定時の fallback 用です
 export OPENAI_API_KEY=
 ```
 

@@ -22,6 +22,7 @@ import os
 from typing import TYPE_CHECKING
 
 from agentflow.llm.gateway import LiteLLMGateway
+from agentflow.runtime import get_runtime_context
 
 
 if TYPE_CHECKING:
@@ -29,6 +30,22 @@ if TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+
+def _gateway_metadata() -> dict[str, str]:
+    """現在の RuntimeContext から metadata を抽出する."""
+    context = get_runtime_context()
+    if context is None:
+        return {}
+    payload: dict[str, str] = {}
+    app_name = context.metadata.get("app_name")
+    if isinstance(app_name, str) and app_name.strip():
+        payload["app_name"] = app_name.strip()
+    agent_name = context.metadata.get("agent_name")
+    if isinstance(agent_name, str) and agent_name.strip():
+        payload["agent_name"] = agent_name.strip()
+    return payload
+
 
 # OpenAI gpt-image-1 対応サイズ
 _OPENAI_SIZES = frozenset({"1024x1024", "1536x1024", "1024x1536"})
@@ -148,6 +165,7 @@ class OpenAIImageClient:
                 output_format=output_format,
                 model_alias=self._model_alias,
                 model=self._model,
+                metadata=_gateway_metadata(),
             )
         finally:
             if inserted:

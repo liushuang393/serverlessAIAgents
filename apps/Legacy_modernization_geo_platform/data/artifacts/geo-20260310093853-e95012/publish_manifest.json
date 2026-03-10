@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "task_id": "geo-20260310093853-e95012",
+    "trace_id": "geo-20260310093853-e95012:publish",
+    "stage": "publish",
+    "generated_at": "2026-03-10T09:38:56.002556Z"
+  },
+  "evidence": [
+    {
+      "page_url": "http://127.0.0.1:18010/geo/pages/manufacturing-cobol-modernization-guide",
+      "title": "manufacturing 向け COBOL モダナイゼーションガイド"
+    }
+  ],
+  "unknowns": [],
+  "extensions": {},
+  "pages": [
+    {
+      "slug": "manufacturing-cobol-modernization-guide",
+      "title": "manufacturing 向け COBOL モダナイゼーションガイド",
+      "page_url": "http://127.0.0.1:18010/geo/pages/manufacturing-cobol-modernization-guide",
+      "html_path": "/home/liush/projects/serverlessAIAgents/apps/Legacy_modernization_geo_platform/data/published/geo-20260310093853-e95012/pages/manufacturing-cobol-modernization-guide.html"
+    }
+  ],
+  "sitemap_url": "http://127.0.0.1:18010/geo/sitemap.xml",
+  "ai_feed_url": "http://127.0.0.1:18010/geo/ai-feed.json",
+  "published_at": "2026-03-10T09:38:56.002574Z"
+}
