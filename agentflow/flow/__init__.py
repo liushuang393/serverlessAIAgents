@@ -54,7 +54,7 @@ Quick Start:
 from agentflow.flow.builder import FlowBuilder, create_flow
 
 # コンテキストと実行
-from agentflow.flow.context import FlowContext
+from agentflow.flow.context import FlowContext, FlowMetadata
 from agentflow.flow.executor import FlowExecutor
 from agentflow.flow.flow import Flow, MemoryAccessor
 from agentflow.flow.graph import FlowGraph
@@ -112,6 +112,7 @@ __all__ = [
     "FlowExecutor",
     # 高度な用法
     "FlowGraph",
+    "FlowMetadata",
     # ノード型
     "FlowNode",
     "GateNode",
