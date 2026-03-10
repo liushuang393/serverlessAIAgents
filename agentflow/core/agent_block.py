@@ -1,10 +1,15 @@
 """AgentBlock 基底クラス.
 
 このモジュールは全てのエージェントが継承する基底クラスを提供します。
+
+非推奨情報:
+    AgentBlock の直接継承は非推奨です。
+    代わりに ResilientAgent（= Agent）を使用してください。
 """
 
 from __future__ import annotations
 
+import warnings
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -24,6 +29,9 @@ if TYPE_CHECKING:
 class AgentBlock(ABC):
     """全てのエージェントが継承する基底クラス.
 
+    .. deprecated::
+        AgentBlock の直接継承は非推奨です。代わりに ResilientAgent（= Agent）を使用してください。
+
     このクラスは以下の機能を提供します:
     - メタデータの自動読み込み
     - プロトコルアダプターの自動適用 (@auto_adapt デコレーター)
@@ -39,6 +47,21 @@ class AgentBlock(ABC):
         >>> agent = MyAgent()
         >>> result = await agent.run({"text": "hello"})
     """
+
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        """サブクラス生成時に非推奨警告を発行.
+
+        ResilientAgent 自体は除外（内部継承のため）。
+        それ以外の全ての直接 AgentBlock サブクラスに DeprecationWarning を発行。
+        """
+        super().__init_subclass__(**kwargs)
+        # ResilientAgent モジュール内の継承は内部利用のため除外
+        if cls.__module__ != "agentflow.core.resilient_agent":
+            warnings.warn(
+                f"{cls.__name__}: AgentBlock の直接継承は非推奨です。ResilientAgent を使用してください。",
+                DeprecationWarning,
+                stacklevel=2,
+            )
 
     def __init__(
         self,

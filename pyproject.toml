@@ -463,6 +463,10 @@ python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
+filterwarnings = [
+    # AgentBlock 直接継承の非推奨警告はテスト中は無視（既存レガシーコードのテスト継続のため）
+    "ignore:.*AgentBlock.*直接継承は非推奨:DeprecationWarning",
+]
 addopts = [
     "--strict-markers",
     "--strict-config",
