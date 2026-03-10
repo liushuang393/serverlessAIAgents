@@ -26,6 +26,10 @@ from pathlib import Path
 from typing import Any
 
 import uvicorn
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from apps.platform.db import close_platform_db, ensure_platform_db_ready
 from apps.platform.engine import PlatformEngine
 from apps.platform.routers import (
     agents_router,
@@ -51,11 +55,13 @@ from apps.platform.routers.studios import init_studio_services
 from apps.platform.routers.tenant_invitations import init_tenant_invitation_services
 from apps.platform.schemas.publish_schemas import PublishRequest, PublishTarget
 from apps.platform.services.agent_aggregator import AgentAggregatorService
+from apps.platform.services.app_config_event_store import init_app_config_event_store
 from apps.platform.services.app_discovery import AppDiscoveryService
 from apps.platform.services.app_lifecycle import AppLifecycleManager
 from apps.platform.services.app_scaffolder import AppScaffolderService
 from apps.platform.services.config_watcher import ConfigWatcherService
 from apps.platform.services.llm_management import get_default_llm_management_service
+from apps.platform.services.llm_management_persistence import sync_runtime_secret_cache_from_db
 from apps.platform.services.mcp_registry import MCPRegistryService
 from apps.platform.services.port_allocator import PortAllocatorService
 from apps.platform.services.rag_config_store import init_rag_config_store
@@ -63,8 +69,6 @@ from apps.platform.services.rag_overview import RAGOverviewService
 from apps.platform.services.skill_catalog import SkillCatalogService
 from apps.platform.services.studio_service import StudioService
 from apps.platform.services.tenant_invitation import TenantInvitationService
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
 
 # --- app_config.json からポート設定を読み取る（単一定義元） ---
@@ -84,11 +88,13 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     lifecycle = AppLifecycleManager()
     scaffolder = AppScaffolderService(discovery)
     port_allocator = PortAllocatorService(discovery)
+    app_config_events = init_app_config_event_store()
     init_app_services(
         discovery,
         lifecycle,
         scaffolder=scaffolder,
         port_allocator=port_allocator,
+        event_store=app_config_events,
     )
     studio_service = StudioService(discovery, lifecycle)
     init_studio_services(studio_service)
@@ -97,10 +103,8 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     _logger.info("Platform 起動完了: %d 件の App を検出", count)
 
     # --- Priority 2: ConfigWatcher（設定ホットリロード）起動 ---
-    watcher = ConfigWatcherService(discovery)
-    _watcher_task: asyncio.Task[None] = asyncio.create_task(
-        watcher.watch(), name="config-watcher"
-    )
+    watcher = ConfigWatcherService(discovery, event_store=app_config_events)
+    _watcher_task: asyncio.Task[None] = asyncio.create_task(watcher.watch(), name="config-watcher")
 
     # --- Phase 3: Agent / Skill / RAG サービス初期化 ---
     aggregator = AgentAggregatorService(discovery)
@@ -118,6 +122,17 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     mcp_registry = MCPRegistryService()
     init_mcp_services(mcp_registry)
 
+    await ensure_platform_db_ready()
+    await sync_runtime_secret_cache_from_db()
+
+    # agentflow → apps 逆依存を回避: コールバック登録方式
+    from agentflow.llm.gateway.config import register_platform_secret_resolver
+    from apps.platform.services.llm_management_persistence import (
+        resolve_platform_cached_secret,
+    )
+
+    register_platform_secret_resolver(resolve_platform_cached_secret)
+
     llm_management = get_default_llm_management_service()
     init_llm_management_service(llm_management)
 
@@ -130,6 +145,7 @@ async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
     _logger.info("Platform シャットダウン")
     _watcher_task.cancel()
     await asyncio.gather(_watcher_task, return_exceptions=True)
+    await close_platform_db()
 
 
 def create_app() -> FastAPI:
