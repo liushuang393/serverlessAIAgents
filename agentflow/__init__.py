@@ -171,6 +171,7 @@ from agentflow.core.retry_advisor import (
     RetryAdvisor,
     RetryContext,
 )
+from agentflow.core.tool_agent import ToolCapableAgent
 from agentflow.core.tool_binding import BoundTools, ToolBinder, ToolExecutor
 
 # =============================================================================
@@ -691,6 +692,7 @@ __all__ = [  # noqa: RUF022 - 3層構造のため意図的な非アルファベ�
     # ツールバインディング
     "BoundTools",
     "ToolBinder",
+    "ToolCapableAgent",
     "ToolExecutor",
     # 統一ツールカタログ
     "CatalogEntry",
