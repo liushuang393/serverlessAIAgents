@@ -54,8 +54,9 @@ class AgentBlock(ABC):
         AgentBlock の直接サブクラスのみ警告（ResilientAgent 等の間接継承は除外）。
         """
         super().__init_subclass__(**kwargs)
-        # AgentBlock の直接サブクラスのみ警告（ResilientAgent等の間接継承は除外）
-        if AgentBlock in cls.__bases__:
+        # ユーザーコードが AgentBlock を直接継承した場合のみ警告
+        # agentflow フレームワーク内部クラスは除外
+        if AgentBlock in cls.__bases__ and not cls.__module__.startswith("agentflow."):
             warnings.warn(
                 f"{cls.__name__}: AgentBlock の直接継承は非推奨です。ResilientAgent を使用してください。",
                 DeprecationWarning,
