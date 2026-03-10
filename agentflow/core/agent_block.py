@@ -51,16 +51,15 @@ class AgentBlock(ABC):
     def __init_subclass__(cls, **kwargs: object) -> None:
         """サブクラス生成時に非推奨警告を発行.
 
-        ResilientAgent 自体は除外（内部継承のため）。
-        それ以外の全ての直接 AgentBlock サブクラスに DeprecationWarning を発行。
+        AgentBlock の直接サブクラスのみ警告（ResilientAgent 等の間接継承は除外）。
         """
         super().__init_subclass__(**kwargs)
-        # ResilientAgent モジュール内の継承は内部利用のため除外
-        if cls.__module__ != "agentflow.core.resilient_agent":
+        # AgentBlock の直接サブクラスのみ警告（ResilientAgent等の間接継承は除外）
+        if AgentBlock in cls.__bases__:
             warnings.warn(
                 f"{cls.__name__}: AgentBlock の直接継承は非推奨です。ResilientAgent を使用してください。",
                 DeprecationWarning,
-                stacklevel=2,
+                stacklevel=3,
             )
 
     def __init__(

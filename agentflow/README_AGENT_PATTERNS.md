@@ -199,5 +199,5 @@ from agentflow import agent            # @agent デコレータ
 from agentflow import AgentClient      # @agent エージェントの呼び出し
 
 # 非推奨（移行中の既存コードのみ）
-from agentflow import AgentBlock       # 非推奨 - DeprecationWarning が発行される
+from agentflow import AgentBlock  # 非推奨（直接継承時に DeprecationWarning が発行される）
 ```

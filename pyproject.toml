@@ -464,7 +464,7 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 asyncio_mode = "auto"
 filterwarnings = [
-    # AgentBlock 直接継承の非推奨警告はテスト中は無視（既存レガシーコードのテスト継続のため）
+    # agentflow/ 内部の AgentBlock 直接継承クラスが多数残っているため一時的に抑制（移行待ち）
     "ignore:.*AgentBlock.*直接継承は非推奨:DeprecationWarning",
 ]
 addopts = [
