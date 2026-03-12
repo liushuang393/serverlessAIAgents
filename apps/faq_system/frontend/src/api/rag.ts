@@ -66,9 +66,14 @@ async function del<T>(endpoint: string): Promise<T> {
   return handleResponse<T>(resp);
 }
 
-async function upload<T>(endpoint: string, file: File): Promise<T> {
+async function upload<T>(endpoint: string, file: File, extra?: Record<string, string>): Promise<T> {
   const form = new FormData();
   form.append('file', file);
+  if (extra) {
+    for (const [key, value] of Object.entries(extra)) {
+      form.append(key, value);
+    }
+  }
   const resp = await fetch(`${BASE_URL}${endpoint}`, {
     method: 'POST',
     headers: { ...authHeaders() },
@@ -175,8 +180,12 @@ export const ragApi = {
   getDocument: (collection: string, docId: string) =>
     get<{ document: DocumentInfo }>(`/collections/${collection}/documents/${docId}`),
 
-  uploadDocument: (collection: string, file: File) =>
-    upload<{ document: DocumentInfo }>(`/collections/${collection}/documents`, file),
+  uploadDocument: (collection: string, file: File, autoIndex = false) =>
+    upload<{ document: DocumentInfo }>(
+      `/collections/${collection}/documents`,
+      file,
+      autoIndex ? { auto_index: 'true' } : undefined,
+    ),
 
   deleteDocument: (collection: string, docId: string) =>
     del<{ deleted: boolean }>(`/collections/${collection}/documents/${docId}`),
@@ -202,4 +211,8 @@ export const ragApi = {
 
   triggerIngest: (sourceIds?: string[], dryRun = false, asyncMode = false) =>
     post<Record<string, unknown>>('/rag/ingest', { source_ids: sourceIds ?? [], dry_run: dryRun, async_mode: asyncMode }),
+
+  // アクセス制御
+  getAccessMatrix: () =>
+    get<{ matrix: Record<string, Record<string, boolean>> }>('/access/matrix'),
 };

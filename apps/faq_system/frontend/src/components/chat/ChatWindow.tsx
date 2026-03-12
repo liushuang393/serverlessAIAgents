@@ -4,6 +4,7 @@ import { useChatStore, useServiceStatus } from '../../stores/chatStore';
 import { MessageBubble } from './MessageBubble';
 import { useI18n } from '../../i18n';
 import { SettingsModal } from '../settings/SettingsPage';
+import { KnowledgePanel } from '../settings/KnowledgePanel';
 import { useOutletContext } from 'react-router-dom';
 
 interface LayoutContext {
@@ -17,6 +18,7 @@ export const ChatWindow = () => {
     const { ragEnabled, sqlEnabled, startPolling, stopPolling } = useServiceStatus();
     const [input, setInput] = useState('');
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isKnowledgePanelOpen, setIsKnowledgePanelOpen] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -115,17 +117,31 @@ export const ChatWindow = () => {
                     </div>
                 </div>
                 {/* 設定ボタン（右上） */}
-                <button
-                    onClick={() => setIsSettingsOpen(true)}
-                    className="p-2 rounded-xl hover:bg-white/5 text-[var(--text-muted)] hover:text-white transition-all border border-transparent hover:border-white/10"
-                    title={t('sidebar.settings')}
-                >
-                    <Settings size={16} />
-                </button>
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setIsKnowledgePanelOpen((prev) => !prev)}
+                        className={`p-2 rounded-xl transition-all border ${
+                            isKnowledgePanelOpen
+                                ? 'text-[var(--primary)] bg-white/5 border-white/10'
+                                : 'text-[var(--text-muted)] hover:text-white border-transparent hover:border-white/10 hover:bg-white/5'
+                        }`}
+                        title="ナレッジベース"
+                    >
+                        <Database size={16} />
+                    </button>
+                    <button
+                        onClick={() => setIsSettingsOpen(true)}
+                        className="p-2 rounded-xl hover:bg-white/5 text-[var(--text-muted)] hover:text-white transition-all border border-transparent hover:border-white/10"
+                        title={t('sidebar.settings')}
+                    >
+                        <Settings size={16} />
+                    </button>
+                </div>
             </div>
 
             {/* 設定モーダル */}
             <SettingsModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+            <KnowledgePanel isOpen={isKnowledgePanelOpen} onClose={() => setIsKnowledgePanelOpen(false)} />
 
             {/* Messages Area - 3列レイアウト（15px / 中央 / 15px） */}
             <div className="flex-1 min-h-0 overflow-y-auto w-full custom-scrollbar">

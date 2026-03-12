@@ -9,8 +9,8 @@
   "version": "1.0.0",
   "icon": "🏗️",
   "ports": {
-    "api": 8000,
-    "frontend": 3000,
+    "api": 8900,
+    "frontend": 3200,
     "db": null,
     "redis": null
   },

@@ -45,7 +45,12 @@ describe('Integration Tests', () => {
       });
 
       const { container } = render(
-        <BrowserRouter>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <Dashboard />
         </BrowserRouter>
       );
@@ -59,7 +64,12 @@ describe('Integration Tests', () => {
       );
 
       render(
-        <BrowserRouter>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <Dashboard />
         </BrowserRouter>
       );
@@ -75,7 +85,12 @@ describe('Integration Tests', () => {
       const user = userEvent.setup();
 
       render(
-        <BrowserRouter>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <Settings />
         </BrowserRouter>
       );
@@ -96,7 +111,12 @@ describe('Integration Tests', () => {
       const user = userEvent.setup();
 
       render(
-        <BrowserRouter>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true,
+          }}
+        >
           <Settings />
         </BrowserRouter>
       );
@@ -112,4 +132,3 @@ describe('Integration Tests', () => {
     });
   });
 });
-

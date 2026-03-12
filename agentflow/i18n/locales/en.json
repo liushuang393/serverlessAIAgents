@@ -1,0 +1,42 @@
+{
+  "error": {
+    "not_found": "Not found",
+    "unauthorized": "Authentication required",
+    "forbidden": "Access denied",
+    "server_error": "Server error occurred",
+    "timeout": "Request timed out",
+    "bad_request": "Invalid request",
+    "conflict": "Data conflict detected",
+    "validation": "Validation error: {detail}"
+  },
+  "status": {
+    "processing": "Processing...",
+    "complete": "Complete",
+    "failed": "Failed",
+    "pending": "Pending",
+    "cancelled": "Cancelled",
+    "retrying": "Retrying..."
+  },
+  "agent": {
+    "running": "Agent running...",
+    "complete": "Agent complete",
+    "failed": "Agent failed",
+    "timeout": "Agent timed out"
+  },
+  "flow": {
+    "start": "Flow started",
+    "complete": "Flow complete",
+    "failed": "Flow failed",
+    "node_start": "Node started: {name}",
+    "node_complete": "Node complete: {name}",
+    "node_failed": "Node failed: {name}"
+  },
+  "hitl": {
+    "approval_required": "Approval required",
+    "approved": "Approved",
+    "rejected": "Rejected",
+    "expired": "Approval expired"
+  },
+  "_note": "common.* are UI labels; define them in each app's frontend locales/*.json, not here."
+}
+

@@ -132,7 +132,7 @@ export const Sidebar = ({ isOpen, onToggle }: SidebarProps) => {
                     }`}
                 >
                     <Database size={15} />
-                    {t('sidebar.knowledge_base')}
+                    ナレッジ(詳細)
                 </button>
             </div>
 

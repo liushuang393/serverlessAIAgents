@@ -33,9 +33,10 @@ interface RAGState {
   documents: DocumentInfo[];
   documentsLoading: boolean;
   fetchDocuments: (collection: string) => Promise<void>;
-  uploadDocument: (collection: string, file: File) => Promise<DocumentInfo>;
+  uploadDocument: (collection: string, file: File, autoIndex?: boolean) => Promise<DocumentInfo>;
   deleteDocument: (collection: string, docId: string) => Promise<void>;
   indexDocument: (collection: string, docId: string) => Promise<void>;
+  reindexDocument: (collection: string, docId: string) => Promise<void>;
 
   // チャンクプレビュー
   chunkPreviews: ChunkPreview[];
@@ -100,8 +101,8 @@ export const useRAGStore = create<RAGState>((set, get) => ({
       set({ error: (e as Error).message, documentsLoading: false });
     }
   },
-  uploadDocument: async (collection, file) => {
-    const resp = await ragApi.uploadDocument(collection, file);
+  uploadDocument: async (collection, file, autoIndex) => {
+    const resp = await ragApi.uploadDocument(collection, file, autoIndex);
     await get().fetchDocuments(collection);
     return resp.document;
   },
@@ -111,6 +112,10 @@ export const useRAGStore = create<RAGState>((set, get) => ({
   },
   indexDocument: async (collection, docId) => {
     await ragApi.indexDocument(collection, docId);
+    await get().fetchDocuments(collection);
+  },
+  reindexDocument: async (collection, docId) => {
+    await ragApi.reindexDocument(collection, docId);
     await get().fetchDocuments(collection);
   },
 

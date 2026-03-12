@@ -9,8 +9,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from apps.faq_system.backend.auth.dependencies import require_auth, require_role
-from apps.faq_system.routers.dependencies import is_rag_enabled
-from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
+from apps.faq_system.routers.dependencies import invalidate_service_cache, is_rag_enabled
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
 from agentflow.knowledge.collection_manager import CollectionManager
@@ -203,6 +203,10 @@ async def update_collection(
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
 
+    # 設定変更が成功したので RAGService キャッシュを無効化し、
+    # 次回クエリから新設定が適用されるようにする
+    invalidate_service_cache(f"rag:{name}", "faq_agent")
+
     return {"collection": model.to_dict()}
 
 
@@ -279,6 +283,7 @@ async def test_query(
 async def upload_document(
     name: str,
     file: UploadFile = File(...),
+    auto_index: bool = Form(False),
     user: UserInfo = Depends(require_auth),
 ) -> dict[str, Any]:
     """ドキュメントアップロード（認証必須）."""
@@ -297,6 +302,12 @@ async def upload_document(
         )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    if auto_index:
+        try:
+            record = await doc_mgr.index_document(record.document_id)
+        except ValueError:
+            pass
 
     return {"document": record.to_dict()}
 

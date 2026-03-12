@@ -5,6 +5,9 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import pytest
 from apps.platform.schemas.app_config_schemas import (
     AgentInfo,
@@ -109,6 +112,17 @@ class TestDependenciesConfig:
 
 class TestAppConfig:
     """AppConfig ルートスキーマテスト."""
+
+    def test_real_legacy_modernization_geo_platform_manifest_is_valid(self) -> None:
+        """実アプリ manifest が現行 AppConfig スキーマを満たす."""
+        manifest_path = Path("apps/Legacy_modernization_geo_platform/app_config.json")
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+        cfg = AppConfig.model_validate(manifest)
+
+        assert cfg.name == "legacy_modernization_geo_platform"
+        assert cfg.product_line == "framework"
+        assert cfg.plugin_bindings == []
 
     def test_valid_full_config(self) -> None:
         """完全な設定を受け付ける."""
