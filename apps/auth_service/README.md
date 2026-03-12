@@ -548,3 +548,10 @@ pytest tests/apps/auth_service/test_authorization_e2e.py -v
 # 6. 全テスト一括実行
 pytest tests/apps/auth_service/ -v --no-cov
 ```
+
+## データクリーニング
+
+```bash
+# 1. auth_service DB 内の全データ削除
+psql postgresql://postgres:postgres@localhost:5438/auth_service -c "TRUNCATE TABLE user_accounts, auth_sessions, refresh_tokens, token_blacklist, roles, permissions, role_permissions, user_roles, resource_permissions, resource_definitions, role_permission_resources RESTART IDENTITY;"
+```

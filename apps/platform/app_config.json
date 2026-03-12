@@ -10,7 +10,7 @@
   "icon": "🏗️",
   "ports": {
     "api": 8000,
-    "frontend": 3100,
+    "frontend": 3000,
     "db": null,
     "redis": null
   },

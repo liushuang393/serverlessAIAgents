@@ -107,10 +107,3 @@ apps/code_migration_assistant/FAILURES.md
 .worktrees/
 .worktrees/
 memory/knowledge/knowledge.json
-data/rag/faq_system/chunk_custom/uploads/*
-data/rag/faq_system/chunk_preview/uploads/*
-data/rag/faq_system/list_docs/uploads/*
-data/rag/faq_system/dup_detect/uploads/*
-data/rag/faq_system/get_doc/uploads/*
-data/rag/faq_system/upload_test/*
-.gitnexus
