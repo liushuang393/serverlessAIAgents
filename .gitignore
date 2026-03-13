@@ -107,3 +107,4 @@ apps/code_migration_assistant/FAILURES.md
 .worktrees/
 .worktrees/
 memory/knowledge/knowledge.json
+.gitnexus/
